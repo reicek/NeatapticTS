@@ -4,7 +4,6 @@
 
 [![Maintainability](https://api.codeclimate.com/v1/badges/a99a88d28ad37a79dbf6/maintainability)](https://codeclimate.com/github/codeclimate/codeclimate/maintainability)![issues](https://img.shields.io/github/issues/reicek/neataptic.svg) [![license](https://img.shields.io/github/license/reicek/neataptic.svg)](https://github.com/reicek/neataptic/blob/master/LICENSE) [![Donate](https://img.shields.io/badge/Donate-PayPal-blue.svg)](https://www.paypal.me/CesarAnton)
 
-
 <hr>
 
 Neataptic offers flexible neural networks; neurons and synapses can be removed with a single line of code. No fixed architecture is required for neural networks to function at all. This flexibility allows networks to be shaped for your dataset through neuro-evolution, which is done using multiple threads.
