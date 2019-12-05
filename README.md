@@ -2,9 +2,7 @@
 
 ### Neataptic ([unmaintained](https://github.com/wagenaartje/neataptic/issues/112))
 
-<a href="https://www.npmjs.com/package/neataptic"><img src="https://img.shields.io/npm/v/neataptic.svg?style=flat-square"></a>
-<a href="https://www.npmjs.com/package/neataptic"><img src="https://img.shields.io/npm/dm/neataptic.svg?style=flat-square"></a>
-<a href="https://travis-ci.org/wagenaartje/neataptic"><img src="https://img.shields.io/travis/wagenaartje/neataptic/master.svg?style=flat-square"></a> [![Slack](https://slack.bri.im/badge.svg)](https://slack.bri.im)
+[![Build Status](https://travis-ci.org/reicek/neataptic.svg?branch=master)](https://travis-ci.org/reicek/neataptic) [![GitHub version](https://badge.fury.io/gh/reicek%2FAI-world.svg)](https://badge.fury.io/gh/reicek%2FAI-world) [![express](https://david-dm.org/reicek/neataptic/status.svg)](https://david-dm.org/reicek/neataptic) [![Maintainability](https://api.codeclimate.com/v1/badges/46e34004ffc45c219347/maintainability)](https://codeclimate.com/github/reicek/neataptic/maintainability) ![issues](https://img.shields.io/github/issues/reicek/neataptic.svg) [![license](https://img.shields.io/github/license/reicek/neataptic.svg)](https://github.com/reicek/neataptic/blob/master/LICENSE) [![Donate](https://img.shields.io/badge/Donate-PayPal-blue.svg)](https://www.paypal.me/CesarAnton)
 
 
 <hr>
