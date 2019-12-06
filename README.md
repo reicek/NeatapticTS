@@ -1,4 +1,4 @@
-> This fork is being updated to TypeScrypt, original repo in now ([unmaintained](https://github.com/wagenaartje/neataptic/issues/112)) <
+## This fork is being updated to TypeScrypt, original repo in now ([unmaintained](https://github.com/wagenaartje/neataptic/issues/112))
 
 <img src="https://cdn-images-1.medium.com/max/800/1*THG2__H9YHxYIt2sulzlTw.png" width="100%"/>
 
