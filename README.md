@@ -3,7 +3,7 @@
 
 [![Maintainability](https://api.codeclimate.com/v1/badges/512db783a8514a0753ab/maintainability)](https://codeclimate.com/github/reicek/NeatapticTS/maintainability) [![Test Coverage](https://api.codeclimate.com/v1/badges/512db783a8514a0753ab/test_coverage)](https://codeclimate.com/github/reicek/NeatapticTS/test_coverage) [![Donate](https://img.shields.io/badge/Donate-PayPal-blue.svg)](https://www.paypal.me/CesarAnton)
 
-![![Instinct](https://cdn-images-1.medium.com/max/800/1*THG2__H9YHxYIt2sulzlTw.png")](https://towardsdatascience.com/neuro-evolution-on-steroids-82bd14ddc2f6?)
+<img src="https://cdn-images-1.medium.com/max/800/1*THG2__H9YHxYIt2sulzlTw.png" width="100%"/>
 
 # NeatapticTS
 
