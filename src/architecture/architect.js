@@ -1,26 +1,27 @@
-/* Import */
-var methods = require('../methods/methods');
-var Network = require('./network');
-var Group = require('./group');
-var Layer = require('./layer');
-var Node = require('./node');
+"use strict";
+
+const methods = require('../methods/methods');
+const Network = require('./network');
+const Group = require('./group');
+const Layer = require('./layer');
+const Node = require('./node');
 
 /*******************************************************************************
                                         architect
 *******************************************************************************/
 
-var architect = {
+const architect = {
   /**
    * Constructs a network from a given array of connected nodes
    */
-  Construct: function (list) {
+  Construct (list) {
     // Create a network
-    var network = new Network(0, 0);
+    const network = new Network(0, 0);
 
     // Transform all groups into nodes
-    var nodes = [];
+    let nodes = [];
 
-    var i;
+    let i;
     for (i = 0; i < list.length; i++) {
       let j;
       if (list[i] instanceof Group) {
@@ -29,7 +30,7 @@ var architect = {
         }
       } else if (list[i] instanceof Layer) {
         for (j = 0; j < list[i].nodes.length; j++) {
-          for (var k = 0; k < list[i].nodes[j].nodes.length; k++) {
+          for (let k = 0; k < list[i].nodes[j].nodes.length; k++) {
             nodes.push(list[i].nodes[j].nodes[k]);
           }
         }
@@ -39,8 +40,8 @@ var architect = {
     }
 
     // Determine input and output nodes
-    var inputs = [];
-    var outputs = [];
+    const inputs = [];
+    const outputs = [];
     for (i = nodes.length - 1; i >= 0; i--) {
       if (nodes[i].type === 'output' || nodes[i].connections.out.length + nodes[i].connections.gated.length === 0) {
         nodes[i].type = 'output';
@@ -85,18 +86,17 @@ var architect = {
    */
   Perceptron: function () {
     // Convert arguments to Array
-    var layers = Array.prototype.slice.call(arguments);
+    const layers = Array.prototype.slice.call(arguments);
     if (layers.length < 3) {
       throw new Error('You have to specify at least 3 layers');
     }
 
     // Create a list of nodes/groups
-    var nodes = [];
+    const nodes = [];
     nodes.push(new Group(layers[0]));
 
-    for (var i = 1; i < layers.length; i++) {
-      var layer = layers[i];
-      layer = new Group(layer);
+    for (let i = 1; i < layers.length; i++) {
+      const layer = new Group(layers[i]);
       nodes.push(layer);
       nodes[i - 1].connect(nodes[i], methods.connection.ALL_TO_ALL);
     }
@@ -111,14 +111,14 @@ var architect = {
   Random: function (input, hidden, output, options) {
     options = options || {};
 
-    var connections = options.connections || hidden * 2;
-    var backconnections = options.backconnections || 0;
-    var selfconnections = options.selfconnections || 0;
-    var gates = options.gates || 0;
+    const connections = options.connections || hidden * 2;
+    const backconnections = options.backconnections || 0;
+    const selfconnections = options.selfconnections || 0;
+    const gates = options.gates || 0;
 
-    var network = new Network(input, output);
+    const network = new Network(input, output);
 
-    var i;
+    let i;
     for (i = 0; i < hidden; i++) {
       network.mutate(methods.mutation.ADD_NODE);
     }
@@ -146,14 +146,14 @@ var architect = {
    * Creates a long short-term memory network
    */
   LSTM: function () {
-    var args = Array.prototype.slice.call(arguments);
+    const args = Array.prototype.slice.call(arguments);
     if (args.length < 3) {
       throw new Error('You have to specify at least 3 layers');
     }
 
-    var last = args.pop();
+    let last = args.pop();
 
-    var outputLayer;
+    let outputLayer;
     if (typeof last === 'number') {
       outputLayer = new Group(last);
       last = {};
@@ -165,33 +165,33 @@ var architect = {
       type: 'output'
     });
 
-    var options = {};
+    const options = {};
     options.memoryToMemory = last.memoryToMemory || false;
     options.outputToMemory = last.outputToMemory || false;
     options.outputToGates = last.outputToGates || false;
     options.inputToOutput = last.inputToOutput === undefined ? true : last.inputToOutput;
     options.inputToDeep = last.inputToDeep === undefined ? true : last.inputToDeep;
 
-    var inputLayer = new Group(args.shift()); // first argument
+    const inputLayer = new Group(args.shift()); // first argument
     inputLayer.set({
       type: 'input'
     });
 
-    var blocks = args; // all the arguments in the middle
+    const blocks = args; // all the arguments in the middle
 
-    var nodes = [];
+    const nodes = [];
     nodes.push(inputLayer);
 
-    var previous = inputLayer;
-    for (var i = 0; i < blocks.length; i++) {
-      var block = blocks[i];
+    let previous = inputLayer;
+    for (let i = 0; i < blocks.length; i++) {
+      const block = blocks[i];
 
       // Init required nodes (in activation order)
-      var inputGate = new Group(block);
-      var forgetGate = new Group(block);
-      var memoryCell = new Group(block);
-      var outputGate = new Group(block);
-      var outputBlock = i === blocks.length - 1 ? outputLayer : new Group(block);
+      const inputGate = new Group(block);
+      const forgetGate = new Group(block);
+      const memoryCell = new Group(block);
+      const outputGate = new Group(block);
+      const outputBlock = i === blocks.length - 1 ? outputLayer : new Group(block);
 
       inputGate.set({
         bias: 1
@@ -204,7 +204,7 @@ var architect = {
       });
 
       // Connect the input with all the nodes
-      var input = previous.connect(memoryCell, methods.connection.ALL_TO_ALL);
+      const input = previous.connect(memoryCell, methods.connection.ALL_TO_ALL);
       previous.connect(inputGate, methods.connection.ALL_TO_ALL);
       previous.connect(outputGate, methods.connection.ALL_TO_ALL);
       previous.connect(forgetGate, methods.connection.ALL_TO_ALL);
@@ -213,8 +213,8 @@ var architect = {
       memoryCell.connect(inputGate, methods.connection.ALL_TO_ALL);
       memoryCell.connect(forgetGate, methods.connection.ALL_TO_ALL);
       memoryCell.connect(outputGate, methods.connection.ALL_TO_ALL);
-      var forget = memoryCell.connect(memoryCell, methods.connection.ONE_TO_ONE);
-      var output = memoryCell.connect(outputBlock, methods.connection.ALL_TO_ALL);
+      const forget = memoryCell.connect(memoryCell, methods.connection.ONE_TO_ONE);
+      const output = memoryCell.connect(outputBlock, methods.connection.ALL_TO_ALL);
 
       // Set up gates
       inputGate.gate(input, methods.gating.INPUT);
@@ -267,21 +267,21 @@ var architect = {
    * Creates a gated recurrent unit network
    */
   GRU: function () {
-    var args = Array.prototype.slice.call(arguments);
+    const args = Array.prototype.slice.call(arguments);
     if (args.length < 3) {
       throw new Error('not enough layers (minimum 3) !!');
     }
 
-    var inputLayer = new Group(args.shift()); // first argument
-    var outputLayer = new Group(args.pop()); // last argument
-    var blocks = args; // all the arguments in the middle
+    const inputLayer = new Group(args.shift()); // first argument
+    const outputLayer = new Group(args.pop()); // last argument
+    const blocks = args; // all the arguments in the middle
 
-    var nodes = [];
+    const nodes = [];
     nodes.push(inputLayer);
 
-    var previous = inputLayer;
-    for (var i = 0; i < blocks.length; i++) {
-      var layer = new Layer.GRU(blocks[i]);
+    let previous = inputLayer;
+    for (let i = 0; i < blocks.length; i++) {
+      const layer = new Layer.GRU(blocks[i]);
       previous.connect(layer);
       previous = layer;
 
@@ -298,8 +298,8 @@ var architect = {
    * Creates a hopfield network of the given size
    */
   Hopfield: function (size) {
-    var input = new Group(size);
-    var output = new Group(size);
+    const input = new Group(size);
+    const output = new Group(size);
 
     input.connect(output, methods.connection.ALL_TO_ALL);
 
@@ -311,7 +311,7 @@ var architect = {
       type: 'output'
     });
 
-    var network = new architect.Construct([input, output]);
+    const network = architect.Construct([input, output]);
 
     return network;
   },
@@ -324,19 +324,19 @@ var architect = {
       hiddenLayers = [hiddenLayers];
     }
 
-    var nodes = [];
+    const nodes = [];
 
-    var input = new Layer.Dense(inputSize);
-    var inputMemory = new Layer.Memory(inputSize, previousInput);
-    var hidden = [];
-    var output = new Layer.Dense(outputSize);
-    var outputMemory = new Layer.Memory(outputSize, previousOutput);
+    const input = new Layer.Dense(inputSize);
+    const inputMemory = new Layer.Memory(inputSize, previousInput);
+    const hidden = [];
+    const output = new Layer.Dense(outputSize);
+    const outputMemory = new Layer.Memory(outputSize, previousOutput);
 
     nodes.push(input);
     nodes.push(outputMemory);
 
-    for (var i = 0; i < hiddenLayers.length; i++) {
-      var hiddenLayer = new Layer.Dense(hiddenLayers[i]);
+    for (let i = 0; i < hiddenLayers.length; i++) {
+      const hiddenLayer = new Layer.Dense(hiddenLayers[i]);
       hidden.push(hiddenLayer);
       nodes.push(hiddenLayer);
       if (typeof hidden[i - 1] !== 'undefined') {
