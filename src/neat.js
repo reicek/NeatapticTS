@@ -1,7 +1,3 @@
-/* Export */
-module.exports = Neat;
-
-/* Import */
 var Network = require('./architecture/network');
 var methods = require('./methods/methods');
 var config = require('./config');
@@ -13,53 +9,53 @@ var selection = methods.selection;
                                          NEAT
 *******************************************************************************/
 
-function Neat (input, output, fitness, options) {
-  this.input = input; // The input size of the networks
-  this.output = output; // The output size of the networks
-  this.fitness = fitness; // The fitness function to evaluate the networks
+class Neat {
+  constructor (input, output, fitness, options) {
+    this.input = input; // The input size of the networks
+    this.output = output; // The output size of the networks
+    this.fitness = fitness; // The fitness function to evaluate the networks
 
-  // Configure options
-  options = options || {};
-  this.equal = options.equal || false;
-  this.clear = options.clear || false;
-  this.popsize = options.popsize || 50;
-  this.elitism = options.elitism || 0;
-  this.provenance = options.provenance || 0;
-  this.mutationRate = options.mutationRate || 0.3;
-  this.mutationAmount = options.mutationAmount || 1;
+    // Configure options
+    options = options || {};
+    this.equal = options.equal || false;
+    this.clear = options.clear || false;
+    this.popsize = options.popsize || 50;
+    this.elitism = options.elitism || 0;
+    this.provenance = options.provenance || 0;
+    this.mutationRate = options.mutationRate || 0.3;
+    this.mutationAmount = options.mutationAmount || 1;
 
-  this.fitnessPopulation = options.fitnessPopulation || false;
+    this.fitnessPopulation = options.fitnessPopulation || false;
 
-  this.selection = options.selection || methods.selection.POWER;
-  this.crossover = options.crossover || [
-    methods.crossover.SINGLE_POINT,
-    methods.crossover.TWO_POINT,
-    methods.crossover.UNIFORM,
-    methods.crossover.AVERAGE
-  ];
-  this.mutation = options.mutation || methods.mutation.FFW;
+    this.selection = options.selection || methods.selection.POWER;
+    this.crossover = options.crossover || [
+      methods.crossover.SINGLE_POINT,
+      methods.crossover.TWO_POINT,
+      methods.crossover.UNIFORM,
+      methods.crossover.AVERAGE
+    ];
+    this.mutation = options.mutation || methods.mutation.FFW;
 
-  this.template = options.network || false;
+    this.template = options.network || false;
 
-  this.maxNodes = options.maxNodes || Infinity;
-  this.maxConns = options.maxConns || Infinity;
-  this.maxGates = options.maxGates || Infinity;
+    this.maxNodes = options.maxNodes || Infinity;
+    this.maxConns = options.maxConns || Infinity;
+    this.maxGates = options.maxGates || Infinity;
 
-  // Custom mutation selection function if given
-  this.selectMutationMethod = typeof options.mutationSelection === 'function' ? options.mutationSelection.bind(this) : this.selectMutationMethod;
+    // Custom mutation selection function if given
+    this.selectMutationMethod = typeof options.mutationSelection === 'function' ? options.mutationSelection.bind(this) : this.selectMutationMethod;
 
-  // Generation counter
-  this.generation = 0;
+    // Generation counter
+    this.generation = 0;
 
-  // Initialise the genomes
-  this.createPool(this.template);
-}
-
-Neat.prototype = {
+    // Initialise the genomes
+    this.createPool(this.template);
+  }
+  
   /**
    * Create the initial pool of genomes
    */
-  createPool: function (network) {
+  createPool(network) {
     this.population = [];
 
     for (var i = 0; i < this.popsize; i++) {
@@ -72,12 +68,12 @@ Neat.prototype = {
       copy.score = undefined;
       this.population.push(copy);
     }
-  },
+  }
 
   /**
    * Evaluates, selects, breeds and mutates population
    */
-  evolve: async function () {
+  async evolve() {
     // Check if evaluated, sort the population
     if (typeof this.population[this.population.length - 1].score === 'undefined') {
       await this.evaluate();
@@ -119,22 +115,22 @@ Neat.prototype = {
     this.generation++;
 
     return fittest;
-  },
+  }
 
   /**
    * Breeds two parents into an offspring, population MUST be surted
    */
-  getOffspring: function () {
+  getOffspring() {
     var parent1 = this.getParent();
     var parent2 = this.getParent();
 
     return Network.crossOver(parent1, parent2, this.equal);
-  },
+  }
 
   /**
    * Selects a random mutation method for a genome according to the parameters
    */
-  selectMutationMethod: function (genome) {
+  selectMutationMethod(genome) {
     var mutationMethod = this.mutation[Math.floor(Math.random() * this.mutation.length)];
 
     if (mutationMethod === methods.mutation.ADD_NODE && genome.nodes.length >= this.maxNodes) {
@@ -153,12 +149,12 @@ Neat.prototype = {
     }
 
     return mutationMethod;
-  },
+  }
 
   /**
    * Mutates the given (or current) population
    */
-  mutate: function () {
+  mutate() {
     // Elitist genomes should not be included
     for (var i = 0; i < this.population.length; i++) {
       if (Math.random() <= this.mutationRate) {
@@ -168,12 +164,12 @@ Neat.prototype = {
         }
       }
     }
-  },
+  }
 
   /**
    * Evaluates the current population
    */
-  evaluate: async function () {
+  async evaluate() {
     var i;
     if (this.fitnessPopulation) {
       if (this.clear) {
@@ -189,21 +185,21 @@ Neat.prototype = {
         genome.score = await this.fitness(genome);
       }
     }
-  },
+  }
 
   /**
    * Sorts the population by score
    */
-  sort: function () {
+  sort() {
     this.population.sort(function (a, b) {
       return b.score - a.score;
     });
-  },
+  }
 
   /**
    * Returns the fittest genome of the current population
    */
-  getFittest: function () {
+  getFittest() {
     // Check if evaluated
     if (typeof this.population[this.population.length - 1].score === 'undefined') {
       this.evaluate();
@@ -213,12 +209,12 @@ Neat.prototype = {
     }
 
     return this.population[0];
-  },
+  }
 
   /**
    * Returns the average fitness of the current population
    */
-  getAverage: function () {
+  getAverage() {
     if (typeof this.population[this.population.length - 1].score === 'undefined') {
       this.evaluate();
     }
@@ -229,13 +225,13 @@ Neat.prototype = {
     }
 
     return score / this.population.length;
-  },
+  }
 
   /**
    * Gets a genome based on the selection function
    * @return {Network} genome
    */
-  getParent: function () {
+  getParent() {
     var i;
     switch (this.selection) {
       case selection.POWER:
@@ -294,12 +290,12 @@ Neat.prototype = {
           }
         }
     }
-  },
+  }
 
   /**
    * Export the current population to a json object
    */
-  export: function () {
+  export() {
     var json = [];
     for (var i = 0; i < this.population.length; i++) {
       var genome = this.population[i];
@@ -307,12 +303,12 @@ Neat.prototype = {
     }
 
     return json;
-  },
+  }
 
   /**
    * Import population from a json object
    */
-  import: function (json) {
+  import(json) {
     var population = [];
     for (var i = 0; i < json.length; i++) {
       var genome = json[i];
@@ -321,4 +317,6 @@ Neat.prototype = {
     this.population = population;
     this.popsize = population.length;
   }
-};
+}
+
+module.exports = Neat;
