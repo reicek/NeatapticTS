@@ -10,8 +10,8 @@ var config = require('../config');
                                          NODE
 *******************************************************************************/
 
-function Node (type) {
-  this.bias = (type === 'input') ? 0 : Math.random() * 0.2 - 0.1;
+function Node(type) {
+  this.bias = type === 'input' ? 0 : Math.random() * 0.2 - 0.1;
   this.squash = methods.activation.LOGISTIC;
   this.type = type || 'hidden';
 
@@ -47,7 +47,7 @@ Node.prototype = {
   /**
    * Activates the node
    */
-  activate: function (input) {
+  activate: function(input) {
     // Check if an input is given
     if (typeof input !== 'undefined') {
       this.activation = input;
@@ -57,13 +57,16 @@ Node.prototype = {
     this.old = this.state;
 
     // All activation sources coming from the node itself
-    this.state = this.connections.self.gain * this.connections.self.weight * this.state + this.bias;
+    this.state =
+      this.connections.self.gain * this.connections.self.weight * this.state +
+      this.bias;
 
     // Activation sources coming from connections
     var i;
     for (i = 0; i < this.connections.in.length; i++) {
       var connection = this.connections.in[i];
-      this.state += connection.from.activation * connection.weight * connection.gain;
+      this.state +=
+        connection.from.activation * connection.weight * connection.gain;
     }
 
     // Squash the values received
@@ -83,8 +86,10 @@ Node.prototype = {
         influences[index] += conn.weight * conn.from.activation;
       } else {
         nodes.push(node);
-        influences.push(conn.weight * conn.from.activation +
-          (node.connections.self.gater === this ? node.old : 0));
+        influences.push(
+          conn.weight * conn.from.activation +
+            (node.connections.self.gater === this ? node.old : 0)
+        );
       }
 
       // Adjust the gain to this nodes' activation
@@ -95,8 +100,11 @@ Node.prototype = {
       let connection = this.connections.in[i];
 
       // Elegibility trace
-      connection.elegibility = this.connections.self.gain * this.connections.self.weight *
-        connection.elegibility + connection.from.activation * connection.gain;
+      connection.elegibility =
+        this.connections.self.gain *
+          this.connections.self.weight *
+          connection.elegibility +
+        connection.from.activation * connection.gain;
 
       // Extended trace
       for (var j = 0; j < nodes.length; j++) {
@@ -106,12 +114,17 @@ Node.prototype = {
         let index = connection.xtrace.nodes.indexOf(node);
 
         if (index > -1) {
-          connection.xtrace.values[index] = node.connections.self.gain * node.connections.self.weight *
-            connection.xtrace.values[index] + this.derivative * connection.elegibility * influence;
+          connection.xtrace.values[index] =
+            node.connections.self.gain *
+              node.connections.self.weight *
+              connection.xtrace.values[index] +
+            this.derivative * connection.elegibility * influence;
         } else {
           // Does not exist there yet, might be through mutation
           connection.xtrace.nodes.push(node);
-          connection.xtrace.values.push(this.derivative * connection.elegibility * influence);
+          connection.xtrace.values.push(
+            this.derivative * connection.elegibility * influence
+          );
         }
       }
     }
@@ -122,7 +135,7 @@ Node.prototype = {
   /**
    * Activates the node without calculating elegibility traces and such
    */
-  noTraceActivate: function (input) {
+  noTraceActivate: function(input) {
     // Check if an input is given
     if (typeof input !== 'undefined') {
       this.activation = input;
@@ -130,13 +143,16 @@ Node.prototype = {
     }
 
     // All activation sources coming from the node itself
-    this.state = this.connections.self.gain * this.connections.self.weight * this.state + this.bias;
+    this.state =
+      this.connections.self.gain * this.connections.self.weight * this.state +
+      this.bias;
 
     // Activation sources coming from connections
     var i;
     for (i = 0; i < this.connections.in.length; i++) {
       var connection = this.connections.in[i];
-      this.state += connection.from.activation * connection.weight * connection.gain;
+      this.state +=
+        connection.from.activation * connection.weight * connection.gain;
     }
 
     // Squash the values received
@@ -152,7 +168,7 @@ Node.prototype = {
   /**
    * Back-propagate the error, aka learn
    */
-  propagate: function (rate, momentum, update, target) {
+  propagate: function(rate, momentum, update, target) {
     momentum = momentum || 0;
     rate = rate || 0.3;
 
@@ -161,15 +177,18 @@ Node.prototype = {
 
     // Output nodes get their error from the enviroment
     if (this.type === 'output') {
-      this.error.responsibility = this.error.projected = target - this.activation;
-    } else { // the rest of the nodes compute their error responsibilities by backpropagation
+      this.error.responsibility = this.error.projected =
+        target - this.activation;
+    } else {
+      // the rest of the nodes compute their error responsibilities by backpropagation
       // error responsibilities from all the connections projected from this node
       var i;
       for (i = 0; i < this.connections.out.length; i++) {
         let connection = this.connections.out[i];
         let node = connection.to;
         // Eq. 21
-        error += node.error.responsibility * connection.weight * connection.gain;
+        error +=
+          node.error.responsibility * connection.weight * connection.gain;
       }
 
       // Projected error responsibility
@@ -212,7 +231,8 @@ Node.prototype = {
       let deltaWeight = rate * gradient * this.mask;
       connection.totalDeltaWeight += deltaWeight;
       if (update) {
-        connection.totalDeltaWeight += momentum * connection.previousDeltaWeight;
+        connection.totalDeltaWeight +=
+          momentum * connection.previousDeltaWeight;
         connection.weight += connection.totalDeltaWeight;
         connection.previousDeltaWeight = connection.totalDeltaWeight;
         connection.totalDeltaWeight = 0;
@@ -233,9 +253,10 @@ Node.prototype = {
   /**
    * Creates a connection from this node to the given node
    */
-  connect: function (target, weight) {
+  connect: function(target, weight) {
     var connections = [];
-    if (typeof target.bias !== 'undefined') { // must be a node!
+    if (typeof target.bias !== 'undefined') {
+      // must be a node!
       if (target === this) {
         // Turn on the self connection by setting the weight
         if (this.connections.self.weight !== 0) {
@@ -253,7 +274,8 @@ Node.prototype = {
 
         connections.push(connection);
       }
-    } else { // should be a group
+    } else {
+      // should be a group
       for (var i = 0; i < target.nodes.length; i++) {
         let connection = new Connection(this, target.nodes[i], weight);
         target.nodes[i].connections.in.push(connection);
@@ -269,7 +291,7 @@ Node.prototype = {
   /**
    * Disconnects this node from the other node
    */
-  disconnect: function (node, twosided) {
+  disconnect: function(node, twosided) {
     if (this === node) {
       this.connections.self.weight = 0;
       return;
@@ -294,7 +316,7 @@ Node.prototype = {
   /**
    * Make this node gate a connection
    */
-  gate: function (connections) {
+  gate: function(connections) {
     if (!Array.isArray(connections)) {
       connections = [connections];
     }
@@ -310,7 +332,7 @@ Node.prototype = {
   /**
    * Removes the gates from this node from the given connection(s)
    */
-  ungate: function (connections) {
+  ungate: function(connections) {
     if (!Array.isArray(connections)) {
       connections = [connections];
     }
@@ -328,7 +350,7 @@ Node.prototype = {
   /**
    * Clear the context of the node
    */
-  clear: function () {
+  clear: function() {
     for (var i = 0; i < this.connections.in.length; i++) {
       var connection = this.connections.in[i];
 
@@ -351,7 +373,7 @@ Node.prototype = {
   /**
    * Mutates the node with the given method
    */
-  mutate: function (method) {
+  mutate: function(method) {
     if (typeof method === 'undefined') {
       throw new Error('No mutate method given!');
     } else if (!(method.name in methods.mutation)) {
@@ -361,11 +383,18 @@ Node.prototype = {
     switch (method) {
       case methods.mutation.MOD_ACTIVATION:
         // Can't be the same squash
-        var squash = method.allowed[(method.allowed.indexOf(this.squash) + Math.floor(Math.random() * (method.allowed.length - 1)) + 1) % method.allowed.length];
+        var squash =
+          method.allowed[
+            (method.allowed.indexOf(this.squash) +
+              Math.floor(Math.random() * (method.allowed.length - 1)) +
+              1) %
+              method.allowed.length
+          ];
         this.squash = squash;
         break;
       case methods.mutation.MOD_BIAS:
-        var modification = Math.random() * (method.max - method.min) + method.min;
+        var modification =
+          Math.random() * (method.max - method.min) + method.min;
         this.bias += modification;
         break;
     }
@@ -374,7 +403,7 @@ Node.prototype = {
   /**
    * Checks if this node is projecting to the given node
    */
-  isProjectingTo: function (node) {
+  isProjectingTo: function(node) {
     if (node === this && this.connections.self.weight !== 0) return true;
 
     for (var i = 0; i < this.connections.out.length; i++) {
@@ -389,7 +418,7 @@ Node.prototype = {
   /**
    * Checks if the given node is projecting to this node
    */
-  isProjectedBy: function (node) {
+  isProjectedBy: function(node) {
     if (node === this && this.connections.self.weight !== 0) return true;
 
     for (var i = 0; i < this.connections.in.length; i++) {
@@ -405,7 +434,7 @@ Node.prototype = {
   /**
    * Converts the node to a json object
    */
-  toJSON: function () {
+  toJSON: function() {
     var json = {
       bias: this.bias,
       type: this.type,
@@ -420,7 +449,7 @@ Node.prototype = {
 /**
  * Convert a json object to a node
  */
-Node.fromJSON = function (json) {
+Node.fromJSON = function(json) {
   var node = new Node();
   node.bias = json.bias;
   node.type = json.type;

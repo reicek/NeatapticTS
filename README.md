@@ -1,7 +1,8 @@
 ### This library is being updated to TypeScrypt
+
 ##### Original [repository](https://github.com/wagenaartje/neataptic) in now [unmaintained](https://github.com/wagenaartje/neataptic/issues/112)
 
-[![Maintainability](https://api.codeclimate.com/v1/badges/512db783a8514a0753ab/maintainability)](https://codeclimate.com/github/reicek/NeatapticTS/maintainability) [![Test Coverage](https://api.codeclimate.com/v1/badges/512db783a8514a0753ab/test_coverage)](https://codeclimate.com/github/reicek/NeatapticTS/test_coverage) [![Donate](https://img.shields.io/badge/Donate-PayPal-blue.svg)](https://www.paypal.me/CesarAnton)
+[![Maintainability](https://api.codeclimate.com/v1/badges/512db783a8514a0753ab/maintainability)](https://codeclimate.com/github/reicek/NeatapticTS/maintainability) [![Test Coverage](https://api.codeclimate.com/v1/badges/512db783a8514a0753ab/test_coverage)](https://codeclimate.com/github/reicek/NeatapticTS/test_coverage) [![Donate](https://img.shields.io/badge/Donate-PayPal-blue.svg)](https://www.paypal.me/CesarAnton) [![code style: prettier](https://img.shields.io/badge/code_style-prettier-ff69b4.svg?style=flat-square)](https://github.com/prettier/prettier)
 
 <img src="https://cdn-images-1.medium.com/max/800/1*THG2__H9YHxYIt2sulzlTw.png" width="100%"/>
 

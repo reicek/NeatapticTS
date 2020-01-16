@@ -4,7 +4,7 @@ var set = [];
 var cost;
 var F = multi.activations;
 
-process.on('message', function (e) {
+process.on('message', function(e) {
   if (typeof e.set === 'undefined') {
     var A = e.activations;
     var S = e.states;

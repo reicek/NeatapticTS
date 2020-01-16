@@ -16,7 +16,7 @@ var mutation = methods.mutation;
                                  NETWORK
 *******************************************************************************/
 
-function Network (input, output) {
+function Network(input, output) {
   if (typeof input === 'undefined' || typeof output === 'undefined') {
     throw new Error('No input or output size given');
   }
@@ -54,7 +54,7 @@ Network.prototype = {
   /**
    * Activates the network
    */
-  activate: function (input, training) {
+  activate: function(input, training) {
     var output = [];
 
     // Activate nodes chronologically
@@ -76,7 +76,7 @@ Network.prototype = {
   /**
    * Activates the network without calculating elegibility traces and such
    */
-  noTraceActivate: function (input) {
+  noTraceActivate: function(input) {
     var output = [];
 
     // Activate nodes chronologically
@@ -97,9 +97,11 @@ Network.prototype = {
   /**
    * Backpropagate the network
    */
-  propagate: function (rate, momentum, update, target) {
+  propagate: function(rate, momentum, update, target) {
     if (typeof target === 'undefined' || target.length !== this.output) {
-      throw new Error('Output target length should match network output length');
+      throw new Error(
+        'Output target length should match network output length'
+      );
     }
 
     var targetIndex = target.length;
@@ -119,7 +121,7 @@ Network.prototype = {
   /**
    * Clear the context of the network
    */
-  clear: function () {
+  clear: function() {
     for (var i = 0; i < this.nodes.length; i++) {
       this.nodes[i].clear();
     }
@@ -128,7 +130,7 @@ Network.prototype = {
   /**
    * Connects the from node to the to node
    */
-  connect: function (from, to, weight) {
+  connect: function(from, to, weight) {
     var connections = from.connect(to, weight);
 
     for (var i = 0; i < connections.length; i++) {
@@ -146,7 +148,7 @@ Network.prototype = {
   /**
    * Disconnects the from node from the to node
    */
-  disconnect: function (from, to) {
+  disconnect: function(from, to) {
     // Delete the connection in the network's connection array
     var connections = from === to ? this.selfconns : this.connections;
 
@@ -166,7 +168,7 @@ Network.prototype = {
   /**
    * Gate a connection with a node
    */
-  gate: function (node, connection) {
+  gate: function(node, connection) {
     if (this.nodes.indexOf(node) === -1) {
       throw new Error('This node is not part of the network!');
     } else if (connection.gater != null) {
@@ -180,7 +182,7 @@ Network.prototype = {
   /**
    *  Remove the gate of a connection
    */
-  ungate: function (connection) {
+  ungate: function(connection) {
     var index = this.gates.indexOf(connection);
     if (index === -1) {
       throw new Error('This connection is not gated!');
@@ -193,7 +195,7 @@ Network.prototype = {
   /**
    *  Removes a node from the network
    */
-  remove: function (node) {
+  remove: function(node) {
     var index = this.nodes.indexOf(node);
 
     if (index === -1) {
@@ -210,7 +212,11 @@ Network.prototype = {
     var inputs = [];
     for (var i = node.connections.in.length - 1; i >= 0; i--) {
       let connection = node.connections.in[i];
-      if (mutation.SUB_NODE.keep_gates && connection.gater !== null && connection.gater !== node) {
+      if (
+        mutation.SUB_NODE.keep_gates &&
+        connection.gater !== null &&
+        connection.gater !== node
+      ) {
         gaters.push(connection.gater);
       }
       inputs.push(connection.from);
@@ -221,7 +227,11 @@ Network.prototype = {
     var outputs = [];
     for (i = node.connections.out.length - 1; i >= 0; i--) {
       let connection = node.connections.out[i];
-      if (mutation.SUB_NODE.keep_gates && connection.gater !== null && connection.gater !== node) {
+      if (
+        mutation.SUB_NODE.keep_gates &&
+        connection.gater !== null &&
+        connection.gater !== node
+      ) {
         gaters.push(connection.gater);
       }
       outputs.push(connection.to);
@@ -268,7 +278,7 @@ Network.prototype = {
   /**
    * Mutates the network with the given method
    */
-  mutate: function (method) {
+  mutate: function(method) {
     if (typeof method === 'undefined') {
       throw new Error('No (correct) mutate method given!');
     }
@@ -277,7 +287,9 @@ Network.prototype = {
     switch (method) {
       case mutation.ADD_NODE:
         // Look for an existing connection and place a node in between
-        var connection = this.connections[Math.floor(Math.random() * this.connections.length)];
+        var connection = this.connections[
+          Math.floor(Math.random() * this.connections.length)
+        ];
         var gater = connection.gater;
         this.disconnect(connection.from, connection.to);
 
@@ -309,7 +321,10 @@ Network.prototype = {
         }
 
         // Select a node which isn't an input or output node
-        var index = Math.floor(Math.random() * (this.nodes.length - this.output - this.input) + this.input);
+        var index = Math.floor(
+          Math.random() * (this.nodes.length - this.output - this.input) +
+            this.input
+        );
         this.remove(this.nodes[index]);
         break;
       case mutation.ADD_CONN:
@@ -338,7 +353,11 @@ Network.prototype = {
         for (i = 0; i < this.connections.length; i++) {
           let conn = this.connections[i];
           // Check if it is not disabling a node
-          if (conn.from.connections.out.length > 1 && conn.to.connections.in.length > 1 && this.nodes.indexOf(conn.to) > this.nodes.indexOf(conn.from)) {
+          if (
+            conn.from.connections.out.length > 1 &&
+            conn.to.connections.in.length > 1 &&
+            this.nodes.indexOf(conn.to) > this.nodes.indexOf(conn.from)
+          ) {
             possible.push(conn);
           }
         }
@@ -354,24 +373,38 @@ Network.prototype = {
       case mutation.MOD_WEIGHT:
         var allconnections = this.connections.concat(this.selfconns);
 
-        var connection = allconnections[Math.floor(Math.random() * allconnections.length)];
-        var modification = Math.random() * (method.max - method.min) + method.min;
+        var connection =
+          allconnections[Math.floor(Math.random() * allconnections.length)];
+        var modification =
+          Math.random() * (method.max - method.min) + method.min;
         connection.weight += modification;
         break;
       case mutation.MOD_BIAS:
         // Has no effect on input node, so they are excluded
-        var index = Math.floor(Math.random() * (this.nodes.length - this.input) + this.input);
+        var index = Math.floor(
+          Math.random() * (this.nodes.length - this.input) + this.input
+        );
         var node = this.nodes[index];
         node.mutate(method);
         break;
       case mutation.MOD_ACTIVATION:
         // Has no effect on input node, so they are excluded
-        if (!method.mutateOutput && this.input + this.output === this.nodes.length) {
-          if (config.warnings) console.warn('No nodes that allow mutation of activation function');
+        if (
+          !method.mutateOutput &&
+          this.input + this.output === this.nodes.length
+        ) {
+          if (config.warnings)
+            console.warn('No nodes that allow mutation of activation function');
           break;
         }
 
-        var index = Math.floor(Math.random() * (this.nodes.length - (method.mutateOutput ? 0 : this.output) - this.input) + this.input);
+        var index = Math.floor(
+          Math.random() *
+            (this.nodes.length -
+              (method.mutateOutput ? 0 : this.output) -
+              this.input) +
+            this.input
+        );
         var node = this.nodes[index];
 
         node.mutate(method);
@@ -399,10 +432,13 @@ Network.prototype = {
         break;
       case mutation.SUB_SELF_CONN:
         if (this.selfconns.length === 0) {
-          if (config.warnings) console.warn('No more self-connections to remove!');
+          if (config.warnings)
+            console.warn('No more self-connections to remove!');
           break;
         }
-        var conn = this.selfconns[Math.floor(Math.random() * this.selfconns.length)];
+        var conn = this.selfconns[
+          Math.floor(Math.random() * this.selfconns.length)
+        ];
         this.disconnect(conn.from, conn.to);
         break;
       case mutation.ADD_GATE:
@@ -423,7 +459,9 @@ Network.prototype = {
         }
 
         // Select a random gater node and connection, can't be gated by input
-        var index = Math.floor(Math.random() * (this.nodes.length - this.input) + this.input);
+        var index = Math.floor(
+          Math.random() * (this.nodes.length - this.input) + this.input
+        );
         var node = this.nodes[index];
         var conn = possible[Math.floor(Math.random() * possible.length)];
 
@@ -468,7 +506,11 @@ Network.prototype = {
         for (i = 0; i < this.connections.length; i++) {
           let conn = this.connections[i];
           // Check if it is not disabling a node
-          if (conn.from.connections.out.length > 1 && conn.to.connections.in.length > 1 && this.nodes.indexOf(conn.from) > this.nodes.indexOf(conn.to)) {
+          if (
+            conn.from.connections.out.length > 1 &&
+            conn.to.connections.in.length > 1 &&
+            this.nodes.indexOf(conn.from) > this.nodes.indexOf(conn.to)
+          ) {
             possible.push(conn);
           }
         }
@@ -483,15 +525,33 @@ Network.prototype = {
         break;
       case mutation.SWAP_NODES:
         // Has no effect on input node, so they are excluded
-        if ((method.mutateOutput && this.nodes.length - this.input < 2) ||
-          (!method.mutateOutput && this.nodes.length - this.input - this.output < 2)) {
-          if (config.warnings) console.warn('No nodes that allow swapping of bias and activation function');
+        if (
+          (method.mutateOutput && this.nodes.length - this.input < 2) ||
+          (!method.mutateOutput &&
+            this.nodes.length - this.input - this.output < 2)
+        ) {
+          if (config.warnings)
+            console.warn(
+              'No nodes that allow swapping of bias and activation function'
+            );
           break;
         }
 
-        var index = Math.floor(Math.random() * (this.nodes.length - (method.mutateOutput ? 0 : this.output) - this.input) + this.input);
+        var index = Math.floor(
+          Math.random() *
+            (this.nodes.length -
+              (method.mutateOutput ? 0 : this.output) -
+              this.input) +
+            this.input
+        );
         var node1 = this.nodes[index];
-        index = Math.floor(Math.random() * (this.nodes.length - (method.mutateOutput ? 0 : this.output) - this.input) + this.input);
+        index = Math.floor(
+          Math.random() *
+            (this.nodes.length -
+              (method.mutateOutput ? 0 : this.output) -
+              this.input) +
+            this.input
+        );
         var node2 = this.nodes[index];
 
         var biasTemp = node1.bias;
@@ -508,19 +568,28 @@ Network.prototype = {
   /**
    * Train the given set to this network
    */
-  train: function (set, options) {
-    if (set[0].input.length !== this.input || set[0].output.length !== this.output) {
-      throw new Error('Dataset input/output size should be same as network input/output size!');
+  train: function(set, options) {
+    if (
+      set[0].input.length !== this.input ||
+      set[0].output.length !== this.output
+    ) {
+      throw new Error(
+        'Dataset input/output size should be same as network input/output size!'
+      );
     }
 
     options = options || {};
 
     // Warning messages
     if (typeof options.rate === 'undefined') {
-      if (config.warnings) console.warn('Using default learning rate, please define a rate!');
+      if (config.warnings)
+        console.warn('Using default learning rate, please define a rate!');
     }
     if (typeof options.iterations === 'undefined') {
-      if (config.warnings) console.warn('No target iterations given, running until error is reached!');
+      if (config.warnings)
+        console.warn(
+          'No target iterations given, running until error is reached!'
+        );
     }
 
     // Read the options
@@ -536,8 +605,13 @@ Network.prototype = {
 
     if (batchSize > set.length) {
       throw new Error('Batch size must be smaller or equal to dataset length!');
-    } else if (typeof options.iterations === 'undefined' && typeof options.error === 'undefined') {
-      throw new Error('At least one of the following options must be specified: error, iterations');
+    } else if (
+      typeof options.iterations === 'undefined' &&
+      typeof options.error === 'undefined'
+    ) {
+      throw new Error(
+        'At least one of the following options must be specified: error, iterations'
+      );
     } else if (typeof options.error === 'undefined') {
       targetError = -1; // run until iterations
     } else if (typeof options.iterations === 'undefined') {
@@ -548,7 +622,9 @@ Network.prototype = {
     this.dropout = dropout;
 
     if (options.crossValidate) {
-      let numTrain = Math.ceil((1 - options.crossValidate.testSize) * set.length);
+      let numTrain = Math.ceil(
+        (1 - options.crossValidate.testSize) * set.length
+      );
       var trainSet = set.slice(0, numTrain);
       var testSet = set.slice(numTrain);
     }
@@ -559,8 +635,12 @@ Network.prototype = {
     var error = 1;
 
     var i, j, x;
-    while (error > targetError && (options.iterations === 0 || iteration < options.iterations)) {
-      if (options.crossValidate && error <= options.crossValidate.testError) break;
+    while (
+      error > targetError &&
+      (options.iterations === 0 || iteration < options.iterations)
+    ) {
+      if (options.crossValidate && error <= options.crossValidate.testError)
+        break;
 
       iteration++;
 
@@ -580,11 +660,25 @@ Network.prototype = {
 
       // Checks for options such as scheduled logs and shuffling
       if (options.shuffle) {
-        for (j, x, i = set.length; i; j = Math.floor(Math.random() * i), x = set[--i], set[i] = set[j], set[j] = x);
+        for (
+          j, x, i = set.length;
+          i;
+          j = Math.floor(Math.random() * i),
+            x = set[--i],
+            set[i] = set[j],
+            set[j] = x
+        );
       }
 
       if (options.log && iteration % options.log === 0) {
-        console.log('iteration', iteration, 'error', error, 'rate', currentRate);
+        console.log(
+          'iteration',
+          iteration,
+          'error',
+          error,
+          'rate',
+          currentRate
+        );
       }
 
       if (options.schedule && iteration % options.schedule.iterations === 0) {
@@ -596,7 +690,10 @@ Network.prototype = {
 
     if (dropout) {
       for (i = 0; i < this.nodes.length; i++) {
-        if (this.nodes[i].type === 'hidden' || this.nodes[i].type === 'constant') {
+        if (
+          this.nodes[i].type === 'hidden' ||
+          this.nodes[i].type === 'constant'
+        ) {
           this.nodes[i].mask = 1 - this.dropout;
         }
       }
@@ -613,13 +710,13 @@ Network.prototype = {
    * Performs one training epoch and returns the error
    * private function used in this.train
    */
-  _trainSet: function (set, batchSize, currentRate, momentum, costFunction) {
+  _trainSet: function(set, batchSize, currentRate, momentum, costFunction) {
     var errorSum = 0;
     for (var i = 0; i < set.length; i++) {
       var input = set[i].input;
       var target = set[i].output;
 
-      var update = !!((i + 1) % batchSize === 0 || (i + 1) === set.length);
+      var update = !!((i + 1) % batchSize === 0 || i + 1 === set.length);
 
       var output = this.activate(input, true);
       this.propagate(currentRate, momentum, update, target);
@@ -632,12 +729,15 @@ Network.prototype = {
   /**
    * Tests a set and returns the error and elapsed time
    */
-  test: function (set, cost = methods.cost.MSE) {
+  test: function(set, cost = methods.cost.MSE) {
     // Check if dropout is enabled, set correct mask
     var i;
     if (this.dropout) {
       for (i = 0; i < this.nodes.length; i++) {
-        if (this.nodes[i].type === 'hidden' || this.nodes[i].type === 'constant') {
+        if (
+          this.nodes[i].type === 'hidden' ||
+          this.nodes[i].type === 'constant'
+        ) {
           this.nodes[i].mask = 1 - this.dropout;
         }
       }
@@ -666,22 +766,25 @@ Network.prototype = {
   /**
    * Creates a json that can be used to create a graph with d3 and webcola
    */
-  graph: function (width, height) {
+  graph: function(width, height) {
     var input = 0;
     var output = 0;
 
     var json = {
       nodes: [],
       links: [],
-      constraints: [{
-        type: 'alignment',
-        axis: 'x',
-        offsets: []
-      }, {
-        type: 'alignment',
-        axis: 'y',
-        offsets: []
-      }]
+      constraints: [
+        {
+          type: 'alignment',
+          axis: 'x',
+          offsets: []
+        },
+        {
+          type: 'alignment',
+          axis: 'y',
+          offsets: []
+        }
+      ]
     };
 
     var i;
@@ -697,7 +800,7 @@ Network.prototype = {
         } else {
           json.constraints[0].offsets.push({
             node: i,
-            offset: 0.8 * width / (this.input - 1) * input++
+            offset: ((0.8 * width) / (this.input - 1)) * input++
           });
         }
         json.constraints[1].offsets.push({
@@ -713,7 +816,7 @@ Network.prototype = {
         } else {
           json.constraints[0].offsets.push({
             node: i,
-            offset: 0.8 * width / (this.output - 1) * output++
+            offset: ((0.8 * width) / (this.output - 1)) * output++
           });
         }
         json.constraints[1].offsets.push({
@@ -724,7 +827,8 @@ Network.prototype = {
 
       json.nodes.push({
         id: i,
-        name: node.type === 'hidden' ? node.squash.name : node.type.toUpperCase(),
+        name:
+          node.type === 'hidden' ? node.squash.name : node.type.toUpperCase(),
         activation: node.activation,
         bias: node.bias
       });
@@ -750,12 +854,12 @@ Network.prototype = {
         json.links.push({
           source: this.nodes.indexOf(connection.from),
           target: index,
-          weight: 1 / 2 * connection.weight
+          weight: (1 / 2) * connection.weight
         });
         json.links.push({
           source: index,
           target: this.nodes.indexOf(connection.to),
-          weight: 1 / 2 * connection.weight
+          weight: (1 / 2) * connection.weight
         });
         json.links.push({
           source: this.nodes.indexOf(connection.gater),
@@ -772,7 +876,7 @@ Network.prototype = {
   /**
    * Convert the network to a json object
    */
-  toJSON: function () {
+  toJSON: function() {
     var json = {
       nodes: [],
       connections: [],
@@ -798,7 +902,10 @@ Network.prototype = {
         tojson.from = i;
         tojson.to = i;
 
-        tojson.gater = node.connections.self.gater != null ? node.connections.self.gater.index : null;
+        tojson.gater =
+          node.connections.self.gater != null
+            ? node.connections.self.gater.index
+            : null;
         json.connections.push(tojson);
       }
     }
@@ -820,7 +927,7 @@ Network.prototype = {
   /**
    * Sets the value of a property for every node in this network
    */
-  set: function (values) {
+  set: function(values) {
     for (var i = 0; i < this.nodes.length; i++) {
       this.nodes[i].bias = values.bias || this.nodes[i].bias;
       this.nodes[i].squash = values.squash || this.nodes[i].squash;
@@ -830,31 +937,45 @@ Network.prototype = {
   /**
    * Evolves the network to reach a lower error on a dataset
    */
-  evolve: async function (set, options) {
-    if (set[0].input.length !== this.input || set[0].output.length !== this.output) {
-      throw new Error('Dataset input/output size should be same as network input/output size!');
+  evolve: async function(set, options) {
+    if (
+      set[0].input.length !== this.input ||
+      set[0].output.length !== this.output
+    ) {
+      throw new Error(
+        'Dataset input/output size should be same as network input/output size!'
+      );
     }
 
     // Read the options
     options = options || {};
-    var targetError = typeof options.error !== 'undefined' ? options.error : 0.05;
-    var growth = typeof options.growth !== 'undefined' ? options.growth : 0.0001;
+    var targetError =
+      typeof options.error !== 'undefined' ? options.error : 0.05;
+    var growth =
+      typeof options.growth !== 'undefined' ? options.growth : 0.0001;
     var cost = options.cost || methods.cost.MSE;
     var amount = options.amount || 1;
 
     var threads = options.threads;
     if (typeof threads === 'undefined') {
-      if (typeof window === 'undefined') { // Node.js
+      if (typeof window === 'undefined') {
+        // Node.js
         threads = require('os').cpus().length;
-      } else { // Browser
+      } else {
+        // Browser
         threads = navigator.hardwareConcurrency;
       }
     }
 
     var start = Date.now();
 
-    if (typeof options.iterations === 'undefined' && typeof options.error === 'undefined') {
-      throw new Error('At least one of the following options must be specified: error, iterations');
+    if (
+      typeof options.iterations === 'undefined' &&
+      typeof options.error === 'undefined'
+    ) {
+      throw new Error(
+        'At least one of the following options must be specified: error, iterations'
+      );
     } else if (typeof options.error === 'undefined') {
       targetError = -1; // run until iterations
     } else if (typeof options.iterations === 'undefined') {
@@ -864,13 +985,19 @@ Network.prototype = {
     var fitnessFunction;
     if (threads === 1) {
       // Create the fitness function
-      fitnessFunction = function (genome) {
+      fitnessFunction = function(genome) {
         var score = 0;
         for (var i = 0; i < amount; i++) {
           score -= genome.test(set, cost).error;
         }
 
-        score -= (genome.nodes.length - genome.input - genome.output + genome.connections.length + genome.gates.length) * growth;
+        score -=
+          (genome.nodes.length -
+            genome.input -
+            genome.output +
+            genome.connections.length +
+            genome.gates.length) *
+          growth;
         score = isNaN(score) ? -Infinity : score; // this can cause problems with fitness proportionate selection
 
         return score / amount;
@@ -891,14 +1018,14 @@ Network.prototype = {
         }
       }
 
-      fitnessFunction = function (population) {
+      fitnessFunction = function(population) {
         return new Promise((resolve, reject) => {
           // Create a queue
           var queue = population.slice();
           var done = 0;
 
           // Start worker function
-          var startWorker = function (worker) {
+          var startWorker = function(worker) {
             if (!queue.length) {
               if (++done === threads) resolve();
               return;
@@ -906,11 +1033,18 @@ Network.prototype = {
 
             var genome = queue.shift();
 
-            worker.evaluate(genome).then(function (result) {
+            worker.evaluate(genome).then(function(result) {
               genome.score = -result;
-              genome.score -= (genome.nodes.length - genome.input - genome.output +
-                genome.connections.length + genome.gates.length) * growth;
-              genome.score = isNaN(parseFloat(result)) ? -Infinity : genome.score;
+              genome.score -=
+                (genome.nodes.length -
+                  genome.input -
+                  genome.output +
+                  genome.connections.length +
+                  genome.gates.length) *
+                growth;
+              genome.score = isNaN(parseFloat(result))
+                ? -Infinity
+                : genome.score;
               startWorker(worker);
             });
           };
@@ -932,10 +1066,20 @@ Network.prototype = {
     var bestFitness = -Infinity;
     var bestGenome;
 
-    while (error < -targetError && (options.iterations === 0 || neat.generation < options.iterations)) {
+    while (
+      error < -targetError &&
+      (options.iterations === 0 || neat.generation < options.iterations)
+    ) {
       let fittest = await neat.evolve();
       let fitness = fittest.score;
-      error = fitness + (fittest.nodes.length - fittest.input - fittest.output + fittest.connections.length + fittest.gates.length) * growth;
+      error =
+        fitness +
+        (fittest.nodes.length -
+          fittest.input -
+          fittest.output +
+          fittest.connections.length +
+          fittest.gates.length) *
+          growth;
 
       if (fitness > bestFitness) {
         bestFitness = fitness;
@@ -943,11 +1087,25 @@ Network.prototype = {
       }
 
       if (options.log && neat.generation % options.log === 0) {
-        console.log('iteration', neat.generation, 'fitness', fitness, 'error', -error);
+        console.log(
+          'iteration',
+          neat.generation,
+          'fitness',
+          fitness,
+          'error',
+          -error
+        );
       }
 
-      if (options.schedule && neat.generation % options.schedule.iterations === 0) {
-        options.schedule.function({ fitness: fitness, error: -error, iteration: neat.generation });
+      if (
+        options.schedule &&
+        neat.generation % options.schedule.iterations === 0
+      ) {
+        options.schedule.function({
+          fitness: fitness,
+          error: -error,
+          iteration: neat.generation
+        });
       }
     }
 
@@ -975,7 +1133,7 @@ Network.prototype = {
    * Creates a standalone function of the network which can be run without the
    * need of a library
    */
-  standalone: function () {
+  standalone: function() {
     var present = [];
     var activations = [];
     var states = [];
@@ -1033,7 +1191,9 @@ Network.prototype = {
       }
 
       var line1 = `S[${i}] = ${incoming.join(' + ')} + ${node.bias};`;
-      var line2 = `A[${i}] = F[${functionIndex}](S[${i}])${!node.mask ? ' * ' + node.mask : ''};`;
+      var line2 = `A[${i}] = F[${functionIndex}](S[${i}])${
+        !node.mask ? ' * ' + node.mask : ''
+      };`;
       lines.push(line1);
       lines.push(line2);
     }
@@ -1058,14 +1218,26 @@ Network.prototype = {
   /**
    * Serialize to send to workers efficiently
    */
-  serialize: function () {
+  serialize: function() {
     var activations = [];
     var states = [];
     var conns = [];
     var squashes = [
-      'LOGISTIC', 'TANH', 'IDENTITY', 'STEP', 'RELU', 'SOFTSIGN', 'SINUSOID',
-      'GAUSSIAN', 'BENT_IDENTITY', 'BIPOLAR', 'BIPOLAR_SIGMOID', 'HARD_TANH',
-      'ABSOLUTE', 'INVERSE', 'SELU'
+      'LOGISTIC',
+      'TANH',
+      'IDENTITY',
+      'STEP',
+      'RELU',
+      'SOFTSIGN',
+      'SINUSOID',
+      'GAUSSIAN',
+      'BENT_IDENTITY',
+      'BIPOLAR',
+      'BIPOLAR_SIGMOID',
+      'HARD_TANH',
+      'ABSOLUTE',
+      'INVERSE',
+      'SELU'
     ];
 
     conns.push(this.input);
@@ -1086,7 +1258,11 @@ Network.prototype = {
       conns.push(squashes.indexOf(node.squash.name));
 
       conns.push(node.connections.self.weight);
-      conns.push(node.connections.self.gater == null ? -1 : node.connections.self.gater.index);
+      conns.push(
+        node.connections.self.gater == null
+          ? -1
+          : node.connections.self.gater.index
+      );
 
       for (var j = 0; j < node.connections.in.length; j++) {
         let conn = node.connections.in[j];
@@ -1106,7 +1282,7 @@ Network.prototype = {
 /**
  * Convert a json object to a network
  */
-Network.fromJSON = function (json) {
+Network.fromJSON = function(json) {
   var network = new Network(json.input, json.output);
   network.dropout = json.dropout;
   network.nodes = [];
@@ -1120,7 +1296,10 @@ Network.fromJSON = function (json) {
   for (i = 0; i < json.connections.length; i++) {
     var conn = json.connections[i];
 
-    var connection = network.connect(network.nodes[conn.from], network.nodes[conn.to])[0];
+    var connection = network.connect(
+      network.nodes[conn.from],
+      network.nodes[conn.to]
+    )[0];
     connection.weight = conn.weight;
 
     if (conn.gater != null) {
@@ -1134,14 +1313,16 @@ Network.fromJSON = function (json) {
 /**
  * Merge two networks into one
  */
-Network.merge = function (network1, network2) {
+Network.merge = function(network1, network2) {
   // Create a copy of the networks
   network1 = Network.fromJSON(network1.toJSON());
   network2 = Network.fromJSON(network2.toJSON());
 
   // Check if output and input size are the same
   if (network1.output !== network2.input) {
-    throw new Error('Output size of network1 should be the same as the input size of network2!');
+    throw new Error(
+      'Output size of network1 should be the same as the input size of network2!'
+    );
   }
 
   // Redirect all connections from network2 input from network1 output
@@ -1162,7 +1343,11 @@ Network.merge = function (network1, network2) {
   }
 
   // Change the node type of network1's output nodes (now hidden)
-  for (i = network1.nodes.length - network1.output; i < network1.nodes.length; i++) {
+  for (
+    i = network1.nodes.length - network1.output;
+    i < network1.nodes.length;
+    i++
+  ) {
     network1.nodes[i].type = 'hidden';
   }
 
@@ -1176,8 +1361,11 @@ Network.merge = function (network1, network2) {
 /**
  * Create an offspring from two parent networks
  */
-Network.crossOver = function (network1, network2, equal) {
-  if (network1.input !== network2.input || network1.output !== network2.output) {
+Network.crossOver = function(network1, network2, equal) {
+  if (
+    network1.input !== network2.input ||
+    network1.output !== network2.output
+  ) {
     throw new Error("Networks don't have the same input/output size!");
   }
 

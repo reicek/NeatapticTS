@@ -10,12 +10,16 @@
     "build:docs": "cd mkdocs && mkdocs build --site-dir ../docs && cd ../",
     "build": "npm run build:dist && npm run build:docs",
     "deploy": "npm run build && npm run test:dist && npm publish",
-    "test:travis": "npm run build:dist && npm run test:dist"
+    "test:travis": "npm run build:dist && npm run test:dist",
+    "prettier:watch": "onchange '**/*.js' -- prettier --write {{changed}}"
   },
   "devDependencies": {
     "chai": "^4.1.2",
     "copy-webpack-plugin": "^4.0.1",
+    "husky": "^4.0.10",
     "mocha": "^3.5.3",
+    "prettier": "1.19.1",
+    "pretty-quick": "^2.0.1",
     "semistandard": "*",
     "webpack": "^3.6.0"
   },
@@ -42,5 +46,13 @@
   "homepage": "http://wagenaartje.github.io/neataptic/",
   "engines": {
     "node": ">=7.6"
+  },
+  "prettier": {
+    "singleQuote": true
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "pretty-quick --staged"
+    }
   }
 }

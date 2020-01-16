@@ -11,7 +11,7 @@ var Node = require('./node');
                                          Group
 *******************************************************************************/
 
-function Group (size) {
+function Group(size) {
   this.nodes = [];
   this.connections = {
     in: [],
@@ -28,11 +28,13 @@ Group.prototype = {
   /**
    * Activates all the nodes in the group
    */
-  activate: function (value) {
+  activate: function(value) {
     var values = [];
 
     if (typeof value !== 'undefined' && value.length !== this.nodes.length) {
-      throw new Error('Array with values should be same as the amount of nodes!');
+      throw new Error(
+        'Array with values should be same as the amount of nodes!'
+      );
     }
 
     for (var i = 0; i < this.nodes.length; i++) {
@@ -52,9 +54,11 @@ Group.prototype = {
   /**
    * Propagates all the node in the group
    */
-  propagate: function (rate, momentum, target) {
+  propagate: function(rate, momentum, target) {
     if (typeof target !== 'undefined' && target.length !== this.nodes.length) {
-      throw new Error('Array with values should be same as the amount of nodes!');
+      throw new Error(
+        'Array with values should be same as the amount of nodes!'
+      );
     }
 
     for (var i = this.nodes.length - 1; i >= 0; i--) {
@@ -69,23 +73,32 @@ Group.prototype = {
   /**
    * Connects the nodes in this group to nodes in another group or just a node
    */
-  connect: function (target, method, weight) {
+  connect: function(target, method, weight) {
     var connections = [];
     var i, j;
     if (target instanceof Group) {
       if (typeof method === 'undefined') {
         if (this !== target) {
-          if (config.warnings) console.warn('No group connection specified, using ALL_TO_ALL');
+          if (config.warnings)
+            console.warn('No group connection specified, using ALL_TO_ALL');
           method = methods.connection.ALL_TO_ALL;
         } else {
-          if (config.warnings) console.warn('No group connection specified, using ONE_TO_ONE');
+          if (config.warnings)
+            console.warn('No group connection specified, using ONE_TO_ONE');
           method = methods.connection.ONE_TO_ONE;
         }
       }
-      if (method === methods.connection.ALL_TO_ALL || method === methods.connection.ALL_TO_ELSE) {
+      if (
+        method === methods.connection.ALL_TO_ALL ||
+        method === methods.connection.ALL_TO_ELSE
+      ) {
         for (i = 0; i < this.nodes.length; i++) {
           for (j = 0; j < target.nodes.length; j++) {
-            if (method === methods.connection.ALL_TO_ELSE && this.nodes[i] === target.nodes[j]) continue;
+            if (
+              method === methods.connection.ALL_TO_ELSE &&
+              this.nodes[i] === target.nodes[j]
+            )
+              continue;
             let connection = this.nodes[i].connect(target.nodes[j], weight);
             this.connections.out.push(connection[0]);
             target.connections.in.push(connection[0]);
@@ -119,7 +132,7 @@ Group.prototype = {
   /**
    * Make nodes from this group gate the given connection(s)
    */
-  gate: function (connections, method) {
+  gate: function(connections, method) {
     if (typeof method === 'undefined') {
       throw new Error('Please specify Gating.INPUT, Gating.OUTPUT');
     }
@@ -180,7 +193,7 @@ Group.prototype = {
   /**
    * Sets the value of a property for every node
    */
-  set: function (values) {
+  set: function(values) {
     for (var i = 0; i < this.nodes.length; i++) {
       if (typeof values.bias !== 'undefined') {
         this.nodes[i].bias = values.bias;
@@ -194,7 +207,7 @@ Group.prototype = {
   /**
    * Disconnects all nodes from this group from another given group/node
    */
-  disconnect: function (target, twosided) {
+  disconnect: function(target, twosided) {
     twosided = twosided || false;
 
     // In the future, disconnect will return a connection so indexOf can be used
@@ -255,7 +268,7 @@ Group.prototype = {
   /**
    * Clear the context of this group
    */
-  clear: function () {
+  clear: function() {
     for (var i = 0; i < this.nodes.length; i++) {
       this.nodes[i].clear();
     }

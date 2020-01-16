@@ -10,25 +10,24 @@ var Node = require('./node');
                                          Group
 *******************************************************************************/
 
-function Layer () {
+function Layer() {
   this.output = null;
 
   this.nodes = [];
-  this.connections = { in: [],
-    out: [],
-    self: []
-  };
+  this.connections = { in: [], out: [], self: [] };
 }
 
 Layer.prototype = {
   /**
    * Activates all the nodes in the group
    */
-  activate: function (value) {
+  activate: function(value) {
     var values = [];
 
     if (typeof value !== 'undefined' && value.length !== this.nodes.length) {
-      throw new Error('Array with values should be same as the amount of nodes!');
+      throw new Error(
+        'Array with values should be same as the amount of nodes!'
+      );
     }
 
     for (var i = 0; i < this.nodes.length; i++) {
@@ -48,9 +47,11 @@ Layer.prototype = {
   /**
    * Propagates all the node in the group
    */
-  propagate: function (rate, momentum, target) {
+  propagate: function(rate, momentum, target) {
     if (typeof target !== 'undefined' && target.length !== this.nodes.length) {
-      throw new Error('Array with values should be same as the amount of nodes!');
+      throw new Error(
+        'Array with values should be same as the amount of nodes!'
+      );
     }
 
     for (var i = this.nodes.length - 1; i >= 0; i--) {
@@ -65,7 +66,7 @@ Layer.prototype = {
   /**
    * Connects the nodes in this group to nodes in another group or just a node
    */
-  connect: function (target, method, weight) {
+  connect: function(target, method, weight) {
     var connections;
     if (target instanceof Group || target instanceof Node) {
       connections = this.output.connect(target, method, weight);
@@ -79,14 +80,14 @@ Layer.prototype = {
   /**
    * Make nodes from this group gate the given connection(s)
    */
-  gate: function (connections, method) {
+  gate: function(connections, method) {
     this.output.gate(connections, method);
   },
 
   /**
    * Sets the value of a property for every node
    */
-  set: function (values) {
+  set: function(values) {
     for (var i = 0; i < this.nodes.length; i++) {
       var node = this.nodes[i];
 
@@ -106,7 +107,7 @@ Layer.prototype = {
   /**
    * Disconnects all nodes from this group from another given group/node
    */
-  disconnect: function (target, twosided) {
+  disconnect: function(target, twosided) {
     twosided = twosided || false;
 
     // In the future, disconnect will return a connection so indexOf can be used
@@ -167,14 +168,14 @@ Layer.prototype = {
   /**
    * Clear the context of this group
    */
-  clear: function () {
+  clear: function() {
     for (var i = 0; i < this.nodes.length; i++) {
       this.nodes[i].clear();
     }
   }
 };
 
-Layer.Dense = function (size) {
+Layer.Dense = function(size) {
   // Create the layer
   var layer = new Layer();
 
@@ -184,7 +185,7 @@ Layer.Dense = function (size) {
   layer.nodes.push(block);
   layer.output = block;
 
-  layer.input = function (from, method, weight) {
+  layer.input = function(from, method, weight) {
     if (from instanceof Layer) from = from.output;
     method = method || methods.connection.ALL_TO_ALL;
     return from.connect(block, method, weight);
@@ -193,7 +194,7 @@ Layer.Dense = function (size) {
   return layer;
 };
 
-Layer.LSTM = function (size) {
+Layer.LSTM = function(size) {
   // Create the layer
   var layer = new Layer();
 
@@ -231,7 +232,7 @@ Layer.LSTM = function (size) {
   // Define output
   layer.output = outputBlock;
 
-  layer.input = function (from, method, weight) {
+  layer.input = function(from, method, weight) {
     if (from instanceof Layer) from = from.output;
     method = method || methods.connection.ALL_TO_ALL;
     var connections = [];
@@ -251,7 +252,7 @@ Layer.LSTM = function (size) {
   return layer;
 };
 
-Layer.GRU = function (size) {
+Layer.GRU = function(size) {
   // Create the layer
   var layer = new Layer();
 
@@ -307,11 +308,18 @@ Layer.GRU = function (size) {
   output.connect(previousOutput, methods.connection.ONE_TO_ONE, 1);
 
   // Add to nodes array
-  layer.nodes = [updateGate, inverseUpdateGate, resetGate, memoryCell, output, previousOutput];
+  layer.nodes = [
+    updateGate,
+    inverseUpdateGate,
+    resetGate,
+    memoryCell,
+    output,
+    previousOutput
+  ];
 
   layer.output = output;
 
-  layer.input = function (from, method, weight) {
+  layer.input = function(from, method, weight) {
     if (from instanceof Layer) from = from.output;
     method = method || methods.connection.ALL_TO_ALL;
     var connections = [];
@@ -326,7 +334,7 @@ Layer.GRU = function (size) {
   return layer;
 };
 
-Layer.Memory = function (size, memory) {
+Layer.Memory = function(size, memory) {
   // Create the layer
   var layer = new Layer();
   // Because the output can only be one group, we have to put the nodes all in óne group
@@ -363,15 +371,21 @@ Layer.Memory = function (size, memory) {
   }
   layer.output = outputGroup;
 
-  layer.input = function (from, method, weight) {
+  layer.input = function(from, method, weight) {
     if (from instanceof Layer) from = from.output;
     method = method || methods.connection.ALL_TO_ALL;
 
-    if (from.nodes.length !== layer.nodes[layer.nodes.length - 1].nodes.length) {
+    if (
+      from.nodes.length !== layer.nodes[layer.nodes.length - 1].nodes.length
+    ) {
       throw new Error('Previous layer size must be same as memory size');
     }
 
-    return from.connect(layer.nodes[layer.nodes.length - 1], methods.connection.ONE_TO_ONE, 1);
+    return from.connect(
+      layer.nodes[layer.nodes.length - 1],
+      methods.connection.ONE_TO_ONE,
+      1
+    );
   };
 
   return layer;

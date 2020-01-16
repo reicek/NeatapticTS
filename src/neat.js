@@ -10,7 +10,7 @@ var selection = methods.selection;
 *******************************************************************************/
 
 class Neat {
-  constructor (input, output, fitness, options) {
+  constructor(input, output, fitness, options) {
     this.input = input; // The input size of the networks
     this.output = output; // The output size of the networks
     this.fitness = fitness; // The fitness function to evaluate the networks
@@ -43,7 +43,10 @@ class Neat {
     this.maxGates = options.maxGates || Infinity;
 
     // Custom mutation selection function if given
-    this.selectMutationMethod = typeof options.mutationSelection === 'function' ? options.mutationSelection.bind(this) : this.selectMutationMethod;
+    this.selectMutationMethod =
+      typeof options.mutationSelection === 'function'
+        ? options.mutationSelection.bind(this)
+        : this.selectMutationMethod;
 
     // Generation counter
     this.generation = 0;
@@ -51,7 +54,7 @@ class Neat {
     // Initialise the genomes
     this.createPool(this.template);
   }
-  
+
   /**
    * Create the initial pool of genomes
    */
@@ -75,7 +78,9 @@ class Neat {
    */
   async evolve() {
     // Check if evaluated, sort the population
-    if (typeof this.population[this.population.length - 1].score === 'undefined') {
+    if (
+      typeof this.population[this.population.length - 1].score === 'undefined'
+    ) {
       await this.evaluate();
     }
     this.sort();
@@ -131,19 +136,30 @@ class Neat {
    * Selects a random mutation method for a genome according to the parameters
    */
   selectMutationMethod(genome) {
-    var mutationMethod = this.mutation[Math.floor(Math.random() * this.mutation.length)];
+    var mutationMethod = this.mutation[
+      Math.floor(Math.random() * this.mutation.length)
+    ];
 
-    if (mutationMethod === methods.mutation.ADD_NODE && genome.nodes.length >= this.maxNodes) {
+    if (
+      mutationMethod === methods.mutation.ADD_NODE &&
+      genome.nodes.length >= this.maxNodes
+    ) {
       if (config.warnings) console.warn('maxNodes exceeded!');
       return;
     }
 
-    if (mutationMethod === methods.mutation.ADD_CONN && genome.connections.length >= this.maxConns) {
+    if (
+      mutationMethod === methods.mutation.ADD_CONN &&
+      genome.connections.length >= this.maxConns
+    ) {
       if (config.warnings) console.warn('maxConns exceeded!');
       return;
     }
 
-    if (mutationMethod === methods.mutation.ADD_GATE && genome.gates.length >= this.maxGates) {
+    if (
+      mutationMethod === methods.mutation.ADD_GATE &&
+      genome.gates.length >= this.maxGates
+    ) {
       if (config.warnings) console.warn('maxGates exceeded!');
       return;
     }
@@ -191,7 +207,7 @@ class Neat {
    * Sorts the population by score
    */
   sort() {
-    this.population.sort(function (a, b) {
+    this.population.sort(function(a, b) {
       return b.score - a.score;
     });
   }
@@ -201,7 +217,9 @@ class Neat {
    */
   getFittest() {
     // Check if evaluated
-    if (typeof this.population[this.population.length - 1].score === 'undefined') {
+    if (
+      typeof this.population[this.population.length - 1].score === 'undefined'
+    ) {
       this.evaluate();
     }
     if (this.population[0].score < this.population[1].score) {
@@ -215,7 +233,9 @@ class Neat {
    * Returns the average fitness of the current population
    */
   getAverage() {
-    if (typeof this.population[this.population.length - 1].score === 'undefined') {
+    if (
+      typeof this.population[this.population.length - 1].score === 'undefined'
+    ) {
       this.evaluate();
     }
 
@@ -237,7 +257,9 @@ class Neat {
       case selection.POWER:
         if (this.population[0].score < this.population[1].score) this.sort();
 
-        var index = Math.floor(Math.pow(Math.random(), this.selection.power) * this.population.length);
+        var index = Math.floor(
+          Math.pow(Math.random(), this.selection.power) * this.population.length
+        );
         return this.population[index];
       case selection.FITNESS_PROPORTIONATE:
         // As negative fitnesses are possible
@@ -265,27 +287,36 @@ class Neat {
         }
 
         // if all scores equal, return random genome
-        return this.population[Math.floor(Math.random() * this.population.length)];
+        return this.population[
+          Math.floor(Math.random() * this.population.length)
+        ];
       case selection.TOURNAMENT:
         if (this.selection.size > this.popsize) {
-          throw new Error('Your tournament size should be lower than the population size, please change methods.selection.TOURNAMENT.size');
+          throw new Error(
+            'Your tournament size should be lower than the population size, please change methods.selection.TOURNAMENT.size'
+          );
         }
 
         // Create a tournament
         var individuals = [];
         for (i = 0; i < this.selection.size; i++) {
-          let random = this.population[Math.floor(Math.random() * this.population.length)];
+          let random = this.population[
+            Math.floor(Math.random() * this.population.length)
+          ];
           individuals.push(random);
         }
 
         // Sort the tournament individuals by score
-        individuals.sort(function (a, b) {
+        individuals.sort(function(a, b) {
           return b.score - a.score;
         });
 
         // Select an individual
         for (i = 0; i < this.selection.size; i++) {
-          if (Math.random() < this.selection.probability || i === this.selection.size - 1) {
+          if (
+            Math.random() < this.selection.probability ||
+            i === this.selection.size - 1
+          ) {
             return individuals[i];
           }
         }

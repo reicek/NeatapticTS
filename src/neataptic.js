@@ -13,7 +13,9 @@ var Neataptic = {
 
 // CommonJS & AMD
 if (typeof define !== 'undefined' && define.amd) {
-  define([], function () { return Neataptic; });
+  define([], function() {
+    return Neataptic;
+  });
 }
 
 // Node.js
@@ -23,9 +25,9 @@ if (typeof module !== 'undefined' && module.exports) {
 
 // Browser
 if (typeof window === 'object') {
-  (function () {
+  (function() {
     var old = window['neataptic'];
-    Neataptic.ninja = function () {
+    Neataptic.ninja = function() {
       window['neataptic'] = old;
       return Neataptic;
     };

@@ -6,9 +6,9 @@ var CopyWebpackPlugin = require('copy-webpack-plugin');
 
 /* Update readme and read license */
 var version = require('./package.json').version;
-var readme = fs.readFileSync('./README.md', 'utf-8').replace(
-  /cdn\/(.*)\/neataptic.js/, `cdn/${version}/neataptic.js`
-);
+var readme = fs
+  .readFileSync('./README.md', 'utf-8')
+  .replace(/cdn\/(.*)\/neataptic.js/, `cdn/${version}/neataptic.js`);
 fs.writeFileSync('./README.md', readme);
 
 var license = fs.readFileSync('./LICENSE', 'utf-8');
@@ -21,9 +21,7 @@ module.exports = {
     [`mkdocs/theme/cdn/${version}/neataptic`]: './src/neataptic.js'
   },
   resolve: {
-    modules: [
-      path.join(__dirname, 'node_modules')
-    ]
+    modules: [path.join(__dirname, 'node_modules')]
   },
   output: {
     path: __dirname,
@@ -39,10 +37,7 @@ module.exports = {
       { from: 'src/multithreading/workers/node/worker.js', to: 'dist' }
     ])
   ],
-  externals: [
-    'child_process',
-    'os'
-  ],
+  externals: ['child_process', 'os'],
   node: {
     __dirname: false
   }

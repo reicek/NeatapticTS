@@ -1,4 +1,4 @@
-"use strict";
+'use strict';
 
 const methods = require('../methods/methods');
 const Network = require('./network');
@@ -14,7 +14,7 @@ const architect = {
   /**
    * Constructs a network from a given array of connected nodes
    */
-  Construct (list) {
+  Construct(list) {
     // Create a network
     const network = new Network(0, 0);
 
@@ -43,7 +43,11 @@ const architect = {
     const inputs = [];
     const outputs = [];
     for (i = nodes.length - 1; i >= 0; i--) {
-      if (nodes[i].type === 'output' || nodes[i].connections.out.length + nodes[i].connections.gated.length === 0) {
+      if (
+        nodes[i].type === 'output' ||
+        nodes[i].connections.out.length + nodes[i].connections.gated.length ===
+          0
+      ) {
         nodes[i].type = 'output';
         network.output++;
         outputs.push(nodes[i]);
@@ -84,7 +88,7 @@ const architect = {
   /**
    * Creates a multilayer perceptron (MLP)
    */
-  Perceptron: function () {
+  Perceptron: function() {
     // Convert arguments to Array
     const layers = Array.prototype.slice.call(arguments);
     if (layers.length < 3) {
@@ -108,7 +112,7 @@ const architect = {
   /**
    * Creates a randomly connected network
    */
-  Random: function (input, hidden, output, options) {
+  Random: function(input, hidden, output, options) {
     options = options || {};
 
     const connections = options.connections || hidden * 2;
@@ -145,7 +149,7 @@ const architect = {
   /**
    * Creates a long short-term memory network
    */
-  LSTM: function () {
+  LSTM: function() {
     const args = Array.prototype.slice.call(arguments);
     if (args.length < 3) {
       throw new Error('You have to specify at least 3 layers');
@@ -169,8 +173,10 @@ const architect = {
     options.memoryToMemory = last.memoryToMemory || false;
     options.outputToMemory = last.outputToMemory || false;
     options.outputToGates = last.outputToGates || false;
-    options.inputToOutput = last.inputToOutput === undefined ? true : last.inputToOutput;
-    options.inputToDeep = last.inputToDeep === undefined ? true : last.inputToDeep;
+    options.inputToOutput =
+      last.inputToOutput === undefined ? true : last.inputToOutput;
+    options.inputToDeep =
+      last.inputToDeep === undefined ? true : last.inputToDeep;
 
     const inputLayer = new Group(args.shift()); // first argument
     inputLayer.set({
@@ -191,7 +197,8 @@ const architect = {
       const forgetGate = new Group(block);
       const memoryCell = new Group(block);
       const outputGate = new Group(block);
-      const outputBlock = i === blocks.length - 1 ? outputLayer : new Group(block);
+      const outputBlock =
+        i === blocks.length - 1 ? outputLayer : new Group(block);
 
       inputGate.set({
         bias: 1
@@ -213,8 +220,14 @@ const architect = {
       memoryCell.connect(inputGate, methods.connection.ALL_TO_ALL);
       memoryCell.connect(forgetGate, methods.connection.ALL_TO_ALL);
       memoryCell.connect(outputGate, methods.connection.ALL_TO_ALL);
-      const forget = memoryCell.connect(memoryCell, methods.connection.ONE_TO_ONE);
-      const output = memoryCell.connect(outputBlock, methods.connection.ALL_TO_ALL);
+      const forget = memoryCell.connect(
+        memoryCell,
+        methods.connection.ONE_TO_ONE
+      );
+      const output = memoryCell.connect(
+        outputBlock,
+        methods.connection.ALL_TO_ALL
+      );
 
       // Set up gates
       inputGate.gate(input, methods.gating.INPUT);
@@ -223,18 +236,27 @@ const architect = {
 
       // Input to all memory cells
       if (options.inputToDeep && i > 0) {
-        let input = inputLayer.connect(memoryCell, methods.connection.ALL_TO_ALL);
+        let input = inputLayer.connect(
+          memoryCell,
+          methods.connection.ALL_TO_ALL
+        );
         inputGate.gate(input, methods.gating.INPUT);
       }
 
       // Optional connections
       if (options.memoryToMemory) {
-        let input = memoryCell.connect(memoryCell, methods.connection.ALL_TO_ELSE);
+        let input = memoryCell.connect(
+          memoryCell,
+          methods.connection.ALL_TO_ELSE
+        );
         inputGate.gate(input, methods.gating.INPUT);
       }
 
       if (options.outputToMemory) {
-        let input = outputLayer.connect(memoryCell, methods.connection.ALL_TO_ALL);
+        let input = outputLayer.connect(
+          memoryCell,
+          methods.connection.ALL_TO_ALL
+        );
         inputGate.gate(input, methods.gating.INPUT);
       }
 
@@ -266,7 +288,7 @@ const architect = {
   /**
    * Creates a gated recurrent unit network
    */
-  GRU: function () {
+  GRU: function() {
     const args = Array.prototype.slice.call(arguments);
     if (args.length < 3) {
       throw new Error('not enough layers (minimum 3) !!');
@@ -297,7 +319,7 @@ const architect = {
   /**
    * Creates a hopfield network of the given size
    */
-  Hopfield: function (size) {
+  Hopfield: function(size) {
     const input = new Group(size);
     const output = new Group(size);
 
@@ -319,7 +341,13 @@ const architect = {
   /**
    * Creates a NARX network (remember previous inputs/outputs)
    */
-  NARX: function (inputSize, hiddenLayers, outputSize, previousInput, previousOutput) {
+  NARX: function(
+    inputSize,
+    hiddenLayers,
+    outputSize,
+    previousInput,
+    previousOutput
+  ) {
     if (!Array.isArray(hiddenLayers)) {
       hiddenLayers = [hiddenLayers];
     }
