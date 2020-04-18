@@ -1,19 +1,19 @@
-var Neataptic = {
-  methods: require('./methods/methods'),
-  Connection: require('./architecture/connection'),
-  architect: require('./architecture/architect'),
-  Network: require('./architecture/network'),
-  config: require('./config'),
-  Group: require('./architecture/group'),
-  Layer: require('./architecture/layer'),
+const Neataptic = {
   Node: require('./architecture/node'),
   Neat: require('./neat'),
-  multi: require('./multithreading/multi')
+  multi: require('./multithreading/multi'),
+  Group: require('./architecture/group'),
+  Layer: require('./architecture/layer'),
+  config: require('./config'),
+  Network: require('./architecture/network'),
+  methods: require('./methods/methods'),
+  architect: require('./architecture/architect'),
+  Connection: require('./architecture/connection')
 };
 
 // CommonJS & AMD
 if (typeof define !== 'undefined' && define.amd) {
-  define([], function () { return Neataptic; });
+  define([], () => Neataptic);
 }
 
 // Node.js
@@ -23,10 +23,12 @@ if (typeof module !== 'undefined' && module.exports) {
 
 // Browser
 if (typeof window === 'object') {
-  (function () {
-    var old = window['neataptic'];
-    Neataptic.ninja = function () {
+  (() => {
+    const old = window['neataptic'];
+
+    Neataptic.ninja = () => {
       window['neataptic'] = old;
+
       return Neataptic;
     };
   })();
