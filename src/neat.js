@@ -2,12 +2,12 @@
 module.exports = Neat;
 
 /* Import */
-var Network = require('./architecture/network');
-var methods = require('./methods/methods');
-var config = require('./config');
+const Network = require('./architecture/network');
+const methods = require('./methods/methods');
+const config = require('./config');
 
-/* Easier variable naming */
-var selection = methods.selection;
+/* Easier constiable naming */
+const selection = methods.selection;
 
 /*******************************************************************************
                                          NEAT
@@ -60,10 +60,13 @@ Neat.prototype = {
    * Create the initial pool of genomes
    */
   createPool: function (network) {
+    let i = 0;
+
     this.population = [];
 
-    for (var i = 0; i < this.popsize; i++) {
-      var copy;
+    for (i = 0; i < this.popsize; i++) {
+      let copy;
+
       if (this.template) {
         copy = Network.fromJSON(network.toJSON());
       } else {
@@ -78,20 +81,22 @@ Neat.prototype = {
    * Evaluates, selects, breeds and mutates population
    */
   evolve: async function () {
+    let i = 0;
+
     // Check if evaluated, sort the population
     if (typeof this.population[this.population.length - 1].score === 'undefined') {
       await this.evaluate();
     }
     this.sort();
 
-    var fittest = Network.fromJSON(this.population[0].toJSON());
+    const fittest = Network.fromJSON(this.population[0].toJSON());
     fittest.score = this.population[0].score;
 
-    var newPopulation = [];
+    const newPopulation = [];
 
     // Elitism
-    var elitists = [];
-    for (var i = 0; i < this.elitism; i++) {
+    const elitists = [];
+    for (i = 0; i < this.elitism; i++) {
       elitists.push(this.population[i]);
     }
 
@@ -125,8 +130,8 @@ Neat.prototype = {
    * Breeds two parents into an offspring, population MUST be surted
    */
   getOffspring: function () {
-    var parent1 = this.getParent();
-    var parent2 = this.getParent();
+    const parent1 = this.getParent();
+    const parent2 = this.getParent();
 
     return Network.crossOver(parent1, parent2, this.equal);
   },
@@ -135,7 +140,7 @@ Neat.prototype = {
    * Selects a random mutation method for a genome according to the parameters
    */
   selectMutationMethod: function (genome) {
-    var mutationMethod = this.mutation[Math.floor(Math.random() * this.mutation.length)];
+    const mutationMethod = this.mutation[Math.floor(Math.random() * this.mutation.length)];
 
     if (mutationMethod === methods.mutation.ADD_NODE && genome.nodes.length >= this.maxNodes) {
       if (config.warnings) console.warn('maxNodes exceeded!');
@@ -159,11 +164,13 @@ Neat.prototype = {
    * Mutates the given (or current) population
    */
   mutate: function () {
+    let i = 0;
+    let j = 0;
     // Elitist genomes should not be included
-    for (var i = 0; i < this.population.length; i++) {
+    for (i = 0; i < this.population.length; i++) {
       if (Math.random() <= this.mutationRate) {
-        for (var j = 0; j < this.mutationAmount; j++) {
-          var mutationMethod = this.selectMutationMethod(this.population[i]);
+        for (j = 0; j < this.mutationAmount; j++) {
+          const mutationMethod = this.selectMutationMethod(this.population[i]);
           this.population[i].mutate(mutationMethod);
         }
       }
@@ -174,7 +181,8 @@ Neat.prototype = {
    * Evaluates the current population
    */
   evaluate: async function () {
-    var i;
+    let i = 0;
+
     if (this.fitnessPopulation) {
       if (this.clear) {
         for (i = 0; i < this.population.length; i++) {
@@ -184,7 +192,7 @@ Neat.prototype = {
       await this.fitness(this.population);
     } else {
       for (i = 0; i < this.population.length; i++) {
-        var genome = this.population[i];
+        const genome = this.population[i];
         if (this.clear) genome.clear();
         genome.score = await this.fitness(genome);
       }
@@ -223,8 +231,10 @@ Neat.prototype = {
       this.evaluate();
     }
 
-    var score = 0;
-    for (var i = 0; i < this.population.length; i++) {
+    const score = 0;
+    let i = 0;
+
+    for (i = 0; i < this.population.length; i++) {
       score += this.population[i].score;
     }
 
@@ -236,22 +246,23 @@ Neat.prototype = {
    * @return {Network} genome
    */
   getParent: function () {
-    var i;
+    let i = 0;
+
     switch (this.selection) {
       case selection.POWER:
         if (this.population[0].score < this.population[1].score) this.sort();
 
-        var index = Math.floor(Math.pow(Math.random(), this.selection.power) * this.population.length);
+        const index = Math.floor(Math.pow(Math.random(), this.selection.power) * this.population.length);
         return this.population[index];
       case selection.FITNESS_PROPORTIONATE:
         // As negative fitnesses are possible
         // https://stackoverflow.com/questions/16186686/genetic-algorithm-handling-negative-fitness-values
         // this is unnecessarily run for every individual, should be changed
 
-        var totalFitness = 0;
-        var minimalFitness = 0;
+        const totalFitness = 0;
+        const minimalFitness = 0;
         for (i = 0; i < this.population.length; i++) {
-          var score = this.population[i].score;
+          const score = this.population[i].score;
           minimalFitness = score < minimalFitness ? score : minimalFitness;
           totalFitness += score;
         }
@@ -259,8 +270,8 @@ Neat.prototype = {
         minimalFitness = Math.abs(minimalFitness);
         totalFitness += minimalFitness * this.population.length;
 
-        var random = Math.random() * totalFitness;
-        var value = 0;
+        const random = Math.random() * totalFitness;
+        const value = 0;
 
         for (i = 0; i < this.population.length; i++) {
           let genome = this.population[i];
@@ -276,7 +287,7 @@ Neat.prototype = {
         }
 
         // Create a tournament
-        var individuals = [];
+        const individuals = [];
         for (i = 0; i < this.selection.size; i++) {
           let random = this.population[Math.floor(Math.random() * this.population.length)];
           individuals.push(random);
@@ -300,9 +311,11 @@ Neat.prototype = {
    * Export the current population to a json object
    */
   export: function () {
-    var json = [];
-    for (var i = 0; i < this.population.length; i++) {
-      var genome = this.population[i];
+    const json = [];
+    let i = 0;
+
+    for (i = 0; i < this.population.length; i++) {
+      const genome = this.population[i];
       json.push(genome.toJSON());
     }
 
@@ -313,9 +326,11 @@ Neat.prototype = {
    * Import population from a json object
    */
   import: function (json) {
-    var population = [];
-    for (var i = 0; i < json.length; i++) {
-      var genome = json[i];
+    const population = [];
+    let i = 0;
+
+    for (i = 0; i < json.length; i++) {
+      const genome = json[i];
       population.push(Network.fromJSON(genome));
     }
     this.population = population;
