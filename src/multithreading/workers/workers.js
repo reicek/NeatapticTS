@@ -1,15 +1,13 @@
-/*******************************************************************************
-                                  WORKERS
-*******************************************************************************/
+import NodeTestWorker from "./node/testworker.js";
+import BrowserTestWorker from "./browser/testworker.js";
 
 var workers = {
   node: {
-    TestWorker: require('./node/testworker')
+    TestWorker: NodeTestWorker,
   },
   browser: {
-    TestWorker: require('./browser/testworker')
-  }
+    TestWorker: BrowserTestWorker,
+  },
 };
 
-/** Export */
-module.exports = workers;
+export default workers;

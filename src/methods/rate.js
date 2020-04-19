@@ -5,7 +5,9 @@
 // https://stackoverflow.com/questions/30033096/what-is-lr-policy-in-caffe/30045244
 var rate = {
   FIXED: function () {
-    var func = function (baseRate, iteration) { return baseRate; };
+    var func = function (baseRate) {
+      return baseRate;
+    };
     return func;
   },
   STEP: function (gamma, stepSize) {
@@ -36,8 +38,8 @@ var rate = {
     };
 
     return func;
-  }
+  },
 };
 
 /* Export */
-module.exports = rate;
+export default rate;

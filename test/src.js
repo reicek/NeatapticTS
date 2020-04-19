@@ -1,3 +1,3 @@
-if (typeof global.neataptic === 'undefined') {
-  global.neataptic = require('../src/neataptic');
+if (typeof global.neataptic === "undefined") {
+  global.neataptic = import("../src/neataptic.js");
 }

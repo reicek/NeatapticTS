@@ -1,19 +1,18 @@
-/* Import */
-var methods = require('../methods/methods');
-var Network = require('./network');
-var Group = require('./group');
-var Layer = require('./layer');
-var Node = require('./node');
+import methods from "../methods/methods.js";
+import Network from "./network.js";
+import Group from "./group.js";
+import Layer from "./layer.js";
+import Node from "./node.js";
 
 /*******************************************************************************
                                         architect
 *******************************************************************************/
 
-var architect = {
-  /**
-   * Constructs a network from a given array of connected nodes
-   */
-  Construct: function (list) {
+/**
+ * Construct a network from a given array of connected nodes
+ */
+class Construct {
+  constructor(list) {
     // Create a network
     var network = new Network(0, 0);
 
@@ -42,13 +41,17 @@ var architect = {
     var inputs = [];
     var outputs = [];
     for (i = nodes.length - 1; i >= 0; i--) {
-      if (nodes[i].type === 'output' || nodes[i].connections.out.length + nodes[i].connections.gated.length === 0) {
-        nodes[i].type = 'output';
+      if (
+        nodes[i].type === "output" ||
+        nodes[i].connections.out.length + nodes[i].connections.gated.length ===
+          0
+      ) {
+        nodes[i].type = "output";
         network.output++;
         outputs.push(nodes[i]);
         nodes.splice(i, 1);
-      } else if (nodes[i].type === 'input' || !nodes[i].connections.in.length) {
-        nodes[i].type = 'input';
+      } else if (nodes[i].type === "input" || !nodes[i].connections.in.length) {
+        nodes[i].type = "input";
         network.input++;
         inputs.push(nodes[i]);
         nodes.splice(i, 1);
@@ -59,7 +62,7 @@ var architect = {
     nodes = inputs.concat(nodes).concat(outputs);
 
     if (network.input === 0 || network.output === 0) {
-      throw new Error('Given nodes have no clear input/output node!');
+      throw new Error("Given nodes have no clear input/output node!");
     }
 
     for (i = 0; i < nodes.length; i++) {
@@ -78,16 +81,18 @@ var architect = {
     network.nodes = nodes;
 
     return network;
-  },
+  }
+}
 
-  /**
-   * Creates a multilayer perceptron (MLP)
-   */
-  Perceptron: function () {
+/**
+ * Creates a multilayer perceptron (MLP)
+ */
+class Perceptron {
+  constructor() {
     // Convert arguments to Array
     var layers = Array.prototype.slice.call(arguments);
     if (layers.length < 3) {
-      throw new Error('You have to specify at least 3 layers');
+      throw new Error("You have to specify at least 3 layers");
     }
 
     // Create a list of nodes/groups
@@ -102,13 +107,15 @@ var architect = {
     }
 
     // Construct the network
-    return architect.Construct(nodes);
-  },
+    return Construct(nodes);
+  }
+}
 
-  /**
-   * Creates a randomly connected network
-   */
-  Random: function (input, hidden, output, options) {
+/**
+ * Creates a randomly connected network
+ */
+class Random {
+  constructor(input, hidden, output, options) {
     options = options || {};
 
     var connections = options.connections || hidden * 2;
@@ -140,21 +147,23 @@ var architect = {
     }
 
     return network;
-  },
+  }
+}
 
-  /**
-   * Creates a long short-term memory network
-   */
-  LSTM: function () {
+/**
+ * Creates a long short-term memory network
+ */
+class LSTM {
+  constructor() {
     var args = Array.prototype.slice.call(arguments);
     if (args.length < 3) {
-      throw new Error('You have to specify at least 3 layers');
+      throw new Error("You have to specify at least 3 layers");
     }
 
     var last = args.pop();
 
     var outputLayer;
-    if (typeof last === 'number') {
+    if (typeof last === "number") {
       outputLayer = new Group(last);
       last = {};
     } else {
@@ -162,19 +171,21 @@ var architect = {
     }
 
     outputLayer.set({
-      type: 'output'
+      type: "output",
     });
 
     var options = {};
     options.memoryToMemory = last.memoryToMemory || false;
     options.outputToMemory = last.outputToMemory || false;
     options.outputToGates = last.outputToGates || false;
-    options.inputToOutput = last.inputToOutput === undefined ? true : last.inputToOutput;
-    options.inputToDeep = last.inputToDeep === undefined ? true : last.inputToDeep;
+    options.inputToOutput =
+      last.inputToOutput === undefined ? true : last.inputToOutput;
+    options.inputToDeep =
+      last.inputToDeep === undefined ? true : last.inputToDeep;
 
     var inputLayer = new Group(args.shift()); // first argument
     inputLayer.set({
-      type: 'input'
+      type: "input",
     });
 
     var blocks = args; // all the arguments in the middle
@@ -191,16 +202,17 @@ var architect = {
       var forgetGate = new Group(block);
       var memoryCell = new Group(block);
       var outputGate = new Group(block);
-      var outputBlock = i === blocks.length - 1 ? outputLayer : new Group(block);
+      var outputBlock =
+        i === blocks.length - 1 ? outputLayer : new Group(block);
 
       inputGate.set({
-        bias: 1
+        bias: 1,
       });
       forgetGate.set({
-        bias: 1
+        bias: 1,
       });
       outputGate.set({
-        bias: 1
+        bias: 1,
       });
 
       // Connect the input with all the nodes
@@ -213,8 +225,14 @@ var architect = {
       memoryCell.connect(inputGate, methods.connection.ALL_TO_ALL);
       memoryCell.connect(forgetGate, methods.connection.ALL_TO_ALL);
       memoryCell.connect(outputGate, methods.connection.ALL_TO_ALL);
-      var forget = memoryCell.connect(memoryCell, methods.connection.ONE_TO_ONE);
-      var output = memoryCell.connect(outputBlock, methods.connection.ALL_TO_ALL);
+      var forget = memoryCell.connect(
+        memoryCell,
+        methods.connection.ONE_TO_ONE
+      );
+      var output = memoryCell.connect(
+        outputBlock,
+        methods.connection.ALL_TO_ALL
+      );
 
       // Set up gates
       inputGate.gate(input, methods.gating.INPUT);
@@ -223,18 +241,27 @@ var architect = {
 
       // Input to all memory cells
       if (options.inputToDeep && i > 0) {
-        let input = inputLayer.connect(memoryCell, methods.connection.ALL_TO_ALL);
+        let input = inputLayer.connect(
+          memoryCell,
+          methods.connection.ALL_TO_ALL
+        );
         inputGate.gate(input, methods.gating.INPUT);
       }
 
       // Optional connections
       if (options.memoryToMemory) {
-        let input = memoryCell.connect(memoryCell, methods.connection.ALL_TO_ELSE);
+        let input = memoryCell.connect(
+          memoryCell,
+          methods.connection.ALL_TO_ELSE
+        );
         inputGate.gate(input, methods.gating.INPUT);
       }
 
       if (options.outputToMemory) {
-        let input = outputLayer.connect(memoryCell, methods.connection.ALL_TO_ALL);
+        let input = outputLayer.connect(
+          memoryCell,
+          methods.connection.ALL_TO_ALL
+        );
         inputGate.gate(input, methods.gating.INPUT);
       }
 
@@ -260,16 +287,18 @@ var architect = {
     }
 
     nodes.push(outputLayer);
-    return architect.Construct(nodes);
-  },
+    return Construct(nodes);
+  }
+}
 
-  /**
-   * Creates a gated recurrent unit network
-   */
-  GRU: function () {
+/**
+ * Creates a gated recurrent unit network
+ */
+class GRU {
+  constructor() {
     var args = Array.prototype.slice.call(arguments);
     if (args.length < 3) {
-      throw new Error('not enough layers (minimum 3) !!');
+      throw new Error("not enough layers (minimum 3) !!");
     }
 
     var inputLayer = new Group(args.shift()); // first argument
@@ -291,35 +320,45 @@ var architect = {
     previous.connect(outputLayer);
     nodes.push(outputLayer);
 
-    return architect.Construct(nodes);
-  },
+    return Construct(nodes);
+  }
+}
 
-  /**
-   * Creates a hopfield network of the given size
-   */
-  Hopfield: function (size) {
+/**
+ * Creates a hopfield network of the given size
+ */
+class Hopfield {
+  constructor(size) {
     var input = new Group(size);
     var output = new Group(size);
 
     input.connect(output, methods.connection.ALL_TO_ALL);
 
     input.set({
-      type: 'input'
+      type: "input",
     });
     output.set({
       squash: methods.activation.STEP,
-      type: 'output'
+      type: "output",
     });
 
-    var network = new architect.Construct([input, output]);
+    var network = new Construct([input, output]);
 
     return network;
-  },
+  }
+}
 
-  /**
-   * Creates a NARX network (remember previous inputs/outputs)
-   */
-  NARX: function (inputSize, hiddenLayers, outputSize, previousInput, previousOutput) {
+/**
+ * Creates a NARX network (remember previous inputs/outputs)
+ */
+class NARX {
+  constructor(
+    inputSize,
+    hiddenLayers,
+    outputSize,
+    previousInput,
+    previousOutput
+  ) {
     if (!Array.isArray(hiddenLayers)) {
       hiddenLayers = [hiddenLayers];
     }
@@ -339,7 +378,7 @@ var architect = {
       var hiddenLayer = new Layer.Dense(hiddenLayers[i]);
       hidden.push(hiddenLayer);
       nodes.push(hiddenLayer);
-      if (typeof hidden[i - 1] !== 'undefined') {
+      if (typeof hidden[i - 1] !== "undefined") {
         hidden[i - 1].connect(hiddenLayer, methods.connection.ALL_TO_ALL);
       }
     }
@@ -355,15 +394,14 @@ var architect = {
     outputMemory.connect(hidden[0], methods.connection.ALL_TO_ALL);
 
     input.set({
-      type: 'input'
+      type: "input",
     });
     output.set({
-      type: 'output'
+      type: "output",
     });
 
-    return architect.Construct(nodes);
+    return Construct(nodes);
   }
-};
+}
 
-/* Export */
-module.exports = architect;
+export { Construct, Perceptron, Random, LSTM, GRU, Hopfield, NARX };

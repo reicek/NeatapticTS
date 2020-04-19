@@ -1,13 +1,10 @@
-/* Export */
-module.exports = Network;
-
-/* Import */
-var multi = require('../multithreading/multi');
-var methods = require('../methods/methods');
-var Connection = require('./connection');
-var config = require('../config');
-var Neat = require('../neat');
-var Node = require('./node');
+import os from "os";
+import multi from "../multithreading/multi.js";
+import methods from "../methods/methods.js";
+import Connection from "./connection.js";
+import config from "../config.js";
+import Neat from "../neat.js";
+import Node from "./node.js";
 
 /* Easier variable naming */
 var mutation = methods.mutation;
@@ -16,9 +13,9 @@ var mutation = methods.mutation;
                                  NETWORK
 *******************************************************************************/
 
-function Network (input, output) {
-  if (typeof input === 'undefined' || typeof output === 'undefined') {
-    throw new Error('No input or output size given');
+function Network(input, output) {
+  if (typeof input === "undefined" || typeof output === "undefined") {
+    throw new Error("No input or output size given");
   }
 
   this.input = input;
@@ -36,7 +33,7 @@ function Network (input, output) {
   // Create input and output nodes
   var i;
   for (i = 0; i < this.input + this.output; i++) {
-    var type = i < this.input ? 'input' : 'output';
+    var type = i < this.input ? "input" : "output";
     this.nodes.push(new Node(type));
   }
 
@@ -59,9 +56,9 @@ Network.prototype = {
 
     // Activate nodes chronologically
     for (var i = 0; i < this.nodes.length; i++) {
-      if (this.nodes[i].type === 'input') {
+      if (this.nodes[i].type === "input") {
         this.nodes[i].activate(input[i]);
-      } else if (this.nodes[i].type === 'output') {
+      } else if (this.nodes[i].type === "output") {
         var activation = this.nodes[i].activate();
         output.push(activation);
       } else {
@@ -81,9 +78,9 @@ Network.prototype = {
 
     // Activate nodes chronologically
     for (var i = 0; i < this.nodes.length; i++) {
-      if (this.nodes[i].type === 'input') {
+      if (this.nodes[i].type === "input") {
         this.nodes[i].noTraceActivate(input[i]);
-      } else if (this.nodes[i].type === 'output') {
+      } else if (this.nodes[i].type === "output") {
         var activation = this.nodes[i].noTraceActivate();
         output.push(activation);
       } else {
@@ -98,8 +95,10 @@ Network.prototype = {
    * Backpropagate the network
    */
   propagate: function (rate, momentum, update, target) {
-    if (typeof target === 'undefined' || target.length !== this.output) {
-      throw new Error('Output target length should match network output length');
+    if (typeof target === "undefined" || target.length !== this.output) {
+      throw new Error(
+        "Output target length should match network output length"
+      );
     }
 
     var targetIndex = target.length;
@@ -168,9 +167,9 @@ Network.prototype = {
    */
   gate: function (node, connection) {
     if (this.nodes.indexOf(node) === -1) {
-      throw new Error('This node is not part of the network!');
+      throw new Error("This node is not part of the network!");
     } else if (connection.gater != null) {
-      if (config.warnings) console.warn('This connection is already gated!');
+      if (config.warnings) console.warn("This connection is already gated!");
       return;
     }
     node.gate(connection);
@@ -183,7 +182,7 @@ Network.prototype = {
   ungate: function (connection) {
     var index = this.gates.indexOf(connection);
     if (index === -1) {
-      throw new Error('This connection is not gated!');
+      throw new Error("This connection is not gated!");
     }
 
     this.gates.splice(index, 1);
@@ -197,7 +196,7 @@ Network.prototype = {
     var index = this.nodes.indexOf(node);
 
     if (index === -1) {
-      throw new Error('This node does not exist in the network!');
+      throw new Error("This node does not exist in the network!");
     }
 
     // Keep track of gaters
@@ -210,7 +209,11 @@ Network.prototype = {
     var inputs = [];
     for (var i = node.connections.in.length - 1; i >= 0; i--) {
       let connection = node.connections.in[i];
-      if (mutation.SUB_NODE.keep_gates && connection.gater !== null && connection.gater !== node) {
+      if (
+        mutation.SUB_NODE.keep_gates &&
+        connection.gater !== null &&
+        connection.gater !== node
+      ) {
         gaters.push(connection.gater);
       }
       inputs.push(connection.from);
@@ -221,7 +224,11 @@ Network.prototype = {
     var outputs = [];
     for (i = node.connections.out.length - 1; i >= 0; i--) {
       let connection = node.connections.out[i];
-      if (mutation.SUB_NODE.keep_gates && connection.gater !== null && connection.gater !== node) {
+      if (
+        mutation.SUB_NODE.keep_gates &&
+        connection.gater !== null &&
+        connection.gater !== node
+      ) {
         gaters.push(connection.gater);
       }
       outputs.push(connection.to);
@@ -269,21 +276,34 @@ Network.prototype = {
    * Mutates the network with the given method
    */
   mutate: function (method) {
-    if (typeof method === 'undefined') {
-      throw new Error('No (correct) mutate method given!');
+    if (typeof method === "undefined") {
+      throw new Error("No (correct) mutate method given!");
     }
 
-    var i, j;
+    let i,
+      j,
+      connection,
+      index,
+      node,
+      possible,
+      allconnections,
+      conn,
+      available,
+      pair,
+      randomConn;
+
     switch (method) {
       case mutation.ADD_NODE:
         // Look for an existing connection and place a node in between
-        var connection = this.connections[Math.floor(Math.random() * this.connections.length)];
+        connection = this.connections[
+          Math.floor(Math.random() * this.connections.length)
+        ];
         var gater = connection.gater;
         this.disconnect(connection.from, connection.to);
 
         // Insert the new node right before the old connection.to
         var toIndex = this.nodes.indexOf(connection.to);
-        var node = new Node('hidden');
+        node = new Node("hidden");
 
         // Random squash function
         node.mutate(mutation.MOD_ACTIVATION);
@@ -304,17 +324,20 @@ Network.prototype = {
       case mutation.SUB_NODE:
         // Check if there are nodes left to remove
         if (this.nodes.length === this.input + this.output) {
-          if (config.warnings) console.warn('No more nodes left to remove!');
+          if (config.warnings) console.warn("No more nodes left to remove!");
           break;
         }
 
         // Select a node which isn't an input or output node
-        var index = Math.floor(Math.random() * (this.nodes.length - this.output - this.input) + this.input);
+        index = Math.floor(
+          Math.random() * (this.nodes.length - this.output - this.input) +
+            this.input
+        );
         this.remove(this.nodes[index]);
         break;
       case mutation.ADD_CONN:
         // Create an array of all uncreated (feedforward) connections
-        var available = [];
+        available = [];
         for (i = 0; i < this.nodes.length - this.output; i++) {
           let node1 = this.nodes[i];
           for (j = Math.max(i + 1, this.input); j < this.nodes.length; j++) {
@@ -324,108 +347,131 @@ Network.prototype = {
         }
 
         if (available.length === 0) {
-          if (config.warnings) console.warn('No more connections to be made!');
+          if (config.warnings) console.warn("No more connections to be made!");
           break;
         }
 
-        var pair = available[Math.floor(Math.random() * available.length)];
+        pair = available[Math.floor(Math.random() * available.length)];
         this.connect(pair[0], pair[1]);
         break;
       case mutation.SUB_CONN:
         // List of possible connections that can be removed
-        var possible = [];
+        possible = [];
 
         for (i = 0; i < this.connections.length; i++) {
-          let conn = this.connections[i];
+          conn = this.connections[i];
           // Check if it is not disabling a node
-          if (conn.from.connections.out.length > 1 && conn.to.connections.in.length > 1 && this.nodes.indexOf(conn.to) > this.nodes.indexOf(conn.from)) {
+          if (
+            conn.from.connections.out.length > 1 &&
+            conn.to.connections.in.length > 1 &&
+            this.nodes.indexOf(conn.to) > this.nodes.indexOf(conn.from)
+          ) {
             possible.push(conn);
           }
         }
 
         if (possible.length === 0) {
-          if (config.warnings) console.warn('No connections to remove!');
+          if (config.warnings) console.warn("No connections to remove!");
           break;
         }
 
-        var randomConn = possible[Math.floor(Math.random() * possible.length)];
+        randomConn = possible[Math.floor(Math.random() * possible.length)];
         this.disconnect(randomConn.from, randomConn.to);
         break;
       case mutation.MOD_WEIGHT:
-        var allconnections = this.connections.concat(this.selfconns);
+        allconnections = this.connections.concat(this.selfconns);
 
-        var connection = allconnections[Math.floor(Math.random() * allconnections.length)];
-        var modification = Math.random() * (method.max - method.min) + method.min;
+        connection =
+          allconnections[Math.floor(Math.random() * allconnections.length)];
+        var modification =
+          Math.random() * (method.max - method.min) + method.min;
         connection.weight += modification;
         break;
       case mutation.MOD_BIAS:
         // Has no effect on input node, so they are excluded
-        var index = Math.floor(Math.random() * (this.nodes.length - this.input) + this.input);
-        var node = this.nodes[index];
+        index = Math.floor(
+          Math.random() * (this.nodes.length - this.input) + this.input
+        );
+        node = this.nodes[index];
         node.mutate(method);
         break;
       case mutation.MOD_ACTIVATION:
         // Has no effect on input node, so they are excluded
-        if (!method.mutateOutput && this.input + this.output === this.nodes.length) {
-          if (config.warnings) console.warn('No nodes that allow mutation of activation function');
+        if (
+          !method.mutateOutput &&
+          this.input + this.output === this.nodes.length
+        ) {
+          if (config.warnings)
+            console.warn("No nodes that allow mutation of activation function");
           break;
         }
 
-        var index = Math.floor(Math.random() * (this.nodes.length - (method.mutateOutput ? 0 : this.output) - this.input) + this.input);
-        var node = this.nodes[index];
+        index = Math.floor(
+          Math.random() *
+            (this.nodes.length -
+              (method.mutateOutput ? 0 : this.output) -
+              this.input) +
+            this.input
+        );
+        node = this.nodes[index];
 
         node.mutate(method);
         break;
       case mutation.ADD_SELF_CONN:
         // Check which nodes aren't selfconnected yet
-        var possible = [];
+        possible = [];
         for (i = this.input; i < this.nodes.length; i++) {
-          let node = this.nodes[i];
+          node = this.nodes[i];
           if (node.connections.self.weight === 0) {
             possible.push(node);
           }
         }
 
         if (possible.length === 0) {
-          if (config.warnings) console.warn('No more self-connections to add!');
+          if (config.warnings) console.warn("No more self-connections to add!");
           break;
         }
 
         // Select a random node
-        var node = possible[Math.floor(Math.random() * possible.length)];
+        node = possible[Math.floor(Math.random() * possible.length)];
 
         // Connect it to himself
         this.connect(node, node);
         break;
       case mutation.SUB_SELF_CONN:
         if (this.selfconns.length === 0) {
-          if (config.warnings) console.warn('No more self-connections to remove!');
+          if (config.warnings)
+            console.warn("No more self-connections to remove!");
           break;
         }
-        var conn = this.selfconns[Math.floor(Math.random() * this.selfconns.length)];
+        conn = this.selfconns[
+          Math.floor(Math.random() * this.selfconns.length)
+        ];
         this.disconnect(conn.from, conn.to);
         break;
       case mutation.ADD_GATE:
-        var allconnections = this.connections.concat(this.selfconns);
+        allconnections = this.connections.concat(this.selfconns);
 
         // Create a list of all non-gated connections
-        var possible = [];
+        possible = [];
         for (i = 0; i < allconnections.length; i++) {
-          let conn = allconnections[i];
+          conn = allconnections[i];
           if (conn.gater === null) {
             possible.push(conn);
           }
         }
 
         if (possible.length === 0) {
-          if (config.warnings) console.warn('No more connections to gate!');
+          if (config.warnings) console.warn("No more connections to gate!");
           break;
         }
 
         // Select a random gater node and connection, can't be gated by input
-        var index = Math.floor(Math.random() * (this.nodes.length - this.input) + this.input);
-        var node = this.nodes[index];
-        var conn = possible[Math.floor(Math.random() * possible.length)];
+        index = Math.floor(
+          Math.random() * (this.nodes.length - this.input) + this.input
+        );
+        node = this.nodes[index];
+        conn = possible[Math.floor(Math.random() * possible.length)];
 
         // Gate the connection with the node
         this.gate(node, conn);
@@ -433,18 +479,18 @@ Network.prototype = {
       case mutation.SUB_GATE:
         // Select a random gated connection
         if (this.gates.length === 0) {
-          if (config.warnings) console.warn('No more connections to ungate!');
+          if (config.warnings) console.warn("No more connections to ungate!");
           break;
         }
 
-        var index = Math.floor(Math.random() * this.gates.length);
+        index = Math.floor(Math.random() * this.gates.length);
         var gatedconn = this.gates[index];
 
         this.ungate(gatedconn);
         break;
       case mutation.ADD_BACK_CONN:
         // Create an array of all uncreated (backfed) connections
-        var available = [];
+        available = [];
         for (i = this.input; i < this.nodes.length; i++) {
           let node1 = this.nodes[i];
           for (j = this.input; j < i; j++) {
@@ -454,44 +500,66 @@ Network.prototype = {
         }
 
         if (available.length === 0) {
-          if (config.warnings) console.warn('No more connections to be made!');
+          if (config.warnings) console.warn("No more connections to be made!");
           break;
         }
 
-        var pair = available[Math.floor(Math.random() * available.length)];
+        pair = available[Math.floor(Math.random() * available.length)];
         this.connect(pair[0], pair[1]);
         break;
       case mutation.SUB_BACK_CONN:
         // List of possible connections that can be removed
-        var possible = [];
+        possible = [];
 
         for (i = 0; i < this.connections.length; i++) {
-          let conn = this.connections[i];
+          conn = this.connections[i];
           // Check if it is not disabling a node
-          if (conn.from.connections.out.length > 1 && conn.to.connections.in.length > 1 && this.nodes.indexOf(conn.from) > this.nodes.indexOf(conn.to)) {
+          if (
+            conn.from.connections.out.length > 1 &&
+            conn.to.connections.in.length > 1 &&
+            this.nodes.indexOf(conn.from) > this.nodes.indexOf(conn.to)
+          ) {
             possible.push(conn);
           }
         }
 
         if (possible.length === 0) {
-          if (config.warnings) console.warn('No connections to remove!');
+          if (config.warnings) console.warn("No connections to remove!");
           break;
         }
 
-        var randomConn = possible[Math.floor(Math.random() * possible.length)];
+        randomConn = possible[Math.floor(Math.random() * possible.length)];
         this.disconnect(randomConn.from, randomConn.to);
         break;
       case mutation.SWAP_NODES:
         // Has no effect on input node, so they are excluded
-        if ((method.mutateOutput && this.nodes.length - this.input < 2) ||
-          (!method.mutateOutput && this.nodes.length - this.input - this.output < 2)) {
-          if (config.warnings) console.warn('No nodes that allow swapping of bias and activation function');
+        if (
+          (method.mutateOutput && this.nodes.length - this.input < 2) ||
+          (!method.mutateOutput &&
+            this.nodes.length - this.input - this.output < 2)
+        ) {
+          if (config.warnings)
+            console.warn(
+              "No nodes that allow swapping of bias and activation function"
+            );
           break;
         }
 
-        var index = Math.floor(Math.random() * (this.nodes.length - (method.mutateOutput ? 0 : this.output) - this.input) + this.input);
+        index = Math.floor(
+          Math.random() *
+            (this.nodes.length -
+              (method.mutateOutput ? 0 : this.output) -
+              this.input) +
+            this.input
+        );
         var node1 = this.nodes[index];
-        index = Math.floor(Math.random() * (this.nodes.length - (method.mutateOutput ? 0 : this.output) - this.input) + this.input);
+        index = Math.floor(
+          Math.random() *
+            (this.nodes.length -
+              (method.mutateOutput ? 0 : this.output) -
+              this.input) +
+            this.input
+        );
         var node2 = this.nodes[index];
 
         var biasTemp = node1.bias;
@@ -509,18 +577,27 @@ Network.prototype = {
    * Train the given set to this network
    */
   train: function (set, options) {
-    if (set[0].input.length !== this.input || set[0].output.length !== this.output) {
-      throw new Error('Dataset input/output size should be same as network input/output size!');
+    if (
+      set[0].input.length !== this.input ||
+      set[0].output.length !== this.output
+    ) {
+      throw new Error(
+        "Dataset input/output size should be same as network input/output size!"
+      );
     }
 
     options = options || {};
 
     // Warning messages
-    if (typeof options.rate === 'undefined') {
-      if (config.warnings) console.warn('Using default learning rate, please define a rate!');
+    if (typeof options.rate === "undefined") {
+      if (config.warnings)
+        console.warn("Using default learning rate, please define a rate!");
     }
-    if (typeof options.iterations === 'undefined') {
-      if (config.warnings) console.warn('No target iterations given, running until error is reached!');
+    if (typeof options.iterations === "undefined") {
+      if (config.warnings)
+        console.warn(
+          "No target iterations given, running until error is reached!"
+        );
     }
 
     // Read the options
@@ -535,12 +612,17 @@ Network.prototype = {
     var start = Date.now();
 
     if (batchSize > set.length) {
-      throw new Error('Batch size must be smaller or equal to dataset length!');
-    } else if (typeof options.iterations === 'undefined' && typeof options.error === 'undefined') {
-      throw new Error('At least one of the following options must be specified: error, iterations');
-    } else if (typeof options.error === 'undefined') {
+      throw new Error("Batch size must be smaller or equal to dataset length!");
+    } else if (
+      typeof options.iterations === "undefined" &&
+      typeof options.error === "undefined"
+    ) {
+      throw new Error(
+        "At least one of the following options must be specified: error, iterations"
+      );
+    } else if (typeof options.error === "undefined") {
       targetError = -1; // run until iterations
-    } else if (typeof options.iterations === 'undefined') {
+    } else if (typeof options.iterations === "undefined") {
       options.iterations = 0; // run until target error
     }
 
@@ -548,7 +630,9 @@ Network.prototype = {
     this.dropout = dropout;
 
     if (options.crossValidate) {
-      let numTrain = Math.ceil((1 - options.crossValidate.testSize) * set.length);
+      let numTrain = Math.ceil(
+        (1 - options.crossValidate.testSize) * set.length
+      );
       var trainSet = set.slice(0, numTrain);
       var testSet = set.slice(numTrain);
     }
@@ -559,8 +643,12 @@ Network.prototype = {
     var error = 1;
 
     var i, j, x;
-    while (error > targetError && (options.iterations === 0 || iteration < options.iterations)) {
-      if (options.crossValidate && error <= options.crossValidate.testError) break;
+    while (
+      error > targetError &&
+      (options.iterations === 0 || iteration < options.iterations)
+    ) {
+      if (options.crossValidate && error <= options.crossValidate.testError)
+        break;
 
       iteration++;
 
@@ -580,11 +668,25 @@ Network.prototype = {
 
       // Checks for options such as scheduled logs and shuffling
       if (options.shuffle) {
-        for (j, x, i = set.length; i; j = Math.floor(Math.random() * i), x = set[--i], set[i] = set[j], set[j] = x);
+        for (
+          j, x, i = set.length;
+          i;
+          j = Math.floor(Math.random() * i),
+            x = set[--i],
+            set[i] = set[j],
+            set[j] = x
+        );
       }
 
       if (options.log && iteration % options.log === 0) {
-        console.log('iteration', iteration, 'error', error, 'rate', currentRate);
+        console.log(
+          "iteration",
+          iteration,
+          "error",
+          error,
+          "rate",
+          currentRate
+        );
       }
 
       if (options.schedule && iteration % options.schedule.iterations === 0) {
@@ -596,7 +698,10 @@ Network.prototype = {
 
     if (dropout) {
       for (i = 0; i < this.nodes.length; i++) {
-        if (this.nodes[i].type === 'hidden' || this.nodes[i].type === 'constant') {
+        if (
+          this.nodes[i].type === "hidden" ||
+          this.nodes[i].type === "varant"
+        ) {
           this.nodes[i].mask = 1 - this.dropout;
         }
       }
@@ -605,7 +710,7 @@ Network.prototype = {
     return {
       error: error,
       iterations: iteration,
-      time: Date.now() - start
+      time: Date.now() - start,
     };
   },
 
@@ -619,7 +724,7 @@ Network.prototype = {
       var input = set[i].input;
       var target = set[i].output;
 
-      var update = !!((i + 1) % batchSize === 0 || (i + 1) === set.length);
+      var update = !!((i + 1) % batchSize === 0 || i + 1 === set.length);
 
       var output = this.activate(input, true);
       this.propagate(currentRate, momentum, update, target);
@@ -637,7 +742,10 @@ Network.prototype = {
     var i;
     if (this.dropout) {
       for (i = 0; i < this.nodes.length; i++) {
-        if (this.nodes[i].type === 'hidden' || this.nodes[i].type === 'constant') {
+        if (
+          this.nodes[i].type === "hidden" ||
+          this.nodes[i].type === "varant"
+        ) {
           this.nodes[i].mask = 1 - this.dropout;
         }
       }
@@ -657,7 +765,7 @@ Network.prototype = {
 
     var results = {
       error: error,
-      time: Date.now() - start
+      time: Date.now() - start,
     };
 
     return results;
@@ -673,60 +781,64 @@ Network.prototype = {
     var json = {
       nodes: [],
       links: [],
-      constraints: [{
-        type: 'alignment',
-        axis: 'x',
-        offsets: []
-      }, {
-        type: 'alignment',
-        axis: 'y',
-        offsets: []
-      }]
+      varraints: [
+        {
+          type: "alignment",
+          axis: "x",
+          offsets: [],
+        },
+        {
+          type: "alignment",
+          axis: "y",
+          offsets: [],
+        },
+      ],
     };
 
     var i;
     for (i = 0; i < this.nodes.length; i++) {
       var node = this.nodes[i];
 
-      if (node.type === 'input') {
+      if (node.type === "input") {
         if (this.input === 1) {
-          json.constraints[0].offsets.push({
+          json.varraints[0].offsets.push({
             node: i,
-            offset: 0
+            offset: 0,
           });
         } else {
-          json.constraints[0].offsets.push({
+          json.varraints[0].offsets.push({
             node: i,
-            offset: 0.8 * width / (this.input - 1) * input++
+            offset: ((0.8 * width) / (this.input - 1)) * input++,
           });
         }
-        json.constraints[1].offsets.push({
+        json.varraints[1].offsets.push({
           node: i,
-          offset: 0
+          offset: 0,
         });
-      } else if (node.type === 'output') {
+      } else if (node.type === "output") {
         if (this.output === 1) {
-          json.constraints[0].offsets.push({
+          json.varraints[0].offsets.push({
             node: i,
-            offset: 0
+            offset: 0,
           });
         } else {
-          json.constraints[0].offsets.push({
+          json.varraints[0].offsets.push({
             node: i,
-            offset: 0.8 * width / (this.output - 1) * output++
+            offset: ((0.8 * width) / (this.output - 1)) * output++,
           });
         }
-        json.constraints[1].offsets.push({
+        json.varraints[1].offsets.push({
           node: i,
-          offset: -0.8 * height
+          offset: -0.8 * height,
         });
       }
 
       json.nodes.push({
         id: i,
-        name: node.type === 'hidden' ? node.squash.name : node.type.toUpperCase(),
+        name:
+          node.type === "hidden" ? node.squash.name : node.type.toUpperCase(),
         activation: node.activation,
-        bias: node.bias
+        bias: node.bias,
       });
     }
 
@@ -737,7 +849,7 @@ Network.prototype = {
         json.links.push({
           source: this.nodes.indexOf(connection.from),
           target: this.nodes.indexOf(connection.to),
-          weight: connection.weight
+          weight: connection.weight,
         });
       } else {
         // Add a gater 'node'
@@ -745,23 +857,23 @@ Network.prototype = {
         json.nodes.push({
           id: index,
           activation: connection.gater.activation,
-          name: 'GATE'
+          name: "GATE",
         });
         json.links.push({
           source: this.nodes.indexOf(connection.from),
           target: index,
-          weight: 1 / 2 * connection.weight
+          weight: (1 / 2) * connection.weight,
         });
         json.links.push({
           source: index,
           target: this.nodes.indexOf(connection.to),
-          weight: 1 / 2 * connection.weight
+          weight: (1 / 2) * connection.weight,
         });
         json.links.push({
           source: this.nodes.indexOf(connection.gater),
           target: index,
           weight: connection.gater.activation,
-          gate: true
+          gate: true,
         });
       }
     }
@@ -778,7 +890,7 @@ Network.prototype = {
       connections: [],
       input: this.input,
       output: this.output,
-      dropout: this.dropout
+      dropout: this.dropout,
     };
 
     // So we don't have to use expensive .indexOf()
@@ -798,7 +910,10 @@ Network.prototype = {
         tojson.from = i;
         tojson.to = i;
 
-        tojson.gater = node.connections.self.gater != null ? node.connections.self.gater.index : null;
+        tojson.gater =
+          node.connections.self.gater != null
+            ? node.connections.self.gater.index
+            : null;
         json.connections.push(tojson);
       }
     }
@@ -831,33 +946,48 @@ Network.prototype = {
    * Evolves the network to reach a lower error on a dataset
    */
   evolve: async function (set, options) {
-    if (set[0].input.length !== this.input || set[0].output.length !== this.output) {
-      throw new Error('Dataset input/output size should be same as network input/output size!');
+    let i = 0;
+    if (
+      set[0].input.length !== this.input ||
+      set[0].output.length !== this.output
+    ) {
+      throw new Error(
+        "Dataset input/output size should be same as network input/output size!"
+      );
     }
 
     // Read the options
     options = options || {};
-    var targetError = typeof options.error !== 'undefined' ? options.error : 0.05;
-    var growth = typeof options.growth !== 'undefined' ? options.growth : 0.0001;
+    var targetError =
+      typeof options.error !== "undefined" ? options.error : 0.05;
+    var growth =
+      typeof options.growth !== "undefined" ? options.growth : 0.0001;
     var cost = options.cost || methods.cost.MSE;
     var amount = options.amount || 1;
 
     var threads = options.threads;
-    if (typeof threads === 'undefined') {
-      if (typeof window === 'undefined') { // Node.js
-        threads = require('os').cpus().length;
-      } else { // Browser
+    if (typeof threads === "undefined") {
+      if (typeof window === "undefined") {
+        // Node.js
+        threads = os.cpus().length;
+      } else {
+        // Browser
         threads = navigator.hardwareConcurrency;
       }
     }
 
     var start = Date.now();
 
-    if (typeof options.iterations === 'undefined' && typeof options.error === 'undefined') {
-      throw new Error('At least one of the following options must be specified: error, iterations');
-    } else if (typeof options.error === 'undefined') {
+    if (
+      typeof options.iterations === "undefined" &&
+      typeof options.error === "undefined"
+    ) {
+      throw new Error(
+        "At least one of the following options must be specified: error, iterations"
+      );
+    } else if (typeof options.error === "undefined") {
       targetError = -1; // run until iterations
-    } else if (typeof options.iterations === 'undefined') {
+    } else if (typeof options.iterations === "undefined") {
       options.iterations = 0; // run until target error
     }
 
@@ -866,11 +996,17 @@ Network.prototype = {
       // Create the fitness function
       fitnessFunction = function (genome) {
         var score = 0;
-        for (var i = 0; i < amount; i++) {
+        for (i = 0; i < amount; i++) {
           score -= genome.test(set, cost).error;
         }
 
-        score -= (genome.nodes.length - genome.input - genome.output + genome.connections.length + genome.gates.length) * growth;
+        score -=
+          (genome.nodes.length -
+            genome.input -
+            genome.output +
+            genome.connections.length +
+            genome.gates.length) *
+          growth;
         score = isNaN(score) ? -Infinity : score; // this can cause problems with fitness proportionate selection
 
         return score / amount;
@@ -881,18 +1017,18 @@ Network.prototype = {
 
       // Create workers, send datasets
       var workers = [];
-      if (typeof window === 'undefined') {
-        for (var i = 0; i < threads; i++) {
+      if (typeof window === "undefined") {
+        for (i = 0; i < threads; i++) {
           workers.push(new multi.workers.node.TestWorker(converted, cost));
         }
       } else {
-        for (var i = 0; i < threads; i++) {
+        for (i = 0; i < threads; i++) {
           workers.push(new multi.workers.browser.TestWorker(converted, cost));
         }
       }
 
       fitnessFunction = function (population) {
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve) => {
           // Create a queue
           var queue = population.slice();
           var done = 0;
@@ -908,14 +1044,21 @@ Network.prototype = {
 
             worker.evaluate(genome).then(function (result) {
               genome.score = -result;
-              genome.score -= (genome.nodes.length - genome.input - genome.output +
-                genome.connections.length + genome.gates.length) * growth;
-              genome.score = isNaN(parseFloat(result)) ? -Infinity : genome.score;
+              genome.score -=
+                (genome.nodes.length -
+                  genome.input -
+                  genome.output +
+                  genome.connections.length +
+                  genome.gates.length) *
+                growth;
+              genome.score = isNaN(parseFloat(result))
+                ? -Infinity
+                : genome.score;
               startWorker(worker);
             });
           };
 
-          for (var i = 0; i < workers.length; i++) {
+          for (i = 0; i < workers.length; i++) {
             startWorker(workers[i]);
           }
         });
@@ -932,10 +1075,20 @@ Network.prototype = {
     var bestFitness = -Infinity;
     var bestGenome;
 
-    while (error < -targetError && (options.iterations === 0 || neat.generation < options.iterations)) {
+    while (
+      error < -targetError &&
+      (options.iterations === 0 || neat.generation < options.iterations)
+    ) {
       let fittest = await neat.evolve();
       let fitness = fittest.score;
-      error = fitness + (fittest.nodes.length - fittest.input - fittest.output + fittest.connections.length + fittest.gates.length) * growth;
+      error =
+        fitness +
+        (fittest.nodes.length -
+          fittest.input -
+          fittest.output +
+          fittest.connections.length +
+          fittest.gates.length) *
+          growth;
 
       if (fitness > bestFitness) {
         bestFitness = fitness;
@@ -943,19 +1096,33 @@ Network.prototype = {
       }
 
       if (options.log && neat.generation % options.log === 0) {
-        console.log('iteration', neat.generation, 'fitness', fitness, 'error', -error);
+        console.log(
+          "iteration",
+          neat.generation,
+          "fitness",
+          fitness,
+          "error",
+          -error
+        );
       }
 
-      if (options.schedule && neat.generation % options.schedule.iterations === 0) {
-        options.schedule.function({ fitness: fitness, error: -error, iteration: neat.generation });
+      if (
+        options.schedule &&
+        neat.generation % options.schedule.iterations === 0
+      ) {
+        options.schedule.function({
+          fitness: fitness,
+          error: -error,
+          iteration: neat.generation,
+        });
       }
     }
 
     if (threads > 1) {
-      for (var i = 0; i < workers.length; i++) workers[i].terminate();
+      for (i = 0; i < workers.length; i++) workers[i].terminate();
     }
 
-    if (typeof bestGenome !== 'undefined') {
+    if (typeof bestGenome !== "undefined") {
       this.nodes = bestGenome.nodes;
       this.connections = bestGenome.connections;
       this.selfconns = bestGenome.selfconns;
@@ -967,7 +1134,7 @@ Network.prototype = {
     return {
       error: -error,
       iterations: neat.generation,
-      time: Date.now() - start
+      time: Date.now() - start,
     };
   },
 
@@ -982,14 +1149,15 @@ Network.prototype = {
     var lines = [];
     var functions = [];
 
-    var i;
+    var i,
+      j = 0;
     for (i = 0; i < this.input; i++) {
       var node = this.nodes[i];
       activations.push(node.activation);
       states.push(node.state);
     }
 
-    lines.push('for(var i = 0; i < input.length; i++) A[i] = input[i];');
+    lines.push("for(var i = 0; i < input.length; i++) A[i] = input[i];");
 
     // So we don't have to use expensive .indexOf()
     for (i = 0; i < this.nodes.length; i++) {
@@ -1010,7 +1178,7 @@ Network.prototype = {
       }
 
       var incoming = [];
-      for (var j = 0; j < node.connections.in.length; j++) {
+      for (j = 0; j < node.connections.in.length; j++) {
         var conn = node.connections.in[j];
         var computation = `A[${conn.from.index}] * ${conn.weight}`;
 
@@ -1032,8 +1200,10 @@ Network.prototype = {
         incoming.push(computation);
       }
 
-      var line1 = `S[${i}] = ${incoming.join(' + ')} + ${node.bias};`;
-      var line2 = `A[${i}] = F[${functionIndex}](S[${i}])${!node.mask ? ' * ' + node.mask : ''};`;
+      var line1 = `S[${i}] = ${incoming.join(" + ")} + ${node.bias};`;
+      var line2 = `A[${i}] = F[${functionIndex}](S[${i}])${
+        !node.mask ? " * " + node.mask : ""
+      };`;
       lines.push(line1);
       lines.push(line2);
     }
@@ -1043,14 +1213,14 @@ Network.prototype = {
       output.push(`A[${i}]`);
     }
 
-    output = `return [${output.join(',')}];`;
+    output = `return [${output.join(",")}];`;
     lines.push(output);
 
-    var total = '';
+    var total = "";
     total += `var F = [${functions.toString()}];\r\n`;
     total += `var A = [${activations.toString()}];\r\n`;
     total += `var S = [${states.toString()}];\r\n`;
-    total += `function activate(input){\r\n${lines.join('\r\n')}\r\n}`;
+    total += `function activate(input){\r\n${lines.join("\r\n")}\r\n}`;
 
     return total;
   },
@@ -1063,15 +1233,28 @@ Network.prototype = {
     var states = [];
     var conns = [];
     var squashes = [
-      'LOGISTIC', 'TANH', 'IDENTITY', 'STEP', 'RELU', 'SOFTSIGN', 'SINUSOID',
-      'GAUSSIAN', 'BENT_IDENTITY', 'BIPOLAR', 'BIPOLAR_SIGMOID', 'HARD_TANH',
-      'ABSOLUTE', 'INVERSE', 'SELU'
+      "LOGISTIC",
+      "TANH",
+      "IDENTITY",
+      "STEP",
+      "RELU",
+      "SOFTSIGN",
+      "SINUSOID",
+      "GAUSSIAN",
+      "BENT_IDENTITY",
+      "BIPOLAR",
+      "BIPOLAR_SIGMOID",
+      "HARD_TANH",
+      "ABSOLUTE",
+      "INVERSE",
+      "SELU",
     ];
 
     conns.push(this.input);
     conns.push(this.output);
 
-    var i;
+    let i,
+      j = 0;
     for (i = 0; i < this.nodes.length; i++) {
       let node = this.nodes[i];
       node.index = i;
@@ -1086,9 +1269,13 @@ Network.prototype = {
       conns.push(squashes.indexOf(node.squash.name));
 
       conns.push(node.connections.self.weight);
-      conns.push(node.connections.self.gater == null ? -1 : node.connections.self.gater.index);
+      conns.push(
+        node.connections.self.gater == null
+          ? -1
+          : node.connections.self.gater.index
+      );
 
-      for (var j = 0; j < node.connections.in.length; j++) {
+      for (j = 0; j < node.connections.in.length; j++) {
         let conn = node.connections.in[j];
 
         conns.push(conn.from.index);
@@ -1100,7 +1287,7 @@ Network.prototype = {
     }
 
     return [activations, states, conns];
-  }
+  },
 };
 
 /**
@@ -1112,7 +1299,7 @@ Network.fromJSON = function (json) {
   network.nodes = [];
   network.connections = [];
 
-  var i;
+  let i = 0;
   for (i = 0; i < json.nodes.length; i++) {
     network.nodes.push(Node.fromJSON(json.nodes[i]));
   }
@@ -1120,7 +1307,10 @@ Network.fromJSON = function (json) {
   for (i = 0; i < json.connections.length; i++) {
     var conn = json.connections[i];
 
-    var connection = network.connect(network.nodes[conn.from], network.nodes[conn.to])[0];
+    var connection = network.connect(
+      network.nodes[conn.from],
+      network.nodes[conn.to]
+    )[0];
     connection.weight = conn.weight;
 
     if (conn.gater != null) {
@@ -1141,14 +1331,16 @@ Network.merge = function (network1, network2) {
 
   // Check if output and input size are the same
   if (network1.output !== network2.input) {
-    throw new Error('Output size of network1 should be the same as the input size of network2!');
+    throw new Error(
+      "Output size of network1 should be the same as the input size of network2!"
+    );
   }
 
   // Redirect all connections from network2 input from network1 output
-  var i;
+  let i = 0;
   for (i = 0; i < network2.connections.length; i++) {
     let conn = network2.connections[i];
-    if (conn.from.type === 'input') {
+    if (conn.from.type === "input") {
       let index = network2.nodes.indexOf(conn.from);
 
       // redirect
@@ -1162,8 +1354,12 @@ Network.merge = function (network1, network2) {
   }
 
   // Change the node type of network1's output nodes (now hidden)
-  for (i = network1.nodes.length - network1.output; i < network1.nodes.length; i++) {
-    network1.nodes[i].type = 'hidden';
+  for (
+    i = network1.nodes.length - network1.output;
+    i < network1.nodes.length;
+    i++
+  ) {
+    network1.nodes[i].type = "hidden";
   }
 
   // Create one network from both networks
@@ -1177,7 +1373,10 @@ Network.merge = function (network1, network2) {
  * Create an offspring from two parent networks
  */
 Network.crossOver = function (network1, network2, equal) {
-  if (network1.input !== network2.input || network1.output !== network2.output) {
+  if (
+    network1.input !== network2.input ||
+    network1.output !== network2.output
+  ) {
     throw new Error("Networks don't have the same input/output size!");
   }
 
@@ -1206,7 +1405,7 @@ Network.crossOver = function (network1, network2, equal) {
   var outputSize = network1.output;
 
   // Set indexes so we don't need indexOf
-  var i;
+  let i = 0;
   for (i = 0; i < network1.nodes.length; i++) {
     network1.nodes[i].index = i;
   }
@@ -1224,7 +1423,7 @@ Network.crossOver = function (network1, network2, equal) {
       node = random >= 0.5 ? network1.nodes[i] : network2.nodes[i];
       let other = random < 0.5 ? network1.nodes[i] : network2.nodes[i];
 
-      if (typeof node === 'undefined' || node.type === 'output') {
+      if (typeof node === "undefined" || node.type === "output") {
         node = other;
       }
     } else {
@@ -1254,7 +1453,7 @@ Network.crossOver = function (network1, network2, equal) {
       weight: conn.weight,
       from: conn.from.index,
       to: conn.to.index,
-      gater: conn.gater != null ? conn.gater.index : -1
+      gater: conn.gater != null ? conn.gater.index : -1,
     };
     n1conns[Connection.innovationID(data.from, data.to)] = data;
   }
@@ -1266,7 +1465,7 @@ Network.crossOver = function (network1, network2, equal) {
       weight: conn.weight,
       from: conn.from.index,
       to: conn.to.index,
-      gater: conn.gater != null ? conn.gater.index : -1
+      gater: conn.gater != null ? conn.gater.index : -1,
     };
     n1conns[Connection.innovationID(data.from, data.to)] = data;
   }
@@ -1278,7 +1477,7 @@ Network.crossOver = function (network1, network2, equal) {
       weight: conn.weight,
       from: conn.from.index,
       to: conn.to.index,
-      gater: conn.gater != null ? conn.gater.index : -1
+      gater: conn.gater != null ? conn.gater.index : -1,
     };
     n2conns[Connection.innovationID(data.from, data.to)] = data;
   }
@@ -1290,7 +1489,7 @@ Network.crossOver = function (network1, network2, equal) {
       weight: conn.weight,
       from: conn.from.index,
       to: conn.to.index,
-      gater: conn.gater != null ? conn.gater.index : -1
+      gater: conn.gater != null ? conn.gater.index : -1,
     };
     n2conns[Connection.innovationID(data.from, data.to)] = data;
   }
@@ -1301,7 +1500,7 @@ Network.crossOver = function (network1, network2, equal) {
   var keys2 = Object.keys(n2conns);
   for (i = keys1.length - 1; i >= 0; i--) {
     // Common gene
-    if (typeof n2conns[keys1[i]] !== 'undefined') {
+    if (typeof n2conns[keys1[i]] !== "undefined") {
       let conn = Math.random() >= 0.5 ? n1conns[keys1[i]] : n2conns[keys1[i]];
       connections.push(conn);
 
@@ -1315,7 +1514,7 @@ Network.crossOver = function (network1, network2, equal) {
   // Excess/disjoint gene
   if (score2 >= score1 || equal) {
     for (i = 0; i < keys2.length; i++) {
-      if (typeof n2conns[keys2[i]] !== 'undefined') {
+      if (typeof n2conns[keys2[i]] !== "undefined") {
         connections.push(n2conns[keys2[i]]);
       }
     }
@@ -1339,3 +1538,5 @@ Network.crossOver = function (network1, network2, equal) {
 
   return offspring;
 };
+
+export default Network;

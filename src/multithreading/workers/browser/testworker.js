@@ -1,14 +1,10 @@
-/* Export */
-module.exports = TestWorker;
-
-/* Import */
-var multi = require('../../multi');
+import multi from "../../multi.js";
 
 /*******************************************************************************
                                 WEBWORKER
 *******************************************************************************/
 
-function TestWorker (dataSet, cost) {
+function TestWorker(dataSet, cost) {
   var blob = new Blob([this._createBlobString(cost)]);
   this.url = window.URL.createObjectURL(blob);
   this.worker = new Worker(this.url);
@@ -19,13 +15,13 @@ function TestWorker (dataSet, cost) {
 
 TestWorker.prototype = {
   evaluate: function (network) {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       var serialized = network.serialize();
 
       var data = {
         activations: new Float64Array(serialized[0]).buffer,
         states: new Float64Array(serialized[1]).buffer,
-        conns: new Float64Array(serialized[2]).buffer
+        conns: new Float64Array(serialized[2]).buffer,
       };
 
       this.worker.onmessage = function (e) {
@@ -33,7 +29,11 @@ TestWorker.prototype = {
         resolve(error);
       };
 
-      this.worker.postMessage(data, [data.activations, data.states, data.conns]);
+      this.worker.postMessage(data, [
+        data.activations,
+        data.states,
+        data.conns,
+      ]);
     });
   },
 
@@ -68,5 +68,7 @@ TestWorker.prototype = {
       };`;
 
     return source;
-  }
+  },
 };
+
+export default TestWorker;

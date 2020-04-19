@@ -48,7 +48,7 @@ var activation = {
   },
   BIPOLAR_SIGMOID: function (x, derivate) {
     var d = 2 / (1 + Math.exp(-x)) - 1;
-    if (derivate) return 1 / 2 * (1 + d) * (1 - d);
+    if (derivate) return (1 / 2) * (1 + d) * (1 - d);
     return d;
   },
   HARD_TANH: function (x, derivate) {
@@ -68,10 +68,12 @@ var activation = {
     var alpha = 1.6732632423543772848170429916717;
     var scale = 1.0507009873554804934193349852946;
     var fx = x > 0 ? x : alpha * Math.exp(x) - alpha;
-    if (derivate) { return x > 0 ? scale : (fx + alpha) * scale; }
+    if (derivate) {
+      return x > 0 ? scale : (fx + alpha) * scale;
+    }
     return fx * scale;
-  }
+  },
 };
 
 /* Export */
-module.exports = activation;
+export default activation;

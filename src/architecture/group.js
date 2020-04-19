@@ -1,43 +1,41 @@
-/* Export */
-module.exports = Group;
-
-/* Import */
-var methods = require('../methods/methods');
-var config = require('../config');
-var Layer = require('./layer');
-var Node = require('./node');
+import methods from "../methods/methods.js";
+import config from "../config.js";
+import Layer from "./layer.js";
+import Node from "./node.js";
 
 /*******************************************************************************
                                          Group
 *******************************************************************************/
 
-function Group (size) {
-  this.nodes = [];
-  this.connections = {
-    in: [],
-    out: [],
-    self: []
-  };
+class Group {
+  constructor(size) {
+    this.nodes = [];
+    this.connections = {
+      in: [],
+      out: [],
+      self: [],
+    };
 
-  for (var i = 0; i < size; i++) {
-    this.nodes.push(new Node());
+    for (var i = 0; i < size; i++) {
+      this.nodes.push(new Node());
+    }
   }
-}
 
-Group.prototype = {
   /**
    * Activates all the nodes in the group
    */
-  activate: function (value) {
+  activate(value) {
     var values = [];
 
-    if (typeof value !== 'undefined' && value.length !== this.nodes.length) {
-      throw new Error('Array with values should be same as the amount of nodes!');
+    if (typeof value !== "undefined" && value.length !== this.nodes.length) {
+      throw new Error(
+        "Array with values should be same as the amount of nodes!"
+      );
     }
 
     for (var i = 0; i < this.nodes.length; i++) {
       var activation;
-      if (typeof value === 'undefined') {
+      if (typeof value === "undefined") {
         activation = this.nodes[i].activate();
       } else {
         activation = this.nodes[i].activate(value[i]);
@@ -47,45 +45,56 @@ Group.prototype = {
     }
 
     return values;
-  },
+  }
 
   /**
    * Propagates all the node in the group
    */
-  propagate: function (rate, momentum, target) {
-    if (typeof target !== 'undefined' && target.length !== this.nodes.length) {
-      throw new Error('Array with values should be same as the amount of nodes!');
+  propagate(rate, momentum, target) {
+    if (typeof target !== "undefined" && target.length !== this.nodes.length) {
+      throw new Error(
+        "Array with values should be same as the amount of nodes!"
+      );
     }
 
     for (var i = this.nodes.length - 1; i >= 0; i--) {
-      if (typeof target === 'undefined') {
+      if (typeof target === "undefined") {
         this.nodes[i].propagate(rate, momentum, true);
       } else {
         this.nodes[i].propagate(rate, momentum, true, target[i]);
       }
     }
-  },
+  }
 
   /**
    * Connects the nodes in this group to nodes in another group or just a node
    */
-  connect: function (target, method, weight) {
+  connect(target, method, weight) {
     var connections = [];
     var i, j;
     if (target instanceof Group) {
-      if (typeof method === 'undefined') {
+      if (typeof method === "undefined") {
         if (this !== target) {
-          if (config.warnings) console.warn('No group connection specified, using ALL_TO_ALL');
+          if (config.warnings)
+            console.warn("No group connection specified, using ALL_TO_ALL");
           method = methods.connection.ALL_TO_ALL;
         } else {
-          if (config.warnings) console.warn('No group connection specified, using ONE_TO_ONE');
+          if (config.warnings)
+            console.warn("No group connection specified, using ONE_TO_ONE");
           method = methods.connection.ONE_TO_ONE;
         }
       }
-      if (method === methods.connection.ALL_TO_ALL || method === methods.connection.ALL_TO_ELSE) {
+      if (
+        method === methods.connection.ALL_TO_ALL ||
+        method === methods.connection.ALL_TO_ELSE
+      ) {
         for (i = 0; i < this.nodes.length; i++) {
           for (j = 0; j < target.nodes.length; j++) {
-            if (method === methods.connection.ALL_TO_ELSE && this.nodes[i] === target.nodes[j]) continue;
+            if (
+              method === methods.connection.ALL_TO_ELSE &&
+              this.nodes[i] === target.nodes[j]
+            )
+              continue;
             let connection = this.nodes[i].connect(target.nodes[j], weight);
             this.connections.out.push(connection[0]);
             target.connections.in.push(connection[0]);
@@ -94,7 +103,7 @@ Group.prototype = {
         }
       } else if (method === methods.connection.ONE_TO_ONE) {
         if (this.nodes.length !== target.nodes.length) {
-          throw new Error('From and To group must be the same size!');
+          throw new Error("From and To group must be the same size!");
         }
 
         for (i = 0; i < this.nodes.length; i++) {
@@ -114,14 +123,14 @@ Group.prototype = {
     }
 
     return connections;
-  },
+  }
 
   /**
    * Make nodes from this group gate the given connection(s)
    */
-  gate: function (connections, method) {
-    if (typeof method === 'undefined') {
-      throw new Error('Please specify Gating.INPUT, Gating.OUTPUT');
+  gate(connections, method) {
+    if (typeof method === "undefined") {
+      throw new Error("Please specify Gating.INPUT, Gating.OUTPUT");
     }
 
     if (!Array.isArray(connections)) {
@@ -175,26 +184,26 @@ Group.prototype = {
           }
         }
     }
-  },
+  }
 
   /**
    * Sets the value of a property for every node
    */
-  set: function (values) {
+  set(values) {
     for (var i = 0; i < this.nodes.length; i++) {
-      if (typeof values.bias !== 'undefined') {
+      if (typeof values.bias !== "undefined") {
         this.nodes[i].bias = values.bias;
       }
 
       this.nodes[i].squash = values.squash || this.nodes[i].squash;
       this.nodes[i].type = values.type || this.nodes[i].type;
     }
-  },
+  }
 
   /**
    * Disconnects all nodes from this group from another given group/node
    */
-  disconnect: function (target, twosided) {
+  disconnect(target, twosided) {
     twosided = twosided || false;
 
     // In the future, disconnect will return a connection so indexOf can be used
@@ -250,14 +259,16 @@ Group.prototype = {
         }
       }
     }
-  },
+  }
 
   /**
    * Clear the context of this group
    */
-  clear: function () {
+  clear() {
     for (var i = 0; i < this.nodes.length; i++) {
       this.nodes[i].clear();
     }
   }
-};
+}
+
+export default Group;

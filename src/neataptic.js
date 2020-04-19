@@ -1,37 +1,23 @@
-const Neataptic = {
-  Node: require('./architecture/node'),
-  Neat: require('./neat'),
-  multi: require('./multithreading/multi'),
-  Group: require('./architecture/group'),
-  Layer: require('./architecture/layer'),
-  config: require('./config'),
-  Network: require('./architecture/network'),
-  methods: require('./methods/methods'),
-  architect: require('./architecture/architect'),
-  Connection: require('./architecture/connection')
+import Node from "./architecture/node.js";
+import Neat from "./neat.js";
+import multi from "./multithreading/multi.js";
+import Group from "./architecture/group.js";
+import Layer from "./architecture/layer.js";
+import config from "./config.js";
+import Network from "./architecture/network.js";
+import methods from "./methods/methods.js";
+import Connection from "./architecture/connection.js";
+import * as architect from "./architecture/architect.js";
+
+export {
+  Node,
+  Neat,
+  multi,
+  Group,
+  Layer,
+  config,
+  Network,
+  methods,
+  architect,
+  Connection,
 };
-
-// CommonJS & AMD
-if (typeof define !== 'undefined' && define.amd) {
-  define([], () => Neataptic);
-}
-
-// Node.js
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = Neataptic;
-}
-
-// Browser
-if (typeof window === 'object') {
-  (() => {
-    const old = window['neataptic'];
-
-    Neataptic.ninja = () => {
-      window['neataptic'] = old;
-
-      return Neataptic;
-    };
-  })();
-
-  window['neataptic'] = Neataptic;
-}

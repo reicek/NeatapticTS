@@ -4,8 +4,8 @@
 
 // Config
 var config = {
-  warnings: false
+  warnings: false,
 };
 
 /* Export */
-module.exports = config;
+export default config;
