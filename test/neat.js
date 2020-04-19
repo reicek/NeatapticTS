@@ -1,8 +1,7 @@
-/* Import */
-var chai = import("chai");
-var assert = chai.assert;
-/* Shorten var names */
 import { Network, methods, config } from "../src/neataptic.js";
+import chai from "chai";
+
+const assert = chai.assert;
 
 /* Turn off warnings */
 config.warnings = false;

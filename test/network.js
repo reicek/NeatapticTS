@@ -1,6 +1,7 @@
 import { architect, Network, methods, config } from "../src/neataptic.js";
 import chai from "chai";
-const asset = chai.assert;
+
+const assert = chai.assert;
 
 /* Turn off warnings */
 config.warnings = false;
@@ -220,21 +221,23 @@ describe("Networks", function () {
     });
     it("standalone equivalency", function () {
       this.timeout(10000);
-      var original;
+      var original, copy;
       original = new architect.Perceptron(
         Math.floor(Math.random() * 5 + 1),
         Math.floor(Math.random() * 5 + 1),
         Math.floor(Math.random() * 5 + 1)
       );
       eval(original.standalone());
-      testEquality(original, activate);
+      copy = Network.fromJSON(original.toJSON());
+      testEquality(original, copy);
 
       original = new Network(
         Math.floor(Math.random() * 5 + 1),
         Math.floor(Math.random() * 5 + 1)
       );
       eval(original.standalone());
-      testEquality(original, activate);
+      copy = Network.fromJSON(original.toJSON());
+      testEquality(original, copy);
 
       original = new architect.LSTM(
         Math.floor(Math.random() * 5 + 1),
@@ -242,7 +245,8 @@ describe("Networks", function () {
         Math.floor(Math.random() * 5 + 1)
       );
       eval(original.standalone());
-      testEquality(original, activate);
+      copy = Network.fromJSON(original.toJSON());
+      testEquality(original, copy);
 
       original = new architect.GRU(
         Math.floor(Math.random() * 5 + 1),
@@ -251,7 +255,8 @@ describe("Networks", function () {
         Math.floor(Math.random() * 5 + 1)
       );
       eval(original.standalone());
-      testEquality(original, activate);
+      copy = Network.fromJSON(original.toJSON());
+      testEquality(original, copy);
 
       original = new architect.Random(
         Math.floor(Math.random() * 5 + 1),
@@ -259,7 +264,8 @@ describe("Networks", function () {
         Math.floor(Math.random() * 5 + 1)
       );
       eval(original.standalone());
-      testEquality(original, activate);
+      copy = Network.fromJSON(original.toJSON());
+      testEquality(original, copy);
 
       original = new architect.NARX(
         Math.floor(Math.random() * 5 + 1),
@@ -269,11 +275,13 @@ describe("Networks", function () {
         Math.floor(Math.random() * 5 + 1)
       );
       eval(original.standalone());
-      testEquality(original, activate);
+      copy = Network.fromJSON(original.toJSON());
+      testEquality(original, copy);
 
       original = new architect.Hopfield(Math.floor(Math.random() * 5 + 1));
       eval(original.standalone());
-      testEquality(original, activate);
+      copy = Network.fromJSON(original.toJSON());
+      testEquality(original, copy);
     });
   });
   describe("Learning capability", function () {

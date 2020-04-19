@@ -1,4 +1,4 @@
-import cp from "child_process.js";
+import cp from "child_process";
 import path from "path";
 
 /*******************************************************************************

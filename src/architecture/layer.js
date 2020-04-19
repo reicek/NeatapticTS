@@ -2,10 +2,6 @@ import methods from "../methods/methods.js";
 import Group from "./group.js";
 import Node from "./node.js";
 
-/*******************************************************************************
-                                         Group
-*******************************************************************************/
-
 class Layer {
   constructor() {
     this.output = null;
@@ -13,6 +9,7 @@ class Layer {
     this.nodes = [];
     this.connections = { in: [], out: [], self: [] };
   }
+
   /**
    * Activates all the nodes in the group
    */
@@ -168,8 +165,10 @@ class Layer {
       this.nodes[i].clear();
     }
   }
+}
 
-  static Dense(size) {
+Layer.Dense = class {
+  constructor(size) {
     // Create the layer
     var layer = new Layer();
 
@@ -187,8 +186,10 @@ class Layer {
 
     return layer;
   }
+};
 
-  static LSTM(size) {
+Layer.LSTM = class {
+  constructor(size) {
     // Create the layer
     var layer = new Layer();
 
@@ -249,8 +250,10 @@ class Layer {
 
     return layer;
   }
+};
 
-  static GRU(size) {
+Layer.GRU = class {
+  constructor(size) {
     // Create the layer
     var layer = new Layer();
 
@@ -338,8 +341,10 @@ class Layer {
 
     return layer;
   }
+};
 
-  static Memory(size, memory) {
+Layer.Memory = class {
+  constructor(size, memory) {
     // Create the layer
     var layer = new Layer();
     // Because the output can only be one group, we have to put the nodes all in óne group
@@ -396,6 +401,6 @@ class Layer {
 
     return layer;
   }
-}
+};
 
 export default Layer;

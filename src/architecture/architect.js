@@ -11,78 +11,75 @@ import Node from "./node.js";
 /**
  * Construct a network from a given array of connected nodes
  */
-class Construct {
-  constructor(list) {
-    // Create a network
-    var network = new Network(0, 0);
+const Construct = (list) => {
+  // Create a network
+  var network = new Network(0, 0);
 
-    // Transform all groups into nodes
-    var nodes = [];
+  // Transform all groups into nodes
+  var nodes = [];
 
-    var i;
-    for (i = 0; i < list.length; i++) {
-      let j;
-      if (list[i] instanceof Group) {
-        for (j = 0; j < list[i].nodes.length; j++) {
-          nodes.push(list[i].nodes[j]);
+  var i;
+  for (i = 0; i < list.length; i++) {
+    let j;
+    if (list[i] instanceof Group) {
+      for (j = 0; j < list[i].nodes.length; j++) {
+        nodes.push(list[i].nodes[j]);
+      }
+    } else if (list[i] instanceof Layer) {
+      for (j = 0; j < list[i].nodes.length; j++) {
+        for (var k = 0; k < list[i].nodes[j].nodes.length; k++) {
+          nodes.push(list[i].nodes[j].nodes[k]);
         }
-      } else if (list[i] instanceof Layer) {
-        for (j = 0; j < list[i].nodes.length; j++) {
-          for (var k = 0; k < list[i].nodes[j].nodes.length; k++) {
-            nodes.push(list[i].nodes[j].nodes[k]);
-          }
-        }
-      } else if (list[i] instanceof Node) {
-        nodes.push(list[i]);
       }
+    } else if (list[i] instanceof Node) {
+      nodes.push(list[i]);
     }
-
-    // Determine input and output nodes
-    var inputs = [];
-    var outputs = [];
-    for (i = nodes.length - 1; i >= 0; i--) {
-      if (
-        nodes[i].type === "output" ||
-        nodes[i].connections.out.length + nodes[i].connections.gated.length ===
-          0
-      ) {
-        nodes[i].type = "output";
-        network.output++;
-        outputs.push(nodes[i]);
-        nodes.splice(i, 1);
-      } else if (nodes[i].type === "input" || !nodes[i].connections.in.length) {
-        nodes[i].type = "input";
-        network.input++;
-        inputs.push(nodes[i]);
-        nodes.splice(i, 1);
-      }
-    }
-
-    // Input nodes are always first, output nodes are always last
-    nodes = inputs.concat(nodes).concat(outputs);
-
-    if (network.input === 0 || network.output === 0) {
-      throw new Error("Given nodes have no clear input/output node!");
-    }
-
-    for (i = 0; i < nodes.length; i++) {
-      let j;
-      for (j = 0; j < nodes[i].connections.out.length; j++) {
-        network.connections.push(nodes[i].connections.out[j]);
-      }
-      for (j = 0; j < nodes[i].connections.gated.length; j++) {
-        network.gates.push(nodes[i].connections.gated[j]);
-      }
-      if (nodes[i].connections.self.weight !== 0) {
-        network.selfconns.push(nodes[i].connections.self);
-      }
-    }
-
-    network.nodes = nodes;
-
-    return network;
   }
-}
+
+  // Determine input and output nodes
+  var inputs = [];
+  var outputs = [];
+  for (i = nodes.length - 1; i >= 0; i--) {
+    if (
+      nodes[i].type === "output" ||
+      nodes[i].connections.out.length + nodes[i].connections.gated.length === 0
+    ) {
+      nodes[i].type = "output";
+      network.output++;
+      outputs.push(nodes[i]);
+      nodes.splice(i, 1);
+    } else if (nodes[i].type === "input" || !nodes[i].connections.in.length) {
+      nodes[i].type = "input";
+      network.input++;
+      inputs.push(nodes[i]);
+      nodes.splice(i, 1);
+    }
+  }
+
+  // Input nodes are always first, output nodes are always last
+  nodes = inputs.concat(nodes).concat(outputs);
+
+  if (network.input === 0 || network.output === 0) {
+    throw new Error("Given nodes have no clear input/output node!");
+  }
+
+  for (i = 0; i < nodes.length; i++) {
+    let j;
+    for (j = 0; j < nodes[i].connections.out.length; j++) {
+      network.connections.push(nodes[i].connections.out[j]);
+    }
+    for (j = 0; j < nodes[i].connections.gated.length; j++) {
+      network.gates.push(nodes[i].connections.gated[j]);
+    }
+    if (nodes[i].connections.self.weight !== 0) {
+      network.selfconns.push(nodes[i].connections.self);
+    }
+  }
+
+  network.nodes = nodes;
+
+  return network;
+};
 
 /**
  * Creates a multilayer perceptron (MLP)
@@ -342,7 +339,7 @@ class Hopfield {
       type: "output",
     });
 
-    var network = new Construct([input, output]);
+    var network = Construct([input, output]);
 
     return network;
   }
