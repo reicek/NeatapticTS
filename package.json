@@ -6,9 +6,7 @@
   "scripts": {
     "test:src": "mocha test/src.js test",
     "test:dist": "mocha test/dist.js test",
-    "build:dist": "webpack",
-    "build:docs": "cd mkdocs && mkdocs build --site-dir ../docs && cd ../",
-    "build": "npm run build:dist && npm run build:docs",
+    "build": "webpack",
     "deploy": "npm run build && npm run test:dist && npm publish",
     "test:travis": "npm run build:dist && npm run test:dist",
     "prettier:watch": "onchange '**/*.js' -- prettier --write {{changed}}"
@@ -17,6 +15,7 @@
     "chai": "^4.1.2",
     "copy-webpack-plugin": "^4.0.1",
     "husky": "^4.0.10",
+    "mkdocs": "0.0.1",
     "mocha": "^3.5.3",
     "prettier": "1.19.1",
     "pretty-quick": "^2.0.1",
