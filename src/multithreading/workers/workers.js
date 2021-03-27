@@ -2,13 +2,13 @@
                                   WORKERS
 *******************************************************************************/
 
-var workers = {
+const workers = {
   node: {
-    TestWorker: require('./node/testworker')
+    TestWorker: import('./node/testworker'),
   },
   browser: {
-    TestWorker: require('./browser/testworker')
-  }
+    TestWorker: import('./browser/testworker'),
+  },
 };
 
 /** Export */

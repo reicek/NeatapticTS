@@ -1,6 +1,6 @@
-var Network = require('./architecture/network');
-var methods = require('./methods/methods');
-var config = require('./config');
+var Network = import('./architecture/network');
+var methods = import('./methods/methods');
+var config = import('./config');
 
 /* Easier variable naming */
 var selection = methods.selection;
@@ -32,7 +32,7 @@ class Neat {
       methods.crossover.SINGLE_POINT,
       methods.crossover.TWO_POINT,
       methods.crossover.UNIFORM,
-      methods.crossover.AVERAGE
+      methods.crossover.AVERAGE,
     ];
     this.mutation = options.mutation || methods.mutation.FFW;
 
@@ -207,7 +207,7 @@ class Neat {
    * Sorts the population by score
    */
   sort() {
-    this.population.sort(function(a, b) {
+    this.population.sort(function (a, b) {
       return b.score - a.score;
     });
   }
@@ -307,7 +307,7 @@ class Neat {
         }
 
         // Sort the tournament individuals by score
-        individuals.sort(function(a, b) {
+        individuals.sort(function (a, b) {
           return b.score - a.score;
         });
 

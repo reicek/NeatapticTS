@@ -1,3 +1,3 @@
 if (typeof global.neataptic === 'undefined') {
-  global.neataptic = require('../dist/neataptic');
+  global.neataptic = import('../dist/neataptic');
 }

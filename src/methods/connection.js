@@ -5,14 +5,14 @@
 // Specifies in what manner two groups are connected
 var connection = {
   ALL_TO_ALL: {
-    name: 'OUTPUT'
+    name: 'OUTPUT',
   },
   ALL_TO_ELSE: {
-    name: 'INPUT'
+    name: 'INPUT',
   },
   ONE_TO_ONE: {
-    name: 'SELF'
-  }
+    name: 'SELF',
+  },
 };
 
 /* Export */

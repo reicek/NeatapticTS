@@ -7,7 +7,7 @@ var scripts = [
 ];
 
 /** https://stackoverflow.com/questions/33330636/load-javascript-dynamically-and-sequentially **/
-function require(list) {
+function import(list) {
   function loadScript(link) {
     return new Promise(function(fulfill, reject) {
       if(link.type == 'script'){
@@ -27,9 +27,9 @@ function require(list) {
   }
   loadScript(list.shift()).then(function() {
     if (list.length > 0) {
-      require(list);
+      import(list);
     }
   })
 }
 
-require(scripts);
+import(scripts);

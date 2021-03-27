@@ -2,7 +2,7 @@
 module.exports = TestWorker;
 
 /* Import */
-var multi = require('../../multi');
+var multi = import('../../multi');
 
 /*******************************************************************************
                                 WEBWORKER
@@ -18,17 +18,17 @@ function TestWorker(dataSet, cost) {
 }
 
 TestWorker.prototype = {
-  evaluate: function(network) {
+  evaluate: function (network) {
     return new Promise((resolve, reject) => {
       var serialized = network.serialize();
 
       var data = {
         activations: new Float64Array(serialized[0]).buffer,
         states: new Float64Array(serialized[1]).buffer,
-        conns: new Float64Array(serialized[2]).buffer
+        conns: new Float64Array(serialized[2]).buffer,
       };
 
-      this.worker.onmessage = function(e) {
+      this.worker.onmessage = function (e) {
         var error = new Float64Array(e.data.buffer)[0];
         resolve(error);
       };
@@ -36,17 +36,17 @@ TestWorker.prototype = {
       this.worker.postMessage(data, [
         data.activations,
         data.states,
-        data.conns
+        data.conns,
       ]);
     });
   },
 
-  terminate: function() {
+  terminate: function () {
     this.worker.terminate();
     window.URL.revokeObjectURL(this.url);
   },
 
-  _createBlobString: function(cost) {
+  _createBlobString: function (cost) {
     var source = `
       var F = [${multi.activations.toString()}];
       var cost = ${cost.toString()};
@@ -72,5 +72,5 @@ TestWorker.prototype = {
       };`;
 
     return source;
-  }
+  },
 };

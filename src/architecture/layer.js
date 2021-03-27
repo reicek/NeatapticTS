@@ -2,9 +2,9 @@
 module.exports = Layer;
 
 /* Import */
-var methods = require('../methods/methods');
-var Group = require('./group');
-var Node = require('./node');
+var methods = import('../methods/methods');
+var Group = import('./group');
+var Node = import('./node');
 
 /*******************************************************************************
                                          Group
@@ -21,7 +21,7 @@ Layer.prototype = {
   /**
    * Activates all the nodes in the group
    */
-  activate: function(value) {
+  activate: function (value) {
     var values = [];
 
     if (typeof value !== 'undefined' && value.length !== this.nodes.length) {
@@ -47,7 +47,7 @@ Layer.prototype = {
   /**
    * Propagates all the node in the group
    */
-  propagate: function(rate, momentum, target) {
+  propagate: function (rate, momentum, target) {
     if (typeof target !== 'undefined' && target.length !== this.nodes.length) {
       throw new Error(
         'Array with values should be same as the amount of nodes!'
@@ -66,7 +66,7 @@ Layer.prototype = {
   /**
    * Connects the nodes in this group to nodes in another group or just a node
    */
-  connect: function(target, method, weight) {
+  connect: function (target, method, weight) {
     var connections;
     if (target instanceof Group || target instanceof Node) {
       connections = this.output.connect(target, method, weight);
@@ -80,14 +80,14 @@ Layer.prototype = {
   /**
    * Make nodes from this group gate the given connection(s)
    */
-  gate: function(connections, method) {
+  gate: function (connections, method) {
     this.output.gate(connections, method);
   },
 
   /**
    * Sets the value of a property for every node
    */
-  set: function(values) {
+  set: function (values) {
     for (var i = 0; i < this.nodes.length; i++) {
       var node = this.nodes[i];
 
@@ -107,7 +107,7 @@ Layer.prototype = {
   /**
    * Disconnects all nodes from this group from another given group/node
    */
-  disconnect: function(target, twosided) {
+  disconnect: function (target, twosided) {
     twosided = twosided || false;
 
     // In the future, disconnect will return a connection so indexOf can be used
@@ -168,14 +168,14 @@ Layer.prototype = {
   /**
    * Clear the context of this group
    */
-  clear: function() {
+  clear: function () {
     for (var i = 0; i < this.nodes.length; i++) {
       this.nodes[i].clear();
     }
-  }
+  },
 };
 
-Layer.Dense = function(size) {
+Layer.Dense = function (size) {
   // Create the layer
   var layer = new Layer();
 
@@ -185,7 +185,7 @@ Layer.Dense = function(size) {
   layer.nodes.push(block);
   layer.output = block;
 
-  layer.input = function(from, method, weight) {
+  layer.input = function (from, method, weight) {
     if (from instanceof Layer) from = from.output;
     method = method || methods.connection.ALL_TO_ALL;
     return from.connect(block, method, weight);
@@ -194,7 +194,7 @@ Layer.Dense = function(size) {
   return layer;
 };
 
-Layer.LSTM = function(size) {
+Layer.LSTM = function (size) {
   // Create the layer
   var layer = new Layer();
 
@@ -206,13 +206,13 @@ Layer.LSTM = function(size) {
   var outputBlock = new Group(size);
 
   inputGate.set({
-    bias: 1
+    bias: 1,
   });
   forgetGate.set({
-    bias: 1
+    bias: 1,
   });
   outputGate.set({
-    bias: 1
+    bias: 1,
   });
 
   // Set up internal connections
@@ -232,7 +232,7 @@ Layer.LSTM = function(size) {
   // Define output
   layer.output = outputBlock;
 
-  layer.input = function(from, method, weight) {
+  layer.input = function (from, method, weight) {
     if (from instanceof Layer) from = from.output;
     method = method || methods.connection.ALL_TO_ALL;
     var connections = [];
@@ -252,7 +252,7 @@ Layer.LSTM = function(size) {
   return layer;
 };
 
-Layer.GRU = function(size) {
+Layer.GRU = function (size) {
   // Create the layer
   var layer = new Layer();
 
@@ -266,21 +266,21 @@ Layer.GRU = function(size) {
   previousOutput.set({
     bias: 0,
     squash: methods.activation.IDENTITY,
-    type: 'constant'
+    type: 'constant',
   });
   memoryCell.set({
-    squash: methods.activation.TANH
+    squash: methods.activation.TANH,
   });
   inverseUpdateGate.set({
     bias: 0,
     squash: methods.activation.INVERSE,
-    type: 'constant'
+    type: 'constant',
   });
   updateGate.set({
-    bias: 1
+    bias: 1,
   });
   resetGate.set({
-    bias: 0
+    bias: 0,
   });
 
   // Update gate calculation
@@ -314,12 +314,12 @@ Layer.GRU = function(size) {
     resetGate,
     memoryCell,
     output,
-    previousOutput
+    previousOutput,
   ];
 
   layer.output = output;
 
-  layer.input = function(from, method, weight) {
+  layer.input = function (from, method, weight) {
     if (from instanceof Layer) from = from.output;
     method = method || methods.connection.ALL_TO_ALL;
     var connections = [];
@@ -334,7 +334,7 @@ Layer.GRU = function(size) {
   return layer;
 };
 
-Layer.Memory = function(size, memory) {
+Layer.Memory = function (size, memory) {
   // Create the layer
   var layer = new Layer();
   // Because the output can only be one group, we have to put the nodes all in óne group
@@ -347,7 +347,7 @@ Layer.Memory = function(size, memory) {
     block.set({
       squash: methods.activation.IDENTITY,
       bias: 0,
-      type: 'constant'
+      type: 'constant',
     });
 
     if (previous != null) {
@@ -371,7 +371,7 @@ Layer.Memory = function(size, memory) {
   }
   layer.output = outputGroup;
 
-  layer.input = function(from, method, weight) {
+  layer.input = function (from, method, weight) {
     if (from instanceof Layer) from = from.output;
     method = method || methods.connection.ALL_TO_ALL;
 

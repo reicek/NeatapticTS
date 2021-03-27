@@ -26,11 +26,11 @@
  */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
-		module.exports = factory(require("child_process"), require("os"));
+		module.exports = factory(import("child_process"), import("os"));
 	else if(typeof define === 'function' && define.amd)
 		define(["child_process", "os"], factory);
 	else if(typeof exports === 'object')
-		exports["neataptic"] = factory(require("child_process"), require("os"));
+		exports["neataptic"] = factory(import("child_process"), import("os"));
 	else
 		root["neataptic"] = factory(root["child_process"], root["os"]);
 })(this, function(__WEBPACK_EXTERNAL_MODULE_21__, __WEBPACK_EXTERNAL_MODULE_25__) {

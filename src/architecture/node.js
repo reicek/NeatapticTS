@@ -2,9 +2,9 @@
 module.exports = Node;
 
 /* Import */
-var methods = require('../methods/methods');
-var Connection = require('./connection');
-var config = require('../config');
+var methods = import('../methods/methods');
+var Connection = import('./connection');
+var config = import('../config');
 
 /*******************************************************************************
                                          NODE
@@ -32,14 +32,14 @@ function Node(type) {
     in: [],
     out: [],
     gated: [],
-    self: new Connection(this, this, 0)
+    self: new Connection(this, this, 0),
   };
 
   // Data for backpropagation
   this.error = {
     responsibility: 0,
     projected: 0,
-    gated: 0
+    gated: 0,
   };
 }
 
@@ -47,7 +47,7 @@ Node.prototype = {
   /**
    * Activates the node
    */
-  activate: function(input) {
+  activate: function (input) {
     // Check if an input is given
     if (typeof input !== 'undefined') {
       this.activation = input;
@@ -135,7 +135,7 @@ Node.prototype = {
   /**
    * Activates the node without calculating elegibility traces and such
    */
-  noTraceActivate: function(input) {
+  noTraceActivate: function (input) {
     // Check if an input is given
     if (typeof input !== 'undefined') {
       this.activation = input;
@@ -168,7 +168,7 @@ Node.prototype = {
   /**
    * Back-propagate the error, aka learn
    */
-  propagate: function(rate, momentum, update, target) {
+  propagate: function (rate, momentum, update, target) {
     momentum = momentum || 0;
     rate = rate || 0.3;
 
@@ -253,7 +253,7 @@ Node.prototype = {
   /**
    * Creates a connection from this node to the given node
    */
-  connect: function(target, weight) {
+  connect: function (target, weight) {
     var connections = [];
     if (typeof target.bias !== 'undefined') {
       // must be a node!
@@ -291,7 +291,7 @@ Node.prototype = {
   /**
    * Disconnects this node from the other node
    */
-  disconnect: function(node, twosided) {
+  disconnect: function (node, twosided) {
     if (this === node) {
       this.connections.self.weight = 0;
       return;
@@ -316,7 +316,7 @@ Node.prototype = {
   /**
    * Make this node gate a connection
    */
-  gate: function(connections) {
+  gate: function (connections) {
     if (!Array.isArray(connections)) {
       connections = [connections];
     }
@@ -332,7 +332,7 @@ Node.prototype = {
   /**
    * Removes the gates from this node from the given connection(s)
    */
-  ungate: function(connections) {
+  ungate: function (connections) {
     if (!Array.isArray(connections)) {
       connections = [connections];
     }
@@ -350,14 +350,14 @@ Node.prototype = {
   /**
    * Clear the context of the node
    */
-  clear: function() {
+  clear: function () {
     for (var i = 0; i < this.connections.in.length; i++) {
       var connection = this.connections.in[i];
 
       connection.elegibility = 0;
       connection.xtrace = {
         nodes: [],
-        values: []
+        values: [],
       };
     }
 
@@ -373,7 +373,7 @@ Node.prototype = {
   /**
    * Mutates the node with the given method
    */
-  mutate: function(method) {
+  mutate: function (method) {
     if (typeof method === 'undefined') {
       throw new Error('No mutate method given!');
     } else if (!(method.name in methods.mutation)) {
@@ -403,7 +403,7 @@ Node.prototype = {
   /**
    * Checks if this node is projecting to the given node
    */
-  isProjectingTo: function(node) {
+  isProjectingTo: function (node) {
     if (node === this && this.connections.self.weight !== 0) return true;
 
     for (var i = 0; i < this.connections.out.length; i++) {
@@ -418,7 +418,7 @@ Node.prototype = {
   /**
    * Checks if the given node is projecting to this node
    */
-  isProjectedBy: function(node) {
+  isProjectedBy: function (node) {
     if (node === this && this.connections.self.weight !== 0) return true;
 
     for (var i = 0; i < this.connections.in.length; i++) {
@@ -434,22 +434,22 @@ Node.prototype = {
   /**
    * Converts the node to a json object
    */
-  toJSON: function() {
+  toJSON: function () {
     var json = {
       bias: this.bias,
       type: this.type,
       squash: this.squash.name,
-      mask: this.mask
+      mask: this.mask,
     };
 
     return json;
-  }
+  },
 };
 
 /**
  * Convert a json object to a node
  */
-Node.fromJSON = function(json) {
+Node.fromJSON = function (json) {
   var node = new Node();
   node.bias = json.bias;
   node.type = json.type;

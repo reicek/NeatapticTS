@@ -4,10 +4,10 @@
 
 var multi = {
   /** Workers */
-  workers: require('./workers/workers'),
+  workers: import('./workers/workers'),
 
   /** Serializes a dataset */
-  serializeDataSet: function(dataSet) {
+  serializeDataSet: function (dataSet) {
     var serialized = [dataSet[0].input.length, dataSet[0].output.length];
 
     for (var i = 0; i < dataSet.length; i++) {
@@ -24,7 +24,7 @@ var multi = {
   },
 
   /** Activate a serialized network */
-  activateSerializedNetwork: function(input, A, S, data, F) {
+  activateSerializedNetwork: function (input, A, S, data, F) {
     for (var i = 0; i < data[0]; i++) A[i] = input[i];
     for (i = 2; i < data.length; i++) {
       let index = data[i++];
@@ -49,7 +49,7 @@ var multi = {
   },
 
   /** Deserializes a dataset to an array of arrays */
-  deserializeDataSet: function(serializedSet) {
+  deserializeDataSet: function (serializedSet) {
     var set = [];
 
     var sampleSize = serializedSet[0] + serializedSet[1];
@@ -79,58 +79,58 @@ var multi = {
 
   /** A list of compiled activation functions in a certain order */
   activations: [
-    function(x) {
+    function (x) {
       return 1 / (1 + Math.exp(-x));
     },
-    function(x) {
+    function (x) {
       return Math.tanh(x);
     },
-    function(x) {
+    function (x) {
       return x;
     },
-    function(x) {
+    function (x) {
       return x > 0 ? 1 : 0;
     },
-    function(x) {
+    function (x) {
       return x > 0 ? x : 0;
     },
-    function(x) {
+    function (x) {
       return x / (1 + Math.abs(x));
     },
-    function(x) {
+    function (x) {
       return Math.sin(x);
     },
-    function(x) {
+    function (x) {
       return Math.exp(-Math.pow(x, 2));
     },
-    function(x) {
+    function (x) {
       return (Math.sqrt(Math.pow(x, 2) + 1) - 1) / 2 + x;
     },
-    function(x) {
+    function (x) {
       return x > 0 ? 1 : -1;
     },
-    function(x) {
+    function (x) {
       return 2 / (1 + Math.exp(-x)) - 1;
     },
-    function(x) {
+    function (x) {
       return Math.max(-1, Math.min(1, x));
     },
-    function(x) {
+    function (x) {
       return Math.abs(x);
     },
-    function(x) {
+    function (x) {
       return 1 - x;
     },
-    function(x) {
+    function (x) {
       var a = 1.6732632423543772848170429916717;
       return (
         (x > 0 ? x : a * Math.exp(x) - a) * 1.0507009873554804934193349852946
       );
-    }
-  ]
+    },
+  ],
 };
 
-multi.testSerializedSet = function(set, cost, A, S, data, F) {
+multi.testSerializedSet = function (set, cost, A, S, data, F) {
   // Calculate how much samples are in the set
   var error = 0;
   for (var i = 0; i < set.length; i += 2) {

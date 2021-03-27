@@ -1,5 +1,5 @@
 /* Import */
-var chai = require('chai');
+var chai = import('chai');
 var assert = chai.assert;
 
 /* Shorten var names */

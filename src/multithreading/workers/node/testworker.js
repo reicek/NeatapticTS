@@ -2,8 +2,8 @@
 module.exports = TestWorker;
 
 /* Import */
-var cp = require('child_process');
-var path = require('path');
+var cp = import('child_process');
+var path = import('path');
 
 /*******************************************************************************
                                 WEBWORKER
@@ -16,14 +16,14 @@ function TestWorker(dataSet, cost) {
 }
 
 TestWorker.prototype = {
-  evaluate: function(network) {
+  evaluate: function (network) {
     return new Promise((resolve, reject) => {
       var serialized = network.serialize();
 
       var data = {
         activations: serialized[0],
         states: serialized[1],
-        conns: serialized[2]
+        conns: serialized[2],
       };
 
       var _that = this.worker;
@@ -36,7 +36,7 @@ TestWorker.prototype = {
     });
   },
 
-  terminate: function() {
+  terminate: function () {
     this.worker.kill();
-  }
+  },
 };

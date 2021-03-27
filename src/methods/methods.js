@@ -3,14 +3,14 @@
 *******************************************************************************/
 
 var methods = {
-  activation: require('./activation'),
-  mutation: require('./mutation'),
-  selection: require('./selection'),
-  crossover: require('./crossover'),
-  cost: require('./cost'),
-  gating: require('./gating'),
-  connection: require('./connection'),
-  rate: require('./rate')
+  activation: import('./activation'),
+  mutation: import('./mutation'),
+  selection: import('./selection'),
+  crossover: import('./crossover'),
+  cost: import('./cost'),
+  gating: import('./gating'),
+  connection: import('./connection'),
+  rate: import('./rate'),
 };
 
 /** Export */

@@ -1,10 +1,10 @@
 'use strict';
 
-const methods = require('../methods/methods');
-const Network = require('./network');
-const Group = require('./group');
-const Layer = require('./layer');
-const Node = require('./node');
+const methods = import('../methods/methods');
+const Network = import('./network');
+const Group = import('./group');
+const Layer = import('./layer');
+const Node = import('./node');
 
 /*******************************************************************************
                                         architect
@@ -88,7 +88,7 @@ const architect = {
   /**
    * Creates a multilayer perceptron (MLP)
    */
-  Perceptron: function() {
+  Perceptron: function () {
     // Convert arguments to Array
     const layers = Array.prototype.slice.call(arguments);
     if (layers.length < 3) {
@@ -112,7 +112,7 @@ const architect = {
   /**
    * Creates a randomly connected network
    */
-  Random: function(input, hidden, output, options) {
+  Random: function (input, hidden, output, options) {
     options = options || {};
 
     const connections = options.connections || hidden * 2;
@@ -149,7 +149,7 @@ const architect = {
   /**
    * Creates a long short-term memory network
    */
-  LSTM: function() {
+  LSTM: function () {
     const args = Array.prototype.slice.call(arguments);
     if (args.length < 3) {
       throw new Error('You have to specify at least 3 layers');
@@ -166,7 +166,7 @@ const architect = {
     }
 
     outputLayer.set({
-      type: 'output'
+      type: 'output',
     });
 
     const options = {};
@@ -180,7 +180,7 @@ const architect = {
 
     const inputLayer = new Group(args.shift()); // first argument
     inputLayer.set({
-      type: 'input'
+      type: 'input',
     });
 
     const blocks = args; // all the arguments in the middle
@@ -201,13 +201,13 @@ const architect = {
         i === blocks.length - 1 ? outputLayer : new Group(block);
 
       inputGate.set({
-        bias: 1
+        bias: 1,
       });
       forgetGate.set({
-        bias: 1
+        bias: 1,
       });
       outputGate.set({
-        bias: 1
+        bias: 1,
       });
 
       // Connect the input with all the nodes
@@ -288,7 +288,7 @@ const architect = {
   /**
    * Creates a gated recurrent unit network
    */
-  GRU: function() {
+  GRU: function () {
     const args = Array.prototype.slice.call(arguments);
     if (args.length < 3) {
       throw new Error('not enough layers (minimum 3) !!');
@@ -319,18 +319,18 @@ const architect = {
   /**
    * Creates a hopfield network of the given size
    */
-  Hopfield: function(size) {
+  Hopfield: function (size) {
     const input = new Group(size);
     const output = new Group(size);
 
     input.connect(output, methods.connection.ALL_TO_ALL);
 
     input.set({
-      type: 'input'
+      type: 'input',
     });
     output.set({
       squash: methods.activation.STEP,
-      type: 'output'
+      type: 'output',
     });
 
     const network = architect.Construct([input, output]);
@@ -341,7 +341,7 @@ const architect = {
   /**
    * Creates a NARX network (remember previous inputs/outputs)
    */
-  NARX: function(
+  NARX: function (
     inputSize,
     hiddenLayers,
     outputSize,
@@ -383,14 +383,14 @@ const architect = {
     outputMemory.connect(hidden[0], methods.connection.ALL_TO_ALL);
 
     input.set({
-      type: 'input'
+      type: 'input',
     });
     output.set({
-      type: 'output'
+      type: 'output',
     });
 
     return architect.Construct(nodes);
-  }
+  },
 };
 
 /* Export */

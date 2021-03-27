@@ -2,10 +2,10 @@
 module.exports = Group;
 
 /* Import */
-var methods = require('../methods/methods');
-var config = require('../config');
-var Layer = require('./layer');
-var Node = require('./node');
+var methods = import('../methods/methods');
+var config = import('../config');
+var Layer = import('./layer');
+var Node = import('./node');
 
 /*******************************************************************************
                                          Group
@@ -16,7 +16,7 @@ function Group(size) {
   this.connections = {
     in: [],
     out: [],
-    self: []
+    self: [],
   };
 
   for (var i = 0; i < size; i++) {
@@ -28,7 +28,7 @@ Group.prototype = {
   /**
    * Activates all the nodes in the group
    */
-  activate: function(value) {
+  activate: function (value) {
     var values = [];
 
     if (typeof value !== 'undefined' && value.length !== this.nodes.length) {
@@ -54,7 +54,7 @@ Group.prototype = {
   /**
    * Propagates all the node in the group
    */
-  propagate: function(rate, momentum, target) {
+  propagate: function (rate, momentum, target) {
     if (typeof target !== 'undefined' && target.length !== this.nodes.length) {
       throw new Error(
         'Array with values should be same as the amount of nodes!'
@@ -73,7 +73,7 @@ Group.prototype = {
   /**
    * Connects the nodes in this group to nodes in another group or just a node
    */
-  connect: function(target, method, weight) {
+  connect: function (target, method, weight) {
     var connections = [];
     var i, j;
     if (target instanceof Group) {
@@ -132,7 +132,7 @@ Group.prototype = {
   /**
    * Make nodes from this group gate the given connection(s)
    */
-  gate: function(connections, method) {
+  gate: function (connections, method) {
     if (typeof method === 'undefined') {
       throw new Error('Please specify Gating.INPUT, Gating.OUTPUT');
     }
@@ -193,7 +193,7 @@ Group.prototype = {
   /**
    * Sets the value of a property for every node
    */
-  set: function(values) {
+  set: function (values) {
     for (var i = 0; i < this.nodes.length; i++) {
       if (typeof values.bias !== 'undefined') {
         this.nodes[i].bias = values.bias;
@@ -207,7 +207,7 @@ Group.prototype = {
   /**
    * Disconnects all nodes from this group from another given group/node
    */
-  disconnect: function(target, twosided) {
+  disconnect: function (target, twosided) {
     twosided = twosided || false;
 
     // In the future, disconnect will return a connection so indexOf can be used
@@ -268,9 +268,9 @@ Group.prototype = {
   /**
    * Clear the context of this group
    */
-  clear: function() {
+  clear: function () {
     for (var i = 0; i < this.nodes.length; i++) {
       this.nodes[i].clear();
     }
-  }
+  },
 };

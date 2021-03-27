@@ -1,5 +1,5 @@
 /* Import */
-var activation = require('./activation');
+var activation = import('./activation');
 
 /*******************************************************************************
                                       MUTATION
@@ -8,27 +8,27 @@ var activation = require('./activation');
 // https://en.wikipedia.org/wiki/mutation_(genetic_algorithm)
 var mutation = {
   ADD_NODE: {
-    name: 'ADD_NODE'
+    name: 'ADD_NODE',
   },
   SUB_NODE: {
     name: 'SUB_NODE',
-    keep_gates: true
+    keep_gates: true,
   },
   ADD_CONN: {
-    name: 'ADD_CONN'
+    name: 'ADD_CONN',
   },
   SUB_CONN: {
-    name: 'REMOVE_CONN'
+    name: 'REMOVE_CONN',
   },
   MOD_WEIGHT: {
     name: 'MOD_WEIGHT',
     min: -1,
-    max: 1
+    max: 1,
   },
   MOD_BIAS: {
     name: 'MOD_BIAS',
     min: -1,
-    max: 1
+    max: 1,
   },
   MOD_ACTIVATION: {
     name: 'MOD_ACTIVATION',
@@ -48,31 +48,31 @@ var mutation = {
       activation.HARD_TANH,
       activation.ABSOLUTE,
       activation.INVERSE,
-      activation.SELU
-    ]
+      activation.SELU,
+    ],
   },
   ADD_SELF_CONN: {
-    name: 'ADD_SELF_CONN'
+    name: 'ADD_SELF_CONN',
   },
   SUB_SELF_CONN: {
-    name: 'SUB_SELF_CONN'
+    name: 'SUB_SELF_CONN',
   },
   ADD_GATE: {
-    name: 'ADD_GATE'
+    name: 'ADD_GATE',
   },
   SUB_GATE: {
-    name: 'SUB_GATE'
+    name: 'SUB_GATE',
   },
   ADD_BACK_CONN: {
-    name: 'ADD_BACK_CONN'
+    name: 'ADD_BACK_CONN',
   },
   SUB_BACK_CONN: {
-    name: 'SUB_BACK_CONN'
+    name: 'SUB_BACK_CONN',
   },
   SWAP_NODES: {
     name: 'SWAP_NODES',
-    mutateOutput: true
-  }
+    mutateOutput: true,
+  },
 };
 
 mutation.ALL = [
@@ -89,7 +89,7 @@ mutation.ALL = [
   mutation.SUB_SELF_CONN,
   mutation.ADD_BACK_CONN,
   mutation.SUB_BACK_CONN,
-  mutation.SWAP_NODES
+  mutation.SWAP_NODES,
 ];
 
 mutation.FFW = [
@@ -100,7 +100,7 @@ mutation.FFW = [
   mutation.MOD_WEIGHT,
   mutation.MOD_BIAS,
   mutation.MOD_ACTIVATION,
-  mutation.SWAP_NODES
+  mutation.SWAP_NODES,
 ];
 
 /* Export */

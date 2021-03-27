@@ -2,12 +2,12 @@
 module.exports = Network;
 
 /* Import */
-var multi = require('../multithreading/multi');
-var methods = require('../methods/methods');
-var Connection = require('./connection');
-var config = require('../config');
-var Neat = require('../neat');
-var Node = require('./node');
+var multi = import('../multithreading/multi');
+var methods = import('../methods/methods');
+var Connection = import('./connection');
+var config = import('../config');
+var Neat = import('../neat');
+var Node = import('./node');
 
 /* Easier variable naming */
 var mutation = methods.mutation;
@@ -54,7 +54,7 @@ Network.prototype = {
   /**
    * Activates the network
    */
-  activate: function(input, training) {
+  activate: function (input, training) {
     var output = [];
 
     // Activate nodes chronologically
@@ -76,7 +76,7 @@ Network.prototype = {
   /**
    * Activates the network without calculating elegibility traces and such
    */
-  noTraceActivate: function(input) {
+  noTraceActivate: function (input) {
     var output = [];
 
     // Activate nodes chronologically
@@ -97,7 +97,7 @@ Network.prototype = {
   /**
    * Backpropagate the network
    */
-  propagate: function(rate, momentum, update, target) {
+  propagate: function (rate, momentum, update, target) {
     if (typeof target === 'undefined' || target.length !== this.output) {
       throw new Error(
         'Output target length should match network output length'
@@ -121,7 +121,7 @@ Network.prototype = {
   /**
    * Clear the context of the network
    */
-  clear: function() {
+  clear: function () {
     for (var i = 0; i < this.nodes.length; i++) {
       this.nodes[i].clear();
     }
@@ -130,7 +130,7 @@ Network.prototype = {
   /**
    * Connects the from node to the to node
    */
-  connect: function(from, to, weight) {
+  connect: function (from, to, weight) {
     var connections = from.connect(to, weight);
 
     for (var i = 0; i < connections.length; i++) {
@@ -148,7 +148,7 @@ Network.prototype = {
   /**
    * Disconnects the from node from the to node
    */
-  disconnect: function(from, to) {
+  disconnect: function (from, to) {
     // Delete the connection in the network's connection array
     var connections = from === to ? this.selfconns : this.connections;
 
@@ -168,7 +168,7 @@ Network.prototype = {
   /**
    * Gate a connection with a node
    */
-  gate: function(node, connection) {
+  gate: function (node, connection) {
     if (this.nodes.indexOf(node) === -1) {
       throw new Error('This node is not part of the network!');
     } else if (connection.gater != null) {
@@ -182,7 +182,7 @@ Network.prototype = {
   /**
    *  Remove the gate of a connection
    */
-  ungate: function(connection) {
+  ungate: function (connection) {
     var index = this.gates.indexOf(connection);
     if (index === -1) {
       throw new Error('This connection is not gated!');
@@ -195,7 +195,7 @@ Network.prototype = {
   /**
    *  Removes a node from the network
    */
-  remove: function(node) {
+  remove: function (node) {
     var index = this.nodes.indexOf(node);
 
     if (index === -1) {
@@ -278,7 +278,7 @@ Network.prototype = {
   /**
    * Mutates the network with the given method
    */
-  mutate: function(method) {
+  mutate: function (method) {
     if (typeof method === 'undefined') {
       throw new Error('No (correct) mutate method given!');
     }
@@ -568,7 +568,7 @@ Network.prototype = {
   /**
    * Train the given set to this network
    */
-  train: function(set, options) {
+  train: function (set, options) {
     if (
       set[0].input.length !== this.input ||
       set[0].output.length !== this.output
@@ -702,7 +702,7 @@ Network.prototype = {
     return {
       error: error,
       iterations: iteration,
-      time: Date.now() - start
+      time: Date.now() - start,
     };
   },
 
@@ -710,7 +710,7 @@ Network.prototype = {
    * Performs one training epoch and returns the error
    * private function used in this.train
    */
-  _trainSet: function(set, batchSize, currentRate, momentum, costFunction) {
+  _trainSet: function (set, batchSize, currentRate, momentum, costFunction) {
     var errorSum = 0;
     for (var i = 0; i < set.length; i++) {
       var input = set[i].input;
@@ -729,7 +729,7 @@ Network.prototype = {
   /**
    * Tests a set and returns the error and elapsed time
    */
-  test: function(set, cost = methods.cost.MSE) {
+  test: function (set, cost = methods.cost.MSE) {
     // Check if dropout is enabled, set correct mask
     var i;
     if (this.dropout) {
@@ -757,7 +757,7 @@ Network.prototype = {
 
     var results = {
       error: error,
-      time: Date.now() - start
+      time: Date.now() - start,
     };
 
     return results;
@@ -766,7 +766,7 @@ Network.prototype = {
   /**
    * Creates a json that can be used to create a graph with d3 and webcola
    */
-  graph: function(width, height) {
+  graph: function (width, height) {
     var input = 0;
     var output = 0;
 
@@ -777,14 +777,14 @@ Network.prototype = {
         {
           type: 'alignment',
           axis: 'x',
-          offsets: []
+          offsets: [],
         },
         {
           type: 'alignment',
           axis: 'y',
-          offsets: []
-        }
-      ]
+          offsets: [],
+        },
+      ],
     };
 
     var i;
@@ -795,33 +795,33 @@ Network.prototype = {
         if (this.input === 1) {
           json.constraints[0].offsets.push({
             node: i,
-            offset: 0
+            offset: 0,
           });
         } else {
           json.constraints[0].offsets.push({
             node: i,
-            offset: ((0.8 * width) / (this.input - 1)) * input++
+            offset: ((0.8 * width) / (this.input - 1)) * input++,
           });
         }
         json.constraints[1].offsets.push({
           node: i,
-          offset: 0
+          offset: 0,
         });
       } else if (node.type === 'output') {
         if (this.output === 1) {
           json.constraints[0].offsets.push({
             node: i,
-            offset: 0
+            offset: 0,
           });
         } else {
           json.constraints[0].offsets.push({
             node: i,
-            offset: ((0.8 * width) / (this.output - 1)) * output++
+            offset: ((0.8 * width) / (this.output - 1)) * output++,
           });
         }
         json.constraints[1].offsets.push({
           node: i,
-          offset: -0.8 * height
+          offset: -0.8 * height,
         });
       }
 
@@ -830,7 +830,7 @@ Network.prototype = {
         name:
           node.type === 'hidden' ? node.squash.name : node.type.toUpperCase(),
         activation: node.activation,
-        bias: node.bias
+        bias: node.bias,
       });
     }
 
@@ -841,7 +841,7 @@ Network.prototype = {
         json.links.push({
           source: this.nodes.indexOf(connection.from),
           target: this.nodes.indexOf(connection.to),
-          weight: connection.weight
+          weight: connection.weight,
         });
       } else {
         // Add a gater 'node'
@@ -849,23 +849,23 @@ Network.prototype = {
         json.nodes.push({
           id: index,
           activation: connection.gater.activation,
-          name: 'GATE'
+          name: 'GATE',
         });
         json.links.push({
           source: this.nodes.indexOf(connection.from),
           target: index,
-          weight: (1 / 2) * connection.weight
+          weight: (1 / 2) * connection.weight,
         });
         json.links.push({
           source: index,
           target: this.nodes.indexOf(connection.to),
-          weight: (1 / 2) * connection.weight
+          weight: (1 / 2) * connection.weight,
         });
         json.links.push({
           source: this.nodes.indexOf(connection.gater),
           target: index,
           weight: connection.gater.activation,
-          gate: true
+          gate: true,
         });
       }
     }
@@ -876,13 +876,13 @@ Network.prototype = {
   /**
    * Convert the network to a json object
    */
-  toJSON: function() {
+  toJSON: function () {
     var json = {
       nodes: [],
       connections: [],
       input: this.input,
       output: this.output,
-      dropout: this.dropout
+      dropout: this.dropout,
     };
 
     // So we don't have to use expensive .indexOf()
@@ -927,7 +927,7 @@ Network.prototype = {
   /**
    * Sets the value of a property for every node in this network
    */
-  set: function(values) {
+  set: function (values) {
     for (var i = 0; i < this.nodes.length; i++) {
       this.nodes[i].bias = values.bias || this.nodes[i].bias;
       this.nodes[i].squash = values.squash || this.nodes[i].squash;
@@ -937,7 +937,7 @@ Network.prototype = {
   /**
    * Evolves the network to reach a lower error on a dataset
    */
-  evolve: async function(set, options) {
+  evolve: async function (set, options) {
     if (
       set[0].input.length !== this.input ||
       set[0].output.length !== this.output
@@ -960,7 +960,7 @@ Network.prototype = {
     if (typeof threads === 'undefined') {
       if (typeof window === 'undefined') {
         // Node.js
-        threads = require('os').cpus().length;
+        threads = import('os').cpus().length;
       } else {
         // Browser
         threads = navigator.hardwareConcurrency;
@@ -985,7 +985,7 @@ Network.prototype = {
     var fitnessFunction;
     if (threads === 1) {
       // Create the fitness function
-      fitnessFunction = function(genome) {
+      fitnessFunction = function (genome) {
         var score = 0;
         for (var i = 0; i < amount; i++) {
           score -= genome.test(set, cost).error;
@@ -1018,14 +1018,14 @@ Network.prototype = {
         }
       }
 
-      fitnessFunction = function(population) {
+      fitnessFunction = function (population) {
         return new Promise((resolve, reject) => {
           // Create a queue
           var queue = population.slice();
           var done = 0;
 
           // Start worker function
-          var startWorker = function(worker) {
+          var startWorker = function (worker) {
             if (!queue.length) {
               if (++done === threads) resolve();
               return;
@@ -1033,7 +1033,7 @@ Network.prototype = {
 
             var genome = queue.shift();
 
-            worker.evaluate(genome).then(function(result) {
+            worker.evaluate(genome).then(function (result) {
               genome.score = -result;
               genome.score -=
                 (genome.nodes.length -
@@ -1104,7 +1104,7 @@ Network.prototype = {
         options.schedule.function({
           fitness: fitness,
           error: -error,
-          iteration: neat.generation
+          iteration: neat.generation,
         });
       }
     }
@@ -1125,7 +1125,7 @@ Network.prototype = {
     return {
       error: -error,
       iterations: neat.generation,
-      time: Date.now() - start
+      time: Date.now() - start,
     };
   },
 
@@ -1133,7 +1133,7 @@ Network.prototype = {
    * Creates a standalone function of the network which can be run without the
    * need of a library
    */
-  standalone: function() {
+  standalone: function () {
     var present = [];
     var activations = [];
     var states = [];
@@ -1218,7 +1218,7 @@ Network.prototype = {
   /**
    * Serialize to send to workers efficiently
    */
-  serialize: function() {
+  serialize: function () {
     var activations = [];
     var states = [];
     var conns = [];
@@ -1237,7 +1237,7 @@ Network.prototype = {
       'HARD_TANH',
       'ABSOLUTE',
       'INVERSE',
-      'SELU'
+      'SELU',
     ];
 
     conns.push(this.input);
@@ -1276,13 +1276,13 @@ Network.prototype = {
     }
 
     return [activations, states, conns];
-  }
+  },
 };
 
 /**
  * Convert a json object to a network
  */
-Network.fromJSON = function(json) {
+Network.fromJSON = function (json) {
   var network = new Network(json.input, json.output);
   network.dropout = json.dropout;
   network.nodes = [];
@@ -1313,7 +1313,7 @@ Network.fromJSON = function(json) {
 /**
  * Merge two networks into one
  */
-Network.merge = function(network1, network2) {
+Network.merge = function (network1, network2) {
   // Create a copy of the networks
   network1 = Network.fromJSON(network1.toJSON());
   network2 = Network.fromJSON(network2.toJSON());
@@ -1361,7 +1361,7 @@ Network.merge = function(network1, network2) {
 /**
  * Create an offspring from two parent networks
  */
-Network.crossOver = function(network1, network2, equal) {
+Network.crossOver = function (network1, network2, equal) {
   if (
     network1.input !== network2.input ||
     network1.output !== network2.output
@@ -1442,7 +1442,7 @@ Network.crossOver = function(network1, network2, equal) {
       weight: conn.weight,
       from: conn.from.index,
       to: conn.to.index,
-      gater: conn.gater != null ? conn.gater.index : -1
+      gater: conn.gater != null ? conn.gater.index : -1,
     };
     n1conns[Connection.innovationID(data.from, data.to)] = data;
   }
@@ -1454,7 +1454,7 @@ Network.crossOver = function(network1, network2, equal) {
       weight: conn.weight,
       from: conn.from.index,
       to: conn.to.index,
-      gater: conn.gater != null ? conn.gater.index : -1
+      gater: conn.gater != null ? conn.gater.index : -1,
     };
     n1conns[Connection.innovationID(data.from, data.to)] = data;
   }
@@ -1466,7 +1466,7 @@ Network.crossOver = function(network1, network2, equal) {
       weight: conn.weight,
       from: conn.from.index,
       to: conn.to.index,
-      gater: conn.gater != null ? conn.gater.index : -1
+      gater: conn.gater != null ? conn.gater.index : -1,
     };
     n2conns[Connection.innovationID(data.from, data.to)] = data;
   }
@@ -1478,7 +1478,7 @@ Network.crossOver = function(network1, network2, equal) {
       weight: conn.weight,
       from: conn.from.index,
       to: conn.to.index,
-      gater: conn.gater != null ? conn.gater.index : -1
+      gater: conn.gater != null ? conn.gater.index : -1,
     };
     n2conns[Connection.innovationID(data.from, data.to)] = data;
   }
