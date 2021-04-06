@@ -1,37 +1,23 @@
-var Neataptic = {
-  methods: import('./methods/methods'),
-  Connection: import('./architecture/connection'),
-  architect: import('./architecture/architect'),
-  Network: import('./architecture/network'),
-  config: import('./config'),
-  Group: import('./architecture/group'),
-  Layer: import('./architecture/layer'),
-  Node: import('./architecture/node'),
-  Neat: import('./neat'),
-  multi: import('./multithreading/multi'),
+import * as methods from './methods/methods';
+import * as Connection from './architecture/connection';
+import * as architect from './architecture/architect';
+import * as Network from './architecture/network';
+import * as config from './config';
+import * as Group from './architecture/group';
+import * as Layer from './architecture/layer';
+import * as Node from './architecture/node';
+import * as Neat from './neat';
+import * as multi from './multithreading/multi';
+
+export {
+  methods,
+  Connection,
+  architect,
+  Network,
+  config,
+  Group,
+  Layer,
+  Node,
+  Neat,
+  multi,
 };
-
-// CommonJS & AMD
-if (typeof define !== 'undefined' && define.amd) {
-  define([], function () {
-    return Neataptic;
-  });
-}
-
-// Node.js
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = Neataptic;
-}
-
-// Browser
-if (typeof window === 'object') {
-  (function () {
-    var old = window['neataptic'];
-    Neataptic.ninja = function () {
-      window['neataptic'] = old;
-      return Neataptic;
-    };
-  })();
-
-  window['neataptic'] = Neataptic;
-}
