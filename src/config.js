@@ -1,11 +1,5 @@
-/*******************************************************************************
-                                      CONFIG
-*******************************************************************************/
-
-// Config
-var config = {
+const config = {
   warnings: false,
 };
 
-/* Export */
-module.exports = config;
+export default config;
