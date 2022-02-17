@@ -1,9 +1,5 @@
-/*******************************************************************************
-                                  METHODS
-*******************************************************************************/
-
-var methods = {
-  activation: import('./activation'),
+const methods = {
+  activation: import('./Activation'),
   mutation: import('./mutation'),
   selection: import('./selection'),
   crossover: import('./crossover'),
@@ -13,5 +9,4 @@ var methods = {
   rate: import('./rate'),
 };
 
-/** Export */
-module.exports = methods;
+export default methods;

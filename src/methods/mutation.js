@@ -1,12 +1,7 @@
-/* Import */
-var activation = import('./activation');
+import { Activation } from './Activation'
 
-/*******************************************************************************
-                                      MUTATION
-*******************************************************************************/
-
-// https://en.wikipedia.org/wiki/mutation_(genetic_algorithm)
-var mutation = {
+/** @see {@link https://en.wikipedia.org/wiki/mutation_(genetic_algorithm)} */
+let mutation = {
   ADD_NODE: {
     name: 'ADD_NODE',
   },
@@ -34,21 +29,21 @@ var mutation = {
     name: 'MOD_ACTIVATION',
     mutateOutput: true,
     allowed: [
-      activation.LOGISTIC,
-      activation.TANH,
-      activation.RELU,
-      activation.IDENTITY,
-      activation.STEP,
-      activation.SOFTSIGN,
-      activation.SINUSOID,
-      activation.GAUSSIAN,
-      activation.BENT_IDENTITY,
-      activation.BIPOLAR,
-      activation.BIPOLAR_SIGMOID,
-      activation.HARD_TANH,
-      activation.ABSOLUTE,
-      activation.INVERSE,
-      activation.SELU,
+      Activation.LOGISTIC,
+      Activation.TANH,
+      Activation.RELU,
+      Activation.IDENTITY,
+      Activation.STEP,
+      Activation.SOFTSIGN,
+      Activation.SINUSOID,
+      Activation.GAUSSIAN,
+      Activation.BENT_IDENTITY,
+      Activation.BIPOLAR,
+      Activation.BIPOLAR_SIGMOID,
+      Activation.HARD_TANH,
+      Activation.ABSOLUTE,
+      Activation.INVERSE,
+      Activation.SELU,
     ],
   },
   ADD_SELF_CONN: {
@@ -103,5 +98,4 @@ mutation.FFW = [
   mutation.SWAP_NODES,
 ];
 
-/* Export */
-module.exports = mutation;
+export default mutation;
