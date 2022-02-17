@@ -1,4 +1,4 @@
-/** 
+/**
  * Specifies how to gate a connection between two groups of multiple neurons
  */
 const gating = {

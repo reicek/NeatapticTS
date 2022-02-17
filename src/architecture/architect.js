@@ -6,15 +6,12 @@ const Group = import('./group');
 const Layer = import('./layer');
 const Node = import('./node');
 
-/*******************************************************************************
-                                        architect
-*******************************************************************************/
-
+/** Architect */
 const architect = {
   /**
    * Constructs a network from a given array of connected nodes
    */
-  Construct(list) {
+  Construct: (list) => {
     // Create a network
     const network = new Network(0, 0);
 
@@ -88,7 +85,7 @@ const architect = {
   /**
    * Creates a multilayer perceptron (MLP)
    */
-  Perceptron: function () {
+  Perceptron: () => {
     // Convert arguments to Array
     const layers = Array.prototype.slice.call(arguments);
     if (layers.length < 3) {
@@ -112,7 +109,7 @@ const architect = {
   /**
    * Creates a randomly connected network
    */
-  Random: function (input, hidden, output, options) {
+  Random: (input, hidden, output, options) => {
     options = options || {};
 
     const connections = options.connections || hidden * 2;
@@ -149,7 +146,7 @@ const architect = {
   /**
    * Creates a long short-term memory network
    */
-  LSTM: function () {
+  LSTM: () => {
     const args = Array.prototype.slice.call(arguments);
     if (args.length < 3) {
       throw new Error('You have to specify at least 3 layers');
@@ -288,7 +285,7 @@ const architect = {
   /**
    * Creates a gated recurrent unit network
    */
-  GRU: function () {
+  GRU: () => {
     const args = Array.prototype.slice.call(arguments);
     if (args.length < 3) {
       throw new Error('not enough layers (minimum 3) !!');
@@ -319,7 +316,7 @@ const architect = {
   /**
    * Creates a hopfield network of the given size
    */
-  Hopfield: function (size) {
+  Hopfield: (size) => {
     const input = new Group(size);
     const output = new Group(size);
 
@@ -341,13 +338,13 @@ const architect = {
   /**
    * Creates a NARX network (remember previous inputs/outputs)
    */
-  NARX: function (
+  NARX: (
     inputSize,
     hiddenLayers,
     outputSize,
     previousInput,
     previousOutput
-  ) {
+  ) => {
     if (!Array.isArray(hiddenLayers)) {
       hiddenLayers = [hiddenLayers];
     }

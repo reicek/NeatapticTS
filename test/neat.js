@@ -21,7 +21,7 @@ describe('Neat', function () {
       { input: [0, 0], output: [0] },
       { input: [0, 1], output: [0] },
       { input: [1, 0], output: [0] },
-      { input: [1, 1], output: [1] }
+      { input: [1, 1], output: [1] },
     ];
 
     var network = new Network(2, 1);
@@ -31,7 +31,7 @@ describe('Neat', function () {
       elitism: 10,
       mutationRate: 0.5,
       error: 0.03,
-      threads: 1
+      threads: 1,
     });
 
     assert.isBelow(results.error, 0.03);
@@ -43,7 +43,7 @@ describe('Neat', function () {
       { input: [0, 0], output: [0] },
       { input: [0, 1], output: [1] },
       { input: [1, 0], output: [1] },
-      { input: [1, 1], output: [0] }
+      { input: [1, 1], output: [0] },
     ];
 
     var network = new Network(2, 1);
@@ -53,7 +53,7 @@ describe('Neat', function () {
       elitism: 10,
       mutationRate: 0.5,
       error: 0.03,
-      threads: 1
+      threads: 1,
     });
 
     assert.isBelow(results.error, 0.03);
@@ -66,7 +66,7 @@ describe('Neat', function () {
       { input: [0, 0], output: [1] },
       { input: [0, 1], output: [0] },
       { input: [1, 0], output: [0] },
-      { input: [1, 1], output: [1] }
+      { input: [1, 1], output: [1] },
     ];
 
     var network = new Network(2, 1);
@@ -76,7 +76,7 @@ describe('Neat', function () {
       elitism: 10,
       mutationRate: 0.5,
       error: 0.03,
-      threads: 1
+      threads: 1,
     });
 
     assert.isBelow(results.error, 0.03);

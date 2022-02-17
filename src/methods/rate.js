@@ -1,6 +1,6 @@
 /**
  * Learning rate methods
- * @see {@link https://stackoverflow.com/questions/30033096/what-is-lr-policy-in-caffe/30045244} 
+ * @see {@link https://stackoverflow.com/questions/30033096/what-is-lr-policy-in-caffe/30045244}
  */
 export default class Rate {
   static fixed() {
@@ -20,15 +20,15 @@ export default class Rate {
   }
 
   static exp(gamma = 0.999) {
-    const func = function (baseRate, iteration) {
+    const func = (baseRate, iteration) => {
       return baseRate * Math.pow(gamma, iteration);
     };
 
     return func;
   }
-  
-  static inv (gamma = 0.001, power = 2) {
-    const func = function (baseRate, iteration) {
+
+  static inv(gamma = 0.001, power = 2) {
+    const func = (baseRate, iteration) => {
       return baseRate * Math.pow(1 + gamma * iteration, -power);
     };
 

@@ -5,15 +5,15 @@ import { config } from './config';
 /* Easier variable naming */
 const selection = methods.selection;
 
-/*******************************************************************************
-                                         NEAT
-*******************************************************************************/
-
+/** NeuroEvolution of Augmenting Topologies */
 class Neat {
   constructor(input, output, fitness, options) {
-    this.input = input; // The input size of the networks
-    this.output = output; // The output size of the networks
-    this.fitness = fitness; // The fitness function to evaluate the networks
+    /** Input size of the network */
+    this.input = input;
+    /** Output size of the networks */
+    this.output = output;
+    /** Fitness function to evaluate the networks */
+    this.fitness = fitness;
 
     // Configure options
     options = options || {};
@@ -42,13 +42,13 @@ class Neat {
     this.maxConns = options.maxConns || Infinity;
     this.maxGates = options.maxGates || Infinity;
 
-    // Custom mutation selection function if given
+    /** Custom mutation selection function if given */
     this.selectMutationMethod =
       typeof options.mutationSelection === 'function'
         ? options.mutationSelection.bind(this)
         : this.selectMutationMethod;
 
-    // Generation counter
+    /** Generation counter */
     this.generation = 0;
 
     // Initialise the genomes

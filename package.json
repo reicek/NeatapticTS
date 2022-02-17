@@ -8,8 +8,7 @@
     "test:dist": "mocha test/dist.js test",
     "build": "webpack",
     "deploy": "npm run build && npm run test:dist && npm publish",
-    "test:travis": "npm run build:dist && npm run test:dist",
-    "prettier:watch": "onchange '**/*.js' -- prettier --write {{changed}}"
+    "test:travis": "npm run build:dist && npm run test:dist"
   },
   "devDependencies": {
     "chai": "^4.3.4",

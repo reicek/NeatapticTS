@@ -1,4 +1,4 @@
-import { Activation } from './Activation'
+import { Activation } from './Activation';
 
 /** @see {@link https://en.wikipedia.org/wiki/mutation_(genetic_algorithm)} */
 let mutation = {
