@@ -1,5 +1,5 @@
 /** Specifies in what manner two groups are connected */
-const connection = {
+export const connection = {
   ALL_TO_ALL: {
     name: 'OUTPUT',
   },
@@ -12,5 +12,3 @@ const connection = {
     name: 'SELF',
   },
 };
-
-export default connection;

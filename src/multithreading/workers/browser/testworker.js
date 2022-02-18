@@ -1,14 +1,7 @@
-/* Export */
-module.exports = TestWorker;
+import { multi } from '../../multi';
 
-/* Import */
-var multi = import('../../multi');
-
-/*******************************************************************************
-                                WEBWORKER
-*******************************************************************************/
-
-function TestWorker(dataSet, cost) {
+/** WEBWORKER */
+export function TestWorker(dataSet, cost) {
   var blob = new Blob([this._createBlobString(cost)]);
   this.url = window.URL.createObjectURL(blob);
   this.worker = new Worker(this.url);

@@ -6,10 +6,7 @@ var methods = import('../methods/methods');
 var Group = import('./group');
 var Node = import('./node');
 
-/*******************************************************************************
-                                         Group
-*******************************************************************************/
-
+/** Group */
 function Layer() {
   this.output = null;
 

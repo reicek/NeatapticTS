@@ -1,7 +1,7 @@
 /**
  * Specifies how to gate a connection between two groups of multiple neurons
  */
-const gating = {
+export const gating = {
   OUTPUT: {
     name: 'OUTPUT',
   },
@@ -14,5 +14,3 @@ const gating = {
     name: 'SELF',
   },
 };
-
-export default gating;

@@ -1,4 +1,4 @@
-const methods = {
+export const methods = {
   activation: import('./Activation'),
   mutation: import('./mutation'),
   selection: import('./selection'),
@@ -8,5 +8,3 @@ const methods = {
   connection: import('./connection'),
   rate: import('./rate'),
 };
-
-export default methods;

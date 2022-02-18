@@ -1,14 +1,10 @@
-/* Export */
-module.exports = Group;
-
-/* Import */
 import methods from '../methods/methods';
 import config from '../config';
 import Layer from './layer';
 import Node from './node';
 
 /** Group */
-class Group {
+export default class Group {
   constructor(size) {
     this.nodes = [];
     this.connections = {

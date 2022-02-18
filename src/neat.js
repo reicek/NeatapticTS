@@ -6,7 +6,7 @@ import { config } from './config';
 const selection = methods.selection;
 
 /** NeuroEvolution of Augmenting Topologies */
-class Neat {
+export default class Neat {
   constructor(input, output, fitness, options) {
     /** Input size of the network */
     this.input = input;
@@ -378,5 +378,3 @@ class Neat {
     this.popsize = population.length;
   }
 }
-
-export default Neat;

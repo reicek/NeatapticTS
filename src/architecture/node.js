@@ -6,10 +6,7 @@ var methods = import('../methods/methods');
 var Connection = import('./connection');
 var config = import('../config');
 
-/*******************************************************************************
-                                         NODE
-*******************************************************************************/
-
+/** NODE */
 function Node(type) {
   this.bias = type === 'input' ? 0 : Math.random() * 0.2 - 0.1;
   this.squash = methods.activation.LOGISTIC;

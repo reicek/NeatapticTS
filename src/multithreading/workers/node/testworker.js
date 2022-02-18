@@ -1,15 +1,8 @@
-/* Export */
-module.exports = TestWorker;
+import { cp } from 'child_process';
+import { path } from 'path';
 
-/* Import */
-var cp = import('child_process');
-var path = import('path');
-
-/*******************************************************************************
-                                WEBWORKER
-*******************************************************************************/
-
-function TestWorker(dataSet, cost) {
+/** WEBWORKER */
+export default function TestWorker(dataSet, cost) {
   this.worker = cp.fork(path.join(__dirname, '/worker'));
 
   this.worker.send({ set: dataSet, cost: cost.name });

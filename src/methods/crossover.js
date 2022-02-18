@@ -1,5 +1,5 @@
 /** @see {@link https://en.wikipedia.org/wiki/Crossover_(genetic_algorithm)} */
-const crossover = {
+export const crossover = {
   SINGLE_POINT: {
     name: 'SINGLE_POINT',
     config: [0.4],
@@ -18,5 +18,3 @@ const crossover = {
     name: 'AVERAGE',
   },
 };
-
-export default crossover;

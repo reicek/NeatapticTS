@@ -1,8 +1,5 @@
-/*******************************************************************************
-                                  WORKERS
-*******************************************************************************/
-
-const workers = {
+/** WORKERS */
+export const workers = {
   node: {
     TestWorker: import('./node/testworker'),
   },
@@ -10,6 +7,3 @@ const workers = {
     TestWorker: import('./browser/testworker'),
   },
 };
-
-/** Export */
-module.exports = workers;

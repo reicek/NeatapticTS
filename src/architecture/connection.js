@@ -1,10 +1,7 @@
 /* Export */
 module.exports = Connection;
 
-/*******************************************************************************
-                                      CONNECTION
-*******************************************************************************/
-
+/** CONNECTION */
 function Connection(from, to, weight) {
   this.from = from;
   this.to = to;
