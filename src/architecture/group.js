@@ -2,34 +2,31 @@
 module.exports = Group;
 
 /* Import */
-var methods = import('../methods/methods');
-var config = import('../config');
-var Layer = import('./layer');
-var Node = import('./node');
+import methods from '../methods/methods';
+import config from '../config';
+import Layer from './layer';
+import Node from './node';
 
-/*******************************************************************************
-                                         Group
-*******************************************************************************/
+/** Group */
+class Group {
+  constructor(size) {
+    this.nodes = [];
+    this.connections = {
+      in: [],
+      out: [],
+      self: [],
+    };
 
-function Group(size) {
-  this.nodes = [];
-  this.connections = {
-    in: [],
-    out: [],
-    self: [],
-  };
-
-  for (var i = 0; i < size; i++) {
-    this.nodes.push(new Node());
+    for (let i = 0; i < size; i++) {
+      this.nodes.push(new Node());
+    }
   }
-}
 
-Group.prototype = {
   /**
    * Activates all the nodes in the group
    */
-  activate: function (value) {
-    var values = [];
+  activate(value) {
+    const values = [];
 
     if (typeof value !== 'undefined' && value.length !== this.nodes.length) {
       throw new Error(
@@ -37,8 +34,8 @@ Group.prototype = {
       );
     }
 
-    for (var i = 0; i < this.nodes.length; i++) {
-      var activation;
+    for (let i = 0; i < this.nodes.length; i++) {
+      let activation;
       if (typeof value === 'undefined') {
         activation = this.nodes[i].activate();
       } else {
@@ -49,33 +46,34 @@ Group.prototype = {
     }
 
     return values;
-  },
+  }
 
   /**
    * Propagates all the node in the group
    */
-  propagate: function (rate, momentum, target) {
+  propagate(rate, momentum, target) {
     if (typeof target !== 'undefined' && target.length !== this.nodes.length) {
       throw new Error(
         'Array with values should be same as the amount of nodes!'
       );
     }
 
-    for (var i = this.nodes.length - 1; i >= 0; i--) {
+    for (let i = this.nodes.length - 1; i >= 0; i--) {
       if (typeof target === 'undefined') {
         this.nodes[i].propagate(rate, momentum, true);
       } else {
         this.nodes[i].propagate(rate, momentum, true, target[i]);
       }
     }
-  },
+  }
 
   /**
    * Connects the nodes in this group to nodes in another group or just a node
    */
-  connect: function (target, method, weight) {
-    var connections = [];
-    var i, j;
+  connect(target, method, weight) {
+    const connections = [];
+    let i, j;
+
     if (target instanceof Group) {
       if (typeof method === 'undefined') {
         if (this !== target) {
@@ -127,12 +125,12 @@ Group.prototype = {
     }
 
     return connections;
-  },
+  }
 
   /**
    * Make nodes from this group gate the given connection(s)
    */
-  gate: function (connections, method) {
+  gate(connections, method) {
     if (typeof method === 'undefined') {
       throw new Error('Please specify Gating.INPUT, Gating.OUTPUT');
     }
@@ -141,30 +139,34 @@ Group.prototype = {
       connections = [connections];
     }
 
-    var nodes1 = [];
-    var nodes2 = [];
+    const nodes1 = [];
+    const nodes2 = [];
 
-    var i, j;
+    let i, j;
     for (i = 0; i < connections.length; i++) {
-      var connection = connections[i];
+      const connection = connections[i];
       if (!nodes1.includes(connection.from)) nodes1.push(connection.from);
       if (!nodes2.includes(connection.to)) nodes2.push(connection.to);
     }
 
     switch (method) {
+      /* Input */
       case methods.gating.INPUT:
         for (i = 0; i < nodes2.length; i++) {
-          let node = nodes2[i];
-          let gater = this.nodes[i % this.nodes.length];
+          const node = nodes2[i];
+          const gater = this.nodes[i % this.nodes.length];
 
           for (j = 0; j < node.connections.in.length; j++) {
-            let conn = node.connections.in[j];
+            const conn = node.connections.in[j];
+
             if (connections.includes(conn)) {
               gater.gate(conn);
             }
           }
         }
         break;
+
+      /* Output */
       case methods.gating.OUTPUT:
         for (i = 0; i < nodes1.length; i++) {
           let node = nodes1[i];
@@ -178,6 +180,8 @@ Group.prototype = {
           }
         }
         break;
+
+      /* Self */
       case methods.gating.SELF:
         for (i = 0; i < nodes1.length; i++) {
           let node = nodes1[i];
@@ -188,13 +192,13 @@ Group.prototype = {
           }
         }
     }
-  },
+  }
 
   /**
    * Sets the value of a property for every node
    */
-  set: function (values) {
-    for (var i = 0; i < this.nodes.length; i++) {
+  set(values) {
+    for (let i = 0; i < this.nodes.length; i++) {
       if (typeof values.bias !== 'undefined') {
         this.nodes[i].bias = values.bias;
       }
@@ -202,16 +206,18 @@ Group.prototype = {
       this.nodes[i].squash = values.squash || this.nodes[i].squash;
       this.nodes[i].type = values.type || this.nodes[i].type;
     }
-  },
+  }
 
   /**
    * Disconnects all nodes from this group from another given group/node
    */
-  disconnect: function (target, twosided) {
+  disconnect(target, twosided) {
     twosided = twosided || false;
 
     // In the future, disconnect will return a connection so indexOf can be used
-    var i, j, k;
+    let i, j, k;
+
+    /* If Group */
     if (target instanceof Group) {
       for (i = 0; i < this.nodes.length; i++) {
         for (j = 0; j < target.nodes.length; j++) {
@@ -238,6 +244,7 @@ Group.prototype = {
           }
         }
       }
+      /* If Node */
     } else if (target instanceof Node) {
       for (i = 0; i < this.nodes.length; i++) {
         this.nodes[i].disconnect(target, twosided);
@@ -263,14 +270,14 @@ Group.prototype = {
         }
       }
     }
-  },
+  }
 
   /**
    * Clear the context of this group
    */
-  clear: function () {
+  clear() {
     for (var i = 0; i < this.nodes.length; i++) {
       this.nodes[i].clear();
     }
-  },
-};
+  }
+}
