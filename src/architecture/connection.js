@@ -1,4 +1,4 @@
-/** CONNECTION */
+/** Connection */
 export default class Connection {
   constructor(from, to, weight) {
     this.from = from;

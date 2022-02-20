@@ -1,6 +1,6 @@
+import { config } from './config';
 import { Network } from './architecture/network';
 import { methods } from './methods/methods';
-import { config } from './config';
 
 /* Easier variable naming */
 const selection = methods.selection;
@@ -93,7 +93,7 @@ export default class Neat {
 
     const newPopulation = [];
 
-    // Elitism
+    /** Elitism */
     const elitists = [];
 
     let i;
