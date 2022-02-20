@@ -1,17 +1,15 @@
-'use strict';
-
-const methods = import('../methods/methods');
-const Network = import('./network');
-const Group = import('./group');
-const Layer = import('./layer');
-const Node = import('./node');
+import { Node } from './node';
+import { Layer } from './layer';
+import { Group } from './group';
+import { Network } from './network';
+import { methods } from '../methods/methods';
 
 /** Architect */
-const architect = {
+export default class Architect {
   /**
    * Constructs a network from a given array of connected nodes
    */
-  Construct: (list) => {
+  static construct(list) {
     // Create a network
     const network = new Network(0, 0);
 
@@ -80,12 +78,12 @@ const architect = {
     network.nodes = nodes;
 
     return network;
-  },
+  }
 
   /**
    * Creates a multilayer perceptron (MLP)
    */
-  Perceptron: () => {
+  static perceptron() {
     // Convert arguments to Array
     const layers = Array.prototype.slice.call(arguments);
     if (layers.length < 3) {
@@ -104,12 +102,12 @@ const architect = {
 
     // Construct the network
     return architect.Construct(nodes);
-  },
+  }
 
   /**
    * Creates a randomly connected network
    */
-  Random: (input, hidden, output, options) => {
+  static random(input, hidden, output, options) {
     options = options || {};
 
     const connections = options.connections || hidden * 2;
@@ -141,12 +139,12 @@ const architect = {
     }
 
     return network;
-  },
+  }
 
   /**
    * Creates a long short-term memory network
    */
-  LSTM: () => {
+  static lstm() {
     const args = Array.prototype.slice.call(arguments);
     if (args.length < 3) {
       throw new Error('You have to specify at least 3 layers');
@@ -280,12 +278,12 @@ const architect = {
 
     nodes.push(outputLayer);
     return architect.Construct(nodes);
-  },
+  }
 
   /**
    * Creates a gated recurrent unit network
    */
-  GRU: () => {
+  static gru() {
     const args = Array.prototype.slice.call(arguments);
     if (args.length < 3) {
       throw new Error('not enough layers (minimum 3) !!');
@@ -311,12 +309,12 @@ const architect = {
     nodes.push(outputLayer);
 
     return architect.Construct(nodes);
-  },
+  }
 
   /**
    * Creates a hopfield network of the given size
    */
-  Hopfield: (size) => {
+  static hopfield(size) {
     const input = new Group(size);
     const output = new Group(size);
 
@@ -333,18 +331,18 @@ const architect = {
     const network = architect.Construct([input, output]);
 
     return network;
-  },
+  }
 
   /**
    * Creates a NARX network (remember previous inputs/outputs)
    */
-  NARX: (
+  static narx(
     inputSize,
     hiddenLayers,
     outputSize,
     previousInput,
     previousOutput
-  ) => {
+  ) {
     if (!Array.isArray(hiddenLayers)) {
       hiddenLayers = [hiddenLayers];
     }
@@ -387,8 +385,5 @@ const architect = {
     });
 
     return architect.Construct(nodes);
-  },
-};
-
-/* Export */
-module.exports = architect;
+  }
+}
