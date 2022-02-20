@@ -10,10 +10,10 @@ export default class Architect {
    * Constructs a network from a given array of connected nodes
    */
   static construct(list) {
-    // Create a network
+    /* Create a network */
     const network = new Network(0, 0);
 
-    // Transform all groups into nodes
+    /* Transform all groups into nodes */
     let nodes = [];
 
     let i;
@@ -34,7 +34,7 @@ export default class Architect {
       }
     }
 
-    // Determine input and output nodes
+    /* Determine input and output nodes */
     const inputs = [];
     const outputs = [];
     for (i = nodes.length - 1; i >= 0; i--) {
@@ -55,7 +55,7 @@ export default class Architect {
       }
     }
 
-    // Input nodes are always first, output nodes are always last
+    /* Input nodes are always first, output nodes are always last */
     nodes = inputs.concat(nodes).concat(outputs);
 
     if (network.input === 0 || network.output === 0) {
@@ -84,13 +84,13 @@ export default class Architect {
    * Creates a multilayer perceptron (MLP)
    */
   static perceptron() {
-    // Convert arguments to Array
+    /* Convert arguments to Array */
     const layers = Array.prototype.slice.call(arguments);
     if (layers.length < 3) {
       throw new Error('You have to specify at least 3 layers');
     }
 
-    // Create a list of nodes/groups
+    /* Create a list of nodes/groups */
     const nodes = [];
     nodes.push(new Group(layers[0]));
 
@@ -100,7 +100,7 @@ export default class Architect {
       nodes[i - 1].connect(nodes[i], methods.connection.ALL_TO_ALL);
     }
 
-    // Construct the network
+    /* Construct the network */
     return architect.Construct(nodes);
   }
 
@@ -187,7 +187,7 @@ export default class Architect {
     for (let i = 0; i < blocks.length; i++) {
       const block = blocks[i];
 
-      // Init required nodes (in activation order)
+      /* Init required nodes (in activation order) */
       const inputGate = new Group(block);
       const forgetGate = new Group(block);
       const memoryCell = new Group(block);
@@ -205,13 +205,13 @@ export default class Architect {
         bias: 1,
       });
 
-      // Connect the input with all the nodes
+      /* Connect the input with all the nodes */
       const input = previous.connect(memoryCell, methods.connection.ALL_TO_ALL);
       previous.connect(inputGate, methods.connection.ALL_TO_ALL);
       previous.connect(outputGate, methods.connection.ALL_TO_ALL);
       previous.connect(forgetGate, methods.connection.ALL_TO_ALL);
 
-      // Set up internal connections
+      /* Set up internal connections */
       memoryCell.connect(inputGate, methods.connection.ALL_TO_ALL);
       memoryCell.connect(forgetGate, methods.connection.ALL_TO_ALL);
       memoryCell.connect(outputGate, methods.connection.ALL_TO_ALL);
@@ -224,12 +224,12 @@ export default class Architect {
         methods.connection.ALL_TO_ALL
       );
 
-      // Set up gates
+      /* Set up gates */
       inputGate.gate(input, methods.gating.INPUT);
       forgetGate.gate(forget, methods.gating.SELF);
       outputGate.gate(output, methods.gating.OUTPUT);
 
-      // Input to all memory cells
+      /* Input to all memory cells */
       if (options.inputToDeep && i > 0) {
         let input = inputLayer.connect(
           memoryCell,
@@ -238,7 +238,7 @@ export default class Architect {
         inputGate.gate(input, methods.gating.INPUT);
       }
 
-      // Optional connections
+      /* Optional connections */
       if (options.memoryToMemory) {
         let input = memoryCell.connect(
           memoryCell,
@@ -261,7 +261,7 @@ export default class Architect {
         outputLayer.connect(outputGate, methods.connection.ALL_TO_ALL);
       }
 
-      // Add to array
+      /* Add to array */
       nodes.push(inputGate);
       nodes.push(forgetGate);
       nodes.push(memoryCell);
@@ -271,7 +271,7 @@ export default class Architect {
       previous = outputBlock;
     }
 
-    // input to output direct connection
+    /* input to output direct connection */
     if (options.inputToOutput) {
       inputLayer.connect(outputLayer, methods.connection.ALL_TO_ALL);
     }

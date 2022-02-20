@@ -15,7 +15,7 @@ export default class Neat {
     /** Fitness function to evaluate the networks */
     this.fitness = fitness;
 
-    // Configure options
+    /* Configure options */
     options = options || {};
     this.equal = options.equal || false;
     this.clear = options.clear || false;
@@ -51,7 +51,7 @@ export default class Neat {
     /** Generation counter */
     this.generation = 0;
 
-    // Initialise the genomes
+    /* Initialise the genomes */
     this.createPool(this.template);
   }
 
@@ -79,7 +79,7 @@ export default class Neat {
    * Evaluates, selects, breeds and mutates population
    */
   async evolve() {
-    // Check if evaluated, sort the population
+    /* Check if evaluated, sort the population */
     if (
       typeof this.population[this.population.length - 1].score === 'undefined'
     ) {
@@ -93,7 +93,7 @@ export default class Neat {
 
     const newPopulation = [];
 
-    /** Elitism */
+    /* Elitism */
     const elitists = [];
 
     let i;
@@ -101,22 +101,22 @@ export default class Neat {
       elitists.push(this.population[i]);
     }
 
-    // Provenance
+    /* Provenance */
     for (i = 0; i < this.provenance; i++) {
       newPopulation.push(Network.fromJSON(this.template.toJSON()));
     }
 
-    // Breed the next individuals
+    /* Breed the next individuals */
     for (i = 0; i < this.popsize - this.elitism - this.provenance; i++) {
       newPopulation.push(this.getOffspring());
     }
 
-    // Replace the old population with the new population
+    /* Replace the old population with the new population */
     this.population = newPopulation;
     this.mutate();
     this.population.push(...elitists);
 
-    // Reset the scores
+    /* Reset the scores */
     for (i = 0; i < this.population.length; i++) {
       this.population[i].score = undefined;
     }
@@ -179,7 +179,7 @@ export default class Neat {
     let j;
     let mutationMethod;
 
-    // Elitist genomes should not be included
+    /* Elitist genomes should not be included */
     for (i = 0; i < this.population.length; i++) {
       if (Math.random() <= this.mutationRate) {
         for (j = 0; j < this.mutationAmount; j++) {
@@ -228,7 +228,7 @@ export default class Neat {
    * Returns the fittest genome of the current population
    */
   getFittest() {
-    // Check if evaluated
+    /* Check if evaluated */
     if (
       typeof this.population[this.population.length - 1].score === 'undefined'
     ) {
@@ -277,11 +277,11 @@ export default class Neat {
         );
         return this.population[index];
 
+      /* 
+        @toDo Refactor/remove: Negative fitnesses are possible.
+        @see {@link https://stackoverflow.com/questions/16186686/genetic-algorithm-handling-negative-fitness-values}
+       */
       case selection.FITNESS_PROPORTIONATE:
-        // As negative fitnesses are possible
-        // https://stackoverflow.com/questions/16186686/genetic-algorithm-handling-negative-fitness-values
-        // this is unnecessarily run for every individual, should be changed
-
         let totalFitness = 0;
         let minimalFitness = 0;
 
@@ -305,7 +305,7 @@ export default class Neat {
           if (random < value) return genome;
         }
 
-        // if all scores equal, return random genome
+        /* if all scores equal, return random genome */
         return this.population[
           Math.floor(Math.random() * this.population.length)
         ];
@@ -317,7 +317,7 @@ export default class Neat {
           );
         }
 
-        // Create a tournament
+        /* Create a tournament */
         const individuals = [];
         let random;
 
@@ -328,12 +328,12 @@ export default class Neat {
           individuals.push(random);
         }
 
-        // Sort the tournament individuals by score
+        /* Sort the tournament individuals by score */
         individuals.sort(function (a, b) {
           return b.score - a.score;
         });
 
-        // Select an individual
+        /* Select an individual */
         for (i = 0; i < this.selection.size; i++) {
           if (
             Math.random() < this.selection.probability ||

@@ -210,7 +210,7 @@ export default class Group {
   disconnect(target, twosided) {
     twosided = twosided || false;
 
-    // In the future, disconnect will return a connection so indexOf can be used
+    /* In the future, disconnect will return a connection so indexOf can be used */
     let i, j, k;
 
     /* If Group */

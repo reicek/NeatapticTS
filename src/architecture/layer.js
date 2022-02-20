@@ -255,7 +255,7 @@ export default class Layer {
   }
 
   static gru(size) {
-    // Create the layer
+    /* Create the layer */
     const layer = new Layer();
 
     const updateGate = new Group(size);
@@ -304,7 +304,8 @@ export default class Layer {
       methods.connection.ALL_TO_ALL
     );
 
-    resetGate.gate(reset, methods.gating.OUTPUT); // gate
+    /* Gate */
+    resetGate.gate(reset, methods.gating.OUTPUT);
 
     /* Output calculation */
     const update1 = previousOutput.connect(
