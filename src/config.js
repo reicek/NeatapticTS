@@ -1,3 +1,5 @@
-export const config = {
+const config = {
   warnings: false,
 };
+
+export default config;

@@ -1,13 +1,9 @@
-/* Export */
-module.exports = Network;
-
-/* Import */
-var multi = import('../multithreading/multi');
-var methods = import('../methods/methods');
-var Connection = import('./connection');
-var config = import('../config');
-var Neat = import('../neat');
-var Node = import('./node');
+import Neat from ('../neat');
+import Node from ('./node');
+import multi from ('../multithreading/multi');
+import config from ('../config');
+import Connection from ('./connection');
+import methods from ('../methods/methods');
 
 /* Easier variable naming */
 var mutation = methods.mutation;
@@ -591,12 +587,12 @@ Network.prototype = {
 
     // Read the options
     var targetError = options.error || 0.05;
-    var cost = options.cost || methods.cost.MSE;
+    var cost = options.cost || methods.Cost.MSE;
     var baseRate = options.rate || 0.3;
     var dropout = options.dropout || 0;
     var momentum = options.momentum || 0;
     var batchSize = options.batchSize || 1; // online learning
-    var ratePolicy = options.ratePolicy || methods.rate.FIXED();
+    var ratePolicy = options.ratePolicy || methods.Rate.FIXED();
 
     var start = Date.now();
 
@@ -726,7 +722,7 @@ Network.prototype = {
   /**
    * Tests a set and returns the error and elapsed time
    */
-  test: function (set, cost = methods.cost.MSE) {
+  test: function (set, cost = methods.Cost.MSE) {
     // Check if dropout is enabled, set correct mask
     var i;
     if (this.dropout) {
@@ -950,7 +946,7 @@ Network.prototype = {
       typeof options.error !== 'undefined' ? options.error : 0.05;
     var growth =
       typeof options.growth !== 'undefined' ? options.growth : 0.0001;
-    var cost = options.cost || methods.cost.MSE;
+    var cost = options.cost || methods.Cost.MSE;
     var amount = options.amount || 1;
 
     var threads = options.threads;
@@ -1524,3 +1520,5 @@ Network.crossOver = function (network1, network2, equal) {
 
   return offspring;
 };
+
+export default Network;

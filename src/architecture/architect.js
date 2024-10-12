@@ -1,8 +1,8 @@
-import { Node } from './node';
-import { Layer } from './layer';
-import { Group } from './group';
-import { Network } from './network';
-import { methods } from '../methods/methods';
+import Node from './node';
+import Layer from './layer';
+import Group from './group';
+import Network from './network';
+import methods from '../methods/methods';
 
 /** Architect */
 export default class Architect {
@@ -324,7 +324,7 @@ export default class Architect {
       type: 'input',
     });
     output.set({
-      squash: methods.activation.STEP,
+      squash: methods.Activation.STEP,
       type: 'output',
     });
 

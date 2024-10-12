@@ -1,6 +1,6 @@
-import { Node } from './node';
-import { Group } from './group';
-import { methods } from '../methods/methods';
+import Node from './node';
+import Group from './group';
+import methods from '../methods/methods';
 
 /** Group */
 export default class Layer {
@@ -267,17 +267,17 @@ export default class Layer {
 
     previousOutput.set({
       bias: 0,
-      squash: methods.activation.IDENTITY,
+      squash: methods.Activation.IDENTITY,
       type: 'constant',
     });
 
     memoryCell.set({
-      squash: methods.activation.TANH,
+      squash: methods.Activation.TANH,
     });
 
     inverseUpdateGate.set({
       bias: 0,
-      squash: methods.activation.INVERSE,
+      squash: methods.Activation.INVERSE,
       type: 'constant',
     });
 
@@ -362,7 +362,7 @@ export default class Layer {
       const block = new Group(size);
 
       block.set({
-        squash: methods.activation.IDENTITY,
+        squash: methods.Activation.IDENTITY,
         bias: 0,
         type: 'constant',
       });

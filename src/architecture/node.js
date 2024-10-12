@@ -1,15 +1,11 @@
-/* Export */
-module.exports = Node;
-
-/* Import */
-var methods = import('../methods/methods');
-var Connection = import('./connection');
-var config = import('../config');
+import config from '../config';
+import methods from '../methods/methods';
+import Connection from './connection';
 
 /** NODE */
 function Node(type) {
   this.bias = type === 'input' ? 0 : Math.random() * 0.2 - 0.1;
-  this.squash = methods.activation.LOGISTIC;
+  this.squash = methods.Activation.LOGISTIC;
   this.type = type || 'hidden';
 
   this.activation = 0;
@@ -451,7 +447,9 @@ Node.fromJSON = function (json) {
   node.bias = json.bias;
   node.type = json.type;
   node.mask = json.mask;
-  node.squash = methods.activation[json.squash];
+  node.squash = methods.Activation[json.squash];
 
   return node;
 };
+
+export default Node;
