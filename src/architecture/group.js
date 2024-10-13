@@ -1,7 +1,7 @@
-import methods from '../methods/methods';
-import config from '../config';
-import Layer from './layer';
 import Node from './node';
+import Layer from './layer';
+import { config } from '../config';
+import * as methods from '../methods/methods';
 
 /** Group */
 export default class Group {

@@ -1,13 +1,13 @@
 import Cost from './cost';
 import Rate from './rate';
 import Activation from './Activation';
-import mutation from './mutation';
-import selection from './selection';
-import crossover from './crossover';
-import gating from './gating';
-import connection from './connection';
+import { gating } from './gating';
+import { mutation } from './mutation';
+import { selection } from './selection';
+import { crossover } from './crossover';
+import { connection } from './connection';
 
-const methods = {
+export {
   Cost,
   Rate,
   Activation,
@@ -17,5 +17,3 @@ const methods = {
   selection,
   connection,
 };
-
-export default methods;

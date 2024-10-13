@@ -1,7 +1,7 @@
-import { Activation } from './Activation';
+import Activation from './Activation';
 
 /** @see {@link https://en.wikipedia.org/wiki/mutation_(genetic_algorithm)} */
-let mutation = {
+export const mutation = {
   ADD_NODE: {
     name: 'ADD_NODE',
   },
@@ -97,5 +97,3 @@ mutation.FFW = [
   mutation.MOD_ACTIVATION,
   mutation.SWAP_NODES,
 ];
-
-export default mutation;

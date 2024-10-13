@@ -2,7 +2,7 @@ import { cp } from 'child_process';
 import { path } from 'path';
 
 /** WEBWORKER */
-export default function TestWorker(dataSet, cost) {
+export function TestWorker(dataSet, cost) {
   this.worker = cp.fork(path.join(__dirname, '/worker'));
 
   this.worker.send({ set: dataSet, cost: cost.name });

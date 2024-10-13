@@ -1,8 +1,8 @@
 import Node from './node';
 import Layer from './layer';
 import Group from './group';
-import Network from './network';
-import methods from '../methods/methods';
+import { Network } from './network';
+import * as methods from '../methods/methods';
 
 /** Architect */
 export default class Architect {

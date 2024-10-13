@@ -1,9 +1,11 @@
-import config from '../config';
-import methods from '../methods/methods';
 import Connection from './connection';
+import { config } from '../config';
+import * as methods from '../methods/methods';
+
+
 
 /** NODE */
-function Node(type) {
+export default function Node(type) {
   this.bias = type === 'input' ? 0 : Math.random() * 0.2 - 0.1;
   this.squash = methods.Activation.LOGISTIC;
   this.type = type || 'hidden';
@@ -451,5 +453,3 @@ Node.fromJSON = function (json) {
 
   return node;
 };
-
-export default Node;

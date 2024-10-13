@@ -1,15 +1,16 @@
-import Neat from ('../neat');
-import Node from ('./node');
-import multi from ('../multithreading/multi');
-import config from ('../config');
-import Connection from ('./connection');
-import methods from ('../methods/methods');
+import Neat from '../neat';
+import Node from './node';
+import multi from '../multithreading/multi';
+import Connection from './connection';
+import { config } from '../config';
+import * as methods from '../methods/methods';
+import os from 'os';
 
 /* Easier variable naming */
 var mutation = methods.mutation;
 
 /** NETWORK */
-function Network(input, output) {
+export function Network(input, output) {
   if (typeof input === 'undefined' || typeof output === 'undefined') {
     throw new Error('No input or output size given');
   }
@@ -953,7 +954,7 @@ Network.prototype = {
     if (typeof threads === 'undefined') {
       if (typeof window === 'undefined') {
         // Node.js
-        threads = import('os').cpus().length;
+        threads = os.cpus().length;
       } else {
         // Browser
         threads = navigator.hardwareConcurrency;
@@ -1520,5 +1521,3 @@ Network.crossOver = function (network1, network2, equal) {
 
   return offspring;
 };
-
-export default Network;

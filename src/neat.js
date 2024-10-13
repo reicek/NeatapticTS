@@ -1,6 +1,6 @@
 import { config } from './config';
 import { Network } from './architecture/network';
-import { methods } from './methods/methods';
+import * as methods from './methods/methods';
 
 /* Easier variable naming */
 const selection = methods.selection;
@@ -267,6 +267,7 @@ export default class Neat {
    */
   getParent() {
     let i;
+    let random;
 
     switch (this.selection) {
       case selection.POWER:
@@ -295,7 +296,7 @@ export default class Neat {
         minimalFitness = Math.abs(minimalFitness);
         totalFitness += minimalFitness * this.population.length;
 
-        const random = Math.random() * totalFitness;
+        random = Math.random() * totalFitness;
 
         let value = 0;
 
@@ -319,7 +320,6 @@ export default class Neat {
 
         /* Create a tournament */
         const individuals = [];
-        let random;
 
         for (i = 0; i < this.selection.size; i++) {
           random = this.population[

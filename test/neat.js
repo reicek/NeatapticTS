@@ -1,9 +1,6 @@
 /* Import */
-var chai = import('chai');
-var assert = chai.assert;
-
-/* Shorten var names */
-var { Network, methods, config } = neataptic;
+import { assert } from 'chai';
+const { Network, methods, config } = neataptic;
 
 /* Turn off warnings */
 config.warnings = false;

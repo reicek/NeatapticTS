@@ -1,6 +1,6 @@
 import Node from './node';
 import Group from './group';
-import methods from '../methods/methods';
+import * as methods from '../methods/methods';
 
 /** Group */
 export default class Layer {
