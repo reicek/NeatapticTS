@@ -1,34 +1,24 @@
-/* Import */
-var chai = import('chai');
-var assert = chai.assert;
+import { assert } from 'chai';
+import { Architect, Network, methods } from '../src/neataptic.js';
 
-/* Shorten var names */
-var { architect, Network, methods, config } = neataptic;
-
-/* Turn off warnings */
-config.warnings = false;
-
-/* Functions used in the testing process */
 function checkMutation(method) {
-  var network = new architect.Perceptron(2, 4, 4, 4, 2);
+  const network = Architect.perceptron(2, 4, 4, 4, 2);
   network.mutate(methods.mutation.ADD_GATE);
   network.mutate(methods.mutation.ADD_BACK_CONN);
   network.mutate(methods.mutation.ADD_SELF_CONN);
 
-  var originalOutput = [];
-  var i, j;
-  for (i = 0; i <= 10; i++) {
-    for (j = 0; j <= 10; j++) {
+  const originalOutput = [];
+  for (let i = 0; i <= 10; i++) {
+    for (let j = 0; j <= 10; j++) {
       originalOutput.push(network.activate([i / 10, j / 10]));
     }
   }
 
   network.mutate(method);
 
-  var mutatedOutput = [];
-
-  for (i = 0; i <= 10; i++) {
-    for (j = 0; j <= 10; j++) {
+  const mutatedOutput = [];
+  for (let i = 0; i <= 10; i++) {
+    for (let j = 0; j <= 10; j++) {
       mutatedOutput.push(network.activate([i / 10, j / 10]));
     }
   }
@@ -41,13 +31,13 @@ function checkMutation(method) {
 }
 
 function learnSet(set, iterations, error) {
-  var network = new architect.Perceptron(
+  const network = Architect.perceptron(
     set[0].input.length,
     5,
     set[0].output.length
   );
 
-  var options = {
+  const options = {
     iterations: iterations,
     error: error,
     shuffle: true,
@@ -55,24 +45,23 @@ function learnSet(set, iterations, error) {
     momentum: 0.9,
   };
 
-  var results = network.train(set, options);
+  const results = network.train(set, options);
 
   assert.isBelow(results.error, error);
 }
 
 function testEquality(original, copied) {
-  for (var j = 0; j < 50; j++) {
-    var input = [];
-    var a;
-    for (a = 0; a < original.input; a++) {
+  for (let j = 0; j < 50; j++) {
+    const input = [];
+    for (let a = 0; a < original.input; a++) {
       input.push(Math.random());
     }
 
-    var ORout = original.activate([input]);
-    var COout =
+    const ORout = original.activate([input]);
+    const COout =
       copied instanceof Network ? copied.activate([input]) : copied([input]);
 
-    for (a = 0; a < original.output; a++) {
+    for (let a = 0; a < original.output; a++) {
       ORout[a] = ORout[a].toFixed(9);
       COout[a] = COout[a].toFixed(9);
     }
@@ -138,27 +127,26 @@ describe('Networks', function () {
   describe('Structure', function () {
     it('Feed-forward', function () {
       this.timeout(30000);
-      var network1 = new Network(2, 2);
-      var network2 = new Network(2, 2);
+      const network1 = new Network(2, 2);
+      const network2 = new Network(2, 2);
 
       // mutate it a couple of times
-      var i;
-      for (i = 0; i < 100; i++) {
+      for (let i = 0; i < 100; i++) {
         network1.mutate(methods.mutation.ADD_NODE);
         network2.mutate(methods.mutation.ADD_NODE);
       }
-      for (i = 0; i < 400; i++) {
+      for (let i = 0; i < 400; i++) {
         network1.mutate(methods.mutation.ADD_CONN);
         network2.mutate(methods.mutation.ADD_NODE);
       }
 
       // Crossover
-      var network = Network.crossOver(network1, network2);
+      const network = Network.crossOver(network1, network2);
 
       // Check if the network is feed-forward correctly
-      for (i = 0; i < network.connections.length; i++) {
-        let from = network.nodes.indexOf(network.connections[i].from);
-        let to = network.nodes.indexOf(network.connections[i].to);
+      for (let i = 0; i < network.connections.length; i++) {
+        const from = network.nodes.indexOf(network.connections[i].from);
+        const to = network.nodes.indexOf(network.connections[i].to);
 
         // Exception will be made for memory connections soon
         assert.isBelow(from, to, 'network is not feeding forward correctly');
@@ -166,8 +154,8 @@ describe('Networks', function () {
     });
     it('from/toJSON equivalency', function () {
       this.timeout(10000);
-      var original, copy;
-      original = new architect.Perceptron(
+      let original, copy;
+      original = Architect.perceptron(
         Math.floor(Math.random() * 5 + 1),
         Math.floor(Math.random() * 5 + 1),
         Math.floor(Math.random() * 5 + 1)
@@ -182,7 +170,7 @@ describe('Networks', function () {
       copy = Network.fromJSON(original.toJSON());
       testEquality(original, copy);
 
-      original = new architect.LSTM(
+      original = Architect.lstm(
         Math.floor(Math.random() * 5 + 1),
         Math.floor(Math.random() * 5 + 1),
         Math.floor(Math.random() * 5 + 1)
@@ -190,7 +178,7 @@ describe('Networks', function () {
       copy = Network.fromJSON(original.toJSON());
       testEquality(original, copy);
 
-      original = new architect.GRU(
+      original = Architect.gru(
         Math.floor(Math.random() * 5 + 1),
         Math.floor(Math.random() * 5 + 1),
         Math.floor(Math.random() * 5 + 1),
@@ -199,7 +187,7 @@ describe('Networks', function () {
       copy = Network.fromJSON(original.toJSON());
       testEquality(original, copy);
 
-      original = new architect.Random(
+      original = Architect.random(
         Math.floor(Math.random() * 5 + 1),
         Math.floor(Math.random() * 10 + 1),
         Math.floor(Math.random() * 5 + 1)
@@ -207,7 +195,7 @@ describe('Networks', function () {
       copy = Network.fromJSON(original.toJSON());
       testEquality(original, copy);
 
-      original = new architect.NARX(
+      original = Architect.narx(
         Math.floor(Math.random() * 5 + 1),
         Math.floor(Math.random() * 10 + 1),
         Math.floor(Math.random() * 5 + 1),
@@ -217,65 +205,65 @@ describe('Networks', function () {
       copy = Network.fromJSON(original.toJSON());
       testEquality(original, copy);
 
-      original = new architect.Hopfield(Math.floor(Math.random() * 5 + 1));
+      original = Architect.hopfield(Math.floor(Math.random() * 5 + 1));
       copy = Network.fromJSON(original.toJSON());
       testEquality(original, copy);
     });
     it('standalone equivalency', function () {
       this.timeout(10000);
-      var original;
-      original = new architect.Perceptron(
+      let original;
+      original = Architect.perceptron(
         Math.floor(Math.random() * 5 + 1),
         Math.floor(Math.random() * 5 + 1),
         Math.floor(Math.random() * 5 + 1)
       );
-      eval(original.standalone());
+      let activate = eval(original.standalone());
       testEquality(original, activate);
 
       original = new Network(
         Math.floor(Math.random() * 5 + 1),
         Math.floor(Math.random() * 5 + 1)
       );
-      eval(original.standalone());
+      activate = eval(original.standalone());
       testEquality(original, activate);
 
-      original = new architect.LSTM(
+      original = Architect.lstm(
         Math.floor(Math.random() * 5 + 1),
         Math.floor(Math.random() * 5 + 1),
         Math.floor(Math.random() * 5 + 1)
       );
-      eval(original.standalone());
+      activate = eval(original.standalone());
       testEquality(original, activate);
 
-      original = new architect.GRU(
+      original = Architect.gru(
         Math.floor(Math.random() * 5 + 1),
         Math.floor(Math.random() * 5 + 1),
         Math.floor(Math.random() * 5 + 1),
         Math.floor(Math.random() * 5 + 1)
       );
-      eval(original.standalone());
+      activate = eval(original.standalone());
       testEquality(original, activate);
 
-      original = new architect.Random(
+      original = Architect.random(
         Math.floor(Math.random() * 5 + 1),
         Math.floor(Math.random() * 10 + 1),
         Math.floor(Math.random() * 5 + 1)
       );
-      eval(original.standalone());
+      activate = eval(original.standalone());
       testEquality(original, activate);
 
-      original = new architect.NARX(
+      original = Architect.narx(
         Math.floor(Math.random() * 5 + 1),
         Math.floor(Math.random() * 5 + 1),
         Math.floor(Math.random() * 5 + 1),
         Math.floor(Math.random() * 5 + 1),
         Math.floor(Math.random() * 5 + 1)
       );
-      eval(original.standalone());
+      activate = eval(original.standalone());
       testEquality(original, activate);
 
-      original = new architect.Hopfield(Math.floor(Math.random() * 5 + 1));
-      eval(original.standalone());
+      original = Architect.hopfield(Math.floor(Math.random() * 5 + 1));
+      activate = eval(original.standalone());
       testEquality(original, activate);
     });
   });
@@ -340,10 +328,10 @@ describe('Networks', function () {
     });
     it('SIN function', function () {
       this.timeout(30000);
-      var set = [];
+      const set = [];
 
       while (set.length < 100) {
-        var inputValue = Math.random() * Math.PI * 2;
+        const inputValue = Math.random() * Math.PI * 2;
         set.push({
           input: [inputValue / (Math.PI * 2)],
           output: [(Math.sin(inputValue) + 1) / 2],
@@ -354,21 +342,21 @@ describe('Networks', function () {
     });
     it('Bigger than', function () {
       this.timeout(30000);
-      var set = [];
+      const set = [];
 
-      for (var i = 0; i < 100; i++) {
-        var x = Math.random();
-        var y = Math.random();
-        var z = x > y ? 1 : 0;
+      for (let i = 0; i < 100; i++) {
+        const x = Math.random();
+        const y = Math.random();
+        const z = x > y ? 1 : 0;
 
         set.push({ input: [x, y], output: [z] });
       }
 
       learnSet(set, 500, 0.05);
     });
-    it('LSTM XOR', function () {
+    it('lstm XOR', function () {
       this.timeout(30000);
-      var lstm = new architect.LSTM(1, 1, 1);
+      const lstm = Architect.lstm(1, 1, 1);
 
       lstm.train(
         [
@@ -391,14 +379,14 @@ describe('Networks', function () {
         return lstm.activate(sensors)[0];
       }
 
-      assert.isBelow(0.9, getActivation([1]), 'LSTM error');
-      assert.isBelow(getActivation([1]), 0.1, 'LSTM error');
-      assert.isBelow(0.9, getActivation([0]), 'LSTM error');
-      assert.isBelow(getActivation([0]), 0.1, 'LSTM error');
+      assert.isBelow(0.9, getActivation([1]), 'lstm error');
+      assert.isBelow(getActivation([1]), 0.1, 'lstm error');
+      assert.isBelow(0.9, getActivation([0]), 'lstm error');
+      assert.isBelow(getActivation([0]), 0.1, 'lstm error');
     });
-    it('GRU XOR', function () {
+    it('gru XOR', function () {
       this.timeout(30000);
-      var gru = new architect.GRU(1, 2, 1);
+      const gru = Architect.gru(1, 2, 1);
 
       gru.train(
         [
@@ -422,16 +410,16 @@ describe('Networks', function () {
         return gru.activate(sensors)[0];
       }
 
-      assert.isBelow(0.9, getActivation([1]), 'GRU error');
-      assert.isBelow(getActivation([1]), 0.1, 'GRU error');
-      assert.isBelow(0.9, getActivation([0]), 'GRU error');
-      assert.isBelow(getActivation([0]), 0.1, 'GRU error');
+      assert.isBelow(0.9, getActivation([1]), 'gru error');
+      assert.isBelow(getActivation([1]), 0.1, 'gru error');
+      assert.isBelow(0.9, getActivation([0]), 'gru error');
+      assert.isBelow(getActivation([0]), 0.1, 'gru error');
     });
-    it('NARX Sequence', function () {
-      var narx = new architect.NARX(1, 5, 1, 3, 3);
+    it('narx Sequence', function () {
+      const narx = Architect.narx(1, 5, 1, 3, 3);
 
       // Train the XOR gate (in sequence!)
-      var trainingData = [
+      const trainingData = [
         { input: [0], output: [0] },
         { input: [0], output: [0] },
         { input: [0], output: [1] },
@@ -451,10 +439,10 @@ describe('Networks', function () {
     });
     it('SIN + COS', function () {
       this.timeout(30000);
-      var set = [];
+      const set = [];
 
       while (set.length < 100) {
-        var inputValue = Math.random() * Math.PI * 2;
+        const inputValue = Math.random() * Math.PI * 2;
         set.push({
           input: [inputValue / (Math.PI * 2)],
           output: [
@@ -467,12 +455,12 @@ describe('Networks', function () {
       learnSet(set, 1000, 0.05);
     });
     it('SHIFT', function () {
-      var set = [];
+      const set = [];
 
-      for (var i = 0; i < 1000; i++) {
-        var x = Math.random();
-        var y = Math.random();
-        var z = Math.random();
+      for (let i = 0; i < 1000; i++) {
+        const x = Math.random();
+        const y = Math.random();
+        const z = Math.random();
 
         set.push({ input: [x, y, z], output: [z, x, y] });
       }

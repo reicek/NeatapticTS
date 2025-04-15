@@ -1,20 +1,18 @@
-var { multi, methods } = import('../../../neataptic');
+import Multi from '../../../multi.js';
+import * as methods from '../../../methods/methods.js';
 
-var set = [];
-var cost;
-var F = multi.activations;
+let set = [];
+let cost;
 
-process.on('message', function (e) {
+process.on('message', (e) => {
   if (typeof e.set === 'undefined') {
-    var A = e.activations;
-    var S = e.states;
-    var data = e.conns;
+    const { activations: A, states: S, conns: data } = e;
 
-    var result = multi.testSerializedSet(set, cost, A, S, data, F);
+    const result = Multi.testSerializedSet(set, cost, A, S, data, Multi);
 
     process.send(result);
   } else {
     cost = methods.Cost[e.cost];
-    set = multi.deserializeDataSet(e.set);
+    set = Multi.deserializeDataSet(e.set);
   }
 });

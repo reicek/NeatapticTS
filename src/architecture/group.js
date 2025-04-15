@@ -1,7 +1,7 @@
-import Node from './node';
-import Layer from './layer';
-import { config } from '../config';
-import * as methods from '../methods/methods';
+import Node from './node.js';
+import Layer from './layer.js';
+import { config } from '../config.js';
+import * as methods from '../methods/methods.js';
 
 /** Group */
 export default class Group {
@@ -67,7 +67,7 @@ export default class Group {
    * Connects the nodes in this group to nodes in another group or just a node
    */
   connect(target, method, weight) {
-    const connections = [];
+    let connections = []; // Changed from const to let
     let i, j;
 
     if (target instanceof Group) {
@@ -256,7 +256,7 @@ export default class Group {
 
         if (twosided) {
           for (j = this.connections.in.length - 1; j >= 0; j--) {
-            var conn = this.connections.in[j];
+            const conn = this.connections.in[j];
 
             if (conn.from === target && conn.to === this.nodes[i]) {
               this.connections.in.splice(j, 1);
@@ -272,7 +272,7 @@ export default class Group {
    * Clear the context of this group
    */
   clear() {
-    for (var i = 0; i < this.nodes.length; i++) {
+    for (let i = 0; i < this.nodes.length; i++) {
       this.nodes[i].clear();
     }
   }

@@ -1,4 +1,4 @@
-import Activation from './Activation';
+import Activation from './activation.js';
 
 /** @see {@link https://en.wikipedia.org/wiki/mutation_(genetic_algorithm)} */
 export const mutation = {
@@ -29,21 +29,22 @@ export const mutation = {
     name: 'MOD_ACTIVATION',
     mutateOutput: true,
     allowed: [
-      Activation.LOGISTIC,
-      Activation.TANH,
-      Activation.RELU,
-      Activation.IDENTITY,
-      Activation.STEP,
-      Activation.SOFTSIGN,
-      Activation.SINUSOID,
-      Activation.GAUSSIAN,
-      Activation.BENT_IDENTITY,
-      Activation.BIPOLAR,
-      Activation.BIPOLAR_SIGMOID,
-      Activation.HARD_TANH,
-      Activation.ABSOLUTE,
-      Activation.INVERSE,
-      Activation.SELU,
+      Activation.logistic,
+      Activation.tanh,
+      Activation.relu,
+      Activation.identity,
+      Activation.step,
+      Activation.softsign,
+      Activation.sinusoid,
+      Activation.gaussian,
+      Activation.bentIdentity,
+      Activation.bipolar,
+      Activation.bipolarSigmoid,
+      Activation.hardTanh,
+      Activation.absolute,
+      Activation.inverse,
+      Activation.selu,
+      Activation.softplus,
     ],
   },
   ADD_SELF_CONN: {

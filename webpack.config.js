@@ -8,10 +8,11 @@ module.exports = {
     filename: 'neataptic.js',
   },
   resolve: {
-    extensions: [".ts", ".js"],
+    extensions: ['.ts', '.js'],
     fallback: {
-      "child_process": false,
-      // and also other packages that are not found
-    }
+      child_process: false,
+      os: false,
+      path: false,
+    },
   },
 };

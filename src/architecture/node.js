@@ -1,13 +1,13 @@
-import Connection from './connection';
-import { config } from '../config';
-import * as methods from '../methods/methods';
+import Connection from './connection.js';
+import { config } from '../config.js';
+import * as methods from '../methods/methods.js';
 
 
 
 /** NODE */
 export default function Node(type) {
   this.bias = type === 'input' ? 0 : Math.random() * 0.2 - 0.1;
-  this.squash = methods.Activation.LOGISTIC;
+  this.squash = methods.Activation.logistic;
   this.type = type || 'hidden';
 
   this.activation = 0;
@@ -57,9 +57,9 @@ Node.prototype = {
       this.bias;
 
     // Activation sources coming from connections
-    var i;
+    let i;
     for (i = 0; i < this.connections.in.length; i++) {
-      var connection = this.connections.in[i];
+      let connection = this.connections.in[i];
       this.state +=
         connection.from.activation * connection.weight * connection.gain;
     }
@@ -69,8 +69,8 @@ Node.prototype = {
     this.derivative = this.squash(this.state, true);
 
     // Update traces
-    var nodes = [];
-    var influences = [];
+    let nodes = [];
+    let influences = [];
 
     for (i = 0; i < this.connections.gated.length; i++) {
       let conn = this.connections.gated[i];
@@ -102,7 +102,7 @@ Node.prototype = {
         connection.from.activation * connection.gain;
 
       // Extended trace
-      for (var j = 0; j < nodes.length; j++) {
+      for (let j = 0; j < nodes.length; j++) {
         let node = nodes[j];
         let influence = influences[j];
 
@@ -143,18 +143,24 @@ Node.prototype = {
       this.bias;
 
     // Activation sources coming from connections
-    var i;
+    let i;
     for (i = 0; i < this.connections.in.length; i++) {
-      var connection = this.connections.in[i];
+      let connection = this.connections.in[i];
       this.state +=
         connection.from.activation * connection.weight * connection.gain;
     }
 
-    // Squash the values received
-    this.activation = this.squash(this.state);
-
-    for (i = 0; i < this.connections.gated.length; i++) {
-      this.connections.gated[i].gain = this.activation;
+    try {
+      this.activation = this.squash(this.state) * this.mask;
+      this.derivative = this.squash(this.state, true);  
+    } catch(error) {
+      console.log('squash >', this.squash);
+      console.log('state >', this.state);
+      console.log('mask >', this.mask);
+      console.log('activation >', this.activation);
+      console.log('derivative >', this.derivative);
+      
+      console.error('Error in node activation:', error);
     }
 
     return this.activation;
@@ -168,17 +174,16 @@ Node.prototype = {
     rate = rate || 0.3;
 
     // Error accumulator
-    var error = 0;
+    let error = 0;
 
-    // Output nodes get their error from the enviroment
+    // Output nodes get their error from the environment
     if (this.type === 'output') {
       this.error.responsibility = this.error.projected =
         target - this.activation;
     } else {
-      // the rest of the nodes compute their error responsibilities by backpropagation
-      // error responsibilities from all the connections projected from this node
-      var i;
-      for (i = 0; i < this.connections.out.length; i++) {
+      // The rest of the nodes compute their error responsibilities by backpropagation
+      // Error responsibilities from all the connections projected from this node
+      for (let i = 0; i < this.connections.out.length; i++) {
         let connection = this.connections.out[i];
         let node = connection.to;
         // Eq. 21
@@ -192,7 +197,7 @@ Node.prototype = {
       // Error responsibilities from all connections gated by this neuron
       error = 0;
 
-      for (i = 0; i < this.connections.gated.length; i++) {
+      for (let i = 0; i < this.connections.gated.length; i++) {
         let conn = this.connections.gated[i];
         let node = conn.to;
         let influence = node.connections.self.gater === this ? node.old : 0;
@@ -211,12 +216,12 @@ Node.prototype = {
     if (this.type === 'constant') return;
 
     // Adjust all the node's incoming connections
-    for (i = 0; i < this.connections.in.length; i++) {
+    for (let i = 0; i < this.connections.in.length; i++) {
       let connection = this.connections.in[i];
 
       let gradient = this.error.projected * connection.elegibility;
 
-      for (var j = 0; j < connection.xtrace.nodes.length; j++) {
+      for (let j = 0; j < connection.xtrace.nodes.length; j++) {
         let node = connection.xtrace.nodes[j];
         let value = connection.xtrace.values[j];
         gradient += node.error.responsibility * value;
@@ -235,7 +240,7 @@ Node.prototype = {
     }
 
     // Adjust bias
-    var deltaBias = rate * this.error.responsibility;
+    let deltaBias = rate * this.error.responsibility;
     this.totalDeltaBias += deltaBias;
     if (update) {
       this.totalDeltaBias += momentum * this.previousDeltaBias;
@@ -249,7 +254,7 @@ Node.prototype = {
    * Creates a connection from this node to the given node
    */
   connect: function (target, weight) {
-    var connections = [];
+    let connections = [];
     if (typeof target.bias !== 'undefined') {
       // must be a node!
       if (target === this) {
@@ -271,7 +276,7 @@ Node.prototype = {
       }
     } else {
       // should be a group
-      for (var i = 0; i < target.nodes.length; i++) {
+      for (let i = 0; i < target.nodes.length; i++) {
         let connection = new Connection(this, target.nodes[i], weight);
         target.nodes[i].connections.in.push(connection);
         this.connections.out.push(connection);
@@ -292,7 +297,7 @@ Node.prototype = {
       return;
     }
 
-    for (var i = 0; i < this.connections.out.length; i++) {
+    for (let i = 0; i < this.connections.out.length; i++) {
       let conn = this.connections.out[i];
       if (conn.to === node) {
         this.connections.out.splice(i, 1);
@@ -316,8 +321,8 @@ Node.prototype = {
       connections = [connections];
     }
 
-    for (var i = 0; i < connections.length; i++) {
-      var connection = connections[i];
+    for (let i = 0; i < connections.length; i++) {
+      let connection = connections[i];
 
       this.connections.gated.push(connection);
       connection.gater = this;
@@ -332,10 +337,10 @@ Node.prototype = {
       connections = [connections];
     }
 
-    for (var i = connections.length - 1; i >= 0; i--) {
-      var connection = connections[i];
+    for (let i = connections.length - 1; i >= 0; i--) {
+      let connection = connections[i];
 
-      var index = this.connections.gated.indexOf(connection);
+      let index = this.connections.gated.indexOf(connection);
       this.connections.gated.splice(index, 1);
       connection.gater = null;
       connection.gain = 1;
@@ -346,8 +351,8 @@ Node.prototype = {
    * Clear the context of the node
    */
   clear: function () {
-    for (var i = 0; i < this.connections.in.length; i++) {
-      var connection = this.connections.in[i];
+    for (let i = 0; i < this.connections.in.length; i++) {
+      let connection = this.connections.in[i];
 
       connection.elegibility = 0;
       connection.xtrace = {
@@ -356,7 +361,7 @@ Node.prototype = {
       };
     }
 
-    for (i = 0; i < this.connections.gated.length; i++) {
+    for (let i = 0; i < this.connections.gated.length; i++) {
       let conn = this.connections.gated[i];
       conn.gain = 0;
     }
@@ -378,7 +383,7 @@ Node.prototype = {
     switch (method) {
       case methods.mutation.MOD_ACTIVATION:
         // Can't be the same squash
-        var squash =
+        let squash =
           method.allowed[
             (method.allowed.indexOf(this.squash) +
               Math.floor(Math.random() * (method.allowed.length - 1)) +
@@ -388,7 +393,7 @@ Node.prototype = {
         this.squash = squash;
         break;
       case methods.mutation.MOD_BIAS:
-        var modification =
+        let modification =
           Math.random() * (method.max - method.min) + method.min;
         this.bias += modification;
         break;
@@ -401,8 +406,8 @@ Node.prototype = {
   isProjectingTo: function (node) {
     if (node === this && this.connections.self.weight !== 0) return true;
 
-    for (var i = 0; i < this.connections.out.length; i++) {
-      var conn = this.connections.out[i];
+    for (let i = 0; i < this.connections.out.length; i++) {
+      let conn = this.connections.out[i];
       if (conn.to === node) {
         return true;
       }
@@ -416,8 +421,8 @@ Node.prototype = {
   isProjectedBy: function (node) {
     if (node === this && this.connections.self.weight !== 0) return true;
 
-    for (var i = 0; i < this.connections.in.length; i++) {
-      var conn = this.connections.in[i];
+    for (let i = 0; i < this.connections.in.length; i++) {
+      let conn = this.connections.in[i];
       if (conn.from === node) {
         return true;
       }
@@ -430,10 +435,10 @@ Node.prototype = {
    * Converts the node to a json object
    */
   toJSON: function () {
-    var json = {
+    let json = {
       bias: this.bias,
       type: this.type,
-      squash: this.squash.name,
+      squash: this.squash ? this.squash.name : null, // Handle undefined squash
       mask: this.mask,
     };
 
@@ -445,7 +450,7 @@ Node.prototype = {
  * Convert a json object to a node
  */
 Node.fromJSON = function (json) {
-  var node = new Node();
+  let node = new Node();
   node.bias = json.bias;
   node.type = json.type;
   node.mask = json.mask;

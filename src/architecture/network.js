@@ -1,13 +1,13 @@
-import Neat from '../neat';
-import Node from './node';
-import multi from '../multithreading/multi';
-import Connection from './connection';
-import { config } from '../config';
-import * as methods from '../methods/methods';
+import Neat from '../neat.js';
+import Node from './node.js';
+import multi from '../multithreading/multi.js';
+import Connection from './connection.js';
+import { config } from '../config.js';
+import * as methods from '../methods/methods.js';
 import os from 'os';
 
 /* Easier variable naming */
-var mutation = methods.mutation;
+let mutation = methods.mutation;
 
 /** NETWORK */
 export function Network(input, output) {
@@ -28,17 +28,17 @@ export function Network(input, output) {
   this.dropout = 0;
 
   // Create input and output nodes
-  var i;
+  let i;
   for (i = 0; i < this.input + this.output; i++) {
-    var type = i < this.input ? 'input' : 'output';
+    let type = i < this.input ? 'input' : 'output';
     this.nodes.push(new Node(type));
   }
 
   // Connect input nodes with output nodes directly
   for (i = 0; i < this.input; i++) {
-    for (var j = this.input; j < this.output + this.input; j++) {
+    for (let j = this.input; j < this.output + this.input; j++) {
       // https://stats.stackexchange.com/a/248040/147931
-      var weight = Math.random() * this.input * Math.sqrt(2 / this.input);
+      let weight = Math.random() * this.input * Math.sqrt(2 / this.input);
       this.connect(this.nodes[i], this.nodes[j], weight);
     }
   }
@@ -49,14 +49,14 @@ Network.prototype = {
    * Activates the network
    */
   activate: function (input, training) {
-    var output = [];
+    let output = [];
 
     // Activate nodes chronologically
-    for (var i = 0; i < this.nodes.length; i++) {
+    for (let i = 0; i < this.nodes.length; i++) {
       if (this.nodes[i].type === 'input') {
         this.nodes[i].activate(input[i]);
       } else if (this.nodes[i].type === 'output') {
-        var activation = this.nodes[i].activate();
+        let activation = this.nodes[i].activate();
         output.push(activation);
       } else {
         if (training) this.nodes[i].mask = Math.random() < this.dropout ? 0 : 1;
@@ -71,14 +71,14 @@ Network.prototype = {
    * Activates the network without calculating elegibility traces and such
    */
   noTraceActivate: function (input) {
-    var output = [];
+    let output = [];
 
     // Activate nodes chronologically
-    for (var i = 0; i < this.nodes.length; i++) {
+    for (let i = 0; i < this.nodes.length; i++) {
       if (this.nodes[i].type === 'input') {
         this.nodes[i].noTraceActivate(input[i]);
       } else if (this.nodes[i].type === 'output') {
-        var activation = this.nodes[i].noTraceActivate();
+        let activation = this.nodes[i].noTraceActivate();
         output.push(activation);
       } else {
         this.nodes[i].noTraceActivate();
@@ -98,10 +98,10 @@ Network.prototype = {
       );
     }
 
-    var targetIndex = target.length;
+    let targetIndex = target.length;
 
     // Propagate output nodes
-    var i;
+    let i;
     for (i = this.nodes.length - 1; i >= this.nodes.length - this.output; i--) {
       this.nodes[i].propagate(rate, momentum, update, target[--targetIndex]);
     }
@@ -116,7 +116,7 @@ Network.prototype = {
    * Clear the context of the network
    */
   clear: function () {
-    for (var i = 0; i < this.nodes.length; i++) {
+    for (let i = 0; i < this.nodes.length; i++) {
       this.nodes[i].clear();
     }
   },
@@ -125,10 +125,10 @@ Network.prototype = {
    * Connects the from node to the to node
    */
   connect: function (from, to, weight) {
-    var connections = from.connect(to, weight);
+    let connections = from.connect(to, weight);
 
-    for (var i = 0; i < connections.length; i++) {
-      var connection = connections[i];
+    for (let i = 0; i < connections.length; i++) {
+      let connection = connections[i];
       if (from !== to) {
         this.connections.push(connection);
       } else {
@@ -144,10 +144,10 @@ Network.prototype = {
    */
   disconnect: function (from, to) {
     // Delete the connection in the network's connection array
-    var connections = from === to ? this.selfconns : this.connections;
+    let connections = from === to ? this.selfconns : this.connections;
 
-    for (var i = 0; i < connections.length; i++) {
-      var connection = connections[i];
+    for (let i = 0; i < connections.length; i++) {
+      let connection = connections[i];
       if (connection.from === from && connection.to === to) {
         if (connection.gater !== null) this.ungate(connection);
         connections.splice(i, 1);
@@ -177,7 +177,7 @@ Network.prototype = {
    *  Remove the gate of a connection
    */
   ungate: function (connection) {
-    var index = this.gates.indexOf(connection);
+    let index = this.gates.indexOf(connection);
     if (index === -1) {
       throw new Error('This connection is not gated!');
     }
@@ -190,21 +190,21 @@ Network.prototype = {
    *  Removes a node from the network
    */
   remove: function (node) {
-    var index = this.nodes.indexOf(node);
+    let nodeIndex = this.nodes.indexOf(node);
 
-    if (index === -1) {
+    if (nodeIndex === -1) {
       throw new Error('This node does not exist in the network!');
     }
 
     // Keep track of gaters
-    var gaters = [];
+    let gaters = [];
 
     // Remove selfconnections from this.selfconns
     this.disconnect(node, node);
 
     // Get all its inputting nodes
-    var inputs = [];
-    for (var i = node.connections.in.length - 1; i >= 0; i--) {
+    let inputs = [];
+    for (let i = node.connections.in.length - 1; i >= 0; i--) {
       let connection = node.connections.in[i];
       if (
         mutation.SUB_NODE.keep_gates &&
@@ -218,8 +218,8 @@ Network.prototype = {
     }
 
     // Get all its outputing nodes
-    var outputs = [];
-    for (i = node.connections.out.length - 1; i >= 0; i--) {
+    let outputs = [];
+    for (let i = node.connections.out.length - 1; i >= 0; i--) {
       let connection = node.connections.out[i];
       if (
         mutation.SUB_NODE.keep_gates &&
@@ -233,20 +233,20 @@ Network.prototype = {
     }
 
     // Connect the input nodes to the output nodes (if not already connected)
-    var connections = [];
-    for (i = 0; i < inputs.length; i++) {
+    let connections = [];
+    for (let i = 0; i < inputs.length; i++) {
       let input = inputs[i];
-      for (var j = 0; j < outputs.length; j++) {
+      for (let j = 0; j < outputs.length; j++) {
         let output = outputs[j];
         if (!input.isProjectingTo(output)) {
-          var conn = this.connect(input, output);
+          let conn = this.connect(input, output);
           connections.push(conn[0]);
         }
       }
     }
 
     // Gate random connections with gaters
-    for (i = 0; i < gaters.length; i++) {
+    for (let i = 0; i < gaters.length; i++) {
       if (connections.length === 0) break;
 
       let gater = gaters[i];
@@ -257,7 +257,7 @@ Network.prototype = {
     }
 
     // Remove gated connections gated by this node
-    for (i = node.connections.gated.length - 1; i >= 0; i--) {
+    for (let i = node.connections.gated.length - 1; i >= 0; i--) {
       let conn = node.connections.gated[i];
       this.ungate(conn);
     }
@@ -266,7 +266,7 @@ Network.prototype = {
     this.disconnect(node, node);
 
     // Remove the node from this.nodes
-    this.nodes.splice(index, 1);
+    this.nodes.splice(nodeIndex, 1);
   },
 
   /**
@@ -277,34 +277,34 @@ Network.prototype = {
       throw new Error('No (correct) mutate method given!');
     }
 
-    var i, j;
+    let i, j;
     switch (method) {
       case mutation.ADD_NODE:
         // Look for an existing connection and place a node in between
-        var connection = this.connections[
+        let selectedConnection = this.connections[
           Math.floor(Math.random() * this.connections.length)
         ];
-        var gater = connection.gater;
-        this.disconnect(connection.from, connection.to);
+        let gaterNode = selectedConnection.gater;
+        this.disconnect(selectedConnection.from, selectedConnection.to);
 
         // Insert the new node right before the old connection.to
-        var toIndex = this.nodes.indexOf(connection.to);
-        var node = new Node('hidden');
+        let targetIndex = this.nodes.indexOf(selectedConnection.to);
+        let hiddenNode = new Node('hidden');
 
-        // Random squash function
-        node.mutate(mutation.MOD_ACTIVATION);
+        // random squash function
+        hiddenNode.mutate(mutation.MOD_ACTIVATION);
 
         // Place it in this.nodes
-        var minBound = Math.min(toIndex, this.nodes.length - this.output);
-        this.nodes.splice(minBound, 0, node);
+        let minBound = Math.min(targetIndex, this.nodes.length - this.output);
+        this.nodes.splice(minBound, 0, hiddenNode);
 
         // Now create two new connections
-        var newConn1 = this.connect(connection.from, node)[0];
-        var newConn2 = this.connect(node, connection.to)[0];
+        let newConn1 = this.connect(selectedConnection.from, hiddenNode)[0];
+        let newConn2 = this.connect(hiddenNode, selectedConnection.to)[0];
 
         // Check if the original connection was gated
-        if (gater != null) {
-          this.gate(gater, Math.random() >= 0.5 ? newConn1 : newConn2);
+        if (gaterNode != null) {
+          this.gate(gaterNode, Math.random() >= 0.5 ? newConn1 : newConn2);
         }
         break;
       case mutation.SUB_NODE:
@@ -315,71 +315,73 @@ Network.prototype = {
         }
 
         // Select a node which isn't an input or output node
-        var index = Math.floor(
+        let removableNodeIndex = Math.floor(
           Math.random() * (this.nodes.length - this.output - this.input) +
             this.input
         );
-        this.remove(this.nodes[index]);
+        this.remove(this.nodes[removableNodeIndex]);
         break;
       case mutation.ADD_CONN:
         // Create an array of all uncreated (feedforward) connections
-        var available = [];
-        for (i = 0; i < this.nodes.length - this.output; i++) {
-          let node1 = this.nodes[i];
-          for (j = Math.max(i + 1, this.input); j < this.nodes.length; j++) {
-            let node2 = this.nodes[j];
-            if (!node1.isProjectingTo(node2)) available.push([node1, node2]);
+        let availableConnections = [];
+        for (let sourceIndex = 0; sourceIndex < this.nodes.length - this.output; sourceIndex++) {
+          let sourceNode = this.nodes[sourceIndex];
+          for (let targetIndex = Math.max(sourceIndex + 1, this.input); targetIndex < this.nodes.length; targetIndex++) {
+            let targetNode = this.nodes[targetIndex];
+            if (!sourceNode.isProjectingTo(targetNode)) {
+              availableConnections.push([sourceNode, targetNode]);
+            }
           }
         }
 
-        if (available.length === 0) {
+        if (availableConnections.length === 0) {
           if (config.warnings) console.warn('No more connections to be made!');
           break;
         }
 
-        var pair = available[Math.floor(Math.random() * available.length)];
-        this.connect(pair[0], pair[1]);
+        let selectedPair = availableConnections[Math.floor(Math.random() * availableConnections.length)];
+        this.connect(selectedPair[0], selectedPair[1]);
         break;
       case mutation.SUB_CONN:
         // List of possible connections that can be removed
-        var possible = [];
+        let removableConnections = [];
 
-        for (i = 0; i < this.connections.length; i++) {
-          let conn = this.connections[i];
+        for (let i = 0; i < this.connections.length; i++) {
+          let removableConnection = this.connections[i];
           // Check if it is not disabling a node
           if (
-            conn.from.connections.out.length > 1 &&
-            conn.to.connections.in.length > 1 &&
-            this.nodes.indexOf(conn.to) > this.nodes.indexOf(conn.from)
+            removableConnection.from.connections.out.length > 1 &&
+            removableConnection.to.connections.in.length > 1 &&
+            this.nodes.indexOf(removableConnection.to) > this.nodes.indexOf(removableConnection.from)
           ) {
-            possible.push(conn);
+            removableConnections.push(removableConnection);
           }
         }
 
-        if (possible.length === 0) {
+        if (removableConnections.length === 0) {
           if (config.warnings) console.warn('No connections to remove!');
           break;
         }
 
-        var randomConn = possible[Math.floor(Math.random() * possible.length)];
-        this.disconnect(randomConn.from, randomConn.to);
+        let randomRemovableConn = removableConnections[Math.floor(Math.random() * removableConnections.length)];
+        this.disconnect(randomRemovableConn.from, randomRemovableConn.to);
         break;
       case mutation.MOD_WEIGHT:
-        var allconnections = this.connections.concat(this.selfconns);
+        let allconnections = this.connections.concat(this.selfconns);
 
-        var connection =
+        let connection =
           allconnections[Math.floor(Math.random() * allconnections.length)];
-        var modification =
+        let modification =
           Math.random() * (method.max - method.min) + method.min;
         connection.weight += modification;
         break;
       case mutation.MOD_BIAS:
         // Has no effect on input node, so they are excluded
-        var index = Math.floor(
+        let selectedNodeIndex = Math.floor(
           Math.random() * (this.nodes.length - this.input) + this.input
         );
-        var node = this.nodes[index];
-        node.mutate(method);
+        let selectedNode = this.nodes[selectedNodeIndex];
+        selectedNode.mutate(method);
         break;
       case mutation.MOD_ACTIVATION:
         // Has no effect on input node, so they are excluded
@@ -392,37 +394,37 @@ Network.prototype = {
           break;
         }
 
-        var index = Math.floor(
+        let activationNodeIndex = Math.floor(
           Math.random() *
             (this.nodes.length -
               (method.mutateOutput ? 0 : this.output) -
               this.input) +
             this.input
         );
-        var node = this.nodes[index];
+        let activationNode = this.nodes[activationNodeIndex];
 
-        node.mutate(method);
+        activationNode.mutate(method);
         break;
       case mutation.ADD_SELF_CONN:
-        // Check which nodes aren't selfconnected yet
-        var possible = [];
-        for (i = this.input; i < this.nodes.length; i++) {
-          let node = this.nodes[i];
-          if (node.connections.self.weight === 0) {
-            possible.push(node);
+        // Check which nodes aren't self-connected yet
+        let selfConnectableNodes = [];
+        for (let i = this.input; i < this.nodes.length; i++) {
+          let selfConnectableNode = this.nodes[i];
+          if (selfConnectableNode.connections.self.weight === 0) {
+            selfConnectableNodes.push(selfConnectableNode);
           }
         }
 
-        if (possible.length === 0) {
+        if (selfConnectableNodes.length === 0) {
           if (config.warnings) console.warn('No more self-connections to add!');
           break;
         }
 
         // Select a random node
-        var node = possible[Math.floor(Math.random() * possible.length)];
+        let randomSelfNode = selfConnectableNodes[Math.floor(Math.random() * selfConnectableNodes.length)];
 
-        // Connect it to himself
-        this.connect(node, node);
+        // Connect it to itself
+        this.connect(randomSelfNode, randomSelfNode);
         break;
       case mutation.SUB_SELF_CONN:
         if (this.selfconns.length === 0) {
@@ -430,37 +432,37 @@ Network.prototype = {
             console.warn('No more self-connections to remove!');
           break;
         }
-        var conn = this.selfconns[
+        let conn = this.selfconns[
           Math.floor(Math.random() * this.selfconns.length)
         ];
         this.disconnect(conn.from, conn.to);
         break;
       case mutation.ADD_GATE:
-        var allconnections = this.connections.concat(this.selfconns);
+        let allConnections = this.connections.concat(this.selfconns);
 
         // Create a list of all non-gated connections
-        var possible = [];
-        for (i = 0; i < allconnections.length; i++) {
-          let conn = allconnections[i];
-          if (conn.gater === null) {
-            possible.push(conn);
+        let ungatedConnections = [];
+        for (let i = 0; i < allConnections.length; i++) {
+          let ungatedConnection = allConnections[i];
+          if (ungatedConnection.gater === null) {
+            ungatedConnections.push(ungatedConnection);
           }
         }
 
-        if (possible.length === 0) {
+        if (ungatedConnections.length === 0) {
           if (config.warnings) console.warn('No more connections to gate!');
           break;
         }
 
         // Select a random gater node and connection, can't be gated by input
-        var index = Math.floor(
+        let randomGaterIndex = Math.floor(
           Math.random() * (this.nodes.length - this.input) + this.input
         );
-        var node = this.nodes[index];
-        var conn = possible[Math.floor(Math.random() * possible.length)];
+        let randomGaterNode = this.nodes[randomGaterIndex];
+        let randomUngatedConn = ungatedConnections[Math.floor(Math.random() * ungatedConnections.length)];
 
         // Gate the connection with the node
-        this.gate(node, conn);
+        this.gate(randomGaterNode, randomUngatedConn);
         break;
       case mutation.SUB_GATE:
         // Select a random gated connection
@@ -469,14 +471,14 @@ Network.prototype = {
           break;
         }
 
-        var index = Math.floor(Math.random() * this.gates.length);
-        var gatedconn = this.gates[index];
+        let subGateIndex = Math.floor(Math.random() * this.gates.length);
+        let gatedconn = this.gates[subGateIndex];
 
         this.ungate(gatedconn);
         break;
       case mutation.ADD_BACK_CONN:
         // Create an array of all uncreated (backfed) connections
-        var available = [];
+        let available = [];
         for (i = this.input; i < this.nodes.length; i++) {
           let node1 = this.nodes[i];
           for (j = this.input; j < i; j++) {
@@ -490,12 +492,12 @@ Network.prototype = {
           break;
         }
 
-        var pair = available[Math.floor(Math.random() * available.length)];
+        let pair = available[Math.floor(Math.random() * available.length)];
         this.connect(pair[0], pair[1]);
         break;
       case mutation.SUB_BACK_CONN:
         // List of possible connections that can be removed
-        var possible = [];
+        let possible = [];
 
         for (i = 0; i < this.connections.length; i++) {
           let conn = this.connections[i];
@@ -514,7 +516,7 @@ Network.prototype = {
           break;
         }
 
-        var randomConn = possible[Math.floor(Math.random() * possible.length)];
+        let randomConn = possible[Math.floor(Math.random() * possible.length)];
         this.disconnect(randomConn.from, randomConn.to);
         break;
       case mutation.SWAP_NODES:
@@ -531,25 +533,25 @@ Network.prototype = {
           break;
         }
 
-        var index = Math.floor(
+        let index = Math.floor(
           Math.random() *
-            (this.nodes.length -
-              (method.mutateOutput ? 0 : this.output) -
-              this.input) +
+            (this.nodes.length - 
+              (method.mutateOutput ? 0 : this.output) - 
+              this.input) + 
             this.input
         );
-        var node1 = this.nodes[index];
+        let node1 = this.nodes[index];
         index = Math.floor(
           Math.random() *
-            (this.nodes.length -
-              (method.mutateOutput ? 0 : this.output) -
-              this.input) +
+            (this.nodes.length - 
+              (method.mutateOutput ? 0 : this.output) - 
+              this.input) + 
             this.input
         );
-        var node2 = this.nodes[index];
+        let node2 = this.nodes[index];
 
-        var biasTemp = node1.bias;
-        var squashTemp = node1.squash;
+        let biasTemp = node1.bias;
+        let squashTemp = node1.squash;
 
         node1.bias = node2.bias;
         node1.squash = node2.squash;
@@ -587,15 +589,15 @@ Network.prototype = {
     }
 
     // Read the options
-    var targetError = options.error || 0.05;
-    var cost = options.cost || methods.Cost.MSE;
-    var baseRate = options.rate || 0.3;
-    var dropout = options.dropout || 0;
-    var momentum = options.momentum || 0;
-    var batchSize = options.batchSize || 1; // online learning
-    var ratePolicy = options.ratePolicy || methods.Rate.FIXED();
+    let targetError = options.error || 0.05;
+    let cost = typeof options.cost === 'function' ? options.cost : methods.Cost.mse;
+    let baseRate = options.rate || 0.3;
+    let dropout = options.dropout || 0;
+    let momentum = options.momentum || 0;
+    let batchSize = options.batchSize || 1; // online learning
+    let ratePolicy = options.ratePolicy || methods.Rate.fixed();
 
-    var start = Date.now();
+    let start = Date.now();
 
     if (batchSize > set.length) {
       throw new Error('Batch size must be smaller or equal to dataset length!');
@@ -619,16 +621,16 @@ Network.prototype = {
       let numTrain = Math.ceil(
         (1 - options.crossValidate.testSize) * set.length
       );
-      var trainSet = set.slice(0, numTrain);
-      var testSet = set.slice(numTrain);
+      let trainSet = set.slice(0, numTrain);
+      let testSet = set.slice(numTrain);
     }
 
     // Loops the training process
-    var currentRate = baseRate;
-    var iteration = 0;
-    var error = 1;
+    let currentRate = baseRate;
+    let iteration = 0;
+    let error = 1;
 
-    var i, j, x;
+    let i, j, x;
     while (
       error > targetError &&
       (options.iterations === 0 || iteration < options.iterations)
@@ -705,14 +707,15 @@ Network.prototype = {
    * private function used in this.train
    */
   _trainSet: function (set, batchSize, currentRate, momentum, costFunction) {
-    var errorSum = 0;
-    for (var i = 0; i < set.length; i++) {
-      var input = set[i].input;
-      var target = set[i].output;
+    costFunction = typeof costFunction === 'function' ? costFunction : methods.Cost.mse;
+    let errorSum = 0;
+    for (let i = 0; i < set.length; i++) {
+      let input = set[i].input;
+      let target = set[i].output;
 
-      var update = !!((i + 1) % batchSize === 0 || i + 1 === set.length);
+      let update = !!((i + 1) % batchSize === 0 || i + 1 === set.length);
 
-      var output = this.activate(input, true);
+      let output = this.activate(input, true);
       this.propagate(currentRate, momentum, update, target);
 
       errorSum += costFunction(target, output);
@@ -723,9 +726,10 @@ Network.prototype = {
   /**
    * Tests a set and returns the error and elapsed time
    */
-  test: function (set, cost = methods.Cost.MSE) {
+  test: function (set, cost = methods.Cost.mse) {
+    cost = typeof cost === 'function' ? cost : methods.Cost.mse;
     // Check if dropout is enabled, set correct mask
-    var i;
+    let i;
     if (this.dropout) {
       for (i = 0; i < this.nodes.length; i++) {
         if (
@@ -737,8 +741,8 @@ Network.prototype = {
       }
     }
 
-    var error = 0;
-    var start = Date.now();
+    let error = 0;
+    let start = Date.now();
 
     for (i = 0; i < set.length; i++) {
       let input = set[i].input;
@@ -749,7 +753,7 @@ Network.prototype = {
 
     error /= set.length;
 
-    var results = {
+    let results = {
       error: error,
       time: Date.now() - start,
     };
@@ -761,10 +765,10 @@ Network.prototype = {
    * Creates a json that can be used to create a graph with d3 and webcola
    */
   graph: function (width, height) {
-    var input = 0;
-    var output = 0;
+    let input = 0;
+    let output = 0;
 
-    var json = {
+    let json = {
       nodes: [],
       links: [],
       constraints: [
@@ -781,9 +785,9 @@ Network.prototype = {
       ],
     };
 
-    var i;
+    let i;
     for (i = 0; i < this.nodes.length; i++) {
-      var node = this.nodes[i];
+      let node = this.nodes[i];
 
       if (node.type === 'input') {
         if (this.input === 1) {
@@ -828,9 +832,9 @@ Network.prototype = {
       });
     }
 
-    var connections = this.connections.concat(this.selfconns);
+    let connections = this.connections.concat(this.selfconns);
     for (i = 0; i < connections.length; i++) {
-      var connection = connections[i];
+      let connection = connections[i];
       if (connection.gater == null) {
         json.links.push({
           source: this.nodes.indexOf(connection.from),
@@ -839,7 +843,7 @@ Network.prototype = {
         });
       } else {
         // Add a gater 'node'
-        var index = json.nodes.length;
+        let index = json.nodes.length;
         json.nodes.push({
           id: index,
           activation: connection.gater.activation,
@@ -871,7 +875,7 @@ Network.prototype = {
    * Convert the network to a json object
    */
   toJSON: function () {
-    var json = {
+    let json = {
       nodes: [],
       connections: [],
       input: this.input,
@@ -880,7 +884,7 @@ Network.prototype = {
     };
 
     // So we don't have to use expensive .indexOf()
-    var i;
+    let i;
     for (i = 0; i < this.nodes.length; i++) {
       this.nodes[i].index = i;
     }
@@ -922,7 +926,7 @@ Network.prototype = {
    * Sets the value of a property for every node in this network
    */
   set: function (values) {
-    for (var i = 0; i < this.nodes.length; i++) {
+    for (let i = 0; i < this.nodes.length; i++) {
       this.nodes[i].bias = values.bias || this.nodes[i].bias;
       this.nodes[i].squash = values.squash || this.nodes[i].squash;
     }
@@ -943,14 +947,14 @@ Network.prototype = {
 
     // Read the options
     options = options || {};
-    var targetError =
+    let targetError =
       typeof options.error !== 'undefined' ? options.error : 0.05;
-    var growth =
+    let growth =
       typeof options.growth !== 'undefined' ? options.growth : 0.0001;
-    var cost = options.cost || methods.Cost.MSE;
-    var amount = options.amount || 1;
+    let cost = options.cost || methods.Cost.MSE;
+    let amount = options.amount || 1;
 
-    var threads = options.threads;
+    let threads = options.threads;
     if (typeof threads === 'undefined') {
       if (typeof window === 'undefined') {
         // Node.js
@@ -961,7 +965,7 @@ Network.prototype = {
       }
     }
 
-    var start = Date.now();
+    let start = Date.now();
 
     if (
       typeof options.iterations === 'undefined' &&
@@ -976,20 +980,20 @@ Network.prototype = {
       options.iterations = 0; // run until target error
     }
 
-    var fitnessFunction;
+    let fitnessFunction;
     if (threads === 1) {
       // Create the fitness function
       fitnessFunction = function (genome) {
-        var score = 0;
-        for (var i = 0; i < amount; i++) {
+        let score = 0;
+        for (let i = 0; i < amount; i++) {
           score -= genome.test(set, cost).error;
         }
 
         score -=
-          (genome.nodes.length -
-            genome.input -
-            genome.output +
-            genome.connections.length +
+          (genome.nodes.length - 
+            genome.input - 
+            genome.output + 
+            genome.connections.length + 
             genome.gates.length) *
           growth;
         score = isNaN(score) ? -Infinity : score; // this can cause problems with fitness proportionate selection
@@ -998,42 +1002,44 @@ Network.prototype = {
       };
     } else {
       // Serialize the dataset
-      var converted = multi.serializeDataSet(set);
+      const converted = multi.serializeDataSet(set);
 
       // Create workers, send datasets
-      var workers = [];
+      const workers = [];
       if (typeof window === 'undefined') {
-        for (var i = 0; i < threads; i++) {
-          workers.push(new multi.workers.node.TestWorker(converted, cost));
+        for (let i = 0; i < threads; i++) {
+          const TestWorker = await multi.Workers.getNodeTestWorker();
+          workers.push(new TestWorker(converted, cost));
         }
       } else {
-        for (var i = 0; i < threads; i++) {
-          workers.push(new multi.workers.browser.TestWorker(converted, cost));
+        for (let i = 0; i < threads; i++) {
+          const TestWorker = await multi.Workers.getBrowserTestWorker();
+          workers.push(new TestWorker(converted, cost));
         }
       }
 
       fitnessFunction = function (population) {
         return new Promise((resolve, reject) => {
           // Create a queue
-          var queue = population.slice();
-          var done = 0;
+          const queue = population.slice();
+          let done = 0;
 
           // Start worker function
-          var startWorker = function (worker) {
+          const startWorker = function (worker) {
             if (!queue.length) {
               if (++done === threads) resolve();
               return;
             }
 
-            var genome = queue.shift();
+            const genome = queue.shift();
 
             worker.evaluate(genome).then(function (result) {
               genome.score = -result;
               genome.score -=
-                (genome.nodes.length -
-                  genome.input -
-                  genome.output +
-                  genome.connections.length +
+                (genome.nodes.length - 
+                  genome.input - 
+                  genome.output + 
+                  genome.connections.length + 
                   genome.gates.length) *
                 growth;
               genome.score = isNaN(parseFloat(result))
@@ -1043,7 +1049,7 @@ Network.prototype = {
             });
           };
 
-          for (var i = 0; i < workers.length; i++) {
+          for (let i = 0; i < workers.length; i++) {
             startWorker(workers[i]);
           }
         });
@@ -1054,11 +1060,11 @@ Network.prototype = {
 
     // Intialise the NEAT instance
     options.network = this;
-    var neat = new Neat(this.input, this.output, fitnessFunction, options);
+    let neat = new Neat(this.input, this.output, fitnessFunction, options);
 
-    var error = -Infinity;
-    var bestFitness = -Infinity;
-    var bestGenome;
+    let error = -Infinity;
+    let bestFitness = -Infinity;
+    let bestGenome;
 
     while (
       error < -targetError &&
@@ -1068,10 +1074,10 @@ Network.prototype = {
       let fitness = fittest.score;
       error =
         fitness +
-        (fittest.nodes.length -
-          fittest.input -
-          fittest.output +
-          fittest.connections.length +
+        (fittest.nodes.length - 
+          fittest.input - 
+          fittest.output + 
+          fittest.connections.length + 
           fittest.gates.length) *
           growth;
 
@@ -1104,7 +1110,7 @@ Network.prototype = {
     }
 
     if (threads > 1) {
-      for (var i = 0; i < workers.length; i++) workers[i].terminate();
+      for (let i = 0; i < workers.length; i++) workers[i].terminate();
     }
 
     if (typeof bestGenome !== 'undefined') {
@@ -1128,83 +1134,75 @@ Network.prototype = {
    * need of a library
    */
   standalone: function () {
-    var present = [];
-    var activations = [];
-    var states = [];
-    var lines = [];
-    var functions = [];
+    const present = [];
+    const activations = [];
+    const states = [];
+    const lines = [];
+    const functions = [];
 
-    var i;
-    for (i = 0; i < this.input; i++) {
-      var node = this.nodes[i];
-      activations.push(node.activation);
-      states.push(node.state);
+    // Initialize activations and states for input nodes
+    for (let i = 0; i < this.input; i++) {
+      activations.push(this.nodes[i].activation);
+      states.push(this.nodes[i].state);
     }
 
-    lines.push('for(var i = 0; i < input.length; i++) A[i] = input[i];');
+    lines.push('for (let i = 0; i < input.length; i++) A[i] = input[i];');
 
-    // So we don't have to use expensive .indexOf()
-    for (i = 0; i < this.nodes.length; i++) {
+    // Assign indexes to nodes for easier reference
+    for (let i = 0; i < this.nodes.length; i++) {
       this.nodes[i].index = i;
     }
 
-    for (i = this.input; i < this.nodes.length; i++) {
-      let node = this.nodes[i];
+    // Generate code for hidden and output nodes
+    for (let i = this.input; i < this.nodes.length; i++) {
+      const node = this.nodes[i];
       activations.push(node.activation);
       states.push(node.state);
 
-      var functionIndex = present.indexOf(node.squash.name);
-
+      let functionIndex = present.indexOf(node.squash.name);
       if (functionIndex === -1) {
         functionIndex = present.length;
         present.push(node.squash.name);
         functions.push(node.squash.toString());
       }
 
-      var incoming = [];
-      for (var j = 0; j < node.connections.in.length; j++) {
-        var conn = node.connections.in[j];
-        var computation = `A[${conn.from.index}] * ${conn.weight}`;
-
+      const incoming = [];
+      for (const conn of node.connections.in) {
+        let computation = `A[${conn.from.index}] * ${conn.weight}`;
         if (conn.gater != null) {
           computation += ` * A[${conn.gater.index}]`;
         }
-
         incoming.push(computation);
       }
 
       if (node.connections.self.weight) {
-        let conn = node.connections.self;
-        let computation = `S[${i}] * ${conn.weight}`;
-
-        if (conn.gater != null) {
-          computation += ` * A[${conn.gater.index}]`;
+        let computation = `S[${i}] * ${node.connections.self.weight}`;
+        if (node.connections.self.gater != null) {
+          computation += ` * A[${node.connections.self.gater.index}]`;
         }
-
         incoming.push(computation);
       }
 
-      var line1 = `S[${i}] = ${incoming.join(' + ')} + ${node.bias};`;
-      var line2 = `A[${i}] = F[${functionIndex}](S[${i}])${
-        !node.mask ? ' * ' + node.mask : ''
-      };`;
-      lines.push(line1);
-      lines.push(line2);
+      lines.push(`S[${i}] = ${incoming.join(' + ')} + ${node.bias};`);
+      lines.push(`A[${i}] = F[${functionIndex}](S[${i}]);`);
     }
 
-    var output = [];
-    for (i = this.nodes.length - this.output; i < this.nodes.length; i++) {
+    // Generate output code
+    const output = [];
+    for (let i = this.nodes.length - this.output; i < this.nodes.length; i++) {
       output.push(`A[${i}]`);
     }
+    lines.push(`return [${output.join(',')}];`);
 
-    output = `return [${output.join(',')}];`;
-    lines.push(output);
-
-    var total = '';
-    total += `var F = [${functions.toString()}];\r\n`;
-    total += `var A = [${activations.toString()}];\r\n`;
-    total += `var S = [${states.toString()}];\r\n`;
-    total += `function activate(input){\r\n${lines.join('\r\n')}\r\n}`;
+    // Combine all parts into a standalone function
+    const total = `
+      const F = [${functions.join(',')}];
+      const A = [${activations.join(',')}];
+      const S = [${states.join(',')}];
+      return function(input) {
+        ${lines.join('\n')}
+      };
+    `;
 
     return total;
   },
@@ -1213,10 +1211,10 @@ Network.prototype = {
    * Serialize to send to workers efficiently
    */
   serialize: function () {
-    var activations = [];
-    var states = [];
-    var conns = [];
-    var squashes = [
+    const activations = [];
+    const states = [];
+    const conns = [];
+    const squashes = [
       'LOGISTIC',
       'TANH',
       'IDENTITY',
@@ -1237,16 +1235,15 @@ Network.prototype = {
     conns.push(this.input);
     conns.push(this.output);
 
-    var i;
-    for (i = 0; i < this.nodes.length; i++) {
-      let node = this.nodes[i];
+    for (let i = 0; i < this.nodes.length; i++) {
+      const node = this.nodes[i];
       node.index = i;
       activations.push(node.activation);
       states.push(node.state);
     }
 
-    for (i = this.input; i < this.nodes.length; i++) {
-      let node = this.nodes[i];
+    for (let i = this.input; i < this.nodes.length; i++) {
+      const node = this.nodes[i];
       conns.push(node.index);
       conns.push(node.bias);
       conns.push(squashes.indexOf(node.squash.name));
@@ -1258,8 +1255,8 @@ Network.prototype = {
           : node.connections.self.gater.index
       );
 
-      for (var j = 0; j < node.connections.in.length; j++) {
-        let conn = node.connections.in[j];
+      for (let j = 0; j < node.connections.in.length; j++) {
+        const conn = node.connections.in[j];
 
         conns.push(conn.from.index);
         conns.push(conn.weight);
@@ -1277,20 +1274,19 @@ Network.prototype = {
  * Convert a json object to a network
  */
 Network.fromJSON = function (json) {
-  var network = new Network(json.input, json.output);
+  const network = new Network(json.input, json.output);
   network.dropout = json.dropout;
   network.nodes = [];
   network.connections = [];
 
-  var i;
-  for (i = 0; i < json.nodes.length; i++) {
+  for (let i = 0; i < json.nodes.length; i++) {
     network.nodes.push(Node.fromJSON(json.nodes[i]));
   }
 
-  for (i = 0; i < json.connections.length; i++) {
-    var conn = json.connections[i];
+  for (let i = 0; i < json.connections.length; i++) {
+    const conn = json.connections[i];
 
-    var connection = network.connect(
+    const connection = network.connect(
       network.nodes[conn.from],
       network.nodes[conn.to]
     )[0];
@@ -1320,11 +1316,10 @@ Network.merge = function (network1, network2) {
   }
 
   // Redirect all connections from network2 input from network1 output
-  var i;
-  for (i = 0; i < network2.connections.length; i++) {
-    let conn = network2.connections[i];
+  for (let i = 0; i < network2.connections.length; i++) {
+    const conn = network2.connections[i];
     if (conn.from.type === 'input') {
-      let index = network2.nodes.indexOf(conn.from);
+      const index = network2.nodes.indexOf(conn.from);
 
       // redirect
       conn.from = network1.nodes[network1.nodes.length - 1 - index];
@@ -1332,13 +1327,13 @@ Network.merge = function (network1, network2) {
   }
 
   // Delete input nodes of network2
-  for (i = network2.input - 1; i >= 0; i--) {
+  for (let i = network2.input - 1; i >= 0; i--) {
     network2.nodes.splice(i, 1);
   }
 
   // Change the node type of network1's output nodes (now hidden)
   for (
-    i = network1.nodes.length - network1.output;
+    let i = network1.nodes.length - network1.output;
     i < network1.nodes.length;
     i++
   ) {
@@ -1364,19 +1359,19 @@ Network.crossOver = function (network1, network2, equal) {
   }
 
   // Initialise offspring
-  var offspring = new Network(network1.input, network1.output);
+  const offspring = new Network(network1.input, network1.output);
   offspring.connections = [];
   offspring.nodes = [];
 
   // Save scores and create a copy
-  var score1 = network1.score || 0;
-  var score2 = network2.score || 0;
+  const score1 = network1.score || 0;
+  const score2 = network2.score || 0;
 
   // Determine offspring node size
-  var size;
+  let size;
   if (equal || score1 === score2) {
-    let max = Math.max(network1.nodes.length, network2.nodes.length);
-    let min = Math.min(network1.nodes.length, network2.nodes.length);
+    const max = Math.max(network1.nodes.length, network2.nodes.length);
+    const min = Math.min(network1.nodes.length, network2.nodes.length);
     size = Math.floor(Math.random() * (max - min + 1) + min);
   } else if (score1 > score2) {
     size = network1.nodes.length;
@@ -1385,26 +1380,25 @@ Network.crossOver = function (network1, network2, equal) {
   }
 
   // Rename some variables for easier reading
-  var outputSize = network1.output;
+  const outputSize = network1.output;
 
   // Set indexes so we don't need indexOf
-  var i;
-  for (i = 0; i < network1.nodes.length; i++) {
+  for (let i = 0; i < network1.nodes.length; i++) {
     network1.nodes[i].index = i;
   }
 
-  for (i = 0; i < network2.nodes.length; i++) {
+  for (let i = 0; i < network2.nodes.length; i++) {
     network2.nodes[i].index = i;
   }
 
   // Assign nodes from parents to offspring
-  for (i = 0; i < size; i++) {
+  for (let i = 0; i < size; i++) {
     // Determine if an output node is needed
-    var node;
+    let node;
     if (i < size - outputSize) {
-      let random = Math.random();
+      const random = Math.random();
       node = random >= 0.5 ? network1.nodes[i] : network2.nodes[i];
-      let other = random < 0.5 ? network1.nodes[i] : network2.nodes[i];
+      const other = random < 0.5 ? network1.nodes[i] : network2.nodes[i];
 
       if (typeof node === 'undefined' || node.type === 'output') {
         node = other;
@@ -1417,7 +1411,7 @@ Network.crossOver = function (network1, network2, equal) {
       }
     }
 
-    var newNode = new Node();
+    const newNode = new Node();
     newNode.bias = node.bias;
     newNode.squash = node.squash;
     newNode.type = node.type;
@@ -1426,13 +1420,13 @@ Network.crossOver = function (network1, network2, equal) {
   }
 
   // Create arrays of connection genes
-  var n1conns = {};
-  var n2conns = {};
+  const n1conns = {};
+  const n2conns = {};
 
   // Normal connections
-  for (i = 0; i < network1.connections.length; i++) {
-    let conn = network1.connections[i];
-    let data = {
+  for (let i = 0; i < network1.connections.length; i++) {
+    const conn = network1.connections[i];
+    const data = {
       weight: conn.weight,
       from: conn.from.index,
       to: conn.to.index,
@@ -1442,9 +1436,9 @@ Network.crossOver = function (network1, network2, equal) {
   }
 
   // Selfconnections
-  for (i = 0; i < network1.selfconns.length; i++) {
-    let conn = network1.selfconns[i];
-    let data = {
+  for (let i = 0; i < network1.selfconns.length; i++) {
+    const conn = network1.selfconns[i];
+    const data = {
       weight: conn.weight,
       from: conn.from.index,
       to: conn.to.index,
@@ -1454,9 +1448,9 @@ Network.crossOver = function (network1, network2, equal) {
   }
 
   // Normal connections
-  for (i = 0; i < network2.connections.length; i++) {
-    let conn = network2.connections[i];
-    let data = {
+  for (let i = 0; i < network2.connections.length; i++) {
+    const conn = network2.connections[i];
+    const data = {
       weight: conn.weight,
       from: conn.from.index,
       to: conn.to.index,
@@ -1466,9 +1460,9 @@ Network.crossOver = function (network1, network2, equal) {
   }
 
   // Selfconnections
-  for (i = 0; i < network2.selfconns.length; i++) {
-    let conn = network2.selfconns[i];
-    let data = {
+  for (let i = 0; i < network2.selfconns.length; i++) {
+    const conn = network2.selfconns[i];
+    const data = {
       weight: conn.weight,
       from: conn.from.index,
       to: conn.to.index,
@@ -1478,13 +1472,13 @@ Network.crossOver = function (network1, network2, equal) {
   }
 
   // Split common conn genes from disjoint or excess conn genes
-  var connections = [];
-  var keys1 = Object.keys(n1conns);
-  var keys2 = Object.keys(n2conns);
-  for (i = keys1.length - 1; i >= 0; i--) {
+  const connections = [];
+  const keys1 = Object.keys(n1conns);
+  const keys2 = Object.keys(n2conns);
+  for (let i = keys1.length - 1; i >= 0; i--) {
     // Common gene
     if (typeof n2conns[keys1[i]] !== 'undefined') {
-      let conn = Math.random() >= 0.5 ? n1conns[keys1[i]] : n2conns[keys1[i]];
+      const conn = Math.random() >= 0.5 ? n1conns[keys1[i]] : n2conns[keys1[i]];
       connections.push(conn);
 
       // Because deleting is expensive, just set it to some value
@@ -1496,7 +1490,7 @@ Network.crossOver = function (network1, network2, equal) {
 
   // Excess/disjoint gene
   if (score2 >= score1 || equal) {
-    for (i = 0; i < keys2.length; i++) {
+    for (let i = 0; i < keys2.length; i++) {
       if (typeof n2conns[keys2[i]] !== 'undefined') {
         connections.push(n2conns[keys2[i]]);
       }
@@ -1504,12 +1498,12 @@ Network.crossOver = function (network1, network2, equal) {
   }
 
   // Add common conn genes uniformly
-  for (i = 0; i < connections.length; i++) {
-    let connData = connections[i];
+  for (let i = 0; i < connections.length; i++) {
+    const connData = connections[i];
     if (connData.to < size && connData.from < size) {
-      let from = offspring.nodes[connData.from];
-      let to = offspring.nodes[connData.to];
-      let conn = offspring.connect(from, to)[0];
+      const from = offspring.nodes[connData.from];
+      const to = offspring.nodes[connData.to];
+      const conn = offspring.connect(from, to)[0];
 
       conn.weight = connData.weight;
 

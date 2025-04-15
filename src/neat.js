@@ -1,6 +1,6 @@
-import { config } from './config';
-import { Network } from './architecture/network';
-import * as methods from './methods/methods';
+import { config } from './config.js';
+import { Network } from './architecture/network.js';
+import * as methods from './methods/methods.js';
 
 /* Easier variable naming */
 const selection = methods.selection;

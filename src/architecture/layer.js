@@ -1,6 +1,6 @@
-import Node from './node';
-import Group from './group';
-import * as methods from '../methods/methods';
+import Node from './node.js';
+import Group from './group.js';
+import * as methods from '../methods/methods.js';
 
 /** Group */
 export default class Layer {
@@ -183,12 +183,12 @@ export default class Layer {
       return from.connect(block, method, weight);
     };
 
-    return layer;
+    return layer; // Ensure a valid Layer instance is returned
   }
 
   static lstm(size) {
     /* Create the layer */
-    var layer = new Layer();
+    const layer = new Layer();
 
     /* Init required nodes (in activation order) */
     const inputGate = new Group(size);
@@ -267,17 +267,17 @@ export default class Layer {
 
     previousOutput.set({
       bias: 0,
-      squash: methods.Activation.IDENTITY,
+      squash: methods.Activation.identity,
       type: 'constant',
     });
 
     memoryCell.set({
-      squash: methods.Activation.TANH,
+      squash: methods.Activation.tanh,
     });
 
     inverseUpdateGate.set({
       bias: 0,
-      squash: methods.Activation.INVERSE,
+      squash: methods.Activation.inverse,
       type: 'constant',
     });
 
@@ -362,7 +362,7 @@ export default class Layer {
       const block = new Group(size);
 
       block.set({
-        squash: methods.Activation.IDENTITY,
+        squash: methods.Activation.identity,
         bias: 0,
         type: 'constant',
       });

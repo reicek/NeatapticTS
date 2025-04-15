@@ -1,25 +1,24 @@
 import { cp } from 'child_process';
-import { path } from 'path';
+import path from 'path';
 
-/** WEBWORKER */
-export function TestWorker(dataSet, cost) {
-  this.worker = cp.fork(path.join(__dirname, '/worker'));
+/** TestWorker Class */
+export class TestWorker {
+  constructor(dataSet, cost) {
+    this.worker = cp.fork(path.join(__dirname, '/worker'));
+    this.worker.send({ set: dataSet, cost: cost.name });
+  }
 
-  this.worker.send({ set: dataSet, cost: cost.name });
-}
+  evaluate(network) {
+    return new Promise((resolve) => {
+      const serialized = network.serialize();
 
-TestWorker.prototype = {
-  evaluate: function (network) {
-    return new Promise((resolve, reject) => {
-      var serialized = network.serialize();
-
-      var data = {
+      const data = {
         activations: serialized[0],
         states: serialized[1],
         conns: serialized[2],
       };
 
-      var _that = this.worker;
+      const _that = this.worker;
       this.worker.on('message', function callback(e) {
         _that.removeListener('message', callback);
         resolve(e);
@@ -27,9 +26,9 @@ TestWorker.prototype = {
 
       this.worker.send(data);
     });
-  },
+  }
 
-  terminate: function () {
+  terminate() {
     this.worker.kill();
-  },
-};
+  }
+}

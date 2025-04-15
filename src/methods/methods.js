@@ -1,19 +1,8 @@
-import Cost from './cost';
-import Rate from './rate';
-import Activation from './Activation';
-import { gating } from './gating';
-import { mutation } from './mutation';
-import { selection } from './selection';
-import { crossover } from './crossover';
-import { connection } from './connection';
-
-export {
-  Cost,
-  Rate,
-  Activation,
-  gating,
-  mutation,
-  crossover,
-  selection,
-  connection,
-};
+export { default as Cost } from './cost.js';
+export { default as Rate } from './rate.js';
+export { default as Activation } from './activation.js';
+export { gating } from './gating.js';
+export { mutation } from './mutation.js';
+export { selection } from './selection.js';
+export { crossover } from './crossover.js';
+export { connection } from './connection.js';

@@ -1,23 +1,10 @@
-import * as methods from './methods/methods';
-import * as Connection from './architecture/connection';
-import * as architect from './architecture/architect';
-import * as Network from './architecture/network';
-import * as config from './config';
-import * as Group from './architecture/group';
-import * as Layer from './architecture/layer';
-import * as Node from './architecture/node';
-import * as Neat from './neat';
-import * as multi from './multithreading/multi';
-
-export {
-  methods,
-  Connection,
-  architect,
-  Network,
-  config,
-  Group,
-  Layer,
-  Node,
-  Neat,
-  multi,
-};
+export { default as Neat } from './neat.js';
+export { Network } from './architecture/network.js';
+export { default as Node } from './architecture/node.js';
+export { default as Layer } from './architecture/layer.js';
+export { default as Group } from './architecture/group.js';
+export { default as Connection } from './architecture/connection.js';
+export { default as Architect } from './architecture/architect.js';
+export * as methods from './methods/methods.js';
+export * as config from './config.js';
+export * as multi from './multithreading/multi.js';

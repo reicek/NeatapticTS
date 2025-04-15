@@ -3,10 +3,11 @@
   "version": "1.4.7",
   "description": "Architecture-free neural network library with genetic algorithm implementations",
   "main": "./src/neataptic",
+  "type": "module",
   "scripts": {
     "test:src": "mocha test/src.js test",
     "test:dist": "mocha test/dist.js test",
-    "build": "webpack",
+    "build": "webpack --config webpack.config.js",
     "deploy": "npm run build && npm run test:dist && npm publish",
     "test:travis": "npm run build:dist && npm run test:dist"
   },
@@ -16,13 +17,8 @@
     "husky": "^6.0.0",
     "mkdocs": "^0.0.1",
     "mocha": "^8.3.2",
-    "os-browserify": "^0.3.0",
-    "path-browserify": "^1.0.1",
-    "prettier": "^2.2.1",
-    "pretty-quick": "^3.1.0",
-    "semistandard": "^16.0.0",
-    "webpack": "^5.30.0",
-    "webpack-cli": "^4.6.0"
+    "webpack": "^5.99.5",
+    "webpack-cli": "^6.0.1"
   },
   "repository": {
     "type": "git",
@@ -46,7 +42,7 @@
   },
   "homepage": "http://wagenaartje.github.io/neataptic/",
   "engines": {
-    "node": ">=14"
+    "node": ">=14.0.0"
   },
   "prettier": {
     "singleQuote": true

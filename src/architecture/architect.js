@@ -1,8 +1,8 @@
-import Node from './node';
-import Layer from './layer';
-import Group from './group';
-import { Network } from './network';
-import * as methods from '../methods/methods';
+import Node from './node.js';
+import Layer from './layer.js';
+import Group from './group.js';
+import { Network } from './network.js';
+import * as methods from '../methods/methods.js';
 
 /** Architect */
 export default class Architect {
@@ -101,7 +101,7 @@ export default class Architect {
     }
 
     /* Construct the network */
-    return architect.Construct(nodes);
+    return Architect.construct(nodes);
   }
 
   /**
@@ -277,7 +277,7 @@ export default class Architect {
     }
 
     nodes.push(outputLayer);
-    return architect.Construct(nodes);
+    return Architect.construct(nodes);
   }
 
   /**
@@ -298,7 +298,7 @@ export default class Architect {
 
     let previous = inputLayer;
     for (let i = 0; i < blocks.length; i++) {
-      const layer = new Layer.GRU(blocks[i]);
+      const layer = Layer.gru(blocks[i]);
       previous.connect(layer);
       previous = layer;
 
@@ -308,7 +308,7 @@ export default class Architect {
     previous.connect(outputLayer);
     nodes.push(outputLayer);
 
-    return architect.Construct(nodes);
+    return Architect.construct(nodes);
   }
 
   /**
@@ -324,17 +324,17 @@ export default class Architect {
       type: 'input',
     });
     output.set({
-      squash: methods.Activation.STEP,
+      squash: methods.Activation.step,
       type: 'output',
     });
 
-    const network = architect.Construct([input, output]);
+    const network = Architect.construct([input, output]);
 
     return network;
   }
 
   /**
-   * Creates a NARX network (remember previous inputs/outputs)
+   * Creates a narx network (remember previous inputs/outputs)
    */
   static narx(
     inputSize,
@@ -349,17 +349,17 @@ export default class Architect {
 
     const nodes = [];
 
-    const input = new Layer.Dense(inputSize);
-    const inputMemory = new Layer.Memory(inputSize, previousInput);
+    const input = Layer.dense(inputSize);
+    const inputMemory = Layer.memory(inputSize, previousInput);
     const hidden = [];
-    const output = new Layer.Dense(outputSize);
-    const outputMemory = new Layer.Memory(outputSize, previousOutput);
+    const output = Layer.dense(outputSize);
+    const outputMemory = Layer.memory(outputSize, previousOutput);
 
     nodes.push(input);
     nodes.push(outputMemory);
 
     for (let i = 0; i < hiddenLayers.length; i++) {
-      const hiddenLayer = new Layer.Dense(hiddenLayers[i]);
+      const hiddenLayer = Layer.dense(hiddenLayers[i]);
       hidden.push(hiddenLayer);
       nodes.push(hiddenLayer);
       if (typeof hidden[i - 1] !== 'undefined') {
@@ -384,6 +384,6 @@ export default class Architect {
       type: 'output',
     });
 
-    return architect.Construct(nodes);
+    return Architect.construct(nodes);
   }
 }

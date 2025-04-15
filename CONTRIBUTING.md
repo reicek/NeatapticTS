@@ -16,8 +16,6 @@ Setting up the developer environment is fairly easy:
 
 And you are good to go!
 
-**PS**: we use the [Javascript Semistandard Style](https://github.com/Flet/semistandard)!
-
 ## Bugs
 
 Nobody likes them, and we understand that you want to get rid of them as soon as

@@ -1,28 +1,28 @@
-import { multi } from '../../multi';
+import Multi from '../../multi.js';
 
-/** WEBWORKER */
-export function TestWorker(dataSet, cost) {
-  var blob = new Blob([this._createBlobString(cost)]);
-  this.url = window.URL.createObjectURL(blob);
-  this.worker = new Worker(this.url);
+/** TestWorker Class */
+export class TestWorker {
+  constructor(dataSet, cost) {
+    const blob = new Blob([TestWorker._createBlobString(cost)]);
+    this.url = window.URL.createObjectURL(blob);
+    this.worker = new Worker(this.url);
 
-  var data = { set: new Float64Array(dataSet).buffer };
-  this.worker.postMessage(data, [data.set]);
-}
+    const data = { set: new Float64Array(dataSet).buffer };
+    this.worker.postMessage(data, [data.set]);
+  }
 
-TestWorker.prototype = {
-  evaluate: function (network) {
+  evaluate(network) {
     return new Promise((resolve, reject) => {
-      var serialized = network.serialize();
+      const serialized = network.serialize();
 
-      var data = {
+      const data = {
         activations: new Float64Array(serialized[0]).buffer,
         states: new Float64Array(serialized[1]).buffer,
         conns: new Float64Array(serialized[2]).buffer,
       };
 
       this.worker.onmessage = function (e) {
-        var error = new Float64Array(e.data.buffer)[0];
+        const error = new Float64Array(e.data.buffer)[0];
         resolve(error);
       };
 
@@ -32,38 +32,49 @@ TestWorker.prototype = {
         data.conns,
       ]);
     });
-  },
+  }
 
-  terminate: function () {
+  terminate() {
     this.worker.terminate();
     window.URL.revokeObjectURL(this.url);
-  },
+  }
 
-  _createBlobString: function (cost) {
-    var source = `
-      var F = [${multi.activations.toString()}];
-      var cost = ${cost.toString()};
-      var multi = {
-        deserializeDataSet: ${multi.deserializeDataSet.toString()},
-        testSerializedSet: ${multi.testSerializedSet.toString()},
-        activateSerializedNetwork: ${multi.activateSerializedNetwork.toString()}
+  static _createBlobString(cost) {
+    return `
+      const multi = {
+        logistic: ${Multi.logistic.toString()},
+        tanh: ${Multi.tanh.toString()},
+        identity: ${Multi.identity.toString()},
+        step: ${Multi.step.toString()},
+        relu: ${Multi.relu.toString()},
+        softsign: ${Multi.softsign.toString()},
+        sinusoid: ${Multi.sinusoid.toString()},
+        gaussian: ${Multi.gaussian.toString()},
+        bentIdentity: ${Multi.bentIdentity.toString()},
+        bipolar: ${Multi.bipolar.toString()},
+        bipolarSigmoid: ${Multi.bipolarSigmoid.toString()},
+        hardTanh: ${Multi.hardTanh.toString()},
+        absolute: ${Multi.absolute.toString()},
+        inverse: ${Multi.inverse.toString()},
+        selu: ${Multi.selu.toString()},
+        deserializeDataSet: ${Multi.deserializeDataSet.toString()},
+        testSerializedSet: ${Multi.testSerializedSet.toString()},
+        activateSerializedNetwork: ${Multi.activateSerializedNetwork.toString()}
       };
 
       this.onmessage = function (e) {
-        if(typeof e.data.set === 'undefined'){
-          var A = new Float64Array(e.data.activations);
-          var S = new Float64Array(e.data.states);
-          var data = new Float64Array(e.data.conns);
+        if (typeof e.data.set === 'undefined') {
+          const A = new Float64Array(e.data.activations);
+          const S = new Float64Array(e.data.states);
+          const data = new Float64Array(e.data.conns);
 
-          var error = multi.testSerializedSet(set, cost, A, S, data, F);
+          const error = multi.testSerializedSet(set, cost, A, S, data, multi);
 
-          var answer = { buffer: new Float64Array([error ]).buffer };
+          const answer = { buffer: new Float64Array([error]).buffer };
           postMessage(answer, [answer.buffer]);
         } else {
           set = multi.deserializeDataSet(new Float64Array(e.data.set));
         }
       };`;
-
-    return source;
-  },
-};
+  }
+}
