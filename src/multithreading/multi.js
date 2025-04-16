@@ -1,4 +1,5 @@
 import { Workers } from './workers/workers.js';
+import Network from '../architecture/network.js';
 
 /** MULTITHREADING */
 export default class Multi {
@@ -134,7 +135,9 @@ export default class Multi {
 
   static selu(x) {
     const a = 1.6732632423543772848170429916717;
-    return (x > 0 ? x : a * Math.exp(x) - a) * 1.0507009873554804934193349852946;
+    return (
+      (x > 0 ? x : a * Math.exp(x) - a) * 1.0507009873554804934193349852946
+    );
   }
 
   static testSerializedSet(set, cost, A, S, data, F) {

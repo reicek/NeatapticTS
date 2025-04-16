@@ -1,7 +1,7 @@
 import Node from './node.js';
 import Layer from './layer.js';
 import Group from './group.js';
-import { Network } from './network.js';
+import Network from './network.js';
 import * as methods from '../methods/methods.js';
 
 /** Architect */

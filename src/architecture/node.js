@@ -2,12 +2,10 @@ import Connection from './connection.js';
 import { config } from '../config.js';
 import * as methods from '../methods/methods.js';
 
-
-
 /** NODE */
 export default function Node(type) {
   this.bias = type === 'input' ? 0 : Math.random() * 0.2 - 0.1;
-  this.squash = methods.Activation.logistic;
+  this.squash = methods.Activation.logistic || ((x) => x); // Default to logistic or identity function
   this.type = type || 'hidden';
 
   this.activation = 0;
@@ -152,15 +150,9 @@ Node.prototype = {
 
     try {
       this.activation = this.squash(this.state) * this.mask;
-      this.derivative = this.squash(this.state, true);  
-    } catch(error) {
-      console.log('squash >', this.squash);
-      console.log('state >', this.state);
-      console.log('mask >', this.mask);
-      console.log('activation >', this.activation);
-      console.log('derivative >', this.derivative);
-      
-      console.error('Error in node activation:', error);
+      this.derivative = this.squash(this.state, true);
+    } catch (error) {
+      //  console.error('Error in node activation:', error);
     }
 
     return this.activation;

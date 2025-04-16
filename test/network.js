@@ -217,14 +217,16 @@ describe('Networks', function () {
         Math.floor(Math.random() * 5 + 1),
         Math.floor(Math.random() * 5 + 1)
       );
-      let activate = eval(original.standalone());
+      let standaloneCode = original.standalone();
+      let activate = new Function(`return ${standaloneCode}`)();
       testEquality(original, activate);
 
       original = new Network(
         Math.floor(Math.random() * 5 + 1),
         Math.floor(Math.random() * 5 + 1)
       );
-      activate = eval(original.standalone());
+      standaloneCode = original.standalone();
+      activate = new Function(`return ${standaloneCode}`)();
       testEquality(original, activate);
 
       original = Architect.lstm(
@@ -232,7 +234,8 @@ describe('Networks', function () {
         Math.floor(Math.random() * 5 + 1),
         Math.floor(Math.random() * 5 + 1)
       );
-      activate = eval(original.standalone());
+      standaloneCode = original.standalone();
+      activate = new Function(`return ${standaloneCode}`)();
       testEquality(original, activate);
 
       original = Architect.gru(
@@ -241,7 +244,8 @@ describe('Networks', function () {
         Math.floor(Math.random() * 5 + 1),
         Math.floor(Math.random() * 5 + 1)
       );
-      activate = eval(original.standalone());
+      standaloneCode = original.standalone();
+      activate = new Function(`return ${standaloneCode}`)();
       testEquality(original, activate);
 
       original = Architect.random(
@@ -249,7 +253,8 @@ describe('Networks', function () {
         Math.floor(Math.random() * 10 + 1),
         Math.floor(Math.random() * 5 + 1)
       );
-      activate = eval(original.standalone());
+      standaloneCode = original.standalone();
+      activate = new Function(`return ${standaloneCode}`)();
       testEquality(original, activate);
 
       original = Architect.narx(
@@ -259,12 +264,21 @@ describe('Networks', function () {
         Math.floor(Math.random() * 5 + 1),
         Math.floor(Math.random() * 5 + 1)
       );
-      activate = eval(original.standalone());
+      standaloneCode = original.standalone();
+      activate = new Function(`return ${standaloneCode}`)();
       testEquality(original, activate);
 
       original = Architect.hopfield(Math.floor(Math.random() * 5 + 1));
-      activate = eval(original.standalone());
+      standaloneCode = original.standalone();
+      activate = new Function(`return ${standaloneCode}`)();
       testEquality(original, activate);
+    });
+  });
+  describe('Standalone Function Generation', function () {
+    it('should generate valid JavaScript', function () {
+      const network = new Network(2, 2);
+      const standaloneCode = network.standalone();
+      assert.doesNotThrow(() => new Function(`return ${standaloneCode}`)());
     });
   });
   describe('Learning capability', function () {

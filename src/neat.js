@@ -1,5 +1,5 @@
 import { config } from './config.js';
-import { Network } from './architecture/network.js';
+import Network from './architecture/network.js';
 import * as methods from './methods/methods.js';
 
 /* Easier variable naming */

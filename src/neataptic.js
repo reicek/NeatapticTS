@@ -1,5 +1,5 @@
 export { default as Neat } from './neat.js';
-export { Network } from './architecture/network.js';
+export { default as Network } from './architecture/network.js';
 export { default as Node } from './architecture/node.js';
 export { default as Layer } from './architecture/layer.js';
 export { default as Group } from './architecture/group.js';
