@@ -3,44 +3,44 @@ import { config } from '../config.js';
 import * as methods from '../methods/methods.js';
 
 /** NODE */
-export default function Node(type) {
-  this.bias = type === 'input' ? 0 : Math.random() * 0.2 - 0.1;
-  this.squash = methods.Activation.logistic || ((x) => x); // Default to logistic or identity function
-  this.type = type || 'hidden';
+export default class Node {
+  constructor(type) {
+    this.bias = type === 'input' ? 0 : Math.random() * 0.2 - 0.1;
+    this.squash = methods.Activation.logistic || ((x) => x); // Default to logistic or identity function
+    this.type = type || 'hidden';
 
-  this.activation = 0;
-  this.state = 0;
-  this.old = 0;
+    this.activation = 0;
+    this.state = 0;
+    this.old = 0;
 
-  // For dropout
-  this.mask = 1;
+    // For dropout
+    this.mask = 1;
 
-  // For tracking momentum
-  this.previousDeltaBias = 0;
+    // For tracking momentum
+    this.previousDeltaBias = 0;
 
-  // Batch training
-  this.totalDeltaBias = 0;
+    // Batch training
+    this.totalDeltaBias = 0;
 
-  this.connections = {
-    in: [],
-    out: [],
-    gated: [],
-    self: new Connection(this, this, 0),
-  };
+    this.connections = {
+      in: [],
+      out: [],
+      gated: [],
+      self: new Connection(this, this, 0),
+    };
 
-  // Data for backpropagation
-  this.error = {
-    responsibility: 0,
-    projected: 0,
-    gated: 0,
-  };
-}
+    // Data for backpropagation
+    this.error = {
+      responsibility: 0,
+      projected: 0,
+      gated: 0,
+    };
+  }
 
-Node.prototype = {
   /**
    * Activates the node
    */
-  activate: function (input) {
+  activate(input) {
     // Check if an input is given
     if (typeof input !== 'undefined') {
       this.activation = input;
@@ -123,12 +123,12 @@ Node.prototype = {
     }
 
     return this.activation;
-  },
+  }
 
   /**
    * Activates the node without calculating elegibility traces and such
    */
-  noTraceActivate: function (input) {
+  noTraceActivate(input) {
     // Check if an input is given
     if (typeof input !== 'undefined') {
       this.activation = input;
@@ -156,12 +156,12 @@ Node.prototype = {
     }
 
     return this.activation;
-  },
+  }
 
   /**
    * Back-propagate the error, aka learn
    */
-  propagate: function (rate, momentum, update, target) {
+  propagate(rate, momentum, update, target) {
     momentum = momentum || 0;
     rate = rate || 0.3;
 
@@ -240,12 +240,12 @@ Node.prototype = {
       this.previousDeltaBias = this.totalDeltaBias;
       this.totalDeltaBias = 0;
     }
-  },
+  }
 
   /**
    * Creates a connection from this node to the given node
    */
-  connect: function (target, weight) {
+  connect(target, weight) {
     let connections = [];
     if (typeof target.bias !== 'undefined') {
       // must be a node!
@@ -278,12 +278,12 @@ Node.prototype = {
       }
     }
     return connections;
-  },
+  }
 
   /**
    * Disconnects this node from the other node
    */
-  disconnect: function (node, twosided) {
+  disconnect(node, twosided) {
     if (this === node) {
       this.connections.self.weight = 0;
       return;
@@ -303,12 +303,12 @@ Node.prototype = {
     if (twosided) {
       node.disconnect(this);
     }
-  },
+  }
 
   /**
    * Make this node gate a connection
    */
-  gate: function (connections) {
+  gate(connections) {
     if (!Array.isArray(connections)) {
       connections = [connections];
     }
@@ -319,12 +319,12 @@ Node.prototype = {
       this.connections.gated.push(connection);
       connection.gater = this;
     }
-  },
+  }
 
   /**
    * Removes the gates from this node from the given connection(s)
    */
-  ungate: function (connections) {
+  ungate(connections) {
     if (!Array.isArray(connections)) {
       connections = [connections];
     }
@@ -337,12 +337,12 @@ Node.prototype = {
       connection.gater = null;
       connection.gain = 1;
     }
-  },
+  }
 
   /**
    * Clear the context of the node
    */
-  clear: function () {
+  clear() {
     for (let i = 0; i < this.connections.in.length; i++) {
       let connection = this.connections.in[i];
 
@@ -360,12 +360,12 @@ Node.prototype = {
 
     this.error.responsibility = this.error.projected = this.error.gated = 0;
     this.old = this.state = this.activation = 0;
-  },
+  }
 
   /**
    * Mutates the node with the given method
    */
-  mutate: function (method) {
+  mutate(method) {
     if (typeof method === 'undefined') {
       throw new Error('No mutate method given!');
     } else if (!(method.name in methods.mutation)) {
@@ -390,12 +390,12 @@ Node.prototype = {
         this.bias += modification;
         break;
     }
-  },
+  }
 
   /**
    * Checks if this node is projecting to the given node
    */
-  isProjectingTo: function (node) {
+  isProjectingTo(node) {
     if (node === this && this.connections.self.weight !== 0) return true;
 
     for (let i = 0; i < this.connections.out.length; i++) {
@@ -405,12 +405,12 @@ Node.prototype = {
       }
     }
     return false;
-  },
+  }
 
   /**
    * Checks if the given node is projecting to this node
    */
-  isProjectedBy: function (node) {
+  isProjectedBy(node) {
     if (node === this && this.connections.self.weight !== 0) return true;
 
     for (let i = 0; i < this.connections.in.length; i++) {
@@ -421,32 +421,29 @@ Node.prototype = {
     }
 
     return false;
-  },
+  }
 
   /**
    * Converts the node to a json object
    */
-  toJSON: function () {
-    let json = {
+  toJSON() {
+    return {
       bias: this.bias,
       type: this.type,
       squash: this.squash ? this.squash.name : null, // Handle undefined squash
       mask: this.mask,
     };
+  }
 
-    return json;
-  },
-};
-
-/**
- * Convert a json object to a node
- */
-Node.fromJSON = function (json) {
-  let node = new Node();
-  node.bias = json.bias;
-  node.type = json.type;
-  node.mask = json.mask;
-  node.squash = methods.Activation[json.squash];
-
-  return node;
-};
+  /**
+   * Convert a json object to a node
+   */
+  static fromJSON(json) {
+    const node = new Node();
+    node.bias = json.bias;
+    node.type = json.type;
+    node.mask = json.mask;
+    node.squash = methods.Activation[json.squash];
+    return node;
+  }
+}
