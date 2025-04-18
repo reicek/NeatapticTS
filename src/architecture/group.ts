@@ -1,11 +1,24 @@
-import Node from './node.js';
-import Layer from './layer.js';
-import { config } from '../config.js';
-import * as methods from '../methods/methods.js';
+import Node from './node';
+import Layer from './layer';
+import { config } from '../config';
+import * as methods from '../methods/methods';
 
-/** Group */
+/**
+ * Represents a group of nodes in a neural network.
+ */
 export default class Group {
-  constructor(size) {
+  nodes: Node[];
+  connections: {
+    in: any[];
+    out: any[];
+    self: any[];
+  };
+
+  /**
+   * Creates a new group of nodes.
+   * @param {number} size - The number of nodes in the group.
+   */
+  constructor(size: number) {
     this.nodes = [];
     this.connections = {
       in: [],
@@ -19,25 +32,25 @@ export default class Group {
   }
 
   /**
-   * Activates all the nodes in the group
+   * Activates all the nodes in the group.
+   * @param {number[]} [value] - Optional input values for the nodes. Must match the number of nodes in the group.
+   * @returns {number[]} The activation values of the nodes.
+   * @throws {Error} If the input array length does not match the number of nodes.
    */
-  activate(value) {
-    const values = [];
+  activate(value?: number[]): number[] {
+    const values: number[] = [];
 
-    if (typeof value !== 'undefined' && value.length !== this.nodes.length) {
+    if (value !== undefined && value.length !== this.nodes.length) {
       throw new Error(
         'Array with values should be same as the amount of nodes!'
       );
     }
 
     for (let i = 0; i < this.nodes.length; i++) {
-      let activation;
-      if (typeof value === 'undefined') {
-        activation = this.nodes[i].activate();
-      } else {
-        activation = this.nodes[i].activate(value[i]);
-      }
-
+      const activation =
+        value === undefined
+          ? this.nodes[i].activate()
+          : this.nodes[i].activate(value[i]);
       values.push(activation);
     }
 
@@ -45,17 +58,21 @@ export default class Group {
   }
 
   /**
-   * Propagates all the node in the group
+   * Propagates all the nodes in the group.
+   * @param {number} rate - The learning rate.
+   * @param {number} momentum - The momentum factor.
+   * @param {number[]} [target] - Optional target values for the nodes. Must match the number of nodes in the group.
+   * @throws {Error} If the target array length does not match the number of nodes.
    */
-  propagate(rate, momentum, target) {
-    if (typeof target !== 'undefined' && target.length !== this.nodes.length) {
+  propagate(rate: number, momentum: number, target?: number[]): void {
+    if (target !== undefined && target.length !== this.nodes.length) {
       throw new Error(
         'Array with values should be same as the amount of nodes!'
       );
     }
 
     for (let i = this.nodes.length - 1; i >= 0; i--) {
-      if (typeof target === 'undefined') {
+      if (target === undefined) {
         this.nodes[i].propagate(rate, momentum, true);
       } else {
         this.nodes[i].propagate(rate, momentum, true, target[i]);
@@ -64,14 +81,18 @@ export default class Group {
   }
 
   /**
-   * Connects the nodes in this group to nodes in another group or just a node
+   * Connects the nodes in this group to another group, layer, or node.
+   * @param {Group | Layer | Node} target - The target to connect to.
+   * @param {any} [method] - The connection method. Defaults to ALL_TO_ALL or ONE_TO_ONE based on the target.
+   * @param {number} [weight] - The weight of the connection.
+   * @returns {any[]} The created connections.
    */
-  connect(target, method, weight) {
-    let connections = []; // Changed from const to let
+  connect(target: Group | Layer | Node, method?: any, weight?: number): any[] {
+    let connections: any[] = [];
     let i, j;
 
     if (target instanceof Group) {
-      if (typeof method === 'undefined') {
+      if (method === undefined) {
         if (this !== target) {
           if (config.warnings)
             console.warn('No group connection specified, using ALL_TO_ALL');
@@ -124,10 +145,13 @@ export default class Group {
   }
 
   /**
-   * Make nodes from this group gate the given connection(s)
+   * Makes nodes from this group gate the given connection(s).
+   * @param {any | any[]} connections - The connection(s) to gate.
+   * @param {any} method - The gating method. Must be one of Gating.INPUT, Gating.OUTPUT, or Gating.SELF.
+   * @throws {Error} If no gating method is specified.
    */
-  gate(connections, method) {
-    if (typeof method === 'undefined') {
+  gate(connections: any | any[], method: any): void {
+    if (method === undefined) {
       throw new Error('Please specify Gating.INPUT, Gating.OUTPUT');
     }
 
@@ -135,8 +159,8 @@ export default class Group {
       connections = [connections];
     }
 
-    const nodes1 = [];
-    const nodes2 = [];
+    const nodes1: Node[] = [];
+    const nodes2: Node[] = [];
 
     let i, j;
     for (i = 0; i < connections.length; i++) {
@@ -191,26 +215,25 @@ export default class Group {
   }
 
   /**
-   * Sets the value of a property for every node
+   * Sets the value of a property for every node in the group.
+   * @param {{ bias?: number; squash?: any; type?: string }} values - The values to set for the nodes.
    */
-  set(values) {
+  set(values: { bias?: number; squash?: any; type?: string }): void {
     for (let i = 0; i < this.nodes.length; i++) {
-      if (typeof values.bias !== 'undefined') {
+      if (values.bias !== undefined) {
         this.nodes[i].bias = values.bias;
       }
-
       this.nodes[i].squash = values.squash || this.nodes[i].squash;
       this.nodes[i].type = values.type || this.nodes[i].type;
     }
   }
 
   /**
-   * Disconnects all nodes from this group from another given group/node
+   * Disconnects all nodes in this group from another group or node.
+   * @param {Group | Node} target - The target to disconnect from.
+   * @param {boolean} [twosided=false] - Whether to disconnect both ways.
    */
-  disconnect(target, twosided) {
-    twosided = twosided || false;
-
-    /* In the future, disconnect will return a connection so indexOf can be used */
+  disconnect(target: Group | Node, twosided: boolean = false): void {
     let i, j, k;
 
     /* If Group */
@@ -269,9 +292,9 @@ export default class Group {
   }
 
   /**
-   * Clear the context of this group
+   * Clears the context of all nodes in the group.
    */
-  clear() {
+  clear(): void {
     for (let i = 0; i < this.nodes.length; i++) {
       this.nodes[i].clear();
     }

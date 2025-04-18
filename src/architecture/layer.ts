@@ -1,31 +1,39 @@
-import Node from './node.js';
-import Group from './group.js';
-import * as methods from '../methods/methods.js';
+import Node from './node';
+import Group from './group';
+import * as methods from '../methods/methods';
 
-/** Group */
+function isGroup(obj: any): obj is Group {
+  return obj && typeof obj.set === 'function' && Array.isArray(obj.nodes);
+}
+
 export default class Layer {
+  nodes: Node[];
+  connections: { in: any[]; out: any[]; self: any[] };
+  output: Group | null;
+
   constructor() {
     this.output = null;
-
     this.nodes = [];
     this.connections = { in: [], out: [], self: [] };
   }
 
   /**
    * Activates all the nodes in the group
+   * @param value Optional array of input values
+   * @returns Array of activation values
    */
-  activate(value) {
-    const values = [];
+  activate(value?: number[]): number[] {
+    const values: number[] = [];
 
-    if (typeof value !== 'undefined' && value.length !== this.nodes.length) {
+    if (value !== undefined && value.length !== this.nodes.length) {
       throw new Error(
         'Array with values should be same as the amount of nodes!'
       );
     }
 
     for (let i = 0; i < this.nodes.length; i++) {
-      let activation;
-      if (typeof value === 'undefined') {
+      let activation: number;
+      if (value === undefined) {
         activation = this.nodes[i].activate();
       } else {
         activation = this.nodes[i].activate(value[i]);
@@ -38,17 +46,20 @@ export default class Layer {
   }
 
   /**
-   * Propagates all the node in the group
+   * Propagates all the nodes in the group
+   * @param rate Learning rate
+   * @param momentum Momentum factor
+   * @param target Optional array of target values
    */
-  propagate(rate, momentum, target) {
-    if (typeof target !== 'undefined' && target.length !== this.nodes.length) {
+  propagate(rate: number, momentum: number, target?: number[]) {
+    if (target !== undefined && target.length !== this.nodes.length) {
       throw new Error(
         'Array with values should be same as the amount of nodes!'
       );
     }
 
     for (let i = this.nodes.length - 1; i >= 0; i--) {
-      if (typeof target === 'undefined') {
+      if (target === undefined) {
         this.nodes[i].propagate(rate, momentum, true);
       } else {
         this.nodes[i].propagate(rate, momentum, true, target[i]);
@@ -56,13 +67,10 @@ export default class Layer {
     }
   }
 
-  /**
-   * Connects the nodes in this group to nodes in another group or just a node
-   */
-  connect(target, method, weight) {
-    let connections;
+  connect(target: Group | Node | Layer, method?: any, weight?: number): any[] {
+    let connections: any[] = []; // Initialize connections
     if (target instanceof Group || target instanceof Node) {
-      connections = this.output.connect(target, method, weight);
+      connections = this.output!.connect(target, method, weight);
     } else if (target instanceof Layer) {
       connections = target.input(this, method, weight);
     }
@@ -70,40 +78,33 @@ export default class Layer {
     return connections;
   }
 
-  /**
-   * Make nodes from this group gate the given connection(s)
-   */
-  gate(connections, method) {
-    this.output.gate(connections, method);
+  gate(connections: any[], method: any) {
+    this.output!.gate(connections, method);
   }
 
   /**
    * Sets the value of a property for every node
+   * @param values Object containing properties to set (e.g., bias, squash, type)
    */
-  set(values) {
+  set(values: { bias?: number; squash?: any; type?: string }) {
     for (let i = 0; i < this.nodes.length; i++) {
       let node = this.nodes[i];
 
       if (node instanceof Node) {
-        if (typeof values.bias !== 'undefined') {
+        if (values.bias !== undefined) {
           node.bias = values.bias;
         }
-
         node.squash = values.squash || node.squash;
         node.type = values.type || node.type;
-      } else if (node instanceof Group) {
-        node.set(values);
+      } else if (isGroup(node)) {
+        (node as Group).set(values);
       }
     }
   }
 
-  /**
-   * Disconnects all nodes from this group from another given group/node
-   */
-  disconnect(target, twosided) {
+  disconnect(target: Group | Node, twosided?: boolean) {
     twosided = twosided || false;
 
-    /* In the future, disconnect will return a connection so indexOf can be used */
     let i, j, k;
     if (target instanceof Group) {
       for (i = 0; i < this.nodes.length; i++) {
@@ -158,39 +159,38 @@ export default class Layer {
     }
   }
 
-  /**
-   * Clear the context of this group
-   */
   clear() {
     for (let i = 0; i < this.nodes.length; i++) {
       this.nodes[i].clear();
     }
   }
 
-  static dense(size) {
-    /* Create the layer */
+  input(from: Layer | Group, method?: any, weight?: number): any {
+    if (from instanceof Layer) from = from.output!;
+    method = method || methods.connection.ALL_TO_ALL;
+    return from.connect(this.output!, method, weight);
+  }
+
+  static dense(size: number): Layer {
     const layer = new Layer();
 
-    /* Init required nodes (in activation order) */
     const block = new Group(size);
 
-    layer.nodes.push(block);
+    layer.nodes.push(...block.nodes); // Push individual nodes from the group
     layer.output = block;
 
-    layer.input = (from, method, weight) => {
-      if (from instanceof Layer) from = from.output;
+    layer.input = (from: Layer | Group, method?: any, weight?: number) => {
+      if (from instanceof Layer) from = from.output!;
       method = method || methods.connection.ALL_TO_ALL;
       return from.connect(block, method, weight);
     };
 
-    return layer; // Ensure a valid Layer instance is returned
+    return layer;
   }
 
-  static lstm(size) {
-    /* Create the layer */
+  static lstm(size: number): Layer {
     const layer = new Layer();
 
-    /* Init required nodes (in activation order) */
     const inputGate = new Group(size);
     const forgetGate = new Group(size);
     const memoryCell = new Group(size);
@@ -207,7 +207,6 @@ export default class Layer {
       bias: 1,
     });
 
-    /* Set up internal connections */
     memoryCell.connect(inputGate, methods.connection.ALL_TO_ALL);
     memoryCell.connect(forgetGate, methods.connection.ALL_TO_ALL);
     memoryCell.connect(outputGate, methods.connection.ALL_TO_ALL);
@@ -220,20 +219,23 @@ export default class Layer {
       methods.connection.ALL_TO_ALL
     );
 
-    /* Set up gates */
     forgetGate.gate(forget, methods.gating.SELF);
     outputGate.gate(output, methods.gating.OUTPUT);
 
-    /* Add to nodes array */
-    layer.nodes = [inputGate, forgetGate, memoryCell, outputGate, outputBlock];
+    layer.nodes = [
+      ...inputGate.nodes,
+      ...forgetGate.nodes,
+      ...memoryCell.nodes,
+      ...outputGate.nodes,
+      ...outputBlock.nodes,
+    ];
 
-    /* Define output */
     layer.output = outputBlock;
 
-    layer.input = (from, method, weight) => {
-      if (from instanceof Layer) from = from.output;
+    layer.input = (from: Layer | Group, method?: any, weight?: number) => {
+      if (from instanceof Layer) from = from.output!;
       method = method || methods.connection.ALL_TO_ALL;
-      let connections = [];
+      let connections: any[] = [];
 
       const input = from.connect(memoryCell, method, weight);
       connections = connections.concat(input);
@@ -254,8 +256,7 @@ export default class Layer {
     return layer;
   }
 
-  static gru(size) {
-    /* Create the layer */
+  static gru(size: number): Layer {
     const layer = new Layer();
 
     const updateGate = new Group(size);
@@ -289,25 +290,19 @@ export default class Layer {
       bias: 0,
     });
 
-    /* Update gate calculation */
     previousOutput.connect(updateGate, methods.connection.ALL_TO_ALL);
 
-    /* Inverse update gate calculation */
     updateGate.connect(inverseUpdateGate, methods.connection.ONE_TO_ONE, 1);
 
-    /* Reset gate calculation */
     previousOutput.connect(resetGate, methods.connection.ALL_TO_ALL);
 
-    /* Memory calculation */
     const reset = previousOutput.connect(
       memoryCell,
       methods.connection.ALL_TO_ALL
     );
 
-    /* Gate */
     resetGate.gate(reset, methods.gating.OUTPUT);
 
-    /* Output calculation */
     const update1 = previousOutput.connect(
       output,
       methods.connection.ALL_TO_ALL
@@ -317,25 +312,23 @@ export default class Layer {
     updateGate.gate(update1, methods.gating.OUTPUT);
     inverseUpdateGate.gate(update2, methods.gating.OUTPUT);
 
-    /* Previous output calculation */
     output.connect(previousOutput, methods.connection.ONE_TO_ONE, 1);
 
-    /* Add to nodes array */
     layer.nodes = [
-      updateGate,
-      inverseUpdateGate,
-      resetGate,
-      memoryCell,
-      output,
-      previousOutput,
+      (updateGate as unknown) as Node,
+      (inverseUpdateGate as unknown) as Node,
+      (resetGate as unknown) as Node,
+      (memoryCell as unknown) as Node,
+      (output as unknown) as Node,
+      (previousOutput as unknown) as Node,
     ];
 
     layer.output = output;
 
-    layer.input = (from, method, weight) => {
-      if (from instanceof Layer) from = from.output;
+    layer.input = (from: Layer | Group, method?: any, weight?: number) => {
+      if (from instanceof Layer) from = from.output!;
       method = method || methods.connection.ALL_TO_ALL;
-      let connections = [];
+      let connections: any[] = [];
 
       connections = connections.concat(
         from.connect(updateGate, method, weight)
@@ -351,14 +344,17 @@ export default class Layer {
     return layer;
   }
 
-  static memory(size, memory) {
-    /* Create the layer */
+  /**
+   * Memory layer with a specified size and memory depth
+   * @param size Number of nodes in each memory block
+   * @param memory Number of memory blocks
+   * @returns A memory layer
+   */
+  static memory(size: number, memory: number): Layer {
     const layer = new Layer();
-    /* Because the output can only be one group, we have to put the nodes all in one group */
 
-    let previous = null;
-    let i;
-    for (i = 0; i < memory; i++) {
+    let previous: Group | null = null;
+    for (let i = 0; i < memory; i++) {
       const block = new Group(size);
 
       block.set({
@@ -371,26 +367,25 @@ export default class Layer {
         previous.connect(block, methods.connection.ONE_TO_ONE, 1);
       }
 
-      layer.nodes.push(block);
+      layer.nodes.push((block as unknown) as Node);
       previous = block;
     }
 
     layer.nodes.reverse();
 
-    for (i = 0; i < layer.nodes.length; i++) {
+    for (let i = 0; i < layer.nodes.length; i++) {
       layer.nodes[i].nodes.reverse();
     }
 
-    /* Because output can only be one group, fit all memory nodes in one group */
     const outputGroup = new Group(0);
-    for (const group in layer.nodes) {
-      outputGroup.nodes = outputGroup.nodes.concat(layer.nodes[group].nodes);
+    for (const group of layer.nodes) {
+      outputGroup.nodes = outputGroup.nodes.concat(group.nodes);
     }
 
     layer.output = outputGroup;
 
-    layer.input = (from, method, weight) => {
-      if (from instanceof Layer) from = from.output;
+    layer.input = (from: Layer | Group, method?: any, weight?: number) => {
+      if (from instanceof Layer) from = from.output!;
       method = method || methods.connection.ALL_TO_ALL;
 
       if (

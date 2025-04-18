@@ -1,8 +1,18 @@
-import Multi from '../../multi.js';
+import Multi from '../../multi';
 
-/** TestWorker Class */
+/**
+ * TestWorker class for handling network evaluations in a browser environment using Web Workers.
+ */
 export class TestWorker {
-  constructor(dataSet, cost) {
+  private worker: Worker;
+  private url: string;
+
+  /**
+   * Creates a new TestWorker instance.
+   * @param {number[]} dataSet - The serialized dataset to be used by the worker.
+   * @param {any} cost - The cost function to evaluate the network.
+   */
+  constructor(dataSet: number[], cost: { name: string }) {
     const blob = new Blob([TestWorker._createBlobString(cost)]);
     this.url = window.URL.createObjectURL(blob);
     this.worker = new Worker(this.url);
@@ -11,7 +21,12 @@ export class TestWorker {
     this.worker.postMessage(data, [data.set]);
   }
 
-  evaluate(network) {
+  /**
+   * Evaluates a network using the worker process.
+   * @param {any} network - The network to evaluate.
+   * @returns {Promise<number>} A promise that resolves to the evaluation result.
+   */
+  evaluate(network: any): Promise<number> {
     return new Promise((resolve, reject) => {
       const serialized = network.serialize();
 
@@ -21,7 +36,7 @@ export class TestWorker {
         conns: new Float64Array(serialized[2]).buffer,
       };
 
-      this.worker.onmessage = function (e) {
+      this.worker.onmessage = function (e: MessageEvent) {
         const error = new Float64Array(e.data.buffer)[0];
         resolve(error);
       };
@@ -34,33 +49,30 @@ export class TestWorker {
     });
   }
 
-  terminate() {
+  /**
+   * Terminates the worker process and revokes the object URL.
+   */
+  terminate(): void {
     this.worker.terminate();
     window.URL.revokeObjectURL(this.url);
   }
 
-  static _createBlobString(cost) {
+  /**
+   * Creates a string representation of the worker's blob.
+   * @param {any} cost - The cost function to be used by the worker.
+   * @returns {string} The blob string.
+   */
+  private static _createBlobString(cost: any): string {
     return `
+      const F = [${Multi.activations.toString()}];
+      const cost = ${cost.toString()};
       const multi = {
-        logistic: ${Multi.logistic.toString()},
-        tanh: ${Multi.tanh.toString()},
-        identity: ${Multi.identity.toString()},
-        step: ${Multi.step.toString()},
-        relu: ${Multi.relu.toString()},
-        softsign: ${Multi.softsign.toString()},
-        sinusoid: ${Multi.sinusoid.toString()},
-        gaussian: ${Multi.gaussian.toString()},
-        bentIdentity: ${Multi.bentIdentity.toString()},
-        bipolar: ${Multi.bipolar.toString()},
-        bipolarSigmoid: ${Multi.bipolarSigmoid.toString()},
-        hardTanh: ${Multi.hardTanh.toString()},
-        absolute: ${Multi.absolute.toString()},
-        inverse: ${Multi.inverse.toString()},
-        selu: ${Multi.selu.toString()},
         deserializeDataSet: ${Multi.deserializeDataSet.toString()},
         testSerializedSet: ${Multi.testSerializedSet.toString()},
         activateSerializedNetwork: ${Multi.activateSerializedNetwork.toString()}
       };
+
+      let set;
 
       this.onmessage = function (e) {
         if (typeof e.data.set === 'undefined') {
@@ -68,7 +80,7 @@ export class TestWorker {
           const S = new Float64Array(e.data.states);
           const data = new Float64Array(e.data.conns);
 
-          const error = multi.testSerializedSet(set, cost, A, S, data, multi);
+          const error = multi.testSerializedSet(set, cost, A, S, data, F);
 
           const answer = { buffer: new Float64Array([error]).buffer };
           postMessage(answer, [answer.buffer]);

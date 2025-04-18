@@ -5,18 +5,29 @@
   "main": "./src/neataptic",
   "type": "module",
   "scripts": {
-    "test:src": "mocha test/src.js test",
-    "test:dist": "mocha test/dist.js test",
-    "build": "webpack --config webpack.config.js",
+    "test": "mocha test/neat.ts test/network.ts",
     "deploy": "npm run build && npm run test:dist && npm publish",
-    "test:travis": "npm run build:dist && npm run test:dist"
+    "test:travis": "npm run build:dist && npm run test:dist",
+    "build": "npm run build:webpack && npm run build:ts",
+    "build:ts": "tsc",
+    "build:webpack": "webpack --config webpack.config.js",
+    "start:ts": "ts-node src/neataptic.ts"
   },
   "devDependencies": {
+    "@types/chai": "^5.2.1",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^22.14.1",
+    "@types/webpack": "^5.28.5",
+    "@types/webpack-dev-server": "^4.7.2",
     "chai": "^4.3.4",
     "copy-webpack-plugin": "^8.1.0",
     "husky": "^6.0.0",
     "mkdocs": "^0.0.1",
     "mocha": "^8.3.2",
+    "ts-loader": "^9.5.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3",
+    "undici-types": "^7.8.0",
     "webpack": "^5.99.5",
     "webpack-cli": "^6.0.1"
   },
@@ -50,6 +61,8 @@
   "dependencies": {
     "child_process": "^1.0.2",
     "os": "^0.1.2",
-    "path": "^0.12.7"
+    "path": "^0.12.7",
+    "undici": "^5.0.0",
+    "undici-types": "^7.8.0"
   }
 }
