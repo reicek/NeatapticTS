@@ -4,6 +4,11 @@ import * as methods from '../methods/methods';
 
 /**
  * Represents a node in a neural network.
+ *
+ * Nodes can be of type 'input', 'hidden', or 'output'. Hidden nodes can mutate their
+ * activation functions, biases, and connections, enabling dynamic network evolution.
+ *
+ * @see {@link https://medium.com/data-science/neuro-evolution-on-steroids-82bd14ddc2f6#1-1-nodes Instinct Algorithm - Section 1.1 Nodes}
  */
 export default class Node {
   bias: number;
@@ -33,7 +38,7 @@ export default class Node {
 
   /**
    * Creates a new node.
-   * @param {string} [type='hidden'] - The type of the node (e.g., 'input', 'output', 'hidden').
+   * @param {string} [type='hidden'] - The type of the node ('input', 'hidden', or 'output').
    */
   constructor(type: string = 'hidden') {
     this.bias = type === 'input' ? 0 : Math.random() * 0.2 - 0.1;
@@ -72,9 +77,14 @@ export default class Node {
   }
 
   /**
-   * Activates the node.
-   * @param {number} [input] - The input value for the node.
+   * Activates the node by calculating its output value.
+   *
+   * The activation process involves applying the node's activation function to its state,
+   * which is influenced by incoming connections, self-connections, and biases.
+   *
+   * @param {number} [input] - Optional input value for the node (used for input nodes).
    * @returns {number} The activation value of the node.
+   * @see {@link https://medium.com/data-science/neuro-evolution-on-steroids-82bd14ddc2f6#1-3-activation Instinct Algorithm - Section 1.3 Activation}
    */
   activate(input?: number): number {
     if (typeof input !== 'undefined') {
@@ -84,8 +94,9 @@ export default class Node {
 
     this.old = this.state;
 
+    // Use this.old for self-connection state update
     this.state =
-      this.connections.self.gain * this.connections.self.weight * this.state +
+      this.connections.self.gain * this.connections.self.weight * this.old + // Changed this.state to this.old
       this.bias;
 
     for (const connection of this.connections.in) {
@@ -146,8 +157,12 @@ export default class Node {
 
   /**
    * Activates the node without calculating eligibility traces.
-   * @param {number} [input] - The input value for the node.
+   *
+   * This is useful for inference or testing where backpropagation is not required.
+   *
+   * @param {number} [input] - Optional input value for the node (used for input nodes).
    * @returns {number} The activation value of the node.
+   * @see {@link https://medium.com/data-science/neuro-evolution-on-steroids-82bd14ddc2f6#1-3-activation Instinct Algorithm - Section 1.3 Activation}
    */
   noTraceActivate(input?: number): number {
     if (typeof input !== 'undefined') {
@@ -176,6 +191,10 @@ export default class Node {
 
   /**
    * Back-propagates the error through the node.
+   *
+   * This method adjusts the node's weights and biases based on the error gradient,
+   * using the specified learning rate and momentum.
+   *
    * @param {number} rate - The learning rate.
    * @param {number} momentum - The momentum factor.
    * @param {boolean} update - Whether to update weights and biases.
@@ -252,7 +271,7 @@ export default class Node {
   }
 
   /**
-   * Converts the node to a JSON object.
+   * Converts the node to a JSON object for serialization.
    * @returns {object} The JSON representation of the node.
    */
   toJSON(): {
@@ -271,7 +290,7 @@ export default class Node {
 
   /**
    * Creates a node from a JSON object.
-   * @param {object} json - The JSON object.
+   * @param {object} json - The JSON object representing the node.
    * @returns {Node} The created node.
    */
   static fromJSON(json: {
@@ -294,8 +313,13 @@ export default class Node {
   }
 
   /**
-   * Mutates the node using a given method.
-   * @param {any} method - The mutation method.
+   * Mutates the node using a specified mutation method.
+   *
+   * Supported mutations include modifying the activation function or bias.
+   *
+   * @param {any} method - The mutation method to apply.
+   * @throws {Error} If the mutation method is invalid or not provided.
+   * @see {@link https://medium.com/data-science/neuro-evolution-on-steroids-82bd14ddc2f6#3-mutation Instinct Algorithm - Section 3 Mutation}
    */
   mutate(method: any): void {
     if (!method) {
@@ -324,12 +348,16 @@ export default class Node {
 
   /**
    * Connects the node to a target node or group.
+   *
    * @param {Node | { nodes: Node[] }} target - The target node or group.
-   * @param {number} [weight] - The weight of the connection.
-   * @returns {Connection[]} The connection(s) created.
+   * @param {number} [weight] - Optional weight for the connection.
+   * @returns {Connection[]} The created connection(s).
    */
   connect(target: Node | { nodes: Node[] }, weight?: number): Connection[] {
     const connections: Connection[] = [];
+    if (!target) {
+      throw new Error('Target node/group is undefined!');
+    }
     if ('bias' in target) {
       if (target === this) {
         if (this.connections.self.weight !== 0) {
@@ -356,8 +384,9 @@ export default class Node {
 
   /**
    * Disconnects the node from a target node.
-   * @param {Node} target - The target node.
-   * @param {boolean} [twosided] - Whether to disconnect both sides.
+   *
+   * @param {Node} target - The target node to disconnect from.
+   * @param {boolean} [twosided=false] - Whether to disconnect both sides.
    */
   disconnect(target: Node, twosided?: boolean): void {
     if (this === target) {
@@ -382,7 +411,8 @@ export default class Node {
   }
 
   /**
-   * Gates a connection.
+   * Gates a connection or multiple connections.
+   *
    * @param {Connection | Connection[]} connections - The connection(s) to gate.
    */
   gate(connections: Connection | Connection[]): void {
@@ -397,7 +427,8 @@ export default class Node {
   }
 
   /**
-   * Removes the gates from this node from the given connection(s).
+   * Removes gates from the specified connection(s).
+   *
    * @param {Connection | Connection[]} connections - The connection(s) to ungate.
    */
   ungate(connections: Connection | Connection[]): void {
@@ -416,7 +447,7 @@ export default class Node {
   }
 
   /**
-   * Clears the node's state and connections.
+   * Clears the node's state, resetting activations, states, and errors.
    */
   clear(): void {
     for (const connection of this.connections.in) {
@@ -434,6 +465,7 @@ export default class Node {
 
   /**
    * Checks if this node is projecting to the given node.
+   *
    * @param {Node} node - The target node.
    * @returns {boolean} True if projecting, false otherwise.
    */
@@ -445,6 +477,7 @@ export default class Node {
 
   /**
    * Checks if the given node is projecting to this node.
+   *
    * @param {Node} node - The source node.
    * @returns {boolean} True if projected, false otherwise.
    */

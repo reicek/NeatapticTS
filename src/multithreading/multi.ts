@@ -3,6 +3,13 @@ import Network from '../architecture/network';
 
 /**
  * Multi-threading utilities for neural network operations.
+ *
+ * This class provides methods for serializing datasets, activating serialized networks,
+ * and testing serialized datasets. These utilities align with the Instinct algorithm's
+ * emphasis on efficient evaluation and mutation of neural networks in parallel environments.
+ *
+ * @see Instinct Algorithm - Section 4 Constraints
+ * @see {@link https://medium.com/data-science/neuro-evolution-on-steroids-82bd14ddc2f6}
  */
 export default class Multi {
   /** Workers for multi-threading */
@@ -12,26 +19,28 @@ export default class Multi {
    * A list of compiled activation functions in a specific order.
    */
   static activations: Array<(x: number) => number> = [
-    (x) => 1 / (1 + Math.exp(-x)), // Logistic
-    (x) => Math.tanh(x), // Tanh
-    (x) => x, // Identity
-    (x) => (x > 0 ? 1 : 0), // Step
-    (x) => (x > 0 ? x : 0), // ReLU
-    (x) => x / (1 + Math.abs(x)), // Softsign
-    (x) => Math.sin(x), // Sinusoid
-    (x) => Math.exp(-Math.pow(x, 2)), // Gaussian
-    (x) => (Math.sqrt(Math.pow(x, 2) + 1) - 1) / 2 + x, // Bent Identity
-    (x) => (x > 0 ? 1 : -1), // Bipolar
-    (x) => 2 / (1 + Math.exp(-x)) - 1, // Bipolar Sigmoid
-    (x) => Math.max(-1, Math.min(1, x)), // Hard Tanh
-    (x) => Math.abs(x), // Absolute
-    (x) => 1 - x, // Inverse
+    (x) => 1 / (1 + Math.exp(-x)), // Logistic (0)
+    (x) => Math.tanh(x), // Tanh (1)
+    (x) => x, // Identity (2)
+    (x) => (x > 0 ? 1 : 0), // Step (3)
+    (x) => (x > 0 ? x : 0), // ReLU (4)
+    (x) => x / (1 + Math.abs(x)), // Softsign (5)
+    (x) => Math.sin(x), // Sinusoid (6)
+    (x) => Math.exp(-Math.pow(x, 2)), // Gaussian (7)
+    (x) => (Math.sqrt(Math.pow(x, 2) + 1) - 1) / 2 + x, // Bent Identity (8)
+    (x) => (x > 0 ? 1 : -1), // Bipolar (9)
+    (x) => 2 / (1 + Math.exp(-x)) - 1, // Bipolar Sigmoid (10)
+    (x) => Math.max(-1, Math.min(1, x)), // Hard Tanh (11)
+    (x) => Math.abs(x), // Absolute (12)
+    (x) => 1 - x, // Inverse (13)
     (x) => {
-      const a = 1.6732632423543772848170429916717;
-      return (
-        (x > 0 ? x : a * Math.exp(x) - a) * 1.0507009873554804934193349852946
-      );
-    }, // SELU
+      // SELU (14)
+      const alpha = 1.6732632423543772848170429916717;
+      const scale = 1.0507009873554804934193349852946;
+      const fx = x > 0 ? x : alpha * Math.exp(x) - alpha;
+      return fx * scale;
+    },
+    (x) => Math.log(1 + Math.exp(x)), // Softplus (15) - Added
   ];
 
   /**
@@ -261,10 +270,19 @@ export default class Multi {
    * @returns {number} The activated value.
    */
   static selu(x: number): number {
-    const a = 1.6732632423543772848170429916717;
-    return (
-      (x > 0 ? x : a * Math.exp(x) - a) * 1.0507009873554804934193349852946
-    );
+    const alpha = 1.6732632423543772848170429916717;
+    const scale = 1.0507009873554804934193349852946;
+    const fx = x > 0 ? x : alpha * Math.exp(x) - alpha; // Corrected definition
+    return fx * scale;
+  }
+
+  /**
+   * Softplus activation function. - Added
+   * @param {number} x - The input value.
+   * @returns {number} The activated value.
+   */
+  static softplus(x: number): number {
+    return Math.log(1 + Math.exp(x));
   }
 
   /**

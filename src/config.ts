@@ -1,3 +1,3 @@
-export const config = {
+export const config: { warnings: boolean } = {
   warnings: false,
 };

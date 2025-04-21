@@ -1,7 +1,19 @@
 /**
  * Activation functions used in neural networks.
+ *
+ * Activation functions determine the output of a node in a neural network
+ * based on its inputs and weights. Nonlinear activation functions enable
+ * neural networks to approximate complex functions, as stated in the
+ * Universal Approximation Theorem.
+ *
+ * Common activation functions include sigmoid, ReLU, and tanh, each with
+ * unique properties such as range, differentiability, and computational
+ * efficiency. These properties influence the network's training stability
+ * and performance.
+ *
  * @see {@link https://en.wikipedia.org/wiki/Activation_function}
- * @see {@link https://stats.stackexchange.com/questions/115258/comprehensive-list-of-activation-functions-in-neural-networks-with-pros-cons}
+ * @see {@link https://en.wikipedia.org/wiki/Universal_approximation_theorem}
+ * @see {@link https://en.wikipedia.org/wiki/Rectifier_(neural_networks)}
  */
 export class Activation {
   /**
@@ -63,7 +75,7 @@ export class Activation {
    */
   static softsign(x: number, derivate: boolean = false): number {
     const d = 1 + Math.abs(x);
-    return derivate ? x / Math.pow(d, 2) : x / d;
+    return derivate ? 1 / Math.pow(d, 2) : x / d; // Corrected derivative
   }
 
   /**
@@ -151,10 +163,14 @@ export class Activation {
 
   /**
    * Scaled Exponential Linear Unit (SELU) activation function.
+   *
+   * This activation function is one of the recommended options for nodes in the
+   * Instinct algorithm, providing self-normalizing properties.
+   *
    * @param {number} x - The input value.
    * @param {boolean} [derivate=false] - Whether to compute the derivative.
    * @returns {number} The result of the SELU function or its derivative.
-   * @see {@link https://arxiv.org/pdf/1706.02515.pdf}
+   * @see Instinct Algorithm - Section 3.6 Modify Squash Mutation
    */
   static selu(x: number, derivate: boolean = false): number {
     const alpha = 1.6732632423543772848170429916717;

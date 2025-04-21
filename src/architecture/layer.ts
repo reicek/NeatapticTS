@@ -2,10 +2,12 @@ import Node from './node';
 import Group from './group';
 import * as methods from '../methods/methods';
 
-function isGroup(obj: any): obj is Group {
-  return obj && typeof obj.set === 'function' && Array.isArray(obj.nodes);
-}
-
+/**
+ * Represents a layer in a neural network.
+ *
+ * A layer is composed of nodes and can connect to other layers, groups, or nodes.
+ * Layers support various architectures such as dense, LSTM, GRU, and memory layers.
+ */
 export default class Layer {
   nodes: Node[];
   connections: { in: any[]; out: any[]; self: any[] };
@@ -18,9 +20,11 @@ export default class Layer {
   }
 
   /**
-   * Activates all the nodes in the group
-   * @param value Optional array of input values
-   * @returns Array of activation values
+   * Activates all the nodes in the layer.
+   *
+   * @param {number[]} [value] - Optional array of input values.
+   * @returns {number[]} Array of activation values.
+   * @throws {Error} If the input array length does not match the number of nodes.
    */
   activate(value?: number[]): number[] {
     const values: number[] = [];
@@ -46,10 +50,12 @@ export default class Layer {
   }
 
   /**
-   * Propagates all the nodes in the group
-   * @param rate Learning rate
-   * @param momentum Momentum factor
-   * @param target Optional array of target values
+   * Propagates errors backward through the layer.
+   *
+   * @param {number} rate - Learning rate.
+   * @param {number} momentum - Momentum factor.
+   * @param {number[]} [target] - Optional array of target values.
+   * @throws {Error} If the target array length does not match the number of nodes.
    */
   propagate(rate: number, momentum: number, target?: number[]) {
     if (target !== undefined && target.length !== this.nodes.length) {
@@ -67,10 +73,22 @@ export default class Layer {
     }
   }
 
+  /**
+   * Connects this layer to a target group, node, or layer.
+   *
+   * @param {Group | Node | Layer} target - The target to connect to.
+   * @param {any} [method] - Connection method (e.g., ALL_TO_ALL).
+   * @param {number} [weight] - Optional weight for the connections.
+   * @returns {any[]} Array of created connections.
+   */
   connect(target: Group | Node | Layer, method?: any, weight?: number): any[] {
-    let connections: any[] = []; // Initialize connections
+    if (!this.output) {
+      throw new Error('Layer output is not defined.');
+    }
+
+    let connections: any[] = [];
     if (target instanceof Group || target instanceof Node) {
-      connections = this.output!.connect(target, method, weight);
+      connections = this.output.connect(target, method, weight);
     } else if (target instanceof Layer) {
       connections = target.input(this, method, weight);
     }
@@ -78,13 +96,20 @@ export default class Layer {
     return connections;
   }
 
+  /**
+   * Gates the specified connections using a gating method.
+   *
+   * @param {any[]} connections - The connections to gate.
+   * @param {any} method - The gating method (e.g., INPUT, OUTPUT, SELF).
+   */
   gate(connections: any[], method: any) {
     this.output!.gate(connections, method);
   }
 
   /**
-   * Sets the value of a property for every node
-   * @param values Object containing properties to set (e.g., bias, squash, type)
+   * Sets the value of a property for every node in the layer.
+   *
+   * @param {{ bias?: number; squash?: any; type?: string }} values - Object containing properties to set.
    */
   set(values: { bias?: number; squash?: any; type?: string }) {
     for (let i = 0; i < this.nodes.length; i++) {
@@ -96,12 +121,18 @@ export default class Layer {
         }
         node.squash = values.squash || node.squash;
         node.type = values.type || node.type;
-      } else if (isGroup(node)) {
+      } else if (this.isGroup(node)) {
         (node as Group).set(values);
       }
     }
   }
 
+  /**
+   * Disconnects this layer from a target group or node.
+   *
+   * @param {Group | Node} target - The target to disconnect from.
+   * @param {boolean} [twosided=false] - Whether to disconnect both ways.
+   */
   disconnect(target: Group | Node, twosided?: boolean) {
     twosided = twosided || false;
 
@@ -159,18 +190,35 @@ export default class Layer {
     }
   }
 
+  /**
+   * Clears the state of all nodes in the layer.
+   */
   clear() {
     for (let i = 0; i < this.nodes.length; i++) {
       this.nodes[i].clear();
     }
   }
 
+  /**
+   * Connects the input of this layer to another layer or group.
+   *
+   * @param {Layer | Group} from - The source layer or group.
+   * @param {any} [method] - Connection method (e.g., ALL_TO_ALL).
+   * @param {number} [weight] - Optional weight for the connections.
+   * @returns {any[]} Array of created connections.
+   */
   input(from: Layer | Group, method?: any, weight?: number): any {
     if (from instanceof Layer) from = from.output!;
     method = method || methods.connection.ALL_TO_ALL;
     return from.connect(this.output!, method, weight);
   }
 
+  /**
+   * Creates a dense layer with the specified number of nodes.
+   *
+   * @param {number} size - Number of nodes in the layer.
+   * @returns {Layer} The created dense layer.
+   */
   static dense(size: number): Layer {
     const layer = new Layer();
 
@@ -188,6 +236,12 @@ export default class Layer {
     return layer;
   }
 
+  /**
+   * Creates a long short-term memory (LSTM) layer.
+   *
+   * @param {number} size - Number of nodes in the layer.
+   * @returns {Layer} The created LSTM layer.
+   */
   static lstm(size: number): Layer {
     const layer = new Layer();
 
@@ -256,6 +310,12 @@ export default class Layer {
     return layer;
   }
 
+  /**
+   * Creates a gated recurrent unit (GRU) layer.
+   *
+   * @param {number} size - Number of nodes in the layer.
+   * @returns {Layer} The created GRU layer.
+   */
   static gru(size: number): Layer {
     const layer = new Layer();
 
@@ -269,7 +329,7 @@ export default class Layer {
     previousOutput.set({
       bias: 0,
       squash: methods.Activation.identity,
-      type: 'constant',
+      type: 'variant', // Corrected type to match JS
     });
 
     memoryCell.set({
@@ -279,7 +339,7 @@ export default class Layer {
     inverseUpdateGate.set({
       bias: 0,
       squash: methods.Activation.inverse,
-      type: 'constant',
+      type: 'variant', // Corrected type to match JS
     });
 
     updateGate.set({
@@ -315,12 +375,12 @@ export default class Layer {
     output.connect(previousOutput, methods.connection.ONE_TO_ONE, 1);
 
     layer.nodes = [
-      (updateGate as unknown) as Node,
-      (inverseUpdateGate as unknown) as Node,
-      (resetGate as unknown) as Node,
-      (memoryCell as unknown) as Node,
-      (output as unknown) as Node,
-      (previousOutput as unknown) as Node,
+      ...updateGate.nodes,
+      ...inverseUpdateGate.nodes,
+      ...resetGate.nodes,
+      ...memoryCell.nodes,
+      ...output.nodes,
+      ...previousOutput.nodes,
     ];
 
     layer.output = output;
@@ -345,10 +405,11 @@ export default class Layer {
   }
 
   /**
-   * Memory layer with a specified size and memory depth
-   * @param size Number of nodes in each memory block
-   * @param memory Number of memory blocks
-   * @returns A memory layer
+   * Creates a memory layer with the specified size and memory depth.
+   *
+   * @param {number} size - Number of nodes in each memory block.
+   * @param {number} memory - Number of memory blocks.
+   * @returns {Layer} The created memory layer.
    */
   static memory(size: number, memory: number): Layer {
     const layer = new Layer();
@@ -360,7 +421,7 @@ export default class Layer {
       block.set({
         squash: methods.Activation.identity,
         bias: 0,
-        type: 'constant',
+        type: 'variant', // Corrected type to match JS
       });
 
       if (previous != null) {
@@ -402,5 +463,18 @@ export default class Layer {
     };
 
     return layer;
+  }
+
+  /**
+   * Determines if the provided object is a `Group`.
+   *
+   * A `Group` is identified by having a `set` method and a `nodes` property
+   * that is an array.
+   *
+   * @param obj - The object to check.
+   * @returns `true` if the object is a `Group`, otherwise `false`.
+   */
+  private isGroup(obj: any): obj is Group {
+    return obj && typeof obj.set === 'function' && Array.isArray(obj.nodes);
   }
 }

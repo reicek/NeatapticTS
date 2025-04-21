@@ -2,7 +2,13 @@ import { fork, ChildProcess } from 'child_process';
 import path from 'path';
 
 /**
- * TestWorker class for handling network evaluations in a separate Node.js process.
+ * TestWorker class for handling network evaluations in a Node.js environment using Worker Threads.
+ *
+ * This implementation aligns with the Instinct algorithm's emphasis on efficient evaluation of
+ * neural networks in parallel environments. The use of Worker Threads allows for offloading
+ * computationally expensive tasks, such as network evaluation, to separate threads.
+ *
+ * @see {@link https://medium.com/data-science/neuro-evolution-on-steroids-82bd14ddc2f6#4-constraints Instinct Algorithm - Section 4 Constraints}
  *
  * This class provides methods to evaluate neural networks and manage the worker process.
  */

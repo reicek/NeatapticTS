@@ -1,20 +1,9 @@
-/* Import */
-import { assert } from 'chai';
-import { Network, methods } from '../src/neataptic';
-import mocha from 'mocha';
+import { Architect, Network, methods } from '../src/neataptic';
 
-/*******************************************************************************************
-                      Tests the effectiveness of evolution
-*******************************************************************************************/
+describe('Neat', () => {
+  test('AND', async () => {
+    jest.setTimeout(40000); // Adjusted timeout
 
-describe('Neat', function () {
-  /**
-   * Tests the evolution of a network to learn the AND gate.
-   */
-  it('AND', async function () {
-    this.timeout(40000); // Use this.timeout
-
-    // Training set for the AND gate
     const trainingSet = [
       { input: [0, 0], output: [0] },
       { input: [0, 1], output: [0] },
@@ -32,16 +21,12 @@ describe('Neat', function () {
       threads: 1,
     });
 
-    assert.isBelow(results.error, 0.03, 'Error should be below 0.03');
+    expect(results.error).toBeLessThan(0.03); // Use expect
   });
 
-  /**
-   * Tests the evolution of a network to learn the XOR gate.
-   */
-  it('XOR', async function () {
-    this.timeout(40000); // Use this.timeout
+  test('XOR', async () => {
+    jest.setTimeout(40000); // Adjusted timeout
 
-    // Training set for the XOR gate
     const trainingSet = [
       { input: [0, 0], output: [0] },
       { input: [0, 1], output: [1] },
@@ -59,16 +44,12 @@ describe('Neat', function () {
       threads: 1,
     });
 
-    assert.isBelow(results.error, 0.03, 'Error should be below 0.03');
+    expect(results.error).toBeLessThan(0.03); // Use expect
   });
 
-  /**
-   * Tests the evolution of a network to learn the XNOR gate.
-   */
-  it('XNOR', async function () {
-    this.timeout(60000); // Use this.timeout
+  test('XNOR', async () => {
+    jest.setTimeout(60000); // Adjusted timeout
 
-    // Training set for the XNOR gate
     const trainingSet = [
       { input: [0, 0], output: [1] },
       { input: [0, 1], output: [0] },
@@ -86,6 +67,6 @@ describe('Neat', function () {
       threads: 1,
     });
 
-    assert.isBelow(results.error, 0.03, 'Error should be below 0.03');
+    expect(results.error).toBeLessThan(0.03); // Use expect
   });
 });

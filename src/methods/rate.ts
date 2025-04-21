@@ -1,14 +1,18 @@
 /**
  * Learning rate methods for adjusting the learning rate during training.
- * This is a TypeScript translation of the original JavaScript implementation.
- * Original JavaScript method names: FIXED, STEP, EXP, INV.
- * @see {@link https://stackoverflow.com/questions/30033096/what-is-lr-policy-in-caffe/30045244}
+ *
+ * Learning rate schedules like fixed, step decay, and exponential decay
+ * control the speed of convergence in optimization algorithms. Proper
+ * adjustment prevents overshooting and ensures efficient training.
+ *
+ * @see {@link https://en.wikipedia.org/wiki/Learning_rate}
+ * @see {@link https://en.wikipedia.org/wiki/Stochastic_gradient_descent}
  */
 export default class Rate {
   /**
    * Fixed learning rate.
    * The learning rate remains constant throughout training.
-   * @returns {(baseRate: number, iteration: number) => number} A function that returns the base rate.
+   * @returns {(baseRate: number, iteration: number) => number} A function returning the base rate.
    */
   static fixed(): (baseRate: number, iteration: number) => number {
     const func = (baseRate: number, iteration: number): number => {
@@ -20,10 +24,10 @@ export default class Rate {
 
   /**
    * Step decay learning rate.
-   * The learning rate decreases by a factor of `gamma` every `stepSize` iterations.
-   * @param {number} [gamma=0.9] - The decay factor. Defaults to 0.9.
-   * @param {number} [stepSize=100] - The number of iterations after which the rate decays. Defaults to 100.
-   * @returns {(baseRate: number, iteration: number) => number} A function that calculates the learning rate.
+   * Decreases the learning rate by a factor of `gamma` every `stepSize` iterations.
+   * @param {number} [gamma=0.9] - Decay factor. Defaults to 0.9.
+   * @param {number} [stepSize=100] - Iterations after which the rate decays. Defaults to 100.
+   * @returns {(baseRate: number, iteration: number) => number} A function calculating the learning rate.
    */
   static step(
     gamma: number = 0.9,
@@ -38,9 +42,9 @@ export default class Rate {
 
   /**
    * Exponential decay learning rate.
-   * The learning rate decreases exponentially with each iteration.
-   * @param {number} [gamma=0.999] - The decay factor. Defaults to 0.999.
-   * @returns {(baseRate: number, iteration: number) => number} A function that calculates the learning rate.
+   * Decreases the learning rate exponentially with each iteration.
+   * @param {number} [gamma=0.999] - Decay factor. Defaults to 0.999.
+   * @returns {(baseRate: number, iteration: number) => number} A function calculating the learning rate.
    */
   static exp(
     gamma: number = 0.999
@@ -54,10 +58,10 @@ export default class Rate {
 
   /**
    * Inverse decay learning rate.
-   * The learning rate decreases inversely proportional to the iteration count.
-   * @param {number} [gamma=0.001] - The decay factor. Defaults to 0.001.
-   * @param {number} [power=2] - The power to which the iteration count is raised. Defaults to 2.
-   * @returns {(baseRate: number, iteration: number) => number} A function that calculates the learning rate.
+   * Decreases the learning rate inversely proportional to the iteration count.
+   * @param {number} [gamma=0.001] - Decay factor. Defaults to 0.001.
+   * @param {number} [power=2] - Power to which the iteration count is raised. Defaults to 2.
+   * @returns {(baseRate: number, iteration: number) => number} A function calculating the learning rate.
    */
   static inv(
     gamma: number = 0.001,

@@ -1,6 +1,19 @@
 /**
  * Cost functions used to evaluate the performance of neural networks.
+ *
+ * Cost functions, also known as loss functions, map the difference between
+ * predicted and target values to a real number representing the "cost" of
+ * the prediction. They are central to optimization problems, where the goal
+ * is to minimize the cost function.
+ *
+ * Examples include Mean Squared Error (MSE) for regression tasks and Cross
+ * Entropy for classification tasks. The choice of cost function depends on
+ * the problem domain and the desired properties, such as robustness to
+ * outliers.
+ *
  * @see {@link https://en.wikipedia.org/wiki/Loss_function}
+ * @see {@link https://en.wikipedia.org/wiki/Mean_squared_error}
+ * @see {@link https://en.wikipedia.org/wiki/Cross_entropy}
  */
 export default class Cost {
   /**

@@ -2,6 +2,13 @@ import Multi from '../../multi';
 
 /**
  * TestWorker class for handling network evaluations in a browser environment using Web Workers.
+ *
+ * This implementation aligns with the Instinct algorithm's emphasis on efficient evaluation of
+ * neural networks in parallel environments. The use of Web Workers allows for offloading
+ * computationally expensive tasks, such as network evaluation, to separate threads.
+ *
+ * @see Instinct Algorithm - Section 4 Constraints
+ * @see {@link https://medium.com/data-science/neuro-evolution-on-steroids-82bd14ddc2f6}
  */
 export class TestWorker {
   private worker: Worker;

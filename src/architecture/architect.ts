@@ -3,9 +3,16 @@ import Layer from './layer';
 import Group from './group';
 import Network from './network';
 import * as methods from '../methods/methods';
+import Connection from './connection'; // Added import for Connection
 
 /**
  * Architect class provides static methods to create various types of neural networks.
+ *
+ * This class includes methods inspired by the Instinct algorithm, such as random network
+ * generation, LSTM, GRU, and NARX networks. These methods leverage advanced mutation
+ * strategies and gating mechanisms to create adaptable and efficient networks.
+ *
+ * @see {@link https://medium.com/data-science/neuro-evolution-on-steroids-82bd14ddc2f6#3-mutation Instinct Algorithm - Section 3 Mutation}
  */
 export default class Architect {
   /**
@@ -21,55 +28,105 @@ export default class Architect {
 
     // Transform all groups and layers into nodes
     for (let i = 0; i < list.length; i++) {
-      if (list[i] instanceof Group) {
-        nodes.push(...list[i].nodes);
-      } else if (list[i] instanceof Layer) {
-        for (const group of list[i].nodes) {
-          nodes.push(...group.nodes);
+      const item = list[i];
+      if (item instanceof Group) {
+        nodes.push(...item.nodes);
+      } else if (item instanceof Layer) {
+        // Iterate through the items within the layer's nodes array
+        // Check if item.nodes contains Groups or Nodes directly
+        if (item.nodes.every((n) => n instanceof Node)) {
+          nodes.push(...(item.nodes as Node[]));
+        } else {
+          // Handle cases where layer.nodes might contain Groups (like in old LSTM impl)
+          for (const layerNode of item.nodes) {
+            if (layerNode instanceof Group) {
+              nodes.push(...layerNode.nodes);
+            } else if (layerNode instanceof Node) {
+              nodes.push(layerNode);
+            }
+          }
         }
-      } else if (list[i] instanceof Node) {
-        nodes.push(list[i] as Node);
+      } else if (item instanceof Node) {
+        nodes.push(item);
       }
     }
 
-    // Determine input and output nodes
-    const inputs: Node[] = [];
-    const outputs: Node[] = [];
-    for (let i = nodes.length - 1; i >= 0; i--) {
-      if (
-        nodes[i].type === 'output' ||
-        nodes[i].connections.out.length + nodes[i].connections.gated.length ===
-          0
-      ) {
-        nodes[i].type = 'output';
-        network.output++;
-        outputs.push(nodes[i]);
-        nodes.splice(i, 1);
-      } else if (nodes[i].type === 'input' || !nodes[i].connections.in.length) {
-        nodes[i].type = 'input';
-        network.input++;
-        inputs.push(nodes[i]);
-        nodes.splice(i, 1);
-      }
-    }
+    // Determine input and output sizes from node types
+    let inputSize = 0;
+    let outputSize = 0;
+    // Use a Set to avoid adding the same node multiple times if it appears in different groups/layers
+    const uniqueNodes = [...new Set(nodes)];
+    uniqueNodes.forEach((node) => {
+      if (node.type === 'input') inputSize++;
+      else if (node.type === 'output') outputSize++;
+    });
 
-    // Input nodes are always first, output nodes are always last
-    nodes = [...inputs, ...nodes, ...outputs];
+    // Assign determined sizes to the network
+    network.input = inputSize;
+    network.output = outputSize;
 
     if (network.input === 0 || network.output === 0) {
-      throw new Error('Given nodes have no clear input/output node!');
+      // Check if types were set on the Layer/Group level instead
+      list.forEach((item) => {
+        if (item instanceof Layer || item instanceof Group) {
+          item.nodes.forEach((node) => {
+            if (node.type === 'input') network.input++;
+            else if (node.type === 'output') network.output++;
+          });
+        }
+      });
+      // Recalculate unique nodes based on potentially updated input/output counts
+      const finalNodes = [...new Set(nodes)];
+      network.nodes = finalNodes;
+      if (network.input === 0 || network.output === 0) {
+        throw new Error('Given nodes have no clear input/output node!');
+      }
+    } else {
+      // Assign unique nodes to the network if sizes were determined initially
+      network.nodes = uniqueNodes;
     }
 
     // Add connections and gates to the network
-    for (const node of nodes) {
-      network.connections.push(...node.connections.out);
-      network.gates.push(...node.connections.gated);
-      if (node.connections.self.weight !== 0) {
+    network.connections = [];
+    network.gates = [];
+    network.selfconns = [];
+
+    network.nodes.forEach((node) => {
+      // Ensure connections.out is iterable and contains Connection objects
+      if (node.connections && Array.isArray(node.connections.out)) {
+        node.connections.out.forEach((conn) => {
+          if (conn instanceof Connection) {
+            // Check if it's a Connection object
+            network.connections.push(conn);
+          }
+        });
+      }
+
+      // Ensure connections.gated is iterable and contains Connection objects
+      if (node.connections && Array.isArray(node.connections.gated)) {
+        node.connections.gated.forEach((conn) => {
+          if (conn instanceof Connection) {
+            // Check if it's a Connection object
+            network.gates.push(conn);
+          }
+        });
+      }
+
+      // Ensure self connection exists and is a Connection object
+      if (
+        node.connections &&
+        node.connections.self instanceof Connection &&
+        node.connections.self.weight !== 0
+      ) {
         network.selfconns.push(node.connections.self);
       }
-    }
+    });
 
-    network.nodes = nodes;
+    // Filter out duplicate connections that might arise from group/layer processing
+    network.connections = [...new Set(network.connections)];
+    network.gates = [...new Set(network.gates)];
+    network.selfconns = [...new Set(network.selfconns)];
+
     return network;
   }
 
@@ -84,12 +141,24 @@ export default class Architect {
       throw new Error('You have to specify at least 3 layers');
     }
 
-    const nodes: Group[] = [new Group(layers[0])];
+    // Use Layer.dense for consistency
+    const inputLayer = Layer.dense(layers[0]);
+    inputLayer.set({ type: 'input' });
+
+    const nodes: (Layer | Group)[] = [inputLayer];
+    let previousLayer: Layer | Group = inputLayer;
 
     for (let i = 1; i < layers.length; i++) {
-      const layer = new Group(layers[i]);
-      nodes.push(layer);
-      nodes[i - 1].connect(layer, methods.connection.ALL_TO_ALL);
+      const currentLayer = Layer.dense(layers[i]);
+      if (i === layers.length - 1) {
+        currentLayer.set({ type: 'output' }); // Set output type for the last layer
+      }
+      (previousLayer as Layer).connect(
+        currentLayer,
+        methods.connection.ALL_TO_ALL
+      );
+      nodes.push(currentLayer);
+      previousLayer = currentLayer;
     }
 
     return Architect.construct(nodes);
@@ -97,6 +166,13 @@ export default class Architect {
 
   /**
    * Creates a randomly connected network.
+   *
+   * This method implements the random network generation described in the Instinct algorithm,
+   * allowing for the creation of networks with configurable connections, backconnections,
+   * self-connections, and gates.
+   *
+   * @see {@link https://medium.com/data-science/neuro-evolution-on-steroids-82bd14ddc2f6#3-mutation Instinct Algorithm - Section 3 Mutation}
+   *
    * @param {number} input - Number of input nodes.
    * @param {number} hidden - Number of hidden nodes.
    * @param {number} output - Number of output nodes.
@@ -151,126 +227,60 @@ export default class Architect {
   }
 
   /**
-   * Creates a long short-term memory (LSTM) network with additional options.
+   * Creates a long short-term memory (LSTM) network using Layer.lstm.
    * @param {...number | object} layers - Sizes of each layer (input, hidden, output) and optional configuration object.
    * @param {object} [options] - Configuration options for the LSTM network.
-   * @param {boolean} [options.memoryToMemory=false] - Connect memory cells to other memory cells.
-   * @param {boolean} [options.outputToMemory=false] - Connect output layer to memory cells.
-   * @param {boolean} [options.outputToGates=false] - Connect output layer to gates.
    * @param {boolean} [options.inputToOutput=true] - Connect input layer to output layer.
-   * @param {boolean} [options.inputToDeep=true] - Connect input layer to deep memory cells.
    * @returns {Network} The constructed LSTM network.
    * @throws {Error} If fewer than 3 layers are specified.
    */
-  static lstm(
-    ...layers: (
-      | number
-      | {
-          memoryToMemory?: boolean;
-          outputToMemory?: boolean;
-          outputToGates?: boolean;
-          inputToOutput?: boolean;
-          inputToDeep?: boolean;
-        }
-    )[]
-  ): Network {
+  static lstm(...layers: (number | { inputToOutput?: boolean })[]): Network {
     if (layers.length < 3) {
       throw new Error('You have to specify at least 3 layers');
     }
 
     const last = layers.pop();
-    const outputLayer = new Group(
-      typeof last === 'number' ? last : (layers.pop() as number)
-    );
-    outputLayer.set({ type: 'output' });
-
+    const outputLayerSize =
+      typeof last === 'number' ? last : (layers.pop() as number);
     const options = typeof last === 'object' ? last : {};
-    const {
-      memoryToMemory = false,
-      outputToMemory = false,
-      outputToGates = false,
-      inputToOutput = true,
-      inputToDeep = true,
-    } = options;
+    const { inputToOutput = true } = options;
 
-    const inputLayer = new Group(layers.shift() as number);
+    const inputLayerSize = layers.shift() as number;
+    const inputLayer = Layer.dense(inputLayerSize); // Use Layer.dense for input
     inputLayer.set({ type: 'input' });
 
-    const nodes: (Group | Layer)[] = [inputLayer];
-    let previous = inputLayer;
+    const outputLayer = Layer.dense(outputLayerSize); // Use Layer.dense for output
+    outputLayer.set({ type: 'output' });
 
-    for (const blockSize of layers) {
-      const inputGate = new Group(blockSize as number);
-      const forgetGate = new Group(blockSize as number);
-      const memoryCell = new Group(blockSize as number);
-      const outputGate = new Group(blockSize as number);
-      const outputBlock = new Group(blockSize as number);
+    const nodes: (Layer | Group)[] = [inputLayer];
+    let previousLayer: Layer | Group = inputLayer;
 
-      inputGate.set({ bias: 1 });
-      forgetGate.set({ bias: 1 });
-      outputGate.set({ bias: 1 });
-
-      const input = previous.connect(memoryCell, methods.connection.ALL_TO_ALL);
-      previous.connect(inputGate, methods.connection.ALL_TO_ALL);
-      previous.connect(outputGate, methods.connection.ALL_TO_ALL);
-      previous.connect(forgetGate, methods.connection.ALL_TO_ALL);
-
-      memoryCell.connect(inputGate, methods.connection.ALL_TO_ALL);
-      memoryCell.connect(forgetGate, methods.connection.ALL_TO_ALL);
-      memoryCell.connect(outputGate, methods.connection.ALL_TO_ALL);
-      const forget = memoryCell.connect(
-        memoryCell,
-        methods.connection.ONE_TO_ONE
-      );
-      const output = memoryCell.connect(
-        outputBlock,
-        methods.connection.ALL_TO_ALL
-      );
-
-      inputGate.gate(input, methods.gating.INPUT);
-      forgetGate.gate(forget, methods.gating.SELF);
-      outputGate.gate(output, methods.gating.OUTPUT);
-
-      if (inputToDeep && nodes.length > 1) {
-        const inputToMemory = inputLayer.connect(
-          memoryCell,
-          methods.connection.ALL_TO_ALL
-        );
-        inputGate.gate(inputToMemory, methods.gating.INPUT);
-      }
-
-      if (memoryToMemory) {
-        const memoryToMemoryConn = memoryCell.connect(
-          memoryCell,
-          methods.connection.ALL_TO_ELSE
-        );
-        inputGate.gate(memoryToMemoryConn, methods.gating.INPUT);
-      }
-
-      if (outputToMemory) {
-        const outputToMemoryConn = outputLayer.connect(
-          memoryCell,
-          methods.connection.ALL_TO_ALL
-        );
-        inputGate.gate(outputToMemoryConn, methods.gating.INPUT);
-      }
-
-      if (outputToGates) {
-        outputLayer.connect(inputGate, methods.connection.ALL_TO_ALL);
-        outputLayer.connect(forgetGate, methods.connection.ALL_TO_ALL);
-        outputLayer.connect(outputGate, methods.connection.ALL_TO_ALL);
-      }
-
-      nodes.push(inputGate, forgetGate, memoryCell, outputGate, outputBlock);
-      previous = outputBlock;
+    // Create LSTM layers using Layer.lstm
+    for (const layerSize of layers) {
+      if (typeof layerSize !== 'number') continue; // Skip options object if present mid-array
+      const lstmLayer = Layer.lstm(layerSize);
+      (previousLayer as Layer).connect(lstmLayer); // Connect previous layer's output to this LSTM layer's input
+      nodes.push(lstmLayer);
+      previousLayer = lstmLayer;
     }
 
+    // Connect the last LSTM layer to the output layer
+    (previousLayer as Layer).connect(outputLayer);
+    nodes.push(outputLayer);
+
+    // Optional connection from input directly to output
     if (inputToOutput) {
       inputLayer.connect(outputLayer, methods.connection.ALL_TO_ALL);
     }
 
-    nodes.push(outputLayer);
-    return Architect.construct(nodes);
+    // Construct the network
+    const network = Architect.construct(nodes);
+
+    // Explicitly set input/output size for the final network object
+    network.input = inputLayerSize;
+    network.output = outputLayerSize;
+
+    return network;
   }
 
   /**
@@ -284,23 +294,35 @@ export default class Architect {
       throw new Error('You have to specify at least 3 layers');
     }
 
-    const inputLayer = new Group(layers.shift()!);
-    const outputLayer = new Group(layers.pop()!);
+    const inputLayerSize = layers.shift()!;
+    const outputLayerSize = layers.pop()!;
 
-    const nodes: (Group | Layer)[] = [inputLayer];
-    let previous = inputLayer;
+    const inputLayer = Layer.dense(inputLayerSize);
+    inputLayer.set({ type: 'input' }); // Set input type
+
+    const outputLayer = Layer.dense(outputLayerSize);
+    outputLayer.set({ type: 'output' }); // Set output type
+
+    const nodes: (Layer | Group)[] = [inputLayer];
+    let previousLayer: Layer | Group = inputLayer;
 
     for (const blockSize of layers) {
-      const layer = Layer.gru(blockSize);
-      previous.connect(layer);
-      nodes.push(layer);
-      previous = layer;
+      const gruLayer = Layer.gru(blockSize);
+      (previousLayer as Layer).connect(gruLayer);
+      nodes.push(gruLayer);
+      previousLayer = gruLayer;
     }
 
-    previous.connect(outputLayer);
+    (previousLayer as Layer).connect(outputLayer);
     nodes.push(outputLayer);
 
-    return Architect.construct(nodes);
+    const network = Architect.construct(nodes);
+
+    // Explicitly set input/output size for the final network object
+    network.input = inputLayerSize;
+    network.output = outputLayerSize;
+
+    return network;
   }
 
   /**
@@ -309,15 +331,16 @@ export default class Architect {
    * @returns {Network} The constructed Hopfield network.
    */
   static hopfield(size: number): Network {
-    const input = new Group(size);
-    const output = new Group(size);
+    // Use Layer.dense for consistency
+    const inputLayer = Layer.dense(size);
+    const outputLayer = Layer.dense(size);
 
-    input.connect(output, methods.connection.ALL_TO_ALL);
+    inputLayer.connect(outputLayer, methods.connection.ALL_TO_ALL);
 
-    input.set({ type: 'input' });
-    output.set({ squash: methods.Activation.step, type: 'output' });
+    inputLayer.set({ type: 'input' });
+    outputLayer.set({ squash: methods.Activation.step, type: 'output' });
 
-    return Architect.construct([input, output]);
+    return Architect.construct([inputLayer, outputLayer]);
   }
 
   /**
@@ -346,32 +369,48 @@ export default class Architect {
     const outputMemory = Layer.memory(outputSize, previousOutput);
 
     const hidden: Layer[] = [];
-    const nodes: (Layer | Group)[] = [input, outputMemory];
+    const nodes: (Layer | Group)[] = [input, outputMemory]; // Start with input and output memory
+
+    let previousHiddenLayer: Layer | Group = input; // Connect input to the first hidden layer
+
+    // Connect input memory to the first hidden layer as well
+    inputMemory.connect(hidden[0], methods.connection.ALL_TO_ALL);
 
     for (const size of hiddenLayers) {
       const hiddenLayer = Layer.dense(size);
       hidden.push(hiddenLayer);
       nodes.push(hiddenLayer);
-      if (hidden.length > 1) {
-        hidden[hidden.length - 2].connect(
-          hiddenLayer,
-          methods.connection.ALL_TO_ALL
-        );
-      }
+      // Connect previous layer (input or previous hidden) to current hidden layer
+      (previousHiddenLayer as Layer).connect(
+        hiddenLayer,
+        methods.connection.ALL_TO_ALL
+      );
+      previousHiddenLayer = hiddenLayer; // Update previous layer for the next iteration
     }
 
-    nodes.push(inputMemory, output);
+    nodes.push(inputMemory, output); // Add input memory and output layer to the list for construction
 
-    input.connect(hidden[0], methods.connection.ALL_TO_ALL);
+    // Connect input to input memory
     input.connect(inputMemory, methods.connection.ONE_TO_ONE, 1);
-    inputMemory.connect(hidden[0], methods.connection.ALL_TO_ALL);
+
+    // Connect the last hidden layer to the output layer
     hidden[hidden.length - 1].connect(output, methods.connection.ALL_TO_ALL);
+
+    // Connect output to output memory
     output.connect(outputMemory, methods.connection.ONE_TO_ONE, 1);
+
+    // Connect output memory back to the first hidden layer
     outputMemory.connect(hidden[0], methods.connection.ALL_TO_ALL);
 
     input.set({ type: 'input' });
     output.set({ type: 'output' });
 
-    return Architect.construct(nodes);
+    const network = Architect.construct(nodes);
+
+    // Explicitly set input/output size for the final network object
+    network.input = inputSize;
+    network.output = outputSize;
+
+    return network;
   }
 }
