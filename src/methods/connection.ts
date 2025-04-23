@@ -1,30 +1,31 @@
 /**
  * Specifies the manner in which two groups of nodes are connected.
  */
-export const connection = {
+export const groupConnection = {
+  // Renamed export
   /**
-   * Connects all nodes in one group to all nodes in another group.
+   * Connects all nodes in the source group to all nodes in the target group.
    */
   ALL_TO_ALL: {
-    name: 'OUTPUT',
+    name: 'ALL_TO_ALL', // Renamed name
   },
 
   /**
-   * Connects all nodes in one group to all nodes in another group, except self-connections.
+   * Connects all nodes in the source group to all nodes in the target group, excluding self-connections (if groups are identical).
    */
   ALL_TO_ELSE: {
-    name: 'INPUT',
+    name: 'ALL_TO_ELSE', // Renamed name
   },
 
   /**
-   * Connects each node in one group to exactly one node in another group.
+   * Connects each node in the source group to the node at the same index in the target group. Requires groups to be the same size.
    */
   ONE_TO_ONE: {
-    name: 'SELF',
+    name: 'ONE_TO_ONE', // Renamed name
   },
 };
 
 /**
  * Export the connection object as the default export.
  */
-export default connection;
+export default groupConnection; // Export renamed object

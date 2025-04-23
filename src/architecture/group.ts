@@ -4,19 +4,29 @@ import { config } from '../config';
 import * as methods from '../methods/methods';
 
 /**
- * Represents a group of nodes in a neural network.
+ * Represents a collection of nodes functioning as a single unit within a network architecture.
+ * Groups facilitate operations like collective activation, propagation, and connection management.
  */
 export default class Group {
+  /**
+   * An array holding all the nodes within this group.
+   */
   nodes: Node[];
+  /**
+   * Stores connection information related to this group.
+   * `in`: Connections coming into any node in this group from outside.
+   * `out`: Connections going out from any node in this group to outside.
+   * `self`: Connections between nodes within this same group (e.g., in ONE_TO_ONE connections).
+   */
   connections: {
-    in: any[];
-    out: any[];
-    self: any[];
+    in: any[]; // Consider using a more specific type like `Connection[]` if available
+    out: any[]; // Consider using a more specific type like `Connection[]` if available
+    self: any[]; // Consider using a more specific type like `Connection[]` if available
   };
 
   /**
-   * Creates a new group of nodes.
-   * @param {number} size - The number of nodes in the group.
+   * Creates a new group comprised of a specified number of nodes.
+   * @param {number} size - The quantity of nodes to initialize within this group.
    */
   constructor(size: number) {
     this.nodes = [];
@@ -32,10 +42,13 @@ export default class Group {
   }
 
   /**
-   * Activates all the nodes in the group.
-   * @param {number[]} [value] - Optional input values for the nodes. Must match the number of nodes in the group.
-   * @returns {number[]} The activation values of the nodes.
-   * @throws {Error} If the input array length does not match the number of nodes.
+   * Activates all nodes in the group. If input values are provided, they are assigned
+   * sequentially to the nodes before activation. Otherwise, nodes activate based on their
+   * existing states and incoming connections.
+   *
+   * @param {number[]} [value] - An optional array of input values. If provided, its length must match the number of nodes in the group.
+   * @returns {number[]} An array containing the activation value of each node in the group, in order.
+   * @throws {Error} If the `value` array is provided and its length does not match the number of nodes in the group.
    */
   activate(value?: number[]): number[] {
     const values: number[] = [];
@@ -58,11 +71,14 @@ export default class Group {
   }
 
   /**
-   * Propagates all the nodes in the group.
-   * @param {number} rate - The learning rate.
-   * @param {number} momentum - The momentum factor.
-   * @param {number[]} [target] - Optional target values for the nodes. Must match the number of nodes in the group.
-   * @throws {Error} If the target array length does not match the number of nodes.
+   * Propagates the error backward through all nodes in the group. If target values are provided,
+   * the error is calculated against these targets (typically for output layers). Otherwise,
+   * the error is calculated based on the error propagated from subsequent layers/nodes.
+   *
+   * @param {number} rate - The learning rate to apply during weight updates.
+   * @param {number} momentum - The momentum factor to apply during weight updates.
+   * @param {number[]} [target] - Optional target values for error calculation. If provided, its length must match the number of nodes.
+   * @throws {Error} If the `target` array is provided and its length does not match the number of nodes in the group.
    */
   propagate(rate: number, momentum: number, target?: number[]): void {
     if (target !== undefined && target.length !== this.nodes.length) {
@@ -81,61 +97,90 @@ export default class Group {
   }
 
   /**
-   * Connects the nodes in this group to another group, layer, or node.
-   * @param {Group | Layer | Node} target - The target to connect to.
-   * @param {any} [method] - The connection method. Defaults to ALL_TO_ALL or ONE_TO_ONE based on the target.
-   * @param {number} [weight] - The weight of the connection.
-   * @returns {any[]} The created connections.
+   * Establishes connections from all nodes in this group to a target Group, Layer, or Node.
+   * The connection pattern (e.g., all-to-all, one-to-one) can be specified.
+   *
+   * @param {Group | Layer | Node} target - The destination entity (Group, Layer, or Node) to connect to.
+   * @param {methods.groupConnection | methods.connection} [method] - The connection method/type (e.g., `methods.groupConnection.ALL_TO_ALL`, `methods.groupConnection.ONE_TO_ONE`). Defaults depend on the target type and whether it's the same group.
+   * @param {number} [weight] - An optional fixed weight to assign to all created connections. If not provided, weights might be initialized randomly or based on node defaults.
+   * @returns {any[]} An array containing all the connection objects created. Consider using a more specific type like `Connection[]`.
+   * @throws {Error} If `methods.groupConnection.ONE_TO_ONE` is used and the source and target groups have different sizes.
    */
   connect(target: Group | Layer | Node, method?: any, weight?: number): any[] {
     let connections: any[] = [];
     let i, j;
 
+    // Connection to another Group
     if (target instanceof Group) {
+      // Determine default connection method if none is provided
       if (method === undefined) {
         if (this !== target) {
+          // Default to ALL_TO_ALL if connecting to a different group
           if (config.warnings)
-            console.warn('No group connection specified, using ALL_TO_ALL');
-          method = methods.connection.ALL_TO_ALL;
+            console.warn(
+              'No group connection specified, using ALL_TO_ALL by default.'
+            );
+          method = methods.groupConnection.ALL_TO_ALL;
         } else {
+          // Default to ONE_TO_ONE if connecting to the same group (self-connection)
           if (config.warnings)
-            console.warn('No group connection specified, using ONE_TO_ONE');
-          method = methods.connection.ONE_TO_ONE;
+            console.warn(
+              'Connecting group to itself, using ONE_TO_ONE by default.'
+            );
+          method = methods.groupConnection.ONE_TO_ONE;
         }
       }
+      // Handle ALL_TO_ALL and ALL_TO_ELSE connection methods
       if (
-        method === methods.connection.ALL_TO_ALL ||
-        method === methods.connection.ALL_TO_ELSE
+        method === methods.groupConnection.ALL_TO_ALL ||
+        method === methods.groupConnection.ALL_TO_ELSE
       ) {
+        // Iterate over each node in the source group
         for (i = 0; i < this.nodes.length; i++) {
+          // Iterate over each node in the target group
           for (j = 0; j < target.nodes.length; j++) {
+            // Skip self-connection if method is ALL_TO_ELSE
             if (
-              method === methods.connection.ALL_TO_ELSE &&
+              method === methods.groupConnection.ALL_TO_ELSE &&
               this.nodes[i] === target.nodes[j]
             )
               continue;
+            // Create connection from source node to target node
             let connection = this.nodes[i].connect(target.nodes[j], weight);
+            // Store the outgoing connection reference in the source group
             this.connections.out.push(connection[0]);
+            // Store the incoming connection reference in the target group
             target.connections.in.push(connection[0]);
+            // Add the created connection to the list of connections returned by this method
             connections.push(connection[0]);
           }
         }
-      } else if (method === methods.connection.ONE_TO_ONE) {
+        // Handle ONE_TO_ONE connection method
+      } else if (method === methods.groupConnection.ONE_TO_ONE) {
+        // Ensure groups are the same size for ONE_TO_ONE connection
         if (this.nodes.length !== target.nodes.length) {
-          throw new Error('From and To group must be the same size!');
+          throw new Error(
+            'Cannot create ONE_TO_ONE connection: source and target groups must have the same size.'
+          );
         }
 
+        // Iterate and connect corresponding nodes
         for (i = 0; i < this.nodes.length; i++) {
           let connection = this.nodes[i].connect(target.nodes[i], weight);
+          // Store self-connections (within the group or between corresponding nodes)
           this.connections.self.push(connection[0]);
           connections.push(connection[0]);
         }
       }
+      // Connection to a Layer (delegates to the Layer's input method)
     } else if (target instanceof Layer) {
       connections = target.input(this, method, weight);
+      // Connection to a single Node
     } else if (target instanceof Node) {
+      // Connect every node in this group to the target node
       for (i = 0; i < this.nodes.length; i++) {
         let connection = this.nodes[i].connect(target, weight);
+        // Store outgoing connections
         this.connections.out.push(connection[0]);
         connections.push(connection[0]);
       }
@@ -145,22 +190,28 @@ export default class Group {
   }
 
   /**
-   * Makes nodes from this group gate the given connection(s).
-   * @param {any | any[]} connections - The connection(s) to gate.
-   * @param {any} method - The gating method. Must be one of Gating.INPUT, Gating.OUTPUT, or Gating.SELF.
-   * @throws {Error} If no gating method is specified.
+   * Configures nodes within this group to act as gates for the specified connection(s).
+   * Gating allows the output of a node in this group to modulate the flow of signal through the gated connection.
+   *
+   * @param {any | any[]} connections - A single connection object or an array of connection objects to be gated. Consider using a more specific type like `Connection | Connection[]`.
+   * @param {methods.gating} method - The gating mechanism to use (e.g., `methods.gating.INPUT`, `methods.gating.OUTPUT`, `methods.gating.SELF`). Specifies which part of the connection is influenced by the gater node.
+   * @throws {Error} If no gating `method` is specified.
    */
   gate(connections: any | any[], method: any): void {
     if (method === undefined) {
-      throw new Error('Please specify Gating.INPUT, Gating.OUTPUT');
+      throw new Error(
+        'Please specify a gating method: Gating.INPUT, Gating.OUTPUT, or Gating.SELF'
+      );
     }
 
+    // Ensure connections is an array for uniform processing
     if (!Array.isArray(connections)) {
       connections = [connections];
     }
 
-    const nodes1: Node[] = [];
-    const nodes2: Node[] = [];
+    // Collect unique source (from) and target (to) nodes from the connections to be gated
+    const nodes1: Node[] = []; // Source nodes
+    const nodes2: Node[] = []; // Target nodes
 
     let i, j;
     for (i = 0; i < connections.length; i++) {
@@ -170,44 +221,52 @@ export default class Group {
     }
 
     switch (method) {
-      /* Input */
+      // Gate the input to the target node(s) of the connection(s)
       case methods.gating.INPUT:
         for (i = 0; i < nodes2.length; i++) {
-          const node = nodes2[i];
+          const node = nodes2[i]; // Target node of a connection
+          // Select a gater node from this group (cycles through if fewer gaters than targets)
           const gater = this.nodes[i % this.nodes.length];
 
+          // Find incoming connections to the target node that are in the provided list
           for (j = 0; j < node.connections.in.length; j++) {
             const conn = node.connections.in[j];
-
             if (connections.includes(conn)) {
+              // Apply gating from the selected gater node to this connection
               gater.gate(conn);
             }
           }
         }
         break;
 
-      /* Output */
+      // Gate the output from the source node(s) of the connection(s)
       case methods.gating.OUTPUT:
         for (i = 0; i < nodes1.length; i++) {
-          let node = nodes1[i];
+          let node = nodes1[i]; // Source node of a connection
+          // Select a gater node from this group
           let gater = this.nodes[i % this.nodes.length];
 
+          // Find outgoing connections from the source node that are in the provided list
           for (j = 0; j < node.connections.out.length; j++) {
             let conn = node.connections.out[j];
             if (connections.includes(conn)) {
+              // Apply gating from the selected gater node to this connection
               gater.gate(conn);
             }
           }
         }
         break;
 
-      /* Self */
+      // Gate the self-connection of the node(s) involved
       case methods.gating.SELF:
         for (i = 0; i < nodes1.length; i++) {
-          let node = nodes1[i];
+          let node = nodes1[i]; // Node with the self-connection
+          // Select a gater node from this group
           let gater = this.nodes[i % this.nodes.length];
 
+          // Check if the node's self-connection is in the provided list
           if (connections.includes(node.connections.self)) {
+            // Apply gating from the selected gater node to the self-connection
             gater.gate(node.connections.self);
           }
         }
@@ -215,8 +274,12 @@ export default class Group {
   }
 
   /**
-   * Sets the value of a property for every node in the group.
-   * @param {{ bias?: number; squash?: any; type?: string }} values - The values to set for the nodes.
+   * Sets specific properties (like bias, squash function, or type) for all nodes within the group.
+   *
+   * @param {{ bias?: number; squash?: any; type?: string }} values - An object containing the properties and their new values. Only provided properties are updated.
+   *        `bias`: Sets the bias term for all nodes.
+   *        `squash`: Sets the activation function (squashing function) for all nodes.
+   *        `type`: Sets the node type (e.g., 'input', 'hidden', 'output') for all nodes.
    */
   set(values: { bias?: number; squash?: any; type?: string }): void {
     for (let i = 0; i < this.nodes.length; i++) {
@@ -229,61 +292,67 @@ export default class Group {
   }
 
   /**
-   * Disconnects all nodes in this group from another group or node.
-   * @param {Group | Node} target - The target to disconnect from.
-   * @param {boolean} [twosided=false] - Whether to disconnect both ways.
+   * Removes connections between nodes in this group and a target Group or Node.
+   *
+   * @param {Group | Node} target - The Group or Node to disconnect from.
+   * @param {boolean} [twosided=false] - If true, also removes connections originating from the `target` and ending in this group. Defaults to false (only removes connections from this group to the target).
    */
   disconnect(target: Group | Node, twosided: boolean = false): void {
     let i, j, k;
 
-    /* If Group */
+    // Disconnecting from another Group
     if (target instanceof Group) {
+      // Iterate through nodes in this group
       for (i = 0; i < this.nodes.length; i++) {
+        // Iterate through nodes in the target group
         for (j = 0; j < target.nodes.length; j++) {
+          // Disconnect individual nodes (handles internal node connection state)
           this.nodes[i].disconnect(target.nodes[j], twosided);
 
+          // Remove the connection reference from this group's outgoing connections list
           for (k = this.connections.out.length - 1; k >= 0; k--) {
             let conn = this.connections.out[k];
-
             if (conn.from === this.nodes[i] && conn.to === target.nodes[j]) {
               this.connections.out.splice(k, 1);
-              break;
+              break; // Assume only one connection between two specific nodes
             }
           }
 
+          // If twosided, also remove the connection reference from this group's incoming connections list
           if (twosided) {
             for (k = this.connections.in.length - 1; k >= 0; k--) {
               let conn = this.connections.in[k];
-
               if (conn.from === target.nodes[j] && conn.to === this.nodes[i]) {
                 this.connections.in.splice(k, 1);
-                break;
+                break; // Assume only one connection
               }
             }
           }
         }
       }
-      /* If Node */
+      // Disconnecting from a single Node
     } else if (target instanceof Node) {
+      // Iterate through nodes in this group
       for (i = 0; i < this.nodes.length; i++) {
+        // Disconnect the node in this group from the target node
         this.nodes[i].disconnect(target, twosided);
 
+        // Remove the connection reference from this group's outgoing connections list
         for (j = this.connections.out.length - 1; j >= 0; j--) {
           let conn = this.connections.out[j];
-
           if (conn.from === this.nodes[i] && conn.to === target) {
             this.connections.out.splice(j, 1);
-            break;
+            break; // Assume only one connection
           }
         }
 
+        // If twosided, also remove the connection reference from this group's incoming connections list
         if (twosided) {
           for (j = this.connections.in.length - 1; j >= 0; j--) {
             const conn = this.connections.in[j];
-
             if (conn.from === target && conn.to === this.nodes[i]) {
               this.connections.in.splice(j, 1);
-              break;
+              break; // Assume only one connection
             }
           }
         }
@@ -292,7 +361,9 @@ export default class Group {
   }
 
   /**
-   * Clears the context of all nodes in the group.
+   * Resets the state of all nodes in the group. This typically involves clearing
+   * activation values, state, and propagated errors, preparing the group for a new input pattern,
+   * especially relevant in recurrent networks or sequence processing.
    */
   clear(): void {
     for (let i = 0; i < this.nodes.length; i++) {

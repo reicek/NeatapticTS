@@ -1,82 +1,110 @@
 import Activation from './activation';
 
 /**
- * Mutation methods for genetic algorithms.
+ * Defines various mutation methods used in neuroevolution algorithms.
  *
- * Mutation introduces diversity into the population by altering genes.
- * Strategies like adding/removing nodes, modifying weights, and changing
- * activation functions enable adaptation to complex datasets.
+ * Mutation introduces genetic diversity into the population by randomly
+ * altering parts of an individual's genome (the neural network structure or parameters).
+ * This is crucial for exploring the search space and escaping local optima.
  *
- * Mutation is inspired by biological evolution and is essential for
- * escaping local optima in optimization problems.
+ * Common mutation strategies include adding or removing nodes and connections,
+ * modifying connection weights and node biases, and changing node activation functions.
+ * These operations allow the network topology and parameters to adapt over generations.
  *
- * These methods implement the mutation strategies described in the Instinct algorithm,
- * including adding/removing nodes and connections, modifying weights and biases, and
- * changing activation functions. These mutations allow the genome to evolve dynamically
- * and adapt to complex datasets.
+ * The methods listed here are inspired by techniques used in algorithms like NEAT
+ * and particularly the Instinct algorithm, providing a comprehensive set of tools
+ * for evolving network architectures.
  *
  * @see {@link https://medium.com/data-science/neuro-evolution-on-steroids-82bd14ddc2f6#3-mutation Instinct Algorithm - Section 3 Mutation}
- * @see {@link https://en.wikipedia.org/wiki/Mutation_(genetic_algorithm)}
- * @see {@link https://en.wikipedia.org/wiki/Evolutionary_algorithm}
+ * @see {@link https://en.wikipedia.org/wiki/Mutation_(genetic_algorithm) Mutation (Genetic Algorithm) - Wikipedia}
+ * @see {@link https://en.wikipedia.org/wiki/Neuroevolution Neuroevolution - Wikipedia}
+ * @see {@link http://nn.cs.utexas.edu/downloads/papers/stanley.ec02.pdf NEAT Paper (Relevant concepts)}
  */
 export const mutation: { [key: string]: any } = {
   ADD_NODE: {
-    /** Adds a new node to the network by splitting an existing connection. */
+    /**
+     * Adds a new node to the network by splitting an existing connection.
+     * The original connection is disabled, and two new connections are created:
+     * one from the original source to the new node, and one from the new node
+     * to the original target. This increases network complexity, potentially
+     * allowing for more sophisticated computations.
+     */
     name: 'ADD_NODE',
     /**
-     * Inserts a new node between two connected nodes, creating two new connections.
      * @see Instinct Algorithm - Section 3.1 Add Node Mutation
      */
   },
   SUB_NODE: {
-    /** Removes an existing node from the network. */
+    /**
+     * Removes a hidden node from the network. Connections to and from the
+     * removed node are also removed. This simplifies the network topology.
+     */
     name: 'SUB_NODE',
+    /** If true, attempts to preserve gating connections associated with the removed node. */
     keep_gates: true,
     /**
-     * Removes a hidden node and reconnects its incoming and outgoing connections.
      * @see Instinct Algorithm - Section 3.7 Remove Node Mutation
      */
   },
   ADD_CONN: {
-    /** Adds a new connection between nodes. */
+    /**
+     * Adds a new connection between two previously unconnected nodes.
+     * This increases network connectivity, potentially creating new pathways
+     * for information flow.
+     */
     name: 'ADD_CONN',
     /**
-     * Generates a list of all possible connections that do not yet exist and adds one randomly.
      * @see Instinct Algorithm - Section 3.2 Add Connection Mutation
      */
   },
   SUB_CONN: {
-    /** Removes an existing connection between nodes. */
+    /**
+     * Removes an existing connection between two nodes.
+     * This prunes the network, potentially removing redundant or detrimental pathways.
+     */
     name: 'SUB_CONN',
     /**
-     * Ensures that nodes retain at least one incoming and one outgoing connection.
      * @see Instinct Algorithm - Section 3.8 Remove Connection Mutation
      */
   },
   MOD_WEIGHT: {
-    /** Modifies the weight of an existing connection. */
+    /**
+     * Modifies the weight of an existing connection by adding a random value
+     * or multiplying by a random factor. This fine-tunes the strength of
+     * the connection.
+     */
     name: 'MOD_WEIGHT',
+    /** Minimum value for the random modification factor/offset. */
     min: -1,
+    /** Maximum value for the random modification factor/offset. */
     max: 1,
     /**
-     * Adjusts the weight of a connection by adding a random value within a fixed range.
      * @see Instinct Algorithm - Section 3.4 Modify Weight Mutation
      */
   },
   MOD_BIAS: {
-    /** Modifies the bias of a node. */
+    /**
+     * Modifies the bias of a node (excluding input nodes) by adding a random value.
+     * This adjusts the node's activation threshold, influencing its firing behavior.
+     */
     name: 'MOD_BIAS',
+    /** Minimum value for the random modification offset. */
     min: -1,
+    /** Maximum value for the random modification offset. */
     max: 1,
     /**
-     * Adjusts the bias of a node by adding a random value within a fixed range.
      * @see Instinct Algorithm - Section 3.5 Modify Bias Mutation
      */
   },
   MOD_ACTIVATION: {
-    /** Changes the activation function of a node. */
+    /**
+     * Randomly changes the activation function of a node (excluding input nodes).
+     * This allows nodes to specialize their response characteristics during evolution.
+     */
     name: 'MOD_ACTIVATION',
+    /** If true, allows mutation of activation functions in output nodes. */
     mutateOutput: true,
+    /** A list of allowed activation functions to choose from during mutation. */
     allowed: [
       Activation.logistic,
       Activation.tanh,
@@ -94,48 +122,82 @@ export const mutation: { [key: string]: any } = {
       Activation.inverse,
       Activation.selu,
       Activation.softplus,
+      Activation.swish,
+      Activation.gelu,
+      Activation.mish,
     ],
     /**
-     * Allows nodes to mutate their activation functions, enabling adaptation to different datasets.
      * @see Instinct Algorithm - Section 3.6 Modify Squash Mutation
      */
   },
   ADD_SELF_CONN: {
-    /** Adds a self-connection to a node. */
+    /**
+     * Adds a self-connection (recurrent connection from a node to itself).
+     * This allows a node to retain information about its previous state,
+     * introducing memory capabilities at the node level. Only applicable
+     * to hidden and output nodes.
+     */
     name: 'ADD_SELF_CONN',
   },
   SUB_SELF_CONN: {
-    /** Removes a self-connection from a node. */
+    /**
+     * Removes a self-connection from a node.
+     * This removes the node's direct recurrent loop.
+     */
     name: 'SUB_SELF_CONN',
   },
   ADD_GATE: {
-    /** Adds a gate to a connection. */
+    /**
+     * Adds a gating mechanism to an existing connection. A new node (the gater)
+     * is selected to control the flow of information through the gated connection.
+     * This introduces multiplicative interactions, similar to LSTM or GRU units,
+     * enabling more complex temporal processing or conditional logic.
+     */
     name: 'ADD_GATE',
   },
   SUB_GATE: {
-    /** Removes a gate from a connection. */
+    /**
+     * Removes a gating mechanism from a connection.
+     * This simplifies the network by removing the modulatory influence of the gater node.
+     */
     name: 'SUB_GATE',
   },
   ADD_BACK_CONN: {
-    /** Adds a recurrent connection to the network. */
+    /**
+     * Adds a recurrent connection between two nodes, potentially creating cycles
+     * in the network graph (e.g., connecting a node to a node in a previous layer
+     * or a non-adjacent node). This enables the network to maintain internal state
+     * and process temporal dependencies.
+     */
     name: 'ADD_BACK_CONN',
   },
   SUB_BACK_CONN: {
-    /** Removes a recurrent connection from the network. */
+    /**
+     * Removes a recurrent connection (that is not a self-connection).
+     * This simplifies the recurrent topology of the network.
+     */
     name: 'SUB_BACK_CONN',
   },
   SWAP_NODES: {
-    /** Swaps two nodes in the network. */
+    /**
+     * Swaps the roles (bias and activation function) of two nodes (excluding input nodes).
+     * Connections are generally preserved relative to the node indices.
+     * This mutation alters the network's internal processing without changing
+     * the overall node count or connection density.
+     */
     name: 'SWAP_NODES',
+    /** If true, allows swapping involving output nodes. */
     mutateOutput: true,
   },
+  /** Placeholder for the list of all mutation methods. */
   ALL: [],
+  /** Placeholder for the list of mutation methods suitable for feedforward networks. */
   FFW: [],
 };
 
 /**
- * List of all mutation methods.
- * Includes all possible mutations for neural networks.
+ * A list containing all defined mutation methods.
+ * Useful for scenarios where any type of structural or parameter mutation is allowed.
  */
 mutation.ALL = [
   mutation.ADD_NODE,
@@ -155,8 +217,10 @@ mutation.ALL = [
 ];
 
 /**
- * List of feedforward-compatible mutation methods.
- * Excludes mutations incompatible with feedforward networks.
+ * A list containing mutation methods suitable for purely feedforward networks.
+ * Excludes mutations that introduce recurrence (ADD_SELF_CONN, ADD_BACK_CONN, ADD_GATE)
+ * and related removal operations (SUB_SELF_CONN, SUB_BACK_CONN, SUB_GATE),
+ * as these would violate the feedforward structure.
  */
 mutation.FFW = [
   mutation.ADD_NODE,

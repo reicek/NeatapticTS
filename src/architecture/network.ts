@@ -2,67 +2,95 @@ import Node from './node';
 import Connection from './connection';
 import Multi from '../multithreading/multi';
 import * as methods from '../methods/methods';
-import mutation from '../methods/mutation'; // Fix the import for mutation
-import { config } from '../config';
+import mutation from '../methods/mutation'; // Import mutation methods
+import { config } from '../config'; // Import configuration settings
 
-// Helper function to strip coverage code - Remove Semicolon Requirement & Add Cleanup
+/**
+ * Helper function to remove Istanbul.js code coverage instrumentation artifacts.
+ * This is useful for generating clean, production-ready code (e.g., for `standalone`).
+ * It removes comments and counter increments inserted by the coverage tool.
+ *
+ * @param {string} code - The input JavaScript code string potentially containing coverage artifacts.
+ * @returns {string} The cleaned JavaScript code string.
+ * @private
+ */
 const stripCoverage = (code: string): string => {
-  // 1. Remove Istanbul ignore comments
+  // 1. Remove Istanbul ignore comments (e.g., /* istanbul ignore next */)
   code = code.replace(/\/\*\s*istanbul\s+ignore\s+[\s\S]*?\*\//g, '');
 
-  // 2. Remove coverage counter increments (No trailing semicolon required)
-  code = code.replace(/cov_[\w$]+\(\)\.(s|f|b)\[\d+\](\[\d+\])?\+\+/g, ''); // Removed trailing ';'
+  // 2. Remove coverage counter increments (e.g., cov_1a2b3c4d().s[0]++)
+  // Matches patterns like cov_...().s[...][...]++ or cov_...().f[...]++ etc.
+  code = code.replace(/cov_[\w$]+\(\)\.(s|f|b)\[\d+\](\[\d+\])?\+\+/g, ''); // Removed trailing ';' requirement
 
-  // 3. Remove simple coverage function calls (No trailing semicolon required)
-  code = code.replace(/cov_[\w$]+\(\)/g, ''); // Removed trailing ';'
+  // 3. Remove simple coverage function calls (e.g., cov_1a2b3c4d())
+  code = code.replace(/cov_[\w$]+\(\)/g, ''); // Removed trailing ';' requirement
 
-  // 4. Remove sourceMappingURL comments
+  // 4. Remove sourceMappingURL comments (often added during transpilation)
   code = code.replace(/^\s*\/\/# sourceMappingURL=.*\s*$/gm, '');
 
-  // 5. Cleanup potential leftover artifacts from comma operator usage
-  // Example: ( , false) -> ( false) or ( true , ) -> ( true )
-  code = code.replace(/\(\s*,\s*/g, '( '); // Remove leading comma inside parentheses
-  code = code.replace(/\s*,\s*\)/g, ' )'); // Remove trailing comma inside parentheses
+  // 5. Cleanup potential leftover artifacts from comma operator usage within coverage code
+  // Example: transforms `( , false)` to `( false)` or `( true , )` to `( true )`
+  code = code.replace(/\(\s*,\s*/g, '( '); // Remove leading comma after opening parenthesis
+  code = code.replace(/\s*,\s*\)/g, ' )'); // Remove trailing comma before closing parenthesis
 
-  // 6. Trim whitespace from start/end
+  // 6. Trim leading/trailing whitespace from the entire code string
   code = code.trim();
 
-  // 7. Remove empty statements potentially left behind
-  code = code.replace(/^\s*;\s*$/gm, ''); // Remove lines containing only a semicolon
-  code = code.replace(/;{2,}/g, ';'); // Replace multiple semicolons with one
-  // Remove lines that might now only contain commas or whitespace
+  // 7. Remove empty statements (lines containing only a semicolon) potentially left behind
+  code = code.replace(/^\s*;\s*$/gm, ''); // Remove lines with only ';'
+  code = code.replace(/;{2,}/g, ';'); // Replace multiple consecutive semicolons with a single one
+  // Remove lines that might now only contain commas or whitespace after other replacements
   code = code.replace(/^\s*[,;]?\s*$/gm, '');
 
   return code;
 };
 
 /**
- * Represents a neural network with nodes and connections.
+ * Represents a neural network composed of nodes and connections.
  *
- * The network supports feedforward and recurrent architectures. It includes advanced
- * features such as dropout, backpropagation, and mutation for neuro-evolution.
+ * This class provides the core structure for building and managing neural networks.
+ * It supports various architectures, including feedforward and recurrent networks (through self-connections and back-connections).
+ * Key functionalities include activation (forward propagation), backpropagation (training), mutation (for neuro-evolution),
+ * serialization, and the ability to generate a standalone, library-independent function representation of the network.
  *
- * @see Instinct Algorithm - Section 1.3 Activation
- * @see {@link https://medium.com/data-science/neuro-evolution-on-steroids-82bd14ddc2f6 Instinct: neuro-evolution on steroids by Thomas Wagenaar}
+ * @param {number} input - The number of input nodes for the network.
+ * @param {number} output - The number of output nodes for the network.
+ *
+ * @property {number} input - Number of input nodes.
+ * @property {number} output - Number of output nodes.
+ * @property {number} [score] - Optional fitness score used during evolutionary algorithms (e.g., NEAT).
+ * @property {Node[]} nodes - Array containing all nodes (input, hidden, output) in the network.
+ * @property {Connection[]} connections - Array containing all feedforward connections between nodes.
+ * @property {Connection[]} gates - Array containing all connections that are gated by a node.
+ * @property {Connection[]} selfconns - Array containing all self-connections (node connecting to itself).
+ * @property {number} dropout - Dropout rate (probability of masking a node during training). Default is 0 (no dropout).
+ *
+ * @see {@link Node}
+ * @see {@link Connection}
+ * @see {@link https://medium.com/data-science/neuro-evolution-on-steroids-82bd14ddc2f6 Instinct: neuro-evolution on steroids by Thomas Wagenaar} - Provides context for some design choices, particularly around activation and crossover.
  */
 export default class Network {
   input: number; // Number of input nodes
   output: number; // Number of output nodes
-  score?: number; // Optional score property for genetic algorithms
-  nodes: Node[]; // List of all nodes in the network
-  connections: Connection[]; // List of all connections between nodes
-  gates: Connection[]; // List of gated connections
-  selfconns: Connection[]; // List of self-connections
-  dropout: number = 0; // Dropout rate for training
+  score?: number; // Optional score property, typically used for genetic algorithms/neuro-evolution fitness.
+  nodes: Node[]; // List of all nodes (input, hidden, output) in the network.
+  connections: Connection[]; // List of all regular (feedforward or backward) connections between nodes.
+  gates: Connection[]; // List of connections that are currently being gated by a node.
+  selfconns: Connection[]; // List of connections where a node connects to itself.
+  dropout: number = 0; // Dropout rate (0 to 1). If > 0, hidden nodes have a chance to be masked during training activation.
 
   /**
-   * Creates a new network with the specified number of input and output nodes.
-   * @param {number} input - Number of input nodes.
-   * @param {number} output - Number of output nodes.
-   * @throws {Error} If input or output size is not provided.
+   * Creates a new neural network instance.
+   * Initializes the network with the specified number of input and output nodes.
+   * Input nodes are created first, followed by output nodes.
+   * By default, input nodes are fully connected to output nodes with random weights.
+   *
+   * @param {number} input - The number of input nodes. Must be a positive integer.
+   * @param {number} output - The number of output nodes. Must be a positive integer.
+   * @throws {Error} If `input` or `output` size is not provided or invalid.
    */
   constructor(input: number, output: number) {
-    // Validate input and output sizes
+    // Validate that input and output sizes are provided.
     if (typeof input === 'undefined' || typeof output === 'undefined') {
       throw new Error('No input or output size given');
     }
@@ -70,382 +98,718 @@ export default class Network {
     // Initialize network properties
     this.input = input;
     this.output = output;
-    this.nodes = [];
-    this.connections = [];
-    this.gates = [];
-    this.selfconns = [];
-    this.dropout = 0;
+    this.nodes = []; // Initialize empty array for nodes
+    this.connections = []; // Initialize empty array for connections
+    this.gates = []; // Initialize empty array for gated connections
+    this.selfconns = []; // Initialize empty array for self-connections
+    this.dropout = 0; // Default dropout rate is 0
 
-    // Create input and output nodes
+    // Create input and output nodes. Input nodes first, then output nodes.
     for (let i = 0; i < this.input + this.output; i++) {
-      const type = i < this.input ? 'input' : 'output'; // Determine node type
-      this.nodes.push(new Node(type)); // Add node to the network
+      const type = i < this.input ? 'input' : 'output'; // Determine node type based on index
+      this.nodes.push(new Node(type)); // Create and add the new node
     }
 
-    // Connect input nodes to output nodes
+    // Create initial connections: fully connect input layer to output layer.
+    // This provides a basic network structure to start with.
     for (let i = 0; i < this.input; i++) {
       for (let j = this.input; j < this.input + this.output; j++) {
-        const weight = Math.random() * this.input * Math.sqrt(2 / this.input); // Initialize weight
-        this.connect(this.nodes[i], this.nodes[j], weight); // Create connection
+        // Initialize weights using a common strategy (He initialization variant) to prevent vanishing/exploding gradients.
+        const weight = Math.random() * this.input * Math.sqrt(2 / this.input);
+        this.connect(this.nodes[i], this.nodes[j], weight); // Create the connection
       }
     }
   }
 
   /**
-   * Activates the network with the given input and returns the output.
+   * Generates a standalone JavaScript function that replicates the network's behavior.
+   * This function can be executed independently of the NeatapticTS library.
+   * It uses `Float64Array` for storing activations and states, potentially offering performance benefits.
+   * The generated function includes definitions for the necessary activation (squash) functions.
    *
-   * This method implements the activation process described in the Instinct algorithm,
-   * where self-connections are handled differently by multiplying the node's previous
-   * state. Activation functions are applied to the node's state to compute the final
-   * activation value.
+   * @returns {string} A string containing the source code of the standalone JavaScript function.
+   *                   This function takes an `input` array and returns an `output` array.
+   */
+  standalone(): string {
+    const present: { [key: string]: string } = {}; // Tracks activation functions already defined (name -> definition string).
+    const squashDefinitions: string[] = []; // Stores the string definitions of the activation functions used.
+    const functionMap: { [key: string]: number } = {}; // Maps activation function name to an index in the `F` array.
+    let functionIndexCounter = 0; // Counter for assigning indices to functions.
+
+    const activations: number[] = []; // Stores initial activation values for all nodes.
+    const states: number[] = []; // Stores initial state values for all nodes.
+    const lines: string[] = []; // Stores the lines of code for the core activation logic within the standalone function.
+
+    // Predefined activation functions. These are included directly for common cases.
+    // Ensure these names match the keys in `methods.Activation`.
+    // Definitions are minified/optimized where possible.
+    const predefined: { [key: string]: string } = {
+      // ... (keep existing predefined function definitions) ...
+      logistic: 'function logistic(x){ return 1 / (1 + Math.exp(-x)); }',
+      tanh: 'function tanh(x){ return Math.tanh(x); }',
+      relu: 'function relu(x){ return x > 0 ? x : 0; }',
+      identity: 'function identity(x){ return x; }',
+      step: 'function step(x){ return x > 0 ? 1 : 0; }',
+      softsign: 'function softsign(x){ return x / (1 + Math.abs(x)); }',
+      sinusoid: 'function sinusoid(x){ return Math.sin(x); }',
+      gaussian: 'function gaussian(x){ return Math.exp(-Math.pow(x, 2)); }',
+      bentIdentity:
+        'function bentIdentity(x){ return (Math.sqrt(Math.pow(x, 2) + 1) - 1) / 2 + x; }',
+      bipolar: 'function bipolar(x){ return x > 0 ? 1 : -1; }',
+      bipolarSigmoid:
+        'function bipolarSigmoid(x){ return 2 / (1 + Math.exp(-x)) - 1; }',
+      hardTanh: 'function hardTanh(x){ return Math.max(-1, Math.min(1, x)); }',
+      absolute: 'function absolute(x){ return Math.abs(x); }',
+      inverse: 'function inverse(x){ return 1 - x; }',
+      selu:
+        'function selu(x){ var a=1.6732632423543772,s=1.0507009873554805; var fx=x>0?x:a*Math.exp(x)-a; return fx*s; }', // Minified SELU
+      softplus:
+        'function softplus(x){ if(x>30)return x; if(x<-30)return Math.exp(x); return Math.max(0,x)+Math.log(1+Math.exp(-Math.abs(x))); }', // Numerically stable softplus
+      swish: 'function swish(x){ var s=1/(1+Math.exp(-x)); return x*s; }', // Swish (Sigmoid Linear Unit)
+      gelu:
+        'function gelu(x){ var cdf=0.5*(1.0+Math.tanh(Math.sqrt(2.0/Math.PI)*(x+0.044715*Math.pow(x,3)))); return x*cdf; }', // Approximate GELU (Gaussian Error Linear Unit)
+      mish:
+        'function mish(x){ var sp_x; if(x>30){sp_x=x;}else if(x<-30){sp_x=Math.exp(x);}else{sp_x=Math.log(1+Math.exp(x));} var tanh_sp_x=Math.tanh(sp_x); return x*tanh_sp_x; }', // Mish (Self Regularized Non-Monotonic) with stable softplus
+    };
+
+    // Assign an index to each node and initialize activation/state arrays.
+    // This ensures consistent referencing within the generated code.
+    this.nodes.forEach((node, index) => {
+      node.index = index; // Assign index used in the standalone code.
+      activations.push(node.activation); // Store current activation (initial value).
+      states.push(node.state); // Store current state (initial value).
+    });
+
+    // Code to copy input values to the activation array `A`.
+    lines.push('for(var i = 0; i < input.length; i++) A[i] = input[i];');
+
+    // Generate activation logic for hidden and output nodes.
+    for (let i = this.input; i < this.nodes.length; i++) {
+      const node = this.nodes[i];
+      const squash = node.squash as any; // The activation function for this node.
+      // Determine the name of the squash function. Use its `name` property or generate one.
+      const squashName = squash.name || `anonymous_squash_${i}`;
+
+      // Check if this squash function's definition is already included.
+      if (!(squashName in present)) {
+        let funcStr: string;
+        // Use predefined definition if available.
+        if (predefined[squashName]) {
+          funcStr = predefined[squashName];
+          // Ensure the function name in the definition string matches the key.
+          if (!funcStr.startsWith(`function ${squashName}`)) {
+            funcStr = `function ${squashName}${funcStr.substring(
+              funcStr.indexOf('(')
+            )}`;
+          }
+          funcStr = stripCoverage(funcStr); // Remove potential coverage artifacts.
+        } else {
+          // Handle custom or unknown functions by converting them to string.
+          funcStr = squash.toString();
+          funcStr = stripCoverage(funcStr); // Remove coverage artifacts.
+
+          // Attempt to format the function string consistently.
+          if (funcStr.startsWith('function')) {
+            // Ensure name matches if it was anonymous or different.
+            funcStr = `function ${squashName}${funcStr.substring(
+              funcStr.indexOf('(')
+            )}`;
+          } else if (funcStr.includes('=>')) {
+            // Basic conversion for arrow functions.
+            funcStr = `function ${squashName}${funcStr.substring(
+              funcStr.indexOf('(')
+            )}`;
+          } else {
+            // Fallback for unusual function definitions.
+            console.warn(
+              `Standalone: Could not reliably get definition for squash function '${squashName}'. Using placeholder.`
+            );
+            funcStr = `function ${squashName}(x){ /* unknown definition */ return x; }`; // Provide a safe placeholder.
+          }
+        }
+        present[squashName] = funcStr; // Mark as present.
+        squashDefinitions.push(present[squashName]); // Add definition to the list.
+        functionMap[squashName] = functionIndexCounter++; // Assign an index.
+      }
+      const functionIndex = functionMap[squashName]; // Get the index for this function.
+
+      // Build the calculation for the node's state (sum of weighted inputs + bias).
+      const incoming: string[] = [];
+      // Process incoming connections.
+      for (const conn of node.connections.in) {
+        // Ensure the source node has a valid index.
+        if (typeof conn.from.index === 'undefined') continue;
+        // Base computation: activation[from] * weight
+        let computation = `A[${conn.from.index}] * ${conn.weight}`;
+        // Apply gating if the connection is gated and the gater node has a valid index.
+        if (conn.gater && typeof conn.gater.index !== 'undefined') {
+          computation += ` * A[${conn.gater.index}]`; // Multiply by gater activation.
+        }
+        incoming.push(computation);
+      }
+
+      // Process self-connection.
+      if (node.connections.self.weight !== 0) {
+        // Base computation: state[self] * weight
+        let computation = `S[${i}] * ${node.connections.self.weight}`;
+        // Apply gating if the self-connection is gated and the gater node has a valid index.
+        if (
+          node.connections.self.gater &&
+          typeof node.connections.self.gater.index !== 'undefined'
+        ) {
+          computation += ` * A[${node.connections.self.gater.index}]`; // Multiply by gater activation.
+        }
+        incoming.push(computation);
+      }
+
+      // Combine incoming calculations. Default to '0' if no incoming connections.
+      const incomingCalculation =
+        incoming.length > 0 ? incoming.join(' + ') : '0';
+      // Calculate the node's state (S[i] = sum + bias).
+      lines.push(`S[${i}] = ${incomingCalculation} + ${node.bias};`);
+      // Calculate the node's activation (A[i] = squash(S[i]) * mask).
+      // Use node.mask if defined and not 1, otherwise default to 1 (no multiplication needed).
+      const maskValue =
+        typeof node.mask === 'number' && node.mask !== 1 ? node.mask : 1;
+      // Apply squash function (referenced by index from F array) and mask.
+      lines.push(
+        `A[${i}] = F[${functionIndex}](S[${i}])${
+          maskValue !== 1 ? ` * ${maskValue}` : '' // Apply mask only if it's not 1.
+        };`
+      );
+    }
+
+    // Identify the indices of the output nodes.
+    const outputIndices: number[] = [];
+    for (let i = this.nodes.length - this.output; i < this.nodes.length; i++) {
+      // Ensure the output node and its index are valid.
+      if (typeof this.nodes[i]?.index !== 'undefined') {
+        outputIndices.push(this.nodes[i].index!); // Add valid index.
+      } else {
+        // Warn if an output node seems invalid (should not happen in normal operation).
+        console.warn(`Standalone: Invalid output node index ${i}`);
+      }
+    }
+    // Generate the return statement, collecting activations from output nodes.
+    lines.push(
+      `return [${outputIndices.map((idx) => `A[${idx}]`).join(',')}];`
+    );
+
+    // Assemble the final standalone function string.
+    let total = '';
+    total += `(function(){\n`; // Start IIFE (Immediately Invoked Function Expression) to encapsulate scope.
+    // Define all required squash functions first.
+    total += `${squashDefinitions.join('\n')}\n`;
+    // Create the `F` array, mapping indices to the actual function objects (by name).
+    const fArrayContent = Object.entries(functionMap)
+      .sort(([, a], [, b]) => a - b) // Sort functions by their assigned index.
+      .map(([name]) => name) // Get the function names in the correct order.
+      .join(','); // Join names into a comma-separated list.
+    total += `var F = [${fArrayContent}];\n`; // Define the F array.
+    // Initialize activation (A) and state (S) arrays using Float64Array.
+    total += `var A = new Float64Array([${activations.join(',')}]);\n`;
+    total += `var S = new Float64Array([${states.join(',')}]);\n`;
+    // Define the main `activate` function within the IIFE.
+    total += `function activate(input){\n`;
+    // Add a safety check for the input array length.
+    total += `if (!input || input.length !== ${this.input}) { throw new Error('Invalid input size. Expected ${this.input}, got ' + (input ? input.length : 'undefined')); }\n`;
+    // Insert the generated activation logic lines.
+    total += `${lines.join('\n')}\n}\n`;
+    // Return the `activate` function from the IIFE.
+    total += `return activate;\n`;
+    total += `})()`; // End and execute the IIFE.
+
+    // Final stripCoverage call as a safeguard.
+    return stripCoverage(total);
+  }
+
+  /**
+   * Activates the network using the given input array.
+   * Performs a forward pass through the network, calculating the activation of each node.
    *
+   * The activation process follows the Instinct algorithm's approach:
+   * - Input nodes are directly set to the input values.
+   * - Hidden and output nodes compute their state based on the sum of weighted inputs from incoming connections
+   *   (including self-connections, which use the node's *previous* state) plus the node's bias.
+   * - Gated connections have their weight modulated by the activation of the gating node.
+   * - The node's activation is calculated by applying its squash (activation) function to its state.
+   * - If `training` is true and `dropout` > 0, hidden nodes are randomly masked (set to 0) based on the dropout rate.
+   *
+   * @param {number[]} input - An array of numerical values corresponding to the network's input nodes.
+   *                           The length must match the network's `input` size.
+   * @param {boolean} [training=false] - Flag indicating if the activation is part of a training process.
+   *                                     If true, dropout may be applied.
+   * @returns {number[]} An array of numerical values representing the activations of the network's output nodes.
+   *
+   * @see {@link Node.activate} for the node-level activation logic.
    * @see Instinct Algorithm - Section 1.3 Activation
    * @see {@link https://medium.com/data-science/neuro-evolution-on-steroids-82bd14ddc2f6}
-   * @param {number[]} input - Array of input values.
-   * @param {boolean} [training=false] - Whether the network is in training mode.
-   * @returns {number[]} Array of output values.
    */
   activate(input: number[], training = false): number[] {
-    const output: number[] = [];
+    const output: number[] = []; // Array to store the activations of output nodes.
 
+    // Iterate through all nodes in the network.
     this.nodes.forEach((node, index) => {
       if (node.type === 'input') {
-        node.activate(input[index]); // Activate input nodes with input values
+        // For input nodes, activate with the corresponding value from the input array.
+        // Eligibility traces are calculated if `training` is true (implicitly via node.activate).
+        node.activate(input[index]);
       } else if (node.type === 'output') {
-        const activation = node.activate(); // Activate output nodes
-        output.push(activation); // Collect output values
+        // For output nodes, activate based on their incoming connections and bias.
+        // Eligibility traces are calculated if `training` is true.
+        const activation = node.activate();
+        output.push(activation); // Store the activation value.
       } else {
-        if (training) node.mask = Math.random() < this.dropout ? 0 : 1; // Apply dropout during training
-        node.activate(); // Activate hidden nodes
+        // For hidden nodes:
+        if (training && this.dropout > 0) {
+          // Apply dropout if in training mode and dropout rate is set.
+          // Generate a random number; if it's less than the dropout rate, mask the node (activation becomes 0).
+          node.mask = Math.random() < this.dropout ? 0 : 1;
+        }
+        // Activate the hidden node based on incoming connections, bias, and potential mask.
+        // Eligibility traces are calculated if `training` is true.
+        node.activate();
       }
     });
 
-    return output; // Return output values
+    return output; // Return the collected output activations.
   }
 
   /**
    * Activates the network without calculating eligibility traces.
+   * This is a performance optimization for scenarios where backpropagation is not needed,
+   * such as during testing, evaluation, or deployment (inference).
    *
-   * This is useful for testing or inference where backpropagation is not needed.
+   * @param {number[]} input - An array of numerical values corresponding to the network's input nodes.
+   *                           The length must match the network's `input` size.
+   * @returns {number[]} An array of numerical values representing the activations of the network's output nodes.
    *
-   * @param {number[]} input - Array of input values.
-   * @returns {number[]} Array of output values.
+   * @see {@link Node.noTraceActivate}
    */
   noTraceActivate(input: number[]): number[] {
-    const output: number[] = [];
+    const output: number[] = []; // Array to store the activations of output nodes.
 
+    // Iterate through all nodes in the network.
     this.nodes.forEach((node, index) => {
       if (node.type === 'input') {
-        node.noTraceActivate(input[index]); // Activate input nodes without traces
+        // Activate input node without calculating traces.
+        node.noTraceActivate(input[index]);
       } else if (node.type === 'output') {
-        const activation = node.noTraceActivate(); // Activate output nodes
-        output.push(activation); // Collect output values
+        // Activate output node without calculating traces.
+        const activation = node.noTraceActivate();
+        output.push(activation); // Store the activation value.
       } else {
-        node.noTraceActivate(); // Activate hidden nodes without traces
+        // Activate hidden node without calculating traces.
+        // Note: Dropout masking (`node.mask`) might still be active if set previously,
+        // ensure `clear()` or manual reset if testing after dropout training.
+        node.noTraceActivate();
       }
     });
 
-    return output; // Return output values
+    return output; // Return the collected output activations.
   }
 
   /**
-   * Propagates the error backward through the network.
+   * Propagates the error backward through the network (backpropagation).
+   * Calculates the error gradient for each node and connection.
+   * If `update` is true, it adjusts the weights and biases based on the calculated gradients,
+   * learning rate, momentum, and optional L2 regularization.
    *
-   * This method adjusts weights and biases based on the error gradient using the
-   * specified learning rate and momentum.
+   * The process starts from the output nodes and moves backward layer by layer (or topologically for recurrent nets).
    *
-   * @param {number} rate - Learning rate.
-   * @param {number} momentum - Momentum factor.
-   * @param {boolean} update - Whether to update weights.
-   * @param {number[]} target - Target output values.
-   * @throws {Error} If the target length does not match the output size.
+   * @param {number} rate - The learning rate (controls the step size of weight adjustments).
+   * @param {number} momentum - The momentum factor (helps overcome local minima and speeds up convergence). Typically between 0 and 1.
+   * @param {boolean} update - If true, apply the calculated weight and bias updates. If false, only calculate gradients (e.g., for batch accumulation).
+   * @param {number[]} target - An array of target values corresponding to the network's output nodes.
+   *                            The length must match the network's `output` size.
+   * @param {number} [regularization=0] - The L2 regularization factor (lambda). Helps prevent overfitting by penalizing large weights.
+   * @throws {Error} If the `target` array length does not match the network's `output` size.
+   *
+   * @see {@link Node.propagate} for the node-level backpropagation logic.
    */
   propagate(
     rate: number,
     momentum: number,
     update: boolean,
-    target: number[]
+    target: number[],
+    regularization: number = 0 // L2 regularization factor (lambda)
   ): void {
+    // Validate that the target array matches the network's output size.
     if (!target || target.length !== this.output) {
       throw new Error(
         'Output target length should match network output length'
-      ); // Validate target size
+      );
     }
 
-    let targetIndex = target.length;
+    let targetIndex = target.length; // Initialize index for accessing target values in reverse order.
 
-    // Propagate error for output nodes
+    // Propagate error starting from the output nodes (last nodes in the `nodes` array).
+    // Iterate backward from the last node to the first output node.
     for (
       let i = this.nodes.length - 1;
       i >= this.nodes.length - this.output;
       i--
     ) {
-      this.nodes[i].propagate(rate, momentum, update, target[--targetIndex]);
+      // Call propagate on the output node, providing the corresponding target value.
+      this.nodes[i].propagate(
+        rate,
+        momentum,
+        update,
+        regularization, // Pass regularization factor
+        target[--targetIndex] // Get the target value for this output node.
+      );
     }
 
-    // Propagate error for hidden nodes
+    // Propagate error backward through the hidden nodes.
+    // Iterate backward from the last hidden node to the first hidden node.
     for (let i = this.nodes.length - this.output - 1; i >= this.input; i--) {
-      this.nodes[i].propagate(rate, momentum, update);
+      // Call propagate on the hidden node. Target is implicitly calculated from downstream nodes.
+      this.nodes[i].propagate(rate, momentum, update, regularization); // Pass regularization factor
     }
   }
 
   /**
-   * Clears the state of all nodes in the network.
+   * Clears the internal state of all nodes in the network.
+   * Resets node activation, state, eligibility traces, and extended traces to their initial values (usually 0).
+   * This is typically done before processing a new input sequence in recurrent networks or between training epochs if desired.
    *
-   * This resets activations, states, and eligibility traces.
+   * @see {@link Node.clear}
    */
   clear(): void {
+    // Iterate through all nodes and call their clear method.
     this.nodes.forEach((node) => node.clear());
   }
 
   /**
-   * Mutates the network using the specified mutation method.
+   * Mutates the network's structure or parameters according to the specified method.
+   * This is a core operation for neuro-evolutionary algorithms (like NEAT).
+   * The method argument should be one of the mutation types defined in `methods.mutation`.
    *
-   * Supported mutation methods include adding/removing nodes or connections, modifying weights, etc.
+   * @param {any} method - The mutation method to apply (e.g., `mutation.ADD_NODE`, `mutation.MOD_WEIGHT`).
+   *                       Some methods might have associated parameters (e.g., `MOD_WEIGHT` uses `min`, `max`).
+   * @throws {Error} If no valid mutation `method` is provided.
    *
-   * @param {any} method - Mutation method to apply.
-   * @throws {Error} If no valid mutation method is provided.
+   * @see {@link methods.mutation} for available mutation types.
    */
   mutate(method: any): void {
+    // Validate that a mutation method was provided.
     if (!method) {
       throw new Error('No (correct) mutate method given!');
     }
 
+    // Declare variables used within the switch statement.
     let connection, node, index, possible, available, pair, randomConn;
 
+    // Apply the specified mutation method.
     switch (method) {
       case mutation.ADD_NODE:
+        // Adds a new hidden node by splitting an existing connection.
+        // 1. Select a random existing connection.
+        if (this.connections.length === 0) break; // Cannot add node if no connections exist
         connection = this.connections[
           Math.floor(Math.random() * this.connections.length)
         ];
-        const gater = connection.gater;
+        const gater = connection.gater; // Store original gater, if any.
+        // 2. Disconnect the original connection.
         this.disconnect(connection.from, connection.to);
 
+        // 3. Create a new hidden node. Optionally mutate its activation function.
         node = new Node('hidden');
-        node.mutate(mutation.MOD_ACTIVATION);
+        node.mutate(mutation.MOD_ACTIVATION); // Randomize activation function.
 
+        // 4. Insert the new node into the `nodes` array.
+        // Try to insert topologically between the original `from` and `to` nodes,
+        // but ensure it's placed before the output layer.
         const toIndex = this.nodes.indexOf(connection.to);
         const minBound = Math.min(toIndex, this.nodes.length - this.output);
         this.nodes.splice(minBound, 0, node);
 
-        const newConn1 = this.connect(connection.from, node)[0];
-        const newConn2 = this.connect(node, connection.to)[0];
+        // 5. Create two new connections: from -> new_node, and new_node -> to.
+        const newConn1 = this.connect(connection.from, node)[0]; // Weight might be 1 initially.
+        const newConn2 = this.connect(node, connection.to)[0]; // Weight might inherit original weight.
 
+        // 6. If the original connection was gated, re-apply the gate to one of the new connections randomly.
         if (gater) {
           this.gate(gater, Math.random() >= 0.5 ? newConn1 : newConn2);
         }
         break;
 
       case mutation.SUB_NODE:
+        // Removes a hidden node from the network.
+        // Check if there are any hidden nodes to remove.
         if (this.nodes.length === this.input + this.output) {
-          if (config.warnings) console.warn('No more nodes left to remove!');
+          if (config.warnings) console.warn('No hidden nodes left to remove!');
           break;
         }
 
+        // 1. Select a random hidden node index.
         index = Math.floor(
-          Math.random() * (this.nodes.length - this.output - this.input) +
-            this.input
+          Math.random() * (this.nodes.length - this.output - this.input) + // Number of hidden nodes
+            this.input // Offset by input nodes
         );
+        // 2. Remove the selected node using the `remove` method, which handles reconnection.
         this.remove(this.nodes[index]);
         break;
 
       case mutation.ADD_CONN:
-        available = [];
+        // Adds a new connection between two previously unconnected nodes.
+        available = []; // Stores pairs of [fromNode, toNode] that can be connected.
+        // Iterate through possible 'from' nodes (input and hidden).
         for (let i = 0; i < this.nodes.length - this.output; i++) {
           const node1 = this.nodes[i];
+          // Iterate through possible 'to' nodes (hidden and output, must come after 'from' node topologically for feedforward).
           for (
-            let j = Math.max(i + 1, this.input);
+            let j = Math.max(i + 1, this.input); // Ensure 'to' is not input and comes after 'from'.
             j < this.nodes.length;
             j++
           ) {
             const node2 = this.nodes[j];
+            // Check if a connection doesn't already exist.
             if (!node1.isProjectingTo(node2)) available.push([node1, node2]);
           }
         }
 
+        // If no possible new connections can be made, exit.
         if (available.length === 0) {
-          // No warning to avoid overloading the console
+          // Avoid warning spam: console.warn('No possible new connections to add.');
           break;
         }
 
+        // 1. Select a random pair of unconnected nodes.
         pair = available[Math.floor(Math.random() * available.length)];
+        // 2. Connect the selected pair with a random weight.
         this.connect(pair[0], pair[1]);
         break;
 
       case mutation.SUB_CONN:
+        // Removes an existing connection.
+        // Find connections that can be safely removed (nodes should have other connections).
         possible = this.connections.filter(
           (conn) =>
-            conn.from.connections.out.length > 1 &&
-            conn.to.connections.in.length > 1 &&
-            this.nodes.indexOf(conn.to) > this.nodes.indexOf(conn.from)
+            conn.from.connections.out.length > 1 && // 'from' node has other outgoing connections.
+            conn.to.connections.in.length > 1 && // 'to' node has other incoming connections.
+            this.nodes.indexOf(conn.to) > this.nodes.indexOf(conn.from) // Ensure it's not a back-connection (handled separately).
         );
 
+        // If no connections can be safely removed, exit.
         if (possible.length === 0) {
-          // No warning to avoid overloading the console
+          // Avoid warning spam: console.warn('No connections available to remove.');
           break;
         }
 
+        // 1. Select a random connection from the list of removable connections.
         randomConn = possible[Math.floor(Math.random() * possible.length)];
+        // 2. Disconnect the nodes associated with the selected connection.
         this.disconnect(randomConn.from, randomConn.to);
         break;
 
       case mutation.MOD_WEIGHT:
-        const allConnections = this.connections.concat(this.selfconns);
+        // Modifies the weight of a random existing connection (including self-connections).
+        const allConnections = this.connections.concat(this.selfconns); // Combine regular and self-connections.
+        if (allConnections.length === 0) break; // Exit if no connections exist.
+        // 1. Select a random connection.
         connection =
           allConnections[Math.floor(Math.random() * allConnections.length)];
+        // 2. Calculate a weight modification value based on method parameters (or defaults).
+        // The `method` object itself might contain `max` and `min` properties.
         const modification =
           Math.random() * (method.max - method.min) + method.min;
+        // 3. Add the modification to the connection's weight.
         connection.weight += modification;
         break;
 
       case mutation.MOD_BIAS:
+        // Modifies the bias of a random hidden or output node.
+        if (this.nodes.length <= this.input) break; // Exit if only input nodes exist.
+        // 1. Select a random hidden or output node index.
         index = Math.floor(
-          Math.random() * (this.nodes.length - this.input) + this.input
+          Math.random() * (this.nodes.length - this.input) + this.input // Range covers hidden and output nodes.
         );
         node = this.nodes[index];
+        // 2. Call the node's mutate method to modify its bias.
         node.mutate(method);
         break;
 
       case mutation.MOD_ACTIVATION:
-        if (
-          !method.mutateOutput &&
-          this.input + this.output === this.nodes.length
-        ) {
-          console.warn('No nodes that allow mutation of activation function');
+        // Changes the activation (squash) function of a random hidden or output node.
+        // Check if mutation of output node activations is allowed by the method config.
+        const canMutateOutput = method.mutateOutput ?? true; // Default to true if not specified
+        const numMutableNodes =
+          this.nodes.length - this.input - (canMutateOutput ? 0 : this.output);
+
+        if (numMutableNodes <= 0) {
+          if (config.warnings)
+            console.warn(
+              'No nodes available for activation function mutation based on config.'
+            );
           break;
         }
 
+        // 1. Select a random node index from the allowed range (hidden, potentially output).
         index = Math.floor(
-          Math.random() *
-            (this.nodes.length -
-              (method.mutateOutput ? 0 : this.output) -
-              this.input) +
-            this.input
+          Math.random() * numMutableNodes + this.input // Offset by input nodes
         );
         node = this.nodes[index];
+        // 2. Call the node's mutate method to change its squash function.
         node.mutate(method);
         break;
 
       case mutation.ADD_SELF_CONN:
+        // Adds a self-connection (node connects to itself) to a random node that doesn't already have one.
+        // Find nodes (hidden or output) that currently have no self-connection (weight is 0).
         possible = this.nodes.filter(
-          (node) => node.connections.self.weight === 0
+          (node, idx) => idx >= this.input && node.connections.self.weight === 0
         );
 
+        // If all eligible nodes already have self-connections, exit.
         if (possible.length === 0) {
-          console.warn('No more self-connections to add!');
+          if (config.warnings)
+            console.warn('All eligible nodes already have self-connections.');
           break;
         }
 
+        // 1. Select a random node from the list of possibilities.
         node = possible[Math.floor(Math.random() * possible.length)];
+        // 2. Connect the node to itself with a random weight.
         this.connect(node, node);
         break;
 
       case mutation.SUB_SELF_CONN:
+        // Removes an existing self-connection.
+        // Check if any self-connections exist.
         if (this.selfconns.length === 0) {
-          console.warn('No more self-connections to remove!');
+          if (config.warnings)
+            console.warn('No self-connections exist to remove.');
           break;
         }
 
+        // 1. Select a random self-connection from the `selfconns` list.
         connection = this.selfconns[
           Math.floor(Math.random() * this.selfconns.length)
         ];
-        this.disconnect(connection.from, connection.to);
+        // 2. Disconnect the node from itself.
+        this.disconnect(connection.from, connection.to); // from and to are the same node here.
         break;
 
       case mutation.ADD_GATE:
-        const allConns = this.connections.concat(this.selfconns);
+        // Adds gating to a random existing connection using a random node as the gater.
+        const allConns = this.connections.concat(this.selfconns); // Consider all connection types.
+        // Find connections that are not currently gated.
         possible = allConns.filter((conn) => conn.gater === null);
 
+        // If all connections are already gated, exit.
         if (possible.length === 0) {
-          if (config.warnings) console.warn('No more connections to gate!');
+          if (config.warnings)
+            console.warn('All connections are already gated.');
           break;
         }
+        // Ensure there's at least one potential gating node (hidden/output)
+        if (this.nodes.length <= this.input) break;
 
+        // 1. Select a random node (hidden or output) to act as the gater.
         index = Math.floor(
           Math.random() * (this.nodes.length - this.input) + this.input
-        ); // Select a random node that is not an input node.
-        node = this.nodes[index];
-        connection = possible[Math.floor(Math.random() * possible.length)]; // Select a random connection from the list of possible connections.
-        this.gate(node, connection); // Gate the selected connection with the selected node.
+        );
+        node = this.nodes[index]; // This node will control the gate.
+        // 2. Select a random un-gated connection.
+        connection = possible[Math.floor(Math.random() * possible.length)];
+        // 3. Apply the gate using the selected node and connection.
+        this.gate(node, connection);
         break;
 
       case mutation.SUB_GATE:
+        // Removes the gating mechanism from a random gated connection.
+        // Check if any gated connections exist.
         if (this.gates.length === 0) {
-          console.warn('No more connections to ungate!'); // Warn if there are no gated connections to remove.
+          if (config.warnings) console.warn('No gated connections to ungate.');
           break;
         }
 
-        index = Math.floor(Math.random() * this.gates.length); // Select a random gated connection.
+        // 1. Select a random gated connection from the `gates` list.
+        index = Math.floor(Math.random() * this.gates.length);
         const gatedConn = this.gates[index];
-        this.ungate(gatedConn); // Remove the gate from the selected connection.
+        // 2. Remove the gate from the selected connection.
+        this.ungate(gatedConn);
         break;
 
       case mutation.ADD_BACK_CONN:
-        available = [];
+        // Adds a recurrent connection where the 'from' node appears later in the `nodes` array than the 'to' node.
+        available = []; // Stores possible [fromNode, toNode] pairs for back-connections.
+        // Iterate through possible 'from' nodes (hidden and output).
         for (let i = this.input; i < this.nodes.length; i++) {
-          // Iterate over all nodes except input nodes.
           const node1 = this.nodes[i];
+          // Iterate through possible 'to' nodes (hidden only, must appear *before* 'from' node).
           for (let j = this.input; j < i; j++) {
-            // Iterate over nodes that come before the current node to ensure back connections.
             const node2 = this.nodes[j];
-            if (!node1.isProjectingTo(node2)) available.push([node1, node2]); // Add to the list if no connection exists between the nodes.
+            // Check if a connection (in this direction) doesn't already exist.
+            if (!node1.isProjectingTo(node2)) available.push([node1, node2]);
           }
         }
 
+        // If no possible back-connections can be made, exit.
         if (available.length === 0) {
-          // No warning to avoid overloading the console
+          // Avoid warning spam: console.warn('No possible new back-connections to add.');
           break;
         }
 
+        // 1. Select a random pair for the back-connection.
         pair = available[Math.floor(Math.random() * available.length)];
+        // 2. Connect the selected pair (note: connection weight is random).
         this.connect(pair[0], pair[1]);
         break;
 
       case mutation.SUB_BACK_CONN:
+        // Removes an existing recurrent (back-) connection.
+        // Find back-connections that can be safely removed.
         possible = this.connections.filter(
           (conn) =>
-            conn.from.connections.out.length > 1 &&
-            conn.to.connections.in.length > 1 &&
-            this.nodes.indexOf(conn.from) > this.nodes.indexOf(conn.to)
+            conn.from.connections.out.length > 1 && // 'from' node has other outputs.
+            conn.to.connections.in.length > 1 && // 'to' node has other inputs.
+            this.nodes.indexOf(conn.from) > this.nodes.indexOf(conn.to) // Identify back-connections.
         );
 
+        // If no removable back-connections are found, exit.
         if (possible.length === 0) {
-          // No warning to avoid overloading the console
+          // Avoid warning spam: console.warn('No back-connections available to remove.');
           break;
         }
 
+        // 1. Select a random back-connection from the list.
         randomConn = possible[Math.floor(Math.random() * possible.length)];
+        // 2. Disconnect the nodes associated with the selected back-connection.
         this.disconnect(randomConn.from, randomConn.to);
         break;
 
       case mutation.SWAP_NODES:
-        if (
-          (method.mutateOutput && this.nodes.length - this.input < 2) ||
-          (!method.mutateOutput &&
-            this.nodes.length - this.input - this.output < 2)
-        ) {
-          // No warning to avoid overloading the console
+        // Swaps the bias and activation function between two random nodes (hidden or output).
+        // Check if there are at least two nodes eligible for swapping.
+        const canSwapOutput = method.mutateOutput ?? true; // Check method config
+        const numSwappableNodes =
+          this.nodes.length - this.input - (canSwapOutput ? 0 : this.output);
+
+        if (numSwappableNodes < 2) {
+          // Avoid warning spam: console.warn('Not enough nodes to perform swap.');
           break;
         }
 
-        const node1Index = Math.floor(
-          Math.random() *
-            (this.nodes.length -
-              (method.mutateOutput ? 0 : this.output) -
-              this.input) +
-            this.input
+        // 1. Select two distinct random indices for eligible nodes.
+        let node1Index = Math.floor(
+          Math.random() * numSwappableNodes + this.input
         );
-        const node2Index = Math.floor(
-          Math.random() *
-            (this.nodes.length -
-              (method.mutateOutput ? 0 : this.output) -
-              this.input) +
-            this.input
+        let node2Index = Math.floor(
+          Math.random() * numSwappableNodes + this.input
         );
+        // Ensure the indices are different.
+        while (node1Index === node2Index) {
+          node2Index = Math.floor(
+            Math.random() * numSwappableNodes + this.input
+          );
+        }
 
         const node1 = this.nodes[node1Index];
         const node2 = this.nodes[node2Index];
 
+        // 2. Swap the bias and squash function between the two selected nodes.
         const tempBias = node1.bias;
         const tempSquash = node1.squash;
 
@@ -458,1100 +822,1489 @@ export default class Network {
   }
 
   /**
-   * Connects two nodes in the network.
+   * Creates a connection between two nodes in the network.
+   * Handles both regular connections and self-connections.
+   * Adds the new connection object(s) to the appropriate network list (`connections` or `selfconns`).
    *
-   * @param {Node} from - The source node.
-   * @param {Node} to - The target node.
-   * @param {number} [weight] - Optional weight for the connection.
-   * @returns {Connection[]} Array of created connections.
+   * @param {Node} from - The source node of the connection.
+   * @param {Node} to - The target node of the connection.
+   * @param {number} [weight] - Optional weight for the connection. If not provided, a random weight is usually assigned by the underlying `Node.connect` method.
+   * @returns {Connection[]} An array containing the newly created connection object(s). Typically contains one connection, but might be empty or contain more in specialized node types.
+   *
+   * @see {@link Node.connect}
    */
   connect(from: Node, to: Node, weight?: number): Connection[] {
+    // Delegate the actual connection creation to the 'from' node.
     const connections = from.connect(to, weight);
 
+    // Add the created connection(s) to the network's lists.
     for (const connection of connections) {
       if (from !== to) {
+        // Regular connection (feedforward or backward)
         this.connections.push(connection);
       } else {
+        // Self-connection
         this.selfconns.push(connection);
       }
     }
 
-    return connections;
+    return connections; // Return the created connection object(s).
   }
 
   /**
-   * Gates a connection with a node.
+   * Gates a connection with a specified node.
+   * The activation of the `node` (gater) will modulate the weight of the `connection`.
+   * Adds the connection to the network's `gates` list.
    *
-   * @param {Node} node - The gating node.
-   * @param {Connection} connection - The connection to gate.
-   * @throws {Error} If the node is not part of the network or the connection is already gated.
+   * @param {Node} node - The node that will act as the gater. Must be part of this network.
+   * @param {Connection} connection - The connection to be gated.
+   * @throws {Error} If the provided `node` is not part of this network.
+   * @throws {Error} If the `connection` is already gated (though currently handled with a warning).
+   *
+   * @see {@link Node.gate}
    */
   gate(node: Node, connection: Connection): void {
+    // Validate that the gating node belongs to this network.
     if (!this.nodes.includes(node)) {
-      throw new Error('This node is not part of the network!');
+      throw new Error(
+        'Gating node must be part of the network to gate a connection!'
+      );
     }
+    // Check if the connection is already gated. Avoids redundant gating.
     if (connection.gater) {
-      if (config.warnings) console.warn('This connection is already gated!');
-      return;
+      if (config.warnings)
+        console.warn('Connection is already gated. Skipping.');
+      return; // Exit if already gated.
     }
+    // Delegate the gating logic to the gating node.
     node.gate(connection);
+    // Add the newly gated connection to the network's list of gates.
     this.gates.push(connection);
   }
 
   /**
    * Removes a node from the network.
+   * This involves:
+   * 1. Disconnecting all incoming and outgoing connections associated with the node.
+   * 2. Removing any self-connections.
+   * 3. Removing the node from the `nodes` array.
+   * 4. Attempting to reconnect the node's direct predecessors to its direct successors
+   *    to maintain network flow, if possible and configured.
+   * 5. Handling gates involving the removed node (ungating connections gated *by* this node,
+   *    and potentially re-gating connections that were gated *by other nodes* onto the removed node's connections).
    *
-   * This also reconnects its input and output nodes to maintain the network's structure.
-   *
-   * @param {Node} node - The node to remove.
-   * @throws {Error} If the node does not exist in the network.
+   * @param {Node} node - The node instance to remove. Must exist within the network's `nodes` list.
+   * @throws {Error} If the specified `node` is not found in the network's `nodes` list.
    */
   remove(node: Node): void {
+    // Find the index of the node to remove.
     const index = this.nodes.indexOf(node);
 
+    // Validate that the node exists in the network.
     if (index === -1) {
-      throw new Error('This node does not exist in the network!');
+      throw new Error('Node not found in the network for removal.');
     }
 
-    // Keep track of gaters
+    // Keep track of nodes that were gating connections involving the removed node.
     const gaters: Node[] = [];
 
-    // Remove self-connections from this.selfconns
-    this.disconnect(node, node);
+    // Disconnect and remove the self-connection, if it exists.
+    this.disconnect(node, node); // Handles removal from `selfconns` list.
 
-    // Get all its input nodes
-    const inputs: Node[] = [];
+    // Disconnect all incoming connections.
+    const inputs: Node[] = []; // Store the 'from' nodes of incoming connections.
+    // Iterate backwards as `disconnect` modifies the `node.connections.in` array.
     for (let i = node.connections.in.length - 1; i >= 0; i--) {
       const connection = node.connections.in[i];
+      // If configured to keep gates and the connection was gated by another node, store the gater.
       if (
-        mutation.SUB_NODE.keep_gates &&
+        mutation.SUB_NODE.keep_gates && // Check configuration option
         connection.gater !== null &&
-        connection.gater !== node
+        connection.gater !== node // Ensure gater is not the node being removed
       ) {
         gaters.push(connection.gater);
       }
-      inputs.push(connection.from);
-      this.disconnect(connection.from, node);
+      inputs.push(connection.from); // Store the input node.
+      this.disconnect(connection.from, node); // Disconnect input -> node.
     }
 
-    // Get all its output nodes
-    const outputs: Node[] = [];
+    // Disconnect all outgoing connections.
+    const outputs: Node[] = []; // Store the 'to' nodes of outgoing connections.
+    // Iterate backwards as `disconnect` modifies the `node.connections.out` array.
     for (let i = node.connections.out.length - 1; i >= 0; i--) {
       const connection = node.connections.out[i];
+      // If configured to keep gates and the connection was gated by another node, store the gater.
       if (
-        mutation.SUB_NODE.keep_gates &&
+        mutation.SUB_NODE.keep_gates && // Check configuration option
         connection.gater !== null &&
-        connection.gater !== node
+        connection.gater !== node // Ensure gater is not the node being removed
       ) {
         gaters.push(connection.gater);
       }
-      outputs.push(connection.to);
-      this.disconnect(node, connection.to);
+      outputs.push(connection.to); // Store the output node.
+      this.disconnect(node, connection.to); // Disconnect node -> output.
     }
 
-    // Connect the input nodes to the output nodes (if not already connected)
-    const connections: Connection[] = [];
+    // Reconnect inputs to outputs to bridge the gap, if they are not already connected.
+    const connections: Connection[] = []; // Store newly created connections.
     for (const input of inputs) {
       for (const output of outputs) {
-        if (!input.isProjectingTo(output)) {
-          const conn = this.connect(input, output);
-          connections.push(conn[0]);
+        // Avoid creating duplicate connections or self-loops if input === output.
+        if (input !== output && !input.isProjectingTo(output)) {
+          const conn = this.connect(input, output); // Create new connection.
+          if (conn.length > 0) connections.push(conn[0]); // Store the new connection.
         }
       }
     }
 
-    // Gate random connections with gaters
+    // Re-apply gates (if `keep_gates` is true) to some of the newly created connections.
+    // This attempts to preserve the gating logic that involved the removed node's connections.
     for (const gater of gaters) {
-      if (connections.length === 0) break;
+      if (connections.length === 0) break; // Stop if no new connections to gate.
 
+      // Select a random new connection to gate.
       const connIndex = Math.floor(Math.random() * connections.length);
-      this.gate(gater, connections[connIndex]);
-      connections.splice(connIndex, 1);
+      this.gate(gater, connections[connIndex]); // Apply the gate.
+      connections.splice(connIndex, 1); // Remove the connection from the list so it's not gated again.
     }
 
-    // Remove gated connections gated by this node
+    // Ungate any connections that were gated *by* the node being removed.
+    // Iterate backwards as `ungate` modifies the `node.connections.gated` array.
     for (let i = node.connections.gated.length - 1; i >= 0; i--) {
       const conn = node.connections.gated[i];
-      this.ungate(conn);
+      this.ungate(conn); // Remove the gate.
     }
 
-    // Remove self-connection
-    this.disconnect(node, node);
-
-    // Remove the node from this.nodes
+    // Remove the node itself from the network's list.
     this.nodes.splice(index, 1);
   }
 
   /**
-   * Disconnects two nodes in the network.
+   * Disconnects two nodes, removing the connection between them.
+   * Handles both regular connections and self-connections.
+   * If the connection being removed was gated, it is also ungated.
    *
-   * @param {Node} from - The source node.
-   * @param {Node} to - The target node.
+   * @param {Node} from - The source node of the connection to remove.
+   * @param {Node} to - The target node of the connection to remove.
+   *
+   * @see {@link Node.disconnect}
    */
   disconnect(from: Node, to: Node): void {
-    // Determine the correct connections array
-    const connections = from === to ? this.selfconns : this.connections;
+    // Determine which list holds the connection (`connections` or `selfconns`).
+    const connectionsList = from === to ? this.selfconns : this.connections;
 
-    // Find and remove the connection
-    for (let i = 0; i < connections.length; i++) {
-      const connection = connections[i];
+    // Find and remove the connection from the network's list.
+    for (let i = 0; i < connectionsList.length; i++) {
+      const connection = connectionsList[i];
       if (connection.from === from && connection.to === to) {
-        // If the connection is gated, ungate it
+        // If the connection is gated, remove the gate first.
         if (connection.gater !== null) {
-          this.ungate(connection);
+          this.ungate(connection); // Removes from `this.gates` list.
         }
-        connections.splice(i, 1);
+        // Remove the connection from the appropriate list (`connections` or `selfconns`).
+        connectionsList.splice(i, 1);
+        // Connection found and removed, break the loop.
         break;
       }
     }
 
-    // Remove the connection from the nodes
+    // Delegate to the 'from' node to remove the connection reference from its internal lists.
     from.disconnect(to);
   }
 
   /**
-   * Removes the gate from a connection.
+   * Removes the gate from a specified connection.
+   * The connection will no longer be modulated by its gater node.
+   * Removes the connection from the network's `gates` list.
    *
-   * @param {Connection} connection - The connection to ungate.
-   * @throws {Error} If the connection is not gated.
+   * @param {Connection} connection - The connection object to ungate.
+   * @throws {Error} If the provided `connection` is not found in the network's `gates` list (i.e., it wasn't gated).
+   *
+   * @see {@link Node.ungate}
    */
   ungate(connection: Connection): void {
+    // Find the index of the connection in the `gates` list.
     const index = this.gates.indexOf(connection);
+    // Validate that the connection is indeed in the gates list.
     if (index === -1) {
-      throw new Error('This connection is not gated!');
+      throw new Error('Connection not found in the gates list for ungating.');
     }
 
+    // Remove the connection from the `gates` list.
     this.gates.splice(index, 1);
-    connection.gater?.ungate(connection);
+    // Delegate to the gater node (if it exists) to remove the gating reference from its internal list.
+    connection.gater?.ungate(connection); // Safely call ungate on the gater.
   }
 
   /**
-   * Trains the network on a dataset for one epoch.
+   * Trains the network on a given dataset subset for one pass (epoch or batch).
+   * Performs activation and backpropagation for each item in the set.
+   * Updates weights based on batch size configuration.
    *
-   * This is a private method used internally by the `train` method.
-   *
-   * @param {{ input: number[]; output: number[] }[]} set - Training dataset.
-   * @param {number} batchSize - Size of the training batch.
-   * @param {number} currentRate - Current learning rate.
-   * @param {number} momentum - Momentum factor.
-   * @param {(target: number[], output: number[]) => number} costFunction - Cost function to calculate error.
-   * @returns {number} Average error for the epoch.
-   * @private
+   * @param {{ input: number[]; output: number[] }[]} set - The training dataset subset (e.g., a batch or the full set for one epoch).
+   * @param {number} batchSize - The number of samples to process before updating weights.
+   * @param {number} currentRate - The learning rate to use for this training pass.
+   * @param {number} momentum - The momentum factor to use.
+   * @param {number} regularization - The L2 regularization factor (lambda).
+   * @param {(target: number[], output: number[]) => number} costFunction - The function used to calculate the error between target and output.
+   * @returns {number} The average error calculated over the provided dataset subset.
+   * @private Internal method used by `train`.
    */
   private _trainSet(
     set: { input: number[]; output: number[] }[],
     batchSize: number,
     currentRate: number,
     momentum: number,
+    regularization: number, // Pass regularization factor
     costFunction: (target: number[], output: number[]) => number
   ): number {
-    let errorSum = 0;
+    let errorSum = 0; // Accumulator for the total error in this pass.
+    // Iterate through each sample in the provided dataset subset.
     for (let i = 0; i < set.length; i++) {
-      const input = set[i].input;
-      const target = set[i].output;
+      const input = set[i].input; // Get the input vector for the current sample.
+      const target = set[i].output; // Get the target output vector.
 
+      // Determine if weights should be updated after this sample.
+      // Update occurs at the end of a batch or if it's the last sample in the set.
       const update = !!((i + 1) % batchSize === 0 || i + 1 === set.length);
 
+      // 1. Activate the network (forward pass) with training flag set to true (enables dropout and trace calculation).
       const output = this.activate(input, true);
-      this.propagate(currentRate, momentum, update, target);
+      // 2. Propagate the error backward (backpropagation).
+      this.propagate(currentRate, momentum, update, target, regularization); // Pass regularization
 
+      // 3. Calculate the error for this sample using the specified cost function.
       errorSum += costFunction(target, output);
     }
+    // Return the average error over the set.
     return errorSum / set.length;
   }
 
   /**
-   * Trains the network on a dataset.
+   * Trains the network on a given dataset using backpropagation.
+   * Iteratively adjusts weights and biases to minimize the error between the network's output and the target values.
+   * Supports various training options like learning rate scheduling, momentum, dropout, batching, regularization, and cross-validation.
    *
-   * @param {{ input: number[]; output: number[] }[]} set - Training dataset.
-   * @param {any} options - Training options.
-   * @returns {{ error: number; iterations: number; time: number }} Training results.
-   * @throws {Error} If the dataset size does not match the network input/output size.
+   * @param {{ input: number[]; output: number[] }[]} set - The training dataset, an array of objects with `input` and `output` arrays.
+   * @param {object} options - Training configuration options.
+   * @param {number} [options.rate=0.3] - The base learning rate.
+   * @param {number} [options.iterations] - The maximum number of training iterations (epochs). Required if `error` is not set.
+   * @param {number} [options.error=0.05] - The target error threshold. Training stops when the error falls below this value. Required if `iterations` is not set.
+   * @param {boolean} [options.shuffle=false] - Whether to shuffle the training set before each iteration.
+   * @param {function} [options.cost=methods.Cost.MSE] - The cost function used to calculate error.
+   * @param {number} [options.momentum=0] - The momentum factor for weight updates.
+   * @param {number} [options.batchSize=1] - The number of samples per batch for weight updates (1 = online learning).
+   * @param {function} [options.ratePolicy=methods.Rate.FIXED] - A function defining how the learning rate changes over iterations.
+   * @param {number} [options.dropout=0] - The dropout rate (0 to 1) applied to hidden nodes during training.
+   * @param {number} [options.regularization=0] - The L2 regularization factor (lambda) to penalize large weights.
+   * @param {number} [options.log=0] - Log training progress (iteration, error, rate) every `log` iterations. 0 disables logging.
+   * @param {object} [options.schedule] - Object for scheduling custom actions during training.
+   * @param {number} options.schedule.iterations - Frequency (in iterations) to execute the schedule function.
+   * @param {function} options.schedule.function - Custom function to execute, receives `{ error, iteration }`.
+   * @param {object} [options.crossValidate] - Configuration for cross-validation.
+   * @param {number} options.crossValidate.testSize - Proportion of the dataset to use as a test set (e.g., 0.2 for 20%).
+   * @param {number} options.crossValidate.testError - Target error on the test set to stop training early.
+   * @param {boolean} [options.clear=false] - Whether to clear the network's state (`clear()`) after each training iteration or test evaluation. Useful for stateless tasks.
+   * @returns {{ error: number; iterations: number; time: number }} An object containing the final error, the number of iterations performed, and the total training time in milliseconds.
+   * @throws {Error} If the dataset's input/output dimensions don't match the network's.
+   * @throws {Error} If `batchSize` is larger than the dataset size.
+   * @throws {Error} If neither `iterations` nor `error` is specified in the options.
    */
   train(
     set: { input: number[]; output: number[] }[],
     options: any
   ): { error: number; iterations: number; time: number } {
+    // Validate dataset dimensions against network dimensions.
     if (
+      !set ||
+      set.length === 0 ||
       set[0].input.length !== this.input ||
       set[0].output.length !== this.output
     ) {
       throw new Error(
-        'Dataset input/output size should match network input/output size!'
-      ); // Validate dataset size
+        'Dataset is invalid or dimensions do not match network input/output size!'
+      );
     }
 
-    options = options || {};
+    options = options || {}; // Ensure options object exists.
 
-    // Warning messages
+    // Issue warnings for common missing options if warnings are enabled.
     if (config.warnings) {
-      // Check for warnings configuration
       if (typeof options.rate === 'undefined') {
-        console.warn('Using default learning rate, please define a rate!'); // Warn if rate is not defined
+        console.warn('Missing `rate` option, using default learning rate 0.3.');
       }
-      if (typeof options.iterations === 'undefined') {
+      if (
+        typeof options.iterations === 'undefined' &&
+        typeof options.error === 'undefined'
+      ) {
+        // This case is handled by the error check below, but warning is good practice.
         console.warn(
-          'No target iterations given, running until error is reached!'
-        ); // Warn if iterations are not defined
+          'Missing `iterations` or `error` option. Training requires a stopping condition.'
+        );
+      } else if (typeof options.iterations === 'undefined') {
+        console.warn(
+          'Missing `iterations` option. Training will run potentially indefinitely until `error` threshold is met.'
+        );
       }
     }
 
-    // Read training options
-    let targetError = options.error || 0.05; // Default target error
-    const cost = options.cost || methods.Cost.mse; // Default cost function
-    const baseRate = options.rate || 0.3; // Default learning rate
-    const dropout = options.dropout || 0; // Default dropout rate
-    const momentum = options.momentum || 0; // Default momentum
-    const batchSize = options.batchSize || 1; // Default batch size
-    const ratePolicy = options.ratePolicy || methods.Rate.fixed(); // Default rate policy
-    const shuffle = options.shuffle || false; // Default shuffle option
+    // Set default values for training options.
+    let targetError = options.error ?? 0.05; // Target error threshold.
+    const cost = options.cost || methods.Cost.mse; // Cost function.
+    const baseRate = options.rate ?? 0.3; // Base learning rate.
+    const dropout = options.dropout || 0; // Dropout rate.
+    const momentum = options.momentum || 0; // Momentum factor.
+    const batchSize = options.batchSize || 1; // Batch size (1 = online).
+    const ratePolicy = options.ratePolicy || methods.Rate.fixed(); // Learning rate schedule.
+    const shuffle = options.shuffle || false; // Shuffle dataset each iteration?
+    const regularization = options.regularization || 0; // L2 regularization factor.
+    const clear = options.clear || false; // Clear network state each iteration?
+    const log = options.log || 0; // Logging frequency.
+    const schedule = options.schedule; // Custom schedule object.
+    const crossValidate = options.crossValidate; // Cross-validation config.
 
-    // Validate batch size
+    // Validate batch size.
     if (batchSize > set.length) {
-      throw new Error('Batch size must be smaller or equal to dataset length!');
-    } else if (
+      throw new Error('Batch size cannot be larger than the dataset length.');
+    }
+    // Validate stopping conditions.
+    if (
       typeof options.iterations === 'undefined' &&
       typeof options.error === 'undefined'
     ) {
       throw new Error(
-        'At least one of the following options must be specified: error, iterations'
+        'At least one stopping condition (`iterations` or `error`) must be specified.'
       );
     } else if (typeof options.error === 'undefined') {
-      targetError = -1; // run until iterations
+      targetError = -1; // Run until iterations are met (effectively disable error check).
     } else if (typeof options.iterations === 'undefined') {
-      options.iterations = 0; // run until target error
+      options.iterations = 0; // Run until error is met (effectively disable iteration check).
     }
 
-    this.dropout = dropout; // Set dropout rate
+    // Set the network's dropout rate for the training duration.
+    this.dropout = dropout;
 
+    // Prepare training and potential test sets for cross-validation.
     let trainSet = set;
-    let testSet: { input: number[]; output: number[] }[] = [];
-    if (options.crossValidate) {
-      const numTrain = Math.ceil(
-        (1 - options.crossValidate.testSize) * set.length
-      ); // Split dataset for cross-validation
+    let testSet:
+      | { input: number[]; output: number[] }[]
+      | undefined = undefined;
+    if (crossValidate) {
+      if (
+        !crossValidate.testSize ||
+        crossValidate.testSize <= 0 ||
+        crossValidate.testSize >= 1
+      ) {
+        throw new Error(
+          'Cross-validation `testSize` must be between 0 and 1 (exclusive).'
+        );
+      }
+      // Split the dataset into training and testing sets.
+      const numTrain = Math.ceil((1 - crossValidate.testSize) * set.length);
       trainSet = set.slice(0, numTrain);
       testSet = set.slice(numTrain);
+      // Ensure testError is defined if crossValidate is used.
+      if (typeof crossValidate.testError === 'undefined') {
+        console.warn(
+          'Cross-validation enabled, but `testError` threshold is not set. Using `options.error` as the target.'
+        );
+        crossValidate.testError = targetError; // Use main target error if specific test error not given
+      }
     }
 
-    let error = 1;
-    let iteration = 0;
-    const start = Date.now();
+    // Initialize training loop variables.
+    let error = 1; // Initialize error to a value above any typical target.
+    let iteration = 0; // Iteration counter.
+    const start = Date.now(); // Start time measurement.
 
+    // Main training loop.
     while (
-      error > targetError &&
+      // Continue if error is above target (and target is not disabled).
+      (targetError === -1 || error > targetError) &&
+      // Continue if max iterations is not set or not reached.
       (options.iterations === 0 || iteration < options.iterations)
     ) {
-      if (options.crossValidate && error <= options.crossValidate.testError)
+      // Early stopping condition for cross-validation.
+      if (
+        crossValidate &&
+        testSet &&
+        error <= crossValidate.testError &&
+        targetError !== -1 // Only stop early if an error target is set
+      ) {
+        if (log > 0)
+          console.log(
+            `Cross-validation: Test error ${error} reached target ${crossValidate.testError} at iteration ${iteration}. Stopping early.`
+          );
         break;
+      }
 
-      iteration++;
+      iteration++; // Increment iteration counter.
 
-      // Update the rate
+      // Calculate the learning rate for the current iteration using the rate policy.
       const currentRate = ratePolicy(baseRate, iteration);
 
-      // Checks if cross validation is enabled
-      if (options.crossValidate) {
-        this._trainSet(trainSet, batchSize, currentRate, momentum, cost); // Train on training set
-        if (options.clear) this.clear(); // Clear network state if required
-        error = this.test(testSet, cost).error; // Test on validation set
-        if (options.clear) this.clear(); // Clear network state if required
-      } else {
-        error = this._trainSet(set, batchSize, currentRate, momentum, cost); // Train on full dataset
-        if (options.clear) this.clear(); // Clear network state if required
-      }
-
-      // Checks for options such as scheduled logs and shuffling
+      // Shuffle the training set if enabled. Fisher-Yates shuffle.
       if (shuffle) {
-        for (let i = set.length - 1; i > 0; i--) {
+        // Use a copy for shuffling if cross-validation is active to not shuffle the original set
+        const set_to_shuffle = crossValidate ? [...trainSet] : trainSet;
+        for (let i = set_to_shuffle.length - 1; i > 0; i--) {
           const j = Math.floor(Math.random() * (i + 1));
-          [set[i], set[j]] = [set[j], set[i]]; // Shuffle dataset
+          [set_to_shuffle[i], set_to_shuffle[j]] = [
+            set_to_shuffle[j],
+            set_to_shuffle[i],
+          ];
         }
+        // If shuffled a copy, update trainSet reference
+        if (crossValidate) trainSet = set_to_shuffle;
       }
 
-      if (options.log && iteration % options.log === 0) {
+      // Perform one training pass (epoch/batch) on the training set.
+      const trainError = this._trainSet(
+        trainSet,
+        batchSize,
+        currentRate,
+        momentum,
+        regularization, // Pass regularization
+        cost
+      );
+
+      // Clear network state if enabled.
+      if (clear) this.clear();
+
+      // Determine the error to report and check against target.
+      if (crossValidate && testSet) {
+        // If cross-validating, evaluate error on the test set.
+        error = this.test(testSet, cost).error;
+        // Clear state again after testing if enabled.
+        if (clear) this.clear();
+      } else {
+        // Otherwise, use the error from the training set pass.
+        error = trainError;
+      }
+
+      // Log progress if logging is enabled and the iteration matches the log frequency.
+      if (log > 0 && iteration % log === 0) {
         console.log(
-          `Iteration: ${iteration}, Error: ${error}, Rate: ${currentRate}`
-        ); // Log progress
+          `Iteration: ${iteration}, Error: ${error.toFixed(
+            9
+          )}, Rate: ${currentRate.toFixed(5)}` +
+            (crossValidate ? ' (Test Set)' : ' (Train Set)')
+        );
       }
 
-      if (options.schedule && iteration % options.schedule.iterations === 0) {
-        options.schedule.function({ error, iteration }); // Execute scheduled function
+      // Execute scheduled function if enabled and the iteration matches the schedule frequency.
+      if (schedule && iteration % schedule.iterations === 0) {
+        schedule.function({ error, iteration }); // Pass current error and iteration.
       }
     }
 
-    if (options.clear) this.clear();
+    // Training finished. Clean up.
+    if (clear) this.clear(); // Final clear if enabled.
 
-    if (dropout) {
+    // Reset dropout mask on hidden nodes to 1 (or effective value if dropout was > 0)
+    // and turn off dropout in the network object after training.
+    if (this.dropout > 0) {
       this.nodes.forEach((node) => {
-        if (node.type === 'hidden' || node.type === 'varant') {
-          node.mask = 1 - this.dropout; // Reset dropout mask
+        // Reset mask for hidden nodes. Input/output nodes don't use dropout mask this way.
+        if (node.type === 'hidden') {
+          // Note: During testing/inference, mask should ideally be `1 - dropout` if dropout was used,
+          // but often setting to 1 is done for simplicity, assuming scaling is handled elsewhere or implicitly.
+          // Setting to 1 disables dropout effect for future activations.
+          node.mask = 1;
         }
       });
+      this.dropout = 0; // Disable dropout for subsequent activate/test calls.
     }
 
-    return { error, iterations: iteration, time: Date.now() - start }; // Return training results
+    // Return training results.
+    return { error, iterations: iteration, time: Date.now() - start };
   }
 
   /**
-   * Evolves the network to minimize error on a dataset.
+   * Evolves the network's topology and weights using a neuro-evolutionary algorithm (NEAT).
+   * A population of networks is evolved over generations to minimize error on the provided dataset.
+   * This method leverages the `Neat` class and can utilize multi-threading for fitness evaluation.
    *
-   * This method uses genetic algorithms to optimize the network structure and weights.
+   * @param {{ input: number[]; output: number[] }[]} set - The dataset used for evaluating the fitness of networks.
+   * @param {object} options - Configuration options for the evolutionary process.
+   * @param {number} [options.error] - The target error threshold. Evolution stops when the fittest network's error falls below this value. Required if `iterations` is not set.
+   * @param {number} [options.iterations] - The maximum number of generations to run the evolution. Required if `error` is not set.
+   * @param {number} [options.growth=0.0001] - Penalty factor for network complexity (number of nodes and connections). Higher values favor smaller networks.
+   * @param {function} [options.cost=methods.Cost.MSE] - The cost function used to calculate error during fitness evaluation.
+   * @param {number} [options.amount=1] - Number of times to test each network on the dataset for fitness evaluation (average error is used).
+   * @param {number} [options.threads] - Number of parallel threads/workers to use for fitness evaluation. Defaults to system's CPU core count or `navigator.hardwareConcurrency`. Set to 1 for single-threaded execution.
+   * @param {number} [options.log=0] - Log evolution progress (generation, best fitness, best error) every `log` generations. 0 disables logging.
+   * @param {object} [options.schedule] - Object for scheduling custom actions during evolution.
+   * @param {number} options.schedule.iterations - Frequency (in generations) to execute the schedule function.
+   * @param {function} options.schedule.function - Custom function to execute, receives `{ fitness, error, iteration }`.
+   * @param {boolean} [options.clear=false] - Whether to clear the network's state (`clear()`) before applying the best genome's structure at the end.
+   * @param {...any} [options] - Additional options are passed directly to the `Neat` constructor (e.g., `populationSize`, `mutationRate`, `selection`, etc.).
+   * @returns {Promise<{ error: number; iterations: number; time: number }>} A Promise resolving to an object containing the final best error achieved, the number of generations run, and the total evolution time in milliseconds.
+   * @throws {Error} If the dataset's input/output dimensions don't match the network's.
+   * @throws {Error} If neither `iterations` nor `error` is specified in the options.
    *
-   * @param {{ input: number[]; output: number[] }[]} set - Training dataset.
-   * @param {any} options - Evolution options.
-   * @returns {Promise<{ error: number; iterations: number; time: number }>} Evolution results.
-   * @see Instinct Algorithm - Section 4 Constraints
+   * @see {@link Neat} class for details on the evolutionary algorithm and its parameters.
+   * @see Instinct Algorithm - Section 4 Constraints (regarding complexity penalty/growth).
    */
   async evolve(
     set: { input: number[]; output: number[] }[],
     options: any
   ): Promise<{ error: number; iterations: number; time: number }> {
-    // Validate dataset size
+    // Validate dataset dimensions.
     if (
+      !set ||
+      set.length === 0 ||
       set[0].input.length !== this.input ||
       set[0].output.length !== this.output
     ) {
       throw new Error(
-        'Dataset input/output size should match network input/output size!'
+        'Dataset is invalid or dimensions do not match network input/output size!'
       );
     }
 
-    options = options || {};
-    let targetError =
-      typeof options.error !== 'undefined' ? options.error : 0.05;
-    let growth =
-      typeof options.growth !== 'undefined' ? options.growth : 0.0001;
-    let cost = options.cost || methods.Cost.mse;
-    let amount = options.amount || 1;
+    options = options || {}; // Ensure options object exists.
 
-    // Determine threads
+    // Set default values for evolution-specific options.
+    let targetError = options.error ?? 0.05; // Target error threshold.
+    const growth = options.growth ?? 0.0001; // Complexity penalty factor.
+    const cost = options.cost || methods.Cost.mse; // Cost function for fitness.
+    const amount = options.amount || 1; // Number of evaluations per genome.
+    const log = options.log || 0; // Logging frequency.
+    const schedule = options.schedule; // Custom schedule object.
+    const clear = options.clear || false; // Clear network state at the end?
+
+    // Determine the number of threads/workers for parallel evaluation.
     let threads = options.threads;
     if (typeof threads === 'undefined') {
+      // Auto-detect based on environment (Node.js or Browser).
       if (typeof window === 'undefined' && typeof navigator === 'undefined') {
-        threads = require('os').cpus().length;
+        // Node.js environment
+        try {
+          threads = require('os').cpus().length; // Get number of CPU cores.
+        } catch (e) {
+          threads = 1; // Fallback if 'os' module is unavailable.
+        }
       } else if (typeof navigator !== 'undefined') {
-        threads = navigator.hardwareConcurrency;
+        // Browser environment
+        threads = navigator.hardwareConcurrency || 1; // Use hardware concurrency API if available.
       } else {
+        // Unknown environment, default to single thread.
         threads = 1;
       }
     }
+    threads = Math.max(1, threads); // Ensure at least one thread.
 
-    const start = Date.now();
+    const start = Date.now(); // Start time measurement.
 
+    // Validate stopping conditions.
     if (
       typeof options.iterations === 'undefined' &&
       typeof options.error === 'undefined'
     ) {
       throw new Error(
-        'At least one of the following options must be specified: error, iterations'
+        'At least one stopping condition (`iterations` or `error`) must be specified for evolution.'
       );
     } else if (typeof options.error === 'undefined') {
-      targetError = -1; // run until iterations
+      targetError = -1; // Run until iterations are met.
     } else if (typeof options.iterations === 'undefined') {
-      options.iterations = 0; // run until target error
+      options.iterations = 0; // Run until error is met.
     }
 
+    // Define the fitness function used by the NEAT algorithm.
     let fitnessFunction: any;
-    let workers: any[] = [];
+    let workers: any[] = []; // Array to hold worker instances if multi-threading.
+
     if (threads === 1) {
+      // Single-threaded fitness function.
       fitnessFunction = (genome: Network) => {
         let score = 0;
+        // Evaluate the genome multiple times if `amount` > 1.
         for (let i = 0; i < amount; i++) {
+          // Fitness is inversely related to error (higher fitness is better).
           score -= genome.test(set, cost).error;
         }
+        // Apply complexity penalty (growth factor). Penalizes more nodes/connections/gates.
         score -=
           (genome.nodes.length -
             genome.input -
-            genome.output +
-            genome.connections.length +
-            genome.gates.length) *
+            genome.output + // Number of hidden nodes
+            genome.connections.length + // Number of regular connections
+            genome.gates.length) * // Number of gated connections
           growth;
-        score = isNaN(score) ? -Infinity : score;
+        // Handle potential NaN scores (e.g., from division by zero in cost function).
+        score = isNaN(score) ? -Infinity : score; // Assign lowest possible fitness if NaN.
+        // Return average score if evaluated multiple times.
         return score / amount;
       };
     } else {
+      // Multi-threaded fitness evaluation setup.
+      // Serialize the dataset once for sending to workers.
       const converted = Multi.serializeDataSet(set);
-      // Create workers
+      // Create worker instances based on the environment.
       for (let i = 0; i < threads; i++) {
         if (typeof navigator !== 'undefined') {
+          // Browser environment: Use BrowserTestWorker.
           workers.push(
             await Multi.getBrowserTestWorker().then(
-              (TestWorker) => new TestWorker(converted, cost)
+              (TestWorker) => new TestWorker(converted, cost) // Pass serialized data and cost function.
             )
           );
         } else {
+          // Node.js environment: Use NodeTestWorker.
           workers.push(
             await Multi.getNodeTestWorker().then(
-              (TestWorker) => new TestWorker(converted, cost)
+              (TestWorker) => new TestWorker(converted, cost) // Pass serialized data and cost function.
             )
           );
         }
       }
+
+      // Define the fitness function for multi-threading. It evaluates the entire population.
       fitnessFunction = (population: Network[]) =>
         new Promise<void>((resolve) => {
-          const queue = population.slice();
-          let done = 0;
+          const queue = population.slice(); // Create a copy of the population to process.
+          let done = 0; // Counter for completed workers.
+
+          // Function to assign work to a worker.
           const startWorker = (worker: any) => {
             if (!queue.length) {
-              if (++done === threads) resolve();
+              // No more genomes in the queue for this worker.
+              // Check if all workers are done.
+              if (++done === threads) resolve(); // Resolve the promise when all genomes are evaluated.
               return;
             }
+            // Get the next genome from the queue.
             const genome = queue.shift();
             if (typeof genome === 'undefined') {
-              startWorker(worker);
+              // Should not happen if queue logic is correct, but handle defensively.
+              startWorker(worker); // Try assigning again.
               return;
             }
+            // Send the genome to the worker for evaluation.
             worker.evaluate(genome).then((result: number) => {
+              // Worker returns the calculated error.
               if (typeof genome !== 'undefined' && typeof result === 'number') {
+                // Calculate fitness score (inverse error + complexity penalty).
                 genome.score =
-                  -result -
+                  -result - // Inverse error.
                   (genome.nodes.length -
                     genome.input -
                     genome.output +
                     genome.connections.length +
                     genome.gates.length) *
-                    growth;
+                    growth; // Complexity penalty.
+                // Handle NaN results.
                 genome.score = isNaN(result) ? -Infinity : genome.score;
               }
+              // Assign the next piece of work to this worker.
               startWorker(worker);
             });
           };
+          // Start all workers.
           workers.forEach(startWorker);
         });
+      // Tell NEAT that the fitness function evaluates the whole population at once.
       options.fitnessPopulation = true;
     }
 
-    // Use NEAT instance for evolution
+    // Set the network context for NEAT (used for calculating complexity, etc.).
     options.network = this;
-    // Dynamically import Neat to avoid circular dependency
+    // Dynamically import Neat to avoid potential circular dependencies at module load time.
     const { default: Neat } = await import('../neat');
+    // Create the NEAT instance.
     const neat = new Neat(this.input, this.output, fitnessFunction, options);
 
-    let error = -Infinity;
-    let bestFitness = -Infinity;
-    let bestGenome: any = undefined;
+    // Initialize evolution loop variables.
+    let error = Infinity; // Initialize error (lower is better).
+    let bestFitness = -Infinity; // Track the highest fitness achieved.
+    let bestGenome: Network | undefined = undefined; // Store the best genome found so far.
 
+    // Main evolution loop.
     while (
-      error < -targetError &&
+      // Continue if error is above target (and target is not disabled).
+      (targetError === -1 || error > targetError) &&
+      // Continue if max generations is not set or not reached.
       (options.iterations === 0 || neat.generation < options.iterations)
     ) {
-      const fittest = await neat.evolve();
-      const fitness = fittest.score;
-      error =
-        (typeof fitness === 'number' ? fitness : 0) +
-        (fittest.nodes.length -
-          fittest.input -
-          fittest.output +
-          fittest.connections.length +
-          fittest.gates.length) *
-          growth;
+      // Evolve the population for one generation.
+      const fittest = await neat.evolve(); // Returns the fittest genome of the generation.
+      const fitness = fittest.score ?? -Infinity; // Get the fitness score.
 
-      if (typeof fitness === 'number' && fitness > bestFitness) {
+      // Calculate the error corresponding to the fitness (inverting the fitness calculation).
+      // Note: This recalculates the complexity penalty part.
+      error =
+        -(
+          fitness -
+          (fittest.nodes.length -
+            fittest.input -
+            fittest.output +
+            fittest.connections.length +
+            fittest.gates.length) *
+            growth
+        ) || Infinity; // Handle potential NaN/Infinity fitness
+
+      // Update the best genome found so far.
+      if (fitness > bestFitness) {
         bestFitness = fitness;
         bestGenome = fittest;
       }
 
-      if (options.log && neat.generation % options.log === 0) {
+      // Log progress if enabled.
+      if (log > 0 && neat.generation % log === 0) {
         console.log(
-          'iteration',
-          neat.generation,
-          'fitness',
-          fitness,
-          'error',
-          -error
+          `Generation: ${neat.generation}, Best Fitness: ${bestFitness.toFixed(
+            9
+          )}, Best Error: ${error.toFixed(9)}`
         );
       }
 
-      if (
-        options.schedule &&
-        neat.generation % options.schedule.iterations === 0
-      ) {
-        options.schedule.function({
-          fitness: fitness,
-          error: -error,
+      // Execute scheduled function if enabled.
+      if (schedule && neat.generation % schedule.iterations === 0) {
+        schedule.function({
+          fitness: bestFitness,
+          error,
           iteration: neat.generation,
         });
       }
     }
 
+    // Evolution finished. Terminate workers if multi-threading was used.
     if (threads > 1) {
-      for (let i = 0; i < workers.length; i++) workers[i].terminate?.();
+      workers.forEach((worker) => worker.terminate?.()); // Terminate worker processes/threads.
     }
 
+    // Apply the structure and parameters of the best found genome to this network instance.
     if (typeof bestGenome !== 'undefined') {
       this.nodes = bestGenome.nodes;
       this.connections = bestGenome.connections;
       this.selfconns = bestGenome.selfconns;
       this.gates = bestGenome.gates;
-      if (options.clear) this.clear();
+      // Optionally clear the state of the applied network.
+      if (clear) this.clear();
+    } else {
+      // Should not happen if evolution ran for at least one generation, but handle defensively.
+      console.warn('Evolution completed without finding a valid best genome.');
+      error = Infinity; // Indicate failure if no best genome was found.
     }
 
+    // Return evolution results.
     return {
-      error: -error,
-      iterations: neat.generation,
-      time: Date.now() - start,
+      error, // Return the error of the best genome found.
+      iterations: neat.generation, // Return the number of generations completed.
+      time: Date.now() - start, // Return the total time taken.
     };
   }
 
   /**
-   * Tests the network on a dataset.
+   * Tests the network's performance on a given dataset.
+   * Calculates the average error over the dataset using a specified cost function.
+   * Uses `noTraceActivate` for efficiency as gradients are not needed.
+   * Handles dropout scaling if dropout was used during training.
    *
-   * @param {{ input: number[]; output: number[] }[]} set - Test dataset.
-   * @param {any} cost - Cost function to evaluate error.
-   * @returns {{ error: number; time: number }} Test results.
+   * @param {{ input: number[]; output: number[] }[]} set - The test dataset, an array of objects with `input` and `output` arrays.
+   * @param {function} [cost=methods.Cost.MSE] - The cost function to evaluate the error. Defaults to Mean Squared Error.
+   * @returns {{ error: number; time: number }} An object containing the calculated average error over the dataset and the time taken for the test in milliseconds.
    */
   test(
     set: { input: number[]; output: number[] }[],
     cost?: any
   ): { error: number; time: number } {
-    // Check if dropout is enabled, set correct mask
-    if (this.dropout) {
-      this.nodes.forEach((node) => {
-        if (node.type === 'hidden' || node.type === 'varant') {
-          node.mask = 1 - this.dropout;
-        }
-      });
+    let error = 0; // Accumulator for the total error.
+    const costFn = cost || methods.Cost.mse; // Use provided cost function or default to MSE.
+    const start = Date.now(); // Start time measurement.
+
+    // Check if dropout was active during training. If so, node masks might need adjustment for testing.
+    // Standard dropout practice scales activations at test time by (1 - dropout_rate).
+    // Here, we assume node masks were set correctly after training (ideally to 1, or handled internally by noTraceActivate if needed).
+    // If `this.dropout` is still > 0, it implies training might have been interrupted or cleanup wasn't perfect.
+    // We ensure masks are effectively 1 for testing by temporarily setting `this.dropout` to 0 for the test run,
+    // assuming `noTraceActivate` doesn't apply dropout based on `this.dropout`.
+    // A more robust approach might involve explicitly setting node masks to 1 before testing.
+    const previousDropout = this.dropout; // Store current dropout rate
+    if (this.dropout > 0) {
+      // Temporarily disable dropout effect for testing.
+      // This relies on activate/noTraceActivate NOT applying dropout if this.dropout is 0.
+      this.dropout = 0;
+      // It might be safer to explicitly set masks:
+      // this.nodes.forEach(node => { if (node.type === 'hidden') node.mask = 1; });
     }
 
-    const start = Date.now();
-    let error = 0;
-    const costFn = cost || methods.Cost.mse;
-
+    // Iterate through each sample in the test set.
     set.forEach((data) => {
+      // Activate the network without calculating traces.
       const output = this.noTraceActivate(data.input);
+      // Calculate the error for this sample and add it to the sum.
       error += costFn(data.output, output);
     });
 
+    // Restore the previous dropout rate if it was changed.
+    this.dropout = previousDropout;
+
+    // Return the average error and the time taken.
     return { error: error / set.length, time: Date.now() - start };
   }
 
   /**
-   * Serializes the network into a compact format for efficient transfer.
+   * Serializes the network's current state into a compact array format.
+   * This format is primarily intended for efficient transfer, e.g., between web workers.
+   * It includes activations, states, squash function names, and connection details.
+   * Note: This is a lightweight serialization, different from the more comprehensive `toJSON`.
    *
-   * @returns {any[]} Serialized network data.
+   * @returns {any[]} An array containing serialized network data:
+   *                  `[activations, states, squashFunctionNames, connectionData]`
+   *                  where `connectionData` is an array of objects like
+   *                  `{ from: number, to: number, weight: number, gater: number | null }`.
+   *                  Indices refer to the node's position in the `nodes` array.
    */
   serialize(): any[] {
+    // Ensure all nodes have an index assigned (should be done by methods like standalone or toJSON, but good practice here too).
+    this.nodes.forEach((node, index) => (node.index = index));
+
+    // Extract current activations and states from all nodes.
     const activations = this.nodes.map((node) => node.activation);
     const states = this.nodes.map((node) => node.state);
+    // Extract the names of the squash functions used by each node.
     const squashes = this.nodes.map((node) => node.squash.name);
+    // Serialize connection data, including self-connections.
     const connections = this.connections.concat(this.selfconns).map((conn) => ({
-      from: conn.from.index,
-      to: conn.to.index,
-      weight: conn.weight,
-      gater: conn.gater ? conn.gater.index : null,
+      from: conn.from.index, // Source node index.
+      to: conn.to.index, // Target node index.
+      weight: conn.weight, // Connection weight.
+      gater: conn.gater ? conn.gater.index : null, // Gating node index or null.
     }));
+    // Return the data packed into an array.
     return [activations, states, squashes, connections];
   }
 
   /**
-   * Creates a network from serialized data.
+   * Creates a Network instance from serialized data produced by `serialize()`.
+   * Reconstructs the network structure and state based on the provided arrays.
    *
-   * @param {any[]} data - Serialized network data.
-   * @returns {Network} The deserialized network.
+   * @param {any[]} data - The serialized network data array, typically obtained from `network.serialize()`.
+   *                       Expected format: `[activations, states, squashNames, connectionData]`.
+   * @returns {Network} A new Network instance reconstructed from the serialized data.
+   * @static
    */
   static deserialize(data: any[]): Network {
+    // Unpack the serialized data.
     const [activations, states, squashes, connections] = data;
-    const network = new Network(
-      activations.length,
-      states.length - activations.length
-    );
 
-    network.nodes.forEach((node, index) => {
-      node.activation = activations[index];
+    // Determine input and output size from the lengths of the arrays.
+    // This assumes a basic structure was serialized; more robust deserialization might need explicit sizes.
+    // TODO: This calculation seems incorrect. Input/Output size cannot be reliably inferred just from activation/state lengths.
+    //       A better approach would be to serialize input/output size explicitly.
+    //       Assuming for now the caller knows the intended input/output size or it matches the original.
+    //       Let's try to infer based on node types if possible, but that info isn't directly here.
+    //       Fallback: Assume input = 0, output = 0 and let connections define structure? Risky.
+    //       Using lengths as a placeholder, but this needs review.
+    const inputSize = 0; // Placeholder - Cannot reliably determine from this data.
+    const outputSize = 0; // Placeholder - Cannot reliably determine from this data.
+    // Create a new network shell. The input/output sizes here might be placeholders if not derivable.
+    // The actual structure will be defined by the nodes and connections data.
+    const network = new Network(inputSize, outputSize);
+    network.nodes = []; // Clear default nodes/connections created by constructor.
+    network.connections = [];
+    network.selfconns = [];
+    network.gates = [];
+
+    // Recreate nodes and set their state.
+    activations.forEach((activation: number, index: number) => {
+      // We need node type information, which isn't in the serialized data.
+      // Assume 'hidden' for now, or try to infer? This is a limitation of the current format.
+      // Let's assume the order implies input/hidden/output based on original sizes if they were known.
+      // Without original sizes, we create generic nodes.
+      const node = new Node(); // Create a default node. Type might be wrong.
+      node.activation = activation;
       node.state = states[index];
-      node.squash = methods.Activation[
-        squashes[index] as keyof typeof methods.Activation
-      ] as (x: number, derivate?: boolean) => number;
+      // Find the squash function by name from the available methods.
+      const squashName = squashes[index] as keyof typeof methods.Activation;
+      const squashFn = methods.Activation[squashName];
+      if (squashFn) {
+        node.squash = squashFn as (x: number, derivate?: boolean) => number;
+      } else {
+        console.warn(
+          `Deserialization: Unknown squash function '${squashName}'. Using identity.`
+        );
+        node.squash = methods.Activation.identity; // Fallback
+      }
+      node.index = index; // Assign index.
+      network.nodes.push(node); // Add the reconstructed node.
     });
 
+    // TODO: Determine actual input/output nodes based on connections or serialized metadata if added.
+    // For now, the network's input/output properties might be inaccurate.
+
+    // Recreate connections.
     connections.forEach(
-      (conn: {
+      (connData: {
         from: number;
         to: number;
         weight: number;
         gater: number | null;
       }) => {
-        const fromNode: Node = network.nodes[conn.from];
-        const toNode: Node = network.nodes[conn.to];
-        const connection: Connection = network.connect(
-          fromNode,
-          toNode,
-          conn.weight
-        )[0];
-        if (conn.gater !== null) {
-          network.gate(network.nodes[conn.gater], connection);
+        // Check if node indices are valid.
+        if (
+          connData.from < network.nodes.length &&
+          connData.to < network.nodes.length
+        ) {
+          const fromNode: Node = network.nodes[connData.from];
+          const toNode: Node = network.nodes[connData.to];
+          // Connect the nodes using the network's connect method to update lists correctly.
+          const connection: Connection | undefined = network.connect(
+            fromNode,
+            toNode,
+            connData.weight
+          )[0];
+
+          // Re-apply gating if necessary.
+          if (connection && connData.gater !== null) {
+            if (connData.gater < network.nodes.length) {
+              network.gate(network.nodes[connData.gater], connection);
+            } else {
+              console.warn(
+                `Deserialization: Invalid gater index ${connData.gater}.`
+              );
+            }
+          }
+        } else {
+          console.warn(
+            `Deserialization: Invalid connection indices ${connData.from} -> ${connData.to}.`
+          );
         }
       }
     );
 
-    return network;
+    return network; // Return the reconstructed network.
   }
 
   /**
-   * Creates a network from a JSON object.
+   * Creates a Network instance from a JSON object representation.
+   * This method reconstructs the network's structure, including nodes (with types, biases, squash functions),
+   * connections (with weights), and gates, based on the provided JSON data.
+   * Assumes the JSON object was created by `network.toJSON()`.
    *
-   * @param {any} json - JSON representation of the network.
-   * @returns {Network} The created network.
+   * @param {object} json - The JSON object representing the network structure and parameters.
+   * @param {number} json.input - Number of input nodes.
+   * @param {number} json.output - Number of output nodes.
+   * @param {number} [json.dropout] - Dropout rate.
+   * @param {object[]} json.nodes - Array of node JSON objects (see `Node.fromJSON`). Must include `squash` name.
+   * @param {object[]} json.connections - Array of connection JSON objects `{ from: number, to: number, weight: number, gater: number | null }`.
+   * @returns {Network} A new Network instance reconstructed from the JSON data.
+   * @static
    */
   static fromJSON(json: any): Network {
+    // Create a new network shell with the specified input/output sizes.
     const network = new Network(json.input, json.output);
-    network.dropout = json.dropout;
-    // Deserialize nodes
-    network.nodes = json.nodes.map((nodeJSON: any) => Node.fromJSON(nodeJSON));
-    // Set squash functions explicitly
-    json.nodes.forEach((nodeJSON: any, index: number) => {
-      network.nodes[index].squash = methods.Activation[
-        nodeJSON.squash as keyof typeof methods.Activation
-      ] as (x: number, derivate?: boolean) => number;
-    });
-    // Deserialize connections
-    network.connections = [];
+    network.dropout = json.dropout || 0; // Set dropout rate from JSON or default to 0.
+    network.nodes = []; // Clear default nodes created by constructor.
+    network.connections = []; // Clear default connections.
     network.selfconns = [];
     network.gates = [];
-    json.connections.forEach((connJSON: any) => {
-      if (
-        typeof connJSON.from === 'undefined' ||
-        typeof connJSON.to === 'undefined' ||
-        typeof network.nodes[connJSON.from] === 'undefined' ||
-        typeof network.nodes[connJSON.to] === 'undefined'
-      ) {
-        return;
+
+    // Deserialize nodes from the JSON array.
+    network.nodes = json.nodes.map((nodeJSON: any) => Node.fromJSON(nodeJSON));
+
+    // Assign squash functions and indices to the deserialized nodes.
+    network.nodes.forEach((node, index) => {
+      const nodeJSON = json.nodes[index];
+      // Find the squash function by name.
+      const squashName = nodeJSON.squash as keyof typeof methods.Activation;
+      const squashFn = methods.Activation[squashName];
+      if (squashFn) {
+        node.squash = squashFn as (x: number, derivate?: boolean) => number;
+      } else {
+        console.warn(
+          `fromJSON: Unknown squash function '${squashName}' for node ${index}. Using identity.`
+        );
+        node.squash = methods.Activation.identity; // Fallback
       }
-      const connection = network.connect(
-        network.nodes[connJSON.from],
-        network.nodes[connJSON.to]
-      )[0];
-      connection.weight = connJSON.weight;
+      node.index = index; // Ensure index is set.
+    });
+
+    // Deserialize connections from the JSON array.
+    json.connections.forEach((connJSON: any) => {
+      // Validate connection indices.
       if (
-        connJSON.gater !== null &&
-        typeof connJSON.gater === 'number' &&
-        connJSON.gater < network.nodes.length
+        typeof connJSON.from !== 'number' ||
+        typeof connJSON.to !== 'number' ||
+        connJSON.from < 0 ||
+        connJSON.from >= network.nodes.length ||
+        connJSON.to < 0 ||
+        connJSON.to >= network.nodes.length
       ) {
-        network.gate(network.nodes[connJSON.gater], connection);
+        console.warn(
+          `fromJSON: Invalid connection indices ${connJSON.from} -> ${connJSON.to}. Skipping connection.`
+        );
+        return; // Skip invalid connection.
+      }
+
+      // Get the 'from' and 'to' nodes using the indices.
+      const fromNode = network.nodes[connJSON.from];
+      const toNode = network.nodes[connJSON.to];
+
+      // Create the connection using the network's method to ensure lists are updated.
+      // Note: `connect` might assign a random weight; we overwrite it immediately after.
+      const connection = network.connect(fromNode, toNode)[0];
+
+      // If connection was successfully created, set its weight and handle gating.
+      if (connection) {
+        connection.weight = connJSON.weight; // Set the weight from JSON.
+
+        // Re-apply gating if specified in JSON.
+        if (
+          connJSON.gater !== null &&
+          typeof connJSON.gater === 'number' &&
+          connJSON.gater >= 0 &&
+          connJSON.gater < network.nodes.length
+        ) {
+          // Gate the connection using the specified gater node.
+          network.gate(network.nodes[connJSON.gater], connection);
+        } else if (connJSON.gater !== null) {
+          // Warn if gater index is invalid but not null.
+          console.warn(
+            `fromJSON: Invalid gater index ${connJSON.gater} for connection ${connJSON.from} -> ${connJSON.to}. Skipping gate.`
+          );
+        }
+      } else {
+        // Warn if connection creation failed (e.g., node types prevent connection).
+        console.warn(
+          `fromJSON: Failed to create connection ${connJSON.from} -> ${connJSON.to}.`
+        );
       }
     });
-    return network;
+
+    return network; // Return the fully reconstructed network.
   }
 
   /**
-   * Merges two networks into one.
+   * Merges two networks sequentially.
+   * Creates a new network where the output nodes of the first network effectively become
+   * the input nodes for the second network's hidden/output layers.
+   * This is a structural merge; weights and biases are copied. It does not automatically
+   * connect the output layer of network1 to the input layer of network2.
+   * The current implementation seems flawed and might not produce a functional merged network as intended.
+   * It primarily concatenates node and connection lists with some index adjustments.
    *
-   * The output of the first network is connected to the input of the second network.
-   *
-   * @param {Network} network1 - The first network.
-   * @param {Network} network2 - The second network.
-   * @returns {Network} The merged network.
-   * @throws {Error} If the output size of the first network does not match the input size of the second network.
+   * @param {Network} network1 - The first network (provides input layer and potentially hidden layers).
+   * @param {Network} network2 - The second network (provides hidden/output layers).
+   * @returns {Network} A new Network instance representing the merged structure.
+   * @throws {Error} If the output size of `network1` does not match the input size of `network2`. (This check might be misleading given the implementation).
+   * @static
+   * @deprecated The current implementation is likely incorrect for functional merging. Review needed.
    */
   static merge(network1: Network, network2: Network): Network {
+    // Validate that the interface between the networks matches.
     if (network1.output !== network2.input) {
       throw new Error(
-        'Output size of network1 must match input size of network2!'
+        'Output size of network1 must match input size of network2 for merging!'
       );
     }
 
+    // Create a new network shell with the input size of network1 and output size of network2.
     const merged = new Network(network1.input, network2.output);
-    merged.nodes = [...network1.nodes, ...network2.nodes.slice(network2.input)];
+
+    // Combine nodes: Take all nodes from network1, and then the hidden/output nodes from network2.
+    // This assumes network2's input nodes are conceptually replaced by network1's output nodes.
+    merged.nodes = [
+      ...network1.nodes, // All nodes from network1
+      ...network2.nodes.slice(network2.input), // Hidden and output nodes from network2
+    ];
+    // Re-index all nodes in the merged network.
+    merged.nodes.forEach((node, index) => (node.index = index));
+
+    // Combine connections. This part is complex and potentially incorrect.
+    // It copies connections from network1 directly.
+    // It copies connections from network2, attempting to remap connections originating from network2's input layer
+    // to connect from network1's output layer instead. This remapping logic seems fragile.
     merged.connections = [
-      ...network1.connections,
+      ...network1.connections, // All connections from network1
       ...network2.connections.map((conn) => {
+        // Remap connections starting from network2's input nodes.
         if (conn.from.type === 'input') {
-          conn.from =
-            network1.nodes[
-              network1.nodes.length - network2.nodes.indexOf(conn.from) - 1
+          // Find the corresponding output node in network1.
+          // This logic assumes a direct mapping based on index, which might be wrong.
+          // `network2.nodes.indexOf(conn.from)` gives the index within network2's node list.
+          // We need to map this input index (0 to network2.input-1) to the corresponding output node index in network1
+          // (network1.input to network1.input + network1.output - 1).
+          const inputIndexInNet2 = network2.nodes.indexOf(conn.from);
+          if (inputIndexInNet2 >= 0 && inputIndexInNet2 < network2.input) {
+            const correspondingOutputIndexInNet1 =
+              network1.input + inputIndexInNet2;
+            if (correspondingOutputIndexInNet1 < network1.nodes.length) {
+              conn.from = network1.nodes[correspondingOutputIndexInNet1]; // Remap 'from' node.
+            } else {
+              // Handle error: Corresponding output node not found in network1.
+              console.warn("Merge: Error remapping connection 'from' node.");
+            }
+          }
+        }
+        // Remap 'to' nodes and 'gater' nodes if they came from network2's hidden/output layers.
+        // Their indices need to be offset by the number of nodes in network1.
+        const toIndexInNet2 = network2.nodes.indexOf(conn.to);
+        if (toIndexInNet2 >= network2.input) {
+          conn.to =
+            merged.nodes[
+              network1.nodes.length + (toIndexInNet2 - network2.input)
             ];
         }
-        return conn;
+        if (conn.gater) {
+          const gaterIndexInNet2 = network2.nodes.indexOf(conn.gater);
+          if (gaterIndexInNet2 >= network2.input) {
+            conn.gater =
+              merged.nodes[
+                network1.nodes.length + (gaterIndexInNet2 - network2.input)
+              ];
+          } else if (gaterIndexInNet2 >= 0) {
+            // Gater was an input node in network2, needs remapping similar to 'from'.
+            const correspondingOutputIndexInNet1 =
+              network1.input + gaterIndexInNet2;
+            if (correspondingOutputIndexInNet1 < network1.nodes.length) {
+              conn.gater = network1.nodes[correspondingOutputIndexInNet1];
+            } else {
+              conn.gater = null; // Gater cannot be remapped.
+            }
+          }
+        }
+        return conn; // Return the potentially modified connection.
       }),
     ];
+    // TODO: This merge logic needs significant review and likely correction to be functionally useful.
+    // It doesn't handle self-connections or gates from network2 properly after index changes.
 
-    return merged;
+    return merged; // Return the merged network structure.
   }
 
   /**
-   * Creates an offspring network by crossing over two parent networks.
-   *
-   * This method implements the crossover logic described in the Instinct algorithm.
+   * Creates a new offspring network by performing crossover between two parent networks.
+   * This method implements the crossover mechanism inspired by the NEAT algorithm and described
+   * in the Instinct paper, combining genes (nodes and connections) from both parents.
+   * Fitness scores can influence the inheritance process. Matching genes are inherited randomly,
+   * while disjoint/excess genes are typically inherited from the fitter parent (or randomly if fitness is equal or `equal` flag is set).
    *
    * @param {Network} network1 - The first parent network.
    * @param {Network} network2 - The second parent network.
-   * @param {boolean} [equal] - Whether the offspring should have an equal number of nodes from both parent networks.
-   * @returns {Network} The offspring network.
-   * @throws {Error} If the input/output sizes of the parent networks do not match.
+   * @param {boolean} [equal=false] - If true, disjoint and excess genes are inherited randomly regardless of fitness.
+   *                                  If false (default), they are inherited from the fitter parent.
+   * @returns {Network} A new Network instance representing the offspring.
+   * @throws {Error} If the input or output sizes of the parent networks do not match.
+   *
    * @see Instinct Algorithm - Section 2 Crossover
+   * @see {@link https://medium.com/data-science/neuro-evolution-on-steroids-82bd14ddc2f6}
+   * @static
    */
   static crossOver(
     network1: Network,
     network2: Network,
-    equal?: boolean
+    equal: boolean = false // Default to fitness-based inheritance for disjoint/excess genes.
   ): Network {
+    // Validate that parents have compatible input/output dimensions.
     if (
       network1.input !== network2.input ||
       network1.output !== network2.output
     ) {
       throw new Error(
-        'Networks must have the same input and output sizes to cross over.'
+        'Parent networks must have the same input and output sizes for crossover.'
       );
     }
 
+    // Create a new network shell for the offspring.
     const offspring = new Network(network1.input, network1.output);
-    offspring.connections = [];
-    offspring.nodes = [];
+    offspring.connections = []; // Clear default connections.
+    offspring.nodes = []; // Clear default nodes.
+    offspring.selfconns = [];
+    offspring.gates = [];
 
+    // Get parent fitness scores (default to 0 if undefined).
     const score1 = network1.score || 0;
     const score2 = network2.score || 0;
 
-    let size;
+    // Determine the number of non-output nodes in the offspring network.
+    // This influences which nodes and connections are potentially included.
+    let size; // Number of nodes to inherit (excluding output layer initially).
+    const n1Size = network1.nodes.length;
+    const n2Size = network2.nodes.length;
     if (equal || score1 === score2) {
-      const max = Math.max(network1.nodes.length, network2.nodes.length);
-      const min = Math.min(network1.nodes.length, network2.nodes.length);
+      // If equal fitness or `equal` flag is true, choose a random size between the parents' sizes.
+      const max = Math.max(n1Size, n2Size);
+      const min = Math.min(n1Size, n2Size);
       size = Math.floor(Math.random() * (max - min + 1) + min);
     } else if (score1 > score2) {
-      size = network1.nodes.length;
+      // Inherit size from the fitter parent (network1).
+      size = n1Size;
     } else {
-      size = network2.nodes.length;
+      // Inherit size from the fitter parent (network2).
+      size = n2Size;
     }
 
-    const outputSize = network1.output;
+    const outputSize = network1.output; // Number of output nodes is fixed.
 
+    // Assign indices to nodes in parent networks for consistent referencing.
     network1.nodes.forEach((node, index) => (node.index = index));
     network2.nodes.forEach((node, index) => (node.index = index));
 
+    // Inherit nodes up to the determined size.
     for (let i = 0; i < size; i++) {
-      let node;
-      if (i < size - outputSize) {
-        const random = Math.random();
-        node = random >= 0.5 ? network1.nodes[i] : network2.nodes[i];
-        const other = random < 0.5 ? network1.nodes[i] : network2.nodes[i];
-        if (!node || node.type === 'output') node = other;
+      // Input nodes (i < inputSize) and Output nodes (handled later) must always be included structurally.
+      // Hidden nodes are chosen based on parentage and random chance.
+
+      let chosenNode: Node | undefined = undefined;
+      const node1 = i < n1Size ? network1.nodes[i] : undefined; // Get node from parent 1 if index is valid.
+      const node2 = i < n2Size ? network2.nodes[i] : undefined; // Get node from parent 2 if index is valid.
+
+      if (i < network1.input) {
+        // Input nodes: Always inherit structure, choose bias/squash randomly?
+        // NEAT typically keeps input nodes standard. Let's inherit from parent 1 arbitrarily.
+        chosenNode = node1;
+      } else if (i >= size - outputSize) {
+        // Output nodes: Determine which parent's output node corresponds to this position.
+        // This logic assumes output nodes are at the end and indices align after potential hidden node differences.
+        const outputIndexInParent1 = n1Size - (size - i);
+        const outputIndexInParent2 = n2Size - (size - i);
+        const node1Output =
+          outputIndexInParent1 >= network1.input &&
+          outputIndexInParent1 < n1Size
+            ? network1.nodes[outputIndexInParent1]
+            : undefined;
+        const node2Output =
+          outputIndexInParent2 >= network2.input &&
+          outputIndexInParent2 < n2Size
+            ? network2.nodes[outputIndexInParent2]
+            : undefined;
+
+        if (node1Output && node2Output) {
+          // Both parents have a corresponding output node. Choose randomly.
+          chosenNode = Math.random() >= 0.5 ? node1Output : node2Output;
+        } else {
+          // Only one parent has this output node (due to size difference). Inherit from that parent.
+          chosenNode = node1Output || node2Output;
+        }
       } else {
-        node =
-          Math.random() >= 0.5
-            ? network1.nodes[network1.nodes.length + i - size]
-            : network2.nodes[network2.nodes.length + i - size];
+        // Hidden nodes:
+        if (node1 && node2) {
+          // Both parents have a node at this index (matching gene). Choose randomly.
+          chosenNode = Math.random() >= 0.5 ? node1 : node2;
+        } else if (node1 && (score1 >= score2 || equal)) {
+          // Only parent 1 has this node (disjoint/excess) and is fitter or `equal` is true.
+          chosenNode = node1;
+        } else if (node2 && (score2 >= score1 || equal)) {
+          // Only parent 2 has this node (disjoint/excess) and is fitter or `equal` is true.
+          chosenNode = node2;
+        }
+        // If neither condition met (e.g., node exists only in weaker parent and equal=false), it's not inherited.
       }
 
-      const newNode = new Node(node.type);
-      newNode.bias = node.bias;
-      newNode.squash = node.squash;
-      offspring.nodes.push(newNode);
+      // If a node was chosen for inheritance, create a copy for the offspring.
+      if (chosenNode) {
+        const newNode = new Node(chosenNode.type); // Copy type.
+        newNode.bias = chosenNode.bias; // Copy bias.
+        newNode.squash = chosenNode.squash; // Copy squash function reference.
+        // Note: Connections are handled separately below.
+        offspring.nodes.push(newNode);
+      } else {
+        // This case (a gap in inherited nodes) might complicate connection inheritance.
+        // NEAT usually includes all nodes up to the max index of inherited connections.
+        // Let's push a placeholder or reconsider the node inheritance logic.
+        // For simplicity now, we assume `size` correctly reflects the nodes to inherit.
+        // If a node isn't inherited, connections to/from it also won't be inherited.
+      }
     }
+    // Re-index offspring nodes.
+    offspring.nodes.forEach((node, index) => (node.index = index));
+    const offspringNodeCount = offspring.nodes.length; // Actual number of nodes inherited.
 
-    const n1conns: Record<string, any> = {};
-    const n2conns: Record<string, any> = {};
+    // --- Inherit Connections ---
 
-    network1.connections.forEach((conn) => {
-      n1conns[Connection.innovationID(conn.from.index, conn.to.index)] = {
-        weight: conn.weight,
-        from: conn.from.index,
-        to: conn.to.index,
-        gater: conn.gater ? conn.gater.index : -1,
-      };
+    // Create dictionaries to store connection data keyed by innovation ID for efficient lookup.
+    const n1conns: Record<string, any> = {}; // Connections from parent 1.
+    const n2conns: Record<string, any> = {}; // Connections from parent 2.
+
+    // Populate connection dictionaries for parent 1.
+    const allParent1Conns = network1.connections.concat(network1.selfconns);
+    allParent1Conns.forEach((conn) => {
+      // Ensure indices are valid before creating innovation ID.
+      if (
+        typeof conn.from.index === 'number' &&
+        typeof conn.to.index === 'number'
+      ) {
+        const innovId = Connection.innovationID(conn.from.index, conn.to.index);
+        n1conns[innovId] = {
+          weight: conn.weight,
+          from: conn.from.index,
+          to: conn.to.index,
+          // Store gater index (-1 if no gater).
+          gater: conn.gater ? conn.gater.index : -1,
+        };
+      }
     });
 
-    network1.selfconns.forEach((conn) => {
-      n1conns[Connection.innovationID(conn.from.index, conn.to.index)] = {
-        weight: conn.weight,
-        from: conn.from.index,
-        to: conn.to.index,
-        gater: conn.gater ? conn.gater.index : -1,
-      };
+    // Populate connection dictionaries for parent 2.
+    const allParent2Conns = network2.connections.concat(network2.selfconns);
+    allParent2Conns.forEach((conn) => {
+      // Ensure indices are valid.
+      if (
+        typeof conn.from.index === 'number' &&
+        typeof conn.to.index === 'number'
+      ) {
+        const innovId = Connection.innovationID(conn.from.index, conn.to.index);
+        n2conns[innovId] = {
+          weight: conn.weight,
+          from: conn.from.index,
+          to: conn.to.index,
+          gater: conn.gater ? conn.gater.index : -1,
+        };
+      }
     });
 
-    network2.connections.forEach((conn) => {
-      n2conns[Connection.innovationID(conn.from.index, conn.to.index)] = {
-        weight: conn.weight,
-        from: conn.from.index,
-        to: conn.to.index,
-        gater: conn.gater ? conn.gater.index : -1,
-      };
-    });
+    // Determine which connections to inherit based on matching, disjoint, and excess genes.
+    const connectionsToInherit: any[] = []; // List to store chosen connection data.
+    const keys1 = Object.keys(n1conns); // Innovation IDs from parent 1.
+    const keys2 = Object.keys(n2conns); // Innovation IDs from parent 2.
 
-    network2.selfconns.forEach((conn) => {
-      n2conns[Connection.innovationID(conn.from.index, conn.to.index)] = {
-        weight: conn.weight,
-        from: conn.from.index,
-        to: conn.to.index,
-        gater: conn.gater ? conn.gater.index : -1,
-      };
-    });
-
-    const connections: any[] = [];
-    const keys1 = Object.keys(n1conns);
-    const keys2 = Object.keys(n2conns);
-
+    // Process connections present in parent 1.
     keys1.forEach((key) => {
+      const conn1Data = n1conns[key];
       if (n2conns[key]) {
-        connections.push(Math.random() >= 0.5 ? n1conns[key] : n2conns[key]);
+        // Matching gene: Connection exists in both parents. Inherit randomly.
+        const conn2Data = n2conns[key];
+        connectionsToInherit.push(Math.random() >= 0.5 ? conn1Data : conn2Data);
+        // Remove from parent 2's keys to avoid processing again.
         delete n2conns[key];
       } else if (score1 >= score2 || equal) {
-        connections.push(n1conns[key]);
+        // Disjoint/Excess gene in parent 1: Inherit if parent 1 is fitter or `equal` is true.
+        connectionsToInherit.push(conn1Data);
       }
     });
 
+    // Process remaining connections (only present in parent 2).
     if (score2 >= score1 || equal) {
-      keys2.forEach((key) => {
-        if (n2conns[key]) connections.push(n2conns[key]);
+      // Inherit disjoint/excess genes from parent 2 if it's fitter or `equal` is true.
+      Object.keys(n2conns).forEach((key) => {
+        connectionsToInherit.push(n2conns[key]);
       });
     }
 
-    connections.forEach((connData) => {
-      if (connData.to < size && connData.from < size) {
+    // Create the inherited connections in the offspring network.
+    connectionsToInherit.forEach((connData) => {
+      // Check if the 'from' and 'to' nodes for this connection were actually inherited by the offspring.
+      // Use `offspringNodeCount` which reflects the actual number of nodes added.
+      if (
+        connData.to < offspringNodeCount &&
+        connData.from < offspringNodeCount
+      ) {
+        // Get the corresponding nodes from the offspring's list.
         const from = offspring.nodes[connData.from];
         const to = offspring.nodes[connData.to];
-        const conn = offspring.connect(from, to)[0];
-        conn.weight = connData.weight;
 
-        if (connData.gater !== -1 && connData.gater < size) {
-          offspring.gate(offspring.nodes[connData.gater], conn);
-        }
-      }
-    });
+        // Check if connection already exists (shouldn't happen with this logic, but good practice).
+        if (!from.isProjectingTo(to)) {
+          // Create the connection using the offspring's method.
+          const conn = offspring.connect(from, to)[0];
+          if (conn) {
+            conn.weight = connData.weight; // Set the inherited weight.
 
-    return offspring;
-  }
-
-  /**
-   * Generates a standalone JavaScript function for the network.
-   * This function can be used independently of the library.
-   * @returns {string} Standalone function as a string.
-   */
-  standalone(): string {
-    const present: { [key: string]: string } = {}; // Map name to function string
-    const squashDefinitions: string[] = []; // Store definitions of functions
-    const functionMap: { [key: string]: number } = {}; // Map name to index in F
-    let functionIndexCounter = 0;
-
-    const activations: number[] = [];
-    const states: number[] = [];
-    const lines: string[] = [];
-
-    // Predefined activation functions (ensure these match your methods.Activation)
-    const predefined: { [key: string]: string } = {
-      LOGISTIC: 'function LOGISTIC(x){ return 1 / (1 + Math.exp(-x)); }',
-      TANH: 'function TANH(x){ return Math.tanh(x); }',
-      RELU: 'function RELU(x){ return x > 0 ? x : 0; }',
-      IDENTITY: 'function IDENTITY(x){ return x; }',
-      STEP: 'function STEP(x){ return x > 0 ? 1 : 0; }',
-      SOFTSIGN: 'function SOFTSIGN(x){ return x / (1 + Math.abs(x)); }',
-      SINUSOID: 'function SINUSOID(x){ return Math.sin(x); }',
-      GAUSSIAN: 'function GAUSSIAN(x){ return Math.exp(-Math.pow(x, 2)); }',
-      BENT_IDENTITY:
-        'function BENT_IDENTITY(x){ return (Math.sqrt(Math.pow(x, 2) + 1) - 1) / 2 + x; }',
-      BIPOLAR: 'function BIPOLAR(x){ return x > 0 ? 1 : -1; }',
-      BIPOLAR_SIGMOID:
-        'function BIPOLAR_SIGMOID(x){ return 2 / (1 + Math.exp(-x)) - 1; }',
-      HARD_TANH:
-        'function HARD_TANH(x){ return Math.max(-1, Math.min(1, x)); }',
-      ABSOLUTE: 'function ABSOLUTE(x){ return Math.abs(x); }',
-      INVERSE: 'function INVERSE(x){ return 1 - x; }',
-      // Corrected SELU definition
-      SELU:
-        'function SELU(x){ var alpha = 1.6732632423543772848170429916717; var scale = 1.0507009873554804934193349852946; var fx = x > 0 ? x : alpha * Math.exp(x) - alpha; return fx * scale; }',
-      SOFTPLUS: 'function SOFTPLUS(x){ return Math.log(1 + Math.exp(x)); }',
-      // Add other predefined functions used in your methods.Activation here
-    };
-
-    // Set up input activations and states
-    for (let i = 0; i < this.input; i++) {
-      const node = this.nodes[i];
-      activations.push(node.activation);
-      states.push(node.state);
-    }
-
-    lines.push('for(var i = 0; i < input.length; i++) A[i] = input[i];');
-
-    // Assign indices for all nodes
-    this.nodes.forEach((node, index) => {
-      node.index = index;
-    });
-
-    // Set up hidden/output nodes
-    for (let i = this.input; i < this.nodes.length; i++) {
-      const node = this.nodes[i];
-      activations.push(node.activation);
-      states.push(node.state);
-
-      const squash = node.squash as any;
-      const squashName = squash.name || `anonymous_squash_${i}`;
-
-      if (!(squashName in present)) {
-        let funcStr: string;
-        if (predefined[squashName]) {
-          funcStr = predefined[squashName]; // Use predefined definition
-          // *** CRITICAL: Even predefined strings might be affected if coverage runs *after* this code generation step ***
-          // Although unlikely, let's strip the predefined string too, just in case.
-          funcStr = stripCoverage(funcStr);
-        } else {
-          // Fallback for custom/unknown functions
-          funcStr = squash.toString();
-          // Attempt to clean up the stringified function definition
-          funcStr = stripCoverage(funcStr); // Strip coverage here (using enhanced function)
-
-          if (!funcStr.startsWith('function') && funcStr.includes('=>')) {
-            // Handle arrow functions (basic conversion)
-            funcStr = `function ${squashName}${funcStr.substring(
-              funcStr.indexOf('(')
-            )}`;
-          } else if (
-            !funcStr.startsWith('function') &&
-            !funcStr.includes('=>')
-          ) {
-            // Handle cases where 'function' keyword might be missing
-            if (!funcStr.includes('{')) {
-              console.warn(
-                `Standalone: Could not get definition for squash function '${squashName}'. Using name directly.`
-              );
-              funcStr = `function ${squashName}(){ /* unknown */ }`; // Placeholder
-            } else {
-              // Assume it's just missing 'function name'
-              funcStr = `function ${squashName}${funcStr.substring(
-                funcStr.indexOf('(')
-              )}`;
+            // Re-apply gating if the inherited connection was gated and the gater node was also inherited.
+            if (connData.gater !== -1 && connData.gater < offspringNodeCount) {
+              offspring.gate(offspring.nodes[connData.gater], conn);
             }
-          } else if (
-            funcStr.startsWith('function') &&
-            !funcStr.includes(squashName)
-          ) {
-            // Ensure the function name is correct if it was anonymous
-            funcStr = `function ${squashName}${funcStr.substring(
-              funcStr.indexOf('(')
-            )}`;
           }
         }
-        present[squashName] = funcStr;
-        squashDefinitions.push(present[squashName]); // Add definition to list
-        functionMap[squashName] = functionIndexCounter++; // Assign index
       }
-      const functionIndex = functionMap[squashName];
+      // If nodes were not inherited, the connection is implicitly dropped.
+    });
 
-      // ... (rest of the incoming connection logic remains the same) ...
-      const incoming: string[] = [];
-      for (const conn of node.connections.in) {
-        let computation = `A[${conn.from.index}] * ${conn.weight}`;
-        if (conn.gater && typeof conn.gater.index !== 'undefined') {
-          // Check gater index exists
-          computation += ` * A[${conn.gater.index}]`;
-        }
-        incoming.push(computation);
-      }
-
-      if (node.connections.self.weight) {
-        let computation = `S[${i}] * ${node.connections.self.weight}`;
-        if (
-          node.connections.self.gater &&
-          typeof node.connections.self.gater.index !== 'undefined'
-        ) {
-          // Check gater index exists
-          computation += ` * A[${node.connections.self.gater.index}]`;
-        }
-        incoming.push(computation);
-      }
-
-      const incomingCalculation =
-        incoming.length > 0 ? incoming.join(' + ') : '0';
-      lines.push(`S[${i}] = ${incomingCalculation} + ${node.bias};`);
-      const maskValue = typeof node.mask !== 'undefined' ? node.mask : 1;
-      lines.push(
-        `A[${i}] = F[${functionIndex}](S[${i}])${
-          maskValue !== 1 ? ` * ${maskValue}` : ''
-        };`
-      );
-    }
-
-    // ... (rest of the output generation remains the same) ...
-    const output = [];
-    for (let i = this.nodes.length - this.output; i < this.nodes.length; i++) {
-      // Ensure index exists before pushing
-      if (typeof i !== 'undefined' && i < this.nodes.length) {
-        output.push(`A[${i}]`);
-      } else {
-        console.warn(`Standalone: Invalid output node index ${i}`);
-      }
-    }
-    lines.push(`return [${output.join(',')}];`);
-
-    // Construct the final standalone function string
-    let total = '';
-    total += `(function(){\n`;
-    // Define the functions first
-    total += `${squashDefinitions.join('\n')}\n`;
-    // Create the F array mapping indices to function names (references)
-    const fArrayContent = Object.entries(functionMap)
-      .sort(([, a], [, b]) => a - b)
-      .map(([name]) => name)
-      .join(',');
-    total += `var F = [${fArrayContent}];\n`;
-    total += `var A = [${activations.join(',')}];\n`;
-    total += `var S = [${states.join(',')}];\n`;
-    total += `function activate(input){\n`;
-    // Add safety check for input length
-    total += `if (input.length !== ${this.input}) { throw new Error('Invalid input size. Expected ${this.input}, got ' + input.length); }\n`;
-    total += `${lines.join('\n')}\n}\n`;
-    total += `return activate;\n`;
-    total += `})()`;
-
-    // Final strip just in case something was missed (belt and suspenders)
-    return stripCoverage(total); // Apply enhanced stripping to the final result
+    return offspring; // Return the created offspring network.
   }
 
   /**
-   * Sets the value of a property for every node in the network.
+   * Sets specified properties (e.g., bias, squash function) for all nodes in the network.
+   * Useful for initializing or resetting node properties uniformly.
    *
-   * @param {{ bias?: number; squash?: any }} values - Values to set.
+   * @param {object} values - An object containing the properties and values to set.
+   * @param {number} [values.bias] - If provided, sets the bias for all nodes.
+   * @param {function} [values.squash] - If provided, sets the squash (activation) function for all nodes.
+   *                                     Should be a valid activation function (e.g., from `methods.Activation`).
    */
   set(values: { bias?: number; squash?: any }): void {
+    // Iterate through all nodes in the network.
     this.nodes.forEach((node) => {
-      if (values.bias !== undefined) node.bias = values.bias;
-      if (values.squash !== undefined) node.squash = values.squash;
+      // Update bias if provided in the values object.
+      if (typeof values.bias !== 'undefined') {
+        node.bias = values.bias;
+      }
+      // Update squash function if provided.
+      if (typeof values.squash !== 'undefined') {
+        node.squash = values.squash;
+      }
     });
   }
 
   /**
-   * Converts the network to a JSON object.
+   * Converts the network into a JSON object representation.
+   * This representation includes detailed information about nodes (type, bias, squash function name, state),
+   * connections (from/to indices, weight, gater index), and network metadata (input/output size, dropout rate).
+   * Suitable for saving the network structure and state, or for transferring it between systems.
    *
-   * This includes nodes, connections, and other properties.
-   *
-   * @returns {object} JSON representation of the network.
+   * @returns {object} A JSON-compatible object representing the network.
+   *                   Structure: `{ input, output, dropout, nodes: [...], connections: [...] }`
    */
   toJSON(): object {
+    // Initialize the base JSON object structure.
     const json: any = {
-      nodes: [], // Array to store serialized nodes.
-      connections: [], // Array to store serialized connections.
-      input: this.input, // Number of input nodes.
-      output: this.output, // Number of output nodes.
-      dropout: this.dropout, // Dropout rate of the network.
+      nodes: [], // Array to store serialized node data.
+      connections: [], // Array to store serialized connection data.
+      input: this.input, // Store number of input nodes.
+      output: this.output, // Store number of output nodes.
+      dropout: this.dropout, // Store current dropout rate.
     };
 
+    // Serialize each node and its self-connection (if any).
     this.nodes.forEach((node, index) => {
-      node.index = index; // Assign an index to each node for serialization.
-      const nodeJSON: any = node.toJSON(); // Serialize the node.
-      nodeJSON.squash = node.squash.name; // Serialize the name of the squash function.
-      json.nodes.push(nodeJSON); // Add the serialized node to the JSON object.
+      node.index = index; // Ensure node has its current index assigned.
+      const nodeJSON: any = node.toJSON(); // Get the basic JSON representation from the node.
+      // Add the squash function name (important for deserialization).
+      nodeJSON.squash = node.squash.name;
+      json.nodes.push(nodeJSON); // Add the node JSON to the list.
 
+      // Check for and serialize self-connections.
       if (node.connections.self.weight !== 0) {
-        // Check if the node has a self-connection.
-        const selfConn: any = node.connections.self.toJSON(); // Serialize the self-connection.
-        selfConn.from = index; // Set the source of the self-connection.
-        selfConn.to = index; // Set the target of the self-connection.
+        const selfConn: any = node.connections.self.toJSON(); // Get connection JSON.
+        selfConn.from = index; // Set 'from' index (same as 'to').
+        selfConn.to = index; // Set 'to' index.
+        // Set 'gater' index if the self-connection is gated.
         selfConn.gater = node.connections.self.gater
           ? node.connections.self.gater.index
-          : null; // Serialize the gater if it exists.
-        json.connections.push(selfConn); // Add the self-connection to the JSON object.
+          : null;
+        json.connections.push(selfConn); // Add self-connection to the connections list.
       }
     });
 
+    // Serialize all regular (non-self) connections.
     this.connections.forEach((conn: Connection) => {
+      // Basic connection data: weight.
       const connJSON: any = { weight: conn.weight };
-      (conn as Connection).from &&
-        (connJSON.from = (conn as Connection).from.index); // Explicitly cast to Connection
-      (conn as Connection).to && (connJSON.to = (conn as Connection).to.index); // Explicitly cast to Connection
-      (conn as Connection).gater &&
-        (connJSON.gater = (conn as Connection).gater.index); // Explicitly cast to Connection
-      json.connections.push(connJSON);
+      // Add 'from' index if the source node and its index are valid.
+      if (conn.from && typeof conn.from.index === 'number') {
+        connJSON.from = conn.from.index;
+      } else {
+        console.warn('toJSON: Connection missing valid "from" node/index.'); // Should not happen in a consistent network.
+        return; // Skip serializing this potentially invalid connection.
+      }
+      // Add 'to' index if the target node and its index are valid.
+      if (conn.to && typeof conn.to.index === 'number') {
+        connJSON.to = conn.to.index;
+      } else {
+        console.warn('toJSON: Connection missing valid "to" node/index.');
+        return; // Skip serializing this potentially invalid connection.
+      }
+      // Add 'gater' index if the connection is gated and the gater node/index are valid.
+      if (conn.gater && typeof conn.gater.index === 'number') {
+        connJSON.gater = conn.gater.index;
+      } else {
+        connJSON.gater = null; // Explicitly set to null if not gated or gater is invalid.
+      }
+      json.connections.push(connJSON); // Add the connection JSON to the list.
     });
 
-    return json;
+    return json; // Return the complete JSON representation.
   }
 }

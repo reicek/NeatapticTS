@@ -5,4 +5,4 @@ export { gating } from './gating';
 export { mutation } from './mutation';
 export { selection } from './selection';
 export { crossover } from './crossover';
-export { connection } from './connection';
+export { default as groupConnection } from './connection';

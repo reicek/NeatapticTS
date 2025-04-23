@@ -4,25 +4,27 @@
  * Connections transfer activation values from one node to another, with an associated weight
  * that determines the strength of the connection. Connections can also be gated by other nodes.
  */
+import Node from './node'; // Import Node type
+
 export default class Connection {
-  from: any; // The source node of the connection
-  to: any; // The target node of the connection
+  from: Node; // The source node of the connection
+  to: Node; // The target node of the connection
   gain: number; // Gain applied to the connection
   weight: number; // Weight of the connection
-  gater: any | null; // Node that gates this connection, if any
+  gater: Node | null; // Node that gates this connection, if any
   elegibility: number; // Eligibility trace for backpropagation
   previousDeltaWeight: number; // Previous weight change for momentum
   totalDeltaWeight: number; // Accumulated weight change for batch training
-  xtrace: { nodes: any[]; values: number[] }; // Extended trace for eligibility propagation
+  xtrace: { nodes: Node[]; values: number[] }; // Extended trace for eligibility propagation
 
   /**
    * Creates a new connection between two nodes.
    *
-   * @param {any} from - The source node of the connection.
-   * @param {any} to - The target node of the connection.
+   * @param {Node} from - The source node of the connection.
+   * @param {Node} to - The target node of the connection.
    * @param {number} [weight] - The weight of the connection. Defaults to a random value between -0.1 and 0.1.
    */
-  constructor(from: any, to: any, weight?: number) {
+  constructor(from: Node, to: Node, weight?: number) {
     this.from = from;
     this.to = to;
     this.gain = 1;
