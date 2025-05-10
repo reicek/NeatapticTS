@@ -50,7 +50,7 @@ describe('Connection', () => {
 
       test('should set the default eligibility to 0', () => {
         // Assert
-        expect(connection.elegibility).toBe(0);
+        expect(connection.eligibility).toBe(0);
       });
 
       test('should initialize xtrace nodes as empty array', () => {

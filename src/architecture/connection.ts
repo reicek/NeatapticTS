@@ -12,7 +12,7 @@ export default class Connection {
   gain: number; // Gain applied to the connection
   weight: number; // Weight of the connection
   gater: Node | null; // Node that gates this connection, if any
-  elegibility: number; // Eligibility trace for backpropagation
+  eligibility: number; // Eligibility trace for backpropagation
   previousDeltaWeight: number; // Previous weight change for momentum
   totalDeltaWeight: number; // Accumulated weight change for batch training
   xtrace: { nodes: Node[]; values: number[] }; // Extended trace for eligibility propagation
@@ -30,7 +30,7 @@ export default class Connection {
     this.gain = 1;
     this.weight = weight ?? Math.random() * 0.2 - 0.1;
     this.gater = null;
-    this.elegibility = 0;
+    this.eligibility = 0;
 
     // For tracking momentum
     this.previousDeltaWeight = 0;
@@ -47,12 +47,19 @@ export default class Connection {
   /**
    * Converts the connection to a JSON object for serialization.
    *
-   * @returns {{ weight: number }} A JSON representation of the connection.
+   * @returns {{ from: number | undefined, to: number | undefined, weight: number, gain: number, gater: number | null }} A JSON representation of the connection.
    */
-  toJSON(): { weight: number } {
-    return {
+  toJSON() {
+    const json: any = {
+      from: this.from.index ?? undefined,
+      to: this.to.index ?? undefined,
       weight: this.weight,
+      gain: this.gain
     };
+    if (this.gater && typeof this.gater.index !== 'undefined') {
+      json.gater = this.gater.index;
+    }
+    return json;
   }
 
   /**

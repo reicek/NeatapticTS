@@ -30,6 +30,13 @@ describe('Selection Methods', () => {
       // Assert
       expect(selection.POWER.power).toBe(4);
     });
+
+    test('should have power property with default value > 0', () => {
+      // Assert
+      const powerVal = selection.POWER.power;
+      expect(powerVal).toBe(4);
+      expect(powerVal).toBeGreaterThan(0);
+    });
   });
 
   describe('TOURNAMENT', () => {
@@ -48,9 +55,24 @@ describe('Selection Methods', () => {
       expect(selection.TOURNAMENT.size).toBe(5);
     });
 
+    test('should have size property with default value > 0', () => {
+      // Assert
+      const sizeVal = selection.TOURNAMENT.size;
+      expect(sizeVal).toBe(5);
+      expect(sizeVal).toBeGreaterThan(0);
+    });
+
     test('should have probability property with default value', () => {
       // Assert
       expect(selection.TOURNAMENT.probability).toBe(0.5);
+    });
+
+    test('should have probability property with default value within [0, 1]', () => {
+      // Assert
+      const probVal = selection.TOURNAMENT.probability;
+      expect(probVal).toBe(0.5);
+      expect(probVal).toBeGreaterThanOrEqual(0);
+      expect(probVal).toBeLessThanOrEqual(1);
     });
   });
 });

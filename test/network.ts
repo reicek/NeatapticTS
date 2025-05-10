@@ -1,7 +1,7 @@
 import { Architect, Network, methods } from '../src/neataptic';
 
 // Retry failed tests
-jest.retryTimes(10, { logErrorsBeforeRetry: true });
+jest.retryTimes(5, { logErrorsBeforeRetry: true });
 
 /**
  * Helper function to verify that a given mutation method alters the network's output.

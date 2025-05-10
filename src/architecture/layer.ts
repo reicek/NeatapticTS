@@ -135,12 +135,12 @@ export default class Layer {
     }
 
     let connections: any[] = [];
-    if (target instanceof Group || target instanceof Node) {
+    if (target instanceof Layer) {
+      // Delegate connection ONLY to the target layer's input method
+      connections = target.input(this, method, weight);
+    } else if (target instanceof Group || target instanceof Node) {
       // Connect the layer's output group to the target Group or Node
       connections = this.output.connect(target, method, weight);
-    } else if (target instanceof Layer) {
-      // Delegate connection to the target layer's input method
-      connections = target.input(this, method, weight);
     }
 
     return connections;
@@ -364,6 +364,9 @@ export default class Layer {
     inputGate.set({ bias: 1 });
     forgetGate.set({ bias: 1 });
     outputGate.set({ bias: 1 });
+    // Set initial bias for memory cell and output block to 0 (modern practice)
+    memoryCell.set({ bias: 0 });
+    outputBlock.set({ bias: 0 });
 
     // Internal connections within the LSTM unit
     // Connections to gates influence their activation
@@ -371,7 +374,7 @@ export default class Layer {
     memoryCell.connect(forgetGate, methods.groupConnection.ALL_TO_ALL);
     memoryCell.connect(outputGate, methods.groupConnection.ALL_TO_ALL);
     // Recurrent connection from memory cell back to itself (gated by forget gate)
-    const forget = memoryCell.connect(
+    memoryCell.connect(
       memoryCell,
       methods.groupConnection.ONE_TO_ONE
     );
@@ -382,10 +385,25 @@ export default class Layer {
     );
 
     // Apply gating mechanisms
-    // Forget gate controls the self-recurrent connection of the memory cell
-    forgetGate.gate(forget, methods.gating.SELF);
     // Output gate controls the connection from the memory cell to the output block
     outputGate.gate(output, methods.gating.OUTPUT);
+
+    // Apply forget gate to self-connections directly
+    memoryCell.nodes.forEach((node, i) => {
+      // Find the self-connection on the node
+      const selfConnection = node.connections.self.find(conn => conn.to === node && conn.from === node);
+      if (selfConnection) {
+        // Assign the corresponding forget gate node as the gater
+        selfConnection.gater = forgetGate.nodes[i];
+        // Ensure the gater node knows about the connection it gates
+        if (!forgetGate.nodes[i].connections.gated.includes(selfConnection)) {
+            forgetGate.nodes[i].connections.gated.push(selfConnection);
+        }
+      } else {
+        // This case should ideally not happen if connect worked correctly
+        console.warn(`LSTM Warning: No self-connection found for memory cell node ${i}`);
+      }
+    });
 
     // Aggregate all nodes from the internal groups into the layer's node list
     layer.nodes = [
@@ -652,6 +670,6 @@ export default class Layer {
    */
   private isGroup(obj: any): obj is Group {
     // Check for existence and type of key properties
-    return obj && typeof obj.set === 'function' && Array.isArray(obj.nodes);
+    return !!obj && typeof obj.set === 'function' && Array.isArray(obj.nodes);
   }
 }

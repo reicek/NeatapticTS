@@ -144,7 +144,6 @@ export default class Network {
     // Ensure these names match the keys in `methods.Activation`.
     // Definitions are minified/optimized where possible.
     const predefined: { [key: string]: string } = {
-      // ... (keep existing predefined function definitions) ...
       logistic: 'function logistic(x){ return 1 / (1 + Math.exp(-x)); }',
       tanh: 'function tanh(x){ return Math.tanh(x); }',
       relu: 'function relu(x){ return x > 0 ? x : 0; }',
@@ -249,15 +248,17 @@ export default class Network {
       }
 
       // Process self-connection.
-      if (node.connections.self.weight !== 0) {
+      // Check if a self-connection exists in the array.
+      if (node.connections.self.length > 0) {
+        const selfConn = node.connections.self[0]; // Access the first (and likely only) self-connection.
         // Base computation: state[self] * weight
-        let computation = `S[${i}] * ${node.connections.self.weight}`;
+        let computation = `S[${i}] * ${selfConn.weight}`;
         // Apply gating if the self-connection is gated and the gater node has a valid index.
         if (
-          node.connections.self.gater &&
-          typeof node.connections.self.gater.index !== 'undefined'
+          selfConn.gater &&
+          typeof selfConn.gater.index !== 'undefined'
         ) {
-          computation += ` * A[${node.connections.self.gater.index}]`; // Multiply by gater activation.
+          computation += ` * A[${selfConn.gater.index}]`; // Multiply by gater activation.
         }
         incoming.push(computation);
       }
@@ -656,9 +657,9 @@ export default class Network {
 
       case mutation.ADD_SELF_CONN:
         // Adds a self-connection (node connects to itself) to a random node that doesn't already have one.
-        // Find nodes (hidden or output) that currently have no self-connection (weight is 0).
+        // Find nodes (hidden or output) that currently have no self-connection (array is empty).
         possible = this.nodes.filter(
-          (node, idx) => idx >= this.input && node.connections.self.weight === 0
+          (node, idx) => idx >= this.input && node.connections.self.length === 0 // Check array length
         );
 
         // If all eligible nodes already have self-connections, exit.
@@ -2266,15 +2267,16 @@ export default class Network {
       json.nodes.push(nodeJSON); // Add the node JSON to the list.
 
       // Check for and serialize self-connections.
-      if (node.connections.self.weight !== 0) {
-        const selfConn: any = node.connections.self.toJSON(); // Get connection JSON.
-        selfConn.from = index; // Set 'from' index (same as 'to').
-        selfConn.to = index; // Set 'to' index.
-        // Set 'gater' index if the self-connection is gated.
-        selfConn.gater = node.connections.self.gater
-          ? node.connections.self.gater.index
+      if (node.connections.self.length > 0) {
+        const selfConnObj = node.connections.self[0]; // Access the connection object
+        const selfConnJSON: any = selfConnObj.toJSON(); // Get connection JSON.
+        selfConnJSON.from = index; // Set 'from' index (same as 'to').
+        selfConnJSON.to = index; // Set 'to' index.
+        // Add gater index if the self-connection is gated.
+        selfConnJSON.gater = selfConnObj.gater
+          ? selfConnObj.gater.index
           : null;
-        json.connections.push(selfConn); // Add self-connection to the connections list.
+        json.connections.push(selfConnJSON); // Add self-connection to the connections list.
       }
     });
 

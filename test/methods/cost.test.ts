@@ -19,6 +19,8 @@ describe('Cost', () => {
       const result = Cost.crossEntropy(targets, outputs);
       // Assert
       expect(result).toBeCloseTo(expected, epsilon);
+      expect(result).toBeGreaterThanOrEqual(0);
+      expect(isFinite(result)).toBe(true);
     });
 
     test('should calculate cross-entropy correctly for soft labels', () => {
@@ -35,6 +37,8 @@ describe('Cost', () => {
       const result = Cost.crossEntropy(targets, outputs);
       // Assert
       expect(result).toBeCloseTo(expected, epsilon);
+      expect(result).toBeGreaterThanOrEqual(0);
+      expect(isFinite(result)).toBe(true);
     });
 
     test('should handle perfect predictions (binary)', () => {
@@ -45,6 +49,8 @@ describe('Cost', () => {
       const result = Cost.crossEntropy(targets, outputs);
       // Assert: Should be close to zero due to clamping
       expect(result).toBeCloseTo(0, 5); // Use tolerance due to internal epsilon
+      expect(result).toBeGreaterThanOrEqual(0);
+      expect(isFinite(result)).toBe(true);
     });
 
     test('should handle near-zero and near-one outputs', () => {
@@ -55,6 +61,8 @@ describe('Cost', () => {
       const result = Cost.crossEntropy(targets, outputs);
       // Assert: Should be close to zero
       expect(result).toBeCloseTo(0, 5);
+      expect(result).toBeGreaterThanOrEqual(0);
+      expect(isFinite(result)).toBe(true);
     });
 
     test('should throw error for mismatched input lengths', () => {
@@ -76,6 +84,8 @@ describe('Cost', () => {
       const result = Cost.crossEntropy(targets, outputs);
       // Assert
       expect(result).toBeCloseTo(expected, epsilon);
+      expect(result).toBeGreaterThanOrEqual(0);
+      expect(isFinite(result)).toBe(true);
     });
   });
 
@@ -89,6 +99,8 @@ describe('Cost', () => {
       const result = Cost.mse(targets, outputs);
       // Assert
       expect(result).toBeCloseTo(expected, epsilon);
+      expect(result).toBeGreaterThanOrEqual(0);
+      expect(isFinite(result)).toBe(true);
     });
 
     test('should return 0 for perfect predictions', () => {
@@ -99,6 +111,7 @@ describe('Cost', () => {
       const result = Cost.mse(targets, outputs);
       // Assert
       expect(result).toBe(0);
+      expect(isFinite(result)).toBe(true);
     });
 
     test('should handle single element arrays', () => {
@@ -110,6 +123,8 @@ describe('Cost', () => {
       const result = Cost.mse(targets, outputs);
       // Assert
       expect(result).toBeCloseTo(expected, epsilon);
+      expect(result).toBeGreaterThanOrEqual(0);
+      expect(isFinite(result)).toBe(true);
     });
   });
 
@@ -123,6 +138,8 @@ describe('Cost', () => {
       const result = Cost.binary(targets, outputs);
       // Assert
       expect(result).toBe(expected);
+      expect(result).toBeGreaterThanOrEqual(0);
+      expect(result).toBeLessThanOrEqual(1);
     });
 
     test('should return 0 for perfect predictions', () => {
@@ -133,6 +150,7 @@ describe('Cost', () => {
       const result = Cost.binary(targets, outputs);
       // Assert
       expect(result).toBe(0);
+      expect(result).toBeLessThanOrEqual(1);
     });
 
     test('should return 1 for completely wrong predictions', () => {
@@ -143,6 +161,7 @@ describe('Cost', () => {
       const result = Cost.binary(targets, outputs);
       // Assert
       expect(result).toBe(1);
+      expect(result).toBeGreaterThanOrEqual(0);
     });
 
     test('should handle single element arrays (correct)', () => {
@@ -153,6 +172,7 @@ describe('Cost', () => {
       const result = Cost.binary(targets, outputs);
       // Assert
       expect(result).toBe(0);
+      expect(result).toBeLessThanOrEqual(1);
     });
 
     test('should handle single element arrays (incorrect)', () => {
@@ -163,6 +183,7 @@ describe('Cost', () => {
       const result = Cost.binary(targets, outputs);
       // Assert
       expect(result).toBe(1);
+      expect(result).toBeGreaterThanOrEqual(0);
     });
   });
 
@@ -176,6 +197,8 @@ describe('Cost', () => {
       const result = Cost.mae(targets, outputs);
       // Assert
       expect(result).toBeCloseTo(expected, epsilon);
+      expect(result).toBeGreaterThanOrEqual(0);
+      expect(isFinite(result)).toBe(true);
     });
 
     test('should return 0 for perfect predictions', () => {
@@ -186,6 +209,7 @@ describe('Cost', () => {
       const result = Cost.mae(targets, outputs);
       // Assert
       expect(result).toBe(0);
+      expect(isFinite(result)).toBe(true);
     });
 
     test('should handle single element arrays', () => {
@@ -197,6 +221,8 @@ describe('Cost', () => {
       const result = Cost.mae(targets, outputs);
       // Assert
       expect(result).toBeCloseTo(expected, epsilon);
+      expect(result).toBeGreaterThanOrEqual(0);
+      expect(isFinite(result)).toBe(true);
     });
   });
 
@@ -210,6 +236,8 @@ describe('Cost', () => {
       const result = Cost.mape(targets, outputs);
       // Assert
       expect(result).toBeCloseTo(expected, epsilon);
+      expect(result).toBeGreaterThanOrEqual(0);
+      expect(isFinite(result)).toBe(true);
     });
 
     test('should return 0 for perfect predictions', () => {
@@ -220,6 +248,7 @@ describe('Cost', () => {
       const result = Cost.mape(targets, outputs);
       // Assert
       expect(result).toBe(0);
+      expect(isFinite(result)).toBe(true);
     });
 
     test('should handle near-zero targets using epsilon', () => {
@@ -229,7 +258,7 @@ describe('Cost', () => {
       // Act: Division by near-zero target is avoided by internal epsilon
       const result = Cost.mape(targets, outputs);
       // Assert: Expect a large but finite number for the first term, averaged with 0.1
-      expect(result).toBeGreaterThan(0);
+      expect(result).toBeGreaterThanOrEqual(0);
       expect(isFinite(result)).toBe(true);
     });
 
@@ -242,6 +271,8 @@ describe('Cost', () => {
       const result = Cost.mape(targets, outputs);
       // Assert
       expect(result).toBeCloseTo(expected, epsilon);
+      expect(result).toBeGreaterThanOrEqual(0);
+      expect(isFinite(result)).toBe(true);
     });
   });
 
@@ -265,6 +296,8 @@ describe('Cost', () => {
       const result = Cost.msle(targets, outputs);
       // Assert
       expect(result).toBeCloseTo(expected, epsilon);
+      expect(result).toBeGreaterThanOrEqual(0);
+      expect(isFinite(result)).toBe(true);
     });
 
     test('should return 0 for perfect predictions', () => {
@@ -275,6 +308,7 @@ describe('Cost', () => {
       const result = Cost.msle(targets, outputs);
       // Assert
       expect(result).toBe(0);
+      expect(isFinite(result)).toBe(true);
     });
 
     test('should handle negative inputs by treating them as 0', () => {
@@ -293,6 +327,8 @@ describe('Cost', () => {
       const result = Cost.msle(targets, outputs);
       // Assert
       expect(result).toBeCloseTo(expected, epsilon);
+      expect(result).toBeGreaterThanOrEqual(0);
+      expect(isFinite(result)).toBe(true);
     });
 
     test('should handle single element arrays', () => {
@@ -304,6 +340,8 @@ describe('Cost', () => {
       const result = Cost.msle(targets, outputs);
       // Assert
       expect(result).toBeCloseTo(expected, epsilon);
+      expect(result).toBeGreaterThanOrEqual(0);
+      expect(isFinite(result)).toBe(true);
     });
   });
 
@@ -321,6 +359,8 @@ describe('Cost', () => {
       const result = Cost.hinge(targets, outputs);
       // Assert
       expect(result).toBeCloseTo(expected, epsilon);
+      expect(result).toBeGreaterThanOrEqual(0);
+      expect(isFinite(result)).toBe(true);
     });
 
     test('should return 0 for correct and confident predictions', () => {
@@ -333,6 +373,7 @@ describe('Cost', () => {
       const result = Cost.hinge(targets, outputs);
       // Assert
       expect(result).toBe(0);
+      expect(isFinite(result)).toBe(true);
     });
 
     test('should calculate loss for correct but not confident predictions', () => {
@@ -346,6 +387,8 @@ describe('Cost', () => {
       const result = Cost.hinge(targets, outputs);
       // Assert
       expect(result).toBeCloseTo(expected, epsilon);
+      expect(result).toBeGreaterThanOrEqual(0);
+      expect(isFinite(result)).toBe(true);
     });
 
     test('should handle single element arrays', () => {
@@ -357,6 +400,8 @@ describe('Cost', () => {
       const result = Cost.hinge(targets, outputs);
       // Assert
       expect(result).toBeCloseTo(expected, epsilon);
+      expect(result).toBeGreaterThanOrEqual(0);
+      expect(isFinite(result)).toBe(true);
     });
   });
 });

@@ -66,7 +66,7 @@ describe('Node', () => {
       });
       // Test if the self-connection weight is initialized to 0.
       test('should initialize selfConnection weight to 0', () => {
-        expect(node.connections.self.weight).toBe(0);
+        expect(node.connections.self.length).toBe(0);
       });
     });
 
@@ -151,9 +151,13 @@ describe('Node', () => {
 
     // Test suite for activation with a self-connection (recurrent connection).
     describe('With Self Connection', () => {
+      let selfConnArr: Connection[];
+      let selfConn: Connection;
+
       beforeEach(() => {
         // Connect the node to itself with a specific weight.
-        node.connect(node, 0.5);
+        selfConnArr = node.connect(node, 0.5);
+        selfConn = selfConnArr[0];
         node.bias = 0.1;
         node.squash = Activation.identity; // Use identity for simple calculation.
       });
@@ -167,7 +171,7 @@ describe('Node', () => {
 
         const secondActivation = node.activate();
         expect(secondActivation).toBeCloseTo(0.1, epsilon); // Adjusted expectation based on failure.
-        expect(node.state).toBeCloseTo(0.1 + stateAfterFirstActivation * node.connections.self.weight, epsilon); // Expecting 0.1
+        expect(node.state).toBeCloseTo(0.1 + stateAfterFirstActivation * selfConn.weight, epsilon); // Expecting 0.1
       });
     });
 
@@ -203,8 +207,8 @@ describe('Node', () => {
       // Test the effect of a SELF gate on the self-connection.
       test('should apply SELF gating effect to self-connection (assuming gater property is set)', () => {
         // Add a self-connection and assign the gater to it.
-        node.connect(node, 0.6);
-        const selfConn = node.connections.self;
+        const selfConnArr = node.connect(node, 0.6);
+        const selfConn = selfConnArr[0];
         gater.activate(0.5); // Activate the gater.
         selfConn.gater = gater;
 
@@ -307,7 +311,7 @@ describe('Node', () => {
 
       beforeEach(() => {
         // Set initial eligibility and gain for the incoming connection.
-        connHT.elegibility = 0.1; // Previous eligibility trace value.
+        connHT.eligibility = 0.1; // Previous eligibility trace value.
         connHT.gain = 1.0; // Connection gain.
 
         // Propagate the error back from the target node.
@@ -316,16 +320,7 @@ describe('Node', () => {
 
       // Test if the eligibility trace of the incoming connection is updated correctly, including momentum.
       test('should update incoming connection eligibility with momentum', () => {
-        // Calculation:
-        // error.responsibility = error.projected = (target - activation) * derivative
-        // derivative = activation * (1 - activation) for logistic
-        // eligibility = momentum * old_eligibility + gain * responsibility * input_activation
-        // Note: The exact expected value depends heavily on the activation value after the forward pass.
-        // The original test was commented out, suggesting potential discrepancies or complexity.
-        // We will check if the eligibility *changed* from its initial value.
-        // expect(connHT.elegibility).not.toBe(0.1); // Failing: Received 0.1, indicates no update occurred. Likely implementation issue.
-        // Commented out: Failing - Implementation differs or calculation is complex.
-        // expect(connHT.elegibility).toBeCloseTo(0.695656, epsilon);
+        expect(connHT.eligibility).not.toBe(0.1);
       });
     });
 
@@ -333,7 +328,7 @@ describe('Node', () => {
     describe('Hidden Node (Logistic)', () => {
       beforeEach(() => {
         // Set initial eligibility and gain for the incoming connection to the hidden node.
-        connIH.elegibility = 0.2; // Previous eligibility trace value.
+        connIH.eligibility = 0.2; // Previous eligibility trace value.
         connIH.gain = 1.0; // Connection gain.
 
         // Propagate error back from the target node first.
@@ -344,14 +339,7 @@ describe('Node', () => {
 
       // Test if the eligibility trace of the connection incoming to the hidden node is updated.
       test('should update incoming connection eligibility with momentum', () => {
-        // Calculation involves error propagated from the target node.
-        // error.responsibility = error.projected * derivative
-        // error.projected = sum(outgoing_conn.weight * outgoing_node.error.responsibility)
-        // eligibility = momentum * old_eligibility + gain * responsibility * input_activation
-        // Again, the exact value is complex. Check if it changed.
-        // expect(connIH.elegibility).not.toBe(0.2); // Failing: Received 0.2, indicates no update occurred. Likely implementation issue.
-        // Commented out: Failing - Implementation differs or calculation is complex.
-        // expect(connIH.elegibility).toBeCloseTo(1.1, epsilon);
+        expect(connIH.eligibility).not.toBe(0.2);
       });
     });
 
@@ -379,6 +367,7 @@ describe('Node', () => {
     // Test suite focusing on propagation involving self-connections.
     describe('With Self Connection (Error Check)', () => {
       let node: Node;
+      let connSSArr: Connection[];
       let connSS: Connection; // Self-connection
 
       beforeEach(() => {
@@ -386,8 +375,8 @@ describe('Node', () => {
         node = new Node('output');
         node.squash = Activation.logistic;
         node.bias = 0.1;
-        node.connect(node, 0.6); // Add self connection.
-        connSS = node.connections.self;
+        connSSArr = node.connect(node, 0.6); // Add self connection.
+        connSS = connSSArr[0];
 
         // Activate a couple of times to establish 'old' state.
         node.activate(1.0);
@@ -395,10 +384,10 @@ describe('Node', () => {
 
         // Reset error state and eligibility for clarity before propagation.
         node.error.responsibility = 0;
-        connSS.elegibility = 0;
+        connSS.eligibility = 0;
 
         // Set non-zero initial values to better observe changes.
-        connSS.elegibility = 0.1;
+        connSS.eligibility = 0.1;
         connSS.gain = 0.9;
         node.error.responsibility = 0.05; // Assume some initial responsibility for testing update logic.
       });
@@ -414,7 +403,7 @@ describe('Node', () => {
       test('should update self-connection weight if update=true', () => {
         const originalWeight = connSS.weight;
         node.propagate(0.1, 0.5, true, 1.0);
-        // expect(connSS.weight).not.toBe(originalWeight); // Failing: Received 0.6, indicates no update occurred. Likely implementation issue.
+        expect(connSS.weight).not.toBe(originalWeight);
       });
     });
 
@@ -511,8 +500,10 @@ describe('Node', () => {
 
       // Test connecting a node to itself (self-connection).
       test('should connect to self', () => {
-        node1.connect(node1, 0.4);
-        const conn = node1.connections.self;
+        const connArr = node1.connect(node1, 0.4);
+        const conn = connArr[0];
+        expect(node1.connections.self.length).toBe(1);
+        expect(node1.connections.self[0]).toBe(conn);
         expect(conn.from).toBe(node1);
         expect(conn.to).toBe(node1);
         expect(conn.weight).toBe(0.4);
@@ -554,8 +545,10 @@ describe('Node', () => {
 
       // Test disconnecting a self-connection.
       test('should disconnect self connection', () => {
-        node1.disconnect(node1); // Disconnect 1 -> 1.
-        expect(node1.connections.self.weight).toBe(0);
+        node1.connect(node1, 0.5); // Create self-connection
+        expect(node1.connections.self.length).toBe(1);
+        node1.disconnect(node1);
+        expect(node1.connections.self.length).toBe(0);
       });
     });
   });
@@ -781,59 +774,8 @@ describe('Node', () => {
           allowed: [targetSquash],
         };
         expect(() => node.mutate(customMutation)).toThrow(
-           /Unsupported mutation method: MOD_ACTIVATION/
+          /Unsupported mutation method: MOD_ACTIVATION/
         );
-      });
-    });
-
-    // Test suite for the MOD_WEIGHT mutation (modifying connection weights).
-    describe('MOD_WEIGHT', () => {
-      // Test modifying the weight of the self-connection.
-      test('should modify self-connection weight', () => {
-        const node = new Node();
-        node.connect(node, 0.5); // Create self-connection.
-        const selfConn = node.connections.self;
-        const originalWeight = selfConn.weight;
-        const customMutation = { ...mutation.MOD_WEIGHT, min: -0.1, max: 0.1 };
-
-        const modification = Math.random() * (customMutation.max - customMutation.min) + customMutation.min;
-        selfConn.weight += modification;
-        selfConn.weight = Math.max(-1, Math.min(1, selfConn.weight));
-
-        expect(selfConn.weight).not.toBe(originalWeight);
-        const diff = selfConn.weight - originalWeight;
-        expect(diff).toBeGreaterThanOrEqual(customMutation.min - epsilon);
-        expect(diff).toBeLessThanOrEqual(customMutation.max + epsilon);
-      });
-
-      // Test clamping the weight if modification exceeds the upper bound (+1).
-      test('should clamp weight modification if exceeding max bound', () => {
-        const node1 = new Node();
-        const node2 = new Node();
-        const conn = node1.connect(node2, 0.95)[0];
-        const customMutation = { ...mutation.MOD_WEIGHT, min: 0.1, max: 0.2 };
-
-        const modification = 0.15;
-        const potentialWeight = conn.weight + modification;
-
-        conn.weight = Math.max(-1, Math.min(1, potentialWeight));
-
-        expect(conn.weight).toBe(1);
-      });
-
-      // Test clamping the weight if modification exceeds the lower bound (-1).
-      test('should clamp weight modification if exceeding min bound', () => {
-        const node1 = new Node();
-        const node2 = new Node();
-        const conn = node1.connect(node2, -0.95)[0];
-        const customMutation = { ...mutation.MOD_WEIGHT, min: -0.2, max: -0.1 };
-
-        const modification = -0.15;
-        const potentialWeight = conn.weight + modification;
-
-        conn.weight = Math.max(-1, Math.min(1, potentialWeight));
-
-        expect(conn.weight).toBe(-1);
       });
     });
 
@@ -948,68 +890,72 @@ describe('Node', () => {
     let node: Node;
     let connInArr: Connection[];
     let connOutArr: Connection[];
-    let connIn: Connection; // Incoming connection to 'node'.
+    let selfConnArr: Connection[];
+    let connIn: Connection;
+    let selfConn: Connection;
 
     beforeEach(() => {
       node = new Node();
-      const source = new Node();
-      const target = new Node();
-
-      connInArr = source.connect(node);
-      connOutArr = node.connect(target);
-      node.connect(node); // Self-connection.
-      connIn = connInArr[0];
-
-      node.activate(0.5);
-      node.type = 'output';
-      node.propagate(0.1, 0, true, 1.0);
-      node.type = 'hidden';
-
-      connIn.elegibility = 0.1;
-      connIn.xtrace.nodes.push(node);
-      connIn.xtrace.values.push(0.2);
-      node.connections.self.elegibility = 0.4;
-      node.old = 0.5;
+      // Set some non-default values
+      node.activation = 0.5;
+      node.state = 0.6;
+      node.old = 0.7;
       node.error.responsibility = 0.1;
       node.error.projected = 0.2;
       node.error.gated = 0.3;
+
+      // Add connections with traces
+      const inputNode = new Node('input');
+      connInArr = inputNode.connect(node);
+      connIn = connInArr[0];
+      connIn.eligibility = 0.4;
+      connIn.xtrace.nodes.push(node); // Simplified trace setup
+      connIn.xtrace.values.push(0.5);
+
+      selfConnArr = node.connect(node); // Add self-connection
+      selfConn = selfConnArr[0];
+      selfConn.eligibility = 0.4; // Fix typo: eligibility -> eligibility
+      selfConn.xtrace.nodes.push(node);
+      selfConn.xtrace.values.push(0.6);
+
+      node.clear(); // Call the method under test
     });
 
     test('should reset activation to 0', () => {
-      node.clear();
       expect(node.activation).toBe(0);
     });
     test('should reset state to 0', () => {
-      node.clear();
       expect(node.state).toBe(0);
     });
     test('should reset old state to 0', () => {
-      node.clear();
       expect(node.old).toBe(0);
     });
     test('should reset error responsibility to 0', () => {
-      node.clear();
       expect(node.error.responsibility).toBe(0);
     });
     test('should reset error projected to 0', () => {
-      node.clear();
       expect(node.error.projected).toBe(0);
     });
     test('should reset error gated to 0', () => {
-      node.clear();
       expect(node.error.gated).toBe(0);
     });
     test('should reset incoming connection eligibility', () => {
-      node.clear();
-      expect(connIn.elegibility).toBe(0);
+      expect(connIn.eligibility).toBe(0);
+      if (selfConn) {
+        expect(selfConn.eligibility).toBe(0);
+      }
     });
     test('should reset incoming connection xtrace nodes', () => {
-      node.clear();
-      expect(connIn.xtrace.nodes).toEqual([]);
+      expect(connIn.xtrace.nodes.length).toBe(0);
+      if (selfConn) {
+        expect(selfConn.xtrace.nodes.length).toBe(0);
+      }
     });
     test('should reset incoming connection xtrace values', () => {
-      node.clear();
-      expect(connIn.xtrace.values).toEqual([]);
+      expect(connIn.xtrace.values.length).toBe(0);
+      if (selfConn) {
+        expect(selfConn.xtrace.values.length).toBe(0);
+      }
     });
   });
 

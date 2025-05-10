@@ -95,12 +95,13 @@ export default class Architect {
                 if (conn instanceof Connection) gates.add(conn);
               });
             }
-            // Add self-connection only if it exists and has a non-zero weight.
+            // Add self-connection only if it exists (array is not empty) and has a non-zero weight.
             if (
-              node.connections.self instanceof Connection &&
-              node.connections.self.weight !== 0
+              node.connections.self.length > 0 && // Check if array has elements
+              node.connections.self[0] instanceof Connection && // Check type of first element
+              node.connections.self[0].weight !== 0 // Access weight of first element
             ) {
-              selfconns.add(node.connections.self);
+              selfconns.add(node.connections.self[0]); // Add the Connection object
             }
           }
         }

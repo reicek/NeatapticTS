@@ -5,7 +5,8 @@
   "main": "./src/neataptic",
   "type": "module",
   "scripts": {
-    "test": "jest --no-cache --coverage --collect-coverage",
+    "test": "jest --no-cache --coverage --collect-coverage --runInBand",
+    "test:group": "jest --runInBand test/architecture/group.test.ts",
     "deploy": "npm run build && npm run test:dist && npm publish",
     "test:travis": "npm run build:dist && npm run test:dist",
     "build": "npm run build:webpack && npm run build:ts",

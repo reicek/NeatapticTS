@@ -167,8 +167,14 @@ export default class Group {
         // Iterate and connect corresponding nodes
         for (i = 0; i < this.nodes.length; i++) {
           let connection = this.nodes[i].connect(target.nodes[i], weight);
-          // Store self-connections (within the group or between corresponding nodes)
-          this.connections.self.push(connection[0]);
+          if (this === target) {
+            // Store self-connections (within the group)
+            this.connections.self.push(connection[0]);
+          } else {
+            // Store connections between different groups
+            this.connections.out.push(connection[0]);
+            target.connections.in.push(connection[0]);
+          }
           connections.push(connection[0]);
         }
       }
@@ -223,19 +229,10 @@ export default class Group {
     switch (method) {
       // Gate the input to the target node(s) of the connection(s)
       case methods.gating.INPUT:
-        for (i = 0; i < nodes2.length; i++) {
-          const node = nodes2[i]; // Target node of a connection
-          // Select a gater node from this group (cycles through if fewer gaters than targets)
+        for (let i = 0; i < connections.length; i++) {
+          const conn = connections[i];
           const gater = this.nodes[i % this.nodes.length];
-
-          // Find incoming connections to the target node that are in the provided list
-          for (j = 0; j < node.connections.in.length; j++) {
-            const conn = node.connections.in[j];
-            if (connections.includes(conn)) {
-              // Apply gating from the selected gater node to this connection
-              gater.gate(conn);
-            }
-          }
+          gater.gate(conn);
         }
         break;
 
@@ -261,15 +258,16 @@ export default class Group {
       case methods.gating.SELF:
         for (i = 0; i < nodes1.length; i++) {
           let node = nodes1[i]; // Node with the self-connection
-          // Select a gater node from this group
           let gater = this.nodes[i % this.nodes.length];
-
-          // Check if the node's self-connection is in the provided list
-          if (connections.includes(node.connections.self)) {
-            // Apply gating from the selected gater node to the self-connection
-            gater.gate(node.connections.self);
+          // Get the actual self-connection object (first element)
+          const selfConn = Array.isArray(node.connections.self)
+            ? node.connections.self[0]
+            : node.connections.self;
+          if (connections.includes(selfConn)) {
+            gater.gate(selfConn);
           }
         }
+        break;
     }
   }
 
@@ -318,12 +316,29 @@ export default class Group {
             }
           }
 
-          // If twosided, also remove the connection reference from this group's incoming connections list
+          // If twosided, also remove the reverse connection references from group lists
           if (twosided) {
+            // Remove from this group's incoming list
             for (k = this.connections.in.length - 1; k >= 0; k--) {
               let conn = this.connections.in[k];
               if (conn.from === target.nodes[j] && conn.to === this.nodes[i]) {
                 this.connections.in.splice(k, 1);
+                break; // Assume only one connection
+              }
+            }
+            // Remove from target group's outgoing list
+            for (k = target.connections.out.length - 1; k >= 0; k--) {
+              let conn = target.connections.out[k];
+              if (conn.from === target.nodes[j] && conn.to === this.nodes[i]) {
+                target.connections.out.splice(k, 1);
+                break; // Assume only one connection
+              }
+            }
+            // Remove from target group's incoming list (forward connection)
+            for (k = target.connections.in.length - 1; k >= 0; k--) {
+              let conn = target.connections.in[k];
+              if (conn.from === this.nodes[i] && conn.to === target.nodes[j]) {
+                target.connections.in.splice(k, 1);
                 break; // Assume only one connection
               }
             }
@@ -369,5 +384,23 @@ export default class Group {
     for (let i = 0; i < this.nodes.length; i++) {
       this.nodes[i].clear();
     }
+  }
+
+  /**
+   * Serializes the group into a JSON-compatible format, avoiding circular references.
+   * Only includes node indices and connection counts.
+   *
+   * @returns {object} A JSON-compatible representation of the group.
+   */
+  toJSON() {
+    return {
+      size: this.nodes.length,
+      nodeIndices: this.nodes.map(n => n.index),
+      connections: {
+        in: this.connections.in.length,
+        out: this.connections.out.length,
+        self: this.connections.self.length
+      }
+    };
   }
 }

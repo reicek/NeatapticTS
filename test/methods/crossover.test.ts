@@ -27,6 +27,14 @@ describe('Crossover Methods', () => {
       // Assert
       expect(crossover.SINGLE_POINT.config[0]).toBeCloseTo(0.4);
     });
+
+    test('should have correct config value within range [0, 1]', () => {
+      // Assert
+      const configVal = crossover.SINGLE_POINT.config[0];
+      expect(configVal).toBeCloseTo(0.4);
+      expect(configVal).toBeGreaterThanOrEqual(0);
+      expect(configVal).toBeLessThanOrEqual(1);
+    });
   });
 
   describe('TWO_POINT', () => {
@@ -55,6 +63,19 @@ describe('Crossover Methods', () => {
       // Assert
       expect(crossover.TWO_POINT.config[0]).toBeCloseTo(0.4);
       expect(crossover.TWO_POINT.config[1]).toBeCloseTo(0.9);
+    });
+
+    test('should have correct config values within range [0, 1]', () => {
+      // Assert
+      const configVal1 = crossover.TWO_POINT.config[0];
+      const configVal2 = crossover.TWO_POINT.config[1];
+      expect(configVal1).toBeCloseTo(0.4);
+      expect(configVal2).toBeCloseTo(0.9);
+      expect(configVal1).toBeGreaterThanOrEqual(0);
+      expect(configVal1).toBeLessThanOrEqual(1);
+      expect(configVal2).toBeGreaterThanOrEqual(0);
+      expect(configVal2).toBeLessThanOrEqual(1);
+      expect(configVal1).toBeLessThanOrEqual(configVal2); // Ensure points are ordered
     });
   });
 
