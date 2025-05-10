@@ -131,6 +131,11 @@ export default class Network {
    *                   This function takes an `input` array and returns an `output` array.
    */
   standalone(): string {
+    // Throw if there are no output nodes
+    if (!this.nodes.some(n => n.type === 'output')) {
+      throw new Error('Cannot create standalone function: network has no output nodes.');
+    }
+
     const present: { [key: string]: string } = {}; // Tracks activation functions already defined (name -> definition string).
     const squashDefinitions: string[] = []; // Stores the string definitions of the activation functions used.
     const functionMap: { [key: string]: number } = {}; // Maps activation function name to an index in the `F` array.
@@ -347,6 +352,13 @@ export default class Network {
    * @see {@link https://medium.com/data-science/neuro-evolution-on-steroids-82bd14ddc2f6}
    */
   activate(input: number[], training = false): number[] {
+    // Input size validation
+    if (!Array.isArray(input) || input.length !== this.input) {
+      throw new Error(
+        `Input size mismatch: expected ${this.input}, got ${input ? input.length : 'undefined'}`
+      );
+    }
+
     const output: number[] = []; // Array to store the activations of output nodes.
 
     // Iterate through all nodes in the network.
@@ -388,6 +400,13 @@ export default class Network {
    * @see {@link Node.noTraceActivate}
    */
   noTraceActivate(input: number[]): number[] {
+    // Input size validation
+    if (!Array.isArray(input) || input.length !== this.input) {
+      throw new Error(
+        `Input size mismatch: expected ${this.input}, got ${input ? input.length : 'undefined'}`
+      );
+    }
+
     const output: number[] = []; // Array to store the activations of output nodes.
 
     // Iterate through all nodes in the network.
@@ -537,19 +556,21 @@ export default class Network {
 
       case mutation.SUB_NODE:
         // Removes a hidden node from the network.
-        // Check if there are any hidden nodes to remove.
-        if (this.nodes.length === this.input + this.output) {
+        // Filter for hidden nodes only.
+        const hiddenNodes = this.nodes.filter(n => n.type === 'hidden');
+        if (hiddenNodes.length === 0) {
           if (config.warnings) console.warn('No hidden nodes left to remove!');
           break;
         }
-
-        // 1. Select a random hidden node index.
-        index = Math.floor(
-          Math.random() * (this.nodes.length - this.output - this.input) + // Number of hidden nodes
-            this.input // Offset by input nodes
-        );
+        // 1. Select a random hidden node.
+        node = hiddenNodes[Math.floor(Math.random() * hiddenNodes.length)];
         // 2. Remove the selected node using the `remove` method, which handles reconnection.
-        this.remove(this.nodes[index]);
+        if (node.type === 'hidden') {
+          this.remove(node);
+        } else {
+          // This should never happen, but guard just in case.
+          if (config.warnings) console.warn('Attempted to remove a non-hidden node. Skipping.');
+        }
         break;
 
       case mutation.ADD_CONN:
@@ -898,6 +919,11 @@ export default class Network {
    * @throws {Error} If the specified `node` is not found in the network's `nodes` list.
    */
   remove(node: Node): void {
+    // Prevent removal of input or output nodes
+    if (node.type === 'input' || node.type === 'output') {
+      throw new Error('Cannot remove input or output node from the network.');
+    }
+
     // Find the index of the node to remove.
     const index = this.nodes.indexOf(node);
 
@@ -1519,6 +1545,8 @@ export default class Network {
     let error = Infinity; // Initialize error (lower is better).
     let bestFitness = -Infinity; // Track the highest fitness achieved.
     let bestGenome: Network | undefined = undefined; // Store the best genome found so far.
+    let infiniteErrorCount = 0; // Failsafe counter for infinite/NaN error.
+    const MAX_INFINITE_ERROR_GEN = 5; // Max allowed generations with infinite/NaN error.
 
     // Main evolution loop.
     while (
@@ -1533,21 +1561,31 @@ export default class Network {
 
       // Calculate the error corresponding to the fitness (inverting the fitness calculation).
       // Note: This recalculates the complexity penalty part.
-      error =
-        -(
-          fitness -
-          (fittest.nodes.length -
-            fittest.input -
-            fittest.output +
-            fittest.connections.length +
-            fittest.gates.length) *
-            growth
-        ) || Infinity; // Handle potential NaN/Infinity fitness
+      error = -(
+        fitness -
+        (fittest.nodes.length -
+          fittest.input -
+          fittest.output +
+          fittest.connections.length +
+          fittest.gates.length) *
+          growth
+      ) || Infinity; // Handle potential NaN/Infinity fitness
 
       // Update the best genome found so far.
       if (fitness > bestFitness) {
         bestFitness = fitness;
         bestGenome = fittest;
+      }
+
+      // Failsafe: If error is infinite or NaN for too many generations, break and warn.
+      if (!isFinite(error) || isNaN(error)) {
+        infiniteErrorCount++;
+        if (infiniteErrorCount >= MAX_INFINITE_ERROR_GEN) {
+          console.warn('Evolution completed without finding a valid best genome. Evolution stopped: error was infinite or NaN for too many generations. Check your fitness function and dataset.');
+          break;
+        }
+      } else {
+        infiniteErrorCount = 0; // Reset if a valid error is found
       }
 
       // Log progress if enabled.
@@ -1610,6 +1648,23 @@ export default class Network {
     set: { input: number[]; output: number[] }[],
     cost?: any
   ): { error: number; time: number } {
+    // Dataset dimension validation
+    if (!Array.isArray(set) || set.length === 0) {
+      throw new Error('Test set is empty or not an array.');
+    }
+    for (const sample of set) {
+      if (!Array.isArray(sample.input) || sample.input.length !== this.input) {
+        throw new Error(
+          `Test sample input size mismatch: expected ${this.input}, got ${sample.input ? sample.input.length : 'undefined'}`
+        );
+      }
+      if (!Array.isArray(sample.output) || sample.output.length !== this.output) {
+        throw new Error(
+          `Test sample output size mismatch: expected ${this.output}, got ${sample.output ? sample.output.length : 'undefined'}`
+        );
+      }
+    }
+
     let error = 0; // Accumulator for the total error.
     const costFn = cost || methods.Cost.mse; // Use provided cost function or default to MSE.
     const start = Date.now(); // Start time measurement.
@@ -1652,7 +1707,7 @@ export default class Network {
    * Note: This is a lightweight serialization, different from the more comprehensive `toJSON`.
    *
    * @returns {any[]} An array containing serialized network data:
-   *                  `[activations, states, squashFunctionNames, connectionData]`
+   *                  `[activations, states, squashFunctionNames, connectionData, inputSize, outputSize]`
    *                  where `connectionData` is an array of objects like
    *                  `{ from: number, to: number, weight: number, gater: number | null }`.
    *                  Indices refer to the node's position in the `nodes` array.
@@ -1673,8 +1728,8 @@ export default class Network {
       weight: conn.weight, // Connection weight.
       gater: conn.gater ? conn.gater.index : null, // Gating node index or null.
     }));
-    // Return the data packed into an array.
-    return [activations, states, squashes, connections];
+    // Include input/output sizes for robust deserialization
+    return [activations, states, squashes, connections, this.input, this.output];
   }
 
   /**
@@ -1682,42 +1737,34 @@ export default class Network {
    * Reconstructs the network structure and state based on the provided arrays.
    *
    * @param {any[]} data - The serialized network data array, typically obtained from `network.serialize()`.
-   *                       Expected format: `[activations, states, squashNames, connectionData]`.
+   *                       Expected format: `[activations, states, squashNames, connectionData, inputSize, outputSize]`.
+   * @param {number} [inputSize] - Optional input size override.
+   * @param {number} [outputSize] - Optional output size override.
    * @returns {Network} A new Network instance reconstructed from the serialized data.
    * @static
    */
-  static deserialize(data: any[]): Network {
+  static deserialize(data: any[], inputSize?: number, outputSize?: number): Network {
     // Unpack the serialized data.
-    const [activations, states, squashes, connections] = data;
-
-    // Determine input and output size from the lengths of the arrays.
-    // This assumes a basic structure was serialized; more robust deserialization might need explicit sizes.
-    // TODO: This calculation seems incorrect. Input/Output size cannot be reliably inferred just from activation/state lengths.
-    //       A better approach would be to serialize input/output size explicitly.
-    //       Assuming for now the caller knows the intended input/output size or it matches the original.
-    //       Let's try to infer based on node types if possible, but that info isn't directly here.
-    //       Fallback: Assume input = 0, output = 0 and let connections define structure? Risky.
-    //       Using lengths as a placeholder, but this needs review.
-    const inputSize = 0; // Placeholder - Cannot reliably determine from this data.
-    const outputSize = 0; // Placeholder - Cannot reliably determine from this data.
-    // Create a new network shell. The input/output sizes here might be placeholders if not derivable.
-    // The actual structure will be defined by the nodes and connections data.
-    const network = new Network(inputSize, outputSize);
-    network.nodes = []; // Clear default nodes/connections created by constructor.
+    const [activations, states, squashes, connections, serializedInput, serializedOutput] = data;
+    // Use provided input/output size, or fallback to serialized values, or fallback to 0
+    const input = typeof inputSize === 'number' ? inputSize : (typeof serializedInput === 'number' ? serializedInput : 0);
+    const output = typeof outputSize === 'number' ? outputSize : (typeof serializedOutput === 'number' ? serializedOutput : 0);
+    // Create a new network shell. The actual structure will be defined by the nodes and connections data.
+    const network = new Network(input, output);
+    network.nodes = [];
     network.connections = [];
     network.selfconns = [];
     network.gates = [];
 
     // Recreate nodes and set their state.
     activations.forEach((activation: number, index: number) => {
-      // We need node type information, which isn't in the serialized data.
-      // Assume 'hidden' for now, or try to infer? This is a limitation of the current format.
-      // Let's assume the order implies input/hidden/output based on original sizes if they were known.
-      // Without original sizes, we create generic nodes.
-      const node = new Node(); // Create a default node. Type might be wrong.
+      let type: string;
+      if (index < input) type = 'input';
+      else if (index >= activations.length - output) type = 'output';
+      else type = 'hidden';
+      const node = new Node(type);
       node.activation = activation;
       node.state = states[index];
-      // Find the squash function by name from the available methods.
       const squashName = squashes[index] as keyof typeof methods.Activation;
       const squashFn = methods.Activation[squashName];
       if (squashFn) {
@@ -1726,14 +1773,11 @@ export default class Network {
         console.warn(
           `Deserialization: Unknown squash function '${squashName}'. Using identity.`
         );
-        node.squash = methods.Activation.identity; // Fallback
+        node.squash = methods.Activation.identity;
       }
-      node.index = index; // Assign index.
-      network.nodes.push(node); // Add the reconstructed node.
+      node.index = index;
+      network.nodes.push(node);
     });
-
-    // TODO: Determine actual input/output nodes based on connections or serialized metadata if added.
-    // For now, the network's input/output properties might be inaccurate.
 
     // Recreate connections.
     connections.forEach(
@@ -1743,21 +1787,17 @@ export default class Network {
         weight: number;
         gater: number | null;
       }) => {
-        // Check if node indices are valid.
         if (
           connData.from < network.nodes.length &&
           connData.to < network.nodes.length
         ) {
           const fromNode: Node = network.nodes[connData.from];
           const toNode: Node = network.nodes[connData.to];
-          // Connect the nodes using the network's connect method to update lists correctly.
           const connection: Connection | undefined = network.connect(
             fromNode,
             toNode,
             connData.weight
           )[0];
-
-          // Re-apply gating if necessary.
           if (connection && connData.gater !== null) {
             if (connData.gater < network.nodes.length) {
               network.gate(network.nodes[connData.gater], connection);
@@ -1775,7 +1815,7 @@ export default class Network {
       }
     );
 
-    return network; // Return the reconstructed network.
+    return network;
   }
 
   /**

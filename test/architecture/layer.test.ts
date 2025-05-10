@@ -6,7 +6,7 @@ import * as methods from '../../src/methods/methods';
 import { config } from '../../src/config';
 
 // Retry failed tests
-jest.retryTimes(5, { logErrorsBeforeRetry: true });
+jest.retryTimes(2, { logErrorsBeforeRetry: true });
 
 // Helper function to check group connectivity
 const isGroupConnectedTo = (
@@ -48,22 +48,27 @@ describe('Layer', () => {
     });
 
     test('should initialize output to null', () => {
+      // Arrange, Act & Assert
       expect(layer.output).toBeNull();
     });
 
     test('should initialize nodes as an empty array', () => {
+      // Arrange, Act & Assert
       expect(layer.nodes).toEqual([]);
     });
 
     test('should initialize connections.in as an empty array', () => {
+      // Arrange, Act & Assert
       expect(layer.connections.in).toEqual([]);
     });
 
     test('should initialize connections.out as an empty array', () => {
+      // Arrange, Act & Assert
       expect(layer.connections.out).toEqual([]);
     });
 
     test('should initialize connections.self as an empty array', () => {
+      // Arrange, Act & Assert
       expect(layer.connections.self).toEqual([]);
     });
   });
@@ -93,7 +98,10 @@ describe('Layer', () => {
       });
 
       test('should call activate on all nodes without input values', () => {
+        // Arrange
+        // Act
         layer.activate();
+        // Assert
         expect(nodeSpies).toHaveLength(size);
         nodeSpies.forEach((spy) => {
           expect(spy).toHaveBeenCalledTimes(1);
@@ -102,7 +110,10 @@ describe('Layer', () => {
       });
 
       test('should return activation values from nodes without input', () => {
+        // Arrange
+        // Act
         const activations = layer.activate();
+        // Assert
         expect(activations).toHaveLength(size);
         activations.forEach((act, i) => {
           const expected = methods.Activation.logistic((i + 1) * 0.1);
@@ -111,8 +122,11 @@ describe('Layer', () => {
       });
 
       test('should call activate on all nodes with provided input values', () => {
+        // Arrange
         const inputValues = [0.5, -0.2, 1.0];
+        // Act
         layer.activate(inputValues);
+        // Assert
         expect(nodeSpies).toHaveLength(size);
         nodeSpies.forEach((spy, i) => {
           expect(spy).toHaveBeenCalledTimes(1);
@@ -121,8 +135,11 @@ describe('Layer', () => {
       });
 
       test('should return activation values from nodes with input', () => {
+        // Arrange
         const inputValues = [0.5, -0.2, 1.0];
+        // Act
         const activations = layer.activate(inputValues);
+        // Assert
         expect(activations).toHaveLength(size);
         activations.forEach((act, i) => {
           expect(act).toBe(inputValues[i]);
@@ -130,7 +147,9 @@ describe('Layer', () => {
       });
 
       test('should throw error if input value array length mismatches layer node count', () => {
+        // Arrange
         const invalidInput = [0.1, 0.2];
+        // Act & Assert
         expect(() => layer.activate(invalidInput)).toThrow(
           'Array with values should be same as the amount of nodes!'
         );
@@ -154,7 +173,10 @@ describe('Layer', () => {
       });
 
       test('should call propagate on all nodes without target values', () => {
+        // Arrange
+        // Act
         layer.propagate(rate, momentum);
+        // Assert
         expect(nodeSpies).toHaveLength(size);
         nodeSpies.forEach((spy) => {
           expect(spy).toHaveBeenCalledTimes(1);
@@ -163,15 +185,21 @@ describe('Layer', () => {
       });
 
       test('should call propagate on nodes in reverse order', () => {
+        // Arrange
         const callOrder: number[] = [];
         nodeSpies.forEach((spy, i) => spy.mockImplementation(() => callOrder.push(i)));
+        // Act
         layer.propagate(rate, momentum);
+        // Assert
         expect(callOrder).toEqual([2, 1, 0]);
       });
 
       test('should call propagate on all nodes with target values', () => {
+        // Arrange
         const targetValues = [0.8, 0.1, 0.5];
+        // Act
         layer.propagate(rate, momentum, targetValues);
+        // Assert
         expect(nodeSpies).toHaveLength(size);
         nodeSpies.reverse().forEach((spy, i) => {
           const originalIndex = size - 1 - i;
@@ -186,7 +214,9 @@ describe('Layer', () => {
       });
 
       test('should throw error if target value array length mismatches layer node count', () => {
+        // Arrange
         const invalidTarget = [0.1, 0.2];
+        // Act & Assert
         expect(() => layer.propagate(rate, momentum, invalidTarget)).toThrow(
           'Array with values should be same as the amount of nodes!'
         );
@@ -219,31 +249,39 @@ describe('Layer', () => {
       });
 
       test('should throw error if source layer output is not defined', () => {
+        // Arrange
         const layerWithoutOutput = new Layer();
+        // Act & Assert
         expect(() => layerWithoutOutput.connect(targetGroup)).toThrow(
           'Layer output is not defined. Cannot connect from this layer.'
         );
       });
 
       test('should call output.connect when connecting to a Group', () => {
+        // Arrange, Act
         const method = methods.groupConnection.ALL_TO_ALL;
         const weight = 0.5;
         sourceLayer.connect(targetGroup, method, weight);
+        // Assert
         expect(sourceOutputSpy).toHaveBeenCalledTimes(1);
         expect(sourceOutputSpy).toHaveBeenCalledWith(targetGroup, method, weight);
       });
 
       test('should call output.connect when connecting to a Node', () => {
+        // Arrange, Act
         const weight = 0.6;
         sourceLayer.connect(targetNode, undefined, weight);
+        // Assert
         expect(sourceOutputSpy).toHaveBeenCalledTimes(1);
         expect(sourceOutputSpy).toHaveBeenCalledWith(targetNode, undefined, weight);
       });
 
       test('should call targetLayer.input when connecting to another Layer', () => {
+        // Arrange, Act
         const method = methods.groupConnection.ONE_TO_ONE;
         const weight = 0.7;
         sourceLayer.connect(targetLayer, method, weight);
+        // Assert
         expect(targetInputSpy).toHaveBeenCalledTimes(1);
         expect(targetInputSpy).toHaveBeenCalledWith(sourceLayer, method, weight);
         expect(sourceOutputSpy).toHaveBeenCalledTimes(1);
@@ -251,16 +289,22 @@ describe('Layer', () => {
       });
 
       test('should return the connections created by output.connect (Group target)', () => {
+        // Arrange
         const mockConnections = [new Connection(new Node(), new Node())];
         sourceOutputSpy?.mockReturnValue(mockConnections);
+        // Act
         const result = sourceLayer.connect(targetGroup);
+        // Assert
         expect(result).toBe(mockConnections);
       });
 
       test('should return the connections created by targetLayer.input (Layer target)', () => {
+        // Arrange
         const mockConnections = [new Connection(new Node(), new Node())];
         targetInputSpy.mockReturnValue(mockConnections);
+        // Act
         const result = sourceLayer.connect(targetLayer);
+        // Assert
         expect(result).toBe(mockConnections);
       });
     });
@@ -286,15 +330,19 @@ describe('Layer', () => {
       });
 
       test('should throw error if layer output is not defined', () => {
+        // Arrange
         const layerWithoutOutput = new Layer();
+        // Act & Assert
         expect(() =>
           layerWithoutOutput.gate(connectionsToGate, methods.gating.INPUT)
         ).toThrow('Layer output is not defined. Cannot gate from this layer.');
       });
 
       test('should call output.gate with the provided connections and method', () => {
+        // Arrange, Act
         const method = methods.gating.OUTPUT;
         layer.gate(connectionsToGate, method);
+        // Assert
         expect(outputGroupSpy).toHaveBeenCalledTimes(1);
         expect(outputGroupSpy).toHaveBeenCalledWith(connectionsToGate, method);
       });
@@ -314,34 +362,42 @@ describe('Layer', () => {
       });
 
       test('should set bias for all nodes', () => {
+        // Arrange, Act
         const biasValue = 0.7;
         layer.set({ bias: biasValue });
+        // Assert
         layer.nodes.forEach((node) => {
           expect(node.bias).toBe(biasValue);
         });
       });
 
       test('should set squash function for all nodes', () => {
+        // Arrange, Act
         const squashFn = methods.Activation.relu;
         layer.set({ squash: squashFn });
+        // Assert
         layer.nodes.forEach((node) => {
           expect(node.squash).toBe(squashFn);
         });
       });
 
       test('should set type for all nodes', () => {
+        // Arrange, Act
         const typeValue = 'output';
         layer.set({ type: typeValue });
+        // Assert
         layer.nodes.forEach((node) => {
           expect(node.type).toBe(typeValue);
         });
       });
 
       test('should set multiple properties at once', () => {
+        // Arrange, Act
         const biasValue = -0.2;
         const squashFn = methods.Activation.tanh;
         const typeValue = 'input';
         layer.set({ bias: biasValue, squash: squashFn, type: typeValue });
+        // Assert
         layer.nodes.forEach((node) => {
           expect(node.bias).toBe(biasValue);
           expect(node.squash).toBe(squashFn);
@@ -350,12 +406,13 @@ describe('Layer', () => {
       });
 
       test('should not change properties if not provided in values object', () => {
+        // Arrange
         const initialBiases = layer.nodes.map((node) => node.bias);
         const initialSquashes = layer.nodes.map((node) => node.squash);
         const initialTypes = layer.nodes.map((node) => node.type);
-
+        // Act
         layer.set({ bias: 0.99 });
-
+        // Assert
         layer.nodes.forEach((node, i) => {
           expect(node.bias).toBe(0.99);
           expect(node.squash).toBe(initialSquashes[i]);
@@ -1098,7 +1155,7 @@ describe('Layer', () => {
       const node = new Node();
       expect((layer as any).isGroup(node)).toBe(false);
     });
-
+ 
     test('should return false for a plain object', () => {
       const obj = { nodes: [], set: () => {} };
       expect((layer as any).isGroup(obj)).toBe(true);

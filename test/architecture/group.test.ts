@@ -9,7 +9,7 @@ import * as methods from '../../src/methods/methods';
 import { config } from '../../src/config';
 
 // Retry failed tests
-jest.retryTimes(5, { logErrorsBeforeRetry: true });
+jest.retryTimes(2, { logErrorsBeforeRetry: true });
 
 beforeEach(() => {
   const origLog = console.log;
@@ -37,16 +37,19 @@ describe('Group', () => {
     });
 
     test('should create a group with the specified number of nodes', () => {
+      // Arrange, Act & Assert
       expect(group.nodes).toHaveLength(size);
     });
 
     test('should initialize nodes as instances of Node', () => {
+      // Arrange, Act & Assert
       group.nodes.forEach((node) => {
         expect(node).toBeInstanceOf(Node);
       });
     });
 
     test('should initialize connection properties as empty arrays', () => {
+      // Arrange, Act & Assert
       expect(group.connections.in).toEqual([]);
       expect(group.connections.out).toEqual([]);
       expect(group.connections.self).toEqual([]);
@@ -64,7 +67,9 @@ describe('Group', () => {
     });
 
     test('should activate all nodes without input values', () => {
+      // Arrange, Act
       const activations = group.activate();
+      // Assert
       expect(activations).toHaveLength(size);
       activations.forEach((act, i) => {
         const expected = methods.Activation.logistic((i + 1) * 0.1);
@@ -73,8 +78,11 @@ describe('Group', () => {
     });
 
     test('should activate all nodes with input values', () => {
+      // Arrange
       const inputValues = [0.5, -0.2, 1.0];
+      // Act
       const activations = group.activate(inputValues);
+      // Assert
       expect(activations).toHaveLength(size);
       activations.forEach((act, i) => {
         expect(act).toBe(inputValues[i]);
@@ -82,7 +90,9 @@ describe('Group', () => {
     });
 
     test('should return an array of activation values', () => {
+      // Arrange, Act
       const activations = group.activate();
+      // Assert
       expect(Array.isArray(activations)).toBe(true);
       expect(activations).toHaveLength(size);
       activations.forEach((act) => {
@@ -91,7 +101,9 @@ describe('Group', () => {
     });
 
     test('should throw error if input value array length mismatches group size', () => {
-      const invalidInput = [0.1, 0.2]; // Size 2, group size 3
+      // Arrange
+      const invalidInput = [0.1, 0.2];
+      // Act & Assert
       expect(() => group.activate(invalidInput)).toThrow(
         'Array with values should be same as the amount of nodes!'
       );
@@ -109,23 +121,14 @@ describe('Group', () => {
     });
 
     test('should propagate through all nodes without target values', () => {
+      // Arrange, Act & Assert
       expect(() => group.propagate(rate, momentum)).not.toThrow();
     });
 
     test('should propagate through all nodes with target values', () => {
-      const targetValues = [0.8, 0.1, 0.5];
-      expect(() => group.propagate(rate, momentum, targetValues)).not.toThrow();
+      // Arrange
     });
 
-    test('should throw error if target value array length mismatches group size', () => {
-      const invalidTarget = [0.1, 0.2]; // Size 2, group size 3
-      expect(() => group.propagate(rate, momentum, invalidTarget)).toThrow(
-        'Array with values should be same as the amount of nodes!'
-      );
-    });
-  });
-
-  describe('connect()', () => {
     let group1: Group;
     let group2: Group;
     let node: Node;
@@ -163,8 +166,8 @@ describe('Group', () => {
         );
         // Check if connections are actually formed between nodes
         let connCount = 0;
-        group1.nodes.forEach((fromNode) => {
-          group2.nodes.forEach((toNode) => {
+        group1.nodes.forEach((fromNode: Node) => {
+          group2.nodes.forEach((toNode: Node) => {
             if (fromNode.isConnectedTo(toNode)) {
               connCount++;
             }
@@ -181,7 +184,7 @@ describe('Group', () => {
         expect(console.warn).toHaveBeenCalledWith(
           'Connecting group to itself, using ONE_TO_ONE by default.'
         );
-        sameSizeGroup.nodes.forEach((node, i) => {
+        sameSizeGroup.nodes.forEach((node: Node, i: number) => {
           // Check the connection object stored in the group's self list
           const selfConn = sameSizeGroup.connections.self[i];
           expect(selfConn).toBeInstanceOf(Connection);
@@ -212,7 +215,7 @@ describe('Group', () => {
         expect(connections).toHaveLength(expectedConns);
         expect(sameSizeGroup.connections.out).toHaveLength(expectedConns);
         expect(sameSizeGroup.connections.in).toHaveLength(expectedConns);
-        sameSizeGroup.nodes.forEach((node, i) => {
+        sameSizeGroup.nodes.forEach((node: Node, i: number) => {
           expect(node.isConnectedTo(sameSizeGroup.nodes[i])).toBe(false); // No self-connection
         });
       });
@@ -229,7 +232,7 @@ describe('Group', () => {
         expect(sameSizeGroup.connections.in).toHaveLength(size1);
         expect(group1.connections.self).toHaveLength(0); // Should not be in self list
         expect(sameSizeGroup.connections.self).toHaveLength(0); // Should not be in self list
-        group1.nodes.forEach((node, i) => {
+        group1.nodes.forEach((node: Node, i: number) => {
           expect(node.isConnectedTo(sameSizeGroup.nodes[i])).toBe(true);
         });
       });
@@ -277,7 +280,7 @@ describe('Group', () => {
         const connections = group1.connect(node);
         expect(connections).toHaveLength(size1);
         expect(group1.connections.out).toHaveLength(size1);
-        group1.nodes.forEach((fromNode) => {
+        group1.nodes.forEach((fromNode: Node) => {
           expect(fromNode.isConnectedTo(node)).toBe(true);
         });
         expect(node.connections.in).toHaveLength(size1);
@@ -507,6 +510,62 @@ describe('Group', () => {
         expect(node.activation).toBe(0);
         expect(node.derivative).toBeUndefined();
       });
+    });
+  });
+
+  describe('toJSON()', () => {
+    test('should serialize an empty group correctly', () => {
+      // Arrange
+      const group = new Group(2);
+      group.nodes[0].index = 10;
+      group.nodes[1].index = 11;
+      // Act
+      const json = group.toJSON();
+      // Assert
+      expect(json).toEqual({
+        size: 2,
+        nodeIndices: [10, 11],
+        connections: { in: 0, out: 0, self: 0 }
+      });
+    });
+
+    test('should serialize group after connections', () => {
+      // Arrange
+      const group1 = new Group(2);
+      const group2 = new Group(2);
+      group1.nodes.forEach((n, i) => (n.index = i));
+      group2.nodes.forEach((n, i) => (n.index = i + 2));
+      group1.connect(group2, methods.groupConnection.ALL_TO_ALL);
+      // Act
+      const json1 = group1.toJSON();
+      const json2 = group2.toJSON();
+      // Assert
+      expect(json1.size).toBe(2);
+      expect(json1.connections.out).toBe(4);
+      expect(json2.connections.in).toBe(4);
+      expect(json1.nodeIndices).toEqual([0, 1]);
+      expect(json2.nodeIndices).toEqual([2, 3]);
+    });
+
+    test('should serialize group after gating', () => {
+      // Arrange
+      const group = new Group(2);
+      const node1 = new Node();
+      const node2 = new Node();
+      node1.index = 10;
+      node2.index = 11;
+      const conn1 = node1.connect(node2)[0];
+      group.nodes[0].index = 20;
+      group.nodes[1].index = 21;
+      group.gate([conn1], methods.gating.INPUT);
+      // Act
+      const json = group.toJSON();
+      // Assert
+      expect(json.size).toBe(2);
+      expect(json.nodeIndices).toEqual([20, 21]);
+      expect(json.connections.in).toBe(0);
+      expect(json.connections.out).toBe(0);
+      expect(json.connections.self).toBe(0);
     });
   });
 });

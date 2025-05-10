@@ -2,77 +2,158 @@ import { selection } from '../../src/methods/selection';
 
 describe('Selection Methods', () => {
   describe('FITNESS_PROPORTIONATE', () => {
-    test('should exist', () => {
-      // Assert
-      expect(selection.FITNESS_PROPORTIONATE).toBeDefined();
+    describe('when checking existence', () => {
+      test('should be defined', () => {
+        // Arrange
+        // Act
+        const method = selection.FITNESS_PROPORTIONATE;
+        // Assert
+        expect(method).toBeDefined();
+      });
     });
 
-    test('should have correct name property', () => {
-      // Assert
-      expect(selection.FITNESS_PROPORTIONATE.name).toBe(
-        'FITNESS_PROPORTIONATE'
-      );
+    describe('when checking name property', () => {
+      test('should have correct name', () => {
+        // Arrange
+        // Act
+        const name = selection.FITNESS_PROPORTIONATE.name;
+        // Assert
+        expect(name).toBe('FITNESS_PROPORTIONATE');
+      });
+
+      test('should not have unexpected properties', () => {
+        // Arrange
+        // Act
+        const keys = Object.keys(selection.FITNESS_PROPORTIONATE);
+        // Assert
+        expect(keys).toEqual(['name']);
+      });
     });
   });
 
   describe('POWER', () => {
-    test('should exist', () => {
-      // Assert
-      expect(selection.POWER).toBeDefined();
+    describe('when checking existence', () => {
+      test('should be defined', () => {
+        // Arrange
+        // Act
+        const method = selection.POWER;
+        // Assert
+        expect(method).toBeDefined();
+      });
     });
 
-    test('should have correct name property', () => {
-      // Assert
-      expect(selection.POWER.name).toBe('POWER');
+    describe('when checking name property', () => {
+      test('should have correct name', () => {
+        // Arrange
+        // Act
+        const name = selection.POWER.name;
+        // Assert
+        expect(name).toBe('POWER');
+      });
     });
 
-    test('should have power property with default value', () => {
-      // Assert
-      expect(selection.POWER.power).toBe(4);
+    describe('when checking power property', () => {
+      test('should have default value 4', () => {
+        // Arrange
+        // Act
+        const power = selection.POWER.power;
+        // Assert
+        expect(power).toBe(4);
+      });
+
+      test('should be greater than 0', () => {
+        // Arrange
+        // Act
+        const power = selection.POWER.power;
+        // Assert
+        expect(power).toBeGreaterThan(0);
+      });
     });
 
-    test('should have power property with default value > 0', () => {
-      // Assert
-      const powerVal = selection.POWER.power;
-      expect(powerVal).toBe(4);
-      expect(powerVal).toBeGreaterThan(0);
+    describe('when checking for unexpected properties', () => {
+      test('should only have name and power', () => {
+        // Arrange
+        // Act
+        const keys = Object.keys(selection.POWER);
+        // Assert
+        expect(keys.sort()).toEqual(['name', 'power'].sort());
+      });
     });
   });
 
   describe('TOURNAMENT', () => {
-    test('should exist', () => {
-      // Assert
-      expect(selection.TOURNAMENT).toBeDefined();
+    describe('when checking existence', () => {
+      test('should be defined', () => {
+        // Arrange
+        // Act
+        const method = selection.TOURNAMENT;
+        // Assert
+        expect(method).toBeDefined();
+      });
     });
 
-    test('should have correct name property', () => {
-      // Assert
-      expect(selection.TOURNAMENT.name).toBe('TOURNAMENT');
+    describe('when checking name property', () => {
+      test('should have correct name', () => {
+        // Arrange
+        // Act
+        const name = selection.TOURNAMENT.name;
+        // Assert
+        expect(name).toBe('TOURNAMENT');
+      });
     });
 
-    test('should have size property with default value', () => {
-      // Assert
-      expect(selection.TOURNAMENT.size).toBe(5);
+    describe('when checking size property', () => {
+      test('should have default value 5', () => {
+        // Arrange
+        // Act
+        const size = selection.TOURNAMENT.size;
+        // Assert
+        expect(size).toBe(5);
+      });
+
+      test('should be greater than 0', () => {
+        // Arrange
+        // Act
+        const size = selection.TOURNAMENT.size;
+        // Assert
+        expect(size).toBeGreaterThan(0);
+      });
     });
 
-    test('should have size property with default value > 0', () => {
-      // Assert
-      const sizeVal = selection.TOURNAMENT.size;
-      expect(sizeVal).toBe(5);
-      expect(sizeVal).toBeGreaterThan(0);
+    describe('when checking probability property', () => {
+      test('should have default value 0.5', () => {
+        // Arrange
+        // Act
+        const probability = selection.TOURNAMENT.probability;
+        // Assert
+        expect(probability).toBe(0.5);
+      });
+
+      test('should be >= 0', () => {
+        // Arrange
+        // Act
+        const probability = selection.TOURNAMENT.probability;
+        // Assert
+        expect(probability).toBeGreaterThanOrEqual(0);
+      });
+
+      test('should be <= 1', () => {
+        // Arrange
+        // Act
+        const probability = selection.TOURNAMENT.probability;
+        // Assert
+        expect(probability).toBeLessThanOrEqual(1);
+      });
     });
 
-    test('should have probability property with default value', () => {
-      // Assert
-      expect(selection.TOURNAMENT.probability).toBe(0.5);
-    });
-
-    test('should have probability property with default value within [0, 1]', () => {
-      // Assert
-      const probVal = selection.TOURNAMENT.probability;
-      expect(probVal).toBe(0.5);
-      expect(probVal).toBeGreaterThanOrEqual(0);
-      expect(probVal).toBeLessThanOrEqual(1);
+    describe('when checking for unexpected properties', () => {
+      test('should only have name, size, and probability', () => {
+        // Arrange
+        // Act
+        const keys = Object.keys(selection.TOURNAMENT);
+        // Assert
+        expect(keys.sort()).toEqual(['name', 'size', 'probability'].sort());
+      });
     });
   });
 });

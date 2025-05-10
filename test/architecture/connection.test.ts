@@ -189,4 +189,71 @@ describe('Connection', () => {
       });
     });
   });
+
+  describe('innovationID', () => {
+    describe('When called with two different pairs', () => {
+      test('should return unique values for different pairs', () => {
+        // Arrange
+        const a1 = 1, b1 = 2;
+        const a2 = 2, b2 = 3;
+        // Act
+        const id1 = Connection.innovationID(a1, b1);
+        const id2 = Connection.innovationID(a2, b2);
+        // Assert
+        expect(id1).not.toBe(id2);
+      });
+    });
+    describe('When called with the same pair twice', () => {
+      test('should return the same value', () => {
+        // Arrange
+        const a = 5, b = 7;
+        // Act
+        const id1 = Connection.innovationID(a, b);
+        const id2 = Connection.innovationID(a, b);
+        // Assert
+        expect(id1).toBe(id2);
+      });
+    });
+    describe('When called with reversed pairs', () => {
+      test('should return different values for (a, b) and (b, a) when a !== b', () => {
+        // Arrange
+        const a = 3, b = 8;
+        // Act
+        const id1 = Connection.innovationID(a, b);
+        const id2 = Connection.innovationID(b, a);
+        // Assert
+        expect(id1).not.toBe(id2);
+      });
+    });
+    describe('When called with identical values', () => {
+      test('should return a valid number for (a, a)', () => {
+        // Arrange
+        const a = 4;
+        // Act
+        const id = Connection.innovationID(a, a);
+        // Assert
+        expect(typeof id).toBe('number');
+      });
+    });
+    describe('When called with large numbers', () => {
+      test('should return a valid number', () => {
+        // Arrange
+        const a = 100000, b = 200000;
+        // Act
+        const id = Connection.innovationID(a, b);
+        // Assert
+        expect(typeof id).toBe('number');
+      });
+    });
+    describe('When called with zero', () => {
+      test('should return a valid number for (0, 0)', () => {
+        // Arrange
+        const a = 0, b = 0;
+        // Act
+        const id = Connection.innovationID(a, b);
+        // Assert
+        expect(typeof id).toBe('number');
+      });
+    });
+  });
 });

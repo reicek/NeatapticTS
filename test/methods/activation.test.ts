@@ -6,7 +6,7 @@ describe('Activation', () => {
   const stabilityTestValues = [-100, -30.1, -30, -10, 0, 10, 30, 30.1, 100]; // For functions needing stability checks
 
   describe('logistic()', () => {
-    test('should calculate logistic function correctly', () => {
+    test('calculates logistic function correctly', () => {
       // Arrange
       const x = 1;
       const expected = 1 / (1 + Math.exp(-1));
@@ -15,8 +15,7 @@ describe('Activation', () => {
       // Assert
       expect(result).toBeCloseTo(expected, epsilon);
     });
-
-    test('should calculate logistic derivative correctly', () => {
+    test('calculates logistic derivative correctly', () => {
       // Arrange
       const x = 1;
       const fx = 1 / (1 + Math.exp(-1));
@@ -26,253 +25,636 @@ describe('Activation', () => {
       // Assert
       expect(result).toBeCloseTo(expected, epsilon);
     });
-
     testValues.forEach((x) => {
-      test(`should calculate logistic for x=${x} within [0, 1]`, () => {
-        const expected = 1 / (1 + Math.exp(-x));
-        const result = Activation.logistic(x);
-        expect(result).toBeCloseTo(expected, epsilon);
-        expect(result).toBeGreaterThanOrEqual(0);
-        expect(result).toBeLessThanOrEqual(1);
-      });
-      test(`should calculate logistic derivative for x=${x} within [0, 0.25]`, () => {
-        const fx = 1 / (1 + Math.exp(-x));
-        const expected = fx * (1 - fx);
-        const result = Activation.logistic(x, true);
-        expect(result).toBeCloseTo(expected, epsilon);
-        expect(result).toBeGreaterThanOrEqual(0);
-        expect(result).toBeLessThanOrEqual(0.25);
+      describe(`Scenario: x=${x}`, () => {
+        test('logistic is within [0, 1]', () => {
+          // Arrange
+          const expected = 1 / (1 + Math.exp(-x));
+          // Act
+          const result = Activation.logistic(x);
+          // Assert
+          expect(result).toBeGreaterThanOrEqual(0);
+        });
+        test('logistic is less than or equal to 1', () => {
+          // Arrange
+          const expected = 1 / (1 + Math.exp(-x));
+          // Act
+          const result = Activation.logistic(x);
+          // Assert
+          expect(result).toBeLessThanOrEqual(1);
+        });
+        test('logistic matches expected value', () => {
+          // Arrange
+          const expected = 1 / (1 + Math.exp(-x));
+          // Act
+          const result = Activation.logistic(x);
+          // Assert
+          expect(result).toBeCloseTo(expected, epsilon);
+        });
+        test('logistic derivative is within [0, 0.25]', () => {
+          // Arrange
+          const fx = 1 / (1 + Math.exp(-x));
+          const expected = fx * (1 - fx);
+          // Act
+          const result = Activation.logistic(x, true);
+          // Assert
+          expect(result).toBeGreaterThanOrEqual(0);
+        });
+        test('logistic derivative is less than or equal to 0.25', () => {
+          // Arrange
+          const fx = 1 / (1 + Math.exp(-x));
+          const expected = fx * (1 - fx);
+          // Act
+          const result = Activation.logistic(x, true);
+          // Assert
+          expect(result).toBeLessThanOrEqual(0.25);
+        });
+        test('logistic derivative matches expected value', () => {
+          // Arrange
+          const fx = 1 / (1 + Math.exp(-x));
+          const expected = fx * (1 - fx);
+          // Act
+          const result = Activation.logistic(x, true);
+          // Assert
+          expect(result).toBeCloseTo(expected, epsilon);
+        });
       });
     });
   });
 
   describe('tanh()', () => {
     testValues.forEach((x) => {
-      test(`should calculate tanh for x=${x} within [-1, 1]`, () => {
-        const expected = Math.tanh(x);
-        const result = Activation.tanh(x);
-        expect(result).toBeCloseTo(expected, epsilon);
-        expect(result).toBeGreaterThanOrEqual(-1);
-        expect(result).toBeLessThanOrEqual(1);
-      });
-      test(`should calculate tanh derivative for x=${x} within [0, 1]`, () => {
-        const expected = 1 - Math.pow(Math.tanh(x), 2);
-        const result = Activation.tanh(x, true);
-        expect(result).toBeCloseTo(expected, epsilon);
-        expect(result).toBeGreaterThanOrEqual(0);
-        expect(result).toBeLessThanOrEqual(1);
+      describe(`Scenario: x=${x}`, () => {
+        test('tanh is within [-1, 1]', () => {
+          // Arrange
+          const expected = Math.tanh(x);
+          // Act
+          const result = Activation.tanh(x);
+          // Assert
+          expect(result).toBeGreaterThanOrEqual(-1);
+        });
+        test('tanh is less than or equal to 1', () => {
+          // Arrange
+          const expected = Math.tanh(x);
+          // Act
+          const result = Activation.tanh(x);
+          // Assert
+          expect(result).toBeLessThanOrEqual(1);
+        });
+        test('tanh matches expected value', () => {
+          // Arrange
+          const expected = Math.tanh(x);
+          // Act
+          const result = Activation.tanh(x);
+          // Assert
+          expect(result).toBeCloseTo(expected, epsilon);
+        });
+        test('tanh derivative is within [0, 1]', () => {
+          // Arrange
+          const expected = 1 - Math.pow(Math.tanh(x), 2);
+          // Act
+          const result = Activation.tanh(x, true);
+          // Assert
+          expect(result).toBeGreaterThanOrEqual(0);
+        });
+        test('tanh derivative is less than or equal to 1', () => {
+          // Arrange
+          const expected = 1 - Math.pow(Math.tanh(x), 2);
+          // Act
+          const result = Activation.tanh(x, true);
+          // Assert
+          expect(result).toBeLessThanOrEqual(1);
+        });
+        test('tanh derivative matches expected value', () => {
+          // Arrange
+          const expected = 1 - Math.pow(Math.tanh(x), 2);
+          // Act
+          const result = Activation.tanh(x, true);
+          // Assert
+          expect(result).toBeCloseTo(expected, epsilon);
+        });
       });
     });
   });
 
   describe('identity()', () => {
     testValues.forEach((x) => {
-      test(`should calculate identity for x=${x}`, () => {
-        const expected = x;
-        const result = Activation.identity(x);
-        expect(result).toBe(expected);
-        expect(isFinite(result)).toBe(true);
-      });
-      test(`should calculate identity derivative for x=${x} equal to 1`, () => {
-        const expected = 1;
-        const result = Activation.identity(x, true);
-        expect(result).toBe(expected);
+      describe(`Scenario: x=${x}`, () => {
+        test('identity matches expected value', () => {
+          // Arrange
+          const expected = x;
+          // Act
+          const result = Activation.identity(x);
+          // Assert
+          expect(result).toBe(expected);
+        });
+        test('identity result is finite', () => {
+          // Arrange
+          const expected = x;
+          // Act
+          const result = Activation.identity(x);
+          // Assert
+          expect(isFinite(result)).toBe(true);
+        });
+        test('identity derivative matches expected value', () => {
+          // Arrange
+          const expected = 1;
+          // Act
+          const result = Activation.identity(x, true);
+          // Assert
+          expect(result).toBe(expected);
+        });
       });
     });
   });
 
   describe('step()', () => {
     testValues.forEach((x) => {
-      test(`should calculate step for x=${x} as 0 or 1`, () => {
-        const expected = x > 0 ? 1 : 0;
-        const result = Activation.step(x);
-        expect(result).toBe(expected);
-        expect([0, 1]).toContain(result);
-      });
-      test(`should calculate step derivative for x=${x} equal to 0`, () => {
-        const expected = 0;
-        const result = Activation.step(x, true);
-        expect(result).toBe(expected);
+      describe(`Scenario: x=${x}`, () => {
+        test('step matches expected value', () => {
+          // Arrange
+          const expected = x > 0 ? 1 : 0;
+          // Act
+          const result = Activation.step(x);
+          // Assert
+          expect(result).toBe(expected);
+        });
+        test('step result is either 0 or 1', () => {
+          // Arrange
+          const expected = x > 0 ? 1 : 0;
+          // Act
+          const result = Activation.step(x);
+          // Assert
+          expect([0, 1]).toContain(result);
+        });
+        test('step derivative matches expected value', () => {
+          // Arrange
+          const expected = 0;
+          // Act
+          const result = Activation.step(x, true);
+          // Assert
+          expect(result).toBe(expected);
+        });
       });
     });
   });
 
   describe('relu()', () => {
     testValues.forEach((x) => {
-      test(`should calculate relu for x=${x} within [0, inf)`, () => {
-        const expected = x > 0 ? x : 0;
-        const result = Activation.relu(x);
-        expect(result).toBeCloseTo(expected, epsilon);
-        expect(result).toBeGreaterThanOrEqual(0);
-      });
-      test(`should calculate relu derivative for x=${x} as 0 or 1`, () => {
-        const expected = x > 0 ? 1 : 0;
-        const result = Activation.relu(x, true);
-        expect(result).toBe(expected);
-        expect([0, 1]).toContain(result);
+      describe(`Scenario: x=${x}`, () => {
+        test('relu is within [0, inf)', () => {
+          // Arrange
+          const expected = x > 0 ? x : 0;
+          // Act
+          const result = Activation.relu(x);
+          // Assert
+          expect(result).toBeGreaterThanOrEqual(0);
+        });
+        test('relu matches expected value', () => {
+          // Arrange
+          const expected = x > 0 ? x : 0;
+          // Act
+          const result = Activation.relu(x);
+          // Assert
+          expect(result).toBeCloseTo(expected, epsilon);
+        });
+        test('relu derivative matches expected value', () => {
+          // Arrange
+          const expected = x > 0 ? 1 : 0;
+          // Act
+          const result = Activation.relu(x, true);
+          // Assert
+          expect(result).toBe(expected);
+        });
+        test('relu derivative result is either 0 or 1', () => {
+          // Arrange
+          const expected = x > 0 ? 1 : 0;
+          // Act
+          const result = Activation.relu(x, true);
+          // Assert
+          expect([0, 1]).toContain(result);
+        });
       });
     });
   });
 
   describe('softsign()', () => {
     testValues.forEach((x) => {
-      test(`should calculate softsign for x=${x} within (-1, 1)`, () => {
-        const expected = x / (1 + Math.abs(x));
-        const result = Activation.softsign(x);
-        expect(result).toBeCloseTo(expected, epsilon);
-        expect(result).toBeGreaterThan(-1);
-        expect(result).toBeLessThan(1);
-      });
-      test(`should calculate softsign derivative for x=${x} within (0, 1]`, () => {
-        const expected = 1 / Math.pow(1 + Math.abs(x), 2);
-        const result = Activation.softsign(x, true);
-        expect(result).toBeCloseTo(expected, epsilon);
-        expect(result).toBeGreaterThan(0);
-        expect(result).toBeLessThanOrEqual(1);
+      describe(`Scenario: x=${x}`, () => {
+        test('softsign is within (-1, 1)', () => {
+          // Arrange
+          const expected = x / (1 + Math.abs(x));
+          // Act
+          const result = Activation.softsign(x);
+          // Assert
+          expect(result).toBeGreaterThan(-1);
+        });
+        test('softsign is less than 1', () => {
+          // Arrange
+          const expected = x / (1 + Math.abs(x));
+          // Act
+          const result = Activation.softsign(x);
+          // Assert
+          expect(result).toBeLessThan(1);
+        });
+        test('softsign matches expected value', () => {
+          // Arrange
+          const expected = x / (1 + Math.abs(x));
+          // Act
+          const result = Activation.softsign(x);
+          // Assert
+          expect(result).toBeCloseTo(expected, epsilon);
+        });
+        test('softsign derivative is within (0, 1]', () => {
+          // Arrange
+          const expected = 1 / Math.pow(1 + Math.abs(x), 2);
+          // Act
+          const result = Activation.softsign(x, true);
+          // Assert
+          expect(result).toBeGreaterThan(0);
+        });
+        test('softsign derivative is less than or equal to 1', () => {
+          // Arrange
+          const expected = 1 / Math.pow(1 + Math.abs(x), 2);
+          // Act
+          const result = Activation.softsign(x, true);
+          // Assert
+          expect(result).toBeLessThanOrEqual(1);
+        });
+        test('softsign derivative matches expected value', () => {
+          // Arrange
+          const expected = 1 / Math.pow(1 + Math.abs(x), 2);
+          // Act
+          const result = Activation.softsign(x, true);
+          // Assert
+          expect(result).toBeCloseTo(expected, epsilon);
+        });
       });
     });
   });
 
   describe('sinusoid()', () => {
     testValues.forEach((x) => {
-      test(`should calculate sinusoid for x=${x} within [-1, 1]`, () => {
-        const expected = Math.sin(x);
-        const result = Activation.sinusoid(x);
-        expect(result).toBeCloseTo(expected, epsilon);
-        expect(result).toBeGreaterThanOrEqual(-1);
-        expect(result).toBeLessThanOrEqual(1);
-      });
-      test(`should calculate sinusoid derivative for x=${x} within [-1, 1]`, () => {
-        const expected = Math.cos(x);
-        const result = Activation.sinusoid(x, true);
-        expect(result).toBeCloseTo(expected, epsilon);
-        expect(result).toBeGreaterThanOrEqual(-1);
-        expect(result).toBeLessThanOrEqual(1);
+      describe(`Scenario: x=${x}`, () => {
+        test('sinusoid is within [-1, 1]', () => {
+          // Arrange
+          const expected = Math.sin(x);
+          // Act
+          const result = Activation.sinusoid(x);
+          // Assert
+          expect(result).toBeGreaterThanOrEqual(-1);
+        });
+        test('sinusoid is less than or equal to 1', () => {
+          // Arrange
+          const expected = Math.sin(x);
+          // Act
+          const result = Activation.sinusoid(x);
+          // Assert
+          expect(result).toBeLessThanOrEqual(1);
+        });
+        test('sinusoid matches expected value', () => {
+          // Arrange
+          const expected = Math.sin(x);
+          // Act
+          const result = Activation.sinusoid(x);
+          // Assert
+          expect(result).toBeCloseTo(expected, epsilon);
+        });
+        test('sinusoid derivative is within [-1, 1]', () => {
+          // Arrange
+          const expected = Math.cos(x);
+          // Act
+          const result = Activation.sinusoid(x, true);
+          // Assert
+          expect(result).toBeGreaterThanOrEqual(-1);
+        });
+        test('sinusoid derivative is less than or equal to 1', () => {
+          // Arrange
+          const expected = Math.cos(x);
+          // Act
+          const result = Activation.sinusoid(x, true);
+          // Assert
+          expect(result).toBeLessThanOrEqual(1);
+        });
+        test('sinusoid derivative matches expected value', () => {
+          // Arrange
+          const expected = Math.cos(x);
+          // Act
+          const result = Activation.sinusoid(x, true);
+          // Assert
+          expect(result).toBeCloseTo(expected, epsilon);
+        });
       });
     });
   });
 
   describe('gaussian()', () => {
     testValues.forEach((x) => {
-      test(`should calculate gaussian for x=${x} within (0, 1]`, () => {
-        const expected = Math.exp(-Math.pow(x, 2));
-        const result = Activation.gaussian(x);
-        expect(result).toBeCloseTo(expected, epsilon);
-        expect(result).toBeGreaterThan(0);
-        expect(result).toBeLessThanOrEqual(1);
-      });
-      test(`should calculate gaussian derivative for x=${x} within approx [-0.86, 0.86]`, () => {
-        const expected = -2 * x * Math.exp(-Math.pow(x, 2));
-        const result = Activation.gaussian(x, true);
-        const maxDeriv = Math.sqrt(2 / Math.E); // Max derivative magnitude
-        expect(result).toBeCloseTo(expected, epsilon);
-        expect(result).toBeGreaterThanOrEqual(-maxDeriv);
-        expect(result).toBeLessThanOrEqual(maxDeriv);
+      describe(`Scenario: x=${x}`, () => {
+        test('gaussian is within (0, 1]', () => {
+          // Arrange
+          const expected = Math.exp(-Math.pow(x, 2));
+          // Act
+          const result = Activation.gaussian(x);
+          // Assert
+          expect(result).toBeGreaterThan(0);
+        });
+        test('gaussian is less than or equal to 1', () => {
+          // Arrange
+          const expected = Math.exp(-Math.pow(x, 2));
+          // Act
+          const result = Activation.gaussian(x);
+          // Assert
+          expect(result).toBeLessThanOrEqual(1);
+        });
+        test('gaussian matches expected value', () => {
+          // Arrange
+          const expected = Math.exp(-Math.pow(x, 2));
+          // Act
+          const result = Activation.gaussian(x);
+          // Assert
+          expect(result).toBeCloseTo(expected, epsilon);
+        });
+        test('gaussian derivative is within approx [-0.86, 0.86]', () => {
+          // Arrange
+          const expected = -2 * x * Math.exp(-Math.pow(x, 2));
+          const maxDeriv = Math.sqrt(2 / Math.E); // Max derivative magnitude
+          // Act
+          const result = Activation.gaussian(x, true);
+          // Assert
+          expect(result).toBeGreaterThanOrEqual(-maxDeriv);
+        });
+        test('gaussian derivative is less than or equal to max derivative', () => {
+          // Arrange
+          const expected = -2 * x * Math.exp(-Math.pow(x, 2));
+          const maxDeriv = Math.sqrt(2 / Math.E); // Max derivative magnitude
+          // Act
+          const result = Activation.gaussian(x, true);
+          // Assert
+          expect(result).toBeLessThanOrEqual(maxDeriv);
+        });
+        test('gaussian derivative matches expected value', () => {
+          // Arrange
+          const expected = -2 * x * Math.exp(-Math.pow(x, 2));
+          const maxDeriv = Math.sqrt(2 / Math.E); // Max derivative magnitude
+          // Act
+          const result = Activation.gaussian(x, true);
+          // Assert
+          expect(result).toBeCloseTo(expected, epsilon);
+        });
       });
     });
   });
 
   describe('bentIdentity()', () => {
     testValues.forEach((x) => {
-      test(`should calculate bentIdentity for x=${x}`, () => {
-        const expected = (Math.sqrt(Math.pow(x, 2) + 1) - 1) / 2 + x;
-        const result = Activation.bentIdentity(x);
-        expect(result).toBeCloseTo(expected, epsilon);
-        expect(isFinite(result)).toBe(true);
-      });
-      test(`should calculate bentIdentity derivative for x=${x} within [0.5, 1.5)`, () => {
-        const expected = x / (2 * Math.sqrt(Math.pow(x, 2) + 1)) + 1;
-        const result = Activation.bentIdentity(x, true);
-        expect(result).toBeCloseTo(expected, epsilon);
-        expect(result).toBeGreaterThanOrEqual(0.5);
-        expect(result).toBeLessThan(1.5);
+      describe(`Scenario: x=${x}`, () => {
+        test('bentIdentity matches expected value', () => {
+          // Arrange
+          const expected = (Math.sqrt(Math.pow(x, 2) + 1) - 1) / 2 + x;
+          // Act
+          const result = Activation.bentIdentity(x);
+          // Assert
+          expect(result).toBeCloseTo(expected, epsilon);
+        });
+        test('bentIdentity result is finite', () => {
+          // Arrange
+          const expected = (Math.sqrt(Math.pow(x, 2) + 1) - 1) / 2 + x;
+          // Act
+          const result = Activation.bentIdentity(x);
+          // Assert
+          expect(isFinite(result)).toBe(true);
+        });
+        test('bentIdentity derivative is within [0.5, 1.5)', () => {
+          // Arrange
+          const expected = x / (2 * Math.sqrt(Math.pow(x, 2) + 1)) + 1;
+          // Act
+          const result = Activation.bentIdentity(x, true);
+          // Assert
+          expect(result).toBeGreaterThanOrEqual(0.5);
+        });
+        test('bentIdentity derivative is less than 1.5', () => {
+          // Arrange
+          const expected = x / (2 * Math.sqrt(Math.pow(x, 2) + 1)) + 1;
+          // Act
+          const result = Activation.bentIdentity(x, true);
+          // Assert
+          expect(result).toBeLessThan(1.5);
+        });
+        test('bentIdentity derivative matches expected value', () => {
+          // Arrange
+          const expected = x / (2 * Math.sqrt(Math.pow(x, 2) + 1)) + 1;
+          // Act
+          const result = Activation.bentIdentity(x, true);
+          // Assert
+          expect(result).toBeCloseTo(expected, epsilon);
+        });
       });
     });
   });
 
   describe('bipolar()', () => {
     testValues.forEach((x) => {
-      test(`should calculate bipolar for x=${x} as -1 or 1`, () => {
-        const expected = x > 0 ? 1 : -1;
-        const result = Activation.bipolar(x);
-        expect(result).toBe(expected);
-        expect([-1, 1]).toContain(result);
-      });
-      test(`should calculate bipolar derivative for x=${x} equal to 0`, () => {
-        const expected = 0;
-        const result = Activation.bipolar(x, true);
-        expect(result).toBe(expected);
+      describe(`Scenario: x=${x}`, () => {
+        test('bipolar matches expected value', () => {
+          // Arrange
+          const expected = x > 0 ? 1 : -1;
+          // Act
+          const result = Activation.bipolar(x);
+          // Assert
+          expect(result).toBe(expected);
+        });
+        test('bipolar result is either -1 or 1', () => {
+          // Arrange
+          const expected = x > 0 ? 1 : -1;
+          // Act
+          const result = Activation.bipolar(x);
+          // Assert
+          expect([-1, 1]).toContain(result);
+        });
+        test('bipolar derivative matches expected value', () => {
+          // Arrange
+          const expected = 0;
+          // Act
+          const result = Activation.bipolar(x, true);
+          // Assert
+          expect(result).toBe(expected);
+        });
       });
     });
   });
 
   describe('bipolarSigmoid()', () => {
     testValues.forEach((x) => {
-      test(`should calculate bipolarSigmoid for x=${x} within (-1, 1)`, () => {
-        const expected = Math.tanh(x); // Equivalent to tanh
-        const result = Activation.bipolarSigmoid(x);
-        expect(result).toBeCloseTo(expected, epsilon);
-        expect(result).toBeGreaterThan(-1);
-        expect(result).toBeLessThan(1);
-      });
-      test(`should calculate bipolarSigmoid derivative for x=${x} within [0, 0.5]`, () => {
-        const d = 2 / (1 + Math.exp(-x)) - 1;
-        const expected = (1 / 2) * (1 + d) * (1 - d);
-        const result = Activation.bipolarSigmoid(x, true);
-        expect(result).toBeCloseTo(expected, epsilon);
-        expect(result).toBeGreaterThanOrEqual(0);
-        expect(result).toBeLessThanOrEqual(0.5);
+      describe(`Scenario: x=${x}`, () => {
+        test('bipolarSigmoid is within (-1, 1)', () => {
+          // Arrange
+          const expected = Math.tanh(x); // Equivalent to tanh
+          // Act
+          const result = Activation.bipolarSigmoid(x);
+          // Assert
+          expect(result).toBeGreaterThan(-1);
+        });
+        test('bipolarSigmoid is less than 1', () => {
+          // Arrange
+          const expected = Math.tanh(x); // Equivalent to tanh
+          // Act
+          const result = Activation.bipolarSigmoid(x);
+          // Assert
+          expect(result).toBeLessThan(1);
+        });
+        test('bipolarSigmoid matches expected value', () => {
+          // Arrange
+          const expected = Math.tanh(x); // Equivalent to tanh
+          // Act
+          const result = Activation.bipolarSigmoid(x);
+          // Assert
+          expect(result).toBeCloseTo(expected, epsilon);
+        });
+        test('bipolarSigmoid derivative is within [0, 0.5]', () => {
+          // Arrange
+          const d = 2 / (1 + Math.exp(-x)) - 1;
+          const expected = (1 / 2) * (1 + d) * (1 - d);
+          // Act
+          const result = Activation.bipolarSigmoid(x, true);
+          // Assert
+          expect(result).toBeGreaterThanOrEqual(0);
+        });
+        test('bipolarSigmoid derivative is less than or equal to 0.5', () => {
+          // Arrange
+          const d = 2 / (1 + Math.exp(-x)) - 1;
+          const expected = (1 / 2) * (1 + d) * (1 - d);
+          // Act
+          const result = Activation.bipolarSigmoid(x, true);
+          // Assert
+          expect(result).toBeLessThanOrEqual(0.5);
+        });
+        test('bipolarSigmoid derivative matches expected value', () => {
+          // Arrange
+          const d = 2 / (1 + Math.exp(-x)) - 1;
+          const expected = (1 / 2) * (1 + d) * (1 - d);
+          // Act
+          const result = Activation.bipolarSigmoid(x, true);
+          // Assert
+          expect(result).toBeCloseTo(expected, epsilon);
+        });
       });
     });
   });
 
   describe('hardTanh()', () => {
     testValues.forEach((x) => {
-      test(`should calculate hardTanh for x=${x} within [-1, 1]`, () => {
-        const expected = Math.max(-1, Math.min(1, x));
-        const result = Activation.hardTanh(x);
-        expect(result).toBeCloseTo(expected, epsilon);
-        expect(result).toBeGreaterThanOrEqual(-1);
-        expect(result).toBeLessThanOrEqual(1);
-      });
-      test(`should calculate hardTanh derivative for x=${x} as 0 or 1`, () => {
-        const expected = x > -1 && x < 1 ? 1 : 0;
-        const result = Activation.hardTanh(x, true);
-        expect(result).toBe(expected);
-        expect([0, 1]).toContain(result);
+      describe(`Scenario: x=${x}`, () => {
+        test('hardTanh is within [-1, 1]', () => {
+          // Arrange
+          const expected = Math.max(-1, Math.min(1, x));
+          // Act
+          const result = Activation.hardTanh(x);
+          // Assert
+          expect(result).toBeGreaterThanOrEqual(-1);
+        });
+        test('hardTanh is less than or equal to 1', () => {
+          // Arrange
+          const expected = Math.max(-1, Math.min(1, x));
+          // Act
+          const result = Activation.hardTanh(x);
+          // Assert
+          expect(result).toBeLessThanOrEqual(1);
+        });
+        test('hardTanh matches expected value', () => {
+          // Arrange
+          const expected = Math.max(-1, Math.min(1, x));
+          // Act
+          const result = Activation.hardTanh(x);
+          // Assert
+          expect(result).toBeCloseTo(expected, epsilon);
+        });
+        test('hardTanh derivative matches expected value', () => {
+          // Arrange
+          const expected = x > -1 && x < 1 ? 1 : 0;
+          // Act
+          const result = Activation.hardTanh(x, true);
+          // Assert
+          expect(result).toBe(expected);
+        });
+        test('hardTanh derivative result is either 0 or 1', () => {
+          // Arrange
+          const expected = x > -1 && x < 1 ? 1 : 0;
+          // Act
+          const result = Activation.hardTanh(x, true);
+          // Assert
+          expect([0, 1]).toContain(result);
+        });
       });
     });
   });
 
   describe('absolute()', () => {
     testValues.forEach((x) => {
-      test(`should calculate absolute for x=${x} within [0, inf)`, () => {
-        const expected = Math.abs(x);
-        const result = Activation.absolute(x);
-        expect(result).toBeCloseTo(expected, epsilon);
-        expect(result).toBeGreaterThanOrEqual(0);
-      });
-      test(`should calculate absolute derivative for x=${x} as -1 or 1`, () => {
-        const expected = x < 0 ? -1 : 1;
-        const result = Activation.absolute(x, true);
-        expect(result).toBe(expected);
-        expect([-1, 1]).toContain(result);
+      describe(`Scenario: x=${x}`, () => {
+        test('absolute is within [0, inf)', () => {
+          // Arrange
+          const expected = Math.abs(x);
+          // Act
+          const result = Activation.absolute(x);
+          // Assert
+          expect(result).toBeGreaterThanOrEqual(0);
+        });
+        test('absolute matches expected value', () => {
+          // Arrange
+          const expected = Math.abs(x);
+          // Act
+          const result = Activation.absolute(x);
+          // Assert
+          expect(result).toBeCloseTo(expected, epsilon);
+        });
+        test('absolute derivative matches expected value', () => {
+          // Arrange
+          const expected = x < 0 ? -1 : 1;
+          // Act
+          const result = Activation.absolute(x, true);
+          // Assert
+          expect(result).toBe(expected);
+        });
+        test('absolute derivative result is either -1 or 1', () => {
+          // Arrange
+          const expected = x < 0 ? -1 : 1;
+          // Act
+          const result = Activation.absolute(x, true);
+          // Assert
+          expect([-1, 1]).toContain(result);
+        });
       });
     });
   });
 
   describe('inverse()', () => {
     testValues.forEach((x) => {
-      test(`should calculate inverse for x=${x}`, () => {
-        const expected = 1 - x;
-        const result = Activation.inverse(x);
-        expect(result).toBe(expected);
-        expect(isFinite(result)).toBe(true);
-      });
-      test(`should calculate inverse derivative for x=${x} equal to -1`, () => {
-        const expected = -1;
-        const result = Activation.inverse(x, true);
-        expect(result).toBe(expected);
+      describe(`Scenario: x=${x}`, () => {
+        test('inverse matches expected value', () => {
+          // Arrange
+          const expected = 1 - x;
+          // Act
+          const result = Activation.inverse(x);
+          // Assert
+          expect(result).toBe(expected);
+        });
+        test('inverse result is finite', () => {
+          // Arrange
+          const expected = 1 - x;
+          // Act
+          const result = Activation.inverse(x);
+          // Assert
+          expect(isFinite(result)).toBe(true);
+        });
+        test('inverse derivative matches expected value', () => {
+          // Arrange
+          const expected = -1;
+          // Act
+          const result = Activation.inverse(x, true);
+          // Assert
+          expect(result).toBe(expected);
+        });
       });
     });
   });
@@ -283,47 +665,107 @@ describe('Activation', () => {
     const lowerBound = -alpha * scale;
 
     testValues.forEach((x) => {
-      test(`should calculate selu for x=${x} within [${lowerBound.toFixed(2)}, inf)`, () => {
-        const fx = x > 0 ? x : alpha * Math.exp(x) - alpha;
-        const expected = fx * scale;
-        const result = Activation.selu(x);
-        expect(result).toBeCloseTo(expected, epsilon);
-        expect(result).toBeGreaterThanOrEqual(lowerBound - epsilon);
-      });
-      test(`should calculate selu derivative for x=${x} within (0, ${scale * alpha}]`, () => {
-        const fx = x > 0 ? x : alpha * Math.exp(x) - alpha;
-        const expected = (x > 0 ? scale : (fx + alpha) * scale);
-        const result = Activation.selu(x, true);
-        expect(result).toBeCloseTo(expected, epsilon);
-        expect(result).toBeGreaterThan(0);
-        expect(result).toBeLessThanOrEqual(scale * alpha + epsilon);
+      describe(`Scenario: x=${x}`, () => {
+        test(`selu is within [${lowerBound.toFixed(2)}, inf)`, () => {
+          // Arrange
+          const fx = x > 0 ? x : alpha * Math.exp(x) - alpha;
+          const expected = fx * scale;
+          // Act
+          const result = Activation.selu(x);
+          // Assert
+          expect(result).toBeGreaterThanOrEqual(lowerBound - epsilon);
+        });
+        test('selu matches expected value', () => {
+          // Arrange
+          const fx = x > 0 ? x : alpha * Math.exp(x) - alpha;
+          const expected = fx * scale;
+          // Act
+          const result = Activation.selu(x);
+          // Assert
+          expect(result).toBeCloseTo(expected, epsilon);
+        });
+        test(`selu derivative is within (0, ${scale * alpha}]`, () => {
+          // Arrange
+          const fx = x > 0 ? x : alpha * Math.exp(x) - alpha;
+          const expected = (x > 0 ? scale : (fx + alpha) * scale);
+          // Act
+          const result = Activation.selu(x, true);
+          // Assert
+          expect(result).toBeGreaterThan(0);
+        });
+        test(`selu derivative is less than or equal to ${scale * alpha}`, () => {
+          // Arrange
+          const fx = x > 0 ? x : alpha * Math.exp(x) - alpha;
+          const expected = (x > 0 ? scale : (fx + alpha) * scale);
+          // Act
+          const result = Activation.selu(x, true);
+          // Assert
+          expect(result).toBeLessThanOrEqual(scale * alpha + epsilon);
+        });
+        test('selu derivative matches expected value', () => {
+          // Arrange
+          const fx = x > 0 ? x : alpha * Math.exp(x) - alpha;
+          const expected = (x > 0 ? scale : (fx + alpha) * scale);
+          // Act
+          const result = Activation.selu(x, true);
+          // Assert
+          expect(result).toBeCloseTo(expected, epsilon);
+        });
       });
     });
   });
 
   describe('softplus()', () => {
     stabilityTestValues.forEach((x) => {
-      test(`should calculate softplus for x=${x} within (0, inf)`, () => {
-        // Reference calculation (potentially unstable)
-        const expected = Math.log(1 + Math.exp(x));
-        // Handle potential Infinity in reference for comparison
-        const result = Activation.softplus(x);
-        if (expected === Infinity) {
-          expect(result).toBeCloseTo(x, epsilon); // Should approximate x for large positive x
-        } else if (expected === 0 && x < -50) {
-          expect(result).toBeCloseTo(0, epsilon); // Should approximate 0 for large negative x
-        } else {
+      describe(`Scenario: x=${x}`, () => {
+        test('softplus is within (0, inf)', () => {
+          // Arrange
+          const expected = Math.log(1 + Math.exp(x));
+          // Act
+          const result = Activation.softplus(x);
+          // Assert
+          if (expected === Infinity) {
+            expect(result).toBeCloseTo(x, epsilon); // Should approximate x for large positive x
+          } else if (expected === 0 && x < -50) {
+            expect(result).toBeCloseTo(0, epsilon); // Should approximate 0 for large negative x
+          } else {
+            expect(result).toBeCloseTo(expected, epsilon);
+          }
+        });
+        test('softplus matches expected value', () => {
+          // Arrange
+          const expected = Math.log(1 + Math.exp(x));
+          // Act
+          const result = Activation.softplus(x);
+          // Assert
+          if (expected !== Infinity && !(expected === 0 && x < -50)) {
+            expect(result).toBeCloseTo(expected, epsilon);
+          }
+        });
+        test('softplus derivative (logistic) is within (0, 1]', () => {
+          // Arrange
+          const expected = 1 / (1 + Math.exp(-x)); // Logistic
+          // Act
+          const result = Activation.softplus(x, true);
+          // Assert
+          expect(result).toBeGreaterThan(0);
+        });
+        test('softplus derivative (logistic) is less than or equal to 1', () => {
+          // Arrange
+          const expected = 1 / (1 + Math.exp(-x)); // Logistic
+          // Act
+          const result = Activation.softplus(x, true);
+          // Assert
+          expect(result).toBeLessThanOrEqual(1);
+        });
+        test('softplus derivative (logistic) matches expected value', () => {
+          // Arrange
+          const expected = 1 / (1 + Math.exp(-x)); // Logistic
+          // Act
+          const result = Activation.softplus(x, true);
+          // Assert
           expect(result).toBeCloseTo(expected, epsilon);
-        }
-        expect(result).toBeGreaterThan(0);
-      });
-
-      test(`should calculate softplus derivative (logistic) for x=${x} within (0, 1]`, () => {
-        const expected = 1 / (1 + Math.exp(-x)); // Logistic
-        const result = Activation.softplus(x, true);
-        expect(result).toBeCloseTo(expected, epsilon);
-        expect(result).toBeGreaterThan(0);
-        expect(result).toBeLessThanOrEqual(1);
+        });
       });
     });
   });
@@ -331,20 +773,45 @@ describe('Activation', () => {
   describe('swish()', () => {
     const lowerBound = -0.2784645; // Approximate minimum value
     testValues.forEach((x) => {
-      test(`should calculate swish for x=${x} within [${lowerBound.toFixed(3)}, inf)`, () => {
-        const sigmoid_x = 1 / (1 + Math.exp(-x));
-        const expected = x * sigmoid_x;
-        const result = Activation.swish(x);
-        expect(result).toBeCloseTo(expected, epsilon);
-        expect(result).toBeGreaterThanOrEqual(lowerBound - epsilon);
-      });
-      test(`should calculate swish derivative for x=${x} within approx [-0.09, inf)`, () => {
-        const sigmoid_x = 1 / (1 + Math.exp(-x));
-        const swish_x = x * sigmoid_x;
-        const expected = swish_x + sigmoid_x * (1 - swish_x);
-        const result = Activation.swish(x, true);
-        expect(result).toBeCloseTo(expected, epsilon);
-        expect(result).toBeGreaterThanOrEqual(-0.09 - epsilon);
+      describe(`Scenario: x=${x}`, () => {
+        test(`swish is within [${lowerBound.toFixed(3)}, inf)`, () => {
+          // Arrange
+          const sigmoid_x = 1 / (1 + Math.exp(-x));
+          const expected = x * sigmoid_x;
+          // Act
+          const result = Activation.swish(x);
+          // Assert
+          expect(result).toBeGreaterThanOrEqual(lowerBound - epsilon);
+        });
+        test('swish matches expected value', () => {
+          // Arrange
+          const sigmoid_x = 1 / (1 + Math.exp(-x));
+          const expected = x * sigmoid_x;
+          // Act
+          const result = Activation.swish(x);
+          // Assert
+          expect(result).toBeCloseTo(expected, epsilon);
+        });
+        test('swish derivative is within approx [-0.09, inf)', () => {
+          // Arrange
+          const sigmoid_x = 1 / (1 + Math.exp(-x));
+          const swish_x = x * sigmoid_x;
+          const expected = swish_x + sigmoid_x * (1 - swish_x);
+          // Act
+          const result = Activation.swish(x, true);
+          // Assert
+          expect(result).toBeGreaterThanOrEqual(-0.09 - epsilon);
+        });
+        test('swish derivative matches expected value', () => {
+          // Arrange
+          const sigmoid_x = 1 / (1 + Math.exp(-x));
+          const swish_x = x * sigmoid_x;
+          const expected = swish_x + sigmoid_x * (1 - swish_x);
+          // Act
+          const result = Activation.swish(x, true);
+          // Assert
+          expect(result).toBeCloseTo(expected, epsilon);
+        });
       });
     });
   });
@@ -352,35 +819,75 @@ describe('Activation', () => {
   describe('gelu()', () => {
     const lowerBound = -0.17; // Approximate minimum value
     testValues.forEach((x) => {
-      test(`should calculate gelu approximation for x=${x} within [${lowerBound.toFixed(2)}, inf)`, () => {
-        const cdf =
-          0.5 *
-          (1.0 +
-            Math.tanh(
-              Math.sqrt(2.0 / Math.PI) * (x + 0.044715 * Math.pow(x, 3))
-            ));
-        const expected = x * cdf;
-        const result = Activation.gelu(x);
-        expect(result).toBeCloseTo(expected, epsilon);
-        expect(result).toBeGreaterThanOrEqual(lowerBound - epsilon);
-      });
-      test(`should calculate gelu approximation derivative for x=${x} within approx [-0.16, inf)`, () => {
-        const cdf =
-          0.5 *
-          (1.0 +
-            Math.tanh(
-              Math.sqrt(2.0 / Math.PI) * (x + 0.044715 * Math.pow(x, 3))
-            ));
-        const intermediate =
-          Math.sqrt(2.0 / Math.PI) * (1.0 + 0.134145 * x * x);
-        const sech_arg =
-          Math.sqrt(2.0 / Math.PI) * (x + 0.044715 * Math.pow(x, 3));
-        const sech_val = 1.0 / Math.cosh(sech_arg);
-        const sech_sq = sech_val * sech_val;
-        const expected = cdf + x * 0.5 * intermediate * sech_sq;
-        const result = Activation.gelu(x, true);
-        expect(result).toBeCloseTo(expected, epsilon);
-        expect(result).toBeGreaterThanOrEqual(-0.16 - epsilon);
+      describe(`Scenario: x=${x}`, () => {
+        test(`gelu approximation is within [${lowerBound.toFixed(2)}, inf)`, () => {
+          // Arrange
+          const cdf =
+            0.5 *
+            (1.0 +
+              Math.tanh(
+                Math.sqrt(2.0 / Math.PI) * (x + 0.044715 * Math.pow(x, 3))
+              ));
+          const expected = x * cdf;
+          // Act
+          const result = Activation.gelu(x);
+          // Assert
+          expect(result).toBeGreaterThanOrEqual(lowerBound - epsilon);
+        });
+        test('gelu approximation matches expected value', () => {
+          // Arrange
+          const cdf =
+            0.5 *
+            (1.0 +
+              Math.tanh(
+                Math.sqrt(2.0 / Math.PI) * (x + 0.044715 * Math.pow(x, 3))
+              ));
+          const expected = x * cdf;
+          // Act
+          const result = Activation.gelu(x);
+          // Assert
+          expect(result).toBeCloseTo(expected, epsilon);
+        });
+        test('gelu approximation derivative is within approx [-0.16, inf)', () => {
+          // Arrange
+          const cdf =
+            0.5 *
+            (1.0 +
+              Math.tanh(
+                Math.sqrt(2.0 / Math.PI) * (x + 0.044715 * Math.pow(x, 3))
+              ));
+          const intermediate =
+            Math.sqrt(2.0 / Math.PI) * (1.0 + 0.134145 * x * x);
+          const sech_arg =
+            Math.sqrt(2.0 / Math.PI) * (x + 0.044715 * Math.pow(x, 3));
+          const sech_val = 1.0 / Math.cosh(sech_arg);
+          const sech_sq = sech_val * sech_val;
+          const expected = cdf + x * 0.5 * intermediate * sech_sq;
+          // Act
+          const result = Activation.gelu(x, true);
+          // Assert
+          expect(result).toBeGreaterThanOrEqual(-0.16 - epsilon);
+        });
+        test('gelu approximation derivative matches expected value', () => {
+          // Arrange
+          const cdf =
+            0.5 *
+            (1.0 +
+              Math.tanh(
+                Math.sqrt(2.0 / Math.PI) * (x + 0.044715 * Math.pow(x, 3))
+              ));
+          const intermediate =
+            Math.sqrt(2.0 / Math.PI) * (1.0 + 0.134145 * x * x);
+          const sech_arg =
+            Math.sqrt(2.0 / Math.PI) * (x + 0.044715 * Math.pow(x, 3));
+          const sech_val = 1.0 / Math.cosh(sech_arg);
+          const sech_sq = sech_val * sech_val;
+          const expected = cdf + x * 0.5 * intermediate * sech_sq;
+          // Act
+          const result = Activation.gelu(x, true);
+          // Assert
+          expect(result).toBeCloseTo(expected, epsilon);
+        });
       });
     });
   });
@@ -388,38 +895,79 @@ describe('Activation', () => {
   describe('mish()', () => {
     const lowerBound = -0.30884; // Approximate minimum value
     stabilityTestValues.forEach((x) => {
-      test(`should calculate mish for x=${x} within [${lowerBound.toFixed(3)}, inf)`, () => {
-        let sp_x: number;
-        if (x > 30) {
-          sp_x = x;
-        } else if (x < -30) {
-          sp_x = Math.exp(x);
-        } else {
-          sp_x = Math.max(0, x) + Math.log(1 + Math.exp(-Math.abs(x)));
-        }
-        const expected = x * Math.tanh(sp_x);
-        const result = Activation.mish(x);
-        expect(result).toBeCloseTo(expected, epsilon);
-        expect(result).toBeGreaterThanOrEqual(lowerBound - epsilon);
-      });
-
-      test(`should calculate mish derivative for x=${x}`, () => {
-        let sp_x: number;
-        if (x > 30) {
-          sp_x = x;
-        } else if (x < -30) {
-          sp_x = Math.exp(x);
-        } else {
-          sp_x = Math.max(0, x) + Math.log(1 + Math.exp(-Math.abs(x)));
-        }
-        const tanh_sp_x = Math.tanh(sp_x);
-        const sigmoid_x = 1 / (1 + Math.exp(-x));
-        const sech_sp_x = 1.0 / Math.cosh(sp_x);
-        const sech_sq_sp_x = sech_sp_x * sech_sp_x;
-        const expected = tanh_sp_x + x * sech_sq_sp_x * sigmoid_x;
-        const result = Activation.mish(x, true);
-        expect(result).toBeCloseTo(expected, epsilon);
-        expect(isFinite(result)).toBe(true);
+      describe(`Scenario: x=${x}`, () => {
+        test(`mish is within [${lowerBound.toFixed(3)}, inf)`, () => {
+          // Arrange
+          let sp_x: number;
+          if (x > 30) {
+            sp_x = x;
+          } else if (x < -30) {
+            sp_x = Math.exp(x);
+          } else {
+            sp_x = Math.max(0, x) + Math.log(1 + Math.exp(-Math.abs(x)));
+          }
+          const expected = x * Math.tanh(sp_x);
+          // Act
+          const result = Activation.mish(x);
+          // Assert
+          expect(result).toBeGreaterThanOrEqual(lowerBound - epsilon);
+        });
+        test('mish matches expected value', () => {
+          // Arrange
+          let sp_x: number;
+          if (x > 30) {
+            sp_x = x;
+          } else if (x < -30) {
+            sp_x = Math.exp(x);
+          } else {
+            sp_x = Math.max(0, x) + Math.log(1 + Math.exp(-Math.abs(x)));
+          }
+          const expected = x * Math.tanh(sp_x);
+          // Act
+          const result = Activation.mish(x);
+          // Assert
+          expect(result).toBeCloseTo(expected, epsilon);
+        });
+        test('mish derivative matches expected value', () => {
+          // Arrange
+          let sp_x: number;
+          if (x > 30) {
+            sp_x = x;
+          } else if (x < -30) {
+            sp_x = Math.exp(x);
+          } else {
+            sp_x = Math.max(0, x) + Math.log(1 + Math.exp(-Math.abs(x)));
+          }
+          const tanh_sp_x = Math.tanh(sp_x);
+          const sigmoid_x = 1 / (1 + Math.exp(-x));
+          const sech_sp_x = 1.0 / Math.cosh(sp_x);
+          const sech_sq_sp_x = sech_sp_x * sech_sp_x;
+          const expected = tanh_sp_x + x * sech_sq_sp_x * sigmoid_x;
+          // Act
+          const result = Activation.mish(x, true);
+          // Assert
+          expect(result).toBeCloseTo(expected, epsilon);
+        });
+        test('mish derivative result is finite', () => {
+          // Arrange
+          let sp_x: number;
+          if (x > 30) {
+            sp_x = x;
+          } else if (x < -30) {
+            sp_x = Math.exp(x);
+          } else {
+            sp_x = Math.max(0, x) + Math.log(1 + Math.exp(-Math.abs(x)));
+          }
+          const tanh_sp_x = Math.tanh(sp_x);
+          const sigmoid_x = 1 / (1 + Math.exp(-x));
+          const sech_sp_x = 1.0 / Math.cosh(sp_x);
+          const sech_sq_sp_x = sech_sp_x * sech_sp_x;
+          const expected = tanh_sp_x + x * sech_sq_sp_x * sigmoid_x;
+          // Act
+          const result = Activation.mish(x, true);
+          // Assert
+          expect(isFinite(result)).toBe(true);
+        });
       });
     });
   });

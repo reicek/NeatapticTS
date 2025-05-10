@@ -530,7 +530,6 @@ export default class Node {
    * Creates a Node instance from a JSON object.
    * @param json The JSON object containing node configuration.
    * @returns A new Node instance configured according to the JSON object.
-   * @throws {Error} If the squash function name in the JSON is invalid.
    */
   static fromJSON(json: {
     bias: number;
@@ -541,16 +540,17 @@ export default class Node {
     const node = new Node(json.type);
     node.bias = json.bias;
     node.mask = json.mask;
-    // Look up the activation function by name in the methods.Activation enum/object.
-    const squashFunction =
-      methods.Activation[json.squash as keyof typeof methods.Activation];
-    if (typeof squashFunction === 'function') {
-      node.squash = squashFunction as (x: number, derivate?: boolean) => number;
-    } else {
-      // Handle cases where the function name might be invalid or not found.
-      throw new Error(
-        `Invalid or unknown squash function name: ${json.squash}`
-      );
+    if (json.squash) {
+      const squashFn = methods.Activation[json.squash as keyof typeof methods.Activation];
+      if (typeof squashFn === 'function') {
+        node.squash = squashFn as (x: number, derivate?: boolean) => number;
+      } else {
+        // Fallback to identity and log a warning
+        console.warn(
+          `fromJSON: Unknown or invalid squash function '${json.squash}' for node. Using identity.`
+        );
+        node.squash = methods.Activation.identity;
+      }
     }
     return node;
   }
