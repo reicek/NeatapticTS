@@ -20,7 +20,13 @@ const config = {
     "!src/**/*.d.ts"
   ],
   coverageReporters: ["lcov", "text", "html"],
-  testPathIgnorePatterns: ["/node_modules/", "/dist/"]
+  testPathIgnorePatterns: ["/node_modules/", "/dist/"],
+  // Add verbose output option that can be enabled with JEST_VERBOSE=1
+  verbose: process.env.JEST_VERBOSE === '1',
+  // Allow selective verbose output via environment variable JEST_SHOW_CONSOLE_FOR
+  globals: {
+    __SHOW_CONSOLE_FOR__: process.env.JEST_SHOW_CONSOLE_FOR || ''
+  }
 };
 
 module.exports = config;

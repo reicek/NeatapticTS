@@ -10,7 +10,8 @@
     "build": "npm run build:webpack && npm run build:ts",
     "build:ts": "tsc",
     "build:webpack": "webpack --config webpack.config.js",
-    "start:ts": "ts-node src/neataptic.ts"
+    "start:ts": "ts-node src/neataptic.ts",
+    "test:maze": "FORCE_COLOR=true jest test/examples/asciiMaze.test.ts --no-cache --runInBand"
   },
   "devDependencies": {
     "@types/chai": "^5.2.1",
