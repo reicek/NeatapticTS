@@ -94,10 +94,14 @@ describe('Async Evolution', () => {
         { input: [1, 1], output: [0] },
       ];
       const net = Architect.perceptron(2, 4, 1);
+      
       // Act
       const result = await net.evolve(dataset, { error: 0.5, amount: 1, threads: 1, popsize: 2 });
+      
       // Assert
       expect(typeof result.error).toBe('number');
+      expect(typeof result.time).toBe('number');
+      expect(typeof result.iterations).toBe('number');
     });
   });
 
@@ -112,6 +116,85 @@ describe('Async Evolution', () => {
       // Assert
       expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Evolution completed without finding a valid best genome'));
       warnSpy.mockRestore();
+    });
+  });
+
+  describe('Advanced Evolution Scenarios', () => {
+    test('should evolve with POWER selection', async () => {
+      // Arrange
+      const dataset = [
+        { input: [0, 0], output: [0] },
+        { input: [0, 1], output: [1] },
+        { input: [1, 0], output: [1] },
+        { input: [1, 1], output: [0] },
+      ];
+      const net = Architect.perceptron(2, 4, 1);
+      // Act
+      const result = await net.evolve(dataset, { iterations: 2, error: 0.5, amount: 1, threads: 1, popsize: 2, selection: 'POWER' });
+      // Assert
+      expect(typeof result.error).toBe('number');
+    });
+
+    test('should evolve with FITNESS_PROPORTIONATE selection', async () => {
+      // Arrange
+      const dataset = [
+        { input: [0, 0], output: [0] },
+        { input: [0, 1], output: [1] },
+        { input: [1, 0], output: [1] },
+        { input: [1, 1], output: [0] },
+      ];
+      const net = Architect.perceptron(2, 4, 1);
+      // Act
+      const result = await net.evolve(dataset, { iterations: 2, error: 0.5, amount: 1, threads: 1, popsize: 2, selection: 'FITNESS_PROPORTIONATE' });
+      // Assert
+      expect(typeof result.error).toBe('number');
+    });
+
+    test('should evolve with TOURNAMENT selection', async () => {
+      // Arrange
+      const dataset = [
+        { input: [0, 0], output: [0] },
+        { input: [0, 1], output: [1] },
+        { input: [1, 0], output: [1] },
+        { input: [1, 1], output: [0] },
+      ];
+      const net = Architect.perceptron(2, 4, 1);
+      // Act
+      const result = await net.evolve(dataset, { iterations: 2, error: 0.5, amount: 1, threads: 1, popsize: 2, selection: { name: 'TOURNAMENT', size: 2, probability: 1 } });
+      // Assert
+      expect(typeof result.error).toBe('number');
+    });
+
+    test('should evolve with maxNodes constraint', async () => {
+      // Arrange
+      const dataset = [
+        { input: [0, 0], output: [0] },
+        { input: [0, 1], output: [1] },
+        { input: [1, 0], output: [1] },
+        { input: [1, 1], output: [0] },
+      ];
+      const net = Architect.perceptron(2, 4, 1);
+      // Act
+      const result = await net.evolve(dataset, { iterations: 2, error: 0.5, amount: 1, threads: 1, popsize: 2, maxNodes: 3 });
+      // Assert
+      expect(typeof result.error).toBe('number');
+    });
+
+    test('should evolve with empty population', async () => {
+      // Arrange
+      const dataset = [
+        { input: [0, 0], output: [0] },
+        { input: [0, 1], output: [1] },
+        { input: [1, 0], output: [1] },
+        { input: [1, 1], output: [0] },
+      ];
+      const net = Architect.perceptron(2, 4, 1);
+      // Force empty population
+      (net as any).population = [];
+      // Act
+      const result = await net.evolve(dataset, { iterations: 2, error: 0.5, amount: 1, threads: 1, popsize: 0 });
+      // Assert
+      expect(typeof result.error).toBe('number');
     });
   });
 });

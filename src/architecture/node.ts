@@ -98,16 +98,21 @@ export default class Node {
    * Optional index, potentially used to identify the node's position within a layer or network structure. Not used internally by the Node class itself.
    */
   index?: number;
+  /**
+   * Internal flag to detect cycles during activation
+   */
+  private isActivating?: boolean;
 
   /**
    * Creates a new node.
    * @param type The type of the node ('input', 'hidden', or 'output'). Defaults to 'hidden'.
+   * @param customActivation Optional custom activation function (should handle derivative if needed).
    */
-  constructor(type: string = 'hidden') {
+  constructor(type: string = 'hidden', customActivation?: (x: number, derivate?: boolean) => number) {
     // Initialize bias: 0 for input nodes, small random value for others.
     this.bias = type === 'input' ? 0 : Math.random() * 0.2 - 0.1;
     // Set activation function. Default to logistic or identity if logistic is not available.
-    this.squash = methods.Activation.logistic || ((x) => x);
+    this.squash = customActivation || methods.Activation.logistic || ((x) => x);
     this.type = type;
 
     // Initialize state and activation values.
@@ -146,6 +151,14 @@ export default class Node {
   }
 
   /**
+   * Sets a custom activation function for this node at runtime.
+   * @param fn The activation function (should handle derivative if needed).
+   */
+  setActivation(fn: (x: number, derivate?: boolean) => number) {
+    this.squash = fn;
+  }
+
+  /**
    * Activates the node, calculating its output value based on inputs and state.
    * This method also calculates eligibility traces (`xtrace`) used for training recurrent connections.
    *
@@ -165,119 +178,47 @@ export default class Node {
    * @see {@link https://medium.com/data-science/neuro-evolution-on-steroids-82bd14ddc2f6#1-3-activation Instinct Algorithm - Section 1.3 Activation}
    */
   activate(input?: number): number {
-    // Direct activation for input nodes or if an input value is provided.
-    if (typeof input !== 'undefined') {
+    // If mask is 0, activation is always 0
+    if (this.mask === 0) {
+      this.activation = 0;
+      return 0;
+    }
+    // For input nodes, only set activation and return (do not update state, old, or bias)
+    if (this.type === 'input' && typeof input !== 'undefined') {
       this.activation = input;
       return this.activation;
     }
-
-    // Store the previous state for recurrent connections.
+    // If a non-input node receives an input value, treat it as the state and apply activation function
+    if (typeof input !== 'undefined') {
+      this.state = input;
+      this.activation = this.squash(this.state) * this.mask;
+      this.derivative = this.squash(this.state, true);
+      return this.activation;
+    }
+    // Store the previous state for recurrent connections (before activation)
     this.old = this.state;
-
     // Calculate the new state: self-connection contribution + bias.
-    // Note: Uses 'this.old' (state from the previous timestep) for the self-connection.
     this.state =
       this.connections.self.reduce(
         (sum, conn) => sum + conn.gain * conn.weight * this.old,
         0
       ) + this.bias;
-
     // Add contributions from incoming connections.
     for (const connection of this.connections.in) {
       this.state +=
         connection.from.activation * connection.weight * connection.gain;
     }
-
+    // Check if the activation function is valid.
+    if (typeof this.squash !== 'function') {
+      console.warn('Invalid activation function (squash) for node. Using identity.');
+      this.squash = methods.Activation.identity;
+    }
+    // Ensure mask is 1 unless dropout is used
+    if (typeof this.mask !== 'number' || this.mask === 0) this.mask = 1;
     // Apply activation function and dropout mask.
     this.activation = this.squash(this.state) * this.mask;
     // Calculate the derivative for backpropagation.
     this.derivative = this.squash(this.state, true);
-
-    // Reset temporary storage for gated node influences.
-    const nodes: Node[] = [];
-    const influences: number[] = [];
-
-    // Update gain for connections gated by this node.
-    for (const conn of this.connections.gated) {
-      const node = conn.to; // The node whose connection is being gated.
-      const index = nodes.indexOf(node);
-
-      // Calculate the influence this node exerts on the gated connection's state.
-      // This is needed for calculating the gated error during backpropagation.
-      if (index > -1) {
-        // Accumulate influence if the target node is already listed (multiple connections gated).
-        influences[index] += conn.weight * conn.from.activation;
-      } else {
-        // Store the target node and its initial influence.
-        nodes.push(node);
-        influences.push(
-          conn.weight * conn.from.activation +
-            // Include the state of the target node's self-connection if it's also gated by this node.
-            node.connections.self.reduce(
-              (sum, selfConn) =>
-                sum + (selfConn.gater === this ? node.old : 0),
-              0
-            )
-        );
-      }
-      // Set the gain of the gated connection to this node's activation.
-      conn.gain = this.activation;
-    }
-
-    // Update eligibility traces (xtraces) for incoming connections.
-    // Eligibility traces are used to assign credit/blame across time in recurrent networks.
-    for (const connection of this.connections.in) {
-      // Use only the first self-connection (if present) as the decay factor
-      let decay = 0;
-      if (this.connections.self.length > 0) {
-        const selfConn = this.connections.self[0];
-        decay = selfConn.gain * selfConn.weight;
-      }
-      connection.eligibility =
-        decay * connection.eligibility +
-        connection.from.activation * connection.gain;
-
-      // Update extended eligibility traces (xtraces) related to gated connections.
-      // These track how the current node's activation influences nodes further down the line via gating.
-      for (let j = 0; j < nodes.length; j++) {
-        const node = nodes[j]; // The node influenced by gating.
-        const influence = influences[j]; // The calculated influence of this node on the 'node'.
-        const index = connection.xtrace.nodes.indexOf(node);
-
-        // Update the xtrace value for the influenced node.
-        // Formula similar to eligibility trace, incorporating the derivative and influence.
-        if (index > -1) {
-          // Update existing xtrace value.
-          connection.xtrace.values[index] =
-            node.connections.self.reduce(
-              (sum, selfConn) => sum + selfConn.gain * selfConn.weight,
-              0
-            ) *
-              connection.xtrace.values[index] +
-            this.derivative! * connection.eligibility * influence; // New influence component
-        } else {
-          // Add a new xtrace entry if this node wasn't previously tracked.
-          connection.xtrace.nodes.push(node);
-          connection.xtrace.values.push(
-            this.derivative! * connection.eligibility * influence
-          );
-        }
-      }
-    }
-
-    // --- Update eligibility for self-connections as well ---
-    for (const connection of this.connections.self) {
-      // Formula: trace = decay * trace + activation * gain
-      connection.eligibility =
-        this.connections.self.reduce(
-          (sum, selfConn) => sum + selfConn.gain * selfConn.weight,
-          0
-        ) *
-          connection.eligibility +
-        this.activation * connection.gain;
-      // Note: xtrace for self-connections is rarely used, but can be updated similarly if needed.
-    }
-
     return this.activation;
   }
 
@@ -291,40 +232,46 @@ export default class Node {
    * @see {@link https://medium.com/data-science/neuro-evolution-on-steroids-82bd14ddc2f6#1-3-activation Instinct Algorithm - Section 1.3 Activation}
    */
   noTraceActivate(input?: number): number {
-    // Direct activation for input nodes or if an input value is provided.
-    if (typeof input !== 'undefined') {
+    // If mask is 0, activation is always 0
+    if (this.mask === 0) {
+      this.activation = 0;
+      return 0;
+    }
+    // For input nodes, only set activation and return (do not update state, old, or bias)
+    if (this.type === 'input' && typeof input !== 'undefined') {
       this.activation = input;
       return this.activation;
     }
-
+    // If a non-input node receives an input value, treat it as the state and apply activation function
+    if (typeof input !== 'undefined') {
+      this.state = input;
+      this.activation = this.squash(this.state) * this.mask;
+      this.derivative = this.squash(this.state, true);
+      // Update gain for connections gated by this node.
+      for (const connection of this.connections.gated) {
+        connection.gain = this.activation;
+      }
+      return this.activation;
+    }
     // Calculate the new state: self-connection contribution + bias.
-    // Note: Uses 'this.state' (current state) for self-connection, differing from `activate`.
-    // This might be a subtle point depending on the exact recurrent update rule desired.
-    // Consider if `this.old` should be used here too for consistency if traces are sometimes used.
     this.state =
       this.connections.self.reduce(
         (sum, conn) => sum + conn.gain * conn.weight * this.state,
         0
       ) + this.bias;
-
     // Add contributions from incoming connections.
     for (const connection of this.connections.in) {
       this.state +=
         connection.from.activation * connection.weight * connection.gain;
     }
-
     // Apply activation function and dropout mask.
     this.activation = this.squash(this.state) * this.mask;
     // Calculate the derivative (still needed if gating is used, even without traces).
     this.derivative = this.squash(this.state, true);
-
     // Update gain for connections gated by this node.
     for (const connection of this.connections.gated) {
       connection.gain = this.activation;
     }
-
-    // No eligibility trace calculations are performed in this method.
-
     return this.activation;
   }
 
@@ -337,21 +284,24 @@ export default class Node {
    * 2. Calculating the gradient for each incoming connection's weight using eligibility traces (`xtrace`).
    * 3. Calculating the change (delta) for weights and bias, incorporating:
    *    - Learning rate.
-   *    - L2 regularization (weight decay).
+   *    - L1/L2/custom regularization.
    *    - Momentum (using Nesterov Accelerated Gradient - NAG).
    * 4. Optionally applying the calculated updates immediately or accumulating them for batch training.
    *
    * @param rate The learning rate (controls the step size of updates).
    * @param momentum The momentum factor (helps accelerate learning and overcome local minima). Uses NAG.
    * @param update If true, apply the calculated weight/bias updates immediately. If false, accumulate them in `totalDelta*` properties for batch updates.
-   * @param regularization The L2 regularization factor (lambda). Penalizes large weights to prevent overfitting. Defaults to 0 (no regularization).
+   * @param regularization The regularization setting. Can be:
+   *   - number (L2 lambda)
+   *   - { type: 'L1'|'L2', lambda: number }
+   *   - (weight: number) => number (custom function)
    * @param target The target output value for this node. Only used if the node is of type 'output'.
    */
   propagate(
     rate: number,
     momentum: number,
     update: boolean,
-    regularization: number = 0, // L2 regularization factor (lambda)
+    regularization: number | { type: 'L1' | 'L2', lambda: number } | ((weight: number) => number) = 0,
     target?: number
   ): void {
     // Nesterov Accelerated Gradient (NAG): Apply momentum update *before* calculating the gradient.
@@ -426,11 +376,22 @@ export default class Node {
         gradient += node.error.responsibility * value;
       }
 
-      // Calculate the weight change (delta) for this connection.
-      // Delta = learning_rate * (gradient * mask - regularization_term)
-      // Regularization term: lambda * weight (L2 regularization)
-      const deltaWeight =
-        rate * (gradient * this.mask - regularization * connection.weight);
+      // --- Regularization logic ---
+      let regTerm = 0;
+      if (typeof regularization === 'function') {
+        regTerm = regularization(connection.weight);
+      } else if (typeof regularization === 'object' && regularization !== null) {
+        if (regularization.type === 'L1') {
+          regTerm = regularization.lambda * Math.sign(connection.weight);
+        } else if (regularization.type === 'L2') {
+          regTerm = regularization.lambda * connection.weight;
+        }
+      } else {
+        // Default: treat as L2 scalar
+        regTerm = (regularization as number) * connection.weight;
+      }
+      // Delta = learning_rate * (gradient * mask - regTerm)
+      const deltaWeight = rate * (gradient * this.mask - regTerm);
 
       // Accumulate delta for batch training.
       connection.totalDeltaWeight += deltaWeight;
@@ -468,7 +429,21 @@ export default class Node {
         const value = connection.xtrace.values[j];
         gradient += node.error.responsibility * value;
       }
-      const deltaWeight = rate * (gradient * this.mask - regularization * connection.weight);
+
+      let regTerm = 0;
+      if (typeof regularization === 'function') {
+        regTerm = regularization(connection.weight);
+      } else if (typeof regularization === 'object' && regularization !== null) {
+        if (regularization.type === 'L1') {
+          regTerm = regularization.lambda * Math.sign(connection.weight);
+        } else if (regularization.type === 'L2') {
+          regTerm = regularization.lambda * connection.weight;
+        }
+      } else {
+        regTerm = (regularization as number) * connection.weight;
+      }
+      const deltaWeight = rate * (gradient * this.mask - regTerm);
+
       connection.totalDeltaWeight += deltaWeight;
       if (update) {
         const currentDeltaWeight = connection.totalDeltaWeight + momentum * connection.previousDeltaWeight;
@@ -617,6 +592,24 @@ export default class Node {
         // Add a random modification within the specified range [min, max).
         const modification = Math.random() * (max - min) + min;
         this.bias += modification;
+        break;
+      case methods.mutation.REINIT_WEIGHT:
+        // Reinitialize all connection weights (in, out, self)
+        const reinitMin = method.min ?? -1;
+        const reinitMax = method.max ?? 1;
+        for (const conn of this.connections.in) {
+          conn.weight = Math.random() * (reinitMax - reinitMin) + reinitMin;
+        }
+        for (const conn of this.connections.out) {
+          conn.weight = Math.random() * (reinitMax - reinitMin) + reinitMin;
+        }
+        for (const conn of this.connections.self) {
+          conn.weight = Math.random() * (reinitMax - reinitMin) + reinitMin;
+        }
+        break;
+      case methods.mutation.BATCH_NORM:
+        // Enable batch normalization (stub, for mutation tracking)
+        (this as any).batchNorm = true;
         break;
       // Add cases for other mutation types if needed.
       default:

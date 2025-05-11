@@ -150,4 +150,12 @@ describe('Genetic Operations', () => {
       });
     });
   });
+
+  describe('Advanced Crossover Scenarios', () => {
+    test('should throw if one parent is missing', () => {
+      // Act & Assert
+      expect(() => Network.crossOver(undefined as any, new Network(2, 1))).toThrow();
+      expect(() => Network.crossOver(new Network(2, 1), undefined as any)).toThrow();
+    });
+  });
 });

@@ -971,4 +971,29 @@ describe('Activation', () => {
       });
     });
   });
+
+  describe('Ambiguous Derivatives', () => {
+    const Activation = require('../../src/methods/activation').default;
+    test('ReLU derivative at 0 returns 0 (documented choice)', () => {
+      expect(Activation.relu(0, true)).toBe(0);
+    });
+    test('Absolute derivative at 0 returns 1 (documented choice)', () => {
+      expect(Activation.absolute(0, true)).toBe(1);
+    });
+  });
+
+  describe('Custom Activation Registration', () => {
+    const Activation = require('../../src/methods/activation').default;
+    const { registerCustomActivation } = require('../../src/methods/activation');
+    test('can register and use a custom activation function', () => {
+      // Act
+      registerCustomActivation('customFn', (x: number, derivate: boolean = false) => derivate ? 42 : x * 2);
+      // Assert
+      expect(Activation['customFn'](3)).toBe(6);
+    });
+    test('custom activation derivative', () => {
+      // Act & Assert
+      expect(Activation['customFn'](3, true)).toBe(42);
+    });
+  });
 });

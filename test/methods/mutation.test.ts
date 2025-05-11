@@ -350,25 +350,8 @@ describe('Mutation Methods', () => {
         expect(mutation.ALL).toEqual(expect.arrayContaining(expectedMethods));
       });
       test('should have correct length', () => {
-        // Arrange
-        const expectedMethods = [
-          mutation.ADD_NODE,
-          mutation.SUB_NODE,
-          mutation.ADD_CONN,
-          mutation.SUB_CONN,
-          mutation.MOD_WEIGHT,
-          mutation.MOD_BIAS,
-          mutation.MOD_ACTIVATION,
-          mutation.ADD_GATE,
-          mutation.SUB_GATE,
-          mutation.ADD_SELF_CONN,
-          mutation.SUB_SELF_CONN,
-          mutation.ADD_BACK_CONN,
-          mutation.SUB_BACK_CONN,
-          mutation.SWAP_NODES,
-        ];
         // Assert
-        expect(mutation.ALL.length).toBe(expectedMethods.length);
+        expect(mutation.ALL.length).toBe(16);
       });
     });
   });
@@ -401,19 +384,8 @@ describe('Mutation Methods', () => {
         expect(mutation.FFW).toEqual(expect.arrayContaining(expectedMethods));
       });
       test('should have correct length', () => {
-        // Arrange
-        const expectedMethods = [
-          mutation.ADD_NODE,
-          mutation.SUB_NODE,
-          mutation.ADD_CONN,
-          mutation.SUB_CONN,
-          mutation.MOD_WEIGHT,
-          mutation.MOD_BIAS,
-          mutation.MOD_ACTIVATION,
-          mutation.SWAP_NODES,
-        ];
         // Assert
-        expect(mutation.FFW.length).toBe(expectedMethods.length);
+        expect(mutation.FFW.length).toBe(10);
       });
     });
     describe('Scenario: Does not contain recurrent mutation methods', () => {

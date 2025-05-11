@@ -189,6 +189,23 @@ export const mutation: { [key: string]: any } = {
     /** If true, allows swapping involving output nodes. */
     mutateOutput: true,
   },
+  REINIT_WEIGHT: {
+    /**
+     * Reinitializes the weights of all incoming, outgoing, and self connections for a node.
+     * This can help escape local minima or inject diversity during evolution.
+     */
+    name: 'REINIT_WEIGHT',
+    /** Range for random reinitialization. */
+    min: -1,
+    max: 1,
+  },
+  BATCH_NORM: {
+    /**
+     * Marks a node for batch normalization. (Stub: actual normalization requires architectural support.)
+     * This mutation can be used to toggle batch normalization on a node or layer.
+     */
+    name: 'BATCH_NORM',
+  },
   /** Placeholder for the list of all mutation methods. */
   ALL: [],
   /** Placeholder for the list of mutation methods suitable for feedforward networks. */
@@ -214,6 +231,8 @@ mutation.ALL = [
   mutation.ADD_BACK_CONN,
   mutation.SUB_BACK_CONN,
   mutation.SWAP_NODES,
+  mutation.REINIT_WEIGHT,
+  mutation.BATCH_NORM,
 ];
 
 /**
@@ -231,6 +250,8 @@ mutation.FFW = [
   mutation.MOD_BIAS,
   mutation.MOD_ACTIVATION,
   mutation.SWAP_NODES,
+  mutation.REINIT_WEIGHT,
+  mutation.BATCH_NORM,
 ];
 
 export default mutation;

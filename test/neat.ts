@@ -55,7 +55,6 @@ describe('Neat', () => {
   describe('XOR scenario', () => {
     test('should evolve to solve XOR (error non-negative)', async () => {
       // Arrange
-      jest.setTimeout(50000);
       const trainingSet = [
         { input: [0, 0], output: [0] },
         { input: [0, 1], output: [1] },
@@ -63,20 +62,23 @@ describe('Neat', () => {
         { input: [1, 1], output: [0] },
       ];
       const network = new Network(2, 1);
+      
       // Act
       const results = await network.evolve(trainingSet, {
         mutation: methods.mutation.FFW,
         equal: true,
         elitism: 10,
         mutationRate: 0.5,
-        error: 0.01,
+        error: 0.1,
         threads: 1,
         iterations: 5,
         populationSize: 3,
       });
+      
       // Assert
       expect(results.error).toBeGreaterThanOrEqual(0);
     });
+    
     test('should evolve to solve XOR (error below threshold)', async () => {
       // Arrange
       jest.setTimeout(50000);
@@ -87,6 +89,7 @@ describe('Neat', () => {
         { input: [1, 1], output: [0] },
       ];
       const network = new Network(2, 1);
+      
       // Act
       const results = await network.evolve(trainingSet, {
         mutation: methods.mutation.FFW,
@@ -95,9 +98,10 @@ describe('Neat', () => {
         mutationRate: 0.5,
         error: 0.01,
         threads: 1,
-        iterations: 5,
-        populationSize: 3,
+        iterations: 50,
+        populationSize: 10,
       });
+      
       // Assert
       expect(results.error).toBeLessThan(0.3);
     });

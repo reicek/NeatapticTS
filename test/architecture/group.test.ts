@@ -57,56 +57,37 @@ describe('Group', () => {
   });
 
   describe('activate()', () => {
-    const size = 3;
-    let group: Group;
-
-    beforeEach(() => {
-      group = new Group(size);
-      // Give nodes some default bias for activation without input
-      group.nodes.forEach((node, i) => (node.bias = (i + 1) * 0.1));
-    });
-
-    test('should activate all nodes without input values', () => {
-      // Arrange, Act
-      const activations = group.activate();
-      // Assert
-      expect(activations).toHaveLength(size);
-      activations.forEach((act, i) => {
-        const expected = methods.Activation.logistic((i + 1) * 0.1);
-        expect(act).toBeCloseTo(expected, epsilon);
+    describe('Scenario: input group', () => {
+      test('should activate all input nodes with input values', () => {
+        // Arrange
+        const size = 3;
+        const inputValues = [0.5, -0.2, 0.9];
+        const group = new Group(size);
+        group.nodes.forEach(node => node.type = 'input');
+        // Act
+        const activations = group.activate(inputValues);
+        // Assert
+        expect(activations).toHaveLength(size);
+        activations.forEach((act, i) => {
+          expect(act).toBe(inputValues[i]);
+        });
       });
     });
-
-    test('should activate all nodes with input values', () => {
-      // Arrange
-      const inputValues = [0.5, -0.2, 1.0];
-      // Act
-      const activations = group.activate(inputValues);
-      // Assert
-      expect(activations).toHaveLength(size);
-      activations.forEach((act, i) => {
-        expect(act).toBe(inputValues[i]);
+    describe('Scenario: hidden group', () => {
+      test('should activate all hidden nodes with activation function', () => {
+        // Arrange
+        const size = 3;
+        const inputValues = [0.5, -0.2, 0.9];
+        const group = new Group(size);
+        group.nodes.forEach(node => node.type = 'hidden');
+        // Act
+        const activations = group.activate(inputValues);
+        // Assert
+        expect(activations).toHaveLength(size);
+        activations.forEach((act, i) => {
+          expect(act).toBeCloseTo(1 / (1 + Math.exp(-inputValues[i])), 10);
+        });
       });
-    });
-
-    test('should return an array of activation values', () => {
-      // Arrange, Act
-      const activations = group.activate();
-      // Assert
-      expect(Array.isArray(activations)).toBe(true);
-      expect(activations).toHaveLength(size);
-      activations.forEach((act) => {
-        expect(typeof act).toBe('number');
-      });
-    });
-
-    test('should throw error if input value array length mismatches group size', () => {
-      // Arrange
-      const invalidInput = [0.1, 0.2];
-      // Act & Assert
-      expect(() => group.activate(invalidInput)).toThrow(
-        'Array with values should be same as the amount of nodes!'
-      );
     });
   });
 

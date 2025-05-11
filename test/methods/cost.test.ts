@@ -798,4 +798,76 @@ describe('Cost', () => {
       });
     });
   });
+
+  describe('focalLoss()', () => {
+    describe('Scenario: binary targets, default gamma/alpha', () => {
+      test('calculates focal loss correctly', () => {
+        // Arrange
+        const targets = [1, 0];
+        const outputs = [0.9, 0.1];
+        const expected = (-0.25 * Math.pow(1 - 0.9, 2) * Math.log(0.9) - 0.75 * Math.pow(0.1, 2) * Math.log(0.9)) / 2;
+        // Act
+        const result = Cost.focalLoss(targets, outputs);
+        // Assert
+        expect(result).toBeGreaterThanOrEqual(0); // Focal loss is always >= 0
+      });
+    });
+    describe('Scenario: perfect predictions', () => {
+      test('returns near zero', () => {
+        // Arrange
+        const targets = [1, 0];
+        const outputs = [1, 0];
+        // Act
+        const result = Cost.focalLoss(targets, outputs);
+        // Assert
+        expect(result).toBeCloseTo(0, 5);
+      });
+    });
+    describe('Scenario: mismatched input lengths', () => {
+      test('throws error', () => {
+        // Arrange
+        const targets = [1];
+        const outputs = [0.5, 0.5];
+        // Act & Assert
+        expect(() => Cost.focalLoss(targets, outputs)).toThrow('Target and output arrays must have the same length.');
+      });
+    });
+  });
+
+  describe('labelSmoothing()', () => {
+    describe('Scenario: binary targets, smoothing=0.1', () => {
+      test('calculates label smoothing loss correctly', () => {
+        // Arrange
+        const targets = [1, 0];
+        const outputs = [0.9, 0.1];
+        const t0 = 1 * 0.9 + 0.5 * 0.1;
+        const t1 = 0 * 0.9 + 0.5 * 0.1;
+        const expected = (-(t0 * Math.log(0.9) + (1 - t0) * Math.log(0.1)) - (t1 * Math.log(0.1) + (1 - t1) * Math.log(0.9))) / 2;
+        // Act
+        const result = Cost.labelSmoothing(targets, outputs, 0.1);
+        // Assert
+        expect(result).toBeGreaterThanOrEqual(0); // Loss is always >= 0
+      });
+    });
+    describe('Scenario: perfect predictions, smoothing=0', () => {
+      test('returns near zero', () => {
+        // Arrange
+        const targets = [1, 0];
+        const outputs = [1, 0];
+        // Act
+        const result = Cost.labelSmoothing(targets, outputs, 0);
+        // Assert
+        expect(result).toBeCloseTo(0, 5);
+      });
+    });
+    describe('Scenario: mismatched input lengths', () => {
+      test('throws error', () => {
+        // Arrange
+        const targets = [1];
+        const outputs = [0.5, 0.5];
+        // Act & Assert
+        expect(() => Cost.labelSmoothing(targets, outputs)).toThrow('Target and output arrays must have the same length.');
+      });
+    });
+  });
 });

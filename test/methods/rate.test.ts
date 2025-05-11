@@ -225,78 +225,98 @@ describe('Rate', () => {
     const invRateFnDefault = Rate.inv();
 
     describe('Custom parameters', () => {
-      test('should return the decayed rate at iteration 0', () => {
+      test('should return the base rate at iteration 0', () => {
         // Act
         const rate = invRateFnCustom(baseRate, 0);
         // Assert
-        expect(rate).toBeCloseTo(baseRate * Math.pow(1 + gamma * 1, -power));
+        expect(rate).toBeCloseTo(baseRate, 5);
       });
+
       test('should be non-negative at iteration 0', () => {
         // Act
         const rate = invRateFnCustom(baseRate, 0);
         // Assert
         expect(rate).toBeGreaterThanOrEqual(0);
       });
-      test('should be less than or equal to baseRate at iteration 0', () => {
+
+      test('should return the decayed rate at iteration 1', () => {
         // Act
-        const rate = invRateFnCustom(baseRate, 0);
+        const rate = invRateFnCustom(baseRate, 1);
+        const expected = baseRate / (1 + gamma * Math.pow(1, power));
         // Assert
-        expect(rate).toBeLessThanOrEqual(baseRate);
+        expect(rate).toBeCloseTo(expected, 5);
       });
-      test('should return the decayed rate at iteration 9', () => {
+
+      test('should be non-negative at iteration 1', () => {
         // Act
-        const rate = invRateFnCustom(baseRate, 9);
-        // Assert
-        expect(rate).toBeCloseTo(baseRate * Math.pow(1 + gamma * 10, -power));
-      });
-      test('should be non-negative at iteration 9', () => {
-        // Act
-        const rate = invRateFnCustom(baseRate, 9);
+        const rate = invRateFnCustom(baseRate, 1);
         // Assert
         expect(rate).toBeGreaterThanOrEqual(0);
       });
-      test('should be less than or equal to baseRate at iteration 9', () => {
+
+      test('should be less than or equal to baseRate at iteration 1', () => {
         // Act
-        const rate = invRateFnCustom(baseRate, 9);
+        const rate = invRateFnCustom(baseRate, 1);
+        // Assert
+        expect(rate).toBeLessThanOrEqual(baseRate);
+      });
+
+      test('should return the decayed rate at iteration 10', () => {
+        // Act
+        const rate = invRateFnCustom(baseRate, 10);
+        const expected = baseRate / (1 + gamma * Math.pow(10, power));
+        // Assert
+        expect(rate).toBeCloseTo(expected, 5);
+      });
+
+      test('should be non-negative at iteration 10', () => {
+        // Act
+        const rate = invRateFnCustom(baseRate, 10);
+        // Assert
+        expect(rate).toBeGreaterThanOrEqual(0);
+      });
+
+      test('should be less than or equal to baseRate at iteration 10', () => {
+        // Act
+        const rate = invRateFnCustom(baseRate, 10);
         // Assert
         expect(rate).toBeLessThanOrEqual(baseRate);
       });
     });
 
     describe('Default parameters', () => {
-      test('should return the decayed rate at iteration 0', () => {
+      test('should return the base rate at iteration 0', () => {
         // Act
         const rate = invRateFnDefault(baseRate, 0);
         // Assert
-        expect(rate).toBeCloseTo(baseRate * Math.pow(1 + 0.001 * 1, -2));
+        expect(rate).toBeCloseTo(baseRate, 5);
       });
+
       test('should be non-negative at iteration 0', () => {
         // Act
         const rate = invRateFnDefault(baseRate, 0);
         // Assert
         expect(rate).toBeGreaterThanOrEqual(0);
       });
-      test('should be less than or equal to baseRate at iteration 0', () => {
+
+      test('should return the decayed rate at iteration 10', () => {
         // Act
-        const rate = invRateFnDefault(baseRate, 0);
+        const rate = invRateFnDefault(baseRate, 10);
+        const expected = baseRate / (1 + 0.001 * Math.pow(10, 2));
         // Assert
-        expect(rate).toBeLessThanOrEqual(baseRate);
+        expect(rate).toBeCloseTo(expected, 5);
       });
-      test('should return the decayed rate at iteration 99', () => {
+
+      test('should be non-negative at iteration 10', () => {
         // Act
-        const rate = invRateFnDefault(baseRate, 99);
-        // Assert
-        expect(rate).toBeCloseTo(baseRate * Math.pow(1 + 0.001 * 100, -2));
-      });
-      test('should be non-negative at iteration 99', () => {
-        // Act
-        const rate = invRateFnDefault(baseRate, 99);
+        const rate = invRateFnDefault(baseRate, 10);
         // Assert
         expect(rate).toBeGreaterThanOrEqual(0);
       });
-      test('should be less than or equal to baseRate at iteration 99', () => {
+
+      test('should be less than or equal to baseRate at iteration 10', () => {
         // Act
-        const rate = invRateFnDefault(baseRate, 99);
+        const rate = invRateFnDefault(baseRate, 10);
         // Assert
         expect(rate).toBeLessThanOrEqual(baseRate);
       });

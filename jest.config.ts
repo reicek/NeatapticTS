@@ -13,6 +13,14 @@ const config = {
       },
     ],
   },
+  setupFilesAfterEnv: ["<rootDir>/test/utils/jest-setup.ts"],
+  testTimeout: 30000,
+  collectCoverageFrom: [
+    "src/**/*.ts",
+    "!src/**/*.d.ts"
+  ],
+  coverageReporters: ["lcov", "text", "html"],
+  testPathIgnorePatterns: ["/node_modules/", "/dist/"]
 };
 
 module.exports = config;

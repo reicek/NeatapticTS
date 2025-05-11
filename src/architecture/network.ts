@@ -45,6 +45,38 @@ const stripCoverage = (code: string): string => {
   return code;
 };
 
+// Minimal ONNX types for export
+type OnnxTensor = {
+  name: string;
+  data_type: number;
+  dims: number[];
+  float_data: number[];
+};
+
+type OnnxNode = {
+  op_type: string;
+  input: string[];
+  output: string[];
+};
+
+type OnnxGraph = {
+  inputs: any[];
+  outputs: any[];
+  initializer: OnnxTensor[];
+  node: OnnxNode[];
+};
+
+type OnnxModel = {
+  graph: OnnxGraph;
+};
+
+// Adding custom properties for testing
+declare global {
+  interface Network {
+    testProp?: string;
+  }
+}
+
 /**
  * Represents a neural network composed of nodes and connections.
  *
@@ -78,6 +110,12 @@ export default class Network {
   gates: Connection[]; // List of connections that are currently being gated by a node.
   selfconns: Connection[]; // List of connections where a node connects to itself.
   dropout: number = 0; // Dropout rate (0 to 1). If > 0, hidden nodes have a chance to be masked during training activation.
+
+  /**
+   * Optional array of Layer objects, if the network was constructed with layers.
+   * If present, layer-level dropout will be used.
+   */
+  layers?: any[];
 
   /**
    * Creates a new neural network instance.
@@ -117,6 +155,34 @@ export default class Network {
         // Initialize weights using a common strategy (He initialization variant) to prevent vanishing/exploding gradients.
         const weight = Math.random() * this.input * Math.sqrt(2 / this.input);
         this.connect(this.nodes[i], this.nodes[j], weight); // Create the connection
+      }
+    }
+  }
+
+  /**
+   * Creates a deep copy of the network.
+   * @returns {Network} A new Network instance that is a clone of the current network.
+   */
+  clone(): Network {
+    return Network.fromJSON(this.toJSON());
+  }
+
+  /**
+   * Resets all masks in the network to 1 (no dropout). Applies to both node-level and layer-level dropout.
+   * Should be called after training to ensure inference is unaffected by previous dropout.
+   */
+  resetDropoutMasks(): void {
+    if (this.layers && this.layers.length > 0) {
+      for (const layer of this.layers) {
+        if (typeof layer.nodes !== 'undefined') {
+          for (const node of layer.nodes) {
+            if (typeof node.mask !== 'undefined') node.mask = 1;
+          }
+        }
+      }
+    } else {
+      for (const node of this.nodes) {
+        if (typeof node.mask !== 'undefined') node.mask = 1;
       }
     }
   }
@@ -333,59 +399,52 @@ export default class Network {
    * Activates the network using the given input array.
    * Performs a forward pass through the network, calculating the activation of each node.
    *
-   * The activation process follows the Instinct algorithm's approach:
-   * - Input nodes are directly set to the input values.
-   * - Hidden and output nodes compute their state based on the sum of weighted inputs from incoming connections
-   *   (including self-connections, which use the node's *previous* state) plus the node's bias.
-   * - Gated connections have their weight modulated by the activation of the gating node.
-   * - The node's activation is calculated by applying its squash (activation) function to its state.
-   * - If `training` is true and `dropout` > 0, hidden nodes are randomly masked (set to 0) based on the dropout rate.
-   *
    * @param {number[]} input - An array of numerical values corresponding to the network's input nodes.
-   *                           The length must match the network's `input` size.
    * @param {boolean} [training=false] - Flag indicating if the activation is part of a training process.
-   *                                     If true, dropout may be applied.
+   * @param {number} [maxActivationDepth=1000] - Maximum allowed activation depth to prevent infinite loops/cycles.
    * @returns {number[]} An array of numerical values representing the activations of the network's output nodes.
-   *
-   * @see {@link Node.activate} for the node-level activation logic.
-   * @see Instinct Algorithm - Section 1.3 Activation
-   * @see {@link https://medium.com/data-science/neuro-evolution-on-steroids-82bd14ddc2f6}
    */
-  activate(input: number[], training = false): number[] {
-    // Input size validation
+  activate(input: number[], training = false, maxActivationDepth = 1000): number[] {
     if (!Array.isArray(input) || input.length !== this.input) {
       throw new Error(
         `Input size mismatch: expected ${this.input}, got ${input ? input.length : 'undefined'}`
       );
     }
-
-    const output: number[] = []; // Array to store the activations of output nodes.
-
-    // Iterate through all nodes in the network.
-    this.nodes.forEach((node, index) => {
-      if (node.type === 'input') {
-        // For input nodes, activate with the corresponding value from the input array.
-        // Eligibility traces are calculated if `training` is true (implicitly via node.activate).
-        node.activate(input[index]);
-      } else if (node.type === 'output') {
-        // For output nodes, activate based on their incoming connections and bias.
-        // Eligibility traces are calculated if `training` is true.
-        const activation = node.activate();
-        output.push(activation); // Store the activation value.
-      } else {
-        // For hidden nodes:
-        if (training && this.dropout > 0) {
-          // Apply dropout if in training mode and dropout rate is set.
-          // Generate a random number; if it's less than the dropout rate, mask the node (activation becomes 0).
-          node.mask = Math.random() < this.dropout ? 0 : 1;
-        }
-        // Activate the hidden node based on incoming connections, bias, and potential mask.
-        // Eligibility traces are calculated if `training` is true.
-        node.activate();
+    
+    // Check for empty or corrupted network structure
+    if (!this.nodes || this.nodes.length === 0) {
+      throw new Error('Network structure is corrupted or empty. No nodes found.');
+    }
+    
+    const output: number[] = [];
+    if (this.layers && this.layers.length > 0) {
+      // Layer-based activation (layer-level dropout)
+      let currentInput = input;
+      for (let i = 0; i < this.layers.length; i++) {
+        const layer = this.layers[i];
+        // For input layer, pass input; for others, pass previous activations
+        const activations = layer.activate(currentInput, training);
+        currentInput = activations;
       }
-    });
-
-    return output; // Return the collected output activations.
+      // Output is the activations of the last layer
+      output.push(...currentInput);
+    } else {
+      // Node-based activation (legacy, node-level dropout)
+      this.nodes.forEach((node, index) => {
+        if (node.type === 'input') {
+          node.activate(input[index]);
+        } else if (node.type === 'output') {
+          const activation = node.activate();
+          output.push(activation);
+        } else {
+          if (training && this.dropout > 0) {
+            node.mask = Math.random() < this.dropout ? 0 : 1;
+          }
+          node.activate();
+        }
+      });
+    }
+    return output;
   }
 
   /**
@@ -443,6 +502,7 @@ export default class Network {
    * @param {number[]} target - An array of target values corresponding to the network's output nodes.
    *                            The length must match the network's `output` size.
    * @param {number} [regularization=0] - The L2 regularization factor (lambda). Helps prevent overfitting by penalizing large weights.
+   * @param {(target: number, output: number) => number} [costDerivative] - Optional derivative of the cost function for output nodes.
    * @throws {Error} If the `target` array length does not match the network's `output` size.
    *
    * @see {@link Node.propagate} for the node-level backpropagation logic.
@@ -452,7 +512,8 @@ export default class Network {
     momentum: number,
     update: boolean,
     target: number[],
-    regularization: number = 0 // L2 regularization factor (lambda)
+    regularization: number = 0, // L2 regularization factor (lambda)
+    costDerivative?: (target: number, output: number) => number
   ): void {
     // Validate that the target array matches the network's output size.
     if (!target || target.length !== this.output) {
@@ -470,20 +531,29 @@ export default class Network {
       i >= this.nodes.length - this.output;
       i--
     ) {
-      // Call propagate on the output node, providing the corresponding target value.
-      this.nodes[i].propagate(
-        rate,
-        momentum,
-        update,
-        regularization, // Pass regularization factor
-        target[--targetIndex] // Get the target value for this output node.
-      );
+      if (costDerivative) {
+        (this.nodes[i] as any).propagate(
+          rate,
+          momentum,
+          update,
+          regularization,
+          target[--targetIndex],
+          costDerivative
+        );
+      } else {
+        this.nodes[i].propagate(
+          rate,
+          momentum,
+          update,
+          regularization,
+          target[--targetIndex]
+        );
+      }
     }
 
     // Propagate error backward through the hidden nodes.
     // Iterate backward from the last hidden node to the first hidden node.
     for (let i = this.nodes.length - this.output - 1; i >= this.input; i--) {
-      // Call propagate on the hidden node. Target is implicitly calculated from downstream nodes.
       this.nodes[i].propagate(rate, momentum, update, regularization); // Pass regularization factor
     }
   }
@@ -1072,7 +1142,7 @@ export default class Network {
    * @param {number} batchSize - The number of samples to process before updating weights.
    * @param {number} currentRate - The learning rate to use for this training pass.
    * @param {number} momentum - The momentum factor to use.
-   * @param {number} regularization - The L2 regularization factor (lambda).
+   * @param {any} regularization - The regularization configuration (L1, L2, or custom function).
    * @param {(target: number[], output: number[]) => number} costFunction - The function used to calculate the error between target and output.
    * @returns {number} The average error calculated over the provided dataset subset.
    * @private Internal method used by `train`.
@@ -1082,29 +1152,63 @@ export default class Network {
     batchSize: number,
     currentRate: number,
     momentum: number,
-    regularization: number, // Pass regularization factor
+    regularization: any, // Expects structured object
     costFunction: (target: number[], output: number[]) => number
   ): number {
-    let errorSum = 0; // Accumulator for the total error in this pass.
-    // Iterate through each sample in the provided dataset subset.
-    for (let i = 0; i < set.length; i++) {
-      const input = set[i].input; // Get the input vector for the current sample.
-      const target = set[i].output; // Get the target output vector.
+    let errorSum = 0;
+    let processedSamplesInBatch = 0;
+    let totalProcessedSamples = 0;
 
-      // Determine if weights should be updated after this sample.
-      // Update occurs at the end of a batch or if it's the last sample in the set.
-      const update = !!((i + 1) % batchSize === 0 || i + 1 === set.length);
-
-      // 1. Activate the network (forward pass) with training flag set to true (enables dropout and trace calculation).
-      const output = this.activate(input, true);
-      // 2. Propagate the error backward (backpropagation).
-      this.propagate(currentRate, momentum, update, target, regularization); // Pass regularization
-
-      // 3. Calculate the error for this sample using the specified cost function.
-      errorSum += costFunction(target, output);
+    // Prepare cost derivative for propagate
+    let costDerivative: ((target: number, output: number) => number) | undefined = undefined;
+    if (typeof costFunction === 'object' && typeof (costFunction as any).derivative === 'function') {
+      costDerivative = (costFunction as any).derivative;
     }
-    // Return the average error over the set.
-    return errorSum / set.length;
+
+    for (let i = 0; i < set.length; i++) {
+      const dataPoint = set[i];
+      const input = dataPoint.input;
+      const target = dataPoint.output;
+
+      if (input.length !== this.input || target.length !== this.output) {
+        if (config.warnings) {
+          console.warn(
+            `Data point ${i} has incorrect dimensions (input: ${input.length}/${this.input}, output: ${target.length}/${this.output}), skipping.`
+          );
+        }
+        continue;
+      }
+
+      try {
+        const output = this.activate(input, true); // Training mode true
+        // Accumulate gradients (update = false)
+        this.propagate(currentRate, momentum, false, target, regularization, costDerivative);
+
+        errorSum += costFunction(target, output);
+        processedSamplesInBatch++;
+        totalProcessedSamples++;
+      } catch (e: any) {
+        if (config.warnings) {
+          console.warn(
+            `Error processing data point ${i} (input: ${JSON.stringify(input)}): ${e.message}. Skipping this point.`
+          );
+        }
+        // If a data point fails, it's skipped. The batch update will proceed with successfully processed points.
+      }
+
+      // Apply accumulated gradients if batch is full or it's the last item and there are processed samples in batch
+      if (processedSamplesInBatch > 0 && ((i + 1) % batchSize === 0 || i === set.length - 1)) {
+        this.nodes.forEach((node) => {
+          // Apply gradients (update = true)
+          // The 'target' for node.propagate when updating is not used, so an empty array or undefined is fine.
+          // The regularization object is passed through.
+          node.propagate(currentRate, momentum, true, undefined, regularization);
+        });
+        processedSamplesInBatch = 0; // Reset for next batch
+      }
+    }
+    // Return average error only for successfully processed samples
+    return totalProcessedSamples > 0 ? errorSum / totalProcessedSamples : 0;
   }
 
   /**
@@ -1123,7 +1227,9 @@ export default class Network {
    * @param {number} [options.batchSize=1] - The number of samples per batch for weight updates (1 = online learning).
    * @param {function} [options.ratePolicy=methods.Rate.FIXED] - A function defining how the learning rate changes over iterations.
    * @param {number} [options.dropout=0] - The dropout rate (0 to 1) applied to hidden nodes during training.
-   * @param {number} [options.regularization=0] - The L2 regularization factor (lambda) to penalize large weights.
+   * @param {number} [options.regularization=0] - The regularization factor (lambda).
+   * @param {string} [options.regularizationType='L2'] - The type of regularization ('L1', 'L2', or 'custom').
+   * @param {function} [options.regularizationFn] - Custom regularization function (used if `regularizationType` is 'custom').
    * @param {number} [options.log=0] - Log training progress (iteration, error, rate) every `log` iterations. 0 disables logging.
    * @param {object} [options.schedule] - Object for scheduling custom actions during training.
    * @param {number} options.schedule.iterations - Frequency (in iterations) to execute the schedule function.
@@ -1178,13 +1284,28 @@ export default class Network {
     // Set default values for training options.
     let targetError = options.error ?? 0.05; // Target error threshold.
     const cost = options.cost || methods.Cost.mse; // Cost function.
+    // --- Enhanced cost function check ---
+    if (
+      typeof cost !== 'function' &&
+      !(typeof cost === 'object' && (typeof cost.fn === 'function' || typeof cost.calculate === 'function'))
+    ) {
+      throw new Error('Invalid cost function provided to Network.train.');
+    }
     const baseRate = options.rate ?? 0.3; // Base learning rate.
     const dropout = options.dropout || 0; // Dropout rate.
     const momentum = options.momentum || 0; // Momentum factor.
     const batchSize = options.batchSize || 1; // Batch size (1 = online).
     const ratePolicy = options.ratePolicy || methods.Rate.fixed(); // Learning rate schedule.
     const shuffle = options.shuffle || false; // Shuffle dataset each iteration?
-    const regularization = options.regularization || 0; // L2 regularization factor.
+    // --- Enhanced regularization support ---
+    let regularization: any = options.regularization || 0; // Default: L2 lambda
+    if (options.regularizationType === 'L1' && typeof options.regularization === 'number') {
+      regularization = { type: 'L1', lambda: options.regularization };
+    } else if (options.regularizationType === 'L2' && typeof options.regularization === 'number') {
+      regularization = { type: 'L2', lambda: options.regularization };
+    } else if (options.regularizationType === 'custom' && typeof options.regularizationFn === 'function') {
+      regularization = options.regularizationFn;
+    }
     const clear = options.clear || false; // Clear network state each iteration?
     const log = options.log || 0; // Logging frequency.
     const schedule = options.schedule; // Custom schedule object.
@@ -1669,20 +1790,15 @@ export default class Network {
     const costFn = cost || methods.Cost.mse; // Use provided cost function or default to MSE.
     const start = Date.now(); // Start time measurement.
 
-    // Check if dropout was active during training. If so, node masks might need adjustment for testing.
-    // Standard dropout practice scales activations at test time by (1 - dropout_rate).
-    // Here, we assume node masks were set correctly after training (ideally to 1, or handled internally by noTraceActivate if needed).
-    // If `this.dropout` is still > 0, it implies training might have been interrupted or cleanup wasn't perfect.
-    // We ensure masks are effectively 1 for testing by temporarily setting `this.dropout` to 0 for the test run,
-    // assuming `noTraceActivate` doesn't apply dropout based on `this.dropout`.
-    // A more robust approach might involve explicitly setting node masks to 1 before testing.
+    // --- Dropout/inference transition: Explicitly reset all hidden node masks to 1 for robust inference ---
+    this.nodes.forEach(node => {
+      if (node.type === 'hidden') node.mask = 1;
+    });
+
     const previousDropout = this.dropout; // Store current dropout rate
     if (this.dropout > 0) {
       // Temporarily disable dropout effect for testing.
-      // This relies on activate/noTraceActivate NOT applying dropout if this.dropout is 0.
       this.dropout = 0;
-      // It might be safer to explicitly set masks:
-      // this.nodes.forEach(node => { if (node.type === 'hidden') node.mask = 1; });
     }
 
     // Iterate through each sample in the test set.
@@ -1819,102 +1935,90 @@ export default class Network {
   }
 
   /**
-   * Creates a Network instance from a JSON object representation.
-   * This method reconstructs the network's structure, including nodes (with types, biases, squash functions),
-   * connections (with weights), and gates, based on the provided JSON data.
-   * Assumes the JSON object was created by `network.toJSON()`.
+   * Converts the network into a JSON object representation (latest standard).
+   * Includes formatVersion, and only serializes properties needed for full reconstruction.
+   * All references are by index. Excludes runtime-only properties (activation, state, traces).
    *
-   * @param {object} json - The JSON object representing the network structure and parameters.
-   * @param {number} json.input - Number of input nodes.
-   * @param {number} json.output - Number of output nodes.
-   * @param {number} [json.dropout] - Dropout rate.
-   * @param {object[]} json.nodes - Array of node JSON objects (see `Node.fromJSON`). Must include `squash` name.
-   * @param {object[]} json.connections - Array of connection JSON objects `{ from: number, to: number, weight: number, gater: number | null }`.
-   * @returns {Network} A new Network instance reconstructed from the JSON data.
-   * @static
+   * @returns {object} A JSON-compatible object representing the network.
+   */
+  toJSON(): object {
+    const json: any = {
+      formatVersion: 2,
+      input: this.input,
+      output: this.output,
+      dropout: this.dropout,
+      nodes: [],
+      connections: []
+    };
+    // Serialize nodes (type, bias, squash, index)
+    this.nodes.forEach((node, index) => {
+      node.index = index;
+      json.nodes.push({
+        type: node.type,
+        bias: node.bias,
+        squash: node.squash.name,
+        index
+      });
+      // Self-connection (if any)
+      if (node.connections.self.length > 0) {
+        const selfConn = node.connections.self[0];
+        json.connections.push({
+          from: index,
+          to: index,
+          weight: selfConn.weight,
+          gater: selfConn.gater ? selfConn.gater.index : null
+        });
+      }
+    });
+    // Serialize regular connections
+    this.connections.forEach(conn => {
+      if (typeof conn.from.index !== 'number' || typeof conn.to.index !== 'number') return;
+      json.connections.push({
+        from: conn.from.index,
+        to: conn.to.index,
+        weight: conn.weight,
+        gater: conn.gater ? conn.gater.index : null
+      });
+    });
+    return json;
+  }
+
+  /**
+   * Reconstructs a network from a JSON object (latest standard).
+   * Handles formatVersion, robust error handling, and index-based references.
+   * @param {object} json - The JSON object representing the network.
+   * @returns {Network} The reconstructed network.
    */
   static fromJSON(json: any): Network {
-    // Create a new network shell with the specified input/output sizes.
+    if (!json || typeof json !== 'object') throw new Error('Invalid JSON for network.');
+    if (json.formatVersion !== 2) {
+      console.warn('fromJSON: Unknown or missing formatVersion. Attempting best-effort import.');
+    }
     const network = new Network(json.input, json.output);
-    network.dropout = json.dropout || 0; // Set dropout rate from JSON or default to 0.
-    network.nodes = []; // Clear default nodes created by constructor.
-    network.connections = []; // Clear default connections.
+    network.dropout = json.dropout || 0;
+    network.nodes = [];
+    network.connections = [];
     network.selfconns = [];
     network.gates = [];
-
-    // Deserialize nodes from the JSON array.
-    network.nodes = json.nodes.map((nodeJSON: any) => Node.fromJSON(nodeJSON));
-
-    // Assign squash functions and indices to the deserialized nodes.
-    network.nodes.forEach((node, index) => {
-      const nodeJSON = json.nodes[index];
-      // Find the squash function by name.
-      const squashName = nodeJSON.squash as keyof typeof methods.Activation;
-      const squashFn = methods.Activation[squashName];
-      if (squashFn) {
-        node.squash = squashFn as (x: number, derivate?: boolean) => number;
-      } else {
-        console.warn(
-          `fromJSON: Unknown squash function '${squashName}' for node ${index}. Using identity.`
-        );
-        node.squash = methods.Activation.identity; // Fallback
-      }
-      node.index = index; // Ensure index is set.
+    // Recreate nodes
+    json.nodes.forEach((n: any, i: number) => {
+      const node = new Node(n.type);
+      node.bias = n.bias;
+      node.squash = methods.Activation[n.squash] || methods.Activation.identity;
+      node.index = i;
+      network.nodes.push(node);
     });
-
-    // Deserialize connections from the JSON array.
-    json.connections.forEach((connJSON: any) => {
-      // Validate connection indices.
-      if (
-        typeof connJSON.from !== 'number' ||
-        typeof connJSON.to !== 'number' ||
-        connJSON.from < 0 ||
-        connJSON.from >= network.nodes.length ||
-        connJSON.to < 0 ||
-        connJSON.to >= network.nodes.length
-      ) {
-        console.warn(
-          `fromJSON: Invalid connection indices ${connJSON.from} -> ${connJSON.to}. Skipping connection.`
-        );
-        return; // Skip invalid connection.
-      }
-
-      // Get the 'from' and 'to' nodes using the indices.
-      const fromNode = network.nodes[connJSON.from];
-      const toNode = network.nodes[connJSON.to];
-
-      // Create the connection using the network's method to ensure lists are updated.
-      // Note: `connect` might assign a random weight; we overwrite it immediately after.
-      const connection = network.connect(fromNode, toNode)[0];
-
-      // If connection was successfully created, set its weight and handle gating.
-      if (connection) {
-        connection.weight = connJSON.weight; // Set the weight from JSON.
-
-        // Re-apply gating if specified in JSON.
-        if (
-          connJSON.gater !== null &&
-          typeof connJSON.gater === 'number' &&
-          connJSON.gater >= 0 &&
-          connJSON.gater < network.nodes.length
-        ) {
-          // Gate the connection using the specified gater node.
-          network.gate(network.nodes[connJSON.gater], connection);
-        } else if (connJSON.gater !== null) {
-          // Warn if gater index is invalid but not null.
-          console.warn(
-            `fromJSON: Invalid gater index ${connJSON.gater} for connection ${connJSON.from} -> ${connJSON.to}. Skipping gate.`
-          );
-        }
-      } else {
-        // Warn if connection creation failed (e.g., node types prevent connection).
-        console.warn(
-          `fromJSON: Failed to create connection ${connJSON.from} -> ${connJSON.to}.`
-        );
+    // Recreate connections
+    json.connections.forEach((c: any) => {
+      if (typeof c.from !== 'number' || typeof c.to !== 'number') return;
+      const from = network.nodes[c.from];
+      const to = network.nodes[c.to];
+      const conn = network.connect(from, to, c.weight)[0];
+      if (conn && c.gater !== null && typeof c.gater === 'number' && network.nodes[c.gater]) {
+        network.gate(network.nodes[c.gater], conn);
       }
     });
-
-    return network; // Return the fully reconstructed network.
+    return network;
   }
 
   /**
@@ -2280,73 +2384,171 @@ export default class Network {
   }
 
   /**
-   * Converts the network into a JSON object representation.
-   * This representation includes detailed information about nodes (type, bias, squash function name, state),
-   * connections (from/to indices, weight, gater index), and network metadata (input/output size, dropout rate).
-   * Suitable for saving the network structure and state, or for transferring it between systems.
+   * Exports the network to ONNX format (JSON object, minimal MLP support).
+   * Only standard feedforward architectures and standard activations are supported.
+   * Gating, custom activations, and evolutionary features are ignored or replaced with Identity.
    *
-   * @returns {object} A JSON-compatible object representing the network.
-   *                   Structure: `{ input, output, dropout, nodes: [...], connections: [...] }`
+   * @returns {OnnxModel} ONNX model as a JSON object.
    */
-  toJSON(): object {
-    // Initialize the base JSON object structure.
-    const json: any = {
-      nodes: [], // Array to store serialized node data.
-      connections: [], // Array to store serialized connection data.
-      input: this.input, // Store number of input nodes.
-      output: this.output, // Store number of output nodes.
-      dropout: this.dropout, // Store current dropout rate.
+  toONNX(): OnnxModel {
+    // Assign indices to all nodes if not already set
+    this.nodes.forEach((node, idx) => { node.index = idx; });
+
+    // Throw if no connections (invalid MLP)
+    if (!this.connections || this.connections.length === 0) {
+      throw new Error('ONNX export currently only supports simple MLPs');
+    }
+    // Helper to map Neataptic activation to ONNX operator type
+    const mapActivationToOnnx = (squash: Function): string => {
+      const name = squash.name.toUpperCase();
+      if (name.includes('TANH')) return 'Tanh';
+      if (name.includes('LOGISTIC') || name.includes('SIGMOID')) return 'Sigmoid';
+      if (name.includes('RELU')) return 'Relu';
+      if (name.includes('IDENTITY')) return 'Identity';
+      if (config.warnings) {
+        console.warn(`Unsupported activation function ${squash.name} for ONNX export, defaulting to Identity.`);
+      }
+      return 'Identity';
     };
-
-    // Serialize each node and its self-connection (if any).
-    this.nodes.forEach((node, index) => {
-      node.index = index; // Ensure node has its current index assigned.
-      const nodeJSON: any = node.toJSON(); // Get the basic JSON representation from the node.
-      // Add the squash function name (important for deserialization).
-      nodeJSON.squash = node.squash.name;
-      json.nodes.push(nodeJSON); // Add the node JSON to the list.
-
-      // Check for and serialize self-connections.
-      if (node.connections.self.length > 0) {
-        const selfConnObj = node.connections.self[0]; // Access the connection object
-        const selfConnJSON: any = selfConnObj.toJSON(); // Get connection JSON.
-        selfConnJSON.from = index; // Set 'from' index (same as 'to').
-        selfConnJSON.to = index; // Set 'to' index.
-        // Add gater index if the self-connection is gated.
-        selfConnJSON.gater = selfConnObj.gater
-          ? selfConnObj.gater.index
-          : null;
-        json.connections.push(selfConnJSON); // Add self-connection to the connections list.
+    // Build layers: input, hidden(s), output
+    const inputNodes = this.nodes.filter(n => n.type === 'input');
+    const outputNodes = this.nodes.filter(n => n.type === 'output');
+    const hiddenNodes = this.nodes.filter(n => n.type === 'hidden');
+    // Group hidden nodes by layer (assume topological order)
+    let layers: Node[][] = [];
+    if (hiddenNodes.length === 0) {
+      layers = [inputNodes, outputNodes];
+    } else {
+      // Try to infer layers: input -> hidden(s) -> output
+      let currentLayer: Node[] = [];
+      let prevLayer = inputNodes;
+      let remaining = [...hiddenNodes];
+      while (remaining.length > 0) {
+        currentLayer = remaining.filter(h => h.connections.in.every(conn => prevLayer.includes(conn.from)));
+        if (currentLayer.length === 0) {
+          throw new Error('ONNX export currently only supports simple MLPs');
+        }
+        layers.push(prevLayer);
+        prevLayer = currentLayer;
+        remaining = remaining.filter(h => !currentLayer.includes(h));
       }
-    });
-
-    // Serialize all regular (non-self) connections.
-    this.connections.forEach((conn: Connection) => {
-      // Basic connection data: weight.
-      const connJSON: any = { weight: conn.weight };
-      // Add 'from' index if the source node and its index are valid.
-      if (conn.from && typeof conn.from.index === 'number') {
-        connJSON.from = conn.from.index;
-      } else {
-        console.warn('toJSON: Connection missing valid "from" node/index.'); // Should not happen in a consistent network.
-        return; // Skip serializing this potentially invalid connection.
+      layers.push(prevLayer); // last hidden layer
+      layers.push(outputNodes);
+    }
+    // Now layers = [input, hidden1, ..., output]
+    // --- Stricter extra connection and full connectivity check ---
+    // Only allow connections from layer L to L+1 (no skips, no recurrent, no extra)
+    // Build a map from node index to layer index
+    const nodeToLayer = new Map<number, number>();
+    for (let l = 0; l < layers.length; l++) {
+      for (const node of layers[l]) {
+        if (typeof node.index !== 'number') {
+          throw new Error('ONNX export: node.index is not a number');
+        }
+        nodeToLayer.set(node.index, l);
       }
-      // Add 'to' index if the target node and its index are valid.
-      if (conn.to && typeof conn.to.index === 'number') {
-        connJSON.to = conn.to.index;
-      } else {
-        console.warn('toJSON: Connection missing valid "to" node/index.');
-        return; // Skip serializing this potentially invalid connection.
+    }
+    // Build allowed connection sets for each layer pair
+    const allowedConnections = new Set<string>();
+    for (let l = 1; l < layers.length; l++) {
+      const prev = layers[l-1];
+      const curr = layers[l];
+      for (const from of prev) {
+        for (const to of curr) {
+          allowedConnections.add(`${from.index}->${to.index}`);
+        }
       }
-      // Add 'gater' index if the connection is gated and the gater node/index are valid.
-      if (conn.gater && typeof conn.gater.index === 'number') {
-        connJSON.gater = conn.gater.index;
-      } else {
-        connJSON.gater = null; // Explicitly set to null if not gated or gater is invalid.
+    }
+    // Track used connections to catch duplicates
+    const usedConnections = new Set<string>();
+    for (const conn of this.connections) {
+      const fromLayer = nodeToLayer.get(conn.from.index ?? -1);
+      const toLayer = nodeToLayer.get(conn.to.index ?? -1);
+      if (typeof fromLayer !== 'number' || typeof toLayer !== 'number') {
+        throw new Error('ONNX export: node not found in any layer');
       }
-      json.connections.push(connJSON); // Add the connection JSON to the list.
-    });
-
-    return json; // Return the complete JSON representation.
+      if (toLayer - fromLayer !== 1) {
+        throw new Error('ONNX export only supports strictly layered, fully connected MLPs (no extra or skip connections)');
+      }
+      const key = `${conn.from.index}->${conn.to.index}`;
+      if (!allowedConnections.has(key)) {
+        throw new Error('ONNX export only supports strictly layered, fully connected MLPs (no extra or skip connections)');
+      }
+      if (usedConnections.has(key)) {
+        throw new Error('ONNX export only supports strictly layered, fully connected MLPs (no duplicate connections)');
+      }
+      usedConnections.add(key);
+    }
+    // Check for missing connections
+    for (const key of allowedConnections) {
+      if (!usedConnections.has(key)) {
+        throw new Error('ONNX export only supports fully connected MLPs (missing connections between layers)');
+      }
+    }
+    // --- End stricter checks ---
+    // Check full connectivity and build ONNX tensors
+    const onnx: OnnxModel = {
+      graph: {
+        inputs: [
+          {
+            name: 'input',
+            type: { tensor_type: { elem_type: 'FLOAT', shape: { dim: [{ dim_value: this.input }] } } }
+          }
+        ],
+        outputs: [
+          {
+            name: 'output',
+            type: { tensor_type: { elem_type: 'FLOAT', shape: { dim: [{ dim_value: this.output }] } } }
+          }
+        ],
+        initializer: [],
+        node: []
+      }
+    };
+    let lastOutput = 'input';
+    for (let l = 1; l < layers.length; l++) {
+      const prev = layers[l-1];
+      const curr = layers[l];
+      // Build weight and bias tensors
+      const W = Array(curr.length).fill(0).map(() => Array(prev.length).fill(0));
+      const B = Array(curr.length).fill(0);
+      for (let j = 0; j < curr.length; j++) {
+        const node = curr[j];
+        B[j] = node.bias;
+        for (let i = 0; i < prev.length; i++) {
+          const conn = node.connections.in.find(conn => conn.from === prev[i]);
+          W[j][i] = conn ? conn.weight : 0;
+        }
+      }
+      onnx.graph.initializer.push({
+        name: `W${l-1}`,
+        data_type: 1,
+        dims: [curr.length, prev.length],
+        float_data: W.flat()
+      });
+      onnx.graph.initializer.push({
+        name: `B${l-1}`,
+        data_type: 1,
+        dims: [curr.length],
+        float_data: B
+      });
+      onnx.graph.node.push({
+        op_type: 'MatMul',
+        input: [lastOutput, `W${l-1}`],
+        output: [`matmul_out_${l-1}`]
+      });
+      onnx.graph.node.push({
+        op_type: 'Add',
+        input: [`matmul_out_${l-1}`, `B${l-1}`],
+        output: [`add_out_${l-1}`]
+      });
+      onnx.graph.node.push({
+        op_type: mapActivationToOnnx(curr[0].squash),
+        input: [`add_out_${l-1}`],
+        output: [l === layers.length-1 ? 'output' : `hidden_out_${l-1}`]
+      });
+      lastOutput = l === layers.length-1 ? 'output' : `hidden_out_${l-1}`;
+    }
+    return onnx;
   }
 }

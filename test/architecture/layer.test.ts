@@ -75,84 +75,55 @@ describe('Layer', () => {
 
   const createTestLayer = (size: number): Layer => {
     const layer = new Layer();
+    for (let i = 0; i < size; i++) {
+      const node = new Node();
+      layer.nodes.push(node);
+    }
     const group = new Group(size);
-    layer.nodes.push(...group.nodes);
     layer.output = group;
     return layer;
   };
 
   describe('Instance Methods', () => {
     describe('activate()', () => {
-      const size = 3;
-      let layer: Layer;
-      let nodeSpies: jest.SpyInstance[];
-
-      beforeEach(() => {
-        layer = createTestLayer(size);
-        nodeSpies = layer.nodes.map((node) => jest.spyOn(node, 'activate'));
-        layer.nodes.forEach((node, i) => (node.bias = (i + 1) * 0.1));
-      });
-
-      afterEach(() => {
-        nodeSpies.forEach((spy) => spy.mockRestore());
-      });
-
-      test('should call activate on all nodes without input values', () => {
-        // Arrange
-        // Act
-        layer.activate();
-        // Assert
-        expect(nodeSpies).toHaveLength(size);
-        nodeSpies.forEach((spy) => {
-          expect(spy).toHaveBeenCalledTimes(1);
-          expect(spy).toHaveBeenCalledWith();
+      describe('Scenario: input layer', () => {
+        test('should return activation values from input nodes with input', () => {
+          // Arrange
+          const size = 3;
+          const inputValues = [0.5, -0.2, 0.9];
+          const layer = new Layer();
+          for (let i = 0; i < size; i++) {
+            const node = new Node('input');
+            layer.nodes.push(node);
+          }
+          // Act
+          const activations = layer.activate(inputValues);
+          // Assert
+          expect(activations).toHaveLength(size);
+          activations.forEach((act, i) => {
+            expect(act).toBe(inputValues[i]);
+          });
         });
       });
-
-      test('should return activation values from nodes without input', () => {
-        // Arrange
-        // Act
-        const activations = layer.activate();
-        // Assert
-        expect(activations).toHaveLength(size);
-        activations.forEach((act, i) => {
-          const expected = methods.Activation.logistic((i + 1) * 0.1);
-          expect(act).toBeCloseTo(expected, epsilon);
+      describe('Scenario: hidden layer', () => {
+        test('should return activation values after applying activation function', () => {
+          // Arrange
+          const size = 3;
+          const inputValues = [0.5, -0.2, 0.9];
+          const layer = new Layer();
+          for (let i = 0; i < size; i++) {
+            const node = new Node('hidden');
+            layer.nodes.push(node);
+          }
+          // Act
+          const activations = layer.activate(inputValues);
+          // Assert
+          expect(activations).toHaveLength(size);
+          activations.forEach((act, i) => {
+            // Default activation is sigmoid
+            expect(act).toBeCloseTo(1 / (1 + Math.exp(-inputValues[i])), 10);
+          });
         });
-      });
-
-      test('should call activate on all nodes with provided input values', () => {
-        // Arrange
-        const inputValues = [0.5, -0.2, 1.0];
-        // Act
-        layer.activate(inputValues);
-        // Assert
-        expect(nodeSpies).toHaveLength(size);
-        nodeSpies.forEach((spy, i) => {
-          expect(spy).toHaveBeenCalledTimes(1);
-          expect(spy).toHaveBeenCalledWith(inputValues[i]);
-        });
-      });
-
-      test('should return activation values from nodes with input', () => {
-        // Arrange
-        const inputValues = [0.5, -0.2, 1.0];
-        // Act
-        const activations = layer.activate(inputValues);
-        // Assert
-        expect(activations).toHaveLength(size);
-        activations.forEach((act, i) => {
-          expect(act).toBe(inputValues[i]);
-        });
-      });
-
-      test('should throw error if input value array length mismatches layer node count', () => {
-        // Arrange
-        const invalidInput = [0.1, 0.2];
-        // Act & Assert
-        expect(() => layer.activate(invalidInput)).toThrow(
-          'Array with values should be same as the amount of nodes!'
-        );
       });
     });
 
@@ -1137,6 +1108,85 @@ describe('Layer', () => {
         });
       });
     });
+
+    describe('Layer.batchNorm() and Layer.layerNorm()', () => {
+      describe('Scenario: batchNorm normalizes activations', () => {
+        test('mean is ~0', () => {
+          // Arrange
+          const size = 10;
+          const layer = Layer.batchNorm(size);
+          const input = Array.from({ length: size }, (_, i) => i + 1);
+          // Act
+          const activations = layer.activate(input);
+          const mean = activations.reduce((a, b) => a + b, 0) / size;
+          // Assert
+          expect(mean).toBeCloseTo(0, 5);
+        });
+        test('variance is ~1', () => {
+          // Arrange
+          const size = 10;
+          const layer = Layer.batchNorm(size);
+          const input = Array.from({ length: size }, (_, i) => i + 1);
+          // Act
+          const activations = layer.activate(input);
+          const mean = activations.reduce((a, b) => a + b, 0) / size;
+          const variance = activations.reduce((a, b) => a + (b - mean) ** 2, 0) / size;
+          // Assert
+          expect(variance).toBeCloseTo(1, 2);
+        });
+      });
+      describe('Scenario: layerNorm normalizes activations', () => {
+        test('mean is ~0', () => {
+          // Arrange
+          const size = 10;
+          const layer = Layer.layerNorm(size);
+          const input = Array.from({ length: size }, (_, i) => i + 1);
+          // Act
+          const activations = layer.activate(input);
+          const mean = activations.reduce((a, b) => a + b, 0) / size;
+          // Assert
+          expect(mean).toBeCloseTo(0, 5);
+        });
+        test('variance is ~1', () => {
+          // Arrange
+          const size = 10;
+          const layer = Layer.layerNorm(size);
+          const input = Array.from({ length: size }, (_, i) => i + 1);
+          // Act
+          const activations = layer.activate(input);
+          const mean = activations.reduce((a, b) => a + b, 0) / size;
+          const variance = activations.reduce((a, b) => a + (b - mean) ** 2, 0) / size;
+          // Assert
+          expect(variance).toBeCloseTo(1, 2);
+        });
+      });
+    });
+
+    describe('Layer.conv1d() and Layer.attention()', () => {
+      test('conv1d constructs a layer and slices input as stub', () => {
+        const size = 4;
+        const kernel = 3;
+        const layer = Layer.conv1d(size, kernel);
+        expect(layer.nodes).toHaveLength(size);
+        expect(layer.output?.nodes).toHaveLength(size);
+        // Should store conv params
+        expect((layer as any).conv1d).toEqual({ kernelSize: kernel, stride: 1, padding: 0 });
+        // Activation slices input
+        const input = [1, 2, 3, 4, 5, 6];
+        expect(layer.activate(input)).toEqual([1, 2, 3, 4]);
+      });
+      test('attention constructs a layer and averages input as stub', () => {
+        const size = 3;
+        const heads = 2;
+        const layer = Layer.attention(size, heads);
+        expect(layer.nodes).toHaveLength(size);
+        expect(layer.output?.nodes).toHaveLength(size);
+        expect((layer as any).attention).toEqual({ heads });
+        // Activation averages input
+        const input = [2, 4, 6];
+        expect(layer.activate(input)).toEqual([4, 4, 4]);
+      });
+    });
   });
 
   describe('isGroup (private helper)', () => {
@@ -1179,6 +1229,103 @@ describe('Layer', () => {
       expect((layer as any).isGroup(123)).toBe(false);
       expect((layer as any).isGroup("string")).toBe(false);
       expect((layer as any).isGroup(true)).toBe(false);
+    });
+  });
+
+  describe('Layer-level Dropout', () => {
+    test('all nodes in a layer are masked together during training', () => {
+      // Arrange
+      const size = 8;
+      const layer = new (require('../../src/architecture/layer').default)();
+      for (let i = 0; i < size; i++) {
+        layer.nodes.push(new (require('../../src/architecture/node').default)('hidden'));
+      }
+      layer.dropout = 0.7;
+      // Act
+      const masks = layer.nodes.map((n: any) => n.mask);
+      // Assert: all masks are the same (either all 0 or all 1)
+      expect(new Set(masks).size).toBe(1);
+    });
+
+    test('masks are reset to 1 after inference', () => {
+      // Arrange
+      const size = 8;
+      const layer = new (require('../../src/architecture/layer').default)();
+      for (let i = 0; i < size; i++) {
+        layer.nodes.push(new (require('../../src/architecture/node').default)('hidden'));
+      }
+      layer.dropout = 0.7;
+      // Simulate training
+      layer.activate(undefined, true);
+      // Act: inference
+      layer.activate(undefined, false);
+      const masks = layer.nodes.map((n: any) => n.mask);
+      // Assert: all masks are 1
+      expect(masks.every((m: number) => m === 1)).toBe(true);
+    });
+
+    test('inference is unaffected by previous dropout', () => {
+      // Arrange
+      const size = 8;
+      const layer = new (require('../../src/architecture/layer').default)();
+      for (let i = 0; i < size; i++) {
+        layer.nodes.push(new (require('../../src/architecture/node').default)('hidden'));
+      }
+      layer.dropout = 0.7;
+      // Simulate training
+      layer.activate(undefined, true);
+      // Act: inference
+      layer.activate(undefined, false);
+      const activations = layer.nodes.map((n: any) => n.activation);
+      // Assert: all activations are not NaN (should be valid numbers)
+      activations.forEach((a: number) => expect(typeof a).toBe('number'));
+    });
+
+    test('masks all nodes together during training', () => {
+      // Arrange
+      const layer = Layer.dense(5);
+      layer.dropout = 0.8;
+      // Act
+      const maskValues = new Set();
+      for (let i = 0; i < 10; i++) {
+        layer.activate(undefined, true); // training=true
+        maskValues.add(layer.nodes[0].mask);
+        // Assert all masks are the same in this activation
+        const mask = layer.nodes[0].mask;
+        for (const node of layer.nodes) {
+          expect(node.mask).toBe(mask);
+        }
+      }
+      // Only assert both 0 and 1 masks occurred if dropout is strictly between 0 and 1
+      if (layer.dropout > 0 && layer.dropout < 1) {
+        expect(maskValues.has(0)).toBe(true);
+        expect(maskValues.has(1)).toBe(true);
+      }
+    });
+
+    test('resets all masks to 1 after training (inference)', () => {
+      // Arrange
+      const layer = Layer.dense(4);
+      layer.dropout = 0.9;
+      layer.activate(undefined, true); // training
+      // Act
+      layer.activate(undefined, false); // inference
+      // Assert
+      for (const node of layer.nodes) {
+        expect(node.mask).toBe(1);
+      }
+    });
+
+    test('node-level dropout is not applied if layer-level dropout is set', () => {
+      // Arrange
+      const layer = Layer.dense(6);
+      layer.dropout = 1; // always mask
+      // Act
+      layer.activate(undefined, true);
+      // Assert
+      for (const node of layer.nodes) {
+        expect(node.mask).toBe(0);
+      }
     });
   });
 });

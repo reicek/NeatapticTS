@@ -111,29 +111,38 @@ describe('Connection', () => {
     beforeEach(() => {
       // Arrange: Create a connection first
       connection = new Connection(fromNode, toNode, weight);
-      // Act: Set the gater node
-      connection.gater = gaterNode;
-    });
+     });
 
-    test('should set the gater node correctly', () => {
-      // Assert
-      expect(connection.gater).toBe(gaterNode);
-    });
-
-    describe('When gater is set back to null', () => {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      let previousGater: Node; // Keep variable for context if needed later
+    describe('Scenario: valid gater', () => {
       beforeEach(() => {
-        // Arrange: Ensure gater is set initially
+        // Act: Set the gater node
         connection.gater = gaterNode;
-        previousGater = gaterNode; // Store reference
-        // Act: Set gater back to null
+      });
+      test('should set the gater node correctly', () => {
+        // Assert
+        expect(connection.gater).toBe(gaterNode);
+      });
+    });
+
+    describe('Scenario: gater set back to null', () => {
+      beforeEach(() => {
+        // Arrange: Set gater, then set to null
+        connection.gater = gaterNode;
         connection.gater = null;
       });
-
       test('should set the gater property to null', () => {
         // Assert
         expect(connection.gater).toBeNull();
+      });
+    });
+
+    describe('Scenario: invalid gater', () => {
+      test('should not throw when setting gater to an invalid value (robustness)', () => {
+        // Arrange & Act
+        expect(() => {
+          // @ts-expect-error
+          connection.gater = 12345;
+        }).not.toThrow();
       });
     });
   });

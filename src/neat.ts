@@ -232,8 +232,10 @@ export default class Neat {
    * @throws Error if tournament size exceeds population size.
    */
   getParent(): Network {
-    switch (this.options.selection) {
-      case methods.selection.POWER:
+    const selection = this.options.selection;
+    const selectionName = selection?.name;
+    switch (selectionName) {
+      case 'POWER':
         if (
           this.population[0]?.score !== undefined &&
           this.population[1]?.score !== undefined &&
@@ -242,11 +244,11 @@ export default class Neat {
           this.sort();
         }
         const index = Math.floor(
-          Math.pow(Math.random(), this.options.selection.power || 1) *
+          Math.pow(Math.random(), selection.power || 1) *
             this.population.length
         );
         return this.population[index];
-      case methods.selection.FITNESS_PROPORTIONATE:
+      case 'FITNESS_PROPORTIONATE':
         let totalFitness = 0;
         let minimalFitness = 0;
         this.population.forEach((genome) => {
@@ -265,12 +267,12 @@ export default class Neat {
         return this.population[
           Math.floor(Math.random() * this.population.length)
         ];
-      case methods.selection.TOURNAMENT:
-        if (this.options.selection.size > this.options.popsize!) {
+      case 'TOURNAMENT':
+        if (selection.size > this.options.popsize!) {
           throw new Error('Tournament size must be less than population size.');
         }
         const tournament = [];
-        for (let i = 0; i < this.options.selection.size; i++) {
+        for (let i = 0; i < selection.size; i++) {
           tournament.push(
             this.population[Math.floor(Math.random() * this.population.length)]
           );
@@ -278,12 +280,73 @@ export default class Neat {
         tournament.sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
         for (let i = 0; i < tournament.length; i++) {
           if (
-            Math.random() < this.options.selection.probability ||
+            Math.random() < selection.probability ||
             i === tournament.length - 1
           ) {
             return tournament[i];
           }
         }
+        break;
+      default:
+        // fallback for legacy or custom selection objects
+        if (selection === methods.selection.POWER) {
+          // ...repeat POWER logic...
+          if (
+            this.population[0]?.score !== undefined &&
+            this.population[1]?.score !== undefined &&
+            this.population[0].score < this.population[1].score
+          ) {
+            this.sort();
+          }
+          const index = Math.floor(
+            Math.pow(Math.random(), selection.power || 1) *
+              this.population.length
+          );
+          return this.population[index];
+        }
+        if (selection === methods.selection.FITNESS_PROPORTIONATE) {
+          // ...repeat FITNESS_PROPORTIONATE logic...
+          let totalFitness = 0;
+          let minimalFitness = 0;
+          this.population.forEach((genome) => {
+            minimalFitness = Math.min(minimalFitness, genome.score ?? 0);
+            totalFitness += genome.score ?? 0;
+          });
+          minimalFitness = Math.abs(minimalFitness);
+          totalFitness += minimalFitness * this.population.length;
+
+          const random = Math.random() * totalFitness;
+          let value = 0;
+          for (const genome of this.population) {
+            value += (genome.score ?? 0) + minimalFitness;
+            if (random < value) return genome;
+          }
+          return this.population[
+            Math.floor(Math.random() * this.population.length)
+          ];
+        }
+        if (selection === methods.selection.TOURNAMENT) {
+          // ...repeat TOURNAMENT logic...
+          if (selection.size > this.options.popsize!) {
+            throw new Error('Tournament size must be less than population size.');
+          }
+          const tournament = [];
+          for (let i = 0; i < selection.size; i++) {
+            tournament.push(
+              this.population[Math.floor(Math.random() * this.population.length)]
+            );
+          }
+          tournament.sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+          for (let i = 0; i < tournament.length; i++) {
+            if (
+              Math.random() < selection.probability ||
+              i === tournament.length - 1
+            ) {
+              return tournament[i];
+            }
+          }
+        }
+        break;
     }
     return this.population[0]; // Default fallback
   }

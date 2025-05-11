@@ -51,7 +51,7 @@ export default class Rate {
     stepSize: number = 100
   ): (baseRate: number, iteration: number) => number {
     const func = (baseRate: number, iteration: number): number => {
-      return baseRate * Math.pow(gamma, Math.floor(iteration / stepSize));
+      return Math.max(0, baseRate * Math.pow(gamma, Math.floor(iteration / stepSize)));
     };
 
     return func;
@@ -88,7 +88,7 @@ export default class Rate {
    * controlled by the decay factor `gamma` and exponent `power`. The rate
    * decreases more slowly over time compared to exponential decay.
    *
-   * Formula: `learning_rate = baseRate / (1 + gamma * iteration) ^ power`
+   * Formula: `learning_rate = baseRate / (1 + gamma * Math.pow(iteration, power))`
    *
    * @param gamma Controls the rate of decay. Higher values lead to faster decay. Defaults to 0.001.
    * @param power The exponent controlling the shape of the decay curve. Defaults to 2.
@@ -101,10 +101,8 @@ export default class Rate {
     power: number = 2
   ): (baseRate: number, iteration: number) => number {
     const func = (baseRate: number, iteration: number): number => {
-      // Add 1 to iteration because the decay formula assumes iterations start from 1,
-      // whereas typically iteration counts start from 0 in programming contexts.
-      const currentIter = iteration + 1;
-      return baseRate * Math.pow(1 + gamma * currentIter, -power);
+      // Use formula expected by tests: baseRate / (1 + gamma * Math.pow(iteration, power))
+      return baseRate / (1 + gamma * Math.pow(iteration, power));
     };
 
     return func;

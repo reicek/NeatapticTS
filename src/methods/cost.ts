@@ -233,4 +233,56 @@ export default class Cost {
     // Return the average hinge loss.
     return error / outputs.length;
   }
+
+  /**
+   * Calculates the Focal Loss, which is useful for addressing class imbalance in classification tasks.
+   * Focal loss down-weights easy examples and focuses training on hard negatives.
+   *
+   * @see https://arxiv.org/abs/1708.02002
+   * @param {number[]} targets - Array of target values (0 or 1 for binary, or probabilities for soft labels).
+   * @param {number[]} outputs - Array of predicted probabilities (between 0 and 1).
+   * @param {number} gamma - Focusing parameter (default 2).
+   * @param {number} alpha - Balancing parameter (default 0.25).
+   * @returns {number} The mean focal loss.
+   */
+  static focalLoss(targets: number[], outputs: number[], gamma: number = 2, alpha: number = 0.25): number {
+    let error = 0;
+    const epsilon = 1e-15;
+    if (targets.length !== outputs.length) {
+      throw new Error('Target and output arrays must have the same length.');
+    }
+    for (let i = 0; i < outputs.length; i++) {
+      const t = targets[i];
+      const p = Math.max(epsilon, Math.min(1 - epsilon, outputs[i]));
+      const pt = t === 1 ? p : 1 - p;
+      const a = t === 1 ? alpha : 1 - alpha;
+      error += -a * Math.pow(1 - pt, gamma) * Math.log(pt);
+    }
+    return error / outputs.length;
+  }
+
+  /**
+   * Calculates the Cross Entropy with Label Smoothing.
+   * Label smoothing prevents the model from becoming overconfident by softening the targets.
+   *
+   * @see https://arxiv.org/abs/1512.00567
+   * @param {number[]} targets - Array of target values (0 or 1 for binary, or probabilities for soft labels).
+   * @param {number[]} outputs - Array of predicted probabilities (between 0 and 1).
+   * @param {number} smoothing - Smoothing factor (between 0 and 1, e.g., 0.1).
+   * @returns {number} The mean cross-entropy loss with label smoothing.
+   */
+  static labelSmoothing(targets: number[], outputs: number[], smoothing: number = 0.1): number {
+    let error = 0;
+    const epsilon = 1e-15;
+    if (targets.length !== outputs.length) {
+      throw new Error('Target and output arrays must have the same length.');
+    }
+    for (let i = 0; i < outputs.length; i++) {
+      // Smooth the target: t_smooth = t * (1 - smoothing) + 0.5 * smoothing
+      const t = targets[i] * (1 - smoothing) + 0.5 * smoothing;
+      const p = Math.max(epsilon, Math.min(1 - epsilon, outputs[i]));
+      error -= t * Math.log(p) + (1 - t) * Math.log(1 - p);
+    }
+    return error / outputs.length;
+  }
 }

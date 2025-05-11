@@ -34,6 +34,12 @@ export default class Layer {
   output: Group | null;
 
   /**
+   * Dropout rate for this layer (0 to 1). If > 0, all nodes in the layer are masked together during training.
+   * Layer-level dropout takes precedence over node-level dropout for nodes in this layer.
+   */
+  dropout: number = 0;
+
+  /**
    * Initializes a new Layer instance.
    */
   constructor() {
@@ -49,11 +55,15 @@ export default class Layer {
    * for the corresponding nodes in the layer. Otherwise, nodes compute their
    * activation based on their incoming connections.
    *
+   * During training, layer-level dropout is applied, masking all nodes in the layer together.
+   * During inference, all masks are set to 1.
+   *
    * @param value - An optional array of activation values to set for the layer's nodes. The length must match the number of nodes.
+   * @param training - A boolean indicating whether the layer is in training mode. Defaults to false.
    * @returns An array containing the activation value of each node in the layer after activation.
    * @throws {Error} If the provided `value` array's length does not match the number of nodes in the layer.
    */
-  activate(value?: number[]): number[] {
+  activate(value?: number[], training: boolean = false): number[] {
     const values: number[] = [];
 
     // Input validation
@@ -61,6 +71,17 @@ export default class Layer {
       throw new Error(
         'Array with values should be same as the amount of nodes!'
       );
+    }
+
+    // --- Layer-level dropout logic ---
+    let layerMask = 1;
+    if (training && this.dropout > 0) {
+      // Fix: Use comparison with dropout rate directly to ensure both 0 and 1 masks occur
+      layerMask = Math.random() >= this.dropout ? 1 : 0;
+      this.nodes.forEach(node => { node.mask = layerMask; });
+    } else {
+      // In inference or no dropout, ensure all masks are 1
+      this.nodes.forEach(node => { node.mask = 1; });
     }
 
     // Activate each node
@@ -655,6 +676,97 @@ export default class Layer {
       return from.connect(inputBlock, methods.groupConnection.ONE_TO_ONE, 1);
     };
 
+    return layer;
+  }
+
+  /**
+   * Creates a batch normalization layer.
+   * Applies batch normalization to the activations of the nodes in this layer during activation.
+   * @param size - The number of nodes in this layer.
+   * @returns A new Layer instance configured as a batch normalization layer.
+   */
+  static batchNorm(size: number): Layer {
+    const layer = Layer.dense(size);
+    (layer as any).batchNorm = true;
+    // Override activate to apply batch normalization
+    const baseActivate = layer.activate.bind(layer);
+    layer.activate = function(value?: number[], training: boolean = false): number[] {
+      const activations = baseActivate(value, training);
+      // Compute mean and variance
+      const mean = activations.reduce((a, b) => a + b, 0) / activations.length;
+      const variance = activations.reduce((a, b) => a + (b - mean) ** 2, 0) / activations.length;
+      const epsilon = 1e-5;
+      // Normalize
+      return activations.map(a => (a - mean) / Math.sqrt(variance + epsilon));
+    };
+    return layer;
+  }
+
+  /**
+   * Creates a layer normalization layer.
+   * Applies layer normalization to the activations of the nodes in this layer during activation.
+   * @param size - The number of nodes in this layer.
+   * @returns A new Layer instance configured as a layer normalization layer.
+   */
+  static layerNorm(size: number): Layer {
+    const layer = Layer.dense(size);
+    (layer as any).layerNorm = true;
+    // Override activate to apply layer normalization
+    const baseActivate = layer.activate.bind(layer);
+    layer.activate = function(value?: number[], training: boolean = false): number[] {
+      const activations = baseActivate(value, training);
+      // Compute mean and variance (per sample, but here per layer)
+      const mean = activations.reduce((a, b) => a + b, 0) / activations.length;
+      const variance = activations.reduce((a, b) => a + (b - mean) ** 2, 0) / activations.length;
+      const epsilon = 1e-5;
+      // Normalize
+      return activations.map(a => (a - mean) / Math.sqrt(variance + epsilon));
+    };
+    return layer;
+  }
+
+  /**
+   * Creates a 1D convolutional layer (stub implementation).
+   * @param size - Number of output nodes (filters).
+   * @param kernelSize - Size of the convolution kernel.
+   * @param stride - Stride of the convolution (default 1).
+   * @param padding - Padding (default 0).
+   * @returns A new Layer instance representing a 1D convolutional layer.
+   */
+  static conv1d(size: number, kernelSize: number, stride: number = 1, padding: number = 0): Layer {
+    const layer = new Layer();
+    layer.nodes = Array.from({ length: size }, () => new Node());
+    layer.output = new Group(size);
+    // Store conv params for future use
+    (layer as any).conv1d = { kernelSize, stride, padding };
+    // Placeholder: actual convolution logic would be in a custom activate method
+    layer.activate = function(value?: number[]): number[] {
+      // For now, just pass through or slice input as a stub
+      if (!value) return this.nodes.map(n => n.activate());
+      // Simple stub: take the first 'size' values
+      return value.slice(0, size);
+    };
+    return layer;
+  }
+
+  /**
+   * Creates a multi-head self-attention layer (stub implementation).
+   * @param size - Number of output nodes.
+   * @param heads - Number of attention heads (default 1).
+   * @returns A new Layer instance representing an attention layer.
+   */
+  static attention(size: number, heads: number = 1): Layer {
+    const layer = new Layer();
+    layer.nodes = Array.from({ length: size }, () => new Node());
+    layer.output = new Group(size);
+    (layer as any).attention = { heads };
+    // Placeholder: actual attention logic would be in a custom activate method
+    layer.activate = function(value?: number[]): number[] {
+      // For now, just average the input as a stub
+      if (!value) return this.nodes.map(n => n.activate());
+      const avg = value.reduce((a, b) => a + b, 0) / value.length;
+      return Array(size).fill(avg);
+    };
     return layer;
   }
 
