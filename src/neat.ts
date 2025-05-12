@@ -18,6 +18,7 @@ type Options = {
   maxConns?: number;
   maxGates?: number;
   mutationSelection?: (genome: any) => any;
+  allowRecurrent?: boolean; // Add allowRecurrent option
 };
 
 export default class Neat {
@@ -47,25 +48,36 @@ export default class Neat {
     this.fitness = fitness;
     this.options = options;
 
-    this.options.equal = options.equal || false;
-    this.options.clear = options.clear || false;
-    this.options.popsize = options.popsize || 50;
-    this.options.elitism = options.elitism || 0;
-    this.options.provenance = options.provenance || 0;
-    this.options.mutationRate = options.mutationRate || 0.3;
-    this.options.mutationAmount = options.mutationAmount || 1;
-    this.options.fitnessPopulation = options.fitnessPopulation || false;
-    this.options.selection = options.selection || methods.selection.POWER;
-    this.options.crossover = options.crossover || [
+    this.options.equal = this.options.equal || false;
+    this.options.clear = this.options.clear || false;
+    this.options.popsize = this.options.popsize || 50;
+    this.options.elitism = this.options.elitism || 0;
+    this.options.provenance = this.options.provenance || 0;
+    this.options.mutationRate = this.options.mutationRate || 0.3;
+    this.options.mutationAmount = this.options.mutationAmount || 1;
+    this.options.fitnessPopulation = this.options.fitnessPopulation || false;
+    this.options.selection = this.options.selection || methods.selection.POWER;
+    this.options.crossover = this.options.crossover || [
       methods.crossover.SINGLE_POINT,
       methods.crossover.TWO_POINT,
       methods.crossover.UNIFORM,
       methods.crossover.AVERAGE,
     ];
-    this.options.mutation = options.mutation || methods.mutation.FFW;
-    this.options.maxNodes = options.maxNodes || Infinity;
-    this.options.maxConns = options.maxConns || Infinity;
-    this.options.maxGates = options.maxGates || Infinity;
+    // Initialize allowRecurrent first, defaulting to false if not specified
+    this.options.allowRecurrent = typeof this.options.allowRecurrent === 'boolean' ? this.options.allowRecurrent : false;
+
+    // Set mutation methods based on allowRecurrent, if not explicitly provided in options
+    if (this.options.mutation === undefined) {
+      if (this.options.allowRecurrent) {
+        this.options.mutation = methods.mutation.ALL; // Use all mutations if recurrent is allowed
+      } else {
+        this.options.mutation = methods.mutation.FFW; // Default to FFW for non-recurrent
+      }
+    }
+    
+    this.options.maxNodes = this.options.maxNodes || Infinity;
+    this.options.maxConns = this.options.maxConns || Infinity;
+    this.options.maxGates = this.options.maxGates || Infinity;
 
     this.createPool(this.options.network || null);
   }
@@ -114,7 +126,11 @@ export default class Neat {
 
     // Provenance
     for (let i = 0; i < (this.options.provenance || 0); i++) {
-      newPopulation.push(Network.fromJSON(this.options.network!.toJSON()));
+      if (this.options.network) {
+        newPopulation.push(Network.fromJSON(this.options.network.toJSON()));
+      } else {
+        newPopulation.push(new Network(this.input, this.output));
+      }
     }
 
     // Breed the next individuals
@@ -197,6 +213,14 @@ export default class Neat {
       genome.gates.length >= (this.options.maxGates || Infinity)
     ) {
       return null;
+    }
+
+    if (
+      !this.options.allowRecurrent &&
+      (mutationMethod === methods.mutation.ADD_BACK_CONN ||
+        mutationMethod === methods.mutation.ADD_SELF_CONN)
+    ) {
+      return null; // Skip recurrent mutations if not allowed
     }
 
     return mutationMethod;
