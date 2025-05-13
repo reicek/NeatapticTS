@@ -1,4 +1,5 @@
 import { Architect, Network, methods } from '../src/neataptic';
+import Neat from '../src/neat';
 
 describe('Neat', () => {
   describe('AND scenario', () => {
@@ -176,6 +177,95 @@ describe('Strict node removal', () => {
       const outputNode = net.nodes.find(n => n.type === 'output');
       // Act & Assert
       expect(() => net.remove(outputNode!)).toThrow('Cannot remove input or output node from the network.');
+    });
+  });
+});
+
+describe('Hidden Node Minimum Enforcement', () => {
+  describe('Scenario: Flat network (no layers)', () => {
+    test('enforces minimum hidden nodes on creation', () => {
+      // Arrange
+      const net = new Network(3, 2);
+      // Act
+      const hiddenCount = net.nodes.filter(n => n.type === 'hidden').length;
+      // Assert
+      expect(hiddenCount).toBeGreaterThanOrEqual(Math.min(net.input, net.output) + 1);
+    });
+    test('enforces minimum after removing hidden nodes', () => {
+      // Arrange
+      const net = new Network(4, 3);
+      // Remove all hidden nodes
+      net.nodes = net.nodes.filter(n => n.type !== 'hidden');
+      // Act
+      // Simulate enforcement (normally done by Neat)
+      const neat = new Neat(4, 3, () => 1);
+      (neat as any).ensureMinHiddenNodes(net);
+      const hiddenCount = net.nodes.filter(n => n.type === 'hidden').length;
+      // Assert
+      expect(hiddenCount).toBeGreaterThanOrEqual(Math.min(net.input, net.output) + 1);
+    });
+  });
+
+  describe('Scenario: Layered network', () => {
+    test('enforces minimum hidden nodes per layer', () => {
+      // Arrange
+      const net = new Network(5, 2);
+      net.layers = [
+        { nodes: Array(5).fill({ type: 'input' }) },
+        { nodes: [] }, // hidden layer
+        { nodes: Array(2).fill({ type: 'output' }) }
+      ];
+      // Act
+      const neat = new Neat(5, 2, () => 1);
+      (neat as any).ensureMinHiddenNodes(net);
+      // Assert
+      expect(net.layers[1].nodes.length).toBeGreaterThanOrEqual(Math.min(net.input, net.output) + 1);
+    });
+    test('does not add nodes to input/output layers', () => {
+      // Arrange
+      const net = new Network(3, 3);
+      net.layers = [
+        { nodes: Array(3).fill({ type: 'input' }) },
+        { nodes: [] }, // hidden layer
+        { nodes: Array(3).fill({ type: 'output' }) }
+      ];
+      // Act
+      const neat = new Neat(3, 3, () => 1);
+      (neat as any).ensureMinHiddenNodes(net);
+      // Assert
+      expect(net.layers[0].nodes.length).toBe(3);
+      expect(net.layers[2].nodes.length).toBe(3);
+    });
+  });
+
+  describe('Scenario: Negative - already meets minimum', () => {
+    test('does not add extra hidden nodes if already at minimum', () => {
+      // Arrange
+      const net = new Network(2, 2);
+      // Add minimum hidden nodes
+      while (net.nodes.filter(n => n.type === 'hidden').length < 3) {
+        net.mutate(methods.mutation.ADD_NODE);
+      }
+      const prevCount = net.nodes.filter(n => n.type === 'hidden').length;
+      // Act
+      const neat = new Neat(2, 2, () => 1);
+      (neat as any).ensureMinHiddenNodes(net);
+      // Assert
+      expect(net.nodes.filter(n => n.type === 'hidden').length).toBe(prevCount);
+    });
+  });
+
+  describe('Scenario: Negative - maxNodes limit', () => {
+    test('does not exceed maxNodes when enforcing minimum', () => {
+      // Arrange
+      const net = new Network(2, 2);
+      const neat = new Neat(2, 2, () => 1, { maxNodes: net.input + net.output + 1 });
+      // Remove all hidden nodes
+      net.nodes = net.nodes.filter(n => n.type !== 'hidden');
+      // Act
+      (neat as any).ensureMinHiddenNodes(net);
+      // Assert
+      expect(net.nodes.length).toBeLessThanOrEqual(neat.options.maxNodes!);
     });
   });
 });

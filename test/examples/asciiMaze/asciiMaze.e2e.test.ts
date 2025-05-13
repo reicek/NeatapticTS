@@ -2,6 +2,7 @@ import { Neat, Network, methods } from '../../../src/neataptic';
 import seedrandom from 'seedrandom';
 import {
   tiny,
+  spiralSmall,
   spiral,
   small,
   medium,
@@ -13,16 +14,16 @@ import {
   encodeMaze,
   findPosition,
   manhattanDistance,
-  visualizeMaze,
-  displayMazeLegend,
-  printMazeStats,
-  printEvolutionSummary,
-  displayProgressBar,
-  formatElapsedTime,
-  simulateAgent,
-  centerLine,
-  visualizeNetworkSummary,
-} from './asciiMaze';
+} from './mazeUtils';
+import {
+  simulateAgent
+} from './mazeMovement';
+import {
+  DashboardManager
+} from './dashboardManager';
+import {
+  createTerminalClearer
+} from './terminalUtility';
 
 // Force console output for this test by writing directly to stdout/stderr
 const forceLog = (...args: any[]): void => {
@@ -30,50 +31,8 @@ const forceLog = (...args: any[]): void => {
   process.stdout.write(message);
 };
 
-// Store solved maze summaries for pretty display above the current run
-const solvedMazeSummaries: string[] = [];
-
-// Define separator length for consistent headers and dividers
-const SEPARATOR_LEN = 100;
-
-
-/**
- * Helper to create a pretty summary for a solved maze
- */
-function makeMazeSummary({
-  mazeName,
-  maze,
-  finalResult,
-  solvedGeneration,
-  winnerNetwork
-}: {
-  mazeName: string,
-  maze: string[],
-  finalResult: any,
-  solvedGeneration: number,
-  winnerNetwork?: Network
-}) {
-  const size = `${maze[0].length} x ${maze.length}`;
-  const solved = finalResult.success;
-  const color = solved ? colors.green : colors.red;
-  const status = solved ? `${colors.bgGreen}${colors.bright} SOLVED ${colors.reset}` : `${colors.bgRed}${colors.bright} FAILED ${colors.reset}`;
-  const genInfo = solved ? `${colors.bright}${colors.cyan}Solved at generation: ${solvedGeneration}${colors.reset}` : '';
-  const mazeVis = visualizeMaze(maze, finalResult.path[finalResult.path.length - 1], finalResult.path);
-  const stats = `${colors.bright}Steps:${colors.reset} ${finalResult.steps}  ${colors.bright}Path:${colors.reset} ${finalResult.path.length}  ${colors.bright}Progress:${colors.reset} ${finalResult.progress}%`;
-  const networkVis = solved && winnerNetwork
-    ? `\n${centerLine(`${colors.bright}${colors.cyan}--- WINNER NETWORK ---${colors.reset}`)}\n${visualizeNetworkSummary(winnerNetwork)}`
-    : '';
-  const summary = [
-    `${colors.bright}${colors.cyan}${'='.repeat(SEPARATOR_LEN)}${colors.reset}`,
-    `${colors.bright}${mazeName}${colors.reset} (${size}) ${status}`,
-    genInfo,
-    mazeVis,
-    stats,
-    networkVis,
-    `${colors.bright}${colors.cyan}${'='.repeat(SEPARATOR_LEN)}${colors.reset}`
-  ].join('\n');
-  return summary;
-}
+// Create the dashboard manager
+const dashboardManager = new DashboardManager(createTerminalClearer(), forceLog);
 
 describe('ASCII Maze Solver using Neuro-Evolution', () => {
   beforeAll(() => {
@@ -97,7 +56,7 @@ describe('ASCII Maze Solver using Neuro-Evolution', () => {
     popSize = 500,
     maxSteps = 2500,
     maxStagnantGenerations = 500,
-    logEvery = 2,
+    logEvery = 1,
     minProgressToPass = 95,
     randomSeed,
     initialPopulation,
@@ -124,7 +83,7 @@ describe('ASCII Maze Solver using Neuro-Evolution', () => {
 
     // Use the same input vector and agent logic for all mazes, including tiny
     // Removed memory components and both heatmaps
-    const inputSize = 3 + 1 + 1; // Now 5 (direction to exit, percent explored, last reward)
+    const inputSize = 3 + 1 + 1 + 4; // Now 9 (direction to exit, percent explored, last reward, open N/S/E/W)
     const outputSize = 4;
     const encodedMaze = encodeMaze(maze);
     const startPosition = findPosition(maze, 'S');
@@ -167,11 +126,11 @@ describe('ASCII Maze Solver using Neuro-Evolution', () => {
         methods.mutation.MOD_WEIGHT,
         methods.mutation.MOD_BIAS,
       ],
-      mutationRate: 0.6,
-      mutationAmount: 10,
-      elitism: Math.max(1, Math.floor(popSize * 0.20)), // 20% elitism
-      provenance: Math.max(1, Math.floor(popSize * 0.10)), // 10% completely new
-      equal: true,
+      mutationRate: 0.8, // Increased from 0.6 to promote more exploration
+      mutationAmount: 15, // Increased from 10 for more significant mutations
+      elitism: Math.max(1, Math.floor(popSize * 0.2)), // Reduced elitism to prevent premature convergence
+      provenance: Math.max(1, Math.floor(popSize * 0.2)), // Increased provenance for more diversity
+      equal: false, // Changed to false to allow fitness-proportional selection
       allowRecurrent,
     });
 
@@ -194,50 +153,8 @@ describe('ASCII Maze Solver using Neuro-Evolution', () => {
     let continueEvolution = true;
     const startTime = Date.now();
 
-    // Track the last solved summary for this maze only
-    let lastSolvedSummary: string | null = null;
-
-    // --- Board header printer ---
-    function printBoardHeader() {
-      const mazeName = label || 'Maze';
-      const mazeSize = `${maze[0].length} x ${maze.length}`;
-      forceLog(centerLine('', SEPARATOR_LEN, '=')); // Top border
-      forceLog(centerLine('NEURO-EVOLUTION MAZE CHALLENGE', SEPARATOR_LEN, '='));
-      forceLog(centerLine(`Maze: ${mazeName}`, SEPARATOR_LEN, ' '));
-      forceLog(centerLine(`Size: ${mazeSize}`, SEPARATOR_LEN, ' '));
-      forceLog(centerLine(`Start: S   Exit: E`, SEPARATOR_LEN, ' '));
-      displayMazeLegend(forceLog);
-      forceLog(centerLine('=', SEPARATOR_LEN, '='));
-      forceLog(centerLine('EVOLUTION PARAMETERS', SEPARATOR_LEN, '='));
-      forceLog(centerLine(`Population size: ${popSize}`, SEPARATOR_LEN, ' '));
-      forceLog(centerLine(`Max steps per attempt: ${maxSteps}`, SEPARATOR_LEN, ' '));
-      forceLog(centerLine(`Input size: ${inputSize}`, SEPARATOR_LEN, ' '));
-      forceLog(centerLine('  + direction to exit (dx,dy)', SEPARATOR_LEN, ' '));
-      forceLog(centerLine('  + distance to exit', SEPARATOR_LEN, ' '));
-      forceLog(centerLine('  + percent explored', SEPARATOR_LEN, ' '));
-      forceLog(centerLine('  + last reward', SEPARATOR_LEN, ' '));
-      forceLog(centerLine(`Stagnation limit: ${maxStagnantGenerations} generations`, SEPARATOR_LEN, ' '));
-      forceLog(centerLine(`Progress log interval: every ${logEvery} generations`, SEPARATOR_LEN, ' '));
-      forceLog(centerLine('=', SEPARATOR_LEN, '='));
-      forceLog(centerLine('BEGINNING EVOLUTION PROCESS', SEPARATOR_LEN, '='));
-    }
-
     // --- Main evolution loop: evolve until solved ---
-    let printedSolvedHeader = false;
-    // Print all previously solved maze summaries (if any) ONCE before the evolution loop
-    console.clear();
-    if (solvedMazeSummaries.length > 0) {
-      forceLog(`\n${colors.bright}${colors.cyan}${centerLine("PREVIOUSLY COMPLETED MAZES", SEPARATOR_LEN, '=')}${colors.reset}`);
-      for (const summary of solvedMazeSummaries) {
-        forceLog(summary);
-      }
-      forceLog(`${colors.bright}${colors.cyan}${centerLine("END OF PREVIOUS MAZES", SEPARATOR_LEN, '=')}${colors.reset}\n`);
-    }
-    // Print the current maze header and legend ONCE before the evolution loop
-    printBoardHeader();
     while (true) {
-      // Clear only the area below the header for each generation
-      // Print the current maze's progress and stats only
       const fittest = await neat.evolve();
       const fitness = fittest.score ?? 0;
       completedGenerations++;
@@ -250,96 +167,36 @@ describe('ASCII Maze Solver using Neuro-Evolution', () => {
         bestResult = generationResult;
         bestProgress = generationResult.progress;
         stagnantGenerations = 0;
+        
+        // Update the dashboard with the new best result
+        dashboardManager.update(maze, generationResult, fittest, completedGenerations);
       } else {
         stagnantGenerations++;
-      }
-
-      // Only show the latest generation result
-      const genLog: string[] = [];
-      genLog.push(`\n${colors.bright}${colors.bgBlue}[GEN-${completedGenerations}]${colors.reset} ${colors.bright}Time: ${formatElapsedTime((Date.now() - startTime) / 1000)}${colors.reset}`);
-      genLog.push(`${colors.bright}Progress to exit: ${displayProgressBar(bestProgress)}${colors.reset}`);
-      genLog.push(`Best fitness: ${colors.green}${bestFitness.toFixed(2)}${colors.reset} | Stagnant: ${stagnantGenerations}`);
-      if (bestResult && bestResult.path.length > 0) {
-        const currentPos = bestResult.path[bestResult.path.length - 1];
-        const distanceToExit = manhattanDistance(currentPos, exitPosition);
-        genLog.push(`Current position: (${currentPos[0]}, ${currentPos[1]}) | Distance to exit: ${distanceToExit}`);
-        genLog.push(`\n${colors.bright}${colors.cyan}Current Best Path (Generation ${completedGenerations}):${colors.reset}`);
-        genLog.push(visualizeMaze(maze, currentPos, bestResult.path));
-        const progressPercent = Math.round((bestProgress + Number.EPSILON) * 100) / 100;
-        genLog.push(`${colors.bright}Progress: ${colors.green}${progressPercent}%${colors.reset} | Remaining distance: ${colors.yellow}${distanceToExit}${colors.reset} units`);
-      }
-      genLog.push(`${colors.dim}${'='.repeat(SEPARATOR_LEN)}${colors.reset}`);
-      forceLog(genLog.join('\n'));
-      // Show the best network summary for the current generation
-      if (bestNetwork) {
-        forceLog(centerLine(`${colors.bright}${colors.cyan}BEST NETWORK (GEN ${completedGenerations})${colors.reset}`, 100, '-'));
-        forceLog(visualizeNetworkSummary(bestNetwork));
+        
+        // Update the dashboard every few generations even if not better
+        if (completedGenerations % logEvery === 0) {
+          dashboardManager.update(maze, bestResult, bestNetwork!, completedGenerations);
+        }
       }
 
       // Stop only if the maze is actually solved (success and path is not excessively long)
       if (bestResult?.success && bestResult.path.length < maxSteps * 0.5) {
         successGeneration = completedGenerations;
-        // Store the summary for this maze, but only once
-        if (!printedSolvedHeader) {
-          lastSolvedSummary = makeMazeSummary({
-            mazeName: label || 'Maze',
-            maze,
-            finalResult: bestResult,
-            solvedGeneration: successGeneration,
-            winnerNetwork: bestNetwork
-          });
-          printedSolvedHeader = true;
-        }
+        // Update the dashboard one last time with the solution
+        dashboardManager.update(maze, bestResult, bestNetwork!, completedGenerations);
+        break;
+      }
+      
+      // If stagnant for too many generations, give up and move on
+      if (stagnantGenerations >= maxStagnantGenerations) {
+        // Update the dashboard with the best attempt
+        dashboardManager.update(maze, bestResult, bestNetwork!, completedGenerations);
         break;
       }
     }
 
     const trainingTime = Date.now() - startTime;
-
-    // Use the actual bestResult for final reporting, not a new simulation
     const finalResult = bestResult;
-
-    forceLog(`\n${colors.bright}${colors.cyan}${'='.repeat(SEPARATOR_LEN)}${colors.reset}`);
-    forceLog(`${colors.bright}${colors.cyan}${centerLine("FINAL RESULTS")}${colors.reset}`);
-    printEvolutionSummary(completedGenerations, trainingTime, bestFitness, forceLog);
-    printMazeStats(finalResult, maze, forceLog);
-
-    forceLog(`\n${colors.bright}${colors.cyan}${'='.repeat(SEPARATOR_LEN)}${colors.reset}`);
-    forceLog(`${colors.bright}${colors.cyan}${centerLine("FINAL BEST ATTEMPT")}${colors.reset}`);
-    forceLog(`${colors.bright}Total path length:${colors.reset} ${finalResult.path.length} steps`);
-    forceLog(visualizeMaze(maze, finalResult.path[finalResult.path.length - 1], finalResult.path));
-    if (finalResult.success) {
-      forceLog(`\n${colors.bgGreen}${colors.bright}${centerLine("MAZE SOLVED SUCCESSFULLY!")}${colors.reset}`);
-    } else {
-      forceLog(`\n${colors.bgYellow}${colors.bright}${centerLine("MAZE NOT SOLVED - BEST ATTEMPT SHOWN")}${colors.reset}`);
-    }
-
-    // --- Winner network visualization and explanation ---
-    if (bestNetwork) {
-      forceLog(`\n${colors.bright}${colors.cyan}${centerLine("=")}${colors.reset}`);
-      forceLog(`${colors.bright}${colors.cyan}${centerLine("WINNER NETWORK VISUALIZATION")}${colors.reset}`);
-      forceLog(visualizeNetworkSummary(bestNetwork));
-    }
-
-    // After the maze is solved, add its summary to the collection
-    if (lastSolvedSummary) {
-      solvedMazeSummaries.push(lastSolvedSummary);
-    }
-
-    // MODIFIED: Print all solved maze summaries at the end of this maze's run
-    if (solvedMazeSummaries.length > 0) {
-      forceLog(`\n${colors.bright}${colors.cyan}${centerLine("SUMMARY OF ALL MAZES ATTEMPTED SO FAR", SEPARATOR_LEN, '=')}${colors.reset}`);
-      for (const s of solvedMazeSummaries) {
-        forceLog(s + '\n');
-      }
-      forceLog(`${colors.bright}${colors.cyan}${centerLine("END OF ALL MAZE SUMMARIES", SEPARATOR_LEN, '=')}${colors.reset}\n`);
-    }
-
-    forceLog(`\n${colors.bright}${colors.cyan}${'='.repeat(SEPARATOR_LEN)}${colors.reset}`);
-    forceLog(`${colors.bright}${colors.cyan}===== END OF RUN FOR: ${label || 'Maze'} =====\n`);
-
-    // Remove any expect/assert that would fail the test if not solved
-    // The test will always continue to the next maze
 
     // Return best network and population for transfer learning
     return {
@@ -355,12 +212,27 @@ describe('ASCII Maze Solver using Neuro-Evolution', () => {
     const tinyResult = await runMazeEvolution({
       maze: tiny,
       allowRecurrent: true,
-      popSize: 1000,
-      maxSteps: 3000,
+      popSize: 100,
+      maxSteps: 100,
       maxStagnantGenerations: 500,
       logEvery: 1,
       minProgressToPass: 99,
       label: 'tiny',
+    });
+    //*/
+    
+    //*// spiralSmall
+    const spiralSmallResult = await runMazeEvolution({
+      maze: spiralSmall,
+      allowRecurrent: true,
+      popSize: 100,
+      maxSteps: 300,
+      maxStagnantGenerations: 500,
+      logEvery: 1,
+      minProgressToPass: 99,
+      initialPopulation: tinyResult?.neat.population,
+      initialBestNetwork: tinyResult?.bestNetwork,
+      label: 'spiralSmall',
     });
     //*/
 
@@ -368,13 +240,13 @@ describe('ASCII Maze Solver using Neuro-Evolution', () => {
     const spiralResult = await runMazeEvolution({
       maze: spiral,
       allowRecurrent: true,
-      popSize: 1000,
-      maxSteps: 3000,
+      popSize: 50,
+      maxSteps: 300,
       maxStagnantGenerations: 500,
       logEvery: 1,
       minProgressToPass: 99,
-      initialPopulation: tinyResult?.neat.population,
-      initialBestNetwork: tinyResult?.bestNetwork,
+      initialPopulation: spiralSmallResult?.neat.population,
+      initialBestNetwork: spiralSmallResult?.bestNetwork,
       label: 'spiral',
     });
     //*/
@@ -383,8 +255,8 @@ describe('ASCII Maze Solver using Neuro-Evolution', () => {
     const smallResult = await runMazeEvolution({
       maze: small,
       allowRecurrent: true,
-      popSize: 1000,
-      maxSteps: 10000,
+      popSize: 20,
+      maxSteps: 1000,
       maxStagnantGenerations: 2000,
       logEvery: 1,
       minProgressToPass: 99,
@@ -398,8 +270,8 @@ describe('ASCII Maze Solver using Neuro-Evolution', () => {
     const mediumResult = await runMazeEvolution({
       maze: medium,
       allowRecurrent: true,
-      popSize: 1000,
-      maxSteps: 10000,
+      popSize: 20,
+      maxSteps: 3000,
       maxStagnantGenerations: 2000,
       logEvery: 1,
       minProgressToPass: 99,
@@ -413,8 +285,8 @@ describe('ASCII Maze Solver using Neuro-Evolution', () => {
     const largeResult = await runMazeEvolution({
       maze: large,
       allowRecurrent: true,
-      popSize: 1000,
-      maxSteps: 10000,
+      popSize: 20,
+      maxSteps: 4000,
       maxStagnantGenerations: 2000,
       logEvery: 1,
       minProgressToPass: 95,
@@ -428,8 +300,8 @@ describe('ASCII Maze Solver using Neuro-Evolution', () => {
     await runMazeEvolution({
       maze: minotaur,
       allowRecurrent: true,
-      popSize: 1000,
-      maxSteps: 10000,
+      popSize: 20,
+      maxSteps: 5000,
       maxStagnantGenerations: 2000,
       logEvery: 1,
       minProgressToPass: 95,

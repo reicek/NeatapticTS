@@ -155,8 +155,13 @@ export default class Architect {
       );
     }
 
+    // Compute minimum hidden size
+    const inputSize = layers[0];
+    const outputSize = layers[layers.length - 1];
+    const minHidden = Math.min(inputSize, outputSize) + 1;
+
     // Create the input layer using Layer.dense for a standard fully connected layer.
-    const inputLayer = Layer.dense(layers[0]);
+    const inputLayer = Layer.dense(inputSize);
     // Mark nodes in this layer as network inputs.
     inputLayer.set({ type: 'input' });
 
@@ -166,7 +171,12 @@ export default class Architect {
 
     // Create hidden layers and the output layer.
     for (let i = 1; i < layers.length; i++) {
-      const currentLayer = Layer.dense(layers[i]);
+      // For hidden layers, enforce minimum size
+      let layerSize = layers[i];
+      if (i !== layers.length - 1 && layerSize < minHidden) {
+        layerSize = minHidden;
+      }
+      const currentLayer = Layer.dense(layerSize);
       // Mark the final layer's nodes as network outputs.
       if (i === layers.length - 1) {
         currentLayer.set({ type: 'output' });
@@ -556,6 +566,69 @@ export default class Architect {
     network.input = inputSize;
     network.output = outputSize;
 
+    return network;
+  }
+
+  /**
+   * Enforces the minimum hidden layer size rule on a network.
+   * 
+   * This ensures that all hidden layers have at least min(input, output) + 1 nodes,
+   * which is a common heuristic to ensure networks have adequate representation capacity.
+   * 
+   * @param {Network} network - The network to enforce minimum hidden layer sizes on
+   * @returns {Network} The same network with properly sized hidden layers
+   */
+  static enforceMinimumHiddenLayerSizes(network: Network): Network {
+    if (!network.layers || network.layers.length <= 2) {
+      // No hidden layers to resize
+      return network;
+    }
+
+    // Calculate minimum size for hidden layers
+    const minSize = Math.min(network.input, network.output) + 1;
+    
+    // Adjust all hidden layers (skip input and output layers)
+    for (let i = 1; i < network.layers.length - 1; i++) {
+      const hiddenLayer = network.layers[i];
+      const currentSize = hiddenLayer.nodes.length;
+      
+      if (currentSize < minSize) {
+        console.log(`Resizing hidden layer ${i} from ${currentSize} to ${minSize} nodes`);
+        
+        // Create the additional nodes needed
+        for (let j = currentSize; j < minSize; j++) {
+          const newNode = new Node('hidden');
+          hiddenLayer.nodes.push(newNode);
+          
+          // Add node to network's node list
+          network.nodes.push(newNode);
+          
+          // Connect to previous layer
+          if (i > 0 && network.layers[i-1].output) {
+            for (const prevNode of network.layers[i-1].output.nodes) {
+              const connections = prevNode.connect(newNode);
+              // Fix: Spread the connections array into individual connections
+              network.connections.push(...connections);
+            }
+          }
+          
+          // Connect to next layer
+          if (i < network.layers.length - 1 && network.layers[i+1].output) {
+            for (const nextNode of network.layers[i+1].output.nodes) {
+              const connections = newNode.connect(nextNode);
+              // Fix: Spread the connections array into individual connections
+              network.connections.push(...connections);
+            }
+          }
+          
+          // If this layer has an output group, add the node to it
+          if (hiddenLayer.output && Array.isArray(hiddenLayer.output.nodes)) {
+            hiddenLayer.output.nodes.push(newNode);
+          }
+        }
+      }
+    }
+    
     return network;
   }
 }

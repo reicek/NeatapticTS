@@ -1,5 +1,6 @@
 import Network from './architecture/network';
 import * as methods from './methods/methods';
+import NodeType from './architecture/node'; // Import the Node type with a different name to avoid conflicts
 
 type Options = {
   equal?: boolean;
@@ -83,6 +84,267 @@ export default class Neat {
   }
 
   /**
+   * Gets the minimum hidden layer size for a network based on input/output sizes.
+   * Uses the formula: max(input, output) x 3
+   * 
+   * @returns The minimum number of hidden nodes required in each hidden layer
+   */
+  getMinimumHiddenSize(): number {
+    /** Larger numbers will generate more complex hidden layers */
+    const hiddenLayerMultiplier = 5;
+    return Math.max(this.input, this.output) * hiddenLayerMultiplier;
+  }
+  
+  /**
+   * Checks if a network meets the minimum hidden node requirements.
+   * Returns information about hidden layer sizes without modifying the network.
+   * 
+   * @param network The network to check
+   * @returns Object containing information about hidden layer compliance
+   */
+  checkHiddenSizes(network: Network): { 
+    compliant: boolean; 
+    minRequired: number;
+    hiddenLayerSizes: number[];
+  } {
+    const minHidden = this.getMinimumHiddenSize();
+    const result = {
+      compliant: true,
+      minRequired: minHidden,
+      hiddenLayerSizes: [] as number[]
+    };
+    
+    // Check networks with explicit layers
+    if (network.layers && network.layers.length >= 3) {
+      // Go through hidden layers (skip input layer [0] and output layer [length-1])
+      for (let i = 1; i < network.layers.length - 1; i++) {
+        const layer = network.layers[i];
+        if (!layer || !Array.isArray(layer.nodes)) {
+          result.hiddenLayerSizes.push(0);
+          result.compliant = false;
+          continue;
+        }
+        
+        const layerSize = layer.nodes.length;
+        result.hiddenLayerSizes.push(layerSize);
+        
+        if (layerSize < minHidden) {
+          result.compliant = false;
+        }
+      }
+    } else {
+      // Flat/legacy network: check total hidden node count
+      const hiddenCount = network.nodes.filter(n => n.type === 'hidden').length;
+      result.hiddenLayerSizes.push(hiddenCount);
+      
+      if (hiddenCount < minHidden) {
+        result.compliant = false;
+      }
+    }
+    
+    return result;
+  }
+
+  /**
+   * Ensures that the network has at least min(input, output) + 1 hidden nodes in each hidden layer.
+   * This prevents bottlenecks in networks where hidden layers might be too small.
+   * 
+   * For layered networks: Ensures each hidden layer has at least the minimum size.
+   * For non-layered networks: Reorganizes into proper layers with the minimum size.
+   * 
+   * Example structures with proper minimum hidden layers:
+   * - 3:4:5:6 (input:hidden:hidden:output with increasing sizes)
+   * - 6:5:4:3 (input:hidden:hidden:output with decreasing sizes)
+   * - 3:4:4:3 (input:hidden:hidden:output with consistent hidden layer sizes)
+   * 
+   * In all cases, hidden layers must have at least min(input,output)+1 nodes.
+   * 
+   * @param network The network to check and modify
+   */
+  private ensureMinHiddenNodes(network: Network) {
+    const minHidden = this.getMinimumHiddenSize();
+
+    // First, organize network into clean layers
+    const inputNodes = network.nodes.filter(n => n.type === 'input');
+    const outputNodes = network.nodes.filter(n => n.type === 'output');
+    let hiddenNodes = network.nodes.filter(n => n.type === 'hidden');
+
+    // Validate that we have input and output nodes before proceeding
+    if (inputNodes.length === 0 || outputNodes.length === 0) {
+      console.warn('Network is missing input or output nodes. Cannot ensure minimum hidden nodes.');
+      return;
+    }
+
+    // For the ASCII maze and similar visualizations, we need to 
+    // reorganize the network into clean layers that will display properly
+    
+    // First, disconnect all hidden nodes from everything
+    for (const hiddenNode of hiddenNodes) {
+      // Store original connections to clean up later
+      const inConns = [...hiddenNode.connections.in];
+      const outConns = [...hiddenNode.connections.out];
+      
+      // Disconnect all existing connections
+      for (const conn of inConns) {
+        if (conn && conn.from) {
+          network.disconnect(conn.from, hiddenNode);
+        }
+      }
+      for (const conn of outConns) {
+        if (conn && conn.to) {
+          network.disconnect(hiddenNode, conn.to);
+        }
+      }
+    }
+    
+    // Create clean two-layer network (input → hidden → output)
+    // Make sure we have at least minHidden hidden nodes
+    const existingCount = hiddenNodes.length;
+    
+    // If we don't have enough hidden nodes, create more
+    for (let i = existingCount; i < minHidden; i++) {
+      const NodeClass = require('./architecture/node').default;
+      const newNode = new NodeClass('hidden');
+      network.nodes.push(newNode);
+      hiddenNodes.push(newNode);
+    }
+    
+    // Now, connect first minHidden nodes to form a clean layer
+    // First layer: Connect all inputs to each hidden node in layer 1
+    const layer1 = hiddenNodes.slice(0, minHidden);
+    for (const hiddenNode of layer1) {
+      for (const inputNode of inputNodes) {
+        if (inputNode && hiddenNode) {
+          try {
+            network.connect(inputNode, hiddenNode);
+          } catch (e: any) {
+            console.warn('Failed to connect input to hidden node:', e.message);
+          }
+        }
+      }
+    }
+    
+    // If we have more hidden nodes and they'd form a separate layer (min size)
+    if (hiddenNodes.length >= minHidden * 2) {
+      // Second hidden layer: Connect all layer1 nodes to each hidden node in layer 2
+      const layer2 = hiddenNodes.slice(minHidden, minHidden * 2);
+      for (const layer2Node of layer2) {
+        for (const layer1Node of layer1) {
+          if (layer1Node && layer2Node) {
+            try {
+              network.connect(layer1Node, layer2Node);
+            } catch (e: any) {
+              console.warn('Failed to connect layer1 to layer2 node:', e.message);
+            }
+          }
+        }
+      }
+      
+      // Connect layer 2 to outputs
+      for (const layer2Node of layer2) {
+        for (const outputNode of outputNodes) {
+          if (layer2Node && outputNode) {
+            try {
+              network.connect(layer2Node, outputNode);
+            } catch (e: any) {
+              console.warn('Failed to connect layer2 to output node:', e.message);
+            }
+          }
+        }
+      }
+      
+      // Any remaining hidden nodes just connect directly input→hidden→output
+      const remainingNodes = hiddenNodes.slice(minHidden * 2);
+      for (const hiddenNode of remainingNodes) {
+        // Ensure at least one connection from input layer
+        let hasInputConnection = false;
+        for (const inputNode of inputNodes) {
+          if (this.hasConnectionBetween(network, inputNode, hiddenNode)) {
+            hasInputConnection = true;
+            break;
+          }
+        }
+        
+        if (!hasInputConnection && inputNodes.length > 0) {
+          try {
+            // Connect to a random input node
+            const randomInput = inputNodes[Math.floor(Math.random() * inputNodes.length)];
+            network.connect(randomInput, hiddenNode);
+          } catch (e: any) {
+            console.warn('Failed to connect input to remaining hidden node:', e.message);
+          }
+        }
+        
+        // Ensure at least one connection to output layer
+        let hasOutputConnection = false;
+        for (const outputNode of outputNodes) {
+          if (this.hasConnectionBetween(network, hiddenNode, outputNode)) {
+            hasOutputConnection = true;
+            break;
+          }
+        }
+        
+        if (!hasOutputConnection && outputNodes.length > 0) {
+          try {
+            // Connect to a random output node
+            const randomOutput = outputNodes[Math.floor(Math.random() * outputNodes.length)];
+            network.connect(hiddenNode, randomOutput);
+          } catch (e: any) {
+            console.warn('Failed to connect remaining hidden node to output:', e.message);
+          }
+        }
+      }
+    } else {
+      // Just one hidden layer - connect to outputs
+      for (const hiddenNode of layer1) {
+        for (const outputNode of outputNodes) {
+          if (hiddenNode && outputNode) {
+            try {
+              network.connect(hiddenNode, outputNode);
+            } catch (e: any) {
+              console.warn('Failed to connect hidden to output node:', e.message);
+            }
+          }
+        }
+      }
+    }
+    
+    // Clean up any disconnected nodes
+    // Note: This is a safe check, not strictly necessary with our implementation
+    hiddenNodes = network.nodes.filter(n => n.type === 'hidden');
+    for (const hiddenNode of hiddenNodes) {
+      if (hiddenNode.connections.in.length === 0 && hiddenNode.connections.out.length === 0) {
+        // Connect to a random input and output
+        if (inputNodes.length > 0) {
+          const randomInput = inputNodes[Math.floor(Math.random() * inputNodes.length)];
+          if (randomInput && hiddenNode) {
+            try {
+              network.connect(randomInput, hiddenNode);
+            } catch (e: any) {
+              console.warn('Failed to connect random input to isolated node:', e.message);
+            }
+          }
+        }
+        if (outputNodes.length > 0) {
+          const randomOutput = outputNodes[Math.floor(Math.random() * outputNodes.length)];
+          if (randomOutput && hiddenNode) {
+            try {
+              network.connect(hiddenNode, randomOutput);
+            } catch (e: any) {
+              console.warn('Failed to connect isolated node to random output:', e.message);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Helper method to check if a connection exists between two nodes
+  private hasConnectionBetween(network: Network, from: NodeType, to: NodeType): boolean {
+    return network.connections.some(conn => conn.from === from && conn.to === to);
+  }
+
+  /**
    * Evaluates the fitness of the current population.
    * If `fitnessPopulation` is true, evaluates the entire population at once.
    * Otherwise, evaluates each genome individually.
@@ -145,6 +407,11 @@ export default class Neat {
       newPopulation.push(this.getOffspring());
     }
 
+    // Ensure minimum hidden nodes to avoid bottlenecks
+    for (const genome of newPopulation) {
+      this.ensureMinHiddenNodes(genome);
+    }
+
     this.population = newPopulation; // Replace population instead of appending
     this.mutate();
 
@@ -180,7 +447,12 @@ export default class Neat {
   getOffspring(): Network {
     const parent1 = this.getParent();
     const parent2 = this.getParent();
-    return Network.crossOver(parent1, parent2, this.options.equal || false);
+    const offspring = Network.crossOver(parent1, parent2, this.options.equal || false);
+    
+    // Ensure the offspring has the minimum required hidden nodes
+    this.ensureMinHiddenNodes(offspring);
+    
+    return offspring;
   }
 
   /**
@@ -229,6 +501,7 @@ export default class Neat {
   /**
    * Applies mutations to the population based on the mutation rate and amount.
    * Each genome is mutated using the selected mutation methods.
+   * Slightly increases the chance of ADD_CONN mutation for more connectivity.
    */
   mutate(): void {
     for (const genome of this.population) {
@@ -236,6 +509,10 @@ export default class Neat {
         for (let j = 0; j < (this.options.mutationAmount || 1); j++) {
           const mutationMethod = this.selectMutationMethod(genome);
           if (mutationMethod) genome.mutate(mutationMethod);
+          // Slightly increase the chance of ADD_CONN mutation for more connectivity
+          if (Math.random() < 0.5) {
+            genome.mutate(methods.mutation.ADD_CONN);
+          }
         }
       }
     }

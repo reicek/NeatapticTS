@@ -157,6 +157,40 @@ export default class Network {
         this.connect(this.nodes[i], this.nodes[j], weight); // Create the connection
       }
     }
+
+    // Enforce minimum hidden nodes after construction
+    const minHidden = Math.min(this.input, this.output) + 1;
+    let hiddenCount = this.nodes.filter(n => n.type === 'hidden').length;
+    
+    // Initialize hidden nodes if needed (using ADD_NODE mutation if connections exist)
+    while (hiddenCount < minHidden) {
+      // This will only work if there are connections to split
+      this.mutate(methods.mutation.ADD_NODE);
+      hiddenCount = this.nodes.filter(n => n.type === 'hidden').length;
+      
+      // If no connections exist or can't split any more, break to avoid infinite loop
+      if (hiddenCount === 0 && this.connections.length === 0) {
+        // Create hidden nodes manually and connect them
+        for (let i = 0; i < minHidden; i++) {
+          const hiddenNode = new Node('hidden');
+          this.nodes.push(hiddenNode);
+          
+          // Connect all inputs to this hidden node
+          for (let j = 0; j < this.input; j++) {
+            this.connect(this.nodes[j], hiddenNode);
+          }
+          
+          // Connect this hidden node to all outputs
+          for (let j = this.input; j < this.input + this.output; j++) {
+            this.connect(hiddenNode, this.nodes[j]);
+          }
+        }
+        break;
+      }
+      
+      // If we're still not meeting the minimum after several attempts, break to avoid infinite loop
+      if (hiddenCount < minHidden && this.connections.length === 0) break;
+    }
   }
 
   /**
@@ -677,10 +711,36 @@ export default class Network {
         // Removes an existing connection.
         // Find connections that can be safely removed (nodes should have other connections).
         possible = this.connections.filter(
-          (conn) =>
-            conn.from.connections.out.length > 1 && // 'from' node has other outgoing connections.
-            conn.to.connections.in.length > 1 && // 'to' node has other incoming connections.
-            this.nodes.indexOf(conn.to) > this.nodes.indexOf(conn.from) // Ensure it's not a back-connection (handled separately).
+          (conn) => {
+            // Basic check: both nodes need to have multiple connections
+            const fromHasMultiple = conn.from.connections.out.length > 1;
+            const toHasMultiple = conn.to.connections.in.length > 1;
+            
+            // Verify we're not removing the last connection from a specific source to a layer
+            // Get all nodes in the same "layer" as the target (to) node
+            const toLayer = this.nodes.filter(n => 
+              n.type === conn.to.type && 
+              Math.abs(this.nodes.indexOf(n) - this.nodes.indexOf(conn.to)) < Math.max(this.input, this.output)
+            );
+            
+            // Check if removing this would disconnect a source node from an entire layer
+            let wouldDisconnectLayer = false;
+            if (toLayer.length > 0) {
+              // Count connections from the same source to this layer
+              const connectionsToLayer = this.connections.filter(c => 
+                c.from === conn.from && 
+                toLayer.includes(c.to)
+              );
+              // If this is the only connection to this layer, don't remove it
+              if (connectionsToLayer.length <= 1) {
+                wouldDisconnectLayer = true;
+              }
+            }
+            
+            return fromHasMultiple && toHasMultiple && 
+                  this.nodes.indexOf(conn.to) > this.nodes.indexOf(conn.from) && // Ensure it's not a back-connection
+                  !wouldDisconnectLayer; // Don't disconnect layers completely
+          }
         );
 
         // If no connections can be safely removed, exit.
