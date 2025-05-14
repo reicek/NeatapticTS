@@ -49,7 +49,7 @@ function getNodeValue(node: any): number {
       return Math.max(0, Math.min(1, node.activation));
     }
     // For other node types, allow a wider range but still cap for display
-    return Math.max(-99, Math.min(99, node.activation));
+    return Math.max(-999, Math.min(999, node.activation));
   }
   return 0;
 }
@@ -61,16 +61,16 @@ function getNodeValue(node: any): number {
  * @returns ANSI color code for the value
  */
 function getActivationColor(value: number): string {
-  // Use modern color palette for activation values
-  if (value >= 2.0) return colors.bgCoral + colors.bright;  // Very high positive
-  if (value >= 1.0) return colors.coral;                   // High positive
-  if (value >= 0.5) return colors.amber;                   // Medium positive
-  if (value >= 0.1) return colors.green;                   // Low positive
-  if (value >= -0.1) return colors.teal;                   // Near zero
-  if (value >= -0.5) return colors.cyan;                   // Low negative
-  if (value >= -1.0) return colors.blue;                   // Medium negative
-  if (value >= -2.0) return colors.indigo + colors.bright; // High negative
-  return colors.bgIndigo + colors.bright;                  // Very high negative
+  // Use TRON-inspired color palette for activation values
+  if (value >= 2.0) return colors.bgOrangeNeon + colors.bright;  // Very high positive
+  if (value >= 1.0) return colors.orangeNeon;                   // High positive
+  if (value >= 0.5) return colors.cyanNeon;                     // Medium positive
+  if (value >= 0.1) return colors.green;                        // Low positive
+  if (value >= -0.1) return colors.whiteNeon;                   // Near zero
+  if (value >= -0.5) return colors.blue;                        // Low negative
+  if (value >= -1.0) return colors.blueCore;                    // Medium negative
+  if (value >= -2.0) return colors.blueNeon + colors.bright;    // High negative
+  return colors.bgBlueCore + colors.bright;                     // Very high negative
 }
 
 /**
@@ -80,16 +80,16 @@ function getActivationColor(value: number): string {
  * @returns Colorized string representation of the value
  */
 function fmtColoredValue(v: number): string {
-  if (typeof v !== 'number' || isNaN(v) || !isFinite(v)) return ' 0.00';
+  if (typeof v !== 'number' || isNaN(v) || !isFinite(v)) return ' 0.000';
   
   const color = getActivationColor(v);
   let formattedValue;
   
   // Use scientific notation for very large/small values
   if (Math.abs(v) >= 1e4 || (Math.abs(v) > 0 && Math.abs(v) < 1e-2)) {
-    formattedValue = (v >= 0 ? ' ' : '') + v.toExponential(2);
+    formattedValue = (v >= 0 ? ' ' : '') + v.toExponential(3);
   } else {
-    formattedValue = (v >= 0 ? ' ' : '') + v.toFixed(2);
+    formattedValue = (v >= 0 ? ' ' : '') + v.toFixed(3);
   }
   
   return color + formattedValue + colors.reset;
@@ -300,7 +300,7 @@ export function visualizeNetworkSummary(network: Network): string {
   const ARROW = '  ──▶  ';
   const ARROW_WIDTH = ARROW.length;
   const TOTAL_WIDTH = 150; // Width of the entire visualization
-  const INPUT_COUNT = 9;  // Number of input nodes (hardcoded for maze solver)
+  const INPUT_COUNT = 5;  // Number of input nodes (hardcoded for maze solver)
   const OUTPUT_COUNT = 4; // Number of output nodes (hardcoded for maze solver)
 
   // Extract nodes from network
@@ -351,6 +351,24 @@ export function visualizeNetworkSummary(network: Network): string {
     connectionCounts.push(lastCount);
   }
 
+  // --- Layer/connection summary footer ---
+  // Calculate connection counts between layers for the footer
+  const layerSizes = [INPUT_COUNT, ...layerDisplayCounts, OUTPUT_COUNT];
+  let connectionSummary = '';
+  for (let i = 0; i < layerSizes.length - 1; i++) {
+    const fromLabel = i === 0
+      ? `${colors.green}Inputs:${layerSizes[i]}${colors.reset}`
+      : `${colors.cyanNeon}Hidden${i}:${layerSizes[i]}${colors.reset}`;
+    const toLabel = i === layerSizes.length - 2
+      ? `${colors.orangeNeon}Outputs:${layerSizes[i+1]}${colors.reset}`
+      : `${colors.cyanNeon}Hidden${i+1}:${layerSizes[i+1]}${colors.reset}`;
+    const connCount = connectionCounts[i] || 0;
+    connectionSummary += `${fromLabel}   ${colors.blueNeon}[${connCount} Connections]${colors.reset} ──▶   `;
+    if (i === layerSizes.length - 2) {
+      connectionSummary += `${toLabel}`;
+    }
+  }
+
   // Calculate layout
   const numLayers = 2 + numHiddenLayers; // input + hidden + output
   const numArrows = numLayers - 1;
@@ -363,22 +381,22 @@ export function visualizeNetworkSummary(network: Network): string {
   
   // First arrow with connection count on the left
   const firstConnCount = connectionCounts[0];
-  const firstArrowText = `${colors.teal}${firstConnCount} ${ARROW.trim()}${colors.reset}`;
+  const firstArrowText = `${colors.blueNeon}${firstConnCount} ${ARROW.trim()}${colors.reset}`;
   header += pad(firstArrowText, ARROW_WIDTH, 'center');
   
   // Add hidden layer headers with connection counts
   for (let i = 0; i < numHiddenLayers; i++) {
-    header += pad(`${colors.amber}Hidden ${i+1} [${hiddenLayers[i].length}]${colors.reset}`, columnWidth, 'center');
+    header += pad(`${colors.cyanNeon}Hidden ${i+1} [${hiddenLayers[i].length}]${colors.reset}`, columnWidth, 'center');
     
     if (i < numHiddenLayers) {
       // Arrow with connection count on the left
       const connCount = connectionCounts[i+1] || 0;
-      const arrowText = `${colors.teal}${connCount} ${ARROW.trim()}${colors.reset}`;
+      const arrowText = `${colors.blueNeon}${connCount} ${ARROW.trim()}${colors.reset}`;
       header += pad(arrowText, ARROW_WIDTH, 'center');
     }
   }
   
-  header += pad(`${colors.coral}Output Layer [${OUTPUT_COUNT}]${colors.reset}`, columnWidth, 'center');
+  header += pad(`${colors.orangeNeon}Output Layer [${OUTPUT_COUNT}]${colors.reset}`, columnWidth, 'center');
 
   // Prepare display data for each layer
   // For input nodes: Always show all 9
@@ -421,9 +439,9 @@ export function visualizeNetworkSummary(network: Network): string {
       if (totalInputs > 0 && firstHiddenTotal > 0) {
         // Calculate a proportional number of connections for the first visible row
         const nodeProportion = Math.ceil(connectionCounts[0] / Math.max(1, totalInputs));
-        row += pad(`${colors.teal}${nodeProportion} ──▶${colors.reset}`, ARROW_WIDTH, 'center');
+        row += pad(`${colors.blueNeon}${nodeProportion} ──▶${colors.reset}`, ARROW_WIDTH, 'center');
       } else {
-        row += pad(`${colors.teal}${ARROW}${colors.reset}`, ARROW_WIDTH, 'center');
+        row += pad(`${colors.blueNeon}${ARROW}${colors.reset}`, ARROW_WIDTH, 'center');
       }
     } else if (rowIdx < INPUT_COUNT && rowIdx < displayLayers[0]?.length) {
       // Calculate proportional connections for this input node to first hidden layer
@@ -433,13 +451,13 @@ export function visualizeNetworkSummary(network: Network): string {
       if (totalInputs > 0 && firstHiddenTotal > 0) {
         // Calculate a proportional number of connections
         const nodeProportion = Math.ceil(connectionCounts[0] / Math.max(3, totalInputs * 2));
-        row += pad(`${colors.teal}${nodeProportion} ──▶${colors.reset}`, ARROW_WIDTH, 'center');
+        row += pad(`${colors.blueNeon}${nodeProportion} ──▶${colors.reset}`, ARROW_WIDTH, 'center');
       } else {
-        row += pad(`${colors.teal}${ARROW}${colors.reset}`, ARROW_WIDTH, 'center');
+        row += pad(`${colors.blueNeon}${ARROW}${colors.reset}`, ARROW_WIDTH, 'center');
       }
     } else {
       // For other rows, just show the arrow without a number
-      row += pad(`${colors.teal}${ARROW}${colors.reset}`, ARROW_WIDTH, 'center');
+      row += pad(`${colors.blueNeon}${ARROW}${colors.reset}`, ARROW_WIDTH, 'center');
     }
     
     // Hidden layers
@@ -451,11 +469,11 @@ export function visualizeNetworkSummary(network: Network): string {
         if (node.isAverage) {
           // Special formatting for average nodes
           const labelText = node.label ? `${node.label} ` : '';
-          const avgText = `${colors.amber}■${colors.reset}${fmtColoredValue(node.activation)} ${colors.dim}(${labelText}avg ${node.avgCount})${colors.reset}`;
+          const avgText = `${colors.cyanNeon}■${colors.reset}${fmtColoredValue(node.activation)} ${colors.dim}(${labelText}avg of ${node.avgCount})${colors.reset}`;
           row += pad(avgText, columnWidth, 'left');
         } else {
           const value = getNodeValue(node);
-          row += pad(`${colors.amber}■${colors.reset}${fmtColoredValue(value)}`, columnWidth, 'left');
+          row += pad(`${colors.cyanNeon}■${colors.reset}${fmtColoredValue(value)}`, columnWidth, 'left');
         }
       } else {
         row += pad('', columnWidth);
@@ -469,7 +487,7 @@ export function visualizeNetworkSummary(network: Network): string {
           // First row shows proportional connection count, not total
           const currentLayerSize = displayLayers[layerIdx]?.length || 1;
           const nodeProportion = Math.ceil(connCount / Math.max(3, currentLayerSize * 2));
-          row += pad(`${colors.teal}${nodeProportion} ──▶${colors.reset}`, ARROW_WIDTH, 'center');
+          row += pad(`${colors.blueNeon}${nodeProportion} ──▶${colors.reset}`, ARROW_WIDTH, 'center');
         } else if (rowIdx < layer.length && rowIdx < displayLayers[layerIdx + 1]?.length) {
           // Calculate proportional connections between these hidden layers
           const currentLayerSize = displayLayers[layerIdx]?.length || 1;
@@ -477,10 +495,10 @@ export function visualizeNetworkSummary(network: Network): string {
           
           // For hidden → hidden connections, distribute more evenly based on layer sizes
           const proportion = Math.max(1, Math.min(5, Math.ceil(connCount / Math.max(3, currentLayerSize))));
-          row += pad(`${colors.teal}${proportion} ──▶${colors.reset}`, ARROW_WIDTH, 'center');
+          row += pad(`${colors.blueNeon}${proportion} ──▶${colors.reset}`, ARROW_WIDTH, 'center');
         } else {
           // Otherwise just show arrow
-          row += pad(`${colors.teal}${ARROW}${colors.reset}`, ARROW_WIDTH, 'center');
+          row += pad(`${colors.blueNeon}${ARROW}${colors.reset}`, ARROW_WIDTH, 'center');
         }
       } else {
         // Last arrow to output layer
@@ -489,7 +507,7 @@ export function visualizeNetworkSummary(network: Network): string {
           // First row shows proportional connections, not total
           const lastLayerSize = displayLayers[displayLayers.length - 1]?.length || 1;
           const nodeProportion = Math.ceil(connCount / Math.max(3, lastLayerSize * 2));
-          row += pad(`${colors.teal}${nodeProportion} ──▶${colors.reset}`, ARROW_WIDTH, 'center');
+          row += pad(`${colors.blueNeon}${nodeProportion} ──▶${colors.reset}`, ARROW_WIDTH, 'center');
         } else if (rowIdx < layer.length && rowIdx < OUTPUT_COUNT) {
           // Calculate proportional connections to output layer
           const lastLayerSize = displayLayers[displayLayers.length - 1]?.length || 1;
@@ -497,10 +515,10 @@ export function visualizeNetworkSummary(network: Network): string {
           // For last hidden → output, calculate a reasonable proportion
           // This should show a small number, typically 1-5, not the total
           const proportion = Math.max(1, Math.min(5, Math.ceil(connCount / Math.max(5, lastLayerSize * 2))));
-          row += pad(`${colors.teal}${proportion} ──▶${colors.reset}`, ARROW_WIDTH, 'center');
+          row += pad(`${colors.blueNeon}${proportion} ──▶${colors.reset}`, ARROW_WIDTH, 'center');
         } else {
           // Otherwise just show arrow
-          row += pad(`${colors.teal}${ARROW}${colors.reset}`, ARROW_WIDTH, 'center');
+          row += pad(`${colors.blueNeon}${ARROW}${colors.reset}`, ARROW_WIDTH, 'center');
         }
       }
     }
@@ -509,33 +527,26 @@ export function visualizeNetworkSummary(network: Network): string {
     if (rowIdx < OUTPUT_COUNT) {
       const node = outputDisplayNodes[rowIdx];
       const value = getNodeValue(node);
-      row += pad(`${colors.coral}▲${colors.reset}${fmtColoredValue(value)}`, columnWidth, 'left');
+      row += pad(`${colors.orangeNeon}▲${colors.reset}${fmtColoredValue(value)}`, columnWidth, 'left');
     } else {
       row += pad('', columnWidth);
     }
     
     rows.push(row);
   }
-
-  // Build the footer with layer summary
-  const layerSummary = [
-    `${colors.green}Inputs:${INPUT_COUNT}${colors.reset}`,
-    ...hiddenLayers.map((l, idx) => `${colors.amber}Hidden${idx+1}:${l.length}${colors.reset}`),
-    `${colors.coral}Outputs:${OUTPUT_COUNT}${colors.reset}`
-  ].join('   ');
   
   // Combine all parts with a legend
   return [
     header,
     ...rows,
     '',
-    layerSummary,
+    connectionSummary,
     '',
-    `${colors.teal}Arrows indicate feed-forward flow.${colors.reset}`,
+    `${colors.blueNeon}Arrows indicate feed-forward flow.${colors.reset}`,
     '',
-    `Legend:  ${colors.green}●${colors.reset}=Input                    ${colors.amber}■${colors.reset}=Hidden                    ${colors.coral}▲${colors.reset}=Output`,
-    `Groups:  ${colors.bgCoral}${colors.bright}v-high+${colors.reset}=Very high positive   ${colors.coral}high+${colors.reset}=High positive    ${colors.amber}mid+${colors.reset}=Medium positive    ${colors.green}low+${colors.reset}=Low positive                `,
-    `         ${colors.teal}zero±${colors.reset}=Near zero`,
-    `         ${colors.bgIndigo}${colors.bright}v-high-${colors.reset}=Very high negative   ${colors.indigo}${colors.bright}high-${colors.reset}=High negative    ${colors.blue}mid-${colors.reset}=Medium negative    ${colors.cyan}low-${colors.reset}=Low negative                             `
+    `Legend:  ${colors.green}●${colors.reset}=Input                    ${colors.cyanNeon}■${colors.reset}=Hidden                    ${colors.orangeNeon}▲${colors.reset}=Output`,
+    `Groups:  ${colors.bgOrangeNeon}${colors.bright}v-high+${colors.reset}=Very high positive   ${colors.orangeNeon}high+${colors.reset}=High positive    ${colors.cyanNeon}mid+${colors.reset}=Medium positive    ${colors.green}low+${colors.reset}=Low positive                `,
+    `         ${colors.whiteNeon}zero±${colors.reset}=Near zero`,
+    `         ${colors.bgBlueCore}${colors.bright}v-high-${colors.reset}=Very high negative   ${colors.blueNeon}${colors.bright}high-${colors.reset}=High negative    ${colors.blueCore}mid-${colors.reset}=Medium negative    ${colors.blue}low-${colors.reset}=Low negative                             `
   ].join('\n');
 }

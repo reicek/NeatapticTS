@@ -13,13 +13,14 @@
  */
 
 /**
- * Converts an ASCII maze (array of strings) into a 2D numeric array for processing by the agent.
+ * Converts an ASCII/Unicode maze (array of strings) into a 2D numeric array for processing by the agent.
  * 
- * This function translates the human-readable ASCII representation into a numeric format
+ * This function translates the human-readable representation into a numeric format
  * that's more suitable for neural network processing. The encoding follows this scheme:
  * 
  * Encoding:
  *   '#' = -1 (wall/obstacle)
+ *   Box drawing characters (═,║,╔,╗,╚,╝,╠,╣,╦,╩,╬) = -1 (wall/obstacle)
  *   '.' = 0 (open path)
  *   'E' = 1 (exit/goal)
  *   'S' = 2 (start position)
@@ -29,11 +30,17 @@
  * @returns 2D array of numbers encoding the maze elements
  */
 export function encodeMaze(asciiMaze: string[]): number[][] {
+  // Unicode box drawing characters that should be treated as walls
+  const wallChars = new Set(['#', '═', '║', '╔', '╗', '╚', '╝', '╠', '╣', '╦', '╩', '╬']);
+  
   // Map each row and cell to its numeric encoding
   return asciiMaze.map(row => 
     [...row].map(cell => {
+      // Check for wall characters first
+      if (wallChars.has(cell)) return -1; // Wall
+      
+      // Check for special cells
       switch(cell) {
-        case '#': return -1; // Wall
         case '.': return 0;  // Open path
         case 'E': return 1;  // Exit
         case 'S': return 2;  // Start

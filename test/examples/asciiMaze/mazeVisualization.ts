@@ -10,7 +10,7 @@
  * current position and traversal history.
  */
 
-import { findPosition, manhattanDistance, calculateProgress } from './mazeUtils';
+import { findPosition, manhattanDistance, calculateProgress, encodeMaze } from './mazeUtils';
 import { colors } from './colors';
 
 /**
@@ -20,6 +20,7 @@ import { colors } from './colors';
  * - Different colors for walls, open paths, start and exit positions
  * - Highlights the agent's current position
  * - Marks cells that are part of the agent's path
+ * - Renders box drawing characters as walls with proper styling
  * 
  * @param cell - The character representing the cell ('S', 'E', '#', '.' etc.)
  * @param x - X-coordinate of the cell
@@ -30,23 +31,30 @@ import { colors } from './colors';
  * @returns Colorized string representing the cell
  */
 function renderCell(cell: string, x: number, y: number, agentX: number, agentY: number, path: Set<string> | undefined): string {
+  // Unicode box drawing characters that should be treated as walls
+  const wallChars = new Set(['#', '═', '║', '╔', '╗', '╚', '╝', '╠', '╣', '╦', '╩', '╬']);
+  
   // Agent's current position takes precedence in visualization
   if (x === agentX && y === agentY) {
-    if (cell === 'S') return `${colors.bgWhite}${colors.pureGreen}S${colors.reset}`;
-    if (cell === 'E') return `${colors.bgWhite}${colors.pureRed}E${colors.reset}`;
-    return `${colors.bgTeal}${colors.bright}A${colors.reset}`; // 'A' for Agent - now using teal
+    if (cell === 'S') return `${colors.bgBlack}${colors.orangeNeon}S${colors.reset}`;
+    if (cell === 'E') return `${colors.bgBlack}${colors.orangeNeon}E${colors.reset}`;
+    return `${colors.bgBlack}${colors.orangeNeon}A${colors.reset}`; // 'A' for Agent - TRON cyan
   }
   
   // Render other cell types
   switch (cell) {
-    case 'S': return `${colors.bgWhite}${colors.pureGreen}S${colors.reset}`; // Start position
-    case 'E': return `${colors.bgWhite}${colors.pureRed}E${colors.reset}`;   // Exit position
-    case '#': return `${colors.darkWallBg}${colors.darkWallText}#${colors.reset}`; // Wall
+    case 'S': return `${colors.bgBlack}${colors.orangeNeon}S${colors.reset}`;    // Start position
+    case 'E': return `${colors.bgBlack}${colors.orangeNeon}E${colors.reset}`;    // Exit position - TRON orange
     case '.':
       // Show path breadcrumbs if this cell was visited
-      if (path && path.has(`${x},${y}`)) return `${colors.lightBrownBg}${colors.indigo}•${colors.reset}`;
-      return `${colors.lightBrownBg}${colors.lightBrownText}.${colors.reset}`; // Open path
-    default: return cell; // Any other character
+      if (path && path.has(`${x},${y}`)) return `${colors.floorBg}${colors.orangeNeon}•${colors.reset}`;
+      return `${colors.floorBg}${colors.gridLineText}.${colors.reset}`; // Open path - dark floor with subtle grid
+    default:
+      // For box drawing characters and # - render as wall
+      if (wallChars.has(cell)) {
+        return `${colors.bgBlack}${colors.blueNeon}${cell}${colors.reset}`;
+      }
+      return cell; // Any other character
   }
 }
 
@@ -87,12 +95,13 @@ export function visualizeMaze(asciiMaze: string[], [agentX, agentY]: [number, nu
  */
 export function displayMazeLegend(forceLog: (...args: any[]) => void): void {
   forceLog(`\n${centerLine(' MAZE LEGEND ', 40)}`);
-  forceLog(`${colors.darkWallBg}${colors.darkWallText}#${colors.reset} - Wall (obstacle the agent cannot pass through)`);
-  forceLog(`${colors.lightBrownBg}${colors.lightBrownText}.${colors.reset} - Open path`);
-  forceLog(`${colors.bgWhite}${colors.pureGreen}S${colors.reset} - Start position`);
-  forceLog(`${colors.bgWhite}${colors.pureRed}E${colors.reset} - Exit/goal position`);
-  forceLog(`${colors.bgTeal}${colors.bright}A${colors.reset} - Current agent position`);
-  forceLog(`${colors.lightBrownBg}${colors.indigo}•${colors.reset} - Path taken by the agent`);
+  forceLog(`${colors.bgBlack}${colors.blueNeon}#${colors.reset} - Wall (obstacle the agent cannot pass through)`);
+  forceLog(`${colors.bgBlack}${colors.blueNeon}═ ║ ╔ ╗ ╚ ╝ ╠ ╣ ╦ ╩ ╬${colors.reset} - Box drawing characters (all treated as walls)`);
+  forceLog(`${colors.floorBg}${colors.gridLineText}.${colors.reset} - Open path`);
+  forceLog(`${colors.bgBlack}${colors.orangeNeon}S${colors.reset} - Start position`);
+  forceLog(`${colors.bgBlack}${colors.orangeNeon}E${colors.reset} - Exit/goal position`);
+  forceLog(`${colors.bgBlack}${colors.orangeNeon}A${colors.reset} - Current agent position`);
+  forceLog(`${colors.floorBg}${colors.orangeNeon}•${colors.reset} - Path taken by the agent`);
   forceLog(`\nThe agent must find a path from S to E while avoiding walls.\n`);
 }
 
@@ -109,8 +118,8 @@ export function displayMazeLegend(forceLog: (...args: any[]) => void): void {
  * @param forceLog - Function used for logging output
  */
 export function printMazeStats(result: any, maze: string[], forceLog: (...args: any[]) => void): void {
-  const successColor = result.success ? colors.teal : colors.coral;
-  forceLog(`\n${colors.bright}${colors.indigo}===== MAZE SOLUTION SUMMARY =====${colors.reset}`);
+  const successColor = result.success ? colors.cyanNeon : colors.red;
+  forceLog(`\n${colors.bright}${colors.blueNeon}===== MAZE SOLUTION SUMMARY =====${colors.reset}`);
   forceLog(`${colors.bright}Success:${colors.reset} ${successColor}${result.success ? 'YES' : 'NO'}${colors.reset}`);
   forceLog(`${colors.bright}Steps taken:${colors.reset} ${result.steps}`);
   forceLog(`${colors.bright}Path length:${colors.reset} ${result.path.length}`);
@@ -120,16 +129,91 @@ export function printMazeStats(result: any, maze: string[], forceLog: (...args: 
   const exitPos = findPosition(maze, 'E');
   
   if (result.success) {
-    // Calculate path efficiency
+    // Calculate path efficiency - optimal vs actual
     const optimalLength = manhattanDistance(startPos, exitPos);
-    const efficiency = ((optimalLength / (result.path.length - 1)) * 100).toFixed(1);
-    forceLog(`${colors.bright}Path efficiency:${colors.reset} ${optimalLength}/${result.path.length - 1} (${efficiency}%)`);
-    forceLog(`${colors.bright}${colors.teal}Agent successfully navigated the maze!${colors.reset}`);
+    const pathLength = result.path.length - 1;
+    // Efficiency is the percentage of optimal length to actual (lower = more roundabout path)
+    const efficiency = Math.min(100, Math.round((optimalLength / pathLength) * 100)).toFixed(1);
+    // Overhead is how much longer than optimal the path is (100% means twice as long as optimal)
+    const overhead = ((pathLength / optimalLength) * 100 - 100).toFixed(1);
+    
+    // Calculate unique cells and revisits
+    const uniqueCells = new Set<string>();
+    let revisitedCells = 0;
+    let directionChanges = 0;
+    let lastDirection: string | null = null;
+    
+    // Track path metrics
+    for (let i = 0; i < result.path.length; i++) {
+      const [x, y] = result.path[i];
+      const cellKey = `${x},${y}`;
+      
+      // Count revisits
+      if (uniqueCells.has(cellKey)) {
+        revisitedCells++;
+      } else {
+        uniqueCells.add(cellKey);
+      }
+      
+      // Count direction changes (if not the first step)
+      if (i > 0) {
+        const [prevX, prevY] = result.path[i-1];
+        const dx = x - prevX;
+        const dy = y - prevY;
+        
+        // Get current direction (N, S, E, W)
+        let currentDirection = "";
+        if (dx > 0) currentDirection = "E";
+        else if (dx < 0) currentDirection = "W";
+        else if (dy > 0) currentDirection = "S";
+        else if (dy < 0) currentDirection = "N";
+        
+        // Check if direction changed
+        if (lastDirection !== null && currentDirection !== lastDirection) {
+          directionChanges++;
+        }
+        
+        lastDirection = currentDirection;
+      }
+    }
+    
+    // Calculate exploration coverage (unique cells compared to walkable cells)
+    const mazeWidth = maze[0].length;
+    const mazeHeight = maze.length;
+    const encodedMaze = encodeMaze(maze);
+    let walkableCells = 0;
+    
+    for (let y = 0; y < mazeHeight; y++) {
+      for (let x = 0; x < mazeWidth; x++) {
+        if (encodedMaze[y][x] !== -1) { // Not a wall
+          walkableCells++;
+        }
+      }
+    }
+    
+    const coveragePercent = ((uniqueCells.size / walkableCells) * 100).toFixed(1);
+    
+    // Display stats
+    forceLog(`${colors.bright}Path efficiency:${colors.reset} ${optimalLength}/${pathLength} (${efficiency}%)`);
+    forceLog(`${colors.bright}Path overhead:${colors.reset} ${overhead}% longer than optimal`);
+    forceLog(`${colors.bright}Direction changes:${colors.reset} ${directionChanges}`);
+    forceLog(`${colors.bright}Unique cells visited:${colors.reset} ${uniqueCells.size} (${coveragePercent}% of maze)`);
+    forceLog(`${colors.bright}Cells revisited:${colors.reset} ${revisitedCells} times`);
+    forceLog(`${colors.bright}Decisions per cell:${colors.reset} ${(directionChanges / uniqueCells.size).toFixed(2)}`);
+    forceLog(`${colors.bright}${colors.cyanNeon}Agent successfully navigated the maze!${colors.reset}`);
   } else {
     // Calculate progress made toward the exit
     const bestProgress = calculateProgress(result.path[result.path.length - 1], startPos, exitPos);
+    
+    // Calculate unique cells visited
+    const uniqueCells = new Set<string>();
+    for (const [x, y] of result.path) {
+      uniqueCells.add(`${x},${y}`);
+    }
+    
     forceLog(`${colors.bright}Best progress toward exit:${colors.reset} ${bestProgress}%`);
-    forceLog(`${colors.bright}${colors.coral}Agent failed to reach the exit.${colors.reset}`);
+    forceLog(`${colors.bright}Unique cells visited:${colors.reset} ${uniqueCells.size}`);
+    forceLog(`${colors.bright}${colors.red}Agent failed to reach the exit.${colors.reset}`);
   }
 }
 
@@ -145,7 +229,7 @@ export function printMazeStats(result: any, maze: string[], forceLog: (...args: 
  * @param forceLog - Function used for logging output
  */
 export function printEvolutionSummary(generations: number, timeMs: number, bestFitness: number, forceLog: (...args: any[]) => void): void {
-  forceLog(`\n${colors.bright}${colors.indigo}===== EVOLUTION SUMMARY =====${colors.reset}`);
+  forceLog(`\n${colors.bright}${colors.blueNeon}===== EVOLUTION SUMMARY =====${colors.reset}`);
   forceLog(`${colors.bright}Total generations:${colors.reset} ${generations}`);
   forceLog(`${colors.bright}Training time:${colors.reset} ${(timeMs/1000).toFixed(1)} seconds (${(timeMs/60000).toFixed(2)} minutes)`);
   forceLog(`${colors.bright}Best fitness:${colors.reset} ${bestFitness.toFixed(2)}`);
@@ -158,10 +242,10 @@ export function printEvolutionSummary(generations: number, timeMs: number, bestF
  * as a horizontal bar with appropriate coloring based on percentage.
  * 
  * @param progress - Progress percentage (0-100)
- * @param length - Length of the progress bar in characters (default: 30)
+ * @param length - Length of the progress bar in characters (default: 60)
  * @returns A string containing the formatted progress bar
  */
-export function displayProgressBar(progress: number, length: number = 30): string {
+export function displayProgressBar(progress: number, length: number = 60): string {
   // Calculate the number of filled positions
   const filledLength = Math.max(0, Math.min(length, Math.floor(length * progress / 100)));
   
@@ -188,8 +272,8 @@ export function displayProgressBar(progress: number, length: number = 30): strin
   
   bar += endChar;
   
-  // Add color based on progress level using our new palette
-  const color = progress < 30 ? colors.coral : progress < 70 ? colors.amber : colors.teal;
+  // Add color based on progress level using our TRON palette
+  const color = progress < 30 ? colors.red : progress < 70 ? colors.blueNeon : colors.cyanNeon;
   return `${color}${bar}${colors.reset} ${progress}%`;
 }
 

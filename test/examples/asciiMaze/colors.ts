@@ -1,12 +1,13 @@
 /**
  * ANSI color codes for maze visualization in the terminal.
- * These codes use a modern and balanced color palette for better visual appeal.
+ * These codes use a TRON-inspired color palette with vibrant cyberspace blues,
+ * electric whites, and neon accents for a futuristic digital look.
  *
- * The palette features complementary colors that work well together while
- * maintaining sufficient contrast for readability in terminal environments.
+ * The palette features the iconic TRON colors that work together to create
+ * the feeling of being inside a digital world or computer system.
  *
  * Usage example:
- *   console.log(colors.bgTeal + 'Agent' + colors.reset);
+ *   console.log(colors.bgCyanNeon + 'Agent' + colors.reset);
  */
 export const colors = {
   // Basic formatting
@@ -14,40 +15,46 @@ export const colors = {
   bright: '\x1b[1m',        // Bright/bold text
   dim: '\x1b[2m',           // Dim text
   
-  // Modern primary colors
-  teal: '\x1b[38;5;36m',    // Teal foreground (primary color)
-  coral: '\x1b[38;5;209m',  // Coral foreground (complementary to teal)
-  indigo: '\x1b[38;5;61m',  // Indigo foreground (accent)
-  amber: '\x1b[38;5;214m',  // Amber/gold foreground (accent)
+  // TRON primary colors
+  blueCore: '\x1b[38;5;39m',      // Primary TRON blue
+  cyanNeon: '\x1b[38;5;87m',      // Electric cyan
+  blueNeon: '\x1b[38;5;45m',      // Bright neon blue
+  whiteNeon: '\x1b[38;5;159m',    // Electric white-blue
+  orangeNeon: '\x1b[38;5;208m',   // TRON orange (for contrast)
+  magentaNeon: '\x1b[38;5;201m',  // Digital magenta
   
-  // Base colors with modern hues
-  red: '\x1b[38;5;203m',    // Softer red foreground
-  green: '\x1b[38;5;78m',   // Mint green foreground
-  yellow: '\x1b[38;5;221m', // Warm yellow foreground
-  blue: '\x1b[38;5;75m',    // Sky blue foreground
-  cyan: '\x1b[38;5;80m',    // Turquoise cyan foreground
+  // Base colors with TRON hues
+  red: '\x1b[38;5;197m',    // Program termination red
+  green: '\x1b[38;5;118m',  // User/CLU green
+  yellow: '\x1b[38;5;220m', // Warning yellow
+  blue: '\x1b[38;5;33m',    // Deep blue
+  cyan: '\x1b[38;5;51m',    // Light cyan
   
   // Background colors
-  bgTeal: '\x1b[48;5;36m',  // Teal background (for agent)
-  bgCoral: '\x1b[48;5;209m',// Coral background (complementary highlight)
-  bgIndigo: '\x1b[48;5;61m',// Indigo background 
-  bgAmber: '\x1b[48;5;214m',// Amber background
+  bgBlueCore: '\x1b[48;5;39m',    // Primary TRON blue background
+  bgCyanNeon: '\x1b[48;5;87m',    // Electric cyan background (for agent)
+  bgBlueNeon: '\x1b[48;5;45m',    // Bright neon blue background
+  bgWhiteNeon: '\x1b[48;5;159m',  // Electric white-blue background
+  bgOrangeNeon: '\x1b[48;5;208m', // TRON orange background
+  bgMagentaNeon: '\x1b[48;5;201m',// Digital magenta background
   
   // Common backgrounds
-  bgRed: '\x1b[48;5;203m',  // Softer red background
-  bgGreen: '\x1b[48;5;78m', // Mint green background (for agent)
-  bgYellow: '\x1b[48;5;221m',// Warm yellow background
-  bgBlue: '\x1b[48;5;75m',  // Sky blue background
+  bgRed: '\x1b[48;5;197m',    // Program termination red background
+  bgGreen: '\x1b[48;5;118m',  // User/CLU green background
+  bgYellow: '\x1b[48;5;220m', // Warning yellow background
+  bgBlue: '\x1b[48;5;33m',    // Deep blue background
   
   // Maze-specific colors
-  darkWallBg: '\x1b[48;5;237m',   // Slightly lighter dark gray for walls
-  darkWallText: '\x1b[38;5;235m', // Almost black text for wall symbols
-  lightBrownBg: '\x1b[48;5;223m', // Slightly warmer light brown for paths
-  lightBrownText: '\x1b[38;5;223m',// Matching text color for paths
+  darkWallBg: '\x1b[48;5;17m',    // Dark blue for walls
+  darkWallText: '\x1b[38;5;17m',  // Dark blue text for wall symbols
+  floorBg: '\x1b[48;5;234m',      // Almost black for empty floor
+  floorText: '\x1b[38;5;234m',    // Almost black text for floor symbols
+  gridLineBg: '\x1b[48;5;23m',    // Subtle grid line color
+  gridLineText: '\x1b[38;5;23m',  // Subtle grid line text
   
   // Special highlights
-  bgWhite: '\x1b[48;5;255m',       // Bright white background (for start/exit)
-  pureBlue: '\x1b[38;5;33;1m',     // Vivid blue text
-  pureRed: '\x1b[38;5;197;1m',     // Vivid magenta-red text (for exit)
-  pureGreen: '\x1b[38;5;41;1m',    // Vivid green text (for start/agent)
+  bgBlack: '\x1b[48;5;16m',       // Pure black background
+  pureBlue: '\x1b[38;5;57;1m',    // Vibrant system blue
+  pureOrange: '\x1b[38;5;214;1m', // Vibrant TRON orange (for CLU/villains)
+  pureGreen: '\x1b[38;5;46;1m',   // Pure green for user programs
 };

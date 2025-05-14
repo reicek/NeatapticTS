@@ -11,3 +11,6 @@ npm-debug.log
 
 # IDE
 /idea
+/.vs
+/.vscode
+/.DS_Store  

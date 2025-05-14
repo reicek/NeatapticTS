@@ -54,7 +54,7 @@ export default class Neat {
     this.options.popsize = this.options.popsize || 50;
     this.options.elitism = this.options.elitism || 0;
     this.options.provenance = this.options.provenance || 0;
-    this.options.mutationRate = this.options.mutationRate || 0.3;
+    this.options.mutationRate = this.options.mutationRate || 0.7;
     this.options.mutationAmount = this.options.mutationAmount || 1;
     this.options.fitnessPopulation = this.options.fitnessPopulation || false;
     this.options.selection = this.options.selection || methods.selection.POWER;
@@ -91,7 +91,7 @@ export default class Neat {
    */
   getMinimumHiddenSize(): number {
     /** Larger numbers will generate more complex hidden layers */
-    const hiddenLayerMultiplier = 5;
+    const hiddenLayerMultiplier = Math.floor(Math.random() * (5 - 2 + 1)) + 2;  // 2 to 5
     return Math.max(this.input, this.output) * hiddenLayerMultiplier;
   }
   
@@ -345,6 +345,83 @@ export default class Neat {
   }
 
   /**
+   * Ensures that all input nodes have at least one outgoing connection,
+   * all output nodes have at least one incoming connection,
+   * and all hidden nodes have at least one incoming and one outgoing connection.
+   * This prevents dead ends and blind I/O neurons.
+   * @param network The network to check and fix
+   */
+  private ensureNoDeadEnds(network: Network) {
+    const inputNodes = network.nodes.filter(n => n.type === 'input');
+    const outputNodes = network.nodes.filter(n => n.type === 'output');
+    const hiddenNodes = network.nodes.filter(n => n.type === 'hidden');
+
+    // Helper to check if a node has a connection in a direction
+    const hasOutgoing = (node: any) => node.connections && node.connections.out && node.connections.out.length > 0;
+    const hasIncoming = (node: any) => node.connections && node.connections.in && node.connections.in.length > 0;
+
+    // 1. Ensure all input nodes have at least one outgoing connection
+    for (const inputNode of inputNodes) {
+      if (!hasOutgoing(inputNode)) {
+        // Try to connect to a random hidden or output node
+        const candidates = hiddenNodes.length > 0 ? hiddenNodes : outputNodes;
+        if (candidates.length > 0) {
+          const target = candidates[Math.floor(Math.random() * candidates.length)];
+          try {
+            network.connect(inputNode, target);
+          } catch (e: any) {
+            // Ignore duplicate connection errors
+          }
+        }
+      }
+    }
+
+    // 2. Ensure all output nodes have at least one incoming connection
+    for (const outputNode of outputNodes) {
+      if (!hasIncoming(outputNode)) {
+        // Try to connect from a random hidden or input node
+        const candidates = hiddenNodes.length > 0 ? hiddenNodes : inputNodes;
+        if (candidates.length > 0) {
+          const source = candidates[Math.floor(Math.random() * candidates.length)];
+          try {
+            network.connect(source, outputNode);
+          } catch (e: any) {
+            // Ignore duplicate connection errors
+          }
+        }
+      }
+    }
+
+    // 3. Ensure all hidden nodes have at least one incoming and one outgoing connection
+    for (const hiddenNode of hiddenNodes) {
+      if (!hasIncoming(hiddenNode)) {
+        // Try to connect from input or another hidden node
+        const candidates = inputNodes.concat(hiddenNodes.filter(n => n !== hiddenNode));
+        if (candidates.length > 0) {
+          const source = candidates[Math.floor(Math.random() * candidates.length)];
+          try {
+            network.connect(source, hiddenNode);
+          } catch (e: any) {
+            // Ignore duplicate connection errors
+          }
+        }
+      }
+      if (!hasOutgoing(hiddenNode)) {
+        // Try to connect to output or another hidden node
+        const candidates = outputNodes.concat(hiddenNodes.filter(n => n !== hiddenNode));
+        if (candidates.length > 0) {
+          const target = candidates[Math.floor(Math.random() * candidates.length)];
+          try {
+            network.connect(hiddenNode, target);
+          } catch (e: any) {
+            // Ignore duplicate connection errors
+          }
+        }
+      }
+    }
+  }
+
+  /**
    * Evaluates the fitness of the current population.
    * If `fitnessPopulation` is true, evaluates the entire population at once.
    * Otherwise, evaluates each genome individually.
@@ -410,6 +487,7 @@ export default class Neat {
     // Ensure minimum hidden nodes to avoid bottlenecks
     for (const genome of newPopulation) {
       this.ensureMinHiddenNodes(genome);
+      this.ensureNoDeadEnds(genome); // Ensure no dead ends or blind I/O
     }
 
     this.population = newPopulation; // Replace population instead of appending
@@ -434,6 +512,7 @@ export default class Neat {
         ? Network.fromJSON(network.toJSON())
         : new Network(this.input, this.output);
       copy.score = undefined;
+      this.ensureNoDeadEnds(copy); // Ensure no dead ends or blind I/O
       this.population.push(copy);
     }
   }
@@ -448,10 +527,9 @@ export default class Neat {
     const parent1 = this.getParent();
     const parent2 = this.getParent();
     const offspring = Network.crossOver(parent1, parent2, this.options.equal || false);
-    
     // Ensure the offspring has the minimum required hidden nodes
     this.ensureMinHiddenNodes(offspring);
-    
+    this.ensureNoDeadEnds(offspring); // Ensure no dead ends or blind I/O
     return offspring;
   }
 
@@ -505,7 +583,7 @@ export default class Neat {
    */
   mutate(): void {
     for (const genome of this.population) {
-      if (Math.random() <= (this.options.mutationRate || 0.3)) {
+      if (Math.random() <= (this.options.mutationRate || 0.7)) {
         for (let j = 0; j < (this.options.mutationAmount || 1); j++) {
           const mutationMethod = this.selectMutationMethod(genome);
           if (mutationMethod) genome.mutate(mutationMethod);

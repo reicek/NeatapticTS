@@ -107,11 +107,11 @@ export class DashboardManager {
     this.clearFunction();
     
     // Print header - using local centerLine function
-    this.logFunction(colors.bright + colors.teal + centerLine(' NEUROEVOLUTION MAZE SOLVER DASHBOARD ', 150, '=') + colors.reset);
+    this.logFunction(colors.bright + colors.blueCore + centerLine(' NEUROEVOLUTION MAZE SOLVER DASHBOARD ', 150, '=') + colors.reset);
     
     // Print current best for active maze
     if (this.currentBest) {
-      this.logFunction(`\n${colors.bright}${colors.teal}${centerLine(` BEST NETWORK (GEN ${this.currentBest.generation}) `, 150, '-')}${colors.reset}`);
+      this.logFunction(`\n${colors.bright}${colors.cyanNeon}${centerLine(` BEST NETWORK (GEN ${this.currentBest.generation}) `, 150, '-')}${colors.reset}`);
       
       // Visualize the network
       this.logFunction(visualizeNetworkSummary(this.currentBest.network));
@@ -119,7 +119,7 @@ export class DashboardManager {
       // Show maze visualization with agent's path
       const startPos = findPosition(currentMaze, 'S');
       const lastPos = this.currentBest.result.path[this.currentBest.result.path.length - 1];
-      this.logFunction(`\n${colors.bright}${colors.teal}${centerLine(' CURRENT MAZE ', 150, '-')}${colors.reset}`);
+      this.logFunction(`\n${colors.bright}${colors.blueNeon}${centerLine(' CURRENT MAZE ', 150, '-')}${colors.reset}`);
       this.logFunction(visualizeMaze(currentMaze, lastPos, this.currentBest.result.path));
       
       // Print stats
@@ -140,26 +140,45 @@ export class DashboardManager {
         
         // Calculate display number (last solved is #1)
         const displayNumber = this.solvedMazes.length - i;
-        this.logFunction(`\n${colors.bright}${colors.green}${centerLine(` SOLVED MAZE #${displayNumber} (GEN ${solved.generation}) `, 150, '-')}${colors.reset}`);
+        this.logFunction(`\n${colors.bright}${colors.cyanNeon}${centerLine(` SOLVED MAZE #${displayNumber} (GEN ${solved.generation}) `, 150, '-')}${colors.reset}`);
         this.logFunction(visualizeMaze(solved.maze, endPos, solved.result.path));
-        
-        // Print efficiency and other stats
+          // Print efficiency and other stats
         const startPos = findPosition(solved.maze, 'S');
-        const exitPos = findPosition(solved.maze, 'E');
-        const optimalLength = manhattanDistance(startPos, exitPos);
-        const efficiency = ((optimalLength / (solved.result.path.length - 1)) * 100).toFixed(1);
-        this.logFunction(`${colors.bright}Path efficiency:${colors.reset} ${optimalLength}/${solved.result.path.length - 1} (${efficiency}%)`);
+        const exitPos = findPosition(solved.maze, 'E');        const optimalLength = manhattanDistance(startPos, exitPos);
+        const pathLength = solved.result.path.length - 1;
+        // Efficiency is the percentage of optimal length to actual (lower = more roundabout path)
+        const efficiency = Math.min(100, Math.round((optimalLength / pathLength) * 100)).toFixed(1);
+        // Overhead is how much longer than optimal the path is (100% means twice as long as optimal)
+        const overhead = ((pathLength / optimalLength) * 100 - 100).toFixed(1);
+        
+        // Calculate unique cells visited vs revisited cells
+        const uniqueCells = new Set<string>();
+        let revisitedCells = 0;
+        
+        for (const [x, y] of solved.result.path) {
+          const cellKey = `${x},${y}`;
+          if (uniqueCells.has(cellKey)) {
+            revisitedCells++;
+          } else {
+            uniqueCells.add(cellKey);
+          }
+        }
+        
+        this.logFunction(`${colors.bright}Path efficiency:${colors.reset} ${optimalLength}/${pathLength} (${efficiency}%)`);
+        this.logFunction(`${colors.bright}Path overhead:${colors.reset} ${overhead}% longer than optimal`);
+        this.logFunction(`${colors.bright}Unique cells visited:${colors.reset} ${uniqueCells.size}`);
+        this.logFunction(`${colors.bright}Cells revisited:${colors.reset} ${revisitedCells} times`);
         this.logFunction(`${colors.bright}Steps:${colors.reset} ${solved.result.steps}`);
         this.logFunction(`${colors.bright}Fitness:${colors.reset} ${solved.result.fitness.toFixed(2)}`);
         
         // Add network visualization for the winner network
-        this.logFunction(`\n${colors.bright}${colors.indigo}${centerLine(' WINNER NETWORK ', 150, '·')}${colors.reset}`);
+        this.logFunction(`\n${colors.bright}${colors.whiteNeon}${centerLine(' WINNER NETWORK ', 150, '·')}${colors.reset}`);
         this.logFunction(visualizeNetworkSummary(solved.network));
       }
     }
     
     // Print footer
-    this.logFunction(`\n${colors.bright}${colors.teal}${centerLine(' EVOLUTION IN PROGRESS ', 150, '=')}${colors.reset}`);
+    this.logFunction(`\n${colors.bright}${colors.blueCore}${centerLine(' EVOLUTION IN PROGRESS ', 150, '=')}${colors.reset}`);
     if (this.solvedMazes.length > 0) {
       this.logFunction(`${colors.bright}${colors.green}Solved mazes: ${this.solvedMazes.length}${colors.reset}`);
     }
