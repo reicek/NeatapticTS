@@ -104,6 +104,11 @@ export default class Node {
   private isActivating?: boolean;
 
   /**
+   * Global index counter for assigning unique indices to nodes.
+   */
+  private static _globalNodeIndex = 0;
+
+  /**
    * Creates a new node.
    * @param type The type of the node ('input', 'hidden', or 'output'). Defaults to 'hidden'.
    * @param customActivation Optional custom activation function (should handle derivative if needed).
@@ -148,6 +153,11 @@ export default class Node {
     // Temporary arrays used during activation/propagation.
     this.nodes = []; // Stores nodes influenced by this node's gating activity.
     this.gates = []; // Likely unused/redundant.
+
+    // Assign a unique index if not already set
+    if (typeof this.index === 'undefined') {
+      this.index = Node._globalNodeIndex++;
+    }
   }
 
   /**
@@ -815,10 +825,10 @@ export default class Node {
    */
   isProjectingTo(node: Node): boolean {
     // Check self-connection (only if weight is non-zero, indicating it's active).
-    if (node === this && this.connections.self.length > 0) return true;
+    if (node.index === this.index && this.connections.self.length > 0) return true;
 
-    // Check regular outgoing connections.
-    return this.connections.out.some((conn) => conn.to === node);
+    // Always compare by index for robust identity
+    return this.connections.out.some((conn) => conn.to.index === node.index);
   }
 
   /**

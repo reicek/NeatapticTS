@@ -12,6 +12,7 @@
 
 import { Network } from '../../../src/neataptic';
 import { colors } from './colors';
+import { IVisualizationNode, IVisualizationConnection } from './interfaces';
 
 /**
  * Pads a string to a specific width with alignment options
@@ -65,12 +66,12 @@ function getActivationColor(value: number): string {
   if (value >= 2.0) return colors.bgOrangeNeon + colors.bright;  // Very high positive
   if (value >= 1.0) return colors.orangeNeon;                   // High positive
   if (value >= 0.5) return colors.cyanNeon;                     // Medium positive
-  if (value >= 0.1) return colors.green;                        // Low positive
+  if (value >= 0.1) return colors.neonGreen;                        // Low positive
   if (value >= -0.1) return colors.whiteNeon;                   // Near zero
   if (value >= -0.5) return colors.blue;                        // Low negative
   if (value >= -1.0) return colors.blueCore;                    // Medium negative
-  if (value >= -2.0) return colors.blueNeon + colors.bright;    // High negative
-  return colors.bgBlueCore + colors.bright;                     // Very high negative
+  if (value >= -2.0) return colors.bgNeonAqua + colors.bright;    // High negative
+  return colors.bgNeonViolet + colors.neonSilver;                     // Very high negative
 }
 
 /**
@@ -265,8 +266,10 @@ function prepareHiddenLayersForDisplay(hiddenLayers: any[][], maxVisiblePerLayer
         };
         
         // Create a "virtual" average node to display
-        return { 
-          type: 'hidden', 
+        return {
+          id: -1 * (layerIdx * 1000 + groupIdx),
+          uuid: avgKey,
+          type: 'hidden',
           activation: avgValue,
           isAverage: true,
           avgCount: group.length,
@@ -281,6 +284,25 @@ function prepareHiddenLayersForDisplay(hiddenLayers: any[][], maxVisiblePerLayer
   });
   
   return { displayLayers, layerDisplayCounts, averageNodes };
+}
+
+/**
+ * Utility to create a visualization node from a neataptic node
+ * 
+ * @param node - Neural network node object
+ * @param index - Index of the node in the network
+ * @returns Visualization node object
+ */
+function toVisualizationNode(node: any, index: number): IVisualizationNode {
+  // Use node.index if available, else fallback to array index
+  const id = typeof node.index === 'number' ? node.index : index;
+  return {
+    id,
+    uuid: String(id),
+    type: node.type,
+    activation: node.activation,
+    bias: node.bias,
+  };
 }
 
 /**
@@ -305,16 +327,25 @@ export function visualizeNetworkSummary(network: Network): string {
 
   // Extract nodes from network
   const nodes = network.nodes || [];
-  const inputNodes = nodes.filter(n => n.type === 'input');
-  const outputNodes = nodes.filter(n => n.type === 'output');
-  const hiddenNodes = nodes.filter(n => n.type !== 'input' && n.type !== 'output');
+  const inputNodes: IVisualizationNode[] = nodes.filter(n => n.type === 'input' || n.type === 'constant').map(toVisualizationNode);
+  const outputNodes: IVisualizationNode[] = nodes.filter(n => n.type === 'output').map(toVisualizationNode);
+  const hiddenNodesRaw: IVisualizationNode[] = nodes.filter(n => n.type === 'hidden').map(toVisualizationNode);
 
   // Group hidden nodes into layers
-  const hiddenLayers = groupHiddenByLayer(inputNodes, hiddenNodes, outputNodes);
+  const hiddenLayers = groupHiddenByLayer(inputNodes, hiddenNodesRaw, outputNodes);
   const numHiddenLayers = hiddenLayers.length;
   
   // Prepare hidden layers for display (condensing large layers)
   const { displayLayers, layerDisplayCounts, averageNodes } = prepareHiddenLayersForDisplay(hiddenLayers);
+
+  // Map connections using node index as unique identifier
+  const connections: IVisualizationConnection[] = network.connections.map((conn: any) => ({
+    weight: conn.weight,
+    fromUUID: String(typeof conn.from.index === 'number' ? conn.from.index : nodes.indexOf(conn.from)),
+    toUUID: String(typeof conn.to.index === 'number' ? conn.to.index : nodes.indexOf(conn.to)),
+    gaterUUID: conn.gater ? String(typeof conn.gater.index === 'number' ? conn.gater.index : nodes.indexOf(conn.gater)) : null,
+    enabled: typeof conn.enabled === 'boolean' ? conn.enabled : true
+  }));
 
   // Calculate connection counts between layers
   const connectionCounts: number[] = [];
@@ -323,7 +354,7 @@ export function visualizeNetworkSummary(network: Network): string {
   let firstCount = 0;
   const firstTargetLayer = hiddenLayers.length > 0 ? hiddenLayers[0] : outputNodes;
   for (const conn of network.connections) {
-    if (inputNodes.includes(conn.from) && firstTargetLayer.includes(conn.to)) {
+    if (inputNodes.some(n => n.id === (typeof conn.from.index === 'number' ? conn.from.index : nodes.indexOf(conn.from))) && firstTargetLayer.some(n => n.id === (typeof conn.to.index === 'number' ? conn.to.index : nodes.indexOf(conn.to)))) {
       firstCount++;
     }
   }
@@ -333,7 +364,7 @@ export function visualizeNetworkSummary(network: Network): string {
   for (let i = 0; i < hiddenLayers.length - 1; i++) {
     let count = 0;
     for (const conn of network.connections) {
-      if (hiddenLayers[i].includes(conn.from) && hiddenLayers[i+1].includes(conn.to)) {
+      if (hiddenLayers[i].some(n => n.id === (typeof conn.from.index === 'number' ? conn.from.index : nodes.indexOf(conn.from))) && hiddenLayers[i+1].some(n => n.id === (typeof conn.to.index === 'number' ? conn.to.index : nodes.indexOf(conn.to)))) {
         count++;
       }
     }
@@ -344,7 +375,7 @@ export function visualizeNetworkSummary(network: Network): string {
   if (hiddenLayers.length > 0) {
     let lastCount = 0;
     for (const conn of network.connections) {
-      if (hiddenLayers[hiddenLayers.length - 1].includes(conn.from) && outputNodes.includes(conn.to)) {
+      if (hiddenLayers[hiddenLayers.length - 1].some(n => n.id === (typeof conn.from.index === 'number' ? conn.from.index : nodes.indexOf(conn.from))) && outputNodes.some(n => n.id === (typeof conn.to.index === 'number' ? conn.to.index : nodes.indexOf(conn.to)))) {
         lastCount++;
       }
     }
@@ -357,7 +388,7 @@ export function visualizeNetworkSummary(network: Network): string {
   let connectionSummary = '';
   for (let i = 0; i < layerSizes.length - 1; i++) {
     const fromLabel = i === 0
-      ? `${colors.green}Inputs:${layerSizes[i]}${colors.reset}`
+      ? `${colors.neonGreen}Inputs:${layerSizes[i]}${colors.reset}`
       : `${colors.cyanNeon}Hidden${i}:${layerSizes[i]}${colors.reset}`;
     const toLabel = i === layerSizes.length - 2
       ? `${colors.orangeNeon}Outputs:${layerSizes[i+1]}${colors.reset}`
@@ -377,7 +408,7 @@ export function visualizeNetworkSummary(network: Network): string {
   
   // Create the header row
   let header = '';
-  header += pad(`${colors.green}Input Layer [${INPUT_COUNT}]${colors.reset}`, columnWidth, 'center');
+  header += pad(`${colors.neonGreen}Input Layer [${INPUT_COUNT}]${colors.reset}`, columnWidth, 'center');
   
   // First arrow with connection count on the left
   const firstConnCount = connectionCounts[0];
@@ -425,7 +456,7 @@ export function visualizeNetworkSummary(network: Network): string {
     if (rowIdx < INPUT_COUNT) {
       const node = inputDisplayNodes[rowIdx];
       const value = getNodeValue(node);
-      row += pad(`${colors.green}●${colors.reset}${fmtColoredValue(value)}`, columnWidth, 'left');
+      row += pad(`${colors.neonGreen}●${colors.reset}${fmtColoredValue(value)}`, columnWidth, 'left');
     } else {
       row += pad('', columnWidth);
     }
@@ -544,8 +575,8 @@ export function visualizeNetworkSummary(network: Network): string {
     '',
     `${colors.blueNeon}Arrows indicate feed-forward flow.${colors.reset}`,
     '',
-    `Legend:  ${colors.green}●${colors.reset}=Input                    ${colors.cyanNeon}■${colors.reset}=Hidden                    ${colors.orangeNeon}▲${colors.reset}=Output`,
-    `Groups:  ${colors.bgOrangeNeon}${colors.bright}v-high+${colors.reset}=Very high positive   ${colors.orangeNeon}high+${colors.reset}=High positive    ${colors.cyanNeon}mid+${colors.reset}=Medium positive    ${colors.green}low+${colors.reset}=Low positive                `,
+    `Legend:  ${colors.neonGreen}●${colors.reset}=Input                    ${colors.cyanNeon}■${colors.reset}=Hidden                    ${colors.orangeNeon}▲${colors.reset}=Output`,
+    `Groups:  ${colors.bgOrangeNeon}${colors.bright}v-high+${colors.reset}=Very high positive   ${colors.orangeNeon}high+${colors.reset}=High positive    ${colors.cyanNeon}mid+${colors.reset}=Medium positive    ${colors.neonGreen}low+${colors.reset}=Low positive                `,
     `         ${colors.whiteNeon}zero±${colors.reset}=Near zero`,
     `         ${colors.bgBlueCore}${colors.bright}v-high-${colors.reset}=Very high negative   ${colors.blueNeon}${colors.bright}high-${colors.reset}=High negative    ${colors.blueCore}mid-${colors.reset}=Medium negative    ${colors.blue}low-${colors.reset}=Low negative                             `
   ].join('\n');

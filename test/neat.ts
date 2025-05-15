@@ -182,6 +182,7 @@ describe('Strict node removal', () => {
 });
 
 describe('Hidden Node Minimum Enforcement', () => {
+  const multiplier = 1; // Deterministic for tests
   describe('Scenario: Flat network (no layers)', () => {
     test('enforces minimum hidden nodes on creation', () => {
       // Arrange
@@ -189,20 +190,18 @@ describe('Hidden Node Minimum Enforcement', () => {
       // Act
       const hiddenCount = net.nodes.filter(n => n.type === 'hidden').length;
       // Assert
-      expect(hiddenCount).toBeGreaterThanOrEqual(Math.min(net.input, net.output) + 1);
+      expect(hiddenCount).toBeGreaterThanOrEqual(Math.max(net.input, net.output) * multiplier);
     });
     test('enforces minimum after removing hidden nodes', () => {
       // Arrange
       const net = new Network(4, 3);
-      // Remove all hidden nodes
       net.nodes = net.nodes.filter(n => n.type !== 'hidden');
       // Act
-      // Simulate enforcement (normally done by Neat)
-      const neat = new Neat(4, 3, () => 1);
-      (neat as any).ensureMinHiddenNodes(net);
+      const neat = new Neat(4, 3, () => 1, { hiddenLayerMultiplier: multiplier });
+      (neat as any).ensureMinHiddenNodes(net, multiplier);
       const hiddenCount = net.nodes.filter(n => n.type === 'hidden').length;
       // Assert
-      expect(hiddenCount).toBeGreaterThanOrEqual(Math.min(net.input, net.output) + 1);
+      expect(hiddenCount).toBeGreaterThanOrEqual(Math.max(net.input, net.output) * multiplier);
     });
   });
 
@@ -216,10 +215,11 @@ describe('Hidden Node Minimum Enforcement', () => {
         { nodes: Array(2).fill({ type: 'output' }) }
       ];
       // Act
-      const neat = new Neat(5, 2, () => 1);
-      (neat as any).ensureMinHiddenNodes(net);
+      const neat = new Neat(5, 2, () => 1, { hiddenLayerMultiplier: multiplier });
+      (neat as any).ensureMinHiddenNodes(net, multiplier);
       // Assert
-      expect(net.layers[1].nodes.length).toBeGreaterThanOrEqual(Math.min(net.input, net.output) + 1);
+      // Check the number of hidden nodes in the flat node list
+      expect(net.nodes.filter(n => n.type === 'hidden').length).toBeGreaterThanOrEqual(Math.max(net.input, net.output) * multiplier);
     });
     test('does not add nodes to input/output layers', () => {
       // Arrange
@@ -230,8 +230,8 @@ describe('Hidden Node Minimum Enforcement', () => {
         { nodes: Array(3).fill({ type: 'output' }) }
       ];
       // Act
-      const neat = new Neat(3, 3, () => 1);
-      (neat as any).ensureMinHiddenNodes(net);
+      const neat = new Neat(3, 3, () => 1, { hiddenLayerMultiplier: multiplier });
+      (neat as any).ensureMinHiddenNodes(net, multiplier);
       // Assert
       expect(net.layers[0].nodes.length).toBe(3);
       expect(net.layers[2].nodes.length).toBe(3);
@@ -243,13 +243,13 @@ describe('Hidden Node Minimum Enforcement', () => {
       // Arrange
       const net = new Network(2, 2);
       // Add minimum hidden nodes
-      while (net.nodes.filter(n => n.type === 'hidden').length < 3) {
+      while (net.nodes.filter(n => n.type === 'hidden').length < Math.max(net.input, net.output) * multiplier) {
         net.mutate(methods.mutation.ADD_NODE);
       }
       const prevCount = net.nodes.filter(n => n.type === 'hidden').length;
       // Act
-      const neat = new Neat(2, 2, () => 1);
-      (neat as any).ensureMinHiddenNodes(net);
+      const neat = new Neat(2, 2, () => 1, { hiddenLayerMultiplier: multiplier });
+      (neat as any).ensureMinHiddenNodes(net, multiplier);
       // Assert
       expect(net.nodes.filter(n => n.type === 'hidden').length).toBe(prevCount);
     });
@@ -259,13 +259,13 @@ describe('Hidden Node Minimum Enforcement', () => {
     test('does not exceed maxNodes when enforcing minimum', () => {
       // Arrange
       const net = new Network(2, 2);
-      const neat = new Neat(2, 2, () => 1, { maxNodes: net.input + net.output + 1 });
-      // Remove all hidden nodes
+      const maxNodes = net.input + net.output + 1;
+      const neat = new Neat(2, 2, () => 1, { maxNodes, hiddenLayerMultiplier: multiplier });
       net.nodes = net.nodes.filter(n => n.type !== 'hidden');
       // Act
-      (neat as any).ensureMinHiddenNodes(net);
+      (neat as any).ensureMinHiddenNodes(net, multiplier);
       // Assert
-      expect(net.nodes.length).toBeLessThanOrEqual(neat.options.maxNodes!);
+      expect(net.nodes.length).toBeLessThanOrEqual(maxNodes);
     });
   });
 });

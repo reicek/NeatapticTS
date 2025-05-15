@@ -58,7 +58,7 @@ describe('Dropout & Regularization', () => {
       });
     });
     describe('Scenario: dropout rate 1', () => {
-      test('all hidden nodes are masked', () => {
+      test('all but one hidden node are masked', () => {
         // Arrange
         const net = Architect.perceptron(2, 10, 1);
         const input = [1, 1];
@@ -67,8 +67,8 @@ describe('Dropout & Regularization', () => {
         net.activate(input, true);
         const hiddenActivations = net.nodes.filter((n: Node) => n.type === 'hidden').map((n: Node) => n.activation);
         const maskedCount = hiddenActivations.filter(a => a === 0).length;
-        // Assert
-        expect(maskedCount).toBe(hiddenActivations.length);
+        // SAFEGUARD: At least one hidden node is always active
+        expect(maskedCount).toBe(hiddenActivations.length - 1);
       });
     });
   });

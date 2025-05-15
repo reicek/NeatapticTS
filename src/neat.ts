@@ -20,6 +20,7 @@ type Options = {
   maxGates?: number;
   mutationSelection?: (genome: any) => any;
   allowRecurrent?: boolean; // Add allowRecurrent option
+  hiddenLayerMultiplier?: number; // Add hiddenLayerMultiplier option
 };
 
 export default class Neat {
@@ -85,29 +86,36 @@ export default class Neat {
 
   /**
    * Gets the minimum hidden layer size for a network based on input/output sizes.
-   * Uses the formula: max(input, output) x 3
-   * 
+   * Uses the formula: max(input, output) x multiplier (default random 2-5)
+   * Allows deterministic override for testing.
+   * @param multiplierOverride Optional fixed multiplier for deterministic tests
    * @returns The minimum number of hidden nodes required in each hidden layer
    */
-  getMinimumHiddenSize(): number {
-    /** Larger numbers will generate more complex hidden layers */
-    const hiddenLayerMultiplier = Math.floor(Math.random() * (5 - 2 + 1)) + 2;  // 2 to 5
+  getMinimumHiddenSize(multiplierOverride?: number): number {
+    let hiddenLayerMultiplier: number;
+    if (typeof multiplierOverride === 'number') {
+      hiddenLayerMultiplier = multiplierOverride;
+    } else if (typeof this.options.hiddenLayerMultiplier === 'number') {
+      hiddenLayerMultiplier = this.options.hiddenLayerMultiplier;
+    } else {
+      hiddenLayerMultiplier = Math.floor(Math.random() * (4 - 2 + 1)) + 2; // 2 to 4
+    }
     return Math.max(this.input, this.output) * hiddenLayerMultiplier;
   }
   
   /**
    * Checks if a network meets the minimum hidden node requirements.
    * Returns information about hidden layer sizes without modifying the network.
-   * 
    * @param network The network to check
+   * @param multiplierOverride Optional fixed multiplier for deterministic tests
    * @returns Object containing information about hidden layer compliance
    */
-  checkHiddenSizes(network: Network): { 
+  checkHiddenSizes(network: Network, multiplierOverride?: number): { 
     compliant: boolean; 
     minRequired: number;
     hiddenLayerSizes: number[];
   } {
-    const minHidden = this.getMinimumHiddenSize();
+    const minHidden = this.getMinimumHiddenSize(multiplierOverride);
     const result = {
       compliant: true,
       minRequired: minHidden,
@@ -148,21 +156,14 @@ export default class Neat {
   /**
    * Ensures that the network has at least min(input, output) + 1 hidden nodes in each hidden layer.
    * This prevents bottlenecks in networks where hidden layers might be too small.
-   * 
    * For layered networks: Ensures each hidden layer has at least the minimum size.
    * For non-layered networks: Reorganizes into proper layers with the minimum size.
-   * 
-   * Example structures with proper minimum hidden layers:
-   * - 3:4:5:6 (input:hidden:hidden:output with increasing sizes)
-   * - 6:5:4:3 (input:hidden:hidden:output with decreasing sizes)
-   * - 3:4:4:3 (input:hidden:hidden:output with consistent hidden layer sizes)
-   * 
-   * In all cases, hidden layers must have at least min(input,output)+1 nodes.
-   * 
    * @param network The network to check and modify
+   * @param multiplierOverride Optional fixed multiplier for deterministic tests
    */
-  private ensureMinHiddenNodes(network: Network) {
-    const minHidden = this.getMinimumHiddenSize();
+  private ensureMinHiddenNodes(network: Network, multiplierOverride?: number) {
+    const maxNodes = this.options.maxNodes || Infinity;
+    const minHidden = Math.min(this.getMinimumHiddenSize(multiplierOverride), maxNodes - network.nodes.filter(n => n.type !== 'hidden').length);
 
     // First, organize network into clean layers
     const inputNodes = network.nodes.filter(n => n.type === 'input');
@@ -201,8 +202,8 @@ export default class Neat {
     // Make sure we have at least minHidden hidden nodes
     const existingCount = hiddenNodes.length;
     
-    // If we don't have enough hidden nodes, create more
-    for (let i = existingCount; i < minHidden; i++) {
+    // If we don't have enough hidden nodes, create more (but do not exceed maxNodes)
+    for (let i = existingCount; i < minHidden && network.nodes.length < maxNodes; i++) {
       const NodeClass = require('./architecture/node').default;
       const newNode = new NodeClass('hidden');
       network.nodes.push(newNode);
@@ -337,6 +338,8 @@ export default class Neat {
         }
       }
     }
+    // Ensure network.connections is consistent with per-node connections after all changes
+    Network.rebuildConnections(network);
   }
 
   // Helper method to check if a connection exists between two nodes
@@ -586,11 +589,14 @@ export default class Neat {
       if (Math.random() <= (this.options.mutationRate || 0.7)) {
         for (let j = 0; j < (this.options.mutationAmount || 1); j++) {
           const mutationMethod = this.selectMutationMethod(genome);
-          if (mutationMethod) genome.mutate(mutationMethod);
-          // Slightly increase the chance of ADD_CONN mutation for more connectivity
-          if (Math.random() < 0.5) {
-            genome.mutate(methods.mutation.ADD_CONN);
+          if (mutationMethod) {
+            genome.mutate(mutationMethod);
+            // Slightly increase the chance of ADD_CONN mutation for more connectivity
+            if (Math.random() < 0.5) {
+              genome.mutate(methods.mutation.ADD_CONN);
+            }
           }
+          // If mutationMethod is null, do not call any mutation (including fallback)
         }
       }
     }

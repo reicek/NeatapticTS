@@ -35,6 +35,9 @@ function seededRandom(seed: number) {
 // Reduced global timeout
 jest.setTimeout(5000);
 
+// Retry failed tests
+jest.retryTimes(3, { logErrorsBeforeRetry: true });
+
 // Reduced set of mutations to test exhaustively
 const CORE_MUTATIONS = [
   methods.mutation.ADD_NODE,

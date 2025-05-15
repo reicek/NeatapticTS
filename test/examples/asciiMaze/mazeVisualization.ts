@@ -86,26 +86,6 @@ export function visualizeMaze(asciiMaze: string[], [agentX, agentY]: [number, nu
 }
 
 /** 
- * Prints a legend explaining the maze symbols and colors.
- * 
- * This function outputs a guide to help users understand the maze visualization,
- * explaining each symbol and color used in the display.
- * 
- * @param forceLog - Function used for logging output
- */
-export function displayMazeLegend(forceLog: (...args: any[]) => void): void {
-  forceLog(`\n${centerLine(' MAZE LEGEND ', 40)}`);
-  forceLog(`${colors.bgBlack}${colors.blueNeon}#${colors.reset} - Wall (obstacle the agent cannot pass through)`);
-  forceLog(`${colors.bgBlack}${colors.blueNeon}═ ║ ╔ ╗ ╚ ╝ ╠ ╣ ╦ ╩ ╬${colors.reset} - Box drawing characters (all treated as walls)`);
-  forceLog(`${colors.floorBg}${colors.gridLineText}.${colors.reset} - Open path`);
-  forceLog(`${colors.bgBlack}${colors.orangeNeon}S${colors.reset} - Start position`);
-  forceLog(`${colors.bgBlack}${colors.orangeNeon}E${colors.reset} - Exit/goal position`);
-  forceLog(`${colors.bgBlack}${colors.orangeNeon}A${colors.reset} - Current agent position`);
-  forceLog(`${colors.floorBg}${colors.orangeNeon}•${colors.reset} - Path taken by the agent`);
-  forceLog(`\nThe agent must find a path from S to E while avoiding walls.\n`);
-}
-
-/** 
  * Prints a summary of the agent's attempt, including success, steps, and efficiency.
  * 
  * This function provides performance metrics about the agent's solution attempt:
@@ -118,7 +98,7 @@ export function displayMazeLegend(forceLog: (...args: any[]) => void): void {
  * @param forceLog - Function used for logging output
  */
 export function printMazeStats(result: any, maze: string[], forceLog: (...args: any[]) => void): void {
-  const successColor = result.success ? colors.cyanNeon : colors.red;
+  const successColor = result.success ? colors.cyanNeon : colors.neonRed;
   forceLog(`\n${colors.bright}${colors.blueNeon}===== MAZE SOLUTION SUMMARY =====${colors.reset}`);
   forceLog(`${colors.bright}Success:${colors.reset} ${successColor}${result.success ? 'YES' : 'NO'}${colors.reset}`);
   forceLog(`${colors.bright}Steps taken:${colors.reset} ${result.steps}`);
@@ -213,7 +193,7 @@ export function printMazeStats(result: any, maze: string[], forceLog: (...args: 
     
     forceLog(`${colors.bright}Best progress toward exit:${colors.reset} ${bestProgress}%`);
     forceLog(`${colors.bright}Unique cells visited:${colors.reset} ${uniqueCells.size}`);
-    forceLog(`${colors.bright}${colors.red}Agent failed to reach the exit.${colors.reset}`);
+    forceLog(`${colors.bright}${colors.neonRed}Agent trying to reach the exit.${colors.reset}`);
   }
 }
 
@@ -252,7 +232,7 @@ export function displayProgressBar(progress: number, length: number = 60): strin
   // Define the characters for the progress bar
   const startChar = '|';
   const endChar = '|';
-  const fillChar = '=';
+  const fillChar = '═';
   const emptyChar = '-';
   const pointerChar = '>'; // Indicates the current progress point
   
@@ -309,10 +289,10 @@ export function formatElapsedTime(seconds: number): string {
  * 
  * @param text - The text to center
  * @param width - Total width of the line (default: 150)
- * @param padChar - Character to use for padding (default: '=')
+ * @param padChar - Character to use for padding (default: '═')
  * @returns The formatted centered line
  */
-export function centerLine(text: string, width = 150, padChar: string = '='): string {
+export function centerLine(text: string, width = 150, padChar: string = '═'): string {
   const pad = Math.max(0, width - text.length);
   const left = Math.floor(pad / 2);
   const right = pad - left;

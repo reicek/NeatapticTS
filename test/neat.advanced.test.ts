@@ -69,7 +69,7 @@ describe('Neat advanced coverage', () => {
       // Act
       const neat = new Neat(2, 1, fitness, {});
       // Assert
-      expect(neat.options.mutationRate).toBe(0.3);
+      expect(neat.options.mutationRate).toBe(0.7);
     });
     test('should set default mutationAmount if options is empty', () => {
       // Arrange

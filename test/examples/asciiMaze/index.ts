@@ -13,6 +13,7 @@ export * from './mazeVisualization';
 export * from './networkVisualization';
 export * from './dashboardManager';
 export * from './terminalUtility';
+export * from './interfaces';
 
 // Re-export specific items needed externally
 export { colors } from './colors';

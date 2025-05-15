@@ -4,6 +4,7 @@ import Multi from '../multithreading/multi';
 import * as methods from '../methods/methods';
 import mutation from '../methods/mutation'; // Import mutation methods
 import { config } from '../config'; // Import configuration settings
+import { exportToONNX } from './onnx'; // Import ONNX export function
 
 /**
  * Helper function to remove Istanbul.js code coverage instrumentation artifacts.
@@ -66,9 +67,7 @@ type OnnxGraph = {
   node: OnnxNode[];
 };
 
-type OnnxModel = {
-  graph: OnnxGraph;
-};
+
 
 // Adding custom properties for testing
 declare global {
@@ -464,6 +463,23 @@ export default class Network {
       output.push(...currentInput);
     } else {
       // Node-based activation (legacy, node-level dropout)
+      let hiddenNodes = this.nodes.filter(node => node.type === 'hidden');
+      let droppedCount = 0;
+      if (training && this.dropout > 0) {
+        // Randomly drop hidden nodes
+        for (const node of hiddenNodes) {
+          node.mask = Math.random() < this.dropout ? 0 : 1;
+          if (node.mask === 0) droppedCount++;
+        }
+        // SAFEGUARD: Ensure at least one hidden node is active
+        if (droppedCount === hiddenNodes.length && hiddenNodes.length > 0) {
+          // Randomly pick one hidden node to keep active
+          const idx = Math.floor(Math.random() * hiddenNodes.length);
+          hiddenNodes[idx].mask = 1;
+        }
+      } else {
+        for (const node of hiddenNodes) node.mask = 1;
+      }
       this.nodes.forEach((node, index) => {
         if (node.type === 'input') {
           node.activate(input[index]);
@@ -471,9 +487,6 @@ export default class Network {
           const activation = node.activate();
           output.push(activation);
         } else {
-          if (training && this.dropout > 0) {
-            node.mask = Math.random() < this.dropout ? 0 : 1;
-          }
           node.activate();
         }
       });
@@ -2448,167 +2461,72 @@ export default class Network {
    * Only standard feedforward architectures and standard activations are supported.
    * Gating, custom activations, and evolutionary features are ignored or replaced with Identity.
    *
-   * @returns {OnnxModel} ONNX model as a JSON object.
+   * @returns {import('./onnx').OnnxModel} ONNX model as a JSON object.
    */
-  toONNX(): OnnxModel {
-    // Assign indices to all nodes if not already set
-    this.nodes.forEach((node, idx) => { node.index = idx; });
+  toONNX() {
+    return exportToONNX(this);
+  }
 
-    // Throw if no connections (invalid MLP)
-    if (!this.connections || this.connections.length === 0) {
-      throw new Error('ONNX export currently only supports simple MLPs');
-    }
-    // Helper to map Neataptic activation to ONNX operator type
-    const mapActivationToOnnx = (squash: Function): string => {
-      const name = squash.name.toUpperCase();
-      if (name.includes('TANH')) return 'Tanh';
-      if (name.includes('LOGISTIC') || name.includes('SIGMOID')) return 'Sigmoid';
-      if (name.includes('RELU')) return 'Relu';
-      if (name.includes('IDENTITY')) return 'Identity';
-      if (config.warnings) {
-        console.warn(`Unsupported activation function ${squash.name} for ONNX export, defaulting to Identity.`);
-      }
-      return 'Identity';
-    };
-    // Build layers: input, hidden(s), output
-    const inputNodes = this.nodes.filter(n => n.type === 'input');
-    const outputNodes = this.nodes.filter(n => n.type === 'output');
-    const hiddenNodes = this.nodes.filter(n => n.type === 'hidden');
-    // Group hidden nodes by layer (assume topological order)
-    let layers: Node[][] = [];
-    if (hiddenNodes.length === 0) {
-      layers = [inputNodes, outputNodes];
-    } else {
-      // Try to infer layers: input -> hidden(s) -> output
-      let currentLayer: Node[] = [];
-      let prevLayer = inputNodes;
-      let remaining = [...hiddenNodes];
-      while (remaining.length > 0) {
-        currentLayer = remaining.filter(h => h.connections.in.every(conn => prevLayer.includes(conn.from)));
-        if (currentLayer.length === 0) {
-          throw new Error('ONNX export currently only supports simple MLPs');
-        }
-        layers.push(prevLayer);
-        prevLayer = currentLayer;
-        remaining = remaining.filter(h => !currentLayer.includes(h));
-      }
-      layers.push(prevLayer); // last hidden layer
-      layers.push(outputNodes);
-    }
-    // Now layers = [input, hidden1, ..., output]
-    // --- Stricter extra connection and full connectivity check ---
-    // Only allow connections from layer L to L+1 (no skips, no recurrent, no extra)
-    // Build a map from node index to layer index
-    const nodeToLayer = new Map<number, number>();
-    for (let l = 0; l < layers.length; l++) {
-      for (const node of layers[l]) {
-        if (typeof node.index !== 'number') {
-          throw new Error('ONNX export: node.index is not a number');
-        }
-        nodeToLayer.set(node.index, l);
-      }
-    }
-    // Build allowed connection sets for each layer pair
-    const allowedConnections = new Set<string>();
-    for (let l = 1; l < layers.length; l++) {
-      const prev = layers[l-1];
-      const curr = layers[l];
-      for (const from of prev) {
-        for (const to of curr) {
-          allowedConnections.add(`${from.index}->${to.index}`);
+  /**
+   * Creates a fully connected, strictly layered MLP network.
+   * @param {number} inputCount - Number of input nodes
+   * @param {number[]} hiddenCounts - Array of hidden layer sizes (e.g. [2,3] for two hidden layers)
+   * @param {number} outputCount - Number of output nodes
+   * @returns {Network} A new, fully connected, layered MLP
+   */
+  static createMLP(inputCount: number, hiddenCounts: number[], outputCount: number): Network {
+    // Create all nodes
+    const inputNodes = Array.from({ length: inputCount }, () => new Node('input'));
+    const hiddenLayers: Node[][] = hiddenCounts.map(count => Array.from({ length: count }, () => new Node('hidden')));
+    const outputNodes = Array.from({ length: outputCount }, () => new Node('output'));
+    // Flatten all nodes in topological order
+    const allNodes = [
+      ...inputNodes,
+      ...hiddenLayers.flat(),
+      ...outputNodes
+    ];
+    // Create network instance
+    const net = new Network(inputCount, outputCount);
+    net.nodes = allNodes;
+    // Connect layers
+    let prevLayer = inputNodes;
+    for (const layer of hiddenLayers) {
+      for (const to of layer) {
+        for (const from of prevLayer) {
+          from.connect(to);
         }
       }
+      prevLayer = layer;
     }
-    // Track used connections to catch duplicates
-    const usedConnections = new Set<string>();
-    for (const conn of this.connections) {
-      const fromLayer = nodeToLayer.get(conn.from.index ?? -1);
-      const toLayer = nodeToLayer.get(conn.to.index ?? -1);
-      if (typeof fromLayer !== 'number' || typeof toLayer !== 'number') {
-        throw new Error('ONNX export: node not found in any layer');
-      }
-      if (toLayer - fromLayer !== 1) {
-        throw new Error('ONNX export only supports strictly layered, fully connected MLPs (no extra or skip connections)');
-      }
-      const key = `${conn.from.index}->${conn.to.index}`;
-      if (!allowedConnections.has(key)) {
-        throw new Error('ONNX export only supports strictly layered, fully connected MLPs (no extra or skip connections)');
-      }
-      if (usedConnections.has(key)) {
-        throw new Error('ONNX export only supports strictly layered, fully connected MLPs (no duplicate connections)');
-      }
-      usedConnections.add(key);
-    }
-    // Check for missing connections
-    for (const key of allowedConnections) {
-      if (!usedConnections.has(key)) {
-        throw new Error('ONNX export only supports fully connected MLPs (missing connections between layers)');
+    // Connect last hidden (or input if no hidden) to output
+    for (const to of outputNodes) {
+      for (const from of prevLayer) {
+        from.connect(to);
       }
     }
-    // --- End stricter checks ---
-    // Check full connectivity and build ONNX tensors
-    const onnx: OnnxModel = {
-      graph: {
-        inputs: [
-          {
-            name: 'input',
-            type: { tensor_type: { elem_type: 'FLOAT', shape: { dim: [{ dim_value: this.input }] } } }
-          }
-        ],
-        outputs: [
-          {
-            name: 'output',
-            type: { tensor_type: { elem_type: 'FLOAT', shape: { dim: [{ dim_value: this.output }] } } }
-          }
-        ],
-        initializer: [],
-        node: []
-      }
-    };
-    let lastOutput = 'input';
-    for (let l = 1; l < layers.length; l++) {
-      const prev = layers[l-1];
-      const curr = layers[l];
-      // Build weight and bias tensors
-      const W = Array(curr.length).fill(0).map(() => Array(prev.length).fill(0));
-      const B = Array(curr.length).fill(0);
-      for (let j = 0; j < curr.length; j++) {
-        const node = curr[j];
-        B[j] = node.bias;
-        for (let i = 0; i < prev.length; i++) {
-          const conn = node.connections.in.find(conn => conn.from === prev[i]);
-          W[j][i] = conn ? conn.weight : 0;
-        }
-      }
-      onnx.graph.initializer.push({
-        name: `W${l-1}`,
-        data_type: 1,
-        dims: [curr.length, prev.length],
-        float_data: W.flat()
+    // Rebuild net.connections from all per-node connections
+    net.connections = net.nodes.flatMap(n => n.connections.out);
+    return net;
+  }
+
+  /**
+   * Rebuilds the network's connections array from all per-node connections.
+   * This ensures that the network.connections array is consistent with the actual
+   * outgoing connections of all nodes. Useful after manual wiring or node manipulation.
+   *
+   * @param {Network} net - The network instance to rebuild connections for.
+   * @returns {void}
+   *
+   * Example usage:
+   *   Network.rebuildConnections(net);
+   */
+  static rebuildConnections(net: Network): void {
+    const allConnections = new Set<Connection>();
+    net.nodes.forEach(node => {
+      node.connections.out.forEach(conn => {
+        allConnections.add(conn);
       });
-      onnx.graph.initializer.push({
-        name: `B${l-1}`,
-        data_type: 1,
-        dims: [curr.length],
-        float_data: B
-      });
-      onnx.graph.node.push({
-        op_type: 'MatMul',
-        input: [lastOutput, `W${l-1}`],
-        output: [`matmul_out_${l-1}`]
-      });
-      onnx.graph.node.push({
-        op_type: 'Add',
-        input: [`matmul_out_${l-1}`, `B${l-1}`],
-        output: [`add_out_${l-1}`]
-      });
-      onnx.graph.node.push({
-        op_type: mapActivationToOnnx(curr[0].squash),
-        input: [`add_out_${l-1}`],
-        output: [l === layers.length-1 ? 'output' : `hidden_out_${l-1}`]
-      });
-      lastOutput = l === layers.length-1 ? 'output' : `hidden_out_${l-1}`;
-    }
-    return onnx;
+    });
+    net.connections = Array.from(allConnections) as Connection[];
   }
 }

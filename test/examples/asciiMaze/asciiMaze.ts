@@ -12,7 +12,7 @@
 export * from './mazeUtils';
 export * from './mazeVision';
 export * from './mazeMovement';
-export * from './mazeEnhancements';
+export * from './interfaces';
 
 // Export utility and visualization functions
 export { colors } from './colors';
