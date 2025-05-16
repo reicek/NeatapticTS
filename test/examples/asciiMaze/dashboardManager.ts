@@ -6,7 +6,7 @@
  */
 
 import { Network } from '../../../src/neataptic';
-import { findPosition, manhattanDistance } from './mazeUtils';
+import { findPosition, bfsDistance, encodeMaze } from './mazeUtils';
 import { visualizeMaze, printMazeStats, displayProgressBar } from './mazeVisualization';
 import { visualizeNetworkSummary } from './networkVisualization';
 import { colors } from './colors';
@@ -162,7 +162,7 @@ export class DashboardManager implements IDashboardManager {
         // Print efficiency and other stats
         const startPos = findPosition(solved.maze, 'S');
         const exitPos = findPosition(solved.maze, 'E');        
-        const optimalLength = manhattanDistance(startPos, exitPos);
+        const optimalLength = bfsDistance(encodeMaze(solved.maze), startPos, exitPos);
         const pathLength = solved.result.path.length - 1;
         // Efficiency is the percentage of optimal length to actual (lower = more roundabout path)
         const efficiency = Math.min(100, Math.round((optimalLength / pathLength) * 100)).toFixed(1);

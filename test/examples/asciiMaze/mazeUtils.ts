@@ -71,24 +71,49 @@ export function findPosition(asciiMaze: string[], char: string): [number, number
 }
 
 /**
- * Calculates the Manhattan distance between two points in the maze.
- * 
- * Manhattan distance (or "taxicab geometry") is the sum of the absolute differences
- * of their Cartesian coordinates. In the context of a grid-based maze where
- * movement is restricted to horizontal and vertical directions, this represents
- * the minimum number of steps required to move from one point to another.
+ * Computes the shortest path distance between two points in the maze using BFS.
+ * Returns Infinity if no path exists.
  *
  * This metric is used for:
  * - Measuring proximity to the exit
  * - Evaluating path efficiency
  * - Calculating progress
  *
- * @param a - [x1, y1] first position
- * @param b - [x2, y2] second position
- * @returns Manhattan distance between the two points
+ * @param encodedMaze - 2D array representation of the maze
+ * @param start - [x, y] start position
+ * @param goal - [x, y] goal position
+ * @returns Shortest path length (number of steps), or Infinity if unreachable
  */
-export function manhattanDistance([x1, y1]: [number, number], [x2, y2]: [number, number]): number {
-  return Math.abs(x1 - x2) + Math.abs(y1 - y2);
+export function bfsDistance(encodedMaze: number[][], start: [number, number], goal: [number, number]): number {
+  const [gx, gy] = goal;
+  if (encodedMaze[gy][gx] === -1) return Infinity;
+  const queue: Array<[[number, number], number]> = [[start, 0]];
+  const visited = new Set<string>();
+  const key = ([x, y]: [number, number]) => `${x},${y}`;
+  visited.add(key(start));
+  const directions = [
+    [0, -1], // North
+    [1, 0],  // East
+    [0, 1],  // South
+    [-1, 0], // West
+  ];
+  while (queue.length > 0) {
+    const [[x, y], dist] = queue.shift()!;
+    if (x === gx && y === gy) return dist;
+    for (const [dx, dy] of directions) {
+      const nx = x + dx, ny = y + dy;
+      if (
+        nx >= 0 && ny >= 0 &&
+        ny < encodedMaze.length && nx < encodedMaze[0].length &&
+        encodedMaze[ny][nx] !== -1 &&
+        !visited.has(key([nx, ny]))
+      ) {
+        visited.add(key([nx, ny]));
+        queue.push([[nx, ny], dist + 1]);
+      }
+    }
+  }
+  return Infinity;
 }
 
 /**
@@ -100,25 +125,24 @@ export function manhattanDistance([x1, y1]: [number, number], [x2, y2]: [number,
  *   ((totalDistance - remainingDistance) / totalDistance) * 100
  * 
  * Where:
- * - totalDistance: Manhattan distance from start to exit
- * - remainingDistance: Manhattan distance from current position to exit
+ * - totalDistance: BFS distance from start to exit
+ * - remainingDistance: BFS distance from current position to exit
  * 
  * This creates a percentage scale where:
  * - 0% means the agent is at the start or has moved away from the exit
  * - 100% means the agent has reached the exit
  * - Values in between represent partial progress toward the goal
  *
+ * @param encodedMaze - 2D array representation of the maze
  * @param currentPos - [x, y] current agent position
  * @param startPos - [x, y] start position
  * @param exitPos - [x, y] exit position
  * @returns Progress percentage (0-100)
  */
-export function calculateProgress(currentPos: [number, number], startPos: [number, number], exitPos: [number, number]): number {
-  const totalDistance = manhattanDistance(startPos, exitPos);
+export function calculateProgress(encodedMaze: number[][], currentPos: [number, number], startPos: [number, number], exitPos: [number, number]): number {
+  const totalDistance = bfsDistance(encodedMaze, startPos, exitPos);
   if (totalDistance === 0) return 100; // Handle case where start and exit positions are the same
-  
-  const remainingDistance = manhattanDistance(currentPos, exitPos);
-  
+  const remainingDistance = bfsDistance(encodedMaze, currentPos, exitPos);
   // Clamp result between 0 and 100 for safety
   return Math.min(100, Math.max(0, Math.round(((totalDistance - remainingDistance) / totalDistance) * 100)));
 }

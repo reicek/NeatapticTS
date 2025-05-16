@@ -12,7 +12,7 @@
  */
 
 import { Network } from '../../../src/neataptic';
-import { manhattanDistance, calculateProgress } from './mazeUtils';
+import { bfsDistance, calculateProgress } from './mazeUtils';
 import { getEnhancedVision } from './mazeVision';
 
 /**
@@ -42,15 +42,11 @@ export function isValidMove(encodedMaze: number[][], [x, y]: [number, number]): 
  * @returns New position after movement, or original position if move was invalid
  */
 export function moveAgent(encodedMaze: number[][], position: [number, number], direction: number): [number, number] {
-  // Don't move if direction is -1
+  // Don't move if direction === -1
   if (direction === -1) {
     return [...position] as [number, number];
   }
-
-  // Initialize next position as current position
   const nextPosition: [number, number] = [...position] as [number, number];
-  
-  // Update next position based on direction
   switch (direction) {
     case 0: // North
       nextPosition[1] -= 1;
@@ -65,44 +61,41 @@ export function moveAgent(encodedMaze: number[][], position: [number, number], d
       nextPosition[0] -= 1;
       break;
   }
-  
-  // Check if the move is valid
   if (isValidMove(encodedMaze, nextPosition)) {
     return nextPosition;
   } else {
-    return position; // Return original position if the move is invalid
+    return position;
   }
 }
 
 /**
  * Selects the direction with the highest output value from the neural network.
- * 
- * This implements the "winner takes all" approach for action selection from 
- * neural network outputs, converting continuous values to discrete actions.
- * 
- * @param outputs - Array of output values from the neural network
- * @returns Index of the highest output value (0-3 for N/E/S/W)
+ * Applies softmax to interpret outputs as probabilities, then uses argmax.
+ *
+ * @param outputs - Array of output values from the neural network (length 4)
+ * @returns Index of the highest output value (0=N, 1=E, 2=S, 3=W), or -1 for no movement
  */
 export function selectDirection(outputs: number[]): number {
-  // Basic safety check - make sure we have valid outputs
-  if (!outputs || outputs.length === 0) {
-    return -1; // Return -1 to indicate "don't move" instead of random choice
+  if (!outputs || outputs.length !== 4) {
+    return -1;
   }
-
-  // Find the index with the maximum value
+  // Apply softmax for numerical stability
+  const max = Math.max(...outputs);
+  const exps = outputs.map(v => Math.exp(v - max));
+  const sum = exps.reduce((a, b) => a + b, 0);
+  const softmax = exps.map(e => e / sum);
+  // Find the index of the highest probability
   let maxVal = -Infinity, maxIdx = -1;
-  for (let i = 0; i < outputs.length; i++) {
-    if (!isNaN(outputs[i]) && outputs[i] > maxVal) {
-      maxVal = outputs[i];
+  for (let i = 0; i < softmax.length; i++) {
+    if (!isNaN(softmax[i]) && softmax[i] > maxVal) {
+      maxVal = softmax[i];
       maxIdx = i;
     }
   }
-  
-  // If all values were NaN or below activation threshold, don't move
+  // If all values are NaN or below a threshold, don't move
   if (maxVal === -Infinity || maxVal < 0.2) {
-    return -1; // Don't move if network doesn't have a strong preference
+    return -1;
   }
-  
   return maxIdx;
 }
 
@@ -143,7 +136,7 @@ export function simulateAgent(
   let steps = 0;
   let path = [position.slice() as [number, number]];
   let visitedPositions = new Set<string>();
-  let minDistanceToExit = manhattanDistance(position, exitPos);
+  let minDistanceToExit = bfsDistance(encodedMaze, position, exitPos);
   
   // Basic reward scale - simplified
   const rewardScale = 0.5;
@@ -181,12 +174,12 @@ export function simulateAgent(
       direction = selectDirection(outputs);
     } catch (error) {
       console.error("Error activating network:", error);
-      direction = Math.floor(Math.random() * 4); // Random fallback
+      direction = -1; // Fallback: don't move
     }
     
     // Save previous state
     const prevPosition = [...position] as [number, number];
-    const prevDistance = manhattanDistance(position, exitPos);
+    const prevDistance = bfsDistance(encodedMaze, position, exitPos);
     
     // --- ACTION: Move based on network decision
     position = moveAgent(encodedMaze, position, direction);
@@ -197,7 +190,7 @@ export function simulateAgent(
       path.push(position.slice() as [number, number]);
       
       // Calculate current distance to exit
-      const currentDistance = manhattanDistance(position, exitPos);
+      const currentDistance = bfsDistance(encodedMaze, position, exitPos);
       
       // Simple reward for getting closer to exit
       if (currentDistance < prevDistance) {
@@ -241,7 +234,7 @@ export function simulateAgent(
   }
   
   // --- FAILURE CASE
-  const progress = calculateProgress(path[path.length - 1], startPos, exitPos);
+  const progress = calculateProgress(encodedMaze, path[path.length - 1], startPos, exitPos);
   
   // Simple fitness for unsuccessful attempts - focus on progress toward exit
   const fitness = progress * 2.0 + 

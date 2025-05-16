@@ -10,7 +10,7 @@
  * current position and traversal history.
  */
 
-import { findPosition, manhattanDistance, calculateProgress, encodeMaze } from './mazeUtils';
+import { findPosition, bfsDistance, calculateProgress, encodeMaze } from './mazeUtils';
 import { colors } from './colors';
 
 /**
@@ -91,7 +91,7 @@ export function visualizeMaze(asciiMaze: string[], [agentX, agentY]: [number, nu
  * This function provides performance metrics about the agent's solution attempt:
  * - Whether it successfully reached the exit
  * - How many steps it took
- * - How efficient the path was compared to the optimal Manhattan distance
+ * - How efficient the path was compared to the optimal BFS distance
  * 
  * @param result - Object containing the simulation results (success, steps, path)
  * @param maze - Array of strings representing the maze layout
@@ -110,7 +110,7 @@ export function printMazeStats(result: any, maze: string[], forceLog: (...args: 
   
   if (result.success) {
     // Calculate path efficiency - optimal vs actual
-    const optimalLength = manhattanDistance(startPos, exitPos);
+    const optimalLength = bfsDistance(encodeMaze(maze), startPos, exitPos);
     const pathLength = result.path.length - 1;
     // Efficiency is the percentage of optimal length to actual (lower = more roundabout path)
     const efficiency = Math.min(100, Math.round((optimalLength / pathLength) * 100)).toFixed(1);
@@ -183,7 +183,7 @@ export function printMazeStats(result: any, maze: string[], forceLog: (...args: 
     forceLog(`${colors.bright}${colors.cyanNeon}Agent successfully navigated the maze!${colors.reset}`);
   } else {
     // Calculate progress made toward the exit
-    const bestProgress = calculateProgress(result.path[result.path.length - 1], startPos, exitPos);
+    const bestProgress = calculateProgress(encodeMaze(maze), result.path[result.path.length - 1], startPos, exitPos);
     
     // Calculate unique cells visited
     const uniqueCells = new Set<string>();

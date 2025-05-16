@@ -6,6 +6,7 @@ import {
   spiral,
   small,
   medium,
+  medium2,
   large,
   minotaur
 } from './mazes';
@@ -13,7 +14,7 @@ import { colors } from './colors';
 import {
   encodeMaze,
   findPosition,
-  manhattanDistance,
+  bfsDistance,
 } from './mazeUtils';
 import {
   simulateAgent
@@ -51,6 +52,15 @@ function countWalkableTiles(maze: string[]): number {
 }
 
 /**
+ * Educational Note:
+ * The first input neuron encodes the "best direction" as perceived by the agent's vision (0=N, 0.25=E, 0.5=S, 0.75=W).
+ * The network learns to correlate this input with the correct output neuron (N/E/S/W).
+ * The softmax+argmax output scheme ensures the network's outputs are interpreted as probabilities,
+ * making the action selection robust and allowing the agent to confidently choose the best direction.
+ * This synergy between input encoding and output selection helps the agent learn more efficiently and robustly.
+ */
+
+/**
  * Refines a winning neural network using backpropagation.
  *
  * This function takes a neural network that has successfully solved a maze (a "winner" from
@@ -74,15 +84,39 @@ function refineWinnerWithBackprop(winner?: Network) {
 
   const trainingSet = [
     // Input: [best direction encoding, N_open, E_open, S_open, W_open]
-    // Output: [N_action, E_action, S_action, W_action] (one-hot encoded)
-    { input: [0, 1, 0, 0, 0], output: [1, 0, 0, 0] },       // Ideal input for North, action is North
-    { input: [0.25, 0, 1, 0, 0], output: [0, 1, 0, 0] },    // Ideal input for East, action is East
-    { input: [0.5, 0, 0, 1, 0], output: [0, 0, 1, 0] },     // Ideal input for South, action is South
-    { input: [0.75, 0, 0, 0, 1], output: [0, 0, 0, 1] },    // Ideal input for West, action is West
+    // Output: [N, E, S, W] (one-hot)
+
+    // Ideal cases
+    { input: [0, 1, 0, 0, 0], output: [1, 0, 0, 0] },       // North
+    { input: [0.25, 0, 1, 0, 0], output: [0, 1, 0, 0] },    // East
+    { input: [0.5, 0, 0, 1, 0], output: [0, 0, 1, 0] },     // South
+    { input: [0.75, 0, 0, 0, 1], output: [0, 0, 0, 1] },    // West
+
+    // Ambiguous: two directions open, best direction encoding points to one
+    { input: [0, 1, 1, 0, 0], output: [1, 0, 0, 0] },       // N and E open, best is N
+    { input: [0.25, 1, 1, 0, 0], output: [0, 1, 0, 0] },    // N and E open, best is E
+    { input: [0.5, 0, 1, 1, 0], output: [0, 0, 1, 0] },     // E and S open, best is S
+    { input: [0.75, 0, 0, 1, 1], output: [0, 0, 0, 1] },    // S and W open, best is W
+
+    // All directions open, best direction encoding points to one
+    { input: [0, 1, 1, 1, 1], output: [1, 0, 0, 0] },       // All open, best is N
+    { input: [0.25, 1, 1, 1, 1], output: [0, 1, 0, 0] },    // All open, best is E
+    { input: [0.5, 1, 1, 1, 1], output: [0, 0, 1, 0] },     // All open, best is S
+    { input: [0.75, 1, 1, 1, 1], output: [0, 0, 0, 1] },    // All open, best is W
+
+    // Only one direction open, but best direction encoding is ambiguous
+    { input: [0.25, 1, 0, 0, 0], output: [1, 0, 0, 0] },    // Only N open, best encoding is E (should still pick N)
+    { input: [0.5, 0, 1, 0, 0], output: [0, 1, 0, 0] },     // Only E open, best encoding is S (should still pick E)
+
+    // No direction open (should not move)
+    { input: [0, 0, 0, 0, 0], output: [0, 0, 0, 0] },       // Surrounded by walls
+
+    // Three directions open, best direction encoding points to the closed one (should pick any open)
+    { input: [0, 0, 1, 1, 1], output: [0, 1, 0, 0] },       // N closed, best encoding is N (should pick E)
   ];
   const clone = winner.clone();
   
-  clone.train(trainingSet, { iterations: 10000, error: 0.0005, log: false });
+  clone.train(trainingSet, { iterations: 100, error: 0.01, log: false });
   
   return clone;
 }
@@ -109,7 +143,7 @@ function evaluateNetworkFitness(
   // Eager exploration: reward unique cells, scaled by proximity to exit
   let explorationBonus = 0;
   for (const [x, y] of result.path) {
-    const distToExit = manhattanDistance([x, y], exitPosition);
+    const distToExit = bfsDistance(encodedMaze, [x, y], exitPosition);
     // Cells closer to exit get a higher multiplier (max 1.5x, min 1x)
     const proximityMultiplier = 1.5 - 0.5 * (distToExit / (encodedMaze.length + encodedMaze[0].length));
     if (result.path.filter(([px, py]: [number, number]) => px === x && py === y).length === 1) {
@@ -119,7 +153,7 @@ function evaluateNetworkFitness(
   let fitness = result.fitness + explorationBonus;
   if (result.success) fitness += 5000;
   if (result.success) {
-    const optimal = manhattanDistance(startPosition, exitPosition);
+    const optimal = bfsDistance(encodedMaze, startPosition, exitPosition);
     const pathOverhead = ((result.path.length - 1) / optimal) * 100 - 100;
     fitness += Math.max(0, 8000 - pathOverhead * 80);
   }
@@ -185,8 +219,8 @@ describe('ASCII Maze Solver using Neuro-Evolution', () => {
     if (randomSeed !== undefined) {
       seedrandom(randomSeed.toString(), { global: true });
     }
-    const inputSize = 1 + 4; // 5 inputs (junction factor (1), open N/E/S/W (4))
-    const outputSize = 4;
+    const inputSize = 1 + 4; // 5 inputs (best direction encoding + open N/E/S/W)
+    const outputSize = 4; // 4 outputs for N/E/S/W (softmax/argmax)
     const encodedMaze = encodeMaze(maze);
     const startPosition = findPosition(maze, 'S');
     const exitPosition = findPosition(maze, 'E');
@@ -214,13 +248,15 @@ describe('ASCII Maze Solver using Neuro-Evolution', () => {
         methods.mutation.SUB_CONN,
         methods.mutation.MOD_WEIGHT,
         methods.mutation.MOD_BIAS,
+        methods.mutation.MOD_CONNECTION,
       ],
-      mutationRate: 0.5,
+      mutationRate: 0.1,
       mutationAmount: 0.1,
       elitism: Math.max(1, Math.floor(popSize * 0.1)),
       provenance: Math.max(1, Math.floor(popSize * 0.1)),
       equal: false,
       allowRecurrent,
+      minHidden: 24,
     });
 
     if (initialPopulation && initialPopulation.length > 0) {
@@ -306,7 +342,7 @@ describe('ASCII Maze Solver using Neuro-Evolution', () => {
       agentSimConfig: { maxSteps: countWalkableTiles(spiralSmall) + 5 },
       evolutionAlgorithmConfig: {
         allowRecurrent: true,
-        popSize: 1000,
+        popSize: 400,
         maxStagnantGenerations: 500,
         minProgressToPass: 99,
         initialBestNetwork: tinyRefined,
@@ -325,7 +361,7 @@ describe('ASCII Maze Solver using Neuro-Evolution', () => {
       agentSimConfig: { maxSteps: countWalkableTiles(spiral) + 5 },
       evolutionAlgorithmConfig: {
         allowRecurrent: true,
-        popSize: 1000,
+        popSize: 500,
         maxStagnantGenerations: 500,
         minProgressToPass: 99,
         initialBestNetwork: spiralSmallRefined,
@@ -344,7 +380,7 @@ describe('ASCII Maze Solver using Neuro-Evolution', () => {
       agentSimConfig: { maxSteps: countWalkableTiles(small) + 5 },
       evolutionAlgorithmConfig: {
         allowRecurrent: true,
-        popSize: 1000,
+        popSize: 500,
         maxStagnantGenerations: 2000,
         minProgressToPass: 99,
         initialBestNetwork: spiralRefined,
@@ -376,16 +412,35 @@ describe('ASCII Maze Solver using Neuro-Evolution', () => {
     });
     const mediumRefined = refineWinnerWithBackprop(mediumResult?.bestNetwork);
 
+    // Medium 2
+    const medium2Result = await runMazeEvolution({
+      mazeConfig: { maze: medium2 },
+      agentSimConfig: { maxSteps: 300 },
+      evolutionAlgorithmConfig: {
+        allowRecurrent: true,
+        popSize: 500,
+        maxStagnantGenerations: 2000,
+        minProgressToPass: 99,
+        initialBestNetwork: mediumRefined,
+      },
+      reportingConfig: {
+        dashboardManager: dashboardManagerInstance,
+        logEvery: 1,
+        label: 'medium2',
+      }
+    });
+    const medium2Refined = refineWinnerWithBackprop(medium2Result?.bestNetwork);
+
     // Large
     const largeResult = await runMazeEvolution({
       mazeConfig: { maze: large },
-      agentSimConfig: { maxSteps: 1000 },
+      agentSimConfig: { maxSteps: 800 },
       evolutionAlgorithmConfig: {
         allowRecurrent: true,
-        popSize: 100,
+        popSize: 500,
         maxStagnantGenerations: 2000,
         minProgressToPass: 95,
-        initialBestNetwork: mediumRefined,
+        initialBestNetwork: medium2Refined,
       },
       reportingConfig: {
         dashboardManager: dashboardManagerInstance,
@@ -398,10 +453,10 @@ describe('ASCII Maze Solver using Neuro-Evolution', () => {
     // Minotaur
     await runMazeEvolution({
       mazeConfig: { maze: minotaur },
-      agentSimConfig: { maxSteps: 1000 },
+      agentSimConfig: { maxSteps: 800 },
       evolutionAlgorithmConfig: {
         allowRecurrent: true,
-        popSize: 100,
+        popSize: 500,
         maxStagnantGenerations: 2000,
         minProgressToPass: 95,
         initialBestNetwork: largeRefined,
