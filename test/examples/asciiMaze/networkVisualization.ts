@@ -383,22 +383,6 @@ export function visualizeNetworkSummary(network: Network): string {
   }
 
   // --- Layer/connection summary footer ---
-  // Calculate connection counts between layers for the footer
-  const layerSizes = [INPUT_COUNT, ...layerDisplayCounts, OUTPUT_COUNT];
-  let connectionSummary = '';
-  for (let i = 0; i < layerSizes.length - 1; i++) {
-    const fromLabel = i === 0
-      ? `${colors.neonGreen}Inputs:${layerSizes[i]}${colors.reset}`
-      : `${colors.cyanNeon}Hidden${i}:${layerSizes[i]}${colors.reset}`;
-    const toLabel = i === layerSizes.length - 2
-      ? `${colors.orangeNeon}Outputs:${layerSizes[i+1]}${colors.reset}`
-      : `${colors.cyanNeon}Hidden${i+1}:${layerSizes[i+1]}${colors.reset}`;
-    const connCount = connectionCounts[i] || 0;
-    connectionSummary += `${fromLabel}   ${colors.blueNeon}[${connCount} Connections]${colors.reset} ──▶   `;
-    if (i === layerSizes.length - 2) {
-      connectionSummary += `${toLabel}`;
-    }
-  }
 
   // Calculate layout
   const numLayers = 2 + numHiddenLayers; // input + hidden + output
@@ -570,8 +554,6 @@ export function visualizeNetworkSummary(network: Network): string {
   return [
     header,
     ...rows,
-    '',
-    connectionSummary,
     '',
     `${colors.blueNeon}Arrows indicate feed-forward flow.${colors.reset}`,
     '',

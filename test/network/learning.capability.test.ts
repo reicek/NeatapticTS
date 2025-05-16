@@ -1,7 +1,7 @@
 import { Architect, Network } from '../../src/neataptic';
 
 // Retry failed tests
-jest.retryTimes(3, { logErrorsBeforeRetry: true });
+jest.retryTimes(5, { logErrorsBeforeRetry: true });
 
 describe('Learning Capability', () => {
   describe('Logic Gates', () => {

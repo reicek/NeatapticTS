@@ -82,23 +82,23 @@ declare global {
  * This class provides the core structure for building and managing neural networks.
  * It supports various architectures, including feedforward and recurrent networks (through self-connections and back-connections).
  * Key functionalities include activation (forward propagation), backpropagation (training), mutation (for neuro-evolution),
- * serialization, and the ability to generate a standalone, library-independent function representation of the network.
+ * serialization, ONNX import/export, and the ability to generate a standalone, library-independent function representation of the network.
  *
- * @param {number} input - The number of input nodes for the network.
- * @param {number} output - The number of output nodes for the network.
+ * ## Constructor
+ * ```ts
+ * new Network(input: number, output: number, options?: { minHidden?: number })
+ * ```
+ * - `input`: Number of input nodes (required)
+ * - `output`: Number of output nodes (required)
+ * - `options.minHidden`: (optional) If set, enforces a minimum number of hidden nodes. If omitted or 0, no minimum is enforced. This allows true 1-1 (input-output only) networks.
  *
- * @property {number} input - Number of input nodes.
- * @property {number} output - Number of output nodes.
- * @property {number} [score] - Optional fitness score used during evolutionary algorithms (e.g., NEAT).
- * @property {Node[]} nodes - Array containing all nodes (input, hidden, output) in the network.
- * @property {Connection[]} connections - Array containing all feedforward connections between nodes.
- * @property {Connection[]} gates - Array containing all connections that are gated by a node.
- * @property {Connection[]} selfconns - Array containing all self-connections (node connecting to itself).
- * @property {number} dropout - Dropout rate (probability of masking a node during training). Default is 0 (no dropout).
+ * ## ONNX Support
+ * - Use `exportToONNX(network)` to export a network to ONNX.
+ * - Use `importFromONNX(onnxModel)` to import a compatible ONNX model as a `Network` instance.
  *
  * @see {@link Node}
  * @see {@link Connection}
- * @see {@link https://medium.com/data-science/neuro-evolution-on-steroids-82bd14ddc2f6 Instinct: neuro-evolution on steroids by Thomas Wagenaar} - Provides context for some design choices, particularly around activation and crossover.
+ * @see {@link https://medium.com/data-science/neuro-evolution-on-steroids-82bd14ddc2f6 Instinct: neuro-evolution on steroids by Thomas Wagenaar}
  */
 export default class Network {
   input: number; // Number of input nodes
@@ -124,9 +124,11 @@ export default class Network {
    *
    * @param {number} input - The number of input nodes. Must be a positive integer.
    * @param {number} output - The number of output nodes. Must be a positive integer.
+   * @param {object} [options] - Optional configuration object.
+   * @param {number} [options.minHidden=0] - Minimum number of hidden nodes to enforce. If 0, no minimum is enforced. If set, the network will ensure at least this many hidden nodes exist after construction. (Legacy behavior was minHidden = Math.min(input, output) + 1)
    * @throws {Error} If `input` or `output` size is not provided or invalid.
    */
-  constructor(input: number, output: number) {
+  constructor(input: number, output: number, options?: { minHidden?: number }) {
     // Validate that input and output sizes are provided.
     if (typeof input === 'undefined' || typeof output === 'undefined') {
       throw new Error('No input or output size given');
@@ -135,60 +137,48 @@ export default class Network {
     // Initialize network properties
     this.input = input;
     this.output = output;
-    this.nodes = []; // Initialize empty array for nodes
-    this.connections = []; // Initialize empty array for connections
-    this.gates = []; // Initialize empty array for gated connections
-    this.selfconns = []; // Initialize empty array for self-connections
-    this.dropout = 0; // Default dropout rate is 0
+    this.nodes = [];
+    this.connections = [];
+    this.gates = [];
+    this.selfconns = [];
+    this.dropout = 0;
 
     // Create input and output nodes. Input nodes first, then output nodes.
     for (let i = 0; i < this.input + this.output; i++) {
-      const type = i < this.input ? 'input' : 'output'; // Determine node type based on index
-      this.nodes.push(new Node(type)); // Create and add the new node
+      const type = i < this.input ? 'input' : 'output';
+      this.nodes.push(new Node(type));
     }
 
     // Create initial connections: fully connect input layer to output layer.
-    // This provides a basic network structure to start with.
     for (let i = 0; i < this.input; i++) {
       for (let j = this.input; j < this.input + this.output; j++) {
-        // Initialize weights using a common strategy (He initialization variant) to prevent vanishing/exploding gradients.
         const weight = Math.random() * this.input * Math.sqrt(2 / this.input);
-        this.connect(this.nodes[i], this.nodes[j], weight); // Create the connection
+        this.connect(this.nodes[i], this.nodes[j], weight);
       }
     }
 
-    // Enforce minimum hidden nodes after construction
-    const minHidden = Math.min(this.input, this.output) + 1;
+    // Enforce minimum hidden nodes if requested
+    const minHidden = options?.minHidden ?? 0;
     let hiddenCount = this.nodes.filter(n => n.type === 'hidden').length;
-    
-    // Initialize hidden nodes if needed (using ADD_NODE mutation if connections exist)
-    while (hiddenCount < minHidden) {
-      // This will only work if there are connections to split
-      this.mutate(methods.mutation.ADD_NODE);
-      hiddenCount = this.nodes.filter(n => n.type === 'hidden').length;
-      
-      // If no connections exist or can't split any more, break to avoid infinite loop
-      if (hiddenCount === 0 && this.connections.length === 0) {
-        // Create hidden nodes manually and connect them
-        for (let i = 0; i < minHidden; i++) {
-          const hiddenNode = new Node('hidden');
-          this.nodes.push(hiddenNode);
-          
-          // Connect all inputs to this hidden node
-          for (let j = 0; j < this.input; j++) {
-            this.connect(this.nodes[j], hiddenNode);
+    if (minHidden > 0) {
+      while (hiddenCount < minHidden) {
+        this.mutate(methods.mutation.ADD_NODE);
+        hiddenCount = this.nodes.filter(n => n.type === 'hidden').length;
+        if (hiddenCount === 0 && this.connections.length === 0) {
+          for (let i = 0; i < minHidden; i++) {
+            const hiddenNode = new Node('hidden');
+            this.nodes.push(hiddenNode);
+            for (let j = 0; j < this.input; j++) {
+              this.connect(this.nodes[j], hiddenNode);
+            }
+            for (let j = this.input; j < this.input + this.output; j++) {
+              this.connect(hiddenNode, this.nodes[j]);
+            }
           }
-          
-          // Connect this hidden node to all outputs
-          for (let j = this.input; j < this.input + this.output; j++) {
-            this.connect(hiddenNode, this.nodes[j]);
-          }
+          break;
         }
-        break;
+        if (hiddenCount < minHidden && this.connections.length === 0) break;
       }
-      
-      // If we're still not meeting the minimum after several attempts, break to avoid infinite loop
-      if (hiddenCount < minHidden && this.connections.length === 0) break;
     }
   }
 

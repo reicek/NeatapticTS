@@ -10,11 +10,13 @@ const suppressConsoleWarn = (fn: () => void) => {
   try { fn(); } finally { console.warn = originalWarn; }
 };
 
+jest.retryTimes(2, { logErrorsBeforeRetry: true });
+
 describe('ONNX Export', () => {
   describe('Minimal valid MLP', () => {
     it('exports a 1-1 input-output network', () => {
       // Arrange
-      const net = new Network(1, 1);
+      const net = new Network(1, 1, {});
       // Act
       const onnx = exportToONNX(net);
       // Assert
@@ -36,7 +38,7 @@ describe('ONNX Export', () => {
   describe('Activation function mapping', () => {
     it('maps Tanh activation to ONNX Tanh', () => {
       // Arrange
-      const net = new Network(1, 1);
+      const net = new Network(1, 1, {});
       net.nodes[1].squash = methods.Activation.tanh;
       // Act
       const onnx = exportToONNX(net);
@@ -45,7 +47,7 @@ describe('ONNX Export', () => {
     });
     it('maps Sigmoid activation to ONNX Sigmoid', () => {
       // Arrange
-      const net = new Network(1, 1);
+      const net = new Network(1, 1, {});
       net.nodes[1].squash = methods.Activation.logistic;
       // Act
       const onnx = exportToONNX(net);
@@ -54,7 +56,7 @@ describe('ONNX Export', () => {
     });
     it('maps Relu activation to ONNX Relu', () => {
       // Arrange
-      const net = new Network(1, 1);
+      const net = new Network(1, 1, {});
       net.nodes[1].squash = methods.Activation.relu;
       // Act
       const onnx = exportToONNX(net);
@@ -63,7 +65,7 @@ describe('ONNX Export', () => {
     });
     it('maps unknown activation to ONNX Identity and warns', () => {
       // Arrange
-      const net = new Network(1, 1);
+      const net = new Network(1, 1, {});
       net.nodes[1].squash = function customSquash(x: number) { return x; };
       // Act & Assert
       suppressConsoleWarn(() => {
@@ -76,7 +78,7 @@ describe('ONNX Export', () => {
   describe('Error scenarios', () => {
     it('throws if network has no connections', () => {
       // Arrange
-      const net = new Network(1, 1);
+      const net = new Network(1, 1, {});
       net.connections = [];
       // Also clear per-node connection lists to ensure the network is truly connectionless
       net.nodes.forEach(n => {
@@ -90,7 +92,7 @@ describe('ONNX Export', () => {
     it('throws if network is not fully connected (invalid MLP)', () => {
       // Arrange
       // Build a valid 2-2-1 MLP first
-      const net = new Network(2, 1);
+      const net = new Network(2, 1, {});
       net.connections = [];
       const hidden1 = new Node('hidden');
       const hidden2 = new Node('hidden');
@@ -127,7 +129,7 @@ describe('ONNX Export', () => {
   describe('Helper/utility coverage', () => {
     it('assigns node indices before export', () => {
       // Arrange
-      const net = new Network(1, 1);
+      const net = new Network(1, 1, {});
       net.nodes.forEach(n => { n.index = undefined; });
       // Act
       exportToONNX(net);

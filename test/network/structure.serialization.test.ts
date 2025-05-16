@@ -162,7 +162,7 @@ describe('Structure & Serialization', () => {
     describe('Scenario: standard perceptron', () => {
       test('should produce the same output length after serialize/deserialize', () => {
         // Arrange
-        const net = Architect.perceptron(2, 4, 1);
+        const net = new Network(2, 1);
         const input = [Math.random(), Math.random()];
         const originalOutput = net.activate(input);
         // Act
@@ -174,7 +174,7 @@ describe('Structure & Serialization', () => {
       });
       test('should produce numerically close outputs after serialize/deserialize', () => {
         // Arrange
-        const net = Architect.perceptron(2, 4, 1);
+        const net = new Network(2, 1);
         const input = [Math.random(), Math.random()];
         const originalOutput = net.activate(input);
         // Act

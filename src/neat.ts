@@ -21,6 +21,7 @@ type Options = {
   mutationSelection?: (genome: any) => any;
   allowRecurrent?: boolean; // Add allowRecurrent option
   hiddenLayerMultiplier?: number; // Add hiddenLayerMultiplier option
+  minHidden?: number; // Add minHidden option for minimum hidden nodes in evolved networks
 };
 
 export default class Neat {
@@ -471,7 +472,7 @@ export default class Neat {
       if (this.options.network) {
         newPopulation.push(Network.fromJSON(this.options.network.toJSON()));
       } else {
-        newPopulation.push(new Network(this.input, this.output));
+        newPopulation.push(new Network(this.input, this.output, { minHidden: this.options.minHidden }));
       }
     }
 
@@ -513,7 +514,7 @@ export default class Neat {
     for (let i = 0; i < (this.options.popsize || 50); i++) {
       const copy = network
         ? Network.fromJSON(network.toJSON())
-        : new Network(this.input, this.output);
+        : new Network(this.input, this.output, { minHidden: this.options.minHidden });
       copy.score = undefined;
       this.ensureNoDeadEnds(copy); // Ensure no dead ends or blind I/O
       this.population.push(copy);

@@ -158,6 +158,29 @@ describe('Neat', () => {
       expect(results.error).toBeLessThan(0.3);
     });
   });
+
+  describe('minHidden option propagation', () => {
+    test('Neat passes minHidden to all new networks in population', () => {
+      const minHidden = 5;
+      const neat = new Neat(2, 1, () => 1, { popsize: 3, minHidden });
+      // All networks in population should have at least minHidden hidden nodes
+      for (const net of neat.population) {
+        const hiddenCount = net.nodes.filter(n => n.type === 'hidden').length;
+        expect(hiddenCount).toBeGreaterThanOrEqual(minHidden);
+      }
+    });
+    test('Neat provenance networks respect minHidden', () => {
+      const minHidden = 4;
+      const neat = new Neat(2, 1, () => 1, { popsize: 2, minHidden, provenance: 1 });
+      // Evolve to trigger provenance
+      return neat.evolve().then(() => {
+        for (const net of neat.population) {
+          const hiddenCount = net.nodes.filter(n => n.type === 'hidden').length;
+          expect(hiddenCount).toBeGreaterThanOrEqual(minHidden);
+        }
+      });
+    });
+  });
 });
 
 describe('Strict node removal', () => {
