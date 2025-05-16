@@ -316,6 +316,32 @@ describe('Mutation Methods', () => {
     });
   });
 
+  describe('ADD_LSTM_NODE', () => {
+    describe('Scenario: Existence', () => {
+      test('should exist', () => {
+        expect(mutation.ADD_LSTM_NODE).toBeDefined();
+      });
+    });
+    describe('Scenario: Name property', () => {
+      test('should have correct name property', () => {
+        expect(mutation.ADD_LSTM_NODE.name).toBe('ADD_LSTM_NODE');
+      });
+    });
+  });
+
+  describe('ADD_GRU_NODE', () => {
+    describe('Scenario: Existence', () => {
+      test('should exist', () => {
+        expect(mutation.ADD_GRU_NODE).toBeDefined();
+      });
+    });
+    describe('Scenario: Name property', () => {
+      test('should have correct name property', () => {
+        expect(mutation.ADD_GRU_NODE.name).toBe('ADD_GRU_NODE');
+      });
+    });
+  });
+
   describe('ALL', () => {
     describe('Scenario: Existence', () => {
       test('should exist and be an array', () => {
@@ -351,7 +377,7 @@ describe('Mutation Methods', () => {
       });
       test('should have correct length', () => {
         // Assert
-        expect(mutation.ALL.length).toBe(16);
+        expect(mutation.ALL.length).toBe(18);
       });
     });
   });

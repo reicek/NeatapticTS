@@ -973,6 +973,44 @@ export default class Network {
         node2.bias = tempBias;
         node2.squash = tempSquash;
         break;
+
+      case mutation.ADD_LSTM_NODE: {
+        if (this.connections.length === 0) break;
+        connection = this.connections[
+          Math.floor(Math.random() * this.connections.length)
+        ];
+        const gaterLSTM = connection.gater;
+        this.disconnect(connection.from, connection.to);
+        // Dynamically import Layer for compatibility
+        const Layer = require('./layer').default;
+        const lstmLayer = Layer.lstm(1);
+        // Insert all LSTM nodes into the network as hidden nodes
+        lstmLayer.nodes.forEach((n: import('./node').default) => { n.type = 'hidden'; this.nodes.push(n); });
+        // Connect from->LSTM input, LSTM output->to
+        this.connect(connection.from, lstmLayer.nodes[0]);
+        this.connect(lstmLayer.output.nodes[0], connection.to);
+        if (gaterLSTM) {
+          this.gate(gaterLSTM, this.connections[this.connections.length-1]);
+        }
+        break;
+      }
+      case mutation.ADD_GRU_NODE: {
+        if (this.connections.length === 0) break;
+        connection = this.connections[
+          Math.floor(Math.random() * this.connections.length)
+        ];
+        const gaterGRU = connection.gater;
+        this.disconnect(connection.from, connection.to);
+        const Layer = require('./layer').default;
+        const gruLayer = Layer.gru(1);
+        gruLayer.nodes.forEach((n: import('./node').default) => { n.type = 'hidden'; this.nodes.push(n); });
+        this.connect(connection.from, gruLayer.nodes[0]);
+        this.connect(gruLayer.output.nodes[0], connection.to);
+        if (gaterGRU) {
+          this.gate(gaterGRU, this.connections[this.connections.length-1]);
+        }
+        break;
+      }
     }
   }
 

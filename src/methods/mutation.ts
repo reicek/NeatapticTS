@@ -206,6 +206,22 @@ export const mutation: { [key: string]: any } = {
      */
     name: 'BATCH_NORM',
   },
+  ADD_LSTM_NODE: {
+    /**
+     * Adds a new LSTM node (memory cell with gates) to the network.
+     * This enables the evolution of memory-augmented architectures.
+     */
+    name: 'ADD_LSTM_NODE',
+    // Additional config can be added here if needed
+  },
+  ADD_GRU_NODE: {
+    /**
+     * Adds a new GRU node (gated recurrent unit) to the network.
+     * This enables the evolution of memory-augmented architectures.
+     */
+    name: 'ADD_GRU_NODE',
+    // Additional config can be added here if needed
+  },
   /** Placeholder for the list of all mutation methods. */
   ALL: [],
   /** Placeholder for the list of mutation methods suitable for feedforward networks. */
@@ -233,6 +249,8 @@ mutation.ALL = [
   mutation.SWAP_NODES,
   mutation.REINIT_WEIGHT,
   mutation.BATCH_NORM,
+  mutation.ADD_LSTM_NODE, // Added
+  mutation.ADD_GRU_NODE,  // Added
 ];
 
 /**

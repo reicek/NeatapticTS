@@ -41,7 +41,9 @@ jest.retryTimes(3, { logErrorsBeforeRetry: true });
 // Reduced set of mutations to test exhaustively
 const CORE_MUTATIONS = [
   methods.mutation.ADD_NODE,
-  methods.mutation.SUB_NODE
+  methods.mutation.SUB_NODE,
+  methods.mutation.ADD_LSTM_NODE, // Added
+  methods.mutation.ADD_GRU_NODE   // Added
 ];
 
 describe('Mutation Effects', () => {
