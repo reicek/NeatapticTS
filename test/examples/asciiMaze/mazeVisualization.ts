@@ -99,22 +99,24 @@ export function visualizeMaze(asciiMaze: string[], [agentX, agentY]: [number, nu
  */
 export function printMazeStats(result: any, maze: string[], forceLog: (...args: any[]) => void): void {
   const successColor = result.success ? colors.cyanNeon : colors.neonRed;
-  forceLog(`\n${colors.bright}${colors.blueNeon}===== MAZE SOLUTION SUMMARY =====${colors.reset}`);
-  forceLog(`${colors.bright}Success:${colors.reset} ${successColor}${result.success ? 'YES' : 'NO'}${colors.reset}`);
-  forceLog(`${colors.bright}Steps taken:${colors.reset} ${result.steps}`);
-  forceLog(`${colors.bright}Path length:${colors.reset} ${result.path.length}`);
+
+  forceLog(`${colors.blueCore}║${centerLine(' ', 148, ' ')}║${colors.reset}`);
+  forceLog(`${colors.blueCore}║${centerLine(' ', 148, ' ')}║${colors.reset}`);
+
+  forceLog(`${colors.blueCore}║ ${colors.neonSilver}Success:${colors.reset} ${successColor}${result.success ? 'YES' : 'NO'}${colors.reset}`);
+  forceLog(`${colors.blueCore}║ ${colors.neonSilver}Steps taken:${colors.reset} ${result.steps}`);
+  forceLog(`${colors.blueCore}║ ${colors.neonSilver}Path length:${colors.reset} ${result.path.length}`);
   
   // Find maze start and end positions
   const startPos = findPosition(maze, 'S');
   const exitPos = findPosition(maze, 'E');
+  const optimalLength = bfsDistance(encodeMaze(maze), startPos, exitPos);
+  forceLog(`${colors.blueCore}║ ${colors.bright}Optimal distance to exit:${colors.reset} ${optimalLength}`);
   
   if (result.success) {
     // Calculate path efficiency - optimal vs actual
-    const optimalLength = bfsDistance(encodeMaze(maze), startPos, exitPos);
     const pathLength = result.path.length - 1;
-    // Efficiency is the percentage of optimal length to actual (lower = more roundabout path)
     const efficiency = Math.min(100, Math.round((optimalLength / pathLength) * 100)).toFixed(1);
-    // Overhead is how much longer than optimal the path is (100% means twice as long as optimal)
     const overhead = ((pathLength / optimalLength) * 100 - 100).toFixed(1);
     
     // Calculate unique cells and revisits
@@ -174,13 +176,14 @@ export function printMazeStats(result: any, maze: string[], forceLog: (...args: 
     const coveragePercent = ((uniqueCells.size / walkableCells) * 100).toFixed(1);
     
     // Display stats
-    forceLog(`${colors.bright}Path efficiency:${colors.reset} ${optimalLength}/${pathLength} (${efficiency}%)`);
-    forceLog(`${colors.bright}Path overhead:${colors.reset} ${overhead}% longer than optimal`);
-    forceLog(`${colors.bright}Direction changes:${colors.reset} ${directionChanges}`);
-    forceLog(`${colors.bright}Unique cells visited:${colors.reset} ${uniqueCells.size} (${coveragePercent}% of maze)`);
-    forceLog(`${colors.bright}Cells revisited:${colors.reset} ${revisitedCells} times`);
-    forceLog(`${colors.bright}Decisions per cell:${colors.reset} ${(directionChanges / uniqueCells.size).toFixed(2)}`);
-    forceLog(`${colors.bright}${colors.cyanNeon}Agent successfully navigated the maze!${colors.reset}`);
+    forceLog(`${colors.blueCore}║ ${colors.neonSilver}Path efficiency:${colors.reset} ${optimalLength}/${pathLength} (${efficiency}%)`);
+    forceLog(`${colors.blueCore}║ ${colors.neonSilver}Optimal steps:${colors.reset} ${optimalLength} times`);
+    forceLog(`${colors.blueCore}║ ${colors.neonSilver}Path overhead:${colors.reset} ${overhead}% longer than optimal`);
+    forceLog(`${colors.blueCore}║ ${colors.neonSilver}Direction changes:${colors.reset} ${directionChanges}`);
+    forceLog(`${colors.blueCore}║ ${colors.neonSilver}Unique cells visited:${colors.reset} ${uniqueCells.size} (${coveragePercent}% of maze)`);
+    forceLog(`${colors.blueCore}║ ${colors.neonSilver}Cells revisited:${colors.reset} ${revisitedCells} times`);
+    forceLog(`${colors.blueCore}║ ${colors.neonSilver}Decisions per cell:${colors.reset} ${(directionChanges / uniqueCells.size).toFixed(2)}`);
+    forceLog(`${colors.blueCore}║ ${colors.blueCore}Agent successfully navigated the maze!${colors.reset}`);
   } else {
     // Calculate progress made toward the exit
     const bestProgress = calculateProgress(encodeMaze(maze), result.path[result.path.length - 1], startPos, exitPos);
@@ -191,28 +194,11 @@ export function printMazeStats(result: any, maze: string[], forceLog: (...args: 
       uniqueCells.add(`${x},${y}`);
     }
     
-    forceLog(`${colors.bright}Best progress toward exit:${colors.reset} ${bestProgress}%`);
-    forceLog(`${colors.bright}Unique cells visited:${colors.reset} ${uniqueCells.size}`);
-    forceLog(`${colors.bright}${colors.neonRed}Agent trying to reach the exit.${colors.reset}`);
+    forceLog(`${colors.blueCore}║ ${colors.neonSilver}Best progress toward exit:${colors.reset} ${bestProgress}%`);
+    forceLog(`${colors.blueCore}║ ${colors.neonSilver}Optimal steps:${colors.reset} ${optimalLength} times`);
+    forceLog(`${colors.blueCore}║ ${colors.neonSilver}Unique cells visited:${colors.reset} ${uniqueCells.size}`);
+    forceLog(`${colors.blueCore}║ ${colors.neonOrange}Agent trying to reach the exit.${colors.reset}`);
   }
-}
-
-/** 
- * Prints a summary of the evolution process (generations, time, best fitness).
- * 
- * This function displays statistics about the neuroevolution training process,
- * showing the computational resources used and the results achieved.
- * 
- * @param generations - Number of generations the evolution ran for
- * @param timeMs - Time taken in milliseconds
- * @param bestFitness - Highest fitness score achieved
- * @param forceLog - Function used for logging output
- */
-export function printEvolutionSummary(generations: number, timeMs: number, bestFitness: number, forceLog: (...args: any[]) => void): void {
-  forceLog(`\n${colors.bright}${colors.blueNeon}===== EVOLUTION SUMMARY =====${colors.reset}`);
-  forceLog(`${colors.bright}Total generations:${colors.reset} ${generations}`);
-  forceLog(`${colors.bright}Training time:${colors.reset} ${(timeMs/1000).toFixed(1)} seconds (${(timeMs/60000).toFixed(2)} minutes)`);
-  forceLog(`${colors.bright}Best fitness:${colors.reset} ${bestFitness.toFixed(2)}`);
 }
 
 /** 

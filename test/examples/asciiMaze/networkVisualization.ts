@@ -392,7 +392,7 @@ export function visualizeNetworkSummary(network: Network): string {
   
   // Create the header row
   let header = '';
-  header += pad(`${colors.neonGreen}Input Layer [${INPUT_COUNT}]${colors.reset}`, columnWidth, 'center');
+  header += `${colors.blueCore}║` + pad(`${colors.neonGreen}Input Layer [${INPUT_COUNT}]${colors.reset}`, columnWidth - 1, 'center');
   
   // First arrow with connection count on the left
   const firstConnCount = connectionCounts[0];
@@ -411,7 +411,7 @@ export function visualizeNetworkSummary(network: Network): string {
     }
   }
   
-  header += pad(`${colors.orangeNeon}Output Layer [${OUTPUT_COUNT}]${colors.reset}`, columnWidth, 'center');
+  header += pad(`${colors.orangeNeon}Output Layer [${OUTPUT_COUNT}]${colors.reset}`, columnWidth, 'center') + `${colors.blueCore}║${colors.reset}`;
 
   // Prepare display data for each layer
   // For input nodes: Always show all 9
@@ -440,7 +440,7 @@ export function visualizeNetworkSummary(network: Network): string {
     if (rowIdx < INPUT_COUNT) {
       const node = inputDisplayNodes[rowIdx];
       const value = getNodeValue(node);
-      row += pad(`${colors.neonGreen}●${colors.reset}${fmtColoredValue(value)}`, columnWidth, 'left');
+      row += pad(`${colors.blueCore}║   ${colors.neonGreen}●${colors.reset}${fmtColoredValue(value)}`, columnWidth, 'left');
     } else {
       row += pad('', columnWidth);
     }
@@ -491,7 +491,7 @@ export function visualizeNetworkSummary(network: Network): string {
           row += pad(`${colors.cyanNeon}■${colors.reset}${fmtColoredValue(value)}`, columnWidth, 'left');
         }
       } else {
-        row += pad('', columnWidth);
+        row += pad(' ', columnWidth);
       }
       
       // Arrow between columns - calculate proportional connection counts
@@ -542,7 +542,7 @@ export function visualizeNetworkSummary(network: Network): string {
     if (rowIdx < OUTPUT_COUNT) {
       const node = outputDisplayNodes[rowIdx];
       const value = getNodeValue(node);
-      row += pad(`${colors.orangeNeon}▲${colors.reset}${fmtColoredValue(value)}`, columnWidth, 'left');
+      row += pad(`${colors.orangeNeon}▲${colors.reset}${fmtColoredValue(value)}`, columnWidth, 'left') + `${colors.blueCore}║${colors.reset}`;
     } else {
       row += pad('', columnWidth);
     }
@@ -554,12 +554,13 @@ export function visualizeNetworkSummary(network: Network): string {
   return [
     header,
     ...rows,
-    '',
-    `${colors.blueNeon}Arrows indicate feed-forward flow.${colors.reset}`,
-    '',
-    `Legend:  ${colors.neonGreen}●${colors.reset}=Input                    ${colors.cyanNeon}■${colors.reset}=Hidden                    ${colors.orangeNeon}▲${colors.reset}=Output`,
-    `Groups:  ${colors.bgOrangeNeon}${colors.bright}v-high+${colors.reset}=Very high positive   ${colors.orangeNeon}high+${colors.reset}=High positive    ${colors.cyanNeon}mid+${colors.reset}=Medium positive    ${colors.neonGreen}low+${colors.reset}=Low positive                `,
-    `         ${colors.whiteNeon}zero±${colors.reset}=Near zero`,
-    `         ${colors.bgBlueCore}${colors.bright}v-high-${colors.reset}=Very high negative   ${colors.blueNeon}${colors.bright}high-${colors.reset}=High negative    ${colors.blueCore}mid-${colors.reset}=Medium negative    ${colors.blue}low-${colors.reset}=Low negative                             `
+    `${colors.blueCore}║       ${colors.reset}${colors.blueNeon}${pad(' ', 140)} ║${colors.reset}`,
+    `${colors.blueCore}║       ${colors.reset}${colors.blueNeon}${pad('Arrows indicate feed-forward flow.', 140)} ${colors.blueCore}║${colors.reset}`,
+    `${colors.blueCore}║       ${colors.reset}${colors.blueNeon}${pad(' ', 140)} ║${colors.reset}`,
+
+    `${colors.blueCore}║       ${colors.reset}${colors.blueNeon}${pad(`${colors.whiteNeon}Legend:  ${colors.neonGreen}●${colors.reset}=Input                    ${colors.cyanNeon}■${colors.reset}=Hidden                    ${colors.orangeNeon}▲${colors.reset}=Output`, 140)} ${colors.blueCore}║${colors.reset}`,
+    `${colors.blueCore}║       ${colors.reset}${colors.blueNeon}${pad(`${colors.whiteNeon}Groups:  ${colors.bgOrangeNeon}${colors.bright}v-high+${colors.reset}=Very high positive   ${colors.orangeNeon}high+${colors.reset}=High positive    ${colors.cyanNeon}mid+${colors.reset}=Medium positive    ${colors.neonGreen}low+${colors.reset}=Low positive`, 140)} ${colors.blueCore}║${colors.reset}`,
+    `${colors.blueCore}║       ${colors.reset}${colors.blueNeon}${pad(`${colors.whiteNeon}         zero±${colors.reset}=Near zero`, 140)} ${colors.blueCore}║${colors.reset}`,
+    `${colors.blueCore}║       ${colors.reset}${colors.blueNeon}${pad(`         ${colors.bgBlueCore}${colors.bright}v-high-${colors.reset}=Very high negative   ${colors.blueNeon}${colors.bright}high-${colors.reset}=High negative    ${colors.blueCore}mid-${colors.reset}=Medium negative    ${colors.blue}low-${colors.reset}=Low negative`, 140)} ${colors.blueCore}║${colors.reset}`,
   ].join('\n');
 }

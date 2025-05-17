@@ -94,7 +94,7 @@ export function selectDirection(outputs: number[]): number {
   }
   // If all values are NaN or below a threshold, don't move
   if (maxVal === -Infinity || maxVal < 0.2) {
-    return -1;
+    return Math.floor(Math.random() * 4);
   }
   return maxIdx;
 }

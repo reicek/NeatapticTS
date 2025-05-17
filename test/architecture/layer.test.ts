@@ -151,7 +151,7 @@ describe('Layer', () => {
         expect(nodeSpies).toHaveLength(size);
         nodeSpies.forEach((spy) => {
           expect(spy).toHaveBeenCalledTimes(1);
-          expect(spy).toHaveBeenCalledWith(rate, momentum, true);
+          expect(spy).toHaveBeenCalledWith(rate, momentum, true, 0);
         });
       });
 
@@ -179,6 +179,7 @@ describe('Layer', () => {
             rate,
             momentum,
             true,
+            0,
             targetValues[originalIndex]
           );
         });

@@ -229,6 +229,15 @@ export default class Node {
     this.activation = this.squash(this.state) * this.mask;
     // Calculate the derivative for backpropagation.
     this.derivative = this.squash(this.state, true);
+
+    // --- Patch: Update eligibility traces for feedforward connections ---
+    for (const connection of this.connections.in) {
+      connection.eligibility = connection.from.activation;
+    }
+    // Update gain for connections gated by this node.
+    for (const connection of this.connections.gated) {
+      connection.gain = this.activation;
+    }
     return this.activation;
   }
 
@@ -697,7 +706,7 @@ export default class Node {
     // Filter out the connection to the target node from the outgoing list.
     this.connections.out = this.connections.out.filter((conn) => {
       if (conn.to === target) {
-        // Remove the connection from the target node's incoming list.
+        // Remove the connection from the target's incoming list.
         target.connections.in = target.connections.in.filter(
           (inConn) => inConn !== conn // Filter by reference.
         );

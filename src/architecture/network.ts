@@ -1223,9 +1223,12 @@ export default class Network {
   ungate(connection: Connection): void {
     // Find the index of the connection in the `gates` list.
     const index = this.gates.indexOf(connection);
-    // Validate that the connection is indeed in the gates list.
+    // If not found, just return (defensive: should never throw in production)
     if (index === -1) {
-      throw new Error('Connection not found in the gates list for ungating.');
+      if (config.warnings) {
+        console.warn('Attempted to ungate a connection not in the gates list.');
+      }
+      return;
     }
 
     // Remove the connection from the `gates` list.
@@ -1550,7 +1553,7 @@ export default class Network {
     // Training finished. Clean up.
     if (clear) this.clear(); // Final clear if enabled.
 
-    // Reset dropout mask on hidden nodes to 1 (or effective value if dropout was > 0)
+    // Reset dropout mask on hidden nodes to 1 (or effective value if dropout was >  0)
     // and turn off dropout in the network object after training.
     if (this.dropout > 0) {
       this.nodes.forEach((node) => {
@@ -2133,7 +2136,7 @@ export default class Network {
    *
    * @param {Network} network1 - The first network (provides input layer and potentially hidden layers).
    * @param {Network} network2 - The second network (provides hidden/output layers).
-   * @returns {Network} A new Network instance representing the merged structure.
+   * @returns {Network} A new, fully connected, layered MLP
    * @throws {Error} If the output size of `network1` does not match the input size of `network2`. (This check might be misleading given the implementation).
    * @static
    * @deprecated The current implementation is likely incorrect for functional merging. Review needed.

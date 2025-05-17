@@ -234,4 +234,36 @@ describe('Mutation Effects', () => {
       expect(() => net2.activate([0.1, 0.2])).not.toThrow();
     });
   });
+
+  describe('Deep Path Evolution via Mutation', () => {
+    describe('Scenario: repeated ADD_NODE mutations', () => {
+      test('can create a deep path (multiple hidden nodes in a chain)', () => {
+        // Arrange
+        const net = new Network(2, 1);
+        net.connect(net.nodes[0], net.nodes[net.nodes.length - 1]);
+        // Act
+        for (let i = 0; i < 4; i++) {
+          net.mutate(methods.mutation.ADD_NODE);
+        }
+        // Find the longest path from input to output
+        const input = net.nodes.find(n => n.type === 'input');
+        const output = net.nodes.find(n => n.type === 'output');
+        function dfs(node: any, visited = new Set()): number {
+          if (node === output) return 0;
+          visited.add(node);
+          let maxDepth = 0;
+          for (const conn of node.connections.out) {
+            if (!visited.has(conn.to)) {
+              maxDepth = Math.max(maxDepth, 1 + dfs(conn.to, visited));
+            }
+          }
+          visited.delete(node);
+          return maxDepth;
+        }
+        const depth = dfs(input!);
+        // Assert
+        expect(depth).toBeGreaterThan(2);
+      });
+    });
+  });
 });

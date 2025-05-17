@@ -11,6 +11,7 @@ import { visualizeMaze, printMazeStats, displayProgressBar } from './mazeVisuali
 import { visualizeNetworkSummary } from './networkVisualization';
 import { colors } from './colors';
 import { IDashboardManager } from './interfaces';
+import { printNetworkStructure } from './evolutionEngine';
 
 // Import centerLine directly for better type resolution
 // We explicitly define a local version of the function with matching signature
@@ -108,39 +109,51 @@ export class DashboardManager implements IDashboardManager {
     this.clearFunction();
     
     // Print header - using local centerLine function
-      this.logFunction(`\n${colors.blueCore}${centerLine(`═`, 150, '═')}${colors.reset}`);
-      this.logFunction(`\n${colors.blueCore}${centerLine(`  ASCII maze  `, 150, '═')}${colors.reset}`);
+    this.logFunction(`${colors.blueCore}${centerLine('╦════════════╦', 150, '═')}${colors.reset}`);
+    this.logFunction(`${colors.blueCore}${centerLine('║ ASCII maze ║', 150, ' ')}${colors.reset}`);
+    this.logFunction(`${colors.blueCore}${centerLine('╩════════════╩', 150, '═')}${colors.reset}`);
     
     // Print current best for active maze
     if (this.currentBest) {
-      this.logFunction(`\n${colors.neonCoral}${centerLine(`EVOLVING (GEN ${this.currentBest.generation}) `, 150, '|')}${colors.reset}`);
+      this.logFunction(`${colors.blueCore}╔${centerLine('══════════════════════', 148, '═')}╗${colors.reset}`);
+      this.logFunction(`${colors.blueCore}║${centerLine(`EVOLVING (GEN ${this.currentBest.generation})`, 148, ' ')}║${colors.reset}`);
+      this.logFunction(`${colors.blueCore}╠${centerLine('══════════════════════', 148, '═')}╣${colors.reset}`);
+      this.logFunction(`${colors.blueCore}║${centerLine(' ', 148, ' ')}║${colors.reset}`);
       
       // Visualize the network
       this.logFunction(visualizeNetworkSummary(this.currentBest.network));
       
       // Show maze visualization with agent's path
       const lastPos = this.currentBest.result.path[this.currentBest.result.path.length - 1];
-      this.logFunction(`\n${colors.neonSilver}${centerLine(' CURRENT MAZE ', 150, '═')}${colors.reset}`);
+      
+      this.logFunction(`${colors.blueCore}║${centerLine(' ', 148, ' ')}║${colors.reset}`);
+      this.logFunction(`${colors.blueCore}║${centerLine(' ', 148, ' ')}║${colors.reset}\n`);
+
       const currentMazeVisualization = visualizeMaze(currentMaze, lastPos, this.currentBest.result.path);
       const currentMazeLines = Array.isArray(currentMazeVisualization) ? currentMazeVisualization : currentMazeVisualization.split('\n');
-      const centeredCurrentMaze = currentMazeLines.map(line => line).join('\n');
+      const centeredCurrentMaze = currentMazeLines.map(line => `${centerLine(line, 150, ' ')}`).join('\n');
+
       this.logFunction(centeredCurrentMaze);
       
+      this.logFunction(`\n${colors.blueCore}║${centerLine(' ', 148, ' ')}║${colors.reset}`);
+
       // Print stats
       printMazeStats(this.currentBest.result, currentMaze, this.logFunction);
       
+      this.logFunction(`${colors.blueCore}║${centerLine(' ', 148, ' ')}║${colors.reset}`);
       // Show progress bar
-      this.logFunction(`\n${colors.neonSilver}Progress to exit: ${displayProgressBar(this.currentBest.result.progress)}`);
+      this.logFunction(`${colors.blueCore}║ ${colors.neonSilver}Progress to exit: ${displayProgressBar(this.currentBest.result.progress)}`);
     }
     
     // Print footer
     if (this.solvedMazes.length > 0) {
-      this.logFunction(`${colors.neonSilver}Solved mazes: ${this.solvedMazes.length}${colors.reset}`);
+      this.logFunction(`${colors.blueCore}║ ${colors.neonSilver}Solved mazes: ${this.solvedMazes.length}${colors.reset}`);
     }
-    this.logFunction(`Current generation: ${this.currentBest?.generation || 0}`);
-    this.logFunction(`Best fitness so far: ${this.currentBest?.result.fitness.toFixed(2) || 0}`);
-    this.logFunction(`\n${colors.neonCoral}${centerLine('|', 150, '|')}${colors.reset}`);
-    this.logFunction(`\n${colors.blueCore}${centerLine(`_`, 150, '_')}${colors.reset}`);
+    this.logFunction(`${colors.blueCore}║ ${colors.neonSilver}Current generation: ${this.currentBest?.generation || 0}`);
+    this.logFunction(`${colors.blueCore}║ ${colors.neonSilver}Best fitness so far: ${this.currentBest?.result.fitness.toFixed(2) || 0}`);
+    
+    this.logFunction(`${colors.blueCore}║${centerLine(' ', 148, ' ')}║${colors.reset}`);
+    this.logFunction(`${colors.blueCore}╚${centerLine('═', 148, '═')}╝${colors.reset}`);
     
     // Print all solved mazes
     if (this.solvedMazes.length > 0) {
@@ -192,6 +205,7 @@ export class DashboardManager implements IDashboardManager {
         // Add network visualization for the winner network
         this.logFunction(`\n${colors.bright}${colors.whiteNeon}${centerLine(' WINNER NETWORK ', 150, '·')}${colors.reset}`);
         this.logFunction(visualizeNetworkSummary(solved.network));
+        if (this.currentBest?.network) printNetworkStructure(this.currentBest.network);
       }
     }
   }

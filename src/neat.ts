@@ -166,179 +166,44 @@ export default class Neat {
     const maxNodes = this.options.maxNodes || Infinity;
     const minHidden = Math.min(this.getMinimumHiddenSize(multiplierOverride), maxNodes - network.nodes.filter(n => n.type !== 'hidden').length);
 
-    // First, organize network into clean layers
     const inputNodes = network.nodes.filter(n => n.type === 'input');
     const outputNodes = network.nodes.filter(n => n.type === 'output');
     let hiddenNodes = network.nodes.filter(n => n.type === 'hidden');
 
-    // Validate that we have input and output nodes before proceeding
     if (inputNodes.length === 0 || outputNodes.length === 0) {
       console.warn('Network is missing input or output nodes. Cannot ensure minimum hidden nodes.');
       return;
     }
 
-    // For the ASCII maze and similar visualizations, we need to 
-    // reorganize the network into clean layers that will display properly
-    
-    // First, disconnect all hidden nodes from everything
-    for (const hiddenNode of hiddenNodes) {
-      // Store original connections to clean up later
-      const inConns = [...hiddenNode.connections.in];
-      const outConns = [...hiddenNode.connections.out];
-      
-      // Disconnect all existing connections
-      for (const conn of inConns) {
-        if (conn && conn.from) {
-          network.disconnect(conn.from, hiddenNode);
-        }
-      }
-      for (const conn of outConns) {
-        if (conn && conn.to) {
-          network.disconnect(hiddenNode, conn.to);
-        }
-      }
-    }
-    
-    // Create clean two-layer network (input → hidden → output)
-    // Make sure we have at least minHidden hidden nodes
+    // Only add hidden nodes if needed, do not disconnect/reconnect existing ones
     const existingCount = hiddenNodes.length;
-    
-    // If we don't have enough hidden nodes, create more (but do not exceed maxNodes)
     for (let i = existingCount; i < minHidden && network.nodes.length < maxNodes; i++) {
       const NodeClass = require('./architecture/node').default;
       const newNode = new NodeClass('hidden');
       network.nodes.push(newNode);
       hiddenNodes.push(newNode);
     }
-    
-    // Now, connect first minHidden nodes to form a clean layer
-    // First layer: Connect all inputs to each hidden node in layer 1
-    const layer1 = hiddenNodes.slice(0, minHidden);
-    for (const hiddenNode of layer1) {
-      for (const inputNode of inputNodes) {
-        if (inputNode && hiddenNode) {
-          try {
-            network.connect(inputNode, hiddenNode);
-          } catch (e: any) {
-            console.warn('Failed to connect input to hidden node:', e.message);
-          }
-        }
-      }
-    }
-    
-    // If we have more hidden nodes and they'd form a separate layer (min size)
-    if (hiddenNodes.length >= minHidden * 2) {
-      // Second hidden layer: Connect all layer1 nodes to each hidden node in layer 2
-      const layer2 = hiddenNodes.slice(minHidden, minHidden * 2);
-      for (const layer2Node of layer2) {
-        for (const layer1Node of layer1) {
-          if (layer1Node && layer2Node) {
-            try {
-              network.connect(layer1Node, layer2Node);
-            } catch (e: any) {
-              console.warn('Failed to connect layer1 to layer2 node:', e.message);
-            }
-          }
-        }
-      }
-      
-      // Connect layer 2 to outputs
-      for (const layer2Node of layer2) {
-        for (const outputNode of outputNodes) {
-          if (layer2Node && outputNode) {
-            try {
-              network.connect(layer2Node, outputNode);
-            } catch (e: any) {
-              console.warn('Failed to connect layer2 to output node:', e.message);
-            }
-          }
-        }
-      }
-      
-      // Any remaining hidden nodes just connect directly input→hidden→output
-      const remainingNodes = hiddenNodes.slice(minHidden * 2);
-      for (const hiddenNode of remainingNodes) {
-        // Ensure at least one connection from input layer
-        let hasInputConnection = false;
-        for (const inputNode of inputNodes) {
-          if (this.hasConnectionBetween(network, inputNode, hiddenNode)) {
-            hasInputConnection = true;
-            break;
-          }
-        }
-        
-        if (!hasInputConnection && inputNodes.length > 0) {
-          try {
-            // Connect to a random input node
-            const randomInput = inputNodes[Math.floor(Math.random() * inputNodes.length)];
-            network.connect(randomInput, hiddenNode);
-          } catch (e: any) {
-            console.warn('Failed to connect input to remaining hidden node:', e.message);
-          }
-        }
-        
-        // Ensure at least one connection to output layer
-        let hasOutputConnection = false;
-        for (const outputNode of outputNodes) {
-          if (this.hasConnectionBetween(network, hiddenNode, outputNode)) {
-            hasOutputConnection = true;
-            break;
-          }
-        }
-        
-        if (!hasOutputConnection && outputNodes.length > 0) {
-          try {
-            // Connect to a random output node
-            const randomOutput = outputNodes[Math.floor(Math.random() * outputNodes.length)];
-            network.connect(hiddenNode, randomOutput);
-          } catch (e: any) {
-            console.warn('Failed to connect remaining hidden node to output:', e.message);
-          }
-        }
-      }
-    } else {
-      // Just one hidden layer - connect to outputs
-      for (const hiddenNode of layer1) {
-        for (const outputNode of outputNodes) {
-          if (hiddenNode && outputNode) {
-            try {
-              network.connect(hiddenNode, outputNode);
-            } catch (e: any) {
-              console.warn('Failed to connect hidden to output node:', e.message);
-            }
-          }
-        }
-      }
-    }
-    
-    // Clean up any disconnected nodes
-    // Note: This is a safe check, not strictly necessary with our implementation
-    hiddenNodes = network.nodes.filter(n => n.type === 'hidden');
+
+    // Ensure each hidden node has at least one input and one output connection
     for (const hiddenNode of hiddenNodes) {
-      if (hiddenNode.connections.in.length === 0 && hiddenNode.connections.out.length === 0) {
-        // Connect to a random input and output
-        if (inputNodes.length > 0) {
-          const randomInput = inputNodes[Math.floor(Math.random() * inputNodes.length)];
-          if (randomInput && hiddenNode) {
-            try {
-              network.connect(randomInput, hiddenNode);
-            } catch (e: any) {
-              console.warn('Failed to connect random input to isolated node:', e.message);
-            }
-          }
+      // At least one input connection (from input or another hidden)
+      if (hiddenNode.connections.in.length === 0) {
+        const candidates = inputNodes.concat(hiddenNodes.filter(n => n !== hiddenNode));
+        if (candidates.length > 0) {
+          const source = candidates[Math.floor(Math.random() * candidates.length)];
+          try { network.connect(source, hiddenNode); } catch {}
         }
-        if (outputNodes.length > 0) {
-          const randomOutput = outputNodes[Math.floor(Math.random() * outputNodes.length)];
-          if (randomOutput && hiddenNode) {
-            try {
-              network.connect(hiddenNode, randomOutput);
-            } catch (e: any) {
-              console.warn('Failed to connect isolated node to random output:', e.message);
-            }
-          }
+      }
+      // At least one output connection (to output or another hidden)
+      if (hiddenNode.connections.out.length === 0) {
+        const candidates = outputNodes.concat(hiddenNodes.filter(n => n !== hiddenNode));
+        if (candidates.length > 0) {
+          const target = candidates[Math.floor(Math.random() * candidates.length)];
+          try { network.connect(hiddenNode, target); } catch {}
         }
       }
     }
+
     // Ensure network.connections is consistent with per-node connections after all changes
     Network.rebuildConnections(network);
   }

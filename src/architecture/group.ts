@@ -89,9 +89,9 @@ export default class Group {
 
     for (let i = this.nodes.length - 1; i >= 0; i--) {
       if (target === undefined) {
-        this.nodes[i].propagate(rate, momentum, true);
+        this.nodes[i].propagate(rate, momentum, true, 0);
       } else {
-        this.nodes[i].propagate(rate, momentum, true, target[i]);
+        this.nodes[i].propagate(rate, momentum, true, 0, target[i]);
       }
     }
   }

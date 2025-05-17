@@ -125,11 +125,9 @@ export default class Layer {
     // Propagate error backward through nodes (iterate in reverse order)
     for (let i = this.nodes.length - 1; i >= 0; i--) {
       if (target === undefined) {
-        // Propagate error based on subsequent layers' errors
-        this.nodes[i].propagate(rate, momentum, true); // Pass `true` for update
+        this.nodes[i].propagate(rate, momentum, true, 0);
       } else {
-        // Propagate error using target values (typically for the output layer)
-        this.nodes[i].propagate(rate, momentum, true, target[i]); // Pass `true` for update
+        this.nodes[i].propagate(rate, momentum, true, 0, target[i]);
       }
     }
   }
