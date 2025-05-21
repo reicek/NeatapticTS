@@ -1,4 +1,5 @@
-import { Network, methods } from '../../../src/neataptic';
+import { methods } from '../../../src/neataptic';
+import Network from '../../../src/architecture/network'; // Correct import for Network
 import {
   tiny,
   spiralSmall,
@@ -13,22 +14,21 @@ import { colors } from './colors';
 import {
   DashboardManager
 } from './dashboardManager';
-import {
-  createTerminalClearer
-} from './terminalUtility';
+import { TerminalUtility } from './terminalUtility';
 import {
   IDashboardManager,
 } from './interfaces';
-import { runMazeEvolution } from './evolutionEngine';
+import { EvolutionEngine } from './evolutionEngine';
 
 // Force console output for this test by writing directly to stdout/stderr
 const forceLog = (...args: any[]): void => {
+  // Write log messages directly to stdout to ensure visibility during test runs
   const message = args.join(' ') + '\n';
   process.stdout.write(message);
 };
 
-// Create the dashboard manager
-const dashboardManagerInstance: IDashboardManager = new DashboardManager(createTerminalClearer(), forceLog);
+// Create the dashboard manager for visualizing and logging progress
+const dashboardManagerInstance: IDashboardManager = new DashboardManager(TerminalUtility.createTerminalClearer(), forceLog);
 
 /**
  * Educational Note:
@@ -61,14 +61,16 @@ function refineWinnerWithBackprop(winner?: Network) {
     throw new Error('No winning network provided for refinement.');
   }
 
-  // Ensure all nodes have a valid squash function before training
+  // Ensure all nodes have a valid squash (activation) function before training.
+  // This is necessary for proper backpropagation.
   winner.nodes.forEach(n => {
     if (typeof n.squash !== 'function') {
       n.squash = methods.Activation.LOGISTIC;
     }
   });
 
-  // Expanded training set for better learning
+  // Expanded training set for better learning.
+  // Each entry represents a possible sensory input and the ideal output action.
   const trainingSet = [
     // Idealized inputs and outputs for the agent's actions
     { input: [0, 1, 0, 0, 0], output: [1, 0, 0, 0] },       // North
@@ -76,7 +78,7 @@ function refineWinnerWithBackprop(winner?: Network) {
     { input: [0.5, 0, 0, 1, 0], output: [0, 0, 1, 0] },     // South
     { input: [0.75, 0, 0, 0, 1], output: [0, 0, 0, 1] },    // West
 
-    // Ambiguous cases where multiple directions are open
+    // Ambiguous cases where multiple directions are open; the best direction is chosen.
     { input: [0, 1, 1, 0, 0], output: [1, 0, 0, 0] },       // N and E open, best is N
     { input: [0, 1, 0, 1, 0], output: [1, 0, 0, 0] },
     { input: [0, 1, 0, 0, 1], output: [1, 0, 0, 0] },
@@ -111,12 +113,12 @@ function refineWinnerWithBackprop(winner?: Network) {
     { input: [0.75, 1, 1, 1, 1], output: [0, 0, 0, 1] },    // West
   ];
 
-  // Use to analyze the winner before training
+  // Uncomment to analyze the winner before training (for debugging)
   // analizeWinner(winner.clone(), trainingSet);
 
-  //* Train the winner with backpropagation (champion gets the ultimate training)
+  // Train the winner with backpropagation (champion gets the ultimate training)
   winner.train(trainingSet, {
-    iterations: 20000,
+    iterations: 30000,
     error: 0.001,
     rate: 0.0001,
     momentum: 0.2,
@@ -127,7 +129,13 @@ function refineWinnerWithBackprop(winner?: Network) {
   return winner.clone();
 }
 
-/** For debugging the winner */
+/**
+ * Analyzes the weights and outputs of a network before and after training.
+ * Used for debugging and understanding how the network changes during training.
+ *
+ * @param winner - The network to analyze.
+ * @param trainingSet - The training data to use for supervised learning.
+ */
 function analizeWinner(winner: Network, trainingSet: {input: number[], output: number[]}[]) {
   // Print weights before training
   console.log('Winner weights before training:', winner.connections.map(c => c.weight));
@@ -142,6 +150,7 @@ function analizeWinner(winner: Network, trainingSet: {input: number[], output: n
     schedule: {
       iterations: 2000,
       function: ({ iteration }: { iteration: number }) => {
+        // Log connection weights and eligibility traces for each node
         winner.nodes.forEach((n, idx) => {
           n.connections.in.forEach((c, cidx) => {
             console.log(`Iter ${iteration}: Node[${idx}] InConn[${cidx}] from Node ${c.from.index} weight=${c.weight} elig=${c.eligibility} tDeltaW=${c.totalDeltaWeight}`);
@@ -156,7 +165,7 @@ function analizeWinner(winner: Network, trainingSet: {input: number[], output: n
 
   // Print weights after training
   console.log('Winner weights after training:', winner.connections.map(c => c.weight));
-  // Print test outputs
+  // Print test outputs for key input patterns
   console.log('Test output for [0,1,0,0,0]:', winner.activate([0,1,0,0,0]));
   console.log('Test output for [0.25,0,1,0,0]:', winner.activate([0.25,0,1,0,0]));
   console.log('Test output for [0.5,0,0,1,0]:', winner.activate([0.5,0,0,1,0]));
@@ -168,27 +177,28 @@ function analizeWinner(winner: Network, trainingSet: {input: number[], output: n
 describe('ASCII Maze Solver using Neuro-Evolution', () => {
   beforeAll(() => {
     // Print instructions for running with visible logs
+    // Override console.log to ensure output is visible in test environments
     console.log = jest.fn((...args) => process.stdout.write(args.join(' ') + '\n'));
     console.log('\n');
-    console.log('=================================================================');
-    console.log('To see all ASCII maze visualization and logs, run:');
-    console.log(`${colors.bright}${colors.cyan}npm run test:e2e:logs${colors.reset}`);
-    console.log('=================================================================');
+    console.log('═══════════════════════════════════════════════════');
+    console.log(' To see all ASCII maze visualization and logs, run');
+    console.log(`  ${colors.cyan}npm run test:e2e:logs${colors.reset}`);
+    console.log('═══════════════════════════════════════════════════');
     console.log('\n');
   });
 
   // --- TESTS ---
-  test('Evolve agent: curriculum learning from small to medium to large to minotaur maze', async () => {
-    // Train on tiny
-    const tinyResult = await runMazeEvolution({
+  test('Evolve agent: curriculum learning in multiple steps from a tiny mazy to the minotaur maze', async () => {
+    // Train on tiny maze
+    const tinyResult = await EvolutionEngine.runMazeEvolution({
       mazeConfig: { maze: tiny },
       agentSimConfig: { maxSteps: 100 },
       evolutionAlgorithmConfig: {
         allowRecurrent: true,
-        popSize: 50, // Lamarckian evolution allows for smaller populations
+        popSize: 10, // Lamarckian evolution allows for smaller populations
         maxStagnantGenerations: 100,
         minProgressToPass: 99,
-       // initialBestNetwork: Architect.perceptron(5, 10, 10, 10, 10, 4),
+        // initialBestNetwork: Architect.perceptron(5, 10, 10, 10, 10, 4),
       },
       reportingConfig: {
         dashboardManager: dashboardManagerInstance,
@@ -197,15 +207,16 @@ describe('ASCII Maze Solver using Neuro-Evolution', () => {
       }
     });
     
-    const tinyRefined = refineWinnerWithBackprop(tinyResult?.bestNetwork);
+    // Refine the best network from tiny maze with supervised backpropagation
+    const tinyRefined = refineWinnerWithBackprop(tinyResult?.bestNetwork as Network);
 
-    // spiralSmall
-    const spiralSmallResult = await runMazeEvolution({
+    // spiralSmall maze
+    const spiralSmallResult = await EvolutionEngine.runMazeEvolution({
       mazeConfig: { maze: spiralSmall },
       agentSimConfig: { maxSteps: 100 },
       evolutionAlgorithmConfig: {
         allowRecurrent: true,
-        popSize: 50, // Lamarckian evolution allows for smaller populations
+        popSize: 10,
         maxStagnantGenerations: 100,
         minProgressToPass: 99,
         initialBestNetwork: tinyRefined,
@@ -216,15 +227,15 @@ describe('ASCII Maze Solver using Neuro-Evolution', () => {
         label: 'spiralSmall',
       }
     });
-    const spiralSmallRefined = refineWinnerWithBackprop(spiralSmallResult?.bestNetwork);
+    const spiralSmallRefined = refineWinnerWithBackprop(spiralSmallResult?.bestNetwork as Network);
 
-    // Spiral
-    const spiralResult = await runMazeEvolution({
+    // Spiral maze
+    const spiralResult = await EvolutionEngine.runMazeEvolution({
       mazeConfig: { maze: spiral },
       agentSimConfig: { maxSteps: 150 },
       evolutionAlgorithmConfig: {
         allowRecurrent: true,
-        popSize: 50, // Lamarckian evolution allows for smaller populations
+        popSize: 10,
         maxStagnantGenerations: 100,
         minProgressToPass: 99,
         initialBestNetwork: spiralSmallRefined,
@@ -235,15 +246,15 @@ describe('ASCII Maze Solver using Neuro-Evolution', () => {
         label: 'spiral',
       }
     });
-    const spiralRefined = refineWinnerWithBackprop(spiralResult.bestNetwork);
+    const spiralRefined = refineWinnerWithBackprop(spiralResult.bestNetwork as Network);
 
-    // Train on small
-    const smallResult = await runMazeEvolution({
+    // Train on small maze
+    const smallResult = await EvolutionEngine.runMazeEvolution({
       mazeConfig: { maze: small },
       agentSimConfig: { maxSteps: 50 },
       evolutionAlgorithmConfig: {
         allowRecurrent: true,
-        popSize: 100, // Lamarckian evolution allows for smaller populations
+        popSize: 10,
         maxStagnantGenerations: 100,
         minProgressToPass: 99,
         initialBestNetwork: spiralRefined,
@@ -254,15 +265,15 @@ describe('ASCII Maze Solver using Neuro-Evolution', () => {
         label: 'small',
       }
     });
-    const smallRefined = refineWinnerWithBackprop(smallResult?.bestNetwork);
+    const smallRefined = refineWinnerWithBackprop(smallResult?.bestNetwork as Network);
 
-    // Medium
-    const mediumResult = await runMazeEvolution({
+    // Medium maze
+    const mediumResult = await EvolutionEngine.runMazeEvolution({
       mazeConfig: { maze: medium },
       agentSimConfig: { maxSteps: 250 },
       evolutionAlgorithmConfig: {
         allowRecurrent: true,
-        popSize: 100, // Lamarckian evolution allows for smaller populations
+        popSize: 10,
         maxStagnantGenerations: 100,
         minProgressToPass: 99,
         initialBestNetwork: smallRefined,
@@ -273,15 +284,15 @@ describe('ASCII Maze Solver using Neuro-Evolution', () => {
         label: 'medium',
       }
     });
-    const mediumRefined = refineWinnerWithBackprop(mediumResult?.bestNetwork);
+    const mediumRefined = refineWinnerWithBackprop(mediumResult?.bestNetwork as Network);
 
-    // Medium 2
-    const medium2Result = await runMazeEvolution({
+    // Medium 2 maze
+    const medium2Result = await EvolutionEngine.runMazeEvolution({
       mazeConfig: { maze: medium2 },
       agentSimConfig: { maxSteps: 300 },
       evolutionAlgorithmConfig: {
         allowRecurrent: true,
-        popSize: 100, // Lamarckian evolution allows for smaller populations
+        popSize: 10,
         maxStagnantGenerations: 100,
         minProgressToPass: 99,
         initialBestNetwork: mediumRefined,
@@ -292,17 +303,17 @@ describe('ASCII Maze Solver using Neuro-Evolution', () => {
         label: 'medium2',
       }
     });
-    const medium2Refined = refineWinnerWithBackprop(medium2Result?.bestNetwork);
+    const medium2Refined = refineWinnerWithBackprop(medium2Result?.bestNetwork as Network);
 
-    // Large
-    const largeResult = await runMazeEvolution({
+    // Large maze
+    const largeResult = await EvolutionEngine.runMazeEvolution({
       mazeConfig: { maze: large },
       agentSimConfig: { maxSteps: 400 },
       evolutionAlgorithmConfig: {
         allowRecurrent: true,
-        popSize: 100, // Lamarckian evolution allows for smaller populations
+        popSize: 10,
         maxStagnantGenerations: 100,
-        minProgressToPass: 95,
+        minProgressToPass: 99,
         initialBestNetwork: medium2Refined,
       },
       reportingConfig: {
@@ -311,17 +322,17 @@ describe('ASCII Maze Solver using Neuro-Evolution', () => {
         label: 'large',
       }
     });
-    const largeRefined = refineWinnerWithBackprop(largeResult?.bestNetwork);
+    const largeRefined = refineWinnerWithBackprop(largeResult?.bestNetwork as Network);
 
-    // Minotaur
-    await runMazeEvolution({
+    // Minotaur maze (final, most complex)
+    await EvolutionEngine.runMazeEvolution({
       mazeConfig: { maze: minotaur },
-      agentSimConfig: { maxSteps: 500 },
+      agentSimConfig: { maxSteps: 700 },
       evolutionAlgorithmConfig: {
         allowRecurrent: true,
-        popSize: 100, // Lamarckian evolution allows for smaller populations
+        popSize: 10,
         maxStagnantGenerations: 100,
-        minProgressToPass: 95,
+        minProgressToPass: 99,
         initialBestNetwork: largeRefined,
       },
       reportingConfig: {

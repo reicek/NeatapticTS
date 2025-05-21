@@ -6,8 +6,7 @@
  * The palette features the iconic TRON colors that work together to create
  * the feeling of being inside a digital world or computer system.
  *
- * Usage example:
- *   console.log(colors.bgCyanNeon + 'Agent' + colors.reset);
+ * All color codes are provided as string escape sequences for use in terminal output.
  */
 export const colors = {
   // Basic formatting
@@ -15,7 +14,7 @@ export const colors = {
   bright: '\x1b[1m',        // Bright/bold text
   dim: '\x1b[2m',           // Dim text
 
-  // Neon foreground colors
+  // Neon foreground colors (expanded palette)
   neonPink: '\x1b[38;5;205m',         // Neon pink
   neonPurple: '\x1b[38;5;93m',        // Neon purple
   neonLime: '\x1b[38;5;154m',         // Neon lime green
@@ -33,6 +32,17 @@ export const colors = {
   neonTeal: '\x1b[38;5;44m',          // Neon teal
   neonGold: '\x1b[38;5;220m',         // Neon gold
   neonSilver: '\x1b[38;5;250m',       // Neon silver
+  neonBlue: '\x1b[38;5;45m',          // Neon blue (extra)
+  neonMagenta: '\x1b[38;5;201m',      // Neon magenta (extra)
+  neonCyan: '\x1b[38;5;87m',          // Neon cyan (extra)
+  neonWhite: '\x1b[38;5;231m',        // Neon white (brightest)
+  neonRose: '\x1b[38;5;218m',         // Neon rose
+  neonPeach: '\x1b[38;5;217m',        // Neon peach
+  neonAzure: '\x1b[38;5;117m',        // Neon azure
+  neonChartreuse: '\x1b[38;5;118m',   // Neon chartreuse
+  neonSpring: '\x1b[38;5;48m',        // Neon spring green
+  neonAmber: '\x1b[38;5;214m',        // Neon amber (duplicate of orange, for clarity)
+  neonFuchsia: '\x1b[38;5;207m',      // Neon fuchsia
 
   // TRON primary colors (foreground)
   blueCore: '\x1b[38;5;39m',      // Primary TRON blue
@@ -49,7 +59,7 @@ export const colors = {
   blue: '\x1b[38;5;33m',    // Deep blue
   cyan: '\x1b[38;5;51m',    // Light cyan
 
-  // Neon background colors
+  // Neon background colors (expanded palette)
   bgNeonPink: '\x1b[48;5;205m',
   bgNeonPurple: '\x1b[48;5;93m',
   bgNeonLime: '\x1b[48;5;154m',
@@ -67,6 +77,17 @@ export const colors = {
   bgNeonTeal: '\x1b[48;5;44m',
   bgNeonGold: '\x1b[48;5;220m',
   bgNeonSilver: '\x1b[48;5;250m',
+  bgNeonBlue: '\x1b[48;5;45m',          // Neon blue background (extra)
+  bgNeonMagenta: '\x1b[48;5;201m',      // Neon magenta background (extra)
+  bgNeonCyan: '\x1b[48;5;87m',          // Neon cyan background (extra)
+  bgNeonWhite: '\x1b[48;5;231m',        // Neon white background (brightest)
+  bgNeonRose: '\x1b[48;5;218m',         // Neon rose background
+  bgNeonPeach: '\x1b[48;5;217m',        // Neon peach background
+  bgNeonAzure: '\x1b[48;5;117m',        // Neon azure background
+  bgNeonChartreuse: '\x1b[48;5;118m',   // Neon chartreuse background
+  bgNeonSpring: '\x1b[48;5;48m',        // Neon spring green background
+  bgNeonAmber: '\x1b[48;5;214m',        // Neon amber background (duplicate of orange, for clarity)
+  bgNeonFuchsia: '\x1b[48;5;207m',      // Neon fuchsia background
 
   // TRON background colors
   bgBlueCore: '\x1b[48;5;39m',    // Primary TRON blue background
