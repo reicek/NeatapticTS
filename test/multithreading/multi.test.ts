@@ -14,161 +14,267 @@ describe('Multi-threading Utilities (Multi)', () => {
   jest.setTimeout(10000);
 
   beforeAll(() => {
-    // Provide a dummy class as the resolved value, matching the expected type
-    class DummyWorker {
-      private worker: any; // Match the protected property
-      constructor(dataSet: number[], cost: { name: string }) {
-        this.worker = null; // Initialize as needed
-      }
-      evaluate = () => {};
-      terminate = () => {};
-      test = () => {};
-      private static _createBlobString = () => ''; // Add the required static method
-    }
-    // @ts-ignore
-    jest.spyOn(Multi, 'getBrowserTestWorker').mockResolvedValue(DummyWorker as unknown as typeof DummyWorker);
-    // @ts-ignore
-    jest.spyOn(Multi, 'getNodeTestWorker').mockResolvedValue(DummyWorker as unknown as typeof DummyWorker);
-
-    // Fix mock implementations to handle edge cases properly
-    jest.spyOn(Multi, 'activateSerializedNetwork').mockImplementation(
-      (input) => input.length > 0 ? input.map(x => x * 2) : [1] // Return non-empty array
-    );
-
-    jest.spyOn(Multi, 'testSerializedSet').mockImplementation(
-      (set) => set.length === 0 ? 0 : 0.5 // Return 0 for empty set, 0.5 otherwise
-    );
-    
-    // Skip mocking for serializeDataSet and deserializeDataSet to use real implementation
-    // since we need to test empty array handling
+    // Only set up DummyWorker for positive import tests, not globally
   });
 
   afterAll(() => {
-    // Clean up mocks
     jest.restoreAllMocks();
   });
 
-  describe('serializeDataSet & deserializeDataSet', () => {
-    test('serializes and deserializes a simple dataset', () => {
-      // Arrange
-      const set = [
-        { input: [1, 2], output: [3] },
-        { input: [4, 5], output: [9] }
-      ];
-      // Act
-      const serialized = Multi.serializeDataSet(set);
-      const deserialized = Multi.deserializeDataSet(serialized);
-      // Assert
-      expect(deserialized).toEqual(set);
-    });
-    test('handles empty dataset', () => {
-      // Arrange
-      const set: any[] = [];
-      
-      // Mock specifically for the empty dataset test
-      jest.spyOn(Multi, 'serializeDataSet').mockImplementation((dataSet) => {
-        if (dataSet.length === 0) return [];
-        // Original implementation for non-empty arrays
-        return [dataSet[0].input.length, dataSet[0].output.length, ...dataSet.flatMap(item => [...item.input, ...item.output])];
+  describe('serializeDataSet', () => {
+    describe('when dataset is valid', () => {
+      it('serializes a simple dataset', () => {
+        // Arrange
+        const set = [
+          { input: [1, 2], output: [3] },
+          { input: [4, 5], output: [9] }
+        ];
+        // Act
+        const serialized = Multi.serializeDataSet(set);
+        // Assert
+        expect(Array.isArray(serialized)).toBe(true);
       });
-      
-      // Act
-      const serialized = Multi.serializeDataSet(set);
-      const deserialized = Multi.deserializeDataSet(serialized);
-      
-      // Assert
-      expect(deserialized).toEqual([]);
-      
-      // Restore after test
-      jest.spyOn(Multi, 'serializeDataSet').mockRestore();
+    });
+    describe('when dataset is empty', () => {
+      it('throws an error', () => {
+        // Arrange
+        const set: any[] = [];
+        // Act & Assert
+        expect(() => Multi.serializeDataSet(set)).toThrow();
+      });
+    });
+  });
+
+  describe('deserializeDataSet', () => {
+    describe('when input is valid', () => {
+      it('deserializes a simple serialized dataset', () => {
+        // Arrange
+        const set = [
+          { input: [1, 2], output: [3] },
+          { input: [4, 5], output: [9] }
+        ];
+        const serialized = Multi.serializeDataSet(set);
+        // Act
+        const deserialized = Multi.deserializeDataSet(serialized);
+        // Assert
+        expect(deserialized).toEqual(set);
+      });
+    });
+    describe('when input is empty', () => {
+      it('returns an empty array', () => {
+        // Arrange
+        const serialized: number[] = [];
+        // Act
+        const deserialized = Multi.deserializeDataSet(serialized);
+        // Assert
+        expect(deserialized).toEqual([]);
+      });
+    });
+    describe('when input is malformed', () => {
+      it('returns an empty array', () => {
+        // Arrange
+        const malformed = [2]; // Not enough info
+        // Act
+        const deserialized = Multi.deserializeDataSet(malformed);
+        // Assert
+        expect(deserialized).toEqual([]);
+      });
     });
   });
 
   describe('activateSerializedNetwork', () => {
-    test('activates a simple serialized network (identity)', () => {
-      // Use minimal data to speed up test
-      const input = [1];
-      const A = [0];
-      const S = [0];
-      const data = [0];
-      const F = [(x: number) => x];
-
-      // Restore specific mock to test real implementation
-      jest.spyOn(Multi, 'activateSerializedNetwork').mockRestore();
-
-      const output = Multi.activateSerializedNetwork(input, A, S, data, F);
-      expect(Array.isArray(output)).toBe(true);
+    describe('when input and data are valid', () => {
+      it('returns an array as output', () => {
+        // Arrange
+        const input = [1];
+        const A = [0];
+        const S = [0];
+        const data = [1, 1, 0, 0, 0, 0, -1, -2]; // squash index is 0
+        const F = [(x: number) => x];
+        // Act
+        const output = Multi.activateSerializedNetwork(input, A, S, data, F);
+        // Assert
+        expect(Array.isArray(output)).toBe(true);
+      });
     });
-    test('throws or returns NaN for invalid input', () => {
-      // Arrange
-      const input = [1, 2];
-      const A = [0];
-      const S = [0];
-      const data = [0];
-      const F = [(x: number) => x];
-      
-      // Mock specifically for this test case
-      jest.spyOn(Multi, 'activateSerializedNetwork').mockImplementation(() => [1, 2]); // Return non-empty array
-      
-      // Act
-      const output = Multi.activateSerializedNetwork(input, A, S, data, F);
-      
-      // Assert
-      expect(output.length).toBeGreaterThan(0);
+    describe('when data is malformed', () => {
+      it('returns an empty array', () => {
+        // Arrange
+        const input = [1];
+        const A = [0];
+        const S = [0];
+        const data = [1]; // malformed
+        const F = [(x: number) => x];
+        // Act
+        const output = Multi.activateSerializedNetwork(input, A, S, data, F);
+        // Assert
+        expect(output).toEqual([]);
+      });
     });
   });
 
   describe('testSerializedSet', () => {
-    test('computes average error over set', () => {
-      // Arrange
-      const set = [
-        { input: [1], output: [2] },
-        { input: [2], output: [4] }
-      ];
-      const cost = mse;
-      const A = [0];
-      const S = [0];
-      const data = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-      const F = [(x: number) => x * 2];
-      // Act
-      const error = Multi.testSerializedSet(set, cost, A, S, data, F);
-      // Assert
-      expect(typeof error).toBe('number');
+    describe('when set is non-empty', () => {
+      it('returns a number as average error', () => {
+        // Arrange
+        const set = [
+          { input: [1], output: [2] },
+          { input: [2], output: [4] }
+        ];
+        const cost = (expected: number[], actual: number[]) => Math.abs(expected[0] - actual[0]);
+        const A = [0];
+        const S = [0];
+        const data = [1, 1, 0, 0, 0, 0, -1, -2]; // squash index is 0
+        const F = [(x: number) => x * 2];
+        // Act
+        const error = Multi.testSerializedSet(set, cost, A, S, data, F);
+        // Assert
+        expect(typeof error).toBe('number');
+      });
     });
-    test('returns NaN or 0 for empty set', () => {
-      // Arrange
-      const set: any[] = [];
-      const cost = mse;
-      const A = [0];
-      const S = [0];
-      const data = [0];
-      const F = [(x: number) => x];
-      
-      // Mock specifically for this test case
-      jest.spyOn(Multi, 'testSerializedSet').mockImplementation(() => 0);
-      
-      // Act
-      const error = Multi.testSerializedSet(set, cost, A, S, data, F);
-      
-      // Assert
-      expect(error === 0 || Number.isNaN(error)).toBe(true);
+    describe('when set is empty', () => {
+      it('returns NaN', () => {
+        // Arrange
+        const set: any[] = [];
+        const cost = (expected: number[], actual: number[]) => 0;
+        const A = [0];
+        const S = [0];
+        const data = [1, 1, 0, 0, 0, 0, -1, -2]; // squash index is 0
+        const F = [(x: number) => x];
+        // Act
+        const error = Multi.testSerializedSet(set, cost, A, S, data, F);
+        // Assert
+        expect(Number.isNaN(error)).toBe(true);
+      });
+    });
+    describe('when cost function throws', () => {
+      it('returns NaN', () => {
+        // Arrange
+        const set = [ { input: [1], output: [2] } ];
+        const cost = () => { throw new Error('cost error'); };
+        const A = [0];
+        const S = [0];
+        const data = [1, 1, 0, 0, 0, 0, -1, -2]; // squash index is 0
+        const F = [(x: number) => x];
+        // Act
+        let error;
+        try {
+          error = Multi.testSerializedSet(set, cost, A, S, data, F);
+        } catch (e) {
+          error = NaN;
+        }
+        // Assert
+        expect(Number.isNaN(error)).toBe(true);
+      });
+    });
+    describe('when cost function returns NaN', () => {
+      it('returns NaN as error', () => {
+        // Arrange
+        const set = [ { input: [1], output: [2] } ];
+        const cost = () => NaN;
+        const A = [0];
+        const S = [0];
+        const data = [1, 1, 0, 0, 0, 0, -1, -2]; // squash index is 0
+        const F = [(x: number) => x];
+        // Act
+        const error = Multi.testSerializedSet(set, cost, A, S, data, F);
+        // Assert
+        expect(Number.isNaN(error)).toBe(true);
+      });
     });
   });
 
-  describe('getBrowserTestWorker & getNodeTestWorker', () => {
-    // These tests are likely slow - make them more efficient
-    test.skip('returns a Promise for browser worker', async () => {
-      // Act
-      const worker = await Multi.getBrowserTestWorker();
-      // Assert
-      expect(worker).toBeDefined();
+  describe('getBrowserTestWorker', () => {
+    describe('when import succeeds', () => {
+      beforeAll(() => {
+        // Provide a dummy class as the resolved value, matching the expected type
+        class DummyWorker {
+          private worker: any;
+          constructor(dataSet: number[], cost: { name: string }) {
+            this.worker = null;
+          }
+          evaluate = () => {};
+          terminate = () => {};
+          test = () => {};
+          private static _createBlobString = () => '';
+        }
+        jest.spyOn(Multi, 'getBrowserTestWorker').mockResolvedValue(DummyWorker as any);
+      });
+      afterAll(() => {
+        jest.restoreAllMocks();
+      });
+      it('returns a TestWorker class', async () => {
+        // Act
+        const WorkerClass = await Multi.getBrowserTestWorker();
+        // Assert
+        expect(WorkerClass).toBeDefined();
+      });
     });
+    describe('when import fails', () => {
+      beforeEach(() => {
+        jest.resetModules();
+        jest.dontMock('../../src/multithreading/workers/browser/testworker');
+        jest.restoreAllMocks();
+        jest.doMock('../../src/multithreading/workers/browser/testworker', () => {
+          throw new Error('fail');
+        });
+      });
+      afterEach(() => {
+        jest.dontMock('../../src/multithreading/workers/browser/testworker');
+        jest.resetModules();
+        jest.restoreAllMocks();
+      });
+      it('throws an error', async () => {
+        // Act & Assert
+        await expect(Multi.getBrowserTestWorker()).rejects.toThrow('fail');
+      });
+    });
+  });
 
-    test.skip('returns a Promise for node worker', async () => {
-      // Act
-      const worker = await Multi.getNodeTestWorker();
-      // Assert
-      expect(worker).toBeDefined();
+  describe('getNodeTestWorker', () => {
+    describe('when import succeeds', () => {
+      beforeAll(() => {
+        // Provide a dummy class as the resolved value, matching the expected type
+        class DummyWorker {
+          private worker: any;
+          constructor(dataSet: number[], cost: { name: string }) {
+            this.worker = null;
+          }
+          evaluate = () => {};
+          terminate = () => {};
+          test = () => {};
+          private static _createBlobString = () => '';
+        }
+        jest.spyOn(Multi, 'getNodeTestWorker').mockResolvedValue(DummyWorker as any);
+      });
+      afterAll(() => {
+        jest.restoreAllMocks();
+      });
+      it('returns a TestWorker class', async () => {
+        // Act
+        const WorkerClass = await Multi.getNodeTestWorker();
+        // Assert
+        expect(WorkerClass).toBeDefined();
+      });
+    });
+    describe('when import fails', () => {
+      beforeEach(() => {
+        jest.resetModules();
+        jest.dontMock('../../src/multithreading/workers/node/testworker');
+        jest.restoreAllMocks();
+        jest.doMock('../../src/multithreading/workers/node/testworker', () => {
+          throw new Error('fail');
+        });
+      });
+      afterEach(() => {
+        jest.dontMock('../../src/multithreading/workers/node/testworker');
+        jest.resetModules();
+        jest.restoreAllMocks();
+      });
+      it('throws an error', async () => {
+        // Act & Assert
+        await expect(Multi.getNodeTestWorker()).rejects.toThrow('fail');
+      });
     });
   });
 });

@@ -45,7 +45,7 @@ expect.extend({
 
 // Add this line to prevent "Your test suite must contain at least one test." error
 describe('Setup', () => {
-  test('Jest setup file loaded correctly', () => {
+  it('Jest setup file loaded correctly', () => {
     expect(true).toBe(true);
   });
 });

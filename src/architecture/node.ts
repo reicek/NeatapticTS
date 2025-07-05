@@ -384,71 +384,12 @@ export default class Node {
     // 2. Calculate gradients and update weights/biases for incoming connections.
     for (const connection of this.connections.in) {
       // Calculate the gradient for the connection weight.
-      // Base gradient: error projected back * eligibility trace of the connection.
-      let gradient = this.error.projected * connection.eligibility;
-
-      // Add contributions from extended eligibility traces (xtraces) for gated connections.
-      for (let j = 0; j < connection.xtrace.nodes.length; j++) {
-        const node = connection.xtrace.nodes[j]; // Node influenced via gating.
-        const value = connection.xtrace.values[j]; // Corresponding xtrace value.
-        // Add the influenced node's responsibility weighted by the xtrace value.
-        gradient += node.error.responsibility * value;
-      }
-
-      // --- Regularization logic ---
-      let regTerm = 0;
-      if (typeof regularization === 'function') {
-        regTerm = regularization(connection.weight);
-      } else if (typeof regularization === 'object' && regularization !== null) {
-        if (regularization.type === 'L1') {
-          regTerm = regularization.lambda * Math.sign(connection.weight);
-        } else if (regularization.type === 'L2') {
-          regTerm = regularization.lambda * connection.weight;
-        }
-      } else {
-        // Default: treat as L2 scalar
-        regTerm = (regularization as number) * connection.weight;
-      }
-      // Delta = learning_rate * (gradient * mask - regTerm)
-      const deltaWeight = rate * (gradient * this.mask - regTerm);
-
-      // Accumulate delta for batch training.
-      connection.totalDeltaWeight += deltaWeight;
-
-      if (update) {
-        // Apply the update immediately (if not batch training or end of batch).
-
-        // Calculate the final weight update including momentum (NAG style).
-        // The gradient was calculated at the lookahead position.
-        const currentDeltaWeight =
-          connection.totalDeltaWeight + // Current batch gradient contribution.
-          momentum * connection.previousDeltaWeight; // Momentum contribution.
-
-        // Apply the update (NAG):
-        // 1. Revert the lookahead momentum step applied at the beginning.
-        if (momentum > 0) {
-          connection.weight -= momentum * connection.previousDeltaWeight;
-        }
-        // 2. Apply the full calculated delta (gradient + momentum).
-        connection.weight += currentDeltaWeight;
-
-        // Store the current delta for the next iteration's momentum calculation.
-        connection.previousDeltaWeight = currentDeltaWeight;
-        // Reset the batch accumulator.
-        connection.totalDeltaWeight = 0;
-      }
-    }
-
-    // --- Update self-connections as well (for eligibility, weight, momentum) ---
-    for (const connection of this.connections.self) {
-      // For self-connection, treat as a special case of incoming connection
       let gradient = this.error.projected * connection.eligibility;
       for (let j = 0; j < connection.xtrace.nodes.length; j++) {
         const node = connection.xtrace.nodes[j];
         const value = connection.xtrace.values[j];
         gradient += node.error.responsibility * value;
       }
-
       let regTerm = 0;
       if (typeof regularization === 'function') {
         regTerm = regularization(connection.weight);
@@ -461,15 +402,102 @@ export default class Node {
       } else {
         regTerm = (regularization as number) * connection.weight;
       }
-      const deltaWeight = rate * (gradient * this.mask - regTerm);
-
+      // Delta = learning_rate * (gradient * mask - regTerm)
+      let deltaWeight = rate * (gradient * this.mask - regTerm);
+      // Clamp deltaWeight to [-1e3, 1e3] to prevent explosion
+      if (!Number.isFinite(deltaWeight)) {
+        console.warn('deltaWeight is not finite, clamping to 0', { node: this.index, connection, deltaWeight });
+        deltaWeight = 0;
+      } else if (Math.abs(deltaWeight) > 1e3) {
+        deltaWeight = Math.sign(deltaWeight) * 1e3;
+      }
+      // Accumulate delta for batch training.
       connection.totalDeltaWeight += deltaWeight;
+      // Defensive: If accumulator is NaN, reset
+      if (!Number.isFinite(connection.totalDeltaWeight)) {
+        console.warn('totalDeltaWeight became NaN/Infinity, resetting to 0', { node: this.index, connection });
+        connection.totalDeltaWeight = 0;
+      }
       if (update) {
-        const currentDeltaWeight = connection.totalDeltaWeight + momentum * connection.previousDeltaWeight;
+        // Apply the update immediately (if not batch training or end of batch).
+        let currentDeltaWeight = connection.totalDeltaWeight + momentum * connection.previousDeltaWeight;
+        if (!Number.isFinite(currentDeltaWeight)) {
+          console.warn('currentDeltaWeight is not finite, clamping to 0', { node: this.index, connection, currentDeltaWeight });
+          currentDeltaWeight = 0;
+        } else if (Math.abs(currentDeltaWeight) > 1e3) {
+          currentDeltaWeight = Math.sign(currentDeltaWeight) * 1e3;
+        }
+        // 1. Revert the lookahead momentum step applied at the beginning.
+        if (momentum > 0) {
+          connection.weight -= momentum * connection.previousDeltaWeight;
+        }
+        // 2. Apply the full calculated delta (gradient + momentum).
+        connection.weight += currentDeltaWeight;
+        // Defensive: Check for NaN/Infinity and clip weights
+        if (!Number.isFinite(connection.weight)) {
+          console.warn(
+            `Weight update produced invalid value: ${connection.weight}. Resetting to 0.`,
+            { node: this.index, connection }
+          );
+          connection.weight = 0;
+        } else if (Math.abs(connection.weight) > 1e6) {
+          connection.weight = Math.sign(connection.weight) * 1e6;
+        }
+        connection.previousDeltaWeight = currentDeltaWeight;
+        connection.totalDeltaWeight = 0;
+      }
+    }
+
+    // --- Update self-connections as well (for eligibility, weight, momentum) ---
+    for (const connection of this.connections.self) {
+      let gradient = this.error.projected * connection.eligibility;
+      for (let j = 0; j < connection.xtrace.nodes.length; j++) {
+        const node = connection.xtrace.nodes[j];
+        const value = connection.xtrace.values[j];
+        gradient += node.error.responsibility * value;
+      }
+      let regTerm = 0;
+      if (typeof regularization === 'function') {
+        regTerm = regularization(connection.weight);
+      } else if (typeof regularization === 'object' && regularization !== null) {
+        if (regularization.type === 'L1') {
+          regTerm = regularization.lambda * Math.sign(connection.weight);
+        } else if (regularization.type === 'L2') {
+          regTerm = regularization.lambda * connection.weight;
+        }
+      } else {
+        regTerm = (regularization as number) * connection.weight;
+      }
+      let deltaWeight = rate * (gradient * this.mask - regTerm);
+      if (!Number.isFinite(deltaWeight)) {
+        console.warn('self deltaWeight is not finite, clamping to 0', { node: this.index, connection, deltaWeight });
+        deltaWeight = 0;
+      } else if (Math.abs(deltaWeight) > 1e3) {
+        deltaWeight = Math.sign(deltaWeight) * 1e3;
+      }
+      connection.totalDeltaWeight += deltaWeight;
+      if (!Number.isFinite(connection.totalDeltaWeight)) {
+        console.warn('self totalDeltaWeight became NaN/Infinity, resetting to 0', { node: this.index, connection });
+        connection.totalDeltaWeight = 0;
+      }
+      if (update) {
+        let currentDeltaWeight = connection.totalDeltaWeight + momentum * connection.previousDeltaWeight;
+        if (!Number.isFinite(currentDeltaWeight)) {
+          console.warn('self currentDeltaWeight is not finite, clamping to 0', { node: this.index, connection, currentDeltaWeight });
+          currentDeltaWeight = 0;
+        } else if (Math.abs(currentDeltaWeight) > 1e3) {
+          currentDeltaWeight = Math.sign(currentDeltaWeight) * 1e3;
+        }
         if (momentum > 0) {
           connection.weight -= momentum * connection.previousDeltaWeight;
         }
         connection.weight += currentDeltaWeight;
+        if (!Number.isFinite(connection.weight)) {
+          console.warn('self weight update produced invalid value, resetting to 0', { node: this.index, connection });
+          connection.weight = 0;
+        } else if (Math.abs(connection.weight) > 1e6) {
+          connection.weight = Math.sign(connection.weight) * 1e6;
+        }
         connection.previousDeltaWeight = currentDeltaWeight;
         connection.totalDeltaWeight = 0;
       }
@@ -477,29 +505,37 @@ export default class Node {
 
     // Calculate bias change (delta). Regularization typically doesn't apply to bias.
     // Delta = learning_rate * error_responsibility
-    const deltaBias = rate * this.error.responsibility;
-    // Accumulate delta for batch training.
+    let deltaBias = rate * this.error.responsibility;
+    if (!Number.isFinite(deltaBias)) {
+      console.warn('deltaBias is not finite, clamping to 0', { node: this.index, deltaBias });
+      deltaBias = 0;
+    } else if (Math.abs(deltaBias) > 1e3) {
+      deltaBias = Math.sign(deltaBias) * 1e3;
+    }
     this.totalDeltaBias += deltaBias;
-
+    if (!Number.isFinite(this.totalDeltaBias)) {
+      console.warn('totalDeltaBias became NaN/Infinity, resetting to 0', { node: this.index });
+      this.totalDeltaBias = 0;
+    }
     if (update) {
-      // Apply the update immediately (if not batch training or end of batch).
-
-      // Calculate the final bias update including momentum (NAG style).
-      const currentDeltaBias =
-        this.totalDeltaBias + // Current batch gradient contribution.
-        momentum * this.previousDeltaBias; // Momentum contribution.
-
-      // Apply the update (NAG):
-      // 1. Revert the lookahead momentum step.
+      let currentDeltaBias = this.totalDeltaBias + momentum * this.previousDeltaBias;
+      if (!Number.isFinite(currentDeltaBias)) {
+        console.warn('currentDeltaBias is not finite, clamping to 0', { node: this.index, currentDeltaBias });
+        currentDeltaBias = 0;
+      } else if (Math.abs(currentDeltaBias) > 1e3) {
+        currentDeltaBias = Math.sign(currentDeltaBias) * 1e3;
+      }
       if (momentum > 0) {
         this.bias -= momentum * this.previousDeltaBias;
       }
-      // 2. Apply the full calculated delta.
       this.bias += currentDeltaBias;
-
-      // Store the current delta for the next iteration's momentum calculation.
+      if (!Number.isFinite(this.bias)) {
+        console.warn('bias update produced invalid value, resetting to 0', { node: this.index });
+        this.bias = 0;
+      } else if (Math.abs(this.bias) > 1e6) {
+        this.bias = Math.sign(this.bias) * 1e6;
+      }
       this.previousDeltaBias = currentDeltaBias;
-      // Reset the batch accumulator.
       this.totalDeltaBias = 0;
     }
   }

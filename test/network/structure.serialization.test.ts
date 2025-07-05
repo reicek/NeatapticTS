@@ -13,41 +13,48 @@ afterAll(() => {
 
 describe('Structure & Serialization', () => {
   describe('Feed-forward Property', () => {
-    test('maintains feed-forward connections after mutations and crossover', () => {
-      // Arrange
-      jest.setTimeout(30000);
-      const network1 = new Network(2, 2);
-      const network2 = new Network(2, 2);
-      let i;
-      for (i = 0; i < 100; i++) {
-        network1.mutate(methods.mutation.ADD_NODE);
-        network2.mutate(methods.mutation.ADD_NODE);
-      }
-      for (i = 0; i < 400; i++) {
-        network1.mutate(methods.mutation.ADD_CONN);
-        network2.mutate(methods.mutation.ADD_NODE);
-      }
-      // Act
-      const network = Network.crossOver(network1, network2);
-      const allFeedForward = network.connections.every((conn) => {
-        const fromNode = conn.from;
-        const toNode = conn.to;
-        if (
-          network.nodes.includes(fromNode) &&
-          network.nodes.includes(toNode)
-        ) {
-          const fromIndex = network.nodes.indexOf(fromNode);
-          const toIndex = network.nodes.indexOf(toNode);
-          return fromIndex < toIndex;
-        } else {
-          console.error(
-            `Connection node not found in network nodes array: from=${fromNode?.index}, to=${toNode?.index}`
-          );
-          return false;
+    describe('Scenario: all connections are feed-forward after mutation and crossover', () => {
+      let network: Network;
+      beforeAll(() => {
+        // Arrange
+        jest.setTimeout(30000);
+        const network1 = new Network(2, 2);
+        const network2 = new Network(2, 2);
+        for (let i = 0; i < 100; i++) {
+          network1.mutate(methods.mutation.ADD_NODE);
+          network2.mutate(methods.mutation.ADD_NODE);
         }
+        for (let i = 0; i < 400; i++) {
+          network1.mutate(methods.mutation.ADD_CONN);
+          network2.mutate(methods.mutation.ADD_NODE);
+        }
+        // Act
+        network = Network.crossOver(network1, network2);
       });
-      // Assert
-      expect(allFeedForward).toBe(true);
+      it('should have all connections feed-forward', () => {
+        // Assert
+        const allFeedForward = network.connections.every((conn: any) => {
+          const fromNode = conn.from;
+          const toNode = conn.to;
+          if (
+            network.nodes.includes(fromNode) &&
+            network.nodes.includes(toNode)
+          ) {
+            const fromIndex = network.nodes.indexOf(fromNode);
+            const toIndex = network.nodes.indexOf(toNode);
+            return fromIndex < toIndex;
+          } else {
+            // Spy
+            const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+            console.error(
+              `Connection node not found in network nodes array: from=${fromNode?.index}, to=${toNode?.index}`
+            );
+            errorSpy.mockRestore();
+            return false;
+          }
+        });
+        expect(allFeedForward).toBe(true);
+      });
     });
   });
 
@@ -72,21 +79,23 @@ describe('Structure & Serialization', () => {
           originalOutput = original.activate(input);
           copyOutput = copy.activate(input);
         });
-        test('produces the same output length as the original', () => {
-          // Assert
-          expect(copyOutput.length).toEqual(originalOutput.length);
-        });
-        test('produces numerically close outputs to the original', () => {
-          // Assert
-          const outputsAreEqual = copyOutput.every(
-            (val, i) =>
-              typeof originalOutput[i] === 'number' &&
-              Math.abs(val - originalOutput[i]) < 1e-9
-          );
-          expect(outputsAreEqual).toBe(true);
+        describe('Scenario: output equivalency', () => {
+          it('produces the same output length as the original', () => {
+            // Assert
+            expect(copyOutput.length).toEqual(originalOutput.length);
+          });
+          it('produces numerically close outputs to the original', () => {
+            // Assert
+            const outputsAreEqual = copyOutput.every(
+              (val, i) =>
+                typeof originalOutput[i] === 'number' &&
+                Math.abs(val - originalOutput[i]) < 1e-9
+            );
+            expect(outputsAreEqual).toBe(true);
+          });
         });
         describe('Scenario: fromJSON throws on corrupted data', () => {
-          test('throws error if nodes field is missing', () => {
+          it('throws error if nodes field is missing', () => {
             // Arrange
             const json: any = original.toJSON();
             delete json.nodes;
@@ -95,7 +104,7 @@ describe('Structure & Serialization', () => {
             // Assert
             expect(act).toThrow();
           });
-          test('throws error if connections field is missing', () => {
+          it('throws error if connections field is missing', () => {
             // Arrange
             const json: any = original.toJSON();
             delete json.connections;
@@ -160,7 +169,7 @@ describe('Structure & Serialization', () => {
 
   describe('Serialize/Deserialize Equivalency', () => {
     describe('Scenario: standard perceptron', () => {
-      test('should produce the same output length after serialize/deserialize', () => {
+      it('should produce the same output length after serialize/deserialize', () => {
         // Arrange
         const net = new Network(2, 1);
         const input = [Math.random(), Math.random()];
@@ -172,7 +181,7 @@ describe('Structure & Serialization', () => {
         // Assert
         expect(deserializedOutput.length).toBe(originalOutput.length);
       });
-      test('should produce numerically close outputs after serialize/deserialize', () => {
+      it('should produce numerically close outputs after serialize/deserialize', () => {
         // Arrange
         const net = new Network(2, 1);
         const input = [Math.random(), Math.random()];
@@ -190,7 +199,7 @@ describe('Structure & Serialization', () => {
       });
     });
     describe('Scenario: network with no connections', () => {
-      test('should serialize and deserialize without error', () => {
+      it('should serialize and deserialize without error', () => {
         // Arrange
         const net = new Network(2, 1);
         net.connections = [];
@@ -218,7 +227,7 @@ describe('Structure & Serialization', () => {
     };
 
     describe('Scenario: invalid connection indices', () => {
-      test('should skip invalid connection indices', () => {
+      it('should skip invalid connection indices', () => {
         // Arrange
         const net = new Network(2, 1);
         const arr = net.serialize();
@@ -229,7 +238,7 @@ describe('Structure & Serialization', () => {
         // Assert
         expect(deserialized.connections.length).toBeLessThanOrEqual(net.connections.length);
       });
-      test('should warn for invalid connection indices', () => {
+      it('should warn for invalid connection indices', () => {
         // Arrange
         const net = new Network(2, 1);
         const arr = net.serialize();
@@ -244,7 +253,7 @@ describe('Structure & Serialization', () => {
       });
     });
     describe('Scenario: invalid gater index', () => {
-      test('should skip invalid gater index', () => {
+      it('should skip invalid gater index', () => {
         // Arrange
         const net = new Network(2, 1);
         const arr = net.serialize();
@@ -254,7 +263,7 @@ describe('Structure & Serialization', () => {
         // Assert
         expect(deserialized.gates.length).toBeLessThanOrEqual(net.gates.length);
       });
-      test('should warn for invalid gater index', () => {
+      it('should warn for invalid gater index', () => {
         // Arrange
         const net = new Network(2, 1);
         const arr = net.serialize();
@@ -268,7 +277,7 @@ describe('Structure & Serialization', () => {
       });
     });
     describe('Scenario: unknown squash function', () => {
-      test('should fall back to identity for unknown squash', () => {
+      it('should fall back to identity for unknown squash', () => {
         // Arrange
         const net = new Network(2, 1);
         const arr = net.serialize();
@@ -278,7 +287,7 @@ describe('Structure & Serialization', () => {
         // Assert
         expect(deserialized.nodes[0].squash).toBe(methods.Activation.identity);
       });
-      test('should warn for unknown squash function', () => {
+      it('should warn for unknown squash function', () => {
         // Arrange
         const net = new Network(2, 1);
         const arr = net.serialize();
@@ -292,7 +301,7 @@ describe('Structure & Serialization', () => {
       });
     });
     describe('Scenario: fromJSON with unknown squash', () => {
-      test('should fall back to identity for unknown squash in fromJSON', () => {
+      it('should fall back to identity for unknown squash in fromJSON', () => {
         // Arrange - Create a valid network first
         const validNetwork = new Network(1, 1);
         const validJson = validNetwork.toJSON() as any;
@@ -309,7 +318,7 @@ describe('Structure & Serialization', () => {
     });
 
     describe('Scenario: fromJSON with invalid connection indices', () => {
-      test('should handle invalid connection indices gracefully', () => {
+      it('should handle invalid connection indices gracefully', () => {
         // Mock console.error to prevent cluttering test output
         const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
         
@@ -366,7 +375,7 @@ describe('Structure & Serialization', () => {
     });
     
     describe('Scenario: fromJSON with invalid gater index', () => {
-      test('should handle invalid gater index gracefully', () => {
+      it('should handle invalid gater index gracefully', () => {
         // Mock console.error to prevent cluttering test output
         const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
         
@@ -420,7 +429,7 @@ describe('Structure & Serialization', () => {
       globalWarnSpy.mockClear();
     });
     
-    test('should ignore extra/unexpected fields in JSON', () => {
+    it('should ignore extra/unexpected fields in JSON', () => {
       // Arrange
       const net = new Network(2, 1);
       const json = net.toJSON() as any;
@@ -431,7 +440,7 @@ describe('Structure & Serialization', () => {
       expect(deserialized).toBeInstanceOf(Network);
     });
 
-    test('should handle missing optional fields (squash, gater)', () => {
+    it('should handle missing optional fields (squash, gater)', () => {
       // Arrange
       const net = new Network(2, 1);
       const json = net.toJSON() as any;
@@ -444,7 +453,7 @@ describe('Structure & Serialization', () => {
       expect(deserialized.connections[0].gater).toBeNull();
     });
 
-    test('should handle empty nodes and connections arrays', () => {
+    it('should handle empty nodes and connections arrays', () => {
       // Arrange
       const json = { nodes: [], connections: [], input: 1, output: 1 } as any;
       // Act
@@ -454,46 +463,33 @@ describe('Structure & Serialization', () => {
       expect(deserialized.connections.length).toBe(0);
     });
 
-    test('should handle custom activation functions appropriately', () => {
-      // Arrange
-      const network = new Network(1, 1);
-      const customSquashName = 'MY_CUSTOM_SQUASH';
-      
-      // Store original function to detect changes
-      const originalFunction = network.nodes[0].squash;
-      
-      // Define a custom function with easily detectable behavior
-      const customFn = function customSquash(x: number, derivate = false) { 
-        return derivate ? 0 : x * 100; // Very distinctive behavior
-      };
-      
-      // Override the node's squash function
-      network.nodes[0].squash = customFn;
-      Object.defineProperty(network.nodes[0].squash, 'name', { value: customSquashName });
-      
-      // Verify setup
-      expect(network.nodes[0].squash).toBe(customFn);
-      
-      // Create JSON representation
-      const json = network.toJSON();
-      
-      // Act - deserialize
-      const deserialized = Network.fromJSON(json);
-      
-      // Assert functionality, not warning messages
-      // 1. Check that the custom function wasn't preserved
-      expect(deserialized.nodes[0].squash).not.toBe(customFn);
-      
-      // 2. Verify functional behavior has changed
-      const testInput = 0.5;
-      expect(customFn(testInput)).toBe(50); // Our custom function multiplies by 100
-      expect(deserialized.nodes[0].squash(testInput)).not.toBe(50); // Should use a different function
-      
-      // 3. The network should still be usable after deserialization
-      expect(() => deserialized.activate([0.5])).not.toThrow();
+    describe('Scenario: custom activation functions', () => {
+      let network: Network, customFn: (x: number, derivate?: boolean) => number, json: any, deserialized: Network;
+      beforeEach(() => {
+        // Arrange
+        network = new Network(1, 1);
+        customFn = function customSquash(x: number, derivate = false) { return derivate ? 0 : x * 100; };
+        network.nodes[0].squash = customFn;
+        Object.defineProperty(network.nodes[0].squash, 'name', { value: 'MY_CUSTOM_SQUASH' });
+        json = network.toJSON();
+        deserialized = Network.fromJSON(json);
+      });
+      it('should not preserve the custom function', () => {
+        // Assert
+        expect(deserialized.nodes[0].squash).not.toBe(customFn);
+      });
+      it('should change the functional behavior', () => {
+        // Assert
+        expect(customFn(0.5)).toBe(50);
+        expect(deserialized.nodes[0].squash(0.5)).not.toBe(50);
+      });
+      it('should remain usable after deserialization', () => {
+        // Assert
+        expect(() => deserialized.activate([0.5])).not.toThrow();
+      });
     });
 
-    test('should serialize/deserialize after mutation', () => {
+    it('should serialize/deserialize after mutation', () => {
       // Arrange
       const net = new Network(2, 1);
       net.mutate(methods.mutation.ADD_NODE);
@@ -504,106 +500,93 @@ describe('Structure & Serialization', () => {
       expect(deserialized.nodes.length).toBeGreaterThan(2);
     });
 
-    test('should handle custom activation functions when deserializing', () => {
-      // Arrange
-      const network = new Network(1, 1);
-      const customSquashName = 'MY_CUSTOM_SQUASH';
-      
-      // Create a custom function for the test
-      const customSquashFn = function customSquash(x: number, derivate = false) { 
-        return derivate ? 0 : x*x; 
-      };
-      
-      // Override node squash with the custom function
-      network.nodes[0].squash = customSquashFn;
-      
-      // Manually set a name that will be used during serialization
-      Object.defineProperty(network.nodes[0].squash, 'name', { value: customSquashName });
-      
-      const json = network.toJSON();
-      
-      // Act
-      const deserialized = Network.fromJSON(json);
-      
-      // Assert - Verify core functionality
-      // 1. The squash function should be replaced (not the same reference)
-      expect(deserialized.nodes[0].squash).not.toBe(customSquashFn);
-      
-      // 2. The replacement should be a proper function
-      expect(typeof deserialized.nodes[0].squash).toBe('function');
-      
-      // 3. For a known input, the original custom function and replacement should produce different outputs
-      const testValue = 0.5;
-      const originalOutput = customSquashFn(testValue);
-      const newOutput = deserialized.nodes[0].squash(testValue);
-      expect(newOutput).not.toBe(originalOutput);
-      
-      // 4. The new function is most likely the identity function (but this is implementation dependent)
-      if (deserialized.nodes[0].squash === methods.Activation.identity) {
-        expect(deserialized.nodes[0].squash(testValue)).toBe(testValue);
-      }
+    describe('Scenario: deserializing custom activation functions', () => {
+      let network: Network, customSquashFn: (x: number, derivate?: boolean) => number, json: any, deserialized: Network, testValue: number;
+      beforeEach(() => {
+        // Arrange
+        network = new Network(1, 1);
+        customSquashFn = function customSquash(x: number, derivate = false) { return derivate ? 0 : x*x; };
+        network.nodes[0].squash = customSquashFn;
+        Object.defineProperty(network.nodes[0].squash, 'name', { value: 'MY_CUSTOM_SQUASH' });
+        json = network.toJSON();
+        deserialized = Network.fromJSON(json);
+        testValue = 0.5;
+      });
+      it('should replace the custom function with a standard one', () => {
+        // Assert
+        expect(deserialized.nodes[0].squash).not.toBe(customSquashFn);
+      });
+      it('should use a function for squash after deserialization', () => {
+        // Assert
+        expect(typeof deserialized.nodes[0].squash).toBe('function');
+      });
+      it('should produce different outputs for custom and deserialized squash', () => {
+        // Assert
+        const originalOutput = customSquashFn(testValue);
+        const newOutput = deserialized.nodes[0].squash(testValue);
+        expect(newOutput).not.toBe(originalOutput);
+      });
+      it('should use identity if fallback is identity', () => {
+        // Assert
+        if (deserialized.nodes[0].squash === methods.Activation.identity) {
+          expect(deserialized.nodes[0].squash(testValue)).toBe(testValue);
+        }
+      });
     });
 
-    test('custom activation functions are not preserved during serialization', () => {
-      // Arrange
-      const network = new Network(1, 1);
-      const customSquashName = 'MY_CUSTOM_SQUASH';
-      
-      // Store original activation function
-      const originalSquash = network.nodes[0].squash;
-      
-      // Create a custom function with distinctive behavior
-      network.nodes[0].squash = function customSquash(x: number, derivate = false) { 
-        return derivate ? 0 : x + 100; // Very distinctive behavior
-      };
-      
-      // Set the name for serialization
-      Object.defineProperty(network.nodes[0].squash, 'name', { value: customSquashName });
-      
-      const json = network.toJSON();
-      
-      // Act
-      const deserialized = Network.fromJSON(json);
-      
-      // Assert - verify function behavior change
-      const testInput = 0.5;
-      const originalResult = network.nodes[0].squash(testInput);
-      const deserializedResult = deserialized.nodes[0].squash(testInput);
-      
-      // The results should be different because the custom function was not preserved
-      expect(originalResult).not.toEqual(deserializedResult);
-      
-      // The deserialized network should have a standard activation function
-      expect(typeof deserialized.nodes[0].squash).toBe('function');
+    describe('Scenario: serialization does not preserve custom activation functions', () => {
+      let network: Network, testInput: number, originalResult: number, deserializedResult: number;
+      beforeEach(() => {
+        // Arrange
+        network = new Network(1, 1);
+        testInput = 0.5;
+        network.nodes[0].squash = function customSquash(x: number, derivate = false) { return derivate ? 0 : x + 100; };
+        Object.defineProperty(network.nodes[0].squash, 'name', { value: 'MY_CUSTOM_SQUASH' });
+        const json = network.toJSON();
+        const deserialized = Network.fromJSON(json);
+        originalResult = network.nodes[0].squash(testInput);
+        deserializedResult = deserialized.nodes[0].squash(testInput);
+      });
+      it('should not preserve the custom function result', () => {
+        // Assert
+        expect(originalResult).not.toEqual(deserializedResult);
+      });
+      it('should use a standard activation function after deserialization', () => {
+        // Assert
+        expect(typeof deserializedResult).toBe('number');
+      });
     });
   });
 
   describe('Network Property Mutation', () => {
-    test('should maintain connections when node properties change', () => {
-      let passed = false;
-      let lastError: any = null;
-      for (let attempt = 0; attempt < 10; attempt++) {
-        try {
-          // Arrange
-          const net = new Network(2, 1);
-          const initialConnectionCount = net.connections.length;
-          const inputNode = net.nodes.find(n => n.type === 'input')!;
-          const outputNode = net.nodes.find(n => n.type === 'output')!;
-          // Act
-          inputNode.bias = 0.5;
-          outputNode.squash = methods.Activation.tanh;
-          // Assert
-          expect(net.connections.length).toBe(initialConnectionCount);
-          expect(inputNode.isProjectingTo(outputNode)).toBe(true);
-          passed = true;
-          break;
-        } catch (err) {
-          lastError = err;
-        }
-      }
-      if (!passed) {
-        throw lastError;
-      }
+    describe('Scenario: node property changes', () => {
+      let net: Network, initialConnectionCount: number, inputNode: Node, outputNode: Node;
+      beforeEach(() => {
+        // Arrange
+        net = new Network(2, 1);
+        initialConnectionCount = net.connections.length;
+        inputNode = net.nodes.find(n => n.type === 'input')!;
+        outputNode = net.nodes.find(n => n.type === 'output')!;
+      });
+      it('should maintain connection count after input node bias change', () => {
+        // Act
+        inputNode.bias = 0.5;
+        // Assert
+        expect(net.connections.length).toBe(initialConnectionCount);
+      });
+      it('should maintain connection count after output node squash change', () => {
+        // Act
+        outputNode.squash = methods.Activation.tanh;
+        // Assert
+        expect(net.connections.length).toBe(initialConnectionCount);
+      });
+      it('should maintain projection from input to output after property changes', () => {
+        // Act
+        inputNode.bias = 0.5;
+        outputNode.squash = methods.Activation.tanh;
+        // Assert
+        expect(inputNode.isProjectingTo(outputNode)).toBe(true);
+      });
     });
   });
 });

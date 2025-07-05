@@ -188,7 +188,7 @@ describe('ASCII Maze Solver using Neuro-Evolution', () => {
   });
 
   // --- TESTS ---
-  test('Evolve agent: curriculum learning in multiple steps from a tiny mazy to the minotaur maze', async () => {
+  it('Evolve agent: curriculum learning in multiple steps from a tiny mazy to the minotaur maze', async () => {
     // Train on tiny maze
     const tinyResult = await EvolutionEngine.runMazeEvolution({
       mazeConfig: { maze: tiny },

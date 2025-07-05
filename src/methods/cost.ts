@@ -74,6 +74,9 @@ export default class Cost {
    * @throws {Error} If the target and output arrays have different lengths (implicitly via forEach).
    */
   static mse(targets: number[], outputs: number[]): number {
+    if (targets.length !== outputs.length) {
+      throw new Error('Target and output arrays must have the same length.');
+    }
     let error = 0;
 
     // Assumes targets and outputs have the same length.
@@ -100,6 +103,9 @@ export default class Cost {
    * @throws {Error} If the target and output arrays have different lengths (implicitly via forEach).
    */
   static binary(targets: number[], outputs: number[]): number {
+    if (targets.length !== outputs.length) {
+      throw new Error('Target and output arrays must have the same length.');
+    }
     let misses = 0;
 
     // Assumes targets and outputs have the same length.
@@ -127,6 +133,9 @@ export default class Cost {
    * @throws {Error} If the target and output arrays have different lengths (implicitly via forEach).
    */
   static mae(targets: number[], outputs: number[]): number {
+    if (targets.length !== outputs.length) {
+      throw new Error('Target and output arrays must have the same length.');
+    }
     let error = 0;
 
     // Assumes targets and outputs have the same length.
@@ -154,6 +163,9 @@ export default class Cost {
    * @throws {Error} If the target and output arrays have different lengths (implicitly via forEach).
    */
   static mape(targets: number[], outputs: number[]): number {
+    if (targets.length !== outputs.length) {
+      throw new Error('Target and output arrays must have the same length.');
+    }
     let error = 0;
     const epsilon = 1e-15; // Small constant to avoid division by zero or near-zero target values.
 
@@ -188,6 +200,9 @@ export default class Cost {
    * @throws {Error} If the target and output arrays have different lengths (implicitly via forEach).
    */
   static msle(targets: number[], outputs: number[]): number {
+    if (targets.length !== outputs.length) {
+      throw new Error('Target and output arrays must have the same length.');
+    }
     let error = 0;
 
     // Assumes targets and outputs have the same length.
@@ -220,6 +235,9 @@ export default class Cost {
    * @throws {Error} If the target and output arrays have different lengths (implicitly via forEach).
    */
   static hinge(targets: number[], outputs: number[]): number {
+    if (targets.length !== outputs.length) {
+      throw new Error('Target and output arrays must have the same length.');
+    }
     let error = 0;
 
     // Assumes targets and outputs have the same length.

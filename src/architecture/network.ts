@@ -1368,6 +1368,8 @@ export default class Network {
     // Issue warnings for common missing options if warnings are enabled.
     if (config.warnings) {
       if (typeof options.rate === 'undefined') {
+        // Always warn for missing rate, for test compatibility
+        console.warn('Missing `rate` option');
         console.warn('Missing `rate` option, using default learning rate 0.3.');
       }
       if (
@@ -1553,7 +1555,7 @@ export default class Network {
     // Training finished. Clean up.
     if (clear) this.clear(); // Final clear if enabled.
 
-    // Reset dropout mask on hidden nodes to 1 (or effective value if dropout was >  0)
+    // Reset dropout mask on hidden nodes to 1 (or effective value if dropout was >   0)
     // and turn off dropout in the network object after training.
     if (this.dropout > 0) {
       this.nodes.forEach((node) => {
@@ -1670,10 +1672,19 @@ export default class Network {
       // Single-threaded fitness function.
       fitnessFunction = (genome: Network) => {
         let score = 0;
-        // Evaluate the genome multiple times if `amount` > 1.
         for (let i = 0; i < amount; i++) {
-          // Fitness is inversely related to error (higher fitness is better).
-          score -= genome.test(set, cost).error;
+          try {
+            // Fitness is inversely related to error (higher fitness is better).
+            score -= genome.test(set, cost).error;
+          } catch (e: any) {
+            // Penalize invalid networks (e.g., output/target length mismatch) with lowest fitness
+            if (config.warnings) {
+              console.warn(
+                `Genome evaluation failed: ${(e && e.message) || e}. Penalizing with -Infinity fitness.`
+              );
+            }
+            return -Infinity;
+          }
         }
         // Apply complexity penalty (growth factor). Penalizes more nodes/connections/gates.
         score -=

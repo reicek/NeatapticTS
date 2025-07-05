@@ -13,7 +13,7 @@ describe('Learning Capability', () => {
     ];
 
     describe('Scenario: XOR gate', () => {
-      test('learns the XOR function (relaxed threshold)', () => {
+      it('learns the XOR function (relaxed threshold)', () => {
         // Arrange
         const network = Architect.perceptron(2, 10, 1);
         const options = { iterations: 5000, error: 0.25, shuffle: true, rate: 0.3, momentum: 0.9 };
@@ -25,7 +25,7 @@ describe('Learning Capability', () => {
         expect(results.error).toBeLessThan(0.25);
       });
       
-      test('fails to learn XOR with insufficient iterations', () => {
+      it('fails to learn XOR with insufficient iterations', () => {
         // Arrange
         const network = Architect.perceptron(2, 10, 1);
         const options = { iterations: 1, error: 0.25, shuffle: true, rate: 0.3, momentum: 0.9 };
@@ -39,7 +39,7 @@ describe('Learning Capability', () => {
     });
 
     describe('Scenario: OR gate', () => {
-      test('learns OR gate correctly', () => {
+      it('learns OR gate correctly', () => {
         // Arrange
         const net = Architect.perceptron(2, 3, 1);
         const dataset = [
@@ -53,7 +53,7 @@ describe('Learning Capability', () => {
         // Assert - relaxed threshold to make test more stable
         expect(results.error).toBeLessThan(0.35);
       });
-      test('fails to learn OR with insufficient iterations', () => {
+      it('fails to learn OR with insufficient iterations', () => {
         // Arrange
         const net = Architect.perceptron(2, 1, 1);
         const dataset = [
@@ -72,7 +72,7 @@ describe('Learning Capability', () => {
 
   describe('Function Approximation', () => {
     describe('Scenario: SIN function', () => {
-      test('learns the SIN function (relaxed threshold)', () => {
+      it('learns the SIN function (relaxed threshold)', () => {
         jest.setTimeout(30000);
         // Arrange
         const set = [];
@@ -91,7 +91,7 @@ describe('Learning Capability', () => {
         expect(results.error).toBeLessThan(0.25);
       });
       
-      test('fails to learn SIN with insufficient iterations', () => {
+      it('fails to learn SIN with insufficient iterations', () => {
         // Arrange
         const size = 40;
         const set = [];
@@ -109,7 +109,7 @@ describe('Learning Capability', () => {
     });
 
     describe('Scenario: SIN and COS functions simultaneously', () => {
-      test('learns the SIN and COS functions simultaneously (relaxed threshold)', () => {
+      it('learns the SIN and COS functions simultaneously (relaxed threshold)', () => {
         jest.setTimeout(30000);
         // Arrange
         const set = [];
@@ -131,7 +131,7 @@ describe('Learning Capability', () => {
         expect(results.error).toBeLessThan(0.2);
       });
       
-      test('fails to learn SIN and COS with insufficient iterations', () => {
+      it('fails to learn SIN and COS with insufficient iterations', () => {
         // Arrange
         const set = [];
         for (let i = 0; i < 100; i++) {
@@ -155,7 +155,7 @@ describe('Learning Capability', () => {
   });
   
   describe('Network Dropout Mask Reset', () => {
-    test('should support dropout during training', () => {
+    it('should support dropout during training', () => {
       // Arrange
       const net = new Network(2, 1);
       const dataset = [
@@ -172,19 +172,29 @@ describe('Learning Capability', () => {
       expect(result.error).toBeLessThanOrEqual(0.5);
     });
 
-    test('resetDropoutMasks resets all node masks to 1 (node-level dropout)', () => {
-      // Arrange
-      const net = new (require('../../src/architecture/network').default)(3, 2);
-      net.nodes.forEach((node: any) => {
-        if (node.type === 'hidden') node.mask = 0;
+    describe('resetDropoutMasks utility', () => {
+      let net: any;
+      let hiddenNodeIndexes: number[];
+      beforeEach(() => {
+        // Arrange
+        const NetworkClass = require('../../src/architecture/network').default;
+        net = new NetworkClass(3, 2);
+        hiddenNodeIndexes = [];
+        net.nodes.forEach((node: any, idx: number) => {
+          if (node.type === 'hidden') {
+            node.mask = 0;
+            hiddenNodeIndexes.push(idx);
+          }
+        });
       });
-      
-      // Act
-      net.resetDropoutMasks();
-      
-      // Assert
-      net.nodes.forEach((node: any) => {
-        expect(node.mask).toBe(1);
+
+      it('resets all hidden node masks to 1 (node-level dropout)', () => {
+        // Act
+        net.resetDropoutMasks();
+        // Assert
+        hiddenNodeIndexes.forEach(idx => {
+          expect(net.nodes[idx].mask).toBe(1);
+        });
       });
     });
   });

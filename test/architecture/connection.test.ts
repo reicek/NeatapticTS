@@ -1,3 +1,4 @@
+import { suppressConsoleOutput } from '../utils/console-helper';
 import Connection from '../../src/architecture/connection';
 import Node from '../../src/architecture/node';
 
@@ -7,97 +8,95 @@ describe('Connection', () => {
   let gaterNode: Node;
 
   beforeEach(() => {
-    // Arrange: Create new nodes before each test
+    // Arrange
     fromNode = new Node();
     toNode = new Node();
     gaterNode = new Node();
-
-    // Assign mock indices - Note: These might not be used by Connection.toJSON() based on errors
     fromNode.index = 0;
     toNode.index = 1;
     gaterNode.index = 2;
   });
 
   describe('Constructor', () => {
-    describe('With specified weight', () => {
-      const weight = 0.75;
+    describe('Scenario: with specified weight', () => {
       let connection: Connection;
+      const weight = 0.75;
 
       beforeEach(() => {
-        // Act
+        // Arrange & Act
         connection = new Connection(fromNode, toNode, weight);
       });
 
-      test('should set the "from" node', () => {
+      it('sets the "from" node', () => {
         // Assert
         expect(connection.from).toBe(fromNode);
       });
 
-      test('should set the "to" node', () => {
+      it('sets the "to" node', () => {
         // Assert
         expect(connection.to).toBe(toNode);
       });
 
-      test('should set the specified weight', () => {
+      it('sets the specified weight', () => {
         // Assert
         expect(connection.weight).toBe(weight);
       });
 
-      test('should set the default gain to 1', () => {
+      it('sets the default gain to 1', () => {
         // Assert
         expect(connection.gain).toBe(1);
       });
 
-      test('should set the default eligibility to 0', () => {
+      it('sets the default eligibility to 0', () => {
         // Assert
         expect(connection.eligibility).toBe(0);
       });
 
-      test('should initialize xtrace nodes as empty array', () => {
+      it('initializes xtrace nodes as empty array', () => {
         // Assert
         expect(connection.xtrace.nodes).toEqual([]);
       });
 
-      test('should initialize xtrace values as empty array', () => {
+      it('initializes xtrace values as empty array', () => {
         // Assert
         expect(connection.xtrace.values).toEqual([]);
       });
 
-      test('should set gater to null', () => {
+      it('sets gater to null', () => {
         // Assert
         expect(connection.gater).toBeNull();
       });
     });
 
-    describe('Without specified weight', () => {
+    describe('Scenario: without specified weight', () => {
       let connection: Connection;
 
       beforeEach(() => {
-        // Act
+        // Arrange & Act
         connection = new Connection(fromNode, toNode);
       });
 
-      test('should set the "from" node', () => {
+      it('sets the "from" node', () => {
         // Assert
         expect(connection.from).toBe(fromNode);
       });
 
-      test('should set the "to" node', () => {
+      it('sets the "to" node', () => {
         // Assert
         expect(connection.to).toBe(toNode);
       });
 
-      test('should set a random weight >= -1', () => {
+      it('sets a random weight >= -0.1', () => {
         // Assert
-        expect(connection.weight).toBeGreaterThanOrEqual(-1);
+        expect(connection.weight).toBeGreaterThanOrEqual(-0.1);
       });
 
-      test('should set a random weight <= 1', () => {
+      it('sets a random weight <= 0.1', () => {
         // Assert
-        expect(connection.weight).toBeLessThanOrEqual(1);
+        expect(connection.weight).toBeLessThanOrEqual(0.1);
       });
 
-      test('should set gater to null', () => {
+      it('sets gater to null', () => {
         // Assert
         expect(connection.gater).toBeNull();
       });
@@ -105,20 +104,20 @@ describe('Connection', () => {
   });
 
   describe('Gating', () => {
-    const weight = 0.5;
     let connection: Connection;
+    const weight = 0.5;
 
     beforeEach(() => {
-      // Arrange: Create a connection first
+      // Arrange
       connection = new Connection(fromNode, toNode, weight);
-     });
+    });
 
     describe('Scenario: valid gater', () => {
       beforeEach(() => {
-        // Act: Set the gater node
+        // Act
         connection.gater = gaterNode;
       });
-      test('should set the gater node correctly', () => {
+      it('sets the gater node correctly', () => {
         // Assert
         expect(connection.gater).toBe(gaterNode);
       });
@@ -126,19 +125,24 @@ describe('Connection', () => {
 
     describe('Scenario: gater set back to null', () => {
       beforeEach(() => {
-        // Arrange: Set gater, then set to null
+        // Arrange
         connection.gater = gaterNode;
+        // Act
         connection.gater = null;
       });
-      test('should set the gater property to null', () => {
+      it('sets the gater property to null', () => {
         // Assert
         expect(connection.gater).toBeNull();
       });
     });
 
     describe('Scenario: invalid gater', () => {
-      test('should not throw when setting gater to an invalid value (robustness)', () => {
-        // Arrange & Act
+      beforeEach(() => {
+        // Arrange
+        suppressConsoleOutput();
+      });
+      it('does not throw when setting gater to an invalid value', () => {
+        // Arrange & Act & Assert
         expect(() => {
           // @ts-expect-error
           connection.gater = 12345;
@@ -148,10 +152,10 @@ describe('Connection', () => {
   });
 
   describe('toJSON()', () => {
-    describe('Simple connection', () => {
-      const weight = -0.3;
+    describe('Scenario: simple connection', () => {
       let connection: Connection;
       let json: any;
+      const weight = -0.3;
 
       beforeEach(() => {
         // Arrange
@@ -160,48 +164,60 @@ describe('Connection', () => {
         json = connection.toJSON();
       });
 
-      test('should serialize the weight', () => {
+      it('serializes the weight', () => {
         // Assert
         expect(json.weight).toBe(weight);
       });
 
-      test('should not include a gater index', () => {
+      it('serializes the from index', () => {
+        // Assert
+        expect(json.from).toBe(fromNode.index);
+      });
+
+      it('serializes the to index', () => {
+        // Assert
+        expect(json.to).toBe(toNode.index);
+      });
+
+      it('serializes the gain', () => {
+        // Assert
+        expect(json.gain).toBe(connection.gain);
+      });
+
+      it('does not include a gater index', () => {
         // Assert
         expect(json.gater).toBeUndefined();
       });
     });
 
-    describe('Connection with gater', () => {
-      const weight = 0.6;
+    describe('Scenario: connection with gater', () => {
       let connection: Connection;
       let json: any;
+      const weight = 0.6;
 
       beforeEach(() => {
-        // Arrange: Create connection
+        // Arrange
         connection = new Connection(fromNode, toNode, weight);
-        // Arrange: Set the gater *after* construction
         connection.gater = gaterNode;
         // Act
         json = connection.toJSON();
       });
 
-      test('should serialize the weight', () => {
+      it('serializes the weight', () => {
         // Assert
         expect(json.weight).toBe(weight);
       });
 
-      test('should potentially include gater index (implementation dependent)', () => {
-        // Assert: Check if gater property exists, even if undefined in current runs
-        expect(json.hasOwnProperty('gater') || json.gater === undefined).toBe(
-          true
-        );
+      it('includes gater property with correct index', () => {
+        // Assert
+        expect(json.gater).toBe(gaterNode.index);
       });
     });
   });
 
   describe('innovationID', () => {
-    describe('When called with two different pairs', () => {
-      test('should return unique values for different pairs', () => {
+    describe('Scenario: two different pairs', () => {
+      it('returns unique values for different pairs', () => {
         // Arrange
         const a1 = 1, b1 = 2;
         const a2 = 2, b2 = 3;
@@ -212,8 +228,8 @@ describe('Connection', () => {
         expect(id1).not.toBe(id2);
       });
     });
-    describe('When called with the same pair twice', () => {
-      test('should return the same value', () => {
+    describe('Scenario: same pair twice', () => {
+      it('returns the same value', () => {
         // Arrange
         const a = 5, b = 7;
         // Act
@@ -223,8 +239,8 @@ describe('Connection', () => {
         expect(id1).toBe(id2);
       });
     });
-    describe('When called with reversed pairs', () => {
-      test('should return different values for (a, b) and (b, a) when a !== b', () => {
+    describe('Scenario: reversed pairs', () => {
+      it('returns different values for (a, b) and (b, a) when a !== b', () => {
         // Arrange
         const a = 3, b = 8;
         // Act
@@ -234,8 +250,8 @@ describe('Connection', () => {
         expect(id1).not.toBe(id2);
       });
     });
-    describe('When called with identical values', () => {
-      test('should return a valid number for (a, a)', () => {
+    describe('Scenario: identical values', () => {
+      it('returns a valid number for (a, a)', () => {
         // Arrange
         const a = 4;
         // Act
@@ -244,8 +260,8 @@ describe('Connection', () => {
         expect(typeof id).toBe('number');
       });
     });
-    describe('When called with large numbers', () => {
-      test('should return a valid number', () => {
+    describe('Scenario: large numbers', () => {
+      it('returns a valid number', () => {
         // Arrange
         const a = 100000, b = 200000;
         // Act
@@ -254,8 +270,8 @@ describe('Connection', () => {
         expect(typeof id).toBe('number');
       });
     });
-    describe('When called with zero', () => {
-      test('should return a valid number for (0, 0)', () => {
+    describe('Scenario: zero', () => {
+      it('returns a valid number for (0, 0)', () => {
         // Arrange
         const a = 0, b = 0;
         // Act

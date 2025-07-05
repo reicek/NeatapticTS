@@ -5,7 +5,7 @@
   "main": "./src/neataptic",
   "type": "module",
   "scripts": {
-    "test": "jest --no-cache --coverage --collect-coverage --runInBand --testPathIgnorePatterns=.e2e.test.ts",
+    "test": "jest --no-cache --coverage --collect-coverage --runInBand --detectOpenHandles --testPathIgnorePatterns=.e2e.test.ts",
     "deploy": "npm run build && npm run test:dist && npm publish",
     "build": "npm run build:webpack && npm run build:ts",
     "build:ts": "tsc",
