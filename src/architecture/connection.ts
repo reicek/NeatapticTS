@@ -16,6 +16,16 @@ export default class Connection {
   previousDeltaWeight: number; // Previous weight change for momentum
   totalDeltaWeight: number; // Accumulated weight change for batch training
   xtrace: { nodes: Node[]; values: number[] }; // Extended trace for eligibility propagation
+  // --- Optimizer moment states ---
+  opt_m?: number; // First moment (Adam)
+  opt_v?: number; // Second moment (Adam)
+  opt_cache?: number; // Accumulator (RMSProp/Adagrad)
+  // Additional optimizer states
+  opt_vhat?: number; // AMSGrad max second moment
+  opt_u?: number; // Adamax infinity norm
+  opt_m2?: number; // Lion second momentum like term
+  _la_shadowWeight?: number; // Lookahead shadow param
+  dcMask?: number; // DropConnect mask (1 active, 0 dropped)
 
   /**
    * Creates a new connection between two nodes.
@@ -42,6 +52,16 @@ export default class Connection {
       nodes: [],
       values: [],
     };
+
+    // Initialize optimizer moments
+    this.opt_m = 0;
+    this.opt_v = 0;
+    this.opt_cache = 0;
+    this.opt_vhat = 0;
+    this.opt_u = 0;
+    this.opt_m2 = 0;
+    // Initialize dropconnect mask
+    this.dcMask = 1;
   }
 
   /**

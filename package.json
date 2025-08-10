@@ -2,7 +2,9 @@
   "name": "neataptic",
   "version": "1.4.7",
   "description": "Architecture-free neural network library with genetic algorithm implementations",
-  "main": "./src/neataptic",
+  "main": "./dist/neataptic.js",
+  "module": "./dist/neataptic.js",
+  "types": "./dist/neataptic.d.ts",
   "type": "module",
   "scripts": {
     "test": "jest --no-cache --coverage --collect-coverage --runInBand --detectOpenHandles --testPathIgnorePatterns=.e2e.test.ts",
@@ -12,7 +14,15 @@
     "build:webpack": "webpack --config webpack.config.js",
     "start:ts": "ts-node src/neataptic.ts",
     "test:e2e": "cross-env FORCE_COLOR=true jest e2e.test.ts --no-cache --runInBand",
-    "test:e2e:logs": "npx jest e2e.test.ts --verbose --runInBand --no-cache"
+    "test:e2e:logs": "npx jest e2e.test.ts --verbose --runInBand --no-cache",
+    "test:dist": "npm run build:ts && jest --no-cache --coverage --collect-coverage --runInBand --detectOpenHandles --testPathIgnorePatterns=.e2e.test.ts",
+    "docs": "jsdoc2md dist/*.js > api.md"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/neataptic.d.ts",
+      "import": "./dist/neataptic.js"
+    }
   },
   "devDependencies": {
     "@types/chai": "^5.2.1",
@@ -25,11 +35,12 @@
     "cross-env": "^7.0.3",
     "husky": "^6.0.0",
     "jest": "^29.7.0",
+    "jsdoc-to-markdown": "^9.1.1",
     "mkdocs": "^0.0.1",
     "ts-jest": "^29.1.1",
     "ts-loader": "^9.5.2",
     "ts-node": "^10.9.2",
-    "typescript": "^5.8.3",
+    "typescript": "^5.6.3",
     "undici-types": "^7.8.0",
     "webpack": "^5.99.5",
     "webpack-cli": "^6.0.1"

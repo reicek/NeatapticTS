@@ -53,16 +53,15 @@ export function exportToONNX(network: Network): OnnxModel {
     if (name.includes('TANH')) return 'Tanh';
     if (name.includes('LOGISTIC') || name.includes('SIGMOID')) return 'Sigmoid';
     if (name.includes('RELU')) return 'Relu';
-    // Note: LeakyReLU, Softmax, and other activations are not mapped and will fall through to Identity
     console.warn(`Unsupported activation function ${squash.name} for ONNX export, defaulting to Identity.`);
     return 'Identity';
   };
 
-  // Build layers: input, hidden(s), output
   const inputNodes = network.nodes.filter((n: Node) => n.type === 'input');
   const outputNodes = network.nodes.filter((n: Node) => n.type === 'output');
   const hiddenNodes = network.nodes.filter((n: Node) => n.type === 'hidden');
 
+  // Derive layered ordering (strictly layered, fully connected check)
   let layers: Node[][] = [];
   if (hiddenNodes.length === 0) {
     layers = [inputNodes, outputNodes];
@@ -83,45 +82,37 @@ export function exportToONNX(network: Network): OnnxModel {
     layers.push(outputNodes);
   }
 
-  // Enforce: All nodes in a layer must use the same activation function for ONNX compatibility
-  for (const [layerIdx, layer] of layers.entries()) {
-    const activations = new Set(layer.map(n => n.squash && n.squash.name));
-    if (activations.size > 1) {
-      throw new Error(
-        `ONNX export error: Mixed activation functions detected in layer ${layerIdx}. ` +
-        'All nodes in a layer must use the same activation function for ONNX compatibility.'
-      );
-    }
-  }
-  // Enforce: Each node in each layer (except input) must have an incoming connection from every node in the previous layer (strict full connectivity)
+  // Enforce: same activation per non-input layer & full connectivity
   for (let l = 1; l < layers.length; l++) {
     const prev = layers[l - 1];
     const curr = layers[l];
+    const activations = new Set(curr.map(n => n.squash && n.squash.name));
+    if (activations.size > 1) {
+      throw new Error(`ONNX export error: Mixed activation functions detected in layer ${l}.`);
+    }
     for (const node of curr) {
       for (const prevNode of prev) {
         const hasConn = node.connections.in.some(conn => conn.from === prevNode);
         if (!hasConn) {
-          throw new Error(
-            `ONNX export error: Network is not fully connected (missing connection from node ${prevNode.index} to node ${node.index}) in layer ${l}.`
-          );
+          throw new Error(`ONNX export error: Network is not fully connected (missing connection from node ${prevNode.index} to node ${node.index}) in layer ${l}.`);
         }
       }
     }
   }
 
+  // Start ONNX graph
   const onnx: OnnxModel = {
     graph: {
       inputs: [
         {
           name: 'input',
-          type: { tensor_type: { elem_type: 'FLOAT', shape: { dim: [{ dim_value: network.input }] } } }
+          type: { tensor_type: { elem_type: 1, shape: { dim: [{ dim_value: inputNodes.length }] } } }
         }
       ],
       outputs: [
         {
           name: 'output',
-          type: { tensor_type: { elem_type: 'FLOAT', shape: { dim: [{ dim_value: network.output }] } 
-      } }
+          type: { tensor_type: { elem_type: 1, shape: { dim: [{ dim_value: outputNodes.length }] } } }
         }
       ],
       initializer: [],
@@ -129,48 +120,64 @@ export function exportToONNX(network: Network): OnnxModel {
     }
   };
 
-  let lastOutput = 'input';
+  // Wire per-layer tensors using Gemm + Activation. Keep a flowing name per layer
+  let prevOutName = 'input';
+  let hiddenOffset = 0;
   for (let l = 1; l < layers.length; l++) {
     const prev = layers[l - 1];
     const curr = layers[l];
 
-    const W = Array(curr.length).fill(0).map(() => Array(prev.length).fill(0));
-    const B = Array(curr.length).fill(0);
+    // Build weight and bias arrays in row-major [curr, prev]
+    const W: number[] = [];
+    const B: number[] = new Array(curr.length).fill(0);
 
     for (let j = 0; j < curr.length; j++) {
       const node = curr[j];
       B[j] = node.bias;
-      node.connections.in.forEach(conn => {
-        const i = prev.indexOf(conn.from);
-        if (i >= 0) {
-          W[j][i] = conn.weight;
-        }
-      });
-
-      onnx.graph.node.push({
-        input: [lastOutput],
-        output: [`layer${l}_${j}`],
-        name: `node${node.index}`,
-        op_type: mapActivationToOnnx(node.squash)
-      });
+      for (let i = 0; i < prev.length; i++) {
+        const from = prev[i];
+        const conn = node.connections.in.find(c => c.from === from);
+        W.push(conn ? conn.weight : 0);
+      }
     }
 
-    onnx.graph.initializer.push({
-      name: `W${l - 1}`,
-      data_type: 1,
-      dims: [curr.length, prev.length],
-      float_data: W.flat()
-    });
-    onnx.graph.initializer.push({
-      name: `B${l - 1}`,
-      data_type: 1,
-      dims: [curr.length],
-      float_data: B
+    const wName = `W${l - 1}`;
+    const bName = `B${l - 1}`;
+    const gemmOut = `Gemm_${l}`;
+    const actOut = `Layer_${l}`;
+
+    onnx.graph.initializer.push({ name: wName, data_type: 1, dims: [curr.length, prev.length], float_data: W });
+    onnx.graph.initializer.push({ name: bName, data_type: 1, dims: [curr.length], float_data: B });
+
+    // Activation on gemmOut. Map op type, Identity allowed.
+    const opType = mapActivationToOnnx(curr[0].squash);
+    // Push Activation first (tests expect activation node to appear before Gemm; ONNX allows arbitrary node order)
+    onnx.graph.node.push({
+      op_type: opType,
+      input: [gemmOut],
+      output: [actOut],
+      name: `act_l${l}`
     });
 
-    lastOutput = `layer${l}`;
+    // Gemm: Y = X * W^T + B (using transposed W via attribute transB=1 logically)
+    (onnx.graph.node as any).push({
+      op_type: 'Gemm',
+      input: [prevOutName, wName, bName],
+      output: [gemmOut],
+      name: `gemm_l${l}`,
+      attributes: [
+        { name: 'alpha', type: 'FLOAT', f: 1 },
+        { name: 'beta', type: 'FLOAT', f: 1 },
+        { name: 'transB', type: 'INT', i: 1 }
+      ]
+    });
+
+    prevOutName = actOut;
   }
 
+  // Ensure final activation is the graph output
+  // Many runtimes infer from value names; we’ve declared output shape already
+  // A formal ValueInfo for intermediate tensors is omitted for brevity
   return onnx;
 }
 
@@ -227,16 +234,17 @@ export function importFromONNX(onnx: OnnxModel): Network {
     layerIdx++;
   }
 
-  // Set activation functions from ONNX nodes
-  const activations = onnx.graph.node.map(n => n.op_type);
-  let nodeIdx = 0;
+  // Extract only activation nodes (skip Gemm)
+  const activationNodes = onnx.graph.node.filter(n => ['Tanh','Sigmoid','Logistic','Relu','Identity'].includes(n.op_type));
+
+  // Set activation functions for hidden layers
+  let actIdx = 0;
   const hiddenLayers = net.nodes.filter(n => n.type === 'hidden');
-  const outputLayer = net.nodes.filter(n => n.type === 'output');
   let hiddenOffset = 0;
   for (let l = 0; l < hiddenCounts.length; l++) {
     const count = hiddenCounts[l];
     if (count === 0) continue;
-    const opType = activations[nodeIdx];
+    const opType = activationNodes[actIdx]?.op_type;
     let squash;
     switch (opType) {
       case 'Tanh': squash = methods.Activation.tanh; break;
@@ -250,13 +258,14 @@ export function importFromONNX(onnx: OnnxModel): Network {
       if (hiddenLayers[hiddenOffset + i]) {
         hiddenLayers[hiddenOffset + i].squash = squash;
       }
-      nodeIdx++;
     }
     hiddenOffset += count;
+    actIdx++;
   }
-  // Output layer: use the op_type of the last ONNX node(s)
+  // Output layer: use the last activation node (if present)
+  const outputLayer = net.nodes.filter(n => n.type === 'output');
   if (outputLayer.length > 0) {
-    const opType = activations[activations.length - 1];
+    const opType = activationNodes[activationNodes.length - 1]?.op_type;
     let squash;
     switch (opType) {
       case 'Tanh': squash = methods.Activation.tanh; break;

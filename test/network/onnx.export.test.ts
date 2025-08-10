@@ -85,7 +85,8 @@ describe('ONNX Export', () => {
         // Act
         const onnx = exportToONNX(net);
         // Assert
-        expect(onnx.graph.node[0].op_type).toBe('Tanh');
+        const actNode = onnx.graph.node.find((n: any) => ['Tanh','Sigmoid','Relu','Identity'].includes(n.op_type));
+        expect(actNode?.op_type).toBe('Tanh');
       });
     });
     describe('when using Sigmoid activation', () => {
@@ -96,7 +97,8 @@ describe('ONNX Export', () => {
         // Act
         const onnx = exportToONNX(net);
         // Assert
-        expect(onnx.graph.node[0].op_type).toBe('Sigmoid');
+        const actNode = onnx.graph.node.find((n: any) => ['Tanh','Sigmoid','Relu','Identity'].includes(n.op_type));
+        expect(actNode?.op_type).toBe('Sigmoid');
       });
     });
     describe('when using Relu activation', () => {
@@ -107,7 +109,8 @@ describe('ONNX Export', () => {
         // Act
         const onnx = exportToONNX(net);
         // Assert
-        expect(onnx.graph.node[0].op_type).toBe('Relu');
+        const actNode = onnx.graph.node.find((n: any) => ['Tanh','Sigmoid','Relu','Identity'].includes(n.op_type));
+        expect(actNode?.op_type).toBe('Relu');
       });
     });
     describe('when using an unknown activation', () => {
@@ -119,7 +122,8 @@ describe('ONNX Export', () => {
         suppressConsoleWarn(() => {
           const onnx = exportToONNX(net);
           // Assert
-          expect(onnx.graph.node[0].op_type).toBe('Identity');
+          const actNode = onnx.graph.node.find((n: any) => ['Tanh','Sigmoid','Relu','Identity'].includes(n.op_type));
+          expect(actNode?.op_type).toBe('Identity');
         });
       });
       it('should warn when using an unknown activation', () => {
@@ -234,6 +238,37 @@ describe('ONNX Export', () => {
         expect(called).toBe(true);
         // Cleanup
         console.warn = originalWarn;
+      });
+    });
+  });
+
+  describe('Gemm attributes and node ordering', () => {
+    it('emits Gemm with alpha=1, beta=1, transB=1 and lists Activation before Gemm', () => {
+      // Arrange
+      const net = Network.createMLP(3, [3, 2], 1);
+      // Act
+      const onnx: any = exportToONNX(net);
+      // Assert Gemm attributes for each layer
+      const gemmNodes = onnx.graph.node.filter((n: any) => n.op_type === 'Gemm');
+      expect(gemmNodes.length).toBeGreaterThan(0);
+      gemmNodes.forEach((g: any) => {
+        // attributes are an array of { name, type, f|i }
+        const attrs = g.attributes || [];
+        const alpha = attrs.find((a: any) => a.name === 'alpha');
+        const beta = attrs.find((a: any) => a.name === 'beta');
+        const transB = attrs.find((a: any) => a.name === 'transB');
+        expect(alpha && alpha.f).toBe(1);
+        expect(beta && beta.f).toBe(1);
+        expect(transB && transB.i).toBe(1);
+      });
+      // Assert ordering: corresponding Activation node should appear before its Gemm
+      const nodes = onnx.graph.node as any[];
+      gemmNodes.forEach((g: any) => {
+        const idxGemm = nodes.indexOf(g);
+        const act = nodes.find((n: any) => n.input && n.input[0] === g.output[0] && n.op_type !== 'Gemm');
+        expect(act).toBeTruthy();
+        const idxAct = nodes.indexOf(act);
+        expect(idxAct).toBeLessThan(idxGemm);
       });
     });
   });

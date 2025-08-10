@@ -210,11 +210,12 @@ export default class Node {
     // Calculate the new state: self-connection contribution + bias.
     this.state =
       this.connections.self.reduce(
-        (sum, conn) => sum + conn.gain * conn.weight * this.old,
+        (sum, conn) => sum + (conn.dcMask === 0 ? 0 : (conn.gain * conn.weight * this.old)),
         0
       ) + this.bias;
-    // Add contributions from incoming connections.
+    // Add contributions from incoming connections (respect DropConnect mask)
     for (const connection of this.connections.in) {
+      if (connection.dcMask === 0) continue; // skip dropped connection
       this.state +=
         connection.from.activation * connection.weight * connection.gain;
     }
@@ -272,14 +273,17 @@ export default class Node {
       }
       return this.activation;
     }
+    // Use last state for recurrent contribution, then compute new state
+    this.old = this.state;
     // Calculate the new state: self-connection contribution + bias.
     this.state =
       this.connections.self.reduce(
-        (sum, conn) => sum + conn.gain * conn.weight * this.state,
+        (sum, conn) => sum + (conn.dcMask === 0 ? 0 : (conn.gain * conn.weight * this.old)),
         0
       ) + this.bias;
     // Add contributions from incoming connections.
     for (const connection of this.connections.in) {
+      if (connection.dcMask === 0) continue;
       this.state +=
         connection.from.activation * connection.weight * connection.gain;
     }
@@ -383,6 +387,8 @@ export default class Node {
 
     // 2. Calculate gradients and update weights/biases for incoming connections.
     for (const connection of this.connections.in) {
+      // Skip gradient if DropConnect removed this connection this step
+      if (connection.dcMask === 0) { connection.totalDeltaWeight += 0; continue; }
       // Calculate the gradient for the connection weight.
       let gradient = this.error.projected * connection.eligibility;
       for (let j = 0; j < connection.xtrace.nodes.length; j++) {
@@ -450,6 +456,7 @@ export default class Node {
 
     // --- Update self-connections as well (for eligibility, weight, momentum) ---
     for (const connection of this.connections.self) {
+      if (connection.dcMask === 0) { connection.totalDeltaWeight += 0; continue; }
       let gradient = this.error.projected * connection.eligibility;
       for (let j = 0; j < connection.xtrace.nodes.length; j++) {
         const node = connection.xtrace.nodes[j];
@@ -889,5 +896,211 @@ export default class Node {
 
     // Check regular incoming connections.
     return this.connections.in.some((conn) => conn.from === node);
+  }
+
+  /**
+   * Applies accumulated batch updates to incoming and self connections and this node's bias.
+   * Uses momentum in a Nesterov-compatible way: currentDelta = accumulated + momentum * previousDelta.
+   * Resets accumulators after applying. Safe to call on any node type.
+   * @param momentum Momentum factor (0 to disable)
+   */
+  applyBatchUpdates(momentum: number): void {
+    return this.applyBatchUpdatesWithOptimizer({ type: 'sgd', momentum });
+  }
+
+  /**
+   * Extended batch update supporting multiple optimizers.
+   */
+  applyBatchUpdatesWithOptimizer(opts: { type: 'sgd'|'rmsprop'|'adagrad'|'adam'|'adamw'|'amsgrad'|'adamax'|'nadam'|'radam'|'lion'|'adabelief'|'lookahead'; momentum?: number; beta1?: number; beta2?: number; eps?: number; weightDecay?: number; lrScale?: number; t?: number; baseType?: any; la_k?: number; la_alpha?: number }): void {
+    const type = opts.type || 'sgd';
+    // Detect lookahead wrapper
+    const effectiveType = type === 'lookahead' ? (opts.baseType || 'sgd') : type;
+    const momentum = opts.momentum ?? 0;
+    const beta1 = opts.beta1 ?? 0.9;
+    const beta2 = opts.beta2 ?? 0.999;
+    const eps = opts.eps ?? 1e-8;
+    const wd = opts.weightDecay ?? 0;
+    const lrScale = opts.lrScale ?? 1;
+    const t = Math.max(1, Math.floor(opts.t ?? 1));
+    if (type === 'lookahead') { (this as any)._la_k = (this as any)._la_k || opts.la_k || 5; (this as any)._la_alpha = (this as any)._la_alpha || opts.la_alpha || 0.5; (this as any)._la_step = ((this as any)._la_step || 0) + 1; if (!(this as any)._la_shadowBias) (this as any)._la_shadowBias = this.bias; }
+    const applyConn = (conn: Connection) => {
+      let g = conn.totalDeltaWeight || 0;
+      if (!Number.isFinite(g)) g = 0;
+      switch (effectiveType) {
+        case 'rmsprop': {
+          conn.opt_cache = (conn.opt_cache ?? 0) * 0.9 + 0.1 * (g * g);
+          const adj = g / (Math.sqrt(conn.opt_cache) + eps);
+          this._safeUpdateWeight(conn, adj * lrScale);
+          break;
+        }
+        case 'adagrad': {
+          conn.opt_cache = (conn.opt_cache ?? 0) + g * g;
+          const adj = g / (Math.sqrt(conn.opt_cache) + eps);
+          this._safeUpdateWeight(conn, adj * lrScale);
+          break;
+        }
+        case 'adam':
+        case 'adamw':
+        case 'amsgrad': {
+          conn.opt_m = (conn.opt_m ?? 0) * beta1 + (1 - beta1) * g;
+            conn.opt_v = (conn.opt_v ?? 0) * beta2 + (1 - beta2) * (g * g);
+            if (effectiveType === 'amsgrad') {
+              conn.opt_vhat = Math.max(conn.opt_vhat ?? 0, conn.opt_v ?? 0);
+            }
+            const vEff = effectiveType === 'amsgrad' ? conn.opt_vhat : conn.opt_v;
+            const mHat = conn.opt_m! / (1 - Math.pow(beta1, t));
+            const vHat = vEff! / (1 - Math.pow(beta2, t));
+            let step = (mHat / (Math.sqrt(vHat) + eps)) * lrScale;
+            if ((effectiveType === 'adamw') && wd !== 0) step -= wd * (conn.weight || 0);
+            this._safeUpdateWeight(conn, step);
+          break;
+        }
+        case 'adamax': {
+          conn.opt_m = (conn.opt_m ?? 0) * beta1 + (1 - beta1) * g;
+          conn.opt_u = Math.max((conn.opt_u ?? 0) * beta2, Math.abs(g));
+          const mHat = conn.opt_m! / (1 - Math.pow(beta1, t));
+          const stepVal = (mHat / ((conn.opt_u) || 1e-12)) * lrScale;
+          this._safeUpdateWeight(conn, stepVal);
+          break;
+        }
+        case 'nadam': {
+          conn.opt_m = (conn.opt_m ?? 0) * beta1 + (1 - beta1) * g;
+          conn.opt_v = (conn.opt_v ?? 0) * beta2 + (1 - beta2) * (g * g);
+          const mHat = conn.opt_m! / (1 - Math.pow(beta1, t));
+          const vHat = conn.opt_v! / (1 - Math.pow(beta2, t));
+          const mNesterov = mHat * beta1 + ((1 - beta1) * g) / (1 - Math.pow(beta1, t));
+          this._safeUpdateWeight(conn, (mNesterov / (Math.sqrt(vHat) + eps)) * lrScale);
+          break;
+        }
+        case 'radam': {
+          conn.opt_m = (conn.opt_m ?? 0) * beta1 + (1 - beta1) * g;
+          conn.opt_v = (conn.opt_v ?? 0) * beta2 + (1 - beta2) * (g * g);
+          const mHat = conn.opt_m! / (1 - Math.pow(beta1, t));
+          const vHat = conn.opt_v! / (1 - Math.pow(beta2, t));
+          const rhoInf = 2 / (1 - beta2) - 1;
+          const rhoT = rhoInf - (2 * t * Math.pow(beta2, t)) / (1 - Math.pow(beta2, t));
+          if (rhoT > 4) {
+            const rt = Math.sqrt(((rhoT - 4) * (rhoT - 2) * rhoInf) / ((rhoInf - 4) * (rhoInf - 2) * rhoT));
+            this._safeUpdateWeight(conn, (rt * mHat / (Math.sqrt(vHat) + eps)) * lrScale);
+          } else {
+            this._safeUpdateWeight(conn, mHat * lrScale);
+          }
+          break;
+        }
+        case 'lion': {
+          conn.opt_m = (conn.opt_m ?? 0) * beta1 + (1 - beta1) * g;
+          conn.opt_m2 = (conn.opt_m2 ?? 0) * beta2 + (1 - beta2) * g;
+          const update = Math.sign((conn.opt_m || 0) + (conn.opt_m2 || 0));
+          this._safeUpdateWeight(conn, -update * lrScale);
+          break;
+        }
+        case 'adabelief': {
+          conn.opt_m = (conn.opt_m ?? 0) * beta1 + (1 - beta1) * g;
+          const g_m = g - conn.opt_m!;
+          conn.opt_v = (conn.opt_v ?? 0) * beta2 + (1 - beta2) * (g_m * g_m);
+          const mHat = conn.opt_m! / (1 - Math.pow(beta1, t));
+          const vHat = conn.opt_v! / (1 - Math.pow(beta2, t));
+          this._safeUpdateWeight(conn, (mHat / (Math.sqrt(vHat) + eps + 1e-12)) * lrScale);
+          break;
+        }
+        default: {
+          let currentDeltaWeight = g + momentum * (conn.previousDeltaWeight || 0);
+          if (!Number.isFinite(currentDeltaWeight)) currentDeltaWeight = 0;
+          if (Math.abs(currentDeltaWeight) > 1e3) currentDeltaWeight = Math.sign(currentDeltaWeight) * 1e3;
+          this._safeUpdateWeight(conn, currentDeltaWeight * lrScale);
+          conn.previousDeltaWeight = currentDeltaWeight;
+        }
+      }
+      if (effectiveType === 'adamw' && wd !== 0) {
+        this._safeUpdateWeight(conn, -wd * (conn.weight || 0) * lrScale);
+      }
+      conn.totalDeltaWeight = 0;
+    };
+    for (const connection of this.connections.in) applyConn(connection);
+    for (const connection of this.connections.self) applyConn(connection);
+    if (this.type !== 'input' && this.type !== 'constant') {
+      let gB = this.totalDeltaBias || 0;
+      if (!Number.isFinite(gB)) gB = 0;
+      if (['adam','adamw','amsgrad','adamax','nadam','radam','lion','adabelief'].includes(effectiveType)) {
+        (this as any).opt_mB = ((this as any).opt_mB ?? 0) * beta1 + (1 - beta1) * gB;
+        if (effectiveType === 'lion') {
+          (this as any).opt_mB2 = ((this as any).opt_mB2 ?? 0) * beta2 + (1 - beta2) * gB;
+        }
+        (this as any).opt_vB = ((this as any).opt_vB ?? 0) * beta2 + (1 - beta2) * ((effectiveType === 'adabelief') ? Math.pow(gB - (this as any).opt_mB, 2) : (gB * gB));
+        if (effectiveType === 'amsgrad') {
+          (this as any).opt_vhatB = Math.max((this as any).opt_vhatB ?? 0, (this as any).opt_vB ?? 0);
+        }
+        const vEffB = effectiveType === 'amsgrad' ? (this as any).opt_vhatB : (this as any).opt_vB;
+        const mHatB = (this as any).opt_mB / (1 - Math.pow(beta1, t));
+        const vHatB = vEffB / (1 - Math.pow(beta2, t));
+        let stepB: number;
+        if (effectiveType === 'adamax') {
+          (this as any).opt_uB = Math.max(((this as any).opt_uB ?? 0) * beta2, Math.abs(gB));
+          stepB = (mHatB / ((this as any).opt_uB || 1e-12)) * lrScale;
+        } else if (effectiveType === 'nadam') {
+          const mNesterovB = mHatB * beta1 + ((1 - beta1) * gB) / (1 - Math.pow(beta1, t));
+          stepB = (mNesterovB / (Math.sqrt(vHatB) + eps)) * lrScale;
+        } else if (effectiveType === 'radam') {
+          const rhoInf = 2 / (1 - beta2) - 1;
+          const rhoT = rhoInf - (2 * t * Math.pow(beta2, t)) / (1 - Math.pow(beta2, t));
+          if (rhoT > 4) {
+            const rt = Math.sqrt(((rhoT - 4) * (rhoT - 2) * rhoInf) / ((rhoInf - 4) * (rhoInf - 2) * rhoT));
+            stepB = (rt * mHatB / (Math.sqrt(vHatB) + eps)) * lrScale;
+          } else {
+            stepB = mHatB * lrScale;
+          }
+        } else if (effectiveType === 'lion') {
+          const updateB = Math.sign((this as any).opt_mB + (this as any).opt_mB2);
+            stepB = -updateB * lrScale;
+        } else if (effectiveType === 'adabelief') {
+          stepB = (mHatB / (Math.sqrt(vHatB) + eps + 1e-12)) * lrScale;
+        } else {
+          stepB = (mHatB / (Math.sqrt(vHatB) + eps)) * lrScale;
+        }
+        if (effectiveType === 'adamw' && wd !== 0) stepB -= wd * (this.bias || 0) * lrScale;
+        let nextBias = this.bias + stepB;
+        if (!Number.isFinite(nextBias)) nextBias = 0;
+        if (Math.abs(nextBias) > 1e6) nextBias = Math.sign(nextBias) * 1e6;
+        this.bias = nextBias;
+      } else {
+        let currentDeltaBias = gB + momentum * (this.previousDeltaBias || 0);
+        if (!Number.isFinite(currentDeltaBias)) currentDeltaBias = 0;
+        if (Math.abs(currentDeltaBias) > 1e3) currentDeltaBias = Math.sign(currentDeltaBias) * 1e3;
+        let nextBias = this.bias + currentDeltaBias * lrScale;
+        if (!Number.isFinite(nextBias)) nextBias = 0;
+        if (Math.abs(nextBias) > 1e6) nextBias = Math.sign(nextBias) * 1e6;
+        this.bias = nextBias;
+        this.previousDeltaBias = currentDeltaBias;
+      }
+      this.totalDeltaBias = 0;
+    } else {
+      this.previousDeltaBias = 0;
+      this.totalDeltaBias = 0;
+    }
+    if (type === 'lookahead') {
+      const k = (this as any)._la_k || 5;
+      const alpha = (this as any)._la_alpha || 0.5;
+      if ((this as any)._la_step % k === 0) {
+        (this as any)._la_shadowBias = (1 - alpha) * (this as any)._la_shadowBias + alpha * this.bias;
+        this.bias = (this as any)._la_shadowBias;
+        const blendConn = (conn: Connection) => {
+          if (!(conn as any)._la_shadowWeight) (conn as any)._la_shadowWeight = conn.weight;
+          (conn as any)._la_shadowWeight = (1 - alpha) * (conn as any)._la_shadowWeight + alpha * conn.weight;
+          conn.weight = (conn as any)._la_shadowWeight;
+        };
+        for (const c of this.connections.in) blendConn(c);
+        for (const c of this.connections.self) blendConn(c);
+      }
+    }
+  }
+
+  /**
+   * Internal helper to safely update a connection weight with clipping and NaN checks.
+   */
+  private _safeUpdateWeight(connection: Connection, delta: number) {
+    let next = connection.weight + delta;
+    if (!Number.isFinite(next)) next = 0;
+    if (Math.abs(next) > 1e6) next = Math.sign(next) * 1e6;
+    connection.weight = next;
   }
 }

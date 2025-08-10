@@ -8,6 +8,7 @@ npm-debug.log
 # Compile
 /dist
 /coverage
+/docs
 
 # IDE
 /idea

@@ -327,13 +327,18 @@ export default class Neat {
 
     const newPopulation: Network[] = [];
 
-    // Elitism
-    for (let i = 0; i < (this.options.elitism || 0); i++) {
-      newPopulation.push(this.population[i]);
+    // Elitism (clamped to available population)
+    const elitismCount = Math.max(0, Math.min(this.options.elitism || 0, this.population.length));
+    for (let i = 0; i < elitismCount; i++) {
+      const elite = this.population[i];
+      if (elite) newPopulation.push(elite);
     }
 
-    // Provenance
-    for (let i = 0; i < (this.options.provenance || 0); i++) {
+    // Provenance (clamp so total does not exceed desired popsize)
+    const desiredPop = Math.max(0, this.options.popsize || 0);
+    const remainingSlotsAfterElites = Math.max(0, desiredPop - newPopulation.length);
+    const provenanceCount = Math.max(0, Math.min(this.options.provenance || 0, remainingSlotsAfterElites));
+    for (let i = 0; i < provenanceCount; i++) {
       if (this.options.network) {
         newPopulation.push(Network.fromJSON(this.options.network.toJSON()));
       } else {
@@ -341,20 +346,15 @@ export default class Neat {
       }
     }
 
-    // Breed the next individuals
-    for (
-      let i = 0;
-      i <
-      this.options.popsize! -
-        (this.options.elitism || 0) -
-        (this.options.provenance || 0);
-      i++
-    ) {
+    // Breed the next individuals (fill up to desired popsize)
+    const toBreed = Math.max(0, desiredPop - newPopulation.length);
+    for (let i = 0; i < toBreed; i++) {
       newPopulation.push(this.getOffspring());
     }
 
     // Ensure minimum hidden nodes to avoid bottlenecks
     for (const genome of newPopulation) {
+      if (!genome) continue;
       this.ensureMinHiddenNodes(genome);
       this.ensureNoDeadEnds(genome); // Ensure no dead ends or blind I/O
     }

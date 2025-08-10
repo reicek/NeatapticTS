@@ -141,4 +141,105 @@ export default class Rate {
     };
     return func;
   }
+
+  /**
+   * Cosine Annealing with Warm Restarts (SGDR style) where the cycle length can grow by a multiplier (tMult) after each restart.
+   *
+   * @param initialPeriod Length of the first cycle in iterations.
+   * @param minRate Minimum learning rate at valley.
+   * @param tMult Factor to multiply the period after each restart (>=1).
+   */
+  static cosineAnnealingWarmRestarts(
+    initialPeriod: number = 1000,
+    minRate: number = 0,
+    tMult: number = 1
+  ): (baseRate: number, iteration: number) => number {
+    let period = initialPeriod;
+    let cycleStart = 0;
+    let cycleEnd = period;
+    return (baseRate: number, iteration: number): number => {
+      // Advance cycles if iteration beyond current
+      while (iteration >= cycleEnd) {
+        cycleStart = cycleEnd;
+        period = Math.max(1, Math.round(period * tMult));
+        cycleEnd = cycleStart + period;
+      }
+      const cyclePos = iteration - cycleStart;
+      const cosineDecay = 0.5 * (1 + Math.cos((cyclePos / period) * Math.PI));
+      return minRate + (baseRate - minRate) * cosineDecay;
+    };
+  }
+
+  /**
+   * Linear Warmup followed by Linear Decay to an end rate.
+   * Warmup linearly increases LR from near 0 up to baseRate over warmupSteps, then linearly decays to endRate at totalSteps.
+   * Iterations beyond totalSteps clamp to endRate.
+   *
+   * @param totalSteps Total steps for full schedule (must be > 0).
+   * @param warmupSteps Steps for warmup (< totalSteps). Defaults to 10% of totalSteps.
+   * @param endRate Final rate at totalSteps.
+   */
+  static linearWarmupDecay(
+    totalSteps: number,
+    warmupSteps?: number,
+    endRate: number = 0
+  ): (baseRate: number, iteration: number) => number {
+    if (totalSteps <= 0) throw new Error('totalSteps must be > 0');
+    const warm = Math.min(warmupSteps ?? Math.max(1, Math.floor(totalSteps * 0.1)), totalSteps - 1);
+    return (baseRate: number, iteration: number): number => {
+      if (iteration <= warm) {
+        return baseRate * (iteration / Math.max(1, warm));
+      }
+      if (iteration >= totalSteps) return endRate;
+      const decaySteps = totalSteps - warm;
+      const progress = (iteration - warm) / decaySteps; // 0..1
+      return endRate + (baseRate - endRate) * (1 - progress);
+    };
+  }
+
+  /**
+   * ReduceLROnPlateau style scheduler (stateful closure) that monitors error signal (third argument if provided)
+   * and reduces rate by 'factor' if no improvement beyond 'minDelta' for 'patience' iterations.
+   * Cooldown prevents immediate successive reductions.
+   * NOTE: Requires the training loop to call with signature (baseRate, iteration, lastError).
+   */
+  static reduceOnPlateau(options?: {
+    factor?: number; // multiplicative decrease (0<f<1)
+    patience?: number; // iterations to wait for improvement
+    minDelta?: number; // significant improvement threshold
+    cooldown?: number; // iterations to wait after a reduction
+    minRate?: number; // floor rate
+    verbose?: boolean;
+  }): (baseRate: number, iteration: number, lastError?: number) => number {
+    const {
+      factor = 0.5,
+      patience = 10,
+      minDelta = 1e-4,
+      cooldown = 0,
+      minRate = 0,
+      verbose = false
+    } = options || {};
+    let currentRate: number | undefined; // lazily initialize to baseRate first call
+    let bestError: number | undefined;
+    let lastImprovementIter = 0;
+    let cooldownUntil = -1;
+    return (baseRate: number, iteration: number, lastError?: number): number => {
+      if (currentRate === undefined) currentRate = baseRate;
+      if (lastError !== undefined) {
+        if (bestError === undefined || lastError < bestError - minDelta) {
+          bestError = lastError;
+          lastImprovementIter = iteration;
+        } else if (iteration - lastImprovementIter >= patience && iteration >= cooldownUntil) {
+          const newRate = Math.max(minRate, currentRate * factor);
+          if (newRate < currentRate) {
+            if (verbose) console.log(`[reduceOnPlateau] Reducing LR from ${currentRate} to ${newRate} at iteration ${iteration}`);
+            currentRate = newRate;
+            cooldownUntil = iteration + cooldown;
+            lastImprovementIter = iteration; // reset wait after reduction
+          }
+        }
+      }
+      return currentRate;
+    };
+  }
 }

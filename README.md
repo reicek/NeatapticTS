@@ -59,3 +59,50 @@ NeatapticTS is based on [Neataptic](https://github.com/wagenaartje/neataptic). P
 The neuro-evolution algorithm used is the [Instinct](https://medium.com/@ThomasWagenaar/neuro-evolution-on-steroids-82bd14ddc2f6) algorithm.
 
 ##### Original [repository](https://github.com/wagenaartje/neataptic) in now [unmaintained](https://github.com/wagenaartje/neataptic/issues/112)
+
+---
+
+## Added Training Features
+
+- Learning rate schedulers: fixed, step, exp, inv, cosine annealing, cosine annealing w/ warm restarts, linear warmup+decay, reduce-on-plateau.
+- Regularization (L1, L2, custom function), dropout, DropConnect.
+- Per-iteration `metricsHook` exposing `{ iteration, error, gradNorm }`.
+- Checkpointing (`best`, `last`) via `checkpoint.save` callback.
+
+### Learning Rate Scheduler Usage
+
+```ts
+import methods from './src/methods/methods';
+const net = new Network(2,1);
+const ratePolicy = methods.Rate.cosineAnnealingWarmRestarts(200, 1e-5, 2);
+net.train(data, { iterations: 1000, rate: 0.1, ratePolicy });
+```
+
+Reduce-on-plateau automatically receives current error because `train` detects a 3-arg scheduler:
+```ts
+const rop = methods.Rate.reduceOnPlateau({ patience: 20, factor: 0.5, minRate: 1e-5 });
+net.train(data, { iterations: 5000, rate: 0.05, ratePolicy: rop });
+```
+
+### Metrics Hook & Checkpoints
+
+```ts
+net.train(data, {
+	iterations: 800,
+	rate: 0.05,
+	metricsHook: ({ iteration, error, gradNorm }) => console.log(iteration, error, gradNorm),
+	checkpoint: {
+		best: true,
+		last: true,
+		save: ({ type, iteration, error, network }) => {/* persist */}
+	}
+});
+```
+
+### DropConnect
+
+```ts
+net.enableDropConnect(0.3);
+net.train(data, { iterations: 300, rate: 0.05 });
+net.disableDropConnect();
+```

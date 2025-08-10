@@ -109,6 +109,8 @@ export default class Network {
   gates: Connection[]; // List of connections that are currently being gated by a node.
   selfconns: Connection[]; // List of connections where a node connects to itself.
   dropout: number = 0; // Dropout rate (0 to 1). If > 0, hidden nodes have a chance to be masked during training activation.
+  private _dropConnectProb: number = 0; // probability for DropConnect
+  private _lastGradNorm?: number; // last computed gradient norm (L2) after batch update
 
   /**
    * Optional array of Layer objects, if the network was constructed with layers.
@@ -181,6 +183,15 @@ export default class Network {
       }
     }
   }
+
+    /** Enable DropConnect: probability p of dropping each connection during training */
+    enableDropConnect(p: number) {
+      if (p < 0 || p >= 1) throw new Error('DropConnect probability must be in [0,1)');
+      this._dropConnectProb = p;
+    }
+
+    /** Disable DropConnect */
+    disableDropConnect() { this._dropConnectProb = 0; }
 
   /**
    * Creates a deep copy of the network.
@@ -480,6 +491,31 @@ export default class Network {
           node.activate();
         }
       });
+      // Apply DropConnect masking to connections post-activation accumulation
+      if (training && this._dropConnectProb > 0) {
+        for (const conn of this.connections) {
+          // sample mask only once per training activation
+          const mask = Math.random() < this._dropConnectProb ? 0 : 1;
+          (conn as any).dcMask = mask;
+          if (mask === 0) {
+            // zero weight contribution temporarily (non-destructive) by storing original weight
+            if ((conn as any)._origWeight == null) (conn as any)._origWeight = conn.weight;
+            conn.weight = 0;
+          } else if ((conn as any)._origWeight != null) {
+            conn.weight = (conn as any)._origWeight;
+            delete (conn as any)._origWeight;
+          }
+        }
+      } else {
+        // restore any temporarily zeroed weights
+        for (const conn of this.connections) {
+          if ((conn as any)._origWeight != null) {
+            conn.weight = (conn as any)._origWeight;
+            delete (conn as any)._origWeight;
+          }
+          (conn as any).dcMask = 1;
+        }
+      }
     }
     return output;
   }
@@ -1302,12 +1338,18 @@ export default class Network {
 
       // Apply accumulated gradients if batch is full or it's the last item and there are processed samples in batch
       if (processedSamplesInBatch > 0 && ((i + 1) % batchSize === 0 || i === set.length - 1)) {
+        let sumSq = 0;
         this.nodes.forEach((node) => {
           // Apply gradients (update = true)
           // The 'target' for node.propagate when updating is not used, so an empty array or undefined is fine.
           // The regularization object is passed through.
           node.propagate(currentRate, momentum, true, undefined, regularization);
+          // Accumulate squared weight/bias updates if available for grad norm (heuristic: use last delta caches)
+          // Many node implementations store totalDeltaWeight or similar on connections; approximate via their absolute weight changes could be expensive.
+          node.connections.in.forEach(c => { if (typeof (c as any).totalDeltaWeight === 'number') sumSq += (c as any).totalDeltaWeight ** 2; });
+          node.connections.self.forEach(c => { if (typeof (c as any).totalDeltaWeight === 'number') sumSq += (c as any).totalDeltaWeight ** 2; });
         });
+        this._lastGradNorm = Math.sqrt(sumSq);
         processedSamplesInBatch = 0; // Reset for next batch
       }
     }
@@ -1349,7 +1391,7 @@ export default class Network {
    */
   train(
     set: { input: number[]; output: number[] }[],
-    options: any
+  options: any
   ): { error: number; iterations: number; time: number } {
     // Validate dataset dimensions against network dimensions.
     if (
@@ -1415,6 +1457,11 @@ export default class Network {
     const clear = options.clear || false; // Clear network state each iteration?
     const log = options.log || 0; // Logging frequency.
     const schedule = options.schedule; // Custom schedule object.
+    const metricsHook = options.metricsHook; // optional metrics hook
+    const checkpoint = options.checkpoint; // { best?, last?, save }
+    if (checkpoint && typeof checkpoint.save !== 'function') {
+      throw new Error('checkpoint.save must be a function');
+    }
     const crossValidate = options.crossValidate; // Cross-validation config.
 
     // Validate batch size.
@@ -1494,8 +1541,17 @@ export default class Network {
 
       iteration++; // Increment iteration counter.
 
-      // Calculate the learning rate for the current iteration using the rate policy.
-      const currentRate = ratePolicy(baseRate, iteration);
+      // Calculate the learning rate; if scheduler expects error as third arg (reduceOnPlateau), supply last error
+      let currentRate: number;
+      try {
+        if (ratePolicy.length >= 3) {
+          currentRate = ratePolicy(baseRate, iteration, error);
+        } else {
+          currentRate = ratePolicy(baseRate, iteration);
+        }
+      } catch {
+        currentRate = baseRate;
+      }
 
       // Shuffle the training set if enabled. Fisher-Yates shuffle.
       if (shuffle) {
@@ -1521,6 +1577,44 @@ export default class Network {
         regularization, // Pass regularization
         cost
       );
+
+      // Metrics hook (exposes gradNorm placeholder if future internal tracking added)
+      if (metricsHook) {
+        try { metricsHook({ iteration, error: trainError, gradNorm: this._lastGradNorm }); } catch { /* ignore */ }
+      }
+
+      // Checkpoint snapshots
+      if (checkpoint) {
+        const snap = this.toJSON();
+        if (checkpoint.last) { try { checkpoint.save({ type:'last', iteration, error: trainError, network: snap }); } catch { /* ignore */ } }
+        if (checkpoint.best) {
+          if (!(this as any)._checkpointMeta || (this as any)._checkpointMeta.bestError == null || trainError < (this as any)._checkpointMeta.bestError) {
+            (this as any)._checkpointMeta = { bestError: trainError };
+            try { checkpoint.save({ type:'best', iteration, error: trainError, network: snap }); } catch { /* ignore */ }
+          }
+        }
+      }
+
+      // Metrics hook (exposes gradNorm placeholder numeric value)
+      if (metricsHook) {
+        try {
+          metricsHook({ iteration, error: trainError, gradNorm: (this as any)._lastGradNorm ?? 0 });
+        } catch { /* swallow */ }
+      }
+
+      // Checkpoint logic
+      if (checkpoint) {
+        const snap = this.toJSON();
+        if (checkpoint.last) {
+          try { checkpoint.save({ type: 'last', iteration, error: trainError, network: snap }); } catch { /* ignore */ }
+        }
+        if (checkpoint.best) {
+          if (!(this as any)._checkpointMeta || (this as any)._checkpointMeta.bestError == null || trainError < (this as any)._checkpointMeta.bestError) {
+            (this as any)._checkpointMeta = { bestError: trainError };
+            try { checkpoint.save({ type: 'best', iteration, error: trainError, network: snap }); } catch { /* ignore */ }
+          }
+        }
+      }
 
       // Clear network state if enabled.
       if (clear) this.clear();
@@ -1571,8 +1665,9 @@ export default class Network {
     }
 
     // Return training results.
-    return { error, iterations: iteration, time: Date.now() - start };
+  return { error, iterations: iteration, time: Date.now() - start };
   }
+
 
   /**
    * Evolves the network's topology and weights using a neuro-evolutionary algorithm (NEAT).
@@ -1930,6 +2025,8 @@ export default class Network {
     // Return the average error and the time taken.
     return { error: error / set.length, time: Date.now() - start };
   }
+
+  
 
   /**
    * Serializes the network's current state into a compact array format.
