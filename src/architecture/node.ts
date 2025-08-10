@@ -910,6 +910,46 @@ export default class Node {
 
   /**
    * Extended batch update supporting multiple optimizers.
+  *
+  * Applies accumulated (batch) gradients stored in `totalDeltaWeight` / `totalDeltaBias` to the
+  * underlying weights and bias using the selected optimization algorithm. Supports both classic
+  * SGD (with Nesterov-style momentum via preceding propagate logic) and a collection of adaptive
+  * optimizers. After applying an update, gradient accumulators are reset to 0.
+  *
+  * Supported optimizers (type):
+  *  - 'sgd'      : Standard gradient descent with optional momentum.
+  *  - 'rmsprop'  : Exponential moving average of squared gradients (cache) to normalize step.
+  *  - 'adagrad'  : Accumulate squared gradients; learning rate effectively decays per weight.
+  *  - 'adam'     : Bias‑corrected first (m) & second (v) moment estimates.
+  *  - 'adamw'    : Adam with decoupled weight decay (applied after adaptive step).
+  *  - 'amsgrad'  : Adam variant maintaining a maximum of past v (vhat) to enforce non‑increasing step size.
+  *  - 'adamax'   : Adam variant using the infinity norm (u) instead of second moment.
+  *  - 'nadam'    : Adam + Nesterov momentum style update (lookahead on first moment).
+  *  - 'radam'    : Rectified Adam – warms up variance by adaptively rectifying denominator when sample size small.
+  *  - 'lion'     : Uses sign of combination of two momentum buffers (beta1 & beta2) for update direction only.
+  *  - 'adabelief': Adam-like but second moment on (g - m) (gradient surprise) for variance reduction.
+  *  - 'lookahead': Wrapper; performs k fast optimizer steps then interpolates (alpha) towards a slow (shadow) weight.
+  *
+  * Options:
+  *  - momentum     : (SGD) momentum factor (Nesterov handled in propagate when update=true).
+  *  - beta1/beta2  : Exponential decay rates for first/second moments (Adam family, Lion, AdaBelief, etc.).
+  *  - eps          : Numerical stability epsilon added to denominator terms.
+  *  - weightDecay  : Decoupled weight decay (AdamW) or additionally applied after main step when adamw selected.
+  *  - lrScale      : Learning rate scalar already scheduled externally (passed as currentRate).
+  *  - t            : Global step (1-indexed) for bias correction / rectification.
+  *  - baseType     : Underlying optimizer for lookahead (not itself lookahead).
+  *  - la_k         : Lookahead synchronization interval (number of fast steps).
+  *  - la_alpha     : Interpolation factor towards slow (shadow) weights/bias at sync points.
+  *
+  * Internal per-connection temp fields (created lazily):
+  *  - opt_m / opt_v / opt_vhat / opt_u : Moment / variance / max variance / infinity norm caches.
+  *  - opt_cache : Single accumulator (RMSProp / AdaGrad).
+  *  - previousDeltaWeight : For classic SGD momentum.
+  *  - _la_shadowWeight / _la_shadowBias : Lookahead shadow copies.
+  *
+  * Safety: We clip extreme weight / bias magnitudes and guard against NaN/Infinity.
+  *
+  * @param opts Optimizer configuration (see above).
    */
   applyBatchUpdatesWithOptimizer(opts: { type: 'sgd'|'rmsprop'|'adagrad'|'adam'|'adamw'|'amsgrad'|'adamax'|'nadam'|'radam'|'lion'|'adabelief'|'lookahead'; momentum?: number; beta1?: number; beta2?: number; eps?: number; weightDecay?: number; lrScale?: number; t?: number; baseType?: any; la_k?: number; la_alpha?: number }): void {
     const type = opts.type || 'sgd';
@@ -928,12 +968,14 @@ export default class Node {
       if (!Number.isFinite(g)) g = 0;
       switch (effectiveType) {
         case 'rmsprop': {
+          // cache = 0.9*cache + 0.1*g^2 ; step = g / sqrt(cache + eps)
           conn.opt_cache = (conn.opt_cache ?? 0) * 0.9 + 0.1 * (g * g);
           const adj = g / (Math.sqrt(conn.opt_cache) + eps);
           this._safeUpdateWeight(conn, adj * lrScale);
           break;
         }
         case 'adagrad': {
+          // cache = cache + g^2 (monotonically increasing)
           conn.opt_cache = (conn.opt_cache ?? 0) + g * g;
           const adj = g / (Math.sqrt(conn.opt_cache) + eps);
           this._safeUpdateWeight(conn, adj * lrScale);
@@ -942,6 +984,7 @@ export default class Node {
         case 'adam':
         case 'adamw':
         case 'amsgrad': {
+          // m = beta1*m + (1-beta1)g ; v = beta2*v + (1-beta2)g^2 ; bias-correct then step
           conn.opt_m = (conn.opt_m ?? 0) * beta1 + (1 - beta1) * g;
             conn.opt_v = (conn.opt_v ?? 0) * beta2 + (1 - beta2) * (g * g);
             if (effectiveType === 'amsgrad') {
@@ -956,6 +999,7 @@ export default class Node {
           break;
         }
         case 'adamax': {
+          // u = max(beta2*u, |g|) ; step uses infinity norm
           conn.opt_m = (conn.opt_m ?? 0) * beta1 + (1 - beta1) * g;
           conn.opt_u = Math.max((conn.opt_u ?? 0) * beta2, Math.abs(g));
           const mHat = conn.opt_m! / (1 - Math.pow(beta1, t));
@@ -964,6 +1008,7 @@ export default class Node {
           break;
         }
         case 'nadam': {
+          // NAdam uses Nesterov lookahead on m
           conn.opt_m = (conn.opt_m ?? 0) * beta1 + (1 - beta1) * g;
           conn.opt_v = (conn.opt_v ?? 0) * beta2 + (1 - beta2) * (g * g);
           const mHat = conn.opt_m! / (1 - Math.pow(beta1, t));
@@ -973,6 +1018,7 @@ export default class Node {
           break;
         }
         case 'radam': {
+          // RAdam rectifies variance when few steps (rho_t small)
           conn.opt_m = (conn.opt_m ?? 0) * beta1 + (1 - beta1) * g;
           conn.opt_v = (conn.opt_v ?? 0) * beta2 + (1 - beta2) * (g * g);
           const mHat = conn.opt_m! / (1 - Math.pow(beta1, t));
@@ -988,6 +1034,7 @@ export default class Node {
           break;
         }
         case 'lion': {
+          // Lion: update direction = sign(beta1*m_t + beta2*m2_t) (two EMA buffers of gradients)
           conn.opt_m = (conn.opt_m ?? 0) * beta1 + (1 - beta1) * g;
           conn.opt_m2 = (conn.opt_m2 ?? 0) * beta2 + (1 - beta2) * g;
           const update = Math.sign((conn.opt_m || 0) + (conn.opt_m2 || 0));
@@ -995,6 +1042,7 @@ export default class Node {
           break;
         }
         case 'adabelief': {
+          // AdaBelief: second moment on surprise (g - m)
           conn.opt_m = (conn.opt_m ?? 0) * beta1 + (1 - beta1) * g;
           const g_m = g - conn.opt_m!;
           conn.opt_v = (conn.opt_v ?? 0) * beta2 + (1 - beta2) * (g_m * g_m);
@@ -1004,6 +1052,7 @@ export default class Node {
           break;
         }
         default: {
+          // SGD: clip extreme deltas and apply momentum separately (momentum value passed here to reuse path)
           let currentDeltaWeight = g + momentum * (conn.previousDeltaWeight || 0);
           if (!Number.isFinite(currentDeltaWeight)) currentDeltaWeight = 0;
           if (Math.abs(currentDeltaWeight) > 1e3) currentDeltaWeight = Math.sign(currentDeltaWeight) * 1e3;
@@ -1081,6 +1130,7 @@ export default class Node {
       const k = (this as any)._la_k || 5;
       const alpha = (this as any)._la_alpha || 0.5;
       if ((this as any)._la_step % k === 0) {
+  // Blend towards slow weights every k steps: shadow = (1-alpha)*shadow + alpha*fast ; fast = shadow
         (this as any)._la_shadowBias = (1 - alpha) * (this as any)._la_shadowBias + alpha * this.bias;
         this.bias = (this as any)._la_shadowBias;
         const blendConn = (conn: Connection) => {

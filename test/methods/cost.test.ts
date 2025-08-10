@@ -1091,6 +1091,14 @@ describe('Cost', () => {
         });
       });
     });
+    describe('Scenario: when smoothing=1 forces uniform 0.5 target', () => {
+      it('returns finite loss', () => {
+        const targets = [1,0];
+        const outputs = [0.9,0.1];
+        const result = Cost.labelSmoothing(targets, outputs, 1);
+        expect(Number.isFinite(result)).toBe(true);
+      });
+    });
     describe('Scenario: mismatched input lengths', () => {
       it('throws error', () => {
         // Arrange

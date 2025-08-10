@@ -735,7 +735,7 @@ describe('Activation', () => {
 
     testValues.forEach((x) => {
       describe(`Scenario: x=${x}`, () => {
-        test(`selu is within [${lowerBound.toFixed(2)}, inf)`, () => {
+        it(`selu is within [${lowerBound.toFixed(2)}, inf)`, () => {
           // Arrange
           const fx = x > 0 ? x : alpha * Math.exp(x) - alpha;
           const expected = fx * scale;
@@ -753,7 +753,7 @@ describe('Activation', () => {
           // Assert
           expect(result).toBeCloseTo(expected, epsilon);
         });
-        test(`selu derivative is within (0, ${scale * alpha}]`, () => {
+        it(`selu derivative is within (0, ${scale * alpha}]`, () => {
           // Arrange
           const fx = x > 0 ? x : alpha * Math.exp(x) - alpha;
           const expected = (x > 0 ? scale : (fx + alpha) * scale);
@@ -762,7 +762,7 @@ describe('Activation', () => {
           // Assert
           expect(result).toBeGreaterThan(0);
         });
-        test(`selu derivative is less than or equal to ${scale * alpha}`, () => {
+        it(`selu derivative is less than or equal to ${scale * alpha}`, () => {
           // Arrange
           const fx = x > 0 ? x : alpha * Math.exp(x) - alpha;
           const expected = (x > 0 ? scale : (fx + alpha) * scale);
@@ -843,7 +843,7 @@ describe('Activation', () => {
     const lowerBound = -0.2784645; // Approximate minimum value
     testValues.forEach((x) => {
       describe(`Scenario: x=${x}`, () => {
-        test(`swish is within [${lowerBound.toFixed(3)}, inf)`, () => {
+        it(`swish is within [${lowerBound.toFixed(3)}, inf)`, () => {
           // Arrange
           const sigmoid_x = 1 / (1 + Math.exp(-x));
           const expected = x * sigmoid_x;
@@ -889,7 +889,7 @@ describe('Activation', () => {
     const lowerBound = -0.17; // Approximate minimum value
     testValues.forEach((x) => {
       describe(`Scenario: x=${x}`, () => {
-        test(`gelu approximation is within [${lowerBound.toFixed(2)}, inf)`, () => {
+        it(`gelu approximation is within [${lowerBound.toFixed(2)}, inf)`, () => {
           // Arrange
           const cdf =
             0.5 *
@@ -965,7 +965,7 @@ describe('Activation', () => {
     const lowerBound = -0.30884; // Approximate minimum value
     stabilityTestValues.forEach((x) => {
       describe(`Scenario: x=${x}`, () => {
-        test(`mish is within [${lowerBound.toFixed(3)}, inf)`, () => {
+        it(`mish is within [${lowerBound.toFixed(3)}, inf)`, () => {
           // Arrange
           let sp_x: number;
           if (x > 30) {

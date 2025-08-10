@@ -111,6 +111,20 @@ export default class Network {
   dropout: number = 0; // Dropout rate (0 to 1). If > 0, hidden nodes have a chance to be masked during training activation.
   private _dropConnectProb: number = 0; // probability for DropConnect
   private _lastGradNorm?: number; // last computed gradient norm (L2) after batch update
+  private _optimizerStep: number = 0; // global optimizer step counter for adaptive optimizers
+  // Weight noise (Gaussian) standard deviation; if >0 applied per training activate as temporary perturbation
+  private _weightNoiseStd: number = 0;
+  private _weightNoisePerHidden: number[] = [];
+  private _weightNoiseSchedule?: (step: number) => number;
+  // Stochastic depth survival probabilities per hidden layer (excluding input/output). Empty => disabled.
+  private _stochasticDepth: number[] = [];
+  // Internal storage for temporarily perturbed weights (weight noise)
+  private _wnOrig?: number[];
+  private _trainingStep: number = 0; // counts training forward passes
+  private _rand: () => number = Math.random; // injectable RNG for determinism
+  private _rngState?: number; // internal state for seeded generator
+  private _lastStats: any = null; // stats from last forward pass
+  private _stochasticDepthSchedule?: (step: number, current: number[]) => number[];
 
   /**
    * Optional array of Layer objects, if the network was constructed with layers.
@@ -192,6 +206,70 @@ export default class Network {
 
     /** Disable DropConnect */
     disableDropConnect() { this._dropConnectProb = 0; }
+
+    /** Enable weight noise. Provide a single std dev number or { perHiddenLayer: number[] }. */
+    enableWeightNoise(stdDev: number | { perHiddenLayer: number[] }) {
+      if (typeof stdDev === 'number') {
+        if (stdDev < 0) throw new Error('Weight noise stdDev must be >= 0');
+        this._weightNoiseStd = stdDev;
+        this._weightNoisePerHidden = [];
+      } else if (stdDev && Array.isArray(stdDev.perHiddenLayer)) {
+        if (!this.layers || this.layers.length < 3) throw new Error('Per-hidden-layer weight noise requires a layered network with at least one hidden layer');
+        const hiddenLayerCount = this.layers.length - 2;
+        if (stdDev.perHiddenLayer.length !== hiddenLayerCount) throw new Error(`Expected ${hiddenLayerCount} std dev entries (one per hidden layer), got ${stdDev.perHiddenLayer.length}`);
+        if (stdDev.perHiddenLayer.some(s => s < 0)) throw new Error('Weight noise std devs must be >= 0');
+        this._weightNoiseStd = 0; // disable global
+        this._weightNoisePerHidden = stdDev.perHiddenLayer.slice();
+      } else {
+        throw new Error('Invalid weight noise configuration');
+      }
+    }
+    /** Disable weight noise */
+    disableWeightNoise() { this._weightNoiseStd = 0; this._weightNoisePerHidden = []; }
+    /** Dynamic schedule for global weight noise (ignored if perHiddenLayer active) */
+    setWeightNoiseSchedule(fn: (step: number) => number) { this._weightNoiseSchedule = fn; }
+    clearWeightNoiseSchedule() { this._weightNoiseSchedule = undefined; }
+    /** Inject custom RNG */
+    setRandom(fn: () => number) { this._rand = fn; }
+    /** Deterministic seed (Mulberry32) */
+    setSeed(seed: number) {
+      this._rngState = seed >>> 0;
+      this._rand = () => {
+        this._rngState = (this._rngState! + 0x6D2B79F5) >>> 0;
+        let r = Math.imul(this._rngState! ^ (this._rngState! >>> 15), 1 | this._rngState!);
+        r ^= r + Math.imul(r ^ (r >>> 7), 61 | r);
+        return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+  /** Current training forward pass count */
+  get trainingStep() { return this._trainingStep; }
+  /** Indices of hidden layers skipped in the most recent stochastic-depth forward pass */
+  get lastSkippedLayers(): number[] { return (this as any)._lastSkippedLayers || []; }
+  /** Snapshot internal RNG state (only works for seeded Mulberry32 generator) */
+  snapshotRNG(): any { return { step: this._trainingStep, state: this._rngState }; }
+  /** Replace RNG with a provided function (advanced) (stateful seed-based generator will be lost) */
+  restoreRNG(fn: () => number) { this._rand = fn; this._rngState = undefined; }
+  /** Get internal RNG state */
+  getRNGState(): number | undefined { return this._rngState; }
+  /** Set internal RNG state (only if previously seeded) */
+  setRNGState(state: number) { if (typeof state === 'number') this._rngState = state >>> 0; }
+  /** Schedule for stochastic depth survival probabilities */
+  setStochasticDepthSchedule(fn: (step: number, current: number[]) => number[]) { this._stochasticDepthSchedule = fn; }
+  clearStochasticDepthSchedule() { this._stochasticDepthSchedule = undefined; }
+  /** Statistics from last forward pass (deep copy) */
+  getRegularizationStats() { return this._lastStats ? JSON.parse(JSON.stringify(this._lastStats)) : null; }
+
+    /** Configure stochastic depth with survival probabilities per hidden layer (length must match hidden layer count when using layered network). */
+    setStochasticDepth(survival: number[]) {
+      if (!Array.isArray(survival)) throw new Error('survival must be an array');
+      if (survival.some(p => p <= 0 || p > 1)) throw new Error('Stochastic depth survival probs must be in (0,1]');
+      if (!this.layers || this.layers.length === 0) throw new Error('Stochastic depth requires layer-based network');
+      // layers includes input and output; hidden layers are layers[1..length-2]
+      const hiddenLayerCount = Math.max(0, this.layers.length - 2);
+      if (survival.length !== hiddenLayerCount) throw new Error(`Expected ${hiddenLayerCount} survival probabilities for hidden layers, got ${survival.length}`);
+      this._stochasticDepth = survival.slice();
+    }
+    disableStochasticDepth() { this._stochasticDepth = []; }
 
   /**
    * Creates a deep copy of the network.
@@ -451,17 +529,122 @@ export default class Network {
     }
     
     const output: number[] = [];
-    if (this.layers && this.layers.length > 0) {
-      // Layer-based activation (layer-level dropout)
-      let currentInput = input;
-      for (let i = 0; i < this.layers.length; i++) {
-        const layer = this.layers[i];
-        // For input layer, pass input; for others, pass previous activations
-        const activations = layer.activate(currentInput, training);
-        currentInput = activations;
+    (this as any)._lastSkippedLayers = [];
+      const stats = {
+        droppedHiddenNodes: 0,
+        totalHiddenNodes: 0,
+        droppedConnections: 0,
+        totalConnections: this.connections.length,
+        skippedLayers: [] as number[],
+        weightNoise: { count: 0, sumAbs: 0, maxAbs: 0, meanAbs: 0 }
+      };
+    // Pre-apply weight noise
+    let appliedWeightNoise = false;
+    let dynamicStd = this._weightNoiseStd;
+    if (training) {
+      if (this._weightNoiseSchedule) dynamicStd = this._weightNoiseSchedule(this._trainingStep);
+      if (dynamicStd > 0 || this._weightNoisePerHidden.length > 0) {
+        for (const c of this.connections) {
+          if ((c as any)._origWeightNoise != null) continue;
+          (c as any)._origWeightNoise = c.weight;
+          let std = dynamicStd;
+          if (this._weightNoisePerHidden.length > 0 && this.layers) {
+            let fromLayerIndex = -1;
+            for (let li = 0; li < this.layers.length; li++) {
+              if (this.layers[li].nodes.includes(c.from)) { fromLayerIndex = li; break; }
+            }
+            if (fromLayerIndex > 0 && fromLayerIndex < this.layers.length) {
+              const hiddenIdx = fromLayerIndex - 1;
+              if (hiddenIdx >= 0 && hiddenIdx < this._weightNoisePerHidden.length) std = this._weightNoisePerHidden[hiddenIdx];
+            }
+          }
+          if (std > 0) {
+            const noise = std * Network._gaussianRand(this._rand);
+            c.weight += noise;
+            (c as any)._wnLast = noise;
+            appliedWeightNoise = true;
+          } else {
+            (c as any)._wnLast = 0;
+          }
+        }
       }
-      // Output is the activations of the last layer
-      output.push(...currentInput);
+    }
+  // Optional stochastic depth schedule update
+    if (training && this._stochasticDepthSchedule && this._stochasticDepth.length > 0) {
+      const updated = this._stochasticDepthSchedule(this._trainingStep, this._stochasticDepth.slice());
+      if (Array.isArray(updated) && updated.length === this._stochasticDepth.length && !updated.some(p => p <= 0 || p > 1)) {
+        this._stochasticDepth = updated.slice();
+      }
+    }
+    if (this.layers && this.layers.length > 0 && this._stochasticDepth.length > 0) {
+      // Layered activation with stochastic depth
+      let acts: number[] | undefined;
+      for (let li = 0; li < this.layers.length; li++) {
+        const layer = this.layers[li];
+        const isHidden = li > 0 && li < this.layers.length - 1;
+        let skip = false;
+        if (training && isHidden) {
+          const hiddenIndex = li - 1;
+          if (hiddenIndex < this._stochasticDepth.length) {
+            const surviveProb = this._stochasticDepth[hiddenIndex];
+            skip = this._rand() >= surviveProb;
+            if (skip) {
+              // Only skip if size matches previous outputs
+              if (!acts || acts.length !== layer.nodes.length) skip = false;
+            }
+            if (!skip) {
+              // Activate (input layer gets input array)
+              const raw = li === 0 ? layer.activate(input, training) : layer.activate(undefined, training);
+              acts = surviveProb < 1 ? raw.map((a: number) => a * (1 / surviveProb)) : raw;
+              continue;
+            }
+          }
+        }
+        if (skip) {
+          (this as any)._lastSkippedLayers.push(li);
+          stats.skippedLayers.push(li);
+          // identity: acts unchanged
+          continue;
+        }
+        const raw = li === 0 ? layer.activate(input, training) : layer.activate(undefined, training);
+        acts = raw;
+      }
+      if (acts) output.push(...acts);
+    } else if (this.layers && this.layers.length > 0) {
+      // Layered activation with optional node-level dropout (replicating legacy behavior expected by tests)
+      let lastActs: number[] | undefined;
+      for (let li = 0; li < this.layers.length; li++) {
+        const layer = this.layers[li];
+        const isHidden = li > 0 && li < this.layers.length - 1;
+        // Always call layer.activate with training=false to avoid its uniform layer-level dropout; we'll handle per-node masks ourselves
+        const raw = li === 0 ? layer.activate(input, false) : layer.activate(undefined, false);
+        // Apply node-level dropout to hidden layers if requested
+        if (isHidden && training && this.dropout > 0) {
+          let dropped = 0;
+          for (const node of layer.nodes) {
+            node.mask = this._rand() < this.dropout ? 0 : 1;
+            stats.totalHiddenNodes++;
+            if (node.mask === 0) stats.droppedHiddenNodes++;
+            if (node.mask === 0) {
+              node.activation = 0; // zero activation so downstream sees dropout
+              dropped++;
+            }
+          }
+          // Safeguard: ensure at least one active node remains
+            if (dropped === layer.nodes.length && layer.nodes.length > 0) {
+              const idx = Math.floor(this._rand() * layer.nodes.length);
+              layer.nodes[idx].mask = 1;
+              // Recompute activation for that single node using previous layer outputs
+              // Simplified: keep existing raw value captured earlier in raw[idx]
+              layer.nodes[idx].activation = raw[idx];
+            }
+        } else if (isHidden) {
+          // Ensure masks are 1 during inference
+          for (const node of layer.nodes) node.mask = 1;
+        }
+        lastActs = raw; // (raw may have been partially zeroed above via node.activation edits; raw array still original but not used after output layer)
+      }
+      if (lastActs) output.push(...lastActs);
     } else {
       // Node-based activation (legacy, node-level dropout)
       let hiddenNodes = this.nodes.filter(node => node.type === 'hidden');
@@ -469,17 +652,29 @@ export default class Network {
       if (training && this.dropout > 0) {
         // Randomly drop hidden nodes
         for (const node of hiddenNodes) {
-          node.mask = Math.random() < this.dropout ? 0 : 1;
-          if (node.mask === 0) droppedCount++;
+          node.mask = this._rand() < this.dropout ? 0 : 1;
+          stats.totalHiddenNodes++;
+          if (node.mask === 0) { droppedCount++; stats.droppedHiddenNodes++; }
         }
         // SAFEGUARD: Ensure at least one hidden node is active
         if (droppedCount === hiddenNodes.length && hiddenNodes.length > 0) {
           // Randomly pick one hidden node to keep active
-          const idx = Math.floor(Math.random() * hiddenNodes.length);
+          const idx = Math.floor(this._rand() * hiddenNodes.length);
           hiddenNodes[idx].mask = 1;
         }
       } else {
         for (const node of hiddenNodes) node.mask = 1;
+      }
+      // Optional weight noise (apply before node activations to all connection weights, store originals)
+      if (training && this._weightNoiseStd > 0) {
+        if (!this._wnOrig) this._wnOrig = new Array(this.connections.length);
+        for (let ci = 0; ci < this.connections.length; ci++) {
+          const c = this.connections[ci];
+          if ((c as any)._origWeightNoise != null) continue; // already perturbed in recursive call
+          (c as any)._origWeightNoise = c.weight;
+          const noise = this._weightNoiseStd * Network._gaussianRand(this._rand);
+          c.weight += noise;
+        }
       }
       this.nodes.forEach((node, index) => {
         if (node.type === 'input') {
@@ -494,11 +689,10 @@ export default class Network {
       // Apply DropConnect masking to connections post-activation accumulation
       if (training && this._dropConnectProb > 0) {
         for (const conn of this.connections) {
-          // sample mask only once per training activation
-          const mask = Math.random() < this._dropConnectProb ? 0 : 1;
+          const mask = this._rand() < this._dropConnectProb ? 0 : 1;
+          if (mask === 0) stats.droppedConnections++;
           (conn as any).dcMask = mask;
           if (mask === 0) {
-            // zero weight contribution temporarily (non-destructive) by storing original weight
             if ((conn as any)._origWeight == null) (conn as any)._origWeight = conn.weight;
             conn.weight = 0;
           } else if ((conn as any)._origWeight != null) {
@@ -516,9 +710,29 @@ export default class Network {
           (conn as any).dcMask = 1;
         }
       }
+      // Restore weight noise
+      if (training && appliedWeightNoise) {
+        for (const c of this.connections) {
+          if ((c as any)._origWeightNoise != null) {
+            c.weight = (c as any)._origWeightNoise;
+            delete (c as any)._origWeightNoise;
+          }
+        }
+      }
     }
-    return output;
+  if (training) this._trainingStep++;
+  if (stats.weightNoise.count > 0) stats.weightNoise.meanAbs = stats.weightNoise.sumAbs / stats.weightNoise.count;
+  this._lastStats = stats;
+  return output;
   }
+
+
+    private static _gaussianRand(rng: () => number = Math.random): number {
+      let u = 0, v = 0;
+      while (u === 0) u = rng();
+      while (v === 0) v = rng();
+      return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+    }
 
   /**
    * Activates the network without calculating eligibility traces.
@@ -1293,17 +1507,16 @@ export default class Network {
     currentRate: number,
     momentum: number,
     regularization: any, // Expects structured object
-    costFunction: (target: number[], output: number[]) => number
+  costFunction: (target: number[], output: number[]) => number,
+  optimizer?: any
   ): number {
     let errorSum = 0;
     let processedSamplesInBatch = 0;
     let totalProcessedSamples = 0;
-
-    // Prepare cost derivative for propagate
-    let costDerivative: ((target: number, output: number) => number) | undefined = undefined;
-    if (typeof costFunction === 'object' && typeof (costFunction as any).derivative === 'function') {
-      costDerivative = (costFunction as any).derivative;
-    }
+    const outputNodes = this.nodes.filter(n => n.type === 'output');
+  // Normalize cost function (may be object with fn/calculate)
+  let computeError: (t:number[], o:number[])=>number;
+  if (typeof costFunction === 'function') computeError = costFunction as any; else if (costFunction && typeof (costFunction as any).fn === 'function') computeError = (costFunction as any).fn; else if (costFunction && typeof (costFunction as any).calculate === 'function') computeError = (costFunction as any).calculate; else computeError = () => 0;
 
     for (let i = 0; i < set.length; i++) {
       const dataPoint = set[i];
@@ -1320,11 +1533,32 @@ export default class Network {
       }
 
       try {
-        const output = this.activate(input, true); // Training mode true
-        // Accumulate gradients (update = false)
-        this.propagate(currentRate, momentum, false, target, regularization, costDerivative);
+        const output = this.activate(input, true); // forward pass
+        if (optimizer && optimizer.type && optimizer.type !== 'sgd') {
+          // Accumulate gradients only (do not update yet)
+          // Process outputs first with targets
+          for (let o = 0; o < outputNodes.length; o++) {
+            outputNodes[o].propagate(currentRate, momentum, false, regularization, target[o]);
+          }
+          // Then hidden nodes
+          for (let r = this.nodes.length - 1; r >= 0; r--) {
+            const node = this.nodes[r];
+            if (node.type === 'output' || node.type === 'input') continue;
+            node.propagate(currentRate, momentum, false, regularization);
+          }
+        } else {
+          // Vanilla path: propagate with immediate updates
+          for (let o = 0; o < outputNodes.length; o++) {
+            outputNodes[o].propagate(currentRate, momentum, true, regularization, target[o]);
+          }
+          for (let r = this.nodes.length - 1; r >= 0; r--) {
+            const node = this.nodes[r];
+            if (node.type === 'output' || node.type === 'input') continue;
+            node.propagate(currentRate, momentum, true, regularization);
+          }
+        }
 
-        errorSum += costFunction(target, output);
+  errorSum += computeError(target, output);
         processedSamplesInBatch++;
         totalProcessedSamples++;
       } catch (e: any) {
@@ -1336,21 +1570,35 @@ export default class Network {
         // If a data point fails, it's skipped. The batch update will proceed with successfully processed points.
       }
 
-      // Apply accumulated gradients if batch is full or it's the last item and there are processed samples in batch
-      if (processedSamplesInBatch > 0 && ((i + 1) % batchSize === 0 || i === set.length - 1)) {
+  // Apply accumulated gradients if batch is full OR last item OR (advanced optimizer with batchSize=1)
+  if (processedSamplesInBatch > 0 && (((i + 1) % batchSize === 0) || i === set.length - 1)) {
         let sumSq = 0;
-        this.nodes.forEach((node) => {
-          // Apply gradients (update = true)
-          // The 'target' for node.propagate when updating is not used, so an empty array or undefined is fine.
-          // The regularization object is passed through.
-          node.propagate(currentRate, momentum, true, undefined, regularization);
-          // Accumulate squared weight/bias updates if available for grad norm (heuristic: use last delta caches)
-          // Many node implementations store totalDeltaWeight or similar on connections; approximate via their absolute weight changes could be expensive.
-          node.connections.in.forEach(c => { if (typeof (c as any).totalDeltaWeight === 'number') sumSq += (c as any).totalDeltaWeight ** 2; });
-          node.connections.self.forEach(c => { if (typeof (c as any).totalDeltaWeight === 'number') sumSq += (c as any).totalDeltaWeight ** 2; });
-        });
+        if (optimizer && optimizer.type && optimizer.type !== 'sgd') {
+          // Advanced optimizer path
+          this._optimizerStep++;
+          this.nodes.forEach(node => {
+            node.applyBatchUpdatesWithOptimizer({
+              type: optimizer.type,
+              baseType: optimizer.baseType,
+              beta1: optimizer.beta1,
+              beta2: optimizer.beta2,
+              eps: optimizer.eps,
+              weightDecay: optimizer.weightDecay,
+              momentum: optimizer.momentum ?? momentum,
+              lrScale: currentRate,
+              t: this._optimizerStep,
+              la_k: optimizer.la_k,
+              la_alpha: optimizer.la_alpha
+            });
+            node.connections.in.forEach(c => { if (typeof (c as any).totalDeltaWeight === 'number') sumSq += (c as any).totalDeltaWeight ** 2; });
+            node.connections.self.forEach(c => { if (typeof (c as any).totalDeltaWeight === 'number') sumSq += (c as any).totalDeltaWeight ** 2; });
+          });
+        } else {
+          // Default SGD + momentum
+          // SGD path already applied updates per sample; just compute grad norm from last sample's deltas (already zeroed). Leave sumSq as 0.
+        }
         this._lastGradNorm = Math.sqrt(sumSq);
-        processedSamplesInBatch = 0; // Reset for next batch
+  processedSamplesInBatch = 0; // Reset for next batch
       }
     }
     // Return average error only for successfully processed samples
@@ -1376,6 +1624,9 @@ export default class Network {
    * @param {number} [options.regularization=0] - The regularization factor (lambda).
    * @param {string} [options.regularizationType='L2'] - The type of regularization ('L1', 'L2', or 'custom').
    * @param {function} [options.regularizationFn] - Custom regularization function (used if `regularizationType` is 'custom').
+  * @param {string|object} [options.optimizer] - Optimizer configuration. Can be a string alias (e.g. 'sgd','adam','adamw','amsgrad','adamax','nadam','radam','lion','adabelief','rmsprop','adagrad','lookahead')
+  *   or an object: `{ type: 'adam', beta1?, beta2?, eps?, weightDecay?, momentum?, la_k?, la_alpha?, baseType? }`.
+  *   For `lookahead`, provide `{ type:'lookahead', baseType:'adam', la_k:5, la_alpha:0.5 }`.
    * @param {number} [options.log=0] - Log training progress (iteration, error, rate) every `log` iterations. 0 disables logging.
    * @param {object} [options.schedule] - Object for scheduling custom actions during training.
    * @param {number} options.schedule.iterations - Frequency (in iterations) to execute the schedule function.
@@ -1439,10 +1690,39 @@ export default class Network {
     ) {
       throw new Error('Invalid cost function provided to Network.train.');
     }
-    const baseRate = options.rate ?? 0.3; // Base learning rate.
-    const dropout = options.dropout || 0; // Dropout rate.
-    const momentum = options.momentum || 0; // Momentum factor.
-    const batchSize = options.batchSize || 1; // Batch size (1 = online).
+    const baseRate = options.rate ?? 0.3; // Base learning rate (before schedule).
+    const dropout = options.dropout || 0; // Node dropout probability.
+    const momentum = options.momentum || 0; // Nesterov momentum factor for SGD.
+  const batchSize = options.batchSize || 1; // Mini-batch size (1 => pure online). For advanced optimizers this controls accumulation length.
+  // --- Optimizer normalization & validation ---
+  // Accept either a string alias or a config object; normalize to object form and validate.
+  const allowedOptimizers = new Set(['sgd','rmsprop','adagrad','adam','adamw','amsgrad','adamax','nadam','radam','lion','adabelief','lookahead']);
+  let optimizerConfig: any = undefined;
+  if (typeof options.optimizer !== 'undefined') {
+      if (typeof options.optimizer === 'string') {
+        optimizerConfig = { type: options.optimizer.toLowerCase() };
+      } else if (typeof options.optimizer === 'object' && options.optimizer !== null) {
+        optimizerConfig = { ...options.optimizer };
+        if (typeof optimizerConfig.type === 'string') optimizerConfig.type = optimizerConfig.type.toLowerCase();
+      } else {
+        throw new Error('Invalid optimizer option; must be string or object');
+      }
+      if (!allowedOptimizers.has(optimizerConfig.type)) {
+        throw new Error(`Unknown optimizer type: ${optimizerConfig.type}`);
+      }
+      if (optimizerConfig.type === 'lookahead') {
+        optimizerConfig.baseType = optimizerConfig.baseType || 'adam';
+        if (!allowedOptimizers.has(optimizerConfig.baseType)) {
+          throw new Error(`Unknown baseType for lookahead optimizer: ${optimizerConfig.baseType}`);
+        }
+        if (optimizerConfig.baseType === 'lookahead') {
+          throw new Error('Nested lookahead (baseType lookahead) is not supported');
+        }
+        // sensible defaults
+        optimizerConfig.la_k = optimizerConfig.la_k || 5;
+        optimizerConfig.la_alpha = optimizerConfig.la_alpha || 0.5;
+      }
+  }
     const ratePolicy = options.ratePolicy || methods.Rate.fixed(); // Learning rate schedule.
     const shuffle = options.shuffle || false; // Shuffle dataset each iteration?
     // --- Enhanced regularization support ---
@@ -1518,7 +1798,9 @@ export default class Network {
     let iteration = 0; // Iteration counter.
     const start = Date.now(); // Start time measurement.
 
-    // Main training loop.
+  // Reset global optimizer step counter for deterministic multi-train usage
+  this._optimizerStep = 0;
+  // Main training loop.
     while (
       // Continue if error is above target (and target is not disabled).
       (targetError === -1 || error > targetError) &&
@@ -1575,7 +1857,8 @@ export default class Network {
         currentRate,
         momentum,
         regularization, // Pass regularization
-        cost
+        cost,
+        optimizerConfig
       );
 
       // Metrics hook (exposes gradNorm placeholder if future internal tracking added)
