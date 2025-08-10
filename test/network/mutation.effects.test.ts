@@ -11,7 +11,7 @@ const CORE_MUTATIONS = [
   methods.mutation.ADD_NODE,
   methods.mutation.SUB_NODE,
   methods.mutation.ADD_LSTM_NODE,
-  methods.mutation.ADD_GRU_NODE
+  methods.mutation.ADD_GRU_NODE,
 ];
 
 describe('Mutation Effects', () => {
@@ -72,20 +72,30 @@ describe('Mutation Effects', () => {
         methods.mutation.ADD_SELF_CONN,
         methods.mutation.SUB_SELF_CONN,
         methods.mutation.ADD_BACK_CONN,
-        methods.mutation.SUB_BACK_CONN
+        methods.mutation.SUB_BACK_CONN,
       ].forEach((mutation) => {
         describe(`Mutation: ${mutation.name}`, () => {
           it('does not throw', () => {
             // Arrange
             const network = new Network(2, 1);
             // Prepare network for specific mutation types
-            if ([methods.mutation.SUB_GATE, methods.mutation.ADD_GATE].includes(mutation)) {
+            if (
+              [methods.mutation.SUB_GATE, methods.mutation.ADD_GATE].includes(
+                mutation
+              )
+            ) {
               if (network.connections.length > 0) {
-                network.gate(network.nodes[network.nodes.length - 1], network.connections[0]);
+                network.gate(
+                  network.nodes[network.nodes.length - 1],
+                  network.connections[0]
+                );
               }
             } else if (mutation === methods.mutation.ADD_NODE) {
               if (network.connections.length === 0) {
-                network.connect(network.nodes[0], network.nodes[network.nodes.length - 1]);
+                network.connect(
+                  network.nodes[0],
+                  network.nodes[network.nodes.length - 1]
+                );
               }
             } else if (mutation === methods.mutation.ADD_BACK_CONN) {
               network.mutate(methods.mutation.ADD_NODE);
@@ -149,14 +159,14 @@ describe('Mutation Effects', () => {
     it('throws when removing input node', () => {
       // Arrange
       const net = new Network(2, 1);
-      const inputNode = net.nodes.find(n => n.type === 'input');
+      const inputNode = net.nodes.find((n) => n.type === 'input');
       // Act & Assert
       expect(() => net.remove(inputNode!)).toThrow();
     });
     it('throws when removing output node', () => {
       // Arrange
       const net = new Network(2, 1);
-      const outputNode = net.nodes.find(n => n.type === 'output');
+      const outputNode = net.nodes.find((n) => n.type === 'output');
       // Act & Assert
       expect(() => net.remove(outputNode!)).toThrow();
     });
@@ -165,7 +175,7 @@ describe('Mutation Effects', () => {
         // Arrange
         const net = new Network(2, 1);
         net.mutate(methods.mutation.ADD_NODE);
-        const hidden = net.nodes.find(n => n.type === 'hidden');
+        const hidden = net.nodes.find((n) => n.type === 'hidden');
         // Act & Assert
         expect(hidden).toBeDefined();
         if (hidden) {
@@ -175,7 +185,7 @@ describe('Mutation Effects', () => {
       it('does nothing if no hidden node exists', () => {
         // Arrange
         const net = new Network(2, 1);
-        const hidden = net.nodes.find(n => n.type === 'hidden');
+        const hidden = net.nodes.find((n) => n.type === 'hidden');
         // Act & Assert
         expect(hidden).toBeUndefined();
       });
@@ -233,7 +243,7 @@ describe('Mutation Effects', () => {
     it('handles self-connection in neural network', () => {
       // Arrange
       const net = new Network(1, 1);
-      const outputNode = net.nodes.find(n => n.type === 'output')!;
+      const outputNode = net.nodes.find((n) => n.type === 'output')!;
       // Act
       net.connect(outputNode, outputNode);
       // Assert
@@ -243,8 +253,8 @@ describe('Mutation Effects', () => {
       // Arrange
       const net2 = new Network(2, 1);
       net2.mutate(methods.mutation.ADD_NODE);
-      const hidden = net2.nodes.find(n => n.type === 'hidden')!;
-      const output = net2.nodes.find(n => n.type === 'output')!;
+      const hidden = net2.nodes.find((n) => n.type === 'hidden')!;
+      const output = net2.nodes.find((n) => n.type === 'output')!;
       // Act
       net2.connect(output, hidden);
       net2.connect(hidden, output);
@@ -264,8 +274,8 @@ describe('Mutation Effects', () => {
           net.mutate(methods.mutation.ADD_NODE);
         }
         // Find the longest path from input to output
-        const input = net.nodes.find(n => n.type === 'input');
-        const output = net.nodes.find(n => n.type === 'output');
+        const input = net.nodes.find((n) => n.type === 'input');
+        const output = net.nodes.find((n) => n.type === 'output');
         function dfs(node: any, visited = new Set()): number {
           if (node === output) return 0;
           visited.add(node);
@@ -288,8 +298,8 @@ describe('Mutation Effects', () => {
         net.connect(net.nodes[0], net.nodes[net.nodes.length - 1]);
         // Act
         // No mutation
-        const input = net.nodes.find(n => n.type === 'input');
-        const output = net.nodes.find(n => n.type === 'output');
+        const input = net.nodes.find((n) => n.type === 'input');
+        const output = net.nodes.find((n) => n.type === 'output');
         function dfs(node: any, visited = new Set()): number {
           if (node === output) return 0;
           visited.add(node);
@@ -343,8 +353,14 @@ describe('Helper: arraysClose', () => {
   describe('Scenario: nested arrays', () => {
     it('returns true for equal nested arrays', () => {
       // Arrange
-      const a = [[1, 2], [3, 4]];
-      const b = [[1, 2], [3, 4]];
+      const a = [
+        [1, 2],
+        [3, 4],
+      ];
+      const b = [
+        [1, 2],
+        [3, 4],
+      ];
       // Act
       const result = arraysClose(a, b);
       // Assert
@@ -352,8 +368,14 @@ describe('Helper: arraysClose', () => {
     });
     it('returns false for different nested arrays', () => {
       // Arrange
-      const a = [[1, 2], [3, 4]];
-      const b = [[1, 2], [3, 5]];
+      const a = [
+        [1, 2],
+        [3, 4],
+      ];
+      const b = [
+        [1, 2],
+        [3, 5],
+      ];
       // Act
       const result = arraysClose(a, b);
       // Assert
@@ -361,7 +383,10 @@ describe('Helper: arraysClose', () => {
     });
     it('returns false for nested arrays of different shape', () => {
       // Arrange
-      const a = [[1, 2], [3, 4]];
+      const a = [
+        [1, 2],
+        [3, 4],
+      ];
       const b = [[1, 2, 3], [4]];
       // Act
       const result = arraysClose(a, b);
@@ -417,7 +442,12 @@ describe('Helper: arraysClose', () => {
 });
 
 // Helper for deep approximate equality with max delta logging
-function arraysClose(a: any, b: any, epsilon = 1e-5, logDelta = false): boolean {
+function arraysClose(
+  a: any,
+  b: any,
+  epsilon = 1e-5,
+  logDelta = false
+): boolean {
   let maxDelta = 0;
   function compare(x: any, y: any): boolean {
     if (Array.isArray(x) && Array.isArray(y) && x.length === y.length) {
@@ -456,6 +486,6 @@ function seededRandom(seed: number) {
   let s = seed;
   return function () {
     s = Math.imul(48271, s) | 0 % 2147483647;
-    return ((s & 2147483647) / 2147483647);
+    return (s & 2147483647) / 2147483647;
   };
 }

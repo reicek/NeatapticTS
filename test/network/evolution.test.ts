@@ -19,7 +19,13 @@ describe('Async Evolution', () => {
       let result: any;
       beforeEach(async () => {
         // Act
-        result = await net.evolve(dataset, { iterations: 2, error: 0.5, amount: 1, threads: 1, popsize: 2 });
+        result = await net.evolve(dataset, {
+          iterations: 2,
+          error: 0.5,
+          amount: 1,
+          threads: 1,
+          popsize: 2,
+        });
       });
       it('returns a result with error property', () => {
         // Assert
@@ -45,7 +51,15 @@ describe('Async Evolution', () => {
       // Arrange
       const net = Architect.perceptron(2, 4, 1);
       // Act & Assert
-      await expect(net.evolve([], { iterations: 2, error: 0.5, amount: 1, threads: 1, popsize: 2 })).rejects.toThrow();
+      await expect(
+        net.evolve([], {
+          iterations: 2,
+          error: 0.5,
+          amount: 1,
+          threads: 1,
+          popsize: 2,
+        })
+      ).rejects.toThrow();
     });
   });
 
@@ -56,10 +70,18 @@ describe('Async Evolution', () => {
         const net = Architect.perceptron(2, 4, 1);
         const dataset = [
           { input: [0], output: [0] },
-          { input: [1], output: [1] }
+          { input: [1], output: [1] },
         ];
         // Act & Assert
-        await expect(net.evolve(dataset, { iterations: 2, error: 0.5, amount: 1, threads: 1, popsize: 2 })).rejects.toThrow();
+        await expect(
+          net.evolve(dataset, {
+            iterations: 2,
+            error: 0.5,
+            amount: 1,
+            threads: 1,
+            popsize: 2,
+          })
+        ).rejects.toThrow();
       });
     });
     describe('output size mismatch', () => {
@@ -68,10 +90,18 @@ describe('Async Evolution', () => {
         const net = Architect.perceptron(2, 4, 1);
         const dataset = [
           { input: [0, 1], output: [0, 1] },
-          { input: [1, 0], output: [1, 0] }
+          { input: [1, 0], output: [1, 0] },
         ];
         // Act & Assert
-        await expect(net.evolve(dataset, { iterations: 2, error: 0.5, amount: 1, threads: 1, popsize: 2 })).rejects.toThrow();
+        await expect(
+          net.evolve(dataset, {
+            iterations: 2,
+            error: 0.5,
+            amount: 1,
+            threads: 1,
+            popsize: 2,
+          })
+        ).rejects.toThrow();
       });
     });
   });
@@ -82,7 +112,7 @@ describe('Async Evolution', () => {
       const net = Architect.perceptron(2, 4, 1);
       const dataset = [
         { input: [0, 0], output: [0] },
-        { input: [0, 1], output: [1] }
+        { input: [0, 1], output: [1] },
       ];
       // Act & Assert
       await expect(net.evolve(dataset, {})).rejects.toThrow();
@@ -105,7 +135,12 @@ describe('Async Evolution', () => {
       let result: any;
       beforeEach(async () => {
         // Act
-        result = await net.evolve(dataset, { error: 0.5, amount: 1, threads: 1, popsize: 2 });
+        result = await net.evolve(dataset, {
+          error: 0.5,
+          amount: 1,
+          threads: 1,
+          popsize: 2,
+        });
       });
       it('returns a result with error property', () => {
         // Assert
@@ -136,9 +171,19 @@ describe('Async Evolution', () => {
         // Arrange
         const net = Architect.perceptron(2, 4, 1);
         // Act
-        await net.evolve([{ input: [0, 0], output: [0] }], { iterations: 0, error: 0.00000001, amount: 1, threads: 1, popsize: 2 });
+        await net.evolve([{ input: [0, 0], output: [0] }], {
+          iterations: 0,
+          error: 0.00000001,
+          amount: 1,
+          threads: 1,
+          popsize: 2,
+        });
         // Assert
-        expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Evolution completed without finding a valid best genome'));
+        expect(warnSpy).toHaveBeenCalledWith(
+          expect.stringContaining(
+            'Evolution completed without finding a valid best genome'
+          )
+        );
       });
     });
   });
@@ -155,7 +200,14 @@ describe('Async Evolution', () => {
         // Arrange
         const net = Architect.perceptron(2, 4, 1);
         // Act
-        const result = await net.evolve(dataset, { iterations: 2, error: 0.5, amount: 1, threads: 1, popsize: 2, selection: 'POWER' });
+        const result = await net.evolve(dataset, {
+          iterations: 2,
+          error: 0.5,
+          amount: 1,
+          threads: 1,
+          popsize: 2,
+          selection: 'POWER',
+        });
         // Assert
         expect(typeof result.error).toBe('number');
       });
@@ -165,7 +217,14 @@ describe('Async Evolution', () => {
         // Arrange
         const net = Architect.perceptron(2, 4, 1);
         // Act
-        const result = await net.evolve(dataset, { iterations: 2, error: 0.5, amount: 1, threads: 1, popsize: 2, selection: 'FITNESS_PROPORTIONATE' });
+        const result = await net.evolve(dataset, {
+          iterations: 2,
+          error: 0.5,
+          amount: 1,
+          threads: 1,
+          popsize: 2,
+          selection: 'FITNESS_PROPORTIONATE',
+        });
         // Assert
         expect(typeof result.error).toBe('number');
       });
@@ -175,7 +234,14 @@ describe('Async Evolution', () => {
         // Arrange
         const net = Architect.perceptron(2, 4, 1);
         // Act
-        const result = await net.evolve(dataset, { iterations: 2, error: 0.5, amount: 1, threads: 1, popsize: 2, selection: { name: 'TOURNAMENT', size: 2, probability: 1 } });
+        const result = await net.evolve(dataset, {
+          iterations: 2,
+          error: 0.5,
+          amount: 1,
+          threads: 1,
+          popsize: 2,
+          selection: { name: 'TOURNAMENT', size: 2, probability: 1 },
+        });
         // Assert
         expect(typeof result.error).toBe('number');
       });
@@ -185,7 +251,14 @@ describe('Async Evolution', () => {
         // Arrange
         const net = Architect.perceptron(2, 4, 1);
         // Act
-        const result = await net.evolve(dataset, { iterations: 2, error: 0.5, amount: 1, threads: 1, popsize: 2, maxNodes: 3 });
+        const result = await net.evolve(dataset, {
+          iterations: 2,
+          error: 0.5,
+          amount: 1,
+          threads: 1,
+          popsize: 2,
+          maxNodes: 3,
+        });
         // Assert
         expect(typeof result.error).toBe('number');
       });
@@ -197,7 +270,13 @@ describe('Async Evolution', () => {
         // Force empty population
         (net as any).population = [];
         // Act
-        const result = await net.evolve(dataset, { iterations: 2, error: 0.5, amount: 1, threads: 1, popsize: 0 });
+        const result = await net.evolve(dataset, {
+          iterations: 2,
+          error: 0.5,
+          amount: 1,
+          threads: 1,
+          popsize: 0,
+        });
         // Assert
         expect(typeof result.error).toBe('number');
       });

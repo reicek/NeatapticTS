@@ -1,4 +1,6 @@
-import groupConnectionDefault, { groupConnection } from '../../src/methods/connection';
+import groupConnectionDefault, {
+  groupConnection,
+} from '../../src/methods/connection';
 
 describe('Group Connection Methods', () => {
   describe('ALL_TO_ALL', () => {
@@ -108,11 +110,9 @@ describe('Group Connection Methods', () => {
         // Arrange
         // Act
         // Assert
-        expect(Object.keys(groupConnection).sort()).toEqual([
-          'ALL_TO_ALL',
-          'ALL_TO_ELSE',
-          'ONE_TO_ONE',
-        ].sort());
+        expect(Object.keys(groupConnection).sort()).toEqual(
+          ['ALL_TO_ALL', 'ALL_TO_ELSE', 'ONE_TO_ONE'].sort()
+        );
       });
     });
     describe('Scenario: Immutability', () => {

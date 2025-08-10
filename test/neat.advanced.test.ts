@@ -185,7 +185,10 @@ describe('Neat advanced coverage', () => {
       it('should return null', () => {
         // Arrange
         const fitness = jest.fn();
-        const neat = new Neat(2, 1, fitness, { mutation: [methods.mutation.ADD_NODE], maxNodes: 1 });
+        const neat = new Neat(2, 1, fitness, {
+          mutation: [methods.mutation.ADD_NODE],
+          maxNodes: 1,
+        });
         const genome = new Network(2, 1);
         genome.nodes.push(new Node());
         // Act
@@ -198,7 +201,10 @@ describe('Neat advanced coverage', () => {
       it('should return null', () => {
         // Arrange
         const fitness = jest.fn();
-        const neat = new Neat(2, 1, fitness, { mutation: [methods.mutation.ADD_CONN], maxConns: 1 });
+        const neat = new Neat(2, 1, fitness, {
+          mutation: [methods.mutation.ADD_CONN],
+          maxConns: 1,
+        });
         const genome = new Network(2, 1);
         genome.connections.push(new Connection(new Node(), new Node()));
         // Act
@@ -211,7 +217,10 @@ describe('Neat advanced coverage', () => {
       it('should return null', () => {
         // Arrange
         const fitness = jest.fn();
-        const neat = new Neat(2, 1, fitness, { mutation: [methods.mutation.ADD_GATE], maxGates: 1 });
+        const neat = new Neat(2, 1, fitness, {
+          mutation: [methods.mutation.ADD_GATE],
+          maxGates: 1,
+        });
         const genome = new Network(2, 1);
         genome.gates.push(new Connection(new Node(), new Node()));
         // Act
@@ -224,7 +233,9 @@ describe('Neat advanced coverage', () => {
       it('should return mutation method', () => {
         // Arrange
         const fitness = jest.fn();
-        const neat = new Neat(2, 1, fitness, { mutation: [methods.mutation.FFW] });
+        const neat = new Neat(2, 1, fitness, {
+          mutation: [methods.mutation.FFW],
+        });
         const genome = new Network(2, 1);
         // Act
         const result = neat.selectMutationMethod(genome);
@@ -239,7 +250,9 @@ describe('Neat advanced coverage', () => {
       it('should return a parent from the population', () => {
         // Arrange
         const fitness = jest.fn();
-        const neat = new Neat(2, 1, fitness, { selection: methods.selection.POWER });
+        const neat = new Neat(2, 1, fitness, {
+          selection: methods.selection.POWER,
+        });
         neat.population = [new Network(2, 1), new Network(2, 1)];
         neat.population[0].score = 2;
         neat.population[1].score = 1;
@@ -253,7 +266,9 @@ describe('Neat advanced coverage', () => {
       it('should return a parent from the population', () => {
         // Arrange
         const fitness = jest.fn();
-        const neat = new Neat(2, 1, fitness, { selection: methods.selection.FITNESS_PROPORTIONATE });
+        const neat = new Neat(2, 1, fitness, {
+          selection: methods.selection.FITNESS_PROPORTIONATE,
+        });
         neat.population = [new Network(2, 1), new Network(2, 1)];
         neat.population[0].score = 2;
         neat.population[1].score = 1;
@@ -267,7 +282,14 @@ describe('Neat advanced coverage', () => {
       it('should return a parent from the population', () => {
         // Arrange
         const fitness = jest.fn();
-        const neat = new Neat(2, 1, fitness, { selection: { ...methods.selection.TOURNAMENT, size: 2, probability: 1 }, popsize: 2 });
+        const neat = new Neat(2, 1, fitness, {
+          selection: {
+            ...methods.selection.TOURNAMENT,
+            size: 2,
+            probability: 1,
+          },
+          popsize: 2,
+        });
         neat.population = [new Network(2, 1), new Network(2, 1)];
         neat.population[0].score = 2;
         neat.population[1].score = 1;
@@ -280,7 +302,14 @@ describe('Neat advanced coverage', () => {
         // Arrange
         const fitness = jest.fn();
         // popsize = 2, selection.size = 3
-        const neat = new Neat(2, 1, fitness, { selection: { ...methods.selection.TOURNAMENT, size: 3, probability: 1 }, popsize: 2 });
+        const neat = new Neat(2, 1, fitness, {
+          selection: {
+            ...methods.selection.TOURNAMENT,
+            size: 3,
+            probability: 1,
+          },
+          popsize: 2,
+        });
         neat.population = [new Network(2, 1), new Network(2, 1)];
         // Act & Assert
         expect(() => {
@@ -308,7 +337,10 @@ describe('Neat advanced coverage', () => {
       it('should call fitness once for population', async () => {
         // Arrange
         const fitness = jest.fn().mockReturnValue(1); // Spy
-        const neat = new Neat(2, 1, fitness, { popsize: 2, fitnessPopulation: true });
+        const neat = new Neat(2, 1, fitness, {
+          popsize: 2,
+          fitnessPopulation: true,
+        });
         // Act
         await neat.evaluate();
         // Assert
@@ -317,7 +349,11 @@ describe('Neat advanced coverage', () => {
       it('should clear genomes if clear is true', async () => {
         // Arrange
         const fitness = jest.fn().mockReturnValue(1); // Spy
-        const neat = new Neat(2, 1, fitness, { popsize: 2, fitnessPopulation: true, clear: true });
+        const neat = new Neat(2, 1, fitness, {
+          popsize: 2,
+          fitnessPopulation: true,
+          clear: true,
+        });
         const clearSpy = jest.spyOn(neat.population[0], 'clear');
         // Act
         await neat.evaluate();
@@ -362,7 +398,9 @@ describe('Neat advanced coverage', () => {
         // Arrange
         const fitness = jest.fn();
         const neat = new Neat(2, 1, fitness, { popsize: 2 });
-        const crossSpy = jest.spyOn(Network, 'crossOver').mockReturnValue(new Network(2, 1));
+        const crossSpy = jest
+          .spyOn(Network, 'crossOver')
+          .mockReturnValue(new Network(2, 1));
         // Act
         neat.getOffspring();
         // Assert
@@ -376,7 +414,11 @@ describe('Neat advanced coverage', () => {
       it('should call mutate on genome', () => {
         // Arrange
         const fitness = jest.fn();
-        const neat = new Neat(2, 1, fitness, { popsize: 1, mutation: [methods.mutation.FFW], mutationRate: 1 });
+        const neat = new Neat(2, 1, fitness, {
+          popsize: 1,
+          mutation: [methods.mutation.FFW],
+          mutationRate: 1,
+        });
         const mutateSpy = jest.spyOn(neat.population[0], 'mutate');
         // Act
         neat.mutate();
@@ -388,7 +430,12 @@ describe('Neat advanced coverage', () => {
       it('should not call mutate', () => {
         // Arrange
         const fitness = jest.fn();
-        const neat = new Neat(2, 1, fitness, { popsize: 1, mutation: [methods.mutation.ADD_NODE], mutationRate: 1, maxNodes: 0 });
+        const neat = new Neat(2, 1, fitness, {
+          popsize: 1,
+          mutation: [methods.mutation.ADD_NODE],
+          mutationRate: 1,
+          maxNodes: 0,
+        });
         const mutateSpy = jest.spyOn(neat.population[0], 'mutate');
         // Force selectMutationMethod to always return null
         jest.spyOn(neat, 'selectMutationMethod').mockReturnValue(null);

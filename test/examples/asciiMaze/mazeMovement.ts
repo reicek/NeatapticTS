@@ -26,12 +26,17 @@ export class MazeMovement {
    * @param [x, y] - Coordinates to check.
    * @returns Boolean indicating if the position is valid for movement.
    */
-  static isValidMove(encodedMaze: number[][], [x, y]: [number, number]): boolean {
-    return x >= 0 &&
-           y >= 0 &&
-           y < encodedMaze.length &&
-           x < encodedMaze[0].length &&
-           encodedMaze[y][x] !== -1;
+  static isValidMove(
+    encodedMaze: number[][],
+    [x, y]: [number, number]
+  ): boolean {
+    return (
+      x >= 0 &&
+      y >= 0 &&
+      y < encodedMaze.length &&
+      x < encodedMaze[0].length &&
+      encodedMaze[y][x] !== -1
+    );
   }
 
   /**
@@ -45,7 +50,11 @@ export class MazeMovement {
    * @param direction - Direction index (0=North, 1=East, 2=South, 3=West).
    * @returns New position after movement, or original position if move was invalid.
    */
-  static moveAgent(encodedMaze: number[][], position: [number, number], direction: number): [number, number] {
+  static moveAgent(
+    encodedMaze: number[][],
+    position: [number, number],
+    direction: number
+  ): [number, number] {
     // Don't move if direction === -1
     if (direction === -1) {
       return [...position] as [number, number];
@@ -85,11 +94,12 @@ export class MazeMovement {
     }
     // Apply softmax for numerical stability
     const max = Math.max(...outputs);
-    const exps = outputs.map(v => Math.exp(v - max));
+    const exps = outputs.map((v) => Math.exp(v - max));
     const sum = exps.reduce((a, b) => a + b, 0);
-    const softmax = exps.map(e => e / sum);
+    const softmax = exps.map((e) => e / sum);
     // Find the index of the highest probability
-    let maxVal = -Infinity, maxIdx = -1;
+    let maxVal = -Infinity,
+      maxIdx = -1;
     for (let i = 0; i < softmax.length; i++) {
       if (!isNaN(softmax[i]) && softmax[i] > maxVal) {
         maxVal = softmax[i];
@@ -139,7 +149,11 @@ export class MazeMovement {
     let visitCounts = new Map<string, number>(); // Track number of visits per cell
     let moveHistory: string[] = []; // Short-term memory for last N positions
     const MOVE_HISTORY_LENGTH = 6; // Tune as needed
-    let minDistanceToExit = MazeUtils.bfsDistance(encodedMaze, position, exitPos);
+    let minDistanceToExit = MazeUtils.bfsDistance(
+      encodedMaze,
+      position,
+      exitPos
+    );
 
     // Reward scaling factor for all reward/penalty calculations
     const rewardScale = 0.5;
@@ -161,14 +175,17 @@ export class MazeMovement {
       if (moveHistory.length > MOVE_HISTORY_LENGTH) moveHistory.shift();
 
       // Calculate percent of maze explored so far
-      const percentExplored = visitedPositions.size / (encodedMaze.length * encodedMaze[0].length);
+      const percentExplored =
+        visitedPositions.size / (encodedMaze.length * encodedMaze[0].length);
 
       // Oscillation/loop detection: if the last 4 moves form a 2-step loop (A->B->A->B)
       let loopPenalty = 0;
       if (
         moveHistory.length >= 4 &&
-        moveHistory[moveHistory.length - 1] === moveHistory[moveHistory.length - 3] &&
-        moveHistory[moveHistory.length - 2] === moveHistory[moveHistory.length - 4]
+        moveHistory[moveHistory.length - 1] ===
+          moveHistory[moveHistory.length - 3] &&
+        moveHistory[moveHistory.length - 2] ===
+          moveHistory[moveHistory.length - 4]
       ) {
         loopPenalty -= 10 * rewardScale; // Strong penalty for 2-step loop
       }
@@ -184,7 +201,7 @@ export class MazeMovement {
       let revisitPenalty = 0;
       const visits = visitCounts.get(currentPosKey) || 1;
       if (visits > 1) {
-        revisitPenalty -= (0.2 * (visits - 1)) * rewardScale; // Penalty increases with each revisit
+        revisitPenalty -= 0.2 * (visits - 1) * rewardScale; // Penalty increases with each revisit
       }
       // Early termination if a cell is visited too many times (hard oscillation)
       if (visits > 10) {
@@ -209,24 +226,33 @@ export class MazeMovement {
         const outputs = network.activate(vision);
         direction = MazeMovement.selectDirection(outputs);
       } catch (error) {
-        console.error("Error activating network:", error);
+        console.error('Error activating network:', error);
         direction = -1; // Fallback: don't move
       }
 
       // Save previous state for reward calculation
       const prevPosition = [...position] as [number, number];
-      const prevDistance = MazeUtils.bfsDistance(encodedMaze, position, exitPos);
+      const prevDistance = MazeUtils.bfsDistance(
+        encodedMaze,
+        position,
+        exitPos
+      );
 
       // --- ACTION: Move based on network decision
       position = MazeMovement.moveAgent(encodedMaze, position, direction);
-      const moved = prevPosition[0] !== position[0] || prevPosition[1] !== position[1];
+      const moved =
+        prevPosition[0] !== position[0] || prevPosition[1] !== position[1];
 
       // Record movement and update rewards/penalties
       if (moved) {
         path.push(position.slice() as [number, number]);
 
         // Calculate current distance to exit
-        const currentDistance = MazeUtils.bfsDistance(encodedMaze, position, exitPos);
+        const currentDistance = MazeUtils.bfsDistance(
+          encodedMaze,
+          position,
+          exitPos
+        );
 
         // Reward for getting closer to exit, penalty for moving away
         if (currentDistance < prevDistance) {
@@ -258,7 +284,8 @@ export class MazeMovement {
       if (position[0] === exitPos[0] && position[1] === exitPos[1]) {
         // Calculate fitness for successful completion
         const stepEfficiency = maxSteps - steps;
-        const fitness = 500 + // Base success reward
+        const fitness =
+          500 + // Base success reward
           stepEfficiency * 0.2 + // Reward for efficiency
           progressReward +
           newCellExplorationBonus +
@@ -269,20 +296,26 @@ export class MazeMovement {
           steps,
           path,
           fitness: Math.max(150, fitness),
-          progress: 100
+          progress: 100,
         };
       }
     }
 
     // --- FAILURE CASE: Did not reach exit
-    const progress = MazeUtils.calculateProgress(encodedMaze, path[path.length - 1], startPos, exitPos);
+    const progress = MazeUtils.calculateProgress(
+      encodedMaze,
+      path[path.length - 1],
+      startPos,
+      exitPos
+    );
 
     // Fitness for unsuccessful attempts: focus on progress and exploration
-    const fitness = progress * 2.0 +
+    const fitness =
+      progress * 2.0 +
       progressReward +
       newCellExplorationBonus +
       invalidMovePenalty +
-      (visitedPositions.size * 0.1);
+      visitedPositions.size * 0.1;
 
     return { success: false, steps, path, fitness, progress };
   }

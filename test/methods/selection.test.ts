@@ -160,7 +160,9 @@ describe('Selection Methods', () => {
       // Act
       const keys = Object.keys(selection);
       // Assert
-      expect(keys.sort()).toEqual(['FITNESS_PROPORTIONATE', 'POWER', 'TOURNAMENT'].sort());
+      expect(keys.sort()).toEqual(
+        ['FITNESS_PROPORTIONATE', 'POWER', 'TOURNAMENT'].sort()
+      );
     });
   });
 

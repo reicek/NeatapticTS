@@ -186,7 +186,9 @@ describe('Genetic Operations', () => {
         const originalWarn = console.warn;
         console.warn = jest.fn(); // Suppress warning
         // Act & Assert
-        expect(() => Network.crossOver(undefined as any, new Network(2, 1))).toThrow();
+        expect(() =>
+          Network.crossOver(undefined as any, new Network(2, 1))
+        ).toThrow();
         console.warn = originalWarn;
       });
     });
@@ -196,7 +198,9 @@ describe('Genetic Operations', () => {
         const originalWarn = console.warn;
         console.warn = jest.fn(); // Suppress warning
         // Act & Assert
-        expect(() => Network.crossOver(new Network(2, 1), undefined as any)).toThrow();
+        expect(() =>
+          Network.crossOver(new Network(2, 1), undefined as any)
+        ).toThrow();
         console.warn = originalWarn;
       });
     });

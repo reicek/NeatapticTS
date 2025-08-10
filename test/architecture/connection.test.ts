@@ -219,8 +219,10 @@ describe('Connection', () => {
     describe('Scenario: two different pairs', () => {
       it('returns unique values for different pairs', () => {
         // Arrange
-        const a1 = 1, b1 = 2;
-        const a2 = 2, b2 = 3;
+        const a1 = 1,
+          b1 = 2;
+        const a2 = 2,
+          b2 = 3;
         // Act
         const id1 = Connection.innovationID(a1, b1);
         const id2 = Connection.innovationID(a2, b2);
@@ -231,7 +233,8 @@ describe('Connection', () => {
     describe('Scenario: same pair twice', () => {
       it('returns the same value', () => {
         // Arrange
-        const a = 5, b = 7;
+        const a = 5,
+          b = 7;
         // Act
         const id1 = Connection.innovationID(a, b);
         const id2 = Connection.innovationID(a, b);
@@ -242,7 +245,8 @@ describe('Connection', () => {
     describe('Scenario: reversed pairs', () => {
       it('returns different values for (a, b) and (b, a) when a !== b', () => {
         // Arrange
-        const a = 3, b = 8;
+        const a = 3,
+          b = 8;
         // Act
         const id1 = Connection.innovationID(a, b);
         const id2 = Connection.innovationID(b, a);
@@ -263,7 +267,8 @@ describe('Connection', () => {
     describe('Scenario: large numbers', () => {
       it('returns a valid number', () => {
         // Arrange
-        const a = 100000, b = 200000;
+        const a = 100000,
+          b = 200000;
         // Act
         const id = Connection.innovationID(a, b);
         // Assert
@@ -273,7 +278,8 @@ describe('Connection', () => {
     describe('Scenario: zero', () => {
       it('returns a valid number for (0, 0)', () => {
         // Arrange
-        const a = 0, b = 0;
+        const a = 0,
+          b = 0;
         // Act
         const id = Connection.innovationID(a, b);
         // Assert

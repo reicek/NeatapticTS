@@ -113,9 +113,9 @@ export default class Node {
    * @param type The type of the node ('input', 'hidden', or 'output'). Defaults to 'hidden'.
    * @param customActivation Optional custom activation function (should handle derivative if needed).
    */
-  constructor(type: string = 'hidden', customActivation?: (x: number, derivate?: boolean) => number) {
-    // Initialize bias: 0 for input nodes, small random value for others.
-    this.bias = type === 'input' ? 0 : Math.random() * 0.2 - 0.1;
+  constructor(type: string = 'hidden', customActivation?: (x: number, derivate?: boolean) => number, rng: () => number = Math.random) {
+    // Initialize bias: 0 for input nodes, small random value for others (deterministic if rng seeded)
+    this.bias = type === 'input' ? 0 : rng() * 0.2 - 0.1;
     // Set activation function. Default to logistic or identity if logistic is not available.
     this.squash = customActivation || methods.Activation.logistic || ((x) => x);
     this.type = type;

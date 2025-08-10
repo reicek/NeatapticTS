@@ -15,7 +15,12 @@ export interface IDashboardManager {
    * @param network - The neural network used for the run.
    * @param generation - The current generation number.
    */
-  update(maze: string[], result: any, network: INetwork, generation: number): void;
+  update(
+    maze: string[],
+    result: any,
+    network: INetwork,
+    generation: number
+  ): void;
 }
 
 /**
@@ -63,7 +68,10 @@ export interface IFitnessEvaluationContext {
  * Fitness evaluator function signature.
  * Used for dependency injection of custom fitness functions.
  */
-export type FitnessEvaluatorFn = (network: INetwork, context: IFitnessEvaluationContext) => number;
+export type FitnessEvaluatorFn = (
+  network: INetwork,
+  context: IFitnessEvaluationContext
+) => number;
 
 /**
  * Reporting and dashboard configuration interface.
@@ -115,7 +123,10 @@ export interface IVisualizationConnection {
 /**
  * Type for activation functions with optional name properties.
  */
-export type ActivationFunctionWithName = ((input: number, derivate?: boolean) => number) & {
+export type ActivationFunctionWithName = ((
+  input: number,
+  derivate?: boolean
+) => number) & {
   name?: string;
   originalName?: string;
 };
@@ -147,7 +158,12 @@ export interface INetwork {
   /**
    * Optionally propagates error for supervised learning.
    */
-  propagate?: (rate: number, momentum: number, update: boolean, target: number[]) => void;
+  propagate?: (
+    rate: number,
+    momentum: number,
+    update: boolean,
+    target: number[]
+  ) => void;
   /**
    * Optionally clears the network's state.
    */

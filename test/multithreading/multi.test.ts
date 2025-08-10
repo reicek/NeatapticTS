@@ -27,7 +27,7 @@ describe('Multi-threading Utilities (Multi)', () => {
         // Arrange
         const set = [
           { input: [1, 2], output: [3] },
-          { input: [4, 5], output: [9] }
+          { input: [4, 5], output: [9] },
         ];
         // Act
         const serialized = Multi.serializeDataSet(set);
@@ -51,7 +51,7 @@ describe('Multi-threading Utilities (Multi)', () => {
         // Arrange
         const set = [
           { input: [1, 2], output: [3] },
-          { input: [4, 5], output: [9] }
+          { input: [4, 5], output: [9] },
         ];
         const serialized = Multi.serializeDataSet(set);
         // Act
@@ -119,9 +119,10 @@ describe('Multi-threading Utilities (Multi)', () => {
         // Arrange
         const set = [
           { input: [1], output: [2] },
-          { input: [2], output: [4] }
+          { input: [2], output: [4] },
         ];
-        const cost = (expected: number[], actual: number[]) => Math.abs(expected[0] - actual[0]);
+        const cost = (expected: number[], actual: number[]) =>
+          Math.abs(expected[0] - actual[0]);
         const A = [0];
         const S = [0];
         const data = [1, 1, 0, 0, 0, 0, -1, -2]; // squash index is 0
@@ -150,8 +151,10 @@ describe('Multi-threading Utilities (Multi)', () => {
     describe('when cost function throws', () => {
       it('returns NaN', () => {
         // Arrange
-        const set = [ { input: [1], output: [2] } ];
-        const cost = () => { throw new Error('cost error'); };
+        const set = [{ input: [1], output: [2] }];
+        const cost = () => {
+          throw new Error('cost error');
+        };
         const A = [0];
         const S = [0];
         const data = [1, 1, 0, 0, 0, 0, -1, -2]; // squash index is 0
@@ -170,7 +173,7 @@ describe('Multi-threading Utilities (Multi)', () => {
     describe('when cost function returns NaN', () => {
       it('returns NaN as error', () => {
         // Arrange
-        const set = [ { input: [1], output: [2] } ];
+        const set = [{ input: [1], output: [2] }];
         const cost = () => NaN;
         const A = [0];
         const S = [0];
@@ -198,7 +201,9 @@ describe('Multi-threading Utilities (Multi)', () => {
           test = () => {};
           private static _createBlobString = () => '';
         }
-        jest.spyOn(Multi, 'getBrowserTestWorker').mockResolvedValue(DummyWorker as any);
+        jest
+          .spyOn(Multi, 'getBrowserTestWorker')
+          .mockResolvedValue(DummyWorker as any);
       });
       afterAll(() => {
         jest.restoreAllMocks();
@@ -215,9 +220,12 @@ describe('Multi-threading Utilities (Multi)', () => {
         jest.resetModules();
         jest.dontMock('../../src/multithreading/workers/browser/testworker');
         jest.restoreAllMocks();
-        jest.doMock('../../src/multithreading/workers/browser/testworker', () => {
-          throw new Error('fail');
-        });
+        jest.doMock(
+          '../../src/multithreading/workers/browser/testworker',
+          () => {
+            throw new Error('fail');
+          }
+        );
       });
       afterEach(() => {
         jest.dontMock('../../src/multithreading/workers/browser/testworker');
@@ -245,7 +253,9 @@ describe('Multi-threading Utilities (Multi)', () => {
           test = () => {};
           private static _createBlobString = () => '';
         }
-        jest.spyOn(Multi, 'getNodeTestWorker').mockResolvedValue(DummyWorker as any);
+        jest
+          .spyOn(Multi, 'getNodeTestWorker')
+          .mockResolvedValue(DummyWorker as any);
       });
       afterAll(() => {
         jest.restoreAllMocks();

@@ -26,18 +26,27 @@ function testWithTimeoutAndRetry(
             runAttempt();
           } else {
             clearTimeout(timer);
-            done(new Error(`Test timed out after ${retries} attempts (${timeoutMs}ms each)`));
+            done(
+              new Error(
+                `Test timed out after ${retries} attempts (${timeoutMs}ms each)`
+              )
+            );
           }
         }
       }, timeoutMs);
       try {
-        fn(Object.assign(function (...args: any[]) {
-          if (!finished) {
-            finished = true;
-            clearTimeout(timer);
-            done(...args);
-          }
-        }, { fail: done.fail }));
+        fn(
+          Object.assign(
+            function (...args: any[]) {
+              if (!finished) {
+                finished = true;
+                clearTimeout(timer);
+                done(...args);
+              }
+            },
+            { fail: done.fail }
+          )
+        );
       } catch (err: any) {
         lastError = err;
         if (!finished) {
@@ -46,7 +55,11 @@ function testWithTimeoutAndRetry(
           if (++attempts < retries) {
             runAttempt();
           } else {
-            done(lastError instanceof Error ? lastError : new Error(String(lastError)));
+            done(
+              lastError instanceof Error
+                ? lastError
+                : new Error(String(lastError))
+            );
           }
         }
       }
@@ -175,7 +188,9 @@ describe('Network Error Handling & Scenarios', () => {
       testWithTimeoutAndRetry('throws error', (done) => {
         // Arrange
         const net = new Network(2, 1);
-        const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+        const warnSpy = jest
+          .spyOn(console, 'warn')
+          .mockImplementation(() => {});
         // Act & Assert
         let threw = false;
         try {
@@ -192,7 +207,9 @@ describe('Network Error Handling & Scenarios', () => {
       testWithTimeoutAndRetry('throws error', (done) => {
         // Arrange
         const net = new Network(2, 1);
-        const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+        const warnSpy = jest
+          .spyOn(console, 'warn')
+          .mockImplementation(() => {});
         // Act & Assert
         let threw = false;
         try {
@@ -209,11 +226,16 @@ describe('Network Error Handling & Scenarios', () => {
       testWithTimeoutAndRetry('throws error', (done) => {
         // Arrange
         const net = new Network(2, 1);
-        const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+        const warnSpy = jest
+          .spyOn(console, 'warn')
+          .mockImplementation(() => {});
         // Act & Assert
         let threw = false;
         try {
-          net.train([{ input: [1, 2], output: [1] }], { batchSize: 2, iterations: 1 });
+          net.train([{ input: [1, 2], output: [1] }], {
+            batchSize: 2,
+            iterations: 1,
+          });
         } catch {
           threw = true;
         }
@@ -226,7 +248,9 @@ describe('Network Error Handling & Scenarios', () => {
       testWithTimeoutAndRetry('throws error', (done) => {
         // Arrange
         const net = new Network(2, 1);
-        const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+        const warnSpy = jest
+          .spyOn(console, 'warn')
+          .mockImplementation(() => {});
         // Act & Assert
         let threw = false;
         try {
@@ -253,7 +277,9 @@ describe('Network Error Handling & Scenarios', () => {
       testWithTimeoutAndRetry('warns about missing rate or throws', (done) => {
         // Arrange
         const net = new Network(2, 1);
-        const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+        const warnSpy = jest
+          .spyOn(console, 'warn')
+          .mockImplementation(() => {});
         // Act & Assert
         let threw = false;
         try {
@@ -265,7 +291,9 @@ describe('Network Error Handling & Scenarios', () => {
           expect(threw).toBe(true);
         } else {
           const calls = warnSpy.mock.calls;
-          const found = calls.some(call => call[0] && call[0].includes('Missing `rate` option'));
+          const found = calls.some(
+            (call) => call[0] && call[0].includes('Missing `rate` option')
+          );
           expect(found).toBe(true);
         }
         warnSpy.mockRestore();
@@ -273,31 +301,44 @@ describe('Network Error Handling & Scenarios', () => {
       });
     });
     describe('Scenario: missing iterations and error option', () => {
-      testWithTimeoutAndRetry('warns about missing iterations and error', (done) => {
-        // Arrange
-        const net = new Network(2, 1);
-        // Spy
-        const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
-        // Act
-        try { net.train([{ input: [1, 2], output: [1] }], {}); } catch {};
-        // Assert (synchronously)
-        expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Missing `iterations` or `error` option'));
-        warnSpy.mockRestore();
-        done();
-      });
+      testWithTimeoutAndRetry(
+        'warns about missing iterations and error',
+        (done) => {
+          // Arrange
+          const net = new Network(2, 1);
+          // Spy
+          const warnSpy = jest
+            .spyOn(console, 'warn')
+            .mockImplementation(() => {});
+          // Act
+          try {
+            net.train([{ input: [1, 2], output: [1] }], {});
+          } catch {}
+          // Assert (synchronously)
+          expect(warnSpy).toHaveBeenCalledWith(
+            expect.stringContaining('Missing `iterations` or `error` option')
+          );
+          warnSpy.mockRestore();
+          done();
+        }
+      );
     });
     describe('Scenario: missing iterations option', () => {
       testWithTimeoutAndRetry('warns about missing iterations', (done) => {
         // Arrange
         const net = new Network(2, 1);
         // Spy
-        const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+        const warnSpy = jest
+          .spyOn(console, 'warn')
+          .mockImplementation(() => {});
         // Act
         try {
           net.train([{ input: [1, 2], output: [1] }], { error: 0.1 });
         } catch {}
         // Assert (synchronously)
-        expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Missing `iterations` option'));
+        expect(warnSpy).toHaveBeenCalledWith(
+          expect.stringContaining('Missing `iterations` option')
+        );
         warnSpy.mockRestore();
         done();
       });
@@ -386,12 +427,18 @@ describe('Network Error Handling & Scenarios', () => {
           const net = new Network(2, 1);
           const [conn] = net.nodes[0].connect(net.nodes[1]);
           // Spy
-          const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+          const warnSpy = jest
+            .spyOn(console, 'warn')
+            .mockImplementation(() => {});
           // Act
           const act = () => net.ungate(conn);
           // Assert
           expect(act).not.toThrow();
-          expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Attempted to ungate a connection not in the gates list.'));
+          expect(warnSpy).toHaveBeenCalledWith(
+            expect.stringContaining(
+              'Attempted to ungate a connection not in the gates list.'
+            )
+          );
           warnSpy.mockRestore();
           done();
         });
@@ -401,7 +448,9 @@ describe('Network Error Handling & Scenarios', () => {
           // Arrange
           const net = new Network(2, 1);
           // Spy
-          const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+          const warnSpy = jest
+            .spyOn(console, 'warn')
+            .mockImplementation(() => {});
           // Act
           const act = () => net.ungate(undefined as any);
           // Assert
@@ -462,7 +511,12 @@ describe('Network Error Handling & Scenarios', () => {
         // Arrange
         const net = new Network(2, 1);
         // Act & Assert
-        expect(() => net.train([{ input: [1, 2], output: [1] }], { iterations: 1, cost: 'notARealCostFn' })).toThrow();
+        expect(() =>
+          net.train([{ input: [1, 2], output: [1] }], {
+            iterations: 1,
+            cost: 'notARealCostFn',
+          })
+        ).toThrow();
       });
     });
     describe('Scenario: invalid activation function', () => {
@@ -478,16 +532,18 @@ describe('Network Error Handling & Scenarios', () => {
         // Arrange
         const net = new Network(2, 1);
         net.mutate(methods.mutation.ADD_NODE);
-        const hidden = net.nodes.find(n => n.type === 'hidden');
-        hidden!.squash = (null as any);
+        const hidden = net.nodes.find((n) => n.type === 'hidden');
+        hidden!.squash = null as any;
         // Act
-        try { net.activate([1, 2]); } catch {}
+        try {
+          net.activate([1, 2]);
+        } catch {}
         // Assert
         expect(warnSpy).toHaveBeenCalled();
       });
     });
   });
-  
+
   describe('Training robustness', () => {
     describe('Scenario: error in a single iteration', () => {
       let net: Network;
@@ -507,14 +563,14 @@ describe('Network Error Handling & Scenarios', () => {
           { input: [0, 0], output: [0] },
           { input: [0, 1], output: [1] },
           { input: [1, 0], output: [1] },
-          { input: [1, 1], output: [0] }
+          { input: [1, 1], output: [0] },
         ];
         let errorThrown = false;
         // Spy
-        net.activate = jest.fn(function(input, training) {
+        net.activate = jest.fn(function (input, training) {
           if (!errorThrown && input[0] === 0 && input[1] === 1) {
             errorThrown = true;
-            throw new Error("Test error");
+            throw new Error('Test error');
           }
           return originalActivate.apply(net, [input, training]);
         });
@@ -531,14 +587,14 @@ describe('Network Error Handling & Scenarios', () => {
           { input: [0, 0], output: [0] },
           { input: [0, 1], output: [1] },
           { input: [1, 0], output: [1] },
-          { input: [1, 1], output: [0] }
+          { input: [1, 1], output: [0] },
         ];
         let errorThrown = false;
         // Spy
-        net.activate = jest.fn(function(input, training) {
+        net.activate = jest.fn(function (input, training) {
           if (!errorThrown && input[0] === 0 && input[1] === 1) {
             errorThrown = true;
-            throw new Error("Test error");
+            throw new Error('Test error');
           }
           return originalActivate.apply(net, [input, training]);
         });

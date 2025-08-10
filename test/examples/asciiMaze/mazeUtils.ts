@@ -18,15 +18,32 @@ export class MazeUtils {
    * @returns 2D array of numbers encoding the maze elements.
    */
   static encodeMaze(asciiMaze: string[]): number[][] {
-    const wallChars = new Set(['#', '═', '║', '╔', '╗', '╚', '╝', '╠', '╣', '╦', '╩', '╬']);
-    return asciiMaze.map(row =>
-      [...row].map(cell => {
+    const wallChars = new Set([
+      '#',
+      '═',
+      '║',
+      '╔',
+      '╗',
+      '╚',
+      '╝',
+      '╠',
+      '╣',
+      '╦',
+      '╩',
+      '╬',
+    ]);
+    return asciiMaze.map((row) =>
+      [...row].map((cell) => {
         if (wallChars.has(cell)) return -1;
-        switch(cell) {
-          case '.': return 0;
-          case 'E': return 1;
-          case 'S': return 2;
-          default: return 0;
+        switch (cell) {
+          case '.':
+            return 0;
+          case 'E':
+            return 1;
+          case 'S':
+            return 2;
+          default:
+            return 0;
         }
       })
     );
@@ -55,7 +72,11 @@ export class MazeUtils {
    * @param goal - [x, y] goal position.
    * @returns Shortest path length (number of steps), or Infinity if unreachable.
    */
-  static bfsDistance(encodedMaze: number[][], start: [number, number], goal: [number, number]): number {
+  static bfsDistance(
+    encodedMaze: number[][],
+    start: [number, number],
+    goal: [number, number]
+  ): number {
     const [gx, gy] = goal;
     if (encodedMaze[gy][gx] === -1) return Infinity;
     const queue: Array<[[number, number], number]> = [[start, 0]];
@@ -72,10 +93,13 @@ export class MazeUtils {
       const [[x, y], dist] = queue.shift()!;
       if (x === gx && y === gy) return dist;
       for (const [dx, dy] of directions) {
-        const nx = x + dx, ny = y + dy;
+        const nx = x + dx,
+          ny = y + dy;
         if (
-          nx >= 0 && ny >= 0 &&
-          ny < encodedMaze.length && nx < encodedMaze[0].length &&
+          nx >= 0 &&
+          ny >= 0 &&
+          ny < encodedMaze.length &&
+          nx < encodedMaze[0].length &&
           encodedMaze[ny][nx] !== -1 &&
           !visited.has(key([nx, ny]))
         ) {
@@ -104,7 +128,17 @@ export class MazeUtils {
   ): number {
     const totalDistance = MazeUtils.bfsDistance(encodedMaze, startPos, exitPos);
     if (totalDistance === 0) return 100;
-    const remainingDistance = MazeUtils.bfsDistance(encodedMaze, currentPos, exitPos);
-    return Math.min(100, Math.max(0, Math.round(((totalDistance - remainingDistance) / totalDistance) * 100)));
+    const remainingDistance = MazeUtils.bfsDistance(
+      encodedMaze,
+      currentPos,
+      exitPos
+    );
+    return Math.min(
+      100,
+      Math.max(
+        0,
+        Math.round(((totalDistance - remainingDistance) / totalDistance) * 100)
+      )
+    );
   }
 }

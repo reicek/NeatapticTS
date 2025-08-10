@@ -8,7 +8,7 @@ describe('Dropout & Regularization', () => {
   beforeEach(() => {
     jest.spyOn(console, 'warn').mockImplementation(() => {});
   });
-  
+
   afterEach(() => {
     jest.restoreAllMocks();
   });
@@ -30,8 +30,10 @@ describe('Dropout & Regularization', () => {
           net.dropout = dropoutRate;
           // Act
           net.activate(input, true);
-          hiddenActivations = net.nodes.filter((n: Node) => n.type === 'hidden').map((n: Node) => n.activation);
-          maskedCount = hiddenActivations.filter(a => a === 0).length;
+          hiddenActivations = net.nodes
+            .filter((n: Node) => n.type === 'hidden')
+            .map((n: Node) => n.activation);
+          maskedCount = hiddenActivations.filter((a) => a === 0).length;
         });
 
         it('at least one hidden node is masked', () => {
@@ -59,11 +61,15 @@ describe('Dropout & Regularization', () => {
           net.dropout = 0.8;
           net.activate(input, true);
           net.dropout = 0;
-          net.nodes.forEach((n: Node) => { if (n.type === 'hidden') n.mask = 1; });
+          net.nodes.forEach((n: Node) => {
+            if (n.type === 'hidden') n.mask = 1;
+          });
           // Act
           net.activate(input, false);
-          hiddenActivationsTest = net.nodes.filter((n: Node) => n.type === 'hidden').map((n: Node) => n.activation);
-          maskedCountTest = hiddenActivationsTest.filter(a => a === 0).length;
+          hiddenActivationsTest = net.nodes
+            .filter((n: Node) => n.type === 'hidden')
+            .map((n: Node) => n.activation);
+          maskedCountTest = hiddenActivationsTest.filter((a) => a === 0).length;
         });
 
         it('no hidden node is masked', () => {
@@ -73,7 +79,7 @@ describe('Dropout & Regularization', () => {
 
         it('all hidden nodes are active', () => {
           // Assert
-          expect(hiddenActivationsTest.every(a => a !== 0)).toBe(true);
+          expect(hiddenActivationsTest.every((a) => a !== 0)).toBe(true);
         });
       });
     });
@@ -91,8 +97,10 @@ describe('Dropout & Regularization', () => {
           net.dropout = 0;
           // Act
           net.activate(input, true);
-          hiddenActivations = net.nodes.filter((n: Node) => n.type === 'hidden').map((n: Node) => n.activation);
-          maskedCount = hiddenActivations.filter(a => a === 0).length;
+          hiddenActivations = net.nodes
+            .filter((n: Node) => n.type === 'hidden')
+            .map((n: Node) => n.activation);
+          maskedCount = hiddenActivations.filter((a) => a === 0).length;
         });
 
         it('no hidden node is masked', () => {
@@ -102,7 +110,7 @@ describe('Dropout & Regularization', () => {
 
         it('all hidden nodes are active', () => {
           // Assert
-          expect(hiddenActivations.every(a => a !== 0)).toBe(true);
+          expect(hiddenActivations.every((a) => a !== 0)).toBe(true);
         });
       });
     });
@@ -120,8 +128,10 @@ describe('Dropout & Regularization', () => {
           net.dropout = 1;
           // Act
           net.activate(input, true);
-          hiddenActivations = net.nodes.filter((n: Node) => n.type === 'hidden').map((n: Node) => n.activation);
-          maskedCount = hiddenActivations.filter(a => a === 0).length;
+          hiddenActivations = net.nodes
+            .filter((n: Node) => n.type === 'hidden')
+            .map((n: Node) => n.activation);
+          maskedCount = hiddenActivations.filter((a) => a === 0).length;
         });
 
         it('all but one hidden node are masked', () => {
@@ -131,7 +141,7 @@ describe('Dropout & Regularization', () => {
 
         it('at least one hidden node is active', () => {
           // Assert
-          expect(hiddenActivations.some(a => a !== 0)).toBe(true);
+          expect(hiddenActivations.some((a) => a !== 0)).toBe(true);
         });
       });
     });
@@ -164,7 +174,9 @@ describe('Dropout & Regularization', () => {
         net = Architect.perceptron(2, 10, 1);
         // Act
         net.train(localDataset, { iterations: 2, dropout: 0.5 });
-        hiddenMasks = net.nodes.filter((n: Node) => n.type === 'hidden').map((n: Node) => n.mask);
+        hiddenMasks = net.nodes
+          .filter((n: Node) => n.type === 'hidden')
+          .map((n: Node) => n.mask);
       });
 
       it('all hidden node masks are 1 after train()', () => {
@@ -177,7 +189,7 @@ describe('Dropout & Regularization', () => {
         expect(hiddenMasks.length).toBeGreaterThan(0);
       });
     });
-    
+
     describe('Scenario: after testing', () => {
       describe('after calling test()', () => {
         beforeEach(() => {
@@ -189,7 +201,9 @@ describe('Dropout & Regularization', () => {
 
         it('all hidden node masks are 1 after test()', () => {
           // Assert
-          const hiddenMasks = net.nodes.filter((n: Node) => n.type === 'hidden').map((n: Node) => n.mask);
+          const hiddenMasks = net.nodes
+            .filter((n: Node) => n.type === 'hidden')
+            .map((n: Node) => n.mask);
           expect(hiddenMasks.every((m: number) => m === 1)).toBe(true);
         });
       });
@@ -226,7 +240,7 @@ describe('Dropout & Regularization', () => {
         });
       });
     });
-    
+
     describe('Scenario: during training', () => {
       describe('when training with dropout', () => {
         let originalActivate: any;
@@ -240,7 +254,9 @@ describe('Dropout & Regularization', () => {
             const isTraining = args[1] === true;
             const result = originalActivate.apply(net, args);
             if (isTraining) {
-              const hiddenNodes = net.nodes.filter((n: Node) => n.type === 'hidden');
+              const hiddenNodes = net.nodes.filter(
+                (n: Node) => n.type === 'hidden'
+              );
               if (hiddenNodes.some((n: Node) => n.mask === 0)) {
                 maskedNodeSeen = true;
               }
@@ -270,7 +286,7 @@ describe('Dropout & Regularization', () => {
       { input: [1, 0], output: [1] },
       { input: [1, 1], output: [0] },
     ];
-    
+
     describe('Scenario: L2 regularization', () => {
       describe('when comparing error with and without L2 regularization', () => {
         let netNoReg: Network;
@@ -285,8 +301,16 @@ describe('Dropout & Regularization', () => {
             netReg.connections[i].weight = netNoReg.connections[i].weight;
           }
           // Act
-          resultNoReg = netNoReg.train(dataset, { iterations: 100, error: 0.01, regularization: 0 });
-          resultReg = netReg.train(dataset, { iterations: 100, error: 0.01, regularization: 10 });
+          resultNoReg = netNoReg.train(dataset, {
+            iterations: 100,
+            error: 0.01,
+            regularization: 0,
+          });
+          resultReg = netReg.train(dataset, {
+            iterations: 100,
+            error: 0.01,
+            regularization: 10,
+          });
         });
 
         it('resultReg.error is a number', () => {
@@ -314,10 +338,24 @@ describe('Dropout & Regularization', () => {
             netReg.connections[i].weight = 3;
           }
           // Act
-          netNoReg.train(dataset, { iterations: 50, error: 0.01, regularization: 0 });
-          netReg.train(dataset, { iterations: 50, error: 0.01, regularization: 10 });
-          avgWeightNoReg = netNoReg.connections.reduce((sum, c) => sum + Math.abs(c.weight), 0) / netNoReg.connections.length;
-          avgWeightReg = netReg.connections.reduce((sum, c) => sum + Math.abs(c.weight), 0) / netReg.connections.length;
+          netNoReg.train(dataset, {
+            iterations: 50,
+            error: 0.01,
+            regularization: 0,
+          });
+          netReg.train(dataset, {
+            iterations: 50,
+            error: 0.01,
+            regularization: 10,
+          });
+          avgWeightNoReg =
+            netNoReg.connections.reduce(
+              (sum, c) => sum + Math.abs(c.weight),
+              0
+            ) / netNoReg.connections.length;
+          avgWeightReg =
+            netReg.connections.reduce((sum, c) => sum + Math.abs(c.weight), 0) /
+            netReg.connections.length;
         });
 
         it('avgWeightReg is finite', () => {
@@ -331,7 +369,7 @@ describe('Dropout & Regularization', () => {
         });
       });
     });
-    
+
     describe('Scenario: regularization 0', () => {
       describe('when regularization is 0', () => {
         let net: Network;
@@ -340,7 +378,11 @@ describe('Dropout & Regularization', () => {
           // Arrange
           net = Architect.perceptron(2, 4, 1);
           // Act
-          result = net.train(dataset, { iterations: 100, error: 0.01, regularization: 0 });
+          result = net.train(dataset, {
+            iterations: 100,
+            error: 0.01,
+            regularization: 0,
+          });
         });
 
         it('error is a number', () => {
@@ -369,8 +411,15 @@ describe('Dropout & Regularization', () => {
             netWithoutReg.connections[i].weight = weight;
           }
           // Act
-          resultWithZero = netWithZero.train(dataset, { iterations: 10, error: 0.01, regularization: 0 });
-          resultWithoutReg = netWithoutReg.train(dataset, { iterations: 10, error: 0.01 });
+          resultWithZero = netWithZero.train(dataset, {
+            iterations: 10,
+            error: 0.01,
+            regularization: 0,
+          });
+          resultWithoutReg = netWithoutReg.train(dataset, {
+            iterations: 10,
+            error: 0.01,
+          });
         });
 
         it('errors are close', () => {
@@ -381,12 +430,15 @@ describe('Dropout & Regularization', () => {
         it('weights are updated the same way', () => {
           // Assert
           for (let i = 0; i < netWithZero.connections.length; i++) {
-            expect(netWithZero.connections[i].weight).toBeCloseTo(netWithoutReg.connections[i].weight, 1);
+            expect(netWithZero.connections[i].weight).toBeCloseTo(
+              netWithoutReg.connections[i].weight,
+              1
+            );
           }
         });
       });
     });
-    
+
     describe('Scenario: L1 regularization', () => {
       describe('when comparing L1 and L2 regularization sparsity', () => {
         let netL1: Network;
@@ -403,11 +455,23 @@ describe('Dropout & Regularization', () => {
             netL2.connections[i].weight = weight;
           }
           // Act
-          netL1.train(dataset, { iterations: 50, error: 0.01, regularization: { type: 'L1', lambda: 0.01 } });
-          netL2.train(dataset, { iterations: 50, error: 0.01, regularization: { type: 'L2', lambda: 0.01 } });
+          netL1.train(dataset, {
+            iterations: 50,
+            error: 0.01,
+            regularization: { type: 'L1', lambda: 0.01 },
+          });
+          netL2.train(dataset, {
+            iterations: 50,
+            error: 0.01,
+            regularization: { type: 'L2', lambda: 0.01 },
+          });
           const zeroThreshold = 1e-4;
-          zeroWeightsL1 = netL1.connections.filter(c => Math.abs(c.weight) < zeroThreshold).length;
-          zeroWeightsL2 = netL2.connections.filter(c => Math.abs(c.weight) < zeroThreshold).length;
+          zeroWeightsL1 = netL1.connections.filter(
+            (c) => Math.abs(c.weight) < zeroThreshold
+          ).length;
+          zeroWeightsL2 = netL2.connections.filter(
+            (c) => Math.abs(c.weight) < zeroThreshold
+          ).length;
         });
 
         it('L1 regularization produces at least as many near-zero weights as L2', () => {
@@ -417,7 +481,7 @@ describe('Dropout & Regularization', () => {
       });
     });
   });
-  
+
   describe('Alternative Cost Functions', () => {
     type DataSample = { input: number[]; output: number[] };
     const dataset: DataSample[] = [
@@ -430,7 +494,7 @@ describe('Dropout & Regularization', () => {
     beforeEach(() => {
       net = Architect.perceptron(2, 4, 1);
     });
-    
+
     describe('Scenario: MAE cost function', () => {
       describe('when using MAE cost function', () => {
         let localNet: Network;
@@ -439,7 +503,11 @@ describe('Dropout & Regularization', () => {
           // Arrange
           localNet = Architect.perceptron(2, 4, 1);
           // Act
-          result = localNet.train(dataset, { iterations: 100, error: 0.1, cost: methods.Cost.mae });
+          result = localNet.train(dataset, {
+            iterations: 100,
+            error: 0.1,
+            cost: methods.Cost.mae,
+          });
         });
 
         it('train returns error less than 1', () => {
@@ -490,14 +558,20 @@ describe('Dropout & Regularization', () => {
         });
       });
     });
-    
+
     describe('Scenario: invalid cost function', () => {
       describe('when using an invalid cost function', () => {
         it('should throw', () => {
           // Arrange
           const net = Architect.perceptron(2, 4, 1);
           // Act & Assert
-          expect(() => net.train(dataset, { iterations: 100, error: 0.1, cost: 'notARealCostFn' as any })).toThrow();
+          expect(() =>
+            net.train(dataset, {
+              iterations: 100,
+              error: 0.1,
+              cost: 'notARealCostFn' as any,
+            })
+          ).toThrow();
         });
       });
 
@@ -506,14 +580,19 @@ describe('Dropout & Regularization', () => {
           // Arrange
           const customCost = {
             calculate: (target: number[], output: number[]) => {
-              return target.reduce((sum, t, i) => sum + Math.abs(t - output[i]), 0) / target.length;
+              return (
+                target.reduce((sum, t, i) => sum + Math.abs(t - output[i]), 0) /
+                target.length
+              );
             },
             derivative: (target: number, output: number) => {
               return output > target ? 1 : -1;
-            }
+            },
           };
           // Act & Assert
-          expect(() => net.train(dataset, { iterations: 5, cost: customCost })).not.toThrow();
+          expect(() =>
+            net.train(dataset, { iterations: 5, cost: customCost })
+          ).not.toThrow();
         });
       });
     });
@@ -528,7 +607,9 @@ describe('Dropout & Regularization', () => {
         // Arrange
         net = new Network(2, 1);
         net.mutate(methods.mutation.ADD_NODE);
-        hiddenMasks = net.nodes.filter((n: Node) => n.type === 'hidden').map((n: Node) => n.mask);
+        hiddenMasks = net.nodes
+          .filter((n: Node) => n.type === 'hidden')
+          .map((n: Node) => n.mask);
       });
 
       it('all hidden nodes are present initially', () => {
@@ -544,7 +625,10 @@ describe('Dropout & Regularization', () => {
       describe('after training with dropout', () => {
         beforeEach(() => {
           // Act
-          net.train([{ input: [0, 0], output: [0] }], { iterations: 2, dropout: 0.5 });
+          net.train([{ input: [0, 0], output: [0] }], {
+            iterations: 2,
+            dropout: 0.5,
+          });
           hiddenNodes = net.nodes.filter((n: Node) => n.type === 'hidden');
         });
 
@@ -559,7 +643,7 @@ describe('Dropout & Regularization', () => {
         });
       });
     });
-    
+
     describe('Clone behavior with dropout', () => {
       describe('when cloning a network with dropout', () => {
         let net1: Network;
@@ -570,7 +654,10 @@ describe('Dropout & Regularization', () => {
           net1.mutate(methods.mutation.ADD_NODE);
           net2 = net1.clone();
           // Act
-          net1.train([{ input: [0, 0], output: [0] }], { iterations: 5, dropout: 0.5 });
+          net1.train([{ input: [0, 0], output: [0] }], {
+            iterations: 5,
+            dropout: 0.5,
+          });
         });
 
         it('cloned network masks are all 1', () => {
@@ -580,17 +667,22 @@ describe('Dropout & Regularization', () => {
       });
     });
   });
-  
+
   describe('L2 Regularization', () => {
     describe('when training on noisy data', () => {
       type DataSample = { input: number[]; output: number[] };
-      const generateNoisyXORData = (numSamples: number, noiseLevel: number): DataSample[] => {
+      const generateNoisyXORData = (
+        numSamples: number,
+        noiseLevel: number
+      ): DataSample[] => {
         const data: DataSample[] = [];
         for (let i = 0; i < numSamples; i++) {
           const x = Math.random() > 0.5 ? 1 : 0;
           const y = Math.random() > 0.5 ? 1 : 0;
           // Target is XOR plus noise
-          const target = (x !== y ? 1 : 0) + (Math.random() * noiseLevel * (Math.random() > 0.5 ? 1 : -1));
+          const target =
+            (x !== y ? 1 : 0) +
+            Math.random() * noiseLevel * (Math.random() > 0.5 ? 1 : -1);
           data.push({ input: [x, y], output: [target] });
         }
         return data;
@@ -614,7 +706,7 @@ describe('Dropout & Regularization', () => {
         withoutReg.train(trainingData, {
           iterations: 5000,
           error: 0.01,
-          rate: 0.05
+          rate: 0.05,
         });
         // Network with regularization (lower lambda and rate for stability)
         withReg = new Network(2, 1);
@@ -625,14 +717,16 @@ describe('Dropout & Regularization', () => {
           error: 0.01,
           rate: 0.05,
           regularization: 0.001,
-          regularizationType: 'L2'
+          regularizationType: 'L2',
         });
         // Defensive: check for NaN weights after training
-        const nanWeights = withReg.connections.filter(c => !Number.isFinite(c.weight));
+        const nanWeights = withReg.connections.filter(
+          (c) => !Number.isFinite(c.weight)
+        );
         if (nanWeights.length > 0) {
           throw new Error(
             `NaN/Infinity detected in weights after training with regularization: ` +
-            nanWeights.map((c, i) => `conn#${i}=${c.weight}`).join(', ')
+              nanWeights.map((c, i) => `conn#${i}=${c.weight}`).join(', ')
           );
         }
         // Test both networks on clean data
@@ -642,17 +736,20 @@ describe('Dropout & Regularization', () => {
 
       it('regularized network should not perform worse than unregularized (probabilistic)', () => {
         // Assert
-        if (!Number.isFinite(errorWithReg) || !Number.isFinite(errorWithoutReg)) {
+        if (
+          !Number.isFinite(errorWithReg) ||
+          !Number.isFinite(errorWithoutReg)
+        ) {
           throw new Error(
             `Test failed: errorWithReg=${errorWithReg}, errorWithoutReg=${errorWithoutReg}. ` +
-            'One or both errors are not finite. This may indicate instability in the network or regularization logic.'
+              'One or both errors are not finite. This may indicate instability in the network or regularization logic.'
           );
         }
         // This is a probabilistic test, so we only check that regularization does not make things worse
         expect(errorWithReg).toBeLessThanOrEqual(errorWithoutReg);
       });
     });
-    
+
     describe('Dropout Mask Usage During Training', () => {
       describe('when applying dropout during training and testing', () => {
         let net: Network;
@@ -666,9 +763,11 @@ describe('Dropout & Regularization', () => {
           dropoutApplied = false;
           // Spy
           originalActivate = net.activate;
-          net.activate = function(input, training) {
+          net.activate = function (input, training) {
             if (training && this.dropout > 0) {
-              const hiddenNodes = net.nodes.filter((n: Node) => n.type === 'hidden');
+              const hiddenNodes = net.nodes.filter(
+                (n: Node) => n.type === 'hidden'
+              );
               if (hiddenNodes.some((n: Node) => n.mask === 0)) {
                 dropoutApplied = true;
               }
@@ -683,20 +782,32 @@ describe('Dropout & Regularization', () => {
 
         it('applies dropout during training', () => {
           // Act
-          net.train([{ input: [0, 0], output: [0] }, { input: [1, 1], output: [0] }], {
-            iterations: 20,
-            dropout: 0.5
-          });
+          net.train(
+            [
+              { input: [0, 0], output: [0] },
+              { input: [1, 1], output: [0] },
+            ],
+            {
+              iterations: 20,
+              dropout: 0.5,
+            }
+          );
           // Assert
           expect(dropoutApplied).toBe(true);
         });
 
         it('does not apply dropout during testing', () => {
           // Arrange
-          net.train([{ input: [0, 0], output: [0] }, { input: [1, 1], output: [0] }], {
-            iterations: 20,
-            dropout: 0.5
-          });
+          net.train(
+            [
+              { input: [0, 0], output: [0] },
+              { input: [1, 1], output: [0] },
+            ],
+            {
+              iterations: 20,
+              dropout: 0.5,
+            }
+          );
           // Reset detection
           dropoutApplied = false;
           // Act

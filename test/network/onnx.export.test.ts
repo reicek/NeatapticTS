@@ -7,7 +7,11 @@ import { exportToONNX } from '../../src/architecture/onnx';
 const suppressConsoleWarn = (fn: () => void) => {
   const originalWarn = console.warn;
   console.warn = jest.fn();
-  try { fn(); } finally { console.warn = originalWarn; }
+  try {
+    fn();
+  } finally {
+    console.warn = originalWarn;
+  }
 };
 
 jest.retryTimes(2, { logErrorsBeforeRetry: true });
@@ -25,7 +29,9 @@ describe('ONNX Export', () => {
       });
       it('should have input shape dim_value 1', () => {
         // Assert
-        expect(onnx.graph.inputs[0].type.tensor_type.shape.dim[0].dim_value).toBe(1);
+        expect(
+          onnx.graph.inputs[0].type.tensor_type.shape.dim[0].dim_value
+        ).toBe(1);
       });
     });
   });
@@ -71,7 +77,9 @@ describe('ONNX Export', () => {
       it('should have a single output tensor with shape 2', () => {
         // Assert
         expect(onnx.graph.outputs.length).toBe(1);
-        expect(onnx.graph.outputs[0].type.tensor_type.shape.dim[0].dim_value).toBe(2);
+        expect(
+          onnx.graph.outputs[0].type.tensor_type.shape.dim[0].dim_value
+        ).toBe(2);
       });
     });
   });
@@ -85,7 +93,9 @@ describe('ONNX Export', () => {
         // Act
         const onnx = exportToONNX(net);
         // Assert
-        const actNode = onnx.graph.node.find((n: any) => ['Tanh','Sigmoid','Relu','Identity'].includes(n.op_type));
+        const actNode = onnx.graph.node.find((n: any) =>
+          ['Tanh', 'Sigmoid', 'Relu', 'Identity'].includes(n.op_type)
+        );
         expect(actNode?.op_type).toBe('Tanh');
       });
     });
@@ -97,7 +107,9 @@ describe('ONNX Export', () => {
         // Act
         const onnx = exportToONNX(net);
         // Assert
-        const actNode = onnx.graph.node.find((n: any) => ['Tanh','Sigmoid','Relu','Identity'].includes(n.op_type));
+        const actNode = onnx.graph.node.find((n: any) =>
+          ['Tanh', 'Sigmoid', 'Relu', 'Identity'].includes(n.op_type)
+        );
         expect(actNode?.op_type).toBe('Sigmoid');
       });
     });
@@ -109,7 +121,9 @@ describe('ONNX Export', () => {
         // Act
         const onnx = exportToONNX(net);
         // Assert
-        const actNode = onnx.graph.node.find((n: any) => ['Tanh','Sigmoid','Relu','Identity'].includes(n.op_type));
+        const actNode = onnx.graph.node.find((n: any) =>
+          ['Tanh', 'Sigmoid', 'Relu', 'Identity'].includes(n.op_type)
+        );
         expect(actNode?.op_type).toBe('Relu');
       });
     });
@@ -117,19 +131,25 @@ describe('ONNX Export', () => {
       it('should map to ONNX Identity', () => {
         // Arrange
         const net = new Network(1, 1, {});
-        net.nodes[1].squash = function customSquash(x: number) { return x; };
+        net.nodes[1].squash = function customSquash(x: number) {
+          return x;
+        };
         // Act & Assert
         suppressConsoleWarn(() => {
           const onnx = exportToONNX(net);
           // Assert
-          const actNode = onnx.graph.node.find((n: any) => ['Tanh','Sigmoid','Relu','Identity'].includes(n.op_type));
+          const actNode = onnx.graph.node.find((n: any) =>
+            ['Tanh', 'Sigmoid', 'Relu', 'Identity'].includes(n.op_type)
+          );
           expect(actNode?.op_type).toBe('Identity');
         });
       });
       it('should warn when using an unknown activation', () => {
         // Arrange
         const net = new Network(1, 1, {});
-        net.nodes[1].squash = function customSquash(x: number) { return x; };
+        net.nodes[1].squash = function customSquash(x: number) {
+          return x;
+        };
         // Spy
         const originalWarn = console.warn;
         const warnSpy = jest.fn();
@@ -162,7 +182,9 @@ describe('ONNX Export', () => {
       });
       it('should throw with message about only supporting simple MLPs', () => {
         // Assert
-        expect(() => exportToONNX(net)).toThrow('ONNX export currently only supports simple MLPs');
+        expect(() => exportToONNX(net)).toThrow(
+          'ONNX export currently only supports simple MLPs'
+        );
       });
     });
     describe('when network is not fully connected (invalid MLP)', () => {
@@ -187,16 +209,20 @@ describe('ONNX Export', () => {
           ...input0.connections.out,
           ...input1.connections.out,
           ...hidden1.connections.out,
-          ...hidden2.connections.out
+          ...hidden2.connections.out,
         ];
         // Remove one input->hidden connection to break full connectivity
         // (e.g., remove input0->hidden1)
         net.connections = net.connections.filter(
-          c => !(c.from === input0 && c.to === hidden1)
+          (c) => !(c.from === input0 && c.to === hidden1)
         );
         // Also update the per-node connection lists
-        input0.connections.out = input0.connections.out.filter(c => c.to !== hidden1);
-        hidden1.connections.in = hidden1.connections.in.filter(c => c.from !== input0);
+        input0.connections.out = input0.connections.out.filter(
+          (c) => c.to !== hidden1
+        );
+        hidden1.connections.in = hidden1.connections.in.filter(
+          (c) => c.from !== input0
+        );
         // Ensure network.connections is consistent with per-node connections
         Network.rebuildConnections(net);
       });
@@ -213,13 +239,17 @@ describe('ONNX Export', () => {
       beforeEach(() => {
         // Arrange
         net = new Network(1, 1, {});
-        net.nodes.forEach((n: Node) => { n.index = undefined; });
+        net.nodes.forEach((n: Node) => {
+          n.index = undefined;
+        });
       });
       it('should assign a number index to every node', () => {
         // Act
         exportToONNX(net);
         // Assert
-        expect(net.nodes.every((n: Node) => typeof n.index === 'number')).toBe(true);
+        expect(net.nodes.every((n: Node) => typeof n.index === 'number')).toBe(
+          true
+        );
       });
     });
     describe('suppressConsoleWarn utility', () => {
@@ -249,7 +279,9 @@ describe('ONNX Export', () => {
       // Act
       const onnx: any = exportToONNX(net);
       // Assert Gemm attributes for each layer
-      const gemmNodes = onnx.graph.node.filter((n: any) => n.op_type === 'Gemm');
+      const gemmNodes = onnx.graph.node.filter(
+        (n: any) => n.op_type === 'Gemm'
+      );
       expect(gemmNodes.length).toBeGreaterThan(0);
       gemmNodes.forEach((g: any) => {
         // attributes are an array of { name, type, f|i }
@@ -265,7 +297,10 @@ describe('ONNX Export', () => {
       const nodes = onnx.graph.node as any[];
       gemmNodes.forEach((g: any) => {
         const idxGemm = nodes.indexOf(g);
-        const act = nodes.find((n: any) => n.input && n.input[0] === g.output[0] && n.op_type !== 'Gemm');
+        const act = nodes.find(
+          (n: any) =>
+            n.input && n.input[0] === g.output[0] && n.op_type !== 'Gemm'
+        );
         expect(act).toBeTruthy();
         const idxAct = nodes.indexOf(act);
         expect(idxAct).toBeLessThan(idxGemm);

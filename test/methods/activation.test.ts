@@ -165,101 +165,109 @@ describe('Activation', () => {
 
   describe('step()', () => {
     describe('when x > 0', () => {
-      testValues.filter(x => x > 0).forEach((x) => {
-        describe(`Scenario: x=${x}`, () => {
-          it('step returns 1', () => {
-            // Arrange
-            // Act
-            const result = Activation.step(x);
-            // Assert
-            expect(result).toBe(1);
-          });
-          it('step derivative returns 0', () => {
-            // Arrange
-            // Act
-            const result = Activation.step(x, true);
-            // Assert
-            expect(result).toBe(0);
+      testValues
+        .filter((x) => x > 0)
+        .forEach((x) => {
+          describe(`Scenario: x=${x}`, () => {
+            it('step returns 1', () => {
+              // Arrange
+              // Act
+              const result = Activation.step(x);
+              // Assert
+              expect(result).toBe(1);
+            });
+            it('step derivative returns 0', () => {
+              // Arrange
+              // Act
+              const result = Activation.step(x, true);
+              // Assert
+              expect(result).toBe(0);
+            });
           });
         });
-      });
     });
     describe('when x <= 0', () => {
-      testValues.filter(x => x <= 0).forEach((x) => {
-        describe(`Scenario: x=${x}`, () => {
-          it('step returns 0', () => {
-            // Arrange
-            // Act
-            const result = Activation.step(x);
-            // Assert
-            expect(result).toBe(0);
-          });
-          it('step derivative returns 0', () => {
-            // Arrange
-            // Act
-            const result = Activation.step(x, true);
-            // Assert
-            expect(result).toBe(0);
+      testValues
+        .filter((x) => x <= 0)
+        .forEach((x) => {
+          describe(`Scenario: x=${x}`, () => {
+            it('step returns 0', () => {
+              // Arrange
+              // Act
+              const result = Activation.step(x);
+              // Assert
+              expect(result).toBe(0);
+            });
+            it('step derivative returns 0', () => {
+              // Arrange
+              // Act
+              const result = Activation.step(x, true);
+              // Assert
+              expect(result).toBe(0);
+            });
           });
         });
-      });
     });
   });
 
   describe('relu()', () => {
     describe('when x > 0', () => {
-      testValues.filter(x => x > 0).forEach((x) => {
-        describe(`Scenario: x=${x}`, () => {
-          it('relu returns x', () => {
-            // Arrange
-            // Act
-            const result = Activation.relu(x);
-            // Assert
-            expect(result).toBeCloseTo(x, epsilon);
-          });
-          it('relu is greater than or equal to 0', () => {
-            // Arrange
-            // Act
-            const result = Activation.relu(x);
-            // Assert
-            expect(result).toBeGreaterThanOrEqual(0);
-          });
-          it('relu derivative returns 1', () => {
-            // Arrange
-            // Act
-            const result = Activation.relu(x, true);
-            // Assert
-            expect(result).toBe(1);
+      testValues
+        .filter((x) => x > 0)
+        .forEach((x) => {
+          describe(`Scenario: x=${x}`, () => {
+            it('relu returns x', () => {
+              // Arrange
+              // Act
+              const result = Activation.relu(x);
+              // Assert
+              expect(result).toBeCloseTo(x, epsilon);
+            });
+            it('relu is greater than or equal to 0', () => {
+              // Arrange
+              // Act
+              const result = Activation.relu(x);
+              // Assert
+              expect(result).toBeGreaterThanOrEqual(0);
+            });
+            it('relu derivative returns 1', () => {
+              // Arrange
+              // Act
+              const result = Activation.relu(x, true);
+              // Assert
+              expect(result).toBe(1);
+            });
           });
         });
-      });
     });
     describe('when x <= 0', () => {
-      testValues.filter(x => x <= 0).forEach((x) => {
-        describe(`Scenario: x=${x}`, () => {
-          it('relu returns 0', () => {
-            // Arrange
-            // Act
-            const result = Activation.relu(x);
-            // Assert
-            expect(result).toBeCloseTo(0, epsilon);
-          });
-          it('relu is greater than or equal to 0', () => {
-            // Arrange
-            // Act
-            const result = Activation.relu(x);
-            // Assert
-            expect(result).toBeGreaterThanOrEqual(0);
-          });
-          it('relu derivative returns 0', () => {
-            // Arrange
-            // Act
-            const result = Activation.relu(x, true);
-            // Assert
-            expect(result).toBe(0);
+      testValues
+        .filter((x) => x <= 0)
+        .forEach((x) => {
+          describe(`Scenario: x=${x}`, () => {
+            it('relu returns 0', () => {
+              // Arrange
+              // Act
+              const result = Activation.relu(x);
+              // Assert
+              expect(result).toBeCloseTo(0, epsilon);
+            });
+            it('relu is greater than or equal to 0', () => {
+              // Arrange
+              // Act
+              const result = Activation.relu(x);
+              // Assert
+              expect(result).toBeGreaterThanOrEqual(0);
+            });
+            it('relu derivative returns 0', () => {
+              // Arrange
+              // Act
+              const result = Activation.relu(x, true);
+              // Assert
+              expect(result).toBe(0);
+            });
           });
         });
-      });
     });
   });
 
@@ -464,44 +472,48 @@ describe('Activation', () => {
 
   describe('bipolar()', () => {
     describe('when x > 0', () => {
-      testValues.filter(x => x > 0).forEach((x) => {
-        describe(`Scenario: x=${x}`, () => {
-          it('bipolar returns 1', () => {
-            // Arrange
-            // Act
-            const result = Activation.bipolar(x);
-            // Assert
-            expect(result).toBe(1);
-          });
-          it('bipolar derivative returns 0', () => {
-            // Arrange
-            // Act
-            const result = Activation.bipolar(x, true);
-            // Assert
-            expect(result).toBe(0);
+      testValues
+        .filter((x) => x > 0)
+        .forEach((x) => {
+          describe(`Scenario: x=${x}`, () => {
+            it('bipolar returns 1', () => {
+              // Arrange
+              // Act
+              const result = Activation.bipolar(x);
+              // Assert
+              expect(result).toBe(1);
+            });
+            it('bipolar derivative returns 0', () => {
+              // Arrange
+              // Act
+              const result = Activation.bipolar(x, true);
+              // Assert
+              expect(result).toBe(0);
+            });
           });
         });
-      });
     });
     describe('when x <= 0', () => {
-      testValues.filter(x => x <= 0).forEach((x) => {
-        describe(`Scenario: x=${x}`, () => {
-          it('bipolar returns -1', () => {
-            // Arrange
-            // Act
-            const result = Activation.bipolar(x);
-            // Assert
-            expect(result).toBe(-1);
-          });
-          it('bipolar derivative returns 0', () => {
-            // Arrange
-            // Act
-            const result = Activation.bipolar(x, true);
-            // Assert
-            expect(result).toBe(0);
+      testValues
+        .filter((x) => x <= 0)
+        .forEach((x) => {
+          describe(`Scenario: x=${x}`, () => {
+            it('bipolar returns -1', () => {
+              // Arrange
+              // Act
+              const result = Activation.bipolar(x);
+              // Assert
+              expect(result).toBe(-1);
+            });
+            it('bipolar derivative returns 0', () => {
+              // Arrange
+              // Act
+              const result = Activation.bipolar(x, true);
+              // Assert
+              expect(result).toBe(0);
+            });
           });
         });
-      });
     });
   });
 
@@ -559,64 +571,70 @@ describe('Activation', () => {
 
   describe('hardTanh()', () => {
     describe('when x > 1', () => {
-      testValues.filter(x => x > 1).forEach((x) => {
-        describe(`Scenario: x=${x}`, () => {
-          it('hardTanh returns 1', () => {
-            // Arrange
-            // Act
-            const result = Activation.hardTanh(x);
-            // Assert
-            expect(result).toBeCloseTo(1, epsilon);
-          });
-          it('hardTanh derivative returns 0', () => {
-            // Arrange
-            // Act
-            const result = Activation.hardTanh(x, true);
-            // Assert
-            expect(result).toBe(0);
+      testValues
+        .filter((x) => x > 1)
+        .forEach((x) => {
+          describe(`Scenario: x=${x}`, () => {
+            it('hardTanh returns 1', () => {
+              // Arrange
+              // Act
+              const result = Activation.hardTanh(x);
+              // Assert
+              expect(result).toBeCloseTo(1, epsilon);
+            });
+            it('hardTanh derivative returns 0', () => {
+              // Arrange
+              // Act
+              const result = Activation.hardTanh(x, true);
+              // Assert
+              expect(result).toBe(0);
+            });
           });
         });
-      });
     });
     describe('when x < -1', () => {
-      testValues.filter(x => x < -1).forEach((x) => {
-        describe(`Scenario: x=${x}`, () => {
-          it('hardTanh returns -1', () => {
-            // Arrange
-            // Act
-            const result = Activation.hardTanh(x);
-            // Assert
-            expect(result).toBeCloseTo(-1, epsilon);
-          });
-          it('hardTanh derivative returns 0', () => {
-            // Arrange
-            // Act
-            const result = Activation.hardTanh(x, true);
-            // Assert
-            expect(result).toBe(0);
+      testValues
+        .filter((x) => x < -1)
+        .forEach((x) => {
+          describe(`Scenario: x=${x}`, () => {
+            it('hardTanh returns -1', () => {
+              // Arrange
+              // Act
+              const result = Activation.hardTanh(x);
+              // Assert
+              expect(result).toBeCloseTo(-1, epsilon);
+            });
+            it('hardTanh derivative returns 0', () => {
+              // Arrange
+              // Act
+              const result = Activation.hardTanh(x, true);
+              // Assert
+              expect(result).toBe(0);
+            });
           });
         });
-      });
     });
     describe('when -1 < x < 1', () => {
-      testValues.filter(x => x > -1 && x < 1).forEach((x) => {
-        describe(`Scenario: x=${x}`, () => {
-          it('hardTanh returns x', () => {
-            // Arrange
-            // Act
-            const result = Activation.hardTanh(x);
-            // Assert
-            expect(result).toBeCloseTo(x, epsilon);
-          });
-          it('hardTanh derivative returns 1', () => {
-            // Arrange
-            // Act
-            const result = Activation.hardTanh(x, true);
-            // Assert
-            expect(result).toBe(1);
+      testValues
+        .filter((x) => x > -1 && x < 1)
+        .forEach((x) => {
+          describe(`Scenario: x=${x}`, () => {
+            it('hardTanh returns x', () => {
+              // Arrange
+              // Act
+              const result = Activation.hardTanh(x);
+              // Assert
+              expect(result).toBeCloseTo(x, epsilon);
+            });
+            it('hardTanh derivative returns 1', () => {
+              // Arrange
+              // Act
+              const result = Activation.hardTanh(x, true);
+              // Assert
+              expect(result).toBe(1);
+            });
           });
         });
-      });
     });
     describe('when x == -1 or x == 1', () => {
       [-1, 1].forEach((x) => {
@@ -642,44 +660,48 @@ describe('Activation', () => {
 
   describe('absolute()', () => {
     describe('when x < 0', () => {
-      testValues.filter(x => x < 0).forEach((x) => {
-        describe(`Scenario: x=${x}`, () => {
-          it('absolute returns -x', () => {
-            // Arrange
-            // Act
-            const result = Activation.absolute(x);
-            // Assert
-            expect(result).toBeCloseTo(-x, epsilon);
-          });
-          it('absolute derivative returns -1', () => {
-            // Arrange
-            // Act
-            const result = Activation.absolute(x, true);
-            // Assert
-            expect(result).toBe(-1);
+      testValues
+        .filter((x) => x < 0)
+        .forEach((x) => {
+          describe(`Scenario: x=${x}`, () => {
+            it('absolute returns -x', () => {
+              // Arrange
+              // Act
+              const result = Activation.absolute(x);
+              // Assert
+              expect(result).toBeCloseTo(-x, epsilon);
+            });
+            it('absolute derivative returns -1', () => {
+              // Arrange
+              // Act
+              const result = Activation.absolute(x, true);
+              // Assert
+              expect(result).toBe(-1);
+            });
           });
         });
-      });
     });
     describe('when x > 0', () => {
-      testValues.filter(x => x > 0).forEach((x) => {
-        describe(`Scenario: x=${x}`, () => {
-          it('absolute returns x', () => {
-            // Arrange
-            // Act
-            const result = Activation.absolute(x);
-            // Assert
-            expect(result).toBeCloseTo(x, epsilon);
-          });
-          it('absolute derivative returns 1', () => {
-            // Arrange
-            // Act
-            const result = Activation.absolute(x, true);
-            // Assert
-            expect(result).toBe(1);
+      testValues
+        .filter((x) => x > 0)
+        .forEach((x) => {
+          describe(`Scenario: x=${x}`, () => {
+            it('absolute returns x', () => {
+              // Arrange
+              // Act
+              const result = Activation.absolute(x);
+              // Assert
+              expect(result).toBeCloseTo(x, epsilon);
+            });
+            it('absolute derivative returns 1', () => {
+              // Arrange
+              // Act
+              const result = Activation.absolute(x, true);
+              // Assert
+              expect(result).toBe(1);
+            });
           });
         });
-      });
     });
     describe('when x == 0', () => {
       it('absolute returns 0', () => {
@@ -756,7 +778,7 @@ describe('Activation', () => {
         it(`selu derivative is within (0, ${scale * alpha}]`, () => {
           // Arrange
           const fx = x > 0 ? x : alpha * Math.exp(x) - alpha;
-          const expected = (x > 0 ? scale : (fx + alpha) * scale);
+          const expected = x > 0 ? scale : (fx + alpha) * scale;
           // Act
           const result = Activation.selu(x, true);
           // Assert
@@ -765,7 +787,7 @@ describe('Activation', () => {
         it(`selu derivative is less than or equal to ${scale * alpha}`, () => {
           // Arrange
           const fx = x > 0 ? x : alpha * Math.exp(x) - alpha;
-          const expected = (x > 0 ? scale : (fx + alpha) * scale);
+          const expected = x > 0 ? scale : (fx + alpha) * scale;
           // Act
           const result = Activation.selu(x, true);
           // Assert
@@ -774,7 +796,7 @@ describe('Activation', () => {
         it('selu derivative matches expected value', () => {
           // Arrange
           const fx = x > 0 ? x : alpha * Math.exp(x) - alpha;
-          const expected = (x > 0 ? scale : (fx + alpha) * scale);
+          const expected = x > 0 ? scale : (fx + alpha) * scale;
           // Act
           const result = Activation.selu(x, true);
           // Assert
@@ -889,7 +911,9 @@ describe('Activation', () => {
     const lowerBound = -0.17; // Approximate minimum value
     testValues.forEach((x) => {
       describe(`Scenario: x=${x}`, () => {
-        it(`gelu approximation is within [${lowerBound.toFixed(2)}, inf)`, () => {
+        it(`gelu approximation is within [${lowerBound.toFixed(
+          2
+        )}, inf)`, () => {
           // Arrange
           const cdf =
             0.5 *
@@ -1064,10 +1088,14 @@ describe('Activation', () => {
 
   describe('Custom Activation Registration', () => {
     let Activation: typeof import('../../src/methods/activation').default;
-    let registerCustomActivation: (name: string, fn: (x: number, derivate?: boolean) => number) => void;
+    let registerCustomActivation: (
+      name: string,
+      fn: (x: number, derivate?: boolean) => number
+    ) => void;
     beforeEach(() => {
       Activation = require('../../src/methods/activation').default;
-      registerCustomActivation = require('../../src/methods/activation').registerCustomActivation;
+      registerCustomActivation = require('../../src/methods/activation')
+        .registerCustomActivation;
       // Clean up any previous customFn
       if (Activation['customFn']) delete Activation['customFn'];
     });
@@ -1077,7 +1105,10 @@ describe('Activation', () => {
     describe('when registering a custom activation', () => {
       it('can register and use a custom activation function', () => {
         // Arrange
-        registerCustomActivation('customFn', (x: number, derivate: boolean = false) => derivate ? 42 : x * 2);
+        registerCustomActivation(
+          'customFn',
+          (x: number, derivate: boolean = false) => (derivate ? 42 : x * 2)
+        );
         // Act
         const result = Activation['customFn'](3);
         // Assert
@@ -1085,7 +1116,10 @@ describe('Activation', () => {
       });
       it('custom activation derivative returns expected value', () => {
         // Arrange
-        registerCustomActivation('customFn', (x: number, derivate: boolean = false) => derivate ? 42 : x * 2);
+        registerCustomActivation(
+          'customFn',
+          (x: number, derivate: boolean = false) => (derivate ? 42 : x * 2)
+        );
         // Act
         const result = Activation['customFn'](3, true);
         // Assert

@@ -198,7 +198,7 @@ describe('Node', () => {
         beforeEach(() => {
           // Arrange
           node.activate(1.0); // first activation
-          node.activate();    // second activation
+          node.activate(); // second activation
         });
         it('includes previous activation in state calculation', () => {
           // Assert
@@ -388,7 +388,8 @@ describe('Node', () => {
         let node: Node;
         beforeEach(() => {
           // Arrange
-          const customFn = (x: number, derivate = false) => derivate ? 42 : x * 3;
+          const customFn = (x: number, derivate = false) =>
+            derivate ? 42 : x * 3;
           node = new Node('hidden', customFn);
           node.bias = 0;
         });
@@ -410,7 +411,8 @@ describe('Node', () => {
         beforeEach(() => {
           // Arrange
           node = new Node('hidden');
-          const customFn = (x: number, derivate = false) => derivate ? -7 : x + 5;
+          const customFn = (x: number, derivate = false) =>
+            derivate ? -7 : x + 5;
           node.setActivation(customFn);
           node.bias = 0;
         });
@@ -652,7 +654,10 @@ describe('Node', () => {
         conn.eligibility = 1.0;
         node.propagate(1.0, 0, true, { type: 'L1', lambda: 0.5 });
         // L1: weight should decrease by 0.5 * sign(initialWeight)
-        expect(conn.weight).toBeCloseTo(initialWeight - 0.5 * Math.sign(initialWeight), 6);
+        expect(conn.weight).toBeCloseTo(
+          initialWeight - 0.5 * Math.sign(initialWeight),
+          6
+        );
       });
       it('L2 regularization decreases weight by lambda * weight', () => {
         const initialWeight = conn.weight;
@@ -668,7 +673,10 @@ describe('Node', () => {
         conn.eligibility = 1.0;
         const customFn = (w: number) => 0.25 * w * w;
         node.propagate(1.0, 0, true, customFn);
-        expect(conn.weight).toBeCloseTo(initialWeight - 0.25 * initialWeight * initialWeight, 6);
+        expect(conn.weight).toBeCloseTo(
+          initialWeight - 0.25 * initialWeight * initialWeight,
+          6
+        );
       });
     });
   });
@@ -939,8 +947,7 @@ describe('Node', () => {
         const originalSquash = inputNode.squash;
         try {
           inputNode.mutate(mutation.MOD_ACTIVATION);
-        } catch (e) {
-        }
+        } catch (e) {}
         expect(typeof inputNode.squash).toBe('function');
         if (inputNode.squash !== originalSquash) {
           expect(mutation.MOD_ACTIVATION.allowed).toContain(inputNode.squash);
@@ -950,7 +957,10 @@ describe('Node', () => {
       // Test that mutating an output node's activation throws an error if mutateOutput is false.
       it('should throw error for MOD_ACTIVATION (mutateOutput: false)', () => {
         const outputNode = new Node('output');
-        const customMutation = { ...mutation.MOD_ACTIVATION, mutateOutput: false };
+        const customMutation = {
+          ...mutation.MOD_ACTIVATION,
+          mutateOutput: false,
+        };
         expect(() => outputNode.mutate(customMutation)).toThrow(
           /Unsupported mutation method: MOD_ACTIVATION/
         );
@@ -959,7 +969,10 @@ describe('Node', () => {
       // Test that mutating an output node's activation *still* throws an error even if mutateOutput is true.
       it('should throw error for MOD_ACTIVATION (mutateOutput: true)', () => {
         const outputNode = new Node('output');
-        const customMutation = { ...mutation.MOD_ACTIVATION, mutateOutput: true };
+        const customMutation = {
+          ...mutation.MOD_ACTIVATION,
+          mutateOutput: true,
+        };
         expect(() => outputNode.mutate(customMutation)).toThrow(
           /Unsupported mutation method: MOD_ACTIVATION/
         );
@@ -1007,8 +1020,7 @@ describe('Node', () => {
         const originalBias = inputNode.bias;
         try {
           inputNode.mutate(mutation.MOD_BIAS);
-        } catch (e) {
-        }
+        } catch (e) {}
       });
     });
 
@@ -1027,7 +1039,9 @@ describe('Node', () => {
         outConn.weight = 0.7;
         selfConn.weight = 0.9;
         // Mutate
-        node.mutate(require('../../src/methods/mutation').default.REINIT_WEIGHT);
+        node.mutate(
+          require('../../src/methods/mutation').default.REINIT_WEIGHT
+        );
         // All weights should be in [-1, 1] and not equal to the original
         expect(inConn.weight).not.toBe(0.5);
         expect(outConn.weight).not.toBe(0.7);
@@ -1228,7 +1242,10 @@ describe('Node', () => {
         expect(json.type).toBe('output');
       });
       it('should serialize squash function name', () => {
-        const expectedSquashName = Object.keys(Activation).find(key => Activation[key as keyof typeof Activation] === Activation.relu);
+        const expectedSquashName = Object.keys(Activation).find(
+          (key) =>
+            Activation[key as keyof typeof Activation] === Activation.relu
+        );
         expect(json.squash).toBe(expectedSquashName || 'relu');
       });
       it('should serialize mask', () => {
@@ -1241,7 +1258,12 @@ describe('Node', () => {
     describe('fromJSON()', () => {
       it('should fallback to identity for unknown squash function', () => {
         // Arrange
-        const json = { bias: 0.5, type: 'hidden', squash: 'unknownFunction', mask: 1 };
+        const json = {
+          bias: 0.5,
+          type: 'hidden',
+          squash: 'unknownFunction',
+          mask: 1,
+        };
         // Act
         const node = Node.fromJSON(json);
         // Assert
@@ -1396,7 +1418,10 @@ describe('Node', () => {
         expect(json.type).toBe('output');
       });
       it('serializes squash function name', () => {
-        const expectedSquashName = Object.keys(Activation).find(key => Activation[key as keyof typeof Activation] === Activation.relu);
+        const expectedSquashName = Object.keys(Activation).find(
+          (key) =>
+            Activation[key as keyof typeof Activation] === Activation.relu
+        );
         expect(json.squash).toBe(expectedSquashName || 'relu');
       });
       it('serializes mask', () => {
@@ -1406,7 +1431,12 @@ describe('Node', () => {
     describe('fromJSON', () => {
       it('falls back to identity for unknown squash function', () => {
         // Arrange
-        const json = { bias: 0.5, type: 'hidden', squash: 'unknownFunction', mask: 1 };
+        const json = {
+          bias: 0.5,
+          type: 'hidden',
+          squash: 'unknownFunction',
+          mask: 1,
+        };
         // Act
         const node = Node.fromJSON(json);
         // Assert
@@ -1464,9 +1494,9 @@ describe('Node', () => {
     });
 
     it('isProjectedBy should return true for self', () => {
-        const node1 = new Node();
-        node1.connect(node1);
-        expect(node1.isProjectedBy(node1)).toBe(true);
+      const node1 = new Node();
+      node1.connect(node1);
+      expect(node1.isProjectedBy(node1)).toBe(true);
     });
   });
 
@@ -1475,22 +1505,22 @@ describe('Node', () => {
       // Arrange
       const node = new Node();
       node.squash = Activation.logistic;
-      
+
       // Act & Assert
       expect(() => node.activate(Number.MAX_VALUE)).not.toThrow();
       expect(() => node.activate(-Number.MAX_VALUE)).not.toThrow();
-      
+
       // Should saturate activation functions
       expect(node.activate(Number.MAX_VALUE)).toBeCloseTo(1);
       expect(node.activate(-Number.MAX_VALUE)).toBeCloseTo(0);
     });
-    
+
     it('propagate should handle extreme target values', () => {
       // Arrange
       const node = new Node('output');
       node.squash = Activation.identity;
       node.activate(0);
-      
+
       // Act & Assert
       // Use a try-catch to handle potential NaN or Infinity
       try {
@@ -1504,62 +1534,64 @@ describe('Node', () => {
         expect(node.error.responsibility).not.toBe(NaN);
       } catch (error) {
         // If propagation fails with extreme values, that's acceptable
-        console.warn('Propagation failed with extreme value, which is expected behavior');
+        console.warn(
+          'Propagation failed with extreme value, which is expected behavior'
+        );
       }
     });
   });
-  
+
   describe('Mutation Resilience', () => {
     it('should maintain connections after activation function change', () => {
       // Arrange
       const sourceNode = new Node();
       const targetNode = new Node();
       const conn = sourceNode.connect(targetNode)[0];
-      
+
       // Act
       targetNode.squash = Activation.tanh; // Change activation function
-      
+
       // Assert
       expect(sourceNode.connections.out).toContain(conn);
       expect(targetNode.connections.in).toContain(conn);
     });
-    
+
     it('should function after connections are mutated', () => {
       // Arrange
       const node = new Node();
       const inputNode = new Node('input');
       const conn = inputNode.connect(node)[0];
       inputNode.activation = 1;
-      
+
       // Get initial activation
       const initialActivation = node.activate();
-      
+
       // Act
       conn.weight = conn.weight * 2; // Double the weight
-      
+
       // Assert
       const newActivation = node.activate();
       expect(newActivation).not.toEqual(initialActivation);
       expect(isFinite(newActivation)).toBe(true);
     });
   });
-  
+
   describe('Memory Management', () => {
     it('clear() removes all traces and eligibility efficiently', () => {
       // Arrange
       const node = new Node();
       const inputNode = new Node();
       const conn = inputNode.connect(node)[0];
-      
+
       // Create some non-zero state
       conn.eligibility = 0.5;
       conn.xtrace.nodes.push(node);
       conn.xtrace.values.push(0.3);
       node.error.responsibility = 0.7;
-      
+
       // Act
       node.clear();
-      
+
       // Assert
       expect(conn.eligibility).toBe(0);
       expect(conn.xtrace.nodes.length).toBe(0);

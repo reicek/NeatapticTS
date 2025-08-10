@@ -14,10 +14,15 @@ jest.retryTimes(2, { logErrorsBeforeRetry: true });
 beforeEach(() => {
   const origLog = console.log;
   const origDir = console.dir;
-  console.log = function(...args) {
-    origLog.apply(console, args.map(arg => (arg && typeof arg.toJSON === 'function') ? arg.toJSON() : arg));
+  console.log = function (...args) {
+    origLog.apply(
+      console,
+      args.map((arg) =>
+        arg && typeof arg.toJSON === 'function' ? arg.toJSON() : arg
+      )
+    );
   };
-  console.dir = function(obj, options) {
+  console.dir = function (obj, options) {
     if (obj && typeof obj.toJSON === 'function') {
       obj = obj.toJSON();
     }
@@ -86,7 +91,7 @@ describe('Group', () => {
       beforeEach(() => {
         // Arrange
         group = new Group(size);
-        group.nodes.forEach(node => node.type = 'input');
+        group.nodes.forEach((node) => (node.type = 'input'));
       });
 
       describe('when activating all input nodes with input values', () => {
@@ -116,7 +121,9 @@ describe('Group', () => {
       describe('when input array length does not match group size', () => {
         it('throws an error', () => {
           // Act & Assert
-          expect(() => group.activate([1, 2])).toThrow('Array with values should be same as the amount of nodes!');
+          expect(() => group.activate([1, 2])).toThrow(
+            'Array with values should be same as the amount of nodes!'
+          );
         });
       });
     });
@@ -128,7 +135,7 @@ describe('Group', () => {
       beforeEach(() => {
         // Arrange
         group = new Group(size);
-        group.nodes.forEach(node => node.type = 'hidden');
+        group.nodes.forEach((node) => (node.type = 'hidden'));
       });
 
       describe('when activating all hidden nodes with input values', () => {
@@ -143,22 +150,33 @@ describe('Group', () => {
         });
         it('assigns correct activation value to node 0', () => {
           // Assert
-          expect(activations[0]).toBeCloseTo(1 / (1 + Math.exp(-inputValues[0])), 10);
+          expect(activations[0]).toBeCloseTo(
+            1 / (1 + Math.exp(-inputValues[0])),
+            10
+          );
         });
         it('assigns correct activation value to node 1', () => {
           // Assert
-          expect(activations[1]).toBeCloseTo(1 / (1 + Math.exp(-inputValues[1])), 10);
+          expect(activations[1]).toBeCloseTo(
+            1 / (1 + Math.exp(-inputValues[1])),
+            10
+          );
         });
         it('assigns correct activation value to node 2', () => {
           // Assert
-          expect(activations[2]).toBeCloseTo(1 / (1 + Math.exp(-inputValues[2])), 10);
+          expect(activations[2]).toBeCloseTo(
+            1 / (1 + Math.exp(-inputValues[2])),
+            10
+          );
         });
       });
 
       describe('when input array length does not match group size', () => {
         it('throws an error', () => {
           // Act & Assert
-          expect(() => group.activate([1, 2])).toThrow('Array with values should be same as the amount of nodes!');
+          expect(() => group.activate([1, 2])).toThrow(
+            'Array with values should be same as the amount of nodes!'
+          );
         });
       });
     });
@@ -193,349 +211,351 @@ describe('Group', () => {
         // Arrange
         const targets = [0.1, 0.2];
         // Act & Assert
-        expect(() => group.propagate(rate, momentum, targets)).toThrow('Array with values should be same as the amount of nodes!');
+        expect(() => group.propagate(rate, momentum, targets)).toThrow(
+          'Array with values should be same as the amount of nodes!'
+        );
       });
     });
   });
 
   describe('gate()', () => {
-      let gatingGroup: Group;
-      let sourceNode1: Node, sourceNode2: Node;
-      let targetNode1: Node, targetNode2: Node;
-      let conn1: Connection, conn2: Connection, selfConn: Connection;
-      let connections: Connection[];
+    let gatingGroup: Group;
+    let sourceNode1: Node, sourceNode2: Node;
+    let targetNode1: Node, targetNode2: Node;
+    let conn1: Connection, conn2: Connection, selfConn: Connection;
+    let connections: Connection[];
 
-      beforeEach(() => {
-        // Arrange
-        gatingGroup = new Group(2);
-        sourceNode1 = new Node();
-        sourceNode2 = new Node();
-        targetNode1 = new Node();
-        targetNode2 = new Node();
-        conn1 = sourceNode1.connect(targetNode1)[0];
-        conn2 = sourceNode2.connect(targetNode2)[0];
-        selfConn = sourceNode1.connect(sourceNode1)[0];
-        connections = [conn1, conn2];
-      });
+    beforeEach(() => {
+      // Arrange
+      gatingGroup = new Group(2);
+      sourceNode1 = new Node();
+      sourceNode2 = new Node();
+      targetNode1 = new Node();
+      targetNode2 = new Node();
+      conn1 = sourceNode1.connect(targetNode1)[0];
+      conn2 = sourceNode2.connect(targetNode2)[0];
+      selfConn = sourceNode1.connect(sourceNode1)[0];
+      connections = [conn1, conn2];
+    });
 
-      describe('when no gating method is specified', () => {
-        it('throws an error', () => {
-          expect(() => gatingGroup.gate(connections, undefined)).toThrow(
-            'Please specify a gating method: Gating.INPUT, Gating.OUTPUT, or Gating.SELF'
-          );
-        });
-      });
-
-      describe('when gating a single connection (INPUT)', () => {
-        beforeEach(() => {
-          // Act
-          gatingGroup.gate(conn1, methods.gating.INPUT);
-        });
-        it('assigns the first node as gater', () => {
-          expect(conn1.gater).toBe(gatingGroup.nodes[0]);
-        });
-      });
-
-      describe('when gating multiple connections (INPUT)', () => {
-        beforeEach(() => {
-          // Act
-          gatingGroup.gate(connections, methods.gating.INPUT);
-        });
-        it('assigns the first node as gater for conn1', () => {
-          expect(conn1.gater).toBe(gatingGroup.nodes[0]);
-        });
-        it('assigns the second node as gater for conn2', () => {
-          expect(conn2.gater).toBe(gatingGroup.nodes[1]);
-        });
-      });
-
-      describe('when gating multiple connections (OUTPUT)', () => {
-        beforeEach(() => {
-          // Act
-          gatingGroup.gate(connections, methods.gating.OUTPUT);
-        });
-        it('assigns the first node as gater for conn1', () => {
-          expect(conn1.gater).toBe(gatingGroup.nodes[0]);
-        });
-        it('assigns the second node as gater for conn2', () => {
-          expect(conn2.gater).toBe(gatingGroup.nodes[1]);
-        });
-      });
-
-      describe('when gating a self connection (SELF)', () => {
-        beforeEach(() => {
-          // Act
-          gatingGroup.gate(selfConn, methods.gating.SELF);
-        });
-        it('assigns the first node as gater for selfConn', () => {
-          expect(selfConn.gater).toBe(gatingGroup.nodes[0]);
-        });
-      });
-
-      describe('when more connections than gaters (cycle)', () => {
-        let conn3: Connection;
-        beforeEach(() => {
-          conn3 = sourceNode1.connect(targetNode2)[0];
-          const threeConnections = [conn1, conn2, conn3];
-          gatingGroup.gate(threeConnections, methods.gating.INPUT);
-        });
-        it('cycles gater assignment for conn1', () => {
-          expect(conn1.gater).toBe(gatingGroup.nodes[0]);
-        });
-        it('cycles gater assignment for conn2', () => {
-          expect(conn2.gater).toBe(gatingGroup.nodes[1]);
-        });
-        it('cycles gater assignment for conn3', () => {
-          expect(conn3.gater).toBe(gatingGroup.nodes[0]);
-        });
+    describe('when no gating method is specified', () => {
+      it('throws an error', () => {
+        expect(() => gatingGroup.gate(connections, undefined)).toThrow(
+          'Please specify a gating method: Gating.INPUT, Gating.OUTPUT, or Gating.SELF'
+        );
       });
     });
+
+    describe('when gating a single connection (INPUT)', () => {
+      beforeEach(() => {
+        // Act
+        gatingGroup.gate(conn1, methods.gating.INPUT);
+      });
+      it('assigns the first node as gater', () => {
+        expect(conn1.gater).toBe(gatingGroup.nodes[0]);
+      });
+    });
+
+    describe('when gating multiple connections (INPUT)', () => {
+      beforeEach(() => {
+        // Act
+        gatingGroup.gate(connections, methods.gating.INPUT);
+      });
+      it('assigns the first node as gater for conn1', () => {
+        expect(conn1.gater).toBe(gatingGroup.nodes[0]);
+      });
+      it('assigns the second node as gater for conn2', () => {
+        expect(conn2.gater).toBe(gatingGroup.nodes[1]);
+      });
+    });
+
+    describe('when gating multiple connections (OUTPUT)', () => {
+      beforeEach(() => {
+        // Act
+        gatingGroup.gate(connections, methods.gating.OUTPUT);
+      });
+      it('assigns the first node as gater for conn1', () => {
+        expect(conn1.gater).toBe(gatingGroup.nodes[0]);
+      });
+      it('assigns the second node as gater for conn2', () => {
+        expect(conn2.gater).toBe(gatingGroup.nodes[1]);
+      });
+    });
+
+    describe('when gating a self connection (SELF)', () => {
+      beforeEach(() => {
+        // Act
+        gatingGroup.gate(selfConn, methods.gating.SELF);
+      });
+      it('assigns the first node as gater for selfConn', () => {
+        expect(selfConn.gater).toBe(gatingGroup.nodes[0]);
+      });
+    });
+
+    describe('when more connections than gaters (cycle)', () => {
+      let conn3: Connection;
+      beforeEach(() => {
+        conn3 = sourceNode1.connect(targetNode2)[0];
+        const threeConnections = [conn1, conn2, conn3];
+        gatingGroup.gate(threeConnections, methods.gating.INPUT);
+      });
+      it('cycles gater assignment for conn1', () => {
+        expect(conn1.gater).toBe(gatingGroup.nodes[0]);
+      });
+      it('cycles gater assignment for conn2', () => {
+        expect(conn2.gater).toBe(gatingGroup.nodes[1]);
+      });
+      it('cycles gater assignment for conn3', () => {
+        expect(conn3.gater).toBe(gatingGroup.nodes[0]);
+      });
+    });
+  });
 
   describe('set()', () => {
-      const size = 4;
-      let group: Group;
+    const size = 4;
+    let group: Group;
 
+    beforeEach(() => {
+      // Arrange
+      group = new Group(size);
+    });
+
+    describe('when setting bias for all nodes', () => {
+      const biasValue = 0.5;
       beforeEach(() => {
-        // Arrange
-        group = new Group(size);
+        // Act
+        group.set({ bias: biasValue });
       });
-
-      describe('when setting bias for all nodes', () => {
-        const biasValue = 0.5;
-        beforeEach(() => {
-          // Act
-          group.set({ bias: biasValue });
-        });
-        it('sets bias for node 0', () => {
-          expect(group.nodes[0].bias).toBe(biasValue);
-        });
-        it('sets bias for node 1', () => {
-          expect(group.nodes[1].bias).toBe(biasValue);
-        });
-        it('sets bias for node 2', () => {
-          expect(group.nodes[2].bias).toBe(biasValue);
-        });
-        it('sets bias for node 3', () => {
-          expect(group.nodes[3].bias).toBe(biasValue);
-        });
+      it('sets bias for node 0', () => {
+        expect(group.nodes[0].bias).toBe(biasValue);
       });
-
-      describe('when setting squash function for all nodes', () => {
-        const squashFn = methods.Activation.relu;
-        beforeEach(() => {
-          // Act
-          group.set({ squash: squashFn });
-        });
-        it('sets squash for node 0', () => {
-          expect(group.nodes[0].squash).toBe(squashFn);
-        });
-        it('sets squash for node 1', () => {
-          expect(group.nodes[1].squash).toBe(squashFn);
-        });
-        it('sets squash for node 2', () => {
-          expect(group.nodes[2].squash).toBe(squashFn);
-        });
-        it('sets squash for node 3', () => {
-          expect(group.nodes[3].squash).toBe(squashFn);
-        });
+      it('sets bias for node 1', () => {
+        expect(group.nodes[1].bias).toBe(biasValue);
       });
-
-      describe('when setting type for all nodes', () => {
-        const typeValue = 'memory';
-        beforeEach(() => {
-          // Act
-          group.set({ type: typeValue });
-        });
-        it('sets type for node 0', () => {
-          expect(group.nodes[0].type).toBe(typeValue);
-        });
-        it('sets type for node 1', () => {
-          expect(group.nodes[1].type).toBe(typeValue);
-        });
-        it('sets type for node 2', () => {
-          expect(group.nodes[2].type).toBe(typeValue);
-        });
-        it('sets type for node 3', () => {
-          expect(group.nodes[3].type).toBe(typeValue);
-        });
+      it('sets bias for node 2', () => {
+        expect(group.nodes[2].bias).toBe(biasValue);
       });
+      it('sets bias for node 3', () => {
+        expect(group.nodes[3].bias).toBe(biasValue);
+      });
+    });
 
-      describe('when setting multiple properties at once', () => {
-        const biasValue = -0.1;
-        const squashFn = methods.Activation.tanh;
-        const typeValue = 'output';
-        beforeEach(() => {
-          // Act
-          group.set({ bias: biasValue, squash: squashFn, type: typeValue });
-        });
-        it('sets bias for all nodes', () => {
-          group.nodes.forEach((node) => {
-            expect(node.bias).toBe(biasValue);
-          });
-        });
-        it('sets squash for all nodes', () => {
-          group.nodes.forEach((node) => {
-            expect(node.squash).toBe(squashFn);
-          });
-        });
-        it('sets type for all nodes', () => {
-          group.nodes.forEach((node) => {
-            expect(node.type).toBe(typeValue);
-          });
+    describe('when setting squash function for all nodes', () => {
+      const squashFn = methods.Activation.relu;
+      beforeEach(() => {
+        // Act
+        group.set({ squash: squashFn });
+      });
+      it('sets squash for node 0', () => {
+        expect(group.nodes[0].squash).toBe(squashFn);
+      });
+      it('sets squash for node 1', () => {
+        expect(group.nodes[1].squash).toBe(squashFn);
+      });
+      it('sets squash for node 2', () => {
+        expect(group.nodes[2].squash).toBe(squashFn);
+      });
+      it('sets squash for node 3', () => {
+        expect(group.nodes[3].squash).toBe(squashFn);
+      });
+    });
+
+    describe('when setting type for all nodes', () => {
+      const typeValue = 'memory';
+      beforeEach(() => {
+        // Act
+        group.set({ type: typeValue });
+      });
+      it('sets type for node 0', () => {
+        expect(group.nodes[0].type).toBe(typeValue);
+      });
+      it('sets type for node 1', () => {
+        expect(group.nodes[1].type).toBe(typeValue);
+      });
+      it('sets type for node 2', () => {
+        expect(group.nodes[2].type).toBe(typeValue);
+      });
+      it('sets type for node 3', () => {
+        expect(group.nodes[3].type).toBe(typeValue);
+      });
+    });
+
+    describe('when setting multiple properties at once', () => {
+      const biasValue = -0.1;
+      const squashFn = methods.Activation.tanh;
+      const typeValue = 'output';
+      beforeEach(() => {
+        // Act
+        group.set({ bias: biasValue, squash: squashFn, type: typeValue });
+      });
+      it('sets bias for all nodes', () => {
+        group.nodes.forEach((node) => {
+          expect(node.bias).toBe(biasValue);
         });
       });
-
-      describe('when not changing properties if not provided', () => {
-        let initialBiases: number[];
-        let initialSquashes: any[];
-        let initialTypes: string[];
-        beforeEach(() => {
-          // Arrange
-          initialBiases = group.nodes.map(node => node.bias);
-          initialSquashes = group.nodes.map(node => node.squash);
-          initialTypes = group.nodes.map(node => node.type);
-          // Act
-          group.set({});
-        });
-        it('does not change bias', () => {
-          group.nodes.forEach((node, i) => {
-            expect(node.bias).toBe(initialBiases[i]);
-          });
-        });
-        it('does not change squash', () => {
-          group.nodes.forEach((node, i) => {
-            expect(node.squash).toBe(initialSquashes[i]);
-          });
-        });
-        it('does not change type', () => {
-          group.nodes.forEach((node, i) => {
-            expect(node.type).toBe(initialTypes[i]);
-          });
+      it('sets squash for all nodes', () => {
+        group.nodes.forEach((node) => {
+          expect(node.squash).toBe(squashFn);
         });
       });
-
-      describe('when setting only bias', () => {
-        let initialSquashes: any[];
-        let initialTypes: string[];
-        beforeEach(() => {
-          // Arrange
-          initialSquashes = group.nodes.map(node => node.squash);
-          initialTypes = group.nodes.map(node => node.type);
-          // Act
-          group.set({ bias: 0.9 });
-        });
-        it('sets bias for all nodes', () => {
-          group.nodes.forEach((node) => {
-            expect(node.bias).toBe(0.9);
-          });
-        });
-        it('does not change squash', () => {
-          group.nodes.forEach((node, i) => {
-            expect(node.squash).toBe(initialSquashes[i]);
-          });
-        });
-        it('does not change type', () => {
-          group.nodes.forEach((node, i) => {
-            expect(node.type).toBe(initialTypes[i]);
-          });
+      it('sets type for all nodes', () => {
+        group.nodes.forEach((node) => {
+          expect(node.type).toBe(typeValue);
         });
       });
     });
+
+    describe('when not changing properties if not provided', () => {
+      let initialBiases: number[];
+      let initialSquashes: any[];
+      let initialTypes: string[];
+      beforeEach(() => {
+        // Arrange
+        initialBiases = group.nodes.map((node) => node.bias);
+        initialSquashes = group.nodes.map((node) => node.squash);
+        initialTypes = group.nodes.map((node) => node.type);
+        // Act
+        group.set({});
+      });
+      it('does not change bias', () => {
+        group.nodes.forEach((node, i) => {
+          expect(node.bias).toBe(initialBiases[i]);
+        });
+      });
+      it('does not change squash', () => {
+        group.nodes.forEach((node, i) => {
+          expect(node.squash).toBe(initialSquashes[i]);
+        });
+      });
+      it('does not change type', () => {
+        group.nodes.forEach((node, i) => {
+          expect(node.type).toBe(initialTypes[i]);
+        });
+      });
+    });
+
+    describe('when setting only bias', () => {
+      let initialSquashes: any[];
+      let initialTypes: string[];
+      beforeEach(() => {
+        // Arrange
+        initialSquashes = group.nodes.map((node) => node.squash);
+        initialTypes = group.nodes.map((node) => node.type);
+        // Act
+        group.set({ bias: 0.9 });
+      });
+      it('sets bias for all nodes', () => {
+        group.nodes.forEach((node) => {
+          expect(node.bias).toBe(0.9);
+        });
+      });
+      it('does not change squash', () => {
+        group.nodes.forEach((node, i) => {
+          expect(node.squash).toBe(initialSquashes[i]);
+        });
+      });
+      it('does not change type', () => {
+        group.nodes.forEach((node, i) => {
+          expect(node.type).toBe(initialTypes[i]);
+        });
+      });
+    });
+  });
 
   describe('disconnect()', () => {
-      let group1: Group;
-      let group2: Group;
-      let node: Node;
-      const size1 = 2;
-      const size2 = 2;
+    let group1: Group;
+    let group2: Group;
+    let node: Node;
+    const size1 = 2;
+    const size2 = 2;
 
-      beforeEach(() => {
-        // Arrange
-        group1 = new Group(size1);
-        group2 = new Group(size2);
-        node = new Node();
-        group1.connect(group2, methods.groupConnection.ALL_TO_ALL);
-        group1.connect(node);
-        group2.connect(group1, methods.groupConnection.ALL_TO_ALL);
-      });
+    beforeEach(() => {
+      // Arrange
+      group1 = new Group(size1);
+      group2 = new Group(size2);
+      node = new Node();
+      group1.connect(group2, methods.groupConnection.ALL_TO_ALL);
+      group1.connect(node);
+      group2.connect(group1, methods.groupConnection.ALL_TO_ALL);
+    });
 
-      describe('Scenario: From Group', () => {
-        describe('when disconnecting one-sided (default)', () => {
-          beforeEach(() => {
-            // Act
-            group1.disconnect(group2);
-          });
-          it('removes out connections from group1 to group2', () => {
-            expect(group1.connections.out).toHaveLength(size1);
-          });
-          it('does not change group2 in connections', () => {
-            expect(group2.connections.in).toHaveLength(size1 * size2);
-          });
-          it('does not change group2 out connections', () => {
-            expect(group2.connections.out).toHaveLength(size1 * size2);
-          });
-          it('does not change group1 in connections', () => {
-            expect(group1.connections.in).toHaveLength(size1 * size2);
-          });
+    describe('Scenario: From Group', () => {
+      describe('when disconnecting one-sided (default)', () => {
+        beforeEach(() => {
+          // Act
+          group1.disconnect(group2);
         });
-
-        describe('when disconnecting two-sided', () => {
-          beforeEach(() => {
-            // Act
-            group1.disconnect(group2, true);
-          });
-          it('removes out connections from group1 to group2', () => {
-            expect(group1.connections.out).toHaveLength(size1);
-          });
-          it('removes in connections from group2', () => {
-            expect(group2.connections.in).toHaveLength(0);
-          });
-          it('removes out connections from group2', () => {
-            expect(group2.connections.out).toHaveLength(0);
-          });
-          it('removes in connections from group1', () => {
-            expect(group1.connections.in).toHaveLength(0);
-          });
+        it('removes out connections from group1 to group2', () => {
+          expect(group1.connections.out).toHaveLength(size1);
+        });
+        it('does not change group2 in connections', () => {
+          expect(group2.connections.in).toHaveLength(size1 * size2);
+        });
+        it('does not change group2 out connections', () => {
+          expect(group2.connections.out).toHaveLength(size1 * size2);
+        });
+        it('does not change group1 in connections', () => {
+          expect(group1.connections.in).toHaveLength(size1 * size2);
         });
       });
 
-      describe('Scenario: From Node', () => {
-        describe('when disconnecting one-sided (default)', () => {
-          beforeEach(() => {
-            // Act
-            group1.disconnect(node);
-          });
-          it('does not change group1 out connections to group2', () => {
-            expect(group1.connections.out).toHaveLength(size1 * size2);
-          });
-          it('removes node in connections', () => {
-            expect(node.connections.in).toHaveLength(0);
-          });
+      describe('when disconnecting two-sided', () => {
+        beforeEach(() => {
+          // Act
+          group1.disconnect(group2, true);
         });
-
-        describe('when disconnecting two-sided', () => {
-          beforeEach(() => {
-            // Arrange
-            node.connect(group1.nodes[0]);
-            group1.connections.in.push(node.connections.out[0]);
-            // Act
-            group1.disconnect(node, true);
-          });
-          it('does not change group1 out connections to group2', () => {
-            expect(group1.connections.out).toHaveLength(size1 * size2);
-          });
-          it('removes group1 in connections from node', () => {
-            expect(group1.connections.in).toHaveLength(size1 * size2);
-          });
-          it('removes node in connections', () => {
-            expect(node.connections.in).toHaveLength(0);
-          });
-          it('removes node out connections', () => {
-            expect(node.connections.out).toHaveLength(0);
-          });
+        it('removes out connections from group1 to group2', () => {
+          expect(group1.connections.out).toHaveLength(size1);
+        });
+        it('removes in connections from group2', () => {
+          expect(group2.connections.in).toHaveLength(0);
+        });
+        it('removes out connections from group2', () => {
+          expect(group2.connections.out).toHaveLength(0);
+        });
+        it('removes in connections from group1', () => {
+          expect(group1.connections.in).toHaveLength(0);
         });
       });
     });
+
+    describe('Scenario: From Node', () => {
+      describe('when disconnecting one-sided (default)', () => {
+        beforeEach(() => {
+          // Act
+          group1.disconnect(node);
+        });
+        it('does not change group1 out connections to group2', () => {
+          expect(group1.connections.out).toHaveLength(size1 * size2);
+        });
+        it('removes node in connections', () => {
+          expect(node.connections.in).toHaveLength(0);
+        });
+      });
+
+      describe('when disconnecting two-sided', () => {
+        beforeEach(() => {
+          // Arrange
+          node.connect(group1.nodes[0]);
+          group1.connections.in.push(node.connections.out[0]);
+          // Act
+          group1.disconnect(node, true);
+        });
+        it('does not change group1 out connections to group2', () => {
+          expect(group1.connections.out).toHaveLength(size1 * size2);
+        });
+        it('removes group1 in connections from node', () => {
+          expect(group1.connections.in).toHaveLength(size1 * size2);
+        });
+        it('removes node in connections', () => {
+          expect(node.connections.in).toHaveLength(0);
+        });
+        it('removes node out connections', () => {
+          expect(node.connections.out).toHaveLength(0);
+        });
+      });
+    });
+  });
 
   describe('clear()', () => {
     const size = 3;
@@ -545,7 +565,7 @@ describe('Group', () => {
       // Arrange
       group = new Group(size);
       // Set non-default values
-      group.nodes.forEach(node => {
+      group.nodes.forEach((node) => {
         node.state = 1;
         node.old = 2;
         node.activation = 3;
@@ -559,126 +579,126 @@ describe('Group', () => {
     });
 
     it('resets state for all nodes', () => {
-      group.nodes.forEach(node => {
+      group.nodes.forEach((node) => {
         expect(node.state).toBe(0);
       });
     });
     it('resets old for all nodes', () => {
-      group.nodes.forEach(node => {
+      group.nodes.forEach((node) => {
         expect(node.old).toBe(0);
       });
     });
     it('resets activation for all nodes', () => {
-      group.nodes.forEach(node => {
+      group.nodes.forEach((node) => {
         expect(node.activation).toBe(0);
       });
     });
     it('resets derivative for all nodes', () => {
-      group.nodes.forEach(node => {
+      group.nodes.forEach((node) => {
         expect(node.derivative).toBe(4);
       });
     });
   });
 
   describe('toJSON()', () => {
-      describe('when serializing an empty group', () => {
-        let group: Group;
-        let json: any;
-        beforeEach(() => {
-          // Arrange
-          group = new Group(2);
-          group.nodes[0].index = 10;
-          group.nodes[1].index = 11;
-          // Act
-          json = group.toJSON();
-        });
-        it('serializes size', () => {
-          expect(json.size).toBe(2);
-        });
-        it('serializes nodeIndices', () => {
-          expect(json.nodeIndices).toEqual([10, 11]);
-        });
-        it('serializes connections.in', () => {
-          expect(json.connections.in).toBe(0);
-        });
-        it('serializes connections.out', () => {
-          expect(json.connections.out).toBe(0);
-        });
-        it('serializes connections.self', () => {
-          expect(json.connections.self).toBe(0);
-        });
+    describe('when serializing an empty group', () => {
+      let group: Group;
+      let json: any;
+      beforeEach(() => {
+        // Arrange
+        group = new Group(2);
+        group.nodes[0].index = 10;
+        group.nodes[1].index = 11;
+        // Act
+        json = group.toJSON();
       });
-
-      describe('when serializing group after connections', () => {
-        let group1: Group;
-        let group2: Group;
-        let json1: any;
-        let json2: any;
-        beforeEach(() => {
-          // Arrange
-          group1 = new Group(2);
-          group2 = new Group(2);
-          group1.nodes.forEach((n, i) => (n.index = i));
-          group2.nodes.forEach((n, i) => (n.index = i + 2));
-          group1.connect(group2, methods.groupConnection.ALL_TO_ALL);
-          // Act
-          json1 = group1.toJSON();
-          json2 = group2.toJSON();
-        });
-        it('serializes size for group1', () => {
-          expect(json1.size).toBe(2);
-        });
-        it('serializes out connections for group1', () => {
-          expect(json1.connections.out).toBe(4);
-        });
-        it('serializes in connections for group2', () => {
-          expect(json2.connections.in).toBe(4);
-        });
-        it('serializes nodeIndices for group1', () => {
-          expect(json1.nodeIndices).toEqual([0, 1]);
-        });
-        it('serializes nodeIndices for group2', () => {
-          expect(json2.nodeIndices).toEqual([2, 3]);
-        });
+      it('serializes size', () => {
+        expect(json.size).toBe(2);
       });
-
-      describe('when serializing group after gating', () => {
-        let group: Group;
-        let node1: Node;
-        let node2: Node;
-        let conn1: Connection;
-        let json: any;
-        beforeEach(() => {
-          // Arrange
-          group = new Group(2);
-          node1 = new Node();
-          node2 = new Node();
-          node1.index = 10;
-          node2.index = 11;
-          conn1 = node1.connect(node2)[0];
-          group.nodes[0].index = 20;
-          group.nodes[1].index = 21;
-          group.gate([conn1], methods.gating.INPUT);
-          // Act
-          json = group.toJSON();
-        });
-        it('serializes size', () => {
-          expect(json.size).toBe(2);
-        });
-        it('serializes nodeIndices', () => {
-          expect(json.nodeIndices).toEqual([20, 21]);
-        });
-        it('serializes connections.in', () => {
-          expect(json.connections.in).toBe(0);
-        });
-        it('serializes connections.out', () => {
-          expect(json.connections.out).toBe(0);
-        });
-        it('serializes connections.self', () => {
-          expect(json.connections.self).toBe(0);
-        });
+      it('serializes nodeIndices', () => {
+        expect(json.nodeIndices).toEqual([10, 11]);
+      });
+      it('serializes connections.in', () => {
+        expect(json.connections.in).toBe(0);
+      });
+      it('serializes connections.out', () => {
+        expect(json.connections.out).toBe(0);
+      });
+      it('serializes connections.self', () => {
+        expect(json.connections.self).toBe(0);
       });
     });
+
+    describe('when serializing group after connections', () => {
+      let group1: Group;
+      let group2: Group;
+      let json1: any;
+      let json2: any;
+      beforeEach(() => {
+        // Arrange
+        group1 = new Group(2);
+        group2 = new Group(2);
+        group1.nodes.forEach((n, i) => (n.index = i));
+        group2.nodes.forEach((n, i) => (n.index = i + 2));
+        group1.connect(group2, methods.groupConnection.ALL_TO_ALL);
+        // Act
+        json1 = group1.toJSON();
+        json2 = group2.toJSON();
+      });
+      it('serializes size for group1', () => {
+        expect(json1.size).toBe(2);
+      });
+      it('serializes out connections for group1', () => {
+        expect(json1.connections.out).toBe(4);
+      });
+      it('serializes in connections for group2', () => {
+        expect(json2.connections.in).toBe(4);
+      });
+      it('serializes nodeIndices for group1', () => {
+        expect(json1.nodeIndices).toEqual([0, 1]);
+      });
+      it('serializes nodeIndices for group2', () => {
+        expect(json2.nodeIndices).toEqual([2, 3]);
+      });
+    });
+
+    describe('when serializing group after gating', () => {
+      let group: Group;
+      let node1: Node;
+      let node2: Node;
+      let conn1: Connection;
+      let json: any;
+      beforeEach(() => {
+        // Arrange
+        group = new Group(2);
+        node1 = new Node();
+        node2 = new Node();
+        node1.index = 10;
+        node2.index = 11;
+        conn1 = node1.connect(node2)[0];
+        group.nodes[0].index = 20;
+        group.nodes[1].index = 21;
+        group.gate([conn1], methods.gating.INPUT);
+        // Act
+        json = group.toJSON();
+      });
+      it('serializes size', () => {
+        expect(json.size).toBe(2);
+      });
+      it('serializes nodeIndices', () => {
+        expect(json.nodeIndices).toEqual([20, 21]);
+      });
+      it('serializes connections.in', () => {
+        expect(json.connections.in).toBe(0);
+      });
+      it('serializes connections.out', () => {
+        expect(json.connections.out).toBe(0);
+      });
+      it('serializes connections.self', () => {
+        expect(json.connections.self).toBe(0);
+      });
+    });
+  });
 
   describe('connect()', () => {
     let group1: Group;
@@ -875,7 +895,9 @@ describe('Group', () => {
     describe('Scenario: To Layer', () => {
       it('delegates connection to Layer.input()', () => {
         const layer = new Layer();
-        const layerInputSpy = jest.spyOn(layer, 'input').mockImplementation(() => []);
+        const layerInputSpy = jest
+          .spyOn(layer, 'input')
+          .mockImplementation(() => []);
         const method = methods.groupConnection.ALL_TO_ALL;
         const weight = 0.5;
         const group1 = new Group(3);

@@ -125,6 +125,18 @@ export default class Network {
   private _rngState?: number; // internal state for seeded generator
   private _lastStats: any = null; // stats from last forward pass
   private _stochasticDepthSchedule?: (step: number, current: number[]) => number[];
+  // Mixed precision & gradient features
+  private _mixedPrecision: { enabled: boolean; lossScale: number } = { enabled: false, lossScale: 1 };
+  private _mixedPrecisionState: { goodSteps: number; badSteps: number; minLossScale: number; maxLossScale: number; overflowCount?: number; scaleUpEvents?: number; scaleDownEvents?: number } = { goodSteps: 0, badSteps: 0, minLossScale: 1, maxLossScale: 65536, overflowCount: 0, scaleUpEvents: 0, scaleDownEvents: 0 };
+  private _gradAccumMicroBatches: number = 0; // counts micro-batches for accumulation
+  private _currentGradClip?: { mode: 'norm'|'percentile'|'layerwiseNorm'|'layerwisePercentile'; maxNorm?: number; percentile?: number };
+  private _lastRawGradNorm: number = 0; // raw gradient norm pre-optimizer
+  private _accumulationReduction: 'average'|'sum' = 'average';
+  private _gradClipSeparateBias: boolean = false;
+  private _lastGradClipGroupCount: number = 0;
+  // Mixed precision extended telemetry
+  private _lastOverflowStep: number = -1;
+  private _forceNextOverflow: boolean = false; // test hook
 
   /**
    * Optional array of Layer objects, if the network was constructed with layers.
@@ -144,7 +156,7 @@ export default class Network {
    * @param {number} [options.minHidden=0] - Minimum number of hidden nodes to enforce. If 0, no minimum is enforced. If set, the network will ensure at least this many hidden nodes exist after construction. (Legacy behavior was minHidden = Math.min(input, output) + 1)
    * @throws {Error} If `input` or `output` size is not provided or invalid.
    */
-  constructor(input: number, output: number, options?: { minHidden?: number }) {
+  constructor(input: number, output: number, options?: { minHidden?: number; seed?: number }) {
     // Validate that input and output sizes are provided.
     if (typeof input === 'undefined' || typeof output === 'undefined') {
       throw new Error('No input or output size given');
@@ -159,16 +171,21 @@ export default class Network {
     this.selfconns = [];
     this.dropout = 0;
 
+    // Apply deterministic seed early so that node bias & initial connection weights become reproducible
+    if (options?.seed !== undefined) {
+      this.setSeed(options.seed);
+    }
+
     // Create input and output nodes. Input nodes first, then output nodes.
     for (let i = 0; i < this.input + this.output; i++) {
       const type = i < this.input ? 'input' : 'output';
-      this.nodes.push(new Node(type));
+  this.nodes.push(new Node(type, undefined, this._rand));
     }
 
     // Create initial connections: fully connect input layer to output layer.
     for (let i = 0; i < this.input; i++) {
       for (let j = this.input; j < this.input + this.output; j++) {
-        const weight = Math.random() * this.input * Math.sqrt(2 / this.input);
+        const weight = this._rand() * this.input * Math.sqrt(2 / this.input);
         this.connect(this.nodes[i], this.nodes[j], weight);
       }
     }
@@ -182,7 +199,7 @@ export default class Network {
         hiddenCount = this.nodes.filter(n => n.type === 'hidden').length;
         if (hiddenCount === 0 && this.connections.length === 0) {
           for (let i = 0; i < minHidden; i++) {
-            const hiddenNode = new Node('hidden');
+            const hiddenNode = new Node('hidden', undefined, this._rand);
             this.nodes.push(hiddenNode);
             for (let j = 0; j < this.input; j++) {
               this.connect(this.nodes[j], hiddenNode);
@@ -241,6 +258,8 @@ export default class Network {
         return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
       };
     }
+    /** TEST ONLY: force next mixed-precision step to register overflow */
+    testForceOverflow() { this._forceNextOverflow = true; }
   /** Current training forward pass count */
   get trainingStep() { return this._trainingStep; }
   /** Indices of hidden layers skipped in the most recent stochastic-depth forward pass */
@@ -884,14 +903,14 @@ export default class Network {
         // 1. Select a random existing connection.
         if (this.connections.length === 0) break; // Cannot add node if no connections exist
         connection = this.connections[
-          Math.floor(Math.random() * this.connections.length)
+          Math.floor(this._rand() * this.connections.length)
         ];
         const gater = connection.gater; // Store original gater, if any.
         // 2. Disconnect the original connection.
         this.disconnect(connection.from, connection.to);
 
         // 3. Create a new hidden node. Optionally mutate its activation function.
-        node = new Node('hidden');
+  node = new Node('hidden', undefined, this._rand);
         node.mutate(mutation.MOD_ACTIVATION); // Randomize activation function.
 
         // 4. Insert the new node into the `nodes` array.
@@ -907,7 +926,7 @@ export default class Network {
 
         // 6. If the original connection was gated, re-apply the gate to one of the new connections randomly.
         if (gater) {
-          this.gate(gater, Math.random() >= 0.5 ? newConn1 : newConn2);
+          this.gate(gater, this._rand() >= 0.5 ? newConn1 : newConn2);
         }
         break;
 
@@ -920,7 +939,7 @@ export default class Network {
           break;
         }
         // 1. Select a random hidden node.
-        node = hiddenNodes[Math.floor(Math.random() * hiddenNodes.length)];
+  node = hiddenNodes[Math.floor(this._rand() * hiddenNodes.length)];
         // 2. Remove the selected node using the `remove` method, which handles reconnection.
         if (node.type === 'hidden') {
           this.remove(node);
@@ -955,7 +974,7 @@ export default class Network {
         }
 
         // 1. Select a random pair of unconnected nodes.
-        pair = available[Math.floor(Math.random() * available.length)];
+  pair = available[Math.floor(this._rand() * available.length)];
         // 2. Connect the selected pair with a random weight.
         this.connect(pair[0], pair[1]);
         break;
@@ -1003,7 +1022,7 @@ export default class Network {
         }
 
         // 1. Select a random connection from the list of removable connections.
-        randomConn = possible[Math.floor(Math.random() * possible.length)];
+  randomConn = possible[Math.floor(this._rand() * possible.length)];
         // 2. Disconnect the nodes associated with the selected connection.
         this.disconnect(randomConn.from, randomConn.to);
         break;
@@ -1014,11 +1033,11 @@ export default class Network {
         if (allConnections.length === 0) break; // Exit if no connections exist.
         // 1. Select a random connection.
         connection =
-          allConnections[Math.floor(Math.random() * allConnections.length)];
+          allConnections[Math.floor(this._rand() * allConnections.length)];
         // 2. Calculate a weight modification value based on method parameters (or defaults).
         // The `method` object itself might contain `max` and `min` properties.
         const modification =
-          Math.random() * (method.max - method.min) + method.min;
+          this._rand() * (method.max - method.min) + method.min;
         // 3. Add the modification to the connection's weight.
         connection.weight += modification;
         break;
@@ -1028,7 +1047,7 @@ export default class Network {
         if (this.nodes.length <= this.input) break; // Exit if only input nodes exist.
         // 1. Select a random hidden or output node index.
         index = Math.floor(
-          Math.random() * (this.nodes.length - this.input) + this.input // Range covers hidden and output nodes.
+          this._rand() * (this.nodes.length - this.input) + this.input // Range covers hidden and output nodes.
         );
         node = this.nodes[index];
         // 2. Call the node's mutate method to modify its bias.
@@ -1052,7 +1071,7 @@ export default class Network {
 
         // 1. Select a random node index from the allowed range (hidden, potentially output).
         index = Math.floor(
-          Math.random() * numMutableNodes + this.input // Offset by input nodes
+          this._rand() * numMutableNodes + this.input // Offset by input nodes
         );
         node = this.nodes[index];
         // 2. Call the node's mutate method to change its squash function.
@@ -1074,7 +1093,7 @@ export default class Network {
         }
 
         // 1. Select a random node from the list of possibilities.
-        node = possible[Math.floor(Math.random() * possible.length)];
+  node = possible[Math.floor(this._rand() * possible.length)];
         // 2. Connect the node to itself with a random weight.
         this.connect(node, node);
         break;
@@ -1090,7 +1109,7 @@ export default class Network {
 
         // 1. Select a random self-connection from the `selfconns` list.
         connection = this.selfconns[
-          Math.floor(Math.random() * this.selfconns.length)
+          Math.floor(this._rand() * this.selfconns.length)
         ];
         // 2. Disconnect the node from itself.
         this.disconnect(connection.from, connection.to); // from and to are the same node here.
@@ -1113,11 +1132,11 @@ export default class Network {
 
         // 1. Select a random node (hidden or output) to act as the gater.
         index = Math.floor(
-          Math.random() * (this.nodes.length - this.input) + this.input
+          this._rand() * (this.nodes.length - this.input) + this.input
         );
         node = this.nodes[index]; // This node will control the gate.
         // 2. Select a random un-gated connection.
-        connection = possible[Math.floor(Math.random() * possible.length)];
+  connection = possible[Math.floor(this._rand() * possible.length)];
         // 3. Apply the gate using the selected node and connection.
         this.gate(node, connection);
         break;
@@ -1131,7 +1150,7 @@ export default class Network {
         }
 
         // 1. Select a random gated connection from the `gates` list.
-        index = Math.floor(Math.random() * this.gates.length);
+  index = Math.floor(this._rand() * this.gates.length);
         const gatedConn = this.gates[index];
         // 2. Remove the gate from the selected connection.
         this.ungate(gatedConn);
@@ -1158,7 +1177,7 @@ export default class Network {
         }
 
         // 1. Select a random pair for the back-connection.
-        pair = available[Math.floor(Math.random() * available.length)];
+  pair = available[Math.floor(this._rand() * available.length)];
         // 2. Connect the selected pair (note: connection weight is random).
         this.connect(pair[0], pair[1]);
         break;
@@ -1180,7 +1199,7 @@ export default class Network {
         }
 
         // 1. Select a random back-connection from the list.
-        randomConn = possible[Math.floor(Math.random() * possible.length)];
+  randomConn = possible[Math.floor(this._rand() * possible.length)];
         // 2. Disconnect the nodes associated with the selected back-connection.
         this.disconnect(randomConn.from, randomConn.to);
         break;
@@ -1199,15 +1218,15 @@ export default class Network {
 
         // 1. Select two distinct random indices for eligible nodes.
         let node1Index = Math.floor(
-          Math.random() * numSwappableNodes + this.input
+          this._rand() * numSwappableNodes + this.input
         );
         let node2Index = Math.floor(
-          Math.random() * numSwappableNodes + this.input
+          this._rand() * numSwappableNodes + this.input
         );
         // Ensure the indices are different.
         while (node1Index === node2Index) {
           node2Index = Math.floor(
-            Math.random() * numSwappableNodes + this.input
+            this._rand() * numSwappableNodes + this.input
           );
         }
 
@@ -1504,14 +1523,16 @@ export default class Network {
   private _trainSet(
     set: { input: number[]; output: number[] }[],
     batchSize: number,
+    accumulationSteps: number,
     currentRate: number,
     momentum: number,
     regularization: any, // Expects structured object
-  costFunction: (target: number[], output: number[]) => number,
-  optimizer?: any
+    costFunction: (target: number[], output: number[]) => number,
+    optimizer?: any
   ): number {
     let errorSum = 0;
     let processedSamplesInBatch = 0;
+    this._gradAccumMicroBatches = 0;
     let totalProcessedSamples = 0;
     const outputNodes = this.nodes.filter(n => n.type === 'output');
   // Normalize cost function (may be object with fn/calculate)
@@ -1533,7 +1554,7 @@ export default class Network {
       }
 
       try {
-        const output = this.activate(input, true); // forward pass
+  const output = this.activate(input, true); // forward pass (training=true)
         if (optimizer && optimizer.type && optimizer.type !== 'sgd') {
           // Accumulate gradients only (do not update yet)
           // Process outputs first with targets
@@ -1570,39 +1591,178 @@ export default class Network {
         // If a data point fails, it's skipped. The batch update will proceed with successfully processed points.
       }
 
-  // Apply accumulated gradients if batch is full OR last item OR (advanced optimizer with batchSize=1)
-  if (processedSamplesInBatch > 0 && (((i + 1) % batchSize === 0) || i === set.length - 1)) {
-        let sumSq = 0;
-        if (optimizer && optimizer.type && optimizer.type !== 'sgd') {
-          // Advanced optimizer path
-          this._optimizerStep++;
-          this.nodes.forEach(node => {
-            node.applyBatchUpdatesWithOptimizer({
-              type: optimizer.type,
-              baseType: optimizer.baseType,
-              beta1: optimizer.beta1,
-              beta2: optimizer.beta2,
-              eps: optimizer.eps,
-              weightDecay: optimizer.weightDecay,
-              momentum: optimizer.momentum ?? momentum,
-              lrScale: currentRate,
-              t: this._optimizerStep,
-              la_k: optimizer.la_k,
-              la_alpha: optimizer.la_alpha
-            });
-            node.connections.in.forEach(c => { if (typeof (c as any).totalDeltaWeight === 'number') sumSq += (c as any).totalDeltaWeight ** 2; });
-            node.connections.self.forEach(c => { if (typeof (c as any).totalDeltaWeight === 'number') sumSq += (c as any).totalDeltaWeight ** 2; });
-          });
-        } else {
-          // Default SGD + momentum
-          // SGD path already applied updates per sample; just compute grad norm from last sample's deltas (already zeroed). Leave sumSq as 0.
+        // Apply accumulated gradients if micro-batch boundary reached
+        if (processedSamplesInBatch > 0 && ((((i + 1) % batchSize) === 0) || i === set.length - 1)) {
+          this._gradAccumMicroBatches++;
+          const readyForStep = (this._gradAccumMicroBatches % accumulationSteps === 0) || i === set.length - 1;
+          if (readyForStep) {
+            // Mixed precision loss scaling: unscale gradients before clipping/optimizer and detect overflow
+            let overflowDetected = false;
+            if (this._mixedPrecision.enabled && optimizer && optimizer.type && optimizer.type !== 'sgd') {
+              if (this._mixedPrecision.lossScale !== 1) {
+                const scale = this._mixedPrecision.lossScale;
+                this.nodes.forEach(node => {
+                  node.connections.in.forEach(c => { if (typeof c.totalDeltaWeight === 'number') { c.totalDeltaWeight /= scale; if (!Number.isFinite(c.totalDeltaWeight)) overflowDetected = true; } });
+                  node.connections.self.forEach(c => { if (typeof c.totalDeltaWeight === 'number') { c.totalDeltaWeight /= scale; if (!Number.isFinite(c.totalDeltaWeight)) overflowDetected = true; } });
+                  if (typeof (node as any).totalDeltaBias === 'number') { (node as any).totalDeltaBias /= scale; if (!Number.isFinite((node as any).totalDeltaBias)) overflowDetected = true; }
+                });
+              }
+            }
+            if (this._forceNextOverflow) { overflowDetected = true; this._forceNextOverflow = false; }
+            // Gradient clipping (advanced optimizer path only because SGD already applied per-sample updates)
+            if (this._currentGradClip && optimizer && optimizer.type && optimizer.type !== 'sgd') {
+              this._applyGradientClipping(this._currentGradClip);
+            }
+            // Capture raw (post-scaling, pre-averaging, pre-zero) gradient norm
+            let rawSumSq = 0;
+            if (optimizer && optimizer.type && optimizer.type !== 'sgd') {
+              this.nodes.forEach(node => {
+                node.connections.in.forEach(c => { if (typeof c.totalDeltaWeight === 'number') rawSumSq += c.totalDeltaWeight * c.totalDeltaWeight; });
+                node.connections.self.forEach(c => { if (typeof c.totalDeltaWeight === 'number') rawSumSq += c.totalDeltaWeight * c.totalDeltaWeight; });
+                if (typeof (node as any).totalDeltaBias === 'number') rawSumSq += (node as any).totalDeltaBias * (node as any).totalDeltaBias;
+              });
+            }
+            this._lastRawGradNorm = Math.sqrt(rawSumSq);
+            let sumSq = 0; // legacy metric based on previousDeltaWeight
+            if (optimizer && optimizer.type && optimizer.type !== 'sgd') {
+              this._optimizerStep++;
+              this.nodes.forEach(node => {
+                // Average gradients if accumulating multiple micro-batches
+                if (accumulationSteps > 1 && this._accumulationReduction === 'average') {
+                  node.connections.in.forEach(c => { if (typeof c.totalDeltaWeight === 'number') c.totalDeltaWeight /= accumulationSteps; });
+                  node.connections.self.forEach(c => { if (typeof c.totalDeltaWeight === 'number') c.totalDeltaWeight /= accumulationSteps; });
+                  if (typeof (node as any).totalDeltaBias === 'number') (node as any).totalDeltaBias /= accumulationSteps;
+                }
+                node.applyBatchUpdatesWithOptimizer({
+                  type: optimizer.type,
+                  baseType: optimizer.baseType,
+                  beta1: optimizer.beta1,
+                  beta2: optimizer.beta2,
+                  eps: optimizer.eps,
+                  weightDecay: optimizer.weightDecay,
+                  momentum: optimizer.momentum ?? momentum,
+                  lrScale: currentRate,
+                  t: this._optimizerStep,
+                  la_k: optimizer.la_k,
+                  la_alpha: optimizer.la_alpha
+                });
+                node.connections.in.forEach(c => { if (typeof c.totalDeltaWeight === 'number') sumSq += (c as any).previousDeltaWeight ? (c as any).previousDeltaWeight ** 2 : 0; });
+                node.connections.self.forEach(c => { if (typeof c.totalDeltaWeight === 'number') sumSq += (c as any).previousDeltaWeight ? (c as any).previousDeltaWeight ** 2 : 0; });
+              });
+              // Dynamic loss scale adjustment heuristic
+        if (this._mixedPrecision.enabled) {
+                if (overflowDetected) {
+                  this._mixedPrecisionState.badSteps++;
+                  this._mixedPrecisionState.goodSteps = 0;
+                  this._mixedPrecision.lossScale = Math.max(this._mixedPrecisionState.minLossScale, Math.floor(this._mixedPrecision.lossScale / 2) || 1);
+                  this._mixedPrecisionState.overflowCount = (this._mixedPrecisionState.overflowCount||0)+1;
+                  this._mixedPrecisionState.scaleDownEvents = (this._mixedPrecisionState.scaleDownEvents||0)+1;
+                  this._lastOverflowStep = this._optimizerStep;
+                } else {
+                  this._mixedPrecisionState.goodSteps++;
+          const incEvery = (this as any)._mpIncreaseEvery || 200;
+          if (this._mixedPrecisionState.goodSteps >= incEvery && this._mixedPrecision.lossScale < this._mixedPrecisionState.maxLossScale) {
+                    this._mixedPrecision.lossScale *= 2;
+                    this._mixedPrecisionState.goodSteps = 0;
+                    this._mixedPrecisionState.scaleUpEvents = (this._mixedPrecisionState.scaleUpEvents||0)+1;
+                  }
+                }
+              }
+            } else {
+              // SGD path: no accumulation; grad norm approximate (0 by design)
+            }
+            this._lastGradNorm = Math.sqrt(sumSq);
+          }
+          processedSamplesInBatch = 0; // reset micro-batch counter
         }
-        this._lastGradNorm = Math.sqrt(sumSq);
-  processedSamplesInBatch = 0; // Reset for next batch
       }
-    }
     // Return average error only for successfully processed samples
     return totalProcessedSamples > 0 ? errorSum / totalProcessedSamples : 0;
+  }
+
+  /**
+   * Applies gradient clipping according to configured mode prior to optimizer step.
+   * Modes:
+   *  - norm: global L2 norm clip to maxNorm
+   *  - percentile: scale gradients if any magnitude exceeds given percentile threshold
+   *  - layerwiseNorm: per-output-node group L2 norm clipping
+   *  - layerwisePercentile: per-output-node percentile clipping
+   */
+  private _applyGradientClipping(cfg: { mode: 'norm'|'percentile'|'layerwiseNorm'|'layerwisePercentile'; maxNorm?: number; percentile?: number }) {
+    const gather = () => {
+      const groups: number[][] = [];
+      // grouping for layerwise: prefer architectural layers if present, else fallback per node
+      if (cfg.mode.startsWith('layerwise')) {
+        if (this.layers && this.layers.length > 0) {
+          for (let li = 0; li < this.layers.length; li++) {
+            const layer = this.layers[li];
+            if (!layer || !layer.nodes) continue;
+            const g: number[] = [];
+            layer.nodes.forEach((n: any) => {
+              if (!n || n.type === 'input') return;
+              n.connections.in.forEach((c: any) => { if (typeof c.totalDeltaWeight === 'number') g.push(c.totalDeltaWeight); });
+              n.connections.self.forEach((c: any) => { if (typeof c.totalDeltaWeight === 'number') g.push(c.totalDeltaWeight); });
+              if (typeof n.totalDeltaBias === 'number') g.push(n.totalDeltaBias);
+            });
+            if (g.length) groups.push(g);
+          }
+        } else {
+          this.nodes.forEach(n => {
+            if (n.type === 'input') return;
+            const g: number[] = [];
+            n.connections.in.forEach(c => { if (typeof c.totalDeltaWeight === 'number') g.push(c.totalDeltaWeight); });
+            n.connections.self.forEach(c => { if (typeof c.totalDeltaWeight === 'number') g.push(c.totalDeltaWeight); });
+            if (typeof (n as any).totalDeltaBias === 'number') g.push((n as any).totalDeltaBias);
+            if (g.length) groups.push(g);
+          });
+        }
+      } else {
+        const g: number[] = [];
+        this.nodes.forEach(n => {
+          n.connections.in.forEach(c => { if (typeof c.totalDeltaWeight === 'number') g.push(c.totalDeltaWeight); });
+          n.connections.self.forEach(c => { if (typeof c.totalDeltaWeight === 'number') g.push(c.totalDeltaWeight); });
+          if (typeof (n as any).totalDeltaBias === 'number') g.push((n as any).totalDeltaBias);
+        });
+        if (g.length) groups.push(g);
+      }
+      return groups;
+    };
+  // gather groups and store count after operations for visibility
+    const groups = gather();
+  this._lastGradClipGroupCount = groups.length;
+    const percentile = (arr: number[], p: number) => {
+      if (!arr.length) return 0;
+      const sorted = [...arr].sort((a,b)=>Math.abs(a)-Math.abs(b));
+      const rank = Math.min(sorted.length - 1, Math.max(0, Math.floor((p/100)*sorted.length - 1)));
+      return Math.abs(sorted[rank]);
+    };
+    const applyScale = (scaleFn: (current: number, group: number[]) => number) => {
+      let gi = 0;
+      this.nodes.forEach(n => {
+        if (cfg.mode.startsWith('layerwise') && n.type === 'input') return;
+        const group = cfg.mode.startsWith('layerwise') ? groups[gi++] : groups[0];
+        n.connections.in.forEach(c => { if (typeof c.totalDeltaWeight === 'number') c.totalDeltaWeight = scaleFn(c.totalDeltaWeight, group); });
+        n.connections.self.forEach(c => { if (typeof c.totalDeltaWeight === 'number') c.totalDeltaWeight = scaleFn(c.totalDeltaWeight, group); });
+        if (typeof (n as any).totalDeltaBias === 'number') (n as any).totalDeltaBias = scaleFn((n as any).totalDeltaBias, group);
+      });
+    };
+    if (cfg.mode === 'norm' || cfg.mode === 'layerwiseNorm') {
+      const maxN = cfg.maxNorm || 1;
+      groups.forEach(g => {
+        const norm = Math.sqrt(g.reduce((s,v)=>s+v*v,0));
+        if (norm > maxN && norm > 0) {
+          const scale = maxN / norm;
+          applyScale((cur, group)=> group === g ? cur * scale : cur);
+        }
+      });
+    } else if (cfg.mode === 'percentile' || cfg.mode === 'layerwisePercentile') {
+      const p = cfg.percentile || 99;
+      groups.forEach(g => {
+        const thresh = percentile(g, p);
+        if (thresh <= 0) return;
+        applyScale((cur, group)=> group === g && Math.abs(cur) > thresh ? (thresh * Math.sign(cur)) : cur);
+      });
+    }
   }
 
   /**
@@ -1693,7 +1853,44 @@ export default class Network {
     const baseRate = options.rate ?? 0.3; // Base learning rate (before schedule).
     const dropout = options.dropout || 0; // Node dropout probability.
     const momentum = options.momentum || 0; // Nesterov momentum factor for SGD.
-  const batchSize = options.batchSize || 1; // Mini-batch size (1 => pure online). For advanced optimizers this controls accumulation length.
+  const batchSize = options.batchSize || 1; // Mini-batch size (1 => pure online)
+  const accumulationSteps = options.accumulationSteps || 1; // Number of micro-batches to accumulate before optimizer step
+  this._accumulationReduction = (options.accumulationReduction === 'sum') ? 'sum' : 'average';
+  if (accumulationSteps < 1 || !Number.isFinite(accumulationSteps)) throw new Error('accumulationSteps must be >=1');
+    // Gradient clipping config capture (per-train invocation)
+    if (options.gradientClip) {
+      const gc = options.gradientClip;
+      if (gc.mode) {
+        this._currentGradClip = { mode: gc.mode, maxNorm: gc.maxNorm, percentile: gc.percentile } as any;
+      } else if (typeof gc.maxNorm === 'number') {
+        this._currentGradClip = { mode: 'norm', maxNorm: gc.maxNorm };
+      } else if (typeof gc.percentile === 'number') {
+        this._currentGradClip = { mode: 'percentile', percentile: gc.percentile } as any;
+      }
+      this._gradClipSeparateBias = !!gc.separateBias;
+    } else {
+      this._currentGradClip = undefined;
+      this._gradClipSeparateBias = false;
+    }
+
+    // Mixed precision enable (per call) - lightweight simulation
+    if (options.mixedPrecision) {
+      const mp = options.mixedPrecision === true ? { lossScale: 1024 } : options.mixedPrecision;
+      this._mixedPrecision.enabled = true;
+      this._mixedPrecision.lossScale = mp.lossScale || 1024;
+      // dynamic scaling config
+      const dyn = mp.dynamic || {};
+      this._mixedPrecisionState.minLossScale = dyn.minScale || 1;
+      this._mixedPrecisionState.maxLossScale = dyn.maxScale || 65536;
+      (this as any)._mpIncreaseEvery = dyn.increaseEvery || dyn.stableStepsForIncrease || 200;
+      // Initialize master weights (fp32) if not stored
+      this.connections.forEach(c => { (c as any)._fp32Weight = c.weight; });
+      this.nodes.forEach(n => { if (n.type !== 'input') (n as any)._fp32Bias = n.bias; });
+    } else {
+      this._mixedPrecision.enabled = false;
+      this._mixedPrecision.lossScale = 1;
+      (this as any)._mpIncreaseEvery = 200;
+    }
   // --- Optimizer normalization & validation ---
   // Accept either a string alias or a config object; normalize to object form and validate.
   const allowedOptimizers = new Set(['sgd','rmsprop','adagrad','adam','adamw','amsgrad','adamax','nadam','radam','lion','adabelief','lookahead']);
@@ -1854,6 +2051,7 @@ export default class Network {
       const trainError = this._trainSet(
         trainSet,
         batchSize,
+        accumulationSteps,
         currentRate,
         momentum,
         regularization, // Pass regularization
@@ -1863,7 +2061,7 @@ export default class Network {
 
       // Metrics hook (exposes gradNorm placeholder if future internal tracking added)
       if (metricsHook) {
-        try { metricsHook({ iteration, error: trainError, gradNorm: this._lastGradNorm }); } catch { /* ignore */ }
+        try { metricsHook({ iteration, error: trainError, gradNorm: this._lastGradNorm, gradNormRaw: this._lastRawGradNorm }); } catch { /* ignore */ }
       }
 
       // Checkpoint snapshots
@@ -1881,7 +2079,7 @@ export default class Network {
       // Metrics hook (exposes gradNorm placeholder numeric value)
       if (metricsHook) {
         try {
-          metricsHook({ iteration, error: trainError, gradNorm: (this as any)._lastGradNorm ?? 0 });
+          metricsHook({ iteration, error: trainError, gradNorm: (this as any)._lastGradNorm ?? 0, gradNormRaw: (this as any)._lastRawGradNorm ?? 0 });
         } catch { /* swallow */ }
       }
 
@@ -1949,6 +2147,20 @@ export default class Network {
 
     // Return training results.
   return { error, iterations: iteration, time: Date.now() - start };
+  }
+
+  /** Returns last recorded raw (pre-update) gradient L2 norm. */
+  getRawGradientNorm(): number { return this._lastRawGradNorm; }
+  /** Returns current mixed precision loss scale (1 if disabled). */
+  getLossScale(): number { return this._mixedPrecision.lossScale; }
+  /** Returns last gradient clipping group count (0 if no clipping yet). */
+  getLastGradClipGroupCount(): number { return this._lastGradClipGroupCount; }
+  /** Consolidated training stats snapshot. */
+  getTrainingStats() { return { gradNorm: this._lastGradNorm ?? 0, gradNormRaw: this._lastRawGradNorm, lossScale: this._mixedPrecision.lossScale, optimizerStep: this._optimizerStep, mp: { good: this._mixedPrecisionState.goodSteps, bad: this._mixedPrecisionState.badSteps, overflowCount: this._mixedPrecisionState.overflowCount||0, scaleUps: this._mixedPrecisionState.scaleUpEvents||0, scaleDowns: this._mixedPrecisionState.scaleDownEvents||0, lastOverflowStep: this._lastOverflowStep } }; }
+  /** Utility: adjust rate for accumulation mode (use result when switching to 'sum' to mimic 'average'). */
+  static adjustRateForAccumulation(rate: number, accumulationSteps: number, reduction: 'average'|'sum') {
+    if (reduction === 'sum' && accumulationSteps > 1) return rate / accumulationSteps;
+    return rate;
   }
 
 
@@ -2373,7 +2585,7 @@ export default class Network {
       if (index < input) type = 'input';
       else if (index >= activations.length - output) type = 'output';
       else type = 'hidden';
-      const node = new Node(type);
+  const node = new Node(type);
       node.activation = activation;
       node.state = states[index];
       const squashName = squashes[index] as keyof typeof methods.Activation;
@@ -2497,7 +2709,7 @@ export default class Network {
     network.gates = [];
     // Recreate nodes
     json.nodes.forEach((n: any, i: number) => {
-      const node = new Node(n.type);
+  const node = new Node(n.type);
       node.bias = n.bias;
       node.squash = methods.Activation[n.squash] || methods.Activation.identity;
       node.index = i;
@@ -2713,7 +2925,8 @@ export default class Network {
 
         if (node1Output && node2Output) {
           // Both parents have a corresponding output node. Choose randomly.
-          chosenNode = Math.random() >= 0.5 ? node1Output : node2Output;
+          const _rngC = (network1 as any)._rand || (network2 as any)._rand || Math.random;
+          chosenNode = _rngC() >= 0.5 ? node1Output : node2Output;
         } else {
           // Only one parent has this output node (due to size difference). Inherit from that parent.
           chosenNode = node1Output || node2Output;
@@ -2722,7 +2935,8 @@ export default class Network {
         // Hidden nodes:
         if (node1 && node2) {
           // Both parents have a node at this index (matching gene). Choose randomly.
-          chosenNode = Math.random() >= 0.5 ? node1 : node2;
+          const _rngH = (network1 as any)._rand || (network2 as any)._rand || Math.random;
+          chosenNode = _rngH() >= 0.5 ? node1 : node2;
         } else if (node1 && (score1 >= score2 || equal)) {
           // Only parent 1 has this node (disjoint/excess) and is fitter or `equal` is true.
           chosenNode = node1;
@@ -2735,7 +2949,7 @@ export default class Network {
 
       // If a node was chosen for inheritance, create a copy for the offspring.
       if (chosenNode) {
-        const newNode = new Node(chosenNode.type); // Copy type.
+  const newNode = new Node(chosenNode.type); // Copy type.
         newNode.bias = chosenNode.bias; // Copy bias.
         newNode.squash = chosenNode.squash; // Copy squash function reference.
         // Note: Connections are handled separately below.
@@ -2806,7 +3020,8 @@ export default class Network {
       if (n2conns[key]) {
         // Matching gene: Connection exists in both parents. Inherit randomly.
         const conn2Data = n2conns[key];
-        connectionsToInherit.push(Math.random() >= 0.5 ? conn1Data : conn2Data);
+  const _rngConn = (network1 as any)._rand || (network2 as any)._rand || Math.random;
+  connectionsToInherit.push(_rngConn() >= 0.5 ? conn1Data : conn2Data);
         // Remove from parent 2's keys to avoid processing again.
         delete n2conns[key];
       } else if (score1 >= score2 || equal) {
@@ -2898,9 +3113,9 @@ export default class Network {
    */
   static createMLP(inputCount: number, hiddenCounts: number[], outputCount: number): Network {
     // Create all nodes
-    const inputNodes = Array.from({ length: inputCount }, () => new Node('input'));
-    const hiddenLayers: Node[][] = hiddenCounts.map(count => Array.from({ length: count }, () => new Node('hidden')));
-    const outputNodes = Array.from({ length: outputCount }, () => new Node('output'));
+  const inputNodes = Array.from({ length: inputCount }, () => new Node('input'));
+  const hiddenLayers: Node[][] = hiddenCounts.map(count => Array.from({ length: count }, () => new Node('hidden')));
+  const outputNodes = Array.from({ length: outputCount }, () => new Node('output'));
     // Flatten all nodes in topological order
     const allNodes = [
       ...inputNodes,

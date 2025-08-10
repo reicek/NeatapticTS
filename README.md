@@ -69,6 +69,57 @@ The neuro-evolution algorithm used is the [Instinct](https://medium.com/@ThomasW
 - Per-iteration `metricsHook` exposing `{ iteration, error, gradNorm }`.
 - Checkpointing (`best`, `last`) via `checkpoint.save` callback.
 - Advanced optimizers: `sgd`, `rmsprop`, `adagrad`, `adam`, `adamw`, `amsgrad`, `adamax`, `nadam`, `radam`, `lion`, `adabelief`, and `lookahead` wrapper.
+- Gradient improvements: per-call gradient clipping (global / layerwise, norm or percentile), micro-batch gradient accumulation (`accumulationSteps`) independent of data `batchSize`, optional mixed precision (loss-scaled with dynamic scaling) training.
+
+### Gradient Improvements
+
+Gradient clipping (optional):
+```ts
+net.train(data, { iterations:500, rate:0.01, optimizer:'adam', gradientClip:{ mode:'norm', maxNorm:1 } });
+net.train(data, { iterations:500, rate:0.01, optimizer:'adam', gradientClip:{ mode:'percentile', percentile:99 } });
+// Layerwise variants: 'layerwiseNorm' | 'layerwisePercentile'
+```
+
+Micro-batch accumulation (simulate larger effective batch without increasing memory):
+```ts
+// Process 1 sample at a time, accumulate 8 micro-batches, then apply one optimizer step
+net.train(data, { iterations:100, rate:0.005, batchSize:1, accumulationSteps:8, optimizer:'adam' });
+```
+If `accumulationSteps > 1`, gradients are averaged before the optimizer step so results match a single larger batch (deterministic given same sample order).
+
+Mixed precision (simulated FP16 gradients with FP32 master weights + dynamic loss scaling):
+```ts
+net.train(data, { iterations:300, rate:0.01, optimizer:'adam', mixedPrecision:{ lossScale:1024 } });
+```
+Behavior:
+* Stores master FP32 copies of weights/biases (`_fp32Weight`, `_fp32Bias`).
+* Scales gradients during accumulation; unscales before clipping / optimizer update; adjusts `lossScale` down on overflow (NaN/Inf), attempts periodic doubling after sustained stable steps (configurable via `mixedPrecision.dynamic`).
+* Raw gradient norm (pre-optimizer, post-scaling/clipping) exposed via metrics hook as `gradNormRaw` (legacy post-update norm still `gradNorm`).
+* Pure JS numbers remain 64-bit; this is a functional simulation for stability and future WASM/GPU backends.
+
+Clipping modes:
+| mode | scope | description |
+|------|-------|-------------|
+| norm | global | Clip global L2 gradient norm to `maxNorm`. |
+| percentile | global | Clamp individual gradients above given percentile magnitude. |
+| layerwiseNorm | per layer | Apply norm clipping per architectural layer (fallback per node if no layer info). Optionally splits weight vs bias groups via `gradientClip.separateBias`. |
+| layerwisePercentile | per layer | Percentile clamp per architectural layer (fallback per node). Supports `separateBias`. |
+
+Notes:
+* Provide either `{ mode, maxNorm? , percentile? }` or shorthand `{ maxNorm }` / `{ percentile }`.
+* Percentile ranking is magnitude-based.
+* Accumulation averages gradients; to sum instead (rare) scale `rate` accordingly.
+* Dynamic loss scaling heuristics: halves on detected overflow, doubles after configurable stable steps (default 200) within bounds `[minScale,maxScale]`.
+* Config: `mixedPrecision:{ lossScale:1024, dynamic:{ minScale:1, maxScale:131072, increaseEvery:300 } }`.
+* Accumulation reduction: default averages gradients; specify `accumulationReduction:'sum'` to sum instead (then adjust learning rate manually, e.g. multiply by 1/accumulationSteps if you want equivalent averaging semantics).
+* Layerwise clipping: set `gradientClip:{ mode:'layerwiseNorm', maxNorm:1, separateBias:true }` to treat biases separately from weights.
+* Two gradient norms tracked: raw (pre-update) and legacy (post-update deltas). Future APIs may expose both formally.
+* Access stats: `net.getTrainingStats()` -> `{ gradNorm, gradNormRaw, lossScale, optimizerStep, mp:{ good, bad, overflowCount, scaleUps, scaleDowns, lastOverflowStep } }`.
+* Test hook (not for production): `net.testForceOverflow()` forces the next mixed-precision step to register an overflow (used in unit tests to validate telemetry paths).
+* Gradient clip grouping count: `net.getLastGradClipGroupCount()` (useful to verify separateBias effect).
+* Rate helper for accumulation: `const adjRate = Network.adjustRateForAccumulation(rate, accumulationSteps, accumulationReduction)`.
+* Deterministic seeding: `new Network(4,2,{ seed:123 })` or later `net.setSeed(123)` ensures reproducible initial weights, biases, connection order, and mutation randomness for training (excluding certain static reconstruction paths). For NEAT evolution pass `seed` in `new Neat(...,{ seed:999 })`.
+* Overflow telemetry: during mixed precision training, `overflowCount` increments on detected NaN/Inf when unscaling gradients; `scaleUps` / `scaleDowns` count dynamic loss scale adjustments.
 
 ### Learning Rate Scheduler Usage
 

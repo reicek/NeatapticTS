@@ -10,12 +10,13 @@ describe('Cost', () => {
           // Arrange
           const targets = [0, 1, 0, 1];
           const outputs = [0.1, 0.9, 0.2, 0.8];
-          const expected = -(
-            Math.log(1 - 0.1) +
-            Math.log(0.9) +
-            Math.log(1 - 0.2) +
-            Math.log(0.8)
-          ) / 4;
+          const expected =
+            -(
+              Math.log(1 - 0.1) +
+              Math.log(0.9) +
+              Math.log(1 - 0.2) +
+              Math.log(0.8)
+            ) / 4;
           // Act
           const result = Cost.crossEntropy(targets, outputs);
           // Assert
@@ -47,11 +48,12 @@ describe('Cost', () => {
           // Arrange
           const targets = [0.2, 0.7];
           const outputs = [0.3, 0.6];
-          const expected = -(
-            0.2 * Math.log(0.3) +
-            (1 - 0.2) * Math.log(1 - 0.3) +
-            (0.7 * Math.log(0.6) + (1 - 0.7) * Math.log(1 - 0.6))
-          ) / 2;
+          const expected =
+            -(
+              0.2 * Math.log(0.3) +
+              (1 - 0.2) * Math.log(1 - 0.3) +
+              (0.7 * Math.log(0.6) + (1 - 0.7) * Math.log(1 - 0.6))
+            ) / 2;
           // Act
           const result = Cost.crossEntropy(targets, outputs);
           // Assert
@@ -195,7 +197,8 @@ describe('Cost', () => {
           // Arrange
           const targets = [1, 2, 3];
           const outputs = [1.5, 2.5, 2.5];
-          const expected = (Math.pow(0.5, 2) + Math.pow(0.5, 2) + Math.pow(-0.5, 2)) / 3;
+          const expected =
+            (Math.pow(0.5, 2) + Math.pow(0.5, 2) + Math.pow(-0.5, 2)) / 3;
           // Act
           const result = Cost.mse(targets, outputs);
           // Assert
@@ -478,11 +481,11 @@ describe('Cost', () => {
           // Arrange
           const targets = [1, 2, 3];
           const outputs = [1.5, 2.5, 2.5];
-          const expected = (
-            Math.abs(targets[0] - outputs[0]) +
-            Math.abs(targets[1] - outputs[1]) +
-            Math.abs(targets[2] - outputs[2])
-          ) / 3;
+          const expected =
+            (Math.abs(targets[0] - outputs[0]) +
+              Math.abs(targets[1] - outputs[1]) +
+              Math.abs(targets[2] - outputs[2])) /
+            3;
           // Act
           const result = Cost.mae(targets, outputs);
           // Assert
@@ -1040,7 +1043,9 @@ describe('Cost', () => {
         const originalError = console.error;
         console.error = () => {};
         // Act & Assert
-        expect(() => Cost.focalLoss(targets, outputs)).toThrow('Target and output arrays must have the same length.');
+        expect(() => Cost.focalLoss(targets, outputs)).toThrow(
+          'Target and output arrays must have the same length.'
+        );
         console.error = originalError;
       });
     });
@@ -1093,8 +1098,8 @@ describe('Cost', () => {
     });
     describe('Scenario: when smoothing=1 forces uniform 0.5 target', () => {
       it('returns finite loss', () => {
-        const targets = [1,0];
-        const outputs = [0.9,0.1];
+        const targets = [1, 0];
+        const outputs = [0.9, 0.1];
         const result = Cost.labelSmoothing(targets, outputs, 1);
         expect(Number.isFinite(result)).toBe(true);
       });
@@ -1108,7 +1113,9 @@ describe('Cost', () => {
         const originalError = console.error;
         console.error = () => {};
         // Act & Assert
-        expect(() => Cost.labelSmoothing(targets, outputs)).toThrow('Target and output arrays must have the same length.');
+        expect(() => Cost.labelSmoothing(targets, outputs)).toThrow(
+          'Target and output arrays must have the same length.'
+        );
         console.error = originalError;
       });
     });

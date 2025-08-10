@@ -16,23 +16,35 @@ describe('Learning Capability', () => {
       it('learns the XOR function (relaxed threshold)', () => {
         // Arrange
         const network = Architect.perceptron(2, 10, 1);
-        const options = { iterations: 5000, error: 0.25, shuffle: true, rate: 0.3, momentum: 0.9 };
-        
+        const options = {
+          iterations: 5000,
+          error: 0.25,
+          shuffle: true,
+          rate: 0.3,
+          momentum: 0.9,
+        };
+
         // Act
         const results = network.train(dataset, options);
-        
+
         // Assert
         expect(results.error).toBeLessThan(0.25);
       });
-      
+
       it('fails to learn XOR with insufficient iterations', () => {
         // Arrange
         const network = Architect.perceptron(2, 10, 1);
-        const options = { iterations: 1, error: 0.25, shuffle: true, rate: 0.3, momentum: 0.9 };
-        
+        const options = {
+          iterations: 1,
+          error: 0.25,
+          shuffle: true,
+          rate: 0.3,
+          momentum: 0.9,
+        };
+
         // Act
         const results = network.train(dataset, options);
-        
+
         // Assert
         expect(results.error).toBeGreaterThanOrEqual(0.2);
       });
@@ -46,7 +58,7 @@ describe('Learning Capability', () => {
           { input: [0, 0], output: [0] },
           { input: [0, 1], output: [1] },
           { input: [1, 0], output: [1] },
-          { input: [1, 1], output: [1] }
+          { input: [1, 1], output: [1] },
         ];
         // Act
         const results = net.train(dataset, { iterations: 3000, error: 0.01 });
@@ -60,10 +72,14 @@ describe('Learning Capability', () => {
           { input: [0, 0], output: [0] },
           { input: [0, 1], output: [1] },
           { input: [1, 0], output: [1] },
-          { input: [1, 1], output: [1] }
+          { input: [1, 1], output: [1] },
         ];
         // Act
-        const results = net.train(dataset, { iterations: 2, error: 0.01, rate: 0.1 }); // Added rate to avoid warning and ensure consistency
+        const results = net.train(dataset, {
+          iterations: 2,
+          error: 0.01,
+          rate: 0.1,
+        }); // Added rate to avoid warning and ensure consistency
         // Assert - relaxed threshold to make test more stable
         expect(results.error).toBeGreaterThanOrEqual(0.22); // This threshold might still be flaky, consider adjusting based on typical behavior or making it less strict.
       });
@@ -84,13 +100,19 @@ describe('Learning Capability', () => {
           });
         }
         const network = Architect.perceptron(1, 15, 1);
-        const options = { iterations: 3000, error: 0.2, shuffle: true, rate: 0.3, momentum: 0.9 };
+        const options = {
+          iterations: 3000,
+          error: 0.2,
+          shuffle: true,
+          rate: 0.3,
+          momentum: 0.9,
+        };
         // Act
         const results = network.train(set, options);
         // Assert
         expect(results.error).toBeLessThan(0.25);
       });
-      
+
       it('fails to learn SIN with insufficient iterations', () => {
         // Arrange
         const size = 40;
@@ -100,7 +122,12 @@ describe('Learning Capability', () => {
           set.push({ input: [x], output: [Math.sin(x)] });
         }
         const network = Architect.perceptron(1, 12, 1);
-        const options = { iterations: 1, error: 0.01, rate: 0.3, momentum: 0.9 }; // Ensured rate is present
+        const options = {
+          iterations: 1,
+          error: 0.01,
+          rate: 0.3,
+          momentum: 0.9,
+        }; // Ensured rate is present
         // Act
         const results = network.train(set, options);
         // Assert
@@ -120,17 +147,23 @@ describe('Learning Capability', () => {
             output: [
               (Math.sin(inputValue) + 1) / 2,
               (Math.cos(inputValue) + 1) / 2,
-            ]
+            ],
           });
         }
         const network = Architect.perceptron(1, 20, 2);
-        const options = { iterations: 6000, error: 0.2, shuffle: true, rate: 0.3, momentum: 0.9 };
+        const options = {
+          iterations: 6000,
+          error: 0.2,
+          shuffle: true,
+          rate: 0.3,
+          momentum: 0.9,
+        };
         // Act
         const results = network.train(set, options);
         // Assert
         expect(results.error).toBeLessThan(0.2);
       });
-      
+
       it('fails to learn SIN and COS with insufficient iterations', () => {
         // Arrange
         const set = [];
@@ -141,11 +174,17 @@ describe('Learning Capability', () => {
             output: [
               (Math.sin(inputValue) + 1) / 2,
               (Math.cos(inputValue) + 1) / 2,
-            ]
+            ],
           });
         }
         const network = Architect.perceptron(1, 20, 2);
-        const options = { iterations: 1, error: 0.15, shuffle: true, rate: 0.3, momentum: 0.9 };
+        const options = {
+          iterations: 1,
+          error: 0.15,
+          shuffle: true,
+          rate: 0.3,
+          momentum: 0.9,
+        };
         // Act
         const results = network.train(set, options);
         // Assert
@@ -153,7 +192,7 @@ describe('Learning Capability', () => {
       });
     });
   });
-  
+
   describe('Network Dropout Mask Reset', () => {
     it('should support dropout during training', () => {
       // Arrange
@@ -164,10 +203,14 @@ describe('Learning Capability', () => {
         { input: [1, 0], output: [1] },
         { input: [1, 1], output: [0] },
       ];
-      
+
       // Act
-      const result = net.train(dataset, { iterations: 10, error: 0.5, dropout: 0.5 });
-      
+      const result = net.train(dataset, {
+        iterations: 10,
+        error: 0.5,
+        dropout: 0.5,
+      });
+
       // Assert
       expect(result.error).toBeLessThanOrEqual(0.5);
     });
@@ -192,7 +235,7 @@ describe('Learning Capability', () => {
         // Act
         net.resetDropoutMasks();
         // Assert
-        hiddenNodeIndexes.forEach(idx => {
+        hiddenNodeIndexes.forEach((idx) => {
           expect(net.nodes[idx].mask).toBe(1);
         });
       });

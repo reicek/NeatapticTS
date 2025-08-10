@@ -22,6 +22,7 @@ type Options = {
   allowRecurrent?: boolean; // Add allowRecurrent option
   hiddenLayerMultiplier?: number; // Add hiddenLayerMultiplier option
   minHidden?: number; // Add minHidden option for minimum hidden nodes in evolved networks
+  seed?: number; // Optional seed for deterministic evolution
 };
 
 export default class Neat {
@@ -31,6 +32,9 @@ export default class Neat {
   options: Options;
   population: Network[] = [];
   generation: number = 0;
+  // Deterministic RNG state (lazy init)
+  private _rngState?: number;
+  private _rng?: () => number;
 
   /**
    * Initializes a new instance of the Neat class.
@@ -82,7 +86,7 @@ export default class Neat {
     this.options.maxConns = this.options.maxConns || Infinity;
     this.options.maxGates = this.options.maxGates || Infinity;
 
-    this.createPool(this.options.network || null);
+  this.createPool(this.options.network || null);
   }
 
   /**
@@ -99,9 +103,26 @@ export default class Neat {
     } else if (typeof this.options.hiddenLayerMultiplier === 'number') {
       hiddenLayerMultiplier = this.options.hiddenLayerMultiplier;
     } else {
-      hiddenLayerMultiplier = Math.floor(Math.random() * (4 - 2 + 1)) + 2; // 2 to 4
+      const rng = this._getRNG();
+  hiddenLayerMultiplier = Math.floor(rng() * (4 - 2 + 1)) + 2; // 2 to 4
     }
     return Math.max(this.input, this.output) * hiddenLayerMultiplier;
+  }
+
+  private _getRNG(): () => number {
+    if (this._rng) return this._rng;
+    if (typeof this.options.seed === 'number') {
+      this._rngState = this.options.seed >>> 0;
+      this._rng = () => {
+        this._rngState = (this._rngState! + 0x6D2B79F5) >>> 0;
+        let r = Math.imul(this._rngState! ^ (this._rngState! >>> 15), 1 | this._rngState!);
+        r ^= r + Math.imul(r ^ (r >>> 7), 61 | r);
+        return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+      };
+      return this._rng;
+    }
+    this._rng = Math.random;
+    return this._rng;
   }
   
   /**
@@ -190,7 +211,8 @@ export default class Neat {
       if (hiddenNode.connections.in.length === 0) {
         const candidates = inputNodes.concat(hiddenNodes.filter(n => n !== hiddenNode));
         if (candidates.length > 0) {
-          const source = candidates[Math.floor(Math.random() * candidates.length)];
+          const rng = this._getRNG();
+          const source = candidates[Math.floor(rng() * candidates.length)];
           try { network.connect(source, hiddenNode); } catch {}
         }
       }
@@ -198,7 +220,8 @@ export default class Neat {
       if (hiddenNode.connections.out.length === 0) {
         const candidates = outputNodes.concat(hiddenNodes.filter(n => n !== hiddenNode));
         if (candidates.length > 0) {
-          const target = candidates[Math.floor(Math.random() * candidates.length)];
+          const rng = this._getRNG();
+          const target = candidates[Math.floor(rng() * candidates.length)];
           try { network.connect(hiddenNode, target); } catch {}
         }
       }
@@ -235,7 +258,8 @@ export default class Neat {
         // Try to connect to a random hidden or output node
         const candidates = hiddenNodes.length > 0 ? hiddenNodes : outputNodes;
         if (candidates.length > 0) {
-          const target = candidates[Math.floor(Math.random() * candidates.length)];
+          const rng = this._getRNG();
+          const target = candidates[Math.floor(rng() * candidates.length)];
           try {
             network.connect(inputNode, target);
           } catch (e: any) {
@@ -251,7 +275,8 @@ export default class Neat {
         // Try to connect from a random hidden or input node
         const candidates = hiddenNodes.length > 0 ? hiddenNodes : inputNodes;
         if (candidates.length > 0) {
-          const source = candidates[Math.floor(Math.random() * candidates.length)];
+          const rng = this._getRNG();
+          const source = candidates[Math.floor(rng() * candidates.length)];
           try {
             network.connect(source, outputNode);
           } catch (e: any) {
@@ -267,7 +292,8 @@ export default class Neat {
         // Try to connect from input or another hidden node
         const candidates = inputNodes.concat(hiddenNodes.filter(n => n !== hiddenNode));
         if (candidates.length > 0) {
-          const source = candidates[Math.floor(Math.random() * candidates.length)];
+          const rng = this._getRNG();
+          const source = candidates[Math.floor(rng() * candidates.length)];
           try {
             network.connect(source, hiddenNode);
           } catch (e: any) {
@@ -279,7 +305,8 @@ export default class Neat {
         // Try to connect to output or another hidden node
         const candidates = outputNodes.concat(hiddenNodes.filter(n => n !== hiddenNode));
         if (candidates.length > 0) {
-          const target = candidates[Math.floor(Math.random() * candidates.length)];
+          const rng = this._getRNG();
+          const target = candidates[Math.floor(rng() * candidates.length)];
           try {
             network.connect(hiddenNode, target);
           } catch (e: any) {
@@ -410,7 +437,7 @@ export default class Neat {
    */
   selectMutationMethod(genome: Network): any {
     const mutationMethod = this.options.mutation![
-      Math.floor(Math.random() * this.options.mutation!.length)
+  Math.floor(this._getRNG()() * this.options.mutation!.length)
     ];
 
     if (
@@ -452,13 +479,13 @@ export default class Neat {
    */
   mutate(): void {
     for (const genome of this.population) {
-      if (Math.random() <= (this.options.mutationRate || 0.7)) {
+  if (this._getRNG()() <= (this.options.mutationRate || 0.7)) {
         for (let j = 0; j < (this.options.mutationAmount || 1); j++) {
           const mutationMethod = this.selectMutationMethod(genome);
           if (mutationMethod) {
             genome.mutate(mutationMethod);
             // Slightly increase the chance of ADD_CONN mutation for more connectivity
-            if (Math.random() < 0.5) {
+            if (this._getRNG()() < 0.5) {
               genome.mutate(methods.mutation.ADD_CONN);
             }
           }
@@ -495,7 +522,7 @@ export default class Neat {
           this.sort();
         }
         const index = Math.floor(
-          Math.pow(Math.random(), selection.power || 1) *
+          Math.pow(this._getRNG()(), selection.power || 1) *
             this.population.length
         );
         return this.population[index];
@@ -509,14 +536,14 @@ export default class Neat {
         minimalFitness = Math.abs(minimalFitness);
         totalFitness += minimalFitness * this.population.length;
 
-        const random = Math.random() * totalFitness;
+  const random = this._getRNG()() * totalFitness;
         let value = 0;
         for (const genome of this.population) {
           value += (genome.score ?? 0) + minimalFitness;
           if (random < value) return genome;
         }
         return this.population[
-          Math.floor(Math.random() * this.population.length)
+          Math.floor(this._getRNG()() * this.population.length)
         ];
       case 'TOURNAMENT':
         if (selection.size > this.options.popsize!) {
@@ -525,13 +552,13 @@ export default class Neat {
         const tournament = [];
         for (let i = 0; i < selection.size; i++) {
           tournament.push(
-            this.population[Math.floor(Math.random() * this.population.length)]
+            this.population[Math.floor(this._getRNG()() * this.population.length)]
           );
         }
         tournament.sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
         for (let i = 0; i < tournament.length; i++) {
           if (
-            Math.random() < selection.probability ||
+            this._getRNG()() < selection.probability ||
             i === tournament.length - 1
           ) {
             return tournament[i];
@@ -550,7 +577,7 @@ export default class Neat {
             this.sort();
           }
           const index = Math.floor(
-            Math.pow(Math.random(), selection.power || 1) *
+            Math.pow(this._getRNG()(), selection.power || 1) *
               this.population.length
           );
           return this.population[index];
@@ -566,14 +593,14 @@ export default class Neat {
           minimalFitness = Math.abs(minimalFitness);
           totalFitness += minimalFitness * this.population.length;
 
-          const random = Math.random() * totalFitness;
+          const random = this._getRNG()() * totalFitness;
           let value = 0;
           for (const genome of this.population) {
             value += (genome.score ?? 0) + minimalFitness;
             if (random < value) return genome;
           }
           return this.population[
-            Math.floor(Math.random() * this.population.length)
+            Math.floor(this._getRNG()() * this.population.length)
           ];
         }
         if (selection === methods.selection.TOURNAMENT) {
@@ -584,13 +611,13 @@ export default class Neat {
           const tournament = [];
           for (let i = 0; i < selection.size; i++) {
             tournament.push(
-              this.population[Math.floor(Math.random() * this.population.length)]
+              this.population[Math.floor(this._getRNG()() * this.population.length)]
             );
           }
           tournament.sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
           for (let i = 0; i < tournament.length; i++) {
             if (
-              Math.random() < selection.probability ||
+              this._getRNG()() < selection.probability ||
               i === tournament.length - 1
             ) {
               return tournament[i];

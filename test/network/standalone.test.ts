@@ -159,9 +159,11 @@ describe('Standalone Functionality', () => {
       it('should throw or return a function that returns an empty array', () => {
         // Arrange
         const net = new Network(2, 1);
-        net.nodes = net.nodes.filter(n => n.type !== 'output');
+        net.nodes = net.nodes.filter((n) => n.type !== 'output');
         // Act & Assert
-        expect(() => net.standalone()).toThrow('Cannot create standalone function: network has no output nodes.');
+        expect(() => net.standalone()).toThrow(
+          'Cannot create standalone function: network has no output nodes.'
+        );
       });
     });
   });
@@ -173,7 +175,9 @@ describe('Standalone Functionality', () => {
       beforeAll(() => {
         // Arrange
         net = new Network(2, 1);
-        net.nodes[0].squash = function customUnknownSquash(x) { return x * 2; };
+        net.nodes[0].squash = function customUnknownSquash(x) {
+          return x * 2;
+        };
         code = net.standalone();
       });
       it('returns a string for standalone code', () => {
@@ -192,7 +196,9 @@ describe('Standalone Functionality', () => {
         // Act
         const act = () => net.standalone();
         // Assert
-        expect(act).toThrow('Cannot create standalone function: network has no output nodes.');
+        expect(act).toThrow(
+          'Cannot create standalone function: network has no output nodes.'
+        );
       });
     });
   });
@@ -217,7 +223,7 @@ describe('Standalone Functionality', () => {
       beforeAll(() => {
         // Arrange
         net = new Network(2, 1);
-        net.nodes = net.nodes.filter(n => n.type === 'input');
+        net.nodes = net.nodes.filter((n) => n.type === 'input');
       });
       it('throws an error', () => {
         // Act
@@ -231,7 +237,7 @@ describe('Standalone Functionality', () => {
       beforeAll(() => {
         // Arrange
         net = new Network(2, 1);
-        net.nodes = net.nodes.filter(n => n.type === 'hidden');
+        net.nodes = net.nodes.filter((n) => n.type === 'hidden');
       });
       it('throws an error', () => {
         // Act
@@ -247,16 +253,16 @@ describe('Standalone Functionality', () => {
     const architectureTests = [
       {
         name: 'Perceptron',
-        factory: () => Architect.perceptron(2, 3, 1)
+        factory: () => Architect.perceptron(2, 3, 1),
       },
       {
         name: 'LSTM',
-        factory: () => Architect.lstm(2, 4, 1)
+        factory: () => Architect.lstm(2, 4, 1),
       },
       {
         name: 'GRU',
-        factory: () => Architect.gru(2, 2, 1)
-      }
+        factory: () => Architect.gru(2, 2, 1),
+      },
     ];
 
     architectureTests.forEach(({ name, factory }) => {
@@ -287,7 +293,9 @@ describe('Standalone Functionality', () => {
           // Act
           const nanOutput = standaloneFn(nanInput);
           // Assert
-          nanOutput.forEach((val: number) => expect(Number.isNaN(val)).toBe(true));
+          nanOutput.forEach((val: number) =>
+            expect(Number.isNaN(val)).toBe(true)
+          );
         });
       });
     });
@@ -298,8 +306,12 @@ describe('Standalone Functionality', () => {
     it('standalone function is not significantly slower than activate()', () => {
       // Arrange
       const network = Architect.perceptron(10, 20, 5);
-      const standaloneFn = new Function(`return ${stripCoverage(network.standalone())}`)();
-      const inputs = Array(10).fill(0).map(() => Math.random());
+      const standaloneFn = new Function(
+        `return ${stripCoverage(network.standalone())}`
+      )();
+      const inputs = Array(10)
+        .fill(0)
+        .map(() => Math.random());
       // Act
       const trials = 100;
       let networkTime = 0;

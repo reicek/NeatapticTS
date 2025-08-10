@@ -1,10 +1,10 @@
 /**
  * Helper utility to allow console output in specific test files.
- * 
- * Usage: 
+ *
+ * Usage:
  * 1. Import at the top of your test file: import { allowConsoleOutput } from '../utils/console-helper';
  * 2. Call at the beginning of your test: allowConsoleOutput();
- * 
+ *
  * Run tests with: JEST_SHOW_CONSOLE_FOR=asciiMaze npm test
  * Or to show all console output: JEST_VERBOSE=1 npm test
  */
@@ -17,7 +17,7 @@ const originalConsole = {
   info: console.info,
   warn: console.warn,
   error: console.error,
-  debug: console.debug
+  debug: console.debug,
 };
 
 /**
@@ -28,7 +28,7 @@ const mockConsole = {
   info: jest.fn(),
   warn: jest.fn(),
   error: jest.fn(),
-  debug: jest.fn()
+  debug: jest.fn(),
 };
 
 /**
@@ -36,14 +36,16 @@ const mockConsole = {
  */
 export function shouldShowConsole(): boolean {
   if (process.env.JEST_VERBOSE === '1') return true;
-  
+
   const filesToShow = (global as any).__SHOW_CONSOLE_FOR__;
   if (!filesToShow) return false;
-  
+
   const currentFile = expect.getState().testPath || '';
-  return filesToShow.split(',').some((filePattern: string) => 
-    currentFile.toLowerCase().includes(filePattern.toLowerCase())
-  );
+  return filesToShow
+    .split(',')
+    .some((filePattern: string) =>
+      currentFile.toLowerCase().includes(filePattern.toLowerCase())
+    );
 }
 
 /**

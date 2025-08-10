@@ -6,7 +6,11 @@
  * simulation processes.
  */
 
-import { INetwork, IEvolutionFunctionResult, IEvolutionStepResult } from './interfaces';
+import {
+  INetwork,
+  IEvolutionFunctionResult,
+  IEvolutionStepResult,
+} from './interfaces';
 
 /**
  * TerminalUtility provides static methods for terminal management and
@@ -44,7 +48,7 @@ export class TerminalUtility {
     evolveFn: () => Promise<IEvolutionFunctionResult>,
     minProgressToPass: number = 60,
     maxTries: number = 10
-  ): Promise<{ finalResult: IEvolutionStepResult, tries: number }> {
+  ): Promise<{ finalResult: IEvolutionStepResult; tries: number }> {
     // Track number of tries and last result
     let tries = 0;
     let lastResult: IEvolutionStepResult = { success: false, progress: 0 };

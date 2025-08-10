@@ -39,14 +39,19 @@ export class MazeVision {
     visitedPositions: Set<string>,
     exitPos?: [number, number],
     globalProgress?: number,
-    visionRange?: number,
+    visionRange?: number
   ): number[] {
     // Get maze dimensions
     const width = encodedMaze[0].length;
     const height = encodedMaze.length;
 
     // Cardinal directions: North, East, South, West
-    const dirs: [number, number][] = [[0, -1], [1, 0], [0, 1], [-1, 0]];
+    const dirs: [number, number][] = [
+      [0, -1],
+      [1, 0],
+      [0, 1],
+      [-1, 0],
+    ];
 
     /**
      * Checks if the given coordinates are the exit position.
@@ -70,7 +75,13 @@ export class MazeVision {
       let foundExit = false;
       let exitSteps = 0;
       const range = visionRange ?? 99999;
-      function dfs(x: number, y: number, px: number, py: number, steps: number): number {
+      function dfs(
+        x: number,
+        y: number,
+        px: number,
+        py: number,
+        steps: number
+      ): number {
         if (steps > range) return 0;
         const key = `${x},${y}`;
         if (visited.has(key)) return 0;
@@ -103,13 +114,22 @@ export class MazeVision {
         if (!foundExit && splitValue > 0) {
           const junctionBonus = open.length * 0.001;
           const explorationFactor = isVisitedByAgent ? 0.98 : 1.02;
-          return Math.min(0.49999, (splitValue + junctionBonus) * explorationFactor);
+          return Math.min(
+            0.49999,
+            (splitValue + junctionBonus) * explorationFactor
+          );
         }
         return splitValue;
       }
       const sx = agentX + dx;
       const sy = agentY + dy;
-      if (sx < 0 || sx >= width || sy < 0 || sy >= height || encodedMaze[sy][sx] === -1) {
+      if (
+        sx < 0 ||
+        sx >= width ||
+        sy < 0 ||
+        sy >= height ||
+        encodedMaze[sy][sx] === -1
+      ) {
         return 0;
       }
       const value = dfs(sx, sy, agentX, agentY, 1);
@@ -139,9 +159,6 @@ export class MazeVision {
     const bestDirectionEncoding = bestIdx * 0.25;
 
     // Assemble complete vision vector: [bestDirectionEncoding, openN, openE, openS, openW]
-    return [
-      bestDirectionEncoding,
-      ...openDistances
-    ];
+    return [bestDirectionEncoding, ...openDistances];
   }
 }

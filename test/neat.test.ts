@@ -66,7 +66,7 @@ describe('Neat', () => {
         { input: [1, 1], output: [0] },
       ];
       const network = new Network(2, 1);
-      
+
       // Act
       const results = await network.evolve(trainingSet, {
         mutation: methods.mutation.FFW,
@@ -78,11 +78,11 @@ describe('Neat', () => {
         iterations: 5,
         populationSize: 3,
       });
-      
+
       // Assert
       expect(results.error).toBeGreaterThanOrEqual(0);
     });
-    
+
     it('should evolve to solve XOR (error below threshold)', async () => {
       // Arrange
       jest.setTimeout(50000);
@@ -93,7 +93,7 @@ describe('Neat', () => {
         { input: [1, 1], output: [0] },
       ];
       const network = new Network(2, 1);
-      
+
       // Act
       const results = await network.evolve(trainingSet, {
         mutation: methods.mutation.FFW,
@@ -105,7 +105,7 @@ describe('Neat', () => {
         iterations: 50,
         populationSize: 10,
       });
-      
+
       // Assert
       expect(results.error).toBeLessThan(0.33);
     });
@@ -170,7 +170,8 @@ describe('Neat', () => {
         it(`network ${idx + 1} has at least minHidden hidden nodes`, () => {
           // Arrange
           // Act
-          const hiddenCount = net.nodes.filter(n => n.type === 'hidden').length;
+          const hiddenCount = net.nodes.filter((n) => n.type === 'hidden')
+            .length;
           // Assert
           expect(hiddenCount).toBeGreaterThanOrEqual(minHidden);
         });
@@ -180,22 +181,30 @@ describe('Neat', () => {
       const minHidden = 4;
       it('network 1 has at least minHidden hidden nodes after evolve', async () => {
         // Arrange
-        const neat = new Neat(2, 1, () => 1, { popsize: 2, minHidden, provenance: 1 });
+        const neat = new Neat(2, 1, () => 1, {
+          popsize: 2,
+          minHidden,
+          provenance: 1,
+        });
         // Act
         await neat.evolve();
         // Assert
         const net = neat.population[0];
-        const hiddenCount = net.nodes.filter(n => n.type === 'hidden').length;
+        const hiddenCount = net.nodes.filter((n) => n.type === 'hidden').length;
         expect(hiddenCount).toBeGreaterThanOrEqual(minHidden);
       });
       it('network 2 has at least minHidden hidden nodes after evolve', async () => {
         // Arrange
-        const neat = new Neat(2, 1, () => 1, { popsize: 2, minHidden, provenance: 1 });
+        const neat = new Neat(2, 1, () => 1, {
+          popsize: 2,
+          minHidden,
+          provenance: 1,
+        });
         // Act
         await neat.evolve();
         // Assert
         const net = neat.population[1];
-        const hiddenCount = net.nodes.filter(n => n.type === 'hidden').length;
+        const hiddenCount = net.nodes.filter((n) => n.type === 'hidden').length;
         expect(hiddenCount).toBeGreaterThanOrEqual(minHidden);
       });
     });
@@ -207,18 +216,22 @@ describe('Strict node removal', () => {
     it('should throw when trying to remove an input node', () => {
       // Arrange
       const net = new Network(2, 1);
-      const inputNode = net.nodes.find(n => n.type === 'input');
+      const inputNode = net.nodes.find((n) => n.type === 'input');
       // Act & Assert
-      expect(() => net.remove(inputNode!)).toThrow('Cannot remove input or output node from the network.');
+      expect(() => net.remove(inputNode!)).toThrow(
+        'Cannot remove input or output node from the network.'
+      );
     });
   });
   describe('when removing output node', () => {
     it('should throw when trying to remove an output node', () => {
       // Arrange
       const net = new Network(2, 1);
-      const outputNode = net.nodes.find(n => n.type === 'output');
+      const outputNode = net.nodes.find((n) => n.type === 'output');
       // Act & Assert
-      expect(() => net.remove(outputNode!)).toThrow('Cannot remove input or output node from the network.');
+      expect(() => net.remove(outputNode!)).toThrow(
+        'Cannot remove input or output node from the network.'
+      );
     });
   });
 });
@@ -237,8 +250,8 @@ describe('Deep Network Evolution', () => {
         net.mutate(methods.mutation.ADD_NODE);
       }
       // Find the longest path from input to output
-      const input = net.nodes.find(n => n.type === 'input');
-      const output = net.nodes.find(n => n.type === 'output');
+      const input = net.nodes.find((n) => n.type === 'input');
+      const output = net.nodes.find((n) => n.type === 'output');
       function dfs(node: any, visited = new Set()): number {
         if (node === output) return 0;
         visited.add(node);
@@ -270,7 +283,7 @@ describe('Deep Path Construction (guaranteed)', () => {
     // Act: Always split the last connection to extend the chain
     for (let i = 0; i < 5; i++) {
       // Always split the connection that is the only outgoing from input or last hidden
-      let node = net.nodes.find(n => n.type === 'input');
+      let node = net.nodes.find((n) => n.type === 'input');
       while (node && node.type !== 'output') {
         const out = node.connections.out[0];
         if (out.to.type === 'output') {
@@ -280,13 +293,15 @@ describe('Deep Path Construction (guaranteed)', () => {
         node = out.to;
       }
       net.disconnect(lastConn.from, lastConn.to);
-      const newNode = new (require('../src/architecture/node').default)('hidden');
+      const newNode = new (require('../src/architecture/node').default)(
+        'hidden'
+      );
       net.nodes.splice(net.nodes.length - 1, 0, newNode); // Insert before output
       net.connect(lastConn.from, newNode);
       net.connect(newNode, lastConn.to);
     }
     // Walk the chain from input to output, counting steps
-    let node = net.nodes.find(n => n.type === 'input');
+    let node = net.nodes.find((n) => n.type === 'input');
     let depth = 0;
     const visited = new Set();
     while (node && node.type !== 'output' && !visited.has(node)) {
@@ -308,8 +323,8 @@ describe('Connection Preservation', () => {
     net.connect(net.nodes[0], net.nodes[net.nodes.length - 1]);
     net.connect(net.nodes[1], net.nodes[net.nodes.length - 1]);
     for (let i = 0; i < 2; i++) net.mutate(methods.mutation.ADD_NODE);
-    const inputNodes = net.nodes.filter(n => n.type === 'input');
-    const outputNode = net.nodes.find(n => n.type === 'output')!;
+    const inputNodes = net.nodes.filter((n) => n.type === 'input');
+    const outputNode = net.nodes.find((n) => n.type === 'output')!;
     const neat = new Neat(2, 1, () => 1, { hiddenLayerMultiplier: 1 });
     (neat as any).ensureMinHiddenNodes(net, 1);
     function hasPath(from: any, to: any, visited = new Set()): boolean {
@@ -341,23 +356,31 @@ describe('Hidden Node Minimum Enforcement', () => {
     it('enforces minimum hidden nodes on creation', () => {
       // Arrange
       const net = new Network(3, 2);
-      const neat = new Neat(3, 2, () => 1, { hiddenLayerMultiplier: multiplier });
+      const neat = new Neat(3, 2, () => 1, {
+        hiddenLayerMultiplier: multiplier,
+      });
       // Act
       (neat as any).ensureMinHiddenNodes(net, multiplier);
-      const hiddenCount = net.nodes.filter(n => n.type === 'hidden').length;
+      const hiddenCount = net.nodes.filter((n) => n.type === 'hidden').length;
       // Assert
-      expect(hiddenCount).toBeGreaterThanOrEqual(Math.max(net.input, net.output) * multiplier);
+      expect(hiddenCount).toBeGreaterThanOrEqual(
+        Math.max(net.input, net.output) * multiplier
+      );
     });
     it('enforces minimum after removing hidden nodes', () => {
       // Arrange
       const net = new Network(4, 3);
-      net.nodes = net.nodes.filter(n => n.type !== 'hidden');
+      net.nodes = net.nodes.filter((n) => n.type !== 'hidden');
       // Act
-      const neat = new Neat(4, 3, () => 1, { hiddenLayerMultiplier: multiplier });
+      const neat = new Neat(4, 3, () => 1, {
+        hiddenLayerMultiplier: multiplier,
+      });
       (neat as any).ensureMinHiddenNodes(net, multiplier);
-      const hiddenCount = net.nodes.filter(n => n.type === 'hidden').length;
+      const hiddenCount = net.nodes.filter((n) => n.type === 'hidden').length;
       // Assert
-      expect(hiddenCount).toBeGreaterThanOrEqual(Math.max(net.input, net.output) * multiplier);
+      expect(hiddenCount).toBeGreaterThanOrEqual(
+        Math.max(net.input, net.output) * multiplier
+      );
     });
     describe('when network has existing hidden nodes', () => {
       // Arrange
@@ -366,18 +389,22 @@ describe('Hidden Node Minimum Enforcement', () => {
       const net = new Network(2, 1);
       net.connect(net.nodes[0], net.nodes[net.nodes.length - 1]);
       for (let i = 0; i < 3; i++) net.mutate(methods.mutation.ADD_NODE);
-      const neat = new Neat(2, 1, () => 1, { hiddenLayerMultiplier: multiplier });
+      const neat = new Neat(2, 1, () => 1, {
+        hiddenLayerMultiplier: multiplier,
+      });
       (neat as any).ensureMinHiddenNodes(net, multiplier);
       it('ensures minimum hidden nodes', () => {
         // Act
-        const hiddenCount = net.nodes.filter(n => n.type === 'hidden').length;
+        const hiddenCount = net.nodes.filter((n) => n.type === 'hidden').length;
         // Assert
-        expect(hiddenCount).toBeGreaterThanOrEqual(Math.max(net.input, net.output) * multiplier);
+        expect(hiddenCount).toBeGreaterThanOrEqual(
+          Math.max(net.input, net.output) * multiplier
+        );
       });
       it('ensures every hidden node has at least one input and one output connection', () => {
         // Act & Assert
-        const hiddenNodes = net.nodes.filter(n => n.type === 'hidden');
-        hiddenNodes.forEach(hiddenNode => {
+        const hiddenNodes = net.nodes.filter((n) => n.type === 'hidden');
+        hiddenNodes.forEach((hiddenNode) => {
           expect(hiddenNode.connections.in.length).toBeGreaterThan(0);
           expect(hiddenNode.connections.out.length).toBeGreaterThan(0);
         });
@@ -389,13 +416,17 @@ describe('Hidden Node Minimum Enforcement', () => {
     it('warns and does not throw if input or output nodes are missing', () => {
       // Arrange
       const net = new Network(2, 1);
-      net.nodes = net.nodes.filter(n => n.type !== 'input');
-      const neat = new Neat(2, 1, () => 1, { hiddenLayerMultiplier: multiplier });
+      net.nodes = net.nodes.filter((n) => n.type !== 'input');
+      const neat = new Neat(2, 1, () => 1, {
+        hiddenLayerMultiplier: multiplier,
+      });
       const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {}); // Spy
       // Act
       (neat as any).ensureMinHiddenNodes(net, multiplier);
       // Assert
-      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Network is missing input or output nodes'));
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Network is missing input or output nodes')
+      );
       warnSpy.mockRestore();
     });
   });
