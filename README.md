@@ -136,6 +136,55 @@ const rop = methods.Rate.reduceOnPlateau({ patience: 20, factor: 0.5, minRate: 1
 net.train(data, { iterations: 5000, rate: 0.05, ratePolicy: rop });
 ```
 
+#### Early Stopping Extensions
+
+You can enable moving-average smoothing and independent early-stop patience separate from any scheduler plateau logic. You can also give the learning-rate scheduler (e.g. reduce-on-plateau) its OWN smoothing configuration if you want it to react differently than early stopping:
+
+```ts
+net.train(data, {
+	rate: 0.05,
+	iterations: 10000,
+	error: 0.02,                // target threshold (checked on SMOOTHED early-stop error)
+	movingAverageType: 'median',
+	movingAverageWindow: 7,     // EARLY STOP smoothing (robust to spikes)
+	earlyStopPatience: 25,
+	earlyStopMinDelta: 0.0005,
+	// Separate plateau smoothing: scheduler sees a faster EMA over shorter horizon
+	plateauMovingAverageType: 'ema',
+	plateauMovingAverageWindow: 3,
+	plateauEmaAlpha: 0.6,       // (otherwise defaults to 2/(N+1))
+	ratePolicy: methods.Rate.reduceOnPlateau({ patience: 10, factor: 0.5, minRate: 1e-5 })
+});
+```
+
+Behavior details:
+Smoothing types (set `movingAverageType`):
+
+| Type | Description | Key Params | When to Use |
+|------|-------------|------------|-------------|
+| sma | Simple moving average over window | movingAverageWindow | General mild smoothing |
+| ema | Exponential moving average | emaAlpha (default 2/(N+1)) | Faster reaction than SMA |
+| adaptive-ema | EMA with alpha scaled by recent variance | emaAlpha, adaptiveAlphaMin/Max, adaptiveVarianceFactor | Volatile early training then stabilizing |
+| wma | Linear weighted (recent heavier) | movingAverageWindow | Slightly more responsive than SMA |
+| median | Moving median | movingAverageWindow | Spike / outlier robustness |
+| trimmed | Trimmed mean (drops extremes) | trimmedRatio (0-0.5) | Moderate outliers; keep efficiency |
+| gaussian | Gaussian-weighted window (recent emphasized smoothly) | gaussianSigma (default N/3) | Want smooth taper vs linear weights |
+
+Additional options:
+* trimmedRatio: fraction trimmed from each side for 'trimmed' (default 0.1)
+* gaussianSigma: width for 'gaussian' (default window/3)
+* trackVariance: true to compute running variance & min (exposed via metricsHook)
+* adaptiveAlphaMin / adaptiveAlphaMax / adaptiveVarianceFactor for adaptive-ema control
+
+Metrics hook additions when smoothing active: `rawError`, `runningVariance`, `runningMin` (if trackVariance true) alongside smoothed `error`.
+* Target `error` comparison and improvement tracking both use the smoothed value.
+* `earlyStopPatience` counts iterations since the last smoothed improvement > `earlyStopMinDelta`.
+* Plateau smoothing: provide any of `plateauMovingAverageWindow`, `plateauMovingAverageType`, `plateauEmaAlpha`, `plateauTrimmedRatio`, `plateauGaussianSigma`, `plateauAdaptiveAlphaMin/Max`, `plateauAdaptiveVarianceFactor`.
+	- If none are supplied the scheduler reuse the early-stop smoothing.
+	- If supplied, metricsHook receives an extra field `plateauError` (the separately smoothed value supplied to the scheduler), while `error` remains the early-stop smoothed value.
+* This does not interfere with `Rate.reduceOnPlateau` patience; they are independent.
+
+
 #### Scheduler Reference
 
 | Scheduler | Factory Call | Key Params | Behavior |

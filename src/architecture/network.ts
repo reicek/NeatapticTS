@@ -1795,6 +1795,32 @@ export default class Network {
    * @param {number} options.crossValidate.testSize - Proportion of the dataset to use as a test set (e.g., 0.2 for 20%).
    * @param {number} options.crossValidate.testError - Target error on the test set to stop training early.
    * @param {boolean} [options.clear=false] - Whether to clear the network's state (`clear()`) after each training iteration or test evaluation. Useful for stateless tasks.
+  * @param {number} [options.movingAverageWindow=1] - Window size for simple moving average smoothing of the monitored error metric used for EARLY STOP logic (1 disables smoothing).
+  * @param {('sma'|'ema'|'wma'|'median'|'trimmed'|'gaussian'|'adaptive-ema')} [options.movingAverageType='sma'] - Smoothing type for EARLY STOP logic.
+  * @param {number} [options.emaAlpha] - Alpha for EMA (0<alpha<=1). If omitted defaults to `2/(movingAverageWindow+1)` when EMA selected.
+  * Additional smoothing types (set movingAverageType accordingly):
+  *  - 'wma' (Weighted Moving Average, linear weights favor recent) – uses movingAverageWindow.
+  *  - 'median' (Moving Median) – robust to spikes.
+  *  - 'trimmed' (Trimmed Mean) – drop extremes, controlled by trimmedRatio (default 0.1).
+  *  - 'gaussian' (Gaussian-weighted tail, sigma via gaussianSigma or window/3) – trailing window with Gaussian emphasis on recent.
+  *  - 'adaptive-ema' (EMA with volatility-adjusted alpha) – alpha scales with recent variance between adaptiveAlphaMin/Max.
+  * @param {number} [options.trimmedRatio=0.1] - Fraction (0-0.5) trimmed from each tail for 'trimmed'.
+  * @param {number} [options.gaussianSigma] - Sigma for 'gaussian'. Defaults to movingAverageWindow/3.
+  * @param {number} [options.adaptiveAlphaMin=0.1] - Minimum alpha for adaptive-ema.
+  * @param {number} [options.adaptiveAlphaMax=0.9] - Maximum alpha for adaptive-ema.
+  * @param {number} [options.adaptiveVarianceFactor=1] - Multiplier controlling sensitivity of adaptive-ema alpha to variance.
+  * @param {boolean} [options.trackVariance=false] - If true, compute running variance & min (Welford) for exposure via metricsHook.
+  * Plateau Smoothing (optional; if omitted plateau uses EARLY STOP smoothing):
+  * @param {number} [options.plateauMovingAverageWindow] - Separate window for plateau (learning rate scheduler) monitoring.
+  * @param {('sma'|'ema'|'wma'|'median'|'trimmed'|'gaussian'|'adaptive-ema')} [options.plateauMovingAverageType] - Separate smoothing type for plateau monitoring.
+  * @param {number} [options.plateauEmaAlpha] - Alpha override for plateau EMA.
+  * @param {number} [options.plateauTrimmedRatio] - Trim ratio for plateau trimmed mean.
+  * @param {number} [options.plateauGaussianSigma] - Sigma for plateau gaussian smoothing.
+  * @param {number} [options.plateauAdaptiveAlphaMin] - Min alpha for plateau adaptive-ema.
+  * @param {number} [options.plateauAdaptiveAlphaMax] - Max alpha for plateau adaptive-ema.
+  * @param {number} [options.plateauAdaptiveVarianceFactor] - Variance scaling for plateau adaptive-ema.
+  * @param {number} [options.earlyStopPatience] - If set, stop when no smoothed error improvement greater than `earlyStopMinDelta` occurred within this many iterations.
+  * @param {number} [options.earlyStopMinDelta=0] - Minimum decrease in smoothed error to qualify as an improvement for patience tracking.
    * @returns {{ error: number; iterations: number; time: number }} An object containing the final error, the number of iterations performed, and the total training time in milliseconds.
    * @throws {Error} If the dataset's input/output dimensions don't match the network's.
    * @throws {Error} If `batchSize` is larger than the dataset size.
@@ -1940,6 +1966,44 @@ export default class Network {
       throw new Error('checkpoint.save must be a function');
     }
     const crossValidate = options.crossValidate; // Cross-validation config.
+    // --- Early Stopping Enhancements ---
+    // movingAverageWindow: smooths monitored error via simple moving average before applying target / patience logic
+  const movingAverageWindow: number = Math.max(1, options.movingAverageWindow || 1);
+  const movingAverageType: 'sma' | 'ema' | 'wma' | 'median' | 'trimmed' | 'gaussian' | 'adaptive-ema' = (options.movingAverageType || 'sma');
+  const plateauMovingAverageWindow: number | undefined = options.plateauMovingAverageWindow ? Math.max(1, options.plateauMovingAverageWindow) : undefined;
+  const plateauMovingAverageType: typeof movingAverageType | undefined = options.plateauMovingAverageType;
+      const emaAlpha: number = (()=>{
+        if (movingAverageType !== 'ema') return 1; // unused
+        if (typeof options.emaAlpha === 'number' && options.emaAlpha > 0 && options.emaAlpha <= 1) return options.emaAlpha;
+        // default alpha based on window length (common EMA heuristic)
+        return 2 / (movingAverageWindow + 1);
+      })();
+    const plateauEmaAlpha: number = (()=>{
+      if ((plateauMovingAverageType || movingAverageType) !== 'ema') return 1;
+      if (typeof options.plateauEmaAlpha === 'number' && options.plateauEmaAlpha > 0 && options.plateauEmaAlpha <= 1) return options.plateauEmaAlpha;
+      const win = plateauMovingAverageWindow || movingAverageWindow;
+      return 2 / (win + 1);
+    })();
+  const trimmedRatio: number = Math.min(0.49, Math.max(0, options.trimmedRatio ?? 0.1));
+  const plateauTrimmedRatio: number = Math.min(0.49, Math.max(0, options.plateauTrimmedRatio ?? trimmedRatio));
+  const gaussianSigma: number = options.gaussianSigma && options.gaussianSigma > 0 ? options.gaussianSigma : Math.max(1e-9, movingAverageWindow / 3);
+  const plateauGaussianSigma: number = options.plateauGaussianSigma && options.plateauGaussianSigma > 0 ? options.plateauGaussianSigma : (plateauMovingAverageWindow ? Math.max(1e-9, plateauMovingAverageWindow / 3) : gaussianSigma);
+  const adaptiveAlphaMin: number = Math.min(1, Math.max(1e-4, options.adaptiveAlphaMin ?? 0.1));
+  const adaptiveAlphaMax: number = Math.min(1, Math.max(adaptiveAlphaMin, options.adaptiveAlphaMax ?? 0.9));
+  const adaptiveVarianceFactor: number = Math.max(0, options.adaptiveVarianceFactor ?? 1);
+  const plateauAdaptiveAlphaMin: number = Math.min(1, Math.max(1e-4, options.plateauAdaptiveAlphaMin ?? adaptiveAlphaMin));
+  const plateauAdaptiveAlphaMax: number = Math.min(1, Math.max(plateauAdaptiveAlphaMin, options.plateauAdaptiveAlphaMax ?? adaptiveAlphaMax));
+  const plateauAdaptiveVarianceFactor: number = Math.max(0, options.plateauAdaptiveVarianceFactor ?? adaptiveVarianceFactor);
+    const trackVariance: boolean = !!options.trackVariance;
+    // earlyStopPatience: stop if no improvement (greater than earlyStopMinDelta) for this many iterations
+    const earlyStopPatience: number | undefined = options.earlyStopPatience;
+    const earlyStopMinDelta: number = options.earlyStopMinDelta ?? 0;
+    // Internal trackers for early stopping with smoothing
+  const _maBuffer: number[] = []; // raw error window (or single slot for EMA)
+  let _emaLast: number | undefined; // for ema/adaptive-ema
+  let _runningMean = 0; let _runningM2 = 0; let _runningCount = 0; let _runningMin: number | undefined;
+    let _bestMonitored: number | undefined = undefined;
+    let _lastImprovementIter = 0;
 
     // Validate batch size.
     if (batchSize > set.length) {
@@ -2010,7 +2074,7 @@ export default class Network {
         testSet &&
         error <= crossValidate.testError &&
         targetError !== -1 // Only stop early if an error target is set
-      ) {
+    ) {
         if (log > 0)
           console.log(
             `Cross-validation: Test error ${error} reached target ${crossValidate.testError} at iteration ${iteration}. Stopping early.`
@@ -2103,12 +2167,146 @@ export default class Network {
       // Determine the error to report and check against target.
       if (crossValidate && testSet) {
         // If cross-validating, evaluate error on the test set.
-        error = this.test(testSet, cost).error;
+  error = this.test(testSet as { input: number[]; output: number[] }[], cost).error;
         // Clear state again after testing if enabled.
         if (clear) this.clear();
       } else {
         // Otherwise, use the error from the training set pass.
         error = trainError;
+      }
+
+  // --- Moving Average Smoothing (Early Stop + optional Plateau) & Early Stop Patience ---
+      // Update running stats BEFORE smoothing (raw error)
+      if (trackVariance) {
+        _runningCount++;
+        const delta = error - _runningMean;
+        _runningMean += delta / _runningCount;
+        const delta2 = error - _runningMean;
+        _runningM2 += delta * delta2;
+        _runningMin = _runningMin === undefined ? error : Math.min(_runningMin, error);
+      }
+      let smoothedEarly: number;
+      switch (movingAverageType) {
+        case 'ema': {
+          if (_emaLast === undefined) { _emaLast = error; }
+          _emaLast = emaAlpha * error + (1 - emaAlpha) * _emaLast;
+          smoothedEarly = _emaLast;
+          break;
+        }
+        case 'adaptive-ema': {
+          // maintain raw window
+            _maBuffer.push(error); if (_maBuffer.length > movingAverageWindow) _maBuffer.shift();
+            const mean = _maBuffer.reduce((a,b)=>a+b,0) / _maBuffer.length;
+            const variance = _maBuffer.reduce((s,v)=>{ const d=v-mean; return s + d*d; },0) / _maBuffer.length;
+            const varScaled = variance * adaptiveVarianceFactor;
+            const baseAlpha = (typeof options.emaAlpha === 'number' && options.emaAlpha>0 && options.emaAlpha<=1) ? options.emaAlpha : (2/(movingAverageWindow+1));
+            const alpha = Math.max(adaptiveAlphaMin, Math.min(adaptiveAlphaMax, baseAlpha * (1 + varScaled)));
+            if (_emaLast === undefined) _emaLast = error;
+            _emaLast = alpha * error + (1 - alpha) * _emaLast;
+            smoothedEarly = _emaLast;
+            break;
+        }
+        case 'wma': {
+          _maBuffer.push(error); if (_maBuffer.length > movingAverageWindow) _maBuffer.shift();
+          const n = _maBuffer.length;
+          let num = 0; let denom = 0;
+          for (let i=0;i<n;i++){ const w=i+1; num += _maBuffer[i]*w; denom += w; }
+          smoothedEarly = denom>0 ? num/denom : error;
+          break;
+        }
+        case 'median': {
+          _maBuffer.push(error); if (_maBuffer.length > movingAverageWindow) _maBuffer.shift();
+          const sorted = [..._maBuffer].sort((a,b)=>a-b);
+          const mid = Math.floor(sorted.length/2);
+          smoothedEarly = sorted.length %2 ? sorted[mid] : (sorted[mid-1]+sorted[mid])/2;
+          break;
+        }
+        case 'trimmed': {
+          _maBuffer.push(error); if (_maBuffer.length > movingAverageWindow) _maBuffer.shift();
+          if (_maBuffer.length <= 2) { smoothedEarly = _maBuffer.reduce((a,b)=>a+b,0)/_maBuffer.length; break; }
+          const sorted = [..._maBuffer].sort((a,b)=>a-b);
+          const trim = Math.min(Math.floor(sorted.length * trimmedRatio), Math.floor((sorted.length-1)/2));
+          const core = sorted.slice(trim, sorted.length - trim);
+          smoothedEarly = core.reduce((a,b)=>a+b,0)/core.length;
+          break;
+        }
+        case 'gaussian': {
+          _maBuffer.push(error); if (_maBuffer.length > movingAverageWindow) _maBuffer.shift();
+          const n=_maBuffer.length; let num=0; let denom=0;
+          for (let i=0;i<n;i++) { const age = (n-1 - i); const w = Math.exp(-0.5 * (age*age)/(gaussianSigma*gaussianSigma)); num += _maBuffer[i]*w; denom += w; }
+          smoothedEarly = denom>0? num/denom : error;
+          break;
+        }
+        case 'sma':
+        default: {
+          _maBuffer.push(error); if (_maBuffer.length > movingAverageWindow) _maBuffer.shift();
+          smoothedEarly = movingAverageWindow === 1 ? error : (_maBuffer.reduce((a,b)=>a+b,0) / _maBuffer.length);
+          break;
+        }
+      }
+      // Plateau smoothing (if separate configuration provided)
+      let plateauSmoothed = smoothedEarly;
+      if (plateauMovingAverageWindow || plateauMovingAverageType || options.plateauEmaAlpha || options.plateauTrimmedRatio || options.plateauGaussianSigma) {
+        switch (plateauMovingAverageType || movingAverageType) {
+          case 'ema': {
+            if ((this as any)._plateauEmaLast === undefined) (this as any)._plateauEmaLast = error;
+            (this as any)._plateauEmaLast = plateauEmaAlpha * error + (1 - plateauEmaAlpha) * (this as any)._plateauEmaLast;
+            plateauSmoothed = (this as any)._plateauEmaLast; break; }
+          case 'adaptive-ema': {
+            if (!(this as any)._plateauBuffer) (this as any)._plateauBuffer = [];
+            (this as any)._plateauBuffer.push(error); if ((this as any)._plateauBuffer.length > (plateauMovingAverageWindow || movingAverageWindow)) (this as any)._plateauBuffer.shift();
+            const buf = (this as any)._plateauBuffer;
+            const mean = buf.reduce((a:number,b:number)=>a+b,0)/buf.length;
+            const variance = buf.reduce((s:number,v:number)=>{ const d=v-mean; return s + d*d; },0)/buf.length;
+            const varScaled = variance * plateauAdaptiveVarianceFactor;
+            const baseAlpha = (typeof options.plateauEmaAlpha === 'number' && options.plateauEmaAlpha>0 && options.plateauEmaAlpha<=1) ? options.plateauEmaAlpha : (2/(((plateauMovingAverageWindow || movingAverageWindow))+1));
+            const alpha = Math.max(plateauAdaptiveAlphaMin, Math.min(plateauAdaptiveAlphaMax, baseAlpha * (1 + varScaled)));
+            if ((this as any)._plateauEmaLast === undefined) (this as any)._plateauEmaLast = error;
+            (this as any)._plateauEmaLast = alpha * error + (1 - alpha) * (this as any)._plateauEmaLast;
+            plateauSmoothed = (this as any)._plateauEmaLast; break; }
+          case 'wma': {
+            if (!(this as any)._plateauBuffer) (this as any)._plateauBuffer = [];
+            const buf=(this as any)._plateauBuffer; buf.push(error); if (buf.length > (plateauMovingAverageWindow || movingAverageWindow)) buf.shift();
+            const n=buf.length; let num=0; let denom=0; for (let i=0;i<n;i++){ const w=i+1; num+=buf[i]*w; denom+=w; } plateauSmoothed = denom>0? num/denom : error; break; }
+          case 'median': {
+            if (!(this as any)._plateauBuffer) (this as any)._plateauBuffer = [];
+            const buf=(this as any)._plateauBuffer; buf.push(error); if (buf.length > (plateauMovingAverageWindow || movingAverageWindow)) buf.shift();
+            const sorted=[...buf].sort((a,b)=>a-b); const mid=Math.floor(sorted.length/2); plateauSmoothed = sorted.length%2? sorted[mid] : (sorted[mid-1]+sorted[mid])/2; break; }
+          case 'trimmed': {
+            if (!(this as any)._plateauBuffer) (this as any)._plateauBuffer = [];
+            const buf=(this as any)._plateauBuffer; buf.push(error); if (buf.length > (plateauMovingAverageWindow || movingAverageWindow)) buf.shift();
+            if (buf.length <=2) { plateauSmoothed = buf.reduce((a:number,b:number)=>a+b,0)/buf.length; break; }
+            const sorted=[...buf].sort((a,b)=>a-b); const trim=Math.min(Math.floor(sorted.length * plateauTrimmedRatio), Math.floor((sorted.length-1)/2)); const core=sorted.slice(trim, sorted.length-trim); plateauSmoothed = core.reduce((a,b)=>a+b,0)/core.length; break; }
+          case 'gaussian': {
+            if (!(this as any)._plateauBuffer) (this as any)._plateauBuffer = [];
+            const buf=(this as any)._plateauBuffer; buf.push(error); if (buf.length > (plateauMovingAverageWindow || movingAverageWindow)) buf.shift();
+            const n=buf.length; let num=0; let denom=0; for (let i=0;i<n;i++){ const age=(n-1 - i); const w=Math.exp(-0.5*(age*age)/(plateauGaussianSigma*plateauGaussianSigma)); num+=buf[i]*w; denom+=w; } plateauSmoothed = denom>0? num/denom : error; break; }
+          case 'sma':
+          default: {
+            if (!(this as any)._plateauBuffer) (this as any)._plateauBuffer = [];
+            const buf=(this as any)._plateauBuffer; buf.push(error); if (buf.length > (plateauMovingAverageWindow || movingAverageWindow)) buf.shift();
+            plateauSmoothed = (plateauMovingAverageWindow || movingAverageWindow) === 1 ? error : (buf.reduce((a:number,b:number)=>a+b,0)/buf.length); break; }
+        }
+      }
+      if (_bestMonitored === undefined || smoothedEarly < _bestMonitored - earlyStopMinDelta) {
+        _bestMonitored = smoothedEarly;
+        _lastImprovementIter = iteration;
+      } else if (earlyStopPatience && (iteration - _lastImprovementIter) >= earlyStopPatience) {
+        if (log > 0) console.log(`Early stopping: no improvement > ${earlyStopMinDelta} for ${earlyStopPatience} iterations (best=${typeof _bestMonitored === 'number' ? _bestMonitored.toFixed(9) : 'n/a'}) at iteration ${iteration}.`);
+        error = smoothedEarly;
+        break;
+      }
+      error = smoothedEarly;
+      // store plateau metric for next iteration's scheduler call
+      (this as any)._lastPlateauMetric = plateauSmoothed;
+      // expose metrics if hook enabled (smoothed & raw stats)
+      if (metricsHook) {
+        try {
+          const variance = trackVariance && _runningCount>1 ? _runningM2/(_runningCount-1) : undefined;
+          const payload: any = { iteration, error: smoothedEarly, rawError: error, runningVariance: variance, runningMin: _runningMin, gradNorm: (this as any)._lastGradNorm ?? 0, gradNormRaw: (this as any)._lastRawGradNorm ?? 0 };
+          if (plateauSmoothed !== smoothedEarly) payload.plateauError = plateauSmoothed;
+          metricsHook(payload);
+        } catch { /* ignore */ }
       }
 
       // Log progress if logging is enabled and the iteration matches the log frequency.
