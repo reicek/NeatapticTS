@@ -1,8 +1,8 @@
-import Neat from '../src/neat';
-import Network from '../src/architecture/network';
-import * as methods from '../src/methods/methods';
-import Node from '../src/architecture/node';
-import Connection from '../src/architecture/connection';
+import Neat from '../../src/neat';
+import Network from '../../src/architecture/network';
+import * as methods from '../../src/methods/methods';
+import Node from '../../src/architecture/node';
+import Connection from '../../src/architecture/connection';
 
 describe('Neat advanced coverage', () => {
   describe('constructor', () => {

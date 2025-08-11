@@ -102,11 +102,14 @@ export default class Node {
    * Internal flag to detect cycles during activation
    */
   private isActivating?: boolean;
+  /** Stable per-node gene identifier for NEAT innovation reuse */
+  geneId: number;
 
   /**
    * Global index counter for assigning unique indices to nodes.
    */
   private static _globalNodeIndex = 0;
+  private static _nextGeneId = 1;
 
   /**
    * Creates a new node.
@@ -158,6 +161,8 @@ export default class Node {
     if (typeof this.index === 'undefined') {
       this.index = Node._globalNodeIndex++;
     }
+  // Assign stable gene id (independent from per-network index)
+  this.geneId = Node._nextGeneId++;
   }
 
   /**
@@ -215,7 +220,7 @@ export default class Node {
       ) + this.bias;
     // Add contributions from incoming connections (respect DropConnect mask)
     for (const connection of this.connections.in) {
-      if (connection.dcMask === 0) continue; // skip dropped connection
+  if (connection.dcMask === 0 || (connection as any).enabled === false) continue; // skip dropped or disabled gene
       this.state +=
         connection.from.activation * connection.weight * connection.gain;
     }
@@ -283,7 +288,7 @@ export default class Node {
       ) + this.bias;
     // Add contributions from incoming connections.
     for (const connection of this.connections.in) {
-      if (connection.dcMask === 0) continue;
+  if (connection.dcMask === 0 || (connection as any).enabled === false) continue;
       this.state +=
         connection.from.activation * connection.weight * connection.gain;
     }

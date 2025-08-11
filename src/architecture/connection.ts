@@ -16,6 +16,8 @@ export default class Connection {
   previousDeltaWeight: number; // Previous weight change for momentum
   totalDeltaWeight: number; // Accumulated weight change for batch training
   xtrace: { nodes: Node[]; values: number[] }; // Extended trace for eligibility propagation
+  innovation: number; // Unique innovation identifier (NEAT-style)
+  enabled: boolean; // Whether this gene (connection) is currently expressed (NEAT disabled gene handling)
   // --- Optimizer moment states ---
   opt_m?: number; // First moment (Adam)
   opt_v?: number; // Second moment (Adam)
@@ -62,6 +64,8 @@ export default class Connection {
     this.opt_m2 = 0;
     // Initialize dropconnect mask
     this.dcMask = 1;
+  this.innovation = Connection._nextInnovation++;
+  this.enabled = true; // default expressed
   }
 
   /**
@@ -74,7 +78,9 @@ export default class Connection {
       from: this.from.index ?? undefined,
       to: this.to.index ?? undefined,
       weight: this.weight,
-      gain: this.gain
+  gain: this.gain,
+  innovation: this.innovation,
+  enabled: this.enabled
     };
     if (this.gater && typeof this.gater.index !== 'undefined') {
       json.gater = this.gater.index;
@@ -96,4 +102,6 @@ export default class Connection {
   static innovationID(a: number, b: number): number {
     return (1 / 2) * (a + b) * (a + b + 1) + b;
   }
+  private static _nextInnovation: number = 1;
+  static resetInnovationCounter(value: number = 1) { Connection._nextInnovation = value; }
 }

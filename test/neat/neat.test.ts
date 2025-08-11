@@ -1,5 +1,5 @@
-import { Architect, Network, methods } from '../src/neataptic';
-import Neat from '../src/neat';
+import { Architect, Network, methods } from '../../src/neataptic';
+import Neat from '../../src/neat';
 
 // Retry failed tests
 jest.retryTimes(3, { logErrorsBeforeRetry: true });
@@ -24,8 +24,8 @@ describe('Neat', () => {
         mutationRate: 0.5,
         error: 0.01,
         threads: 1,
-        iterations: 5,
-        populationSize: 3,
+        iterations: 20,
+        populationSize: 6,
       });
       // Assert
       expect(results.error).toBeGreaterThanOrEqual(0);
@@ -48,8 +48,8 @@ describe('Neat', () => {
         mutationRate: 0.5,
         error: 0.01,
         threads: 1,
-        iterations: 5,
-        populationSize: 3,
+        iterations: 10, // increased for stability under adaptive dynamics
+        populationSize: 5,
       });
       // Assert
       expect(results.error).toBeLessThan(0.33);
@@ -293,7 +293,7 @@ describe('Deep Path Construction (guaranteed)', () => {
         node = out.to;
       }
       net.disconnect(lastConn.from, lastConn.to);
-      const newNode = new (require('../src/architecture/node').default)(
+      const newNode = new (require('../../src/architecture/node').default)(
         'hidden'
       );
       net.nodes.splice(net.nodes.length - 1, 0, newNode); // Insert before output

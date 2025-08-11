@@ -45,118 +45,11 @@ const stripCoverage = (code: string): string => {
 
   return code;
 };
-
-// Minimal ONNX types for export
-type OnnxTensor = {
-  name: string;
-  data_type: number;
-  dims: number[];
-  float_data: number[];
-};
-
-type OnnxNode = {
-  op_type: string;
-  input: string[];
-  output: string[];
-};
-
-type OnnxGraph = {
-  inputs: any[];
-  outputs: any[];
-  initializer: OnnxTensor[];
-  node: OnnxNode[];
-};
-
-
-
-// Adding custom properties for testing
-declare global {
-  interface Network {
-    testProp?: string;
-  }
-}
-
-/**
- * Represents a neural network composed of nodes and connections.
- *
- * This class provides the core structure for building and managing neural networks.
- * It supports various architectures, including feedforward and recurrent networks (through self-connections and back-connections).
- * Key functionalities include activation (forward propagation), backpropagation (training), mutation (for neuro-evolution),
- * serialization, ONNX import/export, and the ability to generate a standalone, library-independent function representation of the network.
- *
- * ## Constructor
- * ```ts
- * new Network(input: number, output: number, options?: { minHidden?: number })
- * ```
- * - `input`: Number of input nodes (required)
- * - `output`: Number of output nodes (required)
- * - `options.minHidden`: (optional) If set, enforces a minimum number of hidden nodes. If omitted or 0, no minimum is enforced. This allows true 1-1 (input-output only) networks.
- *
- * ## ONNX Support
- * - Use `exportToONNX(network)` to export a network to ONNX.
- * - Use `importFromONNX(onnxModel)` to import a compatible ONNX model as a `Network` instance.
- *
- * @see {@link Node}
- * @see {@link Connection}
- * @see {@link https://medium.com/data-science/neuro-evolution-on-steroids-82bd14ddc2f6 Instinct: neuro-evolution on steroids by Thomas Wagenaar}
- */
 export default class Network {
-  input: number; // Number of input nodes
-  output: number; // Number of output nodes
-  score?: number; // Optional score property, typically used for genetic algorithms/neuro-evolution fitness.
-  nodes: Node[]; // List of all nodes (input, hidden, output) in the network.
-  connections: Connection[]; // List of all regular (feedforward or backward) connections between nodes.
-  gates: Connection[]; // List of connections that are currently being gated by a node.
-  selfconns: Connection[]; // List of connections where a node connects to itself.
-  dropout: number = 0; // Dropout rate (0 to 1). If > 0, hidden nodes have a chance to be masked during training activation.
-  private _dropConnectProb: number = 0; // probability for DropConnect
-  private _lastGradNorm?: number; // last computed gradient norm (L2) after batch update
-  private _optimizerStep: number = 0; // global optimizer step counter for adaptive optimizers
-  // Weight noise (Gaussian) standard deviation; if >0 applied per training activate as temporary perturbation
-  private _weightNoiseStd: number = 0;
-  private _weightNoisePerHidden: number[] = [];
-  private _weightNoiseSchedule?: (step: number) => number;
-  // Stochastic depth survival probabilities per hidden layer (excluding input/output). Empty => disabled.
-  private _stochasticDepth: number[] = [];
-  // Internal storage for temporarily perturbed weights (weight noise)
-  private _wnOrig?: number[];
-  private _trainingStep: number = 0; // counts training forward passes
-  private _rand: () => number = Math.random; // injectable RNG for determinism
-  private _rngState?: number; // internal state for seeded generator
-  private _lastStats: any = null; // stats from last forward pass
-  private _stochasticDepthSchedule?: (step: number, current: number[]) => number[];
-  // Mixed precision & gradient features
-  private _mixedPrecision: { enabled: boolean; lossScale: number } = { enabled: false, lossScale: 1 };
-  private _mixedPrecisionState: { goodSteps: number; badSteps: number; minLossScale: number; maxLossScale: number; overflowCount?: number; scaleUpEvents?: number; scaleDownEvents?: number } = { goodSteps: 0, badSteps: 0, minLossScale: 1, maxLossScale: 65536, overflowCount: 0, scaleUpEvents: 0, scaleDownEvents: 0 };
-  private _gradAccumMicroBatches: number = 0; // counts micro-batches for accumulation
-  private _currentGradClip?: { mode: 'norm'|'percentile'|'layerwiseNorm'|'layerwisePercentile'; maxNorm?: number; percentile?: number };
-  private _lastRawGradNorm: number = 0; // raw gradient norm pre-optimizer
-  private _accumulationReduction: 'average'|'sum' = 'average';
-  private _gradClipSeparateBias: boolean = false;
-  private _lastGradClipGroupCount: number = 0;
-  // Mixed precision extended telemetry
-  private _lastOverflowStep: number = -1;
-  private _forceNextOverflow: boolean = false; // test hook
-
-  /**
-   * Optional array of Layer objects, if the network was constructed with layers.
-   * If present, layer-level dropout will be used.
-   */
-  layers?: any[];
-
-  /**
-   * Creates a new neural network instance.
-   * Initializes the network with the specified number of input and output nodes.
-   * Input nodes are created first, followed by output nodes.
-   * By default, input nodes are fully connected to output nodes with random weights.
-   *
-   * @param {number} input - The number of input nodes. Must be a positive integer.
-   * @param {number} output - The number of output nodes. Must be a positive integer.
-   * @param {object} [options] - Optional configuration object.
-   * @param {number} [options.minHidden=0] - Minimum number of hidden nodes to enforce. If 0, no minimum is enforced. If set, the network will ensure at least this many hidden nodes exist after construction. (Legacy behavior was minHidden = Math.min(input, output) + 1)
-   * @throws {Error} If `input` or `output` size is not provided or invalid.
-   */
-  constructor(input: number, output: number, options?: { minHidden?: number; seed?: number }) {
+  input: number; output: number; score?: number; nodes: Node[]; connections: Connection[]; gates: Connection[]; selfconns: Connection[]; dropout: number = 0;
+  private _dropConnectProb: number = 0; private _lastGradNorm?: number; private _optimizerStep: number = 0; private _weightNoiseStd: number = 0; private _weightNoisePerHidden: number[] = []; private _weightNoiseSchedule?: (step:number)=>number; private _stochasticDepth: number[] = []; private _wnOrig?: number[]; private _trainingStep: number = 0; private _rand: () => number = Math.random; private _rngState?: number; private _lastStats: any = null; private _stochasticDepthSchedule?: (step:number,current:number[])=>number[]; private _mixedPrecision: { enabled:boolean; lossScale:number } = { enabled:false, lossScale:1 }; private _mixedPrecisionState: { goodSteps:number; badSteps:number; minLossScale:number; maxLossScale:number; overflowCount?:number; scaleUpEvents?:number; scaleDownEvents?:number } = { goodSteps:0, badSteps:0, minLossScale:1, maxLossScale:65536, overflowCount:0, scaleUpEvents:0, scaleDownEvents:0 }; private _gradAccumMicroBatches: number = 0; private _currentGradClip?: { mode:'norm'|'percentile'|'layerwiseNorm'|'layerwisePercentile'; maxNorm?:number; percentile?:number }; private _lastRawGradNorm: number = 0; private _accumulationReduction: 'average'|'sum' = 'average'; private _gradClipSeparateBias: boolean = false; private _lastGradClipGroupCount: number = 0; private _lastOverflowStep: number = -1; private _forceNextOverflow: boolean = false; private _pruningConfig?: { start:number; end:number; targetSparsity:number; regrowFraction:number; frequency:number; method:'magnitude'|'snip'; lastPruneIter?:number }; private _initialConnectionCount?: number; private _enforceAcyclic: boolean = false; private _topoOrder: Node[] | null = null; private _topoDirty: boolean = true; private _globalEpoch: number = 0; layers?: any[];
+  private _evoInitialConnCount?: number; // baseline for evolution-time pruning
+  constructor(input: number, output: number, options?: { minHidden?: number; seed?: number; enforceAcyclic?: boolean }) {
     // Validate that input and output sizes are provided.
     if (typeof input === 'undefined' || typeof output === 'undefined') {
       throw new Error('No input or output size given');
@@ -170,19 +63,16 @@ export default class Network {
     this.gates = [];
     this.selfconns = [];
     this.dropout = 0;
+    this._enforceAcyclic = (options as any)?.enforceAcyclic || false;
 
-    // Apply deterministic seed early so that node bias & initial connection weights become reproducible
     if (options?.seed !== undefined) {
       this.setSeed(options.seed);
     }
 
-    // Create input and output nodes. Input nodes first, then output nodes.
     for (let i = 0; i < this.input + this.output; i++) {
       const type = i < this.input ? 'input' : 'output';
-  this.nodes.push(new Node(type, undefined, this._rand));
+      this.nodes.push(new Node(type, undefined, this._rand));
     }
-
-    // Create initial connections: fully connect input layer to output layer.
     for (let i = 0; i < this.input; i++) {
       for (let j = this.input; j < this.input + this.output; j++) {
         const weight = this._rand() * this.input * Math.sqrt(2 / this.input);
@@ -190,92 +80,222 @@ export default class Network {
       }
     }
 
-    // Enforce minimum hidden nodes if requested
-    const minHidden = options?.minHidden ?? 0;
-    let hiddenCount = this.nodes.filter(n => n.type === 'hidden').length;
+    const minHidden = options?.minHidden || 0;
     if (minHidden > 0) {
-      while (hiddenCount < minHidden) {
-        this.mutate(methods.mutation.ADD_NODE);
-        hiddenCount = this.nodes.filter(n => n.type === 'hidden').length;
-        if (hiddenCount === 0 && this.connections.length === 0) {
-          for (let i = 0; i < minHidden; i++) {
-            const hiddenNode = new Node('hidden', undefined, this._rand);
-            this.nodes.push(hiddenNode);
-            for (let j = 0; j < this.input; j++) {
-              this.connect(this.nodes[j], hiddenNode);
-            }
-            for (let j = this.input; j < this.input + this.output; j++) {
-              this.connect(hiddenNode, this.nodes[j]);
-            }
-          }
-          break;
-        }
-        if (hiddenCount < minHidden && this.connections.length === 0) break;
+      while (this.nodes.length < this.input + this.output + minHidden) {
+        this.addNodeBetween();
       }
     }
   }
 
-    /** Enable DropConnect: probability p of dropping each connection during training */
-    enableDropConnect(p: number) {
-      if (p < 0 || p >= 1) throw new Error('DropConnect probability must be in [0,1)');
-      this._dropConnectProb = p;
-    }
+  // --- Added: structural helper referenced by constructor (split a random connection) ---
+  private addNodeBetween(): void {
+    if (this.connections.length === 0) return;
+    const idx = Math.floor(this._rand() * this.connections.length);
+    const conn = this.connections[idx];
+    if (!conn) return;
+    // Remove original connection
+    this.disconnect(conn.from, conn.to);
+    // Create new hidden node
+    const newNode = new Node('hidden', undefined, this._rand);
+    this.nodes.push(newNode);
+    // Connect from->newNode and newNode->to
+    this.connect(conn.from, newNode, conn.weight); // keep original weight on first leg
+    this.connect(newNode, conn.to, 1); // second leg weight initialised randomly or 1
+    // Invalidate topo cache
+    this._topoDirty = true;
+  }
 
-    /** Disable DropConnect */
-    disableDropConnect() { this._dropConnectProb = 0; }
+  // --- DropConnect API (re-added for tests) ---
+  enableDropConnect(p: number) {
+    if (p < 0 || p >= 1) throw new Error('DropConnect probability must be in [0,1)');
+    this._dropConnectProb = p;
+  }
+  disableDropConnect() { this._dropConnectProb = 0; }
 
-    /** Enable weight noise. Provide a single std dev number or { perHiddenLayer: number[] }. */
-    enableWeightNoise(stdDev: number | { perHiddenLayer: number[] }) {
-      if (typeof stdDev === 'number') {
-        if (stdDev < 0) throw new Error('Weight noise stdDev must be >= 0');
-        this._weightNoiseStd = stdDev;
-        this._weightNoisePerHidden = [];
-      } else if (stdDev && Array.isArray(stdDev.perHiddenLayer)) {
-        if (!this.layers || this.layers.length < 3) throw new Error('Per-hidden-layer weight noise requires a layered network with at least one hidden layer');
-        const hiddenLayerCount = this.layers.length - 2;
-        if (stdDev.perHiddenLayer.length !== hiddenLayerCount) throw new Error(`Expected ${hiddenLayerCount} std dev entries (one per hidden layer), got ${stdDev.perHiddenLayer.length}`);
-        if (stdDev.perHiddenLayer.some(s => s < 0)) throw new Error('Weight noise std devs must be >= 0');
-        this._weightNoiseStd = 0; // disable global
-        this._weightNoisePerHidden = stdDev.perHiddenLayer.slice();
-      } else {
-        throw new Error('Invalid weight noise configuration');
+  // --- Acyclic enforcement toggle (used by tests) ---
+  setEnforceAcyclic(flag: boolean) { this._enforceAcyclic = !!flag; }
+  /** Recompute cached topological execution order (acyclic only). */
+  private _computeTopoOrder(): void {
+    if (!this._enforceAcyclic) { this._topoOrder = null; this._topoDirty = false; return; }
+    // Kahn's algorithm over current connections (ignore self connections & disabled if added later)
+    const inDegree: Map<Node, number> = new Map();
+    this.nodes.forEach(n => inDegree.set(n, 0));
+    for (const c of this.connections) { if (c.from !== c.to) inDegree.set(c.to, (inDegree.get(c.to) || 0) + 1); }
+    const queue: Node[] = [];
+    // Bias toward inputs first
+    this.nodes.forEach(n => { if ((n as any).type === 'input' || (inDegree.get(n) || 0) === 0) queue.push(n); });
+    const order: Node[] = [];
+    while (queue.length) {
+      const n = queue.shift()!;
+      order.push(n);
+      for (const out of n.connections.out) {
+        if (out.to === n) continue; // self
+        const deg = (inDegree.get(out.to) || 0) - 1;
+        inDegree.set(out.to, deg);
+        if (deg === 0) queue.push(out.to);
       }
     }
-    /** Disable weight noise */
-    disableWeightNoise() { this._weightNoiseStd = 0; this._weightNoisePerHidden = []; }
-    /** Dynamic schedule for global weight noise (ignored if perHiddenLayer active) */
-    setWeightNoiseSchedule(fn: (step: number) => number) { this._weightNoiseSchedule = fn; }
-    clearWeightNoiseSchedule() { this._weightNoiseSchedule = undefined; }
-    /** Inject custom RNG */
-    setRandom(fn: () => number) { this._rand = fn; }
-    /** Deterministic seed (Mulberry32) */
-    setSeed(seed: number) {
-      this._rngState = seed >>> 0;
-      this._rand = () => {
-        this._rngState = (this._rngState! + 0x6D2B79F5) >>> 0;
-        let r = Math.imul(this._rngState! ^ (this._rngState! >>> 15), 1 | this._rngState!);
-        r ^= r + Math.imul(r ^ (r >>> 7), 61 | r);
-        return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
-      };
+    if (order.length !== this.nodes.length) {
+      // Graph has cycle (should not in acyclic mode) – fallback to existing order
+      this._topoOrder = this.nodes.slice();
+    } else {
+      this._topoOrder = order;
     }
-    /** TEST ONLY: force next mixed-precision step to register overflow */
-    testForceOverflow() { this._forceNextOverflow = true; }
-  /** Current training forward pass count */
+    this._topoDirty = false;
+  }
+  /** Internal reachability check used to avoid introducing cycles when acyclic enforced. */
+  private _hasPath(from: Node, to: Node): boolean {
+    if (from === to) return true;
+    const seen = new Set<Node>();
+    const stack: Node[] = [from];
+    while (stack.length) {
+      const cur = stack.pop()!;
+      if (cur === to) return true;
+      if (seen.has(cur)) continue;
+      seen.add(cur);
+      for (const c of cur.connections.out) { if (c.to !== cur) stack.push(c.to); }
+    }
+    return false;
+  }
+
+  // --- Pruning configuration & helpers ---
+  configurePruning(cfg: { start:number; end:number; targetSparsity:number; regrowFraction?:number; frequency?:number; method?:'magnitude'|'snip' }) {
+    const { start, end, targetSparsity } = cfg;
+    if (start < 0 || end < start) throw new Error('Invalid pruning schedule window');
+    if (targetSparsity <= 0 || targetSparsity >= 1) throw new Error('targetSparsity must be in (0,1)');
+    this._pruningConfig = {
+      start,
+      end,
+      targetSparsity,
+      regrowFraction: cfg.regrowFraction ?? 0,
+      frequency: cfg.frequency ?? 1,
+      method: cfg.method || 'magnitude',
+      lastPruneIter: undefined
+    };
+    this._initialConnectionCount = this.connections.length;
+  }
+  getCurrentSparsity(): number {
+    if (!this._initialConnectionCount) return 0;
+    return 1 - (this.connections.length / this._initialConnectionCount);
+  }
+  private _maybePrune(iteration: number) {
+    const cfg = this._pruningConfig;
+    if (!cfg) return;
+    if (iteration < cfg.start || iteration > cfg.end) return;
+    if (cfg.lastPruneIter != null && iteration === cfg.lastPruneIter) return;
+    if ((iteration - cfg.start) % (cfg.frequency || 1) !== 0) return;
+    if (!this._initialConnectionCount || this._initialConnectionCount === 0) return;
+    const progress = (iteration - cfg.start) / Math.max(1, (cfg.end - cfg.start));
+    const targetSparsityNow = cfg.targetSparsity * Math.min(1, Math.max(0, progress));
+    const desiredRemaining = Math.max(1, Math.floor(this._initialConnectionCount * (1 - targetSparsityNow)));
+    const excess = this.connections.length - desiredRemaining;
+    if (excess <= 0) { cfg.lastPruneIter = iteration; return; }
+    // Determine pruning ranking: magnitude or SNIP (saliency |w * grad|)
+    let sorted = [...this.connections];
+    if (cfg.method === 'snip') {
+      sorted.sort((a: any, b: any) => {
+        const ga = Math.abs(a.totalDeltaWeight) || Math.abs(a.previousDeltaWeight) || 0;
+        const gb = Math.abs(b.totalDeltaWeight) || Math.abs(b.previousDeltaWeight) || 0;
+        const sa = ga ? Math.abs(a.weight) * ga : Math.abs(a.weight);
+        const sb = gb ? Math.abs(b.weight) * gb : Math.abs(b.weight);
+        return sa - sb; // ascending saliency
+      });
+    } else {
+      sorted.sort((a,b)=>Math.abs(a.weight)-Math.abs(b.weight));
+    }
+    const toPrune = sorted.slice(0, excess);
+    toPrune.forEach(c => this.disconnect(c.from, c.to));
+    // Optional regrow
+    if (cfg.regrowFraction && cfg.regrowFraction > 0) {
+      const regrowTarget = Math.floor(toPrune.length * cfg.regrowFraction);
+      let attempts = 0;
+      while (this.connections.length < desiredRemaining && attempts < regrowTarget * 10) {
+        attempts++;
+        const from = this.nodes[Math.floor(this._rand()*this.nodes.length)];
+        const to = this.nodes[Math.floor(this._rand()*this.nodes.length)];
+        if (!from || !to) continue;
+        if (from === to) continue;
+        // Prevent duplicate
+        if (this.connections.some(c => c.from === from && c.to === to)) continue;
+        // Respect acyclic constraint
+        if (this._enforceAcyclic && this.nodes.indexOf(from) > this.nodes.indexOf(to)) continue;
+        this.connect(from, to);
+        if (this.connections.length >= desiredRemaining) break;
+      }
+    }
+    cfg.lastPruneIter = iteration;
+  }
+
+  /**
+   * Immediately prune connections to reach (or approach) a target sparsity fraction.
+   * Used by evolutionary pruning (generation-based) independent of training iteration schedule.
+   * @param targetSparsity fraction in (0,1). 0.8 means keep 20% of original (if first call sets baseline)
+   * @param method 'magnitude' | 'snip'
+   */
+  pruneToSparsity(targetSparsity: number, method: 'magnitude'|'snip'='magnitude') {
+    if (targetSparsity <= 0) return; // nothing to do
+    if (targetSparsity >= 1) targetSparsity = 0.999; // safety
+    if (!this._evoInitialConnCount) this._evoInitialConnCount = this.connections.length;
+    const desiredRemaining = Math.max(1, Math.floor(this._evoInitialConnCount * (1 - targetSparsity)));
+    const excess = this.connections.length - desiredRemaining;
+    if (excess <= 0) return;
+    let ranked = [...this.connections];
+    if (method === 'snip') {
+      ranked.sort((a: any, b: any) => {
+        const ga = Math.abs(a.totalDeltaWeight) || Math.abs(a.previousDeltaWeight) || 0;
+        const gb = Math.abs(b.totalDeltaWeight) || Math.abs(b.previousDeltaWeight) || 0;
+        const sa = ga ? Math.abs(a.weight) * ga : Math.abs(a.weight);
+        const sb = gb ? Math.abs(b.weight) * gb : Math.abs(b.weight);
+        return sa - sb;
+      });
+    } else {
+      ranked.sort((a,b)=> Math.abs(a.weight) - Math.abs(b.weight));
+    }
+    const toRemove = ranked.slice(0, excess);
+    toRemove.forEach(c => this.disconnect(c.from, c.to));
+    this._topoDirty = true;
+  }
+
+  /** Enable weight noise. Provide a single std dev number or { perHiddenLayer: number[] }. */
+  enableWeightNoise(stdDev: number | { perHiddenLayer: number[] }) {
+    if (typeof stdDev === 'number') {
+      if (stdDev < 0) throw new Error('Weight noise stdDev must be >= 0');
+      this._weightNoiseStd = stdDev;
+      this._weightNoisePerHidden = [];
+    } else if (stdDev && Array.isArray(stdDev.perHiddenLayer)) {
+      if (!this.layers || this.layers.length < 3) throw new Error('Per-hidden-layer weight noise requires a layered network with at least one hidden layer');
+      const hiddenLayerCount = this.layers.length - 2;
+      if (stdDev.perHiddenLayer.length !== hiddenLayerCount) throw new Error(`Expected ${hiddenLayerCount} std dev entries (one per hidden layer), got ${stdDev.perHiddenLayer.length}`);
+      if (stdDev.perHiddenLayer.some(s => s < 0)) throw new Error('Weight noise std devs must be >= 0');
+      this._weightNoiseStd = 0; // disable global
+      this._weightNoisePerHidden = stdDev.perHiddenLayer.slice();
+    } else {
+      throw new Error('Invalid weight noise configuration');
+    }
+  }
+  disableWeightNoise() { this._weightNoiseStd = 0; this._weightNoisePerHidden = []; }
+  setWeightNoiseSchedule(fn: (step: number) => number) { this._weightNoiseSchedule = fn; }
+  clearWeightNoiseSchedule() { this._weightNoiseSchedule = undefined; }
+  setRandom(fn: () => number) { this._rand = fn; }
+  setSeed(seed: number) {
+    this._rngState = seed >>> 0;
+    this._rand = () => {
+      this._rngState = (this._rngState! + 0x6D2B79F5) >>> 0;
+      let r = Math.imul(this._rngState! ^ (this._rngState! >>> 15), 1 | this._rngState!);
+      r ^= r + Math.imul(r ^ (r >>> 7), 61 | r);
+      return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  testForceOverflow() { this._forceNextOverflow = true; }
   get trainingStep() { return this._trainingStep; }
-  /** Indices of hidden layers skipped in the most recent stochastic-depth forward pass */
   get lastSkippedLayers(): number[] { return (this as any)._lastSkippedLayers || []; }
-  /** Snapshot internal RNG state (only works for seeded Mulberry32 generator) */
   snapshotRNG(): any { return { step: this._trainingStep, state: this._rngState }; }
-  /** Replace RNG with a provided function (advanced) (stateful seed-based generator will be lost) */
   restoreRNG(fn: () => number) { this._rand = fn; this._rngState = undefined; }
-  /** Get internal RNG state */
   getRNGState(): number | undefined { return this._rngState; }
-  /** Set internal RNG state (only if previously seeded) */
   setRNGState(state: number) { if (typeof state === 'number') this._rngState = state >>> 0; }
-  /** Schedule for stochastic depth survival probabilities */
   setStochasticDepthSchedule(fn: (step: number, current: number[]) => number[]) { this._stochasticDepthSchedule = fn; }
   clearStochasticDepthSchedule() { this._stochasticDepthSchedule = undefined; }
-  /** Statistics from last forward pass (deep copy) */
   getRegularizationStats() { return this._lastStats ? JSON.parse(JSON.stringify(this._lastStats)) : null; }
 
     /** Configure stochastic depth with survival probabilities per hidden layer (length must match hidden layer count when using layered network). */
@@ -536,6 +556,7 @@ export default class Network {
    * @returns {number[]} An array of numerical values representing the activations of the network's output nodes.
    */
   activate(input: number[], training = false, maxActivationDepth = 1000): number[] {
+  if (this._enforceAcyclic && this._topoDirty) this._computeTopoOrder();
     if (!Array.isArray(input) || input.length !== this.input) {
       throw new Error(
         `Input size mismatch: expected ${this.input}, got ${input ? input.length : 'undefined'}`
@@ -765,6 +786,7 @@ export default class Network {
    * @see {@link Node.noTraceActivate}
    */
   noTraceActivate(input: number[]): number[] {
+  if (this._enforceAcyclic && this._topoDirty) this._computeTopoOrder();
     // Input size validation
     if (!Array.isArray(input) || input.length !== this.input) {
       throw new Error(
@@ -899,6 +921,7 @@ export default class Network {
     // Apply the specified mutation method.
     switch (method) {
       case mutation.ADD_NODE:
+  if (this._enforceAcyclic) this._topoDirty = true;
         // Adds a new hidden node by splitting an existing connection.
         // 1. Select a random existing connection.
         if (this.connections.length === 0) break; // Cannot add node if no connections exist
@@ -950,6 +973,7 @@ export default class Network {
         break;
 
       case mutation.ADD_CONN:
+  if (this._enforceAcyclic) this._topoDirty = true;
         // Adds a new connection between two previously unconnected nodes.
         available = []; // Stores pairs of [fromNode, toNode] that can be connected.
         // Iterate through possible 'from' nodes (input and hidden).
@@ -1079,6 +1103,7 @@ export default class Network {
         break;
 
       case mutation.ADD_SELF_CONN:
+  if (this._enforceAcyclic) { break; }
         // Adds a self-connection (node connects to itself) to a random node that doesn't already have one.
         // Find nodes (hidden or output) that currently have no self-connection (array is empty).
         possible = this.nodes.filter(
@@ -1157,6 +1182,7 @@ export default class Network {
         break;
 
       case mutation.ADD_BACK_CONN:
+  if (this._enforceAcyclic) { break; }
         // Adds a recurrent connection where the 'from' node appears later in the `nodes` array than the 'to' node.
         available = []; // Stores possible [fromNode, toNode] pairs for back-connections.
         // Iterate through possible 'from' nodes (hidden and output).
@@ -1244,6 +1270,7 @@ export default class Network {
         break;
 
       case mutation.ADD_LSTM_NODE: {
+  if (this._enforceAcyclic) { break; }
         if (this.connections.length === 0) break;
         connection = this.connections[
           Math.floor(Math.random() * this.connections.length)
@@ -1264,6 +1291,7 @@ export default class Network {
         break;
       }
       case mutation.ADD_GRU_NODE: {
+  if (this._enforceAcyclic) { break; }
         if (this.connections.length === 0) break;
         connection = this.connections[
           Math.floor(Math.random() * this.connections.length)
@@ -1281,6 +1309,8 @@ export default class Network {
         break;
       }
     }
+  // structural mutations invalidate topo cache
+  this._topoDirty = true;
   }
 
   /**
@@ -1296,6 +1326,10 @@ export default class Network {
    * @see {@link Node.connect}
    */
   connect(from: Node, to: Node, weight?: number): Connection[] {
+    if (this._enforceAcyclic && this.nodes.indexOf(from) > this.nodes.indexOf(to)) {
+      // Disallow back-edges in acyclic mode
+      return [];
+    }
     // Delegate the actual connection creation to the 'from' node.
     const connections = from.connect(to, weight);
 
@@ -1306,9 +1340,11 @@ export default class Network {
         this.connections.push(connection);
       } else {
         // Self-connection
+    if (this._enforceAcyclic) continue; // ignore in acyclic mode
         this.selfconns.push(connection);
       }
     }
+  if (connections.length) this._topoDirty = true;
 
     return connections; // Return the created connection object(s).
   }
@@ -1477,6 +1513,7 @@ export default class Network {
 
     // Delegate to the 'from' node to remove the connection reference from its internal lists.
     from.disconnect(to);
+  this._topoDirty = true;
   }
 
   /**
@@ -1520,831 +1557,18 @@ export default class Network {
    * @returns {number} The average error calculated over the provided dataset subset.
    * @private Internal method used by `train`.
    */
-  private _trainSet(
-    set: { input: number[]; output: number[] }[],
-    batchSize: number,
-    accumulationSteps: number,
-    currentRate: number,
-    momentum: number,
-    regularization: any, // Expects structured object
-    costFunction: (target: number[], output: number[]) => number,
-    optimizer?: any
-  ): number {
-    let errorSum = 0;
-    let processedSamplesInBatch = 0;
-    this._gradAccumMicroBatches = 0;
-    let totalProcessedSamples = 0;
-    const outputNodes = this.nodes.filter(n => n.type === 'output');
-  // Normalize cost function (may be object with fn/calculate)
-  let computeError: (t:number[], o:number[])=>number;
-  if (typeof costFunction === 'function') computeError = costFunction as any; else if (costFunction && typeof (costFunction as any).fn === 'function') computeError = (costFunction as any).fn; else if (costFunction && typeof (costFunction as any).calculate === 'function') computeError = (costFunction as any).calculate; else computeError = () => 0;
+  // Removed legacy _trainSet; delegated to network.train.ts
 
-    for (let i = 0; i < set.length; i++) {
-      const dataPoint = set[i];
-      const input = dataPoint.input;
-      const target = dataPoint.output;
-
-      if (input.length !== this.input || target.length !== this.output) {
-        if (config.warnings) {
-          console.warn(
-            `Data point ${i} has incorrect dimensions (input: ${input.length}/${this.input}, output: ${target.length}/${this.output}), skipping.`
-          );
-        }
-        continue;
-      }
-
-      try {
-  const output = this.activate(input, true); // forward pass (training=true)
-        if (optimizer && optimizer.type && optimizer.type !== 'sgd') {
-          // Accumulate gradients only (do not update yet)
-          // Process outputs first with targets
-          for (let o = 0; o < outputNodes.length; o++) {
-            outputNodes[o].propagate(currentRate, momentum, false, regularization, target[o]);
-          }
-          // Then hidden nodes
-          for (let r = this.nodes.length - 1; r >= 0; r--) {
-            const node = this.nodes[r];
-            if (node.type === 'output' || node.type === 'input') continue;
-            node.propagate(currentRate, momentum, false, regularization);
-          }
-        } else {
-          // Vanilla path: propagate with immediate updates
-          for (let o = 0; o < outputNodes.length; o++) {
-            outputNodes[o].propagate(currentRate, momentum, true, regularization, target[o]);
-          }
-          for (let r = this.nodes.length - 1; r >= 0; r--) {
-            const node = this.nodes[r];
-            if (node.type === 'output' || node.type === 'input') continue;
-            node.propagate(currentRate, momentum, true, regularization);
-          }
-        }
-
-  errorSum += computeError(target, output);
-        processedSamplesInBatch++;
-        totalProcessedSamples++;
-      } catch (e: any) {
-        if (config.warnings) {
-          console.warn(
-            `Error processing data point ${i} (input: ${JSON.stringify(input)}): ${e.message}. Skipping this point.`
-          );
-        }
-        // If a data point fails, it's skipped. The batch update will proceed with successfully processed points.
-      }
-
-        // Apply accumulated gradients if micro-batch boundary reached
-        if (processedSamplesInBatch > 0 && ((((i + 1) % batchSize) === 0) || i === set.length - 1)) {
-          this._gradAccumMicroBatches++;
-          const readyForStep = (this._gradAccumMicroBatches % accumulationSteps === 0) || i === set.length - 1;
-          if (readyForStep) {
-            // Mixed precision loss scaling: unscale gradients before clipping/optimizer and detect overflow
-            let overflowDetected = false;
-            if (this._mixedPrecision.enabled && optimizer && optimizer.type && optimizer.type !== 'sgd') {
-              if (this._mixedPrecision.lossScale !== 1) {
-                const scale = this._mixedPrecision.lossScale;
-                this.nodes.forEach(node => {
-                  node.connections.in.forEach(c => { if (typeof c.totalDeltaWeight === 'number') { c.totalDeltaWeight /= scale; if (!Number.isFinite(c.totalDeltaWeight)) overflowDetected = true; } });
-                  node.connections.self.forEach(c => { if (typeof c.totalDeltaWeight === 'number') { c.totalDeltaWeight /= scale; if (!Number.isFinite(c.totalDeltaWeight)) overflowDetected = true; } });
-                  if (typeof (node as any).totalDeltaBias === 'number') { (node as any).totalDeltaBias /= scale; if (!Number.isFinite((node as any).totalDeltaBias)) overflowDetected = true; }
-                });
-              }
-            }
-            if (this._forceNextOverflow) { overflowDetected = true; this._forceNextOverflow = false; }
-            // Gradient clipping (advanced optimizer path only because SGD already applied per-sample updates)
-            if (this._currentGradClip && optimizer && optimizer.type && optimizer.type !== 'sgd') {
-              this._applyGradientClipping(this._currentGradClip);
-            }
-            // Capture raw (post-scaling, pre-averaging, pre-zero) gradient norm
-            let rawSumSq = 0;
-            if (optimizer && optimizer.type && optimizer.type !== 'sgd') {
-              this.nodes.forEach(node => {
-                node.connections.in.forEach(c => { if (typeof c.totalDeltaWeight === 'number') rawSumSq += c.totalDeltaWeight * c.totalDeltaWeight; });
-                node.connections.self.forEach(c => { if (typeof c.totalDeltaWeight === 'number') rawSumSq += c.totalDeltaWeight * c.totalDeltaWeight; });
-                if (typeof (node as any).totalDeltaBias === 'number') rawSumSq += (node as any).totalDeltaBias * (node as any).totalDeltaBias;
-              });
-            }
-            this._lastRawGradNorm = Math.sqrt(rawSumSq);
-            let sumSq = 0; // legacy metric based on previousDeltaWeight
-            if (optimizer && optimizer.type && optimizer.type !== 'sgd') {
-              this._optimizerStep++;
-              this.nodes.forEach(node => {
-                // Average gradients if accumulating multiple micro-batches
-                if (accumulationSteps > 1 && this._accumulationReduction === 'average') {
-                  node.connections.in.forEach(c => { if (typeof c.totalDeltaWeight === 'number') c.totalDeltaWeight /= accumulationSteps; });
-                  node.connections.self.forEach(c => { if (typeof c.totalDeltaWeight === 'number') c.totalDeltaWeight /= accumulationSteps; });
-                  if (typeof (node as any).totalDeltaBias === 'number') (node as any).totalDeltaBias /= accumulationSteps;
-                }
-                node.applyBatchUpdatesWithOptimizer({
-                  type: optimizer.type,
-                  baseType: optimizer.baseType,
-                  beta1: optimizer.beta1,
-                  beta2: optimizer.beta2,
-                  eps: optimizer.eps,
-                  weightDecay: optimizer.weightDecay,
-                  momentum: optimizer.momentum ?? momentum,
-                  lrScale: currentRate,
-                  t: this._optimizerStep,
-                  la_k: optimizer.la_k,
-                  la_alpha: optimizer.la_alpha
-                });
-                node.connections.in.forEach(c => { if (typeof c.totalDeltaWeight === 'number') sumSq += (c as any).previousDeltaWeight ? (c as any).previousDeltaWeight ** 2 : 0; });
-                node.connections.self.forEach(c => { if (typeof c.totalDeltaWeight === 'number') sumSq += (c as any).previousDeltaWeight ? (c as any).previousDeltaWeight ** 2 : 0; });
-              });
-              // Dynamic loss scale adjustment heuristic
-        if (this._mixedPrecision.enabled) {
-                if (overflowDetected) {
-                  this._mixedPrecisionState.badSteps++;
-                  this._mixedPrecisionState.goodSteps = 0;
-                  this._mixedPrecision.lossScale = Math.max(this._mixedPrecisionState.minLossScale, Math.floor(this._mixedPrecision.lossScale / 2) || 1);
-                  this._mixedPrecisionState.overflowCount = (this._mixedPrecisionState.overflowCount||0)+1;
-                  this._mixedPrecisionState.scaleDownEvents = (this._mixedPrecisionState.scaleDownEvents||0)+1;
-                  this._lastOverflowStep = this._optimizerStep;
-                } else {
-                  this._mixedPrecisionState.goodSteps++;
-          const incEvery = (this as any)._mpIncreaseEvery || 200;
-          if (this._mixedPrecisionState.goodSteps >= incEvery && this._mixedPrecision.lossScale < this._mixedPrecisionState.maxLossScale) {
-                    this._mixedPrecision.lossScale *= 2;
-                    this._mixedPrecisionState.goodSteps = 0;
-                    this._mixedPrecisionState.scaleUpEvents = (this._mixedPrecisionState.scaleUpEvents||0)+1;
-                  }
-                }
-              }
-            } else {
-              // SGD path: no accumulation; grad norm approximate (0 by design)
-            }
-            this._lastGradNorm = Math.sqrt(sumSq);
-          }
-          processedSamplesInBatch = 0; // reset micro-batch counter
-        }
-      }
-    // Return average error only for successfully processed samples
-    return totalProcessedSamples > 0 ? errorSum / totalProcessedSamples : 0;
-  }
-
-  /**
-   * Applies gradient clipping according to configured mode prior to optimizer step.
-   * Modes:
-   *  - norm: global L2 norm clip to maxNorm
-   *  - percentile: scale gradients if any magnitude exceeds given percentile threshold
-   *  - layerwiseNorm: per-output-node group L2 norm clipping
-   *  - layerwisePercentile: per-output-node percentile clipping
-   */
+  // Gradient clipping implemented in network.train.ts (applyGradientClippingImpl). Kept here only for backward compat if reflection used.
   private _applyGradientClipping(cfg: { mode: 'norm'|'percentile'|'layerwiseNorm'|'layerwisePercentile'; maxNorm?: number; percentile?: number }) {
-    const gather = () => {
-      const groups: number[][] = [];
-      // grouping for layerwise: prefer architectural layers if present, else fallback per node
-      if (cfg.mode.startsWith('layerwise')) {
-        if (this.layers && this.layers.length > 0) {
-          for (let li = 0; li < this.layers.length; li++) {
-            const layer = this.layers[li];
-            if (!layer || !layer.nodes) continue;
-            const g: number[] = [];
-            layer.nodes.forEach((n: any) => {
-              if (!n || n.type === 'input') return;
-              n.connections.in.forEach((c: any) => { if (typeof c.totalDeltaWeight === 'number') g.push(c.totalDeltaWeight); });
-              n.connections.self.forEach((c: any) => { if (typeof c.totalDeltaWeight === 'number') g.push(c.totalDeltaWeight); });
-              if (typeof n.totalDeltaBias === 'number') g.push(n.totalDeltaBias);
-            });
-            if (g.length) groups.push(g);
-          }
-        } else {
-          this.nodes.forEach(n => {
-            if (n.type === 'input') return;
-            const g: number[] = [];
-            n.connections.in.forEach(c => { if (typeof c.totalDeltaWeight === 'number') g.push(c.totalDeltaWeight); });
-            n.connections.self.forEach(c => { if (typeof c.totalDeltaWeight === 'number') g.push(c.totalDeltaWeight); });
-            if (typeof (n as any).totalDeltaBias === 'number') g.push((n as any).totalDeltaBias);
-            if (g.length) groups.push(g);
-          });
-        }
-      } else {
-        const g: number[] = [];
-        this.nodes.forEach(n => {
-          n.connections.in.forEach(c => { if (typeof c.totalDeltaWeight === 'number') g.push(c.totalDeltaWeight); });
-          n.connections.self.forEach(c => { if (typeof c.totalDeltaWeight === 'number') g.push(c.totalDeltaWeight); });
-          if (typeof (n as any).totalDeltaBias === 'number') g.push((n as any).totalDeltaBias);
-        });
-        if (g.length) groups.push(g);
-      }
-      return groups;
-    };
-  // gather groups and store count after operations for visibility
-    const groups = gather();
-  this._lastGradClipGroupCount = groups.length;
-    const percentile = (arr: number[], p: number) => {
-      if (!arr.length) return 0;
-      const sorted = [...arr].sort((a,b)=>Math.abs(a)-Math.abs(b));
-      const rank = Math.min(sorted.length - 1, Math.max(0, Math.floor((p/100)*sorted.length - 1)));
-      return Math.abs(sorted[rank]);
-    };
-    const applyScale = (scaleFn: (current: number, group: number[]) => number) => {
-      let gi = 0;
-      this.nodes.forEach(n => {
-        if (cfg.mode.startsWith('layerwise') && n.type === 'input') return;
-        const group = cfg.mode.startsWith('layerwise') ? groups[gi++] : groups[0];
-        n.connections.in.forEach(c => { if (typeof c.totalDeltaWeight === 'number') c.totalDeltaWeight = scaleFn(c.totalDeltaWeight, group); });
-        n.connections.self.forEach(c => { if (typeof c.totalDeltaWeight === 'number') c.totalDeltaWeight = scaleFn(c.totalDeltaWeight, group); });
-        if (typeof (n as any).totalDeltaBias === 'number') (n as any).totalDeltaBias = scaleFn((n as any).totalDeltaBias, group);
-      });
-    };
-    if (cfg.mode === 'norm' || cfg.mode === 'layerwiseNorm') {
-      const maxN = cfg.maxNorm || 1;
-      groups.forEach(g => {
-        const norm = Math.sqrt(g.reduce((s,v)=>s+v*v,0));
-        if (norm > maxN && norm > 0) {
-          const scale = maxN / norm;
-          applyScale((cur, group)=> group === g ? cur * scale : cur);
-        }
-      });
-    } else if (cfg.mode === 'percentile' || cfg.mode === 'layerwisePercentile') {
-      const p = cfg.percentile || 99;
-      groups.forEach(g => {
-        const thresh = percentile(g, p);
-        if (thresh <= 0) return;
-        applyScale((cur, group)=> group === g && Math.abs(cur) > thresh ? (thresh * Math.sign(cur)) : cur);
-      });
-    }
+    const { applyGradientClippingImpl } = require('./network.train');
+    applyGradientClippingImpl(this as any, cfg);
   }
 
-  /**
-   * Trains the network on a given dataset using backpropagation.
-   * Iteratively adjusts weights and biases to minimize the error between the network's output and the target values.
-   * Supports various training options like learning rate scheduling, momentum, dropout, batching, regularization, and cross-validation.
-   *
-   * @param {{ input: number[]; output: number[] }[]} set - The training dataset, an array of objects with `input` and `output` arrays.
-   * @param {object} options - Training configuration options.
-   * @param {number} [options.rate=0.3] - The base learning rate.
-   * @param {number} [options.iterations] - The maximum number of training iterations (epochs). Required if `error` is not set.
-   * @param {number} [options.error=0.05] - The target error threshold. Training stops when the error falls below this value. Required if `iterations` is not set.
-   * @param {boolean} [options.shuffle=false] - Whether to shuffle the training set before each iteration.
-   * @param {function} [options.cost=methods.Cost.MSE] - The cost function used to calculate error.
-   * @param {number} [options.momentum=0] - The momentum factor for weight updates.
-   * @param {number} [options.batchSize=1] - The number of samples per batch for weight updates (1 = online learning).
-   * @param {function} [options.ratePolicy=methods.Rate.FIXED] - A function defining how the learning rate changes over iterations.
-   * @param {number} [options.dropout=0] - The dropout rate (0 to 1) applied to hidden nodes during training.
-   * @param {number} [options.regularization=0] - The regularization factor (lambda).
-   * @param {string} [options.regularizationType='L2'] - The type of regularization ('L1', 'L2', or 'custom').
-   * @param {function} [options.regularizationFn] - Custom regularization function (used if `regularizationType` is 'custom').
-  * @param {string|object} [options.optimizer] - Optimizer configuration. Can be a string alias (e.g. 'sgd','adam','adamw','amsgrad','adamax','nadam','radam','lion','adabelief','rmsprop','adagrad','lookahead')
-  *   or an object: `{ type: 'adam', beta1?, beta2?, eps?, weightDecay?, momentum?, la_k?, la_alpha?, baseType? }`.
-  *   For `lookahead`, provide `{ type:'lookahead', baseType:'adam', la_k:5, la_alpha:0.5 }`.
-   * @param {number} [options.log=0] - Log training progress (iteration, error, rate) every `log` iterations. 0 disables logging.
-   * @param {object} [options.schedule] - Object for scheduling custom actions during training.
-   * @param {number} options.schedule.iterations - Frequency (in iterations) to execute the schedule function.
-   * @param {function} options.schedule.function - Custom function to execute, receives `{ error, iteration }`.
-   * @param {object} [options.crossValidate] - Configuration for cross-validation.
-   * @param {number} options.crossValidate.testSize - Proportion of the dataset to use as a test set (e.g., 0.2 for 20%).
-   * @param {number} options.crossValidate.testError - Target error on the test set to stop training early.
-   * @param {boolean} [options.clear=false] - Whether to clear the network's state (`clear()`) after each training iteration or test evaluation. Useful for stateless tasks.
-  * @param {number} [options.movingAverageWindow=1] - Window size for simple moving average smoothing of the monitored error metric used for EARLY STOP logic (1 disables smoothing).
-  * @param {('sma'|'ema'|'wma'|'median'|'trimmed'|'gaussian'|'adaptive-ema')} [options.movingAverageType='sma'] - Smoothing type for EARLY STOP logic.
-  * @param {number} [options.emaAlpha] - Alpha for EMA (0<alpha<=1). If omitted defaults to `2/(movingAverageWindow+1)` when EMA selected.
-  * Additional smoothing types (set movingAverageType accordingly):
-  *  - 'wma' (Weighted Moving Average, linear weights favor recent) – uses movingAverageWindow.
-  *  - 'median' (Moving Median) – robust to spikes.
-  *  - 'trimmed' (Trimmed Mean) – drop extremes, controlled by trimmedRatio (default 0.1).
-  *  - 'gaussian' (Gaussian-weighted tail, sigma via gaussianSigma or window/3) – trailing window with Gaussian emphasis on recent.
-  *  - 'adaptive-ema' (EMA with volatility-adjusted alpha) – alpha scales with recent variance between adaptiveAlphaMin/Max.
-  * @param {number} [options.trimmedRatio=0.1] - Fraction (0-0.5) trimmed from each tail for 'trimmed'.
-  * @param {number} [options.gaussianSigma] - Sigma for 'gaussian'. Defaults to movingAverageWindow/3.
-  * @param {number} [options.adaptiveAlphaMin=0.1] - Minimum alpha for adaptive-ema.
-  * @param {number} [options.adaptiveAlphaMax=0.9] - Maximum alpha for adaptive-ema.
-  * @param {number} [options.adaptiveVarianceFactor=1] - Multiplier controlling sensitivity of adaptive-ema alpha to variance.
-  * @param {boolean} [options.trackVariance=false] - If true, compute running variance & min (Welford) for exposure via metricsHook.
-  * Plateau Smoothing (optional; if omitted plateau uses EARLY STOP smoothing):
-  * @param {number} [options.plateauMovingAverageWindow] - Separate window for plateau (learning rate scheduler) monitoring.
-  * @param {('sma'|'ema'|'wma'|'median'|'trimmed'|'gaussian'|'adaptive-ema')} [options.plateauMovingAverageType] - Separate smoothing type for plateau monitoring.
-  * @param {number} [options.plateauEmaAlpha] - Alpha override for plateau EMA.
-  * @param {number} [options.plateauTrimmedRatio] - Trim ratio for plateau trimmed mean.
-  * @param {number} [options.plateauGaussianSigma] - Sigma for plateau gaussian smoothing.
-  * @param {number} [options.plateauAdaptiveAlphaMin] - Min alpha for plateau adaptive-ema.
-  * @param {number} [options.plateauAdaptiveAlphaMax] - Max alpha for plateau adaptive-ema.
-  * @param {number} [options.plateauAdaptiveVarianceFactor] - Variance scaling for plateau adaptive-ema.
-  * @param {number} [options.earlyStopPatience] - If set, stop when no smoothed error improvement greater than `earlyStopMinDelta` occurred within this many iterations.
-  * @param {number} [options.earlyStopMinDelta=0] - Minimum decrease in smoothed error to qualify as an improvement for patience tracking.
-   * @returns {{ error: number; iterations: number; time: number }} An object containing the final error, the number of iterations performed, and the total training time in milliseconds.
-   * @throws {Error} If the dataset's input/output dimensions don't match the network's.
-   * @throws {Error} If `batchSize` is larger than the dataset size.
-   * @throws {Error} If neither `iterations` nor `error` is specified in the options.
-   */
-  train(
-    set: { input: number[]; output: number[] }[],
-  options: any
-  ): { error: number; iterations: number; time: number } {
-    // Validate dataset dimensions against network dimensions.
-    if (
-      !set ||
-      set.length === 0 ||
-      set[0].input.length !== this.input ||
-      set[0].output.length !== this.output
-    ) {
-      throw new Error(
-        'Dataset is invalid or dimensions do not match network input/output size!'
-      );
-    }
-
-    options = options || {}; // Ensure options object exists.
-
-    // Issue warnings for common missing options if warnings are enabled.
-    if (config.warnings) {
-      if (typeof options.rate === 'undefined') {
-        // Always warn for missing rate, for test compatibility
-        console.warn('Missing `rate` option');
-        console.warn('Missing `rate` option, using default learning rate 0.3.');
-      }
-      if (
-        typeof options.iterations === 'undefined' &&
-        typeof options.error === 'undefined'
-      ) {
-        // This case is handled by the error check below, but warning is good practice.
-        console.warn(
-          'Missing `iterations` or `error` option. Training requires a stopping condition.'
-        );
-      } else if (typeof options.iterations === 'undefined') {
-        console.warn(
-          'Missing `iterations` option. Training will run potentially indefinitely until `error` threshold is met.'
-        );
-      }
-    }
-
-    // Set default values for training options.
-    let targetError = options.error ?? 0.05; // Target error threshold.
-    const cost = options.cost || methods.Cost.mse; // Cost function.
-    // --- Enhanced cost function check ---
-    if (
-      typeof cost !== 'function' &&
-      !(typeof cost === 'object' && (typeof cost.fn === 'function' || typeof cost.calculate === 'function'))
-    ) {
-      throw new Error('Invalid cost function provided to Network.train.');
-    }
-    const baseRate = options.rate ?? 0.3; // Base learning rate (before schedule).
-    const dropout = options.dropout || 0; // Node dropout probability.
-    const momentum = options.momentum || 0; // Nesterov momentum factor for SGD.
-  const batchSize = options.batchSize || 1; // Mini-batch size (1 => pure online)
-  const accumulationSteps = options.accumulationSteps || 1; // Number of micro-batches to accumulate before optimizer step
-  this._accumulationReduction = (options.accumulationReduction === 'sum') ? 'sum' : 'average';
-  if (accumulationSteps < 1 || !Number.isFinite(accumulationSteps)) throw new Error('accumulationSteps must be >=1');
-    // Gradient clipping config capture (per-train invocation)
-    if (options.gradientClip) {
-      const gc = options.gradientClip;
-      if (gc.mode) {
-        this._currentGradClip = { mode: gc.mode, maxNorm: gc.maxNorm, percentile: gc.percentile } as any;
-      } else if (typeof gc.maxNorm === 'number') {
-        this._currentGradClip = { mode: 'norm', maxNorm: gc.maxNorm };
-      } else if (typeof gc.percentile === 'number') {
-        this._currentGradClip = { mode: 'percentile', percentile: gc.percentile } as any;
-      }
-      this._gradClipSeparateBias = !!gc.separateBias;
-    } else {
-      this._currentGradClip = undefined;
-      this._gradClipSeparateBias = false;
-    }
-
-    // Mixed precision enable (per call) - lightweight simulation
-    if (options.mixedPrecision) {
-      const mp = options.mixedPrecision === true ? { lossScale: 1024 } : options.mixedPrecision;
-      this._mixedPrecision.enabled = true;
-      this._mixedPrecision.lossScale = mp.lossScale || 1024;
-      // dynamic scaling config
-      const dyn = mp.dynamic || {};
-      this._mixedPrecisionState.minLossScale = dyn.minScale || 1;
-      this._mixedPrecisionState.maxLossScale = dyn.maxScale || 65536;
-      (this as any)._mpIncreaseEvery = dyn.increaseEvery || dyn.stableStepsForIncrease || 200;
-      // Initialize master weights (fp32) if not stored
-      this.connections.forEach(c => { (c as any)._fp32Weight = c.weight; });
-      this.nodes.forEach(n => { if (n.type !== 'input') (n as any)._fp32Bias = n.bias; });
-    } else {
-      this._mixedPrecision.enabled = false;
-      this._mixedPrecision.lossScale = 1;
-      (this as any)._mpIncreaseEvery = 200;
-    }
-  // --- Optimizer normalization & validation ---
-  // Accept either a string alias or a config object; normalize to object form and validate.
-  const allowedOptimizers = new Set(['sgd','rmsprop','adagrad','adam','adamw','amsgrad','adamax','nadam','radam','lion','adabelief','lookahead']);
-  let optimizerConfig: any = undefined;
-  if (typeof options.optimizer !== 'undefined') {
-      if (typeof options.optimizer === 'string') {
-        optimizerConfig = { type: options.optimizer.toLowerCase() };
-      } else if (typeof options.optimizer === 'object' && options.optimizer !== null) {
-        optimizerConfig = { ...options.optimizer };
-        if (typeof optimizerConfig.type === 'string') optimizerConfig.type = optimizerConfig.type.toLowerCase();
-      } else {
-        throw new Error('Invalid optimizer option; must be string or object');
-      }
-      if (!allowedOptimizers.has(optimizerConfig.type)) {
-        throw new Error(`Unknown optimizer type: ${optimizerConfig.type}`);
-      }
-      if (optimizerConfig.type === 'lookahead') {
-        optimizerConfig.baseType = optimizerConfig.baseType || 'adam';
-        if (!allowedOptimizers.has(optimizerConfig.baseType)) {
-          throw new Error(`Unknown baseType for lookahead optimizer: ${optimizerConfig.baseType}`);
-        }
-        if (optimizerConfig.baseType === 'lookahead') {
-          throw new Error('Nested lookahead (baseType lookahead) is not supported');
-        }
-        // sensible defaults
-        optimizerConfig.la_k = optimizerConfig.la_k || 5;
-        optimizerConfig.la_alpha = optimizerConfig.la_alpha || 0.5;
-      }
-  }
-    const ratePolicy = options.ratePolicy || methods.Rate.fixed(); // Learning rate schedule.
-    const shuffle = options.shuffle || false; // Shuffle dataset each iteration?
-    // --- Enhanced regularization support ---
-    let regularization: any = options.regularization || 0; // Default: L2 lambda
-    if (options.regularizationType === 'L1' && typeof options.regularization === 'number') {
-      regularization = { type: 'L1', lambda: options.regularization };
-    } else if (options.regularizationType === 'L2' && typeof options.regularization === 'number') {
-      regularization = { type: 'L2', lambda: options.regularization };
-    } else if (options.regularizationType === 'custom' && typeof options.regularizationFn === 'function') {
-      regularization = options.regularizationFn;
-    }
-    const clear = options.clear || false; // Clear network state each iteration?
-    const log = options.log || 0; // Logging frequency.
-    const schedule = options.schedule; // Custom schedule object.
-    const metricsHook = options.metricsHook; // optional metrics hook
-    const checkpoint = options.checkpoint; // { best?, last?, save }
-    if (checkpoint && typeof checkpoint.save !== 'function') {
-      throw new Error('checkpoint.save must be a function');
-    }
-    const crossValidate = options.crossValidate; // Cross-validation config.
-    // --- Early Stopping Enhancements ---
-    // movingAverageWindow: smooths monitored error via simple moving average before applying target / patience logic
-  const movingAverageWindow: number = Math.max(1, options.movingAverageWindow || 1);
-  const movingAverageType: 'sma' | 'ema' | 'wma' | 'median' | 'trimmed' | 'gaussian' | 'adaptive-ema' = (options.movingAverageType || 'sma');
-  const plateauMovingAverageWindow: number | undefined = options.plateauMovingAverageWindow ? Math.max(1, options.plateauMovingAverageWindow) : undefined;
-  const plateauMovingAverageType: typeof movingAverageType | undefined = options.plateauMovingAverageType;
-      const emaAlpha: number = (()=>{
-        if (movingAverageType !== 'ema') return 1; // unused
-        if (typeof options.emaAlpha === 'number' && options.emaAlpha > 0 && options.emaAlpha <= 1) return options.emaAlpha;
-        // default alpha based on window length (common EMA heuristic)
-        return 2 / (movingAverageWindow + 1);
-      })();
-    const plateauEmaAlpha: number = (()=>{
-      if ((plateauMovingAverageType || movingAverageType) !== 'ema') return 1;
-      if (typeof options.plateauEmaAlpha === 'number' && options.plateauEmaAlpha > 0 && options.plateauEmaAlpha <= 1) return options.plateauEmaAlpha;
-      const win = plateauMovingAverageWindow || movingAverageWindow;
-      return 2 / (win + 1);
-    })();
-  const trimmedRatio: number = Math.min(0.49, Math.max(0, options.trimmedRatio ?? 0.1));
-  const plateauTrimmedRatio: number = Math.min(0.49, Math.max(0, options.plateauTrimmedRatio ?? trimmedRatio));
-  const gaussianSigma: number = options.gaussianSigma && options.gaussianSigma > 0 ? options.gaussianSigma : Math.max(1e-9, movingAverageWindow / 3);
-  const plateauGaussianSigma: number = options.plateauGaussianSigma && options.plateauGaussianSigma > 0 ? options.plateauGaussianSigma : (plateauMovingAverageWindow ? Math.max(1e-9, plateauMovingAverageWindow / 3) : gaussianSigma);
-  const adaptiveAlphaMin: number = Math.min(1, Math.max(1e-4, options.adaptiveAlphaMin ?? 0.1));
-  const adaptiveAlphaMax: number = Math.min(1, Math.max(adaptiveAlphaMin, options.adaptiveAlphaMax ?? 0.9));
-  const adaptiveVarianceFactor: number = Math.max(0, options.adaptiveVarianceFactor ?? 1);
-  const plateauAdaptiveAlphaMin: number = Math.min(1, Math.max(1e-4, options.plateauAdaptiveAlphaMin ?? adaptiveAlphaMin));
-  const plateauAdaptiveAlphaMax: number = Math.min(1, Math.max(plateauAdaptiveAlphaMin, options.plateauAdaptiveAlphaMax ?? adaptiveAlphaMax));
-  const plateauAdaptiveVarianceFactor: number = Math.max(0, options.plateauAdaptiveVarianceFactor ?? adaptiveVarianceFactor);
-    const trackVariance: boolean = !!options.trackVariance;
-    // earlyStopPatience: stop if no improvement (greater than earlyStopMinDelta) for this many iterations
-    const earlyStopPatience: number | undefined = options.earlyStopPatience;
-    const earlyStopMinDelta: number = options.earlyStopMinDelta ?? 0;
-    // Internal trackers for early stopping with smoothing
-  const _maBuffer: number[] = []; // raw error window (or single slot for EMA)
-  let _emaLast: number | undefined; // for ema/adaptive-ema
-  let _runningMean = 0; let _runningM2 = 0; let _runningCount = 0; let _runningMin: number | undefined;
-    let _bestMonitored: number | undefined = undefined;
-    let _lastImprovementIter = 0;
-
-    // Validate batch size.
-    if (batchSize > set.length) {
-      throw new Error('Batch size cannot be larger than the dataset length.');
-    }
-    // Validate stopping conditions.
-    if (
-      typeof options.iterations === 'undefined' &&
-      typeof options.error === 'undefined'
-    ) {
-      throw new Error(
-        'At least one stopping condition (`iterations` or `error`) must be specified.'
-      );
-    } else if (typeof options.error === 'undefined') {
-      targetError = -1; // Run until iterations are met (effectively disable error check).
-    } else if (typeof options.iterations === 'undefined') {
-      options.iterations = 0; // Run until error is met (effectively disable iteration check).
-    }
-
-    // Set the network's dropout rate for the training duration.
-    this.dropout = dropout;
-
-    // Prepare training and potential test sets for cross-validation.
-    let trainSet = set;
-    let testSet:
-      | { input: number[]; output: number[] }[]
-      | undefined = undefined;
-    if (crossValidate) {
-      if (
-        !crossValidate.testSize ||
-        crossValidate.testSize <= 0 ||
-        crossValidate.testSize >= 1
-      ) {
-        throw new Error(
-          'Cross-validation `testSize` must be between 0 and 1 (exclusive).'
-        );
-      }
-      // Split the dataset into training and testing sets.
-      const numTrain = Math.ceil((1 - crossValidate.testSize) * set.length);
-      trainSet = set.slice(0, numTrain);
-      testSet = set.slice(numTrain);
-      // Ensure testError is defined if crossValidate is used.
-      if (typeof crossValidate.testError === 'undefined') {
-        console.warn(
-          'Cross-validation enabled, but `testError` threshold is not set. Using `options.error` as the target.'
-        );
-        crossValidate.testError = targetError; // Use main target error if specific test error not given
-      }
-    }
-
-    // Initialize training loop variables.
-    let error = 1; // Initialize error to a value above any typical target.
-    let iteration = 0; // Iteration counter.
-    const start = Date.now(); // Start time measurement.
-
-  // Reset global optimizer step counter for deterministic multi-train usage
-  this._optimizerStep = 0;
-  // Main training loop.
-    while (
-      // Continue if error is above target (and target is not disabled).
-      (targetError === -1 || error > targetError) &&
-      // Continue if max iterations is not set or not reached.
-      (options.iterations === 0 || iteration < options.iterations)
-    ) {
-      // Early stopping condition for cross-validation.
-      if (
-        crossValidate &&
-        testSet &&
-        error <= crossValidate.testError &&
-        targetError !== -1 // Only stop early if an error target is set
-    ) {
-        if (log > 0)
-          console.log(
-            `Cross-validation: Test error ${error} reached target ${crossValidate.testError} at iteration ${iteration}. Stopping early.`
-          );
-        break;
-      }
-
-      iteration++; // Increment iteration counter.
-
-      // Calculate the learning rate; if scheduler expects error as third arg (reduceOnPlateau), supply last error
-      let currentRate: number;
-      try {
-        if (ratePolicy.length >= 3) {
-          currentRate = ratePolicy(baseRate, iteration, error);
-        } else {
-          currentRate = ratePolicy(baseRate, iteration);
-        }
-      } catch {
-        currentRate = baseRate;
-      }
-
-      // Shuffle the training set if enabled. Fisher-Yates shuffle.
-      if (shuffle) {
-        // Use a copy for shuffling if cross-validation is active to not shuffle the original set
-        const set_to_shuffle = crossValidate ? [...trainSet] : trainSet;
-        for (let i = set_to_shuffle.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [set_to_shuffle[i], set_to_shuffle[j]] = [
-            set_to_shuffle[j],
-            set_to_shuffle[i],
-          ];
-        }
-        // If shuffled a copy, update trainSet reference
-        if (crossValidate) trainSet = set_to_shuffle;
-      }
-
-      // Perform one training pass (epoch/batch) on the training set.
-      const trainError = this._trainSet(
-        trainSet,
-        batchSize,
-        accumulationSteps,
-        currentRate,
-        momentum,
-        regularization, // Pass regularization
-        cost,
-        optimizerConfig
-      );
-
-      // Metrics hook (exposes gradNorm placeholder if future internal tracking added)
-      if (metricsHook) {
-        try { metricsHook({ iteration, error: trainError, gradNorm: this._lastGradNorm, gradNormRaw: this._lastRawGradNorm }); } catch { /* ignore */ }
-      }
-
-      // Checkpoint snapshots
-      if (checkpoint) {
-        const snap = this.toJSON();
-        if (checkpoint.last) { try { checkpoint.save({ type:'last', iteration, error: trainError, network: snap }); } catch { /* ignore */ } }
-        if (checkpoint.best) {
-          if (!(this as any)._checkpointMeta || (this as any)._checkpointMeta.bestError == null || trainError < (this as any)._checkpointMeta.bestError) {
-            (this as any)._checkpointMeta = { bestError: trainError };
-            try { checkpoint.save({ type:'best', iteration, error: trainError, network: snap }); } catch { /* ignore */ }
-          }
-        }
-      }
-
-      // Metrics hook (exposes gradNorm placeholder numeric value)
-      if (metricsHook) {
-        try {
-          metricsHook({ iteration, error: trainError, gradNorm: (this as any)._lastGradNorm ?? 0, gradNormRaw: (this as any)._lastRawGradNorm ?? 0 });
-        } catch { /* swallow */ }
-      }
-
-      // Checkpoint logic
-      if (checkpoint) {
-        const snap = this.toJSON();
-        if (checkpoint.last) {
-          try { checkpoint.save({ type: 'last', iteration, error: trainError, network: snap }); } catch { /* ignore */ }
-        }
-        if (checkpoint.best) {
-          if (!(this as any)._checkpointMeta || (this as any)._checkpointMeta.bestError == null || trainError < (this as any)._checkpointMeta.bestError) {
-            (this as any)._checkpointMeta = { bestError: trainError };
-            try { checkpoint.save({ type: 'best', iteration, error: trainError, network: snap }); } catch { /* ignore */ }
-          }
-        }
-      }
-
-      // Clear network state if enabled.
-      if (clear) this.clear();
-
-      // Determine the error to report and check against target.
-      if (crossValidate && testSet) {
-        // If cross-validating, evaluate error on the test set.
-  error = this.test(testSet as { input: number[]; output: number[] }[], cost).error;
-        // Clear state again after testing if enabled.
-        if (clear) this.clear();
-      } else {
-        // Otherwise, use the error from the training set pass.
-        error = trainError;
-      }
-
-  // --- Moving Average Smoothing (Early Stop + optional Plateau) & Early Stop Patience ---
-      // Update running stats BEFORE smoothing (raw error)
-      if (trackVariance) {
-        _runningCount++;
-        const delta = error - _runningMean;
-        _runningMean += delta / _runningCount;
-        const delta2 = error - _runningMean;
-        _runningM2 += delta * delta2;
-        _runningMin = _runningMin === undefined ? error : Math.min(_runningMin, error);
-      }
-      let smoothedEarly: number;
-      switch (movingAverageType) {
-        case 'ema': {
-          if (_emaLast === undefined) { _emaLast = error; }
-          _emaLast = emaAlpha * error + (1 - emaAlpha) * _emaLast;
-          smoothedEarly = _emaLast;
-          break;
-        }
-        case 'adaptive-ema': {
-          // maintain raw window
-            _maBuffer.push(error); if (_maBuffer.length > movingAverageWindow) _maBuffer.shift();
-            const mean = _maBuffer.reduce((a,b)=>a+b,0) / _maBuffer.length;
-            const variance = _maBuffer.reduce((s,v)=>{ const d=v-mean; return s + d*d; },0) / _maBuffer.length;
-            const varScaled = variance * adaptiveVarianceFactor;
-            const baseAlpha = (typeof options.emaAlpha === 'number' && options.emaAlpha>0 && options.emaAlpha<=1) ? options.emaAlpha : (2/(movingAverageWindow+1));
-            const alpha = Math.max(adaptiveAlphaMin, Math.min(adaptiveAlphaMax, baseAlpha * (1 + varScaled)));
-            if (_emaLast === undefined) _emaLast = error;
-            _emaLast = alpha * error + (1 - alpha) * _emaLast;
-            smoothedEarly = _emaLast;
-            break;
-        }
-        case 'wma': {
-          _maBuffer.push(error); if (_maBuffer.length > movingAverageWindow) _maBuffer.shift();
-          const n = _maBuffer.length;
-          let num = 0; let denom = 0;
-          for (let i=0;i<n;i++){ const w=i+1; num += _maBuffer[i]*w; denom += w; }
-          smoothedEarly = denom>0 ? num/denom : error;
-          break;
-        }
-        case 'median': {
-          _maBuffer.push(error); if (_maBuffer.length > movingAverageWindow) _maBuffer.shift();
-          const sorted = [..._maBuffer].sort((a,b)=>a-b);
-          const mid = Math.floor(sorted.length/2);
-          smoothedEarly = sorted.length %2 ? sorted[mid] : (sorted[mid-1]+sorted[mid])/2;
-          break;
-        }
-        case 'trimmed': {
-          _maBuffer.push(error); if (_maBuffer.length > movingAverageWindow) _maBuffer.shift();
-          if (_maBuffer.length <= 2) { smoothedEarly = _maBuffer.reduce((a,b)=>a+b,0)/_maBuffer.length; break; }
-          const sorted = [..._maBuffer].sort((a,b)=>a-b);
-          const trim = Math.min(Math.floor(sorted.length * trimmedRatio), Math.floor((sorted.length-1)/2));
-          const core = sorted.slice(trim, sorted.length - trim);
-          smoothedEarly = core.reduce((a,b)=>a+b,0)/core.length;
-          break;
-        }
-        case 'gaussian': {
-          _maBuffer.push(error); if (_maBuffer.length > movingAverageWindow) _maBuffer.shift();
-          const n=_maBuffer.length; let num=0; let denom=0;
-          for (let i=0;i<n;i++) { const age = (n-1 - i); const w = Math.exp(-0.5 * (age*age)/(gaussianSigma*gaussianSigma)); num += _maBuffer[i]*w; denom += w; }
-          smoothedEarly = denom>0? num/denom : error;
-          break;
-        }
-        case 'sma':
-        default: {
-          _maBuffer.push(error); if (_maBuffer.length > movingAverageWindow) _maBuffer.shift();
-          smoothedEarly = movingAverageWindow === 1 ? error : (_maBuffer.reduce((a,b)=>a+b,0) / _maBuffer.length);
-          break;
-        }
-      }
-      // Plateau smoothing (if separate configuration provided)
-      let plateauSmoothed = smoothedEarly;
-      if (plateauMovingAverageWindow || plateauMovingAverageType || options.plateauEmaAlpha || options.plateauTrimmedRatio || options.plateauGaussianSigma) {
-        switch (plateauMovingAverageType || movingAverageType) {
-          case 'ema': {
-            if ((this as any)._plateauEmaLast === undefined) (this as any)._plateauEmaLast = error;
-            (this as any)._plateauEmaLast = plateauEmaAlpha * error + (1 - plateauEmaAlpha) * (this as any)._plateauEmaLast;
-            plateauSmoothed = (this as any)._plateauEmaLast; break; }
-          case 'adaptive-ema': {
-            if (!(this as any)._plateauBuffer) (this as any)._plateauBuffer = [];
-            (this as any)._plateauBuffer.push(error); if ((this as any)._plateauBuffer.length > (plateauMovingAverageWindow || movingAverageWindow)) (this as any)._plateauBuffer.shift();
-            const buf = (this as any)._plateauBuffer;
-            const mean = buf.reduce((a:number,b:number)=>a+b,0)/buf.length;
-            const variance = buf.reduce((s:number,v:number)=>{ const d=v-mean; return s + d*d; },0)/buf.length;
-            const varScaled = variance * plateauAdaptiveVarianceFactor;
-            const baseAlpha = (typeof options.plateauEmaAlpha === 'number' && options.plateauEmaAlpha>0 && options.plateauEmaAlpha<=1) ? options.plateauEmaAlpha : (2/(((plateauMovingAverageWindow || movingAverageWindow))+1));
-            const alpha = Math.max(plateauAdaptiveAlphaMin, Math.min(plateauAdaptiveAlphaMax, baseAlpha * (1 + varScaled)));
-            if ((this as any)._plateauEmaLast === undefined) (this as any)._plateauEmaLast = error;
-            (this as any)._plateauEmaLast = alpha * error + (1 - alpha) * (this as any)._plateauEmaLast;
-            plateauSmoothed = (this as any)._plateauEmaLast; break; }
-          case 'wma': {
-            if (!(this as any)._plateauBuffer) (this as any)._plateauBuffer = [];
-            const buf=(this as any)._plateauBuffer; buf.push(error); if (buf.length > (plateauMovingAverageWindow || movingAverageWindow)) buf.shift();
-            const n=buf.length; let num=0; let denom=0; for (let i=0;i<n;i++){ const w=i+1; num+=buf[i]*w; denom+=w; } plateauSmoothed = denom>0? num/denom : error; break; }
-          case 'median': {
-            if (!(this as any)._plateauBuffer) (this as any)._plateauBuffer = [];
-            const buf=(this as any)._plateauBuffer; buf.push(error); if (buf.length > (plateauMovingAverageWindow || movingAverageWindow)) buf.shift();
-            const sorted=[...buf].sort((a,b)=>a-b); const mid=Math.floor(sorted.length/2); plateauSmoothed = sorted.length%2? sorted[mid] : (sorted[mid-1]+sorted[mid])/2; break; }
-          case 'trimmed': {
-            if (!(this as any)._plateauBuffer) (this as any)._plateauBuffer = [];
-            const buf=(this as any)._plateauBuffer; buf.push(error); if (buf.length > (plateauMovingAverageWindow || movingAverageWindow)) buf.shift();
-            if (buf.length <=2) { plateauSmoothed = buf.reduce((a:number,b:number)=>a+b,0)/buf.length; break; }
-            const sorted=[...buf].sort((a,b)=>a-b); const trim=Math.min(Math.floor(sorted.length * plateauTrimmedRatio), Math.floor((sorted.length-1)/2)); const core=sorted.slice(trim, sorted.length-trim); plateauSmoothed = core.reduce((a,b)=>a+b,0)/core.length; break; }
-          case 'gaussian': {
-            if (!(this as any)._plateauBuffer) (this as any)._plateauBuffer = [];
-            const buf=(this as any)._plateauBuffer; buf.push(error); if (buf.length > (plateauMovingAverageWindow || movingAverageWindow)) buf.shift();
-            const n=buf.length; let num=0; let denom=0; for (let i=0;i<n;i++){ const age=(n-1 - i); const w=Math.exp(-0.5*(age*age)/(plateauGaussianSigma*plateauGaussianSigma)); num+=buf[i]*w; denom+=w; } plateauSmoothed = denom>0? num/denom : error; break; }
-          case 'sma':
-          default: {
-            if (!(this as any)._plateauBuffer) (this as any)._plateauBuffer = [];
-            const buf=(this as any)._plateauBuffer; buf.push(error); if (buf.length > (plateauMovingAverageWindow || movingAverageWindow)) buf.shift();
-            plateauSmoothed = (plateauMovingAverageWindow || movingAverageWindow) === 1 ? error : (buf.reduce((a:number,b:number)=>a+b,0)/buf.length); break; }
-        }
-      }
-      if (_bestMonitored === undefined || smoothedEarly < _bestMonitored - earlyStopMinDelta) {
-        _bestMonitored = smoothedEarly;
-        _lastImprovementIter = iteration;
-      } else if (earlyStopPatience && (iteration - _lastImprovementIter) >= earlyStopPatience) {
-        if (log > 0) console.log(`Early stopping: no improvement > ${earlyStopMinDelta} for ${earlyStopPatience} iterations (best=${typeof _bestMonitored === 'number' ? _bestMonitored.toFixed(9) : 'n/a'}) at iteration ${iteration}.`);
-        error = smoothedEarly;
-        break;
-      }
-      error = smoothedEarly;
-      // store plateau metric for next iteration's scheduler call
-      (this as any)._lastPlateauMetric = plateauSmoothed;
-      // expose metrics if hook enabled (smoothed & raw stats)
-      if (metricsHook) {
-        try {
-          const variance = trackVariance && _runningCount>1 ? _runningM2/(_runningCount-1) : undefined;
-          const payload: any = { iteration, error: smoothedEarly, rawError: error, runningVariance: variance, runningMin: _runningMin, gradNorm: (this as any)._lastGradNorm ?? 0, gradNormRaw: (this as any)._lastRawGradNorm ?? 0 };
-          if (plateauSmoothed !== smoothedEarly) payload.plateauError = plateauSmoothed;
-          metricsHook(payload);
-        } catch { /* ignore */ }
-      }
-
-      // Log progress if logging is enabled and the iteration matches the log frequency.
-      if (log > 0 && iteration % log === 0) {
-        console.log(
-          `Iteration: ${iteration}, Error: ${error.toFixed(
-            9
-          )}, Rate: ${currentRate.toFixed(5)}` +
-            (crossValidate ? ' (Test Set)' : ' (Train Set)')
-        );
-      }
-
-      // Execute scheduled function if enabled and the iteration matches the schedule frequency.
-      if (schedule && iteration % schedule.iterations === 0) {
-        schedule.function({ error, iteration }); // Pass current error and iteration.
-      }
-    }
-
-    // Training finished. Clean up.
-    if (clear) this.clear(); // Final clear if enabled.
-
-    // Reset dropout mask on hidden nodes to 1 (or effective value if dropout was >   0)
-    // and turn off dropout in the network object after training.
-    if (this.dropout > 0) {
-      this.nodes.forEach((node) => {
-        // Reset mask for hidden nodes. Input/output nodes don't use dropout mask this way.
-        if (node.type === 'hidden') {
-          // Note: During testing/inference, mask should ideally be `1 - dropout` if dropout was used,
-          // but often setting to 1 is done for simplicity, assuming scaling is handled elsewhere or implicitly.
-          // Setting to 1 disables dropout effect for future activations.
-          node.mask = 1;
-        }
-      });
-      this.dropout = 0; // Disable dropout for subsequent activate/test calls.
-    }
-
-    // Return training results.
-  return { error, iterations: iteration, time: Date.now() - start };
+  // Training is implemented in network.train.ts; this wrapper keeps public API stable.
+  train(set: { input: number[]; output: number[] }[], options: any): { error: number; iterations: number; time: number } {
+    const { trainImpl } = require('./network.train');
+    return trainImpl(this as any, set, options);
   }
 
   /** Returns last recorded raw (pre-update) gradient L2 norm. */
@@ -2362,300 +1586,13 @@ export default class Network {
   }
 
 
-  /**
-   * Evolves the network's topology and weights using a neuro-evolutionary algorithm (NEAT).
-   * A population of networks is evolved over generations to minimize error on the provided dataset.
-   * This method leverages the `Neat` class and can utilize multi-threading for fitness evaluation.
-   *
-   * @param {{ input: number[]; output: number[] }[]} set - The dataset used for evaluating the fitness of networks.
-   * @param {object} options - Configuration options for the evolutionary process.
-   * @param {number} [options.error] - The target error threshold. Evolution stops when the fittest network's error falls below this value. Required if `iterations` is not set.
-   * @param {number} [options.iterations] - The maximum number of generations to run the evolution. Required if `error` is not set.
-   * @param {number} [options.growth=0.0001] - Penalty factor for network complexity (number of nodes and connections). Higher values favor smaller networks.
-   * @param {function} [options.cost=methods.Cost.MSE] - The cost function used to calculate error during fitness evaluation.
-   * @param {number} [options.amount=1] - Number of times to test each network on the dataset for fitness evaluation (average error is used).
-   * @param {number} [options.threads] - Number of parallel threads/workers to use for fitness evaluation. Defaults to system's CPU core count or `navigator.hardwareConcurrency`. Set to 1 for single-threaded execution.
-   * @param {number} [options.log=0] - Log evolution progress (generation, best fitness, best error) every `log` generations. 0 disables logging.
-   * @param {object} [options.schedule] - Object for scheduling custom actions during evolution.
-   * @param {number} options.schedule.iterations - Frequency (in generations) to execute the schedule function.
-   * @param {function} options.schedule.function - Custom function to execute, receives `{ fitness, error, iteration }`.
-   * @param {boolean} [options.clear=false] - Whether to clear the network's state (`clear()`) before applying the best genome's structure at the end.
-   * @param {...any} [options] - Additional options are passed directly to the `Neat` constructor (e.g., `populationSize`, `mutationRate`, `selection`, etc.).
-   * @returns {Promise<{ error: number; iterations: number; time: number }>} A Promise resolving to an object containing the final best error achieved, the number of generations run, and the total evolution time in milliseconds.
-   * @throws {Error} If the dataset's input/output dimensions don't match the network's.
-   * @throws {Error} If neither `iterations` nor `error` is specified in the options.
-   *
-   * @see {@link Neat} class for details on the evolutionary algorithm and its parameters.
-   * @see Instinct Algorithm - Section 4 Constraints (regarding complexity penalty/growth).
-   */
+  // Evolution wrapper delegates to network.evolve.ts implementation.
   async evolve(
     set: { input: number[]; output: number[] }[],
     options: any
   ): Promise<{ error: number; iterations: number; time: number }> {
-    // Validate dataset dimensions.
-    if (
-      !set ||
-      set.length === 0 ||
-      set[0].input.length !== this.input ||
-      set[0].output.length !== this.output
-    ) {
-      throw new Error(
-        'Dataset is invalid or dimensions do not match network input/output size!'
-      );
-    }
-
-    options = options || {}; // Ensure options object exists.
-
-    // Set default values for evolution-specific options.
-    let targetError = options.error ?? 0.05; // Target error threshold.
-    const growth = options.growth ?? 0.0001; // Complexity penalty factor.
-    const cost = options.cost || methods.Cost.mse; // Cost function for fitness.
-    const amount = options.amount || 1; // Number of evaluations per genome.
-    const log = options.log || 0; // Logging frequency.
-    const schedule = options.schedule; // Custom schedule object.
-    const clear = options.clear || false; // Clear network state at the end?
-
-    // Determine the number of threads/workers for parallel evaluation.
-    let threads = options.threads;
-    if (typeof threads === 'undefined') {
-      // Auto-detect based on environment (Node.js or Browser).
-      if (typeof window === 'undefined' && typeof navigator === 'undefined') {
-        // Node.js environment
-        try {
-          threads = require('os').cpus().length; // Get number of CPU cores.
-        } catch (e) {
-          threads = 1; // Fallback if 'os' module is unavailable.
-        }
-      } else if (typeof navigator !== 'undefined') {
-        // Browser environment
-        threads = navigator.hardwareConcurrency || 1; // Use hardware concurrency API if available.
-      } else {
-        // Unknown environment, default to single thread.
-        threads = 1;
-      }
-    }
-    threads = Math.max(1, threads); // Ensure at least one thread.
-
-    const start = Date.now(); // Start time measurement.
-
-    // Validate stopping conditions.
-    if (
-      typeof options.iterations === 'undefined' &&
-      typeof options.error === 'undefined'
-    ) {
-      throw new Error(
-        'At least one stopping condition (`iterations` or `error`) must be specified for evolution.'
-      );
-    } else if (typeof options.error === 'undefined') {
-      targetError = -1; // Run until iterations are met.
-    } else if (typeof options.iterations === 'undefined') {
-      options.iterations = 0; // Run until error is met.
-    }
-
-    // Define the fitness function used by the NEAT algorithm.
-    let fitnessFunction: any;
-    let workers: any[] = []; // Array to hold worker instances if multi-threading.
-
-    if (threads === 1) {
-      // Single-threaded fitness function.
-      fitnessFunction = (genome: Network) => {
-        let score = 0;
-        for (let i = 0; i < amount; i++) {
-          try {
-            // Fitness is inversely related to error (higher fitness is better).
-            score -= genome.test(set, cost).error;
-          } catch (e: any) {
-            // Penalize invalid networks (e.g., output/target length mismatch) with lowest fitness
-            if (config.warnings) {
-              console.warn(
-                `Genome evaluation failed: ${(e && e.message) || e}. Penalizing with -Infinity fitness.`
-              );
-            }
-            return -Infinity;
-          }
-        }
-        // Apply complexity penalty (growth factor). Penalizes more nodes/connections/gates.
-        score -=
-          (genome.nodes.length -
-            genome.input -
-            genome.output + // Number of hidden nodes
-            genome.connections.length + // Number of regular connections
-            genome.gates.length) * // Number of gated connections
-          growth;
-        // Handle potential NaN scores (e.g., from division by zero in cost function).
-        score = isNaN(score) ? -Infinity : score; // Assign lowest possible fitness if NaN.
-        // Return average score if evaluated multiple times.
-        return score / amount;
-      };
-    } else {
-      // Multi-threaded fitness evaluation setup.
-      // Serialize the dataset once for sending to workers.
-      const converted = Multi.serializeDataSet(set);
-      // Create worker instances based on the environment.
-      for (let i = 0; i < threads; i++) {
-        if (typeof navigator !== 'undefined') {
-          // Browser environment: Use BrowserTestWorker.
-          workers.push(
-            await Multi.getBrowserTestWorker().then(
-              (TestWorker) => new TestWorker(converted, cost) // Pass serialized data and cost function.
-            )
-          );
-        } else {
-          // Node.js environment: Use NodeTestWorker.
-          workers.push(
-            await Multi.getNodeTestWorker().then(
-              (TestWorker) => new TestWorker(converted, cost) // Pass serialized data and cost function.
-            )
-          );
-        }
-      }
-
-      // Define the fitness function for multi-threading. It evaluates the entire population.
-      fitnessFunction = (population: Network[]) =>
-        new Promise<void>((resolve) => {
-          const queue = population.slice(); // Create a copy of the population to process.
-          let done = 0; // Counter for completed workers.
-
-          // Function to assign work to a worker.
-          const startWorker = (worker: any) => {
-            if (!queue.length) {
-              // No more genomes in the queue for this worker.
-              // Check if all workers are done.
-              if (++done === threads) resolve(); // Resolve the promise when all genomes are evaluated.
-              return;
-            }
-            // Get the next genome from the queue.
-            const genome = queue.shift();
-            if (typeof genome === 'undefined') {
-              // Should not happen if queue logic is correct, but handle defensively.
-              startWorker(worker); // Try assigning again.
-              return;
-            }
-            // Send the genome to the worker for evaluation.
-            worker.evaluate(genome).then((result: number) => {
-              // Worker returns the calculated error.
-              if (typeof genome !== 'undefined' && typeof result === 'number') {
-                // Calculate fitness score (inverse error + complexity penalty).
-                genome.score =
-                  -result - // Inverse error.
-                  (genome.nodes.length -
-                    genome.input -
-                    genome.output +
-                    genome.connections.length +
-                    genome.gates.length) *
-                    growth; // Complexity penalty.
-                // Handle NaN results.
-                genome.score = isNaN(result) ? -Infinity : genome.score;
-              }
-              // Assign the next piece of work to this worker.
-              startWorker(worker);
-            });
-          };
-          // Start all workers.
-          workers.forEach(startWorker);
-        });
-      // Tell NEAT that the fitness function evaluates the whole population at once.
-      options.fitnessPopulation = true;
-    }
-
-    // Set the network context for NEAT (used for calculating complexity, etc.).
-    options.network = this;
-    // Dynamically import Neat to avoid potential circular dependencies at module load time.
-    const { default: Neat } = await import('../neat');
-    // Create the NEAT instance.
-    const neat = new Neat(this.input, this.output, fitnessFunction, options);
-
-    // Initialize evolution loop variables.
-    let error = Infinity; // Initialize error (lower is better).
-    let bestFitness = -Infinity; // Track the highest fitness achieved.
-    let bestGenome: Network | undefined = undefined; // Store the best genome found so far.
-    let infiniteErrorCount = 0; // Failsafe counter for infinite/NaN error.
-    const MAX_INFINITE_ERROR_GEN = 5; // Max allowed generations with infinite/NaN error.
-
-    // Main evolution loop.
-    while (
-      // Continue if error is above target (and target is not disabled).
-      (targetError === -1 || error > targetError) &&
-      // Continue if max generations is not set or not reached.
-      (options.iterations === 0 || neat.generation < options.iterations)
-    ) {
-      // Evolve the population for one generation.
-      const fittest = await neat.evolve(); // Returns the fittest genome of the generation.
-      const fitness = fittest.score ?? -Infinity; // Get the fitness score.
-
-      // Calculate the error corresponding to the fitness (inverting the fitness calculation).
-      // Note: This recalculates the complexity penalty part.
-      error = -(
-        fitness -
-        (fittest.nodes.length -
-          fittest.input -
-          fittest.output +
-          fittest.connections.length +
-          fittest.gates.length) *
-          growth
-      ) || Infinity; // Handle potential NaN/Infinity fitness
-
-      // Update the best genome found so far.
-      if (fitness > bestFitness) {
-        bestFitness = fitness;
-        bestGenome = fittest;
-      }
-
-      // Failsafe: If error is infinite or NaN for too many generations, break and warn.
-      if (!isFinite(error) || isNaN(error)) {
-        infiniteErrorCount++;
-        if (infiniteErrorCount >= MAX_INFINITE_ERROR_GEN) {
-          console.warn('Evolution completed without finding a valid best genome. Evolution stopped: error was infinite or NaN for too many generations. Check your fitness function and dataset.');
-          break;
-        }
-      } else {
-        infiniteErrorCount = 0; // Reset if a valid error is found
-      }
-
-      // Log progress if enabled.
-      if (log > 0 && neat.generation % log === 0) {
-        console.log(
-          `Generation: ${neat.generation}, Best Fitness: ${bestFitness.toFixed(
-            9
-          )}, Best Error: ${error.toFixed(9)}`
-        );
-      }
-
-      // Execute scheduled function if enabled.
-      if (schedule && neat.generation % schedule.iterations === 0) {
-        schedule.function({
-          fitness: bestFitness,
-          error,
-          iteration: neat.generation,
-        });
-      }
-    }
-
-    // Evolution finished. Terminate workers if multi-threading was used.
-    if (threads > 1) {
-      workers.forEach((worker) => worker.terminate?.()); // Terminate worker processes/threads.
-    }
-
-    // Apply the structure and parameters of the best found genome to this network instance.
-    if (typeof bestGenome !== 'undefined') {
-      this.nodes = bestGenome.nodes;
-      this.connections = bestGenome.connections;
-      this.selfconns = bestGenome.selfconns;
-      this.gates = bestGenome.gates;
-      // Optionally clear the state of the applied network.
-      if (clear) this.clear();
-    } else {
-      // Should not happen if evolution ran for at least one generation, but handle defensively.
-      console.warn('Evolution completed without finding a valid best genome.');
-      error = Infinity; // Indicate failure if no best genome was found.
-    }
-
-    // Return evolution results.
-    return {
-      error, // Return the error of the best genome found.
-      iterations: neat.generation, // Return the number of generations completed.
-      time: Date.now() - start, // Return the total time taken.
-    };
+  const { evolveNetwork } = await import('./network.evolve');
+  return evolveNetwork.call(this, set, options);
   }
 
   /**
@@ -2862,7 +1799,8 @@ export default class Network {
         type: node.type,
         bias: node.bias,
         squash: node.squash.name,
-        index
+  index,
+  geneId: (node as any).geneId
       });
       // Self-connection (if any)
       if (node.connections.self.length > 0) {
@@ -2871,7 +1809,8 @@ export default class Network {
           from: index,
           to: index,
           weight: selfConn.weight,
-          gater: selfConn.gater ? selfConn.gater.index : null
+            gater: selfConn.gater ? selfConn.gater.index : null,
+            enabled: (selfConn as any).enabled !== false
         });
       }
     });
@@ -2882,7 +1821,8 @@ export default class Network {
         from: conn.from.index,
         to: conn.to.index,
         weight: conn.weight,
-        gater: conn.gater ? conn.gater.index : null
+  gater: conn.gater ? conn.gater.index : null,
+  enabled: (conn as any).enabled !== false
       });
     });
     return json;
@@ -2911,6 +1851,7 @@ export default class Network {
       node.bias = n.bias;
       node.squash = methods.Activation[n.squash] || methods.Activation.identity;
       node.index = i;
+      if (typeof n.geneId === 'number') (node as any).geneId = n.geneId; // preserve stable gene id
       network.nodes.push(node);
     });
     // Recreate connections
@@ -2918,10 +1859,11 @@ export default class Network {
       if (typeof c.from !== 'number' || typeof c.to !== 'number') return;
       const from = network.nodes[c.from];
       const to = network.nodes[c.to];
-      const conn = network.connect(from, to, c.weight)[0];
+  const conn = network.connect(from, to, c.weight)[0];
       if (conn && c.gater !== null && typeof c.gater === 'number' && network.nodes[c.gater]) {
         network.gate(network.nodes[c.gater], conn);
       }
+  if (conn && typeof c.enabled !== 'undefined') (conn as any).enabled = c.enabled;
     });
     return network;
   }
@@ -3172,7 +2114,7 @@ export default class Network {
 
     // Populate connection dictionaries for parent 1.
     const allParent1Conns = network1.connections.concat(network1.selfconns);
-    allParent1Conns.forEach((conn) => {
+  allParent1Conns.forEach((conn) => {
       // Ensure indices are valid before creating innovation ID.
       if (
         typeof conn.from.index === 'number' &&
@@ -3184,14 +2126,15 @@ export default class Network {
           from: conn.from.index,
           to: conn.to.index,
           // Store gater index (-1 if no gater).
-          gater: conn.gater ? conn.gater.index : -1,
+      gater: conn.gater ? conn.gater.index : -1,
+      enabled: (conn as any).enabled !== false
         };
       }
     });
 
     // Populate connection dictionaries for parent 2.
     const allParent2Conns = network2.connections.concat(network2.selfconns);
-    allParent2Conns.forEach((conn) => {
+  allParent2Conns.forEach((conn) => {
       // Ensure indices are valid.
       if (
         typeof conn.from.index === 'number' &&
@@ -3202,7 +2145,8 @@ export default class Network {
           weight: conn.weight,
           from: conn.from.index,
           to: conn.to.index,
-          gater: conn.gater ? conn.gater.index : -1,
+      gater: conn.gater ? conn.gater.index : -1,
+      enabled: (conn as any).enabled !== false
         };
       }
     });
@@ -3219,11 +2163,31 @@ export default class Network {
         // Matching gene: Connection exists in both parents. Inherit randomly.
         const conn2Data = n2conns[key];
   const _rngConn = (network1 as any)._rand || (network2 as any)._rand || Math.random;
-  connectionsToInherit.push(_rngConn() >= 0.5 ? conn1Data : conn2Data);
+        const chosen = _rngConn() >= 0.5 ? conn1Data : conn2Data;
+        // If either parent has it disabled, inherit disabled unless re-enabled probability triggers
+        if ((conn1Data.enabled === false || conn2Data.enabled === false)) {
+          const reenableProb = (network1 as any)._reenableProb ?? (network2 as any)._reenableProb ?? 0.25;
+          const reenabled = Math.random() < reenableProb;
+          chosen.enabled = reenabled;
+          if (reenabled) {
+            // track success counters
+            (network1 as any)._reenableSuccess = ((network1 as any)._reenableSuccess||0)+1;
+          }
+          (network1 as any)._reenableAttempts = ((network1 as any)._reenableAttempts||0)+1;
+        }
+        connectionsToInherit.push(chosen);
         // Remove from parent 2's keys to avoid processing again.
         delete n2conns[key];
       } else if (score1 >= score2 || equal) {
         // Disjoint/Excess gene in parent 1: Inherit if parent 1 is fitter or `equal` is true.
+        // Disjoint/excess: carry enabled status with chance to re-enable if disabled in fitter parent
+        if (conn1Data.enabled === false) {
+          const reenableProb = (network1 as any)._reenableProb ?? 0.25;
+          const reenabled = Math.random() < reenableProb;
+          conn1Data.enabled = reenabled;
+          if (reenabled) (network1 as any)._reenableSuccess = ((network1 as any)._reenableSuccess||0)+1;
+          (network1 as any)._reenableAttempts = ((network1 as any)._reenableAttempts||0)+1;
+        }
         connectionsToInherit.push(conn1Data);
       }
     });
@@ -3232,7 +2196,15 @@ export default class Network {
     if (score2 >= score1 || equal) {
       // Inherit disjoint/excess genes from parent 2 if it's fitter or `equal` is true.
       Object.keys(n2conns).forEach((key) => {
-        connectionsToInherit.push(n2conns[key]);
+        const d = n2conns[key];
+        if (d.enabled === false) {
+          const reenableProb = (network2 as any)._reenableProb ?? 0.25;
+          const reenabled = Math.random() < reenableProb;
+          d.enabled = reenabled;
+          if (reenabled) (network2 as any)._reenableSuccess = ((network2 as any)._reenableSuccess||0)+1;
+          (network2 as any)._reenableAttempts = ((network2 as any)._reenableAttempts||0)+1;
+        }
+        connectionsToInherit.push(d);
       });
     }
 
@@ -3254,6 +2226,7 @@ export default class Network {
           const conn = offspring.connect(from, to)[0];
           if (conn) {
             conn.weight = connData.weight; // Set the inherited weight.
+            (conn as any).enabled = connData.enabled !== false; // apply enabled status
 
             // Re-apply gating if the inherited connection was gated and the gater node was also inherited.
             if (connData.gater !== -1 && connData.gater < offspringNodeCount) {
@@ -3341,6 +2314,7 @@ export default class Network {
     }
     // Rebuild net.connections from all per-node connections
     net.connections = net.nodes.flatMap(n => n.connections.out);
+  net._topoDirty = true;
     return net;
   }
 

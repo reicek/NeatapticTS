@@ -6,6 +6,277 @@
 
 NeatapticTS offers flexible neural networks; neurons and synapses can be removed with a single line of code. No fixed architecture is required for neural networks to function at all. This flexibility allows networks to be shaped for your dataset through neuro-evolution, which is done using multiple threads.
 
+## New Evolution Enhancements (TypeScript refactor branch)
+
+Key advanced NEAT features now included:
+* Multi-objective Pareto evolution (fast non-dominated sort) with pluggable objectives.
+* Runtime objective registration: add/remove custom objectives without rewriting core sorter.
+* Hypervolume proxy + Pareto front size telemetry (`getTelemetry()` now includes `fronts`, optional `hv`).
+* Structural entropy proxy (degree-distribution entropy) available for custom objectives.
+* Adaptive complexity budget (nodes & connections) with slope‑aware growth / contraction and diversity modulation.
+* Species extended history (mean complexity, novelty, compatibility, entropy) when `speciesAllocation.extendedHistory=true`.
+* Diversity pressure: motif frequency rarity bonus; novelty archive blending & optional sparse pruning.
+* Self-adaptive mutation rates & amounts (strategies: twoTier, exploreLow, anneal) plus operator bandit selection.
+* Persistent Pareto archive snapshots (first front) retrievable via `getParetoArchive()`.
+* Performance profiling (evaluation & evolution durations) opt-in via `telemetry:{ performance:true }`.
+* Complexity telemetry block (mean/max nodes/connections, enabled ratio, growth deltas) via `telemetry:{ complexity:true }`.
+* Optional hypervolume scalar (`hv`) for first front via `telemetry:{ hypervolume:true }`.
+* Lineage tracking: telemetry `lineage` block now includes `{ parents:[id1,id2], depthBest, meanDepth, inbreeding }` when `lineageTracking` (default true). Depth accumulates as max-parent-depth+1; `inbreeding` counts self-matings in last reproduction phase.
+* Auto entropy objective: enable `multiObjective:{ enabled:true, autoEntropy:true }` to add a structural entropy maximization objective automatically.
+* Adaptive dominance epsilon: `multiObjective:{ adaptiveEpsilon:{ enabled:true, targetFront:~sqrt(pop), adjust:0.002 } }` tunes `dominanceEpsilon` to stabilize first-front size.
+* Reference-point hypervolume (optional): supply `multiObjective.refPoint` (array or `'auto'`) for improved HV scalar (overwrites proxy when `telemetry.hypervolume` set).
+* Pareto front objective vectors export via `exportParetoFrontJSONL()`.
+* Extended species metrics: variance, innovation range, enabled ratio, turnover, delta complexity & score.
+* Adaptive novelty archive insertion threshold (`novelty.dynamicThreshold`) to target insertion rate.
+* Inactive objective pruning: `multiObjective.pruneInactive` automatically removes stagnant objectives (zero range) after a window.
+* Fast mode auto-tuning: `fastMode:true` reduces heavy sampling defaults (diversity, novelty) for faster iteration.
+* Adaptive target species: `adaptiveTargetSpecies` maps structural entropy to a dynamic `targetSpecies` value (feeds compatibility controller).
+* Auto distance coefficient tuning: `autoDistanceCoeffTuning` adjusts excess/disjoint coefficients based on entropy deviation.
+* Adaptive pruning: `adaptivePruning` gently increases sparsity toward target using live complexity metrics.
+* Objective importance telemetry (`objImportance`) with per-generation range & variance per objective.
+* Objective lifecycle events (`objEvents`) and ages (`objAges`).
+
+### Multi-Objective Usage
+
+Default objectives (if `multiObjective.enabled`): maximize fitness (your score) + minimize complexity (`nodes` or `connections`).
+
+Register additional objectives at runtime:
+```ts
+const neat = new Neat(4,2, fitnessFn, { popsize: 50, multiObjective:{ enabled:true, complexityMetric:'nodes' } });
+// Add structural entropy (maximize)
+neat.registerObjective('entropy','max', g => (neat as any)._structuralEntropy(g));
+await neat.evaluate();
+await neat.evolve();
+console.log(neat.getObjectives()); // [{key:'fitness',...},{key:'complexity',...},{key:'entropy',...}]
+const fronts = neat.getParetoFronts(); // Array<Network[]> for leading fronts
+```
+Remove custom objectives:
+```ts
+neat.clearObjectives(); // reverts to default pair (fitness + complexity)
+```
+Inspect per-genome metrics:
+```ts
+neat.getMultiObjectiveMetrics(); // [{ rank, crowding, score, nodes, connections }, ...]
+```
+
+Telemetry front sizes & hypervolume proxy:
+```ts
+neat.getTelemetry().slice(-1)[0]; // { gen, best, species, hyper, fronts:[f0,f1,...] }
+```
+Enable complexity + hypervolume fields:
+```ts
+const neat = new Neat(4,2, fit, { telemetry:{ enabled:true, complexity:true, hypervolume:true } });
+await neat.evolve();
+console.log(neat.getTelemetry().slice(-1)[0].complexity); // { meanNodes, meanConns, ... }
+```
+
+### Adaptive Complexity Budget
+Configure an adaptive schedule that expands limits when improvement slope is positive and contracts during stagnation:
+```ts
+complexityBudget: {
+	enabled:true,
+	mode:'adaptive',
+	maxNodesStart: input+output+2,
+	maxNodesEnd: (input+output+2)*6,
+	improvementWindow: 8,
+	increaseFactor:1.15,
+	stagnationFactor:0.93,
+	minNodes: input+output+2,
+	maxConnsStart: 40,
+	maxConnsEnd: 400
+}
+```
+Linear schedule alternative: set `mode:'linear'` and optionally `horizon` (generations) to interpolate from `maxNodesStart` to `maxNodesEnd`.
+
+### Species Extended History
+If `speciesAllocation.extendedHistory:true`, each generation stores per-species stats:
+```ts
+[{ generation, stats:[ { id, size, best, lastImproved, age, meanNodes, meanConns, meanScore, meanNovelty, meanCompat, meanEntropy, varNodes, varConns, deltaMeanNodes, deltaMeanConns, deltaBestScore, turnoverRate, meanInnovation, innovationRange, enabledRatio } ] }]
+```
+Key new fields:
+- `age`: generations since species creation.
+- `varNodes/varConns`: intra-species variance of nodes/connections.
+- `deltaMean*` & `deltaBestScore`: per-generation change indicators.
+- `turnoverRate`: fraction of members new vs previous generation.
+- `innovationRange`: spread of innovation IDs inside species.
+- `enabledRatio`: enabled / total connections ratio (structural activation health).
+
+### Diversity & Novelty
+Enable novelty search blending:
+```ts
+novelty:{ enabled:true, descriptor: g => g.nodes.map(n=>n.bias).slice(0,8), k:10, blendFactor:0.3 }
+```
+Enable motif rarity pressure:
+```ts
+diversityPressure:{ enabled:true, motifSample:25, penaltyStrength:0.05 }
+```
+Adaptive novelty threshold targeting an archive insertion rate:
+```ts
+novelty:{
+	enabled:true,
+	descriptor:g=>[g.nodes.length, g.connections.length],
+	archiveAddThreshold:0.5,
+	dynamicThreshold:{ enabled:true, targetRate:0.15, adjust:0.1, min:0.01, max:10 }
+}
+```
+After each evaluation the threshold is nudged up/down so the fraction of inserted descriptors approximates `targetRate`.
+
+### Inactive Objective Pruning
+
+If you experiment with many custom objectives it is common for some to become constant (providing no ranking discrimination). Enable automatic removal of such stagnant objectives:
+
+```ts
+multiObjective:{
+	enabled:true,
+	objectives:[
+		{ key:'fitness', direction:'max', accessor: g => g.score },
+		{ key:'novelty', direction:'max', accessor: g => (g as any)._novelty }
+	],
+	pruneInactive:{ enabled:true, window:5, rangeEps:1e-9, protect:['fitness'] }
+}
+```
+
+Mechanics:
+* Each generation the range (max-min) for every objective is computed.
+* If the range stays below `rangeEps` for `window` consecutive generations the objective is removed.
+* Keys listed in `protect` are never removed (even if stagnant).
+* Telemetry will reflect the pruned objective list from the following generation.
+
+Use this to keep the Pareto sorter focused on informative axes.
+
+### Fast Mode Auto-Tuning
+
+When iterating quickly or running inside tests you can set `fastMode:true` to scale down expensive sampling defaults:
+
+```ts
+const neat = new Neat(8,3, fitFn, {
+	popsize: 80,
+	fastMode: true,
+	diversityMetrics:{ enabled:true }, // pairSample / graphletSample auto-lowered
+	novelty:{ enabled:true, descriptor: g=>[g.nodes.length,g.connections.length] } // k auto-lowered if not explicitly set
+});
+```
+
+Auto adjustments (only if corresponding option fields are undefined):
+* `diversityMetrics.pairSample`: 40 -> 20
+* `diversityMetrics.graphletSample`: 60 -> 30
+* `novelty.k`: lowered to 5
+
+The tuning runs once on first diversity stats computation. Override by explicitly supplying your own values.
+
+Lineage depth diversity (auto when lineageTracking + diversityMetrics):
+`diversity` object gains:
+* `lineageMeanDepth`: mean `_depth` over population.
+* `lineageMeanPairDist`: sampled mean absolute depth difference between genome pairs (structure ancestry dispersion).
+Telemetry `lineage` block now also includes:
+* `ancestorUniq`: average Jaccard distance (0..1) between ancestor sets of sampled genome pairs within a small depth window (higher = more genealogical diversification).
+
+Use these to detect genealogical stagnation (both remaining near zero) vs broad exploration (rising pair distance).
+
+### Lineage Pressure & Anti-Inbreeding (Optional)
+Apply score adjustments based on lineage structure (depth dispersion) or penalize inbreeding (high ancestor overlap):
+```ts
+lineagePressure:{
+	enabled:true,
+	mode:'antiInbreeding',   // 'penalizeDeep' | 'rewardShallow' | 'spread' | 'antiInbreeding'
+	strength:0.02,           // generic scaling for depth modes
+	ancestorWindow:4,        // generations to look back when computing ancestor sets
+	inbreedingPenalty:0.04,  // override penalty scaling (defaults to strength*2)
+	diversityBonus:0.02      // bonus scaling for very distinct parent lineages
+}
+```
+Modes:
+* `penalizeDeep`: subtracts proportional penalty `-(depth-target)*strength` when depth exceeds target.
+* `rewardShallow`: adds proportional bonus for depths below target.
+* `spread`: encourages dispersion around mean depth (boost far-from-mean, cap excessive depth).
+* `antiInbreeding`: computes Jaccard overlap of ancestor sets of both parents (including parents) within `ancestorWindow` generations. Penalizes high overlap (>0.75) and rewards very distinct ancestry (<0.25). Penalty/bonus magnitude scales with overlap distance and the configured penalty/bonus parameters.
+
+Runs after evaluation/speciation before sorting so it integrates with all other mechanisms.
+
+### RNG State Snapshot & Reproducibility
+When a numeric `seed` is provided, a fast deterministic PRNG drives stochastic choices. You can snapshot/restore mid-run:
+```ts
+const neat = new Neat(3,1, fit, { seed:1234 });
+await neat.evolve();
+const snap = neat.snapshotRNGState(); // { state }
+// ... later
+neat.restoreRNGState(snap);
+// Serialize
+const json = neat.exportRNGState();
+// New instance (even without seed) can resume deterministic sequence
+const neat2 = new Neat(3,1, fit, {});
+neat2.importRNGState(json);
+```
+Restoring installs the internal deterministic generator if it wasn't active.
+
+### Operator Adaptation & Mutation Self-Adaptation
+Per-genome mutation rate/amount adapt each generation under strategies (`twoTier`, `exploreLow`, `anneal`). Use:
+```ts
+adaptiveMutation:{ enabled:true, strategy:'twoTier', sigma:0.08, adaptAmount:true }
+```
+Operator success statistics (bandit + weighting):
+```ts
+neat.getOperatorStats(); // [{ name, success, attempts }, ...]
+```
+Telemetry now also records an `ops` array each generation with lightweight success/attempt counts.
+
+### Objective Lifetime & Species Allocation Telemetry
+Each telemetry entry now may include:
+* `objectives`: array of active objective keys that generation (already used internally for auditing dynamic scheduling).
+* `objAges`: object mapping objective key -> consecutive generations active. When an objective is removed (e.g. via pruning or dynamic delay) its age resets to 0 if later reintroduced.
+* `speciesAlloc`: array of `{ id, alloc }` giving number of offspring allocated to each species in the reproduction phase that produced the current generation. Useful for diagnosing allocation fairness / starvation.
+* `objEvents`: array of `{ type:'add'|'remove', key }` describing objective lifecycle changes that occurred for that generation (emitted when dynamic scheduling or pruning alters the active set).
+
+Example:
+```ts
+const neat = new Neat(4,2, fit, { popsize:40, multiObjective:{ enabled:true, autoEntropy:true, dynamic:{ enabled:true, addComplexityAt:2, addEntropyAt:5 } }, telemetry:{ enabled:true } });
+for (let g=0; g<10; g++) { await neat.evaluate(); await neat.evolve(); }
+const last = neat.getTelemetry().slice(-1)[0];
+console.log(last.objectives); // ['fitness','complexity','entropy']
+console.log(last.objAges);    // { fitness:10, complexity:9, entropy:5 }
+console.log(last.speciesAlloc); // [{ id:1, alloc:7 }, { id:2, alloc:6 }, ...]
+```
+
+### CSV Export Columns (Extended)
+`exportTelemetryCSV()` now conditionally includes the following columns when present:
+* `rng` (deterministic RNG state snapshot if `rngState:true` + seed supplied)
+* `ops` (JSON array of operator stats)
+* `objectives` (JSON array of active objective keys)
+* `objAges` (JSON object of key->age)
+* `speciesAlloc` (JSON array of per-species offspring allocations)
+* `objEvents` (JSON array of add/remove objective lifecycle events)
+Existing flattened sections remain: `complexity.*`, `perf.*`, `lineage.*`, `diversity.lineageMeanDepth`, `diversity.lineageMeanPairDist`, and `fronts`.
+
+Performance profiling telemetry (optional):
+```ts
+const neat = new Neat(4,2, fitnessFn, { telemetry:{ enabled:true, performance:true } });
+await neat.evaluate(); await neat.evolve();
+const last = neat.getTelemetry().slice(-1)[0];
+console.log(last.perf); // { evalMs, evolveMs }
+
+Export telemetry:
+```ts
+neat.exportTelemetryJSONL(); // JSON Lines
+neat.exportTelemetryCSV();   // CSV (flattened complexity/perf)
+```
+```
+
+Pareto archive snapshots:
+```ts
+neat.getParetoArchive(); // [{ gen, size, genomes:[{ id, score, nodes, connections }] }, ...]
+```
+
+Species history (per-species longitudinal metrics) CSV export:
+```ts
+// Last ~200 generations (configurable)
+const csv = neat.exportSpeciesHistoryCSV();
+// Columns include generation plus dynamic keys: id,size,best,lastImproved,age,meanNodes,meanConns,meanScore,meanNovelty,meanCompat,meanEntropy,varNodes,varConns,deltaMeanNodes,deltaMeanConns,deltaBestScore,turnoverRate,meanInnovation,innovationRange,enabledRatio (when extendedHistory enabled)
+```
+
+These APIs are evolving; consult source `src/neat.ts` for full option surfaces while docs finalize.
+
+Full option & telemetry reference: [docs/API.md](./docs/API.md)
+
 # Network Constructor Update
 
 The `Network` class constructor now supports an optional third parameter for configuration:
@@ -149,6 +420,8 @@ net.train(data, {
 	movingAverageWindow: 7,     // EARLY STOP smoothing (robust to spikes)
 	earlyStopPatience: 25,
 	earlyStopMinDelta: 0.0005,
+
+	---
 	// Separate plateau smoothing: scheduler sees a faster EMA over shorter horizon
 	plateauMovingAverageType: 'ema',
 	plateauMovingAverageWindow: 3,
@@ -164,7 +437,7 @@ Smoothing types (set `movingAverageType`):
 |------|-------------|------------|-------------|
 | sma | Simple moving average over window | movingAverageWindow | General mild smoothing |
 | ema | Exponential moving average | emaAlpha (default 2/(N+1)) | Faster reaction than SMA |
-| adaptive-ema | EMA with alpha scaled by recent variance | emaAlpha, adaptiveAlphaMin/Max, adaptiveVarianceFactor | Volatile early training then stabilizing |
+| adaptive-ema | Dual-track variance-adaptive EMA (takes min of baseline & adaptive for guaranteed non-worse smoothing) | emaAlpha, adaptiveAlphaMin/Max, adaptiveVarianceFactor | Volatile early phase responsiveness with stability guarantee |
 | wma | Linear weighted (recent heavier) | movingAverageWindow | Slightly more responsive than SMA |
 | median | Moving median | movingAverageWindow | Spike / outlier robustness |
 | trimmed | Trimmed mean (drops extremes) | trimmedRatio (0-0.5) | Moderate outliers; keep efficiency |
@@ -180,8 +453,9 @@ Metrics hook additions when smoothing active: `rawError`, `runningVariance`, `ru
 * Target `error` comparison and improvement tracking both use the smoothed value.
 * `earlyStopPatience` counts iterations since the last smoothed improvement > `earlyStopMinDelta`.
 * Plateau smoothing: provide any of `plateauMovingAverageWindow`, `plateauMovingAverageType`, `plateauEmaAlpha`, `plateauTrimmedRatio`, `plateauGaussianSigma`, `plateauAdaptiveAlphaMin/Max`, `plateauAdaptiveVarianceFactor`.
-	- If none are supplied the scheduler reuse the early-stop smoothing.
+	- If none are supplied the scheduler reuses the early-stop smoothing.
 	- If supplied, metricsHook receives an extra field `plateauError` (the separately smoothed value supplied to the scheduler), while `error` remains the early-stop smoothed value.
+	- Plateau adaptive-ema uses the same dual-track min(adaptive, baseline) logic.
 * This does not interfere with `Rate.reduceOnPlateau` patience; they are independent.
 
 
@@ -201,6 +475,10 @@ Metrics hook additions when smoothing active: `rawError`, `runningVariance`, `ru
 Notes:
 * All scheduler factories return a function `(baseRate, iteration)` except `reduceOnPlateau`, which returns `(baseRate, iteration, error)`; `train` auto-detects and supplies `error` if the function arity is 3.
 * You can wrap or compose schedulers—see below for a composition pattern.
+
+#### Evolution Warning
+
+`evolve()` now always emits a warning `"Evolution completed without finding a valid best genome"` when no suitable genome is selected (including zero-iteration runs) to aid testability and user feedback.
 
 #### Composing Schedulers (Warmup then Plateau)
 
@@ -372,7 +650,6 @@ Diagnostics:
 * Last skipped layers (stochastic depth): `net.lastSkippedLayers`.
 * Regularization statistics (after any forward): `net.getRegularizationStats()` returns
 	`{ droppedHiddenNodes, totalHiddenNodes, droppedConnections, totalConnections, skippedLayers, weightNoise: { count, sumAbs, maxAbs, meanAbs } }`.
-* RNG state: `net.snapshotRNG()` -> `{ step, state }`, restore seed/state via `net.setSeed(seed)` then `net.setRNGState(state)` for replay; or replace generator with `net.restoreRNG(fn)`.
 * To combine with DropConnect / Dropout the sampling is independent (noise applied before masking).
 
 Gotchas:
@@ -422,3 +699,181 @@ net.enableDropConnect(0.2);
 net.train(data, { iterations:200, rate:0.02 });
 net.disableDropConnect();
 ```
+
+## Architecture & Evolution
+
+```
+Structural pruning: magnitude-based & SNIP-style (|w * grad| saliency) prune+optional regrow, scheduled window.
+Connection sparsification: progressive schedule toward target sparsity.
+Neuroevolution: speciation (compatibility distance: excess, disjoint, weight diff), dynamic threshold (optional targetSpecies), kernel fitness sharing (quadratic within-species), stagnation injection (global refresh after N stagnant generations).
+Innovation tracking: per-connection monotonically increasing counter (serialized); fallback Cantor pairing for missing.
+Acyclic enforcement: optional; topological order cache for forward pass; cycle prevention via reachability test.
+```
+
+Disabled gene handling:
+Connections now carry an `enabled` flag (classic NEAT). Structural mutations or pruning routines may disable a connection instead of deleting it. During crossover:
+* Matching genes inherit enabled state; if either parent disabled the gene, it remains disabled unless re-enabled probabilistically.
+* Disjoint/excess genes retain their parent's state.
+Re-enable probability is controlled by `reenableProb` (default 0.25). This allows temporarily silenced structure to be revived later, preserving historical innovation without immediate loss.
+
+SNIP usage example:
+```ts
+net.configurePruning({
+	start: 100,
+	end: 1000,
+	targetSparsity: 0.8,
+	frequency: 10,
+	regrowFraction: 0.1,
+	method: 'snip' // use saliency |w * grad|, falls back to |w| if no grad yet
+});
+```
+
+Notes:
+* Saliency uses last accumulated gradient proxy (totalDeltaWeight or previousDeltaWeight) gathered during training steps.
+* If gradients are zero/unused early, ranking gracefully reverts to pure magnitude.
+* Regrow explores random new connections (respecting acyclic constraint) to maintain exploration.
+* Pruning currently applies during gradient-based training, not inside the NEAT evolutionary loop (future option possible).
+* Disabled genes are still serialized (`enabled:false`) and restored on load.
+
+### Evolution Options (selected)
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `targetSpecies` | Desired number of species used by dynamic compatibility threshold steering | 8 |
+| `sharingSigma` | Radius parameter for quadratic kernel fitness sharing | 3.0 |
+| `globalStagnationGenerations` | Generations without global improvement before injecting fresh genomes (0 disables) | 30 |
+| `reenableProb` | Probability a disabled connection gene is re-enabled during crossover | 0.25 |
+| `evolutionPruning.startGeneration` | Generation index to begin structural pruning across genomes | – |
+| `evolutionPruning.interval` | Apply pruning every N generations (default 1) | 1 |
+| `evolutionPruning.targetSparsity` | Final sparsity fraction (e.g. 0.8 keeps 20% connections) | – |
+| `evolutionPruning.rampGenerations` | Generations to linearly ramp 0 -> target sparsity | 0 (immediate) |
+| `evolutionPruning.method` | Prune ranking: 'magnitude' or 'snip' | magnitude |
+| `targetSpecies` | Desired species count for dynamic compatibility threshold controller | 8 |
+| `compatAdjust.kp` | Proportional gain for threshold adjustment | 0.3 |
+| `compatAdjust.ki` | Integral gain (slow corrective action) | 0.02 |
+| `compatAdjust.smoothingWindow` | EMA window for species count smoothing | 5 |
+| `compatAdjust.minThreshold` | Lower clamp for compatibility threshold | 0.5 |
+| `compatAdjust.maxThreshold` | Upper clamp for compatibility threshold | 10 |
+| `compatAdjust.decay` | Integral decay factor (anti-windup) | 0.95 |
+| `sharingSigma` | If > 0 enables kernel fitness sharing (score_i /= sum_j (1-(d_ij/σ)^2)) | 0 (off) |
+| `globalStagnationGenerations` | If >0 replace worst 20% genomes after N stagnant generations | 0 (off) |
+
+### Advanced Evolution Extensions
+
+The TypeScript refactor adds several research-grade evolutionary controls. All are optional and off unless noted.
+
+| Option Group | Key Fields | Purpose / Behavior | Default |
+|--------------|-----------|--------------------|---------|
+| `adaptiveMutation` | `{ enabled, initialRate, sigma, minRate, maxRate, adaptAmount, amountSigma, strategy, adaptEvery }` | Enhanced per-genome adaptive mutation; strategies: twoTier (top half down, bottom up), exploreLow (boost weakest), anneal (global decay); optional simultaneous adaptation of mutation amount. | disabled |
+| `novelty` | `{ descriptor(g), k, addThreshold, archiveLimit, blendFactor }` | Novelty search scaffold blending kNN novelty with fitness; maintains archive | disabled |
+| `speciesAgeBonus` | `{ youngGenerations, youngMultiplier, oldGenerations, oldPenalty }` | Temporary boost for young species, penalty for very old | `{ youngGenerations:5, youngMultiplier:1.2, oldGenerations:30, oldPenalty:0.3 }` |
+| `speciesAgeProtection` | `{ grace, oldPenalty }` | Protect very young species from early elimination; apply fitness scale to very old | `{ grace:3, oldPenalty:0.5 }` |
+| `crossSpeciesMatingProb` | number | Chance to select second parent from another species (maintains diversity) | 0 |
+| `adaptiveSharing` | `{ enabled, targetFragmentation, adjustStep, minSigma, maxSigma }` | Auto-adjust kernel fitness sharing `sharingSigma` toward target fragmentation (#species/pop) | disabled |
+| `minimalCriterion` | `(network)=>boolean` | Filters genomes prior to speciation; failing genomes get score 0 (minimal criterion novelty style) | undefined |
+| `operatorAdaptation` | `{ enabled, window, boost, decay }` | Tracks mutation operator success; weights selection probability by recent success | disabled |
+| `phasedComplexity` | `{ enabled, phaseLength, simplifyFraction }` | Alternates complexify vs simplify phases; simplify prunes fraction of weakest connections | disabled |
+| `complexityBudget` | `{ enabled, maxNodesStart, maxNodesEnd, horizon }` | Linear schedule for max allowed nodes; prevents premature bloat | disabled |
+| `multiObjective` | `{ enabled, complexityMetric }` | Pareto non-dominated sorting (fitness maximize, complexity minimize). `complexityMetric`=`'nodes'|'connections'` | disabled |
+| `reenableProb` (adaptive) | (base option) | Disabled gene reactivation probability; internally adaptively adjusted based on success when adaptive features on | 0.25 |
+| `diversityPressure` | `{ enabled, motifSample, penaltyStrength }` | Penalizes over-represented small connection motif signatures to promote structural variety | disabled |
+| `autoCompatTuning` | `{ enabled, target, adjustRate, minCoeff, maxCoeff }` | Automatically scales excess/disjoint coefficients to approach target species count | disabled |
+| `speciesAllocation` | `{ minOffspring, extendedHistory }` | Guarantees minimum offspring per species (if capacity) and optionally records extended per-species metrics (compatibility, mean complexity, novelty) | `{ minOffspring:1, extendedHistory:true }` |
+| `minimalCriterionAdaptive` | `{ enabled, initialThreshold, targetAcceptance, adjustRate, metric }` | Dynamically adjusts acceptance threshold to maintain target pass rate before fitness ranking | disabled |
+| `complexityBudget` (adaptive) | `{ enabled, mode:'adaptive', maxNodesStart, maxNodesEnd, improvementWindow, increaseFactor, stagnationFactor, maxConnsStart, maxConnsEnd }` | Adaptive complexity caps grow on improvement, shrink on stagnation | disabled |
+| `operatorBandit` | `{ enabled, c, minAttempts }` | UCB1-style multi-armed bandit weighting for mutation operator selection | disabled |
+| `novelty.pruneStrategy` | `'fifo'|'sparse'` | Sparse pruning removes closest archive pair iteratively to keep diversity | fifo |
+| `telemetry` | `{ enabled, logEvery, performance, complexity, hypervolume, rngState }` | Per-generation summary: base { gen,best,species,hyper,fronts }; optional perf timings, complexity block, hv scalar; if `lineageTracking` then `lineage:{ parents, depthBest, meanDepth, inbreeding, ancestorUniq }`; `rngState` embeds deterministic PRNG state (seeded runs) | disabled |
+| `lineageTracking` | `boolean` | Track parent genome ids & depth; adds `_parents`/`_depth` on genomes and enriched telemetry lineage block | true |
+| `multiObjective.autoEntropy` | `boolean` | Automatically append entropy (structure diversity proxy) objective (maximize) | false |
+| `multiObjective.dynamic` | `{ enabled, addComplexityAt, addEntropyAt, dropEntropyOnStagnation, readdEntropyAfter }` | Dynamic scheduling of complexity/entropy objectives: delay adding complexity & entropy to let pure fitness search early; temporarily drop entropy during stagnation then re-add after cooldown. | disabled |
+| `entropySharingTuning` | `{ enabled, targetEntropyVar, adjustRate, minSigma, maxSigma }` | Adjusts kernel sharingSigma based on structural entropy variance (low variance -> shrink sigma, high variance -> expand) | disabled |
+| `ancestorUniqAdaptive` | `{ enabled, lowThreshold, highThreshold, adjust, mode, cooldown }` | Responds to genealogical ancestorUniq metric; mode 'epsilon' tweaks dominance epsilon; 'lineagePressure' modulates lineage pressure strength | disabled |
+| `entropyCompatTuning` | `{ enabled, targetEntropy, adjustRate, minThreshold, maxThreshold, deadband }` | Adjusts compatibilityThreshold toward sustaining target structural entropy (low entropy -> lower threshold to fragment; high entropy -> raise to merge) | disabled |
+#### Example: Entropy-guided sharing sigma & ancestor uniqueness adaptive tuning
+```ts
+const neat = new Neat(inputs, outputs, fitness, {
+	seed: 42,
+	sharingSigma: 3.0,
+	entropySharingTuning: { enabled:true, targetEntropyVar:0.25, adjustRate:0.1, minSigma:0.5, maxSigma:6 },
+	ancestorUniqAdaptive: { enabled:true, mode:'epsilon', lowThreshold:0.25, highThreshold:0.6, adjust:0.01, cooldown:4 },
+	multiObjective: { enabled:true, autoEntropy:true, adaptiveEpsilon:{ enabled:true, targetFront: Math.floor(Math.sqrt( popSize )) } },
+	telemetry: { enabled:true, rngState:true },
+	lineageTracking: true
+});
+```
+`entropySharingTuning` shrinks `sharingSigma` when structural entropy variance is too low (increasing local competition) and widens it when variance is high (reducing over-fragmentation). `entropyCompatTuning` dynamically nudges `compatibilityThreshold` based on mean structural entropy to balance species fragmentation. `ancestorUniqAdaptive` boosts diversity pressure (or relaxes dominance if using mode `epsilon`) when genealogical uniqueness drops below a threshold, and dials it back when uniqueness is already high. CSV export now includes `ops` operator stats and `objectives` active objective keys per generation when available.
+
+| `multiObjective.adaptiveEpsilon` | `{ enabled,targetFront,adjust,min,max,cooldown }` | Auto-tune dominance epsilon toward target first-front size | disabled |
+| `multiObjective.refPoint` | `number[] | 'auto'` | Reference point for hypervolume (when telemetry.hypervolume true) | auto (slightly >1) |
+| `exportParetoFrontJSONL()` | method | Export recent Pareto objective vectors JSONL (for external analysis) | - |
+| `lineagePressure` | `{ enabled, mode, targetMeanDepth, strength }` | Post-eval score adjustment using lineage depth (`penalizeDeep` / `rewardShallow` / `spread`) | disabled |
+
+Helper getters:
+```ts
+neat.getSpeciesHistory();       // rolling snapshots (size, age, best score)
+neat.getNoveltyArchiveSize();   // current novelty archive length
+neat.getMultiObjectiveMetrics(); // per-genome { rank, crowding, score, nodes, connections }
+neat.getOperatorStats();        // operator adaptation/bandit stats
+neat.getTelemetry();            // evolution telemetry log (recent)
+neat.exportTelemetryCSV();      // flattened telemetry (includes lineage.* & diversity.lineage* if present)
+neat.snapshotRNGState();        // { state } deterministic PRNG snapshot (if seeded)
+neat.restoreRNGState(snap);     // restore snapshot
+neat.exportRNGState();          // JSON string of RNG state
+neat.importRNGState(json);      // restore from JSON
+```
+const neat = new Neat(4,2, fit, { telemetry:{ enabled:true, complexity:true, hypervolume:true }, lineageTracking:true, multiObjective:{ enabled:true, autoEntropy:true } });
+#### Example: Enabling Novelty + Multi-Objective
+```ts
+const neat = new Neat(4, 2, fitness, {
+console.log(last.lineage);    // { parents:[id1,id2], depthBest:4, meanDepth:2.1, inbreeding:0 }
+console.log(neat.getObjectives().map(o=>o.key)); // ['fitness','complexity','entropy']
+	popsize: 100,
+	novelty: {
+		descriptor: net => net.nodes.filter(n=>n.type==='H').map(h=>h.index%2), // toy descriptor
+		k: 10,
+		addThreshold: 0.9,
+		archiveLimit: 200,
+		blendFactor: 0.3
+	},
+	multiObjective: { enabled: true, complexityMetric: 'nodes' },
+	adaptiveMutation: { enabled: true }
+});
+```
+
+#### Example: Phased Complexity + Operator Adaptation
+```ts
+const neat = new Neat(3,1, fitness, {
+	phasedComplexity: { enabled:true, phaseLength: 5, simplifyFraction: 0.15 },
+	operatorAdaptation: { enabled:true, window: 30, boost: 2.0, decay: 0.9 }
+});
+```
+
+#### Minimal Criterion
+```ts
+const neat = new Neat(2,1, fitness, {
+	minimalCriterion: net => net.nodes.length >= 5 // require some complexity before scoring
+});
+```
+
+#### Adaptive Sharing
+If `adaptiveSharing.enabled` the system adjusts `sharingSigma` each generation:
+```
+sigma += step * sign(fragmentation - target)
+```
+within `[minSigma,maxSigma]`.
+
+#### Multi-Objective Notes
+Implements a simplified NSGA-II style pass: fast non-dominated sort (O(N^2) current implementation) + crowding distance; final ordering uses (rank asc, crowding desc, fitness desc) before truncation to next generation size.
+
+Planned (future): faster dominance (divide-and-conquer), structural motif diversity pressure, automated compatibility coefficient tuning.
+
+### Roadmap / Backlog
+Planned or partially designed enhancements not yet merged:
+* Structural motif diversity pressure: penalize over-represented connection patterns (entropy-based sharing) to sustain innovation.
+* Automated compatibility coefficient tuning: search or adapt excess/disjoint/weight coefficients to stabilize species counts without manual calibration.
+* Faster Pareto sorting: divide-and-conquer or incremental dominance maintenance to reduce O(N^2) overhead for large populations.
+* Connection complexity budget (current budget targets nodes only) and dual-objective weighting option.
+* Diversity-aware parent selection leveraging motif entropy and archive dispersion.
+* Extended novelty descriptors helper utilities (e.g. built-in graph metrics: depth, feedforwardness, clustering).
+* Visualization hooks (species lineage graph, archive embedding projection) for diagnostics.
