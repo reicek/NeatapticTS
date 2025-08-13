@@ -64,8 +64,8 @@ export default class Connection {
     this.opt_m2 = 0;
     // Initialize dropconnect mask
     this.dcMask = 1;
-  this.innovation = Connection._nextInnovation++;
-  this.enabled = true; // default expressed
+    this.innovation = Connection._nextInnovation++;
+    this.enabled = true; // default expressed
   }
 
   /**
@@ -78,9 +78,9 @@ export default class Connection {
       from: this.from.index ?? undefined,
       to: this.to.index ?? undefined,
       weight: this.weight,
-  gain: this.gain,
-  innovation: this.innovation,
-  enabled: this.enabled
+      gain: this.gain,
+      innovation: this.innovation,
+      enabled: this.enabled,
     };
     if (this.gater && typeof this.gater.index !== 'undefined') {
       json.gater = this.gater.index;
@@ -103,5 +103,46 @@ export default class Connection {
     return (1 / 2) * (a + b) * (a + b + 1) + b;
   }
   private static _nextInnovation: number = 1;
-  static resetInnovationCounter(value: number = 1) { Connection._nextInnovation = value; }
+  static resetInnovationCounter(value: number = 1) {
+    Connection._nextInnovation = value;
+  }
+
+  // --- Simple object pool to reduce GC churn when connections are frequently created/removed ---
+  private static _pool: Connection[] = [];
+  /** Acquire a Connection from the pool or construct a new one. Ensures fresh innovation id. */
+  static acquire(from: Node, to: Node, weight?: number): Connection {
+    let c: Connection;
+    if (Connection._pool.length) {
+      c = Connection._pool.pop()!;
+      // Reset fields
+      (c as any).from = from;
+      (c as any).to = to;
+      c.weight = weight ?? Math.random() * 0.2 - 0.1;
+      c.gain = 1;
+      c.gater = null;
+      c.eligibility = 0;
+      c.previousDeltaWeight = 0;
+      c.totalDeltaWeight = 0;
+      c.xtrace.nodes.length = 0;
+      c.xtrace.values.length = 0;
+      c.opt_m = 0;
+      c.opt_v = 0;
+      c.opt_cache = 0;
+      c.opt_vhat = 0;
+      c.opt_u = 0;
+      c.opt_m2 = 0;
+      c.dcMask = 1;
+      (c as any)._la_shadowWeight = undefined;
+      c.enabled = true;
+      // Assign a fresh innovation id
+      (c as any).innovation = Connection._nextInnovation++;
+    } else {
+      c = new Connection(from, to, weight);
+    }
+    return c;
+  }
+  /** Return a Connection to the pool for reuse. */
+  static release(conn: Connection) {
+    Connection._pool.push(conn);
+  }
 }

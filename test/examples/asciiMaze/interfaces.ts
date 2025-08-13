@@ -19,7 +19,8 @@ export interface IDashboardManager {
     maze: string[],
     result: any,
     network: INetwork,
-    generation: number
+    generation: number,
+    neatInstance?: any // optional Neat instance for advanced telemetry display
   ): void;
 }
 
@@ -48,9 +49,28 @@ export interface IEvolutionAlgorithmConfig {
   popSize?: number;
   maxStagnantGenerations?: number;
   minProgressToPass?: number;
+  maxGenerations?: number; // Safety cap on total generations
   randomSeed?: number;
   initialPopulation?: INetwork[];
   initialBestNetwork?: INetwork;
+  lamarckianIterations?: number; // Per-individual refinement steps
+  lamarckianSampleSize?: number; // Subsample training patterns for speed
+  // Adaptive simplify/pruning phase triggers
+  plateauGenerations?: number; // generations with < plateauImprovementThreshold improvement to trigger simplify
+  plateauImprovementThreshold?: number; // minimum fitness delta to count as improvement (default 1e-6)
+  simplifyDuration?: number; // number of generations to remain in simplify mode
+  simplifyPruneFraction?: number; // fraction of weakest connections to disable each simplify generation (0-1)
+  simplifyStrategy?: 'weakWeight' | 'weakRecurrentPreferred'; // pruning heuristic
+  // Persistence
+  persistEvery?: number; // save snapshot every N generations
+  persistDir?: string; // directory for saving snapshots
+  persistTopK?: number; // number of top genomes to save
+  // Dynamic population growth controls
+  dynamicPopEnabled?: boolean;
+  dynamicPopMax?: number;
+  dynamicPopExpandInterval?: number;
+  dynamicPopExpandFactor?: number;
+  dynamicPopPlateauSlack?: number;
 }
 
 /**
@@ -62,6 +82,7 @@ export interface IFitnessEvaluationContext {
   startPosition: [number, number];
   exitPosition: [number, number];
   agentSimConfig: IAgentSimulationConfig;
+  distanceMap?: number[][]; // optional cached distance map for performance
 }
 
 /**

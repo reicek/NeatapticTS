@@ -162,11 +162,16 @@ export class NetworkVisualization {
     labels: string[];
   } {
     // Calculate activation values
+    /**
+     * Activation values for each node, used for grouping.
+     */
     const activations = nodes.map((node) =>
       NetworkVisualization.getNodeValue(node)
     );
 
-    // Define more granular activation ranges
+    /**
+     * Activation ranges for grouping nodes by value.
+     */
     const ranges = [
       { min: 2.0, max: Infinity, label: 'v-high+' },
       { min: 1.0, max: 2.0, label: 'high+' },
@@ -179,7 +184,9 @@ export class NetworkVisualization {
       { min: -Infinity, max: -2.0, label: 'v-high-' },
     ];
 
-    // Create groups and corresponding labels
+    /**
+     * Arrays to hold groups of nodes and their labels.
+     */
     const groups: any[][] = [];
     const labels: string[] = [];
 
@@ -214,11 +221,21 @@ export class NetworkVisualization {
     layerDisplayCounts: number[];
     averageNodes: { [key: string]: { avgValue: number; count: number } };
   } {
+    /**
+     * Maximum number of nodes to display per layer (rest are averaged).
+     */
     const MAX_VISIBLE = maxVisiblePerLayer;
 
+    /**
+     * Stores average node info for each group.
+     */
     const averageNodes: {
       [key: string]: { avgValue: number; count: number };
     } = {};
+
+    /**
+     * Arrays for display-ready layers and their display counts.
+     */
     const displayLayers: any[][] = [];
     const layerDisplayCounts: number[] = [];
 
@@ -361,15 +378,36 @@ export class NetworkVisualization {
    * @returns String containing the ASCII visualization.
    */
   static visualizeNetworkSummary(network: INetwork): string {
-    // Constants for visualization
+    /**
+     * Visualization constants:
+     * - ARROW: ASCII arrow between layers
+     * - ARROW_WIDTH: width of the arrow string
+     * - TOTAL_WIDTH: total width of the visualization
+     */
     const ARROW = '  ──▶  ';
     const ARROW_WIDTH = ARROW.length;
     const TOTAL_WIDTH = 150; // Width of the entire visualization
-    const INPUT_COUNT = 5; // Number of input nodes (hardcoded for maze solver)
-    const OUTPUT_COUNT = 4; // Number of output nodes (hardcoded for maze solver)
+
+    /**
+     * Determine input count dynamically (inputs + constants).
+     * Fallback to 18 if not detected (for legacy schemas).
+     */
+    const detectedInputNodes = (network.nodes || []).filter(
+      (n: any) => n.type === 'input' || n.type === 'constant'
+    );
+    const INPUT_COUNT = detectedInputNodes.length || 18; // fallback to expected 18 with memory inputs
+
+    /**
+     * Number of output nodes (hardcoded for maze solver: N, E, S, W).
+     */
+    const OUTPUT_COUNT = 4;
 
     // Extract nodes from network
     const nodes = network.nodes || [];
+
+    /**
+     * Arrays of input, output, and hidden nodes for visualization.
+     */
     const inputNodes: IVisualizationNode[] = nodes
       .filter((n) => n.type === 'input' || n.type === 'constant')
       .map(NetworkVisualization.toVisualizationNode);
@@ -380,7 +418,9 @@ export class NetworkVisualization {
       .filter((n) => n.type === 'hidden')
       .map(NetworkVisualization.toVisualizationNode);
 
-    // Group hidden nodes into layers
+    /**
+     * Group hidden nodes into layers for visualization.
+     */
     const hiddenLayers = NetworkVisualization.groupHiddenByLayer(
       inputNodes,
       hiddenNodesRaw,
@@ -388,14 +428,18 @@ export class NetworkVisualization {
     );
     const numHiddenLayers = hiddenLayers.length;
 
-    // Prepare hidden layers for display (condensing large layers)
+    /**
+     * Prepare hidden layers for display (condensing large layers to averages).
+     */
     const {
       displayLayers,
       layerDisplayCounts,
       averageNodes,
     } = NetworkVisualization.prepareHiddenLayersForDisplay(hiddenLayers);
 
-    // Map connections using node index as unique identifier
+    /**
+     * Map connections using node index as unique identifier for visualization.
+     */
     const connections: IVisualizationConnection[] = (
       network.connections || []
     ).map((conn: any) => ({
@@ -406,7 +450,10 @@ export class NetworkVisualization {
       enabled: typeof conn.enabled === 'boolean' ? conn.enabled : true,
     }));
 
-    // Calculate connection counts between layers
+    /**
+     * Calculate connection counts between layers for summary display.
+     * connectionCounts[i] = number of connections from layer i to i+1
+     */
     const connectionCounts: number[] = [];
 
     // Count input → first hidden (or output if no hidden)
@@ -414,7 +461,6 @@ export class NetworkVisualization {
     const firstTargetLayer =
       hiddenLayers.length > 0 ? hiddenLayers[0] : outputNodes;
     for (const conn of network.connections || []) {
-      // Add null check for network.connections
       if (
         inputNodes.some((n) => n.id === conn.from.index) &&
         firstTargetLayer.some((n) => n.id === conn.to.index)
@@ -428,7 +474,6 @@ export class NetworkVisualization {
     for (let i = 0; i < hiddenLayers.length - 1; i++) {
       let count = 0;
       for (const conn of network.connections || []) {
-        // Add null check
         if (
           hiddenLayers[i].some((n) => n.id === conn.from.index) &&
           hiddenLayers[i + 1].some((n) => n.id === conn.to.index)
@@ -443,7 +488,6 @@ export class NetworkVisualization {
     if (hiddenLayers.length > 0) {
       let lastCount = 0;
       for (const conn of network.connections || []) {
-        // Add null check
         if (
           hiddenLayers[hiddenLayers.length - 1].some(
             (n) => n.id === conn.from.index
@@ -458,13 +502,21 @@ export class NetworkVisualization {
 
     // --- Layer/connection summary footer ---
 
-    // Calculate layout
+    /**
+     * Layout calculations for columns and arrows.
+     * - numLayers: total number of layers (input + hidden + output)
+     * - numArrows: number of arrows between layers
+     * - availableWidth: width for all columns
+     * - columnWidth: width of each column
+     */
     const numLayers = 2 + numHiddenLayers; // input + hidden + output
     const numArrows = numLayers - 1;
     const availableWidth = TOTAL_WIDTH - numArrows * ARROW_WIDTH;
     const columnWidth = Math.floor(availableWidth / numLayers);
 
-    // Create the header row
+    /**
+     * Build the header row for the visualization, including layer names and connection counts.
+     */
     let header = '';
     header +=
       `${colors.blueCore}║` +
@@ -508,32 +560,70 @@ export class NetworkVisualization {
       ) + `${colors.blueCore}║${colors.reset}`;
 
     // Prepare display data for each layer
-    // For input nodes: Always show all 9
+    // For input nodes: Always show all detected inputs.
+    // Annotate first 6 (if present) with semantic labels of current minimal vision schema.
+    /**
+     * Array of input nodes to display, padded to INPUT_COUNT.
+     */
     const inputDisplayNodes = Array(INPUT_COUNT)
       .fill(null)
       .map((_, i) => inputNodes[i] || { activation: 0 });
 
-    // For output nodes: Always show all 4
+    /**
+     * Semantic labels for the first 6 input nodes (if present).
+     */
+    const INPUT_LABELS6 = [
+      'compass',
+      'openN',
+      'openE',
+      'openS',
+      'openW',
+      'progress',
+    ];
+
+    /**
+     * Array of output nodes to display, always 4 (N, E, S, W), padded if needed.
+     */
     const outputDisplayNodes = Array(OUTPUT_COUNT)
       .fill(null)
       .map((_, i) => outputNodes[i] || { activation: 0 });
 
-    // Calculate the max number of rows needed
+    /**
+     * Maximum number of rows needed for the visualization table.
+     */
     const maxRows = Math.max(INPUT_COUNT, ...layerDisplayCounts, OUTPUT_COUNT);
 
-    // Generate rows for visualization
+    /**
+     * Array to hold each row of the visualization table.
+     */
     const rows: string[] = [];
     for (let rowIdx = 0; rowIdx < maxRows; rowIdx++) {
+      /**
+       * String for the current row being built.
+       */
       let row = '';
 
       // Input column
       if (rowIdx < INPUT_COUNT) {
+        /**
+         * Node and value for this input row.
+         */
         const node = inputDisplayNodes[rowIdx];
         const value = NetworkVisualization.getNodeValue(node);
+        /**
+         * Optional semantic label for the first 6 inputs.
+         */
+        const label = rowIdx < 6 ? INPUT_LABELS6[rowIdx] : '';
+        /**
+         * Formatted label string for display (with color if present).
+         */
+        const labelStr = label
+          ? ` ${colors.whiteNeon}${label}${colors.reset}`
+          : '';
         row += NetworkVisualization.pad(
           `${colors.blueCore}║   ${colors.neonGreen}●${
             colors.reset
-          }${NetworkVisualization.fmtColoredValue(value)}`,
+          }${NetworkVisualization.fmtColoredValue(value)}${labelStr}`,
           columnWidth,
           ' ',
           'left'
@@ -544,12 +634,16 @@ export class NetworkVisualization {
 
       // First arrow - calculate proportional connection counts
       if (rowIdx === 0) {
-        // First row after header shows proportional counts, not total
+        /**
+         * For the first row, show proportional connection count (not total).
+         */
         const totalInputs = Math.min(INPUT_COUNT, inputNodes.length);
         const firstHiddenTotal = displayLayers[0]?.length || 0;
 
         if (totalInputs > 0 && firstHiddenTotal > 0) {
-          // Calculate a proportional number of connections for the first visible row
+          /**
+           * Proportional number of connections for the first visible row.
+           */
           const nodeProportion = Math.ceil(
             connectionCounts[0] / Math.max(1, totalInputs)
           );
@@ -564,12 +658,16 @@ export class NetworkVisualization {
           );
         }
       } else if (rowIdx < INPUT_COUNT && rowIdx < displayLayers[0]?.length) {
-        // Calculate proportional connections for this input node to first hidden layer
+        /**
+         * For input rows, show proportional connections to first hidden layer.
+         */
         const totalInputs = Math.min(INPUT_COUNT, inputNodes.length);
         const firstHiddenTotal = displayLayers[0]?.length || 0;
 
         if (totalInputs > 0 && firstHiddenTotal > 0) {
-          // Calculate a proportional number of connections
+          /**
+           * Proportional number of connections for this input node.
+           */
           const nodeProportion = Math.ceil(
             connectionCounts[0] / Math.max(3, totalInputs * 2)
           );
@@ -593,13 +691,25 @@ export class NetworkVisualization {
 
       // Hidden layers
       for (let layerIdx = 0; layerIdx < numHiddenLayers; layerIdx++) {
+        /**
+         * The current hidden layer for this column.
+         */
         const layer = displayLayers[layerIdx];
         if (rowIdx < layer.length) {
+          /**
+           * The node (or average node) for this row in the current layer.
+           */
           const node = layer[rowIdx];
 
           if (node.isAverage) {
             // Special formatting for average nodes
+            /**
+             * Label for the average node group (if present).
+             */
             const labelText = node.label ? `${node.label} ` : '';
+            /**
+             * Formatted average node display string.
+             */
             const avgText = `${colors.cyanNeon}■${
               colors.reset
             }${NetworkVisualization.fmtColoredValue(node.activation)} ${
@@ -607,6 +717,9 @@ export class NetworkVisualization {
             }(${labelText}avg of ${node.avgCount})${colors.reset}`;
             row += NetworkVisualization.pad(avgText, columnWidth, ' ', 'left');
           } else {
+            /**
+             * Value for this hidden node.
+             */
             const value = NetworkVisualization.getNodeValue(node);
             row += NetworkVisualization.pad(
               `${colors.cyanNeon}■${
@@ -623,10 +736,14 @@ export class NetworkVisualization {
 
         // Arrow between columns - calculate proportional connection counts
         if (layerIdx < numHiddenLayers - 1) {
-          // Arrow to next hidden layer
+          /**
+           * Arrow to next hidden layer, with proportional connection count.
+           */
           const connCount = connectionCounts[layerIdx + 1];
           if (rowIdx === 0) {
-            // First row shows proportional connection count, not total
+            /**
+             * Proportional connection count for first row.
+             */
             const currentLayerSize = displayLayers[layerIdx]?.length || 1;
             const nodeProportion = Math.ceil(
               connCount / Math.max(3, currentLayerSize * 2)
@@ -639,7 +756,9 @@ export class NetworkVisualization {
             rowIdx < layer.length &&
             rowIdx < displayLayers[layerIdx + 1]?.length
           ) {
-            // Calculate proportional connections between these hidden layers
+            /**
+             * Proportional connections between these hidden layers.
+             */
             const currentLayerSize = displayLayers[layerIdx]?.length || 1;
             const nextLayerSize = displayLayers[layerIdx + 1]?.length || 1;
 
@@ -661,9 +780,14 @@ export class NetworkVisualization {
           }
         } else {
           // Last arrow to output layer
+          /**
+           * Connection count from last hidden to output layer.
+           */
           const connCount = connectionCounts[connectionCounts.length - 1];
           if (rowIdx === 0) {
-            // First row shows proportional connections, not total
+            /**
+             * Proportional connection count for first row to output.
+             */
             const lastLayerSize =
               displayLayers[displayLayers.length - 1]?.length || 1;
             const nodeProportion = Math.ceil(
@@ -674,7 +798,9 @@ export class NetworkVisualization {
               ARROW_WIDTH
             );
           } else if (rowIdx < layer.length && rowIdx < OUTPUT_COUNT) {
-            // Calculate proportional connections to output layer
+            /**
+             * Proportional connections to output layer.
+             */
             const lastLayerSize =
               displayLayers[displayLayers.length - 1]?.length || 1;
 
@@ -700,6 +826,9 @@ export class NetworkVisualization {
 
       // Output column - ALWAYS show all 4 outputs
       if (rowIdx < OUTPUT_COUNT) {
+        /**
+         * Output node and value for this row.
+         */
         const node = outputDisplayNodes[rowIdx];
         const value = NetworkVisualization.getNodeValue(node);
         row +=
@@ -715,44 +844,52 @@ export class NetworkVisualization {
         row += NetworkVisualization.pad('', columnWidth);
       }
 
+      // Add the completed row to the visualization table.
       rows.push(row);
     }
 
-    // Combine all parts with a legend
+    // Combine all parts with a legend and helpful explanations
     return [
       header,
       ...rows,
+      // Spacer row
       `${colors.blueCore}║       ${NetworkVisualization.pad(' ', 140)} ║${
         colors.reset
       }`,
+      // Feed-forward flow explanation
       `${colors.blueCore}║       ${NetworkVisualization.pad(
         'Arrows indicate feed-forward flow.',
         140,
         ' ',
         'left'
       )} ${colors.blueCore}║${colors.reset}`,
+      // Spacer row
       `${colors.blueCore}║       ${NetworkVisualization.pad(' ', 140)} ║${
         colors.reset
       }`,
 
+      // Legend for node types
       `${colors.blueCore}║       ${NetworkVisualization.pad(
         `${colors.whiteNeon}Legend:  ${colors.neonGreen}●${colors.reset}=Input                    ${colors.cyanNeon}■${colors.reset}=Hidden                    ${colors.orangeNeon}▲${colors.reset}=Output`,
         140,
         ' ',
         'left'
       )} ${colors.blueCore}║${colors.reset}`,
+      // Legend for activation groups
       `${colors.blueCore}║       ${NetworkVisualization.pad(
         `${colors.whiteNeon}Groups:  ${colors.bgOrangeNeon}${colors.bright}v-high+${colors.reset}=Very high positive   ${colors.orangeNeon}high+${colors.reset}=High positive    ${colors.cyanNeon}mid+${colors.reset}=Medium positive    ${colors.neonGreen}low+${colors.reset}=Low positive`,
         140,
         ' ',
         'left'
       )} ${colors.blueCore}║${colors.reset}`,
+      // Legend for near-zero group
       `${colors.blueCore}║       ${NetworkVisualization.pad(
         `${colors.whiteNeon}         zero±${colors.reset}=Near zero`,
         140,
         ' ',
         'left'
       )} ${colors.blueCore}║${colors.reset}`,
+      // Legend for negative groups
       `${colors.blueCore}║       ${NetworkVisualization.pad(
         `         ${colors.bgBlueCore}${colors.bright}v-high-${colors.reset}=Very high negative   ${colors.blueNeon}${colors.bright}high-${colors.reset}=High negative    ${colors.blueCore}mid-${colors.reset}=Medium negative    ${colors.blue}low-${colors.reset}=Low negative`,
         140,

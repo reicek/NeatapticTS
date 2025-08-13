@@ -6,6 +6,103 @@
 
 NeatapticTS offers flexible neural networks; neurons and synapses can be removed with a single line of code. No fixed architecture is required for neural networks to function at all. This flexibility allows networks to be shaped for your dataset through neuro-evolution, which is done using multiple threads.
 
+## Performance & Parallelism Tuning
+
+This section summarizes practical knobs to accelerate evolution while preserving solution quality.
+
+### Core Levers
+| Lever | Effect | Guidance |
+|-------|--------|----------|
+| `threads` | Parallel genome evaluation | Increase until CPU saturation (watch diminishing returns > physical cores). Falls back to single-thread if workers unavailable. |
+| `growth` | Structural penalty strength | Higher discourages bloating (faster eval, may limit innovation). Tune 5e-5..5e-4. |
+| `mutationRate` / `mutationAmount` | Exploration breadth | For small populations (<=10) library enforces higher defaults. Reduce when convergence noisy. |
+| `fastMode` | Lower sampling overhead | Use for CI or rapid iteration; disables some heavy sampling defaults. |
+| `adaptiveMutation` | Dynamic operator pressure | Stabilizes search; can reduce wasted evaluations. |
+| `telemetrySelect` | Reduce telemetry overhead | Keep only necessary blocks (e.g. ['performance']). |
+| `lamarckianIterations` / `lamarckianSampleSize` | Local refinement vs throughput | Lower for diversity, raise for precision on stable plateaus. |
+| `maxGenerations` (asciiMaze engine) | Safety cap | Prevents runaway long runs during tuning passes. |
+
+### Structural Complexity Caching
+`network.evolve` caches per-genome complexity metrics (nodes / connections / gates). This avoids recomputing counts each evaluation when unchanged, reducing overhead for large populations or deep architectures.
+
+### Profiling
+Enable `telemetry:{ performance:true }` to capture per-generation evaluation & evolve timings. Use these to:
+1. Identify evaluation bottlenecks (cost function vs structural overhead).
+2. Compare single vs multi-thread scaling (expect near-linear until memory bandwidth limits).
+3. Decide when to lower Lamarckian refinement iterations.
+
+### Suggested Workflow
+1. Start with `threads = physicalCores - 1` to leave OS headroom.
+2. Enable performance telemetry and run a short benchmark (e.g., 30 generations).
+3. Inspect mean `evalMs` / `evolveMs`; if `evalMs` dominates and scaling <70% ideal, reduce Lamarckian refinement & complexity penalty if innovation stalls.
+4. Prune telemetry (`telemetrySelect`) to omit heavy blocks during large sweeps.
+5. Lock seed and record baseline; adjust one lever at a time.
+
+### Determinism Caveat
+Parallel evaluation introduces nondeterministic ordering of floating-point accumulation if your cost function is stateful. For strict reproducibility benchmark with `threads=1`.
+
+### Example Minimal Perf Config
+```ts
+const neat = new Neat(inputs, outputs, fitness, {
+	popsize: 120,
+	threads: 8,
+	telemetry:{ enabled:true, performance:true },
+	telemetrySelect:['performance','complexity'],
+	adaptiveMutation:{ enabled:true, strategy:'twoTier' },
+	fastMode:true
+});
+```
+
+Monitor `getTelemetry().slice(-1)[0].perf` for current timings.
+
+### Memory Optimizations (Activation Pooling & Precision)
+`Network` constructor now accepts:
+```ts
+new Network(input, output, {
+	activationPrecision: 'f32',          // default 'f64'; use float32 activations
+	reuseActivationArrays: true,         // reuse a pooled output buffer each forward pass
+	returnTypedActivations: true         // return the pooled Float32Array/Float64Array directly (no Array clone)
+});
+```
+Guidelines:
+* Use `activationPrecision:'f32'` for large populations or inference batches where 1e-7 precision loss is acceptable.
+* Enable `reuseActivationArrays` to eliminate per-call allocation of output arrays (avoid mutating returned array between passes if reusing!).
+* Set `returnTypedActivations:false` (default) if consumer code expects a plain JS array; this will clone when pooling is on.
+* For maximum throughput (e.g., evaluation workers), combine all three.
+
+These options are conservative by default to preserve existing test expectations.
+
+### Future Improvements
+Planned: micro-batch evaluation, worker task stealing, SIMD/WASM kernels, adaptive Lamarckian schedules.
+
+### Deterministic Chain Mode (Test Utility)
+`config.deterministicChainMode` (default: `false`) enables a simplified deterministic variant of the `ADD_NODE` structural mutation used strictly for tests that must guarantee a predictable deep linear chain.
+
+When enabled BEFORE constructing / mutating a `Network`:
+* Each `ADD_NODE` splits the terminal connection of the current single input→…→output chain (following the first outgoing edge each step).
+* The original connection is replaced by two new ones (from→newHidden, newHidden→to).
+* Any alternate outgoing edges encountered along the chain are pruned to preserve strict linearity.
+* A direct input→output shortcut is removed once at least one hidden node exists, ensuring depth grows.
+
+Intended Usage:
+```ts
+import { config } from 'neataptic';
+config.deterministicChainMode = true; // enable
+const net = new Network(1,1);
+for (let i=0;i<5;i++) net.mutate(methods.mutation.ADD_NODE); // guaranteed 5 hidden chain
+config.deterministicChainMode = false; // restore (recommended)
+```
+Rationale:
+Normal evolutionary heuristics are stochastic and may add branches; some legacy tests asserted an exact depth progression. The flag isolates that legacy requirement without constraining typical evolutionary runs. Avoid using this mode in production evolution— it suppresses beneficial structural diversity.
+
+Invariants (enforced after each deterministic `ADD_NODE`):
+1. Exactly one outgoing forward edge per non-output node along the primary chain.
+2. No direct input→output edge after the first hidden node is inserted.
+3. Hidden node count increments by 1 per `ADD_NODE` call (barring impossible edge cases like empty connection sets).
+
+If you need to debug chain growth without enabling global warnings, temporarily set a bespoke flag (e.g. `config.debugDeepPath`) and add localized logging; persistent debug output has been removed to keep test noise low.
+
+
 ## New Evolution Enhancements (TypeScript refactor branch)
 
 Key advanced NEAT features now included:
@@ -868,7 +965,54 @@ Implements a simplified NSGA-II style pass: fast non-dominated sort (O(N^2) curr
 
 Planned (future): faster dominance (divide-and-conquer), structural motif diversity pressure, automated compatibility coefficient tuning.
 
-### Roadmap / Backlog
+
+## ASCII Maze Example: 6‑Input Long-Range Vision (MazeVision)
+
+The ASCII maze example uses a compact 6‑input perception schema ("MazeVision") with long‑range lookahead via a precomputed distance map. Inputs (order fixed):
+
+1. compassScalar: Encodes the direction of the globally best next step toward the exit as a discrete scalar in {0,0.25,0.5,0.75} corresponding to N,E,S,W. Uses an extended horizon (H_COMPASS=5000) so it can see deeper than openness ratios.
+2. openN
+3. openE
+4. openS
+5. openW
+6. progressDelta: Normalized recent progress signal around 0.5 ( >0.5 improving, <0.5 regressing ).
+
+### Openness Semantics (openN/E/S/W)
+
+Each openness value describes the quality of the shortest path to the exit if the agent moves first in that direction, using a bounded lookahead horizon H=1000 over the distance map.
+
+Value encoding:
+* 1: Direction(s) whose total path length Ldir is minimal among all strictly improving neighbors (ties allowed; multiple 1s possible).
+* Ratio 0 < Lmin / Ldir < 1: Direction is a valid strictly improving path but longer than the best (Lmin is the shortest improving path cost; Ldir = 1 + distance of neighbor cell). This supplies graded preference rather than binary pruning.
+* 0: Wall, unreachable cell, dead end, or any non‑improving move (neighbor distance >= current distance) – all treated uniformly.
+* 0.001: Special back‑only escape marker. When all four openness values would otherwise be 0 but the opposite of the previous successful action is traversable, that single opposite direction is set to 0.001 to indicate a pure retreat (pattern e.g. [0,0,0,0.001]).
+
+Rules / Notes:
+* Strict improvement filter: Only neighbors whose distanceMap value is strictly less than the current cell distance are considered for 1 or ratio values.
+* Horizon clipping: Paths with Ldir > H are treated as unreachable (value 0) to bound search cost.
+* Multiple bests: Corridors that fork into equivalently short routes produce multiple 1s, encouraging neutrality across equally optimal choices.
+* Backtrack marker is intentionally very small (0.001) so evolution distinguishes "retreat only" states from true walls without overweighting them.
+* Supervised refinement dataset intentionally contains ONLY deterministic single‑path cases (exactly one openness=1, others 0) for clarity; richer ratio/backtrack patterns appear only in the Lamarckian / evolutionary phase.
+
+### progressDelta
+Computed from recent distance improvement: delta = prevDistance - currentDistance, clipped to [-2,2], then mapped to [0,1] as 0.5 + delta/4. Values >0.5 mean progress toward exit; <0.5 regression or stalling.
+
+### Debugging
+Set ASCII_VISION_DEBUG=1 to emit periodic vision lines: current position, compassScalar, input vector, and per‑direction distance/ratio breakdown for auditing mismatches between maze geometry and distance map.
+
+### Quick Reference
+| Signal | Meaning |
+|--------|---------|
+| 1 | Best strictly improving path(s) (minimal Ldir) |
+| (0,1) | Longer but improving path (ratio Lmin/Ldir) |
+| 0.001 | Only backtrack available (opposite of prior action) |
+| 0 | Wall / dead end / non‑improving / unreachable |
+
+Implementation: `test/examples/asciiMaze/mazeVision.ts` (function `MazeVision.buildInputs6`).
+
+This design minimizes input size (6 vs earlier large encodings) while preserving directional discrimination and long‑range planning cues, aiding faster evolutionary convergence and avoiding overfitting to local dead‑end noise.
+
+## Roadmap / Backlog
 Planned or partially designed enhancements not yet merged:
 * Structural motif diversity pressure: penalize over-represented connection patterns (entropy-based sharing) to sustain innovation.
 * Automated compatibility coefficient tuning: search or adapt excess/disjoint/weight coefficients to stabilize species counts without manual calibration.

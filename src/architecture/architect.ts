@@ -190,11 +190,11 @@ export default class Architect {
       previousLayer = currentLayer; // Update the reference to the previous layer.
     }
 
-  // Construct the final Network object from the assembled layers.
-  const net = Architect.construct(nodes);
-  // Attach ordered Layer instances (excluding any Group) to enable layer-based features (e.g. stochastic depth)
-  (net as any).layers = nodes.filter(n => n instanceof Layer);
-  return net;
+    // Construct the final Network object from the assembled layers.
+    const net = Architect.construct(nodes);
+    // Attach ordered Layer instances (excluding any Group) to enable layer-based features (e.g. stochastic depth)
+    (net as any).layers = nodes.filter((n) => n instanceof Layer);
+    return net;
   }
 
   /**
@@ -574,10 +574,10 @@ export default class Architect {
 
   /**
    * Enforces the minimum hidden layer size rule on a network.
-   * 
+   *
    * This ensures that all hidden layers have at least min(input, output) + 1 nodes,
    * which is a common heuristic to ensure networks have adequate representation capacity.
-   * 
+   *
    * @param {Network} network - The network to enforce minimum hidden layer sizes on
    * @returns {Network} The same network with properly sized hidden layers
    */
@@ -589,41 +589,39 @@ export default class Architect {
 
     // Calculate minimum size for hidden layers
     const minSize = Math.min(network.input, network.output) + 1;
-    
+
     // Adjust all hidden layers (skip input and output layers)
     for (let i = 1; i < network.layers.length - 1; i++) {
       const hiddenLayer = network.layers[i];
       const currentSize = hiddenLayer.nodes.length;
-      
+
       if (currentSize < minSize) {
-        console.log(`Resizing hidden layer ${i} from ${currentSize} to ${minSize} nodes`);
-        
         // Create the additional nodes needed
         for (let j = currentSize; j < minSize; j++) {
           const newNode = new Node('hidden');
           hiddenLayer.nodes.push(newNode);
-          
+
           // Add node to network's node list
           network.nodes.push(newNode);
-          
+
           // Connect to previous layer
-          if (i > 0 && network.layers[i-1].output) {
-            for (const prevNode of network.layers[i-1].output.nodes) {
+          if (i > 0 && network.layers[i - 1].output) {
+            for (const prevNode of network.layers[i - 1].output.nodes) {
               const connections = prevNode.connect(newNode);
               // Fix: Spread the connections array into individual connections
               network.connections.push(...connections);
             }
           }
-          
+
           // Connect to next layer
-          if (i < network.layers.length - 1 && network.layers[i+1].output) {
-            for (const nextNode of network.layers[i+1].output.nodes) {
+          if (i < network.layers.length - 1 && network.layers[i + 1].output) {
+            for (const nextNode of network.layers[i + 1].output.nodes) {
               const connections = newNode.connect(nextNode);
               // Fix: Spread the connections array into individual connections
               network.connections.push(...connections);
             }
           }
-          
+
           // If this layer has an output group, add the node to it
           if (hiddenLayer.output && Array.isArray(hiddenLayer.output.nodes)) {
             hiddenLayer.output.nodes.push(newNode);
@@ -631,7 +629,7 @@ export default class Architect {
         }
       }
     }
-    
+
     return network;
   }
 }

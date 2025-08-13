@@ -51,7 +51,10 @@ export default class Rate {
     stepSize: number = 100
   ): (baseRate: number, iteration: number) => number {
     const func = (baseRate: number, iteration: number): number => {
-      return Math.max(0, baseRate * Math.pow(gamma, Math.floor(iteration / stepSize)));
+      return Math.max(
+        0,
+        baseRate * Math.pow(gamma, Math.floor(iteration / stepSize))
+      );
     };
 
     return func;
@@ -185,7 +188,10 @@ export default class Rate {
     endRate: number = 0
   ): (baseRate: number, iteration: number) => number {
     if (totalSteps <= 0) throw new Error('totalSteps must be > 0');
-    const warm = Math.min(warmupSteps ?? Math.max(1, Math.floor(totalSteps * 0.1)), totalSteps - 1);
+    const warm = Math.min(
+      warmupSteps ?? Math.max(1, Math.floor(totalSteps * 0.1)),
+      totalSteps - 1
+    );
     return (baseRate: number, iteration: number): number => {
       if (iteration <= warm) {
         return baseRate * (iteration / Math.max(1, warm));
@@ -217,22 +223,28 @@ export default class Rate {
       minDelta = 1e-4,
       cooldown = 0,
       minRate = 0,
-      verbose = false
+      verbose = false,
     } = options || {};
     let currentRate: number | undefined; // lazily initialize to baseRate first call
     let bestError: number | undefined;
     let lastImprovementIter = 0;
     let cooldownUntil = -1;
-    return (baseRate: number, iteration: number, lastError?: number): number => {
+    return (
+      baseRate: number,
+      iteration: number,
+      lastError?: number
+    ): number => {
       if (currentRate === undefined) currentRate = baseRate;
       if (lastError !== undefined) {
         if (bestError === undefined || lastError < bestError - minDelta) {
           bestError = lastError;
           lastImprovementIter = iteration;
-        } else if (iteration - lastImprovementIter >= patience && iteration >= cooldownUntil) {
+        } else if (
+          iteration - lastImprovementIter >= patience &&
+          iteration >= cooldownUntil
+        ) {
           const newRate = Math.max(minRate, currentRate * factor);
           if (newRate < currentRate) {
-            if (verbose) console.log(`[reduceOnPlateau] Reducing LR from ${currentRate} to ${newRate} at iteration ${iteration}`);
             currentRate = newRate;
             cooldownUntil = iteration + cooldown;
             lastImprovementIter = iteration; // reset wait after reduction

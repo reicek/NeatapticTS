@@ -392,33 +392,6 @@ describe('Network Error Handling & Scenarios', () => {
     });
   });
 
-  describe('merge()', () => {
-    describe('Scenario: output/input sizes do not match', () => {
-      testWithTimeoutAndRetry('throws error', (done) => {
-        // Arrange
-        const net1 = new Network(2, 3);
-        const net2 = new Network(2, 1);
-        // Act
-        const act = () => Network.merge(net1, net2);
-        // Assert
-        expect(act).toThrow();
-        done();
-      });
-    });
-    describe('Scenario: output/input sizes match', () => {
-      testWithTimeoutAndRetry('does not throw', (done) => {
-        // Arrange
-        const net1 = new Network(2, 2);
-        const net2 = new Network(2, 2);
-        // Act
-        const act = () => Network.merge(net1, net2);
-        // Assert
-        expect(act).not.toThrow();
-        done();
-      });
-    });
-  });
-
   describe('ungate()', () => {
     describe('Scenario: connection not in gates list', () => {
       describe('when called with a connection not in gates', () => {

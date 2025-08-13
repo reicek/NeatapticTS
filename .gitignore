@@ -9,6 +9,7 @@ npm-debug.log
 /dist
 /coverage
 /docs
+/ascii_maze_snapshots
 
 # IDE
 /idea

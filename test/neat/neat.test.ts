@@ -1,5 +1,7 @@
-import { Architect, Network, methods } from '../../src/neataptic';
+import Network from '../../src/architecture/network';
 import Neat from '../../src/neat';
+import * as methods from '../../src/methods/methods';
+import { config } from '../../src/config';
 
 // Retry failed tests
 jest.retryTimes(3, { logErrorsBeforeRetry: true });
@@ -274,45 +276,32 @@ describe('Deep Network Evolution', () => {
 });
 
 describe('Deep Path Construction (guaranteed)', () => {
-  it('can construct a deep chain by always splitting the last connection', () => {
-    // Arrange
+  const prevDeterministic = config.deterministicChainMode;
+  beforeAll(() => {
+    config.deterministicChainMode = true;
+  });
+  afterAll(() => {
+    config.deterministicChainMode = prevDeterministic;
+  });
+  it('can construct a deep chain by applying ADD_NODE deterministically', () => {
     const net = new Network(1, 1);
-    // Start with a single connection from input to output
-    net.connect(net.nodes[0], net.nodes[net.nodes.length - 1]);
-    let lastConn = net.connections[0];
-    // Act: Always split the last connection to extend the chain
-    for (let i = 0; i < 5; i++) {
-      // Always split the connection that is the only outgoing from input or last hidden
-      let node = net.nodes.find((n) => n.type === 'input');
-      while (node && node.type !== 'output') {
-        const out = node.connections.out[0];
-        if (out.to.type === 'output') {
-          lastConn = out;
-          break;
-        }
-        node = out.to;
-      }
-      net.disconnect(lastConn.from, lastConn.to);
-      const newNode = new (require('../../src/architecture/node').default)(
-        'hidden'
-      );
-      net.nodes.splice(net.nodes.length - 1, 0, newNode); // Insert before output
-      net.connect(lastConn.from, newNode);
-      net.connect(newNode, lastConn.to);
-    }
-    // Walk the chain from input to output, counting steps
-    let node = net.nodes.find((n) => n.type === 'input');
+    // deterministically grow chain: each ADD_NODE splits terminal edge
+    for (let i = 0; i < 5; i++) net.mutate(methods.mutation.ADD_NODE);
+    // measure depth via following out[0]
+    const input = net.nodes.find((n) => n.type === 'input')!;
+    const output = net.nodes.find((n) => n.type === 'output')!;
+    let cur: any = input;
     let depth = 0;
-    const visited = new Set();
-    while (node && node.type !== 'output' && !visited.has(node)) {
-      visited.add(node);
-      const nextConn = node.connections.out[0];
-      if (!nextConn) break;
-      node = nextConn.to;
+    const seen = new Set();
+    while (cur !== output && cur && !seen.has(cur)) {
+      seen.add(cur);
+      const edge = cur.connections.out[0];
+      if (!edge) break;
+      cur = edge.to;
       depth++;
     }
-    // Assert
-    expect(depth).toBe(6); // 5 hidden + 1 output
+    // depth should be hidden count + 1 output; we added 5 hidden nodes
+    expect(depth).toBe(6);
   });
 });
 

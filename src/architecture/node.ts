@@ -84,16 +84,7 @@ export default class Node {
    * The derivative of the activation function evaluated at the node's current state. Used in backpropagation.
    */
   derivative?: number;
-  /**
-   * Temporary store for nodes influenced by gated connections during activation. Used for eligibility trace calculation.
-   * @deprecated Consider refactoring eligibility trace logic if this becomes complex.
-   */
-  nodes: Node[];
-  /**
-   * Stores connections that this node gates. Seems redundant with `connections.gated`.
-   * @deprecated Review usage; likely replaceable by `connections.gated`.
-   */
-  gates: Connection[];
+  // Deprecated: `nodes` & `gates` fields removed in refactor. Backwards access still works via getters below.
   /**
    * Optional index, potentially used to identify the node's position within a layer or network structure. Not used internally by the Node class itself.
    */
@@ -116,7 +107,11 @@ export default class Node {
    * @param type The type of the node ('input', 'hidden', or 'output'). Defaults to 'hidden'.
    * @param customActivation Optional custom activation function (should handle derivative if needed).
    */
-  constructor(type: string = 'hidden', customActivation?: (x: number, derivate?: boolean) => number, rng: () => number = Math.random) {
+  constructor(
+    type: string = 'hidden',
+    customActivation?: (x: number, derivate?: boolean) => number,
+    rng: () => number = Math.random
+  ) {
     // Initialize bias: 0 for input nodes, small random value for others (deterministic if rng seeded)
     this.bias = type === 'input' ? 0 : rng() * 0.2 - 0.1;
     // Set activation function. Default to logistic or identity if logistic is not available.
@@ -153,16 +148,14 @@ export default class Node {
       gated: 0,
     };
 
-    // Temporary arrays used during activation/propagation.
-    this.nodes = []; // Stores nodes influenced by this node's gating activity.
-    this.gates = []; // Likely unused/redundant.
+    // Deprecated fields no longer allocated; accessors mapped to connections.gated for backwards compat.
 
     // Assign a unique index if not already set
     if (typeof this.index === 'undefined') {
       this.index = Node._globalNodeIndex++;
     }
-  // Assign stable gene id (independent from per-network index)
-  this.geneId = Node._nextGeneId++;
+    // Assign stable gene id (independent from per-network index)
+    this.geneId = Node._nextGeneId++;
   }
 
   /**
@@ -193,58 +186,7 @@ export default class Node {
    * @see {@link https://medium.com/data-science/neuro-evolution-on-steroids-82bd14ddc2f6#1-3-activation Instinct Algorithm - Section 1.3 Activation}
    */
   activate(input?: number): number {
-    // If mask is 0, activation is always 0
-    if (this.mask === 0) {
-      this.activation = 0;
-      return 0;
-    }
-    // For input nodes, only set activation and return (do not update state, old, or bias)
-    if (this.type === 'input' && typeof input !== 'undefined') {
-      this.activation = input;
-      return this.activation;
-    }
-    // If a non-input node receives an input value, treat it as the state and apply activation function
-    if (typeof input !== 'undefined') {
-      this.state = input;
-      this.activation = this.squash(this.state) * this.mask;
-      this.derivative = this.squash(this.state, true);
-      return this.activation;
-    }
-    // Store the previous state for recurrent connections (before activation)
-    this.old = this.state;
-    // Calculate the new state: self-connection contribution + bias.
-    this.state =
-      this.connections.self.reduce(
-        (sum, conn) => sum + (conn.dcMask === 0 ? 0 : (conn.gain * conn.weight * this.old)),
-        0
-      ) + this.bias;
-    // Add contributions from incoming connections (respect DropConnect mask)
-    for (const connection of this.connections.in) {
-  if (connection.dcMask === 0 || (connection as any).enabled === false) continue; // skip dropped or disabled gene
-      this.state +=
-        connection.from.activation * connection.weight * connection.gain;
-    }
-    // Check if the activation function is valid.
-    if (typeof this.squash !== 'function') {
-      console.warn('Invalid activation function (squash) for node. Using identity.');
-      this.squash = methods.Activation.identity;
-    }
-    // Ensure mask is 1 unless dropout is used
-    if (typeof this.mask !== 'number' || this.mask === 0) this.mask = 1;
-    // Apply activation function and dropout mask.
-    this.activation = this.squash(this.state) * this.mask;
-    // Calculate the derivative for backpropagation.
-    this.derivative = this.squash(this.state, true);
-
-    // --- Patch: Update eligibility traces for feedforward connections ---
-    for (const connection of this.connections.in) {
-      connection.eligibility = connection.from.activation;
-    }
-    // Update gain for connections gated by this node.
-    for (const connection of this.connections.gated) {
-      connection.gain = this.activation;
-    }
-    return this.activation;
+    return this._activateCore(true, input);
   }
 
   /**
@@ -257,50 +199,92 @@ export default class Node {
    * @see {@link https://medium.com/data-science/neuro-evolution-on-steroids-82bd14ddc2f6#1-3-activation Instinct Algorithm - Section 1.3 Activation}
    */
   noTraceActivate(input?: number): number {
-    // If mask is 0, activation is always 0
+    return this._activateCore(false, input);
+  }
+
+  /**
+   * Internal shared implementation for activate/noTraceActivate.
+   * @param withTrace Whether to update eligibility traces.
+   * @param input Optional externally supplied activation (bypasses weighted sum if provided).
+   */
+  private _activateCore(withTrace: boolean, input?: number): number {
+    // Fast path: dropped out
     if (this.mask === 0) {
       this.activation = 0;
       return 0;
     }
-    // For input nodes, only set activation and return (do not update state, old, or bias)
-    if (this.type === 'input' && typeof input !== 'undefined') {
-      this.activation = input;
-      return this.activation;
-    }
-    // If a non-input node receives an input value, treat it as the state and apply activation function
+    // Fast path: direct input assignment
     if (typeof input !== 'undefined') {
+      if (this.type === 'input') {
+        this.activation = input;
+        return this.activation;
+      }
       this.state = input;
       this.activation = this.squash(this.state) * this.mask;
       this.derivative = this.squash(this.state, true);
-      // Update gain for connections gated by this node.
-      for (const connection of this.connections.gated) {
+      for (const connection of this.connections.gated)
         connection.gain = this.activation;
-      }
+      if (withTrace)
+        for (const connection of this.connections.in)
+          connection.eligibility = connection.from.activation;
       return this.activation;
     }
-    // Use last state for recurrent contribution, then compute new state
+    // Store previous state for recurrent feedback
     this.old = this.state;
-    // Calculate the new state: self-connection contribution + bias.
-    this.state =
-      this.connections.self.reduce(
-        (sum, conn) => sum + (conn.dcMask === 0 ? 0 : (conn.gain * conn.weight * this.old)),
-        0
-      ) + this.bias;
-    // Add contributions from incoming connections.
-    for (const connection of this.connections.in) {
-  if (connection.dcMask === 0 || (connection as any).enabled === false) continue;
-      this.state +=
-        connection.from.activation * connection.weight * connection.gain;
+    // Start with bias plus any self recurrent contribution
+    let newState = this.bias;
+    if (this.connections.self.length) {
+      for (const conn of this.connections.self) {
+        if (conn.dcMask === 0) continue;
+        newState += conn.gain * conn.weight * this.old;
+      }
     }
-    // Apply activation function and dropout mask.
+    // Accumulate incoming weighted activations
+    if (this.connections.in.length) {
+      for (const conn of this.connections.in) {
+        if (conn.dcMask === 0 || (conn as any).enabled === false) continue;
+        newState += conn.from.activation * conn.weight * conn.gain;
+      }
+    }
+    this.state = newState;
+    // Validate activation fn
+    if (typeof this.squash !== 'function') {
+      if (config.warnings)
+        console.warn('Invalid activation function; using identity.');
+      this.squash = methods.Activation.identity;
+    }
+    if (typeof this.mask !== 'number') this.mask = 1;
     this.activation = this.squash(this.state) * this.mask;
-    // Calculate the derivative (still needed if gating is used, even without traces).
     this.derivative = this.squash(this.state, true);
-    // Update gain for connections gated by this node.
-    for (const connection of this.connections.gated) {
-      connection.gain = this.activation;
+    // Update gated connection gains
+    if (this.connections.gated.length) {
+      for (const conn of this.connections.gated) conn.gain = this.activation;
+    }
+    // Eligibility traces for learning
+    if (withTrace) {
+      for (const conn of this.connections.in)
+        conn.eligibility = conn.from.activation;
     }
     return this.activation;
+  }
+
+  // --- Backwards compatibility accessors for deprecated fields ---
+  /** @deprecated Use connections.gated; retained for legacy tests */
+  get gates(): Connection[] {
+    if (config.warnings)
+      console.warn('Node.gates is deprecated; use node.connections.gated');
+    return this.connections.gated;
+  }
+  set gates(val: Connection[]) {
+    // Replace underlying gated list (used only during deserialization edge cases)
+    this.connections.gated = val || [];
+  }
+  /** @deprecated Placeholder kept for legacy structural algorithms. No longer populated. */
+  get nodes(): Node[] {
+    return [];
+  }
+  set nodes(_val: Node[]) {
+    // ignore
   }
 
   /**
@@ -329,7 +313,10 @@ export default class Node {
     rate: number,
     momentum: number,
     update: boolean,
-    regularization: number | { type: 'L1' | 'L2', lambda: number } | ((weight: number) => number) = 0,
+    regularization:
+      | number
+      | { type: 'L1' | 'L2'; lambda: number }
+      | ((weight: number) => number) = 0,
     target?: number
   ): void {
     // Nesterov Accelerated Gradient (NAG): Apply momentum update *before* calculating the gradient.
@@ -393,7 +380,10 @@ export default class Node {
     // 2. Calculate gradients and update weights/biases for incoming connections.
     for (const connection of this.connections.in) {
       // Skip gradient if DropConnect removed this connection this step
-      if (connection.dcMask === 0) { connection.totalDeltaWeight += 0; continue; }
+      if (connection.dcMask === 0) {
+        connection.totalDeltaWeight += 0;
+        continue;
+      }
       // Calculate the gradient for the connection weight.
       let gradient = this.error.projected * connection.eligibility;
       for (let j = 0; j < connection.xtrace.nodes.length; j++) {
@@ -404,7 +394,10 @@ export default class Node {
       let regTerm = 0;
       if (typeof regularization === 'function') {
         regTerm = regularization(connection.weight);
-      } else if (typeof regularization === 'object' && regularization !== null) {
+      } else if (
+        typeof regularization === 'object' &&
+        regularization !== null
+      ) {
         if (regularization.type === 'L1') {
           regTerm = regularization.lambda * Math.sign(connection.weight);
         } else if (regularization.type === 'L2') {
@@ -417,7 +410,11 @@ export default class Node {
       let deltaWeight = rate * (gradient * this.mask - regTerm);
       // Clamp deltaWeight to [-1e3, 1e3] to prevent explosion
       if (!Number.isFinite(deltaWeight)) {
-        console.warn('deltaWeight is not finite, clamping to 0', { node: this.index, connection, deltaWeight });
+        console.warn('deltaWeight is not finite, clamping to 0', {
+          node: this.index,
+          connection,
+          deltaWeight,
+        });
         deltaWeight = 0;
       } else if (Math.abs(deltaWeight) > 1e3) {
         deltaWeight = Math.sign(deltaWeight) * 1e3;
@@ -426,14 +423,23 @@ export default class Node {
       connection.totalDeltaWeight += deltaWeight;
       // Defensive: If accumulator is NaN, reset
       if (!Number.isFinite(connection.totalDeltaWeight)) {
-        console.warn('totalDeltaWeight became NaN/Infinity, resetting to 0', { node: this.index, connection });
+        console.warn('totalDeltaWeight became NaN/Infinity, resetting to 0', {
+          node: this.index,
+          connection,
+        });
         connection.totalDeltaWeight = 0;
       }
       if (update) {
         // Apply the update immediately (if not batch training or end of batch).
-        let currentDeltaWeight = connection.totalDeltaWeight + momentum * connection.previousDeltaWeight;
+        let currentDeltaWeight =
+          connection.totalDeltaWeight +
+          momentum * connection.previousDeltaWeight;
         if (!Number.isFinite(currentDeltaWeight)) {
-          console.warn('currentDeltaWeight is not finite, clamping to 0', { node: this.index, connection, currentDeltaWeight });
+          console.warn('currentDeltaWeight is not finite, clamping to 0', {
+            node: this.index,
+            connection,
+            currentDeltaWeight,
+          });
           currentDeltaWeight = 0;
         } else if (Math.abs(currentDeltaWeight) > 1e3) {
           currentDeltaWeight = Math.sign(currentDeltaWeight) * 1e3;
@@ -461,7 +467,10 @@ export default class Node {
 
     // --- Update self-connections as well (for eligibility, weight, momentum) ---
     for (const connection of this.connections.self) {
-      if (connection.dcMask === 0) { connection.totalDeltaWeight += 0; continue; }
+      if (connection.dcMask === 0) {
+        connection.totalDeltaWeight += 0;
+        continue;
+      }
       let gradient = this.error.projected * connection.eligibility;
       for (let j = 0; j < connection.xtrace.nodes.length; j++) {
         const node = connection.xtrace.nodes[j];
@@ -471,7 +480,10 @@ export default class Node {
       let regTerm = 0;
       if (typeof regularization === 'function') {
         regTerm = regularization(connection.weight);
-      } else if (typeof regularization === 'object' && regularization !== null) {
+      } else if (
+        typeof regularization === 'object' &&
+        regularization !== null
+      ) {
         if (regularization.type === 'L1') {
           regTerm = regularization.lambda * Math.sign(connection.weight);
         } else if (regularization.type === 'L2') {
@@ -482,20 +494,33 @@ export default class Node {
       }
       let deltaWeight = rate * (gradient * this.mask - regTerm);
       if (!Number.isFinite(deltaWeight)) {
-        console.warn('self deltaWeight is not finite, clamping to 0', { node: this.index, connection, deltaWeight });
+        console.warn('self deltaWeight is not finite, clamping to 0', {
+          node: this.index,
+          connection,
+          deltaWeight,
+        });
         deltaWeight = 0;
       } else if (Math.abs(deltaWeight) > 1e3) {
         deltaWeight = Math.sign(deltaWeight) * 1e3;
       }
       connection.totalDeltaWeight += deltaWeight;
       if (!Number.isFinite(connection.totalDeltaWeight)) {
-        console.warn('self totalDeltaWeight became NaN/Infinity, resetting to 0', { node: this.index, connection });
+        console.warn(
+          'self totalDeltaWeight became NaN/Infinity, resetting to 0',
+          { node: this.index, connection }
+        );
         connection.totalDeltaWeight = 0;
       }
       if (update) {
-        let currentDeltaWeight = connection.totalDeltaWeight + momentum * connection.previousDeltaWeight;
+        let currentDeltaWeight =
+          connection.totalDeltaWeight +
+          momentum * connection.previousDeltaWeight;
         if (!Number.isFinite(currentDeltaWeight)) {
-          console.warn('self currentDeltaWeight is not finite, clamping to 0', { node: this.index, connection, currentDeltaWeight });
+          console.warn('self currentDeltaWeight is not finite, clamping to 0', {
+            node: this.index,
+            connection,
+            currentDeltaWeight,
+          });
           currentDeltaWeight = 0;
         } else if (Math.abs(currentDeltaWeight) > 1e3) {
           currentDeltaWeight = Math.sign(currentDeltaWeight) * 1e3;
@@ -505,7 +530,10 @@ export default class Node {
         }
         connection.weight += currentDeltaWeight;
         if (!Number.isFinite(connection.weight)) {
-          console.warn('self weight update produced invalid value, resetting to 0', { node: this.index, connection });
+          console.warn(
+            'self weight update produced invalid value, resetting to 0',
+            { node: this.index, connection }
+          );
           connection.weight = 0;
         } else if (Math.abs(connection.weight) > 1e6) {
           connection.weight = Math.sign(connection.weight) * 1e6;
@@ -519,20 +547,29 @@ export default class Node {
     // Delta = learning_rate * error_responsibility
     let deltaBias = rate * this.error.responsibility;
     if (!Number.isFinite(deltaBias)) {
-      console.warn('deltaBias is not finite, clamping to 0', { node: this.index, deltaBias });
+      console.warn('deltaBias is not finite, clamping to 0', {
+        node: this.index,
+        deltaBias,
+      });
       deltaBias = 0;
     } else if (Math.abs(deltaBias) > 1e3) {
       deltaBias = Math.sign(deltaBias) * 1e3;
     }
     this.totalDeltaBias += deltaBias;
     if (!Number.isFinite(this.totalDeltaBias)) {
-      console.warn('totalDeltaBias became NaN/Infinity, resetting to 0', { node: this.index });
+      console.warn('totalDeltaBias became NaN/Infinity, resetting to 0', {
+        node: this.index,
+      });
       this.totalDeltaBias = 0;
     }
     if (update) {
-      let currentDeltaBias = this.totalDeltaBias + momentum * this.previousDeltaBias;
+      let currentDeltaBias =
+        this.totalDeltaBias + momentum * this.previousDeltaBias;
       if (!Number.isFinite(currentDeltaBias)) {
-        console.warn('currentDeltaBias is not finite, clamping to 0', { node: this.index, currentDeltaBias });
+        console.warn('currentDeltaBias is not finite, clamping to 0', {
+          node: this.index,
+          currentDeltaBias,
+        });
         currentDeltaBias = 0;
       } else if (Math.abs(currentDeltaBias) > 1e3) {
         currentDeltaBias = Math.sign(currentDeltaBias) * 1e3;
@@ -542,7 +579,9 @@ export default class Node {
       }
       this.bias += currentDeltaBias;
       if (!Number.isFinite(this.bias)) {
-        console.warn('bias update produced invalid value, resetting to 0', { node: this.index });
+        console.warn('bias update produced invalid value, resetting to 0', {
+          node: this.index,
+        });
         this.bias = 0;
       } else if (Math.abs(this.bias) > 1e6) {
         this.bias = Math.sign(this.bias) * 1e6;
@@ -564,7 +603,7 @@ export default class Node {
       bias: this.bias,
       type: this.type,
       squash: this.squash ? this.squash.name : null,
-      mask: this.mask
+      mask: this.mask,
     };
   }
 
@@ -583,7 +622,8 @@ export default class Node {
     node.bias = json.bias;
     node.mask = json.mask;
     if (json.squash) {
-      const squashFn = methods.Activation[json.squash as keyof typeof methods.Activation];
+      const squashFn =
+        methods.Activation[json.squash as keyof typeof methods.Activation];
       if (typeof squashFn === 'function') {
         node.squash = squashFn as (x: number, derivate?: boolean) => number;
       } else {
@@ -596,14 +636,14 @@ export default class Node {
     }
     return node;
   }
-  
+
   /**
    * Checks if this node is connected to another node.
    * @param target The target node to check the connection with.
    * @returns True if connected, otherwise false.
    */
   isConnectedTo(target: Node): boolean {
-    return this.connections.out.some(conn => conn.to === target);
+    return this.connections.out.some((conn) => conn.to === target);
   }
 
   /**
@@ -707,23 +747,24 @@ export default class Node {
       if (targetNode === this) {
         // Handle self-connection. Only allow one self-connection.
         if (this.connections.self.length === 0) {
-          const selfConnection = new Connection(this, this, weight ?? 1);
+          const selfConnection = Connection.acquire(this, this, weight ?? 1);
           this.connections.self.push(selfConnection);
           connections.push(selfConnection);
         }
       } else {
         // Handle connection to a different node.
-        const connection = new Connection(this, targetNode, weight);
+        const connection = Connection.acquire(this, targetNode, weight);
         // Add connection to the target's incoming list and this node's outgoing list.
         targetNode.connections.in.push(connection);
         this.connections.out.push(connection);
+
         connections.push(connection);
       }
     } else if ('nodes' in target && Array.isArray(target.nodes)) {
       // Handle connection to a group of nodes.
       for (const node of target.nodes) {
         // Create connection for each node in the group.
-        const connection = new Connection(this, node, weight);
+        const connection = Connection.acquire(this, node, weight);
         node.connections.in.push(connection);
         this.connections.out.push(connection);
         connections.push(connection);
@@ -762,6 +803,7 @@ export default class Node {
         if (conn.gater) {
           conn.gater.ungate(conn);
         }
+        // Pooling deferred to higher-level network logic to ensure no stale references
         return false; // Remove from this.connections.out.
       }
       return true; // Keep other connections.
@@ -881,11 +923,10 @@ export default class Node {
    * @returns True if this node projects to the target node, false otherwise.
    */
   isProjectingTo(node: Node): boolean {
-    // Check self-connection (only if weight is non-zero, indicating it's active).
-    if (node.index === this.index && this.connections.self.length > 0) return true;
-
-    // Always compare by index for robust identity
-    return this.connections.out.some((conn) => conn.to.index === node.index);
+    // Check self-connection
+    if (node === this && this.connections.self.length > 0) return true;
+    // Compare by object identity to avoid stale index issues
+    return this.connections.out.some((conn) => conn.to === node);
   }
 
   /**
@@ -915,51 +956,75 @@ export default class Node {
 
   /**
    * Extended batch update supporting multiple optimizers.
-  *
-  * Applies accumulated (batch) gradients stored in `totalDeltaWeight` / `totalDeltaBias` to the
-  * underlying weights and bias using the selected optimization algorithm. Supports both classic
-  * SGD (with Nesterov-style momentum via preceding propagate logic) and a collection of adaptive
-  * optimizers. After applying an update, gradient accumulators are reset to 0.
-  *
-  * Supported optimizers (type):
-  *  - 'sgd'      : Standard gradient descent with optional momentum.
-  *  - 'rmsprop'  : Exponential moving average of squared gradients (cache) to normalize step.
-  *  - 'adagrad'  : Accumulate squared gradients; learning rate effectively decays per weight.
-  *  - 'adam'     : Bias‑corrected first (m) & second (v) moment estimates.
-  *  - 'adamw'    : Adam with decoupled weight decay (applied after adaptive step).
-  *  - 'amsgrad'  : Adam variant maintaining a maximum of past v (vhat) to enforce non‑increasing step size.
-  *  - 'adamax'   : Adam variant using the infinity norm (u) instead of second moment.
-  *  - 'nadam'    : Adam + Nesterov momentum style update (lookahead on first moment).
-  *  - 'radam'    : Rectified Adam – warms up variance by adaptively rectifying denominator when sample size small.
-  *  - 'lion'     : Uses sign of combination of two momentum buffers (beta1 & beta2) for update direction only.
-  *  - 'adabelief': Adam-like but second moment on (g - m) (gradient surprise) for variance reduction.
-  *  - 'lookahead': Wrapper; performs k fast optimizer steps then interpolates (alpha) towards a slow (shadow) weight.
-  *
-  * Options:
-  *  - momentum     : (SGD) momentum factor (Nesterov handled in propagate when update=true).
-  *  - beta1/beta2  : Exponential decay rates for first/second moments (Adam family, Lion, AdaBelief, etc.).
-  *  - eps          : Numerical stability epsilon added to denominator terms.
-  *  - weightDecay  : Decoupled weight decay (AdamW) or additionally applied after main step when adamw selected.
-  *  - lrScale      : Learning rate scalar already scheduled externally (passed as currentRate).
-  *  - t            : Global step (1-indexed) for bias correction / rectification.
-  *  - baseType     : Underlying optimizer for lookahead (not itself lookahead).
-  *  - la_k         : Lookahead synchronization interval (number of fast steps).
-  *  - la_alpha     : Interpolation factor towards slow (shadow) weights/bias at sync points.
-  *
-  * Internal per-connection temp fields (created lazily):
-  *  - opt_m / opt_v / opt_vhat / opt_u : Moment / variance / max variance / infinity norm caches.
-  *  - opt_cache : Single accumulator (RMSProp / AdaGrad).
-  *  - previousDeltaWeight : For classic SGD momentum.
-  *  - _la_shadowWeight / _la_shadowBias : Lookahead shadow copies.
-  *
-  * Safety: We clip extreme weight / bias magnitudes and guard against NaN/Infinity.
-  *
-  * @param opts Optimizer configuration (see above).
+   *
+   * Applies accumulated (batch) gradients stored in `totalDeltaWeight` / `totalDeltaBias` to the
+   * underlying weights and bias using the selected optimization algorithm. Supports both classic
+   * SGD (with Nesterov-style momentum via preceding propagate logic) and a collection of adaptive
+   * optimizers. After applying an update, gradient accumulators are reset to 0.
+   *
+   * Supported optimizers (type):
+   *  - 'sgd'      : Standard gradient descent with optional momentum.
+   *  - 'rmsprop'  : Exponential moving average of squared gradients (cache) to normalize step.
+   *  - 'adagrad'  : Accumulate squared gradients; learning rate effectively decays per weight.
+   *  - 'adam'     : Bias‑corrected first (m) & second (v) moment estimates.
+   *  - 'adamw'    : Adam with decoupled weight decay (applied after adaptive step).
+   *  - 'amsgrad'  : Adam variant maintaining a maximum of past v (vhat) to enforce non‑increasing step size.
+   *  - 'adamax'   : Adam variant using the infinity norm (u) instead of second moment.
+   *  - 'nadam'    : Adam + Nesterov momentum style update (lookahead on first moment).
+   *  - 'radam'    : Rectified Adam – warms up variance by adaptively rectifying denominator when sample size small.
+   *  - 'lion'     : Uses sign of combination of two momentum buffers (beta1 & beta2) for update direction only.
+   *  - 'adabelief': Adam-like but second moment on (g - m) (gradient surprise) for variance reduction.
+   *  - 'lookahead': Wrapper; performs k fast optimizer steps then interpolates (alpha) towards a slow (shadow) weight.
+   *
+   * Options:
+   *  - momentum     : (SGD) momentum factor (Nesterov handled in propagate when update=true).
+   *  - beta1/beta2  : Exponential decay rates for first/second moments (Adam family, Lion, AdaBelief, etc.).
+   *  - eps          : Numerical stability epsilon added to denominator terms.
+   *  - weightDecay  : Decoupled weight decay (AdamW) or additionally applied after main step when adamw selected.
+   *  - lrScale      : Learning rate scalar already scheduled externally (passed as currentRate).
+   *  - t            : Global step (1-indexed) for bias correction / rectification.
+   *  - baseType     : Underlying optimizer for lookahead (not itself lookahead).
+   *  - la_k         : Lookahead synchronization interval (number of fast steps).
+   *  - la_alpha     : Interpolation factor towards slow (shadow) weights/bias at sync points.
+   *
+   * Internal per-connection temp fields (created lazily):
+   *  - opt_m / opt_v / opt_vhat / opt_u : Moment / variance / max variance / infinity norm caches.
+   *  - opt_cache : Single accumulator (RMSProp / AdaGrad).
+   *  - previousDeltaWeight : For classic SGD momentum.
+   *  - _la_shadowWeight / _la_shadowBias : Lookahead shadow copies.
+   *
+   * Safety: We clip extreme weight / bias magnitudes and guard against NaN/Infinity.
+   *
+   * @param opts Optimizer configuration (see above).
    */
-  applyBatchUpdatesWithOptimizer(opts: { type: 'sgd'|'rmsprop'|'adagrad'|'adam'|'adamw'|'amsgrad'|'adamax'|'nadam'|'radam'|'lion'|'adabelief'|'lookahead'; momentum?: number; beta1?: number; beta2?: number; eps?: number; weightDecay?: number; lrScale?: number; t?: number; baseType?: any; la_k?: number; la_alpha?: number }): void {
+  applyBatchUpdatesWithOptimizer(opts: {
+    type:
+      | 'sgd'
+      | 'rmsprop'
+      | 'adagrad'
+      | 'adam'
+      | 'adamw'
+      | 'amsgrad'
+      | 'adamax'
+      | 'nadam'
+      | 'radam'
+      | 'lion'
+      | 'adabelief'
+      | 'lookahead';
+    momentum?: number;
+    beta1?: number;
+    beta2?: number;
+    eps?: number;
+    weightDecay?: number;
+    lrScale?: number;
+    t?: number;
+    baseType?: any;
+    la_k?: number;
+    la_alpha?: number;
+  }): void {
     const type = opts.type || 'sgd';
     // Detect lookahead wrapper
-    const effectiveType = type === 'lookahead' ? (opts.baseType || 'sgd') : type;
+    const effectiveType = type === 'lookahead' ? opts.baseType || 'sgd' : type;
     const momentum = opts.momentum ?? 0;
     const beta1 = opts.beta1 ?? 0.9;
     const beta2 = opts.beta2 ?? 0.999;
@@ -967,7 +1032,13 @@ export default class Node {
     const wd = opts.weightDecay ?? 0;
     const lrScale = opts.lrScale ?? 1;
     const t = Math.max(1, Math.floor(opts.t ?? 1));
-    if (type === 'lookahead') { (this as any)._la_k = (this as any)._la_k || opts.la_k || 5; (this as any)._la_alpha = (this as any)._la_alpha || opts.la_alpha || 0.5; (this as any)._la_step = ((this as any)._la_step || 0) + 1; if (!(this as any)._la_shadowBias) (this as any)._la_shadowBias = this.bias; }
+    if (type === 'lookahead') {
+      (this as any)._la_k = (this as any)._la_k || opts.la_k || 5;
+      (this as any)._la_alpha = (this as any)._la_alpha || opts.la_alpha || 0.5;
+      (this as any)._la_step = ((this as any)._la_step || 0) + 1;
+      if (!(this as any)._la_shadowBias)
+        (this as any)._la_shadowBias = this.bias;
+    }
     const applyConn = (conn: Connection) => {
       let g = conn.totalDeltaWeight || 0;
       if (!Number.isFinite(g)) g = 0;
@@ -991,16 +1062,17 @@ export default class Node {
         case 'amsgrad': {
           // m = beta1*m + (1-beta1)g ; v = beta2*v + (1-beta2)g^2 ; bias-correct then step
           conn.opt_m = (conn.opt_m ?? 0) * beta1 + (1 - beta1) * g;
-            conn.opt_v = (conn.opt_v ?? 0) * beta2 + (1 - beta2) * (g * g);
-            if (effectiveType === 'amsgrad') {
-              conn.opt_vhat = Math.max(conn.opt_vhat ?? 0, conn.opt_v ?? 0);
-            }
-            const vEff = effectiveType === 'amsgrad' ? conn.opt_vhat : conn.opt_v;
-            const mHat = conn.opt_m! / (1 - Math.pow(beta1, t));
-            const vHat = vEff! / (1 - Math.pow(beta2, t));
-            let step = (mHat / (Math.sqrt(vHat) + eps)) * lrScale;
-            if ((effectiveType === 'adamw') && wd !== 0) step -= wd * (conn.weight || 0);
-            this._safeUpdateWeight(conn, step);
+          conn.opt_v = (conn.opt_v ?? 0) * beta2 + (1 - beta2) * (g * g);
+          if (effectiveType === 'amsgrad') {
+            conn.opt_vhat = Math.max(conn.opt_vhat ?? 0, conn.opt_v ?? 0);
+          }
+          const vEff = effectiveType === 'amsgrad' ? conn.opt_vhat : conn.opt_v;
+          const mHat = conn.opt_m! / (1 - Math.pow(beta1, t));
+          const vHat = vEff! / (1 - Math.pow(beta2, t));
+          let step = (mHat / (Math.sqrt(vHat) + eps)) * lrScale;
+          if (effectiveType === 'adamw' && wd !== 0)
+            step -= wd * (conn.weight || 0);
+          this._safeUpdateWeight(conn, step);
           break;
         }
         case 'adamax': {
@@ -1008,7 +1080,7 @@ export default class Node {
           conn.opt_m = (conn.opt_m ?? 0) * beta1 + (1 - beta1) * g;
           conn.opt_u = Math.max((conn.opt_u ?? 0) * beta2, Math.abs(g));
           const mHat = conn.opt_m! / (1 - Math.pow(beta1, t));
-          const stepVal = (mHat / ((conn.opt_u) || 1e-12)) * lrScale;
+          const stepVal = (mHat / (conn.opt_u || 1e-12)) * lrScale;
           this._safeUpdateWeight(conn, stepVal);
           break;
         }
@@ -1018,8 +1090,12 @@ export default class Node {
           conn.opt_v = (conn.opt_v ?? 0) * beta2 + (1 - beta2) * (g * g);
           const mHat = conn.opt_m! / (1 - Math.pow(beta1, t));
           const vHat = conn.opt_v! / (1 - Math.pow(beta2, t));
-          const mNesterov = mHat * beta1 + ((1 - beta1) * g) / (1 - Math.pow(beta1, t));
-          this._safeUpdateWeight(conn, (mNesterov / (Math.sqrt(vHat) + eps)) * lrScale);
+          const mNesterov =
+            mHat * beta1 + ((1 - beta1) * g) / (1 - Math.pow(beta1, t));
+          this._safeUpdateWeight(
+            conn,
+            (mNesterov / (Math.sqrt(vHat) + eps)) * lrScale
+          );
           break;
         }
         case 'radam': {
@@ -1029,10 +1105,17 @@ export default class Node {
           const mHat = conn.opt_m! / (1 - Math.pow(beta1, t));
           const vHat = conn.opt_v! / (1 - Math.pow(beta2, t));
           const rhoInf = 2 / (1 - beta2) - 1;
-          const rhoT = rhoInf - (2 * t * Math.pow(beta2, t)) / (1 - Math.pow(beta2, t));
+          const rhoT =
+            rhoInf - (2 * t * Math.pow(beta2, t)) / (1 - Math.pow(beta2, t));
           if (rhoT > 4) {
-            const rt = Math.sqrt(((rhoT - 4) * (rhoT - 2) * rhoInf) / ((rhoInf - 4) * (rhoInf - 2) * rhoT));
-            this._safeUpdateWeight(conn, (rt * mHat / (Math.sqrt(vHat) + eps)) * lrScale);
+            const rt = Math.sqrt(
+              ((rhoT - 4) * (rhoT - 2) * rhoInf) /
+                ((rhoInf - 4) * (rhoInf - 2) * rhoT)
+            );
+            this._safeUpdateWeight(
+              conn,
+              ((rt * mHat) / (Math.sqrt(vHat) + eps)) * lrScale
+            );
           } else {
             this._safeUpdateWeight(conn, mHat * lrScale);
           }
@@ -1053,14 +1136,19 @@ export default class Node {
           conn.opt_v = (conn.opt_v ?? 0) * beta2 + (1 - beta2) * (g_m * g_m);
           const mHat = conn.opt_m! / (1 - Math.pow(beta1, t));
           const vHat = conn.opt_v! / (1 - Math.pow(beta2, t));
-          this._safeUpdateWeight(conn, (mHat / (Math.sqrt(vHat) + eps + 1e-12)) * lrScale);
+          this._safeUpdateWeight(
+            conn,
+            (mHat / (Math.sqrt(vHat) + eps + 1e-12)) * lrScale
+          );
           break;
         }
         default: {
           // SGD: clip extreme deltas and apply momentum separately (momentum value passed here to reuse path)
-          let currentDeltaWeight = g + momentum * (conn.previousDeltaWeight || 0);
+          let currentDeltaWeight =
+            g + momentum * (conn.previousDeltaWeight || 0);
           if (!Number.isFinite(currentDeltaWeight)) currentDeltaWeight = 0;
-          if (Math.abs(currentDeltaWeight) > 1e3) currentDeltaWeight = Math.sign(currentDeltaWeight) * 1e3;
+          if (Math.abs(currentDeltaWeight) > 1e3)
+            currentDeltaWeight = Math.sign(currentDeltaWeight) * 1e3;
           this._safeUpdateWeight(conn, currentDeltaWeight * lrScale);
           conn.previousDeltaWeight = currentDeltaWeight;
         }
@@ -1075,43 +1163,78 @@ export default class Node {
     if (this.type !== 'input' && this.type !== 'constant') {
       let gB = this.totalDeltaBias || 0;
       if (!Number.isFinite(gB)) gB = 0;
-      if (['adam','adamw','amsgrad','adamax','nadam','radam','lion','adabelief'].includes(effectiveType)) {
-        (this as any).opt_mB = ((this as any).opt_mB ?? 0) * beta1 + (1 - beta1) * gB;
+      if (
+        [
+          'adam',
+          'adamw',
+          'amsgrad',
+          'adamax',
+          'nadam',
+          'radam',
+          'lion',
+          'adabelief',
+        ].includes(effectiveType)
+      ) {
+        (this as any).opt_mB =
+          ((this as any).opt_mB ?? 0) * beta1 + (1 - beta1) * gB;
         if (effectiveType === 'lion') {
-          (this as any).opt_mB2 = ((this as any).opt_mB2 ?? 0) * beta2 + (1 - beta2) * gB;
+          (this as any).opt_mB2 =
+            ((this as any).opt_mB2 ?? 0) * beta2 + (1 - beta2) * gB;
         }
-        (this as any).opt_vB = ((this as any).opt_vB ?? 0) * beta2 + (1 - beta2) * ((effectiveType === 'adabelief') ? Math.pow(gB - (this as any).opt_mB, 2) : (gB * gB));
+        (this as any).opt_vB =
+          ((this as any).opt_vB ?? 0) * beta2 +
+          (1 - beta2) *
+            (effectiveType === 'adabelief'
+              ? Math.pow(gB - (this as any).opt_mB, 2)
+              : gB * gB);
         if (effectiveType === 'amsgrad') {
-          (this as any).opt_vhatB = Math.max((this as any).opt_vhatB ?? 0, (this as any).opt_vB ?? 0);
+          (this as any).opt_vhatB = Math.max(
+            (this as any).opt_vhatB ?? 0,
+            (this as any).opt_vB ?? 0
+          );
         }
-        const vEffB = effectiveType === 'amsgrad' ? (this as any).opt_vhatB : (this as any).opt_vB;
+        const vEffB =
+          effectiveType === 'amsgrad'
+            ? (this as any).opt_vhatB
+            : (this as any).opt_vB;
         const mHatB = (this as any).opt_mB / (1 - Math.pow(beta1, t));
         const vHatB = vEffB / (1 - Math.pow(beta2, t));
         let stepB: number;
         if (effectiveType === 'adamax') {
-          (this as any).opt_uB = Math.max(((this as any).opt_uB ?? 0) * beta2, Math.abs(gB));
+          (this as any).opt_uB = Math.max(
+            ((this as any).opt_uB ?? 0) * beta2,
+            Math.abs(gB)
+          );
           stepB = (mHatB / ((this as any).opt_uB || 1e-12)) * lrScale;
         } else if (effectiveType === 'nadam') {
-          const mNesterovB = mHatB * beta1 + ((1 - beta1) * gB) / (1 - Math.pow(beta1, t));
+          const mNesterovB =
+            mHatB * beta1 + ((1 - beta1) * gB) / (1 - Math.pow(beta1, t));
           stepB = (mNesterovB / (Math.sqrt(vHatB) + eps)) * lrScale;
         } else if (effectiveType === 'radam') {
           const rhoInf = 2 / (1 - beta2) - 1;
-          const rhoT = rhoInf - (2 * t * Math.pow(beta2, t)) / (1 - Math.pow(beta2, t));
+          const rhoT =
+            rhoInf - (2 * t * Math.pow(beta2, t)) / (1 - Math.pow(beta2, t));
           if (rhoT > 4) {
-            const rt = Math.sqrt(((rhoT - 4) * (rhoT - 2) * rhoInf) / ((rhoInf - 4) * (rhoInf - 2) * rhoT));
-            stepB = (rt * mHatB / (Math.sqrt(vHatB) + eps)) * lrScale;
+            const rt = Math.sqrt(
+              ((rhoT - 4) * (rhoT - 2) * rhoInf) /
+                ((rhoInf - 4) * (rhoInf - 2) * rhoT)
+            );
+            stepB = ((rt * mHatB) / (Math.sqrt(vHatB) + eps)) * lrScale;
           } else {
             stepB = mHatB * lrScale;
           }
         } else if (effectiveType === 'lion') {
-          const updateB = Math.sign((this as any).opt_mB + (this as any).opt_mB2);
-            stepB = -updateB * lrScale;
+          const updateB = Math.sign(
+            (this as any).opt_mB + (this as any).opt_mB2
+          );
+          stepB = -updateB * lrScale;
         } else if (effectiveType === 'adabelief') {
           stepB = (mHatB / (Math.sqrt(vHatB) + eps + 1e-12)) * lrScale;
         } else {
           stepB = (mHatB / (Math.sqrt(vHatB) + eps)) * lrScale;
         }
-        if (effectiveType === 'adamw' && wd !== 0) stepB -= wd * (this.bias || 0) * lrScale;
+        if (effectiveType === 'adamw' && wd !== 0)
+          stepB -= wd * (this.bias || 0) * lrScale;
         let nextBias = this.bias + stepB;
         if (!Number.isFinite(nextBias)) nextBias = 0;
         if (Math.abs(nextBias) > 1e6) nextBias = Math.sign(nextBias) * 1e6;
@@ -1119,7 +1242,8 @@ export default class Node {
       } else {
         let currentDeltaBias = gB + momentum * (this.previousDeltaBias || 0);
         if (!Number.isFinite(currentDeltaBias)) currentDeltaBias = 0;
-        if (Math.abs(currentDeltaBias) > 1e3) currentDeltaBias = Math.sign(currentDeltaBias) * 1e3;
+        if (Math.abs(currentDeltaBias) > 1e3)
+          currentDeltaBias = Math.sign(currentDeltaBias) * 1e3;
         let nextBias = this.bias + currentDeltaBias * lrScale;
         if (!Number.isFinite(nextBias)) nextBias = 0;
         if (Math.abs(nextBias) > 1e6) nextBias = Math.sign(nextBias) * 1e6;
@@ -1135,12 +1259,15 @@ export default class Node {
       const k = (this as any)._la_k || 5;
       const alpha = (this as any)._la_alpha || 0.5;
       if ((this as any)._la_step % k === 0) {
-  // Blend towards slow weights every k steps: shadow = (1-alpha)*shadow + alpha*fast ; fast = shadow
-        (this as any)._la_shadowBias = (1 - alpha) * (this as any)._la_shadowBias + alpha * this.bias;
+        // Blend towards slow weights every k steps: shadow = (1-alpha)*shadow + alpha*fast ; fast = shadow
+        (this as any)._la_shadowBias =
+          (1 - alpha) * (this as any)._la_shadowBias + alpha * this.bias;
         this.bias = (this as any)._la_shadowBias;
         const blendConn = (conn: Connection) => {
-          if (!(conn as any)._la_shadowWeight) (conn as any)._la_shadowWeight = conn.weight;
-          (conn as any)._la_shadowWeight = (1 - alpha) * (conn as any)._la_shadowWeight + alpha * conn.weight;
+          if (!(conn as any)._la_shadowWeight)
+            (conn as any)._la_shadowWeight = conn.weight;
+          (conn as any)._la_shadowWeight =
+            (1 - alpha) * (conn as any)._la_shadowWeight + alpha * conn.weight;
           conn.weight = (conn as any)._la_shadowWeight;
         };
         for (const c of this.connections.in) blendConn(c);

@@ -30,21 +30,33 @@ export class NetworkRefinement {
       throw new Error('A winner network must be provided for refinement.');
     }
 
-    // Clone the network to avoid mutating the original
+    // Clone the network to avoid mutating the original winner
+    /**
+     * The network instance to be refined (clone of the winner).
+     */
     const networkToRefine = winner.clone();
 
-    // Training set: maps idealized sensory states to optimal actions.
-    // Each input/output pair represents a scenario the agent should learn.
+    /**
+     * Training set: maps idealized sensory states to optimal actions.
+     * Each input/output pair represents a scenario the agent should learn.
+     * - input: [N, E, S, W, ...other sensors]
+     * - output: [N, E, S, W] (one-hot for direction)
+     */
     const trainingSet = [
-      // Example: If vision indicates North is clear (1,0,0,0), output should be North (1,0,0,0)
-      { input: [1, 0, 0, 0, 0.5, 0.5, 0.5, 0.5], output: [1, 0, 0, 0] }, // Ideal: Move North
-      { input: [0, 1, 0, 0, 0.5, 0.5, 0.5, 0.5], output: [0, 1, 0, 0] }, // Ideal: Move East
-      { input: [0, 0, 1, 0, 0.5, 0.5, 0.5, 0.5], output: [0, 0, 1, 0] }, // Ideal: Move South
-      { input: [0, 0, 0, 1, 0.5, 0.5, 0.5, 0.5], output: [0, 0, 0, 1] }, // Ideal: Move West
+      // If vision indicates North is clear (1,0,0,0), output should be North (1,0,0,0)
+      { input: [1, 0, 0, 0, 0.5, 0.5, 0.5, 0.5], output: [1, 0, 0, 0] }, // Move North
+      { input: [0, 1, 0, 0, 0.5, 0.5, 0.5, 0.5], output: [0, 1, 0, 0] }, // Move East
+      { input: [0, 0, 1, 0, 0.5, 0.5, 0.5, 0.5], output: [0, 0, 1, 0] }, // Move South
+      { input: [0, 0, 0, 1, 0.5, 0.5, 0.5, 0.5], output: [0, 0, 0, 1] }, // Move West
       // Add more nuanced scenarios if necessary
     ];
 
-    // Training parameters for backpropagation
+    /**
+     * Training parameters for backpropagation:
+     * - learningRate: step size for weight updates
+     * - momentum: helps accelerate learning and avoid local minima
+     * - iterations: number of times to train over the dataset
+     */
     const learningRate = 0.05;
     const momentum = 0.01;
     const iterations = 100;
@@ -53,9 +65,11 @@ export class NetworkRefinement {
     for (let i = 0; i < iterations; i++) {
       for (const data of trainingSet) {
         // The `propagate` method is part of the concrete `Network` class.
+        // It updates the network's weights based on the error between output and target.
         networkToRefine.propagate(learningRate, momentum, true, data.output);
       }
     }
+
     // Return the refined network
     return networkToRefine;
   }

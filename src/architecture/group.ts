@@ -395,12 +395,12 @@ export default class Group {
   toJSON() {
     return {
       size: this.nodes.length,
-      nodeIndices: this.nodes.map(n => n.index),
+      nodeIndices: this.nodes.map((n) => n.index),
       connections: {
         in: this.connections.in.length,
         out: this.connections.out.length,
-        self: this.connections.self.length
-      }
+        self: this.connections.self.length,
+      },
     };
   }
 }

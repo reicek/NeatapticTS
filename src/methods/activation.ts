@@ -15,7 +15,9 @@
  * @see {@link https://en.wikipedia.org/wiki/Universal_approximation_theorem}
  * @see {@link https://en.wikipedia.org/wiki/Rectifier_(neural_networks)}
  */
-export const Activation: { [key: string]: (x: number, derivate?: boolean) => number } = {
+export const Activation: {
+  [key: string]: (x: number, derivate?: boolean) => number;
+} = {
   /**
    * Logistic (Sigmoid) activation function.
    * Outputs values between 0 and 1. Commonly used in older network architectures
@@ -352,7 +354,7 @@ export const Activation: { [key: string]: (x: number, derivate?: boolean) => num
     } else {
       return x * tanh_sp_x;
     }
-  }
+  },
 };
 
 /**

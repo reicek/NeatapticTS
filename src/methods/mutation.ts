@@ -275,7 +275,7 @@ mutation.ALL = [
   mutation.REINIT_WEIGHT,
   mutation.BATCH_NORM,
   mutation.ADD_LSTM_NODE, // Added
-  mutation.ADD_GRU_NODE,  // Added
+  mutation.ADD_GRU_NODE, // Added
 ];
 
 /**

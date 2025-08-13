@@ -61,6 +61,36 @@ export default class Cost {
   }
 
   /**
+   * Softmax Cross Entropy for mutually exclusive multi-class outputs given raw (pre-softmax or arbitrary) scores.
+   * Applies a numerically stable softmax to the outputs internally then computes -sum(target * log(prob)).
+   * Targets may be soft labels and are expected to sum to 1 (will be re-normalized if not).
+   */
+  static softmaxCrossEntropy(targets: number[], outputs: number[]): number {
+    if (targets.length !== outputs.length) {
+      throw new Error('Target and output arrays must have the same length.');
+    }
+    const n = outputs.length;
+    // Normalize targets if they don't sum to 1
+    let tSum = 0;
+    for (const t of targets) tSum += t;
+    const normTargets =
+      tSum > 0 ? targets.map((t) => t / tSum) : targets.slice();
+    // Stable softmax
+    const max = Math.max(...outputs);
+    const exps = outputs.map((o) => Math.exp(o - max));
+    const sum = exps.reduce((a, b) => a + b, 0) || 1;
+    const probs = exps.map((e) => e / sum);
+    let loss = 0;
+    const eps = 1e-15;
+    for (let i = 0; i < n; i++) {
+      const p = Math.min(1 - eps, Math.max(eps, probs[i]));
+      const t = normTargets[i];
+      loss -= t * Math.log(p);
+    }
+    return loss; // mean not applied; caller can average externally if batching
+  }
+
+  /**
    * Calculates the Mean Squared Error (MSE), a common loss function for regression tasks.
    *
    * MSE measures the average of the squares of the errors—that is, the average
@@ -263,7 +293,12 @@ export default class Cost {
    * @param {number} alpha - Balancing parameter (default 0.25).
    * @returns {number} The mean focal loss.
    */
-  static focalLoss(targets: number[], outputs: number[], gamma: number = 2, alpha: number = 0.25): number {
+  static focalLoss(
+    targets: number[],
+    outputs: number[],
+    gamma: number = 2,
+    alpha: number = 0.25
+  ): number {
     let error = 0;
     const epsilon = 1e-15;
     if (targets.length !== outputs.length) {
@@ -289,7 +324,11 @@ export default class Cost {
    * @param {number} smoothing - Smoothing factor (between 0 and 1, e.g., 0.1).
    * @returns {number} The mean cross-entropy loss with label smoothing.
    */
-  static labelSmoothing(targets: number[], outputs: number[], smoothing: number = 0.1): number {
+  static labelSmoothing(
+    targets: number[],
+    outputs: number[],
+    smoothing: number = 0.1
+  ): number {
     let error = 0;
     const epsilon = 1e-15;
     if (targets.length !== outputs.length) {

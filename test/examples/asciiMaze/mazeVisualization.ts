@@ -177,6 +177,7 @@ export class MazeVisualization {
         'left'
       )} ${colors.blueCore}║${colors.reset}`
     );
+    // Print generation number with color and padding
     forceLog(
       `${colors.blueCore}║       ${NetworkVisualization.pad(
         `${colors.neonSilver}Generation:${colors.neonIndigo} ${successColor}${generation}`,
@@ -185,6 +186,7 @@ export class MazeVisualization {
         'left'
       )} ${colors.blueCore}║${colors.reset}`
     );
+    // Print fitness score
     forceLog(
       `${colors.blueCore}║       ${NetworkVisualization.pad(
         `${colors.neonSilver}Fitness:${
@@ -195,6 +197,7 @@ export class MazeVisualization {
         'left'
       )} ${colors.blueCore}║${colors.reset}`
     );
+    // Print steps taken
     forceLog(
       `${colors.blueCore}║       ${NetworkVisualization.pad(
         `${colors.neonSilver}Steps taken:${colors.neonIndigo} ${result.steps}`,
@@ -203,6 +206,7 @@ export class MazeVisualization {
         'left'
       )} ${colors.blueCore}║${colors.reset}`
     );
+    // Print path length
     forceLog(
       `${colors.blueCore}║       ${NetworkVisualization.pad(
         `${colors.neonSilver}Path length:${colors.neonIndigo} ${result.path.length}${colors.blueCore}`,
@@ -211,6 +215,7 @@ export class MazeVisualization {
         'left'
       )} ${colors.blueCore}║${colors.reset}`
     );
+    // Print optimal distance to exit
     forceLog(
       `${colors.blueCore}║       ${NetworkVisualization.pad(
         `${colors.neonSilver}Optimal distance to exit:${colors.neonYellow} ${optimalLength}`,
@@ -219,6 +224,7 @@ export class MazeVisualization {
         'left'
       )} ${colors.blueCore}║${colors.reset}`
     );
+    // Print a blank padded line for spacing
     forceLog(
       `${colors.blueCore}║${NetworkVisualization.pad(' ', 148, ' ')}║${
         colors.reset
@@ -226,23 +232,61 @@ export class MazeVisualization {
     );
 
     if (result.success) {
-      // Calculate path efficiency - optimal vs actual
+      /**
+       * If the agent succeeded, calculate and display detailed path statistics.
+       * This includes path efficiency, overhead, direction changes, unique cells, revisits, and decisions per cell.
+       */
+
+      /**
+       * Path length is the number of steps taken (excluding the starting cell).
+       * Used to compare actual path to optimal path.
+       */
       const pathLength = result.path.length - 1;
+
+      /**
+       * Efficiency: ratio of optimal path to actual path, capped at 100%.
+       * Shows how close the agent's path is to the shortest possible.
+       */
       const efficiency = Math.min(
         100,
         Math.round((optimalLength / pathLength) * 100)
       ).toFixed(1);
+
+      /**
+       * Overhead: how much longer the path is compared to optimal, as a percent.
+       * Positive values mean the agent took a longer route than necessary.
+       */
       const overhead = ((pathLength / optimalLength) * 100 - 100).toFixed(1);
 
-      // Calculate unique cells and revisits
+      /**
+       * Set of unique cells visited by the agent, for coverage and revisit stats.
+       */
       const uniqueCells = new Set<string>();
+
+      /**
+       * Number of times the agent revisited a cell it had already visited.
+       */
       let revisitedCells = 0;
+
+      /**
+       * Number of times the agent changed direction (N, S, E, W) during its path.
+       */
       let directionChanges = 0;
+
+      /**
+       * Tracks the last direction moved, to count direction changes.
+       */
       let lastDirection: string | null = null;
 
-      // Track path metrics
+      // Analyze the path for revisits and direction changes
       for (let i = 0; i < result.path.length; i++) {
+        /**
+         * Current cell coordinates in the path.
+         */
         const [x, y] = result.path[i];
+        /**
+         * Unique string key for the cell, used in the Set.
+         */
         const cellKey = `${x},${y}`;
 
         // Count revisits
@@ -254,47 +298,63 @@ export class MazeVisualization {
 
         // Count direction changes (if not the first step)
         if (i > 0) {
+          /**
+           * Previous cell coordinates in the path.
+           */
           const [prevX, prevY] = result.path[i - 1];
+          /**
+           * Delta X and Y to determine direction.
+           */
           const dx = x - prevX;
           const dy = y - prevY;
 
-          // Get current direction (N, S, E, W)
+          // Determine direction: N, S, E, W
           let currentDirection = '';
           if (dx > 0) currentDirection = 'E';
           else if (dx < 0) currentDirection = 'W';
           else if (dy > 0) currentDirection = 'S';
           else if (dy < 0) currentDirection = 'N';
 
-          // Check if direction changed
+          // Increment if direction changed
           if (lastDirection !== null && currentDirection !== lastDirection) {
             directionChanges++;
           }
-
           lastDirection = currentDirection;
         }
       }
 
-      // Calculate exploration coverage (unique cells compared to walkable cells)
+      /**
+       * Maze width and height, used for coverage calculation.
+       */
       const mazeWidth = maze[0].length;
       const mazeHeight = maze.length;
-      const encodedMaze = MazeUtils.encodeMaze(maze);
-      let walkableCells = 0;
 
+      /**
+       * Encoded maze (walls as -1, open as 0), for walkable cell counting.
+       */
+      const encodedMaze = MazeUtils.encodeMaze(maze);
+
+      /**
+       * Number of walkable (non-wall) cells in the maze.
+       */
+      let walkableCells = 0;
       for (let y = 0; y < mazeHeight; y++) {
         for (let x = 0; x < mazeWidth; x++) {
           if (encodedMaze[y][x] !== -1) {
-            // Not a wall
             walkableCells++;
           }
         }
       }
 
+      /**
+       * Percentage of walkable cells visited by the agent.
+       */
       const coveragePercent = (
         (uniqueCells.size / walkableCells) *
         100
       ).toFixed(1);
 
-      // Display stats
+      // Display detailed statistics
       forceLog(
         `${colors.blueCore}║       ${NetworkVisualization.pad(
           `${colors.neonSilver}Path efficiency:      ${colors.neonIndigo} ${optimalLength}/${pathLength} (${efficiency}%)`,
@@ -362,7 +422,11 @@ export class MazeVisualization {
         )} ${colors.blueCore}║${colors.reset}`
       );
     } else {
-      // Calculate progress made toward the exit
+      /**
+       * If the agent did not succeed, display progress toward the exit and unique cells visited.
+       * This helps visualize partial progress and exploration.
+       */
+      // Calculate best progress toward the exit (as a percent)
       const bestProgress = MazeUtils.calculateProgress(
         MazeUtils.encodeMaze(maze),
         result.path[result.path.length - 1],
@@ -370,12 +434,13 @@ export class MazeVisualization {
         exitPos
       );
 
-      // Calculate unique cells visited
+      // Track unique cells visited
       const uniqueCells = new Set<string>();
       for (const [x, y] of result.path) {
         uniqueCells.add(`${x},${y}`);
       }
 
+      // Display partial progress statistics
       forceLog(
         `${colors.blueCore}║       ${NetworkVisualization.pad(
           `${colors.neonSilver}Best progress toward exit:      ${colors.neonIndigo} ${bestProgress}%`,
@@ -386,7 +451,7 @@ export class MazeVisualization {
       );
       forceLog(
         `${colors.blueCore}║       ${NetworkVisualization.pad(
-          `${colors.neonSilver}Optimal steps:                  ${colors.neonIndigo} ${optimalLength} times`,
+          `${colors.neonSilver}Shortest possible steps:        ${colors.neonIndigo} ${optimalLength}`,
           140,
           ' ',
           'left'
@@ -422,20 +487,29 @@ export class MazeVisualization {
    * @returns A string containing the formatted progress bar
    */
   static displayProgressBar(progress: number, length: number = 60): string {
-    // Calculate the number of filled positions
+    /**
+     * Number of filled positions in the progress bar, based on percent complete.
+     */
     const filledLength = Math.max(
       0,
       Math.min(length, Math.floor((length * progress) / 100))
     );
 
-    // Define the characters for the progress bar
+    /**
+     * Characters for the progress bar:
+     * - startChar: left cap
+     * - endChar: right cap
+     * - fillChar: filled section
+     * - emptyChar: unfilled section
+     * - pointerChar: current progress pointer
+     */
     const startChar = `${colors.blueCore}|>|`;
     const endChar = `${colors.blueCore}|<|`;
     const fillChar = `${colors.neonOrange}═`;
     const emptyChar = `${colors.neonIndigo}:`;
     const pointerChar = `${colors.neonOrange}▶`; // Indicates the current progress point
 
-    // Construct the progress bar
+    // Build the progress bar string
     let bar = '';
     bar += startChar;
 
@@ -444,6 +518,9 @@ export class MazeVisualization {
       bar += pointerChar;
     }
 
+    /**
+     * Number of empty positions remaining in the bar.
+     */
     const emptyLength = length - filledLength;
     if (emptyLength > 0) {
       bar += emptyChar.repeat(emptyLength);
@@ -451,7 +528,9 @@ export class MazeVisualization {
 
     bar += endChar;
 
-    // Add color based on progress level using our TRON palette
+    /**
+     * Color for the bar, based on progress percent (TRON palette).
+     */
     const color =
       progress < 30
         ? colors.neonYellow
@@ -471,15 +550,29 @@ export class MazeVisualization {
    * @returns Formatted string (e.g., "5.3s", "2m 30s", "1h 15m")
    */
   static formatElapsedTime(seconds: number): string {
+    // If less than a minute, show seconds with one decimal
     if (seconds < 60) return `${seconds.toFixed(1)}s`;
 
+    // If less than an hour, show minutes and seconds
     if (seconds < 3600) {
+      /**
+       * Number of whole minutes in the input seconds.
+       */
       const minutes = Math.floor(seconds / 60);
+      /**
+       * Remaining seconds after extracting minutes.
+       */
       const remainingSeconds = seconds % 60;
       return `${minutes}m ${remainingSeconds.toFixed(0)}s`;
     }
 
+    /**
+     * Number of whole hours in the input seconds.
+     */
     const hours = Math.floor(seconds / 3600);
+    /**
+     * Number of whole minutes after extracting hours.
+     */
     const minutes = Math.floor((seconds % 3600) / 60);
     return `${hours}h ${minutes}m`;
   }

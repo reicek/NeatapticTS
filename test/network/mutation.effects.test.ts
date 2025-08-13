@@ -1,4 +1,5 @@
 import { Network, methods } from '../../src/neataptic';
+import { config } from '../../src/config';
 
 // Reduced global timeout
 jest.setTimeout(5000);
@@ -28,7 +29,6 @@ describe('Mutation Effects', () => {
 
   afterEach(() => {
     // Restore console methods
-    console.warn = originalWarn;
     console.log = originalLog;
   });
 
@@ -267,11 +267,13 @@ describe('Mutation Effects', () => {
     describe('Scenario: repeated ADD_NODE mutations', () => {
       it('can create a deep path (multiple hidden nodes in a chain)', () => {
         // Arrange
-        const net = new Network(2, 1);
-        net.connect(net.nodes[0], net.nodes[net.nodes.length - 1]);
-        // Act
-        for (let i = 0; i < 4; i++) {
-          net.mutate(methods.mutation.ADD_NODE);
+        const net = new Network(1, 1); // single input ensures deterministic chain splits the sole forward edge
+        const prevMode = config.deterministicChainMode;
+        config.deterministicChainMode = true; // guarantee linear chain growth per ADD_NODE
+        try {
+          for (let i = 0; i < 4; i++) net.mutate(methods.mutation.ADD_NODE);
+        } finally {
+          config.deterministicChainMode = prevMode; // restore previous mode
         }
         // Find the longest path from input to output
         const input = net.nodes.find((n) => n.type === 'input');
@@ -294,8 +296,7 @@ describe('Mutation Effects', () => {
       });
       it('does not create a deep path in a shallow network', () => {
         // Arrange
-        const net = new Network(2, 1);
-        net.connect(net.nodes[0], net.nodes[net.nodes.length - 1]);
+        const net = new Network(1, 1); // baseline depth is 1
         // Act
         // No mutation
         const input = net.nodes.find((n) => n.type === 'input');

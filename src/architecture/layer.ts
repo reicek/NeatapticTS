@@ -1,6 +1,7 @@
 import Node from './node';
 import Group from './group';
 import * as methods from '../methods/methods';
+import { activationArrayPool } from './activationArrayPool';
 
 /**
  * Represents a functional layer within a neural network architecture.
@@ -64,7 +65,7 @@ export default class Layer {
    * @throws {Error} If the provided `value` array's length does not match the number of nodes in the layer.
    */
   activate(value?: number[], training: boolean = false): number[] {
-    const values: number[] = [];
+    const out = activationArrayPool.acquire(this.nodes.length);
 
     // Input validation
     if (value !== undefined && value.length !== this.nodes.length) {
@@ -78,27 +79,29 @@ export default class Layer {
     if (training && this.dropout > 0) {
       // Fix: Use comparison with dropout rate directly to ensure both 0 and 1 masks occur
       layerMask = Math.random() >= this.dropout ? 1 : 0;
-      this.nodes.forEach(node => { node.mask = layerMask; });
+      this.nodes.forEach((node) => {
+        node.mask = layerMask;
+      });
     } else {
       // In inference or no dropout, ensure all masks are 1
-      this.nodes.forEach(node => { node.mask = 1; });
+      this.nodes.forEach((node) => {
+        node.mask = 1;
+      });
     }
 
     // Activate each node
     for (let i = 0; i < this.nodes.length; i++) {
       let activation: number;
       if (value === undefined) {
-        // Activate node based on its internal state and inputs
         activation = this.nodes[i].activate();
       } else {
-        // Activate node with a specific input value
         activation = this.nodes[i].activate(value[i]);
       }
-
-      values.push(activation);
+      (out as any)[i] = activation;
     }
-
-    return values; // Return the activation values of all nodes
+    const cloned = Array.from(out as any) as number[];
+    activationArrayPool.release(out);
+    return cloned; // Return the activation values of all nodes
   }
 
   /**
@@ -393,10 +396,7 @@ export default class Layer {
     memoryCell.connect(forgetGate, methods.groupConnection.ALL_TO_ALL);
     memoryCell.connect(outputGate, methods.groupConnection.ALL_TO_ALL);
     // Recurrent connection from memory cell back to itself (gated by forget gate)
-    memoryCell.connect(
-      memoryCell,
-      methods.groupConnection.ONE_TO_ONE
-    );
+    memoryCell.connect(memoryCell, methods.groupConnection.ONE_TO_ONE);
     // Connection from memory cell to the final output block (gated by output gate)
     const output = memoryCell.connect(
       outputBlock,
@@ -410,17 +410,21 @@ export default class Layer {
     // Apply forget gate to self-connections directly
     memoryCell.nodes.forEach((node, i) => {
       // Find the self-connection on the node
-      const selfConnection = node.connections.self.find(conn => conn.to === node && conn.from === node);
+      const selfConnection = node.connections.self.find(
+        (conn) => conn.to === node && conn.from === node
+      );
       if (selfConnection) {
         // Assign the corresponding forget gate node as the gater
         selfConnection.gater = forgetGate.nodes[i];
         // Ensure the gater node knows about the connection it gates
         if (!forgetGate.nodes[i].connections.gated.includes(selfConnection)) {
-            forgetGate.nodes[i].connections.gated.push(selfConnection);
+          forgetGate.nodes[i].connections.gated.push(selfConnection);
         }
       } else {
         // This case should ideally not happen if connect worked correctly
-        console.warn(`LSTM Warning: No self-connection found for memory cell node ${i}`);
+        console.warn(
+          `LSTM Warning: No self-connection found for memory cell node ${i}`
+        );
       }
     });
 
@@ -688,14 +692,19 @@ export default class Layer {
     (layer as any).batchNorm = true;
     // Override activate to apply batch normalization
     const baseActivate = layer.activate.bind(layer);
-    layer.activate = function(value?: number[], training: boolean = false): number[] {
+    layer.activate = function (
+      value?: number[],
+      training: boolean = false
+    ): number[] {
       const activations = baseActivate(value, training);
       // Compute mean and variance
       const mean = activations.reduce((a, b) => a + b, 0) / activations.length;
-      const variance = activations.reduce((a, b) => a + (b - mean) ** 2, 0) / activations.length;
+      const variance =
+        activations.reduce((a, b) => a + (b - mean) ** 2, 0) /
+        activations.length;
       const epsilon = 1e-5;
       // Normalize
-      return activations.map(a => (a - mean) / Math.sqrt(variance + epsilon));
+      return activations.map((a) => (a - mean) / Math.sqrt(variance + epsilon));
     };
     return layer;
   }
@@ -711,14 +720,19 @@ export default class Layer {
     (layer as any).layerNorm = true;
     // Override activate to apply layer normalization
     const baseActivate = layer.activate.bind(layer);
-    layer.activate = function(value?: number[], training: boolean = false): number[] {
+    layer.activate = function (
+      value?: number[],
+      training: boolean = false
+    ): number[] {
       const activations = baseActivate(value, training);
       // Compute mean and variance (per sample, but here per layer)
       const mean = activations.reduce((a, b) => a + b, 0) / activations.length;
-      const variance = activations.reduce((a, b) => a + (b - mean) ** 2, 0) / activations.length;
+      const variance =
+        activations.reduce((a, b) => a + (b - mean) ** 2, 0) /
+        activations.length;
       const epsilon = 1e-5;
       // Normalize
-      return activations.map(a => (a - mean) / Math.sqrt(variance + epsilon));
+      return activations.map((a) => (a - mean) / Math.sqrt(variance + epsilon));
     };
     return layer;
   }
@@ -731,16 +745,21 @@ export default class Layer {
    * @param padding - Padding (default 0).
    * @returns A new Layer instance representing a 1D convolutional layer.
    */
-  static conv1d(size: number, kernelSize: number, stride: number = 1, padding: number = 0): Layer {
+  static conv1d(
+    size: number,
+    kernelSize: number,
+    stride: number = 1,
+    padding: number = 0
+  ): Layer {
     const layer = new Layer();
     layer.nodes = Array.from({ length: size }, () => new Node());
     layer.output = new Group(size);
     // Store conv params for future use
     (layer as any).conv1d = { kernelSize, stride, padding };
     // Placeholder: actual convolution logic would be in a custom activate method
-    layer.activate = function(value?: number[]): number[] {
+    layer.activate = function (value?: number[]): number[] {
       // For now, just pass through or slice input as a stub
-      if (!value) return this.nodes.map(n => n.activate());
+      if (!value) return this.nodes.map((n) => n.activate());
       // Simple stub: take the first 'size' values
       return value.slice(0, size);
     };
@@ -759,9 +778,9 @@ export default class Layer {
     layer.output = new Group(size);
     (layer as any).attention = { heads };
     // Placeholder: actual attention logic would be in a custom activate method
-    layer.activate = function(value?: number[]): number[] {
+    layer.activate = function (value?: number[]): number[] {
       // For now, just average the input as a stub
-      if (!value) return this.nodes.map(n => n.activate());
+      if (!value) return this.nodes.map((n) => n.activate());
       const avg = value.reduce((a, b) => a + b, 0) / value.length;
       return Array(size).fill(avg);
     };
