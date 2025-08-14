@@ -1,0 +1,489 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>methods</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+ body{font-family:system-ui,-apple-system,Segoe UI,Arial,sans-serif;margin:0 auto;padding:0 20px 60px;line-height:1.55;background:#fff;color:#222;display:grid;grid-template-columns:260px 1fr 280px;grid-gap:32px;}
+nav.site{position:sticky;top:0;align-self:start;max-height:100vh;overflow:auto;padding:24px 0 40px;}
+nav.site h1{font-size:1.05rem;margin:0 0 .75rem;font-weight:600;}
+.doc-nav{list-style:none;margin:0;padding:0;font-size:.85rem;}
+.doc-nav li{margin:2px 0;}
+ .doc-nav a{display:block;padding:4px 8px;border-radius:4px;color:#2c3963;text-decoration:none;}
+ .doc-nav li.current>a{background:#2c3963;color:#fff;font-weight:600;}
+ .doc-nav a:hover{background:#e4e8f3;}
+main{padding:40px 0;}
+aside.page-index{position:sticky;top:0;align-self:start;max-height:100vh;overflow:auto;padding:32px 0 40px;font-size:.85rem;}
+aside.page-index h2{font-size:.9rem;margin:0 0 .75rem;text-transform:uppercase;letter-spacing:.5px;color:#444;}
+aside.page-index .toc-file{margin:0 0 .5rem;}
+aside.page-index ul{list-style:none;margin:.25rem 0 .5rem .25rem;padding:0;}
+aside.page-index li{margin:0;}
+ aside.page-index a{color:#444;text-decoration:none;}
+ aside.page-index a:hover{color:#2c3963;}
+pre{background:#1e1e1e;color:#eee;padding:12px;border-radius:6px;overflow:auto;}
+code{background:#f5f5f5;padding:2px 4px;border-radius:4px;font-size:90%;}
+pre code{background:transparent;padding:0;font-size:90%;}
+ a{color:#2c3963;text-decoration:none;}a:hover{text-decoration:underline;}
+h1,h2,h3,h4{scroll-margin-top:70px;}
+blockquote{border-left:4px solid #ddd;margin:1em 0;padding:.5em 1em;color:#555;}
+table{border-collapse:collapse}th,td{border:1px solid #ccc;padding:4px 8px;text-align:left;}
+footer{margin-top:64px;font-size:.75rem;color:#666;}
+@media (max-width:1100px){body{grid-template-columns:220px 1fr;}aside.page-index{display:none;} }
+@media (max-width:800px){body{grid-template-columns:1fr;}nav.site{position:relative;top:auto;max-height:none;order:2;}main{order:1;padding-top:24px;}}
+</style></head><body>
+<nav class="site">
+  <h1>Docs Index</h1>
+  <ul class="doc-nav"><li><a href="../index.html">root</a></li>
+<li><a href="../architecture/index.html">architecture/</a></li>
+<li><a href="../architecture/network/index.html">architecture/network/</a></li>
+<li class="current"><a href="./index.html">methods/</a></li>
+<li><a href="../multithreading/index.html">multithreading/</a></li>
+<li><a href="../multithreading/workers/index.html">multithreading/workers/</a></li>
+<li><a href="../multithreading/workers/browser/index.html">multithreading/workers/browser/</a></li>
+<li><a href="../multithreading/workers/node/index.html">multithreading/workers/node/</a></li>
+<li><a href="../src/index.html">src/</a></li></ul>
+</nav>
+<main>
+<h1 id="methods">methods</h1><h2 id="methods-activation-ts">methods/activation.ts</h2><h3 id="activation">Activation</h3><h3 id="registercustomactivation">registerCustomActivation</h3><p><code>(name: string, fn: (x: number, derivate?: boolean | undefined) =&gt; number) =&gt; void</code></p>
+<p>Register a custom activation function at runtime.</p>
+<p>Parameters:</p>
+<ul>
+<li>`` - - Name for the custom activation.</li>
+<li>`` - - The activation function (should handle derivative if needed).</li>
+</ul>
+<h2 id="methods-connection-ts">methods/connection.ts</h2><h3 id="connection">connection</h3><p>Export the connection object as the default export.</p>
+<h3 id="groupconnection">groupConnection</h3><h2 id="methods-cost-ts">methods/cost.ts</h2><h3 id="cost">cost</h3><p>Provides a collection of standard cost functions (also known as loss functions)
+used for evaluating the performance of neural networks during training.</p>
+<p>Cost functions quantify the difference between the network&#39;s predictions
+and the actual target values. The goal of training is typically to minimize
+the value of the cost function. The choice of cost function is crucial and
+depends on the specific task (e.g., regression, classification) and the
+desired behavior of the model.</p>
+<h3 id="cost">Cost</h3><p>Provides a collection of standard cost functions (also known as loss functions)
+used for evaluating the performance of neural networks during training.</p>
+<p>Cost functions quantify the difference between the network&#39;s predictions
+and the actual target values. The goal of training is typically to minimize
+the value of the cost function. The choice of cost function is crucial and
+depends on the specific task (e.g., regression, classification) and the
+desired behavior of the model.</p>
+<h3 id="default">default</h3><h4 id="binary">binary</h4><p><code>(targets: number[], outputs: number[]) =&gt; number</code></p>
+<p>Calculates the Binary Error rate, often used as a simple accuracy metric for classification.</p>
+<p>This function calculates the proportion of misclassifications by comparing the
+rounded network outputs (thresholded at 0.5) against the target labels.
+It assumes target values are 0 or 1, and outputs are probabilities between 0 and 1.
+Note: This is equivalent to <code>1 - accuracy</code> for binary classification.</p>
+<p>Parameters:</p>
+<ul>
+<li>`` - - An array of target values, expected to be 0 or 1.</li>
+<li>`` - - An array of output values from the network, typically probabilities between 0 and 1.</li>
+</ul>
+<p>Returns: The proportion of misclassified samples (error rate, between 0 and 1).</p>
+<h4 id="crossentropy">crossEntropy</h4><p><code>(targets: number[], outputs: number[]) =&gt; number</code></p>
+<p>Calculates the Cross Entropy error, commonly used for classification tasks.</p>
+<p>This function measures the performance of a classification model whose output is
+a probability value between 0 and 1. Cross-entropy loss increases as the
+predicted probability diverges from the actual label.</p>
+<p>It uses a small epsilon (1e-15) to prevent <code>log(0)</code> which would result in <code>NaN</code>.
+Output values are clamped to the range <code>[epsilon, 1 - epsilon]</code> for numerical stability.</p>
+<p>Parameters:</p>
+<ul>
+<li>`` - - An array of target values, typically 0 or 1 for binary classification, or probabilities for soft labels.</li>
+<li>`` - - An array of output values from the network, representing probabilities (expected to be between 0 and 1).</li>
+</ul>
+<p>Returns: The mean cross-entropy error over all samples.</p>
+<h4 id="focalloss">focalLoss</h4><p><code>(targets: number[], outputs: number[], gamma: number, alpha: number) =&gt; number</code></p>
+<p>Calculates the Focal Loss, which is useful for addressing class imbalance in classification tasks.
+Focal loss down-weights easy examples and focuses training on hard negatives.</p>
+<p>Parameters:</p>
+<ul>
+<li>`` - - Array of target values (0 or 1 for binary, or probabilities for soft labels).</li>
+<li>`` - - Array of predicted probabilities (between 0 and 1).</li>
+<li>`` - - Focusing parameter (default 2).</li>
+<li>`` - - Balancing parameter (default 0.25).</li>
+</ul>
+<p>Returns: The mean focal loss.</p>
+<h4 id="hinge">hinge</h4><p><code>(targets: number[], outputs: number[]) =&gt; number</code></p>
+<p>Calculates the Mean Hinge loss, primarily used for &quot;maximum-margin&quot; classification,
+most notably for Support Vector Machines (SVMs).</p>
+<p>Hinge loss is used for training classifiers. It penalizes predictions that are
+not only incorrect but also those that are correct but not confident (i.e., close to the decision boundary).
+Assumes target values are encoded as -1 or 1.</p>
+<p>Parameters:</p>
+<ul>
+<li>`` - - An array of target values, expected to be -1 or 1.</li>
+<li>`` - - An array of output values from the network (raw scores, not necessarily probabilities).</li>
+</ul>
+<p>Returns: The mean hinge loss.</p>
+<h4 id="labelsmoothing">labelSmoothing</h4><p><code>(targets: number[], outputs: number[], smoothing: number) =&gt; number</code></p>
+<p>Calculates the Cross Entropy with Label Smoothing.
+Label smoothing prevents the model from becoming overconfident by softening the targets.</p>
+<p>Parameters:</p>
+<ul>
+<li>`` - - Array of target values (0 or 1 for binary, or probabilities for soft labels).</li>
+<li>`` - - Array of predicted probabilities (between 0 and 1).</li>
+<li>`` - - Smoothing factor (between 0 and 1, e.g., 0.1).</li>
+</ul>
+<p>Returns: The mean cross-entropy loss with label smoothing.</p>
+<h4 id="mae">mae</h4><p><code>(targets: number[], outputs: number[]) =&gt; number</code></p>
+<p>Calculates the Mean Absolute Error (MAE), another common loss function for regression tasks.</p>
+<p>MAE measures the average of the absolute differences between predictions and actual values.
+Compared to MSE, it is less sensitive to outliers because errors are not squared.</p>
+<p>Parameters:</p>
+<ul>
+<li>`` - - An array of target numerical values.</li>
+<li>`` - - An array of output values from the network.</li>
+</ul>
+<p>Returns: The mean absolute error.</p>
+<h4 id="mape">mape</h4><p><code>(targets: number[], outputs: number[]) =&gt; number</code></p>
+<p>Calculates the Mean Absolute Percentage Error (MAPE).</p>
+<p>MAPE expresses the error as a percentage of the actual value. It can be useful
+for understanding the error relative to the magnitude of the target values.
+However, it has limitations: it&#39;s undefined when the target value is zero and
+can be skewed by target values close to zero.</p>
+<p>Parameters:</p>
+<ul>
+<li>`` - - An array of target numerical values. Should not contain zeros for standard MAPE.</li>
+<li>`` - - An array of output values from the network.</li>
+</ul>
+<p>Returns: The mean absolute percentage error, expressed as a proportion (e.g., 0.1 for 10%).</p>
+<h4 id="mse">mse</h4><p><code>(targets: number[], outputs: number[]) =&gt; number</code></p>
+<p>Calculates the Mean Squared Error (MSE), a common loss function for regression tasks.</p>
+<p>MSE measures the average of the squares of the errors—that is, the average
+squared difference between the estimated values and the actual value.
+It is sensitive to outliers due to the squaring of the error terms.</p>
+<p>Parameters:</p>
+<ul>
+<li>`` - - An array of target numerical values.</li>
+<li>`` - - An array of output values from the network.</li>
+</ul>
+<p>Returns: The mean squared error.</p>
+<h4 id="msle">msle</h4><p><code>(targets: number[], outputs: number[]) =&gt; number</code></p>
+<p>Calculates the Mean Squared Logarithmic Error (MSLE).</p>
+<p>MSLE is often used in regression tasks where the target values span a large range
+or when penalizing under-predictions more than over-predictions is desired.
+It measures the squared difference between the logarithms of the predicted and actual values.
+Uses <code>log(1 + x)</code> instead of <code>log(x)</code> for numerical stability and to handle inputs of 0.
+Assumes both targets and outputs are non-negative.</p>
+<p>Parameters:</p>
+<ul>
+<li>`` - - An array of target numerical values (assumed &gt;= 0).</li>
+<li>`` - - An array of output values from the network (assumed &gt;= 0).</li>
+</ul>
+<p>Returns: The mean squared logarithmic error.</p>
+<h4 id="softmaxcrossentropy">softmaxCrossEntropy</h4><p><code>(targets: number[], outputs: number[]) =&gt; number</code></p>
+<p>Softmax Cross Entropy for mutually exclusive multi-class outputs given raw (pre-softmax or arbitrary) scores.
+Applies a numerically stable softmax to the outputs internally then computes -sum(target * log(prob)).
+Targets may be soft labels and are expected to sum to 1 (will be re-normalized if not).</p>
+<h2 id="methods-crossover-ts">methods/crossover.ts</h2><h3 id="crossover">crossover</h3><h2 id="methods-gating-ts">methods/gating.ts</h2><h3 id="gating">gating</h3><h2 id="methods-methods-ts">methods/methods.ts</h2><h3 id="activation">Activation</h3><h3 id="crossover">crossover</h3><h3 id="gating">gating</h3><h3 id="groupconnection">groupConnection</h3><h3 id="methods">methods</h3><p>Provides a collection of standard cost functions (also known as loss functions)
+used for evaluating the performance of neural networks during training.</p>
+<p>Cost functions quantify the difference between the network&#39;s predictions
+and the actual target values. The goal of training is typically to minimize
+the value of the cost function. The choice of cost function is crucial and
+depends on the specific task (e.g., regression, classification) and the
+desired behavior of the model.</p>
+<h3 id="mutation">mutation</h3><h3 id="selection">selection</h3><h3 id="default">default</h3><h4 id="binary">binary</h4><p><code>(targets: number[], outputs: number[]) =&gt; number</code></p>
+<p>Calculates the Binary Error rate, often used as a simple accuracy metric for classification.</p>
+<p>This function calculates the proportion of misclassifications by comparing the
+rounded network outputs (thresholded at 0.5) against the target labels.
+It assumes target values are 0 or 1, and outputs are probabilities between 0 and 1.
+Note: This is equivalent to <code>1 - accuracy</code> for binary classification.</p>
+<p>Parameters:</p>
+<ul>
+<li>`` - - An array of target values, expected to be 0 or 1.</li>
+<li>`` - - An array of output values from the network, typically probabilities between 0 and 1.</li>
+</ul>
+<p>Returns: The proportion of misclassified samples (error rate, between 0 and 1).</p>
+<h4 id="cosineannealing">cosineAnnealing</h4><p><code>(period: number, minRate: number) =&gt; (baseRate: number, iteration: number) =&gt; number</code></p>
+<p>Implements a Cosine Annealing learning rate schedule.</p>
+<p>This schedule varies the learning rate cyclically according to a cosine function.
+It starts at the <code>baseRate</code> and smoothly anneals down to <code>minRate</code> over a
+specified <code>period</code> of iterations, then potentially repeats. This can help
+the model escape local minima and explore the loss landscape more effectively.
+Often used with &quot;warm restarts&quot; where the cycle repeats.</p>
+<p>Formula: <code>learning_rate = minRate + 0.5 * (baseRate - minRate) * (1 + cos(pi * current_cycle_iteration / period))</code></p>
+<p>Parameters:</p>
+<ul>
+<li><code>period</code> - The number of iterations over which the learning rate anneals from <code>baseRate</code> to <code>minRate</code> in one cycle. Defaults to 1000.</li>
+<li><code>minRate</code> - The minimum learning rate value at the end of a cycle. Defaults to 0.</li>
+<li><code>baseRate</code> - The initial (maximum) learning rate for the cycle.</li>
+<li><code>iteration</code> - The current training iteration.</li>
+</ul>
+<p>Returns: A function that calculates the learning rate for a given iteration based on the cosine annealing schedule.</p>
+<h4 id="cosineannealingwarmrestarts">cosineAnnealingWarmRestarts</h4><p><code>(initialPeriod: number, minRate: number, tMult: number) =&gt; (baseRate: number, iteration: number) =&gt; number</code></p>
+<p>Cosine Annealing with Warm Restarts (SGDR style) where the cycle length can grow by a multiplier (tMult) after each restart.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>initialPeriod</code> - Length of the first cycle in iterations.</li>
+<li><code>minRate</code> - Minimum learning rate at valley.</li>
+<li><code>tMult</code> - Factor to multiply the period after each restart (&gt;=1).</li>
+</ul>
+<h4 id="crossentropy">crossEntropy</h4><p><code>(targets: number[], outputs: number[]) =&gt; number</code></p>
+<p>Calculates the Cross Entropy error, commonly used for classification tasks.</p>
+<p>This function measures the performance of a classification model whose output is
+a probability value between 0 and 1. Cross-entropy loss increases as the
+predicted probability diverges from the actual label.</p>
+<p>It uses a small epsilon (1e-15) to prevent <code>log(0)</code> which would result in <code>NaN</code>.
+Output values are clamped to the range <code>[epsilon, 1 - epsilon]</code> for numerical stability.</p>
+<p>Parameters:</p>
+<ul>
+<li>`` - - An array of target values, typically 0 or 1 for binary classification, or probabilities for soft labels.</li>
+<li>`` - - An array of output values from the network, representing probabilities (expected to be between 0 and 1).</li>
+</ul>
+<p>Returns: The mean cross-entropy error over all samples.</p>
+<h4 id="exp">exp</h4><p><code>(gamma: number) =&gt; (baseRate: number, iteration: number) =&gt; number</code></p>
+<p>Implements an exponential decay learning rate schedule.</p>
+<p>The learning rate decreases exponentially after each iteration, multiplying
+by the decay factor <code>gamma</code>. This provides a smooth, continuous reduction
+in the learning rate over time.</p>
+<p>Formula: <code>learning_rate = baseRate * gamma ^ iteration</code></p>
+<p>Parameters:</p>
+<ul>
+<li><code>gamma</code> - The decay factor applied at each iteration. Should be less than 1. Defaults to 0.999.</li>
+<li><code>baseRate</code> - The initial learning rate.</li>
+<li><code>iteration</code> - The current training iteration.</li>
+</ul>
+<p>Returns: A function that calculates the exponentially decayed learning rate for a given iteration.</p>
+<h4 id="fixed">fixed</h4><p><code>() =&gt; (baseRate: number, iteration: number) =&gt; number</code></p>
+<p>Implements a fixed learning rate schedule.</p>
+<p>The learning rate remains constant throughout the entire training process.
+This is the simplest schedule and serves as a baseline, but may not be
+optimal for complex problems.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>baseRate</code> - The initial learning rate, which will remain constant.</li>
+<li><code>iteration</code> - The current training iteration (unused in this method, but included for consistency).</li>
+</ul>
+<p>Returns: A function that takes the base learning rate and the current iteration number, and always returns the base learning rate.</p>
+<h4 id="focalloss">focalLoss</h4><p><code>(targets: number[], outputs: number[], gamma: number, alpha: number) =&gt; number</code></p>
+<p>Calculates the Focal Loss, which is useful for addressing class imbalance in classification tasks.
+Focal loss down-weights easy examples and focuses training on hard negatives.</p>
+<p>Parameters:</p>
+<ul>
+<li>`` - - Array of target values (0 or 1 for binary, or probabilities for soft labels).</li>
+<li>`` - - Array of predicted probabilities (between 0 and 1).</li>
+<li>`` - - Focusing parameter (default 2).</li>
+<li>`` - - Balancing parameter (default 0.25).</li>
+</ul>
+<p>Returns: The mean focal loss.</p>
+<h4 id="hinge">hinge</h4><p><code>(targets: number[], outputs: number[]) =&gt; number</code></p>
+<p>Calculates the Mean Hinge loss, primarily used for &quot;maximum-margin&quot; classification,
+most notably for Support Vector Machines (SVMs).</p>
+<p>Hinge loss is used for training classifiers. It penalizes predictions that are
+not only incorrect but also those that are correct but not confident (i.e., close to the decision boundary).
+Assumes target values are encoded as -1 or 1.</p>
+<p>Parameters:</p>
+<ul>
+<li>`` - - An array of target values, expected to be -1 or 1.</li>
+<li>`` - - An array of output values from the network (raw scores, not necessarily probabilities).</li>
+</ul>
+<p>Returns: The mean hinge loss.</p>
+<h4 id="inv">inv</h4><p><code>(gamma: number, power: number) =&gt; (baseRate: number, iteration: number) =&gt; number</code></p>
+<p>Implements an inverse decay learning rate schedule.</p>
+<p>The learning rate decreases as the inverse of the iteration number,
+controlled by the decay factor <code>gamma</code> and exponent <code>power</code>. The rate
+decreases more slowly over time compared to exponential decay.</p>
+<p>Formula: <code>learning_rate = baseRate / (1 + gamma * Math.pow(iteration, power))</code></p>
+<p>Parameters:</p>
+<ul>
+<li><code>gamma</code> - Controls the rate of decay. Higher values lead to faster decay. Defaults to 0.001.</li>
+<li><code>power</code> - The exponent controlling the shape of the decay curve. Defaults to 2.</li>
+<li><code>baseRate</code> - The initial learning rate.</li>
+<li><code>iteration</code> - The current training iteration.</li>
+</ul>
+<p>Returns: A function that calculates the inversely decayed learning rate for a given iteration.</p>
+<h4 id="labelsmoothing">labelSmoothing</h4><p><code>(targets: number[], outputs: number[], smoothing: number) =&gt; number</code></p>
+<p>Calculates the Cross Entropy with Label Smoothing.
+Label smoothing prevents the model from becoming overconfident by softening the targets.</p>
+<p>Parameters:</p>
+<ul>
+<li>`` - - Array of target values (0 or 1 for binary, or probabilities for soft labels).</li>
+<li>`` - - Array of predicted probabilities (between 0 and 1).</li>
+<li>`` - - Smoothing factor (between 0 and 1, e.g., 0.1).</li>
+</ul>
+<p>Returns: The mean cross-entropy loss with label smoothing.</p>
+<h4 id="linearwarmupdecay">linearWarmupDecay</h4><p><code>(totalSteps: number, warmupSteps: number | undefined, endRate: number) =&gt; (baseRate: number, iteration: number) =&gt; number</code></p>
+<p>Linear Warmup followed by Linear Decay to an end rate.
+Warmup linearly increases LR from near 0 up to baseRate over warmupSteps, then linearly decays to endRate at totalSteps.
+Iterations beyond totalSteps clamp to endRate.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>totalSteps</code> - Total steps for full schedule (must be &gt; 0).</li>
+<li><code>warmupSteps</code> - Steps for warmup (&lt; totalSteps). Defaults to 10% of totalSteps.</li>
+<li><code>endRate</code> - Final rate at totalSteps.</li>
+</ul>
+<h4 id="mae">mae</h4><p><code>(targets: number[], outputs: number[]) =&gt; number</code></p>
+<p>Calculates the Mean Absolute Error (MAE), another common loss function for regression tasks.</p>
+<p>MAE measures the average of the absolute differences between predictions and actual values.
+Compared to MSE, it is less sensitive to outliers because errors are not squared.</p>
+<p>Parameters:</p>
+<ul>
+<li>`` - - An array of target numerical values.</li>
+<li>`` - - An array of output values from the network.</li>
+</ul>
+<p>Returns: The mean absolute error.</p>
+<h4 id="mape">mape</h4><p><code>(targets: number[], outputs: number[]) =&gt; number</code></p>
+<p>Calculates the Mean Absolute Percentage Error (MAPE).</p>
+<p>MAPE expresses the error as a percentage of the actual value. It can be useful
+for understanding the error relative to the magnitude of the target values.
+However, it has limitations: it&#39;s undefined when the target value is zero and
+can be skewed by target values close to zero.</p>
+<p>Parameters:</p>
+<ul>
+<li>`` - - An array of target numerical values. Should not contain zeros for standard MAPE.</li>
+<li>`` - - An array of output values from the network.</li>
+</ul>
+<p>Returns: The mean absolute percentage error, expressed as a proportion (e.g., 0.1 for 10%).</p>
+<h4 id="mse">mse</h4><p><code>(targets: number[], outputs: number[]) =&gt; number</code></p>
+<p>Calculates the Mean Squared Error (MSE), a common loss function for regression tasks.</p>
+<p>MSE measures the average of the squares of the errors—that is, the average
+squared difference between the estimated values and the actual value.
+It is sensitive to outliers due to the squaring of the error terms.</p>
+<p>Parameters:</p>
+<ul>
+<li>`` - - An array of target numerical values.</li>
+<li>`` - - An array of output values from the network.</li>
+</ul>
+<p>Returns: The mean squared error.</p>
+<h4 id="msle">msle</h4><p><code>(targets: number[], outputs: number[]) =&gt; number</code></p>
+<p>Calculates the Mean Squared Logarithmic Error (MSLE).</p>
+<p>MSLE is often used in regression tasks where the target values span a large range
+or when penalizing under-predictions more than over-predictions is desired.
+It measures the squared difference between the logarithms of the predicted and actual values.
+Uses <code>log(1 + x)</code> instead of <code>log(x)</code> for numerical stability and to handle inputs of 0.
+Assumes both targets and outputs are non-negative.</p>
+<p>Parameters:</p>
+<ul>
+<li>`` - - An array of target numerical values (assumed &gt;= 0).</li>
+<li>`` - - An array of output values from the network (assumed &gt;= 0).</li>
+</ul>
+<p>Returns: The mean squared logarithmic error.</p>
+<h4 id="reduceonplateau">reduceOnPlateau</h4><p><code>(options: { factor?: number | undefined; patience?: number | undefined; minDelta?: number | undefined; cooldown?: number | undefined; minRate?: number | undefined; verbose?: boolean | undefined; } | undefined) =&gt; (baseRate: number, iteration: number, lastError?: number | undefined) =&gt; number</code></p>
+<p>ReduceLROnPlateau style scheduler (stateful closure) that monitors error signal (third argument if provided)
+and reduces rate by &#39;factor&#39; if no improvement beyond &#39;minDelta&#39; for &#39;patience&#39; iterations.
+Cooldown prevents immediate successive reductions.
+NOTE: Requires the training loop to call with signature (baseRate, iteration, lastError).</p>
+<h4 id="softmaxcrossentropy">softmaxCrossEntropy</h4><p><code>(targets: number[], outputs: number[]) =&gt; number</code></p>
+<p>Softmax Cross Entropy for mutually exclusive multi-class outputs given raw (pre-softmax or arbitrary) scores.
+Applies a numerically stable softmax to the outputs internally then computes -sum(target * log(prob)).
+Targets may be soft labels and are expected to sum to 1 (will be re-normalized if not).</p>
+<h4 id="step">step</h4><p><code>(gamma: number, stepSize: number) =&gt; (baseRate: number, iteration: number) =&gt; number</code></p>
+<p>Implements a step decay learning rate schedule.</p>
+<p>The learning rate is reduced by a multiplicative factor (<code>gamma</code>)
+at predefined intervals (<code>stepSize</code> iterations). This allows for
+faster initial learning, followed by finer adjustments as training progresses.</p>
+<p>Formula: <code>learning_rate = baseRate * gamma ^ floor(iteration / stepSize)</code></p>
+<p>Parameters:</p>
+<ul>
+<li><code>gamma</code> - The factor by which the learning rate is multiplied at each step. Should be less than 1. Defaults to 0.9.</li>
+<li><code>stepSize</code> - The number of iterations after which the learning rate decays. Defaults to 100.</li>
+<li><code>baseRate</code> - The initial learning rate.</li>
+<li><code>iteration</code> - The current training iteration.</li>
+</ul>
+<p>Returns: A function that calculates the decayed learning rate for a given iteration.</p>
+<h2 id="methods-mutation-ts">methods/mutation.ts</h2><h3 id="mutation">mutation</h3><h2 id="methods-rate-ts">methods/rate.ts</h2><h3 id="rate">rate</h3><p>Provides various methods for implementing learning rate schedules.</p>
+<p>Learning rate schedules dynamically adjust the learning rate during the training
+process of machine learning models, particularly neural networks. Adjusting the
+learning rate can significantly impact training speed and performance. A high
+rate might lead to overshooting the optimal solution, while a very low rate
+can result in slow convergence or getting stuck in local minima. These methods
+offer different strategies to balance exploration and exploitation during training.</p>
+<h3 id="rate">Rate</h3><p>Provides various methods for implementing learning rate schedules.</p>
+<p>Learning rate schedules dynamically adjust the learning rate during the training
+process of machine learning models, particularly neural networks. Adjusting the
+learning rate can significantly impact training speed and performance. A high
+rate might lead to overshooting the optimal solution, while a very low rate
+can result in slow convergence or getting stuck in local minima. These methods
+offer different strategies to balance exploration and exploitation during training.</p>
+<h3 id="default">default</h3><h4 id="cosineannealing">cosineAnnealing</h4><p><code>(period: number, minRate: number) =&gt; (baseRate: number, iteration: number) =&gt; number</code></p>
+<p>Implements a Cosine Annealing learning rate schedule.</p>
+<p>This schedule varies the learning rate cyclically according to a cosine function.
+It starts at the <code>baseRate</code> and smoothly anneals down to <code>minRate</code> over a
+specified <code>period</code> of iterations, then potentially repeats. This can help
+the model escape local minima and explore the loss landscape more effectively.
+Often used with &quot;warm restarts&quot; where the cycle repeats.</p>
+<p>Formula: <code>learning_rate = minRate + 0.5 * (baseRate - minRate) * (1 + cos(pi * current_cycle_iteration / period))</code></p>
+<p>Parameters:</p>
+<ul>
+<li><code>period</code> - The number of iterations over which the learning rate anneals from <code>baseRate</code> to <code>minRate</code> in one cycle. Defaults to 1000.</li>
+<li><code>minRate</code> - The minimum learning rate value at the end of a cycle. Defaults to 0.</li>
+<li><code>baseRate</code> - The initial (maximum) learning rate for the cycle.</li>
+<li><code>iteration</code> - The current training iteration.</li>
+</ul>
+<p>Returns: A function that calculates the learning rate for a given iteration based on the cosine annealing schedule.</p>
+<h4 id="cosineannealingwarmrestarts">cosineAnnealingWarmRestarts</h4><p><code>(initialPeriod: number, minRate: number, tMult: number) =&gt; (baseRate: number, iteration: number) =&gt; number</code></p>
+<p>Cosine Annealing with Warm Restarts (SGDR style) where the cycle length can grow by a multiplier (tMult) after each restart.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>initialPeriod</code> - Length of the first cycle in iterations.</li>
+<li><code>minRate</code> - Minimum learning rate at valley.</li>
+<li><code>tMult</code> - Factor to multiply the period after each restart (&gt;=1).</li>
+</ul>
+<h4 id="exp">exp</h4><p><code>(gamma: number) =&gt; (baseRate: number, iteration: number) =&gt; number</code></p>
+<p>Implements an exponential decay learning rate schedule.</p>
+<p>The learning rate decreases exponentially after each iteration, multiplying
+by the decay factor <code>gamma</code>. This provides a smooth, continuous reduction
+in the learning rate over time.</p>
+<p>Formula: <code>learning_rate = baseRate * gamma ^ iteration</code></p>
+<p>Parameters:</p>
+<ul>
+<li><code>gamma</code> - The decay factor applied at each iteration. Should be less than 1. Defaults to 0.999.</li>
+<li><code>baseRate</code> - The initial learning rate.</li>
+<li><code>iteration</code> - The current training iteration.</li>
+</ul>
+<p>Returns: A function that calculates the exponentially decayed learning rate for a given iteration.</p>
+<h4 id="fixed">fixed</h4><p><code>() =&gt; (baseRate: number, iteration: number) =&gt; number</code></p>
+<p>Implements a fixed learning rate schedule.</p>
+<p>The learning rate remains constant throughout the entire training process.
+This is the simplest schedule and serves as a baseline, but may not be
+optimal for complex problems.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>baseRate</code> - The initial learning rate, which will remain constant.</li>
+<li><code>iteration</code> - The current training iteration (unused in this method, but included for consistency).</li>
+</ul>
+<p>Returns: A function that takes the base learning rate and the current iteration number, and always returns the base learning rate.</p>
+<h4 id="inv">inv</h4><p><code>(gamma: number, power: number) =&gt; (baseRate: number, iteration: number) =&gt; number</code></p>
+<p>Implements an inverse decay learning rate schedule.</p>
+<p>The learning rate decreases as the inverse of the iteration number,
+controlled by the decay factor <code>gamma</code> and exponent <code>power</code>. The rate
+decreases more slowly over time compared to exponential decay.</p>
+<p>Formula: <code>learning_rate = baseRate / (1 + gamma * Math.pow(iteration, power))</code></p>
+<p>Parameters:</p>
+<ul>
+<li><code>gamma</code> - Controls the rate of decay. Higher values lead to faster decay. Defaults to 0.001.</li>
+<li><code>power</code> - The exponent controlling the shape of the decay curve. Defaults to 2.</li>
+<li><code>baseRate</code> - The initial learning rate.</li>
+<li><code>iteration</code> - The current training iteration.</li>
+</ul>
+<p>Returns: A function that calculates the inversely decayed learning rate for a given iteration.</p>
+<h4 id="linearwarmupdecay">linearWarmupDecay</h4><p><code>(totalSteps: number, warmupSteps: number | undefined, endRate: number) =&gt; (baseRate: number, iteration: number) =&gt; number</code></p>
+<p>Linear Warmup followed by Linear Decay to an end rate.
+Warmup linearly increases LR from near 0 up to baseRate over warmupSteps, then linearly decays to endRate at totalSteps.
+Iterations beyond totalSteps clamp to endRate.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>totalSteps</code> - Total steps for full schedule (must be &gt; 0).</li>
+<li><code>warmupSteps</code> - Steps for warmup (&lt; totalSteps). Defaults to 10% of totalSteps.</li>
+<li><code>endRate</code> - Final rate at totalSteps.</li>
+</ul>
+<h4 id="reduceonplateau">reduceOnPlateau</h4><p><code>(options: { factor?: number | undefined; patience?: number | undefined; minDelta?: number | undefined; cooldown?: number | undefined; minRate?: number | undefined; verbose?: boolean | undefined; } | undefined) =&gt; (baseRate: number, iteration: number, lastError?: number | undefined) =&gt; number</code></p>
+<p>ReduceLROnPlateau style scheduler (stateful closure) that monitors error signal (third argument if provided)
+and reduces rate by &#39;factor&#39; if no improvement beyond &#39;minDelta&#39; for &#39;patience&#39; iterations.
+Cooldown prevents immediate successive reductions.
+NOTE: Requires the training loop to call with signature (baseRate, iteration, lastError).</p>
+<h4 id="step">step</h4><p><code>(gamma: number, stepSize: number) =&gt; (baseRate: number, iteration: number) =&gt; number</code></p>
+<p>Implements a step decay learning rate schedule.</p>
+<p>The learning rate is reduced by a multiplicative factor (<code>gamma</code>)
+at predefined intervals (<code>stepSize</code> iterations). This allows for
+faster initial learning, followed by finer adjustments as training progresses.</p>
+<p>Formula: <code>learning_rate = baseRate * gamma ^ floor(iteration / stepSize)</code></p>
+<p>Parameters:</p>
+<ul>
+<li><code>gamma</code> - The factor by which the learning rate is multiplied at each step. Should be less than 1. Defaults to 0.9.</li>
+<li><code>stepSize</code> - The number of iterations after which the learning rate decays. Defaults to 100.</li>
+<li><code>baseRate</code> - The initial learning rate.</li>
+<li><code>iteration</code> - The current training iteration.</li>
+</ul>
+<p>Returns: A function that calculates the decayed learning rate for a given iteration.</p>
+<h2 id="methods-selection-ts">methods/selection.ts</h2><h3 id="selection">selection</h3>
+<footer>Generated from JSDoc. <a href="https://github.com/reicek/NeatapticTS">GitHub</a></footer>
+</main>
+<aside class="page-index"><div class="page-toc"><h2>Files</h2><div class="toc-file"><a href="#methods-activation-ts">methods/activation.ts</a><ul><li><a href=#activation>Activation</a></li><li><a href=#registercustomactivation>registerCustomActivation</a></li></ul></div><div class="toc-file"><a href="#methods-connection-ts">methods/connection.ts</a><ul><li><a href=#connection>connection</a></li><li><a href=#groupconnection>groupConnection</a></li></ul></div><div class="toc-file"><a href="#methods-cost-ts">methods/cost.ts</a><ul><li><a href=#cost>cost</a></li><li><a href=#cost>Cost</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#methods-crossover-ts">methods/crossover.ts</a><ul><li><a href=#crossover>crossover</a></li></ul></div><div class="toc-file"><a href="#methods-gating-ts">methods/gating.ts</a><ul><li><a href=#gating>gating</a></li></ul></div><div class="toc-file"><a href="#methods-methods-ts">methods/methods.ts</a><ul><li><a href=#activation>Activation</a></li><li><a href=#crossover>crossover</a></li><li><a href=#gating>gating</a></li><li><a href=#groupconnection>groupConnection</a></li><li><a href=#methods>methods</a></li><li><a href=#mutation>mutation</a></li><li><a href=#selection>selection</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#methods-mutation-ts">methods/mutation.ts</a><ul><li><a href=#mutation>mutation</a></li></ul></div><div class="toc-file"><a href="#methods-rate-ts">methods/rate.ts</a><ul><li><a href=#rate>rate</a></li><li><a href=#rate>Rate</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#methods-selection-ts">methods/selection.ts</a><ul><li><a href=#selection>selection</a></li></ul></div></div></aside>
+</body></html>

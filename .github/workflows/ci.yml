@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, refactor ]
+  pull_request:
+    branches: [ main, refactor ]
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Use Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+    - name: Install dependencies
+      run: npm ci
+    - name: Run tests
+      run: npm test
+    - name: Check for coverage file
+      id: cov
+      run: |
+        if [ -f coverage/lcov.info ]; then
+          echo "found=true" >> $GITHUB_OUTPUT
+        else
+          echo "found=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Upload coverage to Qlty
+      if: steps.cov.outputs.found == 'true' && secrets.QLTY_COVERAGE_TOKEN != ''
+      uses: qltysh/qlty-action/coverage@v2
+      with:
+        token: ${{ secrets.QLTY_COVERAGE_TOKEN }}
+        files: coverage/lcov.info
+    - name: Build
+      run: npm run build

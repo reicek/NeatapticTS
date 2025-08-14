@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "./",
+    "outDir": "./dist-docs",
+    "module": "CommonJS",
+    "types": ["node"],
+    "skipLibCheck": true
+  },
+  "include": ["scripts/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
+}
