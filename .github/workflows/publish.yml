@@ -3,10 +3,34 @@ name: Publish packages
 on:
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      run_publish:
+        description: 'Whether to actually publish packages'
+        required: false
+        default: 'true'
+      release_tag:
+        description: 'Optional tag to publish (used for metadata only)'
+        required: false
+  workflow_call:
+    inputs:
+      run_publish:
+        description: 'Whether to actually publish packages'
+        required: false
+        type: string
+        default: 'true'
+      release_tag:
+        description: 'Optional tag to publish (used for metadata only)'
+        required: false
+        type: string
 
 jobs:
   publish:
     runs-on: ubuntu-latest
+    env:
+      QLTY_COVERAGE_TOKEN: ${{ secrets.QLTY_COVERAGE_TOKEN }}
+      RUN_PUBLISH: ${{ github.event.inputs.run_publish || 'true' }}
+      RELEASE_TAG: ${{ github.event.inputs.release_tag || '' }}
     steps:
     - uses: actions/checkout@v4
 
@@ -23,6 +47,7 @@ jobs:
       run: npm run build
 
     - name: Publish to npm
+      if: ${{ env.RUN_PUBLISH == 'true' }}
       env:
         NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       run: |
@@ -36,6 +61,7 @@ jobs:
         registry-url: 'https://npm.pkg.github.com/'
 
     - name: Publish to GitHub Packages (scoped)
+      if: ${{ env.RUN_PUBLISH == 'true' }}
       env:
         NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
@@ -52,8 +78,8 @@ jobs:
         fi
 
     - name: Upload coverage to Qlty (release)
-      if: steps.cov.outputs.found == 'true' && secrets.QLTY_COVERAGE_TOKEN != ''
+      if: ${{ steps.cov.outputs.found == 'true' && env.QLTY_COVERAGE_TOKEN != '' }}
       uses: qltysh/qlty-action/coverage@v2
       with:
-        token: ${{ secrets.QLTY_COVERAGE_TOKEN }}
+        token: ${{ env.QLTY_COVERAGE_TOKEN }}
         files: coverage/lcov.info
