@@ -19,7 +19,7 @@
     "docs:build-scripts": "tsc -p tsconfig.docs.json && echo {\"type\":\"commonjs\"} > dist-docs/package.json",
     "docs:folders": "npm run docs:build-scripts && node ./dist-docs/scripts/generate-docs.js",
     "docs:html": "npm run docs:build-scripts && node ./dist-docs/scripts/render-docs-html.js",
-  "build:ascii-maze": "npx esbuild test/examples/asciiMaze/browser-entry.ts --bundle --outfile=docs/assets/ascii-maze.bundle.js --platform=browser --format=iife --sourcemap --external:fs --external:child_process",
+    "build:ascii-maze": "npx esbuild test/examples/asciiMaze/browser-entry.ts --bundle --outfile=docs/assets/ascii-maze.bundle.js --platform=browser --format=iife --sourcemap --external:fs --external:child_process",
     "docs": "npm run build:ascii-maze && npm run docs:build-scripts && node ./dist-docs/scripts/generate-docs.js && node ./dist-docs/scripts/render-docs-html.js"
   },
   "exports": {
@@ -87,6 +87,7 @@
     "singleQuote": true
   },
   "dependencies": {
+    "build": "^0.1.4",
     "child_process": "^1.0.2",
     "os": "^0.1.2",
     "path": "^0.12.7",
