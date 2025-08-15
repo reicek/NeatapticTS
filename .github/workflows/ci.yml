@@ -9,6 +9,8 @@ on:
 jobs:
   build-test:
     runs-on: ubuntu-latest
+    env:
+      QLTY_COVERAGE_TOKEN: ${{ secrets.QLTY_COVERAGE_TOKEN }}
 
     steps:
     - uses: actions/checkout@v4
@@ -30,10 +32,10 @@ jobs:
         fi
 
     - name: Upload coverage to Qlty
-      if: steps.cov.outputs.found == 'true' && secrets.QLTY_COVERAGE_TOKEN != ''
+      if: ${{ steps.cov.outputs.found == 'true' && env.QLTY_COVERAGE_TOKEN != '' }}
       uses: qltysh/qlty-action/coverage@v2
       with:
-        token: ${{ secrets.QLTY_COVERAGE_TOKEN }}
+        token: ${{ env.QLTY_COVERAGE_TOKEN }}
         files: coverage/lcov.info
     - name: Build
       run: npm run build

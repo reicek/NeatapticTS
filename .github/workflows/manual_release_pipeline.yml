@@ -47,6 +47,16 @@ jobs:
       run: |
         npm version ${{ github.event.inputs.level }} -m "chore(release): %s [ci skip]"
         git push origin HEAD --follow-tags
-
     - name: Done
       run: echo "Version bumped and tags pushed. The release workflows will run on tag/release publish."
+
+  publish:
+    needs: release
+    uses: ./.github/workflows/publish.yml
+    with:
+      run_publish: 'true'
+      release_tag: ${{ github.ref }}
+    secrets:
+      QLTY_COVERAGE_TOKEN: ${{ secrets.QLTY_COVERAGE_TOKEN }}
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
