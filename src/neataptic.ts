@@ -1,0 +1,10 @@
+export { default as Neat } from './neat';
+export { default as Network } from './architecture/network';
+export { default as Node } from './architecture/node';
+export { default as Layer } from './architecture/layer';
+export { default as Group } from './architecture/group';
+export { default as Connection } from './architecture/connection';
+export { default as Architect } from './architecture/architect';
+export * as methods from './methods/methods';
+export * as config from './config';
+export * as multi from './multithreading/multi';

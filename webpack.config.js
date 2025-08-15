@@ -1,49 +1,49 @@
-/* Import */
-var fs = require('fs');
-var path = require('path');
-var webpack = require('webpack');
-var CopyWebpackPlugin = require('copy-webpack-plugin');
+import { fileURLToPath } from 'url';
+import path from 'path';
 
-/* Update readme and read license */
-var version = require('./package.json').version;
-var readme = fs.readFileSync('./README.md', 'utf-8').replace(
-  /cdn\/(.*)\/neataptic.js/, `cdn/${version}/neataptic.js`
-);
-fs.writeFileSync('./README.md', readme);
+// Define __dirname for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-var license = fs.readFileSync('./LICENSE', 'utf-8');
-
-/* Export config */
-module.exports = {
-  context: __dirname,
-  entry: {
-    'dist/neataptic': './src/neataptic.js',
-    [`mkdocs/theme/cdn/${version}/neataptic`]: './src/neataptic.js'
+const config = {
+  mode: 'production', // Use 'production' for optimized builds
+  entry: './src/neataptic.ts', // Entry point for the application
+  output: {
+    path: path.resolve(__dirname, 'dist'), // Output directory
+    filename: 'index.js', // Output file name
+    library: 'Neataptic', // Expose the library globally
+    libraryTarget: 'umd', // Universal Module Definition for compatibility with various module systems
+    globalObject: 'this', // Ensure compatibility with both Node.js and browser environments
+    clean: true, // Clean the output directory before emitting files
   },
   resolve: {
-    modules: [
-      path.join(__dirname, 'node_modules')
-    ]
+    extensions: ['.ts', '.js'], // Resolve both TypeScript and JavaScript files
+    fallback: {
+      child_process: false, // Ensure compatibility for browser builds
+      os: false,
+      path: false,
+    },
   },
-  output: {
-    path: __dirname,
-    filename: '[name].js',
-    library: 'neataptic',
-    libraryTarget: 'umd'
+  module: {
+    rules: [
+      {
+        test: /\.ts$/, // Match TypeScript files
+        exclude: /node_modules/, // Exclude node_modules directory
+        use: {
+          loader: 'ts-loader', // Use ts-loader to transpile TypeScript
+          options: {
+            transpileOnly: true, // Skip type checking for faster builds
+            compilerOptions: {
+              module: 'esnext', // Use ESNext module system for output
+              target: 'esnext', // Use ESNext target for output
+              sourceMap: true, // Enable source maps for debugging
+            },
+          },
+        },
+      },
+    ],
   },
-  plugins: [
-    new webpack.NoEmitOnErrorsPlugin(),
-    new webpack.BannerPlugin(license),
-    new webpack.optimize.ModuleConcatenationPlugin(),
-    new CopyWebpackPlugin([
-      { from: 'src/multithreading/workers/node/worker.js', to: 'dist' }
-    ])
-  ],
-  externals: [
-    'child_process',
-    'os'
-  ],
-  node: {
-    __dirname: false
-  }
+  devtool: 'source-map', // Enable source maps for debugging
 };
+
+export default config;

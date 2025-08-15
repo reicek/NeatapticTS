@@ -1,0 +1,83 @@
+/**
+ * Global NeatapticTS configuration contract & default instance.
+ *
+ * WHY THIS EXISTS
+ * --------------
+ * A central `config` object offers a convenient, documented surface for end-users (and tests)
+ * to tweak library behaviour without digging through scattered constants. Centralization also
+ * lets us validate & evolve feature flags in a single place.
+ *
+ * USAGE PATTERN
+ * ------------
+ *   import { config } from 'neataptic-ts';
+ *   config.warnings = true;              // enable runtime warnings
+ *   config.deterministicChainMode = true // opt into deterministic deep path construction
+ *
+ * Adjust BEFORE constructing networks / invoking evolutionary loops so that subsystems read
+ * the intended values while initializing internal buffers / metadata.
+ *
+ * DESIGN NOTES
+ * ------------
+ * - We intentionally avoid setters / proxies to keep this a plain serializable object.
+ * - Optional flags are conservative by default (disabled) to preserve legacy stochastic
+ *   behaviour unless a test or user explicitly opts in.
+ */
+export interface NeatapticConfig {
+  /**
+   * Emit safety, performance & deprecation warnings to stdout.
+   * Rationale: novices benefit from explicit guidance; advanced users can silence noise.
+   * Default: false
+   */
+  warnings: boolean;
+
+  /**
+   * Prefer `Float32Array` for activation & gradient buffers when true.
+   * Trade‑off: 2x lower memory + potential SIMD acceleration vs precision of 64-bit floats.
+   * Default: false (accuracy prioritized; enable for large populations or constrained memory).
+   */
+  float32Mode: boolean;
+
+  /**
+   * Hard cap for arrays retained per size bucket in the activation buffer pool.
+   * Set to a finite non‑negative integer to bound memory. `undefined` = unlimited reuse.
+   */
+  poolMaxPerBucket?: number;
+
+  /**
+   * Prewarm count for commonly used activation sizes. Helps remove first-iteration jitter in
+   * tight benchmarking loops. Omit to accept library default heuristics.
+   */
+  poolPrewarmCount?: number;
+
+  /**
+   * Deterministic deep path construction mode (TEST / EDUCATIONAL FEATURE).
+   * When enabled: every ADD_NODE mutation extends a single linear input→…→output chain, pruning
+   * side branches. This allows tests (and learners) to reason about exact depth after N steps.
+   * Disable for realistic evolutionary stochasticity.
+   */
+  deterministicChainMode?: boolean;
+
+  /**
+   * Enable allocation / maintenance of extended gating trace structures.
+   * Forward looking flag: currently minimal impact; kept for future advanced credit assignment
+   * experiments. Disable if profiling reveals overhead in extremely large recurrent nets.
+   * Default: true
+   */
+  enableGatingTraces?: boolean;
+}
+
+/**
+ * Default configuration instance. Override fields as needed before constructing networks.
+ */
+/**
+ * Singleton mutable configuration object consumed throughout the library.
+ * Modify properties directly; do NOT reassign the binding (imports retain reference).
+ */
+export const config: NeatapticConfig = {
+  warnings: false, // emit runtime guidance
+  float32Mode: false, // numeric precision mode
+  deterministicChainMode: false, // deep path test flag (ADD_NODE determinism)
+  enableGatingTraces: true, // advanced gating trace infra
+  // poolMaxPerBucket: 256,     // example memory cap override
+  // poolPrewarmCount: 2,       // example prewarm override
+};

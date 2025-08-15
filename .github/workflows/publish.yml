@@ -1,0 +1,59 @@
+name: Publish packages
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Use Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        registry-url: 'https://registry.npmjs.org'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Build
+      run: npm run build
+
+    - name: Publish to npm
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      run: |
+        echo "Publishing to npm..."
+        npm publish --access public
+
+    - name: Publish to GitHub Packages
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        registry-url: 'https://npm.pkg.github.com/'
+
+    - name: Publish to GitHub Packages (scoped)
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        echo "Publishing to GitHub Packages..."
+        npm publish --registry https://npm.pkg.github.com/
+
+    - name: Check for coverage file
+      id: cov
+      run: |
+        if [ -f coverage/lcov.info ]; then
+          echo "found=true" >> $GITHUB_OUTPUT
+        else
+          echo "found=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Upload coverage to Qlty (release)
+      if: steps.cov.outputs.found == 'true' && secrets.QLTY_COVERAGE_TOKEN != ''
+      uses: qltysh/qlty-action/coverage@v2
+      with:
+        token: ${{ secrets.QLTY_COVERAGE_TOKEN }}
+        files: coverage/lcov.info

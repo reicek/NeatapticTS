@@ -1,0 +1,128 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>ASCII Maze Demo</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    html,body,#root{height:100%;margin:0}
+    body{font-family:system-ui,Segoe UI,Arial,sans-serif;padding:0;background:#0b0f14;color:#cfe8ff;display:flex;flex-direction:column}
+    main{flex:1;display:flex;flex-direction:column;padding:12px}
+    #ascii-maze-output{flex:1;overflow:auto;background:#041018;padding:12px;border-radius:6px;box-sizing:border-box}
+    #ascii-maze-controls{margin:8px 0}
+    button{padding:6px 10px;border-radius:4px;border:1px solid #2C3963;color:#fff;background:#39632C}
+  </style>
+</head>
+<body>
+  <header style="padding:12px 16px">
+    <h1 style="margin:0;font-size:18px">ASCII Maze Demo</h1>
+  </header>
+  <main id="root">
+    <div id="ascii-maze-controls" style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <button id="ascii-maze-playpause" aria-pressed="false" style="padding:6px 10px;border-radius:4px;border:1px solid #234;background:#0b4;color:#fff">Pause</button>
+    </div>
+    <div id="ascii-maze-output">
+      <div id="ascii-maze-live" style="flex:1;min-height:200px"></div>
+      <div id="ascii-maze-archive" style="margin-top:12px"></div>
+    </div>
+  <div id="ascii-maze-status" aria-live="polite" style="margin-top:8px;color:#f88"></div>
+  <script>
+    // Try several candidate paths for the bundle so the example works under different server roots.
+    (function tryLoadBundle() {
+      const candidates = [
+        '/docs/assets/ascii-maze.bundle.js',
+        'docs/assets/ascii-maze.bundle.js',
+        './docs/assets/ascii-maze.bundle.js',
+        '../../docs/assets/ascii-maze.bundle.js',
+        '../../../docs/assets/ascii-maze.bundle.js'
+      ];
+      let tried = 0;
+      function tryNext() {
+        if (tried >= candidates.length) {
+          console.error('ascii-maze bundle not loaded. Make sure docs/assets/ascii-maze.bundle.js exists and run `npm run build:ascii-maze` from repo root. Tried paths:', candidates);
+          return;
+        }
+        const src = candidates[tried++];
+        const s = document.createElement('script');
+        s.src = src;
+        s.async = true;
+        s.onload = () => {
+          // allow the bundle a short time to initialize and set window.asciiMazeStart
+          setTimeout(() => {
+            if (!window.asciiMazeStart) console.warn('bundle loaded but asciiMazeStart not found on window');
+            else {
+              try {
+                const res = window.asciiMazeStart('ascii-maze-output');
+                if (res && typeof res.then === 'function') {
+                  res.then(() => {})
+                    .catch((e) => console.error('asciiMazeStart rejected:', e));
+                } else {
+                  // started (non-promise or undefined returned)
+                }
+              } catch (e) {
+                console.error('Error while calling asciiMazeStart after load:', e);
+              }
+            }
+          }, 200);
+        };
+        s.onerror = () => {
+          // try the next candidate
+          tryNext();
+        };
+        document.head.appendChild(s);
+      }
+      tryNext();
+    })();
+  </script>
+    <script>
+      // Watchdog: attempt to start the demo if bundle loaded but nothing appears.
+      (function watchStart() {
+        const statusEl = document.getElementById('ascii-maze-status');
+        const outEl = document.getElementById('ascii-maze-output');
+        let attempts = 0;
+        function setStatus(msg) {
+          try {
+            if (statusEl) statusEl.textContent = msg;
+          } catch {}
+        }
+        function tryStart() {
+          attempts++;
+          if (window.asciiMazeStart && typeof window.asciiMazeStart === 'function') {
+            try {
+              window.asciiMazeStart();
+            } catch (e) {
+              console.error(e);
+              setStatus('Error while invoking asciiMazeStart: ' + (e && e.message ? e.message : String(e)));
+            }
+            return;
+          }
+          if (attempts < 20) {
+            setStatus('Waiting for bundle to initialize... (attempt ' + attempts + ')');
+            setTimeout(tryStart, 250);
+          } else {
+            setStatus('asciiMazeStart not found after attempts. Check console for errors.');
+            // Dump current output length for debugging
+            try {
+              const txt = outEl ? outEl.textContent || outEl.innerText || '' : '';
+              console.info('ascii-maze-output length:', txt.length);
+            } catch {}
+          }
+        }
+        // Global handlers to surface errors to the status area
+        window.addEventListener('error', (ev) => {
+          try {
+            const m = (ev && ev.message) || String(ev || 'unknown error');
+            setStatus('Runtime error: ' + m);
+          } catch {}
+        });
+        window.addEventListener('unhandledrejection', (ev) => {
+          try {
+            setStatus('Unhandled promise rejection: ' + (ev && ev.reason ? JSON.stringify(ev.reason) : String(ev)));
+          } catch {}
+        });
+        // Start polling
+        setTimeout(tryStart, 50);
+      })();
+    </script>
+</body>
+</html>
