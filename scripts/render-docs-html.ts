@@ -41,6 +41,19 @@ async function main() {
         const href = (relLink === '.' ? '.' : relLink) + '/index.html';
         return `<li${isCurrent ? ' class="current"' : ''}><a href="${href}">${label}</a></li>`;
       }).join('\n');
+    // If the asciiMaze example exists in the repo, append a nav link so generated docs include it
+    try {
+      const asciiExampleAbs = path.resolve('test', 'examples', 'asciiMaze', 'index.html');
+      if (fs.existsSync(asciiExampleAbs)) {
+        const absTargetDir = path.relative(DOCS_DIR, path.dirname(asciiExampleAbs)).replace(/\\/g, '/');
+        const relLink = path.posix.relative(currentDir || '.', absTargetDir || '.') || '.';
+        const href = (relLink === '.' ? '.' : relLink) + '/index.html';
+        const extra = `<li><a href="${href}">examples/asciiMaze/</a></li>`;
+        return `<ul class="doc-nav">${links}\n${extra}</ul>`;
+      }
+    } catch (e) {
+      /* ignore extra nav */
+    }
     return `<ul class="doc-nav">${links}</ul>`;
   };
 

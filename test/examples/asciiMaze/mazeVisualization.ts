@@ -157,78 +157,84 @@ export class MazeVisualization {
       exitPos
     );
 
+    // Layout constants (keep in sync with DashboardManager framing)
+    const FRAME_WIDTH = 148;
+    const LEFT_PAD = 7;
+    const RIGHT_PAD = 1;
+    const CONTENT_WIDTH = FRAME_WIDTH - LEFT_PAD - RIGHT_PAD;
+
     forceLog(
-      `${colors.blueCore}║${NetworkVisualization.pad(' ', 148, ' ')}║${
-        colors.reset
-      }`
+      `${colors.blueCore}║${NetworkVisualization.pad(' ', FRAME_WIDTH, ' ')}${
+        colors.blueCore
+      }║${colors.reset}`
     );
     forceLog(
-      `${colors.blueCore}║${NetworkVisualization.pad(' ', 148, ' ')}║${
-        colors.reset
-      }`
+      `${colors.blueCore}║${NetworkVisualization.pad(' ', FRAME_WIDTH, ' ')}${
+        colors.blueCore
+      }║${colors.reset}`
     );
     forceLog(
-      `${colors.blueCore}║       ${NetworkVisualization.pad(
+      `${colors.blueCore}║${' '.repeat(LEFT_PAD)}${NetworkVisualization.pad(
         `${colors.neonSilver}Success:${colors.neonIndigo} ${successColor}${
           result.success ? 'YES' : 'NO'
         }`,
-        140,
+        CONTENT_WIDTH,
         ' ',
         'left'
-      )} ${colors.blueCore}║${colors.reset}`
+      )}${' '.repeat(RIGHT_PAD)}${colors.blueCore}║${colors.reset}`
     );
     // Print generation number with color and padding
     forceLog(
-      `${colors.blueCore}║       ${NetworkVisualization.pad(
+      `${colors.blueCore}║${' '.repeat(LEFT_PAD)}${NetworkVisualization.pad(
         `${colors.neonSilver}Generation:${colors.neonIndigo} ${successColor}${generation}`,
-        140,
+        CONTENT_WIDTH,
         ' ',
         'left'
-      )} ${colors.blueCore}║${colors.reset}`
+      )}${' '.repeat(RIGHT_PAD)}║${colors.reset}`
     );
     // Print fitness score
     forceLog(
-      `${colors.blueCore}║       ${NetworkVisualization.pad(
+      `${colors.blueCore}║${' '.repeat(LEFT_PAD)}${NetworkVisualization.pad(
         `${colors.neonSilver}Fitness:${
           colors.neonOrange
         } ${result.fitness.toFixed(2)}`,
-        140,
+        CONTENT_WIDTH,
         ' ',
         'left'
-      )} ${colors.blueCore}║${colors.reset}`
+      )}${' '.repeat(RIGHT_PAD)}║${colors.reset}`
     );
     // Print steps taken
     forceLog(
-      `${colors.blueCore}║       ${NetworkVisualization.pad(
+      `${colors.blueCore}║${' '.repeat(LEFT_PAD)}${NetworkVisualization.pad(
         `${colors.neonSilver}Steps taken:${colors.neonIndigo} ${result.steps}`,
-        140,
+        CONTENT_WIDTH,
         ' ',
         'left'
-      )} ${colors.blueCore}║${colors.reset}`
+      )}${' '.repeat(RIGHT_PAD)}║${colors.reset}`
     );
     // Print path length
     forceLog(
-      `${colors.blueCore}║       ${NetworkVisualization.pad(
+      `${colors.blueCore}║${' '.repeat(LEFT_PAD)}${NetworkVisualization.pad(
         `${colors.neonSilver}Path length:${colors.neonIndigo} ${result.path.length}${colors.blueCore}`,
-        140,
+        CONTENT_WIDTH,
         ' ',
         'left'
-      )} ${colors.blueCore}║${colors.reset}`
+      )}${' '.repeat(RIGHT_PAD)}║${colors.reset}`
     );
     // Print optimal distance to exit
     forceLog(
-      `${colors.blueCore}║       ${NetworkVisualization.pad(
+      `${colors.blueCore}║${' '.repeat(LEFT_PAD)}${NetworkVisualization.pad(
         `${colors.neonSilver}Optimal distance to exit:${colors.neonYellow} ${optimalLength}`,
-        140,
+        CONTENT_WIDTH,
         ' ',
         'left'
-      )} ${colors.blueCore}║${colors.reset}`
+      )}${' '.repeat(RIGHT_PAD)}║${colors.reset}`
     );
     // Print a blank padded line for spacing
     forceLog(
-      `${colors.blueCore}║${NetworkVisualization.pad(' ', 148, ' ')}║${
-        colors.reset
-      }`
+      `${colors.blueCore}║${NetworkVisualization.pad(' ', FRAME_WIDTH, ' ')}${
+        colors.blueCore
+      }║${colors.reset}`
     );
 
     if (result.success) {
@@ -356,70 +362,70 @@ export class MazeVisualization {
 
       // Display detailed statistics
       forceLog(
-        `${colors.blueCore}║       ${NetworkVisualization.pad(
+        `${colors.blueCore}║${' '.repeat(LEFT_PAD)}${NetworkVisualization.pad(
           `${colors.neonSilver}Path efficiency:      ${colors.neonIndigo} ${optimalLength}/${pathLength} (${efficiency}%)`,
-          140,
+          CONTENT_WIDTH,
           ' ',
           'left'
-        )} ${colors.blueCore}║${colors.reset}`
+        )}${' '.repeat(RIGHT_PAD)}║${colors.reset}`
       );
       forceLog(
-        `${colors.blueCore}║       ${NetworkVisualization.pad(
+        `${colors.blueCore}║${' '.repeat(LEFT_PAD)}${NetworkVisualization.pad(
           `${colors.neonSilver}Optimal steps:        ${colors.neonIndigo} ${optimalLength}`,
-          140,
+          CONTENT_WIDTH,
           ' ',
           'left'
-        )} ${colors.blueCore}║${colors.reset}`
+        )}${' '.repeat(RIGHT_PAD)}║${colors.reset}`
       );
       forceLog(
-        `${colors.blueCore}║       ${NetworkVisualization.pad(
+        `${colors.blueCore}║${' '.repeat(LEFT_PAD)}${NetworkVisualization.pad(
           `${colors.neonSilver}Path overhead:        ${colors.neonIndigo} ${overhead}% longer than optimal`,
-          140,
+          CONTENT_WIDTH,
           ' ',
           'left'
-        )} ${colors.blueCore}║${colors.reset}`
+        )}${' '.repeat(RIGHT_PAD)}║${colors.reset}`
       );
       forceLog(
-        `${colors.blueCore}║       ${NetworkVisualization.pad(
+        `${colors.blueCore}║${' '.repeat(LEFT_PAD)}${NetworkVisualization.pad(
           `${colors.neonSilver}Direction changes:    ${colors.neonIndigo} ${directionChanges}`,
-          140,
+          CONTENT_WIDTH,
           ' ',
           'left'
-        )} ${colors.blueCore}║${colors.reset}`
+        )}${' '.repeat(RIGHT_PAD)}║${colors.reset}`
       );
       forceLog(
-        `${colors.blueCore}║       ${NetworkVisualization.pad(
+        `${colors.blueCore}║${' '.repeat(LEFT_PAD)}${NetworkVisualization.pad(
           `${colors.neonSilver}Unique cells visited: ${colors.neonIndigo} ${uniqueCells.size} (${coveragePercent}% of maze)`,
-          140,
+          CONTENT_WIDTH,
           ' ',
           'left'
-        )} ${colors.blueCore}║${colors.reset}`
+        )}${' '.repeat(RIGHT_PAD)}║${colors.reset}`
       );
       forceLog(
-        `${colors.blueCore}║       ${NetworkVisualization.pad(
+        `${colors.blueCore}║${' '.repeat(LEFT_PAD)}${NetworkVisualization.pad(
           `${colors.neonSilver}Cells revisited:      ${colors.neonIndigo} ${revisitedCells} times`,
-          140,
+          CONTENT_WIDTH,
           ' ',
           'left'
-        )} ${colors.blueCore}║${colors.reset}`
+        )}${' '.repeat(RIGHT_PAD)}║${colors.reset}`
       );
       forceLog(
-        `${colors.blueCore}║       ${NetworkVisualization.pad(
+        `${colors.blueCore}║${' '.repeat(LEFT_PAD)}${NetworkVisualization.pad(
           `${colors.neonSilver}Decisions per cell:   ${colors.neonIndigo} ${(
             directionChanges / uniqueCells.size
           ).toFixed(2)}`,
-          140,
+          CONTENT_WIDTH,
           ' ',
           'left'
-        )} ${colors.blueCore}║${colors.reset}`
+        )}${' '.repeat(RIGHT_PAD)}║${colors.reset}`
       );
       forceLog(
-        `${colors.blueCore}║       ${NetworkVisualization.pad(
+        `${colors.blueCore}║${' '.repeat(LEFT_PAD)}${NetworkVisualization.pad(
           `${colors.neonOrange}Agent successfully navigated the maze!`,
-          140,
+          CONTENT_WIDTH,
           ' ',
           'left'
-        )} ${colors.blueCore}║${colors.reset}`
+        )}${' '.repeat(RIGHT_PAD)}║${colors.reset}`
       );
     } else {
       /**
@@ -442,36 +448,36 @@ export class MazeVisualization {
 
       // Display partial progress statistics
       forceLog(
-        `${colors.blueCore}║       ${NetworkVisualization.pad(
+        `${colors.blueCore}║${' '.repeat(LEFT_PAD)}${NetworkVisualization.pad(
           `${colors.neonSilver}Best progress toward exit:      ${colors.neonIndigo} ${bestProgress}%`,
-          140,
+          CONTENT_WIDTH,
           ' ',
           'left'
-        )} ${colors.blueCore}║${colors.reset}`
+        )}${' '.repeat(RIGHT_PAD)}║${colors.reset}`
       );
       forceLog(
-        `${colors.blueCore}║       ${NetworkVisualization.pad(
+        `${colors.blueCore}║${' '.repeat(LEFT_PAD)}${NetworkVisualization.pad(
           `${colors.neonSilver}Shortest possible steps:        ${colors.neonIndigo} ${optimalLength}`,
-          140,
+          CONTENT_WIDTH,
           ' ',
           'left'
-        )} ${colors.blueCore}║${colors.reset}`
+        )}${' '.repeat(RIGHT_PAD)}║${colors.reset}`
       );
       forceLog(
-        `${colors.blueCore}║       ${NetworkVisualization.pad(
+        `${colors.blueCore}║${' '.repeat(LEFT_PAD)}${NetworkVisualization.pad(
           `${colors.neonSilver}Unique cells visited:           ${colors.neonIndigo} ${uniqueCells.size}`,
-          140,
+          CONTENT_WIDTH,
           ' ',
           'left'
-        )} ${colors.blueCore}║${colors.reset}`
+        )}${' '.repeat(RIGHT_PAD)}║${colors.reset}`
       );
       forceLog(
-        `${colors.blueCore}║       ${NetworkVisualization.pad(
+        `${colors.blueCore}║${' '.repeat(LEFT_PAD)}${NetworkVisualization.pad(
           `${colors.neonSilver}Agent trying to reach the exit. ${colors.neonIndigo}`,
-          140,
+          CONTENT_WIDTH,
           ' ',
           'left'
-        )} ${colors.blueCore}║${colors.reset}`
+        )}${' '.repeat(RIGHT_PAD)}║${colors.reset}`
       );
     }
   }

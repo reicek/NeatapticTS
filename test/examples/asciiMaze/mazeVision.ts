@@ -354,7 +354,11 @@ export class MazeVision {
 
     // Optional debug logging for educational/diagnostic purposes.
     // Prints a summary of the agent's vision and neighbor analysis every 5 calls if the environment variable is set.
-    if (process.env.ASCII_VISION_DEBUG === '1') {
+    if (
+      typeof process !== 'undefined' &&
+      typeof process.env !== 'undefined' &&
+      process.env.ASCII_VISION_DEBUG === '1'
+    ) {
       try {
         /**
          * String summary of neighbor info for debugging, showing direction, coordinates, path length, and openness value.

@@ -1,6 +1,6 @@
 # NeatapticTS
 
-[![License: MIT](https://img.shields.io/badge/license-MIT-2c3963.svg)](LICENSE) [![Docs](https://img.shields.io/badge/docs-generated-2c3963.svg)](docs/index.html) [![Maintainability](https://qlty.sh/gh/reicek/projects/NeatapticTS/maintainability.svg)](https://qlty.sh/gh/reicek/projects/NeatapticTS) [![Code Coverage](https://qlty.sh/gh/reicek/projects/NeatapticTS/coverage.svg)](https://qlty.sh/gh/reicek/projects/NeatapticTS)
+[![License: MIT](https://img.shields.io/badge/license-MIT-2c3963.svg)](LICENSE) [![Docs](https://img.shields.io/badge/docs-generated-2c3963.svg)](docs/index.html)
 
 <img src="https://cdn-images-1.medium.com/max/800/1*THG2__H9YHxYIt2sulzlTw.png" width="500px"/>
 

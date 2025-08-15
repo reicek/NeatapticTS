@@ -207,10 +207,74 @@ export class EvolutionEngine {
     let lastBestFitnessForPlateau = -Infinity;
 
     // --- Step 6: Filesystem and Persistence Setup ---
-    // Ensure the directory for saving snapshots exists.
-    const fs = require('fs');
-    const path = require('path');
-    if (persistDir && !fs.existsSync(persistDir)) {
+    // Persistence uses Node fs/path. Guard the require calls so bundlers and browsers
+    // don't attempt to execute dynamic requires at runtime.
+    let fs: any = null;
+    let path: any = null;
+    try {
+      if (typeof window === 'undefined' && typeof require === 'function') {
+        // Running under Node.js environment
+        fs = require('fs');
+        path = require('path');
+      }
+    } catch {
+      // ignore - in browser environments require may not exist
+      fs = null;
+      path = null;
+    }
+
+    // Helper to yield to the browser frame so the DOM can repaint between heavy sync loops.
+    // In Node it falls back to setImmediate or setTimeout(0).
+    const flushToFrame = () => {
+      // Cooperative pause: if the host sets `window.asciiMazePaused = true`,
+      // the evolution loop will yield repeatedly without progressing. This keeps
+      // the UI responsive and allows the user to inspect the live state.
+      const rafPromise = () =>
+        new Promise<void>((resolve) =>
+          window.requestAnimationFrame(() => resolve())
+        );
+      const immediatePromise = () =>
+        new Promise<void>((resolve) =>
+          typeof setImmediate === 'function'
+            ? setImmediate(resolve)
+            : setTimeout(resolve, 0)
+        );
+
+      if (
+        typeof window !== 'undefined' &&
+        typeof window.requestAnimationFrame === 'function'
+      ) {
+        return new Promise<void>(async (resolve) => {
+          // If the pause flag is set, wait until it's cleared before resolving
+          const check = async () => {
+            if ((window as any).asciiMazePaused) {
+              // yield a frame and check again
+              await rafPromise();
+              setTimeout(check, 0);
+            } else {
+              rafPromise().then(() => resolve());
+            }
+          };
+          check();
+        });
+      }
+      if (typeof setImmediate === 'function') {
+        return new Promise<void>(async (resolve) => {
+          const check = async () => {
+            if ((globalThis as any).asciiMazePaused) {
+              await immediatePromise();
+              setTimeout(check, 0);
+            } else {
+              immediatePromise().then(() => resolve());
+            }
+          };
+          check();
+        });
+      }
+      return new Promise<void>((resolve) => setTimeout(resolve, 0));
+    };
+
+    if (fs && persistDir && !fs.existsSync(persistDir)) {
       try {
         fs.mkdirSync(persistDir, { recursive: true });
       } catch (e) {
@@ -373,10 +437,45 @@ export class EvolutionEngine {
     }
 
     // Lightweight profiling (opt-in): set env ASCII_MAZE_PROFILE=1 to enable
-    const doProfile = process.env.ASCII_MAZE_PROFILE === '1';
+    const doProfile =
+      typeof process !== 'undefined' &&
+      typeof process.env !== 'undefined' &&
+      process.env.ASCII_MAZE_PROFILE === '1';
     let tEvolveTotal = 0;
     let tLamarckTotal = 0;
     let tSimTotal = 0;
+
+    // Safe writer: prefer Node stdout when available, else dashboard logger, else console.log
+    const safeWrite = (msg: string) => {
+      try {
+        if (
+          typeof process !== 'undefined' &&
+          process &&
+          process.stdout &&
+          typeof process.stdout.write === 'function'
+        ) {
+          process.stdout.write(msg);
+          return;
+        }
+      } catch {
+        /* ignore */
+      }
+      // Try to use dashboard manager logger if provided
+      try {
+        if (dashboardManager && (dashboardManager as any).logFunction) {
+          try {
+            (dashboardManager as any).logFunction(msg);
+            return;
+          } catch {
+            // fall through to console
+          }
+        }
+      } catch {
+        /* ignore */
+      }
+      if (typeof console !== 'undefined' && console.log)
+        console.log(msg.trim());
+    };
 
     while (true) {
       // === Evolutionary Loop ===
@@ -475,7 +574,7 @@ export class EvolutionEngine {
               neat.population.push(clone);
             }
             neat.options.popsize = neat.population.length; // keep config consistent
-            process.stdout.write(
+            safeWrite(
               `[DYNAMIC_POP] Expanded population to ${neat.population.length} at gen ${completedGenerations}\n`
             );
           }
@@ -553,7 +652,7 @@ export class EvolutionEngine {
           }
         });
         if (gradSamples > 0) {
-          process.stdout.write(
+          safeWrite(
             `[GRAD] gen=${completedGenerations} meanGradNorm=${(
               gradNormSum / gradSamples
             ).toFixed(4)} samples=${gradSamples}\n`
@@ -728,7 +827,7 @@ export class EvolutionEngine {
           });
           // natural log entropy max ln(4)=1.386; normalize
           const entropyNorm = entropy / Math.log(4);
-          process.stdout.write(
+          safeWrite(
             `[ACTION_ENTROPY] gen=${completedGenerations} entropyNorm=${entropyNorm.toFixed(
               3
             )} uniqueMoves=${counts.filter((c) => c > 0).length} pathLen=${
@@ -747,7 +846,7 @@ export class EvolutionEngine {
               });
               varcB /= outs.length;
               const stdB = Math.sqrt(varcB);
-              process.stdout.write(
+              safeWrite(
                 `[OUTPUT_BIAS] gen=${completedGenerations} mean=${meanB.toFixed(
                   3
                 )} std=${stdB.toFixed(3)} biases=${outs
@@ -811,7 +910,7 @@ export class EvolutionEngine {
                 prevDir = arg;
               });
               const stability = totalTrans ? stable / totalTrans : 0;
-              process.stdout.write(
+              safeWrite(
                 `[LOGITS] gen=${completedGenerations} means=${means
                   .map((m) => m.toFixed(3))
                   .join(',')} stds=${stds
@@ -857,7 +956,7 @@ export class EvolutionEngine {
                       }
                     });
                   });
-                  process.stdout.write(
+                  safeWrite(
                     `[ANTICOLLAPSE] gen=${completedGenerations} reinitGenomes=${reinitTargets.length} connReset=${connReset} biasReset=${biasReset}\n`
                   );
                 } catch {
@@ -874,7 +973,7 @@ export class EvolutionEngine {
             const ratio = generationResult.path.length
               ? unique / generationResult.path.length
               : 0;
-            process.stdout.write(
+            safeWrite(
               `[EXPLORE] gen=${completedGenerations} unique=${unique} pathLen=${
                 generationResult.path.length
               } ratio=${ratio.toFixed(
@@ -918,7 +1017,7 @@ export class EvolutionEngine {
               });
             });
             const wStd = wCount ? Math.sqrt(wVar / wCount) : 0;
-            process.stdout.write(
+            safeWrite(
               `[DIVERSITY] gen=${completedGenerations} species=${
                 Object.keys(speciesCounts).length
               } simpson=${simpson.toFixed(3)} weightStd=${wStd.toFixed(3)}\n`
@@ -941,6 +1040,10 @@ export class EvolutionEngine {
           completedGenerations,
           neat
         );
+        try {
+          // yield to the browser to allow DOM paint
+          await flushToFrame();
+        } catch {}
       } else {
         stagnantGenerations++;
         // Periodically update dashboard with current best
@@ -953,6 +1056,9 @@ export class EvolutionEngine {
               completedGenerations,
               neat
             );
+            try {
+              await flushToFrame();
+            } catch {}
           }
         }
       }
@@ -1010,6 +1116,9 @@ export class EvolutionEngine {
             completedGenerations,
             neat
           );
+          try {
+            await flushToFrame();
+          } catch {}
         }
         break;
       }
@@ -1024,6 +1133,9 @@ export class EvolutionEngine {
             completedGenerations,
             neat
           );
+          try {
+            await flushToFrame();
+          } catch {}
         }
         break;
       }
@@ -1040,7 +1152,7 @@ export class EvolutionEngine {
       const avgLamarck = (tLamarckTotal / gen).toFixed(2);
       const avgSim = (tSimTotal / gen).toFixed(2);
       // Direct stdout to avoid jest buffering suppression
-      process.stdout.write(
+      safeWrite(
         `\n[PROFILE] Generations=${gen} avg(ms): evolve=${avgEvolve} lamarck=${avgLamarck} sim=${avgSim} totalPerGen=${(
           +avgEvolve +
           +avgLamarck +
