@@ -692,7 +692,7 @@ export default class Layer {
     (layer as any).batchNorm = true;
     // Override activate to apply batch normalization
     const baseActivate = layer.activate.bind(layer);
-    layer.activate = function (
+  layer.activate = function (
       value?: number[],
       training: boolean = false
     ): number[] {
@@ -702,7 +702,7 @@ export default class Layer {
       const variance =
         activations.reduce((a, b) => a + (b - mean) ** 2, 0) /
         activations.length;
-      const epsilon = 1e-5;
+  const epsilon = require('../neat/neat.constants').NORM_EPSILON;
       // Normalize
       return activations.map((a) => (a - mean) / Math.sqrt(variance + epsilon));
     };
@@ -720,7 +720,7 @@ export default class Layer {
     (layer as any).layerNorm = true;
     // Override activate to apply layer normalization
     const baseActivate = layer.activate.bind(layer);
-    layer.activate = function (
+  layer.activate = function (
       value?: number[],
       training: boolean = false
     ): number[] {
@@ -730,7 +730,7 @@ export default class Layer {
       const variance =
         activations.reduce((a, b) => a + (b - mean) ** 2, 0) /
         activations.length;
-      const epsilon = 1e-5;
+  const epsilon = require('../neat/neat.constants').NORM_EPSILON;
       // Normalize
       return activations.map((a) => (a - mean) / Math.sqrt(variance + epsilon));
     };

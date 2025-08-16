@@ -26,26 +26,6 @@ Export the connection object as the default export.
 
 ### cost
 
-Provides a collection of standard cost functions (also known as loss functions)
-used for evaluating the performance of neural networks during training.
-
-Cost functions quantify the difference between the network's predictions
-and the actual target values. The goal of training is typically to minimize
-the value of the cost function. The choice of cost function is crucial and
-depends on the specific task (e.g., regression, classification) and the
-desired behavior of the model.
-
-### Cost
-
-Provides a collection of standard cost functions (also known as loss functions)
-used for evaluating the performance of neural networks during training.
-
-Cost functions quantify the difference between the network's predictions
-and the actual target values. The goal of training is typically to minimize
-the value of the cost function. The choice of cost function is crucial and
-depends on the specific task (e.g., regression, classification) and the
-desired behavior of the model.
-
 ### default
 
 #### binary
@@ -75,7 +55,7 @@ This function measures the performance of a classification model whose output is
 a probability value between 0 and 1. Cross-entropy loss increases as the
 predicted probability diverges from the actual label.
 
-It uses a small epsilon (1e-15) to prevent `log(0)` which would result in `NaN`.
+It uses a small epsilon (PROB_EPSILON = 1e-15) to prevent `log(0)` which would result in `NaN`.
 Output values are clamped to the range `[epsilon, 1 - epsilon]` for numerical stability.
 
 Parameters:
@@ -224,14 +204,14 @@ Targets may be soft labels and are expected to sum to 1 (will be re-normalized i
 
 ### methods
 
-Provides a collection of standard cost functions (also known as loss functions)
-used for evaluating the performance of neural networks during training.
+Provides various methods for implementing learning rate schedules.
 
-Cost functions quantify the difference between the network's predictions
-and the actual target values. The goal of training is typically to minimize
-the value of the cost function. The choice of cost function is crucial and
-depends on the specific task (e.g., regression, classification) and the
-desired behavior of the model.
+Learning rate schedules dynamically adjust the learning rate during the training
+process of machine learning models, particularly neural networks. Adjusting the
+learning rate can significantly impact training speed and performance. A high
+rate might lead to overshooting the optimal solution, while a very low rate
+can result in slow convergence or getting stuck in local minima. These methods
+offer different strategies to balance exploration and exploitation during training.
 
 ### mutation
 
@@ -299,7 +279,7 @@ This function measures the performance of a classification model whose output is
 a probability value between 0 and 1. Cross-entropy loss increases as the
 predicted probability diverges from the actual label.
 
-It uses a small epsilon (1e-15) to prevent `log(0)` which would result in `NaN`.
+It uses a small epsilon (PROB_EPSILON = 1e-15) to prevent `log(0)` which would result in `NaN`.
 Output values are clamped to the range `[epsilon, 1 - epsilon]` for numerical stability.
 
 Parameters:

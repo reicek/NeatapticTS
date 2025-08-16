@@ -1,6 +1,7 @@
 // Telemetry stream and recording helpers
 
 import { NeatLike, TelemetryEntry } from './neat.types';
+import { EPSILON } from './neat.constants';
 
 /**
  * Apply a telemetry selection whitelist to a telemetry entry.

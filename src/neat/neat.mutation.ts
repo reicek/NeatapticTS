@@ -1,4 +1,5 @@
 import { NeatLike } from './neat.types';
+import { EXTRA_CONNECTION_PROBABILITY, EPSILON } from './neat.constants';
 
 /**
  * Mutate every genome in the population according to configured policies.
@@ -679,7 +680,7 @@ export function selectMutationMethod(
       (Array.from(stats.values()) as any[]).reduce(
         (a: number, s: any) => a + s.attempts,
         0
-      ) + 1e-9;
+      ) + EPSILON; // stability epsilon
     /** Candidate best operator (initialized to current random pick). */
     let best = mutationMethod;
     /** Best score found by the bandit search (higher is better). */
@@ -692,7 +693,7 @@ export function selectMutationMethod(
       const bonus =
         st.attempts < minA
           ? Infinity
-          : c * Math.sqrt(Math.log(totalAttempts) / (st.attempts + 1e-9));
+          : c * Math.sqrt(Math.log(totalAttempts) / (st.attempts + EPSILON));
       /** Combined score used to rank operators. */
       const val = mean + bonus;
       if (val > bestVal) {

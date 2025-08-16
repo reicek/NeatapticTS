@@ -172,6 +172,16 @@ Parameters:
 
 Returns: A numeric innovation id derived from the (from, to) index pair.
 
+## neat/neat.constants.ts
+
+### EPSILON
+
+### EXTRA_CONNECTION_PROBABILITY
+
+### NORM_EPSILON
+
+### PROB_EPSILON
+
 ## neat/neat.diversity.ts
 
 ### arrayMean

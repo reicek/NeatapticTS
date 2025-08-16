@@ -1,3 +1,4 @@
+import { EPSILON } from './neat.constants';
 /**
  * Apply complexity budget scheduling to the evolving population.
  *
@@ -126,7 +127,7 @@ export function applyComplexityBudget(this: any) {
     /** Normalized slope magnitude used to scale growth/shrink nudges. */
     const slopeMag = Math.min(
       2,
-      Math.max(-2, slope / (Math.abs(history[0]) + 1e-9))
+      Math.max(-2, slope / (Math.abs(history[0]) + EPSILON))
     );
     // method step: compute final increase and stagnation multipliers
     /**

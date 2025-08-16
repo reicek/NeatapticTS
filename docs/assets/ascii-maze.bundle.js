@@ -178,11 +178,31 @@
     }
   });
 
+  // src/neat/neat.constants.ts
+  var neat_constants_exports = {};
+  __export(neat_constants_exports, {
+    EPSILON: () => EPSILON,
+    EXTRA_CONNECTION_PROBABILITY: () => EXTRA_CONNECTION_PROBABILITY,
+    NORM_EPSILON: () => NORM_EPSILON,
+    PROB_EPSILON: () => PROB_EPSILON
+  });
+  var EPSILON, PROB_EPSILON, NORM_EPSILON, EXTRA_CONNECTION_PROBABILITY;
+  var init_neat_constants = __esm({
+    "src/neat/neat.constants.ts"() {
+      "use strict";
+      EPSILON = 1e-9;
+      PROB_EPSILON = 1e-15;
+      NORM_EPSILON = 1e-5;
+      EXTRA_CONNECTION_PROBABILITY = 0.5;
+    }
+  });
+
   // src/methods/cost.ts
   var Cost;
   var init_cost = __esm({
     "src/methods/cost.ts"() {
       "use strict";
+      init_neat_constants();
       Cost = class {
         /**
          * Calculates the Cross Entropy error, commonly used for classification tasks.
@@ -191,7 +211,7 @@
          * a probability value between 0 and 1. Cross-entropy loss increases as the
          * predicted probability diverges from the actual label.
          *
-         * It uses a small epsilon (1e-15) to prevent `log(0)` which would result in `NaN`.
+        * It uses a small epsilon (PROB_EPSILON = 1e-15) to prevent `log(0)` which would result in `NaN`.
          * Output values are clamped to the range `[epsilon, 1 - epsilon]` for numerical stability.
          *
          * @see {@link https://en.wikipedia.org/wiki/Cross_entropy}
@@ -202,7 +222,7 @@
          */
         static crossEntropy(targets, outputs) {
           let error = 0;
-          const epsilon = 1e-15;
+          const epsilon = PROB_EPSILON;
           if (targets.length !== outputs.length) {
             throw new Error("Target and output arrays must have the same length.");
           }
@@ -238,7 +258,7 @@
           const sum = exps.reduce((a, b) => a + b, 0) || 1;
           const probs = exps.map((e) => e / sum);
           let loss = 0;
-          const eps = 1e-15;
+          const eps = PROB_EPSILON;
           for (let i = 0; i < n; i++) {
             const p = Math.min(1 - eps, Math.max(eps, probs[i]));
             const t = normTargets[i];
@@ -333,7 +353,7 @@
             throw new Error("Target and output arrays must have the same length.");
           }
           let error = 0;
-          const epsilon = 1e-15;
+          const epsilon = PROB_EPSILON;
           outputs.forEach((output, outputIndex) => {
             const target = targets[outputIndex];
             error += Math.abs(
@@ -408,7 +428,7 @@
          */
         static focalLoss(targets, outputs, gamma = 2, alpha = 0.25) {
           let error = 0;
-          const epsilon = 1e-15;
+          const epsilon = PROB_EPSILON;
           if (targets.length !== outputs.length) {
             throw new Error("Target and output arrays must have the same length.");
           }
@@ -433,7 +453,7 @@
          */
         static labelSmoothing(targets, outputs, smoothing = 0.1) {
           let error = 0;
-          const epsilon = 1e-15;
+          const epsilon = PROB_EPSILON;
           if (targets.length !== outputs.length) {
             throw new Error("Target and output arrays must have the same length.");
           }
@@ -4471,7 +4491,7 @@
             const activations = baseActivate(value, training);
             const mean = activations.reduce((a, b) => a + b, 0) / activations.length;
             const variance = activations.reduce((a, b) => a + (b - mean) ** 2, 0) / activations.length;
-            const epsilon = 1e-5;
+            const epsilon = (init_neat_constants(), __toCommonJS(neat_constants_exports)).NORM_EPSILON;
             return activations.map((a) => (a - mean) / Math.sqrt(variance + epsilon));
           };
           return layer;
@@ -4490,7 +4510,7 @@
             const activations = baseActivate(value, training);
             const mean = activations.reduce((a, b) => a + b, 0) / activations.length;
             const variance = activations.reduce((a, b) => a + (b - mean) ** 2, 0) / activations.length;
-            const epsilon = 1e-5;
+            const epsilon = (init_neat_constants(), __toCommonJS(neat_constants_exports)).NORM_EPSILON;
             return activations.map((a) => (a - mean) / Math.sqrt(variance + epsilon));
           };
           return layer;
@@ -8326,7 +8346,7 @@
                 this._invalidateGenomeCaches(genome);
               }
             }
-            if (this._getRNG()() < 0.5)
+            if (this._getRNG()() < EXTRA_CONNECTION_PROBABILITY)
               this._mutateAddConnReuse(genome);
             if (this.options.operatorAdaptation?.enabled) {
               const statsRecord = this._operatorStats.get(
@@ -8635,13 +8655,13 @@
       const totalAttempts = Array.from(stats.values()).reduce(
         (a, s) => a + s.attempts,
         0
-      ) + 1e-9;
+      ) + EPSILON;
       let best = mutationMethod;
       let bestVal = -Infinity;
       for (const m of pool) {
         const st = stats.get(m.name);
         const mean = st.attempts > 0 ? st.success / st.attempts : 0;
-        const bonus = st.attempts < minA ? Infinity : c * Math.sqrt(Math.log(totalAttempts) / (st.attempts + 1e-9));
+        const bonus = st.attempts < minA ? Infinity : c * Math.sqrt(Math.log(totalAttempts) / (st.attempts + EPSILON));
         const val = mean + bonus;
         if (val > bestVal) {
           bestVal = val;
@@ -8659,6 +8679,7 @@
   var init_neat_mutation = __esm({
     "src/neat/neat.mutation.ts"() {
       "use strict";
+      init_neat_constants();
     }
   });
 
@@ -8808,7 +8829,7 @@
       const baseStag = complexityBudget.stagnationFactor ?? 0.95;
       const slopeMag = Math.min(
         2,
-        Math.max(-2, slope / (Math.abs(history[0]) + 1e-9))
+        Math.max(-2, slope / (Math.abs(history[0]) + EPSILON))
       );
       const incF = baseInc + 0.05 * Math.max(0, slopeMag);
       const stagF = baseStag - 0.03 * Math.max(0, -slopeMag);
@@ -9003,6 +9024,7 @@
   var init_neat_adaptive = __esm({
     "src/neat/neat.adaptive.ts"() {
       "use strict";
+      init_neat_constants();
     }
   });
 
@@ -9118,7 +9140,7 @@
     let entropy = 0;
     for (const k in degreeHistogram) {
       const p = degreeHistogram[k] / nodeCount;
-      if (p > 0) entropy -= p * Math.log(p + 1e-9);
+      if (p > 0) entropy -= p * Math.log(p + EPSILON);
     }
     anyG._entropyGen = this.generation;
     anyG._entropyVal = entropy;
@@ -9504,6 +9526,7 @@
   var init_neat_telemetry = __esm({
     "src/neat/neat.telemetry.ts"() {
       "use strict";
+      init_neat_constants();
     }
   });
 
