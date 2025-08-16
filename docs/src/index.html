@@ -38,6 +38,7 @@ footer{margin-top:64px;font-size:.75rem;color:#666;}
 <li><a href="../multithreading/workers/index.html">multithreading/workers/</a></li>
 <li><a href="../multithreading/workers/browser/index.html">multithreading/workers/browser/</a></li>
 <li><a href="../multithreading/workers/node/index.html">multithreading/workers/node/</a></li>
+<li><a href="../neat/index.html">neat/</a></li>
 <li class="current"><a href="./index.html">src/</a></li>
 <li><a href="../../test/examples/asciiMaze/index.html">examples/asciiMaze/</a></li></ul>
 </nav>
@@ -56,97 +57,302 @@ the intended values while initializing internal buffers / metadata.</p>
 <li>Optional flags are conservative by default (disabled) to preserve legacy stochastic
 behaviour unless a test or user explicitly opts in.</li>
 </ul>
-<h2 id="neat-ts">neat.ts</h2><h3 id="neat">neat</h3><h3 id="neatoptions">NeatOptions</h3><h3 id="options">Options</h3><p>Comprehensive configuration surface for Neat evolutionary runs.
-Options are grouped conceptually; all fields are optional unless noted.
-See docs/API.md for structured tables. New adaptive / telemetry features carry a trailing comment with</p>
-<h3 id="default">default</h3><h4 id="warnifnobestgenome">_warnIfNoBestGenome</h4><p><code>() =&gt; void</code></p>
-<p>Warn that evolution ended without a valid best genome. Always emits when called (tests rely on this).</p>
-<h4 id="checkhiddensizes">checkHiddenSizes</h4><p><code>(network: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default, multiplierOverride: number | undefined) =&gt; { compliant: boolean; minRequired: number; hiddenLayerSizes: number[]; }</code></p>
-<p>Checks if a network meets the minimum hidden node requirements.
-Returns information about hidden layer sizes without modifying the network.</p>
+<h2 id="neat-ts">neat.ts</h2><h3 id="neat">neat</h3><h3 id="neatoptions">NeatOptions</h3><h3 id="options">Options</h3><p>Configuration options for Neat evolutionary runs.</p>
+<p>Each property is optional and the class applies sensible defaults when a
+field is not provided. Options control population size, mutation rates,
+compatibility coefficients, selection strategy and other behavioral knobs.</p>
+<p>Example:
+const opts: NeatOptions = { popsize: 100, mutationRate: 0.5 };
+const neat = new Neat(3, 1, fitnessFn, opts);</p>
+<p>Note: this type is intentionally permissive to support staged migration and
+legacy callers; prefer providing a typed options object where possible.</p>
+<h3 id="default">default</h3><h4 id="adaptiveprunelevel">_adaptivePruneLevel</h4><p>Adaptive prune level for complexity control (optional).</p>
+<h4 id="applyfitnesssharing">_applyFitnessSharing</h4><p><code>() =&gt; void</code></p>
+<p>Apply fitness sharing within species. When <code>sharingSigma</code> &gt; 0 this uses a kernel-based
+sharing; otherwise it falls back to classic per-species averaging. Sharing reduces
+effective fitness for similar genomes to promote diversity.</p>
+<h4 id="bestscorelastgen">_bestScoreLastGen</h4><p>Best score observed in the last generation (used for improvement detection).</p>
+<h4 id="compatintegral">_compatIntegral</h4><p>Integral accumulator used by adaptive compatibility controllers.</p>
+<h4 id="compatspeciesema">_compatSpeciesEMA</h4><p>Exponential moving average for compatibility threshold (adaptive speciation).</p>
+<h4 id="computediversitystats">_computeDiversityStats</h4><p><code>() =&gt; void</code></p>
+<p>Compute and cache diversity statistics used by telemetry &amp; tests.</p>
+<h4 id="conninnovations">_connInnovations</h4><p>Map of connection innovations keyed by a string identifier.</p>
+<h4 id="diversitystats">_diversityStats</h4><p>Cached diversity metrics (computed lazily).</p>
+<h4 id="getobjectives">_getObjectives</h4><p><code>() =&gt; import(&quot;D:/code-practice/NeatapticTS/src/neat/neat.types&quot;).ObjectiveDescriptor[]</code></p>
+<p>Internal: return cached objective descriptors, building if stale.</p>
+<h4 id="invalidategenomecaches">_invalidateGenomeCaches</h4><p><code>(genome: any) =&gt; void</code></p>
+<p>Invalidate per-genome caches (compatibility distance, forward pass, etc.).</p>
+<h4 id="lastancestoruniqadjustgen">_lastAncestorUniqAdjustGen</h4><p>Generation when ancestor uniqueness adjustment was last applied.</p>
+<h4 id="lastepsilonadjustgen">_lastEpsilonAdjustGen</h4><p>Generation when epsilon compatibility was last adjusted.</p>
+<h4 id="lastevalduration">_lastEvalDuration</h4><p>Duration of the last evaluation run (ms).</p>
+<h4 id="lastevolveduration">_lastEvolveDuration</h4><p>Duration of the last evolve run (ms).</p>
+<h4 id="lastglobalimprovegeneration">_lastGlobalImproveGeneration</h4><p>Generation index where the last global improvement occurred.</p>
+<h4 id="lastinbreedingcount">_lastInbreedingCount</h4><p>Last observed count of inbreeding (used for detecting excessive cloning).</p>
+<h4 id="lastoffspringalloc">_lastOffspringAlloc</h4><p>Last allocated offspring set (used by adaptive allocators).</p>
+<h4 id="lineageenabled">_lineageEnabled</h4><p>Whether lineage metadata should be recorded on genomes.</p>
+<h4 id="mcthreshold">_mcThreshold</h4><p>Adaptive minimal criterion threshold (optional).</p>
+<h4 id="nextgenomeid">_nextGenomeId</h4><p>Counter for assigning unique genome ids.</p>
+<h4 id="nextglobalinnovation">_nextGlobalInnovation</h4><p>Counter for issuing global innovation numbers when explicit numbers are used.</p>
+<h4 id="nodesplitinnovations">_nodeSplitInnovations</h4><p>Map of node-split innovations used to reuse innovation ids for node splits.</p>
+<h4 id="noveltyarchive">_noveltyArchive</h4><p>Novelty archive used by novelty search (behavior representatives).</p>
+<h4 id="objectiveages">_objectiveAges</h4><p>Map tracking ages for objectives by key.</p>
+<h4 id="objectiveevents">_objectiveEvents</h4><p>Queue of recent objective activation/deactivation events for telemetry.</p>
+<h4 id="objectiveslist">_objectivesList</h4><p>Cached list of registered objectives.</p>
+<h4 id="objectivestale">_objectiveStale</h4><p>Map tracking stale counts for objectives by key.</p>
+<h4 id="operatorstats">_operatorStats</h4><p>Operator statistics used by adaptive operator selection.</p>
+<h4 id="paretoarchive">_paretoArchive</h4><p>Archive of Pareto front metadata for multi-objective tracking.</p>
+<h4 id="paretoobjectivesarchive">_paretoObjectivesArchive</h4><p>Archive storing Pareto objectives snapshots.</p>
+<h4 id="pendingobjectiveadds">_pendingObjectiveAdds</h4><p>Pending objective keys to add during safe phases.</p>
+<h4 id="pendingobjectiveremoves">_pendingObjectiveRemoves</h4><p>Pending objective keys to remove during safe phases.</p>
+<h4 id="phase">_phase</h4><p>Optional phase marker for multi-stage experiments.</p>
+<h4 id="previnbreedingcount">_prevInbreedingCount</h4><p>Previous inbreeding count snapshot.</p>
+<h4 id="prevspeciesmembers">_prevSpeciesMembers</h4><p>Map of species id -&gt; set of member genome ids from previous generation.</p>
+<h4 id="rng">_rng</h4><p>Cached RNG function; created lazily and seeded from <code>_rngState</code> when used.</p>
+<h4 id="rngstate">_rngState</h4><p>Internal numeric state for the deterministic xorshift RNG when no user RNG
+is provided. Stored as a 32-bit unsigned integer.</p>
+<h4 id="sortspeciesmembers">_sortSpeciesMembers</h4><p><code>(sp: { members: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default[]; }) =&gt; void</code></p>
+<p>Sort members of a species in-place by descending score.</p>
 <p>Parameters:</p>
 <ul>
-<li><code>network</code> - The network to check</li>
-<li><code>multiplierOverride</code> - Optional fixed multiplier for deterministic tests</li>
+<li><code>sp</code> - - Species object with <code>members</code> array.</li>
 </ul>
-<p>Returns: Object containing information about hidden layer compliance</p>
+<h4 id="speciate">_speciate</h4><p><code>() =&gt; void</code></p>
+<p>Assign genomes into species based on compatibility distance and maintain species structures.
+This function creates new species for unassigned genomes and prunes empty species.
+It also records species-level history used for telemetry and adaptive controllers.</p>
+<h4 id="species">_species</h4><p>Array of current species (internal representation).</p>
+<h4 id="speciescreated">_speciesCreated</h4><p>Map of speciesId -&gt; creation generation for bookkeeping.</p>
+<h4 id="specieshistory">_speciesHistory</h4><p>Time-series history of species stats (for exports/telemetry).</p>
+<h4 id="specieslaststats">_speciesLastStats</h4><p>Last recorded stats per species id.</p>
+<h4 id="structuralentropy">_structuralEntropy</h4><p><code>(genome: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default) =&gt; number</code></p>
+<p>Compatibility wrapper retained for tests that reference (neat as any)._structuralEntropy</p>
+<h4 id="telemetry">_telemetry</h4><p>Telemetry buffer storing diagnostic snapshots per generation.</p>
+<h4 id="updatespeciesstagnation">_updateSpeciesStagnation</h4><p><code>() =&gt; void</code></p>
+<p>Update species stagnation tracking and remove species that exceeded the allowed stagnation.</p>
+<h4 id="warnifnobestgenome">_warnIfNoBestGenome</h4><p><code>() =&gt; void</code></p>
+<p>Emit a standardized warning when evolution loop finds no valid best genome (test hook).</p>
+<h4 id="addgenome">addGenome</h4><p><code>(genome: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default, parents: number[] | undefined) =&gt; void</code></p>
+<p>Register an externally-created genome into the <code>Neat</code> population.</p>
+<p>Use this method when code constructs or mutates a <code>Network</code> outside of the
+usual reproduction pipeline and needs to insert it into <code>neat.population</code>
+while preserving lineage, id assignment, and structural invariants. The
+method performs best-effort safety actions and falls back to pushing the
+genome even if invariant enforcement throws, which mirrors the forgiving
+behavior used in dynamic population expansion.</p>
+<p>Behavior summary:</p>
+<ul>
+<li>Clears the genome&#39;s <code>score</code> and assigns <code>_id</code> using Neat&#39;s counter.</li>
+<li>When lineage is enabled, attaches the provided <code>parents</code> array (copied)
+and estimates <code>_depth</code> as <code>max(parent._depth) + 1</code> when parent ids are
+resolvable from the current population.</li>
+<li>Enforces structural invariants (<code>ensureMinHiddenNodes</code> and
+<code>ensureNoDeadEnds</code>) and invalidates caches via
+<code>_invalidateGenomeCaches(genome)</code>.</li>
+<li>Pushes the genome into <code>this.population</code>.</li>
+</ul>
+<p>Note: Because depth estimation requires parent objects to be discoverable
+in <code>this.population</code>, callers that generate intermediate parent genomes
+should register them via <code>addGenome</code> before relying on automatic depth
+estimation for their children.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>genome</code> - - The external <code>Network</code> to add.</li>
+<li><code>parents</code> - - Optional array of parent ids to record on the genome.</li>
+</ul>
+<h4 id="clearobjectives">clearObjectives</h4><p><code>() =&gt; void</code></p>
+<p>Register a custom objective for multi-objective optimization.</p>
+<p>Educational context: multi-objective optimization lets you optimize for
+multiple, potentially conflicting goals (e.g., maximize fitness while
+minimizing complexity). Each objective is identified by a unique key and
+an accessor function mapping a genome to a numeric score. Registering an
+objective makes it visible to the internal MO pipeline and clears any
+cached objective list so changes take effect immediately.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>key</code> - Unique objective key.</li>
+<li><code>direction</code> - &#39;min&#39; or &#39;max&#39; indicating optimization direction.</li>
+<li><code>accessor</code> - Function mapping a genome to a numeric objective value.</li>
+</ul>
+<h4 id="clearparetoarchive">clearParetoArchive</h4><p><code>() =&gt; void</code></p>
+<p>Clear the Pareto archive.</p>
+<p>Removes any stored Pareto-front snapshots retained by the algorithm.</p>
+<h4 id="cleartelemetry">clearTelemetry</h4><p><code>() =&gt; void</code></p>
+<p>Export telemetry as CSV with flattened columns for common nested fields.</p>
 <h4 id="createpool">createPool</h4><p><code>(network: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default | null) =&gt; void</code></p>
-<p>Creates the initial population of networks.
-If a base network is provided, clones it to create the population.</p>
-<p>Parameters:</p>
-<ul>
-<li><code>network</code> - - The base network to clone, or null to create new networks.</li>
-</ul>
+<p>Create initial population pool. Delegates to helpers if present.</p>
 <h4 id="ensureminhiddennodes">ensureMinHiddenNodes</h4><p><code>(network: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default, multiplierOverride: number | undefined) =&gt; void</code></p>
-<p>Ensures that the network has at least min(input, output) + 1 hidden nodes in each hidden layer.
-This prevents bottlenecks in networks where hidden layers might be too small.
-For layered networks: Ensures each hidden layer has at least the minimum size.
-For non-layered networks: Reorganizes into proper layers with the minimum size.</p>
+<p>Ensure a network has the minimum number of hidden nodes according to
+configured policy. Delegates to migrated helper implementation.</p>
 <p>Parameters:</p>
 <ul>
-<li><code>network</code> - The network to check and modify</li>
-<li><code>multiplierOverride</code> - Optional fixed multiplier for deterministic tests</li>
+<li><code>network</code> - Network instance to adjust.</li>
+<li><code>multiplierOverride</code> - Optional multiplier to override configured policy.</li>
 </ul>
 <h4 id="ensurenodeadends">ensureNoDeadEnds</h4><p><code>(network: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default) =&gt; void</code></p>
-<p>Ensures that all input nodes have at least one outgoing connection,
-all output nodes have at least one incoming connection,
-and all hidden nodes have at least one incoming and one outgoing connection.
-This prevents dead ends and blind I/O neurons.</p>
-<p>Parameters:</p>
-<ul>
-<li><code>network</code> - The network to check and fix</li>
-</ul>
-<h4 id="evaluate">evaluate</h4><p><code>() =&gt; Promise&lt;void&gt;</code></p>
-<p>Evaluates the fitness of the current population.
-If <code>fitnessPopulation</code> is true, evaluates the entire population at once.
-Otherwise, evaluates each genome individually.</p>
-<p>Returns: A promise that resolves when evaluation is complete.</p>
+<p>Delegate ensureNoDeadEnds to mutation module (added for backward compat).</p>
 <h4 id="evolve">evolve</h4><p><code>() =&gt; Promise&lt;import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default&gt;</code></p>
 <p>Evolves the population by selecting, mutating, and breeding genomes.
-Implements elitism, provenance, and crossover to create the next generation.</p>
-<p>Returns: The fittest network from the current generation.</p>
+This method is delegated to <code>src/neat/neat.evolve.ts</code> during the migration.</p>
 <h4 id="export">export</h4><p><code>() =&gt; any[]</code></p>
 <p>Exports the current population as an array of JSON objects.
 Useful for saving the state of the population for later use.</p>
 <p>Returns: An array of JSON representations of the population.</p>
-<h4 id="exportrngstate">exportRNGState</h4><p><code>() =&gt; string</code></p>
-<p>Export RNG state as JSON string for persistence</p>
+<h4 id="exportparetofrontjsonl">exportParetoFrontJSONL</h4><p><code>(maxEntries: number) =&gt; string</code></p>
+<p>Export Pareto front archive as JSON Lines for external analysis.</p>
+<p>Each line is a JSON object representing one archived Pareto snapshot.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>maxEntries</code> - Maximum number of entries to include (default: 100).</li>
+</ul>
+<p>Returns: Newline-separated JSON objects.</p>
+<h4 id="exportrngstate">exportRNGState</h4><p><code>() =&gt; number | undefined</code></p>
+<p>Export the current RNG state for external persistence or tests.</p>
+<h4 id="exportspecieshistorycsv">exportSpeciesHistoryCSV</h4><p><code>(maxEntries: number) =&gt; string</code></p>
+<p>Return an array of {id, parents} for the first <code>limit</code> genomes in population.</p>
+<h4 id="exportspecieshistoryjsonl">exportSpeciesHistoryJSONL</h4><p><code>(maxEntries: number) =&gt; string</code></p>
+<p>Export species history as JSON Lines for storage and analysis.</p>
+<p>Each line is a JSON object containing a generation index and per-species
+stats recorded at that generation. Useful for long-term tracking.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>maxEntries</code> - Maximum history entries to include (default: 200).</li>
+</ul>
+<p>Returns: Newline-separated JSON objects.</p>
 <h4 id="exportstate">exportState</h4><p><code>() =&gt; any</code></p>
 <p>Convenience: export full evolutionary state (meta + population genomes).
 Combines innovation registries and serialized genomes for easy persistence.</p>
+<h4 id="exporttelemetrycsv">exportTelemetryCSV</h4><p><code>(maxEntries: number) =&gt; string</code></p>
+<p>Export recent telemetry entries as CSV.</p>
+<p>The exporter attempts to flatten commonly-used nested fields (complexity,
+perf, lineage) into columns. This is a best-effort exporter intended for
+human inspection and simple ingestion.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>maxEntries</code> - Maximum number of recent telemetry entries to include.</li>
+</ul>
+<p>Returns: CSV string (may be empty when no telemetry present).</p>
+<h4 id="exporttelemetryjsonl">exportTelemetryJSONL</h4><p><code>() =&gt; string</code></p>
+<p>Export telemetry as JSON Lines (one JSON object per line).</p>
+<p>Useful for piping telemetry to external loggers or analysis tools.</p>
+<p>Returns: A newline-separated string of JSON objects.</p>
 <h4 id="getaverage">getAverage</h4><p><code>() =&gt; number</code></p>
 <p>Calculates the average fitness score of the population.
 Ensures that the population is evaluated before calculating the average.</p>
 <p>Returns: The average fitness score of the population.</p>
+<h4 id="getdiversitystats">getDiversityStats</h4><p><code>() =&gt; any</code></p>
+<p>Return the latest cached diversity statistics.</p>
+<p>Educational context: diversity metrics summarize how genetically and
+behaviorally spread the population is. They can include lineage depth,
+pairwise genetic distances, and other aggregated measures used by
+adaptive controllers, novelty search, and telemetry. This accessor returns
+whatever precomputed diversity object the Neat instance holds (may be
+undefined if not computed for the current generation).</p>
+<p>Returns: Arbitrary diversity summary object or undefined.</p>
 <h4 id="getfittest">getFittest</h4><p><code>() =&gt; import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default</code></p>
 <p>Retrieves the fittest genome from the population.
 Ensures that the population is evaluated and sorted before returning the result.</p>
 <p>Returns: The fittest genome in the population.</p>
-<h4 id="getinactiveobjectivestats">getInactiveObjectiveStats</h4><p><code>() =&gt; { key: string; stale: number; }[]</code></p>
-<p>Returns an array of objects describing how many consecutive generations each non-protected
-objective has been detected as &quot;stale&quot; (range below pruneInactive.rangeEps). Useful for
-monitoring which objectives are nearing automatic removal.</p>
+<h4 id="getlineagesnapshot">getLineageSnapshot</h4><p><code>(limit: number) =&gt; { id: number; parents: number[]; }[]</code></p>
+<p>Get recent objective add/remove events.</p>
 <h4 id="getminimumhiddensize">getMinimumHiddenSize</h4><p><code>(multiplierOverride: number | undefined) =&gt; number</code></p>
-<p>Gets the minimum hidden layer size for a network based on input/output sizes.
-Uses the formula: max(input, output) x multiplier (default random 2-5)
-Allows deterministic override for testing.</p>
-<p>Parameters:</p>
-<ul>
-<li><code>multiplierOverride</code> - Optional fixed multiplier for deterministic tests</li>
-</ul>
-<p>Returns: The minimum number of hidden nodes required in each hidden layer</p>
+<p>Minimum hidden size considering explicit minHidden or multiplier policy.</p>
+<h4 id="getmultiobjectivemetrics">getMultiObjectiveMetrics</h4><p><code>() =&gt; { rank: number; crowding: number; score: number; nodes: number; connections: number; }[]</code></p>
+<p>Returns compact multi-objective metrics for each genome in the current
+population. The metrics include Pareto rank and crowding distance (if
+computed), along with simple size and score measures useful in
+instructional contexts.</p>
+<p>Returns: Array of per-genome MO metric objects.</p>
+<h4 id="getnoveltyarchivesize">getNoveltyArchiveSize</h4><p><code>() =&gt; number</code></p>
+<p>Returns the number of entries currently stored in the novelty archive.</p>
+<p>Educational context: The novelty archive stores representative behaviors
+used by behavior-based novelty search. Monitoring its size helps teach
+how behavioral diversity accumulates over time and can be used to
+throttle archive growth.</p>
+<p>Returns: Number of archived behaviors.</p>
 <h4 id="getobjectivekeys">getObjectiveKeys</h4><p><code>() =&gt; string[]</code></p>
-<p>Return current objective keys (rebuilds list if cache invalidated)</p>
+<p>Public helper returning just the objective keys (tests rely on).</p>
+<h4 id="getobjectives">getObjectives</h4><p><code>() =&gt; { key: string; direction: &quot;max&quot; | &quot;min&quot;; }[]</code></p>
+<p>Clear all collected telemetry entries.</p>
 <h4 id="getoffspring">getOffspring</h4><p><code>() =&gt; import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default</code></p>
 <p>Generates an offspring by crossing over two parent networks.
 Uses the crossover method described in the Instinct algorithm.</p>
 <p>Returns: A new network created from two parents.</p>
+<h4 id="getoperatorstats">getOperatorStats</h4><p><code>() =&gt; { name: string; success: number; attempts: number; }[]</code></p>
+<p>Returns a summary of mutation/operator statistics used by operator
+adaptation and bandit selection.</p>
+<p>Educational context: Operator statistics track how often mutation
+operators are attempted and how often they succeed. These counters are
+used by adaptation mechanisms to bias operator selection towards
+successful operators.</p>
+<p>Returns: Array of { name, success, attempts } objects.</p>
 <h4 id="getparent">getParent</h4><p><code>() =&gt; import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default</code></p>
 <p>Selects a parent genome for breeding based on the selection method.
 Supports multiple selection strategies, including POWER, FITNESS_PROPORTIONATE, and TOURNAMENT.</p>
 <p>Returns: The selected parent genome.</p>
-<h4 id="getwarnings">getWarnings</h4><p><code>() =&gt; string[]</code></p>
-<p>Retrieve non-fatal configuration warnings (e.g., mutation pool sanitation).</p>
+<h4 id="getparetoarchive">getParetoArchive</h4><p><code>(maxEntries: number) =&gt; any[]</code></p>
+<p>Get recent Pareto archive entries (meta information about archived fronts).</p>
+<p>Educational context: when performing multi-objective search we may store
+representative Pareto-front snapshots over time. This accessor returns the
+most recent archive entries up to the provided limit.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>maxEntries</code> - Maximum number of entries to return (default: 50).</li>
+</ul>
+<p>Returns: Array of archived Pareto metadata entries.</p>
+<h4 id="getparetofronts">getParetoFronts</h4><p><code>(maxFronts: number) =&gt; import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default[][]</code></p>
+<p>Export species history as CSV.</p>
+<p>Produces rows for each recorded per-species stat entry within the
+specified window. Useful for quick inspection or spreadsheet analysis.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>maxEntries</code> - Maximum history entries to include (default: 200).</li>
+</ul>
+<p>Returns: CSV string (may be empty).</p>
+<h4 id="getperformancestats">getPerformanceStats</h4><p><code>() =&gt; { lastEvalMs: number | undefined; lastEvolveMs: number | undefined; }</code></p>
+<p>Return recent performance statistics (durations in milliseconds) for the
+most recent evaluation and evolve operations.</p>
+<p>Provides wall-clock timing useful for profiling and teaching how runtime
+varies with network complexity or population settings.</p>
+<p>Returns: Object with { lastEvalMs, lastEvolveMs }.</p>
+<h4 id="getspecieshistory">getSpeciesHistory</h4><p><code>() =&gt; import(&quot;D:/code-practice/NeatapticTS/src/neat/neat.types&quot;).SpeciesHistoryEntry[]</code></p>
+<p>Returns the historical species statistics recorded each generation.</p>
+<p>Educational context: Species history captures per-generation snapshots
+of species-level metrics (size, best score, last improvement) and is
+useful for plotting trends, teaching about speciation dynamics, and
+driving adaptive controllers.</p>
+<p>The returned array contains entries with a <code>generation</code> index and a
+<code>stats</code> array containing per-species summaries recorded at that
+generation.</p>
+<p>Returns: An array of generation-stamped species stat snapshots.</p>
+<h4 id="getspeciesstats">getSpeciesStats</h4><p><code>() =&gt; { id: number; size: number; bestScore: number; lastImproved: number; }[]</code></p>
+<p>Return a concise summary for each current species.</p>
+<p>Educational context: In NEAT, populations are partitioned into species based
+on genetic compatibility. Each species groups genomes that are similar so
+selection and reproduction can preserve diversity between groups. This
+accessor provides a lightweight view suitable for telemetry, visualization
+and teaching examples without exposing full genome objects.</p>
+<p>The returned array contains objects with these fields:</p>
+<ul>
+<li>id: numeric species identifier</li>
+<li>size: number of members currently assigned to the species</li>
+<li>bestScore: the best observed fitness score for the species</li>
+<li>lastImproved: generation index when the species last improved its best score</li>
+</ul>
+<p>Notes for learners:</p>
+<ul>
+<li>Species sizes and lastImproved are typical signals used to detect
+stagnation and apply protective or penalizing measures.</li>
+<li>This function intentionally avoids returning full member lists to
+prevent accidental mutation of internal state; use <code>getSpeciesHistory</code>
+for richer historical data.</li>
+</ul>
+<p>Returns: An array of species summary objects.</p>
+<h4 id="gettelemetry">getTelemetry</h4><p><code>() =&gt; any[]</code></p>
+<p>Return the internal telemetry buffer.</p>
+<p>Telemetry entries are produced per-generation when telemetry is enabled
+and include diagnostic metrics (diversity, performance, lineage, etc.).
+This accessor returns the raw buffer for external inspection or export.</p>
+<p>Returns: Array of telemetry snapshot objects.</p>
 <h4 id="import">import</h4><p><code>(json: any[]) =&gt; void</code></p>
 <p>Imports a population from an array of JSON objects.
 Replaces the current population with the imported one.</p>
@@ -154,8 +360,12 @@ Replaces the current population with the imported one.</p>
 <ul>
 <li><code>json</code> - - An array of JSON objects representing the population.</li>
 </ul>
-<h4 id="importrngstate">importRNGState</h4><p><code>(json: string) =&gt; void</code></p>
-<p>Import RNG state from JSON produced by exportRNGState</p>
+<h4 id="importrngstate">importRNGState</h4><p><code>(state: any) =&gt; void</code></p>
+<p>Import an RNG state (alias for restore; kept for compatibility).</p>
+<p>Parameters:</p>
+<ul>
+<li><code>state</code> - Numeric RNG state.</li>
+</ul>
 <h4 id="importstate">importState</h4><p><code>(bundle: any, fitness: (n: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default) =&gt; number) =&gt; import(&quot;D:/code-practice/NeatapticTS/src/neat&quot;).default</code></p>
 <p>Convenience: restore full evolutionary state previously produced by exportState().</p>
 <p>Parameters:</p>
@@ -167,10 +377,19 @@ Replaces the current population with the imported one.</p>
 <p>Applies mutations to the population based on the mutation rate and amount.
 Each genome is mutated using the selected mutation methods.
 Slightly increases the chance of ADD_CONN mutation for more connectivity.</p>
-<h4 id="restorerngstate">restoreRNGState</h4><p><code>(s: { state: number; } | null | undefined) =&gt; void</code></p>
-<p>Restore RNG state previously captured via snapshotRNGState.</p>
+<h4 id="resetnoveltyarchive">resetNoveltyArchive</h4><p><code>() =&gt; void</code></p>
+<p>Reset the novelty archive (clear entries).</p>
+<p>The novelty archive is used to keep representative behaviors for novelty
+search. Clearing it removes stored behaviors.</p>
+<h4 id="restorerngstate">restoreRNGState</h4><p><code>(state: any) =&gt; void</code></p>
+<p>Restore a previously-snapshotted RNG state. This restores the internal
+seed but does not re-create the RNG function until next use.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>state</code> - Opaque numeric RNG state produced by <code>snapshotRNGState()</code>.</li>
+</ul>
 <h4 id="samplerandom">sampleRandom</h4><p><code>(count: number) =&gt; number[]</code></p>
-<p>Sample raw RNG outputs (advances state) for testing or reproducibility checks</p>
+<p>Produce <code>count</code> deterministic random samples using instance RNG.</p>
 <h4 id="selectmutationmethod">selectMutationMethod</h4><p><code>(genome: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default, rawReturnForTest: boolean) =&gt; any</code></p>
 <p>Selects a mutation method for a given genome based on constraints.
 Ensures that the mutation respects the maximum nodes, connections, and gates.</p>
@@ -179,12 +398,44 @@ Ensures that the mutation respects the maximum nodes, connections, and gates.</p
 <li><code>genome</code> - - The genome to mutate.</li>
 </ul>
 <p>Returns: The selected mutation method or null if no valid method is available.</p>
-<h4 id="snapshotrngstate">snapshotRNGState</h4><p><code>() =&gt; { state: number; } | null</code></p>
-<p>Snapshot current RNG state (if seeded) for reproducibility checkpoints.
-Returns null if using global Math.random without internal state.</p>
+<h4 id="snapshotrngstate">snapshotRNGState</h4><p><code>() =&gt; number | undefined</code></p>
+<p>Return the current opaque RNG numeric state used by the instance.
+Useful for deterministic test replay and debugging.</p>
 <h4 id="sort">sort</h4><p><code>() =&gt; void</code></p>
 <p>Sorts the population in descending order of fitness scores.
 Ensures that the fittest genomes are at the start of the population array.</p>
+<h4 id="spawnfromparent">spawnFromParent</h4><p><code>(parent: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default, mutateCount: number) =&gt; import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default</code></p>
+<p>Spawn a new genome derived from a single parent while preserving Neat bookkeeping.</p>
+<p>This helper performs a canonical &quot;clone + slight mutation&quot; workflow while
+keeping <code>Neat</code>&#39;s internal invariants intact. It is intended for callers that
+want a child genome derived from a single parent but do not want to perform the
+bookkeeping and registration steps manually. The function deliberately does NOT
+add the returned child to <code>this.population</code> so callers are free to inspect or
+further modify the child and then register it via <code>addGenome()</code> (or push it
+directly if they understand the consequences).</p>
+<p>Behavior summary:</p>
+<ul>
+<li>Clone the provided <code>parent</code> (<code>parent.clone()</code> when available, else JSON round-trip).</li>
+<li>Clear fitness/score on the child and assign a fresh unique <code>_id</code>.</li>
+<li>If lineage tracking is enabled, set <code>(child as any)._parents = [parent._id]</code>
+and <code>(child as any)._depth = (parent._depth ?? 0) + 1</code>.</li>
+<li>Enforce structural invariants by calling <code>ensureMinHiddenNodes(child)</code> and
+<code>ensureNoDeadEnds(child)</code> so the child is valid for subsequent mutation/evaluation.</li>
+<li>Apply <code>mutateCount</code> mutations selected via <code>selectMutationMethod</code> and driven by
+the instance RNG (<code>_getRNG()</code>); mutation exceptions are caught and ignored to
+preserve best-effort behavior during population seeding/expansion.</li>
+<li>Invalidate per-genome caches with <code>_invalidateGenomeCaches(child)</code> before return.</li>
+</ul>
+<p>Important: the returned child is not registered in <code>Neat.population</code> — call
+<code>addGenome(child, [parentId])</code> to insert it and keep telemetry/lineage consistent.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>parent</code> - - Source genome to derive from. Must be a <code>Network</code> instance.</li>
+<li><code>mutateCount</code> - - Number of mutation operations to apply to the spawned child (default: 1).</li>
+</ul>
+<p>Returns: A new <code>Network</code> instance derived from <code>parent</code>. The child is unregistered.</p>
+<h4 id="tojson">toJSON</h4><p><code>() =&gt; any</code></p>
+<p>Import a previously exported state bundle and rehydrate a Neat instance.</p>
 <h2 id="neataptic-ts">neataptic.ts</h2><h3 id="neataptic">neataptic</h3><p>Represents a node (neuron) in a neural network graph.</p>
 <p>Nodes are the fundamental processing units. They receive inputs, apply an activation function,
 and produce an output. Nodes can be of type &#39;input&#39;, &#39;hidden&#39;, or &#39;output&#39;. Hidden and output
@@ -198,6 +449,11 @@ L2 regularization, dropout, and eligibility traces for recurrent connections.</p
 <li><code>withTrace</code> - Whether to update eligibility traces.</li>
 <li><code>input</code> - Optional externally supplied activation (bypasses weighted sum if provided).</li>
 </ul>
+<h4 id="adaptiveprunelevel">_adaptivePruneLevel</h4><p>Adaptive prune level for complexity control (optional).</p>
+<h4 id="applyfitnesssharing">_applyFitnessSharing</h4><p><code>() =&gt; void</code></p>
+<p>Apply fitness sharing within species. When <code>sharingSigma</code> &gt; 0 this uses a kernel-based
+sharing; otherwise it falls back to classic per-species averaging. Sharing reduces
+effective fitness for similar genomes to promote diversity.</p>
 <h4 id="applygradientclipping">_applyGradientClipping</h4><p><code>(cfg: { mode: &quot;norm&quot; | &quot;percentile&quot; | &quot;layerwiseNorm&quot; | &quot;layerwisePercentile&quot;; maxNorm?: number | undefined; percentile?: number | undefined; }) =&gt; void</code></p>
 <p>Trains the network on a given dataset subset for one pass (epoch or batch).
 Performs activation and backpropagation for each item in the set.
@@ -212,11 +468,69 @@ Updates weights based on batch size configuration.</p>
 <li>`` - - The function used to calculate the error between target and output.</li>
 </ul>
 <p>Returns: The average error calculated over the provided dataset subset.</p>
+<h4 id="bestscorelastgen">_bestScoreLastGen</h4><p>Best score observed in the last generation (used for improvement detection).</p>
+<h4 id="compatintegral">_compatIntegral</h4><p>Integral accumulator used by adaptive compatibility controllers.</p>
+<h4 id="compatspeciesema">_compatSpeciesEMA</h4><p>Exponential moving average for compatibility threshold (adaptive speciation).</p>
+<h4 id="computediversitystats">_computeDiversityStats</h4><p><code>() =&gt; void</code></p>
+<p>Compute and cache diversity statistics used by telemetry &amp; tests.</p>
+<h4 id="conninnovations">_connInnovations</h4><p>Map of connection innovations keyed by a string identifier.</p>
+<h4 id="diversitystats">_diversityStats</h4><p>Cached diversity metrics (computed lazily).</p>
+<h4 id="getobjectives">_getObjectives</h4><p><code>() =&gt; import(&quot;D:/code-practice/NeatapticTS/src/neat/neat.types&quot;).ObjectiveDescriptor[]</code></p>
+<p>Internal: return cached objective descriptors, building if stale.</p>
 <h4 id="globalnodeindex">_globalNodeIndex</h4><p>Global index counter for assigning unique indices to nodes.</p>
+<h4 id="invalidategenomecaches">_invalidateGenomeCaches</h4><p><code>(genome: any) =&gt; void</code></p>
+<p>Invalidate per-genome caches (compatibility distance, forward pass, etc.).</p>
+<h4 id="lastancestoruniqadjustgen">_lastAncestorUniqAdjustGen</h4><p>Generation when ancestor uniqueness adjustment was last applied.</p>
+<h4 id="lastepsilonadjustgen">_lastEpsilonAdjustGen</h4><p>Generation when epsilon compatibility was last adjusted.</p>
+<h4 id="lastevalduration">_lastEvalDuration</h4><p>Duration of the last evaluation run (ms).</p>
+<h4 id="lastevolveduration">_lastEvolveDuration</h4><p>Duration of the last evolve run (ms).</p>
+<h4 id="lastglobalimprovegeneration">_lastGlobalImproveGeneration</h4><p>Generation index where the last global improvement occurred.</p>
+<h4 id="lastinbreedingcount">_lastInbreedingCount</h4><p>Last observed count of inbreeding (used for detecting excessive cloning).</p>
+<h4 id="lastoffspringalloc">_lastOffspringAlloc</h4><p>Last allocated offspring set (used by adaptive allocators).</p>
+<h4 id="lineageenabled">_lineageEnabled</h4><p>Whether lineage metadata should be recorded on genomes.</p>
+<h4 id="mcthreshold">_mcThreshold</h4><p>Adaptive minimal criterion threshold (optional).</p>
+<h4 id="nextgenomeid">_nextGenomeId</h4><p>Counter for assigning unique genome ids.</p>
+<h4 id="nextglobalinnovation">_nextGlobalInnovation</h4><p>Counter for issuing global innovation numbers when explicit numbers are used.</p>
+<h4 id="nodesplitinnovations">_nodeSplitInnovations</h4><p>Map of node-split innovations used to reuse innovation ids for node splits.</p>
+<h4 id="noveltyarchive">_noveltyArchive</h4><p>Novelty archive used by novelty search (behavior representatives).</p>
+<h4 id="objectiveages">_objectiveAges</h4><p>Map tracking ages for objectives by key.</p>
+<h4 id="objectiveevents">_objectiveEvents</h4><p>Queue of recent objective activation/deactivation events for telemetry.</p>
+<h4 id="objectiveslist">_objectivesList</h4><p>Cached list of registered objectives.</p>
+<h4 id="objectivestale">_objectiveStale</h4><p>Map tracking stale counts for objectives by key.</p>
+<h4 id="operatorstats">_operatorStats</h4><p>Operator statistics used by adaptive operator selection.</p>
+<h4 id="paretoarchive">_paretoArchive</h4><p>Archive of Pareto front metadata for multi-objective tracking.</p>
+<h4 id="paretoobjectivesarchive">_paretoObjectivesArchive</h4><p>Archive storing Pareto objectives snapshots.</p>
+<h4 id="pendingobjectiveadds">_pendingObjectiveAdds</h4><p>Pending objective keys to add during safe phases.</p>
+<h4 id="pendingobjectiveremoves">_pendingObjectiveRemoves</h4><p>Pending objective keys to remove during safe phases.</p>
+<h4 id="phase">_phase</h4><p>Optional phase marker for multi-stage experiments.</p>
+<h4 id="previnbreedingcount">_prevInbreedingCount</h4><p>Previous inbreeding count snapshot.</p>
+<h4 id="prevspeciesmembers">_prevSpeciesMembers</h4><p>Map of species id -&gt; set of member genome ids from previous generation.</p>
+<h4 id="rng">_rng</h4><p>Cached RNG function; created lazily and seeded from <code>_rngState</code> when used.</p>
+<h4 id="rngstate">_rngState</h4><p>Internal numeric state for the deterministic xorshift RNG when no user RNG
+is provided. Stored as a 32-bit unsigned integer.</p>
 <h4 id="safeupdateweight">_safeUpdateWeight</h4><p><code>(connection: import(&quot;D:/code-practice/NeatapticTS/src/architecture/connection&quot;).default, delta: number) =&gt; void</code></p>
 <p>Internal helper to safely update a connection weight with clipping and NaN checks.</p>
+<h4 id="sortspeciesmembers">_sortSpeciesMembers</h4><p><code>(sp: { members: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default[]; }) =&gt; void</code></p>
+<p>Sort members of a species in-place by descending score.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>sp</code> - - Species object with <code>members</code> array.</li>
+</ul>
+<h4 id="speciate">_speciate</h4><p><code>() =&gt; void</code></p>
+<p>Assign genomes into species based on compatibility distance and maintain species structures.
+This function creates new species for unassigned genomes and prunes empty species.
+It also records species-level history used for telemetry and adaptive controllers.</p>
+<h4 id="species">_species</h4><p>Array of current species (internal representation).</p>
+<h4 id="speciescreated">_speciesCreated</h4><p>Map of speciesId -&gt; creation generation for bookkeeping.</p>
+<h4 id="specieshistory">_speciesHistory</h4><p>Time-series history of species stats (for exports/telemetry).</p>
+<h4 id="specieslaststats">_speciesLastStats</h4><p>Last recorded stats per species id.</p>
+<h4 id="structuralentropy">_structuralEntropy</h4><p><code>(genome: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default) =&gt; number</code></p>
+<p>Compatibility wrapper retained for tests that reference (neat as any)._structuralEntropy</p>
+<h4 id="telemetry">_telemetry</h4><p>Telemetry buffer storing diagnostic snapshots per generation.</p>
+<h4 id="updatespeciesstagnation">_updateSpeciesStagnation</h4><p><code>() =&gt; void</code></p>
+<p>Update species stagnation tracking and remove species that exceeded the allowed stagnation.</p>
 <h4 id="warnifnobestgenome">_warnIfNoBestGenome</h4><p><code>() =&gt; void</code></p>
-<p>Warn that evolution ended without a valid best genome. Always emits when called (tests rely on this).</p>
+<p>Emit a standardized warning when evolution loop finds no valid best genome (test hook).</p>
 <h4 id="acquire">acquire</h4><p><code>(from: import(&quot;D:/code-practice/NeatapticTS/src/architecture/node&quot;).default, to: import(&quot;D:/code-practice/NeatapticTS/src/architecture/node&quot;).default, weight: number | undefined) =&gt; import(&quot;D:/code-practice/NeatapticTS/src/architecture/connection&quot;).default</code></p>
 <p>Acquire a Connection from the pool or construct a new one. Ensures fresh innovation id.</p>
 <h4 id="activate">activate</h4><p><code>(input: number[], training: boolean, maxActivationDepth: number) =&gt; number[]</code></p>
@@ -288,6 +602,34 @@ compatibility. Future optimizations can vectorize this path.</p>
 <p>Raw activation that can return a typed array when pooling is enabled (zero-copy).
 If reuseActivationArrays=false falls back to standard activate().</p>
 <h4 id="activation">activation</h4><p>The output value of the node after applying the activation function. This is the value transmitted to connected nodes.</p>
+<h4 id="addgenome">addGenome</h4><p><code>(genome: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default, parents: number[] | undefined) =&gt; void</code></p>
+<p>Register an externally-created genome into the <code>Neat</code> population.</p>
+<p>Use this method when code constructs or mutates a <code>Network</code> outside of the
+usual reproduction pipeline and needs to insert it into <code>neat.population</code>
+while preserving lineage, id assignment, and structural invariants. The
+method performs best-effort safety actions and falls back to pushing the
+genome even if invariant enforcement throws, which mirrors the forgiving
+behavior used in dynamic population expansion.</p>
+<p>Behavior summary:</p>
+<ul>
+<li>Clears the genome&#39;s <code>score</code> and assigns <code>_id</code> using Neat&#39;s counter.</li>
+<li>When lineage is enabled, attaches the provided <code>parents</code> array (copied)
+and estimates <code>_depth</code> as <code>max(parent._depth) + 1</code> when parent ids are
+resolvable from the current population.</li>
+<li>Enforces structural invariants (<code>ensureMinHiddenNodes</code> and
+<code>ensureNoDeadEnds</code>) and invalidates caches via
+<code>_invalidateGenomeCaches(genome)</code>.</li>
+<li>Pushes the genome into <code>this.population</code>.</li>
+</ul>
+<p>Note: Because depth estimation requires parent objects to be discoverable
+in <code>this.population</code>, callers that generate intermediate parent genomes
+should register them via <code>addGenome</code> before relying on automatic depth
+estimation for their children.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>genome</code> - - The external <code>Network</code> to add.</li>
+<li><code>parents</code> - - Optional array of parent ids to record on the genome.</li>
+</ul>
 <h4 id="adjustrateforaccumulation">adjustRateForAccumulation</h4><p><code>(rate: number, accumulationSteps: number, reduction: &quot;average&quot; | &quot;sum&quot;) =&gt; number</code></p>
 <p>Utility: adjust rate for accumulation mode (use result when switching to &#39;sum&#39; to mimic &#39;average&#39;).</p>
 <h4 id="applybatchupdates">applyBatchUpdates</h4><p><code>(momentum: number) =&gt; void</code></p>
@@ -361,19 +703,29 @@ Applies batch normalization to the activations of the nodes in this layer during
 <p>Returns: A new Layer instance configured as a batch normalization layer.</p>
 <h4 id="bias">bias</h4><p>The bias value of the node. Added to the weighted sum of inputs before activation.
 Input nodes typically have a bias of 0.</p>
-<h4 id="checkhiddensizes">checkHiddenSizes</h4><p><code>(network: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default, multiplierOverride: number | undefined) =&gt; { compliant: boolean; minRequired: number; hiddenLayerSizes: number[]; }</code></p>
-<p>Checks if a network meets the minimum hidden node requirements.
-Returns information about hidden layer sizes without modifying the network.</p>
-<p>Parameters:</p>
-<ul>
-<li><code>network</code> - The network to check</li>
-<li><code>multiplierOverride</code> - Optional fixed multiplier for deterministic tests</li>
-</ul>
-<p>Returns: Object containing information about hidden layer compliance</p>
 <h4 id="clear">clear</h4><p><code>() =&gt; void</code></p>
 <p>Clears the internal state of all nodes in the network.
 Resets node activation, state, eligibility traces, and extended traces to their initial values (usually 0).
 This is typically done before processing a new input sequence in recurrent networks or between training epochs if desired.</p>
+<h4 id="clearobjectives">clearObjectives</h4><p><code>() =&gt; void</code></p>
+<p>Register a custom objective for multi-objective optimization.</p>
+<p>Educational context: multi-objective optimization lets you optimize for
+multiple, potentially conflicting goals (e.g., maximize fitness while
+minimizing complexity). Each objective is identified by a unique key and
+an accessor function mapping a genome to a numeric score. Registering an
+objective makes it visible to the internal MO pipeline and clears any
+cached objective list so changes take effect immediately.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>key</code> - Unique objective key.</li>
+<li><code>direction</code> - &#39;min&#39; or &#39;max&#39; indicating optimization direction.</li>
+<li><code>accessor</code> - Function mapping a genome to a numeric objective value.</li>
+</ul>
+<h4 id="clearparetoarchive">clearParetoArchive</h4><p><code>() =&gt; void</code></p>
+<p>Clear the Pareto archive.</p>
+<p>Removes any stored Pareto-front snapshots retained by the algorithm.</p>
+<h4 id="cleartelemetry">clearTelemetry</h4><p><code>() =&gt; void</code></p>
+<p>Export telemetry as CSV with flattened columns for common nested fields.</p>
 <h4 id="clone">clone</h4><p><code>() =&gt; import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default</code></p>
 <p>Creates a deep copy of the network.</p>
 <p>Returns: A new Network instance that is a clone of the current network.</p>
@@ -441,12 +793,7 @@ for efficient handling of unique elements during construction.</p>
 </ul>
 <p>Returns: A new, fully connected, layered MLP</p>
 <h4 id="createpool">createPool</h4><p><code>(network: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default | null) =&gt; void</code></p>
-<p>Creates the initial population of networks.
-If a base network is provided, clones it to create the population.</p>
-<p>Parameters:</p>
-<ul>
-<li><code>network</code> - - The base network to clone, or null to create new networks.</li>
-</ul>
+<p>Create initial population pool. Delegates to helpers if present.</p>
 <h4 id="crossover">crossOver</h4><p><code>(network1: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default, network2: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default, equal: boolean) =&gt; import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default</code></p>
 <p>Creates a new offspring network by performing crossover between two parent networks.
 This method implements the crossover mechanism inspired by the NEAT algorithm and described
@@ -526,43 +873,61 @@ which is a common heuristic to ensure networks have adequate representation capa
 </ul>
 <p>Returns: The same network with properly sized hidden layers</p>
 <h4 id="ensureminhiddennodes">ensureMinHiddenNodes</h4><p><code>(network: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default, multiplierOverride: number | undefined) =&gt; void</code></p>
-<p>Ensures that the network has at least min(input, output) + 1 hidden nodes in each hidden layer.
-This prevents bottlenecks in networks where hidden layers might be too small.
-For layered networks: Ensures each hidden layer has at least the minimum size.
-For non-layered networks: Reorganizes into proper layers with the minimum size.</p>
+<p>Ensure a network has the minimum number of hidden nodes according to
+configured policy. Delegates to migrated helper implementation.</p>
 <p>Parameters:</p>
 <ul>
-<li><code>network</code> - The network to check and modify</li>
-<li><code>multiplierOverride</code> - Optional fixed multiplier for deterministic tests</li>
+<li><code>network</code> - Network instance to adjust.</li>
+<li><code>multiplierOverride</code> - Optional multiplier to override configured policy.</li>
 </ul>
 <h4 id="ensurenodeadends">ensureNoDeadEnds</h4><p><code>(network: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default) =&gt; void</code></p>
-<p>Ensures that all input nodes have at least one outgoing connection,
-all output nodes have at least one incoming connection,
-and all hidden nodes have at least one incoming and one outgoing connection.
-This prevents dead ends and blind I/O neurons.</p>
-<p>Parameters:</p>
-<ul>
-<li><code>network</code> - The network to check and fix</li>
-</ul>
+<p>Delegate ensureNoDeadEnds to mutation module (added for backward compat).</p>
 <h4 id="error">error</h4><p>Stores error values calculated during backpropagation.</p>
-<h4 id="evaluate">evaluate</h4><p><code>() =&gt; Promise&lt;void&gt;</code></p>
-<p>Evaluates the fitness of the current population.
-If <code>fitnessPopulation</code> is true, evaluates the entire population at once.
-Otherwise, evaluates each genome individually.</p>
-<p>Returns: A promise that resolves when evaluation is complete.</p>
 <h4 id="evolve">evolve</h4><p><code>() =&gt; Promise&lt;import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default&gt;</code></p>
 <p>Evolves the population by selecting, mutating, and breeding genomes.
-Implements elitism, provenance, and crossover to create the next generation.</p>
-<p>Returns: The fittest network from the current generation.</p>
+This method is delegated to <code>src/neat/neat.evolve.ts</code> during the migration.</p>
 <h4 id="export">export</h4><p><code>() =&gt; any[]</code></p>
 <p>Exports the current population as an array of JSON objects.
 Useful for saving the state of the population for later use.</p>
 <p>Returns: An array of JSON representations of the population.</p>
-<h4 id="exportrngstate">exportRNGState</h4><p><code>() =&gt; string</code></p>
-<p>Export RNG state as JSON string for persistence</p>
+<h4 id="exportparetofrontjsonl">exportParetoFrontJSONL</h4><p><code>(maxEntries: number) =&gt; string</code></p>
+<p>Export Pareto front archive as JSON Lines for external analysis.</p>
+<p>Each line is a JSON object representing one archived Pareto snapshot.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>maxEntries</code> - Maximum number of entries to include (default: 100).</li>
+</ul>
+<p>Returns: Newline-separated JSON objects.</p>
+<h4 id="exportrngstate">exportRNGState</h4><p><code>() =&gt; number | undefined</code></p>
+<p>Export the current RNG state for external persistence or tests.</p>
+<h4 id="exportspecieshistorycsv">exportSpeciesHistoryCSV</h4><p><code>(maxEntries: number) =&gt; string</code></p>
+<p>Return an array of {id, parents} for the first <code>limit</code> genomes in population.</p>
+<h4 id="exportspecieshistoryjsonl">exportSpeciesHistoryJSONL</h4><p><code>(maxEntries: number) =&gt; string</code></p>
+<p>Export species history as JSON Lines for storage and analysis.</p>
+<p>Each line is a JSON object containing a generation index and per-species
+stats recorded at that generation. Useful for long-term tracking.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>maxEntries</code> - Maximum history entries to include (default: 200).</li>
+</ul>
+<p>Returns: Newline-separated JSON objects.</p>
 <h4 id="exportstate">exportState</h4><p><code>() =&gt; any</code></p>
 <p>Convenience: export full evolutionary state (meta + population genomes).
 Combines innovation registries and serialized genomes for easy persistence.</p>
+<h4 id="exporttelemetrycsv">exportTelemetryCSV</h4><p><code>(maxEntries: number) =&gt; string</code></p>
+<p>Export recent telemetry entries as CSV.</p>
+<p>The exporter attempts to flatten commonly-used nested fields (complexity,
+perf, lineage) into columns. This is a best-effort exporter intended for
+human inspection and simple ingestion.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>maxEntries</code> - Maximum number of recent telemetry entries to include.</li>
+</ul>
+<p>Returns: CSV string (may be empty when no telemetry present).</p>
+<h4 id="exporttelemetryjsonl">exportTelemetryJSONL</h4><p><code>() =&gt; string</code></p>
+<p>Export telemetry as JSON Lines (one JSON object per line).</p>
+<p>Useful for piping telemetry to external loggers or analysis tools.</p>
+<p>Returns: A newline-separated string of JSON objects.</p>
 <h4 id="fromjson">fromJSON</h4><p><code>(json: any) =&gt; import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default</code></p>
 <p>Reconstructs a network from a JSON object (latest standard).
 Handles formatVersion, robust error handling, and index-based references.</p>
@@ -617,43 +982,128 @@ Gating allows the output of a node in this group to modulate the flow of signal 
 <p>Calculates the average fitness score of the population.
 Ensures that the population is evaluated before calculating the average.</p>
 <p>Returns: The average fitness score of the population.</p>
+<h4 id="getdiversitystats">getDiversityStats</h4><p><code>() =&gt; any</code></p>
+<p>Return the latest cached diversity statistics.</p>
+<p>Educational context: diversity metrics summarize how genetically and
+behaviorally spread the population is. They can include lineage depth,
+pairwise genetic distances, and other aggregated measures used by
+adaptive controllers, novelty search, and telemetry. This accessor returns
+whatever precomputed diversity object the Neat instance holds (may be
+undefined if not computed for the current generation).</p>
+<p>Returns: Arbitrary diversity summary object or undefined.</p>
 <h4 id="getfittest">getFittest</h4><p><code>() =&gt; import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default</code></p>
 <p>Retrieves the fittest genome from the population.
 Ensures that the population is evaluated and sorted before returning the result.</p>
 <p>Returns: The fittest genome in the population.</p>
-<h4 id="getinactiveobjectivestats">getInactiveObjectiveStats</h4><p><code>() =&gt; { key: string; stale: number; }[]</code></p>
-<p>Returns an array of objects describing how many consecutive generations each non-protected
-objective has been detected as &quot;stale&quot; (range below pruneInactive.rangeEps). Useful for
-monitoring which objectives are nearing automatic removal.</p>
 <h4 id="getlastgradclipgroupcount">getLastGradClipGroupCount</h4><p><code>() =&gt; number</code></p>
 <p>Returns last gradient clipping group count (0 if no clipping yet).</p>
+<h4 id="getlineagesnapshot">getLineageSnapshot</h4><p><code>(limit: number) =&gt; { id: number; parents: number[]; }[]</code></p>
+<p>Get recent objective add/remove events.</p>
 <h4 id="getlossscale">getLossScale</h4><p><code>() =&gt; number</code></p>
 <p>Returns current mixed precision loss scale (1 if disabled).</p>
 <h4 id="getminimumhiddensize">getMinimumHiddenSize</h4><p><code>(multiplierOverride: number | undefined) =&gt; number</code></p>
-<p>Gets the minimum hidden layer size for a network based on input/output sizes.
-Uses the formula: max(input, output) x multiplier (default random 2-5)
-Allows deterministic override for testing.</p>
-<p>Parameters:</p>
-<ul>
-<li><code>multiplierOverride</code> - Optional fixed multiplier for deterministic tests</li>
-</ul>
-<p>Returns: The minimum number of hidden nodes required in each hidden layer</p>
+<p>Minimum hidden size considering explicit minHidden or multiplier policy.</p>
+<h4 id="getmultiobjectivemetrics">getMultiObjectiveMetrics</h4><p><code>() =&gt; { rank: number; crowding: number; score: number; nodes: number; connections: number; }[]</code></p>
+<p>Returns compact multi-objective metrics for each genome in the current
+population. The metrics include Pareto rank and crowding distance (if
+computed), along with simple size and score measures useful in
+instructional contexts.</p>
+<p>Returns: Array of per-genome MO metric objects.</p>
+<h4 id="getnoveltyarchivesize">getNoveltyArchiveSize</h4><p><code>() =&gt; number</code></p>
+<p>Returns the number of entries currently stored in the novelty archive.</p>
+<p>Educational context: The novelty archive stores representative behaviors
+used by behavior-based novelty search. Monitoring its size helps teach
+how behavioral diversity accumulates over time and can be used to
+throttle archive growth.</p>
+<p>Returns: Number of archived behaviors.</p>
 <h4 id="getobjectivekeys">getObjectiveKeys</h4><p><code>() =&gt; string[]</code></p>
-<p>Return current objective keys (rebuilds list if cache invalidated)</p>
+<p>Public helper returning just the objective keys (tests rely on).</p>
+<h4 id="getobjectives">getObjectives</h4><p><code>() =&gt; { key: string; direction: &quot;max&quot; | &quot;min&quot;; }[]</code></p>
+<p>Clear all collected telemetry entries.</p>
 <h4 id="getoffspring">getOffspring</h4><p><code>() =&gt; import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default</code></p>
 <p>Generates an offspring by crossing over two parent networks.
 Uses the crossover method described in the Instinct algorithm.</p>
 <p>Returns: A new network created from two parents.</p>
+<h4 id="getoperatorstats">getOperatorStats</h4><p><code>() =&gt; { name: string; success: number; attempts: number; }[]</code></p>
+<p>Returns a summary of mutation/operator statistics used by operator
+adaptation and bandit selection.</p>
+<p>Educational context: Operator statistics track how often mutation
+operators are attempted and how often they succeed. These counters are
+used by adaptation mechanisms to bias operator selection towards
+successful operators.</p>
+<p>Returns: Array of { name, success, attempts } objects.</p>
 <h4 id="getparent">getParent</h4><p><code>() =&gt; import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default</code></p>
 <p>Selects a parent genome for breeding based on the selection method.
 Supports multiple selection strategies, including POWER, FITNESS_PROPORTIONATE, and TOURNAMENT.</p>
 <p>Returns: The selected parent genome.</p>
+<h4 id="getparetoarchive">getParetoArchive</h4><p><code>(maxEntries: number) =&gt; any[]</code></p>
+<p>Get recent Pareto archive entries (meta information about archived fronts).</p>
+<p>Educational context: when performing multi-objective search we may store
+representative Pareto-front snapshots over time. This accessor returns the
+most recent archive entries up to the provided limit.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>maxEntries</code> - Maximum number of entries to return (default: 50).</li>
+</ul>
+<p>Returns: Array of archived Pareto metadata entries.</p>
+<h4 id="getparetofronts">getParetoFronts</h4><p><code>(maxFronts: number) =&gt; import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default[][]</code></p>
+<p>Export species history as CSV.</p>
+<p>Produces rows for each recorded per-species stat entry within the
+specified window. Useful for quick inspection or spreadsheet analysis.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>maxEntries</code> - Maximum history entries to include (default: 200).</li>
+</ul>
+<p>Returns: CSV string (may be empty).</p>
+<h4 id="getperformancestats">getPerformanceStats</h4><p><code>() =&gt; { lastEvalMs: number | undefined; lastEvolveMs: number | undefined; }</code></p>
+<p>Return recent performance statistics (durations in milliseconds) for the
+most recent evaluation and evolve operations.</p>
+<p>Provides wall-clock timing useful for profiling and teaching how runtime
+varies with network complexity or population settings.</p>
+<p>Returns: Object with { lastEvalMs, lastEvolveMs }.</p>
 <h4 id="getrawgradientnorm">getRawGradientNorm</h4><p><code>() =&gt; number</code></p>
 <p>Returns last recorded raw (pre-update) gradient L2 norm.</p>
+<h4 id="getspecieshistory">getSpeciesHistory</h4><p><code>() =&gt; import(&quot;D:/code-practice/NeatapticTS/src/neat/neat.types&quot;).SpeciesHistoryEntry[]</code></p>
+<p>Returns the historical species statistics recorded each generation.</p>
+<p>Educational context: Species history captures per-generation snapshots
+of species-level metrics (size, best score, last improvement) and is
+useful for plotting trends, teaching about speciation dynamics, and
+driving adaptive controllers.</p>
+<p>The returned array contains entries with a <code>generation</code> index and a
+<code>stats</code> array containing per-species summaries recorded at that
+generation.</p>
+<p>Returns: An array of generation-stamped species stat snapshots.</p>
+<h4 id="getspeciesstats">getSpeciesStats</h4><p><code>() =&gt; { id: number; size: number; bestScore: number; lastImproved: number; }[]</code></p>
+<p>Return a concise summary for each current species.</p>
+<p>Educational context: In NEAT, populations are partitioned into species based
+on genetic compatibility. Each species groups genomes that are similar so
+selection and reproduction can preserve diversity between groups. This
+accessor provides a lightweight view suitable for telemetry, visualization
+and teaching examples without exposing full genome objects.</p>
+<p>The returned array contains objects with these fields:</p>
+<ul>
+<li>id: numeric species identifier</li>
+<li>size: number of members currently assigned to the species</li>
+<li>bestScore: the best observed fitness score for the species</li>
+<li>lastImproved: generation index when the species last improved its best score</li>
+</ul>
+<p>Notes for learners:</p>
+<ul>
+<li>Species sizes and lastImproved are typical signals used to detect
+stagnation and apply protective or penalizing measures.</li>
+<li>This function intentionally avoids returning full member lists to
+prevent accidental mutation of internal state; use <code>getSpeciesHistory</code>
+for richer historical data.</li>
+</ul>
+<p>Returns: An array of species summary objects.</p>
+<h4 id="gettelemetry">getTelemetry</h4><p><code>() =&gt; any[]</code></p>
+<p>Return the internal telemetry buffer.</p>
+<p>Telemetry entries are produced per-generation when telemetry is enabled
+and include diagnostic metrics (diversity, performance, lineage, etc.).
+This accessor returns the raw buffer for external inspection or export.</p>
+<p>Returns: Array of telemetry snapshot objects.</p>
 <h4 id="gettrainingstats">getTrainingStats</h4><p><code>() =&gt; { gradNorm: number; gradNormRaw: number; lossScale: number; optimizerStep: number; mp: { good: number; bad: number; overflowCount: number; scaleUps: number; scaleDowns: number; lastOverflowStep: number; }; }</code></p>
 <p>Consolidated training stats snapshot.</p>
-<h4 id="getwarnings">getWarnings</h4><p><code>() =&gt; string[]</code></p>
-<p>Retrieve non-fatal configuration warnings (e.g., mutation pool sanitation).</p>
 <h4 id="gru">gru</h4><p><code>(size: number) =&gt; import(&quot;D:/code-practice/NeatapticTS/src/architecture/layer&quot;).default</code></p>
 <p>Creates a Gated Recurrent Unit (GRU) layer.</p>
 <p>GRUs are another type of recurrent neural network cell, often considered
@@ -689,8 +1139,12 @@ Replaces the current population with the imported one.</p>
 <ul>
 <li><code>json</code> - - An array of JSON objects representing the population.</li>
 </ul>
-<h4 id="importrngstate">importRNGState</h4><p><code>(json: string) =&gt; void</code></p>
-<p>Import RNG state from JSON produced by exportRNGState</p>
+<h4 id="importrngstate">importRNGState</h4><p><code>(state: any) =&gt; void</code></p>
+<p>Import an RNG state (alias for restore; kept for compatibility).</p>
+<p>Parameters:</p>
+<ul>
+<li><code>state</code> - Numeric RNG state.</li>
+</ul>
 <h4 id="importstate">importState</h4><p><code>(bundle: any, fitness: (n: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default) =&gt; number) =&gt; import(&quot;D:/code-practice/NeatapticTS/src/neat&quot;).default</code></p>
 <p>Convenience: restore full evolutionary state previously produced by exportState().</p>
 <p>Parameters:</p>
@@ -970,10 +1424,19 @@ and potentially re-gating connections that were gated <em>by other nodes</em> on
 <h4 id="resetdropoutmasks">resetDropoutMasks</h4><p><code>() =&gt; void</code></p>
 <p>Resets all masks in the network to 1 (no dropout). Applies to both node-level and layer-level dropout.
 Should be called after training to ensure inference is unaffected by previous dropout.</p>
-<h4 id="restorerngstate">restoreRNGState</h4><p><code>(s: { state: number; } | null | undefined) =&gt; void</code></p>
-<p>Restore RNG state previously captured via snapshotRNGState.</p>
+<h4 id="resetnoveltyarchive">resetNoveltyArchive</h4><p><code>() =&gt; void</code></p>
+<p>Reset the novelty archive (clear entries).</p>
+<p>The novelty archive is used to keep representative behaviors for novelty
+search. Clearing it removes stored behaviors.</p>
+<h4 id="restorerngstate">restoreRNGState</h4><p><code>(state: any) =&gt; void</code></p>
+<p>Restore a previously-snapshotted RNG state. This restores the internal
+seed but does not re-create the RNG function until next use.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>state</code> - Opaque numeric RNG state produced by <code>snapshotRNGState()</code>.</li>
+</ul>
 <h4 id="samplerandom">sampleRandom</h4><p><code>(count: number) =&gt; number[]</code></p>
-<p>Sample raw RNG outputs (advances state) for testing or reproducibility checks</p>
+<p>Produce <code>count</code> deterministic random samples using instance RNG.</p>
 <h4 id="selectmutationmethod">selectMutationMethod</h4><p><code>(genome: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default, rawReturnForTest: boolean) =&gt; any</code></p>
 <p>Selects a mutation method for a given genome based on constraints.
 Ensures that the mutation respects the maximum nodes, connections, and gates.</p>
@@ -1013,12 +1476,42 @@ Example: <code>{ bias: 0.5, squash: methods.Activation.ReLU }</code></li>
 </ul>
 <h4 id="setstochasticdepth">setStochasticDepth</h4><p><code>(survival: number[]) =&gt; void</code></p>
 <p>Configure stochastic depth with survival probabilities per hidden layer (length must match hidden layer count when using layered network).</p>
-<h4 id="snapshotrngstate">snapshotRNGState</h4><p><code>() =&gt; { state: number; } | null</code></p>
-<p>Snapshot current RNG state (if seeded) for reproducibility checkpoints.
-Returns null if using global Math.random without internal state.</p>
+<h4 id="snapshotrngstate">snapshotRNGState</h4><p><code>() =&gt; number | undefined</code></p>
+<p>Return the current opaque RNG numeric state used by the instance.
+Useful for deterministic test replay and debugging.</p>
 <h4 id="sort">sort</h4><p><code>() =&gt; void</code></p>
 <p>Sorts the population in descending order of fitness scores.
 Ensures that the fittest genomes are at the start of the population array.</p>
+<h4 id="spawnfromparent">spawnFromParent</h4><p><code>(parent: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default, mutateCount: number) =&gt; import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default</code></p>
+<p>Spawn a new genome derived from a single parent while preserving Neat bookkeeping.</p>
+<p>This helper performs a canonical &quot;clone + slight mutation&quot; workflow while
+keeping <code>Neat</code>&#39;s internal invariants intact. It is intended for callers that
+want a child genome derived from a single parent but do not want to perform the
+bookkeeping and registration steps manually. The function deliberately does NOT
+add the returned child to <code>this.population</code> so callers are free to inspect or
+further modify the child and then register it via <code>addGenome()</code> (or push it
+directly if they understand the consequences).</p>
+<p>Behavior summary:</p>
+<ul>
+<li>Clone the provided <code>parent</code> (<code>parent.clone()</code> when available, else JSON round-trip).</li>
+<li>Clear fitness/score on the child and assign a fresh unique <code>_id</code>.</li>
+<li>If lineage tracking is enabled, set <code>(child as any)._parents = [parent._id]</code>
+and <code>(child as any)._depth = (parent._depth ?? 0) + 1</code>.</li>
+<li>Enforce structural invariants by calling <code>ensureMinHiddenNodes(child)</code> and
+<code>ensureNoDeadEnds(child)</code> so the child is valid for subsequent mutation/evaluation.</li>
+<li>Apply <code>mutateCount</code> mutations selected via <code>selectMutationMethod</code> and driven by
+the instance RNG (<code>_getRNG()</code>); mutation exceptions are caught and ignored to
+preserve best-effort behavior during population seeding/expansion.</li>
+<li>Invalidate per-genome caches with <code>_invalidateGenomeCaches(child)</code> before return.</li>
+</ul>
+<p>Important: the returned child is not registered in <code>Neat.population</code> — call
+<code>addGenome(child, [parentId])</code> to insert it and keep telemetry/lineage consistent.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>parent</code> - - Source genome to derive from. Must be a <code>Network</code> instance.</li>
+<li><code>mutateCount</code> - - Number of mutation operations to apply to the spawned child (default: 1).</li>
+</ul>
+<p>Returns: A new <code>Network</code> instance derived from <code>parent</code>. The child is unregistered.</p>
 <h4 id="squash">squash</h4><p><code>(x: number, derivate: boolean | undefined) =&gt; number</code></p>
 <p>The activation function (squashing function) applied to the node&#39;s state.
 Maps the internal state to the node&#39;s output (activation).</p>
@@ -1040,6 +1533,8 @@ Handles dropout scaling if dropout was used during training.</p>
 <li>`` - - The cost function to evaluate the error. Defaults to Mean Squared Error.</li>
 </ul>
 <p>Returns: An object containing the calculated average error over the dataset and the time taken for the test in milliseconds.</p>
+<h4 id="tojson">toJSON</h4><p><code>() =&gt; any</code></p>
+<p>Import a previously exported state bundle and rehydrate a Neat instance.</p>
 <h4 id="tojson">toJSON</h4><p><code>() =&gt; object</code></p>
 <p>Converts the network into a JSON object representation (latest standard).
 Includes formatVersion, and only serializes properties needed for full reconstruction.
@@ -1054,9 +1549,6 @@ are typically transient or reconstructed separately.</p>
 <p>Serializes the group into a JSON-compatible format, avoiding circular references.
 Only includes node indices and connection counts.</p>
 <p>Returns: A JSON-compatible representation of the group.</p>
-<h4 id="tojson">toJSON</h4><p><code>() =&gt; any</code></p>
-<p>Converts the connection to a JSON object for serialization.</p>
-<p>Returns: A JSON representation of the connection.</p>
 <h4 id="toonnx">toONNX</h4><p><code>() =&gt; import(&quot;D:/code-practice/NeatapticTS/src/architecture/network/network.onnx&quot;).OnnxModel</code></p>
 <p>Exports the network to ONNX format (JSON object, minimal MLP support).
 Only standard feedforward architectures and standard activations are supported.

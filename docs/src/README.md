@@ -37,84 +37,328 @@ DESIGN NOTES
 
 ### Options
 
-Comprehensive configuration surface for Neat evolutionary runs.
-Options are grouped conceptually; all fields are optional unless noted.
-See docs/API.md for structured tables. New adaptive / telemetry features carry a trailing comment with
+Configuration options for Neat evolutionary runs.
+
+Each property is optional and the class applies sensible defaults when a
+field is not provided. Options control population size, mutation rates,
+compatibility coefficients, selection strategy and other behavioral knobs.
+
+Example:
+const opts: NeatOptions = { popsize: 100, mutationRate: 0.5 };
+const neat = new Neat(3, 1, fitnessFn, opts);
+
+Note: this type is intentionally permissive to support staged migration and
+legacy callers; prefer providing a typed options object where possible.
 
 ### default
+
+#### _adaptivePruneLevel
+
+Adaptive prune level for complexity control (optional).
+
+#### _applyFitnessSharing
+
+`() => void`
+
+Apply fitness sharing within species. When `sharingSigma` > 0 this uses a kernel-based
+sharing; otherwise it falls back to classic per-species averaging. Sharing reduces
+effective fitness for similar genomes to promote diversity.
+
+#### _bestScoreLastGen
+
+Best score observed in the last generation (used for improvement detection).
+
+#### _compatIntegral
+
+Integral accumulator used by adaptive compatibility controllers.
+
+#### _compatSpeciesEMA
+
+Exponential moving average for compatibility threshold (adaptive speciation).
+
+#### _computeDiversityStats
+
+`() => void`
+
+Compute and cache diversity statistics used by telemetry & tests.
+
+#### _connInnovations
+
+Map of connection innovations keyed by a string identifier.
+
+#### _diversityStats
+
+Cached diversity metrics (computed lazily).
+
+#### _getObjectives
+
+`() => import("D:/code-practice/NeatapticTS/src/neat/neat.types").ObjectiveDescriptor[]`
+
+Internal: return cached objective descriptors, building if stale.
+
+#### _invalidateGenomeCaches
+
+`(genome: any) => void`
+
+Invalidate per-genome caches (compatibility distance, forward pass, etc.).
+
+#### _lastAncestorUniqAdjustGen
+
+Generation when ancestor uniqueness adjustment was last applied.
+
+#### _lastEpsilonAdjustGen
+
+Generation when epsilon compatibility was last adjusted.
+
+#### _lastEvalDuration
+
+Duration of the last evaluation run (ms).
+
+#### _lastEvolveDuration
+
+Duration of the last evolve run (ms).
+
+#### _lastGlobalImproveGeneration
+
+Generation index where the last global improvement occurred.
+
+#### _lastInbreedingCount
+
+Last observed count of inbreeding (used for detecting excessive cloning).
+
+#### _lastOffspringAlloc
+
+Last allocated offspring set (used by adaptive allocators).
+
+#### _lineageEnabled
+
+Whether lineage metadata should be recorded on genomes.
+
+#### _mcThreshold
+
+Adaptive minimal criterion threshold (optional).
+
+#### _nextGenomeId
+
+Counter for assigning unique genome ids.
+
+#### _nextGlobalInnovation
+
+Counter for issuing global innovation numbers when explicit numbers are used.
+
+#### _nodeSplitInnovations
+
+Map of node-split innovations used to reuse innovation ids for node splits.
+
+#### _noveltyArchive
+
+Novelty archive used by novelty search (behavior representatives).
+
+#### _objectiveAges
+
+Map tracking ages for objectives by key.
+
+#### _objectiveEvents
+
+Queue of recent objective activation/deactivation events for telemetry.
+
+#### _objectivesList
+
+Cached list of registered objectives.
+
+#### _objectiveStale
+
+Map tracking stale counts for objectives by key.
+
+#### _operatorStats
+
+Operator statistics used by adaptive operator selection.
+
+#### _paretoArchive
+
+Archive of Pareto front metadata for multi-objective tracking.
+
+#### _paretoObjectivesArchive
+
+Archive storing Pareto objectives snapshots.
+
+#### _pendingObjectiveAdds
+
+Pending objective keys to add during safe phases.
+
+#### _pendingObjectiveRemoves
+
+Pending objective keys to remove during safe phases.
+
+#### _phase
+
+Optional phase marker for multi-stage experiments.
+
+#### _prevInbreedingCount
+
+Previous inbreeding count snapshot.
+
+#### _prevSpeciesMembers
+
+Map of species id -> set of member genome ids from previous generation.
+
+#### _rng
+
+Cached RNG function; created lazily and seeded from `_rngState` when used.
+
+#### _rngState
+
+Internal numeric state for the deterministic xorshift RNG when no user RNG
+is provided. Stored as a 32-bit unsigned integer.
+
+#### _sortSpeciesMembers
+
+`(sp: { members: import("D:/code-practice/NeatapticTS/src/architecture/network").default[]; }) => void`
+
+Sort members of a species in-place by descending score.
+
+Parameters:
+- `sp` - - Species object with `members` array.
+
+#### _speciate
+
+`() => void`
+
+Assign genomes into species based on compatibility distance and maintain species structures.
+This function creates new species for unassigned genomes and prunes empty species.
+It also records species-level history used for telemetry and adaptive controllers.
+
+#### _species
+
+Array of current species (internal representation).
+
+#### _speciesCreated
+
+Map of speciesId -> creation generation for bookkeeping.
+
+#### _speciesHistory
+
+Time-series history of species stats (for exports/telemetry).
+
+#### _speciesLastStats
+
+Last recorded stats per species id.
+
+#### _structuralEntropy
+
+`(genome: import("D:/code-practice/NeatapticTS/src/architecture/network").default) => number`
+
+Compatibility wrapper retained for tests that reference (neat as any)._structuralEntropy
+
+#### _telemetry
+
+Telemetry buffer storing diagnostic snapshots per generation.
+
+#### _updateSpeciesStagnation
+
+`() => void`
+
+Update species stagnation tracking and remove species that exceeded the allowed stagnation.
 
 #### _warnIfNoBestGenome
 
 `() => void`
 
-Warn that evolution ended without a valid best genome. Always emits when called (tests rely on this).
+Emit a standardized warning when evolution loop finds no valid best genome (test hook).
 
-#### checkHiddenSizes
+#### addGenome
 
-`(network: import("D:/code-practice/NeatapticTS/src/architecture/network").default, multiplierOverride: number | undefined) => { compliant: boolean; minRequired: number; hiddenLayerSizes: number[]; }`
+`(genome: import("D:/code-practice/NeatapticTS/src/architecture/network").default, parents: number[] | undefined) => void`
 
-Checks if a network meets the minimum hidden node requirements.
-Returns information about hidden layer sizes without modifying the network.
+Register an externally-created genome into the `Neat` population.
+
+Use this method when code constructs or mutates a `Network` outside of the
+usual reproduction pipeline and needs to insert it into `neat.population`
+while preserving lineage, id assignment, and structural invariants. The
+method performs best-effort safety actions and falls back to pushing the
+genome even if invariant enforcement throws, which mirrors the forgiving
+behavior used in dynamic population expansion.
+
+Behavior summary:
+- Clears the genome's `score` and assigns `_id` using Neat's counter.
+- When lineage is enabled, attaches the provided `parents` array (copied)
+  and estimates `_depth` as `max(parent._depth) + 1` when parent ids are
+  resolvable from the current population.
+- Enforces structural invariants (`ensureMinHiddenNodes` and
+  `ensureNoDeadEnds`) and invalidates caches via
+  `_invalidateGenomeCaches(genome)`.
+- Pushes the genome into `this.population`.
+
+Note: Because depth estimation requires parent objects to be discoverable
+in `this.population`, callers that generate intermediate parent genomes
+should register them via `addGenome` before relying on automatic depth
+estimation for their children.
 
 Parameters:
-- `network` - The network to check
-- `multiplierOverride` - Optional fixed multiplier for deterministic tests
+- `genome` - - The external `Network` to add.
+- `parents` - - Optional array of parent ids to record on the genome.
 
-Returns: Object containing information about hidden layer compliance
+#### clearObjectives
+
+`() => void`
+
+Register a custom objective for multi-objective optimization.
+
+Educational context: multi-objective optimization lets you optimize for
+multiple, potentially conflicting goals (e.g., maximize fitness while
+minimizing complexity). Each objective is identified by a unique key and
+an accessor function mapping a genome to a numeric score. Registering an
+objective makes it visible to the internal MO pipeline and clears any
+cached objective list so changes take effect immediately.
+
+Parameters:
+- `key` - Unique objective key.
+- `direction` - 'min' or 'max' indicating optimization direction.
+- `accessor` - Function mapping a genome to a numeric objective value.
+
+#### clearParetoArchive
+
+`() => void`
+
+Clear the Pareto archive.
+
+Removes any stored Pareto-front snapshots retained by the algorithm.
+
+#### clearTelemetry
+
+`() => void`
+
+Export telemetry as CSV with flattened columns for common nested fields.
 
 #### createPool
 
 `(network: import("D:/code-practice/NeatapticTS/src/architecture/network").default | null) => void`
 
-Creates the initial population of networks.
-If a base network is provided, clones it to create the population.
-
-Parameters:
-- `network` - - The base network to clone, or null to create new networks.
+Create initial population pool. Delegates to helpers if present.
 
 #### ensureMinHiddenNodes
 
 `(network: import("D:/code-practice/NeatapticTS/src/architecture/network").default, multiplierOverride: number | undefined) => void`
 
-Ensures that the network has at least min(input, output) + 1 hidden nodes in each hidden layer.
-This prevents bottlenecks in networks where hidden layers might be too small.
-For layered networks: Ensures each hidden layer has at least the minimum size.
-For non-layered networks: Reorganizes into proper layers with the minimum size.
+Ensure a network has the minimum number of hidden nodes according to
+configured policy. Delegates to migrated helper implementation.
 
 Parameters:
-- `network` - The network to check and modify
-- `multiplierOverride` - Optional fixed multiplier for deterministic tests
+- `network` - Network instance to adjust.
+- `multiplierOverride` - Optional multiplier to override configured policy.
 
 #### ensureNoDeadEnds
 
 `(network: import("D:/code-practice/NeatapticTS/src/architecture/network").default) => void`
 
-Ensures that all input nodes have at least one outgoing connection,
-all output nodes have at least one incoming connection,
-and all hidden nodes have at least one incoming and one outgoing connection.
-This prevents dead ends and blind I/O neurons.
-
-Parameters:
-- `network` - The network to check and fix
-
-#### evaluate
-
-`() => Promise<void>`
-
-Evaluates the fitness of the current population.
-If `fitnessPopulation` is true, evaluates the entire population at once.
-Otherwise, evaluates each genome individually.
-
-Returns: A promise that resolves when evaluation is complete.
+Delegate ensureNoDeadEnds to mutation module (added for backward compat).
 
 #### evolve
 
 `() => Promise<import("D:/code-practice/NeatapticTS/src/architecture/network").default>`
 
 Evolves the population by selecting, mutating, and breeding genomes.
-Implements elitism, provenance, and crossover to create the next generation.
-
-Returns: The fittest network from the current generation.
+This method is delegated to `src/neat/neat.evolve.ts` during the migration.
 
 #### export
 
@@ -125,11 +369,44 @@ Useful for saving the state of the population for later use.
 
 Returns: An array of JSON representations of the population.
 
+#### exportParetoFrontJSONL
+
+`(maxEntries: number) => string`
+
+Export Pareto front archive as JSON Lines for external analysis.
+
+Each line is a JSON object representing one archived Pareto snapshot.
+
+Parameters:
+- `maxEntries` - Maximum number of entries to include (default: 100).
+
+Returns: Newline-separated JSON objects.
+
 #### exportRNGState
 
-`() => string`
+`() => number | undefined`
 
-Export RNG state as JSON string for persistence
+Export the current RNG state for external persistence or tests.
+
+#### exportSpeciesHistoryCSV
+
+`(maxEntries: number) => string`
+
+Return an array of {id, parents} for the first `limit` genomes in population.
+
+#### exportSpeciesHistoryJSONL
+
+`(maxEntries: number) => string`
+
+Export species history as JSON Lines for storage and analysis.
+
+Each line is a JSON object containing a generation index and per-species
+stats recorded at that generation. Useful for long-term tracking.
+
+Parameters:
+- `maxEntries` - Maximum history entries to include (default: 200).
+
+Returns: Newline-separated JSON objects.
 
 #### exportState
 
@@ -137,6 +414,31 @@ Export RNG state as JSON string for persistence
 
 Convenience: export full evolutionary state (meta + population genomes).
 Combines innovation registries and serialized genomes for easy persistence.
+
+#### exportTelemetryCSV
+
+`(maxEntries: number) => string`
+
+Export recent telemetry entries as CSV.
+
+The exporter attempts to flatten commonly-used nested fields (complexity,
+perf, lineage) into columns. This is a best-effort exporter intended for
+human inspection and simple ingestion.
+
+Parameters:
+- `maxEntries` - Maximum number of recent telemetry entries to include.
+
+Returns: CSV string (may be empty when no telemetry present).
+
+#### exportTelemetryJSONL
+
+`() => string`
+
+Export telemetry as JSON Lines (one JSON object per line).
+
+Useful for piping telemetry to external loggers or analysis tools.
+
+Returns: A newline-separated string of JSON objects.
 
 #### getAverage
 
@@ -147,6 +449,21 @@ Ensures that the population is evaluated before calculating the average.
 
 Returns: The average fitness score of the population.
 
+#### getDiversityStats
+
+`() => any`
+
+Return the latest cached diversity statistics.
+
+Educational context: diversity metrics summarize how genetically and
+behaviorally spread the population is. They can include lineage depth,
+pairwise genetic distances, and other aggregated measures used by
+adaptive controllers, novelty search, and telemetry. This accessor returns
+whatever precomputed diversity object the Neat instance holds (may be
+undefined if not computed for the current generation).
+
+Returns: Arbitrary diversity summary object or undefined.
+
 #### getFittest
 
 `() => import("D:/code-practice/NeatapticTS/src/architecture/network").default`
@@ -156,32 +473,53 @@ Ensures that the population is evaluated and sorted before returning the result.
 
 Returns: The fittest genome in the population.
 
-#### getInactiveObjectiveStats
+#### getLineageSnapshot
 
-`() => { key: string; stale: number; }[]`
+`(limit: number) => { id: number; parents: number[]; }[]`
 
-Returns an array of objects describing how many consecutive generations each non-protected
-objective has been detected as "stale" (range below pruneInactive.rangeEps). Useful for
-monitoring which objectives are nearing automatic removal.
+Get recent objective add/remove events.
 
 #### getMinimumHiddenSize
 
 `(multiplierOverride: number | undefined) => number`
 
-Gets the minimum hidden layer size for a network based on input/output sizes.
-Uses the formula: max(input, output) x multiplier (default random 2-5)
-Allows deterministic override for testing.
+Minimum hidden size considering explicit minHidden or multiplier policy.
 
-Parameters:
-- `multiplierOverride` - Optional fixed multiplier for deterministic tests
+#### getMultiObjectiveMetrics
 
-Returns: The minimum number of hidden nodes required in each hidden layer
+`() => { rank: number; crowding: number; score: number; nodes: number; connections: number; }[]`
+
+Returns compact multi-objective metrics for each genome in the current
+population. The metrics include Pareto rank and crowding distance (if
+computed), along with simple size and score measures useful in
+instructional contexts.
+
+Returns: Array of per-genome MO metric objects.
+
+#### getNoveltyArchiveSize
+
+`() => number`
+
+Returns the number of entries currently stored in the novelty archive.
+
+Educational context: The novelty archive stores representative behaviors
+used by behavior-based novelty search. Monitoring its size helps teach
+how behavioral diversity accumulates over time and can be used to
+throttle archive growth.
+
+Returns: Number of archived behaviors.
 
 #### getObjectiveKeys
 
 `() => string[]`
 
-Return current objective keys (rebuilds list if cache invalidated)
+Public helper returning just the objective keys (tests rely on).
+
+#### getObjectives
+
+`() => { key: string; direction: "max" | "min"; }[]`
+
+Clear all collected telemetry entries.
 
 #### getOffspring
 
@@ -192,6 +530,20 @@ Uses the crossover method described in the Instinct algorithm.
 
 Returns: A new network created from two parents.
 
+#### getOperatorStats
+
+`() => { name: string; success: number; attempts: number; }[]`
+
+Returns a summary of mutation/operator statistics used by operator
+adaptation and bandit selection.
+
+Educational context: Operator statistics track how often mutation
+operators are attempted and how often they succeed. These counters are
+used by adaptation mechanisms to bias operator selection towards
+successful operators.
+
+Returns: Array of { name, success, attempts } objects.
+
 #### getParent
 
 `() => import("D:/code-practice/NeatapticTS/src/architecture/network").default`
@@ -201,11 +553,102 @@ Supports multiple selection strategies, including POWER, FITNESS_PROPORTIONATE, 
 
 Returns: The selected parent genome.
 
-#### getWarnings
+#### getParetoArchive
 
-`() => string[]`
+`(maxEntries: number) => any[]`
 
-Retrieve non-fatal configuration warnings (e.g., mutation pool sanitation).
+Get recent Pareto archive entries (meta information about archived fronts).
+
+Educational context: when performing multi-objective search we may store
+representative Pareto-front snapshots over time. This accessor returns the
+most recent archive entries up to the provided limit.
+
+Parameters:
+- `maxEntries` - Maximum number of entries to return (default: 50).
+
+Returns: Array of archived Pareto metadata entries.
+
+#### getParetoFronts
+
+`(maxFronts: number) => import("D:/code-practice/NeatapticTS/src/architecture/network").default[][]`
+
+Export species history as CSV.
+
+Produces rows for each recorded per-species stat entry within the
+specified window. Useful for quick inspection or spreadsheet analysis.
+
+Parameters:
+- `maxEntries` - Maximum history entries to include (default: 200).
+
+Returns: CSV string (may be empty).
+
+#### getPerformanceStats
+
+`() => { lastEvalMs: number | undefined; lastEvolveMs: number | undefined; }`
+
+Return recent performance statistics (durations in milliseconds) for the
+most recent evaluation and evolve operations.
+
+Provides wall-clock timing useful for profiling and teaching how runtime
+varies with network complexity or population settings.
+
+Returns: Object with { lastEvalMs, lastEvolveMs }.
+
+#### getSpeciesHistory
+
+`() => import("D:/code-practice/NeatapticTS/src/neat/neat.types").SpeciesHistoryEntry[]`
+
+Returns the historical species statistics recorded each generation.
+
+Educational context: Species history captures per-generation snapshots
+of species-level metrics (size, best score, last improvement) and is
+useful for plotting trends, teaching about speciation dynamics, and
+driving adaptive controllers.
+
+The returned array contains entries with a `generation` index and a
+`stats` array containing per-species summaries recorded at that
+generation.
+
+Returns: An array of generation-stamped species stat snapshots.
+
+#### getSpeciesStats
+
+`() => { id: number; size: number; bestScore: number; lastImproved: number; }[]`
+
+Return a concise summary for each current species.
+
+Educational context: In NEAT, populations are partitioned into species based
+on genetic compatibility. Each species groups genomes that are similar so
+selection and reproduction can preserve diversity between groups. This
+accessor provides a lightweight view suitable for telemetry, visualization
+and teaching examples without exposing full genome objects.
+
+The returned array contains objects with these fields:
+- id: numeric species identifier
+- size: number of members currently assigned to the species
+- bestScore: the best observed fitness score for the species
+- lastImproved: generation index when the species last improved its best score
+
+Notes for learners:
+- Species sizes and lastImproved are typical signals used to detect
+  stagnation and apply protective or penalizing measures.
+- This function intentionally avoids returning full member lists to
+  prevent accidental mutation of internal state; use `getSpeciesHistory`
+  for richer historical data.
+
+Returns: An array of species summary objects.
+
+#### getTelemetry
+
+`() => any[]`
+
+Return the internal telemetry buffer.
+
+Telemetry entries are produced per-generation when telemetry is enabled
+and include diagnostic metrics (diversity, performance, lineage, etc.).
+This accessor returns the raw buffer for external inspection or export.
+
+Returns: Array of telemetry snapshot objects.
 
 #### import
 
@@ -219,9 +662,12 @@ Parameters:
 
 #### importRNGState
 
-`(json: string) => void`
+`(state: any) => void`
 
-Import RNG state from JSON produced by exportRNGState
+Import an RNG state (alias for restore; kept for compatibility).
+
+Parameters:
+- `state` - Numeric RNG state.
 
 #### importState
 
@@ -241,17 +687,30 @@ Applies mutations to the population based on the mutation rate and amount.
 Each genome is mutated using the selected mutation methods.
 Slightly increases the chance of ADD_CONN mutation for more connectivity.
 
+#### resetNoveltyArchive
+
+`() => void`
+
+Reset the novelty archive (clear entries).
+
+The novelty archive is used to keep representative behaviors for novelty
+search. Clearing it removes stored behaviors.
+
 #### restoreRNGState
 
-`(s: { state: number; } | null | undefined) => void`
+`(state: any) => void`
 
-Restore RNG state previously captured via snapshotRNGState.
+Restore a previously-snapshotted RNG state. This restores the internal
+seed but does not re-create the RNG function until next use.
+
+Parameters:
+- `state` - Opaque numeric RNG state produced by `snapshotRNGState()`.
 
 #### sampleRandom
 
 `(count: number) => number[]`
 
-Sample raw RNG outputs (advances state) for testing or reproducibility checks
+Produce `count` deterministic random samples using instance RNG.
 
 #### selectMutationMethod
 
@@ -267,10 +726,10 @@ Returns: The selected mutation method or null if no valid method is available.
 
 #### snapshotRNGState
 
-`() => { state: number; } | null`
+`() => number | undefined`
 
-Snapshot current RNG state (if seeded) for reproducibility checkpoints.
-Returns null if using global Math.random without internal state.
+Return the current opaque RNG numeric state used by the instance.
+Useful for deterministic test replay and debugging.
 
 #### sort
 
@@ -278,6 +737,47 @@ Returns null if using global Math.random without internal state.
 
 Sorts the population in descending order of fitness scores.
 Ensures that the fittest genomes are at the start of the population array.
+
+#### spawnFromParent
+
+`(parent: import("D:/code-practice/NeatapticTS/src/architecture/network").default, mutateCount: number) => import("D:/code-practice/NeatapticTS/src/architecture/network").default`
+
+Spawn a new genome derived from a single parent while preserving Neat bookkeeping.
+
+This helper performs a canonical "clone + slight mutation" workflow while
+keeping `Neat`'s internal invariants intact. It is intended for callers that
+want a child genome derived from a single parent but do not want to perform the
+bookkeeping and registration steps manually. The function deliberately does NOT
+add the returned child to `this.population` so callers are free to inspect or
+further modify the child and then register it via `addGenome()` (or push it
+directly if they understand the consequences).
+
+Behavior summary:
+- Clone the provided `parent` (`parent.clone()` when available, else JSON round-trip).
+- Clear fitness/score on the child and assign a fresh unique `_id`.
+- If lineage tracking is enabled, set `(child as any)._parents = [parent._id]`
+  and `(child as any)._depth = (parent._depth ?? 0) + 1`.
+- Enforce structural invariants by calling `ensureMinHiddenNodes(child)` and
+  `ensureNoDeadEnds(child)` so the child is valid for subsequent mutation/evaluation.
+- Apply `mutateCount` mutations selected via `selectMutationMethod` and driven by
+  the instance RNG (`_getRNG()`); mutation exceptions are caught and ignored to
+  preserve best-effort behavior during population seeding/expansion.
+- Invalidate per-genome caches with `_invalidateGenomeCaches(child)` before return.
+
+Important: the returned child is not registered in `Neat.population` — call
+`addGenome(child, [parentId])` to insert it and keep telemetry/lineage consistent.
+
+Parameters:
+- `parent` - - Source genome to derive from. Must be a `Network` instance.
+- `mutateCount` - - Number of mutation operations to apply to the spawned child (default: 1).
+
+Returns: A new `Network` instance derived from `parent`. The child is unregistered.
+
+#### toJSON
+
+`() => any`
+
+Import a previously exported state bundle and rehydrate a Neat instance.
 
 ## neataptic.ts
 
@@ -303,6 +803,18 @@ Parameters:
 - `withTrace` - Whether to update eligibility traces.
 - `input` - Optional externally supplied activation (bypasses weighted sum if provided).
 
+#### _adaptivePruneLevel
+
+Adaptive prune level for complexity control (optional).
+
+#### _applyFitnessSharing
+
+`() => void`
+
+Apply fitness sharing within species. When `sharingSigma` > 0 this uses a kernel-based
+sharing; otherwise it falls back to classic per-species averaging. Sharing reduces
+effective fitness for similar genomes to promote diversity.
+
 #### _applyGradientClipping
 
 `(cfg: { mode: "norm" | "percentile" | "layerwiseNorm" | "layerwisePercentile"; maxNorm?: number | undefined; percentile?: number | undefined; }) => void`
@@ -321,9 +833,156 @@ Parameters:
 
 Returns: The average error calculated over the provided dataset subset.
 
+#### _bestScoreLastGen
+
+Best score observed in the last generation (used for improvement detection).
+
+#### _compatIntegral
+
+Integral accumulator used by adaptive compatibility controllers.
+
+#### _compatSpeciesEMA
+
+Exponential moving average for compatibility threshold (adaptive speciation).
+
+#### _computeDiversityStats
+
+`() => void`
+
+Compute and cache diversity statistics used by telemetry & tests.
+
+#### _connInnovations
+
+Map of connection innovations keyed by a string identifier.
+
+#### _diversityStats
+
+Cached diversity metrics (computed lazily).
+
+#### _getObjectives
+
+`() => import("D:/code-practice/NeatapticTS/src/neat/neat.types").ObjectiveDescriptor[]`
+
+Internal: return cached objective descriptors, building if stale.
+
 #### _globalNodeIndex
 
 Global index counter for assigning unique indices to nodes.
+
+#### _invalidateGenomeCaches
+
+`(genome: any) => void`
+
+Invalidate per-genome caches (compatibility distance, forward pass, etc.).
+
+#### _lastAncestorUniqAdjustGen
+
+Generation when ancestor uniqueness adjustment was last applied.
+
+#### _lastEpsilonAdjustGen
+
+Generation when epsilon compatibility was last adjusted.
+
+#### _lastEvalDuration
+
+Duration of the last evaluation run (ms).
+
+#### _lastEvolveDuration
+
+Duration of the last evolve run (ms).
+
+#### _lastGlobalImproveGeneration
+
+Generation index where the last global improvement occurred.
+
+#### _lastInbreedingCount
+
+Last observed count of inbreeding (used for detecting excessive cloning).
+
+#### _lastOffspringAlloc
+
+Last allocated offspring set (used by adaptive allocators).
+
+#### _lineageEnabled
+
+Whether lineage metadata should be recorded on genomes.
+
+#### _mcThreshold
+
+Adaptive minimal criterion threshold (optional).
+
+#### _nextGenomeId
+
+Counter for assigning unique genome ids.
+
+#### _nextGlobalInnovation
+
+Counter for issuing global innovation numbers when explicit numbers are used.
+
+#### _nodeSplitInnovations
+
+Map of node-split innovations used to reuse innovation ids for node splits.
+
+#### _noveltyArchive
+
+Novelty archive used by novelty search (behavior representatives).
+
+#### _objectiveAges
+
+Map tracking ages for objectives by key.
+
+#### _objectiveEvents
+
+Queue of recent objective activation/deactivation events for telemetry.
+
+#### _objectivesList
+
+Cached list of registered objectives.
+
+#### _objectiveStale
+
+Map tracking stale counts for objectives by key.
+
+#### _operatorStats
+
+Operator statistics used by adaptive operator selection.
+
+#### _paretoArchive
+
+Archive of Pareto front metadata for multi-objective tracking.
+
+#### _paretoObjectivesArchive
+
+Archive storing Pareto objectives snapshots.
+
+#### _pendingObjectiveAdds
+
+Pending objective keys to add during safe phases.
+
+#### _pendingObjectiveRemoves
+
+Pending objective keys to remove during safe phases.
+
+#### _phase
+
+Optional phase marker for multi-stage experiments.
+
+#### _prevInbreedingCount
+
+Previous inbreeding count snapshot.
+
+#### _prevSpeciesMembers
+
+Map of species id -> set of member genome ids from previous generation.
+
+#### _rng
+
+Cached RNG function; created lazily and seeded from `_rngState` when used.
+
+#### _rngState
+
+Internal numeric state for the deterministic xorshift RNG when no user RNG
+is provided. Stored as a 32-bit unsigned integer.
 
 #### _safeUpdateWeight
 
@@ -331,11 +990,60 @@ Global index counter for assigning unique indices to nodes.
 
 Internal helper to safely update a connection weight with clipping and NaN checks.
 
+#### _sortSpeciesMembers
+
+`(sp: { members: import("D:/code-practice/NeatapticTS/src/architecture/network").default[]; }) => void`
+
+Sort members of a species in-place by descending score.
+
+Parameters:
+- `sp` - - Species object with `members` array.
+
+#### _speciate
+
+`() => void`
+
+Assign genomes into species based on compatibility distance and maintain species structures.
+This function creates new species for unassigned genomes and prunes empty species.
+It also records species-level history used for telemetry and adaptive controllers.
+
+#### _species
+
+Array of current species (internal representation).
+
+#### _speciesCreated
+
+Map of speciesId -> creation generation for bookkeeping.
+
+#### _speciesHistory
+
+Time-series history of species stats (for exports/telemetry).
+
+#### _speciesLastStats
+
+Last recorded stats per species id.
+
+#### _structuralEntropy
+
+`(genome: import("D:/code-practice/NeatapticTS/src/architecture/network").default) => number`
+
+Compatibility wrapper retained for tests that reference (neat as any)._structuralEntropy
+
+#### _telemetry
+
+Telemetry buffer storing diagnostic snapshots per generation.
+
+#### _updateSpeciesStagnation
+
+`() => void`
+
+Update species stagnation tracking and remove species that exceeded the allowed stagnation.
+
 #### _warnIfNoBestGenome
 
 `() => void`
 
-Warn that evolution ended without a valid best genome. Always emits when called (tests rely on this).
+Emit a standardized warning when evolution loop finds no valid best genome (test hook).
 
 #### acquire
 
@@ -439,6 +1147,38 @@ If reuseActivationArrays=false falls back to standard activate().
 
 The output value of the node after applying the activation function. This is the value transmitted to connected nodes.
 
+#### addGenome
+
+`(genome: import("D:/code-practice/NeatapticTS/src/architecture/network").default, parents: number[] | undefined) => void`
+
+Register an externally-created genome into the `Neat` population.
+
+Use this method when code constructs or mutates a `Network` outside of the
+usual reproduction pipeline and needs to insert it into `neat.population`
+while preserving lineage, id assignment, and structural invariants. The
+method performs best-effort safety actions and falls back to pushing the
+genome even if invariant enforcement throws, which mirrors the forgiving
+behavior used in dynamic population expansion.
+
+Behavior summary:
+- Clears the genome's `score` and assigns `_id` using Neat's counter.
+- When lineage is enabled, attaches the provided `parents` array (copied)
+  and estimates `_depth` as `max(parent._depth) + 1` when parent ids are
+  resolvable from the current population.
+- Enforces structural invariants (`ensureMinHiddenNodes` and
+  `ensureNoDeadEnds`) and invalidates caches via
+  `_invalidateGenomeCaches(genome)`.
+- Pushes the genome into `this.population`.
+
+Note: Because depth estimation requires parent objects to be discoverable
+in `this.population`, callers that generate intermediate parent genomes
+should register them via `addGenome` before relying on automatic depth
+estimation for their children.
+
+Parameters:
+- `genome` - - The external `Network` to add.
+- `parents` - - Optional array of parent ids to record on the genome.
+
 #### adjustRateForAccumulation
 
 `(rate: number, accumulationSteps: number, reduction: "average" | "sum") => number`
@@ -532,19 +1272,6 @@ Returns: A new Layer instance configured as a batch normalization layer.
 The bias value of the node. Added to the weighted sum of inputs before activation.
 Input nodes typically have a bias of 0.
 
-#### checkHiddenSizes
-
-`(network: import("D:/code-practice/NeatapticTS/src/architecture/network").default, multiplierOverride: number | undefined) => { compliant: boolean; minRequired: number; hiddenLayerSizes: number[]; }`
-
-Checks if a network meets the minimum hidden node requirements.
-Returns information about hidden layer sizes without modifying the network.
-
-Parameters:
-- `network` - The network to check
-- `multiplierOverride` - Optional fixed multiplier for deterministic tests
-
-Returns: Object containing information about hidden layer compliance
-
 #### clear
 
 `() => void`
@@ -552,6 +1279,38 @@ Returns: Object containing information about hidden layer compliance
 Clears the internal state of all nodes in the network.
 Resets node activation, state, eligibility traces, and extended traces to their initial values (usually 0).
 This is typically done before processing a new input sequence in recurrent networks or between training epochs if desired.
+
+#### clearObjectives
+
+`() => void`
+
+Register a custom objective for multi-objective optimization.
+
+Educational context: multi-objective optimization lets you optimize for
+multiple, potentially conflicting goals (e.g., maximize fitness while
+minimizing complexity). Each objective is identified by a unique key and
+an accessor function mapping a genome to a numeric score. Registering an
+objective makes it visible to the internal MO pipeline and clears any
+cached objective list so changes take effect immediately.
+
+Parameters:
+- `key` - Unique objective key.
+- `direction` - 'min' or 'max' indicating optimization direction.
+- `accessor` - Function mapping a genome to a numeric objective value.
+
+#### clearParetoArchive
+
+`() => void`
+
+Clear the Pareto archive.
+
+Removes any stored Pareto-front snapshots retained by the algorithm.
+
+#### clearTelemetry
+
+`() => void`
+
+Export telemetry as CSV with flattened columns for common nested fields.
 
 #### clone
 
@@ -657,11 +1416,7 @@ Returns: A new, fully connected, layered MLP
 
 `(network: import("D:/code-practice/NeatapticTS/src/architecture/network").default | null) => void`
 
-Creates the initial population of networks.
-If a base network is provided, clones it to create the population.
-
-Parameters:
-- `network` - - The base network to clone, or null to create new networks.
+Create initial population pool. Delegates to helpers if present.
 
 #### crossOver
 
@@ -785,49 +1540,29 @@ Returns: The same network with properly sized hidden layers
 
 `(network: import("D:/code-practice/NeatapticTS/src/architecture/network").default, multiplierOverride: number | undefined) => void`
 
-Ensures that the network has at least min(input, output) + 1 hidden nodes in each hidden layer.
-This prevents bottlenecks in networks where hidden layers might be too small.
-For layered networks: Ensures each hidden layer has at least the minimum size.
-For non-layered networks: Reorganizes into proper layers with the minimum size.
+Ensure a network has the minimum number of hidden nodes according to
+configured policy. Delegates to migrated helper implementation.
 
 Parameters:
-- `network` - The network to check and modify
-- `multiplierOverride` - Optional fixed multiplier for deterministic tests
+- `network` - Network instance to adjust.
+- `multiplierOverride` - Optional multiplier to override configured policy.
 
 #### ensureNoDeadEnds
 
 `(network: import("D:/code-practice/NeatapticTS/src/architecture/network").default) => void`
 
-Ensures that all input nodes have at least one outgoing connection,
-all output nodes have at least one incoming connection,
-and all hidden nodes have at least one incoming and one outgoing connection.
-This prevents dead ends and blind I/O neurons.
-
-Parameters:
-- `network` - The network to check and fix
+Delegate ensureNoDeadEnds to mutation module (added for backward compat).
 
 #### error
 
 Stores error values calculated during backpropagation.
-
-#### evaluate
-
-`() => Promise<void>`
-
-Evaluates the fitness of the current population.
-If `fitnessPopulation` is true, evaluates the entire population at once.
-Otherwise, evaluates each genome individually.
-
-Returns: A promise that resolves when evaluation is complete.
 
 #### evolve
 
 `() => Promise<import("D:/code-practice/NeatapticTS/src/architecture/network").default>`
 
 Evolves the population by selecting, mutating, and breeding genomes.
-Implements elitism, provenance, and crossover to create the next generation.
-
-Returns: The fittest network from the current generation.
+This method is delegated to `src/neat/neat.evolve.ts` during the migration.
 
 #### export
 
@@ -838,11 +1573,44 @@ Useful for saving the state of the population for later use.
 
 Returns: An array of JSON representations of the population.
 
+#### exportParetoFrontJSONL
+
+`(maxEntries: number) => string`
+
+Export Pareto front archive as JSON Lines for external analysis.
+
+Each line is a JSON object representing one archived Pareto snapshot.
+
+Parameters:
+- `maxEntries` - Maximum number of entries to include (default: 100).
+
+Returns: Newline-separated JSON objects.
+
 #### exportRNGState
 
-`() => string`
+`() => number | undefined`
 
-Export RNG state as JSON string for persistence
+Export the current RNG state for external persistence or tests.
+
+#### exportSpeciesHistoryCSV
+
+`(maxEntries: number) => string`
+
+Return an array of {id, parents} for the first `limit` genomes in population.
+
+#### exportSpeciesHistoryJSONL
+
+`(maxEntries: number) => string`
+
+Export species history as JSON Lines for storage and analysis.
+
+Each line is a JSON object containing a generation index and per-species
+stats recorded at that generation. Useful for long-term tracking.
+
+Parameters:
+- `maxEntries` - Maximum history entries to include (default: 200).
+
+Returns: Newline-separated JSON objects.
 
 #### exportState
 
@@ -850,6 +1618,31 @@ Export RNG state as JSON string for persistence
 
 Convenience: export full evolutionary state (meta + population genomes).
 Combines innovation registries and serialized genomes for easy persistence.
+
+#### exportTelemetryCSV
+
+`(maxEntries: number) => string`
+
+Export recent telemetry entries as CSV.
+
+The exporter attempts to flatten commonly-used nested fields (complexity,
+perf, lineage) into columns. This is a best-effort exporter intended for
+human inspection and simple ingestion.
+
+Parameters:
+- `maxEntries` - Maximum number of recent telemetry entries to include.
+
+Returns: CSV string (may be empty when no telemetry present).
+
+#### exportTelemetryJSONL
+
+`() => string`
+
+Export telemetry as JSON Lines (one JSON object per line).
+
+Useful for piping telemetry to external loggers or analysis tools.
+
+Returns: A newline-separated string of JSON objects.
 
 #### fromJSON
 
@@ -937,6 +1730,21 @@ Ensures that the population is evaluated before calculating the average.
 
 Returns: The average fitness score of the population.
 
+#### getDiversityStats
+
+`() => any`
+
+Return the latest cached diversity statistics.
+
+Educational context: diversity metrics summarize how genetically and
+behaviorally spread the population is. They can include lineage depth,
+pairwise genetic distances, and other aggregated measures used by
+adaptive controllers, novelty search, and telemetry. This accessor returns
+whatever precomputed diversity object the Neat instance holds (may be
+undefined if not computed for the current generation).
+
+Returns: Arbitrary diversity summary object or undefined.
+
 #### getFittest
 
 `() => import("D:/code-practice/NeatapticTS/src/architecture/network").default`
@@ -946,19 +1754,17 @@ Ensures that the population is evaluated and sorted before returning the result.
 
 Returns: The fittest genome in the population.
 
-#### getInactiveObjectiveStats
-
-`() => { key: string; stale: number; }[]`
-
-Returns an array of objects describing how many consecutive generations each non-protected
-objective has been detected as "stale" (range below pruneInactive.rangeEps). Useful for
-monitoring which objectives are nearing automatic removal.
-
 #### getLastGradClipGroupCount
 
 `() => number`
 
 Returns last gradient clipping group count (0 if no clipping yet).
+
+#### getLineageSnapshot
+
+`(limit: number) => { id: number; parents: number[]; }[]`
+
+Get recent objective add/remove events.
 
 #### getLossScale
 
@@ -970,20 +1776,43 @@ Returns current mixed precision loss scale (1 if disabled).
 
 `(multiplierOverride: number | undefined) => number`
 
-Gets the minimum hidden layer size for a network based on input/output sizes.
-Uses the formula: max(input, output) x multiplier (default random 2-5)
-Allows deterministic override for testing.
+Minimum hidden size considering explicit minHidden or multiplier policy.
 
-Parameters:
-- `multiplierOverride` - Optional fixed multiplier for deterministic tests
+#### getMultiObjectiveMetrics
 
-Returns: The minimum number of hidden nodes required in each hidden layer
+`() => { rank: number; crowding: number; score: number; nodes: number; connections: number; }[]`
+
+Returns compact multi-objective metrics for each genome in the current
+population. The metrics include Pareto rank and crowding distance (if
+computed), along with simple size and score measures useful in
+instructional contexts.
+
+Returns: Array of per-genome MO metric objects.
+
+#### getNoveltyArchiveSize
+
+`() => number`
+
+Returns the number of entries currently stored in the novelty archive.
+
+Educational context: The novelty archive stores representative behaviors
+used by behavior-based novelty search. Monitoring its size helps teach
+how behavioral diversity accumulates over time and can be used to
+throttle archive growth.
+
+Returns: Number of archived behaviors.
 
 #### getObjectiveKeys
 
 `() => string[]`
 
-Return current objective keys (rebuilds list if cache invalidated)
+Public helper returning just the objective keys (tests rely on).
+
+#### getObjectives
+
+`() => { key: string; direction: "max" | "min"; }[]`
+
+Clear all collected telemetry entries.
 
 #### getOffspring
 
@@ -994,6 +1823,20 @@ Uses the crossover method described in the Instinct algorithm.
 
 Returns: A new network created from two parents.
 
+#### getOperatorStats
+
+`() => { name: string; success: number; attempts: number; }[]`
+
+Returns a summary of mutation/operator statistics used by operator
+adaptation and bandit selection.
+
+Educational context: Operator statistics track how often mutation
+operators are attempted and how often they succeed. These counters are
+used by adaptation mechanisms to bias operator selection towards
+successful operators.
+
+Returns: Array of { name, success, attempts } objects.
+
 #### getParent
 
 `() => import("D:/code-practice/NeatapticTS/src/architecture/network").default`
@@ -1003,23 +1846,114 @@ Supports multiple selection strategies, including POWER, FITNESS_PROPORTIONATE, 
 
 Returns: The selected parent genome.
 
+#### getParetoArchive
+
+`(maxEntries: number) => any[]`
+
+Get recent Pareto archive entries (meta information about archived fronts).
+
+Educational context: when performing multi-objective search we may store
+representative Pareto-front snapshots over time. This accessor returns the
+most recent archive entries up to the provided limit.
+
+Parameters:
+- `maxEntries` - Maximum number of entries to return (default: 50).
+
+Returns: Array of archived Pareto metadata entries.
+
+#### getParetoFronts
+
+`(maxFronts: number) => import("D:/code-practice/NeatapticTS/src/architecture/network").default[][]`
+
+Export species history as CSV.
+
+Produces rows for each recorded per-species stat entry within the
+specified window. Useful for quick inspection or spreadsheet analysis.
+
+Parameters:
+- `maxEntries` - Maximum history entries to include (default: 200).
+
+Returns: CSV string (may be empty).
+
+#### getPerformanceStats
+
+`() => { lastEvalMs: number | undefined; lastEvolveMs: number | undefined; }`
+
+Return recent performance statistics (durations in milliseconds) for the
+most recent evaluation and evolve operations.
+
+Provides wall-clock timing useful for profiling and teaching how runtime
+varies with network complexity or population settings.
+
+Returns: Object with { lastEvalMs, lastEvolveMs }.
+
 #### getRawGradientNorm
 
 `() => number`
 
 Returns last recorded raw (pre-update) gradient L2 norm.
 
+#### getSpeciesHistory
+
+`() => import("D:/code-practice/NeatapticTS/src/neat/neat.types").SpeciesHistoryEntry[]`
+
+Returns the historical species statistics recorded each generation.
+
+Educational context: Species history captures per-generation snapshots
+of species-level metrics (size, best score, last improvement) and is
+useful for plotting trends, teaching about speciation dynamics, and
+driving adaptive controllers.
+
+The returned array contains entries with a `generation` index and a
+`stats` array containing per-species summaries recorded at that
+generation.
+
+Returns: An array of generation-stamped species stat snapshots.
+
+#### getSpeciesStats
+
+`() => { id: number; size: number; bestScore: number; lastImproved: number; }[]`
+
+Return a concise summary for each current species.
+
+Educational context: In NEAT, populations are partitioned into species based
+on genetic compatibility. Each species groups genomes that are similar so
+selection and reproduction can preserve diversity between groups. This
+accessor provides a lightweight view suitable for telemetry, visualization
+and teaching examples without exposing full genome objects.
+
+The returned array contains objects with these fields:
+- id: numeric species identifier
+- size: number of members currently assigned to the species
+- bestScore: the best observed fitness score for the species
+- lastImproved: generation index when the species last improved its best score
+
+Notes for learners:
+- Species sizes and lastImproved are typical signals used to detect
+  stagnation and apply protective or penalizing measures.
+- This function intentionally avoids returning full member lists to
+  prevent accidental mutation of internal state; use `getSpeciesHistory`
+  for richer historical data.
+
+Returns: An array of species summary objects.
+
+#### getTelemetry
+
+`() => any[]`
+
+Return the internal telemetry buffer.
+
+Telemetry entries are produced per-generation when telemetry is enabled
+and include diagnostic metrics (diversity, performance, lineage, etc.).
+This accessor returns the raw buffer for external inspection or export.
+
+Returns: Array of telemetry snapshot objects.
+
 #### getTrainingStats
 
 `() => { gradNorm: number; gradNormRaw: number; lossScale: number; optimizerStep: number; mp: { good: number; bad: number; overflowCount: number; scaleUps: number; scaleDowns: number; lastOverflowStep: number; }; }`
 
 Consolidated training stats snapshot.
-
-#### getWarnings
-
-`() => string[]`
-
-Retrieve non-fatal configuration warnings (e.g., mutation pool sanitation).
 
 #### gru
 
@@ -1074,9 +2008,12 @@ Parameters:
 
 #### importRNGState
 
-`(json: string) => void`
+`(state: any) => void`
 
-Import RNG state from JSON produced by exportRNGState
+Import an RNG state (alias for restore; kept for compatibility).
+
+Parameters:
+- `state` - Numeric RNG state.
 
 #### importState
 
@@ -1479,17 +2416,30 @@ Parameters:
 Resets all masks in the network to 1 (no dropout). Applies to both node-level and layer-level dropout.
 Should be called after training to ensure inference is unaffected by previous dropout.
 
+#### resetNoveltyArchive
+
+`() => void`
+
+Reset the novelty archive (clear entries).
+
+The novelty archive is used to keep representative behaviors for novelty
+search. Clearing it removes stored behaviors.
+
 #### restoreRNGState
 
-`(s: { state: number; } | null | undefined) => void`
+`(state: any) => void`
 
-Restore RNG state previously captured via snapshotRNGState.
+Restore a previously-snapshotted RNG state. This restores the internal
+seed but does not re-create the RNG function until next use.
+
+Parameters:
+- `state` - Opaque numeric RNG state produced by `snapshotRNGState()`.
 
 #### sampleRandom
 
 `(count: number) => number[]`
 
-Sample raw RNG outputs (advances state) for testing or reproducibility checks
+Produce `count` deterministic random samples using instance RNG.
 
 #### selectMutationMethod
 
@@ -1554,10 +2504,10 @@ Configure stochastic depth with survival probabilities per hidden layer (length 
 
 #### snapshotRNGState
 
-`() => { state: number; } | null`
+`() => number | undefined`
 
-Snapshot current RNG state (if seeded) for reproducibility checkpoints.
-Returns null if using global Math.random without internal state.
+Return the current opaque RNG numeric state used by the instance.
+Useful for deterministic test replay and debugging.
 
 #### sort
 
@@ -1565,6 +2515,41 @@ Returns null if using global Math.random without internal state.
 
 Sorts the population in descending order of fitness scores.
 Ensures that the fittest genomes are at the start of the population array.
+
+#### spawnFromParent
+
+`(parent: import("D:/code-practice/NeatapticTS/src/architecture/network").default, mutateCount: number) => import("D:/code-practice/NeatapticTS/src/architecture/network").default`
+
+Spawn a new genome derived from a single parent while preserving Neat bookkeeping.
+
+This helper performs a canonical "clone + slight mutation" workflow while
+keeping `Neat`'s internal invariants intact. It is intended for callers that
+want a child genome derived from a single parent but do not want to perform the
+bookkeeping and registration steps manually. The function deliberately does NOT
+add the returned child to `this.population` so callers are free to inspect or
+further modify the child and then register it via `addGenome()` (or push it
+directly if they understand the consequences).
+
+Behavior summary:
+- Clone the provided `parent` (`parent.clone()` when available, else JSON round-trip).
+- Clear fitness/score on the child and assign a fresh unique `_id`.
+- If lineage tracking is enabled, set `(child as any)._parents = [parent._id]`
+  and `(child as any)._depth = (parent._depth ?? 0) + 1`.
+- Enforce structural invariants by calling `ensureMinHiddenNodes(child)` and
+  `ensureNoDeadEnds(child)` so the child is valid for subsequent mutation/evaluation.
+- Apply `mutateCount` mutations selected via `selectMutationMethod` and driven by
+  the instance RNG (`_getRNG()`); mutation exceptions are caught and ignored to
+  preserve best-effort behavior during population seeding/expansion.
+- Invalidate per-genome caches with `_invalidateGenomeCaches(child)` before return.
+
+Important: the returned child is not registered in `Neat.population` — call
+`addGenome(child, [parentId])` to insert it and keep telemetry/lineage consistent.
+
+Parameters:
+- `parent` - - Source genome to derive from. Must be a `Network` instance.
+- `mutateCount` - - Number of mutation operations to apply to the spawned child (default: 1).
+
+Returns: A new `Network` instance derived from `parent`. The child is unregistered.
 
 #### squash
 
@@ -1600,6 +2585,12 @@ Returns: An object containing the calculated average error over the dataset and 
 
 #### toJSON
 
+`() => any`
+
+Import a previously exported state bundle and rehydrate a Neat instance.
+
+#### toJSON
+
 `() => object`
 
 Converts the network into a JSON object representation (latest standard).
@@ -1626,14 +2617,6 @@ Serializes the group into a JSON-compatible format, avoiding circular references
 Only includes node indices and connection counts.
 
 Returns: A JSON-compatible representation of the group.
-
-#### toJSON
-
-`() => any`
-
-Converts the connection to a JSON object for serialization.
-
-Returns: A JSON representation of the connection.
 
 #### toONNX
 

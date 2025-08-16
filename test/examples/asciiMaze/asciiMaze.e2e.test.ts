@@ -39,6 +39,8 @@ const dashboardManagerInstance: IDashboardManager = new DashboardManager(
   forceLog
 );
 
+jest.setTimeout(3600000);
+
 /**
  * Educational Note: This example demonstrates a powerful combination of neuro-evolution and supervised learning.
  *

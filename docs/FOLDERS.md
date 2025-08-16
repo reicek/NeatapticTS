@@ -10,4 +10,5 @@ Auto-generated index of source folders (click to open folder README).
     - [workers](multithreading/workers/README.md)
       - [browser](multithreading/workers/browser/README.md)
       - [node](multithreading/workers/node/README.md)
+  - [neat](neat/README.md)
   - [src](src/README.md)

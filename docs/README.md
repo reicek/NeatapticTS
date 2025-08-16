@@ -111,6 +111,23 @@ Documentation & API
 - Per-file and per-folder API summaries are kept inside `src/*/README.md` and are regenerated
 	using the JSDoc comments in the TypeScript sources. Run `npm run docs` to refresh them.
 
+Note about helper APIs
+---------------------
+
+The `Neat` class exposes two small helpers intended for safe programmatic genome
+management:
+
+- `spawnFromParent(parent, mutateCount?)` — clone a single parent, apply a small
+	number of mutations, and preserve lineage fields. The function returns an
+	unregistered child (it does NOT add the child to `neat.population`).
+- `addGenome(genome, parents?)` — register an externally created genome into the
+	population while assigning `_id`, estimating `_depth` from provided parents,
+	enforcing structural invariants, and invalidating caches.
+
+These helpers are documented inline via JSDoc in `src/neat.ts`; keep those
+comments updated so the generated per-folder READMEs and HTML docs include the
+public contract and usage notes.
+
 Performance & tuning
 
 NeatapticTS includes telemetry and knobs to trade throughput vs fidelity (threads, Lamarckian

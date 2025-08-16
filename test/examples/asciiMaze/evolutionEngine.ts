@@ -554,24 +554,61 @@ export class EvolutionEngine {
             for (let i = 0; i < targetAdd; i++) {
               const parent =
                 parentPool[Math.floor(Math.random() * parentPool.length)];
-              const clone = parent.clone ? parent.clone() : parent; // defensive
-              // Apply a few random mutations to diversify
-              const mutateCount = 1 + (Math.random() < 0.5 ? 1 : 0);
-              for (let m = 0; m < mutateCount; m++) {
-                try {
-                  const mutOps = neat.options.mutation || [];
-                  if (mutOps.length) {
-                    const op =
-                      mutOps[Math.floor(Math.random() * mutOps.length)];
-                    clone.mutate(op);
+              try {
+                if (typeof (neat as any).spawnFromParent === 'function') {
+                  // Prefer neat-managed spawn which keeps lineage, ids and caches consistent
+                  const mutateCount = 1 + (Math.random() < 0.5 ? 1 : 0);
+                  const child = (neat as any).spawnFromParent(
+                    parent,
+                    mutateCount
+                  );
+                  neat.population.push(child);
+                } else {
+                  // Defensive fallback: clone + mutate then use neat.addGenome if available
+                  const clone = parent.clone ? parent.clone() : parent;
+                  const mutateCount = 1 + (Math.random() < 0.5 ? 1 : 0);
+                  for (let m = 0; m < mutateCount; m++) {
+                    try {
+                      const mutOps = neat.options.mutation || [];
+                      if (mutOps.length) {
+                        const op =
+                          mutOps[Math.floor(Math.random() * mutOps.length)];
+                        clone.mutate(op);
+                      }
+                    } catch {
+                      /* ignore */
+                    }
                   }
-                } catch {
-                  /* ignore */
+                  clone.score = undefined;
+                  try {
+                    if (typeof (neat as any).addGenome === 'function') {
+                      (neat as any).addGenome(clone, [(parent as any)._id]);
+                    } else {
+                      // Last resort: push with minimal metadata
+                      if ((neat as any)._nextGenomeId !== undefined)
+                        (clone as any)._id = (neat as any)._nextGenomeId++;
+                      if ((neat as any)._lineageEnabled) {
+                        (clone as any)._parents = [(parent as any)._id];
+                        (clone as any)._depth =
+                          ((parent as any)._depth ?? 0) + 1;
+                      }
+                      if (
+                        typeof (neat as any)._invalidateGenomeCaches ===
+                        'function'
+                      )
+                        (neat as any)._invalidateGenomeCaches(clone);
+                      neat.population.push(clone);
+                    }
+                  } catch {
+                    // fallback: best-effort push
+                    try {
+                      neat.population.push(clone);
+                    } catch {}
+                  }
                 }
+              } catch {
+                /* ignore per-child failures */
               }
-              // Reset score so it will be evaluated newly
-              clone.score = undefined;
-              neat.population.push(clone);
             }
             neat.options.popsize = neat.population.length; // keep config consistent
             safeWrite(

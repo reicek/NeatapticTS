@@ -9,7 +9,7 @@ describe('Minimal criterion filtering', () => {
       popsize: 6,
       seed: 300,
       speciation: false,
-      minimalCriterion: (n) => n.connections.length > 0,
+      minimalCriterion: (n: Network) => n.connections.length > 0,
     });
     // Remove all connections of one genome after initial eval to fail criterion
     await neat.evaluate();
