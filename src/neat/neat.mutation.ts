@@ -142,7 +142,7 @@ export function mutate(this: NeatLike): void {
 
           // Opportunistically add an extra connection half the time to increase
           // connectivity and exploration.
-          if ((this as any)._getRNG()() < 0.5)
+          if ((this as any)._getRNG()() < EXTRA_CONNECTION_PROBABILITY)
             (this as any)._mutateAddConnReuse(genome);
 
           // Update operator adaptation statistics if enabled.
