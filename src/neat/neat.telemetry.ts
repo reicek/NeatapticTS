@@ -121,7 +121,7 @@ export function structuralEntropy(this: NeatLike, graph: any): number {
   let entropy = 0;
   for (const k in degreeHistogram) {
     const p = degreeHistogram[k as any] / nodeCount;
-    if (p > 0) entropy -= p * Math.log(p + 1e-9);
+    if (p > 0) entropy -= p * Math.log(p + EPSILON);
   }
 
   // Cache result on the graph object for the current generation
