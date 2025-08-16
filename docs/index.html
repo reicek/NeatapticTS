@@ -38,6 +38,7 @@ footer{margin-top:64px;font-size:.75rem;color:#666;}
 <li><a href="multithreading/workers/index.html">multithreading/workers/</a></li>
 <li><a href="multithreading/workers/browser/index.html">multithreading/workers/browser/</a></li>
 <li><a href="multithreading/workers/node/index.html">multithreading/workers/node/</a></li>
+<li><a href="neat/index.html">neat/</a></li>
 <li><a href="src/index.html">src/</a></li>
 <li><a href="../test/examples/asciiMaze/index.html">examples/asciiMaze/</a></li></ul>
 </nav>
@@ -149,6 +150,19 @@ run();
 <li>Per-file and per-folder API summaries are kept inside <code>src/*/README.md</code> and are regenerated
   using the JSDoc comments in the TypeScript sources. Run <code>npm run docs</code> to refresh them.</li>
 </ul>
+<h2 id="note-about-helper-apis">Note about helper APIs</h2><p>The <code>Neat</code> class exposes two small helpers intended for safe programmatic genome
+management:</p>
+<ul>
+<li><code>spawnFromParent(parent, mutateCount?)</code> — clone a single parent, apply a small
+  number of mutations, and preserve lineage fields. The function returns an
+  unregistered child (it does NOT add the child to <code>neat.population</code>).</li>
+<li><code>addGenome(genome, parents?)</code> — register an externally created genome into the
+  population while assigning <code>_id</code>, estimating <code>_depth</code> from provided parents,
+  enforcing structural invariants, and invalidating caches.</li>
+</ul>
+<p>These helpers are documented inline via JSDoc in <code>src/neat.ts</code>; keep those
+comments updated so the generated per-folder READMEs and HTML docs include the
+public contract and usage notes.</p>
 <p>Performance &amp; tuning</p>
 <p>NeatapticTS includes telemetry and knobs to trade throughput vs fidelity (threads, Lamarckian
 refinement, mutation scheduling, complexity budgets). See <code>docs/src/README.md</code> and the

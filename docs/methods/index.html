@@ -38,6 +38,7 @@ footer{margin-top:64px;font-size:.75rem;color:#666;}
 <li><a href="../multithreading/workers/index.html">multithreading/workers/</a></li>
 <li><a href="../multithreading/workers/browser/index.html">multithreading/workers/browser/</a></li>
 <li><a href="../multithreading/workers/node/index.html">multithreading/workers/node/</a></li>
+<li><a href="../neat/index.html">neat/</a></li>
 <li><a href="../src/index.html">src/</a></li>
 <li><a href="../../test/examples/asciiMaze/index.html">examples/asciiMaze/</a></li></ul>
 </nav>
@@ -50,21 +51,7 @@ footer{margin-top:64px;font-size:.75rem;color:#666;}
 <li>`` - - The activation function (should handle derivative if needed).</li>
 </ul>
 <h2 id="methods-connection-ts">methods/connection.ts</h2><h3 id="connection">connection</h3><p>Export the connection object as the default export.</p>
-<h3 id="groupconnection">groupConnection</h3><h2 id="methods-cost-ts">methods/cost.ts</h2><h3 id="cost">cost</h3><p>Provides a collection of standard cost functions (also known as loss functions)
-used for evaluating the performance of neural networks during training.</p>
-<p>Cost functions quantify the difference between the network&#39;s predictions
-and the actual target values. The goal of training is typically to minimize
-the value of the cost function. The choice of cost function is crucial and
-depends on the specific task (e.g., regression, classification) and the
-desired behavior of the model.</p>
-<h3 id="cost">Cost</h3><p>Provides a collection of standard cost functions (also known as loss functions)
-used for evaluating the performance of neural networks during training.</p>
-<p>Cost functions quantify the difference between the network&#39;s predictions
-and the actual target values. The goal of training is typically to minimize
-the value of the cost function. The choice of cost function is crucial and
-depends on the specific task (e.g., regression, classification) and the
-desired behavior of the model.</p>
-<h3 id="default">default</h3><h4 id="binary">binary</h4><p><code>(targets: number[], outputs: number[]) =&gt; number</code></p>
+<h3 id="groupconnection">groupConnection</h3><h2 id="methods-cost-ts">methods/cost.ts</h2><h3 id="cost">cost</h3><h3 id="default">default</h3><h4 id="binary">binary</h4><p><code>(targets: number[], outputs: number[]) =&gt; number</code></p>
 <p>Calculates the Binary Error rate, often used as a simple accuracy metric for classification.</p>
 <p>This function calculates the proportion of misclassifications by comparing the
 rounded network outputs (thresholded at 0.5) against the target labels.
@@ -81,7 +68,7 @@ Note: This is equivalent to <code>1 - accuracy</code> for binary classification.
 <p>This function measures the performance of a classification model whose output is
 a probability value between 0 and 1. Cross-entropy loss increases as the
 predicted probability diverges from the actual label.</p>
-<p>It uses a small epsilon (1e-15) to prevent <code>log(0)</code> which would result in <code>NaN</code>.
+<p>It uses a small epsilon (PROB_EPSILON = 1e-15) to prevent <code>log(0)</code> which would result in <code>NaN</code>.
 Output values are clamped to the range <code>[epsilon, 1 - epsilon]</code> for numerical stability.</p>
 <p>Parameters:</p>
 <ul>
@@ -172,13 +159,13 @@ Assumes both targets and outputs are non-negative.</p>
 <p>Softmax Cross Entropy for mutually exclusive multi-class outputs given raw (pre-softmax or arbitrary) scores.
 Applies a numerically stable softmax to the outputs internally then computes -sum(target * log(prob)).
 Targets may be soft labels and are expected to sum to 1 (will be re-normalized if not).</p>
-<h2 id="methods-crossover-ts">methods/crossover.ts</h2><h3 id="crossover">crossover</h3><h2 id="methods-gating-ts">methods/gating.ts</h2><h3 id="gating">gating</h3><h2 id="methods-methods-ts">methods/methods.ts</h2><h3 id="activation">Activation</h3><h3 id="crossover">crossover</h3><h3 id="gating">gating</h3><h3 id="groupconnection">groupConnection</h3><h3 id="methods">methods</h3><p>Provides a collection of standard cost functions (also known as loss functions)
-used for evaluating the performance of neural networks during training.</p>
-<p>Cost functions quantify the difference between the network&#39;s predictions
-and the actual target values. The goal of training is typically to minimize
-the value of the cost function. The choice of cost function is crucial and
-depends on the specific task (e.g., regression, classification) and the
-desired behavior of the model.</p>
+<h2 id="methods-crossover-ts">methods/crossover.ts</h2><h3 id="crossover">crossover</h3><h2 id="methods-gating-ts">methods/gating.ts</h2><h3 id="gating">gating</h3><h2 id="methods-methods-ts">methods/methods.ts</h2><h3 id="activation">Activation</h3><h3 id="crossover">crossover</h3><h3 id="gating">gating</h3><h3 id="groupconnection">groupConnection</h3><h3 id="methods">methods</h3><p>Provides various methods for implementing learning rate schedules.</p>
+<p>Learning rate schedules dynamically adjust the learning rate during the training
+process of machine learning models, particularly neural networks. Adjusting the
+learning rate can significantly impact training speed and performance. A high
+rate might lead to overshooting the optimal solution, while a very low rate
+can result in slow convergence or getting stuck in local minima. These methods
+offer different strategies to balance exploration and exploitation during training.</p>
 <h3 id="mutation">mutation</h3><h3 id="selection">selection</h3><h3 id="default">default</h3><h4 id="binary">binary</h4><p><code>(targets: number[], outputs: number[]) =&gt; number</code></p>
 <p>Calculates the Binary Error rate, often used as a simple accuracy metric for classification.</p>
 <p>This function calculates the proportion of misclassifications by comparing the
@@ -220,7 +207,7 @@ Often used with &quot;warm restarts&quot; where the cycle repeats.</p>
 <p>This function measures the performance of a classification model whose output is
 a probability value between 0 and 1. Cross-entropy loss increases as the
 predicted probability diverges from the actual label.</p>
-<p>It uses a small epsilon (1e-15) to prevent <code>log(0)</code> which would result in <code>NaN</code>.
+<p>It uses a small epsilon (PROB_EPSILON = 1e-15) to prevent <code>log(0)</code> which would result in <code>NaN</code>.
 Output values are clamped to the range <code>[epsilon, 1 - epsilon]</code> for numerical stability.</p>
 <p>Parameters:</p>
 <ul>
@@ -486,5 +473,5 @@ faster initial learning, followed by finer adjustments as training progresses.</
 <h2 id="methods-selection-ts">methods/selection.ts</h2><h3 id="selection">selection</h3>
 <footer>Generated from JSDoc. <a href="https://github.com/reicek/NeatapticTS">GitHub</a></footer>
 </main>
-<aside class="page-index"><div class="page-toc"><h2>Files</h2><div class="toc-file"><a href="#methods-activation-ts">methods/activation.ts</a><ul><li><a href=#activation>Activation</a></li><li><a href=#registercustomactivation>registerCustomActivation</a></li></ul></div><div class="toc-file"><a href="#methods-connection-ts">methods/connection.ts</a><ul><li><a href=#connection>connection</a></li><li><a href=#groupconnection>groupConnection</a></li></ul></div><div class="toc-file"><a href="#methods-cost-ts">methods/cost.ts</a><ul><li><a href=#cost>cost</a></li><li><a href=#cost>Cost</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#methods-crossover-ts">methods/crossover.ts</a><ul><li><a href=#crossover>crossover</a></li></ul></div><div class="toc-file"><a href="#methods-gating-ts">methods/gating.ts</a><ul><li><a href=#gating>gating</a></li></ul></div><div class="toc-file"><a href="#methods-methods-ts">methods/methods.ts</a><ul><li><a href=#activation>Activation</a></li><li><a href=#crossover>crossover</a></li><li><a href=#gating>gating</a></li><li><a href=#groupconnection>groupConnection</a></li><li><a href=#methods>methods</a></li><li><a href=#mutation>mutation</a></li><li><a href=#selection>selection</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#methods-mutation-ts">methods/mutation.ts</a><ul><li><a href=#mutation>mutation</a></li></ul></div><div class="toc-file"><a href="#methods-rate-ts">methods/rate.ts</a><ul><li><a href=#rate>rate</a></li><li><a href=#rate>Rate</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#methods-selection-ts">methods/selection.ts</a><ul><li><a href=#selection>selection</a></li></ul></div></div></aside>
+<aside class="page-index"><div class="page-toc"><h2>Files</h2><div class="toc-file"><a href="#methods-activation-ts">methods/activation.ts</a><ul><li><a href=#activation>Activation</a></li><li><a href=#registercustomactivation>registerCustomActivation</a></li></ul></div><div class="toc-file"><a href="#methods-connection-ts">methods/connection.ts</a><ul><li><a href=#connection>connection</a></li><li><a href=#groupconnection>groupConnection</a></li></ul></div><div class="toc-file"><a href="#methods-cost-ts">methods/cost.ts</a><ul><li><a href=#cost>cost</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#methods-crossover-ts">methods/crossover.ts</a><ul><li><a href=#crossover>crossover</a></li></ul></div><div class="toc-file"><a href="#methods-gating-ts">methods/gating.ts</a><ul><li><a href=#gating>gating</a></li></ul></div><div class="toc-file"><a href="#methods-methods-ts">methods/methods.ts</a><ul><li><a href=#activation>Activation</a></li><li><a href=#crossover>crossover</a></li><li><a href=#gating>gating</a></li><li><a href=#groupconnection>groupConnection</a></li><li><a href=#methods>methods</a></li><li><a href=#mutation>mutation</a></li><li><a href=#selection>selection</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#methods-mutation-ts">methods/mutation.ts</a><ul><li><a href=#mutation>mutation</a></li></ul></div><div class="toc-file"><a href="#methods-rate-ts">methods/rate.ts</a><ul><li><a href=#rate>rate</a></li><li><a href=#rate>Rate</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#methods-selection-ts">methods/selection.ts</a><ul><li><a href=#selection>selection</a></li></ul></div></div></aside>
 </body></html>

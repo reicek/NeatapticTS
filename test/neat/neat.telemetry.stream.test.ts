@@ -9,7 +9,7 @@ describe('Telemetry stream callback', () => {
       seed: 91,
       speciation: false,
       telemetry: { enabled: true, logEvery: 1 },
-      telemetryStream: { enabled: true, onEntry: (e) => entries.push(e) },
+      telemetryStream: { enabled: true, onEntry: (e: any) => entries.push(e) },
     });
     await neat.evaluate();
     await neat.evolve();

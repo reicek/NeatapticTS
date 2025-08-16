@@ -178,11 +178,31 @@
     }
   });
 
+  // src/neat/neat.constants.ts
+  var neat_constants_exports = {};
+  __export(neat_constants_exports, {
+    EPSILON: () => EPSILON,
+    EXTRA_CONNECTION_PROBABILITY: () => EXTRA_CONNECTION_PROBABILITY,
+    NORM_EPSILON: () => NORM_EPSILON,
+    PROB_EPSILON: () => PROB_EPSILON
+  });
+  var EPSILON, PROB_EPSILON, NORM_EPSILON, EXTRA_CONNECTION_PROBABILITY;
+  var init_neat_constants = __esm({
+    "src/neat/neat.constants.ts"() {
+      "use strict";
+      EPSILON = 1e-9;
+      PROB_EPSILON = 1e-15;
+      NORM_EPSILON = 1e-5;
+      EXTRA_CONNECTION_PROBABILITY = 0.5;
+    }
+  });
+
   // src/methods/cost.ts
   var Cost;
   var init_cost = __esm({
     "src/methods/cost.ts"() {
       "use strict";
+      init_neat_constants();
       Cost = class {
         /**
          * Calculates the Cross Entropy error, commonly used for classification tasks.
@@ -191,7 +211,7 @@
          * a probability value between 0 and 1. Cross-entropy loss increases as the
          * predicted probability diverges from the actual label.
          *
-         * It uses a small epsilon (1e-15) to prevent `log(0)` which would result in `NaN`.
+        * It uses a small epsilon (PROB_EPSILON = 1e-15) to prevent `log(0)` which would result in `NaN`.
          * Output values are clamped to the range `[epsilon, 1 - epsilon]` for numerical stability.
          *
          * @see {@link https://en.wikipedia.org/wiki/Cross_entropy}
@@ -202,7 +222,7 @@
          */
         static crossEntropy(targets, outputs) {
           let error = 0;
-          const epsilon = 1e-15;
+          const epsilon = PROB_EPSILON;
           if (targets.length !== outputs.length) {
             throw new Error("Target and output arrays must have the same length.");
           }
@@ -238,7 +258,7 @@
           const sum = exps.reduce((a, b) => a + b, 0) || 1;
           const probs = exps.map((e) => e / sum);
           let loss = 0;
-          const eps = 1e-15;
+          const eps = PROB_EPSILON;
           for (let i = 0; i < n; i++) {
             const p = Math.min(1 - eps, Math.max(eps, probs[i]));
             const t = normTargets[i];
@@ -333,7 +353,7 @@
             throw new Error("Target and output arrays must have the same length.");
           }
           let error = 0;
-          const epsilon = 1e-15;
+          const epsilon = PROB_EPSILON;
           outputs.forEach((output, outputIndex) => {
             const target = targets[outputIndex];
             error += Math.abs(
@@ -408,7 +428,7 @@
          */
         static focalLoss(targets, outputs, gamma = 2, alpha = 0.25) {
           let error = 0;
-          const epsilon = 1e-15;
+          const epsilon = PROB_EPSILON;
           if (targets.length !== outputs.length) {
             throw new Error("Target and output arrays must have the same length.");
           }
@@ -433,7 +453,7 @@
          */
         static labelSmoothing(targets, outputs, smoothing = 0.1) {
           let error = 0;
-          const epsilon = 1e-15;
+          const epsilon = PROB_EPSILON;
           if (targets.length !== outputs.length) {
             throw new Error("Target and output arrays must have the same length.");
           }
@@ -4471,7 +4491,7 @@
             const activations = baseActivate(value, training);
             const mean = activations.reduce((a, b) => a + b, 0) / activations.length;
             const variance = activations.reduce((a, b) => a + (b - mean) ** 2, 0) / activations.length;
-            const epsilon = 1e-5;
+            const epsilon = (init_neat_constants(), __toCommonJS(neat_constants_exports)).NORM_EPSILON;
             return activations.map((a) => (a - mean) / Math.sqrt(variance + epsilon));
           };
           return layer;
@@ -4490,7 +4510,7 @@
             const activations = baseActivate(value, training);
             const mean = activations.reduce((a, b) => a + b, 0) / activations.length;
             const variance = activations.reduce((a, b) => a + (b - mean) ** 2, 0) / activations.length;
-            const epsilon = 1e-5;
+            const epsilon = (init_neat_constants(), __toCommonJS(neat_constants_exports)).NORM_EPSILON;
             return activations.map((a) => (a - mean) / Math.sqrt(variance + epsilon));
           };
           return layer;
@@ -8283,6 +8303,3068 @@
     }
   });
 
+  // src/neat/neat.mutation.ts
+  function mutate() {
+    const methods = (init_methods(), __toCommonJS(methods_exports));
+    for (const genome of this.population) {
+      if (this.options.adaptiveMutation?.enabled) {
+        if (genome._mutRate === void 0) {
+          genome._mutRate = this.options.mutationRate !== void 0 ? this.options.mutationRate : this.options.adaptiveMutation.initialRate ?? (this.options.mutationRate || 0.7);
+          if (this.options.adaptiveMutation.adaptAmount)
+            genome._mutAmount = this.options.mutationAmount || 1;
+        }
+      }
+      const effectiveRate = this.options.mutationRate !== void 0 ? this.options.mutationRate : this.options.adaptiveMutation?.enabled ? genome._mutRate : this.options.mutationRate || 0.7;
+      const effectiveAmount = this.options.adaptiveMutation?.enabled && this.options.adaptiveMutation.adaptAmount ? genome._mutAmount ?? (this.options.mutationAmount || 1) : this.options.mutationAmount || 1;
+      if (this._getRNG()() <= effectiveRate) {
+        for (let iteration = 0; iteration < effectiveAmount; iteration++) {
+          let mutationMethod = this.selectMutationMethod(genome, false);
+          if (Array.isArray(mutationMethod)) {
+            const operatorArray = mutationMethod;
+            mutationMethod = operatorArray[Math.floor(this._getRNG()() * operatorArray.length)];
+          }
+          if (mutationMethod && mutationMethod.name) {
+            const beforeNodes = genome.nodes.length;
+            const beforeConns = genome.connections.length;
+            if (mutationMethod === methods.mutation.ADD_NODE) {
+              this._mutateAddNodeReuse(genome);
+              try {
+                genome.mutate(methods.mutation.MOD_WEIGHT);
+              } catch {
+              }
+              this._invalidateGenomeCaches(genome);
+            } else if (mutationMethod === methods.mutation.ADD_CONN) {
+              this._mutateAddConnReuse(genome);
+              try {
+                genome.mutate(methods.mutation.MOD_WEIGHT);
+              } catch {
+              }
+              this._invalidateGenomeCaches(genome);
+            } else {
+              genome.mutate(mutationMethod);
+              if (mutationMethod === methods.mutation.ADD_GATE || mutationMethod === methods.mutation.SUB_NODE || mutationMethod === methods.mutation.SUB_CONN || mutationMethod === methods.mutation.ADD_SELF_CONN || mutationMethod === methods.mutation.ADD_BACK_CONN) {
+                this._invalidateGenomeCaches(genome);
+              }
+            }
+            if (this._getRNG()() < EXTRA_CONNECTION_PROBABILITY)
+              this._mutateAddConnReuse(genome);
+            if (this.options.operatorAdaptation?.enabled) {
+              const statsRecord = this._operatorStats.get(
+                mutationMethod.name
+              ) || {
+                success: 0,
+                attempts: 0
+              };
+              statsRecord.attempts++;
+              const afterNodes = genome.nodes.length;
+              const afterConns = genome.connections.length;
+              if (afterNodes > beforeNodes || afterConns > beforeConns)
+                statsRecord.success++;
+              this._operatorStats.set(mutationMethod.name, statsRecord);
+            }
+          }
+        }
+      }
+    }
+  }
+  function mutateAddNodeReuse(genome) {
+    if (genome.connections.length === 0) {
+      const inputNode = genome.nodes.find((n) => n.type === "input");
+      const outputNode = genome.nodes.find((n) => n.type === "output");
+      if (inputNode && outputNode) {
+        try {
+          genome.connect(inputNode, outputNode, 1);
+        } catch {
+        }
+      }
+    }
+    const enabledConnections = genome.connections.filter(
+      (c) => c.enabled !== false
+    );
+    if (!enabledConnections.length) return;
+    const chosenConn = enabledConnections[Math.floor(this._getRNG()() * enabledConnections.length)];
+    const fromGeneId = chosenConn.from.geneId;
+    const toGeneId = chosenConn.to.geneId;
+    const splitKey = fromGeneId + "->" + toGeneId;
+    const originalWeight = chosenConn.weight;
+    genome.disconnect(chosenConn.from, chosenConn.to);
+    let splitRecord = this._nodeSplitInnovations.get(splitKey);
+    const NodeClass = (init_node(), __toCommonJS(node_exports)).default;
+    if (!splitRecord) {
+      const newNode = new NodeClass("hidden");
+      const inConn = genome.connect(chosenConn.from, newNode, 1)[0];
+      const outConn = genome.connect(newNode, chosenConn.to, originalWeight)[0];
+      if (inConn) inConn.innovation = this._nextGlobalInnovation++;
+      if (outConn) outConn.innovation = this._nextGlobalInnovation++;
+      splitRecord = {
+        newNodeGeneId: newNode.geneId,
+        inInnov: inConn?.innovation,
+        outInnov: outConn?.innovation
+      };
+      this._nodeSplitInnovations.set(splitKey, splitRecord);
+      const toIndex = genome.nodes.indexOf(chosenConn.to);
+      const insertIndex = Math.min(toIndex, genome.nodes.length - genome.output);
+      genome.nodes.splice(insertIndex, 0, newNode);
+    } else {
+      const newNode = new NodeClass("hidden");
+      newNode.geneId = splitRecord.newNodeGeneId;
+      const toIndex = genome.nodes.indexOf(chosenConn.to);
+      const insertIndex = Math.min(toIndex, genome.nodes.length - genome.output);
+      genome.nodes.splice(insertIndex, 0, newNode);
+      const inConn = genome.connect(chosenConn.from, newNode, 1)[0];
+      const outConn = genome.connect(newNode, chosenConn.to, originalWeight)[0];
+      if (inConn) inConn.innovation = splitRecord.inInnov;
+      if (outConn) outConn.innovation = splitRecord.outInnov;
+    }
+  }
+  function mutateAddConnReuse(genome) {
+    const candidatePairs = [];
+    for (let i = 0; i < genome.nodes.length - genome.output; i++) {
+      const fromNode2 = genome.nodes[i];
+      for (let j = Math.max(i + 1, genome.input); j < genome.nodes.length; j++) {
+        const toNode2 = genome.nodes[j];
+        if (!fromNode2.isProjectingTo(toNode2))
+          candidatePairs.push([fromNode2, toNode2]);
+      }
+    }
+    if (!candidatePairs.length) return;
+    const reuseCandidates = candidatePairs.filter((pair) => {
+      const idA2 = pair[0].geneId;
+      const idB2 = pair[1].geneId;
+      const symmetricKey2 = idA2 < idB2 ? idA2 + "::" + idB2 : idB2 + "::" + idA2;
+      return this._connInnovations.has(symmetricKey2);
+    });
+    const hiddenPairs = reuseCandidates.length ? [] : candidatePairs.filter(
+      (pair) => pair[0].type === "hidden" && pair[1].type === "hidden"
+    );
+    const pool = reuseCandidates.length ? reuseCandidates : hiddenPairs.length ? hiddenPairs : candidatePairs;
+    const chosenPair = pool.length === 1 ? pool[0] : pool[Math.floor(this._getRNG()() * pool.length)];
+    const fromNode = chosenPair[0];
+    const toNode = chosenPair[1];
+    const idA = fromNode.geneId;
+    const idB = toNode.geneId;
+    const symmetricKey = idA < idB ? idA + "::" + idB : idB + "::" + idA;
+    if (genome._enforceAcyclic) {
+      const createsCycle = (() => {
+        const stack = [toNode];
+        const seen = /* @__PURE__ */ new Set();
+        while (stack.length) {
+          const n = stack.pop();
+          if (n === fromNode) return true;
+          if (seen.has(n)) continue;
+          seen.add(n);
+          for (const c of n.connections.out) stack.push(c.to);
+        }
+        return false;
+      })();
+      if (createsCycle) return;
+    }
+    const conn = genome.connect(fromNode, toNode)[0];
+    if (!conn) return;
+    if (this._connInnovations.has(symmetricKey)) {
+      conn.innovation = this._connInnovations.get(symmetricKey);
+    } else {
+      const innov = this._nextGlobalInnovation++;
+      conn.innovation = innov;
+      this._connInnovations.set(symmetricKey, innov);
+      const legacyForward = idA + "::" + idB;
+      const legacyReverse = idB + "::" + idA;
+      this._connInnovations.set(legacyForward, innov);
+      this._connInnovations.set(legacyReverse, innov);
+    }
+  }
+  function ensureMinHiddenNodes(network, multiplierOverride) {
+    const maxNodes = this.options.maxNodes || Infinity;
+    const minHidden = Math.min(
+      this.getMinimumHiddenSize(multiplierOverride),
+      maxNodes - network.nodes.filter((n) => n.type !== "hidden").length
+    );
+    const inputNodes = network.nodes.filter((n) => n.type === "input");
+    const outputNodes = network.nodes.filter((n) => n.type === "output");
+    let hiddenNodes = network.nodes.filter((n) => n.type === "hidden");
+    if (inputNodes.length === 0 || outputNodes.length === 0) {
+      try {
+        console.warn(
+          "Network is missing input or output nodes \u2014 skipping minHidden enforcement"
+        );
+      } catch {
+      }
+      return;
+    }
+    const existingCount = hiddenNodes.length;
+    for (let i = existingCount; i < minHidden && network.nodes.length < maxNodes; i++) {
+      const NodeClass = (init_node(), __toCommonJS(node_exports)).default;
+      const newNode = new NodeClass("hidden");
+      network.nodes.push(newNode);
+      hiddenNodes.push(newNode);
+    }
+    for (const hiddenNode of hiddenNodes) {
+      if (hiddenNode.connections.in.length === 0) {
+        const candidates = inputNodes.concat(
+          hiddenNodes.filter((n) => n !== hiddenNode)
+        );
+        if (candidates.length > 0) {
+          const rng = this._getRNG();
+          const source = candidates[Math.floor(rng() * candidates.length)];
+          try {
+            network.connect(source, hiddenNode);
+          } catch {
+          }
+        }
+      }
+      if (hiddenNode.connections.out.length === 0) {
+        const candidates = outputNodes.concat(
+          hiddenNodes.filter((n) => n !== hiddenNode)
+        );
+        if (candidates.length > 0) {
+          const rng = this._getRNG();
+          const target = candidates[Math.floor(rng() * candidates.length)];
+          try {
+            network.connect(hiddenNode, target);
+          } catch {
+          }
+        }
+      }
+    }
+    const NetworkClass = (init_network(), __toCommonJS(network_exports)).default;
+    NetworkClass.rebuildConnections(network);
+  }
+  function ensureNoDeadEnds(network) {
+    const inputNodes = network.nodes.filter((n) => n.type === "input");
+    const outputNodes = network.nodes.filter((n) => n.type === "output");
+    const hiddenNodes = network.nodes.filter((n) => n.type === "hidden");
+    const hasOutgoing = (node) => node.connections && node.connections.out && node.connections.out.length > 0;
+    const hasIncoming = (node) => node.connections && node.connections.in && node.connections.in.length > 0;
+    for (const inputNode of inputNodes) {
+      if (!hasOutgoing(inputNode)) {
+        const candidates = hiddenNodes.length > 0 ? hiddenNodes : outputNodes;
+        if (candidates.length > 0) {
+          const rng = this._getRNG();
+          const target = candidates[Math.floor(rng() * candidates.length)];
+          try {
+            network.connect(inputNode, target);
+          } catch {
+          }
+        }
+      }
+    }
+    for (const outputNode of outputNodes) {
+      if (!hasIncoming(outputNode)) {
+        const candidates = hiddenNodes.length > 0 ? hiddenNodes : inputNodes;
+        if (candidates.length > 0) {
+          const rng = this._getRNG();
+          const source = candidates[Math.floor(rng() * candidates.length)];
+          try {
+            network.connect(source, outputNode);
+          } catch {
+          }
+        }
+      }
+    }
+    for (const hiddenNode of hiddenNodes) {
+      if (!hasIncoming(hiddenNode)) {
+        const candidates = inputNodes.concat(
+          hiddenNodes.filter((n) => n !== hiddenNode)
+        );
+        if (candidates.length > 0) {
+          const rng = this._getRNG();
+          const source = candidates[Math.floor(rng() * candidates.length)];
+          try {
+            network.connect(source, hiddenNode);
+          } catch {
+          }
+        }
+      }
+      if (!hasOutgoing(hiddenNode)) {
+        const candidates = outputNodes.concat(
+          hiddenNodes.filter((n) => n !== hiddenNode)
+        );
+        if (candidates.length > 0) {
+          const rng = this._getRNG();
+          const target = candidates[Math.floor(rng() * candidates.length)];
+          try {
+            network.connect(hiddenNode, target);
+          } catch {
+          }
+        }
+      }
+    }
+  }
+  function selectMutationMethod(genome, rawReturnForTest = true) {
+    const methods = (init_methods(), __toCommonJS(methods_exports));
+    const isFFWDirect = this.options.mutation === methods.mutation.FFW;
+    const isFFWNested = Array.isArray(this.options.mutation) && this.options.mutation.length === 1 && this.options.mutation[0] === methods.mutation.FFW;
+    if ((isFFWDirect || isFFWNested) && rawReturnForTest)
+      return methods.mutation.FFW;
+    if (isFFWDirect)
+      return methods.mutation.FFW[Math.floor(this._getRNG()() * methods.mutation.FFW.length)];
+    if (isFFWNested)
+      return methods.mutation.FFW[Math.floor(this._getRNG()() * methods.mutation.FFW.length)];
+    let pool = this.options.mutation;
+    if (rawReturnForTest && Array.isArray(pool) && pool.length === methods.mutation.FFW.length && pool.every(
+      (m, i) => m && m.name === methods.mutation.FFW[i].name
+    )) {
+      return methods.mutation.FFW;
+    }
+    if (pool.length === 1 && Array.isArray(pool[0]) && pool[0].length)
+      pool = pool[0];
+    if (this.options.phasedComplexity?.enabled && this._phase) {
+      pool = pool.filter((m) => !!m);
+      if (this._phase === "simplify") {
+        const simplifyPool = pool.filter(
+          (m) => m && m.name && m.name.startsWith && m.name.startsWith("SUB_")
+        );
+        if (simplifyPool.length) pool = [...pool, ...simplifyPool];
+      } else if (this._phase === "complexify") {
+        const addPool = pool.filter(
+          (m) => m && m.name && m.name.startsWith && m.name.startsWith("ADD_")
+        );
+        if (addPool.length) pool = [...pool, ...addPool];
+      }
+    }
+    if (this.options.operatorAdaptation?.enabled) {
+      const boost = this.options.operatorAdaptation.boost ?? 2;
+      const stats = this._operatorStats;
+      const augmented = [];
+      for (const m of pool) {
+        augmented.push(m);
+        const st = stats.get(m.name);
+        if (st && st.attempts > 5) {
+          const ratio = st.success / st.attempts;
+          if (ratio > 0.55) {
+            for (let i = 0; i < Math.min(boost, Math.floor(ratio * boost)); i++)
+              augmented.push(m);
+          }
+        }
+      }
+      pool = augmented;
+    }
+    let mutationMethod = pool[Math.floor(this._getRNG()() * pool.length)];
+    if (mutationMethod === methods.mutation.ADD_GATE && genome.gates.length >= (this.options.maxGates || Infinity))
+      return null;
+    if (mutationMethod === methods.mutation.ADD_NODE && genome.nodes.length >= (this.options.maxNodes || Infinity))
+      return null;
+    if (mutationMethod === methods.mutation.ADD_CONN && genome.connections.length >= (this.options.maxConns || Infinity))
+      return null;
+    if (this.options.operatorBandit?.enabled) {
+      const c = this.options.operatorBandit.c ?? 1.4;
+      const minA = this.options.operatorBandit.minAttempts ?? 5;
+      const stats = this._operatorStats;
+      for (const m of pool)
+        if (!stats.has(m.name)) stats.set(m.name, { success: 0, attempts: 0 });
+      const totalAttempts = Array.from(stats.values()).reduce(
+        (a, s) => a + s.attempts,
+        0
+      ) + EPSILON;
+      let best = mutationMethod;
+      let bestVal = -Infinity;
+      for (const m of pool) {
+        const st = stats.get(m.name);
+        const mean = st.attempts > 0 ? st.success / st.attempts : 0;
+        const bonus = st.attempts < minA ? Infinity : c * Math.sqrt(Math.log(totalAttempts) / (st.attempts + EPSILON));
+        const val = mean + bonus;
+        if (val > bestVal) {
+          bestVal = val;
+          best = m;
+        }
+      }
+      mutationMethod = best;
+    }
+    if (mutationMethod === methods.mutation.ADD_GATE && genome.gates.length >= (this.options.maxGates || Infinity))
+      return null;
+    if (!this.options.allowRecurrent && (mutationMethod === methods.mutation.ADD_BACK_CONN || mutationMethod === methods.mutation.ADD_SELF_CONN))
+      return null;
+    return mutationMethod;
+  }
+  var init_neat_mutation = __esm({
+    "src/neat/neat.mutation.ts"() {
+      "use strict";
+      init_neat_constants();
+    }
+  });
+
+  // src/neat/neat.multiobjective.ts
+  function fastNonDominated(pop) {
+    const objectiveDescriptors = this._getObjectives();
+    const valuesMatrix = pop.map(
+      (genomeItem) => objectiveDescriptors.map((descriptor) => {
+        try {
+          return descriptor.accessor(genomeItem);
+        } catch {
+          return 0;
+        }
+      })
+    );
+    const vectorDominates = (valuesA, valuesB) => {
+      let strictlyBetter = false;
+      for (let objectiveIndex = 0; objectiveIndex < valuesA.length; objectiveIndex++) {
+        const direction = objectiveDescriptors[objectiveIndex].direction || "max";
+        if (direction === "max") {
+          if (valuesA[objectiveIndex] < valuesB[objectiveIndex]) return false;
+          if (valuesA[objectiveIndex] > valuesB[objectiveIndex])
+            strictlyBetter = true;
+        } else {
+          if (valuesA[objectiveIndex] > valuesB[objectiveIndex]) return false;
+          if (valuesA[objectiveIndex] < valuesB[objectiveIndex])
+            strictlyBetter = true;
+        }
+      }
+      return strictlyBetter;
+    };
+    const paretoFronts = [];
+    const dominationCounts = new Array(pop.length).fill(0);
+    const dominatedIndicesByIndex = pop.map(() => []);
+    const firstFrontIndices = [];
+    for (let pIndex = 0; pIndex < pop.length; pIndex++) {
+      for (let qIndex = 0; qIndex < pop.length; qIndex++) {
+        if (pIndex === qIndex) continue;
+        if (vectorDominates(valuesMatrix[pIndex], valuesMatrix[qIndex]))
+          dominatedIndicesByIndex[pIndex].push(qIndex);
+        else if (vectorDominates(valuesMatrix[qIndex], valuesMatrix[pIndex]))
+          dominationCounts[pIndex]++;
+      }
+      if (dominationCounts[pIndex] === 0) firstFrontIndices.push(pIndex);
+    }
+    let currentFrontIndices = firstFrontIndices;
+    let currentFrontRank = 0;
+    while (currentFrontIndices.length) {
+      const nextFrontIndices = [];
+      for (const pIndex of currentFrontIndices) {
+        pop[pIndex]._moRank = currentFrontRank;
+        for (const qIndex of dominatedIndicesByIndex[pIndex]) {
+          dominationCounts[qIndex]--;
+          if (dominationCounts[qIndex] === 0) nextFrontIndices.push(qIndex);
+        }
+      }
+      paretoFronts.push(currentFrontIndices.map((i) => pop[i]));
+      currentFrontIndices = nextFrontIndices;
+      currentFrontRank++;
+      if (currentFrontRank > 50) break;
+    }
+    for (const front of paretoFronts) {
+      if (front.length === 0) continue;
+      for (const genomeItem of front) genomeItem._moCrowd = 0;
+      for (let objectiveIndex = 0; objectiveIndex < objectiveDescriptors.length; objectiveIndex++) {
+        const sortedByCurrentObjective = front.slice().sort((genomeA, genomeB) => {
+          const valA = objectiveDescriptors[objectiveIndex].accessor(genomeA);
+          const valB = objectiveDescriptors[objectiveIndex].accessor(genomeB);
+          return valA - valB;
+        });
+        sortedByCurrentObjective[0]._moCrowd = Infinity;
+        sortedByCurrentObjective[sortedByCurrentObjective.length - 1]._moCrowd = Infinity;
+        const minVal = objectiveDescriptors[objectiveIndex].accessor(
+          sortedByCurrentObjective[0]
+        );
+        const maxVal = objectiveDescriptors[objectiveIndex].accessor(
+          sortedByCurrentObjective[sortedByCurrentObjective.length - 1]
+        );
+        const valueRange = maxVal - minVal || 1;
+        for (let sortedIndex = 1; sortedIndex < sortedByCurrentObjective.length - 1; sortedIndex++) {
+          const prevVal = objectiveDescriptors[objectiveIndex].accessor(
+            sortedByCurrentObjective[sortedIndex - 1]
+          );
+          const nextVal = objectiveDescriptors[objectiveIndex].accessor(
+            sortedByCurrentObjective[sortedIndex + 1]
+          );
+          sortedByCurrentObjective[sortedIndex]._moCrowd += (nextVal - prevVal) / valueRange;
+        }
+      }
+    }
+    if (this.options.multiObjective?.enabled) {
+      this._paretoArchive.push({
+        generation: this.generation,
+        fronts: paretoFronts.slice(0, 3).map(
+          (front) => (
+            // map each front (array of Network) to an array of genome IDs
+            front.map((genome) => genome._id)
+          )
+        )
+      });
+      if (this._paretoArchive.length > 100) this._paretoArchive.shift();
+    }
+    return paretoFronts;
+  }
+  var init_neat_multiobjective = __esm({
+    "src/neat/neat.multiobjective.ts"() {
+      "use strict";
+    }
+  });
+
+  // src/neat/neat.adaptive.ts
+  var neat_adaptive_exports = {};
+  __export(neat_adaptive_exports, {
+    applyAdaptiveMutation: () => applyAdaptiveMutation,
+    applyAncestorUniqAdaptive: () => applyAncestorUniqAdaptive,
+    applyComplexityBudget: () => applyComplexityBudget,
+    applyMinimalCriterionAdaptive: () => applyMinimalCriterionAdaptive,
+    applyOperatorAdaptation: () => applyOperatorAdaptation,
+    applyPhasedComplexity: () => applyPhasedComplexity
+  });
+  function applyComplexityBudget() {
+    if (!this.options.complexityBudget?.enabled) return;
+    const complexityBudget = this.options.complexityBudget;
+    if (complexityBudget.mode === "adaptive") {
+      if (!this._cbHistory) this._cbHistory = [];
+      this._cbHistory.push(this.population[0]?.score || 0);
+      const windowSize = complexityBudget.improvementWindow ?? 10;
+      if (this._cbHistory.length > windowSize) this._cbHistory.shift();
+      const history = this._cbHistory;
+      const improvement = history.length > 1 ? history[history.length - 1] - history[0] : 0;
+      let slope = 0;
+      if (history.length > 2) {
+        const count = history.length;
+        let sumIndices = 0, sumScores = 0, sumIndexScore = 0, sumIndexSquared = 0;
+        for (let idx = 0; idx < count; idx++) {
+          sumIndices += idx;
+          sumScores += history[idx];
+          sumIndexScore += idx * history[idx];
+          sumIndexSquared += idx * idx;
+        }
+        const denom = count * sumIndexSquared - sumIndices * sumIndices || 1;
+        slope = (count * sumIndexScore - sumIndices * sumScores) / denom;
+      }
+      if (this._cbMaxNodes === void 0)
+        this._cbMaxNodes = complexityBudget.maxNodesStart ?? this.input + this.output + 2;
+      const baseInc = complexityBudget.increaseFactor ?? 1.1;
+      const baseStag = complexityBudget.stagnationFactor ?? 0.95;
+      const slopeMag = Math.min(
+        2,
+        Math.max(-2, slope / (Math.abs(history[0]) + EPSILON))
+      );
+      const incF = baseInc + 0.05 * Math.max(0, slopeMag);
+      const stagF = baseStag - 0.03 * Math.max(0, -slopeMag);
+      const noveltyFactor = this._noveltyArchive.length > 5 ? 1 : 0.9;
+      if (improvement > 0 || slope > 0)
+        this._cbMaxNodes = Math.min(
+          complexityBudget.maxNodesEnd ?? this._cbMaxNodes * 4,
+          Math.floor(this._cbMaxNodes * incF * noveltyFactor)
+        );
+      else if (history.length === windowSize)
+        this._cbMaxNodes = Math.max(
+          complexityBudget.minNodes ?? this.input + this.output + 2,
+          Math.floor(this._cbMaxNodes * stagF)
+        );
+      if (complexityBudget.minNodes !== void 0)
+        this._cbMaxNodes = Math.max(complexityBudget.minNodes, this._cbMaxNodes);
+      this.options.maxNodes = this._cbMaxNodes;
+      if (complexityBudget.maxConnsStart) {
+        if (this._cbMaxConns === void 0)
+          this._cbMaxConns = complexityBudget.maxConnsStart;
+        if (improvement > 0 || slope > 0)
+          this._cbMaxConns = Math.min(
+            complexityBudget.maxConnsEnd ?? this._cbMaxConns * 4,
+            Math.floor(this._cbMaxConns * incF * noveltyFactor)
+          );
+        else if (history.length === windowSize)
+          this._cbMaxConns = Math.max(
+            complexityBudget.maxConnsStart,
+            Math.floor(this._cbMaxConns * stagF)
+          );
+        this.options.maxConns = this._cbMaxConns;
+      }
+    } else {
+      const maxStart = complexityBudget.maxNodesStart ?? this.input + this.output + 2;
+      const maxEnd = complexityBudget.maxNodesEnd ?? maxStart * 4;
+      const horizon = complexityBudget.horizon ?? 100;
+      const t = Math.min(1, this.generation / horizon);
+      this.options.maxNodes = Math.floor(maxStart + (maxEnd - maxStart) * t);
+    }
+  }
+  function applyPhasedComplexity() {
+    if (!this.options.phasedComplexity?.enabled) return;
+    const len = this.options.phasedComplexity.phaseLength ?? 10;
+    if (!this._phase) {
+      this._phase = this.options.phasedComplexity.initialPhase ?? "complexify";
+      this._phaseStartGeneration = this.generation;
+    }
+    if (this.generation - this._phaseStartGeneration >= len) {
+      this._phase = this._phase === "complexify" ? "simplify" : "complexify";
+      this._phaseStartGeneration = this.generation;
+    }
+  }
+  function applyMinimalCriterionAdaptive() {
+    if (!this.options.minimalCriterionAdaptive?.enabled) return;
+    const mcCfg = this.options.minimalCriterionAdaptive;
+    if (this._mcThreshold === void 0)
+      this._mcThreshold = mcCfg.initialThreshold ?? 0;
+    const scores = this.population.map((g) => g.score || 0);
+    const accepted = scores.filter((s) => s >= this._mcThreshold).length;
+    const prop = scores.length ? accepted / scores.length : 0;
+    const targetAcceptance = mcCfg.targetAcceptance ?? 0.5;
+    const adjustRate = mcCfg.adjustRate ?? 0.1;
+    if (prop > targetAcceptance * 1.05) this._mcThreshold *= 1 + adjustRate;
+    else if (prop < targetAcceptance * 0.95) this._mcThreshold *= 1 - adjustRate;
+    for (const g of this.population)
+      if ((g.score || 0) < this._mcThreshold) g.score = 0;
+  }
+  function applyAncestorUniqAdaptive() {
+    if (!this.options.ancestorUniqAdaptive?.enabled) return;
+    const ancestorCfg = this.options.ancestorUniqAdaptive;
+    const cooldown = ancestorCfg.cooldown ?? 5;
+    if (this.generation - this._lastAncestorUniqAdjustGen < cooldown) return;
+    const lineageBlock = this._telemetry[this._telemetry.length - 1]?.lineage;
+    const ancUniq = lineageBlock ? lineageBlock.ancestorUniq : void 0;
+    if (typeof ancUniq !== "number") return;
+    const lowT = ancestorCfg.lowThreshold ?? 0.25;
+    const highT = ancestorCfg.highThreshold ?? 0.55;
+    const adj = ancestorCfg.adjust ?? 0.01;
+    if (ancestorCfg.mode === "epsilon" && this.options.multiObjective?.adaptiveEpsilon?.enabled) {
+      if (ancUniq < lowT) {
+        this.options.multiObjective.dominanceEpsilon = (this.options.multiObjective.dominanceEpsilon || 0) + adj;
+        this._lastAncestorUniqAdjustGen = this.generation;
+      } else if (ancUniq > highT) {
+        this.options.multiObjective.dominanceEpsilon = Math.max(
+          0,
+          (this.options.multiObjective.dominanceEpsilon || 0) - adj
+        );
+        this._lastAncestorUniqAdjustGen = this.generation;
+      }
+    } else if (ancestorCfg.mode === "lineagePressure") {
+      if (!this.options.lineagePressure)
+        this.options.lineagePressure = {
+          enabled: true,
+          mode: "spread",
+          strength: 0.01
+        };
+      const lpRef = this.options.lineagePressure;
+      if (ancUniq < lowT) {
+        lpRef.strength = (lpRef.strength || 0.01) * 1.15;
+        lpRef.mode = "spread";
+        this._lastAncestorUniqAdjustGen = this.generation;
+      } else if (ancUniq > highT) {
+        lpRef.strength = (lpRef.strength || 0.01) * 0.9;
+        this._lastAncestorUniqAdjustGen = this.generation;
+      }
+    }
+  }
+  function applyAdaptiveMutation() {
+    if (!this.options.adaptiveMutation?.enabled) return;
+    const adaptCfg = this.options.adaptiveMutation;
+    const every = adaptCfg.adaptEvery ?? 1;
+    if (!(every <= 1 || this.generation % every === 0)) return;
+    const scored = this.population.filter(
+      (g) => typeof g.score === "number"
+    );
+    scored.sort((a, b) => (a.score || 0) - (b.score || 0));
+    const mid = Math.floor(scored.length / 2);
+    const topHalf = scored.slice(mid);
+    const bottomHalf = scored.slice(0, mid);
+    const sigmaBase = (adaptCfg.sigma ?? 0.05) * 1.5;
+    const minR = adaptCfg.minRate ?? 0.01;
+    const maxR = adaptCfg.maxRate ?? 1;
+    const strategy = adaptCfg.strategy || "twoTier";
+    let anyUp = false, anyDown = false;
+    for (let index = 0; index < this.population.length; index++) {
+      const genome = this.population[index];
+      if (genome._mutRate === void 0) continue;
+      let rate = genome._mutRate;
+      let delta = this._getRNG()() * 2 - 1;
+      delta *= sigmaBase;
+      if (strategy === "twoTier") {
+        if (topHalf.length === 0 || bottomHalf.length === 0)
+          delta = index % 2 === 0 ? Math.abs(delta) : -Math.abs(delta);
+        else if (topHalf.includes(genome)) delta = -Math.abs(delta);
+        else if (bottomHalf.includes(genome)) delta = Math.abs(delta);
+      } else if (strategy === "exploreLow") {
+        delta = bottomHalf.includes(genome) ? Math.abs(delta * 1.5) : -Math.abs(delta * 0.5);
+      } else if (strategy === "anneal") {
+        const progress = Math.min(
+          1,
+          this.generation / (50 + this.population.length)
+        );
+        delta *= 1 - progress;
+      }
+      rate += delta;
+      if (rate < minR) rate = minR;
+      if (rate > maxR) rate = maxR;
+      if (rate > (this.options.adaptiveMutation.initialRate ?? 0.5))
+        anyUp = true;
+      if (rate < (this.options.adaptiveMutation.initialRate ?? 0.5))
+        anyDown = true;
+      genome._mutRate = rate;
+      if (adaptCfg.adaptAmount) {
+        const aSigma = adaptCfg.amountSigma ?? 0.25;
+        let aDelta = (this._getRNG()() * 2 - 1) * aSigma;
+        if (strategy === "twoTier") {
+          if (topHalf.length === 0 || bottomHalf.length === 0)
+            aDelta = index % 2 === 0 ? Math.abs(aDelta) : -Math.abs(aDelta);
+          else
+            aDelta = bottomHalf.includes(genome) ? Math.abs(aDelta) : -Math.abs(aDelta);
+        }
+        let amt = genome._mutAmount ?? (this.options.mutationAmount || 1);
+        amt += aDelta;
+        amt = Math.round(amt);
+        const minA = adaptCfg.minAmount ?? 1;
+        const maxA = adaptCfg.maxAmount ?? 10;
+        if (amt < minA) amt = minA;
+        if (amt > maxA) amt = maxA;
+        genome._mutAmount = amt;
+      }
+    }
+    if (strategy === "twoTier" && !(anyUp && anyDown)) {
+      const baseline = this.options.adaptiveMutation.initialRate ?? 0.5;
+      const half = Math.floor(this.population.length / 2);
+      for (let i = 0; i < this.population.length; i++) {
+        const genome = this.population[i];
+        if (genome._mutRate === void 0) continue;
+        if (i < half) genome._mutRate = Math.min(genome._mutRate + sigmaBase, 1);
+        else genome._mutRate = Math.max(genome._mutRate - sigmaBase, 0.01);
+      }
+    }
+  }
+  function applyOperatorAdaptation() {
+    if (!this.options.operatorAdaptation?.enabled) return;
+    const decay = this.options.operatorAdaptation.decay ?? 0.9;
+    for (const [k, stat] of this._operatorStats.entries()) {
+      stat.success *= decay;
+      stat.attempts *= decay;
+      this._operatorStats.set(k, stat);
+    }
+  }
+  var init_neat_adaptive = __esm({
+    "src/neat/neat.adaptive.ts"() {
+      "use strict";
+      init_neat_constants();
+    }
+  });
+
+  // src/neat/neat.lineage.ts
+  var neat_lineage_exports = {};
+  __export(neat_lineage_exports, {
+    buildAnc: () => buildAnc,
+    computeAncestorUniqueness: () => computeAncestorUniqueness
+  });
+  function buildAnc(genome) {
+    const ancestorSet = /* @__PURE__ */ new Set();
+    if (!Array.isArray(genome._parents)) return ancestorSet;
+    const queue = [];
+    for (const parentId of genome._parents) {
+      queue.push({
+        id: parentId,
+        depth: 1,
+        genomeRef: this.population.find((gm) => gm._id === parentId)
+      });
+    }
+    while (queue.length) {
+      const current = queue.shift();
+      if (current.depth > ANCESTOR_DEPTH_WINDOW) continue;
+      if (current.id != null) ancestorSet.add(current.id);
+      if (current.genomeRef && Array.isArray(current.genomeRef._parents)) {
+        for (const parentId of current.genomeRef._parents) {
+          queue.push({
+            id: parentId,
+            // Depth increases as we move one layer further away from the focal genome.
+            depth: current.depth + 1,
+            genomeRef: this.population.find((gm) => gm._id === parentId)
+          });
+        }
+      }
+    }
+    return ancestorSet;
+  }
+  function computeAncestorUniqueness() {
+    const buildAncestorSet = buildAnc.bind(this);
+    let sampledPairCount = 0;
+    let jaccardDistanceSum = 0;
+    const maxSamplePairs = Math.min(
+      MAX_UNIQUENESS_SAMPLE_PAIRS,
+      this.population.length * (this.population.length - 1) / 2
+    );
+    for (let t = 0; t < maxSamplePairs; t++) {
+      if (this.population.length < 2) break;
+      const indexA = Math.floor(this._getRNG()() * this.population.length);
+      let indexB = Math.floor(this._getRNG()() * this.population.length);
+      if (indexB === indexA) indexB = (indexB + 1) % this.population.length;
+      const ancestorSetA = buildAncestorSet(this.population[indexA]);
+      const ancestorSetB = buildAncestorSet(this.population[indexB]);
+      if (ancestorSetA.size === 0 && ancestorSetB.size === 0) continue;
+      let intersectionCount = 0;
+      for (const id of ancestorSetA)
+        if (ancestorSetB.has(id)) intersectionCount++;
+      const unionSize = ancestorSetA.size + ancestorSetB.size - intersectionCount || 1;
+      const jaccardDistance = 1 - intersectionCount / unionSize;
+      jaccardDistanceSum += jaccardDistance;
+      sampledPairCount++;
+    }
+    const ancestorUniqueness = sampledPairCount ? +(jaccardDistanceSum / sampledPairCount).toFixed(3) : 0;
+    return ancestorUniqueness;
+  }
+  var ANCESTOR_DEPTH_WINDOW, MAX_UNIQUENESS_SAMPLE_PAIRS;
+  var init_neat_lineage = __esm({
+    "src/neat/neat.lineage.ts"() {
+      "use strict";
+      ANCESTOR_DEPTH_WINDOW = 4;
+      MAX_UNIQUENESS_SAMPLE_PAIRS = 30;
+    }
+  });
+
+  // src/neat/neat.telemetry.ts
+  var neat_telemetry_exports = {};
+  __export(neat_telemetry_exports, {
+    applyTelemetrySelect: () => applyTelemetrySelect,
+    buildTelemetryEntry: () => buildTelemetryEntry,
+    computeDiversityStats: () => computeDiversityStats,
+    recordTelemetryEntry: () => recordTelemetryEntry,
+    structuralEntropy: () => structuralEntropy
+  });
+  function applyTelemetrySelect(entry) {
+    if (!this._telemetrySelect || !this._telemetrySelect.size)
+      return entry;
+    const keep = this._telemetrySelect;
+    const core = { gen: entry.gen, best: entry.best, species: entry.species };
+    for (const key of Object.keys(entry)) {
+      if (key in core) continue;
+      if (!keep.has(key)) delete entry[key];
+    }
+    return Object.assign(entry, core);
+  }
+  function structuralEntropy(graph) {
+    const anyG = graph;
+    if (anyG._entropyGen === this.generation && typeof anyG._entropyVal === "number")
+      return anyG._entropyVal;
+    const degreeCounts = {};
+    for (const node of graph.nodes) degreeCounts[node.geneId] = 0;
+    for (const conn of graph.connections)
+      if (conn.enabled) {
+        const fromId = conn.from.geneId;
+        const toId = conn.to.geneId;
+        if (degreeCounts[fromId] !== void 0) degreeCounts[fromId]++;
+        if (degreeCounts[toId] !== void 0) degreeCounts[toId]++;
+      }
+    const degreeHistogram = {};
+    const nodeCount = graph.nodes.length || 1;
+    for (const nodeId in degreeCounts) {
+      const d = degreeCounts[nodeId];
+      degreeHistogram[d] = (degreeHistogram[d] || 0) + 1;
+    }
+    let entropy = 0;
+    for (const k in degreeHistogram) {
+      const p = degreeHistogram[k] / nodeCount;
+      if (p > 0) entropy -= p * Math.log(p + EPSILON);
+    }
+    anyG._entropyGen = this.generation;
+    anyG._entropyVal = entropy;
+    return entropy;
+  }
+  function computeDiversityStats() {
+    if (!this.options.diversityMetrics?.enabled) return;
+    if (this.options.fastMode && !this._fastModeTuned) {
+      const dm = this.options.diversityMetrics;
+      if (dm) {
+        if (dm.pairSample == null) dm.pairSample = 20;
+        if (dm.graphletSample == null) dm.graphletSample = 30;
+      }
+      if (this.options.novelty?.enabled && this.options.novelty.k == null)
+        this.options.novelty.k = 5;
+      this._fastModeTuned = true;
+    }
+    const pairSample = this.options.diversityMetrics.pairSample ?? 40;
+    const graphletSample = this.options.diversityMetrics.graphletSample ?? 60;
+    const population = this.population;
+    const popSize = population.length;
+    let compatSum = 0;
+    let compatSq = 0;
+    let compatCount = 0;
+    for (let iter = 0; iter < pairSample; iter++) {
+      if (popSize < 2) break;
+      const i = Math.floor(this._getRNG()() * popSize);
+      let j = Math.floor(this._getRNG()() * popSize);
+      if (j === i) j = (j + 1) % popSize;
+      const d = this._compatibilityDistance(
+        population[i],
+        population[j]
+      );
+      compatSum += d;
+      compatSq += d * d;
+      compatCount++;
+    }
+    const meanCompat = compatCount ? compatSum / compatCount : 0;
+    const varCompat = compatCount ? Math.max(0, compatSq / compatCount - meanCompat * meanCompat) : 0;
+    const entropies = population.map(
+      (g) => this._structuralEntropy(g)
+    );
+    const meanEntropy = entropies.reduce((a, b) => a + b, 0) / (entropies.length || 1);
+    const varEntropy = entropies.length ? entropies.reduce(
+      (a, b) => a + (b - meanEntropy) * (b - meanEntropy),
+      0
+    ) / entropies.length : 0;
+    const motifCounts = [0, 0, 0, 0];
+    for (let iter = 0; iter < graphletSample; iter++) {
+      const g = population[Math.floor(this._getRNG()() * popSize)];
+      if (!g) break;
+      if (g.nodes.length < 3) continue;
+      const selectedIdxs = /* @__PURE__ */ new Set();
+      while (selectedIdxs.size < 3)
+        selectedIdxs.add(Math.floor(this._getRNG()() * g.nodes.length));
+      const selectedNodes = Array.from(selectedIdxs).map((i) => g.nodes[i]);
+      let edges = 0;
+      for (const c of g.connections)
+        if (c.enabled) {
+          if (selectedNodes.includes(c.from) && selectedNodes.includes(c.to))
+            edges++;
+        }
+      if (edges > 3) edges = 3;
+      motifCounts[edges]++;
+    }
+    const totalMotifs = motifCounts.reduce((a, b) => a + b, 0) || 1;
+    let graphletEntropy = 0;
+    for (let k = 0; k < motifCounts.length; k++) {
+      const p = motifCounts[k] / totalMotifs;
+      if (p > 0) graphletEntropy -= p * Math.log(p);
+    }
+    let lineageMeanDepth = 0;
+    let lineageMeanPairDist = 0;
+    if (this._lineageEnabled && popSize > 0) {
+      const depths = population.map((g) => g._depth ?? 0);
+      lineageMeanDepth = depths.reduce((a, b) => a + b, 0) / popSize;
+      let lineagePairSum = 0;
+      let lineagePairN = 0;
+      for (let iter = 0; iter < Math.min(pairSample, popSize * (popSize - 1) / 2); iter++) {
+        if (popSize < 2) break;
+        const i = Math.floor(this._getRNG()() * popSize);
+        let j = Math.floor(this._getRNG()() * popSize);
+        if (j === i) j = (j + 1) % popSize;
+        lineagePairSum += Math.abs(depths[i] - depths[j]);
+        lineagePairN++;
+      }
+      lineageMeanPairDist = lineagePairN ? lineagePairSum / lineagePairN : 0;
+    }
+    this._diversityStats = {
+      meanCompat,
+      varCompat,
+      meanEntropy,
+      varEntropy,
+      graphletEntropy,
+      lineageMeanDepth,
+      lineageMeanPairDist
+    };
+  }
+  function recordTelemetryEntry(entry) {
+    try {
+      applyTelemetrySelect.call(this, entry);
+    } catch {
+    }
+    if (!this._telemetry) this._telemetry = [];
+    this._telemetry.push(entry);
+    try {
+      if (this.options.telemetryStream?.enabled && this.options.telemetryStream.onEntry)
+        this.options.telemetryStream.onEntry(entry);
+    } catch {
+    }
+    if (this._telemetry.length > 500) this._telemetry.shift();
+  }
+  function buildTelemetryEntry(fittest) {
+    const gen = this.generation;
+    let hyperVolumeProxy = 0;
+    if (this.options.multiObjective?.enabled) {
+      const complexityMetric = this.options.multiObjective.complexityMetric || "connections";
+      const primaryObjectiveScores = this.population.map(
+        (genome) => genome.score || 0
+      );
+      const minPrimaryScore = Math.min(...primaryObjectiveScores);
+      const maxPrimaryScore = Math.max(...primaryObjectiveScores);
+      const paretoFrontSizes = [];
+      for (let r = 0; r < 5; r++) {
+        const size = this.population.filter(
+          (g) => (g._moRank ?? 0) === r
+        ).length;
+        if (!size) break;
+        paretoFrontSizes.push(size);
+      }
+      for (const genome of this.population) {
+        const rank = genome._moRank ?? 0;
+        if (rank !== 0) continue;
+        const normalizedScore = maxPrimaryScore > minPrimaryScore ? ((genome.score || 0) - minPrimaryScore) / (maxPrimaryScore - minPrimaryScore) : 0;
+        const genomeComplexity = complexityMetric === "nodes" ? genome.nodes.length : genome.connections.length;
+        hyperVolumeProxy += normalizedScore * (1 / (genomeComplexity + 1));
+      }
+      const operatorStatsSnapshot = Array.from(
+        this._operatorStats.entries()
+      ).map(([opName, stats]) => ({
+        op: opName,
+        succ: stats.success,
+        att: stats.attempts
+      }));
+      const entry2 = {
+        gen,
+        best: fittest.score,
+        species: this._species.length,
+        hyper: hyperVolumeProxy,
+        fronts: paretoFrontSizes,
+        diversity: this._diversityStats,
+        ops: operatorStatsSnapshot
+      };
+      if (!entry2.objImportance) entry2.objImportance = {};
+      if (this._lastObjImportance)
+        entry2.objImportance = this._lastObjImportance;
+      if (this._objectiveAges?.size) {
+        entry2.objAges = Array.from(
+          this._objectiveAges.entries()
+        ).reduce((a, kv) => {
+          a[kv[0]] = kv[1];
+          return a;
+        }, {});
+      }
+      if (this._pendingObjectiveAdds?.length || this._pendingObjectiveRemoves?.length) {
+        entry2.objEvents = [];
+        for (const k of this._pendingObjectiveAdds)
+          entry2.objEvents.push({ type: "add", key: k });
+        for (const k of this._pendingObjectiveRemoves)
+          entry2.objEvents.push({ type: "remove", key: k });
+        this._objectiveEvents.push(
+          ...entry2.objEvents.map((e) => ({ gen, type: e.type, key: e.key }))
+        );
+        this._pendingObjectiveAdds = [];
+        this._pendingObjectiveRemoves = [];
+      }
+      if (this._lastOffspringAlloc)
+        entry2.speciesAlloc = this._lastOffspringAlloc.slice();
+      try {
+        entry2.objectives = this._getObjectives().map(
+          (o) => o.key
+        );
+      } catch {
+      }
+      if (this.options.rngState && this._rngState !== void 0)
+        entry2.rng = this._rngState;
+      if (this._lineageEnabled) {
+        const bestGenome = this.population[0];
+        const depths = this.population.map(
+          (g) => g._depth ?? 0
+        );
+        this._lastMeanDepth = depths.reduce((a, b) => a + b, 0) / (depths.length || 1);
+        const { computeAncestorUniqueness: computeAncestorUniqueness2 } = (init_neat_lineage(), __toCommonJS(neat_lineage_exports));
+        const ancestorUniqueness = computeAncestorUniqueness2.call(this);
+        entry2.lineage = {
+          parents: Array.isArray(bestGenome._parents) ? bestGenome._parents.slice() : [],
+          depthBest: bestGenome._depth ?? 0,
+          meanDepth: +this._lastMeanDepth.toFixed(2),
+          inbreeding: this._prevInbreedingCount,
+          ancestorUniq: ancestorUniqueness
+        };
+      }
+      if (this.options.telemetry?.hypervolume && this.options.multiObjective?.enabled)
+        entry2.hv = +hyperVolumeProxy.toFixed(4);
+      if (this.options.telemetry?.complexity) {
+        const nodesArr = this.population.map((g) => g.nodes.length);
+        const connsArr = this.population.map(
+          (g) => g.connections.length
+        );
+        const meanNodes = nodesArr.reduce((a, b) => a + b, 0) / (nodesArr.length || 1);
+        const meanConns = connsArr.reduce((a, b) => a + b, 0) / (connsArr.length || 1);
+        const maxNodes = nodesArr.length ? Math.max(...nodesArr) : 0;
+        const maxConns = connsArr.length ? Math.max(...connsArr) : 0;
+        const enabledRatios = this.population.map((g) => {
+          let enabled = 0, disabled = 0;
+          for (const c of g.connections) {
+            if (c.enabled === false) disabled++;
+            else enabled++;
+          }
+          return enabled + disabled ? enabled / (enabled + disabled) : 0;
+        });
+        const meanEnabledRatio = enabledRatios.reduce((a, b) => a + b, 0) / (enabledRatios.length || 1);
+        const growthNodes = this._lastMeanNodes !== void 0 ? meanNodes - this._lastMeanNodes : 0;
+        const growthConns = this._lastMeanConns !== void 0 ? meanConns - this._lastMeanConns : 0;
+        this._lastMeanNodes = meanNodes;
+        this._lastMeanConns = meanConns;
+        entry2.complexity = {
+          meanNodes: +meanNodes.toFixed(2),
+          meanConns: +meanConns.toFixed(2),
+          maxNodes,
+          maxConns,
+          meanEnabledRatio: +meanEnabledRatio.toFixed(3),
+          growthNodes: +growthNodes.toFixed(2),
+          growthConns: +growthConns.toFixed(2),
+          budgetMaxNodes: this.options.maxNodes,
+          budgetMaxConns: this.options.maxConns
+        };
+      }
+      if (this.options.telemetry?.performance)
+        entry2.perf = {
+          evalMs: this._lastEvalDuration,
+          evolveMs: this._lastEvolveDuration
+        };
+      return entry2;
+    }
+    const operatorStatsSnapshotMono = Array.from(
+      this._operatorStats.entries()
+    ).map(([opName, stats]) => ({
+      op: opName,
+      succ: stats.success,
+      att: stats.attempts
+    }));
+    const entry = {
+      gen,
+      best: fittest.score,
+      species: this._species.length,
+      hyper: hyperVolumeProxy,
+      diversity: this._diversityStats,
+      ops: operatorStatsSnapshotMono,
+      objImportance: {}
+    };
+    if (this._lastObjImportance)
+      entry.objImportance = this._lastObjImportance;
+    if (this._objectiveAges?.size)
+      entry.objAges = Array.from(
+        this._objectiveAges.entries()
+      ).reduce((a, kv) => {
+        a[kv[0]] = kv[1];
+        return a;
+      }, {});
+    if (this._pendingObjectiveAdds?.length || this._pendingObjectiveRemoves?.length) {
+      entry.objEvents = [];
+      for (const k of this._pendingObjectiveAdds)
+        entry.objEvents.push({ type: "add", key: k });
+      for (const k of this._pendingObjectiveRemoves)
+        entry.objEvents.push({ type: "remove", key: k });
+      this._objectiveEvents.push(
+        ...entry.objEvents.map((e) => ({ gen, type: e.type, key: e.key }))
+      );
+      this._pendingObjectiveAdds = [];
+      this._pendingObjectiveRemoves = [];
+    }
+    if (this._lastOffspringAlloc)
+      entry.speciesAlloc = this._lastOffspringAlloc.slice();
+    try {
+      entry.objectives = this._getObjectives().map(
+        (o) => o.key
+      );
+    } catch {
+    }
+    if (this.options.rngState && this._rngState !== void 0)
+      entry.rng = this._rngState;
+    if (this._lineageEnabled) {
+      const bestGenome = this.population[0];
+      const depths = this.population.map(
+        (g) => g._depth ?? 0
+      );
+      this._lastMeanDepth = depths.reduce((a, b) => a + b, 0) / (depths.length || 1);
+      const { buildAnc: buildAnc2 } = (init_neat_lineage(), __toCommonJS(neat_lineage_exports));
+      let sampledPairs = 0;
+      let jaccardSum = 0;
+      const samplePairs = Math.min(
+        30,
+        this.population.length * (this.population.length - 1) / 2
+      );
+      for (let t = 0; t < samplePairs; t++) {
+        if (this.population.length < 2) break;
+        const i = Math.floor(
+          this._getRNG()() * this.population.length
+        );
+        let j = Math.floor(
+          this._getRNG()() * this.population.length
+        );
+        if (j === i) j = (j + 1) % this.population.length;
+        const ancestorsA = buildAnc2.call(
+          this,
+          this.population[i]
+        );
+        const ancestorsB = buildAnc2.call(
+          this,
+          this.population[j]
+        );
+        if (ancestorsA.size === 0 && ancestorsB.size === 0) continue;
+        let intersectionCount = 0;
+        for (const id of ancestorsA) if (ancestorsB.has(id)) intersectionCount++;
+        const union = ancestorsA.size + ancestorsB.size - intersectionCount || 1;
+        const jaccardDistance = 1 - intersectionCount / union;
+        jaccardSum += jaccardDistance;
+        sampledPairs++;
+      }
+      const ancestorUniqueness = sampledPairs ? +(jaccardSum / sampledPairs).toFixed(3) : 0;
+      entry.lineage = {
+        parents: Array.isArray(bestGenome._parents) ? bestGenome._parents.slice() : [],
+        depthBest: bestGenome._depth ?? 0,
+        meanDepth: +this._lastMeanDepth.toFixed(2),
+        inbreeding: this._prevInbreedingCount,
+        ancestorUniq: ancestorUniqueness
+      };
+    }
+    if (this.options.telemetry?.hypervolume && this.options.multiObjective?.enabled)
+      entry.hv = +hyperVolumeProxy.toFixed(4);
+    if (this.options.telemetry?.complexity) {
+      const nodesArr = this.population.map((g) => g.nodes.length);
+      const connsArr = this.population.map(
+        (g) => g.connections.length
+      );
+      const meanNodes = nodesArr.reduce((a, b) => a + b, 0) / (nodesArr.length || 1);
+      const meanConns = connsArr.reduce((a, b) => a + b, 0) / (connsArr.length || 1);
+      const maxNodes = nodesArr.length ? Math.max(...nodesArr) : 0;
+      const maxConns = connsArr.length ? Math.max(...connsArr) : 0;
+      const enabledRatios = this.population.map((g) => {
+        let en = 0, dis = 0;
+        for (const c of g.connections) {
+          if (c.enabled === false) dis++;
+          else en++;
+        }
+        return en + dis ? en / (en + dis) : 0;
+      });
+      const meanEnabledRatio = enabledRatios.reduce((a, b) => a + b, 0) / (enabledRatios.length || 1);
+      const growthNodes = this._lastMeanNodes !== void 0 ? meanNodes - this._lastMeanNodes : 0;
+      const growthConns = this._lastMeanConns !== void 0 ? meanConns - this._lastMeanConns : 0;
+      this._lastMeanNodes = meanNodes;
+      this._lastMeanConns = meanConns;
+      entry.complexity = {
+        meanNodes: +meanNodes.toFixed(2),
+        meanConns: +meanConns.toFixed(2),
+        maxNodes,
+        maxConns,
+        meanEnabledRatio: +meanEnabledRatio.toFixed(3),
+        growthNodes: +growthNodes.toFixed(2),
+        growthConns: +growthConns.toFixed(2),
+        budgetMaxNodes: this.options.maxNodes,
+        budgetMaxConns: this.options.maxConns
+      };
+    }
+    if (this.options.telemetry?.performance)
+      entry.perf = {
+        evalMs: this._lastEvalDuration,
+        evolveMs: this._lastEvolveDuration
+      };
+    return entry;
+  }
+  var init_neat_telemetry = __esm({
+    "src/neat/neat.telemetry.ts"() {
+      "use strict";
+      init_neat_constants();
+    }
+  });
+
+  // src/neat/neat.pruning.ts
+  var neat_pruning_exports = {};
+  __export(neat_pruning_exports, {
+    applyAdaptivePruning: () => applyAdaptivePruning,
+    applyEvolutionPruning: () => applyEvolutionPruning
+  });
+  function applyEvolutionPruning() {
+    const evolutionPruningOpts = this.options.evolutionPruning;
+    if (!evolutionPruningOpts || this.generation < (evolutionPruningOpts.startGeneration || 0))
+      return;
+    const interval = evolutionPruningOpts.interval || 1;
+    if ((this.generation - evolutionPruningOpts.startGeneration) % interval !== 0)
+      return;
+    const rampGenerations = evolutionPruningOpts.rampGenerations || 0;
+    let rampFraction = 1;
+    if (rampGenerations > 0) {
+      const progressThroughRamp = Math.min(
+        1,
+        Math.max(
+          0,
+          (this.generation - evolutionPruningOpts.startGeneration) / rampGenerations
+        )
+      );
+      rampFraction = progressThroughRamp;
+    }
+    const targetSparsityNow = (evolutionPruningOpts.targetSparsity || 0) * rampFraction;
+    for (const genome of this.population) {
+      if (genome && typeof genome.pruneToSparsity === "function") {
+        genome.pruneToSparsity(
+          targetSparsityNow,
+          evolutionPruningOpts.method || "magnitude"
+        );
+      }
+    }
+  }
+  function applyAdaptivePruning() {
+    if (!this.options.adaptivePruning?.enabled) return;
+    const adaptivePruningOpts = this.options.adaptivePruning;
+    if (this._adaptivePruneLevel === void 0) this._adaptivePruneLevel = 0;
+    const metricName = adaptivePruningOpts.metric || "connections";
+    const meanNodeCount = this.population.reduce((acc, g) => acc + g.nodes.length, 0) / (this.population.length || 1);
+    const meanConnectionCount = this.population.reduce(
+      (acc, g) => acc + g.connections.length,
+      0
+    ) / (this.population.length || 1);
+    const currentMetricValue = metricName === "nodes" ? meanNodeCount : meanConnectionCount;
+    if (this._adaptivePruneBaseline === void 0)
+      this._adaptivePruneBaseline = currentMetricValue;
+    const adaptivePruneBaseline = this._adaptivePruneBaseline;
+    const desiredSparsity = adaptivePruningOpts.targetSparsity ?? 0.5;
+    const targetRemainingMetric = adaptivePruneBaseline * (1 - desiredSparsity);
+    const tolerance = adaptivePruningOpts.tolerance ?? 0.05;
+    const adjustRate = adaptivePruningOpts.adjustRate ?? 0.02;
+    const normalizedDifference = (currentMetricValue - targetRemainingMetric) / (adaptivePruneBaseline || 1);
+    if (Math.abs(normalizedDifference) > tolerance) {
+      this._adaptivePruneLevel = Math.max(
+        0,
+        Math.min(
+          desiredSparsity,
+          this._adaptivePruneLevel + adjustRate * (normalizedDifference > 0 ? 1 : -1)
+        )
+      );
+      for (const g of this.population)
+        if (typeof g.pruneToSparsity === "function")
+          g.pruneToSparsity(this._adaptivePruneLevel, "magnitude");
+    }
+  }
+  var init_neat_pruning = __esm({
+    "src/neat/neat.pruning.ts"() {
+      "use strict";
+    }
+  });
+
+  // src/neat/neat.evolve.ts
+  async function evolve() {
+    const startTime = typeof performance !== "undefined" && performance.now ? performance.now() : Date.now();
+    if (this.population[this.population.length - 1].score === void 0) {
+      await this.evaluate();
+    }
+    this._objectivesList = void 0;
+    try {
+      (init_neat_adaptive(), __toCommonJS(neat_adaptive_exports)).applyComplexityBudget.call(this);
+    } catch {
+    }
+    try {
+      (init_neat_adaptive(), __toCommonJS(neat_adaptive_exports)).applyPhasedComplexity.call(this);
+    } catch {
+    }
+    this.sort();
+    try {
+      const currentBest = this.population[0]?.score;
+      if (typeof currentBest === "number" && (this._bestScoreLastGen === void 0 || currentBest > this._bestScoreLastGen)) {
+        this._bestScoreLastGen = currentBest;
+        this._lastGlobalImproveGeneration = this.generation;
+      }
+    } catch {
+    }
+    try {
+      (init_neat_adaptive(), __toCommonJS(neat_adaptive_exports)).applyMinimalCriterionAdaptive.call(this);
+    } catch {
+    }
+    try {
+      this._computeDiversityStats && this._computeDiversityStats();
+    } catch {
+    }
+    if (this.options.multiObjective?.enabled) {
+      const populationSnapshot = this.population;
+      const paretoFronts = fastNonDominated.call(this, populationSnapshot);
+      const objectives = this._getObjectives();
+      const crowdingDistances = new Array(
+        populationSnapshot.length
+      ).fill(0);
+      const objectiveValues = objectives.map(
+        (obj) => populationSnapshot.map((genome) => obj.accessor(genome))
+      );
+      for (const front of paretoFronts) {
+        const frontIndices = front.map(
+          (genome) => this.population.indexOf(genome)
+        );
+        if (frontIndices.length < 3) {
+          frontIndices.forEach((i) => crowdingDistances[i] = Infinity);
+          continue;
+        }
+        for (let oi = 0; oi < objectives.length; oi++) {
+          const sortedIdx = [...frontIndices].sort(
+            (a, b) => objectiveValues[oi][a] - objectiveValues[oi][b]
+          );
+          crowdingDistances[sortedIdx[0]] = Infinity;
+          crowdingDistances[sortedIdx[sortedIdx.length - 1]] = Infinity;
+          const minV = objectiveValues[oi][sortedIdx[0]];
+          const maxV = objectiveValues[oi][sortedIdx[sortedIdx.length - 1]];
+          for (let k = 1; k < sortedIdx.length - 1; k++) {
+            const prev = objectiveValues[oi][sortedIdx[k - 1]];
+            const next = objectiveValues[oi][sortedIdx[k + 1]];
+            const denom = maxV - minV || 1;
+            crowdingDistances[sortedIdx[k]] += (next - prev) / denom;
+          }
+        }
+      }
+      const indexMap = /* @__PURE__ */ new Map();
+      for (let i = 0; i < populationSnapshot.length; i++)
+        indexMap.set(populationSnapshot[i], i);
+      this.population.sort((a, b) => {
+        const ra = a._moRank ?? 0;
+        const rb = b._moRank ?? 0;
+        if (ra !== rb) return ra - rb;
+        const ia = indexMap.get(a);
+        const ib = indexMap.get(b);
+        return crowdingDistances[ib] - crowdingDistances[ia];
+      });
+      for (let i = 0; i < populationSnapshot.length; i++)
+        populationSnapshot[i]._moCrowd = crowdingDistances[i];
+      if (paretoFronts.length) {
+        const first = paretoFronts[0];
+        const snapshot = first.map((genome) => ({
+          id: genome._id ?? -1,
+          score: genome.score || 0,
+          nodes: genome.nodes.length,
+          connections: genome.connections.length
+        }));
+        this._paretoArchive.push({
+          gen: this.generation,
+          size: first.length,
+          genomes: snapshot
+        });
+        if (this._paretoArchive.length > 200) this._paretoArchive.shift();
+        if (objectives.length) {
+          const vectors = first.map((genome) => ({
+            id: genome._id ?? -1,
+            values: objectives.map((obj) => obj.accessor(genome))
+          }));
+          this._paretoObjectivesArchive.push({ gen: this.generation, vectors });
+          if (this._paretoObjectivesArchive.length > 200)
+            this._paretoObjectivesArchive.shift();
+        }
+      }
+      if (this.options.multiObjective?.adaptiveEpsilon?.enabled && paretoFronts.length) {
+        const cfg = this.options.multiObjective.adaptiveEpsilon;
+        const target = cfg.targetFront ?? Math.max(3, Math.floor(Math.sqrt(this.population.length)));
+        const adjust = cfg.adjust ?? 2e-3;
+        const minE = cfg.min ?? 0;
+        const maxE = cfg.max ?? 0.5;
+        const cooldown = cfg.cooldown ?? 2;
+        if (this.generation - this._lastEpsilonAdjustGen >= cooldown) {
+          const currentSize = paretoFronts[0].length;
+          let eps = this.options.multiObjective.dominanceEpsilon || 0;
+          if (currentSize > target * 1.2) eps = Math.min(maxE, eps + adjust);
+          else if (currentSize < target * 0.8) eps = Math.max(minE, eps - adjust);
+          this.options.multiObjective.dominanceEpsilon = eps;
+          this._lastEpsilonAdjustGen = this.generation;
+        }
+      }
+      if (this.options.multiObjective?.pruneInactive?.enabled) {
+        const cfg = this.options.multiObjective.pruneInactive;
+        const window2 = cfg.window ?? 5;
+        const rangeEps = cfg.rangeEps ?? 1e-6;
+        const protect = /* @__PURE__ */ new Set([
+          "fitness",
+          "complexity",
+          ...cfg.protect || []
+        ]);
+        const objsList = this._getObjectives();
+        const ranges = {};
+        for (const obj of objsList) {
+          let min = Infinity, max = -Infinity;
+          for (const genome of this.population) {
+            const v = obj.accessor(genome);
+            if (v < min) min = v;
+            if (v > max) max = v;
+          }
+          ranges[obj.key] = { min, max };
+        }
+        const toRemove = [];
+        for (const obj of objsList) {
+          if (protect.has(obj.key)) continue;
+          const objRange = ranges[obj.key];
+          const span = objRange.max - objRange.min;
+          if (span < rangeEps) {
+            const count = (this._objectiveStale.get(obj.key) || 0) + 1;
+            this._objectiveStale.set(obj.key, count);
+            if (count >= window2) toRemove.push(obj.key);
+          } else {
+            this._objectiveStale.set(obj.key, 0);
+          }
+        }
+        if (toRemove.length && this.options.multiObjective?.objectives) {
+          this.options.multiObjective.objectives = this.options.multiObjective.objectives.filter(
+            (obj) => !toRemove.includes(obj.key)
+          );
+          this._objectivesList = void 0;
+        }
+      }
+    }
+    try {
+      (init_neat_adaptive(), __toCommonJS(neat_adaptive_exports)).applyAncestorUniqAdaptive.call(this);
+    } catch {
+    }
+    if (this.options.speciation) {
+      try {
+        this._speciate();
+      } catch {
+      }
+      try {
+        this._applyFitnessSharing();
+      } catch {
+      }
+      try {
+        const opts = this.options;
+        if (opts.autoCompatTuning?.enabled) {
+          const tgt = opts.autoCompatTuning.target ?? opts.targetSpecies ?? Math.max(2, Math.round(Math.sqrt(this.population.length)));
+          const obs = this._species.length || 1;
+          const err = tgt - obs;
+          const rate = opts.autoCompatTuning.adjustRate ?? 0.01;
+          const minC = opts.autoCompatTuning.minCoeff ?? 0.1;
+          const maxC = opts.autoCompatTuning.maxCoeff ?? 5;
+          let factor = 1 - rate * Math.sign(err);
+          if (err === 0)
+            factor = 1 + (this._getRNG()() - 0.5) * rate * 0.5;
+          opts.excessCoeff = Math.min(
+            maxC,
+            Math.max(minC, opts.excessCoeff * factor)
+          );
+          opts.disjointCoeff = Math.min(
+            maxC,
+            Math.max(minC, opts.disjointCoeff * factor)
+          );
+        }
+      } catch {
+      }
+      this.sort();
+      try {
+        if (this.options.speciesAllocation?.extendedHistory) {
+        } else {
+          if (!this._speciesHistory || this._speciesHistory.length === 0 || this._speciesHistory[this._speciesHistory.length - 1].generation !== this.generation) {
+            this._speciesHistory.push({
+              generation: this.generation,
+              stats: this._species.map((species) => ({
+                id: species.id,
+                size: species.members.length,
+                best: species.bestScore,
+                lastImproved: species.lastImproved
+              }))
+            });
+            if (this._speciesHistory.length > 200)
+              this._speciesHistory.shift();
+          }
+        }
+      } catch {
+      }
+    }
+    const fittest = Network.fromJSON(this.population[0].toJSON());
+    fittest.score = this.population[0].score;
+    this._computeDiversityStats();
+    try {
+      const currentObjKeys = this._getObjectives().map(
+        (obj) => obj.key
+      );
+      const dyn = this.options.multiObjective?.dynamic;
+      if (this.options.multiObjective?.enabled) {
+        if (dyn?.enabled) {
+          const addC = dyn.addComplexityAt ?? Infinity;
+          const addE = dyn.addEntropyAt ?? Infinity;
+          if (this.generation + 1 >= addC && !currentObjKeys.includes("complexity")) {
+            this.registerObjective(
+              "complexity",
+              "min",
+              (genome) => genome.connections.length
+            );
+            this._pendingObjectiveAdds.push("complexity");
+          }
+          if (this.generation + 1 >= addE && !currentObjKeys.includes("entropy")) {
+            this.registerObjective(
+              "entropy",
+              "max",
+              (genome) => this._structuralEntropy(genome)
+            );
+            this._pendingObjectiveAdds.push("entropy");
+          }
+          if (currentObjKeys.includes("entropy") && dyn.dropEntropyOnStagnation != null) {
+            const stagnGen = dyn.dropEntropyOnStagnation;
+            if (this.generation >= stagnGen && !this._entropyDropped) {
+              if (this.options.multiObjective?.objectives) {
+                this.options.multiObjective.objectives = this.options.multiObjective.objectives.filter(
+                  (obj) => obj.key !== "entropy"
+                );
+                this._objectivesList = void 0;
+                this._pendingObjectiveRemoves.push("entropy");
+                this._entropyDropped = this.generation;
+              }
+            }
+          } else if (!currentObjKeys.includes("entropy") && this._entropyDropped && dyn.readdEntropyAfter != null) {
+            if (this.generation - this._entropyDropped >= dyn.readdEntropyAfter) {
+              this.registerObjective(
+                "entropy",
+                "max",
+                (genome) => this._structuralEntropy(genome)
+              );
+              this._pendingObjectiveAdds.push("entropy");
+              this._entropyDropped = void 0;
+            }
+          }
+        } else if (this.options.multiObjective.autoEntropy) {
+          const addAt = 3;
+          if (this.generation >= addAt && !currentObjKeys.includes("entropy")) {
+            this.registerObjective(
+              "entropy",
+              "max",
+              (genome) => this._structuralEntropy(genome)
+            );
+            this._pendingObjectiveAdds.push("entropy");
+          }
+        }
+      }
+      for (const k of currentObjKeys)
+        this._objectiveAges.set(k, (this._objectiveAges.get(k) || 0) + 1);
+      for (const added of this._pendingObjectiveAdds)
+        this._objectiveAges.set(added, 0);
+    } catch {
+    }
+    try {
+      const mo = this.options.multiObjective;
+      if (mo?.enabled && mo.pruneInactive && mo.pruneInactive.enabled === false) {
+        const keys = this._getObjectives().map((obj) => obj.key);
+        if (keys.includes("fitness") && keys.length > 1 && !this._fitnessSuppressedOnce) {
+          this._suppressFitnessObjective = true;
+          this._fitnessSuppressedOnce = true;
+          this._objectivesList = void 0;
+        }
+      }
+    } catch {
+    }
+    let objImportance = null;
+    try {
+      const objsList = this._getObjectives();
+      if (objsList.length) {
+        objImportance = {};
+        const pop = this.population;
+        for (const obj of objsList) {
+          const vals = pop.map((genome) => obj.accessor(genome));
+          const min = Math.min(...vals);
+          const max = Math.max(...vals);
+          const mean = vals.reduce((a, b) => a + b, 0) / vals.length;
+          const varV = vals.reduce(
+            (a, b) => a + (b - mean) * (b - mean),
+            0
+          ) / (vals.length || 1);
+          objImportance[obj.key] = { range: max - min, var: varV };
+        }
+        this._lastObjImportance = objImportance;
+      }
+    } catch {
+    }
+    if (this.options.telemetry?.enabled || true) {
+      const telemetry = (init_neat_telemetry(), __toCommonJS(neat_telemetry_exports));
+      const entry = telemetry.buildTelemetryEntry.call(this, fittest);
+      telemetry.recordTelemetryEntry.call(this, entry);
+    }
+    if ((fittest.score ?? -Infinity) > this._bestGlobalScore) {
+      this._bestGlobalScore = fittest.score ?? -Infinity;
+      this._lastGlobalImproveGeneration = this.generation;
+    }
+    const newPopulation = [];
+    const elitismCount = Math.max(
+      0,
+      Math.min(this.options.elitism || 0, this.population.length)
+    );
+    for (let i = 0; i < elitismCount; i++) {
+      const elite = this.population[i];
+      if (elite) newPopulation.push(elite);
+    }
+    const desiredPop = Math.max(0, this.options.popsize || 0);
+    const remainingSlotsAfterElites = Math.max(
+      0,
+      desiredPop - newPopulation.length
+    );
+    const provenanceCount = Math.max(
+      0,
+      Math.min(this.options.provenance || 0, remainingSlotsAfterElites)
+    );
+    for (let i = 0; i < provenanceCount; i++) {
+      if (this.options.network) {
+        newPopulation.push(Network.fromJSON(this.options.network.toJSON()));
+      } else {
+        newPopulation.push(
+          new Network(this.input, this.output, {
+            minHidden: this.options.minHidden
+          })
+        );
+      }
+    }
+    if (this.options.speciation && this._species.length > 0) {
+      this._suppressTournamentError = true;
+      const remaining = desiredPop - newPopulation.length;
+      if (remaining > 0) {
+        const ageCfg = this.options.speciesAgeBonus || {};
+        const youngT = ageCfg.youngThreshold ?? 5;
+        const youngM = ageCfg.youngMultiplier ?? 1.3;
+        const oldT = ageCfg.oldThreshold ?? 30;
+        const oldM = ageCfg.oldMultiplier ?? 0.7;
+        const speciesAdjusted = this._species.map((species) => {
+          const base = species.members.reduce(
+            (a, member) => a + (member.score || 0),
+            0
+          );
+          const age = this.generation - species.lastImproved;
+          if (age <= youngT) return base * youngM;
+          if (age >= oldT) return base * oldM;
+          return base;
+        });
+        const totalAdj = speciesAdjusted.reduce((a, b) => a + b, 0) || 1;
+        const minOff = this.options.speciesAllocation?.minOffspring ?? 1;
+        const rawShares = this._species.map(
+          (_, idx) => speciesAdjusted[idx] / totalAdj * remaining
+        );
+        const offspringAlloc = rawShares.map(
+          (s) => Math.floor(s)
+        );
+        for (let i = 0; i < offspringAlloc.length; i++)
+          if (offspringAlloc[i] < minOff && remaining >= this._species.length * minOff)
+            offspringAlloc[i] = minOff;
+        let allocated = offspringAlloc.reduce((a, b) => a + b, 0);
+        let slotsLeft = remaining - allocated;
+        const remainders = rawShares.map((s, i) => ({
+          i,
+          frac: s - Math.floor(s)
+        }));
+        remainders.sort((a, b) => b.frac - a.frac);
+        for (const remainderEntry of remainders) {
+          if (slotsLeft <= 0) break;
+          offspringAlloc[remainderEntry.i]++;
+          slotsLeft--;
+        }
+        if (slotsLeft < 0) {
+          const order = offspringAlloc.map((v, i) => ({ i, v })).sort((a, b) => b.v - a.v);
+          for (const orderEntry of order) {
+            if (slotsLeft === 0) break;
+            if (offspringAlloc[orderEntry.i] > minOff) {
+              offspringAlloc[orderEntry.i]--;
+              slotsLeft++;
+            }
+          }
+        }
+        this._lastOffspringAlloc = this._species.map(
+          (species, i) => ({
+            id: species.id,
+            alloc: offspringAlloc[i] || 0
+          })
+        );
+        this._prevInbreedingCount = this._lastInbreedingCount;
+        this._lastInbreedingCount = 0;
+        offspringAlloc.forEach((count, idx) => {
+          if (count <= 0) return;
+          const species = this._species[idx];
+          this._sortSpeciesMembers(species);
+          const survivors = species.members.slice(
+            0,
+            Math.max(
+              1,
+              Math.floor(
+                species.members.length * (this.options.survivalThreshold || 0.5)
+              )
+            )
+          );
+          for (let k = 0; k < count; k++) {
+            const parentA = survivors[Math.floor(this._getRNG()() * survivors.length)];
+            let parentB;
+            if (this.options.crossSpeciesMatingProb && this._species.length > 1 && this._getRNG()() < (this.options.crossSpeciesMatingProb || 0)) {
+              let otherIdx = idx;
+              let guard = 0;
+              while (otherIdx === idx && guard++ < 5)
+                otherIdx = Math.floor(this._getRNG()() * this._species.length);
+              const otherSpecies = this._species[otherIdx];
+              this._sortSpeciesMembers(otherSpecies);
+              const otherParents = otherSpecies.members.slice(
+                0,
+                Math.max(
+                  1,
+                  Math.floor(
+                    otherSpecies.members.length * (this.options.survivalThreshold || 0.5)
+                  )
+                )
+              );
+              parentB = otherParents[Math.floor(this._getRNG()() * otherParents.length)];
+            } else {
+              parentB = survivors[Math.floor(this._getRNG()() * survivors.length)];
+            }
+            const child = Network.crossOver(
+              parentA,
+              parentB,
+              this.options.equal || false
+            );
+            child._reenableProb = this.options.reenableProb;
+            child._id = this._nextGenomeId++;
+            if (this._lineageEnabled) {
+              child._parents = [
+                parentA._id,
+                parentB._id
+              ];
+              const d1 = parentA._depth ?? 0;
+              const d2 = parentB._depth ?? 0;
+              child._depth = 1 + Math.max(d1, d2);
+              if (parentA._id === parentB._id)
+                this._lastInbreedingCount++;
+            }
+            newPopulation.push(child);
+          }
+        });
+        this._suppressTournamentError = false;
+      }
+    } else {
+      this._suppressTournamentError = true;
+      const toBreed = Math.max(0, desiredPop - newPopulation.length);
+      for (let i = 0; i < toBreed; i++) newPopulation.push(this.getOffspring());
+      this._suppressTournamentError = false;
+    }
+    for (const genome of newPopulation) {
+      if (!genome) continue;
+      this.ensureMinHiddenNodes(genome);
+      this.ensureNoDeadEnds(genome);
+    }
+    this.population = newPopulation;
+    try {
+      (init_neat_pruning(), __toCommonJS(neat_pruning_exports)).applyEvolutionPruning.call(this);
+    } catch {
+    }
+    try {
+      (init_neat_pruning(), __toCommonJS(neat_pruning_exports)).applyAdaptivePruning.call(this);
+    } catch {
+    }
+    this.mutate();
+    try {
+      (init_neat_adaptive(), __toCommonJS(neat_adaptive_exports)).applyAdaptiveMutation.call(this);
+    } catch {
+    }
+    this.population.forEach((genome) => {
+      if (genome._compatCache) delete genome._compatCache;
+    });
+    this.population.forEach((genome) => genome.score = void 0);
+    this.generation++;
+    if (this.options.speciation) this._updateSpeciesStagnation();
+    if ((this.options.globalStagnationGenerations || 0) > 0 && this.generation - this._lastGlobalImproveGeneration > (this.options.globalStagnationGenerations || 0)) {
+      const replaceFraction = 0.2;
+      const startIdx = Math.max(
+        this.options.elitism || 0,
+        Math.floor(this.population.length * (1 - replaceFraction))
+      );
+      for (let i = startIdx; i < this.population.length; i++) {
+        const fresh = new Network(this.input, this.output, {
+          minHidden: this.options.minHidden
+        });
+        fresh.score = void 0;
+        fresh._reenableProb = this.options.reenableProb;
+        fresh._id = this._nextGenomeId++;
+        if (this._lineageEnabled) {
+          fresh._parents = [];
+          fresh._depth = 0;
+        }
+        try {
+          this.ensureMinHiddenNodes(fresh);
+          this.ensureNoDeadEnds(fresh);
+          const hiddenCount = fresh.nodes.filter((n) => n.type === "hidden").length;
+          if (hiddenCount === 0) {
+            const NodeCls = (init_node(), __toCommonJS(node_exports)).default;
+            const newNode = new NodeCls("hidden");
+            fresh.nodes.splice(fresh.nodes.length - fresh.output, 0, newNode);
+            const inputNodes = fresh.nodes.filter((n) => n.type === "input");
+            const outputNodes = fresh.nodes.filter(
+              (n) => n.type === "output"
+            );
+            if (inputNodes.length && outputNodes.length) {
+              try {
+                fresh.connect(inputNodes[0], newNode, 1);
+              } catch {
+              }
+              try {
+                fresh.connect(newNode, outputNodes[0], 1);
+              } catch {
+              }
+            }
+          }
+        } catch {
+        }
+        this.population[i] = fresh;
+      }
+      this._lastGlobalImproveGeneration = this.generation;
+    }
+    if (this.options.reenableProb !== void 0) {
+      let reenableSuccessTotal = 0, reenableAttemptsTotal = 0;
+      for (const genome of this.population) {
+        reenableSuccessTotal += genome._reenableSuccess || 0;
+        reenableAttemptsTotal += genome._reenableAttempts || 0;
+        genome._reenableSuccess = 0;
+        genome._reenableAttempts = 0;
+      }
+      if (reenableAttemptsTotal > 20) {
+        const ratio = reenableSuccessTotal / reenableAttemptsTotal;
+        const target = 0.3;
+        const delta = ratio - target;
+        this.options.reenableProb = Math.min(
+          0.9,
+          Math.max(0.05, this.options.reenableProb - delta * 0.1)
+        );
+      }
+    }
+    try {
+      (init_neat_adaptive(), __toCommonJS(neat_adaptive_exports)).applyOperatorAdaptation.call(this);
+    } catch {
+    }
+    const endTime = typeof performance !== "undefined" && performance.now ? performance.now() : Date.now();
+    this._lastEvolveDuration = endTime - startTime;
+    try {
+      if (!this._speciesHistory) this._speciesHistory = [];
+      if (!this.options.speciesAllocation?.extendedHistory) {
+        if (this._speciesHistory.length === 0 || this._speciesHistory[this._speciesHistory.length - 1].generation !== this.generation) {
+          this._speciesHistory.push({
+            generation: this.generation,
+            stats: this._species.map((species) => ({
+              id: species.id,
+              size: species.members.length,
+              best: species.bestScore,
+              lastImproved: species.lastImproved
+            }))
+          });
+          if (this._speciesHistory.length > 200)
+            this._speciesHistory.shift();
+        }
+      }
+    } catch {
+    }
+    return fittest;
+  }
+  var init_neat_evolve = __esm({
+    "src/neat/neat.evolve.ts"() {
+      "use strict";
+      init_network();
+      init_neat_multiobjective();
+    }
+  });
+
+  // src/neat/neat.evaluate.ts
+  async function evaluate() {
+    const options = this.options || {};
+    if (options.fitnessPopulation) {
+      if (options.clear)
+        this.population.forEach((g) => g.clear && g.clear());
+      await this.fitness(this.population);
+    } else {
+      for (const genome of this.population) {
+        if (options.clear && genome.clear) genome.clear();
+        const fitnessValue = await this.fitness(genome);
+        genome.score = fitnessValue;
+      }
+    }
+    try {
+      const noveltyOptions = options.novelty;
+      if (noveltyOptions?.enabled && typeof noveltyOptions.descriptor === "function") {
+        const kNeighbors = Math.max(1, noveltyOptions.k || 3);
+        const blendFactor = noveltyOptions.blendFactor ?? 0.3;
+        const descriptors = this.population.map((g) => {
+          try {
+            return noveltyOptions.descriptor(g) || [];
+          } catch {
+            return [];
+          }
+        });
+        const distanceMatrix = [];
+        for (let i = 0; i < descriptors.length; i++) {
+          distanceMatrix[i] = [];
+          for (let j = 0; j < descriptors.length; j++) {
+            if (i === j) {
+              distanceMatrix[i][j] = 0;
+              continue;
+            }
+            const descA = descriptors[i];
+            const descB = descriptors[j];
+            let sqSum = 0;
+            const commonLen = Math.min(descA.length, descB.length);
+            for (let t = 0; t < commonLen; t++) {
+              const delta = (descA[t] || 0) - (descB[t] || 0);
+              sqSum += delta * delta;
+            }
+            distanceMatrix[i][j] = Math.sqrt(sqSum);
+          }
+        }
+        for (let i = 0; i < this.population.length; i++) {
+          const sortedRow = distanceMatrix[i].slice().sort((a, b) => a - b);
+          const neighbours = sortedRow.slice(1, kNeighbors + 1);
+          const novelty = neighbours.length ? neighbours.reduce((a, b) => a + b, 0) / neighbours.length : 0;
+          this.population[i]._novelty = novelty;
+          if (typeof this.population[i].score === "number") {
+            this.population[i].score = (1 - blendFactor) * this.population[i].score + blendFactor * novelty;
+          }
+          if (!this._noveltyArchive) this._noveltyArchive = [];
+          const archiveAddThreshold = noveltyOptions.archiveAddThreshold ?? Infinity;
+          if (noveltyOptions.archiveAddThreshold === 0 || novelty > archiveAddThreshold) {
+            if (this._noveltyArchive.length < 200)
+              this._noveltyArchive.push({ desc: descriptors[i], novelty });
+          }
+        }
+      }
+    } catch {
+    }
+    if (!this._diversityStats) this._diversityStats = {};
+    try {
+      const entropySharingOptions = options.entropySharingTuning;
+      if (entropySharingOptions?.enabled) {
+        const targetVar = entropySharingOptions.targetEntropyVar ?? 0.2;
+        const adjustRate = entropySharingOptions.adjustRate ?? 0.1;
+        const minSigma = entropySharingOptions.minSigma ?? 0.1;
+        const maxSigma = entropySharingOptions.maxSigma ?? 10;
+        const currentVarEntropy = this._diversityStats.varEntropy;
+        if (typeof currentVarEntropy === "number") {
+          let sigma = this.options.sharingSigma ?? 0;
+          if (currentVarEntropy < targetVar * 0.9)
+            sigma = Math.max(minSigma, sigma * (1 - adjustRate));
+          else if (currentVarEntropy > targetVar * 1.1)
+            sigma = Math.min(maxSigma, sigma * (1 + adjustRate));
+          this.options.sharingSigma = sigma;
+        }
+      }
+    } catch {
+    }
+    try {
+      const entropyCompatOptions = options.entropyCompatTuning;
+      if (entropyCompatOptions?.enabled) {
+        const meanEntropy = this._diversityStats.meanEntropy;
+        const targetEntropy = entropyCompatOptions.targetEntropy ?? 0.5;
+        const deadband = entropyCompatOptions.deadband ?? 0.05;
+        const adjustRate = entropyCompatOptions.adjustRate ?? 0.05;
+        let threshold = this.options.compatibilityThreshold ?? 3;
+        if (typeof meanEntropy === "number") {
+          if (meanEntropy < targetEntropy - deadband)
+            threshold = Math.max(
+              entropyCompatOptions.minThreshold ?? 0.5,
+              threshold * (1 - adjustRate)
+            );
+          else if (meanEntropy > targetEntropy + deadband)
+            threshold = Math.min(
+              entropyCompatOptions.maxThreshold ?? 10,
+              threshold * (1 + adjustRate)
+            );
+          this.options.compatibilityThreshold = threshold;
+        }
+      }
+    } catch {
+    }
+    try {
+      if (this.options.speciation && (this.options.targetSpecies || this.options.compatAdjust || this.options.speciesAllocation?.extendedHistory)) {
+        this._speciate();
+      }
+    } catch {
+    }
+    try {
+      const autoDistanceCoeffOptions = this.options.autoDistanceCoeffTuning;
+      if (autoDistanceCoeffOptions?.enabled && this.options.speciation) {
+        const connectionSizes = this.population.map(
+          (g) => g.connections.length
+        );
+        const meanSize = connectionSizes.reduce((a, b) => a + b, 0) / (connectionSizes.length || 1);
+        const connVar = connectionSizes.reduce(
+          (a, b) => a + (b - meanSize) * (b - meanSize),
+          0
+        ) / (connectionSizes.length || 1);
+        const adjustRate = autoDistanceCoeffOptions.adjustRate ?? 0.05;
+        const minCoeff = autoDistanceCoeffOptions.minCoeff ?? 0.05;
+        const maxCoeff = autoDistanceCoeffOptions.maxCoeff ?? 8;
+        if (!this._lastConnVar) this._lastConnVar = connVar;
+        if (connVar < this._lastConnVar * 0.95) {
+          this.options.excessCoeff = Math.min(
+            maxCoeff,
+            this.options.excessCoeff * (1 + adjustRate)
+          );
+          this.options.disjointCoeff = Math.min(
+            maxCoeff,
+            this.options.disjointCoeff * (1 + adjustRate)
+          );
+        } else if (connVar > this._lastConnVar * 1.05) {
+          this.options.excessCoeff = Math.max(
+            minCoeff,
+            this.options.excessCoeff * (1 - adjustRate)
+          );
+          this.options.disjointCoeff = Math.max(
+            minCoeff,
+            this.options.disjointCoeff * (1 - adjustRate)
+          );
+        }
+        this._lastConnVar = connVar;
+      }
+    } catch {
+    }
+    try {
+      if (this.options.multiObjective?.enabled && this.options.multiObjective.autoEntropy) {
+        if (!this.options.multiObjective.dynamic?.enabled) {
+          const keys = this._getObjectives().map((o) => o.key);
+          if (!keys.includes("entropy")) {
+            this.registerObjective(
+              "entropy",
+              "max",
+              (g) => this._structuralEntropy(g)
+            );
+            this._pendingObjectiveAdds.push("entropy");
+            this._objectivesList = void 0;
+          }
+        }
+      }
+    } catch {
+    }
+  }
+  var init_neat_evaluate = __esm({
+    "src/neat/neat.evaluate.ts"() {
+      "use strict";
+    }
+  });
+
+  // src/neat/neat.helpers.ts
+  function spawnFromParent(parentGenome, mutateCount = 1) {
+    const clone = parentGenome.clone ? parentGenome.clone() : (init_network(), __toCommonJS(network_exports)).default.fromJSON(
+      parentGenome.toJSON()
+    );
+    clone.score = void 0;
+    clone._reenableProb = this.options.reenableProb;
+    clone._id = this._nextGenomeId++;
+    clone._parents = [parentGenome._id];
+    clone._depth = (parentGenome._depth ?? 0) + 1;
+    this.ensureMinHiddenNodes(clone);
+    this.ensureNoDeadEnds(clone);
+    for (let mutationIndex = 0; mutationIndex < mutateCount; mutationIndex++) {
+      try {
+        let selectedMutationMethod = this.selectMutationMethod(
+          clone,
+          false
+        );
+        if (Array.isArray(selectedMutationMethod)) {
+          const candidateMutations = selectedMutationMethod;
+          selectedMutationMethod = candidateMutations[Math.floor(this._getRNG()() * candidateMutations.length)];
+        }
+        if (selectedMutationMethod && selectedMutationMethod.name) {
+          clone.mutate(selectedMutationMethod);
+        }
+      } catch {
+      }
+    }
+    this._invalidateGenomeCaches(clone);
+    return clone;
+  }
+  function addGenome(genome, parents) {
+    try {
+      genome.score = void 0;
+      genome._reenableProb = this.options.reenableProb;
+      genome._id = this._nextGenomeId++;
+      genome._parents = Array.isArray(parents) ? parents.slice() : [];
+      genome._depth = 0;
+      if (genome._parents.length) {
+        const parentDepths = genome._parents.map(
+          (pid) => this.population.find((g) => g._id === pid)
+        ).filter(Boolean).map((g) => g._depth ?? 0);
+        genome._depth = parentDepths.length ? Math.max(...parentDepths) + 1 : 1;
+      }
+      this.ensureMinHiddenNodes(genome);
+      this.ensureNoDeadEnds(genome);
+      this._invalidateGenomeCaches(genome);
+      this.population.push(genome);
+    } catch (error) {
+      this.population.push(genome);
+    }
+  }
+  function createPool(seedNetwork) {
+    try {
+      this.population = [];
+      const poolSize = this.options?.popsize || 50;
+      for (let genomeIndex = 0; genomeIndex < poolSize; genomeIndex++) {
+        const genomeCopy = seedNetwork ? Network.fromJSON(seedNetwork.toJSON()) : new Network(this.input, this.output, {
+          minHidden: this.options?.minHidden
+        });
+        genomeCopy.score = void 0;
+        try {
+          this.ensureNoDeadEnds(genomeCopy);
+        } catch {
+        }
+        genomeCopy._reenableProb = this.options.reenableProb;
+        genomeCopy._id = this._nextGenomeId++;
+        if (this._lineageEnabled) {
+          genomeCopy._parents = [];
+          genomeCopy._depth = 0;
+        }
+        this.population.push(genomeCopy);
+      }
+    } catch {
+    }
+  }
+  var init_neat_helpers = __esm({
+    "src/neat/neat.helpers.ts"() {
+      "use strict";
+      init_network();
+    }
+  });
+
+  // src/neat/neat.objectives.ts
+  function _getObjectives() {
+    if (this._objectivesList) return this._objectivesList;
+    const objectivesList = [];
+    if (!this._suppressFitnessObjective) {
+      objectivesList.push({
+        key: "fitness",
+        direction: "max",
+        /**
+         * Default accessor extracts the `score` property from a genome.
+         *
+         * @example
+         * ```ts
+         * // genome.score is used as the fitness metric by default
+         * const value = defaultAccessor(genome);
+         * ```
+         */
+        accessor: (genome) => genome.score || 0
+      });
+    }
+    if (this.options.multiObjective?.enabled && Array.isArray(this.options.multiObjective.objectives)) {
+      for (const candidateObjective of this.options.multiObjective.objectives) {
+        if (!candidateObjective || !candidateObjective.key || typeof candidateObjective.accessor !== "function")
+          continue;
+        objectivesList.push(candidateObjective);
+      }
+    }
+    this._objectivesList = objectivesList;
+    return objectivesList;
+  }
+  function registerObjective(key, direction, accessor) {
+    if (!this.options.multiObjective)
+      this.options.multiObjective = { enabled: true };
+    const multiObjectiveOptions = this.options.multiObjective;
+    if (!multiObjectiveOptions.objectives) multiObjectiveOptions.objectives = [];
+    multiObjectiveOptions.objectives = multiObjectiveOptions.objectives.filter(
+      (existingObjective) => existingObjective.key !== key
+    );
+    multiObjectiveOptions.objectives.push({ key, direction, accessor });
+    this._objectivesList = void 0;
+  }
+  function clearObjectives() {
+    if (this.options.multiObjective?.objectives)
+      this.options.multiObjective.objectives = [];
+    this._objectivesList = void 0;
+  }
+  var init_neat_objectives = __esm({
+    "src/neat/neat.objectives.ts"() {
+      "use strict";
+    }
+  });
+
+  // src/neat/neat.diversity.ts
+  function structuralEntropy2(graph) {
+    const outDegrees = graph.nodes.map(
+      (node) => (
+        // each node exposes connections.out array in current architecture
+        node.connections.out.length
+      )
+    );
+    const totalOut = outDegrees.reduce((acc, v) => acc + v, 0) || 1;
+    const probabilities = outDegrees.map((d) => d / totalOut).filter((p) => p > 0);
+    let entropy = 0;
+    for (const p of probabilities) {
+      entropy -= p * Math.log(p);
+    }
+    return entropy;
+  }
+  function arrayMean(values) {
+    if (!values.length) return 0;
+    return values.reduce((sum, v) => sum + v, 0) / values.length;
+  }
+  function arrayVariance(values) {
+    if (!values.length) return 0;
+    const m = arrayMean(values);
+    return arrayMean(values.map((v) => (v - m) * (v - m)));
+  }
+  function computeDiversityStats2(population, compatibilityComputer) {
+    if (!population.length) return void 0;
+    const lineageDepths = [];
+    for (const genome of population) {
+      if (typeof genome._depth === "number") {
+        lineageDepths.push(genome._depth);
+      }
+    }
+    const lineageMeanDepth = arrayMean(lineageDepths);
+    let depthPairAbsDiffSum = 0;
+    let depthPairCount = 0;
+    for (let i = 0; i < lineageDepths.length && i < 30; i++) {
+      for (let j = i + 1; j < lineageDepths.length && j < 30; j++) {
+        depthPairAbsDiffSum += Math.abs(lineageDepths[i] - lineageDepths[j]);
+        depthPairCount++;
+      }
+    }
+    const lineageMeanPairDist = depthPairCount ? depthPairAbsDiffSum / depthPairCount : 0;
+    const nodeCounts = population.map((g) => g.nodes.length);
+    const connectionCounts = population.map((g) => g.connections.length);
+    const meanNodes = arrayMean(nodeCounts);
+    const meanConns = arrayMean(connectionCounts);
+    const nodeVar = arrayVariance(nodeCounts);
+    const connVar = arrayVariance(connectionCounts);
+    let compatSum = 0;
+    let compatPairCount = 0;
+    for (let i = 0; i < population.length && i < 25; i++) {
+      for (let j = i + 1; j < population.length && j < 25; j++) {
+        compatSum += compatibilityComputer._compatibilityDistance(
+          population[i],
+          population[j]
+        );
+        compatPairCount++;
+      }
+    }
+    const meanCompat = compatPairCount ? compatSum / compatPairCount : 0;
+    const graphletEntropy = arrayMean(
+      population.map((g) => structuralEntropy2(g))
+    );
+    return {
+      lineageMeanDepth,
+      lineageMeanPairDist,
+      meanNodes,
+      meanConns,
+      nodeVar,
+      connVar,
+      meanCompat,
+      graphletEntropy,
+      population: population.length
+    };
+  }
+  var init_neat_diversity = __esm({
+    "src/neat/neat.diversity.ts"() {
+      "use strict";
+    }
+  });
+
+  // src/neat/neat.compat.ts
+  function _fallbackInnov(connection) {
+    const fromIndex = connection.from?.index ?? 0;
+    const toIndex = connection.to?.index ?? 0;
+    return fromIndex * 1e5 + toIndex;
+  }
+  function _compatibilityDistance(genomeA, genomeB) {
+    if (!this._compatCacheGen || this._compatCacheGen !== this.generation) {
+      this._compatCacheGen = this.generation;
+      this._compatDistCache = /* @__PURE__ */ new Map();
+    }
+    const key = genomeA._id < genomeB._id ? `${genomeA._id}|${genomeB._id}` : `${genomeB._id}|${genomeA._id}`;
+    const cacheMap = this._compatDistCache;
+    if (cacheMap.has(key)) return cacheMap.get(key);
+    const getCache = (network) => {
+      if (!network._compatCache) {
+        const list = network.connections.map((conn) => [
+          conn.innovation ?? this._fallbackInnov(conn),
+          conn.weight
+        ]);
+        list.sort((x, y) => x[0] - y[0]);
+        network._compatCache = list;
+      }
+      return network._compatCache;
+    };
+    const aList = getCache(genomeA);
+    const bList = getCache(genomeB);
+    let indexA = 0, indexB = 0;
+    let matchingCount = 0, disjoint = 0, excess = 0;
+    let weightDifferenceSum = 0;
+    const maxInnovA = aList.length ? aList[aList.length - 1][0] : 0;
+    const maxInnovB = bList.length ? bList[bList.length - 1][0] : 0;
+    while (indexA < aList.length && indexB < bList.length) {
+      const [innovA, weightA] = aList[indexA];
+      const [innovB, weightB] = bList[indexB];
+      if (innovA === innovB) {
+        matchingCount++;
+        weightDifferenceSum += Math.abs(weightA - weightB);
+        indexA++;
+        indexB++;
+      } else if (innovA < innovB) {
+        if (innovA > maxInnovB) excess++;
+        else disjoint++;
+        indexA++;
+      } else {
+        if (innovB > maxInnovA) excess++;
+        else disjoint++;
+        indexB++;
+      }
+    }
+    if (indexA < aList.length) excess += aList.length - indexA;
+    if (indexB < bList.length) excess += bList.length - indexB;
+    const N = Math.max(1, Math.max(aList.length, bList.length));
+    const avgWeightDiff = matchingCount ? weightDifferenceSum / matchingCount : 0;
+    const opts = this.options;
+    const dist = opts.excessCoeff * excess / N + opts.disjointCoeff * disjoint / N + opts.weightDiffCoeff * avgWeightDiff;
+    cacheMap.set(key, dist);
+    return dist;
+  }
+  var init_neat_compat = __esm({
+    "src/neat/neat.compat.ts"() {
+      "use strict";
+    }
+  });
+
+  // src/neat/neat.speciation.ts
+  function _speciate() {
+    this._prevSpeciesMembers.clear();
+    for (const species of this._species) {
+      const prevMemberSet = /* @__PURE__ */ new Set();
+      for (const member of species.members)
+        prevMemberSet.add(member._id);
+      this._prevSpeciesMembers.set(species.id, prevMemberSet);
+    }
+    this._species.forEach((species) => species.members = []);
+    for (const genome of this.population) {
+      let assignedToExisting = false;
+      for (const species of this._species) {
+        const compatDist = this._compatibilityDistance(
+          genome,
+          species.representative
+        );
+        if (compatDist < (this.options.compatibilityThreshold || 3)) {
+          species.members.push(genome);
+          assignedToExisting = true;
+          break;
+        }
+      }
+      if (!assignedToExisting) {
+        const speciesId = this._nextSpeciesId++;
+        this._species.push({
+          id: speciesId,
+          members: [genome],
+          representative: genome,
+          lastImproved: this.generation,
+          bestScore: genome.score || -Infinity
+        });
+        this._speciesCreated.set(speciesId, this.generation);
+      }
+    }
+    this._species = this._species.filter(
+      (species) => species.members.length > 0
+    );
+    this._species.forEach((species) => {
+      species.representative = species.members[0];
+    });
+    const ageProtection = this.options.speciesAgeProtection || {
+      grace: 3,
+      oldPenalty: 0.5
+    };
+    for (const species of this._species) {
+      const createdGen = this._speciesCreated.get(species.id) ?? this.generation;
+      const speciesAge = this.generation - createdGen;
+      if (speciesAge >= (ageProtection.grace ?? 3) * 10) {
+        const penalty = ageProtection.oldPenalty ?? 0.5;
+        if (penalty < 1)
+          species.members.forEach((member) => {
+            if (typeof member.score === "number") member.score *= penalty;
+          });
+      }
+    }
+    if (this.options.speciation && (this.options.targetSpecies || 0) > 0) {
+      const targetSpeciesCount = this.options.targetSpecies;
+      const observedSpeciesCount = this._species.length;
+      const adjustConfig = this.options.compatAdjust;
+      const smoothingWindow = Math.max(1, adjustConfig.smoothingWindow || 1);
+      const alpha = 2 / (smoothingWindow + 1);
+      this._compatSpeciesEMA = this._compatSpeciesEMA === void 0 ? observedSpeciesCount : this._compatSpeciesEMA + alpha * (observedSpeciesCount - this._compatSpeciesEMA);
+      const smoothedSpecies = this._compatSpeciesEMA;
+      const speciesError = targetSpeciesCount - smoothedSpecies;
+      this._compatIntegral = this._compatIntegral * (adjustConfig.decay || 0.95) + speciesError;
+      const delta = (adjustConfig.kp || 0) * speciesError + (adjustConfig.ki || 0) * this._compatIntegral;
+      let newThreshold = (this.options.compatibilityThreshold || 3) - delta;
+      const minThreshold = adjustConfig.minThreshold || 0.5;
+      const maxThreshold = adjustConfig.maxThreshold || 10;
+      if (newThreshold < minThreshold) {
+        newThreshold = minThreshold;
+        this._compatIntegral = 0;
+      }
+      if (newThreshold > maxThreshold) {
+        newThreshold = maxThreshold;
+        this._compatIntegral = 0;
+      }
+      this.options.compatibilityThreshold = newThreshold;
+    }
+    if (this.options.autoCompatTuning?.enabled) {
+      const autoTarget = this.options.autoCompatTuning.target ?? this.options.targetSpecies ?? Math.max(2, Math.round(Math.sqrt(this.population.length)));
+      const observedForTuning = this._species.length || 1;
+      const tuningError = autoTarget - observedForTuning;
+      const adjustRate = this.options.autoCompatTuning.adjustRate ?? 0.01;
+      const minCoeff = this.options.autoCompatTuning.minCoeff ?? 0.1;
+      const maxCoeff = this.options.autoCompatTuning.maxCoeff ?? 5;
+      const factor = 1 - adjustRate * Math.sign(tuningError);
+      let effectiveFactor = factor;
+      if (tuningError === 0) {
+        effectiveFactor = 1 + (this._getRNG()() - 0.5) * adjustRate * 0.5;
+      }
+      this.options.excessCoeff = Math.min(
+        maxCoeff,
+        Math.max(minCoeff, this.options.excessCoeff * effectiveFactor)
+      );
+      this.options.disjointCoeff = Math.min(
+        maxCoeff,
+        Math.max(minCoeff, this.options.disjointCoeff * effectiveFactor)
+      );
+    }
+    if (this.options.speciesAllocation?.extendedHistory) {
+      const stats = this._species.map((species) => {
+        const sizes = species.members.map((member) => ({
+          nodes: member.nodes.length,
+          conns: member.connections.length,
+          score: member.score || 0,
+          nov: member._novelty || 0,
+          ent: this._structuralEntropy(member)
+        }));
+        const avg = (arr) => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
+        let compatSum = 0;
+        let compatCount = 0;
+        for (let i = 0; i < species.members.length && i < 10; i++)
+          for (let j = i + 1; j < species.members.length && j < 10; j++) {
+            compatSum += this._compatibilityDistance(
+              species.members[i],
+              species.members[j]
+            );
+            compatCount++;
+          }
+        const meanCompat = compatCount ? compatSum / compatCount : 0;
+        const last = this._speciesLastStats.get(species.id);
+        const meanNodes = avg(sizes.map((s) => s.nodes));
+        const meanConns = avg(sizes.map((s) => s.conns));
+        const deltaMeanNodes = last ? meanNodes - last.meanNodes : 0;
+        const deltaMeanConns = last ? meanConns - last.meanConns : 0;
+        const deltaBestScore = last ? species.bestScore - last.best : 0;
+        const createdGen = this._speciesCreated.get(species.id) ?? this.generation;
+        const speciesAge = this.generation - createdGen;
+        let turnoverRate = 0;
+        const prevSet = this._prevSpeciesMembers.get(species.id);
+        if (prevSet && species.members.length) {
+          let newCount = 0;
+          for (const member of species.members)
+            if (!prevSet.has(member._id)) newCount++;
+          turnoverRate = newCount / species.members.length;
+        }
+        const varCalc = (arr) => {
+          if (!arr.length) return 0;
+          const mean = avg(arr);
+          return avg(arr.map((v) => (v - mean) * (v - mean)));
+        };
+        const varNodes = varCalc(sizes.map((s) => s.nodes));
+        const varConns = varCalc(sizes.map((s) => s.conns));
+        let innovSum = 0;
+        let innovCount = 0;
+        let maxInnov = -Infinity;
+        let minInnov = Infinity;
+        let enabled = 0;
+        let disabled = 0;
+        for (const member of species.members)
+          for (const conn of member.connections) {
+            const innov = conn.innovation ?? this._fallbackInnov(conn);
+            innovSum += innov;
+            innovCount++;
+            if (innov > maxInnov) maxInnov = innov;
+            if (innov < minInnov) minInnov = innov;
+            if (conn.enabled === false) disabled++;
+            else enabled++;
+          }
+        const meanInnovation = innovCount ? innovSum / innovCount : 0;
+        const innovationRange = isFinite(maxInnov) && isFinite(minInnov) && maxInnov > minInnov ? maxInnov - minInnov : 0;
+        const enabledRatio = enabled + disabled > 0 ? enabled / (enabled + disabled) : 0;
+        return {
+          id: species.id,
+          size: species.members.length,
+          best: species.bestScore,
+          lastImproved: species.lastImproved,
+          age: speciesAge,
+          meanNodes,
+          meanConns,
+          meanScore: avg(sizes.map((s) => s.score)),
+          meanNovelty: avg(sizes.map((s) => s.nov)),
+          meanCompat,
+          meanEntropy: avg(sizes.map((s) => s.ent)),
+          varNodes,
+          varConns,
+          deltaMeanNodes,
+          deltaMeanConns,
+          deltaBestScore,
+          turnoverRate,
+          meanInnovation,
+          innovationRange,
+          enabledRatio
+        };
+      });
+      for (const st of stats)
+        this._speciesLastStats.set(st.id, {
+          meanNodes: st.meanNodes,
+          meanConns: st.meanConns,
+          best: st.best
+        });
+      this._speciesHistory.push({ generation: this.generation, stats });
+    } else {
+      this._speciesHistory.push({
+        generation: this.generation,
+        stats: this._species.map((species) => ({
+          id: species.id,
+          size: species.members.length,
+          best: species.bestScore,
+          lastImproved: species.lastImproved
+        }))
+      });
+    }
+    if (this._speciesHistory.length > 200) this._speciesHistory.shift();
+  }
+  function _applyFitnessSharing() {
+    const sharingSigma = this.options.sharingSigma || 0;
+    if (sharingSigma > 0) {
+      this._species.forEach((species) => {
+        const members = species.members;
+        for (let i = 0; i < members.length; i++) {
+          const memberI = members[i];
+          if (typeof memberI.score !== "number") continue;
+          let shareSum = 0;
+          for (let j = 0; j < members.length; j++) {
+            const memberJ = members[j];
+            const dist = i === j ? 0 : this._compatibilityDistance(memberI, memberJ);
+            if (dist < sharingSigma) {
+              const ratio = dist / sharingSigma;
+              shareSum += 1 - ratio * ratio;
+            }
+          }
+          if (shareSum <= 0) shareSum = 1;
+          memberI.score = memberI.score / shareSum;
+        }
+      });
+    } else {
+      this._species.forEach((species) => {
+        const size = species.members.length;
+        species.members.forEach((member) => {
+          if (typeof member.score === "number")
+            member.score = member.score / size;
+        });
+      });
+    }
+  }
+  function _sortSpeciesMembers(sp) {
+    sp.members.sort((a, b) => (b.score || 0) - (a.score || 0));
+  }
+  function _updateSpeciesStagnation() {
+    const stagnationWindow = this.options.stagnationGenerations || 15;
+    this._species.forEach((species) => {
+      this._sortSpeciesMembers(species);
+      const top = species.members[0];
+      if ((top.score || -Infinity) > species.bestScore) {
+        species.bestScore = top.score || -Infinity;
+        species.lastImproved = this.generation;
+      }
+    });
+    const survivors = this._species.filter(
+      (species) => this.generation - species.lastImproved <= stagnationWindow
+    );
+    if (survivors.length) this._species = survivors;
+  }
+  var init_neat_speciation = __esm({
+    "src/neat/neat.speciation.ts"() {
+      "use strict";
+    }
+  });
+
+  // src/neat/neat.species.ts
+  function getSpeciesStats() {
+    const speciesArray = this._species;
+    return speciesArray.map((species) => ({
+      id: species.id,
+      size: species.members.length,
+      bestScore: species.bestScore,
+      lastImproved: species.lastImproved
+    }));
+  }
+  function getSpeciesHistory() {
+    const speciesHistory = this._speciesHistory;
+    if (this.options?.speciesAllocation?.extendedHistory) {
+      for (const generationEntry of speciesHistory) {
+        for (const speciesStat of generationEntry.stats) {
+          if ("innovationRange" in speciesStat && "enabledRatio" in speciesStat)
+            continue;
+          const speciesObj = this._species.find(
+            (s) => s.id === speciesStat.id
+          );
+          if (speciesObj && speciesObj.members && speciesObj.members.length) {
+            let maxInnovation = -Infinity;
+            let minInnovation = Infinity;
+            let enabledCount = 0;
+            let disabledCount = 0;
+            for (const member of speciesObj.members) {
+              for (const connection of member.connections) {
+                const innovationId = connection.innovation ?? this._fallbackInnov?.(connection) ?? 0;
+                if (innovationId > maxInnovation) maxInnovation = innovationId;
+                if (innovationId < minInnovation) minInnovation = innovationId;
+                if (connection.enabled === false) disabledCount++;
+                else enabledCount++;
+              }
+            }
+            speciesStat.innovationRange = isFinite(maxInnovation) && isFinite(minInnovation) && maxInnovation > minInnovation ? maxInnovation - minInnovation : 0;
+            speciesStat.enabledRatio = enabledCount + disabledCount ? enabledCount / (enabledCount + disabledCount) : 0;
+          }
+        }
+      }
+    }
+    return speciesHistory;
+  }
+  var init_neat_species = __esm({
+    "src/neat/neat.species.ts"() {
+      "use strict";
+    }
+  });
+
+  // src/neat/neat.telemetry.exports.ts
+  function exportTelemetryJSONL() {
+    return this._telemetry.map((entry) => JSON.stringify(entry)).join("\n");
+  }
+  function exportTelemetryCSV(maxEntries = 500) {
+    const recentTelemetry = Array.isArray(this._telemetry) ? this._telemetry.slice(-maxEntries) : [];
+    if (!recentTelemetry.length) return "";
+    const headerInfo = collectTelemetryHeaderInfo(recentTelemetry);
+    const headers = buildTelemetryHeaders(headerInfo);
+    const csvLines = [headers.join(",")];
+    for (const telemetryEntry of recentTelemetry) {
+      csvLines.push(serializeTelemetryEntry(telemetryEntry, headers));
+    }
+    return csvLines.join("\n");
+  }
+  function collectTelemetryHeaderInfo(entries) {
+    const baseKeys = /* @__PURE__ */ new Set();
+    const complexityKeys = /* @__PURE__ */ new Set();
+    const perfKeys = /* @__PURE__ */ new Set();
+    const lineageKeys = /* @__PURE__ */ new Set();
+    const diversityLineageKeys = /* @__PURE__ */ new Set();
+    let includeOps = false;
+    let includeObjectives = false;
+    let includeObjAges = false;
+    let includeSpeciesAlloc = false;
+    let includeObjEvents = false;
+    let includeObjImportance = false;
+    for (const entry of entries) {
+      Object.keys(entry).forEach((k) => {
+        if (k !== "complexity" && k !== "perf" && k !== "ops" && k !== HEADER_FRONTS) {
+          baseKeys.add(k);
+        }
+      });
+      if (Array.isArray(entry.fronts)) baseKeys.add(HEADER_FRONTS);
+      if (entry.complexity)
+        Object.keys(entry.complexity).forEach((k) => complexityKeys.add(k));
+      if (entry.perf) Object.keys(entry.perf).forEach((k) => perfKeys.add(k));
+      if (entry.lineage)
+        Object.keys(entry.lineage).forEach((k) => lineageKeys.add(k));
+      if (entry.diversity) {
+        if ("lineageMeanDepth" in entry.diversity)
+          diversityLineageKeys.add("lineageMeanDepth");
+        if ("lineageMeanPairDist" in entry.diversity)
+          diversityLineageKeys.add("lineageMeanPairDist");
+      }
+      if ("rng" in entry) baseKeys.add("rng");
+      if (Array.isArray(entry.ops) && entry.ops.length) includeOps = true;
+      if (Array.isArray(entry.objectives)) includeObjectives = true;
+      if (entry.objAges) includeObjAges = true;
+      if (Array.isArray(entry.speciesAlloc)) includeSpeciesAlloc = true;
+      if (Array.isArray(entry.objEvents) && entry.objEvents.length)
+        includeObjEvents = true;
+      if (entry.objImportance) includeObjImportance = true;
+    }
+    return {
+      baseKeys,
+      complexityKeys,
+      perfKeys,
+      lineageKeys,
+      diversityLineageKeys,
+      includeOps,
+      includeObjectives,
+      includeObjAges,
+      includeSpeciesAlloc,
+      includeObjEvents,
+      includeObjImportance
+    };
+  }
+  function buildTelemetryHeaders(info) {
+    const headers = [
+      ...info.baseKeys,
+      ...[...info.complexityKeys].map((k) => `${COMPLEXITY_PREFIX}${k}`),
+      ...[...info.perfKeys].map((k) => `${PERF_PREFIX}${k}`),
+      ...[...info.lineageKeys].map((k) => `${LINEAGE_PREFIX}${k}`),
+      ...[...info.diversityLineageKeys].map((k) => `${DIVERSITY_PREFIX}${k}`)
+    ];
+    if (info.includeOps) headers.push(HEADER_OPS);
+    if (info.includeObjectives) headers.push(HEADER_OBJECTIVES);
+    if (info.includeObjAges) headers.push(HEADER_OBJ_AGES);
+    if (info.includeSpeciesAlloc) headers.push(HEADER_SPECIES_ALLOC);
+    if (info.includeObjEvents) headers.push(HEADER_OBJ_EVENTS);
+    if (info.includeObjImportance) headers.push(HEADER_OBJ_IMPORTANCE);
+    return headers;
+  }
+  function serializeTelemetryEntry(entry, headers) {
+    const row = [];
+    for (const header of headers) {
+      switch (true) {
+        // Grouped complexity metrics
+        case header.startsWith(COMPLEXITY_PREFIX): {
+          const key = header.slice(COMPLEXITY_PREFIX.length);
+          row.push(
+            entry.complexity && key in entry.complexity ? JSON.stringify(entry.complexity[key]) : ""
+          );
+          break;
+        }
+        // Grouped performance metrics
+        case header.startsWith(PERF_PREFIX): {
+          const key = header.slice(PERF_PREFIX.length);
+          row.push(
+            entry.perf && key in entry.perf ? JSON.stringify(entry.perf[key]) : ""
+          );
+          break;
+        }
+        // Grouped lineage metrics
+        case header.startsWith(LINEAGE_PREFIX): {
+          const key = header.slice(LINEAGE_PREFIX.length);
+          row.push(
+            entry.lineage && key in entry.lineage ? JSON.stringify(entry.lineage[key]) : ""
+          );
+          break;
+        }
+        // Grouped diversity metrics
+        case header.startsWith(DIVERSITY_PREFIX): {
+          const key = header.slice(DIVERSITY_PREFIX.length);
+          row.push(
+            entry.diversity && key in entry.diversity ? JSON.stringify(entry.diversity[key]) : ""
+          );
+          break;
+        }
+        // Array-like and optional multi-value columns
+        case header === HEADER_FRONTS: {
+          row.push(
+            Array.isArray(entry.fronts) ? JSON.stringify(entry.fronts) : ""
+          );
+          break;
+        }
+        case header === HEADER_OPS: {
+          row.push(Array.isArray(entry.ops) ? JSON.stringify(entry.ops) : "");
+          break;
+        }
+        case header === HEADER_OBJECTIVES: {
+          row.push(
+            Array.isArray(entry.objectives) ? JSON.stringify(entry.objectives) : ""
+          );
+          break;
+        }
+        case header === HEADER_OBJ_AGES: {
+          row.push(entry.objAges ? JSON.stringify(entry.objAges) : "");
+          break;
+        }
+        case header === HEADER_SPECIES_ALLOC: {
+          row.push(
+            Array.isArray(entry.speciesAlloc) ? JSON.stringify(entry.speciesAlloc) : ""
+          );
+          break;
+        }
+        case header === HEADER_OBJ_EVENTS: {
+          row.push(
+            Array.isArray(entry.objEvents) ? JSON.stringify(entry.objEvents) : ""
+          );
+          break;
+        }
+        case header === HEADER_OBJ_IMPORTANCE: {
+          row.push(
+            entry.objImportance ? JSON.stringify(entry.objImportance) : ""
+          );
+          break;
+        }
+        // Default: treat as top-level column
+        default: {
+          row.push(JSON.stringify(entry[header]));
+          break;
+        }
+      }
+    }
+    return row.join(",");
+  }
+  function exportSpeciesHistoryCSV(maxEntries = 200) {
+    if (!Array.isArray(this._speciesHistory)) this._speciesHistory = [];
+    if (!this._speciesHistory.length && Array.isArray(this._species) && this._species.length) {
+      const stats = this._species.map((sp) => ({
+        /** Unique identifier for the species (or -1 when missing). */
+        id: sp.id ?? -1,
+        /** Current size (number of members) in the species. */
+        size: Array.isArray(sp.members) ? sp.members.length : 0,
+        /** Best score observed in the species (fallback 0). */
+        best: sp.bestScore ?? 0,
+        /** Generation index when the species last improved (fallback 0). */
+        lastImproved: sp.lastImproved ?? 0
+      }));
+      this._speciesHistory.push({ generation: this.generation || 0, stats });
+    }
+    const recentHistory = this._speciesHistory.slice(-maxEntries);
+    if (!recentHistory.length) {
+      return "generation,id,size,best,lastImproved";
+    }
+    const headerKeySet = /* @__PURE__ */ new Set(["generation"]);
+    for (const entry of recentHistory)
+      for (const speciesStat of entry.stats)
+        Object.keys(speciesStat).forEach((k) => headerKeySet.add(k));
+    const headers = Array.from(headerKeySet);
+    return buildSpeciesHistoryCsv(recentHistory, headers);
+  }
+  function buildSpeciesHistoryCsv(recentHistory, headers) {
+    const lines = [headers.join(",")];
+    for (const historyEntry of recentHistory) {
+      for (const speciesStat of historyEntry.stats) {
+        const rowCells = [];
+        for (const header of headers) {
+          if (header === HEADER_GENERATION) {
+            rowCells.push(JSON.stringify(historyEntry.generation));
+            continue;
+          }
+          rowCells.push(JSON.stringify(speciesStat[header]));
+        }
+        lines.push(rowCells.join(","));
+      }
+    }
+    return lines.join("\n");
+  }
+  var COMPLEXITY_PREFIX, PERF_PREFIX, LINEAGE_PREFIX, DIVERSITY_PREFIX, HEADER_FRONTS, HEADER_OPS, HEADER_OBJECTIVES, HEADER_OBJ_AGES, HEADER_SPECIES_ALLOC, HEADER_OBJ_EVENTS, HEADER_OBJ_IMPORTANCE, HEADER_GENERATION;
+  var init_neat_telemetry_exports = __esm({
+    "src/neat/neat.telemetry.exports.ts"() {
+      "use strict";
+      COMPLEXITY_PREFIX = "complexity.";
+      PERF_PREFIX = "perf.";
+      LINEAGE_PREFIX = "lineage.";
+      DIVERSITY_PREFIX = "diversity.";
+      HEADER_FRONTS = "fronts";
+      HEADER_OPS = "ops";
+      HEADER_OBJECTIVES = "objectives";
+      HEADER_OBJ_AGES = "objAges";
+      HEADER_SPECIES_ALLOC = "speciesAlloc";
+      HEADER_OBJ_EVENTS = "objEvents";
+      HEADER_OBJ_IMPORTANCE = "objImportance";
+      HEADER_GENERATION = "generation";
+    }
+  });
+
+  // src/neat/neat.selection.ts
+  function sort() {
+    this.population.sort(
+      (a, b) => (b.score ?? 0) - (a.score ?? 0)
+    );
+  }
+  function getParent() {
+    const selectionOptions = this.options.selection;
+    const selectionName = selectionOptions?.name;
+    const getRngFactory = this._getRNG.bind(this);
+    const population = this.population;
+    switch (selectionName) {
+      case "POWER":
+        if (population[0]?.score !== void 0 && population[1]?.score !== void 0 && population[0].score < population[1].score) {
+          this.sort();
+        }
+        const selectedIndex = Math.floor(
+          Math.pow(getRngFactory()(), selectionOptions.power || 1) * population.length
+        );
+        return population[selectedIndex];
+      case "FITNESS_PROPORTIONATE":
+        let totalFitness = 0;
+        let mostNegativeScore = 0;
+        population.forEach((individual) => {
+          mostNegativeScore = Math.min(mostNegativeScore, individual.score ?? 0);
+          totalFitness += individual.score ?? 0;
+        });
+        const minFitnessShift = Math.abs(mostNegativeScore);
+        totalFitness += minFitnessShift * population.length;
+        const threshold = getRngFactory()() * totalFitness;
+        let cumulative = 0;
+        for (const individual of population) {
+          cumulative += (individual.score ?? 0) + minFitnessShift;
+          if (threshold < cumulative) return individual;
+        }
+        return population[Math.floor(getRngFactory()() * population.length)];
+      case "TOURNAMENT":
+        if ((selectionOptions.size || 2) > population.length) {
+          if (!this._suppressTournamentError) {
+            throw new Error("Tournament size must be less than population size.");
+          }
+          return population[Math.floor(getRngFactory()() * population.length)];
+        }
+        const tournamentSize = selectionOptions.size || 2;
+        const tournamentParticipants = [];
+        for (let i = 0; i < tournamentSize; i++) {
+          tournamentParticipants.push(
+            population[Math.floor(getRngFactory()() * population.length)]
+          );
+        }
+        tournamentParticipants.sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+        for (let i = 0; i < tournamentParticipants.length; i++) {
+          if (getRngFactory()() < (selectionOptions.probability ?? 0.5) || i === tournamentParticipants.length - 1)
+            return tournamentParticipants[i];
+        }
+        break;
+      default:
+        return population[0];
+    }
+    return population[0];
+  }
+  function getFittest() {
+    const population = this.population;
+    if (population[population.length - 1].score === void 0) {
+      this.evaluate();
+    }
+    if (population[1] && (population[0].score ?? 0) < (population[1].score ?? 0)) {
+      this.sort();
+    }
+    return population[0];
+  }
+  function getAverage() {
+    const population = this.population;
+    if (population[population.length - 1].score === void 0) {
+      this.evaluate();
+    }
+    const totalScore = population.reduce(
+      (sum, genome) => sum + (genome.score ?? 0),
+      0
+    );
+    return totalScore / population.length;
+  }
+  var init_neat_selection = __esm({
+    "src/neat/neat.selection.ts"() {
+      "use strict";
+    }
+  });
+
+  // src/neat/neat.export.ts
+  var neat_export_exports = {};
+  __export(neat_export_exports, {
+    exportPopulation: () => exportPopulation,
+    exportState: () => exportState,
+    fromJSONImpl: () => fromJSONImpl2,
+    importPopulation: () => importPopulation,
+    importStateImpl: () => importStateImpl,
+    toJSONImpl: () => toJSONImpl2
+  });
+  function exportPopulation() {
+    return this.population.map((genome) => genome.toJSON());
+  }
+  function importPopulation(populationJSON) {
+    const Network3 = (init_network(), __toCommonJS(network_exports)).default;
+    this.population = populationJSON.map(
+      (serializedGenome) => Network3.fromJSON(serializedGenome)
+    );
+    this.options.popsize = this.population.length;
+  }
+  function exportState() {
+    const { toJSONImpl: toJSONImpl3, exportPopulation: exportPopulation2 } = (init_neat_export(), __toCommonJS(neat_export_exports));
+    return {
+      neat: toJSONImpl3.call(this),
+      population: exportPopulation2.call(this)
+    };
+  }
+  function importStateImpl(stateBundle, fitnessFunction) {
+    if (!stateBundle || typeof stateBundle !== "object")
+      throw new Error("Invalid state bundle");
+    const neatInstance = this.fromJSON(stateBundle.neat, fitnessFunction);
+    if (Array.isArray(stateBundle.population))
+      neatInstance.import(stateBundle.population);
+    return neatInstance;
+  }
+  function toJSONImpl2() {
+    return {
+      input: this.input,
+      output: this.output,
+      generation: this.generation,
+      options: this.options,
+      nodeSplitInnovations: Array.from(
+        this._nodeSplitInnovations.entries()
+      ),
+      connInnovations: Array.from(this._connInnovations.entries()),
+      nextGlobalInnovation: this._nextGlobalInnovation
+    };
+  }
+  function fromJSONImpl2(neatJSON, fitnessFunction) {
+    const NeatClass = this;
+    const neatInstance = new NeatClass(
+      neatJSON.input,
+      neatJSON.output,
+      fitnessFunction,
+      neatJSON.options || {}
+    );
+    neatInstance.generation = neatJSON.generation || 0;
+    if (Array.isArray(neatJSON.nodeSplitInnovations))
+      neatInstance._nodeSplitInnovations = new Map(neatJSON.nodeSplitInnovations);
+    if (Array.isArray(neatJSON.connInnovations))
+      neatInstance._connInnovations = new Map(neatJSON.connInnovations);
+    if (typeof neatJSON.nextGlobalInnovation === "number")
+      neatInstance._nextGlobalInnovation = neatJSON.nextGlobalInnovation;
+    return neatInstance;
+  }
+  var init_neat_export = __esm({
+    "src/neat/neat.export.ts"() {
+      "use strict";
+    }
+  });
+
   // src/neat.ts
   var neat_exports = {};
   __export(neat_exports, {
@@ -8294,2095 +11376,253 @@
       "use strict";
       init_network();
       init_methods();
+      init_selection();
+      init_neat_mutation();
+      init_neat_evolve();
+      init_neat_evaluate();
+      init_neat_helpers();
+      init_neat_objectives();
+      init_neat_diversity();
+      init_neat_compat();
+      init_neat_speciation();
+      init_neat_species();
+      init_neat_telemetry_exports();
+      init_neat_selection();
+      init_neat_export();
       Neat = class _Neat {
         /**
-         * Initializes a new instance of the Neat class.
-         * @param input - Number of input nodes in the network.
-         * @param output - Number of output nodes in the network.
-         * @param fitness - Fitness function to evaluate the performance of networks.
-         * @param options - Configuration options for the evolutionary process.
-         * @see {@link https://medium.com/data-science/neuro-evolution-on-steroids-82bd14ddc2f6 Instinct: neuro-evolution on steroids by Thomas Wagenaar}
+         * Construct a new Neat instance.
+         * Kept permissive during staged migration; accepts the same signature tests expect.
+         *
+         * @example
+         * // Create a neat instance for 3 inputs and 1 output with default options
+         * const neat = new Neat(3, 1, (net) => evaluateFitness(net));
          */
         constructor(input, output, fitness, options = {}) {
           this.population = [];
           this.generation = 0;
-          // --- Speciation state ---
+          // Internal bookkeeping and caches (kept permissive during staggered migration)
+          /** Array of current species (internal representation). */
           this._species = [];
-          this._speciesCreated = /* @__PURE__ */ new Map();
-          this._speciesHistory = [];
-          this._nextSpeciesId = 1;
-          this._compatIntegral = 0;
-          // Innovation reuse registries
-          this._nodeSplitInnovations = /* @__PURE__ */ new Map();
-          this._connInnovations = /* @__PURE__ */ new Map();
-          // fromGene->toGene stable innovation ids for added connections
-          this._nextGlobalInnovation = 1;
-          // Global stagnation tracking
-          this._bestGlobalScore = -Infinity;
-          this._lastGlobalImproveGeneration = 0;
-          // Novelty archive (descriptor vectors only)
-          this._noveltyArchive = [];
+          /** Operator statistics used by adaptive operator selection. */
           this._operatorStats = /* @__PURE__ */ new Map();
-          this._diversityStats = null;
-          this._phaseStartGeneration = 0;
-          this._telemetry = [];
-          // generation when entropy objective was dropped
-          // Genome identity & lineage tracking
+          /** Map of node-split innovations used to reuse innovation ids for node splits. */
+          this._nodeSplitInnovations = /* @__PURE__ */ new Map();
+          /** Map of connection innovations keyed by a string identifier. */
+          this._connInnovations = /* @__PURE__ */ new Map();
+          /** Counter for issuing global innovation numbers when explicit numbers are used. */
+          this._nextGlobalInnovation = 1;
+          /** Counter for assigning unique genome ids. */
           this._nextGenomeId = 1;
-          this._prevSpeciesMembers = /* @__PURE__ */ new Map();
-          this._speciesLastStats = /* @__PURE__ */ new Map();
-          this._paretoArchive = [];
-          this._paretoObjectivesArchive = [];
-          // objective vectors snapshot
-          this._lastEpsilonAdjustGen = -1;
-          // for complexity growth telemetry
-          this._lineageEnabled = true;
-          // runtime flag for lineage tracking
+          /** Whether lineage metadata should be recorded on genomes. */
+          this._lineageEnabled = false;
+          /** Last observed count of inbreeding (used for detecting excessive cloning). */
           this._lastInbreedingCount = 0;
-          // count of identical-parent matings in last reproduction phase
+          /** Previous inbreeding count snapshot. */
           this._prevInbreedingCount = 0;
-          // snapshot used for telemetry (previous generation's reproduction)
-          this._lastMeanDepth = 0;
-          // mean lineage depth of current population
+          /** Telemetry buffer storing diagnostic snapshots per generation. */
+          this._telemetry = [];
+          /** Map of species id -> set of member genome ids from previous generation. */
+          this._prevSpeciesMembers = /* @__PURE__ */ new Map();
+          /** Last recorded stats per species id. */
+          this._speciesLastStats = /* @__PURE__ */ new Map();
+          /** Time-series history of species stats (for exports/telemetry). */
+          this._speciesHistory = [];
+          /** Archive of Pareto front metadata for multi-objective tracking. */
+          this._paretoArchive = [];
+          /** Archive storing Pareto objectives snapshots. */
+          this._paretoObjectivesArchive = [];
+          /** Novelty archive used by novelty search (behavior representatives). */
+          this._noveltyArchive = [];
+          /** Map tracking stale counts for objectives by key. */
           this._objectiveStale = /* @__PURE__ */ new Map();
-          this._lastAncestorUniqAdjustGen = -1;
-          // cooldown tracker
-          // Objective lifetime tracking (consecutive generations active)
+          /** Map tracking ages for objectives by key. */
           this._objectiveAges = /* @__PURE__ */ new Map();
-          // Last offspring allocation per species (captured during reproduction)
-          this._lastOffspringAlloc = null;
-          // Objective add/remove event log
+          /** Queue of recent objective activation/deactivation events for telemetry. */
           this._objectiveEvents = [];
+          /** Pending objective keys to add during safe phases. */
           this._pendingObjectiveAdds = [];
+          /** Pending objective keys to remove during safe phases. */
           this._pendingObjectiveRemoves = [];
-          this._warnings = [];
-          this.input = input;
-          this.output = output;
-          this.fitness = fitness;
-          this.options = options;
-          if (Array.isArray(this.options.telemetrySelect))
-            this._telemetrySelect = new Set(this.options.telemetrySelect);
-          this.options.equal = this.options.equal || false;
-          this.options.clear = this.options.clear || false;
-          this.options.popsize = this.options.popsize || 50;
-          this.options.elitism = this.options.elitism || 0;
-          this.options.provenance = this.options.provenance || 0;
-          this.options.mutationRate = this.options.mutationRate || 0.7;
-          this.options.mutationAmount = this.options.mutationAmount || 1;
-          this.options.fitnessPopulation = this.options.fitnessPopulation || false;
-          this.options.selection = this.options.selection || selection.POWER;
-          this.options.crossover = this.options.crossover || [
-            crossover.SINGLE_POINT,
-            crossover.TWO_POINT,
-            crossover.UNIFORM
-          ];
-          this.options.mutation = this.options.mutation || mutation.ALL;
+          /** Generation index where the last global improvement occurred. */
+          this._lastGlobalImproveGeneration = 0;
+          // Speciation controller state
+          /** Map of speciesId -> creation generation for bookkeeping. */
+          this._speciesCreated = /* @__PURE__ */ new Map();
+          /** Integral accumulator used by adaptive compatibility controllers. */
+          this._compatIntegral = 0;
+          /** Generation when epsilon compatibility was last adjusted. */
+          this._lastEpsilonAdjustGen = -Infinity;
+          /** Generation when ancestor uniqueness adjustment was last applied. */
+          this._lastAncestorUniqAdjustGen = -Infinity;
+          this.input = input ?? 0;
+          this.output = output ?? 0;
+          this.fitness = fitness ?? ((n) => 0);
+          this.options = options || {};
+          const opts = this.options;
+          if (opts.popsize === void 0) opts.popsize = 50;
+          if (opts.elitism === void 0) opts.elitism = 0;
+          if (opts.provenance === void 0) opts.provenance = 0;
+          if (opts.mutationRate === void 0) opts.mutationRate = 0.7;
+          if (opts.mutationAmount === void 0) opts.mutationAmount = 1;
+          if (opts.fitnessPopulation === void 0) opts.fitnessPopulation = false;
+          if (opts.clear === void 0) opts.clear = false;
+          if (opts.equal === void 0) opts.equal = false;
+          if (opts.compatibilityThreshold === void 0)
+            opts.compatibilityThreshold = 3;
+          if (opts.maxNodes === void 0) opts.maxNodes = Infinity;
+          if (opts.maxConns === void 0) opts.maxConns = Infinity;
+          if (opts.maxGates === void 0) opts.maxGates = Infinity;
+          if (opts.excessCoeff === void 0) opts.excessCoeff = 1;
+          if (opts.disjointCoeff === void 0) opts.disjointCoeff = 1;
+          if (opts.weightDiffCoeff === void 0) opts.weightDiffCoeff = 0.5;
+          if (opts.mutation === void 0)
+            opts.mutation = mutation.ALL ? mutation.ALL.slice() : mutation.FFW ? [mutation.FFW] : [];
+          if (opts.selection === void 0) {
+            opts.selection = selection && selection.TOURNAMENT || selection?.TOURNAMENT || selection.FITNESS_PROPORTIONATE;
+          }
+          if (opts.crossover === void 0)
+            opts.crossover = crossover ? crossover.SINGLE_POINT : void 0;
+          if (opts.novelty === void 0) opts.novelty = { enabled: false };
+          if (opts.diversityMetrics === void 0)
+            opts.diversityMetrics = { enabled: true };
+          if (opts.fastMode && opts.diversityMetrics) {
+            if (opts.diversityMetrics.pairSample == null)
+              opts.diversityMetrics.pairSample = 20;
+            if (opts.diversityMetrics.graphletSample == null)
+              opts.diversityMetrics.graphletSample = 30;
+            if (opts.novelty?.enabled && opts.novelty.k == null) opts.novelty.k = 5;
+          }
+          this._noveltyArchive = [];
+          if (opts.speciation === void 0) opts.speciation = false;
+          if (opts.multiObjective && opts.multiObjective.enabled && !Array.isArray(opts.multiObjective.objectives))
+            opts.multiObjective.objectives = [];
+          this.population = this.population || [];
           try {
-            if (Array.isArray(this.options.mutation)) {
-              const isCanonicalFFWWrapper = this.options.mutation.length === 1 && this.options.mutation[0] === mutation.FFW;
-              const isCanonicalFFW = this.options.mutation === mutation.FFW;
-              if (!isCanonicalFFWWrapper && !isCanonicalFFW) {
-                const original = this.options.mutation.slice();
-                const filtered = original.filter(
-                  (m) => !!m && typeof m.name === "string"
-                );
-                const dedup = [];
-                const seen = /* @__PURE__ */ new Set();
-                for (const m of filtered) {
-                  if (!seen.has(m.name)) {
-                    seen.add(m.name);
-                    dedup.push(m);
-                  }
-                }
-                const removed = original.length - dedup.length;
-                if (removed > 0)
-                  this._warnings.push(
-                    `[options.mutation] sanitized ${removed} invalid/duplicate entries (kept ${dedup.length}).`
-                  );
-                this.options.mutation = dedup;
-              }
-            }
-          } catch (e) {
-            this._warnings.push(
-              `[options.mutation] sanitation error: ${e.message}`
-            );
-          }
-          this.options.speciation = this.options.speciation ?? true;
-          this.options.compatibilityThreshold = this.options.compatibilityThreshold ?? 3;
-          this.options.excessCoeff = this.options.excessCoeff ?? 1;
-          this.options.disjointCoeff = this.options.disjointCoeff ?? 1;
-          this.options.weightDiffCoeff = this.options.weightDiffCoeff ?? 0.4;
-          this.options.minSpeciesSize = this.options.minSpeciesSize ?? 2;
-          this.options.stagnationGenerations = this.options.stagnationGenerations ?? 15;
-          this.options.survivalThreshold = this.options.survivalThreshold ?? 0.5;
-          this.options.reenableProb = this.options.reenableProb ?? 0.25;
-          this.options.sharingSigma = this.options.sharingSigma ?? 3;
-          this.options.globalStagnationGenerations = this.options.globalStagnationGenerations ?? 40;
-          this.options.crossSpeciesMatingProb = this.options.crossSpeciesMatingProb ?? 0.1;
-          if (this.options.mutation === void 0) {
-            if (this.options.allowRecurrent) {
-              this.options.mutation = mutation.ALL;
-            } else {
-              this.options.mutation = mutation.FFW;
-            }
-          }
-          this.options.maxNodes = this.options.maxNodes || Infinity;
-          this.options.maxConns = this.options.maxConns || Infinity;
-          this.options.maxGates = this.options.maxGates || Infinity;
-          if (!this.options.telemetry)
-            this.options.telemetry = { enabled: true, logEvery: 1 };
-          if (!this.options.adaptiveMutation)
-            this.options.adaptiveMutation = {
-              enabled: true,
-              initialRate: 0.6,
-              sigma: 0.08,
-              minRate: 0.05,
-              maxRate: 0.95,
-              adaptAmount: true,
-              amountSigma: 0.6,
-              minAmount: 1,
-              maxAmount: 6,
-              strategy: "twoTier",
-              adaptEvery: 1
-            };
-          if (!this.options.novelty) this.options.novelty = { enabled: false };
-          if (!this.options.speciesAgeBonus)
-            this.options.speciesAgeBonus = {
-              youngThreshold: 5,
-              youngMultiplier: 1.25,
-              oldThreshold: 35,
-              oldMultiplier: 0.75
-            };
-          if (!this.options.operatorAdaptation)
-            this.options.operatorAdaptation = {
-              enabled: true,
-              window: 50,
-              boost: 2,
-              decay: 0.9
-            };
-          if (!this.options.operatorBandit)
-            this.options.operatorBandit = { enabled: true, c: 1.2, minAttempts: 5 };
-          if (!this.options.telemetry)
-            this.options.telemetry = { enabled: true, logEvery: 1 };
-          if (!this.options.telemetryStream)
-            this.options.telemetryStream = { enabled: false };
-          if (!this.options.phasedComplexity)
-            this.options.phasedComplexity = {
-              enabled: true,
-              phaseLength: 8,
-              simplifyFraction: 0.15
-            };
-          if (!this.options.complexityBudget)
-            this.options.complexityBudget = {
-              enabled: true,
-              mode: "adaptive",
-              maxNodesStart: this.input + this.output + 2,
-              maxNodesEnd: (this.input + this.output + 2) * 6,
-              improvementWindow: 8,
-              increaseFactor: 1.15,
-              stagnationFactor: 0.93,
-              minNodes: this.input + this.output + 2
-            };
-          if (!this.options.multiObjective)
-            this.options.multiObjective = {
-              enabled: true,
-              complexityMetric: "nodes"
-            };
-          this._lineageEnabled = this.options.lineageTracking !== false;
-          if (!this.options.speciesAllocation)
-            this.options.speciesAllocation = {
-              minOffspring: 1,
-              extendedHistory: true
-            };
-          if (!this.options.diversityPressure)
-            this.options.diversityPressure = {
-              enabled: true,
-              motifSample: 25,
-              penaltyStrength: 0.05
-            };
-          if (!this.options.diversityMetrics)
-            this.options.diversityMetrics = {
-              enabled: true,
-              pairSample: 40,
-              graphletSample: 60
-            };
-          if (!this.options.autoCompatTuning)
-            this.options.autoCompatTuning = {
-              enabled: true,
-              target: this.options.targetSpecies ?? 8,
-              adjustRate: 0.02,
-              minCoeff: 0.2,
-              maxCoeff: 3
-            };
-          this.options.targetSpecies = this.options.targetSpecies ?? 8;
-          this.options.compatAdjust = this.options.compatAdjust || {};
-          if (this.options.compatAdjust.kp === void 0)
-            this.options.compatAdjust.kp = 0.3;
-          if (this.options.compatAdjust.ki === void 0)
-            this.options.compatAdjust.ki = 0.02;
-          if (this.options.compatAdjust.smoothingWindow === void 0)
-            this.options.compatAdjust.smoothingWindow = 5;
-          if (this.options.compatAdjust.minThreshold === void 0)
-            this.options.compatAdjust.minThreshold = 0.5;
-          if (this.options.compatAdjust.maxThreshold === void 0)
-            this.options.compatAdjust.maxThreshold = 10;
-          if (this.options.compatAdjust.decay === void 0)
-            this.options.compatAdjust.decay = 0.95;
-          this.createPool(this.options.network || null);
-        }
-        // Apply telemetry selection whitelist if provided
-        _applyTelemetrySelect(entry) {
-          if (!this._telemetrySelect || !this._telemetrySelect.size) return entry;
-          const keep = this._telemetrySelect;
-          const core = { gen: entry.gen, best: entry.best, species: entry.species };
-          for (const k of Object.keys(entry)) {
-            if (k in core) continue;
-            if (!keep.has(k)) delete entry[k];
-          }
-          return Object.assign(entry, core);
-        }
-        /** Retrieve non-fatal configuration warnings (e.g., mutation pool sanitation). */
-        getWarnings() {
-          return this._warnings.slice();
-        }
-        /**
-         * Returns an array of objects describing how many consecutive generations each non-protected
-         * objective has been detected as "stale" (range below pruneInactive.rangeEps). Useful for
-         * monitoring which objectives are nearing automatic removal.
-         */
-        getInactiveObjectiveStats() {
-          const objs = this._getObjectives();
-          return objs.map((o) => ({
-            key: o.key,
-            stale: this._objectiveStale.get(o.key) || 0
-          }));
-        }
-        // Build or return cached objectives list
-        _getObjectives() {
-          if (this._objectivesList) return this._objectivesList;
-          const prevKeys = new Set(
-            Array.from(this._objectiveAges.keys()).filter(
-              (k) => (this._objectiveAges.get(k) || 0) > 0
-            )
-          );
-          const mo = this.options.multiObjective;
-          if (!mo?.enabled) {
-            this._objectivesList = [];
-            return this._objectivesList;
-          }
-          if (mo.objectives && mo.objectives.length) {
-            this._objectivesList = mo.objectives;
-            return this._objectivesList;
-          }
-          const complexityMetric = mo.complexityMetric || "nodes";
-          this._objectivesList = [
-            {
-              key: "fitness",
-              direction: "max",
-              accessor: (g) => g.score ?? -Infinity
-            }
-          ];
-          const dyn = mo.dynamic;
-          const addComplexAt = dyn?.addComplexityAt ?? 0;
-          if (!dyn?.enabled || this.generation >= addComplexAt) {
-            this._objectivesList.push({
-              key: "complexity",
-              direction: "min",
-              accessor: (g) => complexityMetric === "nodes" ? g.nodes.length : g.connections.length
-            });
-          }
-          let wantEntropy = !!mo.autoEntropy;
-          if (wantEntropy && dyn?.enabled) {
-            if (dyn.addEntropyAt != null && this.generation < dyn.addEntropyAt)
-              wantEntropy = false;
-            if (dyn.dropEntropyOnStagnation != null && dyn.dropEntropyOnStagnation > 0) {
-              const stagnGens = this.generation - this._lastGlobalImproveGeneration;
-              if (!this._entropyTempDropped && stagnGens >= dyn.dropEntropyOnStagnation) {
-                this._entropyTempDropped = true;
-                this._entropyDropGen = this.generation;
-                wantEntropy = false;
-              } else if (this._entropyTempDropped) {
-                if (dyn.readdEntropyAfter != null && this._entropyDropGen != null && this.generation - this._entropyDropGen >= dyn.readdEntropyAfter) {
-                  this._entropyTempDropped = false;
-                  this._entropyDropGen = void 0;
-                } else {
-                  wantEntropy = false;
-                }
-              }
-            }
-          }
-          if (wantEntropy)
-            this._objectivesList.push({
-              key: "entropy",
-              direction: "max",
-              accessor: (g) => this._structuralEntropy(g)
-            });
-          if (dyn?.enabled && this.generation < addComplexAt) {
-            this._objectivesList = this._objectivesList.filter(
-              (o) => o.key !== "complexity"
-            );
-          }
-          const activeKeys = new Set(this._objectivesList.map((o) => o.key));
-          for (const k of activeKeys)
-            if (!prevKeys.has(k)) this._pendingObjectiveAdds.push(k);
-          for (const k of prevKeys)
-            if (!activeKeys.has(k)) this._pendingObjectiveRemoves.push(k);
-          for (const k of activeKeys)
-            this._objectiveAges.set(k, (this._objectiveAges.get(k) || 0) + 1);
-          for (const k of Array.from(this._objectiveAges.keys()))
-            if (!activeKeys.has(k)) this._objectiveAges.set(k, 0);
-          return this._objectivesList;
-        }
-        /** Return current objective keys (rebuilds list if cache invalidated) */
-        getObjectiveKeys() {
-          this._objectivesList = void 0;
-          return this._getObjectives().map((o) => o.key);
-        }
-        // Fast non-dominated sort (basic Deb implementation) producing fronts of indices
-        _fastNonDominated(pop) {
-          const objs = this._getObjectives();
-          if (objs.length === 0) return [];
-          const N = pop.length;
-          const dominates = Array.from({ length: N }, () => []);
-          const dominationCount = new Array(N).fill(0);
-          const fronts = [[]];
-          const epsilon = this.options.multiObjective?.dominanceEpsilon ?? 0;
-          const values = pop.map((g) => objs.map((o) => o.accessor(g)));
-          function better(a, b, dir, eps) {
-            if (dir === "max") {
-              if (a > b + eps) return 1;
-              if (b > a + eps) return -1;
-              return 0;
-            } else {
-              if (a < b - eps) return 1;
-              if (b < a - eps) return -1;
-              return 0;
-            }
-          }
-          for (let p = 0; p < N; p++) {
-            for (let q = p + 1; q < N; q++) {
-              let pBetter = false, qBetter = false;
-              for (let k = 0; k < objs.length; k++) {
-                const cmp = better(
-                  values[p][k],
-                  values[q][k],
-                  objs[k].direction,
-                  epsilon
-                );
-                if (cmp === 1) pBetter = true;
-                else if (cmp === -1) qBetter = true;
-                if (pBetter && qBetter) break;
-              }
-              if (pBetter && !qBetter) {
-                dominates[p].push(q);
-                dominationCount[q]++;
-              } else if (qBetter && !pBetter) {
-                dominates[q].push(p);
-                dominationCount[p]++;
-              }
-            }
-          }
-          for (let i = 0; i < N; i++)
-            if (dominationCount[i] === 0) {
-              pop[i]._moRank = 0;
-              fronts[0].push(i);
-            }
-          let f = 0;
-          while (fronts[f] && fronts[f].length) {
-            const next = [];
-            for (const p of fronts[f]) {
-              for (const q of dominates[p]) {
-                dominationCount[q]--;
-                if (dominationCount[q] === 0) {
-                  pop[q]._moRank = f + 1;
-                  next.push(q);
-                }
-              }
-            }
-            if (next.length) fronts.push(next);
-            else break;
-            f++;
-          }
-          return fronts;
-        }
-        // Lightweight structural entropy proxy (degree distribution entropy) for potential objective use
-        _structuralEntropy(g) {
-          const anyG = g;
-          if (anyG._entropyGen === this.generation && typeof anyG._entropyVal === "number")
-            return anyG._entropyVal;
-          const deg = {};
-          for (const n of g.nodes) deg[n.geneId] = 0;
-          for (const c of g.connections)
-            if (c.enabled) {
-              const from = c.from.geneId;
-              const to = c.to.geneId;
-              if (deg[from] !== void 0) deg[from]++;
-              if (deg[to] !== void 0) deg[to]++;
-            }
-          const hist = {};
-          const N = g.nodes.length || 1;
-          for (const nodeId in deg) {
-            const d = deg[nodeId];
-            hist[d] = (hist[d] || 0) + 1;
-          }
-          let H = 0;
-          for (const k in hist) {
-            const p = hist[k] / N;
-            if (p > 0) H -= p * Math.log(p + 1e-9);
-          }
-          anyG._entropyGen = this.generation;
-          anyG._entropyVal = H;
-          return H;
-        }
-        _computeDiversityStats() {
-          if (!this.options.diversityMetrics?.enabled) return;
-          if (this.options.fastMode && !this._fastModeTuned) {
-            const dm = this.options.diversityMetrics;
-            if (dm) {
-              if (dm.pairSample == null) dm.pairSample = 20;
-              if (dm.graphletSample == null) dm.graphletSample = 30;
-            }
-            if (this.options.novelty?.enabled && this.options.novelty.k == null)
-              this.options.novelty.k = 5;
-            this._fastModeTuned = true;
-          }
-          const pairSample = this.options.diversityMetrics.pairSample ?? 40;
-          const graphletSample = this.options.diversityMetrics.graphletSample ?? 60;
-          const pop = this.population;
-          const n = pop.length;
-          let compSum = 0, compSq = 0, compCount = 0;
-          for (let t = 0; t < pairSample; t++) {
-            if (n < 2) break;
-            const i = Math.floor(this._getRNG()() * n);
-            let j = Math.floor(this._getRNG()() * n);
-            if (j === i) j = (j + 1) % n;
-            const d = this._compatibilityDistance(pop[i], pop[j]);
-            compSum += d;
-            compSq += d * d;
-            compCount++;
-          }
-          const meanCompat = compCount ? compSum / compCount : 0;
-          const varCompat = compCount ? Math.max(0, compSq / compCount - meanCompat * meanCompat) : 0;
-          const entropies = pop.map((g) => this._structuralEntropy(g));
-          const meanEntropy = entropies.reduce((a, b) => a + b, 0) / (entropies.length || 1);
-          const varEntropy = entropies.length ? entropies.reduce(
-            (a, b) => a + (b - meanEntropy) * (b - meanEntropy),
-            0
-          ) / entropies.length : 0;
-          const motifCounts = [0, 0, 0, 0];
-          for (let t = 0; t < graphletSample; t++) {
-            const g = pop[Math.floor(this._getRNG()() * n)];
-            if (!g) break;
-            if (g.nodes.length < 3) continue;
-            const idxs = /* @__PURE__ */ new Set();
-            while (idxs.size < 3)
-              idxs.add(Math.floor(this._getRNG()() * g.nodes.length));
-            const arr = Array.from(idxs).map((i) => g.nodes[i]);
-            let edges = 0;
-            for (const c of g.connections)
-              if (c.enabled) {
-                if (arr.includes(c.from) && arr.includes(c.to)) edges++;
-              }
-            if (edges > 3) edges = 3;
-            motifCounts[edges]++;
-          }
-          const totalMotifs = motifCounts.reduce((a, b) => a + b, 0) || 1;
-          let graphletEntropy = 0;
-          for (let k = 0; k < motifCounts.length; k++) {
-            const p = motifCounts[k] / totalMotifs;
-            if (p > 0) graphletEntropy -= p * Math.log(p);
-          }
-          let lineageMeanDepth = 0;
-          let lineageMeanPairDist = 0;
-          if (this._lineageEnabled && n > 0) {
-            const depths = pop.map((g) => g._depth ?? 0);
-            lineageMeanDepth = depths.reduce((a, b) => a + b, 0) / n;
-            let pairSum = 0, pairN = 0;
-            for (let t = 0; t < Math.min(pairSample, n * (n - 1) / 2); t++) {
-              if (n < 2) break;
-              const i = Math.floor(this._getRNG()() * n);
-              let j = Math.floor(this._getRNG()() * n);
-              if (j === i) j = (j + 1) % n;
-              pairSum += Math.abs(depths[i] - depths[j]);
-              pairN++;
-            }
-            lineageMeanPairDist = pairN ? pairSum / pairN : 0;
-          }
-          this._diversityStats = {
-            meanCompat,
-            varCompat,
-            meanEntropy,
-            varEntropy,
-            graphletEntropy,
-            lineageMeanDepth,
-            lineageMeanPairDist
-          };
-        }
-        // Invalidate per-genome cached analytics after structural mutation phases
-        _invalidateGenomeCaches(genome) {
-          const anyG = genome;
-          if (anyG._compatCache) anyG._compatCache = void 0;
-          if (anyG._entropyGen !== void 0) {
-            anyG._entropyGen = -1;
-            anyG._entropyVal = void 0;
-          }
-        }
-        /**
-         * Gets the minimum hidden layer size for a network based on input/output sizes.
-         * Uses the formula: max(input, output) x multiplier (default random 2-5)
-         * Allows deterministic override for testing.
-         * @param multiplierOverride Optional fixed multiplier for deterministic tests
-         * @returns The minimum number of hidden nodes required in each hidden layer
-         */
-        getMinimumHiddenSize(multiplierOverride) {
-          let hiddenLayerMultiplier;
-          if (typeof multiplierOverride === "number") {
-            hiddenLayerMultiplier = multiplierOverride;
-          } else if (typeof this.options.hiddenLayerMultiplier === "number") {
-            hiddenLayerMultiplier = this.options.hiddenLayerMultiplier;
-          } else {
-            const rng = this._getRNG();
-            hiddenLayerMultiplier = Math.floor(rng() * (4 - 2 + 1)) + 2;
-          }
-          return Math.max(this.input, this.output) * hiddenLayerMultiplier;
-        }
-        _getRNG() {
-          if (this._rng) return this._rng;
-          if (typeof this.options.seed === "number") {
-            this._rngState = this.options.seed >>> 0;
-            this._rng = () => {
-              this._rngState = this._rngState + 1831565813 >>> 0;
-              let r = Math.imul(
-                this._rngState ^ this._rngState >>> 15,
-                1 | this._rngState
-              );
-              r ^= r + Math.imul(r ^ r >>> 7, 61 | r);
-              return ((r ^ r >>> 14) >>> 0) / 4294967296;
-            };
-            return this._rng;
-          }
-          this._rng = Math.random;
-          return this._rng;
-        }
-        /**
-         * Snapshot current RNG state (if seeded) for reproducibility checkpoints.
-         * Returns null if using global Math.random without internal state.
-         */
-        snapshotRNGState() {
-          if (this._rngState === void 0) return null;
-          return { state: this._rngState };
-        }
-        /** Restore RNG state previously captured via snapshotRNGState. */
-        restoreRNGState(s) {
-          if (!s) return;
-          this._rngState = s.state >>> 0;
-          this._rng = () => {
-            this._rngState = this._rngState + 1831565813 >>> 0;
-            let r = Math.imul(
-              this._rngState ^ this._rngState >>> 15,
-              1 | this._rngState
-            );
-            r ^= r + Math.imul(r ^ r >>> 7, 61 | r);
-            return ((r ^ r >>> 14) >>> 0) / 4294967296;
-          };
-        }
-        /** Export RNG state as JSON string for persistence */
-        exportRNGState() {
-          const snap = this.snapshotRNGState();
-          return JSON.stringify(snap);
-        }
-        /** Import RNG state from JSON produced by exportRNGState */
-        importRNGState(json) {
-          try {
-            const obj = JSON.parse(json);
-            this.restoreRNGState(obj);
+            if (this.options.network !== void 0)
+              this.createPool(this.options.network);
+            else if (this.options.popsize) this.createPool(null);
           } catch {
           }
+          if (this.options.lineage?.enabled || this.options.provenance > 0)
+            this._lineageEnabled = true;
+          if (this.options.lineageTracking === true)
+            this._lineageEnabled = true;
+          if (options.lineagePressure?.enabled && this._lineageEnabled !== true) {
+            this._lineageEnabled = true;
+          }
         }
-        /** Sample raw RNG outputs (advances state) for testing or reproducibility checks */
-        sampleRandom(count) {
-          const rng = this._getRNG();
-          const out = [];
-          for (let i = 0; i < count; i++) out.push(rng());
-          return out;
-        }
-        /**
-         * Checks if a network meets the minimum hidden node requirements.
-         * Returns information about hidden layer sizes without modifying the network.
-         * @param network The network to check
-         * @param multiplierOverride Optional fixed multiplier for deterministic tests
-         * @returns Object containing information about hidden layer compliance
-         */
-        checkHiddenSizes(network, multiplierOverride) {
-          const minHidden = this.getMinimumHiddenSize(multiplierOverride);
-          const result = {
-            compliant: true,
-            minRequired: minHidden,
-            hiddenLayerSizes: []
-          };
-          if (network.layers && network.layers.length >= 3) {
-            for (let i = 1; i < network.layers.length - 1; i++) {
-              const layer = network.layers[i];
-              if (!layer || !Array.isArray(layer.nodes)) {
-                result.hiddenLayerSizes.push(0);
-                result.compliant = false;
-                continue;
+        // Lightweight RNG accessor used throughout migrated modules
+        _getRNG() {
+          if (!this._rng) {
+            const optRng = this.options?.rng;
+            if (typeof optRng === "function") this._rng = optRng;
+            else {
+              if (this._rngState === void 0) {
+                let seed = (Date.now() ^ (this.population.length + 1) * 2654435761) >>> 0;
+                if (seed === 0) seed = 439041101;
+                this._rngState = seed >>> 0;
               }
-              const layerSize = layer.nodes.length;
-              result.hiddenLayerSizes.push(layerSize);
-              if (layerSize < minHidden) {
-                result.compliant = false;
-              }
-            }
-          } else {
-            const hiddenCount = network.nodes.filter((n) => n.type === "hidden").length;
-            result.hiddenLayerSizes.push(hiddenCount);
-            if (hiddenCount < minHidden) {
-              result.compliant = false;
+              this._rng = () => {
+                let x = this._rngState >>> 0;
+                x ^= x << 13;
+                x >>>= 0;
+                x ^= x >> 17;
+                x >>>= 0;
+                x ^= x << 5;
+                x >>>= 0;
+                this._rngState = x >>> 0;
+                return (x >>> 0) / 4294967295;
+              };
             }
           }
-          return result;
+          return this._rng;
         }
+        // Delegate ensureMinHiddenNodes to migrated mutation helper for smaller class surface
         /**
-         * Ensures that the network has at least min(input, output) + 1 hidden nodes in each hidden layer.
-         * This prevents bottlenecks in networks where hidden layers might be too small.
-         * For layered networks: Ensures each hidden layer has at least the minimum size.
-         * For non-layered networks: Reorganizes into proper layers with the minimum size.
-         * @param network The network to check and modify
-         * @param multiplierOverride Optional fixed multiplier for deterministic tests
+         * Ensure a network has the minimum number of hidden nodes according to
+         * configured policy. Delegates to migrated helper implementation.
+         *
+         * @param network Network instance to adjust.
+         * @param multiplierOverride Optional multiplier to override configured policy.
          */
         ensureMinHiddenNodes(network, multiplierOverride) {
-          const maxNodes = this.options.maxNodes || Infinity;
-          const minHidden = Math.min(
-            this.getMinimumHiddenSize(multiplierOverride),
-            maxNodes - network.nodes.filter((n) => n.type !== "hidden").length
-          );
-          const inputNodes = network.nodes.filter((n) => n.type === "input");
-          const outputNodes = network.nodes.filter((n) => n.type === "output");
-          let hiddenNodes = network.nodes.filter((n) => n.type === "hidden");
-          if (inputNodes.length === 0 || outputNodes.length === 0) {
-            console.warn(
-              "Network is missing input or output nodes. Cannot ensure minimum hidden nodes."
-            );
-            return;
-          }
-          const existingCount = hiddenNodes.length;
-          for (let i = existingCount; i < minHidden && network.nodes.length < maxNodes; i++) {
-            const NodeClass = (init_node(), __toCommonJS(node_exports)).default;
-            const newNode = new NodeClass("hidden");
-            network.nodes.push(newNode);
-            hiddenNodes.push(newNode);
-          }
-          for (const hiddenNode of hiddenNodes) {
-            if (hiddenNode.connections.in.length === 0) {
-              const candidates = inputNodes.concat(
-                hiddenNodes.filter((n) => n !== hiddenNode)
-              );
-              if (candidates.length > 0) {
-                const rng = this._getRNG();
-                const source = candidates[Math.floor(rng() * candidates.length)];
-                try {
-                  network.connect(source, hiddenNode);
-                } catch {
-                }
-              }
-            }
-            if (hiddenNode.connections.out.length === 0) {
-              const candidates = outputNodes.concat(
-                hiddenNodes.filter((n) => n !== hiddenNode)
-              );
-              if (candidates.length > 0) {
-                const rng = this._getRNG();
-                const target = candidates[Math.floor(rng() * candidates.length)];
-                try {
-                  network.connect(hiddenNode, target);
-                } catch {
-                }
-              }
-            }
-          }
-          Network.rebuildConnections(network);
-        }
-        // Helper method to check if a connection exists between two nodes
-        hasConnectionBetween(network, from, to) {
-          return network.connections.some(
-            (conn) => conn.from === from && conn.to === to
-          );
-        }
-        /**
-         * Ensures that all input nodes have at least one outgoing connection,
-         * all output nodes have at least one incoming connection,
-         * and all hidden nodes have at least one incoming and one outgoing connection.
-         * This prevents dead ends and blind I/O neurons.
-         * @param network The network to check and fix
-         */
-        ensureNoDeadEnds(network) {
-          const inputNodes = network.nodes.filter((n) => n.type === "input");
-          const outputNodes = network.nodes.filter((n) => n.type === "output");
-          const hiddenNodes = network.nodes.filter((n) => n.type === "hidden");
-          const hasOutgoing = (node) => node.connections && node.connections.out && node.connections.out.length > 0;
-          const hasIncoming = (node) => node.connections && node.connections.in && node.connections.in.length > 0;
-          for (const inputNode of inputNodes) {
-            if (!hasOutgoing(inputNode)) {
-              const candidates = hiddenNodes.length > 0 ? hiddenNodes : outputNodes;
-              if (candidates.length > 0) {
-                const rng = this._getRNG();
-                const target = candidates[Math.floor(rng() * candidates.length)];
-                try {
-                  network.connect(inputNode, target);
-                } catch (e) {
-                }
-              }
-            }
-          }
-          for (const outputNode of outputNodes) {
-            if (!hasIncoming(outputNode)) {
-              const candidates = hiddenNodes.length > 0 ? hiddenNodes : inputNodes;
-              if (candidates.length > 0) {
-                const rng = this._getRNG();
-                const source = candidates[Math.floor(rng() * candidates.length)];
-                try {
-                  network.connect(source, outputNode);
-                } catch (e) {
-                }
-              }
-            }
-          }
-          for (const hiddenNode of hiddenNodes) {
-            if (!hasIncoming(hiddenNode)) {
-              const candidates = inputNodes.concat(
-                hiddenNodes.filter((n) => n !== hiddenNode)
-              );
-              if (candidates.length > 0) {
-                const rng = this._getRNG();
-                const source = candidates[Math.floor(rng() * candidates.length)];
-                try {
-                  network.connect(source, hiddenNode);
-                } catch (e) {
-                }
-              }
-            }
-            if (!hasOutgoing(hiddenNode)) {
-              const candidates = outputNodes.concat(
-                hiddenNodes.filter((n) => n !== hiddenNode)
-              );
-              if (candidates.length > 0) {
-                const rng = this._getRNG();
-                const target = candidates[Math.floor(rng() * candidates.length)];
-                try {
-                  network.connect(hiddenNode, target);
-                } catch (e) {
-                }
-              }
-            }
-          }
-        }
-        /**
-         * Evaluates the fitness of the current population.
-         * If `fitnessPopulation` is true, evaluates the entire population at once.
-         * Otherwise, evaluates each genome individually.
-         * @returns A promise that resolves when evaluation is complete.
-         */
-        async evaluate() {
-          const _t0 = typeof performance !== "undefined" && performance.now ? performance.now() : Date.now();
-          if (this.options.fitnessPopulation) {
-            if (this.options.clear)
-              this.population.forEach((genome) => genome.clear());
-            await this.fitness(this.population);
-          } else {
-            for (const genome of this.population) {
-              if (this.options.clear) genome.clear();
-              genome.score = await this.fitness(genome);
-            }
-          }
-          if (this.options.minimalCriterion) {
-            for (const g of this.population)
-              if (!this.options.minimalCriterion(g)) g.score = 0;
-          }
-          if (typeof this.options.minimalCriterionThreshold === "number") {
-            const thr = this.options.minimalCriterionThreshold;
-            for (const g of this.population) if ((g.score || 0) < thr) g.score = 0;
-          }
-          if (this.options.minimalCriterionAdaptive?.enabled) {
-            const mc = this.options.minimalCriterionAdaptive;
-            if (this._mcThreshold === void 0)
-              this._mcThreshold = mc.initialThreshold ?? 0;
-            const metric = mc.metric || "score";
-            const thr = this._mcThreshold;
-            let accepted = 0;
-            for (const g of this.population) {
-              const val = metric === "novelty" ? g._novelty || 0 : g.score || 0;
-              if (val >= thr) accepted++;
-            }
-            const acceptance = accepted / (this.population.length || 1);
-            const target = mc.targetAcceptance ?? 0.5;
-            const rate = mc.adjustRate ?? 0.1;
-            this._mcThreshold += rate * (target - acceptance) * (Math.abs(this._mcThreshold) + 1);
-            const newThr = this._mcThreshold;
-            for (const g of this.population) {
-              const val = metric === "novelty" ? g._novelty || 0 : g.score || 0;
-              if (val < newThr) g.score = 0;
-            }
-          }
-          if (this.options.speciation) {
-            this._speciate();
-            this._applyFitnessSharing();
-          }
-          if (this._lineageEnabled && this.options.lineagePressure?.enabled) {
-            const lp = this.options.lineagePressure;
-            const mode = lp.mode || "penalizeDeep";
-            const targetMean = lp.targetMeanDepth ?? 4;
-            const k = lp.strength ?? 0.02;
-            const depths = this.population.map((g) => g._depth ?? 0);
-            const meanDepth = depths.reduce((a, b) => a + b, 0) / (depths.length || 1);
-            if (mode !== "antiInbreeding") {
-              for (let i = 0; i < this.population.length; i++) {
-                const g = this.population[i];
-                const d = depths[i];
-                let adj = 0;
-                if (mode === "penalizeDeep") {
-                  if (d > targetMean) adj = -k * (d - targetMean);
-                } else if (mode === "rewardShallow") {
-                  if (d <= targetMean) adj = k * (targetMean - d);
-                } else if (mode === "spread") {
-                  adj = k * (d - meanDepth);
-                  if (d > targetMean * 2) adj -= k * (d - targetMean * 2);
-                }
-                if (adj !== 0 && typeof g.score === "number")
-                  g.score += adj * Math.max(1, Math.abs(g.score));
-              }
-            } else {
-              const window2 = lp.ancestorWindow ?? 4;
-              const penalty = lp.inbreedingPenalty ?? k * 2;
-              const bonus = lp.diversityBonus ?? k;
-              const ancestorMap = /* @__PURE__ */ new Map();
-              const getAncestors = (g) => {
-                const id = g._id;
-                if (ancestorMap.has(id)) return ancestorMap.get(id);
-                const s = /* @__PURE__ */ new Set();
-                const queue = [];
-                if (Array.isArray(g._parents)) {
-                  for (const pid of g._parents)
-                    queue.push({
-                      id: pid,
-                      depth: 1,
-                      g: this.population.find((x) => x._id === pid)
-                    });
-                }
-                while (queue.length) {
-                  const cur = queue.shift();
-                  if (cur.depth > window2) continue;
-                  if (cur.id != null) s.add(cur.id);
-                  if (cur.g && Array.isArray(cur.g._parents)) {
-                    for (const pid of cur.g._parents)
-                      queue.push({
-                        id: pid,
-                        depth: cur.depth + 1,
-                        g: this.population.find((x) => x._id === pid)
-                      });
-                  }
-                }
-                ancestorMap.set(id, s);
-                return s;
-              };
-              for (const g of this.population) {
-                if (!Array.isArray(g._parents) || g._parents.length < 2)
-                  continue;
-                const pids = g._parents;
-                const pA = this.population.find((x) => x._id === pids[0]);
-                const pB = this.population.find((x) => x._id === pids[1]);
-                if (!pA || !pB) continue;
-                const aA = getAncestors(pA);
-                aA.add(pA._id);
-                const aB = getAncestors(pB);
-                aB.add(pB._id);
-                let inter = 0;
-                for (const id of aA) if (aB.has(id)) inter++;
-                const union = aA.size + aB.size - inter || 1;
-                const jaccard = inter / union;
-                if (jaccard > 0.75) {
-                  g.score += -penalty * (jaccard - 0.75) * Math.max(1, Math.abs(g.score || 1));
-                } else if (jaccard < 0.25) {
-                  g.score += bonus * (0.25 - jaccard) * Math.max(1, Math.abs(g.score || 1));
-                }
-              }
-            }
-          }
-          if (this.options.adaptiveSharing?.enabled && (this.options.sharingSigma || 0) > 0 && this.options.speciation) {
-            const frag = this._species.length / (this.population.length || 1);
-            const target = this.options.adaptiveSharing.targetFragmentation ?? 0.15;
-            const step = this.options.adaptiveSharing.adjustStep ?? 0.1;
-            const minS = this.options.adaptiveSharing.minSigma ?? 0.5;
-            const maxS = this.options.adaptiveSharing.maxSigma ?? 5;
-            if (frag > target * 1.2)
-              this.options.sharingSigma = Math.min(
-                maxS,
-                (this.options.sharingSigma || 0) + step
-              );
-            else if (frag < target * 0.8)
-              this.options.sharingSigma = Math.max(
-                minS,
-                (this.options.sharingSigma || 0) - step
-              );
-          }
-          if (this.options.entropySharingTuning?.enabled && (this.options.sharingSigma || 0) > 0 && this._diversityStats) {
-            const cfg = this.options.entropySharingTuning;
-            const targetVar = cfg.targetEntropyVar ?? 0.15;
-            const rate = cfg.adjustRate ?? 0.05;
-            const minS = cfg.minSigma ?? 0.3;
-            const maxS = cfg.maxSigma ?? 6;
-            const varEntropy = this._diversityStats.varEntropy || 0;
-            if (varEntropy < targetVar * 0.8)
-              this.options.sharingSigma = Math.max(
-                minS,
-                (this.options.sharingSigma || 0) * (1 - rate)
-              );
-            else if (varEntropy > targetVar * 1.2)
-              this.options.sharingSigma = Math.min(
-                maxS,
-                (this.options.sharingSigma || 0) * (1 + rate)
-              );
-          }
-          if (this.options.entropyCompatTuning?.enabled && this._diversityStats) {
-            const cfg = this.options.entropyCompatTuning;
-            const target = cfg.targetEntropy ?? (this._diversityStats.meanEntropy || 0);
-            const adjust = cfg.adjustRate ?? 0.05;
-            const dead = cfg.deadband ?? 0.05;
-            const meanE = this._diversityStats.meanEntropy || 0;
-            let thr = this.options.compatibilityThreshold ?? 3;
-            if (target > 0) {
-              if (meanE < target * (1 - dead)) {
-                thr -= adjust;
-              } else if (meanE > target * (1 + dead)) {
-                thr += adjust;
-              }
-              const minT = cfg.minThreshold ?? 0.5;
-              const maxT = cfg.maxThreshold ?? 10;
-              if (thr < minT) thr = minT;
-              if (thr > maxT) thr = maxT;
-              this.options.compatibilityThreshold = thr;
-            }
-          }
-          if (this.options.adaptiveTargetSpecies?.enabled && this._diversityStats) {
-            const cfg = this.options.adaptiveTargetSpecies;
-            const [eMin, eMax] = cfg.entropyRange || [0, 1];
-            const [sMin, sMax] = cfg.speciesRange || [4, 16];
-            const meanE = this._diversityStats.meanEntropy || 0;
-            const t = Math.max(0, Math.min(1, (meanE - eMin) / (eMax - eMin || 1)));
-            const smooth = cfg.smooth ?? 0.8;
-            const rawTarget = Math.round(sMin + (sMax - sMin) * t);
-            if (typeof this.options.targetSpecies === "number") {
-              this.options.targetSpecies = Math.round(
-                smooth * this.options.targetSpecies + (1 - smooth) * rawTarget
-              );
-            } else {
-              this.options.targetSpecies = rawTarget;
-            }
-          }
-          if (this.options.autoDistanceCoeffTuning?.enabled && this._diversityStats) {
-            const cfg = this.options.autoDistanceCoeffTuning;
-            const targetE = cfg.targetEntropy ?? (this._diversityStats.meanEntropy || 0);
-            const meanE = this._diversityStats.meanEntropy || 0;
-            const err = meanE - targetE;
-            const rate = cfg.adjustRate ?? 0.01;
-            const minC = cfg.minCoeff ?? 0.1;
-            const maxC = cfg.maxCoeff ?? 5;
-            if (Math.abs(err) > targetE * 0.05 + 1e-6) {
-              const factor = 1 + rate * (err > 0 ? -1 : 1);
-              this.options.excessCoeff = Math.min(
-                maxC,
-                Math.max(minC, (this.options.excessCoeff || 1) * factor)
-              );
-              this.options.disjointCoeff = Math.min(
-                maxC,
-                Math.max(minC, (this.options.disjointCoeff || 1) * factor)
-              );
-            }
-          }
-          if (this.options.novelty?.enabled && this.options.novelty.descriptor) {
-            const descFn = this.options.novelty.descriptor;
-            const k = this.options.novelty.k ?? 10;
-            const alpha = this.options.novelty.blendFactor ?? 0.5;
-            const threshold = this.options.novelty.archiveAddThreshold ?? 0.5;
-            const maxArchive = this.options.novelty.maxArchive ?? 1e3;
-            const dist = (a, b) => {
-              const n = Math.min(a.length, b.length);
-              let s = 0;
-              for (let i = 0; i < n; i++) {
-                const dx = a[i] - b[i];
-                s += dx * dx;
-              }
-              return Math.sqrt(s);
-            };
-            const popDescs = this.population.map((g) => ({ g, d: descFn(g) }));
-            let insertedThisGen = 0;
-            for (const item of popDescs) {
-              const dists = [];
-              for (const other of popDescs)
-                if (other !== item) dists.push(dist(item.d, other.d));
-              for (const arch of this._noveltyArchive)
-                dists.push(dist(item.d, arch.d));
-              dists.sort((a, b) => a - b);
-              const kEff = Math.min(k, dists.length);
-              const meanK = kEff > 0 ? dists.slice(0, kEff).reduce((s, v) => s + v, 0) / kEff : 0;
-              item.g._novelty = meanK;
-              if (meanK >= threshold) {
-                this._noveltyArchive.push({ d: item.d });
-                insertedThisGen++;
-              }
-            }
-            if (this.options.novelty.dynamicThreshold?.enabled) {
-              const target = this.options.novelty.dynamicThreshold.targetRate ?? 0.1;
-              const adjust = this.options.novelty.dynamicThreshold.adjust ?? 0.05;
-              const minT = this.options.novelty.dynamicThreshold.min ?? 0.01;
-              const maxT = this.options.novelty.dynamicThreshold.max ?? 10;
-              const actual = this.population.length ? insertedThisGen / this.population.length : 0;
-              let thr = this.options.novelty.archiveAddThreshold ?? threshold;
-              if (actual > target * 1.2) thr *= 1 + adjust;
-              else if (actual < target * 0.8) thr *= 1 - adjust;
-              if (thr < minT) thr = minT;
-              if (thr > maxT) thr = maxT;
-              this.options.novelty.archiveAddThreshold = thr;
-            }
-            if (this._noveltyArchive.length > maxArchive)
-              this._noveltyArchive.splice(
-                0,
-                this._noveltyArchive.length - maxArchive
-              );
-            if (this.options.novelty.pruneStrategy === "sparse" && this._noveltyArchive.length > maxArchive) {
-              const dist2 = (a, b) => {
-                const n = Math.min(a.length, b.length);
-                let s = 0;
-                for (let i = 0; i < n; i++) {
-                  const d = a[i] - b[i];
-                  s += d * d;
-                }
-                return Math.sqrt(s);
-              };
-              while (this._noveltyArchive.length > maxArchive) {
-                let bestI = -1, bestJ = -1, bestD = Infinity;
-                for (let i = 0; i < this._noveltyArchive.length; i++)
-                  for (let j = i + 1; j < this._noveltyArchive.length; j++) {
-                    const d = dist2(
-                      this._noveltyArchive[i].d,
-                      this._noveltyArchive[j].d
-                    );
-                    if (d < bestD) {
-                      bestD = d;
-                      bestI = i;
-                      bestJ = j;
-                    }
-                  }
-                if (bestI >= 0) this._noveltyArchive.splice(bestI, 1);
-                else break;
-              }
-            }
-            if (alpha > 0) {
-              for (const item of popDescs) {
-                if (typeof item.g.score === "number") {
-                  item.g.score = (1 - alpha) * item.g.score + alpha * (item.g._novelty || 0);
-                }
-              }
-            }
-          }
-          if (this.options.diversityPressure?.enabled) {
-            const sample = this.options.diversityPressure.motifSample ?? 25;
-            const freq = /* @__PURE__ */ new Map();
-            for (const g of this.population) {
-              const conns = g.connections || g.connections || [];
-              const motifs = [];
-              for (let i = 0; i < conns.length && i < sample; i++) {
-                const c = conns[i];
-                if (!c.enabled) continue;
-                motifs.push(`${c.from.index}->${c.to.index}`);
-              }
-              motifs.sort();
-              const sig = motifs.slice(0, Math.min(5, motifs.length)).join("|");
-              const prev = freq.get(sig) || 0;
-              freq.set(sig, prev + 1);
-              g._motifSig = sig;
-            }
-            const penaltyStrength = this.options.diversityPressure.penaltyStrength ?? 0.1;
-            const popSize = this.population.length || 1;
-            for (const g of this.population) {
-              const sig = g._motifSig;
-              if (sig && typeof g.score === "number") {
-                const f = freq.get(sig) || 1;
-                const rarity = 1 - f / popSize;
-                g.score = g.score * (1 + penaltyStrength * (rarity - 0.5));
-              }
-            }
-          }
+          return ensureMinHiddenNodes.call(this, network, multiplierOverride);
         }
         /**
          * Evolves the population by selecting, mutating, and breeding genomes.
-         * Implements elitism, provenance, and crossover to create the next generation.
-         * @returns The fittest network from the current generation.
-         * @see {@link https://medium.com/data-science/neuro-evolution-on-steroids-82bd14ddc2f6 Instinct: neuro-evolution on steroids by Thomas Wagenaar}
+         * This method is delegated to `src/neat/neat.evolve.ts` during the migration.
+         *
+         * @example
+         * // Run a single evolution step (async)
+         * await neat.evolve();
          */
         async evolve() {
-          const __e0 = typeof performance !== "undefined" && performance.now ? performance.now() : Date.now();
-          if (this.population[this.population.length - 1].score === void 0) {
-            await this.evaluate();
-          }
-          this._objectivesList = void 0;
-          if (this.options.complexityBudget?.enabled) {
-            const cb = this.options.complexityBudget;
-            if (cb.mode === "adaptive") {
-              if (!this._cbHistory) this._cbHistory = [];
-              this._cbHistory.push(this.population[0]?.score || 0);
-              const window2 = cb.improvementWindow ?? 10;
-              if (this._cbHistory.length > window2)
-                this._cbHistory.shift();
-              const hist = this._cbHistory;
-              const improvement = hist.length > 1 ? hist[hist.length - 1] - hist[0] : 0;
-              let slope = 0;
-              if (hist.length > 2) {
-                const n = hist.length;
-                let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
-                for (let i = 0; i < n; i++) {
-                  sumX += i;
-                  sumY += hist[i];
-                  sumXY += i * hist[i];
-                  sumXX += i * i;
-                }
-                const denom = n * sumXX - sumX * sumX || 1;
-                slope = (n * sumXY - sumX * sumY) / denom;
-              }
-              if (this._cbMaxNodes === void 0)
-                this._cbMaxNodes = cb.maxNodesStart ?? this.input + this.output + 2;
-              const baseInc = cb.increaseFactor ?? 1.1;
-              const baseStag = cb.stagnationFactor ?? 0.95;
-              const slopeMag = Math.min(
-                2,
-                Math.max(-2, slope / (Math.abs(hist[0]) + 1e-9))
-              );
-              const incF = baseInc + 0.05 * Math.max(0, slopeMag);
-              const stagF = baseStag - 0.03 * Math.max(0, -slopeMag);
-              const noveltyFactor = this._noveltyArchive.length > 5 ? 1 : 0.9;
-              if (improvement > 0 || slope > 0)
-                this._cbMaxNodes = Math.min(
-                  cb.maxNodesEnd ?? this._cbMaxNodes * 4,
-                  Math.floor(this._cbMaxNodes * incF * noveltyFactor)
-                );
-              else if (hist.length === window2)
-                this._cbMaxNodes = Math.max(
-                  cb.minNodes ?? this.input + this.output + 2,
-                  Math.floor(this._cbMaxNodes * stagF)
-                );
-              this.options.maxNodes = this._cbMaxNodes;
-              if (cb.maxConnsStart) {
-                if (this._cbMaxConns === void 0)
-                  this._cbMaxConns = cb.maxConnsStart;
-                if (improvement > 0 || slope > 0)
-                  this._cbMaxConns = Math.min(
-                    cb.maxConnsEnd ?? this._cbMaxConns * 4,
-                    Math.floor(this._cbMaxConns * incF * noveltyFactor)
-                  );
-                else if (hist.length === window2)
-                  this._cbMaxConns = Math.max(
-                    cb.maxConnsStart,
-                    Math.floor(this._cbMaxConns * stagF)
-                  );
-                this.options.maxConns = this._cbMaxConns;
-              }
-            } else {
-              const maxStart = cb.maxNodesStart ?? this.input + this.output + 2;
-              const maxEnd = cb.maxNodesEnd ?? maxStart * 4;
-              const horizon = cb.horizon ?? 100;
-              const t = Math.min(1, this.generation / horizon);
-              this.options.maxNodes = Math.floor(maxStart + (maxEnd - maxStart) * t);
-            }
-          }
-          if (this.options.phasedComplexity?.enabled) {
-            const len = this.options.phasedComplexity.phaseLength ?? 10;
-            if (!this._phase) {
-              this._phase = "complexify";
-              this._phaseStartGeneration = this.generation;
-            }
-            if (this.generation - this._phaseStartGeneration >= len) {
-              this._phase = this._phase === "complexify" ? "simplify" : "complexify";
-              this._phaseStartGeneration = this.generation;
-            }
-          }
-          this.sort();
-          if (this.options.multiObjective?.enabled) {
-            const pop = this.population;
-            const fronts = this._fastNonDominated(pop);
-            const objs = this._getObjectives();
-            const crowd = new Array(pop.length).fill(0);
-            const objVals = objs.map((o) => pop.map((g) => o.accessor(g)));
-            for (const front of fronts) {
-              if (front.length < 3) {
-                front.forEach((i) => crowd[i] = Infinity);
-                continue;
-              }
-              for (let oi = 0; oi < objs.length; oi++) {
-                const sorted = [...front].sort(
-                  (a, b) => objVals[oi][a] - objVals[oi][b]
-                );
-                crowd[sorted[0]] = Infinity;
-                crowd[sorted[sorted.length - 1]] = Infinity;
-                const minV = objVals[oi][sorted[0]];
-                const maxV = objVals[oi][sorted[sorted.length - 1]];
-                for (let k = 1; k < sorted.length - 1; k++) {
-                  const prev = objVals[oi][sorted[k - 1]];
-                  const next = objVals[oi][sorted[k + 1]];
-                  const denom = maxV - minV || 1;
-                  crowd[sorted[k]] += (next - prev) / denom;
-                }
-              }
-            }
-            const idxMap = /* @__PURE__ */ new Map();
-            for (let i = 0; i < pop.length; i++) idxMap.set(pop[i], i);
-            this.population.sort((a, b) => {
-              const ra = a._moRank ?? 0;
-              const rb = b._moRank ?? 0;
-              if (ra !== rb) return ra - rb;
-              const ia = idxMap.get(a);
-              const ib = idxMap.get(b);
-              return crowd[ib] - crowd[ia];
-            });
-            for (let i = 0; i < pop.length; i++) pop[i]._moCrowd = crowd[i];
-            if (fronts.length) {
-              const first = fronts[0];
-              const snapshot = first.map((i) => ({
-                id: pop[i]._id ?? -1,
-                score: pop[i].score || 0,
-                nodes: pop[i].nodes.length,
-                connections: pop[i].connections.length
-              }));
-              this._paretoArchive.push({
-                gen: this.generation,
-                size: first.length,
-                genomes: snapshot
-              });
-              if (this._paretoArchive.length > 200) this._paretoArchive.shift();
-              if (objs.length) {
-                const vectors = first.map((i) => ({
-                  id: pop[i]._id ?? -1,
-                  values: objs.map((o) => o.accessor(pop[i]))
-                }));
-                this._paretoObjectivesArchive.push({ gen: this.generation, vectors });
-                if (this._paretoObjectivesArchive.length > 200)
-                  this._paretoObjectivesArchive.shift();
-              }
-            }
-            if (this.options.multiObjective?.adaptiveEpsilon?.enabled && fronts.length) {
-              const cfg = this.options.multiObjective.adaptiveEpsilon;
-              const target = cfg.targetFront ?? Math.max(3, Math.floor(Math.sqrt(this.population.length)));
-              const adjust = cfg.adjust ?? 2e-3;
-              const minE = cfg.min ?? 0;
-              const maxE = cfg.max ?? 0.5;
-              const cooldown = cfg.cooldown ?? 2;
-              if (this.generation - this._lastEpsilonAdjustGen >= cooldown) {
-                const currentSize = fronts[0].length;
-                let eps = this.options.multiObjective.dominanceEpsilon || 0;
-                if (currentSize > target * 1.2) eps = Math.min(maxE, eps + adjust);
-                else if (currentSize < target * 0.8)
-                  eps = Math.max(minE, eps - adjust);
-                this.options.multiObjective.dominanceEpsilon = eps;
-                this._lastEpsilonAdjustGen = this.generation;
-              }
-            }
-            if (this.options.multiObjective?.pruneInactive?.enabled) {
-              const cfg = this.options.multiObjective.pruneInactive;
-              const window2 = cfg.window ?? 5;
-              const rangeEps = cfg.rangeEps ?? 1e-6;
-              const protect = /* @__PURE__ */ new Set([
-                "fitness",
-                "complexity",
-                ...cfg.protect || []
-              ]);
-              const objsList = this._getObjectives();
-              const ranges = {};
-              for (const o of objsList) {
-                let min = Infinity, max = -Infinity;
-                for (const g of this.population) {
-                  const v = o.accessor(g);
-                  if (v < min) min = v;
-                  if (v > max) max = v;
-                }
-                ranges[o.key] = { min, max };
-              }
-              const toRemove = [];
-              for (const o of objsList) {
-                if (protect.has(o.key)) continue;
-                const r = ranges[o.key];
-                const span = r.max - r.min;
-                if (span < rangeEps) {
-                  const c = (this._objectiveStale.get(o.key) || 0) + 1;
-                  this._objectiveStale.set(o.key, c);
-                  if (c >= window2) toRemove.push(o.key);
-                } else {
-                  this._objectiveStale.set(o.key, 0);
-                }
-              }
-              if (toRemove.length && this.options.multiObjective?.objectives) {
-                this.options.multiObjective.objectives = this.options.multiObjective.objectives.filter(
-                  (o) => !toRemove.includes(o.key)
-                );
-                this._objectivesList = void 0;
-              }
-            }
-          }
-          if (this.options.ancestorUniqAdaptive?.enabled && this._diversityStats) {
-            const cfg = this.options.ancestorUniqAdaptive;
-            const cooldown = cfg.cooldown ?? 5;
-            if (this.generation - this._lastAncestorUniqAdjustGen >= cooldown) {
-              const lineageBlock = this._telemetry[this._telemetry.length - 1]?.lineage;
-              const ancUniq = lineageBlock ? lineageBlock.ancestorUniq : void 0;
-              if (typeof ancUniq === "number") {
-                const lowT = cfg.lowThreshold ?? 0.25;
-                const highT = cfg.highThreshold ?? 0.55;
-                const adj = cfg.adjust ?? 0.01;
-                if (cfg.mode === "epsilon" && this.options.multiObjective?.adaptiveEpsilon?.enabled) {
-                  if (ancUniq < lowT) {
-                    this.options.multiObjective.dominanceEpsilon = (this.options.multiObjective.dominanceEpsilon || 0) + adj;
-                    this._lastAncestorUniqAdjustGen = this.generation;
-                  } else if (ancUniq > highT) {
-                    this.options.multiObjective.dominanceEpsilon = Math.max(
-                      0,
-                      (this.options.multiObjective.dominanceEpsilon || 0) - adj
-                    );
-                    this._lastAncestorUniqAdjustGen = this.generation;
-                  }
-                } else if (cfg.mode === "lineagePressure") {
-                  if (!this.options.lineagePressure)
-                    this.options.lineagePressure = {
-                      enabled: true,
-                      mode: "spread",
-                      strength: 0.01
-                    };
-                  const lpRef = this.options.lineagePressure;
-                  if (ancUniq < lowT) {
-                    lpRef.strength = (lpRef.strength || 0.01) * 1.15;
-                    lpRef.mode = "spread";
-                    this._lastAncestorUniqAdjustGen = this.generation;
-                  } else if (ancUniq > highT) {
-                    lpRef.strength = (lpRef.strength || 0.01) * 0.9;
-                    this._lastAncestorUniqAdjustGen = this.generation;
-                  }
-                }
-              }
-            }
-          }
-          const fittest = Network.fromJSON(this.population[0].toJSON());
-          fittest.score = this.population[0].score;
-          this._computeDiversityStats();
-          let objImportance = null;
-          try {
-            const objsList = this._getObjectives();
-            if (objsList.length) {
-              objImportance = {};
-              const pop = this.population;
-              for (const o of objsList) {
-                const vals = pop.map((g) => o.accessor(g));
-                const min = Math.min(...vals);
-                const max = Math.max(...vals);
-                const mean = vals.reduce((a, b) => a + b, 0) / vals.length;
-                const varV = vals.reduce((a, b) => a + (b - mean) * (b - mean), 0) / (vals.length || 1);
-                objImportance[o.key] = { range: max - min, var: varV };
-              }
-            }
-          } catch {
-          }
-          if (this.options.telemetry?.enabled) {
-            const gen = this.generation;
-            let hyper = 0;
-            if (this.options.multiObjective?.enabled) {
-              const metric = this.options.multiObjective.complexityMetric || "connections";
-              const scores = this.population.map((g) => g.score || 0);
-              const sMin = Math.min(...scores);
-              const sMax = Math.max(...scores);
-              const frontSizes = [];
-              for (let r = 0; r < 5; r++) {
-                const size = this.population.filter(
-                  (g) => (g._moRank ?? 0) === r
-                ).length;
-                if (!size) break;
-                frontSizes.push(size);
-              }
-              for (const g of this.population) {
-                const rank = g._moRank ?? 0;
-                if (rank !== 0) continue;
-                const sNorm = sMax > sMin ? ((g.score || 0) - sMin) / (sMax - sMin) : 0;
-                const comp = metric === "nodes" ? g.nodes.length : g.connections.length;
-                hyper += sNorm * (1 / (comp + 1));
-              }
-              const opStats = Array.from(
-                this._operatorStats.entries()
-              ).map(([k, s]) => ({ op: k, succ: s.success, att: s.attempts }));
-              const entry = {
-                gen,
-                best: fittest.score,
-                species: this._species.length,
-                hyper,
-                fronts: frontSizes,
-                diversity: this._diversityStats,
-                ops: opStats
-              };
-              if (objImportance) entry.objImportance = objImportance;
-              if (this._objectiveAges.size)
-                entry.objAges = Array.from(this._objectiveAges.entries()).reduce(
-                  (a, [k, v]) => {
-                    a[k] = v;
-                    return a;
-                  },
-                  {}
-                );
-              if (this._pendingObjectiveAdds.length || this._pendingObjectiveRemoves.length) {
-                entry.objEvents = [];
-                for (const k of this._pendingObjectiveAdds)
-                  entry.objEvents.push({ type: "add", key: k });
-                for (const k of this._pendingObjectiveRemoves)
-                  entry.objEvents.push({ type: "remove", key: k });
-                this._objectiveEvents.push(
-                  ...entry.objEvents.map((e) => ({
-                    gen,
-                    type: e.type,
-                    key: e.key
-                  }))
-                );
-                this._pendingObjectiveAdds = [];
-                this._pendingObjectiveRemoves = [];
-              }
-              if (this._lastOffspringAlloc)
-                entry.speciesAlloc = this._lastOffspringAlloc.slice();
-              try {
-                entry.objectives = this._getObjectives().map((o) => o.key);
-              } catch {
-              }
-              if (this.options.rngState && this._rngState !== void 0)
-                entry.rng = this._rngState;
-              if (this._lineageEnabled) {
-                const b = this.population[0];
-                const depths = this.population.map((g) => g._depth ?? 0);
-                this._lastMeanDepth = depths.reduce((a, b2) => a + b2, 0) / (depths.length || 1);
-                const ancWindow = 4;
-                const buildAnc = (g) => {
-                  const set = /* @__PURE__ */ new Set();
-                  if (!Array.isArray(g._parents)) return set;
-                  const q = [];
-                  for (const pid of g._parents)
-                    q.push({
-                      id: pid,
-                      depth: 1,
-                      g: this.population.find((x) => x._id === pid)
-                    });
-                  while (q.length) {
-                    const cur = q.shift();
-                    if (cur.depth > ancWindow) continue;
-                    if (cur.id != null) set.add(cur.id);
-                    if (cur.g && Array.isArray(cur.g._parents))
-                      for (const pid of cur.g._parents)
-                        q.push({
-                          id: pid,
-                          depth: cur.depth + 1,
-                          g: this.population.find((x) => x._id === pid)
-                        });
-                  }
-                  return set;
-                };
-                let pairSamples = 0;
-                let jaccSum = 0;
-                const samplePairs = Math.min(
-                  30,
-                  this.population.length * (this.population.length - 1) / 2
-                );
-                for (let t = 0; t < samplePairs; t++) {
-                  if (this.population.length < 2) break;
-                  const i = Math.floor(this._getRNG()() * this.population.length);
-                  let j = Math.floor(this._getRNG()() * this.population.length);
-                  if (j === i) j = (j + 1) % this.population.length;
-                  const A = buildAnc(this.population[i]);
-                  const B = buildAnc(this.population[j]);
-                  if (A.size === 0 && B.size === 0) continue;
-                  let inter = 0;
-                  for (const id of A) if (B.has(id)) inter++;
-                  const union = A.size + B.size - inter || 1;
-                  const jacc = 1 - inter / union;
-                  jaccSum += jacc;
-                  pairSamples++;
-                }
-                const ancestorUniqueness = pairSamples ? +(jaccSum / pairSamples).toFixed(3) : 0;
-                entry.lineage = {
-                  parents: Array.isArray(b._parents) ? b._parents.slice() : [],
-                  depthBest: b._depth ?? 0,
-                  meanDepth: +this._lastMeanDepth.toFixed(2),
-                  inbreeding: this._prevInbreedingCount,
-                  ancestorUniq: ancestorUniqueness
-                };
-              }
-              if (this.options.telemetry?.hypervolume && this.options.multiObjective?.enabled)
-                entry.hv = +hyper.toFixed(4);
-              if (this.options.telemetry?.complexity) {
-                const nodesArr = this.population.map((g) => g.nodes.length);
-                const connsArr = this.population.map((g) => g.connections.length);
-                const meanNodes = nodesArr.reduce((a, b) => a + b, 0) / (nodesArr.length || 1);
-                const meanConns = connsArr.reduce((a, b) => a + b, 0) / (connsArr.length || 1);
-                const maxNodes = nodesArr.length ? Math.max(...nodesArr) : 0;
-                const maxConns = connsArr.length ? Math.max(...connsArr) : 0;
-                const enabledRatios = this.population.map((g) => {
-                  let en = 0, dis = 0;
-                  for (const c of g.connections) {
-                    if (c.enabled === false) dis++;
-                    else en++;
-                  }
-                  return en + dis ? en / (en + dis) : 0;
-                });
-                const meanEnabledRatio = enabledRatios.reduce((a, b) => a + b, 0) / (enabledRatios.length || 1);
-                const growthNodes = this._lastMeanNodes !== void 0 ? meanNodes - this._lastMeanNodes : 0;
-                const growthConns = this._lastMeanConns !== void 0 ? meanConns - this._lastMeanConns : 0;
-                this._lastMeanNodes = meanNodes;
-                this._lastMeanConns = meanConns;
-                entry.complexity = {
-                  meanNodes: +meanNodes.toFixed(2),
-                  meanConns: +meanConns.toFixed(2),
-                  maxNodes,
-                  maxConns,
-                  meanEnabledRatio: +meanEnabledRatio.toFixed(3),
-                  growthNodes: +growthNodes.toFixed(2),
-                  growthConns: +growthConns.toFixed(2),
-                  budgetMaxNodes: this.options.maxNodes,
-                  budgetMaxConns: this.options.maxConns
-                };
-              }
-              if (this.options.telemetry?.performance)
-                entry.perf = {
-                  evalMs: this._lastEvalDuration,
-                  evolveMs: this._lastEvolveDuration
-                };
-              this._applyTelemetrySelect(entry);
-              this._telemetry.push(entry);
-              if (this.options.telemetryStream?.enabled && this.options.telemetryStream.onEntry)
-                this.options.telemetryStream.onEntry(entry);
-            } else {
-              const opStats2 = Array.from(
-                this._operatorStats.entries()
-              ).map(([k, s]) => ({ op: k, succ: s.success, att: s.attempts }));
-              const entry = {
-                gen,
-                best: fittest.score,
-                species: this._species.length,
-                hyper,
-                diversity: this._diversityStats,
-                ops: opStats2
-              };
-              if (objImportance) entry.objImportance = objImportance;
-              if (this._objectiveAges.size)
-                entry.objAges = Array.from(this._objectiveAges.entries()).reduce(
-                  (a, [k, v]) => {
-                    a[k] = v;
-                    return a;
-                  },
-                  {}
-                );
-              if (this._pendingObjectiveAdds.length || this._pendingObjectiveRemoves.length) {
-                entry.objEvents = [];
-                for (const k of this._pendingObjectiveAdds)
-                  entry.objEvents.push({ type: "add", key: k });
-                for (const k of this._pendingObjectiveRemoves)
-                  entry.objEvents.push({ type: "remove", key: k });
-                this._objectiveEvents.push(
-                  ...entry.objEvents.map((e) => ({
-                    gen,
-                    type: e.type,
-                    key: e.key
-                  }))
-                );
-                this._pendingObjectiveAdds = [];
-                this._pendingObjectiveRemoves = [];
-              }
-              if (this._lastOffspringAlloc)
-                entry.speciesAlloc = this._lastOffspringAlloc.slice();
-              try {
-                entry.objectives = this._getObjectives().map((o) => o.key);
-              } catch {
-              }
-              if (this.options.rngState && this._rngState !== void 0)
-                entry.rng = this._rngState;
-              if (this._lineageEnabled) {
-                const b = this.population[0];
-                const depths = this.population.map((g) => g._depth ?? 0);
-                this._lastMeanDepth = depths.reduce((a, b2) => a + b2, 0) / (depths.length || 1);
-                const ancWindow = 4;
-                const buildAnc = (g) => {
-                  const set = /* @__PURE__ */ new Set();
-                  if (!Array.isArray(g._parents)) return set;
-                  const q = [];
-                  for (const pid of g._parents)
-                    q.push({
-                      id: pid,
-                      depth: 1,
-                      g: this.population.find((x) => x._id === pid)
-                    });
-                  while (q.length) {
-                    const cur = q.shift();
-                    if (cur.depth > ancWindow) continue;
-                    if (cur.id != null) set.add(cur.id);
-                    if (cur.g && Array.isArray(cur.g._parents))
-                      for (const pid of cur.g._parents)
-                        q.push({
-                          id: pid,
-                          depth: cur.depth + 1,
-                          g: this.population.find((x) => x._id === pid)
-                        });
-                  }
-                  return set;
-                };
-                let pairSamples = 0;
-                let jaccSum = 0;
-                const samplePairs = Math.min(
-                  30,
-                  this.population.length * (this.population.length - 1) / 2
-                );
-                for (let t = 0; t < samplePairs; t++) {
-                  if (this.population.length < 2) break;
-                  const i = Math.floor(this._getRNG()() * this.population.length);
-                  let j = Math.floor(this._getRNG()() * this.population.length);
-                  if (j === i) j = (j + 1) % this.population.length;
-                  const A = buildAnc(this.population[i]);
-                  const B = buildAnc(this.population[j]);
-                  if (A.size === 0 && B.size === 0) continue;
-                  let inter = 0;
-                  for (const id of A) if (B.has(id)) inter++;
-                  const union = A.size + B.size - inter || 1;
-                  const jacc = 1 - inter / union;
-                  jaccSum += jacc;
-                  pairSamples++;
-                }
-                const ancestorUniqueness = pairSamples ? +(jaccSum / pairSamples).toFixed(3) : 0;
-                entry.lineage = {
-                  parents: Array.isArray(b._parents) ? b._parents.slice() : [],
-                  depthBest: b._depth ?? 0,
-                  meanDepth: +this._lastMeanDepth.toFixed(2),
-                  inbreeding: this._prevInbreedingCount,
-                  ancestorUniq: ancestorUniqueness
-                };
-              }
-              if (this.options.telemetry?.hypervolume && this.options.multiObjective?.enabled)
-                entry.hv = +hyper.toFixed(4);
-              if (this.options.telemetry?.complexity) {
-                const nodesArr = this.population.map((g) => g.nodes.length);
-                const connsArr = this.population.map((g) => g.connections.length);
-                const meanNodes = nodesArr.reduce((a, b) => a + b, 0) / (nodesArr.length || 1);
-                const meanConns = connsArr.reduce((a, b) => a + b, 0) / (connsArr.length || 1);
-                const maxNodes = nodesArr.length ? Math.max(...nodesArr) : 0;
-                const maxConns = connsArr.length ? Math.max(...connsArr) : 0;
-                const enabledRatios = this.population.map((g) => {
-                  let en = 0, dis = 0;
-                  for (const c of g.connections) {
-                    if (c.enabled === false) dis++;
-                    else en++;
-                  }
-                  return en + dis ? en / (en + dis) : 0;
-                });
-                const meanEnabledRatio = enabledRatios.reduce((a, b) => a + b, 0) / (enabledRatios.length || 1);
-                const growthNodes = this._lastMeanNodes !== void 0 ? meanNodes - this._lastMeanNodes : 0;
-                const growthConns = this._lastMeanConns !== void 0 ? meanConns - this._lastMeanConns : 0;
-                this._lastMeanNodes = meanNodes;
-                this._lastMeanConns = meanConns;
-                entry.complexity = {
-                  meanNodes: +meanNodes.toFixed(2),
-                  meanConns: +meanConns.toFixed(2),
-                  maxNodes,
-                  maxConns,
-                  meanEnabledRatio: +meanEnabledRatio.toFixed(3),
-                  growthNodes: +growthNodes.toFixed(2),
-                  growthConns: +growthConns.toFixed(2),
-                  budgetMaxNodes: this.options.maxNodes,
-                  budgetMaxConns: this.options.maxConns
-                };
-              }
-              if (this.options.telemetry?.performance)
-                entry.perf = {
-                  evalMs: this._lastEvalDuration,
-                  evolveMs: this._lastEvolveDuration
-                };
-              this._applyTelemetrySelect(entry);
-              this._telemetry.push(entry);
-              if (this.options.telemetryStream?.enabled && this.options.telemetryStream.onEntry)
-                this.options.telemetryStream.onEntry(entry);
-            }
-            if (this._telemetry.length > 500) this._telemetry.shift();
-          }
-          if ((fittest.score ?? -Infinity) > this._bestGlobalScore) {
-            this._bestGlobalScore = fittest.score ?? -Infinity;
-            this._lastGlobalImproveGeneration = this.generation;
-          }
-          const newPopulation = [];
-          const elitismCount = Math.max(
-            0,
-            Math.min(this.options.elitism || 0, this.population.length)
-          );
-          for (let i = 0; i < elitismCount; i++) {
-            const elite = this.population[i];
-            if (elite) newPopulation.push(elite);
-          }
-          const desiredPop = Math.max(0, this.options.popsize || 0);
-          const remainingSlotsAfterElites = Math.max(
-            0,
-            desiredPop - newPopulation.length
-          );
-          const provenanceCount = Math.max(
-            0,
-            Math.min(this.options.provenance || 0, remainingSlotsAfterElites)
-          );
-          for (let i = 0; i < provenanceCount; i++) {
-            if (this.options.network) {
-              newPopulation.push(Network.fromJSON(this.options.network.toJSON()));
-            } else {
-              newPopulation.push(
-                new Network(this.input, this.output, {
-                  minHidden: this.options.minHidden
-                })
-              );
-            }
-          }
-          if (this.options.speciation && this._species.length > 0) {
-            const remaining = desiredPop - newPopulation.length;
-            if (remaining > 0) {
-              const ageCfg = this.options.speciesAgeBonus || {};
-              const youngT = ageCfg.youngThreshold ?? 5;
-              const youngM = ageCfg.youngMultiplier ?? 1.3;
-              const oldT = ageCfg.oldThreshold ?? 30;
-              const oldM = ageCfg.oldMultiplier ?? 0.7;
-              const speciesAdjusted = this._species.map((sp) => {
-                const base = sp.members.reduce((a, m) => a + (m.score || 0), 0);
-                const age = this.generation - sp.lastImproved;
-                if (age <= youngT) return base * youngM;
-                if (age >= oldT) return base * oldM;
-                return base;
-              });
-              const totalAdj = speciesAdjusted.reduce((a, b) => a + b, 0) || 1;
-              const minOff = this.options.speciesAllocation?.minOffspring ?? 1;
-              const rawShares = this._species.map(
-                (_, idx) => speciesAdjusted[idx] / totalAdj * remaining
-              );
-              const offspringAlloc = rawShares.map((s) => Math.floor(s));
-              for (let i = 0; i < offspringAlloc.length; i++)
-                if (offspringAlloc[i] < minOff && remaining >= this._species.length * minOff)
-                  offspringAlloc[i] = minOff;
-              let allocated = offspringAlloc.reduce((a, b) => a + b, 0);
-              let slotsLeft = remaining - allocated;
-              const remainders = rawShares.map((s, i) => ({
-                i,
-                frac: s - Math.floor(s)
-              }));
-              remainders.sort((a, b) => b.frac - a.frac);
-              for (const r of remainders) {
-                if (slotsLeft <= 0) break;
-                offspringAlloc[r.i]++;
-                slotsLeft--;
-              }
-              if (slotsLeft < 0) {
-                const order = offspringAlloc.map((v, i) => ({ i, v })).sort((a, b) => b.v - a.v);
-                for (const o of order) {
-                  if (slotsLeft === 0) break;
-                  if (offspringAlloc[o.i] > minOff) {
-                    offspringAlloc[o.i]--;
-                    slotsLeft++;
-                  }
-                }
-              }
-              this._lastOffspringAlloc = this._species.map((sp, i) => ({
-                id: sp.id,
-                alloc: offspringAlloc[i] || 0
-              }));
-              this._prevInbreedingCount = this._lastInbreedingCount;
-              this._lastInbreedingCount = 0;
-              offspringAlloc.forEach((count, idx) => {
-                if (count <= 0) return;
-                const sp = this._species[idx];
-                this._sortSpeciesMembers(sp);
-                const survivors = sp.members.slice(
-                  0,
-                  Math.max(
-                    1,
-                    Math.floor(
-                      sp.members.length * (this.options.survivalThreshold || 0.5)
-                    )
-                  )
-                );
-                for (let k = 0; k < count; k++) {
-                  const p1 = survivors[Math.floor(this._getRNG()() * survivors.length)];
-                  let p2;
-                  if (this.options.crossSpeciesMatingProb && this._species.length > 1 && this._getRNG()() < (this.options.crossSpeciesMatingProb || 0)) {
-                    let otherIdx = idx;
-                    let guard = 0;
-                    while (otherIdx === idx && guard++ < 5)
-                      otherIdx = Math.floor(this._getRNG()() * this._species.length);
-                    const otherSp = this._species[otherIdx];
-                    this._sortSpeciesMembers(otherSp);
-                    const otherParents = otherSp.members.slice(
-                      0,
-                      Math.max(
-                        1,
-                        Math.floor(
-                          otherSp.members.length * (this.options.survivalThreshold || 0.5)
-                        )
-                      )
-                    );
-                    p2 = otherParents[Math.floor(this._getRNG()() * otherParents.length)];
-                  } else {
-                    p2 = survivors[Math.floor(this._getRNG()() * survivors.length)];
-                  }
-                  const child = Network.crossOver(
-                    p1,
-                    p2,
-                    this.options.equal || false
-                  );
-                  child._reenableProb = this.options.reenableProb;
-                  child._id = this._nextGenomeId++;
-                  if (this._lineageEnabled) {
-                    child._parents = [p1._id, p2._id];
-                    const d1 = p1._depth ?? 0;
-                    const d2 = p2._depth ?? 0;
-                    child._depth = 1 + Math.max(d1, d2);
-                    if (p1._id === p2._id)
-                      this._lastInbreedingCount++;
-                  }
-                  newPopulation.push(child);
-                }
-              });
-            }
-          } else {
-            const toBreed = Math.max(0, desiredPop - newPopulation.length);
-            for (let i = 0; i < toBreed; i++) newPopulation.push(this.getOffspring());
-          }
-          for (const genome of newPopulation) {
-            if (!genome) continue;
-            this.ensureMinHiddenNodes(genome);
-            this.ensureNoDeadEnds(genome);
-          }
-          this.population = newPopulation;
-          const evoPrune = this.options.evolutionPruning;
-          if (evoPrune && this.generation >= (evoPrune.startGeneration || 0)) {
-            const interval = evoPrune.interval || 1;
-            if ((this.generation - evoPrune.startGeneration) % interval === 0) {
-              const ramp = evoPrune.rampGenerations || 0;
-              let frac = 1;
-              if (ramp > 0) {
-                const t = Math.min(
-                  1,
-                  Math.max(0, (this.generation - evoPrune.startGeneration) / ramp)
-                );
-                frac = t;
-              }
-              const targetNow = (evoPrune.targetSparsity || 0) * frac;
-              for (const genome of this.population) {
-                if (genome && typeof genome.pruneToSparsity === "function") {
-                  genome.pruneToSparsity(
-                    targetNow,
-                    evoPrune.method || "magnitude"
-                  );
-                }
-              }
-            }
-          }
-          if (this.options.adaptivePruning?.enabled) {
-            const ap = this.options.adaptivePruning;
-            if (this._adaptivePruneLevel === void 0) this._adaptivePruneLevel = 0;
-            const metric = ap.metric || "connections";
-            const meanNodes = this.population.reduce((a, g) => a + g.nodes.length, 0) / (this.population.length || 1);
-            const meanConns = this.population.reduce((a, g) => a + g.connections.length, 0) / (this.population.length || 1);
-            const current = metric === "nodes" ? meanNodes : meanConns;
-            if (this._adaptivePruneBaseline === void 0)
-              this._adaptivePruneBaseline = current;
-            const base = this._adaptivePruneBaseline;
-            const desiredSparsity = ap.targetSparsity ?? 0.5;
-            const targetRemaining = base * (1 - desiredSparsity);
-            const tol = ap.tolerance ?? 0.05;
-            const rate = ap.adjustRate ?? 0.02;
-            const diff = (current - targetRemaining) / (base || 1);
-            if (Math.abs(diff) > tol) {
-              this._adaptivePruneLevel = Math.max(
-                0,
-                Math.min(
-                  desiredSparsity,
-                  this._adaptivePruneLevel + rate * (diff > 0 ? 1 : -1)
-                )
-              );
-              for (const g of this.population)
-                if (typeof g.pruneToSparsity === "function")
-                  g.pruneToSparsity(this._adaptivePruneLevel, "magnitude");
-            }
-          }
-          this.mutate();
-          if (this.options.adaptiveMutation?.enabled) {
-            const am = this.options.adaptiveMutation;
-            const every = am.adaptEvery ?? 1;
-            if (every <= 1 || this.generation % every === 0) {
-              const scored = this.population.filter(
-                (g) => typeof g.score === "number"
-              );
-              scored.sort((a, b) => (a.score || 0) - (b.score || 0));
-              const mid = Math.floor(scored.length / 2);
-              const topHalf = scored.slice(mid);
-              const bottomHalf = scored.slice(0, mid);
-              const sigmaBase = (am.sigma ?? 0.05) * 1.5;
-              const minR = am.minRate ?? 0.01;
-              const maxR = am.maxRate ?? 1;
-              const strategy = am.strategy || "twoTier";
-              let anyUp = false, anyDown = false;
-              for (let idx = 0; idx < this.population.length; idx++) {
-                const g = this.population[idx];
-                if (g._mutRate === void 0) continue;
-                let rate = g._mutRate;
-                let delta = (this._getRNG()() * 2 - 1) * sigmaBase;
-                if (strategy === "twoTier") {
-                  if (topHalf.length === 0 || bottomHalf.length === 0) {
-                    delta = idx % 2 === 0 ? Math.abs(delta) : -Math.abs(delta);
-                  } else if (topHalf.includes(g)) delta = -Math.abs(delta);
-                  else if (bottomHalf.includes(g)) delta = Math.abs(delta);
-                } else if (strategy === "exploreLow") {
-                  if (bottomHalf.includes(g)) delta = Math.abs(delta * 1.5);
-                  else delta = -Math.abs(delta * 0.5);
-                } else if (strategy === "anneal") {
-                  const progress = Math.min(
-                    1,
-                    this.generation / (50 + this.population.length)
-                  );
-                  delta *= 1 - progress;
-                }
-                rate += delta;
-                if (rate < minR) rate = minR;
-                if (rate > maxR) rate = maxR;
-                if (rate > (this.options.adaptiveMutation.initialRate ?? 0.5))
-                  anyUp = true;
-                if (rate < (this.options.adaptiveMutation.initialRate ?? 0.5))
-                  anyDown = true;
-                g._mutRate = rate;
-                if (am.adaptAmount) {
-                  const aSigma = am.amountSigma ?? 0.25;
-                  let aDelta = (this._getRNG()() * 2 - 1) * aSigma;
-                  if (strategy === "twoTier") {
-                    if (topHalf.length === 0 || bottomHalf.length === 0)
-                      aDelta = idx % 2 === 0 ? Math.abs(aDelta) : -Math.abs(aDelta);
-                    else
-                      aDelta = bottomHalf.includes(g) ? Math.abs(aDelta) : -Math.abs(aDelta);
-                  }
-                  let amt = g._mutAmount ?? (this.options.mutationAmount || 1);
-                  amt += aDelta;
-                  amt = Math.round(amt);
-                  const minA = am.minAmount ?? 1;
-                  const maxA = am.maxAmount ?? 10;
-                  if (amt < minA) amt = minA;
-                  if (amt > maxA) amt = maxA;
-                  g._mutAmount = amt;
-                }
-              }
-              if (strategy === "twoTier" && !(anyUp && anyDown)) {
-                const baseline = this.options.adaptiveMutation.initialRate ?? 0.5;
-                const half = Math.floor(this.population.length / 2);
-                for (let i = 0; i < this.population.length; i++) {
-                  const g = this.population[i];
-                  if (g._mutRate === void 0) continue;
-                  if (i < half)
-                    g._mutRate = Math.min(
-                      g._mutRate + sigmaBase,
-                      1
-                    );
-                  else
-                    g._mutRate = Math.max(
-                      g._mutRate - sigmaBase,
-                      0.01
-                    );
-                }
-              }
-            }
-          }
-          this.population.forEach((g) => {
-            if (g._compatCache) delete g._compatCache;
-          });
-          this.population.forEach((genome) => genome.score = void 0);
-          this.generation++;
-          if (this.options.speciation) this._updateSpeciesStagnation();
-          if ((this.options.globalStagnationGenerations || 0) > 0 && this.generation - this._lastGlobalImproveGeneration >= (this.options.globalStagnationGenerations || 0)) {
-            const replaceFraction = 0.2;
-            const startIdx = Math.max(
-              this.options.elitism || 0,
-              Math.floor(this.population.length * (1 - replaceFraction))
-            );
-            for (let i = startIdx; i < this.population.length; i++) {
-              this.population[i] = new Network(this.input, this.output, {
-                minHidden: this.options.minHidden
-              });
-              this.population[i]._reenableProb = this.options.reenableProb;
-            }
-            this._lastGlobalImproveGeneration = this.generation;
-          }
-          if (this.options.reenableProb !== void 0) {
-            let succ = 0, att = 0;
-            for (const g of this.population) {
-              succ += g._reenableSuccess || 0;
-              att += g._reenableAttempts || 0;
-              g._reenableSuccess = 0;
-              g._reenableAttempts = 0;
-            }
-            if (att > 20) {
-              const ratio = succ / att;
-              const target = 0.3;
-              const delta = ratio - target;
-              this.options.reenableProb = Math.min(
-                0.9,
-                Math.max(0.05, this.options.reenableProb - delta * 0.1)
-              );
-            }
-          }
-          if (this.options.operatorAdaptation?.enabled) {
-            const decay = this.options.operatorAdaptation.decay ?? 0.9;
-            for (const [k, stat] of this._operatorStats.entries()) {
-              stat.success *= decay;
-              stat.attempts *= decay;
-              this._operatorStats.set(k, stat);
-            }
-          }
-          const __e1 = typeof performance !== "undefined" && performance.now ? performance.now() : Date.now();
-          this._lastEvolveDuration = __e1 - __e0;
-          return fittest;
+          return evolve.call(this);
         }
-        /** Warn that evolution ended without a valid best genome. Always emits when called (tests rely on this). */
-        _warnIfNoBestGenome() {
-          try {
-            if (typeof console !== "undefined" && console.warn) {
-              console.warn("Evolution completed without finding a valid best genome");
-            }
-          } catch {
-          }
+        async evaluate() {
+          return evaluate.call(this);
         }
         /**
-         * Creates the initial population of networks.
-         * If a base network is provided, clones it to create the population.
-         * @param network - The base network to clone, or null to create new networks.
+         * Create initial population pool. Delegates to helpers if present.
          */
         createPool(network) {
+          try {
+            if (createPool && typeof createPool === "function")
+              return createPool.call(this, network);
+          } catch {
+          }
           this.population = [];
-          for (let i = 0; i < (this.options.popsize || 50); i++) {
-            const copy = network ? Network.fromJSON(network.toJSON()) : new Network(this.input, this.output, {
+          const poolSize = this.options.popsize || 50;
+          for (let idx = 0; idx < poolSize; idx++) {
+            const genomeCopy = network ? Network.fromJSON(network.toJSON()) : new Network(this.input, this.output, {
               minHidden: this.options.minHidden
             });
-            copy.score = void 0;
-            this.ensureNoDeadEnds(copy);
-            copy._reenableProb = this.options.reenableProb;
-            if (copy.connections.length === 0) {
-              const inputNode = copy.nodes.find((n) => n.type === "input");
-              const outputNode = copy.nodes.find((n) => n.type === "output");
-              if (inputNode && outputNode) {
-                try {
-                  copy.connect(inputNode, outputNode);
-                } catch {
-                }
-              }
+            genomeCopy.score = void 0;
+            try {
+              this.ensureNoDeadEnds(genomeCopy);
+            } catch {
             }
-            copy._id = this._nextGenomeId++;
+            genomeCopy._reenableProb = this.options.reenableProb;
+            genomeCopy._id = this._nextGenomeId++;
             if (this._lineageEnabled) {
-              copy._parents = [];
-              copy._depth = 0;
+              genomeCopy._parents = [];
+              genomeCopy._depth = 0;
             }
-            this.population.push(copy);
+            this.population.push(genomeCopy);
           }
+        }
+        // RNG snapshot / restore helpers used by tests
+        /**
+         * Return the current opaque RNG numeric state used by the instance.
+         * Useful for deterministic test replay and debugging.
+         */
+        snapshotRNGState() {
+          return this._rngState;
+        }
+        /**
+         * Restore a previously-snapshotted RNG state. This restores the internal
+         * seed but does not re-create the RNG function until next use.
+         *
+         * @param state Opaque numeric RNG state produced by `snapshotRNGState()`.
+         */
+        restoreRNGState(state) {
+          this._rngState = state;
+          this._rng = void 0;
+        }
+        /**
+         * Import an RNG state (alias for restore; kept for compatibility).
+         * @param state Numeric RNG state.
+         */
+        importRNGState(state) {
+          this._rngState = state;
+          this._rng = void 0;
+        }
+        /**
+         * Export the current RNG state for external persistence or tests.
+         */
+        exportRNGState() {
+          return this._rngState;
         }
         /**
          * Generates an offspring by crossing over two parent networks.
@@ -10391,8 +11631,18 @@
          * @see {@link https://medium.com/data-science/neuro-evolution-on-steroids-82bd14ddc2f6 Instinct: neuro-evolution on steroids by Thomas Wagenaar}
          */
         getOffspring() {
-          const parent1 = this.getParent();
-          const parent2 = this.getParent();
+          let parent1;
+          let parent2;
+          try {
+            parent1 = this.getParent();
+          } catch {
+            parent1 = this.population[0];
+          }
+          try {
+            parent2 = this.getParent();
+          } catch {
+            parent2 = this.population[Math.floor(this._getRNG()() * this.population.length)] || this.population[0];
+          }
           const offspring = Network.crossOver(
             parent1,
             parent2,
@@ -10405,15 +11655,88 @@
               parent1._id,
               parent2._id
             ];
-            const d1 = parent1._depth ?? 0;
-            const d2 = parent2._depth ?? 0;
-            offspring._depth = 1 + Math.max(d1, d2);
+            const depth1 = parent1._depth ?? 0;
+            const depth2 = parent2._depth ?? 0;
+            offspring._depth = 1 + Math.max(depth1, depth2);
             if (parent1._id === parent2._id)
               this._lastInbreedingCount++;
           }
           this.ensureMinHiddenNodes(offspring);
           this.ensureNoDeadEnds(offspring);
           return offspring;
+        }
+        /** Emit a standardized warning when evolution loop finds no valid best genome (test hook). */
+        _warnIfNoBestGenome() {
+          try {
+            console.warn(
+              "Evolution completed without finding a valid best genome (no fitness improvements recorded)."
+            );
+          } catch {
+          }
+        }
+        /**
+         * Spawn a new genome derived from a single parent while preserving Neat bookkeeping.
+         *
+         * This helper performs a canonical "clone + slight mutation" workflow while
+         * keeping `Neat`'s internal invariants intact. It is intended for callers that
+         * want a child genome derived from a single parent but do not want to perform the
+         * bookkeeping and registration steps manually. The function deliberately does NOT
+         * add the returned child to `this.population` so callers are free to inspect or
+         * further modify the child and then register it via `addGenome()` (or push it
+         * directly if they understand the consequences).
+         *
+         * Behavior summary:
+         * - Clone the provided `parent` (`parent.clone()` when available, else JSON round-trip).
+         * - Clear fitness/score on the child and assign a fresh unique `_id`.
+         * - If lineage tracking is enabled, set `(child as any)._parents = [parent._id]`
+         *   and `(child as any)._depth = (parent._depth ?? 0) + 1`.
+         * - Enforce structural invariants by calling `ensureMinHiddenNodes(child)` and
+         *   `ensureNoDeadEnds(child)` so the child is valid for subsequent mutation/evaluation.
+         * - Apply `mutateCount` mutations selected via `selectMutationMethod` and driven by
+         *   the instance RNG (`_getRNG()`); mutation exceptions are caught and ignored to
+         *   preserve best-effort behavior during population seeding/expansion.
+         * - Invalidate per-genome caches with `_invalidateGenomeCaches(child)` before return.
+         *
+         * Important: the returned child is not registered in `Neat.population` — call
+         * `addGenome(child, [parentId])` to insert it and keep telemetry/lineage consistent.
+         *
+         * @param parent - Source genome to derive from. Must be a `Network` instance.
+         * @param mutateCount - Number of mutation operations to apply to the spawned child (default: 1).
+         * @returns A new `Network` instance derived from `parent`. The child is unregistered.
+         */
+        spawnFromParent(parent, mutateCount = 1) {
+          return spawnFromParent.call(this, parent, mutateCount);
+        }
+        /**
+         * Register an externally-created genome into the `Neat` population.
+         *
+         * Use this method when code constructs or mutates a `Network` outside of the
+         * usual reproduction pipeline and needs to insert it into `neat.population`
+         * while preserving lineage, id assignment, and structural invariants. The
+         * method performs best-effort safety actions and falls back to pushing the
+         * genome even if invariant enforcement throws, which mirrors the forgiving
+         * behavior used in dynamic population expansion.
+         *
+         * Behavior summary:
+         * - Clears the genome's `score` and assigns `_id` using Neat's counter.
+         * - When lineage is enabled, attaches the provided `parents` array (copied)
+         *   and estimates `_depth` as `max(parent._depth) + 1` when parent ids are
+         *   resolvable from the current population.
+         * - Enforces structural invariants (`ensureMinHiddenNodes` and
+         *   `ensureNoDeadEnds`) and invalidates caches via
+         *   `_invalidateGenomeCaches(genome)`.
+         * - Pushes the genome into `this.population`.
+         *
+         * Note: Because depth estimation requires parent objects to be discoverable
+         * in `this.population`, callers that generate intermediate parent genomes
+         * should register them via `addGenome` before relying on automatic depth
+         * estimation for their children.
+         *
+         * @param genome - The external `Network` to add.
+         * @param parents - Optional array of parent ids to record on the genome.
+         */
+        addGenome(genome, parents) {
+          return addGenome.call(this, genome, parents);
         }
         /**
          * Selects a mutation method for a given genome based on constraints.
@@ -10422,90 +11745,62 @@
          * @returns The selected mutation method or null if no valid method is available.
          */
         selectMutationMethod(genome, rawReturnForTest = true) {
-          const isFFWDirect = this.options.mutation === mutation.FFW;
-          const isFFWNested = Array.isArray(this.options.mutation) && this.options.mutation.length === 1 && this.options.mutation[0] === mutation.FFW;
-          if ((isFFWDirect || isFFWNested) && rawReturnForTest)
-            return mutation.FFW;
-          if (isFFWDirect)
-            return mutation.FFW[Math.floor(this._getRNG()() * mutation.FFW.length)];
-          if (isFFWNested)
-            return mutation.FFW[Math.floor(this._getRNG()() * mutation.FFW.length)];
-          let pool = this.options.mutation;
-          if (rawReturnForTest && Array.isArray(pool) && pool.length === mutation.FFW.length && pool.every(
-            (m, i) => m && m.name === mutation.FFW[i].name
-          )) {
-            return mutation.FFW;
-          }
-          if (pool.length === 1 && Array.isArray(pool[0]) && pool[0].length)
-            pool = pool[0];
-          if (this.options.phasedComplexity?.enabled && this._phase) {
-            pool = pool.filter((m) => !!m);
-            if (this._phase === "simplify") {
-              const simplifyPool = pool.filter(
-                (m) => m && m.name && m.name.startsWith && m.name.startsWith("SUB_")
-              );
-              if (simplifyPool.length) pool = [...pool, ...simplifyPool];
-            } else if (this._phase === "complexify") {
-              const addPool = pool.filter(
-                (m) => m && m.name && m.name.startsWith && m.name.startsWith("ADD_")
-              );
-              if (addPool.length) pool = [...pool, ...addPool];
-            }
-          }
-          if (this.options.operatorAdaptation?.enabled) {
-            const boost = this.options.operatorAdaptation.boost ?? 2;
-            const stats = this._operatorStats;
-            const augmented = [];
-            for (const m of pool) {
-              augmented.push(m);
-              const st = stats.get(m.name);
-              if (st && st.attempts > 5) {
-                const ratio = st.success / st.attempts;
-                if (ratio > 0.55) {
-                  for (let i = 0; i < Math.min(boost, Math.floor(ratio * boost)); i++)
-                    augmented.push(m);
-                }
-              }
-            }
-            pool = augmented;
-          }
-          let mutationMethod = pool[Math.floor(this._getRNG()() * pool.length)];
-          if (mutationMethod === mutation.ADD_GATE && genome.gates.length >= (this.options.maxGates || Infinity)) {
+          try {
+            return selectMutationMethod.call(this, genome, rawReturnForTest);
+          } catch {
             return null;
           }
-          if (mutationMethod === mutation.ADD_NODE && genome.nodes.length >= (this.options.maxNodes || Infinity)) {
-            return null;
+        }
+        /** Delegate ensureNoDeadEnds to mutation module (added for backward compat). */
+        ensureNoDeadEnds(network) {
+          try {
+            return ensureNoDeadEnds.call(this, network);
+          } catch {
+            return;
           }
-          if (mutationMethod === mutation.ADD_CONN && genome.connections.length >= (this.options.maxConns || Infinity)) {
-            return null;
+        }
+        /** Minimum hidden size considering explicit minHidden or multiplier policy. */
+        getMinimumHiddenSize(multiplierOverride) {
+          const o = this.options;
+          if (typeof o.minHidden === "number") return o.minHidden;
+          const mult = multiplierOverride ?? o.minHiddenMultiplier;
+          if (typeof mult === "number" && isFinite(mult)) {
+            return Math.max(0, Math.round(mult * (this.input + this.output)));
           }
-          if (this.options.operatorBandit?.enabled) {
-            const c = this.options.operatorBandit.c ?? 1.4;
-            const minA = this.options.operatorBandit.minAttempts ?? 5;
-            const stats = this._operatorStats;
-            for (const m of pool)
-              if (!stats.has(m.name)) stats.set(m.name, { success: 0, attempts: 0 });
-            const totalAttempts = Array.from(stats.values()).reduce((a, s) => a + s.attempts, 0) + 1e-9;
-            let best = mutationMethod;
-            let bestVal = -Infinity;
-            for (const m of pool) {
-              const st = stats.get(m.name);
-              const mean = st.attempts > 0 ? st.success / st.attempts : 0;
-              const bonus = st.attempts < minA ? Infinity : c * Math.sqrt(Math.log(totalAttempts) / (st.attempts + 1e-9));
-              const val = mean + bonus;
-              if (val > bestVal) {
-                bestVal = val;
-                best = m;
-              }
-            }
-            mutationMethod = best;
-          }
-          if (mutationMethod === mutation.ADD_GATE && genome.gates.length >= (this.options.maxGates || Infinity))
-            return null;
-          if (!this.options.allowRecurrent && (mutationMethod === mutation.ADD_BACK_CONN || mutationMethod === mutation.ADD_SELF_CONN)) {
-            return null;
-          }
-          return mutationMethod;
+          return 0;
+        }
+        /** Produce `count` deterministic random samples using instance RNG. */
+        sampleRandom(count) {
+          const rng = this._getRNG();
+          const arr = [];
+          for (let i = 0; i < count; i++) arr.push(rng());
+          return arr;
+        }
+        /** Internal: return cached objective descriptors, building if stale. */
+        _getObjectives() {
+          return _getObjectives.call(this);
+        }
+        /** Public helper returning just the objective keys (tests rely on). */
+        getObjectiveKeys() {
+          return this._getObjectives().map(
+            (obj) => obj.key
+          );
+        }
+        /** Invalidate per-genome caches (compatibility distance, forward pass, etc.). */
+        _invalidateGenomeCaches(genome) {
+          if (!genome || typeof genome !== "object") return;
+          delete genome._compatCache;
+          delete genome._outputCache;
+          delete genome._traceCache;
+        }
+        /** Compute and cache diversity statistics used by telemetry & tests. */
+        _computeDiversityStats() {
+          this._diversityStats = computeDiversityStats2(this.population, this);
+        }
+        // Removed thin wrappers _structuralEntropy and _fastNonDominated; modules used directly where needed.
+        /** Compatibility wrapper retained for tests that reference (neat as any)._structuralEntropy */
+        _structuralEntropy(genome) {
+          return structuralEntropy2(genome);
         }
         /**
          * Applies mutations to the population based on the mutation rate and amount.
@@ -10513,597 +11808,187 @@
          * Slightly increases the chance of ADD_CONN mutation for more connectivity.
          */
         mutate() {
-          for (const genome of this.population) {
-            if (this.options.adaptiveMutation?.enabled) {
-              if (genome._mutRate === void 0) {
-                genome._mutRate = this.options.mutationRate !== void 0 ? this.options.mutationRate : this.options.adaptiveMutation.initialRate ?? (this.options.mutationRate || 0.7);
-                if (this.options.adaptiveMutation.adaptAmount)
-                  genome._mutAmount = this.options.mutationAmount || 1;
-              }
-            }
-            const effectiveRate = this.options.mutationRate !== void 0 ? this.options.mutationRate : this.options.adaptiveMutation?.enabled ? genome._mutRate : this.options.mutationRate || 0.7;
-            const effectiveAmount = this.options.adaptiveMutation?.enabled && this.options.adaptiveMutation.adaptAmount ? genome._mutAmount ?? (this.options.mutationAmount || 1) : this.options.mutationAmount || 1;
-            if (this._getRNG()() <= effectiveRate) {
-              for (let j = 0; j < effectiveAmount; j++) {
-                let mutationMethod = this.selectMutationMethod(genome, false);
-                if (Array.isArray(mutationMethod)) {
-                  const arr = mutationMethod;
-                  mutationMethod = arr[Math.floor(this._getRNG()() * arr.length)];
-                }
-                if (mutationMethod && mutationMethod.name) {
-                  const beforeNodes = genome.nodes.length;
-                  const beforeConns = genome.connections.length;
-                  if (mutationMethod === mutation.ADD_NODE) {
-                    this._mutateAddNodeReuse(genome);
-                    try {
-                      genome.mutate(mutation.MOD_WEIGHT);
-                    } catch {
-                    }
-                    this._invalidateGenomeCaches(genome);
-                  } else if (mutationMethod === mutation.ADD_CONN) {
-                    this._mutateAddConnReuse(genome);
-                    try {
-                      genome.mutate(mutation.MOD_WEIGHT);
-                    } catch {
-                    }
-                    this._invalidateGenomeCaches(genome);
-                  } else {
-                    genome.mutate(mutationMethod);
-                    if (mutationMethod === mutation.ADD_GATE || mutationMethod === mutation.SUB_NODE || mutationMethod === mutation.SUB_CONN || mutationMethod === mutation.ADD_SELF_CONN || mutationMethod === mutation.ADD_BACK_CONN) {
-                      this._invalidateGenomeCaches(genome);
-                    }
-                  }
-                  if (this._getRNG()() < 0.5) this._mutateAddConnReuse(genome);
-                  if (this.options.operatorAdaptation?.enabled) {
-                    const stat = this._operatorStats.get(mutationMethod.name) || {
-                      success: 0,
-                      attempts: 0
-                    };
-                    stat.attempts++;
-                    const afterNodes = genome.nodes.length;
-                    const afterConns = genome.connections.length;
-                    if (afterNodes > beforeNodes || afterConns > beforeConns)
-                      stat.success++;
-                    this._operatorStats.set(mutationMethod.name, stat);
-                  }
-                }
-              }
-            }
-          }
+          return mutate.call(this);
         }
         // Perform ADD_NODE honoring global innovation reuse mapping
         _mutateAddNodeReuse(genome) {
-          if (genome.connections.length === 0) {
-            const inNode = genome.nodes.find((n) => n.type === "input");
-            const outNode = genome.nodes.find((n) => n.type === "output");
-            if (inNode && outNode) {
-              try {
-                genome.connect(inNode, outNode, 1);
-              } catch {
-              }
-            }
-          }
-          const enabled = genome.connections.filter(
-            (c) => c.enabled !== false
-          );
-          if (!enabled.length) return;
-          const conn = enabled[Math.floor(this._getRNG()() * enabled.length)];
-          const fromGene = conn.from.geneId;
-          const toGene = conn.to.geneId;
-          const key = fromGene + "->" + toGene;
-          const oldWeight = conn.weight;
-          genome.disconnect(conn.from, conn.to);
-          let rec = this._nodeSplitInnovations.get(key);
-          if (!rec) {
-            const NodeCls = (init_node(), __toCommonJS(node_exports)).default;
-            const newNode = new NodeCls("hidden");
-            const inC = genome.connect(conn.from, newNode, 1)[0];
-            const outC = genome.connect(newNode, conn.to, oldWeight)[0];
-            if (inC) inC.innovation = this._nextGlobalInnovation++;
-            if (outC) outC.innovation = this._nextGlobalInnovation++;
-            rec = {
-              newNodeGeneId: newNode.geneId,
-              inInnov: inC?.innovation,
-              outInnov: outC?.innovation
-            };
-            this._nodeSplitInnovations.set(key, rec);
-            const toIdx = genome.nodes.indexOf(conn.to);
-            const insertIdx = Math.min(toIdx, genome.nodes.length - genome.output);
-            genome.nodes.splice(insertIdx, 0, newNode);
-          } else {
-            const NodeCls = (init_node(), __toCommonJS(node_exports)).default;
-            const newNode = new NodeCls("hidden");
-            newNode.geneId = rec.newNodeGeneId;
-            const toIdx = genome.nodes.indexOf(conn.to);
-            const insertIdx = Math.min(toIdx, genome.nodes.length - genome.output);
-            genome.nodes.splice(insertIdx, 0, newNode);
-            const inC = genome.connect(conn.from, newNode, 1)[0];
-            const outC = genome.connect(newNode, conn.to, oldWeight)[0];
-            if (inC) inC.innovation = rec.inInnov;
-            if (outC) outC.innovation = rec.outInnov;
-          }
+          return mutateAddNodeReuse.call(this, genome);
         }
-        // Perform ADD_CONN with stable innovation reuse per node pair
         _mutateAddConnReuse(genome) {
-          const available = [];
-          for (let i = 0; i < genome.nodes.length - genome.output; i++) {
-            const from2 = genome.nodes[i];
-            for (let j = Math.max(i + 1, genome.input); j < genome.nodes.length; j++) {
-              const to2 = genome.nodes[j];
-              if (!from2.isProjectingTo(to2)) available.push([from2, to2]);
-            }
-          }
-          if (!available.length) return;
-          const pair = available[Math.floor(this._getRNG()() * available.length)];
-          const from = pair[0];
-          const to = pair[1];
-          const key = from.geneId + "->" + to.geneId;
-          if (genome._enforceAcyclic) {
-            const createsCycle = (() => {
-              const stack = [to];
-              const seen = /* @__PURE__ */ new Set();
-              while (stack.length) {
-                const n = stack.pop();
-                if (n === from) return true;
-                if (seen.has(n)) continue;
-                seen.add(n);
-                for (const c of n.connections.out) {
-                  if (c.to !== n) stack.push(c.to);
-                }
-              }
-              return false;
-            })();
-            if (createsCycle) return;
-          }
-          const conn = genome.connect(from, to)[0];
-          if (!conn) return;
-          if (this._connInnovations.has(key)) {
-            conn.innovation = this._connInnovations.get(key);
-          } else {
-            conn.innovation = this._nextGlobalInnovation++;
-            this._connInnovations.set(key, conn.innovation);
-          }
+          return mutateAddConnReuse.call(this, genome);
         }
         // --- Speciation helpers (properly scoped) ---
-        _fallbackInnov(c) {
-          return (c.from?.index ?? 0) * 1e5 + (c.to?.index ?? 0);
+        _fallbackInnov(conn) {
+          return _fallbackInnov.call(this, conn);
         }
-        _compatibilityDistance(a, b) {
-          if (!this._compatCacheGen || this._compatCacheGen !== this.generation) {
-            this._compatCacheGen = this.generation;
-            this._compatDistCache = /* @__PURE__ */ new Map();
-          }
-          const key = a._id < b._id ? `${a._id}|${b._id}` : `${b._id}|${a._id}`;
-          const cacheMap = this._compatDistCache;
-          if (cacheMap.has(key)) return cacheMap.get(key);
-          const getCache = (n) => {
-            const anyN = n;
-            if (!anyN._compatCache) {
-              const list = n.connections.map((c) => [
-                c.innovation ?? this._fallbackInnov(c),
-                c.weight
-              ]);
-              list.sort((x, y) => x[0] - y[0]);
-              anyN._compatCache = list;
-            }
-            return anyN._compatCache;
-          };
-          const aList = getCache(a);
-          const bList = getCache(b);
-          let i = 0, j = 0;
-          let matches = 0, disjoint = 0, excess = 0;
-          let weightDiff = 0;
-          const maxInnovA = aList.length ? aList[aList.length - 1][0] : 0;
-          const maxInnovB = bList.length ? bList[bList.length - 1][0] : 0;
-          while (i < aList.length && j < bList.length) {
-            const [innovA, wA] = aList[i];
-            const [innovB, wB] = bList[j];
-            if (innovA === innovB) {
-              matches++;
-              weightDiff += Math.abs(wA - wB);
-              i++;
-              j++;
-            } else if (innovA < innovB) {
-              if (innovA > maxInnovB) excess++;
-              else disjoint++;
-              i++;
-            } else {
-              if (innovB > maxInnovA) excess++;
-              else disjoint++;
-              j++;
-            }
-          }
-          if (i < aList.length) excess += aList.length - i;
-          if (j < bList.length) excess += bList.length - j;
-          const N = Math.max(1, Math.max(aList.length, bList.length));
-          const avgWeightDiff = matches ? weightDiff / matches : 0;
-          const o = this.options;
-          const dist = o.excessCoeff * excess / N + o.disjointCoeff * disjoint / N + o.weightDiffCoeff * avgWeightDiff;
-          cacheMap.set(key, dist);
-          return dist;
+        _compatibilityDistance(netA, netB) {
+          return _compatibilityDistance.call(this, netA, netB);
         }
+        /**
+         * Assign genomes into species based on compatibility distance and maintain species structures.
+         * This function creates new species for unassigned genomes and prunes empty species.
+         * It also records species-level history used for telemetry and adaptive controllers.
+         */
         _speciate() {
-          this._prevSpeciesMembers.clear();
-          for (const sp of this._species) {
-            const set = /* @__PURE__ */ new Set();
-            for (const m of sp.members) set.add(m._id);
-            this._prevSpeciesMembers.set(sp.id, set);
-          }
-          this._species.forEach((sp) => sp.members = []);
-          for (const genome of this.population) {
-            let assigned = false;
-            for (const sp of this._species) {
-              const dist = this._compatibilityDistance(genome, sp.representative);
-              if (dist < (this.options.compatibilityThreshold || 3)) {
-                sp.members.push(genome);
-                assigned = true;
-                break;
-              }
-            }
-            if (!assigned) {
-              const sid = this._nextSpeciesId++;
-              this._species.push({
-                id: sid,
-                members: [genome],
-                representative: genome,
-                lastImproved: this.generation,
-                bestScore: genome.score || -Infinity
-              });
-              this._speciesCreated.set(sid, this.generation);
-            }
-          }
-          this._species = this._species.filter((sp) => sp.members.length > 0);
-          this._species.forEach((sp) => {
-            sp.representative = sp.members[0];
-          });
-          const ageProt = this.options.speciesAgeProtection || {
-            grace: 3,
-            oldPenalty: 0.5
-          };
-          for (const sp of this._species) {
-            const created = this._speciesCreated.get(sp.id) ?? this.generation;
-            const age = this.generation - created;
-            if (age >= (ageProt.grace ?? 3) * 10) {
-              const pen = ageProt.oldPenalty ?? 0.5;
-              if (pen < 1)
-                sp.members.forEach((m) => {
-                  if (typeof m.score === "number") m.score *= pen;
-                });
-            }
-          }
-          if (this.options.speciation && (this.options.targetSpecies || 0) > 0) {
-            const target = this.options.targetSpecies;
-            const observed = this._species.length;
-            const adj = this.options.compatAdjust;
-            const sw = Math.max(1, adj.smoothingWindow || 1);
-            const alpha = 2 / (sw + 1);
-            this._compatSpeciesEMA = this._compatSpeciesEMA === void 0 ? observed : this._compatSpeciesEMA + alpha * (observed - this._compatSpeciesEMA);
-            const smoothed = this._compatSpeciesEMA;
-            const error = target - smoothed;
-            this._compatIntegral = this._compatIntegral * (adj.decay || 0.95) + error;
-            const delta = (adj.kp || 0) * error + (adj.ki || 0) * this._compatIntegral;
-            let newThresh = (this.options.compatibilityThreshold || 3) - delta;
-            const minT = adj.minThreshold || 0.5;
-            const maxT = adj.maxThreshold || 10;
-            if (newThresh < minT) {
-              newThresh = minT;
-              this._compatIntegral = 0;
-            }
-            if (newThresh > maxT) {
-              newThresh = maxT;
-              this._compatIntegral = 0;
-            }
-            this.options.compatibilityThreshold = newThresh;
-          }
-          if (this.options.autoCompatTuning?.enabled && (this.options.targetSpecies || 0) > 0) {
-            const tgt = this.options.autoCompatTuning.target ?? this.options.targetSpecies;
-            const obs = this._species.length;
-            const err = tgt - obs;
-            const rate = this.options.autoCompatTuning.adjustRate ?? 0.01;
-            const minC = this.options.autoCompatTuning.minCoeff ?? 0.1;
-            const maxC = this.options.autoCompatTuning.maxCoeff ?? 5;
-            const factor = 1 - rate * Math.sign(err);
-            if (err !== 0) {
-              this.options.excessCoeff = Math.min(
-                maxC,
-                Math.max(minC, this.options.excessCoeff * factor)
-              );
-              this.options.disjointCoeff = Math.min(
-                maxC,
-                Math.max(minC, this.options.disjointCoeff * factor)
-              );
-            }
-          }
-          if (this.options.speciesAllocation?.extendedHistory) {
-            const stats = this._species.map((sp) => {
-              const sizes = sp.members.map((m) => ({
-                nodes: m.nodes.length,
-                conns: m.connections.length,
-                score: m.score || 0,
-                nov: m._novelty || 0,
-                ent: this._structuralEntropy(m)
-              }));
-              const avg = (arr) => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
-              let compSum = 0, compCount = 0;
-              for (let i = 0; i < sp.members.length && i < 10; i++)
-                for (let j = i + 1; j < sp.members.length && j < 10; j++) {
-                  compSum += this._compatibilityDistance(
-                    sp.members[i],
-                    sp.members[j]
-                  );
-                  compCount++;
-                }
-              const meanCompat = compCount ? compSum / compCount : 0;
-              const last = this._speciesLastStats.get(sp.id);
-              const meanNodes = avg(sizes.map((s) => s.nodes));
-              const meanConns = avg(sizes.map((s) => s.conns));
-              const deltaMeanNodes = last ? meanNodes - last.meanNodes : 0;
-              const deltaMeanConns = last ? meanConns - last.meanConns : 0;
-              const deltaBestScore = last ? sp.bestScore - last.best : 0;
-              const created = this._speciesCreated.get(sp.id) ?? this.generation;
-              const age = this.generation - created;
-              let turnoverRate = 0;
-              const prevSet = this._prevSpeciesMembers.get(sp.id);
-              if (prevSet && sp.members.length) {
-                let newCount = 0;
-                for (const m of sp.members)
-                  if (!prevSet.has(m._id)) newCount++;
-                turnoverRate = newCount / sp.members.length;
-              }
-              const varCalc = (arr) => {
-                if (!arr.length) return 0;
-                const m = avg(arr);
-                return avg(arr.map((v) => (v - m) * (v - m)));
-              };
-              const varNodes = varCalc(sizes.map((s) => s.nodes));
-              const varConns = varCalc(sizes.map((s) => s.conns));
-              let innovSum = 0, innovCount = 0, maxInnov = -Infinity, minInnov = Infinity;
-              let enabled = 0, disabled = 0;
-              for (const m of sp.members)
-                for (const c of m.connections) {
-                  const innov = c.innovation ?? this._fallbackInnov(c);
-                  innovSum += innov;
-                  innovCount++;
-                  if (innov > maxInnov) maxInnov = innov;
-                  if (innov < minInnov) minInnov = innov;
-                  if (c.enabled === false) disabled++;
-                  else enabled++;
-                }
-              const meanInnovation = innovCount ? innovSum / innovCount : 0;
-              const innovationRange = isFinite(maxInnov) && isFinite(minInnov) && maxInnov > minInnov ? maxInnov - minInnov : 0;
-              const enabledRatio = enabled + disabled > 0 ? enabled / (enabled + disabled) : 0;
-              return {
-                id: sp.id,
-                size: sp.members.length,
-                best: sp.bestScore,
-                lastImproved: sp.lastImproved,
-                age,
-                meanNodes,
-                meanConns,
-                meanScore: avg(sizes.map((s) => s.score)),
-                meanNovelty: avg(sizes.map((s) => s.nov)),
-                meanCompat,
-                meanEntropy: avg(sizes.map((s) => s.ent)),
-                varNodes,
-                varConns,
-                deltaMeanNodes,
-                deltaMeanConns,
-                deltaBestScore,
-                turnoverRate,
-                meanInnovation,
-                innovationRange,
-                enabledRatio
-              };
-            });
-            for (const st of stats)
-              this._speciesLastStats.set(st.id, {
-                meanNodes: st.meanNodes,
-                meanConns: st.meanConns,
-                best: st.best
-              });
-            this._speciesHistory.push({ generation: this.generation, stats });
-          } else {
-            this._speciesHistory.push({
-              generation: this.generation,
-              stats: this._species.map((sp) => ({
-                id: sp.id,
-                size: sp.members.length,
-                best: sp.bestScore,
-                lastImproved: sp.lastImproved
-              }))
-            });
-          }
-          if (this._speciesHistory.length > 200) this._speciesHistory.shift();
+          return _speciate.call(this);
         }
+        /**
+         * Apply fitness sharing within species. When `sharingSigma` > 0 this uses a kernel-based
+         * sharing; otherwise it falls back to classic per-species averaging. Sharing reduces
+         * effective fitness for similar genomes to promote diversity.
+         */
         _applyFitnessSharing() {
-          const sigma = this.options.sharingSigma || 0;
-          if (sigma > 0) {
-            this._species.forEach((sp) => {
-              const members = sp.members;
-              for (let i = 0; i < members.length; i++) {
-                const mi = members[i];
-                if (typeof mi.score !== "number") continue;
-                let shSum = 0;
-                for (let j = 0; j < members.length; j++) {
-                  const mj = members[j];
-                  const dist = i === j ? 0 : this._compatibilityDistance(mi, mj);
-                  if (dist < sigma) {
-                    const ratio = dist / sigma;
-                    shSum += 1 - ratio * ratio;
-                  }
-                }
-                if (shSum <= 0) shSum = 1;
-                mi.score = mi.score / shSum;
-              }
-            });
-          } else {
-            this._species.forEach((sp) => {
-              const size = sp.members.length;
-              sp.members.forEach((m) => {
-                if (typeof m.score === "number") m.score = m.score / size;
-              });
-            });
-          }
+          return _applyFitnessSharing.call(this);
         }
+        /**
+         * Sort members of a species in-place by descending score.
+         * @param sp - Species object with `members` array.
+         */
         _sortSpeciesMembers(sp) {
-          sp.members.sort((a, b) => (b.score || 0) - (a.score || 0));
+          return _sortSpeciesMembers.call(this, sp);
         }
+        /**
+         * Update species stagnation tracking and remove species that exceeded the allowed stagnation.
+         */
         _updateSpeciesStagnation() {
-          const stagn = this.options.stagnationGenerations || 15;
-          this._species.forEach((sp) => {
-            this._sortSpeciesMembers(sp);
-            const top = sp.members[0];
-            if ((top.score || -Infinity) > sp.bestScore) {
-              sp.bestScore = top.score || -Infinity;
-              sp.lastImproved = this.generation;
-            }
-          });
-          const survivors = this._species.filter(
-            (sp) => this.generation - sp.lastImproved <= stagn
-          );
-          if (survivors.length) this._species = survivors;
+          return _updateSpeciesStagnation.call(this);
         }
+        /**
+         * Return a concise summary for each current species.
+         *
+         * Educational context: In NEAT, populations are partitioned into species based
+         * on genetic compatibility. Each species groups genomes that are similar so
+         * selection and reproduction can preserve diversity between groups. This
+         * accessor provides a lightweight view suitable for telemetry, visualization
+         * and teaching examples without exposing full genome objects.
+         *
+         * The returned array contains objects with these fields:
+         * - id: numeric species identifier
+         * - size: number of members currently assigned to the species
+         * - bestScore: the best observed fitness score for the species
+         * - lastImproved: generation index when the species last improved its best score
+         *
+         * Notes for learners:
+         * - Species sizes and lastImproved are typical signals used to detect
+         *   stagnation and apply protective or penalizing measures.
+         * - This function intentionally avoids returning full member lists to
+         *   prevent accidental mutation of internal state; use `getSpeciesHistory`
+         *   for richer historical data.
+         *
+         * @returns An array of species summary objects.
+         */
         getSpeciesStats() {
-          return this._species.map((sp) => ({
-            id: sp.id,
-            size: sp.members.length,
-            bestScore: sp.bestScore,
-            lastImproved: sp.lastImproved
-          }));
+          return getSpeciesStats.call(this);
         }
+        /**
+         * Returns the historical species statistics recorded each generation.
+         *
+         * Educational context: Species history captures per-generation snapshots
+         * of species-level metrics (size, best score, last improvement) and is
+         * useful for plotting trends, teaching about speciation dynamics, and
+         * driving adaptive controllers.
+         *
+         * The returned array contains entries with a `generation` index and a
+         * `stats` array containing per-species summaries recorded at that
+         * generation.
+         *
+         * @returns An array of generation-stamped species stat snapshots.
+         */
         getSpeciesHistory() {
-          return this._speciesHistory;
+          return getSpeciesHistory.call(this);
         }
+        /**
+         * Returns the number of entries currently stored in the novelty archive.
+         *
+         * Educational context: The novelty archive stores representative behaviors
+         * used by behavior-based novelty search. Monitoring its size helps teach
+         * how behavioral diversity accumulates over time and can be used to
+         * throttle archive growth.
+         *
+         * @returns Number of archived behaviors.
+         */
         getNoveltyArchiveSize() {
-          return this._noveltyArchive.length;
+          return this._noveltyArchive ? this._noveltyArchive.length : 0;
         }
+        /**
+         * Returns compact multi-objective metrics for each genome in the current
+         * population. The metrics include Pareto rank and crowding distance (if
+         * computed), along with simple size and score measures useful in
+         * instructional contexts.
+         *
+         * @returns Array of per-genome MO metric objects.
+         */
         getMultiObjectiveMetrics() {
-          return this.population.map((g) => ({
-            rank: g._moRank ?? 0,
-            crowding: g._moCrowd ?? 0,
-            score: g.score || 0,
-            nodes: g.nodes.length,
-            connections: g.connections.length
+          return this.population.map((genome) => ({
+            rank: genome._moRank ?? 0,
+            crowding: genome._moCrowd ?? 0,
+            score: genome.score || 0,
+            nodes: genome.nodes.length,
+            connections: genome.connections.length
           }));
         }
+        /**
+         * Returns a summary of mutation/operator statistics used by operator
+         * adaptation and bandit selection.
+         *
+         * Educational context: Operator statistics track how often mutation
+         * operators are attempted and how often they succeed. These counters are
+         * used by adaptation mechanisms to bias operator selection towards
+         * successful operators.
+         *
+         * @returns Array of { name, success, attempts } objects.
+         */
         getOperatorStats() {
-          return Array.from(this._operatorStats.entries()).map(([name, s]) => ({
-            name,
-            success: s.success,
-            attempts: s.attempts
-          }));
+          return Array.from(this._operatorStats.entries()).map(
+            ([operatorName, stats]) => ({
+              name: operatorName,
+              success: stats.success,
+              attempts: stats.attempts
+            })
+          );
         }
+        /**
+         * Return the internal telemetry buffer.
+         *
+         * Telemetry entries are produced per-generation when telemetry is enabled
+         * and include diagnostic metrics (diversity, performance, lineage, etc.).
+         * This accessor returns the raw buffer for external inspection or export.
+         *
+         * @returns Array of telemetry snapshot objects.
+         */
         getTelemetry() {
           return this._telemetry;
         }
+        /**
+         * Export telemetry as JSON Lines (one JSON object per line).
+         *
+         * Useful for piping telemetry to external loggers or analysis tools.
+         *
+         * @returns A newline-separated string of JSON objects.
+         */
         exportTelemetryJSONL() {
-          return this._telemetry.map((e) => JSON.stringify(e)).join("\n");
+          return exportTelemetryJSONL.call(this);
         }
+        /**
+         * Export recent telemetry entries as CSV.
+         *
+         * The exporter attempts to flatten commonly-used nested fields (complexity,
+         * perf, lineage) into columns. This is a best-effort exporter intended for
+         * human inspection and simple ingestion.
+         *
+         * @param maxEntries Maximum number of recent telemetry entries to include.
+         * @returns CSV string (may be empty when no telemetry present).
+         */
         exportTelemetryCSV(maxEntries = 500) {
-          const slice = this._telemetry.slice(-maxEntries);
-          if (!slice.length) return "";
-          const baseKeys = /* @__PURE__ */ new Set();
-          const complexKeys = /* @__PURE__ */ new Set();
-          const perfKeys = /* @__PURE__ */ new Set();
-          const lineageKeys = /* @__PURE__ */ new Set();
-          const diversityLineageKeys = /* @__PURE__ */ new Set();
-          let includeOps = false;
-          let includeObjectives = false;
-          let includeObjAges = false;
-          let includeSpeciesAlloc = false;
-          let includeObjEvents = false;
-          let includeObjImportance = false;
-          for (const e of slice) {
-            Object.keys(e).forEach((k) => {
-              if (k !== "complexity" && k !== "perf" && k !== "ops" && k !== "fronts")
-                baseKeys.add(k);
-            });
-            if (Array.isArray(e.fronts)) baseKeys.add("fronts");
-            if (e.complexity)
-              Object.keys(e.complexity).forEach((k) => complexKeys.add(k));
-            if (e.perf) Object.keys(e.perf).forEach((k) => perfKeys.add(k));
-            if (e.lineage) Object.keys(e.lineage).forEach((k) => lineageKeys.add(k));
-            if (e.diversity) {
-              if ("lineageMeanDepth" in e.diversity)
-                diversityLineageKeys.add("lineageMeanDepth");
-              if ("lineageMeanPairDist" in e.diversity)
-                diversityLineageKeys.add("lineageMeanPairDist");
-            }
-            if ("rng" in e) baseKeys.add("rng");
-            if (Array.isArray(e.ops) && e.ops.length) includeOps = true;
-            if (Array.isArray(e.objectives)) includeObjectives = true;
-            if (e.objAges) includeObjAges = true;
-            if (Array.isArray(e.speciesAlloc)) includeSpeciesAlloc = true;
-            if (Array.isArray(e.objEvents) && e.objEvents.length)
-              includeObjEvents = true;
-            if (e.objImportance) includeObjImportance = true;
-          }
-          const headers = [
-            ...baseKeys,
-            ...[...complexKeys].map((k) => `complexity.${k}`),
-            ...[...perfKeys].map((k) => `perf.${k}`),
-            ...[...lineageKeys].map((k) => `lineage.${k}`),
-            ...[...diversityLineageKeys].map((k) => `diversity.${k}`)
-          ];
-          if (includeOps) headers.push("ops");
-          if (includeObjectives) headers.push("objectives");
-          if (includeObjAges) headers.push("objAges");
-          if (includeSpeciesAlloc) headers.push("speciesAlloc");
-          if (includeObjEvents) headers.push("objEvents");
-          if (includeObjImportance) headers.push("objImportance");
-          const csvLines = [headers.join(",")];
-          for (const e of slice) {
-            const row = [];
-            for (const h of headers) {
-              if (h.startsWith("complexity.")) {
-                const key = h.slice("complexity.".length);
-                row.push(
-                  e.complexity && key in e.complexity ? JSON.stringify(e.complexity[key]) : ""
-                );
-              } else if (h.startsWith("perf.")) {
-                const key = h.slice("perf.".length);
-                row.push(e.perf && key in e.perf ? JSON.stringify(e.perf[key]) : "");
-              } else if (h.startsWith("lineage.")) {
-                const key = h.slice("lineage.".length);
-                row.push(
-                  e.lineage && key in e.lineage ? JSON.stringify(e.lineage[key]) : ""
-                );
-              } else if (h.startsWith("diversity.")) {
-                const key = h.slice("diversity.".length);
-                row.push(
-                  e.diversity && key in e.diversity ? JSON.stringify(e.diversity[key]) : ""
-                );
-              } else if (h === "fronts") {
-                row.push(Array.isArray(e.fronts) ? JSON.stringify(e.fronts) : "");
-              } else if (h === "ops") {
-                row.push(Array.isArray(e.ops) ? JSON.stringify(e.ops) : "");
-              } else if (h === "objectives") {
-                row.push(
-                  Array.isArray(e.objectives) ? JSON.stringify(e.objectives) : ""
-                );
-              } else if (h === "objAges") {
-                row.push(e.objAges ? JSON.stringify(e.objAges) : "");
-              } else if (h === "speciesAlloc") {
-                row.push(
-                  Array.isArray(e.speciesAlloc) ? JSON.stringify(e.speciesAlloc) : ""
-                );
-              } else if (h === "objEvents") {
-                row.push(
-                  Array.isArray(e.objEvents) ? JSON.stringify(e.objEvents) : ""
-                );
-              } else if (h === "objImportance") {
-                row.push(e.objImportance ? JSON.stringify(e.objImportance) : "");
-              } else {
-                row.push(JSON.stringify(e[h]));
-              }
-            }
-            csvLines.push(row.join(","));
-          }
-          return csvLines.join("\n");
+          return exportTelemetryCSV.call(this, maxEntries);
         }
+        /**
+         * Export telemetry as CSV with flattened columns for common nested fields.
+         */
         clearTelemetry() {
           this._telemetry = [];
         }
+        /** Clear all collected telemetry entries. */
         getObjectives() {
           return this._getObjectives().map((o) => ({
             key: o.key,
@@ -11113,69 +11998,117 @@
         getObjectiveEvents() {
           return this._objectiveEvents.slice();
         }
+        /** Get recent objective add/remove events. */
         getLineageSnapshot(limit = 20) {
-          return this.population.slice(0, limit).map((g) => ({
-            id: g._id ?? -1,
-            parents: Array.isArray(g._parents) ? g._parents.slice() : []
+          return this.population.slice(0, limit).map((genome) => ({
+            id: genome._id ?? -1,
+            parents: Array.isArray(genome._parents) ? genome._parents.slice() : []
           }));
         }
+        /**
+         * Return an array of {id, parents} for the first `limit` genomes in population.
+         */
         exportSpeciesHistoryCSV(maxEntries = 200) {
-          const hist = this._speciesHistory.slice(-maxEntries);
-          if (!hist.length) return "";
-          const keySet = /* @__PURE__ */ new Set(["generation"]);
-          for (const h of hist)
-            for (const s of h.stats) Object.keys(s).forEach((k) => keySet.add(k));
-          const headers = Array.from(keySet);
-          const lines = [headers.join(",")];
-          for (const h of hist) {
-            for (const s of h.stats) {
-              const row = [];
-              for (const k of headers) {
-                if (k === "generation") row.push(JSON.stringify(h.generation));
-                else row.push(JSON.stringify(s[k]));
-              }
-              lines.push(row.join(","));
-            }
-          }
-          return lines.join("\n");
+          return exportSpeciesHistoryCSV.call(this, maxEntries);
         }
+        /**
+         * Export species history as CSV.
+         *
+         * Produces rows for each recorded per-species stat entry within the
+         * specified window. Useful for quick inspection or spreadsheet analysis.
+         *
+         * @param maxEntries Maximum history entries to include (default: 200).
+         * @returns CSV string (may be empty).
+         */
         getParetoFronts(maxFronts = 3) {
           if (!this.options.multiObjective?.enabled) return [[...this.population]];
           const fronts = [];
-          for (let r = 0; r < maxFronts; r++) {
+          for (let frontIdx = 0; frontIdx < maxFronts; frontIdx++) {
             const front = this.population.filter(
-              (g) => (g._moRank ?? 0) === r
+              (genome) => (genome._moRank ?? 0) === frontIdx
             );
             if (!front.length) break;
             fronts.push(front);
           }
           return fronts;
         }
+        /**
+         * Return the latest cached diversity statistics.
+         *
+         * Educational context: diversity metrics summarize how genetically and
+         * behaviorally spread the population is. They can include lineage depth,
+         * pairwise genetic distances, and other aggregated measures used by
+         * adaptive controllers, novelty search, and telemetry. This accessor returns
+         * whatever precomputed diversity object the Neat instance holds (may be
+         * undefined if not computed for the current generation).
+         *
+         * @returns Arbitrary diversity summary object or undefined.
+         */
         getDiversityStats() {
           return this._diversityStats;
         }
         registerObjective(key, direction, accessor) {
-          if (!this.options.multiObjective)
-            this.options.multiObjective = { enabled: true };
-          const mo = this.options.multiObjective;
-          if (!mo.objectives) mo.objectives = [];
-          mo.objectives = mo.objectives.filter((o) => o.key !== key);
-          mo.objectives.push({ key, direction, accessor });
-          this._objectivesList = void 0;
+          return registerObjective.call(this, key, direction, accessor);
         }
+        /**
+         * Register a custom objective for multi-objective optimization.
+         *
+         * Educational context: multi-objective optimization lets you optimize for
+         * multiple, potentially conflicting goals (e.g., maximize fitness while
+         * minimizing complexity). Each objective is identified by a unique key and
+         * an accessor function mapping a genome to a numeric score. Registering an
+         * objective makes it visible to the internal MO pipeline and clears any
+         * cached objective list so changes take effect immediately.
+         *
+         * @param key Unique objective key.
+         * @param direction 'min' or 'max' indicating optimization direction.
+         * @param accessor Function mapping a genome to a numeric objective value.
+         */
+        /**
+         * Clear all registered multi-objective objectives.
+         *
+         * Removes any objectives configured for multi-objective optimization and
+         * clears internal caches. Useful for tests or when reconfiguring the MO
+         * setup at runtime.
+         */
         clearObjectives() {
-          if (this.options.multiObjective?.objectives)
-            this.options.multiObjective.objectives = [];
-          this._objectivesList = void 0;
+          return clearObjectives.call(this);
         }
         // Advanced archives & performance accessors
+        /**
+         * Get recent Pareto archive entries (meta information about archived fronts).
+         *
+         * Educational context: when performing multi-objective search we may store
+         * representative Pareto-front snapshots over time. This accessor returns the
+         * most recent archive entries up to the provided limit.
+         *
+         * @param maxEntries Maximum number of entries to return (default: 50).
+         * @returns Array of archived Pareto metadata entries.
+         */
         getParetoArchive(maxEntries = 50) {
           return this._paretoArchive.slice(-maxEntries);
         }
+        /**
+         * Export Pareto front archive as JSON Lines for external analysis.
+         *
+         * Each line is a JSON object representing one archived Pareto snapshot.
+         *
+         * @param maxEntries Maximum number of entries to include (default: 100).
+         * @returns Newline-separated JSON objects.
+         */
         exportParetoFrontJSONL(maxEntries = 100) {
           const slice = this._paretoObjectivesArchive.slice(-maxEntries);
           return slice.map((e) => JSON.stringify(e)).join("\n");
         }
+        /**
+         * Return recent performance statistics (durations in milliseconds) for the
+         * most recent evaluation and evolve operations.
+         *
+         * Provides wall-clock timing useful for profiling and teaching how runtime
+         * varies with network complexity or population settings.
+         *
+         * @returns Object with { lastEvalMs, lastEvolveMs }.
+         */
         getPerformanceStats() {
           return {
             lastEvalMs: this._lastEvalDuration,
@@ -11183,13 +12116,33 @@
           };
         }
         // Utility exports / maintenance
+        /**
+         * Export species history as JSON Lines for storage and analysis.
+         *
+         * Each line is a JSON object containing a generation index and per-species
+         * stats recorded at that generation. Useful for long-term tracking.
+         *
+         * @param maxEntries Maximum history entries to include (default: 200).
+         * @returns Newline-separated JSON objects.
+         */
         exportSpeciesHistoryJSONL(maxEntries = 200) {
           const slice = this._speciesHistory.slice(-maxEntries);
           return slice.map((e) => JSON.stringify(e)).join("\n");
         }
+        /**
+         * Reset the novelty archive (clear entries).
+         *
+         * The novelty archive is used to keep representative behaviors for novelty
+         * search. Clearing it removes stored behaviors.
+         */
         resetNoveltyArchive() {
           this._noveltyArchive = [];
         }
+        /**
+         * Clear the Pareto archive.
+         *
+         * Removes any stored Pareto-front snapshots retained by the algorithm.
+         */
         clearParetoArchive() {
           this._paretoArchive = [];
         }
@@ -11198,7 +12151,7 @@
          * Ensures that the fittest genomes are at the start of the population array.
          */
         sort() {
-          this.population.sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+          return sort.call(this);
         }
         /**
          * Selects a parent genome for breeding based on the selection method.
@@ -11207,99 +12160,7 @@
          * @throws Error if tournament size exceeds population size.
          */
         getParent() {
-          const selection2 = this.options.selection;
-          const selectionName = selection2?.name;
-          switch (selectionName) {
-            case "POWER":
-              if (this.population[0]?.score !== void 0 && this.population[1]?.score !== void 0 && this.population[0].score < this.population[1].score) {
-                this.sort();
-              }
-              const index = Math.floor(
-                Math.pow(this._getRNG()(), selection2.power || 1) * this.population.length
-              );
-              return this.population[index];
-            case "FITNESS_PROPORTIONATE":
-              let totalFitness = 0;
-              let minimalFitness = 0;
-              this.population.forEach((genome) => {
-                minimalFitness = Math.min(minimalFitness, genome.score ?? 0);
-                totalFitness += genome.score ?? 0;
-              });
-              minimalFitness = Math.abs(minimalFitness);
-              totalFitness += minimalFitness * this.population.length;
-              const random = this._getRNG()() * totalFitness;
-              let value = 0;
-              for (const genome of this.population) {
-                value += (genome.score ?? 0) + minimalFitness;
-                if (random < value) return genome;
-              }
-              return this.population[Math.floor(this._getRNG()() * this.population.length)];
-            case "TOURNAMENT":
-              if (selection2.size > this.options.popsize) {
-                throw new Error("Tournament size must be less than population size.");
-              }
-              const tournament = [];
-              for (let i = 0; i < selection2.size; i++) {
-                tournament.push(
-                  this.population[Math.floor(this._getRNG()() * this.population.length)]
-                );
-              }
-              tournament.sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
-              for (let i = 0; i < tournament.length; i++) {
-                if (this._getRNG()() < selection2.probability || i === tournament.length - 1) {
-                  return tournament[i];
-                }
-              }
-              break;
-            default:
-              if (selection2 === selection.POWER) {
-                if (this.population[0]?.score !== void 0 && this.population[1]?.score !== void 0 && this.population[0].score < this.population[1].score) {
-                  this.sort();
-                }
-                const index2 = Math.floor(
-                  Math.pow(this._getRNG()(), selection2.power || 1) * this.population.length
-                );
-                return this.population[index2];
-              }
-              if (selection2 === selection.FITNESS_PROPORTIONATE) {
-                let totalFitness2 = 0;
-                let minimalFitness2 = 0;
-                this.population.forEach((genome) => {
-                  minimalFitness2 = Math.min(minimalFitness2, genome.score ?? 0);
-                  totalFitness2 += genome.score ?? 0;
-                });
-                minimalFitness2 = Math.abs(minimalFitness2);
-                totalFitness2 += minimalFitness2 * this.population.length;
-                const random2 = this._getRNG()() * totalFitness2;
-                let value2 = 0;
-                for (const genome of this.population) {
-                  value2 += (genome.score ?? 0) + minimalFitness2;
-                  if (random2 < value2) return genome;
-                }
-                return this.population[Math.floor(this._getRNG()() * this.population.length)];
-              }
-              if (selection2 === selection.TOURNAMENT) {
-                if (selection2.size > this.options.popsize) {
-                  throw new Error(
-                    "Tournament size must be less than population size."
-                  );
-                }
-                const tournament2 = [];
-                for (let i = 0; i < selection2.size; i++) {
-                  tournament2.push(
-                    this.population[Math.floor(this._getRNG()() * this.population.length)]
-                  );
-                }
-                tournament2.sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
-                for (let i = 0; i < tournament2.length; i++) {
-                  if (this._getRNG()() < selection2.probability || i === tournament2.length - 1) {
-                    return tournament2[i];
-                  }
-                }
-              }
-              break;
-          }
-          return this.population[0];
+          return getParent.call(this);
         }
         /**
          * Retrieves the fittest genome from the population.
@@ -11307,13 +12168,7 @@
          * @returns The fittest genome in the population.
          */
         getFittest() {
-          if (this.population[this.population.length - 1].score === void 0) {
-            this.evaluate();
-          }
-          if (this.population[1] && (this.population[0].score ?? 0) < (this.population[1].score ?? 0)) {
-            this.sort();
-          }
-          return this.population[0];
+          return getFittest.call(this);
         }
         /**
          * Calculates the average fitness score of the population.
@@ -11321,14 +12176,7 @@
          * @returns The average fitness score of the population.
          */
         getAverage() {
-          if (this.population[this.population.length - 1].score === void 0) {
-            this.evaluate();
-          }
-          const totalScore = this.population.reduce(
-            (sum, genome) => sum + (genome.score ?? 0),
-            0
-          );
-          return totalScore / this.population.length;
+          return getAverage.call(this);
         }
         /**
          * Exports the current population as an array of JSON objects.
@@ -11336,7 +12184,7 @@
          * @returns An array of JSON representations of the population.
          */
         export() {
-          return this.population.map((genome) => genome.toJSON());
+          return exportPopulation.call(this);
         }
         /**
          * Imports a population from an array of JSON objects.
@@ -11344,18 +12192,14 @@
          * @param json - An array of JSON objects representing the population.
          */
         import(json) {
-          this.population = json.map((genome) => Network.fromJSON(genome));
-          this.options.popsize = this.population.length;
+          return importPopulation.call(this, json);
         }
         /**
          * Convenience: export full evolutionary state (meta + population genomes).
          * Combines innovation registries and serialized genomes for easy persistence.
          */
         exportState() {
-          return {
-            neat: this.toJSON(),
-            population: this.export()
-          };
+          return exportState.call(this);
         }
         /**
          * Convenience: restore full evolutionary state previously produced by exportState().
@@ -11363,34 +12207,17 @@
          * @param fitness Fitness function to attach
          */
         static importState(bundle, fitness) {
-          if (!bundle || typeof bundle !== "object")
-            throw new Error("Invalid state bundle");
-          const neat = _Neat.fromJSON(bundle.neat, fitness);
-          if (Array.isArray(bundle.population)) neat.import(bundle.population);
-          return neat;
+          return importStateImpl.call(_Neat, bundle, fitness);
         }
+        /**
+         * Import a previously exported state bundle and rehydrate a Neat instance.
+         */
         // Serialize NEAT meta (without population) for persistence of innovation history
         toJSON() {
-          return {
-            input: this.input,
-            output: this.output,
-            generation: this.generation,
-            options: this.options,
-            nodeSplitInnovations: Array.from(this._nodeSplitInnovations.entries()),
-            connInnovations: Array.from(this._connInnovations.entries()),
-            nextGlobalInnovation: this._nextGlobalInnovation
-          };
+          return toJSONImpl2.call(this);
         }
         static fromJSON(json, fitness) {
-          const neat = new _Neat(json.input, json.output, fitness, json.options || {});
-          neat.generation = json.generation || 0;
-          if (Array.isArray(json.nodeSplitInnovations))
-            neat._nodeSplitInnovations = new Map(json.nodeSplitInnovations);
-          if (Array.isArray(json.connInnovations))
-            neat._connInnovations = new Map(json.connInnovations);
-          if (typeof json.nextGlobalInnovation === "number")
-            neat._nextGlobalInnovation = json.nextGlobalInnovation;
-          return neat;
+          return fromJSONImpl2.call(_Neat, json, fitness);
         }
       };
     }
@@ -14815,20 +15642,51 @@
               );
               for (let i = 0; i < targetAdd; i++) {
                 const parent = parentPool[Math.floor(Math.random() * parentPool.length)];
-                const clone = parent.clone ? parent.clone() : parent;
-                const mutateCount = 1 + (Math.random() < 0.5 ? 1 : 0);
-                for (let m = 0; m < mutateCount; m++) {
-                  try {
-                    const mutOps = neat.options.mutation || [];
-                    if (mutOps.length) {
-                      const op = mutOps[Math.floor(Math.random() * mutOps.length)];
-                      clone.mutate(op);
+                try {
+                  if (typeof neat.spawnFromParent === "function") {
+                    const mutateCount = 1 + (Math.random() < 0.5 ? 1 : 0);
+                    const child = neat.spawnFromParent(
+                      parent,
+                      mutateCount
+                    );
+                    neat.population.push(child);
+                  } else {
+                    const clone = parent.clone ? parent.clone() : parent;
+                    const mutateCount = 1 + (Math.random() < 0.5 ? 1 : 0);
+                    for (let m = 0; m < mutateCount; m++) {
+                      try {
+                        const mutOps = neat.options.mutation || [];
+                        if (mutOps.length) {
+                          const op = mutOps[Math.floor(Math.random() * mutOps.length)];
+                          clone.mutate(op);
+                        }
+                      } catch {
+                      }
                     }
-                  } catch {
+                    clone.score = void 0;
+                    try {
+                      if (typeof neat.addGenome === "function") {
+                        neat.addGenome(clone, [parent._id]);
+                      } else {
+                        if (neat._nextGenomeId !== void 0)
+                          clone._id = neat._nextGenomeId++;
+                        if (neat._lineageEnabled) {
+                          clone._parents = [parent._id];
+                          clone._depth = (parent._depth ?? 0) + 1;
+                        }
+                        if (typeof neat._invalidateGenomeCaches === "function")
+                          neat._invalidateGenomeCaches(clone);
+                        neat.population.push(clone);
+                      }
+                    } catch {
+                      try {
+                        neat.population.push(clone);
+                      } catch {
+                      }
+                    }
                   }
+                } catch {
                 }
-                clone.score = void 0;
-                neat.population.push(clone);
               }
               neat.options.popsize = neat.population.length;
               safeWrite(

@@ -73,7 +73,7 @@ Design terminology used below:
 
 ### connect
 
-`(from: import("../node").default, to: import("../node").default, weight: number | undefined) => import("../connection").default[]`
+`(from: import("D:/code-practice/NeatapticTS/src/architecture/node").default, to: import("D:/code-practice/NeatapticTS/src/architecture/node").default, weight: number | undefined) => import("D:/code-practice/NeatapticTS/src/architecture/connection").default[]`
 
 Network structural mutation helpers (connect / disconnect).
 

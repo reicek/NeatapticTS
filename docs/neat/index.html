@@ -1,0 +1,906 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>neat</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+ body{font-family:system-ui,-apple-system,Segoe UI,Arial,sans-serif;margin:0 auto;padding:0 20px 60px;line-height:1.55;background:#fff;color:#222;display:grid;grid-template-columns:260px 1fr 280px;grid-gap:32px;}
+nav.site{position:sticky;top:0;align-self:start;max-height:100vh;overflow:auto;padding:24px 0 40px;}
+nav.site h1{font-size:1.05rem;margin:0 0 .75rem;font-weight:600;}
+.doc-nav{list-style:none;margin:0;padding:0;font-size:.85rem;}
+.doc-nav li{margin:2px 0;}
+ .doc-nav a{display:block;padding:4px 8px;border-radius:4px;color:#2c3963;text-decoration:none;}
+ .doc-nav li.current>a{background:#2c3963;color:#fff;font-weight:600;}
+ .doc-nav a:hover{background:#e4e8f3;}
+main{padding:40px 0;}
+aside.page-index{position:sticky;top:0;align-self:start;max-height:100vh;overflow:auto;padding:32px 0 40px;font-size:.85rem;}
+aside.page-index h2{font-size:.9rem;margin:0 0 .75rem;text-transform:uppercase;letter-spacing:.5px;color:#444;}
+aside.page-index .toc-file{margin:0 0 .5rem;}
+aside.page-index ul{list-style:none;margin:.25rem 0 .5rem .25rem;padding:0;}
+aside.page-index li{margin:0;}
+ aside.page-index a{color:#444;text-decoration:none;}
+ aside.page-index a:hover{color:#2c3963;}
+pre{background:#1e1e1e;color:#eee;padding:12px;border-radius:6px;overflow:auto;}
+code{background:#f5f5f5;padding:2px 4px;border-radius:4px;font-size:90%;}
+pre code{background:transparent;padding:0;font-size:90%;}
+ a{color:#2c3963;text-decoration:none;}a:hover{text-decoration:underline;}
+h1,h2,h3,h4{scroll-margin-top:70px;}
+blockquote{border-left:4px solid #ddd;margin:1em 0;padding:.5em 1em;color:#555;}
+table{border-collapse:collapse}th,td{border:1px solid #ccc;padding:4px 8px;text-align:left;}
+footer{margin-top:64px;font-size:.75rem;color:#666;}
+@media (max-width:1100px){body{grid-template-columns:220px 1fr;}aside.page-index{display:none;} }
+@media (max-width:800px){body{grid-template-columns:1fr;}nav.site{position:relative;top:auto;max-height:none;order:2;}main{order:1;padding-top:24px;}}
+</style></head><body>
+<nav class="site">
+  <h1>Docs Index</h1>
+  <ul class="doc-nav"><li><a href="../index.html">root</a></li>
+<li><a href="../architecture/index.html">architecture/</a></li>
+<li><a href="../architecture/network/index.html">architecture/network/</a></li>
+<li><a href="../methods/index.html">methods/</a></li>
+<li><a href="../multithreading/index.html">multithreading/</a></li>
+<li><a href="../multithreading/workers/index.html">multithreading/workers/</a></li>
+<li><a href="../multithreading/workers/browser/index.html">multithreading/workers/browser/</a></li>
+<li><a href="../multithreading/workers/node/index.html">multithreading/workers/node/</a></li>
+<li class="current"><a href="./index.html">neat/</a></li>
+<li><a href="../src/index.html">src/</a></li>
+<li><a href="../../test/examples/asciiMaze/index.html">examples/asciiMaze/</a></li></ul>
+</nav>
+<main>
+<h1 id="neat">neat</h1><h2 id="neat-neat-adaptive-ts">neat/neat.adaptive.ts</h2><h3 id="applyadaptivemutation">applyAdaptiveMutation</h3><p><code>() =&gt; void</code></p>
+<p>Self-adaptive per-genome mutation tuning.</p>
+<p>This function implements several strategies to adjust each genome&#39;s
+internal mutation rate (<code>g._mutRate</code>) and optionally its mutation
+amount (<code>g._mutAmount</code>) over time. Strategies include:</p>
+<ul>
+<li><code>twoTier</code>: push top and bottom halves in opposite directions to
+create exploration/exploitation balance.</li>
+<li><code>exploreLow</code>: preferentially increase mutation for lower-scoring
+genomes to promote exploration.</li>
+<li><code>anneal</code>: gradually reduce mutation deltas over time.</li>
+</ul>
+<p>The method reads <code>this.options.adaptiveMutation</code> for configuration
+and mutates genomes in-place.</p>
+<h3 id="applyancestoruniqadaptive">applyAncestorUniqAdaptive</h3><p><code>() =&gt; void</code></p>
+<p>Adaptive adjustments based on ancestor uniqueness telemetry.</p>
+<p>This helper inspects the most recent telemetry lineage block (if
+available) for an <code>ancestorUniq</code> metric indicating how unique
+ancestry is across the population. If ancestry uniqueness drifts
+outside configured thresholds, the method will adjust either the
+multi-objective dominance epsilon (if <code>mode === &#39;epsilon&#39;</code>) or the
+lineage pressure strength (if <code>mode === &#39;lineagePressure&#39;</code>).</p>
+<p>Typical usage: keep population lineage diversity within a healthy
+band. Low ancestor uniqueness means too many genomes share ancestors
+(risking premature convergence); high uniqueness might indicate
+excessive divergence.</p>
+<h3 id="applycomplexitybudget">applyComplexityBudget</h3><p><code>() =&gt; void</code></p>
+<p>Apply complexity budget scheduling to the evolving population.</p>
+<p>This routine updates <code>this.options.maxNodes</code> (and optionally
+<code>this.options.maxConns</code>) according to a configured complexity budget
+strategy. Two modes are supported:</p>
+<ul>
+<li><code>adaptive</code>: reacts to recent population improvement (or stagnation)
+by increasing or decreasing the current complexity cap using
+heuristics such as slope (linear trend) of recent best scores,
+novelty, and configured increase/stagnation factors.</li>
+<li><code>linear</code> (default behaviour when not <code>adaptive</code>): linearly ramps
+the budget from <code>maxNodesStart</code> to <code>maxNodesEnd</code> over a horizon.</li>
+</ul>
+<p>Internal state used/maintained on the <code>this</code> object:</p>
+<ul>
+<li><code>_cbHistory</code>: rolling window of best scores used to compute trends.</li>
+<li><code>_cbMaxNodes</code>: current complexity budget for nodes.</li>
+<li><code>_cbMaxConns</code>: current complexity budget for connections (optional).</li>
+</ul>
+<p>The method is intended to be called on the NEAT engine instance with
+<code>this</code> bound appropriately (i.e. a NeatapticTS <code>Neat</code>-like object).</p>
+<p>Returns: Updates <code>this.options.maxNodes</code> and possibly
+<code>this.options.maxConns</code> in-place; no value is returned.</p>
+<h3 id="applyminimalcriterionadaptive">applyMinimalCriterionAdaptive</h3><p><code>() =&gt; void</code></p>
+<p>Apply adaptive minimal criterion (MC) acceptance.</p>
+<p>This method maintains an MC threshold used to decide whether an
+individual genome is considered acceptable. It adapts the threshold
+based on the proportion of the population that meets the current
+threshold, trying to converge to a target acceptance rate.</p>
+<p>Behavior summary:</p>
+<ul>
+<li>Initializes <code>_mcThreshold</code> from configuration if undefined.</li>
+<li>Computes the proportion of genomes with score &gt;= threshold.</li>
+<li>Adjusts threshold multiplicatively by <code>adjustRate</code> to move the
+observed proportion towards <code>targetAcceptance</code>.</li>
+<li>Sets <code>g.score = 0</code> for genomes that fall below the final threshold
+— effectively rejecting them from selection.</li>
+</ul>
+<h3 id="applyoperatoradaptation">applyOperatorAdaptation</h3><p><code>() =&gt; void</code></p>
+<p>Decay operator adaptation statistics (success/attempt counters).</p>
+<p>Many adaptive operator-selection schemes keep running tallies of how
+successful each operator has been. This helper applies an exponential
+moving-average style decay to those counters so older outcomes
+progressively matter less.</p>
+<p>The <code>_operatorStats</code> map on <code>this</code> is expected to contain values of
+the shape <code>{ success: number, attempts: number }</code> keyed by operator
+id/name.</p>
+<h3 id="applyphasedcomplexity">applyPhasedComplexity</h3><p><code>() =&gt; void</code></p>
+<p>Toggle phased complexity mode between &#39;complexify&#39; and &#39;simplify&#39;.</p>
+<p>Phased complexity supports alternating periods where the algorithm
+is encouraged to grow (complexify) or shrink (simplify) network
+structures. This can help escape local minima or reduce bloat.</p>
+<p>The current phase and its start generation are stored on <code>this</code> as
+<code>_phase</code> and <code>_phaseStartGeneration</code> so the state persists across
+generations.</p>
+<p>Returns: Mutates <code>this._phase</code> and <code>this._phaseStartGeneration</code>.</p>
+<h2 id="neat-neat-compat-ts">neat/neat.compat.ts</h2><h3 id="compatibilitydistance">_compatibilityDistance</h3><p><code>(genomeA: any, genomeB: any) =&gt; number</code></p>
+<p>Compute the NEAT compatibility distance between two genomes (networks).</p>
+<p>The compatibility distance is used for speciation in NEAT. It combines the
+number of excess and disjoint genes with the average weight difference of
+matching genes. A generation-scoped cache is used to avoid recomputing the
+same pair distances repeatedly within a generation.</p>
+<p>Formula:
+distance = (c1 * excess + c2 * disjoint) / N + c3 * avgWeightDiff
+where N = max(number of genes in genomeA, number of genes in genomeB)
+and c1,c2,c3 are coefficients provided in <code>this.options</code>.</p>
+<p>Example:
+const d = _compatibilityDistance.call(neatInstance, genomeA, genomeB);
+if (d &lt; neatInstance.options.compatibilityThreshold) { // same species }</p>
+<p>Parameters:</p>
+<ul>
+<li><code>this</code> - - The NEAT instance / context which holds generation, options, and caches.</li>
+<li><code>genomeA</code> - - First genome (network) to compare. Expected to expose <code>_id</code> and <code>connections</code>.</li>
+<li><code>genomeB</code> - - Second genome (network) to compare. Expected to expose <code>_id</code> and <code>connections</code>.</li>
+</ul>
+<p>Returns: A numeric compatibility distance; lower means more similar.</p>
+<h3 id="fallbackinnov">_fallbackInnov</h3><p><code>(connection: any) =&gt; number</code></p>
+<p>Generate a deterministic fallback innovation id for a connection when the
+connection does not provide an explicit innovation number.</p>
+<p>This function encodes the (from.index, to.index) pair into a single number
+by multiplying the <code>from</code> index by a large base and adding the <code>to</code> index.
+The large base reduces collisions between different pairs and keeps the id
+stable and deterministic across runs. It is intended as a fallback only —
+explicit innovation numbers (when present) should be preferred.</p>
+<p>Example:
+const conn = { from: { index: 2 }, to: { index: 5 } };
+const id = _fallbackInnov.call(neatContext, conn); // 200005</p>
+<p>Notes:</p>
+<ul>
+<li>Not globally guaranteed unique, but deterministic for the same indices.</li>
+<li>Useful during compatibility checks when some connections are missing innovation ids.</li>
+</ul>
+<p>Parameters:</p>
+<ul>
+<li><code>this</code> - - The NEAT instance / context (kept for symmetry with other helpers).</li>
+<li><code>connection</code> - - Connection object expected to contain <code>from.index</code> and <code>to.index</code>.</li>
+</ul>
+<p>Returns: A numeric innovation id derived from the (from, to) index pair.</p>
+<h2 id="neat-neat-constants-ts">neat/neat.constants.ts</h2><h3 id="epsilon">EPSILON</h3><h3 id="extra-connection-probability">EXTRA_CONNECTION_PROBABILITY</h3><h3 id="norm-epsilon">NORM_EPSILON</h3><h3 id="prob-epsilon">PROB_EPSILON</h3><h2 id="neat-neat-diversity-ts">neat/neat.diversity.ts</h2><h3 id="arraymean">arrayMean</h3><p><code>(values: number[]) =&gt; number</code></p>
+<p>Compute the arithmetic mean of a numeric array. Returns 0 for empty arrays.
+Extracted as a helper so it can be documented/tested independently.</p>
+<h3 id="arrayvariance">arrayVariance</h3><p><code>(values: number[]) =&gt; number</code></p>
+<p>Compute the variance (population variance) of a numeric array.
+Returns 0 for empty arrays. Uses arrayMean internally.</p>
+<h3 id="compatcomputer">CompatComputer</h3><p>Minimal interface that provides a compatibility distance function.
+Implementors should expose a compatible signature with legacy NEAT code.</p>
+<h3 id="computediversitystats">computeDiversityStats</h3><p><code>(population: any[], compatibilityComputer: CompatComputer) =&gt; import(&quot;D:/code-practice/NeatapticTS/src/neat/neat.diversity&quot;).DiversityStats | undefined</code></p>
+<p>Compute diversity statistics for a NEAT population.
+This is a pure helper used by reporting and diagnostics. It intentionally
+samples pairwise computations to keep cost bounded for large populations.</p>
+<p>Notes for documentation:</p>
+<ul>
+<li>Lineage metrics rely on genomes exposing a numeric <code>_depth</code> property.</li>
+<li>Compatibility distances are computed via the provided compatComputer
+which mirrors legacy code and may use historical marker logic.</li>
+</ul>
+<p>Parameters:</p>
+<ul>
+<li><code>population</code> - - array of genome-like objects (nodes, connections, optional _depth)</li>
+<li><code>compatibilityComputer</code> - - object exposing _compatibilityDistance(a,b)</li>
+</ul>
+<p>Returns: DiversityStats object with all computed aggregates, or undefined if input empty</p>
+<h3 id="diversitystats">DiversityStats</h3><p>Diversity statistics returned by computeDiversityStats.
+Each field represents an aggregate metric for a NEAT population.</p>
+<h3 id="structuralentropy">structuralEntropy</h3><p><code>(graph: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default) =&gt; number</code></p>
+<p>const JSDoc short descriptions above each constant</p>
+<h2 id="neat-neat-evaluate-ts">neat/neat.evaluate.ts</h2><h3 id="evaluate">evaluate</h3><p><code>() =&gt; Promise&lt;void&gt;</code></p>
+<p>Evaluate the population or population-wide fitness delegate.</p>
+<p>This function mirrors the legacy <code>evaluate</code> behaviour used by NeatapticTS
+but adds documentation and clearer local variable names for readability.</p>
+<p>Top-level responsibilities (method steps descriptions):</p>
+<ol>
+<li>Run fitness either on each genome or once for the population depending
+on <code>options.fitnessPopulation</code>.</li>
+<li>Optionally clear genome internal state before evaluation when
+<code>options.clear</code> is set.</li>
+<li>After scoring, apply optional novelty blending using a user-supplied
+descriptor function. Novelty is blended into scores using a blend
+factor and may be archived.</li>
+<li>Apply several adaptive tuning behaviors (entropy-sharing, compatibility
+threshold tuning, auto-distance coefficient tuning) guarded by options.</li>
+<li>Trigger light-weight speciation when speciation-related controller
+options are enabled so tests that only call evaluate still exercise
+threshold tuning.</li>
+</ol>
+<p>Example usage:
+// await evaluate.call(controller); // where controller has <code>population</code>, <code>fitness</code> etc.</p>
+<p>Returns: Promise<void> resolves after evaluation and adaptive updates complete.</p>
+<h2 id="neat-neat-evolve-ts">neat/neat.evolve.ts</h2><h3 id="evolve">evolve</h3><p><code>() =&gt; Promise&lt;import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default&gt;</code></p>
+<p>Run a single evolution step for this NEAT population.</p>
+<p>This method performs a full generation update: evaluation (if needed),
+adaptive hooks, speciation and fitness sharing, multi-objective
+processing, elitism/provenance, offspring allocation (within or without
+species), mutation, pruning, and telemetry recording. It mutates the
+controller state (<code>this.population</code>, <code>this.generation</code>, and telemetry
+caches) and returns a copy of the best discovered <code>Network</code> for the
+generation.</p>
+<p>Important side-effects:</p>
+<ul>
+<li>Replaces <code>this.population</code> with the newly constructed generation.</li>
+<li>Increments <code>this.generation</code>.</li>
+<li>May register or remove dynamic objectives via adaptive controllers.</li>
+</ul>
+<p>Example:
+// assuming <code>neat</code> is an instance with configured population/options
+await neat.evolve();
+console.log(&#39;generation:&#39;, neat.generation);</p>
+<p>Returns: a deep-cloned Network representing the best genome
+ in the previous generation (useful for evaluation)</p>
+<h2 id="neat-neat-export-ts">neat/neat.export.ts</h2><h3 id="exportpopulation">exportPopulation</h3><p><code>() =&gt; import(&quot;D:/code-practice/NeatapticTS/src/neat/neat.export&quot;).GenomeJSON[]</code></p>
+<p>Export the current population (array of genomes) into plain JSON objects.
+Each genome is converted via its <code>toJSON()</code> method. You can persist this
+result (e.g. to disk, a database, or localStorage) and later rehydrate it
+with {@link importPopulation}.</p>
+<p>Why export population only? Sometimes you want to snapshot <em>just</em> the set of
+candidate solutions (e.g. for ensemble evaluation) without freezing the
+innovation counters or hyper‑parameters.</p>
+<p>Example:</p>
+<pre><code class="language-ts">// Assuming `neat` is an instance exposing this helper
+const popSnapshot = neat.exportPopulation();
+fs.writeFileSync(&#39;population.json&#39;, JSON.stringify(popSnapshot, null, 2));
+</code></pre>
+<p>Returns: Array of genome JSON objects.</p>
+<h3 id="exportstate">exportState</h3><p><code>() =&gt; import(&quot;D:/code-practice/NeatapticTS/src/neat/neat.export&quot;).NeatStateJSON</code></p>
+<p>Convenience helper that returns a full evolutionary snapshot: both NEAT meta
+information and the serialized population array. Use this when you want a
+truly <em>pause‑and‑resume</em> capability including innovation bookkeeping.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const state = neat.exportState();
+fs.writeFileSync(&#39;state.json&#39;, JSON.stringify(state));
+// ...later / elsewhere...
+const raw = JSON.parse(fs.readFileSync(&#39;state.json&#39;,&#39;utf8&#39;)) as NeatStateJSON;
+const neat2 = Neat.importState(raw, fitnessFn); // identical evolutionary context
+</code></pre>
+<h3 id="fromjsonimpl">fromJSONImpl</h3><p><code>(neatJSON: import(&quot;D:/code-practice/NeatapticTS/src/neat/neat.export&quot;).NeatMetaJSON, fitnessFunction: (network: any) =&gt; number) =&gt; any</code></p>
+<p>Static-style implementation that rehydrates a NEAT instance from previously
+exported meta JSON produced by {@link toJSONImpl}. This does <em>not</em> restore a
+population; callers typically follow up with <code>importPopulation</code> or use
+{@link importStateImpl} for a complete restore.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const meta: NeatMetaJSON = JSON.parse(fs.readFileSync(&#39;neat-meta.json&#39;,&#39;utf8&#39;));
+const neat = Neat.fromJSONImpl(meta, fitnessFn); // empty population, same innovations
+neat.importPopulation(popSnapshot); // optional
+</code></pre>
+<p>Parameters:</p>
+<ul>
+<li><code>neatJSON</code> - Serialized meta (no population).</li>
+<li><code>fitnessFunction</code> - Fitness callback used to construct the new instance.</li>
+</ul>
+<p>Returns: Fresh NEAT instance with restored innovation history.</p>
+<h3 id="genomejson">GenomeJSON</h3><p>JSON representation of an individual genome (network). The concrete shape is
+produced by <code>Network#toJSON()</code> and re‑hydrated via <code>Network.fromJSON()</code>. We use
+an open record signature here because the network architecture may evolve with
+plugins / future features (e.g. CPPNs, substrate metadata, ONNX export tags).</p>
+<h3 id="importpopulation">importPopulation</h3><p><code>(populationJSON: import(&quot;D:/code-practice/NeatapticTS/src/neat/neat.export&quot;).GenomeJSON[]) =&gt; void</code></p>
+<p>Import (replace) the current population from an array of serialized genomes.
+This does not touch NEAT meta state (generation, innovations, etc.)—only the
+population array and implied <code>popsize</code> are updated.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const populationData: GenomeJSON[] = JSON.parse(fs.readFileSync(&#39;population.json&#39;,&#39;utf8&#39;));
+neat.importPopulation(populationData); // population replaced
+neat.evolve(); // continue evolving with new starting genomes
+</code></pre>
+<p>Edge cases handled:</p>
+<ul>
+<li>Empty array =&gt; becomes an empty population (popsize=0).</li>
+<li>Malformed entries will throw if <code>Network.fromJSON</code> rejects them.</li>
+</ul>
+<p>Parameters:</p>
+<ul>
+<li><code>populationJSON</code> - Array of serialized genome objects.</li>
+</ul>
+<h3 id="importstateimpl">importStateImpl</h3><p><code>(stateBundle: import(&quot;D:/code-practice/NeatapticTS/src/neat/neat.export&quot;).NeatStateJSON, fitnessFunction: (network: any) =&gt; number) =&gt; any</code></p>
+<p>Static-style helper that rehydrates a full evolutionary state previously
+produced by {@link exportState}. Invoke this with the NEAT <em>class</em> (not an
+instance) bound as <code>this</code>, e.g. <code>Neat.importStateImpl(bundle, fitnessFn)</code>.
+It constructs a new NEAT instance using the meta data, then imports the
+population (if present).</p>
+<p>Safety &amp; validation:</p>
+<ul>
+<li>Throws if the bundle is not an object.</li>
+<li>Silently skips population import if <code>population</code> is missing or not an array.</li>
+</ul>
+<p>Example:</p>
+<pre><code class="language-ts">const bundle: NeatStateJSON = JSON.parse(fs.readFileSync(&#39;state.json&#39;,&#39;utf8&#39;));
+const neat = Neat.importStateImpl(bundle, fitnessFn);
+neat.evolve();
+</code></pre>
+<p>Parameters:</p>
+<ul>
+<li><code>stateBundle</code> - Full state bundle from  {@link exportState} .</li>
+</ul>
+<ul>
+<li></li>
+</ul>
+<ul>
+<li><code>fitnessFunction</code> - Fitness evaluation callback used for new instance.</li>
+</ul>
+<p>Returns: Rehydrated NEAT instance ready to continue evolving.</p>
+<h3 id="neatmetajson">NeatMetaJSON</h3><p>Serialized meta information describing a NEAT run, excluding the concrete
+population genomes. This allows you to persist &amp; resume experiment context
+(innovation history, current generation, IO sizes, hyper‑parameters) without
+committing to a particular population snapshot.</p>
+<h3 id="neatstatejson">NeatStateJSON</h3><p>Top‑level bundle containing both NEAT meta information and the full array of
+serialized genomes (population). This is what you get from <code>exportState()</code> and
+feed into <code>importStateImpl()</code> to resume exactly where you left off.</p>
+<h3 id="tojsonimpl">toJSONImpl</h3><p><code>() =&gt; import(&quot;D:/code-practice/NeatapticTS/src/neat/neat.export&quot;).NeatMetaJSON</code></p>
+<p>Serialize NEAT meta (excluding the mutable population) for persistence of
+innovation history and experiment configuration. This is sufficient to
+recreate a <em>blank</em> NEAT run at the same evolutionary generation with the
+same innovation counters, enabling deterministic continuation when combined
+later with a saved population.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const meta = neat.toJSONImpl();
+fs.writeFileSync(&#39;neat-meta.json&#39;, JSON.stringify(meta));
+// ... later ...
+const metaLoaded = JSON.parse(fs.readFileSync(&#39;neat-meta.json&#39;,&#39;utf8&#39;)) as NeatMetaJSON;
+const neat2 = Neat.fromJSONImpl(metaLoaded, fitnessFn); // empty population
+</code></pre>
+<h2 id="neat-neat-helpers-ts">neat/neat.helpers.ts</h2><h3 id="addgenome">addGenome</h3><p><code>(genome: any, parents: number[] | undefined) =&gt; void</code></p>
+<p>Register an externally constructed genome (e.g., deserialized, custom‑built,
+or imported from another run) into the active population. Ensures lineage
+metadata and structural invariants are consistent with internally spawned
+genomes.</p>
+<p>Defensive design: If invariant enforcement fails, the genome is still added
+(best effort) so experiments remain reproducible and do not abort mid‑run.
+Caller can optionally inspect or prune later during evaluation.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>this</code> - Bound NEAT instance.</li>
+<li><code>genome</code> - Genome / network object to insert. Mutated in place to add
+internal metadata fields (<code>_id</code>, <code>_parents</code>, <code>_depth</code>, <code>_reenableProb</code>).</li>
+<li><code>parents</code> - Optional explicit list of parent genome IDs (e.g., 2 parents
+for crossover). If omitted, lineage metadata is left empty.</li>
+</ul>
+<h3 id="createpool">createPool</h3><p><code>(seedNetwork: any) =&gt; void</code></p>
+<p>Create (or reset) the initial population pool for a NEAT run.</p>
+<p>If a <code>seedNetwork</code> is supplied, every genome is a structural + weight clone
+of that seed. This is useful for transfer learning or continuing evolution
+from a known good architecture. When omitted, brand‑new minimal networks are
+synthesized using the configured input/output sizes (and optional minimum
+hidden layer size).</p>
+<p>Design notes:</p>
+<ul>
+<li>Population size is derived from <code>options.popsize</code> (default 50).</li>
+<li>Each genome gets a unique sequential <code>_id</code> for reproducible lineage.</li>
+<li>When lineage tracking is enabled (<code>_lineageEnabled</code>), parent &amp; depth fields
+are initialized for later analytics.</li>
+<li>Structural invariant checks are best effort. A single failure should not
+prevent other genomes from being created, hence broad try/catch blocks.</li>
+</ul>
+<p>Parameters:</p>
+<ul>
+<li><code>this</code> - Bound NEAT instance.</li>
+<li><code>seedNetwork</code> - Optional prototype network to clone for every initial genome.</li>
+</ul>
+<h3 id="spawnfromparent">spawnFromParent</h3><p><code>(parentGenome: any, mutateCount: number) =&gt; any</code></p>
+<p>Helper utilities that augment the core NEAT (NeuroEvolution of Augmenting Topologies)
+implementation. These functions are kept separate from the main class so they can
+be tree‑shaken when unused and independently documented for educational purposes.</p>
+<p>The helpers focus on three core lifecycle operations:</p>
+<ol>
+<li>Spawning children from an existing parent genome with mutation (&quot;sexual&quot; reproduction not handled here).</li>
+<li>Registering externally created genomes so lineage &amp; invariants remain consistent.</li>
+<li>Creating the initial population pool (bootstrapping evolution) either from a seed
+network or by synthesizing fresh minimal networks.</li>
+</ol>
+<p>All helpers expect to be invoked with a <code>this</code> context that matches <code>NeatLike</code>.
+They intentionally use defensive try/catch blocks to avoid aborting broader
+evolutionary runs when an individual genome operation fails; this mirrors the
+tolerant/robust nature of many historical NEAT library implementations.</p>
+<h2 id="neat-neat-lineage-ts">neat/neat.lineage.ts</h2><h3 id="buildanc">buildAnc</h3><p><code>(genome: import(&quot;D:/code-practice/NeatapticTS/src/neat/neat.lineage&quot;).GenomeLike) =&gt; Set&lt;number&gt;</code></p>
+<p>Build the (shallow) ancestor ID set for a single genome using breadth‑first traversal.</p>
+<p>Traversal Strategy:</p>
+<ol>
+<li>Seed queue with the genome&#39;s parent IDs (depth = 1).</li>
+<li>Repeatedly dequeue, record its ID, and enqueue its parents with incremented depth.</li>
+<li>Stop exploring a branch once the configured depth window is exceeded.</li>
+</ol>
+<p>This bounded BFS gives a quick, memory‑friendly approximation of a genome&#39;s lineage neighborhood
+that works well for diversity/uniqueness metrics without the expense of full historical graphs.</p>
+<p>Edge Cases:</p>
+<ul>
+<li>Missing or empty <code>_parents</code> array ⇒ returns an empty set.</li>
+<li>Orphan parent IDs (not found in population) are still added (their ID), but no further expansion occurs.</li>
+</ul>
+<p>Complexity (worst case): O(B^D) where B is average branching factor of parent links (usually &lt;= 2)
+and D = ANCESTOR_DEPTH_WINDOW (default 4) – so effectively constant for typical NEAT usage.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>this</code> - NEAT / evolutionary context; must provide <code>population</code> (array) for ID lookups.</li>
+<li><code>genome</code> - Genome whose shallow ancestor set you want to compute.</li>
+</ul>
+<p>Returns: A Set of numeric ancestor IDs (deduplicated).</p>
+<h3 id="computeancestoruniqueness">computeAncestorUniqueness</h3><p><code>() =&gt; number</code></p>
+<p>Compute an &quot;ancestor uniqueness&quot; diversity metric for the current population.</p>
+<p>The metric = mean Jaccard distance between shallow ancestor sets of randomly sampled genome pairs.
+A higher value indicates that individuals trace back to more distinct recent lineages (i.e. less
+overlap in their ancestor windows), while a lower value indicates convergence toward similar ancestry.</p>
+<p>Why Jaccard Distance? It is scale‑independent: adding unrelated ancestors to both sets simultaneously
+does not change the proportion of shared ancestry, and distance stays within [0,1].</p>
+<p>Sampling Strategy:</p>
+<ul>
+<li>Uniformly sample up to N = min(30, populationPairs) distinct unordered pairs (with replacement on pair selection, but indices are adjusted to avoid self‑pairs).</li>
+<li>For each pair, construct ancestor sets via <code>buildAnc</code> and accumulate their Jaccard distance.</li>
+<li>Return the average (rounded to 3 decimal places) or 0 if insufficient samples.</li>
+</ul>
+<p>Edge Cases:</p>
+<ul>
+<li>Population &lt; 2 ⇒ returns 0 (cannot form pairs).</li>
+<li>Both ancestor sets empty ⇒ pair skipped (no information about uniqueness).</li>
+</ul>
+<p>Performance: O(S * W) where S is sampled pair count (≤ 30) and W is bounded ancestor set size
+(kept small by the depth window). This is intentionally lightweight for per‑generation telemetry.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>this</code> - NEAT context (<code>population</code> and <code>_getRNG</code> must exist).</li>
+</ul>
+<p>Returns: Mean Jaccard distance in [0,1]. Higher ⇒ more lineage uniqueness / diversity.</p>
+<h3 id="genomelike">GenomeLike</h3><p>Lineage / ancestry analysis helpers for NEAT populations.</p>
+<p>These utilities were migrated from the historical implementation inside <code>src/neat.ts</code>
+to keep core NEAT logic lean while still exposing educational metrics for users who
+want to introspect evolutionary diversity.</p>
+<p>Glossary:</p>
+<ul>
+<li>Genome: An individual network encoding (has a unique <code>_id</code> and optional <code>_parents</code>).</li>
+<li>Ancestor Window: A shallow breadth‑first window (default depth = 4) over the lineage graph.</li>
+<li>Jaccard Distance: 1 - |A ∩ B| / |A ∪ B|, measuring dissimilarity between two sets.</li>
+</ul>
+<h3 id="neatlineagecontext">NeatLineageContext</h3><p>Expected <code>this</code> context for lineage helpers (a subset of the NEAT instance).</p>
+<h2 id="neat-neat-multiobjective-ts">neat/neat.multiobjective.ts</h2><h3 id="fastnondominated">fastNonDominated</h3><p><code>(pop: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default[]) =&gt; import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default[][]</code></p>
+<p>Perform fast non-dominated sorting and compute crowding distances for a
+population of networks (genomes). This implements a standard NSGA-II style
+non-dominated sorting followed by crowding distance assignment.</p>
+<p>The function annotates genomes with two fields used elsewhere in the codebase:</p>
+<ul>
+<li><code>_moRank</code>: integer Pareto front rank (0 = best/frontier)</li>
+<li><code>_moCrowd</code>: numeric crowding distance (higher is better; Infinity for
+boundary solutions)</li>
+</ul>
+<p>Example</p>
+<pre><code class="language-ts">// inside a Neat class that exposes `_getObjectives()` and `options`
+const fronts = fastNonDominated.call(neatInstance, population);
+// fronts[0] is the Pareto-optimal set
+</code></pre>
+<p>Notes for documentation generation:</p>
+<ul>
+<li>Each objective descriptor returned by <code>_getObjectives()</code> must have an
+<code>accessor(genome: Network): number</code> function and may include
+<code>direction: &#39;max&#39; | &#39;min&#39;</code> to indicate optimization direction.</li>
+<li>Accessor failures are guarded and will yield a default value of 0.</li>
+</ul>
+<p>Parameters:</p>
+<ul>
+<li><code>this</code> - - Neat instance providing <code>_getObjectives()</code>, <code>options</code> and
+<code>_paretoArchive</code> fields (function is meant to be invoked using <code>.call</code>)</li>
+<li><code>pop</code> - - population array of <code>Network</code> genomes to be ranked</li>
+</ul>
+<p>Returns: Array of Pareto fronts; each front is an array of <code>Network</code> genomes.</p>
+<h3 id="objectivedescriptor">ObjectiveDescriptor</h3><p>Shape of an objective descriptor used by the Neat instance.</p>
+<ul>
+<li><code>accessor</code> extracts a numeric objective from a genome</li>
+<li><code>direction</code> optionally indicates whether the objective is maximized or
+minimized (defaults to &#39;max&#39;)</li>
+</ul>
+<h2 id="neat-neat-mutation-ts">neat/neat.mutation.ts</h2><h3 id="ensureminhiddennodes">ensureMinHiddenNodes</h3><p><code>(network: any, multiplierOverride: number | undefined) =&gt; void</code></p>
+<p>Ensure the network has a minimum number of hidden nodes and connectivity.</p>
+<h3 id="ensurenodeadends">ensureNoDeadEnds</h3><p><code>(network: any) =&gt; void</code></p>
+<p>Ensure there are no dead-end nodes (input/output isolation) in the network.</p>
+<h3 id="mutate">mutate</h3><p><code>() =&gt; void</code></p>
+<p>Mutate every genome in the population according to configured policies.</p>
+<p>This is the high-level mutation driver used by NeatapticTS. It iterates the
+current population and, depending on the configured mutation rate and
+(optional) adaptive mutation controller, applies one or more mutation
+operators to each genome.</p>
+<p>Educational notes:</p>
+<ul>
+<li>Adaptive mutation allows per-genome mutation rates/amounts to evolve so
+that successful genomes can reduce or increase plasticity over time.</li>
+<li>Structural mutations (ADD_NODE, ADD_CONN, etc.) may update global
+innovation bookkeeping; this function attempts to reuse specialized
+helper routines that preserve innovation ids across the population.</li>
+</ul>
+<p>Example:</p>
+<pre><code class="language-ts">// called on a Neat instance after a generation completes
+neat.mutate();
+</code></pre>
+<h3 id="mutateaddconnreuse">mutateAddConnReuse</h3><p><code>(genome: any) =&gt; void</code></p>
+<p>Add a connection between two unconnected nodes reusing a stable innovation id per pair.</p>
+<h3 id="mutateaddnodereuse">mutateAddNodeReuse</h3><p><code>(genome: any) =&gt; void</code></p>
+<p>Split a random enabled connection inserting a hidden node while reusing historical
+innovations for identical (from,to) pairs across genomes. Extracted from Neat class.</p>
+<h3 id="selectmutationmethod">selectMutationMethod</h3><p><code>(genome: any, rawReturnForTest: boolean) =&gt; any</code></p>
+<p>Select a mutation method respecting structural constraints and adaptive controllers.
+Mirrors legacy implementation from <code>neat.ts</code> to preserve test expectations.
+<code>rawReturnForTest</code> retains historical behavior where the full FFW array is
+returned for identity checks in tests.</p>
+<h2 id="neat-neat-objectives-ts">neat/neat.objectives.ts</h2><h3 id="getobjectives">_getObjectives</h3><p><code>() =&gt; import(&quot;D:/code-practice/NeatapticTS/src/neat/neat.types&quot;).ObjectiveDescriptor[]</code></p>
+<p>Build and return the list of registered objectives for this NEAT instance.</p>
+<p>This function lazily builds <code>this._objectivesList</code> from the built-in
+fitness objective (unless suppressed) and any user-registered multi-
+objective descriptors found on <code>this.options.multiObjective.objectives</code>.</p>
+<p>Typical use: the evolution loop calls this to know which objectives to
+evaluate and whether each objective should be maximized or minimized.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const objectives = neatInstance._getObjectives();
+// objectives: Array&lt;ObjectiveDescriptor&gt;
+</code></pre>
+<p>Returns: Array of objective descriptors in the
+order they should be applied. If multi-objective support is disabled or
+no objectives are registered, this will contain only the built-in
+fitness objective (unless suppressed).</p>
+<h3 id="clearobjectives">clearObjectives</h3><p><code>() =&gt; void</code></p>
+<p>Clear all registered multi-objectives.</p>
+<p>This resets <code>this.options.multiObjective.objectives</code> to an empty array and
+clears the cached objectives list so that subsequent calls will reflect the
+cleared state.</p>
+<p>Example:</p>
+<pre><code class="language-ts">neat.clearObjectives();
+// now only the default fitness objective (unless suppressed) will remain
+</code></pre>
+<h3 id="registerobjective">registerObjective</h3><p><code>(key: string, direction: &quot;max&quot; | &quot;min&quot;, accessor: (genome: import(&quot;D:/code-practice/NeatapticTS/src/neat/neat.types&quot;).GenomeLike) =&gt; number) =&gt; void</code></p>
+<p>Register a new objective descriptor.</p>
+<p>This adds or replaces an objective with the given <code>key</code>. The objective is a
+lightweight descriptor with a <code>key</code>, <code>direction</code> (&#39;min&#39; | &#39;max&#39;), and an
+<code>accessor</code> function that maps a genome to a numeric objective value.</p>
+<p>Example:</p>
+<pre><code class="language-ts">// register an objective that measures model sparsity (lower is better)
+neat.registerObjective(&#39;sparsity&#39;, &#39;min&#39;, genome =&gt; computeSparsity(genome));
+</code></pre>
+<p>Notes:</p>
+<ul>
+<li>If <code>this.options.multiObjective</code> doesn&#39;t exist it will be created and
+enabled.</li>
+<li>Registering an objective replaces any previous objective with the same
+<code>key</code>.</li>
+</ul>
+<p>Parameters:</p>
+<ul>
+<li>`` - Unique name for the objective (used for sorting/lookup)</li>
+<li>`` - Whether the objective should be minimized or maximized</li>
+<li>`` - Function to extract a numeric value from a genome</li>
+</ul>
+<h2 id="neat-neat-pruning-ts">neat/neat.pruning.ts</h2><h3 id="applyadaptivepruning">applyAdaptivePruning</h3><p><code>() =&gt; void</code></p>
+<p>Adaptive pruning controller.</p>
+<p>This function monitors a population-level metric (average nodes or
+average connections) and adjusts a global pruning level so the
+population converges to a target sparsity automatically.</p>
+<p>It updates <code>this._adaptivePruneLevel</code> on the Neat instance and calls
+each genome&#39;s <code>pruneToSparsity</code> with the new level when adjustment
+is required.</p>
+<p>Example:</p>
+<pre><code class="language-ts">// options.adaptivePruning = { enabled: true, metric: &#39;connections&#39;, targetSparsity: 0.6 }
+neat.applyAdaptivePruning();
+</code></pre>
+<h3 id="applyevolutionpruning">applyEvolutionPruning</h3><p><code>() =&gt; void</code></p>
+<p>Apply evolution-time pruning to the current population.</p>
+<p>This method is intended to be called from the evolve loop. It reads
+pruning parameters from <code>this.options.evolutionPruning</code> and, when
+appropriate for the current generation, instructs each genome to
+prune its connections/nodes to reach a target sparsity.</p>
+<p>The pruning target can be ramped in over a number of generations so
+sparsification happens gradually instead of abruptly.</p>
+<p>Example (in a Neat instance):</p>
+<pre><code class="language-ts">// options.evolutionPruning = { startGeneration: 10, targetSparsity: 0.5 }
+neat.applyEvolutionPruning();
+</code></pre>
+<p>Notes for docs:</p>
+<ul>
+<li><code>method</code> is passed through to each genome&#39;s <code>pruneToSparsity</code> and
+commonly is <code>&#39;magnitude&#39;</code> (prune smallest-weight connections first).</li>
+<li>This function performs no changes if pruning options are not set or
+the generation is before <code>startGeneration</code>.</li>
+</ul>
+<h2 id="neat-neat-selection-ts">neat/neat.selection.ts</h2><h3 id="getaverage">getAverage</h3><p><code>() =&gt; number</code></p>
+<p>Compute the average (mean) fitness across the population.</p>
+<p>If genomes have not been evaluated yet this will call <code>evaluate()</code> so
+that scores exist. Missing scores are treated as 0.</p>
+<p>Example:
+const avg = neat.getAverage();
+console.log(<code>Average fitness: ${avg}</code>);</p>
+<p>Returns: The mean fitness as a number.</p>
+<h3 id="getfittest">getFittest</h3><p><code>() =&gt; any</code></p>
+<p>Return the fittest genome in the population.</p>
+<p>This will trigger an <code>evaluate()</code> if genomes have not been scored yet, and
+will ensure the population is sorted so index 0 contains the fittest.</p>
+<p>Example:
+const best = neat.getFittest();
+console.log(best.score);</p>
+<p>Returns: The genome object judged to be the fittest (highest score).</p>
+<h3 id="getparent">getParent</h3><p><code>() =&gt; any</code></p>
+<p>Select a parent genome according to the configured selection strategy.</p>
+<p>Supported strategies (via <code>options.selection.name</code>):</p>
+<ul>
+<li>&#39;POWER&#39;              : biased power-law selection (exploits best candidates)</li>
+<li>&#39;FITNESS_PROPORTIONATE&#39;: roulette-wheel style selection proportional to fitness</li>
+<li>&#39;TOURNAMENT&#39;         : pick N random competitors and select the best with probability p</li>
+</ul>
+<p>This function intentionally makes no changes to the population except in
+the POWER path where a quick sort may be triggered to ensure descending
+order.</p>
+<p>Examples:
+// POWER selection (higher power =&gt; more exploitation)
+neat.options.selection = { name: &#39;POWER&#39;, power: 2 };
+const parent = neat.getParent();</p>
+<p>// Tournament selection (size 3, 75% probability to take top of tournament)
+neat.options.selection = { name: &#39;TOURNAMENT&#39;, size: 3, probability: 0.75 };
+const parent2 = neat.getParent();</p>
+<p>Returns: A genome object chosen as the parent according to the selection strategy</p>
+<h3 id="sort">sort</h3><p><code>() =&gt; void</code></p>
+<p>Sorts the internal population in place by descending fitness.</p>
+<p>This method mutates the <code>population</code> array on the Neat instance so that
+the genome with the highest <code>score</code> appears at index 0. It treats missing
+scores as 0.</p>
+<p>Example:
+const neat = new Neat(...);
+neat.sort();
+console.log(neat.population[0].score); // highest score</p>
+<p>Notes for documentation generators: this is a small utility used by many
+selection and evaluation routines; it intentionally sorts in-place for
+performance and to preserve references to genome objects.</p>
+<h2 id="neat-neat-speciation-ts">neat/neat.speciation.ts</h2><h3 id="applyfitnesssharing">_applyFitnessSharing</h3><p><code>() =&gt; void</code></p>
+<p>Apply fitness sharing within each species.</p>
+<p>Fitness sharing reduces the effective fitness of genomes that are clustered
+tightly together (close compatibility distance), promoting diversity by
+penalizing dense species. Two modes are supported:</p>
+<ul>
+<li>Kernel sharing with bandwidth <code>sharingSigma</code> (quadratic kernel)</li>
+<li>Equal sharing based on species size when <code>sharingSigma</code> is 0</li>
+</ul>
+<p>Example:
+neat.options.sharingSigma = 3;
+neat._applyFitnessSharing();</p>
+<h3 id="sortspeciesmembers">_sortSpeciesMembers</h3><p><code>(sp: any) =&gt; void</code></p>
+<p>Sort members of a species in descending order by score.</p>
+<p>Simple utility used by stagnation checks and selection routines to ensure
+the top-performing genomes are at index 0.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>sp</code> - species-like object with a <code>members</code> array and member <code>.score</code></li>
+</ul>
+<h3 id="speciate">_speciate</h3><p><code>() =&gt; void</code></p>
+<p>Assign genomes into species based on compatibility distance and maintain species structures.
+This function creates new species for unassigned genomes, prunes empty species, updates
+dynamic compatibility threshold controllers, performs optional auto coefficient tuning, and
+records per‑species history statistics used by telemetry and adaptive controllers.</p>
+<p>Implementation notes:</p>
+<ul>
+<li>Uses existing representatives; any unassigned genome that doesn&#39;t fit an existing species
+creates a new species with itself as representative.</li>
+<li>Representatives are refreshed each generation (first member heuristic) to reduce drift cost.</li>
+<li>Includes optional age penalty for very old species to gently reduce their reproductive share.</li>
+<li>PID‑style controller adjusts the global compatibility threshold toward <code>targetSpecies</code>.</li>
+<li>Auto compatibility coefficient tuning slightly nudges excess/disjoint coefficients to influence
+clustering granularity when enabled.</li>
+<li>Extended history snapshot captures structural and innovation statistics for richer telemetry.</li>
+</ul>
+<h3 id="updatespeciesstagnation">_updateSpeciesStagnation</h3><p><code>() =&gt; void</code></p>
+<p>Update species stagnation statistics and prune species that have not
+improved within the configured stagnation window.</p>
+<p>This updates each species&#39; <code>bestScore</code> and <code>lastImproved</code> fields and then
+removes species whose age since last improvement exceeds <code>stagnationGenerations</code>.</p>
+<h2 id="neat-neat-species-ts">neat/neat.species.ts</h2><h3 id="getspecieshistory">getSpeciesHistory</h3><p><code>() =&gt; import(&quot;D:/code-practice/NeatapticTS/src/neat/neat.types&quot;).SpeciesHistoryEntry[]</code></p>
+<p>Retrieve the recorded species history across generations.</p>
+<p>Each entry in the returned array corresponds to a recorded generation and
+contains a snapshot of statistics for every species at that generation.
+This is useful for plotting species sizes over time, tracking innovation
+spread, or implementing population-level diagnostics.</p>
+<p>The shape of each entry is defined by <code>SpeciesHistoryEntry</code> in the public
+types. When <code>options.speciesAllocation.extendedHistory</code> is enabled the
+library attempts to include additional metrics such as <code>innovationRange</code>
+and <code>enabledRatio</code>. When those extended metrics are missing they are
+computed lazily from a representative genome to ensure historical data is
+still useful for analysis.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const history = neat.getSpeciesHistory();
+// history =&gt; [{ generation: 0, stats: [{ id:1, size:10, innovationRange:5, enabledRatio:0.9 }, ...] }, ...]
+</code></pre>
+<p>Notes for documentation:</p>
+<ul>
+<li>The function tries to avoid heavy computation. Extended metrics are
+computed only when explicitly requested via options.</li>
+<li>Computed extended metrics are conservative fallbacks; they use the
+available member connections and a fallback innovation extractor when
+connection innovation IDs are not present.</li>
+</ul>
+<p>Returns: Array of generation-stamped species statistic snapshots.</p>
+<h3 id="getspeciesstats">getSpeciesStats</h3><p><code>() =&gt; { id: number; size: number; bestScore: number; lastImproved: number; }[]</code></p>
+<p>Get lightweight per-species statistics for the current population.</p>
+<p>This method intentionally returns a small, immutable-friendly summary per
+species rather than exposing internal member lists. This avoids accidental
+mutation of the library&#39;s internal state while still providing useful
+telemetry for UIs, dashboards, or logging.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const stats = neat.getSpeciesStats();
+// stats =&gt; [{ id: 1, size: 12, bestScore: 0.85, lastImproved: 42 }, ...]
+</code></pre>
+<p>Success criteria:</p>
+<ul>
+<li>Returns an array of objects each containing <code>id</code>, <code>size</code>, <code>bestScore</code>,
+and <code>lastImproved</code>.</li>
+<li>Does not expose or return references to internal member arrays.</li>
+</ul>
+<p>Returns: Array of per-species summaries suitable for reporting.</p>
+<h2 id="neat-neat-telemetry-exports-ts">neat/neat.telemetry.exports.ts</h2><h3 id="buildspecieshistorycsv">buildSpeciesHistoryCsv</h3><p><code>(recentHistory: { generation: number; stats: any[]; }[], headers: string[]) =&gt; string</code></p>
+<p>Build the full CSV string for species history given ordered headers and
+a slice of history entries.</p>
+<p>Implementation notes:</p>
+<ul>
+<li>The history is a 2‑level structure (generation entry -&gt; species stats[]).</li>
+<li>We emit one CSV row per species stat, repeating the generation value.</li>
+<li>Values are JSON.stringify&#39;d to remain safe for commas/quotes.</li>
+</ul>
+<h3 id="buildtelemetryheaders">buildTelemetryHeaders</h3><p><code>(info: TelemetryHeaderInfo) =&gt; string[]</code></p>
+<p>Build the ordered list of CSV headers from collected metadata.
+Flattened nested metrics are emitted using group prefixes (group.key).</p>
+<h3 id="collecttelemetryheaderinfo">collectTelemetryHeaderInfo</h3><p><code>(entries: any[]) =&gt; TelemetryHeaderInfo</code></p>
+<p>Collect header metadata from the raw telemetry entries.</p>
+<ul>
+<li>Discovers base (top‑level) keys excluding grouped objects.</li>
+<li>Discovers nested keys inside complexity, perf, lineage, diversity groups.</li>
+<li>Tracks presence of optional multi-value structures (ops, objectives, etc.).</li>
+</ul>
+<h3 id="exportspecieshistorycsv">exportSpeciesHistoryCSV</h3><p><code>(maxEntries: number) =&gt; string</code></p>
+<p>Export species history snapshots to CSV.</p>
+<p>Each row represents a single species at a specific generation; the generation
+value is repeated per species. Dynamically discovers species stat keys so
+custom metadata added at runtime is preserved.</p>
+<p>Behavior:</p>
+<ul>
+<li>If <code>_speciesHistory</code> is absent/empty but <code>_species</code> exists, synthesizes a
+minimal snapshot to ensure deterministic headers early in a run.</li>
+<li>Returns a header-only CSV when there is no history or species.</li>
+</ul>
+<p>Parameters:</p>
+<ul>
+<li><code>this</code> - Neat instance (expects <code>_speciesHistory</code> and optionally <code>_species</code>).</li>
+<li><code>maxEntries</code> - Maximum number of most recent history snapshots (generations) to include (default 200).</li>
+</ul>
+<p>Returns: CSV string (headers + rows) describing species evolution timeline.</p>
+<h3 id="exporttelemetrycsv">exportTelemetryCSV</h3><p><code>(maxEntries: number) =&gt; string</code></p>
+<p>Export recent telemetry entries to a CSV string.</p>
+<p>Responsibilities:</p>
+<ul>
+<li>Collect a bounded slice (<code>maxEntries</code>) of recent telemetry records.</li>
+<li>Discover and flatten dynamic header keys (top-level + grouped metrics).</li>
+<li>Serialize each entry into a CSV row with stable, parseable values.</li>
+</ul>
+<p>Flattening Rules:</p>
+<ul>
+<li>Nested groups (complexity, perf, lineage, diversity) become group.key columns.</li>
+<li>Optional arrays/maps (ops, objectives, objAges, speciesAlloc, objEvents, objImportance, fronts) included only if present.</li>
+</ul>
+<p>Parameters:</p>
+<ul>
+<li><code>this</code> - Neat instance (expects <code>_telemetry</code> array field).</li>
+<li><code>maxEntries</code> - Maximum number of most recent telemetry entries to include (default 500).</li>
+</ul>
+<p>Returns: CSV string (headers + rows) or empty string when no telemetry.</p>
+<h3 id="exporttelemetryjsonl">exportTelemetryJSONL</h3><p><code>() =&gt; string</code></p>
+<p>Telemetry export helpers extracted from <code>neat.ts</code>.</p>
+<p>This module exposes small helpers intended to serialize the internal
+telemetry gathered by the NeatapticTS <code>Neat</code> runtime into common
+data-export formats (JSONL and CSV). The functions intentionally
+operate against <code>this</code> so they can be attached to instances.</p>
+<h3 id="serializetelemetryentry">serializeTelemetryEntry</h3><p><code>(entry: any, headers: string[]) =&gt; string</code></p>
+<p>Serialize one telemetry entry into a CSV row using previously computed headers.
+Uses a <code>switch(true)</code> pattern instead of a long if/else chain to reduce
+cognitive complexity while preserving readability of each scenario.</p>
+<h3 id="telemetryheaderinfo">TelemetryHeaderInfo</h3><p>Shape describing collected telemetry header discovery info.</p>
+<h2 id="neat-neat-telemetry-ts">neat/neat.telemetry.ts</h2><h3 id="applytelemetryselect">applyTelemetrySelect</h3><p><code>(entry: any) =&gt; any</code></p>
+<p>Apply a telemetry selection whitelist to a telemetry entry.</p>
+<p>This helper inspects a per-instance Set of telemetry keys stored at
+<code>this._telemetrySelect</code>. If present, only keys included in the set are
+retained on the produced entry. Core fields (generation, best score and
+species count) are always preserved.</p>
+<p>Example:</p>
+<p>Parameters:</p>
+<ul>
+<li><code>entry</code> - - Raw telemetry object to be filtered in-place.</li>
+</ul>
+<p>Returns: The filtered telemetry object (same reference as input).</p>
+<h3 id="buildtelemetryentry">buildTelemetryEntry</h3><p><code>(fittest: any) =&gt; import(&quot;D:/code-practice/NeatapticTS/src/neat/neat.types&quot;).TelemetryEntry</code></p>
+<p>Build a comprehensive telemetry entry for the current generation.</p>
+<p>The returned object contains a snapshot of population statistics, multi-
+objective front sizes, operator statistics, lineage summaries and optional
+complexity/performance metrics depending on configured telemetry options.</p>
+<p>This function intentionally mirrors the legacy in-loop telemetry construction
+to preserve behavior relied upon by tests and consumers.</p>
+<p>Example:</p>
+<p>Parameters:</p>
+<ul>
+<li><code>fittest</code> - - The currently fittest genome (used to report <code>best</code> score).</li>
+</ul>
+<p>Returns: A TelemetryEntry object suitable for recording/streaming.</p>
+<h3 id="computediversitystats">computeDiversityStats</h3><p><code>() =&gt; void</code></p>
+<p>Compute several diversity statistics used by telemetry reporting.</p>
+<p>This helper is intentionally conservative in runtime: when <code>fastMode</code> is
+enabled it will automatically tune a few sampling defaults to keep the
+computation cheap. The computed statistics are written to
+<code>this._diversityStats</code> as an object with keys like <code>meanCompat</code> and
+<code>graphletEntropy</code>.</p>
+<p>The method mutates instance-level temporary fields and reads a number of
+runtime options from <code>this.options</code>.</p>
+<h3 id="recordtelemetryentry">recordTelemetryEntry</h3><p><code>(entry: import(&quot;D:/code-practice/NeatapticTS/src/neat/neat.types&quot;).TelemetryEntry) =&gt; void</code></p>
+<p>Record a telemetry entry into the instance buffer and optionally stream it.</p>
+<p>Steps:
+This method performs the following steps to persist and optionally stream telemetry:</p>
+<ol>
+<li>Apply <code>applyTelemetrySelect</code> to filter fields according to user selection.</li>
+<li>Ensure <code>this._telemetry</code> buffer exists and push the entry.</li>
+<li>If a telemetry stream callback is configured, call it.</li>
+<li>Trim the buffer to a conservative max size (500 entries).</li>
+</ol>
+<p>Example:</p>
+<p>Parameters:</p>
+<ul>
+<li><code>entry</code> - - Telemetry entry to record.</li>
+</ul>
+<h3 id="structuralentropy">structuralEntropy</h3><p><code>(graph: any) =&gt; number</code></p>
+<p>Lightweight proxy for structural entropy based on degree-distribution.</p>
+<p>This function computes an approximate entropy of a graph topology by
+counting node degrees and computing the entropy of the degree histogram.
+The result is cached on the graph object for the current generation in
+<code>_entropyVal</code> to avoid repeated expensive recomputation.</p>
+<p>Example:</p>
+<p>Parameters:</p>
+<ul>
+<li><code>graph</code> - - A genome-like object with <code>nodes</code> and <code>connections</code> arrays.</li>
+</ul>
+<p>Returns: A non-negative number approximating structural entropy.</p>
+<h2 id="neat-neat-types-ts">neat/neat.types.ts</h2><h3 id="anyobj">AnyObj</h3><p>Shared lightweight structural types for modular NEAT components.</p>
+<p>These are deliberately kept small &amp; structural (duck-typed) so that helper
+modules can interoperate without importing the concrete (heavier) <code>Neat</code>
+class, avoiding circular references while the codebase is being
+progressively extracted / refactored.</p>
+<p>Guidelines:</p>
+<ul>
+<li>Prefer adding narrowly scoped interfaces instead of widening existing ones.</li>
+<li>Avoid leaking implementation details; keep contracts minimal.</li>
+<li>Feature‑detect optional telemetry fields – they may be omitted to save cost.</li>
+</ul>
+<h3 id="complexitymetrics">ComplexityMetrics</h3><p>Aggregate structural complexity metrics capturing size &amp; growth pressure.</p>
+<h3 id="diversitystats">DiversityStats</h3><p>Diversity statistics captured each generation. Individual fields may be
+omitted in telemetry output if diversity tracking is partially disabled to
+reduce runtime cost.</p>
+<h3 id="genomelike">GenomeLike</h3><p>Minimal genome structural surface used by several helpers (incrementally expanded).</p>
+<p>NOTE: <code>nodes</code> &amp; <code>connections</code> intentionally remain <code>any[]</code> until a stable
+<code>NodeLike</code> / <code>ConnectionLike</code> abstraction is finalised.</p>
+<h3 id="lineagesnapshot">LineageSnapshot</h3><p>Snapshot of lineage &amp; ancestry statistics for the current generation.</p>
+<h3 id="neatlike">NeatLike</h3><p>Minimal surface every helper currently expects from a NEAT instance while
+extraction continues. At present it carries no guaranteed properties besides
+an index signature. As helpers converge, promote concrete, documented fields.</p>
+<h3 id="objages">ObjAges</h3><p>Map of objective key to age in generations since introduction.</p>
+<h3 id="objectivedescriptor">ObjectiveDescriptor</h3><p>Descriptor for a single optimisation objective (single or multi‑objective runs).</p>
+<h3 id="objevent">ObjEvent</h3><p>Dynamic objective lifecycle event (addition or removal).</p>
+<h3 id="objimportance">ObjImportance</h3><p>Map of objective key to its importance metrics (range / variance).</p>
+<h3 id="objimportanceentry">ObjImportanceEntry</h3><p>Contribution / dispersion metrics for an objective over a recent window.
+Used to gauge whether an objective meaningfully influences selection.</p>
+<h3 id="operatorstat">OperatorStat</h3><p>Per-generation statistic for a genetic operator.</p>
+<p>Success is operator‑specific (e.g. produced a structurally valid mutation).
+A high attempt count with low success can indicate constraints becoming tight
+(e.g. structural budgets reached) – useful for adaptive operator scheduling.</p>
+<h3 id="operatorstatsrecord">OperatorStatsRecord</h3><p>Aggregated success / attempt counters over a window or entire run.</p>
+<h3 id="performancemetrics">PerformanceMetrics</h3><p>Timing metrics for coarse evolutionary phases (milliseconds).</p>
+<h3 id="speciesalloc">SpeciesAlloc</h3><p>Offspring allocation for a species during reproduction.</p>
+<h3 id="specieshistoryentry">SpeciesHistoryEntry</h3><p>Species statistics captured for a particular generation.</p>
+<h3 id="specieshistorystat">SpeciesHistoryStat</h3><p>Species statistics at a single historical snapshot (generation boundary).</p>
+<h3 id="telemetryentry">TelemetryEntry</h3><p>Telemetry summary for one generation.</p>
+<p>Optional properties are feature‑dependent; consumers MUST test for presence.</p>
+
+<footer>Generated from JSDoc. <a href="https://github.com/reicek/NeatapticTS">GitHub</a></footer>
+</main>
+<aside class="page-index"><div class="page-toc"><h2>Files</h2><div class="toc-file"><a href="#neat-neat-adaptive-ts">neat/neat.adaptive.ts</a><ul><li><a href=#applyadaptivemutation>applyAdaptiveMutation</a></li><li><a href=#applyancestoruniqadaptive>applyAncestorUniqAdaptive</a></li><li><a href=#applycomplexitybudget>applyComplexityBudget</a></li><li><a href=#applyminimalcriterionadaptive>applyMinimalCriterionAdaptive</a></li><li><a href=#applyoperatoradaptation>applyOperatorAdaptation</a></li><li><a href=#applyphasedcomplexity>applyPhasedComplexity</a></li></ul></div><div class="toc-file"><a href="#neat-neat-compat-ts">neat/neat.compat.ts</a><ul><li><a href=#compatibilitydistance>_compatibilityDistance</a></li><li><a href=#fallbackinnov>_fallbackInnov</a></li></ul></div><div class="toc-file"><a href="#neat-neat-constants-ts">neat/neat.constants.ts</a><ul><li><a href=#epsilon>EPSILON</a></li><li><a href=#extra-connection-probability>EXTRA_CONNECTION_PROBABILITY</a></li><li><a href=#norm-epsilon>NORM_EPSILON</a></li><li><a href=#prob-epsilon>PROB_EPSILON</a></li></ul></div><div class="toc-file"><a href="#neat-neat-diversity-ts">neat/neat.diversity.ts</a><ul><li><a href=#arraymean>arrayMean</a></li><li><a href=#arrayvariance>arrayVariance</a></li><li><a href=#compatcomputer>CompatComputer</a></li><li><a href=#computediversitystats>computeDiversityStats</a></li><li><a href=#diversitystats>DiversityStats</a></li><li><a href=#structuralentropy>structuralEntropy</a></li></ul></div><div class="toc-file"><a href="#neat-neat-evaluate-ts">neat/neat.evaluate.ts</a><ul><li><a href=#evaluate>evaluate</a></li></ul></div><div class="toc-file"><a href="#neat-neat-evolve-ts">neat/neat.evolve.ts</a><ul><li><a href=#evolve>evolve</a></li></ul></div><div class="toc-file"><a href="#neat-neat-export-ts">neat/neat.export.ts</a><ul><li><a href=#exportpopulation>exportPopulation</a></li><li><a href=#exportstate>exportState</a></li><li><a href=#fromjsonimpl>fromJSONImpl</a></li><li><a href=#genomejson>GenomeJSON</a></li><li><a href=#importpopulation>importPopulation</a></li><li><a href=#importstateimpl>importStateImpl</a></li><li><a href=#neatmetajson>NeatMetaJSON</a></li><li><a href=#neatstatejson>NeatStateJSON</a></li><li><a href=#tojsonimpl>toJSONImpl</a></li></ul></div><div class="toc-file"><a href="#neat-neat-helpers-ts">neat/neat.helpers.ts</a><ul><li><a href=#addgenome>addGenome</a></li><li><a href=#createpool>createPool</a></li><li><a href=#spawnfromparent>spawnFromParent</a></li></ul></div><div class="toc-file"><a href="#neat-neat-lineage-ts">neat/neat.lineage.ts</a><ul><li><a href=#buildanc>buildAnc</a></li><li><a href=#computeancestoruniqueness>computeAncestorUniqueness</a></li><li><a href=#genomelike>GenomeLike</a></li><li><a href=#neatlineagecontext>NeatLineageContext</a></li></ul></div><div class="toc-file"><a href="#neat-neat-multiobjective-ts">neat/neat.multiobjective.ts</a><ul><li><a href=#fastnondominated>fastNonDominated</a></li><li><a href=#objectivedescriptor>ObjectiveDescriptor</a></li></ul></div><div class="toc-file"><a href="#neat-neat-mutation-ts">neat/neat.mutation.ts</a><ul><li><a href=#ensureminhiddennodes>ensureMinHiddenNodes</a></li><li><a href=#ensurenodeadends>ensureNoDeadEnds</a></li><li><a href=#mutate>mutate</a></li><li><a href=#mutateaddconnreuse>mutateAddConnReuse</a></li><li><a href=#mutateaddnodereuse>mutateAddNodeReuse</a></li><li><a href=#selectmutationmethod>selectMutationMethod</a></li></ul></div><div class="toc-file"><a href="#neat-neat-objectives-ts">neat/neat.objectives.ts</a><ul><li><a href=#getobjectives>_getObjectives</a></li><li><a href=#clearobjectives>clearObjectives</a></li><li><a href=#registerobjective>registerObjective</a></li></ul></div><div class="toc-file"><a href="#neat-neat-pruning-ts">neat/neat.pruning.ts</a><ul><li><a href=#applyadaptivepruning>applyAdaptivePruning</a></li><li><a href=#applyevolutionpruning>applyEvolutionPruning</a></li></ul></div><div class="toc-file"><a href="#neat-neat-selection-ts">neat/neat.selection.ts</a><ul><li><a href=#getaverage>getAverage</a></li><li><a href=#getfittest>getFittest</a></li><li><a href=#getparent>getParent</a></li><li><a href=#sort>sort</a></li></ul></div><div class="toc-file"><a href="#neat-neat-speciation-ts">neat/neat.speciation.ts</a><ul><li><a href=#applyfitnesssharing>_applyFitnessSharing</a></li><li><a href=#sortspeciesmembers>_sortSpeciesMembers</a></li><li><a href=#speciate>_speciate</a></li><li><a href=#updatespeciesstagnation>_updateSpeciesStagnation</a></li></ul></div><div class="toc-file"><a href="#neat-neat-species-ts">neat/neat.species.ts</a><ul><li><a href=#getspecieshistory>getSpeciesHistory</a></li><li><a href=#getspeciesstats>getSpeciesStats</a></li></ul></div><div class="toc-file"><a href="#neat-neat-telemetry-exports-ts">neat/neat.telemetry.exports.ts</a><ul><li><a href=#buildspecieshistorycsv>buildSpeciesHistoryCsv</a></li><li><a href=#buildtelemetryheaders>buildTelemetryHeaders</a></li><li><a href=#collecttelemetryheaderinfo>collectTelemetryHeaderInfo</a></li><li><a href=#exportspecieshistorycsv>exportSpeciesHistoryCSV</a></li><li><a href=#exporttelemetrycsv>exportTelemetryCSV</a></li><li><a href=#exporttelemetryjsonl>exportTelemetryJSONL</a></li><li><a href=#serializetelemetryentry>serializeTelemetryEntry</a></li><li><a href=#telemetryheaderinfo>TelemetryHeaderInfo</a></li></ul></div><div class="toc-file"><a href="#neat-neat-telemetry-ts">neat/neat.telemetry.ts</a><ul><li><a href=#applytelemetryselect>applyTelemetrySelect</a></li><li><a href=#buildtelemetryentry>buildTelemetryEntry</a></li><li><a href=#computediversitystats>computeDiversityStats</a></li><li><a href=#recordtelemetryentry>recordTelemetryEntry</a></li><li><a href=#structuralentropy>structuralEntropy</a></li></ul></div><div class="toc-file"><a href="#neat-neat-types-ts">neat/neat.types.ts</a><ul><li><a href=#anyobj>AnyObj</a></li><li><a href=#complexitymetrics>ComplexityMetrics</a></li><li><a href=#diversitystats>DiversityStats</a></li><li><a href=#genomelike>GenomeLike</a></li><li><a href=#lineagesnapshot>LineageSnapshot</a></li><li><a href=#neatlike>NeatLike</a></li><li><a href=#objages>ObjAges</a></li><li><a href=#objectivedescriptor>ObjectiveDescriptor</a></li><li><a href=#objevent>ObjEvent</a></li><li><a href=#objimportance>ObjImportance</a></li><li><a href=#objimportanceentry>ObjImportanceEntry</a></li><li><a href=#operatorstat>OperatorStat</a></li><li><a href=#operatorstatsrecord>OperatorStatsRecord</a></li><li><a href=#performancemetrics>PerformanceMetrics</a></li><li><a href=#speciesalloc>SpeciesAlloc</a></li><li><a href=#specieshistoryentry>SpeciesHistoryEntry</a></li><li><a href=#specieshistorystat>SpeciesHistoryStat</a></li><li><a href=#telemetryentry>TelemetryEntry</a></li></ul></div></div></aside>
+</body></html>

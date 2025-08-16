@@ -1,6 +1,6 @@
 {
   "name": "@reicek/neataptic-ts",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "Architecture-free neural network library with genetic algorithm implementations",
   "main": "./dist/neataptic.js",
   "module": "./dist/neataptic.js",
@@ -8,6 +8,7 @@
   "type": "module",
   "scripts": {
     "test": "jest --no-cache --coverage --collect-coverage --runInBand --testPathIgnorePatterns=.e2e.test.ts --verbose",
+    "test:silent": "jest --no-cache --coverage --collect-coverage --runInBand --testPathIgnorePatterns=.e2e.test.ts --silent",
     "deploy": "npm run build && npm run test:dist && npm publish",
     "build": "npm run build:webpack && npm run build:ts",
     "build:ts": "tsc",
@@ -19,7 +20,7 @@
     "docs:build-scripts": "tsc -p tsconfig.docs.json && echo {\"type\":\"commonjs\"} > dist-docs/package.json",
     "docs:folders": "npm run docs:build-scripts && node ./dist-docs/scripts/generate-docs.js",
     "docs:html": "npm run docs:build-scripts && node ./dist-docs/scripts/render-docs-html.js",
-  "build:ascii-maze": "npx esbuild test/examples/asciiMaze/browser-entry.ts --bundle --outfile=docs/assets/ascii-maze.bundle.js --platform=browser --format=iife --sourcemap --external:fs --external:child_process",
+    "build:ascii-maze": "npx esbuild test/examples/asciiMaze/browser-entry.ts --bundle --outfile=docs/assets/ascii-maze.bundle.js --platform=browser --format=iife --sourcemap --external:fs --external:child_process",
     "docs": "npm run build:ascii-maze && npm run docs:build-scripts && node ./dist-docs/scripts/generate-docs.js && node ./dist-docs/scripts/render-docs-html.js"
   },
   "exports": {
@@ -87,6 +88,7 @@
     "singleQuote": true
   },
   "dependencies": {
+    "build": "^0.1.4",
     "child_process": "^1.0.2",
     "os": "^0.1.2",
     "path": "^0.12.7",
