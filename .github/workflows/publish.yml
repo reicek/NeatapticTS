@@ -33,9 +33,6 @@ on:
       NPM_TOKEN:
         description: 'NPM automation/publish token'
         required: true
-      GITHUB_TOKEN:
-        description: 'GitHub token (auto provided)'
-        required: true
       QLTY_COVERAGE_TOKEN:
         description: 'Qlty coverage token (optional)'
         required: false
