@@ -1,6 +1,6 @@
 {
   "name": "@reicek/neataptic-ts",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Architecture-free neural network library with genetic algorithm implementations",
   "main": "./dist/neataptic.js",
   "module": "./dist/neataptic.js",
