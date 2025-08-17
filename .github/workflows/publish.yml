@@ -1,5 +1,9 @@
 name: Publish packages
 
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
 on:
   release:
     types: [published]
@@ -33,9 +37,6 @@ on:
       NPM_TOKEN:
         description: 'NPM automation/publish token'
         required: true
-      QLTY_COVERAGE_TOKEN:
-        description: 'Qlty coverage token (optional)'
-        required: false
 
 jobs:
   publish:
@@ -44,46 +45,62 @@ jobs:
       contents: write
       packages: write
     env:
-      QLTY_COVERAGE_TOKEN: ${{ secrets.QLTY_COVERAGE_TOKEN }}
       RUN_PUBLISH: ${{ inputs.run_publish || github.event.inputs.run_publish || 'true' }}
       RELEASE_TAG: ${{ inputs.release_tag || github.event.inputs.release_tag || '' }}
+      LOOP_SKIP: 'false'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
+      - name: Use npm cache
+        if: ${{ env.LOOP_SKIP == 'false' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+        # NODE_AUTH_TOKEN provided later in auth-specific setup steps
+
       - name: Detect bot release commit (avoid loops)
         id: detect
         run: |
-          LAST_MSG="$(git log -1 --pretty=%s)"
-          echo "last_commit_msg=$LAST_MSG" >> $GITHUB_OUTPUT
-          if [[ "${{ github.event_name }}" == "push" && "${{ github.actor }}" == "github-actions[bot]" && "$LAST_MSG" == chore(release):* ]]; then
+          set -euo pipefail
+          LAST_MSG="$(git log -1 --pretty=%s || echo '')"
+          {
+            echo "last_commit_msg<<'EOF'"; echo "$LAST_MSG"; echo EOF;
+          } >> "$GITHUB_OUTPUT"
+          RELEASE_REGEX='^chore\(release\):'
+          if [[ "${{ github.event_name }}" == "push" && "${{ github.actor }}" == "github-actions[bot]" && "$LAST_MSG" =~ $RELEASE_REGEX ]]; then
             echo "loop_skip=true" >> $GITHUB_OUTPUT
+            echo "LOOP_SKIP=true" >> $GITHUB_ENV
+            echo "Detected prior automated release commit; avoiding recursive release." >&2
           else
             echo "loop_skip=false" >> $GITHUB_OUTPUT
+            echo "LOOP_SKIP=false" >> $GITHUB_ENV
+            echo "Proceeding with publish workflow." >&2
           fi
 
       - name: Setup Node (npmjs)
-        if: ${{ steps.detect.outputs.loop_skip == 'false' }}
+        if: ${{ env.LOOP_SKIP == 'false' }}
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
           registry-url: https://registry.npmjs.org
           always-auth: true
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Install dependencies
-        if: ${{ steps.detect.outputs.loop_skip == 'false' }}
+        if: ${{ env.LOOP_SKIP == 'false' }}
         run: npm ci
 
       - name: Test
-        if: ${{ steps.detect.outputs.loop_skip == 'false' }}
+        if: ${{ env.LOOP_SKIP == 'false' }}
         run: npm test
 
       - name: Ensure unique version (auto bump patch if exists)
-        if: ${{ steps.detect.outputs.loop_skip == 'false' && env.RUN_PUBLISH == 'true' && github.event_name != 'release' }}
+        if: ${{ env.LOOP_SKIP == 'false' && env.RUN_PUBLISH == 'true' && github.event_name != 'release' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -102,41 +119,41 @@ jobs:
           fi
 
       - name: Build
-        if: ${{ steps.detect.outputs.loop_skip == 'false' }}
+        if: ${{ env.LOOP_SKIP == 'false' }}
         run: npm run build
 
       - name: Publish to npm
-        if: ${{ steps.detect.outputs.loop_skip == 'false' && env.RUN_PUBLISH == 'true' }}
+        if: ${{ env.LOOP_SKIP == 'false' && env.RUN_PUBLISH == 'true' }}
         run: npm publish --access public
 
       - name: Setup Node (GitHub Packages)
-        if: ${{ steps.detect.outputs.loop_skip == 'false' }}
+        if: ${{ env.LOOP_SKIP == 'false' }}
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
           registry-url: https://npm.pkg.github.com/
           always-auth: true
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish to GitHub Packages (scoped)
-        if: ${{ steps.detect.outputs.loop_skip == 'false' && env.RUN_PUBLISH == 'true' }}
+        if: ${{ env.LOOP_SKIP == 'false' && env.RUN_PUBLISH == 'true' }}
         run: npm publish --registry https://npm.pkg.github.com/
 
       - name: Read package version
-        if: ${{ steps.detect.outputs.loop_skip == 'false' && env.RUN_PUBLISH == 'true' }}
+        if: ${{ env.LOOP_SKIP == 'false' && env.RUN_PUBLISH == 'true' }}
         id: pkgver
         run: |
           echo "version=$(node -p \"require('./package.json').version\")" >> $GITHUB_OUTPUT
 
       - name: Ensure git user (for tagging)
-        if: ${{ steps.detect.outputs.loop_skip == 'false' && env.RUN_PUBLISH == 'true' && github.event_name != 'release' }}
+        if: ${{ env.LOOP_SKIP == 'false' && env.RUN_PUBLISH == 'true' && github.event_name != 'release' }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
       - name: Ensure tag exists (vX.Y.Z)
-        if: ${{ steps.detect.outputs.loop_skip == 'false' && env.RUN_PUBLISH == 'true' && github.event_name != 'release' }}
+        if: ${{ env.LOOP_SKIP == 'false' && env.RUN_PUBLISH == 'true' && github.event_name != 'release' }}
         run: |
           set -e
           VER=${{ steps.pkgver.outputs.version }}
@@ -154,7 +171,7 @@ jobs:
             git push origin "refs/tags/$TAG"
           fi
       - name: Create GitHub Release
-        if: ${{ steps.detect.outputs.loop_skip == 'false' && env.RUN_PUBLISH == 'true' && github.event_name != 'release' }}
+        if: ${{ env.LOOP_SKIP == 'false' && env.RUN_PUBLISH == 'true' && github.event_name != 'release' }}
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -167,23 +184,7 @@ jobs:
           draft: false
           prerelease: false
 
-      - name: Check for coverage file
-        if: ${{ steps.detect.outputs.loop_skip == 'false' }}
-        id: cov
-        run: |
-          if [ -f coverage/lcov.info ]; then
-            echo "found=true" >> $GITHUB_OUTPUT
-          else
-            echo "found=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Upload coverage to Qlty (release)
-        if: ${{ steps.detect.outputs.loop_skip == 'false' && steps.cov.outputs.found == 'true' && env.QLTY_COVERAGE_TOKEN != '' }}
-        uses: qltysh/qlty-action/coverage@v2
-        with:
-          token: ${{ env.QLTY_COVERAGE_TOKEN }}
-          files: coverage/lcov.info
 
       - name: Summary
         run: |
-          echo "Publish workflow completed. loop_skip=${{ steps.detect.outputs.loop_skip }}"
+          echo "Publish workflow completed. LOOP_SKIP=${{ env.LOOP_SKIP }}"
