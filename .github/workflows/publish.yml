@@ -1,4 +1,5 @@
 name: Publish packages
+# Added debug + npm auth guard steps to ensure proper authentication before publish.
 
 concurrency:
   group: publish-${{ github.ref }}
@@ -101,6 +102,18 @@ jobs:
       - name: Build
         if: ${{ env.LOOP_SKIP == 'false' }}
         run: npm run build
+
+      - name: Configure npm auth
+        if: ${{ env.LOOP_SKIP == 'false' && env.RUN_PUBLISH == 'true' }}
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -e
+          if [ -z "$NPM_TOKEN" ]; then echo "ERROR: NPM_TOKEN secret missing"; exit 1; fi
+          umask 077
+          echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
+          echo "Created ~/.npmrc"
+          npm whoami || { echo "ERROR: npm whoami failed after writing auth"; exit 1; }
 
       - name: Debug npm auth and package
         if: ${{ env.LOOP_SKIP == 'false' && env.RUN_PUBLISH == 'true' }}
