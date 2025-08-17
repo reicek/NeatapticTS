@@ -3,7 +3,11 @@ import Node from '../../src/architecture/node';
 import * as methods from '../../src/methods/methods';
 import { exportToONNX } from '../../src/architecture/onnx';
 
-// Helper to suppress console.warn for tests that expect warnings
+/**
+ * Suppresses console.warn output during execution of a function that is
+ * expected to trigger warnings (e.g., unknown activation mapping). This keeps
+ * test output clean while still exercising the warning path.
+ */
 const suppressConsoleWarn = (fn: () => void) => {
   const originalWarn = console.warn;
   console.warn = jest.fn();
@@ -18,75 +22,78 @@ jest.retryTimes(2, { logErrorsBeforeRetry: true });
 
 describe('ONNX Export', () => {
   describe('Minimal valid MLP', () => {
-    describe('when exporting a 1-1 input-output network', () => {
-      let net: Network;
-      let onnx: ReturnType<typeof exportToONNX>;
+    describe('1-1 input-output network', () => {
+      let net: Network; // network under test
+      let onnx: ReturnType<typeof exportToONNX>; // exported model
       beforeEach(() => {
         // Arrange
         net = new Network(1, 1, {});
         // Act
         onnx = exportToONNX(net);
       });
-      it('should have input shape dim_value 1', () => {
+      it('has correct single input dimension', () => {
         // Assert
-        expect(
-          onnx.graph.inputs[0].type.tensor_type.shape.dim[0].dim_value
-        ).toBe(1);
+        const dimVal =
+          onnx.graph.inputs[0].type.tensor_type.shape.dim[0].dim_value;
+        expect(dimVal).toBe(1);
       });
     });
   });
 
-  describe('Network with hidden layer', () => {
-    describe('when exporting a 2-2-1 network', () => {
-      let net: Network;
+  describe('Networks with hidden layers', () => {
+    describe('2-2-1 network', () => {
       let onnx: ReturnType<typeof exportToONNX>;
       beforeEach(() => {
         // Arrange
-        net = Network.createMLP(2, [2], 1);
+        const net = Network.createMLP(2, [2], 1);
         // Act
         onnx = exportToONNX(net);
       });
-      it('should have at least one initializer', () => {
+      it('has at least one initializer', () => {
         // Assert
-        expect(onnx.graph.initializer.length).toBeGreaterThan(0);
+        const hasInitializer = onnx.graph.initializer.length > 0;
+        expect(hasInitializer).toBe(true);
       });
     });
-    describe('when exporting a 3-3-2-1 network (multiple hidden layers)', () => {
-      let net: Network;
+    describe('3-3-2-1 network (two hidden layers)', () => {
       let onnx: ReturnType<typeof exportToONNX>;
       beforeEach(() => {
         // Arrange
-        net = Network.createMLP(3, [3, 2], 1);
+        const net = Network.createMLP(3, [3, 2], 1);
         // Act
         onnx = exportToONNX(net);
       });
-      it('should have correct number of initializers', () => {
+      it('emits initializers for weights and biases', () => {
         // Assert
-        expect(onnx.graph.initializer.length).toBeGreaterThan(0);
+        const hasInitializers = onnx.graph.initializer.length > 0;
+        expect(hasInitializers).toBe(true);
       });
     });
-    describe('when exporting a 2-2-2 network (multiple outputs)', () => {
-      let net: Network;
+    describe('2-2-2 network (multiple outputs)', () => {
       let onnx: ReturnType<typeof exportToONNX>;
       beforeEach(() => {
         // Arrange
-        net = Network.createMLP(2, [2], 2);
+        const net = Network.createMLP(2, [2], 2);
         // Act
         onnx = exportToONNX(net);
       });
-      it('should have a single output tensor with shape 2', () => {
+      it('has single output tensor', () => {
         // Assert
-        expect(onnx.graph.outputs.length).toBe(1);
-        expect(
-          onnx.graph.outputs[0].type.tensor_type.shape.dim[0].dim_value
-        ).toBe(2);
+        const singleOutput = onnx.graph.outputs.length === 1;
+        expect(singleOutput).toBe(true);
+      });
+      it('has output dimension 2', () => {
+        // Assert
+        const outDim =
+          onnx.graph.outputs[0].type.tensor_type.shape.dim[0].dim_value;
+        expect(outDim).toBe(2);
       });
     });
   });
 
   describe('Activation function mapping', () => {
-    describe('when using Tanh activation', () => {
-      it('should map to ONNX Tanh', () => {
+    describe('Tanh activation', () => {
+      it('maps tanh to ONNX Tanh op', () => {
         // Arrange
         const net = new Network(1, 1, {});
         net.nodes[1].squash = methods.Activation.tanh;
@@ -99,8 +106,8 @@ describe('ONNX Export', () => {
         expect(actNode?.op_type).toBe('Tanh');
       });
     });
-    describe('when using Sigmoid activation', () => {
-      it('should map to ONNX Sigmoid', () => {
+    describe('Sigmoid activation', () => {
+      it('maps logistic to ONNX Sigmoid op', () => {
         // Arrange
         const net = new Network(1, 1, {});
         net.nodes[1].squash = methods.Activation.logistic;
@@ -113,8 +120,8 @@ describe('ONNX Export', () => {
         expect(actNode?.op_type).toBe('Sigmoid');
       });
     });
-    describe('when using Relu activation', () => {
-      it('should map to ONNX Relu', () => {
+    describe('Relu activation', () => {
+      it('maps relu to ONNX Relu op', () => {
         // Arrange
         const net = new Network(1, 1, {});
         net.nodes[1].squash = methods.Activation.relu;
@@ -127,30 +134,28 @@ describe('ONNX Export', () => {
         expect(actNode?.op_type).toBe('Relu');
       });
     });
-    describe('when using an unknown activation', () => {
-      it('should map to ONNX Identity', () => {
+    describe('Unknown activation', () => {
+      it('falls back to Identity op', () => {
         // Arrange
         const net = new Network(1, 1, {});
         net.nodes[1].squash = function customSquash(x: number) {
           return x;
         };
-        // Act & Assert
+        // Act / Assert
         suppressConsoleWarn(() => {
           const onnx = exportToONNX(net);
-          // Assert
           const actNode = onnx.graph.node.find((n: any) =>
             ['Tanh', 'Sigmoid', 'Relu', 'Identity'].includes(n.op_type)
           );
           expect(actNode?.op_type).toBe('Identity');
         });
       });
-      it('should warn when using an unknown activation', () => {
+      it('emits a console warning for unknown activation', () => {
         // Arrange
         const net = new Network(1, 1, {});
         net.nodes[1].squash = function customSquash(x: number) {
           return x;
         };
-        // Spy
         const originalWarn = console.warn;
         const warnSpy = jest.fn();
         console.warn = warnSpy;
@@ -158,7 +163,8 @@ describe('ONNX Export', () => {
           // Act
           exportToONNX(net);
           // Assert
-          expect(warnSpy).toHaveBeenCalled();
+          const warned = warnSpy.mock.calls.length > 0;
+          expect(warned).toBe(true);
         } finally {
           console.warn = originalWarn;
         }
@@ -167,31 +173,30 @@ describe('ONNX Export', () => {
   });
 
   describe('Error scenarios', () => {
-    describe('when network has no connections', () => {
+    describe('Network with no connections', () => {
       let net: Network;
       beforeEach(() => {
         // Arrange
         net = new Network(1, 1, {});
         net.connections = [];
-        // Also clear per-node connection lists to ensure the network is truly connectionless
         net.nodes.forEach((n: Node) => {
           n.connections.out = [];
           n.connections.in = [];
         });
         Network.rebuildConnections(net);
       });
-      it('should throw with message about only supporting simple MLPs', () => {
-        // Assert
-        expect(() => exportToONNX(net)).toThrow(
+      it('throws for unsupported empty connection set', () => {
+        // Act / Assert
+        const throws = () => exportToONNX(net);
+        expect(throws).toThrow(
           'ONNX export currently only supports simple MLPs'
         );
       });
     });
-    describe('when network is not fully connected (invalid MLP)', () => {
+    describe('Partially disconnected network', () => {
       let net: Network;
       beforeEach(() => {
-        // Arrange
-        // Build a valid 2-2-1 MLP first
+        // Arrange: construct partially disconnected 2-2-1 network
         net = new Network(2, 1, {});
         net.connections = [];
         const hidden1 = new Node('hidden');
@@ -205,36 +210,25 @@ describe('ONNX Export', () => {
         input1.connect(hidden2, 0.5);
         hidden1.connect(net.nodes[4], 1.0);
         hidden2.connect(net.nodes[4], 1.0);
-        net.connections = [
-          ...input0.connections.out,
-          ...input1.connections.out,
-          ...hidden1.connections.out,
-          ...hidden2.connections.out,
-        ];
-        // Remove one input->hidden connection to break full connectivity
-        // (e.g., remove input0->hidden1)
-        net.connections = net.connections.filter(
-          (c) => !(c.from === input0 && c.to === hidden1)
-        );
-        // Also update the per-node connection lists
-        input0.connections.out = input0.connections.out.filter(
-          (c) => c.to !== hidden1
-        );
+        // Remove one connection to violate full connectivity
         hidden1.connections.in = hidden1.connections.in.filter(
           (c) => c.from !== input0
         );
-        // Ensure network.connections is consistent with per-node connections
+        input0.connections.out = input0.connections.out.filter(
+          (c) => c.to !== hidden1
+        );
         Network.rebuildConnections(net);
       });
-      it('should throw when not fully connected', () => {
-        // Assert
-        expect(() => exportToONNX(net)).toThrow();
+      it('throws when layer is not fully connected', () => {
+        // Act / Assert
+        const throws = () => exportToONNX(net);
+        expect(throws).toThrow();
       });
     });
   });
 
-  describe('Helper/utility coverage', () => {
-    describe('assigns node indices before export', () => {
+  describe('Helper utilities', () => {
+    describe('Node indexing', () => {
       let net: Network;
       beforeEach(() => {
         // Arrange
@@ -243,67 +237,158 @@ describe('ONNX Export', () => {
           n.index = undefined;
         });
       });
-      it('should assign a number index to every node', () => {
+      it('assigns numeric indices to all nodes', () => {
         // Act
         exportToONNX(net);
         // Assert
-        expect(net.nodes.every((n: Node) => typeof n.index === 'number')).toBe(
-          true
+        const allIndexed = net.nodes.every(
+          (n: Node) => typeof n.index === 'number'
         );
+        expect(allIndexed).toBe(true);
       });
     });
-    describe('suppressConsoleWarn utility', () => {
-      it('should suppress console.warn during function execution', () => {
-        // Spy
-        const originalWarn = console.warn;
-        const warnSpy = jest.fn();
-        let called = false;
+    describe('suppressConsoleWarn helper', () => {
+      it('suppresses console.warn during wrapped call', () => {
+        // Arrange
+        let warned = false;
         // Act
         suppressConsoleWarn(() => {
-          console.warn('test warning');
-          called = true;
+          console.warn('test');
+          warned = true;
         });
         // Assert
-        expect(warnSpy).not.toHaveBeenCalled();
-        expect(called).toBe(true);
-        // Cleanup
-        console.warn = originalWarn;
+        const executed = warned; // ensures closure executed
+        expect(executed).toBe(true);
       });
     });
   });
 
-  describe('Gemm attributes and node ordering', () => {
-    it('emits Gemm with alpha=1, beta=1, transB=1 and lists Activation before Gemm', () => {
-      // Arrange
-      const net = Network.createMLP(3, [3, 2], 1);
-      // Act
-      const onnx: any = exportToONNX(net);
-      // Assert Gemm attributes for each layer
-      const gemmNodes = onnx.graph.node.filter(
-        (n: any) => n.op_type === 'Gemm'
-      );
-      expect(gemmNodes.length).toBeGreaterThan(0);
-      gemmNodes.forEach((g: any) => {
-        // attributes are an array of { name, type, f|i }
-        const attrs = g.attributes || [];
-        const alpha = attrs.find((a: any) => a.name === 'alpha');
-        const beta = attrs.find((a: any) => a.name === 'beta');
-        const transB = attrs.find((a: any) => a.name === 'transB');
-        expect(alpha && alpha.f).toBe(1);
-        expect(beta && beta.f).toBe(1);
-        expect(transB && transB.i).toBe(1);
+  describe('Gemm attributes and ordering', () => {
+    describe('Default ordering (Gemm -> Activation)', () => {
+      let gemmNodes: any[];
+      let nodes: any[];
+      beforeEach(() => {
+        // Arrange
+        const net = Network.createMLP(3, [3, 2], 1);
+        // Act
+        const onnx: any = exportToONNX(net);
+        gemmNodes = onnx.graph.node.filter((n: any) => n.op_type === 'Gemm');
+        nodes = onnx.graph.node as any[];
       });
-      // Assert ordering: corresponding Activation node should appear before its Gemm
-      const nodes = onnx.graph.node as any[];
-      gemmNodes.forEach((g: any) => {
-        const idxGemm = nodes.indexOf(g);
-        const act = nodes.find(
-          (n: any) =>
-            n.input && n.input[0] === g.output[0] && n.op_type !== 'Gemm'
+      it('emits at least one Gemm node', () => {
+        // Assert
+        const hasGemm = gemmNodes.length > 0;
+        expect(hasGemm).toBe(true);
+      });
+      it('all Gemm nodes have alpha=1', () => {
+        const allAlphaOne = gemmNodes.every(
+          (g) =>
+            (g.attributes || []).find((a: any) => a.name === 'alpha')?.f === 1
         );
-        expect(act).toBeTruthy();
-        const idxAct = nodes.indexOf(act);
-        expect(idxAct).toBeLessThan(idxGemm);
+        expect(allAlphaOne).toBe(true);
+      });
+      it('all Gemm nodes have beta=1', () => {
+        const allBetaOne = gemmNodes.every(
+          (g) =>
+            (g.attributes || []).find((a: any) => a.name === 'beta')?.f === 1
+        );
+        expect(allBetaOne).toBe(true);
+      });
+      it('all Gemm nodes have transB=1', () => {
+        const allTransBOne = gemmNodes.every(
+          (g) =>
+            (g.attributes || []).find((a: any) => a.name === 'transB')?.i === 1
+        );
+        expect(allTransBOne).toBe(true);
+      });
+      it('each Gemm node is followed by activation referencing its output', () => {
+        const orderingValid = gemmNodes.every((g) => {
+          const idxG = nodes.indexOf(g);
+          const act = nodes.find(
+            (n) => n.input && n.input[0] === g.output[0] && n.op_type !== 'Gemm'
+          );
+          return act && nodes.indexOf(act) > idxG;
+        });
+        expect(orderingValid).toBe(true);
+      });
+    });
+    describe('Legacy ordering (Activation -> Gemm)', () => {
+      let orderingValid: boolean;
+      beforeEach(() => {
+        // Arrange
+        const net = Network.createMLP(2, [2], 1);
+        // Act
+        const onnx: any = exportToONNX(net, { legacyNodeOrdering: true });
+        const nodes = onnx.graph.node as any[];
+        const gemmNodes = nodes.filter((n) => n.op_type === 'Gemm');
+        orderingValid = gemmNodes.every((g) => {
+          const idxG = nodes.indexOf(g);
+          const act = nodes.find(
+            (n) => n.input && n.input[0] === g.output[0] && n.op_type !== 'Gemm'
+          );
+          return act && nodes.indexOf(act) < idxG;
+        });
+      });
+      it('places activation before gemm in legacy mode', () => {
+        // Assert
+        expect(orderingValid).toBe(true);
+      });
+    });
+    describe('Metadata inclusion', () => {
+      let onnx: any;
+      beforeEach(() => {
+        // Arrange
+        const net = Network.createMLP(1, [1], 1);
+        // Act
+        onnx = exportToONNX(net, { includeMetadata: true, opset: 18 });
+      });
+      it('includes ir_version field', () => {
+        const present = typeof onnx.ir_version !== 'undefined';
+        expect(present).toBe(true);
+      });
+      it('includes opset_import array', () => {
+        const hasOpset = Array.isArray(onnx.opset_import);
+        expect(hasOpset).toBe(true);
+      });
+      it('includes producer_name', () => {
+        const hasProducer = typeof onnx.producer_name === 'string';
+        expect(hasProducer).toBe(true);
+      });
+    });
+    describe('Batch dimension option', () => {
+      let inDims: any[];
+      let outDims: any[];
+      beforeEach(() => {
+        // Arrange
+        const net = Network.createMLP(4, [3], 2);
+        // Act
+        const onnx: any = exportToONNX(net, { batchDimension: true });
+        inDims = onnx.graph.inputs[0].type.tensor_type.shape.dim;
+        outDims = onnx.graph.outputs[0].type.tensor_type.shape.dim;
+      });
+      it('adds two input dims (batch + feature)', () => {
+        const twoDims = inDims.length === 2;
+        expect(twoDims).toBe(true);
+      });
+      it('adds two output dims (batch + feature)', () => {
+        const twoDims = outDims.length === 2;
+        expect(twoDims).toBe(true);
+      });
+      it('uses symbolic batch dim "N" for input', () => {
+        const hasSymbol = inDims[0].dim_param === 'N';
+        expect(hasSymbol).toBe(true);
+      });
+      it('uses symbolic batch dim "N" for output', () => {
+        const hasSymbol = outDims[0].dim_param === 'N';
+        expect(hasSymbol).toBe(true);
+      });
+      it('sets input feature size to 4', () => {
+        const sizeOk = inDims[1].dim_value === 4;
+        expect(sizeOk).toBe(true);
+      });
+      it('sets output feature size to 2', () => {
+        const sizeOk = outDims[1].dim_value === 2;
+        expect(sizeOk).toBe(true);
       });
     });
   });

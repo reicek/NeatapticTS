@@ -1359,7 +1359,7 @@ Parameters:
 
 ### exportToONNX
 
-`(network: import("D:/code-practice/NeatapticTS/src/architecture/network").default) => import("D:/code-practice/NeatapticTS/src/architecture/network/network.onnx").OnnxModel`
+`(network: import("D:/code-practice/NeatapticTS/src/architecture/network").default, options: import("D:/code-practice/NeatapticTS/src/architecture/network/network.onnx").OnnxExportOptions) => import("D:/code-practice/NeatapticTS/src/architecture/network/network.onnx").OnnxModel`
 
 Export a minimal multilayer perceptron Network to a lightweight ONNX JSON object.
 
@@ -1387,5 +1387,9 @@ Steps:
  6. Rebuild flat connection list.
 
 Limitations: Only guaranteed for self-produced ONNX; inconsistent naming or ordering will break.
+
+### OnnxExportOptions
+
+Options controlling ONNX export behavior (Phase 1).
 
 ### OnnxModel

@@ -2498,6 +2498,112 @@
     }
   });
 
+  // package.json
+  var require_package = __commonJS({
+    "package.json"(exports, module) {
+      module.exports = {
+        name: "@reicek/neataptic-ts",
+        version: "0.1.8",
+        description: "Architecture-free neural network library with genetic algorithm implementations",
+        main: "./dist/neataptic.js",
+        module: "./dist/neataptic.js",
+        types: "./dist/neataptic.d.ts",
+        type: "module",
+        scripts: {
+          test: "jest --no-cache --coverage --collect-coverage --runInBand --testPathIgnorePatterns=.e2e.test.ts --verbose",
+          "test:silent": "jest --no-cache --coverage --collect-coverage --runInBand --testPathIgnorePatterns=.e2e.test.ts --silent",
+          deploy: "npm run build && npm run test:dist && npm publish",
+          build: "npm run build:webpack && npm run build:ts",
+          "build:ts": "tsc",
+          "build:webpack": "webpack --config webpack.config.js",
+          "start:ts": "ts-node src/neataptic.ts",
+          "test:e2e": "cross-env FORCE_COLOR=true jest e2e.test.ts --no-cache --runInBand",
+          "test:e2e:logs": "npx jest e2e.test.ts --verbose --runInBand --no-cache",
+          "test:dist": "npm run build:ts && jest --no-cache --coverage --collect-coverage --runInBand --testPathIgnorePatterns=.e2e.test.ts",
+          "docs:build-scripts": "tsc -p tsconfig.docs.json && node scripts/write-dist-docs-pkg.cjs",
+          "docs:folders": "npm run docs:build-scripts && node ./dist-docs/scripts/generate-docs.js",
+          "docs:html": "npm run docs:build-scripts && node ./dist-docs/scripts/render-docs-html.js",
+          "build:ascii-maze": "npx esbuild test/examples/asciiMaze/browser-entry.ts --bundle --outfile=docs/assets/ascii-maze.bundle.js --platform=browser --format=iife --sourcemap --external:fs --external:child_process",
+          "docs:examples": "node scripts/copy-examples.cjs",
+          docs: "npm run build:ascii-maze && npm run docs:examples && npm run docs:build-scripts && node ./dist-docs/scripts/generate-docs.js && node ./dist-docs/scripts/render-docs-html.js"
+        },
+        exports: {
+          ".": {
+            types: "./dist/neataptic.d.ts",
+            import: "./dist/neataptic.js"
+          }
+        },
+        devDependencies: {
+          "@types/chai": "^5.2.1",
+          "@types/fs-extra": "^11.0.4",
+          "@types/jest": "^29.5.11",
+          "@types/node": "^20.19.10",
+          "@types/seedrandom": "^3.0.8",
+          "@types/webpack": "^5.28.5",
+          "@types/webpack-dev-server": "^4.7.2",
+          chai: "^4.3.4",
+          "copy-webpack-plugin": "^8.1.0",
+          "cross-env": "^7.0.3",
+          "fast-glob": "^3.3.3",
+          "fs-extra": "^11.3.1",
+          husky: "^6.0.0",
+          jest: "^29.7.0",
+          "jsdoc-to-markdown": "^9.1.1",
+          marked: "^12.0.2",
+          mkdocs: "^0.0.1",
+          "ts-jest": "^29.1.1",
+          "ts-loader": "^9.5.2",
+          "ts-morph": "^22.0.0",
+          "ts-node": "^10.9.2",
+          typescript: "^5.6.3",
+          "undici-types": "^7.8.0",
+          webpack: "^5.99.5",
+          "webpack-cli": "^6.0.1"
+        },
+        repository: {
+          type: "git",
+          url: "https://github.com/reicek/NeatapticTS.git"
+        },
+        keywords: [
+          "neural network",
+          "machine learning",
+          "genetic algorithm",
+          "mutation",
+          "neat"
+        ],
+        author: {
+          name: "Cesar Anton",
+          email: "reicek@gmail.com"
+        },
+        license: "MIT",
+        publishConfig: {
+          access: "public",
+          registry: "https://registry.npmjs.org/"
+        },
+        bugs: {
+          url: "https://github.com/reicek/NeatapticTS/issues",
+          email: "reicek@gmail.com"
+        },
+        homepage: "https://reicek.github.io/NeatapticTS/",
+        engines: {
+          node: ">=14.0.0"
+        },
+        prettier: {
+          singleQuote: true
+        },
+        dependencies: {
+          build: "^0.1.4",
+          child_process: "^1.0.2",
+          os: "^0.1.2",
+          path: "^0.12.7",
+          seedrandom: "^3.0.5",
+          undici: "^5.0.0",
+          "undici-types": "^7.8.0"
+        }
+      };
+    }
+  });
+
   // src/architecture/network/network.onnx.ts
   function rebuildConnectionsLocal(networkLike) {
     const uniqueConnections = /* @__PURE__ */ new Set();
@@ -2569,9 +2675,20 @@
       }
     }
   }
-  function buildOnnxModel(network, layers) {
+  function buildOnnxModel(network, layers, options = {}) {
+    const {
+      includeMetadata = false,
+      opset = 18,
+      batchDimension = false,
+      legacyNodeOrdering = false,
+      producerName = "neataptic-ts",
+      producerVersion,
+      docString
+    } = options;
     const inputLayerNodes = layers[0];
     const outputLayerNodes = layers[layers.length - 1];
+    const batchDims = batchDimension ? [{ dim_param: "N" }, { dim_value: inputLayerNodes.length }] : [{ dim_value: inputLayerNodes.length }];
+    const outBatchDims = batchDimension ? [{ dim_param: "N" }, { dim_value: outputLayerNodes.length }] : [{ dim_value: outputLayerNodes.length }];
     const model = {
       graph: {
         inputs: [
@@ -2580,7 +2697,7 @@
             type: {
               tensor_type: {
                 elem_type: 1,
-                shape: { dim: [{ dim_value: inputLayerNodes.length }] }
+                shape: { dim: batchDims }
               }
             }
           }
@@ -2591,7 +2708,7 @@
             type: {
               tensor_type: {
                 elem_type: 1,
-                shape: { dim: [{ dim_value: outputLayerNodes.length }] }
+                shape: { dim: outBatchDims }
               }
             }
           }
@@ -2600,6 +2717,20 @@
         node: []
       }
     };
+    if (includeMetadata) {
+      const pkgVersion = (() => {
+        try {
+          return require_package().version;
+        } catch {
+          return "0.0.0";
+        }
+      })();
+      model.ir_version = 9;
+      model.opset_import = [{ version: opset, domain: "" }];
+      model.producer_name = producerName;
+      model.producer_version = producerVersion || pkgVersion;
+      model.doc_string = docString || "Exported from NeatapticTS ONNX exporter (phase 1)";
+    }
     let previousOutputName = "input";
     for (let layerIndex = 1; layerIndex < layers.length; layerIndex++) {
       const previousLayerNodes = layers[layerIndex - 1];
@@ -2633,35 +2764,55 @@
         dims: [currentLayerNodes.length],
         float_data: biasVector
       });
-      model.graph.node.push({
-        op_type: mapActivationToOnnx(currentLayerNodes[0].squash),
-        input: [gemmOutputName],
-        output: [activationOutputName],
-        name: `act_l${layerIndex}`
-      });
-      model.graph.node.push({
-        op_type: "Gemm",
-        input: [previousOutputName, weightTensorName, biasTensorName],
-        output: [gemmOutputName],
-        name: `gemm_l${layerIndex}`,
-        attributes: [
-          { name: "alpha", type: "FLOAT", f: 1 },
-          { name: "beta", type: "FLOAT", f: 1 },
-          { name: "transB", type: "INT", i: 1 }
-        ]
-      });
+      if (!legacyNodeOrdering) {
+        model.graph.node.push({
+          op_type: "Gemm",
+          input: [previousOutputName, weightTensorName, biasTensorName],
+          output: [gemmOutputName],
+          name: `gemm_l${layerIndex}`,
+          attributes: [
+            { name: "alpha", type: "FLOAT", f: 1 },
+            { name: "beta", type: "FLOAT", f: 1 },
+            { name: "transB", type: "INT", i: 1 }
+          ]
+        });
+        model.graph.node.push({
+          op_type: mapActivationToOnnx(currentLayerNodes[0].squash),
+          input: [gemmOutputName],
+          output: [activationOutputName],
+          name: `act_l${layerIndex}`
+        });
+      } else {
+        model.graph.node.push({
+          op_type: mapActivationToOnnx(currentLayerNodes[0].squash),
+          input: [gemmOutputName],
+          output: [activationOutputName],
+          name: `act_l${layerIndex}`
+        });
+        model.graph.node.push({
+          op_type: "Gemm",
+          input: [previousOutputName, weightTensorName, biasTensorName],
+          output: [gemmOutputName],
+          name: `gemm_l${layerIndex}`,
+          attributes: [
+            { name: "alpha", type: "FLOAT", f: 1 },
+            { name: "beta", type: "FLOAT", f: 1 },
+            { name: "transB", type: "INT", i: 1 }
+          ]
+        });
+      }
       previousOutputName = activationOutputName;
     }
     return model;
   }
-  function exportToONNX(network) {
+  function exportToONNX(network, options = {}) {
     rebuildConnectionsLocal(network);
     network.nodes.forEach((node, idx) => node.index = idx);
     if (!network.connections || network.connections.length === 0)
       throw new Error("ONNX export currently only supports simple MLPs");
     const layers = inferLayerOrdering(network);
     validateLayerHomogeneityAndConnectivity(layers, network);
-    return buildOnnxModel(network, layers);
+    return buildOnnxModel(network, layers, options);
   }
   var init_network_onnx = __esm({
     "src/architecture/network/network.onnx.ts"() {

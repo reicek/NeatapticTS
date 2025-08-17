@@ -25,8 +25,38 @@
 import * as methods from '../../methods/methods';
 import type Network from '../network';
 
+// ---------------------------------------------------------------------------
+// Phase 1 Enhancements (metadata + options + ordering normalization)
+// ---------------------------------------------------------------------------
+
+/** Options controlling ONNX export behavior (Phase 1). */
+export interface OnnxExportOptions {
+  /** ONNX opset version (default 18). */
+  opset?: number;
+  /** Emit ModelProto-level metadata (ir_version, opset_import, producer fields). */
+  includeMetadata?: boolean;
+  /** Add a symbolic batch dimension ("N") to input/output shapes. */
+  batchDimension?: boolean;
+  /** Preserve legacy Activation-before-Gemm node ordering (default false => Gemm then Activation). */
+  legacyNodeOrdering?: boolean;
+  /** Producer name override (defaults to 'neataptic-ts'). */
+  producerName?: string;
+  /** Producer version override (defaults to package.json version when available). */
+  producerVersion?: string;
+  /** Optional doc string override. */
+  docString?: string;
+}
+
 // --- Lightweight ONNX type aliases (minimal subset used for export/import) ---
-export type OnnxModel = { graph: OnnxGraph };
+export type OnnxModel = {
+  ir_version?: number;
+  opset_import?: { version: number; domain: string }[];
+  producer_name?: string;
+  producer_version?: string;
+  doc_string?: string;
+  metadata_props?: { key: string; value: string }[];
+  graph: OnnxGraph;
+};
 type OnnxGraph = {
   inputs: any[];
   outputs: any[];
@@ -145,12 +175,31 @@ function validateLayerHomogeneityAndConnectivity(
 }
 
 /** Construct the ONNX model graph (initializers + nodes) given validated layers. */
-function buildOnnxModel(network: Network, layers: any[][]): OnnxModel {
+function buildOnnxModel(
+  network: Network,
+  layers: any[][],
+  options: OnnxExportOptions = {}
+): OnnxModel {
+  const {
+    includeMetadata = false,
+    opset = 18,
+    batchDimension = false,
+    legacyNodeOrdering = false,
+    producerName = 'neataptic-ts',
+    producerVersion,
+    docString,
+  } = options;
   /** Input layer nodes (used for input tensor dimension). */
   const inputLayerNodes = layers[0];
   /** Output layer nodes (used for output tensor dimension). */
   const outputLayerNodes = layers[layers.length - 1];
-  /** Mutable ONNX model under construction. */
+  const batchDims = batchDimension
+    ? [{ dim_param: 'N' }, { dim_value: inputLayerNodes.length }]
+    : [{ dim_value: inputLayerNodes.length }];
+  const outBatchDims = batchDimension
+    ? [{ dim_param: 'N' }, { dim_value: outputLayerNodes.length }]
+    : [{ dim_value: outputLayerNodes.length }];
+  /** Mutable ONNX model under construction (with optional metadata). */
   const model: OnnxModel = {
     graph: {
       inputs: [
@@ -159,7 +208,7 @@ function buildOnnxModel(network: Network, layers: any[][]): OnnxModel {
           type: {
             tensor_type: {
               elem_type: 1,
-              shape: { dim: [{ dim_value: inputLayerNodes.length }] },
+              shape: { dim: batchDims },
             },
           },
         },
@@ -170,7 +219,7 @@ function buildOnnxModel(network: Network, layers: any[][]): OnnxModel {
           type: {
             tensor_type: {
               elem_type: 1,
-              shape: { dim: [{ dim_value: outputLayerNodes.length }] },
+              shape: { dim: outBatchDims },
             },
           },
         },
@@ -179,6 +228,22 @@ function buildOnnxModel(network: Network, layers: any[][]): OnnxModel {
       node: [],
     },
   };
+  if (includeMetadata) {
+    const pkgVersion = (() => {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        return require('../../../package.json').version;
+      } catch {
+        return '0.0.0';
+      }
+    })();
+    model.ir_version = 9; // conservative default
+    model.opset_import = [{ version: opset, domain: '' }];
+    model.producer_name = producerName;
+    model.producer_version = producerVersion || pkgVersion;
+    model.doc_string =
+      docString || 'Exported from NeatapticTS ONNX exporter (phase 1)';
+  }
   /** Name of the tensor that feeds into the current Gemm. */
   let previousOutputName = 'input';
   for (let layerIndex = 1; layerIndex < layers.length; layerIndex++) {
@@ -223,24 +288,46 @@ function buildOnnxModel(network: Network, layers: any[][]): OnnxModel {
       dims: [currentLayerNodes.length],
       float_data: biasVector,
     });
-    // Activation node first (to preserve original order used historically in this project)
-    model.graph.node.push({
-      op_type: mapActivationToOnnx(currentLayerNodes[0].squash),
-      input: [gemmOutputName],
-      output: [activationOutputName],
-      name: `act_l${layerIndex}`,
-    });
-    (model.graph.node as any).push({
-      op_type: 'Gemm',
-      input: [previousOutputName, weightTensorName, biasTensorName],
-      output: [gemmOutputName],
-      name: `gemm_l${layerIndex}`,
-      attributes: [
-        { name: 'alpha', type: 'FLOAT', f: 1 },
-        { name: 'beta', type: 'FLOAT', f: 1 },
-        { name: 'transB', type: 'INT', i: 1 },
-      ],
-    });
+    // Determine standard (Gemm then Activation) or legacy ordering.
+    if (!legacyNodeOrdering) {
+      // Standard ordering: Gemm -> Activation
+      (model.graph.node as any).push({
+        op_type: 'Gemm',
+        input: [previousOutputName, weightTensorName, biasTensorName],
+        output: [gemmOutputName],
+        name: `gemm_l${layerIndex}`,
+        attributes: [
+          { name: 'alpha', type: 'FLOAT', f: 1 },
+          { name: 'beta', type: 'FLOAT', f: 1 },
+          { name: 'transB', type: 'INT', i: 1 },
+        ],
+      });
+      model.graph.node.push({
+        op_type: mapActivationToOnnx(currentLayerNodes[0].squash),
+        input: [gemmOutputName],
+        output: [activationOutputName],
+        name: `act_l${layerIndex}`,
+      });
+    } else {
+      // Legacy ordering: Activation (placeholder) before Gemm (historic project quirk)
+      model.graph.node.push({
+        op_type: mapActivationToOnnx(currentLayerNodes[0].squash),
+        input: [gemmOutputName],
+        output: [activationOutputName],
+        name: `act_l${layerIndex}`,
+      });
+      (model.graph.node as any).push({
+        op_type: 'Gemm',
+        input: [previousOutputName, weightTensorName, biasTensorName],
+        output: [gemmOutputName],
+        name: `gemm_l${layerIndex}`,
+        attributes: [
+          { name: 'alpha', type: 'FLOAT', f: 1 },
+          { name: 'beta', type: 'FLOAT', f: 1 },
+          { name: 'transB', type: 'INT', i: 1 },
+        ],
+      });
+    }
     previousOutputName = activationOutputName;
   }
   return model;
@@ -406,7 +493,10 @@ function assignActivationFunctions(
  *
  * Constraints: See module doc. Throws descriptive errors when assumptions violated.
  */
-export function exportToONNX(network: Network): OnnxModel {
+export function exportToONNX(
+  network: Network,
+  options: OnnxExportOptions = {}
+): OnnxModel {
   rebuildConnectionsLocal(network as any);
   network.nodes.forEach((node: any, idx: number) => (node.index = idx));
   if (!network.connections || network.connections.length === 0)
@@ -414,7 +504,7 @@ export function exportToONNX(network: Network): OnnxModel {
   /** Layered node arrays (input, hidden..., output) inferred for export. */
   const layers = inferLayerOrdering(network);
   validateLayerHomogeneityAndConnectivity(layers, network);
-  return buildOnnxModel(network, layers);
+  return buildOnnxModel(network, layers, options);
 }
 
 /**
@@ -433,11 +523,13 @@ export function exportToONNX(network: Network): OnnxModel {
 export function importFromONNX(onnx: OnnxModel): Network {
   const { default: NetworkVal } = require('../network'); // dynamic import to avoid circular reference at module load
   /** Number of input features (dimension of input tensor). */
-  const inputCount =
-    onnx.graph.inputs[0].type.tensor_type.shape.dim[0].dim_value;
+  const inputShapeDims = onnx.graph.inputs[0].type.tensor_type.shape.dim;
+  const inputCount = (inputShapeDims[inputShapeDims.length - 1] as any)
+    .dim_value;
   /** Number of output neurons (dimension of output tensor). */
-  const outputCount =
-    onnx.graph.outputs[0].type.tensor_type.shape.dim[0].dim_value;
+  const outputShapeDims = onnx.graph.outputs[0].type.tensor_type.shape.dim;
+  const outputCount = (outputShapeDims[outputShapeDims.length - 1] as any)
+    .dim_value;
   /** Hidden layer sizes derived from weight tensor shapes. */
   const hiddenLayerSizes = deriveHiddenLayerSizes(onnx.graph.initializer);
   /** Newly constructed network mirroring the ONNX architecture. */

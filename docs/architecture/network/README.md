@@ -652,7 +652,7 @@ Apply weights & biases from ONNX initializers onto the newly created network.
 
 ### buildOnnxModel
 
-`(network: import("D:/code-practice/NeatapticTS/src/architecture/network").default, layers: any[][]) => import("D:/code-practice/NeatapticTS/src/architecture/network/network.onnx").OnnxModel`
+`(network: import("D:/code-practice/NeatapticTS/src/architecture/network").default, layers: any[][], options: import("D:/code-practice/NeatapticTS/src/architecture/network/network.onnx").OnnxExportOptions) => import("D:/code-practice/NeatapticTS/src/architecture/network/network.onnx").OnnxModel`
 
 Construct the ONNX model graph (initializers + nodes) given validated layers.
 
@@ -664,7 +664,7 @@ Extract hidden layer sizes from ONNX initializers (weight tensors).
 
 ### exportToONNX
 
-`(network: import("D:/code-practice/NeatapticTS/src/architecture/network").default) => import("D:/code-practice/NeatapticTS/src/architecture/network/network.onnx").OnnxModel`
+`(network: import("D:/code-practice/NeatapticTS/src/architecture/network").default, options: import("D:/code-practice/NeatapticTS/src/architecture/network/network.onnx").OnnxExportOptions) => import("D:/code-practice/NeatapticTS/src/architecture/network/network.onnx").OnnxModel`
 
 Export a minimal multilayer perceptron Network to a lightweight ONNX JSON object.
 
@@ -704,6 +704,10 @@ Infer strictly layered ordering from a network, ensuring feed-forward fully-conn
 `(squash: any) => string`
 
 Map an internal activation function (squash) to an ONNX op_type, defaulting to Identity.
+
+### OnnxExportOptions
+
+Options controlling ONNX export behavior (Phase 1).
 
 ### OnnxModel
 
