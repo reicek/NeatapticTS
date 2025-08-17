@@ -156,8 +156,11 @@ jobs:
       - name: Read package version
         if: ${{ env.LOOP_SKIP == 'false' && env.RUN_PUBLISH == 'true' }}
         id: pkgver
+        shell: bash
         run: |
-          echo "version=$(node -p \"require('./package.json').version\")" >> $GITHUB_OUTPUT
+          set -e
+          VER=$(node -p "require('./package.json').version")
+          echo "version=$VER" >> "$GITHUB_OUTPUT"
 
       - name: Ensure git user (for tagging)
         if: ${{ env.LOOP_SKIP == 'false' && env.RUN_PUBLISH == 'true' && github.event_name != 'release' }}
