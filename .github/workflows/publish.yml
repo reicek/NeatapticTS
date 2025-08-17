@@ -111,20 +111,16 @@ jobs:
           echo "masked ~/.npmrc:";
           if [ -f ~/.npmrc ]; then sed -E 's/(:_authToken=).*/\1***REDACTED***/' ~/.npmrc || true; else echo "no ~/.npmrc"; fi
 
-      - name: Guard: ensure npm auth is correct
+      - name: "Guard npm auth"
         if: ${{ env.LOOP_SKIP == 'false' && env.RUN_PUBLISH == 'true' }}
         run: |
           set -e
           WHOAMI=$(npm whoami 2>/dev/null || echo "")
           if [ -z "$WHOAMI" ]; then
-            echo "ERROR: npm not authenticated in runner. Ensure NPM_TOKEN secret is set for this repository and is an npm automation token.";
-            exit 1
-          fi
+            echo "ERROR: npm not authenticated (whoami empty)."; exit 1; fi
           echo "Authenticated as: $WHOAMI"
           if [ "$WHOAMI" != "reicek" ]; then
-            echo "ERROR: npm authenticated as '$WHOAMI' but expected 'reicek'. Use a token for the 'reicek' account or add '$WHOAMI' as a package owner.";
-            exit 1
-          fi
+            echo "ERROR: expected user 'reicek' got '$WHOAMI'. Use correct NPM_TOKEN."; exit 1; fi
 
       - name: Publish to npm
         if: ${{ env.LOOP_SKIP == 'false' && env.RUN_PUBLISH == 'true' }}
