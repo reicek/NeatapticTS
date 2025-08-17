@@ -6,10 +6,7 @@
  * simulation processes.
  */
 
-import {
-  IEvolutionFunctionResult,
-  IEvolutionStepResult,
-} from './interfaces';
+import { IEvolutionFunctionResult, IEvolutionStepResult } from './interfaces';
 
 /**
  * TerminalUtility provides static methods for terminal management and

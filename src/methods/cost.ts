@@ -20,7 +20,7 @@ export default class Cost {
    * a probability value between 0 and 1. Cross-entropy loss increases as the
    * predicted probability diverges from the actual label.
    *
-  * It uses a small epsilon (PROB_EPSILON = 1e-15) to prevent `log(0)` which would result in `NaN`.
+   * It uses a small epsilon (PROB_EPSILON = 1e-15) to prevent `log(0)` which would result in `NaN`.
    * Output values are clamped to the range `[epsilon, 1 - epsilon]` for numerical stability.
    *
    * @see {@link https://en.wikipedia.org/wiki/Cross_entropy}
@@ -31,7 +31,7 @@ export default class Cost {
    */
   static crossEntropy(targets: number[], outputs: number[]): number {
     let error = 0;
-  const epsilon = PROB_EPSILON; // Small constant to avoid log(0)
+    const epsilon = PROB_EPSILON; // Small constant to avoid log(0)
 
     if (targets.length !== outputs.length) {
       throw new Error('Target and output arrays must have the same length.');
@@ -83,7 +83,7 @@ export default class Cost {
     const sum = exps.reduce((a, b) => a + b, 0) || 1;
     const probs = exps.map((e) => e / sum);
     let loss = 0;
-  const eps = PROB_EPSILON;
+    const eps = PROB_EPSILON;
     for (let i = 0; i < n; i++) {
       const p = Math.min(1 - eps, Math.max(eps, probs[i]));
       const t = normTargets[i];
@@ -199,7 +199,7 @@ export default class Cost {
       throw new Error('Target and output arrays must have the same length.');
     }
     let error = 0;
-  const epsilon = PROB_EPSILON; // Small constant to avoid division by zero or near-zero target values.
+    const epsilon = PROB_EPSILON; // Small constant to avoid division by zero or near-zero target values.
 
     // Assumes targets and outputs have the same length.
     outputs.forEach((output, outputIndex) => {
@@ -302,7 +302,7 @@ export default class Cost {
     alpha: number = 0.25
   ): number {
     let error = 0;
-  const epsilon = PROB_EPSILON;
+    const epsilon = PROB_EPSILON;
     if (targets.length !== outputs.length) {
       throw new Error('Target and output arrays must have the same length.');
     }
@@ -332,7 +332,7 @@ export default class Cost {
     smoothing: number = 0.1
   ): number {
     let error = 0;
-  const epsilon = PROB_EPSILON;
+    const epsilon = PROB_EPSILON;
     if (targets.length !== outputs.length) {
       throw new Error('Target and output arrays must have the same length.');
     }

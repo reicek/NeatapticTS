@@ -40,7 +40,7 @@ footer{margin-top:64px;font-size:.75rem;color:#666;}
 <li><a href="multithreading/workers/node/index.html">multithreading/workers/node/</a></li>
 <li><a href="neat/index.html">neat/</a></li>
 <li><a href="src/index.html">src/</a></li>
-<li><a href="../test/examples/asciiMaze/index.html">examples/asciiMaze/</a></li></ul>
+<li><a href="examples/asciiMaze/index.html">examples/asciiMaze/</a></li></ul>
 </nav>
 <main>
 <h1 id="neatapticts">NeatapticTS</h1><p><a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-2c3963.svg" alt="License: MIT"></a> <a href="docs/index.html"><img src="https://img.shields.io/badge/docs-generated-2c3963.svg" alt="Docs"></a></p>
@@ -129,16 +129,16 @@ for a few iterations. See per-folder READMEs in <code>src/</code> for detailed A
 
 // simple fitness: maximize negative squared error for x-&gt;2x mapping
 const fitness = (net: any) =&gt; {
-    const out = net.activate([1])[0];
-    return -Math.pow(out - 2, 2);
+  const out = net.activate([1])[0];
+  return -Math.pow(out - 2, 2);
 };
 
 const neat = new Neat(1, 1, fitness, { popsize: 30, fastMode: true });
 
 async function run() {
-    await neat.evaluate();
-    await neat.evolve();
-    console.log(&#39;best&#39;, neat.getBest());
+  await neat.evaluate();
+  await neat.evolve();
+  console.log(&#39;best&#39;, neat.getBest());
 }
 
 run();
@@ -146,19 +146,19 @@ run();
 <p>Documentation &amp; API</p>
 <ul>
 <li>The <code>docs/</code> folder contains rendered HTML pages (generated from the same READMEs) for
-  browsing locally or publishing as static pages. See <code>docs/index.html</code>.</li>
+browsing locally or publishing as static pages. See <code>docs/index.html</code>.</li>
 <li>Per-file and per-folder API summaries are kept inside <code>src/*/README.md</code> and are regenerated
-  using the JSDoc comments in the TypeScript sources. Run <code>npm run docs</code> to refresh them.</li>
+using the JSDoc comments in the TypeScript sources. Run <code>npm run docs</code> to refresh them.</li>
 </ul>
 <h2 id="note-about-helper-apis">Note about helper APIs</h2><p>The <code>Neat</code> class exposes two small helpers intended for safe programmatic genome
 management:</p>
 <ul>
 <li><code>spawnFromParent(parent, mutateCount?)</code> — clone a single parent, apply a small
-  number of mutations, and preserve lineage fields. The function returns an
-  unregistered child (it does NOT add the child to <code>neat.population</code>).</li>
+number of mutations, and preserve lineage fields. The function returns an
+unregistered child (it does NOT add the child to <code>neat.population</code>).</li>
 <li><code>addGenome(genome, parents?)</code> — register an externally created genome into the
-  population while assigning <code>_id</code>, estimating <code>_depth</code> from provided parents,
-  enforcing structural invariants, and invalidating caches.</li>
+population while assigning <code>_id</code>, estimating <code>_depth</code> from provided parents,
+enforcing structural invariants, and invalidating caches.</li>
 </ul>
 <p>These helpers are documented inline via JSDoc in <code>src/neat.ts</code>; keep those
 comments updated so the generated per-folder READMEs and HTML docs include the
@@ -170,10 +170,10 @@ generated per-folder READMEs for the <code>Neat</code>, <code>Network</code>, an
 <p>Contributing</p>
 <ul>
 <li>This is a public, educational project. Contributions that improve clarity, add examples,
-  or simplify the learning path are especially welcome.</li>
+or simplify the learning path are especially welcome.</li>
 <li>Please follow the repository&#39;s coding conventions and include tests for behavioral changes.</li>
 <li>For docs changes, update JSDoc comments in <code>src/</code> and run <code>npm run docs</code> to regenerate the
-  markdown/html outputs.</li>
+markdown/html outputs.</li>
 </ul>
 <p>License</p>
 <p>This project is released under the MIT License — see the <code>LICENSE</code> file.</p>
@@ -253,20 +253,20 @@ and small example additions for educational clarity.</p>
 </ol>
 <h3 id="determinism-caveat">Determinism Caveat</h3><p>Parallel evaluation introduces nondeterministic ordering of floating-point accumulation if your cost function is stateful. For strict reproducibility benchmark with <code>threads=1</code>.</p>
 <h3 id="example-minimal-perf-config">Example Minimal Perf Config</h3><pre><code class="language-ts">const neat = new Neat(inputs, outputs, fitness, {
-    popsize: 120,
-    threads: 8,
-    telemetry:{ enabled:true, performance:true },
-    telemetrySelect:[&#39;performance&#39;,&#39;complexity&#39;],
-    adaptiveMutation:{ enabled:true, strategy:&#39;twoTier&#39; },
-    fastMode:true
+  popsize: 120,
+  threads: 8,
+  telemetry: { enabled: true, performance: true },
+  telemetrySelect: [&#39;performance&#39;, &#39;complexity&#39;],
+  adaptiveMutation: { enabled: true, strategy: &#39;twoTier&#39; },
+  fastMode: true,
 });
 </code></pre>
 <p>Monitor <code>getTelemetry().slice(-1)[0].perf</code> for current timings.</p>
 <h3 id="memory-optimizations-activation-pooling-precision">Memory Optimizations (Activation Pooling &amp; Precision)</h3><p><code>Network</code> constructor now accepts:</p>
 <pre><code class="language-ts">new Network(input, output, {
-    activationPrecision: &#39;f32&#39;,          // default &#39;f64&#39;; use float32 activations
-    reuseActivationArrays: true,         // reuse a pooled output buffer each forward pass
-    returnTypedActivations: true         // return the pooled Float32Array/Float64Array directly (no Array clone)
+  activationPrecision: &#39;f32&#39;, // default &#39;f64&#39;; use float32 activations
+  reuseActivationArrays: true, // reuse a pooled output buffer each forward pass
+  returnTypedActivations: true, // return the pooled Float32Array/Float64Array directly (no Array clone)
 });
 </code></pre>
 <p>Guidelines:</p>
@@ -289,8 +289,8 @@ and small example additions for educational clarity.</p>
 <p>Intended Usage:</p>
 <pre><code class="language-ts">import { config } from &#39;neataptic&#39;;
 config.deterministicChainMode = true; // enable
-const net = new Network(1,1);
-for (let i=0;i&lt;5;i++) net.mutate(methods.mutation.ADD_NODE); // guaranteed 5 hidden chain
+const net = new Network(1, 1);
+for (let i = 0; i &lt; 5; i++) net.mutate(methods.mutation.ADD_NODE); // guaranteed 5 hidden chain
 config.deterministicChainMode = false; // restore (recommended)
 </code></pre>
 <p>Rationale:
@@ -333,9 +333,14 @@ Normal evolutionary heuristics are stochastic and may add branches; some legacy 
 </ul>
 <h3 id="multi-objective-usage">Multi-Objective Usage</h3><p>Default objectives (if <code>multiObjective.enabled</code>): maximize fitness (your score) + minimize complexity (<code>nodes</code> or <code>connections</code>).</p>
 <p>Register additional objectives at runtime:</p>
-<pre><code class="language-ts">const neat = new Neat(4,2, fitnessFn, { popsize: 50, multiObjective:{ enabled:true, complexityMetric:&#39;nodes&#39; } });
+<pre><code class="language-ts">const neat = new Neat(4, 2, fitnessFn, {
+  popsize: 50,
+  multiObjective: { enabled: true, complexityMetric: &#39;nodes&#39; },
+});
 // Add structural entropy (maximize)
-neat.registerObjective(&#39;entropy&#39;,&#39;max&#39;, g =&gt; (neat as any)._structuralEntropy(g));
+neat.registerObjective(&#39;entropy&#39;, &#39;max&#39;, (g) =&gt;
+  (neat as any)._structuralEntropy(g)
+);
 await neat.evaluate();
 await neat.evolve();
 console.log(neat.getObjectives()); // [{key:&#39;fitness&#39;,...},{key:&#39;complexity&#39;,...},{key:&#39;entropy&#39;,...}]
@@ -351,7 +356,9 @@ const fronts = neat.getParetoFronts(); // Array&lt;Network[]&gt; for leading fro
 <pre><code class="language-ts">neat.getTelemetry().slice(-1)[0]; // { gen, best, species, hyper, fronts:[f0,f1,...] }
 </code></pre>
 <p>Enable complexity + hypervolume fields:</p>
-<pre><code class="language-ts">const neat = new Neat(4,2, fit, { telemetry:{ enabled:true, complexity:true, hypervolume:true } });
+<pre><code class="language-ts">const neat = new Neat(4, 2, fit, {
+  telemetry: { enabled: true, complexity: true, hypervolume: true },
+});
 await neat.evolve();
 console.log(neat.getTelemetry().slice(-1)[0].complexity); // { meanNodes, meanConns, ... }
 </code></pre>
@@ -371,7 +378,35 @@ console.log(neat.getTelemetry().slice(-1)[0].complexity); // { meanNodes, meanCo
 </code></pre>
 <p>Linear schedule alternative: set <code>mode:&#39;linear&#39;</code> and optionally <code>horizon</code> (generations) to interpolate from <code>maxNodesStart</code> to <code>maxNodesEnd</code>.</p>
 <h3 id="species-extended-history">Species Extended History</h3><p>If <code>speciesAllocation.extendedHistory:true</code>, each generation stores per-species stats:</p>
-<pre><code class="language-ts">[{ generation, stats:[ { id, size, best, lastImproved, age, meanNodes, meanConns, meanScore, meanNovelty, meanCompat, meanEntropy, varNodes, varConns, deltaMeanNodes, deltaMeanConns, deltaBestScore, turnoverRate, meanInnovation, innovationRange, enabledRatio } ] }]
+<pre><code class="language-ts">[
+  {
+    generation,
+    stats: [
+      {
+        id,
+        size,
+        best,
+        lastImproved,
+        age,
+        meanNodes,
+        meanConns,
+        meanScore,
+        meanNovelty,
+        meanCompat,
+        meanEntropy,
+        varNodes,
+        varConns,
+        deltaMeanNodes,
+        deltaMeanConns,
+        deltaBestScore,
+        turnoverRate,
+        meanInnovation,
+        innovationRange,
+        enabledRatio,
+      },
+    ],
+  },
+];
 </code></pre>
 <p>Key new fields:</p>
 <ul>
@@ -416,11 +451,14 @@ console.log(neat.getTelemetry().slice(-1)[0].complexity); // { meanNodes, meanCo
 </ul>
 <p>Use this to keep the Pareto sorter focused on informative axes.</p>
 <h3 id="fast-mode-auto-tuning">Fast Mode Auto-Tuning</h3><p>When iterating quickly or running inside tests you can set <code>fastMode:true</code> to scale down expensive sampling defaults:</p>
-<pre><code class="language-ts">const neat = new Neat(8,3, fitFn, {
-    popsize: 80,
-    fastMode: true,
-    diversityMetrics:{ enabled:true }, // pairSample / graphletSample auto-lowered
-    novelty:{ enabled:true, descriptor: g=&gt;[g.nodes.length,g.connections.length] } // k auto-lowered if not explicitly set
+<pre><code class="language-ts">const neat = new Neat(8, 3, fitFn, {
+  popsize: 80,
+  fastMode: true,
+  diversityMetrics: { enabled: true }, // pairSample / graphletSample auto-lowered
+  novelty: {
+    enabled: true,
+    descriptor: (g) =&gt; [g.nodes.length, g.connections.length],
+  }, // k auto-lowered if not explicitly set
 });
 </code></pre>
 <p>Auto adjustments (only if corresponding option fields are undefined):</p>
@@ -458,7 +496,7 @@ Telemetry <code>lineage</code> block now also includes:</li>
 </ul>
 <p>Runs after evaluation/speciation before sorting so it integrates with all other mechanisms.</p>
 <h3 id="rng-state-snapshot-reproducibility">RNG State Snapshot &amp; Reproducibility</h3><p>When a numeric <code>seed</code> is provided, a fast deterministic PRNG drives stochastic choices. You can snapshot/restore mid-run:</p>
-<pre><code class="language-ts">const neat = new Neat(3,1, fit, { seed:1234 });
+<pre><code class="language-ts">const neat = new Neat(3, 1, fit, { seed: 1234 });
 await neat.evolve();
 const snap = neat.snapshotRNGState(); // { state }
 // ... later
@@ -466,7 +504,7 @@ neat.restoreRNGState(snap);
 // Serialize
 const json = neat.exportRNGState();
 // New instance (even without seed) can resume deterministic sequence
-const neat2 = new Neat(3,1, fit, {});
+const neat2 = new Neat(3, 1, fit, {});
 neat2.importRNGState(json);
 </code></pre>
 <p>Restoring installs the internal deterministic generator if it wasn&#39;t active.</p>
@@ -485,11 +523,22 @@ neat2.importRNGState(json);
 <li><code>objEvents</code>: array of <code>{ type:&#39;add&#39;|&#39;remove&#39;, key }</code> describing objective lifecycle changes that occurred for that generation (emitted when dynamic scheduling or pruning alters the active set).</li>
 </ul>
 <p>Example:</p>
-<pre><code class="language-ts">const neat = new Neat(4,2, fit, { popsize:40, multiObjective:{ enabled:true, autoEntropy:true, dynamic:{ enabled:true, addComplexityAt:2, addEntropyAt:5 } }, telemetry:{ enabled:true } });
-for (let g=0; g&lt;10; g++) { await neat.evaluate(); await neat.evolve(); }
+<pre><code class="language-ts">const neat = new Neat(4, 2, fit, {
+  popsize: 40,
+  multiObjective: {
+    enabled: true,
+    autoEntropy: true,
+    dynamic: { enabled: true, addComplexityAt: 2, addEntropyAt: 5 },
+  },
+  telemetry: { enabled: true },
+});
+for (let g = 0; g &lt; 10; g++) {
+  await neat.evaluate();
+  await neat.evolve();
+}
 const last = neat.getTelemetry().slice(-1)[0];
 console.log(last.objectives); // [&#39;fitness&#39;,&#39;complexity&#39;,&#39;entropy&#39;]
-console.log(last.objAges);    // { fitness:10, complexity:9, entropy:5 }
+console.log(last.objAges); // { fitness:10, complexity:9, entropy:5 }
 console.log(last.speciesAlloc); // [{ id:1, alloc:7 }, { id:2, alloc:6 }, ...]
 </code></pre>
 <h3 id="csv-export-columns-extended">CSV Export Columns (Extended)</h3><p><code>exportTelemetryCSV()</code> now conditionally includes the following columns when present:</p>
@@ -567,17 +616,38 @@ const neat = new Neat(2, 1, fitnessFn, { popsize: 50, minHidden: 5 });
 <li>Gradient improvements: per-call gradient clipping (global / layerwise, norm or percentile), micro-batch gradient accumulation (<code>accumulationSteps</code>) independent of data <code>batchSize</code>, optional mixed precision (loss-scaled with dynamic scaling) training.</li>
 </ul>
 <h3 id="gradient-improvements">Gradient Improvements</h3><p>Gradient clipping (optional):</p>
-<pre><code class="language-ts">net.train(data, { iterations:500, rate:0.01, optimizer:&#39;adam&#39;, gradientClip:{ mode:&#39;norm&#39;, maxNorm:1 } });
-net.train(data, { iterations:500, rate:0.01, optimizer:&#39;adam&#39;, gradientClip:{ mode:&#39;percentile&#39;, percentile:99 } });
+<pre><code class="language-ts">net.train(data, {
+  iterations: 500,
+  rate: 0.01,
+  optimizer: &#39;adam&#39;,
+  gradientClip: { mode: &#39;norm&#39;, maxNorm: 1 },
+});
+net.train(data, {
+  iterations: 500,
+  rate: 0.01,
+  optimizer: &#39;adam&#39;,
+  gradientClip: { mode: &#39;percentile&#39;, percentile: 99 },
+});
 // Layerwise variants: &#39;layerwiseNorm&#39; | &#39;layerwisePercentile&#39;
 </code></pre>
 <p>Micro-batch accumulation (simulate larger effective batch without increasing memory):</p>
 <pre><code class="language-ts">// Process 1 sample at a time, accumulate 8 micro-batches, then apply one optimizer step
-net.train(data, { iterations:100, rate:0.005, batchSize:1, accumulationSteps:8, optimizer:&#39;adam&#39; });
+net.train(data, {
+  iterations: 100,
+  rate: 0.005,
+  batchSize: 1,
+  accumulationSteps: 8,
+  optimizer: &#39;adam&#39;,
+});
 </code></pre>
 <p>If <code>accumulationSteps &gt; 1</code>, gradients are averaged before the optimizer step so results match a single larger batch (deterministic given same sample order).</p>
 <p>Mixed precision (simulated FP16 gradients with FP32 master weights + dynamic loss scaling):</p>
-<pre><code class="language-ts">net.train(data, { iterations:300, rate:0.01, optimizer:&#39;adam&#39;, mixedPrecision:{ lossScale:1024 } });
+<pre><code class="language-ts">net.train(data, {
+  iterations: 300,
+  rate: 0.01,
+  optimizer: &#39;adam&#39;,
+  mixedPrecision: { lossScale: 1024 },
+});
 </code></pre>
 <p>Behavior:</p>
 <ul>
@@ -634,12 +704,16 @@ net.train(data, { iterations:100, rate:0.005, batchSize:1, accumulationSteps:8, 
 <li>Overflow telemetry: during mixed precision training, <code>overflowCount</code> increments on detected NaN/Inf when unscaling gradients; <code>scaleUps</code> / <code>scaleDowns</code> count dynamic loss scale adjustments.</li>
 </ul>
 <h3 id="learning-rate-scheduler-usage">Learning Rate Scheduler Usage</h3><pre><code class="language-ts">import methods from &#39;./src/methods/methods&#39;;
-const net = new Network(2,1);
+const net = new Network(2, 1);
 const ratePolicy = methods.Rate.cosineAnnealingWarmRestarts(200, 1e-5, 2);
 net.train(data, { iterations: 1000, rate: 0.1, ratePolicy });
 </code></pre>
 <p>Reduce-on-plateau automatically receives current error because <code>train</code> detects a 3-arg scheduler:</p>
-<pre><code class="language-ts">const rop = methods.Rate.reduceOnPlateau({ patience: 20, factor: 0.5, minRate: 1e-5 });
+<pre><code class="language-ts">const rop = methods.Rate.reduceOnPlateau({
+  patience: 20,
+  factor: 0.5,
+  minRate: 1e-5,
+});
 net.train(data, { iterations: 5000, rate: 0.05, ratePolicy: rop });
 </code></pre>
 <h4 id="early-stopping-extensions">Early Stopping Extensions</h4><p>You can enable moving-average smoothing and independent early-stop patience separate from any scheduler plateau logic. You can also give the learning-rate scheduler (e.g. reduce-on-plateau) its OWN smoothing configuration if you want it to react differently than early stopping:</p>
@@ -801,27 +875,34 @@ Smoothing types (set <code>movingAverageType</code>):</p>
 <pre><code class="language-ts">import methods from &#39;./src/methods/methods&#39;;
 
 const warmup = methods.Rate.linearWarmupDecay(500, 100, 0.1); // only use warmup phase portion
-const plateau = methods.Rate.reduceOnPlateau({ patience: 15, factor: 0.5, minRate: 1e-5 });
+const plateau = methods.Rate.reduceOnPlateau({
+  patience: 15,
+  factor: 0.5,
+  minRate: 1e-5,
+});
 
 // Hybrid policy: first 100 steps use linear ramp; afterward delegate to plateau (needs error)
 const hybrid = (base: number, t: number, err?: number) =&gt; {
-    if (t &lt;= 100) return warmup(base, t); // ignore decay tail by cutting early
-    // plateau expects error (3-arg); train will pass it because we define length &gt;= 3 when we use &#39;err&#39;
-    return plateau(base, t - 100, err!); // shift iteration so plateau&#39;s patience focuses on post-warmup
+  if (t &lt;= 100) return warmup(base, t); // ignore decay tail by cutting early
+  // plateau expects error (3-arg); train will pass it because we define length &gt;= 3 when we use &#39;err&#39;
+  return plateau(base, t - 100, err!); // shift iteration so plateau&#39;s patience focuses on post-warmup
 };
 
 net.train(data, { iterations: 2000, rate: 0.05, ratePolicy: hybrid });
 </code></pre>
 <p>For more elaborate chaining (e.g., staged cosine cycles then plateau), follow the same pattern: evaluate <code>t</code>, decide which inner policy to call, adjust <code>t</code> relative to that stage, and pass along <code>error</code> if the target policy needs it.</p>
 <h3 id="metrics-hook-checkpoints">Metrics Hook &amp; Checkpoints</h3><pre><code class="language-ts">net.train(data, {
-    iterations: 800,
-    rate: 0.05,
-    metricsHook: ({ iteration, error, gradNorm }) =&gt; console.log(iteration, error, gradNorm),
-    checkpoint: {
-        best: true,
-        last: true,
-        save: ({ type, iteration, error, network }) =&gt; {/* persist */}
-    }
+  iterations: 800,
+  rate: 0.05,
+  metricsHook: ({ iteration, error, gradNorm }) =&gt;
+    console.log(iteration, error, gradNorm),
+  checkpoint: {
+    best: true,
+    last: true,
+    save: ({ type, iteration, error, network }) =&gt; {
+      /* persist */
+    },
+  },
 });
 </code></pre>
 <h3 id="dropconnect">DropConnect</h3><pre><code class="language-ts">net.enableDropConnect(0.3);
@@ -834,31 +915,57 @@ net.disableDropConnect();
 </code></pre>
 <p>Custom AdamW:</p>
 <pre><code class="language-ts">net.train(data, {
-    iterations: 500,
-    rate: 0.005,
-    optimizer: { type: &#39;adamw&#39;, beta1: 0.9, beta2: 0.999, eps: 1e-8, weightDecay: 0.01 }
+  iterations: 500,
+  rate: 0.005,
+  optimizer: {
+    type: &#39;adamw&#39;,
+    beta1: 0.9,
+    beta2: 0.999,
+    eps: 1e-8,
+    weightDecay: 0.01,
+  },
 });
 </code></pre>
 <p>Lion (sign-based update):</p>
-<pre><code class="language-ts">net.train(data, { iterations: 300, rate: 0.001, optimizer: { type: &#39;lion&#39;, beta1: 0.9, beta2: 0.99 } });
+<pre><code class="language-ts">net.train(data, {
+  iterations: 300,
+  rate: 0.001,
+  optimizer: { type: &#39;lion&#39;, beta1: 0.9, beta2: 0.99 },
+});
 </code></pre>
 <p>Adamax (robust to sparse large gradients):</p>
-<pre><code class="language-ts">net.train(data, { iterations: 300, rate: 0.002, optimizer: { type: &#39;adamax&#39;, beta1: 0.9, beta2: 0.999 } });
+<pre><code class="language-ts">net.train(data, {
+  iterations: 300,
+  rate: 0.002,
+  optimizer: { type: &#39;adamax&#39;, beta1: 0.9, beta2: 0.999 },
+});
 </code></pre>
 <p>NAdam (Nesterov momentum style lookahead on first moment):</p>
-<pre><code class="language-ts">net.train(data, { iterations: 300, rate: 0.001, optimizer: { type: &#39;nadam&#39;, beta1: 0.9, beta2: 0.999 } });
+<pre><code class="language-ts">net.train(data, {
+  iterations: 300,
+  rate: 0.001,
+  optimizer: { type: &#39;nadam&#39;, beta1: 0.9, beta2: 0.999 },
+});
 </code></pre>
 <p>RAdam (more stable early training variance):</p>
-<pre><code class="language-ts">net.train(data, { iterations: 300, rate: 0.001, optimizer: { type: &#39;radam&#39;, beta1: 0.9, beta2: 0.999 } });
+<pre><code class="language-ts">net.train(data, {
+  iterations: 300,
+  rate: 0.001,
+  optimizer: { type: &#39;radam&#39;, beta1: 0.9, beta2: 0.999 },
+});
 </code></pre>
 <p>AdaBelief (faster convergence / better generalization via surprise-based variance):</p>
-<pre><code class="language-ts">net.train(data, { iterations: 300, rate: 0.001, optimizer: { type: &#39;adabelief&#39;, beta1: 0.9, beta2: 0.999 } });
+<pre><code class="language-ts">net.train(data, {
+  iterations: 300,
+  rate: 0.001,
+  optimizer: { type: &#39;adabelief&#39;, beta1: 0.9, beta2: 0.999 },
+});
 </code></pre>
 <p>Lookahead (wraps a base optimizer; performs k fast steps then interpolates):</p>
 <pre><code class="language-ts">net.train(data, {
-    iterations: 400,
-    rate: 0.01,
-    optimizer: { type: &#39;lookahead&#39;, baseType: &#39;adam&#39;, la_k: 5, la_alpha: 0.5 }
+  iterations: 400,
+  rate: 0.01,
+  optimizer: { type: &#39;lookahead&#39;, baseType: &#39;adam&#39;, la_k: 5, la_alpha: 0.5 },
 });
 </code></pre>
 <p>Optimizer reference:</p>
@@ -944,12 +1051,12 @@ net.disableDropConnect();
 </ul>
 <h3 id="label-smoothing">Label Smoothing</h3><p>Cross-entropy with label smoothing discourages over-confident predictions.</p>
 <pre><code class="language-ts">import methods from &#39;./src/methods/methods&#39;;
-const loss = methods.Cost.labelSmoothing([1,0,0],[0.8,0.1,0.1],0.1);
+const loss = methods.Cost.labelSmoothing([1, 0, 0], [0.8, 0.1, 0.1], 0.1);
 </code></pre>
 <h3 id="weight-noise">Weight Noise</h3><p>Adds zero-mean Gaussian noise to weights on each <em>training</em> forward pass (inference unaffected). Original weights are restored immediately after the pass (noise is ephemeral / non-destructive).</p>
 <p>Basic usage:</p>
 <pre><code class="language-ts">net.enableWeightNoise(0.05); // global stdDev = 0.05
-net.train(data, { iterations: 100, rate:0.05 });
+net.train(data, { iterations: 100, rate: 0.05 });
 net.disableWeightNoise();
 </code></pre>
 <p>Per-hidden-layer std deviations (layered networks only):</p>
@@ -958,7 +1065,7 @@ layered.enableWeightNoise({ perHiddenLayer: [0.05, 0.02, 0.0] }); // third hidde
 </code></pre>
 <p>Dynamic schedule (e.g. cosine decay) for global std:</p>
 <pre><code class="language-ts">net.enableWeightNoise(0.1); // initial value (will be overridden by schedule each step)
-net.setWeightNoiseSchedule(step =&gt; 0.1 * Math.cos(step / 500));
+net.setWeightNoiseSchedule((step) =&gt; 0.1 * Math.cos(step / 500));
 </code></pre>
 <p>Deterministic seeding / custom RNG (affects dropout, dropconnect, stochastic depth, weight noise sampling):</p>
 <pre><code class="language-ts">net.setSeed(42); // reproducible stochastic regularization
@@ -971,7 +1078,7 @@ net.setRandom(() =&gt; myDeterministicGenerator.next());
 <li>Global training forward pass count: <code>net.trainingStep</code>.</li>
 <li>Last skipped layers (stochastic depth): <code>net.lastSkippedLayers</code>.</li>
 <li>Regularization statistics (after any forward): <code>net.getRegularizationStats()</code> returns
-  <code>{ droppedHiddenNodes, totalHiddenNodes, droppedConnections, totalConnections, skippedLayers, weightNoise: { count, sumAbs, maxAbs, meanAbs } }</code>.</li>
+<code>{ droppedHiddenNodes, totalHiddenNodes, droppedConnections, totalConnections, skippedLayers, weightNoise: { count, sumAbs, maxAbs, meanAbs } }</code>.</li>
 <li>To combine with DropConnect / Dropout the sampling is independent (noise applied before masking).</li>
 </ul>
 <p>Gotchas:</p>
@@ -980,10 +1087,10 @@ net.setRandom(() =&gt; myDeterministicGenerator.next());
 <li>Very large noise (&gt; weight scale) can destabilize gradients; start small (e.g. 1-10% of typical weight magnitude).</li>
 </ul>
 <h3 id="stochastic-depth-layer-drop">Stochastic Depth (Layer Drop)</h3><p>Randomly skip (drop) entire hidden layers during training for deeper layered networks to reduce effective depth and encourage resilient representations.</p>
-<pre><code class="language-ts">const deep = Architect.perceptron(8,16,16,16,4,2); // input + 4 hidden + output
+<pre><code class="language-ts">const deep = Architect.perceptron(8, 16, 16, 16, 4, 2); // input + 4 hidden + output
 deep.setSeed(123); // reproducible skipping
-deep.setStochasticDepth([0.9,0.85,0.8,0.75]); // survival probabilities per hidden layer
-deep.train(data, { iterations:500, rate:0.01 });
+deep.setStochasticDepth([0.9, 0.85, 0.8, 0.75]); // survival probabilities per hidden layer
+deep.train(data, { iterations: 500, rate: 0.01 });
 deep.disableStochasticDepth(); // inference uses full depth
 </code></pre>
 <p>Runtime info:</p>
@@ -1002,16 +1109,18 @@ deep.disableStochasticDepth(); // inference uses full depth
 </ul>
 <p>Example combining schedule + stats capture:</p>
 <pre><code class="language-ts">deep.setSeed(2025);
-deep.setStochasticDepth([0.9,0.85,0.8]);
-deep.setStochasticDepthSchedule((step, probs) =&gt; probs.map(p =&gt; Math.max(0.7, p - 0.0001*step)));
-for (let i=0;i&lt;10;i++) {
-    deep.activate(sampleInput, true);
-    console.log(deep.getRegularizationStats());
+deep.setStochasticDepth([0.9, 0.85, 0.8]);
+deep.setStochasticDepthSchedule((step, probs) =&gt;
+  probs.map((p) =&gt; Math.max(0.7, p - 0.0001 * step))
+);
+for (let i = 0; i &lt; 10; i++) {
+  deep.activate(sampleInput, true);
+  console.log(deep.getRegularizationStats());
 }
 </code></pre>
 <h3 id="dropconnect-recap">DropConnect (recap)</h3><p>Already supported: randomly drops individual connections per training pass.</p>
 <pre><code class="language-ts">net.enableDropConnect(0.2);
-net.train(data, { iterations:200, rate:0.02 });
+net.train(data, { iterations: 200, rate: 0.02 });
 net.disableDropConnect();
 </code></pre>
 <h2 id="architecture-evolution">Architecture &amp; Evolution</h2><pre><code>Structural pruning: magnitude-based &amp; SNIP-style (|w * grad| saliency) prune+optional regrow, scheduled window.
@@ -1029,12 +1138,12 @@ Re-enable probability is controlled by <code>reenableProb</code> (default 0.25).
 </ul>
 <p>SNIP usage example:</p>
 <pre><code class="language-ts">net.configurePruning({
-    start: 100,
-    end: 1000,
-    targetSparsity: 0.8,
-    frequency: 10,
-    regrowFraction: 0.1,
-    method: &#39;snip&#39; // use saliency |w * grad|, falls back to |w| if no grad yet
+  start: 100,
+  end: 1000,
+  targetSparsity: 0.8,
+  frequency: 10,
+  regrowFraction: 0.1,
+  method: &#39;snip&#39;, // use saliency |w * grad|, falls back to |w| if no grad yet
 });
 </code></pre>
 <p>Notes:</p>
@@ -1145,162 +1254,59 @@ Re-enable probability is controlled by <code>reenableProb</code> (default 0.25).
 </tr>
 </tbody></table>
 <h3 id="advanced-evolution-extensions">Advanced Evolution Extensions</h3><p>The TypeScript refactor adds several research-grade evolutionary controls. All are optional and off unless noted.</p>
-<table>
-<thead>
-<tr>
-<th>Option Group</th>
-<th>Key Fields</th>
-<th>Purpose / Behavior</th>
-<th>Default</th>
-</tr>
-</thead>
-<tbody><tr>
-<td><code>adaptiveMutation</code></td>
-<td><code>{ enabled, initialRate, sigma, minRate, maxRate, adaptAmount, amountSigma, strategy, adaptEvery }</code></td>
-<td>Enhanced per-genome adaptive mutation; strategies: twoTier (top half down, bottom up), exploreLow (boost weakest), anneal (global decay); optional simultaneous adaptation of mutation amount.</td>
-<td>disabled</td>
-</tr>
-<tr>
-<td><code>novelty</code></td>
-<td><code>{ descriptor(g), k, addThreshold, archiveLimit, blendFactor }</code></td>
-<td>Novelty search scaffold blending kNN novelty with fitness; maintains archive</td>
-<td>disabled</td>
-</tr>
-<tr>
-<td><code>speciesAgeBonus</code></td>
-<td><code>{ youngGenerations, youngMultiplier, oldGenerations, oldPenalty }</code></td>
-<td>Temporary boost for young species, penalty for very old</td>
-<td><code>{ youngGenerations:5, youngMultiplier:1.2, oldGenerations:30, oldPenalty:0.3 }</code></td>
-</tr>
-<tr>
-<td><code>speciesAgeProtection</code></td>
-<td><code>{ grace, oldPenalty }</code></td>
-<td>Protect very young species from early elimination; apply fitness scale to very old</td>
-<td><code>{ grace:3, oldPenalty:0.5 }</code></td>
-</tr>
-<tr>
-<td><code>crossSpeciesMatingProb</code></td>
-<td>number</td>
-<td>Chance to select second parent from another species (maintains diversity)</td>
-<td>0</td>
-</tr>
-<tr>
-<td><code>adaptiveSharing</code></td>
-<td><code>{ enabled, targetFragmentation, adjustStep, minSigma, maxSigma }</code></td>
-<td>Auto-adjust kernel fitness sharing <code>sharingSigma</code> toward target fragmentation (#species/pop)</td>
-<td>disabled</td>
-</tr>
-<tr>
-<td><code>minimalCriterion</code></td>
-<td><code>(network)=&gt;boolean</code></td>
-<td>Filters genomes prior to speciation; failing genomes get score 0 (minimal criterion novelty style)</td>
-<td>undefined</td>
-</tr>
-<tr>
-<td><code>operatorAdaptation</code></td>
-<td><code>{ enabled, window, boost, decay }</code></td>
-<td>Tracks mutation operator success; weights selection probability by recent success</td>
-<td>disabled</td>
-</tr>
-<tr>
-<td><code>phasedComplexity</code></td>
-<td><code>{ enabled, phaseLength, simplifyFraction }</code></td>
-<td>Alternates complexify vs simplify phases; simplify prunes fraction of weakest connections</td>
-<td>disabled</td>
-</tr>
-<tr>
-<td><code>complexityBudget</code></td>
-<td><code>{ enabled, maxNodesStart, maxNodesEnd, horizon }</code></td>
-<td>Linear schedule for max allowed nodes; prevents premature bloat</td>
-<td>disabled</td>
-</tr>
-<tr>
-<td><code>multiObjective</code></td>
-<td><code>{ enabled, complexityMetric }</code></td>
-<td>Pareto non-dominated sorting (fitness maximize, complexity minimize). <code>complexityMetric</code>=`&#39;nodes&#39;</td>
-<td>&#39;connections&#39;`</td>
-</tr>
-<tr>
-<td><code>reenableProb</code> (adaptive)</td>
-<td>(base option)</td>
-<td>Disabled gene reactivation probability; internally adaptively adjusted based on success when adaptive features on</td>
-<td>0.25</td>
-</tr>
-<tr>
-<td><code>diversityPressure</code></td>
-<td><code>{ enabled, motifSample, penaltyStrength }</code></td>
-<td>Penalizes over-represented small connection motif signatures to promote structural variety</td>
-<td>disabled</td>
-</tr>
-<tr>
-<td><code>autoCompatTuning</code></td>
-<td><code>{ enabled, target, adjustRate, minCoeff, maxCoeff }</code></td>
-<td>Automatically scales excess/disjoint coefficients to approach target species count</td>
-<td>disabled</td>
-</tr>
-<tr>
-<td><code>speciesAllocation</code></td>
-<td><code>{ minOffspring, extendedHistory }</code></td>
-<td>Guarantees minimum offspring per species (if capacity) and optionally records extended per-species metrics (compatibility, mean complexity, novelty)</td>
-<td><code>{ minOffspring:1, extendedHistory:true }</code></td>
-</tr>
-<tr>
-<td><code>minimalCriterionAdaptive</code></td>
-<td><code>{ enabled, initialThreshold, targetAcceptance, adjustRate, metric }</code></td>
-<td>Dynamically adjusts acceptance threshold to maintain target pass rate before fitness ranking</td>
-<td>disabled</td>
-</tr>
-<tr>
-<td><code>complexityBudget</code> (adaptive)</td>
-<td><code>{ enabled, mode:&#39;adaptive&#39;, maxNodesStart, maxNodesEnd, improvementWindow, increaseFactor, stagnationFactor, maxConnsStart, maxConnsEnd }</code></td>
-<td>Adaptive complexity caps grow on improvement, shrink on stagnation</td>
-<td>disabled</td>
-</tr>
-<tr>
-<td><code>operatorBandit</code></td>
-<td><code>{ enabled, c, minAttempts }</code></td>
-<td>UCB1-style multi-armed bandit weighting for mutation operator selection</td>
-<td>disabled</td>
-</tr>
-<tr>
-<td><code>novelty.pruneStrategy</code></td>
-<td>`&#39;fifo&#39;</td>
-<td>&#39;sparse&#39;`</td>
-<td>Sparse pruning removes closest archive pair iteratively to keep diversity</td>
-</tr>
-<tr>
-<td><code>telemetry</code></td>
-<td><code>{ enabled, logEvery, performance, complexity, hypervolume, rngState }</code></td>
-<td>Per-generation summary: base { gen,best,species,hyper,fronts }; optional perf timings, complexity block, hv scalar; if <code>lineageTracking</code> then <code>lineage:{ parents, depthBest, meanDepth, inbreeding, ancestorUniq }</code>; <code>rngState</code> embeds deterministic PRNG state (seeded runs)</td>
-<td>disabled</td>
-</tr>
-<tr>
-<td><code>lineageTracking</code></td>
-<td><code>boolean</code></td>
-<td>Track parent genome ids &amp; depth; adds <code>_parents</code>/<code>_depth</code> on genomes and enriched telemetry lineage block</td>
-<td>true</td>
-</tr>
-<tr>
-<td><code>multiObjective.autoEntropy</code></td>
-<td><code>boolean</code></td>
-<td>Automatically append entropy (structure diversity proxy) objective (maximize)</td>
-<td>false</td>
-</tr>
-<tr>
-<td><code>multiObjective.dynamic</code></td>
-<td><code>{ enabled, addComplexityAt, addEntropyAt, dropEntropyOnStagnation, readdEntropyAfter }</code></td>
-<td>Dynamic scheduling of complexity/entropy objectives: delay adding complexity &amp; entropy to let pure fitness search early; temporarily drop entropy during stagnation then re-add after cooldown.</td>
-<td>disabled</td>
-</tr>
-</tbody></table>
+<p>| Option Group                  | Key Fields                                                                                                                                  | Purpose / Behavior                                                                                                                                                                                                                                                            | Default                                                                          |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- | -------- |
+| <code>adaptiveMutation</code>            | <code>{ enabled, initialRate, sigma, minRate, maxRate, adaptAmount, amountSigma, strategy, adaptEvery }</code>                                         | Enhanced per-genome adaptive mutation; strategies: twoTier (top half down, bottom up), exploreLow (boost weakest), anneal (global decay); optional simultaneous adaptation of mutation amount.                                                                                | disabled                                                                         |
+| <code>novelty</code>                     | <code>{ descriptor(g), k, addThreshold, archiveLimit, blendFactor }</code>                                                                             | Novelty search scaffold blending kNN novelty with fitness; maintains archive                                                                                                                                                                                                  | disabled                                                                         |
+| <code>speciesAgeBonus</code>             | <code>{ youngGenerations, youngMultiplier, oldGenerations, oldPenalty }</code>                                                                         | Temporary boost for young species, penalty for very old                                                                                                                                                                                                                       | <code>{ youngGenerations:5, youngMultiplier:1.2, oldGenerations:30, oldPenalty:0.3 }</code> |
+| <code>speciesAgeProtection</code>        | <code>{ grace, oldPenalty }</code>                                                                                                                     | Protect very young species from early elimination; apply fitness scale to very old                                                                                                                                                                                            | <code>{ grace:3, oldPenalty:0.5 }</code>                                                    |
+| <code>crossSpeciesMatingProb</code>      | number                                                                                                                                      | Chance to select second parent from another species (maintains diversity)                                                                                                                                                                                                     | 0                                                                                |
+| <code>adaptiveSharing</code>             | <code>{ enabled, targetFragmentation, adjustStep, minSigma, maxSigma }</code>                                                                          | Auto-adjust kernel fitness sharing <code>sharingSigma</code> toward target fragmentation (#species/pop)                                                                                                                                                                                  | disabled                                                                         |
+| <code>minimalCriterion</code>            | <code>(network)=&gt;boolean</code>                                                                                                                        | Filters genomes prior to speciation; failing genomes get score 0 (minimal criterion novelty style)                                                                                                                                                                            | undefined                                                                        |
+| <code>operatorAdaptation</code>          | <code>{ enabled, window, boost, decay }</code>                                                                                                         | Tracks mutation operator success; weights selection probability by recent success                                                                                                                                                                                             | disabled                                                                         |
+| <code>phasedComplexity</code>            | <code>{ enabled, phaseLength, simplifyFraction }</code>                                                                                                | Alternates complexify vs simplify phases; simplify prunes fraction of weakest connections                                                                                                                                                                                     | disabled                                                                         |
+| <code>complexityBudget</code>            | <code>{ enabled, maxNodesStart, maxNodesEnd, horizon }</code>                                                                                          | Linear schedule for max allowed nodes; prevents premature bloat                                                                                                                                                                                                               | disabled                                                                         |
+| <code>multiObjective</code>              | <code>{ enabled, complexityMetric }</code>                                                                                                             | Pareto non-dominated sorting (fitness maximize, complexity minimize). <code>complexityMetric</code>=<code>&#39;nodes&#39;                                                                                                                                                                             | &#39;connections&#39;</code>                                                                   | disabled |
+| <code>reenableProb</code> (adaptive)     | (base option)                                                                                                                               | Disabled gene reactivation probability; internally adaptively adjusted based on success when adaptive features on                                                                                                                                                             | 0.25                                                                             |
+| <code>diversityPressure</code>           | <code>{ enabled, motifSample, penaltyStrength }</code>                                                                                                 | Penalizes over-represented small connection motif signatures to promote structural variety                                                                                                                                                                                    | disabled                                                                         |
+| <code>autoCompatTuning</code>            | <code>{ enabled, target, adjustRate, minCoeff, maxCoeff }</code>                                                                                       | Automatically scales excess/disjoint coefficients to approach target species count                                                                                                                                                                                            | disabled                                                                         |
+| <code>speciesAllocation</code>           | <code>{ minOffspring, extendedHistory }</code>                                                                                                         | Guarantees minimum offspring per species (if capacity) and optionally records extended per-species metrics (compatibility, mean complexity, novelty)                                                                                                                          | <code>{ minOffspring:1, extendedHistory:true }</code>                                       |
+| <code>minimalCriterionAdaptive</code>    | <code>{ enabled, initialThreshold, targetAcceptance, adjustRate, metric }</code>                                                                       | Dynamically adjusts acceptance threshold to maintain target pass rate before fitness ranking                                                                                                                                                                                  | disabled                                                                         |
+| <code>complexityBudget</code> (adaptive) | <code>{ enabled, mode:&#39;adaptive&#39;, maxNodesStart, maxNodesEnd, improvementWindow, increaseFactor, stagnationFactor, maxConnsStart, maxConnsEnd }</code> | Adaptive complexity caps grow on improvement, shrink on stagnation                                                                                                                                                                                                            | disabled                                                                         |
+| <code>operatorBandit</code>              | <code>{ enabled, c, minAttempts }</code>                                                                                                               | UCB1-style multi-armed bandit weighting for mutation operator selection                                                                                                                                                                                                       | disabled                                                                         |
+| <code>novelty.pruneStrategy</code>       | <code>&#39;fifo&#39;                                                                                                                                     | &#39;sparse&#39;</code>                                                                                                                                                                                                                                                                     | Sparse pruning removes closest archive pair iteratively to keep diversity        | fifo     |
+| <code>telemetry</code>                   | <code>{ enabled, logEvery, performance, complexity, hypervolume, rngState }</code>                                                                     | Per-generation summary: base { gen,best,species,hyper,fronts }; optional perf timings, complexity block, hv scalar; if <code>lineageTracking</code> then <code>lineage:{ parents, depthBest, meanDepth, inbreeding, ancestorUniq }</code>; <code>rngState</code> embeds deterministic PRNG state (seeded runs) | disabled                                                                         |
+| <code>lineageTracking</code>             | <code>boolean</code>                                                                                                                                   | Track parent genome ids &amp; depth; adds <code>_parents</code>/<code>_depth</code> on genomes and enriched telemetry lineage block                                                                                                                                                                     | true                                                                             |
+| <code>multiObjective.autoEntropy</code>  | <code>boolean</code>                                                                                                                                   | Automatically append entropy (structure diversity proxy) objective (maximize)                                                                                                                                                                                                 | false                                                                            |
+| <code>multiObjective.dynamic</code>      | <code>{ enabled, addComplexityAt, addEntropyAt, dropEntropyOnStagnation, readdEntropyAfter }</code>                                                    | Dynamic scheduling of complexity/entropy objectives: delay adding complexity &amp; entropy to let pure fitness search early; temporarily drop entropy during stagnation then re-add after cooldown.                                                                               | disabled                                                                         |</p>
 <h4 id="example-entropy-guided-sharing-sigma-ancestor-uniqueness-adaptive-tuning">Example: Entropy-guided sharing sigma &amp; ancestor uniqueness adaptive tuning</h4><pre><code class="language-ts">const neat = new Neat(inputs, outputs, fitness, {
-    seed: 42,
-    sharingSigma: 3.0,
-    entropySharingTuning: { enabled:true, targetEntropyVar:0.25, adjustRate:0.1, minSigma:0.5, maxSigma:6 },
-    ancestorUniqAdaptive: { enabled:true, mode:&#39;epsilon&#39;, lowThreshold:0.25, highThreshold:0.6, adjust:0.01, cooldown:4 },
-    multiObjective: { enabled:true, autoEntropy:true, adaptiveEpsilon:{ enabled:true, targetFront: Math.floor(Math.sqrt( popSize )) } },
-    telemetry: { enabled:true, rngState:true },
-    lineageTracking: true
+  seed: 42,
+  sharingSigma: 3.0,
+  entropySharingTuning: {
+    enabled: true,
+    targetEntropyVar: 0.25,
+    adjustRate: 0.1,
+    minSigma: 0.5,
+    maxSigma: 6,
+  },
+  ancestorUniqAdaptive: {
+    enabled: true,
+    mode: &#39;epsilon&#39;,
+    lowThreshold: 0.25,
+    highThreshold: 0.6,
+    adjust: 0.01,
+    cooldown: 4,
+  },
+  multiObjective: {
+    enabled: true,
+    autoEntropy: true,
+    adaptiveEpsilon: {
+      enabled: true,
+      targetFront: Math.floor(Math.sqrt(popSize)),
+    },
+  },
+  telemetry: { enabled: true, rngState: true },
+  lineageTracking: true,
 });
 </code></pre>
 <p><code>entropySharingTuning</code> shrinks <code>sharingSigma</code> when structural entropy variance is too low (increasing local competition) and widens it when variance is high (reducing over-fragmentation). <code>entropyCompatTuning</code> dynamically nudges <code>compatibilityThreshold</code> based on mean structural entropy to balance species fragmentation. <code>ancestorUniqAdaptive</code> boosts diversity pressure (or relaxes dominance if using mode <code>epsilon</code>) when genealogical ancestorUniq metric drops below a threshold, and dials it back when uniqueness is already high. CSV export now includes <code>ops</code> operator stats and <code>objectives</code> active objective keys per generation when available.</p>
@@ -1309,38 +1315,39 @@ Re-enable probability is controlled by <code>reenableProb</code> (default 0.25).
 | <code>exportParetoFrontJSONL()</code> | method | Export recent Pareto objective vectors JSONL (for external analysis) | - |
 | <code>lineagePressure</code> | <code>{ enabled, mode, targetMeanDepth, strength }</code> | Post-eval score adjustment using lineage depth (<code>penalizeDeep</code> / <code>rewardShallow</code> / <code>spread</code>) | disabled |</p>
 <p>Helper getters:</p>
-<pre><code class="language-ts">neat.getSpeciesHistory();       // rolling snapshots (size, age, best score)
-neat.getNoveltyArchiveSize();   // current novelty archive length
+<pre><code class="language-ts">neat.getSpeciesHistory(); // rolling snapshots (size, age, best score)
+neat.getNoveltyArchiveSize(); // current novelty archive length
 neat.getMultiObjectiveMetrics(); // per-genome { rank, crowding, score, nodes, connections }
-neat.getOperatorStats();        // operator adaptation/bandit stats
-neat.getTelemetry();            // evolution telemetry log (recent)
-neat.exportTelemetryCSV();      // flattened telemetry (includes lineage.* &amp; diversity.lineage* if present)
-neat.snapshotRNGState();        // { state } deterministic PRNG snapshot (if seeded)
-neat.restoreRNGState(snap);     // restore snapshot
-neat.exportRNGState();          // JSON string of RNG state
-neat.importRNGState(json);      // restore from JSON
+neat.getOperatorStats(); // operator adaptation/bandit stats
+neat.getTelemetry(); // evolution telemetry log (recent)
+neat.exportTelemetryCSV(); // flattened telemetry (includes lineage.* &amp; diversity.lineage* if present)
+neat.snapshotRNGState(); // { state } deterministic PRNG snapshot (if seeded)
+neat.restoreRNGState(snap); // restore snapshot
+neat.exportRNGState(); // JSON string of RNG state
+neat.importRNGState(json); // restore from JSON
 </code></pre>
 <p>const neat = new Neat(4,2, fit, { telemetry:{ enabled:true, complexity:true, hypervolume:true }, lineageTracking:true, multiObjective:{ enabled:true, autoEntropy:true } });</p>
 <h4 id="example-enabling-novelty-multi-objective">Example: Enabling Novelty + Multi-Objective</h4><pre><code class="language-ts">const neat = new Neat(4, 2, fitness, {
-    popsize: 100,
-    novelty: {
-        descriptor: net =&gt; net.nodes.filter(n=&gt;n.type===&#39;H&#39;).map(h=&gt;h.index%2), // toy descriptor
-        k: 10,
-        addThreshold: 0.9,
-        archiveLimit: 200,
-        blendFactor: 0.3
-    },
-    multiObjective: { enabled: true, complexityMetric: &#39;nodes&#39; },
-    adaptiveMutation: { enabled: true }
+  popsize: 100,
+  novelty: {
+    descriptor: (net) =&gt;
+      net.nodes.filter((n) =&gt; n.type === &#39;H&#39;).map((h) =&gt; h.index % 2), // toy descriptor
+    k: 10,
+    addThreshold: 0.9,
+    archiveLimit: 200,
+    blendFactor: 0.3,
+  },
+  multiObjective: { enabled: true, complexityMetric: &#39;nodes&#39; },
+  adaptiveMutation: { enabled: true },
 });
 </code></pre>
-<h4 id="example-phased-complexity-operator-adaptation">Example: Phased Complexity + Operator Adaptation</h4><pre><code class="language-ts">const neat = new Neat(3,1, fitness, {
-    phasedComplexity: { enabled:true, phaseLength: 5, simplifyFraction: 0.15 },
-    operatorAdaptation: { enabled:true, window: 30, boost: 2.0, decay: 0.9 }
+<h4 id="example-phased-complexity-operator-adaptation">Example: Phased Complexity + Operator Adaptation</h4><pre><code class="language-ts">const neat = new Neat(3, 1, fitness, {
+  phasedComplexity: { enabled: true, phaseLength: 5, simplifyFraction: 0.15 },
+  operatorAdaptation: { enabled: true, window: 30, boost: 2.0, decay: 0.9 },
 });
 </code></pre>
-<h4 id="minimal-criterion">Minimal Criterion</h4><pre><code class="language-ts">const neat = new Neat(2,1, fitness, {
-    minimalCriterion: net =&gt; net.nodes.length &gt;= 5 // require some complexity before scoring
+<h4 id="minimal-criterion">Minimal Criterion</h4><pre><code class="language-ts">const neat = new Neat(2, 1, fitness, {
+  minimalCriterion: (net) =&gt; net.nodes.length &gt;= 5, // require some complexity before scoring
 });
 </code></pre>
 <h4 id="adaptive-sharing">Adaptive Sharing</h4><p>If <code>adaptiveSharing.enabled</code> the system adjusts <code>sharingSigma</code> each generation:</p>

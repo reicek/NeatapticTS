@@ -19,6 +19,7 @@ Provide a short code snippet or example of how the new API/feature would be used
 Describe alternatives you've considered and why they are insufficient.
 
 **Acceptance criteria**
+
 - [ ] Clear behavior described
 - [ ] Backwards-compatibility considerations noted
 - [ ] Tests or examples to demonstrate the new feature

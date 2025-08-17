@@ -12,27 +12,27 @@ jobs:
   bump-and-release:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    - name: Setup Node
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
-    - name: Install deps
-      run: npm ci
+      - name: Install deps
+        run: npm ci
 
-    - name: Bump version and push
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        set -e
-        git config user.name "github-actions[bot]"
-        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-        npm version ${{ github.event.inputs.level }} -m "chore(release): %s [ci skip]"
-        git push origin --follow-tags
+      - name: Bump version and push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          npm version ${{ github.event.inputs.level }} -m "chore(release): %s [ci skip]"
+          git push origin --follow-tags
 
-    - name: Create GitHub Release (done by tag push)
-      run: echo "Tag pushed; release workflows will be triggered by the tag/release event."
+      - name: Create GitHub Release (done by tag push)
+        run: echo "Tag pushed; release workflows will be triggered by the tag/release event."
