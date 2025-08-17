@@ -7,7 +7,6 @@
  */
 
 import {
-  INetwork,
   IEvolutionFunctionResult,
   IEvolutionStepResult,
 } from './interfaces';

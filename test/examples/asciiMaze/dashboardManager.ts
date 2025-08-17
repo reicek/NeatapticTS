@@ -9,7 +9,6 @@
  * and renders both a live view (cleared and redrawn each frame) and an
  * archive view (appended once per solved maze).
  */
-import { Network } from '../../../src/neataptic';
 import { MazeUtils } from './mazeUtils';
 import { MazeVisualization } from './mazeVisualization';
 import { NetworkVisualization } from './networkVisualization';

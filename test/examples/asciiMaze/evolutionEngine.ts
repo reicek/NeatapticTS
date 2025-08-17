@@ -2,7 +2,6 @@
 // Exports: EvolutionEngine class with static methods
 
 import { Neat, Network, methods } from '../../../src/neataptic';
-import seedrandom from 'seedrandom';
 import { MazeUtils } from './mazeUtils';
 import { MazeMovement } from './mazeMovement';
 import { FitnessEvaluator } from './fitness';
