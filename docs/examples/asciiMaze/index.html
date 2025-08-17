@@ -29,17 +29,39 @@
   <script>
     // Try several candidate paths for the bundle so the example works under different server roots.
     (function tryLoadBundle() {
-      const candidates = [
-        '/docs/assets/ascii-maze.bundle.js',
-        'docs/assets/ascii-maze.bundle.js',
-        './docs/assets/ascii-maze.bundle.js',
-        '../../docs/assets/ascii-maze.bundle.js',
-        '../../../docs/assets/ascii-maze.bundle.js'
-      ];
+      // When published via GitHub Pages, the contents of the local `docs/` directory become the site root.
+      // Thus the bundle ends up at `<site-root>/assets/ascii-maze.bundle.js`.
+      // This page is served from `examples/asciiMaze/`, so relative path to assets is typically `../../assets/...`.
+      // Include a few fallbacks for local file browsing or alternate hosting setups.
+      // Build candidate paths programmatically to cover:
+      // - Running from docs/examples/asciiMaze/ (published) => ../../assets/
+      // - Running from test/examples/asciiMaze/ locally before copying => ../../../docs/assets/
+      // - Running from copied docs/examples/asciiMaze/ locally (after npm run docs) => ../../assets/
+      // - Opening the file directly from filesystem with inconsistent current working directory
+      const candidates = (() => {
+  const uniq = new Set();
+        function add(p){ if(!uniq.has(p)) uniq.add(p); }
+        // Upward relative search for assets/ path
+        for (let up=0; up<6; up++) {
+          const prefix = '../'.repeat(up);
+            add(prefix + 'assets/ascii-maze.bundle.js');
+            add(prefix + 'docs/assets/ascii-maze.bundle.js');
+        }
+        // Attempt repo-root prefixed path for GitHub Pages project sites
+        try {
+          const parts = window.location.pathname.split('/').filter(Boolean);
+          if (parts.length) {
+            const repo = parts[0];
+            add('/' + repo + '/assets/ascii-maze.bundle.js');
+            add('/' + repo + '/docs/assets/ascii-maze.bundle.js');
+          }
+        } catch {}
+        return Array.from(uniq);
+      })();
       let tried = 0;
       function tryNext() {
         if (tried >= candidates.length) {
-          console.error('ascii-maze bundle not loaded. Make sure docs/assets/ascii-maze.bundle.js exists and run `npm run build:ascii-maze` from repo root. Tried paths:', candidates);
+          console.error('ascii-maze bundle not loaded. Ensure assets/ascii-maze.bundle.js exists (built by `npm run build:ascii-maze`). Tried paths:', candidates);
           return;
         }
         const src = candidates[tried++];
