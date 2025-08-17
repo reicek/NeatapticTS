@@ -17,6 +17,7 @@ Primary workflow used for releases
 Release-triggered workflows
 
 - `publish.yml` (trigger: `release: published`) — builds and publishes packages to:
+
   - npmjs.org (uses `NPM_TOKEN` secret)
   - GitHub Packages (scoped package: `@reicek/neataptic-ts`)
 
@@ -43,6 +44,7 @@ Verification after release
 Troubleshooting & notes
 
 - Branch protection: if the chosen branch has protection rules that prevent the Actions bot from pushing commits/tags, the manual pipeline may fail to push. In that case you can:
+
   - Temporarily allow Actions to push, or
   - Use a PAT (personal access token) stored as a secret and update the workflow to use it for pushing, or
   - Create the tag locally and push it from your machine.

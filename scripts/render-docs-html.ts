@@ -21,32 +21,68 @@ async function main() {
   const readmes = await fg(['**/README.md'], { cwd: DOCS_DIR, absolute: true });
 
   // Collect metadata for navigation
-  interface PageMeta { abs: string; relDir: string; title: string; }
+  interface PageMeta {
+    abs: string;
+    relDir: string;
+    title: string;
+  }
   const pages: PageMeta[] = [];
   for (const mdFile of readmes) {
     const md = await fs.readFile(mdFile, 'utf8');
-    const title = (md.match(/^#\s+(.+)$/m)?.[1]) || (path.relative(DOCS_DIR, path.dirname(mdFile)) || 'Documentation');
-    const relDir = path.relative(DOCS_DIR, path.dirname(mdFile)).replace(/\\/g,'/');
+    const title =
+      md.match(/^#\s+(.+)$/m)?.[1] ||
+      path.relative(DOCS_DIR, path.dirname(mdFile)) ||
+      'Documentation';
+    const relDir = path
+      .relative(DOCS_DIR, path.dirname(mdFile))
+      .replace(/\\/g, '/');
     pages.push({ abs: mdFile, relDir, title });
   }
 
   // Build flat nav list (could be enhanced to a tree)
   const navHtmlFor = (currentDir: string) => {
     const links = pages
-      .sort((a,b) => a.relDir.localeCompare(b.relDir))
-      .map(p => {
+      .sort((a, b) => a.relDir.localeCompare(b.relDir))
+      .map((p) => {
         const label = p.relDir === '' ? 'root' : p.relDir + '/';
         const isCurrent = p.relDir === currentDir;
-        const relLink = path.posix.relative(currentDir || '.', p.relDir || '.') || '.'; // relative folder path
+        const relLink =
+          path.posix.relative(currentDir || '.', p.relDir || '.') || '.'; // relative folder path
         const href = (relLink === '.' ? '.' : relLink) + '/index.html';
-        return `<li${isCurrent ? ' class="current"' : ''}><a href="${href}">${label}</a></li>`;
-      }).join('\n');
-    // If the asciiMaze example exists in the repo, append a nav link so generated docs include it
+        return `<li${
+          isCurrent ? ' class="current"' : ''
+        }><a href="${href}">${label}</a></li>`;
+      })
+      .join('\n');
+    // Prefer copied example under docs/examples/asciiMaze if present
     try {
-      const asciiExampleAbs = path.resolve('test', 'examples', 'asciiMaze', 'index.html');
-      if (fs.existsSync(asciiExampleAbs)) {
-        const absTargetDir = path.relative(DOCS_DIR, path.dirname(asciiExampleAbs)).replace(/\\/g, '/');
-        const relLink = path.posix.relative(currentDir || '.', absTargetDir || '.') || '.';
+      const copiedExampleAbs = path.resolve(
+        DOCS_DIR,
+        'examples',
+        'asciiMaze',
+        'index.html'
+      );
+      if (fs.existsSync(copiedExampleAbs)) {
+        const relTargetDir = 'examples/asciiMaze';
+        const relLink =
+          path.posix.relative(currentDir || '.', relTargetDir) || '.';
+        const href = (relLink === '.' ? '.' : relLink) + '/index.html';
+        const extra = `<li><a href="${href}">examples/asciiMaze/</a></li>`;
+        return `<ul class="doc-nav">${links}\n${extra}</ul>`;
+      }
+      // Fallback to referencing test/ path (legacy) only if copied version not present
+      const legacyExampleAbs = path.resolve(
+        'test',
+        'examples',
+        'asciiMaze',
+        'index.html'
+      );
+      if (fs.existsSync(legacyExampleAbs)) {
+        const absTargetDir = path
+          .relative(DOCS_DIR, path.dirname(legacyExampleAbs))
+          .replace(/\\/g, '/');
+        const relLink =
+          path.posix.relative(currentDir || '.', absTargetDir || '.') || '.';
         const href = (relLink === '.' ? '.' : relLink) + '/index.html';
         const extra = `<li><a href="${href}">examples/asciiMaze/</a></li>`;
         return `<ul class="doc-nav">${links}\n${extra}</ul>`;
@@ -60,9 +96,17 @@ async function main() {
   for (const meta of pages) {
     const md = await fs.readFile(meta.abs, 'utf8');
     // Extract headings for TOC (## file, ### symbol)
-    const fileHeadings: { file: string; anchor: string; symbols: { name: string; anchor: string }[] }[] = [];
+    const fileHeadings: {
+      file: string;
+      anchor: string;
+      symbols: { name: string; anchor: string }[];
+    }[] = [];
     const lines = md.split(/\r?\n/);
-    let currentFile: { file: string; anchor: string; symbols: { name: string; anchor: string }[] } | null = null;
+    let currentFile: {
+      file: string;
+      anchor: string;
+      symbols: { name: string; anchor: string }[];
+    } | null = null;
     for (const line of lines) {
       const fileMatch = /^##\s+(.+\.ts)\s*$/.exec(line);
       if (fileMatch) {
@@ -81,16 +125,31 @@ async function main() {
     // Configure marked renderer with deterministic heading IDs so anchors match our TOC.
     const renderer = new marked.Renderer();
     const originalHeading = renderer.heading?.bind(renderer);
-  renderer.heading = (text: string, level: number, raw: string, slugger: any) => {
+    renderer.heading = (text: string, level: number, raw: string) => {
       // raw is the unescaped heading text; use it for id to align with our parsing.
       const id = slugify(raw.trim());
       return `<h${level} id="${id}">${text}</h${level}>`;
     };
     marked.use({ renderer });
     const htmlBody = marked.parse(md, { async: false });
-    const toc = fileHeadings.length ? `<div class="page-toc"><h2>Files</h2>${fileHeadings.map(f => `<div class=\"toc-file\"><a href=\"#${f.anchor}\">${f.file}</a>${f.symbols.length?`<ul>${f.symbols.map(s=>`<li><a href=#${s.anchor}>${s.name}</a></li>`).join('')}</ul>`:''}</div>`).join('')}</div>` : '';
+    const toc = fileHeadings.length
+      ? `<div class="page-toc"><h2>Files</h2>${fileHeadings
+          .map(
+            (f) =>
+              `<div class=\"toc-file\"><a href=\"#${f.anchor}\">${f.file}</a>${
+                f.symbols.length
+                  ? `<ul>${f.symbols
+                      .map((s) => `<li><a href=#${s.anchor}>${s.name}</a></li>`)
+                      .join('')}</ul>`
+                  : ''
+              }</div>`
+          )
+          .join('')}</div>`
+      : '';
     const outFile = path.join(path.dirname(meta.abs), 'index.html');
-    const page = `<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>${meta.title}</title>
+    const page = `<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>${
+      meta.title
+    }</title>
 <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">
 <style>
  body{font-family:system-ui,-apple-system,Segoe UI,Arial,sans-serif;margin:0 auto;padding:0 20px 60px;line-height:1.55;background:#fff;color:#222;display:grid;grid-template-columns:260px 1fr 280px;grid-gap:32px;}
@@ -135,4 +194,7 @@ ${htmlBody}
   console.log('HTML docs generated.');
 }
 
-main().catch(e => { console.error(e); process.exit(1); });
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});

@@ -35,7 +35,7 @@ network.train([
   { input: [0, 0], output: [0] },
   { input: [0, 1], output: [1] },
   { input: [1, 0], output: [1] },
-  { input: [1, 1], output: [0] }
+  { input: [1, 1], output: [0] },
 ]);
 
 // Export to ONNX format
@@ -55,16 +55,19 @@ const onnxJson = JSON.stringify(onnxModel);
 ## Example Network Structures
 
 ### Simple MLP (input → output)
+
 ```
 Input Layer (2 nodes) → Output Layer (1 node)
 ```
 
 ### Single Hidden Layer MLP
+
 ```
 Input Layer (2 nodes) → Hidden Layer (3 nodes) → Output Layer (1 node)
 ```
 
 ### Multi-Hidden Layer MLP
+
 ```
 Input Layer (2 nodes) → Hidden Layer 1 (4 nodes) → Hidden Layer 2 (3 nodes) → Output Layer (1 node)
 ```
@@ -81,6 +84,7 @@ The exported ONNX model includes:
 ## Future Enhancements
 
 Future versions may support:
+
 - Skip connections
 - Recurrent connections
 - Custom activation functions

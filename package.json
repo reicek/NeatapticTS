@@ -1,6 +1,6 @@
 {
   "name": "@reicek/neataptic-ts",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Architecture-free neural network library with genetic algorithm implementations",
   "main": "./dist/neataptic.js",
   "module": "./dist/neataptic.js",
@@ -21,7 +21,8 @@
     "docs:folders": "npm run docs:build-scripts && node ./dist-docs/scripts/generate-docs.js",
     "docs:html": "npm run docs:build-scripts && node ./dist-docs/scripts/render-docs-html.js",
     "build:ascii-maze": "npx esbuild test/examples/asciiMaze/browser-entry.ts --bundle --outfile=docs/assets/ascii-maze.bundle.js --platform=browser --format=iife --sourcemap --external:fs --external:child_process",
-    "docs": "npm run build:ascii-maze && npm run docs:build-scripts && node ./dist-docs/scripts/generate-docs.js && node ./dist-docs/scripts/render-docs-html.js"
+    "docs:examples": "node scripts/copy-examples.cjs",
+    "docs": "npm run build:ascii-maze && npm run docs:examples && npm run docs:build-scripts && node ./dist-docs/scripts/generate-docs.js && node ./dist-docs/scripts/render-docs-html.js"
   },
   "exports": {
     ".": {

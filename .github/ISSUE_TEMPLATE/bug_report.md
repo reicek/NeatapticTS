@@ -11,6 +11,7 @@ A clear and concise description of what the bug is.
 
 **To Reproduce**
 Steps to reproduce the behavior:
+
 1. Go to '...'
 2. Run '...'
 3. See error
@@ -22,6 +23,7 @@ What you expected to happen.
 Please include a small snippet or a link to a minimal repo/example that reproduces the issue.
 
 **Environment (please complete the following information):**
+
 - OS: (e.g. Windows 10 / macOS / Linux)
 - Node version: (e.g. v16.20.0)
 - NeatapticTS commit / tag:

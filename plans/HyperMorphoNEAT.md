@@ -158,7 +158,10 @@ if (getMemoryUsage() > MEMORY_LIMIT) {
   network.pruneLeastActiveConnections();
 }
 if (network.performanceStagnant()) {
-  network.growNewModules({ type: 'specialized', region: network.findUnderutilizedRegion() });
+  network.growNewModules({
+    type: 'specialized',
+    region: network.findUnderutilizedRegion(),
+  });
 }
 ```
 
@@ -170,21 +173,25 @@ NeuroMorph pruning and substrate evolution are central to Hyper MorphoNEAT's abi
 ## Architecture Overview
 
 1. **Initialization: Compact Genetic Encoding**
+
    - Seed genotypes encode developmental rules for substrate growth.
    - Rules define spatial layout, growth behaviors, and hierarchical patterns.
    - Development combines large-scale structure (CPPN-driven) and fine-grained morphogenesis.
 
 2. **Substrate Growth**
+
    - Neurons are created/organized using developmental rules.
    - Produces global structure (modular zones, symmetry) and local specialization.
    - Growth mechanisms: fractal expansion, modular clustering, recursive division.
 
 3. **CPPN-Driven Patterns**
+
    - CPPN evolves alongside substrate to map coordinates to connection weights.
    - Introduces global connectivity (fractal, hierarchical, spatially-sensitive links).
    - CPPN governs large-scale structure; morphogenesis refines details.
 
 4. **Real-Time Morphogenesis**
+
    - During runtime, neurons/connections grow, prune, or adapt based on input, activity, or feedback.
    - Morphogenesis expands/specializes regions as needed.
    - Plasticity rules strengthen/prune connections during learning.

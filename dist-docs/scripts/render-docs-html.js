@@ -35,26 +35,42 @@ function main() {
         const pages = [];
         for (const mdFile of readmes) {
             const md = yield fs_extra_1.default.readFile(mdFile, 'utf8');
-            const title = ((_a = md.match(/^#\s+(.+)$/m)) === null || _a === void 0 ? void 0 : _a[1]) || (path_1.default.relative(DOCS_DIR, path_1.default.dirname(mdFile)) || 'Documentation');
-            const relDir = path_1.default.relative(DOCS_DIR, path_1.default.dirname(mdFile)).replace(/\\/g, '/');
+            const title = ((_a = md.match(/^#\s+(.+)$/m)) === null || _a === void 0 ? void 0 : _a[1]) ||
+                path_1.default.relative(DOCS_DIR, path_1.default.dirname(mdFile)) ||
+                'Documentation';
+            const relDir = path_1.default
+                .relative(DOCS_DIR, path_1.default.dirname(mdFile))
+                .replace(/\\/g, '/');
             pages.push({ abs: mdFile, relDir, title });
         }
         // Build flat nav list (could be enhanced to a tree)
         const navHtmlFor = (currentDir) => {
             const links = pages
                 .sort((a, b) => a.relDir.localeCompare(b.relDir))
-                .map(p => {
+                .map((p) => {
                 const label = p.relDir === '' ? 'root' : p.relDir + '/';
                 const isCurrent = p.relDir === currentDir;
                 const relLink = path_1.default.posix.relative(currentDir || '.', p.relDir || '.') || '.'; // relative folder path
                 const href = (relLink === '.' ? '.' : relLink) + '/index.html';
                 return `<li${isCurrent ? ' class="current"' : ''}><a href="${href}">${label}</a></li>`;
-            }).join('\n');
-            // If the asciiMaze example exists in the repo, append a nav link so generated docs include it
+            })
+                .join('\n');
+            // Prefer copied example under docs/examples/asciiMaze if present
             try {
-                const asciiExampleAbs = path_1.default.resolve('test', 'examples', 'asciiMaze', 'index.html');
-                if (fs_extra_1.default.existsSync(asciiExampleAbs)) {
-                    const absTargetDir = path_1.default.relative(DOCS_DIR, path_1.default.dirname(asciiExampleAbs)).replace(/\\/g, '/');
+                const copiedExampleAbs = path_1.default.resolve(DOCS_DIR, 'examples', 'asciiMaze', 'index.html');
+                if (fs_extra_1.default.existsSync(copiedExampleAbs)) {
+                    const relTargetDir = 'examples/asciiMaze';
+                    const relLink = path_1.default.posix.relative(currentDir || '.', relTargetDir) || '.';
+                    const href = (relLink === '.' ? '.' : relLink) + '/index.html';
+                    const extra = `<li><a href="${href}">examples/asciiMaze/</a></li>`;
+                    return `<ul class="doc-nav">${links}\n${extra}</ul>`;
+                }
+                // Fallback to referencing test/ path (legacy) only if copied version not present
+                const legacyExampleAbs = path_1.default.resolve('test', 'examples', 'asciiMaze', 'index.html');
+                if (fs_extra_1.default.existsSync(legacyExampleAbs)) {
+                    const absTargetDir = path_1.default
+                        .relative(DOCS_DIR, path_1.default.dirname(legacyExampleAbs))
+                        .replace(/\\/g, '/');
                     const relLink = path_1.default.posix.relative(currentDir || '.', absTargetDir || '.') || '.';
                     const href = (relLink === '.' ? '.' : relLink) + '/index.html';
                     const extra = `<li><a href="${href}">examples/asciiMaze/</a></li>`;
@@ -90,14 +106,22 @@ function main() {
             // Configure marked renderer with deterministic heading IDs so anchors match our TOC.
             const renderer = new marked_1.marked.Renderer();
             const originalHeading = (_b = renderer.heading) === null || _b === void 0 ? void 0 : _b.bind(renderer);
-            renderer.heading = (text, level, raw, slugger) => {
+            renderer.heading = (text, level, raw) => {
                 // raw is the unescaped heading text; use it for id to align with our parsing.
                 const id = slugify(raw.trim());
                 return `<h${level} id="${id}">${text}</h${level}>`;
             };
             marked_1.marked.use({ renderer });
             const htmlBody = marked_1.marked.parse(md, { async: false });
-            const toc = fileHeadings.length ? `<div class="page-toc"><h2>Files</h2>${fileHeadings.map(f => `<div class=\"toc-file\"><a href=\"#${f.anchor}\">${f.file}</a>${f.symbols.length ? `<ul>${f.symbols.map(s => `<li><a href=#${s.anchor}>${s.name}</a></li>`).join('')}</ul>` : ''}</div>`).join('')}</div>` : '';
+            const toc = fileHeadings.length
+                ? `<div class="page-toc"><h2>Files</h2>${fileHeadings
+                    .map((f) => `<div class=\"toc-file\"><a href=\"#${f.anchor}\">${f.file}</a>${f.symbols.length
+                    ? `<ul>${f.symbols
+                        .map((s) => `<li><a href=#${s.anchor}>${s.name}</a></li>`)
+                        .join('')}</ul>`
+                    : ''}</div>`)
+                    .join('')}</div>`
+                : '';
             const outFile = path_1.default.join(path_1.default.dirname(meta.abs), 'index.html');
             const page = `<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>${meta.title}</title>
 <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">
@@ -144,5 +168,8 @@ ${htmlBody}
         console.log('HTML docs generated.');
     });
 }
-main().catch(e => { console.error(e); process.exit(1); });
+main().catch((e) => {
+    console.error(e);
+    process.exit(1);
+});
 //# sourceMappingURL=render-docs-html.js.map

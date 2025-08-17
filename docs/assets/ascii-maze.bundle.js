@@ -211,7 +211,7 @@
          * a probability value between 0 and 1. Cross-entropy loss increases as the
          * predicted probability diverges from the actual label.
          *
-        * It uses a small epsilon (PROB_EPSILON = 1e-15) to prevent `log(0)` which would result in `NaN`.
+         * It uses a small epsilon (PROB_EPSILON = 1e-15) to prevent `log(0)` which would result in `NaN`.
          * Output values are clamped to the range `[epsilon, 1 - epsilon]` for numerical stability.
          *
          * @see {@link https://en.wikipedia.org/wiki/Cross_entropy}
