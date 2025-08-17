@@ -298,6 +298,32 @@ Parameters:
 - `genome` - - The external `Network` to add.
 - `parents` - - Optional array of parent ids to record on the genome.
 
+#### applyAdaptivePruning
+
+`() => void`
+
+Run the adaptive pruning controller once. This adjusts the internal
+`_adaptivePruneLevel` based on the configured metric (nodes or
+connections) and invokes per-genome pruning when an adjustment is
+warranted.
+
+Educational usage: Allows step-wise observation of how the adaptive
+controller converges population complexity toward a target sparsity.
+
+#### applyEvolutionPruning
+
+`() => void`
+
+Manually apply evolution-time pruning once using the current generation
+index and configuration in `options.evolutionPruning`.
+
+Educational usage: While pruning normally occurs automatically inside
+the evolve loop, exposing this method lets learners trigger the pruning
+logic in isolation to observe its effect on network sparsity.
+
+Implementation detail: Delegates to the migrated helper in
+`neat.pruning.ts` so the core class surface remains thin.
+
 #### clearObjectives
 
 `() => void`
@@ -1185,6 +1211,18 @@ Parameters:
 
 Utility: adjust rate for accumulation mode (use result when switching to 'sum' to mimic 'average').
 
+#### applyAdaptivePruning
+
+`() => void`
+
+Run the adaptive pruning controller once. This adjusts the internal
+`_adaptivePruneLevel` based on the configured metric (nodes or
+connections) and invokes per-genome pruning when an adjustment is
+warranted.
+
+Educational usage: Allows step-wise observation of how the adaptive
+controller converges population complexity toward a target sparsity.
+
 #### applyBatchUpdates
 
 `(momentum: number) => void`
@@ -1242,6 +1280,20 @@ Safety: We clip extreme weight / bias magnitudes and guard against NaN/Infinity.
 
 Parameters:
 - `opts` - Optimizer configuration (see above).
+
+#### applyEvolutionPruning
+
+`() => void`
+
+Manually apply evolution-time pruning once using the current generation
+index and configuration in `options.evolutionPruning`.
+
+Educational usage: While pruning normally occurs automatically inside
+the evolve loop, exposing this method lets learners trigger the pruning
+logic in isolation to observe its effect on network sparsity.
+
+Implementation detail: Delegates to the migrated helper in
+`neat.pruning.ts` so the core class surface remains thin.
 
 #### attention
 
