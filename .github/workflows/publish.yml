@@ -151,7 +151,11 @@ jobs:
             git tag -a "$TAG" -m "chore(release): $TAG"
           fi
           git push origin "refs/tags/$TAG" || echo "Tag push may already exist."
-
+          if git ls-remote --tags origin "$TAG" | grep -q "refs/tags/$TAG$"; then
+            echo "Remote tag $TAG already exists. Skipping push."
+          else
+            git push origin "refs/tags/$TAG"
+          fi
       - name: Create GitHub Release
         if: ${{ steps.detect.outputs.loop_skip == 'false' && env.RUN_PUBLISH == 'true' && github.event_name != 'release' }}
         uses: actions/create-release@v1
