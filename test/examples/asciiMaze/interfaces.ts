@@ -1,8 +1,6 @@
 // Interfaces for ASCII Maze Neuroevolution System
 // This file centralizes shared interfaces and types for consistency and maintainability.
 
-import { Network } from '../../../src/neataptic';
-
 /**
  * Interface for dashboard manager abstraction.
  * Used for dependency inversion and testability.

@@ -3,6 +3,12 @@ name: Publish packages
 on:
   release:
     types: [published]
+  push:
+    branches: [develop]
+    paths-ignore:
+      - 'docs/**'
+      - '.github/**'
+      - 'README.md'
   workflow_dispatch:
     inputs:
       run_publish:
@@ -10,7 +16,7 @@ on:
         required: false
         default: 'true'
       release_tag:
-        description: 'Optional tag to publish (used for metadata only)'
+        description: 'Optional tag to publish (metadata only)'
         required: false
   workflow_call:
     inputs:
@@ -20,66 +26,163 @@ on:
         type: string
         default: 'true'
       release_tag:
-        description: 'Optional tag to publish (used for metadata only)'
+        description: 'Optional tag to publish (metadata only)'
         required: false
         type: string
+    secrets:
+      NPM_TOKEN:
+        description: 'NPM automation/publish token'
+        required: true
+      GITHUB_TOKEN:
+        description: 'GitHub token (auto provided)'
+        required: true
+      QLTY_COVERAGE_TOKEN:
+        description: 'Qlty coverage token (optional)'
+        required: false
 
 jobs:
   publish:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
     env:
       QLTY_COVERAGE_TOKEN: ${{ secrets.QLTY_COVERAGE_TOKEN }}
-      RUN_PUBLISH: ${{ github.event.inputs.run_publish || 'true' }}
-      RELEASE_TAG: ${{ github.event.inputs.release_tag || '' }}
+      RUN_PUBLISH: ${{ inputs.run_publish || github.event.inputs.run_publish || 'true' }}
+      RELEASE_TAG: ${{ inputs.release_tag || github.event.inputs.release_tag || '' }}
     steps:
-    - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    - name: Use Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-        registry-url: 'https://registry.npmjs.org'
+      - name: Detect bot release commit (avoid loops)
+        id: detect
+        run: |
+          LAST_MSG="$(git log -1 --pretty=%s)"
+          echo "last_commit_msg=$LAST_MSG" >> $GITHUB_OUTPUT
+          if [[ "${{ github.event_name }}" == "push" && "${{ github.actor }}" == "github-actions[bot]" && "$LAST_MSG" == chore(release):* ]]; then
+            echo "loop_skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "loop_skip=false" >> $GITHUB_OUTPUT
+          fi
 
-    - name: Install dependencies
-      run: npm ci
+      - name: Setup Node (npmjs)
+        if: ${{ steps.detect.outputs.loop_skip == 'false' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          registry-url: https://registry.npmjs.org
+          always-auth: true
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-    - name: Build
-      run: npm run build
+      - name: Install dependencies
+        if: ${{ steps.detect.outputs.loop_skip == 'false' }}
+        run: npm ci
 
-    - name: Publish to npm
-      if: ${{ env.RUN_PUBLISH == 'true' }}
-      env:
-        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      run: |
-        echo "Publishing to npm..."
-        npm publish --access public
+      - name: Test
+        if: ${{ steps.detect.outputs.loop_skip == 'false' }}
+        run: npm test
 
-    - name: Publish to GitHub Packages
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-        registry-url: 'https://npm.pkg.github.com/'
+      - name: Ensure unique version (auto bump patch if exists)
+        if: ${{ steps.detect.outputs.loop_skip == 'false' && env.RUN_PUBLISH == 'true' && github.event_name != 'release' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          PKG_NAME=$(node -p "require('./package.json').name")
+          CURR_VER=$(node -p "require('./package.json').version")
+          echo "Current version: $CURR_VER"
+          if npm view "$PKG_NAME@$CURR_VER" version >/dev/null 2>&1; then
+            echo "Version exists on registry; bumping patch.";
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            npm version patch -m "chore(release): %s [skip ci]"
+            git push origin HEAD --follow-tags
+          else
+            echo "Version $CURR_VER is new.";
+          fi
 
-    - name: Publish to GitHub Packages (scoped)
-      if: ${{ env.RUN_PUBLISH == 'true' }}
-      env:
-        NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        echo "Publishing to GitHub Packages..."
-        npm publish --registry https://npm.pkg.github.com/
+      - name: Build
+        if: ${{ steps.detect.outputs.loop_skip == 'false' }}
+        run: npm run build
 
-    - name: Check for coverage file
-      id: cov
-      run: |
-        if [ -f coverage/lcov.info ]; then
-          echo "found=true" >> $GITHUB_OUTPUT
-        else
-          echo "found=false" >> $GITHUB_OUTPUT
-        fi
+      - name: Publish to npm
+        if: ${{ steps.detect.outputs.loop_skip == 'false' && env.RUN_PUBLISH == 'true' }}
+        run: npm publish --access public
 
-    - name: Upload coverage to Qlty (release)
-      if: ${{ steps.cov.outputs.found == 'true' && env.QLTY_COVERAGE_TOKEN != '' }}
-      uses: qltysh/qlty-action/coverage@v2
-      with:
-        token: ${{ env.QLTY_COVERAGE_TOKEN }}
-        files: coverage/lcov.info
+      - name: Setup Node (GitHub Packages)
+        if: ${{ steps.detect.outputs.loop_skip == 'false' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          registry-url: https://npm.pkg.github.com/
+          always-auth: true
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish to GitHub Packages (scoped)
+        if: ${{ steps.detect.outputs.loop_skip == 'false' && env.RUN_PUBLISH == 'true' }}
+        run: npm publish --registry https://npm.pkg.github.com/
+
+      - name: Read package version
+        if: ${{ steps.detect.outputs.loop_skip == 'false' && env.RUN_PUBLISH == 'true' }}
+        id: pkgver
+        run: |
+          echo "version=$(node -p \"require('./package.json').version\")" >> $GITHUB_OUTPUT
+
+      - name: Ensure git user (for tagging)
+        if: ${{ steps.detect.outputs.loop_skip == 'false' && env.RUN_PUBLISH == 'true' && github.event_name != 'release' }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Ensure tag exists (vX.Y.Z)
+        if: ${{ steps.detect.outputs.loop_skip == 'false' && env.RUN_PUBLISH == 'true' && github.event_name != 'release' }}
+        run: |
+          set -e
+          VER=${{ steps.pkgver.outputs.version }}
+          TAG="v$VER"
+          if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+            echo "Local tag $TAG already exists."
+          else
+            echo "Creating tag $TAG";
+            git tag -a "$TAG" -m "chore(release): $TAG"
+          fi
+          git push origin "refs/tags/$TAG" || echo "Tag push may already exist."
+
+      - name: Create GitHub Release
+        if: ${{ steps.detect.outputs.loop_skip == 'false' && env.RUN_PUBLISH == 'true' && github.event_name != 'release' }}
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ steps.pkgver.outputs.version }}
+          release_name: v${{ steps.pkgver.outputs.version }}
+          body: |
+            Automated release for version v${{ steps.pkgver.outputs.version }}.
+            Generated by publish workflow.
+          draft: false
+          prerelease: false
+
+      - name: Check for coverage file
+        if: ${{ steps.detect.outputs.loop_skip == 'false' }}
+        id: cov
+        run: |
+          if [ -f coverage/lcov.info ]; then
+            echo "found=true" >> $GITHUB_OUTPUT
+          else
+            echo "found=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload coverage to Qlty (release)
+        if: ${{ steps.detect.outputs.loop_skip == 'false' && steps.cov.outputs.found == 'true' && env.QLTY_COVERAGE_TOKEN != '' }}
+        uses: qltysh/qlty-action/coverage@v2
+        with:
+          token: ${{ env.QLTY_COVERAGE_TOKEN }}
+          files: coverage/lcov.info
+
+      - name: Summary
+        run: |
+          echo "Publish workflow completed. loop_skip=${{ steps.detect.outputs.loop_skip }}"
