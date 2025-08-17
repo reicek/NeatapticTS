@@ -159,6 +159,21 @@ estimation for their children.</p>
 <li><code>genome</code> - - The external <code>Network</code> to add.</li>
 <li><code>parents</code> - - Optional array of parent ids to record on the genome.</li>
 </ul>
+<h4 id="applyadaptivepruning">applyAdaptivePruning</h4><p><code>() =&gt; void</code></p>
+<p>Run the adaptive pruning controller once. This adjusts the internal
+<code>_adaptivePruneLevel</code> based on the configured metric (nodes or
+connections) and invokes per-genome pruning when an adjustment is
+warranted.</p>
+<p>Educational usage: Allows step-wise observation of how the adaptive
+controller converges population complexity toward a target sparsity.</p>
+<h4 id="applyevolutionpruning">applyEvolutionPruning</h4><p><code>() =&gt; void</code></p>
+<p>Manually apply evolution-time pruning once using the current generation
+index and configuration in <code>options.evolutionPruning</code>.</p>
+<p>Educational usage: While pruning normally occurs automatically inside
+the evolve loop, exposing this method lets learners trigger the pruning
+logic in isolation to observe its effect on network sparsity.</p>
+<p>Implementation detail: Delegates to the migrated helper in
+<code>neat.pruning.ts</code> so the core class surface remains thin.</p>
 <h4 id="clearobjectives">clearObjectives</h4><p><code>() =&gt; void</code></p>
 <p>Register a custom objective for multi-objective optimization.</p>
 <p>Educational context: multi-objective optimization lets you optimize for
@@ -632,6 +647,13 @@ estimation for their children.</p>
 </ul>
 <h4 id="adjustrateforaccumulation">adjustRateForAccumulation</h4><p><code>(rate: number, accumulationSteps: number, reduction: &quot;average&quot; | &quot;sum&quot;) =&gt; number</code></p>
 <p>Utility: adjust rate for accumulation mode (use result when switching to &#39;sum&#39; to mimic &#39;average&#39;).</p>
+<h4 id="applyadaptivepruning">applyAdaptivePruning</h4><p><code>() =&gt; void</code></p>
+<p>Run the adaptive pruning controller once. This adjusts the internal
+<code>_adaptivePruneLevel</code> based on the configured metric (nodes or
+connections) and invokes per-genome pruning when an adjustment is
+warranted.</p>
+<p>Educational usage: Allows step-wise observation of how the adaptive
+controller converges population complexity toward a target sparsity.</p>
 <h4 id="applybatchupdates">applyBatchUpdates</h4><p><code>(momentum: number) =&gt; void</code></p>
 <p>Applies accumulated batch updates to incoming and self connections and this node&#39;s bias.
 Uses momentum in a Nesterov-compatible way: currentDelta = accumulated + momentum * previousDelta.
@@ -685,6 +707,14 @@ optimizers. After applying an update, gradient accumulators are reset to 0.</p>
 <ul>
 <li><code>opts</code> - Optimizer configuration (see above).</li>
 </ul>
+<h4 id="applyevolutionpruning">applyEvolutionPruning</h4><p><code>() =&gt; void</code></p>
+<p>Manually apply evolution-time pruning once using the current generation
+index and configuration in <code>options.evolutionPruning</code>.</p>
+<p>Educational usage: While pruning normally occurs automatically inside
+the evolve loop, exposing this method lets learners trigger the pruning
+logic in isolation to observe its effect on network sparsity.</p>
+<p>Implementation detail: Delegates to the migrated helper in
+<code>neat.pruning.ts</code> so the core class surface remains thin.</p>
 <h4 id="attention">attention</h4><p><code>(size: number, heads: number) =&gt; import(&quot;D:/code-practice/NeatapticTS/src/architecture/layer&quot;).default</code></p>
 <p>Creates a multi-head self-attention layer (stub implementation).</p>
 <p>Parameters:</p>

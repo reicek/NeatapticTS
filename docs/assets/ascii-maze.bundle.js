@@ -11948,6 +11948,38 @@
           );
         }
         /**
+         * Manually apply evolution-time pruning once using the current generation
+         * index and configuration in `options.evolutionPruning`.
+         *
+         * Educational usage: While pruning normally occurs automatically inside
+         * the evolve loop, exposing this method lets learners trigger the pruning
+         * logic in isolation to observe its effect on network sparsity.
+         *
+         * Implementation detail: Delegates to the migrated helper in
+         * `neat.pruning.ts` so the core class surface remains thin.
+         */
+        applyEvolutionPruning() {
+          try {
+            (init_neat_pruning(), __toCommonJS(neat_pruning_exports)).applyEvolutionPruning.call(this);
+          } catch {
+          }
+        }
+        /**
+         * Run the adaptive pruning controller once. This adjusts the internal
+         * `_adaptivePruneLevel` based on the configured metric (nodes or
+         * connections) and invokes per-genome pruning when an adjustment is
+         * warranted.
+         *
+         * Educational usage: Allows step-wise observation of how the adaptive
+         * controller converges population complexity toward a target sparsity.
+         */
+        applyAdaptivePruning() {
+          try {
+            (init_neat_pruning(), __toCommonJS(neat_pruning_exports)).applyAdaptivePruning.call(this);
+          } catch {
+          }
+        }
+        /**
          * Return the internal telemetry buffer.
          *
          * Telemetry entries are produced per-generation when telemetry is enabled
