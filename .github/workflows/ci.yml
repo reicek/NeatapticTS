@@ -9,15 +9,13 @@ on:
 jobs:
   build-test:
     runs-on: ubuntu-latest
-    env:
-      QLTY_COVERAGE_TOKEN: ${{ secrets.QLTY_COVERAGE_TOKEN }}
 
     steps:
     - uses: actions/checkout@v4
     - name: Use Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '18'
+        node-version: '20'
     - name: Install dependencies
       run: npm ci
     - name: Run tests
@@ -31,11 +29,5 @@ jobs:
           echo "found=false" >> $GITHUB_OUTPUT
         fi
 
-    - name: Upload coverage to Qlty
-      if: ${{ steps.cov.outputs.found == 'true' && env.QLTY_COVERAGE_TOKEN != '' }}
-      uses: qltysh/qlty-action/coverage@v2
-      with:
-        token: ${{ env.QLTY_COVERAGE_TOKEN }}
-        files: coverage/lcov.info
     - name: Build
       run: npm run build
