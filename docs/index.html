@@ -602,7 +602,59 @@ const neat = new Neat(2, 1, fitnessFn, { popsize: 50, minHidden: 5 });
 <li>Use <code>exportToONNX(network)</code> to export a network to ONNX.</li>
 <li>Use <code>importFromONNX(onnxModel)</code> to import a compatible ONNX model as a <code>Network</code> instance.</li>
 </ul>
-<p>See tests in <code>test/network/onnx.export.test.ts</code> and <code>test/network/onnx.import.test.ts</code> for usage examples.</p>
+<p>Additional capabilities (Phase 2 &amp; 3 incremental roadmap):</p>
+<ul>
+<li>Partial connectivity (enable with <code>{ allowPartialConnectivity:true }</code>) inserts zero-weight placeholders for missing edges.</li>
+<li>Mixed activation layers (enable <code>{ allowMixedActivations:true }</code>) are decomposed into per-neuron Gemm + Activation + Concat.</li>
+<li>Multi-layer self‑recurrence single-step form (enable <code>{ allowRecurrent:true, recurrentSingleStep:true }</code>) exports each recurrent hidden layer with:<ul>
+<li>Previous hidden state input tensor (one per recurrent hidden layer).</li>
+<li>Feedforward weight matrix <code>Wk</code>, bias <code>Bk</code>, and diagonal recurrent matrix <code>Rk</code> (self-connection weights) per layer.</li>
+</ul>
+</li>
+<li>Experimental fused recurrent heuristics (enable <code>{ allowRecurrent:true }</code>):<ul>
+<li>LSTM heuristic: detects 5-way equal partition of a hidden layer (input, forget, cell, output, output-block) and emits <code>LSTM_W* / LSTM_R* / LSTM_B*</code> plus an <code>LSTM</code> node (single-step, simplified biases and diagonal recurrence only).</li>
+<li>GRU heuristic: detects 4-way equal partition (update, reset, candidate, output-block) and emits <code>GRU_W* / GRU_R* / GRU_B*</code> plus a <code>GRU</code> node.</li>
+<li>Original Gemm/Activation path is retained (no pruning yet) for transparency; importer reconstructs <code>Layer.lstm</code> / <code>Layer.gru</code> instances when metadata &amp; tensors are present.</li>
+</ul>
+</li>
+</ul>
+<p>Metadata keys (when <code>includeMetadata:true</code>):</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>layer_sizes</code></td>
+<td>JSON array of hidden layer sizes in order</td>
+</tr>
+<tr>
+<td><code>recurrent_single_step</code></td>
+<td>JSON array of 1-based hidden layer indices exported with single-step recurrence</td>
+</tr>
+<tr>
+<td><code>lstm_groups_stub</code></td>
+<td>Detected LSTM grouping stubs (pre-emission heuristic data)</td>
+</tr>
+<tr>
+<td><code>lstm_emitted_layers</code> / <code>gru_emitted_layers</code></td>
+<td>Layers where fused nodes were emitted</td>
+</tr>
+<tr>
+<td><code>rnn_pattern_fallback</code></td>
+<td>Near-miss pattern info for diagnostic purposes</td>
+</tr>
+</tbody></table>
+<p>Limitations / TODO:</p>
+<ul>
+<li>Fused LSTM/GRU nodes are experimental: biases currently unsplit (Rb assumed zero) and recurrence limited to diagonal self-connections of memory/candidate groups.</li>
+<li>Gate ordering in heuristics may differ from canonical ONNX spec and will be normalized in a future pass (documented in code comments).</li>
+<li>Redundant unfused Gemm subgraph is not yet pruned when fused nodes are emitted.</li>
+<li>Only self-produced models are guaranteed to round-trip; arbitrary ONNX graphs are out of scope.</li>
+</ul>
+<p>See tests in <code>test/network/onnx.export.test.ts</code> and <code>test/network/onnx.import.test.ts</code> for baseline MLP &amp; recurrence coverage (fused LSTM/GRU tests pending planned implementation step).</p>
 <hr>
 <h3 id="further-notices">Further notices</h3><p>NeatapticTS is based on <a href="https://github.com/wagenaartje/neataptic">Neataptic</a>. Parts of <a href="https://github.com/cazala/synaptic">Synaptic</a> were used to develop Neataptic.</p>
 <p>The neuro-evolution algorithm used is the <a href="https://medium.com/@ThomasWagenaar/neuro-evolution-on-steroids-82bd14ddc2f6">Instinct</a> algorithm.</p>
@@ -704,7 +756,6 @@ net.train(data, {
 <li>Overflow telemetry: during mixed precision training, <code>overflowCount</code> increments on detected NaN/Inf when unscaling gradients; <code>scaleUps</code> / <code>scaleDowns</code> count dynamic loss scale adjustments.</li>
 </ul>
 <h3 id="learning-rate-scheduler-usage">Learning Rate Scheduler Usage</h3><pre><code class="language-ts">import methods from &#39;./src/methods/methods&#39;;
-const net = new Network(2, 1);
 const ratePolicy = methods.Rate.cosineAnnealingWarmRestarts(200, 1e-5, 2);
 net.train(data, { iterations: 1000, rate: 0.1, ratePolicy });
 </code></pre>

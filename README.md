@@ -692,7 +692,36 @@ NeatapticTS now supports exporting to and importing from ONNX format for strictl
 - Use `exportToONNX(network)` to export a network to ONNX.
 - Use `importFromONNX(onnxModel)` to import a compatible ONNX model as a `Network` instance.
 
-See tests in `test/network/onnx.export.test.ts` and `test/network/onnx.import.test.ts` for usage examples.
+Additional capabilities (Phase 2 & 3 incremental roadmap):
+
+- Partial connectivity (enable with `{ allowPartialConnectivity:true }`) inserts zero-weight placeholders for missing edges.
+- Mixed activation layers (enable `{ allowMixedActivations:true }`) are decomposed into per-neuron Gemm + Activation + Concat.
+- Multi-layer self‑recurrence single-step form (enable `{ allowRecurrent:true, recurrentSingleStep:true }`) exports each recurrent hidden layer with:
+  - Previous hidden state input tensor (one per recurrent hidden layer).
+  - Feedforward weight matrix `Wk`, bias `Bk`, and diagonal recurrent matrix `Rk` (self-connection weights) per layer.
+- Experimental fused recurrent heuristics (enable `{ allowRecurrent:true }`):
+  - LSTM heuristic: detects 5-way equal partition of a hidden layer (input, forget, cell, output, output-block) and emits `LSTM_W* / LSTM_R* / LSTM_B*` plus an `LSTM` node (single-step, simplified biases and diagonal recurrence only).
+  - GRU heuristic: detects 4-way equal partition (update, reset, candidate, output-block) and emits `GRU_W* / GRU_R* / GRU_B*` plus a `GRU` node.
+  - Original Gemm/Activation path is retained (no pruning yet) for transparency; importer reconstructs `Layer.lstm` / `Layer.gru` instances when metadata & tensors are present.
+
+Metadata keys (when `includeMetadata:true`):
+
+| Key | Description |
+|-----|-------------|
+| `layer_sizes` | JSON array of hidden layer sizes in order |
+| `recurrent_single_step` | JSON array of 1-based hidden layer indices exported with single-step recurrence |
+| `lstm_groups_stub` | Detected LSTM grouping stubs (pre-emission heuristic data) |
+| `lstm_emitted_layers` / `gru_emitted_layers` | Layers where fused nodes were emitted |
+| `rnn_pattern_fallback` | Near-miss pattern info for diagnostic purposes |
+
+Limitations / TODO:
+
+- Fused LSTM/GRU nodes are experimental: biases currently unsplit (Rb assumed zero) and recurrence limited to diagonal self-connections of memory/candidate groups.
+- Gate ordering in heuristics may differ from canonical ONNX spec and will be normalized in a future pass (documented in code comments).
+- Redundant unfused Gemm subgraph is not yet pruned when fused nodes are emitted.
+- Only self-produced models are guaranteed to round-trip; arbitrary ONNX graphs are out of scope.
+
+See tests in `test/network/onnx.export.test.ts` and `test/network/onnx.import.test.ts` for baseline MLP & recurrence coverage (fused LSTM/GRU tests pending planned implementation step).
 
 ---
 
@@ -797,7 +826,6 @@ Notes:
 
 ```ts
 import methods from './src/methods/methods';
-const net = new Network(2, 1);
 const ratePolicy = methods.Rate.cosineAnnealingWarmRestarts(200, 1e-5, 2);
 net.train(data, { iterations: 1000, rate: 0.1, ratePolicy });
 ```

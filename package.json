@@ -22,7 +22,9 @@
     "docs:html": "npm run docs:build-scripts && node ./dist-docs/scripts/render-docs-html.js",
     "build:ascii-maze": "npx esbuild test/examples/asciiMaze/browser-entry.ts --bundle --outfile=docs/assets/ascii-maze.bundle.js --platform=browser --format=iife --sourcemap --external:fs --external:child_process",
     "docs:examples": "node scripts/copy-examples.cjs",
-    "docs": "npm run build:ascii-maze && npm run docs:examples && npm run docs:build-scripts && node ./dist-docs/scripts/generate-docs.js && node ./dist-docs/scripts/render-docs-html.js"
+    "prettier": "npx prettier --write .",
+    "docs": "npm run build:ascii-maze && npm run docs:examples && npm run docs:build-scripts && node ./dist-docs/scripts/generate-docs.js && node ./dist-docs/scripts/render-docs-html.js",
+    "onnx:export": "node scripts/export-onnx.cjs"
   },
   "exports": {
     ".": {

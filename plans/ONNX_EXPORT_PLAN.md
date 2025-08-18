@@ -1,5 +1,7 @@
 # ONNX Export / Import Plan for NeatapticTS
 
+_Last updated: 2025-08-17 (Phase 4 progressing: Conv2D + Pool + sharing validation + heuristic conv inference metadata + flatten-after-pool option; Phase 3 Step 6 deep tests still pending)_
+
 ## 0. Purpose
 Provide a clear, incremental roadmap from the current minimal MLP ONNX export/import toward broad ONNX compatibility (feed‑forward, recurrent, convolutional, attention, quantized, and extensible custom ops) while preserving NeatapticTS evolutionary features where feasible.
 
@@ -40,30 +42,123 @@ Original plan suggested a per-node mapping (Add / MatMul explicit). Implementati
 4. Graceful degradation: always export a valid subgraph even when certain advanced features need approximation (e.g., replace unsupported activation with Identity + metadata note).
 5. Evolution fidelity: preserve NEAT-relevant metadata (innovation numbers, topology tags) in model metadata without breaking external consumers.
 
-## 5. Proposed Phased Roadmap
+## 5. Phased Roadmap
 
-### Phase 1 (Immediate Hardening)
-- Reorder node emission: Gemm → Activation (ONNX conventional ordering). Optionally preserve legacy order via flag `{ legacyOrdering?: boolean }`.
-- Add model metadata wrapper: `{ ir_version, opset_import:[{version,domain}], producer_name, producer_version, doc_string }`.
-- Add optional batching: allow input shape `[batch, features]` (dynamic first dim). Use symbolic dim for batch (e.g., `dim_param: "N"`).
-- Layer-level heterogeneous output support: allow different output activations vs hidden layers.
-- Provide round-trip tests (export → import → forward pass numeric equivalence within tolerance) for random seeds.
+### Phase 1 (Immediate Hardening) - COMPLETED
+Implemented:
+- Standard node ordering Gemm → Activation (default) with legacy ordering flag.
+- `OnnxExportOptions` including metadata, batch dimension, legacy ordering.
+- Metadata fields: `ir_version`, `opset_import`, `producer_name`, `producer_version`, `doc_string` (optional via flag).
+- Optional batch dimension with symbolic `N`.
+- Round-trip numerical equivalence tests (`onnx.roundtrip.test.ts`).
+- Layer-level heterogeneous output activation difference (output layer activation can differ from hidden layers) already supported by per-layer homogeneity rule.
 
-### Phase 2 (Feature Breadth – Feedforward Enhancements)
-- Partial connectivity export: represent missing connections by explicit zeros OR sparse encoding (CSR) + expand to dense for Gemm.
-- Support per-node activation (remove homogeneous constraint) by materializing each neuron as: Gemm (slice) + activation OR using `Add`, `Mul`, `Concat` patterns; optimize with fusion pass when all same.
-- Add BatchNormalization, Dropout (train-time only metadata, elide at inference), and residual/skip connections (Graph branching).
-- Add multiple inputs/outputs (map to multiple graph inputs/outputs).
+### Phase 2 (Feature Breadth – Feedforward Enhancements) - COMPLETED
+Deliverables achieved:
+1. Partial connectivity export (validation relaxation + zero-weight insertion).
+2. Mixed per-neuron activations (decomposition to Gemm+Activation per neuron + Concat) with reversible import.
+3. Metadata enrichment (`metadata_props.layer_sizes`).
+4. CLI surface for new capabilities (`--partial`, `--mixed`).
+5. Schema documentation updated (Concat node, decomposed naming, implicit sparse via zeros).
+
+Items originally listed under Phase 2 that were intentionally deferred (moved to later phases for clearer scope slicing):
+- Sparse encoding (`sparseFormat: 'csr'`).
+- Post-export fusion optimization (collapse decomposed homogeneous layers).
+- BatchNormalization / Dropout primitives.
+- Residual & skip connections.
+- Multiple inputs / outputs.
 
 ### Phase 3 (Recurrent / Temporal)
-- Simple recurrent (Elman/Jordan) via unrolling for fixed time steps OR using ONNX `Scan` op when sequence length dynamic.
-- LSTM/GRU mapping for evolved gated structures (pattern recognition of gate groupings) — potentially constrain evolution to recognizable cell templates for exportability.
-- Encode time dimension `[seq, batch, feature]` with symbolic dims.
+Baseline IMPLEMENTED (extended):
+1. Self-recurrence support for ANY hidden layer (one or multiple) in single-step form when `allowRecurrent && recurrentSingleStep`.
+  - For each recurrent hidden layer `k` a previous-state input is added:
+    - First recurrent layer: `hidden_prev`
+    - Subsequent recurrent layers: `hidden_prev_l{k}`
+  - Forward path per recurrent layer: Gemm (`gemm_in_l{k}`) + recurrent Gemm (`gemm_rec_l{k}` using `R{k-1}`) -> Add (`add_recurrent_l{k}`) -> Activation (`act_l{k}`).
+  - Recurrent weight matrices `Rk` currently diagonal (self-connections only) but sized for future dense intra-layer recurrence.
+  - Metadata `recurrent_single_step` now stores JSON array of recurrent layer indices (1-based) instead of boolean.
+  - Importer reconstructs self-connections layer-by-layer using each `Rk` diagonal.
+2. Tests added covering:
+  - Single hidden-layer recurrence (presence of `hidden_prev`, `R0`).
+  - Multi-hidden-layer scenario with recurrence only in later layer (presence of `hidden_prev_l2`, `R1` only).
+  - Error path for mixed activations in recurrent layer.
+
+Deferred (Phase 3 extended):
+- Dense intra-layer recurrence (non-diagonal `Rk`).
+- Multi-step unrolling or ONNX `Scan` operator for dynamic sequence length.
+- Jordan recurrent (output-to-hidden) connections.
+- General backward / arbitrary recurrent edges beyond self; gating interactions.
+- Time dimension `[seq, batch, feature]` formalization and unified state carry semantics.
+
+LSTM / GRU Heuristic Sub-plan Progress:
+1. Structural Pattern Recognition – COMPLETED (heuristic equal partition + self-connection check; metadata `lstm_groups_stub`).
+2. Canonical Parameter Extraction – COMPLETED (concatenated W/R/B initializers with simplified biases).
+3. ONNX Node Emission – COMPLETED (emits experimental single-step `LSTM` / `GRU` nodes alongside unfused Gemm path; no pruning yet).
+4. Metadata & Fallback – COMPLETED (`lstm_emitted_layers`, `gru_emitted_layers`, `rnn_pattern_fallback`).
+5. Import Path Extension – COMPLETED (reconstructs Layer.lstm / Layer.gru using emitted tensors; best-effort, silent skip on mismatch).
+6. Testing – IN PROGRESS (to be added now):
+  - Unit tests for LSTM/GRU emission presence (initializers + node types) under controlled synthetic layer partitions.
+  - Round-trip reconstruction tests verifying gate weight & bias mapping fidelity within tolerance (1e-9) and self-connection restoration.
+  - Negative/fallback tests (near-miss sizes recorded as `rnn_pattern_fallback`, incomplete self-connections skip emission).
+  - Import robustness tests (missing one of W/R/B causes fused reconstruction skip but base MLP still loads).
+7. Deferred (post-step 6):
+  - Peephole & projection support.
+  - Proper ONNX-compliant bias splitting (Wb/Rb) and gate ordering normalization.
+  - Graph pruning/fusion of redundant unfused paths when fused nodes emitted (feature-flagged optimization).
+  - Multi-layer stacked fused LSTM/GRU with consistent sequence/time abstraction.
+
+After Step 6 completes, proceed to Phase 4 (Convolutional / Spatial) groundwork (Conv pattern detection spec + minimal Conv export prototype).
 
 ### Phase 4 (Convolutional / Spatial)
-- Detect 2D convolution patterns (weight sharing topologies) and emit Conv + optional Pool + activation.
-- Pooling ops: MaxPool, AveragePool; flatten transitions to fully connected.
-- Support padding/stride from node metadata (extend internal representation if absent).
+
+Status (cumulative so far):
+ 1. Conv2D Groundwork IMPLEMENTED + TESTS:
+   - `conv2dMappings` option + `Conv2DMapping` interface.
+   - Exporter emits `Conv` node with `ConvW*` / `ConvB*` initializers; attributes: `kernel_shape`, `strides`, `pads`.
+   - Metadata: `conv2d_layers`, `conv2d_specs`.
+   - Import reconstructs dense weights (approximate inverse) to preserve existing forward parity.
+   - Tests: emission + dimension mismatch fallback (`onnx.conv.groundwork.test.ts`).
+ 2. Pool2D Mapping IMPLEMENTED + TESTS:
+   - `pool2dMappings` option + `Pool2DMapping` interface.
+   - Emits `MaxPool` / `AveragePool` nodes directly after target layer output.
+   - Metadata: `pool2d_layers`, `pool2d_specs`.
+   - Import attaches metadata stub to network (`_onnxPooling`).
+   - Tests: pooling metadata presence (`onnx.conv.pool.validation.test.ts`).
+ 3. Conv Weight Sharing Validation IMPLEMENTED:
+   - `validateConvSharing` flag performs best-effort spatial kernel equality check.
+   - Metadata: `conv2d_sharing_verified`, `conv2d_sharing_mismatch` (tolerant 1e-9).
+   - Tests: sharing success + induced mismatch (`onnx.conv.pool.validation.test.ts`).
+ 4. Heuristic Conv Inference (non-intrusive) IMPLEMENTED:
+   - Detects simple single-channel square input with 2x2 or 3x3 kernel stride 1 producing exact dense size.
+   - Metadata only: `conv2d_inferred_layers`, `conv2d_inferred_specs` (does NOT emit Conv node yet).
+   - Test: metadata presence (`onnx.conv.infer.test.ts`).
+ 5. Pooling Import Attachment IMPLEMENTED:
+   - Import attaches `_onnxPooling` with layers & specs (no shape simulation yet).
+ 6. Flatten-after-Pool OPTION IMPLEMENTED:
+   - New export option `flattenAfterPooling` inserts `Flatten` node (axis=1) immediately after each emitted Pool.
+   - Metadata: `flatten_layers` (export-layer indices where flatten applied).
+   - Test: flatten metadata (`onnx.conv.pool.flatten.test.ts`).
+
+New Options / Metadata Added This Increment:
+  - `flattenAfterPooling` (export option).
+  - Metadata key `flatten_layers` (array of layer indices with flatten bridge inserted).
+
+Deferred / Remaining Phase 4 Scope (updated):
+  - Pooling shape simulation & dense remapping on import (currently metadata only; forward path ignores pooling & flatten).
+  - Automatic promotion of heuristic `conv2d_inferred_specs` into actual Conv emission behind safety flag.
+  - Multi-channel & multi-stage Conv chains (stacked conv/pool pipelines), dilation, groups, depthwise separable conv.
+  - Proper spatial shape tracking & validation across Conv → Pool → Flatten boundaries.
+  - Activation fusion / redundant Gemm pruning after Conv introduction.
+  - Residual / skip spatial connections.
+  - Hybrid recurrent + spatial interleaving semantics.
+
+Next Planned Increment (proposed order):
+ 1. Import-time pooling shape simulation stub: record virtual (H,W,C) after each pool to enable future correctness checks (still no numeric pooling yet; weights unaffected).
+ 2. Optional dense output adjustment flag: simulate flatten size effect for layers following a flattenAfterPooling site (consistency metadata check only; no weight change yet).
+ 3. Heuristic Conv auto-promotion (feature-flagged): if sharing validation passes (or small layer), emit Conv instead of Gemm, preserving a fallback path during transition.
+ 4. Multi-channel heuristic extension: detect repeated kernel tiles across channels, infer inChannels > 1.
+ 5. Negative tests for flatten + pooling interplay (ensure metadata only – forward outputs unchanged vs baseline).
+ 6. Begin deeper recurrent parity tests (Phase 3 Step 6) in parallel once spatial metadata foundation stable.
 
 ### Phase 5 (Advanced Graph Constructs)
 - Attention primitives: map multi-head attention to Q/K/V linear projections + MatMul + Softmax + weighted sum.
@@ -128,12 +223,14 @@ Backward compatibility: default options reproduce current behavior except correc
 - Risk: Explosion of custom ops reduces interoperability (Mitigation: prefer composition of standard ops; gate custom domain usage behind explicit flag).
 - Risk: Performance regression from per-neuron decomposition (Mitigation: fusion pass before final emission).
 
-## 11. Short-Term Action Items (Ready to Implement)
-1. Add metadata wrapper + opset (default 18) & reorder Gemm before activation.
-2. Introduce `OnnxExportOptions` with legacy ordering flag.
-3. Add unit tests for ordering & round-trip weights (hidden layers up to depth 4).
-4. Document current JSON schema vs full ONNX (README section linking here).
-5. Provide CLI or script example for exporting a NEAT-evolved best genome.
+## 11. Short-Term Action Items (Post Phase 2 Completion)
+1. Link schema doc from root README & docs index. (Pending)
+2. Provide CLI example for exporting an evolved genome (README snippet). (Pending)
+3. Property-based randomized topology tests (1–6 hidden layers; varying sparsity & mixed activations) ensure import/export fidelity. (Planned)
+4. Fusion optimization pass for decomposed layers (homogeneity collapse). (Planned)
+5. Sparse representation design (`sparseFormat` CSR draft spec). (Planned)
+6. ONNX Runtime smoke test harness for unified & decomposed models. (Planned)
+7. Begin design notes for multi-input/output and residual connection representation (branching graph semantics). (Planned)
 
 ## 12. Contribution Guidelines (ONNX Area)
 - Keep exporter pure (no side effects except optional console warnings); return new object.

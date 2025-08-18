@@ -2525,7 +2525,9 @@
           "docs:html": "npm run docs:build-scripts && node ./dist-docs/scripts/render-docs-html.js",
           "build:ascii-maze": "npx esbuild test/examples/asciiMaze/browser-entry.ts --bundle --outfile=docs/assets/ascii-maze.bundle.js --platform=browser --format=iife --sourcemap --external:fs --external:child_process",
           "docs:examples": "node scripts/copy-examples.cjs",
-          docs: "npm run build:ascii-maze && npm run docs:examples && npm run docs:build-scripts && node ./dist-docs/scripts/generate-docs.js && node ./dist-docs/scripts/render-docs-html.js"
+          prettier: "npx prettier --write .",
+          docs: "npm run build:ascii-maze && npm run docs:examples && npm run docs:build-scripts && node ./dist-docs/scripts/generate-docs.js && node ./dist-docs/scripts/render-docs-html.js",
+          "onnx:export": "node scripts/export-onnx.cjs"
         },
         exports: {
           ".": {
@@ -2650,27 +2652,30 @@
     layerAccumulator.push(outputNodes);
     return layerAccumulator;
   }
-  function validateLayerHomogeneityAndConnectivity(layers, network) {
+  function validateLayerHomogeneityAndConnectivity(layers, network, options) {
     for (let layerIndex = 1; layerIndex < layers.length; layerIndex++) {
       const previousLayerNodes = layers[layerIndex - 1];
       const currentLayerNodes = layers[layerIndex];
       const activationNameSet = new Set(
         currentLayerNodes.map((n) => n.squash && n.squash.name)
       );
-      if (activationNameSet.size > 1)
+      if (activationNameSet.size > 1 && !options.allowMixedActivations)
         throw new Error(
-          `ONNX export error: Mixed activation functions detected in layer ${layerIndex}.`
+          `ONNX export error: Mixed activation functions detected in layer ${layerIndex}. (enable allowMixedActivations to decompose layer)`
+        );
+      if (activationNameSet.size > 1 && options.allowMixedActivations)
+        console.warn(
+          `Warning: Mixed activations in layer ${layerIndex}; exporting per-neuron Gemm + Activation (+Concat) baseline.`
         );
       for (const targetNode of currentLayerNodes) {
         for (const sourceNode of previousLayerNodes) {
           const isConnected = targetNode.connections.in.some(
             (conn) => conn.from === sourceNode
           );
-          if (!isConnected) {
+          if (!isConnected && !options.allowPartialConnectivity)
             throw new Error(
-              `ONNX export error: Missing connection from node ${sourceNode.index} to node ${targetNode.index} in layer ${layerIndex}.`
+              `ONNX export error: Missing connection from node ${sourceNode.index} to node ${targetNode.index} in layer ${layerIndex}. (enable allowPartialConnectivity)`
             );
-          }
         }
       }
     }
@@ -2729,47 +2734,335 @@
       model.opset_import = [{ version: opset, domain: "" }];
       model.producer_name = producerName;
       model.producer_version = producerVersion || pkgVersion;
-      model.doc_string = docString || "Exported from NeatapticTS ONNX exporter (phase 1)";
+      model.doc_string = docString || "Exported from NeatapticTS ONNX exporter (phases 1-2 baseline)";
     }
     let previousOutputName = "input";
+    const recurrentLayerIndices = [];
+    if (options.allowRecurrent && options.recurrentSingleStep) {
+      for (let layerIndex = 1; layerIndex < layers.length - 1; layerIndex++) {
+        const hiddenLayerNodes = layers[layerIndex];
+        if (hiddenLayerNodes.some((n) => n.connections.self.length > 0)) {
+          recurrentLayerIndices.push(layerIndex);
+          const prevName = layerIndex === 1 ? "hidden_prev" : `hidden_prev_l${layerIndex}`;
+          model.graph.inputs.push({
+            name: prevName,
+            type: {
+              tensor_type: {
+                elem_type: 1,
+                shape: {
+                  dim: batchDimension ? [{ dim_param: "N" }, { dim_value: hiddenLayerNodes.length }] : [{ dim_value: hiddenLayerNodes.length }]
+                }
+              }
+            }
+          });
+        }
+      }
+    }
+    const hiddenSizesMetadata = [];
     for (let layerIndex = 1; layerIndex < layers.length; layerIndex++) {
       const previousLayerNodes = layers[layerIndex - 1];
       const currentLayerNodes = layers[layerIndex];
-      const weightMatrixValues = [];
-      const biasVector = new Array(currentLayerNodes.length).fill(0);
-      for (let neuronRow = 0; neuronRow < currentLayerNodes.length; neuronRow++) {
-        const targetNode = currentLayerNodes[neuronRow];
-        biasVector[neuronRow] = targetNode.bias;
-        for (let neuronCol = 0; neuronCol < previousLayerNodes.length; neuronCol++) {
-          const sourceNode = previousLayerNodes[neuronCol];
-          const inboundConn = targetNode.connections.in.find(
-            (c) => c.from === sourceNode
+      const isOutputLayer = layerIndex === layers.length - 1;
+      if (!isOutputLayer) hiddenSizesMetadata.push(currentLayerNodes.length);
+      const convSpec = options.conv2dMappings?.find(
+        (m) => m.layerIndex === layerIndex
+      );
+      if (convSpec) {
+        const prevWidthExpected = convSpec.inHeight * convSpec.inWidth * convSpec.inChannels;
+        const prevWidthActual = previousLayerNodes.length;
+        const thisWidthExpected = convSpec.outChannels * convSpec.outHeight * convSpec.outWidth;
+        const thisWidthActual = currentLayerNodes.length;
+        const pads = [
+          convSpec.padTop || 0,
+          convSpec.padLeft || 0,
+          convSpec.padBottom || 0,
+          convSpec.padRight || 0
+        ];
+        const shapeValid = prevWidthExpected === prevWidthActual && thisWidthExpected === thisWidthActual;
+        if (!shapeValid) {
+          console.warn(
+            `Conv2D mapping for layer ${layerIndex} skipped: dimension mismatch (expected prev=${prevWidthExpected} got ${prevWidthActual}; expected this=${thisWidthExpected} got ${thisWidthActual}).`
           );
-          weightMatrixValues.push(inboundConn ? inboundConn.weight : 0);
+        } else {
+          const W = [];
+          const B = [];
+          for (let oc = 0; oc < convSpec.outChannels; oc++) {
+            const repIndex = oc * convSpec.outHeight * convSpec.outWidth;
+            const repNeuron = currentLayerNodes[repIndex];
+            B.push(repNeuron.bias);
+            for (let ic = 0; ic < convSpec.inChannels; ic++) {
+              for (let kh = 0; kh < convSpec.kernelHeight; kh++) {
+                for (let kw = 0; kw < convSpec.kernelWidth; kw++) {
+                  const inputFeatureIndex = ic * (convSpec.inHeight * convSpec.inWidth) + kh * convSpec.inWidth + kw;
+                  const sourceNode = previousLayerNodes[inputFeatureIndex];
+                  const conn = repNeuron.connections.in.find(
+                    (cc) => cc.from === sourceNode
+                  );
+                  W.push(conn ? conn.weight : 0);
+                }
+              }
+            }
+          }
+          const convWName = `ConvW${layerIndex - 1}`;
+          const convBName = `ConvB${layerIndex - 1}`;
+          model.graph.initializer.push({
+            name: convWName,
+            data_type: 1,
+            dims: [
+              convSpec.outChannels,
+              convSpec.inChannels,
+              convSpec.kernelHeight,
+              convSpec.kernelWidth
+            ],
+            float_data: W
+          });
+          model.graph.initializer.push({
+            name: convBName,
+            data_type: 1,
+            dims: [convSpec.outChannels],
+            float_data: B
+          });
+          const convOut = `Conv_${layerIndex}`;
+          model.graph.node.push({
+            op_type: "Conv",
+            input: [previousOutputName, convWName, convBName],
+            output: [convOut],
+            name: `conv_l${layerIndex}`,
+            attributes: [
+              {
+                name: "kernel_shape",
+                type: "INTS",
+                ints: [convSpec.kernelHeight, convSpec.kernelWidth]
+              },
+              {
+                name: "strides",
+                type: "INTS",
+                ints: [convSpec.strideHeight, convSpec.strideWidth]
+              },
+              { name: "pads", type: "INTS", ints: pads }
+            ]
+          });
+          const actOp = convSpec.activation || mapActivationToOnnx(currentLayerNodes[0].squash);
+          const activationOutputName = `Layer_${layerIndex}`;
+          model.graph.node.push({
+            op_type: actOp,
+            input: [convOut],
+            output: [activationOutputName],
+            name: `act_conv_l${layerIndex}`
+          });
+          previousOutputName = activationOutputName;
+          const poolSpecPostConv = options.pool2dMappings?.find(
+            (p) => p.afterLayerIndex === layerIndex
+          );
+          if (poolSpecPostConv) {
+            const kernel = [
+              poolSpecPostConv.kernelHeight,
+              poolSpecPostConv.kernelWidth
+            ];
+            const strides = [
+              poolSpecPostConv.strideHeight,
+              poolSpecPostConv.strideWidth
+            ];
+            const pads2 = [
+              poolSpecPostConv.padTop || 0,
+              poolSpecPostConv.padLeft || 0,
+              poolSpecPostConv.padBottom || 0,
+              poolSpecPostConv.padRight || 0
+            ];
+            const poolOut = `Pool_${layerIndex}`;
+            model.graph.node.push({
+              op_type: poolSpecPostConv.type,
+              input: [previousOutputName],
+              output: [poolOut],
+              name: `pool_after_l${layerIndex}`,
+              attributes: [
+                { name: "kernel_shape", type: "INTS", ints: kernel },
+                { name: "strides", type: "INTS", ints: strides },
+                { name: "pads", type: "INTS", ints: pads2 }
+              ]
+            });
+            previousOutputName = poolOut;
+            if (options.flattenAfterPooling) {
+              const flatOut = `PoolFlat_${layerIndex}`;
+              model.graph.node.push({
+                op_type: "Flatten",
+                input: [previousOutputName],
+                output: [flatOut],
+                name: `flatten_after_l${layerIndex}`,
+                attributes: [{ name: "axis", type: "INT", i: 1 }]
+              });
+              previousOutputName = flatOut;
+              model.metadata_props = model.metadata_props || [];
+              const flMeta = model.metadata_props.find(
+                (m) => m.key === "flatten_layers"
+              );
+              if (flMeta) {
+                try {
+                  const arr = JSON.parse(flMeta.value);
+                  if (Array.isArray(arr) && !arr.includes(layerIndex)) {
+                    arr.push(layerIndex);
+                    flMeta.value = JSON.stringify(arr);
+                  }
+                } catch {
+                  flMeta.value = JSON.stringify([layerIndex]);
+                }
+              } else {
+                model.metadata_props.push({
+                  key: "flatten_layers",
+                  value: JSON.stringify([layerIndex])
+                });
+              }
+            }
+            model.metadata_props = model.metadata_props || [];
+            const poolLayersMeta = model.metadata_props.find(
+              (m) => m.key === "pool2d_layers"
+            );
+            if (poolLayersMeta) {
+              try {
+                const arr = JSON.parse(poolLayersMeta.value);
+                if (Array.isArray(arr) && !arr.includes(layerIndex)) {
+                  arr.push(layerIndex);
+                  poolLayersMeta.value = JSON.stringify(arr);
+                }
+              } catch {
+                poolLayersMeta.value = JSON.stringify([layerIndex]);
+              }
+            } else {
+              model.metadata_props.push({
+                key: "pool2d_layers",
+                value: JSON.stringify([layerIndex])
+              });
+            }
+            const poolSpecsMeta = model.metadata_props.find(
+              (m) => m.key === "pool2d_specs"
+            );
+            if (poolSpecsMeta) {
+              try {
+                const arr = JSON.parse(poolSpecsMeta.value);
+                if (Array.isArray(arr)) {
+                  arr.push({ ...poolSpecPostConv });
+                  poolSpecsMeta.value = JSON.stringify(arr);
+                }
+              } catch {
+                poolSpecsMeta.value = JSON.stringify([poolSpecPostConv]);
+              }
+            } else {
+              model.metadata_props.push({
+                key: "pool2d_specs",
+                value: JSON.stringify([poolSpecPostConv])
+              });
+            }
+          }
+          model.metadata_props = model.metadata_props || [];
+          const convLayersMeta = model.metadata_props.find(
+            (m) => m.key === "conv2d_layers"
+          );
+          if (convLayersMeta) {
+            try {
+              const arr = JSON.parse(convLayersMeta.value);
+              if (Array.isArray(arr) && !arr.includes(layerIndex)) {
+                arr.push(layerIndex);
+                convLayersMeta.value = JSON.stringify(arr);
+              }
+            } catch {
+              convLayersMeta.value = JSON.stringify([layerIndex]);
+            }
+          } else {
+            model.metadata_props.push({
+              key: "conv2d_layers",
+              value: JSON.stringify([layerIndex])
+            });
+          }
+          const convSpecsMeta = model.metadata_props.find(
+            (m) => m.key === "conv2d_specs"
+          );
+          if (convSpecsMeta) {
+            try {
+              const arr = JSON.parse(convSpecsMeta.value);
+              if (Array.isArray(arr)) {
+                arr.push({ ...convSpec });
+                convSpecsMeta.value = JSON.stringify(arr);
+              }
+            } catch {
+              convSpecsMeta.value = JSON.stringify([convSpec]);
+            }
+          } else {
+            model.metadata_props.push({
+              key: "conv2d_specs",
+              value: JSON.stringify([convSpec])
+            });
+          }
+          continue;
         }
       }
-      const weightTensorName = `W${layerIndex - 1}`;
-      const biasTensorName = `B${layerIndex - 1}`;
-      const gemmOutputName = `Gemm_${layerIndex}`;
-      const activationOutputName = `Layer_${layerIndex}`;
-      model.graph.initializer.push({
-        name: weightTensorName,
-        data_type: 1,
-        dims: [currentLayerNodes.length, previousLayerNodes.length],
-        float_data: weightMatrixValues
-      });
-      model.graph.initializer.push({
-        name: biasTensorName,
-        data_type: 1,
-        dims: [currentLayerNodes.length],
-        float_data: biasVector
-      });
-      if (!legacyNodeOrdering) {
+      const mixed = options.allowMixedActivations && new Set(currentLayerNodes.map((n) => n.squash && n.squash.name)).size > 1;
+      if (recurrentLayerIndices.includes(layerIndex) && !isOutputLayer) {
+        if (mixed)
+          throw new Error(
+            `Recurrent export does not yet support mixed activations in hidden layer ${layerIndex}.`
+          );
+        const weightMatrixValues = [];
+        const biasVector = new Array(currentLayerNodes.length).fill(0);
+        for (let r = 0; r < currentLayerNodes.length; r++) {
+          const targetNode = currentLayerNodes[r];
+          biasVector[r] = targetNode.bias;
+          for (let c = 0; c < previousLayerNodes.length; c++) {
+            const sourceNode = previousLayerNodes[c];
+            const inboundConn = targetNode.connections.in.find(
+              (conn) => conn.from === sourceNode
+            );
+            weightMatrixValues.push(inboundConn ? inboundConn.weight : 0);
+          }
+        }
+        const weightTensorName = `W${layerIndex - 1}`;
+        const biasTensorName = `B${layerIndex - 1}`;
+        model.graph.initializer.push({
+          name: weightTensorName,
+          data_type: 1,
+          dims: [currentLayerNodes.length, previousLayerNodes.length],
+          float_data: weightMatrixValues
+        });
+        model.graph.initializer.push({
+          name: biasTensorName,
+          data_type: 1,
+          dims: [currentLayerNodes.length],
+          float_data: biasVector
+        });
+        const recurrentWeights = [];
+        for (let r = 0; r < currentLayerNodes.length; r++) {
+          for (let c = 0; c < currentLayerNodes.length; c++) {
+            if (r === c) {
+              const selfConn = currentLayerNodes[r].connections.self[0];
+              recurrentWeights.push(selfConn ? selfConn.weight : 0);
+            } else {
+              recurrentWeights.push(0);
+            }
+          }
+        }
+        const rName = `R${layerIndex - 1}`;
+        model.graph.initializer.push({
+          name: rName,
+          data_type: 1,
+          dims: [currentLayerNodes.length, currentLayerNodes.length],
+          float_data: recurrentWeights
+        });
         model.graph.node.push({
           op_type: "Gemm",
           input: [previousOutputName, weightTensorName, biasTensorName],
-          output: [gemmOutputName],
-          name: `gemm_l${layerIndex}`,
+          output: [`Gemm_in_${layerIndex}`],
+          name: `gemm_in_l${layerIndex}`,
+          attributes: [
+            { name: "alpha", type: "FLOAT", f: 1 },
+            { name: "beta", type: "FLOAT", f: 1 },
+            { name: "transB", type: "INT", i: 1 }
+          ]
+        });
+        const prevHiddenInputName = layerIndex === 1 ? "hidden_prev" : `hidden_prev_l${layerIndex}`;
+        model.graph.node.push({
+          op_type: "Gemm",
+          input: [prevHiddenInputName, rName],
+          output: [`Gemm_rec_${layerIndex}`],
+          name: `gemm_rec_l${layerIndex}`,
           attributes: [
             { name: "alpha", type: "FLOAT", f: 1 },
             { name: "beta", type: "FLOAT", f: 1 },
@@ -2777,31 +3070,632 @@
           ]
         });
         model.graph.node.push({
+          op_type: "Add",
+          input: [`Gemm_in_${layerIndex}`, `Gemm_rec_${layerIndex}`],
+          output: [`RecurrentSum_${layerIndex}`],
+          name: `add_recurrent_l${layerIndex}`
+        });
+        model.graph.node.push({
           op_type: mapActivationToOnnx(currentLayerNodes[0].squash),
-          input: [gemmOutputName],
-          output: [activationOutputName],
+          input: [`RecurrentSum_${layerIndex}`],
+          output: [`Layer_${layerIndex}`],
           name: `act_l${layerIndex}`
         });
+        previousOutputName = `Layer_${layerIndex}`;
+      } else if (!mixed) {
+        const weightMatrixValues = [];
+        const biasVector = new Array(currentLayerNodes.length).fill(0);
+        for (let r = 0; r < currentLayerNodes.length; r++) {
+          const targetNode = currentLayerNodes[r];
+          biasVector[r] = targetNode.bias;
+          for (let c = 0; c < previousLayerNodes.length; c++) {
+            const sourceNode = previousLayerNodes[c];
+            const inboundConn = targetNode.connections.in.find(
+              (conn) => conn.from === sourceNode
+            );
+            weightMatrixValues.push(inboundConn ? inboundConn.weight : 0);
+          }
+        }
+        const weightTensorName = `W${layerIndex - 1}`;
+        const biasTensorName = `B${layerIndex - 1}`;
+        const gemmOutputName = `Gemm_${layerIndex}`;
+        const activationOutputName = `Layer_${layerIndex}`;
+        model.graph.initializer.push({
+          name: weightTensorName,
+          data_type: 1,
+          dims: [currentLayerNodes.length, previousLayerNodes.length],
+          float_data: weightMatrixValues
+        });
+        model.graph.initializer.push({
+          name: biasTensorName,
+          data_type: 1,
+          dims: [currentLayerNodes.length],
+          float_data: biasVector
+        });
+        if (!legacyNodeOrdering) {
+          model.graph.node.push({
+            op_type: "Gemm",
+            input: [previousOutputName, weightTensorName, biasTensorName],
+            output: [gemmOutputName],
+            name: `gemm_l${layerIndex}`,
+            attributes: [
+              { name: "alpha", type: "FLOAT", f: 1 },
+              { name: "beta", type: "FLOAT", f: 1 },
+              { name: "transB", type: "INT", i: 1 }
+            ]
+          });
+          model.graph.node.push({
+            op_type: mapActivationToOnnx(currentLayerNodes[0].squash),
+            input: [gemmOutputName],
+            output: [activationOutputName],
+            name: `act_l${layerIndex}`
+          });
+        } else {
+          model.graph.node.push({
+            op_type: mapActivationToOnnx(currentLayerNodes[0].squash),
+            input: [gemmOutputName],
+            output: [activationOutputName],
+            name: `act_l${layerIndex}`
+          });
+          model.graph.node.push({
+            op_type: "Gemm",
+            input: [previousOutputName, weightTensorName, biasTensorName],
+            output: [gemmOutputName],
+            name: `gemm_l${layerIndex}`,
+            attributes: [
+              { name: "alpha", type: "FLOAT", f: 1 },
+              { name: "beta", type: "FLOAT", f: 1 },
+              { name: "transB", type: "INT", i: 1 }
+            ]
+          });
+        }
+        previousOutputName = activationOutputName;
+        const poolSpecDense = options.pool2dMappings?.find(
+          (p) => p.afterLayerIndex === layerIndex
+        );
+        if (poolSpecDense) {
+          const kernel = [poolSpecDense.kernelHeight, poolSpecDense.kernelWidth];
+          const strides = [poolSpecDense.strideHeight, poolSpecDense.strideWidth];
+          const pads = [
+            poolSpecDense.padTop || 0,
+            poolSpecDense.padLeft || 0,
+            poolSpecDense.padBottom || 0,
+            poolSpecDense.padRight || 0
+          ];
+          const poolOut = `Pool_${layerIndex}`;
+          model.graph.node.push({
+            op_type: poolSpecDense.type,
+            input: [previousOutputName],
+            output: [poolOut],
+            name: `pool_after_l${layerIndex}`,
+            attributes: [
+              { name: "kernel_shape", type: "INTS", ints: kernel },
+              { name: "strides", type: "INTS", ints: strides },
+              { name: "pads", type: "INTS", ints: pads }
+            ]
+          });
+          previousOutputName = poolOut;
+          if (options.flattenAfterPooling) {
+            const flatOut = `PoolFlat_${layerIndex}`;
+            model.graph.node.push({
+              op_type: "Flatten",
+              input: [previousOutputName],
+              output: [flatOut],
+              name: `flatten_after_l${layerIndex}`,
+              attributes: [{ name: "axis", type: "INT", i: 1 }]
+            });
+            previousOutputName = flatOut;
+            model.metadata_props = model.metadata_props || [];
+            const flMeta = model.metadata_props.find(
+              (m) => m.key === "flatten_layers"
+            );
+            if (flMeta) {
+              try {
+                const arr = JSON.parse(flMeta.value);
+                if (Array.isArray(arr) && !arr.includes(layerIndex)) {
+                  arr.push(layerIndex);
+                  flMeta.value = JSON.stringify(arr);
+                }
+              } catch {
+                flMeta.value = JSON.stringify([layerIndex]);
+              }
+            } else {
+              model.metadata_props.push({
+                key: "flatten_layers",
+                value: JSON.stringify([layerIndex])
+              });
+            }
+          }
+          model.metadata_props = model.metadata_props || [];
+          const poolLayersMeta = model.metadata_props.find(
+            (m) => m.key === "pool2d_layers"
+          );
+          if (poolLayersMeta) {
+            try {
+              const arr = JSON.parse(poolLayersMeta.value);
+              if (Array.isArray(arr) && !arr.includes(layerIndex)) {
+                arr.push(layerIndex);
+                poolLayersMeta.value = JSON.stringify(arr);
+              }
+            } catch {
+              poolLayersMeta.value = JSON.stringify([layerIndex]);
+            }
+          } else {
+            model.metadata_props.push({
+              key: "pool2d_layers",
+              value: JSON.stringify([layerIndex])
+            });
+          }
+          const poolSpecsMeta = model.metadata_props.find(
+            (m) => m.key === "pool2d_specs"
+          );
+          if (poolSpecsMeta) {
+            try {
+              const arr = JSON.parse(poolSpecsMeta.value);
+              if (Array.isArray(arr)) {
+                arr.push({ ...poolSpecDense });
+                poolSpecsMeta.value = JSON.stringify(arr);
+              }
+            } catch {
+              poolSpecsMeta.value = JSON.stringify([poolSpecDense]);
+            }
+          } else {
+            model.metadata_props.push({
+              key: "pool2d_specs",
+              value: JSON.stringify([poolSpecDense])
+            });
+          }
+        }
       } else {
-        model.graph.node.push({
-          op_type: mapActivationToOnnx(currentLayerNodes[0].squash),
-          input: [gemmOutputName],
-          output: [activationOutputName],
-          name: `act_l${layerIndex}`
+        const perNeuronActivationOutputs = [];
+        currentLayerNodes.forEach((targetNode, idx) => {
+          const weightRow = [];
+          for (let c = 0; c < previousLayerNodes.length; c++) {
+            const sourceNode = previousLayerNodes[c];
+            const inboundConn = targetNode.connections.in.find(
+              (conn) => conn.from === sourceNode
+            );
+            weightRow.push(inboundConn ? inboundConn.weight : 0);
+          }
+          const weightTensorName = `W${layerIndex - 1}_n${idx}`;
+          const biasTensorName = `B${layerIndex - 1}_n${idx}`;
+          const gemmOutputName = `Gemm_${layerIndex}_n${idx}`;
+          const actOutputName = `Layer_${layerIndex}_n${idx}`;
+          model.graph.initializer.push({
+            name: weightTensorName,
+            data_type: 1,
+            dims: [1, previousLayerNodes.length],
+            float_data: weightRow
+          });
+          model.graph.initializer.push({
+            name: biasTensorName,
+            data_type: 1,
+            dims: [1],
+            float_data: [targetNode.bias]
+          });
+          model.graph.node.push({
+            op_type: "Gemm",
+            input: [previousOutputName, weightTensorName, biasTensorName],
+            output: [gemmOutputName],
+            name: `gemm_l${layerIndex}_n${idx}`,
+            attributes: [
+              { name: "alpha", type: "FLOAT", f: 1 },
+              { name: "beta", type: "FLOAT", f: 1 },
+              { name: "transB", type: "INT", i: 1 }
+            ]
+          });
+          model.graph.node.push({
+            op_type: mapActivationToOnnx(targetNode.squash),
+            input: [gemmOutputName],
+            output: [actOutputName],
+            name: `act_l${layerIndex}_n${idx}`
+          });
+          perNeuronActivationOutputs.push(actOutputName);
         });
+        const activationOutputName = `Layer_${layerIndex}`;
         model.graph.node.push({
-          op_type: "Gemm",
-          input: [previousOutputName, weightTensorName, biasTensorName],
-          output: [gemmOutputName],
-          name: `gemm_l${layerIndex}`,
-          attributes: [
-            { name: "alpha", type: "FLOAT", f: 1 },
-            { name: "beta", type: "FLOAT", f: 1 },
-            { name: "transB", type: "INT", i: 1 }
-          ]
+          op_type: "Concat",
+          input: perNeuronActivationOutputs,
+          output: [activationOutputName],
+          name: `concat_l${layerIndex}`,
+          attributes: [{ name: "axis", type: "INT", i: batchDimension ? 1 : 0 }]
+        });
+        previousOutputName = activationOutputName;
+        const poolSpecPerNeuron = options.pool2dMappings?.find(
+          (p) => p.afterLayerIndex === layerIndex
+        );
+        if (poolSpecPerNeuron) {
+          const kernel = [
+            poolSpecPerNeuron.kernelHeight,
+            poolSpecPerNeuron.kernelWidth
+          ];
+          const strides = [
+            poolSpecPerNeuron.strideHeight,
+            poolSpecPerNeuron.strideWidth
+          ];
+          const pads = [
+            poolSpecPerNeuron.padTop || 0,
+            poolSpecPerNeuron.padLeft || 0,
+            poolSpecPerNeuron.padBottom || 0,
+            poolSpecPerNeuron.padRight || 0
+          ];
+          const poolOut = `Pool_${layerIndex}`;
+          model.graph.node.push({
+            op_type: poolSpecPerNeuron.type,
+            input: [previousOutputName],
+            output: [poolOut],
+            name: `pool_after_l${layerIndex}`,
+            attributes: [
+              { name: "kernel_shape", type: "INTS", ints: kernel },
+              { name: "strides", type: "INTS", ints: strides },
+              { name: "pads", type: "INTS", ints: pads }
+            ]
+          });
+          previousOutputName = poolOut;
+          if (options.flattenAfterPooling) {
+            const flatOut = `PoolFlat_${layerIndex}`;
+            model.graph.node.push({
+              op_type: "Flatten",
+              input: [previousOutputName],
+              output: [flatOut],
+              name: `flatten_after_l${layerIndex}`,
+              attributes: [{ name: "axis", type: "INT", i: 1 }]
+            });
+            previousOutputName = flatOut;
+            model.metadata_props = model.metadata_props || [];
+            const flMeta = model.metadata_props.find(
+              (m) => m.key === "flatten_layers"
+            );
+            if (flMeta) {
+              try {
+                const arr = JSON.parse(flMeta.value);
+                if (Array.isArray(arr) && !arr.includes(layerIndex)) {
+                  arr.push(layerIndex);
+                  flMeta.value = JSON.stringify(arr);
+                }
+              } catch {
+                flMeta.value = JSON.stringify([layerIndex]);
+              }
+            } else {
+              model.metadata_props.push({
+                key: "flatten_layers",
+                value: JSON.stringify([layerIndex])
+              });
+            }
+          }
+          model.metadata_props = model.metadata_props || [];
+          const poolLayersMeta = model.metadata_props.find(
+            (m) => m.key === "pool2d_layers"
+          );
+          if (poolLayersMeta) {
+            try {
+              const arr = JSON.parse(poolLayersMeta.value);
+              if (Array.isArray(arr) && !arr.includes(layerIndex)) {
+                arr.push(layerIndex);
+                poolLayersMeta.value = JSON.stringify(arr);
+              }
+            } catch {
+              poolLayersMeta.value = JSON.stringify([layerIndex]);
+            }
+          } else {
+            model.metadata_props.push({
+              key: "pool2d_layers",
+              value: JSON.stringify([layerIndex])
+            });
+          }
+          const poolSpecsMeta = model.metadata_props.find(
+            (m) => m.key === "pool2d_specs"
+          );
+          if (poolSpecsMeta) {
+            try {
+              const arr = JSON.parse(poolSpecsMeta.value);
+              if (Array.isArray(arr)) {
+                arr.push({ ...poolSpecPerNeuron });
+                poolSpecsMeta.value = JSON.stringify(arr);
+              }
+            } catch {
+              poolSpecsMeta.value = JSON.stringify([poolSpecPerNeuron]);
+            }
+          } else {
+            model.metadata_props.push({
+              key: "pool2d_specs",
+              value: JSON.stringify([poolSpecPerNeuron])
+            });
+          }
+        }
+      }
+    }
+    if (options.allowRecurrent) {
+      for (let layerIndex = 1; layerIndex < layers.length - 1; layerIndex++) {
+        const current = layers[layerIndex];
+        const size = current.length;
+        if (!model.metadata_props) model.metadata_props = [];
+        if (size >= 8 && size < 10) {
+          model.metadata_props.push({
+            key: "rnn_pattern_fallback",
+            value: JSON.stringify({
+              layer: layerIndex,
+              reason: "size_between_gru_lstm_thresholds"
+            })
+          });
+        }
+        if (size >= 10 && size % 5 === 0) {
+          const unit = size / 5;
+          const prevLayerNodes = layers[layerIndex - 1];
+          const inputGate = current.slice(0, unit);
+          const forgetGate = current.slice(unit, unit * 2);
+          const cell = current.slice(unit * 2, unit * 3);
+          const outputGate = current.slice(unit * 3, unit * 4);
+          const outputBlock = current.slice(unit * 4, unit * 5);
+          const gateOrder = [inputGate, forgetGate, cell, outputGate];
+          const numGates = gateOrder.length;
+          const prevSize = prevLayerNodes.length;
+          const W = [];
+          const R = [];
+          const B = [];
+          for (let g = 0; g < numGates; g++) {
+            const gate2 = gateOrder[g];
+            for (let r = 0; r < unit; r++) {
+              const neuron = gate2[r];
+              for (let c = 0; c < prevSize; c++) {
+                const source = prevLayerNodes[c];
+                const conn = neuron.connections.in.find(
+                  (cc) => cc.from === source
+                );
+                W.push(conn ? conn.weight : 0);
+              }
+              for (let c = 0; c < unit; c++) {
+                if (gate2 === cell && c === r) {
+                  const selfConn = neuron.connections.self[0];
+                  R.push(selfConn ? selfConn.weight : 0);
+                } else R.push(0);
+              }
+              B.push(neuron.bias);
+            }
+          }
+          model.graph.initializer.push({
+            name: `LSTM_W${layerIndex - 1}`,
+            data_type: 1,
+            dims: [numGates * unit, prevSize],
+            float_data: W
+          });
+          model.graph.initializer.push({
+            name: `LSTM_R${layerIndex - 1}`,
+            data_type: 1,
+            dims: [numGates * unit, unit],
+            float_data: R
+          });
+          model.graph.initializer.push({
+            name: `LSTM_B${layerIndex - 1}`,
+            data_type: 1,
+            dims: [numGates * unit],
+            float_data: B
+          });
+          model.graph.node.push({
+            op_type: "LSTM",
+            input: [
+              previousOutputName,
+              `LSTM_W${layerIndex - 1}`,
+              `LSTM_R${layerIndex - 1}`,
+              `LSTM_B${layerIndex - 1}`
+            ],
+            output: [`Layer_${layerIndex}_lstm_hidden`],
+            name: `lstm_l${layerIndex}`,
+            attributes: [
+              { name: "hidden_size", type: "INT", i: unit },
+              { name: "layout", type: "INT", i: 0 }
+            ]
+          });
+          model.metadata_props = model.metadata_props || [];
+          const lstmMetaIdx = model.metadata_props.findIndex(
+            (m) => m.key === "lstm_emitted_layers"
+          );
+          if (lstmMetaIdx >= 0) {
+            try {
+              const arr = JSON.parse(model.metadata_props[lstmMetaIdx].value);
+              if (Array.isArray(arr) && !arr.includes(layerIndex)) {
+                arr.push(layerIndex);
+                model.metadata_props[lstmMetaIdx].value = JSON.stringify(arr);
+              }
+            } catch {
+              model.metadata_props[lstmMetaIdx].value = JSON.stringify([
+                layerIndex
+              ]);
+            }
+          } else {
+            model.metadata_props.push({
+              key: "lstm_emitted_layers",
+              value: JSON.stringify([layerIndex])
+            });
+          }
+        }
+        if (size >= 8 && size % 4 === 0) {
+          const unitG = size / 4;
+          const prevLayerNodes = layers[layerIndex - 1];
+          const updateGate = current.slice(0, unitG);
+          const resetGate = current.slice(unitG, unitG * 2);
+          const candidate = current.slice(unitG * 2, unitG * 3);
+          const outputBlock = current.slice(unitG * 3, unitG * 4);
+          const gateOrderGRU = [updateGate, resetGate, candidate];
+          const numGatesGRU = gateOrderGRU.length;
+          const prevSizeGRU = prevLayerNodes.length;
+          const Wg = [];
+          const Rg = [];
+          const Bg = [];
+          for (let g = 0; g < numGatesGRU; g++) {
+            const gate2 = gateOrderGRU[g];
+            for (let r = 0; r < unitG; r++) {
+              const neuron = gate2[r];
+              for (let c = 0; c < prevSizeGRU; c++) {
+                const src = prevLayerNodes[c];
+                const conn = neuron.connections.in.find(
+                  (cc) => cc.from === src
+                );
+                Wg.push(conn ? conn.weight : 0);
+              }
+              for (let c = 0; c < unitG; c++) {
+                if (gate2 === candidate && c === r) {
+                  const selfConn = neuron.connections.self[0];
+                  Rg.push(selfConn ? selfConn.weight : 0);
+                } else Rg.push(0);
+              }
+              Bg.push(neuron.bias);
+            }
+          }
+          model.graph.initializer.push({
+            name: `GRU_W${layerIndex - 1}`,
+            data_type: 1,
+            dims: [numGatesGRU * unitG, prevSizeGRU],
+            float_data: Wg
+          });
+          model.graph.initializer.push({
+            name: `GRU_R${layerIndex - 1}`,
+            data_type: 1,
+            dims: [numGatesGRU * unitG, unitG],
+            float_data: Rg
+          });
+          model.graph.initializer.push({
+            name: `GRU_B${layerIndex - 1}`,
+            data_type: 1,
+            dims: [numGatesGRU * unitG],
+            float_data: Bg
+          });
+          const prevOutName = layerIndex === 1 ? "input" : `Layer_${layerIndex - 1}`;
+          model.graph.node.push({
+            op_type: "GRU",
+            input: [
+              prevOutName,
+              `GRU_W${layerIndex - 1}`,
+              `GRU_R${layerIndex - 1}`,
+              `GRU_B${layerIndex - 1}`
+            ],
+            output: [`Layer_${layerIndex}_gru_hidden`],
+            name: `gru_l${layerIndex}`,
+            attributes: [
+              { name: "hidden_size", type: "INT", i: unitG },
+              { name: "layout", type: "INT", i: 0 }
+            ]
+          });
+          model.metadata_props = model.metadata_props || [];
+          const gruMetaIdx = model.metadata_props.findIndex(
+            (m) => m.key === "gru_emitted_layers"
+          );
+          if (gruMetaIdx >= 0) {
+            try {
+              const arr = JSON.parse(model.metadata_props[gruMetaIdx].value);
+              if (Array.isArray(arr) && !arr.includes(layerIndex)) {
+                arr.push(layerIndex);
+                model.metadata_props[gruMetaIdx].value = JSON.stringify(arr);
+              }
+            } catch {
+              model.metadata_props[gruMetaIdx].value = JSON.stringify([
+                layerIndex
+              ]);
+            }
+          } else {
+            model.metadata_props.push({
+              key: "gru_emitted_layers",
+              value: JSON.stringify([layerIndex])
+            });
+          }
+        }
+      }
+    }
+    if (includeMetadata) {
+      model.metadata_props = model.metadata_props || [];
+      model.metadata_props.push({
+        key: "layer_sizes",
+        value: JSON.stringify(hiddenSizesMetadata)
+      });
+      if (recurrentLayerIndices.length) {
+        model.metadata_props.push({
+          key: "recurrent_single_step",
+          value: JSON.stringify(recurrentLayerIndices)
         });
       }
-      previousOutputName = activationOutputName;
+      if (options.validateConvSharing && options.conv2dMappings && options.conv2dMappings.length) {
+        const verified = [];
+        const mismatched = [];
+        for (const spec of options.conv2dMappings) {
+          const layerIdx = spec.layerIndex;
+          const prevLayerNodes = layers[layerIdx - 1];
+          const layerNodes = layers[layerIdx];
+          if (!layerNodes || !prevLayerNodes) continue;
+          const repPerChannel = [];
+          let allOk = true;
+          for (let oc = 0; oc < spec.outChannels; oc++) {
+            const repIndex = oc * (spec.outHeight * spec.outWidth);
+            const repNeuron = layerNodes[repIndex];
+            const kernel = [];
+            for (let ic = 0; ic < spec.inChannels; ic++) {
+              for (let kh = 0; kh < spec.kernelHeight; kh++) {
+                for (let kw = 0; kw < spec.kernelWidth; kw++) {
+                  const inputFeatureIndex = ic * (spec.inHeight * spec.inWidth) + kh * spec.inWidth + kw;
+                  const sourceNode = prevLayerNodes[inputFeatureIndex];
+                  const conn = repNeuron.connections.in.find(
+                    (cc) => cc.from === sourceNode
+                  );
+                  kernel.push(conn ? conn.weight : 0);
+                }
+              }
+            }
+            repPerChannel.push(kernel);
+          }
+          const tol = 1e-9;
+          for (let oc = 0; oc < spec.outChannels && allOk; oc++) {
+            for (let oh = 0; oh < spec.outHeight && allOk; oh++) {
+              for (let ow = 0; ow < spec.outWidth && allOk; ow++) {
+                const idx = oc * (spec.outHeight * spec.outWidth) + oh * spec.outWidth + ow;
+                const neuron = layerNodes[idx];
+                if (!neuron) continue;
+                let kPtr = 0;
+                for (let ic = 0; ic < spec.inChannels && allOk; ic++) {
+                  const hBase = oh * spec.strideHeight - (spec.padTop || 0);
+                  const wBase = ow * spec.strideWidth - (spec.padLeft || 0);
+                  for (let kh = 0; kh < spec.kernelHeight && allOk; kh++) {
+                    for (let kw = 0; kw < spec.kernelWidth && allOk; kw++) {
+                      const ih = hBase + kh;
+                      const iw = wBase + kw;
+                      if (ih < 0 || ih >= spec.inHeight || iw < 0 || iw >= spec.inWidth) {
+                        kPtr++;
+                        continue;
+                      }
+                      const inputFeatureIndex = ic * (spec.inHeight * spec.inWidth) + ih * spec.inWidth + iw;
+                      const srcNode = prevLayerNodes[inputFeatureIndex];
+                      const conn = neuron.connections.in.find(
+                        (cc) => cc.from === srcNode
+                      );
+                      const wVal = conn ? conn.weight : 0;
+                      if (Math.abs(wVal - repPerChannel[oc][kPtr]) > tol) {
+                        allOk = false;
+                      }
+                      kPtr++;
+                    }
+                  }
+                }
+                if (!allOk) break;
+              }
+            }
+          }
+          if (allOk) verified.push(layerIdx);
+          else {
+            mismatched.push(layerIdx);
+            console.warn(
+              `Conv2D weight sharing mismatch detected in layer ${layerIdx}`
+            );
+          }
+        }
+        if (verified.length)
+          model.metadata_props.push({
+            key: "conv2d_sharing_verified",
+            value: JSON.stringify(verified)
+          });
+        if (mismatched.length)
+          model.metadata_props.push({
+            key: "conv2d_sharing_mismatch",
+            value: JSON.stringify(mismatched)
+          });
+      }
     }
     return model;
   }
@@ -2811,13 +3705,90 @@
     if (!network.connections || network.connections.length === 0)
       throw new Error("ONNX export currently only supports simple MLPs");
     const layers = inferLayerOrdering(network);
-    validateLayerHomogeneityAndConnectivity(layers, network);
-    return buildOnnxModel(network, layers, options);
+    const lstmPatternStubs = [];
+    if (options.allowRecurrent) {
+      try {
+        for (let li = 1; li < layers.length - 1; li++) {
+          const hiddenLayer = layers[li];
+          const total = hiddenLayer.length;
+          if (total >= 10 && total % 5 === 0) {
+            const seg = total / 5;
+            const memorySlice = hiddenLayer.slice(seg * 2, seg * 3);
+            const allSelf = memorySlice.every(
+              (n) => n.connections.self.length === 1
+            );
+            if (allSelf) {
+              lstmPatternStubs.push({ layerIndex: li, unitSize: seg });
+            }
+          }
+        }
+      } catch {
+      }
+    }
+    validateLayerHomogeneityAndConnectivity(layers, network, options);
+    const model = buildOnnxModel(network, layers, options);
+    if (options.includeMetadata) {
+      const inferredSpecs = [];
+      const inferredLayers = [];
+      for (let li = 1; li < layers.length - 1; li++) {
+        const prevWidth = layers[li - 1].length;
+        const currWidth = layers[li].length;
+        const s = Math.sqrt(prevWidth);
+        if (Math.abs(s - Math.round(s)) > 1e-9) continue;
+        const sInt = Math.round(s);
+        for (const k of [3, 2]) {
+          if (k >= sInt) continue;
+          const outSpatial = sInt - k + 1;
+          if (outSpatial * outSpatial === currWidth) {
+            const alreadyDeclared = options.conv2dMappings?.some(
+              (m) => m.layerIndex === li
+            );
+            if (alreadyDeclared) break;
+            inferredLayers.push(li);
+            inferredSpecs.push({
+              layerIndex: li,
+              inHeight: sInt,
+              inWidth: sInt,
+              inChannels: 1,
+              kernelHeight: k,
+              kernelWidth: k,
+              strideHeight: 1,
+              strideWidth: 1,
+              outHeight: outSpatial,
+              outWidth: outSpatial,
+              outChannels: 1,
+              note: "heuristic_inferred_no_export_applied"
+            });
+            break;
+          }
+        }
+      }
+      if (inferredLayers.length) {
+        model.metadata_props = model.metadata_props || [];
+        model.metadata_props.push({
+          key: "conv2d_inferred_layers",
+          value: JSON.stringify(inferredLayers)
+        });
+        model.metadata_props.push({
+          key: "conv2d_inferred_specs",
+          value: JSON.stringify(inferredSpecs)
+        });
+      }
+    }
+    if (lstmPatternStubs.length) {
+      model.metadata_props = model.metadata_props || [];
+      model.metadata_props.push({
+        key: "lstm_groups_stub",
+        value: JSON.stringify(lstmPatternStubs)
+      });
+    }
+    return model;
   }
   var init_network_onnx = __esm({
     "src/architecture/network/network.onnx.ts"() {
       "use strict";
       init_methods();
+      init_connection();
     }
   });
 
