@@ -1,57 +1,12 @@
-<!DOCTYPE html><html><head><meta charset="utf-8"><title>multithreading/workers</title>
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<style>
- body{font-family:system-ui,-apple-system,Segoe UI,Arial,sans-serif;margin:0 auto;padding:0 20px 60px;line-height:1.55;background:#fff;color:#222;display:grid;grid-template-columns:260px 1fr 280px;grid-gap:32px;}
-nav.site{position:sticky;top:0;align-self:start;max-height:100vh;overflow:auto;padding:24px 0 40px;}
-nav.site h1{font-size:1.05rem;margin:0 0 .75rem;font-weight:600;}
-.doc-nav{list-style:none;margin:0;padding:0;font-size:.85rem;}
-.doc-nav li{margin:2px 0;}
- .doc-nav a{display:block;padding:4px 8px;border-radius:4px;color:#2c3963;text-decoration:none;}
- .doc-nav li.current>a{background:#2c3963;color:#fff;font-weight:600;}
- .doc-nav a:hover{background:#e4e8f3;}
-main{padding:40px 0;}
-aside.page-index{position:sticky;top:0;align-self:start;max-height:100vh;overflow:auto;padding:32px 0 40px;font-size:.85rem;}
-aside.page-index h2{font-size:.9rem;margin:0 0 .75rem;text-transform:uppercase;letter-spacing:.5px;color:#444;}
-aside.page-index .toc-file{margin:0 0 .5rem;}
-aside.page-index ul{list-style:none;margin:.25rem 0 .5rem .25rem;padding:0;}
-aside.page-index li{margin:0;}
- aside.page-index a{color:#444;text-decoration:none;}
- aside.page-index a:hover{color:#2c3963;}
-pre{background:#1e1e1e;color:#eee;padding:12px;border-radius:6px;overflow:auto;}
-code{background:#f5f5f5;padding:2px 4px;border-radius:4px;font-size:90%;}
-pre code{background:transparent;padding:0;font-size:90%;}
- a{color:#2c3963;text-decoration:none;}a:hover{text-decoration:underline;}
-h1,h2,h3,h4{scroll-margin-top:70px;}
-blockquote{border-left:4px solid #ddd;margin:1em 0;padding:.5em 1em;color:#555;}
-table{border-collapse:collapse}th,td{border:1px solid #ccc;padding:4px 8px;text-align:left;}
-footer{margin-top:64px;font-size:.75rem;color:#666;}
-@media (max-width:1100px){body{grid-template-columns:220px 1fr;}aside.page-index{display:none;} }
-@media (max-width:800px){body{grid-template-columns:1fr;}nav.site{position:relative;top:auto;max-height:none;order:2;}main{order:1;padding-top:24px;}}
-</style></head><body>
-<nav class="site">
-  <h1>Docs Index</h1>
-  <ul class="doc-nav"><li><a href="../../index.html">root</a></li>
-<li><a href="../../architecture/index.html">architecture/</a></li>
-<li><a href="../../architecture/network/index.html">architecture/network/</a></li>
-<li><a href="../../methods/index.html">methods/</a></li>
-<li><a href="../index.html">multithreading/</a></li>
-<li class="current"><a href="./index.html">multithreading/workers/</a></li>
-<li><a href="browser/index.html">multithreading/workers/browser/</a></li>
-<li><a href="node/index.html">multithreading/workers/node/</a></li>
-<li><a href="../../neat/index.html">neat/</a></li>
-<li><a href="../../src/index.html">src/</a></li>
-<li><a href="../../examples/asciiMaze/index.html">examples/asciiMaze/</a></li></ul>
-</nav>
-<main>
-<h1 id="multithreading-workers">multithreading/workers</h1><h2 id="multithreading-workers-workers-ts">multithreading/workers/workers.ts</h2><h3 id="workers">Workers</h3><p>Utility class for managing workers in both Node.js and browser environments.</p>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>multithreading/workers – NeatapticTS Docs</title><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;600;700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/theme.css"></head><body class="">
+<header class="topbar"><div class="inner"><div class="brand"><a href="../../index.html">NeatapticTS</a></div><nav class="main-nav"><a href="../../index.html">Home</a><a href="../../index.html" class="active">Docs</a><a href="https://github.com/reicek/NeatapticTS" target="_blank" rel="noopener">GitHub</a></nav></div></header>
+<div class="layout"><aside class="sidebar"><ul class="sidebar-sections"><li class="group"><div class="g-head">src</div><ul><li><a href="../../src/index.html">src</a></li></ul></li><li><a href="../../index.html">Overview</a></li><li class="group"><div class="g-head">architecture</div><ul><li><a href="../../architecture/index.html">architecture</a></li><li><a href="../../architecture/network/index.html">architecture/network</a></li></ul></li><li class="group"><div class="g-head">methods</div><ul><li><a href="../../methods/index.html">methods</a></li></ul></li><li class="group"><div class="g-head">neat</div><ul><li><a href="../../neat/index.html">neat</a></li></ul></li><li class="group"><div class="g-head">multithreading</div><ul><li><a href="../index.html">multithreading</a></li><li class="current"><a href="./index.html">multithreading/workers</a></li><li><a href="browser/index.html">multithreading/workers/browser</a></li><li><a href="node/index.html">multithreading/workers/node</a></li></ul></li></ul></aside><main class="content"><h1 id="multithreading-workers">multithreading/workers</h1><h2 id="multithreading-workers-workers-ts">multithreading/workers/workers.ts</h2><h3 id="workers">Workers</h3><p>Utility class for managing workers in both Node.js and browser environments.</p>
 <h4 id="getbrowsertestworker">getBrowserTestWorker</h4><p><code>() =&gt; Promise&lt;any&gt;</code></p>
 <p>Loads the browser test worker dynamically.</p>
 <p>Returns: A promise that resolves to the browser TestWorker class.</p>
 <h4 id="getnodetestworker">getNodeTestWorker</h4><p><code>() =&gt; Promise&lt;any&gt;</code></p>
 <p>Loads the Node.js test worker dynamically.</p>
 <p>Returns: A promise that resolves to the Node.js TestWorker class.</p>
-
-<footer>Generated from JSDoc. <a href="https://github.com/reicek/NeatapticTS">GitHub</a></footer>
-</main>
-<aside class="page-index"><div class="page-toc"><h2>Files</h2><div class="toc-file"><a href="#multithreading-workers-workers-ts">multithreading/workers/workers.ts</a><ul><li><a href=#workers>Workers</a></li></ul></div></div></aside>
-</body></html>
+<footer class="site-footer">Generated from source JSDoc • <a href="https://github.com/reicek/NeatapticTS">GitHub</a></footer></main><aside class="toc"><div class="page-toc"><h2>Files</h2><div class="toc-file"><a href="#multithreading-workers-workers-ts">multithreading/workers/workers.ts</a><ul><li><a href=#workers>Workers</a></li></ul></div></div></aside></div></body></html>

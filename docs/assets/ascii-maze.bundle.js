@@ -2503,7 +2503,7 @@
     "package.json"(exports, module) {
       module.exports = {
         name: "@reicek/neataptic-ts",
-        version: "0.1.8",
+        version: "0.1.9",
         description: "Architecture-free neural network library with genetic algorithm implementations",
         main: "./dist/neataptic.js",
         module: "./dist/neataptic.js",

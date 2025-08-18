@@ -43,44 +43,47 @@ function main() {
                 .replace(/\\/g, '/');
             pages.push({ abs: mdFile, relDir, title });
         }
-        // Build flat nav list (could be enhanced to a tree)
+        // Build nav list; group top-level folders similar to original sections.
         const navHtmlFor = (currentDir) => {
-            const links = pages
-                .sort((a, b) => a.relDir.localeCompare(b.relDir))
-                .map((p) => {
-                const label = p.relDir === '' ? 'root' : p.relDir + '/';
-                const isCurrent = p.relDir === currentDir;
-                const relLink = path_1.default.posix.relative(currentDir || '.', p.relDir || '.') || '.'; // relative folder path
+            const groupsMap = new Map();
+            for (const p of pages) {
+                const seg = p.relDir.split('/')[0] || 'root';
+                if (!groupsMap.has(seg))
+                    groupsMap.set(seg, { name: seg, items: [] });
+                groupsMap.get(seg).items.push(p);
+            }
+            const order = ['root', 'architecture', 'methods', 'neat', 'multithreading', 'examples'];
+            const makeLink = (page) => {
+                const isCurrent = page.relDir === currentDir;
+                const relLink = path_1.default.posix.relative(currentDir || '.', page.relDir || '.') || '.';
                 const href = (relLink === '.' ? '.' : relLink) + '/index.html';
-                return `<li${isCurrent ? ' class="current"' : ''}><a href="${href}">${label}</a></li>`;
+                const label = page.relDir === '' ? 'Overview' : page.relDir.replace(/\\/g, '/');
+                return `<li${isCurrent ? ' class="current"' : ''}><a href="${href}">${label}${isCurrent ? '' : ''}</a></li>`;
+            };
+            // Add asciiMaze example explicitly if present
+            const asciiExample = () => {
+                try {
+                    const copiedExampleAbs = path_1.default.resolve(DOCS_DIR, 'examples', 'asciiMaze', 'index.html');
+                    if (fs_extra_1.default.existsSync(copiedExampleAbs)) {
+                        const relTargetDir = 'examples/asciiMaze';
+                        const relLink = path_1.default.posix.relative(currentDir || '.', relTargetDir) || '.';
+                        const href = (relLink === '.' ? '.' : relLink) + '/index.html';
+                        return `<li><a href="${href}">examples/asciiMaze</a></li>`;
+                    }
+                }
+                catch ( /* ignore */_a) { /* ignore */ }
+                return '';
+            };
+            const groupsHtml = Array.from(groupsMap.values())
+                .sort((a, b) => order.indexOf(a.name) - order.indexOf(b.name))
+                .map(g => {
+                const items = g.items.sort((a, b) => a.relDir.localeCompare(b.relDir));
+                if (g.name === 'root')
+                    return makeLink(items.find(i => i.relDir === ''));
+                return `<li class="group"><div class="g-head">${g.name}</div><ul>${items.map(makeLink).join('')}${g.name === 'examples' ? asciiExample() : ''}</ul></li>`;
             })
-                .join('\n');
-            // Prefer copied example under docs/examples/asciiMaze if present
-            try {
-                const copiedExampleAbs = path_1.default.resolve(DOCS_DIR, 'examples', 'asciiMaze', 'index.html');
-                if (fs_extra_1.default.existsSync(copiedExampleAbs)) {
-                    const relTargetDir = 'examples/asciiMaze';
-                    const relLink = path_1.default.posix.relative(currentDir || '.', relTargetDir) || '.';
-                    const href = (relLink === '.' ? '.' : relLink) + '/index.html';
-                    const extra = `<li><a href="${href}">examples/asciiMaze/</a></li>`;
-                    return `<ul class="doc-nav">${links}\n${extra}</ul>`;
-                }
-                // Fallback to referencing test/ path (legacy) only if copied version not present
-                const legacyExampleAbs = path_1.default.resolve('test', 'examples', 'asciiMaze', 'index.html');
-                if (fs_extra_1.default.existsSync(legacyExampleAbs)) {
-                    const absTargetDir = path_1.default
-                        .relative(DOCS_DIR, path_1.default.dirname(legacyExampleAbs))
-                        .replace(/\\/g, '/');
-                    const relLink = path_1.default.posix.relative(currentDir || '.', absTargetDir || '.') || '.';
-                    const href = (relLink === '.' ? '.' : relLink) + '/index.html';
-                    const extra = `<li><a href="${href}">examples/asciiMaze/</a></li>`;
-                    return `<ul class="doc-nav">${links}\n${extra}</ul>`;
-                }
-            }
-            catch (e) {
-                /* ignore extra nav */
-            }
-            return `<ul class="doc-nav">${links}</ul>`;
+                .join('');
+            return `<ul class="sidebar-sections">${groupsHtml}</ul>`;
         };
         for (const meta of pages) {
             const md = yield fs_extra_1.default.readFile(meta.abs, 'utf8');
@@ -123,46 +126,9 @@ function main() {
                     .join('')}</div>`
                 : '';
             const outFile = path_1.default.join(path_1.default.dirname(meta.abs), 'index.html');
-            const page = `<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>${meta.title}</title>
-<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">
-<style>
- body{font-family:system-ui,-apple-system,Segoe UI,Arial,sans-serif;margin:0 auto;padding:0 20px 60px;line-height:1.55;background:#fff;color:#222;display:grid;grid-template-columns:260px 1fr 280px;grid-gap:32px;}
-nav.site{position:sticky;top:0;align-self:start;max-height:100vh;overflow:auto;padding:24px 0 40px;}
-nav.site h1{font-size:1.05rem;margin:0 0 .75rem;font-weight:600;}
-.doc-nav{list-style:none;margin:0;padding:0;font-size:.85rem;}
-.doc-nav li{margin:2px 0;}
- .doc-nav a{display:block;padding:4px 8px;border-radius:4px;color:#2c3963;text-decoration:none;}
- .doc-nav li.current>a{background:#2c3963;color:#fff;font-weight:600;}
- .doc-nav a:hover{background:#e4e8f3;}
-main{padding:40px 0;}
-aside.page-index{position:sticky;top:0;align-self:start;max-height:100vh;overflow:auto;padding:32px 0 40px;font-size:.85rem;}
-aside.page-index h2{font-size:.9rem;margin:0 0 .75rem;text-transform:uppercase;letter-spacing:.5px;color:#444;}
-aside.page-index .toc-file{margin:0 0 .5rem;}
-aside.page-index ul{list-style:none;margin:.25rem 0 .5rem .25rem;padding:0;}
-aside.page-index li{margin:0;}
- aside.page-index a{color:#444;text-decoration:none;}
- aside.page-index a:hover{color:#2c3963;}
-pre{background:#1e1e1e;color:#eee;padding:12px;border-radius:6px;overflow:auto;}
-code{background:#f5f5f5;padding:2px 4px;border-radius:4px;font-size:90%;}
-pre code{background:transparent;padding:0;font-size:90%;}
- a{color:#2c3963;text-decoration:none;}a:hover{text-decoration:underline;}
-h1,h2,h3,h4{scroll-margin-top:70px;}
-blockquote{border-left:4px solid #ddd;margin:1em 0;padding:.5em 1em;color:#555;}
-table{border-collapse:collapse}th,td{border:1px solid #ccc;padding:4px 8px;text-align:left;}
-footer{margin-top:64px;font-size:.75rem;color:#666;}
-@media (max-width:1100px){body{grid-template-columns:220px 1fr;}aside.page-index{display:none;} }
-@media (max-width:800px){body{grid-template-columns:1fr;}nav.site{position:relative;top:auto;max-height:none;order:2;}main{order:1;padding-top:24px;}}
-</style></head><body>
-<nav class="site">
-  <h1>Docs Index</h1>
-  ${navHtmlFor(meta.relDir)}
-</nav>
-<main>
-${htmlBody}
-<footer>Generated from JSDoc. <a href="https://github.com/reicek/NeatapticTS">GitHub</a></footer>
-</main>
-<aside class="page-index">${toc}</aside>
-</body></html>`;
+            const relToRoot = path_1.default.relative(path_1.default.dirname(meta.abs), DOCS_DIR).replace(/\\/g, '/');
+            const cssHref = (relToRoot ? relToRoot + '/' : '') + 'assets/theme.css';
+            const page = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>${meta.title} – NeatapticTS Docs</title><meta name="viewport" content="width=device-width,initial-scale=1">\n<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;600;700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">\n<link rel="stylesheet" href="${cssHref}"></head><body class="${meta.relDir === '' ? 'is-root' : ''}">\n<header class="topbar"><div class="inner"><div class="brand"><a href="${relToRoot || '.'}/index.html">NeatapticTS</a></div><nav class="main-nav"><a href="${relToRoot || '.'}/index.html">Home</a><a href="${relToRoot || '.'}/index.html" class="active">Docs</a><a href="https://github.com/reicek/NeatapticTS" target="_blank" rel="noopener">GitHub</a></nav></div></header>\n<div class="layout"><aside class="sidebar">${navHtmlFor(meta.relDir)}</aside><main class="content">${htmlBody}<footer class="site-footer">Generated from source JSDoc • <a href="https://github.com/reicek/NeatapticTS">GitHub</a></footer></main><aside class="toc">${toc}</aside></div></body></html>`;
             yield fs_extra_1.default.writeFile(outFile, page, 'utf8');
         }
         console.log('HTML docs generated.');
