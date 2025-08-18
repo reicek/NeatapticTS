@@ -1357,9 +1357,16 @@ Parameters:
 
 ## architecture/onnx.ts
 
+### Conv2DMapping
+
+Mapping declaration for treating a fully-connected layer as a 2D convolution during export.
+This assumes the dense layer was originally synthesized from a convolution with weight sharing; we reconstitute spatial metadata.
+Each mapping references an export-layer index (1-based across hidden layers, output layer would be hiddenCount+1) and supplies spatial/kernel hyperparameters.
+Validation ensures that input spatial * channels product equals the previous layer width and that output channels * output spatial equals the current layer width.
+
 ### exportToONNX
 
-`(network: import("D:/code-practice/NeatapticTS/src/architecture/network").default) => import("D:/code-practice/NeatapticTS/src/architecture/network/network.onnx").OnnxModel`
+`(network: import("D:/code-practice/NeatapticTS/src/architecture/network").default, options: import("D:/code-practice/NeatapticTS/src/architecture/network/network.onnx").OnnxExportOptions) => import("D:/code-practice/NeatapticTS/src/architecture/network/network.onnx").OnnxModel`
 
 Export a minimal multilayer perceptron Network to a lightweight ONNX JSON object.
 
@@ -1378,14 +1385,31 @@ Constraints: See module doc. Throws descriptive errors when assumptions violated
 
 Import a model previously produced by {@link exportToONNX} into a fresh Network instance.
 
-Steps:
- 1. Read input/output dimensions.
- 2. Derive hidden layer sizes from weight tensor shapes.
- 3. Create corresponding MLP with identical layer counts.
- 4. Assign weights & biases.
- 5. Map activation op_types back to internal activation functions.
- 6. Rebuild flat connection list.
+Core Steps:
+ 1. Parse input/output tensor shapes (supports optional symbolic batch dim).
+ 2. Derive hidden layer sizes (prefer `layer_sizes` metadata; fallback to weight tensor grouping heuristic).
+ 3. Instantiate matching layered MLP (inputs -> hidden[] -> outputs); remove placeholder hidden nodes for single layer perceptrons.
+ 4. Assign weights & biases (aggregated or per-neuron) from W/B initializers.
+ 5. Reconstruct activation functions from Activation node op_types (layer or per-neuron).
+ 6. Restore recurrent self connections from recorded diagonal Rk matrices if `recurrent_single_step` metadata present.
+ 7. Experimental: Reconstruct LSTM / GRU layers when fused initializers & metadata (`lstm_emitted_layers`, `gru_emitted_layers`) detected
+    by replacing the corresponding hidden node block with a freshly constructed Layer.lstm / Layer.gru instance and remapping weights.
+ 8. Rebuild flat connection array for downstream invariants.
 
-Limitations: Only guaranteed for self-produced ONNX; inconsistent naming or ordering will break.
+Experimental Behavior:
+ - LSTM/GRU reconstruction is best-effort; inconsistencies in tensor shapes or gate counts result in silent skip (import still succeeds).
+ - Recurrent biases (Rb) absent; self-connection diagonal only restored for cell/candidate groups.
+
+Limitations:
+ - Only guaranteed for self-produced models; arbitrary ONNX graphs or differing op orderings are unsupported.
+ - Fused recurrent node emission currently leaves original unfused Gemm/Activation path in exported model (import ignores duplicates).
+
+### OnnxExportOptions
+
+Options controlling ONNX export behavior (Phase 1).
 
 ### OnnxModel
+
+### Pool2DMapping
+
+Mapping describing a pooling operation inserted after a given export-layer index.

@@ -908,7 +908,11 @@ Resets the connection&#39;s gain to 1 and removes it from the <code>connections.
 <ul>
 <li><code>connections</code> - A single Connection object or an array of Connection objects to ungate.</li>
 </ul>
-<h2 id="architecture-onnx-ts">architecture/onnx.ts</h2><h3 id="exporttoonnx">exportToONNX</h3><p><code>(network: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default) =&gt; import(&quot;D:/code-practice/NeatapticTS/src/architecture/network/network.onnx&quot;).OnnxModel</code></p>
+<h2 id="architecture-onnx-ts">architecture/onnx.ts</h2><h3 id="conv2dmapping">Conv2DMapping</h3><p>Mapping declaration for treating a fully-connected layer as a 2D convolution during export.
+This assumes the dense layer was originally synthesized from a convolution with weight sharing; we reconstitute spatial metadata.
+Each mapping references an export-layer index (1-based across hidden layers, output layer would be hiddenCount+1) and supplies spatial/kernel hyperparameters.
+Validation ensures that input spatial * channels product equals the previous layer width and that output channels * output spatial equals the current layer width.</p>
+<h3 id="exporttoonnx">exportToONNX</h3><p><code>(network: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default, options: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network/network.onnx&quot;).OnnxExportOptions) =&gt; import(&quot;D:/code-practice/NeatapticTS/src/architecture/network/network.onnx&quot;).OnnxModel</code></p>
 <p>Export a minimal multilayer perceptron Network to a lightweight ONNX JSON object.</p>
 <p>Steps:</p>
 <ol>
@@ -921,18 +925,32 @@ Resets the connection&#39;s gain to 1 and removes it from the <code>connections.
 <p>Constraints: See module doc. Throws descriptive errors when assumptions violated.</p>
 <h3 id="importfromonnx">importFromONNX</h3><p><code>(onnx: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network/network.onnx&quot;).OnnxModel) =&gt; import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default</code></p>
 <p>Import a model previously produced by {@link exportToONNX} into a fresh Network instance.</p>
-<p>Steps:</p>
+<p>Core Steps:</p>
 <ol>
-<li>Read input/output dimensions.</li>
-<li>Derive hidden layer sizes from weight tensor shapes.</li>
-<li>Create corresponding MLP with identical layer counts.</li>
-<li>Assign weights &amp; biases.</li>
-<li>Map activation op_types back to internal activation functions.</li>
-<li>Rebuild flat connection list.</li>
+<li>Parse input/output tensor shapes (supports optional symbolic batch dim).</li>
+<li>Derive hidden layer sizes (prefer <code>layer_sizes</code> metadata; fallback to weight tensor grouping heuristic).</li>
+<li>Instantiate matching layered MLP (inputs -&gt; hidden[] -&gt; outputs); remove placeholder hidden nodes for single layer perceptrons.</li>
+<li>Assign weights &amp; biases (aggregated or per-neuron) from W/B initializers.</li>
+<li>Reconstruct activation functions from Activation node op_types (layer or per-neuron).</li>
+<li>Restore recurrent self connections from recorded diagonal Rk matrices if <code>recurrent_single_step</code> metadata present.</li>
+<li>Experimental: Reconstruct LSTM / GRU layers when fused initializers &amp; metadata (<code>lstm_emitted_layers</code>, <code>gru_emitted_layers</code>) detected
+by replacing the corresponding hidden node block with a freshly constructed Layer.lstm / Layer.gru instance and remapping weights.</li>
+<li>Rebuild flat connection array for downstream invariants.</li>
 </ol>
-<p>Limitations: Only guaranteed for self-produced ONNX; inconsistent naming or ordering will break.</p>
-<h3 id="onnxmodel">OnnxModel</h3>
+<p>Experimental Behavior:</p>
+<ul>
+<li>LSTM/GRU reconstruction is best-effort; inconsistencies in tensor shapes or gate counts result in silent skip (import still succeeds).</li>
+<li>Recurrent biases (Rb) absent; self-connection diagonal only restored for cell/candidate groups.</li>
+</ul>
+<p>Limitations:</p>
+<ul>
+<li>Only guaranteed for self-produced models; arbitrary ONNX graphs or differing op orderings are unsupported.</li>
+<li>Fused recurrent node emission currently leaves original unfused Gemm/Activation path in exported model (import ignores duplicates).</li>
+</ul>
+<h3 id="onnxexportoptions">OnnxExportOptions</h3><p>Options controlling ONNX export behavior (Phase 1).</p>
+<h3 id="onnxmodel">OnnxModel</h3><h3 id="pool2dmapping">Pool2DMapping</h3><p>Mapping describing a pooling operation inserted after a given export-layer index.</p>
+
 <footer>Generated from JSDoc. <a href="https://github.com/reicek/NeatapticTS">GitHub</a></footer>
 </main>
-<aside class="page-index"><div class="page-toc"><h2>Files</h2><div class="toc-file"><a href="#architecture-activationarraypool-ts">architecture/activationArrayPool.ts</a><ul><li><a href=#activationarray>ActivationArray</a></li><li><a href=#activationarraypool>activationArrayPool</a></li><li><a href=#activationarraypool>ActivationArrayPool</a></li></ul></div><div class="toc-file"><a href="#architecture-architect-ts">architecture/architect.ts</a><ul><li><a href=#architect>architect</a></li><li><a href=#architect>Architect</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#architecture-connection-ts">architecture/connection.ts</a><ul><li><a href=#connection>connection</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#architecture-group-ts">architecture/group.ts</a><ul><li><a href=#group>group</a></li><li><a href=#group>Group</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#architecture-layer-ts">architecture/layer.ts</a><ul><li><a href=#layer>layer</a></li><li><a href=#layer>Layer</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#architecture-network-ts">architecture/network.ts</a><ul><li><a href=#network>network</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#architecture-node-ts">architecture/node.ts</a><ul><li><a href=#node>node</a></li><li><a href=#node>Node</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#architecture-onnx-ts">architecture/onnx.ts</a><ul><li><a href=#exporttoonnx>exportToONNX</a></li><li><a href=#importfromonnx>importFromONNX</a></li><li><a href=#onnxmodel>OnnxModel</a></li></ul></div></div></aside>
+<aside class="page-index"><div class="page-toc"><h2>Files</h2><div class="toc-file"><a href="#architecture-activationarraypool-ts">architecture/activationArrayPool.ts</a><ul><li><a href=#activationarray>ActivationArray</a></li><li><a href=#activationarraypool>activationArrayPool</a></li><li><a href=#activationarraypool>ActivationArrayPool</a></li></ul></div><div class="toc-file"><a href="#architecture-architect-ts">architecture/architect.ts</a><ul><li><a href=#architect>architect</a></li><li><a href=#architect>Architect</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#architecture-connection-ts">architecture/connection.ts</a><ul><li><a href=#connection>connection</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#architecture-group-ts">architecture/group.ts</a><ul><li><a href=#group>group</a></li><li><a href=#group>Group</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#architecture-layer-ts">architecture/layer.ts</a><ul><li><a href=#layer>layer</a></li><li><a href=#layer>Layer</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#architecture-network-ts">architecture/network.ts</a><ul><li><a href=#network>network</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#architecture-node-ts">architecture/node.ts</a><ul><li><a href=#node>node</a></li><li><a href=#node>Node</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#architecture-onnx-ts">architecture/onnx.ts</a><ul><li><a href=#conv2dmapping>Conv2DMapping</a></li><li><a href=#exporttoonnx>exportToONNX</a></li><li><a href=#importfromonnx>importFromONNX</a></li><li><a href=#onnxexportoptions>OnnxExportOptions</a></li><li><a href=#onnxmodel>OnnxModel</a></li><li><a href=#pool2dmapping>Pool2DMapping</a></li></ul></div></div></aside>
 </body></html>
