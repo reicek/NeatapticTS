@@ -2,7 +2,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;600;700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../assets/theme.css"></head><body class="">
 <header class="topbar"><div class="inner"><div class="brand"><a href="../index.html">NeatapticTS</a></div><nav class="main-nav"><a href="../index.html">Home</a><a href="../index.html" class="active">Docs</a><a href="https://github.com/reicek/NeatapticTS" target="_blank" rel="noopener">GitHub</a></nav></div></header>
-<div class="layout"><aside class="sidebar"><ul class="sidebar-sections"><li class="group"><div class="g-head">src</div><ul><li class="current"><a href="./index.html">src</a></li></ul></li><li><a href="../index.html">Overview</a></li><li class="group"><div class="g-head">architecture</div><ul><li><a href="../architecture/index.html">architecture</a></li><li><a href="../architecture/network/index.html">architecture/network</a></li></ul></li><li class="group"><div class="g-head">methods</div><ul><li><a href="../methods/index.html">methods</a></li></ul></li><li class="group"><div class="g-head">neat</div><ul><li><a href="../neat/index.html">neat</a></li></ul></li><li class="group"><div class="g-head">multithreading</div><ul><li><a href="../multithreading/index.html">multithreading</a></li><li><a href="../multithreading/workers/index.html">multithreading/workers</a></li><li><a href="../multithreading/workers/browser/index.html">multithreading/workers/browser</a></li><li><a href="../multithreading/workers/node/index.html">multithreading/workers/node</a></li></ul></li></ul></aside><main class="content"><h1 id=""></h1><h2 id="config-ts">config.ts</h2><h3 id="config">config</h3><h3 id="neatapticconfig">NeatapticConfig</h3><p>Global NeatapticTS configuration contract &amp; default instance.</p>
+<div class="layout"><aside class="sidebar"><ul class="sidebar-sections"><li class="group"><div class="g-head">src</div><ul><li class="current"><a href="./index.html">src</a></li></ul></li><li class="group"><div class="g-head">utils</div><ul><li><a href="../utils/index.html">utils</a></li></ul></li><li><a href="../index.html">Overview</a></li><li class="group"><div class="g-head">architecture</div><ul><li><a href="../architecture/index.html">architecture</a></li><li><a href="../architecture/network/index.html">architecture/network</a></li></ul></li><li class="group"><div class="g-head">methods</div><ul><li><a href="../methods/index.html">methods</a></li></ul></li><li class="group"><div class="g-head">neat</div><ul><li><a href="../neat/index.html">neat</a></li></ul></li><li class="group"><div class="g-head">multithreading</div><ul><li><a href="../multithreading/index.html">multithreading</a></li><li><a href="../multithreading/workers/index.html">multithreading/workers</a></li><li><a href="../multithreading/workers/browser/index.html">multithreading/workers/browser</a></li><li><a href="../multithreading/workers/node/index.html">multithreading/workers/node</a></li></ul></li></ul></aside><main class="content"><h1 id=""></h1><h2 id="config-ts">config.ts</h2><h3 id="config">config</h3><h3 id="neatapticconfig">NeatapticConfig</h3><p>Global NeatapticTS configuration contract &amp; default instance.</p>
 <h2 id="why-this-exists">WHY THIS EXISTS</h2><p>A central <code>config</code> object offers a convenient, documented surface for end-users (and tests)
 to tweak library behaviour without digging through scattered constants. Centralization also
 lets us validate &amp; evolve feature flags in a single place.</p>
@@ -449,11 +449,15 @@ Updates weights based on batch size configuration.</p>
 <p>Compute and cache diversity statistics used by telemetry &amp; tests.</p>
 <h4 id="conninnovations">_connInnovations</h4><p>Map of connection innovations keyed by a string identifier.</p>
 <h4 id="diversitystats">_diversityStats</h4><p>Cached diversity metrics (computed lazily).</p>
+<h4 id="flags">_flags</h4><p>Packed state flags (private for future-proofing hidden class):
+bit0 =&gt; enabled gene expression (1 = active)
+bit1 =&gt; DropConnect active mask (1 = not dropped this forward pass)</p>
 <h4 id="getobjectives">_getObjectives</h4><p><code>() =&gt; import(&quot;D:/code-practice/NeatapticTS/src/neat/neat.types&quot;).ObjectiveDescriptor[]</code></p>
 <p>Internal: return cached objective descriptors, building if stale.</p>
 <h4 id="globalnodeindex">_globalNodeIndex</h4><p>Global index counter for assigning unique indices to nodes.</p>
 <h4 id="invalidategenomecaches">_invalidateGenomeCaches</h4><p><code>(genome: any) =&gt; void</code></p>
 <p>Invalidate per-genome caches (compatibility distance, forward pass, etc.).</p>
+<h4 id="la-shadowweight">_la_shadowWeight</h4><p><strong>Deprecated:</strong> Use lookaheadShadowWeight instead.</p>
 <h4 id="lastancestoruniqadjustgen">_lastAncestorUniqAdjustGen</h4><p>Generation when ancestor uniqueness adjustment was last applied.</p>
 <h4 id="lastepsilonadjustgen">_lastEpsilonAdjustGen</h4><p>Generation when epsilon compatibility was last adjusted.</p>
 <h4 id="lastevalduration">_lastEvalDuration</h4><p>Duration of the last evaluation run (ms).</p>
@@ -506,7 +510,16 @@ It also records species-level history used for telemetry and adaptive controller
 <h4 id="warnifnobestgenome">_warnIfNoBestGenome</h4><p><code>() =&gt; void</code></p>
 <p>Emit a standardized warning when evolution loop finds no valid best genome (test hook).</p>
 <h4 id="acquire">acquire</h4><p><code>(from: import(&quot;D:/code-practice/NeatapticTS/src/architecture/node&quot;).default, to: import(&quot;D:/code-practice/NeatapticTS/src/architecture/node&quot;).default, weight: number | undefined) =&gt; import(&quot;D:/code-practice/NeatapticTS/src/architecture/connection&quot;).default</code></p>
-<p>Acquire a Connection from the pool or construct a new one. Ensures fresh innovation id.</p>
+<p>Acquire a <code>Connection</code> from the pool (or construct new). Fields are fully reset &amp; given
+a fresh sequential <code>innovation</code> id. Prefer this in evolutionary algorithms that mutate
+topology frequently to reduce GC pressure.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>from</code> - Source node.</li>
+<li><code>to</code> - Target node.</li>
+<li><code>weight</code> - Optional initial weight.</li>
+</ul>
+<p>Returns: Reinitialized connection instance.</p>
 <h4 id="activate">activate</h4><p><code>(input: number[], training: boolean, maxActivationDepth: number) =&gt; number[]</code></p>
 <p>Activates the network using the given input array.
 Performs a forward pass through the network, calculating the activation of each node.</p>
@@ -656,10 +669,10 @@ optimizers. After applying an update, gradient accumulators are reset to 0.</p>
 </ul>
 <p>Internal per-connection temp fields (created lazily):</p>
 <ul>
-<li>opt_m / opt_v / opt_vhat / opt_u : Moment / variance / max variance / infinity norm caches.</li>
-<li>opt_cache : Single accumulator (RMSProp / AdaGrad).</li>
+<li>firstMoment / secondMoment / maxSecondMoment / infinityNorm : Moment / variance / max variance / infinity norm caches.</li>
+<li>gradientAccumulator : Single accumulator (RMSProp / AdaGrad).</li>
 <li>previousDeltaWeight : For classic SGD momentum.</li>
-<li>_la_shadowWeight / _la_shadowBias : Lookahead shadow copies.</li>
+<li>lookaheadShadowWeight / _la_shadowBias : Lookahead shadow copies.</li>
 </ul>
 <p>Safety: We clip extreme weight / bias magnitudes and guard against NaN/Infinity.</p>
 <p>Parameters:</p>
@@ -797,6 +810,7 @@ while disjoint/excess genes are typically inherited from the fitter parent (or r
  If false (default), they are inherited from the fitter parent.</li>
 </ul>
 <p>Returns: A new Network instance representing the offspring.</p>
+<h4 id="dcmask">dcMask</h4><p>DropConnect active mask: 1 = not dropped (active), 0 = dropped for this stochastic pass.</p>
 <h4 id="dense">dense</h4><p><code>(size: number) =&gt; import(&quot;D:/code-practice/NeatapticTS/src/architecture/layer&quot;).default</code></p>
 <p>Creates a standard fully connected (dense) layer.</p>
 <p>All nodes in the source layer/group will connect to all nodes in this layer
@@ -848,8 +862,11 @@ If the connection being removed was gated, it is also ungated.</p>
 <li>`` - - The Group or Node to disconnect from.</li>
 <li>`` - - If true, also removes connections originating from the <code>target</code> and ending in this group. Defaults to false (only removes connections from this group to the target).</li>
 </ul>
+<h4 id="dropconnectactivemask">dropConnectActiveMask</h4><p>Convenience alias for DropConnect mask with clearer naming.</p>
 <h4 id="dropout">dropout</h4><p>Dropout rate for this layer (0 to 1). If &gt; 0, all nodes in the layer are masked together during training.
 Layer-level dropout takes precedence over node-level dropout for nodes in this layer.</p>
+<h4 id="eligibility">eligibility</h4><p>Standard eligibility trace (e.g., for RTRL / policy gradient credit assignment).</p>
+<h4 id="enabled">enabled</h4><p>Whether the gene (connection) is currently expressed (participates in forward pass).</p>
 <h4 id="enableweightnoise">enableWeightNoise</h4><p><code>(stdDev: number | { perHiddenLayer: number[]; }) =&gt; void</code></p>
 <p>Enable weight noise. Provide a single std dev number or { perHiddenLayer: number[] }.</p>
 <h4 id="enforceminimumhiddenlayersizes">enforceMinimumHiddenLayerSizes</h4><p><code>(network: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default) =&gt; import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default</code></p>
@@ -917,6 +934,8 @@ human inspection and simple ingestion.</p>
 <p>Export telemetry as JSON Lines (one JSON object per line).</p>
 <p>Useful for piping telemetry to external loggers or analysis tools.</p>
 <p>Returns: A newline-separated string of JSON objects.</p>
+<h4 id="firstmoment">firstMoment</h4><p>First moment estimate (Adam / AdamW) (was opt_m).</p>
+<h4 id="from">from</h4><p>The source (pre-synaptic) node supplying activation.</p>
 <h4 id="fromjson">fromJSON</h4><p><code>(json: any) =&gt; import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default</code></p>
 <p>Reconstructs a network from a JSON object (latest standard).
 Handles formatVersion, robust error handling, and index-based references.</p>
@@ -932,6 +951,9 @@ Handles formatVersion, robust error handling, and index-based references.</p>
 <li><code>json</code> - The JSON object containing node configuration.</li>
 </ul>
 <p>Returns: A new Node instance configured according to the JSON object.</p>
+<h4 id="gain">gain</h4><p>Multiplicative modulation applied <em>after</em> weight. Default is <code>1</code> (neutral). We only store an
+internal symbol-keyed property when the gain is non-neutral, reducing memory usage across
+large populations where most connections are ungated.</p>
 <h4 id="gate">gate</h4><p><code>(node: import(&quot;D:/code-practice/NeatapticTS/src/architecture/node&quot;).default, connection: import(&quot;D:/code-practice/NeatapticTS/src/architecture/connection&quot;).default) =&gt; void</code></p>
 <p>Gates a connection with a specified node.
 The activation of the <code>node</code> (gater) will modulate the weight of the <code>connection</code>.
@@ -965,6 +987,7 @@ Gating allows the output of a node in this group to modulate the flow of signal 
 <li>`` - - A single connection object or an array of connection objects to be gated. Consider using a more specific type like <code>Connection | Connection[]</code>.</li>
 <li>`` - - The gating mechanism to use (e.g., <code>methods.gating.INPUT</code>, <code>methods.gating.OUTPUT</code>, <code>methods.gating.SELF</code>). Specifies which part of the connection is influenced by the gater node.</li>
 </ul>
+<h4 id="gater">gater</h4><p>Optional gating node that modulates the connection&#39;s gain (handled externally).</p>
 <h4 id="gates">gates</h4><p><strong>Deprecated:</strong> Use connections.gated; retained for legacy tests</p>
 <h4 id="geneid">geneId</h4><p>Stable per-node gene identifier for NEAT innovation reuse</p>
 <h4 id="getaverage">getAverage</h4><p><code>() =&gt; number</code></p>
@@ -1093,6 +1116,7 @@ This accessor returns the raw buffer for external inspection or export.</p>
 <p>Returns: Array of telemetry snapshot objects.</p>
 <h4 id="gettrainingstats">getTrainingStats</h4><p><code>() =&gt; { gradNorm: number; gradNormRaw: number; lossScale: number; optimizerStep: number; mp: { good: number; bad: number; overflowCount: number; scaleUps: number; scaleDowns: number; lastOverflowStep: number; }; }</code></p>
 <p>Consolidated training stats snapshot.</p>
+<h4 id="gradientaccumulator">gradientAccumulator</h4><p>Generic gradient accumulator (RMSProp / AdaGrad) (was opt_cache).</p>
 <h4 id="gru">gru</h4><p><code>(size: number) =&gt; import(&quot;D:/code-practice/NeatapticTS/src/architecture/layer&quot;).default</code></p>
 <p>Creates a Gated Recurrent Unit (GRU) layer.</p>
 <p>GRUs are another type of recurrent neural network cell, often considered
@@ -1142,16 +1166,19 @@ Replaces the current population with the imported one.</p>
 <li><code>fitness</code> - Fitness function to attach</li>
 </ul>
 <h4 id="index">index</h4><p>Optional index, potentially used to identify the node&#39;s position within a layer or network structure. Not used internally by the Node class itself.</p>
-<h4 id="innovationid">innovationID</h4><p><code>(a: number, b: number) =&gt; number</code></p>
-<p>Generates a unique innovation ID for the connection.</p>
-<p>The innovation ID is calculated using the Cantor pairing function, which maps two integers
-(representing the source and target nodes) to a unique integer.</p>
+<h4 id="infinitynorm">infinityNorm</h4><p>Adamax: Exponential moving infinity norm (was opt_u).</p>
+<h4 id="innovation">innovation</h4><p>Unique historical marking (auto-increment) for evolutionary alignment.</p>
+<h4 id="innovationid">innovationID</h4><p><code>(sourceNodeId: number, targetNodeId: number) =&gt; number</code></p>
+<p>Deterministic Cantor pairing function for a (sourceNodeId, targetNodeId) pair.
+Useful when you want a stable innovation id without relying on global mutable counters
+(e.g., for hashing or reproducible experiments).</p>
+<p>NOTE: For large indices this can overflow 53-bit safe integer space; keep node indices reasonable.</p>
 <p>Parameters:</p>
 <ul>
-<li>`` - - The ID of the source node.</li>
-<li>`` - - The ID of the target node.</li>
+<li><code>sourceNodeId</code> - Source node integer id / index.</li>
+<li><code>targetNodeId</code> - Target node integer id / index.</li>
 </ul>
-<p>Returns: The innovation ID based on the Cantor pairing function.</p>
+<p>Returns: Unique non-negative integer derived from the ordered pair.</p>
 <h4 id="input">input</h4><p><code>(from: import(&quot;D:/code-practice/NeatapticTS/src/architecture/layer&quot;).default | import(&quot;D:/code-practice/NeatapticTS/src/architecture/group&quot;).default, method: any, weight: number | undefined) =&gt; any[]</code></p>
 <p>Handles the connection logic when this layer is the <em>target</em> of a connection.</p>
 <p>It connects the output of the <code>from</code> layer or group to this layer&#39;s primary
@@ -1206,6 +1233,7 @@ Applies layer normalization to the activations of the nodes in this layer during
 <li><code>size</code> - - The number of nodes in this layer.</li>
 </ul>
 <p>Returns: A new Layer instance configured as a layer normalization layer.</p>
+<h4 id="lookaheadshadowweight">lookaheadShadowWeight</h4><p>Lookahead: shadow (slow) weight parameter (was _la_shadowWeight).</p>
 <h4 id="lstm">lstm</h4><p><code>(size: number) =&gt; import(&quot;D:/code-practice/NeatapticTS/src/architecture/layer&quot;).default</code></p>
 <p>Creates a Long Short-Term Memory (LSTM) layer.</p>
 <p>LSTMs are a type of recurrent neural network (RNN) cell capable of learning
@@ -1229,6 +1257,7 @@ This constructor uses <code>Layer.lstm</code> to create the core LSTM blocks.</p
 </ul>
 <p>Returns: The constructed LSTM network.</p>
 <h4 id="mask">mask</h4><p>A mask factor (typically 0 or 1) used for implementing dropout. If 0, the node&#39;s output is effectively silenced.</p>
+<h4 id="maxsecondmoment">maxSecondMoment</h4><p>AMSGrad: Maximum of past second moment (was opt_vhat).</p>
 <h4 id="memory">memory</h4><p><code>(size: number, memory: number) =&gt; import(&quot;D:/code-practice/NeatapticTS/src/architecture/layer&quot;).default</code></p>
 <p>Creates a Memory layer, designed to hold state over a fixed number of time steps.</p>
 <p>This layer consists of multiple groups (memory blocks), each holding the state
@@ -1292,6 +1321,12 @@ is just making predictions, not learning) as trace calculations are only needed 
 </ul>
 <p>Returns: The calculated activation value of the node.</p>
 <h4 id="old">old</h4><p>The node&#39;s state from the previous activation cycle. Used for recurrent self-connections.</p>
+<h4 id="opt-cache">opt_cache</h4><p><strong>Deprecated:</strong> Use gradientAccumulator instead.</p>
+<h4 id="opt-m">opt_m</h4><p><strong>Deprecated:</strong> Use firstMoment instead.</p>
+<h4 id="opt-m2">opt_m2</h4><p><strong>Deprecated:</strong> Use secondMomentum instead.</p>
+<h4 id="opt-u">opt_u</h4><p><strong>Deprecated:</strong> Use infinityNorm instead.</p>
+<h4 id="opt-v">opt_v</h4><p><strong>Deprecated:</strong> Use secondMoment instead.</p>
+<h4 id="opt-vhat">opt_vhat</h4><p><strong>Deprecated:</strong> Use maxSecondMoment instead.</p>
 <h4 id="output">output</h4><p>Represents the primary output group of nodes for this layer.
 This group is typically used when connecting this layer <em>to</em> another layer or group.
 It might be null if the layer is not yet fully constructed or is an input layer.</p>
@@ -1305,6 +1340,7 @@ fully connected layer by layer.</p>
 </ul>
 <p>Returns: The constructed MLP network.</p>
 <h4 id="previousdeltabias">previousDeltaBias</h4><p>The change in bias applied in the previous training iteration. Used for calculating momentum.</p>
+<h4 id="previousdeltaweight">previousDeltaWeight</h4><p>Last applied delta weight (used by classic momentum).</p>
 <h4 id="propagate">propagate</h4><p><code>(rate: number, momentum: number, update: boolean, target: number[], regularization: number, costDerivative: ((target: number, output: number) =&gt; number) | undefined) =&gt; void</code></p>
 <p>Propagates the error backward through the network (backpropagation).
 Calculates the error gradient for each node and connection.
@@ -1393,7 +1429,13 @@ outgoing connections of all nodes. Useful after manual wiring or node manipulati
 <p>Returns: Example usage:
   Network.rebuildConnections(net);</p>
 <h4 id="release">release</h4><p><code>(conn: import(&quot;D:/code-practice/NeatapticTS/src/architecture/connection&quot;).default) =&gt; void</code></p>
-<p>Return a Connection to the pool for reuse.</p>
+<p>Return a <code>Connection</code> to the internal pool for later reuse. Do NOT use the instance again
+afterward unless re-acquired (treat as surrendered). Optimizer / trace fields are not
+scrubbed here (they&#39;re overwritten during <code>acquire</code>).</p>
+<p>Parameters:</p>
+<ul>
+<li><code>conn</code> - The connection instance to recycle.</li>
+</ul>
 <h4 id="remove">remove</h4><p><code>(node: import(&quot;D:/code-practice/NeatapticTS/src/architecture/node&quot;).default) =&gt; void</code></p>
 <p>Removes a node from the network.
 This involves:</p>
@@ -1413,6 +1455,13 @@ and potentially re-gating connections that were gated <em>by other nodes</em> on
 <h4 id="resetdropoutmasks">resetDropoutMasks</h4><p><code>() =&gt; void</code></p>
 <p>Resets all masks in the network to 1 (no dropout). Applies to both node-level and layer-level dropout.
 Should be called after training to ensure inference is unaffected by previous dropout.</p>
+<h4 id="resetinnovationcounter">resetInnovationCounter</h4><p><code>(value: number) =&gt; void</code></p>
+<p>Reset the monotonic auto-increment innovation counter (used for newly constructed / pooled instances).
+You normally only call this at the start of an experiment or when deserializing a full population.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>value</code> - New starting value (default 1).</li>
+</ul>
 <h4 id="resetnoveltyarchive">resetNoveltyArchive</h4><p><code>() =&gt; void</code></p>
 <p>Reset the novelty archive (clear entries).</p>
 <p>The novelty archive is used to keep representative behaviors for novelty
@@ -1426,6 +1475,8 @@ seed but does not re-create the RNG function until next use.</p>
 </ul>
 <h4 id="samplerandom">sampleRandom</h4><p><code>(count: number) =&gt; number[]</code></p>
 <p>Produce <code>count</code> deterministic random samples using instance RNG.</p>
+<h4 id="secondmoment">secondMoment</h4><p>Second raw moment estimate (Adam family) (was opt_v).</p>
+<h4 id="secondmomentum">secondMomentum</h4><p>Secondary momentum (Lion variant) (was opt_m2).</p>
 <h4 id="selectmutationmethod">selectMutationMethod</h4><p><code>(genome: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default, rawReturnForTest: boolean) =&gt; any</code></p>
 <p>Selects a mutation method for a given genome based on constraints.
 Ensures that the mutation respects the maximum nodes, connections, and gates.</p>
@@ -1522,6 +1573,7 @@ Handles dropout scaling if dropout was used during training.</p>
 <li>`` - - The cost function to evaluate the error. Defaults to Mean Squared Error.</li>
 </ul>
 <p>Returns: An object containing the calculated average error over the dataset and the time taken for the test in milliseconds.</p>
+<h4 id="to">to</h4><p>The target (post-synaptic) node receiving activation.</p>
 <h4 id="tojson">toJSON</h4><p><code>() =&gt; any</code></p>
 <p>Import a previously exported state bundle and rehydrate a Neat instance.</p>
 <h4 id="tojson">toJSON</h4><p><code>() =&gt; object</code></p>
@@ -1544,6 +1596,7 @@ Only standard feedforward architectures and standard activations are supported.
 Gating, custom activations, and evolutionary features are ignored or replaced with Identity.</p>
 <p>Returns: ONNX model as a JSON object.</p>
 <h4 id="totaldeltabias">totalDeltaBias</h4><p>Accumulates changes in bias over a mini-batch during batch training. Reset after each weight update.</p>
+<h4 id="totaldeltaweight">totalDeltaWeight</h4><p>Accumulated (batched) delta weight awaiting an apply step.</p>
 <h4 id="type">type</h4><p>The type of the node: &#39;input&#39;, &#39;hidden&#39;, or &#39;output&#39;.
 Determines behavior (e.g., input nodes don&#39;t have biases modified typically, output nodes calculate error differently).</p>
 <h4 id="ungate">ungate</h4><p><code>(connection: import(&quot;D:/code-practice/NeatapticTS/src/architecture/connection&quot;).default) =&gt; void</code></p>
@@ -1561,4 +1614,6 @@ Resets the connection&#39;s gain to 1 and removes it from the <code>connections.
 <ul>
 <li><code>connections</code> - A single Connection object or an array of Connection objects to ungate.</li>
 </ul>
+<h4 id="weight">weight</h4><p>Scalar multiplier applied to the source activation (prior to gain modulation).</p>
+<h4 id="xtrace">xtrace</h4><p>Extended trace structure for modulatory / eligibility propagation algorithms. Parallel arrays for cache-friendly iteration.</p>
 <footer class="site-footer">Generated from source JSDoc • <a href="https://github.com/reicek/NeatapticTS">GitHub</a></footer></main><aside class="toc"><div class="page-toc"><h2>Files</h2><div class="toc-file"><a href="#config-ts">config.ts</a><ul><li><a href=#config>config</a></li><li><a href=#neatapticconfig>NeatapticConfig</a></li></ul></div><div class="toc-file"><a href="#neat-ts">neat.ts</a><ul><li><a href=#neat>neat</a></li><li><a href=#neatoptions>NeatOptions</a></li><li><a href=#options>Options</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#neataptic-ts">neataptic.ts</a><ul><li><a href=#neataptic>neataptic</a></li><li><a href=#default>default</a></li></ul></div></div></aside></div></body></html>

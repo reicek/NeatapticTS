@@ -1,0 +1,2145 @@
+{
+  "generatedAt": "2025-08-18T23:16:42.751Z",
+  "baseline": [
+    {
+      "mode": "src",
+      "variant": "unoptimized",
+      "size": 1000,
+      "buildMs": 5.004,
+      "fwdAvgMs": 1.0596,
+      "fwdTotalMs": 5.298,
+      "conn": 1000,
+      "nodes": 64,
+      "estBytes": 68608,
+      "bytesPerConn": 69,
+      "bytesPerNode": 1072
+    },
+    {
+      "mode": "src",
+      "variant": "unoptimized",
+      "size": 10000,
+      "buildMs": 12.962,
+      "fwdAvgMs": 5.7439,
+      "fwdTotalMs": 28.719,
+      "conn": 10000,
+      "nodes": 200,
+      "estBytes": 654400,
+      "bytesPerConn": 65,
+      "bytesPerNode": 3272
+    },
+    {
+      "mode": "src",
+      "variant": "unoptimized",
+      "size": 50000,
+      "buildMs": 112.785,
+      "fwdAvgMs": 9.1697,
+      "fwdTotalMs": 27.509,
+      "conn": 50000,
+      "nodes": 448,
+      "estBytes": 3232256,
+      "bytesPerConn": 65,
+      "bytesPerNode": 7215
+    },
+    {
+      "mode": "src",
+      "variant": "unoptimized",
+      "size": 100000,
+      "buildMs": 168.594,
+      "fwdAvgMs": 18.0816,
+      "fwdTotalMs": 36.163,
+      "conn": 100000,
+      "nodes": 633,
+      "estBytes": 6445576,
+      "bytesPerConn": 64,
+      "bytesPerNode": 10183
+    },
+    {
+      "mode": "src",
+      "variant": "unoptimized",
+      "size": 200000,
+      "buildMs": 662.371,
+      "fwdAvgMs": 21.0995,
+      "fwdTotalMs": 21.1,
+      "conn": 200000,
+      "nodes": 895,
+      "estBytes": 12864440,
+      "bytesPerConn": 64,
+      "bytesPerNode": 14374
+    }
+  ],
+  "variantRaw": [
+    {
+      "mode": "src",
+      "scenario": "buildForward",
+      "size": 1000,
+      "metrics": {
+        "buildMs": 0.5603999999984808,
+        "fwdAvgMs": 0.076140000000305,
+        "fwdTotalMs": 0.38070000000152504,
+        "bytesPerConn": 69,
+        "heapUsed": 1061974488,
+        "rss": 1180508160
+      }
+    },
+    {
+      "mode": "dist",
+      "scenario": "buildForward",
+      "size": 1000,
+      "metrics": {
+        "buildMs": 0.5531999999984691,
+        "fwdAvgMs": 0.06575999999986379,
+        "fwdTotalMs": 0.32879999999931897,
+        "bytesPerConn": 69,
+        "heapUsed": 1062765640,
+        "rss": 1180508160
+      }
+    },
+    {
+      "mode": "src",
+      "scenario": "buildForward",
+      "size": 10000,
+      "metrics": {
+        "buildMs": 3.750499999998283,
+        "fwdAvgMs": 0.8971599999997124,
+        "fwdTotalMs": 4.485799999998562,
+        "bytesPerConn": 65,
+        "heapUsed": 1070218272,
+        "rss": 1180508160
+      }
+    },
+    {
+      "mode": "dist",
+      "scenario": "buildForward",
+      "size": 10000,
+      "metrics": {
+        "buildMs": 6.776900000000751,
+        "fwdAvgMs": 0.6958599999998114,
+        "fwdTotalMs": 3.479299999999057,
+        "bytesPerConn": 65,
+        "heapUsed": 1067220840,
+        "rss": 1181741056
+      }
+    },
+    {
+      "mode": "src",
+      "scenario": "buildForward",
+      "size": 50000,
+      "metrics": {
+        "buildMs": 38.33250000000044,
+        "fwdAvgMs": 9.162566666667166,
+        "fwdTotalMs": 27.487700000001496,
+        "bytesPerConn": 65,
+        "heapUsed": 1076894584,
+        "rss": 1195417600
+      }
+    },
+    {
+      "mode": "dist",
+      "scenario": "buildForward",
+      "size": 50000,
+      "metrics": {
+        "buildMs": 29.99539999999979,
+        "fwdAvgMs": 4.829466666667334,
+        "fwdTotalMs": 14.488400000002002,
+        "bytesPerConn": 65,
+        "heapUsed": 1096675712,
+        "rss": 1205219328
+      }
+    },
+    {
+      "mode": "src",
+      "scenario": "buildForward",
+      "size": 100000,
+      "metrics": {
+        "buildMs": 65.74889999999868,
+        "fwdAvgMs": 10.839700000000448,
+        "fwdTotalMs": 21.679400000000896,
+        "bytesPerConn": 64,
+        "heapUsed": 1119844344,
+        "rss": 1239752704
+      }
+    },
+    {
+      "mode": "src",
+      "scenario": "buildForward",
+      "size": 100000,
+      "metrics": {
+        "buildMs": 59.25800000000163,
+        "fwdAvgMs": 11.395699999999124,
+        "fwdTotalMs": 22.791399999998248,
+        "bytesPerConn": 64,
+        "heapUsed": 1150917088,
+        "rss": 1267052544
+      }
+    },
+    {
+      "mode": "src",
+      "scenario": "buildForward",
+      "size": 100000,
+      "metrics": {
+        "buildMs": 62.278199999997014,
+        "fwdAvgMs": 12.846099999998842,
+        "fwdTotalMs": 25.692199999997683,
+        "bytesPerConn": 64,
+        "heapUsed": 1181945600,
+        "rss": 1294434304
+      }
+    },
+    {
+      "mode": "dist",
+      "scenario": "buildForward",
+      "size": 100000,
+      "metrics": {
+        "buildMs": 65.97499999999854,
+        "fwdAvgMs": 10.508299999999508,
+        "fwdTotalMs": 21.016599999999016,
+        "bytesPerConn": 64,
+        "heapUsed": 1211767688,
+        "rss": 1321676800
+      }
+    },
+    {
+      "mode": "dist",
+      "scenario": "buildForward",
+      "size": 100000,
+      "metrics": {
+        "buildMs": 79.5760999999984,
+        "fwdAvgMs": 12.071850000000268,
+        "fwdTotalMs": 24.143700000000536,
+        "bytesPerConn": 64,
+        "heapUsed": 1233344768,
+        "rss": 1355403264
+      }
+    },
+    {
+      "mode": "dist",
+      "scenario": "buildForward",
+      "size": 100000,
+      "metrics": {
+        "buildMs": 60.616299999997864,
+        "fwdAvgMs": 11.829750000000786,
+        "fwdTotalMs": 23.65950000000157,
+        "bytesPerConn": 64,
+        "heapUsed": 1264421248,
+        "rss": 1382789120
+      }
+    },
+    {
+      "mode": "src",
+      "scenario": "buildForward",
+      "size": 200000,
+      "metrics": {
+        "buildMs": 138.78649999999834,
+        "fwdAvgMs": 24.666999999997643,
+        "fwdTotalMs": 24.666999999997643,
+        "bytesPerConn": 64,
+        "heapUsed": 1325470776,
+        "rss": 1443315712
+      }
+    },
+    {
+      "mode": "src",
+      "scenario": "buildForward",
+      "size": 200000,
+      "metrics": {
+        "buildMs": 133.79260000000068,
+        "fwdAvgMs": 24.83139999999912,
+        "fwdTotalMs": 24.83139999999912,
+        "bytesPerConn": 64,
+        "heapUsed": 1387086288,
+        "rss": 1504108544
+      }
+    },
+    {
+      "mode": "src",
+      "scenario": "buildForward",
+      "size": 200000,
+      "metrics": {
+        "buildMs": 157.65229999999792,
+        "fwdAvgMs": 39.02249999999913,
+        "fwdTotalMs": 39.02249999999913,
+        "bytesPerConn": 64,
+        "heapUsed": 1448639112,
+        "rss": 1564749824
+      }
+    },
+    {
+      "mode": "dist",
+      "scenario": "buildForward",
+      "size": 200000,
+      "metrics": {
+        "buildMs": 172.45989999999802,
+        "fwdAvgMs": 29.056100000001607,
+        "fwdTotalMs": 29.056100000001607,
+        "bytesPerConn": 64,
+        "heapUsed": 1509385152,
+        "rss": 1625141248
+      }
+    },
+    {
+      "mode": "dist",
+      "scenario": "buildForward",
+      "size": 200000,
+      "metrics": {
+        "buildMs": 176.72149999999965,
+        "fwdAvgMs": 34.25960000000123,
+        "fwdTotalMs": 34.25960000000123,
+        "bytesPerConn": 64,
+        "heapUsed": 1570247592,
+        "rss": 1685786624
+      }
+    },
+    {
+      "mode": "dist",
+      "scenario": "buildForward",
+      "size": 200000,
+      "metrics": {
+        "buildMs": 171.6277000000009,
+        "fwdAvgMs": 22.22360000000117,
+        "fwdTotalMs": 22.22360000000117,
+        "bytesPerConn": 64,
+        "heapUsed": 1621640128,
+        "rss": 1751572480
+      }
+    }
+  ],
+  "aggregated": [
+    {
+      "mode": "src",
+      "scenario": "buildForward",
+      "size": 1000,
+      "count": 1,
+      "buildMsMean": 0.5603999999984808,
+      "buildMsP50": 0.5603999999984808,
+      "buildMsP95": 0.5603999999984808,
+      "buildMsStd": 0,
+      "fwdAvgMsMean": 0.076140000000305,
+      "fwdAvgMsP50": 0.076140000000305,
+      "fwdAvgMsP95": 0.076140000000305,
+      "fwdAvgMsStd": 0,
+      "fwdTotalMsMean": 0.38070000000152504,
+      "fwdTotalMsP50": 0.38070000000152504,
+      "fwdTotalMsP95": 0.38070000000152504,
+      "fwdTotalMsStd": 0,
+      "bytesPerConnMean": 69,
+      "bytesPerConnP50": 69,
+      "bytesPerConnP95": 69,
+      "bytesPerConnStd": 0,
+      "heapUsedMean": 1061974488,
+      "heapUsedP50": 1061974488,
+      "heapUsedP95": 1061974488,
+      "heapUsedStd": 0,
+      "rssMean": 1180508160,
+      "rssP50": 1180508160,
+      "rssP95": 1180508160,
+      "rssStd": 0
+    },
+    {
+      "mode": "dist",
+      "scenario": "buildForward",
+      "size": 1000,
+      "count": 1,
+      "buildMsMean": 0.5531999999984691,
+      "buildMsP50": 0.5531999999984691,
+      "buildMsP95": 0.5531999999984691,
+      "buildMsStd": 0,
+      "fwdAvgMsMean": 0.06575999999986379,
+      "fwdAvgMsP50": 0.06575999999986379,
+      "fwdAvgMsP95": 0.06575999999986379,
+      "fwdAvgMsStd": 0,
+      "fwdTotalMsMean": 0.32879999999931897,
+      "fwdTotalMsP50": 0.32879999999931897,
+      "fwdTotalMsP95": 0.32879999999931897,
+      "fwdTotalMsStd": 0,
+      "bytesPerConnMean": 69,
+      "bytesPerConnP50": 69,
+      "bytesPerConnP95": 69,
+      "bytesPerConnStd": 0,
+      "heapUsedMean": 1062765640,
+      "heapUsedP50": 1062765640,
+      "heapUsedP95": 1062765640,
+      "heapUsedStd": 0,
+      "rssMean": 1180508160,
+      "rssP50": 1180508160,
+      "rssP95": 1180508160,
+      "rssStd": 0
+    },
+    {
+      "mode": "src",
+      "scenario": "buildForward",
+      "size": 10000,
+      "count": 1,
+      "buildMsMean": 3.750499999998283,
+      "buildMsP50": 3.750499999998283,
+      "buildMsP95": 3.750499999998283,
+      "buildMsStd": 0,
+      "fwdAvgMsMean": 0.8971599999997124,
+      "fwdAvgMsP50": 0.8971599999997124,
+      "fwdAvgMsP95": 0.8971599999997124,
+      "fwdAvgMsStd": 0,
+      "fwdTotalMsMean": 4.485799999998562,
+      "fwdTotalMsP50": 4.485799999998562,
+      "fwdTotalMsP95": 4.485799999998562,
+      "fwdTotalMsStd": 0,
+      "bytesPerConnMean": 65,
+      "bytesPerConnP50": 65,
+      "bytesPerConnP95": 65,
+      "bytesPerConnStd": 0,
+      "heapUsedMean": 1070218272,
+      "heapUsedP50": 1070218272,
+      "heapUsedP95": 1070218272,
+      "heapUsedStd": 0,
+      "rssMean": 1180508160,
+      "rssP50": 1180508160,
+      "rssP95": 1180508160,
+      "rssStd": 0
+    },
+    {
+      "mode": "dist",
+      "scenario": "buildForward",
+      "size": 10000,
+      "count": 1,
+      "buildMsMean": 6.776900000000751,
+      "buildMsP50": 6.776900000000751,
+      "buildMsP95": 6.776900000000751,
+      "buildMsStd": 0,
+      "fwdAvgMsMean": 0.6958599999998114,
+      "fwdAvgMsP50": 0.6958599999998114,
+      "fwdAvgMsP95": 0.6958599999998114,
+      "fwdAvgMsStd": 0,
+      "fwdTotalMsMean": 3.479299999999057,
+      "fwdTotalMsP50": 3.479299999999057,
+      "fwdTotalMsP95": 3.479299999999057,
+      "fwdTotalMsStd": 0,
+      "bytesPerConnMean": 65,
+      "bytesPerConnP50": 65,
+      "bytesPerConnP95": 65,
+      "bytesPerConnStd": 0,
+      "heapUsedMean": 1067220840,
+      "heapUsedP50": 1067220840,
+      "heapUsedP95": 1067220840,
+      "heapUsedStd": 0,
+      "rssMean": 1181741056,
+      "rssP50": 1181741056,
+      "rssP95": 1181741056,
+      "rssStd": 0
+    },
+    {
+      "mode": "src",
+      "scenario": "buildForward",
+      "size": 50000,
+      "count": 1,
+      "buildMsMean": 38.33250000000044,
+      "buildMsP50": 38.33250000000044,
+      "buildMsP95": 38.33250000000044,
+      "buildMsStd": 0,
+      "fwdAvgMsMean": 9.162566666667166,
+      "fwdAvgMsP50": 9.162566666667166,
+      "fwdAvgMsP95": 9.162566666667166,
+      "fwdAvgMsStd": 0,
+      "fwdTotalMsMean": 27.487700000001496,
+      "fwdTotalMsP50": 27.487700000001496,
+      "fwdTotalMsP95": 27.487700000001496,
+      "fwdTotalMsStd": 0,
+      "bytesPerConnMean": 65,
+      "bytesPerConnP50": 65,
+      "bytesPerConnP95": 65,
+      "bytesPerConnStd": 0,
+      "heapUsedMean": 1076894584,
+      "heapUsedP50": 1076894584,
+      "heapUsedP95": 1076894584,
+      "heapUsedStd": 0,
+      "rssMean": 1195417600,
+      "rssP50": 1195417600,
+      "rssP95": 1195417600,
+      "rssStd": 0
+    },
+    {
+      "mode": "dist",
+      "scenario": "buildForward",
+      "size": 50000,
+      "count": 1,
+      "buildMsMean": 29.99539999999979,
+      "buildMsP50": 29.99539999999979,
+      "buildMsP95": 29.99539999999979,
+      "buildMsStd": 0,
+      "fwdAvgMsMean": 4.829466666667334,
+      "fwdAvgMsP50": 4.829466666667334,
+      "fwdAvgMsP95": 4.829466666667334,
+      "fwdAvgMsStd": 0,
+      "fwdTotalMsMean": 14.488400000002002,
+      "fwdTotalMsP50": 14.488400000002002,
+      "fwdTotalMsP95": 14.488400000002002,
+      "fwdTotalMsStd": 0,
+      "bytesPerConnMean": 65,
+      "bytesPerConnP50": 65,
+      "bytesPerConnP95": 65,
+      "bytesPerConnStd": 0,
+      "heapUsedMean": 1096675712,
+      "heapUsedP50": 1096675712,
+      "heapUsedP95": 1096675712,
+      "heapUsedStd": 0,
+      "rssMean": 1205219328,
+      "rssP50": 1205219328,
+      "rssP95": 1205219328,
+      "rssStd": 0
+    },
+    {
+      "mode": "src",
+      "scenario": "buildForward",
+      "size": 100000,
+      "count": 3,
+      "buildMsMean": 62.428366666665774,
+      "buildMsP50": 62.278199999997014,
+      "buildMsP95": 62.278199999997014,
+      "buildMsStd": 2.652025417591147,
+      "fwdAvgMsMean": 11.693833333332805,
+      "fwdAvgMsP50": 11.395699999999124,
+      "fwdAvgMsP95": 11.395699999999124,
+      "fwdAvgMsStd": 0.845802519635199,
+      "fwdTotalMsMean": 23.38766666666561,
+      "fwdTotalMsP50": 22.791399999998248,
+      "fwdTotalMsP95": 22.791399999998248,
+      "fwdTotalMsStd": 1.691605039270398,
+      "bytesPerConnMean": 64,
+      "bytesPerConnP50": 64,
+      "bytesPerConnP95": 64,
+      "bytesPerConnStd": 0,
+      "heapUsedMean": 1150902344,
+      "heapUsedP50": 1150917088,
+      "heapUsedP95": 1150917088,
+      "heapUsedStd": 25352733.741269216,
+      "rssMean": 1267079850.6666667,
+      "rssP50": 1267052544,
+      "rssP95": 1267052544,
+      "rssStd": 22323678.07031409
+    },
+    {
+      "mode": "dist",
+      "scenario": "buildForward",
+      "size": 100000,
+      "count": 3,
+      "buildMsMean": 68.72246666666494,
+      "buildMsP50": 65.97499999999854,
+      "buildMsP95": 65.97499999999854,
+      "buildMsStd": 7.980389874491819,
+      "fwdAvgMsMean": 11.469966666666854,
+      "fwdAvgMsP50": 11.829750000000786,
+      "fwdAvgMsP95": 11.829750000000786,
+      "fwdAvgMsStd": 0.6871463627856151,
+      "fwdTotalMsMean": 22.93993333333371,
+      "fwdTotalMsP50": 23.65950000000157,
+      "fwdTotalMsP95": 23.65950000000157,
+      "fwdTotalMsStd": 1.3742927255712303,
+      "bytesPerConnMean": 64,
+      "bytesPerConnP50": 64,
+      "bytesPerConnP95": 64,
+      "bytesPerConnStd": 0,
+      "heapUsedMean": 1236511234.6666667,
+      "heapUsedP50": 1233344768,
+      "heapUsedP95": 1233344768,
+      "heapUsedStd": 21612021.786214776,
+      "rssMean": 1353289728,
+      "rssP50": 1355403264,
+      "rssP95": 1355403264,
+      "rssStd": 24993721.741843782
+    },
+    {
+      "mode": "src",
+      "scenario": "buildForward",
+      "size": 200000,
+      "count": 3,
+      "buildMsMean": 143.41046666666566,
+      "buildMsP50": 138.78649999999834,
+      "buildMsP95": 138.78649999999834,
+      "buildMsStd": 10.274795109824328,
+      "fwdAvgMsMean": 29.506966666665296,
+      "fwdAvgMsP50": 24.83139999999912,
+      "fwdAvgMsP95": 24.83139999999912,
+      "fwdAvgMsStd": 6.728832875684587,
+      "fwdTotalMsMean": 29.506966666665296,
+      "fwdTotalMsP50": 24.83139999999912,
+      "fwdTotalMsP95": 24.83139999999912,
+      "fwdTotalMsStd": 6.728832875684587,
+      "bytesPerConnMean": 64,
+      "bytesPerConnP50": 64,
+      "bytesPerConnP95": 64,
+      "bytesPerConnStd": 0,
+      "heapUsedMean": 1387065392,
+      "heapUsedP50": 1387086288,
+      "heapUsedP95": 1387086288,
+      "heapUsedStd": 50283264.78219393,
+      "rssMean": 1504058026.6666667,
+      "rssP50": 1504108544,
+      "rssP95": 1504108544,
+      "rssStd": 49575281.497320555
+    },
+    {
+      "mode": "dist",
+      "scenario": "buildForward",
+      "size": 200000,
+      "count": 3,
+      "buildMsMean": 173.60303333333286,
+      "buildMsP50": 172.45989999999802,
+      "buildMsP95": 172.45989999999802,
+      "buildMsStd": 2.2311080914099923,
+      "fwdAvgMsMean": 28.513100000001334,
+      "fwdAvgMsP50": 29.056100000001607,
+      "fwdAvgMsP95": 29.056100000001607,
+      "fwdAvgMsStd": 4.9286550396634965,
+      "fwdTotalMsMean": 28.513100000001334,
+      "fwdTotalMsP50": 29.056100000001607,
+      "fwdTotalMsP95": 29.056100000001607,
+      "fwdTotalMsStd": 4.9286550396634965,
+      "bytesPerConnMean": 64,
+      "bytesPerConnP50": 64,
+      "bytesPerConnP95": 64,
+      "bytesPerConnStd": 0,
+      "heapUsedMean": 1567090957.3333333,
+      "heapUsedP50": 1570247592,
+      "heapUsedP95": 1570247592,
+      "heapUsedStd": 45882227.24907939,
+      "rssMean": 1687500117.3333333,
+      "rssP50": 1685786624,
+      "rssP95": 1685786624,
+      "rssStd": 51629553.23463484
+    }
+  ],
+  "deltas": [
+    {
+      "size": 1000,
+      "metric": "buildMsMean",
+      "src": 0.5603999999984808,
+      "dist": 0.5531999999984691,
+      "delta": -0.0072000000000116415,
+      "deltaPct": -1.28
+    },
+    {
+      "size": 1000,
+      "metric": "fwdAvgMsMean",
+      "src": 0.076140000000305,
+      "dist": 0.06575999999986379,
+      "delta": -0.010380000000441217,
+      "deltaPct": -13.63
+    },
+    {
+      "size": 1000,
+      "metric": "bytesPerConnMean",
+      "src": 69,
+      "dist": 69,
+      "delta": 0,
+      "deltaPct": 0
+    },
+    {
+      "size": 1000,
+      "metric": "heapUsedMean",
+      "src": 1061974488,
+      "dist": 1062765640,
+      "delta": 791152,
+      "deltaPct": 0.07
+    },
+    {
+      "size": 1000,
+      "metric": "rssMean",
+      "src": 1180508160,
+      "dist": 1180508160,
+      "delta": 0,
+      "deltaPct": 0
+    },
+    {
+      "size": 10000,
+      "metric": "buildMsMean",
+      "src": 3.750499999998283,
+      "dist": 6.776900000000751,
+      "delta": 3.026400000002468,
+      "deltaPct": 80.69
+    },
+    {
+      "size": 10000,
+      "metric": "fwdAvgMsMean",
+      "src": 0.8971599999997124,
+      "dist": 0.6958599999998114,
+      "delta": -0.201299999999901,
+      "deltaPct": -22.44
+    },
+    {
+      "size": 10000,
+      "metric": "bytesPerConnMean",
+      "src": 65,
+      "dist": 65,
+      "delta": 0,
+      "deltaPct": 0
+    },
+    {
+      "size": 10000,
+      "metric": "heapUsedMean",
+      "src": 1070218272,
+      "dist": 1067220840,
+      "delta": -2997432,
+      "deltaPct": -0.28
+    },
+    {
+      "size": 10000,
+      "metric": "rssMean",
+      "src": 1180508160,
+      "dist": 1181741056,
+      "delta": 1232896,
+      "deltaPct": 0.1
+    },
+    {
+      "size": 50000,
+      "metric": "buildMsMean",
+      "src": 38.33250000000044,
+      "dist": 29.99539999999979,
+      "delta": -8.337100000000646,
+      "deltaPct": -21.75
+    },
+    {
+      "size": 50000,
+      "metric": "fwdAvgMsMean",
+      "src": 9.162566666667166,
+      "dist": 4.829466666667334,
+      "delta": -4.333099999999832,
+      "deltaPct": -47.29
+    },
+    {
+      "size": 50000,
+      "metric": "bytesPerConnMean",
+      "src": 65,
+      "dist": 65,
+      "delta": 0,
+      "deltaPct": 0
+    },
+    {
+      "size": 50000,
+      "metric": "heapUsedMean",
+      "src": 1076894584,
+      "dist": 1096675712,
+      "delta": 19781128,
+      "deltaPct": 1.84
+    },
+    {
+      "size": 50000,
+      "metric": "rssMean",
+      "src": 1195417600,
+      "dist": 1205219328,
+      "delta": 9801728,
+      "deltaPct": 0.82
+    },
+    {
+      "size": 100000,
+      "metric": "buildMsMean",
+      "src": 62.428366666665774,
+      "dist": 68.72246666666494,
+      "delta": 6.294099999999169,
+      "deltaPct": 10.08
+    },
+    {
+      "size": 100000,
+      "metric": "fwdAvgMsMean",
+      "src": 11.693833333332805,
+      "dist": 11.469966666666854,
+      "delta": -0.22386666666595012,
+      "deltaPct": -1.91
+    },
+    {
+      "size": 100000,
+      "metric": "bytesPerConnMean",
+      "src": 64,
+      "dist": 64,
+      "delta": 0,
+      "deltaPct": 0
+    },
+    {
+      "size": 100000,
+      "metric": "heapUsedMean",
+      "src": 1150902344,
+      "dist": 1236511234.6666667,
+      "delta": 85608890.66666675,
+      "deltaPct": 7.44
+    },
+    {
+      "size": 100000,
+      "metric": "rssMean",
+      "src": 1267079850.6666667,
+      "dist": 1353289728,
+      "delta": 86209877.33333325,
+      "deltaPct": 6.8
+    },
+    {
+      "size": 200000,
+      "metric": "buildMsMean",
+      "src": 143.41046666666566,
+      "dist": 173.60303333333286,
+      "delta": 30.192566666667204,
+      "deltaPct": 21.05
+    },
+    {
+      "size": 200000,
+      "metric": "fwdAvgMsMean",
+      "src": 29.506966666665296,
+      "dist": 28.513100000001334,
+      "delta": -0.993866666663962,
+      "deltaPct": -3.37
+    },
+    {
+      "size": 200000,
+      "metric": "bytesPerConnMean",
+      "src": 64,
+      "dist": 64,
+      "delta": 0,
+      "deltaPct": 0
+    },
+    {
+      "size": 200000,
+      "metric": "heapUsedMean",
+      "src": 1387065392,
+      "dist": 1567090957.3333333,
+      "delta": 180025565.33333325,
+      "deltaPct": 12.98
+    },
+    {
+      "size": 200000,
+      "metric": "rssMean",
+      "src": 1504058026.6666667,
+      "dist": 1687500117.3333333,
+      "delta": 183442090.6666665,
+      "deltaPct": 12.2
+    }
+  ],
+  "warnings": [
+    {
+      "type": "dist-missing",
+      "distPath": "D:\\code-practice\\dist\\neataptic.js"
+    },
+    {
+      "type": "dist-missing",
+      "distPath": "D:\\code-practice\\dist\\neataptic.js"
+    },
+    {
+      "type": "dist-missing",
+      "distPath": "D:\\code-practice\\dist\\neataptic.js"
+    },
+    {
+      "type": "dist-missing",
+      "distPath": "D:\\code-practice\\dist\\neataptic.js"
+    },
+    {
+      "type": "dist-missing",
+      "distPath": "D:\\code-practice\\dist\\neataptic.js"
+    },
+    {
+      "type": "dist-missing",
+      "distPath": "D:\\code-practice\\dist\\neataptic.js"
+    },
+    {
+      "type": "dist-missing",
+      "distPath": "D:\\code-practice\\dist\\neataptic.js"
+    },
+    {
+      "type": "dist-missing",
+      "distPath": "D:\\code-practice\\dist\\neataptic.js"
+    },
+    {
+      "type": "dist-missing",
+      "distPath": "D:\\code-practice\\dist\\neataptic.js"
+    }
+  ],
+  "browserBundles": [
+    {
+      "label": "dev",
+      "path": "D:\\code-practice\\bench-browser\\dev.bundle.js",
+      "exists": false
+    },
+    {
+      "label": "prod",
+      "path": "D:\\code-practice\\bench-browser\\prod.bundle.js",
+      "exists": false
+    }
+  ],
+  "meta": {
+    "note": "Phase 0 results file (no console logs). Update plan tables manually from this source.",
+    "largeEnabled": true,
+    "varianceRepeatsLarge": 3,
+    "browserHarness": true
+  },
+  "browserRuns": [
+    {
+      "mode": "dev",
+      "bundleBytes": 574606,
+      "performanceMemory": {
+        "usedJSHeapSize": 31200000,
+        "totalJSHeapSize": 60300000,
+        "jsHeapSizeLimit": 3760000000
+      },
+      "bench": {
+        "mode": "dev",
+        "generatedAt": "2025-08-18T23:16:52.827Z",
+        "results": [
+          {
+            "size": 1000,
+            "buildMs": 2.4,
+            "fwdAvgMs": 0.76,
+            "fwdTotalMs": 3.8,
+            "conn": 1000,
+            "nodes": 64,
+            "iterations": 5
+          },
+          {
+            "size": 10000,
+            "buildMs": 5.9,
+            "fwdAvgMs": 2.1,
+            "fwdTotalMs": 10.5,
+            "conn": 10000,
+            "nodes": 200,
+            "iterations": 5
+          },
+          {
+            "size": 50000,
+            "buildMs": 46.8,
+            "fwdAvgMs": 4.2667,
+            "fwdTotalMs": 12.8,
+            "conn": 50000,
+            "nodes": 448,
+            "iterations": 3
+          },
+          {
+            "size": 100000,
+            "buildMs": 57.8,
+            "fwdAvgMs": 6.05,
+            "fwdTotalMs": 12.1,
+            "conn": 100000,
+            "nodes": 633,
+            "iterations": 2
+          }
+        ]
+      }
+    },
+    {
+      "mode": "prod",
+      "bundleBytes": 206787,
+      "performanceMemory": {
+        "usedJSHeapSize": 33100000,
+        "totalJSHeapSize": 56800000,
+        "jsHeapSizeLimit": 3760000000
+      },
+      "bench": {
+        "mode": "prod",
+        "generatedAt": "2025-08-18T23:16:53.132Z",
+        "results": [
+          {
+            "size": 1000,
+            "buildMs": 2.3,
+            "fwdAvgMs": 0.9,
+            "fwdTotalMs": 4.5,
+            "conn": 1000,
+            "nodes": 64,
+            "iterations": 5
+          },
+          {
+            "size": 10000,
+            "buildMs": 5.8,
+            "fwdAvgMs": 1.96,
+            "fwdTotalMs": 9.8,
+            "conn": 10000,
+            "nodes": 200,
+            "iterations": 5
+          },
+          {
+            "size": 50000,
+            "buildMs": 49.4,
+            "fwdAvgMs": 3.8,
+            "fwdTotalMs": 11.4,
+            "conn": 50000,
+            "nodes": 448,
+            "iterations": 3
+          },
+          {
+            "size": 100000,
+            "buildMs": 86.6,
+            "fwdAvgMs": 3.65,
+            "fwdTotalMs": 7.3,
+            "conn": 100000,
+            "nodes": 633,
+            "iterations": 2
+          }
+        ]
+      }
+    }
+  ],
+  "fieldAudit": {
+    "generatedAt": "2025-08-18T23:17:00.119Z",
+    "Node": {
+      "count": 14,
+      "keys": [
+        "activation",
+        "bias",
+        "connections",
+        "derivative",
+        "error",
+        "geneId",
+        "index",
+        "mask",
+        "old",
+        "previousDeltaBias",
+        "squash",
+        "state",
+        "totalDeltaBias",
+        "type"
+      ]
+    },
+    "Connection": {
+      "count": 10,
+      "keys": [
+        "_flags",
+        "eligibility",
+        "from",
+        "gater",
+        "innovation",
+        "previousDeltaWeight",
+        "to",
+        "totalDeltaWeight",
+        "weight",
+        "xtrace"
+      ]
+    }
+  },
+  "history": [
+    {
+      "generatedAt": "2025-08-18T22:22:34.955Z",
+      "commit": "f6dae24",
+      "sizes": [
+        1000,
+        10000,
+        50000,
+        100000,
+        200000
+      ],
+      "summary": [
+        {
+          "mode": "src",
+          "size": 1000,
+          "buildMsMean": 0.6671000000005733,
+          "fwdAvgMsMean": 0.05984000000007654,
+          "bytesPerConnMean": 69
+        },
+        {
+          "mode": "dist",
+          "size": 1000,
+          "buildMsMean": 0.5999000000001615,
+          "fwdAvgMsMean": 0.06018000000003667,
+          "bytesPerConnMean": 69
+        },
+        {
+          "mode": "src",
+          "size": 10000,
+          "buildMsMean": 4.105999999999767,
+          "fwdAvgMsMean": 0.948660000000018,
+          "bytesPerConnMean": 65
+        },
+        {
+          "mode": "dist",
+          "size": 10000,
+          "buildMsMean": 4.139200000000528,
+          "fwdAvgMsMean": 0.5428600000001097,
+          "bytesPerConnMean": 65
+        },
+        {
+          "mode": "src",
+          "size": 50000,
+          "buildMsMean": 26.812199999999393,
+          "fwdAvgMsMean": 3.886833333333319,
+          "bytesPerConnMean": 65
+        },
+        {
+          "mode": "dist",
+          "size": 50000,
+          "buildMsMean": 26.273699999999735,
+          "fwdAvgMsMean": 3.3060333333335925,
+          "bytesPerConnMean": 65
+        },
+        {
+          "mode": "src",
+          "size": 100000,
+          "buildMsMean": 55.255199999999604,
+          "fwdAvgMsMean": 7.383100000000013,
+          "bytesPerConnMean": 64
+        },
+        {
+          "mode": "dist",
+          "size": 100000,
+          "buildMsMean": 67.10220000000027,
+          "fwdAvgMsMean": 8.241749999999683,
+          "bytesPerConnMean": 64
+        },
+        {
+          "mode": "src",
+          "size": 200000,
+          "buildMsMean": 114.09450000000015,
+          "fwdAvgMsMean": 14.190400000000409,
+          "bytesPerConnMean": 64
+        },
+        {
+          "mode": "dist",
+          "size": 200000,
+          "buildMsMean": 106.14739999999983,
+          "fwdAvgMsMean": 18.18029999999999,
+          "bytesPerConnMean": 64
+        }
+      ],
+      "fwdDeltaPct": [
+        {
+          "size": 1000,
+          "deltaPct": 0.57
+        },
+        {
+          "size": 10000,
+          "deltaPct": -42.78
+        },
+        {
+          "size": 50000,
+          "deltaPct": -14.94
+        },
+        {
+          "size": 100000,
+          "deltaPct": 11.63
+        },
+        {
+          "size": 200000,
+          "deltaPct": 28.12
+        }
+      ],
+      "fieldAuditCounts": {
+        "Node": 14,
+        "Connection": 11
+      }
+    },
+    {
+      "generatedAt": "2025-08-18T22:27:38.553Z",
+      "commit": "f6dae24",
+      "sizes": [
+        1000,
+        10000,
+        50000,
+        100000,
+        200000
+      ],
+      "summary": [
+        {
+          "mode": "src",
+          "size": 1000,
+          "buildMsMean": 0.5279000000009546,
+          "fwdAvgMsMean": 0.06364000000030501,
+          "bytesPerConnMean": 69
+        },
+        {
+          "mode": "dist",
+          "size": 1000,
+          "buildMsMean": 0.6166999999986729,
+          "fwdAvgMsMean": 0.06187999999965541,
+          "bytesPerConnMean": 69
+        },
+        {
+          "mode": "src",
+          "size": 10000,
+          "buildMsMean": 6.003100000001723,
+          "fwdAvgMsMean": 0.4978000000002794,
+          "bytesPerConnMean": 65
+        },
+        {
+          "mode": "dist",
+          "size": 10000,
+          "buildMsMean": 3.91019999999844,
+          "fwdAvgMsMean": 0.6144399999990128,
+          "bytesPerConnMean": 65
+        },
+        {
+          "mode": "src",
+          "size": 50000,
+          "buildMsMean": 34.73370000000432,
+          "fwdAvgMsMean": 3.253499999998894,
+          "bytesPerConnMean": 65
+        },
+        {
+          "mode": "dist",
+          "size": 50000,
+          "buildMsMean": 28.762299999994866,
+          "fwdAvgMsMean": 6.266533333332821,
+          "bytesPerConnMean": 65
+        },
+        {
+          "mode": "src",
+          "size": 100000,
+          "buildMsMean": 63.96209999999701,
+          "fwdAvgMsMean": 9.710149999998976,
+          "bytesPerConnMean": 64
+        },
+        {
+          "mode": "dist",
+          "size": 100000,
+          "buildMsMean": 68.57979999999952,
+          "fwdAvgMsMean": 10.389500000001135,
+          "bytesPerConnMean": 64
+        },
+        {
+          "mode": "src",
+          "size": 200000,
+          "buildMsMean": 141.37689999999566,
+          "fwdAvgMsMean": 21.597900000000664,
+          "bytesPerConnMean": 64
+        },
+        {
+          "mode": "dist",
+          "size": 200000,
+          "buildMsMean": 136.3515000000043,
+          "fwdAvgMsMean": 21.989300000001094,
+          "bytesPerConnMean": 64
+        }
+      ],
+      "fwdDeltaPct": [
+        {
+          "size": 1000,
+          "deltaPct": -2.77
+        },
+        {
+          "size": 10000,
+          "deltaPct": 23.43
+        },
+        {
+          "size": 50000,
+          "deltaPct": 92.61
+        },
+        {
+          "size": 100000,
+          "deltaPct": 7
+        },
+        {
+          "size": 200000,
+          "deltaPct": 1.81
+        }
+      ],
+      "fieldAuditCounts": {
+        "Node": 14,
+        "Connection": 11
+      }
+    },
+    {
+      "generatedAt": "2025-08-18T22:35:54.186Z",
+      "commit": "f6dae24",
+      "sizes": [
+        1000,
+        10000,
+        50000,
+        100000,
+        200000
+      ],
+      "summary": [
+        {
+          "mode": "src",
+          "size": 1000,
+          "buildMsMean": 0.5514000000002852,
+          "fwdAvgMsMean": 0.05771999999997206,
+          "bytesPerConnMean": 69
+        },
+        {
+          "mode": "dist",
+          "size": 1000,
+          "buildMsMean": 0.6031999999995605,
+          "fwdAvgMsMean": 0.05991999999987456,
+          "bytesPerConnMean": 69
+        },
+        {
+          "mode": "src",
+          "size": 10000,
+          "buildMsMean": 6.477499999999964,
+          "fwdAvgMsMean": 0.4968800000000556,
+          "bytesPerConnMean": 65
+        },
+        {
+          "mode": "dist",
+          "size": 10000,
+          "buildMsMean": 4.507599999999911,
+          "fwdAvgMsMean": 0.5576999999999316,
+          "bytesPerConnMean": 65
+        },
+        {
+          "mode": "src",
+          "size": 50000,
+          "buildMsMean": 30.13079999999991,
+          "fwdAvgMsMean": 3.916266666666464,
+          "bytesPerConnMean": 65
+        },
+        {
+          "mode": "dist",
+          "size": 50000,
+          "buildMsMean": 25.745499999999993,
+          "fwdAvgMsMean": 3.0595666666667967,
+          "bytesPerConnMean": 65
+        },
+        {
+          "mode": "src",
+          "size": 100000,
+          "buildMsMean": 52.97700000000077,
+          "fwdAvgMsMean": 9.377400000000307,
+          "bytesPerConnMean": 64
+        },
+        {
+          "mode": "dist",
+          "size": 100000,
+          "buildMsMean": 51.566899999999805,
+          "fwdAvgMsMean": 8.421150000000125,
+          "bytesPerConnMean": 64
+        },
+        {
+          "mode": "src",
+          "size": 200000,
+          "buildMsMean": 109.8725999999997,
+          "fwdAvgMsMean": 14.909200000000055,
+          "bytesPerConnMean": 64
+        },
+        {
+          "mode": "dist",
+          "size": 200000,
+          "buildMsMean": 108.66320000000087,
+          "fwdAvgMsMean": 18.35909999999967,
+          "bytesPerConnMean": 64
+        }
+      ],
+      "fwdDeltaPct": [
+        {
+          "size": 1000,
+          "deltaPct": 3.81
+        },
+        {
+          "size": 10000,
+          "deltaPct": 12.24
+        },
+        {
+          "size": 50000,
+          "deltaPct": -21.88
+        },
+        {
+          "size": 100000,
+          "deltaPct": -10.2
+        },
+        {
+          "size": 200000,
+          "deltaPct": 23.14
+        }
+      ],
+      "fieldAuditCounts": {
+        "Node": 14,
+        "Connection": 11
+      }
+    },
+    {
+      "generatedAt": "2025-08-18T22:44:47.351Z",
+      "commit": "f6dae24",
+      "sizes": [
+        1000,
+        10000,
+        50000,
+        100000,
+        200000
+      ],
+      "summary": [
+        {
+          "mode": "src",
+          "size": 1000,
+          "buildMsMean": 0.5486999999993714,
+          "fwdAvgMsMean": 0.057340000000112926,
+          "bytesPerConnMean": 69
+        },
+        {
+          "mode": "dist",
+          "size": 1000,
+          "buildMsMean": 0.5871999999999389,
+          "fwdAvgMsMean": 0.056419999999889114,
+          "bytesPerConnMean": 69
+        },
+        {
+          "mode": "src",
+          "size": 10000,
+          "buildMsMean": 4.018000000000029,
+          "fwdAvgMsMean": 0.8406399999999848,
+          "bytesPerConnMean": 65
+        },
+        {
+          "mode": "dist",
+          "size": 10000,
+          "buildMsMean": 4.069999999999709,
+          "fwdAvgMsMean": 0.5283400000000256,
+          "bytesPerConnMean": 65
+        },
+        {
+          "mode": "src",
+          "size": 50000,
+          "buildMsMean": 27.733500000000276,
+          "fwdAvgMsMean": 3.0928666666668505,
+          "bytesPerConnMean": 65
+        },
+        {
+          "mode": "dist",
+          "size": 50000,
+          "buildMsMean": 26.149000000000342,
+          "fwdAvgMsMean": 3.6243333333331975,
+          "bytesPerConnMean": 65
+        },
+        {
+          "mode": "src",
+          "size": 100000,
+          "buildMsMean": 54.54989999999998,
+          "fwdAvgMsMean": 7.119999999999891,
+          "bytesPerConnMean": 64
+        },
+        {
+          "mode": "dist",
+          "size": 100000,
+          "buildMsMean": 54.759000000000015,
+          "fwdAvgMsMean": 7.887199999999666,
+          "bytesPerConnMean": 64
+        },
+        {
+          "mode": "src",
+          "size": 200000,
+          "buildMsMean": 116.58169999999973,
+          "fwdAvgMsMean": 15.42029999999977,
+          "bytesPerConnMean": 64
+        },
+        {
+          "mode": "dist",
+          "size": 200000,
+          "buildMsMean": 112.82609999999931,
+          "fwdAvgMsMean": 18.66610000000037,
+          "bytesPerConnMean": 64
+        }
+      ],
+      "fwdDeltaPct": [
+        {
+          "size": 1000,
+          "deltaPct": -1.6
+        },
+        {
+          "size": 10000,
+          "deltaPct": -37.15
+        },
+        {
+          "size": 50000,
+          "deltaPct": 17.18
+        },
+        {
+          "size": 100000,
+          "deltaPct": 10.78
+        },
+        {
+          "size": 200000,
+          "deltaPct": 21.05
+        }
+      ],
+      "fieldAuditCounts": {
+        "Node": 14,
+        "Connection": 11
+      }
+    },
+    {
+      "generatedAt": "2025-08-18T22:51:01.942Z",
+      "commit": "f6dae24",
+      "sizes": [
+        1000,
+        10000,
+        50000,
+        100000,
+        200000
+      ],
+      "summary": [
+        {
+          "mode": "src",
+          "size": 1000,
+          "buildMsMean": 0.7476999999998952,
+          "fwdAvgMsMean": 0.09053999999960069,
+          "bytesPerConnMean": 69
+        },
+        {
+          "mode": "dist",
+          "size": 1000,
+          "buildMsMean": 1.0918000000019674,
+          "fwdAvgMsMean": 0.12039999999979045,
+          "bytesPerConnMean": 69
+        },
+        {
+          "mode": "src",
+          "size": 10000,
+          "buildMsMean": 6.540899999999965,
+          "fwdAvgMsMean": 1.5114000000001397,
+          "bytesPerConnMean": 65
+        },
+        {
+          "mode": "dist",
+          "size": 10000,
+          "buildMsMean": 8.89679999999862,
+          "fwdAvgMsMean": 1.0625399999997172,
+          "bytesPerConnMean": 65
+        },
+        {
+          "mode": "src",
+          "size": 50000,
+          "buildMsMean": 35.96149999999761,
+          "fwdAvgMsMean": 8.508866666667018,
+          "bytesPerConnMean": 65
+        },
+        {
+          "mode": "dist",
+          "size": 50000,
+          "buildMsMean": 31.76100000000224,
+          "fwdAvgMsMean": 8.687833333333401,
+          "bytesPerConnMean": 65
+        },
+        {
+          "mode": "src",
+          "size": 100000,
+          "buildMsMean": 68.96829999999682,
+          "fwdAvgMsMean": 14.375400000000809,
+          "bytesPerConnMean": 64
+        },
+        {
+          "mode": "dist",
+          "size": 100000,
+          "buildMsMean": 67.23270000000048,
+          "fwdAvgMsMean": 10.488900000000285,
+          "bytesPerConnMean": 64
+        },
+        {
+          "mode": "src",
+          "size": 200000,
+          "buildMsMean": 139.81720000000132,
+          "fwdAvgMsMean": 24.001100000001315,
+          "bytesPerConnMean": 64
+        },
+        {
+          "mode": "dist",
+          "size": 200000,
+          "buildMsMean": 152.77010000000155,
+          "fwdAvgMsMean": 31.3237999999983,
+          "bytesPerConnMean": 64
+        }
+      ],
+      "fwdDeltaPct": [
+        {
+          "size": 1000,
+          "deltaPct": 32.98
+        },
+        {
+          "size": 10000,
+          "deltaPct": -29.7
+        },
+        {
+          "size": 50000,
+          "deltaPct": 2.1
+        },
+        {
+          "size": 100000,
+          "deltaPct": -27.04
+        },
+        {
+          "size": 200000,
+          "deltaPct": 30.51
+        }
+      ],
+      "fieldAuditCounts": {
+        "Node": 14,
+        "Connection": 11
+      }
+    },
+    {
+      "generatedAt": "2025-08-18T22:56:10.989Z",
+      "commit": "f6dae24",
+      "sizes": [
+        1000,
+        10000,
+        50000,
+        100000,
+        200000
+      ],
+      "summary": [
+        {
+          "mode": "src",
+          "size": 1000,
+          "buildMsMean": 0.5355000000054133,
+          "fwdAvgMsMean": 0.06572000000014669,
+          "bytesPerConnMean": 69
+        },
+        {
+          "mode": "dist",
+          "size": 1000,
+          "buildMsMean": 0.5830000000059954,
+          "fwdAvgMsMean": 0.06732000000047264,
+          "bytesPerConnMean": 69
+        },
+        {
+          "mode": "src",
+          "size": 10000,
+          "buildMsMean": 4.104899999998452,
+          "fwdAvgMsMean": 0.969199999999546,
+          "bytesPerConnMean": 65
+        },
+        {
+          "mode": "dist",
+          "size": 10000,
+          "buildMsMean": 4.160700000000361,
+          "fwdAvgMsMean": 0.6052600000009989,
+          "bytesPerConnMean": 65
+        },
+        {
+          "mode": "src",
+          "size": 50000,
+          "buildMsMean": 37.77950000000419,
+          "fwdAvgMsMean": 6.141600000000229,
+          "bytesPerConnMean": 65
+        },
+        {
+          "mode": "dist",
+          "size": 50000,
+          "buildMsMean": 37.627699999997276,
+          "fwdAvgMsMean": 6.345733333332949,
+          "bytesPerConnMean": 65
+        },
+        {
+          "mode": "src",
+          "size": 100000,
+          "buildMsMean": 64.98566666666495,
+          "fwdAvgMsMean": 12.121383333332536,
+          "bytesPerConnMean": 64
+        },
+        {
+          "mode": "dist",
+          "size": 100000,
+          "buildMsMean": 66.4386666666663,
+          "fwdAvgMsMean": 12.05339999999948,
+          "bytesPerConnMean": 64
+        },
+        {
+          "mode": "src",
+          "size": 200000,
+          "buildMsMean": 139.19296666666682,
+          "fwdAvgMsMean": 22.04950000000099,
+          "bytesPerConnMean": 64
+        },
+        {
+          "mode": "dist",
+          "size": 200000,
+          "buildMsMean": 141.89750000000154,
+          "fwdAvgMsMean": 26.80233333333308,
+          "bytesPerConnMean": 64
+        }
+      ],
+      "fwdDeltaPct": [
+        {
+          "size": 1000,
+          "deltaPct": 2.43
+        },
+        {
+          "size": 10000,
+          "deltaPct": -37.55
+        },
+        {
+          "size": 50000,
+          "deltaPct": 3.32
+        },
+        {
+          "size": 100000,
+          "deltaPct": -0.56
+        },
+        {
+          "size": 200000,
+          "deltaPct": 21.56
+        }
+      ],
+      "fieldAuditCounts": {
+        "Node": 14,
+        "Connection": 10
+      }
+    },
+    {
+      "generatedAt": "2025-08-18T23:00:01.789Z",
+      "commit": "f6dae24",
+      "sizes": [
+        1000,
+        10000,
+        50000,
+        100000,
+        200000
+      ],
+      "summary": [
+        {
+          "mode": "src",
+          "size": 1000,
+          "buildMsMean": 0.5360000000000582,
+          "fwdAvgMsMean": 0.0692799999997078,
+          "bytesPerConnMean": 69
+        },
+        {
+          "mode": "dist",
+          "size": 1000,
+          "buildMsMean": 0.5830999999998312,
+          "fwdAvgMsMean": 0.06507999999957974,
+          "bytesPerConnMean": 69
+        },
+        {
+          "mode": "src",
+          "size": 10000,
+          "buildMsMean": 3.9830000000001746,
+          "fwdAvgMsMean": 0.5698799999998301,
+          "bytesPerConnMean": 65
+        },
+        {
+          "mode": "dist",
+          "size": 10000,
+          "buildMsMean": 6.210100000000239,
+          "fwdAvgMsMean": 0.5657800000000861,
+          "bytesPerConnMean": 65
+        },
+        {
+          "mode": "src",
+          "size": 50000,
+          "buildMsMean": 31.460900000001857,
+          "fwdAvgMsMean": 3.4227000000003804,
+          "bytesPerConnMean": 65
+        },
+        {
+          "mode": "dist",
+          "size": 50000,
+          "buildMsMean": 27.991699999998673,
+          "fwdAvgMsMean": 3.2682333333335314,
+          "bytesPerConnMean": 65
+        },
+        {
+          "mode": "src",
+          "size": 100000,
+          "buildMsMean": 57.21586666666675,
+          "fwdAvgMsMean": 10.376266666666803,
+          "bytesPerConnMean": 64
+        },
+        {
+          "mode": "dist",
+          "size": 100000,
+          "buildMsMean": 58.56193333333431,
+          "fwdAvgMsMean": 12.086900000000242,
+          "bytesPerConnMean": 64
+        },
+        {
+          "mode": "src",
+          "size": 200000,
+          "buildMsMean": 120.25239999999879,
+          "fwdAvgMsMean": 20.115733333332173,
+          "bytesPerConnMean": 64
+        },
+        {
+          "mode": "dist",
+          "size": 200000,
+          "buildMsMean": 148.84983333333366,
+          "fwdAvgMsMean": 23.968466666667762,
+          "bytesPerConnMean": 64
+        }
+      ],
+      "fwdDeltaPct": [
+        {
+          "size": 1000,
+          "deltaPct": -6.06
+        },
+        {
+          "size": 10000,
+          "deltaPct": -0.72
+        },
+        {
+          "size": 50000,
+          "deltaPct": -4.51
+        },
+        {
+          "size": 100000,
+          "deltaPct": 16.49
+        },
+        {
+          "size": 200000,
+          "deltaPct": 19.15
+        }
+      ],
+      "fieldAuditCounts": {
+        "Node": 14,
+        "Connection": 10
+      }
+    },
+    {
+      "generatedAt": "2025-08-18T23:05:01.984Z",
+      "commit": "f6dae24",
+      "sizes": [
+        1000,
+        10000,
+        50000,
+        100000,
+        200000
+      ],
+      "summary": [
+        {
+          "mode": "src",
+          "size": 1000,
+          "buildMsMean": 0.6881999999968684,
+          "fwdAvgMsMean": 0.07557999999989988,
+          "bytesPerConnMean": 69
+        },
+        {
+          "mode": "dist",
+          "size": 1000,
+          "buildMsMean": 0.7016999999977998,
+          "fwdAvgMsMean": 0.09481999999989058,
+          "bytesPerConnMean": 69
+        },
+        {
+          "mode": "src",
+          "size": 10000,
+          "buildMsMean": 4.613900000003923,
+          "fwdAvgMsMean": 1.0099000000001979,
+          "bytesPerConnMean": 65
+        },
+        {
+          "mode": "dist",
+          "size": 10000,
+          "buildMsMean": 4.719700000001467,
+          "fwdAvgMsMean": 1.2100199999986216,
+          "bytesPerConnMean": 65
+        },
+        {
+          "mode": "src",
+          "size": 50000,
+          "buildMsMean": 29.059399999998277,
+          "fwdAvgMsMean": 6.40606666666766,
+          "bytesPerConnMean": 65
+        },
+        {
+          "mode": "dist",
+          "size": 50000,
+          "buildMsMean": 25.141899999995076,
+          "fwdAvgMsMean": 5.773700000000342,
+          "bytesPerConnMean": 65
+        },
+        {
+          "mode": "src",
+          "size": 100000,
+          "buildMsMean": 57.34876666666484,
+          "fwdAvgMsMean": 10.442849999999453,
+          "bytesPerConnMean": 64
+        },
+        {
+          "mode": "dist",
+          "size": 100000,
+          "buildMsMean": 59.973366666667665,
+          "fwdAvgMsMean": 7.90909999999955,
+          "bytesPerConnMean": 64
+        },
+        {
+          "mode": "src",
+          "size": 200000,
+          "buildMsMean": 128.90993333333367,
+          "fwdAvgMsMean": 19.848966666667064,
+          "bytesPerConnMean": 64
+        },
+        {
+          "mode": "dist",
+          "size": 200000,
+          "buildMsMean": 119.50210000000031,
+          "fwdAvgMsMean": 18.037399999998645,
+          "bytesPerConnMean": 64
+        }
+      ],
+      "fwdDeltaPct": [
+        {
+          "size": 1000,
+          "deltaPct": 25.46
+        },
+        {
+          "size": 10000,
+          "deltaPct": 19.82
+        },
+        {
+          "size": 50000,
+          "deltaPct": -9.87
+        },
+        {
+          "size": 100000,
+          "deltaPct": -24.26
+        },
+        {
+          "size": 200000,
+          "deltaPct": -9.13
+        }
+      ],
+      "fieldAuditCounts": {
+        "Node": 14,
+        "Connection": 10
+      }
+    },
+    {
+      "generatedAt": "2025-08-18T23:07:43.848Z",
+      "commit": "f6dae24",
+      "sizes": [
+        1000,
+        10000,
+        50000,
+        100000,
+        200000
+      ],
+      "summary": [
+        {
+          "mode": "src",
+          "size": 1000,
+          "buildMsMean": 0.7747000000017579,
+          "fwdAvgMsMean": 0.10380000000004656,
+          "bytesPerConnMean": 69
+        },
+        {
+          "mode": "dist",
+          "size": 1000,
+          "buildMsMean": 0.8188999999983935,
+          "fwdAvgMsMean": 0.09337999999988825,
+          "bytesPerConnMean": 69
+        },
+        {
+          "mode": "src",
+          "size": 10000,
+          "buildMsMean": 5.424600000002101,
+          "fwdAvgMsMean": 1.5138400000003458,
+          "bytesPerConnMean": 65
+        },
+        {
+          "mode": "dist",
+          "size": 10000,
+          "buildMsMean": 9.075099999998201,
+          "fwdAvgMsMean": 0.9408000000003085,
+          "bytesPerConnMean": 65
+        },
+        {
+          "mode": "src",
+          "size": 50000,
+          "buildMsMean": 34.21940000000177,
+          "fwdAvgMsMean": 8.269466666667237,
+          "bytesPerConnMean": 65
+        },
+        {
+          "mode": "dist",
+          "size": 50000,
+          "buildMsMean": 37.67190000000119,
+          "fwdAvgMsMean": 6.071766666666615,
+          "bytesPerConnMean": 65
+        },
+        {
+          "mode": "src",
+          "size": 100000,
+          "buildMsMean": 74.82043333333301,
+          "fwdAvgMsMean": 15.512116666666165,
+          "bytesPerConnMean": 64
+        },
+        {
+          "mode": "dist",
+          "size": 100000,
+          "buildMsMean": 73.09416666666584,
+          "fwdAvgMsMean": 11.949883333332764,
+          "bytesPerConnMean": 64
+        },
+        {
+          "mode": "src",
+          "size": 200000,
+          "buildMsMean": 150.03446666666665,
+          "fwdAvgMsMean": 29.489866666667996,
+          "bytesPerConnMean": 64
+        },
+        {
+          "mode": "dist",
+          "size": 200000,
+          "buildMsMean": 153.56833333333148,
+          "fwdAvgMsMean": 22.644333333334846,
+          "bytesPerConnMean": 64
+        }
+      ],
+      "fwdDeltaPct": [
+        {
+          "size": 1000,
+          "deltaPct": -10.04
+        },
+        {
+          "size": 10000,
+          "deltaPct": -37.85
+        },
+        {
+          "size": 50000,
+          "deltaPct": -26.58
+        },
+        {
+          "size": 100000,
+          "deltaPct": -22.96
+        },
+        {
+          "size": 200000,
+          "deltaPct": -23.21
+        }
+      ],
+      "fieldAuditCounts": {
+        "Node": 14,
+        "Connection": 10
+      }
+    },
+    {
+      "generatedAt": "2025-08-18T23:16:42.751Z",
+      "commit": "f6dae24",
+      "sizes": [
+        1000,
+        10000,
+        50000,
+        100000,
+        200000
+      ],
+      "summary": [
+        {
+          "mode": "src",
+          "size": 1000,
+          "buildMsMean": 0.5603999999984808,
+          "fwdAvgMsMean": 0.076140000000305,
+          "bytesPerConnMean": 69
+        },
+        {
+          "mode": "dist",
+          "size": 1000,
+          "buildMsMean": 0.5531999999984691,
+          "fwdAvgMsMean": 0.06575999999986379,
+          "bytesPerConnMean": 69
+        },
+        {
+          "mode": "src",
+          "size": 10000,
+          "buildMsMean": 3.750499999998283,
+          "fwdAvgMsMean": 0.8971599999997124,
+          "bytesPerConnMean": 65
+        },
+        {
+          "mode": "dist",
+          "size": 10000,
+          "buildMsMean": 6.776900000000751,
+          "fwdAvgMsMean": 0.6958599999998114,
+          "bytesPerConnMean": 65
+        },
+        {
+          "mode": "src",
+          "size": 50000,
+          "buildMsMean": 38.33250000000044,
+          "fwdAvgMsMean": 9.162566666667166,
+          "bytesPerConnMean": 65
+        },
+        {
+          "mode": "dist",
+          "size": 50000,
+          "buildMsMean": 29.99539999999979,
+          "fwdAvgMsMean": 4.829466666667334,
+          "bytesPerConnMean": 65
+        },
+        {
+          "mode": "src",
+          "size": 100000,
+          "buildMsMean": 62.428366666665774,
+          "fwdAvgMsMean": 11.693833333332805,
+          "bytesPerConnMean": 64
+        },
+        {
+          "mode": "dist",
+          "size": 100000,
+          "buildMsMean": 68.72246666666494,
+          "fwdAvgMsMean": 11.469966666666854,
+          "bytesPerConnMean": 64
+        },
+        {
+          "mode": "src",
+          "size": 200000,
+          "buildMsMean": 143.41046666666566,
+          "fwdAvgMsMean": 29.506966666665296,
+          "bytesPerConnMean": 64
+        },
+        {
+          "mode": "dist",
+          "size": 200000,
+          "buildMsMean": 173.60303333333286,
+          "fwdAvgMsMean": 28.513100000001334,
+          "bytesPerConnMean": 64
+        }
+      ],
+      "fwdDeltaPct": [
+        {
+          "size": 1000,
+          "deltaPct": -13.63
+        },
+        {
+          "size": 10000,
+          "deltaPct": -22.44
+        },
+        {
+          "size": 50000,
+          "deltaPct": -47.29
+        },
+        {
+          "size": 100000,
+          "deltaPct": -1.91
+        },
+        {
+          "size": 200000,
+          "deltaPct": -3.37
+        }
+      ],
+      "fieldAuditCounts": {
+        "Node": 14,
+        "Connection": 10
+      }
+    }
+  ],
+  "variance": [
+    {
+      "mode": "src",
+      "size": 100000,
+      "buildMsMean": 62.428366666665774,
+      "buildMsStd": 2.652025417591147,
+      "buildMsCvPct": 4.25,
+      "fwdAvgMsMean": 11.693833333332805,
+      "fwdAvgMsStd": 0.845802519635199,
+      "fwdAvgMsCvPct": 7.23,
+      "samples": 3
+    },
+    {
+      "mode": "dist",
+      "size": 100000,
+      "buildMsMean": 68.72246666666494,
+      "buildMsStd": 7.980389874491819,
+      "buildMsCvPct": 11.61,
+      "fwdAvgMsMean": 11.469966666666854,
+      "fwdAvgMsStd": 0.6871463627856151,
+      "fwdAvgMsCvPct": 5.99,
+      "samples": 3
+    },
+    {
+      "mode": "src",
+      "size": 200000,
+      "buildMsMean": 143.41046666666566,
+      "buildMsStd": 10.274795109824328,
+      "buildMsCvPct": 7.16,
+      "fwdAvgMsMean": 29.506966666665296,
+      "fwdAvgMsStd": 6.728832875684587,
+      "fwdAvgMsCvPct": 22.8,
+      "samples": 3
+    },
+    {
+      "mode": "dist",
+      "size": 200000,
+      "buildMsMean": 173.60303333333286,
+      "buildMsStd": 2.2311080914099923,
+      "buildMsCvPct": 1.29,
+      "fwdAvgMsMean": 28.513100000001334,
+      "fwdAvgMsStd": 4.9286550396634965,
+      "fwdAvgMsCvPct": 17.29,
+      "samples": 3
+    }
+  ]
+}

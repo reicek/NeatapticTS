@@ -987,11 +987,11 @@ export default class Node {
    *  - la_k         : Lookahead synchronization interval (number of fast steps).
    *  - la_alpha     : Interpolation factor towards slow (shadow) weights/bias at sync points.
    *
-   * Internal per-connection temp fields (created lazily):
-   *  - opt_m / opt_v / opt_vhat / opt_u : Moment / variance / max variance / infinity norm caches.
-   *  - opt_cache : Single accumulator (RMSProp / AdaGrad).
+  * Internal per-connection temp fields (created lazily):
+  *  - firstMoment / secondMoment / maxSecondMoment / infinityNorm : Moment / variance / max variance / infinity norm caches.
+  *  - gradientAccumulator : Single accumulator (RMSProp / AdaGrad).
    *  - previousDeltaWeight : For classic SGD momentum.
-   *  - _la_shadowWeight / _la_shadowBias : Lookahead shadow copies.
+  *  - lookaheadShadowWeight / _la_shadowBias : Lookahead shadow copies.
    *
    * Safety: We clip extreme weight / bias magnitudes and guard against NaN/Infinity.
    *
@@ -1045,15 +1045,15 @@ export default class Node {
       switch (effectiveType) {
         case 'rmsprop': {
           // cache = 0.9*cache + 0.1*g^2 ; step = g / sqrt(cache + eps)
-          conn.opt_cache = (conn.opt_cache ?? 0) * 0.9 + 0.1 * (g * g);
-          const adj = g / (Math.sqrt(conn.opt_cache) + eps);
+          conn.gradientAccumulator = (conn.gradientAccumulator ?? 0) * 0.9 + 0.1 * (g * g);
+          const adj = g / (Math.sqrt(conn.gradientAccumulator) + eps);
           this._safeUpdateWeight(conn, adj * lrScale);
           break;
         }
         case 'adagrad': {
           // cache = cache + g^2 (monotonically increasing)
-          conn.opt_cache = (conn.opt_cache ?? 0) + g * g;
-          const adj = g / (Math.sqrt(conn.opt_cache) + eps);
+          conn.gradientAccumulator = (conn.gradientAccumulator ?? 0) + g * g;
+          const adj = g / (Math.sqrt(conn.gradientAccumulator) + eps);
           this._safeUpdateWeight(conn, adj * lrScale);
           break;
         }
@@ -1061,13 +1061,13 @@ export default class Node {
         case 'adamw':
         case 'amsgrad': {
           // m = beta1*m + (1-beta1)g ; v = beta2*v + (1-beta2)g^2 ; bias-correct then step
-          conn.opt_m = (conn.opt_m ?? 0) * beta1 + (1 - beta1) * g;
-          conn.opt_v = (conn.opt_v ?? 0) * beta2 + (1 - beta2) * (g * g);
+          conn.firstMoment = (conn.firstMoment ?? 0) * beta1 + (1 - beta1) * g;
+          conn.secondMoment = (conn.secondMoment ?? 0) * beta2 + (1 - beta2) * (g * g);
           if (effectiveType === 'amsgrad') {
-            conn.opt_vhat = Math.max(conn.opt_vhat ?? 0, conn.opt_v ?? 0);
+            conn.maxSecondMoment = Math.max(conn.maxSecondMoment ?? 0, conn.secondMoment ?? 0);
           }
-          const vEff = effectiveType === 'amsgrad' ? conn.opt_vhat : conn.opt_v;
-          const mHat = conn.opt_m! / (1 - Math.pow(beta1, t));
+          const vEff = effectiveType === 'amsgrad' ? conn.maxSecondMoment : conn.secondMoment;
+          const mHat = conn.firstMoment! / (1 - Math.pow(beta1, t));
           const vHat = vEff! / (1 - Math.pow(beta2, t));
           let step = (mHat / (Math.sqrt(vHat) + eps)) * lrScale;
           if (effectiveType === 'adamw' && wd !== 0)
@@ -1077,19 +1077,19 @@ export default class Node {
         }
         case 'adamax': {
           // u = max(beta2*u, |g|) ; step uses infinity norm
-          conn.opt_m = (conn.opt_m ?? 0) * beta1 + (1 - beta1) * g;
-          conn.opt_u = Math.max((conn.opt_u ?? 0) * beta2, Math.abs(g));
-          const mHat = conn.opt_m! / (1 - Math.pow(beta1, t));
-          const stepVal = (mHat / (conn.opt_u || 1e-12)) * lrScale;
+          conn.firstMoment = (conn.firstMoment ?? 0) * beta1 + (1 - beta1) * g;
+          conn.infinityNorm = Math.max((conn.infinityNorm ?? 0) * beta2, Math.abs(g));
+          const mHat = conn.firstMoment! / (1 - Math.pow(beta1, t));
+          const stepVal = (mHat / (conn.infinityNorm || 1e-12)) * lrScale;
           this._safeUpdateWeight(conn, stepVal);
           break;
         }
         case 'nadam': {
           // NAdam uses Nesterov lookahead on m
-          conn.opt_m = (conn.opt_m ?? 0) * beta1 + (1 - beta1) * g;
-          conn.opt_v = (conn.opt_v ?? 0) * beta2 + (1 - beta2) * (g * g);
-          const mHat = conn.opt_m! / (1 - Math.pow(beta1, t));
-          const vHat = conn.opt_v! / (1 - Math.pow(beta2, t));
+          conn.firstMoment = (conn.firstMoment ?? 0) * beta1 + (1 - beta1) * g;
+          conn.secondMoment = (conn.secondMoment ?? 0) * beta2 + (1 - beta2) * (g * g);
+          const mHat = conn.firstMoment! / (1 - Math.pow(beta1, t));
+          const vHat = conn.secondMoment! / (1 - Math.pow(beta2, t));
           const mNesterov =
             mHat * beta1 + ((1 - beta1) * g) / (1 - Math.pow(beta1, t));
           this._safeUpdateWeight(
@@ -1100,10 +1100,10 @@ export default class Node {
         }
         case 'radam': {
           // RAdam rectifies variance when few steps (rho_t small)
-          conn.opt_m = (conn.opt_m ?? 0) * beta1 + (1 - beta1) * g;
-          conn.opt_v = (conn.opt_v ?? 0) * beta2 + (1 - beta2) * (g * g);
-          const mHat = conn.opt_m! / (1 - Math.pow(beta1, t));
-          const vHat = conn.opt_v! / (1 - Math.pow(beta2, t));
+          conn.firstMoment = (conn.firstMoment ?? 0) * beta1 + (1 - beta1) * g;
+          conn.secondMoment = (conn.secondMoment ?? 0) * beta2 + (1 - beta2) * (g * g);
+          const mHat = conn.firstMoment! / (1 - Math.pow(beta1, t));
+          const vHat = conn.secondMoment! / (1 - Math.pow(beta2, t));
           const rhoInf = 2 / (1 - beta2) - 1;
           const rhoT =
             rhoInf - (2 * t * Math.pow(beta2, t)) / (1 - Math.pow(beta2, t));
@@ -1123,19 +1123,19 @@ export default class Node {
         }
         case 'lion': {
           // Lion: update direction = sign(beta1*m_t + beta2*m2_t) (two EMA buffers of gradients)
-          conn.opt_m = (conn.opt_m ?? 0) * beta1 + (1 - beta1) * g;
-          conn.opt_m2 = (conn.opt_m2 ?? 0) * beta2 + (1 - beta2) * g;
-          const update = Math.sign((conn.opt_m || 0) + (conn.opt_m2 || 0));
+          conn.firstMoment = (conn.firstMoment ?? 0) * beta1 + (1 - beta1) * g;
+          conn.secondMomentum = (conn.secondMomentum ?? 0) * beta2 + (1 - beta2) * g;
+          const update = Math.sign((conn.firstMoment || 0) + (conn.secondMomentum || 0));
           this._safeUpdateWeight(conn, -update * lrScale);
           break;
         }
         case 'adabelief': {
           // AdaBelief: second moment on surprise (g - m)
-          conn.opt_m = (conn.opt_m ?? 0) * beta1 + (1 - beta1) * g;
-          const g_m = g - conn.opt_m!;
-          conn.opt_v = (conn.opt_v ?? 0) * beta2 + (1 - beta2) * (g_m * g_m);
-          const mHat = conn.opt_m! / (1 - Math.pow(beta1, t));
-          const vHat = conn.opt_v! / (1 - Math.pow(beta2, t));
+          conn.firstMoment = (conn.firstMoment ?? 0) * beta1 + (1 - beta1) * g;
+          const g_m = g - conn.firstMoment!;
+          conn.secondMoment = (conn.secondMoment ?? 0) * beta2 + (1 - beta2) * (g_m * g_m);
+          const mHat = conn.firstMoment! / (1 - Math.pow(beta1, t));
+          const vHat = conn.secondMoment! / (1 - Math.pow(beta2, t));
           this._safeUpdateWeight(
             conn,
             (mHat / (Math.sqrt(vHat) + eps + 1e-12)) * lrScale
@@ -1264,11 +1264,11 @@ export default class Node {
           (1 - alpha) * (this as any)._la_shadowBias + alpha * this.bias;
         this.bias = (this as any)._la_shadowBias;
         const blendConn = (conn: Connection) => {
-          if (!(conn as any)._la_shadowWeight)
-            (conn as any)._la_shadowWeight = conn.weight;
-          (conn as any)._la_shadowWeight =
-            (1 - alpha) * (conn as any)._la_shadowWeight + alpha * conn.weight;
-          conn.weight = (conn as any)._la_shadowWeight;
+          if (!conn.lookaheadShadowWeight)
+            conn.lookaheadShadowWeight = conn.weight;
+          conn.lookaheadShadowWeight =
+            (1 - alpha) * conn.lookaheadShadowWeight + alpha * conn.weight;
+          conn.weight = conn.lookaheadShadowWeight;
         };
         for (const c of this.connections.in) blendConn(c);
         for (const c of this.connections.self) blendConn(c);

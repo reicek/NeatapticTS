@@ -36,8 +36,8 @@ describe('Optimizer formula characteristics', () => {
     trainSteps(netB, { type: 'adam' }, 2);
     const connA: any = netA.connections[0];
     const connB: any = netB.connections[0];
-    it('maintains opt_u (infinity norm) different from sqrt(v)', () => {
-      expect(connA.opt_u).not.toBeUndefined();
+    it('maintains infinityNorm different from sqrt(secondMoment)', () => {
+      expect(connA.infinityNorm).not.toBeUndefined();
     });
   });
 
@@ -73,7 +73,7 @@ describe('Optimizer formula characteristics', () => {
     const cB: any = netBelief.connections[0];
     const cA: any = netAdam.connections[0];
     it('maintains distinct second moment estimate', () => {
-      expect(cB.opt_v).not.toBe(cA.opt_v);
+      expect(cB.secondMoment).not.toBe(cA.secondMoment);
     });
   });
 
@@ -83,7 +83,7 @@ describe('Optimizer formula characteristics', () => {
     trainSteps(net, { type: 'lookahead' }, 3);
     const conn: any = net.connections[0];
     it('creates shadow weight with default params', () => {
-      expect(conn._la_shadowWeight).toBeDefined();
+      expect(conn.lookaheadShadowWeight).toBeDefined();
     });
   });
 });

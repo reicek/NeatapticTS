@@ -177,40 +177,182 @@ Returns: The constructed network with a randomized topology.
 
 ### default
 
+#### _flags
+
+Packed state flags (private for future-proofing hidden class):
+bit0 => enabled gene expression (1 = active)
+bit1 => DropConnect active mask (1 = not dropped this forward pass)
+
+#### _la_shadowWeight
+
+**Deprecated:** Use lookaheadShadowWeight instead.
+
 #### acquire
 
 `(from: import("D:/code-practice/NeatapticTS/src/architecture/node").default, to: import("D:/code-practice/NeatapticTS/src/architecture/node").default, weight: number | undefined) => import("D:/code-practice/NeatapticTS/src/architecture/connection").default`
 
-Acquire a Connection from the pool or construct a new one. Ensures fresh innovation id.
+Acquire a `Connection` from the pool (or construct new). Fields are fully reset & given
+a fresh sequential `innovation` id. Prefer this in evolutionary algorithms that mutate
+topology frequently to reduce GC pressure.
+
+Parameters:
+- `from` - Source node.
+- `to` - Target node.
+- `weight` - Optional initial weight.
+
+Returns: Reinitialized connection instance.
+
+#### dcMask
+
+DropConnect active mask: 1 = not dropped (active), 0 = dropped for this stochastic pass.
+
+#### dropConnectActiveMask
+
+Convenience alias for DropConnect mask with clearer naming.
+
+#### eligibility
+
+Standard eligibility trace (e.g., for RTRL / policy gradient credit assignment).
+
+#### enabled
+
+Whether the gene (connection) is currently expressed (participates in forward pass).
+
+#### firstMoment
+
+First moment estimate (Adam / AdamW) (was opt_m).
+
+#### from
+
+The source (pre-synaptic) node supplying activation.
+
+#### gain
+
+Multiplicative modulation applied *after* weight. Default is `1` (neutral). We only store an
+internal symbol-keyed property when the gain is non-neutral, reducing memory usage across
+large populations where most connections are ungated.
+
+#### gater
+
+Optional gating node that modulates the connection's gain (handled externally).
+
+#### gradientAccumulator
+
+Generic gradient accumulator (RMSProp / AdaGrad) (was opt_cache).
+
+#### infinityNorm
+
+Adamax: Exponential moving infinity norm (was opt_u).
+
+#### innovation
+
+Unique historical marking (auto-increment) for evolutionary alignment.
 
 #### innovationID
 
-`(a: number, b: number) => number`
+`(sourceNodeId: number, targetNodeId: number) => number`
 
-Generates a unique innovation ID for the connection.
+Deterministic Cantor pairing function for a (sourceNodeId, targetNodeId) pair.
+Useful when you want a stable innovation id without relying on global mutable counters
+(e.g., for hashing or reproducible experiments).
 
-The innovation ID is calculated using the Cantor pairing function, which maps two integers
-(representing the source and target nodes) to a unique integer.
+NOTE: For large indices this can overflow 53-bit safe integer space; keep node indices reasonable.
 
 Parameters:
-- `` - - The ID of the source node.
-- `` - - The ID of the target node.
+- `sourceNodeId` - Source node integer id / index.
+- `targetNodeId` - Target node integer id / index.
 
-Returns: The innovation ID based on the Cantor pairing function.
+Returns: Unique non-negative integer derived from the ordered pair.
+
+#### lookaheadShadowWeight
+
+Lookahead: shadow (slow) weight parameter (was _la_shadowWeight).
+
+#### maxSecondMoment
+
+AMSGrad: Maximum of past second moment (was opt_vhat).
+
+#### opt_cache
+
+**Deprecated:** Use gradientAccumulator instead.
+
+#### opt_m
+
+**Deprecated:** Use firstMoment instead.
+
+#### opt_m2
+
+**Deprecated:** Use secondMomentum instead.
+
+#### opt_u
+
+**Deprecated:** Use infinityNorm instead.
+
+#### opt_v
+
+**Deprecated:** Use secondMoment instead.
+
+#### opt_vhat
+
+**Deprecated:** Use maxSecondMoment instead.
+
+#### previousDeltaWeight
+
+Last applied delta weight (used by classic momentum).
 
 #### release
 
 `(conn: import("D:/code-practice/NeatapticTS/src/architecture/connection").default) => void`
 
-Return a Connection to the pool for reuse.
+Return a `Connection` to the internal pool for later reuse. Do NOT use the instance again
+afterward unless re-acquired (treat as surrendered). Optimizer / trace fields are not
+scrubbed here (they're overwritten during `acquire`).
+
+Parameters:
+- `conn` - The connection instance to recycle.
+
+#### resetInnovationCounter
+
+`(value: number) => void`
+
+Reset the monotonic auto-increment innovation counter (used for newly constructed / pooled instances).
+You normally only call this at the start of an experiment or when deserializing a full population.
+
+Parameters:
+- `value` - New starting value (default 1).
+
+#### secondMoment
+
+Second raw moment estimate (Adam family) (was opt_v).
+
+#### secondMomentum
+
+Secondary momentum (Lion variant) (was opt_m2).
+
+#### to
+
+The target (post-synaptic) node receiving activation.
 
 #### toJSON
 
 `() => any`
 
-Converts the connection to a JSON object for serialization.
+Serialize to a minimal JSON-friendly shape (used for saving genomes / networks).
+Undefined indices are preserved as `undefined` to allow later resolution / remapping.
 
-Returns: A JSON representation of the connection.
+Returns: Object with node indices, weight, gain, gater index (if any), innovation id & enabled flag.
+
+#### totalDeltaWeight
+
+Accumulated (batched) delta weight awaiting an apply step.
+
+#### weight
+
+Scalar multiplier applied to the source activation (prior to gain modulation).
+
+#### xtrace
+
+Extended trace structure for modulatory / eligibility propagation algorithms. Parallel arrays for cache-friendly iteration.
 
 ## architecture/group.ts
 
@@ -1104,10 +1246,10 @@ Options:
  - la_alpha     : Interpolation factor towards slow (shadow) weights/bias at sync points.
 
 Internal per-connection temp fields (created lazily):
- - opt_m / opt_v / opt_vhat / opt_u : Moment / variance / max variance / infinity norm caches.
- - opt_cache : Single accumulator (RMSProp / AdaGrad).
+ - firstMoment / secondMoment / maxSecondMoment / infinityNorm : Moment / variance / max variance / infinity norm caches.
+ - gradientAccumulator : Single accumulator (RMSProp / AdaGrad).
  - previousDeltaWeight : For classic SGD momentum.
- - _la_shadowWeight / _la_shadowBias : Lookahead shadow copies.
+ - lookaheadShadowWeight / _la_shadowBias : Lookahead shadow copies.
 
 Safety: We clip extreme weight / bias magnitudes and guard against NaN/Infinity.
 
