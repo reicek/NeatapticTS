@@ -41,12 +41,43 @@
   var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
   // dist/architecture/connection.js
-  var kGain, Connection, connection_default;
+  var kGain, kGater, kOpt, Connection;
   var init_connection = __esm({
     "dist/architecture/connection.js"() {
       "use strict";
       kGain = Symbol("connGain");
+      kGater = Symbol("connGater");
+      kOpt = Symbol("connOptMoments");
       Connection = class _Connection {
+        /** The source (pre-synaptic) node supplying activation. */
+        from;
+        /** The target (post-synaptic) node receiving activation. */
+        to;
+        /** Scalar multiplier applied to the source activation (prior to gain modulation). */
+        weight;
+        /** Standard eligibility trace (e.g., for RTRL / policy gradient credit assignment). */
+        eligibility;
+        /** Last applied delta weight (used by classic momentum). */
+        previousDeltaWeight;
+        /** Accumulated (batched) delta weight awaiting an apply step. */
+        totalDeltaWeight;
+        /** Extended trace structure for modulatory / eligibility propagation algorithms. Parallel arrays for cache-friendly iteration. */
+        xtrace;
+        /** Unique historical marking (auto-increment) for evolutionary alignment. */
+        innovation;
+        // enabled handled via bitfield (see _flags) exposed through accessor (enumerability removed for slimming)
+        // --- Optimizer moment states (virtualized via symbol-backed bag + accessors) ---
+        // NOTE: Accessor implementations below manage a lazily-created non-enumerable object containing:
+        // { firstMoment, secondMoment, gradientAccumulator, maxSecondMoment, infinityNorm, secondMomentum, lookaheadShadowWeight }
+        /**
+         * Packed state flags (private for future-proofing hidden class):
+         * bit0 => enabled gene expression (1 = active)
+         * bit1 => DropConnect active mask (1 = not dropped this forward pass)
+         * bit2 => hasGater (1 = symbol field present)
+         * bits3+ reserved.
+         */
+        _flags;
+        // bit0 enabled, bit1 dcActive, bit2 hasGater
         /**
          * Construct a new connection between two nodes.
          *
@@ -63,8 +94,7 @@
         constructor(from, to, weight) {
           this.from = from;
           this.to = to;
-          this.weight = weight !== null && weight !== void 0 ? weight : Math.random() * 0.2 - 0.1;
-          this.gater = null;
+          this.weight = weight ?? Math.random() * 0.2 - 0.1;
           this.eligibility = 0;
           this.previousDeltaWeight = 0;
           this.totalDeltaWeight = 0;
@@ -85,17 +115,18 @@
          * // => { from: 0, to: 3, weight: 0.12, gain: 1, innovation: 57, enabled: true }
          */
         toJSON() {
-          var _a, _b;
           const json = {
-            from: (_a = this.from.index) !== null && _a !== void 0 ? _a : void 0,
-            to: (_b = this.to.index) !== null && _b !== void 0 ? _b : void 0,
+            from: this.from.index ?? void 0,
+            to: this.to.index ?? void 0,
             weight: this.weight,
             gain: this.gain,
             innovation: this.innovation,
             enabled: this.enabled
           };
-          if (this.gater && typeof this.gater.index !== "undefined") {
-            json.gater = this.gater.index;
+          if (this._flags & 4) {
+            const g = this[kGater];
+            if (g && typeof g.index !== "undefined")
+              json.gater = g.index;
           }
           return json;
         }
@@ -116,6 +147,7 @@
         static innovationID(sourceNodeId, targetNodeId) {
           return 0.5 * (sourceNodeId + targetNodeId) * (sourceNodeId + targetNodeId + 1) + targetNodeId;
         }
+        static _nextInnovation = 1;
         /**
          * Reset the monotonic auto-increment innovation counter (used for newly constructed / pooled instances).
          * You normally only call this at the start of an experiment or when deserializing a full population.
@@ -128,6 +160,8 @@
         static resetInnovationCounter(value = 1) {
           _Connection._nextInnovation = value;
         }
+        // --- Simple object pool to reduce GC churn when connections are frequently created/removed ---
+        static _pool = [];
         /**
          * Acquire a `Connection` from the pool (or construct new). Fields are fully reset & given
          * a fresh sequential `innovation` id. Prefer this in evolutionary algorithms that mutate
@@ -143,27 +177,28 @@
          * Connection.release(conn); // when permanently removed
          */
         static acquire(from, to, weight) {
-          let connection;
+          let c;
           if (_Connection._pool.length) {
-            connection = _Connection._pool.pop();
-            connection.from = from;
-            connection.to = to;
-            connection.weight = weight !== null && weight !== void 0 ? weight : Math.random() * 0.2 - 0.1;
-            if (connection[kGain] !== void 0)
-              delete connection[kGain];
-            connection.gater = null;
-            connection.eligibility = 0;
-            connection.previousDeltaWeight = 0;
-            connection.totalDeltaWeight = 0;
-            connection.xtrace.nodes.length = 0;
-            connection.xtrace.values.length = 0;
-            connection._flags = 3;
-            connection.lookaheadShadowWeight = void 0;
-            connection.innovation = _Connection._nextInnovation++;
-          } else {
-            connection = new _Connection(from, to, weight);
-          }
-          return connection;
+            c = _Connection._pool.pop();
+            c.from = from;
+            c.to = to;
+            c.weight = weight ?? Math.random() * 0.2 - 0.1;
+            if (c[kGain] !== void 0)
+              delete c[kGain];
+            if (c[kGater] !== void 0)
+              delete c[kGater];
+            c._flags = 3;
+            c.eligibility = 0;
+            c.previousDeltaWeight = 0;
+            c.totalDeltaWeight = 0;
+            c.xtrace.nodes.length = 0;
+            c.xtrace.values.length = 0;
+            if (c[kOpt])
+              delete c[kOpt];
+            c.innovation = _Connection._nextInnovation++;
+          } else
+            c = new _Connection(from, to, weight);
+          return c;
         }
         /**
          * Return a `Connection` to the internal pool for later reuse. Do NOT use the instance again
@@ -189,6 +224,10 @@
         set dcMask(v) {
           this._flags = v ? this._flags | 2 : this._flags & ~2;
         }
+        /** Whether a gater node is assigned (modulates gain); true if the gater symbol field is present. */
+        get hasGater() {
+          return (this._flags & 4) !== 0;
+        }
         // --- Virtualized gain property ---
         /**
          * Multiplicative modulation applied *after* weight. Default is `1` (neutral). We only store an
@@ -204,6 +243,94 @@
               delete this[kGain];
           } else {
             this[kGain] = v;
+          }
+        }
+        // --- Optimizer field accessors (prototype-level to avoid per-instance enumerable keys) ---
+        _ensureOptBag() {
+          let bag = this[kOpt];
+          if (!bag) {
+            bag = {};
+            this[kOpt] = bag;
+          }
+          return bag;
+        }
+        _getOpt(k) {
+          const bag = this[kOpt];
+          return bag ? bag[k] : void 0;
+        }
+        _setOpt(k, v) {
+          if (v === void 0) {
+            const bag = this[kOpt];
+            if (bag)
+              delete bag[k];
+          } else {
+            this._ensureOptBag()[k] = v;
+          }
+        }
+        /** First moment estimate (Adam / AdamW) (was opt_m). */
+        get firstMoment() {
+          return this._getOpt("firstMoment");
+        }
+        set firstMoment(v) {
+          this._setOpt("firstMoment", v);
+        }
+        /** Second raw moment estimate (Adam family) (was opt_v). */
+        get secondMoment() {
+          return this._getOpt("secondMoment");
+        }
+        set secondMoment(v) {
+          this._setOpt("secondMoment", v);
+        }
+        /** Generic gradient accumulator (RMSProp / AdaGrad) (was opt_cache). */
+        get gradientAccumulator() {
+          return this._getOpt("gradientAccumulator");
+        }
+        set gradientAccumulator(v) {
+          this._setOpt("gradientAccumulator", v);
+        }
+        /** AMSGrad: Maximum of past second moment (was opt_vhat). */
+        get maxSecondMoment() {
+          return this._getOpt("maxSecondMoment");
+        }
+        set maxSecondMoment(v) {
+          this._setOpt("maxSecondMoment", v);
+        }
+        /** Adamax: Exponential moving infinity norm (was opt_u). */
+        get infinityNorm() {
+          return this._getOpt("infinityNorm");
+        }
+        set infinityNorm(v) {
+          this._setOpt("infinityNorm", v);
+        }
+        /** Secondary momentum (Lion variant) (was opt_m2). */
+        get secondMomentum() {
+          return this._getOpt("secondMomentum");
+        }
+        set secondMomentum(v) {
+          this._setOpt("secondMomentum", v);
+        }
+        /** Lookahead: shadow (slow) weight parameter (was _la_shadowWeight). */
+        get lookaheadShadowWeight() {
+          return this._getOpt("lookaheadShadowWeight");
+        }
+        set lookaheadShadowWeight(v) {
+          this._setOpt("lookaheadShadowWeight", v);
+        }
+        // --- Virtualized gater property (non-enumerable) ---
+        /** Optional gating node whose activation can modulate effective weight (symbol-backed). */
+        get gater() {
+          return (this._flags & 4) !== 0 ? this[kGater] : null;
+        }
+        set gater(node) {
+          if (node === null) {
+            if ((this._flags & 4) !== 0) {
+              this._flags &= ~4;
+              if (this[kGater] !== void 0)
+                delete this[kGater];
+            }
+          } else {
+            this[kGater] = node;
+            this._flags |= 4;
           }
         }
         // ---------------------------------------------------------------------------
@@ -268,9 +395,6 @@
           this.dcMask = v;
         }
       };
-      Connection._nextInnovation = 1;
-      Connection._pool = [];
-      connection_default = Connection;
     }
   });
 
@@ -728,7 +852,7 @@
         static linearWarmupDecay(totalSteps, warmupSteps, endRate = 0) {
           if (totalSteps <= 0)
             throw new Error("totalSteps must be > 0");
-          const warm = Math.min(warmupSteps !== null && warmupSteps !== void 0 ? warmupSteps : Math.max(1, Math.floor(totalSteps * 0.1)), totalSteps - 1);
+          const warm = Math.min(warmupSteps ?? Math.max(1, Math.floor(totalSteps * 0.1)), totalSteps - 1);
           return (baseRate, iteration) => {
             if (iteration <= warm) {
               return baseRate * (iteration / Math.max(1, warm));
@@ -1480,7 +1604,7 @@
   });
 
   // dist/methods/connection.js
-  var groupConnection, connection_default2;
+  var groupConnection, connection_default;
   var init_connection2 = __esm({
     "dist/methods/connection.js"() {
       "use strict";
@@ -1508,7 +1632,7 @@
           // Renamed name
         })
       });
-      connection_default2 = groupConnection;
+      connection_default = groupConnection;
     }
   });
 
@@ -1520,7 +1644,7 @@
     Rate: () => Rate,
     crossover: () => crossover,
     gating: () => gating,
-    groupConnection: () => connection_default2,
+    groupConnection: () => connection_default,
     mutation: () => mutation,
     selection: () => selection
   });
@@ -1541,9 +1665,9 @@
   // dist/architecture/node.js
   var node_exports = {};
   __export(node_exports, {
-    default: () => node_default
+    default: () => Node
   });
-  var Node, node_default;
+  var Node;
   var init_node = __esm({
     "dist/architecture/node.js"() {
       "use strict";
@@ -1551,6 +1675,76 @@
       init_config();
       init_methods();
       Node = class _Node {
+        /**
+         * The bias value of the node. Added to the weighted sum of inputs before activation.
+         * Input nodes typically have a bias of 0.
+         */
+        bias;
+        /**
+         * The activation function (squashing function) applied to the node's state.
+         * Maps the internal state to the node's output (activation).
+         * @param x The node's internal state (sum of weighted inputs + bias).
+         * @param derivate If true, returns the derivative of the function instead of the function value.
+         * @returns The activation value or its derivative.
+         */
+        squash;
+        /**
+         * The type of the node: 'input', 'hidden', or 'output'.
+         * Determines behavior (e.g., input nodes don't have biases modified typically, output nodes calculate error differently).
+         */
+        type;
+        /**
+         * The output value of the node after applying the activation function. This is the value transmitted to connected nodes.
+         */
+        activation;
+        /**
+         * The internal state of the node (sum of weighted inputs + bias) before the activation function is applied.
+         */
+        state;
+        /**
+         * The node's state from the previous activation cycle. Used for recurrent self-connections.
+         */
+        old;
+        /**
+         * A mask factor (typically 0 or 1) used for implementing dropout. If 0, the node's output is effectively silenced.
+         */
+        mask;
+        /**
+         * The change in bias applied in the previous training iteration. Used for calculating momentum.
+         */
+        previousDeltaBias;
+        /**
+         * Accumulates changes in bias over a mini-batch during batch training. Reset after each weight update.
+         */
+        totalDeltaBias;
+        /**
+         * Stores incoming, outgoing, gated, and self-connections for this node.
+         */
+        connections;
+        /**
+         * Stores error values calculated during backpropagation.
+         */
+        error;
+        /**
+         * The derivative of the activation function evaluated at the node's current state. Used in backpropagation.
+         */
+        derivative;
+        // Deprecated: `nodes` & `gates` fields removed in refactor. Backwards access still works via getters below.
+        /**
+         * Optional index, potentially used to identify the node's position within a layer or network structure. Not used internally by the Node class itself.
+         */
+        index;
+        /**
+         * Internal flag to detect cycles during activation
+         */
+        isActivating;
+        /** Stable per-node gene identifier for NEAT innovation reuse */
+        geneId;
+        /**
+         * Global index counter for assigning unique indices to nodes.
+         */
+        static _globalNodeIndex = 0;
+        static _nextGeneId = 1;
         /**
          * Creates a new node.
          * @param type The type of the node ('input', 'hidden', or 'output'). Defaults to 'hidden'.
@@ -1984,7 +2178,6 @@
          * @see {@link https://medium.com/data-science/neuro-evolution-on-steroids-82bd14ddc2f6#3-mutation Instinct Algorithm - Section 3 Mutation}
          */
         mutate(method) {
-          var _a, _b, _c, _d;
           if (!method) {
             throw new Error("Mutation method cannot be null or undefined.");
           }
@@ -2006,14 +2199,14 @@
               this.squash = allowed[newIndex];
               break;
             case mutation.MOD_BIAS:
-              const min = (_a = method.min) !== null && _a !== void 0 ? _a : -1;
-              const max = (_b = method.max) !== null && _b !== void 0 ? _b : 1;
+              const min = method.min ?? -1;
+              const max = method.max ?? 1;
               const modification = Math.random() * (max - min) + min;
               this.bias += modification;
               break;
             case mutation.REINIT_WEIGHT:
-              const reinitMin = (_c = method.min) !== null && _c !== void 0 ? _c : -1;
-              const reinitMax = (_d = method.max) !== null && _d !== void 0 ? _d : 1;
+              const reinitMin = method.min ?? -1;
+              const reinitMax = method.max ?? 1;
               for (const conn of this.connections.in) {
                 conn.weight = Math.random() * (reinitMax - reinitMin) + reinitMin;
               }
@@ -2050,19 +2243,19 @@
             const targetNode = target;
             if (targetNode === this) {
               if (this.connections.self.length === 0) {
-                const selfConnection = connection_default.acquire(this, this, weight !== null && weight !== void 0 ? weight : 1);
+                const selfConnection = Connection.acquire(this, this, weight ?? 1);
                 this.connections.self.push(selfConnection);
                 connections.push(selfConnection);
               }
             } else {
-              const connection = connection_default.acquire(this, targetNode, weight);
+              const connection = Connection.acquire(this, targetNode, weight);
               targetNode.connections.in.push(connection);
               this.connections.out.push(connection);
               connections.push(connection);
             }
           } else if ("nodes" in target && Array.isArray(target.nodes)) {
             for (const node of target.nodes) {
-              const connection = connection_default.acquire(this, node, weight);
+              const connection = Connection.acquire(this, node, weight);
               node.connections.in.push(connection);
               this.connections.out.push(connection);
               connections.push(connection);
@@ -2246,16 +2439,15 @@
          * @param opts Optimizer configuration (see above).
          */
         applyBatchUpdatesWithOptimizer(opts) {
-          var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o;
           const type = opts.type || "sgd";
           const effectiveType = type === "lookahead" ? opts.baseType || "sgd" : type;
-          const momentum = (_a = opts.momentum) !== null && _a !== void 0 ? _a : 0;
-          const beta1 = (_b = opts.beta1) !== null && _b !== void 0 ? _b : 0.9;
-          const beta2 = (_c = opts.beta2) !== null && _c !== void 0 ? _c : 0.999;
-          const eps = (_d = opts.eps) !== null && _d !== void 0 ? _d : 1e-8;
-          const wd = (_e = opts.weightDecay) !== null && _e !== void 0 ? _e : 0;
-          const lrScale = (_f = opts.lrScale) !== null && _f !== void 0 ? _f : 1;
-          const t = Math.max(1, Math.floor((_g = opts.t) !== null && _g !== void 0 ? _g : 1));
+          const momentum = opts.momentum ?? 0;
+          const beta1 = opts.beta1 ?? 0.9;
+          const beta2 = opts.beta2 ?? 0.999;
+          const eps = opts.eps ?? 1e-8;
+          const wd = opts.weightDecay ?? 0;
+          const lrScale = opts.lrScale ?? 1;
+          const t = Math.max(1, Math.floor(opts.t ?? 1));
           if (type === "lookahead") {
             this._la_k = this._la_k || opts.la_k || 5;
             this._la_alpha = this._la_alpha || opts.la_alpha || 0.5;
@@ -2264,19 +2456,18 @@
               this._la_shadowBias = this.bias;
           }
           const applyConn = (conn) => {
-            var _a2, _b2, _c2, _d2, _e2, _f2, _g2, _h2, _j2, _k2, _l2, _m2, _o2, _p, _q, _r;
             let g = conn.totalDeltaWeight || 0;
             if (!Number.isFinite(g))
               g = 0;
             switch (effectiveType) {
               case "rmsprop": {
-                conn.gradientAccumulator = ((_a2 = conn.gradientAccumulator) !== null && _a2 !== void 0 ? _a2 : 0) * 0.9 + 0.1 * (g * g);
+                conn.gradientAccumulator = (conn.gradientAccumulator ?? 0) * 0.9 + 0.1 * (g * g);
                 const adj = g / (Math.sqrt(conn.gradientAccumulator) + eps);
                 this._safeUpdateWeight(conn, adj * lrScale);
                 break;
               }
               case "adagrad": {
-                conn.gradientAccumulator = ((_b2 = conn.gradientAccumulator) !== null && _b2 !== void 0 ? _b2 : 0) + g * g;
+                conn.gradientAccumulator = (conn.gradientAccumulator ?? 0) + g * g;
                 const adj = g / (Math.sqrt(conn.gradientAccumulator) + eps);
                 this._safeUpdateWeight(conn, adj * lrScale);
                 break;
@@ -2284,10 +2475,10 @@
               case "adam":
               case "adamw":
               case "amsgrad": {
-                conn.firstMoment = ((_c2 = conn.firstMoment) !== null && _c2 !== void 0 ? _c2 : 0) * beta1 + (1 - beta1) * g;
-                conn.secondMoment = ((_d2 = conn.secondMoment) !== null && _d2 !== void 0 ? _d2 : 0) * beta2 + (1 - beta2) * (g * g);
+                conn.firstMoment = (conn.firstMoment ?? 0) * beta1 + (1 - beta1) * g;
+                conn.secondMoment = (conn.secondMoment ?? 0) * beta2 + (1 - beta2) * (g * g);
                 if (effectiveType === "amsgrad") {
-                  conn.maxSecondMoment = Math.max((_e2 = conn.maxSecondMoment) !== null && _e2 !== void 0 ? _e2 : 0, (_f2 = conn.secondMoment) !== null && _f2 !== void 0 ? _f2 : 0);
+                  conn.maxSecondMoment = Math.max(conn.maxSecondMoment ?? 0, conn.secondMoment ?? 0);
                 }
                 const vEff = effectiveType === "amsgrad" ? conn.maxSecondMoment : conn.secondMoment;
                 const mHat = conn.firstMoment / (1 - Math.pow(beta1, t));
@@ -2299,16 +2490,16 @@
                 break;
               }
               case "adamax": {
-                conn.firstMoment = ((_g2 = conn.firstMoment) !== null && _g2 !== void 0 ? _g2 : 0) * beta1 + (1 - beta1) * g;
-                conn.infinityNorm = Math.max(((_h2 = conn.infinityNorm) !== null && _h2 !== void 0 ? _h2 : 0) * beta2, Math.abs(g));
+                conn.firstMoment = (conn.firstMoment ?? 0) * beta1 + (1 - beta1) * g;
+                conn.infinityNorm = Math.max((conn.infinityNorm ?? 0) * beta2, Math.abs(g));
                 const mHat = conn.firstMoment / (1 - Math.pow(beta1, t));
                 const stepVal = mHat / (conn.infinityNorm || 1e-12) * lrScale;
                 this._safeUpdateWeight(conn, stepVal);
                 break;
               }
               case "nadam": {
-                conn.firstMoment = ((_j2 = conn.firstMoment) !== null && _j2 !== void 0 ? _j2 : 0) * beta1 + (1 - beta1) * g;
-                conn.secondMoment = ((_k2 = conn.secondMoment) !== null && _k2 !== void 0 ? _k2 : 0) * beta2 + (1 - beta2) * (g * g);
+                conn.firstMoment = (conn.firstMoment ?? 0) * beta1 + (1 - beta1) * g;
+                conn.secondMoment = (conn.secondMoment ?? 0) * beta2 + (1 - beta2) * (g * g);
                 const mHat = conn.firstMoment / (1 - Math.pow(beta1, t));
                 const vHat = conn.secondMoment / (1 - Math.pow(beta2, t));
                 const mNesterov = mHat * beta1 + (1 - beta1) * g / (1 - Math.pow(beta1, t));
@@ -2316,8 +2507,8 @@
                 break;
               }
               case "radam": {
-                conn.firstMoment = ((_l2 = conn.firstMoment) !== null && _l2 !== void 0 ? _l2 : 0) * beta1 + (1 - beta1) * g;
-                conn.secondMoment = ((_m2 = conn.secondMoment) !== null && _m2 !== void 0 ? _m2 : 0) * beta2 + (1 - beta2) * (g * g);
+                conn.firstMoment = (conn.firstMoment ?? 0) * beta1 + (1 - beta1) * g;
+                conn.secondMoment = (conn.secondMoment ?? 0) * beta2 + (1 - beta2) * (g * g);
                 const mHat = conn.firstMoment / (1 - Math.pow(beta1, t));
                 const vHat = conn.secondMoment / (1 - Math.pow(beta2, t));
                 const rhoInf = 2 / (1 - beta2) - 1;
@@ -2331,16 +2522,16 @@
                 break;
               }
               case "lion": {
-                conn.firstMoment = ((_o2 = conn.firstMoment) !== null && _o2 !== void 0 ? _o2 : 0) * beta1 + (1 - beta1) * g;
-                conn.secondMomentum = ((_p = conn.secondMomentum) !== null && _p !== void 0 ? _p : 0) * beta2 + (1 - beta2) * g;
+                conn.firstMoment = (conn.firstMoment ?? 0) * beta1 + (1 - beta1) * g;
+                conn.secondMomentum = (conn.secondMomentum ?? 0) * beta2 + (1 - beta2) * g;
                 const update = Math.sign((conn.firstMoment || 0) + (conn.secondMomentum || 0));
                 this._safeUpdateWeight(conn, -update * lrScale);
                 break;
               }
               case "adabelief": {
-                conn.firstMoment = ((_q = conn.firstMoment) !== null && _q !== void 0 ? _q : 0) * beta1 + (1 - beta1) * g;
+                conn.firstMoment = (conn.firstMoment ?? 0) * beta1 + (1 - beta1) * g;
                 const g_m = g - conn.firstMoment;
-                conn.secondMoment = ((_r = conn.secondMoment) !== null && _r !== void 0 ? _r : 0) * beta2 + (1 - beta2) * (g_m * g_m);
+                conn.secondMoment = (conn.secondMoment ?? 0) * beta2 + (1 - beta2) * (g_m * g_m);
                 const mHat = conn.firstMoment / (1 - Math.pow(beta1, t));
                 const vHat = conn.secondMoment / (1 - Math.pow(beta2, t));
                 this._safeUpdateWeight(conn, mHat / (Math.sqrt(vHat) + eps + 1e-12) * lrScale);
@@ -2379,20 +2570,20 @@
               "lion",
               "adabelief"
             ].includes(effectiveType)) {
-              this.opt_mB = ((_h = this.opt_mB) !== null && _h !== void 0 ? _h : 0) * beta1 + (1 - beta1) * gB;
+              this.opt_mB = (this.opt_mB ?? 0) * beta1 + (1 - beta1) * gB;
               if (effectiveType === "lion") {
-                this.opt_mB2 = ((_j = this.opt_mB2) !== null && _j !== void 0 ? _j : 0) * beta2 + (1 - beta2) * gB;
+                this.opt_mB2 = (this.opt_mB2 ?? 0) * beta2 + (1 - beta2) * gB;
               }
-              this.opt_vB = ((_k = this.opt_vB) !== null && _k !== void 0 ? _k : 0) * beta2 + (1 - beta2) * (effectiveType === "adabelief" ? Math.pow(gB - this.opt_mB, 2) : gB * gB);
+              this.opt_vB = (this.opt_vB ?? 0) * beta2 + (1 - beta2) * (effectiveType === "adabelief" ? Math.pow(gB - this.opt_mB, 2) : gB * gB);
               if (effectiveType === "amsgrad") {
-                this.opt_vhatB = Math.max((_l = this.opt_vhatB) !== null && _l !== void 0 ? _l : 0, (_m = this.opt_vB) !== null && _m !== void 0 ? _m : 0);
+                this.opt_vhatB = Math.max(this.opt_vhatB ?? 0, this.opt_vB ?? 0);
               }
               const vEffB = effectiveType === "amsgrad" ? this.opt_vhatB : this.opt_vB;
               const mHatB = this.opt_mB / (1 - Math.pow(beta1, t));
               const vHatB = vEffB / (1 - Math.pow(beta2, t));
               let stepB;
               if (effectiveType === "adamax") {
-                this.opt_uB = Math.max(((_o = this.opt_uB) !== null && _o !== void 0 ? _o : 0) * beta2, Math.abs(gB));
+                this.opt_uB = Math.max((this.opt_uB ?? 0) * beta2, Math.abs(gB));
                 stepB = mHatB / (this.opt_uB || 1e-12) * lrScale;
               } else if (effectiveType === "nadam") {
                 const mNesterovB = mHatB * beta1 + (1 - beta1) * gB / (1 - Math.pow(beta1, t));
@@ -2472,9 +2663,6 @@
           connection.weight = next;
         }
       };
-      Node._globalNodeIndex = 0;
-      Node._nextGeneId = 1;
-      node_default = Node;
     }
   });
 
@@ -2485,12 +2673,14 @@
       "use strict";
       init_config();
       ActivationArrayPool = class {
-        constructor() {
-          this.buckets = /* @__PURE__ */ new Map();
-          this.created = 0;
-          this.reused = 0;
-          this.maxPerBucket = Number.POSITIVE_INFINITY;
-        }
+        /** Buckets keyed by length, storing reusable arrays. */
+        buckets = /* @__PURE__ */ new Map();
+        /** Count of arrays created since last clear(), for diagnostics. */
+        created = 0;
+        /** Count of successful reuses since last clear(), for diagnostics. */
+        reused = 0;
+        /** Max arrays retained per size bucket; Infinity by default. */
+        maxPerBucket = Number.POSITIVE_INFINITY;
         /**
          * Acquire an activation array of fixed length.
          * Zero-fills reused arrays to guarantee clean state.
@@ -2574,8 +2764,7 @@
          * @returns Number of arrays available to reuse for that length.
          */
         bucketSize(size) {
-          var _a, _b;
-          return (_b = (_a = this.buckets.get(size)) === null || _a === void 0 ? void 0 : _a.length) !== null && _b !== void 0 ? _b : 0;
+          return this.buckets.get(size)?.length ?? 0;
         }
       };
       activationArrayPool = new ActivationArrayPool();
@@ -2595,6 +2784,7 @@
         type: "module",
         scripts: {
           test: "jest --no-cache --coverage --collect-coverage --runInBand --testPathIgnorePatterns=.e2e.test.ts --verbose",
+          pretest: "npm run build",
           "test:bench": "jest --no-cache --runInBand --verbose --testPathPattern=benchmark",
           "test:silent": "jest --no-cache --coverage --collect-coverage --runInBand --testPathIgnorePatterns=.e2e.test.ts --silent",
           deploy: "npm run build && npm run test:dist && npm publish",
@@ -2696,14 +2886,11 @@
   // dist/architecture/network/network.onnx.js
   function rebuildConnectionsLocal(networkLike) {
     const uniqueConnections = /* @__PURE__ */ new Set();
-    networkLike.nodes.forEach((node) => {
-      var _a;
-      return (_a = node.connections) === null || _a === void 0 ? void 0 : _a.out.forEach((conn) => uniqueConnections.add(conn));
-    });
+    networkLike.nodes.forEach((node) => node.connections?.out.forEach((conn) => uniqueConnections.add(conn)));
     networkLike.connections = Array.from(uniqueConnections);
   }
   function mapActivationToOnnx(squash) {
-    const upperName = ((squash === null || squash === void 0 ? void 0 : squash.name) || "").toUpperCase();
+    const upperName = (squash?.name || "").toUpperCase();
     if (upperName.includes("TANH"))
       return "Tanh";
     if (upperName.includes("LOGISTIC") || upperName.includes("SIGMOID"))
@@ -2754,7 +2941,6 @@
     }
   }
   function buildOnnxModel(network, layers, options = {}) {
-    var _a, _b, _c, _d;
     const { includeMetadata = false, opset = 18, batchDimension = false, legacyNodeOrdering = false, producerName = "neataptic-ts", producerVersion, docString } = options;
     const inputLayerNodes = layers[0];
     const outputLayerNodes = layers[layers.length - 1];
@@ -2792,7 +2978,7 @@
       const pkgVersion = (() => {
         try {
           return require_package().version;
-        } catch (_a2) {
+        } catch {
           return "0.0.0";
         }
       })();
@@ -2831,7 +3017,7 @@
       const isOutputLayer = layerIndex === layers.length - 1;
       if (!isOutputLayer)
         hiddenSizesMetadata.push(currentLayerNodes.length);
-      const convSpec = (_a = options.conv2dMappings) === null || _a === void 0 ? void 0 : _a.find((m) => m.layerIndex === layerIndex);
+      const convSpec = options.conv2dMappings?.find((m) => m.layerIndex === layerIndex);
       if (convSpec) {
         const prevWidthExpected = convSpec.inHeight * convSpec.inWidth * convSpec.inChannels;
         const prevWidthActual = previousLayerNodes.length;
@@ -2912,7 +3098,7 @@
             name: `act_conv_l${layerIndex}`
           });
           previousOutputName = activationOutputName;
-          const poolSpecPostConv = (_b = options.pool2dMappings) === null || _b === void 0 ? void 0 : _b.find((p) => p.afterLayerIndex === layerIndex);
+          const poolSpecPostConv = options.pool2dMappings?.find((p) => p.afterLayerIndex === layerIndex);
           if (poolSpecPostConv) {
             const kernel = [
               poolSpecPostConv.kernelHeight,
@@ -2960,7 +3146,7 @@
                     arr.push(layerIndex);
                     flMeta.value = JSON.stringify(arr);
                   }
-                } catch (_e) {
+                } catch {
                   flMeta.value = JSON.stringify([layerIndex]);
                 }
               } else {
@@ -2979,7 +3165,7 @@
                   arr.push(layerIndex);
                   poolLayersMeta.value = JSON.stringify(arr);
                 }
-              } catch (_f) {
+              } catch {
                 poolLayersMeta.value = JSON.stringify([layerIndex]);
               }
             } else {
@@ -2993,10 +3179,10 @@
               try {
                 const arr = JSON.parse(poolSpecsMeta.value);
                 if (Array.isArray(arr)) {
-                  arr.push(Object.assign({}, poolSpecPostConv));
+                  arr.push({ ...poolSpecPostConv });
                   poolSpecsMeta.value = JSON.stringify(arr);
                 }
-              } catch (_g) {
+              } catch {
                 poolSpecsMeta.value = JSON.stringify([poolSpecPostConv]);
               }
             } else {
@@ -3015,7 +3201,7 @@
                 arr.push(layerIndex);
                 convLayersMeta.value = JSON.stringify(arr);
               }
-            } catch (_h) {
+            } catch {
               convLayersMeta.value = JSON.stringify([layerIndex]);
             }
           } else {
@@ -3029,10 +3215,10 @@
             try {
               const arr = JSON.parse(convSpecsMeta.value);
               if (Array.isArray(arr)) {
-                arr.push(Object.assign({}, convSpec));
+                arr.push({ ...convSpec });
                 convSpecsMeta.value = JSON.stringify(arr);
               }
-            } catch (_j) {
+            } catch {
               convSpecsMeta.value = JSON.stringify([convSpec]);
             }
           } else {
@@ -3193,7 +3379,7 @@
           });
         }
         previousOutputName = activationOutputName;
-        const poolSpecDense = (_c = options.pool2dMappings) === null || _c === void 0 ? void 0 : _c.find((p) => p.afterLayerIndex === layerIndex);
+        const poolSpecDense = options.pool2dMappings?.find((p) => p.afterLayerIndex === layerIndex);
         if (poolSpecDense) {
           const kernel = [poolSpecDense.kernelHeight, poolSpecDense.kernelWidth];
           const strides = [poolSpecDense.strideHeight, poolSpecDense.strideWidth];
@@ -3235,7 +3421,7 @@
                   arr.push(layerIndex);
                   flMeta.value = JSON.stringify(arr);
                 }
-              } catch (_k) {
+              } catch {
                 flMeta.value = JSON.stringify([layerIndex]);
               }
             } else {
@@ -3254,7 +3440,7 @@
                 arr.push(layerIndex);
                 poolLayersMeta.value = JSON.stringify(arr);
               }
-            } catch (_l) {
+            } catch {
               poolLayersMeta.value = JSON.stringify([layerIndex]);
             }
           } else {
@@ -3268,10 +3454,10 @@
             try {
               const arr = JSON.parse(poolSpecsMeta.value);
               if (Array.isArray(arr)) {
-                arr.push(Object.assign({}, poolSpecDense));
+                arr.push({ ...poolSpecDense });
                 poolSpecsMeta.value = JSON.stringify(arr);
               }
-            } catch (_m) {
+            } catch {
               poolSpecsMeta.value = JSON.stringify([poolSpecDense]);
             }
           } else {
@@ -3334,7 +3520,7 @@
           attributes: [{ name: "axis", type: "INT", i: batchDimension ? 1 : 0 }]
         });
         previousOutputName = activationOutputName;
-        const poolSpecPerNeuron = (_d = options.pool2dMappings) === null || _d === void 0 ? void 0 : _d.find((p) => p.afterLayerIndex === layerIndex);
+        const poolSpecPerNeuron = options.pool2dMappings?.find((p) => p.afterLayerIndex === layerIndex);
         if (poolSpecPerNeuron) {
           const kernel = [
             poolSpecPerNeuron.kernelHeight,
@@ -3382,7 +3568,7 @@
                   arr.push(layerIndex);
                   flMeta.value = JSON.stringify(arr);
                 }
-              } catch (_o) {
+              } catch {
                 flMeta.value = JSON.stringify([layerIndex]);
               }
             } else {
@@ -3401,7 +3587,7 @@
                 arr.push(layerIndex);
                 poolLayersMeta.value = JSON.stringify(arr);
               }
-            } catch (_p) {
+            } catch {
               poolLayersMeta.value = JSON.stringify([layerIndex]);
             }
           } else {
@@ -3415,10 +3601,10 @@
             try {
               const arr = JSON.parse(poolSpecsMeta.value);
               if (Array.isArray(arr)) {
-                arr.push(Object.assign({}, poolSpecPerNeuron));
+                arr.push({ ...poolSpecPerNeuron });
                 poolSpecsMeta.value = JSON.stringify(arr);
               }
-            } catch (_q) {
+            } catch {
               poolSpecsMeta.value = JSON.stringify([poolSpecPerNeuron]);
             }
           } else {
@@ -3520,7 +3706,7 @@
                 arr.push(layerIndex);
                 model.metadata_props[lstmMetaIdx].value = JSON.stringify(arr);
               }
-            } catch (_r) {
+            } catch {
               model.metadata_props[lstmMetaIdx].value = JSON.stringify([
                 layerIndex
               ]);
@@ -3607,7 +3793,7 @@
                 arr.push(layerIndex);
                 model.metadata_props[gruMetaIdx].value = JSON.stringify(arr);
               }
-            } catch (_s) {
+            } catch {
               model.metadata_props[gruMetaIdx].value = JSON.stringify([
                 layerIndex
               ]);
@@ -3718,7 +3904,6 @@
     return model;
   }
   function exportToONNX(network, options = {}) {
-    var _a;
     rebuildConnectionsLocal(network);
     network.nodes.forEach((node, idx) => node.index = idx);
     if (!network.connections || network.connections.length === 0)
@@ -3739,7 +3924,7 @@
             }
           }
         }
-      } catch (_b) {
+      } catch {
       }
     }
     validateLayerHomogeneityAndConnectivity(layers, network, options);
@@ -3759,7 +3944,7 @@
             continue;
           const outSpatial = sInt - k + 1;
           if (outSpatial * outSpatial === currWidth) {
-            const alreadyDeclared = (_a = options.conv2dMappings) === null || _a === void 0 ? void 0 : _a.some((m) => m.layerIndex === li);
+            const alreadyDeclared = options.conv2dMappings?.some((m) => m.layerIndex === li);
             if (alreadyDeclared)
               break;
             inferredLayers.push(li);
@@ -3821,7 +4006,6 @@
 
   // dist/architecture/network/network.standalone.js
   function generateStandalone(net) {
-    var _a;
     if (!net.nodes.some((nodeRef) => nodeRef.type === "output")) {
       throw new Error("Cannot create standalone function: network has no output nodes.");
     }
@@ -3912,7 +4096,7 @@
     }
     const outputIndices = [];
     for (let nodeIndex = net.nodes.length - net.output; nodeIndex < net.nodes.length; nodeIndex++) {
-      if (typeof ((_a = net.nodes[nodeIndex]) === null || _a === void 0 ? void 0 : _a.index) !== "undefined") {
+      if (typeof net.nodes[nodeIndex]?.index !== "undefined") {
         outputIndices.push(net.nodes[nodeIndex].index);
       }
     }
@@ -4276,7 +4460,6 @@
     this.gates.push(connection);
   }
   function ungate(connection) {
-    var _a;
     const index = this.gates.indexOf(connection);
     if (index === -1) {
       if (config.warnings)
@@ -4284,7 +4467,7 @@
       return;
     }
     this.gates.splice(index, 1);
-    (_a = connection.gater) === null || _a === void 0 ? void 0 : _a.ungate(connection);
+    connection.gater?.ungate(connection);
   }
   var init_network_gating = __esm({
     "dist/architecture/network/network.gating.js"() {
@@ -4328,7 +4511,7 @@
   function deepCloneValue(value) {
     try {
       return globalThis.structuredClone ? globalThis.structuredClone(value) : JSON.parse(JSON.stringify(value));
-    } catch (_a) {
+    } catch {
       return JSON.parse(JSON.stringify(value));
     }
   }
@@ -4465,7 +4648,7 @@
         type = "output";
       else
         type = "hidden";
-      const node = new node_default(type);
+      const node = new Node(type);
       node.activation = activation;
       node.state = states[nodeIndex];
       const squashName = squashes[nodeIndex];
@@ -4548,7 +4731,7 @@
     net.selfconns = [];
     net.gates = [];
     json.nodes.forEach((nodeJson, nodeIndex) => {
-      const node = new node_default(nodeJson.type);
+      const node = new Node(nodeJson.type);
       node.bias = nodeJson.bias;
       node.squash = activation_default[nodeJson.squash] || activation_default.identity;
       node.index = nodeIndex;
@@ -4626,7 +4809,7 @@
           chosen = node2;
       }
       if (chosen) {
-        const nn = new node_default(chosen.type);
+        const nn = new Node(chosen.type);
         nn.bias = chosen.bias;
         nn.squash = chosen.squash;
         offspring.nodes.push(nn);
@@ -4637,7 +4820,7 @@
     const n2conns = {};
     network1.connections.concat(network1.selfconns).forEach((c) => {
       if (typeof c.from.index === "number" && typeof c.to.index === "number")
-        n1conns[connection_default.innovationID(c.from.index, c.to.index)] = {
+        n1conns[Connection.innovationID(c.from.index, c.to.index)] = {
           weight: c.weight,
           from: c.from.index,
           to: c.to.index,
@@ -4647,7 +4830,7 @@
     });
     network2.connections.concat(network2.selfconns).forEach((c) => {
       if (typeof c.from.index === "number" && typeof c.to.index === "number")
-        n2conns[connection_default.innovationID(c.from.index, c.to.index)] = {
+        n2conns[Connection.innovationID(c.from.index, c.to.index)] = {
           weight: c.weight,
           from: c.from.index,
           to: c.to.index,
@@ -4658,20 +4841,19 @@
     const chosenConns = [];
     const keys1 = Object.keys(n1conns);
     keys1.forEach((k) => {
-      var _a, _b, _c;
       const c1 = n1conns[k];
       if (n2conns[k]) {
         const c2 = n2conns[k];
         const pick = (network1._rand || Math.random)() >= 0.5 ? c1 : c2;
         if (c1.enabled === false || c2.enabled === false) {
-          const rp = (_b = (_a = network1._reenableProb) !== null && _a !== void 0 ? _a : network2._reenableProb) !== null && _b !== void 0 ? _b : 0.25;
+          const rp = network1._reenableProb ?? network2._reenableProb ?? 0.25;
           pick.enabled = Math.random() < rp;
         }
         chosenConns.push(pick);
         delete n2conns[k];
       } else if (score1 >= score2 || equal) {
         if (c1.enabled === false) {
-          const rp = (_c = network1._reenableProb) !== null && _c !== void 0 ? _c : 0.25;
+          const rp = network1._reenableProb ?? 0.25;
           c1.enabled = Math.random() < rp;
         }
         chosenConns.push(c1);
@@ -4679,10 +4861,9 @@
     });
     if (score2 >= score1 || equal)
       Object.keys(n2conns).forEach((k) => {
-        var _a;
         const d = n2conns[k];
         if (d.enabled === false) {
-          const rp = (_a = network2._reenableProb) !== null && _a !== void 0 ? _a : 0.25;
+          const rp = network2._reenableProb ?? 0.25;
           d.enabled = Math.random() < rp;
         }
         chosenConns.push(d);
@@ -4732,7 +4913,7 @@
     if (this._canUseFastSlab(false)) {
       try {
         return this._fastSlabActivate(input);
-      } catch (_a) {
+      } catch {
       }
     }
     const output = activationArrayPool.acquire(this.output);
@@ -4786,6 +4967,17 @@
       init_methods();
       Group = class _Group {
         /**
+         * An array holding all the nodes within this group.
+         */
+        nodes;
+        /**
+         * Stores connection information related to this group.
+         * `in`: Connections coming into any node in this group from outside.
+         * `out`: Connections going out from any node in this group to outside.
+         * `self`: Connections between nodes within this same group (e.g., in ONE_TO_ONE connections).
+         */
+        connections;
+        /**
          * Creates a new group comprised of a specified number of nodes.
          * @param {number} size - The quantity of nodes to initialize within this group.
          */
@@ -4797,7 +4989,7 @@
             self: []
           };
           for (let i = 0; i < size; i++) {
-            this.nodes.push(new node_default());
+            this.nodes.push(new Node());
           }
         }
         /**
@@ -4860,17 +5052,17 @@
               if (this !== target) {
                 if (config.warnings)
                   console.warn("No group connection specified, using ALL_TO_ALL by default.");
-                method = connection_default2.ALL_TO_ALL;
+                method = connection_default.ALL_TO_ALL;
               } else {
                 if (config.warnings)
                   console.warn("Connecting group to itself, using ONE_TO_ONE by default.");
-                method = connection_default2.ONE_TO_ONE;
+                method = connection_default.ONE_TO_ONE;
               }
             }
-            if (method === connection_default2.ALL_TO_ALL || method === connection_default2.ALL_TO_ELSE) {
+            if (method === connection_default.ALL_TO_ALL || method === connection_default.ALL_TO_ELSE) {
               for (i = 0; i < this.nodes.length; i++) {
                 for (j = 0; j < target.nodes.length; j++) {
-                  if (method === connection_default2.ALL_TO_ELSE && this.nodes[i] === target.nodes[j])
+                  if (method === connection_default.ALL_TO_ELSE && this.nodes[i] === target.nodes[j])
                     continue;
                   let connection = this.nodes[i].connect(target.nodes[j], weight);
                   this.connections.out.push(connection[0]);
@@ -4878,7 +5070,7 @@
                   connections.push(connection[0]);
                 }
               }
-            } else if (method === connection_default2.ONE_TO_ONE) {
+            } else if (method === connection_default.ONE_TO_ONE) {
               if (this.nodes.length !== target.nodes.length) {
                 throw new Error("Cannot create ONE_TO_ONE connection: source and target groups must have the same size.");
               }
@@ -4895,7 +5087,7 @@
             }
           } else if (target instanceof Layer) {
             connections = target.input(this, method, weight);
-          } else if (target instanceof node_default) {
+          } else if (target instanceof Node) {
             for (i = 0; i < this.nodes.length; i++) {
               let connection = this.nodes[i].connect(target, weight);
               this.connections.out.push(connection[0]);
@@ -5025,7 +5217,7 @@
                 }
               }
             }
-          } else if (target instanceof node_default) {
+          } else if (target instanceof Node) {
             for (i = 0; i < this.nodes.length; i++) {
               this.nodes[i].disconnect(target, twosided);
               for (j = this.connections.out.length - 1; j >= 0; j--) {
@@ -5093,10 +5285,34 @@
       init_activationArrayPool();
       Layer = class _Layer {
         /**
+         * An array containing all the nodes (neurons or groups) that constitute this layer.
+         * The order of nodes might be relevant depending on the layer type and its connections.
+         */
+        nodes;
+        // Note: While typed as Node[], can contain Group instances in practice for memory layers.
+        /**
+         * Stores connection information related to this layer. This is often managed
+         * by the network or higher-level structures rather than directly by the layer itself.
+         * `in`: Incoming connections to the layer's nodes.
+         * `out`: Outgoing connections from the layer's nodes.
+         * `self`: Self-connections within the layer's nodes.
+         */
+        connections;
+        /**
+         * Represents the primary output group of nodes for this layer.
+         * This group is typically used when connecting this layer *to* another layer or group.
+         * It might be null if the layer is not yet fully constructed or is an input layer.
+         */
+        output;
+        /**
+         * Dropout rate for this layer (0 to 1). If > 0, all nodes in the layer are masked together during training.
+         * Layer-level dropout takes precedence over node-level dropout for nodes in this layer.
+         */
+        dropout = 0;
+        /**
          * Initializes a new Layer instance.
          */
         constructor() {
-          this.dropout = 0;
           this.output = null;
           this.nodes = [];
           this.connections = { in: [], out: [], self: [] };
@@ -5190,7 +5406,7 @@
           let connections = [];
           if (target instanceof _Layer) {
             connections = target.input(this, method, weight);
-          } else if (target instanceof Group || target instanceof node_default) {
+          } else if (target instanceof Group || target instanceof Node) {
             connections = this.output.connect(target, method, weight);
           }
           return connections;
@@ -5224,7 +5440,7 @@
         set(values) {
           for (let i = 0; i < this.nodes.length; i++) {
             let node = this.nodes[i];
-            if (node instanceof node_default) {
+            if (node instanceof Node) {
               if (values.bias !== void 0) {
                 node.bias = values.bias;
               }
@@ -5266,7 +5482,7 @@
                 }
               }
             }
-          } else if (target instanceof node_default) {
+          } else if (target instanceof Node) {
             for (i = 0; i < this.nodes.length; i++) {
               this.nodes[i].disconnect(target, twosided);
               for (j = this.connections.out.length - 1; j >= 0; j--) {
@@ -5313,7 +5529,7 @@
         input(from, method, weight) {
           if (from instanceof _Layer)
             from = from.output;
-          method = method || connection_default2.ALL_TO_ALL;
+          method = method || connection_default.ALL_TO_ALL;
           if (!this.output) {
             throw new Error("Layer output (acting as input target) is not defined.");
           }
@@ -5337,7 +5553,7 @@
           layer.input = (from, method, weight) => {
             if (from instanceof _Layer)
               from = from.output;
-            method = method || connection_default2.ALL_TO_ALL;
+            method = method || connection_default.ALL_TO_ALL;
             return from.connect(block, method, weight);
           };
           return layer;
@@ -5364,11 +5580,11 @@
           outputGate.set({ bias: 1 });
           memoryCell.set({ bias: 0 });
           outputBlock.set({ bias: 0 });
-          memoryCell.connect(inputGate, connection_default2.ALL_TO_ALL);
-          memoryCell.connect(forgetGate, connection_default2.ALL_TO_ALL);
-          memoryCell.connect(outputGate, connection_default2.ALL_TO_ALL);
-          memoryCell.connect(memoryCell, connection_default2.ONE_TO_ONE);
-          const output = memoryCell.connect(outputBlock, connection_default2.ALL_TO_ALL);
+          memoryCell.connect(inputGate, connection_default.ALL_TO_ALL);
+          memoryCell.connect(forgetGate, connection_default.ALL_TO_ALL);
+          memoryCell.connect(outputGate, connection_default.ALL_TO_ALL);
+          memoryCell.connect(memoryCell, connection_default.ONE_TO_ONE);
+          const output = memoryCell.connect(outputBlock, connection_default.ALL_TO_ALL);
           outputGate.gate(output, gating.OUTPUT);
           memoryCell.nodes.forEach((node, i) => {
             const selfConnection = node.connections.self.find((conn) => conn.to === node && conn.from === node);
@@ -5392,7 +5608,7 @@
           layer.input = (from, method, weight) => {
             if (from instanceof _Layer)
               from = from.output;
-            method = method || connection_default2.ALL_TO_ALL;
+            method = method || connection_default.ALL_TO_ALL;
             let connections = [];
             const input = from.connect(memoryCell, method, weight);
             connections = connections.concat(input);
@@ -5442,16 +5658,16 @@
           });
           updateGate.set({ bias: 1 });
           resetGate.set({ bias: 0 });
-          previousOutput.connect(updateGate, connection_default2.ALL_TO_ALL);
-          previousOutput.connect(resetGate, connection_default2.ALL_TO_ALL);
-          updateGate.connect(inverseUpdateGate, connection_default2.ONE_TO_ONE, 1);
-          const reset = previousOutput.connect(memoryCell, connection_default2.ALL_TO_ALL);
+          previousOutput.connect(updateGate, connection_default.ALL_TO_ALL);
+          previousOutput.connect(resetGate, connection_default.ALL_TO_ALL);
+          updateGate.connect(inverseUpdateGate, connection_default.ONE_TO_ONE, 1);
+          const reset = previousOutput.connect(memoryCell, connection_default.ALL_TO_ALL);
           resetGate.gate(reset, gating.OUTPUT);
-          const update1 = previousOutput.connect(output, connection_default2.ALL_TO_ALL);
-          const update2 = memoryCell.connect(output, connection_default2.ALL_TO_ALL);
+          const update1 = previousOutput.connect(output, connection_default.ALL_TO_ALL);
+          const update2 = memoryCell.connect(output, connection_default.ALL_TO_ALL);
           updateGate.gate(update1, gating.OUTPUT);
           inverseUpdateGate.gate(update2, gating.OUTPUT);
-          output.connect(previousOutput, connection_default2.ONE_TO_ONE, 1);
+          output.connect(previousOutput, connection_default.ONE_TO_ONE, 1);
           layer.nodes = [
             ...updateGate.nodes,
             ...inverseUpdateGate.nodes,
@@ -5464,7 +5680,7 @@
           layer.input = (from, method, weight) => {
             if (from instanceof _Layer)
               from = from.output;
-            method = method || connection_default2.ALL_TO_ALL;
+            method = method || connection_default.ALL_TO_ALL;
             let connections = [];
             connections = connections.concat(from.connect(updateGate, method, weight));
             connections = connections.concat(from.connect(resetGate, method, weight));
@@ -5498,7 +5714,7 @@
               // Custom type identifier
             });
             if (previous != null) {
-              previous.connect(block, connection_default2.ONE_TO_ONE, 1);
+              previous.connect(block, connection_default.ONE_TO_ONE, 1);
             }
             layer.nodes.push(block);
             previous = block;
@@ -5516,7 +5732,7 @@
           layer.input = (from, method, weight) => {
             if (from instanceof _Layer)
               from = from.output;
-            method = method || connection_default2.ALL_TO_ALL;
+            method = method || connection_default.ALL_TO_ALL;
             const inputBlock = layer.nodes[layer.nodes.length - 1];
             if (!this.prototype.isGroup(inputBlock)) {
               throw new Error("Memory layer input block is not a Group.");
@@ -5524,7 +5740,7 @@
             if (from.nodes.length !== inputBlock.nodes.length) {
               throw new Error(`Previous layer size (${from.nodes.length}) must be same as memory size (${inputBlock.nodes.length})`);
             }
-            return from.connect(inputBlock, connection_default2.ONE_TO_ONE, 1);
+            return from.connect(inputBlock, connection_default.ONE_TO_ONE, 1);
           };
           return layer;
         }
@@ -5541,7 +5757,7 @@
           layer.activate = function(value, training = false) {
             const activations = baseActivate(value, training);
             const mean = activations.reduce((a, b) => a + b, 0) / activations.length;
-            const variance = activations.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / activations.length;
+            const variance = activations.reduce((a, b) => a + (b - mean) ** 2, 0) / activations.length;
             const epsilon = (init_neat_constants(), __toCommonJS(neat_constants_exports)).NORM_EPSILON;
             return activations.map((a) => (a - mean) / Math.sqrt(variance + epsilon));
           };
@@ -5560,7 +5776,7 @@
           layer.activate = function(value, training = false) {
             const activations = baseActivate(value, training);
             const mean = activations.reduce((a, b) => a + b, 0) / activations.length;
-            const variance = activations.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / activations.length;
+            const variance = activations.reduce((a, b) => a + (b - mean) ** 2, 0) / activations.length;
             const epsilon = (init_neat_constants(), __toCommonJS(neat_constants_exports)).NORM_EPSILON;
             return activations.map((a) => (a - mean) / Math.sqrt(variance + epsilon));
           };
@@ -5576,7 +5792,7 @@
          */
         static conv1d(size, kernelSize, stride = 1, padding = 0) {
           const layer = new _Layer();
-          layer.nodes = Array.from({ length: size }, () => new node_default());
+          layer.nodes = Array.from({ length: size }, () => new Node());
           layer.output = new Group(size);
           layer.conv1d = { kernelSize, stride, padding };
           layer.activate = function(value) {
@@ -5594,7 +5810,7 @@
          */
         static attention(size, heads = 1) {
           const layer = new _Layer();
-          layer.nodes = Array.from({ length: size }, () => new node_default());
+          layer.nodes = Array.from({ length: size }, () => new Node());
           layer.output = new Group(size);
           layer.attention = { heads };
           layer.activate = function(value) {
@@ -5628,14 +5844,13 @@
     mutateImpl: () => mutateImpl
   });
   function mutateImpl(method) {
-    var _a, _b;
     if (method == null)
       throw new Error("No (correct) mutate method given!");
     let key;
     if (typeof method === "string")
       key = method;
     else
-      key = (_b = (_a = method === null || method === void 0 ? void 0 : method.name) !== null && _a !== void 0 ? _a : method === null || method === void 0 ? void 0 : method.type) !== null && _b !== void 0 ? _b : method === null || method === void 0 ? void 0 : method.identity;
+      key = method?.name ?? method?.type ?? method?.identity;
     if (!key) {
       for (const k in mutation_default) {
         if (method === mutation_default[k]) {
@@ -5676,7 +5891,7 @@
         terminal = this.connect(tail, outputNode)[0];
       const prevGater2 = terminal.gater;
       this.disconnect(terminal.from, terminal.to);
-      const hidden2 = new node_default("hidden", void 0, internal._rand);
+      const hidden2 = new Node("hidden", void 0, internal._rand);
       hidden2.mutate(mutation_default.MOD_ACTIVATION);
       const outIndex = this.nodes.indexOf(outputNode);
       const insertIndex2 = Math.min(outIndex, this.nodes.length - this.output);
@@ -5697,7 +5912,7 @@
             if (extra !== keep) {
               try {
                 this.disconnect(extra.from, extra.to);
-              } catch (_a) {
+              } catch {
               }
             }
           }
@@ -5718,7 +5933,7 @@
       return;
     const prevGater = connection.gater;
     this.disconnect(connection.from, connection.to);
-    const hidden = new node_default("hidden", void 0, internal._rand);
+    const hidden = new Node("hidden", void 0, internal._rand);
     hidden.mutate(mutation_default.MOD_ACTIVATION);
     const targetIndex = this.nodes.indexOf(connection.to);
     const insertIndex = Math.min(targetIndex, this.nodes.length - this.output);
@@ -5797,8 +6012,7 @@
     nodeForBiasMutation.mutate(method);
   }
   function _modActivation(method) {
-    var _a;
-    const canMutateOutput = (_a = method.mutateOutput) !== null && _a !== void 0 ? _a : true;
+    const canMutateOutput = method.mutateOutput ?? true;
     const numMutableNodes = this.nodes.length - this.input - (canMutateOutput ? 0 : this.output);
     if (numMutableNodes <= 0) {
       if (config.warnings)
@@ -5881,9 +6095,8 @@
     this.disconnect(backwardConnectionToRemove.from, backwardConnectionToRemove.to);
   }
   function _swapNodes(method) {
-    var _a;
     const netInternal = this;
-    const canSwapOutput = (_a = method.mutateOutput) !== null && _a !== void 0 ? _a : true;
+    const canSwapOutput = method.mutateOutput ?? true;
     const numSwappableNodes = this.nodes.length - this.input - (canSwapOutput ? 0 : this.output);
     if (numSwappableNodes < 2)
       return;
@@ -5941,14 +6154,13 @@
       this.gate(gaterGRU, this.connections[this.connections.length - 1]);
   }
   function _reinitWeight(method) {
-    var _a, _b;
     if (this.nodes.length <= this.input)
       return;
     const internal = this;
     const idx = Math.floor(internal._rand() * (this.nodes.length - this.input) + this.input);
     const node = this.nodes[idx];
-    const min = (_a = method === null || method === void 0 ? void 0 : method.min) !== null && _a !== void 0 ? _a : -1;
-    const max = (_b = method === null || method === void 0 ? void 0 : method.max) !== null && _b !== void 0 ? _b : 1;
+    const min = method?.min ?? -1;
+    const max = method?.max ?? 1;
     const sample = () => internal._rand() * (max - min) + min;
     for (const c of node.connections.in)
       c.weight = sample();
@@ -6131,7 +6343,6 @@
   function applyOptimizerStep(net, optimizer, currentRate, momentum, internalNet) {
     let sumSq = 0;
     net.nodes.forEach((node) => {
-      var _a;
       if (node.type === "input")
         return;
       node.applyBatchUpdatesWithOptimizer({
@@ -6141,7 +6352,7 @@
         beta2: optimizer.beta2,
         eps: optimizer.eps,
         weightDecay: optimizer.weightDecay,
-        momentum: (_a = optimizer.momentum) !== null && _a !== void 0 ? _a : momentum,
+        momentum: optimizer.momentum ?? momentum,
         lrScale: currentRate,
         t: internalNet._optimizerStep,
         la_k: optimizer.la_k,
@@ -6372,7 +6583,6 @@
     return totalProcessedSamples > 0 ? cumulativeError / totalProcessedSamples : 0;
   }
   function trainImpl(net, set, options) {
-    var _a, _b, _c, _d, _e;
     const internalNet = net;
     if (!set || set.length === 0 || set[0].input.length !== net.input || set[0].output.length !== net.output) {
       throw new Error("Dataset is invalid or dimensions do not match network input/output size!");
@@ -6391,12 +6601,12 @@
       if (typeof options.iterations === "undefined")
         console.warn("Missing `iterations` option. Training will run potentially indefinitely until `error` threshold is met.");
     }
-    let targetError = (_a = options.error) !== null && _a !== void 0 ? _a : -Infinity;
+    let targetError = options.error ?? -Infinity;
     const cost = options.cost || Cost.mse;
     if (typeof cost !== "function" && !(typeof cost === "object" && (typeof cost.fn === "function" || typeof cost.calculate === "function"))) {
       throw new Error("Invalid cost function provided to Network.train.");
     }
-    const baseRate = (_b = options.rate) !== null && _b !== void 0 ? _b : 0.3;
+    const baseRate = options.rate ?? 0.3;
     const dropout = options.dropout || 0;
     if (dropout < 0 || dropout >= 1)
       throw new Error("dropout must be in [0,1)");
@@ -6467,7 +6677,7 @@
       if (typeof options.optimizer === "string")
         optimizerConfig = { type: options.optimizer.toLowerCase() };
       else if (typeof options.optimizer === "object" && options.optimizer !== null) {
-        optimizerConfig = Object.assign({}, options.optimizer);
+        optimizerConfig = { ...options.optimizer };
         if (typeof optimizerConfig.type === "string")
           optimizerConfig.type = optimizerConfig.type.toLowerCase();
       } else
@@ -6482,10 +6692,10 @@
         if (!allowedOptimizers.has(optimizerConfig.baseType))
           throw new Error(`Unknown baseType for lookahead: ${optimizerConfig.baseType}`);
         optimizerConfig.la_k = optimizerConfig.la_k || 5;
-        optimizerConfig.la_alpha = (_c = optimizerConfig.la_alpha) !== null && _c !== void 0 ? _c : 0.5;
+        optimizerConfig.la_alpha = optimizerConfig.la_alpha ?? 0.5;
       }
     }
-    const iterations = (_d = options.iterations) !== null && _d !== void 0 ? _d : Number.MAX_SAFE_INTEGER;
+    const iterations = options.iterations ?? Number.MAX_SAFE_INTEGER;
     const start = Date.now();
     let finalError = Infinity;
     const movingAverageWindow = Math.max(1, options.movingAverageWindow || 1);
@@ -6660,9 +6870,9 @@
             iteration: iter,
             error: finalError,
             plateauError,
-            gradNorm: (_e = internalNet._lastGradNorm) !== null && _e !== void 0 ? _e : 0
+            gradNorm: internalNet._lastGradNorm ?? 0
           });
-        } catch (_f) {
+        } catch {
         }
       }
       if (options.checkpoint && typeof options.checkpoint.save === "function") {
@@ -6674,7 +6884,7 @@
               error: finalError,
               network: net.toJSON()
             });
-          } catch (_g) {
+          } catch {
           }
         }
         if (options.checkpoint.best) {
@@ -6687,7 +6897,7 @@
                 error: finalError,
                 network: net.toJSON()
               });
-            } catch (_h) {
+            } catch {
             }
           }
         }
@@ -6695,7 +6905,7 @@
       if (options.schedule && options.schedule.iterations && iter % options.schedule.iterations === 0) {
         try {
           options.schedule.function({ error: finalError, iteration: iter });
-        } catch (_j) {
+        } catch {
         }
       }
       if (finalError < bestError - earlyStopMinDelta) {
@@ -7621,6 +7831,7 @@
       import_child_process = __require("child_process");
       import_path = __toESM(require_path(), 1);
       TestWorker = class {
+        worker;
         /**
          * Creates a new TestWorker instance.
          *
@@ -7683,6 +7894,8 @@
       "use strict";
       init_multi();
       TestWorker2 = class _TestWorker {
+        worker;
+        url;
         /**
          * Creates a new TestWorker instance.
          * @param {number[]} dataSet - The serialized dataset to be used by the worker.
@@ -7733,12 +7946,12 @@
          */
         static _createBlobString(cost) {
           return `
-      const F = [${multi_default.activations.toString()}];
+      const F = [${Multi.activations.toString()}];
       const cost = ${cost.toString()};
       const multi = {
-        deserializeDataSet: ${multi_default.deserializeDataSet.toString()},
-        testSerializedSet: ${multi_default.testSerializedSet.toString()},
-        activateSerializedNetwork: ${multi_default.activateSerializedNetwork.toString()}
+        deserializeDataSet: ${Multi.deserializeDataSet.toString()},
+        testSerializedSet: ${Multi.testSerializedSet.toString()},
+        activateSerializedNetwork: ${Multi.activateSerializedNetwork.toString()}
       };
 
       let set;
@@ -7763,96 +7976,81 @@
   });
 
   // dist/multithreading/workers/workers.js
-  var __awaiter, Workers;
+  var Workers;
   var init_workers = __esm({
     "dist/multithreading/workers/workers.js"() {
       "use strict";
-      __awaiter = function(thisArg, _arguments, P, generator) {
-        function adopt(value) {
-          return value instanceof P ? value : new P(function(resolve) {
-            resolve(value);
-          });
-        }
-        return new (P || (P = Promise))(function(resolve, reject) {
-          function fulfilled(value) {
-            try {
-              step(generator.next(value));
-            } catch (e) {
-              reject(e);
-            }
-          }
-          function rejected(value) {
-            try {
-              step(generator["throw"](value));
-            } catch (e) {
-              reject(e);
-            }
-          }
-          function step(result) {
-            result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected);
-          }
-          step((generator = generator.apply(thisArg, _arguments || [])).next());
-        });
-      };
       Workers = class {
         /**
          * Loads the Node.js test worker dynamically.
          * @returns {Promise<any>} A promise that resolves to the Node.js TestWorker class.
          */
-        static getNodeTestWorker() {
-          return __awaiter(this, void 0, void 0, function* () {
-            const module = yield Promise.resolve().then(() => (init_testworker(), testworker_exports));
-            return module.TestWorker;
-          });
+        static async getNodeTestWorker() {
+          const module = await Promise.resolve().then(() => (init_testworker(), testworker_exports));
+          return module.TestWorker;
         }
         /**
          * Loads the browser test worker dynamically.
          * @returns {Promise<any>} A promise that resolves to the browser TestWorker class.
          */
-        static getBrowserTestWorker() {
-          return __awaiter(this, void 0, void 0, function* () {
-            const module = yield Promise.resolve().then(() => (init_testworker2(), testworker_exports2));
-            return module.TestWorker;
-          });
+        static async getBrowserTestWorker() {
+          const module = await Promise.resolve().then(() => (init_testworker2(), testworker_exports2));
+          return module.TestWorker;
         }
       };
     }
   });
 
   // dist/multithreading/multi.js
-  var __awaiter2, Multi, multi_default;
+  var Multi;
   var init_multi = __esm({
     "dist/multithreading/multi.js"() {
       "use strict";
       init_workers();
-      __awaiter2 = function(thisArg, _arguments, P, generator) {
-        function adopt(value) {
-          return value instanceof P ? value : new P(function(resolve) {
-            resolve(value);
-          });
-        }
-        return new (P || (P = Promise))(function(resolve, reject) {
-          function fulfilled(value) {
-            try {
-              step(generator.next(value));
-            } catch (e) {
-              reject(e);
-            }
-          }
-          function rejected(value) {
-            try {
-              step(generator["throw"](value));
-            } catch (e) {
-              reject(e);
-            }
-          }
-          function step(result) {
-            result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected);
-          }
-          step((generator = generator.apply(thisArg, _arguments || [])).next());
-        });
-      };
       Multi = class _Multi {
+        /** Workers for multi-threading */
+        static workers = Workers;
+        /**
+         * A list of compiled activation functions in a specific order.
+         */
+        static activations = [
+          (x) => 1 / (1 + Math.exp(-x)),
+          // Logistic (0)
+          (x) => Math.tanh(x),
+          // Tanh (1)
+          (x) => x,
+          // Identity (2)
+          (x) => x > 0 ? 1 : 0,
+          // Step (3)
+          (x) => x > 0 ? x : 0,
+          // ReLU (4)
+          (x) => x / (1 + Math.abs(x)),
+          // Softsign (5)
+          (x) => Math.sin(x),
+          // Sinusoid (6)
+          (x) => Math.exp(-Math.pow(x, 2)),
+          // Gaussian (7)
+          (x) => (Math.sqrt(Math.pow(x, 2) + 1) - 1) / 2 + x,
+          // Bent Identity (8)
+          (x) => x > 0 ? 1 : -1,
+          // Bipolar (9)
+          (x) => 2 / (1 + Math.exp(-x)) - 1,
+          // Bipolar Sigmoid (10)
+          (x) => Math.max(-1, Math.min(1, x)),
+          // Hard Tanh (11)
+          (x) => Math.abs(x),
+          // Absolute (12)
+          (x) => 1 - x,
+          // Inverse (13)
+          (x) => {
+            const alpha = 1.6732632423543772;
+            const scale = 1.0507009873554805;
+            const fx = x > 0 ? x : alpha * Math.exp(x) - alpha;
+            return fx * scale;
+          },
+          (x) => Math.log(1 + Math.exp(x))
+          // Softplus (15) - Added
+        ];
         /**
          * Serializes a dataset into a flat array.
          * @param {Array<{ input: number[]; output: number[] }>} dataSet - The dataset to serialize.
@@ -8073,63 +8271,19 @@
          * Gets the browser test worker.
          * @returns {Promise<any>} The browser test worker.
          */
-        static getBrowserTestWorker() {
-          return __awaiter2(this, void 0, void 0, function* () {
-            const { TestWorker: TestWorker3 } = yield Promise.resolve().then(() => (init_testworker2(), testworker_exports2));
-            return TestWorker3;
-          });
+        static async getBrowserTestWorker() {
+          const { TestWorker: TestWorker3 } = await Promise.resolve().then(() => (init_testworker2(), testworker_exports2));
+          return TestWorker3;
         }
         /**
          * Gets the node test worker.
          * @returns {Promise<any>} The node test worker.
          */
-        static getNodeTestWorker() {
-          return __awaiter2(this, void 0, void 0, function* () {
-            const { TestWorker: TestWorker3 } = yield Promise.resolve().then(() => (init_testworker(), testworker_exports));
-            return TestWorker3;
-          });
+        static async getNodeTestWorker() {
+          const { TestWorker: TestWorker3 } = await Promise.resolve().then(() => (init_testworker(), testworker_exports));
+          return TestWorker3;
         }
       };
-      Multi.workers = Workers;
-      Multi.activations = [
-        (x) => 1 / (1 + Math.exp(-x)),
-        // Logistic (0)
-        (x) => Math.tanh(x),
-        // Tanh (1)
-        (x) => x,
-        // Identity (2)
-        (x) => x > 0 ? 1 : 0,
-        // Step (3)
-        (x) => x > 0 ? x : 0,
-        // ReLU (4)
-        (x) => x / (1 + Math.abs(x)),
-        // Softsign (5)
-        (x) => Math.sin(x),
-        // Sinusoid (6)
-        (x) => Math.exp(-Math.pow(x, 2)),
-        // Gaussian (7)
-        (x) => (Math.sqrt(Math.pow(x, 2) + 1) - 1) / 2 + x,
-        // Bent Identity (8)
-        (x) => x > 0 ? 1 : -1,
-        // Bipolar (9)
-        (x) => 2 / (1 + Math.exp(-x)) - 1,
-        // Bipolar Sigmoid (10)
-        (x) => Math.max(-1, Math.min(1, x)),
-        // Hard Tanh (11)
-        (x) => Math.abs(x),
-        // Absolute (12)
-        (x) => 1 - x,
-        // Inverse (13)
-        (x) => {
-          const alpha = 1.6732632423543772;
-          const scale = 1.0507009873554805;
-          const fx = x > 0 ? x : alpha * Math.exp(x) - alpha;
-          return fx * scale;
-        },
-        (x) => Math.log(1 + Math.exp(x))
-        // Softplus (15) - Added
-      ];
-      multi_default = Multi;
     }
   });
 
@@ -8166,216 +8320,183 @@
       return score / amount;
     };
   }
-  function buildMultiThreadFitness(set, cost, amount, growth, threads, options) {
-    return __awaiter3(this, void 0, void 0, function* () {
-      var _a, _b, _c, _d;
-      const serializedSet = multi_default.serializeDataSet(set);
-      const workers = [];
-      let WorkerCtor = null;
+  async function buildMultiThreadFitness(set, cost, amount, growth, threads, options) {
+    const serializedSet = Multi.serializeDataSet(set);
+    const workers = [];
+    let WorkerCtor = null;
+    try {
+      const isNode = typeof process !== "undefined" && !!process.versions?.node;
+      if (isNode && Multi.workers?.getNodeTestWorker)
+        WorkerCtor = await Multi.workers.getNodeTestWorker();
+      else if (!isNode && Multi.workers?.getBrowserTestWorker)
+        WorkerCtor = await Multi.workers.getBrowserTestWorker();
+    } catch (e) {
+      if (config.warnings)
+        console.warn("Failed to load worker class; falling back to single-thread path:", e?.message || e);
+    }
+    if (!WorkerCtor)
+      return {
+        fitnessFunction: buildSingleThreadFitness(set, cost, amount, growth),
+        threads: 1
+      };
+    for (let i = 0; i < threads; i++) {
       try {
-        const isNode = typeof process !== "undefined" && !!((_a = process.versions) === null || _a === void 0 ? void 0 : _a.node);
-        if (isNode && ((_b = multi_default.workers) === null || _b === void 0 ? void 0 : _b.getNodeTestWorker))
-          WorkerCtor = yield multi_default.workers.getNodeTestWorker();
-        else if (!isNode && ((_c = multi_default.workers) === null || _c === void 0 ? void 0 : _c.getBrowserTestWorker))
-          WorkerCtor = yield multi_default.workers.getBrowserTestWorker();
+        workers.push(new WorkerCtor(serializedSet, {
+          name: cost.name || cost.toString?.() || "cost"
+        }));
       } catch (e) {
         if (config.warnings)
-          console.warn("Failed to load worker class; falling back to single-thread path:", (e === null || e === void 0 ? void 0 : e.message) || e);
+          console.warn("Worker spawn failed", e);
       }
-      if (!WorkerCtor)
-        return {
-          fitnessFunction: buildSingleThreadFitness(set, cost, amount, growth),
-          threads: 1
-        };
-      for (let i = 0; i < threads; i++) {
-        try {
-          workers.push(new WorkerCtor(serializedSet, {
-            name: cost.name || ((_d = cost.toString) === null || _d === void 0 ? void 0 : _d.call(cost)) || "cost"
-          }));
-        } catch (e) {
-          if (config.warnings)
-            console.warn("Worker spawn failed", e);
-        }
+    }
+    const fitnessFunction = (population) => new Promise((resolve) => {
+      if (!workers.length) {
+        resolve();
+        return;
       }
-      const fitnessFunction = (population) => new Promise((resolve) => {
-        if (!workers.length) {
-          resolve();
+      const queue = population.slice();
+      let active = workers.length;
+      const startNext = (worker) => {
+        if (!queue.length) {
+          if (--active === 0)
+            resolve();
           return;
         }
-        const queue = population.slice();
-        let active = workers.length;
-        const startNext = (worker) => {
-          if (!queue.length) {
-            if (--active === 0)
-              resolve();
-            return;
+        const genome = queue.shift();
+        worker.evaluate(genome).then((result) => {
+          if (typeof genome !== "undefined" && typeof result === "number") {
+            genome.score = -result - computeComplexityPenalty(genome, growth);
+            genome.score = isNaN(result) ? -Infinity : genome.score;
           }
-          const genome = queue.shift();
-          worker.evaluate(genome).then((result) => {
-            if (typeof genome !== "undefined" && typeof result === "number") {
-              genome.score = -result - computeComplexityPenalty(genome, growth);
-              genome.score = isNaN(result) ? -Infinity : genome.score;
-            }
-            startNext(worker);
-          }).catch(() => startNext(worker));
-        };
-        workers.forEach((w) => startNext(w));
-      });
-      options.fitnessPopulation = true;
-      options._workerTerminators = () => {
-        workers.forEach((w) => {
-          try {
-            w.terminate && w.terminate();
-          } catch (_a2) {
-          }
-        });
+          startNext(worker);
+        }).catch(() => startNext(worker));
       };
-      return { fitnessFunction, threads };
+      workers.forEach((w) => startNext(w));
     });
+    options.fitnessPopulation = true;
+    options._workerTerminators = () => {
+      workers.forEach((w) => {
+        try {
+          w.terminate && w.terminate();
+        } catch {
+        }
+      });
+    };
+    return { fitnessFunction, threads };
   }
-  function evolveNetwork(set, options) {
-    return __awaiter3(this, void 0, void 0, function* () {
-      var _a, _b, _c, _d, _e;
-      if (!set || set.length === 0 || set[0].input.length !== this.input || set[0].output.length !== this.output) {
-        throw new Error("Dataset is invalid or dimensions do not match network input/output size!");
-      }
-      options = options || {};
-      let targetError = (_a = options.error) !== null && _a !== void 0 ? _a : 0.05;
-      const growth = (_b = options.growth) !== null && _b !== void 0 ? _b : 1e-4;
-      const cost = options.cost || Cost.mse;
-      const amount = options.amount || 1;
-      const log = options.log || 0;
-      const schedule = options.schedule;
-      const clear = options.clear || false;
-      let threads = typeof options.threads === "undefined" ? 1 : options.threads;
-      const start = Date.now();
-      const evoConfig = {
-        targetError,
-        growth,
-        cost,
-        amount,
-        log,
-        schedule,
-        clear,
-        threads
-      };
-      if (typeof options.iterations === "undefined" && typeof options.error === "undefined") {
-        throw new Error("At least one stopping condition (`iterations` or `error`) must be specified for evolution.");
-      } else if (typeof options.error === "undefined")
-        targetError = -1;
-      else if (typeof options.iterations === "undefined")
-        options.iterations = 0;
-      let fitnessFunction;
-      if (threads === 1)
-        fitnessFunction = buildSingleThreadFitness(set, cost, amount, growth);
-      else {
-        const multi = yield buildMultiThreadFitness(set, cost, amount, growth, threads, options);
-        fitnessFunction = multi.fitnessFunction;
-        threads = multi.threads;
-      }
-      options.network = this;
-      if (options.populationSize != null && options.popsize == null)
-        options.popsize = options.populationSize;
-      if (typeof options.speciation === "undefined")
-        options.speciation = false;
-      const { default: Neat2 } = yield Promise.resolve().then(() => (init_neat(), neat_exports));
-      const neat = new Neat2(this.input, this.output, fitnessFunction, options);
-      if (typeof options.iterations === "number" && options.iterations === 0) {
-        if (neat._warnIfNoBestGenome) {
-          try {
-            neat._warnIfNoBestGenome();
-          } catch (_f) {
-          }
-        }
-      }
-      if (options.popsize && options.popsize <= 10) {
-        neat.options.mutationRate = (_c = neat.options.mutationRate) !== null && _c !== void 0 ? _c : 0.5;
-        neat.options.mutationAmount = (_d = neat.options.mutationAmount) !== null && _d !== void 0 ? _d : 1;
-      }
-      let error = Infinity;
-      let bestFitness = -Infinity;
-      let bestGenome;
-      let infiniteErrorCount = 0;
-      const MAX_INF = 5;
-      const iterationsSpecified = typeof options.iterations === "number";
-      while ((targetError === -1 || error > targetError) && (!iterationsSpecified || neat.generation < options.iterations)) {
-        const fittest = yield neat.evolve();
-        const fitness = (_e = fittest.score) !== null && _e !== void 0 ? _e : -Infinity;
-        error = -(fitness - computeComplexityPenalty(fittest, growth)) || Infinity;
-        if (fitness > bestFitness) {
-          bestFitness = fitness;
-          bestGenome = fittest;
-        }
-        if (!isFinite(error) || isNaN(error)) {
-          if (++infiniteErrorCount >= MAX_INF)
-            break;
-        } else
-          infiniteErrorCount = 0;
-        if (schedule && neat.generation % schedule.iterations === 0) {
-          try {
-            schedule.function({
-              fitness: bestFitness,
-              error,
-              iteration: neat.generation
-            });
-          } catch (_g) {
-          }
-        }
-      }
-      if (typeof bestGenome !== "undefined") {
-        this.nodes = bestGenome.nodes;
-        this.connections = bestGenome.connections;
-        this.selfconns = bestGenome.selfconns;
-        this.gates = bestGenome.gates;
-        if (clear)
-          this.clear();
-      } else if (neat._warnIfNoBestGenome) {
+  async function evolveNetwork(set, options) {
+    if (!set || set.length === 0 || set[0].input.length !== this.input || set[0].output.length !== this.output) {
+      throw new Error("Dataset is invalid or dimensions do not match network input/output size!");
+    }
+    options = options || {};
+    let targetError = options.error ?? 0.05;
+    const growth = options.growth ?? 1e-4;
+    const cost = options.cost || Cost.mse;
+    const amount = options.amount || 1;
+    const log = options.log || 0;
+    const schedule = options.schedule;
+    const clear = options.clear || false;
+    let threads = typeof options.threads === "undefined" ? 1 : options.threads;
+    const start = Date.now();
+    const evoConfig = {
+      targetError,
+      growth,
+      cost,
+      amount,
+      log,
+      schedule,
+      clear,
+      threads
+    };
+    if (typeof options.iterations === "undefined" && typeof options.error === "undefined") {
+      throw new Error("At least one stopping condition (`iterations` or `error`) must be specified for evolution.");
+    } else if (typeof options.error === "undefined")
+      targetError = -1;
+    else if (typeof options.iterations === "undefined")
+      options.iterations = 0;
+    let fitnessFunction;
+    if (threads === 1)
+      fitnessFunction = buildSingleThreadFitness(set, cost, amount, growth);
+    else {
+      const multi = await buildMultiThreadFitness(set, cost, amount, growth, threads, options);
+      fitnessFunction = multi.fitnessFunction;
+      threads = multi.threads;
+    }
+    options.network = this;
+    if (options.populationSize != null && options.popsize == null)
+      options.popsize = options.populationSize;
+    if (typeof options.speciation === "undefined")
+      options.speciation = false;
+    const { default: Neat2 } = await Promise.resolve().then(() => (init_neat(), neat_exports));
+    const neat = new Neat2(this.input, this.output, fitnessFunction, options);
+    if (typeof options.iterations === "number" && options.iterations === 0) {
+      if (neat._warnIfNoBestGenome) {
         try {
           neat._warnIfNoBestGenome();
-        } catch (_h) {
+        } catch {
         }
       }
-      try {
-        options._workerTerminators && options._workerTerminators();
-      } catch (_j) {
+    }
+    if (options.popsize && options.popsize <= 10) {
+      neat.options.mutationRate = neat.options.mutationRate ?? 0.5;
+      neat.options.mutationAmount = neat.options.mutationAmount ?? 1;
+    }
+    let error = Infinity;
+    let bestFitness = -Infinity;
+    let bestGenome;
+    let infiniteErrorCount = 0;
+    const MAX_INF = 5;
+    const iterationsSpecified = typeof options.iterations === "number";
+    while ((targetError === -1 || error > targetError) && (!iterationsSpecified || neat.generation < options.iterations)) {
+      const fittest = await neat.evolve();
+      const fitness = fittest.score ?? -Infinity;
+      error = -(fitness - computeComplexityPenalty(fittest, growth)) || Infinity;
+      if (fitness > bestFitness) {
+        bestFitness = fitness;
+        bestGenome = fittest;
       }
-      return { error, iterations: neat.generation, time: Date.now() - start };
-    });
+      if (!isFinite(error) || isNaN(error)) {
+        if (++infiniteErrorCount >= MAX_INF)
+          break;
+      } else
+        infiniteErrorCount = 0;
+      if (schedule && neat.generation % schedule.iterations === 0) {
+        try {
+          schedule.function({
+            fitness: bestFitness,
+            error,
+            iteration: neat.generation
+          });
+        } catch {
+        }
+      }
+    }
+    if (typeof bestGenome !== "undefined") {
+      this.nodes = bestGenome.nodes;
+      this.connections = bestGenome.connections;
+      this.selfconns = bestGenome.selfconns;
+      this.gates = bestGenome.gates;
+      if (clear)
+        this.clear();
+    } else if (neat._warnIfNoBestGenome) {
+      try {
+        neat._warnIfNoBestGenome();
+      } catch {
+      }
+    }
+    try {
+      options._workerTerminators && options._workerTerminators();
+    } catch {
+    }
+    return { error, iterations: neat.generation, time: Date.now() - start };
   }
-  var __awaiter3, _complexityCache;
+  var _complexityCache;
   var init_network_evolve = __esm({
     "dist/architecture/network/network.evolve.js"() {
       "use strict";
       init_methods();
       init_config();
       init_multi();
-      __awaiter3 = function(thisArg, _arguments, P, generator) {
-        function adopt(value) {
-          return value instanceof P ? value : new P(function(resolve) {
-            resolve(value);
-          });
-        }
-        return new (P || (P = Promise))(function(resolve, reject) {
-          function fulfilled(value) {
-            try {
-              step(generator.next(value));
-            } catch (e) {
-              reject(e);
-            }
-          }
-          function rejected(value) {
-            try {
-              step(generator["throw"](value));
-            } catch (e) {
-              reject(e);
-            }
-          }
-          function step(result) {
-            result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected);
-          }
-          step((generator = generator.apply(thisArg, _arguments || [])).next());
-        });
-      };
       _complexityCache = /* @__PURE__ */ new WeakMap();
     }
   });
@@ -8385,7 +8506,7 @@
   __export(network_exports, {
     default: () => Network
   });
-  var __awaiter4, Network;
+  var Network;
   var init_network = __esm({
     "dist/architecture/network.js"() {
       "use strict";
@@ -8405,34 +8526,85 @@
       init_network_connect();
       init_network_serialize();
       init_network_genetic();
-      __awaiter4 = function(thisArg, _arguments, P, generator) {
-        function adopt(value) {
-          return value instanceof P ? value : new P(function(resolve) {
-            resolve(value);
-          });
-        }
-        return new (P || (P = Promise))(function(resolve, reject) {
-          function fulfilled(value) {
-            try {
-              step(generator.next(value));
-            } catch (e) {
-              reject(e);
-            }
-          }
-          function rejected(value) {
-            try {
-              step(generator["throw"](value));
-            } catch (e) {
-              reject(e);
-            }
-          }
-          function step(result) {
-            result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected);
-          }
-          step((generator = generator.apply(thisArg, _arguments || [])).next());
-        });
-      };
       Network = class _Network {
+        input;
+        output;
+        score;
+        nodes;
+        connections;
+        gates;
+        selfconns;
+        dropout = 0;
+        _dropConnectProb = 0;
+        _lastGradNorm;
+        _optimizerStep = 0;
+        _weightNoiseStd = 0;
+        _weightNoisePerHidden = [];
+        _weightNoiseSchedule;
+        _stochasticDepth = [];
+        _wnOrig;
+        _trainingStep = 0;
+        _rand = Math.random;
+        _rngState;
+        _lastStats = null;
+        _stochasticDepthSchedule;
+        _mixedPrecision = {
+          enabled: false,
+          lossScale: 1
+        };
+        _mixedPrecisionState = {
+          goodSteps: 0,
+          badSteps: 0,
+          minLossScale: 1,
+          maxLossScale: 65536,
+          overflowCount: 0,
+          scaleUpEvents: 0,
+          scaleDownEvents: 0
+        };
+        _gradAccumMicroBatches = 0;
+        _currentGradClip;
+        _lastRawGradNorm = 0;
+        _accumulationReduction = "average";
+        _gradClipSeparateBias = false;
+        _lastGradClipGroupCount = 0;
+        _lastOverflowStep = -1;
+        _forceNextOverflow = false;
+        _pruningConfig;
+        _initialConnectionCount;
+        _enforceAcyclic = false;
+        _topoOrder = null;
+        _topoDirty = true;
+        _globalEpoch = 0;
+        layers;
+        _evoInitialConnCount;
+        // baseline for evolution-time pruning
+        _activationPrecision = "f64";
+        // typed array precision for compiled path
+        _reuseActivationArrays = false;
+        // reuse pooled output arrays
+        _returnTypedActivations = false;
+        // if true and reuse enabled, return typed array directly
+        _activationPool;
+        // pooled output array
+        // Packed connection slab fields (for memory + cache efficiency when iterating connections)
+        _connWeights;
+        _connFrom;
+        _connTo;
+        _slabDirty = true;
+        _useFloat32Weights = true;
+        // Cached node.index maintenance (avoids repeated this.nodes.indexOf in hot paths like slab rebuild)
+        _nodeIndexDirty = true;
+        // when true, node.index values must be reassigned sequentially
+        // Fast slab forward path structures
+        _outStart;
+        _outOrder;
+        _adjDirty = true;
+        // Cached typed arrays for fast slab forward pass
+        _fastA;
+        _fastS;
+        // Internal hint: track a preferred linear chain edge to split on subsequent ADD_NODE mutations
+        // to encourage deep path formation even in stochastic modes. Updated each time we split it.
+        _preferredChainEdge;
         // Slab helpers delegated to network.slab.ts
         _canUseFastSlab(training) {
           return canUseFastSlab.call(this, training);
@@ -8447,46 +8619,6 @@
           return getConnectionSlab.call(this);
         }
         constructor(input, output, options) {
-          this.dropout = 0;
-          this._dropConnectProb = 0;
-          this._optimizerStep = 0;
-          this._weightNoiseStd = 0;
-          this._weightNoisePerHidden = [];
-          this._stochasticDepth = [];
-          this._trainingStep = 0;
-          this._rand = Math.random;
-          this._lastStats = null;
-          this._mixedPrecision = {
-            enabled: false,
-            lossScale: 1
-          };
-          this._mixedPrecisionState = {
-            goodSteps: 0,
-            badSteps: 0,
-            minLossScale: 1,
-            maxLossScale: 65536,
-            overflowCount: 0,
-            scaleUpEvents: 0,
-            scaleDownEvents: 0
-          };
-          this._gradAccumMicroBatches = 0;
-          this._lastRawGradNorm = 0;
-          this._accumulationReduction = "average";
-          this._gradClipSeparateBias = false;
-          this._lastGradClipGroupCount = 0;
-          this._lastOverflowStep = -1;
-          this._forceNextOverflow = false;
-          this._enforceAcyclic = false;
-          this._topoOrder = null;
-          this._topoDirty = true;
-          this._globalEpoch = 0;
-          this._activationPrecision = "f64";
-          this._reuseActivationArrays = false;
-          this._returnTypedActivations = false;
-          this._slabDirty = true;
-          this._useFloat32Weights = true;
-          this._nodeIndexDirty = true;
-          this._adjDirty = true;
           if (typeof input === "undefined" || typeof output === "undefined") {
             throw new Error("No input or output size given");
           }
@@ -8497,29 +8629,29 @@
           this.gates = [];
           this.selfconns = [];
           this.dropout = 0;
-          this._enforceAcyclic = (options === null || options === void 0 ? void 0 : options.enforceAcyclic) || false;
-          if (options === null || options === void 0 ? void 0 : options.activationPrecision) {
+          this._enforceAcyclic = options?.enforceAcyclic || false;
+          if (options?.activationPrecision) {
             this._activationPrecision = options.activationPrecision;
           } else if (config.float32Mode) {
             this._activationPrecision = "f32";
           }
-          if (options === null || options === void 0 ? void 0 : options.reuseActivationArrays)
+          if (options?.reuseActivationArrays)
             this._reuseActivationArrays = true;
-          if (options === null || options === void 0 ? void 0 : options.returnTypedActivations)
+          if (options?.returnTypedActivations)
             this._returnTypedActivations = true;
           try {
             if (typeof config.poolMaxPerBucket === "number")
               activationArrayPool.setMaxPerBucket(config.poolMaxPerBucket);
             const prewarm = typeof config.poolPrewarmCount === "number" ? config.poolPrewarmCount : 2;
             activationArrayPool.prewarm(this.output, prewarm);
-          } catch (_a) {
+          } catch {
           }
-          if ((options === null || options === void 0 ? void 0 : options.seed) !== void 0) {
+          if (options?.seed !== void 0) {
             this.setSeed(options.seed);
           }
           for (let i = 0; i < this.input + this.output; i++) {
             const type = i < this.input ? "input" : "output";
-            this.nodes.push(new node_default(type, void 0, this._rand));
+            this.nodes.push(new Node(type, void 0, this._rand));
           }
           for (let i = 0; i < this.input; i++) {
             for (let j = this.input; j < this.input + this.output; j++) {
@@ -8527,7 +8659,7 @@
               this.connect(this.nodes[i], this.nodes[j], weight);
             }
           }
-          const minHidden = (options === null || options === void 0 ? void 0 : options.minHidden) || 0;
+          const minHidden = options?.minHidden || 0;
           if (minHidden > 0) {
             while (this.nodes.length < this.input + this.output + minHidden) {
               this.addNodeBetween();
@@ -8543,7 +8675,7 @@
           if (!conn)
             return;
           this.disconnect(conn.from, conn.to);
-          const newNode = new node_default("hidden", void 0, this._rand);
+          const newNode = new Node("hidden", void 0, this._rand);
           this.nodes.push(newNode);
           this.connect(conn.from, newNode, conn.weight);
           this.connect(newNode, conn.to, 1);
@@ -8571,7 +8703,6 @@
         }
         // --- Pruning configuration & helpers ---
         configurePruning(cfg) {
-          var _a, _b;
           const { start, end, targetSparsity } = cfg;
           if (start < 0 || end < start)
             throw new Error("Invalid pruning schedule window");
@@ -8581,8 +8712,8 @@
             start,
             end,
             targetSparsity,
-            regrowFraction: (_a = cfg.regrowFraction) !== null && _a !== void 0 ? _a : 0,
-            frequency: (_b = cfg.frequency) !== null && _b !== void 0 ? _b : 1,
+            regrowFraction: cfg.regrowFraction ?? 0,
+            frequency: cfg.frequency ?? 1,
             method: cfg.method || "magnitude",
             lastPruneIter: void 0
           };
@@ -8740,7 +8871,7 @@
           if (this._canUseFastSlab(training)) {
             try {
               return this._fastSlabActivate(input);
-            } catch (_a) {
+            } catch {
             }
           }
           const outputArr = activationArrayPool.acquire(this.output);
@@ -9176,9 +9307,8 @@
         }
         /** Consolidated training stats snapshot. */
         getTrainingStats() {
-          var _a;
           return {
-            gradNorm: (_a = this._lastGradNorm) !== null && _a !== void 0 ? _a : 0,
+            gradNorm: this._lastGradNorm ?? 0,
             gradNormRaw: this._lastRawGradNorm,
             lossScale: this._mixedPrecision.lossScale,
             optimizerStep: this._optimizerStep,
@@ -9199,11 +9329,9 @@
           return rate;
         }
         // Evolution wrapper delegates to network/network.evolve.ts implementation.
-        evolve(set, options) {
-          return __awaiter4(this, void 0, void 0, function* () {
-            const { evolveNetwork: evolveNetwork2 } = yield Promise.resolve().then(() => (init_network_evolve(), network_evolve_exports));
-            return evolveNetwork2.call(this, set, options);
-          });
+        async evolve(set, options) {
+          const { evolveNetwork: evolveNetwork2 } = await Promise.resolve().then(() => (init_network_evolve(), network_evolve_exports));
+          return evolveNetwork2.call(this, set, options);
         }
         /**
          * Tests the network's performance on a given dataset.
@@ -9344,9 +9472,9 @@
          * @returns {Network} A new, fully connected, layered MLP
          */
         static createMLP(inputCount, hiddenCounts, outputCount) {
-          const inputNodes = Array.from({ length: inputCount }, () => new node_default("input"));
-          const hiddenLayers = hiddenCounts.map((count) => Array.from({ length: count }, () => new node_default("hidden")));
-          const outputNodes = Array.from({ length: outputCount }, () => new node_default("output"));
+          const inputNodes = Array.from({ length: inputCount }, () => new Node("input"));
+          const hiddenLayers = hiddenCounts.map((count) => Array.from({ length: count }, () => new Node("hidden")));
+          const outputNodes = Array.from({ length: outputCount }, () => new Node("output"));
           const allNodes = [...inputNodes, ...hiddenLayers.flat(), ...outputNodes];
           const net = new _Network(inputCount, outputCount);
           net.nodes = allNodes;
@@ -9394,18 +9522,17 @@
 
   // dist/neat/neat.mutation.js
   function mutate() {
-    var _a, _b, _c, _d, _e, _f;
     const methods = (init_methods(), __toCommonJS(methods_exports));
     for (const genome of this.population) {
-      if ((_a = this.options.adaptiveMutation) === null || _a === void 0 ? void 0 : _a.enabled) {
+      if (this.options.adaptiveMutation?.enabled) {
         if (genome._mutRate === void 0) {
-          genome._mutRate = this.options.mutationRate !== void 0 ? this.options.mutationRate : (_b = this.options.adaptiveMutation.initialRate) !== null && _b !== void 0 ? _b : this.options.mutationRate || 0.7;
+          genome._mutRate = this.options.mutationRate !== void 0 ? this.options.mutationRate : this.options.adaptiveMutation.initialRate ?? (this.options.mutationRate || 0.7);
           if (this.options.adaptiveMutation.adaptAmount)
             genome._mutAmount = this.options.mutationAmount || 1;
         }
       }
-      const effectiveRate = this.options.mutationRate !== void 0 ? this.options.mutationRate : ((_c = this.options.adaptiveMutation) === null || _c === void 0 ? void 0 : _c.enabled) ? genome._mutRate : this.options.mutationRate || 0.7;
-      const effectiveAmount = ((_d = this.options.adaptiveMutation) === null || _d === void 0 ? void 0 : _d.enabled) && this.options.adaptiveMutation.adaptAmount ? (_e = genome._mutAmount) !== null && _e !== void 0 ? _e : this.options.mutationAmount || 1 : this.options.mutationAmount || 1;
+      const effectiveRate = this.options.mutationRate !== void 0 ? this.options.mutationRate : this.options.adaptiveMutation?.enabled ? genome._mutRate : this.options.mutationRate || 0.7;
+      const effectiveAmount = this.options.adaptiveMutation?.enabled && this.options.adaptiveMutation.adaptAmount ? genome._mutAmount ?? (this.options.mutationAmount || 1) : this.options.mutationAmount || 1;
       if (this._getRNG()() <= effectiveRate) {
         for (let iteration = 0; iteration < effectiveAmount; iteration++) {
           let mutationMethod = this.selectMutationMethod(genome, false);
@@ -9420,14 +9547,14 @@
               this._mutateAddNodeReuse(genome);
               try {
                 genome.mutate(methods.mutation.MOD_WEIGHT);
-              } catch (_g) {
+              } catch {
               }
               this._invalidateGenomeCaches(genome);
             } else if (mutationMethod === methods.mutation.ADD_CONN) {
               this._mutateAddConnReuse(genome);
               try {
                 genome.mutate(methods.mutation.MOD_WEIGHT);
-              } catch (_h) {
+              } catch {
               }
               this._invalidateGenomeCaches(genome);
             } else {
@@ -9438,7 +9565,7 @@
             }
             if (this._getRNG()() < EXTRA_CONNECTION_PROBABILITY)
               this._mutateAddConnReuse(genome);
-            if ((_f = this.options.operatorAdaptation) === null || _f === void 0 ? void 0 : _f.enabled) {
+            if (this.options.operatorAdaptation?.enabled) {
               const statsRecord = this._operatorStats.get(mutationMethod.name) || {
                 success: 0,
                 attempts: 0
@@ -9462,7 +9589,7 @@
       if (inputNode && outputNode) {
         try {
           genome.connect(inputNode, outputNode, 1);
-        } catch (_a) {
+        } catch {
         }
       }
     }
@@ -9487,8 +9614,8 @@
         outConn.innovation = this._nextGlobalInnovation++;
       splitRecord = {
         newNodeGeneId: newNode.geneId,
-        inInnov: inConn === null || inConn === void 0 ? void 0 : inConn.innovation,
-        outInnov: outConn === null || outConn === void 0 ? void 0 : outConn.innovation
+        inInnov: inConn?.innovation,
+        outInnov: outConn?.innovation
       };
       this._nodeSplitInnovations.set(splitKey, splitRecord);
       const toIndex = genome.nodes.indexOf(chosenConn.to);
@@ -9577,7 +9704,7 @@
     if (inputNodes.length === 0 || outputNodes.length === 0) {
       try {
         console.warn("Network is missing input or output nodes \u2014 skipping minHidden enforcement");
-      } catch (_a) {
+      } catch {
       }
       return;
     }
@@ -9596,7 +9723,7 @@
           const source = candidates[Math.floor(rng() * candidates.length)];
           try {
             network.connect(source, hiddenNode);
-          } catch (_b) {
+          } catch {
           }
         }
       }
@@ -9607,7 +9734,7 @@
           const target = candidates[Math.floor(rng() * candidates.length)];
           try {
             network.connect(hiddenNode, target);
-          } catch (_c) {
+          } catch {
           }
         }
       }
@@ -9629,7 +9756,7 @@
           const target = candidates[Math.floor(rng() * candidates.length)];
           try {
             network.connect(inputNode, target);
-          } catch (_a) {
+          } catch {
           }
         }
       }
@@ -9642,7 +9769,7 @@
           const source = candidates[Math.floor(rng() * candidates.length)];
           try {
             network.connect(source, outputNode);
-          } catch (_b) {
+          } catch {
           }
         }
       }
@@ -9655,7 +9782,7 @@
           const source = candidates[Math.floor(rng() * candidates.length)];
           try {
             network.connect(source, hiddenNode);
-          } catch (_c) {
+          } catch {
           }
         }
       }
@@ -9666,14 +9793,13 @@
           const target = candidates[Math.floor(rng() * candidates.length)];
           try {
             network.connect(hiddenNode, target);
-          } catch (_d) {
+          } catch {
           }
         }
       }
     }
   }
   function selectMutationMethod(genome, rawReturnForTest = true) {
-    var _a, _b, _c, _d, _e, _f;
     const methods = (init_methods(), __toCommonJS(methods_exports));
     const isFFWDirect = this.options.mutation === methods.mutation.FFW;
     const isFFWNested = Array.isArray(this.options.mutation) && this.options.mutation.length === 1 && this.options.mutation[0] === methods.mutation.FFW;
@@ -9689,7 +9815,7 @@
     }
     if (pool.length === 1 && Array.isArray(pool[0]) && pool[0].length)
       pool = pool[0];
-    if (((_a = this.options.phasedComplexity) === null || _a === void 0 ? void 0 : _a.enabled) && this._phase) {
+    if (this.options.phasedComplexity?.enabled && this._phase) {
       pool = pool.filter((m) => !!m);
       if (this._phase === "simplify") {
         const simplifyPool = pool.filter((m) => m && m.name && m.name.startsWith && m.name.startsWith("SUB_"));
@@ -9701,8 +9827,8 @@
           pool = [...pool, ...addPool];
       }
     }
-    if ((_b = this.options.operatorAdaptation) === null || _b === void 0 ? void 0 : _b.enabled) {
-      const boost = (_c = this.options.operatorAdaptation.boost) !== null && _c !== void 0 ? _c : 2;
+    if (this.options.operatorAdaptation?.enabled) {
+      const boost = this.options.operatorAdaptation.boost ?? 2;
       const stats = this._operatorStats;
       const augmented = [];
       for (const m of pool) {
@@ -9725,9 +9851,9 @@
       return null;
     if (mutationMethod === methods.mutation.ADD_CONN && genome.connections.length >= (this.options.maxConns || Infinity))
       return null;
-    if ((_d = this.options.operatorBandit) === null || _d === void 0 ? void 0 : _d.enabled) {
-      const c = (_e = this.options.operatorBandit.c) !== null && _e !== void 0 ? _e : 1.4;
-      const minA = (_f = this.options.operatorBandit.minAttempts) !== null && _f !== void 0 ? _f : 5;
+    if (this.options.operatorBandit?.enabled) {
+      const c = this.options.operatorBandit.c ?? 1.4;
+      const minA = this.options.operatorBandit.minAttempts ?? 5;
       const stats = this._operatorStats;
       for (const m of pool)
         if (!stats.has(m.name))
@@ -9762,12 +9888,11 @@
 
   // dist/neat/neat.multiobjective.js
   function fastNonDominated(pop) {
-    var _a;
     const objectiveDescriptors = this._getObjectives();
     const valuesMatrix = pop.map((genomeItem) => objectiveDescriptors.map((descriptor) => {
       try {
         return descriptor.accessor(genomeItem);
-      } catch (_a2) {
+      } catch {
         return 0;
       }
     }));
@@ -9846,7 +9971,7 @@
         }
       }
     }
-    if ((_a = this.options.multiObjective) === null || _a === void 0 ? void 0 : _a.enabled) {
+    if (this.options.multiObjective?.enabled) {
       this._paretoArchive.push({
         generation: this.generation,
         fronts: paretoFronts.slice(0, 3).map((front) => (
@@ -9876,15 +10001,14 @@
     applyPhasedComplexity: () => applyPhasedComplexity
   });
   function applyComplexityBudget() {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m;
-    if (!((_a = this.options.complexityBudget) === null || _a === void 0 ? void 0 : _a.enabled))
+    if (!this.options.complexityBudget?.enabled)
       return;
     const complexityBudget = this.options.complexityBudget;
     if (complexityBudget.mode === "adaptive") {
       if (!this._cbHistory)
         this._cbHistory = [];
-      this._cbHistory.push(((_b = this.population[0]) === null || _b === void 0 ? void 0 : _b.score) || 0);
-      const windowSize = (_c = complexityBudget.improvementWindow) !== null && _c !== void 0 ? _c : 10;
+      this._cbHistory.push(this.population[0]?.score || 0);
+      const windowSize = complexityBudget.improvementWindow ?? 10;
       if (this._cbHistory.length > windowSize)
         this._cbHistory.shift();
       const history = this._cbHistory;
@@ -9903,44 +10027,48 @@
         slope = (count * sumIndexScore - sumIndices * sumScores) / denom;
       }
       if (this._cbMaxNodes === void 0)
-        this._cbMaxNodes = (_d = complexityBudget.maxNodesStart) !== null && _d !== void 0 ? _d : this.input + this.output + 2;
-      const baseInc = (_e = complexityBudget.increaseFactor) !== null && _e !== void 0 ? _e : 1.1;
-      const baseStag = (_f = complexityBudget.stagnationFactor) !== null && _f !== void 0 ? _f : 0.95;
+        this._cbMaxNodes = complexityBudget.maxNodesStart ?? this.input + this.output + 2;
+      const baseInc = complexityBudget.increaseFactor ?? 1.1;
+      const baseStag = complexityBudget.stagnationFactor ?? 0.95;
       const slopeMag = Math.min(2, Math.max(-2, slope / (Math.abs(history[0]) + EPSILON)));
       const incF = baseInc + 0.05 * Math.max(0, slopeMag);
       const stagF = baseStag - 0.03 * Math.max(0, -slopeMag);
       const noveltyFactor = this._noveltyArchive.length > 5 ? 1 : 0.9;
       if (improvement > 0 || slope > 0)
-        this._cbMaxNodes = Math.min((_g = complexityBudget.maxNodesEnd) !== null && _g !== void 0 ? _g : this._cbMaxNodes * 4, Math.floor(this._cbMaxNodes * incF * noveltyFactor));
+        this._cbMaxNodes = Math.min(complexityBudget.maxNodesEnd ?? this._cbMaxNodes * 4, Math.floor(this._cbMaxNodes * incF * noveltyFactor));
       else if (history.length === windowSize)
-        this._cbMaxNodes = Math.max((_h = complexityBudget.minNodes) !== null && _h !== void 0 ? _h : this.input + this.output + 2, Math.floor(this._cbMaxNodes * stagF));
-      if (complexityBudget.minNodes !== void 0)
+        this._cbMaxNodes = Math.max(complexityBudget.minNodes ?? this.input + this.output + 2, Math.floor(this._cbMaxNodes * stagF));
+      if (complexityBudget.minNodes !== void 0) {
         this._cbMaxNodes = Math.max(complexityBudget.minNodes, this._cbMaxNodes);
+      } else {
+        const implicitMin = this.input + this.output + 2;
+        if (this._cbMaxNodes < implicitMin)
+          this._cbMaxNodes = implicitMin;
+      }
       this.options.maxNodes = this._cbMaxNodes;
       if (complexityBudget.maxConnsStart) {
         if (this._cbMaxConns === void 0)
           this._cbMaxConns = complexityBudget.maxConnsStart;
         if (improvement > 0 || slope > 0)
-          this._cbMaxConns = Math.min((_j = complexityBudget.maxConnsEnd) !== null && _j !== void 0 ? _j : this._cbMaxConns * 4, Math.floor(this._cbMaxConns * incF * noveltyFactor));
+          this._cbMaxConns = Math.min(complexityBudget.maxConnsEnd ?? this._cbMaxConns * 4, Math.floor(this._cbMaxConns * incF * noveltyFactor));
         else if (history.length === windowSize)
           this._cbMaxConns = Math.max(complexityBudget.maxConnsStart, Math.floor(this._cbMaxConns * stagF));
         this.options.maxConns = this._cbMaxConns;
       }
     } else {
-      const maxStart = (_k = complexityBudget.maxNodesStart) !== null && _k !== void 0 ? _k : this.input + this.output + 2;
-      const maxEnd = (_l = complexityBudget.maxNodesEnd) !== null && _l !== void 0 ? _l : maxStart * 4;
-      const horizon = (_m = complexityBudget.horizon) !== null && _m !== void 0 ? _m : 100;
+      const maxStart = complexityBudget.maxNodesStart ?? this.input + this.output + 2;
+      const maxEnd = complexityBudget.maxNodesEnd ?? maxStart * 4;
+      const horizon = complexityBudget.horizon ?? 100;
       const t = Math.min(1, this.generation / horizon);
       this.options.maxNodes = Math.floor(maxStart + (maxEnd - maxStart) * t);
     }
   }
   function applyPhasedComplexity() {
-    var _a, _b, _c;
-    if (!((_a = this.options.phasedComplexity) === null || _a === void 0 ? void 0 : _a.enabled))
+    if (!this.options.phasedComplexity?.enabled)
       return;
-    const len = (_b = this.options.phasedComplexity.phaseLength) !== null && _b !== void 0 ? _b : 10;
+    const len = this.options.phasedComplexity.phaseLength ?? 10;
     if (!this._phase) {
-      this._phase = (_c = this.options.phasedComplexity.initialPhase) !== null && _c !== void 0 ? _c : "complexify";
+      this._phase = this.options.phasedComplexity.initialPhase ?? "complexify";
       this._phaseStartGeneration = this.generation;
     }
     if (this.generation - this._phaseStartGeneration >= len) {
@@ -9949,17 +10077,16 @@
     }
   }
   function applyMinimalCriterionAdaptive() {
-    var _a, _b, _c, _d;
-    if (!((_a = this.options.minimalCriterionAdaptive) === null || _a === void 0 ? void 0 : _a.enabled))
+    if (!this.options.minimalCriterionAdaptive?.enabled)
       return;
     const mcCfg = this.options.minimalCriterionAdaptive;
     if (this._mcThreshold === void 0)
-      this._mcThreshold = (_b = mcCfg.initialThreshold) !== null && _b !== void 0 ? _b : 0;
+      this._mcThreshold = mcCfg.initialThreshold ?? 0;
     const scores = this.population.map((g) => g.score || 0);
     const accepted = scores.filter((s) => s >= this._mcThreshold).length;
     const prop = scores.length ? accepted / scores.length : 0;
-    const targetAcceptance = (_c = mcCfg.targetAcceptance) !== null && _c !== void 0 ? _c : 0.5;
-    const adjustRate = (_d = mcCfg.adjustRate) !== null && _d !== void 0 ? _d : 0.1;
+    const targetAcceptance = mcCfg.targetAcceptance ?? 0.5;
+    const adjustRate = mcCfg.adjustRate ?? 0.1;
     if (prop > targetAcceptance * 1.05)
       this._mcThreshold *= 1 + adjustRate;
     else if (prop < targetAcceptance * 0.95)
@@ -9969,21 +10096,20 @@
         g.score = 0;
   }
   function applyAncestorUniqAdaptive() {
-    var _a, _b, _c, _d, _e, _f, _g, _h;
-    if (!((_a = this.options.ancestorUniqAdaptive) === null || _a === void 0 ? void 0 : _a.enabled))
+    if (!this.options.ancestorUniqAdaptive?.enabled)
       return;
     const ancestorCfg = this.options.ancestorUniqAdaptive;
-    const cooldown = (_b = ancestorCfg.cooldown) !== null && _b !== void 0 ? _b : 5;
+    const cooldown = ancestorCfg.cooldown ?? 5;
     if (this.generation - this._lastAncestorUniqAdjustGen < cooldown)
       return;
-    const lineageBlock = (_c = this._telemetry[this._telemetry.length - 1]) === null || _c === void 0 ? void 0 : _c.lineage;
+    const lineageBlock = this._telemetry[this._telemetry.length - 1]?.lineage;
     const ancUniq = lineageBlock ? lineageBlock.ancestorUniq : void 0;
     if (typeof ancUniq !== "number")
       return;
-    const lowT = (_d = ancestorCfg.lowThreshold) !== null && _d !== void 0 ? _d : 0.25;
-    const highT = (_e = ancestorCfg.highThreshold) !== null && _e !== void 0 ? _e : 0.55;
-    const adj = (_f = ancestorCfg.adjust) !== null && _f !== void 0 ? _f : 0.01;
-    if (ancestorCfg.mode === "epsilon" && ((_h = (_g = this.options.multiObjective) === null || _g === void 0 ? void 0 : _g.adaptiveEpsilon) === null || _h === void 0 ? void 0 : _h.enabled)) {
+    const lowT = ancestorCfg.lowThreshold ?? 0.25;
+    const highT = ancestorCfg.highThreshold ?? 0.55;
+    const adj = ancestorCfg.adjust ?? 0.01;
+    if (ancestorCfg.mode === "epsilon" && this.options.multiObjective?.adaptiveEpsilon?.enabled) {
       if (ancUniq < lowT) {
         this.options.multiObjective.dominanceEpsilon = (this.options.multiObjective.dominanceEpsilon || 0) + adj;
         this._lastAncestorUniqAdjustGen = this.generation;
@@ -10010,11 +10136,10 @@
     }
   }
   function applyAdaptiveMutation() {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m;
-    if (!((_a = this.options.adaptiveMutation) === null || _a === void 0 ? void 0 : _a.enabled))
+    if (!this.options.adaptiveMutation?.enabled)
       return;
     const adaptCfg = this.options.adaptiveMutation;
-    const every = (_b = adaptCfg.adaptEvery) !== null && _b !== void 0 ? _b : 1;
+    const every = adaptCfg.adaptEvery ?? 1;
     if (!(every <= 1 || this.generation % every === 0))
       return;
     const scored = this.population.filter((g) => typeof g.score === "number");
@@ -10022,9 +10147,9 @@
     const mid = Math.floor(scored.length / 2);
     const topHalf = scored.slice(mid);
     const bottomHalf = scored.slice(0, mid);
-    const sigmaBase = ((_c = adaptCfg.sigma) !== null && _c !== void 0 ? _c : 0.05) * 1.5;
-    const minR = (_d = adaptCfg.minRate) !== null && _d !== void 0 ? _d : 0.01;
-    const maxR = (_e = adaptCfg.maxRate) !== null && _e !== void 0 ? _e : 1;
+    const sigmaBase = (adaptCfg.sigma ?? 0.05) * 1.5;
+    const minR = adaptCfg.minRate ?? 0.01;
+    const maxR = adaptCfg.maxRate ?? 1;
     const strategy = adaptCfg.strategy || "twoTier";
     let anyUp = false, anyDown = false;
     for (let index = 0; index < this.population.length; index++) {
@@ -10052,13 +10177,13 @@
         rate = minR;
       if (rate > maxR)
         rate = maxR;
-      if (rate > ((_f = this.options.adaptiveMutation.initialRate) !== null && _f !== void 0 ? _f : 0.5))
+      if (rate > (this.options.adaptiveMutation.initialRate ?? 0.5))
         anyUp = true;
-      if (rate < ((_g = this.options.adaptiveMutation.initialRate) !== null && _g !== void 0 ? _g : 0.5))
+      if (rate < (this.options.adaptiveMutation.initialRate ?? 0.5))
         anyDown = true;
       genome._mutRate = rate;
       if (adaptCfg.adaptAmount) {
-        const aSigma = (_h = adaptCfg.amountSigma) !== null && _h !== void 0 ? _h : 0.25;
+        const aSigma = adaptCfg.amountSigma ?? 0.25;
         let aDelta = (this._getRNG()() * 2 - 1) * aSigma;
         if (strategy === "twoTier") {
           if (topHalf.length === 0 || bottomHalf.length === 0)
@@ -10066,11 +10191,11 @@
           else
             aDelta = bottomHalf.includes(genome) ? Math.abs(aDelta) : -Math.abs(aDelta);
         }
-        let amt = (_j = genome._mutAmount) !== null && _j !== void 0 ? _j : this.options.mutationAmount || 1;
+        let amt = genome._mutAmount ?? (this.options.mutationAmount || 1);
         amt += aDelta;
         amt = Math.round(amt);
-        const minA = (_k = adaptCfg.minAmount) !== null && _k !== void 0 ? _k : 1;
-        const maxA = (_l = adaptCfg.maxAmount) !== null && _l !== void 0 ? _l : 10;
+        const minA = adaptCfg.minAmount ?? 1;
+        const maxA = adaptCfg.maxAmount ?? 10;
         if (amt < minA)
           amt = minA;
         if (amt > maxA)
@@ -10079,7 +10204,7 @@
       }
     }
     if (strategy === "twoTier" && !(anyUp && anyDown)) {
-      const baseline = (_m = this.options.adaptiveMutation.initialRate) !== null && _m !== void 0 ? _m : 0.5;
+      const baseline = this.options.adaptiveMutation.initialRate ?? 0.5;
       const half = Math.floor(this.population.length / 2);
       for (let i = 0; i < this.population.length; i++) {
         const genome = this.population[i];
@@ -10093,10 +10218,9 @@
     }
   }
   function applyOperatorAdaptation() {
-    var _a, _b;
-    if (!((_a = this.options.operatorAdaptation) === null || _a === void 0 ? void 0 : _a.enabled))
+    if (!this.options.operatorAdaptation?.enabled)
       return;
-    const decay = (_b = this.options.operatorAdaptation.decay) !== null && _b !== void 0 ? _b : 0.9;
+    const decay = this.options.operatorAdaptation.decay ?? 0.9;
     for (const [k, stat] of this._operatorStats.entries()) {
       stat.success *= decay;
       stat.attempts *= decay;
@@ -10239,8 +10363,7 @@
     return entropy;
   }
   function computeDiversityStats() {
-    var _a, _b, _c, _d;
-    if (!((_a = this.options.diversityMetrics) === null || _a === void 0 ? void 0 : _a.enabled))
+    if (!this.options.diversityMetrics?.enabled)
       return;
     if (this.options.fastMode && !this._fastModeTuned) {
       const dm = this.options.diversityMetrics;
@@ -10250,12 +10373,12 @@
         if (dm.graphletSample == null)
           dm.graphletSample = 30;
       }
-      if (((_b = this.options.novelty) === null || _b === void 0 ? void 0 : _b.enabled) && this.options.novelty.k == null)
+      if (this.options.novelty?.enabled && this.options.novelty.k == null)
         this.options.novelty.k = 5;
       this._fastModeTuned = true;
     }
-    const pairSample = (_c = this.options.diversityMetrics.pairSample) !== null && _c !== void 0 ? _c : 40;
-    const graphletSample = (_d = this.options.diversityMetrics.graphletSample) !== null && _d !== void 0 ? _d : 60;
+    const pairSample = this.options.diversityMetrics.pairSample ?? 40;
+    const graphletSample = this.options.diversityMetrics.graphletSample ?? 60;
     const population = this.population;
     const popSize = population.length;
     let compatSum = 0;
@@ -10309,10 +10432,7 @@
     let lineageMeanDepth = 0;
     let lineageMeanPairDist = 0;
     if (this._lineageEnabled && popSize > 0) {
-      const depths = population.map((g) => {
-        var _a2;
-        return (_a2 = g._depth) !== null && _a2 !== void 0 ? _a2 : 0;
-      });
+      const depths = population.map((g) => g._depth ?? 0);
       lineageMeanDepth = depths.reduce((a, b) => a + b, 0) / popSize;
       let lineagePairSum = 0;
       let lineagePairN = 0;
@@ -10339,43 +10459,38 @@
     };
   }
   function recordTelemetryEntry(entry) {
-    var _a;
     try {
       applyTelemetrySelect.call(this, entry);
-    } catch (_b) {
+    } catch {
     }
     if (!this._telemetry)
       this._telemetry = [];
     this._telemetry.push(entry);
     try {
-      if (((_a = this.options.telemetryStream) === null || _a === void 0 ? void 0 : _a.enabled) && this.options.telemetryStream.onEntry)
+      if (this.options.telemetryStream?.enabled && this.options.telemetryStream.onEntry)
         this.options.telemetryStream.onEntry(entry);
-    } catch (_c) {
+    } catch {
     }
     if (this._telemetry.length > 500)
       this._telemetry.shift();
   }
   function buildTelemetryEntry(fittest) {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t;
     const gen = this.generation;
     let hyperVolumeProxy = 0;
-    if ((_a = this.options.multiObjective) === null || _a === void 0 ? void 0 : _a.enabled) {
+    if (this.options.multiObjective?.enabled) {
       const complexityMetric = this.options.multiObjective.complexityMetric || "connections";
       const primaryObjectiveScores = this.population.map((genome) => genome.score || 0);
       const minPrimaryScore = Math.min(...primaryObjectiveScores);
       const maxPrimaryScore = Math.max(...primaryObjectiveScores);
       const paretoFrontSizes = [];
       for (let r = 0; r < 5; r++) {
-        const size = this.population.filter((g) => {
-          var _a2;
-          return ((_a2 = g._moRank) !== null && _a2 !== void 0 ? _a2 : 0) === r;
-        }).length;
+        const size = this.population.filter((g) => (g._moRank ?? 0) === r).length;
         if (!size)
           break;
         paretoFrontSizes.push(size);
       }
       for (const genome of this.population) {
-        const rank = (_b = genome._moRank) !== null && _b !== void 0 ? _b : 0;
+        const rank = genome._moRank ?? 0;
         if (rank !== 0)
           continue;
         const normalizedScore = maxPrimaryScore > minPrimaryScore ? ((genome.score || 0) - minPrimaryScore) / (maxPrimaryScore - minPrimaryScore) : 0;
@@ -10400,13 +10515,13 @@
         entry2.objImportance = {};
       if (this._lastObjImportance)
         entry2.objImportance = this._lastObjImportance;
-      if ((_c = this._objectiveAges) === null || _c === void 0 ? void 0 : _c.size) {
+      if (this._objectiveAges?.size) {
         entry2.objAges = Array.from(this._objectiveAges.entries()).reduce((a, kv) => {
           a[kv[0]] = kv[1];
           return a;
         }, {});
       }
-      if (((_d = this._pendingObjectiveAdds) === null || _d === void 0 ? void 0 : _d.length) || ((_e = this._pendingObjectiveRemoves) === null || _e === void 0 ? void 0 : _e.length)) {
+      if (this._pendingObjectiveAdds?.length || this._pendingObjectiveRemoves?.length) {
         entry2.objEvents = [];
         for (const k of this._pendingObjectiveAdds)
           entry2.objEvents.push({ type: "add", key: k });
@@ -10420,30 +10535,27 @@
         entry2.speciesAlloc = this._lastOffspringAlloc.slice();
       try {
         entry2.objectives = this._getObjectives().map((o) => o.key);
-      } catch (_u) {
+      } catch {
       }
       if (this.options.rngState && this._rngState !== void 0)
         entry2.rng = this._rngState;
       if (this._lineageEnabled) {
         const bestGenome = this.population[0];
-        const depths = this.population.map((g) => {
-          var _a2;
-          return (_a2 = g._depth) !== null && _a2 !== void 0 ? _a2 : 0;
-        });
+        const depths = this.population.map((g) => g._depth ?? 0);
         this._lastMeanDepth = depths.reduce((a, b) => a + b, 0) / (depths.length || 1);
         const { computeAncestorUniqueness: computeAncestorUniqueness2 } = (init_neat_lineage(), __toCommonJS(neat_lineage_exports));
         const ancestorUniqueness = computeAncestorUniqueness2.call(this);
         entry2.lineage = {
           parents: Array.isArray(bestGenome._parents) ? bestGenome._parents.slice() : [],
-          depthBest: (_f = bestGenome._depth) !== null && _f !== void 0 ? _f : 0,
+          depthBest: bestGenome._depth ?? 0,
           meanDepth: +this._lastMeanDepth.toFixed(2),
           inbreeding: this._prevInbreedingCount,
           ancestorUniq: ancestorUniqueness
         };
       }
-      if (((_g = this.options.telemetry) === null || _g === void 0 ? void 0 : _g.hypervolume) && ((_h = this.options.multiObjective) === null || _h === void 0 ? void 0 : _h.enabled))
+      if (this.options.telemetry?.hypervolume && this.options.multiObjective?.enabled)
         entry2.hv = +hyperVolumeProxy.toFixed(4);
-      if ((_j = this.options.telemetry) === null || _j === void 0 ? void 0 : _j.complexity) {
+      if (this.options.telemetry?.complexity) {
         const nodesArr = this.population.map((g) => g.nodes.length);
         const connsArr = this.population.map((g) => g.connections.length);
         const meanNodes = nodesArr.reduce((a, b) => a + b, 0) / (nodesArr.length || 1);
@@ -10477,7 +10589,7 @@
           budgetMaxConns: this.options.maxConns
         };
       }
-      if ((_k = this.options.telemetry) === null || _k === void 0 ? void 0 : _k.performance)
+      if (this.options.telemetry?.performance)
         entry2.perf = {
           evalMs: this._lastEvalDuration,
           evolveMs: this._lastEvolveDuration
@@ -10500,12 +10612,12 @@
     };
     if (this._lastObjImportance)
       entry.objImportance = this._lastObjImportance;
-    if ((_l = this._objectiveAges) === null || _l === void 0 ? void 0 : _l.size)
+    if (this._objectiveAges?.size)
       entry.objAges = Array.from(this._objectiveAges.entries()).reduce((a, kv) => {
         a[kv[0]] = kv[1];
         return a;
       }, {});
-    if (((_m = this._pendingObjectiveAdds) === null || _m === void 0 ? void 0 : _m.length) || ((_o = this._pendingObjectiveRemoves) === null || _o === void 0 ? void 0 : _o.length)) {
+    if (this._pendingObjectiveAdds?.length || this._pendingObjectiveRemoves?.length) {
       entry.objEvents = [];
       for (const k of this._pendingObjectiveAdds)
         entry.objEvents.push({ type: "add", key: k });
@@ -10519,16 +10631,13 @@
       entry.speciesAlloc = this._lastOffspringAlloc.slice();
     try {
       entry.objectives = this._getObjectives().map((o) => o.key);
-    } catch (_v) {
+    } catch {
     }
     if (this.options.rngState && this._rngState !== void 0)
       entry.rng = this._rngState;
     if (this._lineageEnabled) {
       const bestGenome = this.population[0];
-      const depths = this.population.map((g) => {
-        var _a2;
-        return (_a2 = g._depth) !== null && _a2 !== void 0 ? _a2 : 0;
-      });
+      const depths = this.population.map((g) => g._depth ?? 0);
       this._lastMeanDepth = depths.reduce((a, b) => a + b, 0) / (depths.length || 1);
       const { buildAnc: buildAnc2 } = (init_neat_lineage(), __toCommonJS(neat_lineage_exports));
       let sampledPairs = 0;
@@ -10557,15 +10666,15 @@
       const ancestorUniqueness = sampledPairs ? +(jaccardSum / sampledPairs).toFixed(3) : 0;
       entry.lineage = {
         parents: Array.isArray(bestGenome._parents) ? bestGenome._parents.slice() : [],
-        depthBest: (_p = bestGenome._depth) !== null && _p !== void 0 ? _p : 0,
+        depthBest: bestGenome._depth ?? 0,
         meanDepth: +this._lastMeanDepth.toFixed(2),
         inbreeding: this._prevInbreedingCount,
         ancestorUniq: ancestorUniqueness
       };
     }
-    if (((_q = this.options.telemetry) === null || _q === void 0 ? void 0 : _q.hypervolume) && ((_r = this.options.multiObjective) === null || _r === void 0 ? void 0 : _r.enabled))
+    if (this.options.telemetry?.hypervolume && this.options.multiObjective?.enabled)
       entry.hv = +hyperVolumeProxy.toFixed(4);
-    if ((_s = this.options.telemetry) === null || _s === void 0 ? void 0 : _s.complexity) {
+    if (this.options.telemetry?.complexity) {
       const nodesArr = this.population.map((g) => g.nodes.length);
       const connsArr = this.population.map((g) => g.connections.length);
       const meanNodes = nodesArr.reduce((a, b) => a + b, 0) / (nodesArr.length || 1);
@@ -10599,7 +10708,7 @@
         budgetMaxConns: this.options.maxConns
       };
     }
-    if ((_t = this.options.telemetry) === null || _t === void 0 ? void 0 : _t.performance)
+    if (this.options.telemetry?.performance)
       entry.perf = {
         evalMs: this._lastEvalDuration,
         evolveMs: this._lastEvolveDuration
@@ -10640,8 +10749,7 @@
     }
   }
   function applyAdaptivePruning() {
-    var _a, _b, _c, _d;
-    if (!((_a = this.options.adaptivePruning) === null || _a === void 0 ? void 0 : _a.enabled))
+    if (!this.options.adaptivePruning?.enabled)
       return;
     const adaptivePruningOpts = this.options.adaptivePruning;
     if (this._adaptivePruneLevel === void 0)
@@ -10653,10 +10761,10 @@
     if (this._adaptivePruneBaseline === void 0)
       this._adaptivePruneBaseline = currentMetricValue;
     const adaptivePruneBaseline = this._adaptivePruneBaseline;
-    const desiredSparsity = (_b = adaptivePruningOpts.targetSparsity) !== null && _b !== void 0 ? _b : 0.5;
+    const desiredSparsity = adaptivePruningOpts.targetSparsity ?? 0.5;
     const targetRemainingMetric = adaptivePruneBaseline * (1 - desiredSparsity);
-    const tolerance = (_c = adaptivePruningOpts.tolerance) !== null && _c !== void 0 ? _c : 0.05;
-    const adjustRate = (_d = adaptivePruningOpts.adjustRate) !== null && _d !== void 0 ? _d : 0.02;
+    const tolerance = adaptivePruningOpts.tolerance ?? 0.05;
+    const adjustRate = adaptivePruningOpts.adjustRate ?? 0.02;
     const normalizedDifference = (currentMetricValue - targetRemainingMetric) / (adaptivePruneBaseline || 1);
     if (Math.abs(normalizedDifference) > tolerance) {
       this._adaptivePruneLevel = Math.max(0, Math.min(desiredSparsity, this._adaptivePruneLevel + adjustRate * (normalizedDifference > 0 ? 1 : -1)));
@@ -10672,528 +10780,198 @@
   });
 
   // dist/neat/neat.evolve.js
-  function evolve() {
-    return __awaiter5(this, void 0, void 0, function* () {
-      var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11;
-      const startTime = typeof performance !== "undefined" && performance.now ? performance.now() : Date.now();
-      if (this.population[this.population.length - 1].score === void 0) {
-        yield this.evaluate();
+  async function evolve() {
+    const startTime = typeof performance !== "undefined" && performance.now ? performance.now() : Date.now();
+    if (this.population[this.population.length - 1].score === void 0) {
+      await this.evaluate();
+    }
+    this._objectivesList = void 0;
+    try {
+      (init_neat_adaptive(), __toCommonJS(neat_adaptive_exports)).applyComplexityBudget.call(this);
+    } catch {
+    }
+    try {
+      (init_neat_adaptive(), __toCommonJS(neat_adaptive_exports)).applyPhasedComplexity.call(this);
+    } catch {
+    }
+    this.sort();
+    try {
+      const currentBest = this.population[0]?.score;
+      if (typeof currentBest === "number" && (this._bestScoreLastGen === void 0 || currentBest > this._bestScoreLastGen)) {
+        this._bestScoreLastGen = currentBest;
+        this._lastGlobalImproveGeneration = this.generation;
       }
-      this._objectivesList = void 0;
+    } catch {
+    }
+    try {
+      (init_neat_adaptive(), __toCommonJS(neat_adaptive_exports)).applyMinimalCriterionAdaptive.call(this);
+    } catch {
+    }
+    try {
+      this._computeDiversityStats && this._computeDiversityStats();
+    } catch {
+    }
+    if (this.options.multiObjective?.enabled) {
+      const populationSnapshot = this.population;
+      const paretoFronts = fastNonDominated.call(this, populationSnapshot);
+      const objectives = this._getObjectives();
+      const crowdingDistances = new Array(populationSnapshot.length).fill(0);
+      const objectiveValues = objectives.map((obj) => populationSnapshot.map((genome) => obj.accessor(genome)));
+      for (const front of paretoFronts) {
+        const frontIndices = front.map((genome) => this.population.indexOf(genome));
+        if (frontIndices.length < 3) {
+          frontIndices.forEach((i) => crowdingDistances[i] = Infinity);
+          continue;
+        }
+        for (let oi = 0; oi < objectives.length; oi++) {
+          const sortedIdx = [...frontIndices].sort((a, b) => objectiveValues[oi][a] - objectiveValues[oi][b]);
+          crowdingDistances[sortedIdx[0]] = Infinity;
+          crowdingDistances[sortedIdx[sortedIdx.length - 1]] = Infinity;
+          const minV = objectiveValues[oi][sortedIdx[0]];
+          const maxV = objectiveValues[oi][sortedIdx[sortedIdx.length - 1]];
+          for (let k = 1; k < sortedIdx.length - 1; k++) {
+            const prev = objectiveValues[oi][sortedIdx[k - 1]];
+            const next = objectiveValues[oi][sortedIdx[k + 1]];
+            const denom = maxV - minV || 1;
+            crowdingDistances[sortedIdx[k]] += (next - prev) / denom;
+          }
+        }
+      }
+      const indexMap = /* @__PURE__ */ new Map();
+      for (let i = 0; i < populationSnapshot.length; i++)
+        indexMap.set(populationSnapshot[i], i);
+      this.population.sort((a, b) => {
+        const ra = a._moRank ?? 0;
+        const rb = b._moRank ?? 0;
+        if (ra !== rb)
+          return ra - rb;
+        const ia = indexMap.get(a);
+        const ib = indexMap.get(b);
+        return crowdingDistances[ib] - crowdingDistances[ia];
+      });
+      for (let i = 0; i < populationSnapshot.length; i++)
+        populationSnapshot[i]._moCrowd = crowdingDistances[i];
+      if (paretoFronts.length) {
+        const first = paretoFronts[0];
+        const snapshot = first.map((genome) => ({
+          id: genome._id ?? -1,
+          score: genome.score || 0,
+          nodes: genome.nodes.length,
+          connections: genome.connections.length
+        }));
+        this._paretoArchive.push({
+          gen: this.generation,
+          size: first.length,
+          genomes: snapshot
+        });
+        if (this._paretoArchive.length > 200)
+          this._paretoArchive.shift();
+        if (objectives.length) {
+          const vectors = first.map((genome) => ({
+            id: genome._id ?? -1,
+            values: objectives.map((obj) => obj.accessor(genome))
+          }));
+          this._paretoObjectivesArchive.push({ gen: this.generation, vectors });
+          if (this._paretoObjectivesArchive.length > 200)
+            this._paretoObjectivesArchive.shift();
+        }
+      }
+      if (this.options.multiObjective?.adaptiveEpsilon?.enabled && paretoFronts.length) {
+        const cfg = this.options.multiObjective.adaptiveEpsilon;
+        const target = cfg.targetFront ?? Math.max(3, Math.floor(Math.sqrt(this.population.length)));
+        const adjust = cfg.adjust ?? 2e-3;
+        const minE = cfg.min ?? 0;
+        const maxE = cfg.max ?? 0.5;
+        const cooldown = cfg.cooldown ?? 2;
+        if (this.generation - this._lastEpsilonAdjustGen >= cooldown) {
+          const currentSize = paretoFronts[0].length;
+          let eps = this.options.multiObjective.dominanceEpsilon || 0;
+          if (currentSize > target * 1.2)
+            eps = Math.min(maxE, eps + adjust);
+          else if (currentSize < target * 0.8)
+            eps = Math.max(minE, eps - adjust);
+          this.options.multiObjective.dominanceEpsilon = eps;
+          this._lastEpsilonAdjustGen = this.generation;
+        }
+      }
+      if (this.options.multiObjective?.pruneInactive?.enabled) {
+        const cfg = this.options.multiObjective.pruneInactive;
+        const window2 = cfg.window ?? 5;
+        const rangeEps = cfg.rangeEps ?? 1e-6;
+        const protect = /* @__PURE__ */ new Set([
+          "fitness",
+          "complexity",
+          ...cfg.protect || []
+        ]);
+        const objsList = this._getObjectives();
+        const ranges = {};
+        for (const obj of objsList) {
+          let min = Infinity, max = -Infinity;
+          for (const genome of this.population) {
+            const v = obj.accessor(genome);
+            if (v < min)
+              min = v;
+            if (v > max)
+              max = v;
+          }
+          ranges[obj.key] = { min, max };
+        }
+        const toRemove = [];
+        for (const obj of objsList) {
+          if (protect.has(obj.key))
+            continue;
+          const objRange = ranges[obj.key];
+          const span = objRange.max - objRange.min;
+          if (span < rangeEps) {
+            const count = (this._objectiveStale.get(obj.key) || 0) + 1;
+            this._objectiveStale.set(obj.key, count);
+            if (count >= window2)
+              toRemove.push(obj.key);
+          } else {
+            this._objectiveStale.set(obj.key, 0);
+          }
+        }
+        if (toRemove.length && this.options.multiObjective?.objectives) {
+          this.options.multiObjective.objectives = this.options.multiObjective.objectives.filter((obj) => !toRemove.includes(obj.key));
+          this._objectivesList = void 0;
+        }
+      }
+    }
+    try {
+      (init_neat_adaptive(), __toCommonJS(neat_adaptive_exports)).applyAncestorUniqAdaptive.call(this);
+    } catch {
+    }
+    if (this.options.speciation) {
       try {
-        (init_neat_adaptive(), __toCommonJS(neat_adaptive_exports)).applyComplexityBudget.call(this);
-      } catch (_12) {
+        this._speciate();
+      } catch {
       }
       try {
-        (init_neat_adaptive(), __toCommonJS(neat_adaptive_exports)).applyPhasedComplexity.call(this);
-      } catch (_13) {
+        this._applyFitnessSharing();
+      } catch {
+      }
+      try {
+        const opts = this.options;
+        if (opts.autoCompatTuning?.enabled) {
+          const tgt = opts.autoCompatTuning.target ?? opts.targetSpecies ?? Math.max(2, Math.round(Math.sqrt(this.population.length)));
+          const obs = this._species.length || 1;
+          const err = tgt - obs;
+          const rate = opts.autoCompatTuning.adjustRate ?? 0.01;
+          const minC = opts.autoCompatTuning.minCoeff ?? 0.1;
+          const maxC = opts.autoCompatTuning.maxCoeff ?? 5;
+          let factor = 1 - rate * Math.sign(err);
+          if (err === 0)
+            factor = 1 + (this._getRNG()() - 0.5) * rate * 0.5;
+          opts.excessCoeff = Math.min(maxC, Math.max(minC, opts.excessCoeff * factor));
+          opts.disjointCoeff = Math.min(maxC, Math.max(minC, opts.disjointCoeff * factor));
+        }
+      } catch {
       }
       this.sort();
       try {
-        const currentBest = (_a = this.population[0]) === null || _a === void 0 ? void 0 : _a.score;
-        if (typeof currentBest === "number" && (this._bestScoreLastGen === void 0 || currentBest > this._bestScoreLastGen)) {
-          this._bestScoreLastGen = currentBest;
-          this._lastGlobalImproveGeneration = this.generation;
-        }
-      } catch (_14) {
-      }
-      try {
-        (init_neat_adaptive(), __toCommonJS(neat_adaptive_exports)).applyMinimalCriterionAdaptive.call(this);
-      } catch (_15) {
-      }
-      try {
-        this._computeDiversityStats && this._computeDiversityStats();
-      } catch (_16) {
-      }
-      if ((_b = this.options.multiObjective) === null || _b === void 0 ? void 0 : _b.enabled) {
-        const populationSnapshot = this.population;
-        const paretoFronts = fastNonDominated.call(this, populationSnapshot);
-        const objectives = this._getObjectives();
-        const crowdingDistances = new Array(populationSnapshot.length).fill(0);
-        const objectiveValues = objectives.map((obj) => populationSnapshot.map((genome) => obj.accessor(genome)));
-        for (const front of paretoFronts) {
-          const frontIndices = front.map((genome) => this.population.indexOf(genome));
-          if (frontIndices.length < 3) {
-            frontIndices.forEach((i) => crowdingDistances[i] = Infinity);
-            continue;
-          }
-          for (let oi = 0; oi < objectives.length; oi++) {
-            const sortedIdx = [...frontIndices].sort((a, b) => objectiveValues[oi][a] - objectiveValues[oi][b]);
-            crowdingDistances[sortedIdx[0]] = Infinity;
-            crowdingDistances[sortedIdx[sortedIdx.length - 1]] = Infinity;
-            const minV = objectiveValues[oi][sortedIdx[0]];
-            const maxV = objectiveValues[oi][sortedIdx[sortedIdx.length - 1]];
-            for (let k = 1; k < sortedIdx.length - 1; k++) {
-              const prev = objectiveValues[oi][sortedIdx[k - 1]];
-              const next = objectiveValues[oi][sortedIdx[k + 1]];
-              const denom = maxV - minV || 1;
-              crowdingDistances[sortedIdx[k]] += (next - prev) / denom;
-            }
-          }
-        }
-        const indexMap = /* @__PURE__ */ new Map();
-        for (let i = 0; i < populationSnapshot.length; i++)
-          indexMap.set(populationSnapshot[i], i);
-        this.population.sort((a, b) => {
-          var _a2, _b2;
-          const ra = (_a2 = a._moRank) !== null && _a2 !== void 0 ? _a2 : 0;
-          const rb = (_b2 = b._moRank) !== null && _b2 !== void 0 ? _b2 : 0;
-          if (ra !== rb)
-            return ra - rb;
-          const ia = indexMap.get(a);
-          const ib = indexMap.get(b);
-          return crowdingDistances[ib] - crowdingDistances[ia];
-        });
-        for (let i = 0; i < populationSnapshot.length; i++)
-          populationSnapshot[i]._moCrowd = crowdingDistances[i];
-        if (paretoFronts.length) {
-          const first = paretoFronts[0];
-          const snapshot = first.map((genome) => {
-            var _a2;
-            return {
-              id: (_a2 = genome._id) !== null && _a2 !== void 0 ? _a2 : -1,
-              score: genome.score || 0,
-              nodes: genome.nodes.length,
-              connections: genome.connections.length
-            };
-          });
-          this._paretoArchive.push({
-            gen: this.generation,
-            size: first.length,
-            genomes: snapshot
-          });
-          if (this._paretoArchive.length > 200)
-            this._paretoArchive.shift();
-          if (objectives.length) {
-            const vectors = first.map((genome) => {
-              var _a2;
-              return {
-                id: (_a2 = genome._id) !== null && _a2 !== void 0 ? _a2 : -1,
-                values: objectives.map((obj) => obj.accessor(genome))
-              };
-            });
-            this._paretoObjectivesArchive.push({ gen: this.generation, vectors });
-            if (this._paretoObjectivesArchive.length > 200)
-              this._paretoObjectivesArchive.shift();
-          }
-        }
-        if (((_d = (_c = this.options.multiObjective) === null || _c === void 0 ? void 0 : _c.adaptiveEpsilon) === null || _d === void 0 ? void 0 : _d.enabled) && paretoFronts.length) {
-          const cfg = this.options.multiObjective.adaptiveEpsilon;
-          const target = (_e = cfg.targetFront) !== null && _e !== void 0 ? _e : Math.max(3, Math.floor(Math.sqrt(this.population.length)));
-          const adjust = (_f = cfg.adjust) !== null && _f !== void 0 ? _f : 2e-3;
-          const minE = (_g = cfg.min) !== null && _g !== void 0 ? _g : 0;
-          const maxE = (_h = cfg.max) !== null && _h !== void 0 ? _h : 0.5;
-          const cooldown = (_j = cfg.cooldown) !== null && _j !== void 0 ? _j : 2;
-          if (this.generation - this._lastEpsilonAdjustGen >= cooldown) {
-            const currentSize = paretoFronts[0].length;
-            let eps = this.options.multiObjective.dominanceEpsilon || 0;
-            if (currentSize > target * 1.2)
-              eps = Math.min(maxE, eps + adjust);
-            else if (currentSize < target * 0.8)
-              eps = Math.max(minE, eps - adjust);
-            this.options.multiObjective.dominanceEpsilon = eps;
-            this._lastEpsilonAdjustGen = this.generation;
-          }
-        }
-        if ((_l = (_k = this.options.multiObjective) === null || _k === void 0 ? void 0 : _k.pruneInactive) === null || _l === void 0 ? void 0 : _l.enabled) {
-          const cfg = this.options.multiObjective.pruneInactive;
-          const window2 = (_m = cfg.window) !== null && _m !== void 0 ? _m : 5;
-          const rangeEps = (_o = cfg.rangeEps) !== null && _o !== void 0 ? _o : 1e-6;
-          const protect = /* @__PURE__ */ new Set([
-            "fitness",
-            "complexity",
-            ...cfg.protect || []
-          ]);
-          const objsList = this._getObjectives();
-          const ranges = {};
-          for (const obj of objsList) {
-            let min = Infinity, max = -Infinity;
-            for (const genome of this.population) {
-              const v = obj.accessor(genome);
-              if (v < min)
-                min = v;
-              if (v > max)
-                max = v;
-            }
-            ranges[obj.key] = { min, max };
-          }
-          const toRemove = [];
-          for (const obj of objsList) {
-            if (protect.has(obj.key))
-              continue;
-            const objRange = ranges[obj.key];
-            const span = objRange.max - objRange.min;
-            if (span < rangeEps) {
-              const count = (this._objectiveStale.get(obj.key) || 0) + 1;
-              this._objectiveStale.set(obj.key, count);
-              if (count >= window2)
-                toRemove.push(obj.key);
-            } else {
-              this._objectiveStale.set(obj.key, 0);
-            }
-          }
-          if (toRemove.length && ((_p = this.options.multiObjective) === null || _p === void 0 ? void 0 : _p.objectives)) {
-            this.options.multiObjective.objectives = this.options.multiObjective.objectives.filter((obj) => !toRemove.includes(obj.key));
-            this._objectivesList = void 0;
-          }
-        }
-      }
-      try {
-        (init_neat_adaptive(), __toCommonJS(neat_adaptive_exports)).applyAncestorUniqAdaptive.call(this);
-      } catch (_17) {
-      }
-      if (this.options.speciation) {
-        try {
-          this._speciate();
-        } catch (_18) {
-        }
-        try {
-          this._applyFitnessSharing();
-        } catch (_19) {
-        }
-        try {
-          const opts = this.options;
-          if ((_q = opts.autoCompatTuning) === null || _q === void 0 ? void 0 : _q.enabled) {
-            const tgt = (_s = (_r = opts.autoCompatTuning.target) !== null && _r !== void 0 ? _r : opts.targetSpecies) !== null && _s !== void 0 ? _s : Math.max(2, Math.round(Math.sqrt(this.population.length)));
-            const obs = this._species.length || 1;
-            const err = tgt - obs;
-            const rate = (_t = opts.autoCompatTuning.adjustRate) !== null && _t !== void 0 ? _t : 0.01;
-            const minC = (_u = opts.autoCompatTuning.minCoeff) !== null && _u !== void 0 ? _u : 0.1;
-            const maxC = (_v = opts.autoCompatTuning.maxCoeff) !== null && _v !== void 0 ? _v : 5;
-            let factor = 1 - rate * Math.sign(err);
-            if (err === 0)
-              factor = 1 + (this._getRNG()() - 0.5) * rate * 0.5;
-            opts.excessCoeff = Math.min(maxC, Math.max(minC, opts.excessCoeff * factor));
-            opts.disjointCoeff = Math.min(maxC, Math.max(minC, opts.disjointCoeff * factor));
-          }
-        } catch (_20) {
-        }
-        this.sort();
-        try {
-          if ((_w = this.options.speciesAllocation) === null || _w === void 0 ? void 0 : _w.extendedHistory) {
-          } else {
-            if (!this._speciesHistory || this._speciesHistory.length === 0 || this._speciesHistory[this._speciesHistory.length - 1].generation !== this.generation) {
-              this._speciesHistory.push({
-                generation: this.generation,
-                stats: this._species.map((species) => ({
-                  id: species.id,
-                  size: species.members.length,
-                  best: species.bestScore,
-                  lastImproved: species.lastImproved
-                }))
-              });
-              if (this._speciesHistory.length > 200)
-                this._speciesHistory.shift();
-            }
-          }
-        } catch (_21) {
-        }
-      }
-      const fittest = Network.fromJSON(this.population[0].toJSON());
-      fittest.score = this.population[0].score;
-      this._computeDiversityStats();
-      try {
-        const currentObjKeys = this._getObjectives().map((obj) => obj.key);
-        const dyn = (_x = this.options.multiObjective) === null || _x === void 0 ? void 0 : _x.dynamic;
-        if ((_y = this.options.multiObjective) === null || _y === void 0 ? void 0 : _y.enabled) {
-          if (dyn === null || dyn === void 0 ? void 0 : dyn.enabled) {
-            const addC = (_z = dyn.addComplexityAt) !== null && _z !== void 0 ? _z : Infinity;
-            const addE = (_0 = dyn.addEntropyAt) !== null && _0 !== void 0 ? _0 : Infinity;
-            if (this.generation + 1 >= addC && !currentObjKeys.includes("complexity")) {
-              this.registerObjective("complexity", "min", (genome) => genome.connections.length);
-              this._pendingObjectiveAdds.push("complexity");
-            }
-            if (this.generation + 1 >= addE && !currentObjKeys.includes("entropy")) {
-              this.registerObjective("entropy", "max", (genome) => this._structuralEntropy(genome));
-              this._pendingObjectiveAdds.push("entropy");
-            }
-            if (currentObjKeys.includes("entropy") && dyn.dropEntropyOnStagnation != null) {
-              const stagnGen = dyn.dropEntropyOnStagnation;
-              if (this.generation >= stagnGen && !this._entropyDropped) {
-                if ((_1 = this.options.multiObjective) === null || _1 === void 0 ? void 0 : _1.objectives) {
-                  this.options.multiObjective.objectives = this.options.multiObjective.objectives.filter((obj) => obj.key !== "entropy");
-                  this._objectivesList = void 0;
-                  this._pendingObjectiveRemoves.push("entropy");
-                  this._entropyDropped = this.generation;
-                }
-              }
-            } else if (!currentObjKeys.includes("entropy") && this._entropyDropped && dyn.readdEntropyAfter != null) {
-              if (this.generation - this._entropyDropped >= dyn.readdEntropyAfter) {
-                this.registerObjective("entropy", "max", (genome) => this._structuralEntropy(genome));
-                this._pendingObjectiveAdds.push("entropy");
-                this._entropyDropped = void 0;
-              }
-            }
-          } else if (this.options.multiObjective.autoEntropy) {
-            const addAt = 3;
-            if (this.generation >= addAt && !currentObjKeys.includes("entropy")) {
-              this.registerObjective("entropy", "max", (genome) => this._structuralEntropy(genome));
-              this._pendingObjectiveAdds.push("entropy");
-            }
-          }
-        }
-        for (const k of currentObjKeys)
-          this._objectiveAges.set(k, (this._objectiveAges.get(k) || 0) + 1);
-        for (const added of this._pendingObjectiveAdds)
-          this._objectiveAges.set(added, 0);
-      } catch (_22) {
-      }
-      try {
-        const mo = this.options.multiObjective;
-        if ((mo === null || mo === void 0 ? void 0 : mo.enabled) && mo.pruneInactive && mo.pruneInactive.enabled === false) {
-          const keys = this._getObjectives().map((obj) => obj.key);
-          if (keys.includes("fitness") && keys.length > 1 && !this._fitnessSuppressedOnce) {
-            this._suppressFitnessObjective = true;
-            this._fitnessSuppressedOnce = true;
-            this._objectivesList = void 0;
-          }
-        }
-      } catch (_23) {
-      }
-      let objImportance = null;
-      try {
-        const objsList = this._getObjectives();
-        if (objsList.length) {
-          objImportance = {};
-          const pop = this.population;
-          for (const obj of objsList) {
-            const vals = pop.map((genome) => obj.accessor(genome));
-            const min = Math.min(...vals);
-            const max = Math.max(...vals);
-            const mean = vals.reduce((a, b) => a + b, 0) / vals.length;
-            const varV = vals.reduce((a, b) => a + (b - mean) * (b - mean), 0) / (vals.length || 1);
-            objImportance[obj.key] = { range: max - min, var: varV };
-          }
-          this._lastObjImportance = objImportance;
-        }
-      } catch (_24) {
-      }
-      if (((_2 = this.options.telemetry) === null || _2 === void 0 ? void 0 : _2.enabled) || true) {
-        const telemetry = (init_neat_telemetry(), __toCommonJS(neat_telemetry_exports));
-        const entry = telemetry.buildTelemetryEntry.call(this, fittest);
-        telemetry.recordTelemetryEntry.call(this, entry);
-      }
-      if (((_3 = fittest.score) !== null && _3 !== void 0 ? _3 : -Infinity) > this._bestGlobalScore) {
-        this._bestGlobalScore = (_4 = fittest.score) !== null && _4 !== void 0 ? _4 : -Infinity;
-        this._lastGlobalImproveGeneration = this.generation;
-      }
-      const newPopulation = [];
-      const elitismCount = Math.max(0, Math.min(this.options.elitism || 0, this.population.length));
-      for (let i = 0; i < elitismCount; i++) {
-        const elite = this.population[i];
-        if (elite)
-          newPopulation.push(elite);
-      }
-      const desiredPop = Math.max(0, this.options.popsize || 0);
-      const remainingSlotsAfterElites = Math.max(0, desiredPop - newPopulation.length);
-      const provenanceCount = Math.max(0, Math.min(this.options.provenance || 0, remainingSlotsAfterElites));
-      for (let i = 0; i < provenanceCount; i++) {
-        if (this.options.network) {
-          newPopulation.push(Network.fromJSON(this.options.network.toJSON()));
+        if (this.options.speciesAllocation?.extendedHistory) {
         } else {
-          newPopulation.push(new Network(this.input, this.output, {
-            minHidden: this.options.minHidden
-          }));
-        }
-      }
-      if (this.options.speciation && this._species.length > 0) {
-        this._suppressTournamentError = true;
-        const remaining = desiredPop - newPopulation.length;
-        if (remaining > 0) {
-          const ageCfg = this.options.speciesAgeBonus || {};
-          const youngT = (_5 = ageCfg.youngThreshold) !== null && _5 !== void 0 ? _5 : 5;
-          const youngM = (_6 = ageCfg.youngMultiplier) !== null && _6 !== void 0 ? _6 : 1.3;
-          const oldT = (_7 = ageCfg.oldThreshold) !== null && _7 !== void 0 ? _7 : 30;
-          const oldM = (_8 = ageCfg.oldMultiplier) !== null && _8 !== void 0 ? _8 : 0.7;
-          const speciesAdjusted = this._species.map((species) => {
-            const base = species.members.reduce((a, member) => a + (member.score || 0), 0);
-            const age = this.generation - species.lastImproved;
-            if (age <= youngT)
-              return base * youngM;
-            if (age >= oldT)
-              return base * oldM;
-            return base;
-          });
-          const totalAdj = speciesAdjusted.reduce((a, b) => a + b, 0) || 1;
-          const minOff = (_10 = (_9 = this.options.speciesAllocation) === null || _9 === void 0 ? void 0 : _9.minOffspring) !== null && _10 !== void 0 ? _10 : 1;
-          const rawShares = this._species.map((_, idx) => speciesAdjusted[idx] / totalAdj * remaining);
-          const offspringAlloc = rawShares.map((s) => Math.floor(s));
-          for (let i = 0; i < offspringAlloc.length; i++)
-            if (offspringAlloc[i] < minOff && remaining >= this._species.length * minOff)
-              offspringAlloc[i] = minOff;
-          let allocated = offspringAlloc.reduce((a, b) => a + b, 0);
-          let slotsLeft = remaining - allocated;
-          const remainders = rawShares.map((s, i) => ({
-            i,
-            frac: s - Math.floor(s)
-          }));
-          remainders.sort((a, b) => b.frac - a.frac);
-          for (const remainderEntry of remainders) {
-            if (slotsLeft <= 0)
-              break;
-            offspringAlloc[remainderEntry.i]++;
-            slotsLeft--;
-          }
-          if (slotsLeft < 0) {
-            const order = offspringAlloc.map((v, i) => ({ i, v })).sort((a, b) => b.v - a.v);
-            for (const orderEntry of order) {
-              if (slotsLeft === 0)
-                break;
-              if (offspringAlloc[orderEntry.i] > minOff) {
-                offspringAlloc[orderEntry.i]--;
-                slotsLeft++;
-              }
-            }
-          }
-          this._lastOffspringAlloc = this._species.map((species, i) => ({
-            id: species.id,
-            alloc: offspringAlloc[i] || 0
-          }));
-          this._prevInbreedingCount = this._lastInbreedingCount;
-          this._lastInbreedingCount = 0;
-          offspringAlloc.forEach((count, idx) => {
-            var _a2, _b2;
-            if (count <= 0)
-              return;
-            const species = this._species[idx];
-            this._sortSpeciesMembers(species);
-            const survivors = species.members.slice(0, Math.max(1, Math.floor(species.members.length * (this.options.survivalThreshold || 0.5))));
-            for (let k = 0; k < count; k++) {
-              const parentA = survivors[Math.floor(this._getRNG()() * survivors.length)];
-              let parentB;
-              if (this.options.crossSpeciesMatingProb && this._species.length > 1 && this._getRNG()() < (this.options.crossSpeciesMatingProb || 0)) {
-                let otherIdx = idx;
-                let guard = 0;
-                while (otherIdx === idx && guard++ < 5)
-                  otherIdx = Math.floor(this._getRNG()() * this._species.length);
-                const otherSpecies = this._species[otherIdx];
-                this._sortSpeciesMembers(otherSpecies);
-                const otherParents = otherSpecies.members.slice(0, Math.max(1, Math.floor(otherSpecies.members.length * (this.options.survivalThreshold || 0.5))));
-                parentB = otherParents[Math.floor(this._getRNG()() * otherParents.length)];
-              } else {
-                parentB = survivors[Math.floor(this._getRNG()() * survivors.length)];
-              }
-              const child = Network.crossOver(parentA, parentB, this.options.equal || false);
-              child._reenableProb = this.options.reenableProb;
-              child._id = this._nextGenomeId++;
-              if (this._lineageEnabled) {
-                child._parents = [
-                  parentA._id,
-                  parentB._id
-                ];
-                const d1 = (_a2 = parentA._depth) !== null && _a2 !== void 0 ? _a2 : 0;
-                const d2 = (_b2 = parentB._depth) !== null && _b2 !== void 0 ? _b2 : 0;
-                child._depth = 1 + Math.max(d1, d2);
-                if (parentA._id === parentB._id)
-                  this._lastInbreedingCount++;
-              }
-              newPopulation.push(child);
-            }
-          });
-          this._suppressTournamentError = false;
-        }
-      } else {
-        this._suppressTournamentError = true;
-        const toBreed = Math.max(0, desiredPop - newPopulation.length);
-        for (let i = 0; i < toBreed; i++)
-          newPopulation.push(this.getOffspring());
-        this._suppressTournamentError = false;
-      }
-      for (const genome of newPopulation) {
-        if (!genome)
-          continue;
-        this.ensureMinHiddenNodes(genome);
-        this.ensureNoDeadEnds(genome);
-      }
-      this.population = newPopulation;
-      try {
-        (init_neat_pruning(), __toCommonJS(neat_pruning_exports)).applyEvolutionPruning.call(this);
-      } catch (_25) {
-      }
-      try {
-        (init_neat_pruning(), __toCommonJS(neat_pruning_exports)).applyAdaptivePruning.call(this);
-      } catch (_26) {
-      }
-      this.mutate();
-      try {
-        (init_neat_adaptive(), __toCommonJS(neat_adaptive_exports)).applyAdaptiveMutation.call(this);
-      } catch (_27) {
-      }
-      this.population.forEach((genome) => {
-        if (genome._compatCache)
-          delete genome._compatCache;
-      });
-      this.population.forEach((genome) => genome.score = void 0);
-      this.generation++;
-      if (this.options.speciation)
-        this._updateSpeciesStagnation();
-      if ((this.options.globalStagnationGenerations || 0) > 0 && this.generation - this._lastGlobalImproveGeneration > (this.options.globalStagnationGenerations || 0)) {
-        const replaceFraction = 0.2;
-        const startIdx = Math.max(this.options.elitism || 0, Math.floor(this.population.length * (1 - replaceFraction)));
-        for (let i = startIdx; i < this.population.length; i++) {
-          const fresh = new Network(this.input, this.output, {
-            minHidden: this.options.minHidden
-          });
-          fresh.score = void 0;
-          fresh._reenableProb = this.options.reenableProb;
-          fresh._id = this._nextGenomeId++;
-          if (this._lineageEnabled) {
-            fresh._parents = [];
-            fresh._depth = 0;
-          }
-          try {
-            this.ensureMinHiddenNodes(fresh);
-            this.ensureNoDeadEnds(fresh);
-            const hiddenCount = fresh.nodes.filter((n) => n.type === "hidden").length;
-            if (hiddenCount === 0) {
-              const NodeCls = (init_node(), __toCommonJS(node_exports)).default;
-              const newNode = new NodeCls("hidden");
-              fresh.nodes.splice(fresh.nodes.length - fresh.output, 0, newNode);
-              const inputNodes = fresh.nodes.filter((n) => n.type === "input");
-              const outputNodes = fresh.nodes.filter((n) => n.type === "output");
-              if (inputNodes.length && outputNodes.length) {
-                try {
-                  fresh.connect(inputNodes[0], newNode, 1);
-                } catch (_28) {
-                }
-                try {
-                  fresh.connect(newNode, outputNodes[0], 1);
-                } catch (_29) {
-                }
-              }
-            }
-          } catch (_30) {
-          }
-          this.population[i] = fresh;
-        }
-        this._lastGlobalImproveGeneration = this.generation;
-      }
-      if (this.options.reenableProb !== void 0) {
-        let reenableSuccessTotal = 0, reenableAttemptsTotal = 0;
-        for (const genome of this.population) {
-          reenableSuccessTotal += genome._reenableSuccess || 0;
-          reenableAttemptsTotal += genome._reenableAttempts || 0;
-          genome._reenableSuccess = 0;
-          genome._reenableAttempts = 0;
-        }
-        if (reenableAttemptsTotal > 20) {
-          const ratio = reenableSuccessTotal / reenableAttemptsTotal;
-          const target = 0.3;
-          const delta = ratio - target;
-          this.options.reenableProb = Math.min(0.9, Math.max(0.05, this.options.reenableProb - delta * 0.1));
-        }
-      }
-      try {
-        (init_neat_adaptive(), __toCommonJS(neat_adaptive_exports)).applyOperatorAdaptation.call(this);
-      } catch (_31) {
-      }
-      const endTime = typeof performance !== "undefined" && performance.now ? performance.now() : Date.now();
-      this._lastEvolveDuration = endTime - startTime;
-      try {
-        if (!this._speciesHistory)
-          this._speciesHistory = [];
-        if (!((_11 = this.options.speciesAllocation) === null || _11 === void 0 ? void 0 : _11.extendedHistory)) {
-          if (this._speciesHistory.length === 0 || this._speciesHistory[this._speciesHistory.length - 1].generation !== this.generation) {
+          if (!this._speciesHistory || this._speciesHistory.length === 0 || this._speciesHistory[this._speciesHistory.length - 1].generation !== this.generation) {
             this._speciesHistory.push({
               generation: this.generation,
               stats: this._species.map((species) => ({
@@ -11207,239 +10985,498 @@
               this._speciesHistory.shift();
           }
         }
-      } catch (_32) {
+      } catch {
       }
-      return fittest;
+    }
+    const fittest = Network.fromJSON(this.population[0].toJSON());
+    fittest.score = this.population[0].score;
+    this._computeDiversityStats();
+    try {
+      const currentObjKeys = this._getObjectives().map((obj) => obj.key);
+      const dyn = this.options.multiObjective?.dynamic;
+      if (this.options.multiObjective?.enabled) {
+        if (dyn?.enabled) {
+          const addC = dyn.addComplexityAt ?? Infinity;
+          const addE = dyn.addEntropyAt ?? Infinity;
+          if (this.generation + 1 >= addC && !currentObjKeys.includes("complexity")) {
+            this.registerObjective("complexity", "min", (genome) => genome.connections.length);
+            this._pendingObjectiveAdds.push("complexity");
+          }
+          if (this.generation + 1 >= addE && !currentObjKeys.includes("entropy")) {
+            this.registerObjective("entropy", "max", (genome) => this._structuralEntropy(genome));
+            this._pendingObjectiveAdds.push("entropy");
+          }
+          if (currentObjKeys.includes("entropy") && dyn.dropEntropyOnStagnation != null) {
+            const stagnGen = dyn.dropEntropyOnStagnation;
+            if (this.generation >= stagnGen && !this._entropyDropped) {
+              if (this.options.multiObjective?.objectives) {
+                this.options.multiObjective.objectives = this.options.multiObjective.objectives.filter((obj) => obj.key !== "entropy");
+                this._objectivesList = void 0;
+                this._pendingObjectiveRemoves.push("entropy");
+                this._entropyDropped = this.generation;
+              }
+            }
+          } else if (!currentObjKeys.includes("entropy") && this._entropyDropped && dyn.readdEntropyAfter != null) {
+            if (this.generation - this._entropyDropped >= dyn.readdEntropyAfter) {
+              this.registerObjective("entropy", "max", (genome) => this._structuralEntropy(genome));
+              this._pendingObjectiveAdds.push("entropy");
+              this._entropyDropped = void 0;
+            }
+          }
+        } else if (this.options.multiObjective.autoEntropy) {
+          const addAt = 3;
+          if (this.generation >= addAt && !currentObjKeys.includes("entropy")) {
+            this.registerObjective("entropy", "max", (genome) => this._structuralEntropy(genome));
+            this._pendingObjectiveAdds.push("entropy");
+          }
+        }
+      }
+      for (const k of currentObjKeys)
+        this._objectiveAges.set(k, (this._objectiveAges.get(k) || 0) + 1);
+      for (const added of this._pendingObjectiveAdds)
+        this._objectiveAges.set(added, 0);
+    } catch {
+    }
+    try {
+      const mo = this.options.multiObjective;
+      if (mo?.enabled && mo.pruneInactive && mo.pruneInactive.enabled === false) {
+        const keys = this._getObjectives().map((obj) => obj.key);
+        if (keys.includes("fitness") && keys.length > 1 && !this._fitnessSuppressedOnce) {
+          this._suppressFitnessObjective = true;
+          this._fitnessSuppressedOnce = true;
+          this._objectivesList = void 0;
+        }
+      }
+    } catch {
+    }
+    let objImportance = null;
+    try {
+      const objsList = this._getObjectives();
+      if (objsList.length) {
+        objImportance = {};
+        const pop = this.population;
+        for (const obj of objsList) {
+          const vals = pop.map((genome) => obj.accessor(genome));
+          const min = Math.min(...vals);
+          const max = Math.max(...vals);
+          const mean = vals.reduce((a, b) => a + b, 0) / vals.length;
+          const varV = vals.reduce((a, b) => a + (b - mean) * (b - mean), 0) / (vals.length || 1);
+          objImportance[obj.key] = { range: max - min, var: varV };
+        }
+        this._lastObjImportance = objImportance;
+      }
+    } catch {
+    }
+    if (this.options.telemetry?.enabled || true) {
+      const telemetry = (init_neat_telemetry(), __toCommonJS(neat_telemetry_exports));
+      const entry = telemetry.buildTelemetryEntry.call(this, fittest);
+      telemetry.recordTelemetryEntry.call(this, entry);
+    }
+    if ((fittest.score ?? -Infinity) > this._bestGlobalScore) {
+      this._bestGlobalScore = fittest.score ?? -Infinity;
+      this._lastGlobalImproveGeneration = this.generation;
+    }
+    const newPopulation = [];
+    const elitismCount = Math.max(0, Math.min(this.options.elitism || 0, this.population.length));
+    for (let i = 0; i < elitismCount; i++) {
+      const elite = this.population[i];
+      if (elite)
+        newPopulation.push(elite);
+    }
+    const desiredPop = Math.max(0, this.options.popsize || 0);
+    const remainingSlotsAfterElites = Math.max(0, desiredPop - newPopulation.length);
+    const provenanceCount = Math.max(0, Math.min(this.options.provenance || 0, remainingSlotsAfterElites));
+    for (let i = 0; i < provenanceCount; i++) {
+      if (this.options.network) {
+        newPopulation.push(Network.fromJSON(this.options.network.toJSON()));
+      } else {
+        newPopulation.push(new Network(this.input, this.output, {
+          minHidden: this.options.minHidden
+        }));
+      }
+    }
+    if (this.options.speciation && this._species.length > 0) {
+      this._suppressTournamentError = true;
+      const remaining = desiredPop - newPopulation.length;
+      if (remaining > 0) {
+        const ageCfg = this.options.speciesAgeBonus || {};
+        const youngT = ageCfg.youngThreshold ?? 5;
+        const youngM = ageCfg.youngMultiplier ?? 1.3;
+        const oldT = ageCfg.oldThreshold ?? 30;
+        const oldM = ageCfg.oldMultiplier ?? 0.7;
+        const speciesAdjusted = this._species.map((species) => {
+          const base = species.members.reduce((a, member) => a + (member.score || 0), 0);
+          const age = this.generation - species.lastImproved;
+          if (age <= youngT)
+            return base * youngM;
+          if (age >= oldT)
+            return base * oldM;
+          return base;
+        });
+        const totalAdj = speciesAdjusted.reduce((a, b) => a + b, 0) || 1;
+        const minOff = this.options.speciesAllocation?.minOffspring ?? 1;
+        const rawShares = this._species.map((_, idx) => speciesAdjusted[idx] / totalAdj * remaining);
+        const offspringAlloc = rawShares.map((s) => Math.floor(s));
+        for (let i = 0; i < offspringAlloc.length; i++)
+          if (offspringAlloc[i] < minOff && remaining >= this._species.length * minOff)
+            offspringAlloc[i] = minOff;
+        let allocated = offspringAlloc.reduce((a, b) => a + b, 0);
+        let slotsLeft = remaining - allocated;
+        const remainders = rawShares.map((s, i) => ({
+          i,
+          frac: s - Math.floor(s)
+        }));
+        remainders.sort((a, b) => b.frac - a.frac);
+        for (const remainderEntry of remainders) {
+          if (slotsLeft <= 0)
+            break;
+          offspringAlloc[remainderEntry.i]++;
+          slotsLeft--;
+        }
+        if (slotsLeft < 0) {
+          const order = offspringAlloc.map((v, i) => ({ i, v })).sort((a, b) => b.v - a.v);
+          for (const orderEntry of order) {
+            if (slotsLeft === 0)
+              break;
+            if (offspringAlloc[orderEntry.i] > minOff) {
+              offspringAlloc[orderEntry.i]--;
+              slotsLeft++;
+            }
+          }
+        }
+        this._lastOffspringAlloc = this._species.map((species, i) => ({
+          id: species.id,
+          alloc: offspringAlloc[i] || 0
+        }));
+        this._prevInbreedingCount = this._lastInbreedingCount;
+        this._lastInbreedingCount = 0;
+        offspringAlloc.forEach((count, idx) => {
+          if (count <= 0)
+            return;
+          const species = this._species[idx];
+          this._sortSpeciesMembers(species);
+          const survivors = species.members.slice(0, Math.max(1, Math.floor(species.members.length * (this.options.survivalThreshold || 0.5))));
+          for (let k = 0; k < count; k++) {
+            const parentA = survivors[Math.floor(this._getRNG()() * survivors.length)];
+            let parentB;
+            if (this.options.crossSpeciesMatingProb && this._species.length > 1 && this._getRNG()() < (this.options.crossSpeciesMatingProb || 0)) {
+              let otherIdx = idx;
+              let guard = 0;
+              while (otherIdx === idx && guard++ < 5)
+                otherIdx = Math.floor(this._getRNG()() * this._species.length);
+              const otherSpecies = this._species[otherIdx];
+              this._sortSpeciesMembers(otherSpecies);
+              const otherParents = otherSpecies.members.slice(0, Math.max(1, Math.floor(otherSpecies.members.length * (this.options.survivalThreshold || 0.5))));
+              parentB = otherParents[Math.floor(this._getRNG()() * otherParents.length)];
+            } else {
+              parentB = survivors[Math.floor(this._getRNG()() * survivors.length)];
+            }
+            const child = Network.crossOver(parentA, parentB, this.options.equal || false);
+            child._reenableProb = this.options.reenableProb;
+            child._id = this._nextGenomeId++;
+            if (this._lineageEnabled) {
+              child._parents = [
+                parentA._id,
+                parentB._id
+              ];
+              const d1 = parentA._depth ?? 0;
+              const d2 = parentB._depth ?? 0;
+              child._depth = 1 + Math.max(d1, d2);
+              if (parentA._id === parentB._id)
+                this._lastInbreedingCount++;
+            }
+            newPopulation.push(child);
+          }
+        });
+        this._suppressTournamentError = false;
+      }
+    } else {
+      this._suppressTournamentError = true;
+      const toBreed = Math.max(0, desiredPop - newPopulation.length);
+      for (let i = 0; i < toBreed; i++)
+        newPopulation.push(this.getOffspring());
+      this._suppressTournamentError = false;
+    }
+    for (const genome of newPopulation) {
+      if (!genome)
+        continue;
+      this.ensureMinHiddenNodes(genome);
+      this.ensureNoDeadEnds(genome);
+    }
+    this.population = newPopulation;
+    try {
+      (init_neat_pruning(), __toCommonJS(neat_pruning_exports)).applyEvolutionPruning.call(this);
+    } catch {
+    }
+    try {
+      (init_neat_pruning(), __toCommonJS(neat_pruning_exports)).applyAdaptivePruning.call(this);
+    } catch {
+    }
+    this.mutate();
+    try {
+      (init_neat_adaptive(), __toCommonJS(neat_adaptive_exports)).applyAdaptiveMutation.call(this);
+    } catch {
+    }
+    this.population.forEach((genome) => {
+      if (genome._compatCache)
+        delete genome._compatCache;
     });
+    this.population.forEach((genome) => genome.score = void 0);
+    this.generation++;
+    if (this.options.speciation)
+      this._updateSpeciesStagnation();
+    if ((this.options.globalStagnationGenerations || 0) > 0 && this.generation - this._lastGlobalImproveGeneration > (this.options.globalStagnationGenerations || 0)) {
+      const replaceFraction = 0.2;
+      const startIdx = Math.max(this.options.elitism || 0, Math.floor(this.population.length * (1 - replaceFraction)));
+      for (let i = startIdx; i < this.population.length; i++) {
+        const fresh = new Network(this.input, this.output, {
+          minHidden: this.options.minHidden
+        });
+        fresh.score = void 0;
+        fresh._reenableProb = this.options.reenableProb;
+        fresh._id = this._nextGenomeId++;
+        if (this._lineageEnabled) {
+          fresh._parents = [];
+          fresh._depth = 0;
+        }
+        try {
+          this.ensureMinHiddenNodes(fresh);
+          this.ensureNoDeadEnds(fresh);
+          const hiddenCount = fresh.nodes.filter((n) => n.type === "hidden").length;
+          if (hiddenCount === 0) {
+            const NodeCls = (init_node(), __toCommonJS(node_exports)).default;
+            const newNode = new NodeCls("hidden");
+            fresh.nodes.splice(fresh.nodes.length - fresh.output, 0, newNode);
+            const inputNodes = fresh.nodes.filter((n) => n.type === "input");
+            const outputNodes = fresh.nodes.filter((n) => n.type === "output");
+            if (inputNodes.length && outputNodes.length) {
+              try {
+                fresh.connect(inputNodes[0], newNode, 1);
+              } catch {
+              }
+              try {
+                fresh.connect(newNode, outputNodes[0], 1);
+              } catch {
+              }
+            }
+          }
+        } catch {
+        }
+        this.population[i] = fresh;
+      }
+      this._lastGlobalImproveGeneration = this.generation;
+    }
+    if (this.options.reenableProb !== void 0) {
+      let reenableSuccessTotal = 0, reenableAttemptsTotal = 0;
+      for (const genome of this.population) {
+        reenableSuccessTotal += genome._reenableSuccess || 0;
+        reenableAttemptsTotal += genome._reenableAttempts || 0;
+        genome._reenableSuccess = 0;
+        genome._reenableAttempts = 0;
+      }
+      if (reenableAttemptsTotal > 20) {
+        const ratio = reenableSuccessTotal / reenableAttemptsTotal;
+        const target = 0.3;
+        const delta = ratio - target;
+        this.options.reenableProb = Math.min(0.9, Math.max(0.05, this.options.reenableProb - delta * 0.1));
+      }
+    }
+    try {
+      (init_neat_adaptive(), __toCommonJS(neat_adaptive_exports)).applyOperatorAdaptation.call(this);
+    } catch {
+    }
+    const endTime = typeof performance !== "undefined" && performance.now ? performance.now() : Date.now();
+    this._lastEvolveDuration = endTime - startTime;
+    try {
+      if (!this._speciesHistory)
+        this._speciesHistory = [];
+      if (!this.options.speciesAllocation?.extendedHistory) {
+        if (this._speciesHistory.length === 0 || this._speciesHistory[this._speciesHistory.length - 1].generation !== this.generation) {
+          this._speciesHistory.push({
+            generation: this.generation,
+            stats: this._species.map((species) => ({
+              id: species.id,
+              size: species.members.length,
+              best: species.bestScore,
+              lastImproved: species.lastImproved
+            }))
+          });
+          if (this._speciesHistory.length > 200)
+            this._speciesHistory.shift();
+        }
+      }
+    } catch {
+    }
+    return fittest;
   }
-  var __awaiter5;
   var init_neat_evolve = __esm({
     "dist/neat/neat.evolve.js"() {
       "use strict";
       init_network();
       init_neat_multiobjective();
-      __awaiter5 = function(thisArg, _arguments, P, generator) {
-        function adopt(value) {
-          return value instanceof P ? value : new P(function(resolve) {
-            resolve(value);
-          });
-        }
-        return new (P || (P = Promise))(function(resolve, reject) {
-          function fulfilled(value) {
-            try {
-              step(generator.next(value));
-            } catch (e) {
-              reject(e);
-            }
-          }
-          function rejected(value) {
-            try {
-              step(generator["throw"](value));
-            } catch (e) {
-              reject(e);
-            }
-          }
-          function step(result) {
-            result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected);
-          }
-          step((generator = generator.apply(thisArg, _arguments || [])).next());
-        });
-      };
     }
   });
 
   // dist/neat/neat.evaluate.js
-  function evaluate() {
-    return __awaiter6(this, void 0, void 0, function* () {
-      var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u;
-      const options = this.options || {};
-      if (options.fitnessPopulation) {
-        if (options.clear)
-          this.population.forEach((g) => g.clear && g.clear());
-        yield this.fitness(this.population);
-      } else {
-        for (const genome of this.population) {
-          if (options.clear && genome.clear)
-            genome.clear();
-          const fitnessValue = yield this.fitness(genome);
-          genome.score = fitnessValue;
-        }
+  async function evaluate() {
+    const options = this.options || {};
+    if (options.fitnessPopulation) {
+      if (options.clear)
+        this.population.forEach((g) => g.clear && g.clear());
+      await this.fitness(this.population);
+    } else {
+      for (const genome of this.population) {
+        if (options.clear && genome.clear)
+          genome.clear();
+        const fitnessValue = await this.fitness(genome);
+        genome.score = fitnessValue;
       }
-      try {
-        const noveltyOptions = options.novelty;
-        if ((noveltyOptions === null || noveltyOptions === void 0 ? void 0 : noveltyOptions.enabled) && typeof noveltyOptions.descriptor === "function") {
-          const kNeighbors = Math.max(1, noveltyOptions.k || 3);
-          const blendFactor = (_a = noveltyOptions.blendFactor) !== null && _a !== void 0 ? _a : 0.3;
-          const descriptors = this.population.map((g) => {
-            try {
-              return noveltyOptions.descriptor(g) || [];
-            } catch (_a2) {
-              return [];
+    }
+    try {
+      const noveltyOptions = options.novelty;
+      if (noveltyOptions?.enabled && typeof noveltyOptions.descriptor === "function") {
+        const kNeighbors = Math.max(1, noveltyOptions.k || 3);
+        const blendFactor = noveltyOptions.blendFactor ?? 0.3;
+        const descriptors = this.population.map((g) => {
+          try {
+            return noveltyOptions.descriptor(g) || [];
+          } catch {
+            return [];
+          }
+        });
+        const distanceMatrix = [];
+        for (let i = 0; i < descriptors.length; i++) {
+          distanceMatrix[i] = [];
+          for (let j = 0; j < descriptors.length; j++) {
+            if (i === j) {
+              distanceMatrix[i][j] = 0;
+              continue;
             }
-          });
-          const distanceMatrix = [];
-          for (let i = 0; i < descriptors.length; i++) {
-            distanceMatrix[i] = [];
-            for (let j = 0; j < descriptors.length; j++) {
-              if (i === j) {
-                distanceMatrix[i][j] = 0;
-                continue;
-              }
-              const descA = descriptors[i];
-              const descB = descriptors[j];
-              let sqSum = 0;
-              const commonLen = Math.min(descA.length, descB.length);
-              for (let t = 0; t < commonLen; t++) {
-                const delta = (descA[t] || 0) - (descB[t] || 0);
-                sqSum += delta * delta;
-              }
-              distanceMatrix[i][j] = Math.sqrt(sqSum);
+            const descA = descriptors[i];
+            const descB = descriptors[j];
+            let sqSum = 0;
+            const commonLen = Math.min(descA.length, descB.length);
+            for (let t = 0; t < commonLen; t++) {
+              const delta = (descA[t] || 0) - (descB[t] || 0);
+              sqSum += delta * delta;
             }
-          }
-          for (let i = 0; i < this.population.length; i++) {
-            const sortedRow = distanceMatrix[i].slice().sort((a, b) => a - b);
-            const neighbours = sortedRow.slice(1, kNeighbors + 1);
-            const novelty = neighbours.length ? neighbours.reduce((a, b) => a + b, 0) / neighbours.length : 0;
-            this.population[i]._novelty = novelty;
-            if (typeof this.population[i].score === "number") {
-              this.population[i].score = (1 - blendFactor) * this.population[i].score + blendFactor * novelty;
-            }
-            if (!this._noveltyArchive)
-              this._noveltyArchive = [];
-            const archiveAddThreshold = (_b = noveltyOptions.archiveAddThreshold) !== null && _b !== void 0 ? _b : Infinity;
-            if (noveltyOptions.archiveAddThreshold === 0 || novelty > archiveAddThreshold) {
-              if (this._noveltyArchive.length < 200)
-                this._noveltyArchive.push({ desc: descriptors[i], novelty });
-            }
+            distanceMatrix[i][j] = Math.sqrt(sqSum);
           }
         }
-      } catch (_v) {
-      }
-      if (!this._diversityStats)
-        this._diversityStats = {};
-      try {
-        const entropySharingOptions = options.entropySharingTuning;
-        if (entropySharingOptions === null || entropySharingOptions === void 0 ? void 0 : entropySharingOptions.enabled) {
-          const targetVar = (_c = entropySharingOptions.targetEntropyVar) !== null && _c !== void 0 ? _c : 0.2;
-          const adjustRate = (_d = entropySharingOptions.adjustRate) !== null && _d !== void 0 ? _d : 0.1;
-          const minSigma = (_e = entropySharingOptions.minSigma) !== null && _e !== void 0 ? _e : 0.1;
-          const maxSigma = (_f = entropySharingOptions.maxSigma) !== null && _f !== void 0 ? _f : 10;
-          const currentVarEntropy = this._diversityStats.varEntropy;
-          if (typeof currentVarEntropy === "number") {
-            let sigma = (_g = this.options.sharingSigma) !== null && _g !== void 0 ? _g : 0;
-            if (currentVarEntropy < targetVar * 0.9)
-              sigma = Math.max(minSigma, sigma * (1 - adjustRate));
-            else if (currentVarEntropy > targetVar * 1.1)
-              sigma = Math.min(maxSigma, sigma * (1 + adjustRate));
-            this.options.sharingSigma = sigma;
+        for (let i = 0; i < this.population.length; i++) {
+          const sortedRow = distanceMatrix[i].slice().sort((a, b) => a - b);
+          const neighbours = sortedRow.slice(1, kNeighbors + 1);
+          const novelty = neighbours.length ? neighbours.reduce((a, b) => a + b, 0) / neighbours.length : 0;
+          this.population[i]._novelty = novelty;
+          if (typeof this.population[i].score === "number") {
+            this.population[i].score = (1 - blendFactor) * this.population[i].score + blendFactor * novelty;
+          }
+          if (!this._noveltyArchive)
+            this._noveltyArchive = [];
+          const archiveAddThreshold = noveltyOptions.archiveAddThreshold ?? Infinity;
+          if (noveltyOptions.archiveAddThreshold === 0 || novelty > archiveAddThreshold) {
+            if (this._noveltyArchive.length < 200)
+              this._noveltyArchive.push({ desc: descriptors[i], novelty });
           }
         }
-      } catch (_w) {
       }
-      try {
-        const entropyCompatOptions = options.entropyCompatTuning;
-        if (entropyCompatOptions === null || entropyCompatOptions === void 0 ? void 0 : entropyCompatOptions.enabled) {
-          const meanEntropy = this._diversityStats.meanEntropy;
-          const targetEntropy = (_h = entropyCompatOptions.targetEntropy) !== null && _h !== void 0 ? _h : 0.5;
-          const deadband = (_j = entropyCompatOptions.deadband) !== null && _j !== void 0 ? _j : 0.05;
-          const adjustRate = (_k = entropyCompatOptions.adjustRate) !== null && _k !== void 0 ? _k : 0.05;
-          let threshold = (_l = this.options.compatibilityThreshold) !== null && _l !== void 0 ? _l : 3;
-          if (typeof meanEntropy === "number") {
-            if (meanEntropy < targetEntropy - deadband)
-              threshold = Math.max((_m = entropyCompatOptions.minThreshold) !== null && _m !== void 0 ? _m : 0.5, threshold * (1 - adjustRate));
-            else if (meanEntropy > targetEntropy + deadband)
-              threshold = Math.min((_o = entropyCompatOptions.maxThreshold) !== null && _o !== void 0 ? _o : 10, threshold * (1 + adjustRate));
-            this.options.compatibilityThreshold = threshold;
-          }
+    } catch {
+    }
+    if (!this._diversityStats)
+      this._diversityStats = {};
+    try {
+      const entropySharingOptions = options.entropySharingTuning;
+      if (entropySharingOptions?.enabled) {
+        const targetVar = entropySharingOptions.targetEntropyVar ?? 0.2;
+        const adjustRate = entropySharingOptions.adjustRate ?? 0.1;
+        const minSigma = entropySharingOptions.minSigma ?? 0.1;
+        const maxSigma = entropySharingOptions.maxSigma ?? 10;
+        const currentVarEntropy = this._diversityStats.varEntropy;
+        if (typeof currentVarEntropy === "number") {
+          let sigma = this.options.sharingSigma ?? 0;
+          if (currentVarEntropy < targetVar * 0.9)
+            sigma = Math.max(minSigma, sigma * (1 - adjustRate));
+          else if (currentVarEntropy > targetVar * 1.1)
+            sigma = Math.min(maxSigma, sigma * (1 + adjustRate));
+          this.options.sharingSigma = sigma;
         }
-      } catch (_x) {
       }
-      try {
-        if (this.options.speciation && (this.options.targetSpecies || this.options.compatAdjust || ((_p = this.options.speciesAllocation) === null || _p === void 0 ? void 0 : _p.extendedHistory))) {
-          this._speciate();
+    } catch {
+    }
+    try {
+      const entropyCompatOptions = options.entropyCompatTuning;
+      if (entropyCompatOptions?.enabled) {
+        const meanEntropy = this._diversityStats.meanEntropy;
+        const targetEntropy = entropyCompatOptions.targetEntropy ?? 0.5;
+        const deadband = entropyCompatOptions.deadband ?? 0.05;
+        const adjustRate = entropyCompatOptions.adjustRate ?? 0.05;
+        let threshold = this.options.compatibilityThreshold ?? 3;
+        if (typeof meanEntropy === "number") {
+          if (meanEntropy < targetEntropy - deadband)
+            threshold = Math.max(entropyCompatOptions.minThreshold ?? 0.5, threshold * (1 - adjustRate));
+          else if (meanEntropy > targetEntropy + deadband)
+            threshold = Math.min(entropyCompatOptions.maxThreshold ?? 10, threshold * (1 + adjustRate));
+          this.options.compatibilityThreshold = threshold;
         }
-      } catch (_y) {
       }
-      try {
-        const autoDistanceCoeffOptions = this.options.autoDistanceCoeffTuning;
-        if ((autoDistanceCoeffOptions === null || autoDistanceCoeffOptions === void 0 ? void 0 : autoDistanceCoeffOptions.enabled) && this.options.speciation) {
-          const connectionSizes = this.population.map((g) => g.connections.length);
-          const meanSize = connectionSizes.reduce((a, b) => a + b, 0) / (connectionSizes.length || 1);
-          const connVar = connectionSizes.reduce((a, b) => a + (b - meanSize) * (b - meanSize), 0) / (connectionSizes.length || 1);
-          const adjustRate = (_q = autoDistanceCoeffOptions.adjustRate) !== null && _q !== void 0 ? _q : 0.05;
-          const minCoeff = (_r = autoDistanceCoeffOptions.minCoeff) !== null && _r !== void 0 ? _r : 0.05;
-          const maxCoeff = (_s = autoDistanceCoeffOptions.maxCoeff) !== null && _s !== void 0 ? _s : 8;
-          if (!this._lastConnVar)
-            this._lastConnVar = connVar;
-          if (connVar < this._lastConnVar * 0.95) {
-            this.options.excessCoeff = Math.min(maxCoeff, this.options.excessCoeff * (1 + adjustRate));
-            this.options.disjointCoeff = Math.min(maxCoeff, this.options.disjointCoeff * (1 + adjustRate));
-          } else if (connVar > this._lastConnVar * 1.05) {
-            this.options.excessCoeff = Math.max(minCoeff, this.options.excessCoeff * (1 - adjustRate));
-            this.options.disjointCoeff = Math.max(minCoeff, this.options.disjointCoeff * (1 - adjustRate));
-          }
+    } catch {
+    }
+    try {
+      if (this.options.speciation && (this.options.targetSpecies || this.options.compatAdjust || this.options.speciesAllocation?.extendedHistory)) {
+        this._speciate();
+      }
+    } catch {
+    }
+    try {
+      const autoDistanceCoeffOptions = this.options.autoDistanceCoeffTuning;
+      if (autoDistanceCoeffOptions?.enabled && this.options.speciation) {
+        const connectionSizes = this.population.map((g) => g.connections.length);
+        const meanSize = connectionSizes.reduce((a, b) => a + b, 0) / (connectionSizes.length || 1);
+        const connVar = connectionSizes.reduce((a, b) => a + (b - meanSize) * (b - meanSize), 0) / (connectionSizes.length || 1);
+        const adjustRate = autoDistanceCoeffOptions.adjustRate ?? 0.05;
+        const minCoeff = autoDistanceCoeffOptions.minCoeff ?? 0.05;
+        const maxCoeff = autoDistanceCoeffOptions.maxCoeff ?? 8;
+        if (!this._lastConnVar)
           this._lastConnVar = connVar;
+        if (connVar < this._lastConnVar * 0.95) {
+          this.options.excessCoeff = Math.min(maxCoeff, this.options.excessCoeff * (1 + adjustRate));
+          this.options.disjointCoeff = Math.min(maxCoeff, this.options.disjointCoeff * (1 + adjustRate));
+        } else if (connVar > this._lastConnVar * 1.05) {
+          this.options.excessCoeff = Math.max(minCoeff, this.options.excessCoeff * (1 - adjustRate));
+          this.options.disjointCoeff = Math.max(minCoeff, this.options.disjointCoeff * (1 - adjustRate));
         }
-      } catch (_z) {
+        this._lastConnVar = connVar;
       }
-      try {
-        if (((_t = this.options.multiObjective) === null || _t === void 0 ? void 0 : _t.enabled) && this.options.multiObjective.autoEntropy) {
-          if (!((_u = this.options.multiObjective.dynamic) === null || _u === void 0 ? void 0 : _u.enabled)) {
-            const keys = this._getObjectives().map((o) => o.key);
-            if (!keys.includes("entropy")) {
-              this.registerObjective("entropy", "max", (g) => this._structuralEntropy(g));
-              this._pendingObjectiveAdds.push("entropy");
-              this._objectivesList = void 0;
-            }
+    } catch {
+    }
+    try {
+      if (this.options.multiObjective?.enabled && this.options.multiObjective.autoEntropy) {
+        if (!this.options.multiObjective.dynamic?.enabled) {
+          const keys = this._getObjectives().map((o) => o.key);
+          if (!keys.includes("entropy")) {
+            this.registerObjective("entropy", "max", (g) => this._structuralEntropy(g));
+            this._pendingObjectiveAdds.push("entropy");
+            this._objectivesList = void 0;
           }
         }
-      } catch (_0) {
       }
-    });
+    } catch {
+    }
   }
-  var __awaiter6;
   var init_neat_evaluate = __esm({
     "dist/neat/neat.evaluate.js"() {
       "use strict";
-      __awaiter6 = function(thisArg, _arguments, P, generator) {
-        function adopt(value) {
-          return value instanceof P ? value : new P(function(resolve) {
-            resolve(value);
-          });
-        }
-        return new (P || (P = Promise))(function(resolve, reject) {
-          function fulfilled(value) {
-            try {
-              step(generator.next(value));
-            } catch (e) {
-              reject(e);
-            }
-          }
-          function rejected(value) {
-            try {
-              step(generator["throw"](value));
-            } catch (e) {
-              reject(e);
-            }
-          }
-          function step(result) {
-            result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected);
-          }
-          step((generator = generator.apply(thisArg, _arguments || [])).next());
-        });
-      };
     }
   });
 
   // dist/neat/neat.helpers.js
   function spawnFromParent(parentGenome, mutateCount = 1) {
-    var _a;
     const clone = parentGenome.clone ? parentGenome.clone() : (init_network(), __toCommonJS(network_exports)).default.fromJSON(parentGenome.toJSON());
     clone.score = void 0;
     clone._reenableProb = this.options.reenableProb;
     clone._id = this._nextGenomeId++;
     clone._parents = [parentGenome._id];
-    clone._depth = ((_a = parentGenome._depth) !== null && _a !== void 0 ? _a : 0) + 1;
+    clone._depth = (parentGenome._depth ?? 0) + 1;
     this.ensureMinHiddenNodes(clone);
     this.ensureNoDeadEnds(clone);
     for (let mutationIndex = 0; mutationIndex < mutateCount; mutationIndex++) {
@@ -11452,7 +11489,7 @@
         if (selectedMutationMethod && selectedMutationMethod.name) {
           clone.mutate(selectedMutationMethod);
         }
-      } catch (_b) {
+      } catch {
       }
     }
     this._invalidateGenomeCaches(clone);
@@ -11466,10 +11503,7 @@
       genome._parents = Array.isArray(parents) ? parents.slice() : [];
       genome._depth = 0;
       if (genome._parents.length) {
-        const parentDepths = genome._parents.map((pid) => this.population.find((g) => g._id === pid)).filter(Boolean).map((g) => {
-          var _a;
-          return (_a = g._depth) !== null && _a !== void 0 ? _a : 0;
-        });
+        const parentDepths = genome._parents.map((pid) => this.population.find((g) => g._id === pid)).filter(Boolean).map((g) => g._depth ?? 0);
         genome._depth = parentDepths.length ? Math.max(...parentDepths) + 1 : 1;
       }
       this.ensureMinHiddenNodes(genome);
@@ -11481,18 +11515,17 @@
     }
   }
   function createPool(seedNetwork) {
-    var _a, _b;
     try {
       this.population = [];
-      const poolSize = ((_a = this.options) === null || _a === void 0 ? void 0 : _a.popsize) || 50;
+      const poolSize = this.options?.popsize || 50;
       for (let genomeIndex = 0; genomeIndex < poolSize; genomeIndex++) {
         const genomeCopy = seedNetwork ? Network.fromJSON(seedNetwork.toJSON()) : new Network(this.input, this.output, {
-          minHidden: (_b = this.options) === null || _b === void 0 ? void 0 : _b.minHidden
+          minHidden: this.options?.minHidden
         });
         genomeCopy.score = void 0;
         try {
           this.ensureNoDeadEnds(genomeCopy);
-        } catch (_c) {
+        } catch {
         }
         genomeCopy._reenableProb = this.options.reenableProb;
         genomeCopy._id = this._nextGenomeId++;
@@ -11502,7 +11535,7 @@
         }
         this.population.push(genomeCopy);
       }
-    } catch (_d) {
+    } catch {
     }
   }
   var init_neat_helpers = __esm({
@@ -11514,7 +11547,6 @@
 
   // dist/neat/neat.objectives.js
   function _getObjectives() {
-    var _a;
     if (this._objectivesList)
       return this._objectivesList;
     const objectivesList = [];
@@ -11534,7 +11566,7 @@
         accessor: (genome) => genome.score || 0
       });
     }
-    if (((_a = this.options.multiObjective) === null || _a === void 0 ? void 0 : _a.enabled) && Array.isArray(this.options.multiObjective.objectives)) {
+    if (this.options.multiObjective?.enabled && Array.isArray(this.options.multiObjective.objectives)) {
       for (const candidateObjective of this.options.multiObjective.objectives) {
         if (!candidateObjective || !candidateObjective.key || typeof candidateObjective.accessor !== "function")
           continue;
@@ -11555,8 +11587,7 @@
     this._objectivesList = void 0;
   }
   function clearObjectives() {
-    var _a;
-    if ((_a = this.options.multiObjective) === null || _a === void 0 ? void 0 : _a.objectives)
+    if (this.options.multiObjective?.objectives)
       this.options.multiObjective.objectives = [];
     this._objectivesList = void 0;
   }
@@ -11646,9 +11677,8 @@
 
   // dist/neat/neat.compat.js
   function _fallbackInnov(connection) {
-    var _a, _b, _c, _d;
-    const fromIndex = (_b = (_a = connection.from) === null || _a === void 0 ? void 0 : _a.index) !== null && _b !== void 0 ? _b : 0;
-    const toIndex = (_d = (_c = connection.to) === null || _c === void 0 ? void 0 : _c.index) !== null && _d !== void 0 ? _d : 0;
+    const fromIndex = connection.from?.index ?? 0;
+    const toIndex = connection.to?.index ?? 0;
     return fromIndex * 1e5 + toIndex;
   }
   function _compatibilityDistance(genomeA, genomeB) {
@@ -11662,13 +11692,10 @@
       return cacheMap.get(key);
     const getCache = (network) => {
       if (!network._compatCache) {
-        const list = network.connections.map((conn) => {
-          var _a;
-          return [
-            (_a = conn.innovation) !== null && _a !== void 0 ? _a : this._fallbackInnov(conn),
-            conn.weight
-          ];
-        });
+        const list = network.connections.map((conn) => [
+          conn.innovation ?? this._fallbackInnov(conn),
+          conn.weight
+        ]);
         list.sort((x, y) => x[0] - y[0]);
         network._compatCache = list;
       }
@@ -11722,7 +11749,6 @@
 
   // dist/neat/neat.speciation.js
   function _speciate() {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k;
     this._prevSpeciesMembers.clear();
     for (const species of this._species) {
       const prevMemberSet = /* @__PURE__ */ new Set();
@@ -11762,10 +11788,10 @@
       oldPenalty: 0.5
     };
     for (const species of this._species) {
-      const createdGen = (_a = this._speciesCreated.get(species.id)) !== null && _a !== void 0 ? _a : this.generation;
+      const createdGen = this._speciesCreated.get(species.id) ?? this.generation;
       const speciesAge = this.generation - createdGen;
-      if (speciesAge >= ((_b = ageProtection.grace) !== null && _b !== void 0 ? _b : 3) * 10) {
-        const penalty = (_c = ageProtection.oldPenalty) !== null && _c !== void 0 ? _c : 0.5;
+      if (speciesAge >= (ageProtection.grace ?? 3) * 10) {
+        const penalty = ageProtection.oldPenalty ?? 0.5;
         if (penalty < 1)
           species.members.forEach((member) => {
             if (typeof member.score === "number")
@@ -11797,13 +11823,13 @@
       }
       this.options.compatibilityThreshold = newThreshold;
     }
-    if ((_d = this.options.autoCompatTuning) === null || _d === void 0 ? void 0 : _d.enabled) {
-      const autoTarget = (_f = (_e = this.options.autoCompatTuning.target) !== null && _e !== void 0 ? _e : this.options.targetSpecies) !== null && _f !== void 0 ? _f : Math.max(2, Math.round(Math.sqrt(this.population.length)));
+    if (this.options.autoCompatTuning?.enabled) {
+      const autoTarget = this.options.autoCompatTuning.target ?? this.options.targetSpecies ?? Math.max(2, Math.round(Math.sqrt(this.population.length)));
       const observedForTuning = this._species.length || 1;
       const tuningError = autoTarget - observedForTuning;
-      const adjustRate = (_g = this.options.autoCompatTuning.adjustRate) !== null && _g !== void 0 ? _g : 0.01;
-      const minCoeff = (_h = this.options.autoCompatTuning.minCoeff) !== null && _h !== void 0 ? _h : 0.1;
-      const maxCoeff = (_j = this.options.autoCompatTuning.maxCoeff) !== null && _j !== void 0 ? _j : 5;
+      const adjustRate = this.options.autoCompatTuning.adjustRate ?? 0.01;
+      const minCoeff = this.options.autoCompatTuning.minCoeff ?? 0.1;
+      const maxCoeff = this.options.autoCompatTuning.maxCoeff ?? 5;
       const factor = 1 - adjustRate * Math.sign(tuningError);
       let effectiveFactor = factor;
       if (tuningError === 0) {
@@ -11812,9 +11838,8 @@
       this.options.excessCoeff = Math.min(maxCoeff, Math.max(minCoeff, this.options.excessCoeff * effectiveFactor));
       this.options.disjointCoeff = Math.min(maxCoeff, Math.max(minCoeff, this.options.disjointCoeff * effectiveFactor));
     }
-    if ((_k = this.options.speciesAllocation) === null || _k === void 0 ? void 0 : _k.extendedHistory) {
+    if (this.options.speciesAllocation?.extendedHistory) {
       const stats = this._species.map((species) => {
-        var _a2, _b2;
         const sizes = species.members.map((member) => ({
           nodes: member.nodes.length,
           conns: member.connections.length,
@@ -11837,7 +11862,7 @@
         const deltaMeanNodes = last ? meanNodes - last.meanNodes : 0;
         const deltaMeanConns = last ? meanConns - last.meanConns : 0;
         const deltaBestScore = last ? species.bestScore - last.best : 0;
-        const createdGen = (_a2 = this._speciesCreated.get(species.id)) !== null && _a2 !== void 0 ? _a2 : this.generation;
+        const createdGen = this._speciesCreated.get(species.id) ?? this.generation;
         const speciesAge = this.generation - createdGen;
         let turnoverRate = 0;
         const prevSet = this._prevSpeciesMembers.get(species.id);
@@ -11864,7 +11889,7 @@
         let disabled = 0;
         for (const member of species.members)
           for (const conn of member.connections) {
-            const innov = (_b2 = conn.innovation) !== null && _b2 !== void 0 ? _b2 : this._fallbackInnov(conn);
+            const innov = conn.innovation ?? this._fallbackInnov(conn);
             innovSum += innov;
             innovCount++;
             if (innov > maxInnov)
@@ -11990,9 +12015,8 @@
     }));
   }
   function getSpeciesHistory() {
-    var _a, _b, _c, _d, _e, _f;
     const speciesHistory = this._speciesHistory;
-    if ((_b = (_a = this.options) === null || _a === void 0 ? void 0 : _a.speciesAllocation) === null || _b === void 0 ? void 0 : _b.extendedHistory) {
+    if (this.options?.speciesAllocation?.extendedHistory) {
       for (const generationEntry of speciesHistory) {
         for (const speciesStat of generationEntry.stats) {
           if ("innovationRange" in speciesStat && "enabledRatio" in speciesStat)
@@ -12005,7 +12029,7 @@
             let disabledCount = 0;
             for (const member of speciesObj.members) {
               for (const connection of member.connections) {
-                const innovationId = (_f = (_c = connection.innovation) !== null && _c !== void 0 ? _c : (_e = (_d = this)._fallbackInnov) === null || _e === void 0 ? void 0 : _e.call(_d, connection)) !== null && _f !== void 0 ? _f : 0;
+                const innovationId = connection.innovation ?? this._fallbackInnov?.(connection) ?? 0;
                 if (innovationId > maxInnovation)
                   maxInnovation = innovationId;
                 if (innovationId < minInnovation)
@@ -12199,19 +12223,16 @@
     if (!Array.isArray(this._speciesHistory))
       this._speciesHistory = [];
     if (!this._speciesHistory.length && Array.isArray(this._species) && this._species.length) {
-      const stats = this._species.map((sp) => {
-        var _a, _b, _c;
-        return {
-          /** Unique identifier for the species (or -1 when missing). */
-          id: (_a = sp.id) !== null && _a !== void 0 ? _a : -1,
-          /** Current size (number of members) in the species. */
-          size: Array.isArray(sp.members) ? sp.members.length : 0,
-          /** Best score observed in the species (fallback 0). */
-          best: (_b = sp.bestScore) !== null && _b !== void 0 ? _b : 0,
-          /** Generation index when the species last improved (fallback 0). */
-          lastImproved: (_c = sp.lastImproved) !== null && _c !== void 0 ? _c : 0
-        };
-      });
+      const stats = this._species.map((sp) => ({
+        /** Unique identifier for the species (or -1 when missing). */
+        id: sp.id ?? -1,
+        /** Current size (number of members) in the species. */
+        size: Array.isArray(sp.members) ? sp.members.length : 0,
+        /** Best score observed in the species (fallback 0). */
+        best: sp.bestScore ?? 0,
+        /** Generation index when the species last improved (fallback 0). */
+        lastImproved: sp.lastImproved ?? 0
+      }));
       this._speciesHistory.push({ generation: this.generation || 0, stats });
     }
     const recentHistory = this._speciesHistory.slice(-maxEntries);
@@ -12263,20 +12284,16 @@
 
   // dist/neat/neat.selection.js
   function sort() {
-    this.population.sort((a, b) => {
-      var _a, _b;
-      return ((_a = b.score) !== null && _a !== void 0 ? _a : 0) - ((_b = a.score) !== null && _b !== void 0 ? _b : 0);
-    });
+    this.population.sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
   }
   function getParent() {
-    var _a, _b, _c, _d;
     const selectionOptions = this.options.selection;
-    const selectionName = selectionOptions === null || selectionOptions === void 0 ? void 0 : selectionOptions.name;
+    const selectionName = selectionOptions?.name;
     const getRngFactory = this._getRNG.bind(this);
     const population = this.population;
     switch (selectionName) {
       case "POWER":
-        if (((_a = population[0]) === null || _a === void 0 ? void 0 : _a.score) !== void 0 && ((_b = population[1]) === null || _b === void 0 ? void 0 : _b.score) !== void 0 && population[0].score < population[1].score) {
+        if (population[0]?.score !== void 0 && population[1]?.score !== void 0 && population[0].score < population[1].score) {
           this.sort();
         }
         const selectedIndex = Math.floor(Math.pow(getRngFactory()(), selectionOptions.power || 1) * population.length);
@@ -12285,16 +12302,15 @@
         let totalFitness = 0;
         let mostNegativeScore = 0;
         population.forEach((individual) => {
-          var _a2, _b2;
-          mostNegativeScore = Math.min(mostNegativeScore, (_a2 = individual.score) !== null && _a2 !== void 0 ? _a2 : 0);
-          totalFitness += (_b2 = individual.score) !== null && _b2 !== void 0 ? _b2 : 0;
+          mostNegativeScore = Math.min(mostNegativeScore, individual.score ?? 0);
+          totalFitness += individual.score ?? 0;
         });
         const minFitnessShift = Math.abs(mostNegativeScore);
         totalFitness += minFitnessShift * population.length;
         const threshold = getRngFactory()() * totalFitness;
         let cumulative = 0;
         for (const individual of population) {
-          cumulative += ((_c = individual.score) !== null && _c !== void 0 ? _c : 0) + minFitnessShift;
+          cumulative += (individual.score ?? 0) + minFitnessShift;
           if (threshold < cumulative)
             return individual;
         }
@@ -12311,12 +12327,9 @@
         for (let i = 0; i < tournamentSize; i++) {
           tournamentParticipants.push(population[Math.floor(getRngFactory()() * population.length)]);
         }
-        tournamentParticipants.sort((a, b) => {
-          var _a2, _b2;
-          return ((_a2 = b.score) !== null && _a2 !== void 0 ? _a2 : 0) - ((_b2 = a.score) !== null && _b2 !== void 0 ? _b2 : 0);
-        });
+        tournamentParticipants.sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
         for (let i = 0; i < tournamentParticipants.length; i++) {
-          if (getRngFactory()() < ((_d = selectionOptions.probability) !== null && _d !== void 0 ? _d : 0.5) || i === tournamentParticipants.length - 1)
+          if (getRngFactory()() < (selectionOptions.probability ?? 0.5) || i === tournamentParticipants.length - 1)
             return tournamentParticipants[i];
         }
         break;
@@ -12326,12 +12339,11 @@
     return population[0];
   }
   function getFittest() {
-    var _a, _b;
     const population = this.population;
     if (population[population.length - 1].score === void 0) {
       this.evaluate();
     }
-    if (population[1] && ((_a = population[0].score) !== null && _a !== void 0 ? _a : 0) < ((_b = population[1].score) !== null && _b !== void 0 ? _b : 0)) {
+    if (population[1] && (population[0].score ?? 0) < (population[1].score ?? 0)) {
       this.sort();
     }
     return population[0];
@@ -12341,10 +12353,7 @@
     if (population[population.length - 1].score === void 0) {
       this.evaluate();
     }
-    const totalScore = population.reduce((sum, genome) => {
-      var _a;
-      return sum + ((_a = genome.score) !== null && _a !== void 0 ? _a : 0);
-    }, 0);
+    const totalScore = population.reduce((sum, genome) => sum + (genome.score ?? 0), 0);
     return totalScore / population.length;
   }
   var init_neat_selection = __esm({
@@ -12420,7 +12429,7 @@
   __export(neat_exports, {
     default: () => Neat
   });
-  var __awaiter7, Neat;
+  var Neat;
   var init_neat = __esm({
     "dist/neat.js"() {
       "use strict";
@@ -12439,39 +12448,102 @@
       init_neat_telemetry_exports();
       init_neat_selection();
       init_neat_export();
-      __awaiter7 = function(thisArg, _arguments, P, generator) {
-        function adopt(value) {
-          return value instanceof P ? value : new P(function(resolve) {
-            resolve(value);
-          });
-        }
-        return new (P || (P = Promise))(function(resolve, reject) {
-          function fulfilled(value) {
-            try {
-              step(generator.next(value));
-            } catch (e) {
-              reject(e);
-            }
-          }
-          function rejected(value) {
-            try {
-              step(generator["throw"](value));
-            } catch (e) {
-              reject(e);
-            }
-          }
-          function step(result) {
-            result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected);
-          }
-          step((generator = generator.apply(thisArg, _arguments || [])).next());
-        });
-      };
       Neat = class _Neat {
+        input;
+        output;
+        fitness;
+        options;
+        population = [];
+        generation = 0;
+        // Deterministic RNG state (lazy init)
+        /**
+         * Internal numeric state for the deterministic xorshift RNG when no user RNG
+         * is provided. Stored as a 32-bit unsigned integer.
+         */
+        _rngState;
+        /**
+         * Cached RNG function; created lazily and seeded from `_rngState` when used.
+         */
+        _rng;
+        // Internal bookkeeping and caches (kept permissive during staggered migration)
+        /** Array of current species (internal representation). */
+        _species = [];
+        /** Operator statistics used by adaptive operator selection. */
+        _operatorStats = /* @__PURE__ */ new Map();
+        /** Map of node-split innovations used to reuse innovation ids for node splits. */
+        _nodeSplitInnovations = /* @__PURE__ */ new Map();
+        /** Map of connection innovations keyed by a string identifier. */
+        _connInnovations = /* @__PURE__ */ new Map();
+        /** Counter for issuing global innovation numbers when explicit numbers are used. */
+        _nextGlobalInnovation = 1;
+        /** Counter for assigning unique genome ids. */
+        _nextGenomeId = 1;
+        /** Whether lineage metadata should be recorded on genomes. */
+        _lineageEnabled = false;
+        /** Last observed count of inbreeding (used for detecting excessive cloning). */
+        _lastInbreedingCount = 0;
+        /** Previous inbreeding count snapshot. */
+        _prevInbreedingCount = 0;
+        /** Optional phase marker for multi-stage experiments. */
+        _phase;
+        /** Telemetry buffer storing diagnostic snapshots per generation. */
+        _telemetry = [];
+        /** Map of species id -> set of member genome ids from previous generation. */
+        _prevSpeciesMembers = /* @__PURE__ */ new Map();
+        /** Last recorded stats per species id. */
+        _speciesLastStats = /* @__PURE__ */ new Map();
+        /** Time-series history of species stats (for exports/telemetry). */
+        _speciesHistory = [];
+        /** Archive of Pareto front metadata for multi-objective tracking. */
+        _paretoArchive = [];
+        /** Archive storing Pareto objectives snapshots. */
+        _paretoObjectivesArchive = [];
+        /** Novelty archive used by novelty search (behavior representatives). */
+        _noveltyArchive = [];
+        /** Map tracking stale counts for objectives by key. */
+        _objectiveStale = /* @__PURE__ */ new Map();
+        /** Map tracking ages for objectives by key. */
+        _objectiveAges = /* @__PURE__ */ new Map();
+        /** Queue of recent objective activation/deactivation events for telemetry. */
+        _objectiveEvents = [];
+        /** Pending objective keys to add during safe phases. */
+        _pendingObjectiveAdds = [];
+        /** Pending objective keys to remove during safe phases. */
+        _pendingObjectiveRemoves = [];
+        /** Last allocated offspring set (used by adaptive allocators). */
+        _lastOffspringAlloc;
+        /** Adaptive prune level for complexity control (optional). */
+        _adaptivePruneLevel;
+        /** Duration of the last evaluation run (ms). */
+        _lastEvalDuration;
+        /** Duration of the last evolve run (ms). */
+        _lastEvolveDuration;
+        /** Cached diversity metrics (computed lazily). */
+        _diversityStats;
+        /** Cached list of registered objectives. */
+        _objectivesList;
+        /** Generation index where the last global improvement occurred. */
+        _lastGlobalImproveGeneration = 0;
+        /** Best score observed in the last generation (used for improvement detection). */
+        _bestScoreLastGen;
+        // Speciation controller state
+        /** Map of speciesId -> creation generation for bookkeeping. */
+        _speciesCreated = /* @__PURE__ */ new Map();
+        /** Exponential moving average for compatibility threshold (adaptive speciation). */
+        _compatSpeciesEMA;
+        /** Integral accumulator used by adaptive compatibility controllers. */
+        _compatIntegral = 0;
+        /** Generation when epsilon compatibility was last adjusted. */
+        _lastEpsilonAdjustGen = -Infinity;
+        /** Generation when ancestor uniqueness adjustment was last applied. */
+        _lastAncestorUniqAdjustGen = -Infinity;
+        // Adaptive minimal criterion & complexity
+        /** Adaptive minimal criterion threshold (optional). */
+        _mcThreshold;
         // Lightweight RNG accessor used throughout migrated modules
         _getRNG() {
-          var _a;
           if (!this._rng) {
-            const optRng = (_a = this.options) === null || _a === void 0 ? void 0 : _a.rng;
+            const optRng = this.options?.rng;
             if (typeof optRng === "function")
               this._rng = optRng;
             else {
@@ -12516,38 +12588,9 @@
          * const neat = new Neat(3, 1, (net) => evaluateFitness(net));
          */
         constructor(input, output, fitness, options = {}) {
-          var _a, _b, _c, _d;
-          this.population = [];
-          this.generation = 0;
-          this._species = [];
-          this._operatorStats = /* @__PURE__ */ new Map();
-          this._nodeSplitInnovations = /* @__PURE__ */ new Map();
-          this._connInnovations = /* @__PURE__ */ new Map();
-          this._nextGlobalInnovation = 1;
-          this._nextGenomeId = 1;
-          this._lineageEnabled = false;
-          this._lastInbreedingCount = 0;
-          this._prevInbreedingCount = 0;
-          this._telemetry = [];
-          this._prevSpeciesMembers = /* @__PURE__ */ new Map();
-          this._speciesLastStats = /* @__PURE__ */ new Map();
-          this._speciesHistory = [];
-          this._paretoArchive = [];
-          this._paretoObjectivesArchive = [];
-          this._noveltyArchive = [];
-          this._objectiveStale = /* @__PURE__ */ new Map();
-          this._objectiveAges = /* @__PURE__ */ new Map();
-          this._objectiveEvents = [];
-          this._pendingObjectiveAdds = [];
-          this._pendingObjectiveRemoves = [];
-          this._lastGlobalImproveGeneration = 0;
-          this._speciesCreated = /* @__PURE__ */ new Map();
-          this._compatIntegral = 0;
-          this._lastEpsilonAdjustGen = -Infinity;
-          this._lastAncestorUniqAdjustGen = -Infinity;
-          this.input = input !== null && input !== void 0 ? input : 0;
-          this.output = output !== null && output !== void 0 ? output : 0;
-          this.fitness = fitness !== null && fitness !== void 0 ? fitness : (n) => 0;
+          this.input = input ?? 0;
+          this.output = output ?? 0;
+          this.fitness = fitness ?? ((n) => 0);
           this.options = options || {};
           const opts = this.options;
           if (opts.popsize === void 0)
@@ -12583,7 +12626,7 @@
           if (opts.mutation === void 0)
             opts.mutation = mutation.ALL ? mutation.ALL.slice() : mutation.FFW ? [mutation.FFW] : [];
           if (opts.selection === void 0) {
-            opts.selection = selection && selection.TOURNAMENT || ((_a = selection) === null || _a === void 0 ? void 0 : _a.TOURNAMENT) || selection.FITNESS_PROPORTIONATE;
+            opts.selection = selection && selection.TOURNAMENT || selection?.TOURNAMENT || selection.FITNESS_PROPORTIONATE;
           }
           if (opts.crossover === void 0)
             opts.crossover = crossover ? crossover.SINGLE_POINT : void 0;
@@ -12596,7 +12639,7 @@
               opts.diversityMetrics.pairSample = 20;
             if (opts.diversityMetrics.graphletSample == null)
               opts.diversityMetrics.graphletSample = 30;
-            if (((_b = opts.novelty) === null || _b === void 0 ? void 0 : _b.enabled) && opts.novelty.k == null)
+            if (opts.novelty?.enabled && opts.novelty.k == null)
               opts.novelty.k = 5;
           }
           this._noveltyArchive = [];
@@ -12610,13 +12653,13 @@
               this.createPool(this.options.network);
             else if (this.options.popsize)
               this.createPool(null);
-          } catch (_e) {
+          } catch {
           }
-          if (((_c = this.options.lineage) === null || _c === void 0 ? void 0 : _c.enabled) || this.options.provenance > 0)
+          if (this.options.lineage?.enabled || this.options.provenance > 0)
             this._lineageEnabled = true;
           if (this.options.lineageTracking === true)
             this._lineageEnabled = true;
-          if (((_d = options.lineagePressure) === null || _d === void 0 ? void 0 : _d.enabled) && this._lineageEnabled !== true) {
+          if (options.lineagePressure?.enabled && this._lineageEnabled !== true) {
             this._lineageEnabled = true;
           }
         }
@@ -12628,15 +12671,11 @@
          * // Run a single evolution step (async)
          * await neat.evolve();
          */
-        evolve() {
-          return __awaiter7(this, void 0, void 0, function* () {
-            return evolve.call(this);
-          });
+        async evolve() {
+          return evolve.call(this);
         }
-        evaluate() {
-          return __awaiter7(this, void 0, void 0, function* () {
-            return evaluate.call(this);
-          });
+        async evaluate() {
+          return evaluate.call(this);
         }
         /**
          * Create initial population pool. Delegates to helpers if present.
@@ -12645,7 +12684,7 @@
           try {
             if (createPool && typeof createPool === "function")
               return createPool.call(this, network);
-          } catch (_a) {
+          } catch {
           }
           this.population = [];
           const poolSize = this.options.popsize || 50;
@@ -12656,7 +12695,7 @@
             genomeCopy.score = void 0;
             try {
               this.ensureNoDeadEnds(genomeCopy);
-            } catch (_b) {
+            } catch {
             }
             genomeCopy._reenableProb = this.options.reenableProb;
             genomeCopy._id = this._nextGenomeId++;
@@ -12706,17 +12745,16 @@
          * @see {@link https://medium.com/data-science/neuro-evolution-on-steroids-82bd14ddc2f6 Instinct: neuro-evolution on steroids by Thomas Wagenaar}
          */
         getOffspring() {
-          var _a, _b;
           let parent1;
           let parent2;
           try {
             parent1 = this.getParent();
-          } catch (_c) {
+          } catch {
             parent1 = this.population[0];
           }
           try {
             parent2 = this.getParent();
-          } catch (_d) {
+          } catch {
             parent2 = this.population[Math.floor(this._getRNG()() * this.population.length)] || this.population[0];
           }
           const offspring = Network.crossOver(parent1, parent2, this.options.equal || false);
@@ -12727,8 +12765,8 @@
               parent1._id,
               parent2._id
             ];
-            const depth1 = (_a = parent1._depth) !== null && _a !== void 0 ? _a : 0;
-            const depth2 = (_b = parent2._depth) !== null && _b !== void 0 ? _b : 0;
+            const depth1 = parent1._depth ?? 0;
+            const depth2 = parent2._depth ?? 0;
             offspring._depth = 1 + Math.max(depth1, depth2);
             if (parent1._id === parent2._id)
               this._lastInbreedingCount++;
@@ -12741,7 +12779,7 @@
         _warnIfNoBestGenome() {
           try {
             console.warn("Evolution completed without finding a valid best genome (no fitness improvements recorded).");
-          } catch (_a) {
+          } catch {
           }
         }
         /**
@@ -12817,7 +12855,7 @@
         selectMutationMethod(genome, rawReturnForTest = true) {
           try {
             return selectMutationMethod.call(this, genome, rawReturnForTest);
-          } catch (_a) {
+          } catch {
             return null;
           }
         }
@@ -12825,7 +12863,7 @@
         ensureNoDeadEnds(network) {
           try {
             return ensureNoDeadEnds.call(this, network);
-          } catch (_a) {
+          } catch {
             return;
           }
         }
@@ -12834,7 +12872,7 @@
           const o = this.options;
           if (typeof o.minHidden === "number")
             return o.minHidden;
-          const mult = multiplierOverride !== null && multiplierOverride !== void 0 ? multiplierOverride : o.minHiddenMultiplier;
+          const mult = multiplierOverride ?? o.minHiddenMultiplier;
           if (typeof mult === "number" && isFinite(mult)) {
             return Math.max(0, Math.round(mult * (this.input + this.output)));
           }
@@ -12990,16 +13028,13 @@
          * @returns Array of per-genome MO metric objects.
          */
         getMultiObjectiveMetrics() {
-          return this.population.map((genome) => {
-            var _a, _b;
-            return {
-              rank: (_a = genome._moRank) !== null && _a !== void 0 ? _a : 0,
-              crowding: (_b = genome._moCrowd) !== null && _b !== void 0 ? _b : 0,
-              score: genome.score || 0,
-              nodes: genome.nodes.length,
-              connections: genome.connections.length
-            };
-          });
+          return this.population.map((genome) => ({
+            rank: genome._moRank ?? 0,
+            crowding: genome._moCrowd ?? 0,
+            score: genome.score || 0,
+            nodes: genome.nodes.length,
+            connections: genome.connections.length
+          }));
         }
         /**
          * Returns a summary of mutation/operator statistics used by operator
@@ -13033,7 +13068,7 @@
         applyEvolutionPruning() {
           try {
             (init_neat_pruning(), __toCommonJS(neat_pruning_exports)).applyEvolutionPruning.call(this);
-          } catch (_a) {
+          } catch {
           }
         }
         /**
@@ -13048,7 +13083,7 @@
         applyAdaptivePruning() {
           try {
             (init_neat_pruning(), __toCommonJS(neat_pruning_exports)).applyAdaptivePruning.call(this);
-          } catch (_a) {
+          } catch {
           }
         }
         /**
@@ -13104,13 +13139,10 @@
         }
         /** Get recent objective add/remove events. */
         getLineageSnapshot(limit = 20) {
-          return this.population.slice(0, limit).map((genome) => {
-            var _a;
-            return {
-              id: (_a = genome._id) !== null && _a !== void 0 ? _a : -1,
-              parents: Array.isArray(genome._parents) ? genome._parents.slice() : []
-            };
-          });
+          return this.population.slice(0, limit).map((genome) => ({
+            id: genome._id ?? -1,
+            parents: Array.isArray(genome._parents) ? genome._parents.slice() : []
+          }));
         }
         /**
          * Return an array of {id, parents} for the first `limit` genomes in population.
@@ -13128,15 +13160,11 @@
          * @returns CSV string (may be empty).
          */
         getParetoFronts(maxFronts = 3) {
-          var _a;
-          if (!((_a = this.options.multiObjective) === null || _a === void 0 ? void 0 : _a.enabled))
+          if (!this.options.multiObjective?.enabled)
             return [[...this.population]];
           const fronts = [];
           for (let frontIdx = 0; frontIdx < maxFronts; frontIdx++) {
-            const front = this.population.filter((genome) => {
-              var _a2;
-              return ((_a2 = genome._moRank) !== null && _a2 !== void 0 ? _a2 : 0) === frontIdx;
-            });
+            const front = this.population.filter((genome) => (genome._moRank ?? 0) === frontIdx);
             if (!front.length)
               break;
             fronts.push(front);

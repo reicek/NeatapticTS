@@ -141,7 +141,9 @@ function mergeResults(browserRuns: BrowserRunRecord[]) {
 
 describe('browser headless benchmark integration', () => {
   if (SKIP) {
-    it('skips when SKIP_BROWSER_BENCH=1', () => { expect(true).toBe(true); });
+    it('skips when SKIP_BROWSER_BENCH=1', () => {
+      expect(true).toBe(true);
+    });
     return; // Prevent executing further browser dependent tests
   }
   // Arrange (once): build bundles & perform headless runs
@@ -152,19 +154,33 @@ describe('browser headless benchmark integration', () => {
     runs = await runHeadless();
     mergeResults(runs);
   });
-  it('produces an array of run records', () => { expect(Array.isArray(runs)).toBe(true); });
-  it('includes dev bundle path', () => { expect(typeof built.devPath).toBe('string'); });
-  it('includes prod bundle path', () => { expect(typeof built.prodPath).toBe('string'); });
+  it('produces an array of run records', () => {
+    expect(Array.isArray(runs)).toBe(true);
+  });
+  it('includes dev bundle path', () => {
+    expect(typeof built.devPath).toBe('string');
+  });
+  it('includes prod bundle path', () => {
+    expect(typeof built.prodPath).toBe('string');
+  });
   it('persists browserRuns in results file', () => {
     const resultsPath = path.resolve(__dirname, 'benchmark.results.json');
     let parsed: any = {};
-    if (fs.existsSync(resultsPath)) { try { parsed = JSON.parse(fs.readFileSync(resultsPath,'utf-8')); } catch {} }
+    if (fs.existsSync(resultsPath)) {
+      try {
+        parsed = JSON.parse(fs.readFileSync(resultsPath, 'utf-8'));
+      } catch {}
+    }
     const ok = Array.isArray(parsed.browserRuns);
     expect(ok).toBe(true);
   });
   if (runs.length) {
     const first = runs[0];
-    it('run record exposes numeric bundleBytes', () => { expect(typeof first.bundleBytes).toBe('number'); });
-    it('run record exposes mode string', () => { expect(typeof first.mode).toBe('string'); });
+    it('run record exposes numeric bundleBytes', () => {
+      expect(typeof first.bundleBytes).toBe('number');
+    });
+    it('run record exposes mode string', () => {
+      expect(typeof first.mode).toBe('string');
+    });
   }
 });

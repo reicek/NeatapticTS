@@ -1,6 +1,6 @@
 // Telemetry stream and recording helpers
 
-import { NeatLike, TelemetryEntry } from './neat.types';
+import type { NeatLike, TelemetryEntry } from './neat.types';
 import { EPSILON } from './neat.constants';
 
 /**

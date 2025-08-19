@@ -32,6 +32,7 @@
  * @returns {MemoryStats} A memory stats object (partial placeholder fields).
  */
 import { config } from '../config';
+import { nodePoolStats } from '../architecture/nodePool';
 
 /**
  * Capture heuristic memory statistics for one or more networks with snapshot of active config flags.
@@ -133,8 +134,8 @@ export function memoryStats(targetNetworks?: any | any[]) {
       fragmentationPct: null,
     },
     pools: {
-      // activation pool stats added in later phase; placeholder values
-      activation: null,
+      nodePool: nodePoolStats?.() ?? null,
+      // future: connectionPool, slabAllocators, activation array pool etc.
     },
     flags: {
       snapshot: {

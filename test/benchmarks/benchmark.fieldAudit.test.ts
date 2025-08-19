@@ -54,21 +54,38 @@ describe('phase1.fieldAudit baseline', () => {
   });
 
   describe('Node keys', () => {
-    test('non-zero Node key count', () => { expect(nodeKeys.length).toBeGreaterThan(0); });
-    test('Node keys array is sorted', () => { expect(nodeKeys.join(',')).toBe([...nodeKeys].sort().join(',')); });
+    test('non-zero Node key count', () => {
+      expect(nodeKeys.length).toBeGreaterThan(0);
+    });
+    test('Node keys array is sorted', () => {
+      expect(nodeKeys.join(',')).toBe([...nodeKeys].sort().join(','));
+    });
   });
 
   describe('Connection keys', () => {
-    test('non-zero Connection key count', () => { expect(connectionKeys.length).toBeGreaterThan(0); });
-    test('Connection keys array is sorted', () => { expect(connectionKeys.join(',')).toBe([...connectionKeys].sort().join(',')); });
+    test('non-zero Connection key count', () => {
+      expect(connectionKeys.length).toBeGreaterThan(0);
+    });
+    test('Connection keys array is sorted', () => {
+      expect(connectionKeys.join(',')).toBe(
+        [...connectionKeys].sort().join(',')
+      );
+    });
   });
 
   describe('persistence', () => {
     test('writes fieldAudit with matching Node count', () => {
       const resultsPath = path.resolve(__dirname, 'benchmark.results.json');
       let parsed: any = {};
-      if (fs.existsSync(resultsPath)) { try { parsed = JSON.parse(fs.readFileSync(resultsPath,'utf-8')); } catch {} }
-      const ok = parsed.fieldAudit && parsed.fieldAudit.Node && parsed.fieldAudit.Node.count === nodeKeys.length;
+      if (fs.existsSync(resultsPath)) {
+        try {
+          parsed = JSON.parse(fs.readFileSync(resultsPath, 'utf-8'));
+        } catch {}
+      }
+      const ok =
+        parsed.fieldAudit &&
+        parsed.fieldAudit.Node &&
+        parsed.fieldAudit.Node.count === nodeKeys.length;
       expect(ok).toBe(true);
     });
   });

@@ -41,13 +41,54 @@
   var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
   // src/architecture/connection.ts
-  var kGain, Connection;
+  var kGain, kGater, Connection;
   var init_connection = __esm({
     "src/architecture/connection.ts"() {
       "use strict";
       kGain = Symbol("connGain");
+      kGater = Symbol("connGater");
       Connection = class _Connection {
-        // bit0: enabled, bit1: dc active
+        /** The source (pre-synaptic) node supplying activation. */
+        from;
+        /** The target (post-synaptic) node receiving activation. */
+        to;
+        /** Scalar multiplier applied to the source activation (prior to gain modulation). */
+        weight;
+        /** Standard eligibility trace (e.g., for RTRL / policy gradient credit assignment). */
+        eligibility;
+        /** Last applied delta weight (used by classic momentum). */
+        previousDeltaWeight;
+        /** Accumulated (batched) delta weight awaiting an apply step. */
+        totalDeltaWeight;
+        /** Extended trace structure for modulatory / eligibility propagation algorithms. Parallel arrays for cache-friendly iteration. */
+        xtrace;
+        /** Unique historical marking (auto-increment) for evolutionary alignment. */
+        innovation;
+        // enabled handled via bitfield (see _flags) exposed through accessor (enumerability removed for slimming)
+        // --- Optimizer moment states (allocated lazily when an optimizer uses them) ---
+        /** First moment estimate (Adam / AdamW) (was opt_m). */
+        firstMoment;
+        /** Second raw moment estimate (Adam family) (was opt_v). */
+        secondMoment;
+        /** Generic gradient accumulator (RMSProp / AdaGrad) (was opt_cache). */
+        gradientAccumulator;
+        /** AMSGrad: Maximum of past second moment (was opt_vhat). */
+        maxSecondMoment;
+        /** Adamax: Exponential moving infinity norm (was opt_u). */
+        infinityNorm;
+        /** Secondary momentum (Lion variant) (was opt_m2). */
+        secondMomentum;
+        /** Lookahead: shadow (slow) weight parameter (was _la_shadowWeight). */
+        lookaheadShadowWeight;
+        /**
+         * Packed state flags (private for future-proofing hidden class):
+         * bit0 => enabled gene expression (1 = active)
+         * bit1 => DropConnect active mask (1 = not dropped this forward pass)
+         * bit2 => hasGater (1 = symbol field present)
+         * bits3+ reserved.
+         */
+        _flags;
+        // bit0 enabled, bit1 dcActive, bit2 hasGater
         /**
          * Construct a new connection between two nodes.
          *
@@ -65,7 +106,6 @@
           this.from = from;
           this.to = to;
           this.weight = weight ?? Math.random() * 0.2 - 0.1;
-          this.gater = null;
           this.eligibility = 0;
           this.previousDeltaWeight = 0;
           this.totalDeltaWeight = 0;
@@ -94,8 +134,9 @@
             innovation: this.innovation,
             enabled: this.enabled
           };
-          if (this.gater && typeof this.gater.index !== "undefined") {
-            json.gater = this.gater.index;
+          if (this._flags & 4) {
+            const g = this[kGater];
+            if (g && typeof g.index !== "undefined") json.gater = g.index;
           }
           return json;
         }
@@ -116,9 +157,7 @@
         static innovationID(sourceNodeId, targetNodeId) {
           return 0.5 * (sourceNodeId + targetNodeId) * (sourceNodeId + targetNodeId + 1) + targetNodeId;
         }
-        static {
-          this._nextInnovation = 1;
-        }
+        static _nextInnovation = 1;
         /**
          * Reset the monotonic auto-increment innovation counter (used for newly constructed / pooled instances).
          * You normally only call this at the start of an experiment or when deserializing a full population.
@@ -131,10 +170,8 @@
         static resetInnovationCounter(value = 1) {
           _Connection._nextInnovation = value;
         }
-        static {
-          // --- Simple object pool to reduce GC churn when connections are frequently created/removed ---
-          this._pool = [];
-        }
+        // --- Simple object pool to reduce GC churn when connections are frequently created/removed ---
+        static _pool = [];
         /**
          * Acquire a `Connection` from the pool (or construct new). Fields are fully reset & given
          * a fresh sequential `innovation` id. Prefer this in evolutionary algorithms that mutate
@@ -150,26 +187,25 @@
          * Connection.release(conn); // when permanently removed
          */
         static acquire(from, to, weight) {
-          let connection;
+          let c;
           if (_Connection._pool.length) {
-            connection = _Connection._pool.pop();
-            connection.from = from;
-            connection.to = to;
-            connection.weight = weight ?? Math.random() * 0.2 - 0.1;
-            if (connection[kGain] !== void 0) delete connection[kGain];
-            connection.gater = null;
-            connection.eligibility = 0;
-            connection.previousDeltaWeight = 0;
-            connection.totalDeltaWeight = 0;
-            connection.xtrace.nodes.length = 0;
-            connection.xtrace.values.length = 0;
-            connection._flags = 3;
-            connection.lookaheadShadowWeight = void 0;
-            connection.innovation = _Connection._nextInnovation++;
-          } else {
-            connection = new _Connection(from, to, weight);
-          }
-          return connection;
+            c = _Connection._pool.pop();
+            c.from = from;
+            c.to = to;
+            c.weight = weight ?? Math.random() * 0.2 - 0.1;
+            if (c[kGain] !== void 0) delete c[kGain];
+            if (c[kGater] !== void 0) delete c[kGater];
+            c._flags = 3;
+            c.eligibility = 0;
+            c.previousDeltaWeight = 0;
+            c.totalDeltaWeight = 0;
+            c.xtrace.nodes.length = 0;
+            c.xtrace.values.length = 0;
+            c.firstMoment = c.secondMoment = c.gradientAccumulator = c.maxSecondMoment = c.infinityNorm = c.secondMomentum = void 0;
+            c.lookaheadShadowWeight = void 0;
+            c.innovation = _Connection._nextInnovation++;
+          } else c = new _Connection(from, to, weight);
+          return c;
         }
         /**
          * Return a `Connection` to the internal pool for later reuse. Do NOT use the instance again
@@ -195,6 +231,10 @@
         set dcMask(v) {
           this._flags = v ? this._flags | 2 : this._flags & ~2;
         }
+        /** Whether a gater node is assigned (modulates gain); true if the gater symbol field is present. */
+        get hasGater() {
+          return (this._flags & 4) !== 0;
+        }
         // --- Virtualized gain property ---
         /**
          * Multiplicative modulation applied *after* weight. Default is `1` (neutral). We only store an
@@ -209,6 +249,22 @@
             if (this[kGain] !== void 0) delete this[kGain];
           } else {
             this[kGain] = v;
+          }
+        }
+        // --- Virtualized gater property (non-enumerable) ---
+        /** Optional gating node whose activation can modulate effective weight (symbol-backed). */
+        get gater() {
+          return (this._flags & 4) !== 0 ? this[kGater] : null;
+        }
+        set gater(node) {
+          if (node === null) {
+            if ((this._flags & 4) !== 0) {
+              this._flags &= ~4;
+              if (this[kGater] !== void 0) delete this[kGater];
+            }
+          } else {
+            this[kGater] = node;
+            this._flags |= 4;
           }
         }
         // ---------------------------------------------------------------------------
@@ -1564,15 +1620,76 @@
       init_config();
       init_methods();
       Node = class _Node {
-        static {
-          /**
-           * Global index counter for assigning unique indices to nodes.
-           */
-          this._globalNodeIndex = 0;
-        }
-        static {
-          this._nextGeneId = 1;
-        }
+        /**
+         * The bias value of the node. Added to the weighted sum of inputs before activation.
+         * Input nodes typically have a bias of 0.
+         */
+        bias;
+        /**
+         * The activation function (squashing function) applied to the node's state.
+         * Maps the internal state to the node's output (activation).
+         * @param x The node's internal state (sum of weighted inputs + bias).
+         * @param derivate If true, returns the derivative of the function instead of the function value.
+         * @returns The activation value or its derivative.
+         */
+        squash;
+        /**
+         * The type of the node: 'input', 'hidden', or 'output'.
+         * Determines behavior (e.g., input nodes don't have biases modified typically, output nodes calculate error differently).
+         */
+        type;
+        /**
+         * The output value of the node after applying the activation function. This is the value transmitted to connected nodes.
+         */
+        activation;
+        /**
+         * The internal state of the node (sum of weighted inputs + bias) before the activation function is applied.
+         */
+        state;
+        /**
+         * The node's state from the previous activation cycle. Used for recurrent self-connections.
+         */
+        old;
+        /**
+         * A mask factor (typically 0 or 1) used for implementing dropout. If 0, the node's output is effectively silenced.
+         */
+        mask;
+        /**
+         * The change in bias applied in the previous training iteration. Used for calculating momentum.
+         */
+        previousDeltaBias;
+        /**
+         * Accumulates changes in bias over a mini-batch during batch training. Reset after each weight update.
+         */
+        totalDeltaBias;
+        /**
+         * Stores incoming, outgoing, gated, and self-connections for this node.
+         */
+        connections;
+        /**
+         * Stores error values calculated during backpropagation.
+         */
+        error;
+        /**
+         * The derivative of the activation function evaluated at the node's current state. Used in backpropagation.
+         */
+        derivative;
+        // Deprecated: `nodes` & `gates` fields removed in refactor. Backwards access still works via getters below.
+        /**
+         * Optional index, potentially used to identify the node's position within a layer or network structure. Not used internally by the Node class itself.
+         */
+        index;
+        /**
+         * Internal flag to detect cycles during activation
+         */
+        isActivating;
+        /** Stable per-node gene identifier for NEAT innovation reuse */
+        geneId;
+        /**
+         * Global index counter for assigning unique indices to nodes.
+         */
+        static _globalNodeIndex = 0;
+        static _nextGeneId = 1;
         /**
          * Creates a new node.
          * @param type The type of the node ('input', 'hidden', or 'output'). Defaults to 'hidden'.
@@ -2520,16 +2637,14 @@
       "use strict";
       init_config();
       ActivationArrayPool = class {
-        constructor() {
-          /** Buckets keyed by length, storing reusable arrays. */
-          this.buckets = /* @__PURE__ */ new Map();
-          /** Count of arrays created since last clear(), for diagnostics. */
-          this.created = 0;
-          /** Count of successful reuses since last clear(), for diagnostics. */
-          this.reused = 0;
-          /** Max arrays retained per size bucket; Infinity by default. */
-          this.maxPerBucket = Number.POSITIVE_INFINITY;
-        }
+        /** Buckets keyed by length, storing reusable arrays. */
+        buckets = /* @__PURE__ */ new Map();
+        /** Count of arrays created since last clear(), for diagnostics. */
+        created = 0;
+        /** Count of successful reuses since last clear(), for diagnostics. */
+        reused = 0;
+        /** Max arrays retained per size bucket; Infinity by default. */
+        maxPerBucket = Number.POSITIVE_INFINITY;
         /**
          * Acquire an activation array of fixed length.
          * Zero-fills reused arrays to guarantee clean state.
@@ -2629,6 +2744,7 @@
         type: "module",
         scripts: {
           test: "jest --no-cache --coverage --collect-coverage --runInBand --testPathIgnorePatterns=.e2e.test.ts --verbose",
+          pretest: "npm run build",
           "test:bench": "jest --no-cache --runInBand --verbose --testPathPattern=benchmark",
           "test:silent": "jest --no-cache --coverage --collect-coverage --runInBand --testPathIgnorePatterns=.e2e.test.ts --silent",
           deploy: "npm run build && npm run test:dist && npm publish",
@@ -4929,6 +5045,17 @@
       init_methods();
       Group = class _Group {
         /**
+         * An array holding all the nodes within this group.
+         */
+        nodes;
+        /**
+         * Stores connection information related to this group.
+         * `in`: Connections coming into any node in this group from outside.
+         * `out`: Connections going out from any node in this group to outside.
+         * `self`: Connections between nodes within this same group (e.g., in ONE_TO_ONE connections).
+         */
+        connections;
+        /**
          * Creates a new group comprised of a specified number of nodes.
          * @param {number} size - The quantity of nodes to initialize within this group.
          */
@@ -5246,14 +5373,34 @@
       init_activationArrayPool();
       Layer = class _Layer {
         /**
+         * An array containing all the nodes (neurons or groups) that constitute this layer.
+         * The order of nodes might be relevant depending on the layer type and its connections.
+         */
+        nodes;
+        // Note: While typed as Node[], can contain Group instances in practice for memory layers.
+        /**
+         * Stores connection information related to this layer. This is often managed
+         * by the network or higher-level structures rather than directly by the layer itself.
+         * `in`: Incoming connections to the layer's nodes.
+         * `out`: Outgoing connections from the layer's nodes.
+         * `self`: Self-connections within the layer's nodes.
+         */
+        connections;
+        /**
+         * Represents the primary output group of nodes for this layer.
+         * This group is typically used when connecting this layer *to* another layer or group.
+         * It might be null if the layer is not yet fully constructed or is an input layer.
+         */
+        output;
+        /**
+         * Dropout rate for this layer (0 to 1). If > 0, all nodes in the layer are masked together during training.
+         * Layer-level dropout takes precedence over node-level dropout for nodes in this layer.
+         */
+        dropout = 0;
+        /**
          * Initializes a new Layer instance.
          */
         constructor() {
-          /**
-           * Dropout rate for this layer (0 to 1). If > 0, all nodes in the layer are masked together during training.
-           * Layer-level dropout takes precedence over node-level dropout for nodes in this layer.
-           */
-          this.dropout = 0;
           this.output = null;
           this.nodes = [];
           this.connections = { in: [], out: [], self: [] };
@@ -7857,6 +8004,7 @@
       import_child_process = __require("child_process");
       import_path = __toESM(require_path(), 1);
       TestWorker = class {
+        worker;
         /**
          * Creates a new TestWorker instance.
          *
@@ -7919,6 +8067,8 @@
       "use strict";
       init_multi();
       TestWorker2 = class _TestWorker {
+        worker;
+        url;
         /**
          * Creates a new TestWorker instance.
          * @param {number[]} dataSet - The serialized dataset to be used by the worker.
@@ -8031,53 +8181,49 @@
       "use strict";
       init_workers();
       Multi = class _Multi {
-        static {
-          /** Workers for multi-threading */
-          this.workers = Workers;
-        }
-        static {
-          /**
-           * A list of compiled activation functions in a specific order.
-           */
-          this.activations = [
-            (x) => 1 / (1 + Math.exp(-x)),
-            // Logistic (0)
-            (x) => Math.tanh(x),
-            // Tanh (1)
-            (x) => x,
-            // Identity (2)
-            (x) => x > 0 ? 1 : 0,
-            // Step (3)
-            (x) => x > 0 ? x : 0,
-            // ReLU (4)
-            (x) => x / (1 + Math.abs(x)),
-            // Softsign (5)
-            (x) => Math.sin(x),
-            // Sinusoid (6)
-            (x) => Math.exp(-Math.pow(x, 2)),
-            // Gaussian (7)
-            (x) => (Math.sqrt(Math.pow(x, 2) + 1) - 1) / 2 + x,
-            // Bent Identity (8)
-            (x) => x > 0 ? 1 : -1,
-            // Bipolar (9)
-            (x) => 2 / (1 + Math.exp(-x)) - 1,
-            // Bipolar Sigmoid (10)
-            (x) => Math.max(-1, Math.min(1, x)),
-            // Hard Tanh (11)
-            (x) => Math.abs(x),
-            // Absolute (12)
-            (x) => 1 - x,
-            // Inverse (13)
-            (x) => {
-              const alpha = 1.6732632423543772;
-              const scale = 1.0507009873554805;
-              const fx = x > 0 ? x : alpha * Math.exp(x) - alpha;
-              return fx * scale;
-            },
-            (x) => Math.log(1 + Math.exp(x))
-            // Softplus (15) - Added
-          ];
-        }
+        /** Workers for multi-threading */
+        static workers = Workers;
+        /**
+         * A list of compiled activation functions in a specific order.
+         */
+        static activations = [
+          (x) => 1 / (1 + Math.exp(-x)),
+          // Logistic (0)
+          (x) => Math.tanh(x),
+          // Tanh (1)
+          (x) => x,
+          // Identity (2)
+          (x) => x > 0 ? 1 : 0,
+          // Step (3)
+          (x) => x > 0 ? x : 0,
+          // ReLU (4)
+          (x) => x / (1 + Math.abs(x)),
+          // Softsign (5)
+          (x) => Math.sin(x),
+          // Sinusoid (6)
+          (x) => Math.exp(-Math.pow(x, 2)),
+          // Gaussian (7)
+          (x) => (Math.sqrt(Math.pow(x, 2) + 1) - 1) / 2 + x,
+          // Bent Identity (8)
+          (x) => x > 0 ? 1 : -1,
+          // Bipolar (9)
+          (x) => 2 / (1 + Math.exp(-x)) - 1,
+          // Bipolar Sigmoid (10)
+          (x) => Math.max(-1, Math.min(1, x)),
+          // Hard Tanh (11)
+          (x) => Math.abs(x),
+          // Absolute (12)
+          (x) => 1 - x,
+          // Inverse (13)
+          (x) => {
+            const alpha = 1.6732632423543772;
+            const scale = 1.0507009873554805;
+            const fx = x > 0 ? x : alpha * Math.exp(x) - alpha;
+            return fx * scale;
+          },
+          (x) => Math.log(1 + Math.exp(x))
+          // Softplus (15) - Added
+        ];
         /**
          * Serializes a dataset into a flat array.
          * @param {Array<{ input: number[]; output: number[] }>} dataSet - The dataset to serialize.
@@ -8568,51 +8714,98 @@
       init_network_serialize();
       init_network_genetic();
       Network = class _Network {
+        input;
+        output;
+        score;
+        nodes;
+        connections;
+        gates;
+        selfconns;
+        dropout = 0;
+        _dropConnectProb = 0;
+        _lastGradNorm;
+        _optimizerStep = 0;
+        _weightNoiseStd = 0;
+        _weightNoisePerHidden = [];
+        _weightNoiseSchedule;
+        _stochasticDepth = [];
+        _wnOrig;
+        _trainingStep = 0;
+        _rand = Math.random;
+        _rngState;
+        _lastStats = null;
+        _stochasticDepthSchedule;
+        _mixedPrecision = {
+          enabled: false,
+          lossScale: 1
+        };
+        _mixedPrecisionState = {
+          goodSteps: 0,
+          badSteps: 0,
+          minLossScale: 1,
+          maxLossScale: 65536,
+          overflowCount: 0,
+          scaleUpEvents: 0,
+          scaleDownEvents: 0
+        };
+        _gradAccumMicroBatches = 0;
+        _currentGradClip;
+        _lastRawGradNorm = 0;
+        _accumulationReduction = "average";
+        _gradClipSeparateBias = false;
+        _lastGradClipGroupCount = 0;
+        _lastOverflowStep = -1;
+        _forceNextOverflow = false;
+        _pruningConfig;
+        _initialConnectionCount;
+        _enforceAcyclic = false;
+        _topoOrder = null;
+        _topoDirty = true;
+        _globalEpoch = 0;
+        layers;
+        _evoInitialConnCount;
+        // baseline for evolution-time pruning
+        _activationPrecision = "f64";
+        // typed array precision for compiled path
+        _reuseActivationArrays = false;
+        // reuse pooled output arrays
+        _returnTypedActivations = false;
+        // if true and reuse enabled, return typed array directly
+        _activationPool;
+        // pooled output array
+        // Packed connection slab fields (for memory + cache efficiency when iterating connections)
+        _connWeights;
+        _connFrom;
+        _connTo;
+        _slabDirty = true;
+        _useFloat32Weights = true;
+        // Cached node.index maintenance (avoids repeated this.nodes.indexOf in hot paths like slab rebuild)
+        _nodeIndexDirty = true;
+        // when true, node.index values must be reassigned sequentially
+        // Fast slab forward path structures
+        _outStart;
+        _outOrder;
+        _adjDirty = true;
+        // Cached typed arrays for fast slab forward pass
+        _fastA;
+        _fastS;
+        // Internal hint: track a preferred linear chain edge to split on subsequent ADD_NODE mutations
+        // to encourage deep path formation even in stochastic modes. Updated each time we split it.
+        _preferredChainEdge;
+        // Slab helpers delegated to network.slab.ts
+        _canUseFastSlab(training) {
+          return canUseFastSlab.call(this, training);
+        }
+        _fastSlabActivate(input) {
+          return fastSlabActivate.call(this, input);
+        }
+        rebuildConnectionSlab(force = false) {
+          return rebuildConnectionSlab.call(this, force);
+        }
+        getConnectionSlab() {
+          return getConnectionSlab.call(this);
+        }
         constructor(input, output, options) {
-          this.dropout = 0;
-          this._dropConnectProb = 0;
-          this._optimizerStep = 0;
-          this._weightNoiseStd = 0;
-          this._weightNoisePerHidden = [];
-          this._stochasticDepth = [];
-          this._trainingStep = 0;
-          this._rand = Math.random;
-          this._lastStats = null;
-          this._mixedPrecision = {
-            enabled: false,
-            lossScale: 1
-          };
-          this._mixedPrecisionState = {
-            goodSteps: 0,
-            badSteps: 0,
-            minLossScale: 1,
-            maxLossScale: 65536,
-            overflowCount: 0,
-            scaleUpEvents: 0,
-            scaleDownEvents: 0
-          };
-          this._gradAccumMicroBatches = 0;
-          this._lastRawGradNorm = 0;
-          this._accumulationReduction = "average";
-          this._gradClipSeparateBias = false;
-          this._lastGradClipGroupCount = 0;
-          this._lastOverflowStep = -1;
-          this._forceNextOverflow = false;
-          this._enforceAcyclic = false;
-          this._topoOrder = null;
-          this._topoDirty = true;
-          this._globalEpoch = 0;
-          // baseline for evolution-time pruning
-          this._activationPrecision = "f64";
-          // typed array precision for compiled path
-          this._reuseActivationArrays = false;
-          // reuse pooled output arrays
-          this._returnTypedActivations = false;
-          this._slabDirty = true;
-          this._useFloat32Weights = true;
-          // Cached node.index maintenance (avoids repeated this.nodes.indexOf in hot paths like slab rebuild)
-          this._nodeIndexDirty = true;
-          this._adjDirty = true;
           if (typeof input === "undefined" || typeof output === "undefined") {
             throw new Error("No input or output size given");
           }
@@ -8657,19 +8850,6 @@
               this.addNodeBetween();
             }
           }
-        }
-        // Slab helpers delegated to network.slab.ts
-        _canUseFastSlab(training) {
-          return canUseFastSlab.call(this, training);
-        }
-        _fastSlabActivate(input) {
-          return fastSlabActivate.call(this, input);
-        }
-        rebuildConnectionSlab(force = false) {
-          return rebuildConnectionSlab.call(this, force);
-        }
-        getConnectionSlab() {
-          return getConnectionSlab.call(this);
         }
         // --- Added: structural helper referenced by constructor (split a random connection) ---
         addNodeBetween() {
@@ -10087,8 +10267,12 @@
           complexityBudget.minNodes ?? this.input + this.output + 2,
           Math.floor(this._cbMaxNodes * stagF)
         );
-      if (complexityBudget.minNodes !== void 0)
+      if (complexityBudget.minNodes !== void 0) {
         this._cbMaxNodes = Math.max(complexityBudget.minNodes, this._cbMaxNodes);
+      } else {
+        const implicitMin = this.input + this.output + 2;
+        if (this._cbMaxNodes < implicitMin) this._cbMaxNodes = implicitMin;
+      }
       this.options.maxNodes = this._cbMaxNodes;
       if (complexityBudget.maxConnsStart) {
         if (this._cbMaxConns === void 0)
@@ -12633,6 +12817,134 @@
       init_neat_selection();
       init_neat_export();
       Neat = class _Neat {
+        input;
+        output;
+        fitness;
+        options;
+        population = [];
+        generation = 0;
+        // Deterministic RNG state (lazy init)
+        /**
+         * Internal numeric state for the deterministic xorshift RNG when no user RNG
+         * is provided. Stored as a 32-bit unsigned integer.
+         */
+        _rngState;
+        /**
+         * Cached RNG function; created lazily and seeded from `_rngState` when used.
+         */
+        _rng;
+        // Internal bookkeeping and caches (kept permissive during staggered migration)
+        /** Array of current species (internal representation). */
+        _species = [];
+        /** Operator statistics used by adaptive operator selection. */
+        _operatorStats = /* @__PURE__ */ new Map();
+        /** Map of node-split innovations used to reuse innovation ids for node splits. */
+        _nodeSplitInnovations = /* @__PURE__ */ new Map();
+        /** Map of connection innovations keyed by a string identifier. */
+        _connInnovations = /* @__PURE__ */ new Map();
+        /** Counter for issuing global innovation numbers when explicit numbers are used. */
+        _nextGlobalInnovation = 1;
+        /** Counter for assigning unique genome ids. */
+        _nextGenomeId = 1;
+        /** Whether lineage metadata should be recorded on genomes. */
+        _lineageEnabled = false;
+        /** Last observed count of inbreeding (used for detecting excessive cloning). */
+        _lastInbreedingCount = 0;
+        /** Previous inbreeding count snapshot. */
+        _prevInbreedingCount = 0;
+        /** Optional phase marker for multi-stage experiments. */
+        _phase;
+        /** Telemetry buffer storing diagnostic snapshots per generation. */
+        _telemetry = [];
+        /** Map of species id -> set of member genome ids from previous generation. */
+        _prevSpeciesMembers = /* @__PURE__ */ new Map();
+        /** Last recorded stats per species id. */
+        _speciesLastStats = /* @__PURE__ */ new Map();
+        /** Time-series history of species stats (for exports/telemetry). */
+        _speciesHistory = [];
+        /** Archive of Pareto front metadata for multi-objective tracking. */
+        _paretoArchive = [];
+        /** Archive storing Pareto objectives snapshots. */
+        _paretoObjectivesArchive = [];
+        /** Novelty archive used by novelty search (behavior representatives). */
+        _noveltyArchive = [];
+        /** Map tracking stale counts for objectives by key. */
+        _objectiveStale = /* @__PURE__ */ new Map();
+        /** Map tracking ages for objectives by key. */
+        _objectiveAges = /* @__PURE__ */ new Map();
+        /** Queue of recent objective activation/deactivation events for telemetry. */
+        _objectiveEvents = [];
+        /** Pending objective keys to add during safe phases. */
+        _pendingObjectiveAdds = [];
+        /** Pending objective keys to remove during safe phases. */
+        _pendingObjectiveRemoves = [];
+        /** Last allocated offspring set (used by adaptive allocators). */
+        _lastOffspringAlloc;
+        /** Adaptive prune level for complexity control (optional). */
+        _adaptivePruneLevel;
+        /** Duration of the last evaluation run (ms). */
+        _lastEvalDuration;
+        /** Duration of the last evolve run (ms). */
+        _lastEvolveDuration;
+        /** Cached diversity metrics (computed lazily). */
+        _diversityStats;
+        /** Cached list of registered objectives. */
+        _objectivesList;
+        /** Generation index where the last global improvement occurred. */
+        _lastGlobalImproveGeneration = 0;
+        /** Best score observed in the last generation (used for improvement detection). */
+        _bestScoreLastGen;
+        // Speciation controller state
+        /** Map of speciesId -> creation generation for bookkeeping. */
+        _speciesCreated = /* @__PURE__ */ new Map();
+        /** Exponential moving average for compatibility threshold (adaptive speciation). */
+        _compatSpeciesEMA;
+        /** Integral accumulator used by adaptive compatibility controllers. */
+        _compatIntegral = 0;
+        /** Generation when epsilon compatibility was last adjusted. */
+        _lastEpsilonAdjustGen = -Infinity;
+        /** Generation when ancestor uniqueness adjustment was last applied. */
+        _lastAncestorUniqAdjustGen = -Infinity;
+        // Adaptive minimal criterion & complexity
+        /** Adaptive minimal criterion threshold (optional). */
+        _mcThreshold;
+        // Lightweight RNG accessor used throughout migrated modules
+        _getRNG() {
+          if (!this._rng) {
+            const optRng = this.options?.rng;
+            if (typeof optRng === "function") this._rng = optRng;
+            else {
+              if (this._rngState === void 0) {
+                let seed = (Date.now() ^ (this.population.length + 1) * 2654435761) >>> 0;
+                if (seed === 0) seed = 439041101;
+                this._rngState = seed >>> 0;
+              }
+              this._rng = () => {
+                let x = this._rngState >>> 0;
+                x ^= x << 13;
+                x >>>= 0;
+                x ^= x >> 17;
+                x >>>= 0;
+                x ^= x << 5;
+                x >>>= 0;
+                this._rngState = x >>> 0;
+                return (x >>> 0) / 4294967295;
+              };
+            }
+          }
+          return this._rng;
+        }
+        // Delegate ensureMinHiddenNodes to migrated mutation helper for smaller class surface
+        /**
+         * Ensure a network has the minimum number of hidden nodes according to
+         * configured policy. Delegates to migrated helper implementation.
+         *
+         * @param network Network instance to adjust.
+         * @param multiplierOverride Optional multiplier to override configured policy.
+         */
+        ensureMinHiddenNodes(network, multiplierOverride) {
+          return ensureMinHiddenNodes.call(this, network, multiplierOverride);
+        }
         /**
          * Construct a new Neat instance.
          * Kept permissive during staged migration; accepts the same signature tests expect.
@@ -12642,62 +12954,6 @@
          * const neat = new Neat(3, 1, (net) => evaluateFitness(net));
          */
         constructor(input, output, fitness, options = {}) {
-          this.population = [];
-          this.generation = 0;
-          // Internal bookkeeping and caches (kept permissive during staggered migration)
-          /** Array of current species (internal representation). */
-          this._species = [];
-          /** Operator statistics used by adaptive operator selection. */
-          this._operatorStats = /* @__PURE__ */ new Map();
-          /** Map of node-split innovations used to reuse innovation ids for node splits. */
-          this._nodeSplitInnovations = /* @__PURE__ */ new Map();
-          /** Map of connection innovations keyed by a string identifier. */
-          this._connInnovations = /* @__PURE__ */ new Map();
-          /** Counter for issuing global innovation numbers when explicit numbers are used. */
-          this._nextGlobalInnovation = 1;
-          /** Counter for assigning unique genome ids. */
-          this._nextGenomeId = 1;
-          /** Whether lineage metadata should be recorded on genomes. */
-          this._lineageEnabled = false;
-          /** Last observed count of inbreeding (used for detecting excessive cloning). */
-          this._lastInbreedingCount = 0;
-          /** Previous inbreeding count snapshot. */
-          this._prevInbreedingCount = 0;
-          /** Telemetry buffer storing diagnostic snapshots per generation. */
-          this._telemetry = [];
-          /** Map of species id -> set of member genome ids from previous generation. */
-          this._prevSpeciesMembers = /* @__PURE__ */ new Map();
-          /** Last recorded stats per species id. */
-          this._speciesLastStats = /* @__PURE__ */ new Map();
-          /** Time-series history of species stats (for exports/telemetry). */
-          this._speciesHistory = [];
-          /** Archive of Pareto front metadata for multi-objective tracking. */
-          this._paretoArchive = [];
-          /** Archive storing Pareto objectives snapshots. */
-          this._paretoObjectivesArchive = [];
-          /** Novelty archive used by novelty search (behavior representatives). */
-          this._noveltyArchive = [];
-          /** Map tracking stale counts for objectives by key. */
-          this._objectiveStale = /* @__PURE__ */ new Map();
-          /** Map tracking ages for objectives by key. */
-          this._objectiveAges = /* @__PURE__ */ new Map();
-          /** Queue of recent objective activation/deactivation events for telemetry. */
-          this._objectiveEvents = [];
-          /** Pending objective keys to add during safe phases. */
-          this._pendingObjectiveAdds = [];
-          /** Pending objective keys to remove during safe phases. */
-          this._pendingObjectiveRemoves = [];
-          /** Generation index where the last global improvement occurred. */
-          this._lastGlobalImproveGeneration = 0;
-          // Speciation controller state
-          /** Map of speciesId -> creation generation for bookkeeping. */
-          this._speciesCreated = /* @__PURE__ */ new Map();
-          /** Integral accumulator used by adaptive compatibility controllers. */
-          this._compatIntegral = 0;
-          /** Generation when epsilon compatibility was last adjusted. */
-          this._lastEpsilonAdjustGen = -Infinity;
-          /** Generation when ancestor uniqueness adjustment was last applied. */
-          this._lastAncestorUniqAdjustGen = -Infinity;
           this.input = input ?? 0;
           this.output = output ?? 0;
           this.fitness = fitness ?? ((n) => 0);
@@ -12754,43 +13010,6 @@
           if (options.lineagePressure?.enabled && this._lineageEnabled !== true) {
             this._lineageEnabled = true;
           }
-        }
-        // Lightweight RNG accessor used throughout migrated modules
-        _getRNG() {
-          if (!this._rng) {
-            const optRng = this.options?.rng;
-            if (typeof optRng === "function") this._rng = optRng;
-            else {
-              if (this._rngState === void 0) {
-                let seed = (Date.now() ^ (this.population.length + 1) * 2654435761) >>> 0;
-                if (seed === 0) seed = 439041101;
-                this._rngState = seed >>> 0;
-              }
-              this._rng = () => {
-                let x = this._rngState >>> 0;
-                x ^= x << 13;
-                x >>>= 0;
-                x ^= x >> 17;
-                x >>>= 0;
-                x ^= x << 5;
-                x >>>= 0;
-                this._rngState = x >>> 0;
-                return (x >>> 0) / 4294967295;
-              };
-            }
-          }
-          return this._rng;
-        }
-        // Delegate ensureMinHiddenNodes to migrated mutation helper for smaller class surface
-        /**
-         * Ensure a network has the minimum number of hidden nodes according to
-         * configured policy. Delegates to migrated helper implementation.
-         *
-         * @param network Network instance to adjust.
-         * @param multiplierOverride Optional multiplier to override configured policy.
-         */
-        ensureMinHiddenNodes(network, multiplierOverride) {
-          return ensureMinHiddenNodes.call(this, network, multiplierOverride);
         }
         /**
          * Evolves the population by selecting, mutating, and breeding genomes.
@@ -14973,6 +15192,32 @@
 
   // test/examples/asciiMaze/dashboardManager.ts
   var DashboardManager = class _DashboardManager {
+    // List of solved maze records (keeps full maze + solution for archival display)
+    solvedMazes = [];
+    // Set of maze keys we've already archived to avoid duplicate entries
+    solvedMazeKeys = /* @__PURE__ */ new Set();
+    // Currently evolving/best candidate for the active maze (live view)
+    currentBest = null;
+    // Functions supplied by the embedding environment. Keep dashboard I/O pluggable.
+    clearFunction;
+    logFunction;
+    archiveLogFunction;
+    // Telemetry and small history windows used for rendering trends/sparklines
+    _lastTelemetry = null;
+    _lastBestFitness = null;
+    _bestFitnessHistory = [];
+    _complexityNodesHistory = [];
+    _complexityConnsHistory = [];
+    _hypervolumeHistory = [];
+    _progressHistory = [];
+    _speciesCountHistory = [];
+    // Layout constants for the ASCII-art framed display
+    static FRAME_INNER_WIDTH = 148;
+    static LEFT_PADDING = 7;
+    static RIGHT_PADDING = 1;
+    static CONTENT_WIDTH = _DashboardManager.FRAME_INNER_WIDTH - _DashboardManager.LEFT_PADDING - _DashboardManager.RIGHT_PADDING;
+    static STAT_LABEL_WIDTH = 28;
+    static opennessLegend = "Openness: 1=best, (0,1)=longer improving, 0.001=only backtrack, 0=wall/dead/non-improving";
     /**
      * Construct a new DashboardManager
      *
@@ -14981,43 +15226,9 @@
      * @param archiveLogFn - optional function to which solved-maze archive blocks are appended
      */
     constructor(clearFn, logFn, archiveLogFn) {
-      // List of solved maze records (keeps full maze + solution for archival display)
-      this.solvedMazes = [];
-      // Set of maze keys we've already archived to avoid duplicate entries
-      this.solvedMazeKeys = /* @__PURE__ */ new Set();
-      // Currently evolving/best candidate for the active maze (live view)
-      this.currentBest = null;
-      // Telemetry and small history windows used for rendering trends/sparklines
-      this._lastTelemetry = null;
-      this._lastBestFitness = null;
-      this._bestFitnessHistory = [];
-      this._complexityNodesHistory = [];
-      this._complexityConnsHistory = [];
-      this._hypervolumeHistory = [];
-      this._progressHistory = [];
-      this._speciesCountHistory = [];
       this.clearFunction = clearFn;
       this.logFunction = logFn;
       this.archiveLogFunction = archiveLogFn;
-    }
-    static {
-      // Layout constants for the ASCII-art framed display
-      this.FRAME_INNER_WIDTH = 148;
-    }
-    static {
-      this.LEFT_PADDING = 7;
-    }
-    static {
-      this.RIGHT_PADDING = 1;
-    }
-    static {
-      this.CONTENT_WIDTH = _DashboardManager.FRAME_INNER_WIDTH - _DashboardManager.LEFT_PADDING - _DashboardManager.RIGHT_PADDING;
-    }
-    static {
-      this.STAT_LABEL_WIDTH = 28;
-    }
-    static {
-      this.opennessLegend = "Openness: 1=best, (0,1)=longer improving, 0.001=only backtrack, 0=wall/dead/non-improving";
     }
     /**
      * formatStat

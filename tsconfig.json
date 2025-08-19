@@ -3,9 +3,11 @@
     "baseUrl": "./",
     "outDir": "./dist",
     "rootDir": "./src",
-
+    // Pin to ES2023 baseline (stable, reproducible) per request.
     "module": "ESNext",
-    "target": "ES6",
+    "target": "ES2023",
+    // Libs aligned with target + DOM for browser compatibility.
+    "lib": ["ES2023", "DOM"],
     "strict": true,
     "sourceMap": true,
     "declaration": true,
@@ -14,7 +16,11 @@
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true,
-    "moduleResolution": "node" // Added this line to fix the error
+    // Modern module resolution (handles both .ts/.mts/.cts & package exports properly)
+    "moduleResolution": "Bundler",
+    // Emit smaller, spec-compliant class fields
+    "useDefineForClassFields": true,
+    "verbatimModuleSyntax": false
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]

@@ -216,7 +216,7 @@
 <ol>
 <li>Consistent option schema evolution (nested adaptive objects) without breaking historical JS ergonomics.</li>
 <li>Telemetry-first design—data structures shaped around analysis &amp; CSV export from the outset.</li>
-<li>Separation of concern between core evolutionary loop and optional extensions (each toggled). </li>
+<li>Separation of concern between core evolutionary loop and optional extensions (each toggled).</li>
 <li>Clearer future extension points (e.g., faster dominance algorithms, motif analytics) without entangling legacy patterns.</li>
 </ol>
 <h3 id="when-to-consult-the-original-project">When to Consult the Original Project</h3><table>
@@ -313,18 +313,8 @@ Performance</li>
 <li><a href="#common-symptoms--fixes">Common Symptoms &amp; Fixes</a></li>
 <li><a href="#minimal-experimental-loop">Minimal Experimental Loop</a></li>
 <li><a href="#hybrid-strategy-evolve--train">Hybrid Strategy (Evolve + Train)</a></li>
-<li><a href="#performance--parallelism-tuning">Performance &amp; Parallelism Tuning</a><ul>
-<li><a href="#core-levers">Core Levers</a></li>
-<li><a href="#structural-complexity-caching">Structural Complexity Caching</a></li>
-<li><a href="#profiling">Profiling</a></li>
-<li><a href="#suggested-workflow">Suggested Workflow</a></li>
-<li><a href="#determinism-caveat">Determinism Caveat</a></li>
-<li><a href="#example-minimal-perf-config">Example Minimal Perf Config</a></li>
-<li><a href="#memory-optimizations-activation-pooling--precision">Memory Optimizations (Activation Pooling &amp; Precision)</a></li>
-<li><a href="#deterministic-chain-mode-test-utility">Deterministic Chain Mode (Test Utility)</a>
+<li><a href="#performance--parallelism-tuning">Performance &amp; Parallelism Tuning</a> - <a href="#core-levers">Core Levers</a> - <a href="#structural-complexity-caching">Structural Complexity Caching</a> - <a href="#profiling">Profiling</a> - <a href="#suggested-workflow">Suggested Workflow</a> - <a href="#determinism-caveat">Determinism Caveat</a> - <a href="#example-minimal-perf-config">Example Minimal Perf Config</a> - <a href="#memory-optimizations-activation-pooling--precision">Memory Optimizations (Activation Pooling &amp; Precision)</a> - <a href="#deterministic-chain-mode-test-utility">Deterministic Chain Mode (Test Utility)</a>
 Evolution features</li>
-</ul>
-</li>
 <li><a href="#new-evolution-enhancements">New Evolution Enhancements</a><ul>
 <li><a href="#multi-objective-usage">Multi-Objective Usage</a></li>
 <li><a href="#adaptive-complexity-budget">Adaptive Complexity Budget</a></li>
@@ -349,22 +339,8 @@ Evolution features</li>
 <li><a href="#limitations--todo">Limitations / TODO</a></li>
 <li><a href="#validation--tests">Validation &amp; Tests</a>
 Training extensions</li>
-<li><a href="#added-training-features">Added Training Features</a><ul>
-<li><a href="#gradient-improvements">Gradient Improvements</a></li>
-<li><a href="#learning-rate-scheduler-usage">Learning Rate Scheduler Usage</a></li>
-<li><a href="#early-stopping-extensions">Early Stopping Extensions</a></li>
-<li><a href="#scheduler-reference">Scheduler Reference</a></li>
-<li><a href="#evolution-warning">Evolution Warning</a></li>
-<li><a href="#composing-schedulers-warmup-then-plateau">Composing Schedulers (Warmup then Plateau)</a></li>
-<li><a href="#metrics-hook--checkpoints">Metrics Hook &amp; Checkpoints</a></li>
-<li><a href="#advanced-optimizers">Advanced Optimizers</a></li>
-<li><a href="#label-smoothing">Label Smoothing</a></li>
-<li><a href="#weight-noise">Weight Noise</a></li>
-<li><a href="#stochastic-depth-layer-drop">Stochastic Depth (Layer Drop)</a></li>
-<li><a href="#dropconnect-recap">DropConnect (recap)</a>
+<li><a href="#added-training-features">Added Training Features</a> - <a href="#gradient-improvements">Gradient Improvements</a> - <a href="#learning-rate-scheduler-usage">Learning Rate Scheduler Usage</a> - <a href="#early-stopping-extensions">Early Stopping Extensions</a> - <a href="#scheduler-reference">Scheduler Reference</a> - <a href="#evolution-warning">Evolution Warning</a> - <a href="#composing-schedulers-warmup-then-plateau">Composing Schedulers (Warmup then Plateau)</a> - <a href="#metrics-hook--checkpoints">Metrics Hook &amp; Checkpoints</a> - <a href="#advanced-optimizers">Advanced Optimizers</a> - <a href="#label-smoothing">Label Smoothing</a> - <a href="#weight-noise">Weight Noise</a> - <a href="#stochastic-depth-layer-drop">Stochastic Depth (Layer Drop)</a> - <a href="#dropconnect-recap">DropConnect (recap)</a>
 Architecture &amp; Analysis</li>
-</ul>
-</li>
 <li><a href="#architecture--evolution">Architecture &amp; Evolution</a></li>
 <li><a href="#advanced-evolution-extensions">Advanced Evolution Extensions</a></li>
 <li><a href="#example-entropy-guided-sharing-sigma--ancestor-uniqueness-adaptive-tuning">Example: Entropy-Guided Sharing Sigma &amp; Ancestor Uniqueness Adaptive Tuning</a></li>
@@ -1974,154 +1950,31 @@ Re-enable probability is controlled by <code>reenableProb</code> (default 0.25).
 <li>Objective management (multiObjective.dynamic / autoEntropy / adaptiveEpsilon)</li>
 <li>Speciation governance (autoCompatTuning, speciesAge* protection/bonus)</li>
 </ul>
-<table>
-<thead>
-<tr>
-<th>Option Group</th>
-<th>Key Fields</th>
-<th>Purpose / Behavior</th>
-<th>Default</th>
-</tr>
-</thead>
-<tbody><tr>
-<td><code>adaptiveMutation</code></td>
-<td><code>{ enabled, initialRate, sigma, minRate, maxRate, adaptAmount, amountSigma, strategy, adaptEvery }</code></td>
-<td>Enhanced per-genome adaptive mutation; strategies: twoTier (top half down, bottom up), exploreLow (boost weakest), anneal (global decay); optional simultaneous adaptation of mutation amount.</td>
-<td>disabled</td>
-</tr>
-<tr>
-<td><code>novelty</code></td>
-<td><code>{ descriptor(g), k, addThreshold, archiveLimit, blendFactor }</code></td>
-<td>Novelty search scaffold blending kNN novelty with fitness; maintains archive</td>
-<td>disabled</td>
-</tr>
-<tr>
-<td><code>speciesAgeBonus</code></td>
-<td><code>{ youngGenerations, youngMultiplier, oldGenerations, oldPenalty }</code></td>
-<td>Temporary boost for young species, penalty for very old</td>
-<td><code>{ youngGenerations:5, youngMultiplier:1.2, oldGenerations:30, oldPenalty:0.3 }</code></td>
-</tr>
-<tr>
-<td><code>speciesAgeProtection</code></td>
-<td><code>{ grace, oldPenalty }</code></td>
-<td>Protect very young species from early elimination; apply fitness scale to very old</td>
-<td><code>{ grace:3, oldPenalty:0.5 }</code></td>
-</tr>
-<tr>
-<td><code>crossSpeciesMatingProb</code></td>
-<td>number</td>
-<td>Chance to select second parent from another species (maintains diversity)</td>
-<td>0</td>
-</tr>
-<tr>
-<td><code>adaptiveSharing</code></td>
-<td><code>{ enabled, targetFragmentation, adjustStep, minSigma, maxSigma }</code></td>
-<td>Auto-adjust kernel fitness sharing <code>sharingSigma</code> toward target fragmentation (#species/pop)</td>
-<td>disabled</td>
-</tr>
-<tr>
-<td><code>minimalCriterion</code></td>
-<td><code>(network)=&gt;boolean</code></td>
-<td>Filters genomes prior to speciation; failing genomes get score 0 (minimal criterion novelty style)</td>
-<td>undefined</td>
-</tr>
-<tr>
-<td><code>operatorAdaptation</code></td>
-<td><code>{ enabled, window, boost, decay }</code></td>
-<td>Tracks mutation operator success; weights selection probability by recent success</td>
-<td>disabled</td>
-</tr>
-<tr>
-<td><code>phasedComplexity</code></td>
-<td><code>{ enabled, phaseLength, simplifyFraction }</code></td>
-<td>Alternates complexify vs simplify phases; simplify prunes fraction of weakest connections</td>
-<td>disabled</td>
-</tr>
-<tr>
-<td><code>complexityBudget</code></td>
-<td><code>{ enabled, maxNodesStart, maxNodesEnd, horizon }</code></td>
-<td>Linear schedule for max allowed nodes; prevents premature bloat</td>
-<td>disabled</td>
-</tr>
-<tr>
-<td><code>multiObjective</code></td>
-<td><code>{ enabled, complexityMetric }</code></td>
-<td>Pareto non-dominated sorting (maximize fitness, minimize complexity). <code>complexityMetric</code>: <code>&#39;nodes&#39;</code> or <code>&#39;connections&#39;</code>.</td>
-<td>disabled</td>
-</tr>
-<tr>
-<td><code>reenableProb</code> (adaptive)</td>
-<td>(base option)</td>
-<td>Disabled gene reactivation probability; internally adaptively adjusted based on success when adaptive features on</td>
-<td>0.25</td>
-</tr>
-<tr>
-<td><code>diversityPressure</code></td>
-<td><code>{ enabled, motifSample, penaltyStrength }</code></td>
-<td>Penalizes over-represented small connection motif signatures to promote structural variety</td>
-<td>disabled</td>
-</tr>
-<tr>
-<td><code>autoCompatTuning</code></td>
-<td><code>{ enabled, target, adjustRate, minCoeff, maxCoeff }</code></td>
-<td>Automatically scales excess/disjoint coefficients to approach target species count</td>
-<td>disabled</td>
-</tr>
-<tr>
-<td><code>speciesAllocation</code></td>
-<td><code>{ minOffspring, extendedHistory }</code></td>
-<td>Guarantees minimum offspring per species (if capacity) and optionally records extended per-species metrics (compatibility, mean complexity, novelty)</td>
-<td><code>{ minOffspring:1, extendedHistory:true }</code></td>
-</tr>
-<tr>
-<td><code>minimalCriterionAdaptive</code></td>
-<td><code>{ enabled, initialThreshold, targetAcceptance, adjustRate, metric }</code></td>
-<td>Dynamically adjusts acceptance threshold to maintain target pass rate before fitness ranking</td>
-<td>disabled</td>
-</tr>
-<tr>
-<td><code>complexityBudget</code> (adaptive)</td>
-<td><code>{ enabled, mode:&#39;adaptive&#39;, maxNodesStart, maxNodesEnd, improvementWindow, increaseFactor, stagnationFactor, maxConnsStart, maxConnsEnd }</code></td>
-<td>Adaptive complexity caps grow on improvement, shrink on stagnation</td>
-<td>disabled</td>
-</tr>
-<tr>
-<td><code>operatorBandit</code></td>
-<td><code>{ enabled, c, minAttempts }</code></td>
-<td>UCB1-style multi-armed bandit weighting for mutation operator selection</td>
-<td>disabled</td>
-</tr>
-<tr>
-<td><code>novelty.pruneStrategy</code></td>
-<td>`&#39;fifo&#39;</td>
-<td>&#39;sparse&#39;`</td>
-<td>Archive pruning: fifo drops oldest when over limit; sparse iteratively removes closest pair to maximize dispersion.</td>
-</tr>
-<tr>
-<td><code>telemetry</code></td>
-<td><code>{ enabled, logEvery, performance, complexity, hypervolume, rngState }</code></td>
-<td>Per-generation summary: base {gen,best,species,hyper,fronts}; optional perf timings, complexity block, hv scalar; if <code>lineageTracking</code> then lineage:{ parents, depthBest, meanDepth, inbreeding, ancestorUniq }; rngState embeds deterministic PRNG state (seeded runs).</td>
-<td>disabled</td>
-</tr>
-<tr>
-<td><code>lineageTracking</code></td>
-<td><code>boolean</code></td>
-<td>Track parent genome ids &amp; depth; adds <code>_parents</code>/<code>_depth</code> on genomes and enriched telemetry lineage block</td>
-<td>true</td>
-</tr>
-<tr>
-<td><code>multiObjective.autoEntropy</code></td>
-<td><code>boolean</code></td>
-<td>Automatically append entropy (structure diversity proxy) objective (maximize)</td>
-<td>false</td>
-</tr>
-<tr>
-<td><code>multiObjective.dynamic</code></td>
-<td><code>{ enabled, addComplexityAt, addEntropyAt, dropEntropyOnStagnation, readdEntropyAfter }</code></td>
-<td>Dynamic scheduling of complexity/entropy objectives: delay adding complexity &amp; entropy to let pure fitness search early; temporarily drop entropy during stagnation then re-add after cooldown.</td>
-<td>disabled</td>
-</tr>
-</tbody></table>
+<p>| Option Group                  | Key Fields                                                                                                                                  | Purpose / Behavior                                                                                                                                                                                                                                                       | Default                                                                                                             |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------- | ---- |
+| <code>adaptiveMutation</code>            | <code>{ enabled, initialRate, sigma, minRate, maxRate, adaptAmount, amountSigma, strategy, adaptEvery }</code>                                         | Enhanced per-genome adaptive mutation; strategies: twoTier (top half down, bottom up), exploreLow (boost weakest), anneal (global decay); optional simultaneous adaptation of mutation amount.                                                                           | disabled                                                                                                            |
+| <code>novelty</code>                     | <code>{ descriptor(g), k, addThreshold, archiveLimit, blendFactor }</code>                                                                             | Novelty search scaffold blending kNN novelty with fitness; maintains archive                                                                                                                                                                                             | disabled                                                                                                            |
+| <code>speciesAgeBonus</code>             | <code>{ youngGenerations, youngMultiplier, oldGenerations, oldPenalty }</code>                                                                         | Temporary boost for young species, penalty for very old                                                                                                                                                                                                                  | <code>{ youngGenerations:5, youngMultiplier:1.2, oldGenerations:30, oldPenalty:0.3 }</code>                                    |
+| <code>speciesAgeProtection</code>        | <code>{ grace, oldPenalty }</code>                                                                                                                     | Protect very young species from early elimination; apply fitness scale to very old                                                                                                                                                                                       | <code>{ grace:3, oldPenalty:0.5 }</code>                                                                                       |
+| <code>crossSpeciesMatingProb</code>      | number                                                                                                                                      | Chance to select second parent from another species (maintains diversity)                                                                                                                                                                                                | 0                                                                                                                   |
+| <code>adaptiveSharing</code>             | <code>{ enabled, targetFragmentation, adjustStep, minSigma, maxSigma }</code>                                                                          | Auto-adjust kernel fitness sharing <code>sharingSigma</code> toward target fragmentation (#species/pop)                                                                                                                                                                             | disabled                                                                                                            |
+| <code>minimalCriterion</code>            | <code>(network)=&gt;boolean</code>                                                                                                                        | Filters genomes prior to speciation; failing genomes get score 0 (minimal criterion novelty style)                                                                                                                                                                       | undefined                                                                                                           |
+| <code>operatorAdaptation</code>          | <code>{ enabled, window, boost, decay }</code>                                                                                                         | Tracks mutation operator success; weights selection probability by recent success                                                                                                                                                                                        | disabled                                                                                                            |
+| <code>phasedComplexity</code>            | <code>{ enabled, phaseLength, simplifyFraction }</code>                                                                                                | Alternates complexify vs simplify phases; simplify prunes fraction of weakest connections                                                                                                                                                                                | disabled                                                                                                            |
+| <code>complexityBudget</code>            | <code>{ enabled, maxNodesStart, maxNodesEnd, horizon }</code>                                                                                          | Linear schedule for max allowed nodes; prevents premature bloat                                                                                                                                                                                                          | disabled                                                                                                            |
+| <code>multiObjective</code>              | <code>{ enabled, complexityMetric }</code>                                                                                                             | Pareto non-dominated sorting (maximize fitness, minimize complexity). <code>complexityMetric</code>: <code>&#39;nodes&#39;</code> or <code>&#39;connections&#39;</code>.                                                                                                                                                  | disabled                                                                                                            |
+| <code>reenableProb</code> (adaptive)     | (base option)                                                                                                                               | Disabled gene reactivation probability; internally adaptively adjusted based on success when adaptive features on                                                                                                                                                        | 0.25                                                                                                                |
+| <code>diversityPressure</code>           | <code>{ enabled, motifSample, penaltyStrength }</code>                                                                                                 | Penalizes over-represented small connection motif signatures to promote structural variety                                                                                                                                                                               | disabled                                                                                                            |
+| <code>autoCompatTuning</code>            | <code>{ enabled, target, adjustRate, minCoeff, maxCoeff }</code>                                                                                       | Automatically scales excess/disjoint coefficients to approach target species count                                                                                                                                                                                       | disabled                                                                                                            |
+| <code>speciesAllocation</code>           | <code>{ minOffspring, extendedHistory }</code>                                                                                                         | Guarantees minimum offspring per species (if capacity) and optionally records extended per-species metrics (compatibility, mean complexity, novelty)                                                                                                                     | <code>{ minOffspring:1, extendedHistory:true }</code>                                                                          |
+| <code>minimalCriterionAdaptive</code>    | <code>{ enabled, initialThreshold, targetAcceptance, adjustRate, metric }</code>                                                                       | Dynamically adjusts acceptance threshold to maintain target pass rate before fitness ranking                                                                                                                                                                             | disabled                                                                                                            |
+| <code>complexityBudget</code> (adaptive) | <code>{ enabled, mode:&#39;adaptive&#39;, maxNodesStart, maxNodesEnd, improvementWindow, increaseFactor, stagnationFactor, maxConnsStart, maxConnsEnd }</code> | Adaptive complexity caps grow on improvement, shrink on stagnation                                                                                                                                                                                                       | disabled                                                                                                            |
+| <code>operatorBandit</code>              | <code>{ enabled, c, minAttempts }</code>                                                                                                               | UCB1-style multi-armed bandit weighting for mutation operator selection                                                                                                                                                                                                  | disabled                                                                                                            |
+| <code>novelty.pruneStrategy</code>       | <code>&#39;fifo&#39;                                                                                                                                     | &#39;sparse&#39;</code>                                                                                                                                                                                                                                                                | Archive pruning: fifo drops oldest when over limit; sparse iteratively removes closest pair to maximize dispersion. | fifo |
+| <code>telemetry</code>                   | <code>{ enabled, logEvery, performance, complexity, hypervolume, rngState }</code>                                                                     | Per-generation summary: base {gen,best,species,hyper,fronts}; optional perf timings, complexity block, hv scalar; if <code>lineageTracking</code> then lineage:{ parents, depthBest, meanDepth, inbreeding, ancestorUniq }; rngState embeds deterministic PRNG state (seeded runs). | disabled                                                                                                            |
+| <code>lineageTracking</code>             | <code>boolean</code>                                                                                                                                   | Track parent genome ids &amp; depth; adds <code>_parents</code>/<code>_depth</code> on genomes and enriched telemetry lineage block                                                                                                                                                                | true                                                                                                                |
+| <code>multiObjective.autoEntropy</code>  | <code>boolean</code>                                                                                                                                   | Automatically append entropy (structure diversity proxy) objective (maximize)                                                                                                                                                                                            | false                                                                                                               |
+| <code>multiObjective.dynamic</code>      | <code>{ enabled, addComplexityAt, addEntropyAt, dropEntropyOnStagnation, readdEntropyAfter }</code>                                                    | Dynamic scheduling of complexity/entropy objectives: delay adding complexity &amp; entropy to let pure fitness search early; temporarily drop entropy during stagnation then re-add after cooldown.                                                                          | disabled                                                                                                            |</p>
 <h4 id="example-entropy-guided-sharing-sigma-ancestor-uniqueness-adaptive-tuning">Example: Entropy-guided sharing sigma &amp; ancestor uniqueness adaptive tuning</h4><pre><code class="language-ts">const neat = new Neat(inputs, outputs, fitness, {
   seed: 42,
   sharingSigma: 3.0,

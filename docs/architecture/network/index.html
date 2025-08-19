@@ -690,7 +690,9 @@ Defensive parsing retains forward compatibility (warns on unknown versions rathe
 formatVersion=2 adds: enabled flags, stable geneId (if present), dropout value.</p>
 <h3 id="default">default</h3><h4 id="flags">_flags</h4><p>Packed state flags (private for future-proofing hidden class):
 bit0 =&gt; enabled gene expression (1 = active)
-bit1 =&gt; DropConnect active mask (1 = not dropped this forward pass)</p>
+bit1 =&gt; DropConnect active mask (1 = not dropped this forward pass)
+bit2 =&gt; hasGater (1 = symbol field present)
+bits3+ reserved.</p>
 <h4 id="la-shadowweight">_la_shadowWeight</h4><p><strong>Deprecated:</strong> Use lookaheadShadowWeight instead.</p>
 <h4 id="acquire">acquire</h4><p><code>(from: import(&quot;D:/code-practice/NeatapticTS/src/architecture/node&quot;).default, to: import(&quot;D:/code-practice/NeatapticTS/src/architecture/node&quot;).default, weight: number | undefined) =&gt; import(&quot;D:/code-practice/NeatapticTS/src/architecture/connection&quot;).default</code></p>
 <p>Acquire a <code>Connection</code> from the pool (or construct new). Fields are fully reset &amp; given
@@ -712,8 +714,9 @@ topology frequently to reduce GC pressure.</p>
 <h4 id="gain">gain</h4><p>Multiplicative modulation applied <em>after</em> weight. Default is <code>1</code> (neutral). We only store an
 internal symbol-keyed property when the gain is non-neutral, reducing memory usage across
 large populations where most connections are ungated.</p>
-<h4 id="gater">gater</h4><p>Optional gating node that modulates the connection&#39;s gain (handled externally).</p>
+<h4 id="gater">gater</h4><p>Optional gating node whose activation can modulate effective weight (symbol-backed).</p>
 <h4 id="gradientaccumulator">gradientAccumulator</h4><p>Generic gradient accumulator (RMSProp / AdaGrad) (was opt_cache).</p>
+<h4 id="hasgater">hasGater</h4><p>Whether a gater node is assigned (modulates gain); true if the gater symbol field is present.</p>
 <h4 id="infinitynorm">infinityNorm</h4><p>Adamax: Exponential moving infinity norm (was opt_u).</p>
 <h4 id="innovation">innovation</h4><p>Unique historical marking (auto-increment) for evolutionary alignment.</p>
 <h4 id="innovationid">innovationID</h4><p><code>(sourceNodeId: number, targetNodeId: number) =&gt; number</code></p>

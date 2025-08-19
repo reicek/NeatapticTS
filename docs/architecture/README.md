@@ -182,6 +182,8 @@ Returns: The constructed network with a randomized topology.
 Packed state flags (private for future-proofing hidden class):
 bit0 => enabled gene expression (1 = active)
 bit1 => DropConnect active mask (1 = not dropped this forward pass)
+bit2 => hasGater (1 = symbol field present)
+bits3+ reserved.
 
 #### _la_shadowWeight
 
@@ -234,11 +236,15 @@ large populations where most connections are ungated.
 
 #### gater
 
-Optional gating node that modulates the connection's gain (handled externally).
+Optional gating node whose activation can modulate effective weight (symbol-backed).
 
 #### gradientAccumulator
 
 Generic gradient accumulator (RMSProp / AdaGrad) (was opt_cache).
+
+#### hasGater
+
+Whether a gater node is assigned (modulates gain); true if the gater symbol field is present.
 
 #### infinityNorm
 
@@ -1496,6 +1502,53 @@ Resets the connection's gain to 1 and removes it from the `connections.gated` li
 
 Parameters:
 - `connections` - A single Connection object or an array of Connection objects to ungate.
+
+## architecture/nodePool.ts
+
+### acquireNode
+
+`(opts: import("D:/code-practice/NeatapticTS/src/architecture/nodePool").AcquireNodeOptions) => import("D:/code-practice/NeatapticTS/src/architecture/node").default`
+
+Acquire (obtain) a node instance from the pool (or construct a new one if empty).
+The node is guaranteed to have fully reset dynamic state (activation, gradients, error, connections).
+
+### AcquireNodeOptions
+
+Options bag for acquiring a node.
+
+### nodePoolStats
+
+`() => { size: number; highWaterMark: number; }`
+
+Get current pool statistics (for debugging / future leak detection).
+
+### releaseNode
+
+`(node: import("D:/code-practice/NeatapticTS/src/architecture/node").default) => void`
+
+Release (recycle) a node back into the pool. The caller MUST ensure the node is fully detached
+from any network (connections arrays pruned, no external references maintained) to prevent leaks.
+After release, the node must be considered invalid until re-acquired.
+
+### resetNode
+
+`(node: import("D:/code-practice/NeatapticTS/src/architecture/node").default, type: string | undefined, rng: () => number) => void`
+
+Reset all mutable / dynamic fields of a node to a pristine post-construction state.
+This mirrors logic in the constructor & `clear()` while also clearing arrays & error objects.
+
+We intentionally do NOT reset the `type` or `squash` function unless explicitly provided so callers
+can optionally request a different type on acquire. Bias is reinitialized consistent with constructor semantics.
+
+### resetNodePool
+
+`() => void`
+
+Reset the pool (drops all retained nodes). Intended for test harness cleanup.
+
+### ResettableNodeFields
+
+Shape describing minimal mutable fields we explicitly reset (used internally).
 
 ## architecture/onnx.ts
 

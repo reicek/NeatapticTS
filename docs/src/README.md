@@ -890,6 +890,8 @@ Cached diversity metrics (computed lazily).
 Packed state flags (private for future-proofing hidden class):
 bit0 => enabled gene expression (1 = active)
 bit1 => DropConnect active mask (1 = not dropped this forward pass)
+bit2 => hasGater (1 = symbol field present)
+bits3+ reserved.
 
 #### _getObjectives
 
@@ -1816,7 +1818,7 @@ Parameters:
 
 #### gater
 
-Optional gating node that modulates the connection's gain (handled externally).
+Optional gating node whose activation can modulate effective weight (symbol-backed).
 
 #### gates
 
@@ -2091,6 +2093,10 @@ Parameters:
 - `` - - A sequence of numbers representing the size (number of units) of each layer: input layer size, hidden GRU layer sizes..., output layer size. Must include at least input, one hidden, and output layer sizes.
 
 Returns: The constructed GRU network.
+
+#### hasGater
+
+Whether a gater node is assigned (modulates gain); true if the gater symbol field is present.
 
 #### hopfield
 

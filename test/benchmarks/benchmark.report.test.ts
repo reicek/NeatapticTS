@@ -41,7 +41,8 @@ export function aggregateBenchMeasurements(
     string,
     BenchAggregateGroup & { _metricSamples: Record<string, number[]> }
   >();
-  for (const rec of records) { // Iterate each raw record (Act: grouping)
+  for (const rec of records) {
+    // Iterate each raw record (Act: grouping)
     const groupKey = `${rec.mode}|${rec.scenario}|${rec.size}`;
     let group = groupMap.get(groupKey);
     if (!group) {
@@ -64,7 +65,8 @@ export function aggregateBenchMeasurements(
   }
   // Finalize statistics
   const finalized: BenchAggregateGroup[] = [];
-  for (const group of groupMap.values()) { // Finalize each group (Act: statistic computation)
+  for (const group of groupMap.values()) {
+    // Finalize each group (Act: statistic computation)
     const stats: Record<string, number> = {};
     for (const [metricName, samples] of Object.entries(group._metricSamples)) {
       samples.sort((a, b) => a - b);
@@ -103,8 +105,18 @@ describe('benchmark.report placeholder', () => {
       expect(out.length).toBe(0);
     });
     const identicalKeyRecords: RawBenchMeasurement[] = [
-      { mode: 'src', scenario: 'build', size: 1000, metrics: { constructMs: 10 } },
-      { mode: 'src', scenario: 'build', size: 1000, metrics: { constructMs: 20 } },
+      {
+        mode: 'src',
+        scenario: 'build',
+        size: 1000,
+        metrics: { constructMs: 10 },
+      },
+      {
+        mode: 'src',
+        scenario: 'build',
+        size: 1000,
+        metrics: { constructMs: 20 },
+      },
     ];
     const aggregated = aggregateBenchMeasurements(identicalKeyRecords);
     it('produces one group for identical key records', () => {

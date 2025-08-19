@@ -161,8 +161,14 @@ export function applyComplexityBudget(this: any) {
         Math.floor(this._cbMaxNodes * stagF)
       );
     // Final clamp to explicit minNodes if provided (safety to avoid too-small nets)
-    if (complexityBudget.minNodes !== undefined)
+    if (complexityBudget.minNodes !== undefined) {
+      // Explicit minNodes clamp
       this._cbMaxNodes = Math.max(complexityBudget.minNodes, this._cbMaxNodes);
+    } else {
+      // Implicit minimal topology clamp (input + output + 2) to prevent underflow scenarios
+      const implicitMin = this.input + this.output + 2;
+      if (this._cbMaxNodes < implicitMin) this._cbMaxNodes = implicitMin;
+    }
     this.options.maxNodes = this._cbMaxNodes;
     if (complexityBudget.maxConnsStart) {
       if (this._cbMaxConns === undefined)

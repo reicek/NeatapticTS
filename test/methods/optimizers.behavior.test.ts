@@ -65,7 +65,7 @@ describe('Optimizer specific behaviors', () => {
     });
     it('synchronizes weight to shadow on k-multiple', () => {
       const conn: any = net.connections[0];
-  expect(conn.weight).toBeCloseTo(conn.lookaheadShadowWeight, 10);
+      expect(conn.weight).toBeCloseTo(conn.lookaheadShadowWeight, 10);
     });
   });
 

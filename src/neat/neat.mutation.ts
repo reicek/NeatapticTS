@@ -1,4 +1,4 @@
-import { NeatLike } from './neat.types';
+import type { NeatLike } from './neat.types';
 import { EXTRA_CONNECTION_PROBABILITY, EPSILON } from './neat.constants';
 
 /**

@@ -17,47 +17,19 @@
  * 2. Low GC churn: a simple object pool (`acquire` / `release`) recycles instances during topology evolution.
  * 3. Educational clarity: rich docs & examples show how to use connections in evolutionary + gradient settings.
  *
- * Typical Lifecycle
- * ```ts
- * // Construct directly (simplest)
- * const conn = new Connection(nodeA, nodeB, 0.5);
- * conn.weight *= 1.1;                  // adjust weight
- * conn.gain = 0.8;                     // set gating gain manually (rare)
- * conn.enabled = false;                // temporarily disable gene expression (NEAT mutation)
- * conn.enabled = true;                 // re‑enable
- *
- * // OR use the pool for performance in algorithms that create/destroy many links
- * const pooled = Connection.acquire(nodeA, nodeB); // random small initial weight
- * // ... use pooled connection in a network draft ...
- * Connection.release(pooled); // recycle when removed from topology
- * ```
- *
- * Gating vs Gain
- * ---------------
- * A connection's effective strength during forward propagation is: `effective = weight * gain`.
- * By default `gain = 1`. If a `gater` node is assigned elsewhere in the library, `gain` may be
- * updated dynamically each tick using the gater's activation. To minimize object shape bloat, a
- * neutral gain of `1` is *not stored*; only non‑neutral gains materialize an internal symbol field.
- *
- * Innovation Numbers
- * ------------------
- * NEAT-style historical markings let crossover align homologous genes. We provide both:
- * - `Connection.innovationID(sourceId, targetId)` – deterministic Cantor pairing for a pair of node indices
- * - Sequential auto-increment (`innovation` instance field) – simpler uniqueness for pooled instances
- *
- * Serialization
- * -------------
- * The `toJSON()` method exposes a concise representation suitable for saving / exchanging genomes.
- *
- * Performance Note
- * ----------------
- * Most numeric fields are plain JS numbers for JIT friendliness. Avoid adding ad-hoc properties at
- * runtime (it would deopt hidden classes). Use provided accessors for flags & gain.
+ * (Edited: gater is now virtualized – non-enumerable symbol storage + hasGater bit (bit2).)
  */
 import Node from './node'; // Import Node type
 
 // Symbol used for optional gain storage (non-enumerable). Neutral gain=1 omitted entirely.
 const kGain = Symbol('connGain');
+// Symbol used for optional gater storage (non-enumerable). Presence tracked with bit2 flag.
+const kGater = Symbol('connGater');
+// Symbol-backed optimizer moment bag (amortizes 7 rarely-used numeric fields into a single optional object).
+// Accessed via prototype accessors so assigning e.g. `conn.firstMoment = x` does NOT create an enumerable
+// own property (slimming the field audit key count back to baseline). The bag itself lives on a symbol key
+// (non-enumerable) allocated lazily on first write to any optimizer field.
+const kOpt = Symbol('connOptMoments');
 
 export default class Connection {
   /** The source (pre-synaptic) node supplying activation. */
@@ -66,8 +38,6 @@ export default class Connection {
   to: Node;
   /** Scalar multiplier applied to the source activation (prior to gain modulation). */
   weight: number;
-  /** Optional gating node that modulates the connection's gain (handled externally). */
-  gater: Node | null;
   /** Standard eligibility trace (e.g., for RTRL / policy gradient credit assignment). */
   eligibility: number;
   /** Last applied delta weight (used by classic momentum). */
@@ -79,27 +49,17 @@ export default class Connection {
   /** Unique historical marking (auto-increment) for evolutionary alignment. */
   innovation: number;
   // enabled handled via bitfield (see _flags) exposed through accessor (enumerability removed for slimming)
-  // --- Optimizer moment states (allocated lazily when an optimizer uses them) ---
-  /** First moment estimate (Adam / AdamW) (was opt_m). */
-  firstMoment?: number;
-  /** Second raw moment estimate (Adam family) (was opt_v). */
-  secondMoment?: number;
-  /** Generic gradient accumulator (RMSProp / AdaGrad) (was opt_cache). */
-  gradientAccumulator?: number;
-  /** AMSGrad: Maximum of past second moment (was opt_vhat). */
-  maxSecondMoment?: number;
-  /** Adamax: Exponential moving infinity norm (was opt_u). */
-  infinityNorm?: number;
-  /** Secondary momentum (Lion variant) (was opt_m2). */
-  secondMomentum?: number;
-  /** Lookahead: shadow (slow) weight parameter (was _la_shadowWeight). */
-  lookaheadShadowWeight?: number;
+  // --- Optimizer moment states (virtualized via symbol-backed bag + accessors) ---
+  // NOTE: Accessor implementations below manage a lazily-created non-enumerable object containing:
+  // { firstMoment, secondMoment, gradientAccumulator, maxSecondMoment, infinityNorm, secondMomentum, lookaheadShadowWeight }
   /**
    * Packed state flags (private for future-proofing hidden class):
    * bit0 => enabled gene expression (1 = active)
    * bit1 => DropConnect active mask (1 = not dropped this forward pass)
+   * bit2 => hasGater (1 = symbol field present)
+   * bits3+ reserved.
    */
-  private _flags: number; // bit0: enabled, bit1: dc active
+  private _flags: number; // bit0 enabled, bit1 dcActive, bit2 hasGater
 
   /**
    * Construct a new connection between two nodes.
@@ -118,7 +78,7 @@ export default class Connection {
     this.from = from;
     this.to = to;
     this.weight = weight ?? Math.random() * 0.2 - 0.1;
-    this.gater = null;
+    // gater default: absent (bit2 clear, no symbol)
     this.eligibility = 0;
 
     // For tracking momentum
@@ -157,8 +117,9 @@ export default class Connection {
       innovation: this.innovation,
       enabled: this.enabled,
     };
-    if (this.gater && typeof this.gater.index !== 'undefined') {
-      json.gater = this.gater.index;
+    if ((this as any)._flags & 0b100) {
+      const g = (this as any)[kGater];
+      if (g && typeof g.index !== 'undefined') json.gater = g.index;
     }
     return json;
   }
@@ -209,28 +170,20 @@ export default class Connection {
    * Connection.release(conn); // when permanently removed
    */
   static acquire(from: Node, to: Node, weight?: number): Connection {
-    let connection: Connection;
+    let c: Connection;
     if (Connection._pool.length) {
-      connection = Connection._pool.pop()!;
-      // Reset core references
-      (connection as any).from = from;
-      (connection as any).to = to;
-      connection.weight = weight ?? Math.random() * 0.2 - 0.1;
-      if ((connection as any)[kGain] !== undefined) delete (connection as any)[kGain]; // neutral gain
-      connection.gater = null;
-      connection.eligibility = 0;
-      connection.previousDeltaWeight = 0;
-      connection.totalDeltaWeight = 0;
-      connection.xtrace.nodes.length = 0;
-      connection.xtrace.values.length = 0;
-      // Optimizer fields intentionally left undefined (pay-for-use)
-      connection._flags = 0b11; // enabled + active
-  connection.lookaheadShadowWeight = undefined;
-      (connection as any).innovation = Connection._nextInnovation++;
-    } else {
-      connection = new Connection(from, to, weight);
-    }
-    return connection;
+      c = Connection._pool.pop()!;
+      (c as any).from = from; (c as any).to = to; c.weight = weight ?? Math.random() * 0.2 - 0.1;
+      if ((c as any)[kGain] !== undefined) delete (c as any)[kGain];
+      if ((c as any)[kGater] !== undefined) delete (c as any)[kGater];
+      c._flags = 0b11; // enabled + dcActive
+      c.eligibility = 0; c.previousDeltaWeight = 0; c.totalDeltaWeight = 0;
+      c.xtrace.nodes.length = 0; c.xtrace.values.length = 0;
+  // Clear optimizer bag if present
+  if ((c as any)[kOpt]) delete (c as any)[kOpt];
+      (c as any).innovation = Connection._nextInnovation++;
+    } else c = new Connection(from, to, weight);
+    return c;
   }
   /**
    * Return a `Connection` to the internal pool for later reuse. Do NOT use the instance again
@@ -246,6 +199,8 @@ export default class Connection {
   /** DropConnect active mask: 1 = not dropped (active), 0 = dropped for this stochastic pass. */
   get dcMask(): number { return (this._flags & 0b10) !== 0 ? 1 : 0; }
   set dcMask(v: number) { this._flags = v ? (this._flags | 0b10) : (this._flags & ~0b10); }
+  /** Whether a gater node is assigned (modulates gain); true if the gater symbol field is present. */
+  get hasGater(): boolean { return (this._flags & 0b100) !== 0; }
 
   // --- Virtualized gain property ---
   /**
@@ -259,6 +214,64 @@ export default class Connection {
       if ((this as any)[kGain] !== undefined) delete (this as any)[kGain];
     } else {
       (this as any)[kGain] = v;
+    }
+  }
+
+  // --- Optimizer field accessors (prototype-level to avoid per-instance enumerable keys) ---
+  private _ensureOptBag(): any {
+    let bag = (this as any)[kOpt];
+    if (!bag) {
+      bag = {};
+      (this as any)[kOpt] = bag; // symbol-keyed; non-enumerable
+    }
+    return bag;
+  }
+  private _getOpt<K extends keyof any>(k: string): number | undefined {
+    const bag = (this as any)[kOpt];
+    return bag ? bag[k] : undefined;
+  }
+  private _setOpt(k: string, v: number | undefined): void {
+    if (v === undefined) {
+      const bag = (this as any)[kOpt];
+      if (bag) delete bag[k];
+    } else {
+      this._ensureOptBag()[k] = v;
+    }
+  }
+  /** First moment estimate (Adam / AdamW) (was opt_m). */
+  get firstMoment(): number | undefined { return this._getOpt('firstMoment'); }
+  set firstMoment(v: number | undefined) { this._setOpt('firstMoment', v); }
+  /** Second raw moment estimate (Adam family) (was opt_v). */
+  get secondMoment(): number | undefined { return this._getOpt('secondMoment'); }
+  set secondMoment(v: number | undefined) { this._setOpt('secondMoment', v); }
+  /** Generic gradient accumulator (RMSProp / AdaGrad) (was opt_cache). */
+  get gradientAccumulator(): number | undefined { return this._getOpt('gradientAccumulator'); }
+  set gradientAccumulator(v: number | undefined) { this._setOpt('gradientAccumulator', v); }
+  /** AMSGrad: Maximum of past second moment (was opt_vhat). */
+  get maxSecondMoment(): number | undefined { return this._getOpt('maxSecondMoment'); }
+  set maxSecondMoment(v: number | undefined) { this._setOpt('maxSecondMoment', v); }
+  /** Adamax: Exponential moving infinity norm (was opt_u). */
+  get infinityNorm(): number | undefined { return this._getOpt('infinityNorm'); }
+  set infinityNorm(v: number | undefined) { this._setOpt('infinityNorm', v); }
+  /** Secondary momentum (Lion variant) (was opt_m2). */
+  get secondMomentum(): number | undefined { return this._getOpt('secondMomentum'); }
+  set secondMomentum(v: number | undefined) { this._setOpt('secondMomentum', v); }
+  /** Lookahead: shadow (slow) weight parameter (was _la_shadowWeight). */
+  get lookaheadShadowWeight(): number | undefined { return this._getOpt('lookaheadShadowWeight'); }
+  set lookaheadShadowWeight(v: number | undefined) { this._setOpt('lookaheadShadowWeight', v); }
+
+  // --- Virtualized gater property (non-enumerable) ---
+  /** Optional gating node whose activation can modulate effective weight (symbol-backed). */
+  get gater(): Node | null { return (this._flags & 0b100) !== 0 ? (this as any)[kGater] : null; }
+  set gater(node: Node | null) {
+    if (node === null) {
+      if ((this._flags & 0b100) !== 0) {
+        this._flags &= ~0b100;
+        if ((this as any)[kGater] !== undefined) delete (this as any)[kGater];
+      }
+    } else {
+      (this as any)[kGater] = node;
+      this._flags |= 0b100;
     }
   }
 

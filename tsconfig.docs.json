@@ -4,6 +4,7 @@
     "rootDir": "./",
     "outDir": "./dist-docs",
     "module": "CommonJS",
+    "moduleResolution": "Node",
     "types": ["node"],
     "skipLibCheck": true
   },

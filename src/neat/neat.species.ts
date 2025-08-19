@@ -1,4 +1,4 @@
-import { NeatLike, SpeciesHistoryEntry } from './neat.types';
+import type { NeatLike, SpeciesHistoryEntry } from './neat.types';
 
 /**
  * Get lightweight per-species statistics for the current population.

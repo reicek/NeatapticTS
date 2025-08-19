@@ -898,6 +898,8 @@ formatVersion=2 adds: enabled flags, stable geneId (if present), dropout value.
 Packed state flags (private for future-proofing hidden class):
 bit0 => enabled gene expression (1 = active)
 bit1 => DropConnect active mask (1 = not dropped this forward pass)
+bit2 => hasGater (1 = symbol field present)
+bits3+ reserved.
 
 #### _la_shadowWeight
 
@@ -950,11 +952,15 @@ large populations where most connections are ungated.
 
 #### gater
 
-Optional gating node that modulates the connection's gain (handled externally).
+Optional gating node whose activation can modulate effective weight (symbol-backed).
 
 #### gradientAccumulator
 
 Generic gradient accumulator (RMSProp / AdaGrad) (was opt_cache).
+
+#### hasGater
+
+Whether a gater node is assigned (modulates gain); true if the gater symbol field is present.
 
 #### infinityNorm
 

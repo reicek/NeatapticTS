@@ -29,11 +29,18 @@ export function planVariantRuns(
 ): PlannedVariantRun[] {
   const plannedRuns: PlannedVariantRun[] = [];
   // Iterate axes in fixed order to guarantee stable output ordering for reproducibility.
-  for (const variantMode of modes) { // outer: modes
-    for (const scenarioKey of scenarios) { // middle: scenarios
-      for (const sizePoint of sizes) { // inner: sizes
+  for (const variantMode of modes) {
+    // outer: modes
+    for (const scenarioKey of scenarios) {
+      // middle: scenarios
+      for (const sizePoint of sizes) {
+        // inner: sizes
         // Push cartesian element (Act)
-        plannedRuns.push({ mode: variantMode, scenario: scenarioKey, size: sizePoint });
+        plannedRuns.push({
+          mode: variantMode,
+          scenario: scenarioKey,
+          size: sizePoint,
+        });
       }
     }
   }
@@ -46,12 +53,14 @@ describe('benchmark.buildVariants placeholder', () => {
   describe('planVariantRuns()', () => {
     // Default arrangement reused across tests
     const plannedDefault = planVariantRuns();
-    it('returns an array of runs', () => { expect(Array.isArray(plannedDefault)).toBe(true); });
+    it('returns an array of runs', () => {
+      expect(Array.isArray(plannedDefault)).toBe(true);
+    });
     it('produces runs covering both modes', () => {
-      const modes = new Set(plannedDefault.map(r => r.mode));
+      const modes = new Set(plannedDefault.map((r) => r.mode));
       expect(modes.has('src') && modes.has('dist')).toBe(true);
     });
-    const custom = planVariantRuns(['src'], ['build','forward'], [1,2]);
+    const custom = planVariantRuns(['src'], ['build', 'forward'], [1, 2]);
     it('computes expected cartesian size for custom axes', () => {
       const expected = 1 * 2 * 2; // modes × scenarios × sizes
       expect(custom.length).toBe(expected);
@@ -71,14 +80,14 @@ describe('benchmark.buildVariants placeholder', () => {
       });
     });
     describe('ordering & duplicates', () => {
-      const sizes = [5,3,9];
+      const sizes = [5, 3, 9];
       const ordered = planVariantRuns(['src'], ['build'], sizes);
-      const duplicateModes = planVariantRuns(['src','src'], ['build'], [1]);
+      const duplicateModes = planVariantRuns(['src', 'src'], ['build'], [1]);
       it('preserves size iteration order (no internal sort)', () => {
-        expect(ordered.map(r => r.size).join(',')).toBe(sizes.join(','));
+        expect(ordered.map((r) => r.size).join(',')).toBe(sizes.join(','));
       });
       it('retains duplicate modes (no deduplication)', () => {
-        const srcCount = duplicateModes.filter(r => r.mode === 'src').length;
+        const srcCount = duplicateModes.filter((r) => r.mode === 'src').length;
         expect(srcCount).toBe(2);
       });
     });

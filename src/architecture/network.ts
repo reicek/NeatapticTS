@@ -4,7 +4,7 @@ import Multi from '../multithreading/multi';
 import * as methods from '../methods/methods';
 import mutation from '../methods/mutation'; // Import mutation methods
 import { config } from '../config'; // Import configuration settings
-import { activationArrayPool, ActivationArray } from './activationArrayPool';
+import { activationArrayPool, type ActivationArray } from './activationArrayPool';
 // ONNX export/import now lives in ./network/network.onnx (re-exported via ./onnx for backwards compat)
 import { exportToONNX } from './onnx';
 import { generateStandalone } from './network/network.standalone';

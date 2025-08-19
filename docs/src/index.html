@@ -451,7 +451,9 @@ Updates weights based on batch size configuration.</p>
 <h4 id="diversitystats">_diversityStats</h4><p>Cached diversity metrics (computed lazily).</p>
 <h4 id="flags">_flags</h4><p>Packed state flags (private for future-proofing hidden class):
 bit0 =&gt; enabled gene expression (1 = active)
-bit1 =&gt; DropConnect active mask (1 = not dropped this forward pass)</p>
+bit1 =&gt; DropConnect active mask (1 = not dropped this forward pass)
+bit2 =&gt; hasGater (1 = symbol field present)
+bits3+ reserved.</p>
 <h4 id="getobjectives">_getObjectives</h4><p><code>() =&gt; import(&quot;D:/code-practice/NeatapticTS/src/neat/neat.types&quot;).ObjectiveDescriptor[]</code></p>
 <p>Internal: return cached objective descriptors, building if stale.</p>
 <h4 id="globalnodeindex">_globalNodeIndex</h4><p>Global index counter for assigning unique indices to nodes.</p>
@@ -987,7 +989,7 @@ Gating allows the output of a node in this group to modulate the flow of signal 
 <li>`` - - A single connection object or an array of connection objects to be gated. Consider using a more specific type like <code>Connection | Connection[]</code>.</li>
 <li>`` - - The gating mechanism to use (e.g., <code>methods.gating.INPUT</code>, <code>methods.gating.OUTPUT</code>, <code>methods.gating.SELF</code>). Specifies which part of the connection is influenced by the gater node.</li>
 </ul>
-<h4 id="gater">gater</h4><p>Optional gating node that modulates the connection&#39;s gain (handled externally).</p>
+<h4 id="gater">gater</h4><p>Optional gating node whose activation can modulate effective weight (symbol-backed).</p>
 <h4 id="gates">gates</h4><p><strong>Deprecated:</strong> Use connections.gated; retained for legacy tests</p>
 <h4 id="geneid">geneId</h4><p>Stable per-node gene identifier for NEAT innovation reuse</p>
 <h4 id="getaverage">getAverage</h4><p><code>() =&gt; number</code></p>
@@ -1136,6 +1138,7 @@ This constructor uses <code>Layer.gru</code> to create the core GRU blocks.</p>
 <li>`` - - A sequence of numbers representing the size (number of units) of each layer: input layer size, hidden GRU layer sizes..., output layer size. Must include at least input, one hidden, and output layer sizes.</li>
 </ul>
 <p>Returns: The constructed GRU network.</p>
+<h4 id="hasgater">hasGater</h4><p>Whether a gater node is assigned (modulates gain); true if the gater symbol field is present.</p>
 <h4 id="hopfield">hopfield</h4><p><code>(size: number) =&gt; import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default</code></p>
 <p>Creates a Hopfield network.
 Hopfield networks are a form of recurrent neural network often used for associative memory tasks.

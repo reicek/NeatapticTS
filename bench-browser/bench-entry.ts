@@ -30,7 +30,10 @@ function buildSynthetic(size: number): { net: any; buildMs: number } {
   return { net, buildMs: t1 - t0 };
 }
 
-function measureForward(net: any, iterations: number): { totalMs: number; avgMs: number } {
+function measureForward(
+  net: any,
+  iterations: number
+): { totalMs: number; avgMs: number } {
   const vec = new Array(net.input).fill(0).map(() => Math.random());
   const t0 = performance.now();
   for (let i = 0; i < iterations; i++) net.activate(vec);

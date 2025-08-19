@@ -116,7 +116,9 @@ This approach is inspired by neuro-evolution techniques where network topology e
 <p>Returns: The constructed network with a randomized topology.</p>
 <h2 id="architecture-connection-ts">architecture/connection.ts</h2><h3 id="connection">connection</h3><h3 id="default">default</h3><h4 id="flags">_flags</h4><p>Packed state flags (private for future-proofing hidden class):
 bit0 =&gt; enabled gene expression (1 = active)
-bit1 =&gt; DropConnect active mask (1 = not dropped this forward pass)</p>
+bit1 =&gt; DropConnect active mask (1 = not dropped this forward pass)
+bit2 =&gt; hasGater (1 = symbol field present)
+bits3+ reserved.</p>
 <h4 id="la-shadowweight">_la_shadowWeight</h4><p><strong>Deprecated:</strong> Use lookaheadShadowWeight instead.</p>
 <h4 id="acquire">acquire</h4><p><code>(from: import(&quot;D:/code-practice/NeatapticTS/src/architecture/node&quot;).default, to: import(&quot;D:/code-practice/NeatapticTS/src/architecture/node&quot;).default, weight: number | undefined) =&gt; import(&quot;D:/code-practice/NeatapticTS/src/architecture/connection&quot;).default</code></p>
 <p>Acquire a <code>Connection</code> from the pool (or construct new). Fields are fully reset &amp; given
@@ -138,8 +140,9 @@ topology frequently to reduce GC pressure.</p>
 <h4 id="gain">gain</h4><p>Multiplicative modulation applied <em>after</em> weight. Default is <code>1</code> (neutral). We only store an
 internal symbol-keyed property when the gain is non-neutral, reducing memory usage across
 large populations where most connections are ungated.</p>
-<h4 id="gater">gater</h4><p>Optional gating node that modulates the connection&#39;s gain (handled externally).</p>
+<h4 id="gater">gater</h4><p>Optional gating node whose activation can modulate effective weight (symbol-backed).</p>
 <h4 id="gradientaccumulator">gradientAccumulator</h4><p>Generic gradient accumulator (RMSProp / AdaGrad) (was opt_cache).</p>
+<h4 id="hasgater">hasGater</h4><p>Whether a gater node is assigned (modulates gain); true if the gater symbol field is present.</p>
 <h4 id="infinitynorm">infinityNorm</h4><p>Adamax: Exponential moving infinity norm (was opt_u).</p>
 <h4 id="innovation">innovation</h4><p>Unique historical marking (auto-increment) for evolutionary alignment.</p>
 <h4 id="innovationid">innovationID</h4><p><code>(sourceNodeId: number, targetNodeId: number) =&gt; number</code></p>
@@ -923,6 +926,24 @@ Resets the connection&#39;s gain to 1 and removes it from the <code>connections.
 <ul>
 <li><code>connections</code> - A single Connection object or an array of Connection objects to ungate.</li>
 </ul>
+<h2 id="architecture-nodepool-ts">architecture/nodePool.ts</h2><h3 id="acquirenode">acquireNode</h3><p><code>(opts: import(&quot;D:/code-practice/NeatapticTS/src/architecture/nodePool&quot;).AcquireNodeOptions) =&gt; import(&quot;D:/code-practice/NeatapticTS/src/architecture/node&quot;).default</code></p>
+<p>Acquire (obtain) a node instance from the pool (or construct a new one if empty).
+The node is guaranteed to have fully reset dynamic state (activation, gradients, error, connections).</p>
+<h3 id="acquirenodeoptions">AcquireNodeOptions</h3><p>Options bag for acquiring a node.</p>
+<h3 id="nodepoolstats">nodePoolStats</h3><p><code>() =&gt; { size: number; highWaterMark: number; }</code></p>
+<p>Get current pool statistics (for debugging / future leak detection).</p>
+<h3 id="releasenode">releaseNode</h3><p><code>(node: import(&quot;D:/code-practice/NeatapticTS/src/architecture/node&quot;).default) =&gt; void</code></p>
+<p>Release (recycle) a node back into the pool. The caller MUST ensure the node is fully detached
+from any network (connections arrays pruned, no external references maintained) to prevent leaks.
+After release, the node must be considered invalid until re-acquired.</p>
+<h3 id="resetnode">resetNode</h3><p><code>(node: import(&quot;D:/code-practice/NeatapticTS/src/architecture/node&quot;).default, type: string | undefined, rng: () =&gt; number) =&gt; void</code></p>
+<p>Reset all mutable / dynamic fields of a node to a pristine post-construction state.
+This mirrors logic in the constructor &amp; <code>clear()</code> while also clearing arrays &amp; error objects.</p>
+<p>We intentionally do NOT reset the <code>type</code> or <code>squash</code> function unless explicitly provided so callers
+can optionally request a different type on acquire. Bias is reinitialized consistent with constructor semantics.</p>
+<h3 id="resetnodepool">resetNodePool</h3><p><code>() =&gt; void</code></p>
+<p>Reset the pool (drops all retained nodes). Intended for test harness cleanup.</p>
+<h3 id="resettablenodefields">ResettableNodeFields</h3><p>Shape describing minimal mutable fields we explicitly reset (used internally).</p>
 <h2 id="architecture-onnx-ts">architecture/onnx.ts</h2><h3 id="conv2dmapping">Conv2DMapping</h3><p>Mapping declaration for treating a fully-connected layer as a 2D convolution during export.
 This assumes the dense layer was originally synthesized from a convolution with weight sharing; we reconstitute spatial metadata.
 Each mapping references an export-layer index (1-based across hidden layers, output layer would be hiddenCount+1) and supplies spatial/kernel hyperparameters.
@@ -964,4 +985,4 @@ by replacing the corresponding hidden node block with a freshly constructed Laye
 </ul>
 <h3 id="onnxexportoptions">OnnxExportOptions</h3><p>Options controlling ONNX export behavior (Phase 1).</p>
 <h3 id="onnxmodel">OnnxModel</h3><h3 id="pool2dmapping">Pool2DMapping</h3><p>Mapping describing a pooling operation inserted after a given export-layer index.</p>
-<footer class="site-footer">Generated from source JSDoc • <a href="https://github.com/reicek/NeatapticTS">GitHub</a></footer></main><aside class="toc"><div class="page-toc"><h2>Files</h2><div class="toc-file"><a href="#architecture-activationarraypool-ts">architecture/activationArrayPool.ts</a><ul><li><a href=#activationarray>ActivationArray</a></li><li><a href=#activationarraypool>activationArrayPool</a></li><li><a href=#activationarraypool>ActivationArrayPool</a></li></ul></div><div class="toc-file"><a href="#architecture-architect-ts">architecture/architect.ts</a><ul><li><a href=#architect>architect</a></li><li><a href=#architect>Architect</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#architecture-connection-ts">architecture/connection.ts</a><ul><li><a href=#connection>connection</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#architecture-group-ts">architecture/group.ts</a><ul><li><a href=#group>group</a></li><li><a href=#group>Group</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#architecture-layer-ts">architecture/layer.ts</a><ul><li><a href=#layer>layer</a></li><li><a href=#layer>Layer</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#architecture-network-ts">architecture/network.ts</a><ul><li><a href=#network>network</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#architecture-node-ts">architecture/node.ts</a><ul><li><a href=#node>node</a></li><li><a href=#node>Node</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#architecture-onnx-ts">architecture/onnx.ts</a><ul><li><a href=#conv2dmapping>Conv2DMapping</a></li><li><a href=#exporttoonnx>exportToONNX</a></li><li><a href=#importfromonnx>importFromONNX</a></li><li><a href=#onnxexportoptions>OnnxExportOptions</a></li><li><a href=#onnxmodel>OnnxModel</a></li><li><a href=#pool2dmapping>Pool2DMapping</a></li></ul></div></div></aside></div></body></html>
+<footer class="site-footer">Generated from source JSDoc • <a href="https://github.com/reicek/NeatapticTS">GitHub</a></footer></main><aside class="toc"><div class="page-toc"><h2>Files</h2><div class="toc-file"><a href="#architecture-activationarraypool-ts">architecture/activationArrayPool.ts</a><ul><li><a href=#activationarray>ActivationArray</a></li><li><a href=#activationarraypool>activationArrayPool</a></li><li><a href=#activationarraypool>ActivationArrayPool</a></li></ul></div><div class="toc-file"><a href="#architecture-architect-ts">architecture/architect.ts</a><ul><li><a href=#architect>architect</a></li><li><a href=#architect>Architect</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#architecture-connection-ts">architecture/connection.ts</a><ul><li><a href=#connection>connection</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#architecture-group-ts">architecture/group.ts</a><ul><li><a href=#group>group</a></li><li><a href=#group>Group</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#architecture-layer-ts">architecture/layer.ts</a><ul><li><a href=#layer>layer</a></li><li><a href=#layer>Layer</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#architecture-network-ts">architecture/network.ts</a><ul><li><a href=#network>network</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#architecture-node-ts">architecture/node.ts</a><ul><li><a href=#node>node</a></li><li><a href=#node>Node</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#architecture-nodepool-ts">architecture/nodePool.ts</a><ul><li><a href=#acquirenode>acquireNode</a></li><li><a href=#acquirenodeoptions>AcquireNodeOptions</a></li><li><a href=#nodepoolstats>nodePoolStats</a></li><li><a href=#releasenode>releaseNode</a></li><li><a href=#resetnode>resetNode</a></li><li><a href=#resetnodepool>resetNodePool</a></li><li><a href=#resettablenodefields>ResettableNodeFields</a></li></ul></div><div class="toc-file"><a href="#architecture-onnx-ts">architecture/onnx.ts</a><ul><li><a href=#conv2dmapping>Conv2DMapping</a></li><li><a href=#exporttoonnx>exportToONNX</a></li><li><a href=#importfromonnx>importFromONNX</a></li><li><a href=#onnxexportoptions>OnnxExportOptions</a></li><li><a href=#onnxmodel>OnnxModel</a></li><li><a href=#pool2dmapping>Pool2DMapping</a></li></ul></div></div></aside></div></body></html>

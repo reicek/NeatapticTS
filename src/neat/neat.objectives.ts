@@ -1,4 +1,4 @@
-import { ObjectiveDescriptor, GenomeLike } from './neat.types';
+import type { ObjectiveDescriptor, GenomeLike } from './neat.types';
 
 /**
  * Build and return the list of registered objectives for this NEAT instance.
