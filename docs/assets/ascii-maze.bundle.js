@@ -41,12 +41,13 @@
   var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
   // src/architecture/connection.ts
-  var kGain, kGater, Connection;
+  var kGain, kGater, kOpt, Connection;
   var init_connection = __esm({
     "src/architecture/connection.ts"() {
       "use strict";
       kGain = Symbol("connGain");
       kGater = Symbol("connGater");
+      kOpt = Symbol("connOptMoments");
       Connection = class _Connection {
         /** The source (pre-synaptic) node supplying activation. */
         from;
@@ -65,21 +66,9 @@
         /** Unique historical marking (auto-increment) for evolutionary alignment. */
         innovation;
         // enabled handled via bitfield (see _flags) exposed through accessor (enumerability removed for slimming)
-        // --- Optimizer moment states (allocated lazily when an optimizer uses them) ---
-        /** First moment estimate (Adam / AdamW) (was opt_m). */
-        firstMoment;
-        /** Second raw moment estimate (Adam family) (was opt_v). */
-        secondMoment;
-        /** Generic gradient accumulator (RMSProp / AdaGrad) (was opt_cache). */
-        gradientAccumulator;
-        /** AMSGrad: Maximum of past second moment (was opt_vhat). */
-        maxSecondMoment;
-        /** Adamax: Exponential moving infinity norm (was opt_u). */
-        infinityNorm;
-        /** Secondary momentum (Lion variant) (was opt_m2). */
-        secondMomentum;
-        /** Lookahead: shadow (slow) weight parameter (was _la_shadowWeight). */
-        lookaheadShadowWeight;
+        // --- Optimizer moment states (virtualized via symbol-backed bag + accessors) ---
+        // NOTE: Accessor implementations below manage a lazily-created non-enumerable object containing:
+        // { firstMoment, secondMoment, gradientAccumulator, maxSecondMoment, infinityNorm, secondMomentum, lookaheadShadowWeight }
         /**
          * Packed state flags (private for future-proofing hidden class):
          * bit0 => enabled gene expression (1 = active)
@@ -201,8 +190,7 @@
             c.totalDeltaWeight = 0;
             c.xtrace.nodes.length = 0;
             c.xtrace.values.length = 0;
-            c.firstMoment = c.secondMoment = c.gradientAccumulator = c.maxSecondMoment = c.infinityNorm = c.secondMomentum = void 0;
-            c.lookaheadShadowWeight = void 0;
+            if (c[kOpt]) delete c[kOpt];
             c.innovation = _Connection._nextInnovation++;
           } else c = new _Connection(from, to, weight);
           return c;
@@ -250,6 +238,76 @@
           } else {
             this[kGain] = v;
           }
+        }
+        // --- Optimizer field accessors (prototype-level to avoid per-instance enumerable keys) ---
+        _ensureOptBag() {
+          let bag = this[kOpt];
+          if (!bag) {
+            bag = {};
+            this[kOpt] = bag;
+          }
+          return bag;
+        }
+        _getOpt(k) {
+          const bag = this[kOpt];
+          return bag ? bag[k] : void 0;
+        }
+        _setOpt(k, v) {
+          if (v === void 0) {
+            const bag = this[kOpt];
+            if (bag) delete bag[k];
+          } else {
+            this._ensureOptBag()[k] = v;
+          }
+        }
+        /** First moment estimate (Adam / AdamW) (was opt_m). */
+        get firstMoment() {
+          return this._getOpt("firstMoment");
+        }
+        set firstMoment(v) {
+          this._setOpt("firstMoment", v);
+        }
+        /** Second raw moment estimate (Adam family) (was opt_v). */
+        get secondMoment() {
+          return this._getOpt("secondMoment");
+        }
+        set secondMoment(v) {
+          this._setOpt("secondMoment", v);
+        }
+        /** Generic gradient accumulator (RMSProp / AdaGrad) (was opt_cache). */
+        get gradientAccumulator() {
+          return this._getOpt("gradientAccumulator");
+        }
+        set gradientAccumulator(v) {
+          this._setOpt("gradientAccumulator", v);
+        }
+        /** AMSGrad: Maximum of past second moment (was opt_vhat). */
+        get maxSecondMoment() {
+          return this._getOpt("maxSecondMoment");
+        }
+        set maxSecondMoment(v) {
+          this._setOpt("maxSecondMoment", v);
+        }
+        /** Adamax: Exponential moving infinity norm (was opt_u). */
+        get infinityNorm() {
+          return this._getOpt("infinityNorm");
+        }
+        set infinityNorm(v) {
+          this._setOpt("infinityNorm", v);
+        }
+        /** Secondary momentum (Lion variant) (was opt_m2). */
+        get secondMomentum() {
+          return this._getOpt("secondMomentum");
+        }
+        set secondMomentum(v) {
+          this._setOpt("secondMomentum", v);
+        }
+        /** Lookahead: shadow (slow) weight parameter (was _la_shadowWeight). */
+        get lookaheadShadowWeight() {
+          return this._getOpt("lookaheadShadowWeight");
+        }
+        set lookaheadShadowWeight(v) {
+          this._setOpt("lookaheadShadowWeight", v);
         }
         // --- Virtualized gater property (non-enumerable) ---
         /** Optional gating node whose activation can modulate effective weight (symbol-backed). */
@@ -344,8 +402,10 @@
         // numeric precision mode
         deterministicChainMode: false,
         // deep path test flag (ADD_NODE determinism)
-        enableGatingTraces: true
+        enableGatingTraces: true,
         // advanced gating trace infra
+        enableNodePooling: false
+        // experimental node instance pooling
         // poolMaxPerBucket: 256,     // example memory cap override
         // poolPrewarmCount: 2,       // example prewarm override
       };
@@ -2385,11 +2445,11 @@
          *  - la_k         : Lookahead synchronization interval (number of fast steps).
          *  - la_alpha     : Interpolation factor towards slow (shadow) weights/bias at sync points.
          *
-        * Internal per-connection temp fields (created lazily):
-        *  - firstMoment / secondMoment / maxSecondMoment / infinityNorm : Moment / variance / max variance / infinity norm caches.
-        *  - gradientAccumulator : Single accumulator (RMSProp / AdaGrad).
+         * Internal per-connection temp fields (created lazily):
+         *  - firstMoment / secondMoment / maxSecondMoment / infinityNorm : Moment / variance / max variance / infinity norm caches.
+         *  - gradientAccumulator : Single accumulator (RMSProp / AdaGrad).
          *  - previousDeltaWeight : For classic SGD momentum.
-        *  - lookaheadShadowWeight / _la_shadowBias : Lookahead shadow copies.
+         *  - lookaheadShadowWeight / _la_shadowBias : Lookahead shadow copies.
          *
          * Safety: We clip extreme weight / bias magnitudes and guard against NaN/Infinity.
          *
@@ -2434,7 +2494,10 @@
                 conn.firstMoment = (conn.firstMoment ?? 0) * beta1 + (1 - beta1) * g;
                 conn.secondMoment = (conn.secondMoment ?? 0) * beta2 + (1 - beta2) * (g * g);
                 if (effectiveType === "amsgrad") {
-                  conn.maxSecondMoment = Math.max(conn.maxSecondMoment ?? 0, conn.secondMoment ?? 0);
+                  conn.maxSecondMoment = Math.max(
+                    conn.maxSecondMoment ?? 0,
+                    conn.secondMoment ?? 0
+                  );
                 }
                 const vEff = effectiveType === "amsgrad" ? conn.maxSecondMoment : conn.secondMoment;
                 const mHat = conn.firstMoment / (1 - Math.pow(beta1, t));
@@ -2447,7 +2510,10 @@
               }
               case "adamax": {
                 conn.firstMoment = (conn.firstMoment ?? 0) * beta1 + (1 - beta1) * g;
-                conn.infinityNorm = Math.max((conn.infinityNorm ?? 0) * beta2, Math.abs(g));
+                conn.infinityNorm = Math.max(
+                  (conn.infinityNorm ?? 0) * beta2,
+                  Math.abs(g)
+                );
                 const mHat = conn.firstMoment / (1 - Math.pow(beta1, t));
                 const stepVal = mHat / (conn.infinityNorm || 1e-12) * lrScale;
                 this._safeUpdateWeight(conn, stepVal);
@@ -2488,7 +2554,9 @@
               case "lion": {
                 conn.firstMoment = (conn.firstMoment ?? 0) * beta1 + (1 - beta1) * g;
                 conn.secondMomentum = (conn.secondMomentum ?? 0) * beta2 + (1 - beta2) * g;
-                const update = Math.sign((conn.firstMoment || 0) + (conn.secondMomentum || 0));
+                const update = Math.sign(
+                  (conn.firstMoment || 0) + (conn.secondMomentum || 0)
+                );
                 this._safeUpdateWeight(conn, -update * lrScale);
                 break;
               }
@@ -2630,6 +2698,62 @@
     }
   });
 
+  // src/architecture/nodePool.ts
+  function resetNode(node, type, rng = Math.random) {
+    if (type) node.type = type;
+    const t = node.type;
+    node.bias = t === "input" ? 0 : rng() * 0.2 - 0.1;
+    node.activation = 0;
+    node.state = 0;
+    node.old = 0;
+    node.mask = 1;
+    node.previousDeltaBias = 0;
+    node.totalDeltaBias = 0;
+    node.derivative = void 0;
+    node.connections.in.length = 0;
+    node.connections.out.length = 0;
+    node.connections.gated.length = 0;
+    node.connections.self.length = 0;
+    node.error = { responsibility: 0, projected: 0, gated: 0 };
+    node.geneId = nextGeneId++;
+  }
+  function acquireNode(opts = {}) {
+    const { type = "hidden", activationFn, rng } = opts;
+    let node;
+    if (pool.length) {
+      node = pool.pop();
+      reusedCount++;
+      resetNode(node, type, rng);
+      if (activationFn) node.squash = activationFn;
+    } else {
+      node = new Node(type, activationFn, rng);
+      node.geneId = nextGeneId++;
+      freshCount++;
+    }
+    return node;
+  }
+  function releaseNode(node) {
+    node.connections.in.length = 0;
+    node.connections.out.length = 0;
+    node.connections.gated.length = 0;
+    node.connections.self.length = 0;
+    node.error = { responsibility: 0, projected: 0, gated: 0 };
+    pool.push(node);
+    if (pool.length > highWaterMark) highWaterMark = pool.length;
+  }
+  var pool, highWaterMark, nextGeneId, reusedCount, freshCount;
+  var init_nodePool = __esm({
+    "src/architecture/nodePool.ts"() {
+      "use strict";
+      init_node();
+      pool = [];
+      highWaterMark = 0;
+      nextGeneId = 1;
+      reusedCount = 0;
+      freshCount = 0;
+    }
+  });
+
   // src/architecture/activationArrayPool.ts
   var ActivationArrayPool, activationArrayPool;
   var init_activationArrayPool = __esm({
@@ -2760,7 +2884,9 @@
           "docs:html": "npm run docs:build-scripts && node ./dist-docs/scripts/render-docs-html.js",
           "build:ascii-maze": "npx esbuild test/examples/asciiMaze/browser-entry.ts --bundle --outfile=docs/assets/ascii-maze.bundle.js --platform=browser --format=iife --sourcemap --external:fs --external:child_process",
           "docs:examples": "node scripts/copy-examples.cjs",
-          prettier: "npx prettier --write .",
+          prettier: "npm run prettier:tests && npm run prettier:src",
+          "prettier:tests": "npx prettier --write **/*.test.ts",
+          "prettier:src": "npx prettier --write src/**/*.ts",
           docs: "npm run build:ascii-maze && npm run docs:examples && npm run docs:build-scripts && node ./dist-docs/scripts/generate-docs.js && node ./dist-docs/scripts/render-docs-html.js",
           "onnx:export": "node scripts/export-onnx.cjs"
         },
@@ -4590,7 +4716,10 @@
     inbound.forEach((c) => this.disconnect(c.from, c.to));
     outbound.forEach((c) => this.disconnect(c.from, c.to));
     node.connections.self.slice().forEach(() => this.disconnect(node, node));
-    this.nodes.splice(idx, 1);
+    const removed = this.nodes.splice(idx, 1)[0];
+    if (config.enableNodePooling && removed) {
+      releaseNode(removed);
+    }
     inbound.forEach((ic) => {
       outbound.forEach((oc) => {
         if (!ic.from || !oc.to || ic.from === oc.to) return;
@@ -4608,6 +4737,8 @@
   var init_network_remove = __esm({
     "src/architecture/network/network.remove.ts"() {
       "use strict";
+      init_nodePool();
+      init_config();
     }
   });
 
@@ -8698,6 +8829,7 @@
     "src/architecture/network.ts"() {
       "use strict";
       init_node();
+      init_nodePool();
       init_methods();
       init_config();
       init_activationArrayPool();
@@ -8836,7 +8968,9 @@
           }
           for (let i = 0; i < this.input + this.output; i++) {
             const type = i < this.input ? "input" : "output";
-            this.nodes.push(new Node(type, void 0, this._rand));
+            if (config.enableNodePooling)
+              this.nodes.push(acquireNode({ type, rng: this._rand }));
+            else this.nodes.push(new Node(type, void 0, this._rand));
           }
           for (let i = 0; i < this.input; i++) {
             for (let j = this.input; j < this.input + this.output; j++) {
@@ -8851,14 +8985,14 @@
             }
           }
         }
-        // --- Added: structural helper referenced by constructor (split a random connection) ---
+        // --- Changed: made public (was private) for deterministic pooling stress harness ---
         addNodeBetween() {
           if (this.connections.length === 0) return;
           const idx = Math.floor(this._rand() * this.connections.length);
           const conn = this.connections[idx];
           if (!conn) return;
           this.disconnect(conn.from, conn.to);
-          const newNode = new Node("hidden", void 0, this._rand);
+          const newNode = config.enableNodePooling ? acquireNode({ type: "hidden", rng: this._rand }) : new Node("hidden", void 0, this._rand);
           this.nodes.push(newNode);
           this.connect(conn.from, newNode, conn.weight);
           this.connect(newNode, conn.to, 1);
@@ -9434,7 +9568,14 @@
          * @throws {Error} If the specified `node` is not found in the network's `nodes` list.
          */
         remove(node) {
-          return removeNode.call(this, node);
+          const result = removeNode.call(this, node);
+          if (config.enableNodePooling) {
+            try {
+              releaseNode(node);
+            } catch {
+            }
+          }
+          return result;
         }
         /**
          * Disconnects two nodes, removing the connection between them.
@@ -9477,8 +9618,6 @@
          * @returns {number} The average error calculated over the provided dataset subset.
          * @private Internal method used by `train`.
          */
-        // Removed legacy _trainSet; delegated to network.training.ts
-        // Gradient clipping implemented in network.training.ts (applyGradientClippingImpl). Kept here only for backward compat if reflection used.
         _applyGradientClipping(cfg) {
           const { applyGradientClippingImpl: applyGradientClippingImpl2 } = (init_network_training(), __toCommonJS(network_training_exports));
           applyGradientClippingImpl2(this, cfg);
@@ -9860,8 +9999,8 @@
     const hiddenPairs = reuseCandidates.length ? [] : candidatePairs.filter(
       (pair) => pair[0].type === "hidden" && pair[1].type === "hidden"
     );
-    const pool = reuseCandidates.length ? reuseCandidates : hiddenPairs.length ? hiddenPairs : candidatePairs;
-    const chosenPair = pool.length === 1 ? pool[0] : pool[Math.floor(this._getRNG()() * pool.length)];
+    const pool2 = reuseCandidates.length ? reuseCandidates : hiddenPairs.length ? hiddenPairs : candidatePairs;
+    const chosenPair = pool2.length === 1 ? pool2[0] : pool2[Math.floor(this._getRNG()() * pool2.length)];
     const fromNode = chosenPair[0];
     const toNode = chosenPair[1];
     const idA = fromNode.geneId;
@@ -10023,33 +10162,33 @@
       return methods.mutation.FFW[Math.floor(this._getRNG()() * methods.mutation.FFW.length)];
     if (isFFWNested)
       return methods.mutation.FFW[Math.floor(this._getRNG()() * methods.mutation.FFW.length)];
-    let pool = this.options.mutation;
-    if (rawReturnForTest && Array.isArray(pool) && pool.length === methods.mutation.FFW.length && pool.every(
+    let pool2 = this.options.mutation;
+    if (rawReturnForTest && Array.isArray(pool2) && pool2.length === methods.mutation.FFW.length && pool2.every(
       (m, i) => m && m.name === methods.mutation.FFW[i].name
     )) {
       return methods.mutation.FFW;
     }
-    if (pool.length === 1 && Array.isArray(pool[0]) && pool[0].length)
-      pool = pool[0];
+    if (pool2.length === 1 && Array.isArray(pool2[0]) && pool2[0].length)
+      pool2 = pool2[0];
     if (this.options.phasedComplexity?.enabled && this._phase) {
-      pool = pool.filter((m) => !!m);
+      pool2 = pool2.filter((m) => !!m);
       if (this._phase === "simplify") {
-        const simplifyPool = pool.filter(
+        const simplifyPool = pool2.filter(
           (m) => m && m.name && m.name.startsWith && m.name.startsWith("SUB_")
         );
-        if (simplifyPool.length) pool = [...pool, ...simplifyPool];
+        if (simplifyPool.length) pool2 = [...pool2, ...simplifyPool];
       } else if (this._phase === "complexify") {
-        const addPool = pool.filter(
+        const addPool = pool2.filter(
           (m) => m && m.name && m.name.startsWith && m.name.startsWith("ADD_")
         );
-        if (addPool.length) pool = [...pool, ...addPool];
+        if (addPool.length) pool2 = [...pool2, ...addPool];
       }
     }
     if (this.options.operatorAdaptation?.enabled) {
       const boost = this.options.operatorAdaptation.boost ?? 2;
       const stats = this._operatorStats;
       const augmented = [];
-      for (const m of pool) {
+      for (const m of pool2) {
         augmented.push(m);
         const st = stats.get(m.name);
         if (st && st.attempts > 5) {
@@ -10060,9 +10199,9 @@
           }
         }
       }
-      pool = augmented;
+      pool2 = augmented;
     }
-    let mutationMethod = pool[Math.floor(this._getRNG()() * pool.length)];
+    let mutationMethod = pool2[Math.floor(this._getRNG()() * pool2.length)];
     if (mutationMethod === methods.mutation.ADD_GATE && genome.gates.length >= (this.options.maxGates || Infinity))
       return null;
     if (mutationMethod === methods.mutation.ADD_NODE && genome.nodes.length >= (this.options.maxNodes || Infinity))
@@ -10073,7 +10212,7 @@
       const c = this.options.operatorBandit.c ?? 1.4;
       const minA = this.options.operatorBandit.minAttempts ?? 5;
       const stats = this._operatorStats;
-      for (const m of pool)
+      for (const m of pool2)
         if (!stats.has(m.name)) stats.set(m.name, { success: 0, attempts: 0 });
       const totalAttempts = Array.from(stats.values()).reduce(
         (a, s) => a + s.attempts,
@@ -10081,7 +10220,7 @@
       ) + EPSILON;
       let best = mutationMethod;
       let bestVal = -Infinity;
-      for (const m of pool) {
+      for (const m of pool2) {
         const st = stats.get(m.name);
         const mean = st.attempts > 0 ? st.success / st.attempts : 0;
         const bonus = st.attempts < minA ? Infinity : c * Math.sqrt(Math.log(totalAttempts) / (st.attempts + EPSILON));

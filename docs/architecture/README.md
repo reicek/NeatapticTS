@@ -1518,7 +1518,7 @@ Options bag for acquiring a node.
 
 ### nodePoolStats
 
-`() => { size: number; highWaterMark: number; }`
+`() => { size: number; highWaterMark: number; reused: number; fresh: number; recycledRatio: number; }`
 
 Get current pool statistics (for debugging / future leak detection).
 
@@ -1529,6 +1529,8 @@ Get current pool statistics (for debugging / future leak detection).
 Release (recycle) a node back into the pool. The caller MUST ensure the node is fully detached
 from any network (connections arrays pruned, no external references maintained) to prevent leaks.
 After release, the node must be considered invalid until re-acquired.
+
+Phase 2: Automatically invoked by Network.remove() when pooling is enabled to recycle pruned nodes.
 
 ### resetNode
 

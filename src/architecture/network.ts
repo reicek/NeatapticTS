@@ -1,4 +1,5 @@
 import Node from './node';
+import { acquireNode as _acquireNode, releaseNode as _releaseNode } from './nodePool';
 import Connection from './connection';
 import Multi from '../multithreading/multi';
 import * as methods from '../methods/methods';
@@ -209,7 +210,11 @@ export default class Network {
 
     for (let i = 0; i < this.input + this.output; i++) {
       const type = i < this.input ? 'input' : 'output';
-      this.nodes.push(new Node(type, undefined, this._rand));
+      // Phase 2: initial IO node construction respects pooling flag. Pooled nodes are fully reset
+      // on acquire ensuring deterministic fresh bias & zeroed dynamic fields.
+      if (config.enableNodePooling)
+        this.nodes.push(_acquireNode({ type, rng: this._rand }));
+      else this.nodes.push(new Node(type, undefined, this._rand));
     }
     for (let i = 0; i < this.input; i++) {
       for (let j = this.input; j < this.input + this.output; j++) {
@@ -226,23 +231,21 @@ export default class Network {
     }
   }
 
-  // --- Added: structural helper referenced by constructor (split a random connection) ---
-  private addNodeBetween(): void {
+  // --- Changed: made public (was private) for deterministic pooling stress harness ---
+  addNodeBetween(): void {
     if (this.connections.length === 0) return;
     const idx = Math.floor(this._rand() * this.connections.length);
     const conn = this.connections[idx];
     if (!conn) return;
-    // Remove original connection
     this.disconnect(conn.from, conn.to);
-    // Create new hidden node
-    const newNode = new Node('hidden', undefined, this._rand);
+    const newNode = config.enableNodePooling
+      ? _acquireNode({ type: 'hidden', rng: this._rand })
+      : new Node('hidden', undefined, this._rand);
     this.nodes.push(newNode);
-    // Connect from->newNode and newNode->to
-    this.connect(conn.from, newNode, conn.weight); // keep original weight on first leg
-    this.connect(newNode, conn.to, 1); // second leg weight initialised randomly or 1
-    // Invalidate topo cache
+    this.connect(conn.from, newNode, conn.weight);
+    this.connect(newNode, conn.to, 1);
     this._topoDirty = true;
-    this._nodeIndexDirty = true; // structure changed
+    this._nodeIndexDirty = true;
   }
 
   // --- DropConnect API (re-added for tests) ---
@@ -934,7 +937,18 @@ export default class Network {
    * @throws {Error} If the specified `node` is not found in the network's `nodes` list.
    */
   remove(node: Node) {
-    return _removeNodeStandalone.call(this, node);
+  // Existing structural removal logic
+    const result = _removeNodeStandalone.call(this, node);
+  // Phase 2: if pooling enabled release node back to pool AFTER it is fully detached.
+  // Detachment guarantees connection arrays emptied & gating cleared, so pool reset cost is minimal.
+    if (config.enableNodePooling) {
+      try {
+        _releaseNode(node);
+      } catch {
+        /* swallow – defensive: never let pooling failure break functional remove */
+      }
+    }
+    return result;
   }
 
   /**
@@ -981,9 +995,6 @@ export default class Network {
    * @returns {number} The average error calculated over the provided dataset subset.
    * @private Internal method used by `train`.
    */
-  // Removed legacy _trainSet; delegated to network.training.ts
-
-  // Gradient clipping implemented in network.training.ts (applyGradientClippingImpl). Kept here only for backward compat if reflection used.
   private _applyGradientClipping(cfg: {
     mode: 'norm' | 'percentile' | 'layerwiseNorm' | 'layerwisePercentile';
     maxNorm?: number;

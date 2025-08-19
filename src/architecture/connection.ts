@@ -92,11 +92,11 @@ export default class Connection {
       values: [],
     };
 
-  // Optimizer moment fields left undefined until an optimizer that needs them runs (pay-for-use)
-  // Initialize dropconnect mask
-  // Bitfield initialization: enabled (bit0)=1, dropActive (bit1)=1
-  this._flags = 0b11;
-  this.innovation = Connection._nextInnovation++;
+    // Optimizer moment fields left undefined until an optimizer that needs them runs (pay-for-use)
+    // Initialize dropconnect mask
+    // Bitfield initialization: enabled (bit0)=1, dropActive (bit1)=1
+    this._flags = 0b11;
+    this.innovation = Connection._nextInnovation++;
   }
 
   /**
@@ -139,7 +139,10 @@ export default class Connection {
    * const id = Connection.innovationID(2, 5); // deterministic
    */
   static innovationID(sourceNodeId: number, targetNodeId: number): number {
-    return 0.5 * (sourceNodeId + targetNodeId) * (sourceNodeId + targetNodeId + 1) + targetNodeId;
+    return (
+      0.5 * (sourceNodeId + targetNodeId) * (sourceNodeId + targetNodeId + 1) +
+      targetNodeId
+    );
   }
   private static _nextInnovation: number = 1;
   /**
@@ -151,7 +154,9 @@ export default class Connection {
    * Connection.resetInnovationCounter();     // back to 1
    * Connection.resetInnovationCounter(1000); // start counting from 1000
    */
-  static resetInnovationCounter(value: number = 1) { Connection._nextInnovation = value; }
+  static resetInnovationCounter(value: number = 1) {
+    Connection._nextInnovation = value;
+  }
 
   // --- Simple object pool to reduce GC churn when connections are frequently created/removed ---
   private static _pool: Connection[] = [];
@@ -173,14 +178,19 @@ export default class Connection {
     let c: Connection;
     if (Connection._pool.length) {
       c = Connection._pool.pop()!;
-      (c as any).from = from; (c as any).to = to; c.weight = weight ?? Math.random() * 0.2 - 0.1;
+      (c as any).from = from;
+      (c as any).to = to;
+      c.weight = weight ?? Math.random() * 0.2 - 0.1;
       if ((c as any)[kGain] !== undefined) delete (c as any)[kGain];
       if ((c as any)[kGater] !== undefined) delete (c as any)[kGater];
       c._flags = 0b11; // enabled + dcActive
-      c.eligibility = 0; c.previousDeltaWeight = 0; c.totalDeltaWeight = 0;
-      c.xtrace.nodes.length = 0; c.xtrace.values.length = 0;
-  // Clear optimizer bag if present
-  if ((c as any)[kOpt]) delete (c as any)[kOpt];
+      c.eligibility = 0;
+      c.previousDeltaWeight = 0;
+      c.totalDeltaWeight = 0;
+      c.xtrace.nodes.length = 0;
+      c.xtrace.values.length = 0;
+      // Clear optimizer bag if present
+      if ((c as any)[kOpt]) delete (c as any)[kOpt];
       (c as any).innovation = Connection._nextInnovation++;
     } else c = new Connection(from, to, weight);
     return c;
@@ -192,15 +202,27 @@ export default class Connection {
    *
    * @param conn The connection instance to recycle.
    */
-  static release(conn: Connection) { Connection._pool.push(conn); }
+  static release(conn: Connection) {
+    Connection._pool.push(conn);
+  }
   /** Whether the gene (connection) is currently expressed (participates in forward pass). */
-  get enabled(): boolean { return (this._flags & 0b1) !== 0; }
-  set enabled(v: boolean) { this._flags = v ? (this._flags | 0b1) : (this._flags & ~0b1); }
+  get enabled(): boolean {
+    return (this._flags & 0b1) !== 0;
+  }
+  set enabled(v: boolean) {
+    this._flags = v ? this._flags | 0b1 : this._flags & ~0b1;
+  }
   /** DropConnect active mask: 1 = not dropped (active), 0 = dropped for this stochastic pass. */
-  get dcMask(): number { return (this._flags & 0b10) !== 0 ? 1 : 0; }
-  set dcMask(v: number) { this._flags = v ? (this._flags | 0b10) : (this._flags & ~0b10); }
+  get dcMask(): number {
+    return (this._flags & 0b10) !== 0 ? 1 : 0;
+  }
+  set dcMask(v: number) {
+    this._flags = v ? this._flags | 0b10 : this._flags & ~0b10;
+  }
   /** Whether a gater node is assigned (modulates gain); true if the gater symbol field is present. */
-  get hasGater(): boolean { return (this._flags & 0b100) !== 0; }
+  get hasGater(): boolean {
+    return (this._flags & 0b100) !== 0;
+  }
 
   // --- Virtualized gain property ---
   /**
@@ -208,7 +230,9 @@ export default class Connection {
    * internal symbol-keyed property when the gain is non-neutral, reducing memory usage across
    * large populations where most connections are ungated.
    */
-  get gain(): number { return (this as any)[kGain] === undefined ? 1 : (this as any)[kGain]; }
+  get gain(): number {
+    return (this as any)[kGain] === undefined ? 1 : (this as any)[kGain];
+  }
   set gain(v: number) {
     if (v === 1) {
       if ((this as any)[kGain] !== undefined) delete (this as any)[kGain];
@@ -239,30 +263,60 @@ export default class Connection {
     }
   }
   /** First moment estimate (Adam / AdamW) (was opt_m). */
-  get firstMoment(): number | undefined { return this._getOpt('firstMoment'); }
-  set firstMoment(v: number | undefined) { this._setOpt('firstMoment', v); }
+  get firstMoment(): number | undefined {
+    return this._getOpt('firstMoment');
+  }
+  set firstMoment(v: number | undefined) {
+    this._setOpt('firstMoment', v);
+  }
   /** Second raw moment estimate (Adam family) (was opt_v). */
-  get secondMoment(): number | undefined { return this._getOpt('secondMoment'); }
-  set secondMoment(v: number | undefined) { this._setOpt('secondMoment', v); }
+  get secondMoment(): number | undefined {
+    return this._getOpt('secondMoment');
+  }
+  set secondMoment(v: number | undefined) {
+    this._setOpt('secondMoment', v);
+  }
   /** Generic gradient accumulator (RMSProp / AdaGrad) (was opt_cache). */
-  get gradientAccumulator(): number | undefined { return this._getOpt('gradientAccumulator'); }
-  set gradientAccumulator(v: number | undefined) { this._setOpt('gradientAccumulator', v); }
+  get gradientAccumulator(): number | undefined {
+    return this._getOpt('gradientAccumulator');
+  }
+  set gradientAccumulator(v: number | undefined) {
+    this._setOpt('gradientAccumulator', v);
+  }
   /** AMSGrad: Maximum of past second moment (was opt_vhat). */
-  get maxSecondMoment(): number | undefined { return this._getOpt('maxSecondMoment'); }
-  set maxSecondMoment(v: number | undefined) { this._setOpt('maxSecondMoment', v); }
+  get maxSecondMoment(): number | undefined {
+    return this._getOpt('maxSecondMoment');
+  }
+  set maxSecondMoment(v: number | undefined) {
+    this._setOpt('maxSecondMoment', v);
+  }
   /** Adamax: Exponential moving infinity norm (was opt_u). */
-  get infinityNorm(): number | undefined { return this._getOpt('infinityNorm'); }
-  set infinityNorm(v: number | undefined) { this._setOpt('infinityNorm', v); }
+  get infinityNorm(): number | undefined {
+    return this._getOpt('infinityNorm');
+  }
+  set infinityNorm(v: number | undefined) {
+    this._setOpt('infinityNorm', v);
+  }
   /** Secondary momentum (Lion variant) (was opt_m2). */
-  get secondMomentum(): number | undefined { return this._getOpt('secondMomentum'); }
-  set secondMomentum(v: number | undefined) { this._setOpt('secondMomentum', v); }
+  get secondMomentum(): number | undefined {
+    return this._getOpt('secondMomentum');
+  }
+  set secondMomentum(v: number | undefined) {
+    this._setOpt('secondMomentum', v);
+  }
   /** Lookahead: shadow (slow) weight parameter (was _la_shadowWeight). */
-  get lookaheadShadowWeight(): number | undefined { return this._getOpt('lookaheadShadowWeight'); }
-  set lookaheadShadowWeight(v: number | undefined) { this._setOpt('lookaheadShadowWeight', v); }
+  get lookaheadShadowWeight(): number | undefined {
+    return this._getOpt('lookaheadShadowWeight');
+  }
+  set lookaheadShadowWeight(v: number | undefined) {
+    this._setOpt('lookaheadShadowWeight', v);
+  }
 
   // --- Virtualized gater property (non-enumerable) ---
   /** Optional gating node whose activation can modulate effective weight (symbol-backed). */
-  get gater(): Node | null { return (this._flags & 0b100) !== 0 ? (this as any)[kGater] : null; }
+  get gater(): Node | null {
+    return (this._flags & 0b100) !== 0 ? (this as any)[kGater] : null;
+  }
   set gater(node: Node | null) {
     if (node === null) {
       if ((this._flags & 0b100) !== 0) {
@@ -281,28 +335,60 @@ export default class Connection {
   // These keep external code & tests functioning while encouraging clearer names.
   // ---------------------------------------------------------------------------
   /** @deprecated Use firstMoment instead. */
-  get opt_m(): number | undefined { return this.firstMoment; }
-  set opt_m(v: number | undefined) { this.firstMoment = v; }
+  get opt_m(): number | undefined {
+    return this.firstMoment;
+  }
+  set opt_m(v: number | undefined) {
+    this.firstMoment = v;
+  }
   /** @deprecated Use secondMoment instead. */
-  get opt_v(): number | undefined { return this.secondMoment; }
-  set opt_v(v: number | undefined) { this.secondMoment = v; }
+  get opt_v(): number | undefined {
+    return this.secondMoment;
+  }
+  set opt_v(v: number | undefined) {
+    this.secondMoment = v;
+  }
   /** @deprecated Use gradientAccumulator instead. */
-  get opt_cache(): number | undefined { return this.gradientAccumulator; }
-  set opt_cache(v: number | undefined) { this.gradientAccumulator = v; }
+  get opt_cache(): number | undefined {
+    return this.gradientAccumulator;
+  }
+  set opt_cache(v: number | undefined) {
+    this.gradientAccumulator = v;
+  }
   /** @deprecated Use maxSecondMoment instead. */
-  get opt_vhat(): number | undefined { return this.maxSecondMoment; }
-  set opt_vhat(v: number | undefined) { this.maxSecondMoment = v; }
+  get opt_vhat(): number | undefined {
+    return this.maxSecondMoment;
+  }
+  set opt_vhat(v: number | undefined) {
+    this.maxSecondMoment = v;
+  }
   /** @deprecated Use infinityNorm instead. */
-  get opt_u(): number | undefined { return this.infinityNorm; }
-  set opt_u(v: number | undefined) { this.infinityNorm = v; }
+  get opt_u(): number | undefined {
+    return this.infinityNorm;
+  }
+  set opt_u(v: number | undefined) {
+    this.infinityNorm = v;
+  }
   /** @deprecated Use secondMomentum instead. */
-  get opt_m2(): number | undefined { return this.secondMomentum; }
-  set opt_m2(v: number | undefined) { this.secondMomentum = v; }
+  get opt_m2(): number | undefined {
+    return this.secondMomentum;
+  }
+  set opt_m2(v: number | undefined) {
+    this.secondMomentum = v;
+  }
   /** @deprecated Use lookaheadShadowWeight instead. */
-  get _la_shadowWeight(): number | undefined { return this.lookaheadShadowWeight; }
-  set _la_shadowWeight(v: number | undefined) { this.lookaheadShadowWeight = v; }
+  get _la_shadowWeight(): number | undefined {
+    return this.lookaheadShadowWeight;
+  }
+  set _la_shadowWeight(v: number | undefined) {
+    this.lookaheadShadowWeight = v;
+  }
 
   /** Convenience alias for DropConnect mask with clearer naming. */
-  get dropConnectActiveMask(): number { return this.dcMask; }
-  set dropConnectActiveMask(v: number) { this.dcMask = v; }
+  get dropConnectActiveMask(): number {
+    return this.dcMask;
+  }
+  set dropConnectActiveMask(v: number) {
+    this.dcMask = v;
+  }
 }

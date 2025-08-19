@@ -64,6 +64,13 @@ export interface NeatapticConfig {
    * Default: true
    */
   enableGatingTraces?: boolean;
+
+  /**
+   * Experimental: Enable Node pooling (reuse Node instances on prune/regrow).
+   * Default: false (opt-in while feature stabilizes). When enabled, network growth and
+   * pruning paths will acquire/release nodes via NodePool reducing GC churn.
+   */
+  enableNodePooling?: boolean;
 }
 
 /**
@@ -78,6 +85,7 @@ export const config: NeatapticConfig = {
   float32Mode: false, // numeric precision mode
   deterministicChainMode: false, // deep path test flag (ADD_NODE determinism)
   enableGatingTraces: true, // advanced gating trace infra
+  enableNodePooling: false, // experimental node instance pooling
   // poolMaxPerBucket: 256,     // example memory cap override
   // poolPrewarmCount: 2,       // example prewarm override
 };

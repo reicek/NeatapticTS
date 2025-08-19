@@ -1,5 +1,7 @@
 import type Network from '../network';
 import type Node from '../node';
+import { releaseNode as _releaseNode } from '../nodePool';
+import { config } from '../../config';
 
 /**
  * Node removal utilities.
@@ -71,8 +73,11 @@ export function removeNode(this: Network, node: Node) {
   // 4. Disconnect self connections (if any recurrent self-loop).
   node.connections.self.slice().forEach(() => this.disconnect(node, node));
 
-  // 5. Physically remove the node from the node list.
-  this.nodes.splice(idx, 1);
+  // 5. Physically remove the node from the node list (and release to pool if enabled).
+  const removed = this.nodes.splice(idx, 1)[0];
+  if (config.enableNodePooling && removed) {
+    _releaseNode(removed as any);
+  }
 
   // 6. Reconnect every former inbound source to every former outbound target if a direct edge is missing.
   inbound.forEach((ic: any) => {

@@ -58,7 +58,9 @@ export function memoryStats(targetNetworks?: any | any[]) {
 
   for (const net of networks) {
     if (!net) continue;
-    const connCount = Array.isArray(net.connections) ? net.connections.length : 0;
+    const connCount = Array.isArray(net.connections)
+      ? net.connections.length
+      : 0;
     const nodeCount = Array.isArray(net.nodes) ? net.nodes.length : 0;
     totalConnections += connCount;
     totalNodes += nodeCount;
@@ -73,15 +75,17 @@ export function memoryStats(targetNetworks?: any | any[]) {
       | undefined;
     const fromSlab = (net as any)._connFrom as Uint32Array | undefined;
     const toSlab = (net as any)._connTo as Uint32Array | undefined;
-    const fastA = (net as any)._fastA as Float32Array | Float64Array | undefined;
-    const fastS = (net as any)._fastS as Float32Array | Float64Array | undefined;
-
-    const typedArrays: Array<
+    const fastA = (net as any)._fastA as
       | Float32Array
       | Float64Array
-      | Uint32Array
-      | Uint8Array
-      | Int32Array
+      | undefined;
+    const fastS = (net as any)._fastS as
+      | Float32Array
+      | Float64Array
+      | undefined;
+
+    const typedArrays: Array<
+      Float32Array | Float64Array | Uint32Array | Uint8Array | Int32Array
     > = [];
     if (weightSlab) typedArrays.push(weightSlab);
     if (fromSlab) typedArrays.push(fromSlab);
@@ -145,6 +149,7 @@ export function memoryStats(targetNetworks?: any | any[]) {
         enableGatingTraces: config.enableGatingTraces,
         poolMaxPerBucket: config.poolMaxPerBucket ?? null,
         poolPrewarmCount: config.poolPrewarmCount ?? null,
+        enableNodePooling: (config as any).enableNodePooling ?? false, // Phase 2 addition
       },
     },
     env,

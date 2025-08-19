@@ -25,16 +25,15 @@ interface BrowserRunRecord {
  * Build development & production browser bundles via esbuild. Returns filesystem
  * paths to the generated artifacts (Arrange stage for browser benchmarks).
  */
-async function buildBundles(): Promise<{
-  devPath?: string;
-  prodPath?: string;
-}> {
+async function buildBundles(): Promise<{ devPath: string; prodPath: string }> {
   const esbuild = require('esbuild');
   const benchDir = path.resolve(__dirname, '../..', 'bench-browser');
   const entry = path.join(benchDir, 'bench-entry.ts');
   if (!fs.existsSync(entry)) throw new Error('bench-entry.ts missing');
-  const devOut = path.join(benchDir, 'dev.bundle.js');
-  const prodOut = path.join(benchDir, 'prod.bundle.js');
+  const ts = Date.now();
+  const suffix = `${ts}-${process.pid}`;
+  const devOut = path.resolve(benchDir, `dev.bundle.${suffix}.js`);
+  const prodOut = path.resolve(benchDir, `prod.bundle.${suffix}.js`);
   await esbuild.build({
     entryPoints: [entry],
     bundle: true,
@@ -44,6 +43,7 @@ async function buildBundles(): Promise<{
     sourcemap: false,
     define: { __BENCH_MODE__: '"dev"' },
     external: ['child_process', 'fs', 'worker_threads'],
+    write: true,
   });
   await esbuild.build({
     entryPoints: [entry],
@@ -54,15 +54,18 @@ async function buildBundles(): Promise<{
     minify: true,
     define: { __BENCH_MODE__: '"prod"' },
     external: ['child_process', 'fs', 'worker_threads'],
+    write: true,
   });
   return { devPath: devOut, prodPath: prodOut };
 }
 
 /**
- * Execute benchmark bundles inside a headless Chromium instance using Puppeteer.
- * Polls a global symbol injected by the bench harness for completion payload.
+ * Headless run with dynamic bundle paths (avoids rewriting locked files).
  */
-async function runHeadless(): Promise<BrowserRunRecord[]> {
+async function runHeadless(paths: {
+  devPath: string;
+  prodPath: string;
+}): Promise<BrowserRunRecord[]> {
   let puppeteer;
   try {
     puppeteer = require('puppeteer');
@@ -73,29 +76,40 @@ async function runHeadless(): Promise<BrowserRunRecord[]> {
   const templatePath = path.join(benchDir, 'index.html');
   if (!fs.existsSync(templatePath)) return [];
   const template = fs.readFileSync(templatePath, 'utf-8');
-  const modes: Array<{ mode: string; bundle: string }> = [
-    { mode: 'dev', bundle: 'dev.bundle.js' },
-    { mode: 'prod', bundle: 'prod.bundle.js' },
+  const bundles = [
+    { mode: 'dev', path: paths.devPath },
+    { mode: 'prod', path: paths.prodPath },
   ];
   const browser = await puppeteer
     .launch({ headless: 'new', args: ['--no-sandbox'] })
     .catch(() => null);
   if (!browser) return [];
   const runs: BrowserRunRecord[] = [];
-  for (const m of modes) {
-    const bundlePath = path.join(benchDir, m.bundle);
-    if (!fs.existsSync(bundlePath)) continue;
+  for (const b of bundles) {
+    if (!b.path || !fs.existsSync(b.path)) continue;
+    const fileName = path.basename(b.path);
+    // Generate per-mode HTML referencing the unique bundle filename via relative copy
+    const localCopy = path.join(benchDir, fileName);
+    if (b.path !== localCopy) {
+      try {
+        if (!fs.existsSync(localCopy)) {
+          fs.copyFileSync(b.path, localCopy);
+        }
+      } catch {}
+    }
     const html = template
-      .replace('__MODE__', m.mode)
-      .replace('__BUNDLE__', m.bundle);
-    const tmpPath = path.join(benchDir, `jest-${m.mode}.html`);
+      .replace(/__MODE__/g, b.mode)
+      .replace(/__BUNDLE__/g, fileName);
+    const tmpPath = path.join(benchDir, `jest-${b.mode}.${fileName}.html`);
     fs.writeFileSync(tmpPath, html, 'utf-8');
     const page = await browser.newPage();
     await page.goto(`file://${tmpPath}`);
     const start = Date.now();
     let payload: any;
     while (Date.now() - start < 15000) {
-      payload = await page.evaluate(() => (window as any).__NEATAPTIC_BENCH__);
+      payload = await page
+        .evaluate(() => (window as any).__NEATAPTIC_BENCH__)
+        .catch(() => null);
       if (payload) break;
       await new Promise((r) => setTimeout(r, 50));
     }
@@ -112,8 +126,8 @@ async function runHeadless(): Promise<BrowserRunRecord[]> {
       })
       .catch(() => null);
     runs.push({
-      mode: m.mode,
-      bundleBytes: fs.statSync(bundlePath).size,
+      mode: b.mode,
+      bundleBytes: fs.statSync(b.path).size,
       performanceMemory: perfMem,
       bench: payload || null,
     });
@@ -123,9 +137,6 @@ async function runHeadless(): Promise<BrowserRunRecord[]> {
   return runs;
 }
 
-/**
- * Merge browser run results into the shared benchmark.results.json artifact.
- */
 function mergeResults(browserRuns: BrowserRunRecord[]) {
   const resultsPath = path.resolve(__dirname, 'benchmark.results.json');
   let data: any = {};
@@ -144,24 +155,34 @@ describe('browser headless benchmark integration', () => {
     it('skips when SKIP_BROWSER_BENCH=1', () => {
       expect(true).toBe(true);
     });
-    return; // Prevent executing further browser dependent tests
+    return;
   }
-  // Arrange (once): build bundles & perform headless runs
+
   let runs: BrowserRunRecord[] = [];
-  let built: { devPath?: string; prodPath?: string } = {};
+  let devPath = '';
+  let prodPath = '';
+
   beforeAll(async () => {
-    built = await buildBundles();
-    runs = await runHeadless();
+    const built = await buildBundles();
+    devPath = built.devPath;
+    prodPath = built.prodPath;
+    runs = await runHeadless(built);
     mergeResults(runs);
   });
+
+  afterAll(() => {
+    [devPath, prodPath].forEach((f) => {
+      try {
+        fs.unlinkSync(f);
+      } catch {}
+    });
+  });
+
   it('produces an array of run records', () => {
     expect(Array.isArray(runs)).toBe(true);
   });
-  it('includes dev bundle path', () => {
-    expect(typeof built.devPath).toBe('string');
-  });
-  it('includes prod bundle path', () => {
-    expect(typeof built.prodPath).toBe('string');
+  it('dev & prod bundle files exist', () => {
+    expect(fs.existsSync(devPath) && fs.existsSync(prodPath)).toBe(true);
   });
   it('persists browserRuns in results file', () => {
     const resultsPath = path.resolve(__dirname, 'benchmark.results.json');
@@ -171,8 +192,7 @@ describe('browser headless benchmark integration', () => {
         parsed = JSON.parse(fs.readFileSync(resultsPath, 'utf-8'));
       } catch {}
     }
-    const ok = Array.isArray(parsed.browserRuns);
-    expect(ok).toBe(true);
+    expect(Array.isArray(parsed.browserRuns)).toBe(true);
   });
   if (runs.length) {
     const first = runs[0];

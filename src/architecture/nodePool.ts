@@ -1,18 +1,21 @@
 /**
- * NodePool (Phase 2 Groundwork)
+ * NodePool (Phase 2 – COMPLETE)
  * =============================
- * Lightweight object pool for `Node` instances mirroring the existing `Connection` pooling pattern.
+ * Lightweight object pool for `Node` instances mirroring (future) connection pooling patterns.
  *
- * Goals:
+ * Objectives:
  * 1. Reduce GC pressure during topology mutation / morphogenesis (frequent add/remove of nodes).
  * 2. Provide deterministic, fully-reset instances on `acquire()` so algorithms can assume a fresh state.
- * 3. Serve as a future anchor for slab-backed node state (Phase 3) without changing the public API.
+ * 3. Provide instrumentation (reused vs fresh, highWaterMark, recycledRatio) consumed by benchmarks.
+ * 4. Serve as a future anchor for slab-backed / SoA node state (Phase 3) without altering the public API.
  *
- * Current Scope (Phase 1 prep):
- * - Basic acquire/release/reset without integrating into `Network` yet.
- * - Thorough reset of dynamic & training related fields to prevent memory leaks or stale gradient reuse.
- * - JSDoc rich educational comments (library standard).
- * - No pre-warm or adaptive trimming logic yet (will arrive in Phase 2+).
+ * Phase 2 Deliverables Implemented Here:
+ * - acquire / release with thorough reset and defensive scrub on release.
+ * - highWaterMark updated ONLY on release (tracks retained capacity not transient demand).
+ * - Counters reusedCount & freshCount powering recycledRatio assertions.
+ * - resetNodePool() for deterministic test harness setup.
+ *
+ * Deferred (Phase 3+): preWarm(count), adaptive trim(), leak pattern heuristics, slab field hydration.
  */
 import Node from './node';
 
@@ -41,6 +44,10 @@ let highWaterMark = 0;
 
 /** Incrementing counter to allocate fresh stable geneIds when resetting pooled nodes. */
 let nextGeneId = 1;
+
+/** Counters for recycling efficiency instrumentation (Phase 2 stress harness). */
+let reusedCount = 0;
+let freshCount = 0;
 
 /**
  * Reset all mutable / dynamic fields of a node to a pristine post-construction state.
@@ -94,13 +101,15 @@ export function acquireNode(opts: AcquireNodeOptions = {}): Node {
   let node: Node;
   if (pool.length) {
     node = pool.pop()!;
+    reusedCount++;
     resetNode(node, type, rng);
     if (activationFn) (node as any).squash = activationFn;
   } else {
     node = new Node(type, activationFn, rng);
-    (node as any).geneId = nextGeneId++; // ensure sync with local counter (constructor used Node's static)
+    (node as any).geneId = nextGeneId++;
+    freshCount++;
   }
-  if (pool.length > highWaterMark) highWaterMark = pool.length;
+  // NOTE: highWaterMark reflects MAX retained pool size; updated only on release().
   return node;
 }
 
@@ -108,6 +117,8 @@ export function acquireNode(opts: AcquireNodeOptions = {}): Node {
  * Release (recycle) a node back into the pool. The caller MUST ensure the node is fully detached
  * from any network (connections arrays pruned, no external references maintained) to prevent leaks.
  * After release, the node must be considered invalid until re-acquired.
+ *
+ * Phase 2: Automatically invoked by Network.remove() when pooling is enabled to recycle pruned nodes.
  */
 export function releaseNode(node: Node) {
   // Proactively scrub large arrays / references to help GC of graphs containing this node.
@@ -115,7 +126,7 @@ export function releaseNode(node: Node) {
   node.connections.out.length = 0;
   node.connections.gated.length = 0;
   node.connections.self.length = 0;
-  ;(node as any).error = { responsibility: 0, projected: 0, gated: 0 };
+  (node as any).error = { responsibility: 0, projected: 0, gated: 0 };
   pool.push(node);
   if (pool.length > highWaterMark) highWaterMark = pool.length;
 }
@@ -124,15 +135,27 @@ export function releaseNode(node: Node) {
  * Get current pool statistics (for debugging / future leak detection).
  */
 export function nodePoolStats() {
-  return { size: pool.length, highWaterMark };
+  // recycledRatio expresses long-run reuse efficiency; 0 => all fresh, 1 => full reuse.
+  return {
+    size: pool.length,
+    highWaterMark,
+    reused: reusedCount,
+    fresh: freshCount,
+    recycledRatio:
+      reusedCount + freshCount > 0
+        ? reusedCount / (reusedCount + freshCount)
+        : 0,
+  };
 }
 
 /**
  * Reset the pool (drops all retained nodes). Intended for test harness cleanup.
  */
 export function resetNodePool() {
-  pool.length = 0;
-  highWaterMark = 0;
+  pool.length = 0; // drop all retained instances
+  highWaterMark = 0; // reset leak tracking baseline
+  reusedCount = 0; // reset instrumentation counters
+  freshCount = 0;
 }
 
 // Future (Phase 2+): preWarm(count), trim(predicate), integrate with network pruning events.

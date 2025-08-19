@@ -224,6 +224,131 @@ describe('benchmark.memory dist-only', () => {
         fwdAvgMsCvPct: fm ? +((fs / fm) * 100).toFixed(2) : 0,
       };
     }
+    // --- Variance auto escalation (Phase 2 -> active implementation) ---
+    // If CV% for large sizes (>=100k) exceeds target, incrementally add repeats (up to cap)
+    // to stabilize variance before persisting final artifact. Each escalation recorded.
+    const targetCvPct = 7; // phase target (can tighten in future phases)
+    const maxVarianceRepeats = 9; // hard cap to control runtime explosion
+    const escalateRecords: any[] = [];
+
+    function runAdditionalRepeat(size: number, rep: number) {
+      // Mirrors logic in initial measurement loop for large sizes
+      (seedrandom as any)(`size:${size}|rep:${rep}`, { global: true });
+      const inp = Math.max(1, Math.floor(Math.sqrt(size)));
+      const out = Math.max(1, Math.ceil(size / inp));
+      if (size >= 100000) {
+        const warm = new Network(inp, out);
+        measureForwardPass(warm, 1);
+      }
+      const t0 = performance.now?.() ?? Date.now();
+      const net = new Network(inp, out);
+      const t1 = performance.now?.() ?? Date.now();
+      const buildMs = t1 - t0;
+      if (size >= 100000) measureForwardPass(net, 1);
+      const iterations = size >= 200000 ? 3 : 5; // mirrors original logic for large sizes
+      const { totalMs: fwdTotalMs, avgMs: fwdAvgMs } = measureForwardPass(
+        net,
+        iterations
+      );
+      const mem = memoryStats(net);
+      let heapUsed: number | undefined;
+      let rss: number | undefined;
+      try {
+        const mu = (process as any).memoryUsage?.();
+        if (mu) {
+          heapUsed = mu.heapUsed;
+          rss = mu.rss;
+        }
+      } catch {}
+      rawMeasurements.push({
+        size,
+        metrics: {
+          buildMs,
+          fwdAvgMs,
+          fwdTotalMs,
+          bytesPerConn: mem.bytesPerConnection,
+          heapUsed: heapUsed ?? NaN,
+          rss: rss ?? NaN,
+          fwdIterations: iterations,
+        },
+      });
+    }
+
+    function computeVarianceForSize(size: number) {
+      const raw = rawMeasurements.filter((r) => r.size === size);
+      if (raw.length < 2) return null;
+      const build = raw.map((r) => r.metrics.buildMs);
+      const fwd = raw.map((r) => r.metrics.fwdAvgMs);
+      const m = (a: number[]) => a.reduce((s, x) => s + x, 0) / (a.length || 1);
+      const sdev = (a: number[]) => {
+        if (a.length < 2) return 0;
+        const mm = m(a);
+        return Math.sqrt(
+          a.reduce((s, x) => s + (x - mm) * (x - mm), 0) / (a.length - 1)
+        );
+      };
+      const bm = m(build),
+        bs = sdev(build);
+      const fm = m(fwd),
+        fs = sdev(fwd);
+      return {
+        size,
+        samples: raw.length,
+        buildMsCvPct: bm ? +((bs / bm) * 100).toFixed(2) : 0,
+        fwdAvgMsCvPct: fm ? +((fs / fm) * 100).toFixed(2) : 0,
+      };
+    }
+
+    // Escalate per monitored large size
+    for (const size of [100000, 200000]) {
+      let varianceEntry = computeVarianceForSize(size);
+      // Only attempt escalation if we already have at least 2 samples (repeat mode active)
+      while (
+        varianceEntry &&
+        (varianceEntry.buildMsCvPct > targetCvPct ||
+          varianceEntry.fwdAvgMsCvPct > targetCvPct) &&
+        varianceEntry.samples < maxVarianceRepeats
+      ) {
+        escalateRecords.push({
+          size,
+          buildCvPct: varianceEntry.buildMsCvPct,
+          fwdCvPct: varianceEntry.fwdAvgMsCvPct,
+          targetCvPct,
+          repeatsObserved: varianceEntry.samples,
+          action: 'escalate',
+          reason: 'cv-above-threshold',
+          timestamp: new Date().toISOString(),
+        });
+        runAdditionalRepeat(size, varianceEntry.samples);
+        varianceEntry = computeVarianceForSize(size);
+      }
+      if (varianceEntry && varianceEntry.samples >= 2) {
+        escalateRecords.push({
+          size,
+          buildCvPct: varianceEntry.buildMsCvPct,
+          fwdCvPct: varianceEntry.fwdAvgMsCvPct,
+          targetCvPct,
+          repeatsObserved: varianceEntry.samples,
+          action: 'stop',
+          reason:
+            varianceEntry.buildMsCvPct <= targetCvPct &&
+            varianceEntry.fwdAvgMsCvPct <= targetCvPct
+              ? 'below-threshold'
+              : 'max-repeats',
+          timestamp: new Date().toISOString(),
+        });
+      }
+    }
+
+    // Recompute aggregation & final variance summary after escalations
+    distAggregated = aggregateBenchMeasurements(
+      rawMeasurements.map((r) => ({
+        mode: 'dist',
+        scenario: 'buildForward',
+        size: r.size,
+        metrics: r.metrics,
+      })) as any
+    );
     const varianceSummary = distAggregated
       .filter((g) => g.size >= 100000 && g.count > 1)
       .map(recomputeVariance);
@@ -362,6 +487,12 @@ describe('benchmark.memory dist-only', () => {
         filteredVariance: true,
         distBundle: distBundleMeta,
       };
+      // Attach variance escalation records & cap metadata
+      (payload.meta as any).maxVarianceRepeats = maxVarianceRepeats;
+      const priorEsc = (existing?.meta?.varianceAutoEscalations || []) as any[];
+      (payload.meta as any).varianceAutoEscalations = priorEsc.concat(
+        escalateRecords
+      );
       if (varianceSummary.length) payload.variance = varianceSummary;
       const hist = Array.isArray(payload.history) ? payload.history : [];
       hist.push(snapshot);
