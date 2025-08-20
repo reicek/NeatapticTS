@@ -1,6 +1,9 @@
 # NeatapticTS
 
-[![License: MIT](https://img.shields.io/badge/license-MIT-2c3963.svg)](LICENSE) [![Docs](https://img.shields.io/badge/docs-generated-2c3963.svg)](docs/index.html)
+<div class="badges">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-2c3963.svg" alt="License: MIT"/></a>
+  <a href="docs/index.html"><img src="https://img.shields.io/badge/docs-generated-2c3963.svg" alt="Docs"/></a>
+</div>
 
 <img src="https://cdn-images-1.medium.com/max/800/1*THG2__H9YHxYIt2sulzlTw.png" width="500px"/>
 

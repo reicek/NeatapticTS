@@ -1,0 +1,24 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Examples – NeatapticTS Docs</title><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;600;700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/theme.css"></head><body class="">
+<header class="topbar"><div class="inner"><div class="brand"><a href="../index.html">NeatapticTS</a></div><nav class="main-nav"><a href="../index.html">Home</a><a href="../index.html">Docs</a><a href="../examples/index.html" class="active">Examples</a><a href="https://github.com/reicek/NeatapticTS" target="_blank" rel="noopener">GitHub</a></nav></div></header>
+<div class="layout"><aside class="sidebar"><ul class="sidebar-sections"><li class="group"><div class="g-head">src</div><ul><li><a href="../src/index.html">src</a></li></ul></li><li class="group"><div class="g-head">utils</div><ul><li><a href="../utils/index.html">utils</a></li></ul></li><li><a href="../index.html">Overview</a></li><li class="group"><div class="g-head">architecture</div><ul><li><a href="../architecture/index.html">architecture</a></li><li><a href="../architecture/network/index.html">architecture/network</a></li></ul></li><li class="group"><div class="g-head">methods</div><ul><li><a href="../methods/index.html">methods</a></li></ul></li><li class="group"><div class="g-head">neat</div><ul><li><a href="../neat/index.html">neat</a></li></ul></li><li class="group"><div class="g-head">multithreading</div><ul><li><a href="../multithreading/index.html">multithreading</a></li><li><a href="../multithreading/workers/index.html">multithreading/workers</a></li><li><a href="../multithreading/workers/browser/index.html">multithreading/workers/browser</a></li><li><a href="../multithreading/workers/node/index.html">multithreading/workers/node</a></li></ul></li><li class="group"><div class="g-head">examples</div><ul><li class="current"><a href="./index.html">examples</a></li><li><a href="asciiMaze/index.html">examples/asciiMaze</a></li></ul></li></ul></aside><main class="content"><!-- Auto-generated into HTML by scripts/render-docs-html.ts -->
+<h1 id="examples">Examples</h1><p>Interactive demos showcasing NeatapticTS concepts in the browser. Each example is self‑contained and built with native ES2023 features – no transpilation.</p>
+<blockquote>
+<p>Tip: Open DevTools console while an example runs to inspect logged telemetry or errors.</p>
+</blockquote>
+<h2 id="asciimaze-neuro-evolving-maze-agent">asciiMaze (Neuro‑evolving maze agent)</h2><p>Demonstrates a simple environment where agents must traverse an ASCII maze layout. The population evolves weights / topology over generations; progress prints in real time.</p>
+<div class="example-frame">
+  <iframe src="./asciiMaze/index.html" title="ASCII Maze Example" loading="lazy" referrerpolicy="no-referrer" sandbox="allow-scripts allow-same-origin" aria-label="ASCII Maze interactive example"></iframe>
+  <p class="example-caption">If the demo fails to load, ensure the build step <code>npm run build:ascii-maze</code> has produced <code>docs/assets/ascii-maze.bundle.js</code>.</p>
+</div>
+
+<h3 id="controls-behaviour">Controls &amp; Behaviour</h3><ul>
+<li>The Play / Pause button toggles evolutionary steps &amp; rendering.</li>
+<li>Output area streams the live generation status; archived snapshots accumulate below.</li>
+<li>A watchdog restarts the demo if the bundle loads slowly.</li>
+</ul>
+<h3 id="embedding-notes">Embedding Notes</h3><p>The iframe isolation keeps demo CSS / JS from interfering with site chrome. For tighter integration (shared styles / dark mode variables), convert the example to an ESM entry that renders into a supplied container (see enhancement plan).</p>
+<hr>
+<p>Additional examples will appear here as they are added.</p>
+<footer class="site-footer">Generated from source JSDoc • <a href="https://github.com/reicek/NeatapticTS">GitHub</a></footer></main><aside class="toc"></aside></div></body></html>

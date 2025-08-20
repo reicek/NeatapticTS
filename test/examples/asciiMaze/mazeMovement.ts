@@ -784,11 +784,18 @@ export class MazeMovement {
         }
       }
 
-      // Early termination on deep stagnation (no improvement & limited exploration)
+      // Early termination on deep stagnation (disabled for browser demo to allow full exploration)
       if (stepsSinceImprovement > 40) {
-        // discourage bloating while stuck
-        invalidMovePenalty -= 2 * rewardScale;
-        break;
+        try {
+          if (typeof window === 'undefined') {
+            invalidMovePenalty -= 2 * rewardScale;
+            break; // keep for non-browser environments (tests / Node)
+          }
+        } catch {
+          // if window check failed, proceed with default behavior
+          invalidMovePenalty -= 2 * rewardScale;
+          break;
+        }
       }
 
       // Apply oscillation/loop/memory/revisit penalties

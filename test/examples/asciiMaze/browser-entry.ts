@@ -51,7 +51,7 @@ export async function start(containerId = 'ascii-maze-output') {
     // Carry the winning network forward between phases (curriculum transfer)
     let lastBestNetwork: any = undefined;
 
-    for (const key of order) {
+  for (const key of order) {
       const maze = (mazes as any)[key] as string[];
       if (!Array.isArray(maze)) continue; // skip missing exports
 
@@ -100,9 +100,12 @@ export async function start(containerId = 'ascii-maze-output') {
           evolutionAlgorithmConfig: {
             allowRecurrent: true,
             popSize: 40,
-            maxStagnantGenerations: 200,
+            // Run indefinitely until solved; remove stagnation pressure for demo clarity
+            maxStagnantGenerations: Number.POSITIVE_INFINITY,
             minProgressToPass: 99,
-            maxGenerations: maxGenerations,
+            maxGenerations: Number.POSITIVE_INFINITY,
+            stopOnlyOnSolve: false,
+            autoPauseOnSolve: false,
             // Disable Lamarckian/backprop refinement for browser runs per request
             lamarckianIterations: 0,
             lamarckianSampleSize: 0,
@@ -115,7 +118,7 @@ export async function start(containerId = 'ascii-maze-output') {
             label: `browser-${key}`,
           },
         });
-
+        try { console.log('[asciiMaze] maze solved', key, (result as any)?.bestResult?.progress); } catch {}
         if (result && (result as any).bestNetwork)
           lastBestNetwork = (result as any).bestNetwork;
       } catch (e) {
@@ -127,7 +130,7 @@ export async function start(containerId = 'ascii-maze-output') {
   // auto-start for convenience
   (window as any).asciiMazeStart();
 
-  // Setup a cooperative pause flag and UI wiring so users can pause/resume the demo.
+  // Setup a cooperative pause flag and UI wiring so users can pause/resume the entire curriculum.
   try {
     // Ensure the paused flag exists on window
     (window as any).asciiMazePaused = false;
@@ -135,20 +138,28 @@ export async function start(containerId = 'ascii-maze-output') {
     const playPauseBtn = document.getElementById(
       'ascii-maze-playpause'
     ) as HTMLButtonElement | null;
+    const statusEl = document.getElementById('ascii-maze-status');
     const updateUI = () => {
       const paused = !!(window as any).asciiMazePaused;
       if (playPauseBtn) {
-        playPauseBtn.textContent = paused ? 'Play' : 'Pause';
+        playPauseBtn.textContent = paused ? 'Resume' : 'Pause';
         playPauseBtn.style.background = paused ? '#39632C' : '#2C3963';
-        playPauseBtn.setAttribute('aria-pressed', String(paused));
+        playPauseBtn.setAttribute('aria-pressed', String(!paused));
+        playPauseBtn.disabled = false;
       }
     };
 
     if (playPauseBtn) {
       playPauseBtn.addEventListener('click', () => {
         (window as any).asciiMazePaused = !(window as any).asciiMazePaused;
+        if (statusEl) {
+          statusEl.textContent = (window as any).asciiMazePaused
+            ? 'Paused – evolution halted'
+            : 'Running continuously';
+        }
         updateUI();
       });
+      playPauseBtn.addEventListener('update-ui', updateUI as any);
     }
     // initialize UI state
     updateUI();

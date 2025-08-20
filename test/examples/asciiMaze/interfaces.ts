@@ -48,6 +48,10 @@ export interface IEvolutionAlgorithmConfig {
   maxStagnantGenerations?: number;
   minProgressToPass?: number;
   maxGenerations?: number; // Safety cap on total generations
+  /** If true, ignore stagnation / generation caps and only stop when the agent actually solves the maze (success flag true AND progress threshold met). */
+  stopOnlyOnSolve?: boolean;
+  /** If true (default), engine sets window.asciiMazePaused=true after a solve; browser demo now disables this for continuous run. */
+  autoPauseOnSolve?: boolean;
   randomSeed?: number;
   initialPopulation?: INetwork[];
   initialBestNetwork?: INetwork;

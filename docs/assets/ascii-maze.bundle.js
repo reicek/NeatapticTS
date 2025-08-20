@@ -4165,7 +4165,7 @@
     "package.json"(exports, module) {
       module.exports = {
         name: "@reicek/neataptic-ts",
-        version: "0.1.10",
+        version: "0.1.11",
         description: "Architecture-free neural network library with genetic algorithm implementations",
         main: "./dist/neataptic.js",
         module: "./dist/neataptic.js",
@@ -16817,8 +16817,15 @@
           }
         }
         if (stepsSinceImprovement > 40) {
-          invalidMovePenalty -= 2 * rewardScale;
-          break;
+          try {
+            if (typeof window === "undefined") {
+              invalidMovePenalty -= 2 * rewardScale;
+              break;
+            }
+          } catch {
+            invalidMovePenalty -= 2 * rewardScale;
+            break;
+          }
         }
         invalidMovePenalty += loopPenalty + memoryPenalty + revisitPenalty;
         if (position[0] === exitPos[0] && position[1] === exitPos[1]) {
@@ -17072,8 +17079,12 @@
         // The number of generations between population size expansions.
         dynamicPopExpandFactor = 0.15,
         // The factor by which to expand the population size.
-        dynamicPopPlateauSlack = 0.6
+        dynamicPopPlateauSlack = 0.6,
         // A slack factor for plateau detection when dynamic population is enabled.
+        stopOnlyOnSolve = false,
+        // If true, ignore stagnation/maxGenerations and run until solved.
+        autoPauseOnSolve = true
+        // Browser demo will override to false to keep running continuously
       } = evolutionAlgorithmConfig;
       const dynamicPopMax = typeof dynamicPopMaxCfg === "number" ? dynamicPopMaxCfg : Math.max(popSize, 120);
       const encodedMaze = MazeUtils.encodeMaze(maze);
@@ -17527,44 +17538,58 @@
           plateauCounter++;
         }
         if (!simplifyMode && plateauCounter >= plateauGenerations) {
-          simplifyMode = true;
-          simplifyRemaining = simplifyDuration;
-          plateauCounter = 0;
+          try {
+            if (typeof window === "undefined") {
+              simplifyMode = true;
+              simplifyRemaining = simplifyDuration;
+              plateauCounter = 0;
+            }
+          } catch {
+          }
         }
         if (simplifyMode) {
-          neat.population.forEach((g) => {
-            const enabledConns = g.connections.filter(
-              (c) => c.enabled !== false
-            );
-            if (!enabledConns.length) return;
-            const pruneCount = Math.max(
-              1,
-              Math.floor(enabledConns.length * simplifyPruneFraction)
-            );
-            let candidates = enabledConns.slice();
-            if (simplifyStrategy === "weakRecurrentPreferred") {
-              const recurrent = candidates.filter(
-                (c) => c.from === c.to || c.gater
-              );
-              const nonRecurrent = candidates.filter(
-                (c) => !(c.from === c.to || c.gater)
-              );
-              recurrent.sort(
-                (a, b) => Math.abs(a.weight) - Math.abs(b.weight)
-              );
-              nonRecurrent.sort(
-                (a, b) => Math.abs(a.weight) - Math.abs(b.weight)
-              );
-              candidates = [...recurrent, ...nonRecurrent];
-            } else {
-              candidates.sort(
-                (a, b) => Math.abs(a.weight) - Math.abs(b.weight)
-              );
+          try {
+            if (typeof window !== "undefined") {
+              throw 0;
             }
-            candidates.slice(0, pruneCount).forEach((c) => c.enabled = false);
-          });
-          simplifyRemaining--;
-          if (simplifyRemaining <= 0) simplifyMode = false;
+          } catch {
+          }
+          if (typeof window !== "undefined") {
+          } else {
+            neat.population.forEach((g) => {
+              const enabledConns = g.connections.filter(
+                (c) => c.enabled !== false
+              );
+              if (!enabledConns.length) return;
+              const pruneCount = Math.max(
+                1,
+                Math.floor(enabledConns.length * simplifyPruneFraction)
+              );
+              let candidates = enabledConns.slice();
+              if (simplifyStrategy === "weakRecurrentPreferred") {
+                const recurrent = candidates.filter(
+                  (c) => c.from === c.to || c.gater
+                );
+                const nonRecurrent = candidates.filter(
+                  (c) => !(c.from === c.to || c.gater)
+                );
+                recurrent.sort(
+                  (a, b) => Math.abs(a.weight) - Math.abs(b.weight)
+                );
+                nonRecurrent.sort(
+                  (a, b) => Math.abs(a.weight) - Math.abs(b.weight)
+                );
+                candidates = [...recurrent, ...nonRecurrent];
+              } else {
+                candidates.sort(
+                  (a, b) => Math.abs(a.weight) - Math.abs(b.weight)
+                );
+              }
+              candidates.slice(0, pruneCount).forEach((c) => c.enabled = false);
+            });
+            simplifyRemaining--;
+            if (simplifyRemaining <= 0) simplifyMode = false;
+          }
         }
         const t2 = doProfile ? Date.now() : 0;
         const generationResult = MazeMovement.simulateAgent(
@@ -17882,9 +17907,19 @@
             } catch {
             }
           }
+          if (autoPauseOnSolve) {
+            try {
+              if (typeof window !== "undefined") {
+                window.asciiMazePaused = true;
+                window.dispatchEvent(new CustomEvent("asciiMazeSolved", { detail: { maze, generations: completedGenerations, progress: bestResult?.progress } }));
+              }
+            } catch {
+            }
+          }
+          if (bestResult) bestResult.exitReason = "solved";
           break;
         }
-        if (stagnantGenerations >= maxStagnantGenerations) {
+        if (!stopOnlyOnSolve && stagnantGenerations >= maxStagnantGenerations && isFinite(maxStagnantGenerations)) {
           if (bestNetwork && bestResult) {
             dashboardManager.update(
               maze,
@@ -17898,9 +17933,11 @@
             } catch {
             }
           }
+          if (bestResult) bestResult.exitReason = "stagnation";
           break;
         }
-        if (completedGenerations >= maxGenerations) {
+        if (!stopOnlyOnSolve && completedGenerations >= maxGenerations && isFinite(maxGenerations)) {
+          if (bestResult) bestResult.exitReason = "maxGenerations";
           break;
         }
       }
@@ -17918,7 +17955,8 @@
       return {
         bestNetwork,
         bestResult,
-        neat
+        neat,
+        exitReason: bestResult?.exitReason ?? "incomplete"
       };
     }
     /**
@@ -18246,9 +18284,12 @@
             evolutionAlgorithmConfig: {
               allowRecurrent: true,
               popSize: 40,
-              maxStagnantGenerations: 200,
+              // Run indefinitely until solved; remove stagnation pressure for demo clarity
+              maxStagnantGenerations: Number.POSITIVE_INFINITY,
               minProgressToPass: 99,
-              maxGenerations,
+              maxGenerations: Number.POSITIVE_INFINITY,
+              stopOnlyOnSolve: false,
+              autoPauseOnSolve: false,
               // Disable Lamarckian/backprop refinement for browser runs per request
               lamarckianIterations: 0,
               lamarckianSampleSize: 0,
@@ -18261,6 +18302,10 @@
               label: `browser-${key}`
             }
           });
+          try {
+            console.log("[asciiMaze] maze solved", key, result?.bestResult?.progress);
+          } catch {
+          }
           if (result && result.bestNetwork)
             lastBestNetwork = result.bestNetwork;
         } catch (e) {
@@ -18274,19 +18319,25 @@
       const playPauseBtn = document.getElementById(
         "ascii-maze-playpause"
       );
+      const statusEl = document.getElementById("ascii-maze-status");
       const updateUI = () => {
         const paused = !!window.asciiMazePaused;
         if (playPauseBtn) {
-          playPauseBtn.textContent = paused ? "Play" : "Pause";
+          playPauseBtn.textContent = paused ? "Resume" : "Pause";
           playPauseBtn.style.background = paused ? "#39632C" : "#2C3963";
-          playPauseBtn.setAttribute("aria-pressed", String(paused));
+          playPauseBtn.setAttribute("aria-pressed", String(!paused));
+          playPauseBtn.disabled = false;
         }
       };
       if (playPauseBtn) {
         playPauseBtn.addEventListener("click", () => {
           window.asciiMazePaused = !window.asciiMazePaused;
+          if (statusEl) {
+            statusEl.textContent = window.asciiMazePaused ? "Paused \u2013 evolution halted" : "Running continuously";
+          }
           updateUI();
         });
+        playPauseBtn.addEventListener("update-ui", updateUI);
       }
       updateUI();
     } catch {

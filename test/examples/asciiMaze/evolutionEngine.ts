@@ -87,6 +87,8 @@ export class EvolutionEngine {
       dynamicPopExpandInterval = 25, // The number of generations between population size expansions.
       dynamicPopExpandFactor = 0.15, // The factor by which to expand the population size.
       dynamicPopPlateauSlack = 0.6, // A slack factor for plateau detection when dynamic population is enabled.
+  stopOnlyOnSolve = false, // If true, ignore stagnation/maxGenerations and run until solved.
+  autoPauseOnSolve = true, // Browser demo will override to false to keep running continuously
     } = evolutionAlgorithmConfig;
 
     // Determine the maximum population size, with a fallback if not explicitly configured.
@@ -723,13 +725,22 @@ export class EvolutionEngine {
         plateauCounter++;
       }
       // Enter simplify mode
+      // Disable simplify mode entirely for browser demo to avoid pruning good structure mid-run
       if (!simplifyMode && plateauCounter >= plateauGenerations) {
-        simplifyMode = true;
-        simplifyRemaining = simplifyDuration;
-        plateauCounter = 0; // reset
+        try {
+          if (typeof window === 'undefined') {
+            simplifyMode = true;
+            simplifyRemaining = simplifyDuration;
+            plateauCounter = 0;
+          }
+        } catch {/* ignore */}
       }
-      // Apply simplify pruning if active
+      // Apply simplify pruning only outside browser
       if (simplifyMode) {
+        try { if (typeof window !== 'undefined') { /* skip in browser */ throw 0; } } catch { /* skipped */ }
+        if (typeof window !== 'undefined') {
+          // skip pruning in browser
+        } else {
         // Disable weakest fraction of enabled connections in each genome
         neat.population.forEach((g: any) => {
           const enabledConns = g.connections.filter(
@@ -769,6 +780,7 @@ export class EvolutionEngine {
         });
         simplifyRemaining--;
         if (simplifyRemaining <= 0) simplifyMode = false;
+        }
       }
 
       // Simulate the agent using the fittest network
@@ -1142,7 +1154,7 @@ export class EvolutionEngine {
         }
       }
 
-      // Stop if solved or sufficient progress
+      // Stop only when solved (success + progress threshold) or (if not stopOnlyOnSolve) by other criteria.
       if (bestResult?.success && bestResult.progress >= minProgressToPass) {
         if (bestNetwork && bestResult) {
           dashboardManager.update(
@@ -1156,11 +1168,22 @@ export class EvolutionEngine {
             await flushToFrame();
           } catch {}
         }
+        // Auto-pause hook: if in browser context, set asciiMazePaused = true so user must press Play to continue to next maze
+        if (autoPauseOnSolve) {
+          try {
+            if (typeof window !== 'undefined') {
+              (window as any).asciiMazePaused = true;
+              // Dispatch a custom event so UI can react (status message / button update)
+              window.dispatchEvent(new CustomEvent('asciiMazeSolved', { detail: { maze, generations: completedGenerations, progress: bestResult?.progress } }));
+            }
+          } catch { /* ignore */ }
+        }
+        if (bestResult) (bestResult as any).exitReason = 'solved';
         break;
       }
 
-      // Stop if stagnation limit reached
-      if (stagnantGenerations >= maxStagnantGenerations) {
+      // Stop if stagnation limit reached (unless we are configured to only stop on solve)
+  if (!stopOnlyOnSolve && stagnantGenerations >= maxStagnantGenerations && isFinite(maxStagnantGenerations)) {
         if (bestNetwork && bestResult) {
           dashboardManager.update(
             maze,
@@ -1173,11 +1196,13 @@ export class EvolutionEngine {
             await flushToFrame();
           } catch {}
         }
+        if (bestResult) (bestResult as any).exitReason = 'stagnation';
         break;
       }
 
-      // Safety cap on generations
-      if (completedGenerations >= maxGenerations) {
+      // Safety cap on generations (unless only stopping on solve)
+  if (!stopOnlyOnSolve && completedGenerations >= maxGenerations && isFinite(maxGenerations)) {
+        if (bestResult) (bestResult as any).exitReason = 'maxGenerations';
         break;
       }
     }
@@ -1202,6 +1227,7 @@ export class EvolutionEngine {
       bestNetwork,
       bestResult,
       neat,
+      exitReason: (bestResult as any)?.exitReason ?? 'incomplete',
     };
   }
 
