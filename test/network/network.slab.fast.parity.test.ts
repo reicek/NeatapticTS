@@ -24,7 +24,7 @@ describe('network.slab.fast.parity', () => {
     (net as any)._slabDirty = true;
     const input = randomInputs(5);
     const legacy = (net as any).activate(input.slice(), false);
-  const fast = (net as any).fastSlabActivate(input.slice());
+    const fast = (net as any).fastSlabActivate(input.slice());
     // Assert single expectation
     expect(JSON.stringify(fast)).toBe(JSON.stringify(legacy));
   });

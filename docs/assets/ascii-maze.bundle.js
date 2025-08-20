@@ -41,13 +41,14 @@
   var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
   // src/architecture/connection.ts
-  var kGain, kGater, kOpt, Connection;
+  var kGain, kGater, kOpt, kPlasticRate, Connection;
   var init_connection = __esm({
     "src/architecture/connection.ts"() {
       "use strict";
       kGain = Symbol("connGain");
       kGater = Symbol("connGater");
       kOpt = Symbol("connOptMoments");
+      kPlasticRate = Symbol("connPlasticRate");
       Connection = class _Connection {
         /** The source (pre-synaptic) node supplying activation. */
         from;
@@ -74,10 +75,11 @@
          * bit0 => enabled gene expression (1 = active)
          * bit1 => DropConnect active mask (1 = not dropped this forward pass)
          * bit2 => hasGater (1 = symbol field present)
-         * bits3+ reserved.
+         * bit3 => plastic (plasticityRate > 0)
+         * bits4+ reserved.
          */
         _flags;
-        // bit0 enabled, bit1 dcActive, bit2 hasGater
+        // bit0 enabled, bit1 dcActive, bit2 hasGater, bit3 plastic
         /**
          * Construct a new connection between two nodes.
          *
@@ -87,7 +89,6 @@
          *
          * @example
          * const link = new Connection(nodeA, nodeB, 0.42);
-         * console.log(link.weight); // 0.42
          * link.enabled = false;     // disable during mutation
          * link.enabled = true;      // re-enable later
          */
@@ -223,6 +224,16 @@
         get hasGater() {
           return (this._flags & 4) !== 0;
         }
+        /** Whether this connection participates in plastic adaptation (rate > 0). */
+        get plastic() {
+          return (this._flags & 8) !== 0;
+        }
+        set plastic(v) {
+          if (v) this._flags |= 8;
+          else this._flags &= ~8;
+          if (!v && this[kPlasticRate] !== void 0)
+            delete this[kPlasticRate];
+        }
         // --- Virtualized gain property ---
         /**
          * Multiplicative modulation applied *after* weight. Default is `1` (neutral). We only store an
@@ -325,6 +336,21 @@
             this._flags |= 4;
           }
         }
+        // --- Plasticity rate (virtualized) ---
+        /** Per-connection plasticity / learning rate (0 means non-plastic). Setting >0 marks plastic flag. */
+        get plasticityRate() {
+          return this[kPlasticRate] === void 0 ? 0 : this[kPlasticRate];
+        }
+        set plasticityRate(v) {
+          if (v === void 0 || v === 0) {
+            if (this[kPlasticRate] !== void 0)
+              delete this[kPlasticRate];
+            this._flags &= ~8;
+          } else {
+            this[kPlasticRate] = v;
+            this._flags |= 8;
+          }
+        }
         // ---------------------------------------------------------------------------
         // Backward compatibility accessors for previously abbreviated property names
         // (opt_m, opt_v, opt_cache, opt_vhat, opt_u, opt_m2, _la_shadowWeight)
@@ -404,8 +430,11 @@
         // deep path test flag (ADD_NODE determinism)
         enableGatingTraces: true,
         // advanced gating trace infra
-        enableNodePooling: false
+        enableNodePooling: false,
         // experimental node instance pooling
+        enableSlabArrayPooling: false
+        // experimental slab typed array pooling
+        // browserSlabChunkTargetMs: 3, // example: aim for ~3ms per async slab slice in Browser
         // poolMaxPerBucket: 256,     // example memory cap override
         // poolPrewarmCount: 2,       // example prewarm override
       };
@@ -4377,6 +4406,37 @@
   });
 
   // src/architecture/network/network.slab.ts
+  function _poolKey(kind, bytes, length) {
+    return kind + ":" + bytes + ":" + length;
+  }
+  function _acquireTA(kind, ctor, length, bytesPerElement) {
+    if (!config.enableSlabArrayPooling) {
+      _slabAllocStats.fresh++;
+      return new ctor(length);
+    }
+    const key = _poolKey(kind, bytesPerElement, length);
+    const list = _slabArrayPool[key];
+    if (list && list.length) {
+      _slabAllocStats.pooled++;
+      (_slabPoolMetrics[key] ||= { created: 0, reused: 0, maxRetained: 0 }).reused++;
+      return list.pop();
+    }
+    _slabAllocStats.fresh++;
+    (_slabPoolMetrics[key] ||= { created: 0, reused: 0, maxRetained: 0 }).created++;
+    return new ctor(length);
+  }
+  function _releaseTA(kind, bytesPerElement, arr) {
+    if (!config.enableSlabArrayPooling) return;
+    const key = _poolKey(kind, bytesPerElement, arr.length);
+    const list = _slabArrayPool[key] ||= [];
+    if (list.length < SLAB_POOL_MAX_PER_KEY) list.push(arr);
+    const m = _slabPoolMetrics[key] ||= {
+      created: 0,
+      reused: 0,
+      maxRetained: 0
+    };
+    if (list.length > m.maxRetained) m.maxRetained = list.length;
+  }
   function rebuildConnectionSlab(force = false) {
     const internalNet = this;
     if (!force && !internalNet._slabDirty) return;
@@ -4389,11 +4449,41 @@
       capacity = capacity === 0 ? Math.ceil(connectionCount * growthFactor) : capacity;
       while (capacity < connectionCount)
         capacity = Math.ceil(capacity * growthFactor);
-      internalNet._connWeights = internalNet._useFloat32Weights ? new Float32Array(capacity) : new Float64Array(capacity);
-      internalNet._connFrom = new Uint32Array(capacity);
-      internalNet._connTo = new Uint32Array(capacity);
-      internalNet._connFlags = new Uint8Array(capacity);
-      internalNet._connGain = internalNet._useFloat32Weights ? new Float32Array(capacity) : new Float64Array(capacity);
+      if (internalNet._connWeights)
+        _releaseTA(
+          "w",
+          internalNet._useFloat32Weights ? 4 : 8,
+          internalNet._connWeights
+        );
+      if (internalNet._connFrom)
+        _releaseTA("f", 4, internalNet._connFrom);
+      if (internalNet._connTo)
+        _releaseTA("t", 4, internalNet._connTo);
+      if (internalNet._connFlags)
+        _releaseTA("fl", 1, internalNet._connFlags);
+      if (internalNet._connGain)
+        _releaseTA(
+          "g",
+          internalNet._useFloat32Weights ? 4 : 8,
+          internalNet._connGain
+        );
+      if (internalNet._connPlastic)
+        _releaseTA(
+          "p",
+          internalNet._useFloat32Weights ? 4 : 8,
+          internalNet._connPlastic
+        );
+      internalNet._connWeights = _acquireTA(
+        "w",
+        internalNet._useFloat32Weights ? Float32Array : Float64Array,
+        capacity,
+        internalNet._useFloat32Weights ? 4 : 8
+      );
+      internalNet._connFrom = _acquireTA("f", Uint32Array, capacity, 4);
+      internalNet._connTo = _acquireTA("t", Uint32Array, capacity, 4);
+      internalNet._connFlags = _acquireTA("fl", Uint8Array, capacity, 1);
+      internalNet._connGain = null;
+      internalNet._connPlastic = null;
       internalNet._connCapacity = capacity;
     } else {
       capacity = internalNet._connCapacity;
@@ -4402,7 +4492,10 @@
     const fromIndexArray = internalNet._connFrom;
     const toIndexArray = internalNet._connTo;
     const flagArray = internalNet._connFlags;
-    const gainArray = internalNet._connGain;
+    let gainArray = internalNet._connGain;
+    let anyNonNeutralGain = false;
+    let plasticArray = internalNet._connPlastic;
+    let anyPlastic = false;
     for (let connectionIndex = 0; connectionIndex < connectionCount; connectionIndex++) {
       const connection = this.connections[connectionIndex];
       weightArray[connectionIndex] = connection.weight;
@@ -4410,7 +4503,51 @@
       toIndexArray[connectionIndex] = connection.to.index >>> 0;
       flagArray[connectionIndex] = connection._flags & 255;
       const g = connection.gain;
-      gainArray[connectionIndex] = g === 1 ? 1 : g;
+      if (g !== 1) {
+        if (!gainArray) {
+          gainArray = _acquireTA(
+            "g",
+            internalNet._useFloat32Weights ? Float32Array : Float64Array,
+            capacity,
+            internalNet._useFloat32Weights ? 4 : 8
+          );
+          internalNet._connGain = gainArray;
+          for (let j = 0; j < connectionIndex; j++) gainArray[j] = 1;
+        }
+        gainArray[connectionIndex] = g;
+        anyNonNeutralGain = true;
+      } else if (gainArray) {
+        gainArray[connectionIndex] = 1;
+      }
+      if (connection._flags & 8) anyPlastic = true;
+    }
+    if (!anyNonNeutralGain && gainArray) {
+      _releaseTA(
+        "g",
+        internalNet._useFloat32Weights ? 4 : 8,
+        gainArray
+      );
+      internalNet._connGain = null;
+    }
+    if (anyPlastic && !plasticArray) {
+      plasticArray = _acquireTA(
+        "p",
+        internalNet._useFloat32Weights ? Float32Array : Float64Array,
+        capacity,
+        internalNet._useFloat32Weights ? 4 : 8
+      );
+      internalNet._connPlastic = plasticArray;
+      for (let i = 0; i < connectionCount; i++) {
+        const c = this.connections[i];
+        plasticArray[i] = c.plasticityRate || 0;
+      }
+    } else if (!anyPlastic && plasticArray) {
+      _releaseTA(
+        "p",
+        internalNet._useFloat32Weights ? 4 : 8,
+        plasticArray
+      );
+      internalNet._connPlastic = null;
     }
     internalNet._connCount = connectionCount;
     internalNet._slabDirty = false;
@@ -4420,12 +4557,19 @@
   function getConnectionSlab() {
     rebuildConnectionSlab.call(this);
     const internalNet = this;
+    let gain = internalNet._connGain || null;
+    if (!gain) {
+      const cap = internalNet._connCapacity || internalNet._connWeights && internalNet._connWeights.length || 0;
+      gain = internalNet._useFloat32Weights ? new Float32Array(cap) : new Float64Array(cap);
+      for (let i = 0; i < (internalNet._connCount || 0); i++) gain[i] = 1;
+    }
     return {
       weights: internalNet._connWeights,
       from: internalNet._connFrom,
       to: internalNet._connTo,
       flags: internalNet._connFlags,
-      gain: internalNet._connGain,
+      gain,
+      plastic: internalNet._connPlastic || null,
       version: internalNet._slabVersion || 0,
       used: internalNet._connCount || 0,
       capacity: internalNet._connCapacity || internalNet._connWeights && internalNet._connWeights.length || 0
@@ -4479,6 +4623,8 @@
     const internalNet = this;
     rebuildConnectionSlab.call(this);
     if (internalNet._adjDirty) _buildAdjacency.call(this);
+    if (this.gates && this.gates.length > 0)
+      return this.activate(input, false);
     if (!internalNet._connWeights || !internalNet._connFrom || !internalNet._connTo || !internalNet._outStart || !internalNet._outOrder) {
       return this.activate(input, false);
     }
@@ -4520,7 +4666,10 @@
       const sourceActivation = activationBuffer[nodeIndex];
       for (let cursorIdx = edgeStart; cursorIdx < edgeEnd; cursorIdx++) {
         const connectionIndex = outgoingOrder[cursorIdx];
-        stateBuffer[toIndexArray[connectionIndex]] += sourceActivation * weightArray[connectionIndex];
+        let w = weightArray[connectionIndex];
+        const gainArr = internalNet._connGain;
+        if (gainArr) w *= gainArr[connectionIndex];
+        stateBuffer[toIndexArray[connectionIndex]] += sourceActivation * w;
       }
     }
     const outputBaseIndex = nodeCount - this.output;
@@ -4535,10 +4684,16 @@
   function canUseFastSlab(training) {
     return _canUseFastSlab.call(this, training);
   }
+  var _slabArrayPool, _slabPoolMetrics, SLAB_POOL_MAX_PER_KEY, _slabAllocStats;
   var init_network_slab = __esm({
     "src/architecture/network/network.slab.ts"() {
       "use strict";
       init_activationArrayPool();
+      init_config();
+      _slabArrayPool = /* @__PURE__ */ Object.create(null);
+      _slabPoolMetrics = /* @__PURE__ */ Object.create(null);
+      SLAB_POOL_MAX_PER_KEY = 4;
+      _slabAllocStats = { fresh: 0, pooled: 0 };
     }
   });
 
@@ -8961,6 +9116,14 @@
         }
         getConnectionSlab() {
           return getConnectionSlab.call(this);
+        }
+        /**
+         * Public wrapper for fast slab forward pass (primarily for tests / benchmarking).
+         * Prefer using standard activate(); it will auto dispatch when eligible.
+         * Falls back internally if prerequisites not met.
+         */
+        fastSlabActivate(input) {
+          return this._fastSlabActivate(input);
         }
         constructor(input, output, options) {
           if (typeof input === "undefined" || typeof output === "undefined") {

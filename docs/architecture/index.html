@@ -118,7 +118,8 @@ This approach is inspired by neuro-evolution techniques where network topology e
 bit0 =&gt; enabled gene expression (1 = active)
 bit1 =&gt; DropConnect active mask (1 = not dropped this forward pass)
 bit2 =&gt; hasGater (1 = symbol field present)
-bits3+ reserved.</p>
+bit3 =&gt; plastic (plasticityRate &gt; 0)
+bits4+ reserved.</p>
 <h4 id="la-shadowweight">_la_shadowWeight</h4><p><strong>Deprecated:</strong> Use lookaheadShadowWeight instead.</p>
 <h4 id="acquire">acquire</h4><p><code>(from: import(&quot;D:/code-practice/NeatapticTS/src/architecture/node&quot;).default, to: import(&quot;D:/code-practice/NeatapticTS/src/architecture/node&quot;).default, weight: number | undefined) =&gt; import(&quot;D:/code-practice/NeatapticTS/src/architecture/connection&quot;).default</code></p>
 <p>Acquire a <code>Connection</code> from the pool (or construct new). Fields are fully reset &amp; given
@@ -164,6 +165,8 @@ Useful when you want a stable innovation id without relying on global mutable co
 <h4 id="opt-u">opt_u</h4><p><strong>Deprecated:</strong> Use infinityNorm instead.</p>
 <h4 id="opt-v">opt_v</h4><p><strong>Deprecated:</strong> Use secondMoment instead.</p>
 <h4 id="opt-vhat">opt_vhat</h4><p><strong>Deprecated:</strong> Use maxSecondMoment instead.</p>
+<h4 id="plastic">plastic</h4><p>Whether this connection participates in plastic adaptation (rate &gt; 0).</p>
+<h4 id="plasticityrate">plasticityRate</h4><p>Per-connection plasticity / learning rate (0 means non-plastic). Setting &gt;0 marks plastic flag.</p>
 <h4 id="previousdeltaweight">previousDeltaWeight</h4><p>Last applied delta weight (used by classic momentum).</p>
 <h4 id="release">release</h4><p><code>(conn: import(&quot;D:/code-practice/NeatapticTS/src/architecture/connection&quot;).default) =&gt; void</code></p>
 <p>Return a <code>Connection</code> to the internal pool for later reuse. Do NOT use the instance again
@@ -445,7 +448,77 @@ the configuration is applied recursively to the nodes within that group.</p>
 <li><code>values</code> - - An object containing the properties and their values to set.
 Example: <code>{ bias: 0.5, squash: methods.Activation.ReLU }</code></li>
 </ul>
-<h2 id="architecture-network-ts">architecture/network.ts</h2><h3 id="network">network</h3><h3 id="default">default</h3><h4 id="applygradientclipping">_applyGradientClipping</h4><p><code>(cfg: { mode: &quot;norm&quot; | &quot;percentile&quot; | &quot;layerwiseNorm&quot; | &quot;layerwisePercentile&quot;; maxNorm?: number | undefined; percentile?: number | undefined; }) =&gt; void</code></p>
+<h2 id="architecture-network-ts">architecture/network.ts</h2><h3 id="network">network</h3><h1 id="network-evolvable-trainable-graph">Network (Evolvable / Trainable Graph)</h1><p>Represents a directed neural computation graph used both as a NEAT genome
+phenotype and (optionally) as a gradient‑trainable model. The class binds
+together specialized modules (topology, pruning, serialization, slab packing)
+to keep the core surface approachable for learners.</p>
+<p>Educational Highlights:</p>
+<ul>
+<li>Structural Mutation: functions like <code>addNodeBetween()</code> and evolutionary
+helpers (in higher-level <code>Neat</code>) mutate topology to explore architectures.</li>
+<li>Fast Execution Paths: a Structure‑of‑Arrays (SoA) slab (<code>rebuildConnectionSlab</code>)
+packs connection data into typed arrays to improve cache locality.</li>
+<li>Memory Optimization: node pooling &amp; typed array pooling demonstrate how
+allocation patterns affect performance and GC pressure.</li>
+<li>Determinism: RNG snapshot/restore methods allow reproducible experiments.</li>
+<li>Hybrid Workflows: dropout, stochastic depth, weight noise and mixed precision
+illustrate gradient‑era regularization applied to evolved topologies.</li>
+</ul>
+<p>Typical Usage:</p>
+<pre><code class="language-ts">const net = new Network(4, 2);           // create network
+const out = net.activate([0.1,0.3,0.2,0.9]);
+net.addNodeBetween();                    // structural mutation
+const slab = (net as any).getConnectionSlab(); // inspect packed arrays
+const clone = net.clone();               // deep copy
+</code></pre>
+<p>Performance Guidance:</p>
+<ul>
+<li>Invoke <code>activate()</code> normally; the class auto‑selects slab vs object path.</li>
+<li>Batch structural mutations then call <code>rebuildConnectionSlab(true)</code> if you
+need an immediate fast‑path (it is invoked lazily otherwise).</li>
+<li>Keep input array length exactly equal to <code>input</code>; mismatches throw early.</li>
+</ul>
+<p>Serialization:</p>
+<ul>
+<li><code>toJSON()</code> / <code>fromJSON()</code> support experiment checkpointing.</li>
+<li>ONNX export (<code>exportToONNX</code>) enables interoperability with other tools.</li>
+</ul>
+<h3 id="network">Network</h3><h1 id="network-evolvable-trainable-graph">Network (Evolvable / Trainable Graph)</h1><p>Represents a directed neural computation graph used both as a NEAT genome
+phenotype and (optionally) as a gradient‑trainable model. The class binds
+together specialized modules (topology, pruning, serialization, slab packing)
+to keep the core surface approachable for learners.</p>
+<p>Educational Highlights:</p>
+<ul>
+<li>Structural Mutation: functions like <code>addNodeBetween()</code> and evolutionary
+helpers (in higher-level <code>Neat</code>) mutate topology to explore architectures.</li>
+<li>Fast Execution Paths: a Structure‑of‑Arrays (SoA) slab (<code>rebuildConnectionSlab</code>)
+packs connection data into typed arrays to improve cache locality.</li>
+<li>Memory Optimization: node pooling &amp; typed array pooling demonstrate how
+allocation patterns affect performance and GC pressure.</li>
+<li>Determinism: RNG snapshot/restore methods allow reproducible experiments.</li>
+<li>Hybrid Workflows: dropout, stochastic depth, weight noise and mixed precision
+illustrate gradient‑era regularization applied to evolved topologies.</li>
+</ul>
+<p>Typical Usage:</p>
+<pre><code class="language-ts">const net = new Network(4, 2);           // create network
+const out = net.activate([0.1,0.3,0.2,0.9]);
+net.addNodeBetween();                    // structural mutation
+const slab = (net as any).getConnectionSlab(); // inspect packed arrays
+const clone = net.clone();               // deep copy
+</code></pre>
+<p>Performance Guidance:</p>
+<ul>
+<li>Invoke <code>activate()</code> normally; the class auto‑selects slab vs object path.</li>
+<li>Batch structural mutations then call <code>rebuildConnectionSlab(true)</code> if you
+need an immediate fast‑path (it is invoked lazily otherwise).</li>
+<li>Keep input array length exactly equal to <code>input</code>; mismatches throw early.</li>
+</ul>
+<p>Serialization:</p>
+<ul>
+<li><code>toJSON()</code> / <code>fromJSON()</code> support experiment checkpointing.</li>
+<li>ONNX export (<code>exportToONNX</code>) enables interoperability with other tools.</li>
+</ul>
+<h3 id="default">default</h3><h4 id="applygradientclipping">_applyGradientClipping</h4><p><code>(cfg: { mode: &quot;norm&quot; | &quot;percentile&quot; | &quot;layerwiseNorm&quot; | &quot;layerwisePercentile&quot;; maxNorm?: number | undefined; percentile?: number | undefined; }) =&gt; void</code></p>
 <p>Trains the network on a given dataset subset for one pass (epoch or batch).
 Performs activation and backpropagation for each item in the set.
 Updates weights based on batch size configuration.</p>
@@ -548,6 +621,10 @@ If the connection being removed was gated, it is also ungated.</p>
 </ul>
 <h4 id="enableweightnoise">enableWeightNoise</h4><p><code>(stdDev: number | { perHiddenLayer: number[]; }) =&gt; void</code></p>
 <p>Enable weight noise. Provide a single std dev number or { perHiddenLayer: number[] }.</p>
+<h4 id="fastslabactivate">fastSlabActivate</h4><p><code>(input: number[]) =&gt; number[]</code></p>
+<p>Public wrapper for fast slab forward pass (primarily for tests / benchmarking).
+Prefer using standard activate(); it will auto dispatch when eligible.
+Falls back internally if prerequisites not met.</p>
 <h4 id="fromjson">fromJSON</h4><p><code>(json: any) =&gt; import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default</code></p>
 <p>Reconstructs a network from a JSON object (latest standard).
 Handles formatVersion, robust error handling, and index-based references.</p>
@@ -685,18 +762,28 @@ Removes the connection from the network&#39;s <code>gates</code> list.</p>
 <ul>
 <li>`` - - The connection object to ungate.</li>
 </ul>
-<h2 id="architecture-node-ts">architecture/node.ts</h2><h3 id="node">node</h3><p>Represents a node (neuron) in a neural network graph.</p>
-<p>Nodes are the fundamental processing units. They receive inputs, apply an activation function,
-and produce an output. Nodes can be of type &#39;input&#39;, &#39;hidden&#39;, or &#39;output&#39;. Hidden and output
-nodes have biases and activation functions, which can be mutated during neuro-evolution.
-This class also implements mechanisms for backpropagation, including support for momentum (NAG),
-L2 regularization, dropout, and eligibility traces for recurrent connections.</p>
-<h3 id="node">Node</h3><p>Represents a node (neuron) in a neural network graph.</p>
-<p>Nodes are the fundamental processing units. They receive inputs, apply an activation function,
-and produce an output. Nodes can be of type &#39;input&#39;, &#39;hidden&#39;, or &#39;output&#39;. Hidden and output
-nodes have biases and activation functions, which can be mutated during neuro-evolution.
-This class also implements mechanisms for backpropagation, including support for momentum (NAG),
-L2 regularization, dropout, and eligibility traces for recurrent connections.</p>
+<h2 id="architecture-node-ts">architecture/node.ts</h2><h3 id="node">node</h3><h1 id="node-neuron">Node (Neuron)</h1><p>Fundamental computational unit: aggregates weighted inputs, applies an activation
+function (squash) and emits an activation value. Supports:</p>
+<ul>
+<li>Types: &#39;input&#39; | &#39;hidden&#39; | &#39;output&#39; (affects bias initialization &amp; error handling)</li>
+<li>Recurrent self‑connections &amp; gated connections (for dynamic / RNN behavior)</li>
+<li>Dropout mask (<code>mask</code>), momentum terms, eligibility &amp; extended traces (for
+a variety of learning rules beyond simple backprop).</li>
+</ul>
+<p>Educational note: Traces (<code>eligibility</code> and <code>xtrace</code>) illustrate how recurrent credit
+assignment works in algorithms like RTRL / policy gradients. They are updated only when
+using the traced activation path (<code>activate</code>) vs <code>noTraceActivate</code> (inference fast path).</p>
+<h3 id="node">Node</h3><h1 id="node-neuron">Node (Neuron)</h1><p>Fundamental computational unit: aggregates weighted inputs, applies an activation
+function (squash) and emits an activation value. Supports:</p>
+<ul>
+<li>Types: &#39;input&#39; | &#39;hidden&#39; | &#39;output&#39; (affects bias initialization &amp; error handling)</li>
+<li>Recurrent self‑connections &amp; gated connections (for dynamic / RNN behavior)</li>
+<li>Dropout mask (<code>mask</code>), momentum terms, eligibility &amp; extended traces (for
+a variety of learning rules beyond simple backprop).</li>
+</ul>
+<p>Educational note: Traces (<code>eligibility</code> and <code>xtrace</code>) illustrate how recurrent credit
+assignment works in algorithms like RTRL / policy gradients. They are updated only when
+using the traced activation path (<code>activate</code>) vs <code>noTraceActivate</code> (inference fast path).</p>
 <h3 id="default">default</h3><h4 id="activatecore">_activateCore</h4><p><code>(withTrace: boolean, input: number | undefined) =&gt; number</code></p>
 <p>Internal shared implementation for activate/noTraceActivate.</p>
 <p>Parameters:</p>
@@ -986,4 +1073,4 @@ by replacing the corresponding hidden node block with a freshly constructed Laye
 </ul>
 <h3 id="onnxexportoptions">OnnxExportOptions</h3><p>Options controlling ONNX export behavior (Phase 1).</p>
 <h3 id="onnxmodel">OnnxModel</h3><h3 id="pool2dmapping">Pool2DMapping</h3><p>Mapping describing a pooling operation inserted after a given export-layer index.</p>
-<footer class="site-footer">Generated from source JSDoc • <a href="https://github.com/reicek/NeatapticTS">GitHub</a></footer></main><aside class="toc"><div class="page-toc"><h2>Files</h2><div class="toc-file"><a href="#architecture-activationarraypool-ts">architecture/activationArrayPool.ts</a><ul><li><a href=#activationarray>ActivationArray</a></li><li><a href=#activationarraypool>activationArrayPool</a></li><li><a href=#activationarraypool>ActivationArrayPool</a></li></ul></div><div class="toc-file"><a href="#architecture-architect-ts">architecture/architect.ts</a><ul><li><a href=#architect>architect</a></li><li><a href=#architect>Architect</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#architecture-connection-ts">architecture/connection.ts</a><ul><li><a href=#connection>connection</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#architecture-group-ts">architecture/group.ts</a><ul><li><a href=#group>group</a></li><li><a href=#group>Group</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#architecture-layer-ts">architecture/layer.ts</a><ul><li><a href=#layer>layer</a></li><li><a href=#layer>Layer</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#architecture-network-ts">architecture/network.ts</a><ul><li><a href=#network>network</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#architecture-node-ts">architecture/node.ts</a><ul><li><a href=#node>node</a></li><li><a href=#node>Node</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#architecture-nodepool-ts">architecture/nodePool.ts</a><ul><li><a href=#acquirenode>acquireNode</a></li><li><a href=#acquirenodeoptions>AcquireNodeOptions</a></li><li><a href=#nodepoolstats>nodePoolStats</a></li><li><a href=#releasenode>releaseNode</a></li><li><a href=#resetnode>resetNode</a></li><li><a href=#resetnodepool>resetNodePool</a></li><li><a href=#resettablenodefields>ResettableNodeFields</a></li></ul></div><div class="toc-file"><a href="#architecture-onnx-ts">architecture/onnx.ts</a><ul><li><a href=#conv2dmapping>Conv2DMapping</a></li><li><a href=#exporttoonnx>exportToONNX</a></li><li><a href=#importfromonnx>importFromONNX</a></li><li><a href=#onnxexportoptions>OnnxExportOptions</a></li><li><a href=#onnxmodel>OnnxModel</a></li><li><a href=#pool2dmapping>Pool2DMapping</a></li></ul></div></div></aside></div></body></html>
+<footer class="site-footer">Generated from source JSDoc • <a href="https://github.com/reicek/NeatapticTS">GitHub</a></footer></main><aside class="toc"><div class="page-toc"><h2>Files</h2><div class="toc-file"><a href="#architecture-activationarraypool-ts">architecture/activationArrayPool.ts</a><ul><li><a href=#activationarray>ActivationArray</a></li><li><a href=#activationarraypool>activationArrayPool</a></li><li><a href=#activationarraypool>ActivationArrayPool</a></li></ul></div><div class="toc-file"><a href="#architecture-architect-ts">architecture/architect.ts</a><ul><li><a href=#architect>architect</a></li><li><a href=#architect>Architect</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#architecture-connection-ts">architecture/connection.ts</a><ul><li><a href=#connection>connection</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#architecture-group-ts">architecture/group.ts</a><ul><li><a href=#group>group</a></li><li><a href=#group>Group</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#architecture-layer-ts">architecture/layer.ts</a><ul><li><a href=#layer>layer</a></li><li><a href=#layer>Layer</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#architecture-network-ts">architecture/network.ts</a><ul><li><a href=#network>network</a></li><li><a href=#network>Network</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#architecture-node-ts">architecture/node.ts</a><ul><li><a href=#node>node</a></li><li><a href=#node>Node</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#architecture-nodepool-ts">architecture/nodePool.ts</a><ul><li><a href=#acquirenode>acquireNode</a></li><li><a href=#acquirenodeoptions>AcquireNodeOptions</a></li><li><a href=#nodepoolstats>nodePoolStats</a></li><li><a href=#releasenode>releaseNode</a></li><li><a href=#resetnode>resetNode</a></li><li><a href=#resetnodepool>resetNodePool</a></li><li><a href=#resettablenodefields>ResettableNodeFields</a></li></ul></div><div class="toc-file"><a href="#architecture-onnx-ts">architecture/onnx.ts</a><ul><li><a href=#conv2dmapping>Conv2DMapping</a></li><li><a href=#exporttoonnx>exportToONNX</a></li><li><a href=#importfromonnx>importFromONNX</a></li><li><a href=#onnxexportoptions>OnnxExportOptions</a></li><li><a href=#onnxmodel>OnnxModel</a></li><li><a href=#pool2dmapping>Pool2DMapping</a></li></ul></div></div></aside></div></body></html>

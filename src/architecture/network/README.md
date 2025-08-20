@@ -899,7 +899,8 @@ Packed state flags (private for future-proofing hidden class):
 bit0 => enabled gene expression (1 = active)
 bit1 => DropConnect active mask (1 = not dropped this forward pass)
 bit2 => hasGater (1 = symbol field present)
-bits3+ reserved.
+bit3 => plastic (plasticityRate > 0)
+bits4+ reserved.
 
 #### _la_shadowWeight
 
@@ -1018,6 +1019,14 @@ AMSGrad: Maximum of past second moment (was opt_vhat).
 
 **Deprecated:** Use maxSecondMoment instead.
 
+#### plastic
+
+Whether this connection participates in plastic adaptation (rate > 0).
+
+#### plasticityRate
+
+Per-connection plasticity / learning rate (0 means non-plastic). Setting >0 marks plastic flag.
+
 #### previousDeltaWeight
 
 Last applied delta weight (used by classic momentum).
@@ -1078,11 +1087,28 @@ Extended trace structure for modulatory / eligibility propagation algorithms. Pa
 
 ## architecture/network/network.slab.ts
 
+### _acquireTA
+
+`(kind: string, ctor: any, length: number, bytesPerElement: number) => TypedArray`
+
+Acquire (or reuse) a typed array slab, recording allocation statistics.
+
+### _releaseTA
+
+`(kind: string, bytesPerElement: number, arr: TypedArray) => void`
+
+Return a typed array slab to the small LRU pool (bounded).
+
 ### canUseFastSlab
 
 `(training: boolean) => boolean`
 
 Public helper: indicates whether fast slab path is currently viable.
+
+### ConnectionSlabView
+
+Shape returned by `getConnectionSlab()` describing the packed SoA view.
+Note: The arrays SHOULD NOT be mutated by callers; treat as read‑only.
 
 ### fastSlabActivate
 
@@ -1093,54 +1119,57 @@ Falls back to generic activate if prerequisites unavailable.
 
 ### getConnectionSlab
 
-`() => { weights: any; from: any; to: any; flags: any; gain: any; version: any; used: any; capacity: any; }`
+`() => import("D:/code-practice/NeatapticTS/src/architecture/network/network.slab").ConnectionSlabView`
 
-Return current slab (building lazily).
+Snapshot (lazy rebuild) of packed arrays.
+Synthetic neutral gain array returned when omission active.
+
+Example (iterate first 10 connections):
+```ts
+const slab = (net as any).getConnectionSlab();
+for (let i=0; i<Math.min(10, slab.used); i++) {
+  console.log(`#${i}: ${slab.from[i]} -> ${slab.to[i]} w=${slab.weights[i]}`);
+}
+```
+
+### getSlabAllocationStats
+
+`() => { pool: Record<string, PoolKeyMetrics>; fresh: number; pooled: number; }`
+
+Allocation statistics for slab typed arrays.
+
+Educational usage: Inspect `fresh` vs `pooled` to discuss reuse efficiency
+and memory churn. `pool` contains per-key creation/reuse counters.
 
 ### getSlabVersion
 
 `() => number`
 
-Public accessor for current slab version (0 if never built).
+Monotonic slab version counter (increments each successful rebuild).
 
 ### rebuildConnectionSlab
 
 `(force: boolean) => void`
 
-Fast slab (structure-of-arrays) acceleration layer (Phase 3 foundation).
-----------------------------------------------------------------------
-Motivation:
- Object graphs suffer from pointer chasing & polymorphic inline caches in large forward passes.
- By packing connection attributes into contiguous typed arrays we:
-   - Improve spatial locality (sequential memory scans).
-   - Enable simpler tight loops amenable to JIT & future WASM SIMD lowering.
-   - Provide a staging ground for subsequent Phase 3+ memory slimming (flags / precision / plasticity).
+### rebuildConnectionSlabAsync
 
-Phase 3 Additions (initial commit):
- - Slab version counter (_slabVersion) incremented on each structural rebuild (educational introspection).
- - Flags array (_connFlags Uint8Array) and gain array (_connGain Float32/64) allocated in parallel (placeholders
-   for enabled bits, drop masks, future plasticity multipliers). Currently all flags=1, gains=1.
- - getConnectionSlab() now returns flags & gain alongside weights/from/to.
+`(chunkSize: number) => Promise<void>`
 
-Future (later Phase 3 iterations):
- - Geometric capacity growth (avoid realloc on small structural deltas). (Implemented: capacity reuse with growth factor)
- - Plasticity / mask bits stored compactly (bitpacking) to reduce per-connection bytes.
- - Typed array pooling / recycling to limit GC churn on frequent rebuilds.
+Cooperative async rebuild (browser). Slices packing into microtasks for large connection
+counts to limit a single long blocking loop. Capacity growth + pooling mirror the sync path.
 
-Core Data Structures:
- weights (Float32Array|Float64Array)    : connection weights
- from    (Uint32Array)                  : source node indices
- to      (Uint32Array)                  : target node indices
- flags   (Uint8Array)                   : connection enable / mask bits (placeholder value=1)
- gain    (Float32Array|Float64Array)    : multiplicative gain (placeholder value=1)
- outStart (Uint32Array)                 : CSR row pointer style offsets (length nodeCount+1)
- outOrder (Uint32Array)                 : permutation of connection indices grouped by source
+NOTE: Allocation happens up-front; the microtask yields only segment the population copy.
+Thus `fresh` increments by the number of new slabs allocated (weights/from/to/flags/gain)
+only when capacity grows.
 
-Rebuild Workflow:
- 1. Reindex nodes if dirty.
- 2. Allocate typed arrays sized to current connection count.
- 3. Populate parallel arrays in a single linear pass.
- 4. Mark adjacency dirty; increment version.
+Example:
+```ts
+await rebuildConnectionSlabAsync.call(net, 40_000);
+console.log('Version after async build', (net as any)._slabVersion);
+```
+
+Parameters:
+- `chunkSize` - Max connections per microtask slice (auto-tuned for very large graphs).
 
 ## architecture/network/network.standalone.ts
 

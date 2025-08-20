@@ -2,26 +2,44 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;600;700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../assets/theme.css"></head><body class="">
 <header class="topbar"><div class="inner"><div class="brand"><a href="../index.html">NeatapticTS</a></div><nav class="main-nav"><a href="../index.html">Home</a><a href="../index.html" class="active">Docs</a><a href="https://github.com/reicek/NeatapticTS" target="_blank" rel="noopener">GitHub</a></nav></div></header>
-<div class="layout"><aside class="sidebar"><ul class="sidebar-sections"><li class="group"><div class="g-head">src</div><ul><li><a href="../src/index.html">src</a></li></ul></li><li class="group"><div class="g-head">utils</div><ul><li class="current"><a href="./index.html">utils</a></li></ul></li><li><a href="../index.html">Overview</a></li><li class="group"><div class="g-head">architecture</div><ul><li><a href="../architecture/index.html">architecture</a></li><li><a href="../architecture/network/index.html">architecture/network</a></li></ul></li><li class="group"><div class="g-head">methods</div><ul><li><a href="../methods/index.html">methods</a></li></ul></li><li class="group"><div class="g-head">neat</div><ul><li><a href="../neat/index.html">neat</a></li></ul></li><li class="group"><div class="g-head">multithreading</div><ul><li><a href="../multithreading/index.html">multithreading</a></li><li><a href="../multithreading/workers/index.html">multithreading/workers</a></li><li><a href="../multithreading/workers/browser/index.html">multithreading/workers/browser</a></li><li><a href="../multithreading/workers/node/index.html">multithreading/workers/node</a></li></ul></li></ul></aside><main class="content"><h1 id="utils">utils</h1><h2 id="utils-memory-ts">utils/memory.ts</h2><h3 id="memorystats">memoryStats</h3><p><code>(targetNetworks: any) =&gt; any</code></p>
+<div class="layout"><aside class="sidebar"><ul class="sidebar-sections"><li class="group"><div class="g-head">src</div><ul><li><a href="../src/index.html">src</a></li></ul></li><li class="group"><div class="g-head">utils</div><ul><li class="current"><a href="./index.html">utils</a></li></ul></li><li><a href="../index.html">Overview</a></li><li class="group"><div class="g-head">architecture</div><ul><li><a href="../architecture/index.html">architecture</a></li><li><a href="../architecture/network/index.html">architecture/network</a></li></ul></li><li class="group"><div class="g-head">methods</div><ul><li><a href="../methods/index.html">methods</a></li></ul></li><li class="group"><div class="g-head">neat</div><ul><li><a href="../neat/index.html">neat</a></li></ul></li><li class="group"><div class="g-head">multithreading</div><ul><li><a href="../multithreading/index.html">multithreading</a></li><li><a href="../multithreading/workers/index.html">multithreading/workers</a></li><li><a href="../multithreading/workers/browser/index.html">multithreading/workers/browser</a></li><li><a href="../multithreading/workers/node/index.html">multithreading/workers/node</a></li></ul></li></ul></aside><main class="content"><h1 id="utils">utils</h1><h2 id="utils-memory-ts">utils/memory.ts</h2><h3 id="memorystats">memoryStats</h3><p><code>(targetNetworks: any) =&gt; import(&quot;D:/code-practice/NeatapticTS/src/utils/memory&quot;).MemoryStats</code></p>
 <p>Capture heuristic memory statistics for one or more networks with snapshot of active config flags.</p>
 <p>Parameters:</p>
 <ul>
 <li><code>targetNetworks</code> - Optional single network or array. If omitted, uses registered networks.</li>
 </ul>
+<h3 id="memorystats">MemoryStats</h3><p>Memory instrumentation utilities (Phase 0).</p>
+<p>Educational overview:
+These helpers expose a <em>heuristic</em> snapshot of memory usage for the
+evolutionary population and internal pools. The goal is to help learners
+reason about how design choices (slab storage, pooling, typed arrays)
+influence memory footprint <em>without</em> incurring heavy introspection costs.</p>
+<p>Design principles:</p>
+<ul>
+<li>Lightweight: Avoid deep graph walks or JSON serialization.</li>
+<li>Pay-for-use: If no networks are registered the function returns a small, fast object.</li>
+<li>Cross‑environment: Works in both Browser and Node via feature detection.</li>
+<li>Extensible: Shape deliberately includes draft sections for later precise accounting phases.</li>
+</ul>
 <h3 id="registertrackednetwork">registerTrackedNetwork</h3><p><code>(network: any) =&gt; void</code></p>
-<p>Register a network instance for memory tracking (optional depending on design).
-Allows memoryStats() to iterate over registered networks when no explicit instance passed.</p>
+<p>Register a network for inclusion in future <code>memoryStats()</code> calls made
+without explicit parameters.</p>
+<p>Duplicate registrations are ignored; insertion order is preserved which is
+useful for deterministic test snapshots.</p>
 <p>Parameters:</p>
 <ul>
-<li>`` - Network instance (type narrowed later).</li>
+<li><code>network</code> - Network instance (loosely typed to defer strict coupling).</li>
 </ul>
 <h3 id="resetmemorytracking">resetMemoryTracking</h3><p><code>() =&gt; void</code></p>
-<p>Reset internal counters / high-water marks used for memory tracking.
-Placeholder for future pool tracking reset.</p>
+<p>Reset internal tracking registry (and, in later phases, ancillary counters).</p>
+<p>Educational: Calling this does NOT free memory — it simply clears the list
+of networks that will be included when <code>memoryStats()</code> is invoked without
+arguments. Use it between benchmark runs to isolate scenarios.</p>
 <h3 id="unregistertrackednetwork">unregisterTrackedNetwork</h3><p><code>(network: any) =&gt; void</code></p>
-<p>Unregister a previously registered network instance.</p>
+<p>Remove a previously registered network from the tracking registry.
+No-op if the network is not currently registered.</p>
 <p>Parameters:</p>
 <ul>
-<li>`` - Network instance.</li>
+<li><code>network</code> - Network instance.</li>
 </ul>
-<footer class="site-footer">Generated from source JSDoc • <a href="https://github.com/reicek/NeatapticTS">GitHub</a></footer></main><aside class="toc"><div class="page-toc"><h2>Files</h2><div class="toc-file"><a href="#utils-memory-ts">utils/memory.ts</a><ul><li><a href=#memorystats>memoryStats</a></li><li><a href=#registertrackednetwork>registerTrackedNetwork</a></li><li><a href=#resetmemorytracking>resetMemoryTracking</a></li><li><a href=#unregistertrackednetwork>unregisterTrackedNetwork</a></li></ul></div></div></aside></div></body></html>
+<footer class="site-footer">Generated from source JSDoc • <a href="https://github.com/reicek/NeatapticTS">GitHub</a></footer></main><aside class="toc"><div class="page-toc"><h2>Files</h2><div class="toc-file"><a href="#utils-memory-ts">utils/memory.ts</a><ul><li><a href=#memorystats>memoryStats</a></li><li><a href=#memorystats>MemoryStats</a></li><li><a href=#registertrackednetwork>registerTrackedNetwork</a></li><li><a href=#resetmemorytracking>resetMemoryTracking</a></li><li><a href=#unregistertrackednetwork>unregisterTrackedNetwork</a></li></ul></div></div></aside></div></body></html>

@@ -21,8 +21,11 @@ describe('network.slab.fast.gating.guard', () => {
     (net as any)._nodeIndexDirty = true;
     const input = [0.3, -0.1];
     const legacy = (net as any).activate(input.slice(), false);
-  const fast = (net as any).fastSlabActivate(input.slice());
+    const fast = (net as any).fastSlabActivate(input.slice());
     // Assert: outputs equal (fallback used) and gating array present
-    expect(JSON.stringify(fast) === JSON.stringify(legacy) && (net as any).gates.length > 0).toBe(true);
+    expect(
+      JSON.stringify(fast) === JSON.stringify(legacy) &&
+        (net as any).gates.length > 0
+    ).toBe(true);
   });
 });

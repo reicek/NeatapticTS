@@ -410,12 +410,41 @@ preserve best-effort behavior during population seeding/expansion.</li>
 <p>Returns: A new <code>Network</code> instance derived from <code>parent</code>. The child is unregistered.</p>
 <h4 id="tojson">toJSON</h4><p><code>() =&gt; any</code></p>
 <p>Import a previously exported state bundle and rehydrate a Neat instance.</p>
-<h2 id="neataptic-ts">neataptic.ts</h2><h3 id="neataptic">neataptic</h3><p>Represents a node (neuron) in a neural network graph.</p>
-<p>Nodes are the fundamental processing units. They receive inputs, apply an activation function,
-and produce an output. Nodes can be of type &#39;input&#39;, &#39;hidden&#39;, or &#39;output&#39;. Hidden and output
-nodes have biases and activation functions, which can be mutated during neuro-evolution.
-This class also implements mechanisms for backpropagation, including support for momentum (NAG),
-L2 regularization, dropout, and eligibility traces for recurrent connections.</p>
+<h2 id="neataptic-ts">neataptic.ts</h2><h3 id="neataptic">neataptic</h3><h1 id="network-evolvable-trainable-graph">Network (Evolvable / Trainable Graph)</h1><p>Represents a directed neural computation graph used both as a NEAT genome
+phenotype and (optionally) as a gradient‑trainable model. The class binds
+together specialized modules (topology, pruning, serialization, slab packing)
+to keep the core surface approachable for learners.</p>
+<p>Educational Highlights:</p>
+<ul>
+<li>Structural Mutation: functions like <code>addNodeBetween()</code> and evolutionary
+helpers (in higher-level <code>Neat</code>) mutate topology to explore architectures.</li>
+<li>Fast Execution Paths: a Structure‑of‑Arrays (SoA) slab (<code>rebuildConnectionSlab</code>)
+packs connection data into typed arrays to improve cache locality.</li>
+<li>Memory Optimization: node pooling &amp; typed array pooling demonstrate how
+allocation patterns affect performance and GC pressure.</li>
+<li>Determinism: RNG snapshot/restore methods allow reproducible experiments.</li>
+<li>Hybrid Workflows: dropout, stochastic depth, weight noise and mixed precision
+illustrate gradient‑era regularization applied to evolved topologies.</li>
+</ul>
+<p>Typical Usage:</p>
+<pre><code class="language-ts">const net = new Network(4, 2);           // create network
+const out = net.activate([0.1,0.3,0.2,0.9]);
+net.addNodeBetween();                    // structural mutation
+const slab = (net as any).getConnectionSlab(); // inspect packed arrays
+const clone = net.clone();               // deep copy
+</code></pre>
+<p>Performance Guidance:</p>
+<ul>
+<li>Invoke <code>activate()</code> normally; the class auto‑selects slab vs object path.</li>
+<li>Batch structural mutations then call <code>rebuildConnectionSlab(true)</code> if you
+need an immediate fast‑path (it is invoked lazily otherwise).</li>
+<li>Keep input array length exactly equal to <code>input</code>; mismatches throw early.</li>
+</ul>
+<p>Serialization:</p>
+<ul>
+<li><code>toJSON()</code> / <code>fromJSON()</code> support experiment checkpointing.</li>
+<li>ONNX export (<code>exportToONNX</code>) enables interoperability with other tools.</li>
+</ul>
 <h3 id="default">default</h3><h4 id="activatecore">_activateCore</h4><p><code>(withTrace: boolean, input: number | undefined) =&gt; number</code></p>
 <p>Internal shared implementation for activate/noTraceActivate.</p>
 <p>Parameters:</p>
@@ -453,7 +482,8 @@ Updates weights based on batch size configuration.</p>
 bit0 =&gt; enabled gene expression (1 = active)
 bit1 =&gt; DropConnect active mask (1 = not dropped this forward pass)
 bit2 =&gt; hasGater (1 = symbol field present)
-bits3+ reserved.</p>
+bit3 =&gt; plastic (plasticityRate &gt; 0)
+bits4+ reserved.</p>
 <h4 id="getobjectives">_getObjectives</h4><p><code>() =&gt; import(&quot;D:/code-practice/NeatapticTS/src/neat/neat.types&quot;).ObjectiveDescriptor[]</code></p>
 <p>Internal: return cached objective descriptors, building if stale.</p>
 <h4 id="globalnodeindex">_globalNodeIndex</h4><p>Global index counter for assigning unique indices to nodes.</p>
@@ -936,6 +966,10 @@ human inspection and simple ingestion.</p>
 <p>Export telemetry as JSON Lines (one JSON object per line).</p>
 <p>Useful for piping telemetry to external loggers or analysis tools.</p>
 <p>Returns: A newline-separated string of JSON objects.</p>
+<h4 id="fastslabactivate">fastSlabActivate</h4><p><code>(input: number[]) =&gt; number[]</code></p>
+<p>Public wrapper for fast slab forward pass (primarily for tests / benchmarking).
+Prefer using standard activate(); it will auto dispatch when eligible.
+Falls back internally if prerequisites not met.</p>
 <h4 id="firstmoment">firstMoment</h4><p>First moment estimate (Adam / AdamW) (was opt_m).</p>
 <h4 id="from">from</h4><p>The source (pre-synaptic) node supplying activation.</p>
 <h4 id="fromjson">fromJSON</h4><p><code>(json: any) =&gt; import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default</code></p>
@@ -1342,6 +1376,8 @@ fully connected layer by layer.</p>
 <li>`` - - A sequence of numbers representing the size (number of nodes) of each layer, starting with the input layer, followed by hidden layers, and ending with the output layer. Must include at least input, one hidden, and output layer sizes.</li>
 </ul>
 <p>Returns: The constructed MLP network.</p>
+<h4 id="plastic">plastic</h4><p>Whether this connection participates in plastic adaptation (rate &gt; 0).</p>
+<h4 id="plasticityrate">plasticityRate</h4><p>Per-connection plasticity / learning rate (0 means non-plastic). Setting &gt;0 marks plastic flag.</p>
 <h4 id="previousdeltabias">previousDeltaBias</h4><p>The change in bias applied in the previous training iteration. Used for calculating momentum.</p>
 <h4 id="previousdeltaweight">previousDeltaWeight</h4><p>Last applied delta weight (used by classic momentum).</p>
 <h4 id="propagate">propagate</h4><p><code>(rate: number, momentum: number, update: boolean, target: number[], regularization: number, costDerivative: ((target: number, output: number) =&gt; number) | undefined) =&gt; void</code></p>

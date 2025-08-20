@@ -3,15 +3,20 @@ import { config } from '../config';
 import * as methods from '../methods/methods';
 
 /**
- * Represents a node (neuron) in a neural network graph.
+ * Node (Neuron)
+ * =============
+ * Fundamental computational unit: aggregates weighted inputs, applies an activation
+ * function (squash) and emits an activation value. Supports:
+ *  - Types: 'input' | 'hidden' | 'output' (affects bias initialization & error handling)
+ *  - Recurrent self‑connections & gated connections (for dynamic / RNN behavior)
+ *  - Dropout mask (`mask`), momentum terms, eligibility & extended traces (for
+ *    a variety of learning rules beyond simple backprop).
  *
- * Nodes are the fundamental processing units. They receive inputs, apply an activation function,
- * and produce an output. Nodes can be of type 'input', 'hidden', or 'output'. Hidden and output
- * nodes have biases and activation functions, which can be mutated during neuro-evolution.
- * This class also implements mechanisms for backpropagation, including support for momentum (NAG),
- * L2 regularization, dropout, and eligibility traces for recurrent connections.
+ * Educational note: Traces (`eligibility` and `xtrace`) illustrate how recurrent credit
+ * assignment works in algorithms like RTRL / policy gradients. They are updated only when
+ * using the traced activation path (`activate`) vs `noTraceActivate` (inference fast path).
  *
- * @see {@link https://medium.com/data-science/neuro-evolution-on-steroids-82bd14ddc2f6#1-1-nodes Instinct Algorithm - Section 1.1 Nodes}
+ * @see Instinct article (Section 1.1 Nodes) for conceptual background.
  */
 export default class Node {
   /**

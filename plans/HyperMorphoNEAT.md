@@ -776,6 +776,92 @@ type MorphogenesisHook = (
 ) => void;
 ```
 
+## Risk & Mitigation Summary
+
+Transforms diffuse architectural risks into an actionable ledger, pairing each risk with concrete mitigation levers (caching, budgets, feature flags). This supports proactive monitoring and simplifies post‑mortem attribution if regressions emerge.
+| Risk | Mitigation |
+|------|------------|
+| Rebuild overhead for large CPPN substrates | Caching + incremental diff generation |
+| Memory blowup from plasticity state | Optional feature; pooled typed arrays with reuse |
+| Rule explosion causing combinatorial growth | Global complexity budget + rule priority throttle |
+| API instability | Feature-flag entire hyper layer until Phase 6 |
+
+---
+
+## Incremental PR Sequencing (Granular Checklist)
+
+Breaks delivery into reviewable micro‑increments so semantic drift or performance regressions are localized; each PR carries its own acceptance tests and plan diff, forming an auditable evolution trail of the design document itself.
+
+1. PR1: Scaffolding + config flag + empty tests.
+2. PR2: Genotype + basic phenotype builder.
+3. PR3: Developmental rules (replicate/symmetry) + tests.
+4. PR4: CPPN core + indirect edge generation.
+5. PR5: Morphogenesis hooks + activity metrics.
+6. PR6: Plasticity (Hebbian) + gating.
+7. PR7: Telemetry + export trace.
+8. PR8: Evolution integration (mutation + speciation extension).
+9. PR9: Scaling benchmarks + docs.
+10. PR10: Stabilization & API doc examples.
+
+Each PR keeps surface area small, adds tests, and updates this plan (append CHANGELOG section).
+
+---
+
+## Example (Future) User API Sketch (Post Phase 5)
+
+Provides a provisional user‑facing construct to validate naming consistency, configuration surface minimality, and composability with existing library patterns before hardening interfaces post Phase 6.
+
+```ts
+import { createHyper } from 'neataptic-ts/hyper';
+
+const hyper = createHyper({
+  input: 16,
+  output: 4,
+  rules: [{ kind: 'replicate', params: { times: 2 } }],
+  cppn: { layers: [8, 8], activation: 'tanh' },
+  enableMorphogenesis: true,
+  plasticity: { mode: 'hebbian', rate: 1e-3 },
+});
+
+const net = hyper.build();
+// training loop ... hyper.maybeMorph(eventMetrics)
+```
+
+---
+
+## Acceptance & Success Metrics
+
+Anchors success to quantifiable, automatable metrics (build time ratio, memory per active connection, deterministic hash reproducibility) ensuring progress narratives are evidence‑based; thresholds provide regression guards in CI.
+| Metric | Target (initial) | Rationale |
+|----------------------------------|-------------------------------------------------|--------------------------|
+| Phenotype build time (50k edges) | < 1.2× baseline Network construction | Maintain responsiveness |
+| Memory per active connection | TBD after measurement (< baseline by Phase 8) | Scale to big nets |
+| Morph hook overhead (disabled) | < 1% runtime | Pay only when used |
+| Deterministic rebuild hash match | 100% | Reproducibility |
+
+---
+
+## Future Extensions (Post v1)
+
+Signals strategic extension vectors (symbolic modules, GPU path, compressed serialization) to align community contributions and prevent ad‑hoc divergence once the core is stable.
+
+- Spatially aware neuro-symbolic modules.
+- GPU/WebGPU execution path using slab + typed buffers.
+- Compressed serialization (delta-coded genotype + pattern seeds).
+
+---
+
+## Maintenance Notes
+
+Enumerates non‑negotiable constraints (optional fields, isolation of hyper namespace, pooled state hygiene) that reviewers should enforce to avoid gradual entropy accumulation and maintain predictable memory/performance profiles.
+
+- Keep `hyper/` isolated; do not import from it inside baseline `Network` unless flag enabled to avoid bundle bloat.
+- All added fields on `Network` must be optional and lazily allocated.
+- Pool any added per-connection arrays (plasticity, tags) via indexed side buffers.
+
+---
+
+
 ---
 
 ## Phased Implementation Plan
@@ -790,7 +876,8 @@ Steps:
 
 1. Add `src/hyper/` folder with placeholder `genotype.ts`, `developmentalRules.ts`, `substrate.ts` exporting empty interfaces + TODO comments.
 2. Add feature flag to `config` (e.g. `config.enableHyper = false`).
-3. Add unit test stubs verifying import does not throw.
+3. Add `test/hyper/` folder.
+4. Add unit test stubs verifying import does not throw. Naming pattern: `hyper.*.test.ts` using the topic or focus on the file name.
    Acceptance: Build + tests unchanged; tree includes new folder.
 
 ### Phase 1 – Genotype & Substrate Core
@@ -894,90 +981,3 @@ Steps:
    Acceptance: Peak memory per active connection meets target (<X bytes; finalize after measurement Phase 6).
 
 ---
-
-## Risk & Mitigation Summary
-
-Transforms diffuse architectural risks into an actionable ledger, pairing each risk with concrete mitigation levers (caching, budgets, feature flags). This supports proactive monitoring and simplifies post‑mortem attribution if regressions emerge.
-| Risk | Mitigation |
-|------|------------|
-| Rebuild overhead for large CPPN substrates | Caching + incremental diff generation |
-| Memory blowup from plasticity state | Optional feature; pooled typed arrays with reuse |
-| Rule explosion causing combinatorial growth | Global complexity budget + rule priority throttle |
-| API instability | Feature-flag entire hyper layer until Phase 6 |
-
----
-
-## Incremental PR Sequencing (Granular Checklist)
-
-Breaks delivery into reviewable micro‑increments so semantic drift or performance regressions are localized; each PR carries its own acceptance tests and plan diff, forming an auditable evolution trail of the design document itself.
-
-1. PR1: Scaffolding + config flag + empty tests.
-2. PR2: Genotype + basic phenotype builder.
-3. PR3: Developmental rules (replicate/symmetry) + tests.
-4. PR4: CPPN core + indirect edge generation.
-5. PR5: Morphogenesis hooks + activity metrics.
-6. PR6: Plasticity (Hebbian) + gating.
-7. PR7: Telemetry + export trace.
-8. PR8: Evolution integration (mutation + speciation extension).
-9. PR9: Scaling benchmarks + docs.
-10. PR10: Stabilization & API doc examples.
-
-Each PR keeps surface area small, adds tests, and updates this plan (append CHANGELOG section).
-
----
-
-## Example (Future) User API Sketch (Post Phase 5)
-
-Provides a provisional user‑facing construct to validate naming consistency, configuration surface minimality, and composability with existing library patterns before hardening interfaces post Phase 6.
-
-```ts
-import { createHyper } from 'neataptic-ts/hyper';
-
-const hyper = createHyper({
-  input: 16,
-  output: 4,
-  rules: [{ kind: 'replicate', params: { times: 2 } }],
-  cppn: { layers: [8, 8], activation: 'tanh' },
-  enableMorphogenesis: true,
-  plasticity: { mode: 'hebbian', rate: 1e-3 },
-});
-
-const net = hyper.build();
-// training loop ... hyper.maybeMorph(eventMetrics)
-```
-
----
-
-## Acceptance & Success Metrics
-
-Anchors success to quantifiable, automatable metrics (build time ratio, memory per active connection, deterministic hash reproducibility) ensuring progress narratives are evidence‑based; thresholds provide regression guards in CI.
-| Metric | Target (initial) | Rationale |
-|----------------------------------|-------------------------------------------------|--------------------------|
-| Phenotype build time (50k edges) | < 1.2× baseline Network construction | Maintain responsiveness |
-| Memory per active connection | TBD after measurement (< baseline by Phase 8) | Scale to big nets |
-| Morph hook overhead (disabled) | < 1% runtime | Pay only when used |
-| Deterministic rebuild hash match | 100% | Reproducibility |
-
----
-
-## Future Extensions (Post v1)
-
-Signals strategic extension vectors (symbolic modules, GPU path, compressed serialization) to align community contributions and prevent ad‑hoc divergence once the core is stable.
-
-- Spatially aware neuro-symbolic modules.
-- GPU/WebGPU execution path using slab + typed buffers.
-- Compressed serialization (delta-coded genotype + pattern seeds).
-
----
-
-## Maintenance Notes
-
-Enumerates non‑negotiable constraints (optional fields, isolation of hyper namespace, pooled state hygiene) that reviewers should enforce to avoid gradual entropy accumulation and maintain predictable memory/performance profiles.
-
-- Keep `hyper/` isolated; do not import from it inside baseline `Network` unless flag enabled to avoid bundle bloat.
-- All added fields on `Network` must be optional and lazily allocated.
-- Pool any added per-connection arrays (plasticity, tags) via indexed side buffers.
-
----
-
-End of refined plan.

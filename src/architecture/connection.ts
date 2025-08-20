@@ -1,23 +1,15 @@
 /**
- * Connection (aka Synapse / Link)
- * ===============================
- * A `Connection` represents a directed, weighted edge between two `Node`s in a neural network graph.
+ * Connection (Synapse / Edge)
+ * ===========================
+ * Directed weighted link between two nodes. Extends the minimal (from,to,weight)
+ * trio with optional features that are *allocated lazily* for efficiency:
+ *  - Gain modulation (virtualized gain property; omitted when 1)
+ *  - Gating node (symbol-backed; presence tracked via bit flag)
+ *  - Plasticity rate (bit flag + optional slab field)
+ *  - Optimizer moment bag (created only when an optimizer writes to it)
  *
- * Responsibilities / Stored State
- * - References to the source (`from`) and target (`to`) nodes
- * - The weight scalar applied to the source activation when propagating to the target
- * - (Optional) a gating node (`gater`) whose activation modulates an additional multiplicative gain
- * - Training traces: standard eligibility trace plus optional extended / modulatory traces (`xtrace`)
- * - Bookkeeping information for evolutionary algorithms (NEAT-style innovation number)
- * - Bookkeeping for optimizers (Adam / RMSProp / Adagrad / Lion / Lookahead etc.) – allocated lazily
- * - Lightweight binary flags for enable / disable (genetic expression) and DropConnect masks
- *
- * Design Goals
- * 1. Memory efficiency: rarely-used optimizer fields & non-neutral gain are omitted until needed.
- * 2. Low GC churn: a simple object pool (`acquire` / `release`) recycles instances during topology evolution.
- * 3. Educational clarity: rich docs & examples show how to use connections in evolutionary + gradient settings.
- *
- * (Edited: gater is now virtualized – non-enumerable symbol storage + hasGater bit (bit2).)
+ * Educational design pattern: Use bit flags + symbol-backed optional fields to illustrate
+ * how to minimize hidden class bloat while keeping the API ergonomic.
  */
 import Node from './node'; // Import Node type
 
@@ -30,6 +22,8 @@ const kGater = Symbol('connGater');
 // own property (slimming the field audit key count back to baseline). The bag itself lives on a symbol key
 // (non-enumerable) allocated lazily on first write to any optimizer field.
 const kOpt = Symbol('connOptMoments');
+// Symbol used for optional plasticity learning rate (non-enumerable) (bit3 flag presence)
+const kPlasticRate = Symbol('connPlasticRate');
 
 export default class Connection {
   /** The source (pre-synaptic) node supplying activation. */
@@ -57,9 +51,10 @@ export default class Connection {
    * bit0 => enabled gene expression (1 = active)
    * bit1 => DropConnect active mask (1 = not dropped this forward pass)
    * bit2 => hasGater (1 = symbol field present)
-   * bits3+ reserved.
+   * bit3 => plastic (plasticityRate > 0)
+   * bits4+ reserved.
    */
-  private _flags: number; // bit0 enabled, bit1 dcActive, bit2 hasGater
+  private _flags: number; // bit0 enabled, bit1 dcActive, bit2 hasGater, bit3 plastic
 
   /**
    * Construct a new connection between two nodes.
@@ -70,7 +65,6 @@ export default class Connection {
    *
    * @example
    * const link = new Connection(nodeA, nodeB, 0.42);
-   * console.log(link.weight); // 0.42
    * link.enabled = false;     // disable during mutation
    * link.enabled = true;      // re-enable later
    */
@@ -223,6 +217,16 @@ export default class Connection {
   get hasGater(): boolean {
     return (this._flags & 0b100) !== 0;
   }
+  /** Whether this connection participates in plastic adaptation (rate > 0). */
+  get plastic(): boolean {
+    return (this._flags & 0b1000) !== 0;
+  }
+  set plastic(v: boolean) {
+    if (v) this._flags |= 0b1000;
+    else this._flags &= ~0b1000;
+    if (!v && (this as any)[kPlasticRate] !== undefined)
+      delete (this as any)[kPlasticRate];
+  }
 
   // --- Virtualized gain property ---
   /**
@@ -326,6 +330,23 @@ export default class Connection {
     } else {
       (this as any)[kGater] = node;
       this._flags |= 0b100;
+    }
+  }
+  // --- Plasticity rate (virtualized) ---
+  /** Per-connection plasticity / learning rate (0 means non-plastic). Setting >0 marks plastic flag. */
+  get plasticityRate(): number {
+    return (this as any)[kPlasticRate] === undefined
+      ? 0
+      : (this as any)[kPlasticRate];
+  }
+  set plasticityRate(v: number) {
+    if (v === undefined || v === 0) {
+      if ((this as any)[kPlasticRate] !== undefined)
+        delete (this as any)[kPlasticRate];
+      this._flags &= ~0b1000;
+    } else {
+      (this as any)[kPlasticRate] = v;
+      this._flags |= 0b1000;
     }
   }
 

@@ -15,8 +15,10 @@ function buildDenseNetwork(input: number, hidden: number, output: number) {
   for (let h = 0; h < hidden; h++) {
     const node = new Node('hidden');
     (net as any).nodes.push(node);
-    for (let i = 0; i < input; i++) (net as any).connect(net.nodes[i], node, Math.random() * 0.2 - 0.1);
-    for (let o = net.nodes.length - output; o < net.nodes.length; o++) (net as any).connect(node, net.nodes[o], Math.random() * 0.2 - 0.1);
+    for (let i = 0; i < input; i++)
+      (net as any).connect(net.nodes[i], node, Math.random() * 0.2 - 0.1);
+    for (let o = net.nodes.length - output; o < net.nodes.length; o++)
+      (net as any).connect(node, net.nodes[o], Math.random() * 0.2 - 0.1);
   }
   (net as any)._topoDirty = true;
   (net as any)._nodeIndexDirty = true;
@@ -41,8 +43,10 @@ describe('network.slab.async', () => {
     while (net.connections.length < targetConnections && guard < 2000) {
       const node = new Node('hidden');
       (net as any).nodes.push(node);
-      for (let i = 0; i < 20; i++) (net as any).connect(net.nodes[i], node, 0.05);
-      for (let o = net.nodes.length - 5; o < net.nodes.length; o++) (net as any).connect(node, net.nodes[o], 0.05);
+      for (let i = 0; i < 20; i++)
+        (net as any).connect(net.nodes[i], node, 0.05);
+      for (let o = net.nodes.length - 5; o < net.nodes.length; o++)
+        (net as any).connect(node, net.nodes[o], 0.05);
       guard++;
     }
     (net as any)._topoDirty = true;

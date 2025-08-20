@@ -1,35 +1,118 @@
 /**
- * memory.ts
+ * Memory instrumentation utilities (Phase 0).
  *
- * Phase 0 memory instrumentation utilities.
+ * Educational overview:
+ * These helpers expose a *heuristic* snapshot of memory usage for the
+ * evolutionary population and internal pools. The goal is to help learners
+ * reason about how design choices (slab storage, pooling, typed arrays)
+ * influence memory footprint *without* incurring heavy introspection costs.
  *
- * Design Goals (Phase 0):
- *  - Lightweight heuristic stats: no heavy reflection / JSON stringify cost.
- *  - Pay-for-use: if no networks registered, returns minimal structure.
- *  - Safe in both Node & Browser (feature-detect environment APIs).
- *  - Foundation for later precise slab + pool accounting.
+ * Design principles:
+ * - Lightweight: Avoid deep graph walks or JSON serialization.
+ * - Pay-for-use: If no networks are registered the function returns a small, fast object.
+ * - Cross‑environment: Works in both Browser and Node via feature detection.
+ * - Extensible: Shape deliberately includes draft sections for later precise accounting phases.
  */
 
 /**
- * Core memory statistics (draft shape) describing current network & pool state.
+ * Detailed statistics describing the current estimated memory footprint of
+ * tracked networks plus supporting pools.
  *
- * @typedef {Object} MemoryStats
- * @property {number} timestamp Epoch ms when sampled.
- * @property {number} connections Number of active connections.
- * @property {number} nodes Number of active nodes.
- * @property {number} bytesPerConnection Approximate bytes per active connection (heuristic or measured).
- * @property {number} estimatedTotalBytes Aggregate estimated bytes across tracked structures.
- * @property {object} slabs Slab-related stats (weights, gains, flags, fragmentation%) (draft).
- * @property {object} pools Pool high-water marks & current sizes (draft).
- * @property {object} flags Active feature / optimization flags snapshot.
- * @property {object} env Environment heuristics (isBrowser, heapUsed, rss, usedJSHeapSize, etc.).
+ * Important: All byte counts here are *estimates*. JavaScript engine object
+ * overhead varies; once slab (Structure of Arrays) storage dominates, these
+ * estimates get closer to real usage. Treat values as relative metrics for
+ * comparing configurations (e.g. before / after enabling pooling) rather than
+ * exact allocations.
  */
+export interface MemoryStats {
+  /** Epoch milliseconds when the snapshot was captured. */
+  timestamp: number;
+  /** Total active connection objects across all tracked networks (object + slab entries). */
+  connections: number;
+  /** Total active nodes across all tracked networks. */
+  nodes: number;
+  /** Heuristic bytes per connection (estimatedTotalBytes / connections, rounded). */
+  bytesPerConnection: number;
+  /** Aggregate estimated bytes combining node object overhead + connection object overhead + slab typed array bytes. */
+  estimatedTotalBytes: number;
+  slabs: {
+    /** Sum of byteLength for all discovered typed arrays representing connection slabs & fast-path caches. */
+    slabBytes: number;
+    /** Count of individual typed array slabs encountered. */
+    slabArrayCount: number;
+    /** Percentage (0–100) of reserved slab bytes not currently used (null when capacity unknown). */
+    fragmentationPct: number | null;
+    /** Total reserved bytes implied by capacity * per-connection element width across slab arrays (null if unknown). */
+    reservedBytes: number | null;
+    /** Estimated used portion of reservedBytes corresponding to live connections (null if unknown). */
+    usedBytes: number | null;
+    /** Implementation / layout revision tag (null if network does not expose one). */
+    slabVersion: number | null;
+    /** Count of async slab builds performed (educational: shows deferred optimization activity). */
+    asyncBuilds: number;
+    /** Fraction of allocations served from slab pool vs fresh (null if allocator stats unavailable). */
+    pooledFraction: number | null;
+  };
+  pools: {
+    /** Node pool statistics or null when pooling disabled / not initialized. */
+    nodePool: ReturnType<typeof nodePoolStats> | null;
+  };
+  flags: {
+    /** Snapshot of selected global / experimental feature flags at sampling time. */
+    snapshot: {
+      warnings: any;
+      float32Mode: any;
+      deterministicChainMode: any;
+      enableGatingTraces: any;
+      poolMaxPerBucket: number | null;
+      poolPrewarmCount: number | null;
+      enableNodePooling: boolean;
+      /** Raw allocator stats (shape may evolve). */
+      allocStats: any;
+    };
+  };
+  env: {
+    /** True if executing in a browser (window defined). */
+    isBrowser: boolean;
+    /** Browser: current used JS heap size (if available). */
+    usedJSHeapSize?: number;
+    /** Browser: total JS heap size (if available). */
+    totalJSHeapSize?: number;
+    /** Browser: heap size limit (if available). */
+    jsHeapSizeLimit?: number;
+    /** Node: resident set size in bytes. */
+    rss?: number;
+    /** Node: bytes of V8 heap used. */
+    heapUsed?: number;
+    /** Node: total V8 heap size. */
+    heapTotal?: number;
+    /** Node: external memory usage. */
+    external?: number;
+  };
+}
 
 /**
- * Collect approximate memory statistics across network structures and pools.
- * Placeholder returns minimal stub; implementation added later in Phase 0.
+ * Capture heuristic memory statistics for one or more networks and active config flags.
  *
- * @returns {MemoryStats} A memory stats object (partial placeholder fields).
+ * Usage examples:
+ * ```ts
+ * import { memoryStats, registerTrackedNetwork } from '../utils/memory';
+ * registerTrackedNetwork(myNetwork);
+ * const snap = memoryStats();
+ * console.log('Approx MB', (snap.estimatedTotalBytes / 1e6).toFixed(2));
+ * ```
+ * ```ts
+ * // Ad-hoc comparison between two networks (no need to register globally)
+ * const before = memoryStats(netA);
+ * const after = memoryStats(netB);
+ * console.log('Δ bytes', after.estimatedTotalBytes - before.estimatedTotalBytes);
+ * ```
+ *
+ * Notes:
+ * - Passing an explicit network (or array) bypasses the internal registry.
+ * - Fields marked nullable are omitted when the implementation cannot infer
+ *   capacity or allocator stats (e.g. early phases or when slabs disabled).
+ * - Fragmentation percent is interpreted as (reserved - used)/reserved * 100.
  */
 import { config } from '../config';
 import { nodePoolStats } from '../architecture/nodePool';
@@ -39,7 +122,7 @@ import { getSlabAllocationStats as _getSlabAllocationStats } from '../architectu
  * Capture heuristic memory statistics for one or more networks with snapshot of active config flags.
  * @param targetNetworks Optional single network or array. If omitted, uses registered networks.
  */
-export function memoryStats(targetNetworks?: any | any[]) {
+export function memoryStats(targetNetworks?: any | any[]): MemoryStats {
   const networks: any[] = Array.isArray(targetNetworks)
     ? targetNetworks
     : targetNetworks
@@ -82,7 +165,13 @@ export function memoryStats(targetNetworks?: any | any[]) {
     const gainSlab = (net as any)._connGain as
       | Float32Array
       | Float64Array
-      | undefined; // Phase 3 gain
+      | null
+      | undefined; // Phase 3 gain (optional with omission optimization)
+    const plasticSlab = (net as any)._connPlastic as
+      | Float32Array
+      | Float64Array
+      | null
+      | undefined;
     const fastA = (net as any)._fastA as
       | Float32Array
       | Float64Array
@@ -100,6 +189,7 @@ export function memoryStats(targetNetworks?: any | any[]) {
     if (toSlab) typedArrays.push(toSlab);
     if (flagsSlab) typedArrays.push(flagsSlab);
     if (gainSlab) typedArrays.push(gainSlab);
+    if (plasticSlab) typedArrays.push(plasticSlab as any);
     if (fastA) typedArrays.push(fastA);
     if (fastS) typedArrays.push(fastS);
     for (const ta of typedArrays) {
@@ -113,11 +203,18 @@ export function memoryStats(targetNetworks?: any | any[]) {
       // Approximate per-connection bytes across parallel arrays we manage (weights/from/to/flags/gain)
       // Determine element sizes
       const weightBytes = (net as any)._useFloat32Weights ? 4 : 8;
-      const gainBytes = weightBytes;
+      const gainBytes = gainSlab ? weightBytes : 0;
       const fromBytes = 4;
       const toBytes = 4;
       const flagBytes = 1;
-      const perConn = weightBytes + gainBytes + fromBytes + toBytes + flagBytes;
+      const plasticBytes = plasticSlab ? weightBytes : 0; // plastic slab mirrors weight precision
+      const perConn =
+        weightBytes +
+        gainBytes +
+        fromBytes +
+        toBytes +
+        flagBytes +
+        plasticBytes;
       totalReservedBytes += perConn * capacity;
       totalUsedBytes += perConn * used;
     }
@@ -150,7 +247,7 @@ export function memoryStats(targetNetworks?: any | any[]) {
     }
   } catch {}
 
-  return {
+  const stats: MemoryStats = {
     timestamp: Date.now(),
     connections: totalConnections,
     nodes: totalNodes,
@@ -173,7 +270,7 @@ export function memoryStats(targetNetworks?: any | any[]) {
         try {
           const stats = _getSlabAllocationStats();
           const denom = stats.fresh + stats.pooled;
-            return denom > 0 ? Number((stats.pooled / denom).toFixed(4)) : null;
+          return denom > 0 ? Number((stats.pooled / denom).toFixed(4)) : null;
         } catch {
           return null;
         }
@@ -192,31 +289,39 @@ export function memoryStats(targetNetworks?: any | any[]) {
         poolMaxPerBucket: config.poolMaxPerBucket ?? null,
         poolPrewarmCount: config.poolPrewarmCount ?? null,
         enableNodePooling: (config as any).enableNodePooling ?? false, // Phase 2 addition
-      allocStats: (() => {
-        try {
-          return _getSlabAllocationStats();
-        } catch {
-          return null;
-        }
-      })(),
+        allocStats: (() => {
+          try {
+            return _getSlabAllocationStats();
+          } catch {
+            return null;
+          }
+        })(),
       },
     },
     env,
-  } as any;
+  };
+  return stats;
 }
 
 /**
- * Reset internal counters / high-water marks used for memory tracking.
- * Placeholder for future pool tracking reset.
+ * Reset internal tracking registry (and, in later phases, ancillary counters).
+ *
+ * Educational: Calling this does NOT free memory — it simply clears the list
+ * of networks that will be included when `memoryStats()` is invoked without
+ * arguments. Use it between benchmark runs to isolate scenarios.
  */
 export function resetMemoryTracking(): void {
   _trackedNetworks.length = 0; // clear registered networks
 }
 
 /**
- * Register a network instance for memory tracking (optional depending on design).
- * Allows memoryStats() to iterate over registered networks when no explicit instance passed.
- * @param {any} network Network instance (type narrowed later).
+ * Register a network for inclusion in future `memoryStats()` calls made
+ * without explicit parameters.
+ *
+ * Duplicate registrations are ignored; insertion order is preserved which is
+ * useful for deterministic test snapshots.
+ *
+ * @param network Network instance (loosely typed to defer strict coupling).
  */
 export function registerTrackedNetwork(network: any): void {
   if (network && !_trackedNetworks.includes(network)) {
@@ -225,8 +330,10 @@ export function registerTrackedNetwork(network: any): void {
 }
 
 /**
- * Unregister a previously registered network instance.
- * @param {any} network Network instance.
+ * Remove a previously registered network from the tracking registry.
+ * No-op if the network is not currently registered.
+ *
+ * @param network Network instance.
  */
 export function unregisterTrackedNetwork(network: any): void {
   const idx = _trackedNetworks.indexOf(network);

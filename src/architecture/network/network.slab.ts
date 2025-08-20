@@ -3,67 +3,72 @@ import { activationArrayPool } from '../activationArrayPool';
 import { config } from '../../config';
 
 /**
- * Fast slab (structure-of-arrays) acceleration layer (Phase 3 foundation).
- * ----------------------------------------------------------------------
- * Motivation:
- *  Object graphs suffer from pointer chasing & polymorphic inline caches in large forward passes.
- *  By packing connection attributes into contiguous typed arrays we:
- *    - Improve spatial locality (sequential memory scans).
- *    - Enable simpler tight loops amenable to JIT & future WASM SIMD lowering.
- *    - Provide a staging ground for subsequent Phase 3+ memory slimming (flags / precision / plasticity).
+ * Slab Packing / Structure‑of‑Arrays Backend (Educational Module)
+ * ==============================================================
+ * Packs per‑connection data into parallel typed arrays (SoA) to accelerate
+ * forward passes and to illustrate memory/layout optimizations.
  *
- * Phase 3 Additions (initial commit):
- *  - Slab version counter (_slabVersion) incremented on each structural rebuild (educational introspection).
- *  - Flags array (_connFlags Uint8Array) and gain array (_connGain Float32/64) allocated in parallel (placeholders
- *    for enabled bits, drop masks, future plasticity multipliers). Currently all flags=1, gains=1.
- *  - getConnectionSlab() now returns flags & gain alongside weights/from/to.
+ * Why SoA?
+ *  - Locality & fewer cache misses.
+ *  - Predictable tight numeric loops (JIT / SIMD friendly).
+ *  - Easy instrumentation (single contiguous blocks to measure & diff).
  *
- * Future (later Phase 3 iterations):
- *  - Geometric capacity growth (avoid realloc on small structural deltas). (Implemented: capacity reuse with growth factor)
- *  - Typed array pooling (current commit) to reuse large buffers and reduce GC churn on frequent rebuilds.
- *  - Plasticity / mask bits stored compactly (bitpacking) to reduce per-connection bytes.
- *  - Typed array pooling / recycling to limit GC churn on frequent rebuilds.
+ * Key Arrays (logical length = `used`): weights | from | to | flags | (optional) gain | (optional) plastic.
+ * Adjacency (CSR style): outStart (nodeCount+1), outOrder (per‑source permutation) enabling fast fan‑out.
  *
- * Core Data Structures:
- *  weights (Float32Array|Float64Array)    : connection weights
- *  from    (Uint32Array)                  : source node indices
- *  to      (Uint32Array)                  : target node indices
- *  flags   (Uint8Array)                   : connection enable / mask bits (placeholder value=1)
- *  gain    (Float32Array|Float64Array)    : multiplicative gain (placeholder value=1)
- *  outStart (Uint32Array)                 : CSR row pointer style offsets (length nodeCount+1)
- *  outOrder (Uint32Array)                 : permutation of connection indices grouped by source
+ * On‑Demand & Omission:
+ *  - Gain/plastic slabs allocated only when a non‑neutral value appears; freed if neutrality returns.
+ *  - `getConnectionSlab()` synthesizes a neutral gain view if omitted internally (keeps teaching tools simple).
  *
- * Rebuild Workflow:
- *  1. Reindex nodes if dirty.
- *  2. Allocate typed arrays sized to current connection count.
- *  3. Populate parallel arrays in a single linear pass.
- *  4. Mark adjacency dirty; increment version.
+ * Capacity Strategy: geometric growth (1.25x browser / 1.75x Node) amortizes realloc cost.
+ * Pooling (config gated) reuses typed arrays (see `getSlabAllocationStats`).
+ *
+ * Rebuild Steps (sync): reindex nodes → grow/allocate if needed → single pass populate → optional slabs → version++.
+ * Async variant slices the population loop into microtasks to reduce long main‑thread blocks.
+ *
+ * Example (inspection):
+ * ```ts
+ * const slab = (net as any).getConnectionSlab();
+ * console.log('Edges', slab.used, 'Version', slab.version, 'Cap', slab.capacity);
+ * console.log('First weight from->to', slab.weights[0], slab.from[0], slab.to[0]);
+ * ```
  */
 
 /**
- * (Re)build packed connection slabs (SoA layout) for fast, cache-friendly forward passes.
+ * (Re)build the slab representation (synchronous).
  *
- * Slab arrays:
- *  - weights: Float32/64 contiguous weights
- *  - from: Uint32 source node indices
- *  - to:   Uint32 target node indices
+ * Triggers: called explicitly OR lazily from `getConnectionSlab` / fast forward paths
+ * whenever `_slabDirty` is true (set by structural mutation helpers).
  *
- * These enable tight loops free of object indirection; we update only when structure/weights marked dirty.
+ * Performance:
+ *  - O(C) where C = connection count.
+ *  - Allocations only when capacity insufficient.
+ *  - Optional slabs (gain / plastic) created only if needed; neutral arrays are released.
+ *
+ * @param force When true, rebuild even if not marked dirty (rarely needed; useful in tests benchmarking rebuild cost).
  */
-// Simple slab typed array pool keyed by element byte size + capacity for reuse.
-// We intentionally keep a small LRU list per key to avoid unbounded retention.
+// Typed array pool (small LRU per key) + metrics for reuse introspection.
 const _slabArrayPool: Record<string, Array<TypedArray>> = Object.create(null);
-type TypedArray =
-  | Float32Array
-  | Float64Array
-  | Uint32Array
-  | Uint8Array;
+// Pool metrics per key (key = kind:bytes:length) for allocator education.
+interface PoolKeyMetrics {
+  created: number;
+  reused: number;
+  maxRetained: number;
+}
+const _slabPoolMetrics: Record<string, PoolKeyMetrics> = Object.create(null);
+type TypedArray = Float32Array | Float64Array | Uint32Array | Uint8Array;
 const SLAB_POOL_MAX_PER_KEY = 4; // small cap; configurable later.
 const _slabAllocStats = { fresh: 0, pooled: 0 };
 function _poolKey(kind: string, bytes: number, length: number) {
   return kind + ':' + bytes + ':' + length;
 }
-function _acquireTA(kind: string, ctor: any, length: number, bytesPerElement: number): TypedArray {
+/** Acquire (or reuse) a typed array slab, recording allocation statistics. */
+function _acquireTA(
+  kind: string,
+  ctor: any,
+  length: number,
+  bytesPerElement: number
+): TypedArray {
   if (!config.enableSlabArrayPooling) {
     _slabAllocStats.fresh++;
     return new ctor(length);
@@ -72,20 +77,37 @@ function _acquireTA(kind: string, ctor: any, length: number, bytesPerElement: nu
   const list = _slabArrayPool[key];
   if (list && list.length) {
     _slabAllocStats.pooled++;
+    (_slabPoolMetrics[key] ||= { created: 0, reused: 0, maxRetained: 0 })
+      .reused++;
     return list.pop()! as TypedArray;
   }
   _slabAllocStats.fresh++;
+  (_slabPoolMetrics[key] ||= { created: 0, reused: 0, maxRetained: 0 })
+    .created++;
   return new ctor(length);
 }
+/** Return a typed array slab to the small LRU pool (bounded). */
 function _releaseTA(kind: string, bytesPerElement: number, arr: TypedArray) {
   if (!config.enableSlabArrayPooling) return;
   const key = _poolKey(kind, bytesPerElement, arr.length);
   const list = (_slabArrayPool[key] ||= []);
   if (list.length < SLAB_POOL_MAX_PER_KEY) list.push(arr);
+  const m = (_slabPoolMetrics[key] ||= {
+    created: 0,
+    reused: 0,
+    maxRetained: 0,
+  });
+  if (list.length > m.maxRetained) m.maxRetained = list.length;
 }
 
+/**
+ * Allocation statistics for slab typed arrays.
+ *
+ * Educational usage: Inspect `fresh` vs `pooled` to discuss reuse efficiency
+ * and memory churn. `pool` contains per-key creation/reuse counters.
+ */
 export function getSlabAllocationStats() {
-  return { ..._slabAllocStats };
+  return { ..._slabAllocStats, pool: Object.assign({}, _slabPoolMetrics) };
 }
 
 export function rebuildConnectionSlab(this: Network, force = false): void {
@@ -125,6 +147,12 @@ export function rebuildConnectionSlab(this: Network, force = false): void {
         internalNet._useFloat32Weights ? 4 : 8,
         internalNet._connGain as Float32Array | Float64Array
       );
+    if (internalNet._connPlastic)
+      _releaseTA(
+        'p',
+        internalNet._useFloat32Weights ? 4 : 8,
+        internalNet._connPlastic as Float32Array | Float64Array
+      );
     // Acquire (possibly pooled) slabs with new capacity
     internalNet._connWeights = _acquireTA(
       'w',
@@ -135,12 +163,10 @@ export function rebuildConnectionSlab(this: Network, force = false): void {
     internalNet._connFrom = _acquireTA('f', Uint32Array, capacity, 4);
     internalNet._connTo = _acquireTA('t', Uint32Array, capacity, 4);
     internalNet._connFlags = _acquireTA('fl', Uint8Array, capacity, 1);
-    internalNet._connGain = _acquireTA(
-      'g',
-      internalNet._useFloat32Weights ? Float32Array : Float64Array,
-      capacity,
-      internalNet._useFloat32Weights ? 4 : 8
-    );
+    // Gain slab now allocated lazily (gain omission optimization); set null placeholder
+    internalNet._connGain = null;
+    // Plasticity slab allocated lazily later IF any connection sets plastic flag
+    internalNet._connPlastic = null;
     internalNet._connCapacity = capacity;
   } else {
     capacity = internalNet._connCapacity; // reuse existing arrays (logical size may grow within capacity)
@@ -150,7 +176,13 @@ export function rebuildConnectionSlab(this: Network, force = false): void {
   const fromIndexArray = internalNet._connFrom as Uint32Array;
   const toIndexArray = internalNet._connTo as Uint32Array;
   const flagArray = internalNet._connFlags as Uint8Array;
-  const gainArray = internalNet._connGain as Float32Array | Float64Array;
+  let gainArray = internalNet._connGain as Float32Array | Float64Array | null;
+  let anyNonNeutralGain = false;
+  let plasticArray = internalNet._connPlastic as
+    | Float32Array
+    | Float64Array
+    | null;
+  let anyPlastic = false;
   for (
     let connectionIndex = 0;
     connectionIndex < connectionCount;
@@ -165,7 +197,54 @@ export function rebuildConnectionSlab(this: Network, force = false): void {
     flagArray[connectionIndex] = (connection as any)._flags & 0xff; // mask to one byte
     // Gain: if virtualized gain !== 1 we snapshot it, else store 1 (keeps forward math branch-free)
     const g = connection.gain;
-    gainArray[connectionIndex] = g === 1 ? 1 : g;
+    if (g !== 1) {
+      if (!gainArray) {
+        gainArray = _acquireTA(
+          'g',
+          internalNet._useFloat32Weights ? Float32Array : Float64Array,
+          capacity,
+          internalNet._useFloat32Weights ? 4 : 8
+        ) as any;
+        internalNet._connGain = gainArray;
+        for (let j = 0; j < connectionIndex; j++) (gainArray as any)[j] = 1;
+      }
+      (gainArray as any)[connectionIndex] = g;
+      anyNonNeutralGain = true;
+    } else if (gainArray) {
+      (gainArray as any)[connectionIndex] = 1;
+    }
+    if ((connection as any)._flags & 0b1000) anyPlastic = true;
+  }
+  // Omission optimization: if we allocated a gain array but all gains were neutral revert to null (tests for omission expect this)
+  if (!anyNonNeutralGain && gainArray) {
+    _releaseTA(
+      'g',
+      internalNet._useFloat32Weights ? 4 : 8,
+      gainArray as Float32Array | Float64Array
+    );
+    internalNet._connGain = null;
+  }
+  if (anyPlastic && !plasticArray) {
+    // allocate plastic slab & second pass fill
+    plasticArray = _acquireTA(
+      'p',
+      internalNet._useFloat32Weights ? Float32Array : Float64Array,
+      capacity,
+      internalNet._useFloat32Weights ? 4 : 8
+    ) as any;
+    internalNet._connPlastic = plasticArray;
+    for (let i = 0; i < connectionCount; i++) {
+      const c: any = this.connections[i];
+      plasticArray![i] = (c as any).plasticityRate || 0;
+    }
+  } else if (!anyPlastic && plasticArray) {
+    // release existing plastic array if no longer needed
+    _releaseTA(
+      'p',
+      internalNet._useFloat32Weights ? 4 : 8,
+      plasticArray as Float32Array | Float64Array
+    );
+    internalNet._connPlastic = null;
   }
   // Optional: zero out tail of reused arrays (not strictly needed, left intact for potential diff debugging)
   internalNet._connCount = connectionCount; // record logical size
@@ -176,22 +255,27 @@ export function rebuildConnectionSlab(this: Network, force = false): void {
 
 // Browser cooperative async rebuild (experimental). Splits large copy into microtasks to reduce jank.
 /**
- * Cooperative asynchronous slab rebuild (Browser focused) that slices the packing work
- * across microtasks to mitigate long blocking copy loops for very large networks.
+ * Cooperative async rebuild (browser). Slices packing into microtasks for large connection
+ * counts to limit a single long blocking loop. Capacity growth + pooling mirror the sync path.
  *
- * Instrumentation / Phase 3 extensions:
- *  - Shares geometric capacity growth & typed array pooling with the synchronous path.
- *  - Increments internal _slabAsyncBuilds counter for memoryStats aggregation.
- *  - Updates shared allocation statistics (fresh vs pooled) only once per reallocation.
+ * NOTE: Allocation happens up-front; the microtask yields only segment the population copy.
+ * Thus `fresh` increments by the number of new slabs allocated (weights/from/to/flags/gain)
+ * only when capacity grows.
  *
- * NOTE: The async copy loop ONLY yields between chunk slices; typed array allocation
- * occurs up-front so allocStats.fresh should increase by exactly the number of newly
- * allocated slabs (5 arrays: weights/from/to/flags/gain) when capacity grows, and 0
- * when reusing existing capacity.
+ * Example:
+ * ```ts
+ * await rebuildConnectionSlabAsync.call(net, 40_000);
+ * console.log('Version after async build', (net as any)._slabVersion);
+ * ```
+ * @param chunkSize Max connections per microtask slice (auto-tuned for very large graphs).
  */
-export async function rebuildConnectionSlabAsync(this: Network, chunkSize = 50_000): Promise<void> {
+export async function rebuildConnectionSlabAsync(
+  this: Network,
+  chunkSize = 50_000
+): Promise<void> {
   const internalNet = this as any;
-  if (typeof window === 'undefined') return rebuildConnectionSlab.call(this, true);
+  if (typeof window === 'undefined')
+    return rebuildConnectionSlab.call(this, true);
   if (!internalNet._slabDirty) return; // already clean
   if (internalNet._nodeIndexDirty) _reindexNodes.call(this);
   const total = this.connections.length;
@@ -208,14 +292,23 @@ export async function rebuildConnectionSlabAsync(this: Network, chunkSize = 50_0
         internalNet._useFloat32Weights ? 4 : 8,
         internalNet._connWeights
       );
-    if (internalNet._connFrom) _releaseTA('f', 4, internalNet._connFrom as Uint32Array);
-    if (internalNet._connTo) _releaseTA('t', 4, internalNet._connTo as Uint32Array);
-    if (internalNet._connFlags) _releaseTA('fl', 1, internalNet._connFlags as Uint8Array);
+    if (internalNet._connFrom)
+      _releaseTA('f', 4, internalNet._connFrom as Uint32Array);
+    if (internalNet._connTo)
+      _releaseTA('t', 4, internalNet._connTo as Uint32Array);
+    if (internalNet._connFlags)
+      _releaseTA('fl', 1, internalNet._connFlags as Uint8Array);
     if (internalNet._connGain)
       _releaseTA(
         'g',
         internalNet._useFloat32Weights ? 4 : 8,
         internalNet._connGain as Float32Array | Float64Array
+      );
+    if (internalNet._connPlastic)
+      _releaseTA(
+        'p',
+        internalNet._useFloat32Weights ? 4 : 8,
+        internalNet._connPlastic as Float32Array | Float64Array
       );
     // Acquire slabs (pooled or fresh) so allocation stats reflect this async path too
     internalNet._connWeights = _acquireTA(
@@ -233,20 +326,27 @@ export async function rebuildConnectionSlabAsync(this: Network, chunkSize = 50_0
       capacity,
       internalNet._useFloat32Weights ? 4 : 8
     );
+    internalNet._connPlastic = null;
     internalNet._connCapacity = capacity;
   }
   const w = internalNet._connWeights as Float32Array | Float64Array;
   const fr = internalNet._connFrom as Uint32Array;
   const to = internalNet._connTo as Uint32Array;
   const fl = internalNet._connFlags as Uint8Array;
-  const g = internalNet._connGain as Float32Array | Float64Array;
+  const g = internalNet._connGain as Float32Array | Float64Array | null;
+  let anyNonNeutralGain = false;
+  let p = internalNet._connPlastic as Float32Array | Float64Array | null;
+  let anyPlastic = false;
   // Adaptive chunk sizing: if very large and config specifies a target ms, reduce slice size conservatively.
   if (total > 200_000) {
     const target = config.browserSlabChunkTargetMs;
     if (typeof target === 'number' && target > 0) {
       // Heuristic: assume ~50k simple copy ops ~= 2-4ms on mid-tier hardware; scale linearly.
       const baseOpsPerMs = 15000; // coarse empirical constant; refine later.
-      const estOps = Math.max(5_000, Math.min(50_000, Math.floor(baseOpsPerMs * target)));
+      const estOps = Math.max(
+        5_000,
+        Math.min(50_000, Math.floor(baseOpsPerMs * target))
+      );
       chunkSize = Math.min(chunkSize, estOps);
     } else {
       // No target; still clamp to 50k to avoid pathological large default if caller passed bigger.
@@ -263,10 +363,39 @@ export async function rebuildConnectionSlabAsync(this: Network, chunkSize = 50_0
       to[i] = (c.to as any).index >>> 0;
       fl[i] = c._flags & 0xff;
       const gn = c.gain;
-      g[i] = gn === 1 ? 1 : gn;
+      if (g) g[i] = gn === 1 ? 1 : gn;
+      if (gn !== 1) anyNonNeutralGain = true;
+      if (c._flags & 0b1000) anyPlastic = true;
     }
     idx = end;
     if (idx < total) await Promise.resolve(); // yield microtask
+  }
+  if (!anyNonNeutralGain && g) {
+    // Release neutral gain slab to honor omission policy
+    _releaseTA(
+      'g',
+      internalNet._useFloat32Weights ? 4 : 8,
+      g as Float32Array | Float64Array
+    );
+    internalNet._connGain = null;
+  }
+  if (anyPlastic && !p) {
+    p = _acquireTA(
+      'p',
+      internalNet._useFloat32Weights ? Float32Array : Float64Array,
+      internalNet._connCapacity,
+      internalNet._useFloat32Weights ? 4 : 8
+    ) as any;
+    internalNet._connPlastic = p;
+    for (let i = 0; i < total; i++)
+      (p as any)[i] = (this.connections[i] as any).plasticityRate || 0;
+  } else if (!anyPlastic && p) {
+    _releaseTA(
+      'p',
+      internalNet._useFloat32Weights ? 4 : 8,
+      p as Float32Array | Float64Array
+    );
+    internalNet._connPlastic = null;
   }
   internalNet._connCount = total;
   internalNet._slabDirty = false;
@@ -275,16 +404,40 @@ export async function rebuildConnectionSlabAsync(this: Network, chunkSize = 50_0
   internalNet._slabAsyncBuilds = (internalNet._slabAsyncBuilds || 0) + 1; // track async path usage
 }
 
-/** Return current slab (building lazily). */
-export function getConnectionSlab(this: Network) {
+/**
+ * Snapshot (lazy rebuild) of packed arrays.
+ * Synthetic neutral gain array returned when omission active.
+ *
+ * Example (iterate first 10 connections):
+ * ```ts
+ * const slab = (net as any).getConnectionSlab();
+ * for (let i=0; i<Math.min(10, slab.used); i++) {
+ *   console.log(`#${i}: ${slab.from[i]} -> ${slab.to[i]} w=${slab.weights[i]}`);
+ * }
+ * ```
+ */
+export function getConnectionSlab(this: Network): ConnectionSlabView {
   rebuildConnectionSlab.call(this); // Lazy rebuild if needed.
   const internalNet = this as any;
+  let gain: Float32Array | Float64Array | null = internalNet._connGain || null;
+  if (!gain) {
+    // Provide a synthetic neutral gain view for educational/tests expecting parity while preserving omission semantics.
+    const cap =
+      internalNet._connCapacity ||
+      (internalNet._connWeights && internalNet._connWeights.length) ||
+      0;
+    gain = internalNet._useFloat32Weights
+      ? new Float32Array(cap)
+      : new Float64Array(cap);
+    for (let i = 0; i < (internalNet._connCount || 0); i++) gain[i] = 1;
+  }
   return {
     weights: internalNet._connWeights!,
     from: internalNet._connFrom!,
     to: internalNet._connTo!,
     flags: internalNet._connFlags!,
-    gain: internalNet._connGain!,
+    gain,
+    plastic: internalNet._connPlastic || null,
     version: internalNet._slabVersion || 0,
     used: internalNet._connCount || 0,
     capacity:
@@ -366,12 +519,25 @@ function _canUseFastSlab(this: Network, training: boolean): boolean {
  * High-performance forward pass using packed slabs + CSR adjacency.
  * Falls back to generic activate if prerequisites unavailable.
  */
+/**
+ * Fast forward pass using slab + CSR. Falls back automatically when predicates fail.
+ *
+ * Example:
+ * ```ts
+ * if ((net as any).canUseFastSlab(false)) {
+ *   const y = (net as any).fastSlabActivate(x);
+ * } else {
+ *   const y = net.activate(x);
+ * }
+ * ```
+ */
 export function fastSlabActivate(this: Network, input: number[]): number[] {
   const internalNet = this as any;
   rebuildConnectionSlab.call(this); // Ensure slabs up-to-date (no-op if clean).
   if (internalNet._adjDirty) _buildAdjacency.call(this); // Build CSR adjacency if needed.
   // Gating incompatibility guard: if gating is present, always fallback to legacy path (dynamic per-edge behavior)
-  if (this.gates && this.gates.length > 0) return (this as any).activate(input, false);
+  if (this.gates && this.gates.length > 0)
+    return (this as any).activate(input, false);
   if (
     !internalNet._connWeights ||
     !internalNet._connFrom ||
@@ -448,8 +614,10 @@ export function fastSlabActivate(this: Network, input: number[]): number[] {
     const sourceActivation = activationBuffer[nodeIndex];
     for (let cursorIdx = edgeStart; cursorIdx < edgeEnd; cursorIdx++) {
       const connectionIndex = outgoingOrder[cursorIdx];
-      stateBuffer[toIndexArray[connectionIndex]] +=
-        sourceActivation * weightArray[connectionIndex];
+      let w = weightArray[connectionIndex];
+      const gainArr = internalNet._connGain;
+      if (gainArr) w *= gainArr[connectionIndex];
+      stateBuffer[toIndexArray[connectionIndex]] += sourceActivation * w;
     }
   }
   // Collect outputs: final output nodes occupy the tail of the node list.
@@ -465,11 +633,37 @@ export function fastSlabActivate(this: Network, input: number[]): number[] {
 }
 
 /** Public helper: indicates whether fast slab path is currently viable. */
+/** True when all predicates for slab fast path hold (acyclic, no gating/self, no stochastic features). */
 export function canUseFastSlab(this: Network, training: boolean) {
   return _canUseFastSlab.call(this, training);
 }
 
-/** Public accessor for current slab version (0 if never built). */
+/** Monotonic slab version counter (increments each successful rebuild). */
 export function getSlabVersion(this: Network): number {
   return (this as any)._slabVersion || 0;
+}
+
+/**
+ * Shape returned by `getConnectionSlab()` describing the packed SoA view.
+ * Note: The arrays SHOULD NOT be mutated by callers; treat as read‑only.
+ */
+export interface ConnectionSlabView {
+  /** Packed connection weights (length >= used; logical slice = used). */
+  weights: Float32Array | Float64Array;
+  /** Source node indices per connection. */
+  from: Uint32Array;
+  /** Target node indices per connection. */
+  to: Uint32Array;
+  /** Bitfield flags per connection (see module header). */
+  flags: Uint8Array;
+  /** Gain array (synthetic neutral array if omission optimization active). */
+  gain: Float32Array | Float64Array | null;
+  /** Plasticity rate array (null if no plastic connections). */
+  plastic: Float32Array | Float64Array | null;
+  /** Monotonic rebuild counter (0 if never built). */
+  version: number;
+  /** Logical number of active connections packed into the leading slice of arrays. */
+  used: number;
+  /** Physical capacity (allocated length) of the parallel arrays. */
+  capacity: number;
 }

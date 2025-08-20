@@ -183,7 +183,8 @@ Packed state flags (private for future-proofing hidden class):
 bit0 => enabled gene expression (1 = active)
 bit1 => DropConnect active mask (1 = not dropped this forward pass)
 bit2 => hasGater (1 = symbol field present)
-bits3+ reserved.
+bit3 => plastic (plasticityRate > 0)
+bits4+ reserved.
 
 #### _la_shadowWeight
 
@@ -301,6 +302,14 @@ AMSGrad: Maximum of past second moment (was opt_vhat).
 #### opt_vhat
 
 **Deprecated:** Use maxSecondMoment instead.
+
+#### plastic
+
+Whether this connection participates in plastic adaptation (rate > 0).
+
+#### plasticityRate
+
+Per-connection plasticity / learning rate (0 means non-plastic). Setting >0 marks plastic flag.
 
 #### previousDeltaWeight
 
@@ -764,6 +773,82 @@ Parameters:
 
 ### network
 
+Network (Evolvable / Trainable Graph)
+=====================================
+Represents a directed neural computation graph used both as a NEAT genome
+phenotype and (optionally) as a gradient‑trainable model. The class binds
+together specialized modules (topology, pruning, serialization, slab packing)
+to keep the core surface approachable for learners.
+
+Educational Highlights:
+ - Structural Mutation: functions like `addNodeBetween()` and evolutionary
+   helpers (in higher-level `Neat`) mutate topology to explore architectures.
+ - Fast Execution Paths: a Structure‑of‑Arrays (SoA) slab (`rebuildConnectionSlab`)
+   packs connection data into typed arrays to improve cache locality.
+ - Memory Optimization: node pooling & typed array pooling demonstrate how
+   allocation patterns affect performance and GC pressure.
+ - Determinism: RNG snapshot/restore methods allow reproducible experiments.
+ - Hybrid Workflows: dropout, stochastic depth, weight noise and mixed precision
+   illustrate gradient‑era regularization applied to evolved topologies.
+
+Typical Usage:
+```ts
+const net = new Network(4, 2);           // create network
+const out = net.activate([0.1,0.3,0.2,0.9]);
+net.addNodeBetween();                    // structural mutation
+const slab = (net as any).getConnectionSlab(); // inspect packed arrays
+const clone = net.clone();               // deep copy
+```
+
+Performance Guidance:
+ - Invoke `activate()` normally; the class auto‑selects slab vs object path.
+ - Batch structural mutations then call `rebuildConnectionSlab(true)` if you
+   need an immediate fast‑path (it is invoked lazily otherwise).
+ - Keep input array length exactly equal to `input`; mismatches throw early.
+
+Serialization:
+ - `toJSON()` / `fromJSON()` support experiment checkpointing.
+ - ONNX export (`exportToONNX`) enables interoperability with other tools.
+
+### Network
+
+Network (Evolvable / Trainable Graph)
+=====================================
+Represents a directed neural computation graph used both as a NEAT genome
+phenotype and (optionally) as a gradient‑trainable model. The class binds
+together specialized modules (topology, pruning, serialization, slab packing)
+to keep the core surface approachable for learners.
+
+Educational Highlights:
+ - Structural Mutation: functions like `addNodeBetween()` and evolutionary
+   helpers (in higher-level `Neat`) mutate topology to explore architectures.
+ - Fast Execution Paths: a Structure‑of‑Arrays (SoA) slab (`rebuildConnectionSlab`)
+   packs connection data into typed arrays to improve cache locality.
+ - Memory Optimization: node pooling & typed array pooling demonstrate how
+   allocation patterns affect performance and GC pressure.
+ - Determinism: RNG snapshot/restore methods allow reproducible experiments.
+ - Hybrid Workflows: dropout, stochastic depth, weight noise and mixed precision
+   illustrate gradient‑era regularization applied to evolved topologies.
+
+Typical Usage:
+```ts
+const net = new Network(4, 2);           // create network
+const out = net.activate([0.1,0.3,0.2,0.9]);
+net.addNodeBetween();                    // structural mutation
+const slab = (net as any).getConnectionSlab(); // inspect packed arrays
+const clone = net.clone();               // deep copy
+```
+
+Performance Guidance:
+ - Invoke `activate()` normally; the class auto‑selects slab vs object path.
+ - Batch structural mutations then call `rebuildConnectionSlab(true)` if you
+   need an immediate fast‑path (it is invoked lazily otherwise).
+ - Keep input array length exactly equal to `input`; mismatches throw early.
+
+Serialization:
+ - `toJSON()` / `fromJSON()` support experiment checkpointing.
+ - ONNX export (`exportToONNX`) enables interoperability with other tools.
+
 ### default
 
 #### _applyGradientClipping
@@ -921,6 +1006,14 @@ Parameters:
 `(stdDev: number | { perHiddenLayer: number[]; }) => void`
 
 Enable weight noise. Provide a single std dev number or { perHiddenLayer: number[] }.
+
+#### fastSlabActivate
+
+`(input: number[]) => number[]`
+
+Public wrapper for fast slab forward pass (primarily for tests / benchmarking).
+Prefer using standard activate(); it will auto dispatch when eligible.
+Falls back internally if prerequisites not met.
 
 #### fromJSON
 
@@ -1137,23 +1230,33 @@ Parameters:
 
 ### node
 
-Represents a node (neuron) in a neural network graph.
+Node (Neuron)
+=============
+Fundamental computational unit: aggregates weighted inputs, applies an activation
+function (squash) and emits an activation value. Supports:
+ - Types: 'input' | 'hidden' | 'output' (affects bias initialization & error handling)
+ - Recurrent self‑connections & gated connections (for dynamic / RNN behavior)
+ - Dropout mask (`mask`), momentum terms, eligibility & extended traces (for
+   a variety of learning rules beyond simple backprop).
 
-Nodes are the fundamental processing units. They receive inputs, apply an activation function,
-and produce an output. Nodes can be of type 'input', 'hidden', or 'output'. Hidden and output
-nodes have biases and activation functions, which can be mutated during neuro-evolution.
-This class also implements mechanisms for backpropagation, including support for momentum (NAG),
-L2 regularization, dropout, and eligibility traces for recurrent connections.
+Educational note: Traces (`eligibility` and `xtrace`) illustrate how recurrent credit
+assignment works in algorithms like RTRL / policy gradients. They are updated only when
+using the traced activation path (`activate`) vs `noTraceActivate` (inference fast path).
 
 ### Node
 
-Represents a node (neuron) in a neural network graph.
+Node (Neuron)
+=============
+Fundamental computational unit: aggregates weighted inputs, applies an activation
+function (squash) and emits an activation value. Supports:
+ - Types: 'input' | 'hidden' | 'output' (affects bias initialization & error handling)
+ - Recurrent self‑connections & gated connections (for dynamic / RNN behavior)
+ - Dropout mask (`mask`), momentum terms, eligibility & extended traces (for
+   a variety of learning rules beyond simple backprop).
 
-Nodes are the fundamental processing units. They receive inputs, apply an activation function,
-and produce an output. Nodes can be of type 'input', 'hidden', or 'output'. Hidden and output
-nodes have biases and activation functions, which can be mutated during neuro-evolution.
-This class also implements mechanisms for backpropagation, including support for momentum (NAG),
-L2 regularization, dropout, and eligibility traces for recurrent connections.
+Educational note: Traces (`eligibility` and `xtrace`) illustrate how recurrent credit
+assignment works in algorithms like RTRL / policy gradients. They are updated only when
+using the traced activation path (`activate`) vs `noTraceActivate` (inference fast path).
 
 ### default
 
