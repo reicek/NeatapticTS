@@ -893,98 +893,391 @@ formatVersion=2 adds: enabled flags, stable geneId (if present), dropout value.
 
 ### default
 
+#### _flags
+
+Packed state flags (private for future-proofing hidden class):
+bit0 => enabled gene expression (1 = active)
+bit1 => DropConnect active mask (1 = not dropped this forward pass)
+bit2 => hasGater (1 = symbol field present)
+bit3 => plastic (plasticityRate > 0)
+bits4+ reserved.
+
 #### acquire
 
 `(from: import("D:/code-practice/NeatapticTS/src/architecture/node").default, to: import("D:/code-practice/NeatapticTS/src/architecture/node").default, weight: number | undefined) => import("D:/code-practice/NeatapticTS/src/architecture/connection").default`
 
-Acquire a Connection from the pool or construct a new one. Ensures fresh innovation id.
+Acquire a `Connection` from the pool (or construct new). Fields are fully reset & given
+a fresh sequential `innovation` id. Prefer this in evolutionary algorithms that mutate
+topology frequently to reduce GC pressure.
+
+Parameters:
+- `from` - Source node.
+- `to` - Target node.
+- `weight` - Optional initial weight.
+
+Returns: Reinitialized connection instance.
+
+#### dcMask
+
+DropConnect active mask: 1 = not dropped (active), 0 = dropped for this stochastic pass.
+
+#### dropConnectActiveMask
+
+Convenience alias for DropConnect mask with clearer naming.
+
+#### eligibility
+
+Standard eligibility trace (e.g., for RTRL / policy gradient credit assignment).
+
+#### enabled
+
+Whether the gene (connection) is currently expressed (participates in forward pass).
+
+#### firstMoment
+
+First moment estimate (Adam / AdamW) (was opt_m).
+
+#### from
+
+The source (pre-synaptic) node supplying activation.
+
+#### gain
+
+Multiplicative modulation applied *after* weight. Default is `1` (neutral). We only store an
+internal symbol-keyed property when the gain is non-neutral, reducing memory usage across
+large populations where most connections are ungated.
+
+#### gater
+
+Optional gating node whose activation can modulate effective weight (symbol-backed).
+
+#### gradientAccumulator
+
+Generic gradient accumulator (RMSProp / AdaGrad) (was opt_cache).
+
+#### hasGater
+
+Whether a gater node is assigned (modulates gain); true if the gater symbol field is present.
+
+#### infinityNorm
+
+Adamax: Exponential moving infinity norm (was opt_u).
+
+#### innovation
+
+Unique historical marking (auto-increment) for evolutionary alignment.
 
 #### innovationID
 
-`(a: number, b: number) => number`
+`(sourceNodeId: number, targetNodeId: number) => number`
 
-Generates a unique innovation ID for the connection.
+Deterministic Cantor pairing function for a (sourceNodeId, targetNodeId) pair.
+Useful when you want a stable innovation id without relying on global mutable counters
+(e.g., for hashing or reproducible experiments).
 
-The innovation ID is calculated using the Cantor pairing function, which maps two integers
-(representing the source and target nodes) to a unique integer.
+NOTE: For large indices this can overflow 53-bit safe integer space; keep node indices reasonable.
 
 Parameters:
-- `` - - The ID of the source node.
-- `` - - The ID of the target node.
+- `sourceNodeId` - Source node integer id / index.
+- `targetNodeId` - Target node integer id / index.
 
-Returns: The innovation ID based on the Cantor pairing function.
+Returns: Unique non-negative integer derived from the ordered pair.
+
+#### lookaheadShadowWeight
+
+Lookahead: shadow (slow) weight parameter (was _la_shadowWeight).
+
+#### maxSecondMoment
+
+AMSGrad: Maximum of past second moment (was opt_vhat).
+
+#### plastic
+
+Whether this connection participates in plastic adaptation (rate > 0).
+
+#### plasticityRate
+
+Per-connection plasticity / learning rate (0 means non-plastic). Setting >0 marks plastic flag.
+
+#### previousDeltaWeight
+
+Last applied delta weight (used by classic momentum).
 
 #### release
 
 `(conn: import("D:/code-practice/NeatapticTS/src/architecture/connection").default) => void`
 
-Return a Connection to the pool for reuse.
+Return a `Connection` to the internal pool for later reuse. Do NOT use the instance again
+afterward unless re-acquired (treat as surrendered). Optimizer / trace fields are not
+scrubbed here (they're overwritten during `acquire`).
+
+Parameters:
+- `conn` - The connection instance to recycle.
+
+#### resetInnovationCounter
+
+`(value: number) => void`
+
+Reset the monotonic auto-increment innovation counter (used for newly constructed / pooled instances).
+You normally only call this at the start of an experiment or when deserializing a full population.
+
+Parameters:
+- `value` - New starting value (default 1).
+
+#### secondMoment
+
+Second raw moment estimate (Adam family) (was opt_v).
+
+#### secondMomentum
+
+Secondary momentum (Lion variant) (was opt_m2).
+
+#### to
+
+The target (post-synaptic) node receiving activation.
 
 #### toJSON
 
 `() => any`
 
-Converts the connection to a JSON object for serialization.
+Serialize to a minimal JSON-friendly shape (used for saving genomes / networks).
+Undefined indices are preserved as `undefined` to allow later resolution / remapping.
 
-Returns: A JSON representation of the connection.
+Returns: Object with node indices, weight, gain, gater index (if any), innovation id & enabled flag.
+
+#### totalDeltaWeight
+
+Accumulated (batched) delta weight awaiting an apply step.
+
+#### weight
+
+Scalar multiplier applied to the source activation (prior to gain modulation).
+
+#### xtrace
+
+Extended trace structure for modulatory / eligibility propagation algorithms. Parallel arrays for cache-friendly iteration.
 
 ## architecture/network/network.slab.ts
+
+### _acquireTA
+
+`(kind: string, ctor: any, length: number, bytesPerElement: number) => TypedArray`
+
+Acquire (or reuse) a typed array slab, updating allocation statistics.
+
+Behaviour:
+ - Pooling disabled: always allocate fresh.
+ - Pooling enabled: reuse last retained array for identical key if present.
+ - Metrics updated (fresh/pooled + per-key created/reused counters).
+
+Parameters:
+- `kind` - Pool discriminator (see `_poolKey`).
+- `ctor` - Typed array constructor.
+- `length` - Desired element count.
+- `bytesPerElement` - Byte width used to form key (guards reuse correctness).
+
+Returns: The acquired typed array (possibly recycled).
+
+### _buildAdjacency
+
+`() => void`
+
+Build / refresh CSR‑style adjacency (outStart + outOrder) enabling fast fan‑out traversal.
+Only rebuilds when marked dirty. Stores arrays on internal network instance.
+
+### _canUseFastSlab
+
+`(training: boolean) => boolean`
+
+Predicate gating usage of high‑performance slab forward pass.
+Disallows training / stochastic / dynamic edge behaviours (gating, dropout, noise, self‑connections).
+
+Parameters:
+- `training` - Whether caller is in training mode (disables fast path for gradient/time reasons).
+
+Returns: True if fast path can be safely used for deterministic forward activation.
+
+### _poolKey
+
+`(kind: string, bytes: number, length: number) => string`
+
+Construct a unique pool key encoding kind + element byte size + logical length.
+This granularity prevents mismatched reuse (different lengths / element sizes).
+
+Parameters:
+- `kind` - Short discriminator (e.g. 'w','f','t','fl','g','p').
+- `bytes` - Bytes per element (1,4,8).
+- `length` - Typed array length.
+
+Returns: Stable string key used in pool maps.
+
+### _reindexNodes
+
+`() => void`
+
+Assign sequential indices to each node (stable ordering prerequisite for slab packing).
+Clears `_nodeIndexDirty` flag.
+
+### _releaseTA
+
+`(kind: string, bytesPerElement: number, arr: TypedArray) => void`
+
+Return a typed array slab to the per‑key bounded pool.
+No-op if pooling disabled. Pool functions as small LRU (push/pop).
+
+Parameters:
+- `kind` - Pool discriminator.
+- `bytesPerElement` - Byte width for key regeneration.
+- `arr` - The typed array instance to consider retaining.
+
+### _slabPoolCap
+
+`() => number`
+
+Compute the effective per‑key retention cap for slab pooling.
+
+RATIONALE
+---------
+The default (4) was selected after observing diminishing reuse gains beyond the
+3rd–4th cached buffer in mutation / prune churn micro‑benchmarks; larger caps
+produced a higher long‑tail of retained bytes with negligible hit‑rate benefit.
+
+CONFIG
+------
+Users can override via `config.slabPoolMaxPerKey`:
+  undefined → default 4
+  0         → keep metrics but do not retain slabs (max reuse pressure scenario)
+  <0        → coerced to 0 (safety)
+
+Returns: Integer retention cap (≥0).
 
 ### canUseFastSlab
 
 `(training: boolean) => boolean`
 
-Public helper: indicates whether fast slab path is currently viable.
+Public convenience wrapper exposing fast path eligibility.
+Mirrors `_canUseFastSlab` internal predicate.
+
+Parameters:
+- `training` - Whether caller is performing training (disables fast path if true).
+
+Returns: True when slab fast path predicates hold.
+
+### ConnectionSlabView
+
+Shape returned by `getConnectionSlab()` describing the packed SoA view.
+Note: The arrays SHOULD NOT be mutated by callers; treat as read‑only.
 
 ### fastSlabActivate
 
 `(input: number[]) => number[]`
 
-High-performance forward pass using packed slabs + CSR adjacency.
-Falls back to generic activate if prerequisites unavailable.
+High‑performance forward pass using packed slabs + CSR adjacency.
+
+Fallback Conditions (auto‑detected):
+ - Missing slabs / adjacency structures.
+ - Topology/gating/stochastic predicates fail (see `_canUseFastSlab`).
+ - Any gating present (explicit guard).
+
+Implementation Notes:
+ - Reuses internal activation/state buffers to reduce per‑step allocation churn.
+ - Applies gain multiplication if optional gain slab exists.
+ - Assumes acyclic graph; topological order recomputed on demand if marked dirty.
+
+Parameters:
+- `input` - Input vector (length must equal `network.input`).
+
+Returns: Output activations (detached plain array) of length `network.output`.
 
 ### getConnectionSlab
 
-`() => { weights: any; from: any; to: any; }`
+`() => import("D:/code-practice/NeatapticTS/src/architecture/network/network.slab").ConnectionSlabView`
 
-Return current slab (building lazily).
+Obtain (and lazily rebuild if dirty) the current packed SoA view of connections.
+
+Gain Omission: If the internal gain slab is absent (all gains neutral) a synthetic
+neutral array is created and returned (NOT retained) to keep external educational
+tooling branch‑free while preserving omission memory savings internally.
+
+Returns: Read‑only style view (do not mutate) containing typed arrays + metadata.
+
+### getSlabAllocationStats
+
+`() => { pool: Record<string, PoolKeyMetrics>; fresh: number; pooled: number; }`
+
+Allocation statistics snapshot for slab typed arrays.
+
+Includes:
+ - fresh: number of newly constructed typed arrays since process start / metrics reset.
+ - pooled: number of arrays served from the pool.
+ - pool: per‑key metrics (created, reused, maxRetained) for educational inspection.
+
+NOTE: Stats are cumulative (not auto‑reset); callers may diff successive snapshots.
+
+Returns: Plain object copy (safe to serialize) of current allocator counters.
+
+### getSlabVersion
+
+`() => number`
+
+Retrieve current monotonic slab version (increments on each successful rebuild).
+
+Returns: Non‑negative integer (0 if slab never built yet).
+
+### PoolKeyMetrics
+
+Per-pool-key allocation & reuse counters (educational / diagnostics).
+Tracks how many slabs were freshly created vs reused plus the high‑water
+mark (maxRetained) of simultaneously retained arrays for the key. Exposed
+indirectly via `getSlabAllocationStats()` so users can introspect the
+effectiveness of pooling under their workload.
 
 ### rebuildConnectionSlab
 
 `(force: boolean) => void`
 
-Fast slab (structure-of-arrays) acceleration layer.
+Build (or refresh) the packed connection slabs for the network synchronously.
 
-Rationale:
- Typical neural network graphs represented as object graphs incur significant overhead during
- forward passes due to pointer chasing (cache misses) and dynamic property lookups. For large
- evolving populations where topologies change infrequently compared to evaluation frequency,
- we can amortize a one-off packing cost into contiguous typed arrays, dramatically improving
- memory locality and enabling tight inner loops.
+ACTIONS
+-------
+1. Optionally reindex nodes if structural mutations invalidated indices.
+2. Grow (geometric) or reuse existing typed arrays to ensure capacity >= active connections.
+3. Populate the logical slice [0, connectionCount) with weight/from/to/flag data.
+4. Lazily allocate gain & plastic slabs only on first non‑neutral / plastic encounter; omit otherwise.
+5. Release previously allocated optional slabs when they revert to neutral / unused (omission optimization).
+6. Update internal bookkeeping: logical count, dirty flags, version counter.
 
-Core Data Structures:
- - weightArray     (Float32Array|Float64Array): connection weights
- - fromIndexArray  (Uint32Array): source node indices per connection
- - toIndexArray    (Uint32Array): destination node indices per connection
- - outgoingStartIndices (Uint32Array length = nodeCount + 1): CSR row pointer style offsets
- - outgoingOrder   (Uint32Array): permutation of connection indices grouped by source node
+PERFORMANCE
+-----------
+O(C) over active connections with amortized allocation cost due to geometric growth.
 
-Workflow:
- 1. rebuildConnectionSlab packs connections into SoA arrays when dirty.
- 2. _buildAdjacency converts fromIndexArray into CSR-like adjacency for each source node.
- 3. fastSlabActivate uses the packed arrays + precomputed topological order to perform a forward pass
-    with minimal branching and object access.
+Parameters:
+- `force` - When true forces rebuild even if network not marked dirty (useful for timing tests).
 
-Constraints for Fast Path (_canUseFastSlab):
- - Acyclic enforced (no recurrence) so single topological sweep suffices.
- - No gating, self-connections, dropout, stochastic depth, or per-hidden noise.
- - Topological order and node indices must be clean.
+### rebuildConnectionSlabAsync
 
-Dirty Flags Touched:
- - _slabDirty: slab arrays need rebuild
- - _adjDirty: adjacency mapping (CSR) invalid
- - _nodeIndexDirty: node.index values invalid
- - _topoDirty: topological ordering invalid
+`(chunkSize: number) => Promise<void>`
+
+Cooperative asynchronous slab rebuild (Browser only).
+
+Strategy:
+ - Perform capacity decision + allocation up front (mirrors sync path).
+ - Populate connection data in microtask slices (yield via resolved Promise) to avoid long main‑thread stalls.
+ - Adaptive slice sizing for very large graphs if `config.browserSlabChunkTargetMs` set.
+
+Metrics: Increments `_slabAsyncBuilds` for observability.
+Fallback: On Node (no `window`) defers to synchronous rebuild for simplicity.
+
+Parameters:
+- `chunkSize` - Initial maximum connections per slice (may be reduced adaptively for huge graphs).
+
+Returns: Promise resolving once rebuild completes.
+
+### TypedArray
+
+Union of slab typed array element container types. We purposefully restrict
+to the specific constructors actually used by this module so TypeScript can
+narrow accurately and editors display concise hover info.
 
 ## architecture/network/network.standalone.ts
 

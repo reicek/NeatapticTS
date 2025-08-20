@@ -3,9 +3,14 @@
   "compilerOptions": {
     "rootDir": "./",
     "outDir": "./dist-docs",
-    "module": "CommonJS",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "target": "ES2023",
+    "lib": ["ES2023", "DOM"],
     "types": ["node"],
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true
   },
   "include": ["scripts/**/*.ts"],
   "exclude": ["node_modules", "dist"]

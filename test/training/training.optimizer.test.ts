@@ -9,9 +9,9 @@ describe('training.optimizer', () => {
   optimizers.forEach((opt) => {
     describe(opt, () => {
       let weightChanged = false;
-      let hasM = false;
-      let hasV = false;
-      let hasCache = false;
+      let hasFirstMoment = false;
+      let hasSecondMoment = false;
+      let hasAccumulator = false;
       beforeAll(() => {
         const net = new Network(1, 1);
         const conn: any = net.connections[0];
@@ -23,24 +23,24 @@ describe('training.optimizer', () => {
           optimizer: opt,
         });
         weightChanged = conn.weight !== w0;
-        hasM = typeof conn.opt_m !== 'undefined';
-        hasV = typeof conn.opt_v !== 'undefined';
-        hasCache = typeof conn.opt_cache !== 'undefined';
+        hasFirstMoment = typeof conn.firstMoment !== 'undefined';
+        hasSecondMoment = typeof conn.secondMoment !== 'undefined';
+        hasAccumulator = typeof conn.gradientAccumulator !== 'undefined';
       });
       it('updates weight', () => {
         expect(weightChanged).toBe(true);
       });
       if (opt === 'adam' || opt === 'adamw') {
         it('tracks first moment', () => {
-          expect(hasM).toBe(true);
+          expect(hasFirstMoment).toBe(true);
         });
         it('tracks second moment', () => {
-          expect(hasV).toBe(true);
+          expect(hasSecondMoment).toBe(true);
         });
       }
       if (opt === 'rmsprop' || opt === 'adagrad') {
-        it('tracks cache', () => {
-          expect(hasCache).toBe(true);
+        it('tracks accumulator', () => {
+          expect(hasAccumulator).toBe(true);
         });
       }
     });

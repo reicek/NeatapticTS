@@ -1,4 +1,4 @@
-import { NeatLike } from './neat.types';
+import type { NeatLike } from './neat.types';
 
 // ----------------------------------------------------------------------------------
 // Export / Import helpers for NEAT evolutionary state.

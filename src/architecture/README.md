@@ -177,40 +177,169 @@ Returns: The constructed network with a randomized topology.
 
 ### default
 
+#### _flags
+
+Packed state flags (private for future-proofing hidden class):
+bit0 => enabled gene expression (1 = active)
+bit1 => DropConnect active mask (1 = not dropped this forward pass)
+bit2 => hasGater (1 = symbol field present)
+bit3 => plastic (plasticityRate > 0)
+bits4+ reserved.
+
 #### acquire
 
 `(from: import("D:/code-practice/NeatapticTS/src/architecture/node").default, to: import("D:/code-practice/NeatapticTS/src/architecture/node").default, weight: number | undefined) => import("D:/code-practice/NeatapticTS/src/architecture/connection").default`
 
-Acquire a Connection from the pool or construct a new one. Ensures fresh innovation id.
+Acquire a `Connection` from the pool (or construct new). Fields are fully reset & given
+a fresh sequential `innovation` id. Prefer this in evolutionary algorithms that mutate
+topology frequently to reduce GC pressure.
+
+Parameters:
+- `from` - Source node.
+- `to` - Target node.
+- `weight` - Optional initial weight.
+
+Returns: Reinitialized connection instance.
+
+#### dcMask
+
+DropConnect active mask: 1 = not dropped (active), 0 = dropped for this stochastic pass.
+
+#### dropConnectActiveMask
+
+Convenience alias for DropConnect mask with clearer naming.
+
+#### eligibility
+
+Standard eligibility trace (e.g., for RTRL / policy gradient credit assignment).
+
+#### enabled
+
+Whether the gene (connection) is currently expressed (participates in forward pass).
+
+#### firstMoment
+
+First moment estimate (Adam / AdamW) (was opt_m).
+
+#### from
+
+The source (pre-synaptic) node supplying activation.
+
+#### gain
+
+Multiplicative modulation applied *after* weight. Default is `1` (neutral). We only store an
+internal symbol-keyed property when the gain is non-neutral, reducing memory usage across
+large populations where most connections are ungated.
+
+#### gater
+
+Optional gating node whose activation can modulate effective weight (symbol-backed).
+
+#### gradientAccumulator
+
+Generic gradient accumulator (RMSProp / AdaGrad) (was opt_cache).
+
+#### hasGater
+
+Whether a gater node is assigned (modulates gain); true if the gater symbol field is present.
+
+#### infinityNorm
+
+Adamax: Exponential moving infinity norm (was opt_u).
+
+#### innovation
+
+Unique historical marking (auto-increment) for evolutionary alignment.
 
 #### innovationID
 
-`(a: number, b: number) => number`
+`(sourceNodeId: number, targetNodeId: number) => number`
 
-Generates a unique innovation ID for the connection.
+Deterministic Cantor pairing function for a (sourceNodeId, targetNodeId) pair.
+Useful when you want a stable innovation id without relying on global mutable counters
+(e.g., for hashing or reproducible experiments).
 
-The innovation ID is calculated using the Cantor pairing function, which maps two integers
-(representing the source and target nodes) to a unique integer.
+NOTE: For large indices this can overflow 53-bit safe integer space; keep node indices reasonable.
 
 Parameters:
-- `` - - The ID of the source node.
-- `` - - The ID of the target node.
+- `sourceNodeId` - Source node integer id / index.
+- `targetNodeId` - Target node integer id / index.
 
-Returns: The innovation ID based on the Cantor pairing function.
+Returns: Unique non-negative integer derived from the ordered pair.
+
+#### lookaheadShadowWeight
+
+Lookahead: shadow (slow) weight parameter (was _la_shadowWeight).
+
+#### maxSecondMoment
+
+AMSGrad: Maximum of past second moment (was opt_vhat).
+
+#### plastic
+
+Whether this connection participates in plastic adaptation (rate > 0).
+
+#### plasticityRate
+
+Per-connection plasticity / learning rate (0 means non-plastic). Setting >0 marks plastic flag.
+
+#### previousDeltaWeight
+
+Last applied delta weight (used by classic momentum).
 
 #### release
 
 `(conn: import("D:/code-practice/NeatapticTS/src/architecture/connection").default) => void`
 
-Return a Connection to the pool for reuse.
+Return a `Connection` to the internal pool for later reuse. Do NOT use the instance again
+afterward unless re-acquired (treat as surrendered). Optimizer / trace fields are not
+scrubbed here (they're overwritten during `acquire`).
+
+Parameters:
+- `conn` - The connection instance to recycle.
+
+#### resetInnovationCounter
+
+`(value: number) => void`
+
+Reset the monotonic auto-increment innovation counter (used for newly constructed / pooled instances).
+You normally only call this at the start of an experiment or when deserializing a full population.
+
+Parameters:
+- `value` - New starting value (default 1).
+
+#### secondMoment
+
+Second raw moment estimate (Adam family) (was opt_v).
+
+#### secondMomentum
+
+Secondary momentum (Lion variant) (was opt_m2).
+
+#### to
+
+The target (post-synaptic) node receiving activation.
 
 #### toJSON
 
 `() => any`
 
-Converts the connection to a JSON object for serialization.
+Serialize to a minimal JSON-friendly shape (used for saving genomes / networks).
+Undefined indices are preserved as `undefined` to allow later resolution / remapping.
 
-Returns: A JSON representation of the connection.
+Returns: Object with node indices, weight, gain, gater index (if any), innovation id & enabled flag.
+
+#### totalDeltaWeight
+
+Accumulated (batched) delta weight awaiting an apply step.
+
+#### weight
+
+Scalar multiplier applied to the source activation (prior to gain modulation).
+
+#### xtrace
+
+Extended trace structure for modulatory / eligibility propagation algorithms. Parallel arrays for cache-friendly iteration.
 
 ## architecture/group.ts
 
@@ -616,6 +745,82 @@ Parameters:
 
 ### network
 
+Network (Evolvable / Trainable Graph)
+=====================================
+Represents a directed neural computation graph used both as a NEAT genome
+phenotype and (optionally) as a gradient‑trainable model. The class binds
+together specialized modules (topology, pruning, serialization, slab packing)
+to keep the core surface approachable for learners.
+
+Educational Highlights:
+ - Structural Mutation: functions like `addNodeBetween()` and evolutionary
+   helpers (in higher-level `Neat`) mutate topology to explore architectures.
+ - Fast Execution Paths: a Structure‑of‑Arrays (SoA) slab (`rebuildConnectionSlab`)
+   packs connection data into typed arrays to improve cache locality.
+ - Memory Optimization: node pooling & typed array pooling demonstrate how
+   allocation patterns affect performance and GC pressure.
+ - Determinism: RNG snapshot/restore methods allow reproducible experiments.
+ - Hybrid Workflows: dropout, stochastic depth, weight noise and mixed precision
+   illustrate gradient‑era regularization applied to evolved topologies.
+
+Typical Usage:
+```ts
+const net = new Network(4, 2);           // create network
+const out = net.activate([0.1,0.3,0.2,0.9]);
+net.addNodeBetween();                    // structural mutation
+const slab = (net as any).getConnectionSlab(); // inspect packed arrays
+const clone = net.clone();               // deep copy
+```
+
+Performance Guidance:
+ - Invoke `activate()` normally; the class auto‑selects slab vs object path.
+ - Batch structural mutations then call `rebuildConnectionSlab(true)` if you
+   need an immediate fast‑path (it is invoked lazily otherwise).
+ - Keep input array length exactly equal to `input`; mismatches throw early.
+
+Serialization:
+ - `toJSON()` / `fromJSON()` support experiment checkpointing.
+ - ONNX export (`exportToONNX`) enables interoperability with other tools.
+
+### Network
+
+Network (Evolvable / Trainable Graph)
+=====================================
+Represents a directed neural computation graph used both as a NEAT genome
+phenotype and (optionally) as a gradient‑trainable model. The class binds
+together specialized modules (topology, pruning, serialization, slab packing)
+to keep the core surface approachable for learners.
+
+Educational Highlights:
+ - Structural Mutation: functions like `addNodeBetween()` and evolutionary
+   helpers (in higher-level `Neat`) mutate topology to explore architectures.
+ - Fast Execution Paths: a Structure‑of‑Arrays (SoA) slab (`rebuildConnectionSlab`)
+   packs connection data into typed arrays to improve cache locality.
+ - Memory Optimization: node pooling & typed array pooling demonstrate how
+   allocation patterns affect performance and GC pressure.
+ - Determinism: RNG snapshot/restore methods allow reproducible experiments.
+ - Hybrid Workflows: dropout, stochastic depth, weight noise and mixed precision
+   illustrate gradient‑era regularization applied to evolved topologies.
+
+Typical Usage:
+```ts
+const net = new Network(4, 2);           // create network
+const out = net.activate([0.1,0.3,0.2,0.9]);
+net.addNodeBetween();                    // structural mutation
+const slab = (net as any).getConnectionSlab(); // inspect packed arrays
+const clone = net.clone();               // deep copy
+```
+
+Performance Guidance:
+ - Invoke `activate()` normally; the class auto‑selects slab vs object path.
+ - Batch structural mutations then call `rebuildConnectionSlab(true)` if you
+   need an immediate fast‑path (it is invoked lazily otherwise).
+ - Keep input array length exactly equal to `input`; mismatches throw early.
+
+Serialization:
+ - `toJSON()` / `fromJSON()` support experiment checkpointing.
+ - ONNX export (`exportToONNX`) enables interoperability with other tools.
+
 ### default
 
 #### _applyGradientClipping
@@ -773,6 +978,14 @@ Parameters:
 `(stdDev: number | { perHiddenLayer: number[]; }) => void`
 
 Enable weight noise. Provide a single std dev number or { perHiddenLayer: number[] }.
+
+#### fastSlabActivate
+
+`(input: number[]) => number[]`
+
+Public wrapper for fast slab forward pass (primarily for tests / benchmarking).
+Prefer using standard activate(); it will auto dispatch when eligible.
+Falls back internally if prerequisites not met.
 
 #### fromJSON
 
@@ -989,23 +1202,33 @@ Parameters:
 
 ### node
 
-Represents a node (neuron) in a neural network graph.
+Node (Neuron)
+=============
+Fundamental computational unit: aggregates weighted inputs, applies an activation
+function (squash) and emits an activation value. Supports:
+ - Types: 'input' | 'hidden' | 'output' (affects bias initialization & error handling)
+ - Recurrent self‑connections & gated connections (for dynamic / RNN behavior)
+ - Dropout mask (`mask`), momentum terms, eligibility & extended traces (for
+   a variety of learning rules beyond simple backprop).
 
-Nodes are the fundamental processing units. They receive inputs, apply an activation function,
-and produce an output. Nodes can be of type 'input', 'hidden', or 'output'. Hidden and output
-nodes have biases and activation functions, which can be mutated during neuro-evolution.
-This class also implements mechanisms for backpropagation, including support for momentum (NAG),
-L2 regularization, dropout, and eligibility traces for recurrent connections.
+Educational note: Traces (`eligibility` and `xtrace`) illustrate how recurrent credit
+assignment works in algorithms like RTRL / policy gradients. They are updated only when
+using the traced activation path (`activate`) vs `noTraceActivate` (inference fast path).
 
 ### Node
 
-Represents a node (neuron) in a neural network graph.
+Node (Neuron)
+=============
+Fundamental computational unit: aggregates weighted inputs, applies an activation
+function (squash) and emits an activation value. Supports:
+ - Types: 'input' | 'hidden' | 'output' (affects bias initialization & error handling)
+ - Recurrent self‑connections & gated connections (for dynamic / RNN behavior)
+ - Dropout mask (`mask`), momentum terms, eligibility & extended traces (for
+   a variety of learning rules beyond simple backprop).
 
-Nodes are the fundamental processing units. They receive inputs, apply an activation function,
-and produce an output. Nodes can be of type 'input', 'hidden', or 'output'. Hidden and output
-nodes have biases and activation functions, which can be mutated during neuro-evolution.
-This class also implements mechanisms for backpropagation, including support for momentum (NAG),
-L2 regularization, dropout, and eligibility traces for recurrent connections.
+Educational note: Traces (`eligibility` and `xtrace`) illustrate how recurrent credit
+assignment works in algorithms like RTRL / policy gradients. They are updated only when
+using the traced activation path (`activate`) vs `noTraceActivate` (inference fast path).
 
 ### default
 
@@ -1104,10 +1327,10 @@ Options:
  - la_alpha     : Interpolation factor towards slow (shadow) weights/bias at sync points.
 
 Internal per-connection temp fields (created lazily):
- - opt_m / opt_v / opt_vhat / opt_u : Moment / variance / max variance / infinity norm caches.
- - opt_cache : Single accumulator (RMSProp / AdaGrad).
+ - firstMoment / secondMoment / maxSecondMoment / infinityNorm : Moment / variance / max variance / infinity norm caches.
+ - gradientAccumulator : Single accumulator (RMSProp / AdaGrad).
  - previousDeltaWeight : For classic SGD momentum.
- - _la_shadowWeight / _la_shadowBias : Lookahead shadow copies.
+ - lookaheadShadowWeight / _la_shadowBias : Lookahead shadow copies.
 
 Safety: We clip extreme weight / bias magnitudes and guard against NaN/Infinity.
 
@@ -1182,10 +1405,6 @@ The connection's gain will be controlled by this node's activation value.
 Parameters:
 - `connections` - A single Connection object or an array of Connection objects to be gated.
 
-#### gates
-
-**Deprecated:** Use connections.gated; retained for legacy tests
-
 #### geneId
 
 Stable per-node gene identifier for NEAT innovation reuse
@@ -1248,10 +1467,6 @@ based on predefined mutation methods.
 
 Parameters:
 - `method` - A mutation method object, typically from `methods.mutation`. It should define the type of mutation and its parameters (e.g., allowed functions, modification range).
-
-#### nodes
-
-**Deprecated:** Placeholder kept for legacy structural algorithms. No longer populated.
 
 #### noTraceActivate
 
@@ -1354,6 +1569,55 @@ Resets the connection's gain to 1 and removes it from the `connections.gated` li
 
 Parameters:
 - `connections` - A single Connection object or an array of Connection objects to ungate.
+
+## architecture/nodePool.ts
+
+### acquireNode
+
+`(opts: import("D:/code-practice/NeatapticTS/src/architecture/nodePool").AcquireNodeOptions) => import("D:/code-practice/NeatapticTS/src/architecture/node").default`
+
+Acquire (obtain) a node instance from the pool (or construct a new one if empty).
+The node is guaranteed to have fully reset dynamic state (activation, gradients, error, connections).
+
+### AcquireNodeOptions
+
+Options bag for acquiring a node.
+
+### nodePoolStats
+
+`() => { size: number; highWaterMark: number; reused: number; fresh: number; recycledRatio: number; }`
+
+Get current pool statistics (for debugging / future leak detection).
+
+### releaseNode
+
+`(node: import("D:/code-practice/NeatapticTS/src/architecture/node").default) => void`
+
+Release (recycle) a node back into the pool. The caller MUST ensure the node is fully detached
+from any network (connections arrays pruned, no external references maintained) to prevent leaks.
+After release, the node must be considered invalid until re-acquired.
+
+Phase 2: Automatically invoked by Network.remove() when pooling is enabled to recycle pruned nodes.
+
+### resetNode
+
+`(node: import("D:/code-practice/NeatapticTS/src/architecture/node").default, type: string | undefined, rng: () => number) => void`
+
+Reset all mutable / dynamic fields of a node to a pristine post-construction state.
+This mirrors logic in the constructor & `clear()` while also clearing arrays & error objects.
+
+We intentionally do NOT reset the `type` or `squash` function unless explicitly provided so callers
+can optionally request a different type on acquire. Bias is reinitialized consistent with constructor semantics.
+
+### resetNodePool
+
+`() => void`
+
+Reset the pool (drops all retained nodes). Intended for test harness cleanup.
+
+### ResettableNodeFields
+
+Shape describing minimal mutable fields we explicitly reset (used internally).
 
 ## architecture/onnx.ts
 

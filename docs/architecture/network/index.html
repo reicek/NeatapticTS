@@ -2,7 +2,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;600;700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../../assets/theme.css"></head><body class="">
 <header class="topbar"><div class="inner"><div class="brand"><a href="../../index.html">NeatapticTS</a></div><nav class="main-nav"><a href="../../index.html">Home</a><a href="../../index.html" class="active">Docs</a><a href="https://github.com/reicek/NeatapticTS" target="_blank" rel="noopener">GitHub</a></nav></div></header>
-<div class="layout"><aside class="sidebar"><ul class="sidebar-sections"><li class="group"><div class="g-head">src</div><ul><li><a href="../../src/index.html">src</a></li></ul></li><li><a href="../../index.html">Overview</a></li><li class="group"><div class="g-head">architecture</div><ul><li><a href="../index.html">architecture</a></li><li class="current"><a href="./index.html">architecture/network</a></li></ul></li><li class="group"><div class="g-head">methods</div><ul><li><a href="../../methods/index.html">methods</a></li></ul></li><li class="group"><div class="g-head">neat</div><ul><li><a href="../../neat/index.html">neat</a></li></ul></li><li class="group"><div class="g-head">multithreading</div><ul><li><a href="../../multithreading/index.html">multithreading</a></li><li><a href="../../multithreading/workers/index.html">multithreading/workers</a></li><li><a href="../../multithreading/workers/browser/index.html">multithreading/workers/browser</a></li><li><a href="../../multithreading/workers/node/index.html">multithreading/workers/node</a></li></ul></li></ul></aside><main class="content"><h1 id="architecture-network">architecture/network</h1><h2 id="architecture-network-network-activate-ts">architecture/network/network.activate.ts</h2><h3 id="activatebatch">activateBatch</h3><p><code>(inputs: number[][], training: boolean) =&gt; number[][]</code></p>
+<div class="layout"><aside class="sidebar"><ul class="sidebar-sections"><li class="group"><div class="g-head">src</div><ul><li><a href="../../src/index.html">src</a></li></ul></li><li class="group"><div class="g-head">utils</div><ul><li><a href="../../utils/index.html">utils</a></li></ul></li><li><a href="../../index.html">Overview</a></li><li class="group"><div class="g-head">architecture</div><ul><li><a href="../index.html">architecture</a></li><li class="current"><a href="./index.html">architecture/network</a></li></ul></li><li class="group"><div class="g-head">methods</div><ul><li><a href="../../methods/index.html">methods</a></li></ul></li><li class="group"><div class="g-head">neat</div><ul><li><a href="../../neat/index.html">neat</a></li></ul></li><li class="group"><div class="g-head">multithreading</div><ul><li><a href="../../multithreading/index.html">multithreading</a></li><li><a href="../../multithreading/workers/index.html">multithreading/workers</a></li><li><a href="../../multithreading/workers/browser/index.html">multithreading/workers/browser</a></li><li><a href="../../multithreading/workers/node/index.html">multithreading/workers/node</a></li></ul></li></ul></aside><main class="content"><h1 id="architecture-network">architecture/network</h1><h2 id="architecture-network-network-activate-ts">architecture/network/network.activate.ts</h2><h3 id="activatebatch">activateBatch</h3><p><code>(inputs: number[][], training: boolean) =&gt; number[][]</code></p>
 <p>Activate the network over a mini‑batch (array) of input vectors, returning a 2‑D array of outputs.</p>
 <p>This helper simply loops, invoking {@link Network.activate} (or its bound variant) for each
 sample. It is intentionally naive: no attempt is made to fuse operations across the batch.
@@ -688,66 +688,223 @@ Defensive parsing retains forward compatibility (warns on unknown versions rathe
 <h3 id="tojsonimpl">toJSONImpl</h3><p><code>() =&gt; object</code></p>
 <p>Verbose JSON export (stable formatVersion). Omits transient runtime fields but keeps structural genetics.
 formatVersion=2 adds: enabled flags, stable geneId (if present), dropout value.</p>
-<h3 id="default">default</h3><h4 id="acquire">acquire</h4><p><code>(from: import(&quot;D:/code-practice/NeatapticTS/src/architecture/node&quot;).default, to: import(&quot;D:/code-practice/NeatapticTS/src/architecture/node&quot;).default, weight: number | undefined) =&gt; import(&quot;D:/code-practice/NeatapticTS/src/architecture/connection&quot;).default</code></p>
-<p>Acquire a Connection from the pool or construct a new one. Ensures fresh innovation id.</p>
-<h4 id="innovationid">innovationID</h4><p><code>(a: number, b: number) =&gt; number</code></p>
-<p>Generates a unique innovation ID for the connection.</p>
-<p>The innovation ID is calculated using the Cantor pairing function, which maps two integers
-(representing the source and target nodes) to a unique integer.</p>
+<h3 id="default">default</h3><h4 id="flags">_flags</h4><p>Packed state flags (private for future-proofing hidden class):
+bit0 =&gt; enabled gene expression (1 = active)
+bit1 =&gt; DropConnect active mask (1 = not dropped this forward pass)
+bit2 =&gt; hasGater (1 = symbol field present)
+bit3 =&gt; plastic (plasticityRate &gt; 0)
+bits4+ reserved.</p>
+<h4 id="acquire">acquire</h4><p><code>(from: import(&quot;D:/code-practice/NeatapticTS/src/architecture/node&quot;).default, to: import(&quot;D:/code-practice/NeatapticTS/src/architecture/node&quot;).default, weight: number | undefined) =&gt; import(&quot;D:/code-practice/NeatapticTS/src/architecture/connection&quot;).default</code></p>
+<p>Acquire a <code>Connection</code> from the pool (or construct new). Fields are fully reset &amp; given
+a fresh sequential <code>innovation</code> id. Prefer this in evolutionary algorithms that mutate
+topology frequently to reduce GC pressure.</p>
 <p>Parameters:</p>
 <ul>
-<li>`` - - The ID of the source node.</li>
-<li>`` - - The ID of the target node.</li>
+<li><code>from</code> - Source node.</li>
+<li><code>to</code> - Target node.</li>
+<li><code>weight</code> - Optional initial weight.</li>
 </ul>
-<p>Returns: The innovation ID based on the Cantor pairing function.</p>
+<p>Returns: Reinitialized connection instance.</p>
+<h4 id="dcmask">dcMask</h4><p>DropConnect active mask: 1 = not dropped (active), 0 = dropped for this stochastic pass.</p>
+<h4 id="dropconnectactivemask">dropConnectActiveMask</h4><p>Convenience alias for DropConnect mask with clearer naming.</p>
+<h4 id="eligibility">eligibility</h4><p>Standard eligibility trace (e.g., for RTRL / policy gradient credit assignment).</p>
+<h4 id="enabled">enabled</h4><p>Whether the gene (connection) is currently expressed (participates in forward pass).</p>
+<h4 id="firstmoment">firstMoment</h4><p>First moment estimate (Adam / AdamW) (was opt_m).</p>
+<h4 id="from">from</h4><p>The source (pre-synaptic) node supplying activation.</p>
+<h4 id="gain">gain</h4><p>Multiplicative modulation applied <em>after</em> weight. Default is <code>1</code> (neutral). We only store an
+internal symbol-keyed property when the gain is non-neutral, reducing memory usage across
+large populations where most connections are ungated.</p>
+<h4 id="gater">gater</h4><p>Optional gating node whose activation can modulate effective weight (symbol-backed).</p>
+<h4 id="gradientaccumulator">gradientAccumulator</h4><p>Generic gradient accumulator (RMSProp / AdaGrad) (was opt_cache).</p>
+<h4 id="hasgater">hasGater</h4><p>Whether a gater node is assigned (modulates gain); true if the gater symbol field is present.</p>
+<h4 id="infinitynorm">infinityNorm</h4><p>Adamax: Exponential moving infinity norm (was opt_u).</p>
+<h4 id="innovation">innovation</h4><p>Unique historical marking (auto-increment) for evolutionary alignment.</p>
+<h4 id="innovationid">innovationID</h4><p><code>(sourceNodeId: number, targetNodeId: number) =&gt; number</code></p>
+<p>Deterministic Cantor pairing function for a (sourceNodeId, targetNodeId) pair.
+Useful when you want a stable innovation id without relying on global mutable counters
+(e.g., for hashing or reproducible experiments).</p>
+<p>NOTE: For large indices this can overflow 53-bit safe integer space; keep node indices reasonable.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>sourceNodeId</code> - Source node integer id / index.</li>
+<li><code>targetNodeId</code> - Target node integer id / index.</li>
+</ul>
+<p>Returns: Unique non-negative integer derived from the ordered pair.</p>
+<h4 id="lookaheadshadowweight">lookaheadShadowWeight</h4><p>Lookahead: shadow (slow) weight parameter (was _la_shadowWeight).</p>
+<h4 id="maxsecondmoment">maxSecondMoment</h4><p>AMSGrad: Maximum of past second moment (was opt_vhat).</p>
+<h4 id="plastic">plastic</h4><p>Whether this connection participates in plastic adaptation (rate &gt; 0).</p>
+<h4 id="plasticityrate">plasticityRate</h4><p>Per-connection plasticity / learning rate (0 means non-plastic). Setting &gt;0 marks plastic flag.</p>
+<h4 id="previousdeltaweight">previousDeltaWeight</h4><p>Last applied delta weight (used by classic momentum).</p>
 <h4 id="release">release</h4><p><code>(conn: import(&quot;D:/code-practice/NeatapticTS/src/architecture/connection&quot;).default) =&gt; void</code></p>
-<p>Return a Connection to the pool for reuse.</p>
+<p>Return a <code>Connection</code> to the internal pool for later reuse. Do NOT use the instance again
+afterward unless re-acquired (treat as surrendered). Optimizer / trace fields are not
+scrubbed here (they&#39;re overwritten during <code>acquire</code>).</p>
+<p>Parameters:</p>
+<ul>
+<li><code>conn</code> - The connection instance to recycle.</li>
+</ul>
+<h4 id="resetinnovationcounter">resetInnovationCounter</h4><p><code>(value: number) =&gt; void</code></p>
+<p>Reset the monotonic auto-increment innovation counter (used for newly constructed / pooled instances).
+You normally only call this at the start of an experiment or when deserializing a full population.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>value</code> - New starting value (default 1).</li>
+</ul>
+<h4 id="secondmoment">secondMoment</h4><p>Second raw moment estimate (Adam family) (was opt_v).</p>
+<h4 id="secondmomentum">secondMomentum</h4><p>Secondary momentum (Lion variant) (was opt_m2).</p>
+<h4 id="to">to</h4><p>The target (post-synaptic) node receiving activation.</p>
 <h4 id="tojson">toJSON</h4><p><code>() =&gt; any</code></p>
-<p>Converts the connection to a JSON object for serialization.</p>
-<p>Returns: A JSON representation of the connection.</p>
-<h2 id="architecture-network-network-slab-ts">architecture/network/network.slab.ts</h2><h3 id="canusefastslab">canUseFastSlab</h3><p><code>(training: boolean) =&gt; boolean</code></p>
-<p>Public helper: indicates whether fast slab path is currently viable.</p>
+<p>Serialize to a minimal JSON-friendly shape (used for saving genomes / networks).
+Undefined indices are preserved as <code>undefined</code> to allow later resolution / remapping.</p>
+<p>Returns: Object with node indices, weight, gain, gater index (if any), innovation id &amp; enabled flag.</p>
+<h4 id="totaldeltaweight">totalDeltaWeight</h4><p>Accumulated (batched) delta weight awaiting an apply step.</p>
+<h4 id="weight">weight</h4><p>Scalar multiplier applied to the source activation (prior to gain modulation).</p>
+<h4 id="xtrace">xtrace</h4><p>Extended trace structure for modulatory / eligibility propagation algorithms. Parallel arrays for cache-friendly iteration.</p>
+<h2 id="architecture-network-network-slab-ts">architecture/network/network.slab.ts</h2><h3 id="acquireta">_acquireTA</h3><p><code>(kind: string, ctor: any, length: number, bytesPerElement: number) =&gt; TypedArray</code></p>
+<p>Acquire (or reuse) a typed array slab, updating allocation statistics.</p>
+<p>Behaviour:</p>
+<ul>
+<li>Pooling disabled: always allocate fresh.</li>
+<li>Pooling enabled: reuse last retained array for identical key if present.</li>
+<li>Metrics updated (fresh/pooled + per-key created/reused counters).</li>
+</ul>
+<p>Parameters:</p>
+<ul>
+<li><code>kind</code> - Pool discriminator (see <code>_poolKey</code>).</li>
+<li><code>ctor</code> - Typed array constructor.</li>
+<li><code>length</code> - Desired element count.</li>
+<li><code>bytesPerElement</code> - Byte width used to form key (guards reuse correctness).</li>
+</ul>
+<p>Returns: The acquired typed array (possibly recycled).</p>
+<h3 id="buildadjacency">_buildAdjacency</h3><p><code>() =&gt; void</code></p>
+<p>Build / refresh CSR‑style adjacency (outStart + outOrder) enabling fast fan‑out traversal.
+Only rebuilds when marked dirty. Stores arrays on internal network instance.</p>
+<h3 id="canusefastslab">_canUseFastSlab</h3><p><code>(training: boolean) =&gt; boolean</code></p>
+<p>Predicate gating usage of high‑performance slab forward pass.
+Disallows training / stochastic / dynamic edge behaviours (gating, dropout, noise, self‑connections).</p>
+<p>Parameters:</p>
+<ul>
+<li><code>training</code> - Whether caller is in training mode (disables fast path for gradient/time reasons).</li>
+</ul>
+<p>Returns: True if fast path can be safely used for deterministic forward activation.</p>
+<h3 id="poolkey">_poolKey</h3><p><code>(kind: string, bytes: number, length: number) =&gt; string</code></p>
+<p>Construct a unique pool key encoding kind + element byte size + logical length.
+This granularity prevents mismatched reuse (different lengths / element sizes).</p>
+<p>Parameters:</p>
+<ul>
+<li><code>kind</code> - Short discriminator (e.g. &#39;w&#39;,&#39;f&#39;,&#39;t&#39;,&#39;fl&#39;,&#39;g&#39;,&#39;p&#39;).</li>
+<li><code>bytes</code> - Bytes per element (1,4,8).</li>
+<li><code>length</code> - Typed array length.</li>
+</ul>
+<p>Returns: Stable string key used in pool maps.</p>
+<h3 id="reindexnodes">_reindexNodes</h3><p><code>() =&gt; void</code></p>
+<p>Assign sequential indices to each node (stable ordering prerequisite for slab packing).
+Clears <code>_nodeIndexDirty</code> flag.</p>
+<h3 id="releaseta">_releaseTA</h3><p><code>(kind: string, bytesPerElement: number, arr: TypedArray) =&gt; void</code></p>
+<p>Return a typed array slab to the per‑key bounded pool.
+No-op if pooling disabled. Pool functions as small LRU (push/pop).</p>
+<p>Parameters:</p>
+<ul>
+<li><code>kind</code> - Pool discriminator.</li>
+<li><code>bytesPerElement</code> - Byte width for key regeneration.</li>
+<li><code>arr</code> - The typed array instance to consider retaining.</li>
+</ul>
+<h3 id="slabpoolcap">_slabPoolCap</h3><p><code>() =&gt; number</code></p>
+<p>Compute the effective per‑key retention cap for slab pooling.</p>
+<h2 id="rationale">RATIONALE</h2><p>The default (4) was selected after observing diminishing reuse gains beyond the
+3rd–4th cached buffer in mutation / prune churn micro‑benchmarks; larger caps
+produced a higher long‑tail of retained bytes with negligible hit‑rate benefit.</p>
+<h2 id="config">CONFIG</h2><p>Users can override via <code>config.slabPoolMaxPerKey</code>:
+  undefined → default 4
+  0         → keep metrics but do not retain slabs (max reuse pressure scenario)
+  &lt;0        → coerced to 0 (safety)</p>
+<p>Returns: Integer retention cap (≥0).</p>
+<h3 id="canusefastslab">canUseFastSlab</h3><p><code>(training: boolean) =&gt; boolean</code></p>
+<p>Public convenience wrapper exposing fast path eligibility.
+Mirrors <code>_canUseFastSlab</code> internal predicate.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>training</code> - Whether caller is performing training (disables fast path if true).</li>
+</ul>
+<p>Returns: True when slab fast path predicates hold.</p>
+<h3 id="connectionslabview">ConnectionSlabView</h3><p>Shape returned by <code>getConnectionSlab()</code> describing the packed SoA view.
+Note: The arrays SHOULD NOT be mutated by callers; treat as read‑only.</p>
 <h3 id="fastslabactivate">fastSlabActivate</h3><p><code>(input: number[]) =&gt; number[]</code></p>
-<p>High-performance forward pass using packed slabs + CSR adjacency.
-Falls back to generic activate if prerequisites unavailable.</p>
-<h3 id="getconnectionslab">getConnectionSlab</h3><p><code>() =&gt; { weights: any; from: any; to: any; }</code></p>
-<p>Return current slab (building lazily).</p>
+<p>High‑performance forward pass using packed slabs + CSR adjacency.</p>
+<p>Fallback Conditions (auto‑detected):</p>
+<ul>
+<li>Missing slabs / adjacency structures.</li>
+<li>Topology/gating/stochastic predicates fail (see <code>_canUseFastSlab</code>).</li>
+<li>Any gating present (explicit guard).</li>
+</ul>
+<p>Implementation Notes:</p>
+<ul>
+<li>Reuses internal activation/state buffers to reduce per‑step allocation churn.</li>
+<li>Applies gain multiplication if optional gain slab exists.</li>
+<li>Assumes acyclic graph; topological order recomputed on demand if marked dirty.</li>
+</ul>
+<p>Parameters:</p>
+<ul>
+<li><code>input</code> - Input vector (length must equal <code>network.input</code>).</li>
+</ul>
+<p>Returns: Output activations (detached plain array) of length <code>network.output</code>.</p>
+<h3 id="getconnectionslab">getConnectionSlab</h3><p><code>() =&gt; import(&quot;D:/code-practice/NeatapticTS/src/architecture/network/network.slab&quot;).ConnectionSlabView</code></p>
+<p>Obtain (and lazily rebuild if dirty) the current packed SoA view of connections.</p>
+<p>Gain Omission: If the internal gain slab is absent (all gains neutral) a synthetic
+neutral array is created and returned (NOT retained) to keep external educational
+tooling branch‑free while preserving omission memory savings internally.</p>
+<p>Returns: Read‑only style view (do not mutate) containing typed arrays + metadata.</p>
+<h3 id="getslaballocationstats">getSlabAllocationStats</h3><p><code>() =&gt; { pool: Record&lt;string, PoolKeyMetrics&gt;; fresh: number; pooled: number; }</code></p>
+<p>Allocation statistics snapshot for slab typed arrays.</p>
+<p>Includes:</p>
+<ul>
+<li>fresh: number of newly constructed typed arrays since process start / metrics reset.</li>
+<li>pooled: number of arrays served from the pool.</li>
+<li>pool: per‑key metrics (created, reused, maxRetained) for educational inspection.</li>
+</ul>
+<p>NOTE: Stats are cumulative (not auto‑reset); callers may diff successive snapshots.</p>
+<p>Returns: Plain object copy (safe to serialize) of current allocator counters.</p>
+<h3 id="getslabversion">getSlabVersion</h3><p><code>() =&gt; number</code></p>
+<p>Retrieve current monotonic slab version (increments on each successful rebuild).</p>
+<p>Returns: Non‑negative integer (0 if slab never built yet).</p>
+<h3 id="poolkeymetrics">PoolKeyMetrics</h3><p>Per-pool-key allocation &amp; reuse counters (educational / diagnostics).
+Tracks how many slabs were freshly created vs reused plus the high‑water
+mark (maxRetained) of simultaneously retained arrays for the key. Exposed
+indirectly via <code>getSlabAllocationStats()</code> so users can introspect the
+effectiveness of pooling under their workload.</p>
 <h3 id="rebuildconnectionslab">rebuildConnectionSlab</h3><p><code>(force: boolean) =&gt; void</code></p>
-<p>Fast slab (structure-of-arrays) acceleration layer.</p>
-<p>Rationale:
- Typical neural network graphs represented as object graphs incur significant overhead during
- forward passes due to pointer chasing (cache misses) and dynamic property lookups. For large
- evolving populations where topologies change infrequently compared to evaluation frequency,
- we can amortize a one-off packing cost into contiguous typed arrays, dramatically improving
- memory locality and enabling tight inner loops.</p>
-<p>Core Data Structures:</p>
-<ul>
-<li>weightArray     (Float32Array|Float64Array): connection weights</li>
-<li>fromIndexArray  (Uint32Array): source node indices per connection</li>
-<li>toIndexArray    (Uint32Array): destination node indices per connection</li>
-<li>outgoingStartIndices (Uint32Array length = nodeCount + 1): CSR row pointer style offsets</li>
-<li>outgoingOrder   (Uint32Array): permutation of connection indices grouped by source node</li>
-</ul>
-<p>Workflow:</p>
-<ol>
-<li>rebuildConnectionSlab packs connections into SoA arrays when dirty.</li>
-<li>_buildAdjacency converts fromIndexArray into CSR-like adjacency for each source node.</li>
-<li>fastSlabActivate uses the packed arrays + precomputed topological order to perform a forward pass
-with minimal branching and object access.</li>
+<p>Build (or refresh) the packed connection slabs for the network synchronously.</p>
+<h2 id="actions">ACTIONS</h2><ol>
+<li>Optionally reindex nodes if structural mutations invalidated indices.</li>
+<li>Grow (geometric) or reuse existing typed arrays to ensure capacity &gt;= active connections.</li>
+<li>Populate the logical slice [0, connectionCount) with weight/from/to/flag data.</li>
+<li>Lazily allocate gain &amp; plastic slabs only on first non‑neutral / plastic encounter; omit otherwise.</li>
+<li>Release previously allocated optional slabs when they revert to neutral / unused (omission optimization).</li>
+<li>Update internal bookkeeping: logical count, dirty flags, version counter.</li>
 </ol>
-<p>Constraints for Fast Path (_canUseFastSlab):</p>
+<h2 id="performance">PERFORMANCE</h2><p>O(C) over active connections with amortized allocation cost due to geometric growth.</p>
+<p>Parameters:</p>
 <ul>
-<li>Acyclic enforced (no recurrence) so single topological sweep suffices.</li>
-<li>No gating, self-connections, dropout, stochastic depth, or per-hidden noise.</li>
-<li>Topological order and node indices must be clean.</li>
+<li><code>force</code> - When true forces rebuild even if network not marked dirty (useful for timing tests).</li>
 </ul>
-<p>Dirty Flags Touched:</p>
+<h3 id="rebuildconnectionslabasync">rebuildConnectionSlabAsync</h3><p><code>(chunkSize: number) =&gt; Promise&lt;void&gt;</code></p>
+<p>Cooperative asynchronous slab rebuild (Browser only).</p>
+<p>Strategy:</p>
 <ul>
-<li>_slabDirty: slab arrays need rebuild</li>
-<li>_adjDirty: adjacency mapping (CSR) invalid</li>
-<li>_nodeIndexDirty: node.index values invalid</li>
-<li>_topoDirty: topological ordering invalid</li>
+<li>Perform capacity decision + allocation up front (mirrors sync path).</li>
+<li>Populate connection data in microtask slices (yield via resolved Promise) to avoid long main‑thread stalls.</li>
+<li>Adaptive slice sizing for very large graphs if <code>config.browserSlabChunkTargetMs</code> set.</li>
 </ul>
+<p>Metrics: Increments <code>_slabAsyncBuilds</code> for observability.
+Fallback: On Node (no <code>window</code>) defers to synchronous rebuild for simplicity.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>chunkSize</code> - Initial maximum connections per slice (may be reduced adaptively for huge graphs).</li>
+</ul>
+<p>Returns: Promise resolving once rebuild completes.</p>
+<h3 id="typedarray">TypedArray</h3><p>Union of slab typed array element container types. We purposefully restrict
+to the specific constructors actually used by this module so TypeScript can
+narrow accurately and editors display concise hover info.</p>
 <h2 id="architecture-network-network-standalone-ts">architecture/network/network.standalone.ts</h2><h3 id="generatestandalone">generateStandalone</h3><p><code>(net: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default) =&gt; string</code></p>
 <p>Generate a standalone JavaScript source string that returns an <code>activate(input:number[])</code> function.</p>
 <p>Implementation Steps:</p>
@@ -878,4 +1035,4 @@ Each helper is intentionally pure where reasonable or documents its side-effects
 Returns mean cost across processed samples.</p>
 <h3 id="zeroaccumulatedgradients">zeroAccumulatedGradients</h3><p><code>(net: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default) =&gt; void</code></p>
 <p>Zero-out accumulated gradient buffers after an overflow to discard invalid updates.</p>
-<footer class="site-footer">Generated from source JSDoc • <a href="https://github.com/reicek/NeatapticTS">GitHub</a></footer></main><aside class="toc"><div class="page-toc"><h2>Files</h2><div class="toc-file"><a href="#architecture-network-network-activate-ts">architecture/network/network.activate.ts</a><ul><li><a href=#activatebatch>activateBatch</a></li><li><a href=#activateraw>activateRaw</a></li><li><a href=#notraceactivate>noTraceActivate</a></li></ul></div><div class="toc-file"><a href="#architecture-network-network-connect-ts">architecture/network/network.connect.ts</a><ul><li><a href=#connect>connect</a></li><li><a href=#disconnect>disconnect</a></li></ul></div><div class="toc-file"><a href="#architecture-network-network-deterministic-ts">architecture/network/network.deterministic.ts</a><ul><li><a href=#getrandomfn>getRandomFn</a></li><li><a href=#getrngstate>getRNGState</a></li><li><a href=#restorerng>restoreRNG</a></li><li><a href=#rngsnapshot>RNGSnapshot</a></li><li><a href=#setrngstate>setRNGState</a></li><li><a href=#setseed>setSeed</a></li><li><a href=#snapshotrng>snapshotRNG</a></li></ul></div><div class="toc-file"><a href="#architecture-network-network-evolve-ts">architecture/network/network.evolve.ts</a><ul><li><a href=#buildmultithreadfitness>buildMultiThreadFitness</a></li><li><a href=#buildsinglethreadfitness>buildSingleThreadFitness</a></li><li><a href=#computecomplexitypenalty>computeComplexityPenalty</a></li><li><a href=#evolutionconfig>EvolutionConfig</a></li><li><a href=#evolvenetwork>evolveNetwork</a></li><li><a href=#trainingsample>TrainingSample</a></li></ul></div><div class="toc-file"><a href="#architecture-network-network-gating-ts">architecture/network/network.gating.ts</a><ul><li><a href=#gate>gate</a></li><li><a href=#removenode>removeNode</a></li><li><a href=#ungate>ungate</a></li></ul></div><div class="toc-file"><a href="#architecture-network-network-genetic-ts">architecture/network/network.genetic.ts</a><ul><li><a href=#crossover>crossOver</a></li></ul></div><div class="toc-file"><a href="#architecture-network-network-mutate-ts">architecture/network/network.mutate.ts</a><ul><li><a href=#addbackconn>_addBackConn</a></li><li><a href=#addconn>_addConn</a></li><li><a href=#addgate>_addGate</a></li><li><a href=#addgrunode>_addGRUNode</a></li><li><a href=#addlstmnode>_addLSTMNode</a></li><li><a href=#addnode>_addNode</a></li><li><a href=#addselfconn>_addSelfConn</a></li><li><a href=#batchnorm>_batchNorm</a></li><li><a href=#modactivation>_modActivation</a></li><li><a href=#modbias>_modBias</a></li><li><a href=#modweight>_modWeight</a></li><li><a href=#reinitweight>_reinitWeight</a></li><li><a href=#subbackconn>_subBackConn</a></li><li><a href=#subconn>_subConn</a></li><li><a href=#subgate>_subGate</a></li><li><a href=#subnode>_subNode</a></li><li><a href=#subselfconn>_subSelfConn</a></li><li><a href=#swapnodes>_swapNodes</a></li><li><a href=#mutateimpl>mutateImpl</a></li></ul></div><div class="toc-file"><a href="#architecture-network-network-onnx-ts">architecture/network/network.onnx.ts</a><ul><li><a href=#assignactivationfunctions>assignActivationFunctions</a></li><li><a href=#assignweightsandbiases>assignWeightsAndBiases</a></li><li><a href=#buildonnxmodel>buildOnnxModel</a></li><li><a href=#conv2dmapping>Conv2DMapping</a></li><li><a href=#derivehiddenlayersizes>deriveHiddenLayerSizes</a></li><li><a href=#exporttoonnx>exportToONNX</a></li><li><a href=#importfromonnx>importFromONNX</a></li><li><a href=#inferlayerordering>inferLayerOrdering</a></li><li><a href=#mapactivationtoonnx>mapActivationToOnnx</a></li><li><a href=#onnxexportoptions>OnnxExportOptions</a></li><li><a href=#onnxmodel>OnnxModel</a></li><li><a href=#pool2dmapping>Pool2DMapping</a></li><li><a href=#rebuildconnectionslocal>rebuildConnectionsLocal</a></li><li><a href=#validatelayerhomogeneityandconnectivity>validateLayerHomogeneityAndConnectivity</a></li></ul></div><div class="toc-file"><a href="#architecture-network-network-prune-ts">architecture/network/network.prune.ts</a><ul><li><a href=#getcurrentsparsity>getCurrentSparsity</a></li><li><a href=#maybeprune>maybePrune</a></li><li><a href=#prunetosparsity>pruneToSparsity</a></li><li><a href=#rankconnections>rankConnections</a></li><li><a href=#regrowconnections>regrowConnections</a></li></ul></div><div class="toc-file"><a href="#architecture-network-network-remove-ts">architecture/network/network.remove.ts</a><ul><li><a href=#removenode>removeNode</a></li></ul></div><div class="toc-file"><a href="#architecture-network-network-serialize-ts">architecture/network/network.serialize.ts</a><ul><li><a href=#deserialize>deserialize</a></li><li><a href=#fromjsonimpl>fromJSONImpl</a></li><li><a href=#serialize>serialize</a></li><li><a href=#tojsonimpl>toJSONImpl</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#architecture-network-network-slab-ts">architecture/network/network.slab.ts</a><ul><li><a href=#canusefastslab>canUseFastSlab</a></li><li><a href=#fastslabactivate>fastSlabActivate</a></li><li><a href=#getconnectionslab>getConnectionSlab</a></li><li><a href=#rebuildconnectionslab>rebuildConnectionSlab</a></li></ul></div><div class="toc-file"><a href="#architecture-network-network-standalone-ts">architecture/network/network.standalone.ts</a><ul><li><a href=#generatestandalone>generateStandalone</a></li></ul></div><div class="toc-file"><a href="#architecture-network-network-stats-ts">architecture/network/network.stats.ts</a><ul><li><a href=#deepclonevalue>deepCloneValue</a></li><li><a href=#getregularizationstats>getRegularizationStats</a></li></ul></div><div class="toc-file"><a href="#architecture-network-network-topology-ts">architecture/network/network.topology.ts</a><ul><li><a href=#computetopoorder>computeTopoOrder</a></li><li><a href=#haspath>hasPath</a></li></ul></div><div class="toc-file"><a href="#architecture-network-network-training-ts">architecture/network/network.training.ts</a><ul><li><a href=#traininginternals>__trainingInternals</a></li><li><a href=#applygradientclippingimpl>applyGradientClippingImpl</a></li><li><a href=#applyoptimizerstep>applyOptimizerStep</a></li><li><a href=#averageaccumulatedgradients>averageAccumulatedGradients</a></li><li><a href=#checkpointconfig>CheckpointConfig</a></li><li><a href=#computemonitorederror>computeMonitoredError</a></li><li><a href=#computeplateaumetric>computePlateauMetric</a></li><li><a href=#costfunction>CostFunction</a></li><li><a href=#detectmixedprecisionoverflow>detectMixedPrecisionOverflow</a></li><li><a href=#gradientclipconfig>GradientClipConfig</a></li><li><a href=#handleoverflow>handleOverflow</a></li><li><a href=#maybeincreaselossscale>maybeIncreaseLossScale</a></li><li><a href=#metricshook>MetricsHook</a></li><li><a href=#mixedprecisionconfig>MixedPrecisionConfig</a></li><li><a href=#mixedprecisiondynamicconfig>MixedPrecisionDynamicConfig</a></li><li><a href=#monitoredsmoothingconfig>MonitoredSmoothingConfig</a></li><li><a href=#movingaveragetype>MovingAverageType</a></li><li><a href=#optimizerconfigbase>OptimizerConfigBase</a></li><li><a href=#plateausmoothingconfig>PlateauSmoothingConfig</a></li><li><a href=#plateausmoothingstate>PlateauSmoothingState</a></li><li><a href=#primarysmoothingstate>PrimarySmoothingState</a></li><li><a href=#scheduleconfig>ScheduleConfig</a></li><li><a href=#trainimpl>trainImpl</a></li><li><a href=#trainingoptions>TrainingOptions</a></li><li><a href=#trainsetimpl>trainSetImpl</a></li><li><a href=#zeroaccumulatedgradients>zeroAccumulatedGradients</a></li></ul></div></div></aside></div></body></html>
+<footer class="site-footer">Generated from source JSDoc • <a href="https://github.com/reicek/NeatapticTS">GitHub</a></footer></main><aside class="toc"><div class="page-toc"><h2>Files</h2><div class="toc-file"><a href="#architecture-network-network-activate-ts">architecture/network/network.activate.ts</a><ul><li><a href=#activatebatch>activateBatch</a></li><li><a href=#activateraw>activateRaw</a></li><li><a href=#notraceactivate>noTraceActivate</a></li></ul></div><div class="toc-file"><a href="#architecture-network-network-connect-ts">architecture/network/network.connect.ts</a><ul><li><a href=#connect>connect</a></li><li><a href=#disconnect>disconnect</a></li></ul></div><div class="toc-file"><a href="#architecture-network-network-deterministic-ts">architecture/network/network.deterministic.ts</a><ul><li><a href=#getrandomfn>getRandomFn</a></li><li><a href=#getrngstate>getRNGState</a></li><li><a href=#restorerng>restoreRNG</a></li><li><a href=#rngsnapshot>RNGSnapshot</a></li><li><a href=#setrngstate>setRNGState</a></li><li><a href=#setseed>setSeed</a></li><li><a href=#snapshotrng>snapshotRNG</a></li></ul></div><div class="toc-file"><a href="#architecture-network-network-evolve-ts">architecture/network/network.evolve.ts</a><ul><li><a href=#buildmultithreadfitness>buildMultiThreadFitness</a></li><li><a href=#buildsinglethreadfitness>buildSingleThreadFitness</a></li><li><a href=#computecomplexitypenalty>computeComplexityPenalty</a></li><li><a href=#evolutionconfig>EvolutionConfig</a></li><li><a href=#evolvenetwork>evolveNetwork</a></li><li><a href=#trainingsample>TrainingSample</a></li></ul></div><div class="toc-file"><a href="#architecture-network-network-gating-ts">architecture/network/network.gating.ts</a><ul><li><a href=#gate>gate</a></li><li><a href=#removenode>removeNode</a></li><li><a href=#ungate>ungate</a></li></ul></div><div class="toc-file"><a href="#architecture-network-network-genetic-ts">architecture/network/network.genetic.ts</a><ul><li><a href=#crossover>crossOver</a></li></ul></div><div class="toc-file"><a href="#architecture-network-network-mutate-ts">architecture/network/network.mutate.ts</a><ul><li><a href=#addbackconn>_addBackConn</a></li><li><a href=#addconn>_addConn</a></li><li><a href=#addgate>_addGate</a></li><li><a href=#addgrunode>_addGRUNode</a></li><li><a href=#addlstmnode>_addLSTMNode</a></li><li><a href=#addnode>_addNode</a></li><li><a href=#addselfconn>_addSelfConn</a></li><li><a href=#batchnorm>_batchNorm</a></li><li><a href=#modactivation>_modActivation</a></li><li><a href=#modbias>_modBias</a></li><li><a href=#modweight>_modWeight</a></li><li><a href=#reinitweight>_reinitWeight</a></li><li><a href=#subbackconn>_subBackConn</a></li><li><a href=#subconn>_subConn</a></li><li><a href=#subgate>_subGate</a></li><li><a href=#subnode>_subNode</a></li><li><a href=#subselfconn>_subSelfConn</a></li><li><a href=#swapnodes>_swapNodes</a></li><li><a href=#mutateimpl>mutateImpl</a></li></ul></div><div class="toc-file"><a href="#architecture-network-network-onnx-ts">architecture/network/network.onnx.ts</a><ul><li><a href=#assignactivationfunctions>assignActivationFunctions</a></li><li><a href=#assignweightsandbiases>assignWeightsAndBiases</a></li><li><a href=#buildonnxmodel>buildOnnxModel</a></li><li><a href=#conv2dmapping>Conv2DMapping</a></li><li><a href=#derivehiddenlayersizes>deriveHiddenLayerSizes</a></li><li><a href=#exporttoonnx>exportToONNX</a></li><li><a href=#importfromonnx>importFromONNX</a></li><li><a href=#inferlayerordering>inferLayerOrdering</a></li><li><a href=#mapactivationtoonnx>mapActivationToOnnx</a></li><li><a href=#onnxexportoptions>OnnxExportOptions</a></li><li><a href=#onnxmodel>OnnxModel</a></li><li><a href=#pool2dmapping>Pool2DMapping</a></li><li><a href=#rebuildconnectionslocal>rebuildConnectionsLocal</a></li><li><a href=#validatelayerhomogeneityandconnectivity>validateLayerHomogeneityAndConnectivity</a></li></ul></div><div class="toc-file"><a href="#architecture-network-network-prune-ts">architecture/network/network.prune.ts</a><ul><li><a href=#getcurrentsparsity>getCurrentSparsity</a></li><li><a href=#maybeprune>maybePrune</a></li><li><a href=#prunetosparsity>pruneToSparsity</a></li><li><a href=#rankconnections>rankConnections</a></li><li><a href=#regrowconnections>regrowConnections</a></li></ul></div><div class="toc-file"><a href="#architecture-network-network-remove-ts">architecture/network/network.remove.ts</a><ul><li><a href=#removenode>removeNode</a></li></ul></div><div class="toc-file"><a href="#architecture-network-network-serialize-ts">architecture/network/network.serialize.ts</a><ul><li><a href=#deserialize>deserialize</a></li><li><a href=#fromjsonimpl>fromJSONImpl</a></li><li><a href=#serialize>serialize</a></li><li><a href=#tojsonimpl>toJSONImpl</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#architecture-network-network-slab-ts">architecture/network/network.slab.ts</a><ul><li><a href=#acquireta>_acquireTA</a></li><li><a href=#buildadjacency>_buildAdjacency</a></li><li><a href=#canusefastslab>_canUseFastSlab</a></li><li><a href=#poolkey>_poolKey</a></li><li><a href=#reindexnodes>_reindexNodes</a></li><li><a href=#releaseta>_releaseTA</a></li><li><a href=#slabpoolcap>_slabPoolCap</a></li><li><a href=#canusefastslab>canUseFastSlab</a></li><li><a href=#connectionslabview>ConnectionSlabView</a></li><li><a href=#fastslabactivate>fastSlabActivate</a></li><li><a href=#getconnectionslab>getConnectionSlab</a></li><li><a href=#getslaballocationstats>getSlabAllocationStats</a></li><li><a href=#getslabversion>getSlabVersion</a></li><li><a href=#poolkeymetrics>PoolKeyMetrics</a></li><li><a href=#rebuildconnectionslab>rebuildConnectionSlab</a></li><li><a href=#rebuildconnectionslabasync>rebuildConnectionSlabAsync</a></li><li><a href=#typedarray>TypedArray</a></li></ul></div><div class="toc-file"><a href="#architecture-network-network-standalone-ts">architecture/network/network.standalone.ts</a><ul><li><a href=#generatestandalone>generateStandalone</a></li></ul></div><div class="toc-file"><a href="#architecture-network-network-stats-ts">architecture/network/network.stats.ts</a><ul><li><a href=#deepclonevalue>deepCloneValue</a></li><li><a href=#getregularizationstats>getRegularizationStats</a></li></ul></div><div class="toc-file"><a href="#architecture-network-network-topology-ts">architecture/network/network.topology.ts</a><ul><li><a href=#computetopoorder>computeTopoOrder</a></li><li><a href=#haspath>hasPath</a></li></ul></div><div class="toc-file"><a href="#architecture-network-network-training-ts">architecture/network/network.training.ts</a><ul><li><a href=#traininginternals>__trainingInternals</a></li><li><a href=#applygradientclippingimpl>applyGradientClippingImpl</a></li><li><a href=#applyoptimizerstep>applyOptimizerStep</a></li><li><a href=#averageaccumulatedgradients>averageAccumulatedGradients</a></li><li><a href=#checkpointconfig>CheckpointConfig</a></li><li><a href=#computemonitorederror>computeMonitoredError</a></li><li><a href=#computeplateaumetric>computePlateauMetric</a></li><li><a href=#costfunction>CostFunction</a></li><li><a href=#detectmixedprecisionoverflow>detectMixedPrecisionOverflow</a></li><li><a href=#gradientclipconfig>GradientClipConfig</a></li><li><a href=#handleoverflow>handleOverflow</a></li><li><a href=#maybeincreaselossscale>maybeIncreaseLossScale</a></li><li><a href=#metricshook>MetricsHook</a></li><li><a href=#mixedprecisionconfig>MixedPrecisionConfig</a></li><li><a href=#mixedprecisiondynamicconfig>MixedPrecisionDynamicConfig</a></li><li><a href=#monitoredsmoothingconfig>MonitoredSmoothingConfig</a></li><li><a href=#movingaveragetype>MovingAverageType</a></li><li><a href=#optimizerconfigbase>OptimizerConfigBase</a></li><li><a href=#plateausmoothingconfig>PlateauSmoothingConfig</a></li><li><a href=#plateausmoothingstate>PlateauSmoothingState</a></li><li><a href=#primarysmoothingstate>PrimarySmoothingState</a></li><li><a href=#scheduleconfig>ScheduleConfig</a></li><li><a href=#trainimpl>trainImpl</a></li><li><a href=#trainingoptions>TrainingOptions</a></li><li><a href=#trainsetimpl>trainSetImpl</a></li><li><a href=#zeroaccumulatedgradients>zeroAccumulatedGradients</a></li></ul></div></div></aside></div></body></html>

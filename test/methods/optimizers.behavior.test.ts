@@ -61,11 +61,11 @@ describe('Optimizer specific behaviors', () => {
     });
     const conn: any = net.connections[0];
     it('creates shadow weight', () => {
-      expect(conn._la_shadowWeight).toBeDefined();
+      expect(conn.lookaheadShadowWeight).toBeDefined();
     });
     it('synchronizes weight to shadow on k-multiple', () => {
       const conn: any = net.connections[0];
-      expect(conn.weight).toBeCloseTo(conn._la_shadowWeight, 10);
+      expect(conn.weight).toBeCloseTo(conn.lookaheadShadowWeight, 10);
     });
   });
 
@@ -74,10 +74,10 @@ describe('Optimizer specific behaviors', () => {
     net.train(data, { iterations: 1, rate: 0.01, optimizer: 'adam' });
     const conn: any = net.connections[0];
     it('creates first moment', () => {
-      expect(conn.opt_m).toBeDefined();
+      expect(conn.firstMoment).toBeDefined();
     });
     it('creates second moment', () => {
-      expect(conn.opt_v).toBeDefined();
+      expect(conn.secondMoment).toBeDefined();
     });
   });
 

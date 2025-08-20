@@ -41,25 +41,62 @@
   var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
   // src/architecture/connection.ts
-  var Connection;
+  var kGain, kGater, kOpt, kPlasticRate, Connection;
   var init_connection = __esm({
     "src/architecture/connection.ts"() {
       "use strict";
+      init_node();
+      kGain = Symbol("connGain");
+      kGater = Symbol("connGater");
+      kOpt = Symbol("connOptMoments");
+      kPlasticRate = Symbol("connPlasticRate");
       Connection = class _Connection {
-        // DropConnect mask (1 active, 0 dropped)
+        /** The source (pre-synaptic) node supplying activation. */
+        from;
+        /** The target (post-synaptic) node receiving activation. */
+        to;
+        /** Scalar multiplier applied to the source activation (prior to gain modulation). */
+        weight;
+        /** Standard eligibility trace (e.g., for RTRL / policy gradient credit assignment). */
+        eligibility;
+        /** Last applied delta weight (used by classic momentum). */
+        previousDeltaWeight;
+        /** Accumulated (batched) delta weight awaiting an apply step. */
+        totalDeltaWeight;
+        /** Extended trace structure for modulatory / eligibility propagation algorithms. Parallel arrays for cache-friendly iteration. */
+        xtrace;
+        /** Unique historical marking (auto-increment) for evolutionary alignment. */
+        innovation;
+        // enabled handled via bitfield (see _flags) exposed through accessor (enumerability removed for slimming)
+        // --- Optimizer moment states (virtualized via symbol-backed bag + accessors) ---
+        // NOTE: Accessor implementations below manage a lazily-created non-enumerable object containing:
+        // { firstMoment, secondMoment, gradientAccumulator, maxSecondMoment, infinityNorm, secondMomentum, lookaheadShadowWeight }
         /**
-         * Creates a new connection between two nodes.
+         * Packed state flags (private for future-proofing hidden class):
+         * bit0 => enabled gene expression (1 = active)
+         * bit1 => DropConnect active mask (1 = not dropped this forward pass)
+         * bit2 => hasGater (1 = symbol field present)
+         * bit3 => plastic (plasticityRate > 0)
+         * bits4+ reserved.
+         */
+        _flags;
+        // bit0 enabled, bit1 dcActive, bit2 hasGater, bit3 plastic
+        /**
+         * Construct a new connection between two nodes.
          *
-         * @param {Node} from - The source node of the connection.
-         * @param {Node} to - The target node of the connection.
-         * @param {number} [weight] - The weight of the connection. Defaults to a random value between -0.1 and 0.1.
+         * @param from Source node.
+         * @param to Target node.
+         * @param weight Optional initial weight (default: small random in [-0.1, 0.1]).
+         *
+         * @example
+         * const link = new Connection(nodeA, nodeB, 0.42);
+         * link.enabled = false;     // disable during mutation
+         * link.enabled = true;      // re-enable later
          */
         constructor(from, to, weight) {
           this.from = from;
           this.to = to;
-          this.gain = 1;
           this.weight = weight ?? Math.random() * 0.2 - 0.1;
-          this.gater = null;
           this.eligibility = 0;
           this.previousDeltaWeight = 0;
           this.totalDeltaWeight = 0;
@@ -67,20 +104,17 @@
             nodes: [],
             values: []
           };
-          this.opt_m = 0;
-          this.opt_v = 0;
-          this.opt_cache = 0;
-          this.opt_vhat = 0;
-          this.opt_u = 0;
-          this.opt_m2 = 0;
-          this.dcMask = 1;
+          this._flags = 3;
           this.innovation = _Connection._nextInnovation++;
-          this.enabled = true;
         }
         /**
-         * Converts the connection to a JSON object for serialization.
+         * Serialize to a minimal JSON-friendly shape (used for saving genomes / networks).
+         * Undefined indices are preserved as `undefined` to allow later resolution / remapping.
          *
-         * @returns {{ from: number | undefined, to: number | undefined, weight: number, gain: number, gater: number | null }} A JSON representation of the connection.
+         * @returns Object with node indices, weight, gain, gater index (if any), innovation id & enabled flag.
+         * @example
+         * const json = connection.toJSON();
+         * // => { from: 0, to: 3, weight: 0.12, gain: 1, innovation: 57, enabled: true }
          */
         toJSON() {
           const json = {
@@ -91,36 +125,58 @@
             innovation: this.innovation,
             enabled: this.enabled
           };
-          if (this.gater && typeof this.gater.index !== "undefined") {
-            json.gater = this.gater.index;
+          if (this._flags & 4) {
+            const g = this[kGater];
+            if (g && typeof g.index !== "undefined") json.gater = g.index;
           }
           return json;
         }
         /**
-         * Generates a unique innovation ID for the connection.
+         * Deterministic Cantor pairing function for a (sourceNodeId, targetNodeId) pair.
+         * Useful when you want a stable innovation id without relying on global mutable counters
+         * (e.g., for hashing or reproducible experiments).
          *
-         * The innovation ID is calculated using the Cantor pairing function, which maps two integers
-         * (representing the source and target nodes) to a unique integer.
+         * NOTE: For large indices this can overflow 53-bit safe integer space; keep node indices reasonable.
          *
-         * @param {number} a - The ID of the source node.
-         * @param {number} b - The ID of the target node.
-         * @returns {number} The innovation ID based on the Cantor pairing function.
-         * @see {@link https://en.wikipedia.org/wiki/Pairing_function Cantor pairing function}
+         * @param sourceNodeId Source node integer id / index.
+         * @param targetNodeId Target node integer id / index.
+         * @returns Unique non-negative integer derived from the ordered pair.
+         * @see https://en.wikipedia.org/wiki/Pairing_function
+         * @example
+         * const id = Connection.innovationID(2, 5); // deterministic
          */
-        static innovationID(a, b) {
-          return 1 / 2 * (a + b) * (a + b + 1) + b;
+        static innovationID(sourceNodeId, targetNodeId) {
+          return 0.5 * (sourceNodeId + targetNodeId) * (sourceNodeId + targetNodeId + 1) + targetNodeId;
         }
-        static {
-          this._nextInnovation = 1;
-        }
+        static _nextInnovation = 1;
+        /**
+         * Reset the monotonic auto-increment innovation counter (used for newly constructed / pooled instances).
+         * You normally only call this at the start of an experiment or when deserializing a full population.
+         *
+         * @param value New starting value (default 1).
+         * @example
+         * Connection.resetInnovationCounter();     // back to 1
+         * Connection.resetInnovationCounter(1000); // start counting from 1000
+         */
         static resetInnovationCounter(value = 1) {
           _Connection._nextInnovation = value;
         }
-        static {
-          // --- Simple object pool to reduce GC churn when connections are frequently created/removed ---
-          this._pool = [];
-        }
-        /** Acquire a Connection from the pool or construct a new one. Ensures fresh innovation id. */
+        // --- Simple object pool to reduce GC churn when connections are frequently created/removed ---
+        static _pool = [];
+        /**
+         * Acquire a `Connection` from the pool (or construct new). Fields are fully reset & given
+         * a fresh sequential `innovation` id. Prefer this in evolutionary algorithms that mutate
+         * topology frequently to reduce GC pressure.
+         *
+         * @param from Source node.
+         * @param to Target node.
+         * @param weight Optional initial weight.
+         * @returns Reinitialized connection instance.
+         * @example
+         * const conn = Connection.acquire(a, b);
+         * // ... use conn ...
+         * Connection.release(conn); // when permanently removed
+         */
         static acquire(from, to, weight) {
           let c;
           if (_Connection._pool.length) {
@@ -128,31 +184,180 @@
             c.from = from;
             c.to = to;
             c.weight = weight ?? Math.random() * 0.2 - 0.1;
-            c.gain = 1;
-            c.gater = null;
+            if (c[kGain] !== void 0) delete c[kGain];
+            if (c[kGater] !== void 0) delete c[kGater];
+            c._flags = 3;
             c.eligibility = 0;
             c.previousDeltaWeight = 0;
             c.totalDeltaWeight = 0;
             c.xtrace.nodes.length = 0;
             c.xtrace.values.length = 0;
-            c.opt_m = 0;
-            c.opt_v = 0;
-            c.opt_cache = 0;
-            c.opt_vhat = 0;
-            c.opt_u = 0;
-            c.opt_m2 = 0;
-            c.dcMask = 1;
-            c._la_shadowWeight = void 0;
-            c.enabled = true;
+            if (c[kOpt]) delete c[kOpt];
             c.innovation = _Connection._nextInnovation++;
-          } else {
-            c = new _Connection(from, to, weight);
-          }
+          } else c = new _Connection(from, to, weight);
           return c;
         }
-        /** Return a Connection to the pool for reuse. */
+        /**
+         * Return a `Connection` to the internal pool for later reuse. Do NOT use the instance again
+         * afterward unless re-acquired (treat as surrendered). Optimizer / trace fields are not
+         * scrubbed here (they're overwritten during `acquire`).
+         *
+         * @param conn The connection instance to recycle.
+         */
         static release(conn) {
           _Connection._pool.push(conn);
+        }
+        /** Whether the gene (connection) is currently expressed (participates in forward pass). */
+        get enabled() {
+          return (this._flags & 1) !== 0;
+        }
+        set enabled(v) {
+          this._flags = v ? this._flags | 1 : this._flags & ~1;
+        }
+        /** DropConnect active mask: 1 = not dropped (active), 0 = dropped for this stochastic pass. */
+        get dcMask() {
+          return (this._flags & 2) !== 0 ? 1 : 0;
+        }
+        set dcMask(v) {
+          this._flags = v ? this._flags | 2 : this._flags & ~2;
+        }
+        /** Whether a gater node is assigned (modulates gain); true if the gater symbol field is present. */
+        get hasGater() {
+          return (this._flags & 4) !== 0;
+        }
+        /** Whether this connection participates in plastic adaptation (rate > 0). */
+        get plastic() {
+          return (this._flags & 8) !== 0;
+        }
+        set plastic(v) {
+          if (v) this._flags |= 8;
+          else this._flags &= ~8;
+          if (!v && this[kPlasticRate] !== void 0)
+            delete this[kPlasticRate];
+        }
+        // --- Virtualized gain property ---
+        /**
+         * Multiplicative modulation applied *after* weight. Default is `1` (neutral). We only store an
+         * internal symbol-keyed property when the gain is non-neutral, reducing memory usage across
+         * large populations where most connections are ungated.
+         */
+        get gain() {
+          return this[kGain] === void 0 ? 1 : this[kGain];
+        }
+        set gain(v) {
+          if (v === 1) {
+            if (this[kGain] !== void 0) delete this[kGain];
+          } else {
+            this[kGain] = v;
+          }
+        }
+        // --- Optimizer field accessors (prototype-level to avoid per-instance enumerable keys) ---
+        _ensureOptBag() {
+          let bag = this[kOpt];
+          if (!bag) {
+            bag = {};
+            this[kOpt] = bag;
+          }
+          return bag;
+        }
+        _getOpt(k) {
+          const bag = this[kOpt];
+          return bag ? bag[k] : void 0;
+        }
+        _setOpt(k, v) {
+          if (v === void 0) {
+            const bag = this[kOpt];
+            if (bag) delete bag[k];
+          } else {
+            this._ensureOptBag()[k] = v;
+          }
+        }
+        /** First moment estimate (Adam / AdamW) (was opt_m). */
+        get firstMoment() {
+          return this._getOpt("firstMoment");
+        }
+        set firstMoment(v) {
+          this._setOpt("firstMoment", v);
+        }
+        /** Second raw moment estimate (Adam family) (was opt_v). */
+        get secondMoment() {
+          return this._getOpt("secondMoment");
+        }
+        set secondMoment(v) {
+          this._setOpt("secondMoment", v);
+        }
+        /** Generic gradient accumulator (RMSProp / AdaGrad) (was opt_cache). */
+        get gradientAccumulator() {
+          return this._getOpt("gradientAccumulator");
+        }
+        set gradientAccumulator(v) {
+          this._setOpt("gradientAccumulator", v);
+        }
+        /** AMSGrad: Maximum of past second moment (was opt_vhat). */
+        get maxSecondMoment() {
+          return this._getOpt("maxSecondMoment");
+        }
+        set maxSecondMoment(v) {
+          this._setOpt("maxSecondMoment", v);
+        }
+        /** Adamax: Exponential moving infinity norm (was opt_u). */
+        get infinityNorm() {
+          return this._getOpt("infinityNorm");
+        }
+        set infinityNorm(v) {
+          this._setOpt("infinityNorm", v);
+        }
+        /** Secondary momentum (Lion variant) (was opt_m2). */
+        get secondMomentum() {
+          return this._getOpt("secondMomentum");
+        }
+        set secondMomentum(v) {
+          this._setOpt("secondMomentum", v);
+        }
+        /** Lookahead: shadow (slow) weight parameter (was _la_shadowWeight). */
+        get lookaheadShadowWeight() {
+          return this._getOpt("lookaheadShadowWeight");
+        }
+        set lookaheadShadowWeight(v) {
+          this._setOpt("lookaheadShadowWeight", v);
+        }
+        // --- Virtualized gater property (non-enumerable) ---
+        /** Optional gating node whose activation can modulate effective weight (symbol-backed). */
+        get gater() {
+          return (this._flags & 4) !== 0 ? this[kGater] : null;
+        }
+        set gater(node) {
+          if (node === null) {
+            if ((this._flags & 4) !== 0) {
+              this._flags &= ~4;
+              if (this[kGater] !== void 0) delete this[kGater];
+            }
+          } else {
+            this[kGater] = node;
+            this._flags |= 4;
+          }
+        }
+        // --- Plasticity rate (virtualized) ---
+        /** Per-connection plasticity / learning rate (0 means non-plastic). Setting >0 marks plastic flag. */
+        get plasticityRate() {
+          return this[kPlasticRate] === void 0 ? 0 : this[kPlasticRate];
+        }
+        set plasticityRate(v) {
+          if (v === void 0 || v === 0) {
+            if (this[kPlasticRate] !== void 0)
+              delete this[kPlasticRate];
+            this._flags &= ~8;
+          } else {
+            this[kPlasticRate] = v;
+            this._flags |= 8;
+          }
+        }
+        /** Convenience alias for DropConnect mask with clearer naming. */
+        get dropConnectActiveMask() {
+          return this.dcMask;
+        }
+        set dropConnectActiveMask(v) {
+          this.dcMask = v;
         }
       };
     }
@@ -170,8 +375,14 @@
         // numeric precision mode
         deterministicChainMode: false,
         // deep path test flag (ADD_NODE determinism)
-        enableGatingTraces: true
+        enableGatingTraces: true,
         // advanced gating trace infra
+        enableNodePooling: false,
+        // experimental node instance pooling
+        enableSlabArrayPooling: false
+        // experimental slab typed array pooling
+        // slabPoolMaxPerKey: 4,        // optional override for per-key slab retention cap (default internal 4)
+        // browserSlabChunkTargetMs: 3, // example: aim for ~3ms per async slab slice in Browser
         // poolMaxPerBucket: 256,     // example memory cap override
         // poolPrewarmCount: 2,       // example prewarm override
       };
@@ -1436,25 +1647,85 @@
   // src/architecture/node.ts
   var node_exports = {};
   __export(node_exports, {
-    default: () => Node
+    default: () => Node2
   });
-  var Node;
+  var Node2;
   var init_node = __esm({
     "src/architecture/node.ts"() {
       "use strict";
       init_connection();
       init_config();
       init_methods();
-      Node = class _Node {
-        static {
-          /**
-           * Global index counter for assigning unique indices to nodes.
-           */
-          this._globalNodeIndex = 0;
-        }
-        static {
-          this._nextGeneId = 1;
-        }
+      Node2 = class _Node {
+        /**
+         * The bias value of the node. Added to the weighted sum of inputs before activation.
+         * Input nodes typically have a bias of 0.
+         */
+        bias;
+        /**
+         * The activation function (squashing function) applied to the node's state.
+         * Maps the internal state to the node's output (activation).
+         * @param x The node's internal state (sum of weighted inputs + bias).
+         * @param derivate If true, returns the derivative of the function instead of the function value.
+         * @returns The activation value or its derivative.
+         */
+        squash;
+        /**
+         * The type of the node: 'input', 'hidden', or 'output'.
+         * Determines behavior (e.g., input nodes don't have biases modified typically, output nodes calculate error differently).
+         */
+        type;
+        /**
+         * The output value of the node after applying the activation function. This is the value transmitted to connected nodes.
+         */
+        activation;
+        /**
+         * The internal state of the node (sum of weighted inputs + bias) before the activation function is applied.
+         */
+        state;
+        /**
+         * The node's state from the previous activation cycle. Used for recurrent self-connections.
+         */
+        old;
+        /**
+         * A mask factor (typically 0 or 1) used for implementing dropout. If 0, the node's output is effectively silenced.
+         */
+        mask;
+        /**
+         * The change in bias applied in the previous training iteration. Used for calculating momentum.
+         */
+        previousDeltaBias;
+        /**
+         * Accumulates changes in bias over a mini-batch during batch training. Reset after each weight update.
+         */
+        totalDeltaBias;
+        /**
+         * Stores incoming, outgoing, gated, and self-connections for this node.
+         */
+        connections;
+        /**
+         * Stores error values calculated during backpropagation.
+         */
+        error;
+        /**
+         * The derivative of the activation function evaluated at the node's current state. Used in backpropagation.
+         */
+        derivative;
+        /**
+         * Optional index, potentially used to identify the node's position within a layer or network structure. Not used internally by the Node class itself.
+         */
+        index;
+        /**
+         * Internal flag to detect cycles during activation
+         */
+        isActivating;
+        /** Stable per-node gene identifier for NEAT innovation reuse */
+        geneId;
+        /**
+         * Global index counter for assigning unique indices to nodes.
+         */
+        static _globalNodeIndex = 0;
+        static _nextGeneId = 1;
         /**
          * Creates a new node.
          * @param type The type of the node ('input', 'hidden', or 'output'). Defaults to 'hidden'.
@@ -1584,22 +1855,6 @@
               conn.eligibility = conn.from.activation;
           }
           return this.activation;
-        }
-        // --- Backwards compatibility accessors for deprecated fields ---
-        /** @deprecated Use connections.gated; retained for legacy tests */
-        get gates() {
-          if (config.warnings)
-            console.warn("Node.gates is deprecated; use node.connections.gated");
-          return this.connections.gated;
-        }
-        set gates(val) {
-          this.connections.gated = val || [];
-        }
-        /** @deprecated Placeholder kept for legacy structural algorithms. No longer populated. */
-        get nodes() {
-          return [];
-        }
-        set nodes(_val) {
         }
         /**
          * Back-propagates the error signal through the node and calculates weight/bias updates.
@@ -2151,10 +2406,10 @@
          *  - la_alpha     : Interpolation factor towards slow (shadow) weights/bias at sync points.
          *
          * Internal per-connection temp fields (created lazily):
-         *  - opt_m / opt_v / opt_vhat / opt_u : Moment / variance / max variance / infinity norm caches.
-         *  - opt_cache : Single accumulator (RMSProp / AdaGrad).
+         *  - firstMoment / secondMoment / maxSecondMoment / infinityNorm : Moment / variance / max variance / infinity norm caches.
+         *  - gradientAccumulator : Single accumulator (RMSProp / AdaGrad).
          *  - previousDeltaWeight : For classic SGD momentum.
-         *  - _la_shadowWeight / _la_shadowBias : Lookahead shadow copies.
+         *  - lookaheadShadowWeight / _la_shadowBias : Lookahead shadow copies.
          *
          * Safety: We clip extreme weight / bias magnitudes and guard against NaN/Infinity.
          *
@@ -2182,27 +2437,30 @@
             if (!Number.isFinite(g)) g = 0;
             switch (effectiveType) {
               case "rmsprop": {
-                conn.opt_cache = (conn.opt_cache ?? 0) * 0.9 + 0.1 * (g * g);
-                const adj = g / (Math.sqrt(conn.opt_cache) + eps);
+                conn.gradientAccumulator = (conn.gradientAccumulator ?? 0) * 0.9 + 0.1 * (g * g);
+                const adj = g / (Math.sqrt(conn.gradientAccumulator) + eps);
                 this._safeUpdateWeight(conn, adj * lrScale);
                 break;
               }
               case "adagrad": {
-                conn.opt_cache = (conn.opt_cache ?? 0) + g * g;
-                const adj = g / (Math.sqrt(conn.opt_cache) + eps);
+                conn.gradientAccumulator = (conn.gradientAccumulator ?? 0) + g * g;
+                const adj = g / (Math.sqrt(conn.gradientAccumulator) + eps);
                 this._safeUpdateWeight(conn, adj * lrScale);
                 break;
               }
               case "adam":
               case "adamw":
               case "amsgrad": {
-                conn.opt_m = (conn.opt_m ?? 0) * beta1 + (1 - beta1) * g;
-                conn.opt_v = (conn.opt_v ?? 0) * beta2 + (1 - beta2) * (g * g);
+                conn.firstMoment = (conn.firstMoment ?? 0) * beta1 + (1 - beta1) * g;
+                conn.secondMoment = (conn.secondMoment ?? 0) * beta2 + (1 - beta2) * (g * g);
                 if (effectiveType === "amsgrad") {
-                  conn.opt_vhat = Math.max(conn.opt_vhat ?? 0, conn.opt_v ?? 0);
+                  conn.maxSecondMoment = Math.max(
+                    conn.maxSecondMoment ?? 0,
+                    conn.secondMoment ?? 0
+                  );
                 }
-                const vEff = effectiveType === "amsgrad" ? conn.opt_vhat : conn.opt_v;
-                const mHat = conn.opt_m / (1 - Math.pow(beta1, t));
+                const vEff = effectiveType === "amsgrad" ? conn.maxSecondMoment : conn.secondMoment;
+                const mHat = conn.firstMoment / (1 - Math.pow(beta1, t));
                 const vHat = vEff / (1 - Math.pow(beta2, t));
                 let step = mHat / (Math.sqrt(vHat) + eps) * lrScale;
                 if (effectiveType === "adamw" && wd !== 0)
@@ -2211,18 +2469,21 @@
                 break;
               }
               case "adamax": {
-                conn.opt_m = (conn.opt_m ?? 0) * beta1 + (1 - beta1) * g;
-                conn.opt_u = Math.max((conn.opt_u ?? 0) * beta2, Math.abs(g));
-                const mHat = conn.opt_m / (1 - Math.pow(beta1, t));
-                const stepVal = mHat / (conn.opt_u || 1e-12) * lrScale;
+                conn.firstMoment = (conn.firstMoment ?? 0) * beta1 + (1 - beta1) * g;
+                conn.infinityNorm = Math.max(
+                  (conn.infinityNorm ?? 0) * beta2,
+                  Math.abs(g)
+                );
+                const mHat = conn.firstMoment / (1 - Math.pow(beta1, t));
+                const stepVal = mHat / (conn.infinityNorm || 1e-12) * lrScale;
                 this._safeUpdateWeight(conn, stepVal);
                 break;
               }
               case "nadam": {
-                conn.opt_m = (conn.opt_m ?? 0) * beta1 + (1 - beta1) * g;
-                conn.opt_v = (conn.opt_v ?? 0) * beta2 + (1 - beta2) * (g * g);
-                const mHat = conn.opt_m / (1 - Math.pow(beta1, t));
-                const vHat = conn.opt_v / (1 - Math.pow(beta2, t));
+                conn.firstMoment = (conn.firstMoment ?? 0) * beta1 + (1 - beta1) * g;
+                conn.secondMoment = (conn.secondMoment ?? 0) * beta2 + (1 - beta2) * (g * g);
+                const mHat = conn.firstMoment / (1 - Math.pow(beta1, t));
+                const vHat = conn.secondMoment / (1 - Math.pow(beta2, t));
                 const mNesterov = mHat * beta1 + (1 - beta1) * g / (1 - Math.pow(beta1, t));
                 this._safeUpdateWeight(
                   conn,
@@ -2231,10 +2492,10 @@
                 break;
               }
               case "radam": {
-                conn.opt_m = (conn.opt_m ?? 0) * beta1 + (1 - beta1) * g;
-                conn.opt_v = (conn.opt_v ?? 0) * beta2 + (1 - beta2) * (g * g);
-                const mHat = conn.opt_m / (1 - Math.pow(beta1, t));
-                const vHat = conn.opt_v / (1 - Math.pow(beta2, t));
+                conn.firstMoment = (conn.firstMoment ?? 0) * beta1 + (1 - beta1) * g;
+                conn.secondMoment = (conn.secondMoment ?? 0) * beta2 + (1 - beta2) * (g * g);
+                const mHat = conn.firstMoment / (1 - Math.pow(beta1, t));
+                const vHat = conn.secondMoment / (1 - Math.pow(beta2, t));
                 const rhoInf = 2 / (1 - beta2) - 1;
                 const rhoT = rhoInf - 2 * t * Math.pow(beta2, t) / (1 - Math.pow(beta2, t));
                 if (rhoT > 4) {
@@ -2251,18 +2512,20 @@
                 break;
               }
               case "lion": {
-                conn.opt_m = (conn.opt_m ?? 0) * beta1 + (1 - beta1) * g;
-                conn.opt_m2 = (conn.opt_m2 ?? 0) * beta2 + (1 - beta2) * g;
-                const update = Math.sign((conn.opt_m || 0) + (conn.opt_m2 || 0));
+                conn.firstMoment = (conn.firstMoment ?? 0) * beta1 + (1 - beta1) * g;
+                conn.secondMomentum = (conn.secondMomentum ?? 0) * beta2 + (1 - beta2) * g;
+                const update = Math.sign(
+                  (conn.firstMoment || 0) + (conn.secondMomentum || 0)
+                );
                 this._safeUpdateWeight(conn, -update * lrScale);
                 break;
               }
               case "adabelief": {
-                conn.opt_m = (conn.opt_m ?? 0) * beta1 + (1 - beta1) * g;
-                const g_m = g - conn.opt_m;
-                conn.opt_v = (conn.opt_v ?? 0) * beta2 + (1 - beta2) * (g_m * g_m);
-                const mHat = conn.opt_m / (1 - Math.pow(beta1, t));
-                const vHat = conn.opt_v / (1 - Math.pow(beta2, t));
+                conn.firstMoment = (conn.firstMoment ?? 0) * beta1 + (1 - beta1) * g;
+                const g_m = g - conn.firstMoment;
+                conn.secondMoment = (conn.secondMoment ?? 0) * beta2 + (1 - beta2) * (g_m * g_m);
+                const mHat = conn.firstMoment / (1 - Math.pow(beta1, t));
+                const vHat = conn.secondMoment / (1 - Math.pow(beta2, t));
                 this._safeUpdateWeight(
                   conn,
                   mHat / (Math.sqrt(vHat) + eps + 1e-12) * lrScale
@@ -2372,10 +2635,10 @@
               this._la_shadowBias = (1 - alpha) * this._la_shadowBias + alpha * this.bias;
               this.bias = this._la_shadowBias;
               const blendConn = (conn) => {
-                if (!conn._la_shadowWeight)
-                  conn._la_shadowWeight = conn.weight;
-                conn._la_shadowWeight = (1 - alpha) * conn._la_shadowWeight + alpha * conn.weight;
-                conn.weight = conn._la_shadowWeight;
+                if (!conn.lookaheadShadowWeight)
+                  conn.lookaheadShadowWeight = conn.weight;
+                conn.lookaheadShadowWeight = (1 - alpha) * conn.lookaheadShadowWeight + alpha * conn.weight;
+                conn.weight = conn.lookaheadShadowWeight;
               };
               for (const c of this.connections.in) blendConn(c);
               for (const c of this.connections.self) blendConn(c);
@@ -2395,6 +2658,1407 @@
     }
   });
 
+  // src/architecture/nodePool.ts
+  function resetNode(node, type, rng = Math.random) {
+    if (type) node.type = type;
+    const t = node.type;
+    node.bias = t === "input" ? 0 : rng() * 0.2 - 0.1;
+    node.activation = 0;
+    node.state = 0;
+    node.old = 0;
+    node.mask = 1;
+    node.previousDeltaBias = 0;
+    node.totalDeltaBias = 0;
+    node.derivative = void 0;
+    node.connections.in.length = 0;
+    node.connections.out.length = 0;
+    node.connections.gated.length = 0;
+    node.connections.self.length = 0;
+    node.error = { responsibility: 0, projected: 0, gated: 0 };
+    node.geneId = nextGeneId++;
+  }
+  function acquireNode(opts = {}) {
+    const { type = "hidden", activationFn, rng } = opts;
+    let node;
+    if (pool.length) {
+      node = pool.pop();
+      reusedCount++;
+      resetNode(node, type, rng);
+      if (activationFn) node.squash = activationFn;
+    } else {
+      node = new Node2(type, activationFn, rng);
+      node.geneId = nextGeneId++;
+      freshCount++;
+    }
+    return node;
+  }
+  function releaseNode(node) {
+    node.connections.in.length = 0;
+    node.connections.out.length = 0;
+    node.connections.gated.length = 0;
+    node.connections.self.length = 0;
+    node.error = { responsibility: 0, projected: 0, gated: 0 };
+    pool.push(node);
+    if (pool.length > highWaterMark) highWaterMark = pool.length;
+  }
+  var pool, highWaterMark, nextGeneId, reusedCount, freshCount;
+  var init_nodePool = __esm({
+    "src/architecture/nodePool.ts"() {
+      "use strict";
+      init_node();
+      pool = [];
+      highWaterMark = 0;
+      nextGeneId = 1;
+      reusedCount = 0;
+      freshCount = 0;
+    }
+  });
+
+  // node_modules/util/support/isBufferBrowser.js
+  var require_isBufferBrowser = __commonJS({
+    "node_modules/util/support/isBufferBrowser.js"(exports, module) {
+      module.exports = function isBuffer(arg) {
+        return arg && typeof arg === "object" && typeof arg.copy === "function" && typeof arg.fill === "function" && typeof arg.readUInt8 === "function";
+      };
+    }
+  });
+
+  // node_modules/util/node_modules/inherits/inherits_browser.js
+  var require_inherits_browser = __commonJS({
+    "node_modules/util/node_modules/inherits/inherits_browser.js"(exports, module) {
+      if (typeof Object.create === "function") {
+        module.exports = function inherits(ctor, superCtor) {
+          ctor.super_ = superCtor;
+          ctor.prototype = Object.create(superCtor.prototype, {
+            constructor: {
+              value: ctor,
+              enumerable: false,
+              writable: true,
+              configurable: true
+            }
+          });
+        };
+      } else {
+        module.exports = function inherits(ctor, superCtor) {
+          ctor.super_ = superCtor;
+          var TempCtor = function() {
+          };
+          TempCtor.prototype = superCtor.prototype;
+          ctor.prototype = new TempCtor();
+          ctor.prototype.constructor = ctor;
+        };
+      }
+    }
+  });
+
+  // node_modules/util/util.js
+  var require_util = __commonJS({
+    "node_modules/util/util.js"(exports) {
+      var formatRegExp = /%[sdj%]/g;
+      exports.format = function(f) {
+        if (!isString(f)) {
+          var objects = [];
+          for (var i = 0; i < arguments.length; i++) {
+            objects.push(inspect(arguments[i]));
+          }
+          return objects.join(" ");
+        }
+        var i = 1;
+        var args = arguments;
+        var len = args.length;
+        var str = String(f).replace(formatRegExp, function(x2) {
+          if (x2 === "%%") return "%";
+          if (i >= len) return x2;
+          switch (x2) {
+            case "%s":
+              return String(args[i++]);
+            case "%d":
+              return Number(args[i++]);
+            case "%j":
+              try {
+                return JSON.stringify(args[i++]);
+              } catch (_) {
+                return "[Circular]";
+              }
+            default:
+              return x2;
+          }
+        });
+        for (var x = args[i]; i < len; x = args[++i]) {
+          if (isNull(x) || !isObject(x)) {
+            str += " " + x;
+          } else {
+            str += " " + inspect(x);
+          }
+        }
+        return str;
+      };
+      exports.deprecate = function(fn, msg) {
+        if (isUndefined(global.process)) {
+          return function() {
+            return exports.deprecate(fn, msg).apply(this, arguments);
+          };
+        }
+        if (process.noDeprecation === true) {
+          return fn;
+        }
+        var warned = false;
+        function deprecated() {
+          if (!warned) {
+            if (process.throwDeprecation) {
+              throw new Error(msg);
+            } else if (process.traceDeprecation) {
+              console.trace(msg);
+            } else {
+              console.error(msg);
+            }
+            warned = true;
+          }
+          return fn.apply(this, arguments);
+        }
+        return deprecated;
+      };
+      var debugs = {};
+      var debugEnviron;
+      exports.debuglog = function(set) {
+        if (isUndefined(debugEnviron))
+          debugEnviron = process.env.NODE_DEBUG || "";
+        set = set.toUpperCase();
+        if (!debugs[set]) {
+          if (new RegExp("\\b" + set + "\\b", "i").test(debugEnviron)) {
+            var pid = process.pid;
+            debugs[set] = function() {
+              var msg = exports.format.apply(exports, arguments);
+              console.error("%s %d: %s", set, pid, msg);
+            };
+          } else {
+            debugs[set] = function() {
+            };
+          }
+        }
+        return debugs[set];
+      };
+      function inspect(obj, opts) {
+        var ctx = {
+          seen: [],
+          stylize: stylizeNoColor
+        };
+        if (arguments.length >= 3) ctx.depth = arguments[2];
+        if (arguments.length >= 4) ctx.colors = arguments[3];
+        if (isBoolean(opts)) {
+          ctx.showHidden = opts;
+        } else if (opts) {
+          exports._extend(ctx, opts);
+        }
+        if (isUndefined(ctx.showHidden)) ctx.showHidden = false;
+        if (isUndefined(ctx.depth)) ctx.depth = 2;
+        if (isUndefined(ctx.colors)) ctx.colors = false;
+        if (isUndefined(ctx.customInspect)) ctx.customInspect = true;
+        if (ctx.colors) ctx.stylize = stylizeWithColor;
+        return formatValue(ctx, obj, ctx.depth);
+      }
+      exports.inspect = inspect;
+      inspect.colors = {
+        "bold": [1, 22],
+        "italic": [3, 23],
+        "underline": [4, 24],
+        "inverse": [7, 27],
+        "white": [37, 39],
+        "grey": [90, 39],
+        "black": [30, 39],
+        "blue": [34, 39],
+        "cyan": [36, 39],
+        "green": [32, 39],
+        "magenta": [35, 39],
+        "red": [31, 39],
+        "yellow": [33, 39]
+      };
+      inspect.styles = {
+        "special": "cyan",
+        "number": "yellow",
+        "boolean": "yellow",
+        "undefined": "grey",
+        "null": "bold",
+        "string": "green",
+        "date": "magenta",
+        // "name": intentionally not styling
+        "regexp": "red"
+      };
+      function stylizeWithColor(str, styleType) {
+        var style = inspect.styles[styleType];
+        if (style) {
+          return "\x1B[" + inspect.colors[style][0] + "m" + str + "\x1B[" + inspect.colors[style][1] + "m";
+        } else {
+          return str;
+        }
+      }
+      function stylizeNoColor(str, styleType) {
+        return str;
+      }
+      function arrayToHash(array) {
+        var hash = {};
+        array.forEach(function(val, idx) {
+          hash[val] = true;
+        });
+        return hash;
+      }
+      function formatValue(ctx, value, recurseTimes) {
+        if (ctx.customInspect && value && isFunction(value.inspect) && // Filter out the util module, it's inspect function is special
+        value.inspect !== exports.inspect && // Also filter out any prototype objects using the circular check.
+        !(value.constructor && value.constructor.prototype === value)) {
+          var ret = value.inspect(recurseTimes, ctx);
+          if (!isString(ret)) {
+            ret = formatValue(ctx, ret, recurseTimes);
+          }
+          return ret;
+        }
+        var primitive = formatPrimitive(ctx, value);
+        if (primitive) {
+          return primitive;
+        }
+        var keys = Object.keys(value);
+        var visibleKeys = arrayToHash(keys);
+        if (ctx.showHidden) {
+          keys = Object.getOwnPropertyNames(value);
+        }
+        if (isError(value) && (keys.indexOf("message") >= 0 || keys.indexOf("description") >= 0)) {
+          return formatError(value);
+        }
+        if (keys.length === 0) {
+          if (isFunction(value)) {
+            var name = value.name ? ": " + value.name : "";
+            return ctx.stylize("[Function" + name + "]", "special");
+          }
+          if (isRegExp(value)) {
+            return ctx.stylize(RegExp.prototype.toString.call(value), "regexp");
+          }
+          if (isDate(value)) {
+            return ctx.stylize(Date.prototype.toString.call(value), "date");
+          }
+          if (isError(value)) {
+            return formatError(value);
+          }
+        }
+        var base = "", array = false, braces = ["{", "}"];
+        if (isArray(value)) {
+          array = true;
+          braces = ["[", "]"];
+        }
+        if (isFunction(value)) {
+          var n = value.name ? ": " + value.name : "";
+          base = " [Function" + n + "]";
+        }
+        if (isRegExp(value)) {
+          base = " " + RegExp.prototype.toString.call(value);
+        }
+        if (isDate(value)) {
+          base = " " + Date.prototype.toUTCString.call(value);
+        }
+        if (isError(value)) {
+          base = " " + formatError(value);
+        }
+        if (keys.length === 0 && (!array || value.length == 0)) {
+          return braces[0] + base + braces[1];
+        }
+        if (recurseTimes < 0) {
+          if (isRegExp(value)) {
+            return ctx.stylize(RegExp.prototype.toString.call(value), "regexp");
+          } else {
+            return ctx.stylize("[Object]", "special");
+          }
+        }
+        ctx.seen.push(value);
+        var output;
+        if (array) {
+          output = formatArray(ctx, value, recurseTimes, visibleKeys, keys);
+        } else {
+          output = keys.map(function(key) {
+            return formatProperty(ctx, value, recurseTimes, visibleKeys, key, array);
+          });
+        }
+        ctx.seen.pop();
+        return reduceToSingleString(output, base, braces);
+      }
+      function formatPrimitive(ctx, value) {
+        if (isUndefined(value))
+          return ctx.stylize("undefined", "undefined");
+        if (isString(value)) {
+          var simple = "'" + JSON.stringify(value).replace(/^"|"$/g, "").replace(/'/g, "\\'").replace(/\\"/g, '"') + "'";
+          return ctx.stylize(simple, "string");
+        }
+        if (isNumber(value))
+          return ctx.stylize("" + value, "number");
+        if (isBoolean(value))
+          return ctx.stylize("" + value, "boolean");
+        if (isNull(value))
+          return ctx.stylize("null", "null");
+      }
+      function formatError(value) {
+        return "[" + Error.prototype.toString.call(value) + "]";
+      }
+      function formatArray(ctx, value, recurseTimes, visibleKeys, keys) {
+        var output = [];
+        for (var i = 0, l = value.length; i < l; ++i) {
+          if (hasOwnProperty(value, String(i))) {
+            output.push(formatProperty(
+              ctx,
+              value,
+              recurseTimes,
+              visibleKeys,
+              String(i),
+              true
+            ));
+          } else {
+            output.push("");
+          }
+        }
+        keys.forEach(function(key) {
+          if (!key.match(/^\d+$/)) {
+            output.push(formatProperty(
+              ctx,
+              value,
+              recurseTimes,
+              visibleKeys,
+              key,
+              true
+            ));
+          }
+        });
+        return output;
+      }
+      function formatProperty(ctx, value, recurseTimes, visibleKeys, key, array) {
+        var name, str, desc;
+        desc = Object.getOwnPropertyDescriptor(value, key) || { value: value[key] };
+        if (desc.get) {
+          if (desc.set) {
+            str = ctx.stylize("[Getter/Setter]", "special");
+          } else {
+            str = ctx.stylize("[Getter]", "special");
+          }
+        } else {
+          if (desc.set) {
+            str = ctx.stylize("[Setter]", "special");
+          }
+        }
+        if (!hasOwnProperty(visibleKeys, key)) {
+          name = "[" + key + "]";
+        }
+        if (!str) {
+          if (ctx.seen.indexOf(desc.value) < 0) {
+            if (isNull(recurseTimes)) {
+              str = formatValue(ctx, desc.value, null);
+            } else {
+              str = formatValue(ctx, desc.value, recurseTimes - 1);
+            }
+            if (str.indexOf("\n") > -1) {
+              if (array) {
+                str = str.split("\n").map(function(line) {
+                  return "  " + line;
+                }).join("\n").substr(2);
+              } else {
+                str = "\n" + str.split("\n").map(function(line) {
+                  return "   " + line;
+                }).join("\n");
+              }
+            }
+          } else {
+            str = ctx.stylize("[Circular]", "special");
+          }
+        }
+        if (isUndefined(name)) {
+          if (array && key.match(/^\d+$/)) {
+            return str;
+          }
+          name = JSON.stringify("" + key);
+          if (name.match(/^"([a-zA-Z_][a-zA-Z_0-9]*)"$/)) {
+            name = name.substr(1, name.length - 2);
+            name = ctx.stylize(name, "name");
+          } else {
+            name = name.replace(/'/g, "\\'").replace(/\\"/g, '"').replace(/(^"|"$)/g, "'");
+            name = ctx.stylize(name, "string");
+          }
+        }
+        return name + ": " + str;
+      }
+      function reduceToSingleString(output, base, braces) {
+        var numLinesEst = 0;
+        var length = output.reduce(function(prev, cur) {
+          numLinesEst++;
+          if (cur.indexOf("\n") >= 0) numLinesEst++;
+          return prev + cur.replace(/\u001b\[\d\d?m/g, "").length + 1;
+        }, 0);
+        if (length > 60) {
+          return braces[0] + (base === "" ? "" : base + "\n ") + " " + output.join(",\n  ") + " " + braces[1];
+        }
+        return braces[0] + base + " " + output.join(", ") + " " + braces[1];
+      }
+      function isArray(ar) {
+        return Array.isArray(ar);
+      }
+      exports.isArray = isArray;
+      function isBoolean(arg) {
+        return typeof arg === "boolean";
+      }
+      exports.isBoolean = isBoolean;
+      function isNull(arg) {
+        return arg === null;
+      }
+      exports.isNull = isNull;
+      function isNullOrUndefined(arg) {
+        return arg == null;
+      }
+      exports.isNullOrUndefined = isNullOrUndefined;
+      function isNumber(arg) {
+        return typeof arg === "number";
+      }
+      exports.isNumber = isNumber;
+      function isString(arg) {
+        return typeof arg === "string";
+      }
+      exports.isString = isString;
+      function isSymbol(arg) {
+        return typeof arg === "symbol";
+      }
+      exports.isSymbol = isSymbol;
+      function isUndefined(arg) {
+        return arg === void 0;
+      }
+      exports.isUndefined = isUndefined;
+      function isRegExp(re) {
+        return isObject(re) && objectToString(re) === "[object RegExp]";
+      }
+      exports.isRegExp = isRegExp;
+      function isObject(arg) {
+        return typeof arg === "object" && arg !== null;
+      }
+      exports.isObject = isObject;
+      function isDate(d) {
+        return isObject(d) && objectToString(d) === "[object Date]";
+      }
+      exports.isDate = isDate;
+      function isError(e) {
+        return isObject(e) && (objectToString(e) === "[object Error]" || e instanceof Error);
+      }
+      exports.isError = isError;
+      function isFunction(arg) {
+        return typeof arg === "function";
+      }
+      exports.isFunction = isFunction;
+      function isPrimitive(arg) {
+        return arg === null || typeof arg === "boolean" || typeof arg === "number" || typeof arg === "string" || typeof arg === "symbol" || // ES6 symbol
+        typeof arg === "undefined";
+      }
+      exports.isPrimitive = isPrimitive;
+      exports.isBuffer = require_isBufferBrowser();
+      function objectToString(o) {
+        return Object.prototype.toString.call(o);
+      }
+      function pad(n) {
+        return n < 10 ? "0" + n.toString(10) : n.toString(10);
+      }
+      var months = [
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec"
+      ];
+      function timestamp() {
+        var d = /* @__PURE__ */ new Date();
+        var time = [
+          pad(d.getHours()),
+          pad(d.getMinutes()),
+          pad(d.getSeconds())
+        ].join(":");
+        return [d.getDate(), months[d.getMonth()], time].join(" ");
+      }
+      exports.log = function() {
+        console.log("%s - %s", timestamp(), exports.format.apply(exports, arguments));
+      };
+      exports.inherits = require_inherits_browser();
+      exports._extend = function(origin, add) {
+        if (!add || !isObject(add)) return origin;
+        var keys = Object.keys(add);
+        var i = keys.length;
+        while (i--) {
+          origin[keys[i]] = add[keys[i]];
+        }
+        return origin;
+      };
+      function hasOwnProperty(obj, prop) {
+        return Object.prototype.hasOwnProperty.call(obj, prop);
+      }
+    }
+  });
+
+  // node_modules/path/path.js
+  var require_path = __commonJS({
+    "node_modules/path/path.js"(exports, module) {
+      "use strict";
+      var isWindows = process.platform === "win32";
+      var util = require_util();
+      function normalizeArray(parts, allowAboveRoot) {
+        var res = [];
+        for (var i = 0; i < parts.length; i++) {
+          var p = parts[i];
+          if (!p || p === ".")
+            continue;
+          if (p === "..") {
+            if (res.length && res[res.length - 1] !== "..") {
+              res.pop();
+            } else if (allowAboveRoot) {
+              res.push("..");
+            }
+          } else {
+            res.push(p);
+          }
+        }
+        return res;
+      }
+      function trimArray(arr) {
+        var lastIndex = arr.length - 1;
+        var start2 = 0;
+        for (; start2 <= lastIndex; start2++) {
+          if (arr[start2])
+            break;
+        }
+        var end = lastIndex;
+        for (; end >= 0; end--) {
+          if (arr[end])
+            break;
+        }
+        if (start2 === 0 && end === lastIndex)
+          return arr;
+        if (start2 > end)
+          return [];
+        return arr.slice(start2, end + 1);
+      }
+      var splitDeviceRe = /^([a-zA-Z]:|[\\\/]{2}[^\\\/]+[\\\/]+[^\\\/]+)?([\\\/])?([\s\S]*?)$/;
+      var splitTailRe = /^([\s\S]*?)((?:\.{1,2}|[^\\\/]+?|)(\.[^.\/\\]*|))(?:[\\\/]*)$/;
+      var win32 = {};
+      function win32SplitPath(filename) {
+        var result = splitDeviceRe.exec(filename), device = (result[1] || "") + (result[2] || ""), tail = result[3] || "";
+        var result2 = splitTailRe.exec(tail), dir = result2[1], basename = result2[2], ext = result2[3];
+        return [device, dir, basename, ext];
+      }
+      function win32StatPath(path2) {
+        var result = splitDeviceRe.exec(path2), device = result[1] || "", isUnc = !!device && device[1] !== ":";
+        return {
+          device,
+          isUnc,
+          isAbsolute: isUnc || !!result[2],
+          // UNC paths are always absolute
+          tail: result[3]
+        };
+      }
+      function normalizeUNCRoot(device) {
+        return "\\\\" + device.replace(/^[\\\/]+/, "").replace(/[\\\/]+/g, "\\");
+      }
+      win32.resolve = function() {
+        var resolvedDevice = "", resolvedTail = "", resolvedAbsolute = false;
+        for (var i = arguments.length - 1; i >= -1; i--) {
+          var path2;
+          if (i >= 0) {
+            path2 = arguments[i];
+          } else if (!resolvedDevice) {
+            path2 = process.cwd();
+          } else {
+            path2 = process.env["=" + resolvedDevice];
+            if (!path2 || path2.substr(0, 3).toLowerCase() !== resolvedDevice.toLowerCase() + "\\") {
+              path2 = resolvedDevice + "\\";
+            }
+          }
+          if (!util.isString(path2)) {
+            throw new TypeError("Arguments to path.resolve must be strings");
+          } else if (!path2) {
+            continue;
+          }
+          var result = win32StatPath(path2), device = result.device, isUnc = result.isUnc, isAbsolute = result.isAbsolute, tail = result.tail;
+          if (device && resolvedDevice && device.toLowerCase() !== resolvedDevice.toLowerCase()) {
+            continue;
+          }
+          if (!resolvedDevice) {
+            resolvedDevice = device;
+          }
+          if (!resolvedAbsolute) {
+            resolvedTail = tail + "\\" + resolvedTail;
+            resolvedAbsolute = isAbsolute;
+          }
+          if (resolvedDevice && resolvedAbsolute) {
+            break;
+          }
+        }
+        if (isUnc) {
+          resolvedDevice = normalizeUNCRoot(resolvedDevice);
+        }
+        resolvedTail = normalizeArray(
+          resolvedTail.split(/[\\\/]+/),
+          !resolvedAbsolute
+        ).join("\\");
+        return resolvedDevice + (resolvedAbsolute ? "\\" : "") + resolvedTail || ".";
+      };
+      win32.normalize = function(path2) {
+        var result = win32StatPath(path2), device = result.device, isUnc = result.isUnc, isAbsolute = result.isAbsolute, tail = result.tail, trailingSlash = /[\\\/]$/.test(tail);
+        tail = normalizeArray(tail.split(/[\\\/]+/), !isAbsolute).join("\\");
+        if (!tail && !isAbsolute) {
+          tail = ".";
+        }
+        if (tail && trailingSlash) {
+          tail += "\\";
+        }
+        if (isUnc) {
+          device = normalizeUNCRoot(device);
+        }
+        return device + (isAbsolute ? "\\" : "") + tail;
+      };
+      win32.isAbsolute = function(path2) {
+        return win32StatPath(path2).isAbsolute;
+      };
+      win32.join = function() {
+        var paths = [];
+        for (var i = 0; i < arguments.length; i++) {
+          var arg = arguments[i];
+          if (!util.isString(arg)) {
+            throw new TypeError("Arguments to path.join must be strings");
+          }
+          if (arg) {
+            paths.push(arg);
+          }
+        }
+        var joined = paths.join("\\");
+        if (!/^[\\\/]{2}[^\\\/]/.test(paths[0])) {
+          joined = joined.replace(/^[\\\/]{2,}/, "\\");
+        }
+        return win32.normalize(joined);
+      };
+      win32.relative = function(from, to) {
+        from = win32.resolve(from);
+        to = win32.resolve(to);
+        var lowerFrom = from.toLowerCase();
+        var lowerTo = to.toLowerCase();
+        var toParts = trimArray(to.split("\\"));
+        var lowerFromParts = trimArray(lowerFrom.split("\\"));
+        var lowerToParts = trimArray(lowerTo.split("\\"));
+        var length = Math.min(lowerFromParts.length, lowerToParts.length);
+        var samePartsLength = length;
+        for (var i = 0; i < length; i++) {
+          if (lowerFromParts[i] !== lowerToParts[i]) {
+            samePartsLength = i;
+            break;
+          }
+        }
+        if (samePartsLength == 0) {
+          return to;
+        }
+        var outputParts = [];
+        for (var i = samePartsLength; i < lowerFromParts.length; i++) {
+          outputParts.push("..");
+        }
+        outputParts = outputParts.concat(toParts.slice(samePartsLength));
+        return outputParts.join("\\");
+      };
+      win32._makeLong = function(path2) {
+        if (!util.isString(path2))
+          return path2;
+        if (!path2) {
+          return "";
+        }
+        var resolvedPath = win32.resolve(path2);
+        if (/^[a-zA-Z]\:\\/.test(resolvedPath)) {
+          return "\\\\?\\" + resolvedPath;
+        } else if (/^\\\\[^?.]/.test(resolvedPath)) {
+          return "\\\\?\\UNC\\" + resolvedPath.substring(2);
+        }
+        return path2;
+      };
+      win32.dirname = function(path2) {
+        var result = win32SplitPath(path2), root = result[0], dir = result[1];
+        if (!root && !dir) {
+          return ".";
+        }
+        if (dir) {
+          dir = dir.substr(0, dir.length - 1);
+        }
+        return root + dir;
+      };
+      win32.basename = function(path2, ext) {
+        var f = win32SplitPath(path2)[2];
+        if (ext && f.substr(-1 * ext.length) === ext) {
+          f = f.substr(0, f.length - ext.length);
+        }
+        return f;
+      };
+      win32.extname = function(path2) {
+        return win32SplitPath(path2)[3];
+      };
+      win32.format = function(pathObject) {
+        if (!util.isObject(pathObject)) {
+          throw new TypeError(
+            "Parameter 'pathObject' must be an object, not " + typeof pathObject
+          );
+        }
+        var root = pathObject.root || "";
+        if (!util.isString(root)) {
+          throw new TypeError(
+            "'pathObject.root' must be a string or undefined, not " + typeof pathObject.root
+          );
+        }
+        var dir = pathObject.dir;
+        var base = pathObject.base || "";
+        if (!dir) {
+          return base;
+        }
+        if (dir[dir.length - 1] === win32.sep) {
+          return dir + base;
+        }
+        return dir + win32.sep + base;
+      };
+      win32.parse = function(pathString) {
+        if (!util.isString(pathString)) {
+          throw new TypeError(
+            "Parameter 'pathString' must be a string, not " + typeof pathString
+          );
+        }
+        var allParts = win32SplitPath(pathString);
+        if (!allParts || allParts.length !== 4) {
+          throw new TypeError("Invalid path '" + pathString + "'");
+        }
+        return {
+          root: allParts[0],
+          dir: allParts[0] + allParts[1].slice(0, -1),
+          base: allParts[2],
+          ext: allParts[3],
+          name: allParts[2].slice(0, allParts[2].length - allParts[3].length)
+        };
+      };
+      win32.sep = "\\";
+      win32.delimiter = ";";
+      var splitPathRe = /^(\/?|)([\s\S]*?)((?:\.{1,2}|[^\/]+?|)(\.[^.\/]*|))(?:[\/]*)$/;
+      var posix = {};
+      function posixSplitPath(filename) {
+        return splitPathRe.exec(filename).slice(1);
+      }
+      posix.resolve = function() {
+        var resolvedPath = "", resolvedAbsolute = false;
+        for (var i = arguments.length - 1; i >= -1 && !resolvedAbsolute; i--) {
+          var path2 = i >= 0 ? arguments[i] : process.cwd();
+          if (!util.isString(path2)) {
+            throw new TypeError("Arguments to path.resolve must be strings");
+          } else if (!path2) {
+            continue;
+          }
+          resolvedPath = path2 + "/" + resolvedPath;
+          resolvedAbsolute = path2[0] === "/";
+        }
+        resolvedPath = normalizeArray(
+          resolvedPath.split("/"),
+          !resolvedAbsolute
+        ).join("/");
+        return (resolvedAbsolute ? "/" : "") + resolvedPath || ".";
+      };
+      posix.normalize = function(path2) {
+        var isAbsolute = posix.isAbsolute(path2), trailingSlash = path2 && path2[path2.length - 1] === "/";
+        path2 = normalizeArray(path2.split("/"), !isAbsolute).join("/");
+        if (!path2 && !isAbsolute) {
+          path2 = ".";
+        }
+        if (path2 && trailingSlash) {
+          path2 += "/";
+        }
+        return (isAbsolute ? "/" : "") + path2;
+      };
+      posix.isAbsolute = function(path2) {
+        return path2.charAt(0) === "/";
+      };
+      posix.join = function() {
+        var path2 = "";
+        for (var i = 0; i < arguments.length; i++) {
+          var segment = arguments[i];
+          if (!util.isString(segment)) {
+            throw new TypeError("Arguments to path.join must be strings");
+          }
+          if (segment) {
+            if (!path2) {
+              path2 += segment;
+            } else {
+              path2 += "/" + segment;
+            }
+          }
+        }
+        return posix.normalize(path2);
+      };
+      posix.relative = function(from, to) {
+        from = posix.resolve(from).substr(1);
+        to = posix.resolve(to).substr(1);
+        var fromParts = trimArray(from.split("/"));
+        var toParts = trimArray(to.split("/"));
+        var length = Math.min(fromParts.length, toParts.length);
+        var samePartsLength = length;
+        for (var i = 0; i < length; i++) {
+          if (fromParts[i] !== toParts[i]) {
+            samePartsLength = i;
+            break;
+          }
+        }
+        var outputParts = [];
+        for (var i = samePartsLength; i < fromParts.length; i++) {
+          outputParts.push("..");
+        }
+        outputParts = outputParts.concat(toParts.slice(samePartsLength));
+        return outputParts.join("/");
+      };
+      posix._makeLong = function(path2) {
+        return path2;
+      };
+      posix.dirname = function(path2) {
+        var result = posixSplitPath(path2), root = result[0], dir = result[1];
+        if (!root && !dir) {
+          return ".";
+        }
+        if (dir) {
+          dir = dir.substr(0, dir.length - 1);
+        }
+        return root + dir;
+      };
+      posix.basename = function(path2, ext) {
+        var f = posixSplitPath(path2)[2];
+        if (ext && f.substr(-1 * ext.length) === ext) {
+          f = f.substr(0, f.length - ext.length);
+        }
+        return f;
+      };
+      posix.extname = function(path2) {
+        return posixSplitPath(path2)[3];
+      };
+      posix.format = function(pathObject) {
+        if (!util.isObject(pathObject)) {
+          throw new TypeError(
+            "Parameter 'pathObject' must be an object, not " + typeof pathObject
+          );
+        }
+        var root = pathObject.root || "";
+        if (!util.isString(root)) {
+          throw new TypeError(
+            "'pathObject.root' must be a string or undefined, not " + typeof pathObject.root
+          );
+        }
+        var dir = pathObject.dir ? pathObject.dir + posix.sep : "";
+        var base = pathObject.base || "";
+        return dir + base;
+      };
+      posix.parse = function(pathString) {
+        if (!util.isString(pathString)) {
+          throw new TypeError(
+            "Parameter 'pathString' must be a string, not " + typeof pathString
+          );
+        }
+        var allParts = posixSplitPath(pathString);
+        if (!allParts || allParts.length !== 4) {
+          throw new TypeError("Invalid path '" + pathString + "'");
+        }
+        allParts[1] = allParts[1] || "";
+        allParts[2] = allParts[2] || "";
+        allParts[3] = allParts[3] || "";
+        return {
+          root: allParts[0],
+          dir: allParts[0] + allParts[1].slice(0, -1),
+          base: allParts[2],
+          ext: allParts[3],
+          name: allParts[2].slice(0, allParts[2].length - allParts[3].length)
+        };
+      };
+      posix.sep = "/";
+      posix.delimiter = ":";
+      if (isWindows)
+        module.exports = win32;
+      else
+        module.exports = posix;
+      module.exports.posix = posix;
+      module.exports.win32 = win32;
+    }
+  });
+
+  // src/multithreading/workers/node/testworker.ts
+  var testworker_exports = {};
+  __export(testworker_exports, {
+    TestWorker: () => TestWorker,
+    default: () => testworker_default
+  });
+  var import_child_process, import_path, TestWorker, testworker_default;
+  var init_testworker = __esm({
+    "src/multithreading/workers/node/testworker.ts"() {
+      "use strict";
+      import_child_process = __require("child_process");
+      import_path = __toESM(require_path(), 1);
+      TestWorker = class {
+        worker;
+        /**
+         * Creates a new TestWorker instance.
+         *
+         * This initializes a new worker process and sends the dataset and cost function
+         * to the worker for further processing.
+         *
+         * @param {number[]} dataSet - The serialized dataset to be used by the worker.
+         * @param {{ name: string }} cost - The cost function to evaluate the network.
+         */
+        constructor(dataSet, cost) {
+          this.worker = (0, import_child_process.fork)(import_path.default.join(__dirname, "/worker"));
+          this.worker.send({ set: dataSet, cost: cost.name });
+        }
+        /**
+         * Evaluates a neural network using the worker process.
+         *
+         * The network is serialized and sent to the worker for evaluation. The worker
+         * sends back the evaluation result, which is returned as a promise.
+         *
+         * @param {any} network - The neural network to evaluate. It must implement a `serialize` method.
+         * @returns {Promise<number>} A promise that resolves to the evaluation result.
+         */
+        evaluate(network) {
+          return new Promise((resolve) => {
+            const serialized = network.serialize();
+            const data = {
+              activations: serialized[0],
+              states: serialized[1],
+              conns: serialized[2]
+            };
+            const _that = this.worker;
+            this.worker.on("message", function callback(e) {
+              _that.removeListener("message", callback);
+              resolve(e);
+            });
+            this.worker.send(data);
+          });
+        }
+        /**
+         * Terminates the worker process.
+         *
+         * This method ensures that the worker process is properly terminated to free up system resources.
+         */
+        terminate() {
+          this.worker.kill();
+        }
+      };
+      testworker_default = TestWorker;
+    }
+  });
+
+  // src/multithreading/workers/browser/testworker.ts
+  var testworker_exports2 = {};
+  __export(testworker_exports2, {
+    TestWorker: () => TestWorker2
+  });
+  var TestWorker2;
+  var init_testworker2 = __esm({
+    "src/multithreading/workers/browser/testworker.ts"() {
+      "use strict";
+      init_multi();
+      TestWorker2 = class _TestWorker {
+        worker;
+        url;
+        /**
+         * Creates a new TestWorker instance.
+         * @param {number[]} dataSet - The serialized dataset to be used by the worker.
+         * @param {any} cost - The cost function to evaluate the network.
+         */
+        constructor(dataSet, cost) {
+          const blob = new Blob([_TestWorker._createBlobString(cost)]);
+          this.url = window.URL.createObjectURL(blob);
+          this.worker = new Worker(this.url);
+          const data = { set: new Float64Array(dataSet).buffer };
+          this.worker.postMessage(data, [data.set]);
+        }
+        /**
+         * Evaluates a network using the worker process.
+         * @param {any} network - The network to evaluate.
+         * @returns {Promise<number>} A promise that resolves to the evaluation result.
+         */
+        evaluate(network) {
+          return new Promise((resolve, reject) => {
+            const serialized = network.serialize();
+            const data = {
+              activations: new Float64Array(serialized[0]).buffer,
+              states: new Float64Array(serialized[1]).buffer,
+              conns: new Float64Array(serialized[2]).buffer
+            };
+            this.worker.onmessage = function(e) {
+              const error = new Float64Array(e.data.buffer)[0];
+              resolve(error);
+            };
+            this.worker.postMessage(data, [
+              data.activations,
+              data.states,
+              data.conns
+            ]);
+          });
+        }
+        /**
+         * Terminates the worker process and revokes the object URL.
+         */
+        terminate() {
+          this.worker.terminate();
+          window.URL.revokeObjectURL(this.url);
+        }
+        /**
+         * Creates a string representation of the worker's blob.
+         * @param {any} cost - The cost function to be used by the worker.
+         * @returns {string} The blob string.
+         */
+        static _createBlobString(cost) {
+          return `
+      const F = [${Multi.activations.toString()}];
+      const cost = ${cost.toString()};
+      const multi = {
+        deserializeDataSet: ${Multi.deserializeDataSet.toString()},
+        testSerializedSet: ${Multi.testSerializedSet.toString()},
+        activateSerializedNetwork: ${Multi.activateSerializedNetwork.toString()}
+      };
+
+      let set;
+
+      this.onmessage = function (e) {
+        if (typeof e.data.set === 'undefined') {
+          const A = new Float64Array(e.data.activations);
+          const S = new Float64Array(e.data.states);
+          const data = new Float64Array(e.data.conns);
+
+          const error = multi.testSerializedSet(set, cost, A, S, data, F);
+
+          const answer = { buffer: new Float64Array([error]).buffer };
+          postMessage(answer, [answer.buffer]);
+        } else {
+          set = multi.deserializeDataSet(new Float64Array(e.data.set));
+        }
+      };`;
+        }
+      };
+    }
+  });
+
+  // src/multithreading/workers/workers.ts
+  var Workers;
+  var init_workers = __esm({
+    "src/multithreading/workers/workers.ts"() {
+      "use strict";
+      Workers = class {
+        /**
+         * Loads the Node.js test worker dynamically.
+         * @returns {Promise<any>} A promise that resolves to the Node.js TestWorker class.
+         */
+        static async getNodeTestWorker() {
+          const module = await Promise.resolve().then(() => (init_testworker(), testworker_exports));
+          return module.TestWorker;
+        }
+        /**
+         * Loads the browser test worker dynamically.
+         * @returns {Promise<any>} A promise that resolves to the browser TestWorker class.
+         */
+        static async getBrowserTestWorker() {
+          const module = await Promise.resolve().then(() => (init_testworker2(), testworker_exports2));
+          return module.TestWorker;
+        }
+      };
+    }
+  });
+
+  // src/multithreading/multi.ts
+  var Multi;
+  var init_multi = __esm({
+    "src/multithreading/multi.ts"() {
+      "use strict";
+      init_workers();
+      init_network();
+      Multi = class _Multi {
+        /** Workers for multi-threading */
+        static workers = Workers;
+        /**
+         * A list of compiled activation functions in a specific order.
+         */
+        static activations = [
+          (x) => 1 / (1 + Math.exp(-x)),
+          // Logistic (0)
+          (x) => Math.tanh(x),
+          // Tanh (1)
+          (x) => x,
+          // Identity (2)
+          (x) => x > 0 ? 1 : 0,
+          // Step (3)
+          (x) => x > 0 ? x : 0,
+          // ReLU (4)
+          (x) => x / (1 + Math.abs(x)),
+          // Softsign (5)
+          (x) => Math.sin(x),
+          // Sinusoid (6)
+          (x) => Math.exp(-Math.pow(x, 2)),
+          // Gaussian (7)
+          (x) => (Math.sqrt(Math.pow(x, 2) + 1) - 1) / 2 + x,
+          // Bent Identity (8)
+          (x) => x > 0 ? 1 : -1,
+          // Bipolar (9)
+          (x) => 2 / (1 + Math.exp(-x)) - 1,
+          // Bipolar Sigmoid (10)
+          (x) => Math.max(-1, Math.min(1, x)),
+          // Hard Tanh (11)
+          (x) => Math.abs(x),
+          // Absolute (12)
+          (x) => 1 - x,
+          // Inverse (13)
+          (x) => {
+            const alpha = 1.6732632423543772;
+            const scale = 1.0507009873554805;
+            const fx = x > 0 ? x : alpha * Math.exp(x) - alpha;
+            return fx * scale;
+          },
+          (x) => Math.log(1 + Math.exp(x))
+          // Softplus (15) - Added
+        ];
+        /**
+         * Serializes a dataset into a flat array.
+         * @param {Array<{ input: number[]; output: number[] }>} dataSet - The dataset to serialize.
+         * @returns {number[]} The serialized dataset.
+         */
+        static serializeDataSet(dataSet) {
+          const serialized = [dataSet[0].input.length, dataSet[0].output.length];
+          for (let i = 0; i < dataSet.length; i++) {
+            for (let j = 0; j < serialized[0]; j++) {
+              serialized.push(dataSet[i].input[j]);
+            }
+            for (let j = 0; j < serialized[1]; j++) {
+              serialized.push(dataSet[i].output[j]);
+            }
+          }
+          return serialized;
+        }
+        /**
+         * Activates a serialized network.
+         * @param {number[]} input - The input values.
+         * @param {number[]} A - The activations array.
+         * @param {number[]} S - The states array.
+         * @param {number[]} data - The serialized network data.
+         * @param {Function[]} F - The activation functions.
+         * @returns {number[]} The output values.
+         */
+        static activateSerializedNetwork(input, A, S, data, F) {
+          for (let i = 0; i < data[0]; i++) A[i] = input[i];
+          for (let i = 2; i < data.length; i++) {
+            const index = data[i++];
+            const bias = data[i++];
+            const squash = data[i++];
+            const selfweight = data[i++];
+            const selfgater = data[i++];
+            S[index] = (selfgater === -1 ? 1 : A[selfgater]) * selfweight * S[index] + bias;
+            while (data[i] !== -2) {
+              S[index] += A[data[i++]] * data[i++] * (data[i++] === -1 ? 1 : A[data[i - 1]]);
+            }
+            A[index] = F[squash](S[index]);
+          }
+          const output = [];
+          for (let i = A.length - data[1]; i < A.length; i++) output.push(A[i]);
+          return output;
+        }
+        /**
+         * Deserializes a dataset from a flat array.
+         * @param {number[]} serializedSet - The serialized dataset.
+         * @returns {Array<{ input: number[]; output: number[] }>} The deserialized dataset as an array of input-output pairs.
+         */
+        static deserializeDataSet(serializedSet) {
+          const set = [];
+          const sampleSize = serializedSet[0] + serializedSet[1];
+          for (let i = 0; i < (serializedSet.length - 2) / sampleSize; i++) {
+            const input = [];
+            for (let j = 2 + i * sampleSize; j < 2 + i * sampleSize + serializedSet[0]; j++) {
+              input.push(serializedSet[j]);
+            }
+            const output = [];
+            for (let j = 2 + i * sampleSize + serializedSet[0]; j < 2 + i * sampleSize + sampleSize; j++) {
+              output.push(serializedSet[j]);
+            }
+            set.push({ input, output });
+          }
+          return set;
+        }
+        /**
+         * Logistic activation function.
+         * @param {number} x - The input value.
+         * @returns {number} The activated value.
+         */
+        static logistic(x) {
+          return 1 / (1 + Math.exp(-x));
+        }
+        /**
+         * Hyperbolic tangent activation function.
+         * @param {number} x - The input value.
+         * @returns {number} The activated value.
+         */
+        static tanh(x) {
+          return Math.tanh(x);
+        }
+        /**
+         * Identity activation function.
+         * @param {number} x - The input value.
+         * @returns {number} The activated value.
+         */
+        static identity(x) {
+          return x;
+        }
+        /**
+         * Step activation function.
+         * @param {number} x - The input value.
+         * @returns {number} The activated value.
+         */
+        static step(x) {
+          return x > 0 ? 1 : 0;
+        }
+        /**
+         * Rectified Linear Unit (ReLU) activation function.
+         * @param {number} x - The input value.
+         * @returns {number} The activated value.
+         */
+        static relu(x) {
+          return x > 0 ? x : 0;
+        }
+        /**
+         * Softsign activation function.
+         * @param {number} x - The input value.
+         * @returns {number} The activated value.
+         */
+        static softsign(x) {
+          return x / (1 + Math.abs(x));
+        }
+        /**
+         * Sinusoid activation function.
+         * @param {number} x - The input value.
+         * @returns {number} The activated value.
+         */
+        static sinusoid(x) {
+          return Math.sin(x);
+        }
+        /**
+         * Gaussian activation function.
+         * @param {number} x - The input value.
+         * @returns {number} The activated value.
+         */
+        static gaussian(x) {
+          return Math.exp(-Math.pow(x, 2));
+        }
+        /**
+         * Bent Identity activation function.
+         * @param {number} x - The input value.
+         * @returns {number} The activated value.
+         */
+        static bentIdentity(x) {
+          return (Math.sqrt(Math.pow(x, 2) + 1) - 1) / 2 + x;
+        }
+        /**
+         * Bipolar activation function.
+         * @param {number} x - The input value.
+         * @returns {number} The activated value.
+         */
+        static bipolar(x) {
+          return x > 0 ? 1 : -1;
+        }
+        /**
+         * Bipolar Sigmoid activation function.
+         * @param {number} x - The input value.
+         * @returns {number} The activated value.
+         */
+        static bipolarSigmoid(x) {
+          return 2 / (1 + Math.exp(-x)) - 1;
+        }
+        /**
+         * Hard Tanh activation function.
+         * @param {number} x - The input value.
+         * @returns {number} The activated value.
+         */
+        static hardTanh(x) {
+          return Math.max(-1, Math.min(1, x));
+        }
+        /**
+         * Absolute activation function.
+         * @param {number} x - The input value.
+         * @returns {number} The activated value.
+         */
+        static absolute(x) {
+          return Math.abs(x);
+        }
+        /**
+         * Inverse activation function.
+         * @param {number} x - The input value.
+         * @returns {number} The activated value.
+         */
+        static inverse(x) {
+          return 1 - x;
+        }
+        /**
+         * Scaled Exponential Linear Unit (SELU) activation function.
+         * @param {number} x - The input value.
+         * @returns {number} The activated value.
+         */
+        static selu(x) {
+          const alpha = 1.6732632423543772;
+          const scale = 1.0507009873554805;
+          const fx = x > 0 ? x : alpha * Math.exp(x) - alpha;
+          return fx * scale;
+        }
+        /**
+         * Softplus activation function. - Added
+         * @param {number} x - The input value.
+         * @returns {number} The activated value.
+         */
+        static softplus(x) {
+          return Math.log(1 + Math.exp(x));
+        }
+        /**
+         * Tests a serialized dataset using a cost function.
+         * @param {Array<{ input: number[]; output: number[] }>} set - The serialized dataset as an array of input-output pairs.
+         * @param {Function} cost - The cost function.
+         * @param {number[]} A - The activations array.
+         * @param {number[]} S - The states array.
+         * @param {number[]} data - The serialized network data.
+         * @param {Function[]} F - The activation functions.
+         * @returns {number} The average error.
+         */
+        static testSerializedSet(set, cost, A, S, data, F) {
+          let error = 0;
+          for (let i = 0; i < set.length; i++) {
+            const output = _Multi.activateSerializedNetwork(
+              set[i].input,
+              A,
+              S,
+              data,
+              F
+            );
+            error += cost(set[i].output, output);
+          }
+          return error / set.length;
+        }
+        /**
+         * Gets the browser test worker.
+         * @returns {Promise<any>} The browser test worker.
+         */
+        static async getBrowserTestWorker() {
+          const { TestWorker: TestWorker3 } = await Promise.resolve().then(() => (init_testworker2(), testworker_exports2));
+          return TestWorker3;
+        }
+        /**
+         * Gets the node test worker.
+         * @returns {Promise<any>} The node test worker.
+         */
+        static async getNodeTestWorker() {
+          const { TestWorker: TestWorker3 } = await Promise.resolve().then(() => (init_testworker(), testworker_exports));
+          return TestWorker3;
+        }
+      };
+    }
+  });
+
   // src/architecture/activationArrayPool.ts
   var ActivationArrayPool, activationArrayPool;
   var init_activationArrayPool = __esm({
@@ -2402,16 +4066,14 @@
       "use strict";
       init_config();
       ActivationArrayPool = class {
-        constructor() {
-          /** Buckets keyed by length, storing reusable arrays. */
-          this.buckets = /* @__PURE__ */ new Map();
-          /** Count of arrays created since last clear(), for diagnostics. */
-          this.created = 0;
-          /** Count of successful reuses since last clear(), for diagnostics. */
-          this.reused = 0;
-          /** Max arrays retained per size bucket; Infinity by default. */
-          this.maxPerBucket = Number.POSITIVE_INFINITY;
-        }
+        /** Buckets keyed by length, storing reusable arrays. */
+        buckets = /* @__PURE__ */ new Map();
+        /** Count of arrays created since last clear(), for diagnostics. */
+        created = 0;
+        /** Count of successful reuses since last clear(), for diagnostics. */
+        reused = 0;
+        /** Max arrays retained per size bucket; Infinity by default. */
+        maxPerBucket = Number.POSITIVE_INFINITY;
         /**
          * Acquire an activation array of fixed length.
          * Zero-fills reused arrays to guarantee clean state.
@@ -2503,14 +4165,16 @@
     "package.json"(exports, module) {
       module.exports = {
         name: "@reicek/neataptic-ts",
-        version: "0.1.9",
+        version: "0.1.10",
         description: "Architecture-free neural network library with genetic algorithm implementations",
         main: "./dist/neataptic.js",
         module: "./dist/neataptic.js",
         types: "./dist/neataptic.d.ts",
         type: "module",
         scripts: {
-          test: "jest --no-cache --coverage --collect-coverage --runInBand --testPathIgnorePatterns=.e2e.test.ts --verbose",
+          test: "jest --config=jest.config.mjs --no-cache --coverage --collect-coverage --runInBand --testPathIgnorePatterns=.e2e.test.ts --verbose",
+          pretest: "npm run build",
+          "test:bench": "jest --no-cache --runInBand --verbose --testPathPattern=benchmark",
           "test:silent": "jest --no-cache --coverage --collect-coverage --runInBand --testPathIgnorePatterns=.e2e.test.ts --silent",
           deploy: "npm run build && npm run test:dist && npm publish",
           build: "npm run build:webpack && npm run build:ts",
@@ -2520,14 +4184,16 @@
           "test:e2e": "cross-env FORCE_COLOR=true jest e2e.test.ts --no-cache --runInBand",
           "test:e2e:logs": "npx jest e2e.test.ts --verbose --runInBand --no-cache",
           "test:dist": "npm run build:ts && jest --no-cache --coverage --collect-coverage --runInBand --testPathIgnorePatterns=.e2e.test.ts",
-          "docs:build-scripts": "tsc -p tsconfig.docs.json && node scripts/write-dist-docs-pkg.cjs",
+          "docs:build-scripts": "tsc -p tsconfig.docs.json && node scripts/write-dist-docs-pkg.mjs",
           "docs:folders": "npm run docs:build-scripts && node ./dist-docs/scripts/generate-docs.js",
           "docs:html": "npm run docs:build-scripts && node ./dist-docs/scripts/render-docs-html.js",
           "build:ascii-maze": "npx esbuild test/examples/asciiMaze/browser-entry.ts --bundle --outfile=docs/assets/ascii-maze.bundle.js --platform=browser --format=iife --sourcemap --external:fs --external:child_process",
-          "docs:examples": "node scripts/copy-examples.cjs",
-          prettier: "npx prettier --write .",
+          "docs:examples": "node scripts/copy-examples.mjs",
+          prettier: "npm run prettier:tests && npm run prettier:src",
+          "prettier:tests": "npx prettier --write **/*.test.ts",
+          "prettier:src": "npx prettier --write src/**/*.ts",
           docs: "npm run build:ascii-maze && npm run docs:examples && npm run docs:build-scripts && node ./dist-docs/scripts/generate-docs.js && node ./dist-docs/scripts/render-docs-html.js",
-          "onnx:export": "node scripts/export-onnx.cjs"
+          "onnx:export": "node scripts/export-onnx.mjs"
         },
         exports: {
           ".": {
@@ -2560,7 +4226,9 @@
           typescript: "^5.6.3",
           "undici-types": "^7.8.0",
           webpack: "^5.99.5",
-          "webpack-cli": "^6.0.1"
+          "webpack-cli": "^6.0.1",
+          esbuild: "^0.23.0",
+          puppeteer: "^23.3.0"
         },
         repository: {
           type: "git",
@@ -2588,19 +4256,14 @@
         },
         homepage: "https://reicek.github.io/NeatapticTS/",
         engines: {
-          node: ">=14.0.0"
+          node: ">=20.0.0"
         },
         prettier: {
           singleQuote: true
         },
         dependencies: {
-          build: "^0.1.4",
-          child_process: "^1.0.2",
-          os: "^0.1.2",
-          path: "^0.12.7",
           seedrandom: "^3.0.5",
-          undici: "^5.0.0",
-          "undici-types": "^7.8.0"
+          undici: "^5.0.0"
         }
       };
     }
@@ -4014,33 +5677,178 @@
   });
 
   // src/architecture/network/network.slab.ts
+  function _slabPoolCap() {
+    const configuredCap = config.slabPoolMaxPerKey;
+    if (configuredCap === void 0) return 4;
+    return configuredCap < 0 ? 0 : configuredCap | 0;
+  }
+  function _poolKey(kind, bytes, length) {
+    return kind + ":" + bytes + ":" + length;
+  }
+  function _acquireTA(kind, ctor, length, bytesPerElement) {
+    if (!config.enableSlabArrayPooling) {
+      _slabAllocStats.fresh++;
+      return new ctor(length);
+    }
+    const key = _poolKey(kind, bytesPerElement, length);
+    const list = _slabArrayPool[key];
+    if (list && list.length) {
+      _slabAllocStats.pooled++;
+      (_slabPoolMetrics[key] ||= { created: 0, reused: 0, maxRetained: 0 }).reused++;
+      return list.pop();
+    }
+    _slabAllocStats.fresh++;
+    (_slabPoolMetrics[key] ||= { created: 0, reused: 0, maxRetained: 0 }).created++;
+    return new ctor(length);
+  }
+  function _releaseTA(kind, bytesPerElement, arr) {
+    if (!config.enableSlabArrayPooling) return;
+    const key = _poolKey(kind, bytesPerElement, arr.length);
+    const list = _slabArrayPool[key] ||= [];
+    if (list.length < _slabPoolCap()) list.push(arr);
+    const m = _slabPoolMetrics[key] ||= {
+      created: 0,
+      reused: 0,
+      maxRetained: 0
+    };
+    if (list.length > m.maxRetained) m.maxRetained = list.length;
+  }
   function rebuildConnectionSlab(force = false) {
     const internalNet = this;
     if (!force && !internalNet._slabDirty) return;
     if (internalNet._nodeIndexDirty) _reindexNodes.call(this);
     const connectionCount = this.connections.length;
-    const weightArray = internalNet._useFloat32Weights ? new Float32Array(connectionCount) : new Float64Array(connectionCount);
-    const fromIndexArray = new Uint32Array(connectionCount);
-    const toIndexArray = new Uint32Array(connectionCount);
+    let capacity = internalNet._connCapacity || 0;
+    const growthFactor = typeof window === "undefined" ? 1.75 : 1.25;
+    const needAllocate = capacity < connectionCount;
+    if (needAllocate) {
+      capacity = capacity === 0 ? Math.ceil(connectionCount * growthFactor) : capacity;
+      while (capacity < connectionCount)
+        capacity = Math.ceil(capacity * growthFactor);
+      if (internalNet._connWeights)
+        _releaseTA(
+          "w",
+          internalNet._useFloat32Weights ? 4 : 8,
+          internalNet._connWeights
+        );
+      if (internalNet._connFrom)
+        _releaseTA("f", 4, internalNet._connFrom);
+      if (internalNet._connTo)
+        _releaseTA("t", 4, internalNet._connTo);
+      if (internalNet._connFlags)
+        _releaseTA("fl", 1, internalNet._connFlags);
+      if (internalNet._connGain)
+        _releaseTA(
+          "g",
+          internalNet._useFloat32Weights ? 4 : 8,
+          internalNet._connGain
+        );
+      if (internalNet._connPlastic)
+        _releaseTA(
+          "p",
+          internalNet._useFloat32Weights ? 4 : 8,
+          internalNet._connPlastic
+        );
+      internalNet._connWeights = _acquireTA(
+        "w",
+        internalNet._useFloat32Weights ? Float32Array : Float64Array,
+        capacity,
+        internalNet._useFloat32Weights ? 4 : 8
+      );
+      internalNet._connFrom = _acquireTA("f", Uint32Array, capacity, 4);
+      internalNet._connTo = _acquireTA("t", Uint32Array, capacity, 4);
+      internalNet._connFlags = _acquireTA("fl", Uint8Array, capacity, 1);
+      internalNet._connGain = null;
+      internalNet._connPlastic = null;
+      internalNet._connCapacity = capacity;
+    } else {
+      capacity = internalNet._connCapacity;
+    }
+    const weightArray = internalNet._connWeights;
+    const fromIndexArray = internalNet._connFrom;
+    const toIndexArray = internalNet._connTo;
+    const flagArray = internalNet._connFlags;
+    let gainArray = internalNet._connGain;
+    let anyNonNeutralGain = false;
+    let plasticArray = internalNet._connPlastic;
+    let anyPlastic = false;
     for (let connectionIndex = 0; connectionIndex < connectionCount; connectionIndex++) {
       const connection = this.connections[connectionIndex];
       weightArray[connectionIndex] = connection.weight;
       fromIndexArray[connectionIndex] = connection.from.index >>> 0;
       toIndexArray[connectionIndex] = connection.to.index >>> 0;
+      flagArray[connectionIndex] = connection._flags & 255;
+      const gainValue = connection.gain;
+      if (gainValue !== 1) {
+        if (!gainArray) {
+          gainArray = _acquireTA(
+            "g",
+            internalNet._useFloat32Weights ? Float32Array : Float64Array,
+            capacity,
+            internalNet._useFloat32Weights ? 4 : 8
+          );
+          internalNet._connGain = gainArray;
+          for (let j = 0; j < connectionIndex; j++) gainArray[j] = 1;
+        }
+        gainArray[connectionIndex] = gainValue;
+        anyNonNeutralGain = true;
+      } else if (gainArray) {
+        gainArray[connectionIndex] = 1;
+      }
+      if (connection._flags & 8) anyPlastic = true;
     }
-    internalNet._connWeights = weightArray;
-    internalNet._connFrom = fromIndexArray;
-    internalNet._connTo = toIndexArray;
+    if (!anyNonNeutralGain && gainArray) {
+      _releaseTA(
+        "g",
+        internalNet._useFloat32Weights ? 4 : 8,
+        gainArray
+      );
+      internalNet._connGain = null;
+    }
+    if (anyPlastic && !plasticArray) {
+      plasticArray = _acquireTA(
+        "p",
+        internalNet._useFloat32Weights ? Float32Array : Float64Array,
+        capacity,
+        internalNet._useFloat32Weights ? 4 : 8
+      );
+      internalNet._connPlastic = plasticArray;
+      for (let i = 0; i < connectionCount; i++) {
+        const c = this.connections[i];
+        plasticArray[i] = c.plasticityRate || 0;
+      }
+    } else if (!anyPlastic && plasticArray) {
+      _releaseTA(
+        "p",
+        internalNet._useFloat32Weights ? 4 : 8,
+        plasticArray
+      );
+      internalNet._connPlastic = null;
+    }
+    internalNet._connCount = connectionCount;
     internalNet._slabDirty = false;
     internalNet._adjDirty = true;
+    internalNet._slabVersion = (internalNet._slabVersion || 0) + 1;
   }
   function getConnectionSlab() {
     rebuildConnectionSlab.call(this);
     const internalNet = this;
+    let gain = internalNet._connGain || null;
+    if (!gain) {
+      const cap = internalNet._connCapacity || internalNet._connWeights && internalNet._connWeights.length || 0;
+      gain = internalNet._useFloat32Weights ? new Float32Array(cap) : new Float64Array(cap);
+      for (let i = 0; i < (internalNet._connCount || 0); i++) gain[i] = 1;
+    }
     return {
       weights: internalNet._connWeights,
       from: internalNet._connFrom,
-      to: internalNet._connTo
+      to: internalNet._connTo,
+      flags: internalNet._connFlags,
+      gain,
+      plastic: internalNet._connPlastic || null,
+      version: internalNet._slabVersion || 0,
+      used: internalNet._connCount || 0,
+      capacity: internalNet._connCapacity || internalNet._connWeights && internalNet._connWeights.length || 0
     };
   }
   function _reindexNodes() {
@@ -4053,7 +5861,7 @@
     const internalNet = this;
     if (!internalNet._connFrom || !internalNet._connTo) return;
     const nodeCount = this.nodes.length;
-    const connectionCount = internalNet._connFrom.length;
+    const connectionCount = internalNet._connCount ?? internalNet._connFrom.length;
     const fanOutCounts = new Uint32Array(nodeCount);
     for (let connectionIndex = 0; connectionIndex < connectionCount; connectionIndex++) {
       fanOutCounts[internalNet._connFrom[connectionIndex]]++;
@@ -4091,6 +5899,8 @@
     const internalNet = this;
     rebuildConnectionSlab.call(this);
     if (internalNet._adjDirty) _buildAdjacency.call(this);
+    if (this.gates && this.gates.length > 0)
+      return this.activate(input, false);
     if (!internalNet._connWeights || !internalNet._connFrom || !internalNet._connTo || !internalNet._outStart || !internalNet._outOrder) {
       return this.activate(input, false);
     }
@@ -4132,7 +5942,10 @@
       const sourceActivation = activationBuffer[nodeIndex];
       for (let cursorIdx = edgeStart; cursorIdx < edgeEnd; cursorIdx++) {
         const connectionIndex = outgoingOrder[cursorIdx];
-        stateBuffer[toIndexArray[connectionIndex]] += sourceActivation * weightArray[connectionIndex];
+        let w = weightArray[connectionIndex];
+        const gainArr = internalNet._connGain;
+        if (gainArr) w *= gainArr[connectionIndex];
+        stateBuffer[toIndexArray[connectionIndex]] += sourceActivation * w;
       }
     }
     const outputBaseIndex = nodeCount - this.output;
@@ -4147,10 +5960,15 @@
   function canUseFastSlab(training) {
     return _canUseFastSlab.call(this, training);
   }
+  var _slabArrayPool, _slabPoolMetrics, _slabAllocStats;
   var init_network_slab = __esm({
     "src/architecture/network/network.slab.ts"() {
       "use strict";
       init_activationArrayPool();
+      init_config();
+      _slabArrayPool = /* @__PURE__ */ Object.create(null);
+      _slabPoolMetrics = /* @__PURE__ */ Object.create(null);
+      _slabAllocStats = { fresh: 0, pooled: 0 };
     }
   });
 
@@ -4249,6 +6067,8 @@
   var init_network_prune = __esm({
     "src/architecture/network/network.prune.ts"() {
       "use strict";
+      init_node();
+      init_connection();
     }
   });
 
@@ -4278,6 +6098,8 @@
   var init_network_gating = __esm({
     "src/architecture/network/network.gating.ts"() {
       "use strict";
+      init_node();
+      init_connection();
       init_mutation();
       init_config();
     }
@@ -4353,7 +6175,10 @@
     inbound.forEach((c) => this.disconnect(c.from, c.to));
     outbound.forEach((c) => this.disconnect(c.from, c.to));
     node.connections.self.slice().forEach(() => this.disconnect(node, node));
-    this.nodes.splice(idx, 1);
+    const removed = this.nodes.splice(idx, 1)[0];
+    if (config.enableNodePooling && removed) {
+      releaseNode(removed);
+    }
     inbound.forEach((ic) => {
       outbound.forEach((oc) => {
         if (!ic.from || !oc.to || ic.from === oc.to) return;
@@ -4371,6 +6196,8 @@
   var init_network_remove = __esm({
     "src/architecture/network/network.remove.ts"() {
       "use strict";
+      init_nodePool();
+      init_config();
     }
   });
 
@@ -4410,6 +6237,8 @@
   var init_network_connect = __esm({
     "src/architecture/network/network.connect.ts"() {
       "use strict";
+      init_node();
+      init_connection();
     }
   });
 
@@ -4463,7 +6292,7 @@
       if (nodeIndex < input) type = "input";
       else if (nodeIndex >= activations.length - output) type = "output";
       else type = "hidden";
-      const node = new Node(type);
+      const node = new Node2(type);
       node.activation = activation;
       node.state = states[nodeIndex];
       const squashName = squashes[nodeIndex];
@@ -4564,7 +6393,7 @@
     net.selfconns = [];
     net.gates = [];
     json.nodes.forEach((nodeJson, nodeIndex) => {
-      const node = new Node(nodeJson.type);
+      const node = new Node2(nodeJson.type);
       node.bias = nodeJson.bias;
       node.squash = activation_default[nodeJson.squash] || activation_default.identity;
       node.index = nodeIndex;
@@ -4646,7 +6475,7 @@
         else if (node2 && (score2 >= score1 || equal)) chosen = node2;
       }
       if (chosen) {
-        const nn = new Node(chosen.type);
+        const nn = new Node2(chosen.type);
         nn.bias = chosen.bias;
         nn.squash = chosen.squash;
         offspring.nodes.push(nn);
@@ -4808,6 +6637,17 @@
       init_methods();
       Group = class _Group {
         /**
+         * An array holding all the nodes within this group.
+         */
+        nodes;
+        /**
+         * Stores connection information related to this group.
+         * `in`: Connections coming into any node in this group from outside.
+         * `out`: Connections going out from any node in this group to outside.
+         * `self`: Connections between nodes within this same group (e.g., in ONE_TO_ONE connections).
+         */
+        connections;
+        /**
          * Creates a new group comprised of a specified number of nodes.
          * @param {number} size - The quantity of nodes to initialize within this group.
          */
@@ -4819,7 +6659,7 @@
             self: []
           };
           for (let i = 0; i < size; i++) {
-            this.nodes.push(new Node());
+            this.nodes.push(new Node2());
           }
         }
         /**
@@ -4927,7 +6767,7 @@
             }
           } else if (target instanceof Layer) {
             connections = target.input(this, method, weight);
-          } else if (target instanceof Node) {
+          } else if (target instanceof Node2) {
             for (i = 0; i < this.nodes.length; i++) {
               let connection = this.nodes[i].connect(target, weight);
               this.connections.out.push(connection[0]);
@@ -5057,7 +6897,7 @@
                 }
               }
             }
-          } else if (target instanceof Node) {
+          } else if (target instanceof Node2) {
             for (i = 0; i < this.nodes.length; i++) {
               this.nodes[i].disconnect(target, twosided);
               for (j = this.connections.out.length - 1; j >= 0; j--) {
@@ -5125,14 +6965,34 @@
       init_activationArrayPool();
       Layer = class _Layer {
         /**
+         * An array containing all the nodes (neurons or groups) that constitute this layer.
+         * The order of nodes might be relevant depending on the layer type and its connections.
+         */
+        nodes;
+        // Note: While typed as Node[], can contain Group instances in practice for memory layers.
+        /**
+         * Stores connection information related to this layer. This is often managed
+         * by the network or higher-level structures rather than directly by the layer itself.
+         * `in`: Incoming connections to the layer's nodes.
+         * `out`: Outgoing connections from the layer's nodes.
+         * `self`: Self-connections within the layer's nodes.
+         */
+        connections;
+        /**
+         * Represents the primary output group of nodes for this layer.
+         * This group is typically used when connecting this layer *to* another layer or group.
+         * It might be null if the layer is not yet fully constructed or is an input layer.
+         */
+        output;
+        /**
+         * Dropout rate for this layer (0 to 1). If > 0, all nodes in the layer are masked together during training.
+         * Layer-level dropout takes precedence over node-level dropout for nodes in this layer.
+         */
+        dropout = 0;
+        /**
          * Initializes a new Layer instance.
          */
         constructor() {
-          /**
-           * Dropout rate for this layer (0 to 1). If > 0, all nodes in the layer are masked together during training.
-           * Layer-level dropout takes precedence over node-level dropout for nodes in this layer.
-           */
-          this.dropout = 0;
           this.output = null;
           this.nodes = [];
           this.connections = { in: [], out: [], self: [] };
@@ -5232,7 +7092,7 @@
           let connections = [];
           if (target instanceof _Layer) {
             connections = target.input(this, method, weight);
-          } else if (target instanceof Group || target instanceof Node) {
+          } else if (target instanceof Group || target instanceof Node2) {
             connections = this.output.connect(target, method, weight);
           }
           return connections;
@@ -5268,7 +7128,7 @@
         set(values) {
           for (let i = 0; i < this.nodes.length; i++) {
             let node = this.nodes[i];
-            if (node instanceof Node) {
+            if (node instanceof Node2) {
               if (values.bias !== void 0) {
                 node.bias = values.bias;
               }
@@ -5310,7 +7170,7 @@
                 }
               }
             }
-          } else if (target instanceof Node) {
+          } else if (target instanceof Node2) {
             for (i = 0; i < this.nodes.length; i++) {
               this.nodes[i].disconnect(target, twosided);
               for (j = this.connections.out.length - 1; j >= 0; j--) {
@@ -5647,7 +7507,7 @@
          */
         static conv1d(size, kernelSize, stride = 1, padding = 0) {
           const layer = new _Layer();
-          layer.nodes = Array.from({ length: size }, () => new Node());
+          layer.nodes = Array.from({ length: size }, () => new Node2());
           layer.output = new Group(size);
           layer.conv1d = { kernelSize, stride, padding };
           layer.activate = function(value) {
@@ -5664,7 +7524,7 @@
          */
         static attention(size, heads = 1) {
           const layer = new _Layer();
-          layer.nodes = Array.from({ length: size }, () => new Node());
+          layer.nodes = Array.from({ length: size }, () => new Node2());
           layer.output = new Group(size);
           layer.attention = { heads };
           layer.activate = function(value) {
@@ -5742,7 +7602,7 @@
       if (!terminal) terminal = this.connect(tail, outputNode)[0];
       const prevGater2 = terminal.gater;
       this.disconnect(terminal.from, terminal.to);
-      const hidden2 = new Node("hidden", void 0, internal._rand);
+      const hidden2 = new Node2("hidden", void 0, internal._rand);
       hidden2.mutate(mutation_default.MOD_ACTIVATION);
       const outIndex = this.nodes.indexOf(outputNode);
       const insertIndex2 = Math.min(outIndex, this.nodes.length - this.output);
@@ -5780,7 +7640,7 @@
     if (!connection) return;
     const prevGater = connection.gater;
     this.disconnect(connection.from, connection.to);
-    const hidden = new Node("hidden", void 0, internal._rand);
+    const hidden = new Node2("hidden", void 0, internal._rand);
     hidden.mutate(mutation_default.MOD_ACTIVATION);
     const targetIndex = this.nodes.indexOf(connection.to);
     const insertIndex = Math.min(targetIndex, this.nodes.length - this.output);
@@ -6852,1351 +8712,6 @@
     }
   });
 
-  // node_modules/util/support/isBufferBrowser.js
-  var require_isBufferBrowser = __commonJS({
-    "node_modules/util/support/isBufferBrowser.js"(exports, module) {
-      module.exports = function isBuffer(arg) {
-        return arg && typeof arg === "object" && typeof arg.copy === "function" && typeof arg.fill === "function" && typeof arg.readUInt8 === "function";
-      };
-    }
-  });
-
-  // node_modules/util/node_modules/inherits/inherits_browser.js
-  var require_inherits_browser = __commonJS({
-    "node_modules/util/node_modules/inherits/inherits_browser.js"(exports, module) {
-      if (typeof Object.create === "function") {
-        module.exports = function inherits(ctor, superCtor) {
-          ctor.super_ = superCtor;
-          ctor.prototype = Object.create(superCtor.prototype, {
-            constructor: {
-              value: ctor,
-              enumerable: false,
-              writable: true,
-              configurable: true
-            }
-          });
-        };
-      } else {
-        module.exports = function inherits(ctor, superCtor) {
-          ctor.super_ = superCtor;
-          var TempCtor = function() {
-          };
-          TempCtor.prototype = superCtor.prototype;
-          ctor.prototype = new TempCtor();
-          ctor.prototype.constructor = ctor;
-        };
-      }
-    }
-  });
-
-  // node_modules/util/util.js
-  var require_util = __commonJS({
-    "node_modules/util/util.js"(exports) {
-      var formatRegExp = /%[sdj%]/g;
-      exports.format = function(f) {
-        if (!isString(f)) {
-          var objects = [];
-          for (var i = 0; i < arguments.length; i++) {
-            objects.push(inspect(arguments[i]));
-          }
-          return objects.join(" ");
-        }
-        var i = 1;
-        var args = arguments;
-        var len = args.length;
-        var str = String(f).replace(formatRegExp, function(x2) {
-          if (x2 === "%%") return "%";
-          if (i >= len) return x2;
-          switch (x2) {
-            case "%s":
-              return String(args[i++]);
-            case "%d":
-              return Number(args[i++]);
-            case "%j":
-              try {
-                return JSON.stringify(args[i++]);
-              } catch (_) {
-                return "[Circular]";
-              }
-            default:
-              return x2;
-          }
-        });
-        for (var x = args[i]; i < len; x = args[++i]) {
-          if (isNull(x) || !isObject(x)) {
-            str += " " + x;
-          } else {
-            str += " " + inspect(x);
-          }
-        }
-        return str;
-      };
-      exports.deprecate = function(fn, msg) {
-        if (isUndefined(global.process)) {
-          return function() {
-            return exports.deprecate(fn, msg).apply(this, arguments);
-          };
-        }
-        if (process.noDeprecation === true) {
-          return fn;
-        }
-        var warned = false;
-        function deprecated() {
-          if (!warned) {
-            if (process.throwDeprecation) {
-              throw new Error(msg);
-            } else if (process.traceDeprecation) {
-              console.trace(msg);
-            } else {
-              console.error(msg);
-            }
-            warned = true;
-          }
-          return fn.apply(this, arguments);
-        }
-        return deprecated;
-      };
-      var debugs = {};
-      var debugEnviron;
-      exports.debuglog = function(set) {
-        if (isUndefined(debugEnviron))
-          debugEnviron = process.env.NODE_DEBUG || "";
-        set = set.toUpperCase();
-        if (!debugs[set]) {
-          if (new RegExp("\\b" + set + "\\b", "i").test(debugEnviron)) {
-            var pid = process.pid;
-            debugs[set] = function() {
-              var msg = exports.format.apply(exports, arguments);
-              console.error("%s %d: %s", set, pid, msg);
-            };
-          } else {
-            debugs[set] = function() {
-            };
-          }
-        }
-        return debugs[set];
-      };
-      function inspect(obj, opts) {
-        var ctx = {
-          seen: [],
-          stylize: stylizeNoColor
-        };
-        if (arguments.length >= 3) ctx.depth = arguments[2];
-        if (arguments.length >= 4) ctx.colors = arguments[3];
-        if (isBoolean(opts)) {
-          ctx.showHidden = opts;
-        } else if (opts) {
-          exports._extend(ctx, opts);
-        }
-        if (isUndefined(ctx.showHidden)) ctx.showHidden = false;
-        if (isUndefined(ctx.depth)) ctx.depth = 2;
-        if (isUndefined(ctx.colors)) ctx.colors = false;
-        if (isUndefined(ctx.customInspect)) ctx.customInspect = true;
-        if (ctx.colors) ctx.stylize = stylizeWithColor;
-        return formatValue(ctx, obj, ctx.depth);
-      }
-      exports.inspect = inspect;
-      inspect.colors = {
-        "bold": [1, 22],
-        "italic": [3, 23],
-        "underline": [4, 24],
-        "inverse": [7, 27],
-        "white": [37, 39],
-        "grey": [90, 39],
-        "black": [30, 39],
-        "blue": [34, 39],
-        "cyan": [36, 39],
-        "green": [32, 39],
-        "magenta": [35, 39],
-        "red": [31, 39],
-        "yellow": [33, 39]
-      };
-      inspect.styles = {
-        "special": "cyan",
-        "number": "yellow",
-        "boolean": "yellow",
-        "undefined": "grey",
-        "null": "bold",
-        "string": "green",
-        "date": "magenta",
-        // "name": intentionally not styling
-        "regexp": "red"
-      };
-      function stylizeWithColor(str, styleType) {
-        var style = inspect.styles[styleType];
-        if (style) {
-          return "\x1B[" + inspect.colors[style][0] + "m" + str + "\x1B[" + inspect.colors[style][1] + "m";
-        } else {
-          return str;
-        }
-      }
-      function stylizeNoColor(str, styleType) {
-        return str;
-      }
-      function arrayToHash(array) {
-        var hash = {};
-        array.forEach(function(val, idx) {
-          hash[val] = true;
-        });
-        return hash;
-      }
-      function formatValue(ctx, value, recurseTimes) {
-        if (ctx.customInspect && value && isFunction(value.inspect) && // Filter out the util module, it's inspect function is special
-        value.inspect !== exports.inspect && // Also filter out any prototype objects using the circular check.
-        !(value.constructor && value.constructor.prototype === value)) {
-          var ret = value.inspect(recurseTimes, ctx);
-          if (!isString(ret)) {
-            ret = formatValue(ctx, ret, recurseTimes);
-          }
-          return ret;
-        }
-        var primitive = formatPrimitive(ctx, value);
-        if (primitive) {
-          return primitive;
-        }
-        var keys = Object.keys(value);
-        var visibleKeys = arrayToHash(keys);
-        if (ctx.showHidden) {
-          keys = Object.getOwnPropertyNames(value);
-        }
-        if (isError(value) && (keys.indexOf("message") >= 0 || keys.indexOf("description") >= 0)) {
-          return formatError(value);
-        }
-        if (keys.length === 0) {
-          if (isFunction(value)) {
-            var name = value.name ? ": " + value.name : "";
-            return ctx.stylize("[Function" + name + "]", "special");
-          }
-          if (isRegExp(value)) {
-            return ctx.stylize(RegExp.prototype.toString.call(value), "regexp");
-          }
-          if (isDate(value)) {
-            return ctx.stylize(Date.prototype.toString.call(value), "date");
-          }
-          if (isError(value)) {
-            return formatError(value);
-          }
-        }
-        var base = "", array = false, braces = ["{", "}"];
-        if (isArray(value)) {
-          array = true;
-          braces = ["[", "]"];
-        }
-        if (isFunction(value)) {
-          var n = value.name ? ": " + value.name : "";
-          base = " [Function" + n + "]";
-        }
-        if (isRegExp(value)) {
-          base = " " + RegExp.prototype.toString.call(value);
-        }
-        if (isDate(value)) {
-          base = " " + Date.prototype.toUTCString.call(value);
-        }
-        if (isError(value)) {
-          base = " " + formatError(value);
-        }
-        if (keys.length === 0 && (!array || value.length == 0)) {
-          return braces[0] + base + braces[1];
-        }
-        if (recurseTimes < 0) {
-          if (isRegExp(value)) {
-            return ctx.stylize(RegExp.prototype.toString.call(value), "regexp");
-          } else {
-            return ctx.stylize("[Object]", "special");
-          }
-        }
-        ctx.seen.push(value);
-        var output;
-        if (array) {
-          output = formatArray(ctx, value, recurseTimes, visibleKeys, keys);
-        } else {
-          output = keys.map(function(key) {
-            return formatProperty(ctx, value, recurseTimes, visibleKeys, key, array);
-          });
-        }
-        ctx.seen.pop();
-        return reduceToSingleString(output, base, braces);
-      }
-      function formatPrimitive(ctx, value) {
-        if (isUndefined(value))
-          return ctx.stylize("undefined", "undefined");
-        if (isString(value)) {
-          var simple = "'" + JSON.stringify(value).replace(/^"|"$/g, "").replace(/'/g, "\\'").replace(/\\"/g, '"') + "'";
-          return ctx.stylize(simple, "string");
-        }
-        if (isNumber(value))
-          return ctx.stylize("" + value, "number");
-        if (isBoolean(value))
-          return ctx.stylize("" + value, "boolean");
-        if (isNull(value))
-          return ctx.stylize("null", "null");
-      }
-      function formatError(value) {
-        return "[" + Error.prototype.toString.call(value) + "]";
-      }
-      function formatArray(ctx, value, recurseTimes, visibleKeys, keys) {
-        var output = [];
-        for (var i = 0, l = value.length; i < l; ++i) {
-          if (hasOwnProperty(value, String(i))) {
-            output.push(formatProperty(
-              ctx,
-              value,
-              recurseTimes,
-              visibleKeys,
-              String(i),
-              true
-            ));
-          } else {
-            output.push("");
-          }
-        }
-        keys.forEach(function(key) {
-          if (!key.match(/^\d+$/)) {
-            output.push(formatProperty(
-              ctx,
-              value,
-              recurseTimes,
-              visibleKeys,
-              key,
-              true
-            ));
-          }
-        });
-        return output;
-      }
-      function formatProperty(ctx, value, recurseTimes, visibleKeys, key, array) {
-        var name, str, desc;
-        desc = Object.getOwnPropertyDescriptor(value, key) || { value: value[key] };
-        if (desc.get) {
-          if (desc.set) {
-            str = ctx.stylize("[Getter/Setter]", "special");
-          } else {
-            str = ctx.stylize("[Getter]", "special");
-          }
-        } else {
-          if (desc.set) {
-            str = ctx.stylize("[Setter]", "special");
-          }
-        }
-        if (!hasOwnProperty(visibleKeys, key)) {
-          name = "[" + key + "]";
-        }
-        if (!str) {
-          if (ctx.seen.indexOf(desc.value) < 0) {
-            if (isNull(recurseTimes)) {
-              str = formatValue(ctx, desc.value, null);
-            } else {
-              str = formatValue(ctx, desc.value, recurseTimes - 1);
-            }
-            if (str.indexOf("\n") > -1) {
-              if (array) {
-                str = str.split("\n").map(function(line) {
-                  return "  " + line;
-                }).join("\n").substr(2);
-              } else {
-                str = "\n" + str.split("\n").map(function(line) {
-                  return "   " + line;
-                }).join("\n");
-              }
-            }
-          } else {
-            str = ctx.stylize("[Circular]", "special");
-          }
-        }
-        if (isUndefined(name)) {
-          if (array && key.match(/^\d+$/)) {
-            return str;
-          }
-          name = JSON.stringify("" + key);
-          if (name.match(/^"([a-zA-Z_][a-zA-Z_0-9]*)"$/)) {
-            name = name.substr(1, name.length - 2);
-            name = ctx.stylize(name, "name");
-          } else {
-            name = name.replace(/'/g, "\\'").replace(/\\"/g, '"').replace(/(^"|"$)/g, "'");
-            name = ctx.stylize(name, "string");
-          }
-        }
-        return name + ": " + str;
-      }
-      function reduceToSingleString(output, base, braces) {
-        var numLinesEst = 0;
-        var length = output.reduce(function(prev, cur) {
-          numLinesEst++;
-          if (cur.indexOf("\n") >= 0) numLinesEst++;
-          return prev + cur.replace(/\u001b\[\d\d?m/g, "").length + 1;
-        }, 0);
-        if (length > 60) {
-          return braces[0] + (base === "" ? "" : base + "\n ") + " " + output.join(",\n  ") + " " + braces[1];
-        }
-        return braces[0] + base + " " + output.join(", ") + " " + braces[1];
-      }
-      function isArray(ar) {
-        return Array.isArray(ar);
-      }
-      exports.isArray = isArray;
-      function isBoolean(arg) {
-        return typeof arg === "boolean";
-      }
-      exports.isBoolean = isBoolean;
-      function isNull(arg) {
-        return arg === null;
-      }
-      exports.isNull = isNull;
-      function isNullOrUndefined(arg) {
-        return arg == null;
-      }
-      exports.isNullOrUndefined = isNullOrUndefined;
-      function isNumber(arg) {
-        return typeof arg === "number";
-      }
-      exports.isNumber = isNumber;
-      function isString(arg) {
-        return typeof arg === "string";
-      }
-      exports.isString = isString;
-      function isSymbol(arg) {
-        return typeof arg === "symbol";
-      }
-      exports.isSymbol = isSymbol;
-      function isUndefined(arg) {
-        return arg === void 0;
-      }
-      exports.isUndefined = isUndefined;
-      function isRegExp(re) {
-        return isObject(re) && objectToString(re) === "[object RegExp]";
-      }
-      exports.isRegExp = isRegExp;
-      function isObject(arg) {
-        return typeof arg === "object" && arg !== null;
-      }
-      exports.isObject = isObject;
-      function isDate(d) {
-        return isObject(d) && objectToString(d) === "[object Date]";
-      }
-      exports.isDate = isDate;
-      function isError(e) {
-        return isObject(e) && (objectToString(e) === "[object Error]" || e instanceof Error);
-      }
-      exports.isError = isError;
-      function isFunction(arg) {
-        return typeof arg === "function";
-      }
-      exports.isFunction = isFunction;
-      function isPrimitive(arg) {
-        return arg === null || typeof arg === "boolean" || typeof arg === "number" || typeof arg === "string" || typeof arg === "symbol" || // ES6 symbol
-        typeof arg === "undefined";
-      }
-      exports.isPrimitive = isPrimitive;
-      exports.isBuffer = require_isBufferBrowser();
-      function objectToString(o) {
-        return Object.prototype.toString.call(o);
-      }
-      function pad(n) {
-        return n < 10 ? "0" + n.toString(10) : n.toString(10);
-      }
-      var months = [
-        "Jan",
-        "Feb",
-        "Mar",
-        "Apr",
-        "May",
-        "Jun",
-        "Jul",
-        "Aug",
-        "Sep",
-        "Oct",
-        "Nov",
-        "Dec"
-      ];
-      function timestamp() {
-        var d = /* @__PURE__ */ new Date();
-        var time = [
-          pad(d.getHours()),
-          pad(d.getMinutes()),
-          pad(d.getSeconds())
-        ].join(":");
-        return [d.getDate(), months[d.getMonth()], time].join(" ");
-      }
-      exports.log = function() {
-        console.log("%s - %s", timestamp(), exports.format.apply(exports, arguments));
-      };
-      exports.inherits = require_inherits_browser();
-      exports._extend = function(origin, add) {
-        if (!add || !isObject(add)) return origin;
-        var keys = Object.keys(add);
-        var i = keys.length;
-        while (i--) {
-          origin[keys[i]] = add[keys[i]];
-        }
-        return origin;
-      };
-      function hasOwnProperty(obj, prop) {
-        return Object.prototype.hasOwnProperty.call(obj, prop);
-      }
-    }
-  });
-
-  // node_modules/path/path.js
-  var require_path = __commonJS({
-    "node_modules/path/path.js"(exports, module) {
-      "use strict";
-      var isWindows = process.platform === "win32";
-      var util = require_util();
-      function normalizeArray(parts, allowAboveRoot) {
-        var res = [];
-        for (var i = 0; i < parts.length; i++) {
-          var p = parts[i];
-          if (!p || p === ".")
-            continue;
-          if (p === "..") {
-            if (res.length && res[res.length - 1] !== "..") {
-              res.pop();
-            } else if (allowAboveRoot) {
-              res.push("..");
-            }
-          } else {
-            res.push(p);
-          }
-        }
-        return res;
-      }
-      function trimArray(arr) {
-        var lastIndex = arr.length - 1;
-        var start2 = 0;
-        for (; start2 <= lastIndex; start2++) {
-          if (arr[start2])
-            break;
-        }
-        var end = lastIndex;
-        for (; end >= 0; end--) {
-          if (arr[end])
-            break;
-        }
-        if (start2 === 0 && end === lastIndex)
-          return arr;
-        if (start2 > end)
-          return [];
-        return arr.slice(start2, end + 1);
-      }
-      var splitDeviceRe = /^([a-zA-Z]:|[\\\/]{2}[^\\\/]+[\\\/]+[^\\\/]+)?([\\\/])?([\s\S]*?)$/;
-      var splitTailRe = /^([\s\S]*?)((?:\.{1,2}|[^\\\/]+?|)(\.[^.\/\\]*|))(?:[\\\/]*)$/;
-      var win32 = {};
-      function win32SplitPath(filename) {
-        var result = splitDeviceRe.exec(filename), device = (result[1] || "") + (result[2] || ""), tail = result[3] || "";
-        var result2 = splitTailRe.exec(tail), dir = result2[1], basename = result2[2], ext = result2[3];
-        return [device, dir, basename, ext];
-      }
-      function win32StatPath(path2) {
-        var result = splitDeviceRe.exec(path2), device = result[1] || "", isUnc = !!device && device[1] !== ":";
-        return {
-          device,
-          isUnc,
-          isAbsolute: isUnc || !!result[2],
-          // UNC paths are always absolute
-          tail: result[3]
-        };
-      }
-      function normalizeUNCRoot(device) {
-        return "\\\\" + device.replace(/^[\\\/]+/, "").replace(/[\\\/]+/g, "\\");
-      }
-      win32.resolve = function() {
-        var resolvedDevice = "", resolvedTail = "", resolvedAbsolute = false;
-        for (var i = arguments.length - 1; i >= -1; i--) {
-          var path2;
-          if (i >= 0) {
-            path2 = arguments[i];
-          } else if (!resolvedDevice) {
-            path2 = process.cwd();
-          } else {
-            path2 = process.env["=" + resolvedDevice];
-            if (!path2 || path2.substr(0, 3).toLowerCase() !== resolvedDevice.toLowerCase() + "\\") {
-              path2 = resolvedDevice + "\\";
-            }
-          }
-          if (!util.isString(path2)) {
-            throw new TypeError("Arguments to path.resolve must be strings");
-          } else if (!path2) {
-            continue;
-          }
-          var result = win32StatPath(path2), device = result.device, isUnc = result.isUnc, isAbsolute = result.isAbsolute, tail = result.tail;
-          if (device && resolvedDevice && device.toLowerCase() !== resolvedDevice.toLowerCase()) {
-            continue;
-          }
-          if (!resolvedDevice) {
-            resolvedDevice = device;
-          }
-          if (!resolvedAbsolute) {
-            resolvedTail = tail + "\\" + resolvedTail;
-            resolvedAbsolute = isAbsolute;
-          }
-          if (resolvedDevice && resolvedAbsolute) {
-            break;
-          }
-        }
-        if (isUnc) {
-          resolvedDevice = normalizeUNCRoot(resolvedDevice);
-        }
-        resolvedTail = normalizeArray(
-          resolvedTail.split(/[\\\/]+/),
-          !resolvedAbsolute
-        ).join("\\");
-        return resolvedDevice + (resolvedAbsolute ? "\\" : "") + resolvedTail || ".";
-      };
-      win32.normalize = function(path2) {
-        var result = win32StatPath(path2), device = result.device, isUnc = result.isUnc, isAbsolute = result.isAbsolute, tail = result.tail, trailingSlash = /[\\\/]$/.test(tail);
-        tail = normalizeArray(tail.split(/[\\\/]+/), !isAbsolute).join("\\");
-        if (!tail && !isAbsolute) {
-          tail = ".";
-        }
-        if (tail && trailingSlash) {
-          tail += "\\";
-        }
-        if (isUnc) {
-          device = normalizeUNCRoot(device);
-        }
-        return device + (isAbsolute ? "\\" : "") + tail;
-      };
-      win32.isAbsolute = function(path2) {
-        return win32StatPath(path2).isAbsolute;
-      };
-      win32.join = function() {
-        var paths = [];
-        for (var i = 0; i < arguments.length; i++) {
-          var arg = arguments[i];
-          if (!util.isString(arg)) {
-            throw new TypeError("Arguments to path.join must be strings");
-          }
-          if (arg) {
-            paths.push(arg);
-          }
-        }
-        var joined = paths.join("\\");
-        if (!/^[\\\/]{2}[^\\\/]/.test(paths[0])) {
-          joined = joined.replace(/^[\\\/]{2,}/, "\\");
-        }
-        return win32.normalize(joined);
-      };
-      win32.relative = function(from, to) {
-        from = win32.resolve(from);
-        to = win32.resolve(to);
-        var lowerFrom = from.toLowerCase();
-        var lowerTo = to.toLowerCase();
-        var toParts = trimArray(to.split("\\"));
-        var lowerFromParts = trimArray(lowerFrom.split("\\"));
-        var lowerToParts = trimArray(lowerTo.split("\\"));
-        var length = Math.min(lowerFromParts.length, lowerToParts.length);
-        var samePartsLength = length;
-        for (var i = 0; i < length; i++) {
-          if (lowerFromParts[i] !== lowerToParts[i]) {
-            samePartsLength = i;
-            break;
-          }
-        }
-        if (samePartsLength == 0) {
-          return to;
-        }
-        var outputParts = [];
-        for (var i = samePartsLength; i < lowerFromParts.length; i++) {
-          outputParts.push("..");
-        }
-        outputParts = outputParts.concat(toParts.slice(samePartsLength));
-        return outputParts.join("\\");
-      };
-      win32._makeLong = function(path2) {
-        if (!util.isString(path2))
-          return path2;
-        if (!path2) {
-          return "";
-        }
-        var resolvedPath = win32.resolve(path2);
-        if (/^[a-zA-Z]\:\\/.test(resolvedPath)) {
-          return "\\\\?\\" + resolvedPath;
-        } else if (/^\\\\[^?.]/.test(resolvedPath)) {
-          return "\\\\?\\UNC\\" + resolvedPath.substring(2);
-        }
-        return path2;
-      };
-      win32.dirname = function(path2) {
-        var result = win32SplitPath(path2), root = result[0], dir = result[1];
-        if (!root && !dir) {
-          return ".";
-        }
-        if (dir) {
-          dir = dir.substr(0, dir.length - 1);
-        }
-        return root + dir;
-      };
-      win32.basename = function(path2, ext) {
-        var f = win32SplitPath(path2)[2];
-        if (ext && f.substr(-1 * ext.length) === ext) {
-          f = f.substr(0, f.length - ext.length);
-        }
-        return f;
-      };
-      win32.extname = function(path2) {
-        return win32SplitPath(path2)[3];
-      };
-      win32.format = function(pathObject) {
-        if (!util.isObject(pathObject)) {
-          throw new TypeError(
-            "Parameter 'pathObject' must be an object, not " + typeof pathObject
-          );
-        }
-        var root = pathObject.root || "";
-        if (!util.isString(root)) {
-          throw new TypeError(
-            "'pathObject.root' must be a string or undefined, not " + typeof pathObject.root
-          );
-        }
-        var dir = pathObject.dir;
-        var base = pathObject.base || "";
-        if (!dir) {
-          return base;
-        }
-        if (dir[dir.length - 1] === win32.sep) {
-          return dir + base;
-        }
-        return dir + win32.sep + base;
-      };
-      win32.parse = function(pathString) {
-        if (!util.isString(pathString)) {
-          throw new TypeError(
-            "Parameter 'pathString' must be a string, not " + typeof pathString
-          );
-        }
-        var allParts = win32SplitPath(pathString);
-        if (!allParts || allParts.length !== 4) {
-          throw new TypeError("Invalid path '" + pathString + "'");
-        }
-        return {
-          root: allParts[0],
-          dir: allParts[0] + allParts[1].slice(0, -1),
-          base: allParts[2],
-          ext: allParts[3],
-          name: allParts[2].slice(0, allParts[2].length - allParts[3].length)
-        };
-      };
-      win32.sep = "\\";
-      win32.delimiter = ";";
-      var splitPathRe = /^(\/?|)([\s\S]*?)((?:\.{1,2}|[^\/]+?|)(\.[^.\/]*|))(?:[\/]*)$/;
-      var posix = {};
-      function posixSplitPath(filename) {
-        return splitPathRe.exec(filename).slice(1);
-      }
-      posix.resolve = function() {
-        var resolvedPath = "", resolvedAbsolute = false;
-        for (var i = arguments.length - 1; i >= -1 && !resolvedAbsolute; i--) {
-          var path2 = i >= 0 ? arguments[i] : process.cwd();
-          if (!util.isString(path2)) {
-            throw new TypeError("Arguments to path.resolve must be strings");
-          } else if (!path2) {
-            continue;
-          }
-          resolvedPath = path2 + "/" + resolvedPath;
-          resolvedAbsolute = path2[0] === "/";
-        }
-        resolvedPath = normalizeArray(
-          resolvedPath.split("/"),
-          !resolvedAbsolute
-        ).join("/");
-        return (resolvedAbsolute ? "/" : "") + resolvedPath || ".";
-      };
-      posix.normalize = function(path2) {
-        var isAbsolute = posix.isAbsolute(path2), trailingSlash = path2 && path2[path2.length - 1] === "/";
-        path2 = normalizeArray(path2.split("/"), !isAbsolute).join("/");
-        if (!path2 && !isAbsolute) {
-          path2 = ".";
-        }
-        if (path2 && trailingSlash) {
-          path2 += "/";
-        }
-        return (isAbsolute ? "/" : "") + path2;
-      };
-      posix.isAbsolute = function(path2) {
-        return path2.charAt(0) === "/";
-      };
-      posix.join = function() {
-        var path2 = "";
-        for (var i = 0; i < arguments.length; i++) {
-          var segment = arguments[i];
-          if (!util.isString(segment)) {
-            throw new TypeError("Arguments to path.join must be strings");
-          }
-          if (segment) {
-            if (!path2) {
-              path2 += segment;
-            } else {
-              path2 += "/" + segment;
-            }
-          }
-        }
-        return posix.normalize(path2);
-      };
-      posix.relative = function(from, to) {
-        from = posix.resolve(from).substr(1);
-        to = posix.resolve(to).substr(1);
-        var fromParts = trimArray(from.split("/"));
-        var toParts = trimArray(to.split("/"));
-        var length = Math.min(fromParts.length, toParts.length);
-        var samePartsLength = length;
-        for (var i = 0; i < length; i++) {
-          if (fromParts[i] !== toParts[i]) {
-            samePartsLength = i;
-            break;
-          }
-        }
-        var outputParts = [];
-        for (var i = samePartsLength; i < fromParts.length; i++) {
-          outputParts.push("..");
-        }
-        outputParts = outputParts.concat(toParts.slice(samePartsLength));
-        return outputParts.join("/");
-      };
-      posix._makeLong = function(path2) {
-        return path2;
-      };
-      posix.dirname = function(path2) {
-        var result = posixSplitPath(path2), root = result[0], dir = result[1];
-        if (!root && !dir) {
-          return ".";
-        }
-        if (dir) {
-          dir = dir.substr(0, dir.length - 1);
-        }
-        return root + dir;
-      };
-      posix.basename = function(path2, ext) {
-        var f = posixSplitPath(path2)[2];
-        if (ext && f.substr(-1 * ext.length) === ext) {
-          f = f.substr(0, f.length - ext.length);
-        }
-        return f;
-      };
-      posix.extname = function(path2) {
-        return posixSplitPath(path2)[3];
-      };
-      posix.format = function(pathObject) {
-        if (!util.isObject(pathObject)) {
-          throw new TypeError(
-            "Parameter 'pathObject' must be an object, not " + typeof pathObject
-          );
-        }
-        var root = pathObject.root || "";
-        if (!util.isString(root)) {
-          throw new TypeError(
-            "'pathObject.root' must be a string or undefined, not " + typeof pathObject.root
-          );
-        }
-        var dir = pathObject.dir ? pathObject.dir + posix.sep : "";
-        var base = pathObject.base || "";
-        return dir + base;
-      };
-      posix.parse = function(pathString) {
-        if (!util.isString(pathString)) {
-          throw new TypeError(
-            "Parameter 'pathString' must be a string, not " + typeof pathString
-          );
-        }
-        var allParts = posixSplitPath(pathString);
-        if (!allParts || allParts.length !== 4) {
-          throw new TypeError("Invalid path '" + pathString + "'");
-        }
-        allParts[1] = allParts[1] || "";
-        allParts[2] = allParts[2] || "";
-        allParts[3] = allParts[3] || "";
-        return {
-          root: allParts[0],
-          dir: allParts[0] + allParts[1].slice(0, -1),
-          base: allParts[2],
-          ext: allParts[3],
-          name: allParts[2].slice(0, allParts[2].length - allParts[3].length)
-        };
-      };
-      posix.sep = "/";
-      posix.delimiter = ":";
-      if (isWindows)
-        module.exports = win32;
-      else
-        module.exports = posix;
-      module.exports.posix = posix;
-      module.exports.win32 = win32;
-    }
-  });
-
-  // src/multithreading/workers/node/testworker.ts
-  var testworker_exports = {};
-  __export(testworker_exports, {
-    TestWorker: () => TestWorker,
-    default: () => testworker_default
-  });
-  var import_child_process, import_path, TestWorker, testworker_default;
-  var init_testworker = __esm({
-    "src/multithreading/workers/node/testworker.ts"() {
-      "use strict";
-      import_child_process = __require("child_process");
-      import_path = __toESM(require_path(), 1);
-      TestWorker = class {
-        /**
-         * Creates a new TestWorker instance.
-         *
-         * This initializes a new worker process and sends the dataset and cost function
-         * to the worker for further processing.
-         *
-         * @param {number[]} dataSet - The serialized dataset to be used by the worker.
-         * @param {{ name: string }} cost - The cost function to evaluate the network.
-         */
-        constructor(dataSet, cost) {
-          this.worker = (0, import_child_process.fork)(import_path.default.join(__dirname, "/worker"));
-          this.worker.send({ set: dataSet, cost: cost.name });
-        }
-        /**
-         * Evaluates a neural network using the worker process.
-         *
-         * The network is serialized and sent to the worker for evaluation. The worker
-         * sends back the evaluation result, which is returned as a promise.
-         *
-         * @param {any} network - The neural network to evaluate. It must implement a `serialize` method.
-         * @returns {Promise<number>} A promise that resolves to the evaluation result.
-         */
-        evaluate(network) {
-          return new Promise((resolve) => {
-            const serialized = network.serialize();
-            const data = {
-              activations: serialized[0],
-              states: serialized[1],
-              conns: serialized[2]
-            };
-            const _that = this.worker;
-            this.worker.on("message", function callback(e) {
-              _that.removeListener("message", callback);
-              resolve(e);
-            });
-            this.worker.send(data);
-          });
-        }
-        /**
-         * Terminates the worker process.
-         *
-         * This method ensures that the worker process is properly terminated to free up system resources.
-         */
-        terminate() {
-          this.worker.kill();
-        }
-      };
-      testworker_default = TestWorker;
-    }
-  });
-
-  // src/multithreading/workers/browser/testworker.ts
-  var testworker_exports2 = {};
-  __export(testworker_exports2, {
-    TestWorker: () => TestWorker2
-  });
-  var TestWorker2;
-  var init_testworker2 = __esm({
-    "src/multithreading/workers/browser/testworker.ts"() {
-      "use strict";
-      init_multi();
-      TestWorker2 = class _TestWorker {
-        /**
-         * Creates a new TestWorker instance.
-         * @param {number[]} dataSet - The serialized dataset to be used by the worker.
-         * @param {any} cost - The cost function to evaluate the network.
-         */
-        constructor(dataSet, cost) {
-          const blob = new Blob([_TestWorker._createBlobString(cost)]);
-          this.url = window.URL.createObjectURL(blob);
-          this.worker = new Worker(this.url);
-          const data = { set: new Float64Array(dataSet).buffer };
-          this.worker.postMessage(data, [data.set]);
-        }
-        /**
-         * Evaluates a network using the worker process.
-         * @param {any} network - The network to evaluate.
-         * @returns {Promise<number>} A promise that resolves to the evaluation result.
-         */
-        evaluate(network) {
-          return new Promise((resolve, reject) => {
-            const serialized = network.serialize();
-            const data = {
-              activations: new Float64Array(serialized[0]).buffer,
-              states: new Float64Array(serialized[1]).buffer,
-              conns: new Float64Array(serialized[2]).buffer
-            };
-            this.worker.onmessage = function(e) {
-              const error = new Float64Array(e.data.buffer)[0];
-              resolve(error);
-            };
-            this.worker.postMessage(data, [
-              data.activations,
-              data.states,
-              data.conns
-            ]);
-          });
-        }
-        /**
-         * Terminates the worker process and revokes the object URL.
-         */
-        terminate() {
-          this.worker.terminate();
-          window.URL.revokeObjectURL(this.url);
-        }
-        /**
-         * Creates a string representation of the worker's blob.
-         * @param {any} cost - The cost function to be used by the worker.
-         * @returns {string} The blob string.
-         */
-        static _createBlobString(cost) {
-          return `
-      const F = [${Multi.activations.toString()}];
-      const cost = ${cost.toString()};
-      const multi = {
-        deserializeDataSet: ${Multi.deserializeDataSet.toString()},
-        testSerializedSet: ${Multi.testSerializedSet.toString()},
-        activateSerializedNetwork: ${Multi.activateSerializedNetwork.toString()}
-      };
-
-      let set;
-
-      this.onmessage = function (e) {
-        if (typeof e.data.set === 'undefined') {
-          const A = new Float64Array(e.data.activations);
-          const S = new Float64Array(e.data.states);
-          const data = new Float64Array(e.data.conns);
-
-          const error = multi.testSerializedSet(set, cost, A, S, data, F);
-
-          const answer = { buffer: new Float64Array([error]).buffer };
-          postMessage(answer, [answer.buffer]);
-        } else {
-          set = multi.deserializeDataSet(new Float64Array(e.data.set));
-        }
-      };`;
-        }
-      };
-    }
-  });
-
-  // src/multithreading/workers/workers.ts
-  var Workers;
-  var init_workers = __esm({
-    "src/multithreading/workers/workers.ts"() {
-      "use strict";
-      Workers = class {
-        /**
-         * Loads the Node.js test worker dynamically.
-         * @returns {Promise<any>} A promise that resolves to the Node.js TestWorker class.
-         */
-        static async getNodeTestWorker() {
-          const module = await Promise.resolve().then(() => (init_testworker(), testworker_exports));
-          return module.TestWorker;
-        }
-        /**
-         * Loads the browser test worker dynamically.
-         * @returns {Promise<any>} A promise that resolves to the browser TestWorker class.
-         */
-        static async getBrowserTestWorker() {
-          const module = await Promise.resolve().then(() => (init_testworker2(), testworker_exports2));
-          return module.TestWorker;
-        }
-      };
-    }
-  });
-
-  // src/multithreading/multi.ts
-  var Multi;
-  var init_multi = __esm({
-    "src/multithreading/multi.ts"() {
-      "use strict";
-      init_workers();
-      Multi = class _Multi {
-        static {
-          /** Workers for multi-threading */
-          this.workers = Workers;
-        }
-        static {
-          /**
-           * A list of compiled activation functions in a specific order.
-           */
-          this.activations = [
-            (x) => 1 / (1 + Math.exp(-x)),
-            // Logistic (0)
-            (x) => Math.tanh(x),
-            // Tanh (1)
-            (x) => x,
-            // Identity (2)
-            (x) => x > 0 ? 1 : 0,
-            // Step (3)
-            (x) => x > 0 ? x : 0,
-            // ReLU (4)
-            (x) => x / (1 + Math.abs(x)),
-            // Softsign (5)
-            (x) => Math.sin(x),
-            // Sinusoid (6)
-            (x) => Math.exp(-Math.pow(x, 2)),
-            // Gaussian (7)
-            (x) => (Math.sqrt(Math.pow(x, 2) + 1) - 1) / 2 + x,
-            // Bent Identity (8)
-            (x) => x > 0 ? 1 : -1,
-            // Bipolar (9)
-            (x) => 2 / (1 + Math.exp(-x)) - 1,
-            // Bipolar Sigmoid (10)
-            (x) => Math.max(-1, Math.min(1, x)),
-            // Hard Tanh (11)
-            (x) => Math.abs(x),
-            // Absolute (12)
-            (x) => 1 - x,
-            // Inverse (13)
-            (x) => {
-              const alpha = 1.6732632423543772;
-              const scale = 1.0507009873554805;
-              const fx = x > 0 ? x : alpha * Math.exp(x) - alpha;
-              return fx * scale;
-            },
-            (x) => Math.log(1 + Math.exp(x))
-            // Softplus (15) - Added
-          ];
-        }
-        /**
-         * Serializes a dataset into a flat array.
-         * @param {Array<{ input: number[]; output: number[] }>} dataSet - The dataset to serialize.
-         * @returns {number[]} The serialized dataset.
-         */
-        static serializeDataSet(dataSet) {
-          const serialized = [dataSet[0].input.length, dataSet[0].output.length];
-          for (let i = 0; i < dataSet.length; i++) {
-            for (let j = 0; j < serialized[0]; j++) {
-              serialized.push(dataSet[i].input[j]);
-            }
-            for (let j = 0; j < serialized[1]; j++) {
-              serialized.push(dataSet[i].output[j]);
-            }
-          }
-          return serialized;
-        }
-        /**
-         * Activates a serialized network.
-         * @param {number[]} input - The input values.
-         * @param {number[]} A - The activations array.
-         * @param {number[]} S - The states array.
-         * @param {number[]} data - The serialized network data.
-         * @param {Function[]} F - The activation functions.
-         * @returns {number[]} The output values.
-         */
-        static activateSerializedNetwork(input, A, S, data, F) {
-          for (let i = 0; i < data[0]; i++) A[i] = input[i];
-          for (let i = 2; i < data.length; i++) {
-            const index = data[i++];
-            const bias = data[i++];
-            const squash = data[i++];
-            const selfweight = data[i++];
-            const selfgater = data[i++];
-            S[index] = (selfgater === -1 ? 1 : A[selfgater]) * selfweight * S[index] + bias;
-            while (data[i] !== -2) {
-              S[index] += A[data[i++]] * data[i++] * (data[i++] === -1 ? 1 : A[data[i - 1]]);
-            }
-            A[index] = F[squash](S[index]);
-          }
-          const output = [];
-          for (let i = A.length - data[1]; i < A.length; i++) output.push(A[i]);
-          return output;
-        }
-        /**
-         * Deserializes a dataset from a flat array.
-         * @param {number[]} serializedSet - The serialized dataset.
-         * @returns {Array<{ input: number[]; output: number[] }>} The deserialized dataset as an array of input-output pairs.
-         */
-        static deserializeDataSet(serializedSet) {
-          const set = [];
-          const sampleSize = serializedSet[0] + serializedSet[1];
-          for (let i = 0; i < (serializedSet.length - 2) / sampleSize; i++) {
-            const input = [];
-            for (let j = 2 + i * sampleSize; j < 2 + i * sampleSize + serializedSet[0]; j++) {
-              input.push(serializedSet[j]);
-            }
-            const output = [];
-            for (let j = 2 + i * sampleSize + serializedSet[0]; j < 2 + i * sampleSize + sampleSize; j++) {
-              output.push(serializedSet[j]);
-            }
-            set.push({ input, output });
-          }
-          return set;
-        }
-        /**
-         * Logistic activation function.
-         * @param {number} x - The input value.
-         * @returns {number} The activated value.
-         */
-        static logistic(x) {
-          return 1 / (1 + Math.exp(-x));
-        }
-        /**
-         * Hyperbolic tangent activation function.
-         * @param {number} x - The input value.
-         * @returns {number} The activated value.
-         */
-        static tanh(x) {
-          return Math.tanh(x);
-        }
-        /**
-         * Identity activation function.
-         * @param {number} x - The input value.
-         * @returns {number} The activated value.
-         */
-        static identity(x) {
-          return x;
-        }
-        /**
-         * Step activation function.
-         * @param {number} x - The input value.
-         * @returns {number} The activated value.
-         */
-        static step(x) {
-          return x > 0 ? 1 : 0;
-        }
-        /**
-         * Rectified Linear Unit (ReLU) activation function.
-         * @param {number} x - The input value.
-         * @returns {number} The activated value.
-         */
-        static relu(x) {
-          return x > 0 ? x : 0;
-        }
-        /**
-         * Softsign activation function.
-         * @param {number} x - The input value.
-         * @returns {number} The activated value.
-         */
-        static softsign(x) {
-          return x / (1 + Math.abs(x));
-        }
-        /**
-         * Sinusoid activation function.
-         * @param {number} x - The input value.
-         * @returns {number} The activated value.
-         */
-        static sinusoid(x) {
-          return Math.sin(x);
-        }
-        /**
-         * Gaussian activation function.
-         * @param {number} x - The input value.
-         * @returns {number} The activated value.
-         */
-        static gaussian(x) {
-          return Math.exp(-Math.pow(x, 2));
-        }
-        /**
-         * Bent Identity activation function.
-         * @param {number} x - The input value.
-         * @returns {number} The activated value.
-         */
-        static bentIdentity(x) {
-          return (Math.sqrt(Math.pow(x, 2) + 1) - 1) / 2 + x;
-        }
-        /**
-         * Bipolar activation function.
-         * @param {number} x - The input value.
-         * @returns {number} The activated value.
-         */
-        static bipolar(x) {
-          return x > 0 ? 1 : -1;
-        }
-        /**
-         * Bipolar Sigmoid activation function.
-         * @param {number} x - The input value.
-         * @returns {number} The activated value.
-         */
-        static bipolarSigmoid(x) {
-          return 2 / (1 + Math.exp(-x)) - 1;
-        }
-        /**
-         * Hard Tanh activation function.
-         * @param {number} x - The input value.
-         * @returns {number} The activated value.
-         */
-        static hardTanh(x) {
-          return Math.max(-1, Math.min(1, x));
-        }
-        /**
-         * Absolute activation function.
-         * @param {number} x - The input value.
-         * @returns {number} The activated value.
-         */
-        static absolute(x) {
-          return Math.abs(x);
-        }
-        /**
-         * Inverse activation function.
-         * @param {number} x - The input value.
-         * @returns {number} The activated value.
-         */
-        static inverse(x) {
-          return 1 - x;
-        }
-        /**
-         * Scaled Exponential Linear Unit (SELU) activation function.
-         * @param {number} x - The input value.
-         * @returns {number} The activated value.
-         */
-        static selu(x) {
-          const alpha = 1.6732632423543772;
-          const scale = 1.0507009873554805;
-          const fx = x > 0 ? x : alpha * Math.exp(x) - alpha;
-          return fx * scale;
-        }
-        /**
-         * Softplus activation function. - Added
-         * @param {number} x - The input value.
-         * @returns {number} The activated value.
-         */
-        static softplus(x) {
-          return Math.log(1 + Math.exp(x));
-        }
-        /**
-         * Tests a serialized dataset using a cost function.
-         * @param {Array<{ input: number[]; output: number[] }>} set - The serialized dataset as an array of input-output pairs.
-         * @param {Function} cost - The cost function.
-         * @param {number[]} A - The activations array.
-         * @param {number[]} S - The states array.
-         * @param {number[]} data - The serialized network data.
-         * @param {Function[]} F - The activation functions.
-         * @returns {number} The average error.
-         */
-        static testSerializedSet(set, cost, A, S, data, F) {
-          let error = 0;
-          for (let i = 0; i < set.length; i++) {
-            const output = _Multi.activateSerializedNetwork(
-              set[i].input,
-              A,
-              S,
-              data,
-              F
-            );
-            error += cost(set[i].output, output);
-          }
-          return error / set.length;
-        }
-        /**
-         * Gets the browser test worker.
-         * @returns {Promise<any>} The browser test worker.
-         */
-        static async getBrowserTestWorker() {
-          const { TestWorker: TestWorker3 } = await Promise.resolve().then(() => (init_testworker2(), testworker_exports2));
-          return TestWorker3;
-        }
-        /**
-         * Gets the node test worker.
-         * @returns {Promise<any>} The node test worker.
-         */
-        static async getNodeTestWorker() {
-          const { TestWorker: TestWorker3 } = await Promise.resolve().then(() => (init_testworker(), testworker_exports));
-          return TestWorker3;
-        }
-      };
-    }
-  });
-
   // src/architecture/network/network.evolve.ts
   var network_evolve_exports = {};
   __export(network_evolve_exports, {
@@ -8414,6 +8929,7 @@
   var init_network_evolve = __esm({
     "src/architecture/network/network.evolve.ts"() {
       "use strict";
+      init_network();
       init_methods();
       init_config();
       init_multi();
@@ -8424,14 +8940,18 @@
   // src/architecture/network.ts
   var network_exports = {};
   __export(network_exports, {
-    default: () => Network
+    default: () => Network3
   });
-  var Network;
+  var Network3;
   var init_network = __esm({
     "src/architecture/network.ts"() {
       "use strict";
       init_node();
+      init_nodePool();
+      init_connection();
+      init_multi();
       init_methods();
+      init_mutation();
       init_config();
       init_activationArrayPool();
       init_onnx();
@@ -8446,52 +8966,107 @@
       init_network_connect();
       init_network_serialize();
       init_network_genetic();
-      Network = class _Network {
+      Network3 = class _Network {
+        input;
+        output;
+        score;
+        nodes;
+        connections;
+        gates;
+        selfconns;
+        dropout = 0;
+        _dropConnectProb = 0;
+        _lastGradNorm;
+        _optimizerStep = 0;
+        _weightNoiseStd = 0;
+        _weightNoisePerHidden = [];
+        _weightNoiseSchedule;
+        _stochasticDepth = [];
+        _wnOrig;
+        _trainingStep = 0;
+        _rand = Math.random;
+        _rngState;
+        _lastStats = null;
+        _stochasticDepthSchedule;
+        _mixedPrecision = {
+          enabled: false,
+          lossScale: 1
+        };
+        _mixedPrecisionState = {
+          goodSteps: 0,
+          badSteps: 0,
+          minLossScale: 1,
+          maxLossScale: 65536,
+          overflowCount: 0,
+          scaleUpEvents: 0,
+          scaleDownEvents: 0
+        };
+        _gradAccumMicroBatches = 0;
+        _currentGradClip;
+        _lastRawGradNorm = 0;
+        _accumulationReduction = "average";
+        _gradClipSeparateBias = false;
+        _lastGradClipGroupCount = 0;
+        _lastOverflowStep = -1;
+        _forceNextOverflow = false;
+        _pruningConfig;
+        _initialConnectionCount;
+        _enforceAcyclic = false;
+        _topoOrder = null;
+        _topoDirty = true;
+        _globalEpoch = 0;
+        layers;
+        _evoInitialConnCount;
+        // baseline for evolution-time pruning
+        _activationPrecision = "f64";
+        // typed array precision for compiled path
+        _reuseActivationArrays = false;
+        // reuse pooled output arrays
+        _returnTypedActivations = false;
+        // if true and reuse enabled, return typed array directly
+        _activationPool;
+        // pooled output array
+        // Packed connection slab fields (for memory + cache efficiency when iterating connections)
+        _connWeights;
+        _connFrom;
+        _connTo;
+        _slabDirty = true;
+        _useFloat32Weights = true;
+        // Cached node.index maintenance (avoids repeated this.nodes.indexOf in hot paths like slab rebuild)
+        _nodeIndexDirty = true;
+        // when true, node.index values must be reassigned sequentially
+        // Fast slab forward path structures
+        _outStart;
+        _outOrder;
+        _adjDirty = true;
+        // Cached typed arrays for fast slab forward pass
+        _fastA;
+        _fastS;
+        // Internal hint: track a preferred linear chain edge to split on subsequent ADD_NODE mutations
+        // to encourage deep path formation even in stochastic modes. Updated each time we split it.
+        _preferredChainEdge;
+        // Slab helpers delegated to network.slab.ts
+        _canUseFastSlab(training) {
+          return canUseFastSlab.call(this, training);
+        }
+        _fastSlabActivate(input) {
+          return fastSlabActivate.call(this, input);
+        }
+        rebuildConnectionSlab(force = false) {
+          return rebuildConnectionSlab.call(this, force);
+        }
+        getConnectionSlab() {
+          return getConnectionSlab.call(this);
+        }
+        /**
+         * Public wrapper for fast slab forward pass (primarily for tests / benchmarking).
+         * Prefer using standard activate(); it will auto dispatch when eligible.
+         * Falls back internally if prerequisites not met.
+         */
+        fastSlabActivate(input) {
+          return this._fastSlabActivate(input);
+        }
         constructor(input, output, options) {
-          this.dropout = 0;
-          this._dropConnectProb = 0;
-          this._optimizerStep = 0;
-          this._weightNoiseStd = 0;
-          this._weightNoisePerHidden = [];
-          this._stochasticDepth = [];
-          this._trainingStep = 0;
-          this._rand = Math.random;
-          this._lastStats = null;
-          this._mixedPrecision = {
-            enabled: false,
-            lossScale: 1
-          };
-          this._mixedPrecisionState = {
-            goodSteps: 0,
-            badSteps: 0,
-            minLossScale: 1,
-            maxLossScale: 65536,
-            overflowCount: 0,
-            scaleUpEvents: 0,
-            scaleDownEvents: 0
-          };
-          this._gradAccumMicroBatches = 0;
-          this._lastRawGradNorm = 0;
-          this._accumulationReduction = "average";
-          this._gradClipSeparateBias = false;
-          this._lastGradClipGroupCount = 0;
-          this._lastOverflowStep = -1;
-          this._forceNextOverflow = false;
-          this._enforceAcyclic = false;
-          this._topoOrder = null;
-          this._topoDirty = true;
-          this._globalEpoch = 0;
-          // baseline for evolution-time pruning
-          this._activationPrecision = "f64";
-          // typed array precision for compiled path
-          this._reuseActivationArrays = false;
-          // reuse pooled output arrays
-          this._returnTypedActivations = false;
-          this._slabDirty = true;
-          this._useFloat32Weights = true;
-          // Cached node.index maintenance (avoids repeated this.nodes.indexOf in hot paths like slab rebuild)
-          this._nodeIndexDirty = true;
-          this._adjDirty = true;
           if (typeof input === "undefined" || typeof output === "undefined") {
             throw new Error("No input or output size given");
           }
@@ -8522,7 +9097,9 @@
           }
           for (let i = 0; i < this.input + this.output; i++) {
             const type = i < this.input ? "input" : "output";
-            this.nodes.push(new Node(type, void 0, this._rand));
+            if (config.enableNodePooling)
+              this.nodes.push(acquireNode({ type, rng: this._rand }));
+            else this.nodes.push(new Node2(type, void 0, this._rand));
           }
           for (let i = 0; i < this.input; i++) {
             for (let j = this.input; j < this.input + this.output; j++) {
@@ -8537,27 +9114,14 @@
             }
           }
         }
-        // Slab helpers delegated to network.slab.ts
-        _canUseFastSlab(training) {
-          return canUseFastSlab.call(this, training);
-        }
-        _fastSlabActivate(input) {
-          return fastSlabActivate.call(this, input);
-        }
-        rebuildConnectionSlab(force = false) {
-          return rebuildConnectionSlab.call(this, force);
-        }
-        getConnectionSlab() {
-          return getConnectionSlab.call(this);
-        }
-        // --- Added: structural helper referenced by constructor (split a random connection) ---
+        // --- Changed: made public (was private) for deterministic pooling stress harness ---
         addNodeBetween() {
           if (this.connections.length === 0) return;
           const idx = Math.floor(this._rand() * this.connections.length);
           const conn = this.connections[idx];
           if (!conn) return;
           this.disconnect(conn.from, conn.to);
-          const newNode = new Node("hidden", void 0, this._rand);
+          const newNode = config.enableNodePooling ? acquireNode({ type: "hidden", rng: this._rand }) : new Node2("hidden", void 0, this._rand);
           this.nodes.push(newNode);
           this.connect(conn.from, newNode, conn.weight);
           this.connect(newNode, conn.to, 1);
@@ -9133,7 +9697,14 @@
          * @throws {Error} If the specified `node` is not found in the network's `nodes` list.
          */
         remove(node) {
-          return removeNode.call(this, node);
+          const result = removeNode.call(this, node);
+          if (config.enableNodePooling) {
+            try {
+              releaseNode(node);
+            } catch {
+            }
+          }
+          return result;
         }
         /**
          * Disconnects two nodes, removing the connection between them.
@@ -9176,8 +9747,6 @@
          * @returns {number} The average error calculated over the provided dataset subset.
          * @private Internal method used by `train`.
          */
-        // Removed legacy _trainSet; delegated to network.training.ts
-        // Gradient clipping implemented in network.training.ts (applyGradientClippingImpl). Kept here only for backward compat if reflection used.
         _applyGradientClipping(cfg) {
           const { applyGradientClippingImpl: applyGradientClippingImpl2 } = (init_network_training(), __toCommonJS(network_training_exports));
           applyGradientClippingImpl2(this, cfg);
@@ -9371,14 +9940,14 @@
         static createMLP(inputCount, hiddenCounts, outputCount) {
           const inputNodes = Array.from(
             { length: inputCount },
-            () => new Node("input")
+            () => new Node2("input")
           );
           const hiddenLayers = hiddenCounts.map(
-            (count) => Array.from({ length: count }, () => new Node("hidden"))
+            (count) => Array.from({ length: count }, () => new Node2("hidden"))
           );
           const outputNodes = Array.from(
             { length: outputCount },
-            () => new Node("output")
+            () => new Node2("output")
           );
           const allNodes = [...inputNodes, ...hiddenLayers.flat(), ...outputNodes];
           const net = new _Network(inputCount, outputCount);
@@ -9559,8 +10128,8 @@
     const hiddenPairs = reuseCandidates.length ? [] : candidatePairs.filter(
       (pair) => pair[0].type === "hidden" && pair[1].type === "hidden"
     );
-    const pool = reuseCandidates.length ? reuseCandidates : hiddenPairs.length ? hiddenPairs : candidatePairs;
-    const chosenPair = pool.length === 1 ? pool[0] : pool[Math.floor(this._getRNG()() * pool.length)];
+    const pool2 = reuseCandidates.length ? reuseCandidates : hiddenPairs.length ? hiddenPairs : candidatePairs;
+    const chosenPair = pool2.length === 1 ? pool2[0] : pool2[Math.floor(this._getRNG()() * pool2.length)];
     const fromNode = chosenPair[0];
     const toNode = chosenPair[1];
     const idA = fromNode.geneId;
@@ -9722,33 +10291,33 @@
       return methods.mutation.FFW[Math.floor(this._getRNG()() * methods.mutation.FFW.length)];
     if (isFFWNested)
       return methods.mutation.FFW[Math.floor(this._getRNG()() * methods.mutation.FFW.length)];
-    let pool = this.options.mutation;
-    if (rawReturnForTest && Array.isArray(pool) && pool.length === methods.mutation.FFW.length && pool.every(
+    let pool2 = this.options.mutation;
+    if (rawReturnForTest && Array.isArray(pool2) && pool2.length === methods.mutation.FFW.length && pool2.every(
       (m, i) => m && m.name === methods.mutation.FFW[i].name
     )) {
       return methods.mutation.FFW;
     }
-    if (pool.length === 1 && Array.isArray(pool[0]) && pool[0].length)
-      pool = pool[0];
+    if (pool2.length === 1 && Array.isArray(pool2[0]) && pool2[0].length)
+      pool2 = pool2[0];
     if (this.options.phasedComplexity?.enabled && this._phase) {
-      pool = pool.filter((m) => !!m);
+      pool2 = pool2.filter((m) => !!m);
       if (this._phase === "simplify") {
-        const simplifyPool = pool.filter(
+        const simplifyPool = pool2.filter(
           (m) => m && m.name && m.name.startsWith && m.name.startsWith("SUB_")
         );
-        if (simplifyPool.length) pool = [...pool, ...simplifyPool];
+        if (simplifyPool.length) pool2 = [...pool2, ...simplifyPool];
       } else if (this._phase === "complexify") {
-        const addPool = pool.filter(
+        const addPool = pool2.filter(
           (m) => m && m.name && m.name.startsWith && m.name.startsWith("ADD_")
         );
-        if (addPool.length) pool = [...pool, ...addPool];
+        if (addPool.length) pool2 = [...pool2, ...addPool];
       }
     }
     if (this.options.operatorAdaptation?.enabled) {
       const boost = this.options.operatorAdaptation.boost ?? 2;
       const stats = this._operatorStats;
       const augmented = [];
-      for (const m of pool) {
+      for (const m of pool2) {
         augmented.push(m);
         const st = stats.get(m.name);
         if (st && st.attempts > 5) {
@@ -9759,9 +10328,9 @@
           }
         }
       }
-      pool = augmented;
+      pool2 = augmented;
     }
-    let mutationMethod = pool[Math.floor(this._getRNG()() * pool.length)];
+    let mutationMethod = pool2[Math.floor(this._getRNG()() * pool2.length)];
     if (mutationMethod === methods.mutation.ADD_GATE && genome.gates.length >= (this.options.maxGates || Infinity))
       return null;
     if (mutationMethod === methods.mutation.ADD_NODE && genome.nodes.length >= (this.options.maxNodes || Infinity))
@@ -9772,7 +10341,7 @@
       const c = this.options.operatorBandit.c ?? 1.4;
       const minA = this.options.operatorBandit.minAttempts ?? 5;
       const stats = this._operatorStats;
-      for (const m of pool)
+      for (const m of pool2)
         if (!stats.has(m.name)) stats.set(m.name, { success: 0, attempts: 0 });
       const totalAttempts = Array.from(stats.values()).reduce(
         (a, s) => a + s.attempts,
@@ -9780,7 +10349,7 @@
       ) + EPSILON;
       let best = mutationMethod;
       let bestVal = -Infinity;
-      for (const m of pool) {
+      for (const m of pool2) {
         const st = stats.get(m.name);
         const mean = st.attempts > 0 ? st.success / st.attempts : 0;
         const bonus = st.attempts < minA ? Infinity : c * Math.sqrt(Math.log(totalAttempts) / (st.attempts + EPSILON));
@@ -9966,8 +10535,12 @@
           complexityBudget.minNodes ?? this.input + this.output + 2,
           Math.floor(this._cbMaxNodes * stagF)
         );
-      if (complexityBudget.minNodes !== void 0)
+      if (complexityBudget.minNodes !== void 0) {
         this._cbMaxNodes = Math.max(complexityBudget.minNodes, this._cbMaxNodes);
+      } else {
+        const implicitMin = this.input + this.output + 2;
+        if (this._cbMaxNodes < implicitMin) this._cbMaxNodes = implicitMin;
+      }
       this.options.maxNodes = this._cbMaxNodes;
       if (complexityBudget.maxConnsStart) {
         if (this._cbMaxConns === void 0)
@@ -10942,7 +11515,7 @@
       } catch {
       }
     }
-    const fittest = Network.fromJSON(this.population[0].toJSON());
+    const fittest = Network3.fromJSON(this.population[0].toJSON());
     fittest.score = this.population[0].score;
     this._computeDiversityStats();
     try {
@@ -11073,10 +11646,10 @@
     );
     for (let i = 0; i < provenanceCount; i++) {
       if (this.options.network) {
-        newPopulation.push(Network.fromJSON(this.options.network.toJSON()));
+        newPopulation.push(Network3.fromJSON(this.options.network.toJSON()));
       } else {
         newPopulation.push(
-          new Network(this.input, this.output, {
+          new Network3(this.input, this.output, {
             minHidden: this.options.minHidden
           })
         );
@@ -11178,7 +11751,7 @@
             } else {
               parentB = survivors[Math.floor(this._getRNG()() * survivors.length)];
             }
-            const child = Network.crossOver(
+            const child = Network3.crossOver(
               parentA,
               parentB,
               this.options.equal || false
@@ -11239,7 +11812,7 @@
         Math.floor(this.population.length * (1 - replaceFraction))
       );
       for (let i = startIdx; i < this.population.length; i++) {
-        const fresh = new Network(this.input, this.output, {
+        const fresh = new Network3(this.input, this.output, {
           minHidden: this.options.minHidden
         });
         fresh.score = void 0;
@@ -11563,7 +12136,7 @@
       this.population = [];
       const poolSize = this.options?.popsize || 50;
       for (let genomeIndex = 0; genomeIndex < poolSize; genomeIndex++) {
-        const genomeCopy = seedNetwork ? Network.fromJSON(seedNetwork.toJSON()) : new Network(this.input, this.output, {
+        const genomeCopy = seedNetwork ? Network3.fromJSON(seedNetwork.toJSON()) : new Network3(this.input, this.output, {
           minHidden: this.options?.minHidden
         });
         genomeCopy.score = void 0;
@@ -11720,6 +12293,7 @@
   var init_neat_diversity = __esm({
     "src/neat/neat.diversity.ts"() {
       "use strict";
+      init_network();
     }
   });
 
@@ -12430,9 +13004,9 @@
     return this.population.map((genome) => genome.toJSON());
   }
   function importPopulation(populationJSON) {
-    const Network3 = (init_network(), __toCommonJS(network_exports)).default;
+    const Network6 = (init_network(), __toCommonJS(network_exports)).default;
     this.population = populationJSON.map(
-      (serializedGenome) => Network3.fromJSON(serializedGenome)
+      (serializedGenome) => Network6.fromJSON(serializedGenome)
     );
     this.options.popsize = this.population.length;
   }
@@ -12499,12 +13073,14 @@
       init_network();
       init_methods();
       init_selection();
+      init_node();
       init_neat_mutation();
       init_neat_evolve();
       init_neat_evaluate();
       init_neat_helpers();
       init_neat_objectives();
       init_neat_diversity();
+      init_neat_multiobjective();
       init_neat_compat();
       init_neat_speciation();
       init_neat_species();
@@ -12512,6 +13088,134 @@
       init_neat_selection();
       init_neat_export();
       Neat = class _Neat {
+        input;
+        output;
+        fitness;
+        options;
+        population = [];
+        generation = 0;
+        // Deterministic RNG state (lazy init)
+        /**
+         * Internal numeric state for the deterministic xorshift RNG when no user RNG
+         * is provided. Stored as a 32-bit unsigned integer.
+         */
+        _rngState;
+        /**
+         * Cached RNG function; created lazily and seeded from `_rngState` when used.
+         */
+        _rng;
+        // Internal bookkeeping and caches (kept permissive during staggered migration)
+        /** Array of current species (internal representation). */
+        _species = [];
+        /** Operator statistics used by adaptive operator selection. */
+        _operatorStats = /* @__PURE__ */ new Map();
+        /** Map of node-split innovations used to reuse innovation ids for node splits. */
+        _nodeSplitInnovations = /* @__PURE__ */ new Map();
+        /** Map of connection innovations keyed by a string identifier. */
+        _connInnovations = /* @__PURE__ */ new Map();
+        /** Counter for issuing global innovation numbers when explicit numbers are used. */
+        _nextGlobalInnovation = 1;
+        /** Counter for assigning unique genome ids. */
+        _nextGenomeId = 1;
+        /** Whether lineage metadata should be recorded on genomes. */
+        _lineageEnabled = false;
+        /** Last observed count of inbreeding (used for detecting excessive cloning). */
+        _lastInbreedingCount = 0;
+        /** Previous inbreeding count snapshot. */
+        _prevInbreedingCount = 0;
+        /** Optional phase marker for multi-stage experiments. */
+        _phase;
+        /** Telemetry buffer storing diagnostic snapshots per generation. */
+        _telemetry = [];
+        /** Map of species id -> set of member genome ids from previous generation. */
+        _prevSpeciesMembers = /* @__PURE__ */ new Map();
+        /** Last recorded stats per species id. */
+        _speciesLastStats = /* @__PURE__ */ new Map();
+        /** Time-series history of species stats (for exports/telemetry). */
+        _speciesHistory = [];
+        /** Archive of Pareto front metadata for multi-objective tracking. */
+        _paretoArchive = [];
+        /** Archive storing Pareto objectives snapshots. */
+        _paretoObjectivesArchive = [];
+        /** Novelty archive used by novelty search (behavior representatives). */
+        _noveltyArchive = [];
+        /** Map tracking stale counts for objectives by key. */
+        _objectiveStale = /* @__PURE__ */ new Map();
+        /** Map tracking ages for objectives by key. */
+        _objectiveAges = /* @__PURE__ */ new Map();
+        /** Queue of recent objective activation/deactivation events for telemetry. */
+        _objectiveEvents = [];
+        /** Pending objective keys to add during safe phases. */
+        _pendingObjectiveAdds = [];
+        /** Pending objective keys to remove during safe phases. */
+        _pendingObjectiveRemoves = [];
+        /** Last allocated offspring set (used by adaptive allocators). */
+        _lastOffspringAlloc;
+        /** Adaptive prune level for complexity control (optional). */
+        _adaptivePruneLevel;
+        /** Duration of the last evaluation run (ms). */
+        _lastEvalDuration;
+        /** Duration of the last evolve run (ms). */
+        _lastEvolveDuration;
+        /** Cached diversity metrics (computed lazily). */
+        _diversityStats;
+        /** Cached list of registered objectives. */
+        _objectivesList;
+        /** Generation index where the last global improvement occurred. */
+        _lastGlobalImproveGeneration = 0;
+        /** Best score observed in the last generation (used for improvement detection). */
+        _bestScoreLastGen;
+        // Speciation controller state
+        /** Map of speciesId -> creation generation for bookkeeping. */
+        _speciesCreated = /* @__PURE__ */ new Map();
+        /** Exponential moving average for compatibility threshold (adaptive speciation). */
+        _compatSpeciesEMA;
+        /** Integral accumulator used by adaptive compatibility controllers. */
+        _compatIntegral = 0;
+        /** Generation when epsilon compatibility was last adjusted. */
+        _lastEpsilonAdjustGen = -Infinity;
+        /** Generation when ancestor uniqueness adjustment was last applied. */
+        _lastAncestorUniqAdjustGen = -Infinity;
+        // Adaptive minimal criterion & complexity
+        /** Adaptive minimal criterion threshold (optional). */
+        _mcThreshold;
+        // Lightweight RNG accessor used throughout migrated modules
+        _getRNG() {
+          if (!this._rng) {
+            const optRng = this.options?.rng;
+            if (typeof optRng === "function") this._rng = optRng;
+            else {
+              if (this._rngState === void 0) {
+                let seed = (Date.now() ^ (this.population.length + 1) * 2654435761) >>> 0;
+                if (seed === 0) seed = 439041101;
+                this._rngState = seed >>> 0;
+              }
+              this._rng = () => {
+                let x = this._rngState >>> 0;
+                x ^= x << 13;
+                x >>>= 0;
+                x ^= x >> 17;
+                x >>>= 0;
+                x ^= x << 5;
+                x >>>= 0;
+                this._rngState = x >>> 0;
+                return (x >>> 0) / 4294967295;
+              };
+            }
+          }
+          return this._rng;
+        }
+        // Delegate ensureMinHiddenNodes to migrated mutation helper for smaller class surface
+        /**
+         * Ensure a network has the minimum number of hidden nodes according to
+         * configured policy. Delegates to migrated helper implementation.
+         *
+         * @param network Network instance to adjust.
+         * @param multiplierOverride Optional multiplier to override configured policy.
+         */
+        ensureMinHiddenNodes(network, multiplierOverride) {
+          return ensureMinHiddenNodes.call(this, network, multiplierOverride);
+        }
         /**
          * Construct a new Neat instance.
          * Kept permissive during staged migration; accepts the same signature tests expect.
@@ -12521,62 +13225,6 @@
          * const neat = new Neat(3, 1, (net) => evaluateFitness(net));
          */
         constructor(input, output, fitness, options = {}) {
-          this.population = [];
-          this.generation = 0;
-          // Internal bookkeeping and caches (kept permissive during staggered migration)
-          /** Array of current species (internal representation). */
-          this._species = [];
-          /** Operator statistics used by adaptive operator selection. */
-          this._operatorStats = /* @__PURE__ */ new Map();
-          /** Map of node-split innovations used to reuse innovation ids for node splits. */
-          this._nodeSplitInnovations = /* @__PURE__ */ new Map();
-          /** Map of connection innovations keyed by a string identifier. */
-          this._connInnovations = /* @__PURE__ */ new Map();
-          /** Counter for issuing global innovation numbers when explicit numbers are used. */
-          this._nextGlobalInnovation = 1;
-          /** Counter for assigning unique genome ids. */
-          this._nextGenomeId = 1;
-          /** Whether lineage metadata should be recorded on genomes. */
-          this._lineageEnabled = false;
-          /** Last observed count of inbreeding (used for detecting excessive cloning). */
-          this._lastInbreedingCount = 0;
-          /** Previous inbreeding count snapshot. */
-          this._prevInbreedingCount = 0;
-          /** Telemetry buffer storing diagnostic snapshots per generation. */
-          this._telemetry = [];
-          /** Map of species id -> set of member genome ids from previous generation. */
-          this._prevSpeciesMembers = /* @__PURE__ */ new Map();
-          /** Last recorded stats per species id. */
-          this._speciesLastStats = /* @__PURE__ */ new Map();
-          /** Time-series history of species stats (for exports/telemetry). */
-          this._speciesHistory = [];
-          /** Archive of Pareto front metadata for multi-objective tracking. */
-          this._paretoArchive = [];
-          /** Archive storing Pareto objectives snapshots. */
-          this._paretoObjectivesArchive = [];
-          /** Novelty archive used by novelty search (behavior representatives). */
-          this._noveltyArchive = [];
-          /** Map tracking stale counts for objectives by key. */
-          this._objectiveStale = /* @__PURE__ */ new Map();
-          /** Map tracking ages for objectives by key. */
-          this._objectiveAges = /* @__PURE__ */ new Map();
-          /** Queue of recent objective activation/deactivation events for telemetry. */
-          this._objectiveEvents = [];
-          /** Pending objective keys to add during safe phases. */
-          this._pendingObjectiveAdds = [];
-          /** Pending objective keys to remove during safe phases. */
-          this._pendingObjectiveRemoves = [];
-          /** Generation index where the last global improvement occurred. */
-          this._lastGlobalImproveGeneration = 0;
-          // Speciation controller state
-          /** Map of speciesId -> creation generation for bookkeeping. */
-          this._speciesCreated = /* @__PURE__ */ new Map();
-          /** Integral accumulator used by adaptive compatibility controllers. */
-          this._compatIntegral = 0;
-          /** Generation when epsilon compatibility was last adjusted. */
-          this._lastEpsilonAdjustGen = -Infinity;
-          /** Generation when ancestor uniqueness adjustment was last applied. */
-          this._lastAncestorUniqAdjustGen = -Infinity;
           this.input = input ?? 0;
           this.output = output ?? 0;
           this.fitness = fitness ?? ((n) => 0);
@@ -12634,43 +13282,6 @@
             this._lineageEnabled = true;
           }
         }
-        // Lightweight RNG accessor used throughout migrated modules
-        _getRNG() {
-          if (!this._rng) {
-            const optRng = this.options?.rng;
-            if (typeof optRng === "function") this._rng = optRng;
-            else {
-              if (this._rngState === void 0) {
-                let seed = (Date.now() ^ (this.population.length + 1) * 2654435761) >>> 0;
-                if (seed === 0) seed = 439041101;
-                this._rngState = seed >>> 0;
-              }
-              this._rng = () => {
-                let x = this._rngState >>> 0;
-                x ^= x << 13;
-                x >>>= 0;
-                x ^= x >> 17;
-                x >>>= 0;
-                x ^= x << 5;
-                x >>>= 0;
-                this._rngState = x >>> 0;
-                return (x >>> 0) / 4294967295;
-              };
-            }
-          }
-          return this._rng;
-        }
-        // Delegate ensureMinHiddenNodes to migrated mutation helper for smaller class surface
-        /**
-         * Ensure a network has the minimum number of hidden nodes according to
-         * configured policy. Delegates to migrated helper implementation.
-         *
-         * @param network Network instance to adjust.
-         * @param multiplierOverride Optional multiplier to override configured policy.
-         */
-        ensureMinHiddenNodes(network, multiplierOverride) {
-          return ensureMinHiddenNodes.call(this, network, multiplierOverride);
-        }
         /**
          * Evolves the population by selecting, mutating, and breeding genomes.
          * This method is delegated to `src/neat/neat.evolve.ts` during the migration.
@@ -12697,7 +13308,7 @@
           this.population = [];
           const poolSize = this.options.popsize || 50;
           for (let idx = 0; idx < poolSize; idx++) {
-            const genomeCopy = network ? Network.fromJSON(network.toJSON()) : new Network(this.input, this.output, {
+            const genomeCopy = network ? Network3.fromJSON(network.toJSON()) : new Network3(this.input, this.output, {
               minHidden: this.options.minHidden
             });
             genomeCopy.score = void 0;
@@ -12765,7 +13376,7 @@
           } catch {
             parent2 = this.population[Math.floor(this._getRNG()() * this.population.length)] || this.population[0];
           }
-          const offspring = Network.crossOver(
+          const offspring = Network3.crossOver(
             parent1,
             parent2,
             this.options.equal || false
@@ -14852,6 +15463,32 @@
 
   // test/examples/asciiMaze/dashboardManager.ts
   var DashboardManager = class _DashboardManager {
+    // List of solved maze records (keeps full maze + solution for archival display)
+    solvedMazes = [];
+    // Set of maze keys we've already archived to avoid duplicate entries
+    solvedMazeKeys = /* @__PURE__ */ new Set();
+    // Currently evolving/best candidate for the active maze (live view)
+    currentBest = null;
+    // Functions supplied by the embedding environment. Keep dashboard I/O pluggable.
+    clearFunction;
+    logFunction;
+    archiveLogFunction;
+    // Telemetry and small history windows used for rendering trends/sparklines
+    _lastTelemetry = null;
+    _lastBestFitness = null;
+    _bestFitnessHistory = [];
+    _complexityNodesHistory = [];
+    _complexityConnsHistory = [];
+    _hypervolumeHistory = [];
+    _progressHistory = [];
+    _speciesCountHistory = [];
+    // Layout constants for the ASCII-art framed display
+    static FRAME_INNER_WIDTH = 148;
+    static LEFT_PADDING = 7;
+    static RIGHT_PADDING = 1;
+    static CONTENT_WIDTH = _DashboardManager.FRAME_INNER_WIDTH - _DashboardManager.LEFT_PADDING - _DashboardManager.RIGHT_PADDING;
+    static STAT_LABEL_WIDTH = 28;
+    static opennessLegend = "Openness: 1=best, (0,1)=longer improving, 0.001=only backtrack, 0=wall/dead/non-improving";
     /**
      * Construct a new DashboardManager
      *
@@ -14860,43 +15497,9 @@
      * @param archiveLogFn - optional function to which solved-maze archive blocks are appended
      */
     constructor(clearFn, logFn, archiveLogFn) {
-      // List of solved maze records (keeps full maze + solution for archival display)
-      this.solvedMazes = [];
-      // Set of maze keys we've already archived to avoid duplicate entries
-      this.solvedMazeKeys = /* @__PURE__ */ new Set();
-      // Currently evolving/best candidate for the active maze (live view)
-      this.currentBest = null;
-      // Telemetry and small history windows used for rendering trends/sparklines
-      this._lastTelemetry = null;
-      this._lastBestFitness = null;
-      this._bestFitnessHistory = [];
-      this._complexityNodesHistory = [];
-      this._complexityConnsHistory = [];
-      this._hypervolumeHistory = [];
-      this._progressHistory = [];
-      this._speciesCountHistory = [];
       this.clearFunction = clearFn;
       this.logFunction = logFn;
       this.archiveLogFunction = archiveLogFn;
-    }
-    static {
-      // Layout constants for the ASCII-art framed display
-      this.FRAME_INNER_WIDTH = 148;
-    }
-    static {
-      this.LEFT_PADDING = 7;
-    }
-    static {
-      this.RIGHT_PADDING = 1;
-    }
-    static {
-      this.CONTENT_WIDTH = _DashboardManager.FRAME_INNER_WIDTH - _DashboardManager.LEFT_PADDING - _DashboardManager.RIGHT_PADDING;
-    }
-    static {
-      this.STAT_LABEL_WIDTH = 28;
-    }
-    static {
-      this.opennessLegend = "Openness: 1=best, (0,1)=longer improving, 0.001=only backtrack, 0=wall/dead/non-improving";
     }
     /**
      * formatStat

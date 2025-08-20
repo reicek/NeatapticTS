@@ -1,11 +1,15 @@
 import Node from './node';
+import {
+  acquireNode as _acquireNode,
+  releaseNode as _releaseNode,
+} from './nodePool';
 import Connection from './connection';
 import Multi from '../multithreading/multi';
 import * as methods from '../methods/methods';
 import mutation from '../methods/mutation'; // Import mutation methods
 import { config } from '../config'; // Import configuration settings
-import { activationArrayPool, ActivationArray } from './activationArrayPool';
-// ONNX export/import now lives in ./network/network.onnx (re-exported via ./onnx for backwards compat)
+import { activationArrayPool } from './activationArrayPool';
+import type { ActivationArray } from './activationArrayPool';
 import { exportToONNX } from './onnx';
 import { generateStandalone } from './network/network.standalone';
 import {
@@ -49,6 +53,44 @@ import {
 } from './network/network.serialize';
 import { crossOver as _crossOver } from './network/network.genetic';
 
+/**
+ * Network (Evolvable / Trainable Graph)
+ * =====================================
+ * Represents a directed neural computation graph used both as a NEAT genome
+ * phenotype and (optionally) as a gradient‑trainable model. The class binds
+ * together specialized modules (topology, pruning, serialization, slab packing)
+ * to keep the core surface approachable for learners.
+ *
+ * Educational Highlights:
+ *  - Structural Mutation: functions like `addNodeBetween()` and evolutionary
+ *    helpers (in higher-level `Neat`) mutate topology to explore architectures.
+ *  - Fast Execution Paths: a Structure‑of‑Arrays (SoA) slab (`rebuildConnectionSlab`)
+ *    packs connection data into typed arrays to improve cache locality.
+ *  - Memory Optimization: node pooling & typed array pooling demonstrate how
+ *    allocation patterns affect performance and GC pressure.
+ *  - Determinism: RNG snapshot/restore methods allow reproducible experiments.
+ *  - Hybrid Workflows: dropout, stochastic depth, weight noise and mixed precision
+ *    illustrate gradient‑era regularization applied to evolved topologies.
+ *
+ * Typical Usage:
+ * ```ts
+ * const net = new Network(4, 2);           // create network
+ * const out = net.activate([0.1,0.3,0.2,0.9]);
+ * net.addNodeBetween();                    // structural mutation
+ * const slab = (net as any).getConnectionSlab(); // inspect packed arrays
+ * const clone = net.clone();               // deep copy
+ * ```
+ *
+ * Performance Guidance:
+ *  - Invoke `activate()` normally; the class auto‑selects slab vs object path.
+ *  - Batch structural mutations then call `rebuildConnectionSlab(true)` if you
+ *    need an immediate fast‑path (it is invoked lazily otherwise).
+ *  - Keep input array length exactly equal to `input`; mismatches throw early.
+ *
+ * Serialization:
+ *  - `toJSON()` / `fromJSON()` support experiment checkpointing.
+ *  - ONNX export (`exportToONNX`) enables interoperability with other tools.
+ */
 export default class Network {
   input: number;
   output: number;
@@ -159,6 +201,14 @@ export default class Network {
   getConnectionSlab() {
     return _getConnectionSlab.call(this);
   }
+  /**
+   * Public wrapper for fast slab forward pass (primarily for tests / benchmarking).
+   * Prefer using standard activate(); it will auto dispatch when eligible.
+   * Falls back internally if prerequisites not met.
+   */
+  fastSlabActivate(input: number[]) {
+    return this._fastSlabActivate(input);
+  }
   constructor(
     input: number,
     output: number,
@@ -209,7 +259,11 @@ export default class Network {
 
     for (let i = 0; i < this.input + this.output; i++) {
       const type = i < this.input ? 'input' : 'output';
-      this.nodes.push(new Node(type, undefined, this._rand));
+      // Phase 2: initial IO node construction respects pooling flag. Pooled nodes are fully reset
+      // on acquire ensuring deterministic fresh bias & zeroed dynamic fields.
+      if (config.enableNodePooling)
+        this.nodes.push(_acquireNode({ type, rng: this._rand }));
+      else this.nodes.push(new Node(type, undefined, this._rand));
     }
     for (let i = 0; i < this.input; i++) {
       for (let j = this.input; j < this.input + this.output; j++) {
@@ -226,23 +280,21 @@ export default class Network {
     }
   }
 
-  // --- Added: structural helper referenced by constructor (split a random connection) ---
-  private addNodeBetween(): void {
+  // --- Changed: made public (was private) for deterministic pooling stress harness ---
+  addNodeBetween(): void {
     if (this.connections.length === 0) return;
     const idx = Math.floor(this._rand() * this.connections.length);
     const conn = this.connections[idx];
     if (!conn) return;
-    // Remove original connection
     this.disconnect(conn.from, conn.to);
-    // Create new hidden node
-    const newNode = new Node('hidden', undefined, this._rand);
+    const newNode = config.enableNodePooling
+      ? _acquireNode({ type: 'hidden', rng: this._rand })
+      : new Node('hidden', undefined, this._rand);
     this.nodes.push(newNode);
-    // Connect from->newNode and newNode->to
-    this.connect(conn.from, newNode, conn.weight); // keep original weight on first leg
-    this.connect(newNode, conn.to, 1); // second leg weight initialised randomly or 1
-    // Invalidate topo cache
+    this.connect(conn.from, newNode, conn.weight);
+    this.connect(newNode, conn.to, 1);
     this._topoDirty = true;
-    this._nodeIndexDirty = true; // structure changed
+    this._nodeIndexDirty = true;
   }
 
   // --- DropConnect API (re-added for tests) ---
@@ -934,7 +986,18 @@ export default class Network {
    * @throws {Error} If the specified `node` is not found in the network's `nodes` list.
    */
   remove(node: Node) {
-    return _removeNodeStandalone.call(this, node);
+    // Existing structural removal logic
+    const result = _removeNodeStandalone.call(this, node);
+    // Phase 2: if pooling enabled release node back to pool AFTER it is fully detached.
+    // Detachment guarantees connection arrays emptied & gating cleared, so pool reset cost is minimal.
+    if (config.enableNodePooling) {
+      try {
+        _releaseNode(node);
+      } catch {
+        /* swallow – defensive: never let pooling failure break functional remove */
+      }
+    }
+    return result;
   }
 
   /**
@@ -981,9 +1044,6 @@ export default class Network {
    * @returns {number} The average error calculated over the provided dataset subset.
    * @private Internal method used by `train`.
    */
-  // Removed legacy _trainSet; delegated to network.training.ts
-
-  // Gradient clipping implemented in network.training.ts (applyGradientClippingImpl). Kept here only for backward compat if reflection used.
   private _applyGradientClipping(cfg: {
     mode: 'norm' | 'percentile' | 'layerwiseNorm' | 'layerwisePercentile';
     maxNorm?: number;

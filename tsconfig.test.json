@@ -1,0 +1,18 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./dist-test",
+    "rootDir": ".",
+    // Ensure test files compile as ESM and allow ESM syntax
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "types": ["jest", "node"],
+  // Disable verbatimModuleSyntax for tests so Jest/ts-jest won't complain about ESM syntax classification
+  "verbatimModuleSyntax": false,
+    // Allow importing from src with relative paths
+    "allowJs": false,
+    "noEmit": false
+  },
+  "include": ["test/**/*.ts", "src/**/*.ts"],
+  "exclude": ["dist", "node_modules"]
+}

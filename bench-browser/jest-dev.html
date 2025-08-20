@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>NeatapticTS Browser Bench</title>
+  </head>
+  <body>
+    <h1>NeatapticTS Browser Benchmark</h1>
+    <p id="status">Running…</p>
+    <script>
+      window.__BENCH_MODE__ = 'dev';
+    </script>
+    <script src="./dev.bundle.js"></script>
+    <script>
+      const s = document.getElementById('status');
+      setTimeout(() => {
+        s.textContent = 'Done';
+        console.log(
+          '[NEATAPTIC_BROWSER_BENCH_RESULTS]',
+          JSON.stringify(window.__NEATAPTIC_BENCH__)
+        );
+      }, 50);
+    </script>
+  </body>
+</html>

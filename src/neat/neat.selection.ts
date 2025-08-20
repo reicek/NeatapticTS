@@ -1,4 +1,4 @@
-import { NeatLike } from './neat.types';
+import type { NeatLike } from './neat.types';
 
 /**
  * Sorts the internal population in place by descending fitness.

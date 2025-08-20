@@ -47,3 +47,6 @@ Thumbs.db
 # Misc
 .nyc_output/
 .sass-cache/
+*.results.json
+jest-dev.dev.bundle.*
+jest-prod.prod.bundle.*
