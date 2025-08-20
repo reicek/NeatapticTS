@@ -1,13 +1,13 @@
 {
   "name": "@reicek/neataptic-ts",
-  "version": "0.1.10",
+  "version": "0.1.11",
   "description": "Architecture-free neural network library with genetic algorithm implementations",
   "main": "./dist/neataptic.js",
   "module": "./dist/neataptic.js",
   "types": "./dist/neataptic.d.ts",
   "type": "module",
   "scripts": {
-  "test": "jest --config=jest.config.mjs --no-cache --coverage --collect-coverage --runInBand --testPathIgnorePatterns=.e2e.test.ts --verbose",
+    "test": "jest --config=jest.config.mjs --no-cache --coverage --collect-coverage --runInBand --testPathIgnorePatterns=.e2e.test.ts --verbose",
     "pretest": "npm run build",
     "test:bench": "jest --no-cache --runInBand --verbose --testPathPattern=benchmark",
     "test:silent": "jest --no-cache --coverage --collect-coverage --runInBand --testPathIgnorePatterns=.e2e.test.ts --silent",
