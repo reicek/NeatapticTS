@@ -75,9 +75,9 @@ async function buildBundles(): Promise<{ devPath: string; prodPath: string }> {
     format: 'iife',
     sourcemap: false,
     define: { __BENCH_MODE__: '"dev"' },
-  // Exclude Node-specific modules so esbuild doesn't try to bundle them for the browser.
-  // 'path' is required by the node TestWorker but should stay external in the browser build.
-  external: ['child_process', 'fs', 'worker_threads', 'path'],
+    // Exclude Node-specific modules so esbuild doesn't try to bundle them for the browser.
+    // 'path' is required by the node TestWorker but should stay external in the browser build.
+    external: ['child_process', 'fs', 'worker_threads', 'path'],
     write: true,
   });
   // Build production (minified) variant.
@@ -89,7 +89,7 @@ async function buildBundles(): Promise<{ devPath: string; prodPath: string }> {
     format: 'iife',
     minify: true,
     define: { __BENCH_MODE__: '"prod"' },
-  external: ['child_process', 'fs', 'worker_threads', 'path'],
+    external: ['child_process', 'fs', 'worker_threads', 'path'],
     write: true,
   });
   return { devPath: devOut, prodPath: prodOut };
@@ -250,7 +250,7 @@ describe('browser headless benchmark integration', () => {
     }
     expect(Array.isArray(parsed.browserRuns)).toBe(true);
   });
-  
+
   if (runs.length) {
     const first = runs[0];
     it('run record exposes numeric bundleBytes', () => {

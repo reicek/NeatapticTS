@@ -350,7 +350,6 @@ export default class Connection {
     }
   }
 
-
   /** Convenience alias for DropConnect mask with clearer naming. */
   get dropConnectActiveMask(): number {
     return this.dcMask;

@@ -152,7 +152,6 @@ export default class Node {
       gated: 0,
     };
 
-
     // Assign a unique index if not already set
     if (typeof this.index === 'undefined') {
       this.index = Node._globalNodeIndex++;
@@ -270,7 +269,6 @@ export default class Node {
     }
     return this.activation;
   }
-
 
   /**
    * Back-propagates the error signal through the node and calculates weight/bias updates.
