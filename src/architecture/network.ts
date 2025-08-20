@@ -160,6 +160,14 @@ export default class Network {
   getConnectionSlab() {
     return _getConnectionSlab.call(this);
   }
+  /**
+   * Public wrapper for fast slab forward pass (primarily for tests / benchmarking).
+   * Prefer using standard activate(); it will auto dispatch when eligible.
+   * Falls back internally if prerequisites not met.
+   */
+  fastSlabActivate(input: number[]) {
+    return this._fastSlabActivate(input);
+  }
   constructor(
     input: number,
     output: number,

@@ -71,6 +71,23 @@ export interface NeatapticConfig {
    * pruning paths will acquire/release nodes via NodePool reducing GC churn.
    */
   enableNodePooling?: boolean;
+
+  /**
+   * Experimental: Enable slab typed array pooling (reuse large Float/Uint buffers between rebuilds
+   * when geometric growth triggers reallocation). Reduces GC churn in topology‑heavy evolution loops.
+   * Default: false (opt-in while stabilizing fragmentation heuristics).
+   */
+  enableSlabArrayPooling?: boolean;
+
+  /**
+   * Browser-only (ignored in Node): Target maximum milliseconds of work per microtask slice
+   * when performing a large asynchronous slab rebuild via rebuildConnectionSlabAsync(). If set,
+   * the chunk size (number of connections copied per slice) is heuristically reduced so that
+   * each slice aims to remain below this budget, improving UI responsiveness for very large
+   * (>200k edges) networks. Undefined leaves the caller-provided or default chunkSize untouched
+   * except for the built-in large-network clamp (currently 50k ops) when total connections >200k.
+   */
+  browserSlabChunkTargetMs?: number;
 }
 
 /**
@@ -86,6 +103,8 @@ export const config: NeatapticConfig = {
   deterministicChainMode: false, // deep path test flag (ADD_NODE determinism)
   enableGatingTraces: true, // advanced gating trace infra
   enableNodePooling: false, // experimental node instance pooling
+  enableSlabArrayPooling: false, // experimental slab typed array pooling
+  // browserSlabChunkTargetMs: 3, // example: aim for ~3ms per async slab slice in Browser
   // poolMaxPerBucket: 256,     // example memory cap override
   // poolPrewarmCount: 2,       // example prewarm override
 };

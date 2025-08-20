@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -15,7 +15,10 @@
       const s = document.getElementById('status');
       setTimeout(() => {
         s.textContent = 'Done';
-        console.log('[NEATAPTIC_BROWSER_BENCH_RESULTS]', JSON.stringify(window.__NEATAPTIC_BENCH__));
+        console.log(
+          '[NEATAPTIC_BROWSER_BENCH_RESULTS]',
+          JSON.stringify(window.__NEATAPTIC_BENCH__)
+        );
       }, 50);
     </script>
   </body>

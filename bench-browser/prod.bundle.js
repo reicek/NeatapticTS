@@ -1,24 +1,5945 @@
-"use strict";(()=>{var Ii=Object.create;var te=Object.defineProperty;var Ti=Object.getOwnPropertyDescriptor;var Di=Object.getOwnPropertyNames;var ki=Object.getPrototypeOf,ji=Object.prototype.hasOwnProperty;var Li=(n=>typeof require<"u"?require:typeof Proxy<"u"?new Proxy(n,{get:(t,e)=>(typeof require<"u"?require:t)[e]}):n)(function(n){if(typeof require<"u")return require.apply(this,arguments);throw Error('Dynamic require of "'+n+'" is not supported')});var C=(n,t)=>()=>(n&&(t=n(n=0)),t);var qt=(n,t)=>()=>(t||n((t={exports:{}}).exports,t),t.exports),ct=(n,t)=>{for(var e in t)te(n,e,{get:t[e],enumerable:!0})},pn=(n,t,e,o)=>{if(t&&typeof t=="object"||typeof t=="function")for(let s of Di(t))!ji.call(n,s)&&s!==e&&te(n,s,{get:()=>t[s],enumerable:!(o=Ti(t,s))||o.enumerable});return n};var Pi=(n,t,e)=>(e=n!=null?Ii(ki(n)):{},pn(t||!n||!n.__esModule?te(e,"default",{value:n,enumerable:!0}):e,n)),q=n=>pn(te({},"__esModule",{value:!0}),n);var It,Tt,Bt,ht,Dt=C(()=>{"use strict";It=Symbol("connGain"),Tt=Symbol("connGater"),Bt=Symbol("connOptMoments"),ht=class n{from;to;weight;eligibility;previousDeltaWeight;totalDeltaWeight;xtrace;innovation;_flags;constructor(t,e,o){this.from=t,this.to=e,this.weight=o??Math.random()*.2-.1,this.eligibility=0,this.previousDeltaWeight=0,this.totalDeltaWeight=0,this.xtrace={nodes:[],values:[]},this._flags=3,this.innovation=n._nextInnovation++}toJSON(){let t={from:this.from.index??void 0,to:this.to.index??void 0,weight:this.weight,gain:this.gain,innovation:this.innovation,enabled:this.enabled};if(this._flags&4){let e=this[Tt];e&&typeof e.index<"u"&&(t.gater=e.index)}return t}static innovationID(t,e){return .5*(t+e)*(t+e+1)+e}static _nextInnovation=1;static resetInnovationCounter(t=1){n._nextInnovation=t}static _pool=[];static acquire(t,e,o){let s;return n._pool.length?(s=n._pool.pop(),s.from=t,s.to=e,s.weight=o??Math.random()*.2-.1,s[It]!==void 0&&delete s[It],s[Tt]!==void 0&&delete s[Tt],s._flags=3,s.eligibility=0,s.previousDeltaWeight=0,s.totalDeltaWeight=0,s.xtrace.nodes.length=0,s.xtrace.values.length=0,s[Bt]&&delete s[Bt],s.innovation=n._nextInnovation++):s=new n(t,e,o),s}static release(t){n._pool.push(t)}get enabled(){return(this._flags&1)!==0}set enabled(t){this._flags=t?this._flags|1:this._flags&-2}get dcMask(){return this._flags&2?1:0}set dcMask(t){this._flags=t?this._flags|2:this._flags&-3}get hasGater(){return(this._flags&4)!==0}get gain(){return this[It]===void 0?1:this[It]}set gain(t){t===1?this[It]!==void 0&&delete this[It]:this[It]=t}_ensureOptBag(){let t=this[Bt];return t||(t={},this[Bt]=t),t}_getOpt(t){let e=this[Bt];return e?e[t]:void 0}_setOpt(t,e){if(e===void 0){let o=this[Bt];o&&delete o[t]}else this._ensureOptBag()[t]=e}get firstMoment(){return this._getOpt("firstMoment")}set firstMoment(t){this._setOpt("firstMoment",t)}get secondMoment(){return this._getOpt("secondMoment")}set secondMoment(t){this._setOpt("secondMoment",t)}get gradientAccumulator(){return this._getOpt("gradientAccumulator")}set gradientAccumulator(t){this._setOpt("gradientAccumulator",t)}get maxSecondMoment(){return this._getOpt("maxSecondMoment")}set maxSecondMoment(t){this._setOpt("maxSecondMoment",t)}get infinityNorm(){return this._getOpt("infinityNorm")}set infinityNorm(t){this._setOpt("infinityNorm",t)}get secondMomentum(){return this._getOpt("secondMomentum")}set secondMomentum(t){this._setOpt("secondMomentum",t)}get lookaheadShadowWeight(){return this._getOpt("lookaheadShadowWeight")}set lookaheadShadowWeight(t){this._setOpt("lookaheadShadowWeight",t)}get gater(){return this._flags&4?this[Tt]:null}set gater(t){t===null?this._flags&4&&(this._flags&=-5,this[Tt]!==void 0&&delete this[Tt]):(this[Tt]=t,this._flags|=4)}get opt_m(){return this.firstMoment}set opt_m(t){this.firstMoment=t}get opt_v(){return this.secondMoment}set opt_v(t){this.secondMoment=t}get opt_cache(){return this.gradientAccumulator}set opt_cache(t){this.gradientAccumulator=t}get opt_vhat(){return this.maxSecondMoment}set opt_vhat(t){this.maxSecondMoment=t}get opt_u(){return this.infinityNorm}set opt_u(t){this.infinityNorm=t}get opt_m2(){return this.secondMomentum}set opt_m2(t){this.secondMomentum=t}get _la_shadowWeight(){return this.lookaheadShadowWeight}set _la_shadowWeight(t){this.lookaheadShadowWeight=t}get dropConnectActiveMask(){return this.dcMask}set dropConnectActiveMask(t){this.dcMask=t}}});var G,vt=C(()=>{"use strict";G={warnings:!1,float32Mode:!1,deterministicChainMode:!1,enableGatingTraces:!0,enableNodePooling:!1}});var xe={};ct(xe,{EPSILON:()=>Nt,EXTRA_CONNECTION_PROBABILITY:()=>Se,NORM_EPSILON:()=>Wi,PROB_EPSILON:()=>kt});var Nt,kt,Wi,Se,jt=C(()=>{"use strict";Nt=1e-9,kt=1e-15,Wi=1e-5,Se=.5});var wt,fn=C(()=>{"use strict";jt();wt=class{static crossEntropy(t,e){let o=0,s=1e-15;if(t.length!==e.length)throw new Error("Target and output arrays must have the same length.");for(let i=0;i<e.length;i++){let r=t[i],a=e[i],l=Math.max(s,Math.min(1-s,a));r===1?o-=Math.log(l):r===0?o-=Math.log(1-l):o-=r*Math.log(l)+(1-r)*Math.log(1-l)}return o/e.length}static softmaxCrossEntropy(t,e){if(t.length!==e.length)throw new Error("Target and output arrays must have the same length.");let o=e.length,s=0;for(let c of t)s+=c;let i=s>0?t.map(c=>c/s):t.slice(),r=Math.max(...e),a=e.map(c=>Math.exp(c-r)),l=a.reduce((c,d)=>c+d,0)||1,h=a.map(c=>c/l),u=0,p=1e-15;for(let c=0;c<o;c++){let d=Math.min(1-p,Math.max(p,h[c])),f=i[c];u-=f*Math.log(d)}return u}static mse(t,e){if(t.length!==e.length)throw new Error("Target and output arrays must have the same length.");let o=0;return e.forEach((s,i)=>{o+=Math.pow(t[i]-s,2)}),o/e.length}static binary(t,e){if(t.length!==e.length)throw new Error("Target and output arrays must have the same length.");let o=0;return e.forEach((s,i)=>{o+=Math.round(t[i])!==Math.round(s)?1:0}),o/e.length}static mae(t,e){if(t.length!==e.length)throw new Error("Target and output arrays must have the same length.");let o=0;return e.forEach((s,i)=>{o+=Math.abs(t[i]-s)}),o/e.length}static mape(t,e){if(t.length!==e.length)throw new Error("Target and output arrays must have the same length.");let o=0,s=1e-15;return e.forEach((i,r)=>{let a=t[r];o+=Math.abs((a-i)/Math.max(Math.abs(a),s))}),o/e.length}static msle(t,e){if(t.length!==e.length)throw new Error("Target and output arrays must have the same length.");let o=0;return e.forEach((s,i)=>{let r=t[i],a=Math.log(Math.max(r,0)+1),l=Math.log(Math.max(s,0)+1);o+=Math.pow(a-l,2)}),o/e.length}static hinge(t,e){if(t.length!==e.length)throw new Error("Target and output arrays must have the same length.");let o=0;return e.forEach((s,i)=>{let r=t[i];o+=Math.max(0,1-r*s)}),o/e.length}static focalLoss(t,e,o=2,s=.25){let i=0,r=1e-15;if(t.length!==e.length)throw new Error("Target and output arrays must have the same length.");for(let a=0;a<e.length;a++){let l=t[a],h=Math.max(r,Math.min(1-r,e[a])),u=l===1?h:1-h,p=l===1?s:1-s;i+=-p*Math.pow(1-u,o)*Math.log(u)}return i/e.length}static labelSmoothing(t,e,o=.1){let s=0,i=1e-15;if(t.length!==e.length)throw new Error("Target and output arrays must have the same length.");for(let r=0;r<e.length;r++){let a=t[r]*(1-o)+.5*o,l=Math.max(i,Math.min(1-i,e[r]));s-=a*Math.log(l)+(1-a)*Math.log(1-l)}return s/e.length}}});var Ut,dn=C(()=>{"use strict";Ut=class{static fixed(){return(e,o)=>e}static step(t=.9,e=100){return(s,i)=>Math.max(0,s*Math.pow(t,Math.floor(i/e)))}static exp(t=.999){return(o,s)=>o*Math.pow(t,s)}static inv(t=.001,e=2){return(s,i)=>s/(1+t*Math.pow(i,e))}static cosineAnnealing(t=1e3,e=0){return(s,i)=>{let r=i%t,a=.5*(1+Math.cos(r/t*Math.PI));return e+(s-e)*a}}static cosineAnnealingWarmRestarts(t=1e3,e=0,o=1){let s=t,i=0,r=s;return(a,l)=>{for(;l>=r;)i=r,s=Math.max(1,Math.round(s*o)),r=i+s;let h=l-i,u=.5*(1+Math.cos(h/s*Math.PI));return e+(a-e)*u}}static linearWarmupDecay(t,e,o=0){if(t<=0)throw new Error("totalSteps must be > 0");let s=Math.min(e??Math.max(1,Math.floor(t*.1)),t-1);return(i,r)=>{if(r<=s)return i*(r/Math.max(1,s));if(r>=t)return o;let a=t-s,l=(r-s)/a;return o+(i-o)*(1-l)}}static reduceOnPlateau(t){let{factor:e=.5,patience:o=10,minDelta:s=1e-4,cooldown:i=0,minRate:r=0,verbose:a=!1}=t||{},l,h,u=0,p=-1;return(c,d,f)=>{if(l===void 0&&(l=c),f!==void 0){if(h===void 0||f<h-s)h=f,u=d;else if(d-u>=o&&d>=p){let m=Math.max(r,l*e);m<l&&(l=m,p=d+i,u=d)}}return l}}}});var Bi,F,Ne=C(()=>{"use strict";Bi={logistic:(n,t=!1)=>{let e=1/(1+Math.exp(-n));return t?e*(1-e):e},sigmoid:(n,t=!1)=>{let e=1/(1+Math.exp(-n));return t?e*(1-e):e},tanh:(n,t=!1)=>t?1-Math.pow(Math.tanh(n),2):Math.tanh(n),identity:(n,t=!1)=>t?1:n,step:(n,t=!1)=>t?0:n>0?1:0,relu:(n,t=!1)=>t?n>0?1:0:n>0?n:0,softsign:(n,t=!1)=>{let e=1+Math.abs(n);return t?1/Math.pow(e,2):n/e},sinusoid:(n,t=!1)=>t?Math.cos(n):Math.sin(n),gaussian:(n,t=!1)=>{let e=Math.exp(-Math.pow(n,2));return t?-2*n*e:e},bentIdentity:(n,t=!1)=>{let e=Math.sqrt(Math.pow(n,2)+1);return t?n/(2*e)+1:(e-1)/2+n},bipolar:(n,t=!1)=>t?0:n>0?1:-1,bipolarSigmoid:(n,t=!1)=>{let e=2/(1+Math.exp(-n))-1;return t?.5*(1+e)*(1-e):e},hardTanh:(n,t=!1)=>t?n>-1&&n<1?1:0:Math.max(-1,Math.min(1,n)),absolute:(n,t=!1)=>t?n<0?-1:1:Math.abs(n),inverse:(n,t=!1)=>t?-1:1-n,selu:(n,t=!1)=>{let e=1.6732632423543772,o=1.0507009873554805,s=n>0?n:e*Math.exp(n)-e;return t?n>0?o:(s+e)*o:s*o},softplus:(n,t=!1)=>{let e=1/(1+Math.exp(-n));return t?e:n>30?n:n<-30?Math.exp(n):Math.max(0,n)+Math.log(1+Math.exp(-Math.abs(n)))},swish:(n,t=!1)=>{let e=1/(1+Math.exp(-n));if(t){let o=n*e;return o+e*(1-o)}else return n*e},gelu:(n,t=!1)=>{let e=.5*(1+Math.tanh(Math.sqrt(2/Math.PI)*(n+.044715*Math.pow(n,3))));if(t){let o=Math.sqrt(2/Math.PI)*(1+.134145*n*n),s=Math.sqrt(2/Math.PI)*(n+.044715*Math.pow(n,3)),i=1/Math.cosh(s),r=i*i;return e+n*.5*o*r}else return n*e},mish:(n,t=!1)=>{let e;n>30?e=n:n<-30?e=Math.exp(n):e=Math.max(0,n)+Math.log(1+Math.exp(-Math.abs(n)));let o=Math.tanh(e);if(t){let s=1/(1+Math.exp(-n)),i=1/Math.cosh(e),r=i*i;return o+n*r*s}else return n*o}},F=Bi});var _t,mn=C(()=>{"use strict";_t={OUTPUT:{name:"OUTPUT"},INPUT:{name:"INPUT"},SELF:{name:"SELF"}}});var P,Gt,ee=C(()=>{"use strict";Ne();P={ADD_NODE:{name:"ADD_NODE"},SUB_NODE:{name:"SUB_NODE",keep_gates:!0},ADD_CONN:{name:"ADD_CONN"},SUB_CONN:{name:"SUB_CONN"},MOD_WEIGHT:{name:"MOD_WEIGHT",min:-1,max:1},MOD_BIAS:{name:"MOD_BIAS",min:-1,max:1},MOD_ACTIVATION:{name:"MOD_ACTIVATION",mutateOutput:!0,allowed:[F.logistic,F.tanh,F.relu,F.identity,F.step,F.softsign,F.sinusoid,F.gaussian,F.bentIdentity,F.bipolar,F.bipolarSigmoid,F.hardTanh,F.absolute,F.inverse,F.selu,F.softplus,F.swish,F.gelu,F.mish]},ADD_SELF_CONN:{name:"ADD_SELF_CONN"},SUB_SELF_CONN:{name:"SUB_SELF_CONN"},ADD_GATE:{name:"ADD_GATE"},SUB_GATE:{name:"SUB_GATE"},ADD_BACK_CONN:{name:"ADD_BACK_CONN"},SUB_BACK_CONN:{name:"SUB_BACK_CONN"},SWAP_NODES:{name:"SWAP_NODES",mutateOutput:!0},REINIT_WEIGHT:{name:"REINIT_WEIGHT",min:-1,max:1},BATCH_NORM:{name:"BATCH_NORM"},ADD_LSTM_NODE:{name:"ADD_LSTM_NODE"},ADD_GRU_NODE:{name:"ADD_GRU_NODE"},ALL:[],FFW:[]};P.ALL=[P.ADD_NODE,P.SUB_NODE,P.ADD_CONN,P.SUB_CONN,P.MOD_WEIGHT,P.MOD_BIAS,P.MOD_ACTIVATION,P.ADD_GATE,P.SUB_GATE,P.ADD_SELF_CONN,P.SUB_SELF_CONN,P.ADD_BACK_CONN,P.SUB_BACK_CONN,P.SWAP_NODES,P.REINIT_WEIGHT,P.BATCH_NORM,P.ADD_LSTM_NODE,P.ADD_GRU_NODE];P.FFW=[P.ADD_NODE,P.SUB_NODE,P.ADD_CONN,P.SUB_CONN,P.MOD_WEIGHT,P.MOD_BIAS,P.MOD_ACTIVATION,P.SWAP_NODES,P.REINIT_WEIGHT,P.BATCH_NORM];Gt=P});var At,Ae=C(()=>{"use strict";At={FITNESS_PROPORTIONATE:{name:"FITNESS_PROPORTIONATE"},POWER:{name:"POWER",power:4},TOURNAMENT:{name:"TOURNAMENT",size:5,probability:.5}}});var zt,gn=C(()=>{"use strict";zt={SINGLE_POINT:{name:"SINGLE_POINT",config:[.4]},TWO_POINT:{name:"TWO_POINT",config:[.4,.9]},UNIFORM:{name:"UNIFORM"},AVERAGE:{name:"AVERAGE"}}});var Gi,X,yn=C(()=>{"use strict";Gi=Object.freeze({ALL_TO_ALL:Object.freeze({name:"ALL_TO_ALL"}),ALL_TO_ELSE:Object.freeze({name:"ALL_TO_ELSE"}),ONE_TO_ONE:Object.freeze({name:"ONE_TO_ONE"})}),X=Gi});var ut={};ct(ut,{Activation:()=>F,Cost:()=>wt,Rate:()=>Ut,crossover:()=>zt,gating:()=>_t,groupConnection:()=>X,mutation:()=>P,selection:()=>At});var pt=C(()=>{"use strict";fn();dn();Ne();mn();ee();Ae();gn();yn()});var ne={};ct(ne,{default:()=>K});var K,mt=C(()=>{"use strict";Dt();vt();pt();K=class n{bias;squash;type;activation;state;old;mask;previousDeltaBias;totalDeltaBias;connections;error;derivative;index;isActivating;geneId;static _globalNodeIndex=0;static _nextGeneId=1;constructor(t="hidden",e,o=Math.random){this.bias=t==="input"?0:o()*.2-.1,this.squash=e||F.logistic||(s=>s),this.type=t,this.activation=0,this.state=0,this.old=0,this.mask=1,this.previousDeltaBias=0,this.totalDeltaBias=0,this.connections={in:[],out:[],gated:[],self:[]},this.error={responsibility:0,projected:0,gated:0},typeof this.index>"u"&&(this.index=n._globalNodeIndex++),this.geneId=n._nextGeneId++}setActivation(t){this.squash=t}activate(t){return this._activateCore(!0,t)}noTraceActivate(t){return this._activateCore(!1,t)}_activateCore(t,e){if(this.mask===0)return this.activation=0,0;if(typeof e<"u"){if(this.type==="input")return this.activation=e,this.activation;this.state=e,this.activation=this.squash(this.state)*this.mask,this.derivative=this.squash(this.state,!0);for(let s of this.connections.gated)s.gain=this.activation;if(t)for(let s of this.connections.in)s.eligibility=s.from.activation;return this.activation}this.old=this.state;let o=this.bias;if(this.connections.self.length)for(let s of this.connections.self)s.dcMask!==0&&(o+=s.gain*s.weight*this.old);if(this.connections.in.length)for(let s of this.connections.in)s.dcMask===0||s.enabled===!1||(o+=s.from.activation*s.weight*s.gain);if(this.state=o,typeof this.squash!="function"&&(G.warnings&&console.warn("Invalid activation function; using identity."),this.squash=F.identity),typeof this.mask!="number"&&(this.mask=1),this.activation=this.squash(this.state)*this.mask,this.derivative=this.squash(this.state,!0),this.connections.gated.length)for(let s of this.connections.gated)s.gain=this.activation;if(t)for(let s of this.connections.in)s.eligibility=s.from.activation;return this.activation}get gates(){return G.warnings&&console.warn("Node.gates is deprecated; use node.connections.gated"),this.connections.gated}set gates(t){this.connections.gated=t||[]}get nodes(){return[]}set nodes(t){}propagate(t,e,o,s=0,i){if(o&&e>0){for(let l of this.connections.in)l.weight+=e*l.previousDeltaWeight,l.eligibility+=1e-12;this.bias+=e*this.previousDeltaBias}let r=0;if(this.type==="output")this.error.responsibility=this.error.projected=i-this.activation;else{for(let l of this.connections.out)r+=l.to.error.responsibility*l.weight*l.gain;this.error.projected=this.derivative*r,r=0;for(let l of this.connections.gated){let h=l.to,u=h.connections.self.reduce((p,c)=>p+(c.gater===this?h.old:0),0);u+=l.weight*l.from.activation,r+=h.error.responsibility*u}this.error.gated=this.derivative*r,this.error.responsibility=this.error.projected+this.error.gated}if(this.type==="constant")return;for(let l of this.connections.in){if(l.dcMask===0){l.totalDeltaWeight+=0;continue}let h=this.error.projected*l.eligibility;for(let c=0;c<l.xtrace.nodes.length;c++){let d=l.xtrace.nodes[c],f=l.xtrace.values[c];h+=d.error.responsibility*f}let u=0;typeof s=="function"?u=s(l.weight):typeof s=="object"&&s!==null?s.type==="L1"?u=s.lambda*Math.sign(l.weight):s.type==="L2"&&(u=s.lambda*l.weight):u=s*l.weight;let p=t*(h*this.mask-u);if(Number.isFinite(p)?Math.abs(p)>1e3&&(p=Math.sign(p)*1e3):(console.warn("deltaWeight is not finite, clamping to 0",{node:this.index,connection:l,deltaWeight:p}),p=0),l.totalDeltaWeight+=p,Number.isFinite(l.totalDeltaWeight)||(console.warn("totalDeltaWeight became NaN/Infinity, resetting to 0",{node:this.index,connection:l}),l.totalDeltaWeight=0),o){let c=l.totalDeltaWeight+e*l.previousDeltaWeight;Number.isFinite(c)?Math.abs(c)>1e3&&(c=Math.sign(c)*1e3):(console.warn("currentDeltaWeight is not finite, clamping to 0",{node:this.index,connection:l,currentDeltaWeight:c}),c=0),e>0&&(l.weight-=e*l.previousDeltaWeight),l.weight+=c,Number.isFinite(l.weight)?Math.abs(l.weight)>1e6&&(l.weight=Math.sign(l.weight)*1e6):(console.warn(`Weight update produced invalid value: ${l.weight}. Resetting to 0.`,{node:this.index,connection:l}),l.weight=0),l.previousDeltaWeight=c,l.totalDeltaWeight=0}}for(let l of this.connections.self){if(l.dcMask===0){l.totalDeltaWeight+=0;continue}let h=this.error.projected*l.eligibility;for(let c=0;c<l.xtrace.nodes.length;c++){let d=l.xtrace.nodes[c],f=l.xtrace.values[c];h+=d.error.responsibility*f}let u=0;typeof s=="function"?u=s(l.weight):typeof s=="object"&&s!==null?s.type==="L1"?u=s.lambda*Math.sign(l.weight):s.type==="L2"&&(u=s.lambda*l.weight):u=s*l.weight;let p=t*(h*this.mask-u);if(Number.isFinite(p)?Math.abs(p)>1e3&&(p=Math.sign(p)*1e3):(console.warn("self deltaWeight is not finite, clamping to 0",{node:this.index,connection:l,deltaWeight:p}),p=0),l.totalDeltaWeight+=p,Number.isFinite(l.totalDeltaWeight)||(console.warn("self totalDeltaWeight became NaN/Infinity, resetting to 0",{node:this.index,connection:l}),l.totalDeltaWeight=0),o){let c=l.totalDeltaWeight+e*l.previousDeltaWeight;Number.isFinite(c)?Math.abs(c)>1e3&&(c=Math.sign(c)*1e3):(console.warn("self currentDeltaWeight is not finite, clamping to 0",{node:this.index,connection:l,currentDeltaWeight:c}),c=0),e>0&&(l.weight-=e*l.previousDeltaWeight),l.weight+=c,Number.isFinite(l.weight)?Math.abs(l.weight)>1e6&&(l.weight=Math.sign(l.weight)*1e6):(console.warn("self weight update produced invalid value, resetting to 0",{node:this.index,connection:l}),l.weight=0),l.previousDeltaWeight=c,l.totalDeltaWeight=0}}let a=t*this.error.responsibility;if(Number.isFinite(a)?Math.abs(a)>1e3&&(a=Math.sign(a)*1e3):(console.warn("deltaBias is not finite, clamping to 0",{node:this.index,deltaBias:a}),a=0),this.totalDeltaBias+=a,Number.isFinite(this.totalDeltaBias)||(console.warn("totalDeltaBias became NaN/Infinity, resetting to 0",{node:this.index}),this.totalDeltaBias=0),o){let l=this.totalDeltaBias+e*this.previousDeltaBias;Number.isFinite(l)?Math.abs(l)>1e3&&(l=Math.sign(l)*1e3):(console.warn("currentDeltaBias is not finite, clamping to 0",{node:this.index,currentDeltaBias:l}),l=0),e>0&&(this.bias-=e*this.previousDeltaBias),this.bias+=l,Number.isFinite(this.bias)?Math.abs(this.bias)>1e6&&(this.bias=Math.sign(this.bias)*1e6):(console.warn("bias update produced invalid value, resetting to 0",{node:this.index}),this.bias=0),this.previousDeltaBias=l,this.totalDeltaBias=0}}toJSON(){return{index:this.index,bias:this.bias,type:this.type,squash:this.squash?this.squash.name:null,mask:this.mask}}static fromJSON(t){let e=new n(t.type);if(e.bias=t.bias,e.mask=t.mask,t.squash){let o=F[t.squash];typeof o=="function"?e.squash=o:(console.warn(`fromJSON: Unknown or invalid squash function '${t.squash}' for node. Using identity.`),e.squash=F.identity)}return e}isConnectedTo(t){return this.connections.out.some(e=>e.to===t)}mutate(t){if(!t)throw new Error("Mutation method cannot be null or undefined.");if(!(t.name in P))throw new Error(`Unknown mutation method: ${t.name}`);switch(t){case P.MOD_ACTIVATION:if(!t.allowed||t.allowed.length===0){console.warn("MOD_ACTIVATION mutation called without allowed functions specified.");return}let e=t.allowed,o=e.indexOf(this.squash),s=o;e.length>1&&(s=(o+Math.floor(Math.random()*(e.length-1))+1)%e.length),this.squash=e[s];break;case P.MOD_BIAS:let i=t.min??-1,r=t.max??1,a=Math.random()*(r-i)+i;this.bias+=a;break;case P.REINIT_WEIGHT:let l=t.min??-1,h=t.max??1;for(let u of this.connections.in)u.weight=Math.random()*(h-l)+l;for(let u of this.connections.out)u.weight=Math.random()*(h-l)+l;for(let u of this.connections.self)u.weight=Math.random()*(h-l)+l;break;case P.BATCH_NORM:this.batchNorm=!0;break;default:throw new Error(`Unsupported mutation method: ${t.name}`)}}connect(t,e){let o=[];if(!t)throw new Error("Cannot connect to an undefined target.");if("bias"in t){let s=t;if(s===this){if(this.connections.self.length===0){let i=ht.acquire(this,this,e??1);this.connections.self.push(i),o.push(i)}}else{let i=ht.acquire(this,s,e);s.connections.in.push(i),this.connections.out.push(i),o.push(i)}}else if("nodes"in t&&Array.isArray(t.nodes))for(let s of t.nodes){let i=ht.acquire(this,s,e);s.connections.in.push(i),this.connections.out.push(i),o.push(i)}else throw new Error("Invalid target type for connection. Must be a Node or a group { nodes: Node[] }.");return o}disconnect(t,e=!1){if(this===t){this.connections.self=[];return}this.connections.out=this.connections.out.filter(o=>o.to===t?(t.connections.in=t.connections.in.filter(s=>s!==o),o.gater&&o.gater.ungate(o),!1):!0),e&&t.disconnect(this,!1)}gate(t){Array.isArray(t)||(t=[t]);for(let e of t){if(!e||!e.from||!e.to){console.warn("Attempted to gate an invalid or incomplete connection.");continue}if(e.gater===this){console.warn("Node is already gating this connection.");continue}if(e.gater!==null){console.warn("Connection is already gated by another node. Ungate first.");continue}this.connections.gated.push(e),e.gater=this}}ungate(t){Array.isArray(t)||(t=[t]);for(let e of t){if(!e)continue;let o=this.connections.gated.indexOf(e);o!==-1&&(this.connections.gated.splice(o,1),e.gater=null,e.gain=1)}}clear(){for(let t of this.connections.in)t.eligibility=0,t.xtrace={nodes:[],values:[]};for(let t of this.connections.self)t.eligibility=0,t.xtrace={nodes:[],values:[]};for(let t of this.connections.gated)t.gain=0;this.error={responsibility:0,projected:0,gated:0},this.old=this.state=this.activation=0}isProjectingTo(t){return t===this&&this.connections.self.length>0?!0:this.connections.out.some(e=>e.to===t)}isProjectedBy(t){return t===this&&this.connections.self.length>0?!0:this.connections.in.some(e=>e.from===t)}applyBatchUpdates(t){return this.applyBatchUpdatesWithOptimizer({type:"sgd",momentum:t})}applyBatchUpdatesWithOptimizer(t){let e=t.type||"sgd",o=e==="lookahead"?t.baseType||"sgd":e,s=t.momentum??0,i=t.beta1??.9,r=t.beta2??.999,a=t.eps??1e-8,l=t.weightDecay??0,h=t.lrScale??1,u=Math.max(1,Math.floor(t.t??1));e==="lookahead"&&(this._la_k=this._la_k||t.la_k||5,this._la_alpha=this._la_alpha||t.la_alpha||.5,this._la_step=(this._la_step||0)+1,this._la_shadowBias||(this._la_shadowBias=this.bias));let p=c=>{let d=c.totalDeltaWeight||0;switch(Number.isFinite(d)||(d=0),o){case"rmsprop":{c.gradientAccumulator=(c.gradientAccumulator??0)*.9+.1*(d*d);let f=d/(Math.sqrt(c.gradientAccumulator)+a);this._safeUpdateWeight(c,f*h);break}case"adagrad":{c.gradientAccumulator=(c.gradientAccumulator??0)+d*d;let f=d/(Math.sqrt(c.gradientAccumulator)+a);this._safeUpdateWeight(c,f*h);break}case"adam":case"adamw":case"amsgrad":{c.firstMoment=(c.firstMoment??0)*i+(1-i)*d,c.secondMoment=(c.secondMoment??0)*r+(1-r)*(d*d),o==="amsgrad"&&(c.maxSecondMoment=Math.max(c.maxSecondMoment??0,c.secondMoment??0));let f=o==="amsgrad"?c.maxSecondMoment:c.secondMoment,m=c.firstMoment/(1-Math.pow(i,u)),_=f/(1-Math.pow(r,u)),y=m/(Math.sqrt(_)+a)*h;o==="adamw"&&l!==0&&(y-=l*(c.weight||0)),this._safeUpdateWeight(c,y);break}case"adamax":{c.firstMoment=(c.firstMoment??0)*i+(1-i)*d,c.infinityNorm=Math.max((c.infinityNorm??0)*r,Math.abs(d));let m=c.firstMoment/(1-Math.pow(i,u))/(c.infinityNorm||1e-12)*h;this._safeUpdateWeight(c,m);break}case"nadam":{c.firstMoment=(c.firstMoment??0)*i+(1-i)*d,c.secondMoment=(c.secondMoment??0)*r+(1-r)*(d*d);let f=c.firstMoment/(1-Math.pow(i,u)),m=c.secondMoment/(1-Math.pow(r,u)),_=f*i+(1-i)*d/(1-Math.pow(i,u));this._safeUpdateWeight(c,_/(Math.sqrt(m)+a)*h);break}case"radam":{c.firstMoment=(c.firstMoment??0)*i+(1-i)*d,c.secondMoment=(c.secondMoment??0)*r+(1-r)*(d*d);let f=c.firstMoment/(1-Math.pow(i,u)),m=c.secondMoment/(1-Math.pow(r,u)),_=2/(1-r)-1,y=_-2*u*Math.pow(r,u)/(1-Math.pow(r,u));if(y>4){let g=Math.sqrt((y-4)*(y-2)*_/((_-4)*(_-2)*y));this._safeUpdateWeight(c,g*f/(Math.sqrt(m)+a)*h)}else this._safeUpdateWeight(c,f*h);break}case"lion":{c.firstMoment=(c.firstMoment??0)*i+(1-i)*d,c.secondMomentum=(c.secondMomentum??0)*r+(1-r)*d;let f=Math.sign((c.firstMoment||0)+(c.secondMomentum||0));this._safeUpdateWeight(c,-f*h);break}case"adabelief":{c.firstMoment=(c.firstMoment??0)*i+(1-i)*d;let f=d-c.firstMoment;c.secondMoment=(c.secondMoment??0)*r+(1-r)*(f*f);let m=c.firstMoment/(1-Math.pow(i,u)),_=c.secondMoment/(1-Math.pow(r,u));this._safeUpdateWeight(c,m/(Math.sqrt(_)+a+1e-12)*h);break}default:{let f=d+s*(c.previousDeltaWeight||0);Number.isFinite(f)||(f=0),Math.abs(f)>1e3&&(f=Math.sign(f)*1e3),this._safeUpdateWeight(c,f*h),c.previousDeltaWeight=f}}o==="adamw"&&l!==0&&this._safeUpdateWeight(c,-l*(c.weight||0)*h),c.totalDeltaWeight=0};for(let c of this.connections.in)p(c);for(let c of this.connections.self)p(c);if(this.type!=="input"&&this.type!=="constant"){let c=this.totalDeltaBias||0;if(Number.isFinite(c)||(c=0),["adam","adamw","amsgrad","adamax","nadam","radam","lion","adabelief"].includes(o)){this.opt_mB=(this.opt_mB??0)*i+(1-i)*c,o==="lion"&&(this.opt_mB2=(this.opt_mB2??0)*r+(1-r)*c),this.opt_vB=(this.opt_vB??0)*r+(1-r)*(o==="adabelief"?Math.pow(c-this.opt_mB,2):c*c),o==="amsgrad"&&(this.opt_vhatB=Math.max(this.opt_vhatB??0,this.opt_vB??0));let d=o==="amsgrad"?this.opt_vhatB:this.opt_vB,f=this.opt_mB/(1-Math.pow(i,u)),m=d/(1-Math.pow(r,u)),_;if(o==="adamax")this.opt_uB=Math.max((this.opt_uB??0)*r,Math.abs(c)),_=f/(this.opt_uB||1e-12)*h;else if(o==="nadam")_=(f*i+(1-i)*c/(1-Math.pow(i,u)))/(Math.sqrt(m)+a)*h;else if(o==="radam"){let g=2/(1-r)-1,w=g-2*u*Math.pow(r,u)/(1-Math.pow(r,u));w>4?_=Math.sqrt((w-4)*(w-2)*g/((g-4)*(g-2)*w))*f/(Math.sqrt(m)+a)*h:_=f*h}else o==="lion"?_=-Math.sign(this.opt_mB+this.opt_mB2)*h:o==="adabelief"?_=f/(Math.sqrt(m)+a+1e-12)*h:_=f/(Math.sqrt(m)+a)*h;o==="adamw"&&l!==0&&(_-=l*(this.bias||0)*h);let y=this.bias+_;Number.isFinite(y)||(y=0),Math.abs(y)>1e6&&(y=Math.sign(y)*1e6),this.bias=y}else{let d=c+s*(this.previousDeltaBias||0);Number.isFinite(d)||(d=0),Math.abs(d)>1e3&&(d=Math.sign(d)*1e3);let f=this.bias+d*h;Number.isFinite(f)||(f=0),Math.abs(f)>1e6&&(f=Math.sign(f)*1e6),this.bias=f,this.previousDeltaBias=d}this.totalDeltaBias=0}else this.previousDeltaBias=0,this.totalDeltaBias=0;if(e==="lookahead"){let c=this._la_k||5,d=this._la_alpha||.5;if(this._la_step%c===0){this._la_shadowBias=(1-d)*this._la_shadowBias+d*this.bias,this.bias=this._la_shadowBias;let f=m=>{m.lookaheadShadowWeight||(m.lookaheadShadowWeight=m.weight),m.lookaheadShadowWeight=(1-d)*m.lookaheadShadowWeight+d*m.weight,m.weight=m.lookaheadShadowWeight};for(let m of this.connections.in)f(m);for(let m of this.connections.self)f(m)}}}_safeUpdateWeight(t,e){let o=t.weight+e;Number.isFinite(o)||(o=0),Math.abs(o)>1e6&&(o=Math.sign(o)*1e6),t.weight=o}}});function Hi(n,t,e=Math.random){t&&(n.type=t);let o=n.type;n.bias=o==="input"?0:e()*.2-.1,n.activation=0,n.state=0,n.old=0,n.mask=1,n.previousDeltaBias=0,n.totalDeltaBias=0,n.derivative=void 0,n.connections.in.length=0,n.connections.out.length=0,n.connections.gated.length=0,n.connections.self.length=0,n.error={responsibility:0,projected:0,gated:0},n.geneId=_n++}function Oe(n={}){let{type:t="hidden",activationFn:e,rng:o}=n,s;return Lt.length?(s=Lt.pop(),Fi++,Hi(s,t,o),e&&(s.squash=e)):(s=new K(t,e,o),s.geneId=_n++,$i++),Lt.length>oe&&(oe=Lt.length),s}function ie(n){n.connections.in.length=0,n.connections.out.length=0,n.connections.gated.length=0,n.connections.self.length=0,n.error={responsibility:0,projected:0,gated:0},Lt.push(n),Lt.length>oe&&(oe=Lt.length)}var Lt,oe,_n,Fi,$i,Ee=C(()=>{"use strict";mt();Lt=[],oe=0,_n=1,Fi=0,$i=0});var Ce,ft,Jt=C(()=>{"use strict";vt();Ce=class{buckets=new Map;created=0;reused=0;maxPerBucket=Number.POSITIVE_INFINITY;acquire(t){let e=this.buckets.get(t);if(e&&e.length>0){this.reused++;let o=e.pop();return o.fill(0),o}return this.created++,G.float32Mode?new Float32Array(t):new Array(t).fill(0)}release(t){let e=t.length>>>0;this.buckets.has(e)||this.buckets.set(e,[]);let o=this.buckets.get(e);o.length<this.maxPerBucket&&o.push(t)}clear(){this.buckets.clear(),this.created=0,this.reused=0}stats(){return{created:this.created,reused:this.reused,bucketCount:this.buckets.size}}setMaxPerBucket(t){typeof t=="number"&&t>=0&&(this.maxPerBucket=t)}prewarm(t,e){let o=Math.max(0,Math.floor(e));this.buckets.has(t)||this.buckets.set(t,[]);let s=this.buckets.get(t);for(let i=0;i<o&&s.length<this.maxPerBucket;i++){let r=G.float32Mode?new Float32Array(t):new Array(t).fill(0);s.push(r),this.created++}}bucketSize(t){return this.buckets.get(t)?.length??0}},ft=new Ce});var bn=qt((Ur,qi)=>{qi.exports={name:"@reicek/neataptic-ts",version:"0.1.10",description:"Architecture-free neural network library with genetic algorithm implementations",main:"./dist/neataptic.js",module:"./dist/neataptic.js",types:"./dist/neataptic.d.ts",type:"module",scripts:{test:"jest --no-cache --coverage --collect-coverage --runInBand --testPathIgnorePatterns=.e2e.test.ts --verbose",pretest:"npm run build","test:bench":"jest --no-cache --runInBand --verbose --testPathPattern=benchmark","test:silent":"jest --no-cache --coverage --collect-coverage --runInBand --testPathIgnorePatterns=.e2e.test.ts --silent",deploy:"npm run build && npm run test:dist && npm publish",build:"npm run build:webpack && npm run build:ts","build:ts":"tsc","build:webpack":"webpack --config webpack.config.js","start:ts":"ts-node src/neataptic.ts","test:e2e":"cross-env FORCE_COLOR=true jest e2e.test.ts --no-cache --runInBand","test:e2e:logs":"npx jest e2e.test.ts --verbose --runInBand --no-cache","test:dist":"npm run build:ts && jest --no-cache --coverage --collect-coverage --runInBand --testPathIgnorePatterns=.e2e.test.ts","docs:build-scripts":"tsc -p tsconfig.docs.json && node scripts/write-dist-docs-pkg.cjs","docs:folders":"npm run docs:build-scripts && node ./dist-docs/scripts/generate-docs.js","docs:html":"npm run docs:build-scripts && node ./dist-docs/scripts/render-docs-html.js","build:ascii-maze":"npx esbuild test/examples/asciiMaze/browser-entry.ts --bundle --outfile=docs/assets/ascii-maze.bundle.js --platform=browser --format=iife --sourcemap --external:fs --external:child_process","docs:examples":"node scripts/copy-examples.cjs",prettier:"npm run prettier:tests && npm run prettier:src","prettier:tests":"npx prettier --write **/*.test.ts","prettier:src":"npx prettier --write src/**/*.ts",docs:"npm run build:ascii-maze && npm run docs:examples && npm run docs:build-scripts && node ./dist-docs/scripts/generate-docs.js && node ./dist-docs/scripts/render-docs-html.js","onnx:export":"node scripts/export-onnx.cjs"},exports:{".":{types:"./dist/neataptic.d.ts",import:"./dist/neataptic.js"}},devDependencies:{"@types/chai":"^5.2.1","@types/fs-extra":"^11.0.4","@types/jest":"^29.5.11","@types/node":"^20.19.10","@types/seedrandom":"^3.0.8","@types/webpack":"^5.28.5","@types/webpack-dev-server":"^4.7.2",chai:"^4.3.4","copy-webpack-plugin":"^8.1.0","cross-env":"^7.0.3","fast-glob":"^3.3.3","fs-extra":"^11.3.1",husky:"^6.0.0",jest:"^29.7.0","jsdoc-to-markdown":"^9.1.1",marked:"^12.0.2",mkdocs:"^0.0.1","ts-jest":"^29.1.1","ts-loader":"^9.5.2","ts-morph":"^22.0.0","ts-node":"^10.9.2",typescript:"^5.6.3","undici-types":"^7.8.0",webpack:"^5.99.5","webpack-cli":"^6.0.1",esbuild:"^0.23.0",puppeteer:"^23.3.0"},repository:{type:"git",url:"https://github.com/reicek/NeatapticTS.git"},keywords:["neural network","machine learning","genetic algorithm","mutation","neat"],author:{name:"Cesar Anton",email:"reicek@gmail.com"},license:"MIT",publishConfig:{access:"public",registry:"https://registry.npmjs.org/"},bugs:{url:"https://github.com/reicek/NeatapticTS/issues",email:"reicek@gmail.com"},homepage:"https://reicek.github.io/NeatapticTS/",engines:{node:">=14.0.0"},prettier:{singleQuote:!0},dependencies:{build:"^0.1.4",child_process:"^1.0.2",os:"^0.1.2",path:"^0.12.7",seedrandom:"^3.0.5",undici:"^5.0.0","undici-types":"^7.8.0"}}});function Ui(n){let t=new Set;n.nodes.forEach(e=>e.connections?.out.forEach(o=>t.add(o))),n.connections=Array.from(t)}function Vt(n){let t=(n?.name||"").toUpperCase();return t.includes("TANH")?"Tanh":t.includes("LOGISTIC")||t.includes("SIGMOID")?"Sigmoid":t.includes("RELU")?"Relu":(n&&console.warn(`Unsupported activation function ${n.name} for ONNX export, defaulting to Identity.`),"Identity")}function zi(n){let t=n.nodes.filter(a=>a.type==="input"),e=n.nodes.filter(a=>a.type==="output"),o=n.nodes.filter(a=>a.type==="hidden");if(o.length===0)return[t,e];let s=[...o],i=t,r=[];for(;s.length;){let a=s.filter(l=>l.connections.in.every(h=>i.includes(h.from)));if(!a.length)throw new Error("Invalid network structure for ONNX export: cannot resolve layered ordering.");r.push(i),i=a,s=s.filter(l=>!a.includes(l))}return r.push(i),r.push(e),r}function Ji(n,t,e){for(let o=1;o<n.length;o++){let s=n[o-1],i=n[o],r=new Set(i.map(a=>a.squash&&a.squash.name));if(r.size>1&&!e.allowMixedActivations)throw new Error(`ONNX export error: Mixed activation functions detected in layer ${o}. (enable allowMixedActivations to decompose layer)`);r.size>1&&e.allowMixedActivations&&console.warn(`Warning: Mixed activations in layer ${o}; exporting per-neuron Gemm + Activation (+Concat) baseline.`);for(let a of i)for(let l of s)if(!a.connections.in.some(u=>u.from===l)&&!e.allowPartialConnectivity)throw new Error(`ONNX export error: Missing connection from node ${l.index} to node ${a.index} in layer ${o}. (enable allowPartialConnectivity)`)}}function Vi(n,t,e={}){let{includeMetadata:o=!1,opset:s=18,batchDimension:i=!1,legacyNodeOrdering:r=!1,producerName:a="neataptic-ts",producerVersion:l,docString:h}=e,u=t[0],p=t[t.length-1],c=i?[{dim_param:"N"},{dim_value:u.length}]:[{dim_value:u.length}],d=i?[{dim_param:"N"},{dim_value:p.length}]:[{dim_value:p.length}],f={graph:{inputs:[{name:"input",type:{tensor_type:{elem_type:1,shape:{dim:c}}}}],outputs:[{name:"output",type:{tensor_type:{elem_type:1,shape:{dim:d}}}}],initializer:[],node:[]}};if(o){let g=(()=>{try{return bn().version}catch{return"0.0.0"}})();f.ir_version=9,f.opset_import=[{version:s,domain:""}],f.producer_name=a,f.producer_version=l||g,f.doc_string=h||"Exported from NeatapticTS ONNX exporter (phases 1-2 baseline)"}let m="input",_=[];if(e.allowRecurrent&&e.recurrentSingleStep)for(let g=1;g<t.length-1;g++){let w=t[g];if(w.some(v=>v.connections.self.length>0)){_.push(g);let v=g===1?"hidden_prev":`hidden_prev_l${g}`;f.graph.inputs.push({name:v,type:{tensor_type:{elem_type:1,shape:{dim:i?[{dim_param:"N"},{dim_value:w.length}]:[{dim_value:w.length}]}}}})}}let y=[];for(let g=1;g<t.length;g++){let w=t[g-1],v=t[g],b=g===t.length-1;b||y.push(v.length);let M=e.conv2dMappings?.find(N=>N.layerIndex===g);if(M){let N=M.inHeight*M.inWidth*M.inChannels,T=w.length,k=M.outChannels*M.outHeight*M.outWidth,R=v.length,j=[M.padTop||0,M.padLeft||0,M.padBottom||0,M.padRight||0];if(!(N===T&&k===R))console.warn(`Conv2D mapping for layer ${g} skipped: dimension mismatch (expected prev=${N} got ${T}; expected this=${k} got ${R}).`);else{let S=[],A=[];for(let H=0;H<M.outChannels;H++){let rt=H*M.outHeight*M.outWidth,lt=v[rt];A.push(lt.bias);for(let L=0;L<M.inChannels;L++)for(let V=0;V<M.kernelHeight;V++)for(let U=0;U<M.kernelWidth;U++){let nt=L*(M.inHeight*M.inWidth)+V*M.inWidth+U,Q=w[nt],$=lt.connections.in.find(et=>et.from===Q);S.push($?$.weight:0)}}let O=`ConvW${g-1}`,E=`ConvB${g-1}`;f.graph.initializer.push({name:O,data_type:1,dims:[M.outChannels,M.inChannels,M.kernelHeight,M.kernelWidth],float_data:S}),f.graph.initializer.push({name:E,data_type:1,dims:[M.outChannels],float_data:A});let B=`Conv_${g}`;f.graph.node.push({op_type:"Conv",input:[m,O,E],output:[B],name:`conv_l${g}`,attributes:[{name:"kernel_shape",type:"INTS",ints:[M.kernelHeight,M.kernelWidth]},{name:"strides",type:"INTS",ints:[M.strideHeight,M.strideWidth]},{name:"pads",type:"INTS",ints:j}]});let D=M.activation||Vt(v[0].squash),J=`Layer_${g}`;f.graph.node.push({op_type:D,input:[B],output:[J],name:`act_conv_l${g}`}),m=J;let I=e.pool2dMappings?.find(H=>H.afterLayerIndex===g);if(I){let H=[I.kernelHeight,I.kernelWidth],rt=[I.strideHeight,I.strideWidth],lt=[I.padTop||0,I.padLeft||0,I.padBottom||0,I.padRight||0],L=`Pool_${g}`;if(f.graph.node.push({op_type:I.type,input:[m],output:[L],name:`pool_after_l${g}`,attributes:[{name:"kernel_shape",type:"INTS",ints:H},{name:"strides",type:"INTS",ints:rt},{name:"pads",type:"INTS",ints:lt}]}),m=L,e.flattenAfterPooling){let nt=`PoolFlat_${g}`;f.graph.node.push({op_type:"Flatten",input:[m],output:[nt],name:`flatten_after_l${g}`,attributes:[{name:"axis",type:"INT",i:1}]}),m=nt,f.metadata_props=f.metadata_props||[];let Q=f.metadata_props.find($=>$.key==="flatten_layers");if(Q)try{let $=JSON.parse(Q.value);Array.isArray($)&&!$.includes(g)&&($.push(g),Q.value=JSON.stringify($))}catch{Q.value=JSON.stringify([g])}else f.metadata_props.push({key:"flatten_layers",value:JSON.stringify([g])})}f.metadata_props=f.metadata_props||[];let V=f.metadata_props.find(nt=>nt.key==="pool2d_layers");if(V)try{let nt=JSON.parse(V.value);Array.isArray(nt)&&!nt.includes(g)&&(nt.push(g),V.value=JSON.stringify(nt))}catch{V.value=JSON.stringify([g])}else f.metadata_props.push({key:"pool2d_layers",value:JSON.stringify([g])});let U=f.metadata_props.find(nt=>nt.key==="pool2d_specs");if(U)try{let nt=JSON.parse(U.value);Array.isArray(nt)&&(nt.push({...I}),U.value=JSON.stringify(nt))}catch{U.value=JSON.stringify([I])}else f.metadata_props.push({key:"pool2d_specs",value:JSON.stringify([I])})}f.metadata_props=f.metadata_props||[];let Z=f.metadata_props.find(H=>H.key==="conv2d_layers");if(Z)try{let H=JSON.parse(Z.value);Array.isArray(H)&&!H.includes(g)&&(H.push(g),Z.value=JSON.stringify(H))}catch{Z.value=JSON.stringify([g])}else f.metadata_props.push({key:"conv2d_layers",value:JSON.stringify([g])});let z=f.metadata_props.find(H=>H.key==="conv2d_specs");if(z)try{let H=JSON.parse(z.value);Array.isArray(H)&&(H.push({...M}),z.value=JSON.stringify(H))}catch{z.value=JSON.stringify([M])}else f.metadata_props.push({key:"conv2d_specs",value:JSON.stringify([M])});continue}}let x=e.allowMixedActivations&&new Set(v.map(N=>N.squash&&N.squash.name)).size>1;if(_.includes(g)&&!b){if(x)throw new Error(`Recurrent export does not yet support mixed activations in hidden layer ${g}.`);let N=[],T=new Array(v.length).fill(0);for(let A=0;A<v.length;A++){let O=v[A];T[A]=O.bias;for(let E=0;E<w.length;E++){let B=w[E],D=O.connections.in.find(J=>J.from===B);N.push(D?D.weight:0)}}let k=`W${g-1}`,R=`B${g-1}`;f.graph.initializer.push({name:k,data_type:1,dims:[v.length,w.length],float_data:N}),f.graph.initializer.push({name:R,data_type:1,dims:[v.length],float_data:T});let j=[];for(let A=0;A<v.length;A++)for(let O=0;O<v.length;O++)if(A===O){let E=v[A].connections.self[0];j.push(E?E.weight:0)}else j.push(0);let W=`R${g-1}`;f.graph.initializer.push({name:W,data_type:1,dims:[v.length,v.length],float_data:j}),f.graph.node.push({op_type:"Gemm",input:[m,k,R],output:[`Gemm_in_${g}`],name:`gemm_in_l${g}`,attributes:[{name:"alpha",type:"FLOAT",f:1},{name:"beta",type:"FLOAT",f:1},{name:"transB",type:"INT",i:1}]});let S=g===1?"hidden_prev":`hidden_prev_l${g}`;f.graph.node.push({op_type:"Gemm",input:[S,W],output:[`Gemm_rec_${g}`],name:`gemm_rec_l${g}`,attributes:[{name:"alpha",type:"FLOAT",f:1},{name:"beta",type:"FLOAT",f:1},{name:"transB",type:"INT",i:1}]}),f.graph.node.push({op_type:"Add",input:[`Gemm_in_${g}`,`Gemm_rec_${g}`],output:[`RecurrentSum_${g}`],name:`add_recurrent_l${g}`}),f.graph.node.push({op_type:Vt(v[0].squash),input:[`RecurrentSum_${g}`],output:[`Layer_${g}`],name:`act_l${g}`}),m=`Layer_${g}`}else if(x){let N=[];v.forEach((R,j)=>{let W=[];for(let B=0;B<w.length;B++){let D=w[B],J=R.connections.in.find(I=>I.from===D);W.push(J?J.weight:0)}let S=`W${g-1}_n${j}`,A=`B${g-1}_n${j}`,O=`Gemm_${g}_n${j}`,E=`Layer_${g}_n${j}`;f.graph.initializer.push({name:S,data_type:1,dims:[1,w.length],float_data:W}),f.graph.initializer.push({name:A,data_type:1,dims:[1],float_data:[R.bias]}),f.graph.node.push({op_type:"Gemm",input:[m,S,A],output:[O],name:`gemm_l${g}_n${j}`,attributes:[{name:"alpha",type:"FLOAT",f:1},{name:"beta",type:"FLOAT",f:1},{name:"transB",type:"INT",i:1}]}),f.graph.node.push({op_type:Vt(R.squash),input:[O],output:[E],name:`act_l${g}_n${j}`}),N.push(E)});let T=`Layer_${g}`;f.graph.node.push({op_type:"Concat",input:N,output:[T],name:`concat_l${g}`,attributes:[{name:"axis",type:"INT",i:i?1:0}]}),m=T;let k=e.pool2dMappings?.find(R=>R.afterLayerIndex===g);if(k){let R=[k.kernelHeight,k.kernelWidth],j=[k.strideHeight,k.strideWidth],W=[k.padTop||0,k.padLeft||0,k.padBottom||0,k.padRight||0],S=`Pool_${g}`;if(f.graph.node.push({op_type:k.type,input:[m],output:[S],name:`pool_after_l${g}`,attributes:[{name:"kernel_shape",type:"INTS",ints:R},{name:"strides",type:"INTS",ints:j},{name:"pads",type:"INTS",ints:W}]}),m=S,e.flattenAfterPooling){let E=`PoolFlat_${g}`;f.graph.node.push({op_type:"Flatten",input:[m],output:[E],name:`flatten_after_l${g}`,attributes:[{name:"axis",type:"INT",i:1}]}),m=E,f.metadata_props=f.metadata_props||[];let B=f.metadata_props.find(D=>D.key==="flatten_layers");if(B)try{let D=JSON.parse(B.value);Array.isArray(D)&&!D.includes(g)&&(D.push(g),B.value=JSON.stringify(D))}catch{B.value=JSON.stringify([g])}else f.metadata_props.push({key:"flatten_layers",value:JSON.stringify([g])})}f.metadata_props=f.metadata_props||[];let A=f.metadata_props.find(E=>E.key==="pool2d_layers");if(A)try{let E=JSON.parse(A.value);Array.isArray(E)&&!E.includes(g)&&(E.push(g),A.value=JSON.stringify(E))}catch{A.value=JSON.stringify([g])}else f.metadata_props.push({key:"pool2d_layers",value:JSON.stringify([g])});let O=f.metadata_props.find(E=>E.key==="pool2d_specs");if(O)try{let E=JSON.parse(O.value);Array.isArray(E)&&(E.push({...k}),O.value=JSON.stringify(E))}catch{O.value=JSON.stringify([k])}else f.metadata_props.push({key:"pool2d_specs",value:JSON.stringify([k])})}}else{let N=[],T=new Array(v.length).fill(0);for(let A=0;A<v.length;A++){let O=v[A];T[A]=O.bias;for(let E=0;E<w.length;E++){let B=w[E],D=O.connections.in.find(J=>J.from===B);N.push(D?D.weight:0)}}let k=`W${g-1}`,R=`B${g-1}`,j=`Gemm_${g}`,W=`Layer_${g}`;f.graph.initializer.push({name:k,data_type:1,dims:[v.length,w.length],float_data:N}),f.graph.initializer.push({name:R,data_type:1,dims:[v.length],float_data:T}),r?(f.graph.node.push({op_type:Vt(v[0].squash),input:[j],output:[W],name:`act_l${g}`}),f.graph.node.push({op_type:"Gemm",input:[m,k,R],output:[j],name:`gemm_l${g}`,attributes:[{name:"alpha",type:"FLOAT",f:1},{name:"beta",type:"FLOAT",f:1},{name:"transB",type:"INT",i:1}]})):(f.graph.node.push({op_type:"Gemm",input:[m,k,R],output:[j],name:`gemm_l${g}`,attributes:[{name:"alpha",type:"FLOAT",f:1},{name:"beta",type:"FLOAT",f:1},{name:"transB",type:"INT",i:1}]}),f.graph.node.push({op_type:Vt(v[0].squash),input:[j],output:[W],name:`act_l${g}`})),m=W;let S=e.pool2dMappings?.find(A=>A.afterLayerIndex===g);if(S){let A=[S.kernelHeight,S.kernelWidth],O=[S.strideHeight,S.strideWidth],E=[S.padTop||0,S.padLeft||0,S.padBottom||0,S.padRight||0],B=`Pool_${g}`;if(f.graph.node.push({op_type:S.type,input:[m],output:[B],name:`pool_after_l${g}`,attributes:[{name:"kernel_shape",type:"INTS",ints:A},{name:"strides",type:"INTS",ints:O},{name:"pads",type:"INTS",ints:E}]}),m=B,e.flattenAfterPooling){let I=`PoolFlat_${g}`;f.graph.node.push({op_type:"Flatten",input:[m],output:[I],name:`flatten_after_l${g}`,attributes:[{name:"axis",type:"INT",i:1}]}),m=I,f.metadata_props=f.metadata_props||[];let Z=f.metadata_props.find(z=>z.key==="flatten_layers");if(Z)try{let z=JSON.parse(Z.value);Array.isArray(z)&&!z.includes(g)&&(z.push(g),Z.value=JSON.stringify(z))}catch{Z.value=JSON.stringify([g])}else f.metadata_props.push({key:"flatten_layers",value:JSON.stringify([g])})}f.metadata_props=f.metadata_props||[];let D=f.metadata_props.find(I=>I.key==="pool2d_layers");if(D)try{let I=JSON.parse(D.value);Array.isArray(I)&&!I.includes(g)&&(I.push(g),D.value=JSON.stringify(I))}catch{D.value=JSON.stringify([g])}else f.metadata_props.push({key:"pool2d_layers",value:JSON.stringify([g])});let J=f.metadata_props.find(I=>I.key==="pool2d_specs");if(J)try{let I=JSON.parse(J.value);Array.isArray(I)&&(I.push({...S}),J.value=JSON.stringify(I))}catch{J.value=JSON.stringify([S])}else f.metadata_props.push({key:"pool2d_specs",value:JSON.stringify([S])})}}}if(e.allowRecurrent)for(let g=1;g<t.length-1;g++){let w=t[g],v=w.length;if(f.metadata_props||(f.metadata_props=[]),v>=8&&v<10&&f.metadata_props.push({key:"rnn_pattern_fallback",value:JSON.stringify({layer:g,reason:"size_between_gru_lstm_thresholds"})}),v>=10&&v%5===0){let b=v/5,M=t[g-1],x=w.slice(0,b),N=w.slice(b,b*2),T=w.slice(b*2,b*3),k=w.slice(b*3,b*4),R=w.slice(b*4,b*5),j=[x,N,T,k],W=j.length,S=M.length,A=[],O=[],E=[];for(let D=0;D<W;D++){let J=j[D];for(let I=0;I<b;I++){let Z=J[I];for(let z=0;z<S;z++){let H=M[z],rt=Z.connections.in.find(lt=>lt.from===H);A.push(rt?rt.weight:0)}for(let z=0;z<b;z++)if(J===T&&z===I){let H=Z.connections.self[0];O.push(H?H.weight:0)}else O.push(0);E.push(Z.bias)}}f.graph.initializer.push({name:`LSTM_W${g-1}`,data_type:1,dims:[W*b,S],float_data:A}),f.graph.initializer.push({name:`LSTM_R${g-1}`,data_type:1,dims:[W*b,b],float_data:O}),f.graph.initializer.push({name:`LSTM_B${g-1}`,data_type:1,dims:[W*b],float_data:E}),f.graph.node.push({op_type:"LSTM",input:[m,`LSTM_W${g-1}`,`LSTM_R${g-1}`,`LSTM_B${g-1}`],output:[`Layer_${g}_lstm_hidden`],name:`lstm_l${g}`,attributes:[{name:"hidden_size",type:"INT",i:b},{name:"layout",type:"INT",i:0}]}),f.metadata_props=f.metadata_props||[];let B=f.metadata_props.findIndex(D=>D.key==="lstm_emitted_layers");if(B>=0)try{let D=JSON.parse(f.metadata_props[B].value);Array.isArray(D)&&!D.includes(g)&&(D.push(g),f.metadata_props[B].value=JSON.stringify(D))}catch{f.metadata_props[B].value=JSON.stringify([g])}else f.metadata_props.push({key:"lstm_emitted_layers",value:JSON.stringify([g])})}if(v>=8&&v%4===0){let b=v/4,M=t[g-1],x=w.slice(0,b),N=w.slice(b,b*2),T=w.slice(b*2,b*3),k=w.slice(b*3,b*4),R=[x,N,T],j=R.length,W=M.length,S=[],A=[],O=[];for(let D=0;D<j;D++){let J=R[D];for(let I=0;I<b;I++){let Z=J[I];for(let z=0;z<W;z++){let H=M[z],rt=Z.connections.in.find(lt=>lt.from===H);S.push(rt?rt.weight:0)}for(let z=0;z<b;z++)if(J===T&&z===I){let H=Z.connections.self[0];A.push(H?H.weight:0)}else A.push(0);O.push(Z.bias)}}f.graph.initializer.push({name:`GRU_W${g-1}`,data_type:1,dims:[j*b,W],float_data:S}),f.graph.initializer.push({name:`GRU_R${g-1}`,data_type:1,dims:[j*b,b],float_data:A}),f.graph.initializer.push({name:`GRU_B${g-1}`,data_type:1,dims:[j*b],float_data:O});let E=g===1?"input":`Layer_${g-1}`;f.graph.node.push({op_type:"GRU",input:[E,`GRU_W${g-1}`,`GRU_R${g-1}`,`GRU_B${g-1}`],output:[`Layer_${g}_gru_hidden`],name:`gru_l${g}`,attributes:[{name:"hidden_size",type:"INT",i:b},{name:"layout",type:"INT",i:0}]}),f.metadata_props=f.metadata_props||[];let B=f.metadata_props.findIndex(D=>D.key==="gru_emitted_layers");if(B>=0)try{let D=JSON.parse(f.metadata_props[B].value);Array.isArray(D)&&!D.includes(g)&&(D.push(g),f.metadata_props[B].value=JSON.stringify(D))}catch{f.metadata_props[B].value=JSON.stringify([g])}else f.metadata_props.push({key:"gru_emitted_layers",value:JSON.stringify([g])})}}if(o&&(f.metadata_props=f.metadata_props||[],f.metadata_props.push({key:"layer_sizes",value:JSON.stringify(y)}),_.length&&f.metadata_props.push({key:"recurrent_single_step",value:JSON.stringify(_)}),e.validateConvSharing&&e.conv2dMappings&&e.conv2dMappings.length)){let g=[],w=[];for(let v of e.conv2dMappings){let b=v.layerIndex,M=t[b-1],x=t[b];if(!x||!M)continue;let N=[],T=!0;for(let R=0;R<v.outChannels;R++){let j=R*(v.outHeight*v.outWidth),W=x[j],S=[];for(let A=0;A<v.inChannels;A++)for(let O=0;O<v.kernelHeight;O++)for(let E=0;E<v.kernelWidth;E++){let B=A*(v.inHeight*v.inWidth)+O*v.inWidth+E,D=M[B],J=W.connections.in.find(I=>I.from===D);S.push(J?J.weight:0)}N.push(S)}let k=1e-9;for(let R=0;R<v.outChannels&&T;R++)for(let j=0;j<v.outHeight&&T;j++)for(let W=0;W<v.outWidth&&T;W++){let S=R*(v.outHeight*v.outWidth)+j*v.outWidth+W,A=x[S];if(!A)continue;let O=0;for(let E=0;E<v.inChannels&&T;E++){let B=j*v.strideHeight-(v.padTop||0),D=W*v.strideWidth-(v.padLeft||0);for(let J=0;J<v.kernelHeight&&T;J++)for(let I=0;I<v.kernelWidth&&T;I++){let Z=B+J,z=D+I;if(Z<0||Z>=v.inHeight||z<0||z>=v.inWidth){O++;continue}let H=E*(v.inHeight*v.inWidth)+Z*v.inWidth+z,rt=M[H],lt=A.connections.in.find(V=>V.from===rt),L=lt?lt.weight:0;Math.abs(L-N[R][O])>k&&(T=!1),O++}}if(!T)break}T?g.push(b):(w.push(b),console.warn(`Conv2D weight sharing mismatch detected in layer ${b}`))}g.length&&f.metadata_props.push({key:"conv2d_sharing_verified",value:JSON.stringify(g)}),w.length&&f.metadata_props.push({key:"conv2d_sharing_mismatch",value:JSON.stringify(w)})}return f}function vn(n,t={}){if(Ui(n),n.nodes.forEach((i,r)=>i.index=r),!n.connections||n.connections.length===0)throw new Error("ONNX export currently only supports simple MLPs");let e=zi(n),o=[];if(t.allowRecurrent)try{for(let i=1;i<e.length-1;i++){let r=e[i],a=r.length;if(a>=10&&a%5===0){let l=a/5;r.slice(l*2,l*3).every(p=>p.connections.self.length===1)&&o.push({layerIndex:i,unitSize:l})}}}catch{}Ji(e,n,t);let s=Vi(n,e,t);if(t.includeMetadata){let i=[],r=[];for(let a=1;a<e.length-1;a++){let l=e[a-1].length,h=e[a].length,u=Math.sqrt(l);if(Math.abs(u-Math.round(u))>1e-9)continue;let p=Math.round(u);for(let c of[3,2]){if(c>=p)continue;let d=p-c+1;if(d*d===h){if(t.conv2dMappings?.some(m=>m.layerIndex===a))break;r.push(a),i.push({layerIndex:a,inHeight:p,inWidth:p,inChannels:1,kernelHeight:c,kernelWidth:c,strideHeight:1,strideWidth:1,outHeight:d,outWidth:d,outChannels:1,note:"heuristic_inferred_no_export_applied"});break}}}r.length&&(s.metadata_props=s.metadata_props||[],s.metadata_props.push({key:"conv2d_inferred_layers",value:JSON.stringify(r)}),s.metadata_props.push({key:"conv2d_inferred_specs",value:JSON.stringify(i)}))}return o.length&&(s.metadata_props=s.metadata_props||[],s.metadata_props.push({key:"lstm_groups_stub",value:JSON.stringify(o)})),s}var Ie=C(()=>{"use strict";pt();Dt()});var wn=C(()=>{"use strict";Ie();Ie()});function Sn(n){if(!n.nodes.some(d=>d.type==="output"))throw new Error("Cannot create standalone function: network has no output nodes.");let t={},e=[],o={},s=0,i=[],r=[],a=[],l={logistic:"function logistic(x){ return 1 / (1 + Math.exp(-x)); }",tanh:"function tanh(x){ return Math.tanh(x); }",relu:"function relu(x){ return x > 0 ? x : 0; }",identity:"function identity(x){ return x; }",step:"function step(x){ return x > 0 ? 1 : 0; }",softsign:"function softsign(x){ return x / (1 + Math.abs(x)); }",sinusoid:"function sinusoid(x){ return Math.sin(x); }",gaussian:"function gaussian(x){ return Math.exp(-Math.pow(x, 2)); }",bentIdentity:"function bentIdentity(x){ return (Math.sqrt(Math.pow(x, 2) + 1) - 1) / 2 + x; }",bipolar:"function bipolar(x){ return x > 0 ? 1 : -1; }",bipolarSigmoid:"function bipolarSigmoid(x){ return 2 / (1 + Math.exp(-x)) - 1; }",hardTanh:"function hardTanh(x){ return Math.max(-1, Math.min(1, x)); }",absolute:"function absolute(x){ return Math.abs(x); }",inverse:"function inverse(x){ return 1 - x; }",selu:"function selu(x){ var a=1.6732632423543772,s=1.0507009873554805; var fx=x>0?x:a*Math.exp(x)-a; return fx*s; }",softplus:"function softplus(x){ if(x>30)return x; if(x<-30)return Math.exp(x); return Math.max(0,x)+Math.log(1+Math.exp(-Math.abs(x))); }",swish:"function swish(x){ var s=1/(1+Math.exp(-x)); return x*s; }",gelu:"function gelu(x){ var cdf=0.5*(1.0+Math.tanh(Math.sqrt(2.0/Math.PI)*(x+0.044715*Math.pow(x,3)))); return x*cdf; }",mish:"function mish(x){ var sp_x; if(x>30){sp_x=x;}else if(x<-30){sp_x=Math.exp(x);}else{sp_x=Math.log(1+Math.exp(x));} var tanh_sp_x=Math.tanh(sp_x); return x*tanh_sp_x; }"};n.nodes.forEach((d,f)=>{d.index=f,i.push(d.activation),r.push(d.state)}),a.push("for(var i = 0; i < input.length; i++) A[i] = input[i];");for(let d=n.input;d<n.nodes.length;d++){let f=n.nodes[d],m=f.squash,_=m.name||`anonymous_squash_${d}`;if(!(_ in t)){let b;l[_]?(b=l[_],b.startsWith(`function ${_}`)||(b=`function ${_}${b.substring(b.indexOf("("))}`),b=Mn(b)):(b=m.toString(),b=Mn(b),b.startsWith("function")?b=`function ${_}${b.substring(b.indexOf("("))}`:b.includes("=>")?b=`function ${_}${b.substring(b.indexOf("("))}`:b=`function ${_}(x){ return x; }`),t[_]=b,e.push(b),o[_]=s++}let y=o[_],g=[];for(let b of f.connections.in){if(typeof b.from.index>"u")continue;let M=`A[${b.from.index}] * ${b.weight}`;b.gater&&typeof b.gater.index<"u"&&(M+=` * A[${b.gater.index}]`),g.push(M)}if(f.connections.self.length>0){let b=f.connections.self[0],M=`S[${d}] * ${b.weight}`;b.gater&&typeof b.gater.index<"u"&&(M+=` * A[${b.gater.index}]`),g.push(M)}let w=g.length>0?g.join(" + "):"0";a.push(`S[${d}] = ${w} + ${f.bias};`);let v=typeof f.mask=="number"&&f.mask!==1?f.mask:1;a.push(`A[${d}] = F[${y}](S[${d}])${v!==1?` * ${v}`:""};`)}let h=[];for(let d=n.nodes.length-n.output;d<n.nodes.length;d++)typeof n.nodes[d]?.index<"u"&&h.push(n.nodes[d].index);a.push(`return [${h.map(d=>`A[${d}]`).join(",")}];`);let u=Object.entries(o).sort(([,d],[,f])=>d-f).map(([d])=>d).join(","),p=n._activationPrecision==="f32"?"Float32Array":"Float64Array",c="";return c+=`(function(){
-`,c+=`${e.join(`
+'use strict';
+(() => {
+  var Ii = Object.create;
+  var te = Object.defineProperty;
+  var Ti = Object.getOwnPropertyDescriptor;
+  var Di = Object.getOwnPropertyNames;
+  var ki = Object.getPrototypeOf,
+    ji = Object.prototype.hasOwnProperty;
+  var Li = ((n) =>
+    typeof require < 'u'
+      ? require
+      : typeof Proxy < 'u'
+      ? new Proxy(n, { get: (t, e) => (typeof require < 'u' ? require : t)[e] })
+      : n)(function (n) {
+    if (typeof require < 'u') return require.apply(this, arguments);
+    throw Error('Dynamic require of "' + n + '" is not supported');
+  });
+  var C = (n, t) => () => (n && (t = n((n = 0))), t);
+  var qt = (n, t) => () => (
+      t || n((t = { exports: {} }).exports, t), t.exports
+    ),
+    ct = (n, t) => {
+      for (var e in t) te(n, e, { get: t[e], enumerable: !0 });
+    },
+    pn = (n, t, e, o) => {
+      if ((t && typeof t == 'object') || typeof t == 'function')
+        for (let s of Di(t))
+          !ji.call(n, s) &&
+            s !== e &&
+            te(n, s, {
+              get: () => t[s],
+              enumerable: !(o = Ti(t, s)) || o.enumerable,
+            });
+      return n;
+    };
+  var Pi = (n, t, e) => (
+      (e = n != null ? Ii(ki(n)) : {}),
+      pn(
+        t || !n || !n.__esModule
+          ? te(e, 'default', { value: n, enumerable: !0 })
+          : e,
+        n
+      )
+    ),
+    q = (n) => pn(te({}, '__esModule', { value: !0 }), n);
+  var It,
+    Tt,
+    Bt,
+    ht,
+    Dt = C(() => {
+      'use strict';
+      (It = Symbol('connGain')),
+        (Tt = Symbol('connGater')),
+        (Bt = Symbol('connOptMoments')),
+        (ht = class n {
+          from;
+          to;
+          weight;
+          eligibility;
+          previousDeltaWeight;
+          totalDeltaWeight;
+          xtrace;
+          innovation;
+          _flags;
+          constructor(t, e, o) {
+            (this.from = t),
+              (this.to = e),
+              (this.weight = o ?? Math.random() * 0.2 - 0.1),
+              (this.eligibility = 0),
+              (this.previousDeltaWeight = 0),
+              (this.totalDeltaWeight = 0),
+              (this.xtrace = { nodes: [], values: [] }),
+              (this._flags = 3),
+              (this.innovation = n._nextInnovation++);
+          }
+          toJSON() {
+            let t = {
+              from: this.from.index ?? void 0,
+              to: this.to.index ?? void 0,
+              weight: this.weight,
+              gain: this.gain,
+              innovation: this.innovation,
+              enabled: this.enabled,
+            };
+            if (this._flags & 4) {
+              let e = this[Tt];
+              e && typeof e.index < 'u' && (t.gater = e.index);
+            }
+            return t;
+          }
+          static innovationID(t, e) {
+            return 0.5 * (t + e) * (t + e + 1) + e;
+          }
+          static _nextInnovation = 1;
+          static resetInnovationCounter(t = 1) {
+            n._nextInnovation = t;
+          }
+          static _pool = [];
+          static acquire(t, e, o) {
+            let s;
+            return (
+              n._pool.length
+                ? ((s = n._pool.pop()),
+                  (s.from = t),
+                  (s.to = e),
+                  (s.weight = o ?? Math.random() * 0.2 - 0.1),
+                  s[It] !== void 0 && delete s[It],
+                  s[Tt] !== void 0 && delete s[Tt],
+                  (s._flags = 3),
+                  (s.eligibility = 0),
+                  (s.previousDeltaWeight = 0),
+                  (s.totalDeltaWeight = 0),
+                  (s.xtrace.nodes.length = 0),
+                  (s.xtrace.values.length = 0),
+                  s[Bt] && delete s[Bt],
+                  (s.innovation = n._nextInnovation++))
+                : (s = new n(t, e, o)),
+              s
+            );
+          }
+          static release(t) {
+            n._pool.push(t);
+          }
+          get enabled() {
+            return (this._flags & 1) !== 0;
+          }
+          set enabled(t) {
+            this._flags = t ? this._flags | 1 : this._flags & -2;
+          }
+          get dcMask() {
+            return this._flags & 2 ? 1 : 0;
+          }
+          set dcMask(t) {
+            this._flags = t ? this._flags | 2 : this._flags & -3;
+          }
+          get hasGater() {
+            return (this._flags & 4) !== 0;
+          }
+          get gain() {
+            return this[It] === void 0 ? 1 : this[It];
+          }
+          set gain(t) {
+            t === 1 ? this[It] !== void 0 && delete this[It] : (this[It] = t);
+          }
+          _ensureOptBag() {
+            let t = this[Bt];
+            return t || ((t = {}), (this[Bt] = t)), t;
+          }
+          _getOpt(t) {
+            let e = this[Bt];
+            return e ? e[t] : void 0;
+          }
+          _setOpt(t, e) {
+            if (e === void 0) {
+              let o = this[Bt];
+              o && delete o[t];
+            } else this._ensureOptBag()[t] = e;
+          }
+          get firstMoment() {
+            return this._getOpt('firstMoment');
+          }
+          set firstMoment(t) {
+            this._setOpt('firstMoment', t);
+          }
+          get secondMoment() {
+            return this._getOpt('secondMoment');
+          }
+          set secondMoment(t) {
+            this._setOpt('secondMoment', t);
+          }
+          get gradientAccumulator() {
+            return this._getOpt('gradientAccumulator');
+          }
+          set gradientAccumulator(t) {
+            this._setOpt('gradientAccumulator', t);
+          }
+          get maxSecondMoment() {
+            return this._getOpt('maxSecondMoment');
+          }
+          set maxSecondMoment(t) {
+            this._setOpt('maxSecondMoment', t);
+          }
+          get infinityNorm() {
+            return this._getOpt('infinityNorm');
+          }
+          set infinityNorm(t) {
+            this._setOpt('infinityNorm', t);
+          }
+          get secondMomentum() {
+            return this._getOpt('secondMomentum');
+          }
+          set secondMomentum(t) {
+            this._setOpt('secondMomentum', t);
+          }
+          get lookaheadShadowWeight() {
+            return this._getOpt('lookaheadShadowWeight');
+          }
+          set lookaheadShadowWeight(t) {
+            this._setOpt('lookaheadShadowWeight', t);
+          }
+          get gater() {
+            return this._flags & 4 ? this[Tt] : null;
+          }
+          set gater(t) {
+            t === null
+              ? this._flags & 4 &&
+                ((this._flags &= -5), this[Tt] !== void 0 && delete this[Tt])
+              : ((this[Tt] = t), (this._flags |= 4));
+          }
+          get opt_m() {
+            return this.firstMoment;
+          }
+          set opt_m(t) {
+            this.firstMoment = t;
+          }
+          get opt_v() {
+            return this.secondMoment;
+          }
+          set opt_v(t) {
+            this.secondMoment = t;
+          }
+          get opt_cache() {
+            return this.gradientAccumulator;
+          }
+          set opt_cache(t) {
+            this.gradientAccumulator = t;
+          }
+          get opt_vhat() {
+            return this.maxSecondMoment;
+          }
+          set opt_vhat(t) {
+            this.maxSecondMoment = t;
+          }
+          get opt_u() {
+            return this.infinityNorm;
+          }
+          set opt_u(t) {
+            this.infinityNorm = t;
+          }
+          get opt_m2() {
+            return this.secondMomentum;
+          }
+          set opt_m2(t) {
+            this.secondMomentum = t;
+          }
+          get _la_shadowWeight() {
+            return this.lookaheadShadowWeight;
+          }
+          set _la_shadowWeight(t) {
+            this.lookaheadShadowWeight = t;
+          }
+          get dropConnectActiveMask() {
+            return this.dcMask;
+          }
+          set dropConnectActiveMask(t) {
+            this.dcMask = t;
+          }
+        });
+    });
+  var G,
+    vt = C(() => {
+      'use strict';
+      G = {
+        warnings: !1,
+        float32Mode: !1,
+        deterministicChainMode: !1,
+        enableGatingTraces: !0,
+        enableNodePooling: !1,
+      };
+    });
+  var xe = {};
+  ct(xe, {
+    EPSILON: () => Nt,
+    EXTRA_CONNECTION_PROBABILITY: () => Se,
+    NORM_EPSILON: () => Wi,
+    PROB_EPSILON: () => kt,
+  });
+  var Nt,
+    kt,
+    Wi,
+    Se,
+    jt = C(() => {
+      'use strict';
+      (Nt = 1e-9), (kt = 1e-15), (Wi = 1e-5), (Se = 0.5);
+    });
+  var wt,
+    fn = C(() => {
+      'use strict';
+      jt();
+      wt = class {
+        static crossEntropy(t, e) {
+          let o = 0,
+            s = 1e-15;
+          if (t.length !== e.length)
+            throw new Error(
+              'Target and output arrays must have the same length.'
+            );
+          for (let i = 0; i < e.length; i++) {
+            let r = t[i],
+              a = e[i],
+              l = Math.max(s, Math.min(1 - s, a));
+            r === 1
+              ? (o -= Math.log(l))
+              : r === 0
+              ? (o -= Math.log(1 - l))
+              : (o -= r * Math.log(l) + (1 - r) * Math.log(1 - l));
+          }
+          return o / e.length;
+        }
+        static softmaxCrossEntropy(t, e) {
+          if (t.length !== e.length)
+            throw new Error(
+              'Target and output arrays must have the same length.'
+            );
+          let o = e.length,
+            s = 0;
+          for (let c of t) s += c;
+          let i = s > 0 ? t.map((c) => c / s) : t.slice(),
+            r = Math.max(...e),
+            a = e.map((c) => Math.exp(c - r)),
+            l = a.reduce((c, d) => c + d, 0) || 1,
+            h = a.map((c) => c / l),
+            u = 0,
+            p = 1e-15;
+          for (let c = 0; c < o; c++) {
+            let d = Math.min(1 - p, Math.max(p, h[c])),
+              f = i[c];
+            u -= f * Math.log(d);
+          }
+          return u;
+        }
+        static mse(t, e) {
+          if (t.length !== e.length)
+            throw new Error(
+              'Target and output arrays must have the same length.'
+            );
+          let o = 0;
+          return (
+            e.forEach((s, i) => {
+              o += Math.pow(t[i] - s, 2);
+            }),
+            o / e.length
+          );
+        }
+        static binary(t, e) {
+          if (t.length !== e.length)
+            throw new Error(
+              'Target and output arrays must have the same length.'
+            );
+          let o = 0;
+          return (
+            e.forEach((s, i) => {
+              o += Math.round(t[i]) !== Math.round(s) ? 1 : 0;
+            }),
+            o / e.length
+          );
+        }
+        static mae(t, e) {
+          if (t.length !== e.length)
+            throw new Error(
+              'Target and output arrays must have the same length.'
+            );
+          let o = 0;
+          return (
+            e.forEach((s, i) => {
+              o += Math.abs(t[i] - s);
+            }),
+            o / e.length
+          );
+        }
+        static mape(t, e) {
+          if (t.length !== e.length)
+            throw new Error(
+              'Target and output arrays must have the same length.'
+            );
+          let o = 0,
+            s = 1e-15;
+          return (
+            e.forEach((i, r) => {
+              let a = t[r];
+              o += Math.abs((a - i) / Math.max(Math.abs(a), s));
+            }),
+            o / e.length
+          );
+        }
+        static msle(t, e) {
+          if (t.length !== e.length)
+            throw new Error(
+              'Target and output arrays must have the same length.'
+            );
+          let o = 0;
+          return (
+            e.forEach((s, i) => {
+              let r = t[i],
+                a = Math.log(Math.max(r, 0) + 1),
+                l = Math.log(Math.max(s, 0) + 1);
+              o += Math.pow(a - l, 2);
+            }),
+            o / e.length
+          );
+        }
+        static hinge(t, e) {
+          if (t.length !== e.length)
+            throw new Error(
+              'Target and output arrays must have the same length.'
+            );
+          let o = 0;
+          return (
+            e.forEach((s, i) => {
+              let r = t[i];
+              o += Math.max(0, 1 - r * s);
+            }),
+            o / e.length
+          );
+        }
+        static focalLoss(t, e, o = 2, s = 0.25) {
+          let i = 0,
+            r = 1e-15;
+          if (t.length !== e.length)
+            throw new Error(
+              'Target and output arrays must have the same length.'
+            );
+          for (let a = 0; a < e.length; a++) {
+            let l = t[a],
+              h = Math.max(r, Math.min(1 - r, e[a])),
+              u = l === 1 ? h : 1 - h,
+              p = l === 1 ? s : 1 - s;
+            i += -p * Math.pow(1 - u, o) * Math.log(u);
+          }
+          return i / e.length;
+        }
+        static labelSmoothing(t, e, o = 0.1) {
+          let s = 0,
+            i = 1e-15;
+          if (t.length !== e.length)
+            throw new Error(
+              'Target and output arrays must have the same length.'
+            );
+          for (let r = 0; r < e.length; r++) {
+            let a = t[r] * (1 - o) + 0.5 * o,
+              l = Math.max(i, Math.min(1 - i, e[r]));
+            s -= a * Math.log(l) + (1 - a) * Math.log(1 - l);
+          }
+          return s / e.length;
+        }
+      };
+    });
+  var Ut,
+    dn = C(() => {
+      'use strict';
+      Ut = class {
+        static fixed() {
+          return (e, o) => e;
+        }
+        static step(t = 0.9, e = 100) {
+          return (s, i) => Math.max(0, s * Math.pow(t, Math.floor(i / e)));
+        }
+        static exp(t = 0.999) {
+          return (o, s) => o * Math.pow(t, s);
+        }
+        static inv(t = 0.001, e = 2) {
+          return (s, i) => s / (1 + t * Math.pow(i, e));
+        }
+        static cosineAnnealing(t = 1e3, e = 0) {
+          return (s, i) => {
+            let r = i % t,
+              a = 0.5 * (1 + Math.cos((r / t) * Math.PI));
+            return e + (s - e) * a;
+          };
+        }
+        static cosineAnnealingWarmRestarts(t = 1e3, e = 0, o = 1) {
+          let s = t,
+            i = 0,
+            r = s;
+          return (a, l) => {
+            for (; l >= r; )
+              (i = r), (s = Math.max(1, Math.round(s * o))), (r = i + s);
+            let h = l - i,
+              u = 0.5 * (1 + Math.cos((h / s) * Math.PI));
+            return e + (a - e) * u;
+          };
+        }
+        static linearWarmupDecay(t, e, o = 0) {
+          if (t <= 0) throw new Error('totalSteps must be > 0');
+          let s = Math.min(e ?? Math.max(1, Math.floor(t * 0.1)), t - 1);
+          return (i, r) => {
+            if (r <= s) return i * (r / Math.max(1, s));
+            if (r >= t) return o;
+            let a = t - s,
+              l = (r - s) / a;
+            return o + (i - o) * (1 - l);
+          };
+        }
+        static reduceOnPlateau(t) {
+          let {
+              factor: e = 0.5,
+              patience: o = 10,
+              minDelta: s = 1e-4,
+              cooldown: i = 0,
+              minRate: r = 0,
+              verbose: a = !1,
+            } = t || {},
+            l,
+            h,
+            u = 0,
+            p = -1;
+          return (c, d, f) => {
+            if ((l === void 0 && (l = c), f !== void 0)) {
+              if (h === void 0 || f < h - s) (h = f), (u = d);
+              else if (d - u >= o && d >= p) {
+                let m = Math.max(r, l * e);
+                m < l && ((l = m), (p = d + i), (u = d));
+              }
+            }
+            return l;
+          };
+        }
+      };
+    });
+  var Bi,
+    F,
+    Ne = C(() => {
+      'use strict';
+      (Bi = {
+        logistic: (n, t = !1) => {
+          let e = 1 / (1 + Math.exp(-n));
+          return t ? e * (1 - e) : e;
+        },
+        sigmoid: (n, t = !1) => {
+          let e = 1 / (1 + Math.exp(-n));
+          return t ? e * (1 - e) : e;
+        },
+        tanh: (n, t = !1) => (t ? 1 - Math.pow(Math.tanh(n), 2) : Math.tanh(n)),
+        identity: (n, t = !1) => (t ? 1 : n),
+        step: (n, t = !1) => (t ? 0 : n > 0 ? 1 : 0),
+        relu: (n, t = !1) => (t ? (n > 0 ? 1 : 0) : n > 0 ? n : 0),
+        softsign: (n, t = !1) => {
+          let e = 1 + Math.abs(n);
+          return t ? 1 / Math.pow(e, 2) : n / e;
+        },
+        sinusoid: (n, t = !1) => (t ? Math.cos(n) : Math.sin(n)),
+        gaussian: (n, t = !1) => {
+          let e = Math.exp(-Math.pow(n, 2));
+          return t ? -2 * n * e : e;
+        },
+        bentIdentity: (n, t = !1) => {
+          let e = Math.sqrt(Math.pow(n, 2) + 1);
+          return t ? n / (2 * e) + 1 : (e - 1) / 2 + n;
+        },
+        bipolar: (n, t = !1) => (t ? 0 : n > 0 ? 1 : -1),
+        bipolarSigmoid: (n, t = !1) => {
+          let e = 2 / (1 + Math.exp(-n)) - 1;
+          return t ? 0.5 * (1 + e) * (1 - e) : e;
+        },
+        hardTanh: (n, t = !1) =>
+          t ? (n > -1 && n < 1 ? 1 : 0) : Math.max(-1, Math.min(1, n)),
+        absolute: (n, t = !1) => (t ? (n < 0 ? -1 : 1) : Math.abs(n)),
+        inverse: (n, t = !1) => (t ? -1 : 1 - n),
+        selu: (n, t = !1) => {
+          let e = 1.6732632423543772,
+            o = 1.0507009873554805,
+            s = n > 0 ? n : e * Math.exp(n) - e;
+          return t ? (n > 0 ? o : (s + e) * o) : s * o;
+        },
+        softplus: (n, t = !1) => {
+          let e = 1 / (1 + Math.exp(-n));
+          return t
+            ? e
+            : n > 30
+            ? n
+            : n < -30
+            ? Math.exp(n)
+            : Math.max(0, n) + Math.log(1 + Math.exp(-Math.abs(n)));
+        },
+        swish: (n, t = !1) => {
+          let e = 1 / (1 + Math.exp(-n));
+          if (t) {
+            let o = n * e;
+            return o + e * (1 - o);
+          } else return n * e;
+        },
+        gelu: (n, t = !1) => {
+          let e =
+            0.5 *
+            (1 +
+              Math.tanh(
+                Math.sqrt(2 / Math.PI) * (n + 0.044715 * Math.pow(n, 3))
+              ));
+          if (t) {
+            let o = Math.sqrt(2 / Math.PI) * (1 + 0.134145 * n * n),
+              s = Math.sqrt(2 / Math.PI) * (n + 0.044715 * Math.pow(n, 3)),
+              i = 1 / Math.cosh(s),
+              r = i * i;
+            return e + n * 0.5 * o * r;
+          } else return n * e;
+        },
+        mish: (n, t = !1) => {
+          let e;
+          n > 30
+            ? (e = n)
+            : n < -30
+            ? (e = Math.exp(n))
+            : (e = Math.max(0, n) + Math.log(1 + Math.exp(-Math.abs(n))));
+          let o = Math.tanh(e);
+          if (t) {
+            let s = 1 / (1 + Math.exp(-n)),
+              i = 1 / Math.cosh(e),
+              r = i * i;
+            return o + n * r * s;
+          } else return n * o;
+        },
+      }),
+        (F = Bi);
+    });
+  var _t,
+    mn = C(() => {
+      'use strict';
+      _t = {
+        OUTPUT: { name: 'OUTPUT' },
+        INPUT: { name: 'INPUT' },
+        SELF: { name: 'SELF' },
+      };
+    });
+  var P,
+    Gt,
+    ee = C(() => {
+      'use strict';
+      Ne();
+      P = {
+        ADD_NODE: { name: 'ADD_NODE' },
+        SUB_NODE: { name: 'SUB_NODE', keep_gates: !0 },
+        ADD_CONN: { name: 'ADD_CONN' },
+        SUB_CONN: { name: 'SUB_CONN' },
+        MOD_WEIGHT: { name: 'MOD_WEIGHT', min: -1, max: 1 },
+        MOD_BIAS: { name: 'MOD_BIAS', min: -1, max: 1 },
+        MOD_ACTIVATION: {
+          name: 'MOD_ACTIVATION',
+          mutateOutput: !0,
+          allowed: [
+            F.logistic,
+            F.tanh,
+            F.relu,
+            F.identity,
+            F.step,
+            F.softsign,
+            F.sinusoid,
+            F.gaussian,
+            F.bentIdentity,
+            F.bipolar,
+            F.bipolarSigmoid,
+            F.hardTanh,
+            F.absolute,
+            F.inverse,
+            F.selu,
+            F.softplus,
+            F.swish,
+            F.gelu,
+            F.mish,
+          ],
+        },
+        ADD_SELF_CONN: { name: 'ADD_SELF_CONN' },
+        SUB_SELF_CONN: { name: 'SUB_SELF_CONN' },
+        ADD_GATE: { name: 'ADD_GATE' },
+        SUB_GATE: { name: 'SUB_GATE' },
+        ADD_BACK_CONN: { name: 'ADD_BACK_CONN' },
+        SUB_BACK_CONN: { name: 'SUB_BACK_CONN' },
+        SWAP_NODES: { name: 'SWAP_NODES', mutateOutput: !0 },
+        REINIT_WEIGHT: { name: 'REINIT_WEIGHT', min: -1, max: 1 },
+        BATCH_NORM: { name: 'BATCH_NORM' },
+        ADD_LSTM_NODE: { name: 'ADD_LSTM_NODE' },
+        ADD_GRU_NODE: { name: 'ADD_GRU_NODE' },
+        ALL: [],
+        FFW: [],
+      };
+      P.ALL = [
+        P.ADD_NODE,
+        P.SUB_NODE,
+        P.ADD_CONN,
+        P.SUB_CONN,
+        P.MOD_WEIGHT,
+        P.MOD_BIAS,
+        P.MOD_ACTIVATION,
+        P.ADD_GATE,
+        P.SUB_GATE,
+        P.ADD_SELF_CONN,
+        P.SUB_SELF_CONN,
+        P.ADD_BACK_CONN,
+        P.SUB_BACK_CONN,
+        P.SWAP_NODES,
+        P.REINIT_WEIGHT,
+        P.BATCH_NORM,
+        P.ADD_LSTM_NODE,
+        P.ADD_GRU_NODE,
+      ];
+      P.FFW = [
+        P.ADD_NODE,
+        P.SUB_NODE,
+        P.ADD_CONN,
+        P.SUB_CONN,
+        P.MOD_WEIGHT,
+        P.MOD_BIAS,
+        P.MOD_ACTIVATION,
+        P.SWAP_NODES,
+        P.REINIT_WEIGHT,
+        P.BATCH_NORM,
+      ];
+      Gt = P;
+    });
+  var At,
+    Ae = C(() => {
+      'use strict';
+      At = {
+        FITNESS_PROPORTIONATE: { name: 'FITNESS_PROPORTIONATE' },
+        POWER: { name: 'POWER', power: 4 },
+        TOURNAMENT: { name: 'TOURNAMENT', size: 5, probability: 0.5 },
+      };
+    });
+  var zt,
+    gn = C(() => {
+      'use strict';
+      zt = {
+        SINGLE_POINT: { name: 'SINGLE_POINT', config: [0.4] },
+        TWO_POINT: { name: 'TWO_POINT', config: [0.4, 0.9] },
+        UNIFORM: { name: 'UNIFORM' },
+        AVERAGE: { name: 'AVERAGE' },
+      };
+    });
+  var Gi,
+    X,
+    yn = C(() => {
+      'use strict';
+      (Gi = Object.freeze({
+        ALL_TO_ALL: Object.freeze({ name: 'ALL_TO_ALL' }),
+        ALL_TO_ELSE: Object.freeze({ name: 'ALL_TO_ELSE' }),
+        ONE_TO_ONE: Object.freeze({ name: 'ONE_TO_ONE' }),
+      })),
+        (X = Gi);
+    });
+  var ut = {};
+  ct(ut, {
+    Activation: () => F,
+    Cost: () => wt,
+    Rate: () => Ut,
+    crossover: () => zt,
+    gating: () => _t,
+    groupConnection: () => X,
+    mutation: () => P,
+    selection: () => At,
+  });
+  var pt = C(() => {
+    'use strict';
+    fn();
+    dn();
+    Ne();
+    mn();
+    ee();
+    Ae();
+    gn();
+    yn();
+  });
+  var ne = {};
+  ct(ne, { default: () => K });
+  var K,
+    mt = C(() => {
+      'use strict';
+      Dt();
+      vt();
+      pt();
+      K = class n {
+        bias;
+        squash;
+        type;
+        activation;
+        state;
+        old;
+        mask;
+        previousDeltaBias;
+        totalDeltaBias;
+        connections;
+        error;
+        derivative;
+        index;
+        isActivating;
+        geneId;
+        static _globalNodeIndex = 0;
+        static _nextGeneId = 1;
+        constructor(t = 'hidden', e, o = Math.random) {
+          (this.bias = t === 'input' ? 0 : o() * 0.2 - 0.1),
+            (this.squash = e || F.logistic || ((s) => s)),
+            (this.type = t),
+            (this.activation = 0),
+            (this.state = 0),
+            (this.old = 0),
+            (this.mask = 1),
+            (this.previousDeltaBias = 0),
+            (this.totalDeltaBias = 0),
+            (this.connections = { in: [], out: [], gated: [], self: [] }),
+            (this.error = { responsibility: 0, projected: 0, gated: 0 }),
+            typeof this.index > 'u' && (this.index = n._globalNodeIndex++),
+            (this.geneId = n._nextGeneId++);
+        }
+        setActivation(t) {
+          this.squash = t;
+        }
+        activate(t) {
+          return this._activateCore(!0, t);
+        }
+        noTraceActivate(t) {
+          return this._activateCore(!1, t);
+        }
+        _activateCore(t, e) {
+          if (this.mask === 0) return (this.activation = 0), 0;
+          if (typeof e < 'u') {
+            if (this.type === 'input')
+              return (this.activation = e), this.activation;
+            (this.state = e),
+              (this.activation = this.squash(this.state) * this.mask),
+              (this.derivative = this.squash(this.state, !0));
+            for (let s of this.connections.gated) s.gain = this.activation;
+            if (t)
+              for (let s of this.connections.in)
+                s.eligibility = s.from.activation;
+            return this.activation;
+          }
+          this.old = this.state;
+          let o = this.bias;
+          if (this.connections.self.length)
+            for (let s of this.connections.self)
+              s.dcMask !== 0 && (o += s.gain * s.weight * this.old);
+          if (this.connections.in.length)
+            for (let s of this.connections.in)
+              s.dcMask === 0 ||
+                s.enabled === !1 ||
+                (o += s.from.activation * s.weight * s.gain);
+          if (
+            ((this.state = o),
+            typeof this.squash != 'function' &&
+              (G.warnings &&
+                console.warn('Invalid activation function; using identity.'),
+              (this.squash = F.identity)),
+            typeof this.mask != 'number' && (this.mask = 1),
+            (this.activation = this.squash(this.state) * this.mask),
+            (this.derivative = this.squash(this.state, !0)),
+            this.connections.gated.length)
+          )
+            for (let s of this.connections.gated) s.gain = this.activation;
+          if (t)
+            for (let s of this.connections.in)
+              s.eligibility = s.from.activation;
+          return this.activation;
+        }
+        get gates() {
+          return (
+            G.warnings &&
+              console.warn(
+                'Node.gates is deprecated; use node.connections.gated'
+              ),
+            this.connections.gated
+          );
+        }
+        set gates(t) {
+          this.connections.gated = t || [];
+        }
+        get nodes() {
+          return [];
+        }
+        set nodes(t) {}
+        propagate(t, e, o, s = 0, i) {
+          if (o && e > 0) {
+            for (let l of this.connections.in)
+              (l.weight += e * l.previousDeltaWeight), (l.eligibility += 1e-12);
+            this.bias += e * this.previousDeltaBias;
+          }
+          let r = 0;
+          if (this.type === 'output')
+            this.error.responsibility = this.error.projected =
+              i - this.activation;
+          else {
+            for (let l of this.connections.out)
+              r += l.to.error.responsibility * l.weight * l.gain;
+            (this.error.projected = this.derivative * r), (r = 0);
+            for (let l of this.connections.gated) {
+              let h = l.to,
+                u = h.connections.self.reduce(
+                  (p, c) => p + (c.gater === this ? h.old : 0),
+                  0
+                );
+              (u += l.weight * l.from.activation),
+                (r += h.error.responsibility * u);
+            }
+            (this.error.gated = this.derivative * r),
+              (this.error.responsibility =
+                this.error.projected + this.error.gated);
+          }
+          if (this.type === 'constant') return;
+          for (let l of this.connections.in) {
+            if (l.dcMask === 0) {
+              l.totalDeltaWeight += 0;
+              continue;
+            }
+            let h = this.error.projected * l.eligibility;
+            for (let c = 0; c < l.xtrace.nodes.length; c++) {
+              let d = l.xtrace.nodes[c],
+                f = l.xtrace.values[c];
+              h += d.error.responsibility * f;
+            }
+            let u = 0;
+            typeof s == 'function'
+              ? (u = s(l.weight))
+              : typeof s == 'object' && s !== null
+              ? s.type === 'L1'
+                ? (u = s.lambda * Math.sign(l.weight))
+                : s.type === 'L2' && (u = s.lambda * l.weight)
+              : (u = s * l.weight);
+            let p = t * (h * this.mask - u);
+            if (
+              (Number.isFinite(p)
+                ? Math.abs(p) > 1e3 && (p = Math.sign(p) * 1e3)
+                : (console.warn('deltaWeight is not finite, clamping to 0', {
+                    node: this.index,
+                    connection: l,
+                    deltaWeight: p,
+                  }),
+                  (p = 0)),
+              (l.totalDeltaWeight += p),
+              Number.isFinite(l.totalDeltaWeight) ||
+                (console.warn(
+                  'totalDeltaWeight became NaN/Infinity, resetting to 0',
+                  { node: this.index, connection: l }
+                ),
+                (l.totalDeltaWeight = 0)),
+              o)
+            ) {
+              let c = l.totalDeltaWeight + e * l.previousDeltaWeight;
+              Number.isFinite(c)
+                ? Math.abs(c) > 1e3 && (c = Math.sign(c) * 1e3)
+                : (console.warn(
+                    'currentDeltaWeight is not finite, clamping to 0',
+                    { node: this.index, connection: l, currentDeltaWeight: c }
+                  ),
+                  (c = 0)),
+                e > 0 && (l.weight -= e * l.previousDeltaWeight),
+                (l.weight += c),
+                Number.isFinite(l.weight)
+                  ? Math.abs(l.weight) > 1e6 &&
+                    (l.weight = Math.sign(l.weight) * 1e6)
+                  : (console.warn(
+                      `Weight update produced invalid value: ${l.weight}. Resetting to 0.`,
+                      { node: this.index, connection: l }
+                    ),
+                    (l.weight = 0)),
+                (l.previousDeltaWeight = c),
+                (l.totalDeltaWeight = 0);
+            }
+          }
+          for (let l of this.connections.self) {
+            if (l.dcMask === 0) {
+              l.totalDeltaWeight += 0;
+              continue;
+            }
+            let h = this.error.projected * l.eligibility;
+            for (let c = 0; c < l.xtrace.nodes.length; c++) {
+              let d = l.xtrace.nodes[c],
+                f = l.xtrace.values[c];
+              h += d.error.responsibility * f;
+            }
+            let u = 0;
+            typeof s == 'function'
+              ? (u = s(l.weight))
+              : typeof s == 'object' && s !== null
+              ? s.type === 'L1'
+                ? (u = s.lambda * Math.sign(l.weight))
+                : s.type === 'L2' && (u = s.lambda * l.weight)
+              : (u = s * l.weight);
+            let p = t * (h * this.mask - u);
+            if (
+              (Number.isFinite(p)
+                ? Math.abs(p) > 1e3 && (p = Math.sign(p) * 1e3)
+                : (console.warn(
+                    'self deltaWeight is not finite, clamping to 0',
+                    { node: this.index, connection: l, deltaWeight: p }
+                  ),
+                  (p = 0)),
+              (l.totalDeltaWeight += p),
+              Number.isFinite(l.totalDeltaWeight) ||
+                (console.warn(
+                  'self totalDeltaWeight became NaN/Infinity, resetting to 0',
+                  { node: this.index, connection: l }
+                ),
+                (l.totalDeltaWeight = 0)),
+              o)
+            ) {
+              let c = l.totalDeltaWeight + e * l.previousDeltaWeight;
+              Number.isFinite(c)
+                ? Math.abs(c) > 1e3 && (c = Math.sign(c) * 1e3)
+                : (console.warn(
+                    'self currentDeltaWeight is not finite, clamping to 0',
+                    { node: this.index, connection: l, currentDeltaWeight: c }
+                  ),
+                  (c = 0)),
+                e > 0 && (l.weight -= e * l.previousDeltaWeight),
+                (l.weight += c),
+                Number.isFinite(l.weight)
+                  ? Math.abs(l.weight) > 1e6 &&
+                    (l.weight = Math.sign(l.weight) * 1e6)
+                  : (console.warn(
+                      'self weight update produced invalid value, resetting to 0',
+                      { node: this.index, connection: l }
+                    ),
+                    (l.weight = 0)),
+                (l.previousDeltaWeight = c),
+                (l.totalDeltaWeight = 0);
+            }
+          }
+          let a = t * this.error.responsibility;
+          if (
+            (Number.isFinite(a)
+              ? Math.abs(a) > 1e3 && (a = Math.sign(a) * 1e3)
+              : (console.warn('deltaBias is not finite, clamping to 0', {
+                  node: this.index,
+                  deltaBias: a,
+                }),
+                (a = 0)),
+            (this.totalDeltaBias += a),
+            Number.isFinite(this.totalDeltaBias) ||
+              (console.warn(
+                'totalDeltaBias became NaN/Infinity, resetting to 0',
+                { node: this.index }
+              ),
+              (this.totalDeltaBias = 0)),
+            o)
+          ) {
+            let l = this.totalDeltaBias + e * this.previousDeltaBias;
+            Number.isFinite(l)
+              ? Math.abs(l) > 1e3 && (l = Math.sign(l) * 1e3)
+              : (console.warn('currentDeltaBias is not finite, clamping to 0', {
+                  node: this.index,
+                  currentDeltaBias: l,
+                }),
+                (l = 0)),
+              e > 0 && (this.bias -= e * this.previousDeltaBias),
+              (this.bias += l),
+              Number.isFinite(this.bias)
+                ? Math.abs(this.bias) > 1e6 &&
+                  (this.bias = Math.sign(this.bias) * 1e6)
+                : (console.warn(
+                    'bias update produced invalid value, resetting to 0',
+                    { node: this.index }
+                  ),
+                  (this.bias = 0)),
+              (this.previousDeltaBias = l),
+              (this.totalDeltaBias = 0);
+          }
+        }
+        toJSON() {
+          return {
+            index: this.index,
+            bias: this.bias,
+            type: this.type,
+            squash: this.squash ? this.squash.name : null,
+            mask: this.mask,
+          };
+        }
+        static fromJSON(t) {
+          let e = new n(t.type);
+          if (((e.bias = t.bias), (e.mask = t.mask), t.squash)) {
+            let o = F[t.squash];
+            typeof o == 'function'
+              ? (e.squash = o)
+              : (console.warn(
+                  `fromJSON: Unknown or invalid squash function '${t.squash}' for node. Using identity.`
+                ),
+                (e.squash = F.identity));
+          }
+          return e;
+        }
+        isConnectedTo(t) {
+          return this.connections.out.some((e) => e.to === t);
+        }
+        mutate(t) {
+          if (!t)
+            throw new Error('Mutation method cannot be null or undefined.');
+          if (!(t.name in P))
+            throw new Error(`Unknown mutation method: ${t.name}`);
+          switch (t) {
+            case P.MOD_ACTIVATION:
+              if (!t.allowed || t.allowed.length === 0) {
+                console.warn(
+                  'MOD_ACTIVATION mutation called without allowed functions specified.'
+                );
+                return;
+              }
+              let e = t.allowed,
+                o = e.indexOf(this.squash),
+                s = o;
+              e.length > 1 &&
+                (s =
+                  (o + Math.floor(Math.random() * (e.length - 1)) + 1) %
+                  e.length),
+                (this.squash = e[s]);
+              break;
+            case P.MOD_BIAS:
+              let i = t.min ?? -1,
+                r = t.max ?? 1,
+                a = Math.random() * (r - i) + i;
+              this.bias += a;
+              break;
+            case P.REINIT_WEIGHT:
+              let l = t.min ?? -1,
+                h = t.max ?? 1;
+              for (let u of this.connections.in)
+                u.weight = Math.random() * (h - l) + l;
+              for (let u of this.connections.out)
+                u.weight = Math.random() * (h - l) + l;
+              for (let u of this.connections.self)
+                u.weight = Math.random() * (h - l) + l;
+              break;
+            case P.BATCH_NORM:
+              this.batchNorm = !0;
+              break;
+            default:
+              throw new Error(`Unsupported mutation method: ${t.name}`);
+          }
+        }
+        connect(t, e) {
+          let o = [];
+          if (!t) throw new Error('Cannot connect to an undefined target.');
+          if ('bias' in t) {
+            let s = t;
+            if (s === this) {
+              if (this.connections.self.length === 0) {
+                let i = ht.acquire(this, this, e ?? 1);
+                this.connections.self.push(i), o.push(i);
+              }
+            } else {
+              let i = ht.acquire(this, s, e);
+              s.connections.in.push(i), this.connections.out.push(i), o.push(i);
+            }
+          } else if ('nodes' in t && Array.isArray(t.nodes))
+            for (let s of t.nodes) {
+              let i = ht.acquire(this, s, e);
+              s.connections.in.push(i), this.connections.out.push(i), o.push(i);
+            }
+          else
+            throw new Error(
+              'Invalid target type for connection. Must be a Node or a group { nodes: Node[] }.'
+            );
+          return o;
+        }
+        disconnect(t, e = !1) {
+          if (this === t) {
+            this.connections.self = [];
+            return;
+          }
+          (this.connections.out = this.connections.out.filter((o) =>
+            o.to === t
+              ? ((t.connections.in = t.connections.in.filter((s) => s !== o)),
+                o.gater && o.gater.ungate(o),
+                !1)
+              : !0
+          )),
+            e && t.disconnect(this, !1);
+        }
+        gate(t) {
+          Array.isArray(t) || (t = [t]);
+          for (let e of t) {
+            if (!e || !e.from || !e.to) {
+              console.warn(
+                'Attempted to gate an invalid or incomplete connection.'
+              );
+              continue;
+            }
+            if (e.gater === this) {
+              console.warn('Node is already gating this connection.');
+              continue;
+            }
+            if (e.gater !== null) {
+              console.warn(
+                'Connection is already gated by another node. Ungate first.'
+              );
+              continue;
+            }
+            this.connections.gated.push(e), (e.gater = this);
+          }
+        }
+        ungate(t) {
+          Array.isArray(t) || (t = [t]);
+          for (let e of t) {
+            if (!e) continue;
+            let o = this.connections.gated.indexOf(e);
+            o !== -1 &&
+              (this.connections.gated.splice(o, 1),
+              (e.gater = null),
+              (e.gain = 1));
+          }
+        }
+        clear() {
+          for (let t of this.connections.in)
+            (t.eligibility = 0), (t.xtrace = { nodes: [], values: [] });
+          for (let t of this.connections.self)
+            (t.eligibility = 0), (t.xtrace = { nodes: [], values: [] });
+          for (let t of this.connections.gated) t.gain = 0;
+          (this.error = { responsibility: 0, projected: 0, gated: 0 }),
+            (this.old = this.state = this.activation = 0);
+        }
+        isProjectingTo(t) {
+          return t === this && this.connections.self.length > 0
+            ? !0
+            : this.connections.out.some((e) => e.to === t);
+        }
+        isProjectedBy(t) {
+          return t === this && this.connections.self.length > 0
+            ? !0
+            : this.connections.in.some((e) => e.from === t);
+        }
+        applyBatchUpdates(t) {
+          return this.applyBatchUpdatesWithOptimizer({
+            type: 'sgd',
+            momentum: t,
+          });
+        }
+        applyBatchUpdatesWithOptimizer(t) {
+          let e = t.type || 'sgd',
+            o = e === 'lookahead' ? t.baseType || 'sgd' : e,
+            s = t.momentum ?? 0,
+            i = t.beta1 ?? 0.9,
+            r = t.beta2 ?? 0.999,
+            a = t.eps ?? 1e-8,
+            l = t.weightDecay ?? 0,
+            h = t.lrScale ?? 1,
+            u = Math.max(1, Math.floor(t.t ?? 1));
+          e === 'lookahead' &&
+            ((this._la_k = this._la_k || t.la_k || 5),
+            (this._la_alpha = this._la_alpha || t.la_alpha || 0.5),
+            (this._la_step = (this._la_step || 0) + 1),
+            this._la_shadowBias || (this._la_shadowBias = this.bias));
+          let p = (c) => {
+            let d = c.totalDeltaWeight || 0;
+            switch ((Number.isFinite(d) || (d = 0), o)) {
+              case 'rmsprop': {
+                c.gradientAccumulator =
+                  (c.gradientAccumulator ?? 0) * 0.9 + 0.1 * (d * d);
+                let f = d / (Math.sqrt(c.gradientAccumulator) + a);
+                this._safeUpdateWeight(c, f * h);
+                break;
+              }
+              case 'adagrad': {
+                c.gradientAccumulator = (c.gradientAccumulator ?? 0) + d * d;
+                let f = d / (Math.sqrt(c.gradientAccumulator) + a);
+                this._safeUpdateWeight(c, f * h);
+                break;
+              }
+              case 'adam':
+              case 'adamw':
+              case 'amsgrad': {
+                (c.firstMoment = (c.firstMoment ?? 0) * i + (1 - i) * d),
+                  (c.secondMoment =
+                    (c.secondMoment ?? 0) * r + (1 - r) * (d * d)),
+                  o === 'amsgrad' &&
+                    (c.maxSecondMoment = Math.max(
+                      c.maxSecondMoment ?? 0,
+                      c.secondMoment ?? 0
+                    ));
+                let f = o === 'amsgrad' ? c.maxSecondMoment : c.secondMoment,
+                  m = c.firstMoment / (1 - Math.pow(i, u)),
+                  _ = f / (1 - Math.pow(r, u)),
+                  y = (m / (Math.sqrt(_) + a)) * h;
+                o === 'adamw' && l !== 0 && (y -= l * (c.weight || 0)),
+                  this._safeUpdateWeight(c, y);
+                break;
+              }
+              case 'adamax': {
+                (c.firstMoment = (c.firstMoment ?? 0) * i + (1 - i) * d),
+                  (c.infinityNorm = Math.max(
+                    (c.infinityNorm ?? 0) * r,
+                    Math.abs(d)
+                  ));
+                let m =
+                  (c.firstMoment /
+                    (1 - Math.pow(i, u)) /
+                    (c.infinityNorm || 1e-12)) *
+                  h;
+                this._safeUpdateWeight(c, m);
+                break;
+              }
+              case 'nadam': {
+                (c.firstMoment = (c.firstMoment ?? 0) * i + (1 - i) * d),
+                  (c.secondMoment =
+                    (c.secondMoment ?? 0) * r + (1 - r) * (d * d));
+                let f = c.firstMoment / (1 - Math.pow(i, u)),
+                  m = c.secondMoment / (1 - Math.pow(r, u)),
+                  _ = f * i + ((1 - i) * d) / (1 - Math.pow(i, u));
+                this._safeUpdateWeight(c, (_ / (Math.sqrt(m) + a)) * h);
+                break;
+              }
+              case 'radam': {
+                (c.firstMoment = (c.firstMoment ?? 0) * i + (1 - i) * d),
+                  (c.secondMoment =
+                    (c.secondMoment ?? 0) * r + (1 - r) * (d * d));
+                let f = c.firstMoment / (1 - Math.pow(i, u)),
+                  m = c.secondMoment / (1 - Math.pow(r, u)),
+                  _ = 2 / (1 - r) - 1,
+                  y = _ - (2 * u * Math.pow(r, u)) / (1 - Math.pow(r, u));
+                if (y > 4) {
+                  let g = Math.sqrt(
+                    ((y - 4) * (y - 2) * _) / ((_ - 4) * (_ - 2) * y)
+                  );
+                  this._safeUpdateWeight(c, ((g * f) / (Math.sqrt(m) + a)) * h);
+                } else this._safeUpdateWeight(c, f * h);
+                break;
+              }
+              case 'lion': {
+                (c.firstMoment = (c.firstMoment ?? 0) * i + (1 - i) * d),
+                  (c.secondMomentum =
+                    (c.secondMomentum ?? 0) * r + (1 - r) * d);
+                let f = Math.sign(
+                  (c.firstMoment || 0) + (c.secondMomentum || 0)
+                );
+                this._safeUpdateWeight(c, -f * h);
+                break;
+              }
+              case 'adabelief': {
+                c.firstMoment = (c.firstMoment ?? 0) * i + (1 - i) * d;
+                let f = d - c.firstMoment;
+                c.secondMoment = (c.secondMoment ?? 0) * r + (1 - r) * (f * f);
+                let m = c.firstMoment / (1 - Math.pow(i, u)),
+                  _ = c.secondMoment / (1 - Math.pow(r, u));
+                this._safeUpdateWeight(c, (m / (Math.sqrt(_) + a + 1e-12)) * h);
+                break;
+              }
+              default: {
+                let f = d + s * (c.previousDeltaWeight || 0);
+                Number.isFinite(f) || (f = 0),
+                  Math.abs(f) > 1e3 && (f = Math.sign(f) * 1e3),
+                  this._safeUpdateWeight(c, f * h),
+                  (c.previousDeltaWeight = f);
+              }
+            }
+            o === 'adamw' &&
+              l !== 0 &&
+              this._safeUpdateWeight(c, -l * (c.weight || 0) * h),
+              (c.totalDeltaWeight = 0);
+          };
+          for (let c of this.connections.in) p(c);
+          for (let c of this.connections.self) p(c);
+          if (this.type !== 'input' && this.type !== 'constant') {
+            let c = this.totalDeltaBias || 0;
+            if (
+              (Number.isFinite(c) || (c = 0),
+              [
+                'adam',
+                'adamw',
+                'amsgrad',
+                'adamax',
+                'nadam',
+                'radam',
+                'lion',
+                'adabelief',
+              ].includes(o))
+            ) {
+              (this.opt_mB = (this.opt_mB ?? 0) * i + (1 - i) * c),
+                o === 'lion' &&
+                  (this.opt_mB2 = (this.opt_mB2 ?? 0) * r + (1 - r) * c),
+                (this.opt_vB =
+                  (this.opt_vB ?? 0) * r +
+                  (1 - r) *
+                    (o === 'adabelief' ? Math.pow(c - this.opt_mB, 2) : c * c)),
+                o === 'amsgrad' &&
+                  (this.opt_vhatB = Math.max(
+                    this.opt_vhatB ?? 0,
+                    this.opt_vB ?? 0
+                  ));
+              let d = o === 'amsgrad' ? this.opt_vhatB : this.opt_vB,
+                f = this.opt_mB / (1 - Math.pow(i, u)),
+                m = d / (1 - Math.pow(r, u)),
+                _;
+              if (o === 'adamax')
+                (this.opt_uB = Math.max((this.opt_uB ?? 0) * r, Math.abs(c))),
+                  (_ = (f / (this.opt_uB || 1e-12)) * h);
+              else if (o === 'nadam')
+                _ =
+                  ((f * i + ((1 - i) * c) / (1 - Math.pow(i, u))) /
+                    (Math.sqrt(m) + a)) *
+                  h;
+              else if (o === 'radam') {
+                let g = 2 / (1 - r) - 1,
+                  w = g - (2 * u * Math.pow(r, u)) / (1 - Math.pow(r, u));
+                w > 4
+                  ? (_ =
+                      ((Math.sqrt(
+                        ((w - 4) * (w - 2) * g) / ((g - 4) * (g - 2) * w)
+                      ) *
+                        f) /
+                        (Math.sqrt(m) + a)) *
+                      h)
+                  : (_ = f * h);
+              } else
+                o === 'lion'
+                  ? (_ = -Math.sign(this.opt_mB + this.opt_mB2) * h)
+                  : o === 'adabelief'
+                  ? (_ = (f / (Math.sqrt(m) + a + 1e-12)) * h)
+                  : (_ = (f / (Math.sqrt(m) + a)) * h);
+              o === 'adamw' && l !== 0 && (_ -= l * (this.bias || 0) * h);
+              let y = this.bias + _;
+              Number.isFinite(y) || (y = 0),
+                Math.abs(y) > 1e6 && (y = Math.sign(y) * 1e6),
+                (this.bias = y);
+            } else {
+              let d = c + s * (this.previousDeltaBias || 0);
+              Number.isFinite(d) || (d = 0),
+                Math.abs(d) > 1e3 && (d = Math.sign(d) * 1e3);
+              let f = this.bias + d * h;
+              Number.isFinite(f) || (f = 0),
+                Math.abs(f) > 1e6 && (f = Math.sign(f) * 1e6),
+                (this.bias = f),
+                (this.previousDeltaBias = d);
+            }
+            this.totalDeltaBias = 0;
+          } else (this.previousDeltaBias = 0), (this.totalDeltaBias = 0);
+          if (e === 'lookahead') {
+            let c = this._la_k || 5,
+              d = this._la_alpha || 0.5;
+            if (this._la_step % c === 0) {
+              (this._la_shadowBias =
+                (1 - d) * this._la_shadowBias + d * this.bias),
+                (this.bias = this._la_shadowBias);
+              let f = (m) => {
+                m.lookaheadShadowWeight || (m.lookaheadShadowWeight = m.weight),
+                  (m.lookaheadShadowWeight =
+                    (1 - d) * m.lookaheadShadowWeight + d * m.weight),
+                  (m.weight = m.lookaheadShadowWeight);
+              };
+              for (let m of this.connections.in) f(m);
+              for (let m of this.connections.self) f(m);
+            }
+          }
+        }
+        _safeUpdateWeight(t, e) {
+          let o = t.weight + e;
+          Number.isFinite(o) || (o = 0),
+            Math.abs(o) > 1e6 && (o = Math.sign(o) * 1e6),
+            (t.weight = o);
+        }
+      };
+    });
+  function Hi(n, t, e = Math.random) {
+    t && (n.type = t);
+    let o = n.type;
+    (n.bias = o === 'input' ? 0 : e() * 0.2 - 0.1),
+      (n.activation = 0),
+      (n.state = 0),
+      (n.old = 0),
+      (n.mask = 1),
+      (n.previousDeltaBias = 0),
+      (n.totalDeltaBias = 0),
+      (n.derivative = void 0),
+      (n.connections.in.length = 0),
+      (n.connections.out.length = 0),
+      (n.connections.gated.length = 0),
+      (n.connections.self.length = 0),
+      (n.error = { responsibility: 0, projected: 0, gated: 0 }),
+      (n.geneId = _n++);
+  }
+  function Oe(n = {}) {
+    let { type: t = 'hidden', activationFn: e, rng: o } = n,
+      s;
+    return (
+      Lt.length
+        ? ((s = Lt.pop()), Fi++, Hi(s, t, o), e && (s.squash = e))
+        : ((s = new K(t, e, o)), (s.geneId = _n++), $i++),
+      Lt.length > oe && (oe = Lt.length),
+      s
+    );
+  }
+  function ie(n) {
+    (n.connections.in.length = 0),
+      (n.connections.out.length = 0),
+      (n.connections.gated.length = 0),
+      (n.connections.self.length = 0),
+      (n.error = { responsibility: 0, projected: 0, gated: 0 }),
+      Lt.push(n),
+      Lt.length > oe && (oe = Lt.length);
+  }
+  var Lt,
+    oe,
+    _n,
+    Fi,
+    $i,
+    Ee = C(() => {
+      'use strict';
+      mt();
+      (Lt = []), (oe = 0), (_n = 1), (Fi = 0), ($i = 0);
+    });
+  var Ce,
+    ft,
+    Jt = C(() => {
+      'use strict';
+      vt();
+      (Ce = class {
+        buckets = new Map();
+        created = 0;
+        reused = 0;
+        maxPerBucket = Number.POSITIVE_INFINITY;
+        acquire(t) {
+          let e = this.buckets.get(t);
+          if (e && e.length > 0) {
+            this.reused++;
+            let o = e.pop();
+            return o.fill(0), o;
+          }
+          return (
+            this.created++,
+            G.float32Mode ? new Float32Array(t) : new Array(t).fill(0)
+          );
+        }
+        release(t) {
+          let e = t.length >>> 0;
+          this.buckets.has(e) || this.buckets.set(e, []);
+          let o = this.buckets.get(e);
+          o.length < this.maxPerBucket && o.push(t);
+        }
+        clear() {
+          this.buckets.clear(), (this.created = 0), (this.reused = 0);
+        }
+        stats() {
+          return {
+            created: this.created,
+            reused: this.reused,
+            bucketCount: this.buckets.size,
+          };
+        }
+        setMaxPerBucket(t) {
+          typeof t == 'number' && t >= 0 && (this.maxPerBucket = t);
+        }
+        prewarm(t, e) {
+          let o = Math.max(0, Math.floor(e));
+          this.buckets.has(t) || this.buckets.set(t, []);
+          let s = this.buckets.get(t);
+          for (let i = 0; i < o && s.length < this.maxPerBucket; i++) {
+            let r = G.float32Mode ? new Float32Array(t) : new Array(t).fill(0);
+            s.push(r), this.created++;
+          }
+        }
+        bucketSize(t) {
+          return this.buckets.get(t)?.length ?? 0;
+        }
+      }),
+        (ft = new Ce());
+    });
+  var bn = qt((Ur, qi) => {
+    qi.exports = {
+      name: '@reicek/neataptic-ts',
+      version: '0.1.10',
+      description:
+        'Architecture-free neural network library with genetic algorithm implementations',
+      main: './dist/neataptic.js',
+      module: './dist/neataptic.js',
+      types: './dist/neataptic.d.ts',
+      type: 'module',
+      scripts: {
+        test:
+          'jest --no-cache --coverage --collect-coverage --runInBand --testPathIgnorePatterns=.e2e.test.ts --verbose',
+        pretest: 'npm run build',
+        'test:bench':
+          'jest --no-cache --runInBand --verbose --testPathPattern=benchmark',
+        'test:silent':
+          'jest --no-cache --coverage --collect-coverage --runInBand --testPathIgnorePatterns=.e2e.test.ts --silent',
+        deploy: 'npm run build && npm run test:dist && npm publish',
+        build: 'npm run build:webpack && npm run build:ts',
+        'build:ts': 'tsc',
+        'build:webpack': 'webpack --config webpack.config.js',
+        'start:ts': 'ts-node src/neataptic.ts',
+        'test:e2e':
+          'cross-env FORCE_COLOR=true jest e2e.test.ts --no-cache --runInBand',
+        'test:e2e:logs':
+          'npx jest e2e.test.ts --verbose --runInBand --no-cache',
+        'test:dist':
+          'npm run build:ts && jest --no-cache --coverage --collect-coverage --runInBand --testPathIgnorePatterns=.e2e.test.ts',
+        'docs:build-scripts':
+          'tsc -p tsconfig.docs.json && node scripts/write-dist-docs-pkg.cjs',
+        'docs:folders':
+          'npm run docs:build-scripts && node ./dist-docs/scripts/generate-docs.js',
+        'docs:html':
+          'npm run docs:build-scripts && node ./dist-docs/scripts/render-docs-html.js',
+        'build:ascii-maze':
+          'npx esbuild test/examples/asciiMaze/browser-entry.ts --bundle --outfile=docs/assets/ascii-maze.bundle.js --platform=browser --format=iife --sourcemap --external:fs --external:child_process',
+        'docs:examples': 'node scripts/copy-examples.cjs',
+        prettier: 'npm run prettier:tests && npm run prettier:src',
+        'prettier:tests': 'npx prettier --write **/*.test.ts',
+        'prettier:src': 'npx prettier --write src/**/*.ts',
+        docs:
+          'npm run build:ascii-maze && npm run docs:examples && npm run docs:build-scripts && node ./dist-docs/scripts/generate-docs.js && node ./dist-docs/scripts/render-docs-html.js',
+        'onnx:export': 'node scripts/export-onnx.cjs',
+      },
+      exports: {
+        '.': { types: './dist/neataptic.d.ts', import: './dist/neataptic.js' },
+      },
+      devDependencies: {
+        '@types/chai': '^5.2.1',
+        '@types/fs-extra': '^11.0.4',
+        '@types/jest': '^29.5.11',
+        '@types/node': '^20.19.10',
+        '@types/seedrandom': '^3.0.8',
+        '@types/webpack': '^5.28.5',
+        '@types/webpack-dev-server': '^4.7.2',
+        chai: '^4.3.4',
+        'copy-webpack-plugin': '^8.1.0',
+        'cross-env': '^7.0.3',
+        'fast-glob': '^3.3.3',
+        'fs-extra': '^11.3.1',
+        husky: '^6.0.0',
+        jest: '^29.7.0',
+        'jsdoc-to-markdown': '^9.1.1',
+        marked: '^12.0.2',
+        mkdocs: '^0.0.1',
+        'ts-jest': '^29.1.1',
+        'ts-loader': '^9.5.2',
+        'ts-morph': '^22.0.0',
+        'ts-node': '^10.9.2',
+        typescript: '^5.6.3',
+        'undici-types': '^7.8.0',
+        webpack: '^5.99.5',
+        'webpack-cli': '^6.0.1',
+        esbuild: '^0.23.0',
+        puppeteer: '^23.3.0',
+      },
+      repository: {
+        type: 'git',
+        url: 'https://github.com/reicek/NeatapticTS.git',
+      },
+      keywords: [
+        'neural network',
+        'machine learning',
+        'genetic algorithm',
+        'mutation',
+        'neat',
+      ],
+      author: { name: 'Cesar Anton', email: 'reicek@gmail.com' },
+      license: 'MIT',
+      publishConfig: {
+        access: 'public',
+        registry: 'https://registry.npmjs.org/',
+      },
+      bugs: {
+        url: 'https://github.com/reicek/NeatapticTS/issues',
+        email: 'reicek@gmail.com',
+      },
+      homepage: 'https://reicek.github.io/NeatapticTS/',
+      engines: { node: '>=14.0.0' },
+      prettier: { singleQuote: !0 },
+      dependencies: {
+        build: '^0.1.4',
+        child_process: '^1.0.2',
+        os: '^0.1.2',
+        path: '^0.12.7',
+        seedrandom: '^3.0.5',
+        undici: '^5.0.0',
+        'undici-types': '^7.8.0',
+      },
+    };
+  });
+  function Ui(n) {
+    let t = new Set();
+    n.nodes.forEach((e) => e.connections?.out.forEach((o) => t.add(o))),
+      (n.connections = Array.from(t));
+  }
+  function Vt(n) {
+    let t = (n?.name || '').toUpperCase();
+    return t.includes('TANH')
+      ? 'Tanh'
+      : t.includes('LOGISTIC') || t.includes('SIGMOID')
+      ? 'Sigmoid'
+      : t.includes('RELU')
+      ? 'Relu'
+      : (n &&
+          console.warn(
+            `Unsupported activation function ${n.name} for ONNX export, defaulting to Identity.`
+          ),
+        'Identity');
+  }
+  function zi(n) {
+    let t = n.nodes.filter((a) => a.type === 'input'),
+      e = n.nodes.filter((a) => a.type === 'output'),
+      o = n.nodes.filter((a) => a.type === 'hidden');
+    if (o.length === 0) return [t, e];
+    let s = [...o],
+      i = t,
+      r = [];
+    for (; s.length; ) {
+      let a = s.filter((l) =>
+        l.connections.in.every((h) => i.includes(h.from))
+      );
+      if (!a.length)
+        throw new Error(
+          'Invalid network structure for ONNX export: cannot resolve layered ordering.'
+        );
+      r.push(i), (i = a), (s = s.filter((l) => !a.includes(l)));
+    }
+    return r.push(i), r.push(e), r;
+  }
+  function Ji(n, t, e) {
+    for (let o = 1; o < n.length; o++) {
+      let s = n[o - 1],
+        i = n[o],
+        r = new Set(i.map((a) => a.squash && a.squash.name));
+      if (r.size > 1 && !e.allowMixedActivations)
+        throw new Error(
+          `ONNX export error: Mixed activation functions detected in layer ${o}. (enable allowMixedActivations to decompose layer)`
+        );
+      r.size > 1 &&
+        e.allowMixedActivations &&
+        console.warn(
+          `Warning: Mixed activations in layer ${o}; exporting per-neuron Gemm + Activation (+Concat) baseline.`
+        );
+      for (let a of i)
+        for (let l of s)
+          if (
+            !a.connections.in.some((u) => u.from === l) &&
+            !e.allowPartialConnectivity
+          )
+            throw new Error(
+              `ONNX export error: Missing connection from node ${l.index} to node ${a.index} in layer ${o}. (enable allowPartialConnectivity)`
+            );
+    }
+  }
+  function Vi(n, t, e = {}) {
+    let {
+        includeMetadata: o = !1,
+        opset: s = 18,
+        batchDimension: i = !1,
+        legacyNodeOrdering: r = !1,
+        producerName: a = 'neataptic-ts',
+        producerVersion: l,
+        docString: h,
+      } = e,
+      u = t[0],
+      p = t[t.length - 1],
+      c = i
+        ? [{ dim_param: 'N' }, { dim_value: u.length }]
+        : [{ dim_value: u.length }],
+      d = i
+        ? [{ dim_param: 'N' }, { dim_value: p.length }]
+        : [{ dim_value: p.length }],
+      f = {
+        graph: {
+          inputs: [
+            {
+              name: 'input',
+              type: { tensor_type: { elem_type: 1, shape: { dim: c } } },
+            },
+          ],
+          outputs: [
+            {
+              name: 'output',
+              type: { tensor_type: { elem_type: 1, shape: { dim: d } } },
+            },
+          ],
+          initializer: [],
+          node: [],
+        },
+      };
+    if (o) {
+      let g = (() => {
+        try {
+          return bn().version;
+        } catch {
+          return '0.0.0';
+        }
+      })();
+      (f.ir_version = 9),
+        (f.opset_import = [{ version: s, domain: '' }]),
+        (f.producer_name = a),
+        (f.producer_version = l || g),
+        (f.doc_string =
+          h || 'Exported from NeatapticTS ONNX exporter (phases 1-2 baseline)');
+    }
+    let m = 'input',
+      _ = [];
+    if (e.allowRecurrent && e.recurrentSingleStep)
+      for (let g = 1; g < t.length - 1; g++) {
+        let w = t[g];
+        if (w.some((v) => v.connections.self.length > 0)) {
+          _.push(g);
+          let v = g === 1 ? 'hidden_prev' : `hidden_prev_l${g}`;
+          f.graph.inputs.push({
+            name: v,
+            type: {
+              tensor_type: {
+                elem_type: 1,
+                shape: {
+                  dim: i
+                    ? [{ dim_param: 'N' }, { dim_value: w.length }]
+                    : [{ dim_value: w.length }],
+                },
+              },
+            },
+          });
+        }
+      }
+    let y = [];
+    for (let g = 1; g < t.length; g++) {
+      let w = t[g - 1],
+        v = t[g],
+        b = g === t.length - 1;
+      b || y.push(v.length);
+      let M = e.conv2dMappings?.find((N) => N.layerIndex === g);
+      if (M) {
+        let N = M.inHeight * M.inWidth * M.inChannels,
+          T = w.length,
+          k = M.outChannels * M.outHeight * M.outWidth,
+          R = v.length,
+          j = [
+            M.padTop || 0,
+            M.padLeft || 0,
+            M.padBottom || 0,
+            M.padRight || 0,
+          ];
+        if (!(N === T && k === R))
+          console.warn(
+            `Conv2D mapping for layer ${g} skipped: dimension mismatch (expected prev=${N} got ${T}; expected this=${k} got ${R}).`
+          );
+        else {
+          let S = [],
+            A = [];
+          for (let H = 0; H < M.outChannels; H++) {
+            let rt = H * M.outHeight * M.outWidth,
+              lt = v[rt];
+            A.push(lt.bias);
+            for (let L = 0; L < M.inChannels; L++)
+              for (let V = 0; V < M.kernelHeight; V++)
+                for (let U = 0; U < M.kernelWidth; U++) {
+                  let nt = L * (M.inHeight * M.inWidth) + V * M.inWidth + U,
+                    Q = w[nt],
+                    $ = lt.connections.in.find((et) => et.from === Q);
+                  S.push($ ? $.weight : 0);
+                }
+          }
+          let O = `ConvW${g - 1}`,
+            E = `ConvB${g - 1}`;
+          f.graph.initializer.push({
+            name: O,
+            data_type: 1,
+            dims: [M.outChannels, M.inChannels, M.kernelHeight, M.kernelWidth],
+            float_data: S,
+          }),
+            f.graph.initializer.push({
+              name: E,
+              data_type: 1,
+              dims: [M.outChannels],
+              float_data: A,
+            });
+          let B = `Conv_${g}`;
+          f.graph.node.push({
+            op_type: 'Conv',
+            input: [m, O, E],
+            output: [B],
+            name: `conv_l${g}`,
+            attributes: [
+              {
+                name: 'kernel_shape',
+                type: 'INTS',
+                ints: [M.kernelHeight, M.kernelWidth],
+              },
+              {
+                name: 'strides',
+                type: 'INTS',
+                ints: [M.strideHeight, M.strideWidth],
+              },
+              { name: 'pads', type: 'INTS', ints: j },
+            ],
+          });
+          let D = M.activation || Vt(v[0].squash),
+            J = `Layer_${g}`;
+          f.graph.node.push({
+            op_type: D,
+            input: [B],
+            output: [J],
+            name: `act_conv_l${g}`,
+          }),
+            (m = J);
+          let I = e.pool2dMappings?.find((H) => H.afterLayerIndex === g);
+          if (I) {
+            let H = [I.kernelHeight, I.kernelWidth],
+              rt = [I.strideHeight, I.strideWidth],
+              lt = [
+                I.padTop || 0,
+                I.padLeft || 0,
+                I.padBottom || 0,
+                I.padRight || 0,
+              ],
+              L = `Pool_${g}`;
+            if (
+              (f.graph.node.push({
+                op_type: I.type,
+                input: [m],
+                output: [L],
+                name: `pool_after_l${g}`,
+                attributes: [
+                  { name: 'kernel_shape', type: 'INTS', ints: H },
+                  { name: 'strides', type: 'INTS', ints: rt },
+                  { name: 'pads', type: 'INTS', ints: lt },
+                ],
+              }),
+              (m = L),
+              e.flattenAfterPooling)
+            ) {
+              let nt = `PoolFlat_${g}`;
+              f.graph.node.push({
+                op_type: 'Flatten',
+                input: [m],
+                output: [nt],
+                name: `flatten_after_l${g}`,
+                attributes: [{ name: 'axis', type: 'INT', i: 1 }],
+              }),
+                (m = nt),
+                (f.metadata_props = f.metadata_props || []);
+              let Q = f.metadata_props.find(($) => $.key === 'flatten_layers');
+              if (Q)
+                try {
+                  let $ = JSON.parse(Q.value);
+                  Array.isArray($) &&
+                    !$.includes(g) &&
+                    ($.push(g), (Q.value = JSON.stringify($)));
+                } catch {
+                  Q.value = JSON.stringify([g]);
+                }
+              else
+                f.metadata_props.push({
+                  key: 'flatten_layers',
+                  value: JSON.stringify([g]),
+                });
+            }
+            f.metadata_props = f.metadata_props || [];
+            let V = f.metadata_props.find((nt) => nt.key === 'pool2d_layers');
+            if (V)
+              try {
+                let nt = JSON.parse(V.value);
+                Array.isArray(nt) &&
+                  !nt.includes(g) &&
+                  (nt.push(g), (V.value = JSON.stringify(nt)));
+              } catch {
+                V.value = JSON.stringify([g]);
+              }
+            else
+              f.metadata_props.push({
+                key: 'pool2d_layers',
+                value: JSON.stringify([g]),
+              });
+            let U = f.metadata_props.find((nt) => nt.key === 'pool2d_specs');
+            if (U)
+              try {
+                let nt = JSON.parse(U.value);
+                Array.isArray(nt) &&
+                  (nt.push({ ...I }), (U.value = JSON.stringify(nt)));
+              } catch {
+                U.value = JSON.stringify([I]);
+              }
+            else
+              f.metadata_props.push({
+                key: 'pool2d_specs',
+                value: JSON.stringify([I]),
+              });
+          }
+          f.metadata_props = f.metadata_props || [];
+          let Z = f.metadata_props.find((H) => H.key === 'conv2d_layers');
+          if (Z)
+            try {
+              let H = JSON.parse(Z.value);
+              Array.isArray(H) &&
+                !H.includes(g) &&
+                (H.push(g), (Z.value = JSON.stringify(H)));
+            } catch {
+              Z.value = JSON.stringify([g]);
+            }
+          else
+            f.metadata_props.push({
+              key: 'conv2d_layers',
+              value: JSON.stringify([g]),
+            });
+          let z = f.metadata_props.find((H) => H.key === 'conv2d_specs');
+          if (z)
+            try {
+              let H = JSON.parse(z.value);
+              Array.isArray(H) &&
+                (H.push({ ...M }), (z.value = JSON.stringify(H)));
+            } catch {
+              z.value = JSON.stringify([M]);
+            }
+          else
+            f.metadata_props.push({
+              key: 'conv2d_specs',
+              value: JSON.stringify([M]),
+            });
+          continue;
+        }
+      }
+      let x =
+        e.allowMixedActivations &&
+        new Set(v.map((N) => N.squash && N.squash.name)).size > 1;
+      if (_.includes(g) && !b) {
+        if (x)
+          throw new Error(
+            `Recurrent export does not yet support mixed activations in hidden layer ${g}.`
+          );
+        let N = [],
+          T = new Array(v.length).fill(0);
+        for (let A = 0; A < v.length; A++) {
+          let O = v[A];
+          T[A] = O.bias;
+          for (let E = 0; E < w.length; E++) {
+            let B = w[E],
+              D = O.connections.in.find((J) => J.from === B);
+            N.push(D ? D.weight : 0);
+          }
+        }
+        let k = `W${g - 1}`,
+          R = `B${g - 1}`;
+        f.graph.initializer.push({
+          name: k,
+          data_type: 1,
+          dims: [v.length, w.length],
+          float_data: N,
+        }),
+          f.graph.initializer.push({
+            name: R,
+            data_type: 1,
+            dims: [v.length],
+            float_data: T,
+          });
+        let j = [];
+        for (let A = 0; A < v.length; A++)
+          for (let O = 0; O < v.length; O++)
+            if (A === O) {
+              let E = v[A].connections.self[0];
+              j.push(E ? E.weight : 0);
+            } else j.push(0);
+        let W = `R${g - 1}`;
+        f.graph.initializer.push({
+          name: W,
+          data_type: 1,
+          dims: [v.length, v.length],
+          float_data: j,
+        }),
+          f.graph.node.push({
+            op_type: 'Gemm',
+            input: [m, k, R],
+            output: [`Gemm_in_${g}`],
+            name: `gemm_in_l${g}`,
+            attributes: [
+              { name: 'alpha', type: 'FLOAT', f: 1 },
+              { name: 'beta', type: 'FLOAT', f: 1 },
+              { name: 'transB', type: 'INT', i: 1 },
+            ],
+          });
+        let S = g === 1 ? 'hidden_prev' : `hidden_prev_l${g}`;
+        f.graph.node.push({
+          op_type: 'Gemm',
+          input: [S, W],
+          output: [`Gemm_rec_${g}`],
+          name: `gemm_rec_l${g}`,
+          attributes: [
+            { name: 'alpha', type: 'FLOAT', f: 1 },
+            { name: 'beta', type: 'FLOAT', f: 1 },
+            { name: 'transB', type: 'INT', i: 1 },
+          ],
+        }),
+          f.graph.node.push({
+            op_type: 'Add',
+            input: [`Gemm_in_${g}`, `Gemm_rec_${g}`],
+            output: [`RecurrentSum_${g}`],
+            name: `add_recurrent_l${g}`,
+          }),
+          f.graph.node.push({
+            op_type: Vt(v[0].squash),
+            input: [`RecurrentSum_${g}`],
+            output: [`Layer_${g}`],
+            name: `act_l${g}`,
+          }),
+          (m = `Layer_${g}`);
+      } else if (x) {
+        let N = [];
+        v.forEach((R, j) => {
+          let W = [];
+          for (let B = 0; B < w.length; B++) {
+            let D = w[B],
+              J = R.connections.in.find((I) => I.from === D);
+            W.push(J ? J.weight : 0);
+          }
+          let S = `W${g - 1}_n${j}`,
+            A = `B${g - 1}_n${j}`,
+            O = `Gemm_${g}_n${j}`,
+            E = `Layer_${g}_n${j}`;
+          f.graph.initializer.push({
+            name: S,
+            data_type: 1,
+            dims: [1, w.length],
+            float_data: W,
+          }),
+            f.graph.initializer.push({
+              name: A,
+              data_type: 1,
+              dims: [1],
+              float_data: [R.bias],
+            }),
+            f.graph.node.push({
+              op_type: 'Gemm',
+              input: [m, S, A],
+              output: [O],
+              name: `gemm_l${g}_n${j}`,
+              attributes: [
+                { name: 'alpha', type: 'FLOAT', f: 1 },
+                { name: 'beta', type: 'FLOAT', f: 1 },
+                { name: 'transB', type: 'INT', i: 1 },
+              ],
+            }),
+            f.graph.node.push({
+              op_type: Vt(R.squash),
+              input: [O],
+              output: [E],
+              name: `act_l${g}_n${j}`,
+            }),
+            N.push(E);
+        });
+        let T = `Layer_${g}`;
+        f.graph.node.push({
+          op_type: 'Concat',
+          input: N,
+          output: [T],
+          name: `concat_l${g}`,
+          attributes: [{ name: 'axis', type: 'INT', i: i ? 1 : 0 }],
+        }),
+          (m = T);
+        let k = e.pool2dMappings?.find((R) => R.afterLayerIndex === g);
+        if (k) {
+          let R = [k.kernelHeight, k.kernelWidth],
+            j = [k.strideHeight, k.strideWidth],
+            W = [
+              k.padTop || 0,
+              k.padLeft || 0,
+              k.padBottom || 0,
+              k.padRight || 0,
+            ],
+            S = `Pool_${g}`;
+          if (
+            (f.graph.node.push({
+              op_type: k.type,
+              input: [m],
+              output: [S],
+              name: `pool_after_l${g}`,
+              attributes: [
+                { name: 'kernel_shape', type: 'INTS', ints: R },
+                { name: 'strides', type: 'INTS', ints: j },
+                { name: 'pads', type: 'INTS', ints: W },
+              ],
+            }),
+            (m = S),
+            e.flattenAfterPooling)
+          ) {
+            let E = `PoolFlat_${g}`;
+            f.graph.node.push({
+              op_type: 'Flatten',
+              input: [m],
+              output: [E],
+              name: `flatten_after_l${g}`,
+              attributes: [{ name: 'axis', type: 'INT', i: 1 }],
+            }),
+              (m = E),
+              (f.metadata_props = f.metadata_props || []);
+            let B = f.metadata_props.find((D) => D.key === 'flatten_layers');
+            if (B)
+              try {
+                let D = JSON.parse(B.value);
+                Array.isArray(D) &&
+                  !D.includes(g) &&
+                  (D.push(g), (B.value = JSON.stringify(D)));
+              } catch {
+                B.value = JSON.stringify([g]);
+              }
+            else
+              f.metadata_props.push({
+                key: 'flatten_layers',
+                value: JSON.stringify([g]),
+              });
+          }
+          f.metadata_props = f.metadata_props || [];
+          let A = f.metadata_props.find((E) => E.key === 'pool2d_layers');
+          if (A)
+            try {
+              let E = JSON.parse(A.value);
+              Array.isArray(E) &&
+                !E.includes(g) &&
+                (E.push(g), (A.value = JSON.stringify(E)));
+            } catch {
+              A.value = JSON.stringify([g]);
+            }
+          else
+            f.metadata_props.push({
+              key: 'pool2d_layers',
+              value: JSON.stringify([g]),
+            });
+          let O = f.metadata_props.find((E) => E.key === 'pool2d_specs');
+          if (O)
+            try {
+              let E = JSON.parse(O.value);
+              Array.isArray(E) &&
+                (E.push({ ...k }), (O.value = JSON.stringify(E)));
+            } catch {
+              O.value = JSON.stringify([k]);
+            }
+          else
+            f.metadata_props.push({
+              key: 'pool2d_specs',
+              value: JSON.stringify([k]),
+            });
+        }
+      } else {
+        let N = [],
+          T = new Array(v.length).fill(0);
+        for (let A = 0; A < v.length; A++) {
+          let O = v[A];
+          T[A] = O.bias;
+          for (let E = 0; E < w.length; E++) {
+            let B = w[E],
+              D = O.connections.in.find((J) => J.from === B);
+            N.push(D ? D.weight : 0);
+          }
+        }
+        let k = `W${g - 1}`,
+          R = `B${g - 1}`,
+          j = `Gemm_${g}`,
+          W = `Layer_${g}`;
+        f.graph.initializer.push({
+          name: k,
+          data_type: 1,
+          dims: [v.length, w.length],
+          float_data: N,
+        }),
+          f.graph.initializer.push({
+            name: R,
+            data_type: 1,
+            dims: [v.length],
+            float_data: T,
+          }),
+          r
+            ? (f.graph.node.push({
+                op_type: Vt(v[0].squash),
+                input: [j],
+                output: [W],
+                name: `act_l${g}`,
+              }),
+              f.graph.node.push({
+                op_type: 'Gemm',
+                input: [m, k, R],
+                output: [j],
+                name: `gemm_l${g}`,
+                attributes: [
+                  { name: 'alpha', type: 'FLOAT', f: 1 },
+                  { name: 'beta', type: 'FLOAT', f: 1 },
+                  { name: 'transB', type: 'INT', i: 1 },
+                ],
+              }))
+            : (f.graph.node.push({
+                op_type: 'Gemm',
+                input: [m, k, R],
+                output: [j],
+                name: `gemm_l${g}`,
+                attributes: [
+                  { name: 'alpha', type: 'FLOAT', f: 1 },
+                  { name: 'beta', type: 'FLOAT', f: 1 },
+                  { name: 'transB', type: 'INT', i: 1 },
+                ],
+              }),
+              f.graph.node.push({
+                op_type: Vt(v[0].squash),
+                input: [j],
+                output: [W],
+                name: `act_l${g}`,
+              })),
+          (m = W);
+        let S = e.pool2dMappings?.find((A) => A.afterLayerIndex === g);
+        if (S) {
+          let A = [S.kernelHeight, S.kernelWidth],
+            O = [S.strideHeight, S.strideWidth],
+            E = [
+              S.padTop || 0,
+              S.padLeft || 0,
+              S.padBottom || 0,
+              S.padRight || 0,
+            ],
+            B = `Pool_${g}`;
+          if (
+            (f.graph.node.push({
+              op_type: S.type,
+              input: [m],
+              output: [B],
+              name: `pool_after_l${g}`,
+              attributes: [
+                { name: 'kernel_shape', type: 'INTS', ints: A },
+                { name: 'strides', type: 'INTS', ints: O },
+                { name: 'pads', type: 'INTS', ints: E },
+              ],
+            }),
+            (m = B),
+            e.flattenAfterPooling)
+          ) {
+            let I = `PoolFlat_${g}`;
+            f.graph.node.push({
+              op_type: 'Flatten',
+              input: [m],
+              output: [I],
+              name: `flatten_after_l${g}`,
+              attributes: [{ name: 'axis', type: 'INT', i: 1 }],
+            }),
+              (m = I),
+              (f.metadata_props = f.metadata_props || []);
+            let Z = f.metadata_props.find((z) => z.key === 'flatten_layers');
+            if (Z)
+              try {
+                let z = JSON.parse(Z.value);
+                Array.isArray(z) &&
+                  !z.includes(g) &&
+                  (z.push(g), (Z.value = JSON.stringify(z)));
+              } catch {
+                Z.value = JSON.stringify([g]);
+              }
+            else
+              f.metadata_props.push({
+                key: 'flatten_layers',
+                value: JSON.stringify([g]),
+              });
+          }
+          f.metadata_props = f.metadata_props || [];
+          let D = f.metadata_props.find((I) => I.key === 'pool2d_layers');
+          if (D)
+            try {
+              let I = JSON.parse(D.value);
+              Array.isArray(I) &&
+                !I.includes(g) &&
+                (I.push(g), (D.value = JSON.stringify(I)));
+            } catch {
+              D.value = JSON.stringify([g]);
+            }
+          else
+            f.metadata_props.push({
+              key: 'pool2d_layers',
+              value: JSON.stringify([g]),
+            });
+          let J = f.metadata_props.find((I) => I.key === 'pool2d_specs');
+          if (J)
+            try {
+              let I = JSON.parse(J.value);
+              Array.isArray(I) &&
+                (I.push({ ...S }), (J.value = JSON.stringify(I)));
+            } catch {
+              J.value = JSON.stringify([S]);
+            }
+          else
+            f.metadata_props.push({
+              key: 'pool2d_specs',
+              value: JSON.stringify([S]),
+            });
+        }
+      }
+    }
+    if (e.allowRecurrent)
+      for (let g = 1; g < t.length - 1; g++) {
+        let w = t[g],
+          v = w.length;
+        if (
+          (f.metadata_props || (f.metadata_props = []),
+          v >= 8 &&
+            v < 10 &&
+            f.metadata_props.push({
+              key: 'rnn_pattern_fallback',
+              value: JSON.stringify({
+                layer: g,
+                reason: 'size_between_gru_lstm_thresholds',
+              }),
+            }),
+          v >= 10 && v % 5 === 0)
+        ) {
+          let b = v / 5,
+            M = t[g - 1],
+            x = w.slice(0, b),
+            N = w.slice(b, b * 2),
+            T = w.slice(b * 2, b * 3),
+            k = w.slice(b * 3, b * 4),
+            R = w.slice(b * 4, b * 5),
+            j = [x, N, T, k],
+            W = j.length,
+            S = M.length,
+            A = [],
+            O = [],
+            E = [];
+          for (let D = 0; D < W; D++) {
+            let J = j[D];
+            for (let I = 0; I < b; I++) {
+              let Z = J[I];
+              for (let z = 0; z < S; z++) {
+                let H = M[z],
+                  rt = Z.connections.in.find((lt) => lt.from === H);
+                A.push(rt ? rt.weight : 0);
+              }
+              for (let z = 0; z < b; z++)
+                if (J === T && z === I) {
+                  let H = Z.connections.self[0];
+                  O.push(H ? H.weight : 0);
+                } else O.push(0);
+              E.push(Z.bias);
+            }
+          }
+          f.graph.initializer.push({
+            name: `LSTM_W${g - 1}`,
+            data_type: 1,
+            dims: [W * b, S],
+            float_data: A,
+          }),
+            f.graph.initializer.push({
+              name: `LSTM_R${g - 1}`,
+              data_type: 1,
+              dims: [W * b, b],
+              float_data: O,
+            }),
+            f.graph.initializer.push({
+              name: `LSTM_B${g - 1}`,
+              data_type: 1,
+              dims: [W * b],
+              float_data: E,
+            }),
+            f.graph.node.push({
+              op_type: 'LSTM',
+              input: [m, `LSTM_W${g - 1}`, `LSTM_R${g - 1}`, `LSTM_B${g - 1}`],
+              output: [`Layer_${g}_lstm_hidden`],
+              name: `lstm_l${g}`,
+              attributes: [
+                { name: 'hidden_size', type: 'INT', i: b },
+                { name: 'layout', type: 'INT', i: 0 },
+              ],
+            }),
+            (f.metadata_props = f.metadata_props || []);
+          let B = f.metadata_props.findIndex(
+            (D) => D.key === 'lstm_emitted_layers'
+          );
+          if (B >= 0)
+            try {
+              let D = JSON.parse(f.metadata_props[B].value);
+              Array.isArray(D) &&
+                !D.includes(g) &&
+                (D.push(g), (f.metadata_props[B].value = JSON.stringify(D)));
+            } catch {
+              f.metadata_props[B].value = JSON.stringify([g]);
+            }
+          else
+            f.metadata_props.push({
+              key: 'lstm_emitted_layers',
+              value: JSON.stringify([g]),
+            });
+        }
+        if (v >= 8 && v % 4 === 0) {
+          let b = v / 4,
+            M = t[g - 1],
+            x = w.slice(0, b),
+            N = w.slice(b, b * 2),
+            T = w.slice(b * 2, b * 3),
+            k = w.slice(b * 3, b * 4),
+            R = [x, N, T],
+            j = R.length,
+            W = M.length,
+            S = [],
+            A = [],
+            O = [];
+          for (let D = 0; D < j; D++) {
+            let J = R[D];
+            for (let I = 0; I < b; I++) {
+              let Z = J[I];
+              for (let z = 0; z < W; z++) {
+                let H = M[z],
+                  rt = Z.connections.in.find((lt) => lt.from === H);
+                S.push(rt ? rt.weight : 0);
+              }
+              for (let z = 0; z < b; z++)
+                if (J === T && z === I) {
+                  let H = Z.connections.self[0];
+                  A.push(H ? H.weight : 0);
+                } else A.push(0);
+              O.push(Z.bias);
+            }
+          }
+          f.graph.initializer.push({
+            name: `GRU_W${g - 1}`,
+            data_type: 1,
+            dims: [j * b, W],
+            float_data: S,
+          }),
+            f.graph.initializer.push({
+              name: `GRU_R${g - 1}`,
+              data_type: 1,
+              dims: [j * b, b],
+              float_data: A,
+            }),
+            f.graph.initializer.push({
+              name: `GRU_B${g - 1}`,
+              data_type: 1,
+              dims: [j * b],
+              float_data: O,
+            });
+          let E = g === 1 ? 'input' : `Layer_${g - 1}`;
+          f.graph.node.push({
+            op_type: 'GRU',
+            input: [E, `GRU_W${g - 1}`, `GRU_R${g - 1}`, `GRU_B${g - 1}`],
+            output: [`Layer_${g}_gru_hidden`],
+            name: `gru_l${g}`,
+            attributes: [
+              { name: 'hidden_size', type: 'INT', i: b },
+              { name: 'layout', type: 'INT', i: 0 },
+            ],
+          }),
+            (f.metadata_props = f.metadata_props || []);
+          let B = f.metadata_props.findIndex(
+            (D) => D.key === 'gru_emitted_layers'
+          );
+          if (B >= 0)
+            try {
+              let D = JSON.parse(f.metadata_props[B].value);
+              Array.isArray(D) &&
+                !D.includes(g) &&
+                (D.push(g), (f.metadata_props[B].value = JSON.stringify(D)));
+            } catch {
+              f.metadata_props[B].value = JSON.stringify([g]);
+            }
+          else
+            f.metadata_props.push({
+              key: 'gru_emitted_layers',
+              value: JSON.stringify([g]),
+            });
+        }
+      }
+    if (
+      o &&
+      ((f.metadata_props = f.metadata_props || []),
+      f.metadata_props.push({ key: 'layer_sizes', value: JSON.stringify(y) }),
+      _.length &&
+        f.metadata_props.push({
+          key: 'recurrent_single_step',
+          value: JSON.stringify(_),
+        }),
+      e.validateConvSharing && e.conv2dMappings && e.conv2dMappings.length)
+    ) {
+      let g = [],
+        w = [];
+      for (let v of e.conv2dMappings) {
+        let b = v.layerIndex,
+          M = t[b - 1],
+          x = t[b];
+        if (!x || !M) continue;
+        let N = [],
+          T = !0;
+        for (let R = 0; R < v.outChannels; R++) {
+          let j = R * (v.outHeight * v.outWidth),
+            W = x[j],
+            S = [];
+          for (let A = 0; A < v.inChannels; A++)
+            for (let O = 0; O < v.kernelHeight; O++)
+              for (let E = 0; E < v.kernelWidth; E++) {
+                let B = A * (v.inHeight * v.inWidth) + O * v.inWidth + E,
+                  D = M[B],
+                  J = W.connections.in.find((I) => I.from === D);
+                S.push(J ? J.weight : 0);
+              }
+          N.push(S);
+        }
+        let k = 1e-9;
+        for (let R = 0; R < v.outChannels && T; R++)
+          for (let j = 0; j < v.outHeight && T; j++)
+            for (let W = 0; W < v.outWidth && T; W++) {
+              let S = R * (v.outHeight * v.outWidth) + j * v.outWidth + W,
+                A = x[S];
+              if (!A) continue;
+              let O = 0;
+              for (let E = 0; E < v.inChannels && T; E++) {
+                let B = j * v.strideHeight - (v.padTop || 0),
+                  D = W * v.strideWidth - (v.padLeft || 0);
+                for (let J = 0; J < v.kernelHeight && T; J++)
+                  for (let I = 0; I < v.kernelWidth && T; I++) {
+                    let Z = B + J,
+                      z = D + I;
+                    if (Z < 0 || Z >= v.inHeight || z < 0 || z >= v.inWidth) {
+                      O++;
+                      continue;
+                    }
+                    let H = E * (v.inHeight * v.inWidth) + Z * v.inWidth + z,
+                      rt = M[H],
+                      lt = A.connections.in.find((V) => V.from === rt),
+                      L = lt ? lt.weight : 0;
+                    Math.abs(L - N[R][O]) > k && (T = !1), O++;
+                  }
+              }
+              if (!T) break;
+            }
+        T
+          ? g.push(b)
+          : (w.push(b),
+            console.warn(
+              `Conv2D weight sharing mismatch detected in layer ${b}`
+            ));
+      }
+      g.length &&
+        f.metadata_props.push({
+          key: 'conv2d_sharing_verified',
+          value: JSON.stringify(g),
+        }),
+        w.length &&
+          f.metadata_props.push({
+            key: 'conv2d_sharing_mismatch',
+            value: JSON.stringify(w),
+          });
+    }
+    return f;
+  }
+  function vn(n, t = {}) {
+    if (
+      (Ui(n),
+      n.nodes.forEach((i, r) => (i.index = r)),
+      !n.connections || n.connections.length === 0)
+    )
+      throw new Error('ONNX export currently only supports simple MLPs');
+    let e = zi(n),
+      o = [];
+    if (t.allowRecurrent)
+      try {
+        for (let i = 1; i < e.length - 1; i++) {
+          let r = e[i],
+            a = r.length;
+          if (a >= 10 && a % 5 === 0) {
+            let l = a / 5;
+            r
+              .slice(l * 2, l * 3)
+              .every((p) => p.connections.self.length === 1) &&
+              o.push({ layerIndex: i, unitSize: l });
+          }
+        }
+      } catch {}
+    Ji(e, n, t);
+    let s = Vi(n, e, t);
+    if (t.includeMetadata) {
+      let i = [],
+        r = [];
+      for (let a = 1; a < e.length - 1; a++) {
+        let l = e[a - 1].length,
+          h = e[a].length,
+          u = Math.sqrt(l);
+        if (Math.abs(u - Math.round(u)) > 1e-9) continue;
+        let p = Math.round(u);
+        for (let c of [3, 2]) {
+          if (c >= p) continue;
+          let d = p - c + 1;
+          if (d * d === h) {
+            if (t.conv2dMappings?.some((m) => m.layerIndex === a)) break;
+            r.push(a),
+              i.push({
+                layerIndex: a,
+                inHeight: p,
+                inWidth: p,
+                inChannels: 1,
+                kernelHeight: c,
+                kernelWidth: c,
+                strideHeight: 1,
+                strideWidth: 1,
+                outHeight: d,
+                outWidth: d,
+                outChannels: 1,
+                note: 'heuristic_inferred_no_export_applied',
+              });
+            break;
+          }
+        }
+      }
+      r.length &&
+        ((s.metadata_props = s.metadata_props || []),
+        s.metadata_props.push({
+          key: 'conv2d_inferred_layers',
+          value: JSON.stringify(r),
+        }),
+        s.metadata_props.push({
+          key: 'conv2d_inferred_specs',
+          value: JSON.stringify(i),
+        }));
+    }
+    return (
+      o.length &&
+        ((s.metadata_props = s.metadata_props || []),
+        s.metadata_props.push({
+          key: 'lstm_groups_stub',
+          value: JSON.stringify(o),
+        })),
+      s
+    );
+  }
+  var Ie = C(() => {
+    'use strict';
+    pt();
+    Dt();
+  });
+  var wn = C(() => {
+    'use strict';
+    Ie();
+    Ie();
+  });
+  function Sn(n) {
+    if (!n.nodes.some((d) => d.type === 'output'))
+      throw new Error(
+        'Cannot create standalone function: network has no output nodes.'
+      );
+    let t = {},
+      e = [],
+      o = {},
+      s = 0,
+      i = [],
+      r = [],
+      a = [],
+      l = {
+        logistic: 'function logistic(x){ return 1 / (1 + Math.exp(-x)); }',
+        tanh: 'function tanh(x){ return Math.tanh(x); }',
+        relu: 'function relu(x){ return x > 0 ? x : 0; }',
+        identity: 'function identity(x){ return x; }',
+        step: 'function step(x){ return x > 0 ? 1 : 0; }',
+        softsign: 'function softsign(x){ return x / (1 + Math.abs(x)); }',
+        sinusoid: 'function sinusoid(x){ return Math.sin(x); }',
+        gaussian: 'function gaussian(x){ return Math.exp(-Math.pow(x, 2)); }',
+        bentIdentity:
+          'function bentIdentity(x){ return (Math.sqrt(Math.pow(x, 2) + 1) - 1) / 2 + x; }',
+        bipolar: 'function bipolar(x){ return x > 0 ? 1 : -1; }',
+        bipolarSigmoid:
+          'function bipolarSigmoid(x){ return 2 / (1 + Math.exp(-x)) - 1; }',
+        hardTanh:
+          'function hardTanh(x){ return Math.max(-1, Math.min(1, x)); }',
+        absolute: 'function absolute(x){ return Math.abs(x); }',
+        inverse: 'function inverse(x){ return 1 - x; }',
+        selu:
+          'function selu(x){ var a=1.6732632423543772,s=1.0507009873554805; var fx=x>0?x:a*Math.exp(x)-a; return fx*s; }',
+        softplus:
+          'function softplus(x){ if(x>30)return x; if(x<-30)return Math.exp(x); return Math.max(0,x)+Math.log(1+Math.exp(-Math.abs(x))); }',
+        swish: 'function swish(x){ var s=1/(1+Math.exp(-x)); return x*s; }',
+        gelu:
+          'function gelu(x){ var cdf=0.5*(1.0+Math.tanh(Math.sqrt(2.0/Math.PI)*(x+0.044715*Math.pow(x,3)))); return x*cdf; }',
+        mish:
+          'function mish(x){ var sp_x; if(x>30){sp_x=x;}else if(x<-30){sp_x=Math.exp(x);}else{sp_x=Math.log(1+Math.exp(x));} var tanh_sp_x=Math.tanh(sp_x); return x*tanh_sp_x; }',
+      };
+    n.nodes.forEach((d, f) => {
+      (d.index = f), i.push(d.activation), r.push(d.state);
+    }),
+      a.push('for(var i = 0; i < input.length; i++) A[i] = input[i];');
+    for (let d = n.input; d < n.nodes.length; d++) {
+      let f = n.nodes[d],
+        m = f.squash,
+        _ = m.name || `anonymous_squash_${d}`;
+      if (!(_ in t)) {
+        let b;
+        l[_]
+          ? ((b = l[_]),
+            b.startsWith(`function ${_}`) ||
+              (b = `function ${_}${b.substring(b.indexOf('('))}`),
+            (b = Mn(b)))
+          : ((b = m.toString()),
+            (b = Mn(b)),
+            b.startsWith('function')
+              ? (b = `function ${_}${b.substring(b.indexOf('('))}`)
+              : b.includes('=>')
+              ? (b = `function ${_}${b.substring(b.indexOf('('))}`)
+              : (b = `function ${_}(x){ return x; }`)),
+          (t[_] = b),
+          e.push(b),
+          (o[_] = s++);
+      }
+      let y = o[_],
+        g = [];
+      for (let b of f.connections.in) {
+        if (typeof b.from.index > 'u') continue;
+        let M = `A[${b.from.index}] * ${b.weight}`;
+        b.gater &&
+          typeof b.gater.index < 'u' &&
+          (M += ` * A[${b.gater.index}]`),
+          g.push(M);
+      }
+      if (f.connections.self.length > 0) {
+        let b = f.connections.self[0],
+          M = `S[${d}] * ${b.weight}`;
+        b.gater &&
+          typeof b.gater.index < 'u' &&
+          (M += ` * A[${b.gater.index}]`),
+          g.push(M);
+      }
+      let w = g.length > 0 ? g.join(' + ') : '0';
+      a.push(`S[${d}] = ${w} + ${f.bias};`);
+      let v = typeof f.mask == 'number' && f.mask !== 1 ? f.mask : 1;
+      a.push(`A[${d}] = F[${y}](S[${d}])${v !== 1 ? ` * ${v}` : ''};`);
+    }
+    let h = [];
+    for (let d = n.nodes.length - n.output; d < n.nodes.length; d++)
+      typeof n.nodes[d]?.index < 'u' && h.push(n.nodes[d].index);
+    a.push(`return [${h.map((d) => `A[${d}]`).join(',')}];`);
+    let u = Object.entries(o)
+        .sort(([, d], [, f]) => d - f)
+        .map(([d]) => d)
+        .join(','),
+      p = n._activationPrecision === 'f32' ? 'Float32Array' : 'Float64Array',
+      c = '';
+    return (
+      (c += `(function(){
+`),
+      (c += `${e.join(`
 `)}
-`,c+=`var F = [${u}];
-`,c+=`var A = new ${p}([${i.join(",")}]);
-`,c+=`var S = new ${p}([${r.join(",")}]);
-`,c+=`function activate(input){
-`,c+=`if (!input || input.length !== ${n.input}) { throw new Error('Invalid input size. Expected ${n.input}, got ' + (input ? input.length : 'undefined')); }
-`,c+=a.join(`
-`),c+=`}
-`,c+=`return activate;
-})();`,c}var Mn,xn=C(()=>{"use strict";Mn=n=>(n=n.replace(/\/\*\s*istanbul\s+ignore\s+[\s\S]*?\*\//g,""),n=n.replace(/cov_[\w$]+\(\)\.(s|f|b)\[\d+\](\[\d+\])?\+\+/g,""),n=n.replace(/cov_[\w$]+\(\)/g,""),n=n.replace(/^\s*\/\/ # sourceMappingURL=.*\s*$/gm,""),n=n.replace(/\(\s*,\s*/g,"( "),n=n.replace(/\s*,\s*\)/g," )"),n=n.trim(),n=n.replace(/^\s*;\s*$/gm,""),n=n.replace(/;{2,}/g,";"),n=n.replace(/^\s*[,;]?\s*$/gm,""),n)});function Nn(){let n=this;if(!n._enforceAcyclic){n._topoOrder=null,n._topoDirty=!1;return}let t=new Map;this.nodes.forEach(s=>t.set(s,0));for(let s of this.connections)s.from!==s.to&&t.set(s.to,(t.get(s.to)||0)+1);let e=[];this.nodes.forEach(s=>{(s.type==="input"||(t.get(s)||0)===0)&&e.push(s)});let o=[];for(;e.length;){let s=e.shift();o.push(s);for(let i of s.connections.out){if(i.to===s)continue;let r=(t.get(i.to)||0)-1;t.set(i.to,r),r===0&&e.push(i.to)}}n._topoOrder=o.length===this.nodes.length?o:this.nodes.slice(),n._topoDirty=!1}function An(n,t){if(n===t)return!0;let e=new Set,o=[n];for(;o.length;){let s=o.pop();if(s===t)return!0;if(!e.has(s)){e.add(s);for(let i of s.connections.out)i.to!==s&&o.push(i.to)}}return!1}var On=C(()=>{"use strict"});function se(n=!1){let t=this;if(!n&&!t._slabDirty)return;t._nodeIndexDirty&&Cn.call(this);let e=this.connections.length,o=t._useFloat32Weights?new Float32Array(e):new Float64Array(e),s=new Uint32Array(e),i=new Uint32Array(e);for(let r=0;r<e;r++){let a=this.connections[r];o[r]=a.weight,s[r]=a.from.index>>>0,i[r]=a.to.index>>>0}t._connWeights=o,t._connFrom=s,t._connTo=i,t._slabDirty=!1,t._adjDirty=!0}function En(){se.call(this);let n=this;return{weights:n._connWeights,from:n._connFrom,to:n._connTo}}function Cn(){let n=this;for(let t=0;t<this.nodes.length;t++)this.nodes[t].index=t;n._nodeIndexDirty=!1}function Ki(){let n=this;if(!n._connFrom||!n._connTo)return;let t=this.nodes.length,e=n._connFrom.length,o=new Uint32Array(t);for(let l=0;l<e;l++)o[n._connFrom[l]]++;let s=new Uint32Array(t+1),i=0;for(let l=0;l<t;l++)s[l]=i,i+=o[l];s[t]=i;let r=new Uint32Array(e),a=s.slice();for(let l=0;l<e;l++){let h=n._connFrom[l];r[a[h]++]=l}n._outStart=s,n._outOrder=r,n._adjDirty=!1}function Xi(n){let t=this;return!n&&t._enforceAcyclic&&!t._topoDirty&&this.gates.length===0&&this.selfconns.length===0&&this.dropout===0&&t._weightNoiseStd===0&&t._weightNoisePerHidden.length===0&&t._stochasticDepth.length===0}function In(n){let t=this;if(se.call(this),t._adjDirty&&Ki.call(this),!t._connWeights||!t._connFrom||!t._connTo||!t._outStart||!t._outOrder)return this.activate(n,!1);t._topoDirty&&this._computeTopoOrder(),t._nodeIndexDirty&&Cn.call(this);let e=t._topoOrder||this.nodes,o=this.nodes.length,s=t._activationPrecision==="f32";(!t._fastA||t._fastA.length!==o||s&&!(t._fastA instanceof Float32Array)||!s&&!(t._fastA instanceof Float64Array))&&(t._fastA=s?new Float32Array(o):new Float64Array(o)),(!t._fastS||t._fastS.length!==o||s&&!(t._fastS instanceof Float32Array)||!s&&!(t._fastS instanceof Float64Array))&&(t._fastS=s?new Float32Array(o):new Float64Array(o));let i=t._fastA,r=t._fastS;r.fill(0);for(let f=0;f<this.input;f++)i[f]=n[f],this.nodes[f].activation=n[f],this.nodes[f].state=0;let a=t._connWeights,l=t._connTo,h=t._outOrder,u=t._outStart;for(let f=0;f<e.length;f++){let m=e[f],_=m.index>>>0;if(_>=this.input){let v=r[_]+m.bias,b=m.squash(v);m.state=r[_],m.activation=b,i[_]=b}let y=u[_],g=u[_+1],w=i[_];for(let v=y;v<g;v++){let b=h[v];r[l[b]]+=w*a[b]}}let p=o-this.output,c=ft.acquire(this.output);for(let f=0;f<this.output;f++)c[f]=i[p+f];let d=Array.from(c);return ft.release(c),d}function Tn(n){return Xi.call(this,n)}var Dn=C(()=>{"use strict";Jt()});function kn(n,t){let e=[...n];return t==="snip"?e.sort((o,s)=>{let i=Math.abs(o.totalDeltaWeight)||Math.abs(o.previousDeltaWeight)||0,r=Math.abs(s.totalDeltaWeight)||Math.abs(s.previousDeltaWeight)||0,a=i?Math.abs(o.weight)*i:Math.abs(o.weight),l=r?Math.abs(s.weight)*r:Math.abs(s.weight);return a-l}):e.sort((o,s)=>Math.abs(o.weight)-Math.abs(s.weight)),e}function Yi(n,t,e){let o=n,s=0;for(;n.connections.length<t&&s<e;){s++;let i=n.nodes[Math.floor(o._rand()*n.nodes.length)],r=n.nodes[Math.floor(o._rand()*n.nodes.length)];!i||!r||i===r||n.connections.some(a=>a.from===i&&a.to===r)||o._enforceAcyclic&&n.nodes.indexOf(i)>n.nodes.indexOf(r)||n.connect(i,r)}}function jn(n){let t=this._pruningConfig;if(!t||n<t.start||n>t.end||t.lastPruneIter!=null&&n===t.lastPruneIter||(n-t.start)%(t.frequency||1)!==0)return;let e=this._initialConnectionCount;if(!e)return;let o=(n-t.start)/Math.max(1,t.end-t.start),s=t.targetSparsity*Math.min(1,Math.max(0,o)),i=Math.max(1,Math.floor(e*(1-s))),r=this.connections.length-i;if(r<=0){t.lastPruneIter=n;return}let l=kn(this.connections,t.method||"magnitude").slice(0,r);if(l.forEach(h=>this.disconnect(h.from,h.to)),t.regrowFraction&&t.regrowFraction>0){let h=Math.floor(l.length*t.regrowFraction);Yi(this,i,h*10)}t.lastPruneIter=n,this._topoDirty=!0}function Ln(n,t="magnitude"){if(n<=0)return;n>=1&&(n=.999);let e=this;e._evoInitialConnCount||(e._evoInitialConnCount=this.connections.length);let o=e._evoInitialConnCount,s=Math.max(1,Math.floor(o*(1-n))),i=this.connections.length-s;if(i<=0)return;kn(this.connections,t).slice(0,i).forEach(l=>this.disconnect(l.from,l.to)),e._topoDirty=!0}function Pn(){let n=this._initialConnectionCount;return n?1-this.connections.length/n:0}var Rn=C(()=>{"use strict"});function Wn(n,t){if(!this.nodes.includes(n))throw new Error("Gating node must be part of the network to gate a connection!");if(t.gater){G.warnings&&console.warn("Connection is already gated. Skipping.");return}n.gate(t),this.gates.push(t)}function Bn(n){let t=this.gates.indexOf(n);if(t===-1){G.warnings&&console.warn("Attempted to ungate a connection not in the gates list.");return}this.gates.splice(t,1),n.gater?.ungate(n)}var Gn=C(()=>{"use strict";ee();vt()});function Fn(n){this._rngState=n>>>0,this._rand=()=>{this._rngState=this._rngState+1831565813>>>0;let t=Math.imul(this._rngState^this._rngState>>>15,1|this._rngState);return t^=t+Math.imul(t^t>>>7,61|t),((t^t>>>14)>>>0)/4294967296}}function $n(){return{step:this._trainingStep,state:this._rngState}}function Hn(n){this._rand=n,this._rngState=void 0}function qn(){return this._rngState}function Un(n){typeof n=="number"&&(this._rngState=n>>>0)}var zn=C(()=>{"use strict"});function Zi(n){try{return globalThis.structuredClone?globalThis.structuredClone(n):JSON.parse(JSON.stringify(n))}catch{return JSON.parse(JSON.stringify(n))}}function Jn(){let n=this._lastStats;return n?Zi(n):null}var Vn=C(()=>{"use strict"});function Kn(n){let t=this,e=this.nodes.indexOf(n);if(e===-1)throw new Error("Node not in network");if(n.type==="input"||n.type==="output")throw new Error("Cannot remove input or output node from the network.");this.gates=this.gates.filter(r=>r.gater===n?(r.gater=null,!1):!0);let o=n.connections.in.slice(),s=n.connections.out.slice();o.forEach(r=>this.disconnect(r.from,r.to)),s.forEach(r=>this.disconnect(r.from,r.to)),n.connections.self.slice().forEach(()=>this.disconnect(n,n));let i=this.nodes.splice(e,1)[0];G.enableNodePooling&&i&&ie(i),o.forEach(r=>{s.forEach(a=>{if(!r.from||!a.to||r.from===a.to)return;this.connections.some(h=>h.from===r.from&&h.to===a.to)||this.connect(r.from,a.to)})}),t._topoDirty=!0,t._nodeIndexDirty=!0,t._slabDirty=!0,t._adjDirty=!0}var Xn=C(()=>{"use strict";Ee();vt()});function Yn(n,t,e){if(this._enforceAcyclic&&this.nodes.indexOf(n)>this.nodes.indexOf(t))return[];let o=n.connect(t,e);for(let s of o)if(n!==t)this.connections.push(s);else{if(this._enforceAcyclic)continue;this.selfconns.push(s)}return o.length&&(this._topoDirty=!0,this._slabDirty=!0),o}function Zn(n,t){let e=n===t?this.selfconns:this.connections;for(let o=0;o<e.length;o++){let s=e[o];if(s.from===n&&s.to===t){s.gater&&this.ungate(s),e.splice(o,1);break}}n.disconnect(t),this._topoDirty=!0,this._slabDirty=!0}var Qn=C(()=>{"use strict"});function to(){this.nodes.forEach((r,a)=>r.index=a);let n=this.nodes.map(r=>r.activation),t=this.nodes.map(r=>r.state),e=this.nodes.map(r=>r.squash.name),o=this.connections.concat(this.selfconns).map(r=>({from:r.from.index,to:r.to.index,weight:r.weight,gater:r.gater?r.gater.index:null})),s=this.input,i=this.output;return[n,t,e,o,s,i]}function eo(n,t,e){let[o,s,i,r,a,l]=n,h=typeof t=="number"?t:a||0,u=typeof e=="number"?e:l||0,p=new(bt(),q(Pt)).default(h,u);return p.nodes=[],p.connections=[],p.selfconns=[],p.gates=[],o.forEach((c,d)=>{let f;d<h?f="input":d>=o.length-u?f="output":f="hidden";let m=new K(f);m.activation=c,m.state=s[d];let _=i[d];F[_]||console.warn(`Unknown squash function '${String(_)}' encountered during deserialize. Falling back to identity.`),m.squash=F[_]||F.identity,m.index=d,p.nodes.push(m)}),r.forEach(c=>{if(c.from<p.nodes.length&&c.to<p.nodes.length){let d=p.nodes[c.from],f=p.nodes[c.to],m=p.connect(d,f,c.weight)[0];m&&c.gater!=null&&(c.gater<p.nodes.length?p.gate(p.nodes[c.gater],m):console.warn("Invalid gater index encountered during deserialize; skipping gater assignment."))}else console.warn("Invalid connection indices encountered during deserialize; skipping connection.")}),p}function no(){let n={formatVersion:2,input:this.input,output:this.output,dropout:this.dropout,nodes:[],connections:[]};return this.nodes.forEach((t,e)=>{if(t.index=e,n.nodes.push({type:t.type,bias:t.bias,squash:t.squash.name,index:e,geneId:t.geneId}),t.connections.self.length>0){let o=t.connections.self[0];n.connections.push({from:e,to:e,weight:o.weight,gater:o.gater?o.gater.index:null,enabled:o.enabled!==!1})}}),this.connections.forEach(t=>{typeof t.from.index!="number"||typeof t.to.index!="number"||n.connections.push({from:t.from.index,to:t.to.index,weight:t.weight,gater:t.gater?t.gater.index:null,enabled:t.enabled!==!1})}),n}function oo(n){if(!n||typeof n!="object")throw new Error("Invalid JSON for network.");n.formatVersion!==2&&console.warn("fromJSONImpl: Unknown formatVersion, attempting import.");let t=new(bt(),q(Pt)).default(n.input,n.output);return t.dropout=n.dropout||0,t.nodes=[],t.connections=[],t.selfconns=[],t.gates=[],n.nodes.forEach((e,o)=>{let s=new K(e.type);s.bias=e.bias,s.squash=F[e.squash]||F.identity,s.index=o,typeof e.geneId=="number"&&(s.geneId=e.geneId),t.nodes.push(s)}),n.connections.forEach(e=>{if(typeof e.from!="number"||typeof e.to!="number")return;let o=t.nodes[e.from],s=t.nodes[e.to],i=t.connect(o,s,e.weight)[0];i&&e.gater!=null&&typeof e.gater=="number"&&t.nodes[e.gater]&&t.gate(t.nodes[e.gater],i),i&&typeof e.enabled<"u"&&(i.enabled=e.enabled)}),t}var io=C(()=>{"use strict";mt();Dt();pt()});function so(n,t,e=!1){if(n.input!==t.input||n.output!==t.output)throw new Error("Parent networks must have the same input and output sizes for crossover.");let o=new(bt(),q(Pt)).default(n.input,n.output);o.connections=[],o.nodes=[],o.selfconns=[],o.gates=[];let s=n.score||0,i=t.score||0,r=n.nodes.length,a=t.nodes.length,l;if(e||s===i){let m=Math.max(r,a),_=Math.min(r,a);l=Math.floor(Math.random()*(m-_+1)+_)}else l=s>i?r:a;let h=n.output;n.nodes.forEach((m,_)=>m.index=_),t.nodes.forEach((m,_)=>m.index=_);for(let m=0;m<l;m++){let _,y=m<r?n.nodes[m]:void 0,g=m<a?t.nodes[m]:void 0;if(m<n.input)_=y;else if(m>=l-h){let w=r-(l-m),v=a-(l-m),b=w>=n.input&&w<r?n.nodes[w]:void 0,M=v>=t.input&&v<a?t.nodes[v]:void 0;b&&M?_=(n._rand||Math.random)()>=.5?b:M:_=b||M}else y&&g?_=(n._rand||Math.random)()>=.5?y:g:y&&(s>=i||e)?_=y:g&&(i>=s||e)&&(_=g);if(_){let w=new K(_.type);w.bias=_.bias,w.squash=_.squash,o.nodes.push(w)}}o.nodes.forEach((m,_)=>m.index=_);let u={},p={};n.connections.concat(n.selfconns).forEach(m=>{typeof m.from.index=="number"&&typeof m.to.index=="number"&&(u[ht.innovationID(m.from.index,m.to.index)]={weight:m.weight,from:m.from.index,to:m.to.index,gater:m.gater?m.gater.index:-1,enabled:m.enabled!==!1})}),t.connections.concat(t.selfconns).forEach(m=>{typeof m.from.index=="number"&&typeof m.to.index=="number"&&(p[ht.innovationID(m.from.index,m.to.index)]={weight:m.weight,from:m.from.index,to:m.to.index,gater:m.gater?m.gater.index:-1,enabled:m.enabled!==!1})});let c=[];Object.keys(u).forEach(m=>{let _=u[m];if(p[m]){let y=p[m],g=(n._rand||Math.random)()>=.5?_:y;if(_.enabled===!1||y.enabled===!1){let w=n._reenableProb??t._reenableProb??.25;g.enabled=Math.random()<w}c.push(g),delete p[m]}else if(s>=i||e){if(_.enabled===!1){let y=n._reenableProb??.25;_.enabled=Math.random()<y}c.push(_)}}),(i>=s||e)&&Object.keys(p).forEach(m=>{let _=p[m];if(_.enabled===!1){let y=t._reenableProb??.25;_.enabled=Math.random()<y}c.push(_)});let f=o.nodes.length;return c.forEach(m=>{if(m.from<f&&m.to<f){let _=o.nodes[m.from],y=o.nodes[m.to];if(m.from>=m.to)return;if(!_.isProjectingTo(y)){let g=o.connect(_,y)[0];g&&(g.weight=m.weight,g.enabled=m.enabled!==!1,m.gater!==-1&&m.gater<f&&o.gate(o.nodes[m.gater],g))}}}),o}var ro=C(()=>{"use strict";mt();Dt()});var re={};ct(re,{activateBatch:()=>es,activateRaw:()=>ts,noTraceActivate:()=>Qi});function Qi(n){let t=this;if(t._enforceAcyclic&&t._topoDirty&&this._computeTopoOrder(),!Array.isArray(n)||n.length!==this.input)throw new Error(`Input size mismatch: expected ${this.input}, got ${n?n.length:"undefined"}`);if(this._canUseFastSlab(!1))try{return this._fastSlabActivate(n)}catch{}let e=ft.acquire(this.output),o=0;this.nodes.forEach((i,r)=>{i.type==="input"?i.noTraceActivate(n[r]):i.type==="output"?e[o++]=i.noTraceActivate():i.noTraceActivate()});let s=Array.from(e);return ft.release(e),s}function ts(n,t=!1,e=1e3){return this._reuseActivationArrays?this.activate(n,t,e):this.activate(n,t,e)}function es(n,t=!1){if(!Array.isArray(n))throw new Error("inputs must be an array of input arrays");let e=new Array(n.length);for(let o=0;o<n.length;o++){let s=n[o];if(!Array.isArray(s)||s.length!==this.input)throw new Error(`Input[${o}] size mismatch: expected ${this.input}, got ${s?s.length:"undefined"}`);e[o]=this.activate(s,t)}return e}var ae=C(()=>{"use strict";Jt()});var tt,ce=C(()=>{"use strict";mt();Ft();vt();pt();tt=class n{nodes;connections;constructor(t){this.nodes=[],this.connections={in:[],out:[],self:[]};for(let e=0;e<t;e++)this.nodes.push(new K)}activate(t){let e=[];if(t!==void 0&&t.length!==this.nodes.length)throw new Error("Array with values should be same as the amount of nodes!");for(let o=0;o<this.nodes.length;o++){let s=t===void 0?this.nodes[o].activate():this.nodes[o].activate(t[o]);e.push(s)}return e}propagate(t,e,o){if(o!==void 0&&o.length!==this.nodes.length)throw new Error("Array with values should be same as the amount of nodes!");for(let s=this.nodes.length-1;s>=0;s--)o===void 0?this.nodes[s].propagate(t,e,!0,0):this.nodes[s].propagate(t,e,!0,0,o[s])}connect(t,e,o){let s=[],i,r;if(t instanceof n){if(e===void 0&&(this!==t?(G.warnings&&console.warn("No group connection specified, using ALL_TO_ALL by default."),e=X.ALL_TO_ALL):(G.warnings&&console.warn("Connecting group to itself, using ONE_TO_ONE by default."),e=X.ONE_TO_ONE)),e===X.ALL_TO_ALL||e===X.ALL_TO_ELSE)for(i=0;i<this.nodes.length;i++)for(r=0;r<t.nodes.length;r++){if(e===X.ALL_TO_ELSE&&this.nodes[i]===t.nodes[r])continue;let a=this.nodes[i].connect(t.nodes[r],o);this.connections.out.push(a[0]),t.connections.in.push(a[0]),s.push(a[0])}else if(e===X.ONE_TO_ONE){if(this.nodes.length!==t.nodes.length)throw new Error("Cannot create ONE_TO_ONE connection: source and target groups must have the same size.");for(i=0;i<this.nodes.length;i++){let a=this.nodes[i].connect(t.nodes[i],o);this===t?this.connections.self.push(a[0]):(this.connections.out.push(a[0]),t.connections.in.push(a[0])),s.push(a[0])}}}else if(t instanceof Ot)s=t.input(this,e,o);else if(t instanceof K)for(i=0;i<this.nodes.length;i++){let a=this.nodes[i].connect(t,o);this.connections.out.push(a[0]),s.push(a[0])}return s}gate(t,e){if(e===void 0)throw new Error("Please specify a gating method: Gating.INPUT, Gating.OUTPUT, or Gating.SELF");Array.isArray(t)||(t=[t]);let o=[],s=[],i,r;for(i=0;i<t.length;i++){let a=t[i];o.includes(a.from)||o.push(a.from),s.includes(a.to)||s.push(a.to)}switch(e){case _t.INPUT:for(let a=0;a<t.length;a++){let l=t[a];this.nodes[a%this.nodes.length].gate(l)}break;case _t.OUTPUT:for(i=0;i<o.length;i++){let a=o[i],l=this.nodes[i%this.nodes.length];for(r=0;r<a.connections.out.length;r++){let h=a.connections.out[r];t.includes(h)&&l.gate(h)}}break;case _t.SELF:for(i=0;i<o.length;i++){let a=o[i],l=this.nodes[i%this.nodes.length],h=Array.isArray(a.connections.self)?a.connections.self[0]:a.connections.self;t.includes(h)&&l.gate(h)}break}}set(t){for(let e=0;e<this.nodes.length;e++)t.bias!==void 0&&(this.nodes[e].bias=t.bias),this.nodes[e].squash=t.squash||this.nodes[e].squash,this.nodes[e].type=t.type||this.nodes[e].type}disconnect(t,e=!1){let o,s,i;if(t instanceof n)for(o=0;o<this.nodes.length;o++)for(s=0;s<t.nodes.length;s++){for(this.nodes[o].disconnect(t.nodes[s],e),i=this.connections.out.length-1;i>=0;i--){let r=this.connections.out[i];if(r.from===this.nodes[o]&&r.to===t.nodes[s]){this.connections.out.splice(i,1);break}}if(e){for(i=this.connections.in.length-1;i>=0;i--){let r=this.connections.in[i];if(r.from===t.nodes[s]&&r.to===this.nodes[o]){this.connections.in.splice(i,1);break}}for(i=t.connections.out.length-1;i>=0;i--){let r=t.connections.out[i];if(r.from===t.nodes[s]&&r.to===this.nodes[o]){t.connections.out.splice(i,1);break}}for(i=t.connections.in.length-1;i>=0;i--){let r=t.connections.in[i];if(r.from===this.nodes[o]&&r.to===t.nodes[s]){t.connections.in.splice(i,1);break}}}}else if(t instanceof K)for(o=0;o<this.nodes.length;o++){for(this.nodes[o].disconnect(t,e),s=this.connections.out.length-1;s>=0;s--){let r=this.connections.out[s];if(r.from===this.nodes[o]&&r.to===t){this.connections.out.splice(s,1);break}}if(e)for(s=this.connections.in.length-1;s>=0;s--){let r=this.connections.in[s];if(r.from===t&&r.to===this.nodes[o]){this.connections.in.splice(s,1);break}}}}clear(){for(let t=0;t<this.nodes.length;t++)this.nodes[t].clear()}toJSON(){return{size:this.nodes.length,nodeIndices:this.nodes.map(t=>t.index),connections:{in:this.connections.in.length,out:this.connections.out.length,self:this.connections.self.length}}}}});var Te={};ct(Te,{default:()=>Ot});var Ot,Ft=C(()=>{"use strict";mt();ce();pt();Jt();Ot=class n{nodes;connections;output;dropout=0;constructor(){this.output=null,this.nodes=[],this.connections={in:[],out:[],self:[]}}activate(t,e=!1){let o=ft.acquire(this.nodes.length);if(t!==void 0&&t.length!==this.nodes.length)throw new Error("Array with values should be same as the amount of nodes!");let s=1;e&&this.dropout>0?(s=Math.random()>=this.dropout?1:0,this.nodes.forEach(r=>{r.mask=s})):this.nodes.forEach(r=>{r.mask=1});for(let r=0;r<this.nodes.length;r++){let a;t===void 0?a=this.nodes[r].activate():a=this.nodes[r].activate(t[r]),o[r]=a}let i=Array.from(o);return ft.release(o),i}propagate(t,e,o){if(o!==void 0&&o.length!==this.nodes.length)throw new Error("Array with values should be same as the amount of nodes!");for(let s=this.nodes.length-1;s>=0;s--)o===void 0?this.nodes[s].propagate(t,e,!0,0):this.nodes[s].propagate(t,e,!0,0,o[s])}connect(t,e,o){if(!this.output)throw new Error("Layer output is not defined. Cannot connect from this layer.");let s=[];return t instanceof n?s=t.input(this,e,o):(t instanceof tt||t instanceof K)&&(s=this.output.connect(t,e,o)),s}gate(t,e){if(!this.output)throw new Error("Layer output is not defined. Cannot gate from this layer.");this.output.gate(t,e)}set(t){for(let e=0;e<this.nodes.length;e++){let o=this.nodes[e];o instanceof K?(t.bias!==void 0&&(o.bias=t.bias),o.squash=t.squash||o.squash,o.type=t.type||o.type):this.isGroup(o)&&o.set(t)}}disconnect(t,e){e=e||!1;let o,s,i;if(t instanceof tt)for(o=0;o<this.nodes.length;o++)for(s=0;s<t.nodes.length;s++){for(this.nodes[o].disconnect(t.nodes[s],e),i=this.connections.out.length-1;i>=0;i--){let r=this.connections.out[i];if(r.from===this.nodes[o]&&r.to===t.nodes[s]){this.connections.out.splice(i,1);break}}if(e)for(i=this.connections.in.length-1;i>=0;i--){let r=this.connections.in[i];if(r.from===t.nodes[s]&&r.to===this.nodes[o]){this.connections.in.splice(i,1);break}}}else if(t instanceof K)for(o=0;o<this.nodes.length;o++){for(this.nodes[o].disconnect(t,e),s=this.connections.out.length-1;s>=0;s--){let r=this.connections.out[s];if(r.from===this.nodes[o]&&r.to===t){this.connections.out.splice(s,1);break}}if(e)for(i=this.connections.in.length-1;i>=0;i--){let r=this.connections.in[i];if(r.from===t&&r.to===this.nodes[o]){this.connections.in.splice(i,1);break}}}}clear(){for(let t=0;t<this.nodes.length;t++)this.nodes[t].clear()}input(t,e,o){if(t instanceof n&&(t=t.output),e=e||X.ALL_TO_ALL,!this.output)throw new Error("Layer output (acting as input target) is not defined.");return t.connect(this.output,e,o)}static dense(t){let e=new n,o=new tt(t);return e.nodes.push(...o.nodes),e.output=o,e.input=(s,i,r)=>(s instanceof n&&(s=s.output),i=i||X.ALL_TO_ALL,s.connect(o,i,r)),e}static lstm(t){let e=new n,o=new tt(t),s=new tt(t),i=new tt(t),r=new tt(t),a=new tt(t);o.set({bias:1}),s.set({bias:1}),r.set({bias:1}),i.set({bias:0}),a.set({bias:0}),i.connect(o,X.ALL_TO_ALL),i.connect(s,X.ALL_TO_ALL),i.connect(r,X.ALL_TO_ALL),i.connect(i,X.ONE_TO_ONE);let l=i.connect(a,X.ALL_TO_ALL);return r.gate(l,_t.OUTPUT),i.nodes.forEach((h,u)=>{let p=h.connections.self.find(c=>c.to===h&&c.from===h);p?(p.gater=s.nodes[u],s.nodes[u].connections.gated.includes(p)||s.nodes[u].connections.gated.push(p)):console.warn(`LSTM Warning: No self-connection found for memory cell node ${u}`)}),e.nodes=[...o.nodes,...s.nodes,...i.nodes,...r.nodes,...a.nodes],e.output=a,e.input=(h,u,p)=>{h instanceof n&&(h=h.output),u=u||X.ALL_TO_ALL;let c=[],d=h.connect(i,u,p);return c=c.concat(d),c=c.concat(h.connect(o,u,p)),c=c.concat(h.connect(r,u,p)),c=c.concat(h.connect(s,u,p)),o.gate(d,_t.INPUT),c},e}static gru(t){let e=new n,o=new tt(t),s=new tt(t),i=new tt(t),r=new tt(t),a=new tt(t),l=new tt(t);l.set({bias:0,squash:F.identity,type:"variant"}),r.set({squash:F.tanh}),s.set({bias:0,squash:F.inverse,type:"variant"}),o.set({bias:1}),i.set({bias:0}),l.connect(o,X.ALL_TO_ALL),l.connect(i,X.ALL_TO_ALL),o.connect(s,X.ONE_TO_ONE,1);let h=l.connect(r,X.ALL_TO_ALL);i.gate(h,_t.OUTPUT);let u=l.connect(a,X.ALL_TO_ALL),p=r.connect(a,X.ALL_TO_ALL);return o.gate(u,_t.OUTPUT),s.gate(p,_t.OUTPUT),a.connect(l,X.ONE_TO_ONE,1),e.nodes=[...o.nodes,...s.nodes,...i.nodes,...r.nodes,...a.nodes,...l.nodes],e.output=a,e.input=(c,d,f)=>{c instanceof n&&(c=c.output),d=d||X.ALL_TO_ALL;let m=[];return m=m.concat(c.connect(o,d,f)),m=m.concat(c.connect(i,d,f)),m=m.concat(c.connect(r,d,f)),m},e}static memory(t,e){let o=new n,s=null;for(let r=0;r<e;r++){let a=new tt(t);a.set({squash:F.identity,bias:0,type:"variant"}),s?.connect(a,X.ONE_TO_ONE,1),o.nodes.push(a),s=a}o.nodes.reverse();let i=new tt(0);for(let r of o.nodes)this.prototype.isGroup(r)?i.nodes=i.nodes.concat(r.nodes):console.warn("Unexpected Node type found directly in Memory layer nodes list during output group creation.");return o.output=i,o.input=(r,a,l)=>{r instanceof n&&(r=r.output),a=a||X.ALL_TO_ALL;let h=o.nodes[o.nodes.length-1];if(!this.prototype.isGroup(h))throw new Error("Memory layer input block is not a Group.");if(r.nodes.length!==h.nodes.length)throw new Error(`Previous layer size (${r.nodes.length}) must be same as memory size (${h.nodes.length})`);return r.connect(h,X.ONE_TO_ONE,1)},o}static batchNorm(t){let e=n.dense(t);e.batchNorm=!0;let o=e.activate.bind(e);return e.activate=function(s,i=!1){let r=o(s,i),a=r.reduce((u,p)=>u+p,0)/r.length,l=r.reduce((u,p)=>u+(p-a)**2,0)/r.length,h=(jt(),q(xe)).NORM_EPSILON;return r.map(u=>(u-a)/Math.sqrt(l+h))},e}static layerNorm(t){let e=n.dense(t);e.layerNorm=!0;let o=e.activate.bind(e);return e.activate=function(s,i=!1){let r=o(s,i),a=r.reduce((u,p)=>u+p,0)/r.length,l=r.reduce((u,p)=>u+(p-a)**2,0)/r.length,h=(jt(),q(xe)).NORM_EPSILON;return r.map(u=>(u-a)/Math.sqrt(l+h))},e}static conv1d(t,e,o=1,s=0){let i=new n;return i.nodes=Array.from({length:t},()=>new K),i.output=new tt(t),i.conv1d={kernelSize:e,stride:o,padding:s},i.activate=function(r){return r?r.slice(0,t):this.nodes.map(a=>a.activate())},i}static attention(t,e=1){let o=new n;return o.nodes=Array.from({length:t},()=>new K),o.output=new tt(t),o.attention={heads:e},o.activate=function(s){if(!s)return this.nodes.map(r=>r.activate());let i=s.reduce((r,a)=>r+a,0)/s.length;return Array(t).fill(i)},o}isGroup(t){return!!t&&typeof t.set=="function"&&Array.isArray(t.nodes)}}});var ao={};ct(ao,{mutateImpl:()=>os});function os(n){if(n==null)throw new Error("No (correct) mutate method given!");let t;if(typeof n=="string"?t=n:t=n?.name??n?.type??n?.identity,!t){for(let o in Gt)if(n===Gt[o]){t=o;break}}let e=t?ns[t]:void 0;if(!e){G.warnings&&console.warn("[mutate] Unknown mutation method ignored:",t);return}e.call(this,n),this._topoDirty=!0}function is(){let n=this;if(n._enforceAcyclic&&(n._topoDirty=!0),G.deterministicChainMode){let l=this.nodes.find(w=>w.type==="input"),h=this.nodes.find(w=>w.type==="output");if(!l||!h)return;n._detChain||(this.connections.some(w=>w.from===l&&w.to===h)||this.connect(l,h),n._detChain=[l]);let u=n._detChain,p=u[u.length-1],c=this.connections.find(w=>w.from===p&&w.to===h);c||(c=this.connect(p,h)[0]);let d=c.gater;this.disconnect(c.from,c.to);let f=new K("hidden",void 0,n._rand);f.mutate(Gt.MOD_ACTIVATION);let m=this.nodes.indexOf(h),_=Math.min(m,this.nodes.length-this.output);this.nodes.splice(_,0,f),n._nodeIndexDirty=!0;let y=this.connect(p,f)[0],g=this.connect(f,h)[0];u.push(f),n._preferredChainEdge=g,d&&this.gate(d,n._rand()>=.5?y:g);for(let w=0;w<u.length;w++){let v=u[w],b=w+1<u.length?u[w+1]:h,M=v.connections.out.find(x=>x.to===b);if(M){for(let x of v.connections.out.slice())if(x!==M)try{this.disconnect(x.from,x.to)}catch{}}}return}if(this.connections.length===0){let l=this.nodes.find(u=>u.type==="input"),h=this.nodes.find(u=>u.type==="output");if(l&&h)this.connect(l,h);else return}let t=this.connections[Math.floor(n._rand()*this.connections.length)];if(!t)return;let e=t.gater;this.disconnect(t.from,t.to);let o=new K("hidden",void 0,n._rand);o.mutate(Gt.MOD_ACTIVATION);let s=this.nodes.indexOf(t.to),i=Math.min(s,this.nodes.length-this.output);this.nodes.splice(i,0,o),n._nodeIndexDirty=!0;let r=this.connect(t.from,o)[0],a=this.connect(o,t.to)[0];n._preferredChainEdge=a,e&&this.gate(e,n._rand()>=.5?r:a)}function ss(){let n=this.nodes.filter(s=>s.type==="hidden");if(n.length===0){G.warnings&&console.warn("No hidden nodes left to remove!");return}let e=n[Math.floor(this._rand()*n.length)];this.remove(e);let o=this.connections[0];o&&(o.weight+=1e-4)}function rs(){let n=this;n._enforceAcyclic&&(n._topoDirty=!0);let t=[];for(let o=0;o<this.nodes.length-this.output;o++){let s=this.nodes[o];for(let i=Math.max(o+1,this.input);i<this.nodes.length;i++){let r=this.nodes[i];s.isProjectingTo(r)||t.push([s,r])}}if(t.length===0)return;let e=t[Math.floor(n._rand()*t.length)];this.connect(e[0],e[1])}function as(){let n=this,t=this.connections.filter(o=>{let s=o.from.connections.out.length>1,i=o.to.connections.in.length>1,r=this.nodes.filter(l=>l.type===o.to.type&&Math.abs(this.nodes.indexOf(l)-this.nodes.indexOf(o.to))<Math.max(this.input,this.output)),a=!1;return r.length>0&&this.connections.filter(h=>h.from===o.from&&r.includes(h.to)).length<=1&&(a=!0),s&&i&&this.nodes.indexOf(o.to)>this.nodes.indexOf(o.from)&&!a});if(t.length===0)return;let e=t[Math.floor(n._rand()*t.length)];this.disconnect(e.from,e.to)}function cs(n){let t=this.connections.concat(this.selfconns);if(t.length===0)return;let e=t[Math.floor(this._rand()*t.length)],o=this._rand()*(n.max-n.min)+n.min;e.weight+=o}function ls(n){if(this.nodes.length<=this.input)return;let t=Math.floor(this._rand()*(this.nodes.length-this.input)+this.input);this.nodes[t].mutate(n)}function hs(n){let t=n.mutateOutput??!0,e=this.nodes.length-this.input-(t?0:this.output);if(e<=0){G.warnings&&console.warn("No nodes available for activation function mutation based on config.");return}let o=Math.floor(this._rand()*e+this.input);this.nodes[o].mutate(n)}function us(){let n=this;if(n._enforceAcyclic)return;let t=this.nodes.filter((o,s)=>s>=this.input&&o.connections.self.length===0);if(t.length===0){G.warnings&&console.warn("All eligible nodes already have self-connections.");return}let e=t[Math.floor(n._rand()*t.length)];this.connect(e,e)}function ps(){if(this.selfconns.length===0){G.warnings&&console.warn("No self-connections exist to remove.");return}let n=this.selfconns[Math.floor(this._rand()*this.selfconns.length)];this.disconnect(n.from,n.to)}function fs(){let n=this,e=this.connections.concat(this.selfconns).filter(r=>r.gater===null);if(e.length===0||this.nodes.length<=this.input){G.warnings&&console.warn("All connections are already gated.");return}let o=Math.floor(n._rand()*(this.nodes.length-this.input)+this.input),s=this.nodes[o],i=e[Math.floor(n._rand()*e.length)];this.gate(s,i)}function ds(){if(this.gates.length===0){G.warnings&&console.warn("No gated connections to ungate.");return}let n=Math.floor(this._rand()*this.gates.length),t=this.gates[n];this.ungate(t)}function ms(){let n=this;if(n._enforceAcyclic)return;let t=[];for(let o=this.input;o<this.nodes.length;o++){let s=this.nodes[o];for(let i=this.input;i<o;i++){let r=this.nodes[i];s.isProjectingTo(r)||t.push([s,r])}}if(t.length===0)return;let e=t[Math.floor(n._rand()*t.length)];this.connect(e[0],e[1])}function gs(){let n=this.connections.filter(e=>e.from.connections.out.length>1&&e.to.connections.in.length>1&&this.nodes.indexOf(e.from)>this.nodes.indexOf(e.to));if(n.length===0)return;let t=n[Math.floor(this._rand()*n.length)];this.disconnect(t.from,t.to)}function ys(n){let t=this,e=n.mutateOutput??!0,o=this.nodes.length-this.input-(e?0:this.output);if(o<2)return;let s=Math.floor(t._rand()*o+this.input),i=Math.floor(t._rand()*o+this.input);for(;s===i;)i=Math.floor(t._rand()*o+this.input);let r=this.nodes[s],a=this.nodes[i],l=r.bias,h=r.squash;r.bias=a.bias,r.squash=a.squash,a.bias=l,a.squash=h}function _s(){if(this._enforceAcyclic||this.connections.length===0)return;let t=this.connections[Math.floor(Math.random()*this.connections.length)],e=t.gater;this.disconnect(t.from,t.to);let s=(Ft(),q(Te)).default.lstm(1);s.nodes.forEach(i=>{i.type="hidden",this.nodes.push(i)}),this.connect(t.from,s.nodes[0]),this.connect(s.output.nodes[0],t.to),e&&this.gate(e,this.connections[this.connections.length-1])}function bs(){if(this._enforceAcyclic||this.connections.length===0)return;let t=this.connections[Math.floor(Math.random()*this.connections.length)],e=t.gater;this.disconnect(t.from,t.to);let s=(Ft(),q(Te)).default.gru(1);s.nodes.forEach(i=>{i.type="hidden",this.nodes.push(i)}),this.connect(t.from,s.nodes[0]),this.connect(s.output.nodes[0],t.to),e&&this.gate(e,this.connections[this.connections.length-1])}function vs(n){if(this.nodes.length<=this.input)return;let t=this,e=Math.floor(t._rand()*(this.nodes.length-this.input)+this.input),o=this.nodes[e],s=n?.min??-1,i=n?.max??1,r=()=>t._rand()*(i-s)+s;for(let a of o.connections.in)a.weight=r();for(let a of o.connections.out)a.weight=r();for(let a of o.connections.self)a.weight=r()}function ws(){let n=this.nodes.filter(o=>o.type==="hidden");if(!n.length)return;let e=n[Math.floor(this._rand()*n.length)];e._batchNorm=!0}var ns,co=C(()=>{"use strict";mt();ee();vt();ns={ADD_NODE:is,SUB_NODE:ss,ADD_CONN:rs,SUB_CONN:as,MOD_WEIGHT:cs,MOD_BIAS:ls,MOD_ACTIVATION:hs,ADD_SELF_CONN:us,SUB_SELF_CONN:ps,ADD_GATE:fs,SUB_GATE:ds,ADD_BACK_CONN:ms,SUB_BACK_CONN:gs,SWAP_NODES:ys,ADD_LSTM_NODE:_s,ADD_GRU_NODE:bs,REINIT_WEIGHT:vs,BATCH_NORM:ws}});var De={};ct(De,{__trainingInternals:()=>xs,applyGradientClippingImpl:()=>lo,trainImpl:()=>Ts,trainSetImpl:()=>ho});function Ms(n,t,e,o){if(e.window<=1&&e.type!=="ema"&&e.type!=="adaptive-ema")return n;let s=e.type;if(s==="median"){let i=[...t].sort((a,l)=>a-l),r=Math.floor(i.length/2);return i.length%2?i[r]:(i[r-1]+i[r])/2}if(s==="ema")return o.emaValue==null?o.emaValue=n:o.emaValue=o.emaValue+e.emaAlpha*(n-o.emaValue),o.emaValue;if(s==="adaptive-ema"){let i=t.reduce((u,p)=>u+p,0)/t.length,r=t.reduce((u,p)=>u+(p-i)*(p-i),0)/t.length,a=e.emaAlpha||2/(e.window+1),l=r/Math.max(i*i,1e-8),h=Math.min(.95,Math.max(a,a*(1+2*l)));return o.adaptiveBaseEmaValue==null?(o.adaptiveBaseEmaValue=n,o.adaptiveEmaValue=n):(o.adaptiveBaseEmaValue=o.adaptiveBaseEmaValue+a*(n-o.adaptiveBaseEmaValue),o.adaptiveEmaValue=o.adaptiveEmaValue+h*(n-o.adaptiveEmaValue)),Math.min(o.adaptiveEmaValue,o.adaptiveBaseEmaValue)}if(s==="gaussian"){let i=e.window/3||1,r=0,a=0,l=t.length;for(let h=0;h<l;h++){let u=Math.exp(-.5*Math.pow((h-(l-1))/i,2));r+=u,a+=u*t[h]}return a/(r||1)}if(s==="trimmed"){let i=Math.min(.49,Math.max(0,e.trimmedRatio||.1)),r=[...t].sort((h,u)=>h-u),a=Math.floor(r.length*i),l=r.slice(a,r.length-a);return l.reduce((h,u)=>h+u,0)/(l.length||1)}if(s==="wma"){let i=0,r=0;for(let a=0;a<t.length;a++){let l=a+1;i+=l,r+=l*t[a]}return r/(i||1)}return t.reduce((i,r)=>i+r,0)/t.length}function Ss(n,t,e,o){if(e.window<=1&&e.type!=="ema")return n;if(e.type==="median"){let s=[...t].sort((r,a)=>r-a),i=Math.floor(s.length/2);return s.length%2?s[i]:(s[i-1]+s[i])/2}return e.type==="ema"?(o.plateauEmaValue==null?o.plateauEmaValue=n:o.plateauEmaValue=o.plateauEmaValue+e.emaAlpha*(n-o.plateauEmaValue),o.plateauEmaValue):t.reduce((s,i)=>s+i,0)/t.length}function Ns(n,t){if(!t._mixedPrecision.enabled)return!1;if(t._forceNextOverflow)return t._forceNextOverflow=!1,!0;let e=!1;return n.nodes.forEach(o=>{o._fp32Bias!==void 0&&(Number.isFinite(o.bias)||(e=!0))}),e}function As(n){n.nodes.forEach(t=>{t.connections.in.forEach(e=>{e.totalDeltaWeight=0}),t.connections.self.forEach(e=>{e.totalDeltaWeight=0}),typeof t.totalDeltaBias=="number"&&(t.totalDeltaBias=0),t.previousDeltaBias=0})}function Os(n,t){t<=1||n.nodes.forEach(e=>{e.connections.in.forEach(o=>{typeof o.totalDeltaWeight=="number"&&(o.totalDeltaWeight/=t)}),e.connections.self.forEach(o=>{typeof o.totalDeltaWeight=="number"&&(o.totalDeltaWeight/=t)}),typeof e.totalDeltaBias=="number"&&(e.totalDeltaBias/=t)})}function Es(n,t,e,o,s){let i=0;return n.nodes.forEach(r=>{r.type!=="input"&&(r.applyBatchUpdatesWithOptimizer({type:t.type,baseType:t.baseType,beta1:t.beta1,beta2:t.beta2,eps:t.eps,weightDecay:t.weightDecay,momentum:t.momentum??o,lrScale:e,t:s._optimizerStep,la_k:t.la_k,la_alpha:t.la_alpha}),r.connections.in.forEach(a=>{typeof a.previousDeltaWeight=="number"&&(i+=a.previousDeltaWeight*a.previousDeltaWeight)}),r.connections.self.forEach(a=>{typeof a.previousDeltaWeight=="number"&&(i+=a.previousDeltaWeight*a.previousDeltaWeight)}))}),Math.sqrt(i)}function Cs(n){n._mixedPrecisionState.goodSteps++;let t=n._mpIncreaseEvery||200;n._mixedPrecisionState.goodSteps>=t&&n._mixedPrecision.lossScale<n._mixedPrecisionState.maxLossScale&&(n._mixedPrecision.lossScale*=2,n._mixedPrecisionState.goodSteps=0,n._mixedPrecisionState.scaleUpEvents=(n._mixedPrecisionState.scaleUpEvents||0)+1)}function Is(n){n._mixedPrecisionState.badSteps++,n._mixedPrecisionState.goodSteps=0,n._mixedPrecision.lossScale=Math.max(n._mixedPrecisionState.minLossScale,Math.floor(n._mixedPrecision.lossScale/2)||1),n._mixedPrecisionState.overflowCount=(n._mixedPrecisionState.overflowCount||0)+1,n._mixedPrecisionState.scaleDownEvents=(n._mixedPrecisionState.scaleDownEvents||0)+1,n._lastOverflowStep=n._optimizerStep}function lo(n,t){let e=n,s=(()=>{let a=[];if(t.mode.startsWith("layerwise"))if(n.layers&&n.layers.length>0)for(let l=0;l<n.layers.length;l++){let h=n.layers[l];if(!h||!h.nodes)continue;let u=[];h.nodes.forEach(p=>{!p||p.type==="input"||(p.connections.in.forEach(c=>{typeof c.totalDeltaWeight=="number"&&u.push(c.totalDeltaWeight)}),p.connections.self.forEach(c=>{typeof c.totalDeltaWeight=="number"&&u.push(c.totalDeltaWeight)}),typeof p.totalDeltaBias=="number"&&u.push(p.totalDeltaBias))}),u.length&&a.push(u)}else n.nodes.forEach(l=>{if(l.type==="input")return;let h=[];l.connections.in.forEach(u=>{typeof u.totalDeltaWeight=="number"&&h.push(u.totalDeltaWeight)}),l.connections.self.forEach(u=>{typeof u.totalDeltaWeight=="number"&&h.push(u.totalDeltaWeight)}),typeof l.totalDeltaBias=="number"&&h.push(l.totalDeltaBias),h.length&&a.push(h)});else{let l=[];n.nodes.forEach(h=>{h.connections.in.forEach(u=>{typeof u.totalDeltaWeight=="number"&&l.push(u.totalDeltaWeight)}),h.connections.self.forEach(u=>{typeof u.totalDeltaWeight=="number"&&l.push(u.totalDeltaWeight)}),typeof h.totalDeltaBias=="number"&&l.push(h.totalDeltaBias)}),l.length&&a.push(l)}return a})();e._lastGradClipGroupCount=s.length;let i=(a,l)=>{if(!a.length)return 0;let h=[...a].sort((p,c)=>Math.abs(p)-Math.abs(c)),u=Math.min(h.length-1,Math.max(0,Math.floor(l/100*h.length-1)));return Math.abs(h[u])},r=a=>{let l=0;n.nodes.forEach(h=>{if(t.mode.startsWith("layerwise")&&h.type==="input")return;let u=t.mode.startsWith("layerwise")?s[l++]:s[0];h.connections.in.forEach(p=>{typeof p.totalDeltaWeight=="number"&&(p.totalDeltaWeight=a(p.totalDeltaWeight,u))}),h.connections.self.forEach(p=>{typeof p.totalDeltaWeight=="number"&&(p.totalDeltaWeight=a(p.totalDeltaWeight,u))}),typeof h.totalDeltaBias=="number"&&(h.totalDeltaBias=a(h.totalDeltaBias,u))})};if(t.mode==="norm"||t.mode==="layerwiseNorm"){let a=t.maxNorm||1;s.forEach(l=>{let h=Math.sqrt(l.reduce((u,p)=>u+p*p,0));if(h>a&&h>0){let u=a/h;r((p,c)=>c===l?p*u:p)}})}else if(t.mode==="percentile"||t.mode==="layerwisePercentile"){let a=t.percentile||99;s.forEach(l=>{let h=i(l,a);h<=0||r((u,p)=>p===l&&Math.abs(u)>h?h*Math.sign(u):u)})}}function ho(n,t,e,o,s,i,r,a,l){let h=n,u=0,p=0;h._gradAccumMicroBatches=0;let c=0,d=n.nodes.filter(m=>m.type==="output"),f;typeof a=="function"?f=a:a&&typeof a.fn=="function"?f=a.fn:a&&typeof a.calculate=="function"?f=a.calculate:f=()=>0;for(let m=0;m<t.length;m++){let _=t[m],y=_.input,g=_.output;if(y.length!==n.input||g.length!==n.output){G.warnings&&console.warn(`Data point ${m} has incorrect dimensions (input: ${y.length}/${n.input}, output: ${g.length}/${n.output}), skipping.`);continue}try{let w=n.activate(y,!0);if(l&&l.type&&l.type!=="sgd"){for(let v=0;v<d.length;v++)d[v].propagate(s,i,!1,r,g[v]);for(let v=n.nodes.length-1;v>=0;v--){let b=n.nodes[v];b.type==="output"||b.type==="input"||b.propagate(s,i,!1,r)}}else{for(let v=0;v<d.length;v++)d[v].propagate(s,i,!0,r,g[v]);for(let v=n.nodes.length-1;v>=0;v--){let b=n.nodes[v];b.type==="output"||b.type==="input"||b.propagate(s,i,!0,r)}}u+=f(g,w),p++,c++}catch(w){G.warnings&&console.warn(`Error processing data point ${m} (input: ${JSON.stringify(y)}): ${w.message}. Skipping.`)}p>0&&((m+1)%e===0||m===t.length-1)&&l&&l.type&&l.type!=="sgd"&&(h._gradAccumMicroBatches++,(h._gradAccumMicroBatches%o===0||m===t.length-1)&&(h._optimizerStep=(h._optimizerStep||0)+1,Ns(n,h)?(As(n),h._mixedPrecision.enabled&&Is(h),h._lastGradNorm=0):(h._currentGradClip&&lo(n,h._currentGradClip),o>1&&h._accumulationReduction==="average"&&Os(n,o),h._lastGradNorm=Es(n,l,s,i,h),h._mixedPrecision.enabled&&Cs(h))),p=0)}return h._lastGradNorm==null&&(h._lastGradNorm=0),c>0?u/c:0}function Ts(n,t,e){let o=n;if(!t||t.length===0||t[0].input.length!==n.input||t[0].output.length!==n.output)throw new Error("Dataset is invalid or dimensions do not match network input/output size!");if(e=e||{},typeof e.iterations>"u"&&typeof e.error>"u")throw G.warnings&&console.warn("Missing `iterations` or `error` option."),new Error("Missing `iterations` or `error` option. Training requires a stopping condition.");G.warnings&&(typeof e.rate>"u"&&(console.warn("Missing `rate` option"),console.warn("Missing `rate` option, using default learning rate 0.3.")),typeof e.iterations>"u"&&console.warn("Missing `iterations` option. Training will run potentially indefinitely until `error` threshold is met."));let s=e.error??-1/0,i=e.cost||wt.mse;if(typeof i!="function"&&!(typeof i=="object"&&(typeof i.fn=="function"||typeof i.calculate=="function")))throw new Error("Invalid cost function provided to Network.train.");let r=e.rate??.3,a=e.dropout||0;if(a<0||a>=1)throw new Error("dropout must be in [0,1)");let l=e.momentum||0,h=e.batchSize||1;if(h>t.length)throw new Error("Batch size cannot be larger than the dataset length.");let u=e.accumulationSteps||1;if(o._accumulationReduction=e.accumulationReduction==="sum"?"sum":"average",u<1||!Number.isFinite(u))throw new Error("accumulationSteps must be >=1");if(e.gradientClip){let L=e.gradientClip;L.mode?o._currentGradClip={mode:L.mode,maxNorm:L.maxNorm,percentile:L.percentile}:typeof L.maxNorm=="number"?o._currentGradClip={mode:"norm",maxNorm:L.maxNorm}:typeof L.percentile=="number"&&(o._currentGradClip={mode:"percentile",percentile:L.percentile}),o._gradClipSeparateBias=!!L.separateBias}else o._currentGradClip=void 0,o._gradClipSeparateBias=!1;if(e.mixedPrecision){let L=e.mixedPrecision===!0?{lossScale:1024}:e.mixedPrecision;o._mixedPrecision.enabled=!0,o._mixedPrecision.lossScale=L.lossScale||1024;let V=L.dynamic||{};o._mixedPrecisionState.minLossScale=V.minScale||1,o._mixedPrecisionState.maxLossScale=V.maxScale||65536,o._mpIncreaseEvery=V.increaseEvery||V.stableStepsForIncrease||200,n.connections.forEach(U=>{U._fp32Weight=U.weight}),n.nodes.forEach(U=>{U.type!=="input"&&(U._fp32Bias=U.bias)})}else o._mixedPrecision.enabled=!1,o._mixedPrecision.lossScale=1,o._mpIncreaseEvery=200;let p=new Set(["sgd","rmsprop","adagrad","adam","adamw","amsgrad","adamax","nadam","radam","lion","adabelief","lookahead"]),c;if(typeof e.optimizer<"u"){if(typeof e.optimizer=="string")c={type:e.optimizer.toLowerCase()};else if(typeof e.optimizer=="object"&&e.optimizer!==null)c={...e.optimizer},typeof c.type=="string"&&(c.type=c.type.toLowerCase());else throw new Error("Invalid optimizer option; must be string or object");if(!p.has(c.type))throw new Error(`Unknown optimizer type: ${c.type}`);if(c.type==="lookahead"){if(c.baseType||(c.baseType="adam"),c.baseType==="lookahead")throw new Error("Nested lookahead (baseType lookahead) is not supported");if(!p.has(c.baseType))throw new Error(`Unknown baseType for lookahead: ${c.baseType}`);c.la_k=c.la_k||5,c.la_alpha=c.la_alpha??.5}}let d=e.iterations??Number.MAX_SAFE_INTEGER,f=Date.now(),m=1/0,_=Math.max(1,e.movingAverageWindow||1),y=e.movingAverageType||"sma",g=(()=>{if(y==="ema")return e.emaAlpha&&e.emaAlpha>0&&e.emaAlpha<=1?e.emaAlpha:2/(_+1)})(),w=Math.max(1,e.plateauMovingAverageWindow||_),v=e.plateauMovingAverageType||y,b=(()=>{if(v==="ema")return e.plateauEmaAlpha&&e.plateauEmaAlpha>0&&e.plateauEmaAlpha<=1?e.plateauEmaAlpha:2/(w+1)})(),M=e.earlyStopPatience,x=e.earlyStopMinDelta||0,N=1/0,T=0,k=_,R=new Array(k),j=0,W=0,S=L=>{if(k===1){R[0]=L,j=1,W=0;return}R[W]=L,W=(W+1)%k,j<k&&j++},A=()=>{if(j===0)return[];if(j<k)return R.slice(0,j);let L=new Array(j),V=W;for(let U=0;U<j;U++)L[U]=R[(V+U)%k];return L},O,E,B,D=w,J=new Array(D),I=0,Z=0,z=L=>{if(D===1){J[0]=L,I=1,Z=0;return}J[Z]=L,Z=(Z+1)%D,I<D&&I++},H=()=>{if(I===0)return[];if(I<D)return J.slice(0,I);let L=new Array(I),V=Z;for(let U=0;U<I;U++)L[U]=J[(V+U)%D];return L},rt;n.dropout=a;let lt=0;for(let L=1;L<=d;L++){n._maybePrune&&n._maybePrune((o._globalEpoch||0)+L);let V=ho(n,t,h,u,r,l,{},i,c);lt=L,S(V);let U=V;if(_>1||y==="ema"||y==="adaptive-ema"){let Q=A();if(y==="median"){let $=[...Q].sort((at,gt)=>at-gt),et=Math.floor($.length/2);U=$.length%2?$[et]:($[et-1]+$[et])/2}else if(y==="ema")O==null?O=V:O=O+g*(V-O),U=O;else if(y==="adaptive-ema"){let $=Q.reduce((yt,Ct)=>yt+Ct,0)/Q.length,et=Q.reduce((yt,Ct)=>yt+(Ct-$)*(Ct-$),0)/Q.length,at=g||2/(_+1),gt=et/Math.max($*$,1e-8),xt=Math.min(.95,Math.max(at,at*(1+2*gt)));E==null?(E=V,B=V):(E=E+at*(V-E),B=B+xt*(V-B)),U=Math.min(B,E)}else if(y==="gaussian"){let $=Q,et=$.length,at=_/3||1,gt=0,xt=0;for(let yt=0;yt<et;yt++){let Ct=Math.exp(-.5*Math.pow((yt-(et-1))/at,2));gt+=Ct,xt+=Ct*$[yt]}U=xt/(gt||1)}else if(y==="trimmed"){let $=Math.min(.49,Math.max(0,e.trimmedRatio||.1)),et=[...Q].sort((xt,yt)=>xt-yt),at=Math.floor(et.length*$),gt=et.slice(at,et.length-at);U=gt.reduce((xt,yt)=>xt+yt,0)/(gt.length||1)}else if(y==="wma"){let $=0,et=0;for(let at=0;at<Q.length;at++){let gt=at+1;$+=gt,et+=gt*Q[at]}U=et/($||1)}else U=Q.reduce(($,et)=>$+et,0)/Q.length}m=U,z(V);let nt=V;if(w>1||v==="ema")if(v==="median"){let Q=[...H()].sort((et,at)=>et-at),$=Math.floor(Q.length/2);nt=Q.length%2?Q[$]:(Q[$-1]+Q[$])/2}else if(v==="ema")rt==null?rt=V:rt=rt+b*(V-rt),nt=rt;else{let Q=H();nt=Q.reduce(($,et)=>$+et,0)/Q.length}if(typeof e.metricsHook=="function")try{e.metricsHook({iteration:L,error:m,plateauError:nt,gradNorm:o._lastGradNorm??0})}catch{}if(e.checkpoint&&typeof e.checkpoint.save=="function"){if(e.checkpoint.last)try{e.checkpoint.save({type:"last",iteration:L,error:m,network:n.toJSON()})}catch{}if(e.checkpoint.best&&(m<n._checkpointBestError||n._checkpointBestError==null)){n._checkpointBestError=m;try{e.checkpoint.save({type:"best",iteration:L,error:m,network:n.toJSON()})}catch{}}}if(e.schedule&&e.schedule.iterations&&L%e.schedule.iterations===0)try{e.schedule.function({error:m,iteration:L})}catch{}if(m<N-x?(N=m,T=0):M&&T++,M&&T>=M||m<=s)break}return n.nodes.forEach(L=>{L.type==="hidden"&&(L.mask=1)}),n.dropout=0,o._globalEpoch=(o._globalEpoch||0)+lt,{error:m,iterations:lt,time:Date.now()-f}}var xs,ke=C(()=>{"use strict";pt();vt();xs={computeMonitoredError:Ms,computePlateauMetric:Ss}});var po=qt((Ia,uo)=>{uo.exports=function(t){return t&&typeof t=="object"&&typeof t.copy=="function"&&typeof t.fill=="function"&&typeof t.readUInt8=="function"}});var fo=qt((Ta,je)=>{typeof Object.create=="function"?je.exports=function(t,e){t.super_=e,t.prototype=Object.create(e.prototype,{constructor:{value:t,enumerable:!1,writable:!0,configurable:!0}})}:je.exports=function(t,e){t.super_=e;var o=function(){};o.prototype=e.prototype,t.prototype=new o,t.prototype.constructor=t}});var _o=qt(Y=>{var Ds=/%[sdj%]/g;Y.format=function(n){if(!me(n)){for(var t=[],e=0;e<arguments.length;e++)t.push(Et(arguments[e]));return t.join(" ")}for(var e=1,o=arguments,s=o.length,i=String(n).replace(Ds,function(a){if(a==="%%")return"%";if(e>=s)return a;switch(a){case"%s":return String(o[e++]);case"%d":return Number(o[e++]);case"%j":try{return JSON.stringify(o[e++])}catch{return"[Circular]"}default:return a}}),r=o[e];e<s;r=o[++e])de(r)||!$t(r)?i+=" "+r:i+=" "+Et(r);return i};Y.deprecate=function(n,t){if(St(global.process))return function(){return Y.deprecate(n,t).apply(this,arguments)};if(process.noDeprecation===!0)return n;var e=!1;function o(){if(!e){if(process.throwDeprecation)throw new Error(t);process.traceDeprecation?console.trace(t):console.error(t),e=!0}return n.apply(this,arguments)}return o};var le={},Le;Y.debuglog=function(n){if(St(Le)&&(Le=process.env.NODE_DEBUG||""),n=n.toUpperCase(),!le[n])if(new RegExp("\\b"+n+"\\b","i").test(Le)){var t=process.pid;le[n]=function(){var e=Y.format.apply(Y,arguments);console.error("%s %d: %s",n,t,e)}}else le[n]=function(){};return le[n]};function Et(n,t){var e={seen:[],stylize:js};return arguments.length>=3&&(e.depth=arguments[2]),arguments.length>=4&&(e.colors=arguments[3]),Ge(t)?e.showHidden=t:t&&Y._extend(e,t),St(e.showHidden)&&(e.showHidden=!1),St(e.depth)&&(e.depth=2),St(e.colors)&&(e.colors=!1),St(e.customInspect)&&(e.customInspect=!0),e.colors&&(e.stylize=ks),fe(e,n,e.depth)}Y.inspect=Et;Et.colors={bold:[1,22],italic:[3,23],underline:[4,24],inverse:[7,27],white:[37,39],grey:[90,39],black:[30,39],blue:[34,39],cyan:[36,39],green:[32,39],magenta:[35,39],red:[31,39],yellow:[33,39]};Et.styles={special:"cyan",number:"yellow",boolean:"yellow",undefined:"grey",null:"bold",string:"green",date:"magenta",regexp:"red"};function ks(n,t){var e=Et.styles[t];return e?"\x1B["+Et.colors[e][0]+"m"+n+"\x1B["+Et.colors[e][1]+"m":n}function js(n,t){return n}function Ls(n){var t={};return n.forEach(function(e,o){t[e]=!0}),t}function fe(n,t,e){if(n.customInspect&&t&&pe(t.inspect)&&t.inspect!==Y.inspect&&!(t.constructor&&t.constructor.prototype===t)){var o=t.inspect(e,n);return me(o)||(o=fe(n,o,e)),o}var s=Ps(n,t);if(s)return s;var i=Object.keys(t),r=Ls(i);if(n.showHidden&&(i=Object.getOwnPropertyNames(t)),ue(t)&&(i.indexOf("message")>=0||i.indexOf("description")>=0))return Pe(t);if(i.length===0){if(pe(t)){var a=t.name?": "+t.name:"";return n.stylize("[Function"+a+"]","special")}if(he(t))return n.stylize(RegExp.prototype.toString.call(t),"regexp");if(Be(t))return n.stylize(Date.prototype.toString.call(t),"date");if(ue(t))return Pe(t)}var l="",h=!1,u=["{","}"];if(mo(t)&&(h=!0,u=["[","]"]),pe(t)){var p=t.name?": "+t.name:"";l=" [Function"+p+"]"}if(he(t)&&(l=" "+RegExp.prototype.toString.call(t)),Be(t)&&(l=" "+Date.prototype.toUTCString.call(t)),ue(t)&&(l=" "+Pe(t)),i.length===0&&(!h||t.length==0))return u[0]+l+u[1];if(e<0)return he(t)?n.stylize(RegExp.prototype.toString.call(t),"regexp"):n.stylize("[Object]","special");n.seen.push(t);var c;return h?c=Rs(n,t,e,r,i):c=i.map(function(d){return We(n,t,e,r,d,h)}),n.seen.pop(),Ws(c,l,u)}function Ps(n,t){if(St(t))return n.stylize("undefined","undefined");if(me(t)){var e="'"+JSON.stringify(t).replace(/^"|"$/g,"").replace(/'/g,"\\'").replace(/\\"/g,'"')+"'";return n.stylize(e,"string")}if(go(t))return n.stylize(""+t,"number");if(Ge(t))return n.stylize(""+t,"boolean");if(de(t))return n.stylize("null","null")}function Pe(n){return"["+Error.prototype.toString.call(n)+"]"}function Rs(n,t,e,o,s){for(var i=[],r=0,a=t.length;r<a;++r)yo(t,String(r))?i.push(We(n,t,e,o,String(r),!0)):i.push("");return s.forEach(function(l){l.match(/^\d+$/)||i.push(We(n,t,e,o,l,!0))}),i}function We(n,t,e,o,s,i){var r,a,l;if(l=Object.getOwnPropertyDescriptor(t,s)||{value:t[s]},l.get?l.set?a=n.stylize("[Getter/Setter]","special"):a=n.stylize("[Getter]","special"):l.set&&(a=n.stylize("[Setter]","special")),yo(o,s)||(r="["+s+"]"),a||(n.seen.indexOf(l.value)<0?(de(e)?a=fe(n,l.value,null):a=fe(n,l.value,e-1),a.indexOf(`
-`)>-1&&(i?a=a.split(`
-`).map(function(h){return"  "+h}).join(`
-`).substr(2):a=`
-`+a.split(`
-`).map(function(h){return"   "+h}).join(`
-`))):a=n.stylize("[Circular]","special")),St(r)){if(i&&s.match(/^\d+$/))return a;r=JSON.stringify(""+s),r.match(/^"([a-zA-Z_][a-zA-Z_0-9]*)"$/)?(r=r.substr(1,r.length-2),r=n.stylize(r,"name")):(r=r.replace(/'/g,"\\'").replace(/\\"/g,'"').replace(/(^"|"$)/g,"'"),r=n.stylize(r,"string"))}return r+": "+a}function Ws(n,t,e){var o=0,s=n.reduce(function(i,r){return o++,r.indexOf(`
-`)>=0&&o++,i+r.replace(/\u001b\[\d\d?m/g,"").length+1},0);return s>60?e[0]+(t===""?"":t+`
- `)+" "+n.join(`,
-  `)+" "+e[1]:e[0]+t+" "+n.join(", ")+" "+e[1]}function mo(n){return Array.isArray(n)}Y.isArray=mo;function Ge(n){return typeof n=="boolean"}Y.isBoolean=Ge;function de(n){return n===null}Y.isNull=de;function Bs(n){return n==null}Y.isNullOrUndefined=Bs;function go(n){return typeof n=="number"}Y.isNumber=go;function me(n){return typeof n=="string"}Y.isString=me;function Gs(n){return typeof n=="symbol"}Y.isSymbol=Gs;function St(n){return n===void 0}Y.isUndefined=St;function he(n){return $t(n)&&Fe(n)==="[object RegExp]"}Y.isRegExp=he;function $t(n){return typeof n=="object"&&n!==null}Y.isObject=$t;function Be(n){return $t(n)&&Fe(n)==="[object Date]"}Y.isDate=Be;function ue(n){return $t(n)&&(Fe(n)==="[object Error]"||n instanceof Error)}Y.isError=ue;function pe(n){return typeof n=="function"}Y.isFunction=pe;function Fs(n){return n===null||typeof n=="boolean"||typeof n=="number"||typeof n=="string"||typeof n=="symbol"||typeof n>"u"}Y.isPrimitive=Fs;Y.isBuffer=po();function Fe(n){return Object.prototype.toString.call(n)}function Re(n){return n<10?"0"+n.toString(10):n.toString(10)}var $s=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];function Hs(){var n=new Date,t=[Re(n.getHours()),Re(n.getMinutes()),Re(n.getSeconds())].join(":");return[n.getDate(),$s[n.getMonth()],t].join(" ")}Y.log=function(){console.log("%s - %s",Hs(),Y.format.apply(Y,arguments))};Y.inherits=fo();Y._extend=function(n,t){if(!t||!$t(t))return n;for(var e=Object.keys(t),o=e.length;o--;)n[e[o]]=t[e[o]];return n};function yo(n,t){return Object.prototype.hasOwnProperty.call(n,t)}});var wo=qt((ka,Xt)=>{"use strict";var qs=process.platform==="win32",Mt=_o();function ge(n,t){for(var e=[],o=0;o<n.length;o++){var s=n[o];!s||s==="."||(s===".."?e.length&&e[e.length-1]!==".."?e.pop():t&&e.push(".."):e.push(s))}return e}function Kt(n){for(var t=n.length-1,e=0;e<=t&&!n[e];e++);for(var o=t;o>=0&&!n[o];o--);return e===0&&o===t?n:e>o?[]:n.slice(e,o+1)}var bo=/^([a-zA-Z]:|[\\\/]{2}[^\\\/]+[\\\/]+[^\\\/]+)?([\\\/])?([\s\S]*?)$/,Us=/^([\s\S]*?)((?:\.{1,2}|[^\\\/]+?|)(\.[^.\/\\]*|))(?:[\\\/]*)$/,ot={};function ye(n){var t=bo.exec(n),e=(t[1]||"")+(t[2]||""),o=t[3]||"",s=Us.exec(o),i=s[1],r=s[2],a=s[3];return[e,i,r,a]}function $e(n){var t=bo.exec(n),e=t[1]||"",o=!!e&&e[1]!==":";return{device:e,isUnc:o,isAbsolute:o||!!t[2],tail:t[3]}}function vo(n){return"\\\\"+n.replace(/^[\\\/]+/,"").replace(/[\\\/]+/g,"\\")}ot.resolve=function(){for(var n="",t="",e=!1,o=arguments.length-1;o>=-1;o--){var s;if(o>=0?s=arguments[o]:n?(s=process.env["="+n],(!s||s.substr(0,3).toLowerCase()!==n.toLowerCase()+"\\")&&(s=n+"\\")):s=process.cwd(),Mt.isString(s)){if(!s)continue}else throw new TypeError("Arguments to path.resolve must be strings");var i=$e(s),r=i.device,a=i.isUnc,l=i.isAbsolute,h=i.tail;if(!(r&&n&&r.toLowerCase()!==n.toLowerCase())&&(n||(n=r),e||(t=h+"\\"+t,e=l),n&&e))break}return a&&(n=vo(n)),t=ge(t.split(/[\\\/]+/),!e).join("\\"),n+(e?"\\":"")+t||"."};ot.normalize=function(n){var t=$e(n),e=t.device,o=t.isUnc,s=t.isAbsolute,i=t.tail,r=/[\\\/]$/.test(i);return i=ge(i.split(/[\\\/]+/),!s).join("\\"),!i&&!s&&(i="."),i&&r&&(i+="\\"),o&&(e=vo(e)),e+(s?"\\":"")+i};ot.isAbsolute=function(n){return $e(n).isAbsolute};ot.join=function(){for(var n=[],t=0;t<arguments.length;t++){var e=arguments[t];if(!Mt.isString(e))throw new TypeError("Arguments to path.join must be strings");e&&n.push(e)}var o=n.join("\\");return/^[\\\/]{2}[^\\\/]/.test(n[0])||(o=o.replace(/^[\\\/]{2,}/,"\\")),ot.normalize(o)};ot.relative=function(n,t){n=ot.resolve(n),t=ot.resolve(t);for(var e=n.toLowerCase(),o=t.toLowerCase(),s=Kt(t.split("\\")),i=Kt(e.split("\\")),r=Kt(o.split("\\")),a=Math.min(i.length,r.length),l=a,h=0;h<a;h++)if(i[h]!==r[h]){l=h;break}if(l==0)return t;for(var u=[],h=l;h<i.length;h++)u.push("..");return u=u.concat(s.slice(l)),u.join("\\")};ot._makeLong=function(n){if(!Mt.isString(n))return n;if(!n)return"";var t=ot.resolve(n);return/^[a-zA-Z]\:\\/.test(t)?"\\\\?\\"+t:/^\\\\[^?.]/.test(t)?"\\\\?\\UNC\\"+t.substring(2):n};ot.dirname=function(n){var t=ye(n),e=t[0],o=t[1];return!e&&!o?".":(o&&(o=o.substr(0,o.length-1)),e+o)};ot.basename=function(n,t){var e=ye(n)[2];return t&&e.substr(-1*t.length)===t&&(e=e.substr(0,e.length-t.length)),e};ot.extname=function(n){return ye(n)[3]};ot.format=function(n){if(!Mt.isObject(n))throw new TypeError("Parameter 'pathObject' must be an object, not "+typeof n);var t=n.root||"";if(!Mt.isString(t))throw new TypeError("'pathObject.root' must be a string or undefined, not "+typeof n.root);var e=n.dir,o=n.base||"";return e?e[e.length-1]===ot.sep?e+o:e+ot.sep+o:o};ot.parse=function(n){if(!Mt.isString(n))throw new TypeError("Parameter 'pathString' must be a string, not "+typeof n);var t=ye(n);if(!t||t.length!==4)throw new TypeError("Invalid path '"+n+"'");return{root:t[0],dir:t[0]+t[1].slice(0,-1),base:t[2],ext:t[3],name:t[2].slice(0,t[2].length-t[3].length)}};ot.sep="\\";ot.delimiter=";";var zs=/^(\/?|)([\s\S]*?)((?:\.{1,2}|[^\/]+?|)(\.[^.\/]*|))(?:[\/]*)$/,st={};function _e(n){return zs.exec(n).slice(1)}st.resolve=function(){for(var n="",t=!1,e=arguments.length-1;e>=-1&&!t;e--){var o=e>=0?arguments[e]:process.cwd();if(Mt.isString(o)){if(!o)continue}else throw new TypeError("Arguments to path.resolve must be strings");n=o+"/"+n,t=o[0]==="/"}return n=ge(n.split("/"),!t).join("/"),(t?"/":"")+n||"."};st.normalize=function(n){var t=st.isAbsolute(n),e=n&&n[n.length-1]==="/";return n=ge(n.split("/"),!t).join("/"),!n&&!t&&(n="."),n&&e&&(n+="/"),(t?"/":"")+n};st.isAbsolute=function(n){return n.charAt(0)==="/"};st.join=function(){for(var n="",t=0;t<arguments.length;t++){var e=arguments[t];if(!Mt.isString(e))throw new TypeError("Arguments to path.join must be strings");e&&(n?n+="/"+e:n+=e)}return st.normalize(n)};st.relative=function(n,t){n=st.resolve(n).substr(1),t=st.resolve(t).substr(1);for(var e=Kt(n.split("/")),o=Kt(t.split("/")),s=Math.min(e.length,o.length),i=s,r=0;r<s;r++)if(e[r]!==o[r]){i=r;break}for(var a=[],r=i;r<e.length;r++)a.push("..");return a=a.concat(o.slice(i)),a.join("/")};st._makeLong=function(n){return n};st.dirname=function(n){var t=_e(n),e=t[0],o=t[1];return!e&&!o?".":(o&&(o=o.substr(0,o.length-1)),e+o)};st.basename=function(n,t){var e=_e(n)[2];return t&&e.substr(-1*t.length)===t&&(e=e.substr(0,e.length-t.length)),e};st.extname=function(n){return _e(n)[3]};st.format=function(n){if(!Mt.isObject(n))throw new TypeError("Parameter 'pathObject' must be an object, not "+typeof n);var t=n.root||"";if(!Mt.isString(t))throw new TypeError("'pathObject.root' must be a string or undefined, not "+typeof n.root);var e=n.dir?n.dir+st.sep:"",o=n.base||"";return e+o};st.parse=function(n){if(!Mt.isString(n))throw new TypeError("Parameter 'pathString' must be a string, not "+typeof n);var t=_e(n);if(!t||t.length!==4)throw new TypeError("Invalid path '"+n+"'");return t[1]=t[1]||"",t[2]=t[2]||"",t[3]=t[3]||"",{root:t[0],dir:t[0]+t[1].slice(0,-1),base:t[2],ext:t[3],name:t[2].slice(0,t[2].length-t[3].length)}};st.sep="/";st.delimiter=":";qs?Xt.exports=ot:Xt.exports=st;Xt.exports.posix=st;Xt.exports.win32=ot});var He={};ct(He,{TestWorker:()=>be,default:()=>Js});var Mo,So,be,Js,qe=C(()=>{"use strict";Mo=Li("child_process"),So=Pi(wo(),1),be=class{worker;constructor(t,e){this.worker=(0,Mo.fork)(So.default.join(__dirname,"/worker")),this.worker.send({set:t,cost:e.name})}evaluate(t){return new Promise(e=>{let o=t.serialize(),s={activations:o[0],states:o[1],conns:o[2]},i=this.worker;this.worker.on("message",function r(a){i.removeListener("message",r),e(a)}),this.worker.send(s)})}terminate(){this.worker.kill()}},Js=be});var ze={};ct(ze,{TestWorker:()=>Ue});var Ue,Je=C(()=>{"use strict";ve();Ue=class n{worker;url;constructor(t,e){let o=new Blob([n._createBlobString(e)]);this.url=window.URL.createObjectURL(o),this.worker=new Worker(this.url);let s={set:new Float64Array(t).buffer};this.worker.postMessage(s,[s.set])}evaluate(t){return new Promise((e,o)=>{let s=t.serialize(),i={activations:new Float64Array(s[0]).buffer,states:new Float64Array(s[1]).buffer,conns:new Float64Array(s[2]).buffer};this.worker.onmessage=function(r){let a=new Float64Array(r.data.buffer)[0];e(a)},this.worker.postMessage(i,[i.activations,i.states,i.conns])})}terminate(){this.worker.terminate(),window.URL.revokeObjectURL(this.url)}static _createBlobString(t){return`
+`),
+      (c += `var F = [${u}];
+`),
+      (c += `var A = new ${p}([${i.join(',')}]);
+`),
+      (c += `var S = new ${p}([${r.join(',')}]);
+`),
+      (c += `function activate(input){
+`),
+      (c += `if (!input || input.length !== ${n.input}) { throw new Error('Invalid input size. Expected ${n.input}, got ' + (input ? input.length : 'undefined')); }
+`),
+      (c += a.join(`
+`)),
+      (c += `}
+`),
+      (c += `return activate;
+})();`),
+      c
+    );
+  }
+  var Mn,
+    xn = C(() => {
+      'use strict';
+      Mn = (n) => (
+        (n = n.replace(/\/\*\s*istanbul\s+ignore\s+[\s\S]*?\*\//g, '')),
+        (n = n.replace(/cov_[\w$]+\(\)\.(s|f|b)\[\d+\](\[\d+\])?\+\+/g, '')),
+        (n = n.replace(/cov_[\w$]+\(\)/g, '')),
+        (n = n.replace(/^\s*\/\/ # sourceMappingURL=.*\s*$/gm, '')),
+        (n = n.replace(/\(\s*,\s*/g, '( ')),
+        (n = n.replace(/\s*,\s*\)/g, ' )')),
+        (n = n.trim()),
+        (n = n.replace(/^\s*;\s*$/gm, '')),
+        (n = n.replace(/;{2,}/g, ';')),
+        (n = n.replace(/^\s*[,;]?\s*$/gm, '')),
+        n
+      );
+    });
+  function Nn() {
+    let n = this;
+    if (!n._enforceAcyclic) {
+      (n._topoOrder = null), (n._topoDirty = !1);
+      return;
+    }
+    let t = new Map();
+    this.nodes.forEach((s) => t.set(s, 0));
+    for (let s of this.connections)
+      s.from !== s.to && t.set(s.to, (t.get(s.to) || 0) + 1);
+    let e = [];
+    this.nodes.forEach((s) => {
+      (s.type === 'input' || (t.get(s) || 0) === 0) && e.push(s);
+    });
+    let o = [];
+    for (; e.length; ) {
+      let s = e.shift();
+      o.push(s);
+      for (let i of s.connections.out) {
+        if (i.to === s) continue;
+        let r = (t.get(i.to) || 0) - 1;
+        t.set(i.to, r), r === 0 && e.push(i.to);
+      }
+    }
+    (n._topoOrder = o.length === this.nodes.length ? o : this.nodes.slice()),
+      (n._topoDirty = !1);
+  }
+  function An(n, t) {
+    if (n === t) return !0;
+    let e = new Set(),
+      o = [n];
+    for (; o.length; ) {
+      let s = o.pop();
+      if (s === t) return !0;
+      if (!e.has(s)) {
+        e.add(s);
+        for (let i of s.connections.out) i.to !== s && o.push(i.to);
+      }
+    }
+    return !1;
+  }
+  var On = C(() => {
+    'use strict';
+  });
+  function se(n = !1) {
+    let t = this;
+    if (!n && !t._slabDirty) return;
+    t._nodeIndexDirty && Cn.call(this);
+    let e = this.connections.length,
+      o = t._useFloat32Weights ? new Float32Array(e) : new Float64Array(e),
+      s = new Uint32Array(e),
+      i = new Uint32Array(e);
+    for (let r = 0; r < e; r++) {
+      let a = this.connections[r];
+      (o[r] = a.weight), (s[r] = a.from.index >>> 0), (i[r] = a.to.index >>> 0);
+    }
+    (t._connWeights = o),
+      (t._connFrom = s),
+      (t._connTo = i),
+      (t._slabDirty = !1),
+      (t._adjDirty = !0);
+  }
+  function En() {
+    se.call(this);
+    let n = this;
+    return { weights: n._connWeights, from: n._connFrom, to: n._connTo };
+  }
+  function Cn() {
+    let n = this;
+    for (let t = 0; t < this.nodes.length; t++) this.nodes[t].index = t;
+    n._nodeIndexDirty = !1;
+  }
+  function Ki() {
+    let n = this;
+    if (!n._connFrom || !n._connTo) return;
+    let t = this.nodes.length,
+      e = n._connFrom.length,
+      o = new Uint32Array(t);
+    for (let l = 0; l < e; l++) o[n._connFrom[l]]++;
+    let s = new Uint32Array(t + 1),
+      i = 0;
+    for (let l = 0; l < t; l++) (s[l] = i), (i += o[l]);
+    s[t] = i;
+    let r = new Uint32Array(e),
+      a = s.slice();
+    for (let l = 0; l < e; l++) {
+      let h = n._connFrom[l];
+      r[a[h]++] = l;
+    }
+    (n._outStart = s), (n._outOrder = r), (n._adjDirty = !1);
+  }
+  function Xi(n) {
+    let t = this;
+    return (
+      !n &&
+      t._enforceAcyclic &&
+      !t._topoDirty &&
+      this.gates.length === 0 &&
+      this.selfconns.length === 0 &&
+      this.dropout === 0 &&
+      t._weightNoiseStd === 0 &&
+      t._weightNoisePerHidden.length === 0 &&
+      t._stochasticDepth.length === 0
+    );
+  }
+  function In(n) {
+    let t = this;
+    if (
+      (se.call(this),
+      t._adjDirty && Ki.call(this),
+      !t._connWeights ||
+        !t._connFrom ||
+        !t._connTo ||
+        !t._outStart ||
+        !t._outOrder)
+    )
+      return this.activate(n, !1);
+    t._topoDirty && this._computeTopoOrder(),
+      t._nodeIndexDirty && Cn.call(this);
+    let e = t._topoOrder || this.nodes,
+      o = this.nodes.length,
+      s = t._activationPrecision === 'f32';
+    (!t._fastA ||
+      t._fastA.length !== o ||
+      (s && !(t._fastA instanceof Float32Array)) ||
+      (!s && !(t._fastA instanceof Float64Array))) &&
+      (t._fastA = s ? new Float32Array(o) : new Float64Array(o)),
+      (!t._fastS ||
+        t._fastS.length !== o ||
+        (s && !(t._fastS instanceof Float32Array)) ||
+        (!s && !(t._fastS instanceof Float64Array))) &&
+        (t._fastS = s ? new Float32Array(o) : new Float64Array(o));
+    let i = t._fastA,
+      r = t._fastS;
+    r.fill(0);
+    for (let f = 0; f < this.input; f++)
+      (i[f] = n[f]),
+        (this.nodes[f].activation = n[f]),
+        (this.nodes[f].state = 0);
+    let a = t._connWeights,
+      l = t._connTo,
+      h = t._outOrder,
+      u = t._outStart;
+    for (let f = 0; f < e.length; f++) {
+      let m = e[f],
+        _ = m.index >>> 0;
+      if (_ >= this.input) {
+        let v = r[_] + m.bias,
+          b = m.squash(v);
+        (m.state = r[_]), (m.activation = b), (i[_] = b);
+      }
+      let y = u[_],
+        g = u[_ + 1],
+        w = i[_];
+      for (let v = y; v < g; v++) {
+        let b = h[v];
+        r[l[b]] += w * a[b];
+      }
+    }
+    let p = o - this.output,
+      c = ft.acquire(this.output);
+    for (let f = 0; f < this.output; f++) c[f] = i[p + f];
+    let d = Array.from(c);
+    return ft.release(c), d;
+  }
+  function Tn(n) {
+    return Xi.call(this, n);
+  }
+  var Dn = C(() => {
+    'use strict';
+    Jt();
+  });
+  function kn(n, t) {
+    let e = [...n];
+    return (
+      t === 'snip'
+        ? e.sort((o, s) => {
+            let i =
+                Math.abs(o.totalDeltaWeight) ||
+                Math.abs(o.previousDeltaWeight) ||
+                0,
+              r =
+                Math.abs(s.totalDeltaWeight) ||
+                Math.abs(s.previousDeltaWeight) ||
+                0,
+              a = i ? Math.abs(o.weight) * i : Math.abs(o.weight),
+              l = r ? Math.abs(s.weight) * r : Math.abs(s.weight);
+            return a - l;
+          })
+        : e.sort((o, s) => Math.abs(o.weight) - Math.abs(s.weight)),
+      e
+    );
+  }
+  function Yi(n, t, e) {
+    let o = n,
+      s = 0;
+    for (; n.connections.length < t && s < e; ) {
+      s++;
+      let i = n.nodes[Math.floor(o._rand() * n.nodes.length)],
+        r = n.nodes[Math.floor(o._rand() * n.nodes.length)];
+      !i ||
+        !r ||
+        i === r ||
+        n.connections.some((a) => a.from === i && a.to === r) ||
+        (o._enforceAcyclic && n.nodes.indexOf(i) > n.nodes.indexOf(r)) ||
+        n.connect(i, r);
+    }
+  }
+  function jn(n) {
+    let t = this._pruningConfig;
+    if (
+      !t ||
+      n < t.start ||
+      n > t.end ||
+      (t.lastPruneIter != null && n === t.lastPruneIter) ||
+      (n - t.start) % (t.frequency || 1) !== 0
+    )
+      return;
+    let e = this._initialConnectionCount;
+    if (!e) return;
+    let o = (n - t.start) / Math.max(1, t.end - t.start),
+      s = t.targetSparsity * Math.min(1, Math.max(0, o)),
+      i = Math.max(1, Math.floor(e * (1 - s))),
+      r = this.connections.length - i;
+    if (r <= 0) {
+      t.lastPruneIter = n;
+      return;
+    }
+    let l = kn(this.connections, t.method || 'magnitude').slice(0, r);
+    if (
+      (l.forEach((h) => this.disconnect(h.from, h.to)),
+      t.regrowFraction && t.regrowFraction > 0)
+    ) {
+      let h = Math.floor(l.length * t.regrowFraction);
+      Yi(this, i, h * 10);
+    }
+    (t.lastPruneIter = n), (this._topoDirty = !0);
+  }
+  function Ln(n, t = 'magnitude') {
+    if (n <= 0) return;
+    n >= 1 && (n = 0.999);
+    let e = this;
+    e._evoInitialConnCount ||
+      (e._evoInitialConnCount = this.connections.length);
+    let o = e._evoInitialConnCount,
+      s = Math.max(1, Math.floor(o * (1 - n))),
+      i = this.connections.length - s;
+    if (i <= 0) return;
+    kn(this.connections, t)
+      .slice(0, i)
+      .forEach((l) => this.disconnect(l.from, l.to)),
+      (e._topoDirty = !0);
+  }
+  function Pn() {
+    let n = this._initialConnectionCount;
+    return n ? 1 - this.connections.length / n : 0;
+  }
+  var Rn = C(() => {
+    'use strict';
+  });
+  function Wn(n, t) {
+    if (!this.nodes.includes(n))
+      throw new Error(
+        'Gating node must be part of the network to gate a connection!'
+      );
+    if (t.gater) {
+      G.warnings && console.warn('Connection is already gated. Skipping.');
+      return;
+    }
+    n.gate(t), this.gates.push(t);
+  }
+  function Bn(n) {
+    let t = this.gates.indexOf(n);
+    if (t === -1) {
+      G.warnings &&
+        console.warn('Attempted to ungate a connection not in the gates list.');
+      return;
+    }
+    this.gates.splice(t, 1), n.gater?.ungate(n);
+  }
+  var Gn = C(() => {
+    'use strict';
+    ee();
+    vt();
+  });
+  function Fn(n) {
+    (this._rngState = n >>> 0),
+      (this._rand = () => {
+        this._rngState = (this._rngState + 1831565813) >>> 0;
+        let t = Math.imul(
+          this._rngState ^ (this._rngState >>> 15),
+          1 | this._rngState
+        );
+        return (
+          (t ^= t + Math.imul(t ^ (t >>> 7), 61 | t)),
+          ((t ^ (t >>> 14)) >>> 0) / 4294967296
+        );
+      });
+  }
+  function $n() {
+    return { step: this._trainingStep, state: this._rngState };
+  }
+  function Hn(n) {
+    (this._rand = n), (this._rngState = void 0);
+  }
+  function qn() {
+    return this._rngState;
+  }
+  function Un(n) {
+    typeof n == 'number' && (this._rngState = n >>> 0);
+  }
+  var zn = C(() => {
+    'use strict';
+  });
+  function Zi(n) {
+    try {
+      return globalThis.structuredClone
+        ? globalThis.structuredClone(n)
+        : JSON.parse(JSON.stringify(n));
+    } catch {
+      return JSON.parse(JSON.stringify(n));
+    }
+  }
+  function Jn() {
+    let n = this._lastStats;
+    return n ? Zi(n) : null;
+  }
+  var Vn = C(() => {
+    'use strict';
+  });
+  function Kn(n) {
+    let t = this,
+      e = this.nodes.indexOf(n);
+    if (e === -1) throw new Error('Node not in network');
+    if (n.type === 'input' || n.type === 'output')
+      throw new Error('Cannot remove input or output node from the network.');
+    this.gates = this.gates.filter((r) =>
+      r.gater === n ? ((r.gater = null), !1) : !0
+    );
+    let o = n.connections.in.slice(),
+      s = n.connections.out.slice();
+    o.forEach((r) => this.disconnect(r.from, r.to)),
+      s.forEach((r) => this.disconnect(r.from, r.to)),
+      n.connections.self.slice().forEach(() => this.disconnect(n, n));
+    let i = this.nodes.splice(e, 1)[0];
+    G.enableNodePooling && i && ie(i),
+      o.forEach((r) => {
+        s.forEach((a) => {
+          if (!r.from || !a.to || r.from === a.to) return;
+          this.connections.some((h) => h.from === r.from && h.to === a.to) ||
+            this.connect(r.from, a.to);
+        });
+      }),
+      (t._topoDirty = !0),
+      (t._nodeIndexDirty = !0),
+      (t._slabDirty = !0),
+      (t._adjDirty = !0);
+  }
+  var Xn = C(() => {
+    'use strict';
+    Ee();
+    vt();
+  });
+  function Yn(n, t, e) {
+    if (this._enforceAcyclic && this.nodes.indexOf(n) > this.nodes.indexOf(t))
+      return [];
+    let o = n.connect(t, e);
+    for (let s of o)
+      if (n !== t) this.connections.push(s);
+      else {
+        if (this._enforceAcyclic) continue;
+        this.selfconns.push(s);
+      }
+    return o.length && ((this._topoDirty = !0), (this._slabDirty = !0)), o;
+  }
+  function Zn(n, t) {
+    let e = n === t ? this.selfconns : this.connections;
+    for (let o = 0; o < e.length; o++) {
+      let s = e[o];
+      if (s.from === n && s.to === t) {
+        s.gater && this.ungate(s), e.splice(o, 1);
+        break;
+      }
+    }
+    n.disconnect(t), (this._topoDirty = !0), (this._slabDirty = !0);
+  }
+  var Qn = C(() => {
+    'use strict';
+  });
+  function to() {
+    this.nodes.forEach((r, a) => (r.index = a));
+    let n = this.nodes.map((r) => r.activation),
+      t = this.nodes.map((r) => r.state),
+      e = this.nodes.map((r) => r.squash.name),
+      o = this.connections
+        .concat(this.selfconns)
+        .map((r) => ({
+          from: r.from.index,
+          to: r.to.index,
+          weight: r.weight,
+          gater: r.gater ? r.gater.index : null,
+        })),
+      s = this.input,
+      i = this.output;
+    return [n, t, e, o, s, i];
+  }
+  function eo(n, t, e) {
+    let [o, s, i, r, a, l] = n,
+      h = typeof t == 'number' ? t : a || 0,
+      u = typeof e == 'number' ? e : l || 0,
+      p = new (bt(), q(Pt)).default(h, u);
+    return (
+      (p.nodes = []),
+      (p.connections = []),
+      (p.selfconns = []),
+      (p.gates = []),
+      o.forEach((c, d) => {
+        let f;
+        d < h
+          ? (f = 'input')
+          : d >= o.length - u
+          ? (f = 'output')
+          : (f = 'hidden');
+        let m = new K(f);
+        (m.activation = c), (m.state = s[d]);
+        let _ = i[d];
+        F[_] ||
+          console.warn(
+            `Unknown squash function '${String(
+              _
+            )}' encountered during deserialize. Falling back to identity.`
+          ),
+          (m.squash = F[_] || F.identity),
+          (m.index = d),
+          p.nodes.push(m);
+      }),
+      r.forEach((c) => {
+        if (c.from < p.nodes.length && c.to < p.nodes.length) {
+          let d = p.nodes[c.from],
+            f = p.nodes[c.to],
+            m = p.connect(d, f, c.weight)[0];
+          m &&
+            c.gater != null &&
+            (c.gater < p.nodes.length
+              ? p.gate(p.nodes[c.gater], m)
+              : console.warn(
+                  'Invalid gater index encountered during deserialize; skipping gater assignment.'
+                ));
+        } else
+          console.warn(
+            'Invalid connection indices encountered during deserialize; skipping connection.'
+          );
+      }),
+      p
+    );
+  }
+  function no() {
+    let n = {
+      formatVersion: 2,
+      input: this.input,
+      output: this.output,
+      dropout: this.dropout,
+      nodes: [],
+      connections: [],
+    };
+    return (
+      this.nodes.forEach((t, e) => {
+        if (
+          ((t.index = e),
+          n.nodes.push({
+            type: t.type,
+            bias: t.bias,
+            squash: t.squash.name,
+            index: e,
+            geneId: t.geneId,
+          }),
+          t.connections.self.length > 0)
+        ) {
+          let o = t.connections.self[0];
+          n.connections.push({
+            from: e,
+            to: e,
+            weight: o.weight,
+            gater: o.gater ? o.gater.index : null,
+            enabled: o.enabled !== !1,
+          });
+        }
+      }),
+      this.connections.forEach((t) => {
+        typeof t.from.index != 'number' ||
+          typeof t.to.index != 'number' ||
+          n.connections.push({
+            from: t.from.index,
+            to: t.to.index,
+            weight: t.weight,
+            gater: t.gater ? t.gater.index : null,
+            enabled: t.enabled !== !1,
+          });
+      }),
+      n
+    );
+  }
+  function oo(n) {
+    if (!n || typeof n != 'object')
+      throw new Error('Invalid JSON for network.');
+    n.formatVersion !== 2 &&
+      console.warn('fromJSONImpl: Unknown formatVersion, attempting import.');
+    let t = new (bt(), q(Pt)).default(n.input, n.output);
+    return (
+      (t.dropout = n.dropout || 0),
+      (t.nodes = []),
+      (t.connections = []),
+      (t.selfconns = []),
+      (t.gates = []),
+      n.nodes.forEach((e, o) => {
+        let s = new K(e.type);
+        (s.bias = e.bias),
+          (s.squash = F[e.squash] || F.identity),
+          (s.index = o),
+          typeof e.geneId == 'number' && (s.geneId = e.geneId),
+          t.nodes.push(s);
+      }),
+      n.connections.forEach((e) => {
+        if (typeof e.from != 'number' || typeof e.to != 'number') return;
+        let o = t.nodes[e.from],
+          s = t.nodes[e.to],
+          i = t.connect(o, s, e.weight)[0];
+        i &&
+          e.gater != null &&
+          typeof e.gater == 'number' &&
+          t.nodes[e.gater] &&
+          t.gate(t.nodes[e.gater], i),
+          i && typeof e.enabled < 'u' && (i.enabled = e.enabled);
+      }),
+      t
+    );
+  }
+  var io = C(() => {
+    'use strict';
+    mt();
+    Dt();
+    pt();
+  });
+  function so(n, t, e = !1) {
+    if (n.input !== t.input || n.output !== t.output)
+      throw new Error(
+        'Parent networks must have the same input and output sizes for crossover.'
+      );
+    let o = new (bt(), q(Pt)).default(n.input, n.output);
+    (o.connections = []), (o.nodes = []), (o.selfconns = []), (o.gates = []);
+    let s = n.score || 0,
+      i = t.score || 0,
+      r = n.nodes.length,
+      a = t.nodes.length,
+      l;
+    if (e || s === i) {
+      let m = Math.max(r, a),
+        _ = Math.min(r, a);
+      l = Math.floor(Math.random() * (m - _ + 1) + _);
+    } else l = s > i ? r : a;
+    let h = n.output;
+    n.nodes.forEach((m, _) => (m.index = _)),
+      t.nodes.forEach((m, _) => (m.index = _));
+    for (let m = 0; m < l; m++) {
+      let _,
+        y = m < r ? n.nodes[m] : void 0,
+        g = m < a ? t.nodes[m] : void 0;
+      if (m < n.input) _ = y;
+      else if (m >= l - h) {
+        let w = r - (l - m),
+          v = a - (l - m),
+          b = w >= n.input && w < r ? n.nodes[w] : void 0,
+          M = v >= t.input && v < a ? t.nodes[v] : void 0;
+        b && M ? (_ = (n._rand || Math.random)() >= 0.5 ? b : M) : (_ = b || M);
+      } else
+        y && g
+          ? (_ = (n._rand || Math.random)() >= 0.5 ? y : g)
+          : y && (s >= i || e)
+          ? (_ = y)
+          : g && (i >= s || e) && (_ = g);
+      if (_) {
+        let w = new K(_.type);
+        (w.bias = _.bias), (w.squash = _.squash), o.nodes.push(w);
+      }
+    }
+    o.nodes.forEach((m, _) => (m.index = _));
+    let u = {},
+      p = {};
+    n.connections.concat(n.selfconns).forEach((m) => {
+      typeof m.from.index == 'number' &&
+        typeof m.to.index == 'number' &&
+        (u[ht.innovationID(m.from.index, m.to.index)] = {
+          weight: m.weight,
+          from: m.from.index,
+          to: m.to.index,
+          gater: m.gater ? m.gater.index : -1,
+          enabled: m.enabled !== !1,
+        });
+    }),
+      t.connections.concat(t.selfconns).forEach((m) => {
+        typeof m.from.index == 'number' &&
+          typeof m.to.index == 'number' &&
+          (p[ht.innovationID(m.from.index, m.to.index)] = {
+            weight: m.weight,
+            from: m.from.index,
+            to: m.to.index,
+            gater: m.gater ? m.gater.index : -1,
+            enabled: m.enabled !== !1,
+          });
+      });
+    let c = [];
+    Object.keys(u).forEach((m) => {
+      let _ = u[m];
+      if (p[m]) {
+        let y = p[m],
+          g = (n._rand || Math.random)() >= 0.5 ? _ : y;
+        if (_.enabled === !1 || y.enabled === !1) {
+          let w = n._reenableProb ?? t._reenableProb ?? 0.25;
+          g.enabled = Math.random() < w;
+        }
+        c.push(g), delete p[m];
+      } else if (s >= i || e) {
+        if (_.enabled === !1) {
+          let y = n._reenableProb ?? 0.25;
+          _.enabled = Math.random() < y;
+        }
+        c.push(_);
+      }
+    }),
+      (i >= s || e) &&
+        Object.keys(p).forEach((m) => {
+          let _ = p[m];
+          if (_.enabled === !1) {
+            let y = t._reenableProb ?? 0.25;
+            _.enabled = Math.random() < y;
+          }
+          c.push(_);
+        });
+    let f = o.nodes.length;
+    return (
+      c.forEach((m) => {
+        if (m.from < f && m.to < f) {
+          let _ = o.nodes[m.from],
+            y = o.nodes[m.to];
+          if (m.from >= m.to) return;
+          if (!_.isProjectingTo(y)) {
+            let g = o.connect(_, y)[0];
+            g &&
+              ((g.weight = m.weight),
+              (g.enabled = m.enabled !== !1),
+              m.gater !== -1 && m.gater < f && o.gate(o.nodes[m.gater], g));
+          }
+        }
+      }),
+      o
+    );
+  }
+  var ro = C(() => {
+    'use strict';
+    mt();
+    Dt();
+  });
+  var re = {};
+  ct(re, {
+    activateBatch: () => es,
+    activateRaw: () => ts,
+    noTraceActivate: () => Qi,
+  });
+  function Qi(n) {
+    let t = this;
+    if (
+      (t._enforceAcyclic && t._topoDirty && this._computeTopoOrder(),
+      !Array.isArray(n) || n.length !== this.input)
+    )
+      throw new Error(
+        `Input size mismatch: expected ${this.input}, got ${
+          n ? n.length : 'undefined'
+        }`
+      );
+    if (this._canUseFastSlab(!1))
+      try {
+        return this._fastSlabActivate(n);
+      } catch {}
+    let e = ft.acquire(this.output),
+      o = 0;
+    this.nodes.forEach((i, r) => {
+      i.type === 'input'
+        ? i.noTraceActivate(n[r])
+        : i.type === 'output'
+        ? (e[o++] = i.noTraceActivate())
+        : i.noTraceActivate();
+    });
+    let s = Array.from(e);
+    return ft.release(e), s;
+  }
+  function ts(n, t = !1, e = 1e3) {
+    return this._reuseActivationArrays
+      ? this.activate(n, t, e)
+      : this.activate(n, t, e);
+  }
+  function es(n, t = !1) {
+    if (!Array.isArray(n))
+      throw new Error('inputs must be an array of input arrays');
+    let e = new Array(n.length);
+    for (let o = 0; o < n.length; o++) {
+      let s = n[o];
+      if (!Array.isArray(s) || s.length !== this.input)
+        throw new Error(
+          `Input[${o}] size mismatch: expected ${this.input}, got ${
+            s ? s.length : 'undefined'
+          }`
+        );
+      e[o] = this.activate(s, t);
+    }
+    return e;
+  }
+  var ae = C(() => {
+    'use strict';
+    Jt();
+  });
+  var tt,
+    ce = C(() => {
+      'use strict';
+      mt();
+      Ft();
+      vt();
+      pt();
+      tt = class n {
+        nodes;
+        connections;
+        constructor(t) {
+          (this.nodes = []), (this.connections = { in: [], out: [], self: [] });
+          for (let e = 0; e < t; e++) this.nodes.push(new K());
+        }
+        activate(t) {
+          let e = [];
+          if (t !== void 0 && t.length !== this.nodes.length)
+            throw new Error(
+              'Array with values should be same as the amount of nodes!'
+            );
+          for (let o = 0; o < this.nodes.length; o++) {
+            let s =
+              t === void 0
+                ? this.nodes[o].activate()
+                : this.nodes[o].activate(t[o]);
+            e.push(s);
+          }
+          return e;
+        }
+        propagate(t, e, o) {
+          if (o !== void 0 && o.length !== this.nodes.length)
+            throw new Error(
+              'Array with values should be same as the amount of nodes!'
+            );
+          for (let s = this.nodes.length - 1; s >= 0; s--)
+            o === void 0
+              ? this.nodes[s].propagate(t, e, !0, 0)
+              : this.nodes[s].propagate(t, e, !0, 0, o[s]);
+        }
+        connect(t, e, o) {
+          let s = [],
+            i,
+            r;
+          if (t instanceof n) {
+            if (
+              (e === void 0 &&
+                (this !== t
+                  ? (G.warnings &&
+                      console.warn(
+                        'No group connection specified, using ALL_TO_ALL by default.'
+                      ),
+                    (e = X.ALL_TO_ALL))
+                  : (G.warnings &&
+                      console.warn(
+                        'Connecting group to itself, using ONE_TO_ONE by default.'
+                      ),
+                    (e = X.ONE_TO_ONE))),
+              e === X.ALL_TO_ALL || e === X.ALL_TO_ELSE)
+            )
+              for (i = 0; i < this.nodes.length; i++)
+                for (r = 0; r < t.nodes.length; r++) {
+                  if (e === X.ALL_TO_ELSE && this.nodes[i] === t.nodes[r])
+                    continue;
+                  let a = this.nodes[i].connect(t.nodes[r], o);
+                  this.connections.out.push(a[0]),
+                    t.connections.in.push(a[0]),
+                    s.push(a[0]);
+                }
+            else if (e === X.ONE_TO_ONE) {
+              if (this.nodes.length !== t.nodes.length)
+                throw new Error(
+                  'Cannot create ONE_TO_ONE connection: source and target groups must have the same size.'
+                );
+              for (i = 0; i < this.nodes.length; i++) {
+                let a = this.nodes[i].connect(t.nodes[i], o);
+                this === t
+                  ? this.connections.self.push(a[0])
+                  : (this.connections.out.push(a[0]),
+                    t.connections.in.push(a[0])),
+                  s.push(a[0]);
+              }
+            }
+          } else if (t instanceof Ot) s = t.input(this, e, o);
+          else if (t instanceof K)
+            for (i = 0; i < this.nodes.length; i++) {
+              let a = this.nodes[i].connect(t, o);
+              this.connections.out.push(a[0]), s.push(a[0]);
+            }
+          return s;
+        }
+        gate(t, e) {
+          if (e === void 0)
+            throw new Error(
+              'Please specify a gating method: Gating.INPUT, Gating.OUTPUT, or Gating.SELF'
+            );
+          Array.isArray(t) || (t = [t]);
+          let o = [],
+            s = [],
+            i,
+            r;
+          for (i = 0; i < t.length; i++) {
+            let a = t[i];
+            o.includes(a.from) || o.push(a.from),
+              s.includes(a.to) || s.push(a.to);
+          }
+          switch (e) {
+            case _t.INPUT:
+              for (let a = 0; a < t.length; a++) {
+                let l = t[a];
+                this.nodes[a % this.nodes.length].gate(l);
+              }
+              break;
+            case _t.OUTPUT:
+              for (i = 0; i < o.length; i++) {
+                let a = o[i],
+                  l = this.nodes[i % this.nodes.length];
+                for (r = 0; r < a.connections.out.length; r++) {
+                  let h = a.connections.out[r];
+                  t.includes(h) && l.gate(h);
+                }
+              }
+              break;
+            case _t.SELF:
+              for (i = 0; i < o.length; i++) {
+                let a = o[i],
+                  l = this.nodes[i % this.nodes.length],
+                  h = Array.isArray(a.connections.self)
+                    ? a.connections.self[0]
+                    : a.connections.self;
+                t.includes(h) && l.gate(h);
+              }
+              break;
+          }
+        }
+        set(t) {
+          for (let e = 0; e < this.nodes.length; e++)
+            t.bias !== void 0 && (this.nodes[e].bias = t.bias),
+              (this.nodes[e].squash = t.squash || this.nodes[e].squash),
+              (this.nodes[e].type = t.type || this.nodes[e].type);
+        }
+        disconnect(t, e = !1) {
+          let o, s, i;
+          if (t instanceof n)
+            for (o = 0; o < this.nodes.length; o++)
+              for (s = 0; s < t.nodes.length; s++) {
+                for (
+                  this.nodes[o].disconnect(t.nodes[s], e),
+                    i = this.connections.out.length - 1;
+                  i >= 0;
+                  i--
+                ) {
+                  let r = this.connections.out[i];
+                  if (r.from === this.nodes[o] && r.to === t.nodes[s]) {
+                    this.connections.out.splice(i, 1);
+                    break;
+                  }
+                }
+                if (e) {
+                  for (i = this.connections.in.length - 1; i >= 0; i--) {
+                    let r = this.connections.in[i];
+                    if (r.from === t.nodes[s] && r.to === this.nodes[o]) {
+                      this.connections.in.splice(i, 1);
+                      break;
+                    }
+                  }
+                  for (i = t.connections.out.length - 1; i >= 0; i--) {
+                    let r = t.connections.out[i];
+                    if (r.from === t.nodes[s] && r.to === this.nodes[o]) {
+                      t.connections.out.splice(i, 1);
+                      break;
+                    }
+                  }
+                  for (i = t.connections.in.length - 1; i >= 0; i--) {
+                    let r = t.connections.in[i];
+                    if (r.from === this.nodes[o] && r.to === t.nodes[s]) {
+                      t.connections.in.splice(i, 1);
+                      break;
+                    }
+                  }
+                }
+              }
+          else if (t instanceof K)
+            for (o = 0; o < this.nodes.length; o++) {
+              for (
+                this.nodes[o].disconnect(t, e),
+                  s = this.connections.out.length - 1;
+                s >= 0;
+                s--
+              ) {
+                let r = this.connections.out[s];
+                if (r.from === this.nodes[o] && r.to === t) {
+                  this.connections.out.splice(s, 1);
+                  break;
+                }
+              }
+              if (e)
+                for (s = this.connections.in.length - 1; s >= 0; s--) {
+                  let r = this.connections.in[s];
+                  if (r.from === t && r.to === this.nodes[o]) {
+                    this.connections.in.splice(s, 1);
+                    break;
+                  }
+                }
+            }
+        }
+        clear() {
+          for (let t = 0; t < this.nodes.length; t++) this.nodes[t].clear();
+        }
+        toJSON() {
+          return {
+            size: this.nodes.length,
+            nodeIndices: this.nodes.map((t) => t.index),
+            connections: {
+              in: this.connections.in.length,
+              out: this.connections.out.length,
+              self: this.connections.self.length,
+            },
+          };
+        }
+      };
+    });
+  var Te = {};
+  ct(Te, { default: () => Ot });
+  var Ot,
+    Ft = C(() => {
+      'use strict';
+      mt();
+      ce();
+      pt();
+      Jt();
+      Ot = class n {
+        nodes;
+        connections;
+        output;
+        dropout = 0;
+        constructor() {
+          (this.output = null),
+            (this.nodes = []),
+            (this.connections = { in: [], out: [], self: [] });
+        }
+        activate(t, e = !1) {
+          let o = ft.acquire(this.nodes.length);
+          if (t !== void 0 && t.length !== this.nodes.length)
+            throw new Error(
+              'Array with values should be same as the amount of nodes!'
+            );
+          let s = 1;
+          e && this.dropout > 0
+            ? ((s = Math.random() >= this.dropout ? 1 : 0),
+              this.nodes.forEach((r) => {
+                r.mask = s;
+              }))
+            : this.nodes.forEach((r) => {
+                r.mask = 1;
+              });
+          for (let r = 0; r < this.nodes.length; r++) {
+            let a;
+            t === void 0
+              ? (a = this.nodes[r].activate())
+              : (a = this.nodes[r].activate(t[r])),
+              (o[r] = a);
+          }
+          let i = Array.from(o);
+          return ft.release(o), i;
+        }
+        propagate(t, e, o) {
+          if (o !== void 0 && o.length !== this.nodes.length)
+            throw new Error(
+              'Array with values should be same as the amount of nodes!'
+            );
+          for (let s = this.nodes.length - 1; s >= 0; s--)
+            o === void 0
+              ? this.nodes[s].propagate(t, e, !0, 0)
+              : this.nodes[s].propagate(t, e, !0, 0, o[s]);
+        }
+        connect(t, e, o) {
+          if (!this.output)
+            throw new Error(
+              'Layer output is not defined. Cannot connect from this layer.'
+            );
+          let s = [];
+          return (
+            t instanceof n
+              ? (s = t.input(this, e, o))
+              : (t instanceof tt || t instanceof K) &&
+                (s = this.output.connect(t, e, o)),
+            s
+          );
+        }
+        gate(t, e) {
+          if (!this.output)
+            throw new Error(
+              'Layer output is not defined. Cannot gate from this layer.'
+            );
+          this.output.gate(t, e);
+        }
+        set(t) {
+          for (let e = 0; e < this.nodes.length; e++) {
+            let o = this.nodes[e];
+            o instanceof K
+              ? (t.bias !== void 0 && (o.bias = t.bias),
+                (o.squash = t.squash || o.squash),
+                (o.type = t.type || o.type))
+              : this.isGroup(o) && o.set(t);
+          }
+        }
+        disconnect(t, e) {
+          e = e || !1;
+          let o, s, i;
+          if (t instanceof tt)
+            for (o = 0; o < this.nodes.length; o++)
+              for (s = 0; s < t.nodes.length; s++) {
+                for (
+                  this.nodes[o].disconnect(t.nodes[s], e),
+                    i = this.connections.out.length - 1;
+                  i >= 0;
+                  i--
+                ) {
+                  let r = this.connections.out[i];
+                  if (r.from === this.nodes[o] && r.to === t.nodes[s]) {
+                    this.connections.out.splice(i, 1);
+                    break;
+                  }
+                }
+                if (e)
+                  for (i = this.connections.in.length - 1; i >= 0; i--) {
+                    let r = this.connections.in[i];
+                    if (r.from === t.nodes[s] && r.to === this.nodes[o]) {
+                      this.connections.in.splice(i, 1);
+                      break;
+                    }
+                  }
+              }
+          else if (t instanceof K)
+            for (o = 0; o < this.nodes.length; o++) {
+              for (
+                this.nodes[o].disconnect(t, e),
+                  s = this.connections.out.length - 1;
+                s >= 0;
+                s--
+              ) {
+                let r = this.connections.out[s];
+                if (r.from === this.nodes[o] && r.to === t) {
+                  this.connections.out.splice(s, 1);
+                  break;
+                }
+              }
+              if (e)
+                for (i = this.connections.in.length - 1; i >= 0; i--) {
+                  let r = this.connections.in[i];
+                  if (r.from === t && r.to === this.nodes[o]) {
+                    this.connections.in.splice(i, 1);
+                    break;
+                  }
+                }
+            }
+        }
+        clear() {
+          for (let t = 0; t < this.nodes.length; t++) this.nodes[t].clear();
+        }
+        input(t, e, o) {
+          if (
+            (t instanceof n && (t = t.output),
+            (e = e || X.ALL_TO_ALL),
+            !this.output)
+          )
+            throw new Error(
+              'Layer output (acting as input target) is not defined.'
+            );
+          return t.connect(this.output, e, o);
+        }
+        static dense(t) {
+          let e = new n(),
+            o = new tt(t);
+          return (
+            e.nodes.push(...o.nodes),
+            (e.output = o),
+            (e.input = (s, i, r) => (
+              s instanceof n && (s = s.output),
+              (i = i || X.ALL_TO_ALL),
+              s.connect(o, i, r)
+            )),
+            e
+          );
+        }
+        static lstm(t) {
+          let e = new n(),
+            o = new tt(t),
+            s = new tt(t),
+            i = new tt(t),
+            r = new tt(t),
+            a = new tt(t);
+          o.set({ bias: 1 }),
+            s.set({ bias: 1 }),
+            r.set({ bias: 1 }),
+            i.set({ bias: 0 }),
+            a.set({ bias: 0 }),
+            i.connect(o, X.ALL_TO_ALL),
+            i.connect(s, X.ALL_TO_ALL),
+            i.connect(r, X.ALL_TO_ALL),
+            i.connect(i, X.ONE_TO_ONE);
+          let l = i.connect(a, X.ALL_TO_ALL);
+          return (
+            r.gate(l, _t.OUTPUT),
+            i.nodes.forEach((h, u) => {
+              let p = h.connections.self.find(
+                (c) => c.to === h && c.from === h
+              );
+              p
+                ? ((p.gater = s.nodes[u]),
+                  s.nodes[u].connections.gated.includes(p) ||
+                    s.nodes[u].connections.gated.push(p))
+                : console.warn(
+                    `LSTM Warning: No self-connection found for memory cell node ${u}`
+                  );
+            }),
+            (e.nodes = [
+              ...o.nodes,
+              ...s.nodes,
+              ...i.nodes,
+              ...r.nodes,
+              ...a.nodes,
+            ]),
+            (e.output = a),
+            (e.input = (h, u, p) => {
+              h instanceof n && (h = h.output), (u = u || X.ALL_TO_ALL);
+              let c = [],
+                d = h.connect(i, u, p);
+              return (
+                (c = c.concat(d)),
+                (c = c.concat(h.connect(o, u, p))),
+                (c = c.concat(h.connect(r, u, p))),
+                (c = c.concat(h.connect(s, u, p))),
+                o.gate(d, _t.INPUT),
+                c
+              );
+            }),
+            e
+          );
+        }
+        static gru(t) {
+          let e = new n(),
+            o = new tt(t),
+            s = new tt(t),
+            i = new tt(t),
+            r = new tt(t),
+            a = new tt(t),
+            l = new tt(t);
+          l.set({ bias: 0, squash: F.identity, type: 'variant' }),
+            r.set({ squash: F.tanh }),
+            s.set({ bias: 0, squash: F.inverse, type: 'variant' }),
+            o.set({ bias: 1 }),
+            i.set({ bias: 0 }),
+            l.connect(o, X.ALL_TO_ALL),
+            l.connect(i, X.ALL_TO_ALL),
+            o.connect(s, X.ONE_TO_ONE, 1);
+          let h = l.connect(r, X.ALL_TO_ALL);
+          i.gate(h, _t.OUTPUT);
+          let u = l.connect(a, X.ALL_TO_ALL),
+            p = r.connect(a, X.ALL_TO_ALL);
+          return (
+            o.gate(u, _t.OUTPUT),
+            s.gate(p, _t.OUTPUT),
+            a.connect(l, X.ONE_TO_ONE, 1),
+            (e.nodes = [
+              ...o.nodes,
+              ...s.nodes,
+              ...i.nodes,
+              ...r.nodes,
+              ...a.nodes,
+              ...l.nodes,
+            ]),
+            (e.output = a),
+            (e.input = (c, d, f) => {
+              c instanceof n && (c = c.output), (d = d || X.ALL_TO_ALL);
+              let m = [];
+              return (
+                (m = m.concat(c.connect(o, d, f))),
+                (m = m.concat(c.connect(i, d, f))),
+                (m = m.concat(c.connect(r, d, f))),
+                m
+              );
+            }),
+            e
+          );
+        }
+        static memory(t, e) {
+          let o = new n(),
+            s = null;
+          for (let r = 0; r < e; r++) {
+            let a = new tt(t);
+            a.set({ squash: F.identity, bias: 0, type: 'variant' }),
+              s?.connect(a, X.ONE_TO_ONE, 1),
+              o.nodes.push(a),
+              (s = a);
+          }
+          o.nodes.reverse();
+          let i = new tt(0);
+          for (let r of o.nodes)
+            this.prototype.isGroup(r)
+              ? (i.nodes = i.nodes.concat(r.nodes))
+              : console.warn(
+                  'Unexpected Node type found directly in Memory layer nodes list during output group creation.'
+                );
+          return (
+            (o.output = i),
+            (o.input = (r, a, l) => {
+              r instanceof n && (r = r.output), (a = a || X.ALL_TO_ALL);
+              let h = o.nodes[o.nodes.length - 1];
+              if (!this.prototype.isGroup(h))
+                throw new Error('Memory layer input block is not a Group.');
+              if (r.nodes.length !== h.nodes.length)
+                throw new Error(
+                  `Previous layer size (${r.nodes.length}) must be same as memory size (${h.nodes.length})`
+                );
+              return r.connect(h, X.ONE_TO_ONE, 1);
+            }),
+            o
+          );
+        }
+        static batchNorm(t) {
+          let e = n.dense(t);
+          e.batchNorm = !0;
+          let o = e.activate.bind(e);
+          return (
+            (e.activate = function (s, i = !1) {
+              let r = o(s, i),
+                a = r.reduce((u, p) => u + p, 0) / r.length,
+                l = r.reduce((u, p) => u + (p - a) ** 2, 0) / r.length,
+                h = (jt(), q(xe)).NORM_EPSILON;
+              return r.map((u) => (u - a) / Math.sqrt(l + h));
+            }),
+            e
+          );
+        }
+        static layerNorm(t) {
+          let e = n.dense(t);
+          e.layerNorm = !0;
+          let o = e.activate.bind(e);
+          return (
+            (e.activate = function (s, i = !1) {
+              let r = o(s, i),
+                a = r.reduce((u, p) => u + p, 0) / r.length,
+                l = r.reduce((u, p) => u + (p - a) ** 2, 0) / r.length,
+                h = (jt(), q(xe)).NORM_EPSILON;
+              return r.map((u) => (u - a) / Math.sqrt(l + h));
+            }),
+            e
+          );
+        }
+        static conv1d(t, e, o = 1, s = 0) {
+          let i = new n();
+          return (
+            (i.nodes = Array.from({ length: t }, () => new K())),
+            (i.output = new tt(t)),
+            (i.conv1d = { kernelSize: e, stride: o, padding: s }),
+            (i.activate = function (r) {
+              return r ? r.slice(0, t) : this.nodes.map((a) => a.activate());
+            }),
+            i
+          );
+        }
+        static attention(t, e = 1) {
+          let o = new n();
+          return (
+            (o.nodes = Array.from({ length: t }, () => new K())),
+            (o.output = new tt(t)),
+            (o.attention = { heads: e }),
+            (o.activate = function (s) {
+              if (!s) return this.nodes.map((r) => r.activate());
+              let i = s.reduce((r, a) => r + a, 0) / s.length;
+              return Array(t).fill(i);
+            }),
+            o
+          );
+        }
+        isGroup(t) {
+          return !!t && typeof t.set == 'function' && Array.isArray(t.nodes);
+        }
+      };
+    });
+  var ao = {};
+  ct(ao, { mutateImpl: () => os });
+  function os(n) {
+    if (n == null) throw new Error('No (correct) mutate method given!');
+    let t;
+    if (
+      (typeof n == 'string' ? (t = n) : (t = n?.name ?? n?.type ?? n?.identity),
+      !t)
+    ) {
+      for (let o in Gt)
+        if (n === Gt[o]) {
+          t = o;
+          break;
+        }
+    }
+    let e = t ? ns[t] : void 0;
+    if (!e) {
+      G.warnings &&
+        console.warn('[mutate] Unknown mutation method ignored:', t);
+      return;
+    }
+    e.call(this, n), (this._topoDirty = !0);
+  }
+  function is() {
+    let n = this;
+    if ((n._enforceAcyclic && (n._topoDirty = !0), G.deterministicChainMode)) {
+      let l = this.nodes.find((w) => w.type === 'input'),
+        h = this.nodes.find((w) => w.type === 'output');
+      if (!l || !h) return;
+      n._detChain ||
+        (this.connections.some((w) => w.from === l && w.to === h) ||
+          this.connect(l, h),
+        (n._detChain = [l]));
+      let u = n._detChain,
+        p = u[u.length - 1],
+        c = this.connections.find((w) => w.from === p && w.to === h);
+      c || (c = this.connect(p, h)[0]);
+      let d = c.gater;
+      this.disconnect(c.from, c.to);
+      let f = new K('hidden', void 0, n._rand);
+      f.mutate(Gt.MOD_ACTIVATION);
+      let m = this.nodes.indexOf(h),
+        _ = Math.min(m, this.nodes.length - this.output);
+      this.nodes.splice(_, 0, f), (n._nodeIndexDirty = !0);
+      let y = this.connect(p, f)[0],
+        g = this.connect(f, h)[0];
+      u.push(f),
+        (n._preferredChainEdge = g),
+        d && this.gate(d, n._rand() >= 0.5 ? y : g);
+      for (let w = 0; w < u.length; w++) {
+        let v = u[w],
+          b = w + 1 < u.length ? u[w + 1] : h,
+          M = v.connections.out.find((x) => x.to === b);
+        if (M) {
+          for (let x of v.connections.out.slice())
+            if (x !== M)
+              try {
+                this.disconnect(x.from, x.to);
+              } catch {}
+        }
+      }
+      return;
+    }
+    if (this.connections.length === 0) {
+      let l = this.nodes.find((u) => u.type === 'input'),
+        h = this.nodes.find((u) => u.type === 'output');
+      if (l && h) this.connect(l, h);
+      else return;
+    }
+    let t = this.connections[Math.floor(n._rand() * this.connections.length)];
+    if (!t) return;
+    let e = t.gater;
+    this.disconnect(t.from, t.to);
+    let o = new K('hidden', void 0, n._rand);
+    o.mutate(Gt.MOD_ACTIVATION);
+    let s = this.nodes.indexOf(t.to),
+      i = Math.min(s, this.nodes.length - this.output);
+    this.nodes.splice(i, 0, o), (n._nodeIndexDirty = !0);
+    let r = this.connect(t.from, o)[0],
+      a = this.connect(o, t.to)[0];
+    (n._preferredChainEdge = a), e && this.gate(e, n._rand() >= 0.5 ? r : a);
+  }
+  function ss() {
+    let n = this.nodes.filter((s) => s.type === 'hidden');
+    if (n.length === 0) {
+      G.warnings && console.warn('No hidden nodes left to remove!');
+      return;
+    }
+    let e = n[Math.floor(this._rand() * n.length)];
+    this.remove(e);
+    let o = this.connections[0];
+    o && (o.weight += 1e-4);
+  }
+  function rs() {
+    let n = this;
+    n._enforceAcyclic && (n._topoDirty = !0);
+    let t = [];
+    for (let o = 0; o < this.nodes.length - this.output; o++) {
+      let s = this.nodes[o];
+      for (let i = Math.max(o + 1, this.input); i < this.nodes.length; i++) {
+        let r = this.nodes[i];
+        s.isProjectingTo(r) || t.push([s, r]);
+      }
+    }
+    if (t.length === 0) return;
+    let e = t[Math.floor(n._rand() * t.length)];
+    this.connect(e[0], e[1]);
+  }
+  function as() {
+    let n = this,
+      t = this.connections.filter((o) => {
+        let s = o.from.connections.out.length > 1,
+          i = o.to.connections.in.length > 1,
+          r = this.nodes.filter(
+            (l) =>
+              l.type === o.to.type &&
+              Math.abs(this.nodes.indexOf(l) - this.nodes.indexOf(o.to)) <
+                Math.max(this.input, this.output)
+          ),
+          a = !1;
+        return (
+          r.length > 0 &&
+            this.connections.filter(
+              (h) => h.from === o.from && r.includes(h.to)
+            ).length <= 1 &&
+            (a = !0),
+          s && i && this.nodes.indexOf(o.to) > this.nodes.indexOf(o.from) && !a
+        );
+      });
+    if (t.length === 0) return;
+    let e = t[Math.floor(n._rand() * t.length)];
+    this.disconnect(e.from, e.to);
+  }
+  function cs(n) {
+    let t = this.connections.concat(this.selfconns);
+    if (t.length === 0) return;
+    let e = t[Math.floor(this._rand() * t.length)],
+      o = this._rand() * (n.max - n.min) + n.min;
+    e.weight += o;
+  }
+  function ls(n) {
+    if (this.nodes.length <= this.input) return;
+    let t = Math.floor(
+      this._rand() * (this.nodes.length - this.input) + this.input
+    );
+    this.nodes[t].mutate(n);
+  }
+  function hs(n) {
+    let t = n.mutateOutput ?? !0,
+      e = this.nodes.length - this.input - (t ? 0 : this.output);
+    if (e <= 0) {
+      G.warnings &&
+        console.warn(
+          'No nodes available for activation function mutation based on config.'
+        );
+      return;
+    }
+    let o = Math.floor(this._rand() * e + this.input);
+    this.nodes[o].mutate(n);
+  }
+  function us() {
+    let n = this;
+    if (n._enforceAcyclic) return;
+    let t = this.nodes.filter(
+      (o, s) => s >= this.input && o.connections.self.length === 0
+    );
+    if (t.length === 0) {
+      G.warnings &&
+        console.warn('All eligible nodes already have self-connections.');
+      return;
+    }
+    let e = t[Math.floor(n._rand() * t.length)];
+    this.connect(e, e);
+  }
+  function ps() {
+    if (this.selfconns.length === 0) {
+      G.warnings && console.warn('No self-connections exist to remove.');
+      return;
+    }
+    let n = this.selfconns[Math.floor(this._rand() * this.selfconns.length)];
+    this.disconnect(n.from, n.to);
+  }
+  function fs() {
+    let n = this,
+      e = this.connections
+        .concat(this.selfconns)
+        .filter((r) => r.gater === null);
+    if (e.length === 0 || this.nodes.length <= this.input) {
+      G.warnings && console.warn('All connections are already gated.');
+      return;
+    }
+    let o = Math.floor(
+        n._rand() * (this.nodes.length - this.input) + this.input
+      ),
+      s = this.nodes[o],
+      i = e[Math.floor(n._rand() * e.length)];
+    this.gate(s, i);
+  }
+  function ds() {
+    if (this.gates.length === 0) {
+      G.warnings && console.warn('No gated connections to ungate.');
+      return;
+    }
+    let n = Math.floor(this._rand() * this.gates.length),
+      t = this.gates[n];
+    this.ungate(t);
+  }
+  function ms() {
+    let n = this;
+    if (n._enforceAcyclic) return;
+    let t = [];
+    for (let o = this.input; o < this.nodes.length; o++) {
+      let s = this.nodes[o];
+      for (let i = this.input; i < o; i++) {
+        let r = this.nodes[i];
+        s.isProjectingTo(r) || t.push([s, r]);
+      }
+    }
+    if (t.length === 0) return;
+    let e = t[Math.floor(n._rand() * t.length)];
+    this.connect(e[0], e[1]);
+  }
+  function gs() {
+    let n = this.connections.filter(
+      (e) =>
+        e.from.connections.out.length > 1 &&
+        e.to.connections.in.length > 1 &&
+        this.nodes.indexOf(e.from) > this.nodes.indexOf(e.to)
+    );
+    if (n.length === 0) return;
+    let t = n[Math.floor(this._rand() * n.length)];
+    this.disconnect(t.from, t.to);
+  }
+  function ys(n) {
+    let t = this,
+      e = n.mutateOutput ?? !0,
+      o = this.nodes.length - this.input - (e ? 0 : this.output);
+    if (o < 2) return;
+    let s = Math.floor(t._rand() * o + this.input),
+      i = Math.floor(t._rand() * o + this.input);
+    for (; s === i; ) i = Math.floor(t._rand() * o + this.input);
+    let r = this.nodes[s],
+      a = this.nodes[i],
+      l = r.bias,
+      h = r.squash;
+    (r.bias = a.bias), (r.squash = a.squash), (a.bias = l), (a.squash = h);
+  }
+  function _s() {
+    if (this._enforceAcyclic || this.connections.length === 0) return;
+    let t = this.connections[
+        Math.floor(Math.random() * this.connections.length)
+      ],
+      e = t.gater;
+    this.disconnect(t.from, t.to);
+    let s = (Ft(), q(Te)).default.lstm(1);
+    s.nodes.forEach((i) => {
+      (i.type = 'hidden'), this.nodes.push(i);
+    }),
+      this.connect(t.from, s.nodes[0]),
+      this.connect(s.output.nodes[0], t.to),
+      e && this.gate(e, this.connections[this.connections.length - 1]);
+  }
+  function bs() {
+    if (this._enforceAcyclic || this.connections.length === 0) return;
+    let t = this.connections[
+        Math.floor(Math.random() * this.connections.length)
+      ],
+      e = t.gater;
+    this.disconnect(t.from, t.to);
+    let s = (Ft(), q(Te)).default.gru(1);
+    s.nodes.forEach((i) => {
+      (i.type = 'hidden'), this.nodes.push(i);
+    }),
+      this.connect(t.from, s.nodes[0]),
+      this.connect(s.output.nodes[0], t.to),
+      e && this.gate(e, this.connections[this.connections.length - 1]);
+  }
+  function vs(n) {
+    if (this.nodes.length <= this.input) return;
+    let t = this,
+      e = Math.floor(t._rand() * (this.nodes.length - this.input) + this.input),
+      o = this.nodes[e],
+      s = n?.min ?? -1,
+      i = n?.max ?? 1,
+      r = () => t._rand() * (i - s) + s;
+    for (let a of o.connections.in) a.weight = r();
+    for (let a of o.connections.out) a.weight = r();
+    for (let a of o.connections.self) a.weight = r();
+  }
+  function ws() {
+    let n = this.nodes.filter((o) => o.type === 'hidden');
+    if (!n.length) return;
+    let e = n[Math.floor(this._rand() * n.length)];
+    e._batchNorm = !0;
+  }
+  var ns,
+    co = C(() => {
+      'use strict';
+      mt();
+      ee();
+      vt();
+      ns = {
+        ADD_NODE: is,
+        SUB_NODE: ss,
+        ADD_CONN: rs,
+        SUB_CONN: as,
+        MOD_WEIGHT: cs,
+        MOD_BIAS: ls,
+        MOD_ACTIVATION: hs,
+        ADD_SELF_CONN: us,
+        SUB_SELF_CONN: ps,
+        ADD_GATE: fs,
+        SUB_GATE: ds,
+        ADD_BACK_CONN: ms,
+        SUB_BACK_CONN: gs,
+        SWAP_NODES: ys,
+        ADD_LSTM_NODE: _s,
+        ADD_GRU_NODE: bs,
+        REINIT_WEIGHT: vs,
+        BATCH_NORM: ws,
+      };
+    });
+  var De = {};
+  ct(De, {
+    __trainingInternals: () => xs,
+    applyGradientClippingImpl: () => lo,
+    trainImpl: () => Ts,
+    trainSetImpl: () => ho,
+  });
+  function Ms(n, t, e, o) {
+    if (e.window <= 1 && e.type !== 'ema' && e.type !== 'adaptive-ema')
+      return n;
+    let s = e.type;
+    if (s === 'median') {
+      let i = [...t].sort((a, l) => a - l),
+        r = Math.floor(i.length / 2);
+      return i.length % 2 ? i[r] : (i[r - 1] + i[r]) / 2;
+    }
+    if (s === 'ema')
+      return (
+        o.emaValue == null
+          ? (o.emaValue = n)
+          : (o.emaValue = o.emaValue + e.emaAlpha * (n - o.emaValue)),
+        o.emaValue
+      );
+    if (s === 'adaptive-ema') {
+      let i = t.reduce((u, p) => u + p, 0) / t.length,
+        r = t.reduce((u, p) => u + (p - i) * (p - i), 0) / t.length,
+        a = e.emaAlpha || 2 / (e.window + 1),
+        l = r / Math.max(i * i, 1e-8),
+        h = Math.min(0.95, Math.max(a, a * (1 + 2 * l)));
+      return (
+        o.adaptiveBaseEmaValue == null
+          ? ((o.adaptiveBaseEmaValue = n), (o.adaptiveEmaValue = n))
+          : ((o.adaptiveBaseEmaValue =
+              o.adaptiveBaseEmaValue + a * (n - o.adaptiveBaseEmaValue)),
+            (o.adaptiveEmaValue =
+              o.adaptiveEmaValue + h * (n - o.adaptiveEmaValue))),
+        Math.min(o.adaptiveEmaValue, o.adaptiveBaseEmaValue)
+      );
+    }
+    if (s === 'gaussian') {
+      let i = e.window / 3 || 1,
+        r = 0,
+        a = 0,
+        l = t.length;
+      for (let h = 0; h < l; h++) {
+        let u = Math.exp(-0.5 * Math.pow((h - (l - 1)) / i, 2));
+        (r += u), (a += u * t[h]);
+      }
+      return a / (r || 1);
+    }
+    if (s === 'trimmed') {
+      let i = Math.min(0.49, Math.max(0, e.trimmedRatio || 0.1)),
+        r = [...t].sort((h, u) => h - u),
+        a = Math.floor(r.length * i),
+        l = r.slice(a, r.length - a);
+      return l.reduce((h, u) => h + u, 0) / (l.length || 1);
+    }
+    if (s === 'wma') {
+      let i = 0,
+        r = 0;
+      for (let a = 0; a < t.length; a++) {
+        let l = a + 1;
+        (i += l), (r += l * t[a]);
+      }
+      return r / (i || 1);
+    }
+    return t.reduce((i, r) => i + r, 0) / t.length;
+  }
+  function Ss(n, t, e, o) {
+    if (e.window <= 1 && e.type !== 'ema') return n;
+    if (e.type === 'median') {
+      let s = [...t].sort((r, a) => r - a),
+        i = Math.floor(s.length / 2);
+      return s.length % 2 ? s[i] : (s[i - 1] + s[i]) / 2;
+    }
+    return e.type === 'ema'
+      ? (o.plateauEmaValue == null
+          ? (o.plateauEmaValue = n)
+          : (o.plateauEmaValue =
+              o.plateauEmaValue + e.emaAlpha * (n - o.plateauEmaValue)),
+        o.plateauEmaValue)
+      : t.reduce((s, i) => s + i, 0) / t.length;
+  }
+  function Ns(n, t) {
+    if (!t._mixedPrecision.enabled) return !1;
+    if (t._forceNextOverflow) return (t._forceNextOverflow = !1), !0;
+    let e = !1;
+    return (
+      n.nodes.forEach((o) => {
+        o._fp32Bias !== void 0 && (Number.isFinite(o.bias) || (e = !0));
+      }),
+      e
+    );
+  }
+  function As(n) {
+    n.nodes.forEach((t) => {
+      t.connections.in.forEach((e) => {
+        e.totalDeltaWeight = 0;
+      }),
+        t.connections.self.forEach((e) => {
+          e.totalDeltaWeight = 0;
+        }),
+        typeof t.totalDeltaBias == 'number' && (t.totalDeltaBias = 0),
+        (t.previousDeltaBias = 0);
+    });
+  }
+  function Os(n, t) {
+    t <= 1 ||
+      n.nodes.forEach((e) => {
+        e.connections.in.forEach((o) => {
+          typeof o.totalDeltaWeight == 'number' && (o.totalDeltaWeight /= t);
+        }),
+          e.connections.self.forEach((o) => {
+            typeof o.totalDeltaWeight == 'number' && (o.totalDeltaWeight /= t);
+          }),
+          typeof e.totalDeltaBias == 'number' && (e.totalDeltaBias /= t);
+      });
+  }
+  function Es(n, t, e, o, s) {
+    let i = 0;
+    return (
+      n.nodes.forEach((r) => {
+        r.type !== 'input' &&
+          (r.applyBatchUpdatesWithOptimizer({
+            type: t.type,
+            baseType: t.baseType,
+            beta1: t.beta1,
+            beta2: t.beta2,
+            eps: t.eps,
+            weightDecay: t.weightDecay,
+            momentum: t.momentum ?? o,
+            lrScale: e,
+            t: s._optimizerStep,
+            la_k: t.la_k,
+            la_alpha: t.la_alpha,
+          }),
+          r.connections.in.forEach((a) => {
+            typeof a.previousDeltaWeight == 'number' &&
+              (i += a.previousDeltaWeight * a.previousDeltaWeight);
+          }),
+          r.connections.self.forEach((a) => {
+            typeof a.previousDeltaWeight == 'number' &&
+              (i += a.previousDeltaWeight * a.previousDeltaWeight);
+          }));
+      }),
+      Math.sqrt(i)
+    );
+  }
+  function Cs(n) {
+    n._mixedPrecisionState.goodSteps++;
+    let t = n._mpIncreaseEvery || 200;
+    n._mixedPrecisionState.goodSteps >= t &&
+      n._mixedPrecision.lossScale < n._mixedPrecisionState.maxLossScale &&
+      ((n._mixedPrecision.lossScale *= 2),
+      (n._mixedPrecisionState.goodSteps = 0),
+      (n._mixedPrecisionState.scaleUpEvents =
+        (n._mixedPrecisionState.scaleUpEvents || 0) + 1));
+  }
+  function Is(n) {
+    n._mixedPrecisionState.badSteps++,
+      (n._mixedPrecisionState.goodSteps = 0),
+      (n._mixedPrecision.lossScale = Math.max(
+        n._mixedPrecisionState.minLossScale,
+        Math.floor(n._mixedPrecision.lossScale / 2) || 1
+      )),
+      (n._mixedPrecisionState.overflowCount =
+        (n._mixedPrecisionState.overflowCount || 0) + 1),
+      (n._mixedPrecisionState.scaleDownEvents =
+        (n._mixedPrecisionState.scaleDownEvents || 0) + 1),
+      (n._lastOverflowStep = n._optimizerStep);
+  }
+  function lo(n, t) {
+    let e = n,
+      s = (() => {
+        let a = [];
+        if (t.mode.startsWith('layerwise'))
+          if (n.layers && n.layers.length > 0)
+            for (let l = 0; l < n.layers.length; l++) {
+              let h = n.layers[l];
+              if (!h || !h.nodes) continue;
+              let u = [];
+              h.nodes.forEach((p) => {
+                !p ||
+                  p.type === 'input' ||
+                  (p.connections.in.forEach((c) => {
+                    typeof c.totalDeltaWeight == 'number' &&
+                      u.push(c.totalDeltaWeight);
+                  }),
+                  p.connections.self.forEach((c) => {
+                    typeof c.totalDeltaWeight == 'number' &&
+                      u.push(c.totalDeltaWeight);
+                  }),
+                  typeof p.totalDeltaBias == 'number' &&
+                    u.push(p.totalDeltaBias));
+              }),
+                u.length && a.push(u);
+            }
+          else
+            n.nodes.forEach((l) => {
+              if (l.type === 'input') return;
+              let h = [];
+              l.connections.in.forEach((u) => {
+                typeof u.totalDeltaWeight == 'number' &&
+                  h.push(u.totalDeltaWeight);
+              }),
+                l.connections.self.forEach((u) => {
+                  typeof u.totalDeltaWeight == 'number' &&
+                    h.push(u.totalDeltaWeight);
+                }),
+                typeof l.totalDeltaBias == 'number' && h.push(l.totalDeltaBias),
+                h.length && a.push(h);
+            });
+        else {
+          let l = [];
+          n.nodes.forEach((h) => {
+            h.connections.in.forEach((u) => {
+              typeof u.totalDeltaWeight == 'number' &&
+                l.push(u.totalDeltaWeight);
+            }),
+              h.connections.self.forEach((u) => {
+                typeof u.totalDeltaWeight == 'number' &&
+                  l.push(u.totalDeltaWeight);
+              }),
+              typeof h.totalDeltaBias == 'number' && l.push(h.totalDeltaBias);
+          }),
+            l.length && a.push(l);
+        }
+        return a;
+      })();
+    e._lastGradClipGroupCount = s.length;
+    let i = (a, l) => {
+        if (!a.length) return 0;
+        let h = [...a].sort((p, c) => Math.abs(p) - Math.abs(c)),
+          u = Math.min(
+            h.length - 1,
+            Math.max(0, Math.floor((l / 100) * h.length - 1))
+          );
+        return Math.abs(h[u]);
+      },
+      r = (a) => {
+        let l = 0;
+        n.nodes.forEach((h) => {
+          if (t.mode.startsWith('layerwise') && h.type === 'input') return;
+          let u = t.mode.startsWith('layerwise') ? s[l++] : s[0];
+          h.connections.in.forEach((p) => {
+            typeof p.totalDeltaWeight == 'number' &&
+              (p.totalDeltaWeight = a(p.totalDeltaWeight, u));
+          }),
+            h.connections.self.forEach((p) => {
+              typeof p.totalDeltaWeight == 'number' &&
+                (p.totalDeltaWeight = a(p.totalDeltaWeight, u));
+            }),
+            typeof h.totalDeltaBias == 'number' &&
+              (h.totalDeltaBias = a(h.totalDeltaBias, u));
+        });
+      };
+    if (t.mode === 'norm' || t.mode === 'layerwiseNorm') {
+      let a = t.maxNorm || 1;
+      s.forEach((l) => {
+        let h = Math.sqrt(l.reduce((u, p) => u + p * p, 0));
+        if (h > a && h > 0) {
+          let u = a / h;
+          r((p, c) => (c === l ? p * u : p));
+        }
+      });
+    } else if (t.mode === 'percentile' || t.mode === 'layerwisePercentile') {
+      let a = t.percentile || 99;
+      s.forEach((l) => {
+        let h = i(l, a);
+        h <= 0 ||
+          r((u, p) => (p === l && Math.abs(u) > h ? h * Math.sign(u) : u));
+      });
+    }
+  }
+  function ho(n, t, e, o, s, i, r, a, l) {
+    let h = n,
+      u = 0,
+      p = 0;
+    h._gradAccumMicroBatches = 0;
+    let c = 0,
+      d = n.nodes.filter((m) => m.type === 'output'),
+      f;
+    typeof a == 'function'
+      ? (f = a)
+      : a && typeof a.fn == 'function'
+      ? (f = a.fn)
+      : a && typeof a.calculate == 'function'
+      ? (f = a.calculate)
+      : (f = () => 0);
+    for (let m = 0; m < t.length; m++) {
+      let _ = t[m],
+        y = _.input,
+        g = _.output;
+      if (y.length !== n.input || g.length !== n.output) {
+        G.warnings &&
+          console.warn(
+            `Data point ${m} has incorrect dimensions (input: ${y.length}/${n.input}, output: ${g.length}/${n.output}), skipping.`
+          );
+        continue;
+      }
+      try {
+        let w = n.activate(y, !0);
+        if (l && l.type && l.type !== 'sgd') {
+          for (let v = 0; v < d.length; v++) d[v].propagate(s, i, !1, r, g[v]);
+          for (let v = n.nodes.length - 1; v >= 0; v--) {
+            let b = n.nodes[v];
+            b.type === 'output' ||
+              b.type === 'input' ||
+              b.propagate(s, i, !1, r);
+          }
+        } else {
+          for (let v = 0; v < d.length; v++) d[v].propagate(s, i, !0, r, g[v]);
+          for (let v = n.nodes.length - 1; v >= 0; v--) {
+            let b = n.nodes[v];
+            b.type === 'output' ||
+              b.type === 'input' ||
+              b.propagate(s, i, !0, r);
+          }
+        }
+        (u += f(g, w)), p++, c++;
+      } catch (w) {
+        G.warnings &&
+          console.warn(
+            `Error processing data point ${m} (input: ${JSON.stringify(y)}): ${
+              w.message
+            }. Skipping.`
+          );
+      }
+      p > 0 &&
+        ((m + 1) % e === 0 || m === t.length - 1) &&
+        l &&
+        l.type &&
+        l.type !== 'sgd' &&
+        (h._gradAccumMicroBatches++,
+        (h._gradAccumMicroBatches % o === 0 || m === t.length - 1) &&
+          ((h._optimizerStep = (h._optimizerStep || 0) + 1),
+          Ns(n, h)
+            ? (As(n), h._mixedPrecision.enabled && Is(h), (h._lastGradNorm = 0))
+            : (h._currentGradClip && lo(n, h._currentGradClip),
+              o > 1 && h._accumulationReduction === 'average' && Os(n, o),
+              (h._lastGradNorm = Es(n, l, s, i, h)),
+              h._mixedPrecision.enabled && Cs(h))),
+        (p = 0));
+    }
+    return h._lastGradNorm == null && (h._lastGradNorm = 0), c > 0 ? u / c : 0;
+  }
+  function Ts(n, t, e) {
+    let o = n;
+    if (
+      !t ||
+      t.length === 0 ||
+      t[0].input.length !== n.input ||
+      t[0].output.length !== n.output
+    )
+      throw new Error(
+        'Dataset is invalid or dimensions do not match network input/output size!'
+      );
+    if (((e = e || {}), typeof e.iterations > 'u' && typeof e.error > 'u'))
+      throw (
+        (G.warnings && console.warn('Missing `iterations` or `error` option.'),
+        new Error(
+          'Missing `iterations` or `error` option. Training requires a stopping condition.'
+        ))
+      );
+    G.warnings &&
+      (typeof e.rate > 'u' &&
+        (console.warn('Missing `rate` option'),
+        console.warn(
+          'Missing `rate` option, using default learning rate 0.3.'
+        )),
+      typeof e.iterations > 'u' &&
+        console.warn(
+          'Missing `iterations` option. Training will run potentially indefinitely until `error` threshold is met.'
+        ));
+    let s = e.error ?? -1 / 0,
+      i = e.cost || wt.mse;
+    if (
+      typeof i != 'function' &&
+      !(
+        typeof i == 'object' &&
+        (typeof i.fn == 'function' || typeof i.calculate == 'function')
+      )
+    )
+      throw new Error('Invalid cost function provided to Network.train.');
+    let r = e.rate ?? 0.3,
+      a = e.dropout || 0;
+    if (a < 0 || a >= 1) throw new Error('dropout must be in [0,1)');
+    let l = e.momentum || 0,
+      h = e.batchSize || 1;
+    if (h > t.length)
+      throw new Error('Batch size cannot be larger than the dataset length.');
+    let u = e.accumulationSteps || 1;
+    if (
+      ((o._accumulationReduction =
+        e.accumulationReduction === 'sum' ? 'sum' : 'average'),
+      u < 1 || !Number.isFinite(u))
+    )
+      throw new Error('accumulationSteps must be >=1');
+    if (e.gradientClip) {
+      let L = e.gradientClip;
+      L.mode
+        ? (o._currentGradClip = {
+            mode: L.mode,
+            maxNorm: L.maxNorm,
+            percentile: L.percentile,
+          })
+        : typeof L.maxNorm == 'number'
+        ? (o._currentGradClip = { mode: 'norm', maxNorm: L.maxNorm })
+        : typeof L.percentile == 'number' &&
+          (o._currentGradClip = {
+            mode: 'percentile',
+            percentile: L.percentile,
+          }),
+        (o._gradClipSeparateBias = !!L.separateBias);
+    } else (o._currentGradClip = void 0), (o._gradClipSeparateBias = !1);
+    if (e.mixedPrecision) {
+      let L = e.mixedPrecision === !0 ? { lossScale: 1024 } : e.mixedPrecision;
+      (o._mixedPrecision.enabled = !0),
+        (o._mixedPrecision.lossScale = L.lossScale || 1024);
+      let V = L.dynamic || {};
+      (o._mixedPrecisionState.minLossScale = V.minScale || 1),
+        (o._mixedPrecisionState.maxLossScale = V.maxScale || 65536),
+        (o._mpIncreaseEvery =
+          V.increaseEvery || V.stableStepsForIncrease || 200),
+        n.connections.forEach((U) => {
+          U._fp32Weight = U.weight;
+        }),
+        n.nodes.forEach((U) => {
+          U.type !== 'input' && (U._fp32Bias = U.bias);
+        });
+    } else
+      (o._mixedPrecision.enabled = !1),
+        (o._mixedPrecision.lossScale = 1),
+        (o._mpIncreaseEvery = 200);
+    let p = new Set([
+        'sgd',
+        'rmsprop',
+        'adagrad',
+        'adam',
+        'adamw',
+        'amsgrad',
+        'adamax',
+        'nadam',
+        'radam',
+        'lion',
+        'adabelief',
+        'lookahead',
+      ]),
+      c;
+    if (typeof e.optimizer < 'u') {
+      if (typeof e.optimizer == 'string')
+        c = { type: e.optimizer.toLowerCase() };
+      else if (typeof e.optimizer == 'object' && e.optimizer !== null)
+        (c = { ...e.optimizer }),
+          typeof c.type == 'string' && (c.type = c.type.toLowerCase());
+      else
+        throw new Error('Invalid optimizer option; must be string or object');
+      if (!p.has(c.type)) throw new Error(`Unknown optimizer type: ${c.type}`);
+      if (c.type === 'lookahead') {
+        if ((c.baseType || (c.baseType = 'adam'), c.baseType === 'lookahead'))
+          throw new Error(
+            'Nested lookahead (baseType lookahead) is not supported'
+          );
+        if (!p.has(c.baseType))
+          throw new Error(`Unknown baseType for lookahead: ${c.baseType}`);
+        (c.la_k = c.la_k || 5), (c.la_alpha = c.la_alpha ?? 0.5);
+      }
+    }
+    let d = e.iterations ?? Number.MAX_SAFE_INTEGER,
+      f = Date.now(),
+      m = 1 / 0,
+      _ = Math.max(1, e.movingAverageWindow || 1),
+      y = e.movingAverageType || 'sma',
+      g = (() => {
+        if (y === 'ema')
+          return e.emaAlpha && e.emaAlpha > 0 && e.emaAlpha <= 1
+            ? e.emaAlpha
+            : 2 / (_ + 1);
+      })(),
+      w = Math.max(1, e.plateauMovingAverageWindow || _),
+      v = e.plateauMovingAverageType || y,
+      b = (() => {
+        if (v === 'ema')
+          return e.plateauEmaAlpha &&
+            e.plateauEmaAlpha > 0 &&
+            e.plateauEmaAlpha <= 1
+            ? e.plateauEmaAlpha
+            : 2 / (w + 1);
+      })(),
+      M = e.earlyStopPatience,
+      x = e.earlyStopMinDelta || 0,
+      N = 1 / 0,
+      T = 0,
+      k = _,
+      R = new Array(k),
+      j = 0,
+      W = 0,
+      S = (L) => {
+        if (k === 1) {
+          (R[0] = L), (j = 1), (W = 0);
+          return;
+        }
+        (R[W] = L), (W = (W + 1) % k), j < k && j++;
+      },
+      A = () => {
+        if (j === 0) return [];
+        if (j < k) return R.slice(0, j);
+        let L = new Array(j),
+          V = W;
+        for (let U = 0; U < j; U++) L[U] = R[(V + U) % k];
+        return L;
+      },
+      O,
+      E,
+      B,
+      D = w,
+      J = new Array(D),
+      I = 0,
+      Z = 0,
+      z = (L) => {
+        if (D === 1) {
+          (J[0] = L), (I = 1), (Z = 0);
+          return;
+        }
+        (J[Z] = L), (Z = (Z + 1) % D), I < D && I++;
+      },
+      H = () => {
+        if (I === 0) return [];
+        if (I < D) return J.slice(0, I);
+        let L = new Array(I),
+          V = Z;
+        for (let U = 0; U < I; U++) L[U] = J[(V + U) % D];
+        return L;
+      },
+      rt;
+    n.dropout = a;
+    let lt = 0;
+    for (let L = 1; L <= d; L++) {
+      n._maybePrune && n._maybePrune((o._globalEpoch || 0) + L);
+      let V = ho(n, t, h, u, r, l, {}, i, c);
+      (lt = L), S(V);
+      let U = V;
+      if (_ > 1 || y === 'ema' || y === 'adaptive-ema') {
+        let Q = A();
+        if (y === 'median') {
+          let $ = [...Q].sort((at, gt) => at - gt),
+            et = Math.floor($.length / 2);
+          U = $.length % 2 ? $[et] : ($[et - 1] + $[et]) / 2;
+        } else if (y === 'ema')
+          O == null ? (O = V) : (O = O + g * (V - O)), (U = O);
+        else if (y === 'adaptive-ema') {
+          let $ = Q.reduce((yt, Ct) => yt + Ct, 0) / Q.length,
+            et = Q.reduce((yt, Ct) => yt + (Ct - $) * (Ct - $), 0) / Q.length,
+            at = g || 2 / (_ + 1),
+            gt = et / Math.max($ * $, 1e-8),
+            xt = Math.min(0.95, Math.max(at, at * (1 + 2 * gt)));
+          E == null
+            ? ((E = V), (B = V))
+            : ((E = E + at * (V - E)), (B = B + xt * (V - B))),
+            (U = Math.min(B, E));
+        } else if (y === 'gaussian') {
+          let $ = Q,
+            et = $.length,
+            at = _ / 3 || 1,
+            gt = 0,
+            xt = 0;
+          for (let yt = 0; yt < et; yt++) {
+            let Ct = Math.exp(-0.5 * Math.pow((yt - (et - 1)) / at, 2));
+            (gt += Ct), (xt += Ct * $[yt]);
+          }
+          U = xt / (gt || 1);
+        } else if (y === 'trimmed') {
+          let $ = Math.min(0.49, Math.max(0, e.trimmedRatio || 0.1)),
+            et = [...Q].sort((xt, yt) => xt - yt),
+            at = Math.floor(et.length * $),
+            gt = et.slice(at, et.length - at);
+          U = gt.reduce((xt, yt) => xt + yt, 0) / (gt.length || 1);
+        } else if (y === 'wma') {
+          let $ = 0,
+            et = 0;
+          for (let at = 0; at < Q.length; at++) {
+            let gt = at + 1;
+            ($ += gt), (et += gt * Q[at]);
+          }
+          U = et / ($ || 1);
+        } else U = Q.reduce(($, et) => $ + et, 0) / Q.length;
+      }
+      (m = U), z(V);
+      let nt = V;
+      if (w > 1 || v === 'ema')
+        if (v === 'median') {
+          let Q = [...H()].sort((et, at) => et - at),
+            $ = Math.floor(Q.length / 2);
+          nt = Q.length % 2 ? Q[$] : (Q[$ - 1] + Q[$]) / 2;
+        } else if (v === 'ema')
+          rt == null ? (rt = V) : (rt = rt + b * (V - rt)), (nt = rt);
+        else {
+          let Q = H();
+          nt = Q.reduce(($, et) => $ + et, 0) / Q.length;
+        }
+      if (typeof e.metricsHook == 'function')
+        try {
+          e.metricsHook({
+            iteration: L,
+            error: m,
+            plateauError: nt,
+            gradNorm: o._lastGradNorm ?? 0,
+          });
+        } catch {}
+      if (e.checkpoint && typeof e.checkpoint.save == 'function') {
+        if (e.checkpoint.last)
+          try {
+            e.checkpoint.save({
+              type: 'last',
+              iteration: L,
+              error: m,
+              network: n.toJSON(),
+            });
+          } catch {}
+        if (
+          e.checkpoint.best &&
+          (m < n._checkpointBestError || n._checkpointBestError == null)
+        ) {
+          n._checkpointBestError = m;
+          try {
+            e.checkpoint.save({
+              type: 'best',
+              iteration: L,
+              error: m,
+              network: n.toJSON(),
+            });
+          } catch {}
+        }
+      }
+      if (
+        e.schedule &&
+        e.schedule.iterations &&
+        L % e.schedule.iterations === 0
+      )
+        try {
+          e.schedule.function({ error: m, iteration: L });
+        } catch {}
+      if ((m < N - x ? ((N = m), (T = 0)) : M && T++, (M && T >= M) || m <= s))
+        break;
+    }
+    return (
+      n.nodes.forEach((L) => {
+        L.type === 'hidden' && (L.mask = 1);
+      }),
+      (n.dropout = 0),
+      (o._globalEpoch = (o._globalEpoch || 0) + lt),
+      { error: m, iterations: lt, time: Date.now() - f }
+    );
+  }
+  var xs,
+    ke = C(() => {
+      'use strict';
+      pt();
+      vt();
+      xs = { computeMonitoredError: Ms, computePlateauMetric: Ss };
+    });
+  var po = qt((Ia, uo) => {
+    uo.exports = function (t) {
+      return (
+        t &&
+        typeof t == 'object' &&
+        typeof t.copy == 'function' &&
+        typeof t.fill == 'function' &&
+        typeof t.readUInt8 == 'function'
+      );
+    };
+  });
+  var fo = qt((Ta, je) => {
+    typeof Object.create == 'function'
+      ? (je.exports = function (t, e) {
+          (t.super_ = e),
+            (t.prototype = Object.create(e.prototype, {
+              constructor: {
+                value: t,
+                enumerable: !1,
+                writable: !0,
+                configurable: !0,
+              },
+            }));
+        })
+      : (je.exports = function (t, e) {
+          t.super_ = e;
+          var o = function () {};
+          (o.prototype = e.prototype),
+            (t.prototype = new o()),
+            (t.prototype.constructor = t);
+        });
+  });
+  var _o = qt((Y) => {
+    var Ds = /%[sdj%]/g;
+    Y.format = function (n) {
+      if (!me(n)) {
+        for (var t = [], e = 0; e < arguments.length; e++)
+          t.push(Et(arguments[e]));
+        return t.join(' ');
+      }
+      for (
+        var e = 1,
+          o = arguments,
+          s = o.length,
+          i = String(n).replace(Ds, function (a) {
+            if (a === '%%') return '%';
+            if (e >= s) return a;
+            switch (a) {
+              case '%s':
+                return String(o[e++]);
+              case '%d':
+                return Number(o[e++]);
+              case '%j':
+                try {
+                  return JSON.stringify(o[e++]);
+                } catch {
+                  return '[Circular]';
+                }
+              default:
+                return a;
+            }
+          }),
+          r = o[e];
+        e < s;
+        r = o[++e]
+      )
+        de(r) || !$t(r) ? (i += ' ' + r) : (i += ' ' + Et(r));
+      return i;
+    };
+    Y.deprecate = function (n, t) {
+      if (St(global.process))
+        return function () {
+          return Y.deprecate(n, t).apply(this, arguments);
+        };
+      if (process.noDeprecation === !0) return n;
+      var e = !1;
+      function o() {
+        if (!e) {
+          if (process.throwDeprecation) throw new Error(t);
+          process.traceDeprecation ? console.trace(t) : console.error(t),
+            (e = !0);
+        }
+        return n.apply(this, arguments);
+      }
+      return o;
+    };
+    var le = {},
+      Le;
+    Y.debuglog = function (n) {
+      if (
+        (St(Le) && (Le = process.env.NODE_DEBUG || ''),
+        (n = n.toUpperCase()),
+        !le[n])
+      )
+        if (new RegExp('\\b' + n + '\\b', 'i').test(Le)) {
+          var t = process.pid;
+          le[n] = function () {
+            var e = Y.format.apply(Y, arguments);
+            console.error('%s %d: %s', n, t, e);
+          };
+        } else le[n] = function () {};
+      return le[n];
+    };
+    function Et(n, t) {
+      var e = { seen: [], stylize: js };
+      return (
+        arguments.length >= 3 && (e.depth = arguments[2]),
+        arguments.length >= 4 && (e.colors = arguments[3]),
+        Ge(t) ? (e.showHidden = t) : t && Y._extend(e, t),
+        St(e.showHidden) && (e.showHidden = !1),
+        St(e.depth) && (e.depth = 2),
+        St(e.colors) && (e.colors = !1),
+        St(e.customInspect) && (e.customInspect = !0),
+        e.colors && (e.stylize = ks),
+        fe(e, n, e.depth)
+      );
+    }
+    Y.inspect = Et;
+    Et.colors = {
+      bold: [1, 22],
+      italic: [3, 23],
+      underline: [4, 24],
+      inverse: [7, 27],
+      white: [37, 39],
+      grey: [90, 39],
+      black: [30, 39],
+      blue: [34, 39],
+      cyan: [36, 39],
+      green: [32, 39],
+      magenta: [35, 39],
+      red: [31, 39],
+      yellow: [33, 39],
+    };
+    Et.styles = {
+      special: 'cyan',
+      number: 'yellow',
+      boolean: 'yellow',
+      undefined: 'grey',
+      null: 'bold',
+      string: 'green',
+      date: 'magenta',
+      regexp: 'red',
+    };
+    function ks(n, t) {
+      var e = Et.styles[t];
+      return e
+        ? '\x1B[' + Et.colors[e][0] + 'm' + n + '\x1B[' + Et.colors[e][1] + 'm'
+        : n;
+    }
+    function js(n, t) {
+      return n;
+    }
+    function Ls(n) {
+      var t = {};
+      return (
+        n.forEach(function (e, o) {
+          t[e] = !0;
+        }),
+        t
+      );
+    }
+    function fe(n, t, e) {
+      if (
+        n.customInspect &&
+        t &&
+        pe(t.inspect) &&
+        t.inspect !== Y.inspect &&
+        !(t.constructor && t.constructor.prototype === t)
+      ) {
+        var o = t.inspect(e, n);
+        return me(o) || (o = fe(n, o, e)), o;
+      }
+      var s = Ps(n, t);
+      if (s) return s;
+      var i = Object.keys(t),
+        r = Ls(i);
+      if (
+        (n.showHidden && (i = Object.getOwnPropertyNames(t)),
+        ue(t) && (i.indexOf('message') >= 0 || i.indexOf('description') >= 0))
+      )
+        return Pe(t);
+      if (i.length === 0) {
+        if (pe(t)) {
+          var a = t.name ? ': ' + t.name : '';
+          return n.stylize('[Function' + a + ']', 'special');
+        }
+        if (he(t))
+          return n.stylize(RegExp.prototype.toString.call(t), 'regexp');
+        if (Be(t)) return n.stylize(Date.prototype.toString.call(t), 'date');
+        if (ue(t)) return Pe(t);
+      }
+      var l = '',
+        h = !1,
+        u = ['{', '}'];
+      if ((mo(t) && ((h = !0), (u = ['[', ']'])), pe(t))) {
+        var p = t.name ? ': ' + t.name : '';
+        l = ' [Function' + p + ']';
+      }
+      if (
+        (he(t) && (l = ' ' + RegExp.prototype.toString.call(t)),
+        Be(t) && (l = ' ' + Date.prototype.toUTCString.call(t)),
+        ue(t) && (l = ' ' + Pe(t)),
+        i.length === 0 && (!h || t.length == 0))
+      )
+        return u[0] + l + u[1];
+      if (e < 0)
+        return he(t)
+          ? n.stylize(RegExp.prototype.toString.call(t), 'regexp')
+          : n.stylize('[Object]', 'special');
+      n.seen.push(t);
+      var c;
+      return (
+        h
+          ? (c = Rs(n, t, e, r, i))
+          : (c = i.map(function (d) {
+              return We(n, t, e, r, d, h);
+            })),
+        n.seen.pop(),
+        Ws(c, l, u)
+      );
+    }
+    function Ps(n, t) {
+      if (St(t)) return n.stylize('undefined', 'undefined');
+      if (me(t)) {
+        var e =
+          "'" +
+          JSON.stringify(t)
+            .replace(/^"|"$/g, '')
+            .replace(/'/g, "\\'")
+            .replace(/\\"/g, '"') +
+          "'";
+        return n.stylize(e, 'string');
+      }
+      if (go(t)) return n.stylize('' + t, 'number');
+      if (Ge(t)) return n.stylize('' + t, 'boolean');
+      if (de(t)) return n.stylize('null', 'null');
+    }
+    function Pe(n) {
+      return '[' + Error.prototype.toString.call(n) + ']';
+    }
+    function Rs(n, t, e, o, s) {
+      for (var i = [], r = 0, a = t.length; r < a; ++r)
+        yo(t, String(r)) ? i.push(We(n, t, e, o, String(r), !0)) : i.push('');
+      return (
+        s.forEach(function (l) {
+          l.match(/^\d+$/) || i.push(We(n, t, e, o, l, !0));
+        }),
+        i
+      );
+    }
+    function We(n, t, e, o, s, i) {
+      var r, a, l;
+      if (
+        ((l = Object.getOwnPropertyDescriptor(t, s) || { value: t[s] }),
+        l.get
+          ? l.set
+            ? (a = n.stylize('[Getter/Setter]', 'special'))
+            : (a = n.stylize('[Getter]', 'special'))
+          : l.set && (a = n.stylize('[Setter]', 'special')),
+        yo(o, s) || (r = '[' + s + ']'),
+        a ||
+          (n.seen.indexOf(l.value) < 0
+            ? (de(e) ? (a = fe(n, l.value, null)) : (a = fe(n, l.value, e - 1)),
+              a.indexOf(`
+`) > -1 &&
+                (i
+                  ? (a = a
+                      .split(
+                        `
+`
+                      )
+                      .map(function (h) {
+                        return '  ' + h;
+                      })
+                      .join(
+                        `
+`
+                      )
+                      .substr(2))
+                  : (a =
+                      `
+` +
+                      a
+                        .split(
+                          `
+`
+                        )
+                        .map(function (h) {
+                          return '   ' + h;
+                        }).join(`
+`))))
+            : (a = n.stylize('[Circular]', 'special'))),
+        St(r))
+      ) {
+        if (i && s.match(/^\d+$/)) return a;
+        (r = JSON.stringify('' + s)),
+          r.match(/^"([a-zA-Z_][a-zA-Z_0-9]*)"$/)
+            ? ((r = r.substr(1, r.length - 2)), (r = n.stylize(r, 'name')))
+            : ((r = r
+                .replace(/'/g, "\\'")
+                .replace(/\\"/g, '"')
+                .replace(/(^"|"$)/g, "'")),
+              (r = n.stylize(r, 'string')));
+      }
+      return r + ': ' + a;
+    }
+    function Ws(n, t, e) {
+      var o = 0,
+        s = n.reduce(function (i, r) {
+          return (
+            o++,
+            r.indexOf(`
+`) >= 0 && o++,
+            i + r.replace(/\u001b\[\d\d?m/g, '').length + 1
+          );
+        }, 0);
+      return s > 60
+        ? e[0] +
+            (t === ''
+              ? ''
+              : t +
+                `
+ `) +
+            ' ' +
+            n.join(`,
+  `) +
+            ' ' +
+            e[1]
+        : e[0] + t + ' ' + n.join(', ') + ' ' + e[1];
+    }
+    function mo(n) {
+      return Array.isArray(n);
+    }
+    Y.isArray = mo;
+    function Ge(n) {
+      return typeof n == 'boolean';
+    }
+    Y.isBoolean = Ge;
+    function de(n) {
+      return n === null;
+    }
+    Y.isNull = de;
+    function Bs(n) {
+      return n == null;
+    }
+    Y.isNullOrUndefined = Bs;
+    function go(n) {
+      return typeof n == 'number';
+    }
+    Y.isNumber = go;
+    function me(n) {
+      return typeof n == 'string';
+    }
+    Y.isString = me;
+    function Gs(n) {
+      return typeof n == 'symbol';
+    }
+    Y.isSymbol = Gs;
+    function St(n) {
+      return n === void 0;
+    }
+    Y.isUndefined = St;
+    function he(n) {
+      return $t(n) && Fe(n) === '[object RegExp]';
+    }
+    Y.isRegExp = he;
+    function $t(n) {
+      return typeof n == 'object' && n !== null;
+    }
+    Y.isObject = $t;
+    function Be(n) {
+      return $t(n) && Fe(n) === '[object Date]';
+    }
+    Y.isDate = Be;
+    function ue(n) {
+      return $t(n) && (Fe(n) === '[object Error]' || n instanceof Error);
+    }
+    Y.isError = ue;
+    function pe(n) {
+      return typeof n == 'function';
+    }
+    Y.isFunction = pe;
+    function Fs(n) {
+      return (
+        n === null ||
+        typeof n == 'boolean' ||
+        typeof n == 'number' ||
+        typeof n == 'string' ||
+        typeof n == 'symbol' ||
+        typeof n > 'u'
+      );
+    }
+    Y.isPrimitive = Fs;
+    Y.isBuffer = po();
+    function Fe(n) {
+      return Object.prototype.toString.call(n);
+    }
+    function Re(n) {
+      return n < 10 ? '0' + n.toString(10) : n.toString(10);
+    }
+    var $s = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    function Hs() {
+      var n = new Date(),
+        t = [Re(n.getHours()), Re(n.getMinutes()), Re(n.getSeconds())].join(
+          ':'
+        );
+      return [n.getDate(), $s[n.getMonth()], t].join(' ');
+    }
+    Y.log = function () {
+      console.log('%s - %s', Hs(), Y.format.apply(Y, arguments));
+    };
+    Y.inherits = fo();
+    Y._extend = function (n, t) {
+      if (!t || !$t(t)) return n;
+      for (var e = Object.keys(t), o = e.length; o--; ) n[e[o]] = t[e[o]];
+      return n;
+    };
+    function yo(n, t) {
+      return Object.prototype.hasOwnProperty.call(n, t);
+    }
+  });
+  var wo = qt((ka, Xt) => {
+    'use strict';
+    var qs = process.platform === 'win32',
+      Mt = _o();
+    function ge(n, t) {
+      for (var e = [], o = 0; o < n.length; o++) {
+        var s = n[o];
+        !s ||
+          s === '.' ||
+          (s === '..'
+            ? e.length && e[e.length - 1] !== '..'
+              ? e.pop()
+              : t && e.push('..')
+            : e.push(s));
+      }
+      return e;
+    }
+    function Kt(n) {
+      for (var t = n.length - 1, e = 0; e <= t && !n[e]; e++);
+      for (var o = t; o >= 0 && !n[o]; o--);
+      return e === 0 && o === t ? n : e > o ? [] : n.slice(e, o + 1);
+    }
+    var bo = /^([a-zA-Z]:|[\\\/]{2}[^\\\/]+[\\\/]+[^\\\/]+)?([\\\/])?([\s\S]*?)$/,
+      Us = /^([\s\S]*?)((?:\.{1,2}|[^\\\/]+?|)(\.[^.\/\\]*|))(?:[\\\/]*)$/,
+      ot = {};
+    function ye(n) {
+      var t = bo.exec(n),
+        e = (t[1] || '') + (t[2] || ''),
+        o = t[3] || '',
+        s = Us.exec(o),
+        i = s[1],
+        r = s[2],
+        a = s[3];
+      return [e, i, r, a];
+    }
+    function $e(n) {
+      var t = bo.exec(n),
+        e = t[1] || '',
+        o = !!e && e[1] !== ':';
+      return { device: e, isUnc: o, isAbsolute: o || !!t[2], tail: t[3] };
+    }
+    function vo(n) {
+      return '\\\\' + n.replace(/^[\\\/]+/, '').replace(/[\\\/]+/g, '\\');
+    }
+    ot.resolve = function () {
+      for (var n = '', t = '', e = !1, o = arguments.length - 1; o >= -1; o--) {
+        var s;
+        if (
+          (o >= 0
+            ? (s = arguments[o])
+            : n
+            ? ((s = process.env['=' + n]),
+              (!s || s.substr(0, 3).toLowerCase() !== n.toLowerCase() + '\\') &&
+                (s = n + '\\'))
+            : (s = process.cwd()),
+          Mt.isString(s))
+        ) {
+          if (!s) continue;
+        } else throw new TypeError('Arguments to path.resolve must be strings');
+        var i = $e(s),
+          r = i.device,
+          a = i.isUnc,
+          l = i.isAbsolute,
+          h = i.tail;
+        if (
+          !(r && n && r.toLowerCase() !== n.toLowerCase()) &&
+          (n || (n = r), e || ((t = h + '\\' + t), (e = l)), n && e)
+        )
+          break;
+      }
+      return (
+        a && (n = vo(n)),
+        (t = ge(t.split(/[\\\/]+/), !e).join('\\')),
+        n + (e ? '\\' : '') + t || '.'
+      );
+    };
+    ot.normalize = function (n) {
+      var t = $e(n),
+        e = t.device,
+        o = t.isUnc,
+        s = t.isAbsolute,
+        i = t.tail,
+        r = /[\\\/]$/.test(i);
+      return (
+        (i = ge(i.split(/[\\\/]+/), !s).join('\\')),
+        !i && !s && (i = '.'),
+        i && r && (i += '\\'),
+        o && (e = vo(e)),
+        e + (s ? '\\' : '') + i
+      );
+    };
+    ot.isAbsolute = function (n) {
+      return $e(n).isAbsolute;
+    };
+    ot.join = function () {
+      for (var n = [], t = 0; t < arguments.length; t++) {
+        var e = arguments[t];
+        if (!Mt.isString(e))
+          throw new TypeError('Arguments to path.join must be strings');
+        e && n.push(e);
+      }
+      var o = n.join('\\');
+      return (
+        /^[\\\/]{2}[^\\\/]/.test(n[0]) || (o = o.replace(/^[\\\/]{2,}/, '\\')),
+        ot.normalize(o)
+      );
+    };
+    ot.relative = function (n, t) {
+      (n = ot.resolve(n)), (t = ot.resolve(t));
+      for (
+        var e = n.toLowerCase(),
+          o = t.toLowerCase(),
+          s = Kt(t.split('\\')),
+          i = Kt(e.split('\\')),
+          r = Kt(o.split('\\')),
+          a = Math.min(i.length, r.length),
+          l = a,
+          h = 0;
+        h < a;
+        h++
+      )
+        if (i[h] !== r[h]) {
+          l = h;
+          break;
+        }
+      if (l == 0) return t;
+      for (var u = [], h = l; h < i.length; h++) u.push('..');
+      return (u = u.concat(s.slice(l))), u.join('\\');
+    };
+    ot._makeLong = function (n) {
+      if (!Mt.isString(n)) return n;
+      if (!n) return '';
+      var t = ot.resolve(n);
+      return /^[a-zA-Z]\:\\/.test(t)
+        ? '\\\\?\\' + t
+        : /^\\\\[^?.]/.test(t)
+        ? '\\\\?\\UNC\\' + t.substring(2)
+        : n;
+    };
+    ot.dirname = function (n) {
+      var t = ye(n),
+        e = t[0],
+        o = t[1];
+      return !e && !o ? '.' : (o && (o = o.substr(0, o.length - 1)), e + o);
+    };
+    ot.basename = function (n, t) {
+      var e = ye(n)[2];
+      return (
+        t &&
+          e.substr(-1 * t.length) === t &&
+          (e = e.substr(0, e.length - t.length)),
+        e
+      );
+    };
+    ot.extname = function (n) {
+      return ye(n)[3];
+    };
+    ot.format = function (n) {
+      if (!Mt.isObject(n))
+        throw new TypeError(
+          "Parameter 'pathObject' must be an object, not " + typeof n
+        );
+      var t = n.root || '';
+      if (!Mt.isString(t))
+        throw new TypeError(
+          "'pathObject.root' must be a string or undefined, not " +
+            typeof n.root
+        );
+      var e = n.dir,
+        o = n.base || '';
+      return e ? (e[e.length - 1] === ot.sep ? e + o : e + ot.sep + o) : o;
+    };
+    ot.parse = function (n) {
+      if (!Mt.isString(n))
+        throw new TypeError(
+          "Parameter 'pathString' must be a string, not " + typeof n
+        );
+      var t = ye(n);
+      if (!t || t.length !== 4) throw new TypeError("Invalid path '" + n + "'");
+      return {
+        root: t[0],
+        dir: t[0] + t[1].slice(0, -1),
+        base: t[2],
+        ext: t[3],
+        name: t[2].slice(0, t[2].length - t[3].length),
+      };
+    };
+    ot.sep = '\\';
+    ot.delimiter = ';';
+    var zs = /^(\/?|)([\s\S]*?)((?:\.{1,2}|[^\/]+?|)(\.[^.\/]*|))(?:[\/]*)$/,
+      st = {};
+    function _e(n) {
+      return zs.exec(n).slice(1);
+    }
+    st.resolve = function () {
+      for (var n = '', t = !1, e = arguments.length - 1; e >= -1 && !t; e--) {
+        var o = e >= 0 ? arguments[e] : process.cwd();
+        if (Mt.isString(o)) {
+          if (!o) continue;
+        } else throw new TypeError('Arguments to path.resolve must be strings');
+        (n = o + '/' + n), (t = o[0] === '/');
+      }
+      return (n = ge(n.split('/'), !t).join('/')), (t ? '/' : '') + n || '.';
+    };
+    st.normalize = function (n) {
+      var t = st.isAbsolute(n),
+        e = n && n[n.length - 1] === '/';
+      return (
+        (n = ge(n.split('/'), !t).join('/')),
+        !n && !t && (n = '.'),
+        n && e && (n += '/'),
+        (t ? '/' : '') + n
+      );
+    };
+    st.isAbsolute = function (n) {
+      return n.charAt(0) === '/';
+    };
+    st.join = function () {
+      for (var n = '', t = 0; t < arguments.length; t++) {
+        var e = arguments[t];
+        if (!Mt.isString(e))
+          throw new TypeError('Arguments to path.join must be strings');
+        e && (n ? (n += '/' + e) : (n += e));
+      }
+      return st.normalize(n);
+    };
+    st.relative = function (n, t) {
+      (n = st.resolve(n).substr(1)), (t = st.resolve(t).substr(1));
+      for (
+        var e = Kt(n.split('/')),
+          o = Kt(t.split('/')),
+          s = Math.min(e.length, o.length),
+          i = s,
+          r = 0;
+        r < s;
+        r++
+      )
+        if (e[r] !== o[r]) {
+          i = r;
+          break;
+        }
+      for (var a = [], r = i; r < e.length; r++) a.push('..');
+      return (a = a.concat(o.slice(i))), a.join('/');
+    };
+    st._makeLong = function (n) {
+      return n;
+    };
+    st.dirname = function (n) {
+      var t = _e(n),
+        e = t[0],
+        o = t[1];
+      return !e && !o ? '.' : (o && (o = o.substr(0, o.length - 1)), e + o);
+    };
+    st.basename = function (n, t) {
+      var e = _e(n)[2];
+      return (
+        t &&
+          e.substr(-1 * t.length) === t &&
+          (e = e.substr(0, e.length - t.length)),
+        e
+      );
+    };
+    st.extname = function (n) {
+      return _e(n)[3];
+    };
+    st.format = function (n) {
+      if (!Mt.isObject(n))
+        throw new TypeError(
+          "Parameter 'pathObject' must be an object, not " + typeof n
+        );
+      var t = n.root || '';
+      if (!Mt.isString(t))
+        throw new TypeError(
+          "'pathObject.root' must be a string or undefined, not " +
+            typeof n.root
+        );
+      var e = n.dir ? n.dir + st.sep : '',
+        o = n.base || '';
+      return e + o;
+    };
+    st.parse = function (n) {
+      if (!Mt.isString(n))
+        throw new TypeError(
+          "Parameter 'pathString' must be a string, not " + typeof n
+        );
+      var t = _e(n);
+      if (!t || t.length !== 4) throw new TypeError("Invalid path '" + n + "'");
+      return (
+        (t[1] = t[1] || ''),
+        (t[2] = t[2] || ''),
+        (t[3] = t[3] || ''),
+        {
+          root: t[0],
+          dir: t[0] + t[1].slice(0, -1),
+          base: t[2],
+          ext: t[3],
+          name: t[2].slice(0, t[2].length - t[3].length),
+        }
+      );
+    };
+    st.sep = '/';
+    st.delimiter = ':';
+    qs ? (Xt.exports = ot) : (Xt.exports = st);
+    Xt.exports.posix = st;
+    Xt.exports.win32 = ot;
+  });
+  var He = {};
+  ct(He, { TestWorker: () => be, default: () => Js });
+  var Mo,
+    So,
+    be,
+    Js,
+    qe = C(() => {
+      'use strict';
+      (Mo = Li('child_process')),
+        (So = Pi(wo(), 1)),
+        (be = class {
+          worker;
+          constructor(t, e) {
+            (this.worker = (0, Mo.fork)(So.default.join(__dirname, '/worker'))),
+              this.worker.send({ set: t, cost: e.name });
+          }
+          evaluate(t) {
+            return new Promise((e) => {
+              let o = t.serialize(),
+                s = { activations: o[0], states: o[1], conns: o[2] },
+                i = this.worker;
+              this.worker.on('message', function r(a) {
+                i.removeListener('message', r), e(a);
+              }),
+                this.worker.send(s);
+            });
+          }
+          terminate() {
+            this.worker.kill();
+          }
+        }),
+        (Js = be);
+    });
+  var ze = {};
+  ct(ze, { TestWorker: () => Ue });
+  var Ue,
+    Je = C(() => {
+      'use strict';
+      ve();
+      Ue = class n {
+        worker;
+        url;
+        constructor(t, e) {
+          let o = new Blob([n._createBlobString(e)]);
+          (this.url = window.URL.createObjectURL(o)),
+            (this.worker = new Worker(this.url));
+          let s = { set: new Float64Array(t).buffer };
+          this.worker.postMessage(s, [s.set]);
+        }
+        evaluate(t) {
+          return new Promise((e, o) => {
+            let s = t.serialize(),
+              i = {
+                activations: new Float64Array(s[0]).buffer,
+                states: new Float64Array(s[1]).buffer,
+                conns: new Float64Array(s[2]).buffer,
+              };
+            (this.worker.onmessage = function (r) {
+              let a = new Float64Array(r.data.buffer)[0];
+              e(a);
+            }),
+              this.worker.postMessage(i, [i.activations, i.states, i.conns]);
+          });
+        }
+        terminate() {
+          this.worker.terminate(), window.URL.revokeObjectURL(this.url);
+        }
+        static _createBlobString(t) {
+          return `
       const F = [${dt.activations.toString()}];
       const cost = ${t.toString()};
       const multi = {
@@ -42,9 +5963,4193 @@
         } else {
           set = multi.deserializeDataSet(new Float64Array(e.data.set));
         }
-      };`}}});var we,xo=C(()=>{"use strict";we=class{static async getNodeTestWorker(){return(await Promise.resolve().then(()=>(qe(),He))).TestWorker}static async getBrowserTestWorker(){return(await Promise.resolve().then(()=>(Je(),ze))).TestWorker}}});var dt,ve=C(()=>{"use strict";xo();dt=class n{static workers=we;static activations=[t=>1/(1+Math.exp(-t)),t=>Math.tanh(t),t=>t,t=>t>0?1:0,t=>t>0?t:0,t=>t/(1+Math.abs(t)),t=>Math.sin(t),t=>Math.exp(-Math.pow(t,2)),t=>(Math.sqrt(Math.pow(t,2)+1)-1)/2+t,t=>t>0?1:-1,t=>2/(1+Math.exp(-t))-1,t=>Math.max(-1,Math.min(1,t)),t=>Math.abs(t),t=>1-t,t=>{let e=1.6732632423543772;return(t>0?t:e*Math.exp(t)-e)*1.0507009873554805},t=>Math.log(1+Math.exp(t))];static serializeDataSet(t){let e=[t[0].input.length,t[0].output.length];for(let o=0;o<t.length;o++){for(let s=0;s<e[0];s++)e.push(t[o].input[s]);for(let s=0;s<e[1];s++)e.push(t[o].output[s])}return e}static activateSerializedNetwork(t,e,o,s,i){for(let a=0;a<s[0];a++)e[a]=t[a];for(let a=2;a<s.length;a++){let l=s[a++],h=s[a++],u=s[a++],p=s[a++],c=s[a++];for(o[l]=(c===-1?1:e[c])*p*o[l]+h;s[a]!==-2;)o[l]+=e[s[a++]]*s[a++]*(s[a++]===-1?1:e[s[a-1]]);e[l]=i[u](o[l])}let r=[];for(let a=e.length-s[1];a<e.length;a++)r.push(e[a]);return r}static deserializeDataSet(t){let e=[],o=t[0]+t[1];for(let s=0;s<(t.length-2)/o;s++){let i=[];for(let a=2+s*o;a<2+s*o+t[0];a++)i.push(t[a]);let r=[];for(let a=2+s*o+t[0];a<2+s*o+o;a++)r.push(t[a]);e.push({input:i,output:r})}return e}static logistic(t){return 1/(1+Math.exp(-t))}static tanh(t){return Math.tanh(t)}static identity(t){return t}static step(t){return t>0?1:0}static relu(t){return t>0?t:0}static softsign(t){return t/(1+Math.abs(t))}static sinusoid(t){return Math.sin(t)}static gaussian(t){return Math.exp(-Math.pow(t,2))}static bentIdentity(t){return(Math.sqrt(Math.pow(t,2)+1)-1)/2+t}static bipolar(t){return t>0?1:-1}static bipolarSigmoid(t){return 2/(1+Math.exp(-t))-1}static hardTanh(t){return Math.max(-1,Math.min(1,t))}static absolute(t){return Math.abs(t)}static inverse(t){return 1-t}static selu(t){let e=1.6732632423543772;return(t>0?t:e*Math.exp(t)-e)*1.0507009873554805}static softplus(t){return Math.log(1+Math.exp(t))}static testSerializedSet(t,e,o,s,i,r){let a=0;for(let l=0;l<t.length;l++){let h=n.activateSerializedNetwork(t[l].input,o,s,i,r);a+=e(t[l].output,h)}return a/t.length}static async getBrowserTestWorker(){let{TestWorker:t}=await Promise.resolve().then(()=>(Je(),ze));return t}static async getNodeTestWorker(){let{TestWorker:t}=await Promise.resolve().then(()=>(qe(),He));return t}}});var Oo={};ct(Oo,{evolveNetwork:()=>Xs});function Ve(n,t){let e=n.nodes.length,o=n.connections.length,s=n.gates.length,i=No.get(n);if(i&&i.nodes===e&&i.conns===o&&i.gates===s)return i.value*t;let r=e-n.input-n.output+o+s;return No.set(n,{nodes:e,conns:o,gates:s,value:r}),r*t}function Ao(n,t,e,o){return s=>{let i=0;for(let r=0;r<e;r++)try{i-=s.test(n,t).error}catch(a){return G.warnings&&console.warn(`Genome evaluation failed: ${a&&a.message||a}. Penalizing with -Infinity fitness.`),-1/0}return i-=Ve(s,o),i=isNaN(i)?-1/0:i,i/e}}async function Ks(n,t,e,o,s,i){let r=dt.serializeDataSet(n),a=[],l=null;try{let u=typeof process<"u"&&!!process.versions?.node;u&&dt.workers?.getNodeTestWorker?l=await dt.workers.getNodeTestWorker():!u&&dt.workers?.getBrowserTestWorker&&(l=await dt.workers.getBrowserTestWorker())}catch(u){G.warnings&&console.warn("Failed to load worker class; falling back to single-thread path:",u?.message||u)}if(!l)return{fitnessFunction:Ao(n,t,e,o),threads:1};for(let u=0;u<s;u++)try{a.push(new l(r,{name:t.name||t.toString?.()||"cost"}))}catch(p){G.warnings&&console.warn("Worker spawn failed",p)}let h=u=>new Promise(p=>{if(!a.length){p();return}let c=u.slice(),d=a.length,f=m=>{if(!c.length){--d===0&&p();return}let _=c.shift();m.evaluate(_).then(y=>{typeof _<"u"&&typeof y=="number"&&(_.score=-y-Ve(_,o),_.score=isNaN(y)?-1/0:_.score),f(m)}).catch(()=>f(m))};a.forEach(m=>f(m))});return i.fitnessPopulation=!0,i._workerTerminators=()=>{a.forEach(u=>{try{u.terminate&&u.terminate()}catch{}})},{fitnessFunction:h,threads:s}}async function Xs(n,t){if(!n||n.length===0||n[0].input.length!==this.input||n[0].output.length!==this.output)throw new Error("Dataset is invalid or dimensions do not match network input/output size!");t=t||{};let e=t.error??.05,o=t.growth??1e-4,s=t.cost||wt.mse,i=t.amount||1,r=t.log||0,a=t.schedule,l=t.clear||!1,h=typeof t.threads>"u"?1:t.threads,u=Date.now(),p={targetError:e,growth:o,cost:s,amount:i,log:r,schedule:a,clear:l,threads:h};if(typeof t.iterations>"u"&&typeof t.error>"u")throw new Error("At least one stopping condition (`iterations` or `error`) must be specified for evolution.");typeof t.error>"u"?e=-1:typeof t.iterations>"u"&&(t.iterations=0);let c;if(h===1)c=Ao(n,s,i,o);else{let b=await Ks(n,s,i,o,h,t);c=b.fitnessFunction,h=b.threads}t.network=this,t.populationSize!=null&&t.popsize==null&&(t.popsize=t.populationSize),typeof t.speciation>"u"&&(t.speciation=!1);let{default:d}=await Promise.resolve().then(()=>(Ke(),Co)),f=new d(this.input,this.output,c,t);if(typeof t.iterations=="number"&&t.iterations===0&&f._warnIfNoBestGenome)try{f._warnIfNoBestGenome()}catch{}t.popsize&&t.popsize<=10&&(f.options.mutationRate=f.options.mutationRate??.5,f.options.mutationAmount=f.options.mutationAmount??1);let m=1/0,_=-1/0,y,g=0,w=5,v=typeof t.iterations=="number";for(;(e===-1||m>e)&&(!v||f.generation<t.iterations);){let b=await f.evolve(),M=b.score??-1/0;if(m=-(M-Ve(b,o))||1/0,M>_&&(_=M,y=b),!isFinite(m)||isNaN(m)){if(++g>=w)break}else g=0;if(a&&f.generation%a.iterations===0)try{a.function({fitness:_,error:m,iteration:f.generation})}catch{}}if(typeof y<"u")this.nodes=y.nodes,this.connections=y.connections,this.selfconns=y.selfconns,this.gates=y.gates,l&&this.clear();else if(f._warnIfNoBestGenome)try{f._warnIfNoBestGenome()}catch{}try{t._workerTerminators&&t._workerTerminators()}catch{}return{error:m,iterations:f.generation,time:Date.now()-u}}var No,Eo=C(()=>{"use strict";pt();vt();ve();No=new WeakMap});var Pt={};ct(Pt,{default:()=>it});var it,bt=C(()=>{"use strict";mt();Ee();pt();vt();Jt();wn();xn();On();Dn();Rn();Gn();zn();Vn();Xn();Qn();io();ro();it=class n{input;output;score;nodes;connections;gates;selfconns;dropout=0;_dropConnectProb=0;_lastGradNorm;_optimizerStep=0;_weightNoiseStd=0;_weightNoisePerHidden=[];_weightNoiseSchedule;_stochasticDepth=[];_wnOrig;_trainingStep=0;_rand=Math.random;_rngState;_lastStats=null;_stochasticDepthSchedule;_mixedPrecision={enabled:!1,lossScale:1};_mixedPrecisionState={goodSteps:0,badSteps:0,minLossScale:1,maxLossScale:65536,overflowCount:0,scaleUpEvents:0,scaleDownEvents:0};_gradAccumMicroBatches=0;_currentGradClip;_lastRawGradNorm=0;_accumulationReduction="average";_gradClipSeparateBias=!1;_lastGradClipGroupCount=0;_lastOverflowStep=-1;_forceNextOverflow=!1;_pruningConfig;_initialConnectionCount;_enforceAcyclic=!1;_topoOrder=null;_topoDirty=!0;_globalEpoch=0;layers;_evoInitialConnCount;_activationPrecision="f64";_reuseActivationArrays=!1;_returnTypedActivations=!1;_activationPool;_connWeights;_connFrom;_connTo;_slabDirty=!0;_useFloat32Weights=!0;_nodeIndexDirty=!0;_outStart;_outOrder;_adjDirty=!0;_fastA;_fastS;_preferredChainEdge;_canUseFastSlab(t){return Tn.call(this,t)}_fastSlabActivate(t){return In.call(this,t)}rebuildConnectionSlab(t=!1){return se.call(this,t)}getConnectionSlab(){return En.call(this)}constructor(t,e,o){if(typeof t>"u"||typeof e>"u")throw new Error("No input or output size given");this.input=t,this.output=e,this.nodes=[],this.connections=[],this.gates=[],this.selfconns=[],this.dropout=0,this._enforceAcyclic=o?.enforceAcyclic||!1,o?.activationPrecision?this._activationPrecision=o.activationPrecision:G.float32Mode&&(this._activationPrecision="f32"),o?.reuseActivationArrays&&(this._reuseActivationArrays=!0),o?.returnTypedActivations&&(this._returnTypedActivations=!0);try{typeof G.poolMaxPerBucket=="number"&&ft.setMaxPerBucket(G.poolMaxPerBucket);let i=typeof G.poolPrewarmCount=="number"?G.poolPrewarmCount:2;ft.prewarm(this.output,i)}catch{}o?.seed!==void 0&&this.setSeed(o.seed);for(let i=0;i<this.input+this.output;i++){let r=i<this.input?"input":"output";G.enableNodePooling?this.nodes.push(Oe({type:r,rng:this._rand})):this.nodes.push(new K(r,void 0,this._rand))}for(let i=0;i<this.input;i++)for(let r=this.input;r<this.input+this.output;r++){let a=this._rand()*this.input*Math.sqrt(2/this.input);this.connect(this.nodes[i],this.nodes[r],a)}let s=o?.minHidden||0;if(s>0)for(;this.nodes.length<this.input+this.output+s;)this.addNodeBetween()}addNodeBetween(){if(this.connections.length===0)return;let t=Math.floor(this._rand()*this.connections.length),e=this.connections[t];if(!e)return;this.disconnect(e.from,e.to);let o=G.enableNodePooling?Oe({type:"hidden",rng:this._rand}):new K("hidden",void 0,this._rand);this.nodes.push(o),this.connect(e.from,o,e.weight),this.connect(o,e.to,1),this._topoDirty=!0,this._nodeIndexDirty=!0}enableDropConnect(t){if(t<0||t>=1)throw new Error("DropConnect probability must be in [0,1)");this._dropConnectProb=t}disableDropConnect(){this._dropConnectProb=0}setEnforceAcyclic(t){this._enforceAcyclic=!!t}_computeTopoOrder(){return Nn.call(this)}_hasPath(t,e){return An.call(this,t,e)}configurePruning(t){let{start:e,end:o,targetSparsity:s}=t;if(e<0||o<e)throw new Error("Invalid pruning schedule window");if(s<=0||s>=1)throw new Error("targetSparsity must be in (0,1)");this._pruningConfig={start:e,end:o,targetSparsity:s,regrowFraction:t.regrowFraction??0,frequency:t.frequency??1,method:t.method||"magnitude",lastPruneIter:void 0},this._initialConnectionCount=this.connections.length}getCurrentSparsity(){return Pn.call(this)}_maybePrune(t){return jn.call(this,t)}pruneToSparsity(t,e="magnitude"){return Ln.call(this,t,e)}enableWeightNoise(t){if(typeof t=="number"){if(t<0)throw new Error("Weight noise stdDev must be >= 0");this._weightNoiseStd=t,this._weightNoisePerHidden=[]}else if(t&&Array.isArray(t.perHiddenLayer)){if(!this.layers||this.layers.length<3)throw new Error("Per-hidden-layer weight noise requires a layered network with at least one hidden layer");let e=this.layers.length-2;if(t.perHiddenLayer.length!==e)throw new Error(`Expected ${e} std dev entries (one per hidden layer), got ${t.perHiddenLayer.length}`);if(t.perHiddenLayer.some(o=>o<0))throw new Error("Weight noise std devs must be >= 0");this._weightNoiseStd=0,this._weightNoisePerHidden=t.perHiddenLayer.slice()}else throw new Error("Invalid weight noise configuration")}disableWeightNoise(){this._weightNoiseStd=0,this._weightNoisePerHidden=[]}setWeightNoiseSchedule(t){this._weightNoiseSchedule=t}clearWeightNoiseSchedule(){this._weightNoiseSchedule=void 0}setRandom(t){this._rand=t}setSeed(t){Fn.call(this,t)}testForceOverflow(){this._forceNextOverflow=!0}get trainingStep(){return this._trainingStep}get lastSkippedLayers(){return this._lastSkippedLayers||[]}snapshotRNG(){return $n.call(this)}restoreRNG(t){Hn.call(this,t)}getRNGState(){return qn.call(this)}setRNGState(t){Un.call(this,t)}setStochasticDepthSchedule(t){this._stochasticDepthSchedule=t}clearStochasticDepthSchedule(){this._stochasticDepthSchedule=void 0}getRegularizationStats(){return Jn.call(this)}setStochasticDepth(t){if(!Array.isArray(t))throw new Error("survival must be an array");if(t.some(o=>o<=0||o>1))throw new Error("Stochastic depth survival probs must be in (0,1]");if(!this.layers||this.layers.length===0)throw new Error("Stochastic depth requires layer-based network");let e=Math.max(0,this.layers.length-2);if(t.length!==e)throw new Error(`Expected ${e} survival probabilities for hidden layers, got ${t.length}`);this._stochasticDepth=t.slice()}disableStochasticDepth(){this._stochasticDepth=[]}clone(){return n.fromJSON(this.toJSON())}resetDropoutMasks(){if(this.layers&&this.layers.length>0){for(let t of this.layers)if(typeof t.nodes<"u")for(let e of t.nodes)typeof e.mask<"u"&&(e.mask=1)}else for(let t of this.nodes)typeof t.mask<"u"&&(t.mask=1)}standalone(){return Sn(this)}activate(t,e=!1,o=1e3){if(this._enforceAcyclic&&this._topoDirty&&this._computeTopoOrder(),!Array.isArray(t)||t.length!==this.input)throw new Error(`Input size mismatch: expected ${this.input}, got ${t?t.length:"undefined"}`);if(this._canUseFastSlab(e))try{return this._fastSlabActivate(t)}catch{}let s=ft.acquire(this.output);if(!this.nodes||this.nodes.length===0)throw new Error("Network structure is corrupted or empty. No nodes found.");let i=s;this._lastSkippedLayers=[];let r={droppedHiddenNodes:0,totalHiddenNodes:0,droppedConnections:0,totalConnections:this.connections.length,skippedLayers:[],weightNoise:{count:0,sumAbs:0,maxAbs:0,meanAbs:0}},a=!1,l=this._weightNoiseStd;if(e&&(this._weightNoiseSchedule&&(l=this._weightNoiseSchedule(this._trainingStep)),l>0||this._weightNoisePerHidden.length>0))for(let u of this.connections){if(u._origWeightNoise!=null)continue;u._origWeightNoise=u.weight;let p=l;if(this._weightNoisePerHidden.length>0&&this.layers){let c=-1;for(let d=0;d<this.layers.length;d++)if(this.layers[d].nodes.includes(u.from)){c=d;break}if(c>0&&c<this.layers.length){let d=c-1;d>=0&&d<this._weightNoisePerHidden.length&&(p=this._weightNoisePerHidden[d])}}if(p>0){let c=p*n._gaussianRand(this._rand);u.weight+=c,u._wnLast=c,a=!0}else u._wnLast=0}if(e&&this._stochasticDepthSchedule&&this._stochasticDepth.length>0){let u=this._stochasticDepthSchedule(this._trainingStep,this._stochasticDepth.slice());Array.isArray(u)&&u.length===this._stochasticDepth.length&&!u.some(p=>p<=0||p>1)&&(this._stochasticDepth=u.slice())}if(this.layers&&this.layers.length>0&&this._stochasticDepth.length>0){let u;for(let p=0;p<this.layers.length;p++){let c=this.layers[p],d=p>0&&p<this.layers.length-1,f=!1;if(e&&d){let _=p-1;if(_<this._stochasticDepth.length){let y=this._stochasticDepth[_];if(f=this._rand()>=y,f&&(!u||u.length!==c.nodes.length)&&(f=!1),!f){let g=p===0?c.activate(t,e):c.activate(void 0,e);u=y<1?g.map(w=>w*(1/y)):g;continue}}}if(f){this._lastSkippedLayers.push(p),r.skippedLayers.push(p);continue}u=p===0?c.activate(t,e):c.activate(void 0,e)}if(u)for(let p=0;p<u.length&&p<this.output;p++)i[p]=u[p]}else if(this.layers&&this.layers.length>0){let u;for(let p=0;p<this.layers.length;p++){let c=this.layers[p],d=p>0&&p<this.layers.length-1,f=p===0?c.activate(t,!1):c.activate(void 0,!1);if(d&&e&&this.dropout>0){let m=0;for(let _ of c.nodes)_.mask=this._rand()<this.dropout?0:1,r.totalHiddenNodes++,_.mask===0&&r.droppedHiddenNodes++,_.mask===0&&(_.activation=0,m++);if(m===c.nodes.length&&c.nodes.length>0){let _=Math.floor(this._rand()*c.nodes.length);c.nodes[_].mask=1,c.nodes[_].activation=f[_]}}else if(d)for(let m of c.nodes)m.mask=1;u=f}if(u)if(this._reuseActivationArrays)for(let p=0;p<u.length&&p<this.output;p++)i[p]=u[p];else for(let p=0;p<u.length&&p<this.output;p++)i[p]=u[p]}else{let u=this.nodes.filter(d=>d.type==="hidden"),p=0;if(e&&this.dropout>0){for(let d of u)d.mask=this._rand()<this.dropout?0:1,r.totalHiddenNodes++,d.mask===0&&(p++,r.droppedHiddenNodes++);if(p===u.length&&u.length>0){let d=Math.floor(this._rand()*u.length);u[d].mask=1}}else for(let d of u)d.mask=1;if(e&&this._weightNoiseStd>0){this._wnOrig||(this._wnOrig=new Array(this.connections.length));for(let d=0;d<this.connections.length;d++){let f=this.connections[d];if(f._origWeightNoise!=null)continue;f._origWeightNoise=f.weight;let m=this._weightNoiseStd*n._gaussianRand(this._rand);f.weight+=m}}let c=0;if(this.nodes.forEach((d,f)=>{if(d.type==="input")d.activate(t[f]);else if(d.type==="output"){let m=d.activate();i[c++]=m}else d.activate()}),e&&this._dropConnectProb>0)for(let d of this.connections){let f=this._rand()<this._dropConnectProb?0:1;f===0&&r.droppedConnections++,d.dcMask=f,f===0?(d._origWeight==null&&(d._origWeight=d.weight),d.weight=0):d._origWeight!=null&&(d.weight=d._origWeight,delete d._origWeight)}else for(let d of this.connections)d._origWeight!=null&&(d.weight=d._origWeight,delete d._origWeight),d.dcMask=1;if(e&&a)for(let d of this.connections)d._origWeightNoise!=null&&(d.weight=d._origWeightNoise,delete d._origWeightNoise)}e&&this._trainingStep++,r.weightNoise.count>0&&(r.weightNoise.meanAbs=r.weightNoise.sumAbs/r.weightNoise.count),this._lastStats=r;let h=Array.from(i);return ft.release(i),h}static _gaussianRand(t=Math.random){let e=0,o=0;for(;e===0;)e=t();for(;o===0;)o=t();return Math.sqrt(-2*Math.log(e))*Math.cos(2*Math.PI*o)}noTraceActivate(t){let{noTraceActivate:e}=(ae(),q(re));return e.call(this,t)}activateRaw(t,e=!1,o=1e3){let{activateRaw:s}=(ae(),q(re));return s.call(this,t,e,o)}activateBatch(t,e=!1){let{activateBatch:o}=(ae(),q(re));return o.call(this,t,e)}propagate(t,e,o,s,i=0,r){if(!s||s.length!==this.output)throw new Error("Output target length should match network output length");let a=s.length;for(let l=this.nodes.length-1;l>=this.nodes.length-this.output;l--)r?this.nodes[l].propagate(t,e,o,i,s[--a],r):this.nodes[l].propagate(t,e,o,i,s[--a]);for(let l=this.nodes.length-this.output-1;l>=this.input;l--)this.nodes[l].propagate(t,e,o,i)}clear(){this.nodes.forEach(t=>t.clear())}mutate(t){let{mutateImpl:e}=(co(),q(ao));return e.call(this,t)}connect(t,e,o){return Yn.call(this,t,e,o)}gate(t,e){return Wn.call(this,t,e)}remove(t){let e=Kn.call(this,t);if(G.enableNodePooling)try{ie(t)}catch{}return e}disconnect(t,e){return Zn.call(this,t,e)}ungate(t){return Bn.call(this,t)}_applyGradientClipping(t){let{applyGradientClippingImpl:e}=(ke(),q(De));e(this,t)}train(t,e){let{trainImpl:o}=(ke(),q(De));return o(this,t,e)}getRawGradientNorm(){return this._lastRawGradNorm}getLossScale(){return this._mixedPrecision.lossScale}getLastGradClipGroupCount(){return this._lastGradClipGroupCount}getTrainingStats(){return{gradNorm:this._lastGradNorm??0,gradNormRaw:this._lastRawGradNorm,lossScale:this._mixedPrecision.lossScale,optimizerStep:this._optimizerStep,mp:{good:this._mixedPrecisionState.goodSteps,bad:this._mixedPrecisionState.badSteps,overflowCount:this._mixedPrecisionState.overflowCount||0,scaleUps:this._mixedPrecisionState.scaleUpEvents||0,scaleDowns:this._mixedPrecisionState.scaleDownEvents||0,lastOverflowStep:this._lastOverflowStep}}}static adjustRateForAccumulation(t,e,o){return o==="sum"&&e>1?t/e:t}async evolve(t,e){let{evolveNetwork:o}=await Promise.resolve().then(()=>(Eo(),Oo));return o.call(this,t,e)}test(t,e){if(!Array.isArray(t)||t.length===0)throw new Error("Test set is empty or not an array.");for(let a of t){if(!Array.isArray(a.input)||a.input.length!==this.input)throw new Error(`Test sample input size mismatch: expected ${this.input}, got ${a.input?a.input.length:"undefined"}`);if(!Array.isArray(a.output)||a.output.length!==this.output)throw new Error(`Test sample output size mismatch: expected ${this.output}, got ${a.output?a.output.length:"undefined"}`)}let o=0,s=e||wt.mse,i=Date.now();this.nodes.forEach(a=>{a.type==="hidden"&&(a.mask=1)});let r=this.dropout;return this.dropout>0&&(this.dropout=0),t.forEach(a=>{let l=this.noTraceActivate(a.input);o+=s(a.output,l)}),this.dropout=r,{error:o/t.length,time:Date.now()-i}}serialize(){return to.call(this)}static deserialize(t,e,o){return eo(t,e,o)}toJSON(){return no.call(this)}static fromJSON(t){return oo(t)}static crossOver(t,e,o=!1){return so(t,e,o)}set(t){this.nodes.forEach(e=>{typeof t.bias<"u"&&(e.bias=t.bias),typeof t.squash<"u"&&(e.squash=t.squash)})}toONNX(){return vn(this)}static createMLP(t,e,o){let s=Array.from({length:t},()=>new K("input")),i=e.map(u=>Array.from({length:u},()=>new K("hidden"))),r=Array.from({length:o},()=>new K("output")),a=[...s,...i.flat(),...r],l=new n(t,o);l.nodes=a;let h=s;for(let u of i){for(let p of u)for(let c of h)c.connect(p);h=u}for(let u of r)for(let p of h)p.connect(u);return l.connections=l.nodes.flatMap(u=>u.connections.out),l._topoDirty=!0,l}static rebuildConnections(t){let e=new Set;t.nodes.forEach(o=>{o.connections.out.forEach(s=>{e.add(s)})}),t.connections=Array.from(e)}}});function Io(){let n=(pt(),q(ut));for(let t of this.population){this.options.adaptiveMutation?.enabled&&t._mutRate===void 0&&(t._mutRate=this.options.mutationRate!==void 0?this.options.mutationRate:this.options.adaptiveMutation.initialRate??(this.options.mutationRate||.7),this.options.adaptiveMutation.adaptAmount&&(t._mutAmount=this.options.mutationAmount||1));let e=this.options.mutationRate!==void 0?this.options.mutationRate:this.options.adaptiveMutation?.enabled?t._mutRate:this.options.mutationRate||.7,o=this.options.adaptiveMutation?.enabled&&this.options.adaptiveMutation.adaptAmount?t._mutAmount??(this.options.mutationAmount||1):this.options.mutationAmount||1;if(this._getRNG()()<=e)for(let s=0;s<o;s++){let i=this.selectMutationMethod(t,!1);if(Array.isArray(i)){let r=i;i=r[Math.floor(this._getRNG()()*r.length)]}if(i&&i.name){let r=t.nodes.length,a=t.connections.length;if(i===n.mutation.ADD_NODE){this._mutateAddNodeReuse(t);try{t.mutate(n.mutation.MOD_WEIGHT)}catch{}this._invalidateGenomeCaches(t)}else if(i===n.mutation.ADD_CONN){this._mutateAddConnReuse(t);try{t.mutate(n.mutation.MOD_WEIGHT)}catch{}this._invalidateGenomeCaches(t)}else t.mutate(i),(i===n.mutation.ADD_GATE||i===n.mutation.SUB_NODE||i===n.mutation.SUB_CONN||i===n.mutation.ADD_SELF_CONN||i===n.mutation.ADD_BACK_CONN)&&this._invalidateGenomeCaches(t);if(this._getRNG()()<.5&&this._mutateAddConnReuse(t),this.options.operatorAdaptation?.enabled){let l=this._operatorStats.get(i.name)||{success:0,attempts:0};l.attempts++;let h=t.nodes.length,u=t.connections.length;(h>r||u>a)&&l.success++,this._operatorStats.set(i.name,l)}}}}}function To(n){if(n.connections.length===0){let h=n.nodes.find(p=>p.type==="input"),u=n.nodes.find(p=>p.type==="output");if(h&&u)try{n.connect(h,u,1)}catch{}}let t=n.connections.filter(h=>h.enabled!==!1);if(!t.length)return;let e=t[Math.floor(this._getRNG()()*t.length)],o=e.from.geneId,s=e.to.geneId,i=o+"->"+s,r=e.weight;n.disconnect(e.from,e.to);let a=this._nodeSplitInnovations.get(i),l=(mt(),q(ne)).default;if(a){let h=new l("hidden");h.geneId=a.newNodeGeneId;let u=n.nodes.indexOf(e.to),p=Math.min(u,n.nodes.length-n.output);n.nodes.splice(p,0,h);let c=n.connect(e.from,h,1)[0],d=n.connect(h,e.to,r)[0];c&&(c.innovation=a.inInnov),d&&(d.innovation=a.outInnov)}else{let h=new l("hidden"),u=n.connect(e.from,h,1)[0],p=n.connect(h,e.to,r)[0];u&&(u.innovation=this._nextGlobalInnovation++),p&&(p.innovation=this._nextGlobalInnovation++),a={newNodeGeneId:h.geneId,inInnov:u?.innovation,outInnov:p?.innovation},this._nodeSplitInnovations.set(i,a);let c=n.nodes.indexOf(e.to),d=Math.min(c,n.nodes.length-n.output);n.nodes.splice(d,0,h)}}function Do(n){let t=[];for(let c=0;c<n.nodes.length-n.output;c++){let d=n.nodes[c];for(let f=Math.max(c+1,n.input);f<n.nodes.length;f++){let m=n.nodes[f];d.isProjectingTo(m)||t.push([d,m])}}if(!t.length)return;let e=t.filter(c=>{let d=c[0].geneId,f=c[1].geneId,m=d<f?d+"::"+f:f+"::"+d;return this._connInnovations.has(m)}),o=e.length?[]:t.filter(c=>c[0].type==="hidden"&&c[1].type==="hidden"),s=e.length?e:o.length?o:t,i=s.length===1?s[0]:s[Math.floor(this._getRNG()()*s.length)],r=i[0],a=i[1],l=r.geneId,h=a.geneId,u=l<h?l+"::"+h:h+"::"+l;if(n._enforceAcyclic&&(()=>{let d=[a],f=new Set;for(;d.length;){let m=d.pop();if(m===r)return!0;if(!f.has(m)){f.add(m);for(let _ of m.connections.out)d.push(_.to)}}return!1})())return;let p=n.connect(r,a)[0];if(p)if(this._connInnovations.has(u))p.innovation=this._connInnovations.get(u);else{let c=this._nextGlobalInnovation++;p.innovation=c,this._connInnovations.set(u,c);let d=l+"::"+h,f=h+"::"+l;this._connInnovations.set(d,c),this._connInnovations.set(f,c)}}function ko(n,t){let e=this.options.maxNodes||1/0,o=Math.min(this.getMinimumHiddenSize(t),e-n.nodes.filter(h=>h.type!=="hidden").length),s=n.nodes.filter(h=>h.type==="input"),i=n.nodes.filter(h=>h.type==="output"),r=n.nodes.filter(h=>h.type==="hidden");if(s.length===0||i.length===0){try{console.warn("Network is missing input or output nodes \u2014 skipping minHidden enforcement")}catch{}return}let a=r.length;for(let h=a;h<o&&n.nodes.length<e;h++){let u=(mt(),q(ne)).default,p=new u("hidden");n.nodes.push(p),r.push(p)}for(let h of r){if(h.connections.in.length===0){let u=s.concat(r.filter(p=>p!==h));if(u.length>0){let p=this._getRNG(),c=u[Math.floor(p()*u.length)];try{n.connect(c,h)}catch{}}}if(h.connections.out.length===0){let u=i.concat(r.filter(p=>p!==h));if(u.length>0){let p=this._getRNG(),c=u[Math.floor(p()*u.length)];try{n.connect(h,c)}catch{}}}}(bt(),q(Pt)).default.rebuildConnections(n)}function jo(n){let t=n.nodes.filter(r=>r.type==="input"),e=n.nodes.filter(r=>r.type==="output"),o=n.nodes.filter(r=>r.type==="hidden"),s=r=>r.connections&&r.connections.out&&r.connections.out.length>0,i=r=>r.connections&&r.connections.in&&r.connections.in.length>0;for(let r of t)if(!s(r)){let a=o.length>0?o:e;if(a.length>0){let l=this._getRNG(),h=a[Math.floor(l()*a.length)];try{n.connect(r,h)}catch{}}}for(let r of e)if(!i(r)){let a=o.length>0?o:t;if(a.length>0){let l=this._getRNG(),h=a[Math.floor(l()*a.length)];try{n.connect(h,r)}catch{}}}for(let r of o){if(!i(r)){let a=t.concat(o.filter(l=>l!==r));if(a.length>0){let l=this._getRNG(),h=a[Math.floor(l()*a.length)];try{n.connect(h,r)}catch{}}}if(!s(r)){let a=e.concat(o.filter(l=>l!==r));if(a.length>0){let l=this._getRNG(),h=a[Math.floor(l()*a.length)];try{n.connect(r,h)}catch{}}}}}function Lo(n,t=!0){let e=(pt(),q(ut)),o=this.options.mutation===e.mutation.FFW,s=Array.isArray(this.options.mutation)&&this.options.mutation.length===1&&this.options.mutation[0]===e.mutation.FFW;if((o||s)&&t)return e.mutation.FFW;if(o)return e.mutation.FFW[Math.floor(this._getRNG()()*e.mutation.FFW.length)];if(s)return e.mutation.FFW[Math.floor(this._getRNG()()*e.mutation.FFW.length)];let i=this.options.mutation;if(t&&Array.isArray(i)&&i.length===e.mutation.FFW.length&&i.every((a,l)=>a&&a.name===e.mutation.FFW[l].name))return e.mutation.FFW;if(i.length===1&&Array.isArray(i[0])&&i[0].length&&(i=i[0]),this.options.phasedComplexity?.enabled&&this._phase){if(i=i.filter(a=>!!a),this._phase==="simplify"){let a=i.filter(l=>l&&l.name&&l.name.startsWith&&l.name.startsWith("SUB_"));a.length&&(i=[...i,...a])}else if(this._phase==="complexify"){let a=i.filter(l=>l&&l.name&&l.name.startsWith&&l.name.startsWith("ADD_"));a.length&&(i=[...i,...a])}}if(this.options.operatorAdaptation?.enabled){let a=this.options.operatorAdaptation.boost??2,l=this._operatorStats,h=[];for(let u of i){h.push(u);let p=l.get(u.name);if(p&&p.attempts>5){let c=p.success/p.attempts;if(c>.55)for(let d=0;d<Math.min(a,Math.floor(c*a));d++)h.push(u)}}i=h}let r=i[Math.floor(this._getRNG()()*i.length)];if(r===e.mutation.ADD_GATE&&n.gates.length>=(this.options.maxGates||1/0)||r===e.mutation.ADD_NODE&&n.nodes.length>=(this.options.maxNodes||1/0)||r===e.mutation.ADD_CONN&&n.connections.length>=(this.options.maxConns||1/0))return null;if(this.options.operatorBandit?.enabled){let a=this.options.operatorBandit.c??1.4,l=this.options.operatorBandit.minAttempts??5,h=this._operatorStats;for(let d of i)h.has(d.name)||h.set(d.name,{success:0,attempts:0});let u=Array.from(h.values()).reduce((d,f)=>d+f.attempts,0)+1e-9,p=r,c=-1/0;for(let d of i){let f=h.get(d.name),m=f.attempts>0?f.success/f.attempts:0,_=f.attempts<l?1/0:a*Math.sqrt(Math.log(u)/(f.attempts+1e-9)),y=m+_;y>c&&(c=y,p=d)}r=p}return r===e.mutation.ADD_GATE&&n.gates.length>=(this.options.maxGates||1/0)||!this.options.allowRecurrent&&(r===e.mutation.ADD_BACK_CONN||r===e.mutation.ADD_SELF_CONN)?null:r}var Po=C(()=>{"use strict";jt()});function Ro(n){let t=this._getObjectives(),e=n.map(u=>t.map(p=>{try{return p.accessor(u)}catch{return 0}})),o=(u,p)=>{let c=!1;for(let d=0;d<u.length;d++)if((t[d].direction||"max")==="max"){if(u[d]<p[d])return!1;u[d]>p[d]&&(c=!0)}else{if(u[d]>p[d])return!1;u[d]<p[d]&&(c=!0)}return c},s=[],i=new Array(n.length).fill(0),r=n.map(()=>[]),a=[];for(let u=0;u<n.length;u++){for(let p=0;p<n.length;p++)u!==p&&(o(e[u],e[p])?r[u].push(p):o(e[p],e[u])&&i[u]++);i[u]===0&&a.push(u)}let l=a,h=0;for(;l.length;){let u=[];for(let p of l){n[p]._moRank=h;for(let c of r[p])i[c]--,i[c]===0&&u.push(c)}if(s.push(l.map(p=>n[p])),l=u,h++,h>50)break}for(let u of s)if(u.length!==0){for(let p of u)p._moCrowd=0;for(let p=0;p<t.length;p++){let c=u.slice().sort((_,y)=>{let g=t[p].accessor(_),w=t[p].accessor(y);return g-w});c[0]._moCrowd=1/0,c[c.length-1]._moCrowd=1/0;let d=t[p].accessor(c[0]),m=t[p].accessor(c[c.length-1])-d||1;for(let _=1;_<c.length-1;_++){let y=t[p].accessor(c[_-1]),g=t[p].accessor(c[_+1]);c[_]._moCrowd+=(g-y)/m}}}return this.options.multiObjective?.enabled&&(this._paretoArchive.push({generation:this.generation,fronts:s.slice(0,3).map(u=>u.map(p=>p._id))}),this._paretoArchive.length>100&&this._paretoArchive.shift()),s}var Wo=C(()=>{"use strict"});var Rt={};ct(Rt,{applyAdaptiveMutation:()=>er,applyAncestorUniqAdaptive:()=>tr,applyComplexityBudget:()=>Ys,applyMinimalCriterionAdaptive:()=>Qs,applyOperatorAdaptation:()=>nr,applyPhasedComplexity:()=>Zs});function Ys(){if(!this.options.complexityBudget?.enabled)return;let n=this.options.complexityBudget;if(n.mode==="adaptive"){this._cbHistory||(this._cbHistory=[]),this._cbHistory.push(this.population[0]?.score||0);let t=n.improvementWindow??10;this._cbHistory.length>t&&this._cbHistory.shift();let e=this._cbHistory,o=e.length>1?e[e.length-1]-e[0]:0,s=0;if(e.length>2){let p=e.length,c=0,d=0,f=0,m=0;for(let y=0;y<p;y++)c+=y,d+=e[y],f+=y*e[y],m+=y*y;let _=p*m-c*c||1;s=(p*f-c*d)/_}this._cbMaxNodes===void 0&&(this._cbMaxNodes=n.maxNodesStart??this.input+this.output+2);let i=n.increaseFactor??1.1,r=n.stagnationFactor??.95,a=Math.min(2,Math.max(-2,s/(Math.abs(e[0])+1e-9))),l=i+.05*Math.max(0,a),h=r-.03*Math.max(0,-a),u=this._noveltyArchive.length>5?1:.9;if(o>0||s>0?this._cbMaxNodes=Math.min(n.maxNodesEnd??this._cbMaxNodes*4,Math.floor(this._cbMaxNodes*l*u)):e.length===t&&(this._cbMaxNodes=Math.max(n.minNodes??this.input+this.output+2,Math.floor(this._cbMaxNodes*h))),n.minNodes!==void 0)this._cbMaxNodes=Math.max(n.minNodes,this._cbMaxNodes);else{let p=this.input+this.output+2;this._cbMaxNodes<p&&(this._cbMaxNodes=p)}this.options.maxNodes=this._cbMaxNodes,n.maxConnsStart&&(this._cbMaxConns===void 0&&(this._cbMaxConns=n.maxConnsStart),o>0||s>0?this._cbMaxConns=Math.min(n.maxConnsEnd??this._cbMaxConns*4,Math.floor(this._cbMaxConns*l*u)):e.length===t&&(this._cbMaxConns=Math.max(n.maxConnsStart,Math.floor(this._cbMaxConns*h))),this.options.maxConns=this._cbMaxConns)}else{let t=n.maxNodesStart??this.input+this.output+2,e=n.maxNodesEnd??t*4,o=n.horizon??100,s=Math.min(1,this.generation/o);this.options.maxNodes=Math.floor(t+(e-t)*s)}}function Zs(){if(!this.options.phasedComplexity?.enabled)return;let n=this.options.phasedComplexity.phaseLength??10;this._phase||(this._phase=this.options.phasedComplexity.initialPhase??"complexify",this._phaseStartGeneration=this.generation),this.generation-this._phaseStartGeneration>=n&&(this._phase=this._phase==="complexify"?"simplify":"complexify",this._phaseStartGeneration=this.generation)}function Qs(){if(!this.options.minimalCriterionAdaptive?.enabled)return;let n=this.options.minimalCriterionAdaptive;this._mcThreshold===void 0&&(this._mcThreshold=n.initialThreshold??0);let t=this.population.map(r=>r.score||0),e=t.filter(r=>r>=this._mcThreshold).length,o=t.length?e/t.length:0,s=n.targetAcceptance??.5,i=n.adjustRate??.1;o>s*1.05?this._mcThreshold*=1+i:o<s*.95&&(this._mcThreshold*=1-i);for(let r of this.population)(r.score||0)<this._mcThreshold&&(r.score=0)}function tr(){if(!this.options.ancestorUniqAdaptive?.enabled)return;let n=this.options.ancestorUniqAdaptive,t=n.cooldown??5;if(this.generation-this._lastAncestorUniqAdjustGen<t)return;let e=this._telemetry[this._telemetry.length-1]?.lineage,o=e?e.ancestorUniq:void 0;if(typeof o!="number")return;let s=n.lowThreshold??.25,i=n.highThreshold??.55,r=n.adjust??.01;if(n.mode==="epsilon"&&this.options.multiObjective?.adaptiveEpsilon?.enabled)o<s?(this.options.multiObjective.dominanceEpsilon=(this.options.multiObjective.dominanceEpsilon||0)+r,this._lastAncestorUniqAdjustGen=this.generation):o>i&&(this.options.multiObjective.dominanceEpsilon=Math.max(0,(this.options.multiObjective.dominanceEpsilon||0)-r),this._lastAncestorUniqAdjustGen=this.generation);else if(n.mode==="lineagePressure"){this.options.lineagePressure||(this.options.lineagePressure={enabled:!0,mode:"spread",strength:.01});let a=this.options.lineagePressure;o<s?(a.strength=(a.strength||.01)*1.15,a.mode="spread",this._lastAncestorUniqAdjustGen=this.generation):o>i&&(a.strength=(a.strength||.01)*.9,this._lastAncestorUniqAdjustGen=this.generation)}}function er(){if(!this.options.adaptiveMutation?.enabled)return;let n=this.options.adaptiveMutation,t=n.adaptEvery??1;if(!(t<=1||this.generation%t===0))return;let e=this.population.filter(c=>typeof c.score=="number");e.sort((c,d)=>(c.score||0)-(d.score||0));let o=Math.floor(e.length/2),s=e.slice(o),i=e.slice(0,o),r=(n.sigma??.05)*1.5,a=n.minRate??.01,l=n.maxRate??1,h=n.strategy||"twoTier",u=!1,p=!1;for(let c=0;c<this.population.length;c++){let d=this.population[c];if(d._mutRate===void 0)continue;let f=d._mutRate,m=this._getRNG()()*2-1;if(m*=r,h==="twoTier")s.length===0||i.length===0?m=c%2===0?Math.abs(m):-Math.abs(m):s.includes(d)?m=-Math.abs(m):i.includes(d)&&(m=Math.abs(m));else if(h==="exploreLow")m=i.includes(d)?Math.abs(m*1.5):-Math.abs(m*.5);else if(h==="anneal"){let _=Math.min(1,this.generation/(50+this.population.length));m*=1-_}if(f+=m,f<a&&(f=a),f>l&&(f=l),f>(this.options.adaptiveMutation.initialRate??.5)&&(u=!0),f<(this.options.adaptiveMutation.initialRate??.5)&&(p=!0),d._mutRate=f,n.adaptAmount){let _=n.amountSigma??.25,y=(this._getRNG()()*2-1)*_;h==="twoTier"&&(s.length===0||i.length===0?y=c%2===0?Math.abs(y):-Math.abs(y):y=i.includes(d)?Math.abs(y):-Math.abs(y));let g=d._mutAmount??(this.options.mutationAmount||1);g+=y,g=Math.round(g);let w=n.minAmount??1,v=n.maxAmount??10;g<w&&(g=w),g>v&&(g=v),d._mutAmount=g}}if(h==="twoTier"&&!(u&&p)){let c=this.options.adaptiveMutation.initialRate??.5,d=Math.floor(this.population.length/2);for(let f=0;f<this.population.length;f++){let m=this.population[f];m._mutRate!==void 0&&(f<d?m._mutRate=Math.min(m._mutRate+r,1):m._mutRate=Math.max(m._mutRate-r,.01))}}}function nr(){if(!this.options.operatorAdaptation?.enabled)return;let n=this.options.operatorAdaptation.decay??.9;for(let[t,e]of this._operatorStats.entries())e.success*=n,e.attempts*=n,this._operatorStats.set(t,e)}var Wt=C(()=>{"use strict";jt()});var Xe={};ct(Xe,{buildAnc:()=>Bo,computeAncestorUniqueness:()=>ir});function Bo(n){let t=new Set;if(!Array.isArray(n._parents))return t;let e=[];for(let o of n._parents)e.push({id:o,depth:1,genomeRef:this.population.find(s=>s._id===o)});for(;e.length;){let o=e.shift();if(!(o.depth>4)&&(o.id!=null&&t.add(o.id),o.genomeRef&&Array.isArray(o.genomeRef._parents)))for(let s of o.genomeRef._parents)e.push({id:s,depth:o.depth+1,genomeRef:this.population.find(i=>i._id===s)})}return t}function ir(){let n=Bo.bind(this),t=0,e=0,o=Math.min(or,this.population.length*(this.population.length-1)/2);for(let i=0;i<o&&!(this.population.length<2);i++){let r=Math.floor(this._getRNG()()*this.population.length),a=Math.floor(this._getRNG()()*this.population.length);a===r&&(a=(a+1)%this.population.length);let l=n(this.population[r]),h=n(this.population[a]);if(l.size===0&&h.size===0)continue;let u=0;for(let d of l)h.has(d)&&u++;let p=l.size+h.size-u||1,c=1-u/p;e+=c,t++}return t?+(e/t).toFixed(3):0}var or,Ye=C(()=>{"use strict";or=30});var Fo={};ct(Fo,{applyTelemetrySelect:()=>Go,buildTelemetryEntry:()=>cr,computeDiversityStats:()=>rr,recordTelemetryEntry:()=>ar,structuralEntropy:()=>sr});function Go(n){if(!this._telemetrySelect||!this._telemetrySelect.size)return n;let t=this._telemetrySelect,e={gen:n.gen,best:n.best,species:n.species};for(let o of Object.keys(n))o in e||t.has(o)||delete n[o];return Object.assign(n,e)}function sr(n){let t=n;if(t._entropyGen===this.generation&&typeof t._entropyVal=="number")return t._entropyVal;let e={};for(let r of n.nodes)e[r.geneId]=0;for(let r of n.connections)if(r.enabled){let a=r.from.geneId,l=r.to.geneId;e[a]!==void 0&&e[a]++,e[l]!==void 0&&e[l]++}let o={},s=n.nodes.length||1;for(let r in e){let a=e[r];o[a]=(o[a]||0)+1}let i=0;for(let r in o){let a=o[r]/s;a>0&&(i-=a*Math.log(a+1e-9))}return t._entropyGen=this.generation,t._entropyVal=i,i}function rr(){if(!this.options.diversityMetrics?.enabled)return;if(this.options.fastMode&&!this._fastModeTuned){let y=this.options.diversityMetrics;y&&(y.pairSample==null&&(y.pairSample=20),y.graphletSample==null&&(y.graphletSample=30)),this.options.novelty?.enabled&&this.options.novelty.k==null&&(this.options.novelty.k=5),this._fastModeTuned=!0}let n=this.options.diversityMetrics.pairSample??40,t=this.options.diversityMetrics.graphletSample??60,e=this.population,o=e.length,s=0,i=0,r=0;for(let y=0;y<n&&!(o<2);y++){let g=Math.floor(this._getRNG()()*o),w=Math.floor(this._getRNG()()*o);w===g&&(w=(w+1)%o);let v=this._compatibilityDistance(e[g],e[w]);s+=v,i+=v*v,r++}let a=r?s/r:0,l=r?Math.max(0,i/r-a*a):0,h=e.map(y=>this._structuralEntropy(y)),u=h.reduce((y,g)=>y+g,0)/(h.length||1),p=h.length?h.reduce((y,g)=>y+(g-u)*(g-u),0)/h.length:0,c=[0,0,0,0];for(let y=0;y<t;y++){let g=e[Math.floor(this._getRNG()()*o)];if(!g)break;if(g.nodes.length<3)continue;let w=new Set;for(;w.size<3;)w.add(Math.floor(this._getRNG()()*g.nodes.length));let v=Array.from(w).map(M=>g.nodes[M]),b=0;for(let M of g.connections)M.enabled&&v.includes(M.from)&&v.includes(M.to)&&b++;b>3&&(b=3),c[b]++}let d=c.reduce((y,g)=>y+g,0)||1,f=0;for(let y=0;y<c.length;y++){let g=c[y]/d;g>0&&(f-=g*Math.log(g))}let m=0,_=0;if(this._lineageEnabled&&o>0){let y=e.map(v=>v._depth??0);m=y.reduce((v,b)=>v+b,0)/o;let g=0,w=0;for(let v=0;v<Math.min(n,o*(o-1)/2)&&!(o<2);v++){let b=Math.floor(this._getRNG()()*o),M=Math.floor(this._getRNG()()*o);M===b&&(M=(M+1)%o),g+=Math.abs(y[b]-y[M]),w++}_=w?g/w:0}this._diversityStats={meanCompat:a,varCompat:l,meanEntropy:u,varEntropy:p,graphletEntropy:f,lineageMeanDepth:m,lineageMeanPairDist:_}}function ar(n){try{Go.call(this,n)}catch{}this._telemetry||(this._telemetry=[]),this._telemetry.push(n);try{this.options.telemetryStream?.enabled&&this.options.telemetryStream.onEntry&&this.options.telemetryStream.onEntry(n)}catch{}this._telemetry.length>500&&this._telemetry.shift()}function cr(n){let t=this.generation,e=0;if(this.options.multiObjective?.enabled){let i=this.options.multiObjective.complexityMetric||"connections",r=this.population.map(c=>c.score||0),a=Math.min(...r),l=Math.max(...r),h=[];for(let c=0;c<5;c++){let d=this.population.filter(f=>(f._moRank??0)===c).length;if(!d)break;h.push(d)}for(let c of this.population){if((c._moRank??0)!==0)continue;let f=l>a?((c.score||0)-a)/(l-a):0,m=i==="nodes"?c.nodes.length:c.connections.length;e+=f*(1/(m+1))}let u=Array.from(this._operatorStats.entries()).map(([c,d])=>({op:c,succ:d.success,att:d.attempts})),p={gen:t,best:n.score,species:this._species.length,hyper:e,fronts:h,diversity:this._diversityStats,ops:u};if(p.objImportance||(p.objImportance={}),this._lastObjImportance&&(p.objImportance=this._lastObjImportance),this._objectiveAges?.size&&(p.objAges=Array.from(this._objectiveAges.entries()).reduce((c,d)=>(c[d[0]]=d[1],c),{})),this._pendingObjectiveAdds?.length||this._pendingObjectiveRemoves?.length){p.objEvents=[];for(let c of this._pendingObjectiveAdds)p.objEvents.push({type:"add",key:c});for(let c of this._pendingObjectiveRemoves)p.objEvents.push({type:"remove",key:c});this._objectiveEvents.push(...p.objEvents.map(c=>({gen:t,type:c.type,key:c.key}))),this._pendingObjectiveAdds=[],this._pendingObjectiveRemoves=[]}this._lastOffspringAlloc&&(p.speciesAlloc=this._lastOffspringAlloc.slice());try{p.objectives=this._getObjectives().map(c=>c.key)}catch{}if(this.options.rngState&&this._rngState!==void 0&&(p.rng=this._rngState),this._lineageEnabled){let c=this.population[0],d=this.population.map(_=>_._depth??0);this._lastMeanDepth=d.reduce((_,y)=>_+y,0)/(d.length||1);let{computeAncestorUniqueness:f}=(Ye(),q(Xe)),m=f.call(this);p.lineage={parents:Array.isArray(c._parents)?c._parents.slice():[],depthBest:c._depth??0,meanDepth:+this._lastMeanDepth.toFixed(2),inbreeding:this._prevInbreedingCount,ancestorUniq:m}}if(this.options.telemetry?.hypervolume&&this.options.multiObjective?.enabled&&(p.hv=+e.toFixed(4)),this.options.telemetry?.complexity){let c=this.population.map(M=>M.nodes.length),d=this.population.map(M=>M.connections.length),f=c.reduce((M,x)=>M+x,0)/(c.length||1),m=d.reduce((M,x)=>M+x,0)/(d.length||1),_=c.length?Math.max(...c):0,y=d.length?Math.max(...d):0,g=this.population.map(M=>{let x=0,N=0;for(let T of M.connections)T.enabled===!1?N++:x++;return x+N?x/(x+N):0}),w=g.reduce((M,x)=>M+x,0)/(g.length||1),v=this._lastMeanNodes!==void 0?f-this._lastMeanNodes:0,b=this._lastMeanConns!==void 0?m-this._lastMeanConns:0;this._lastMeanNodes=f,this._lastMeanConns=m,p.complexity={meanNodes:+f.toFixed(2),meanConns:+m.toFixed(2),maxNodes:_,maxConns:y,meanEnabledRatio:+w.toFixed(3),growthNodes:+v.toFixed(2),growthConns:+b.toFixed(2),budgetMaxNodes:this.options.maxNodes,budgetMaxConns:this.options.maxConns}}return this.options.telemetry?.performance&&(p.perf={evalMs:this._lastEvalDuration,evolveMs:this._lastEvolveDuration}),p}let o=Array.from(this._operatorStats.entries()).map(([i,r])=>({op:i,succ:r.success,att:r.attempts})),s={gen:t,best:n.score,species:this._species.length,hyper:e,diversity:this._diversityStats,ops:o,objImportance:{}};if(this._lastObjImportance&&(s.objImportance=this._lastObjImportance),this._objectiveAges?.size&&(s.objAges=Array.from(this._objectiveAges.entries()).reduce((i,r)=>(i[r[0]]=r[1],i),{})),this._pendingObjectiveAdds?.length||this._pendingObjectiveRemoves?.length){s.objEvents=[];for(let i of this._pendingObjectiveAdds)s.objEvents.push({type:"add",key:i});for(let i of this._pendingObjectiveRemoves)s.objEvents.push({type:"remove",key:i});this._objectiveEvents.push(...s.objEvents.map(i=>({gen:t,type:i.type,key:i.key}))),this._pendingObjectiveAdds=[],this._pendingObjectiveRemoves=[]}this._lastOffspringAlloc&&(s.speciesAlloc=this._lastOffspringAlloc.slice());try{s.objectives=this._getObjectives().map(i=>i.key)}catch{}if(this.options.rngState&&this._rngState!==void 0&&(s.rng=this._rngState),this._lineageEnabled){let i=this.population[0],r=this.population.map(c=>c._depth??0);this._lastMeanDepth=r.reduce((c,d)=>c+d,0)/(r.length||1);let{buildAnc:a}=(Ye(),q(Xe)),l=0,h=0,u=Math.min(30,this.population.length*(this.population.length-1)/2);for(let c=0;c<u&&!(this.population.length<2);c++){let d=Math.floor(this._getRNG()()*this.population.length),f=Math.floor(this._getRNG()()*this.population.length);f===d&&(f=(f+1)%this.population.length);let m=a.call(this,this.population[d]),_=a.call(this,this.population[f]);if(m.size===0&&_.size===0)continue;let y=0;for(let v of m)_.has(v)&&y++;let g=m.size+_.size-y||1,w=1-y/g;h+=w,l++}let p=l?+(h/l).toFixed(3):0;s.lineage={parents:Array.isArray(i._parents)?i._parents.slice():[],depthBest:i._depth??0,meanDepth:+this._lastMeanDepth.toFixed(2),inbreeding:this._prevInbreedingCount,ancestorUniq:p}}if(this.options.telemetry?.hypervolume&&this.options.multiObjective?.enabled&&(s.hv=+e.toFixed(4)),this.options.telemetry?.complexity){let i=this.population.map(m=>m.nodes.length),r=this.population.map(m=>m.connections.length),a=i.reduce((m,_)=>m+_,0)/(i.length||1),l=r.reduce((m,_)=>m+_,0)/(r.length||1),h=i.length?Math.max(...i):0,u=r.length?Math.max(...r):0,p=this.population.map(m=>{let _=0,y=0;for(let g of m.connections)g.enabled===!1?y++:_++;return _+y?_/(_+y):0}),c=p.reduce((m,_)=>m+_,0)/(p.length||1),d=this._lastMeanNodes!==void 0?a-this._lastMeanNodes:0,f=this._lastMeanConns!==void 0?l-this._lastMeanConns:0;this._lastMeanNodes=a,this._lastMeanConns=l,s.complexity={meanNodes:+a.toFixed(2),meanConns:+l.toFixed(2),maxNodes:h,maxConns:u,meanEnabledRatio:+c.toFixed(3),growthNodes:+d.toFixed(2),growthConns:+f.toFixed(2),budgetMaxNodes:this.options.maxNodes,budgetMaxConns:this.options.maxConns}}return this.options.telemetry?.performance&&(s.perf={evalMs:this._lastEvalDuration,evolveMs:this._lastEvolveDuration}),s}var $o=C(()=>{"use strict";jt()});var Yt={};ct(Yt,{applyAdaptivePruning:()=>hr,applyEvolutionPruning:()=>lr});function lr(){let n=this.options.evolutionPruning;if(!n||this.generation<(n.startGeneration||0))return;let t=n.interval||1;if((this.generation-n.startGeneration)%t!==0)return;let e=n.rampGenerations||0,o=1;e>0&&(o=Math.min(1,Math.max(0,(this.generation-n.startGeneration)/e)));let s=(n.targetSparsity||0)*o;for(let i of this.population)i&&typeof i.pruneToSparsity=="function"&&i.pruneToSparsity(s,n.method||"magnitude")}function hr(){if(!this.options.adaptivePruning?.enabled)return;let n=this.options.adaptivePruning;this._adaptivePruneLevel===void 0&&(this._adaptivePruneLevel=0);let t=n.metric||"connections",e=this.population.reduce((p,c)=>p+c.nodes.length,0)/(this.population.length||1),o=this.population.reduce((p,c)=>p+c.connections.length,0)/(this.population.length||1),s=t==="nodes"?e:o;this._adaptivePruneBaseline===void 0&&(this._adaptivePruneBaseline=s);let i=this._adaptivePruneBaseline,r=n.targetSparsity??.5,a=i*(1-r),l=n.tolerance??.05,h=n.adjustRate??.02,u=(s-a)/(i||1);if(Math.abs(u)>l){this._adaptivePruneLevel=Math.max(0,Math.min(r,this._adaptivePruneLevel+h*(u>0?1:-1)));for(let p of this.population)typeof p.pruneToSparsity=="function"&&p.pruneToSparsity(this._adaptivePruneLevel,"magnitude")}}var Zt=C(()=>{"use strict"});async function Ho(){let n=typeof performance<"u"&&performance.now?performance.now():Date.now();this.population[this.population.length-1].score===void 0&&await this.evaluate(),this._objectivesList=void 0;try{(Wt(),q(Rt)).applyComplexityBudget.call(this)}catch{}try{(Wt(),q(Rt)).applyPhasedComplexity.call(this)}catch{}this.sort();try{let h=this.population[0]?.score;typeof h=="number"&&(this._bestScoreLastGen===void 0||h>this._bestScoreLastGen)&&(this._bestScoreLastGen=h,this._lastGlobalImproveGeneration=this.generation)}catch{}try{(Wt(),q(Rt)).applyMinimalCriterionAdaptive.call(this)}catch{}try{this._computeDiversityStats&&this._computeDiversityStats()}catch{}if(this.options.multiObjective?.enabled){let h=this.population,u=Ro.call(this,h),p=this._getObjectives(),c=new Array(h.length).fill(0),d=p.map(m=>h.map(_=>m.accessor(_)));for(let m of u){let _=m.map(y=>this.population.indexOf(y));if(_.length<3){_.forEach(y=>c[y]=1/0);continue}for(let y=0;y<p.length;y++){let g=[..._].sort((b,M)=>d[y][b]-d[y][M]);c[g[0]]=1/0,c[g[g.length-1]]=1/0;let w=d[y][g[0]],v=d[y][g[g.length-1]];for(let b=1;b<g.length-1;b++){let M=d[y][g[b-1]],x=d[y][g[b+1]],N=v-w||1;c[g[b]]+=(x-M)/N}}}let f=new Map;for(let m=0;m<h.length;m++)f.set(h[m],m);this.population.sort((m,_)=>{let y=m._moRank??0,g=_._moRank??0;if(y!==g)return y-g;let w=f.get(m),v=f.get(_);return c[v]-c[w]});for(let m=0;m<h.length;m++)h[m]._moCrowd=c[m];if(u.length){let m=u[0],_=m.map(y=>({id:y._id??-1,score:y.score||0,nodes:y.nodes.length,connections:y.connections.length}));if(this._paretoArchive.push({gen:this.generation,size:m.length,genomes:_}),this._paretoArchive.length>200&&this._paretoArchive.shift(),p.length){let y=m.map(g=>({id:g._id??-1,values:p.map(w=>w.accessor(g))}));this._paretoObjectivesArchive.push({gen:this.generation,vectors:y}),this._paretoObjectivesArchive.length>200&&this._paretoObjectivesArchive.shift()}}if(this.options.multiObjective?.adaptiveEpsilon?.enabled&&u.length){let m=this.options.multiObjective.adaptiveEpsilon,_=m.targetFront??Math.max(3,Math.floor(Math.sqrt(this.population.length))),y=m.adjust??.002,g=m.min??0,w=m.max??.5,v=m.cooldown??2;if(this.generation-this._lastEpsilonAdjustGen>=v){let b=u[0].length,M=this.options.multiObjective.dominanceEpsilon||0;b>_*1.2?M=Math.min(w,M+y):b<_*.8&&(M=Math.max(g,M-y)),this.options.multiObjective.dominanceEpsilon=M,this._lastEpsilonAdjustGen=this.generation}}if(this.options.multiObjective?.pruneInactive?.enabled){let m=this.options.multiObjective.pruneInactive,_=m.window??5,y=m.rangeEps??1e-6,g=new Set(["fitness","complexity",...m.protect||[]]),w=this._getObjectives(),v={};for(let M of w){let x=1/0,N=-1/0;for(let T of this.population){let k=M.accessor(T);k<x&&(x=k),k>N&&(N=k)}v[M.key]={min:x,max:N}}let b=[];for(let M of w){if(g.has(M.key))continue;let x=v[M.key];if(x.max-x.min<y){let T=(this._objectiveStale.get(M.key)||0)+1;this._objectiveStale.set(M.key,T),T>=_&&b.push(M.key)}else this._objectiveStale.set(M.key,0)}b.length&&this.options.multiObjective?.objectives&&(this.options.multiObjective.objectives=this.options.multiObjective.objectives.filter(M=>!b.includes(M.key)),this._objectivesList=void 0)}}try{(Wt(),q(Rt)).applyAncestorUniqAdaptive.call(this)}catch{}if(this.options.speciation){try{this._speciate()}catch{}try{this._applyFitnessSharing()}catch{}try{let h=this.options;if(h.autoCompatTuning?.enabled){let u=h.autoCompatTuning.target??h.targetSpecies??Math.max(2,Math.round(Math.sqrt(this.population.length))),p=this._species.length||1,c=u-p,d=h.autoCompatTuning.adjustRate??.01,f=h.autoCompatTuning.minCoeff??.1,m=h.autoCompatTuning.maxCoeff??5,_=1-d*Math.sign(c);c===0&&(_=1+(this._getRNG()()-.5)*d*.5),h.excessCoeff=Math.min(m,Math.max(f,h.excessCoeff*_)),h.disjointCoeff=Math.min(m,Math.max(f,h.disjointCoeff*_))}}catch{}this.sort();try{this.options.speciesAllocation?.extendedHistory||(!this._speciesHistory||this._speciesHistory.length===0||this._speciesHistory[this._speciesHistory.length-1].generation!==this.generation)&&(this._speciesHistory.push({generation:this.generation,stats:this._species.map(h=>({id:h.id,size:h.members.length,best:h.bestScore,lastImproved:h.lastImproved}))}),this._speciesHistory.length>200&&this._speciesHistory.shift())}catch{}}let t=it.fromJSON(this.population[0].toJSON());t.score=this.population[0].score,this._computeDiversityStats();try{let h=this._getObjectives().map(p=>p.key),u=this.options.multiObjective?.dynamic;if(this.options.multiObjective?.enabled)if(u?.enabled){let p=u.addComplexityAt??1/0,c=u.addEntropyAt??1/0;if(this.generation+1>=p&&!h.includes("complexity")&&(this.registerObjective("complexity","min",d=>d.connections.length),this._pendingObjectiveAdds.push("complexity")),this.generation+1>=c&&!h.includes("entropy")&&(this.registerObjective("entropy","max",d=>this._structuralEntropy(d)),this._pendingObjectiveAdds.push("entropy")),h.includes("entropy")&&u.dropEntropyOnStagnation!=null){let d=u.dropEntropyOnStagnation;this.generation>=d&&!this._entropyDropped&&this.options.multiObjective?.objectives&&(this.options.multiObjective.objectives=this.options.multiObjective.objectives.filter(f=>f.key!=="entropy"),this._objectivesList=void 0,this._pendingObjectiveRemoves.push("entropy"),this._entropyDropped=this.generation)}else!h.includes("entropy")&&this._entropyDropped&&u.readdEntropyAfter!=null&&this.generation-this._entropyDropped>=u.readdEntropyAfter&&(this.registerObjective("entropy","max",d=>this._structuralEntropy(d)),this._pendingObjectiveAdds.push("entropy"),this._entropyDropped=void 0)}else this.options.multiObjective.autoEntropy&&this.generation>=3&&!h.includes("entropy")&&(this.registerObjective("entropy","max",c=>this._structuralEntropy(c)),this._pendingObjectiveAdds.push("entropy"));for(let p of h)this._objectiveAges.set(p,(this._objectiveAges.get(p)||0)+1);for(let p of this._pendingObjectiveAdds)this._objectiveAges.set(p,0)}catch{}try{let h=this.options.multiObjective;if(h?.enabled&&h.pruneInactive&&h.pruneInactive.enabled===!1){let u=this._getObjectives().map(p=>p.key);u.includes("fitness")&&u.length>1&&!this._fitnessSuppressedOnce&&(this._suppressFitnessObjective=!0,this._fitnessSuppressedOnce=!0,this._objectivesList=void 0)}}catch{}let e=null;try{let h=this._getObjectives();if(h.length){e={};let u=this.population;for(let p of h){let c=u.map(y=>p.accessor(y)),d=Math.min(...c),f=Math.max(...c),m=c.reduce((y,g)=>y+g,0)/c.length,_=c.reduce((y,g)=>y+(g-m)*(g-m),0)/(c.length||1);e[p.key]={range:f-d,var:_}}this._lastObjImportance=e}}catch{}this.options.telemetry?.enabled;{let h=($o(),q(Fo)),u=h.buildTelemetryEntry.call(this,t);h.recordTelemetryEntry.call(this,u)}(t.score??-1/0)>this._bestGlobalScore&&(this._bestGlobalScore=t.score??-1/0,this._lastGlobalImproveGeneration=this.generation);let o=[],s=Math.max(0,Math.min(this.options.elitism||0,this.population.length));for(let h=0;h<s;h++){let u=this.population[h];u&&o.push(u)}let i=Math.max(0,this.options.popsize||0),r=Math.max(0,i-o.length),a=Math.max(0,Math.min(this.options.provenance||0,r));for(let h=0;h<a;h++)this.options.network?o.push(it.fromJSON(this.options.network.toJSON())):o.push(new it(this.input,this.output,{minHidden:this.options.minHidden}));if(this.options.speciation&&this._species.length>0){this._suppressTournamentError=!0;let h=i-o.length;if(h>0){let u=this.options.speciesAgeBonus||{},p=u.youngThreshold??5,c=u.youngMultiplier??1.3,d=u.oldThreshold??30,f=u.oldMultiplier??.7,m=this._species.map(x=>{let N=x.members.reduce((k,R)=>k+(R.score||0),0),T=this.generation-x.lastImproved;return T<=p?N*c:T>=d?N*f:N}),_=m.reduce((x,N)=>x+N,0)||1,y=this.options.speciesAllocation?.minOffspring??1,g=this._species.map((x,N)=>m[N]/_*h),w=g.map(x=>Math.floor(x));for(let x=0;x<w.length;x++)w[x]<y&&h>=this._species.length*y&&(w[x]=y);let v=w.reduce((x,N)=>x+N,0),b=h-v,M=g.map((x,N)=>({i:N,frac:x-Math.floor(x)}));M.sort((x,N)=>N.frac-x.frac);for(let x of M){if(b<=0)break;w[x.i]++,b--}if(b<0){let x=w.map((N,T)=>({i:T,v:N})).sort((N,T)=>T.v-N.v);for(let N of x){if(b===0)break;w[N.i]>y&&(w[N.i]--,b++)}}this._lastOffspringAlloc=this._species.map((x,N)=>({id:x.id,alloc:w[N]||0})),this._prevInbreedingCount=this._lastInbreedingCount,this._lastInbreedingCount=0,w.forEach((x,N)=>{if(x<=0)return;let T=this._species[N];this._sortSpeciesMembers(T);let k=T.members.slice(0,Math.max(1,Math.floor(T.members.length*(this.options.survivalThreshold||.5))));for(let R=0;R<x;R++){let j=k[Math.floor(this._getRNG()()*k.length)],W;if(this.options.crossSpeciesMatingProb&&this._species.length>1&&this._getRNG()()<(this.options.crossSpeciesMatingProb||0)){let A=N,O=0;for(;A===N&&O++<5;)A=Math.floor(this._getRNG()()*this._species.length);let E=this._species[A];this._sortSpeciesMembers(E);let B=E.members.slice(0,Math.max(1,Math.floor(E.members.length*(this.options.survivalThreshold||.5))));W=B[Math.floor(this._getRNG()()*B.length)]}else W=k[Math.floor(this._getRNG()()*k.length)];let S=it.crossOver(j,W,this.options.equal||!1);if(S._reenableProb=this.options.reenableProb,S._id=this._nextGenomeId++,this._lineageEnabled){S._parents=[j._id,W._id];let A=j._depth??0,O=W._depth??0;S._depth=1+Math.max(A,O),j._id===W._id&&this._lastInbreedingCount++}o.push(S)}}),this._suppressTournamentError=!1}}else{this._suppressTournamentError=!0;let h=Math.max(0,i-o.length);for(let u=0;u<h;u++)o.push(this.getOffspring());this._suppressTournamentError=!1}for(let h of o)h&&(this.ensureMinHiddenNodes(h),this.ensureNoDeadEnds(h));this.population=o;try{(Zt(),q(Yt)).applyEvolutionPruning.call(this)}catch{}try{(Zt(),q(Yt)).applyAdaptivePruning.call(this)}catch{}this.mutate();try{(Wt(),q(Rt)).applyAdaptiveMutation.call(this)}catch{}if(this.population.forEach(h=>{h._compatCache&&delete h._compatCache}),this.population.forEach(h=>h.score=void 0),this.generation++,this.options.speciation&&this._updateSpeciesStagnation(),(this.options.globalStagnationGenerations||0)>0&&this.generation-this._lastGlobalImproveGeneration>(this.options.globalStagnationGenerations||0)){let u=Math.max(this.options.elitism||0,Math.floor(this.population.length*.8));for(let p=u;p<this.population.length;p++){let c=new it(this.input,this.output,{minHidden:this.options.minHidden});c.score=void 0,c._reenableProb=this.options.reenableProb,c._id=this._nextGenomeId++,this._lineageEnabled&&(c._parents=[],c._depth=0);try{if(this.ensureMinHiddenNodes(c),this.ensureNoDeadEnds(c),c.nodes.filter(f=>f.type==="hidden").length===0){let f=(mt(),q(ne)).default,m=new f("hidden");c.nodes.splice(c.nodes.length-c.output,0,m);let _=c.nodes.filter(g=>g.type==="input"),y=c.nodes.filter(g=>g.type==="output");if(_.length&&y.length){try{c.connect(_[0],m,1)}catch{}try{c.connect(m,y[0],1)}catch{}}}}catch{}this.population[p]=c}this._lastGlobalImproveGeneration=this.generation}if(this.options.reenableProb!==void 0){let h=0,u=0;for(let p of this.population)h+=p._reenableSuccess||0,u+=p._reenableAttempts||0,p._reenableSuccess=0,p._reenableAttempts=0;if(u>20){let d=h/u-.3;this.options.reenableProb=Math.min(.9,Math.max(.05,this.options.reenableProb-d*.1))}}try{(Wt(),q(Rt)).applyOperatorAdaptation.call(this)}catch{}let l=typeof performance<"u"&&performance.now?performance.now():Date.now();this._lastEvolveDuration=l-n;try{this._speciesHistory||(this._speciesHistory=[]),this.options.speciesAllocation?.extendedHistory||(this._speciesHistory.length===0||this._speciesHistory[this._speciesHistory.length-1].generation!==this.generation)&&(this._speciesHistory.push({generation:this.generation,stats:this._species.map(h=>({id:h.id,size:h.members.length,best:h.bestScore,lastImproved:h.lastImproved}))}),this._speciesHistory.length>200&&this._speciesHistory.shift())}catch{}return t}var qo=C(()=>{"use strict";bt();Wo()});async function Uo(){let n=this.options||{};if(n.fitnessPopulation)n.clear&&this.population.forEach(t=>t.clear&&t.clear()),await this.fitness(this.population);else for(let t of this.population){n.clear&&t.clear&&t.clear();let e=await this.fitness(t);t.score=e}try{let t=n.novelty;if(t?.enabled&&typeof t.descriptor=="function"){let e=Math.max(1,t.k||3),o=t.blendFactor??.3,s=this.population.map(r=>{try{return t.descriptor(r)||[]}catch{return[]}}),i=[];for(let r=0;r<s.length;r++){i[r]=[];for(let a=0;a<s.length;a++){if(r===a){i[r][a]=0;continue}let l=s[r],h=s[a],u=0,p=Math.min(l.length,h.length);for(let c=0;c<p;c++){let d=(l[c]||0)-(h[c]||0);u+=d*d}i[r][a]=Math.sqrt(u)}}for(let r=0;r<this.population.length;r++){let l=i[r].slice().sort((p,c)=>p-c).slice(1,e+1),h=l.length?l.reduce((p,c)=>p+c,0)/l.length:0;this.population[r]._novelty=h,typeof this.population[r].score=="number"&&(this.population[r].score=(1-o)*this.population[r].score+o*h),this._noveltyArchive||(this._noveltyArchive=[]);let u=t.archiveAddThreshold??1/0;(t.archiveAddThreshold===0||h>u)&&this._noveltyArchive.length<200&&this._noveltyArchive.push({desc:s[r],novelty:h})}}}catch{}this._diversityStats||(this._diversityStats={});try{let t=n.entropySharingTuning;if(t?.enabled){let e=t.targetEntropyVar??.2,o=t.adjustRate??.1,s=t.minSigma??.1,i=t.maxSigma??10,r=this._diversityStats.varEntropy;if(typeof r=="number"){let a=this.options.sharingSigma??0;r<e*.9?a=Math.max(s,a*(1-o)):r>e*1.1&&(a=Math.min(i,a*(1+o))),this.options.sharingSigma=a}}}catch{}try{let t=n.entropyCompatTuning;if(t?.enabled){let e=this._diversityStats.meanEntropy,o=t.targetEntropy??.5,s=t.deadband??.05,i=t.adjustRate??.05,r=this.options.compatibilityThreshold??3;typeof e=="number"&&(e<o-s?r=Math.max(t.minThreshold??.5,r*(1-i)):e>o+s&&(r=Math.min(t.maxThreshold??10,r*(1+i))),this.options.compatibilityThreshold=r)}}catch{}try{this.options.speciation&&(this.options.targetSpecies||this.options.compatAdjust||this.options.speciesAllocation?.extendedHistory)&&this._speciate()}catch{}try{let t=this.options.autoDistanceCoeffTuning;if(t?.enabled&&this.options.speciation){let e=this.population.map(l=>l.connections.length),o=e.reduce((l,h)=>l+h,0)/(e.length||1),s=e.reduce((l,h)=>l+(h-o)*(h-o),0)/(e.length||1),i=t.adjustRate??.05,r=t.minCoeff??.05,a=t.maxCoeff??8;this._lastConnVar||(this._lastConnVar=s),s<this._lastConnVar*.95?(this.options.excessCoeff=Math.min(a,this.options.excessCoeff*(1+i)),this.options.disjointCoeff=Math.min(a,this.options.disjointCoeff*(1+i))):s>this._lastConnVar*1.05&&(this.options.excessCoeff=Math.max(r,this.options.excessCoeff*(1-i)),this.options.disjointCoeff=Math.max(r,this.options.disjointCoeff*(1-i))),this._lastConnVar=s}}catch{}try{this.options.multiObjective?.enabled&&this.options.multiObjective.autoEntropy&&(this.options.multiObjective.dynamic?.enabled||this._getObjectives().map(e=>e.key).includes("entropy")||(this.registerObjective("entropy","max",e=>this._structuralEntropy(e)),this._pendingObjectiveAdds.push("entropy"),this._objectivesList=void 0))}catch{}}var zo=C(()=>{"use strict"});function Jo(n,t=1){let e=n.clone?n.clone():(bt(),q(Pt)).default.fromJSON(n.toJSON());e.score=void 0,e._reenableProb=this.options.reenableProb,e._id=this._nextGenomeId++,e._parents=[n._id],e._depth=(n._depth??0)+1,this.ensureMinHiddenNodes(e),this.ensureNoDeadEnds(e);for(let o=0;o<t;o++)try{let s=this.selectMutationMethod(e,!1);if(Array.isArray(s)){let i=s;s=i[Math.floor(this._getRNG()()*i.length)]}s&&s.name&&e.mutate(s)}catch{}return this._invalidateGenomeCaches(e),e}function Vo(n,t){try{if(n.score=void 0,n._reenableProb=this.options.reenableProb,n._id=this._nextGenomeId++,n._parents=Array.isArray(t)?t.slice():[],n._depth=0,n._parents.length){let e=n._parents.map(o=>this.population.find(s=>s._id===o)).filter(Boolean).map(o=>o._depth??0);n._depth=e.length?Math.max(...e)+1:1}this.ensureMinHiddenNodes(n),this.ensureNoDeadEnds(n),this._invalidateGenomeCaches(n),this.population.push(n)}catch{this.population.push(n)}}function Me(n){try{this.population=[];let t=this.options?.popsize||50;for(let e=0;e<t;e++){let o=n?it.fromJSON(n.toJSON()):new it(this.input,this.output,{minHidden:this.options?.minHidden});o.score=void 0;try{this.ensureNoDeadEnds(o)}catch{}o._reenableProb=this.options.reenableProb,o._id=this._nextGenomeId++,this._lineageEnabled&&(o._parents=[],o._depth=0),this.population.push(o)}}catch{}}var Ko=C(()=>{"use strict";bt()});function Xo(){if(this._objectivesList)return this._objectivesList;let n=[];if(this._suppressFitnessObjective||n.push({key:"fitness",direction:"max",accessor:t=>t.score||0}),this.options.multiObjective?.enabled&&Array.isArray(this.options.multiObjective.objectives))for(let t of this.options.multiObjective.objectives)!t||!t.key||typeof t.accessor!="function"||n.push(t);return this._objectivesList=n,n}function Yo(n,t,e){this.options.multiObjective||(this.options.multiObjective={enabled:!0});let o=this.options.multiObjective;o.objectives||(o.objectives=[]),o.objectives=o.objectives.filter(s=>s.key!==n),o.objectives.push({key:n,direction:t,accessor:e}),this._objectivesList=void 0}function Zo(){this.options.multiObjective?.objectives&&(this.options.multiObjective.objectives=[]),this._objectivesList=void 0}var Qo=C(()=>{"use strict"});function Ze(n){let t=n.nodes.map(i=>i.connections.out.length),e=t.reduce((i,r)=>i+r,0)||1,o=t.map(i=>i/e).filter(i=>i>0),s=0;for(let i of o)s-=i*Math.log(i);return s}function Ht(n){return n.length?n.reduce((t,e)=>t+e,0)/n.length:0}function ti(n){if(!n.length)return 0;let t=Ht(n);return Ht(n.map(e=>(e-t)*(e-t)))}function ei(n,t){if(!n.length)return;let e=[];for(let y of n)typeof y._depth=="number"&&e.push(y._depth);let o=Ht(e),s=0,i=0;for(let y=0;y<e.length&&y<30;y++)for(let g=y+1;g<e.length&&g<30;g++)s+=Math.abs(e[y]-e[g]),i++;let r=i?s/i:0,a=n.map(y=>y.nodes.length),l=n.map(y=>y.connections.length),h=Ht(a),u=Ht(l),p=ti(a),c=ti(l),d=0,f=0;for(let y=0;y<n.length&&y<25;y++)for(let g=y+1;g<n.length&&g<25;g++)d+=t._compatibilityDistance(n[y],n[g]),f++;let m=f?d/f:0,_=Ht(n.map(y=>Ze(y)));return{lineageMeanDepth:o,lineageMeanPairDist:r,meanNodes:h,meanConns:u,nodeVar:p,connVar:c,meanCompat:m,graphletEntropy:_,population:n.length}}var ni=C(()=>{"use strict"});function oi(n){let t=n.from?.index??0,e=n.to?.index??0;return t*1e5+e}function ii(n,t){(!this._compatCacheGen||this._compatCacheGen!==this.generation)&&(this._compatCacheGen=this.generation,this._compatDistCache=new Map);let e=n._id<t._id?`${n._id}|${t._id}`:`${t._id}|${n._id}`,o=this._compatDistCache;if(o.has(e))return o.get(e);let s=w=>{if(!w._compatCache){let v=w.connections.map(b=>[b.innovation??this._fallbackInnov(b),b.weight]);v.sort((b,M)=>b[0]-M[0]),w._compatCache=v}return w._compatCache},i=s(n),r=s(t),a=0,l=0,h=0,u=0,p=0,c=0,d=i.length?i[i.length-1][0]:0,f=r.length?r[r.length-1][0]:0;for(;a<i.length&&l<r.length;){let[w,v]=i[a],[b,M]=r[l];w===b?(h++,c+=Math.abs(v-M),a++,l++):w<b?(w>f?p++:u++,a++):(b>d?p++:u++,l++)}a<i.length&&(p+=i.length-a),l<r.length&&(p+=r.length-l);let m=Math.max(1,Math.max(i.length,r.length)),_=h?c/h:0,y=this.options,g=y.excessCoeff*p/m+y.disjointCoeff*u/m+y.weightDiffCoeff*_;return o.set(e,g),g}var si=C(()=>{"use strict"});function ri(){this._prevSpeciesMembers.clear();for(let t of this._species){let e=new Set;for(let o of t.members)e.add(o._id);this._prevSpeciesMembers.set(t.id,e)}this._species.forEach(t=>t.members=[]);for(let t of this.population){let e=!1;for(let o of this._species)if(this._compatibilityDistance(t,o.representative)<(this.options.compatibilityThreshold||3)){o.members.push(t),e=!0;break}if(!e){let o=this._nextSpeciesId++;this._species.push({id:o,members:[t],representative:t,lastImproved:this.generation,bestScore:t.score||-1/0}),this._speciesCreated.set(o,this.generation)}}this._species=this._species.filter(t=>t.members.length>0),this._species.forEach(t=>{t.representative=t.members[0]});let n=this.options.speciesAgeProtection||{grace:3,oldPenalty:.5};for(let t of this._species){let e=this._speciesCreated.get(t.id)??this.generation;if(this.generation-e>=(n.grace??3)*10){let s=n.oldPenalty??.5;s<1&&t.members.forEach(i=>{typeof i.score=="number"&&(i.score*=s)})}}if(this.options.speciation&&(this.options.targetSpecies||0)>0){let t=this.options.targetSpecies,e=this._species.length,o=this.options.compatAdjust,i=2/(Math.max(1,o.smoothingWindow||1)+1);this._compatSpeciesEMA=this._compatSpeciesEMA===void 0?e:this._compatSpeciesEMA+i*(e-this._compatSpeciesEMA);let r=this._compatSpeciesEMA,a=t-r;this._compatIntegral=this._compatIntegral*(o.decay||.95)+a;let l=(o.kp||0)*a+(o.ki||0)*this._compatIntegral,h=(this.options.compatibilityThreshold||3)-l,u=o.minThreshold||.5,p=o.maxThreshold||10;h<u&&(h=u,this._compatIntegral=0),h>p&&(h=p,this._compatIntegral=0),this.options.compatibilityThreshold=h}if(this.options.autoCompatTuning?.enabled){let t=this.options.autoCompatTuning.target??this.options.targetSpecies??Math.max(2,Math.round(Math.sqrt(this.population.length))),e=this._species.length||1,o=t-e,s=this.options.autoCompatTuning.adjustRate??.01,i=this.options.autoCompatTuning.minCoeff??.1,r=this.options.autoCompatTuning.maxCoeff??5,l=1-s*Math.sign(o);o===0&&(l=1+(this._getRNG()()-.5)*s*.5),this.options.excessCoeff=Math.min(r,Math.max(i,this.options.excessCoeff*l)),this.options.disjointCoeff=Math.min(r,Math.max(i,this.options.disjointCoeff*l))}if(this.options.speciesAllocation?.extendedHistory){let t=this._species.map(e=>{let o=e.members.map(S=>({nodes:S.nodes.length,conns:S.connections.length,score:S.score||0,nov:S._novelty||0,ent:this._structuralEntropy(S)})),s=S=>S.length?S.reduce((A,O)=>A+O,0)/S.length:0,i=0,r=0;for(let S=0;S<e.members.length&&S<10;S++)for(let A=S+1;A<e.members.length&&A<10;A++)i+=this._compatibilityDistance(e.members[S],e.members[A]),r++;let a=r?i/r:0,l=this._speciesLastStats.get(e.id),h=s(o.map(S=>S.nodes)),u=s(o.map(S=>S.conns)),p=l?h-l.meanNodes:0,c=l?u-l.meanConns:0,d=l?e.bestScore-l.best:0,f=this._speciesCreated.get(e.id)??this.generation,m=this.generation-f,_=0,y=this._prevSpeciesMembers.get(e.id);if(y&&e.members.length){let S=0;for(let A of e.members)y.has(A._id)||S++;_=S/e.members.length}let g=S=>{if(!S.length)return 0;let A=s(S);return s(S.map(O=>(O-A)*(O-A)))},w=g(o.map(S=>S.nodes)),v=g(o.map(S=>S.conns)),b=0,M=0,x=-1/0,N=1/0,T=0,k=0;for(let S of e.members)for(let A of S.connections){let O=A.innovation??this._fallbackInnov(A);b+=O,M++,O>x&&(x=O),O<N&&(N=O),A.enabled===!1?k++:T++}let R=M?b/M:0,j=isFinite(x)&&isFinite(N)&&x>N?x-N:0,W=T+k>0?T/(T+k):0;return{id:e.id,size:e.members.length,best:e.bestScore,lastImproved:e.lastImproved,age:m,meanNodes:h,meanConns:u,meanScore:s(o.map(S=>S.score)),meanNovelty:s(o.map(S=>S.nov)),meanCompat:a,meanEntropy:s(o.map(S=>S.ent)),varNodes:w,varConns:v,deltaMeanNodes:p,deltaMeanConns:c,deltaBestScore:d,turnoverRate:_,meanInnovation:R,innovationRange:j,enabledRatio:W}});for(let e of t)this._speciesLastStats.set(e.id,{meanNodes:e.meanNodes,meanConns:e.meanConns,best:e.best});this._speciesHistory.push({generation:this.generation,stats:t})}else this._speciesHistory.push({generation:this.generation,stats:this._species.map(t=>({id:t.id,size:t.members.length,best:t.bestScore,lastImproved:t.lastImproved}))});this._speciesHistory.length>200&&this._speciesHistory.shift()}function ai(){let n=this.options.sharingSigma||0;n>0?this._species.forEach(t=>{let e=t.members;for(let o=0;o<e.length;o++){let s=e[o];if(typeof s.score!="number")continue;let i=0;for(let r=0;r<e.length;r++){let a=e[r],l=o===r?0:this._compatibilityDistance(s,a);if(l<n){let h=l/n;i+=1-h*h}}i<=0&&(i=1),s.score=s.score/i}}):this._species.forEach(t=>{let e=t.members.length;t.members.forEach(o=>{typeof o.score=="number"&&(o.score=o.score/e)})})}function ci(n){n.members.sort((t,e)=>(e.score||0)-(t.score||0))}function li(){let n=this.options.stagnationGenerations||15;this._species.forEach(e=>{this._sortSpeciesMembers(e);let o=e.members[0];(o.score||-1/0)>e.bestScore&&(e.bestScore=o.score||-1/0,e.lastImproved=this.generation)});let t=this._species.filter(e=>this.generation-e.lastImproved<=n);t.length&&(this._species=t)}var hi=C(()=>{"use strict"});function ui(){return this._species.map(t=>({id:t.id,size:t.members.length,bestScore:t.bestScore,lastImproved:t.lastImproved}))}function pi(){let n=this._speciesHistory;if(this.options?.speciesAllocation?.extendedHistory)for(let t of n)for(let e of t.stats){if("innovationRange"in e&&"enabledRatio"in e)continue;let o=this._species.find(s=>s.id===e.id);if(o&&o.members&&o.members.length){let s=-1/0,i=1/0,r=0,a=0;for(let l of o.members)for(let h of l.connections){let u=h.innovation??this._fallbackInnov?.(h)??0;u>s&&(s=u),u<i&&(i=u),h.enabled===!1?a++:r++}e.innovationRange=isFinite(s)&&isFinite(i)&&s>i?s-i:0,e.enabledRatio=r+a?r/(r+a):0}}return n}var fi=C(()=>{"use strict"});function di(){return this._telemetry.map(n=>JSON.stringify(n)).join(`
-`)}function mi(n=500){let t=Array.isArray(this._telemetry)?this._telemetry.slice(-n):[];if(!t.length)return"";let e=ur(t),o=pr(e),s=[o.join(",")];for(let i of t)s.push(fr(i,o));return s.join(`
-`)}function ur(n){let t=new Set,e=new Set,o=new Set,s=new Set,i=new Set,r=!1,a=!1,l=!1,h=!1,u=!1,p=!1;for(let c of n)Object.keys(c).forEach(d=>{d!=="complexity"&&d!=="perf"&&d!=="ops"&&d!==on&&t.add(d)}),Array.isArray(c.fronts)&&t.add(on),c.complexity&&Object.keys(c.complexity).forEach(d=>e.add(d)),c.perf&&Object.keys(c.perf).forEach(d=>o.add(d)),c.lineage&&Object.keys(c.lineage).forEach(d=>s.add(d)),c.diversity&&("lineageMeanDepth"in c.diversity&&i.add("lineageMeanDepth"),"lineageMeanPairDist"in c.diversity&&i.add("lineageMeanPairDist")),"rng"in c&&t.add("rng"),Array.isArray(c.ops)&&c.ops.length&&(r=!0),Array.isArray(c.objectives)&&(a=!0),c.objAges&&(l=!0),Array.isArray(c.speciesAlloc)&&(h=!0),Array.isArray(c.objEvents)&&c.objEvents.length&&(u=!0),c.objImportance&&(p=!0);return{baseKeys:t,complexityKeys:e,perfKeys:o,lineageKeys:s,diversityLineageKeys:i,includeOps:r,includeObjectives:a,includeObjAges:l,includeSpeciesAlloc:h,includeObjEvents:u,includeObjImportance:p}}function pr(n){let t=[...n.baseKeys,...[...n.complexityKeys].map(e=>`${Qe}${e}`),...[...n.perfKeys].map(e=>`${tn}${e}`),...[...n.lineageKeys].map(e=>`${en}${e}`),...[...n.diversityLineageKeys].map(e=>`${nn}${e}`)];return n.includeOps&&t.push(gi),n.includeObjectives&&t.push(yi),n.includeObjAges&&t.push(_i),n.includeSpeciesAlloc&&t.push(bi),n.includeObjEvents&&t.push(vi),n.includeObjImportance&&t.push(wi),t}function fr(n,t){let e=[];for(let o of t)switch(!0){case o.startsWith(Qe):{let s=o.slice(Qe.length);e.push(n.complexity&&s in n.complexity?JSON.stringify(n.complexity[s]):"");break}case o.startsWith(tn):{let s=o.slice(tn.length);e.push(n.perf&&s in n.perf?JSON.stringify(n.perf[s]):"");break}case o.startsWith(en):{let s=o.slice(en.length);e.push(n.lineage&&s in n.lineage?JSON.stringify(n.lineage[s]):"");break}case o.startsWith(nn):{let s=o.slice(nn.length);e.push(n.diversity&&s in n.diversity?JSON.stringify(n.diversity[s]):"");break}case o===on:{e.push(Array.isArray(n.fronts)?JSON.stringify(n.fronts):"");break}case o===gi:{e.push(Array.isArray(n.ops)?JSON.stringify(n.ops):"");break}case o===yi:{e.push(Array.isArray(n.objectives)?JSON.stringify(n.objectives):"");break}case o===_i:{e.push(n.objAges?JSON.stringify(n.objAges):"");break}case o===bi:{e.push(Array.isArray(n.speciesAlloc)?JSON.stringify(n.speciesAlloc):"");break}case o===vi:{e.push(Array.isArray(n.objEvents)?JSON.stringify(n.objEvents):"");break}case o===wi:{e.push(n.objImportance?JSON.stringify(n.objImportance):"");break}default:{e.push(JSON.stringify(n[o]));break}}return e.join(",")}function Mi(n=200){if(Array.isArray(this._speciesHistory)||(this._speciesHistory=[]),!this._speciesHistory.length&&Array.isArray(this._species)&&this._species.length){let s=this._species.map(i=>({id:i.id??-1,size:Array.isArray(i.members)?i.members.length:0,best:i.bestScore??0,lastImproved:i.lastImproved??0}));this._speciesHistory.push({generation:this.generation||0,stats:s})}let t=this._speciesHistory.slice(-n);if(!t.length)return"generation,id,size,best,lastImproved";let e=new Set(["generation"]);for(let s of t)for(let i of s.stats)Object.keys(i).forEach(r=>e.add(r));let o=Array.from(e);return mr(t,o)}function mr(n,t){let e=[t.join(",")];for(let o of n)for(let s of o.stats){let i=[];for(let r of t){if(r===dr){i.push(JSON.stringify(o.generation));continue}i.push(JSON.stringify(s[r]))}e.push(i.join(","))}return e.join(`
-`)}var Qe,tn,en,nn,on,gi,yi,_i,bi,vi,wi,dr,Si=C(()=>{"use strict";Qe="complexity.",tn="perf.",en="lineage.",nn="diversity.",on="fronts",gi="ops",yi="objectives",_i="objAges",bi="speciesAlloc",vi="objEvents",wi="objImportance";dr="generation"});function xi(){this.population.sort((n,t)=>(t.score??0)-(n.score??0))}function Ni(){let n=this.options.selection,t=n?.name,e=this._getRNG.bind(this),o=this.population;switch(t){case"POWER":o[0]?.score!==void 0&&o[1]?.score!==void 0&&o[0].score<o[1].score&&this.sort();let s=Math.floor(Math.pow(e()(),n.power||1)*o.length);return o[s];case"FITNESS_PROPORTIONATE":let i=0,r=0;o.forEach(c=>{r=Math.min(r,c.score??0),i+=c.score??0});let a=Math.abs(r);i+=a*o.length;let l=e()()*i,h=0;for(let c of o)if(h+=(c.score??0)+a,l<h)return c;return o[Math.floor(e()()*o.length)];case"TOURNAMENT":if((n.size||2)>o.length){if(!this._suppressTournamentError)throw new Error("Tournament size must be less than population size.");return o[Math.floor(e()()*o.length)]}let u=n.size||2,p=[];for(let c=0;c<u;c++)p.push(o[Math.floor(e()()*o.length)]);p.sort((c,d)=>(d.score??0)-(c.score??0));for(let c=0;c<p.length;c++)if(e()()<(n.probability??.5)||c===p.length-1)return p[c];break;default:return o[0]}return o[0]}function Ai(){let n=this.population;return n[n.length-1].score===void 0&&this.evaluate(),n[1]&&(n[0].score??0)<(n[1].score??0)&&this.sort(),n[0]}function Oi(){let n=this.population;return n[n.length-1].score===void 0&&this.evaluate(),n.reduce((e,o)=>e+(o.score??0),0)/n.length}var Ei=C(()=>{"use strict"});var Ci={};ct(Ci,{exportPopulation:()=>sn,exportState:()=>an,fromJSONImpl:()=>hn,importPopulation:()=>rn,importStateImpl:()=>cn,toJSONImpl:()=>ln});function sn(){return this.population.map(n=>n.toJSON())}function rn(n){let t=(bt(),q(Pt)).default;this.population=n.map(e=>t.fromJSON(e)),this.options.popsize=this.population.length}function an(){let{toJSONImpl:n,exportPopulation:t}=(un(),q(Ci));return{neat:n.call(this),population:t.call(this)}}function cn(n,t){if(!n||typeof n!="object")throw new Error("Invalid state bundle");let e=this.fromJSON(n.neat,t);return Array.isArray(n.population)&&e.import(n.population),e}function ln(){return{input:this.input,output:this.output,generation:this.generation,options:this.options,nodeSplitInnovations:Array.from(this._nodeSplitInnovations.entries()),connInnovations:Array.from(this._connInnovations.entries()),nextGlobalInnovation:this._nextGlobalInnovation}}function hn(n,t){let e=this,o=new e(n.input,n.output,t,n.options||{});return o.generation=n.generation||0,Array.isArray(n.nodeSplitInnovations)&&(o._nodeSplitInnovations=new Map(n.nodeSplitInnovations)),Array.isArray(n.connInnovations)&&(o._connInnovations=new Map(n.connInnovations)),typeof n.nextGlobalInnovation=="number"&&(o._nextGlobalInnovation=n.nextGlobalInnovation),o}var un=C(()=>{"use strict"});var Co={};ct(Co,{default:()=>Qt});var Qt,Ke=C(()=>{"use strict";bt();pt();Ae();Po();qo();zo();Ko();Qo();ni();si();hi();fi();Si();Ei();un();Qt=class n{input;output;fitness;options;population=[];generation=0;_rngState;_rng;_species=[];_operatorStats=new Map;_nodeSplitInnovations=new Map;_connInnovations=new Map;_nextGlobalInnovation=1;_nextGenomeId=1;_lineageEnabled=!1;_lastInbreedingCount=0;_prevInbreedingCount=0;_phase;_telemetry=[];_prevSpeciesMembers=new Map;_speciesLastStats=new Map;_speciesHistory=[];_paretoArchive=[];_paretoObjectivesArchive=[];_noveltyArchive=[];_objectiveStale=new Map;_objectiveAges=new Map;_objectiveEvents=[];_pendingObjectiveAdds=[];_pendingObjectiveRemoves=[];_lastOffspringAlloc;_adaptivePruneLevel;_lastEvalDuration;_lastEvolveDuration;_diversityStats;_objectivesList;_lastGlobalImproveGeneration=0;_bestScoreLastGen;_speciesCreated=new Map;_compatSpeciesEMA;_compatIntegral=0;_lastEpsilonAdjustGen=-1/0;_lastAncestorUniqAdjustGen=-1/0;_mcThreshold;_getRNG(){if(!this._rng){let t=this.options?.rng;if(typeof t=="function")this._rng=t;else{if(this._rngState===void 0){let e=(Date.now()^(this.population.length+1)*2654435761)>>>0;e===0&&(e=439041101),this._rngState=e>>>0}this._rng=()=>{let e=this._rngState>>>0;return e^=e<<13,e>>>=0,e^=e>>17,e>>>=0,e^=e<<5,e>>>=0,this._rngState=e>>>0,(e>>>0)/4294967295}}}return this._rng}ensureMinHiddenNodes(t,e){return ko.call(this,t,e)}constructor(t,e,o,s={}){this.input=t??0,this.output=e??0,this.fitness=o??(r=>0),this.options=s||{};let i=this.options;i.popsize===void 0&&(i.popsize=50),i.elitism===void 0&&(i.elitism=0),i.provenance===void 0&&(i.provenance=0),i.mutationRate===void 0&&(i.mutationRate=.7),i.mutationAmount===void 0&&(i.mutationAmount=1),i.fitnessPopulation===void 0&&(i.fitnessPopulation=!1),i.clear===void 0&&(i.clear=!1),i.equal===void 0&&(i.equal=!1),i.compatibilityThreshold===void 0&&(i.compatibilityThreshold=3),i.maxNodes===void 0&&(i.maxNodes=1/0),i.maxConns===void 0&&(i.maxConns=1/0),i.maxGates===void 0&&(i.maxGates=1/0),i.excessCoeff===void 0&&(i.excessCoeff=1),i.disjointCoeff===void 0&&(i.disjointCoeff=1),i.weightDiffCoeff===void 0&&(i.weightDiffCoeff=.5),i.mutation===void 0&&(i.mutation=P.ALL?P.ALL.slice():P.FFW?[P.FFW]:[]),i.selection===void 0&&(i.selection=At&&At.TOURNAMENT||At?.TOURNAMENT||At.FITNESS_PROPORTIONATE),i.crossover===void 0&&(i.crossover=zt?zt.SINGLE_POINT:void 0),i.novelty===void 0&&(i.novelty={enabled:!1}),i.diversityMetrics===void 0&&(i.diversityMetrics={enabled:!0}),i.fastMode&&i.diversityMetrics&&(i.diversityMetrics.pairSample==null&&(i.diversityMetrics.pairSample=20),i.diversityMetrics.graphletSample==null&&(i.diversityMetrics.graphletSample=30),i.novelty?.enabled&&i.novelty.k==null&&(i.novelty.k=5)),this._noveltyArchive=[],i.speciation===void 0&&(i.speciation=!1),i.multiObjective&&i.multiObjective.enabled&&!Array.isArray(i.multiObjective.objectives)&&(i.multiObjective.objectives=[]),this.population=this.population||[];try{this.options.network!==void 0?this.createPool(this.options.network):this.options.popsize&&this.createPool(null)}catch{}(this.options.lineage?.enabled||this.options.provenance>0)&&(this._lineageEnabled=!0),this.options.lineageTracking===!0&&(this._lineageEnabled=!0),s.lineagePressure?.enabled&&this._lineageEnabled!==!0&&(this._lineageEnabled=!0)}async evolve(){return Ho.call(this)}async evaluate(){return Uo.call(this)}createPool(t){try{if(Me&&typeof Me=="function")return Me.call(this,t)}catch{}this.population=[];let e=this.options.popsize||50;for(let o=0;o<e;o++){let s=t?it.fromJSON(t.toJSON()):new it(this.input,this.output,{minHidden:this.options.minHidden});s.score=void 0;try{this.ensureNoDeadEnds(s)}catch{}s._reenableProb=this.options.reenableProb,s._id=this._nextGenomeId++,this._lineageEnabled&&(s._parents=[],s._depth=0),this.population.push(s)}}snapshotRNGState(){return this._rngState}restoreRNGState(t){this._rngState=t,this._rng=void 0}importRNGState(t){this._rngState=t,this._rng=void 0}exportRNGState(){return this._rngState}getOffspring(){let t,e;try{t=this.getParent()}catch{t=this.population[0]}try{e=this.getParent()}catch{e=this.population[Math.floor(this._getRNG()()*this.population.length)]||this.population[0]}let o=it.crossOver(t,e,this.options.equal||!1);if(o._reenableProb=this.options.reenableProb,o._id=this._nextGenomeId++,this._lineageEnabled){o._parents=[t._id,e._id];let s=t._depth??0,i=e._depth??0;o._depth=1+Math.max(s,i),t._id===e._id&&this._lastInbreedingCount++}return this.ensureMinHiddenNodes(o),this.ensureNoDeadEnds(o),o}_warnIfNoBestGenome(){try{console.warn("Evolution completed without finding a valid best genome (no fitness improvements recorded).")}catch{}}spawnFromParent(t,e=1){return Jo.call(this,t,e)}addGenome(t,e){return Vo.call(this,t,e)}selectMutationMethod(t,e=!0){try{return Lo.call(this,t,e)}catch{return null}}ensureNoDeadEnds(t){try{return jo.call(this,t)}catch{return}}getMinimumHiddenSize(t){let e=this.options;if(typeof e.minHidden=="number")return e.minHidden;let o=t??e.minHiddenMultiplier;return typeof o=="number"&&isFinite(o)?Math.max(0,Math.round(o*(this.input+this.output))):0}sampleRandom(t){let e=this._getRNG(),o=[];for(let s=0;s<t;s++)o.push(e());return o}_getObjectives(){return Xo.call(this)}getObjectiveKeys(){return this._getObjectives().map(t=>t.key)}_invalidateGenomeCaches(t){!t||typeof t!="object"||(delete t._compatCache,delete t._outputCache,delete t._traceCache)}_computeDiversityStats(){this._diversityStats=ei(this.population,this)}_structuralEntropy(t){return Ze(t)}mutate(){return Io.call(this)}_mutateAddNodeReuse(t){return To.call(this,t)}_mutateAddConnReuse(t){return Do.call(this,t)}_fallbackInnov(t){return oi.call(this,t)}_compatibilityDistance(t,e){return ii.call(this,t,e)}_speciate(){return ri.call(this)}_applyFitnessSharing(){return ai.call(this)}_sortSpeciesMembers(t){return ci.call(this,t)}_updateSpeciesStagnation(){return li.call(this)}getSpeciesStats(){return ui.call(this)}getSpeciesHistory(){return pi.call(this)}getNoveltyArchiveSize(){return this._noveltyArchive?this._noveltyArchive.length:0}getMultiObjectiveMetrics(){return this.population.map(t=>({rank:t._moRank??0,crowding:t._moCrowd??0,score:t.score||0,nodes:t.nodes.length,connections:t.connections.length}))}getOperatorStats(){return Array.from(this._operatorStats.entries()).map(([t,e])=>({name:t,success:e.success,attempts:e.attempts}))}applyEvolutionPruning(){try{(Zt(),q(Yt)).applyEvolutionPruning.call(this)}catch{}}applyAdaptivePruning(){try{(Zt(),q(Yt)).applyAdaptivePruning.call(this)}catch{}}getTelemetry(){return this._telemetry}exportTelemetryJSONL(){return di.call(this)}exportTelemetryCSV(t=500){return mi.call(this,t)}clearTelemetry(){this._telemetry=[]}getObjectives(){return this._getObjectives().map(t=>({key:t.key,direction:t.direction}))}getObjectiveEvents(){return this._objectiveEvents.slice()}getLineageSnapshot(t=20){return this.population.slice(0,t).map(e=>({id:e._id??-1,parents:Array.isArray(e._parents)?e._parents.slice():[]}))}exportSpeciesHistoryCSV(t=200){return Mi.call(this,t)}getParetoFronts(t=3){if(!this.options.multiObjective?.enabled)return[[...this.population]];let e=[];for(let o=0;o<t;o++){let s=this.population.filter(i=>(i._moRank??0)===o);if(!s.length)break;e.push(s)}return e}getDiversityStats(){return this._diversityStats}registerObjective(t,e,o){return Yo.call(this,t,e,o)}clearObjectives(){return Zo.call(this)}getParetoArchive(t=50){return this._paretoArchive.slice(-t)}exportParetoFrontJSONL(t=100){return this._paretoObjectivesArchive.slice(-t).map(o=>JSON.stringify(o)).join(`
-`)}getPerformanceStats(){return{lastEvalMs:this._lastEvalDuration,lastEvolveMs:this._lastEvolveDuration}}exportSpeciesHistoryJSONL(t=200){return this._speciesHistory.slice(-t).map(o=>JSON.stringify(o)).join(`
-`)}resetNoveltyArchive(){this._noveltyArchive=[]}clearParetoArchive(){this._paretoArchive=[]}sort(){return xi.call(this)}getParent(){return Ni.call(this)}getFittest(){return Ai.call(this)}getAverage(){return Oi.call(this)}export(){return sn.call(this)}import(t){return rn.call(this,t)}exportState(){return an.call(this)}static importState(t,e){return cn.call(n,t,e)}toJSON(){return ln.call(this)}static fromJSON(t,e){return hn.call(n,t,e)}}});Ke();bt();mt();Ft();ce();Dt();mt();Ft();ce();bt();pt();Dt();pt();vt();ve();function gr(n){let t=performance.now(),e=Math.max(1,Math.floor(Math.sqrt(n))),o=Math.max(1,Math.ceil(n/e)),s=new it(e,o);for(;s.connections.length>n;){let r=Math.floor(Math.random()*s.connections.length),a=s.connections[r];s.disconnect(a.from,a.to)}let i=performance.now();return{net:s,buildMs:i-t}}function yr(n,t){let e=new Array(n.input).fill(0).map(()=>Math.random()),o=performance.now();for(let r=0;r<t;r++)n.activate(e);let i=performance.now()-o;return{totalMs:i,avgMs:i/t}}function _r(){let n=[1e3,1e4,5e4,1e5],t=[];for(let e of n){let{net:o,buildMs:s}=gr(e),i=e>=1e5?2:e>=5e4?3:5,{totalMs:r,avgMs:a}=yr(o,i);t.push({size:e,buildMs:Number(s.toFixed(3)),fwdAvgMs:Number(a.toFixed(4)),fwdTotalMs:Number(r.toFixed(3)),conn:o.connections.length,nodes:o.nodes.length,iterations:i})}return t}window.__NEATAPTIC_BENCH__={mode:window.__BENCH_MODE__||"__UNDEF__",generatedAt:new Date().toISOString(),results:_r()};console.log("[NEATAPTIC_BROWSER_BENCH] ready");})();
+      };`;
+        }
+      };
+    });
+  var we,
+    xo = C(() => {
+      'use strict';
+      we = class {
+        static async getNodeTestWorker() {
+          return (await Promise.resolve().then(() => (qe(), He))).TestWorker;
+        }
+        static async getBrowserTestWorker() {
+          return (await Promise.resolve().then(() => (Je(), ze))).TestWorker;
+        }
+      };
+    });
+  var dt,
+    ve = C(() => {
+      'use strict';
+      xo();
+      dt = class n {
+        static workers = we;
+        static activations = [
+          (t) => 1 / (1 + Math.exp(-t)),
+          (t) => Math.tanh(t),
+          (t) => t,
+          (t) => (t > 0 ? 1 : 0),
+          (t) => (t > 0 ? t : 0),
+          (t) => t / (1 + Math.abs(t)),
+          (t) => Math.sin(t),
+          (t) => Math.exp(-Math.pow(t, 2)),
+          (t) => (Math.sqrt(Math.pow(t, 2) + 1) - 1) / 2 + t,
+          (t) => (t > 0 ? 1 : -1),
+          (t) => 2 / (1 + Math.exp(-t)) - 1,
+          (t) => Math.max(-1, Math.min(1, t)),
+          (t) => Math.abs(t),
+          (t) => 1 - t,
+          (t) => {
+            let e = 1.6732632423543772;
+            return (t > 0 ? t : e * Math.exp(t) - e) * 1.0507009873554805;
+          },
+          (t) => Math.log(1 + Math.exp(t)),
+        ];
+        static serializeDataSet(t) {
+          let e = [t[0].input.length, t[0].output.length];
+          for (let o = 0; o < t.length; o++) {
+            for (let s = 0; s < e[0]; s++) e.push(t[o].input[s]);
+            for (let s = 0; s < e[1]; s++) e.push(t[o].output[s]);
+          }
+          return e;
+        }
+        static activateSerializedNetwork(t, e, o, s, i) {
+          for (let a = 0; a < s[0]; a++) e[a] = t[a];
+          for (let a = 2; a < s.length; a++) {
+            let l = s[a++],
+              h = s[a++],
+              u = s[a++],
+              p = s[a++],
+              c = s[a++];
+            for (o[l] = (c === -1 ? 1 : e[c]) * p * o[l] + h; s[a] !== -2; )
+              o[l] += e[s[a++]] * s[a++] * (s[a++] === -1 ? 1 : e[s[a - 1]]);
+            e[l] = i[u](o[l]);
+          }
+          let r = [];
+          for (let a = e.length - s[1]; a < e.length; a++) r.push(e[a]);
+          return r;
+        }
+        static deserializeDataSet(t) {
+          let e = [],
+            o = t[0] + t[1];
+          for (let s = 0; s < (t.length - 2) / o; s++) {
+            let i = [];
+            for (let a = 2 + s * o; a < 2 + s * o + t[0]; a++) i.push(t[a]);
+            let r = [];
+            for (let a = 2 + s * o + t[0]; a < 2 + s * o + o; a++) r.push(t[a]);
+            e.push({ input: i, output: r });
+          }
+          return e;
+        }
+        static logistic(t) {
+          return 1 / (1 + Math.exp(-t));
+        }
+        static tanh(t) {
+          return Math.tanh(t);
+        }
+        static identity(t) {
+          return t;
+        }
+        static step(t) {
+          return t > 0 ? 1 : 0;
+        }
+        static relu(t) {
+          return t > 0 ? t : 0;
+        }
+        static softsign(t) {
+          return t / (1 + Math.abs(t));
+        }
+        static sinusoid(t) {
+          return Math.sin(t);
+        }
+        static gaussian(t) {
+          return Math.exp(-Math.pow(t, 2));
+        }
+        static bentIdentity(t) {
+          return (Math.sqrt(Math.pow(t, 2) + 1) - 1) / 2 + t;
+        }
+        static bipolar(t) {
+          return t > 0 ? 1 : -1;
+        }
+        static bipolarSigmoid(t) {
+          return 2 / (1 + Math.exp(-t)) - 1;
+        }
+        static hardTanh(t) {
+          return Math.max(-1, Math.min(1, t));
+        }
+        static absolute(t) {
+          return Math.abs(t);
+        }
+        static inverse(t) {
+          return 1 - t;
+        }
+        static selu(t) {
+          let e = 1.6732632423543772;
+          return (t > 0 ? t : e * Math.exp(t) - e) * 1.0507009873554805;
+        }
+        static softplus(t) {
+          return Math.log(1 + Math.exp(t));
+        }
+        static testSerializedSet(t, e, o, s, i, r) {
+          let a = 0;
+          for (let l = 0; l < t.length; l++) {
+            let h = n.activateSerializedNetwork(t[l].input, o, s, i, r);
+            a += e(t[l].output, h);
+          }
+          return a / t.length;
+        }
+        static async getBrowserTestWorker() {
+          let { TestWorker: t } = await Promise.resolve().then(
+            () => (Je(), ze)
+          );
+          return t;
+        }
+        static async getNodeTestWorker() {
+          let { TestWorker: t } = await Promise.resolve().then(
+            () => (qe(), He)
+          );
+          return t;
+        }
+      };
+    });
+  var Oo = {};
+  ct(Oo, { evolveNetwork: () => Xs });
+  function Ve(n, t) {
+    let e = n.nodes.length,
+      o = n.connections.length,
+      s = n.gates.length,
+      i = No.get(n);
+    if (i && i.nodes === e && i.conns === o && i.gates === s)
+      return i.value * t;
+    let r = e - n.input - n.output + o + s;
+    return No.set(n, { nodes: e, conns: o, gates: s, value: r }), r * t;
+  }
+  function Ao(n, t, e, o) {
+    return (s) => {
+      let i = 0;
+      for (let r = 0; r < e; r++)
+        try {
+          i -= s.test(n, t).error;
+        } catch (a) {
+          return (
+            G.warnings &&
+              console.warn(
+                `Genome evaluation failed: ${
+                  (a && a.message) || a
+                }. Penalizing with -Infinity fitness.`
+              ),
+            -1 / 0
+          );
+        }
+      return (i -= Ve(s, o)), (i = isNaN(i) ? -1 / 0 : i), i / e;
+    };
+  }
+  async function Ks(n, t, e, o, s, i) {
+    let r = dt.serializeDataSet(n),
+      a = [],
+      l = null;
+    try {
+      let u = typeof process < 'u' && !!process.versions?.node;
+      u && dt.workers?.getNodeTestWorker
+        ? (l = await dt.workers.getNodeTestWorker())
+        : !u &&
+          dt.workers?.getBrowserTestWorker &&
+          (l = await dt.workers.getBrowserTestWorker());
+    } catch (u) {
+      G.warnings &&
+        console.warn(
+          'Failed to load worker class; falling back to single-thread path:',
+          u?.message || u
+        );
+    }
+    if (!l) return { fitnessFunction: Ao(n, t, e, o), threads: 1 };
+    for (let u = 0; u < s; u++)
+      try {
+        a.push(new l(r, { name: t.name || t.toString?.() || 'cost' }));
+      } catch (p) {
+        G.warnings && console.warn('Worker spawn failed', p);
+      }
+    let h = (u) =>
+      new Promise((p) => {
+        if (!a.length) {
+          p();
+          return;
+        }
+        let c = u.slice(),
+          d = a.length,
+          f = (m) => {
+            if (!c.length) {
+              --d === 0 && p();
+              return;
+            }
+            let _ = c.shift();
+            m.evaluate(_)
+              .then((y) => {
+                typeof _ < 'u' &&
+                  typeof y == 'number' &&
+                  ((_.score = -y - Ve(_, o)),
+                  (_.score = isNaN(y) ? -1 / 0 : _.score)),
+                  f(m);
+              })
+              .catch(() => f(m));
+          };
+        a.forEach((m) => f(m));
+      });
+    return (
+      (i.fitnessPopulation = !0),
+      (i._workerTerminators = () => {
+        a.forEach((u) => {
+          try {
+            u.terminate && u.terminate();
+          } catch {}
+        });
+      }),
+      { fitnessFunction: h, threads: s }
+    );
+  }
+  async function Xs(n, t) {
+    if (
+      !n ||
+      n.length === 0 ||
+      n[0].input.length !== this.input ||
+      n[0].output.length !== this.output
+    )
+      throw new Error(
+        'Dataset is invalid or dimensions do not match network input/output size!'
+      );
+    t = t || {};
+    let e = t.error ?? 0.05,
+      o = t.growth ?? 1e-4,
+      s = t.cost || wt.mse,
+      i = t.amount || 1,
+      r = t.log || 0,
+      a = t.schedule,
+      l = t.clear || !1,
+      h = typeof t.threads > 'u' ? 1 : t.threads,
+      u = Date.now(),
+      p = {
+        targetError: e,
+        growth: o,
+        cost: s,
+        amount: i,
+        log: r,
+        schedule: a,
+        clear: l,
+        threads: h,
+      };
+    if (typeof t.iterations > 'u' && typeof t.error > 'u')
+      throw new Error(
+        'At least one stopping condition (`iterations` or `error`) must be specified for evolution.'
+      );
+    typeof t.error > 'u'
+      ? (e = -1)
+      : typeof t.iterations > 'u' && (t.iterations = 0);
+    let c;
+    if (h === 1) c = Ao(n, s, i, o);
+    else {
+      let b = await Ks(n, s, i, o, h, t);
+      (c = b.fitnessFunction), (h = b.threads);
+    }
+    (t.network = this),
+      t.populationSize != null &&
+        t.popsize == null &&
+        (t.popsize = t.populationSize),
+      typeof t.speciation > 'u' && (t.speciation = !1);
+    let { default: d } = await Promise.resolve().then(() => (Ke(), Co)),
+      f = new d(this.input, this.output, c, t);
+    if (
+      typeof t.iterations == 'number' &&
+      t.iterations === 0 &&
+      f._warnIfNoBestGenome
+    )
+      try {
+        f._warnIfNoBestGenome();
+      } catch {}
+    t.popsize &&
+      t.popsize <= 10 &&
+      ((f.options.mutationRate = f.options.mutationRate ?? 0.5),
+      (f.options.mutationAmount = f.options.mutationAmount ?? 1));
+    let m = 1 / 0,
+      _ = -1 / 0,
+      y,
+      g = 0,
+      w = 5,
+      v = typeof t.iterations == 'number';
+    for (; (e === -1 || m > e) && (!v || f.generation < t.iterations); ) {
+      let b = await f.evolve(),
+        M = b.score ?? -1 / 0;
+      if (
+        ((m = -(M - Ve(b, o)) || 1 / 0),
+        M > _ && ((_ = M), (y = b)),
+        !isFinite(m) || isNaN(m))
+      ) {
+        if (++g >= w) break;
+      } else g = 0;
+      if (a && f.generation % a.iterations === 0)
+        try {
+          a.function({ fitness: _, error: m, iteration: f.generation });
+        } catch {}
+    }
+    if (typeof y < 'u')
+      (this.nodes = y.nodes),
+        (this.connections = y.connections),
+        (this.selfconns = y.selfconns),
+        (this.gates = y.gates),
+        l && this.clear();
+    else if (f._warnIfNoBestGenome)
+      try {
+        f._warnIfNoBestGenome();
+      } catch {}
+    try {
+      t._workerTerminators && t._workerTerminators();
+    } catch {}
+    return { error: m, iterations: f.generation, time: Date.now() - u };
+  }
+  var No,
+    Eo = C(() => {
+      'use strict';
+      pt();
+      vt();
+      ve();
+      No = new WeakMap();
+    });
+  var Pt = {};
+  ct(Pt, { default: () => it });
+  var it,
+    bt = C(() => {
+      'use strict';
+      mt();
+      Ee();
+      pt();
+      vt();
+      Jt();
+      wn();
+      xn();
+      On();
+      Dn();
+      Rn();
+      Gn();
+      zn();
+      Vn();
+      Xn();
+      Qn();
+      io();
+      ro();
+      it = class n {
+        input;
+        output;
+        score;
+        nodes;
+        connections;
+        gates;
+        selfconns;
+        dropout = 0;
+        _dropConnectProb = 0;
+        _lastGradNorm;
+        _optimizerStep = 0;
+        _weightNoiseStd = 0;
+        _weightNoisePerHidden = [];
+        _weightNoiseSchedule;
+        _stochasticDepth = [];
+        _wnOrig;
+        _trainingStep = 0;
+        _rand = Math.random;
+        _rngState;
+        _lastStats = null;
+        _stochasticDepthSchedule;
+        _mixedPrecision = { enabled: !1, lossScale: 1 };
+        _mixedPrecisionState = {
+          goodSteps: 0,
+          badSteps: 0,
+          minLossScale: 1,
+          maxLossScale: 65536,
+          overflowCount: 0,
+          scaleUpEvents: 0,
+          scaleDownEvents: 0,
+        };
+        _gradAccumMicroBatches = 0;
+        _currentGradClip;
+        _lastRawGradNorm = 0;
+        _accumulationReduction = 'average';
+        _gradClipSeparateBias = !1;
+        _lastGradClipGroupCount = 0;
+        _lastOverflowStep = -1;
+        _forceNextOverflow = !1;
+        _pruningConfig;
+        _initialConnectionCount;
+        _enforceAcyclic = !1;
+        _topoOrder = null;
+        _topoDirty = !0;
+        _globalEpoch = 0;
+        layers;
+        _evoInitialConnCount;
+        _activationPrecision = 'f64';
+        _reuseActivationArrays = !1;
+        _returnTypedActivations = !1;
+        _activationPool;
+        _connWeights;
+        _connFrom;
+        _connTo;
+        _slabDirty = !0;
+        _useFloat32Weights = !0;
+        _nodeIndexDirty = !0;
+        _outStart;
+        _outOrder;
+        _adjDirty = !0;
+        _fastA;
+        _fastS;
+        _preferredChainEdge;
+        _canUseFastSlab(t) {
+          return Tn.call(this, t);
+        }
+        _fastSlabActivate(t) {
+          return In.call(this, t);
+        }
+        rebuildConnectionSlab(t = !1) {
+          return se.call(this, t);
+        }
+        getConnectionSlab() {
+          return En.call(this);
+        }
+        constructor(t, e, o) {
+          if (typeof t > 'u' || typeof e > 'u')
+            throw new Error('No input or output size given');
+          (this.input = t),
+            (this.output = e),
+            (this.nodes = []),
+            (this.connections = []),
+            (this.gates = []),
+            (this.selfconns = []),
+            (this.dropout = 0),
+            (this._enforceAcyclic = o?.enforceAcyclic || !1),
+            o?.activationPrecision
+              ? (this._activationPrecision = o.activationPrecision)
+              : G.float32Mode && (this._activationPrecision = 'f32'),
+            o?.reuseActivationArrays && (this._reuseActivationArrays = !0),
+            o?.returnTypedActivations && (this._returnTypedActivations = !0);
+          try {
+            typeof G.poolMaxPerBucket == 'number' &&
+              ft.setMaxPerBucket(G.poolMaxPerBucket);
+            let i =
+              typeof G.poolPrewarmCount == 'number' ? G.poolPrewarmCount : 2;
+            ft.prewarm(this.output, i);
+          } catch {}
+          o?.seed !== void 0 && this.setSeed(o.seed);
+          for (let i = 0; i < this.input + this.output; i++) {
+            let r = i < this.input ? 'input' : 'output';
+            G.enableNodePooling
+              ? this.nodes.push(Oe({ type: r, rng: this._rand }))
+              : this.nodes.push(new K(r, void 0, this._rand));
+          }
+          for (let i = 0; i < this.input; i++)
+            for (let r = this.input; r < this.input + this.output; r++) {
+              let a = this._rand() * this.input * Math.sqrt(2 / this.input);
+              this.connect(this.nodes[i], this.nodes[r], a);
+            }
+          let s = o?.minHidden || 0;
+          if (s > 0)
+            for (; this.nodes.length < this.input + this.output + s; )
+              this.addNodeBetween();
+        }
+        addNodeBetween() {
+          if (this.connections.length === 0) return;
+          let t = Math.floor(this._rand() * this.connections.length),
+            e = this.connections[t];
+          if (!e) return;
+          this.disconnect(e.from, e.to);
+          let o = G.enableNodePooling
+            ? Oe({ type: 'hidden', rng: this._rand })
+            : new K('hidden', void 0, this._rand);
+          this.nodes.push(o),
+            this.connect(e.from, o, e.weight),
+            this.connect(o, e.to, 1),
+            (this._topoDirty = !0),
+            (this._nodeIndexDirty = !0);
+        }
+        enableDropConnect(t) {
+          if (t < 0 || t >= 1)
+            throw new Error('DropConnect probability must be in [0,1)');
+          this._dropConnectProb = t;
+        }
+        disableDropConnect() {
+          this._dropConnectProb = 0;
+        }
+        setEnforceAcyclic(t) {
+          this._enforceAcyclic = !!t;
+        }
+        _computeTopoOrder() {
+          return Nn.call(this);
+        }
+        _hasPath(t, e) {
+          return An.call(this, t, e);
+        }
+        configurePruning(t) {
+          let { start: e, end: o, targetSparsity: s } = t;
+          if (e < 0 || o < e)
+            throw new Error('Invalid pruning schedule window');
+          if (s <= 0 || s >= 1)
+            throw new Error('targetSparsity must be in (0,1)');
+          (this._pruningConfig = {
+            start: e,
+            end: o,
+            targetSparsity: s,
+            regrowFraction: t.regrowFraction ?? 0,
+            frequency: t.frequency ?? 1,
+            method: t.method || 'magnitude',
+            lastPruneIter: void 0,
+          }),
+            (this._initialConnectionCount = this.connections.length);
+        }
+        getCurrentSparsity() {
+          return Pn.call(this);
+        }
+        _maybePrune(t) {
+          return jn.call(this, t);
+        }
+        pruneToSparsity(t, e = 'magnitude') {
+          return Ln.call(this, t, e);
+        }
+        enableWeightNoise(t) {
+          if (typeof t == 'number') {
+            if (t < 0) throw new Error('Weight noise stdDev must be >= 0');
+            (this._weightNoiseStd = t), (this._weightNoisePerHidden = []);
+          } else if (t && Array.isArray(t.perHiddenLayer)) {
+            if (!this.layers || this.layers.length < 3)
+              throw new Error(
+                'Per-hidden-layer weight noise requires a layered network with at least one hidden layer'
+              );
+            let e = this.layers.length - 2;
+            if (t.perHiddenLayer.length !== e)
+              throw new Error(
+                `Expected ${e} std dev entries (one per hidden layer), got ${t.perHiddenLayer.length}`
+              );
+            if (t.perHiddenLayer.some((o) => o < 0))
+              throw new Error('Weight noise std devs must be >= 0');
+            (this._weightNoiseStd = 0),
+              (this._weightNoisePerHidden = t.perHiddenLayer.slice());
+          } else throw new Error('Invalid weight noise configuration');
+        }
+        disableWeightNoise() {
+          (this._weightNoiseStd = 0), (this._weightNoisePerHidden = []);
+        }
+        setWeightNoiseSchedule(t) {
+          this._weightNoiseSchedule = t;
+        }
+        clearWeightNoiseSchedule() {
+          this._weightNoiseSchedule = void 0;
+        }
+        setRandom(t) {
+          this._rand = t;
+        }
+        setSeed(t) {
+          Fn.call(this, t);
+        }
+        testForceOverflow() {
+          this._forceNextOverflow = !0;
+        }
+        get trainingStep() {
+          return this._trainingStep;
+        }
+        get lastSkippedLayers() {
+          return this._lastSkippedLayers || [];
+        }
+        snapshotRNG() {
+          return $n.call(this);
+        }
+        restoreRNG(t) {
+          Hn.call(this, t);
+        }
+        getRNGState() {
+          return qn.call(this);
+        }
+        setRNGState(t) {
+          Un.call(this, t);
+        }
+        setStochasticDepthSchedule(t) {
+          this._stochasticDepthSchedule = t;
+        }
+        clearStochasticDepthSchedule() {
+          this._stochasticDepthSchedule = void 0;
+        }
+        getRegularizationStats() {
+          return Jn.call(this);
+        }
+        setStochasticDepth(t) {
+          if (!Array.isArray(t)) throw new Error('survival must be an array');
+          if (t.some((o) => o <= 0 || o > 1))
+            throw new Error('Stochastic depth survival probs must be in (0,1]');
+          if (!this.layers || this.layers.length === 0)
+            throw new Error('Stochastic depth requires layer-based network');
+          let e = Math.max(0, this.layers.length - 2);
+          if (t.length !== e)
+            throw new Error(
+              `Expected ${e} survival probabilities for hidden layers, got ${t.length}`
+            );
+          this._stochasticDepth = t.slice();
+        }
+        disableStochasticDepth() {
+          this._stochasticDepth = [];
+        }
+        clone() {
+          return n.fromJSON(this.toJSON());
+        }
+        resetDropoutMasks() {
+          if (this.layers && this.layers.length > 0) {
+            for (let t of this.layers)
+              if (typeof t.nodes < 'u')
+                for (let e of t.nodes) typeof e.mask < 'u' && (e.mask = 1);
+          } else for (let t of this.nodes) typeof t.mask < 'u' && (t.mask = 1);
+        }
+        standalone() {
+          return Sn(this);
+        }
+        activate(t, e = !1, o = 1e3) {
+          if (
+            (this._enforceAcyclic &&
+              this._topoDirty &&
+              this._computeTopoOrder(),
+            !Array.isArray(t) || t.length !== this.input)
+          )
+            throw new Error(
+              `Input size mismatch: expected ${this.input}, got ${
+                t ? t.length : 'undefined'
+              }`
+            );
+          if (this._canUseFastSlab(e))
+            try {
+              return this._fastSlabActivate(t);
+            } catch {}
+          let s = ft.acquire(this.output);
+          if (!this.nodes || this.nodes.length === 0)
+            throw new Error(
+              'Network structure is corrupted or empty. No nodes found.'
+            );
+          let i = s;
+          this._lastSkippedLayers = [];
+          let r = {
+              droppedHiddenNodes: 0,
+              totalHiddenNodes: 0,
+              droppedConnections: 0,
+              totalConnections: this.connections.length,
+              skippedLayers: [],
+              weightNoise: { count: 0, sumAbs: 0, maxAbs: 0, meanAbs: 0 },
+            },
+            a = !1,
+            l = this._weightNoiseStd;
+          if (
+            e &&
+            (this._weightNoiseSchedule &&
+              (l = this._weightNoiseSchedule(this._trainingStep)),
+            l > 0 || this._weightNoisePerHidden.length > 0)
+          )
+            for (let u of this.connections) {
+              if (u._origWeightNoise != null) continue;
+              u._origWeightNoise = u.weight;
+              let p = l;
+              if (this._weightNoisePerHidden.length > 0 && this.layers) {
+                let c = -1;
+                for (let d = 0; d < this.layers.length; d++)
+                  if (this.layers[d].nodes.includes(u.from)) {
+                    c = d;
+                    break;
+                  }
+                if (c > 0 && c < this.layers.length) {
+                  let d = c - 1;
+                  d >= 0 &&
+                    d < this._weightNoisePerHidden.length &&
+                    (p = this._weightNoisePerHidden[d]);
+                }
+              }
+              if (p > 0) {
+                let c = p * n._gaussianRand(this._rand);
+                (u.weight += c), (u._wnLast = c), (a = !0);
+              } else u._wnLast = 0;
+            }
+          if (
+            e &&
+            this._stochasticDepthSchedule &&
+            this._stochasticDepth.length > 0
+          ) {
+            let u = this._stochasticDepthSchedule(
+              this._trainingStep,
+              this._stochasticDepth.slice()
+            );
+            Array.isArray(u) &&
+              u.length === this._stochasticDepth.length &&
+              !u.some((p) => p <= 0 || p > 1) &&
+              (this._stochasticDepth = u.slice());
+          }
+          if (
+            this.layers &&
+            this.layers.length > 0 &&
+            this._stochasticDepth.length > 0
+          ) {
+            let u;
+            for (let p = 0; p < this.layers.length; p++) {
+              let c = this.layers[p],
+                d = p > 0 && p < this.layers.length - 1,
+                f = !1;
+              if (e && d) {
+                let _ = p - 1;
+                if (_ < this._stochasticDepth.length) {
+                  let y = this._stochasticDepth[_];
+                  if (
+                    ((f = this._rand() >= y),
+                    f && (!u || u.length !== c.nodes.length) && (f = !1),
+                    !f)
+                  ) {
+                    let g = p === 0 ? c.activate(t, e) : c.activate(void 0, e);
+                    u = y < 1 ? g.map((w) => w * (1 / y)) : g;
+                    continue;
+                  }
+                }
+              }
+              if (f) {
+                this._lastSkippedLayers.push(p), r.skippedLayers.push(p);
+                continue;
+              }
+              u = p === 0 ? c.activate(t, e) : c.activate(void 0, e);
+            }
+            if (u)
+              for (let p = 0; p < u.length && p < this.output; p++) i[p] = u[p];
+          } else if (this.layers && this.layers.length > 0) {
+            let u;
+            for (let p = 0; p < this.layers.length; p++) {
+              let c = this.layers[p],
+                d = p > 0 && p < this.layers.length - 1,
+                f = p === 0 ? c.activate(t, !1) : c.activate(void 0, !1);
+              if (d && e && this.dropout > 0) {
+                let m = 0;
+                for (let _ of c.nodes)
+                  (_.mask = this._rand() < this.dropout ? 0 : 1),
+                    r.totalHiddenNodes++,
+                    _.mask === 0 && r.droppedHiddenNodes++,
+                    _.mask === 0 && ((_.activation = 0), m++);
+                if (m === c.nodes.length && c.nodes.length > 0) {
+                  let _ = Math.floor(this._rand() * c.nodes.length);
+                  (c.nodes[_].mask = 1), (c.nodes[_].activation = f[_]);
+                }
+              } else if (d) for (let m of c.nodes) m.mask = 1;
+              u = f;
+            }
+            if (u)
+              if (this._reuseActivationArrays)
+                for (let p = 0; p < u.length && p < this.output; p++)
+                  i[p] = u[p];
+              else
+                for (let p = 0; p < u.length && p < this.output; p++)
+                  i[p] = u[p];
+          } else {
+            let u = this.nodes.filter((d) => d.type === 'hidden'),
+              p = 0;
+            if (e && this.dropout > 0) {
+              for (let d of u)
+                (d.mask = this._rand() < this.dropout ? 0 : 1),
+                  r.totalHiddenNodes++,
+                  d.mask === 0 && (p++, r.droppedHiddenNodes++);
+              if (p === u.length && u.length > 0) {
+                let d = Math.floor(this._rand() * u.length);
+                u[d].mask = 1;
+              }
+            } else for (let d of u) d.mask = 1;
+            if (e && this._weightNoiseStd > 0) {
+              this._wnOrig ||
+                (this._wnOrig = new Array(this.connections.length));
+              for (let d = 0; d < this.connections.length; d++) {
+                let f = this.connections[d];
+                if (f._origWeightNoise != null) continue;
+                f._origWeightNoise = f.weight;
+                let m = this._weightNoiseStd * n._gaussianRand(this._rand);
+                f.weight += m;
+              }
+            }
+            let c = 0;
+            if (
+              (this.nodes.forEach((d, f) => {
+                if (d.type === 'input') d.activate(t[f]);
+                else if (d.type === 'output') {
+                  let m = d.activate();
+                  i[c++] = m;
+                } else d.activate();
+              }),
+              e && this._dropConnectProb > 0)
+            )
+              for (let d of this.connections) {
+                let f = this._rand() < this._dropConnectProb ? 0 : 1;
+                f === 0 && r.droppedConnections++,
+                  (d.dcMask = f),
+                  f === 0
+                    ? (d._origWeight == null && (d._origWeight = d.weight),
+                      (d.weight = 0))
+                    : d._origWeight != null &&
+                      ((d.weight = d._origWeight), delete d._origWeight);
+              }
+            else
+              for (let d of this.connections)
+                d._origWeight != null &&
+                  ((d.weight = d._origWeight), delete d._origWeight),
+                  (d.dcMask = 1);
+            if (e && a)
+              for (let d of this.connections)
+                d._origWeightNoise != null &&
+                  ((d.weight = d._origWeightNoise), delete d._origWeightNoise);
+          }
+          e && this._trainingStep++,
+            r.weightNoise.count > 0 &&
+              (r.weightNoise.meanAbs =
+                r.weightNoise.sumAbs / r.weightNoise.count),
+            (this._lastStats = r);
+          let h = Array.from(i);
+          return ft.release(i), h;
+        }
+        static _gaussianRand(t = Math.random) {
+          let e = 0,
+            o = 0;
+          for (; e === 0; ) e = t();
+          for (; o === 0; ) o = t();
+          return Math.sqrt(-2 * Math.log(e)) * Math.cos(2 * Math.PI * o);
+        }
+        noTraceActivate(t) {
+          let { noTraceActivate: e } = (ae(), q(re));
+          return e.call(this, t);
+        }
+        activateRaw(t, e = !1, o = 1e3) {
+          let { activateRaw: s } = (ae(), q(re));
+          return s.call(this, t, e, o);
+        }
+        activateBatch(t, e = !1) {
+          let { activateBatch: o } = (ae(), q(re));
+          return o.call(this, t, e);
+        }
+        propagate(t, e, o, s, i = 0, r) {
+          if (!s || s.length !== this.output)
+            throw new Error(
+              'Output target length should match network output length'
+            );
+          let a = s.length;
+          for (
+            let l = this.nodes.length - 1;
+            l >= this.nodes.length - this.output;
+            l--
+          )
+            r
+              ? this.nodes[l].propagate(t, e, o, i, s[--a], r)
+              : this.nodes[l].propagate(t, e, o, i, s[--a]);
+          for (
+            let l = this.nodes.length - this.output - 1;
+            l >= this.input;
+            l--
+          )
+            this.nodes[l].propagate(t, e, o, i);
+        }
+        clear() {
+          this.nodes.forEach((t) => t.clear());
+        }
+        mutate(t) {
+          let { mutateImpl: e } = (co(), q(ao));
+          return e.call(this, t);
+        }
+        connect(t, e, o) {
+          return Yn.call(this, t, e, o);
+        }
+        gate(t, e) {
+          return Wn.call(this, t, e);
+        }
+        remove(t) {
+          let e = Kn.call(this, t);
+          if (G.enableNodePooling)
+            try {
+              ie(t);
+            } catch {}
+          return e;
+        }
+        disconnect(t, e) {
+          return Zn.call(this, t, e);
+        }
+        ungate(t) {
+          return Bn.call(this, t);
+        }
+        _applyGradientClipping(t) {
+          let { applyGradientClippingImpl: e } = (ke(), q(De));
+          e(this, t);
+        }
+        train(t, e) {
+          let { trainImpl: o } = (ke(), q(De));
+          return o(this, t, e);
+        }
+        getRawGradientNorm() {
+          return this._lastRawGradNorm;
+        }
+        getLossScale() {
+          return this._mixedPrecision.lossScale;
+        }
+        getLastGradClipGroupCount() {
+          return this._lastGradClipGroupCount;
+        }
+        getTrainingStats() {
+          return {
+            gradNorm: this._lastGradNorm ?? 0,
+            gradNormRaw: this._lastRawGradNorm,
+            lossScale: this._mixedPrecision.lossScale,
+            optimizerStep: this._optimizerStep,
+            mp: {
+              good: this._mixedPrecisionState.goodSteps,
+              bad: this._mixedPrecisionState.badSteps,
+              overflowCount: this._mixedPrecisionState.overflowCount || 0,
+              scaleUps: this._mixedPrecisionState.scaleUpEvents || 0,
+              scaleDowns: this._mixedPrecisionState.scaleDownEvents || 0,
+              lastOverflowStep: this._lastOverflowStep,
+            },
+          };
+        }
+        static adjustRateForAccumulation(t, e, o) {
+          return o === 'sum' && e > 1 ? t / e : t;
+        }
+        async evolve(t, e) {
+          let { evolveNetwork: o } = await Promise.resolve().then(
+            () => (Eo(), Oo)
+          );
+          return o.call(this, t, e);
+        }
+        test(t, e) {
+          if (!Array.isArray(t) || t.length === 0)
+            throw new Error('Test set is empty or not an array.');
+          for (let a of t) {
+            if (!Array.isArray(a.input) || a.input.length !== this.input)
+              throw new Error(
+                `Test sample input size mismatch: expected ${this.input}, got ${
+                  a.input ? a.input.length : 'undefined'
+                }`
+              );
+            if (!Array.isArray(a.output) || a.output.length !== this.output)
+              throw new Error(
+                `Test sample output size mismatch: expected ${
+                  this.output
+                }, got ${a.output ? a.output.length : 'undefined'}`
+              );
+          }
+          let o = 0,
+            s = e || wt.mse,
+            i = Date.now();
+          this.nodes.forEach((a) => {
+            a.type === 'hidden' && (a.mask = 1);
+          });
+          let r = this.dropout;
+          return (
+            this.dropout > 0 && (this.dropout = 0),
+            t.forEach((a) => {
+              let l = this.noTraceActivate(a.input);
+              o += s(a.output, l);
+            }),
+            (this.dropout = r),
+            { error: o / t.length, time: Date.now() - i }
+          );
+        }
+        serialize() {
+          return to.call(this);
+        }
+        static deserialize(t, e, o) {
+          return eo(t, e, o);
+        }
+        toJSON() {
+          return no.call(this);
+        }
+        static fromJSON(t) {
+          return oo(t);
+        }
+        static crossOver(t, e, o = !1) {
+          return so(t, e, o);
+        }
+        set(t) {
+          this.nodes.forEach((e) => {
+            typeof t.bias < 'u' && (e.bias = t.bias),
+              typeof t.squash < 'u' && (e.squash = t.squash);
+          });
+        }
+        toONNX() {
+          return vn(this);
+        }
+        static createMLP(t, e, o) {
+          let s = Array.from({ length: t }, () => new K('input')),
+            i = e.map((u) => Array.from({ length: u }, () => new K('hidden'))),
+            r = Array.from({ length: o }, () => new K('output')),
+            a = [...s, ...i.flat(), ...r],
+            l = new n(t, o);
+          l.nodes = a;
+          let h = s;
+          for (let u of i) {
+            for (let p of u) for (let c of h) c.connect(p);
+            h = u;
+          }
+          for (let u of r) for (let p of h) p.connect(u);
+          return (
+            (l.connections = l.nodes.flatMap((u) => u.connections.out)),
+            (l._topoDirty = !0),
+            l
+          );
+        }
+        static rebuildConnections(t) {
+          let e = new Set();
+          t.nodes.forEach((o) => {
+            o.connections.out.forEach((s) => {
+              e.add(s);
+            });
+          }),
+            (t.connections = Array.from(e));
+        }
+      };
+    });
+  function Io() {
+    let n = (pt(), q(ut));
+    for (let t of this.population) {
+      this.options.adaptiveMutation?.enabled &&
+        t._mutRate === void 0 &&
+        ((t._mutRate =
+          this.options.mutationRate !== void 0
+            ? this.options.mutationRate
+            : this.options.adaptiveMutation.initialRate ??
+              (this.options.mutationRate || 0.7)),
+        this.options.adaptiveMutation.adaptAmount &&
+          (t._mutAmount = this.options.mutationAmount || 1));
+      let e =
+          this.options.mutationRate !== void 0
+            ? this.options.mutationRate
+            : this.options.adaptiveMutation?.enabled
+            ? t._mutRate
+            : this.options.mutationRate || 0.7,
+        o =
+          this.options.adaptiveMutation?.enabled &&
+          this.options.adaptiveMutation.adaptAmount
+            ? t._mutAmount ?? (this.options.mutationAmount || 1)
+            : this.options.mutationAmount || 1;
+      if (this._getRNG()() <= e)
+        for (let s = 0; s < o; s++) {
+          let i = this.selectMutationMethod(t, !1);
+          if (Array.isArray(i)) {
+            let r = i;
+            i = r[Math.floor(this._getRNG()() * r.length)];
+          }
+          if (i && i.name) {
+            let r = t.nodes.length,
+              a = t.connections.length;
+            if (i === n.mutation.ADD_NODE) {
+              this._mutateAddNodeReuse(t);
+              try {
+                t.mutate(n.mutation.MOD_WEIGHT);
+              } catch {}
+              this._invalidateGenomeCaches(t);
+            } else if (i === n.mutation.ADD_CONN) {
+              this._mutateAddConnReuse(t);
+              try {
+                t.mutate(n.mutation.MOD_WEIGHT);
+              } catch {}
+              this._invalidateGenomeCaches(t);
+            } else
+              t.mutate(i),
+                (i === n.mutation.ADD_GATE ||
+                  i === n.mutation.SUB_NODE ||
+                  i === n.mutation.SUB_CONN ||
+                  i === n.mutation.ADD_SELF_CONN ||
+                  i === n.mutation.ADD_BACK_CONN) &&
+                  this._invalidateGenomeCaches(t);
+            if (
+              (this._getRNG()() < 0.5 && this._mutateAddConnReuse(t),
+              this.options.operatorAdaptation?.enabled)
+            ) {
+              let l = this._operatorStats.get(i.name) || {
+                success: 0,
+                attempts: 0,
+              };
+              l.attempts++;
+              let h = t.nodes.length,
+                u = t.connections.length;
+              (h > r || u > a) && l.success++,
+                this._operatorStats.set(i.name, l);
+            }
+          }
+        }
+    }
+  }
+  function To(n) {
+    if (n.connections.length === 0) {
+      let h = n.nodes.find((p) => p.type === 'input'),
+        u = n.nodes.find((p) => p.type === 'output');
+      if (h && u)
+        try {
+          n.connect(h, u, 1);
+        } catch {}
+    }
+    let t = n.connections.filter((h) => h.enabled !== !1);
+    if (!t.length) return;
+    let e = t[Math.floor(this._getRNG()() * t.length)],
+      o = e.from.geneId,
+      s = e.to.geneId,
+      i = o + '->' + s,
+      r = e.weight;
+    n.disconnect(e.from, e.to);
+    let a = this._nodeSplitInnovations.get(i),
+      l = (mt(), q(ne)).default;
+    if (a) {
+      let h = new l('hidden');
+      h.geneId = a.newNodeGeneId;
+      let u = n.nodes.indexOf(e.to),
+        p = Math.min(u, n.nodes.length - n.output);
+      n.nodes.splice(p, 0, h);
+      let c = n.connect(e.from, h, 1)[0],
+        d = n.connect(h, e.to, r)[0];
+      c && (c.innovation = a.inInnov), d && (d.innovation = a.outInnov);
+    } else {
+      let h = new l('hidden'),
+        u = n.connect(e.from, h, 1)[0],
+        p = n.connect(h, e.to, r)[0];
+      u && (u.innovation = this._nextGlobalInnovation++),
+        p && (p.innovation = this._nextGlobalInnovation++),
+        (a = {
+          newNodeGeneId: h.geneId,
+          inInnov: u?.innovation,
+          outInnov: p?.innovation,
+        }),
+        this._nodeSplitInnovations.set(i, a);
+      let c = n.nodes.indexOf(e.to),
+        d = Math.min(c, n.nodes.length - n.output);
+      n.nodes.splice(d, 0, h);
+    }
+  }
+  function Do(n) {
+    let t = [];
+    for (let c = 0; c < n.nodes.length - n.output; c++) {
+      let d = n.nodes[c];
+      for (let f = Math.max(c + 1, n.input); f < n.nodes.length; f++) {
+        let m = n.nodes[f];
+        d.isProjectingTo(m) || t.push([d, m]);
+      }
+    }
+    if (!t.length) return;
+    let e = t.filter((c) => {
+        let d = c[0].geneId,
+          f = c[1].geneId,
+          m = d < f ? d + '::' + f : f + '::' + d;
+        return this._connInnovations.has(m);
+      }),
+      o = e.length
+        ? []
+        : t.filter((c) => c[0].type === 'hidden' && c[1].type === 'hidden'),
+      s = e.length ? e : o.length ? o : t,
+      i = s.length === 1 ? s[0] : s[Math.floor(this._getRNG()() * s.length)],
+      r = i[0],
+      a = i[1],
+      l = r.geneId,
+      h = a.geneId,
+      u = l < h ? l + '::' + h : h + '::' + l;
+    if (
+      n._enforceAcyclic &&
+      (() => {
+        let d = [a],
+          f = new Set();
+        for (; d.length; ) {
+          let m = d.pop();
+          if (m === r) return !0;
+          if (!f.has(m)) {
+            f.add(m);
+            for (let _ of m.connections.out) d.push(_.to);
+          }
+        }
+        return !1;
+      })()
+    )
+      return;
+    let p = n.connect(r, a)[0];
+    if (p)
+      if (this._connInnovations.has(u))
+        p.innovation = this._connInnovations.get(u);
+      else {
+        let c = this._nextGlobalInnovation++;
+        (p.innovation = c), this._connInnovations.set(u, c);
+        let d = l + '::' + h,
+          f = h + '::' + l;
+        this._connInnovations.set(d, c), this._connInnovations.set(f, c);
+      }
+  }
+  function ko(n, t) {
+    let e = this.options.maxNodes || 1 / 0,
+      o = Math.min(
+        this.getMinimumHiddenSize(t),
+        e - n.nodes.filter((h) => h.type !== 'hidden').length
+      ),
+      s = n.nodes.filter((h) => h.type === 'input'),
+      i = n.nodes.filter((h) => h.type === 'output'),
+      r = n.nodes.filter((h) => h.type === 'hidden');
+    if (s.length === 0 || i.length === 0) {
+      try {
+        console.warn(
+          'Network is missing input or output nodes \u2014 skipping minHidden enforcement'
+        );
+      } catch {}
+      return;
+    }
+    let a = r.length;
+    for (let h = a; h < o && n.nodes.length < e; h++) {
+      let u = (mt(), q(ne)).default,
+        p = new u('hidden');
+      n.nodes.push(p), r.push(p);
+    }
+    for (let h of r) {
+      if (h.connections.in.length === 0) {
+        let u = s.concat(r.filter((p) => p !== h));
+        if (u.length > 0) {
+          let p = this._getRNG(),
+            c = u[Math.floor(p() * u.length)];
+          try {
+            n.connect(c, h);
+          } catch {}
+        }
+      }
+      if (h.connections.out.length === 0) {
+        let u = i.concat(r.filter((p) => p !== h));
+        if (u.length > 0) {
+          let p = this._getRNG(),
+            c = u[Math.floor(p() * u.length)];
+          try {
+            n.connect(h, c);
+          } catch {}
+        }
+      }
+    }
+    (bt(), q(Pt)).default.rebuildConnections(n);
+  }
+  function jo(n) {
+    let t = n.nodes.filter((r) => r.type === 'input'),
+      e = n.nodes.filter((r) => r.type === 'output'),
+      o = n.nodes.filter((r) => r.type === 'hidden'),
+      s = (r) =>
+        r.connections && r.connections.out && r.connections.out.length > 0,
+      i = (r) =>
+        r.connections && r.connections.in && r.connections.in.length > 0;
+    for (let r of t)
+      if (!s(r)) {
+        let a = o.length > 0 ? o : e;
+        if (a.length > 0) {
+          let l = this._getRNG(),
+            h = a[Math.floor(l() * a.length)];
+          try {
+            n.connect(r, h);
+          } catch {}
+        }
+      }
+    for (let r of e)
+      if (!i(r)) {
+        let a = o.length > 0 ? o : t;
+        if (a.length > 0) {
+          let l = this._getRNG(),
+            h = a[Math.floor(l() * a.length)];
+          try {
+            n.connect(h, r);
+          } catch {}
+        }
+      }
+    for (let r of o) {
+      if (!i(r)) {
+        let a = t.concat(o.filter((l) => l !== r));
+        if (a.length > 0) {
+          let l = this._getRNG(),
+            h = a[Math.floor(l() * a.length)];
+          try {
+            n.connect(h, r);
+          } catch {}
+        }
+      }
+      if (!s(r)) {
+        let a = e.concat(o.filter((l) => l !== r));
+        if (a.length > 0) {
+          let l = this._getRNG(),
+            h = a[Math.floor(l() * a.length)];
+          try {
+            n.connect(r, h);
+          } catch {}
+        }
+      }
+    }
+  }
+  function Lo(n, t = !0) {
+    let e = (pt(), q(ut)),
+      o = this.options.mutation === e.mutation.FFW,
+      s =
+        Array.isArray(this.options.mutation) &&
+        this.options.mutation.length === 1 &&
+        this.options.mutation[0] === e.mutation.FFW;
+    if ((o || s) && t) return e.mutation.FFW;
+    if (o)
+      return e.mutation.FFW[
+        Math.floor(this._getRNG()() * e.mutation.FFW.length)
+      ];
+    if (s)
+      return e.mutation.FFW[
+        Math.floor(this._getRNG()() * e.mutation.FFW.length)
+      ];
+    let i = this.options.mutation;
+    if (
+      t &&
+      Array.isArray(i) &&
+      i.length === e.mutation.FFW.length &&
+      i.every((a, l) => a && a.name === e.mutation.FFW[l].name)
+    )
+      return e.mutation.FFW;
+    if (
+      (i.length === 1 && Array.isArray(i[0]) && i[0].length && (i = i[0]),
+      this.options.phasedComplexity?.enabled && this._phase)
+    ) {
+      if (((i = i.filter((a) => !!a)), this._phase === 'simplify')) {
+        let a = i.filter(
+          (l) => l && l.name && l.name.startsWith && l.name.startsWith('SUB_')
+        );
+        a.length && (i = [...i, ...a]);
+      } else if (this._phase === 'complexify') {
+        let a = i.filter(
+          (l) => l && l.name && l.name.startsWith && l.name.startsWith('ADD_')
+        );
+        a.length && (i = [...i, ...a]);
+      }
+    }
+    if (this.options.operatorAdaptation?.enabled) {
+      let a = this.options.operatorAdaptation.boost ?? 2,
+        l = this._operatorStats,
+        h = [];
+      for (let u of i) {
+        h.push(u);
+        let p = l.get(u.name);
+        if (p && p.attempts > 5) {
+          let c = p.success / p.attempts;
+          if (c > 0.55)
+            for (let d = 0; d < Math.min(a, Math.floor(c * a)); d++) h.push(u);
+        }
+      }
+      i = h;
+    }
+    let r = i[Math.floor(this._getRNG()() * i.length)];
+    if (
+      (r === e.mutation.ADD_GATE &&
+        n.gates.length >= (this.options.maxGates || 1 / 0)) ||
+      (r === e.mutation.ADD_NODE &&
+        n.nodes.length >= (this.options.maxNodes || 1 / 0)) ||
+      (r === e.mutation.ADD_CONN &&
+        n.connections.length >= (this.options.maxConns || 1 / 0))
+    )
+      return null;
+    if (this.options.operatorBandit?.enabled) {
+      let a = this.options.operatorBandit.c ?? 1.4,
+        l = this.options.operatorBandit.minAttempts ?? 5,
+        h = this._operatorStats;
+      for (let d of i)
+        h.has(d.name) || h.set(d.name, { success: 0, attempts: 0 });
+      let u = Array.from(h.values()).reduce((d, f) => d + f.attempts, 0) + 1e-9,
+        p = r,
+        c = -1 / 0;
+      for (let d of i) {
+        let f = h.get(d.name),
+          m = f.attempts > 0 ? f.success / f.attempts : 0,
+          _ =
+            f.attempts < l
+              ? 1 / 0
+              : a * Math.sqrt(Math.log(u) / (f.attempts + 1e-9)),
+          y = m + _;
+        y > c && ((c = y), (p = d));
+      }
+      r = p;
+    }
+    return (r === e.mutation.ADD_GATE &&
+      n.gates.length >= (this.options.maxGates || 1 / 0)) ||
+      (!this.options.allowRecurrent &&
+        (r === e.mutation.ADD_BACK_CONN || r === e.mutation.ADD_SELF_CONN))
+      ? null
+      : r;
+  }
+  var Po = C(() => {
+    'use strict';
+    jt();
+  });
+  function Ro(n) {
+    let t = this._getObjectives(),
+      e = n.map((u) =>
+        t.map((p) => {
+          try {
+            return p.accessor(u);
+          } catch {
+            return 0;
+          }
+        })
+      ),
+      o = (u, p) => {
+        let c = !1;
+        for (let d = 0; d < u.length; d++)
+          if ((t[d].direction || 'max') === 'max') {
+            if (u[d] < p[d]) return !1;
+            u[d] > p[d] && (c = !0);
+          } else {
+            if (u[d] > p[d]) return !1;
+            u[d] < p[d] && (c = !0);
+          }
+        return c;
+      },
+      s = [],
+      i = new Array(n.length).fill(0),
+      r = n.map(() => []),
+      a = [];
+    for (let u = 0; u < n.length; u++) {
+      for (let p = 0; p < n.length; p++)
+        u !== p && (o(e[u], e[p]) ? r[u].push(p) : o(e[p], e[u]) && i[u]++);
+      i[u] === 0 && a.push(u);
+    }
+    let l = a,
+      h = 0;
+    for (; l.length; ) {
+      let u = [];
+      for (let p of l) {
+        n[p]._moRank = h;
+        for (let c of r[p]) i[c]--, i[c] === 0 && u.push(c);
+      }
+      if ((s.push(l.map((p) => n[p])), (l = u), h++, h > 50)) break;
+    }
+    for (let u of s)
+      if (u.length !== 0) {
+        for (let p of u) p._moCrowd = 0;
+        for (let p = 0; p < t.length; p++) {
+          let c = u.slice().sort((_, y) => {
+            let g = t[p].accessor(_),
+              w = t[p].accessor(y);
+            return g - w;
+          });
+          (c[0]._moCrowd = 1 / 0), (c[c.length - 1]._moCrowd = 1 / 0);
+          let d = t[p].accessor(c[0]),
+            m = t[p].accessor(c[c.length - 1]) - d || 1;
+          for (let _ = 1; _ < c.length - 1; _++) {
+            let y = t[p].accessor(c[_ - 1]),
+              g = t[p].accessor(c[_ + 1]);
+            c[_]._moCrowd += (g - y) / m;
+          }
+        }
+      }
+    return (
+      this.options.multiObjective?.enabled &&
+        (this._paretoArchive.push({
+          generation: this.generation,
+          fronts: s.slice(0, 3).map((u) => u.map((p) => p._id)),
+        }),
+        this._paretoArchive.length > 100 && this._paretoArchive.shift()),
+      s
+    );
+  }
+  var Wo = C(() => {
+    'use strict';
+  });
+  var Rt = {};
+  ct(Rt, {
+    applyAdaptiveMutation: () => er,
+    applyAncestorUniqAdaptive: () => tr,
+    applyComplexityBudget: () => Ys,
+    applyMinimalCriterionAdaptive: () => Qs,
+    applyOperatorAdaptation: () => nr,
+    applyPhasedComplexity: () => Zs,
+  });
+  function Ys() {
+    if (!this.options.complexityBudget?.enabled) return;
+    let n = this.options.complexityBudget;
+    if (n.mode === 'adaptive') {
+      this._cbHistory || (this._cbHistory = []),
+        this._cbHistory.push(this.population[0]?.score || 0);
+      let t = n.improvementWindow ?? 10;
+      this._cbHistory.length > t && this._cbHistory.shift();
+      let e = this._cbHistory,
+        o = e.length > 1 ? e[e.length - 1] - e[0] : 0,
+        s = 0;
+      if (e.length > 2) {
+        let p = e.length,
+          c = 0,
+          d = 0,
+          f = 0,
+          m = 0;
+        for (let y = 0; y < p; y++)
+          (c += y), (d += e[y]), (f += y * e[y]), (m += y * y);
+        let _ = p * m - c * c || 1;
+        s = (p * f - c * d) / _;
+      }
+      this._cbMaxNodes === void 0 &&
+        (this._cbMaxNodes = n.maxNodesStart ?? this.input + this.output + 2);
+      let i = n.increaseFactor ?? 1.1,
+        r = n.stagnationFactor ?? 0.95,
+        a = Math.min(2, Math.max(-2, s / (Math.abs(e[0]) + 1e-9))),
+        l = i + 0.05 * Math.max(0, a),
+        h = r - 0.03 * Math.max(0, -a),
+        u = this._noveltyArchive.length > 5 ? 1 : 0.9;
+      if (
+        (o > 0 || s > 0
+          ? (this._cbMaxNodes = Math.min(
+              n.maxNodesEnd ?? this._cbMaxNodes * 4,
+              Math.floor(this._cbMaxNodes * l * u)
+            ))
+          : e.length === t &&
+            (this._cbMaxNodes = Math.max(
+              n.minNodes ?? this.input + this.output + 2,
+              Math.floor(this._cbMaxNodes * h)
+            )),
+        n.minNodes !== void 0)
+      )
+        this._cbMaxNodes = Math.max(n.minNodes, this._cbMaxNodes);
+      else {
+        let p = this.input + this.output + 2;
+        this._cbMaxNodes < p && (this._cbMaxNodes = p);
+      }
+      (this.options.maxNodes = this._cbMaxNodes),
+        n.maxConnsStart &&
+          (this._cbMaxConns === void 0 && (this._cbMaxConns = n.maxConnsStart),
+          o > 0 || s > 0
+            ? (this._cbMaxConns = Math.min(
+                n.maxConnsEnd ?? this._cbMaxConns * 4,
+                Math.floor(this._cbMaxConns * l * u)
+              ))
+            : e.length === t &&
+              (this._cbMaxConns = Math.max(
+                n.maxConnsStart,
+                Math.floor(this._cbMaxConns * h)
+              )),
+          (this.options.maxConns = this._cbMaxConns));
+    } else {
+      let t = n.maxNodesStart ?? this.input + this.output + 2,
+        e = n.maxNodesEnd ?? t * 4,
+        o = n.horizon ?? 100,
+        s = Math.min(1, this.generation / o);
+      this.options.maxNodes = Math.floor(t + (e - t) * s);
+    }
+  }
+  function Zs() {
+    if (!this.options.phasedComplexity?.enabled) return;
+    let n = this.options.phasedComplexity.phaseLength ?? 10;
+    this._phase ||
+      ((this._phase =
+        this.options.phasedComplexity.initialPhase ?? 'complexify'),
+      (this._phaseStartGeneration = this.generation)),
+      this.generation - this._phaseStartGeneration >= n &&
+        ((this._phase =
+          this._phase === 'complexify' ? 'simplify' : 'complexify'),
+        (this._phaseStartGeneration = this.generation));
+  }
+  function Qs() {
+    if (!this.options.minimalCriterionAdaptive?.enabled) return;
+    let n = this.options.minimalCriterionAdaptive;
+    this._mcThreshold === void 0 &&
+      (this._mcThreshold = n.initialThreshold ?? 0);
+    let t = this.population.map((r) => r.score || 0),
+      e = t.filter((r) => r >= this._mcThreshold).length,
+      o = t.length ? e / t.length : 0,
+      s = n.targetAcceptance ?? 0.5,
+      i = n.adjustRate ?? 0.1;
+    o > s * 1.05
+      ? (this._mcThreshold *= 1 + i)
+      : o < s * 0.95 && (this._mcThreshold *= 1 - i);
+    for (let r of this.population)
+      (r.score || 0) < this._mcThreshold && (r.score = 0);
+  }
+  function tr() {
+    if (!this.options.ancestorUniqAdaptive?.enabled) return;
+    let n = this.options.ancestorUniqAdaptive,
+      t = n.cooldown ?? 5;
+    if (this.generation - this._lastAncestorUniqAdjustGen < t) return;
+    let e = this._telemetry[this._telemetry.length - 1]?.lineage,
+      o = e ? e.ancestorUniq : void 0;
+    if (typeof o != 'number') return;
+    let s = n.lowThreshold ?? 0.25,
+      i = n.highThreshold ?? 0.55,
+      r = n.adjust ?? 0.01;
+    if (
+      n.mode === 'epsilon' &&
+      this.options.multiObjective?.adaptiveEpsilon?.enabled
+    )
+      o < s
+        ? ((this.options.multiObjective.dominanceEpsilon =
+            (this.options.multiObjective.dominanceEpsilon || 0) + r),
+          (this._lastAncestorUniqAdjustGen = this.generation))
+        : o > i &&
+          ((this.options.multiObjective.dominanceEpsilon = Math.max(
+            0,
+            (this.options.multiObjective.dominanceEpsilon || 0) - r
+          )),
+          (this._lastAncestorUniqAdjustGen = this.generation));
+    else if (n.mode === 'lineagePressure') {
+      this.options.lineagePressure ||
+        (this.options.lineagePressure = {
+          enabled: !0,
+          mode: 'spread',
+          strength: 0.01,
+        });
+      let a = this.options.lineagePressure;
+      o < s
+        ? ((a.strength = (a.strength || 0.01) * 1.15),
+          (a.mode = 'spread'),
+          (this._lastAncestorUniqAdjustGen = this.generation))
+        : o > i &&
+          ((a.strength = (a.strength || 0.01) * 0.9),
+          (this._lastAncestorUniqAdjustGen = this.generation));
+    }
+  }
+  function er() {
+    if (!this.options.adaptiveMutation?.enabled) return;
+    let n = this.options.adaptiveMutation,
+      t = n.adaptEvery ?? 1;
+    if (!(t <= 1 || this.generation % t === 0)) return;
+    let e = this.population.filter((c) => typeof c.score == 'number');
+    e.sort((c, d) => (c.score || 0) - (d.score || 0));
+    let o = Math.floor(e.length / 2),
+      s = e.slice(o),
+      i = e.slice(0, o),
+      r = (n.sigma ?? 0.05) * 1.5,
+      a = n.minRate ?? 0.01,
+      l = n.maxRate ?? 1,
+      h = n.strategy || 'twoTier',
+      u = !1,
+      p = !1;
+    for (let c = 0; c < this.population.length; c++) {
+      let d = this.population[c];
+      if (d._mutRate === void 0) continue;
+      let f = d._mutRate,
+        m = this._getRNG()() * 2 - 1;
+      if (((m *= r), h === 'twoTier'))
+        s.length === 0 || i.length === 0
+          ? (m = c % 2 === 0 ? Math.abs(m) : -Math.abs(m))
+          : s.includes(d)
+          ? (m = -Math.abs(m))
+          : i.includes(d) && (m = Math.abs(m));
+      else if (h === 'exploreLow')
+        m = i.includes(d) ? Math.abs(m * 1.5) : -Math.abs(m * 0.5);
+      else if (h === 'anneal') {
+        let _ = Math.min(1, this.generation / (50 + this.population.length));
+        m *= 1 - _;
+      }
+      if (
+        ((f += m),
+        f < a && (f = a),
+        f > l && (f = l),
+        f > (this.options.adaptiveMutation.initialRate ?? 0.5) && (u = !0),
+        f < (this.options.adaptiveMutation.initialRate ?? 0.5) && (p = !0),
+        (d._mutRate = f),
+        n.adaptAmount)
+      ) {
+        let _ = n.amountSigma ?? 0.25,
+          y = (this._getRNG()() * 2 - 1) * _;
+        h === 'twoTier' &&
+          (s.length === 0 || i.length === 0
+            ? (y = c % 2 === 0 ? Math.abs(y) : -Math.abs(y))
+            : (y = i.includes(d) ? Math.abs(y) : -Math.abs(y)));
+        let g = d._mutAmount ?? (this.options.mutationAmount || 1);
+        (g += y), (g = Math.round(g));
+        let w = n.minAmount ?? 1,
+          v = n.maxAmount ?? 10;
+        g < w && (g = w), g > v && (g = v), (d._mutAmount = g);
+      }
+    }
+    if (h === 'twoTier' && !(u && p)) {
+      let c = this.options.adaptiveMutation.initialRate ?? 0.5,
+        d = Math.floor(this.population.length / 2);
+      for (let f = 0; f < this.population.length; f++) {
+        let m = this.population[f];
+        m._mutRate !== void 0 &&
+          (f < d
+            ? (m._mutRate = Math.min(m._mutRate + r, 1))
+            : (m._mutRate = Math.max(m._mutRate - r, 0.01)));
+      }
+    }
+  }
+  function nr() {
+    if (!this.options.operatorAdaptation?.enabled) return;
+    let n = this.options.operatorAdaptation.decay ?? 0.9;
+    for (let [t, e] of this._operatorStats.entries())
+      (e.success *= n), (e.attempts *= n), this._operatorStats.set(t, e);
+  }
+  var Wt = C(() => {
+    'use strict';
+    jt();
+  });
+  var Xe = {};
+  ct(Xe, { buildAnc: () => Bo, computeAncestorUniqueness: () => ir });
+  function Bo(n) {
+    let t = new Set();
+    if (!Array.isArray(n._parents)) return t;
+    let e = [];
+    for (let o of n._parents)
+      e.push({
+        id: o,
+        depth: 1,
+        genomeRef: this.population.find((s) => s._id === o),
+      });
+    for (; e.length; ) {
+      let o = e.shift();
+      if (
+        !(o.depth > 4) &&
+        (o.id != null && t.add(o.id),
+        o.genomeRef && Array.isArray(o.genomeRef._parents))
+      )
+        for (let s of o.genomeRef._parents)
+          e.push({
+            id: s,
+            depth: o.depth + 1,
+            genomeRef: this.population.find((i) => i._id === s),
+          });
+    }
+    return t;
+  }
+  function ir() {
+    let n = Bo.bind(this),
+      t = 0,
+      e = 0,
+      o = Math.min(
+        or,
+        (this.population.length * (this.population.length - 1)) / 2
+      );
+    for (let i = 0; i < o && !(this.population.length < 2); i++) {
+      let r = Math.floor(this._getRNG()() * this.population.length),
+        a = Math.floor(this._getRNG()() * this.population.length);
+      a === r && (a = (a + 1) % this.population.length);
+      let l = n(this.population[r]),
+        h = n(this.population[a]);
+      if (l.size === 0 && h.size === 0) continue;
+      let u = 0;
+      for (let d of l) h.has(d) && u++;
+      let p = l.size + h.size - u || 1,
+        c = 1 - u / p;
+      (e += c), t++;
+    }
+    return t ? +(e / t).toFixed(3) : 0;
+  }
+  var or,
+    Ye = C(() => {
+      'use strict';
+      or = 30;
+    });
+  var Fo = {};
+  ct(Fo, {
+    applyTelemetrySelect: () => Go,
+    buildTelemetryEntry: () => cr,
+    computeDiversityStats: () => rr,
+    recordTelemetryEntry: () => ar,
+    structuralEntropy: () => sr,
+  });
+  function Go(n) {
+    if (!this._telemetrySelect || !this._telemetrySelect.size) return n;
+    let t = this._telemetrySelect,
+      e = { gen: n.gen, best: n.best, species: n.species };
+    for (let o of Object.keys(n)) o in e || t.has(o) || delete n[o];
+    return Object.assign(n, e);
+  }
+  function sr(n) {
+    let t = n;
+    if (t._entropyGen === this.generation && typeof t._entropyVal == 'number')
+      return t._entropyVal;
+    let e = {};
+    for (let r of n.nodes) e[r.geneId] = 0;
+    for (let r of n.connections)
+      if (r.enabled) {
+        let a = r.from.geneId,
+          l = r.to.geneId;
+        e[a] !== void 0 && e[a]++, e[l] !== void 0 && e[l]++;
+      }
+    let o = {},
+      s = n.nodes.length || 1;
+    for (let r in e) {
+      let a = e[r];
+      o[a] = (o[a] || 0) + 1;
+    }
+    let i = 0;
+    for (let r in o) {
+      let a = o[r] / s;
+      a > 0 && (i -= a * Math.log(a + 1e-9));
+    }
+    return (t._entropyGen = this.generation), (t._entropyVal = i), i;
+  }
+  function rr() {
+    if (!this.options.diversityMetrics?.enabled) return;
+    if (this.options.fastMode && !this._fastModeTuned) {
+      let y = this.options.diversityMetrics;
+      y &&
+        (y.pairSample == null && (y.pairSample = 20),
+        y.graphletSample == null && (y.graphletSample = 30)),
+        this.options.novelty?.enabled &&
+          this.options.novelty.k == null &&
+          (this.options.novelty.k = 5),
+        (this._fastModeTuned = !0);
+    }
+    let n = this.options.diversityMetrics.pairSample ?? 40,
+      t = this.options.diversityMetrics.graphletSample ?? 60,
+      e = this.population,
+      o = e.length,
+      s = 0,
+      i = 0,
+      r = 0;
+    for (let y = 0; y < n && !(o < 2); y++) {
+      let g = Math.floor(this._getRNG()() * o),
+        w = Math.floor(this._getRNG()() * o);
+      w === g && (w = (w + 1) % o);
+      let v = this._compatibilityDistance(e[g], e[w]);
+      (s += v), (i += v * v), r++;
+    }
+    let a = r ? s / r : 0,
+      l = r ? Math.max(0, i / r - a * a) : 0,
+      h = e.map((y) => this._structuralEntropy(y)),
+      u = h.reduce((y, g) => y + g, 0) / (h.length || 1),
+      p = h.length
+        ? h.reduce((y, g) => y + (g - u) * (g - u), 0) / h.length
+        : 0,
+      c = [0, 0, 0, 0];
+    for (let y = 0; y < t; y++) {
+      let g = e[Math.floor(this._getRNG()() * o)];
+      if (!g) break;
+      if (g.nodes.length < 3) continue;
+      let w = new Set();
+      for (; w.size < 3; ) w.add(Math.floor(this._getRNG()() * g.nodes.length));
+      let v = Array.from(w).map((M) => g.nodes[M]),
+        b = 0;
+      for (let M of g.connections)
+        M.enabled && v.includes(M.from) && v.includes(M.to) && b++;
+      b > 3 && (b = 3), c[b]++;
+    }
+    let d = c.reduce((y, g) => y + g, 0) || 1,
+      f = 0;
+    for (let y = 0; y < c.length; y++) {
+      let g = c[y] / d;
+      g > 0 && (f -= g * Math.log(g));
+    }
+    let m = 0,
+      _ = 0;
+    if (this._lineageEnabled && o > 0) {
+      let y = e.map((v) => v._depth ?? 0);
+      m = y.reduce((v, b) => v + b, 0) / o;
+      let g = 0,
+        w = 0;
+      for (let v = 0; v < Math.min(n, (o * (o - 1)) / 2) && !(o < 2); v++) {
+        let b = Math.floor(this._getRNG()() * o),
+          M = Math.floor(this._getRNG()() * o);
+        M === b && (M = (M + 1) % o), (g += Math.abs(y[b] - y[M])), w++;
+      }
+      _ = w ? g / w : 0;
+    }
+    this._diversityStats = {
+      meanCompat: a,
+      varCompat: l,
+      meanEntropy: u,
+      varEntropy: p,
+      graphletEntropy: f,
+      lineageMeanDepth: m,
+      lineageMeanPairDist: _,
+    };
+  }
+  function ar(n) {
+    try {
+      Go.call(this, n);
+    } catch {}
+    this._telemetry || (this._telemetry = []), this._telemetry.push(n);
+    try {
+      this.options.telemetryStream?.enabled &&
+        this.options.telemetryStream.onEntry &&
+        this.options.telemetryStream.onEntry(n);
+    } catch {}
+    this._telemetry.length > 500 && this._telemetry.shift();
+  }
+  function cr(n) {
+    let t = this.generation,
+      e = 0;
+    if (this.options.multiObjective?.enabled) {
+      let i = this.options.multiObjective.complexityMetric || 'connections',
+        r = this.population.map((c) => c.score || 0),
+        a = Math.min(...r),
+        l = Math.max(...r),
+        h = [];
+      for (let c = 0; c < 5; c++) {
+        let d = this.population.filter((f) => (f._moRank ?? 0) === c).length;
+        if (!d) break;
+        h.push(d);
+      }
+      for (let c of this.population) {
+        if ((c._moRank ?? 0) !== 0) continue;
+        let f = l > a ? ((c.score || 0) - a) / (l - a) : 0,
+          m = i === 'nodes' ? c.nodes.length : c.connections.length;
+        e += f * (1 / (m + 1));
+      }
+      let u = Array.from(this._operatorStats.entries()).map(([c, d]) => ({
+          op: c,
+          succ: d.success,
+          att: d.attempts,
+        })),
+        p = {
+          gen: t,
+          best: n.score,
+          species: this._species.length,
+          hyper: e,
+          fronts: h,
+          diversity: this._diversityStats,
+          ops: u,
+        };
+      if (
+        (p.objImportance || (p.objImportance = {}),
+        this._lastObjImportance && (p.objImportance = this._lastObjImportance),
+        this._objectiveAges?.size &&
+          (p.objAges = Array.from(this._objectiveAges.entries()).reduce(
+            (c, d) => ((c[d[0]] = d[1]), c),
+            {}
+          )),
+        this._pendingObjectiveAdds?.length ||
+          this._pendingObjectiveRemoves?.length)
+      ) {
+        p.objEvents = [];
+        for (let c of this._pendingObjectiveAdds)
+          p.objEvents.push({ type: 'add', key: c });
+        for (let c of this._pendingObjectiveRemoves)
+          p.objEvents.push({ type: 'remove', key: c });
+        this._objectiveEvents.push(
+          ...p.objEvents.map((c) => ({ gen: t, type: c.type, key: c.key }))
+        ),
+          (this._pendingObjectiveAdds = []),
+          (this._pendingObjectiveRemoves = []);
+      }
+      this._lastOffspringAlloc &&
+        (p.speciesAlloc = this._lastOffspringAlloc.slice());
+      try {
+        p.objectives = this._getObjectives().map((c) => c.key);
+      } catch {}
+      if (
+        (this.options.rngState &&
+          this._rngState !== void 0 &&
+          (p.rng = this._rngState),
+        this._lineageEnabled)
+      ) {
+        let c = this.population[0],
+          d = this.population.map((_) => _._depth ?? 0);
+        this._lastMeanDepth = d.reduce((_, y) => _ + y, 0) / (d.length || 1);
+        let { computeAncestorUniqueness: f } = (Ye(), q(Xe)),
+          m = f.call(this);
+        p.lineage = {
+          parents: Array.isArray(c._parents) ? c._parents.slice() : [],
+          depthBest: c._depth ?? 0,
+          meanDepth: +this._lastMeanDepth.toFixed(2),
+          inbreeding: this._prevInbreedingCount,
+          ancestorUniq: m,
+        };
+      }
+      if (
+        (this.options.telemetry?.hypervolume &&
+          this.options.multiObjective?.enabled &&
+          (p.hv = +e.toFixed(4)),
+        this.options.telemetry?.complexity)
+      ) {
+        let c = this.population.map((M) => M.nodes.length),
+          d = this.population.map((M) => M.connections.length),
+          f = c.reduce((M, x) => M + x, 0) / (c.length || 1),
+          m = d.reduce((M, x) => M + x, 0) / (d.length || 1),
+          _ = c.length ? Math.max(...c) : 0,
+          y = d.length ? Math.max(...d) : 0,
+          g = this.population.map((M) => {
+            let x = 0,
+              N = 0;
+            for (let T of M.connections) T.enabled === !1 ? N++ : x++;
+            return x + N ? x / (x + N) : 0;
+          }),
+          w = g.reduce((M, x) => M + x, 0) / (g.length || 1),
+          v = this._lastMeanNodes !== void 0 ? f - this._lastMeanNodes : 0,
+          b = this._lastMeanConns !== void 0 ? m - this._lastMeanConns : 0;
+        (this._lastMeanNodes = f),
+          (this._lastMeanConns = m),
+          (p.complexity = {
+            meanNodes: +f.toFixed(2),
+            meanConns: +m.toFixed(2),
+            maxNodes: _,
+            maxConns: y,
+            meanEnabledRatio: +w.toFixed(3),
+            growthNodes: +v.toFixed(2),
+            growthConns: +b.toFixed(2),
+            budgetMaxNodes: this.options.maxNodes,
+            budgetMaxConns: this.options.maxConns,
+          });
+      }
+      return (
+        this.options.telemetry?.performance &&
+          (p.perf = {
+            evalMs: this._lastEvalDuration,
+            evolveMs: this._lastEvolveDuration,
+          }),
+        p
+      );
+    }
+    let o = Array.from(this._operatorStats.entries()).map(([i, r]) => ({
+        op: i,
+        succ: r.success,
+        att: r.attempts,
+      })),
+      s = {
+        gen: t,
+        best: n.score,
+        species: this._species.length,
+        hyper: e,
+        diversity: this._diversityStats,
+        ops: o,
+        objImportance: {},
+      };
+    if (
+      (this._lastObjImportance && (s.objImportance = this._lastObjImportance),
+      this._objectiveAges?.size &&
+        (s.objAges = Array.from(this._objectiveAges.entries()).reduce(
+          (i, r) => ((i[r[0]] = r[1]), i),
+          {}
+        )),
+      this._pendingObjectiveAdds?.length ||
+        this._pendingObjectiveRemoves?.length)
+    ) {
+      s.objEvents = [];
+      for (let i of this._pendingObjectiveAdds)
+        s.objEvents.push({ type: 'add', key: i });
+      for (let i of this._pendingObjectiveRemoves)
+        s.objEvents.push({ type: 'remove', key: i });
+      this._objectiveEvents.push(
+        ...s.objEvents.map((i) => ({ gen: t, type: i.type, key: i.key }))
+      ),
+        (this._pendingObjectiveAdds = []),
+        (this._pendingObjectiveRemoves = []);
+    }
+    this._lastOffspringAlloc &&
+      (s.speciesAlloc = this._lastOffspringAlloc.slice());
+    try {
+      s.objectives = this._getObjectives().map((i) => i.key);
+    } catch {}
+    if (
+      (this.options.rngState &&
+        this._rngState !== void 0 &&
+        (s.rng = this._rngState),
+      this._lineageEnabled)
+    ) {
+      let i = this.population[0],
+        r = this.population.map((c) => c._depth ?? 0);
+      this._lastMeanDepth = r.reduce((c, d) => c + d, 0) / (r.length || 1);
+      let { buildAnc: a } = (Ye(), q(Xe)),
+        l = 0,
+        h = 0,
+        u = Math.min(
+          30,
+          (this.population.length * (this.population.length - 1)) / 2
+        );
+      for (let c = 0; c < u && !(this.population.length < 2); c++) {
+        let d = Math.floor(this._getRNG()() * this.population.length),
+          f = Math.floor(this._getRNG()() * this.population.length);
+        f === d && (f = (f + 1) % this.population.length);
+        let m = a.call(this, this.population[d]),
+          _ = a.call(this, this.population[f]);
+        if (m.size === 0 && _.size === 0) continue;
+        let y = 0;
+        for (let v of m) _.has(v) && y++;
+        let g = m.size + _.size - y || 1,
+          w = 1 - y / g;
+        (h += w), l++;
+      }
+      let p = l ? +(h / l).toFixed(3) : 0;
+      s.lineage = {
+        parents: Array.isArray(i._parents) ? i._parents.slice() : [],
+        depthBest: i._depth ?? 0,
+        meanDepth: +this._lastMeanDepth.toFixed(2),
+        inbreeding: this._prevInbreedingCount,
+        ancestorUniq: p,
+      };
+    }
+    if (
+      (this.options.telemetry?.hypervolume &&
+        this.options.multiObjective?.enabled &&
+        (s.hv = +e.toFixed(4)),
+      this.options.telemetry?.complexity)
+    ) {
+      let i = this.population.map((m) => m.nodes.length),
+        r = this.population.map((m) => m.connections.length),
+        a = i.reduce((m, _) => m + _, 0) / (i.length || 1),
+        l = r.reduce((m, _) => m + _, 0) / (r.length || 1),
+        h = i.length ? Math.max(...i) : 0,
+        u = r.length ? Math.max(...r) : 0,
+        p = this.population.map((m) => {
+          let _ = 0,
+            y = 0;
+          for (let g of m.connections) g.enabled === !1 ? y++ : _++;
+          return _ + y ? _ / (_ + y) : 0;
+        }),
+        c = p.reduce((m, _) => m + _, 0) / (p.length || 1),
+        d = this._lastMeanNodes !== void 0 ? a - this._lastMeanNodes : 0,
+        f = this._lastMeanConns !== void 0 ? l - this._lastMeanConns : 0;
+      (this._lastMeanNodes = a),
+        (this._lastMeanConns = l),
+        (s.complexity = {
+          meanNodes: +a.toFixed(2),
+          meanConns: +l.toFixed(2),
+          maxNodes: h,
+          maxConns: u,
+          meanEnabledRatio: +c.toFixed(3),
+          growthNodes: +d.toFixed(2),
+          growthConns: +f.toFixed(2),
+          budgetMaxNodes: this.options.maxNodes,
+          budgetMaxConns: this.options.maxConns,
+        });
+    }
+    return (
+      this.options.telemetry?.performance &&
+        (s.perf = {
+          evalMs: this._lastEvalDuration,
+          evolveMs: this._lastEvolveDuration,
+        }),
+      s
+    );
+  }
+  var $o = C(() => {
+    'use strict';
+    jt();
+  });
+  var Yt = {};
+  ct(Yt, { applyAdaptivePruning: () => hr, applyEvolutionPruning: () => lr });
+  function lr() {
+    let n = this.options.evolutionPruning;
+    if (!n || this.generation < (n.startGeneration || 0)) return;
+    let t = n.interval || 1;
+    if ((this.generation - n.startGeneration) % t !== 0) return;
+    let e = n.rampGenerations || 0,
+      o = 1;
+    e > 0 &&
+      (o = Math.min(1, Math.max(0, (this.generation - n.startGeneration) / e)));
+    let s = (n.targetSparsity || 0) * o;
+    for (let i of this.population)
+      i &&
+        typeof i.pruneToSparsity == 'function' &&
+        i.pruneToSparsity(s, n.method || 'magnitude');
+  }
+  function hr() {
+    if (!this.options.adaptivePruning?.enabled) return;
+    let n = this.options.adaptivePruning;
+    this._adaptivePruneLevel === void 0 && (this._adaptivePruneLevel = 0);
+    let t = n.metric || 'connections',
+      e =
+        this.population.reduce((p, c) => p + c.nodes.length, 0) /
+        (this.population.length || 1),
+      o =
+        this.population.reduce((p, c) => p + c.connections.length, 0) /
+        (this.population.length || 1),
+      s = t === 'nodes' ? e : o;
+    this._adaptivePruneBaseline === void 0 && (this._adaptivePruneBaseline = s);
+    let i = this._adaptivePruneBaseline,
+      r = n.targetSparsity ?? 0.5,
+      a = i * (1 - r),
+      l = n.tolerance ?? 0.05,
+      h = n.adjustRate ?? 0.02,
+      u = (s - a) / (i || 1);
+    if (Math.abs(u) > l) {
+      this._adaptivePruneLevel = Math.max(
+        0,
+        Math.min(r, this._adaptivePruneLevel + h * (u > 0 ? 1 : -1))
+      );
+      for (let p of this.population)
+        typeof p.pruneToSparsity == 'function' &&
+          p.pruneToSparsity(this._adaptivePruneLevel, 'magnitude');
+    }
+  }
+  var Zt = C(() => {
+    'use strict';
+  });
+  async function Ho() {
+    let n =
+      typeof performance < 'u' && performance.now
+        ? performance.now()
+        : Date.now();
+    this.population[this.population.length - 1].score === void 0 &&
+      (await this.evaluate()),
+      (this._objectivesList = void 0);
+    try {
+      (Wt(), q(Rt)).applyComplexityBudget.call(this);
+    } catch {}
+    try {
+      (Wt(), q(Rt)).applyPhasedComplexity.call(this);
+    } catch {}
+    this.sort();
+    try {
+      let h = this.population[0]?.score;
+      typeof h == 'number' &&
+        (this._bestScoreLastGen === void 0 || h > this._bestScoreLastGen) &&
+        ((this._bestScoreLastGen = h),
+        (this._lastGlobalImproveGeneration = this.generation));
+    } catch {}
+    try {
+      (Wt(), q(Rt)).applyMinimalCriterionAdaptive.call(this);
+    } catch {}
+    try {
+      this._computeDiversityStats && this._computeDiversityStats();
+    } catch {}
+    if (this.options.multiObjective?.enabled) {
+      let h = this.population,
+        u = Ro.call(this, h),
+        p = this._getObjectives(),
+        c = new Array(h.length).fill(0),
+        d = p.map((m) => h.map((_) => m.accessor(_)));
+      for (let m of u) {
+        let _ = m.map((y) => this.population.indexOf(y));
+        if (_.length < 3) {
+          _.forEach((y) => (c[y] = 1 / 0));
+          continue;
+        }
+        for (let y = 0; y < p.length; y++) {
+          let g = [..._].sort((b, M) => d[y][b] - d[y][M]);
+          (c[g[0]] = 1 / 0), (c[g[g.length - 1]] = 1 / 0);
+          let w = d[y][g[0]],
+            v = d[y][g[g.length - 1]];
+          for (let b = 1; b < g.length - 1; b++) {
+            let M = d[y][g[b - 1]],
+              x = d[y][g[b + 1]],
+              N = v - w || 1;
+            c[g[b]] += (x - M) / N;
+          }
+        }
+      }
+      let f = new Map();
+      for (let m = 0; m < h.length; m++) f.set(h[m], m);
+      this.population.sort((m, _) => {
+        let y = m._moRank ?? 0,
+          g = _._moRank ?? 0;
+        if (y !== g) return y - g;
+        let w = f.get(m),
+          v = f.get(_);
+        return c[v] - c[w];
+      });
+      for (let m = 0; m < h.length; m++) h[m]._moCrowd = c[m];
+      if (u.length) {
+        let m = u[0],
+          _ = m.map((y) => ({
+            id: y._id ?? -1,
+            score: y.score || 0,
+            nodes: y.nodes.length,
+            connections: y.connections.length,
+          }));
+        if (
+          (this._paretoArchive.push({
+            gen: this.generation,
+            size: m.length,
+            genomes: _,
+          }),
+          this._paretoArchive.length > 200 && this._paretoArchive.shift(),
+          p.length)
+        ) {
+          let y = m.map((g) => ({
+            id: g._id ?? -1,
+            values: p.map((w) => w.accessor(g)),
+          }));
+          this._paretoObjectivesArchive.push({
+            gen: this.generation,
+            vectors: y,
+          }),
+            this._paretoObjectivesArchive.length > 200 &&
+              this._paretoObjectivesArchive.shift();
+        }
+      }
+      if (this.options.multiObjective?.adaptiveEpsilon?.enabled && u.length) {
+        let m = this.options.multiObjective.adaptiveEpsilon,
+          _ =
+            m.targetFront ??
+            Math.max(3, Math.floor(Math.sqrt(this.population.length))),
+          y = m.adjust ?? 0.002,
+          g = m.min ?? 0,
+          w = m.max ?? 0.5,
+          v = m.cooldown ?? 2;
+        if (this.generation - this._lastEpsilonAdjustGen >= v) {
+          let b = u[0].length,
+            M = this.options.multiObjective.dominanceEpsilon || 0;
+          b > _ * 1.2
+            ? (M = Math.min(w, M + y))
+            : b < _ * 0.8 && (M = Math.max(g, M - y)),
+            (this.options.multiObjective.dominanceEpsilon = M),
+            (this._lastEpsilonAdjustGen = this.generation);
+        }
+      }
+      if (this.options.multiObjective?.pruneInactive?.enabled) {
+        let m = this.options.multiObjective.pruneInactive,
+          _ = m.window ?? 5,
+          y = m.rangeEps ?? 1e-6,
+          g = new Set(['fitness', 'complexity', ...(m.protect || [])]),
+          w = this._getObjectives(),
+          v = {};
+        for (let M of w) {
+          let x = 1 / 0,
+            N = -1 / 0;
+          for (let T of this.population) {
+            let k = M.accessor(T);
+            k < x && (x = k), k > N && (N = k);
+          }
+          v[M.key] = { min: x, max: N };
+        }
+        let b = [];
+        for (let M of w) {
+          if (g.has(M.key)) continue;
+          let x = v[M.key];
+          if (x.max - x.min < y) {
+            let T = (this._objectiveStale.get(M.key) || 0) + 1;
+            this._objectiveStale.set(M.key, T), T >= _ && b.push(M.key);
+          } else this._objectiveStale.set(M.key, 0);
+        }
+        b.length &&
+          this.options.multiObjective?.objectives &&
+          ((this.options.multiObjective.objectives = this.options.multiObjective.objectives.filter(
+            (M) => !b.includes(M.key)
+          )),
+          (this._objectivesList = void 0));
+      }
+    }
+    try {
+      (Wt(), q(Rt)).applyAncestorUniqAdaptive.call(this);
+    } catch {}
+    if (this.options.speciation) {
+      try {
+        this._speciate();
+      } catch {}
+      try {
+        this._applyFitnessSharing();
+      } catch {}
+      try {
+        let h = this.options;
+        if (h.autoCompatTuning?.enabled) {
+          let u =
+              h.autoCompatTuning.target ??
+              h.targetSpecies ??
+              Math.max(2, Math.round(Math.sqrt(this.population.length))),
+            p = this._species.length || 1,
+            c = u - p,
+            d = h.autoCompatTuning.adjustRate ?? 0.01,
+            f = h.autoCompatTuning.minCoeff ?? 0.1,
+            m = h.autoCompatTuning.maxCoeff ?? 5,
+            _ = 1 - d * Math.sign(c);
+          c === 0 && (_ = 1 + (this._getRNG()() - 0.5) * d * 0.5),
+            (h.excessCoeff = Math.min(m, Math.max(f, h.excessCoeff * _))),
+            (h.disjointCoeff = Math.min(m, Math.max(f, h.disjointCoeff * _)));
+        }
+      } catch {}
+      this.sort();
+      try {
+        this.options.speciesAllocation?.extendedHistory ||
+          ((!this._speciesHistory ||
+            this._speciesHistory.length === 0 ||
+            this._speciesHistory[this._speciesHistory.length - 1].generation !==
+              this.generation) &&
+            (this._speciesHistory.push({
+              generation: this.generation,
+              stats: this._species.map((h) => ({
+                id: h.id,
+                size: h.members.length,
+                best: h.bestScore,
+                lastImproved: h.lastImproved,
+              })),
+            }),
+            this._speciesHistory.length > 200 && this._speciesHistory.shift()));
+      } catch {}
+    }
+    let t = it.fromJSON(this.population[0].toJSON());
+    (t.score = this.population[0].score), this._computeDiversityStats();
+    try {
+      let h = this._getObjectives().map((p) => p.key),
+        u = this.options.multiObjective?.dynamic;
+      if (this.options.multiObjective?.enabled)
+        if (u?.enabled) {
+          let p = u.addComplexityAt ?? 1 / 0,
+            c = u.addEntropyAt ?? 1 / 0;
+          if (
+            (this.generation + 1 >= p &&
+              !h.includes('complexity') &&
+              (this.registerObjective(
+                'complexity',
+                'min',
+                (d) => d.connections.length
+              ),
+              this._pendingObjectiveAdds.push('complexity')),
+            this.generation + 1 >= c &&
+              !h.includes('entropy') &&
+              (this.registerObjective('entropy', 'max', (d) =>
+                this._structuralEntropy(d)
+              ),
+              this._pendingObjectiveAdds.push('entropy')),
+            h.includes('entropy') && u.dropEntropyOnStagnation != null)
+          ) {
+            let d = u.dropEntropyOnStagnation;
+            this.generation >= d &&
+              !this._entropyDropped &&
+              this.options.multiObjective?.objectives &&
+              ((this.options.multiObjective.objectives = this.options.multiObjective.objectives.filter(
+                (f) => f.key !== 'entropy'
+              )),
+              (this._objectivesList = void 0),
+              this._pendingObjectiveRemoves.push('entropy'),
+              (this._entropyDropped = this.generation));
+          } else
+            !h.includes('entropy') &&
+              this._entropyDropped &&
+              u.readdEntropyAfter != null &&
+              this.generation - this._entropyDropped >= u.readdEntropyAfter &&
+              (this.registerObjective('entropy', 'max', (d) =>
+                this._structuralEntropy(d)
+              ),
+              this._pendingObjectiveAdds.push('entropy'),
+              (this._entropyDropped = void 0));
+        } else
+          this.options.multiObjective.autoEntropy &&
+            this.generation >= 3 &&
+            !h.includes('entropy') &&
+            (this.registerObjective('entropy', 'max', (c) =>
+              this._structuralEntropy(c)
+            ),
+            this._pendingObjectiveAdds.push('entropy'));
+      for (let p of h)
+        this._objectiveAges.set(p, (this._objectiveAges.get(p) || 0) + 1);
+      for (let p of this._pendingObjectiveAdds) this._objectiveAges.set(p, 0);
+    } catch {}
+    try {
+      let h = this.options.multiObjective;
+      if (h?.enabled && h.pruneInactive && h.pruneInactive.enabled === !1) {
+        let u = this._getObjectives().map((p) => p.key);
+        u.includes('fitness') &&
+          u.length > 1 &&
+          !this._fitnessSuppressedOnce &&
+          ((this._suppressFitnessObjective = !0),
+          (this._fitnessSuppressedOnce = !0),
+          (this._objectivesList = void 0));
+      }
+    } catch {}
+    let e = null;
+    try {
+      let h = this._getObjectives();
+      if (h.length) {
+        e = {};
+        let u = this.population;
+        for (let p of h) {
+          let c = u.map((y) => p.accessor(y)),
+            d = Math.min(...c),
+            f = Math.max(...c),
+            m = c.reduce((y, g) => y + g, 0) / c.length,
+            _ = c.reduce((y, g) => y + (g - m) * (g - m), 0) / (c.length || 1);
+          e[p.key] = { range: f - d, var: _ };
+        }
+        this._lastObjImportance = e;
+      }
+    } catch {}
+    this.options.telemetry?.enabled;
+    {
+      let h = ($o(), q(Fo)),
+        u = h.buildTelemetryEntry.call(this, t);
+      h.recordTelemetryEntry.call(this, u);
+    }
+    (t.score ?? -1 / 0) > this._bestGlobalScore &&
+      ((this._bestGlobalScore = t.score ?? -1 / 0),
+      (this._lastGlobalImproveGeneration = this.generation));
+    let o = [],
+      s = Math.max(
+        0,
+        Math.min(this.options.elitism || 0, this.population.length)
+      );
+    for (let h = 0; h < s; h++) {
+      let u = this.population[h];
+      u && o.push(u);
+    }
+    let i = Math.max(0, this.options.popsize || 0),
+      r = Math.max(0, i - o.length),
+      a = Math.max(0, Math.min(this.options.provenance || 0, r));
+    for (let h = 0; h < a; h++)
+      this.options.network
+        ? o.push(it.fromJSON(this.options.network.toJSON()))
+        : o.push(
+            new it(this.input, this.output, {
+              minHidden: this.options.minHidden,
+            })
+          );
+    if (this.options.speciation && this._species.length > 0) {
+      this._suppressTournamentError = !0;
+      let h = i - o.length;
+      if (h > 0) {
+        let u = this.options.speciesAgeBonus || {},
+          p = u.youngThreshold ?? 5,
+          c = u.youngMultiplier ?? 1.3,
+          d = u.oldThreshold ?? 30,
+          f = u.oldMultiplier ?? 0.7,
+          m = this._species.map((x) => {
+            let N = x.members.reduce((k, R) => k + (R.score || 0), 0),
+              T = this.generation - x.lastImproved;
+            return T <= p ? N * c : T >= d ? N * f : N;
+          }),
+          _ = m.reduce((x, N) => x + N, 0) || 1,
+          y = this.options.speciesAllocation?.minOffspring ?? 1,
+          g = this._species.map((x, N) => (m[N] / _) * h),
+          w = g.map((x) => Math.floor(x));
+        for (let x = 0; x < w.length; x++)
+          w[x] < y && h >= this._species.length * y && (w[x] = y);
+        let v = w.reduce((x, N) => x + N, 0),
+          b = h - v,
+          M = g.map((x, N) => ({ i: N, frac: x - Math.floor(x) }));
+        M.sort((x, N) => N.frac - x.frac);
+        for (let x of M) {
+          if (b <= 0) break;
+          w[x.i]++, b--;
+        }
+        if (b < 0) {
+          let x = w.map((N, T) => ({ i: T, v: N })).sort((N, T) => T.v - N.v);
+          for (let N of x) {
+            if (b === 0) break;
+            w[N.i] > y && (w[N.i]--, b++);
+          }
+        }
+        (this._lastOffspringAlloc = this._species.map((x, N) => ({
+          id: x.id,
+          alloc: w[N] || 0,
+        }))),
+          (this._prevInbreedingCount = this._lastInbreedingCount),
+          (this._lastInbreedingCount = 0),
+          w.forEach((x, N) => {
+            if (x <= 0) return;
+            let T = this._species[N];
+            this._sortSpeciesMembers(T);
+            let k = T.members.slice(
+              0,
+              Math.max(
+                1,
+                Math.floor(
+                  T.members.length * (this.options.survivalThreshold || 0.5)
+                )
+              )
+            );
+            for (let R = 0; R < x; R++) {
+              let j = k[Math.floor(this._getRNG()() * k.length)],
+                W;
+              if (
+                this.options.crossSpeciesMatingProb &&
+                this._species.length > 1 &&
+                this._getRNG()() < (this.options.crossSpeciesMatingProb || 0)
+              ) {
+                let A = N,
+                  O = 0;
+                for (; A === N && O++ < 5; )
+                  A = Math.floor(this._getRNG()() * this._species.length);
+                let E = this._species[A];
+                this._sortSpeciesMembers(E);
+                let B = E.members.slice(
+                  0,
+                  Math.max(
+                    1,
+                    Math.floor(
+                      E.members.length * (this.options.survivalThreshold || 0.5)
+                    )
+                  )
+                );
+                W = B[Math.floor(this._getRNG()() * B.length)];
+              } else W = k[Math.floor(this._getRNG()() * k.length)];
+              let S = it.crossOver(j, W, this.options.equal || !1);
+              if (
+                ((S._reenableProb = this.options.reenableProb),
+                (S._id = this._nextGenomeId++),
+                this._lineageEnabled)
+              ) {
+                S._parents = [j._id, W._id];
+                let A = j._depth ?? 0,
+                  O = W._depth ?? 0;
+                (S._depth = 1 + Math.max(A, O)),
+                  j._id === W._id && this._lastInbreedingCount++;
+              }
+              o.push(S);
+            }
+          }),
+          (this._suppressTournamentError = !1);
+      }
+    } else {
+      this._suppressTournamentError = !0;
+      let h = Math.max(0, i - o.length);
+      for (let u = 0; u < h; u++) o.push(this.getOffspring());
+      this._suppressTournamentError = !1;
+    }
+    for (let h of o)
+      h && (this.ensureMinHiddenNodes(h), this.ensureNoDeadEnds(h));
+    this.population = o;
+    try {
+      (Zt(), q(Yt)).applyEvolutionPruning.call(this);
+    } catch {}
+    try {
+      (Zt(), q(Yt)).applyAdaptivePruning.call(this);
+    } catch {}
+    this.mutate();
+    try {
+      (Wt(), q(Rt)).applyAdaptiveMutation.call(this);
+    } catch {}
+    if (
+      (this.population.forEach((h) => {
+        h._compatCache && delete h._compatCache;
+      }),
+      this.population.forEach((h) => (h.score = void 0)),
+      this.generation++,
+      this.options.speciation && this._updateSpeciesStagnation(),
+      (this.options.globalStagnationGenerations || 0) > 0 &&
+        this.generation - this._lastGlobalImproveGeneration >
+          (this.options.globalStagnationGenerations || 0))
+    ) {
+      let u = Math.max(
+        this.options.elitism || 0,
+        Math.floor(this.population.length * 0.8)
+      );
+      for (let p = u; p < this.population.length; p++) {
+        let c = new it(this.input, this.output, {
+          minHidden: this.options.minHidden,
+        });
+        (c.score = void 0),
+          (c._reenableProb = this.options.reenableProb),
+          (c._id = this._nextGenomeId++),
+          this._lineageEnabled && ((c._parents = []), (c._depth = 0));
+        try {
+          if (
+            (this.ensureMinHiddenNodes(c),
+            this.ensureNoDeadEnds(c),
+            c.nodes.filter((f) => f.type === 'hidden').length === 0)
+          ) {
+            let f = (mt(), q(ne)).default,
+              m = new f('hidden');
+            c.nodes.splice(c.nodes.length - c.output, 0, m);
+            let _ = c.nodes.filter((g) => g.type === 'input'),
+              y = c.nodes.filter((g) => g.type === 'output');
+            if (_.length && y.length) {
+              try {
+                c.connect(_[0], m, 1);
+              } catch {}
+              try {
+                c.connect(m, y[0], 1);
+              } catch {}
+            }
+          }
+        } catch {}
+        this.population[p] = c;
+      }
+      this._lastGlobalImproveGeneration = this.generation;
+    }
+    if (this.options.reenableProb !== void 0) {
+      let h = 0,
+        u = 0;
+      for (let p of this.population)
+        (h += p._reenableSuccess || 0),
+          (u += p._reenableAttempts || 0),
+          (p._reenableSuccess = 0),
+          (p._reenableAttempts = 0);
+      if (u > 20) {
+        let d = h / u - 0.3;
+        this.options.reenableProb = Math.min(
+          0.9,
+          Math.max(0.05, this.options.reenableProb - d * 0.1)
+        );
+      }
+    }
+    try {
+      (Wt(), q(Rt)).applyOperatorAdaptation.call(this);
+    } catch {}
+    let l =
+      typeof performance < 'u' && performance.now
+        ? performance.now()
+        : Date.now();
+    this._lastEvolveDuration = l - n;
+    try {
+      this._speciesHistory || (this._speciesHistory = []),
+        this.options.speciesAllocation?.extendedHistory ||
+          ((this._speciesHistory.length === 0 ||
+            this._speciesHistory[this._speciesHistory.length - 1].generation !==
+              this.generation) &&
+            (this._speciesHistory.push({
+              generation: this.generation,
+              stats: this._species.map((h) => ({
+                id: h.id,
+                size: h.members.length,
+                best: h.bestScore,
+                lastImproved: h.lastImproved,
+              })),
+            }),
+            this._speciesHistory.length > 200 && this._speciesHistory.shift()));
+    } catch {}
+    return t;
+  }
+  var qo = C(() => {
+    'use strict';
+    bt();
+    Wo();
+  });
+  async function Uo() {
+    let n = this.options || {};
+    if (n.fitnessPopulation)
+      n.clear && this.population.forEach((t) => t.clear && t.clear()),
+        await this.fitness(this.population);
+    else
+      for (let t of this.population) {
+        n.clear && t.clear && t.clear();
+        let e = await this.fitness(t);
+        t.score = e;
+      }
+    try {
+      let t = n.novelty;
+      if (t?.enabled && typeof t.descriptor == 'function') {
+        let e = Math.max(1, t.k || 3),
+          o = t.blendFactor ?? 0.3,
+          s = this.population.map((r) => {
+            try {
+              return t.descriptor(r) || [];
+            } catch {
+              return [];
+            }
+          }),
+          i = [];
+        for (let r = 0; r < s.length; r++) {
+          i[r] = [];
+          for (let a = 0; a < s.length; a++) {
+            if (r === a) {
+              i[r][a] = 0;
+              continue;
+            }
+            let l = s[r],
+              h = s[a],
+              u = 0,
+              p = Math.min(l.length, h.length);
+            for (let c = 0; c < p; c++) {
+              let d = (l[c] || 0) - (h[c] || 0);
+              u += d * d;
+            }
+            i[r][a] = Math.sqrt(u);
+          }
+        }
+        for (let r = 0; r < this.population.length; r++) {
+          let l = i[r]
+              .slice()
+              .sort((p, c) => p - c)
+              .slice(1, e + 1),
+            h = l.length ? l.reduce((p, c) => p + c, 0) / l.length : 0;
+          (this.population[r]._novelty = h),
+            typeof this.population[r].score == 'number' &&
+              (this.population[r].score =
+                (1 - o) * this.population[r].score + o * h),
+            this._noveltyArchive || (this._noveltyArchive = []);
+          let u = t.archiveAddThreshold ?? 1 / 0;
+          (t.archiveAddThreshold === 0 || h > u) &&
+            this._noveltyArchive.length < 200 &&
+            this._noveltyArchive.push({ desc: s[r], novelty: h });
+        }
+      }
+    } catch {}
+    this._diversityStats || (this._diversityStats = {});
+    try {
+      let t = n.entropySharingTuning;
+      if (t?.enabled) {
+        let e = t.targetEntropyVar ?? 0.2,
+          o = t.adjustRate ?? 0.1,
+          s = t.minSigma ?? 0.1,
+          i = t.maxSigma ?? 10,
+          r = this._diversityStats.varEntropy;
+        if (typeof r == 'number') {
+          let a = this.options.sharingSigma ?? 0;
+          r < e * 0.9
+            ? (a = Math.max(s, a * (1 - o)))
+            : r > e * 1.1 && (a = Math.min(i, a * (1 + o))),
+            (this.options.sharingSigma = a);
+        }
+      }
+    } catch {}
+    try {
+      let t = n.entropyCompatTuning;
+      if (t?.enabled) {
+        let e = this._diversityStats.meanEntropy,
+          o = t.targetEntropy ?? 0.5,
+          s = t.deadband ?? 0.05,
+          i = t.adjustRate ?? 0.05,
+          r = this.options.compatibilityThreshold ?? 3;
+        typeof e == 'number' &&
+          (e < o - s
+            ? (r = Math.max(t.minThreshold ?? 0.5, r * (1 - i)))
+            : e > o + s && (r = Math.min(t.maxThreshold ?? 10, r * (1 + i))),
+          (this.options.compatibilityThreshold = r));
+      }
+    } catch {}
+    try {
+      this.options.speciation &&
+        (this.options.targetSpecies ||
+          this.options.compatAdjust ||
+          this.options.speciesAllocation?.extendedHistory) &&
+        this._speciate();
+    } catch {}
+    try {
+      let t = this.options.autoDistanceCoeffTuning;
+      if (t?.enabled && this.options.speciation) {
+        let e = this.population.map((l) => l.connections.length),
+          o = e.reduce((l, h) => l + h, 0) / (e.length || 1),
+          s = e.reduce((l, h) => l + (h - o) * (h - o), 0) / (e.length || 1),
+          i = t.adjustRate ?? 0.05,
+          r = t.minCoeff ?? 0.05,
+          a = t.maxCoeff ?? 8;
+        this._lastConnVar || (this._lastConnVar = s),
+          s < this._lastConnVar * 0.95
+            ? ((this.options.excessCoeff = Math.min(
+                a,
+                this.options.excessCoeff * (1 + i)
+              )),
+              (this.options.disjointCoeff = Math.min(
+                a,
+                this.options.disjointCoeff * (1 + i)
+              )))
+            : s > this._lastConnVar * 1.05 &&
+              ((this.options.excessCoeff = Math.max(
+                r,
+                this.options.excessCoeff * (1 - i)
+              )),
+              (this.options.disjointCoeff = Math.max(
+                r,
+                this.options.disjointCoeff * (1 - i)
+              ))),
+          (this._lastConnVar = s);
+      }
+    } catch {}
+    try {
+      this.options.multiObjective?.enabled &&
+        this.options.multiObjective.autoEntropy &&
+        (this.options.multiObjective.dynamic?.enabled ||
+          this._getObjectives()
+            .map((e) => e.key)
+            .includes('entropy') ||
+          (this.registerObjective('entropy', 'max', (e) =>
+            this._structuralEntropy(e)
+          ),
+          this._pendingObjectiveAdds.push('entropy'),
+          (this._objectivesList = void 0)));
+    } catch {}
+  }
+  var zo = C(() => {
+    'use strict';
+  });
+  function Jo(n, t = 1) {
+    let e = n.clone ? n.clone() : (bt(), q(Pt)).default.fromJSON(n.toJSON());
+    (e.score = void 0),
+      (e._reenableProb = this.options.reenableProb),
+      (e._id = this._nextGenomeId++),
+      (e._parents = [n._id]),
+      (e._depth = (n._depth ?? 0) + 1),
+      this.ensureMinHiddenNodes(e),
+      this.ensureNoDeadEnds(e);
+    for (let o = 0; o < t; o++)
+      try {
+        let s = this.selectMutationMethod(e, !1);
+        if (Array.isArray(s)) {
+          let i = s;
+          s = i[Math.floor(this._getRNG()() * i.length)];
+        }
+        s && s.name && e.mutate(s);
+      } catch {}
+    return this._invalidateGenomeCaches(e), e;
+  }
+  function Vo(n, t) {
+    try {
+      if (
+        ((n.score = void 0),
+        (n._reenableProb = this.options.reenableProb),
+        (n._id = this._nextGenomeId++),
+        (n._parents = Array.isArray(t) ? t.slice() : []),
+        (n._depth = 0),
+        n._parents.length)
+      ) {
+        let e = n._parents
+          .map((o) => this.population.find((s) => s._id === o))
+          .filter(Boolean)
+          .map((o) => o._depth ?? 0);
+        n._depth = e.length ? Math.max(...e) + 1 : 1;
+      }
+      this.ensureMinHiddenNodes(n),
+        this.ensureNoDeadEnds(n),
+        this._invalidateGenomeCaches(n),
+        this.population.push(n);
+    } catch {
+      this.population.push(n);
+    }
+  }
+  function Me(n) {
+    try {
+      this.population = [];
+      let t = this.options?.popsize || 50;
+      for (let e = 0; e < t; e++) {
+        let o = n
+          ? it.fromJSON(n.toJSON())
+          : new it(this.input, this.output, {
+              minHidden: this.options?.minHidden,
+            });
+        o.score = void 0;
+        try {
+          this.ensureNoDeadEnds(o);
+        } catch {}
+        (o._reenableProb = this.options.reenableProb),
+          (o._id = this._nextGenomeId++),
+          this._lineageEnabled && ((o._parents = []), (o._depth = 0)),
+          this.population.push(o);
+      }
+    } catch {}
+  }
+  var Ko = C(() => {
+    'use strict';
+    bt();
+  });
+  function Xo() {
+    if (this._objectivesList) return this._objectivesList;
+    let n = [];
+    if (
+      (this._suppressFitnessObjective ||
+        n.push({
+          key: 'fitness',
+          direction: 'max',
+          accessor: (t) => t.score || 0,
+        }),
+      this.options.multiObjective?.enabled &&
+        Array.isArray(this.options.multiObjective.objectives))
+    )
+      for (let t of this.options.multiObjective.objectives)
+        !t || !t.key || typeof t.accessor != 'function' || n.push(t);
+    return (this._objectivesList = n), n;
+  }
+  function Yo(n, t, e) {
+    this.options.multiObjective ||
+      (this.options.multiObjective = { enabled: !0 });
+    let o = this.options.multiObjective;
+    o.objectives || (o.objectives = []),
+      (o.objectives = o.objectives.filter((s) => s.key !== n)),
+      o.objectives.push({ key: n, direction: t, accessor: e }),
+      (this._objectivesList = void 0);
+  }
+  function Zo() {
+    this.options.multiObjective?.objectives &&
+      (this.options.multiObjective.objectives = []),
+      (this._objectivesList = void 0);
+  }
+  var Qo = C(() => {
+    'use strict';
+  });
+  function Ze(n) {
+    let t = n.nodes.map((i) => i.connections.out.length),
+      e = t.reduce((i, r) => i + r, 0) || 1,
+      o = t.map((i) => i / e).filter((i) => i > 0),
+      s = 0;
+    for (let i of o) s -= i * Math.log(i);
+    return s;
+  }
+  function Ht(n) {
+    return n.length ? n.reduce((t, e) => t + e, 0) / n.length : 0;
+  }
+  function ti(n) {
+    if (!n.length) return 0;
+    let t = Ht(n);
+    return Ht(n.map((e) => (e - t) * (e - t)));
+  }
+  function ei(n, t) {
+    if (!n.length) return;
+    let e = [];
+    for (let y of n) typeof y._depth == 'number' && e.push(y._depth);
+    let o = Ht(e),
+      s = 0,
+      i = 0;
+    for (let y = 0; y < e.length && y < 30; y++)
+      for (let g = y + 1; g < e.length && g < 30; g++)
+        (s += Math.abs(e[y] - e[g])), i++;
+    let r = i ? s / i : 0,
+      a = n.map((y) => y.nodes.length),
+      l = n.map((y) => y.connections.length),
+      h = Ht(a),
+      u = Ht(l),
+      p = ti(a),
+      c = ti(l),
+      d = 0,
+      f = 0;
+    for (let y = 0; y < n.length && y < 25; y++)
+      for (let g = y + 1; g < n.length && g < 25; g++)
+        (d += t._compatibilityDistance(n[y], n[g])), f++;
+    let m = f ? d / f : 0,
+      _ = Ht(n.map((y) => Ze(y)));
+    return {
+      lineageMeanDepth: o,
+      lineageMeanPairDist: r,
+      meanNodes: h,
+      meanConns: u,
+      nodeVar: p,
+      connVar: c,
+      meanCompat: m,
+      graphletEntropy: _,
+      population: n.length,
+    };
+  }
+  var ni = C(() => {
+    'use strict';
+  });
+  function oi(n) {
+    let t = n.from?.index ?? 0,
+      e = n.to?.index ?? 0;
+    return t * 1e5 + e;
+  }
+  function ii(n, t) {
+    (!this._compatCacheGen || this._compatCacheGen !== this.generation) &&
+      ((this._compatCacheGen = this.generation),
+      (this._compatDistCache = new Map()));
+    let e = n._id < t._id ? `${n._id}|${t._id}` : `${t._id}|${n._id}`,
+      o = this._compatDistCache;
+    if (o.has(e)) return o.get(e);
+    let s = (w) => {
+        if (!w._compatCache) {
+          let v = w.connections.map((b) => [
+            b.innovation ?? this._fallbackInnov(b),
+            b.weight,
+          ]);
+          v.sort((b, M) => b[0] - M[0]), (w._compatCache = v);
+        }
+        return w._compatCache;
+      },
+      i = s(n),
+      r = s(t),
+      a = 0,
+      l = 0,
+      h = 0,
+      u = 0,
+      p = 0,
+      c = 0,
+      d = i.length ? i[i.length - 1][0] : 0,
+      f = r.length ? r[r.length - 1][0] : 0;
+    for (; a < i.length && l < r.length; ) {
+      let [w, v] = i[a],
+        [b, M] = r[l];
+      w === b
+        ? (h++, (c += Math.abs(v - M)), a++, l++)
+        : w < b
+        ? (w > f ? p++ : u++, a++)
+        : (b > d ? p++ : u++, l++);
+    }
+    a < i.length && (p += i.length - a), l < r.length && (p += r.length - l);
+    let m = Math.max(1, Math.max(i.length, r.length)),
+      _ = h ? c / h : 0,
+      y = this.options,
+      g =
+        (y.excessCoeff * p) / m +
+        (y.disjointCoeff * u) / m +
+        y.weightDiffCoeff * _;
+    return o.set(e, g), g;
+  }
+  var si = C(() => {
+    'use strict';
+  });
+  function ri() {
+    this._prevSpeciesMembers.clear();
+    for (let t of this._species) {
+      let e = new Set();
+      for (let o of t.members) e.add(o._id);
+      this._prevSpeciesMembers.set(t.id, e);
+    }
+    this._species.forEach((t) => (t.members = []));
+    for (let t of this.population) {
+      let e = !1;
+      for (let o of this._species)
+        if (
+          this._compatibilityDistance(t, o.representative) <
+          (this.options.compatibilityThreshold || 3)
+        ) {
+          o.members.push(t), (e = !0);
+          break;
+        }
+      if (!e) {
+        let o = this._nextSpeciesId++;
+        this._species.push({
+          id: o,
+          members: [t],
+          representative: t,
+          lastImproved: this.generation,
+          bestScore: t.score || -1 / 0,
+        }),
+          this._speciesCreated.set(o, this.generation);
+      }
+    }
+    (this._species = this._species.filter((t) => t.members.length > 0)),
+      this._species.forEach((t) => {
+        t.representative = t.members[0];
+      });
+    let n = this.options.speciesAgeProtection || { grace: 3, oldPenalty: 0.5 };
+    for (let t of this._species) {
+      let e = this._speciesCreated.get(t.id) ?? this.generation;
+      if (this.generation - e >= (n.grace ?? 3) * 10) {
+        let s = n.oldPenalty ?? 0.5;
+        s < 1 &&
+          t.members.forEach((i) => {
+            typeof i.score == 'number' && (i.score *= s);
+          });
+      }
+    }
+    if (this.options.speciation && (this.options.targetSpecies || 0) > 0) {
+      let t = this.options.targetSpecies,
+        e = this._species.length,
+        o = this.options.compatAdjust,
+        i = 2 / (Math.max(1, o.smoothingWindow || 1) + 1);
+      this._compatSpeciesEMA =
+        this._compatSpeciesEMA === void 0
+          ? e
+          : this._compatSpeciesEMA + i * (e - this._compatSpeciesEMA);
+      let r = this._compatSpeciesEMA,
+        a = t - r;
+      this._compatIntegral = this._compatIntegral * (o.decay || 0.95) + a;
+      let l = (o.kp || 0) * a + (o.ki || 0) * this._compatIntegral,
+        h = (this.options.compatibilityThreshold || 3) - l,
+        u = o.minThreshold || 0.5,
+        p = o.maxThreshold || 10;
+      h < u && ((h = u), (this._compatIntegral = 0)),
+        h > p && ((h = p), (this._compatIntegral = 0)),
+        (this.options.compatibilityThreshold = h);
+    }
+    if (this.options.autoCompatTuning?.enabled) {
+      let t =
+          this.options.autoCompatTuning.target ??
+          this.options.targetSpecies ??
+          Math.max(2, Math.round(Math.sqrt(this.population.length))),
+        e = this._species.length || 1,
+        o = t - e,
+        s = this.options.autoCompatTuning.adjustRate ?? 0.01,
+        i = this.options.autoCompatTuning.minCoeff ?? 0.1,
+        r = this.options.autoCompatTuning.maxCoeff ?? 5,
+        l = 1 - s * Math.sign(o);
+      o === 0 && (l = 1 + (this._getRNG()() - 0.5) * s * 0.5),
+        (this.options.excessCoeff = Math.min(
+          r,
+          Math.max(i, this.options.excessCoeff * l)
+        )),
+        (this.options.disjointCoeff = Math.min(
+          r,
+          Math.max(i, this.options.disjointCoeff * l)
+        ));
+    }
+    if (this.options.speciesAllocation?.extendedHistory) {
+      let t = this._species.map((e) => {
+        let o = e.members.map((S) => ({
+            nodes: S.nodes.length,
+            conns: S.connections.length,
+            score: S.score || 0,
+            nov: S._novelty || 0,
+            ent: this._structuralEntropy(S),
+          })),
+          s = (S) => (S.length ? S.reduce((A, O) => A + O, 0) / S.length : 0),
+          i = 0,
+          r = 0;
+        for (let S = 0; S < e.members.length && S < 10; S++)
+          for (let A = S + 1; A < e.members.length && A < 10; A++)
+            (i += this._compatibilityDistance(e.members[S], e.members[A])), r++;
+        let a = r ? i / r : 0,
+          l = this._speciesLastStats.get(e.id),
+          h = s(o.map((S) => S.nodes)),
+          u = s(o.map((S) => S.conns)),
+          p = l ? h - l.meanNodes : 0,
+          c = l ? u - l.meanConns : 0,
+          d = l ? e.bestScore - l.best : 0,
+          f = this._speciesCreated.get(e.id) ?? this.generation,
+          m = this.generation - f,
+          _ = 0,
+          y = this._prevSpeciesMembers.get(e.id);
+        if (y && e.members.length) {
+          let S = 0;
+          for (let A of e.members) y.has(A._id) || S++;
+          _ = S / e.members.length;
+        }
+        let g = (S) => {
+            if (!S.length) return 0;
+            let A = s(S);
+            return s(S.map((O) => (O - A) * (O - A)));
+          },
+          w = g(o.map((S) => S.nodes)),
+          v = g(o.map((S) => S.conns)),
+          b = 0,
+          M = 0,
+          x = -1 / 0,
+          N = 1 / 0,
+          T = 0,
+          k = 0;
+        for (let S of e.members)
+          for (let A of S.connections) {
+            let O = A.innovation ?? this._fallbackInnov(A);
+            (b += O),
+              M++,
+              O > x && (x = O),
+              O < N && (N = O),
+              A.enabled === !1 ? k++ : T++;
+          }
+        let R = M ? b / M : 0,
+          j = isFinite(x) && isFinite(N) && x > N ? x - N : 0,
+          W = T + k > 0 ? T / (T + k) : 0;
+        return {
+          id: e.id,
+          size: e.members.length,
+          best: e.bestScore,
+          lastImproved: e.lastImproved,
+          age: m,
+          meanNodes: h,
+          meanConns: u,
+          meanScore: s(o.map((S) => S.score)),
+          meanNovelty: s(o.map((S) => S.nov)),
+          meanCompat: a,
+          meanEntropy: s(o.map((S) => S.ent)),
+          varNodes: w,
+          varConns: v,
+          deltaMeanNodes: p,
+          deltaMeanConns: c,
+          deltaBestScore: d,
+          turnoverRate: _,
+          meanInnovation: R,
+          innovationRange: j,
+          enabledRatio: W,
+        };
+      });
+      for (let e of t)
+        this._speciesLastStats.set(e.id, {
+          meanNodes: e.meanNodes,
+          meanConns: e.meanConns,
+          best: e.best,
+        });
+      this._speciesHistory.push({ generation: this.generation, stats: t });
+    } else
+      this._speciesHistory.push({
+        generation: this.generation,
+        stats: this._species.map((t) => ({
+          id: t.id,
+          size: t.members.length,
+          best: t.bestScore,
+          lastImproved: t.lastImproved,
+        })),
+      });
+    this._speciesHistory.length > 200 && this._speciesHistory.shift();
+  }
+  function ai() {
+    let n = this.options.sharingSigma || 0;
+    n > 0
+      ? this._species.forEach((t) => {
+          let e = t.members;
+          for (let o = 0; o < e.length; o++) {
+            let s = e[o];
+            if (typeof s.score != 'number') continue;
+            let i = 0;
+            for (let r = 0; r < e.length; r++) {
+              let a = e[r],
+                l = o === r ? 0 : this._compatibilityDistance(s, a);
+              if (l < n) {
+                let h = l / n;
+                i += 1 - h * h;
+              }
+            }
+            i <= 0 && (i = 1), (s.score = s.score / i);
+          }
+        })
+      : this._species.forEach((t) => {
+          let e = t.members.length;
+          t.members.forEach((o) => {
+            typeof o.score == 'number' && (o.score = o.score / e);
+          });
+        });
+  }
+  function ci(n) {
+    n.members.sort((t, e) => (e.score || 0) - (t.score || 0));
+  }
+  function li() {
+    let n = this.options.stagnationGenerations || 15;
+    this._species.forEach((e) => {
+      this._sortSpeciesMembers(e);
+      let o = e.members[0];
+      (o.score || -1 / 0) > e.bestScore &&
+        ((e.bestScore = o.score || -1 / 0), (e.lastImproved = this.generation));
+    });
+    let t = this._species.filter((e) => this.generation - e.lastImproved <= n);
+    t.length && (this._species = t);
+  }
+  var hi = C(() => {
+    'use strict';
+  });
+  function ui() {
+    return this._species.map((t) => ({
+      id: t.id,
+      size: t.members.length,
+      bestScore: t.bestScore,
+      lastImproved: t.lastImproved,
+    }));
+  }
+  function pi() {
+    let n = this._speciesHistory;
+    if (this.options?.speciesAllocation?.extendedHistory)
+      for (let t of n)
+        for (let e of t.stats) {
+          if ('innovationRange' in e && 'enabledRatio' in e) continue;
+          let o = this._species.find((s) => s.id === e.id);
+          if (o && o.members && o.members.length) {
+            let s = -1 / 0,
+              i = 1 / 0,
+              r = 0,
+              a = 0;
+            for (let l of o.members)
+              for (let h of l.connections) {
+                let u = h.innovation ?? this._fallbackInnov?.(h) ?? 0;
+                u > s && (s = u),
+                  u < i && (i = u),
+                  h.enabled === !1 ? a++ : r++;
+              }
+            (e.innovationRange =
+              isFinite(s) && isFinite(i) && s > i ? s - i : 0),
+              (e.enabledRatio = r + a ? r / (r + a) : 0);
+          }
+        }
+    return n;
+  }
+  var fi = C(() => {
+    'use strict';
+  });
+  function di() {
+    return this._telemetry.map((n) => JSON.stringify(n)).join(`
+`);
+  }
+  function mi(n = 500) {
+    let t = Array.isArray(this._telemetry) ? this._telemetry.slice(-n) : [];
+    if (!t.length) return '';
+    let e = ur(t),
+      o = pr(e),
+      s = [o.join(',')];
+    for (let i of t) s.push(fr(i, o));
+    return s.join(`
+`);
+  }
+  function ur(n) {
+    let t = new Set(),
+      e = new Set(),
+      o = new Set(),
+      s = new Set(),
+      i = new Set(),
+      r = !1,
+      a = !1,
+      l = !1,
+      h = !1,
+      u = !1,
+      p = !1;
+    for (let c of n)
+      Object.keys(c).forEach((d) => {
+        d !== 'complexity' &&
+          d !== 'perf' &&
+          d !== 'ops' &&
+          d !== on &&
+          t.add(d);
+      }),
+        Array.isArray(c.fronts) && t.add(on),
+        c.complexity && Object.keys(c.complexity).forEach((d) => e.add(d)),
+        c.perf && Object.keys(c.perf).forEach((d) => o.add(d)),
+        c.lineage && Object.keys(c.lineage).forEach((d) => s.add(d)),
+        c.diversity &&
+          ('lineageMeanDepth' in c.diversity && i.add('lineageMeanDepth'),
+          'lineageMeanPairDist' in c.diversity && i.add('lineageMeanPairDist')),
+        'rng' in c && t.add('rng'),
+        Array.isArray(c.ops) && c.ops.length && (r = !0),
+        Array.isArray(c.objectives) && (a = !0),
+        c.objAges && (l = !0),
+        Array.isArray(c.speciesAlloc) && (h = !0),
+        Array.isArray(c.objEvents) && c.objEvents.length && (u = !0),
+        c.objImportance && (p = !0);
+    return {
+      baseKeys: t,
+      complexityKeys: e,
+      perfKeys: o,
+      lineageKeys: s,
+      diversityLineageKeys: i,
+      includeOps: r,
+      includeObjectives: a,
+      includeObjAges: l,
+      includeSpeciesAlloc: h,
+      includeObjEvents: u,
+      includeObjImportance: p,
+    };
+  }
+  function pr(n) {
+    let t = [
+      ...n.baseKeys,
+      ...[...n.complexityKeys].map((e) => `${Qe}${e}`),
+      ...[...n.perfKeys].map((e) => `${tn}${e}`),
+      ...[...n.lineageKeys].map((e) => `${en}${e}`),
+      ...[...n.diversityLineageKeys].map((e) => `${nn}${e}`),
+    ];
+    return (
+      n.includeOps && t.push(gi),
+      n.includeObjectives && t.push(yi),
+      n.includeObjAges && t.push(_i),
+      n.includeSpeciesAlloc && t.push(bi),
+      n.includeObjEvents && t.push(vi),
+      n.includeObjImportance && t.push(wi),
+      t
+    );
+  }
+  function fr(n, t) {
+    let e = [];
+    for (let o of t)
+      switch (!0) {
+        case o.startsWith(Qe): {
+          let s = o.slice(Qe.length);
+          e.push(
+            n.complexity && s in n.complexity
+              ? JSON.stringify(n.complexity[s])
+              : ''
+          );
+          break;
+        }
+        case o.startsWith(tn): {
+          let s = o.slice(tn.length);
+          e.push(n.perf && s in n.perf ? JSON.stringify(n.perf[s]) : '');
+          break;
+        }
+        case o.startsWith(en): {
+          let s = o.slice(en.length);
+          e.push(
+            n.lineage && s in n.lineage ? JSON.stringify(n.lineage[s]) : ''
+          );
+          break;
+        }
+        case o.startsWith(nn): {
+          let s = o.slice(nn.length);
+          e.push(
+            n.diversity && s in n.diversity
+              ? JSON.stringify(n.diversity[s])
+              : ''
+          );
+          break;
+        }
+        case o === on: {
+          e.push(Array.isArray(n.fronts) ? JSON.stringify(n.fronts) : '');
+          break;
+        }
+        case o === gi: {
+          e.push(Array.isArray(n.ops) ? JSON.stringify(n.ops) : '');
+          break;
+        }
+        case o === yi: {
+          e.push(
+            Array.isArray(n.objectives) ? JSON.stringify(n.objectives) : ''
+          );
+          break;
+        }
+        case o === _i: {
+          e.push(n.objAges ? JSON.stringify(n.objAges) : '');
+          break;
+        }
+        case o === bi: {
+          e.push(
+            Array.isArray(n.speciesAlloc) ? JSON.stringify(n.speciesAlloc) : ''
+          );
+          break;
+        }
+        case o === vi: {
+          e.push(Array.isArray(n.objEvents) ? JSON.stringify(n.objEvents) : '');
+          break;
+        }
+        case o === wi: {
+          e.push(n.objImportance ? JSON.stringify(n.objImportance) : '');
+          break;
+        }
+        default: {
+          e.push(JSON.stringify(n[o]));
+          break;
+        }
+      }
+    return e.join(',');
+  }
+  function Mi(n = 200) {
+    if (
+      (Array.isArray(this._speciesHistory) || (this._speciesHistory = []),
+      !this._speciesHistory.length &&
+        Array.isArray(this._species) &&
+        this._species.length)
+    ) {
+      let s = this._species.map((i) => ({
+        id: i.id ?? -1,
+        size: Array.isArray(i.members) ? i.members.length : 0,
+        best: i.bestScore ?? 0,
+        lastImproved: i.lastImproved ?? 0,
+      }));
+      this._speciesHistory.push({ generation: this.generation || 0, stats: s });
+    }
+    let t = this._speciesHistory.slice(-n);
+    if (!t.length) return 'generation,id,size,best,lastImproved';
+    let e = new Set(['generation']);
+    for (let s of t)
+      for (let i of s.stats) Object.keys(i).forEach((r) => e.add(r));
+    let o = Array.from(e);
+    return mr(t, o);
+  }
+  function mr(n, t) {
+    let e = [t.join(',')];
+    for (let o of n)
+      for (let s of o.stats) {
+        let i = [];
+        for (let r of t) {
+          if (r === dr) {
+            i.push(JSON.stringify(o.generation));
+            continue;
+          }
+          i.push(JSON.stringify(s[r]));
+        }
+        e.push(i.join(','));
+      }
+    return e.join(`
+`);
+  }
+  var Qe,
+    tn,
+    en,
+    nn,
+    on,
+    gi,
+    yi,
+    _i,
+    bi,
+    vi,
+    wi,
+    dr,
+    Si = C(() => {
+      'use strict';
+      (Qe = 'complexity.'),
+        (tn = 'perf.'),
+        (en = 'lineage.'),
+        (nn = 'diversity.'),
+        (on = 'fronts'),
+        (gi = 'ops'),
+        (yi = 'objectives'),
+        (_i = 'objAges'),
+        (bi = 'speciesAlloc'),
+        (vi = 'objEvents'),
+        (wi = 'objImportance');
+      dr = 'generation';
+    });
+  function xi() {
+    this.population.sort((n, t) => (t.score ?? 0) - (n.score ?? 0));
+  }
+  function Ni() {
+    let n = this.options.selection,
+      t = n?.name,
+      e = this._getRNG.bind(this),
+      o = this.population;
+    switch (t) {
+      case 'POWER':
+        o[0]?.score !== void 0 &&
+          o[1]?.score !== void 0 &&
+          o[0].score < o[1].score &&
+          this.sort();
+        let s = Math.floor(Math.pow(e()(), n.power || 1) * o.length);
+        return o[s];
+      case 'FITNESS_PROPORTIONATE':
+        let i = 0,
+          r = 0;
+        o.forEach((c) => {
+          (r = Math.min(r, c.score ?? 0)), (i += c.score ?? 0);
+        });
+        let a = Math.abs(r);
+        i += a * o.length;
+        let l = e()() * i,
+          h = 0;
+        for (let c of o) if (((h += (c.score ?? 0) + a), l < h)) return c;
+        return o[Math.floor(e()() * o.length)];
+      case 'TOURNAMENT':
+        if ((n.size || 2) > o.length) {
+          if (!this._suppressTournamentError)
+            throw new Error(
+              'Tournament size must be less than population size.'
+            );
+          return o[Math.floor(e()() * o.length)];
+        }
+        let u = n.size || 2,
+          p = [];
+        for (let c = 0; c < u; c++) p.push(o[Math.floor(e()() * o.length)]);
+        p.sort((c, d) => (d.score ?? 0) - (c.score ?? 0));
+        for (let c = 0; c < p.length; c++)
+          if (e()() < (n.probability ?? 0.5) || c === p.length - 1) return p[c];
+        break;
+      default:
+        return o[0];
+    }
+    return o[0];
+  }
+  function Ai() {
+    let n = this.population;
+    return (
+      n[n.length - 1].score === void 0 && this.evaluate(),
+      n[1] && (n[0].score ?? 0) < (n[1].score ?? 0) && this.sort(),
+      n[0]
+    );
+  }
+  function Oi() {
+    let n = this.population;
+    return (
+      n[n.length - 1].score === void 0 && this.evaluate(),
+      n.reduce((e, o) => e + (o.score ?? 0), 0) / n.length
+    );
+  }
+  var Ei = C(() => {
+    'use strict';
+  });
+  var Ci = {};
+  ct(Ci, {
+    exportPopulation: () => sn,
+    exportState: () => an,
+    fromJSONImpl: () => hn,
+    importPopulation: () => rn,
+    importStateImpl: () => cn,
+    toJSONImpl: () => ln,
+  });
+  function sn() {
+    return this.population.map((n) => n.toJSON());
+  }
+  function rn(n) {
+    let t = (bt(), q(Pt)).default;
+    (this.population = n.map((e) => t.fromJSON(e))),
+      (this.options.popsize = this.population.length);
+  }
+  function an() {
+    let { toJSONImpl: n, exportPopulation: t } = (un(), q(Ci));
+    return { neat: n.call(this), population: t.call(this) };
+  }
+  function cn(n, t) {
+    if (!n || typeof n != 'object') throw new Error('Invalid state bundle');
+    let e = this.fromJSON(n.neat, t);
+    return Array.isArray(n.population) && e.import(n.population), e;
+  }
+  function ln() {
+    return {
+      input: this.input,
+      output: this.output,
+      generation: this.generation,
+      options: this.options,
+      nodeSplitInnovations: Array.from(this._nodeSplitInnovations.entries()),
+      connInnovations: Array.from(this._connInnovations.entries()),
+      nextGlobalInnovation: this._nextGlobalInnovation,
+    };
+  }
+  function hn(n, t) {
+    let e = this,
+      o = new e(n.input, n.output, t, n.options || {});
+    return (
+      (o.generation = n.generation || 0),
+      Array.isArray(n.nodeSplitInnovations) &&
+        (o._nodeSplitInnovations = new Map(n.nodeSplitInnovations)),
+      Array.isArray(n.connInnovations) &&
+        (o._connInnovations = new Map(n.connInnovations)),
+      typeof n.nextGlobalInnovation == 'number' &&
+        (o._nextGlobalInnovation = n.nextGlobalInnovation),
+      o
+    );
+  }
+  var un = C(() => {
+    'use strict';
+  });
+  var Co = {};
+  ct(Co, { default: () => Qt });
+  var Qt,
+    Ke = C(() => {
+      'use strict';
+      bt();
+      pt();
+      Ae();
+      Po();
+      qo();
+      zo();
+      Ko();
+      Qo();
+      ni();
+      si();
+      hi();
+      fi();
+      Si();
+      Ei();
+      un();
+      Qt = class n {
+        input;
+        output;
+        fitness;
+        options;
+        population = [];
+        generation = 0;
+        _rngState;
+        _rng;
+        _species = [];
+        _operatorStats = new Map();
+        _nodeSplitInnovations = new Map();
+        _connInnovations = new Map();
+        _nextGlobalInnovation = 1;
+        _nextGenomeId = 1;
+        _lineageEnabled = !1;
+        _lastInbreedingCount = 0;
+        _prevInbreedingCount = 0;
+        _phase;
+        _telemetry = [];
+        _prevSpeciesMembers = new Map();
+        _speciesLastStats = new Map();
+        _speciesHistory = [];
+        _paretoArchive = [];
+        _paretoObjectivesArchive = [];
+        _noveltyArchive = [];
+        _objectiveStale = new Map();
+        _objectiveAges = new Map();
+        _objectiveEvents = [];
+        _pendingObjectiveAdds = [];
+        _pendingObjectiveRemoves = [];
+        _lastOffspringAlloc;
+        _adaptivePruneLevel;
+        _lastEvalDuration;
+        _lastEvolveDuration;
+        _diversityStats;
+        _objectivesList;
+        _lastGlobalImproveGeneration = 0;
+        _bestScoreLastGen;
+        _speciesCreated = new Map();
+        _compatSpeciesEMA;
+        _compatIntegral = 0;
+        _lastEpsilonAdjustGen = -1 / 0;
+        _lastAncestorUniqAdjustGen = -1 / 0;
+        _mcThreshold;
+        _getRNG() {
+          if (!this._rng) {
+            let t = this.options?.rng;
+            if (typeof t == 'function') this._rng = t;
+            else {
+              if (this._rngState === void 0) {
+                let e =
+                  (Date.now() ^ ((this.population.length + 1) * 2654435761)) >>>
+                  0;
+                e === 0 && (e = 439041101), (this._rngState = e >>> 0);
+              }
+              this._rng = () => {
+                let e = this._rngState >>> 0;
+                return (
+                  (e ^= e << 13),
+                  (e >>>= 0),
+                  (e ^= e >> 17),
+                  (e >>>= 0),
+                  (e ^= e << 5),
+                  (e >>>= 0),
+                  (this._rngState = e >>> 0),
+                  (e >>> 0) / 4294967295
+                );
+              };
+            }
+          }
+          return this._rng;
+        }
+        ensureMinHiddenNodes(t, e) {
+          return ko.call(this, t, e);
+        }
+        constructor(t, e, o, s = {}) {
+          (this.input = t ?? 0),
+            (this.output = e ?? 0),
+            (this.fitness = o ?? ((r) => 0)),
+            (this.options = s || {});
+          let i = this.options;
+          i.popsize === void 0 && (i.popsize = 50),
+            i.elitism === void 0 && (i.elitism = 0),
+            i.provenance === void 0 && (i.provenance = 0),
+            i.mutationRate === void 0 && (i.mutationRate = 0.7),
+            i.mutationAmount === void 0 && (i.mutationAmount = 1),
+            i.fitnessPopulation === void 0 && (i.fitnessPopulation = !1),
+            i.clear === void 0 && (i.clear = !1),
+            i.equal === void 0 && (i.equal = !1),
+            i.compatibilityThreshold === void 0 &&
+              (i.compatibilityThreshold = 3),
+            i.maxNodes === void 0 && (i.maxNodes = 1 / 0),
+            i.maxConns === void 0 && (i.maxConns = 1 / 0),
+            i.maxGates === void 0 && (i.maxGates = 1 / 0),
+            i.excessCoeff === void 0 && (i.excessCoeff = 1),
+            i.disjointCoeff === void 0 && (i.disjointCoeff = 1),
+            i.weightDiffCoeff === void 0 && (i.weightDiffCoeff = 0.5),
+            i.mutation === void 0 &&
+              (i.mutation = P.ALL ? P.ALL.slice() : P.FFW ? [P.FFW] : []),
+            i.selection === void 0 &&
+              (i.selection =
+                (At && At.TOURNAMENT) ||
+                At?.TOURNAMENT ||
+                At.FITNESS_PROPORTIONATE),
+            i.crossover === void 0 &&
+              (i.crossover = zt ? zt.SINGLE_POINT : void 0),
+            i.novelty === void 0 && (i.novelty = { enabled: !1 }),
+            i.diversityMetrics === void 0 &&
+              (i.diversityMetrics = { enabled: !0 }),
+            i.fastMode &&
+              i.diversityMetrics &&
+              (i.diversityMetrics.pairSample == null &&
+                (i.diversityMetrics.pairSample = 20),
+              i.diversityMetrics.graphletSample == null &&
+                (i.diversityMetrics.graphletSample = 30),
+              i.novelty?.enabled && i.novelty.k == null && (i.novelty.k = 5)),
+            (this._noveltyArchive = []),
+            i.speciation === void 0 && (i.speciation = !1),
+            i.multiObjective &&
+              i.multiObjective.enabled &&
+              !Array.isArray(i.multiObjective.objectives) &&
+              (i.multiObjective.objectives = []),
+            (this.population = this.population || []);
+          try {
+            this.options.network !== void 0
+              ? this.createPool(this.options.network)
+              : this.options.popsize && this.createPool(null);
+          } catch {}
+          (this.options.lineage?.enabled || this.options.provenance > 0) &&
+            (this._lineageEnabled = !0),
+            this.options.lineageTracking === !0 && (this._lineageEnabled = !0),
+            s.lineagePressure?.enabled &&
+              this._lineageEnabled !== !0 &&
+              (this._lineageEnabled = !0);
+        }
+        async evolve() {
+          return Ho.call(this);
+        }
+        async evaluate() {
+          return Uo.call(this);
+        }
+        createPool(t) {
+          try {
+            if (Me && typeof Me == 'function') return Me.call(this, t);
+          } catch {}
+          this.population = [];
+          let e = this.options.popsize || 50;
+          for (let o = 0; o < e; o++) {
+            let s = t
+              ? it.fromJSON(t.toJSON())
+              : new it(this.input, this.output, {
+                  minHidden: this.options.minHidden,
+                });
+            s.score = void 0;
+            try {
+              this.ensureNoDeadEnds(s);
+            } catch {}
+            (s._reenableProb = this.options.reenableProb),
+              (s._id = this._nextGenomeId++),
+              this._lineageEnabled && ((s._parents = []), (s._depth = 0)),
+              this.population.push(s);
+          }
+        }
+        snapshotRNGState() {
+          return this._rngState;
+        }
+        restoreRNGState(t) {
+          (this._rngState = t), (this._rng = void 0);
+        }
+        importRNGState(t) {
+          (this._rngState = t), (this._rng = void 0);
+        }
+        exportRNGState() {
+          return this._rngState;
+        }
+        getOffspring() {
+          let t, e;
+          try {
+            t = this.getParent();
+          } catch {
+            t = this.population[0];
+          }
+          try {
+            e = this.getParent();
+          } catch {
+            e =
+              this.population[
+                Math.floor(this._getRNG()() * this.population.length)
+              ] || this.population[0];
+          }
+          let o = it.crossOver(t, e, this.options.equal || !1);
+          if (
+            ((o._reenableProb = this.options.reenableProb),
+            (o._id = this._nextGenomeId++),
+            this._lineageEnabled)
+          ) {
+            o._parents = [t._id, e._id];
+            let s = t._depth ?? 0,
+              i = e._depth ?? 0;
+            (o._depth = 1 + Math.max(s, i)),
+              t._id === e._id && this._lastInbreedingCount++;
+          }
+          return this.ensureMinHiddenNodes(o), this.ensureNoDeadEnds(o), o;
+        }
+        _warnIfNoBestGenome() {
+          try {
+            console.warn(
+              'Evolution completed without finding a valid best genome (no fitness improvements recorded).'
+            );
+          } catch {}
+        }
+        spawnFromParent(t, e = 1) {
+          return Jo.call(this, t, e);
+        }
+        addGenome(t, e) {
+          return Vo.call(this, t, e);
+        }
+        selectMutationMethod(t, e = !0) {
+          try {
+            return Lo.call(this, t, e);
+          } catch {
+            return null;
+          }
+        }
+        ensureNoDeadEnds(t) {
+          try {
+            return jo.call(this, t);
+          } catch {
+            return;
+          }
+        }
+        getMinimumHiddenSize(t) {
+          let e = this.options;
+          if (typeof e.minHidden == 'number') return e.minHidden;
+          let o = t ?? e.minHiddenMultiplier;
+          return typeof o == 'number' && isFinite(o)
+            ? Math.max(0, Math.round(o * (this.input + this.output)))
+            : 0;
+        }
+        sampleRandom(t) {
+          let e = this._getRNG(),
+            o = [];
+          for (let s = 0; s < t; s++) o.push(e());
+          return o;
+        }
+        _getObjectives() {
+          return Xo.call(this);
+        }
+        getObjectiveKeys() {
+          return this._getObjectives().map((t) => t.key);
+        }
+        _invalidateGenomeCaches(t) {
+          !t ||
+            typeof t != 'object' ||
+            (delete t._compatCache,
+            delete t._outputCache,
+            delete t._traceCache);
+        }
+        _computeDiversityStats() {
+          this._diversityStats = ei(this.population, this);
+        }
+        _structuralEntropy(t) {
+          return Ze(t);
+        }
+        mutate() {
+          return Io.call(this);
+        }
+        _mutateAddNodeReuse(t) {
+          return To.call(this, t);
+        }
+        _mutateAddConnReuse(t) {
+          return Do.call(this, t);
+        }
+        _fallbackInnov(t) {
+          return oi.call(this, t);
+        }
+        _compatibilityDistance(t, e) {
+          return ii.call(this, t, e);
+        }
+        _speciate() {
+          return ri.call(this);
+        }
+        _applyFitnessSharing() {
+          return ai.call(this);
+        }
+        _sortSpeciesMembers(t) {
+          return ci.call(this, t);
+        }
+        _updateSpeciesStagnation() {
+          return li.call(this);
+        }
+        getSpeciesStats() {
+          return ui.call(this);
+        }
+        getSpeciesHistory() {
+          return pi.call(this);
+        }
+        getNoveltyArchiveSize() {
+          return this._noveltyArchive ? this._noveltyArchive.length : 0;
+        }
+        getMultiObjectiveMetrics() {
+          return this.population.map((t) => ({
+            rank: t._moRank ?? 0,
+            crowding: t._moCrowd ?? 0,
+            score: t.score || 0,
+            nodes: t.nodes.length,
+            connections: t.connections.length,
+          }));
+        }
+        getOperatorStats() {
+          return Array.from(this._operatorStats.entries()).map(([t, e]) => ({
+            name: t,
+            success: e.success,
+            attempts: e.attempts,
+          }));
+        }
+        applyEvolutionPruning() {
+          try {
+            (Zt(), q(Yt)).applyEvolutionPruning.call(this);
+          } catch {}
+        }
+        applyAdaptivePruning() {
+          try {
+            (Zt(), q(Yt)).applyAdaptivePruning.call(this);
+          } catch {}
+        }
+        getTelemetry() {
+          return this._telemetry;
+        }
+        exportTelemetryJSONL() {
+          return di.call(this);
+        }
+        exportTelemetryCSV(t = 500) {
+          return mi.call(this, t);
+        }
+        clearTelemetry() {
+          this._telemetry = [];
+        }
+        getObjectives() {
+          return this._getObjectives().map((t) => ({
+            key: t.key,
+            direction: t.direction,
+          }));
+        }
+        getObjectiveEvents() {
+          return this._objectiveEvents.slice();
+        }
+        getLineageSnapshot(t = 20) {
+          return this.population
+            .slice(0, t)
+            .map((e) => ({
+              id: e._id ?? -1,
+              parents: Array.isArray(e._parents) ? e._parents.slice() : [],
+            }));
+        }
+        exportSpeciesHistoryCSV(t = 200) {
+          return Mi.call(this, t);
+        }
+        getParetoFronts(t = 3) {
+          if (!this.options.multiObjective?.enabled)
+            return [[...this.population]];
+          let e = [];
+          for (let o = 0; o < t; o++) {
+            let s = this.population.filter((i) => (i._moRank ?? 0) === o);
+            if (!s.length) break;
+            e.push(s);
+          }
+          return e;
+        }
+        getDiversityStats() {
+          return this._diversityStats;
+        }
+        registerObjective(t, e, o) {
+          return Yo.call(this, t, e, o);
+        }
+        clearObjectives() {
+          return Zo.call(this);
+        }
+        getParetoArchive(t = 50) {
+          return this._paretoArchive.slice(-t);
+        }
+        exportParetoFrontJSONL(t = 100) {
+          return this._paretoObjectivesArchive
+            .slice(-t)
+            .map((o) => JSON.stringify(o)).join(`
+`);
+        }
+        getPerformanceStats() {
+          return {
+            lastEvalMs: this._lastEvalDuration,
+            lastEvolveMs: this._lastEvolveDuration,
+          };
+        }
+        exportSpeciesHistoryJSONL(t = 200) {
+          return this._speciesHistory.slice(-t).map((o) => JSON.stringify(o))
+            .join(`
+`);
+        }
+        resetNoveltyArchive() {
+          this._noveltyArchive = [];
+        }
+        clearParetoArchive() {
+          this._paretoArchive = [];
+        }
+        sort() {
+          return xi.call(this);
+        }
+        getParent() {
+          return Ni.call(this);
+        }
+        getFittest() {
+          return Ai.call(this);
+        }
+        getAverage() {
+          return Oi.call(this);
+        }
+        export() {
+          return sn.call(this);
+        }
+        import(t) {
+          return rn.call(this, t);
+        }
+        exportState() {
+          return an.call(this);
+        }
+        static importState(t, e) {
+          return cn.call(n, t, e);
+        }
+        toJSON() {
+          return ln.call(this);
+        }
+        static fromJSON(t, e) {
+          return hn.call(n, t, e);
+        }
+      };
+    });
+  Ke();
+  bt();
+  mt();
+  Ft();
+  ce();
+  Dt();
+  mt();
+  Ft();
+  ce();
+  bt();
+  pt();
+  Dt();
+  pt();
+  vt();
+  ve();
+  function gr(n) {
+    let t = performance.now(),
+      e = Math.max(1, Math.floor(Math.sqrt(n))),
+      o = Math.max(1, Math.ceil(n / e)),
+      s = new it(e, o);
+    for (; s.connections.length > n; ) {
+      let r = Math.floor(Math.random() * s.connections.length),
+        a = s.connections[r];
+      s.disconnect(a.from, a.to);
+    }
+    let i = performance.now();
+    return { net: s, buildMs: i - t };
+  }
+  function yr(n, t) {
+    let e = new Array(n.input).fill(0).map(() => Math.random()),
+      o = performance.now();
+    for (let r = 0; r < t; r++) n.activate(e);
+    let i = performance.now() - o;
+    return { totalMs: i, avgMs: i / t };
+  }
+  function _r() {
+    let n = [1e3, 1e4, 5e4, 1e5],
+      t = [];
+    for (let e of n) {
+      let { net: o, buildMs: s } = gr(e),
+        i = e >= 1e5 ? 2 : e >= 5e4 ? 3 : 5,
+        { totalMs: r, avgMs: a } = yr(o, i);
+      t.push({
+        size: e,
+        buildMs: Number(s.toFixed(3)),
+        fwdAvgMs: Number(a.toFixed(4)),
+        fwdTotalMs: Number(r.toFixed(3)),
+        conn: o.connections.length,
+        nodes: o.nodes.length,
+        iterations: i,
+      });
+    }
+    return t;
+  }
+  window.__NEATAPTIC_BENCH__ = {
+    mode: window.__BENCH_MODE__ || '__UNDEF__',
+    generatedAt: new Date().toISOString(),
+    results: _r(),
+  };
+  console.log('[NEATAPTIC_BROWSER_BENCH] ready');
+})();

@@ -1,4 +1,4 @@
-"use strict";
+'use strict';
 (() => {
   var __create = Object.create;
   var __defProp = Object.defineProperty;
@@ -6,48 +6,72 @@
   var __getOwnPropNames = Object.getOwnPropertyNames;
   var __getProtoOf = Object.getPrototypeOf;
   var __hasOwnProp = Object.prototype.hasOwnProperty;
-  var __require = /* @__PURE__ */ ((x) => typeof require !== "undefined" ? require : typeof Proxy !== "undefined" ? new Proxy(x, {
-    get: (a, b) => (typeof require !== "undefined" ? require : a)[b]
-  }) : x)(function(x) {
-    if (typeof require !== "undefined") return require.apply(this, arguments);
+  var __require = /* @__PURE__ */ ((x) =>
+    typeof require !== 'undefined'
+      ? require
+      : typeof Proxy !== 'undefined'
+      ? new Proxy(x, {
+          get: (a, b) => (typeof require !== 'undefined' ? require : a)[b],
+        })
+      : x)(function (x) {
+    if (typeof require !== 'undefined') return require.apply(this, arguments);
     throw Error('Dynamic require of "' + x + '" is not supported');
   });
-  var __esm = (fn, res) => function __init() {
-    return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
-  };
-  var __commonJS = (cb, mod) => function __require2() {
-    return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
-  };
+  var __esm = (fn, res) =>
+    function __init() {
+      return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])((fn = 0))), res;
+    };
+  var __commonJS = (cb, mod) =>
+    function __require2() {
+      return (
+        mod ||
+          (0, cb[__getOwnPropNames(cb)[0]])(
+            (mod = { exports: {} }).exports,
+            mod
+          ),
+        mod.exports
+      );
+    };
   var __export = (target, all) => {
     for (var name in all)
       __defProp(target, name, { get: all[name], enumerable: true });
   };
   var __copyProps = (to, from, except, desc) => {
-    if (from && typeof from === "object" || typeof from === "function") {
+    if ((from && typeof from === 'object') || typeof from === 'function') {
       for (let key of __getOwnPropNames(from))
         if (!__hasOwnProp.call(to, key) && key !== except)
-          __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+          __defProp(to, key, {
+            get: () => from[key],
+            enumerable:
+              !(desc = __getOwnPropDesc(from, key)) || desc.enumerable,
+          });
     }
     return to;
   };
-  var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
-    // If the importer is in node compatibility mode or this is not an ESM
-    // file that has been converted to a CommonJS file using a Babel-
-    // compatible transform (i.e. "__esModule" has not been set), then set
-    // "default" to the CommonJS "module.exports" for node compatibility.
-    isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
-    mod
-  ));
-  var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+  var __toESM = (mod, isNodeMode, target) => (
+    (target = mod != null ? __create(__getProtoOf(mod)) : {}),
+    __copyProps(
+      // If the importer is in node compatibility mode or this is not an ESM
+      // file that has been converted to a CommonJS file using a Babel-
+      // compatible transform (i.e. "__esModule" has not been set), then set
+      // "default" to the CommonJS "module.exports" for node compatibility.
+      isNodeMode || !mod || !mod.__esModule
+        ? __defProp(target, 'default', { value: mod, enumerable: true })
+        : target,
+      mod
+    )
+  );
+  var __toCommonJS = (mod) =>
+    __copyProps(__defProp({}, '__esModule', { value: true }), mod);
 
   // dist/architecture/connection.js
   var kGain, kGater, kOpt, Connection;
   var init_connection = __esm({
-    "dist/architecture/connection.js"() {
-      "use strict";
-      kGain = Symbol("connGain");
-      kGater = Symbol("connGater");
-      kOpt = Symbol("connOptMoments");
+    'dist/architecture/connection.js'() {
+      'use strict';
+      kGain = Symbol('connGain');
+      kGater = Symbol('connGater');
+      kOpt = Symbol('connOptMoments');
       Connection = class _Connection {
         /** The source (pre-synaptic) node supplying activation. */
         from;
@@ -100,7 +124,7 @@
           this.totalDeltaWeight = 0;
           this.xtrace = {
             nodes: [],
-            values: []
+            values: [],
           };
           this._flags = 3;
           this.innovation = _Connection._nextInnovation++;
@@ -121,12 +145,11 @@
             weight: this.weight,
             gain: this.gain,
             innovation: this.innovation,
-            enabled: this.enabled
+            enabled: this.enabled,
           };
           if (this._flags & 4) {
             const g = this[kGater];
-            if (g && typeof g.index !== "undefined")
-              json.gater = g.index;
+            if (g && typeof g.index !== 'undefined') json.gater = g.index;
           }
           return json;
         }
@@ -145,7 +168,12 @@
          * const id = Connection.innovationID(2, 5); // deterministic
          */
         static innovationID(sourceNodeId, targetNodeId) {
-          return 0.5 * (sourceNodeId + targetNodeId) * (sourceNodeId + targetNodeId + 1) + targetNodeId;
+          return (
+            0.5 *
+              (sourceNodeId + targetNodeId) *
+              (sourceNodeId + targetNodeId + 1) +
+            targetNodeId
+          );
         }
         static _nextInnovation = 1;
         /**
@@ -183,21 +211,17 @@
             c.from = from;
             c.to = to;
             c.weight = weight ?? Math.random() * 0.2 - 0.1;
-            if (c[kGain] !== void 0)
-              delete c[kGain];
-            if (c[kGater] !== void 0)
-              delete c[kGater];
+            if (c[kGain] !== void 0) delete c[kGain];
+            if (c[kGater] !== void 0) delete c[kGater];
             c._flags = 3;
             c.eligibility = 0;
             c.previousDeltaWeight = 0;
             c.totalDeltaWeight = 0;
             c.xtrace.nodes.length = 0;
             c.xtrace.values.length = 0;
-            if (c[kOpt])
-              delete c[kOpt];
+            if (c[kOpt]) delete c[kOpt];
             c.innovation = _Connection._nextInnovation++;
-          } else
-            c = new _Connection(from, to, weight);
+          } else c = new _Connection(from, to, weight);
           return c;
         }
         /**
@@ -239,8 +263,7 @@
         }
         set gain(v) {
           if (v === 1) {
-            if (this[kGain] !== void 0)
-              delete this[kGain];
+            if (this[kGain] !== void 0) delete this[kGain];
           } else {
             this[kGain] = v;
           }
@@ -261,60 +284,59 @@
         _setOpt(k, v) {
           if (v === void 0) {
             const bag = this[kOpt];
-            if (bag)
-              delete bag[k];
+            if (bag) delete bag[k];
           } else {
             this._ensureOptBag()[k] = v;
           }
         }
         /** First moment estimate (Adam / AdamW) (was opt_m). */
         get firstMoment() {
-          return this._getOpt("firstMoment");
+          return this._getOpt('firstMoment');
         }
         set firstMoment(v) {
-          this._setOpt("firstMoment", v);
+          this._setOpt('firstMoment', v);
         }
         /** Second raw moment estimate (Adam family) (was opt_v). */
         get secondMoment() {
-          return this._getOpt("secondMoment");
+          return this._getOpt('secondMoment');
         }
         set secondMoment(v) {
-          this._setOpt("secondMoment", v);
+          this._setOpt('secondMoment', v);
         }
         /** Generic gradient accumulator (RMSProp / AdaGrad) (was opt_cache). */
         get gradientAccumulator() {
-          return this._getOpt("gradientAccumulator");
+          return this._getOpt('gradientAccumulator');
         }
         set gradientAccumulator(v) {
-          this._setOpt("gradientAccumulator", v);
+          this._setOpt('gradientAccumulator', v);
         }
         /** AMSGrad: Maximum of past second moment (was opt_vhat). */
         get maxSecondMoment() {
-          return this._getOpt("maxSecondMoment");
+          return this._getOpt('maxSecondMoment');
         }
         set maxSecondMoment(v) {
-          this._setOpt("maxSecondMoment", v);
+          this._setOpt('maxSecondMoment', v);
         }
         /** Adamax: Exponential moving infinity norm (was opt_u). */
         get infinityNorm() {
-          return this._getOpt("infinityNorm");
+          return this._getOpt('infinityNorm');
         }
         set infinityNorm(v) {
-          this._setOpt("infinityNorm", v);
+          this._setOpt('infinityNorm', v);
         }
         /** Secondary momentum (Lion variant) (was opt_m2). */
         get secondMomentum() {
-          return this._getOpt("secondMomentum");
+          return this._getOpt('secondMomentum');
         }
         set secondMomentum(v) {
-          this._setOpt("secondMomentum", v);
+          this._setOpt('secondMomentum', v);
         }
         /** Lookahead: shadow (slow) weight parameter (was _la_shadowWeight). */
         get lookaheadShadowWeight() {
-          return this._getOpt("lookaheadShadowWeight");
+          return this._getOpt('lookaheadShadowWeight');
         }
         set lookaheadShadowWeight(v) {
-          this._setOpt("lookaheadShadowWeight", v);
+          this._setOpt('lookaheadShadowWeight', v);
         }
         // --- Virtualized gater property (non-enumerable) ---
         /** Optional gating node whose activation can modulate effective weight (symbol-backed). */
@@ -325,8 +347,7 @@
           if (node === null) {
             if ((this._flags & 4) !== 0) {
               this._flags &= ~4;
-              if (this[kGater] !== void 0)
-                delete this[kGater];
+              if (this[kGater] !== void 0) delete this[kGater];
             }
           } else {
             this[kGater] = node;
@@ -395,14 +416,14 @@
           this.dcMask = v;
         }
       };
-    }
+    },
   });
 
   // dist/config.js
   var config;
   var init_config = __esm({
-    "dist/config.js"() {
-      "use strict";
+    'dist/config.js'() {
+      'use strict';
       config = {
         warnings: false,
         // emit runtime guidance
@@ -412,12 +433,12 @@
         // deep path test flag (ADD_NODE determinism)
         enableGatingTraces: true,
         // advanced gating trace infra
-        enableNodePooling: false
+        enableNodePooling: false,
         // experimental node instance pooling
         // poolMaxPerBucket: 256,     // example memory cap override
         // poolPrewarmCount: 2,       // example prewarm override
       };
-    }
+    },
   });
 
   // dist/neat/neat.constants.js
@@ -426,24 +447,24 @@
     EPSILON: () => EPSILON,
     EXTRA_CONNECTION_PROBABILITY: () => EXTRA_CONNECTION_PROBABILITY,
     NORM_EPSILON: () => NORM_EPSILON,
-    PROB_EPSILON: () => PROB_EPSILON
+    PROB_EPSILON: () => PROB_EPSILON,
   });
   var EPSILON, PROB_EPSILON, NORM_EPSILON, EXTRA_CONNECTION_PROBABILITY;
   var init_neat_constants = __esm({
-    "dist/neat/neat.constants.js"() {
-      "use strict";
+    'dist/neat/neat.constants.js'() {
+      'use strict';
       EPSILON = 1e-9;
       PROB_EPSILON = 1e-15;
       NORM_EPSILON = 1e-5;
       EXTRA_CONNECTION_PROBABILITY = 0.5;
-    }
+    },
   });
 
   // dist/methods/cost.js
   var Cost;
   var init_cost = __esm({
-    "dist/methods/cost.js"() {
-      "use strict";
+    'dist/methods/cost.js'() {
+      'use strict';
       init_neat_constants();
       Cost = class {
         /**
@@ -466,18 +487,25 @@
           let error = 0;
           const epsilon = PROB_EPSILON;
           if (targets.length !== outputs.length) {
-            throw new Error("Target and output arrays must have the same length.");
+            throw new Error(
+              'Target and output arrays must have the same length.'
+            );
           }
           for (let i = 0; i < outputs.length; i++) {
             const target = targets[i];
             const output = outputs[i];
-            const clampedOutput = Math.max(epsilon, Math.min(1 - epsilon, output));
+            const clampedOutput = Math.max(
+              epsilon,
+              Math.min(1 - epsilon, output)
+            );
             if (target === 1) {
               error -= Math.log(clampedOutput);
             } else if (target === 0) {
               error -= Math.log(1 - clampedOutput);
             } else {
-              error -= target * Math.log(clampedOutput) + (1 - target) * Math.log(1 - clampedOutput);
+              error -=
+                target * Math.log(clampedOutput) +
+                (1 - target) * Math.log(1 - clampedOutput);
             }
           }
           return error / outputs.length;
@@ -489,13 +517,15 @@
          */
         static softmaxCrossEntropy(targets, outputs) {
           if (targets.length !== outputs.length) {
-            throw new Error("Target and output arrays must have the same length.");
+            throw new Error(
+              'Target and output arrays must have the same length.'
+            );
           }
           const n = outputs.length;
           let tSum = 0;
-          for (const t of targets)
-            tSum += t;
-          const normTargets = tSum > 0 ? targets.map((t) => t / tSum) : targets.slice();
+          for (const t of targets) tSum += t;
+          const normTargets =
+            tSum > 0 ? targets.map((t) => t / tSum) : targets.slice();
           const max = Math.max(...outputs);
           const exps = outputs.map((o) => Math.exp(o - max));
           const sum = exps.reduce((a, b) => a + b, 0) || 1;
@@ -524,7 +554,9 @@
          */
         static mse(targets, outputs) {
           if (targets.length !== outputs.length) {
-            throw new Error("Target and output arrays must have the same length.");
+            throw new Error(
+              'Target and output arrays must have the same length.'
+            );
           }
           let error = 0;
           outputs.forEach((output, outputIndex) => {
@@ -547,11 +579,14 @@
          */
         static binary(targets, outputs) {
           if (targets.length !== outputs.length) {
-            throw new Error("Target and output arrays must have the same length.");
+            throw new Error(
+              'Target and output arrays must have the same length.'
+            );
           }
           let misses = 0;
           outputs.forEach((output, outputIndex) => {
-            misses += Math.round(targets[outputIndex]) !== Math.round(output) ? 1 : 0;
+            misses +=
+              Math.round(targets[outputIndex]) !== Math.round(output) ? 1 : 0;
           });
           return misses / outputs.length;
         }
@@ -569,7 +604,9 @@
          */
         static mae(targets, outputs) {
           if (targets.length !== outputs.length) {
-            throw new Error("Target and output arrays must have the same length.");
+            throw new Error(
+              'Target and output arrays must have the same length.'
+            );
           }
           let error = 0;
           outputs.forEach((output, outputIndex) => {
@@ -593,13 +630,17 @@
          */
         static mape(targets, outputs) {
           if (targets.length !== outputs.length) {
-            throw new Error("Target and output arrays must have the same length.");
+            throw new Error(
+              'Target and output arrays must have the same length.'
+            );
           }
           let error = 0;
           const epsilon = PROB_EPSILON;
           outputs.forEach((output, outputIndex) => {
             const target = targets[outputIndex];
-            error += Math.abs((target - output) / Math.max(Math.abs(target), epsilon));
+            error += Math.abs(
+              (target - output) / Math.max(Math.abs(target), epsilon)
+            );
           });
           return error / outputs.length;
         }
@@ -620,7 +661,9 @@
          */
         static msle(targets, outputs) {
           if (targets.length !== outputs.length) {
-            throw new Error("Target and output arrays must have the same length.");
+            throw new Error(
+              'Target and output arrays must have the same length.'
+            );
           }
           let error = 0;
           outputs.forEach((output, outputIndex) => {
@@ -647,7 +690,9 @@
          */
         static hinge(targets, outputs) {
           if (targets.length !== outputs.length) {
-            throw new Error("Target and output arrays must have the same length.");
+            throw new Error(
+              'Target and output arrays must have the same length.'
+            );
           }
           let error = 0;
           outputs.forEach((output, outputIndex) => {
@@ -671,7 +716,9 @@
           let error = 0;
           const epsilon = PROB_EPSILON;
           if (targets.length !== outputs.length) {
-            throw new Error("Target and output arrays must have the same length.");
+            throw new Error(
+              'Target and output arrays must have the same length.'
+            );
           }
           for (let i = 0; i < outputs.length; i++) {
             const t = targets[i];
@@ -696,7 +743,9 @@
           let error = 0;
           const epsilon = PROB_EPSILON;
           if (targets.length !== outputs.length) {
-            throw new Error("Target and output arrays must have the same length.");
+            throw new Error(
+              'Target and output arrays must have the same length.'
+            );
           }
           for (let i = 0; i < outputs.length; i++) {
             const t = targets[i] * (1 - smoothing) + 0.5 * smoothing;
@@ -706,14 +755,14 @@
           return error / outputs.length;
         }
       };
-    }
+    },
   });
 
   // dist/methods/rate.js
   var Rate;
   var init_rate = __esm({
-    "dist/methods/rate.js"() {
-      "use strict";
+    'dist/methods/rate.js'() {
+      'use strict';
       Rate = class {
         /**
          * Implements a fixed learning rate schedule.
@@ -749,7 +798,10 @@
          */
         static step(gamma = 0.9, stepSize = 100) {
           const func = (baseRate, iteration) => {
-            return Math.max(0, baseRate * Math.pow(gamma, Math.floor(iteration / stepSize)));
+            return Math.max(
+              0,
+              baseRate * Math.pow(gamma, Math.floor(iteration / stepSize))
+            );
           };
           return func;
         }
@@ -815,7 +867,8 @@
         static cosineAnnealing(period = 1e3, minRate = 0) {
           const func = (baseRate, iteration) => {
             const currentCycleIteration = iteration % period;
-            const cosineDecay = 0.5 * (1 + Math.cos(currentCycleIteration / period * Math.PI));
+            const cosineDecay =
+              0.5 * (1 + Math.cos((currentCycleIteration / period) * Math.PI));
             return minRate + (baseRate - minRate) * cosineDecay;
           };
           return func;
@@ -827,7 +880,11 @@
          * @param minRate Minimum learning rate at valley.
          * @param tMult Factor to multiply the period after each restart (>=1).
          */
-        static cosineAnnealingWarmRestarts(initialPeriod = 1e3, minRate = 0, tMult = 1) {
+        static cosineAnnealingWarmRestarts(
+          initialPeriod = 1e3,
+          minRate = 0,
+          tMult = 1
+        ) {
           let period = initialPeriod;
           let cycleStart = 0;
           let cycleEnd = period;
@@ -838,7 +895,8 @@
               cycleEnd = cycleStart + period;
             }
             const cyclePos = iteration - cycleStart;
-            const cosineDecay = 0.5 * (1 + Math.cos(cyclePos / period * Math.PI));
+            const cosineDecay =
+              0.5 * (1 + Math.cos((cyclePos / period) * Math.PI));
             return minRate + (baseRate - minRate) * cosineDecay;
           };
         }
@@ -852,15 +910,16 @@
          * @param endRate Final rate at totalSteps.
          */
         static linearWarmupDecay(totalSteps, warmupSteps, endRate = 0) {
-          if (totalSteps <= 0)
-            throw new Error("totalSteps must be > 0");
-          const warm = Math.min(warmupSteps ?? Math.max(1, Math.floor(totalSteps * 0.1)), totalSteps - 1);
+          if (totalSteps <= 0) throw new Error('totalSteps must be > 0');
+          const warm = Math.min(
+            warmupSteps ?? Math.max(1, Math.floor(totalSteps * 0.1)),
+            totalSteps - 1
+          );
           return (baseRate, iteration) => {
             if (iteration <= warm) {
               return baseRate * (iteration / Math.max(1, warm));
             }
-            if (iteration >= totalSteps)
-              return endRate;
+            if (iteration >= totalSteps) return endRate;
             const decaySteps = totalSteps - warm;
             const progress = (iteration - warm) / decaySteps;
             return endRate + (baseRate - endRate) * (1 - progress);
@@ -873,19 +932,28 @@
          * NOTE: Requires the training loop to call with signature (baseRate, iteration, lastError).
          */
         static reduceOnPlateau(options) {
-          const { factor = 0.5, patience = 10, minDelta = 1e-4, cooldown = 0, minRate = 0, verbose = false } = options || {};
+          const {
+            factor = 0.5,
+            patience = 10,
+            minDelta = 1e-4,
+            cooldown = 0,
+            minRate = 0,
+            verbose = false,
+          } = options || {};
           let currentRate;
           let bestError;
           let lastImprovementIter = 0;
           let cooldownUntil = -1;
           return (baseRate, iteration, lastError) => {
-            if (currentRate === void 0)
-              currentRate = baseRate;
+            if (currentRate === void 0) currentRate = baseRate;
             if (lastError !== void 0) {
               if (bestError === void 0 || lastError < bestError - minDelta) {
                 bestError = lastError;
                 lastImprovementIter = iteration;
-              } else if (iteration - lastImprovementIter >= patience && iteration >= cooldownUntil) {
+              } else if (
+                iteration - lastImprovementIter >= patience &&
+                iteration >= cooldownUntil
+              ) {
                 const newRate = Math.max(minRate, currentRate * factor);
                 if (newRate < currentRate) {
                   currentRate = newRate;
@@ -898,14 +966,14 @@
           };
         }
       };
-    }
+    },
   });
 
   // dist/methods/activation.js
   var Activation, activation_default;
   var init_activation = __esm({
-    "dist/methods/activation.js"() {
-      "use strict";
+    'dist/methods/activation.js'() {
+      'use strict';
       Activation = {
         /**
          * Logistic (Sigmoid) activation function.
@@ -979,7 +1047,7 @@
          * @returns {number} The result of the ReLU function or its derivative (0 or 1).
          */
         relu: (x, derivate = false) => {
-          return derivate ? x > 0 ? 1 : 0 : x > 0 ? x : 0;
+          return derivate ? (x > 0 ? 1 : 0) : x > 0 ? x : 0;
         },
         /**
          * Softsign activation function.
@@ -1051,7 +1119,7 @@
          */
         bipolarSigmoid: (x, derivate = false) => {
           const d = 2 / (1 + Math.exp(-x)) - 1;
-          return derivate ? 1 / 2 * (1 + d) * (1 - d) : d;
+          return derivate ? (1 / 2) * (1 + d) * (1 - d) : d;
         },
         /**
          * Hard Tanh activation function.
@@ -1062,7 +1130,11 @@
          * @returns {number} The result of the hard tanh function or its derivative (0 or 1).
          */
         hardTanh: (x, derivate = false) => {
-          return derivate ? x > -1 && x < 1 ? 1 : 0 : Math.max(-1, Math.min(1, x));
+          return derivate
+            ? x > -1 && x < 1
+              ? 1
+              : 0
+            : Math.max(-1, Math.min(1, x));
         },
         /**
          * Absolute activation function.
@@ -1076,7 +1148,7 @@
          * @returns {number} The result of the absolute function or its derivative (sign of x).
          */
         absolute: (x, derivate = false) => {
-          return derivate ? x < 0 ? -1 : 1 : Math.abs(x);
+          return derivate ? (x < 0 ? -1 : 1) : Math.abs(x);
         },
         /**
          * Inverse activation function.
@@ -1106,7 +1178,7 @@
           const alpha = 1.6732632423543772;
           const scale = 1.0507009873554805;
           const fx = x > 0 ? x : alpha * Math.exp(x) - alpha;
-          return derivate ? x > 0 ? scale : (fx + alpha) * scale : fx * scale;
+          return derivate ? (x > 0 ? scale : (fx + alpha) * scale) : fx * scale;
         },
         /**
          * Softplus activation function.
@@ -1160,10 +1232,17 @@
          * @see {@link https://arxiv.org/abs/1606.08415}
          */
         gelu: (x, derivate = false) => {
-          const cdf = 0.5 * (1 + Math.tanh(Math.sqrt(2 / Math.PI) * (x + 0.044715 * Math.pow(x, 3))));
+          const cdf =
+            0.5 *
+            (1 +
+              Math.tanh(
+                Math.sqrt(2 / Math.PI) * (x + 0.044715 * Math.pow(x, 3))
+              ));
           if (derivate) {
-            const intermediate = Math.sqrt(2 / Math.PI) * (1 + 0.134145 * x * x);
-            const sech_arg = Math.sqrt(2 / Math.PI) * (x + 0.044715 * Math.pow(x, 3));
+            const intermediate =
+              Math.sqrt(2 / Math.PI) * (1 + 0.134145 * x * x);
+            const sech_arg =
+              Math.sqrt(2 / Math.PI) * (x + 0.044715 * Math.pow(x, 3));
             const sech_val = 1 / Math.cosh(sech_arg);
             const sech_sq = sech_val * sech_val;
             return cdf + x * 0.5 * intermediate * sech_sq;
@@ -1198,17 +1277,17 @@
           } else {
             return x * tanh_sp_x;
           }
-        }
+        },
       };
       activation_default = Activation;
-    }
+    },
   });
 
   // dist/methods/gating.js
   var gating;
   var init_gating = __esm({
-    "dist/methods/gating.js"() {
-      "use strict";
+    'dist/methods/gating.js'() {
+      'use strict';
       gating = {
         /**
          * Output Gating: The gating neuron(s) control the activation flowing *out*
@@ -1217,7 +1296,7 @@
          * @property {string} name - Identifier for the output gating method.
          */
         OUTPUT: {
-          name: "OUTPUT"
+          name: 'OUTPUT',
         },
         /**
          * Input Gating: The gating neuron(s) control the activation flowing *into*
@@ -1226,7 +1305,7 @@
          * @property {string} name - Identifier for the input gating method.
          */
         INPUT: {
-          name: "INPUT"
+          name: 'INPUT',
         },
         /**
          * Self Gating: The gating neuron(s) directly modulate the *weight* or strength
@@ -1235,17 +1314,17 @@
          * @property {string} name - Identifier for the self-gating method.
          */
         SELF: {
-          name: "SELF"
-        }
+          name: 'SELF',
+        },
       };
-    }
+    },
   });
 
   // dist/methods/mutation.js
   var mutation, mutation_default;
   var init_mutation = __esm({
-    "dist/methods/mutation.js"() {
-      "use strict";
+    'dist/methods/mutation.js'() {
+      'use strict';
       init_activation();
       mutation = {
         /**
@@ -1256,7 +1335,7 @@
          * allowing for more sophisticated computations.
          */
         ADD_NODE: {
-          name: "ADD_NODE"
+          name: 'ADD_NODE',
           /**
            * @see Instinct Algorithm - Section 3.1 Add Node Mutation
            */
@@ -1266,9 +1345,9 @@
          * removed node are also removed. This simplifies the network topology.
          */
         SUB_NODE: {
-          name: "SUB_NODE",
+          name: 'SUB_NODE',
           /** If true, attempts to preserve gating connections associated with the removed node. */
-          keep_gates: true
+          keep_gates: true,
           /**
            * @see Instinct Algorithm - Section 3.7 Remove Node Mutation
            */
@@ -1279,7 +1358,7 @@
          * for information flow.
          */
         ADD_CONN: {
-          name: "ADD_CONN"
+          name: 'ADD_CONN',
           /**
            * @see Instinct Algorithm - Section 3.2 Add Connection Mutation
            */
@@ -1289,7 +1368,7 @@
          * This prunes the network, potentially removing redundant or detrimental pathways.
          */
         SUB_CONN: {
-          name: "SUB_CONN"
+          name: 'SUB_CONN',
           /**
            * @see Instinct Algorithm - Section 3.8 Remove Connection Mutation
            */
@@ -1300,11 +1379,11 @@
          * the connection.
          */
         MOD_WEIGHT: {
-          name: "MOD_WEIGHT",
+          name: 'MOD_WEIGHT',
           /** Minimum value for the random modification factor/offset. */
           min: -1,
           /** Maximum value for the random modification factor/offset. */
-          max: 1
+          max: 1,
           /**
            * @see Instinct Algorithm - Section 3.4 Modify Weight Mutation
            */
@@ -1314,11 +1393,11 @@
          * This adjusts the node's activation threshold, influencing its firing behavior.
          */
         MOD_BIAS: {
-          name: "MOD_BIAS",
+          name: 'MOD_BIAS',
           /** Minimum value for the random modification offset. */
           min: -1,
           /** Maximum value for the random modification offset. */
-          max: 1
+          max: 1,
           /**
            * @see Instinct Algorithm - Section 3.5 Modify Bias Mutation
            */
@@ -1328,7 +1407,7 @@
          * This allows nodes to specialize their response characteristics during evolution.
          */
         MOD_ACTIVATION: {
-          name: "MOD_ACTIVATION",
+          name: 'MOD_ACTIVATION',
           /** If true, allows mutation of activation functions in output nodes. */
           mutateOutput: true,
           /** A list of allowed activation functions to choose from during mutation. */
@@ -1351,8 +1430,8 @@
             activation_default.softplus,
             activation_default.swish,
             activation_default.gelu,
-            activation_default.mish
-          ]
+            activation_default.mish,
+          ],
           /**
            * @see Instinct Algorithm - Section 3.6 Modify Squash Mutation
            */
@@ -1364,14 +1443,14 @@
          * to hidden and output nodes.
          */
         ADD_SELF_CONN: {
-          name: "ADD_SELF_CONN"
+          name: 'ADD_SELF_CONN',
         },
         /**
          * Removes a self-connection from a node.
          * This removes the node's direct recurrent loop.
          */
         SUB_SELF_CONN: {
-          name: "SUB_SELF_CONN"
+          name: 'SUB_SELF_CONN',
         },
         /**
          * Adds a gating mechanism to an existing connection. A new node (the gater)
@@ -1380,14 +1459,14 @@
          * enabling more complex temporal processing or conditional logic.
          */
         ADD_GATE: {
-          name: "ADD_GATE"
+          name: 'ADD_GATE',
         },
         /**
          * Removes a gating mechanism from a connection.
          * This simplifies the network by removing the modulatory influence of the gater node.
          */
         SUB_GATE: {
-          name: "SUB_GATE"
+          name: 'SUB_GATE',
         },
         /**
          * Adds a recurrent connection between two nodes, potentially creating cycles
@@ -1396,14 +1475,14 @@
          * and process temporal dependencies.
          */
         ADD_BACK_CONN: {
-          name: "ADD_BACK_CONN"
+          name: 'ADD_BACK_CONN',
         },
         /**
          * Removes a recurrent connection (that is not a self-connection).
          * This simplifies the recurrent topology of the network.
          */
         SUB_BACK_CONN: {
-          name: "SUB_BACK_CONN"
+          name: 'SUB_BACK_CONN',
         },
         /**
          * Swaps the roles (bias and activation function) of two nodes (excluding input nodes).
@@ -1412,33 +1491,33 @@
          * the overall node count or connection density.
          */
         SWAP_NODES: {
-          name: "SWAP_NODES",
+          name: 'SWAP_NODES',
           /** If true, allows swapping involving output nodes. */
-          mutateOutput: true
+          mutateOutput: true,
         },
         /**
          * Reinitializes the weights of all incoming, outgoing, and self connections for a node.
          * This can help escape local minima or inject diversity during evolution.
          */
         REINIT_WEIGHT: {
-          name: "REINIT_WEIGHT",
+          name: 'REINIT_WEIGHT',
           /** Range for random reinitialization. */
           min: -1,
-          max: 1
+          max: 1,
         },
         /**
          * Marks a node for batch normalization. (Stub: actual normalization requires architectural support.)
          * This mutation can be used to toggle batch normalization on a node or layer.
          */
         BATCH_NORM: {
-          name: "BATCH_NORM"
+          name: 'BATCH_NORM',
         },
         /**
          * Adds a new LSTM node (memory cell with gates) to the network.
          * This enables the evolution of memory-augmented architectures.
          */
         ADD_LSTM_NODE: {
-          name: "ADD_LSTM_NODE"
+          name: 'ADD_LSTM_NODE',
           // Additional config can be added here if needed
         },
         /**
@@ -1446,13 +1525,13 @@
          * This enables the evolution of memory-augmented architectures.
          */
         ADD_GRU_NODE: {
-          name: "ADD_GRU_NODE"
+          name: 'ADD_GRU_NODE',
           // Additional config can be added here if needed
         },
         /** Placeholder for the list of all mutation methods. */
         ALL: [],
         /** Placeholder for the list of mutation methods suitable for feedforward networks. */
-        FFW: []
+        FFW: [],
       };
       mutation.ALL = [
         mutation.ADD_NODE,
@@ -1473,7 +1552,7 @@
         mutation.BATCH_NORM,
         mutation.ADD_LSTM_NODE,
         // Added
-        mutation.ADD_GRU_NODE
+        mutation.ADD_GRU_NODE,
         // Added
       ];
       mutation.FFW = [
@@ -1486,17 +1565,17 @@
         mutation.MOD_ACTIVATION,
         mutation.SWAP_NODES,
         mutation.REINIT_WEIGHT,
-        mutation.BATCH_NORM
+        mutation.BATCH_NORM,
       ];
       mutation_default = mutation;
-    }
+    },
   });
 
   // dist/methods/selection.js
   var selection;
   var init_selection = __esm({
-    "dist/methods/selection.js"() {
-      "use strict";
+    'dist/methods/selection.js'() {
+      'use strict';
       selection = {
         /**
          * Fitness Proportionate Selection (also known as Roulette Wheel Selection).
@@ -1508,7 +1587,7 @@
          * if there are large disparities.
          */
         FITNESS_PROPORTIONATE: {
-          name: "FITNESS_PROPORTIONATE"
+          name: 'FITNESS_PROPORTIONATE',
         },
         /**
          * Power Selection.
@@ -1521,8 +1600,8 @@
          * @property {number} power - The exponent applied to each individual's fitness score. Higher values increase selection pressure. Must be a positive number. Defaults to 4.
          */
         POWER: {
-          name: "POWER",
-          power: 4
+          name: 'POWER',
+          power: 4,
         },
         /**
          * Tournament Selection.
@@ -1539,19 +1618,19 @@
          * @property {number} probability - The probability (between 0 and 1) of selecting the absolute fittest individual from the tournament participants. Defaults to 0.5.
          */
         TOURNAMENT: {
-          name: "TOURNAMENT",
+          name: 'TOURNAMENT',
           size: 5,
-          probability: 0.5
-        }
+          probability: 0.5,
+        },
       };
-    }
+    },
   });
 
   // dist/methods/crossover.js
   var crossover;
   var init_crossover = __esm({
-    "dist/methods/crossover.js"() {
-      "use strict";
+    'dist/methods/crossover.js'() {
+      'use strict';
       crossover = {
         /**
          * Single-point crossover.
@@ -1563,8 +1642,8 @@
          * @see {@link https://en.wikipedia.org/wiki/Crossover_(genetic_algorithm)#One-point_crossover}
          */
         SINGLE_POINT: {
-          name: "SINGLE_POINT",
-          config: [0.4]
+          name: 'SINGLE_POINT',
+          config: [0.4],
         },
         /**
          * Two-point crossover.
@@ -1576,8 +1655,8 @@
          * @see {@link https://en.wikipedia.org/wiki/Crossover_(genetic_algorithm)#Two-point_and_k-point_crossover}
          */
         TWO_POINT: {
-          name: "TWO_POINT",
-          config: [0.4, 0.9]
+          name: 'TWO_POINT',
+          config: [0.4, 0.9],
         },
         /**
          * Uniform crossover.
@@ -1588,7 +1667,7 @@
          * @see {@link https://en.wikipedia.org/wiki/Crossover_(genetic_algorithm)#Uniform_crossover}
          */
         UNIFORM: {
-          name: "UNIFORM"
+          name: 'UNIFORM',
         },
         /**
          * Average crossover.
@@ -1599,43 +1678,43 @@
          * @see {@link https://en.wikipedia.org/wiki/Crossover_(genetic_algorithm)#Arithmetic_recombination}
          */
         AVERAGE: {
-          name: "AVERAGE"
-        }
+          name: 'AVERAGE',
+        },
       };
-    }
+    },
   });
 
   // dist/methods/connection.js
   var groupConnection, connection_default;
   var init_connection2 = __esm({
-    "dist/methods/connection.js"() {
-      "use strict";
+    'dist/methods/connection.js'() {
+      'use strict';
       groupConnection = Object.freeze({
         // Renamed export
         /**
          * Connects all nodes in the source group to all nodes in the target group.
          */
         ALL_TO_ALL: Object.freeze({
-          name: "ALL_TO_ALL"
+          name: 'ALL_TO_ALL',
           // Renamed name
         }),
         /**
          * Connects all nodes in the source group to all nodes in the target group, excluding self-connections (if groups are identical).
          */
         ALL_TO_ELSE: Object.freeze({
-          name: "ALL_TO_ELSE"
+          name: 'ALL_TO_ELSE',
           // Renamed name
         }),
         /**
          * Connects each node in the source group to the node at the same index in the target group. Requires groups to be the same size.
          */
         ONE_TO_ONE: Object.freeze({
-          name: "ONE_TO_ONE"
+          name: 'ONE_TO_ONE',
           // Renamed name
-        })
+        }),
       });
       connection_default = groupConnection;
-    }
+    },
   });
 
   // dist/methods/methods.js
@@ -1648,11 +1727,11 @@
     gating: () => gating,
     groupConnection: () => connection_default,
     mutation: () => mutation,
-    selection: () => selection
+    selection: () => selection,
   });
   var init_methods = __esm({
-    "dist/methods/methods.js"() {
-      "use strict";
+    'dist/methods/methods.js'() {
+      'use strict';
       init_cost();
       init_rate();
       init_activation();
@@ -1661,18 +1740,18 @@
       init_selection();
       init_crossover();
       init_connection2();
-    }
+    },
   });
 
   // dist/architecture/node.js
   var node_exports = {};
   __export(node_exports, {
-    default: () => Node
+    default: () => Node,
   });
   var Node;
   var init_node = __esm({
-    "dist/architecture/node.js"() {
-      "use strict";
+    'dist/architecture/node.js'() {
+      'use strict';
       init_connection();
       init_config();
       init_methods();
@@ -1752,9 +1831,10 @@
          * @param type The type of the node ('input', 'hidden', or 'output'). Defaults to 'hidden'.
          * @param customActivation Optional custom activation function (should handle derivative if needed).
          */
-        constructor(type = "hidden", customActivation, rng = Math.random) {
-          this.bias = type === "input" ? 0 : rng() * 0.2 - 0.1;
-          this.squash = customActivation || activation_default.logistic || ((x) => x);
+        constructor(type = 'hidden', customActivation, rng = Math.random) {
+          this.bias = type === 'input' ? 0 : rng() * 0.2 - 0.1;
+          this.squash =
+            customActivation || activation_default.logistic || ((x) => x);
           this.type = type;
           this.activation = 0;
           this.state = 0;
@@ -1767,14 +1847,14 @@
             out: [],
             gated: [],
             // Self-connection initialized as an empty array.
-            self: []
+            self: [],
           };
           this.error = {
             responsibility: 0,
             projected: 0,
-            gated: 0
+            gated: 0,
           };
-          if (typeof this.index === "undefined") {
+          if (typeof this.index === 'undefined') {
             this.index = _Node._globalNodeIndex++;
           }
           this.geneId = _Node._nextGeneId++;
@@ -1830,8 +1910,8 @@
             this.activation = 0;
             return 0;
           }
-          if (typeof input !== "undefined") {
-            if (this.type === "input") {
+          if (typeof input !== 'undefined') {
+            if (this.type === 'input') {
               this.activation = input;
               return this.activation;
             }
@@ -1849,26 +1929,23 @@
           let newState = this.bias;
           if (this.connections.self.length) {
             for (const conn of this.connections.self) {
-              if (conn.dcMask === 0)
-                continue;
+              if (conn.dcMask === 0) continue;
               newState += conn.gain * conn.weight * this.old;
             }
           }
           if (this.connections.in.length) {
             for (const conn of this.connections.in) {
-              if (conn.dcMask === 0 || conn.enabled === false)
-                continue;
+              if (conn.dcMask === 0 || conn.enabled === false) continue;
               newState += conn.from.activation * conn.weight * conn.gain;
             }
           }
           this.state = newState;
-          if (typeof this.squash !== "function") {
+          if (typeof this.squash !== 'function') {
             if (config.warnings)
-              console.warn("Invalid activation function; using identity.");
+              console.warn('Invalid activation function; using identity.');
             this.squash = activation_default.identity;
           }
-          if (typeof this.mask !== "number")
-            this.mask = 1;
+          if (typeof this.mask !== 'number') this.mask = 1;
           this.activation = this.squash(this.state) * this.mask;
           this.derivative = this.squash(this.state, true);
           if (this.connections.gated.length) {
@@ -1885,7 +1962,9 @@
         /** @deprecated Use connections.gated; retained for legacy tests */
         get gates() {
           if (config.warnings)
-            console.warn("Node.gates is deprecated; use node.connections.gated");
+            console.warn(
+              'Node.gates is deprecated; use node.connections.gated'
+            );
           return this.connections.gated;
         }
         set gates(val) {
@@ -1895,8 +1974,7 @@
         get nodes() {
           return [];
         }
-        set nodes(_val) {
-        }
+        set nodes(_val) {}
         /**
          * Back-propagates the error signal through the node and calculates weight/bias updates.
          *
@@ -1928,27 +2006,32 @@
             this.bias += momentum * this.previousDeltaBias;
           }
           let error = 0;
-          if (this.type === "output") {
-            this.error.responsibility = this.error.projected = target - this.activation;
+          if (this.type === 'output') {
+            this.error.responsibility = this.error.projected =
+              target - this.activation;
           } else {
             for (const connection of this.connections.out) {
-              error += connection.to.error.responsibility * // Error responsibility of the node this connection points to.
-              connection.weight * // Weight of the connection.
-              connection.gain;
+              error +=
+                connection.to.error.responsibility * // Error responsibility of the node this connection points to.
+                connection.weight * // Weight of the connection.
+                connection.gain;
             }
             this.error.projected = this.derivative * error;
             error = 0;
             for (const connection of this.connections.gated) {
               const node = connection.to;
-              let influence = node.connections.self.reduce((sum, selfConn) => sum + (selfConn.gater === this ? node.old : 0), 0);
+              let influence = node.connections.self.reduce(
+                (sum, selfConn) =>
+                  sum + (selfConn.gater === this ? node.old : 0),
+                0
+              );
               influence += connection.weight * connection.from.activation;
               error += node.error.responsibility * influence;
             }
             this.error.gated = this.derivative * error;
             this.error.responsibility = this.error.projected + this.error.gated;
           }
-          if (this.type === "constant")
-            return;
+          if (this.type === 'constant') return;
           for (const connection of this.connections.in) {
             if (connection.dcMask === 0) {
               connection.totalDeltaWeight += 0;
@@ -1961,12 +2044,15 @@
               gradient += node.error.responsibility * value;
             }
             let regTerm = 0;
-            if (typeof regularization === "function") {
+            if (typeof regularization === 'function') {
               regTerm = regularization(connection.weight);
-            } else if (typeof regularization === "object" && regularization !== null) {
-              if (regularization.type === "L1") {
+            } else if (
+              typeof regularization === 'object' &&
+              regularization !== null
+            ) {
+              if (regularization.type === 'L1') {
                 regTerm = regularization.lambda * Math.sign(connection.weight);
-              } else if (regularization.type === "L2") {
+              } else if (regularization.type === 'L2') {
                 regTerm = regularization.lambda * connection.weight;
               }
             } else {
@@ -1974,10 +2060,10 @@
             }
             let deltaWeight = rate * (gradient * this.mask - regTerm);
             if (!Number.isFinite(deltaWeight)) {
-              console.warn("deltaWeight is not finite, clamping to 0", {
+              console.warn('deltaWeight is not finite, clamping to 0', {
                 node: this.index,
                 connection,
-                deltaWeight
+                deltaWeight,
               });
               deltaWeight = 0;
             } else if (Math.abs(deltaWeight) > 1e3) {
@@ -1985,20 +2071,28 @@
             }
             connection.totalDeltaWeight += deltaWeight;
             if (!Number.isFinite(connection.totalDeltaWeight)) {
-              console.warn("totalDeltaWeight became NaN/Infinity, resetting to 0", {
-                node: this.index,
-                connection
-              });
+              console.warn(
+                'totalDeltaWeight became NaN/Infinity, resetting to 0',
+                {
+                  node: this.index,
+                  connection,
+                }
+              );
               connection.totalDeltaWeight = 0;
             }
             if (update) {
-              let currentDeltaWeight = connection.totalDeltaWeight + momentum * connection.previousDeltaWeight;
+              let currentDeltaWeight =
+                connection.totalDeltaWeight +
+                momentum * connection.previousDeltaWeight;
               if (!Number.isFinite(currentDeltaWeight)) {
-                console.warn("currentDeltaWeight is not finite, clamping to 0", {
-                  node: this.index,
-                  connection,
-                  currentDeltaWeight
-                });
+                console.warn(
+                  'currentDeltaWeight is not finite, clamping to 0',
+                  {
+                    node: this.index,
+                    connection,
+                    currentDeltaWeight,
+                  }
+                );
                 currentDeltaWeight = 0;
               } else if (Math.abs(currentDeltaWeight) > 1e3) {
                 currentDeltaWeight = Math.sign(currentDeltaWeight) * 1e3;
@@ -2008,7 +2102,10 @@
               }
               connection.weight += currentDeltaWeight;
               if (!Number.isFinite(connection.weight)) {
-                console.warn(`Weight update produced invalid value: ${connection.weight}. Resetting to 0.`, { node: this.index, connection });
+                console.warn(
+                  `Weight update produced invalid value: ${connection.weight}. Resetting to 0.`,
+                  { node: this.index, connection }
+                );
                 connection.weight = 0;
               } else if (Math.abs(connection.weight) > 1e6) {
                 connection.weight = Math.sign(connection.weight) * 1e6;
@@ -2029,12 +2126,15 @@
               gradient += node.error.responsibility * value;
             }
             let regTerm = 0;
-            if (typeof regularization === "function") {
+            if (typeof regularization === 'function') {
               regTerm = regularization(connection.weight);
-            } else if (typeof regularization === "object" && regularization !== null) {
-              if (regularization.type === "L1") {
+            } else if (
+              typeof regularization === 'object' &&
+              regularization !== null
+            ) {
+              if (regularization.type === 'L1') {
                 regTerm = regularization.lambda * Math.sign(connection.weight);
-              } else if (regularization.type === "L2") {
+              } else if (regularization.type === 'L2') {
                 regTerm = regularization.lambda * connection.weight;
               }
             } else {
@@ -2042,10 +2142,10 @@
             }
             let deltaWeight = rate * (gradient * this.mask - regTerm);
             if (!Number.isFinite(deltaWeight)) {
-              console.warn("self deltaWeight is not finite, clamping to 0", {
+              console.warn('self deltaWeight is not finite, clamping to 0', {
                 node: this.index,
                 connection,
-                deltaWeight
+                deltaWeight,
               });
               deltaWeight = 0;
             } else if (Math.abs(deltaWeight) > 1e3) {
@@ -2053,17 +2153,25 @@
             }
             connection.totalDeltaWeight += deltaWeight;
             if (!Number.isFinite(connection.totalDeltaWeight)) {
-              console.warn("self totalDeltaWeight became NaN/Infinity, resetting to 0", { node: this.index, connection });
+              console.warn(
+                'self totalDeltaWeight became NaN/Infinity, resetting to 0',
+                { node: this.index, connection }
+              );
               connection.totalDeltaWeight = 0;
             }
             if (update) {
-              let currentDeltaWeight = connection.totalDeltaWeight + momentum * connection.previousDeltaWeight;
+              let currentDeltaWeight =
+                connection.totalDeltaWeight +
+                momentum * connection.previousDeltaWeight;
               if (!Number.isFinite(currentDeltaWeight)) {
-                console.warn("self currentDeltaWeight is not finite, clamping to 0", {
-                  node: this.index,
-                  connection,
-                  currentDeltaWeight
-                });
+                console.warn(
+                  'self currentDeltaWeight is not finite, clamping to 0',
+                  {
+                    node: this.index,
+                    connection,
+                    currentDeltaWeight,
+                  }
+                );
                 currentDeltaWeight = 0;
               } else if (Math.abs(currentDeltaWeight) > 1e3) {
                 currentDeltaWeight = Math.sign(currentDeltaWeight) * 1e3;
@@ -2073,7 +2181,10 @@
               }
               connection.weight += currentDeltaWeight;
               if (!Number.isFinite(connection.weight)) {
-                console.warn("self weight update produced invalid value, resetting to 0", { node: this.index, connection });
+                console.warn(
+                  'self weight update produced invalid value, resetting to 0',
+                  { node: this.index, connection }
+                );
                 connection.weight = 0;
               } else if (Math.abs(connection.weight) > 1e6) {
                 connection.weight = Math.sign(connection.weight) * 1e6;
@@ -2084,9 +2195,9 @@
           }
           let deltaBias = rate * this.error.responsibility;
           if (!Number.isFinite(deltaBias)) {
-            console.warn("deltaBias is not finite, clamping to 0", {
+            console.warn('deltaBias is not finite, clamping to 0', {
               node: this.index,
-              deltaBias
+              deltaBias,
             });
             deltaBias = 0;
           } else if (Math.abs(deltaBias) > 1e3) {
@@ -2094,17 +2205,18 @@
           }
           this.totalDeltaBias += deltaBias;
           if (!Number.isFinite(this.totalDeltaBias)) {
-            console.warn("totalDeltaBias became NaN/Infinity, resetting to 0", {
-              node: this.index
+            console.warn('totalDeltaBias became NaN/Infinity, resetting to 0', {
+              node: this.index,
             });
             this.totalDeltaBias = 0;
           }
           if (update) {
-            let currentDeltaBias = this.totalDeltaBias + momentum * this.previousDeltaBias;
+            let currentDeltaBias =
+              this.totalDeltaBias + momentum * this.previousDeltaBias;
             if (!Number.isFinite(currentDeltaBias)) {
-              console.warn("currentDeltaBias is not finite, clamping to 0", {
+              console.warn('currentDeltaBias is not finite, clamping to 0', {
                 node: this.index,
-                currentDeltaBias
+                currentDeltaBias,
               });
               currentDeltaBias = 0;
             } else if (Math.abs(currentDeltaBias) > 1e3) {
@@ -2115,9 +2227,12 @@
             }
             this.bias += currentDeltaBias;
             if (!Number.isFinite(this.bias)) {
-              console.warn("bias update produced invalid value, resetting to 0", {
-                node: this.index
-              });
+              console.warn(
+                'bias update produced invalid value, resetting to 0',
+                {
+                  node: this.index,
+                }
+              );
               this.bias = 0;
             } else if (Math.abs(this.bias) > 1e6) {
               this.bias = Math.sign(this.bias) * 1e6;
@@ -2138,7 +2253,7 @@
             bias: this.bias,
             type: this.type,
             squash: this.squash ? this.squash.name : null,
-            mask: this.mask
+            mask: this.mask,
           };
         }
         /**
@@ -2152,10 +2267,12 @@
           node.mask = json.mask;
           if (json.squash) {
             const squashFn = activation_default[json.squash];
-            if (typeof squashFn === "function") {
+            if (typeof squashFn === 'function') {
               node.squash = squashFn;
             } else {
-              console.warn(`fromJSON: Unknown or invalid squash function '${json.squash}' for node. Using identity.`);
+              console.warn(
+                `fromJSON: Unknown or invalid squash function '${json.squash}' for node. Using identity.`
+              );
               node.squash = activation_default.identity;
             }
           }
@@ -2181,7 +2298,7 @@
          */
         mutate(method) {
           if (!method) {
-            throw new Error("Mutation method cannot be null or undefined.");
+            throw new Error('Mutation method cannot be null or undefined.');
           }
           if (!(method.name in mutation)) {
             throw new Error(`Unknown mutation method: ${method.name}`);
@@ -2189,14 +2306,20 @@
           switch (method) {
             case mutation.MOD_ACTIVATION:
               if (!method.allowed || method.allowed.length === 0) {
-                console.warn("MOD_ACTIVATION mutation called without allowed functions specified.");
+                console.warn(
+                  'MOD_ACTIVATION mutation called without allowed functions specified.'
+                );
                 return;
               }
               const allowed = method.allowed;
               const currentIndex = allowed.indexOf(this.squash);
               let newIndex = currentIndex;
               if (allowed.length > 1) {
-                newIndex = (currentIndex + Math.floor(Math.random() * (allowed.length - 1)) + 1) % allowed.length;
+                newIndex =
+                  (currentIndex +
+                    Math.floor(Math.random() * (allowed.length - 1)) +
+                    1) %
+                  allowed.length;
               }
               this.squash = allowed[newIndex];
               break;
@@ -2210,13 +2333,16 @@
               const reinitMin = method.min ?? -1;
               const reinitMax = method.max ?? 1;
               for (const conn of this.connections.in) {
-                conn.weight = Math.random() * (reinitMax - reinitMin) + reinitMin;
+                conn.weight =
+                  Math.random() * (reinitMax - reinitMin) + reinitMin;
               }
               for (const conn of this.connections.out) {
-                conn.weight = Math.random() * (reinitMax - reinitMin) + reinitMin;
+                conn.weight =
+                  Math.random() * (reinitMax - reinitMin) + reinitMin;
               }
               for (const conn of this.connections.self) {
-                conn.weight = Math.random() * (reinitMax - reinitMin) + reinitMin;
+                conn.weight =
+                  Math.random() * (reinitMax - reinitMin) + reinitMin;
               }
               break;
             case mutation.BATCH_NORM:
@@ -2239,13 +2365,17 @@
         connect(target, weight) {
           const connections = [];
           if (!target) {
-            throw new Error("Cannot connect to an undefined target.");
+            throw new Error('Cannot connect to an undefined target.');
           }
-          if ("bias" in target) {
+          if ('bias' in target) {
             const targetNode = target;
             if (targetNode === this) {
               if (this.connections.self.length === 0) {
-                const selfConnection = Connection.acquire(this, this, weight ?? 1);
+                const selfConnection = Connection.acquire(
+                  this,
+                  this,
+                  weight ?? 1
+                );
                 this.connections.self.push(selfConnection);
                 connections.push(selfConnection);
               }
@@ -2255,7 +2385,7 @@
               this.connections.out.push(connection);
               connections.push(connection);
             }
-          } else if ("nodes" in target && Array.isArray(target.nodes)) {
+          } else if ('nodes' in target && Array.isArray(target.nodes)) {
             for (const node of target.nodes) {
               const connection = Connection.acquire(this, node, weight);
               node.connections.in.push(connection);
@@ -2263,7 +2393,9 @@
               connections.push(connection);
             }
           } else {
-            throw new Error("Invalid target type for connection. Must be a Node or a group { nodes: Node[] }.");
+            throw new Error(
+              'Invalid target type for connection. Must be a Node or a group { nodes: Node[] }.'
+            );
           }
           return connections;
         }
@@ -2307,15 +2439,19 @@
           }
           for (const connection of connections) {
             if (!connection || !connection.from || !connection.to) {
-              console.warn("Attempted to gate an invalid or incomplete connection.");
+              console.warn(
+                'Attempted to gate an invalid or incomplete connection.'
+              );
               continue;
             }
             if (connection.gater === this) {
-              console.warn("Node is already gating this connection.");
+              console.warn('Node is already gating this connection.');
               continue;
             }
             if (connection.gater !== null) {
-              console.warn("Connection is already gated by another node. Ungate first.");
+              console.warn(
+                'Connection is already gated by another node. Ungate first.'
+              );
               continue;
             }
             this.connections.gated.push(connection);
@@ -2333,8 +2469,7 @@
             connections = [connections];
           }
           for (const connection of connections) {
-            if (!connection)
-              continue;
+            if (!connection) continue;
             const index = this.connections.gated.indexOf(connection);
             if (index !== -1) {
               this.connections.gated.splice(index, 1);
@@ -2372,8 +2507,7 @@
          * @returns True if this node projects to the target node, false otherwise.
          */
         isProjectingTo(node) {
-          if (node === this && this.connections.self.length > 0)
-            return true;
+          if (node === this && this.connections.self.length > 0) return true;
           return this.connections.out.some((conn) => conn.to === node);
         }
         /**
@@ -2384,8 +2518,7 @@
          * @returns True if the given node projects to this node, false otherwise.
          */
         isProjectedBy(node) {
-          if (node === this && this.connections.self.length > 0)
-            return true;
+          if (node === this && this.connections.self.length > 0) return true;
           return this.connections.in.some((conn) => conn.from === node);
         }
         /**
@@ -2395,7 +2528,7 @@
          * @param momentum Momentum factor (0 to disable)
          */
         applyBatchUpdates(momentum) {
-          return this.applyBatchUpdatesWithOptimizer({ type: "sgd", momentum });
+          return this.applyBatchUpdatesWithOptimizer({ type: 'sgd', momentum });
         }
         /**
          * Extended batch update supporting multiple optimizers.
@@ -2441,8 +2574,9 @@
          * @param opts Optimizer configuration (see above).
          */
         applyBatchUpdatesWithOptimizer(opts) {
-          const type = opts.type || "sgd";
-          const effectiveType = type === "lookahead" ? opts.baseType || "sgd" : type;
+          const type = opts.type || 'sgd';
+          const effectiveType =
+            type === 'lookahead' ? opts.baseType || 'sgd' : type;
           const momentum = opts.momentum ?? 0;
           const beta1 = opts.beta1 ?? 0.9;
           const beta2 = opts.beta2 ?? 0.999;
@@ -2450,97 +2584,135 @@
           const wd = opts.weightDecay ?? 0;
           const lrScale = opts.lrScale ?? 1;
           const t = Math.max(1, Math.floor(opts.t ?? 1));
-          if (type === "lookahead") {
+          if (type === 'lookahead') {
             this._la_k = this._la_k || opts.la_k || 5;
             this._la_alpha = this._la_alpha || opts.la_alpha || 0.5;
             this._la_step = (this._la_step || 0) + 1;
-            if (!this._la_shadowBias)
-              this._la_shadowBias = this.bias;
+            if (!this._la_shadowBias) this._la_shadowBias = this.bias;
           }
           const applyConn = (conn) => {
             let g = conn.totalDeltaWeight || 0;
-            if (!Number.isFinite(g))
-              g = 0;
+            if (!Number.isFinite(g)) g = 0;
             switch (effectiveType) {
-              case "rmsprop": {
-                conn.gradientAccumulator = (conn.gradientAccumulator ?? 0) * 0.9 + 0.1 * (g * g);
+              case 'rmsprop': {
+                conn.gradientAccumulator =
+                  (conn.gradientAccumulator ?? 0) * 0.9 + 0.1 * (g * g);
                 const adj = g / (Math.sqrt(conn.gradientAccumulator) + eps);
                 this._safeUpdateWeight(conn, adj * lrScale);
                 break;
               }
-              case "adagrad": {
-                conn.gradientAccumulator = (conn.gradientAccumulator ?? 0) + g * g;
+              case 'adagrad': {
+                conn.gradientAccumulator =
+                  (conn.gradientAccumulator ?? 0) + g * g;
                 const adj = g / (Math.sqrt(conn.gradientAccumulator) + eps);
                 this._safeUpdateWeight(conn, adj * lrScale);
                 break;
               }
-              case "adam":
-              case "adamw":
-              case "amsgrad": {
-                conn.firstMoment = (conn.firstMoment ?? 0) * beta1 + (1 - beta1) * g;
-                conn.secondMoment = (conn.secondMoment ?? 0) * beta2 + (1 - beta2) * (g * g);
-                if (effectiveType === "amsgrad") {
-                  conn.maxSecondMoment = Math.max(conn.maxSecondMoment ?? 0, conn.secondMoment ?? 0);
+              case 'adam':
+              case 'adamw':
+              case 'amsgrad': {
+                conn.firstMoment =
+                  (conn.firstMoment ?? 0) * beta1 + (1 - beta1) * g;
+                conn.secondMoment =
+                  (conn.secondMoment ?? 0) * beta2 + (1 - beta2) * (g * g);
+                if (effectiveType === 'amsgrad') {
+                  conn.maxSecondMoment = Math.max(
+                    conn.maxSecondMoment ?? 0,
+                    conn.secondMoment ?? 0
+                  );
                 }
-                const vEff = effectiveType === "amsgrad" ? conn.maxSecondMoment : conn.secondMoment;
+                const vEff =
+                  effectiveType === 'amsgrad'
+                    ? conn.maxSecondMoment
+                    : conn.secondMoment;
                 const mHat = conn.firstMoment / (1 - Math.pow(beta1, t));
                 const vHat = vEff / (1 - Math.pow(beta2, t));
-                let step = mHat / (Math.sqrt(vHat) + eps) * lrScale;
-                if (effectiveType === "adamw" && wd !== 0)
+                let step = (mHat / (Math.sqrt(vHat) + eps)) * lrScale;
+                if (effectiveType === 'adamw' && wd !== 0)
                   step -= wd * (conn.weight || 0);
                 this._safeUpdateWeight(conn, step);
                 break;
               }
-              case "adamax": {
-                conn.firstMoment = (conn.firstMoment ?? 0) * beta1 + (1 - beta1) * g;
-                conn.infinityNorm = Math.max((conn.infinityNorm ?? 0) * beta2, Math.abs(g));
+              case 'adamax': {
+                conn.firstMoment =
+                  (conn.firstMoment ?? 0) * beta1 + (1 - beta1) * g;
+                conn.infinityNorm = Math.max(
+                  (conn.infinityNorm ?? 0) * beta2,
+                  Math.abs(g)
+                );
                 const mHat = conn.firstMoment / (1 - Math.pow(beta1, t));
-                const stepVal = mHat / (conn.infinityNorm || 1e-12) * lrScale;
+                const stepVal = (mHat / (conn.infinityNorm || 1e-12)) * lrScale;
                 this._safeUpdateWeight(conn, stepVal);
                 break;
               }
-              case "nadam": {
-                conn.firstMoment = (conn.firstMoment ?? 0) * beta1 + (1 - beta1) * g;
-                conn.secondMoment = (conn.secondMoment ?? 0) * beta2 + (1 - beta2) * (g * g);
+              case 'nadam': {
+                conn.firstMoment =
+                  (conn.firstMoment ?? 0) * beta1 + (1 - beta1) * g;
+                conn.secondMoment =
+                  (conn.secondMoment ?? 0) * beta2 + (1 - beta2) * (g * g);
                 const mHat = conn.firstMoment / (1 - Math.pow(beta1, t));
                 const vHat = conn.secondMoment / (1 - Math.pow(beta2, t));
-                const mNesterov = mHat * beta1 + (1 - beta1) * g / (1 - Math.pow(beta1, t));
-                this._safeUpdateWeight(conn, mNesterov / (Math.sqrt(vHat) + eps) * lrScale);
+                const mNesterov =
+                  mHat * beta1 + ((1 - beta1) * g) / (1 - Math.pow(beta1, t));
+                this._safeUpdateWeight(
+                  conn,
+                  (mNesterov / (Math.sqrt(vHat) + eps)) * lrScale
+                );
                 break;
               }
-              case "radam": {
-                conn.firstMoment = (conn.firstMoment ?? 0) * beta1 + (1 - beta1) * g;
-                conn.secondMoment = (conn.secondMoment ?? 0) * beta2 + (1 - beta2) * (g * g);
+              case 'radam': {
+                conn.firstMoment =
+                  (conn.firstMoment ?? 0) * beta1 + (1 - beta1) * g;
+                conn.secondMoment =
+                  (conn.secondMoment ?? 0) * beta2 + (1 - beta2) * (g * g);
                 const mHat = conn.firstMoment / (1 - Math.pow(beta1, t));
                 const vHat = conn.secondMoment / (1 - Math.pow(beta2, t));
                 const rhoInf = 2 / (1 - beta2) - 1;
-                const rhoT = rhoInf - 2 * t * Math.pow(beta2, t) / (1 - Math.pow(beta2, t));
+                const rhoT =
+                  rhoInf -
+                  (2 * t * Math.pow(beta2, t)) / (1 - Math.pow(beta2, t));
                 if (rhoT > 4) {
-                  const rt = Math.sqrt((rhoT - 4) * (rhoT - 2) * rhoInf / ((rhoInf - 4) * (rhoInf - 2) * rhoT));
-                  this._safeUpdateWeight(conn, rt * mHat / (Math.sqrt(vHat) + eps) * lrScale);
+                  const rt = Math.sqrt(
+                    ((rhoT - 4) * (rhoT - 2) * rhoInf) /
+                      ((rhoInf - 4) * (rhoInf - 2) * rhoT)
+                  );
+                  this._safeUpdateWeight(
+                    conn,
+                    ((rt * mHat) / (Math.sqrt(vHat) + eps)) * lrScale
+                  );
                 } else {
                   this._safeUpdateWeight(conn, mHat * lrScale);
                 }
                 break;
               }
-              case "lion": {
-                conn.firstMoment = (conn.firstMoment ?? 0) * beta1 + (1 - beta1) * g;
-                conn.secondMomentum = (conn.secondMomentum ?? 0) * beta2 + (1 - beta2) * g;
-                const update = Math.sign((conn.firstMoment || 0) + (conn.secondMomentum || 0));
+              case 'lion': {
+                conn.firstMoment =
+                  (conn.firstMoment ?? 0) * beta1 + (1 - beta1) * g;
+                conn.secondMomentum =
+                  (conn.secondMomentum ?? 0) * beta2 + (1 - beta2) * g;
+                const update = Math.sign(
+                  (conn.firstMoment || 0) + (conn.secondMomentum || 0)
+                );
                 this._safeUpdateWeight(conn, -update * lrScale);
                 break;
               }
-              case "adabelief": {
-                conn.firstMoment = (conn.firstMoment ?? 0) * beta1 + (1 - beta1) * g;
+              case 'adabelief': {
+                conn.firstMoment =
+                  (conn.firstMoment ?? 0) * beta1 + (1 - beta1) * g;
                 const g_m = g - conn.firstMoment;
-                conn.secondMoment = (conn.secondMoment ?? 0) * beta2 + (1 - beta2) * (g_m * g_m);
+                conn.secondMoment =
+                  (conn.secondMoment ?? 0) * beta2 + (1 - beta2) * (g_m * g_m);
                 const mHat = conn.firstMoment / (1 - Math.pow(beta1, t));
                 const vHat = conn.secondMoment / (1 - Math.pow(beta2, t));
-                this._safeUpdateWeight(conn, mHat / (Math.sqrt(vHat) + eps + 1e-12) * lrScale);
+                this._safeUpdateWeight(
+                  conn,
+                  (mHat / (Math.sqrt(vHat) + eps + 1e-12)) * lrScale
+                );
                 break;
               }
               default: {
-                let currentDeltaWeight = g + momentum * (conn.previousDeltaWeight || 0);
+                let currentDeltaWeight =
+                  g + momentum * (conn.previousDeltaWeight || 0);
                 if (!Number.isFinite(currentDeltaWeight))
                   currentDeltaWeight = 0;
                 if (Math.abs(currentDeltaWeight) > 1e3)
@@ -2549,81 +2721,96 @@
                 conn.previousDeltaWeight = currentDeltaWeight;
               }
             }
-            if (effectiveType === "adamw" && wd !== 0) {
+            if (effectiveType === 'adamw' && wd !== 0) {
               this._safeUpdateWeight(conn, -wd * (conn.weight || 0) * lrScale);
             }
             conn.totalDeltaWeight = 0;
           };
-          for (const connection of this.connections.in)
-            applyConn(connection);
-          for (const connection of this.connections.self)
-            applyConn(connection);
-          if (this.type !== "input" && this.type !== "constant") {
+          for (const connection of this.connections.in) applyConn(connection);
+          for (const connection of this.connections.self) applyConn(connection);
+          if (this.type !== 'input' && this.type !== 'constant') {
             let gB = this.totalDeltaBias || 0;
-            if (!Number.isFinite(gB))
-              gB = 0;
-            if ([
-              "adam",
-              "adamw",
-              "amsgrad",
-              "adamax",
-              "nadam",
-              "radam",
-              "lion",
-              "adabelief"
-            ].includes(effectiveType)) {
+            if (!Number.isFinite(gB)) gB = 0;
+            if (
+              [
+                'adam',
+                'adamw',
+                'amsgrad',
+                'adamax',
+                'nadam',
+                'radam',
+                'lion',
+                'adabelief',
+              ].includes(effectiveType)
+            ) {
               this.opt_mB = (this.opt_mB ?? 0) * beta1 + (1 - beta1) * gB;
-              if (effectiveType === "lion") {
+              if (effectiveType === 'lion') {
                 this.opt_mB2 = (this.opt_mB2 ?? 0) * beta2 + (1 - beta2) * gB;
               }
-              this.opt_vB = (this.opt_vB ?? 0) * beta2 + (1 - beta2) * (effectiveType === "adabelief" ? Math.pow(gB - this.opt_mB, 2) : gB * gB);
-              if (effectiveType === "amsgrad") {
-                this.opt_vhatB = Math.max(this.opt_vhatB ?? 0, this.opt_vB ?? 0);
+              this.opt_vB =
+                (this.opt_vB ?? 0) * beta2 +
+                (1 - beta2) *
+                  (effectiveType === 'adabelief'
+                    ? Math.pow(gB - this.opt_mB, 2)
+                    : gB * gB);
+              if (effectiveType === 'amsgrad') {
+                this.opt_vhatB = Math.max(
+                  this.opt_vhatB ?? 0,
+                  this.opt_vB ?? 0
+                );
               }
-              const vEffB = effectiveType === "amsgrad" ? this.opt_vhatB : this.opt_vB;
+              const vEffB =
+                effectiveType === 'amsgrad' ? this.opt_vhatB : this.opt_vB;
               const mHatB = this.opt_mB / (1 - Math.pow(beta1, t));
               const vHatB = vEffB / (1 - Math.pow(beta2, t));
               let stepB;
-              if (effectiveType === "adamax") {
-                this.opt_uB = Math.max((this.opt_uB ?? 0) * beta2, Math.abs(gB));
-                stepB = mHatB / (this.opt_uB || 1e-12) * lrScale;
-              } else if (effectiveType === "nadam") {
-                const mNesterovB = mHatB * beta1 + (1 - beta1) * gB / (1 - Math.pow(beta1, t));
-                stepB = mNesterovB / (Math.sqrt(vHatB) + eps) * lrScale;
-              } else if (effectiveType === "radam") {
+              if (effectiveType === 'adamax') {
+                this.opt_uB = Math.max(
+                  (this.opt_uB ?? 0) * beta2,
+                  Math.abs(gB)
+                );
+                stepB = (mHatB / (this.opt_uB || 1e-12)) * lrScale;
+              } else if (effectiveType === 'nadam') {
+                const mNesterovB =
+                  mHatB * beta1 + ((1 - beta1) * gB) / (1 - Math.pow(beta1, t));
+                stepB = (mNesterovB / (Math.sqrt(vHatB) + eps)) * lrScale;
+              } else if (effectiveType === 'radam') {
                 const rhoInf = 2 / (1 - beta2) - 1;
-                const rhoT = rhoInf - 2 * t * Math.pow(beta2, t) / (1 - Math.pow(beta2, t));
+                const rhoT =
+                  rhoInf -
+                  (2 * t * Math.pow(beta2, t)) / (1 - Math.pow(beta2, t));
                 if (rhoT > 4) {
-                  const rt = Math.sqrt((rhoT - 4) * (rhoT - 2) * rhoInf / ((rhoInf - 4) * (rhoInf - 2) * rhoT));
-                  stepB = rt * mHatB / (Math.sqrt(vHatB) + eps) * lrScale;
+                  const rt = Math.sqrt(
+                    ((rhoT - 4) * (rhoT - 2) * rhoInf) /
+                      ((rhoInf - 4) * (rhoInf - 2) * rhoT)
+                  );
+                  stepB = ((rt * mHatB) / (Math.sqrt(vHatB) + eps)) * lrScale;
                 } else {
                   stepB = mHatB * lrScale;
                 }
-              } else if (effectiveType === "lion") {
+              } else if (effectiveType === 'lion') {
                 const updateB = Math.sign(this.opt_mB + this.opt_mB2);
                 stepB = -updateB * lrScale;
-              } else if (effectiveType === "adabelief") {
-                stepB = mHatB / (Math.sqrt(vHatB) + eps + 1e-12) * lrScale;
+              } else if (effectiveType === 'adabelief') {
+                stepB = (mHatB / (Math.sqrt(vHatB) + eps + 1e-12)) * lrScale;
               } else {
-                stepB = mHatB / (Math.sqrt(vHatB) + eps) * lrScale;
+                stepB = (mHatB / (Math.sqrt(vHatB) + eps)) * lrScale;
               }
-              if (effectiveType === "adamw" && wd !== 0)
+              if (effectiveType === 'adamw' && wd !== 0)
                 stepB -= wd * (this.bias || 0) * lrScale;
               let nextBias = this.bias + stepB;
-              if (!Number.isFinite(nextBias))
-                nextBias = 0;
+              if (!Number.isFinite(nextBias)) nextBias = 0;
               if (Math.abs(nextBias) > 1e6)
                 nextBias = Math.sign(nextBias) * 1e6;
               this.bias = nextBias;
             } else {
-              let currentDeltaBias = gB + momentum * (this.previousDeltaBias || 0);
-              if (!Number.isFinite(currentDeltaBias))
-                currentDeltaBias = 0;
+              let currentDeltaBias =
+                gB + momentum * (this.previousDeltaBias || 0);
+              if (!Number.isFinite(currentDeltaBias)) currentDeltaBias = 0;
               if (Math.abs(currentDeltaBias) > 1e3)
                 currentDeltaBias = Math.sign(currentDeltaBias) * 1e3;
               let nextBias = this.bias + currentDeltaBias * lrScale;
-              if (!Number.isFinite(nextBias))
-                nextBias = 0;
+              if (!Number.isFinite(nextBias)) nextBias = 0;
               if (Math.abs(nextBias) > 1e6)
                 nextBias = Math.sign(nextBias) * 1e6;
               this.bias = nextBias;
@@ -2634,22 +2821,23 @@
             this.previousDeltaBias = 0;
             this.totalDeltaBias = 0;
           }
-          if (type === "lookahead") {
+          if (type === 'lookahead') {
             const k = this._la_k || 5;
             const alpha = this._la_alpha || 0.5;
             if (this._la_step % k === 0) {
-              this._la_shadowBias = (1 - alpha) * this._la_shadowBias + alpha * this.bias;
+              this._la_shadowBias =
+                (1 - alpha) * this._la_shadowBias + alpha * this.bias;
               this.bias = this._la_shadowBias;
               const blendConn = (conn) => {
                 if (!conn.lookaheadShadowWeight)
                   conn.lookaheadShadowWeight = conn.weight;
-                conn.lookaheadShadowWeight = (1 - alpha) * conn.lookaheadShadowWeight + alpha * conn.weight;
+                conn.lookaheadShadowWeight =
+                  (1 - alpha) * conn.lookaheadShadowWeight +
+                  alpha * conn.weight;
                 conn.weight = conn.lookaheadShadowWeight;
               };
-              for (const c of this.connections.in)
-                blendConn(c);
-              for (const c of this.connections.self)
-                blendConn(c);
+              for (const c of this.connections.in) blendConn(c);
+              for (const c of this.connections.self) blendConn(c);
             }
           }
         }
@@ -2658,22 +2846,19 @@
          */
         _safeUpdateWeight(connection, delta) {
           let next = connection.weight + delta;
-          if (!Number.isFinite(next))
-            next = 0;
-          if (Math.abs(next) > 1e6)
-            next = Math.sign(next) * 1e6;
+          if (!Number.isFinite(next)) next = 0;
+          if (Math.abs(next) > 1e6) next = Math.sign(next) * 1e6;
           connection.weight = next;
         }
       };
-    }
+    },
   });
 
   // dist/architecture/nodePool.js
   function resetNode(node, type, rng = Math.random) {
-    if (type)
-      node.type = type;
+    if (type) node.type = type;
     const t = node.type;
-    node.bias = t === "input" ? 0 : rng() * 0.2 - 0.1;
+    node.bias = t === 'input' ? 0 : rng() * 0.2 - 0.1;
     node.activation = 0;
     node.state = 0;
     node.old = 0;
@@ -2689,21 +2874,19 @@
     node.geneId = nextGeneId++;
   }
   function acquireNode(opts = {}) {
-    const { type = "hidden", activationFn, rng } = opts;
+    const { type = 'hidden', activationFn, rng } = opts;
     let node;
     if (pool.length) {
       node = pool.pop();
       reusedCount++;
       resetNode(node, type, rng);
-      if (activationFn)
-        node.squash = activationFn;
+      if (activationFn) node.squash = activationFn;
     } else {
       node = new Node(type, activationFn, rng);
       node.geneId = nextGeneId++;
       freshCount++;
     }
-    if (pool.length > highWaterMark)
-      highWaterMark = pool.length;
+    if (pool.length > highWaterMark) highWaterMark = pool.length;
     return node;
   }
   function releaseNode(node) {
@@ -2713,27 +2896,26 @@
     node.connections.self.length = 0;
     node.error = { responsibility: 0, projected: 0, gated: 0 };
     pool.push(node);
-    if (pool.length > highWaterMark)
-      highWaterMark = pool.length;
+    if (pool.length > highWaterMark) highWaterMark = pool.length;
   }
   var pool, highWaterMark, nextGeneId, reusedCount, freshCount;
   var init_nodePool = __esm({
-    "dist/architecture/nodePool.js"() {
-      "use strict";
+    'dist/architecture/nodePool.js'() {
+      'use strict';
       init_node();
       pool = [];
       highWaterMark = 0;
       nextGeneId = 1;
       reusedCount = 0;
       freshCount = 0;
-    }
+    },
   });
 
   // dist/architecture/activationArrayPool.js
   var ActivationArrayPool, activationArrayPool;
   var init_activationArrayPool = __esm({
-    "dist/architecture/activationArrayPool.js"() {
-      "use strict";
+    'dist/architecture/activationArrayPool.js'() {
+      'use strict';
       init_config();
       ActivationArrayPool = class {
         /** Buckets keyed by length, storing reusable arrays. */
@@ -2760,7 +2942,9 @@
             return arr;
           }
           this.created++;
-          return config.float32Mode ? new Float32Array(size) : new Array(size).fill(0);
+          return config.float32Mode
+            ? new Float32Array(size)
+            : new Array(size).fill(0);
         }
         /**
          * Return an activation array to the pool. If the bucket is full per
@@ -2770,11 +2954,9 @@
          */
         release(array) {
           const size = array.length >>> 0;
-          if (!this.buckets.has(size))
-            this.buckets.set(size, []);
+          if (!this.buckets.has(size)) this.buckets.set(size, []);
           const bucket = this.buckets.get(size);
-          if (bucket.length < this.maxPerBucket)
-            bucket.push(array);
+          if (bucket.length < this.maxPerBucket) bucket.push(array);
         }
         /**
          * Clear all buckets and reset counters. Frees references to pooled arrays.
@@ -2791,7 +2973,7 @@
           return {
             created: this.created,
             reused: this.reused,
-            bucketCount: this.buckets.size
+            bucketCount: this.buckets.size,
           };
         }
         /**
@@ -2800,8 +2982,7 @@
          * @param cap Non-negative capacity per bucket (Infinity allowed).
          */
         setMaxPerBucket(cap) {
-          if (typeof cap === "number" && cap >= 0)
-            this.maxPerBucket = cap;
+          if (typeof cap === 'number' && cap >= 0) this.maxPerBucket = cap;
         }
         /**
          * Pre-allocate and retain arrays for a given size bucket up to `count` items.
@@ -2811,11 +2992,12 @@
          */
         prewarm(size, count) {
           const n = Math.max(0, Math.floor(count));
-          if (!this.buckets.has(size))
-            this.buckets.set(size, []);
+          if (!this.buckets.has(size)) this.buckets.set(size, []);
           const bucket = this.buckets.get(size);
           for (let i = 0; i < n && bucket.length < this.maxPerBucket; i++) {
-            const arr = config.float32Mode ? new Float32Array(size) : new Array(size).fill(0);
+            const arr = config.float32Mode
+              ? new Float32Array(size)
+              : new Array(size).fill(0);
             bucket.push(arr);
             this.created++;
           }
@@ -2831,157 +3013,176 @@
         }
       };
       activationArrayPool = new ActivationArrayPool();
-    }
+    },
   });
 
   // package.json
   var require_package = __commonJS({
-    "package.json"(exports, module) {
+    'package.json'(exports, module) {
       module.exports = {
-        name: "@reicek/neataptic-ts",
-        version: "0.1.10",
-        description: "Architecture-free neural network library with genetic algorithm implementations",
-        main: "./dist/neataptic.js",
-        module: "./dist/neataptic.js",
-        types: "./dist/neataptic.d.ts",
-        type: "module",
+        name: '@reicek/neataptic-ts',
+        version: '0.1.10',
+        description:
+          'Architecture-free neural network library with genetic algorithm implementations',
+        main: './dist/neataptic.js',
+        module: './dist/neataptic.js',
+        types: './dist/neataptic.d.ts',
+        type: 'module',
         scripts: {
-          test: "jest --no-cache --coverage --collect-coverage --runInBand --testPathIgnorePatterns=.e2e.test.ts --verbose",
-          pretest: "npm run build",
-          "test:bench": "jest --no-cache --runInBand --verbose --testPathPattern=benchmark",
-          "test:silent": "jest --no-cache --coverage --collect-coverage --runInBand --testPathIgnorePatterns=.e2e.test.ts --silent",
-          deploy: "npm run build && npm run test:dist && npm publish",
-          build: "npm run build:webpack && npm run build:ts",
-          "build:ts": "tsc",
-          "build:webpack": "webpack --config webpack.config.js",
-          "start:ts": "ts-node src/neataptic.ts",
-          "test:e2e": "cross-env FORCE_COLOR=true jest e2e.test.ts --no-cache --runInBand",
-          "test:e2e:logs": "npx jest e2e.test.ts --verbose --runInBand --no-cache",
-          "test:dist": "npm run build:ts && jest --no-cache --coverage --collect-coverage --runInBand --testPathIgnorePatterns=.e2e.test.ts",
-          "docs:build-scripts": "tsc -p tsconfig.docs.json && node scripts/write-dist-docs-pkg.cjs",
-          "docs:folders": "npm run docs:build-scripts && node ./dist-docs/scripts/generate-docs.js",
-          "docs:html": "npm run docs:build-scripts && node ./dist-docs/scripts/render-docs-html.js",
-          "build:ascii-maze": "npx esbuild test/examples/asciiMaze/browser-entry.ts --bundle --outfile=docs/assets/ascii-maze.bundle.js --platform=browser --format=iife --sourcemap --external:fs --external:child_process",
-          "docs:examples": "node scripts/copy-examples.cjs",
-          prettier: "npm run prettier:tests && npm run prettier:src",
-          "prettier:tests": "npx prettier --write **/*.test.ts",
-          "prettier:src": "npx prettier --write src/**/*.ts",
-          docs: "npm run build:ascii-maze && npm run docs:examples && npm run docs:build-scripts && node ./dist-docs/scripts/generate-docs.js && node ./dist-docs/scripts/render-docs-html.js",
-          "onnx:export": "node scripts/export-onnx.cjs"
+          test:
+            'jest --no-cache --coverage --collect-coverage --runInBand --testPathIgnorePatterns=.e2e.test.ts --verbose',
+          pretest: 'npm run build',
+          'test:bench':
+            'jest --no-cache --runInBand --verbose --testPathPattern=benchmark',
+          'test:silent':
+            'jest --no-cache --coverage --collect-coverage --runInBand --testPathIgnorePatterns=.e2e.test.ts --silent',
+          deploy: 'npm run build && npm run test:dist && npm publish',
+          build: 'npm run build:webpack && npm run build:ts',
+          'build:ts': 'tsc',
+          'build:webpack': 'webpack --config webpack.config.js',
+          'start:ts': 'ts-node src/neataptic.ts',
+          'test:e2e':
+            'cross-env FORCE_COLOR=true jest e2e.test.ts --no-cache --runInBand',
+          'test:e2e:logs':
+            'npx jest e2e.test.ts --verbose --runInBand --no-cache',
+          'test:dist':
+            'npm run build:ts && jest --no-cache --coverage --collect-coverage --runInBand --testPathIgnorePatterns=.e2e.test.ts',
+          'docs:build-scripts':
+            'tsc -p tsconfig.docs.json && node scripts/write-dist-docs-pkg.cjs',
+          'docs:folders':
+            'npm run docs:build-scripts && node ./dist-docs/scripts/generate-docs.js',
+          'docs:html':
+            'npm run docs:build-scripts && node ./dist-docs/scripts/render-docs-html.js',
+          'build:ascii-maze':
+            'npx esbuild test/examples/asciiMaze/browser-entry.ts --bundle --outfile=docs/assets/ascii-maze.bundle.js --platform=browser --format=iife --sourcemap --external:fs --external:child_process',
+          'docs:examples': 'node scripts/copy-examples.cjs',
+          prettier: 'npm run prettier:tests && npm run prettier:src',
+          'prettier:tests': 'npx prettier --write **/*.test.ts',
+          'prettier:src': 'npx prettier --write src/**/*.ts',
+          docs:
+            'npm run build:ascii-maze && npm run docs:examples && npm run docs:build-scripts && node ./dist-docs/scripts/generate-docs.js && node ./dist-docs/scripts/render-docs-html.js',
+          'onnx:export': 'node scripts/export-onnx.cjs',
         },
         exports: {
-          ".": {
-            types: "./dist/neataptic.d.ts",
-            import: "./dist/neataptic.js"
-          }
+          '.': {
+            types: './dist/neataptic.d.ts',
+            import: './dist/neataptic.js',
+          },
         },
         devDependencies: {
-          "@types/chai": "^5.2.1",
-          "@types/fs-extra": "^11.0.4",
-          "@types/jest": "^29.5.11",
-          "@types/node": "^20.19.10",
-          "@types/seedrandom": "^3.0.8",
-          "@types/webpack": "^5.28.5",
-          "@types/webpack-dev-server": "^4.7.2",
-          chai: "^4.3.4",
-          "copy-webpack-plugin": "^8.1.0",
-          "cross-env": "^7.0.3",
-          "fast-glob": "^3.3.3",
-          "fs-extra": "^11.3.1",
-          husky: "^6.0.0",
-          jest: "^29.7.0",
-          "jsdoc-to-markdown": "^9.1.1",
-          marked: "^12.0.2",
-          mkdocs: "^0.0.1",
-          "ts-jest": "^29.1.1",
-          "ts-loader": "^9.5.2",
-          "ts-morph": "^22.0.0",
-          "ts-node": "^10.9.2",
-          typescript: "^5.6.3",
-          "undici-types": "^7.8.0",
-          webpack: "^5.99.5",
-          "webpack-cli": "^6.0.1",
-          esbuild: "^0.23.0",
-          puppeteer: "^23.3.0"
+          '@types/chai': '^5.2.1',
+          '@types/fs-extra': '^11.0.4',
+          '@types/jest': '^29.5.11',
+          '@types/node': '^20.19.10',
+          '@types/seedrandom': '^3.0.8',
+          '@types/webpack': '^5.28.5',
+          '@types/webpack-dev-server': '^4.7.2',
+          chai: '^4.3.4',
+          'copy-webpack-plugin': '^8.1.0',
+          'cross-env': '^7.0.3',
+          'fast-glob': '^3.3.3',
+          'fs-extra': '^11.3.1',
+          husky: '^6.0.0',
+          jest: '^29.7.0',
+          'jsdoc-to-markdown': '^9.1.1',
+          marked: '^12.0.2',
+          mkdocs: '^0.0.1',
+          'ts-jest': '^29.1.1',
+          'ts-loader': '^9.5.2',
+          'ts-morph': '^22.0.0',
+          'ts-node': '^10.9.2',
+          typescript: '^5.6.3',
+          'undici-types': '^7.8.0',
+          webpack: '^5.99.5',
+          'webpack-cli': '^6.0.1',
+          esbuild: '^0.23.0',
+          puppeteer: '^23.3.0',
         },
         repository: {
-          type: "git",
-          url: "https://github.com/reicek/NeatapticTS.git"
+          type: 'git',
+          url: 'https://github.com/reicek/NeatapticTS.git',
         },
         keywords: [
-          "neural network",
-          "machine learning",
-          "genetic algorithm",
-          "mutation",
-          "neat"
+          'neural network',
+          'machine learning',
+          'genetic algorithm',
+          'mutation',
+          'neat',
         ],
         author: {
-          name: "Cesar Anton",
-          email: "reicek@gmail.com"
+          name: 'Cesar Anton',
+          email: 'reicek@gmail.com',
         },
-        license: "MIT",
+        license: 'MIT',
         publishConfig: {
-          access: "public",
-          registry: "https://registry.npmjs.org/"
+          access: 'public',
+          registry: 'https://registry.npmjs.org/',
         },
         bugs: {
-          url: "https://github.com/reicek/NeatapticTS/issues",
-          email: "reicek@gmail.com"
+          url: 'https://github.com/reicek/NeatapticTS/issues',
+          email: 'reicek@gmail.com',
         },
-        homepage: "https://reicek.github.io/NeatapticTS/",
+        homepage: 'https://reicek.github.io/NeatapticTS/',
         engines: {
-          node: ">=14.0.0"
+          node: '>=14.0.0',
         },
         prettier: {
-          singleQuote: true
+          singleQuote: true,
         },
         dependencies: {
-          build: "^0.1.4",
-          child_process: "^1.0.2",
-          os: "^0.1.2",
-          path: "^0.12.7",
-          seedrandom: "^3.0.5",
-          undici: "^5.0.0",
-          "undici-types": "^7.8.0"
-        }
+          build: '^0.1.4',
+          child_process: '^1.0.2',
+          os: '^0.1.2',
+          path: '^0.12.7',
+          seedrandom: '^3.0.5',
+          undici: '^5.0.0',
+          'undici-types': '^7.8.0',
+        },
       };
-    }
+    },
   });
 
   // dist/architecture/network/network.onnx.js
   function rebuildConnectionsLocal(networkLike) {
     const uniqueConnections = /* @__PURE__ */ new Set();
-    networkLike.nodes.forEach((node) => node.connections?.out.forEach((conn) => uniqueConnections.add(conn)));
+    networkLike.nodes.forEach((node) =>
+      node.connections?.out.forEach((conn) => uniqueConnections.add(conn))
+    );
     networkLike.connections = Array.from(uniqueConnections);
   }
   function mapActivationToOnnx(squash) {
-    const upperName = (squash?.name || "").toUpperCase();
-    if (upperName.includes("TANH"))
-      return "Tanh";
-    if (upperName.includes("LOGISTIC") || upperName.includes("SIGMOID"))
-      return "Sigmoid";
-    if (upperName.includes("RELU"))
-      return "Relu";
+    const upperName = (squash?.name || '').toUpperCase();
+    if (upperName.includes('TANH')) return 'Tanh';
+    if (upperName.includes('LOGISTIC') || upperName.includes('SIGMOID'))
+      return 'Sigmoid';
+    if (upperName.includes('RELU')) return 'Relu';
     if (squash)
-      console.warn(`Unsupported activation function ${squash.name} for ONNX export, defaulting to Identity.`);
-    return "Identity";
+      console.warn(
+        `Unsupported activation function ${squash.name} for ONNX export, defaulting to Identity.`
+      );
+    return 'Identity';
   }
   function inferLayerOrdering(network) {
-    const inputNodes = network.nodes.filter((n) => n.type === "input");
-    const outputNodes = network.nodes.filter((n) => n.type === "output");
-    const hiddenNodes = network.nodes.filter((n) => n.type === "hidden");
-    if (hiddenNodes.length === 0)
-      return [inputNodes, outputNodes];
+    const inputNodes = network.nodes.filter((n) => n.type === 'input');
+    const outputNodes = network.nodes.filter((n) => n.type === 'output');
+    const hiddenNodes = network.nodes.filter((n) => n.type === 'hidden');
+    if (hiddenNodes.length === 0) return [inputNodes, outputNodes];
     let remainingHidden = [...hiddenNodes];
     let previousLayer = inputNodes;
     const layerAccumulator = [];
     while (remainingHidden.length) {
-      const currentLayer = remainingHidden.filter((hidden) => hidden.connections.in.every((conn) => previousLayer.includes(conn.from)));
+      const currentLayer = remainingHidden.filter((hidden) =>
+        hidden.connections.in.every((conn) => previousLayer.includes(conn.from))
+      );
       if (!currentLayer.length)
-        throw new Error("Invalid network structure for ONNX export: cannot resolve layered ordering.");
+        throw new Error(
+          'Invalid network structure for ONNX export: cannot resolve layered ordering.'
+        );
       layerAccumulator.push(previousLayer);
       previousLayer = currentLayer;
-      remainingHidden = remainingHidden.filter((h) => !currentLayer.includes(h));
+      remainingHidden = remainingHidden.filter(
+        (h) => !currentLayer.includes(h)
+      );
     }
     layerAccumulator.push(previousLayer);
     layerAccumulator.push(outputNodes);
@@ -2991,86 +3192,116 @@
     for (let layerIndex = 1; layerIndex < layers.length; layerIndex++) {
       const previousLayerNodes = layers[layerIndex - 1];
       const currentLayerNodes = layers[layerIndex];
-      const activationNameSet = new Set(currentLayerNodes.map((n) => n.squash && n.squash.name));
+      const activationNameSet = new Set(
+        currentLayerNodes.map((n) => n.squash && n.squash.name)
+      );
       if (activationNameSet.size > 1 && !options.allowMixedActivations)
-        throw new Error(`ONNX export error: Mixed activation functions detected in layer ${layerIndex}. (enable allowMixedActivations to decompose layer)`);
+        throw new Error(
+          `ONNX export error: Mixed activation functions detected in layer ${layerIndex}. (enable allowMixedActivations to decompose layer)`
+        );
       if (activationNameSet.size > 1 && options.allowMixedActivations)
-        console.warn(`Warning: Mixed activations in layer ${layerIndex}; exporting per-neuron Gemm + Activation (+Concat) baseline.`);
+        console.warn(
+          `Warning: Mixed activations in layer ${layerIndex}; exporting per-neuron Gemm + Activation (+Concat) baseline.`
+        );
       for (const targetNode of currentLayerNodes) {
         for (const sourceNode of previousLayerNodes) {
-          const isConnected = targetNode.connections.in.some((conn) => conn.from === sourceNode);
+          const isConnected = targetNode.connections.in.some(
+            (conn) => conn.from === sourceNode
+          );
           if (!isConnected && !options.allowPartialConnectivity)
-            throw new Error(`ONNX export error: Missing connection from node ${sourceNode.index} to node ${targetNode.index} in layer ${layerIndex}. (enable allowPartialConnectivity)`);
+            throw new Error(
+              `ONNX export error: Missing connection from node ${sourceNode.index} to node ${targetNode.index} in layer ${layerIndex}. (enable allowPartialConnectivity)`
+            );
         }
       }
     }
   }
   function buildOnnxModel(network, layers, options = {}) {
-    const { includeMetadata = false, opset = 18, batchDimension = false, legacyNodeOrdering = false, producerName = "neataptic-ts", producerVersion, docString } = options;
+    const {
+      includeMetadata = false,
+      opset = 18,
+      batchDimension = false,
+      legacyNodeOrdering = false,
+      producerName = 'neataptic-ts',
+      producerVersion,
+      docString,
+    } = options;
     const inputLayerNodes = layers[0];
     const outputLayerNodes = layers[layers.length - 1];
-    const batchDims = batchDimension ? [{ dim_param: "N" }, { dim_value: inputLayerNodes.length }] : [{ dim_value: inputLayerNodes.length }];
-    const outBatchDims = batchDimension ? [{ dim_param: "N" }, { dim_value: outputLayerNodes.length }] : [{ dim_value: outputLayerNodes.length }];
+    const batchDims = batchDimension
+      ? [{ dim_param: 'N' }, { dim_value: inputLayerNodes.length }]
+      : [{ dim_value: inputLayerNodes.length }];
+    const outBatchDims = batchDimension
+      ? [{ dim_param: 'N' }, { dim_value: outputLayerNodes.length }]
+      : [{ dim_value: outputLayerNodes.length }];
     const model = {
       graph: {
         inputs: [
           {
-            name: "input",
+            name: 'input',
             type: {
               tensor_type: {
                 elem_type: 1,
-                shape: { dim: batchDims }
-              }
-            }
-          }
+                shape: { dim: batchDims },
+              },
+            },
+          },
         ],
         outputs: [
           {
-            name: "output",
+            name: 'output',
             type: {
               tensor_type: {
                 elem_type: 1,
-                shape: { dim: outBatchDims }
-              }
-            }
-          }
+                shape: { dim: outBatchDims },
+              },
+            },
+          },
         ],
         initializer: [],
-        node: []
-      }
+        node: [],
+      },
     };
     if (includeMetadata) {
       const pkgVersion = (() => {
         try {
           return require_package().version;
         } catch {
-          return "0.0.0";
+          return '0.0.0';
         }
       })();
       model.ir_version = 9;
-      model.opset_import = [{ version: opset, domain: "" }];
+      model.opset_import = [{ version: opset, domain: '' }];
       model.producer_name = producerName;
       model.producer_version = producerVersion || pkgVersion;
-      model.doc_string = docString || "Exported from NeatapticTS ONNX exporter (phases 1-2 baseline)";
+      model.doc_string =
+        docString ||
+        'Exported from NeatapticTS ONNX exporter (phases 1-2 baseline)';
     }
-    let previousOutputName = "input";
+    let previousOutputName = 'input';
     const recurrentLayerIndices = [];
     if (options.allowRecurrent && options.recurrentSingleStep) {
       for (let layerIndex = 1; layerIndex < layers.length - 1; layerIndex++) {
         const hiddenLayerNodes = layers[layerIndex];
         if (hiddenLayerNodes.some((n) => n.connections.self.length > 0)) {
           recurrentLayerIndices.push(layerIndex);
-          const prevName = layerIndex === 1 ? "hidden_prev" : `hidden_prev_l${layerIndex}`;
+          const prevName =
+            layerIndex === 1 ? 'hidden_prev' : `hidden_prev_l${layerIndex}`;
           model.graph.inputs.push({
             name: prevName,
             type: {
               tensor_type: {
                 elem_type: 1,
                 shape: {
-                  dim: batchDimension ? [{ dim_param: "N" }, { dim_value: hiddenLayerNodes.length }] : [{ dim_value: hiddenLayerNodes.length }]
-                }
-              }
-            }
+                  dim: batchDimension
+                    ? [
+                        { dim_param: 'N' },
+                        { dim_value: hiddenLayerNodes.length },
+                      ]
+                    : [{ dim_value: hiddenLayerNodes.length }],
+                },
+              },
+            },
           });
         }
       }
@@ -3080,23 +3311,30 @@
       const previousLayerNodes = layers[layerIndex - 1];
       const currentLayerNodes = layers[layerIndex];
       const isOutputLayer = layerIndex === layers.length - 1;
-      if (!isOutputLayer)
-        hiddenSizesMetadata.push(currentLayerNodes.length);
-      const convSpec = options.conv2dMappings?.find((m) => m.layerIndex === layerIndex);
+      if (!isOutputLayer) hiddenSizesMetadata.push(currentLayerNodes.length);
+      const convSpec = options.conv2dMappings?.find(
+        (m) => m.layerIndex === layerIndex
+      );
       if (convSpec) {
-        const prevWidthExpected = convSpec.inHeight * convSpec.inWidth * convSpec.inChannels;
+        const prevWidthExpected =
+          convSpec.inHeight * convSpec.inWidth * convSpec.inChannels;
         const prevWidthActual = previousLayerNodes.length;
-        const thisWidthExpected = convSpec.outChannels * convSpec.outHeight * convSpec.outWidth;
+        const thisWidthExpected =
+          convSpec.outChannels * convSpec.outHeight * convSpec.outWidth;
         const thisWidthActual = currentLayerNodes.length;
         const pads = [
           convSpec.padTop || 0,
           convSpec.padLeft || 0,
           convSpec.padBottom || 0,
-          convSpec.padRight || 0
+          convSpec.padRight || 0,
         ];
-        const shapeValid = prevWidthExpected === prevWidthActual && thisWidthExpected === thisWidthActual;
+        const shapeValid =
+          prevWidthExpected === prevWidthActual &&
+          thisWidthExpected === thisWidthActual;
         if (!shapeValid) {
-          console.warn(`Conv2D mapping for layer ${layerIndex} skipped: dimension mismatch (expected prev=${prevWidthExpected} got ${prevWidthActual}; expected this=${thisWidthExpected} got ${thisWidthActual}).`);
+          console.warn(
+            `Conv2D mapping for layer ${layerIndex} skipped: dimension mismatch (expected prev=${prevWidthExpected} got ${prevWidthActual}; expected this=${thisWidthExpected} got ${thisWidthActual}).`
+          );
         } else {
           const W = [];
           const B = [];
@@ -3107,9 +3345,14 @@
             for (let ic = 0; ic < convSpec.inChannels; ic++) {
               for (let kh = 0; kh < convSpec.kernelHeight; kh++) {
                 for (let kw = 0; kw < convSpec.kernelWidth; kw++) {
-                  const inputFeatureIndex = ic * (convSpec.inHeight * convSpec.inWidth) + kh * convSpec.inWidth + kw;
+                  const inputFeatureIndex =
+                    ic * (convSpec.inHeight * convSpec.inWidth) +
+                    kh * convSpec.inWidth +
+                    kw;
                   const sourceNode = previousLayerNodes[inputFeatureIndex];
-                  const conn = repNeuron.connections.in.find((cc) => cc.from === sourceNode);
+                  const conn = repNeuron.connections.in.find(
+                    (cc) => cc.from === sourceNode
+                  );
                   W.push(conn ? conn.weight : 0);
                 }
               }
@@ -3124,60 +3367,64 @@
               convSpec.outChannels,
               convSpec.inChannels,
               convSpec.kernelHeight,
-              convSpec.kernelWidth
+              convSpec.kernelWidth,
             ],
-            float_data: W
+            float_data: W,
           });
           model.graph.initializer.push({
             name: convBName,
             data_type: 1,
             dims: [convSpec.outChannels],
-            float_data: B
+            float_data: B,
           });
           const convOut = `Conv_${layerIndex}`;
           model.graph.node.push({
-            op_type: "Conv",
+            op_type: 'Conv',
             input: [previousOutputName, convWName, convBName],
             output: [convOut],
             name: `conv_l${layerIndex}`,
             attributes: [
               {
-                name: "kernel_shape",
-                type: "INTS",
-                ints: [convSpec.kernelHeight, convSpec.kernelWidth]
+                name: 'kernel_shape',
+                type: 'INTS',
+                ints: [convSpec.kernelHeight, convSpec.kernelWidth],
               },
               {
-                name: "strides",
-                type: "INTS",
-                ints: [convSpec.strideHeight, convSpec.strideWidth]
+                name: 'strides',
+                type: 'INTS',
+                ints: [convSpec.strideHeight, convSpec.strideWidth],
               },
-              { name: "pads", type: "INTS", ints: pads }
-            ]
+              { name: 'pads', type: 'INTS', ints: pads },
+            ],
           });
-          const actOp = convSpec.activation || mapActivationToOnnx(currentLayerNodes[0].squash);
+          const actOp =
+            convSpec.activation ||
+            mapActivationToOnnx(currentLayerNodes[0].squash);
           const activationOutputName = `Layer_${layerIndex}`;
           model.graph.node.push({
             op_type: actOp,
             input: [convOut],
             output: [activationOutputName],
-            name: `act_conv_l${layerIndex}`
+            name: `act_conv_l${layerIndex}`,
           });
           previousOutputName = activationOutputName;
-          const poolSpecPostConv = options.pool2dMappings?.find((p) => p.afterLayerIndex === layerIndex);
+          const poolSpecPostConv = options.pool2dMappings?.find(
+            (p) => p.afterLayerIndex === layerIndex
+          );
           if (poolSpecPostConv) {
             const kernel = [
               poolSpecPostConv.kernelHeight,
-              poolSpecPostConv.kernelWidth
+              poolSpecPostConv.kernelWidth,
             ];
             const strides = [
               poolSpecPostConv.strideHeight,
-              poolSpecPostConv.strideWidth
+              poolSpecPostConv.strideWidth,
             ];
             const pads2 = [
               poolSpecPostConv.padTop || 0,
               poolSpecPostConv.padLeft || 0,
               poolSpecPostConv.padBottom || 0,
-              poolSpecPostConv.padRight || 0
+              poolSpecPostConv.padRight || 0,
             ];
             const poolOut = `Pool_${layerIndex}`;
             model.graph.node.push({
@@ -3186,24 +3433,26 @@
               output: [poolOut],
               name: `pool_after_l${layerIndex}`,
               attributes: [
-                { name: "kernel_shape", type: "INTS", ints: kernel },
-                { name: "strides", type: "INTS", ints: strides },
-                { name: "pads", type: "INTS", ints: pads2 }
-              ]
+                { name: 'kernel_shape', type: 'INTS', ints: kernel },
+                { name: 'strides', type: 'INTS', ints: strides },
+                { name: 'pads', type: 'INTS', ints: pads2 },
+              ],
             });
             previousOutputName = poolOut;
             if (options.flattenAfterPooling) {
               const flatOut = `PoolFlat_${layerIndex}`;
               model.graph.node.push({
-                op_type: "Flatten",
+                op_type: 'Flatten',
                 input: [previousOutputName],
                 output: [flatOut],
                 name: `flatten_after_l${layerIndex}`,
-                attributes: [{ name: "axis", type: "INT", i: 1 }]
+                attributes: [{ name: 'axis', type: 'INT', i: 1 }],
               });
               previousOutputName = flatOut;
               model.metadata_props = model.metadata_props || [];
-              const flMeta = model.metadata_props.find((m) => m.key === "flatten_layers");
+              const flMeta = model.metadata_props.find(
+                (m) => m.key === 'flatten_layers'
+              );
               if (flMeta) {
                 try {
                   const arr = JSON.parse(flMeta.value);
@@ -3216,13 +3465,15 @@
                 }
               } else {
                 model.metadata_props.push({
-                  key: "flatten_layers",
-                  value: JSON.stringify([layerIndex])
+                  key: 'flatten_layers',
+                  value: JSON.stringify([layerIndex]),
                 });
               }
             }
             model.metadata_props = model.metadata_props || [];
-            const poolLayersMeta = model.metadata_props.find((m) => m.key === "pool2d_layers");
+            const poolLayersMeta = model.metadata_props.find(
+              (m) => m.key === 'pool2d_layers'
+            );
             if (poolLayersMeta) {
               try {
                 const arr = JSON.parse(poolLayersMeta.value);
@@ -3235,11 +3486,13 @@
               }
             } else {
               model.metadata_props.push({
-                key: "pool2d_layers",
-                value: JSON.stringify([layerIndex])
+                key: 'pool2d_layers',
+                value: JSON.stringify([layerIndex]),
               });
             }
-            const poolSpecsMeta = model.metadata_props.find((m) => m.key === "pool2d_specs");
+            const poolSpecsMeta = model.metadata_props.find(
+              (m) => m.key === 'pool2d_specs'
+            );
             if (poolSpecsMeta) {
               try {
                 const arr = JSON.parse(poolSpecsMeta.value);
@@ -3252,13 +3505,15 @@
               }
             } else {
               model.metadata_props.push({
-                key: "pool2d_specs",
-                value: JSON.stringify([poolSpecPostConv])
+                key: 'pool2d_specs',
+                value: JSON.stringify([poolSpecPostConv]),
               });
             }
           }
           model.metadata_props = model.metadata_props || [];
-          const convLayersMeta = model.metadata_props.find((m) => m.key === "conv2d_layers");
+          const convLayersMeta = model.metadata_props.find(
+            (m) => m.key === 'conv2d_layers'
+          );
           if (convLayersMeta) {
             try {
               const arr = JSON.parse(convLayersMeta.value);
@@ -3271,11 +3526,13 @@
             }
           } else {
             model.metadata_props.push({
-              key: "conv2d_layers",
-              value: JSON.stringify([layerIndex])
+              key: 'conv2d_layers',
+              value: JSON.stringify([layerIndex]),
             });
           }
-          const convSpecsMeta = model.metadata_props.find((m) => m.key === "conv2d_specs");
+          const convSpecsMeta = model.metadata_props.find(
+            (m) => m.key === 'conv2d_specs'
+          );
           if (convSpecsMeta) {
             try {
               const arr = JSON.parse(convSpecsMeta.value);
@@ -3288,17 +3545,22 @@
             }
           } else {
             model.metadata_props.push({
-              key: "conv2d_specs",
-              value: JSON.stringify([convSpec])
+              key: 'conv2d_specs',
+              value: JSON.stringify([convSpec]),
             });
           }
           continue;
         }
       }
-      const mixed = options.allowMixedActivations && new Set(currentLayerNodes.map((n) => n.squash && n.squash.name)).size > 1;
+      const mixed =
+        options.allowMixedActivations &&
+        new Set(currentLayerNodes.map((n) => n.squash && n.squash.name)).size >
+          1;
       if (recurrentLayerIndices.includes(layerIndex) && !isOutputLayer) {
         if (mixed)
-          throw new Error(`Recurrent export does not yet support mixed activations in hidden layer ${layerIndex}.`);
+          throw new Error(
+            `Recurrent export does not yet support mixed activations in hidden layer ${layerIndex}.`
+          );
         const weightMatrixValues = [];
         const biasVector = new Array(currentLayerNodes.length).fill(0);
         for (let r = 0; r < currentLayerNodes.length; r++) {
@@ -3306,7 +3568,9 @@
           biasVector[r] = targetNode.bias;
           for (let c = 0; c < previousLayerNodes.length; c++) {
             const sourceNode = previousLayerNodes[c];
-            const inboundConn = targetNode.connections.in.find((conn) => conn.from === sourceNode);
+            const inboundConn = targetNode.connections.in.find(
+              (conn) => conn.from === sourceNode
+            );
             weightMatrixValues.push(inboundConn ? inboundConn.weight : 0);
           }
         }
@@ -3316,13 +3580,13 @@
           name: weightTensorName,
           data_type: 1,
           dims: [currentLayerNodes.length, previousLayerNodes.length],
-          float_data: weightMatrixValues
+          float_data: weightMatrixValues,
         });
         model.graph.initializer.push({
           name: biasTensorName,
           data_type: 1,
           dims: [currentLayerNodes.length],
-          float_data: biasVector
+          float_data: biasVector,
         });
         const recurrentWeights = [];
         for (let r = 0; r < currentLayerNodes.length; r++) {
@@ -3340,42 +3604,43 @@
           name: rName,
           data_type: 1,
           dims: [currentLayerNodes.length, currentLayerNodes.length],
-          float_data: recurrentWeights
+          float_data: recurrentWeights,
         });
         model.graph.node.push({
-          op_type: "Gemm",
+          op_type: 'Gemm',
           input: [previousOutputName, weightTensorName, biasTensorName],
           output: [`Gemm_in_${layerIndex}`],
           name: `gemm_in_l${layerIndex}`,
           attributes: [
-            { name: "alpha", type: "FLOAT", f: 1 },
-            { name: "beta", type: "FLOAT", f: 1 },
-            { name: "transB", type: "INT", i: 1 }
-          ]
+            { name: 'alpha', type: 'FLOAT', f: 1 },
+            { name: 'beta', type: 'FLOAT', f: 1 },
+            { name: 'transB', type: 'INT', i: 1 },
+          ],
         });
-        const prevHiddenInputName = layerIndex === 1 ? "hidden_prev" : `hidden_prev_l${layerIndex}`;
+        const prevHiddenInputName =
+          layerIndex === 1 ? 'hidden_prev' : `hidden_prev_l${layerIndex}`;
         model.graph.node.push({
-          op_type: "Gemm",
+          op_type: 'Gemm',
           input: [prevHiddenInputName, rName],
           output: [`Gemm_rec_${layerIndex}`],
           name: `gemm_rec_l${layerIndex}`,
           attributes: [
-            { name: "alpha", type: "FLOAT", f: 1 },
-            { name: "beta", type: "FLOAT", f: 1 },
-            { name: "transB", type: "INT", i: 1 }
-          ]
+            { name: 'alpha', type: 'FLOAT', f: 1 },
+            { name: 'beta', type: 'FLOAT', f: 1 },
+            { name: 'transB', type: 'INT', i: 1 },
+          ],
         });
         model.graph.node.push({
-          op_type: "Add",
+          op_type: 'Add',
           input: [`Gemm_in_${layerIndex}`, `Gemm_rec_${layerIndex}`],
           output: [`RecurrentSum_${layerIndex}`],
-          name: `add_recurrent_l${layerIndex}`
+          name: `add_recurrent_l${layerIndex}`,
         });
         model.graph.node.push({
           op_type: mapActivationToOnnx(currentLayerNodes[0].squash),
           input: [`RecurrentSum_${layerIndex}`],
           output: [`Layer_${layerIndex}`],
-          name: `act_l${layerIndex}`
+          name: `act_l${layerIndex}`,
         });
         previousOutputName = `Layer_${layerIndex}`;
       } else if (!mixed) {
@@ -3386,7 +3651,9 @@
           biasVector[r] = targetNode.bias;
           for (let c = 0; c < previousLayerNodes.length; c++) {
             const sourceNode = previousLayerNodes[c];
-            const inboundConn = targetNode.connections.in.find((conn) => conn.from === sourceNode);
+            const inboundConn = targetNode.connections.in.find(
+              (conn) => conn.from === sourceNode
+            );
             weightMatrixValues.push(inboundConn ? inboundConn.weight : 0);
           }
         }
@@ -3398,61 +3665,69 @@
           name: weightTensorName,
           data_type: 1,
           dims: [currentLayerNodes.length, previousLayerNodes.length],
-          float_data: weightMatrixValues
+          float_data: weightMatrixValues,
         });
         model.graph.initializer.push({
           name: biasTensorName,
           data_type: 1,
           dims: [currentLayerNodes.length],
-          float_data: biasVector
+          float_data: biasVector,
         });
         if (!legacyNodeOrdering) {
           model.graph.node.push({
-            op_type: "Gemm",
+            op_type: 'Gemm',
             input: [previousOutputName, weightTensorName, biasTensorName],
             output: [gemmOutputName],
             name: `gemm_l${layerIndex}`,
             attributes: [
-              { name: "alpha", type: "FLOAT", f: 1 },
-              { name: "beta", type: "FLOAT", f: 1 },
-              { name: "transB", type: "INT", i: 1 }
-            ]
+              { name: 'alpha', type: 'FLOAT', f: 1 },
+              { name: 'beta', type: 'FLOAT', f: 1 },
+              { name: 'transB', type: 'INT', i: 1 },
+            ],
           });
           model.graph.node.push({
             op_type: mapActivationToOnnx(currentLayerNodes[0].squash),
             input: [gemmOutputName],
             output: [activationOutputName],
-            name: `act_l${layerIndex}`
+            name: `act_l${layerIndex}`,
           });
         } else {
           model.graph.node.push({
             op_type: mapActivationToOnnx(currentLayerNodes[0].squash),
             input: [gemmOutputName],
             output: [activationOutputName],
-            name: `act_l${layerIndex}`
+            name: `act_l${layerIndex}`,
           });
           model.graph.node.push({
-            op_type: "Gemm",
+            op_type: 'Gemm',
             input: [previousOutputName, weightTensorName, biasTensorName],
             output: [gemmOutputName],
             name: `gemm_l${layerIndex}`,
             attributes: [
-              { name: "alpha", type: "FLOAT", f: 1 },
-              { name: "beta", type: "FLOAT", f: 1 },
-              { name: "transB", type: "INT", i: 1 }
-            ]
+              { name: 'alpha', type: 'FLOAT', f: 1 },
+              { name: 'beta', type: 'FLOAT', f: 1 },
+              { name: 'transB', type: 'INT', i: 1 },
+            ],
           });
         }
         previousOutputName = activationOutputName;
-        const poolSpecDense = options.pool2dMappings?.find((p) => p.afterLayerIndex === layerIndex);
+        const poolSpecDense = options.pool2dMappings?.find(
+          (p) => p.afterLayerIndex === layerIndex
+        );
         if (poolSpecDense) {
-          const kernel = [poolSpecDense.kernelHeight, poolSpecDense.kernelWidth];
-          const strides = [poolSpecDense.strideHeight, poolSpecDense.strideWidth];
+          const kernel = [
+            poolSpecDense.kernelHeight,
+            poolSpecDense.kernelWidth,
+          ];
+          const strides = [
+            poolSpecDense.strideHeight,
+            poolSpecDense.strideWidth,
+          ];
           const pads = [
             poolSpecDense.padTop || 0,
             poolSpecDense.padLeft || 0,
             poolSpecDense.padBottom || 0,
-            poolSpecDense.padRight || 0
+            poolSpecDense.padRight || 0,
           ];
           const poolOut = `Pool_${layerIndex}`;
           model.graph.node.push({
@@ -3461,24 +3736,26 @@
             output: [poolOut],
             name: `pool_after_l${layerIndex}`,
             attributes: [
-              { name: "kernel_shape", type: "INTS", ints: kernel },
-              { name: "strides", type: "INTS", ints: strides },
-              { name: "pads", type: "INTS", ints: pads }
-            ]
+              { name: 'kernel_shape', type: 'INTS', ints: kernel },
+              { name: 'strides', type: 'INTS', ints: strides },
+              { name: 'pads', type: 'INTS', ints: pads },
+            ],
           });
           previousOutputName = poolOut;
           if (options.flattenAfterPooling) {
             const flatOut = `PoolFlat_${layerIndex}`;
             model.graph.node.push({
-              op_type: "Flatten",
+              op_type: 'Flatten',
               input: [previousOutputName],
               output: [flatOut],
               name: `flatten_after_l${layerIndex}`,
-              attributes: [{ name: "axis", type: "INT", i: 1 }]
+              attributes: [{ name: 'axis', type: 'INT', i: 1 }],
             });
             previousOutputName = flatOut;
             model.metadata_props = model.metadata_props || [];
-            const flMeta = model.metadata_props.find((m) => m.key === "flatten_layers");
+            const flMeta = model.metadata_props.find(
+              (m) => m.key === 'flatten_layers'
+            );
             if (flMeta) {
               try {
                 const arr = JSON.parse(flMeta.value);
@@ -3491,13 +3768,15 @@
               }
             } else {
               model.metadata_props.push({
-                key: "flatten_layers",
-                value: JSON.stringify([layerIndex])
+                key: 'flatten_layers',
+                value: JSON.stringify([layerIndex]),
               });
             }
           }
           model.metadata_props = model.metadata_props || [];
-          const poolLayersMeta = model.metadata_props.find((m) => m.key === "pool2d_layers");
+          const poolLayersMeta = model.metadata_props.find(
+            (m) => m.key === 'pool2d_layers'
+          );
           if (poolLayersMeta) {
             try {
               const arr = JSON.parse(poolLayersMeta.value);
@@ -3510,11 +3789,13 @@
             }
           } else {
             model.metadata_props.push({
-              key: "pool2d_layers",
-              value: JSON.stringify([layerIndex])
+              key: 'pool2d_layers',
+              value: JSON.stringify([layerIndex]),
             });
           }
-          const poolSpecsMeta = model.metadata_props.find((m) => m.key === "pool2d_specs");
+          const poolSpecsMeta = model.metadata_props.find(
+            (m) => m.key === 'pool2d_specs'
+          );
           if (poolSpecsMeta) {
             try {
               const arr = JSON.parse(poolSpecsMeta.value);
@@ -3527,8 +3808,8 @@
             }
           } else {
             model.metadata_props.push({
-              key: "pool2d_specs",
-              value: JSON.stringify([poolSpecDense])
+              key: 'pool2d_specs',
+              value: JSON.stringify([poolSpecDense]),
             });
           }
         }
@@ -3538,7 +3819,9 @@
           const weightRow = [];
           for (let c = 0; c < previousLayerNodes.length; c++) {
             const sourceNode = previousLayerNodes[c];
-            const inboundConn = targetNode.connections.in.find((conn) => conn.from === sourceNode);
+            const inboundConn = targetNode.connections.in.find(
+              (conn) => conn.from === sourceNode
+            );
             weightRow.push(inboundConn ? inboundConn.weight : 0);
           }
           const weightTensorName = `W${layerIndex - 1}_n${idx}`;
@@ -3549,57 +3832,61 @@
             name: weightTensorName,
             data_type: 1,
             dims: [1, previousLayerNodes.length],
-            float_data: weightRow
+            float_data: weightRow,
           });
           model.graph.initializer.push({
             name: biasTensorName,
             data_type: 1,
             dims: [1],
-            float_data: [targetNode.bias]
+            float_data: [targetNode.bias],
           });
           model.graph.node.push({
-            op_type: "Gemm",
+            op_type: 'Gemm',
             input: [previousOutputName, weightTensorName, biasTensorName],
             output: [gemmOutputName],
             name: `gemm_l${layerIndex}_n${idx}`,
             attributes: [
-              { name: "alpha", type: "FLOAT", f: 1 },
-              { name: "beta", type: "FLOAT", f: 1 },
-              { name: "transB", type: "INT", i: 1 }
-            ]
+              { name: 'alpha', type: 'FLOAT', f: 1 },
+              { name: 'beta', type: 'FLOAT', f: 1 },
+              { name: 'transB', type: 'INT', i: 1 },
+            ],
           });
           model.graph.node.push({
             op_type: mapActivationToOnnx(targetNode.squash),
             input: [gemmOutputName],
             output: [actOutputName],
-            name: `act_l${layerIndex}_n${idx}`
+            name: `act_l${layerIndex}_n${idx}`,
           });
           perNeuronActivationOutputs.push(actOutputName);
         });
         const activationOutputName = `Layer_${layerIndex}`;
         model.graph.node.push({
-          op_type: "Concat",
+          op_type: 'Concat',
           input: perNeuronActivationOutputs,
           output: [activationOutputName],
           name: `concat_l${layerIndex}`,
-          attributes: [{ name: "axis", type: "INT", i: batchDimension ? 1 : 0 }]
+          attributes: [
+            { name: 'axis', type: 'INT', i: batchDimension ? 1 : 0 },
+          ],
         });
         previousOutputName = activationOutputName;
-        const poolSpecPerNeuron = options.pool2dMappings?.find((p) => p.afterLayerIndex === layerIndex);
+        const poolSpecPerNeuron = options.pool2dMappings?.find(
+          (p) => p.afterLayerIndex === layerIndex
+        );
         if (poolSpecPerNeuron) {
           const kernel = [
             poolSpecPerNeuron.kernelHeight,
-            poolSpecPerNeuron.kernelWidth
+            poolSpecPerNeuron.kernelWidth,
           ];
           const strides = [
             poolSpecPerNeuron.strideHeight,
-            poolSpecPerNeuron.strideWidth
+            poolSpecPerNeuron.strideWidth,
           ];
           const pads = [
             poolSpecPerNeuron.padTop || 0,
             poolSpecPerNeuron.padLeft || 0,
             poolSpecPerNeuron.padBottom || 0,
-            poolSpecPerNeuron.padRight || 0
+            poolSpecPerNeuron.padRight || 0,
           ];
           const poolOut = `Pool_${layerIndex}`;
           model.graph.node.push({
@@ -3608,24 +3895,26 @@
             output: [poolOut],
             name: `pool_after_l${layerIndex}`,
             attributes: [
-              { name: "kernel_shape", type: "INTS", ints: kernel },
-              { name: "strides", type: "INTS", ints: strides },
-              { name: "pads", type: "INTS", ints: pads }
-            ]
+              { name: 'kernel_shape', type: 'INTS', ints: kernel },
+              { name: 'strides', type: 'INTS', ints: strides },
+              { name: 'pads', type: 'INTS', ints: pads },
+            ],
           });
           previousOutputName = poolOut;
           if (options.flattenAfterPooling) {
             const flatOut = `PoolFlat_${layerIndex}`;
             model.graph.node.push({
-              op_type: "Flatten",
+              op_type: 'Flatten',
               input: [previousOutputName],
               output: [flatOut],
               name: `flatten_after_l${layerIndex}`,
-              attributes: [{ name: "axis", type: "INT", i: 1 }]
+              attributes: [{ name: 'axis', type: 'INT', i: 1 }],
             });
             previousOutputName = flatOut;
             model.metadata_props = model.metadata_props || [];
-            const flMeta = model.metadata_props.find((m) => m.key === "flatten_layers");
+            const flMeta = model.metadata_props.find(
+              (m) => m.key === 'flatten_layers'
+            );
             if (flMeta) {
               try {
                 const arr = JSON.parse(flMeta.value);
@@ -3638,13 +3927,15 @@
               }
             } else {
               model.metadata_props.push({
-                key: "flatten_layers",
-                value: JSON.stringify([layerIndex])
+                key: 'flatten_layers',
+                value: JSON.stringify([layerIndex]),
               });
             }
           }
           model.metadata_props = model.metadata_props || [];
-          const poolLayersMeta = model.metadata_props.find((m) => m.key === "pool2d_layers");
+          const poolLayersMeta = model.metadata_props.find(
+            (m) => m.key === 'pool2d_layers'
+          );
           if (poolLayersMeta) {
             try {
               const arr = JSON.parse(poolLayersMeta.value);
@@ -3657,11 +3948,13 @@
             }
           } else {
             model.metadata_props.push({
-              key: "pool2d_layers",
-              value: JSON.stringify([layerIndex])
+              key: 'pool2d_layers',
+              value: JSON.stringify([layerIndex]),
             });
           }
-          const poolSpecsMeta = model.metadata_props.find((m) => m.key === "pool2d_specs");
+          const poolSpecsMeta = model.metadata_props.find(
+            (m) => m.key === 'pool2d_specs'
+          );
           if (poolSpecsMeta) {
             try {
               const arr = JSON.parse(poolSpecsMeta.value);
@@ -3674,8 +3967,8 @@
             }
           } else {
             model.metadata_props.push({
-              key: "pool2d_specs",
-              value: JSON.stringify([poolSpecPerNeuron])
+              key: 'pool2d_specs',
+              value: JSON.stringify([poolSpecPerNeuron]),
             });
           }
         }
@@ -3685,15 +3978,14 @@
       for (let layerIndex = 1; layerIndex < layers.length - 1; layerIndex++) {
         const current = layers[layerIndex];
         const size = current.length;
-        if (!model.metadata_props)
-          model.metadata_props = [];
+        if (!model.metadata_props) model.metadata_props = [];
         if (size >= 8 && size < 10) {
           model.metadata_props.push({
-            key: "rnn_pattern_fallback",
+            key: 'rnn_pattern_fallback',
             value: JSON.stringify({
               layer: layerIndex,
-              reason: "size_between_gru_lstm_thresholds"
-            })
+              reason: 'size_between_gru_lstm_thresholds',
+            }),
           });
         }
         if (size >= 10 && size % 5 === 0) {
@@ -3716,15 +4008,16 @@
               const neuron = gate2[r];
               for (let c = 0; c < prevSize; c++) {
                 const source = prevLayerNodes[c];
-                const conn = neuron.connections.in.find((cc) => cc.from === source);
+                const conn = neuron.connections.in.find(
+                  (cc) => cc.from === source
+                );
                 W.push(conn ? conn.weight : 0);
               }
               for (let c = 0; c < unit; c++) {
                 if (gate2 === cell && c === r) {
                   const selfConn = neuron.connections.self[0];
                   R.push(selfConn ? selfConn.weight : 0);
-                } else
-                  R.push(0);
+                } else R.push(0);
               }
               B.push(neuron.bias);
             }
@@ -3733,37 +4026,39 @@
             name: `LSTM_W${layerIndex - 1}`,
             data_type: 1,
             dims: [numGates * unit, prevSize],
-            float_data: W
+            float_data: W,
           });
           model.graph.initializer.push({
             name: `LSTM_R${layerIndex - 1}`,
             data_type: 1,
             dims: [numGates * unit, unit],
-            float_data: R
+            float_data: R,
           });
           model.graph.initializer.push({
             name: `LSTM_B${layerIndex - 1}`,
             data_type: 1,
             dims: [numGates * unit],
-            float_data: B
+            float_data: B,
           });
           model.graph.node.push({
-            op_type: "LSTM",
+            op_type: 'LSTM',
             input: [
               previousOutputName,
               `LSTM_W${layerIndex - 1}`,
               `LSTM_R${layerIndex - 1}`,
-              `LSTM_B${layerIndex - 1}`
+              `LSTM_B${layerIndex - 1}`,
             ],
             output: [`Layer_${layerIndex}_lstm_hidden`],
             name: `lstm_l${layerIndex}`,
             attributes: [
-              { name: "hidden_size", type: "INT", i: unit },
-              { name: "layout", type: "INT", i: 0 }
-            ]
+              { name: 'hidden_size', type: 'INT', i: unit },
+              { name: 'layout', type: 'INT', i: 0 },
+            ],
           });
           model.metadata_props = model.metadata_props || [];
-          const lstmMetaIdx = model.metadata_props.findIndex((m) => m.key === "lstm_emitted_layers");
+          const lstmMetaIdx = model.metadata_props.findIndex(
+            (m) => m.key === 'lstm_emitted_layers'
+          );
           if (lstmMetaIdx >= 0) {
             try {
               const arr = JSON.parse(model.metadata_props[lstmMetaIdx].value);
@@ -3773,13 +4068,13 @@
               }
             } catch {
               model.metadata_props[lstmMetaIdx].value = JSON.stringify([
-                layerIndex
+                layerIndex,
               ]);
             }
           } else {
             model.metadata_props.push({
-              key: "lstm_emitted_layers",
-              value: JSON.stringify([layerIndex])
+              key: 'lstm_emitted_layers',
+              value: JSON.stringify([layerIndex]),
             });
           }
         }
@@ -3802,15 +4097,16 @@
               const neuron = gate2[r];
               for (let c = 0; c < prevSizeGRU; c++) {
                 const src = prevLayerNodes[c];
-                const conn = neuron.connections.in.find((cc) => cc.from === src);
+                const conn = neuron.connections.in.find(
+                  (cc) => cc.from === src
+                );
                 Wg.push(conn ? conn.weight : 0);
               }
               for (let c = 0; c < unitG; c++) {
                 if (gate2 === candidate && c === r) {
                   const selfConn = neuron.connections.self[0];
                   Rg.push(selfConn ? selfConn.weight : 0);
-                } else
-                  Rg.push(0);
+                } else Rg.push(0);
               }
               Bg.push(neuron.bias);
             }
@@ -3819,38 +4115,41 @@
             name: `GRU_W${layerIndex - 1}`,
             data_type: 1,
             dims: [numGatesGRU * unitG, prevSizeGRU],
-            float_data: Wg
+            float_data: Wg,
           });
           model.graph.initializer.push({
             name: `GRU_R${layerIndex - 1}`,
             data_type: 1,
             dims: [numGatesGRU * unitG, unitG],
-            float_data: Rg
+            float_data: Rg,
           });
           model.graph.initializer.push({
             name: `GRU_B${layerIndex - 1}`,
             data_type: 1,
             dims: [numGatesGRU * unitG],
-            float_data: Bg
+            float_data: Bg,
           });
-          const prevOutName = layerIndex === 1 ? "input" : `Layer_${layerIndex - 1}`;
+          const prevOutName =
+            layerIndex === 1 ? 'input' : `Layer_${layerIndex - 1}`;
           model.graph.node.push({
-            op_type: "GRU",
+            op_type: 'GRU',
             input: [
               prevOutName,
               `GRU_W${layerIndex - 1}`,
               `GRU_R${layerIndex - 1}`,
-              `GRU_B${layerIndex - 1}`
+              `GRU_B${layerIndex - 1}`,
             ],
             output: [`Layer_${layerIndex}_gru_hidden`],
             name: `gru_l${layerIndex}`,
             attributes: [
-              { name: "hidden_size", type: "INT", i: unitG },
-              { name: "layout", type: "INT", i: 0 }
-            ]
+              { name: 'hidden_size', type: 'INT', i: unitG },
+              { name: 'layout', type: 'INT', i: 0 },
+            ],
           });
           model.metadata_props = model.metadata_props || [];
-          const gruMetaIdx = model.metadata_props.findIndex((m) => m.key === "gru_emitted_layers");
+          const gruMetaIdx = model.metadata_props.findIndex(
+            (m) => m.key === 'gru_emitted_layers'
+          );
           if (gruMetaIdx >= 0) {
             try {
               const arr = JSON.parse(model.metadata_props[gruMetaIdx].value);
@@ -3860,13 +4159,13 @@
               }
             } catch {
               model.metadata_props[gruMetaIdx].value = JSON.stringify([
-                layerIndex
+                layerIndex,
               ]);
             }
           } else {
             model.metadata_props.push({
-              key: "gru_emitted_layers",
-              value: JSON.stringify([layerIndex])
+              key: 'gru_emitted_layers',
+              value: JSON.stringify([layerIndex]),
             });
           }
         }
@@ -3875,24 +4174,27 @@
     if (includeMetadata) {
       model.metadata_props = model.metadata_props || [];
       model.metadata_props.push({
-        key: "layer_sizes",
-        value: JSON.stringify(hiddenSizesMetadata)
+        key: 'layer_sizes',
+        value: JSON.stringify(hiddenSizesMetadata),
       });
       if (recurrentLayerIndices.length) {
         model.metadata_props.push({
-          key: "recurrent_single_step",
-          value: JSON.stringify(recurrentLayerIndices)
+          key: 'recurrent_single_step',
+          value: JSON.stringify(recurrentLayerIndices),
         });
       }
-      if (options.validateConvSharing && options.conv2dMappings && options.conv2dMappings.length) {
+      if (
+        options.validateConvSharing &&
+        options.conv2dMappings &&
+        options.conv2dMappings.length
+      ) {
         const verified = [];
         const mismatched = [];
         for (const spec of options.conv2dMappings) {
           const layerIdx = spec.layerIndex;
           const prevLayerNodes = layers[layerIdx - 1];
           const layerNodes = layers[layerIdx];
-          if (!layerNodes || !prevLayerNodes)
-            continue;
+          if (!layerNodes || !prevLayerNodes) continue;
           const repPerChannel = [];
           let allOk = true;
           for (let oc = 0; oc < spec.outChannels; oc++) {
@@ -3902,9 +4204,14 @@
             for (let ic = 0; ic < spec.inChannels; ic++) {
               for (let kh = 0; kh < spec.kernelHeight; kh++) {
                 for (let kw = 0; kw < spec.kernelWidth; kw++) {
-                  const inputFeatureIndex = ic * (spec.inHeight * spec.inWidth) + kh * spec.inWidth + kw;
+                  const inputFeatureIndex =
+                    ic * (spec.inHeight * spec.inWidth) +
+                    kh * spec.inWidth +
+                    kw;
                   const sourceNode = prevLayerNodes[inputFeatureIndex];
-                  const conn = repNeuron.connections.in.find((cc) => cc.from === sourceNode);
+                  const conn = repNeuron.connections.in.find(
+                    (cc) => cc.from === sourceNode
+                  );
                   kernel.push(conn ? conn.weight : 0);
                 }
               }
@@ -3915,10 +4222,12 @@
           for (let oc = 0; oc < spec.outChannels && allOk; oc++) {
             for (let oh = 0; oh < spec.outHeight && allOk; oh++) {
               for (let ow = 0; ow < spec.outWidth && allOk; ow++) {
-                const idx = oc * (spec.outHeight * spec.outWidth) + oh * spec.outWidth + ow;
+                const idx =
+                  oc * (spec.outHeight * spec.outWidth) +
+                  oh * spec.outWidth +
+                  ow;
                 const neuron = layerNodes[idx];
-                if (!neuron)
-                  continue;
+                if (!neuron) continue;
                 let kPtr = 0;
                 for (let ic = 0; ic < spec.inChannels && allOk; ic++) {
                   const hBase = oh * spec.strideHeight - (spec.padTop || 0);
@@ -3927,13 +4236,23 @@
                     for (let kw = 0; kw < spec.kernelWidth && allOk; kw++) {
                       const ih = hBase + kh;
                       const iw = wBase + kw;
-                      if (ih < 0 || ih >= spec.inHeight || iw < 0 || iw >= spec.inWidth) {
+                      if (
+                        ih < 0 ||
+                        ih >= spec.inHeight ||
+                        iw < 0 ||
+                        iw >= spec.inWidth
+                      ) {
                         kPtr++;
                         continue;
                       }
-                      const inputFeatureIndex = ic * (spec.inHeight * spec.inWidth) + ih * spec.inWidth + iw;
+                      const inputFeatureIndex =
+                        ic * (spec.inHeight * spec.inWidth) +
+                        ih * spec.inWidth +
+                        iw;
                       const srcNode = prevLayerNodes[inputFeatureIndex];
-                      const conn = neuron.connections.in.find((cc) => cc.from === srcNode);
+                      const conn = neuron.connections.in.find(
+                        (cc) => cc.from === srcNode
+                      );
                       const wVal = conn ? conn.weight : 0;
                       if (Math.abs(wVal - repPerChannel[oc][kPtr]) > tol) {
                         allOk = false;
@@ -3942,27 +4261,27 @@
                     }
                   }
                 }
-                if (!allOk)
-                  break;
+                if (!allOk) break;
               }
             }
           }
-          if (allOk)
-            verified.push(layerIdx);
+          if (allOk) verified.push(layerIdx);
           else {
             mismatched.push(layerIdx);
-            console.warn(`Conv2D weight sharing mismatch detected in layer ${layerIdx}`);
+            console.warn(
+              `Conv2D weight sharing mismatch detected in layer ${layerIdx}`
+            );
           }
         }
         if (verified.length)
           model.metadata_props.push({
-            key: "conv2d_sharing_verified",
-            value: JSON.stringify(verified)
+            key: 'conv2d_sharing_verified',
+            value: JSON.stringify(verified),
           });
         if (mismatched.length)
           model.metadata_props.push({
-            key: "conv2d_sharing_mismatch",
-            value: JSON.stringify(mismatched)
+            key: 'conv2d_sharing_mismatch',
+            value: JSON.stringify(mismatched),
           });
       }
     }
@@ -3970,9 +4289,9 @@
   }
   function exportToONNX(network, options = {}) {
     rebuildConnectionsLocal(network);
-    network.nodes.forEach((node, idx) => node.index = idx);
+    network.nodes.forEach((node, idx) => (node.index = idx));
     if (!network.connections || network.connections.length === 0)
-      throw new Error("ONNX export currently only supports simple MLPs");
+      throw new Error('ONNX export currently only supports simple MLPs');
     const layers = inferLayerOrdering(network);
     const lstmPatternStubs = [];
     if (options.allowRecurrent) {
@@ -3983,14 +4302,15 @@
           if (total >= 10 && total % 5 === 0) {
             const seg = total / 5;
             const memorySlice = hiddenLayer.slice(seg * 2, seg * 3);
-            const allSelf = memorySlice.every((n) => n.connections.self.length === 1);
+            const allSelf = memorySlice.every(
+              (n) => n.connections.self.length === 1
+            );
             if (allSelf) {
               lstmPatternStubs.push({ layerIndex: li, unitSize: seg });
             }
           }
         }
-      } catch {
-      }
+      } catch {}
     }
     validateLayerHomogeneityAndConnectivity(layers, network, options);
     const model = buildOnnxModel(network, layers, options);
@@ -4001,17 +4321,16 @@
         const prevWidth = layers[li - 1].length;
         const currWidth = layers[li].length;
         const s = Math.sqrt(prevWidth);
-        if (Math.abs(s - Math.round(s)) > 1e-9)
-          continue;
+        if (Math.abs(s - Math.round(s)) > 1e-9) continue;
         const sInt = Math.round(s);
         for (const k of [3, 2]) {
-          if (k >= sInt)
-            continue;
+          if (k >= sInt) continue;
           const outSpatial = sInt - k + 1;
           if (outSpatial * outSpatial === currWidth) {
-            const alreadyDeclared = options.conv2dMappings?.some((m) => m.layerIndex === li);
-            if (alreadyDeclared)
-              break;
+            const alreadyDeclared = options.conv2dMappings?.some(
+              (m) => m.layerIndex === li
+            );
+            if (alreadyDeclared) break;
             inferredLayers.push(li);
             inferredSpecs.push({
               layerIndex: li,
@@ -4025,7 +4344,7 @@
               outHeight: outSpatial,
               outWidth: outSpatial,
               outChannels: 1,
-              note: "heuristic_inferred_no_export_applied"
+              note: 'heuristic_inferred_no_export_applied',
             });
             break;
           }
@@ -4034,45 +4353,47 @@
       if (inferredLayers.length) {
         model.metadata_props = model.metadata_props || [];
         model.metadata_props.push({
-          key: "conv2d_inferred_layers",
-          value: JSON.stringify(inferredLayers)
+          key: 'conv2d_inferred_layers',
+          value: JSON.stringify(inferredLayers),
         });
         model.metadata_props.push({
-          key: "conv2d_inferred_specs",
-          value: JSON.stringify(inferredSpecs)
+          key: 'conv2d_inferred_specs',
+          value: JSON.stringify(inferredSpecs),
         });
       }
     }
     if (lstmPatternStubs.length) {
       model.metadata_props = model.metadata_props || [];
       model.metadata_props.push({
-        key: "lstm_groups_stub",
-        value: JSON.stringify(lstmPatternStubs)
+        key: 'lstm_groups_stub',
+        value: JSON.stringify(lstmPatternStubs),
       });
     }
     return model;
   }
   var init_network_onnx = __esm({
-    "dist/architecture/network/network.onnx.js"() {
-      "use strict";
+    'dist/architecture/network/network.onnx.js'() {
+      'use strict';
       init_methods();
       init_connection();
-    }
+    },
   });
 
   // dist/architecture/onnx.js
   var init_onnx = __esm({
-    "dist/architecture/onnx.js"() {
-      "use strict";
+    'dist/architecture/onnx.js'() {
+      'use strict';
       init_network_onnx();
       init_network_onnx();
-    }
+    },
   });
 
   // dist/architecture/network/network.standalone.js
   function generateStandalone(net) {
-    if (!net.nodes.some((nodeRef) => nodeRef.type === "output")) {
-      throw new Error("Cannot create standalone function: network has no output nodes.");
+    if (!net.nodes.some((nodeRef) => nodeRef.type === 'output')) {
+      throw new Error(
+        'Cannot create standalone function: network has no output nodes.'
+      );
     }
     const emittedActivationSource = {};
     const activationFunctionSources = [];
@@ -4082,32 +4403,38 @@
     const initialStates = [];
     const bodyLines = [];
     const builtinActivationSnippets = {
-      logistic: "function logistic(x){ return 1 / (1 + Math.exp(-x)); }",
-      tanh: "function tanh(x){ return Math.tanh(x); }",
-      relu: "function relu(x){ return x > 0 ? x : 0; }",
-      identity: "function identity(x){ return x; }",
-      step: "function step(x){ return x > 0 ? 1 : 0; }",
-      softsign: "function softsign(x){ return x / (1 + Math.abs(x)); }",
-      sinusoid: "function sinusoid(x){ return Math.sin(x); }",
-      gaussian: "function gaussian(x){ return Math.exp(-Math.pow(x, 2)); }",
-      bentIdentity: "function bentIdentity(x){ return (Math.sqrt(Math.pow(x, 2) + 1) - 1) / 2 + x; }",
-      bipolar: "function bipolar(x){ return x > 0 ? 1 : -1; }",
-      bipolarSigmoid: "function bipolarSigmoid(x){ return 2 / (1 + Math.exp(-x)) - 1; }",
-      hardTanh: "function hardTanh(x){ return Math.max(-1, Math.min(1, x)); }",
-      absolute: "function absolute(x){ return Math.abs(x); }",
-      inverse: "function inverse(x){ return 1 - x; }",
-      selu: "function selu(x){ var a=1.6732632423543772,s=1.0507009873554805; var fx=x>0?x:a*Math.exp(x)-a; return fx*s; }",
-      softplus: "function softplus(x){ if(x>30)return x; if(x<-30)return Math.exp(x); return Math.max(0,x)+Math.log(1+Math.exp(-Math.abs(x))); }",
-      swish: "function swish(x){ var s=1/(1+Math.exp(-x)); return x*s; }",
-      gelu: "function gelu(x){ var cdf=0.5*(1.0+Math.tanh(Math.sqrt(2.0/Math.PI)*(x+0.044715*Math.pow(x,3)))); return x*cdf; }",
-      mish: "function mish(x){ var sp_x; if(x>30){sp_x=x;}else if(x<-30){sp_x=Math.exp(x);}else{sp_x=Math.log(1+Math.exp(x));} var tanh_sp_x=Math.tanh(sp_x); return x*tanh_sp_x; }"
+      logistic: 'function logistic(x){ return 1 / (1 + Math.exp(-x)); }',
+      tanh: 'function tanh(x){ return Math.tanh(x); }',
+      relu: 'function relu(x){ return x > 0 ? x : 0; }',
+      identity: 'function identity(x){ return x; }',
+      step: 'function step(x){ return x > 0 ? 1 : 0; }',
+      softsign: 'function softsign(x){ return x / (1 + Math.abs(x)); }',
+      sinusoid: 'function sinusoid(x){ return Math.sin(x); }',
+      gaussian: 'function gaussian(x){ return Math.exp(-Math.pow(x, 2)); }',
+      bentIdentity:
+        'function bentIdentity(x){ return (Math.sqrt(Math.pow(x, 2) + 1) - 1) / 2 + x; }',
+      bipolar: 'function bipolar(x){ return x > 0 ? 1 : -1; }',
+      bipolarSigmoid:
+        'function bipolarSigmoid(x){ return 2 / (1 + Math.exp(-x)) - 1; }',
+      hardTanh: 'function hardTanh(x){ return Math.max(-1, Math.min(1, x)); }',
+      absolute: 'function absolute(x){ return Math.abs(x); }',
+      inverse: 'function inverse(x){ return 1 - x; }',
+      selu:
+        'function selu(x){ var a=1.6732632423543772,s=1.0507009873554805; var fx=x>0?x:a*Math.exp(x)-a; return fx*s; }',
+      softplus:
+        'function softplus(x){ if(x>30)return x; if(x<-30)return Math.exp(x); return Math.max(0,x)+Math.log(1+Math.exp(-Math.abs(x))); }',
+      swish: 'function swish(x){ var s=1/(1+Math.exp(-x)); return x*s; }',
+      gelu:
+        'function gelu(x){ var cdf=0.5*(1.0+Math.tanh(Math.sqrt(2.0/Math.PI)*(x+0.044715*Math.pow(x,3)))); return x*cdf; }',
+      mish:
+        'function mish(x){ var sp_x; if(x>30){sp_x=x;}else if(x<-30){sp_x=Math.exp(x);}else{sp_x=Math.log(1+Math.exp(x));} var tanh_sp_x=Math.tanh(sp_x); return x*tanh_sp_x; }',
     };
     net.nodes.forEach((node, nodeIndex) => {
       node.index = nodeIndex;
       initialActivations.push(node.activation);
       initialStates.push(node.state);
     });
-    bodyLines.push("for(var i = 0; i < input.length; i++) A[i] = input[i];");
+    bodyLines.push('for(var i = 0; i < input.length; i++) A[i] = input[i];');
     for (let nodeIndex = net.input; nodeIndex < net.nodes.length; nodeIndex++) {
       const node = net.nodes[nodeIndex];
       const squashFn = node.squash;
@@ -4117,16 +4444,22 @@
         if (builtinActivationSnippets[squashName]) {
           functionSource = builtinActivationSnippets[squashName];
           if (!functionSource.startsWith(`function ${squashName}`)) {
-            functionSource = `function ${squashName}${functionSource.substring(functionSource.indexOf("("))}`;
+            functionSource = `function ${squashName}${functionSource.substring(
+              functionSource.indexOf('(')
+            )}`;
           }
           functionSource = stripCoverage(functionSource);
         } else {
           functionSource = squashFn.toString();
           functionSource = stripCoverage(functionSource);
-          if (functionSource.startsWith("function")) {
-            functionSource = `function ${squashName}${functionSource.substring(functionSource.indexOf("("))}`;
-          } else if (functionSource.includes("=>")) {
-            functionSource = `function ${squashName}${functionSource.substring(functionSource.indexOf("("))}`;
+          if (functionSource.startsWith('function')) {
+            functionSource = `function ${squashName}${functionSource.substring(
+              functionSource.indexOf('(')
+            )}`;
+          } else if (functionSource.includes('=>')) {
+            functionSource = `function ${squashName}${functionSource.substring(
+              functionSource.indexOf('(')
+            )}`;
           } else {
             functionSource = `function ${squashName}(x){ return x; }`;
           }
@@ -4138,10 +4471,9 @@
       const activationFunctionIndex = activationFunctionIndexMap[squashName];
       const incomingTerms = [];
       for (const connection of node.connections.in) {
-        if (typeof connection.from.index === "undefined")
-          continue;
+        if (typeof connection.from.index === 'undefined') continue;
         let term = `A[${connection.from.index}] * ${connection.weight}`;
-        if (connection.gater && typeof connection.gater.index !== "undefined") {
+        if (connection.gater && typeof connection.gater.index !== 'undefined') {
           term += ` * A[${connection.gater.index}]`;
         }
         incomingTerms.push(term);
@@ -4149,41 +4481,61 @@
       if (node.connections.self.length > 0) {
         const selfConn = node.connections.self[0];
         let term = `S[${nodeIndex}] * ${selfConn.weight}`;
-        if (selfConn.gater && typeof selfConn.gater.index !== "undefined") {
+        if (selfConn.gater && typeof selfConn.gater.index !== 'undefined') {
           term += ` * A[${selfConn.gater.index}]`;
         }
         incomingTerms.push(term);
       }
-      const sumExpression = incomingTerms.length > 0 ? incomingTerms.join(" + ") : "0";
+      const sumExpression =
+        incomingTerms.length > 0 ? incomingTerms.join(' + ') : '0';
       bodyLines.push(`S[${nodeIndex}] = ${sumExpression} + ${node.bias};`);
-      const maskValue = typeof node.mask === "number" && node.mask !== 1 ? node.mask : 1;
-      bodyLines.push(`A[${nodeIndex}] = F[${activationFunctionIndex}](S[${nodeIndex}])${maskValue !== 1 ? ` * ${maskValue}` : ""};`);
+      const maskValue =
+        typeof node.mask === 'number' && node.mask !== 1 ? node.mask : 1;
+      bodyLines.push(
+        `A[${nodeIndex}] = F[${activationFunctionIndex}](S[${nodeIndex}])${
+          maskValue !== 1 ? ` * ${maskValue}` : ''
+        };`
+      );
     }
     const outputIndices = [];
-    for (let nodeIndex = net.nodes.length - net.output; nodeIndex < net.nodes.length; nodeIndex++) {
-      if (typeof net.nodes[nodeIndex]?.index !== "undefined") {
+    for (
+      let nodeIndex = net.nodes.length - net.output;
+      nodeIndex < net.nodes.length;
+      nodeIndex++
+    ) {
+      if (typeof net.nodes[nodeIndex]?.index !== 'undefined') {
         outputIndices.push(net.nodes[nodeIndex].index);
       }
     }
-    bodyLines.push(`return [${outputIndices.map((idx) => `A[${idx}]`).join(",")}];`);
-    const activationArrayLiteral = Object.entries(activationFunctionIndexMap).sort(([, a], [, b]) => a - b).map(([name]) => name).join(",");
-    const activationArrayType = net._activationPrecision === "f32" ? "Float32Array" : "Float64Array";
-    let generatedSource = "";
+    bodyLines.push(
+      `return [${outputIndices.map((idx) => `A[${idx}]`).join(',')}];`
+    );
+    const activationArrayLiteral = Object.entries(activationFunctionIndexMap)
+      .sort(([, a], [, b]) => a - b)
+      .map(([name]) => name)
+      .join(',');
+    const activationArrayType =
+      net._activationPrecision === 'f32' ? 'Float32Array' : 'Float64Array';
+    let generatedSource = '';
     generatedSource += `(function(){
 `;
-    generatedSource += `${activationFunctionSources.join("\n")}
+    generatedSource += `${activationFunctionSources.join('\n')}
 `;
     generatedSource += `var F = [${activationArrayLiteral}];
 `;
-    generatedSource += `var A = new ${activationArrayType}([${initialActivations.join(",")}]);
+    generatedSource += `var A = new ${activationArrayType}([${initialActivations.join(
+      ','
+    )}]);
 `;
-    generatedSource += `var S = new ${activationArrayType}([${initialStates.join(",")}]);
+    generatedSource += `var S = new ${activationArrayType}([${initialStates.join(
+      ','
+    )}]);
 `;
     generatedSource += `function activate(input){
 `;
     generatedSource += `if (!input || input.length !== ${net.input}) { throw new Error('Invalid input size. Expected ${net.input}, got ' + (input ? input.length : 'undefined')); }
 `;
-    generatedSource += bodyLines.join("\n");
+    generatedSource += bodyLines.join('\n');
     generatedSource += `}
 `;
     generatedSource += `return activate;
@@ -4192,22 +4544,25 @@
   }
   var stripCoverage;
   var init_network_standalone = __esm({
-    "dist/architecture/network/network.standalone.js"() {
-      "use strict";
+    'dist/architecture/network/network.standalone.js'() {
+      'use strict';
       stripCoverage = (code) => {
-        code = code.replace(/\/\*\s*istanbul\s+ignore\s+[\s\S]*?\*\//g, "");
-        code = code.replace(/cov_[\w$]+\(\)\.(s|f|b)\[\d+\](\[\d+\])?\+\+/g, "");
-        code = code.replace(/cov_[\w$]+\(\)/g, "");
-        code = code.replace(/^\s*\/\/ # sourceMappingURL=.*\s*$/gm, "");
-        code = code.replace(/\(\s*,\s*/g, "( ");
-        code = code.replace(/\s*,\s*\)/g, " )");
+        code = code.replace(/\/\*\s*istanbul\s+ignore\s+[\s\S]*?\*\//g, '');
+        code = code.replace(
+          /cov_[\w$]+\(\)\.(s|f|b)\[\d+\](\[\d+\])?\+\+/g,
+          ''
+        );
+        code = code.replace(/cov_[\w$]+\(\)/g, '');
+        code = code.replace(/^\s*\/\/ # sourceMappingURL=.*\s*$/gm, '');
+        code = code.replace(/\(\s*,\s*/g, '( ');
+        code = code.replace(/\s*,\s*\)/g, ' )');
         code = code.trim();
-        code = code.replace(/^\s*;\s*$/gm, "");
-        code = code.replace(/;{2,}/g, ";");
-        code = code.replace(/^\s*[,;]?\s*$/gm, "");
+        code = code.replace(/^\s*;\s*$/gm, '');
+        code = code.replace(/;{2,}/g, ';');
+        code = code.replace(/^\s*[,;]?\s*$/gm, '');
         return code;
       };
-    }
+    },
   });
 
   // dist/architecture/network/network.topology.js
@@ -4227,7 +4582,7 @@
     }
     const processingQueue = [];
     this.nodes.forEach((node) => {
-      if (node.type === "input" || (inDegree.get(node) || 0) === 0) {
+      if (node.type === 'input' || (inDegree.get(node) || 0) === 0) {
         processingQueue.push(node);
       }
     });
@@ -4236,54 +4591,53 @@
       const node = processingQueue.shift();
       topoOrder.push(node);
       for (const outgoing of node.connections.out) {
-        if (outgoing.to === node)
-          continue;
+        if (outgoing.to === node) continue;
         const remaining = (inDegree.get(outgoing.to) || 0) - 1;
         inDegree.set(outgoing.to, remaining);
-        if (remaining === 0)
-          processingQueue.push(outgoing.to);
+        if (remaining === 0) processingQueue.push(outgoing.to);
       }
     }
-    internalNet._topoOrder = topoOrder.length === this.nodes.length ? topoOrder : this.nodes.slice();
+    internalNet._topoOrder =
+      topoOrder.length === this.nodes.length ? topoOrder : this.nodes.slice();
     internalNet._topoDirty = false;
   }
   function hasPath(from, to) {
-    if (from === to)
-      return true;
+    if (from === to) return true;
     const visited = /* @__PURE__ */ new Set();
     const dfsStack = [from];
     while (dfsStack.length) {
       const current = dfsStack.pop();
-      if (current === to)
-        return true;
-      if (visited.has(current))
-        continue;
+      if (current === to) return true;
+      if (visited.has(current)) continue;
       visited.add(current);
       for (const edge of current.connections.out) {
-        if (edge.to !== current)
-          dfsStack.push(edge.to);
+        if (edge.to !== current) dfsStack.push(edge.to);
       }
     }
     return false;
   }
   var init_network_topology = __esm({
-    "dist/architecture/network/network.topology.js"() {
-      "use strict";
-    }
+    'dist/architecture/network/network.topology.js'() {
+      'use strict';
+    },
   });
 
   // dist/architecture/network/network.slab.js
   function rebuildConnectionSlab(force = false) {
     const internalNet = this;
-    if (!force && !internalNet._slabDirty)
-      return;
-    if (internalNet._nodeIndexDirty)
-      _reindexNodes.call(this);
+    if (!force && !internalNet._slabDirty) return;
+    if (internalNet._nodeIndexDirty) _reindexNodes.call(this);
     const connectionCount = this.connections.length;
-    const weightArray = internalNet._useFloat32Weights ? new Float32Array(connectionCount) : new Float64Array(connectionCount);
+    const weightArray = internalNet._useFloat32Weights
+      ? new Float32Array(connectionCount)
+      : new Float64Array(connectionCount);
     const fromIndexArray = new Uint32Array(connectionCount);
     const toIndexArray = new Uint32Array(connectionCount);
-    for (let connectionIndex = 0; connectionIndex < connectionCount; connectionIndex++) {
+    for (
+      let connectionIndex = 0;
+      connectionIndex < connectionCount;
+      connectionIndex++
+    ) {
       const connection = this.connections[connectionIndex];
       weightArray[connectionIndex] = connection.weight;
       fromIndexArray[connectionIndex] = connection.from.index >>> 0;
@@ -4301,7 +4655,7 @@
     return {
       weights: internalNet._connWeights,
       from: internalNet._connFrom,
-      to: internalNet._connTo
+      to: internalNet._connTo,
     };
   }
   function _reindexNodes() {
@@ -4312,12 +4666,15 @@
   }
   function _buildAdjacency() {
     const internalNet = this;
-    if (!internalNet._connFrom || !internalNet._connTo)
-      return;
+    if (!internalNet._connFrom || !internalNet._connTo) return;
     const nodeCount = this.nodes.length;
     const connectionCount = internalNet._connFrom.length;
     const fanOutCounts = new Uint32Array(nodeCount);
-    for (let connectionIndex = 0; connectionIndex < connectionCount; connectionIndex++) {
+    for (
+      let connectionIndex = 0;
+      connectionIndex < connectionCount;
+      connectionIndex++
+    ) {
       fanOutCounts[internalNet._connFrom[connectionIndex]]++;
     }
     const outgoingStartIndices = new Uint32Array(nodeCount + 1);
@@ -4329,7 +4686,11 @@
     outgoingStartIndices[nodeCount] = runningOffset;
     const outgoingOrder = new Uint32Array(connectionCount);
     const insertionCursor = outgoingStartIndices.slice();
-    for (let connectionIndex = 0; connectionIndex < connectionCount; connectionIndex++) {
+    for (
+      let connectionIndex = 0;
+      connectionIndex < connectionCount;
+      connectionIndex++
+    ) {
       const fromNodeIndex = internalNet._connFrom[connectionIndex];
       outgoingOrder[insertionCursor[fromNodeIndex]++] = connectionIndex;
     }
@@ -4339,36 +4700,55 @@
   }
   function _canUseFastSlab(training) {
     const internalNet = this;
-    return !training && // Training may require gradients / noise injection.
-    internalNet._enforceAcyclic && // Must have acyclic guarantee for single forward sweep.
-    !internalNet._topoDirty && // Topological order must be current.
-    this.gates.length === 0 && // Gating implies dynamic per-edge behavior.
-    this.selfconns.length === 0 && // Self connections require recurrent handling.
-    this.dropout === 0 && // Dropout introduces stochastic masking.
-    internalNet._weightNoiseStd === 0 && // Global weight noise disables deterministic slab pass.
-    internalNet._weightNoisePerHidden.length === 0 && // Per hidden noise variants.
-    internalNet._stochasticDepth.length === 0;
+    return (
+      !training && // Training may require gradients / noise injection.
+      internalNet._enforceAcyclic && // Must have acyclic guarantee for single forward sweep.
+      !internalNet._topoDirty && // Topological order must be current.
+      this.gates.length === 0 && // Gating implies dynamic per-edge behavior.
+      this.selfconns.length === 0 && // Self connections require recurrent handling.
+      this.dropout === 0 && // Dropout introduces stochastic masking.
+      internalNet._weightNoiseStd === 0 && // Global weight noise disables deterministic slab pass.
+      internalNet._weightNoisePerHidden.length === 0 && // Per hidden noise variants.
+      internalNet._stochasticDepth.length === 0
+    );
   }
   function fastSlabActivate(input) {
     const internalNet = this;
     rebuildConnectionSlab.call(this);
-    if (internalNet._adjDirty)
-      _buildAdjacency.call(this);
-    if (!internalNet._connWeights || !internalNet._connFrom || !internalNet._connTo || !internalNet._outStart || !internalNet._outOrder) {
+    if (internalNet._adjDirty) _buildAdjacency.call(this);
+    if (
+      !internalNet._connWeights ||
+      !internalNet._connFrom ||
+      !internalNet._connTo ||
+      !internalNet._outStart ||
+      !internalNet._outOrder
+    ) {
       return this.activate(input, false);
     }
-    if (internalNet._topoDirty)
-      this._computeTopoOrder();
-    if (internalNet._nodeIndexDirty)
-      _reindexNodes.call(this);
+    if (internalNet._topoDirty) this._computeTopoOrder();
+    if (internalNet._nodeIndexDirty) _reindexNodes.call(this);
     const topoOrder = internalNet._topoOrder || this.nodes;
     const nodeCount = this.nodes.length;
-    const useFloat32Activation = internalNet._activationPrecision === "f32";
-    if (!internalNet._fastA || internalNet._fastA.length !== nodeCount || useFloat32Activation && !(internalNet._fastA instanceof Float32Array) || !useFloat32Activation && !(internalNet._fastA instanceof Float64Array)) {
-      internalNet._fastA = useFloat32Activation ? new Float32Array(nodeCount) : new Float64Array(nodeCount);
+    const useFloat32Activation = internalNet._activationPrecision === 'f32';
+    if (
+      !internalNet._fastA ||
+      internalNet._fastA.length !== nodeCount ||
+      (useFloat32Activation && !(internalNet._fastA instanceof Float32Array)) ||
+      (!useFloat32Activation && !(internalNet._fastA instanceof Float64Array))
+    ) {
+      internalNet._fastA = useFloat32Activation
+        ? new Float32Array(nodeCount)
+        : new Float64Array(nodeCount);
     }
-    if (!internalNet._fastS || internalNet._fastS.length !== nodeCount || useFloat32Activation && !(internalNet._fastS instanceof Float32Array) || !useFloat32Activation && !(internalNet._fastS instanceof Float64Array)) {
-      internalNet._fastS = useFloat32Activation ? new Float32Array(nodeCount) : new Float64Array(nodeCount);
+    if (
+      !internalNet._fastS ||
+      internalNet._fastS.length !== nodeCount ||
+      (useFloat32Activation && !(internalNet._fastS instanceof Float32Array)) ||
+      (!useFloat32Activation && !(internalNet._fastS instanceof Float64Array))
+    ) {
+      internalNet._fastS = useFloat32Activation
+        ? new Float32Array(nodeCount)
+        : new Float64Array(nodeCount);
     }
     const activationBuffer = internalNet._fastA;
     const stateBuffer = internalNet._fastS;
@@ -4397,13 +4777,15 @@
       const sourceActivation = activationBuffer[nodeIndex];
       for (let cursorIdx = edgeStart; cursorIdx < edgeEnd; cursorIdx++) {
         const connectionIndex = outgoingOrder[cursorIdx];
-        stateBuffer[toIndexArray[connectionIndex]] += sourceActivation * weightArray[connectionIndex];
+        stateBuffer[toIndexArray[connectionIndex]] +=
+          sourceActivation * weightArray[connectionIndex];
       }
     }
     const outputBaseIndex = nodeCount - this.output;
     const pooledOutputArray = activationArrayPool.acquire(this.output);
     for (let outputOffset = 0; outputOffset < this.output; outputOffset++) {
-      pooledOutputArray[outputOffset] = activationBuffer[outputBaseIndex + outputOffset];
+      pooledOutputArray[outputOffset] =
+        activationBuffer[outputBaseIndex + outputOffset];
     }
     const result = Array.from(pooledOutputArray);
     activationArrayPool.release(pooledOutputArray);
@@ -4413,21 +4795,27 @@
     return _canUseFastSlab.call(this, training);
   }
   var init_network_slab = __esm({
-    "dist/architecture/network/network.slab.js"() {
-      "use strict";
+    'dist/architecture/network/network.slab.js'() {
+      'use strict';
       init_activationArrayPool();
-    }
+    },
   });
 
   // dist/architecture/network/network.prune.js
   function rankConnections(conns, method) {
     const ranked = [...conns];
-    if (method === "snip") {
+    if (method === 'snip') {
       ranked.sort((a, b) => {
-        const gradMagA = Math.abs(a.totalDeltaWeight) || Math.abs(a.previousDeltaWeight) || 0;
-        const gradMagB = Math.abs(b.totalDeltaWeight) || Math.abs(b.previousDeltaWeight) || 0;
-        const saliencyA = gradMagA ? Math.abs(a.weight) * gradMagA : Math.abs(a.weight);
-        const saliencyB = gradMagB ? Math.abs(b.weight) * gradMagB : Math.abs(b.weight);
+        const gradMagA =
+          Math.abs(a.totalDeltaWeight) || Math.abs(a.previousDeltaWeight) || 0;
+        const gradMagB =
+          Math.abs(b.totalDeltaWeight) || Math.abs(b.previousDeltaWeight) || 0;
+        const saliencyA = gradMagA
+          ? Math.abs(a.weight) * gradMagA
+          : Math.abs(a.weight);
+        const saliencyB = gradMagB
+          ? Math.abs(b.weight) * gradMagB
+          : Math.abs(b.weight);
         return saliencyA - saliencyB;
       });
     } else {
@@ -4438,87 +4826,114 @@
   function regrowConnections(network, desiredRemaining, maxAttempts) {
     const netAny = network;
     let attempts = 0;
-    while (network.connections.length < desiredRemaining && attempts < maxAttempts) {
+    while (
+      network.connections.length < desiredRemaining &&
+      attempts < maxAttempts
+    ) {
       attempts++;
-      const fromNode = network.nodes[Math.floor(netAny._rand() * network.nodes.length)];
-      const toNode = network.nodes[Math.floor(netAny._rand() * network.nodes.length)];
-      if (!fromNode || !toNode || fromNode === toNode)
+      const fromNode =
+        network.nodes[Math.floor(netAny._rand() * network.nodes.length)];
+      const toNode =
+        network.nodes[Math.floor(netAny._rand() * network.nodes.length)];
+      if (!fromNode || !toNode || fromNode === toNode) continue;
+      if (
+        network.connections.some((c) => c.from === fromNode && c.to === toNode)
+      )
         continue;
-      if (network.connections.some((c) => c.from === fromNode && c.to === toNode))
-        continue;
-      if (netAny._enforceAcyclic && network.nodes.indexOf(fromNode) > network.nodes.indexOf(toNode))
+      if (
+        netAny._enforceAcyclic &&
+        network.nodes.indexOf(fromNode) > network.nodes.indexOf(toNode)
+      )
         continue;
       network.connect(fromNode, toNode);
     }
   }
   function maybePrune(iteration) {
     const cfg = this._pruningConfig;
-    if (!cfg)
-      return;
-    if (iteration < cfg.start || iteration > cfg.end)
-      return;
-    if (cfg.lastPruneIter != null && iteration === cfg.lastPruneIter)
-      return;
-    if ((iteration - cfg.start) % (cfg.frequency || 1) !== 0)
-      return;
+    if (!cfg) return;
+    if (iteration < cfg.start || iteration > cfg.end) return;
+    if (cfg.lastPruneIter != null && iteration === cfg.lastPruneIter) return;
+    if ((iteration - cfg.start) % (cfg.frequency || 1) !== 0) return;
     const initialConnectionBaseline = this._initialConnectionCount;
-    if (!initialConnectionBaseline)
-      return;
-    const progressFraction = (iteration - cfg.start) / Math.max(1, cfg.end - cfg.start);
-    const targetSparsityNow = cfg.targetSparsity * Math.min(1, Math.max(0, progressFraction));
-    const desiredRemainingConnections = Math.max(1, Math.floor(initialConnectionBaseline * (1 - targetSparsityNow)));
-    const excessConnectionCount = this.connections.length - desiredRemainingConnections;
+    if (!initialConnectionBaseline) return;
+    const progressFraction =
+      (iteration - cfg.start) / Math.max(1, cfg.end - cfg.start);
+    const targetSparsityNow =
+      cfg.targetSparsity * Math.min(1, Math.max(0, progressFraction));
+    const desiredRemainingConnections = Math.max(
+      1,
+      Math.floor(initialConnectionBaseline * (1 - targetSparsityNow))
+    );
+    const excessConnectionCount =
+      this.connections.length - desiredRemainingConnections;
     if (excessConnectionCount <= 0) {
       cfg.lastPruneIter = iteration;
       return;
     }
-    const rankedConnections = rankConnections(this.connections, cfg.method || "magnitude");
-    const connectionsToPrune = rankedConnections.slice(0, excessConnectionCount);
+    const rankedConnections = rankConnections(
+      this.connections,
+      cfg.method || 'magnitude'
+    );
+    const connectionsToPrune = rankedConnections.slice(
+      0,
+      excessConnectionCount
+    );
     connectionsToPrune.forEach((conn) => this.disconnect(conn.from, conn.to));
     if (cfg.regrowFraction && cfg.regrowFraction > 0) {
-      const intendedRegrowCount = Math.floor(connectionsToPrune.length * cfg.regrowFraction);
-      regrowConnections(this, desiredRemainingConnections, intendedRegrowCount * 10);
+      const intendedRegrowCount = Math.floor(
+        connectionsToPrune.length * cfg.regrowFraction
+      );
+      regrowConnections(
+        this,
+        desiredRemainingConnections,
+        intendedRegrowCount * 10
+      );
     }
     cfg.lastPruneIter = iteration;
     this._topoDirty = true;
   }
-  function pruneToSparsity(targetSparsity, method = "magnitude") {
-    if (targetSparsity <= 0)
-      return;
-    if (targetSparsity >= 1)
-      targetSparsity = 0.999;
+  function pruneToSparsity(targetSparsity, method = 'magnitude') {
+    if (targetSparsity <= 0) return;
+    if (targetSparsity >= 1) targetSparsity = 0.999;
     const netAny = this;
     if (!netAny._evoInitialConnCount)
       netAny._evoInitialConnCount = this.connections.length;
     const evolutionaryBaseline = netAny._evoInitialConnCount;
-    const desiredRemainingConnections = Math.max(1, Math.floor(evolutionaryBaseline * (1 - targetSparsity)));
-    const excessConnectionCount = this.connections.length - desiredRemainingConnections;
-    if (excessConnectionCount <= 0)
-      return;
+    const desiredRemainingConnections = Math.max(
+      1,
+      Math.floor(evolutionaryBaseline * (1 - targetSparsity))
+    );
+    const excessConnectionCount =
+      this.connections.length - desiredRemainingConnections;
+    if (excessConnectionCount <= 0) return;
     const rankedConnections = rankConnections(this.connections, method);
-    const connectionsToRemove = rankedConnections.slice(0, excessConnectionCount);
+    const connectionsToRemove = rankedConnections.slice(
+      0,
+      excessConnectionCount
+    );
     connectionsToRemove.forEach((c) => this.disconnect(c.from, c.to));
     netAny._topoDirty = true;
   }
   function getCurrentSparsity() {
     const initialBaseline = this._initialConnectionCount;
-    if (!initialBaseline)
-      return 0;
+    if (!initialBaseline) return 0;
     return 1 - this.connections.length / initialBaseline;
   }
   var init_network_prune = __esm({
-    "dist/architecture/network/network.prune.js"() {
-      "use strict";
-    }
+    'dist/architecture/network/network.prune.js'() {
+      'use strict';
+    },
   });
 
   // dist/architecture/network/network.gating.js
   function gate(node, connection) {
     if (!this.nodes.includes(node))
-      throw new Error("Gating node must be part of the network to gate a connection!");
+      throw new Error(
+        'Gating node must be part of the network to gate a connection!'
+      );
     if (connection.gater) {
       if (config.warnings)
-        console.warn("Connection is already gated. Skipping.");
+        console.warn('Connection is already gated. Skipping.');
       return;
     }
     node.gate(connection);
@@ -4528,28 +4943,31 @@
     const index = this.gates.indexOf(connection);
     if (index === -1) {
       if (config.warnings)
-        console.warn("Attempted to ungate a connection not in the gates list.");
+        console.warn('Attempted to ungate a connection not in the gates list.');
       return;
     }
     this.gates.splice(index, 1);
     connection.gater?.ungate(connection);
   }
   var init_network_gating = __esm({
-    "dist/architecture/network/network.gating.js"() {
-      "use strict";
+    'dist/architecture/network/network.gating.js'() {
+      'use strict';
       init_mutation();
       init_config();
-    }
+    },
   });
 
   // dist/architecture/network/network.deterministic.js
   function setSeed(seed) {
     this._rngState = seed >>> 0;
     this._rand = () => {
-      this._rngState = this._rngState + 1831565813 >>> 0;
-      let r = Math.imul(this._rngState ^ this._rngState >>> 15, 1 | this._rngState);
-      r ^= r + Math.imul(r ^ r >>> 7, 61 | r);
-      return ((r ^ r >>> 14) >>> 0) / 4294967296;
+      this._rngState = (this._rngState + 1831565813) >>> 0;
+      let r = Math.imul(
+        this._rngState ^ (this._rngState >>> 15),
+        1 | this._rngState
+      );
+      r ^= r + Math.imul(r ^ (r >>> 7), 61 | r);
+      return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
     };
   }
   function snapshotRNG() {
@@ -4563,19 +4981,20 @@
     return this._rngState;
   }
   function setRNGState(state) {
-    if (typeof state === "number")
-      this._rngState = state >>> 0;
+    if (typeof state === 'number') this._rngState = state >>> 0;
   }
   var init_network_deterministic = __esm({
-    "dist/architecture/network/network.deterministic.js"() {
-      "use strict";
-    }
+    'dist/architecture/network/network.deterministic.js'() {
+      'use strict';
+    },
   });
 
   // dist/architecture/network/network.stats.js
   function deepCloneValue(value) {
     try {
-      return globalThis.structuredClone ? globalThis.structuredClone(value) : JSON.parse(JSON.stringify(value));
+      return globalThis.structuredClone
+        ? globalThis.structuredClone(value)
+        : JSON.parse(JSON.stringify(value));
     } catch {
       return JSON.parse(JSON.stringify(value));
     }
@@ -4585,19 +5004,18 @@
     return lastStatsSnapshot ? deepCloneValue(lastStatsSnapshot) : null;
   }
   var init_network_stats = __esm({
-    "dist/architecture/network/network.stats.js"() {
-      "use strict";
-    }
+    'dist/architecture/network/network.stats.js'() {
+      'use strict';
+    },
   });
 
   // dist/architecture/network/network.remove.js
   function removeNode(node) {
     const internalNet = this;
     const idx = this.nodes.indexOf(node);
-    if (idx === -1)
-      throw new Error("Node not in network");
-    if (node.type === "input" || node.type === "output") {
-      throw new Error("Cannot remove input or output node from the network.");
+    if (idx === -1) throw new Error('Node not in network');
+    if (node.type === 'input' || node.type === 'output') {
+      throw new Error('Cannot remove input or output node from the network.');
     }
     this.gates = this.gates.filter((c) => {
       if (c.gater === node) {
@@ -4617,11 +5035,11 @@
     }
     inbound.forEach((ic) => {
       outbound.forEach((oc) => {
-        if (!ic.from || !oc.to || ic.from === oc.to)
-          return;
-        const exists = this.connections.some((c) => c.from === ic.from && c.to === oc.to);
-        if (!exists)
-          this.connect(ic.from, oc.to);
+        if (!ic.from || !oc.to || ic.from === oc.to) return;
+        const exists = this.connections.some(
+          (c) => c.from === ic.from && c.to === oc.to
+        );
+        if (!exists) this.connect(ic.from, oc.to);
       });
     });
     internalNet._topoDirty = true;
@@ -4630,24 +5048,26 @@
     internalNet._adjDirty = true;
   }
   var init_network_remove = __esm({
-    "dist/architecture/network/network.remove.js"() {
-      "use strict";
+    'dist/architecture/network/network.remove.js'() {
+      'use strict';
       init_nodePool();
       init_config();
-    }
+    },
   });
 
   // dist/architecture/network/network.connect.js
   function connect(from, to, weight) {
-    if (this._enforceAcyclic && this.nodes.indexOf(from) > this.nodes.indexOf(to))
+    if (
+      this._enforceAcyclic &&
+      this.nodes.indexOf(from) > this.nodes.indexOf(to)
+    )
       return [];
     const connections = from.connect(to, weight);
     for (const c of connections) {
       if (from !== to) {
         this.connections.push(c);
       } else {
-        if (this._enforceAcyclic)
-          continue;
+        if (this._enforceAcyclic) continue;
         this.selfconns.push(c);
       }
     }
@@ -4662,8 +5082,7 @@
     for (let i = 0; i < list.length; i++) {
       const c = list[i];
       if (c.from === from && c.to === to) {
-        if (c.gater)
-          this.ungate(c);
+        if (c.gater) this.ungate(c);
         list.splice(i, 1);
         break;
       }
@@ -4673,23 +5092,25 @@
     this._slabDirty = true;
   }
   var init_network_connect = __esm({
-    "dist/architecture/network/network.connect.js"() {
-      "use strict";
-    }
+    'dist/architecture/network/network.connect.js'() {
+      'use strict';
+    },
   });
 
   // dist/architecture/network/network.serialize.js
   function serialize() {
-    this.nodes.forEach((nodeRef, nodeIndex) => nodeRef.index = nodeIndex);
+    this.nodes.forEach((nodeRef, nodeIndex) => (nodeRef.index = nodeIndex));
     const activations = this.nodes.map((nodeRef) => nodeRef.activation);
     const states = this.nodes.map((nodeRef) => nodeRef.state);
     const squashes = this.nodes.map((nodeRef) => nodeRef.squash.name);
-    const serializedConnections = this.connections.concat(this.selfconns).map((connInstance) => ({
-      from: connInstance.from.index,
-      to: connInstance.to.index,
-      weight: connInstance.weight,
-      gater: connInstance.gater ? connInstance.gater.index : null
-    }));
+    const serializedConnections = this.connections
+      .concat(this.selfconns)
+      .map((connInstance) => ({
+        from: connInstance.from.index,
+        to: connInstance.to.index,
+        weight: connInstance.weight,
+        gater: connInstance.gater ? connInstance.gater.index : null,
+      }));
     const inputSize = this.input;
     const outputSize = this.output;
     return [
@@ -4698,51 +5119,76 @@
       squashes,
       serializedConnections,
       inputSize,
-      outputSize
+      outputSize,
     ];
   }
   function deserialize(data, inputSize, outputSize) {
-    const [activations, states, squashes, connections, serializedInput, serializedOutput] = data;
-    const input = typeof inputSize === "number" ? inputSize : serializedInput || 0;
-    const output = typeof outputSize === "number" ? outputSize : serializedOutput || 0;
-    const net = new (init_network(), __toCommonJS(network_exports)).default(input, output);
+    const [
+      activations,
+      states,
+      squashes,
+      connections,
+      serializedInput,
+      serializedOutput,
+    ] = data;
+    const input =
+      typeof inputSize === 'number' ? inputSize : serializedInput || 0;
+    const output =
+      typeof outputSize === 'number' ? outputSize : serializedOutput || 0;
+    const net = new (init_network(), __toCommonJS(network_exports)).default(
+      input,
+      output
+    );
     net.nodes = [];
     net.connections = [];
     net.selfconns = [];
     net.gates = [];
     activations.forEach((activation, nodeIndex) => {
       let type;
-      if (nodeIndex < input)
-        type = "input";
-      else if (nodeIndex >= activations.length - output)
-        type = "output";
-      else
-        type = "hidden";
+      if (nodeIndex < input) type = 'input';
+      else if (nodeIndex >= activations.length - output) type = 'output';
+      else type = 'hidden';
       const node = new Node(type);
       node.activation = activation;
       node.state = states[nodeIndex];
       const squashName = squashes[nodeIndex];
       if (!activation_default[squashName]) {
-        console.warn(`Unknown squash function '${String(squashName)}' encountered during deserialize. Falling back to identity.`);
+        console.warn(
+          `Unknown squash function '${String(
+            squashName
+          )}' encountered during deserialize. Falling back to identity.`
+        );
       }
-      node.squash = activation_default[squashName] || activation_default.identity;
+      node.squash =
+        activation_default[squashName] || activation_default.identity;
       node.index = nodeIndex;
       net.nodes.push(node);
     });
     connections.forEach((serializedConn) => {
-      if (serializedConn.from < net.nodes.length && serializedConn.to < net.nodes.length) {
+      if (
+        serializedConn.from < net.nodes.length &&
+        serializedConn.to < net.nodes.length
+      ) {
         const sourceNode = net.nodes[serializedConn.from];
         const targetNode = net.nodes[serializedConn.to];
-        const createdConnection = net.connect(sourceNode, targetNode, serializedConn.weight)[0];
+        const createdConnection = net.connect(
+          sourceNode,
+          targetNode,
+          serializedConn.weight
+        )[0];
         if (createdConnection && serializedConn.gater != null) {
           if (serializedConn.gater < net.nodes.length) {
             net.gate(net.nodes[serializedConn.gater], createdConnection);
           } else {
-            console.warn("Invalid gater index encountered during deserialize; skipping gater assignment.");
+            console.warn(
+              'Invalid gater index encountered during deserialize; skipping gater assignment.'
+            );
           }
         }
       } else {
-        console.warn("Invalid connection indices encountered during deserialize; skipping connection.");
+        console.warn(
+          'Invalid connection indices encountered during deserialize; skipping connection.'
+        );
       }
     });
     return net;
@@ -4754,7 +5200,7 @@
       output: this.output,
       dropout: this.dropout,
       nodes: [],
-      connections: []
+      connections: [],
     };
     this.nodes.forEach((node, nodeIndex) => {
       node.index = nodeIndex;
@@ -4763,7 +5209,7 @@
         bias: node.bias,
         squash: node.squash.name,
         index: nodeIndex,
-        geneId: node.geneId
+        geneId: node.geneId,
       });
       if (node.connections.self.length > 0) {
         const selfConn = node.connections.self[0];
@@ -4772,29 +5218,35 @@
           to: nodeIndex,
           weight: selfConn.weight,
           gater: selfConn.gater ? selfConn.gater.index : null,
-          enabled: selfConn.enabled !== false
+          enabled: selfConn.enabled !== false,
         });
       }
     });
     this.connections.forEach((connInstance) => {
-      if (typeof connInstance.from.index !== "number" || typeof connInstance.to.index !== "number")
+      if (
+        typeof connInstance.from.index !== 'number' ||
+        typeof connInstance.to.index !== 'number'
+      )
         return;
       json.connections.push({
         from: connInstance.from.index,
         to: connInstance.to.index,
         weight: connInstance.weight,
         gater: connInstance.gater ? connInstance.gater.index : null,
-        enabled: connInstance.enabled !== false
+        enabled: connInstance.enabled !== false,
       });
     });
     return json;
   }
   function fromJSONImpl(json) {
-    if (!json || typeof json !== "object")
-      throw new Error("Invalid JSON for network.");
+    if (!json || typeof json !== 'object')
+      throw new Error('Invalid JSON for network.');
     if (json.formatVersion !== 2)
-      console.warn("fromJSONImpl: Unknown formatVersion, attempting import.");
-    const net = new (init_network(), __toCommonJS(network_exports)).default(json.input, json.output);
+      console.warn('fromJSONImpl: Unknown formatVersion, attempting import.');
+    const net = new (init_network(), __toCommonJS(network_exports)).default(
+      json.input,
+      json.output
+    );
     net.dropout = json.dropout || 0;
     net.nodes = [];
     net.connections = [];
@@ -4803,40 +5255,55 @@
     json.nodes.forEach((nodeJson, nodeIndex) => {
       const node = new Node(nodeJson.type);
       node.bias = nodeJson.bias;
-      node.squash = activation_default[nodeJson.squash] || activation_default.identity;
+      node.squash =
+        activation_default[nodeJson.squash] || activation_default.identity;
       node.index = nodeIndex;
-      if (typeof nodeJson.geneId === "number")
-        node.geneId = nodeJson.geneId;
+      if (typeof nodeJson.geneId === 'number') node.geneId = nodeJson.geneId;
       net.nodes.push(node);
     });
     json.connections.forEach((connJson) => {
-      if (typeof connJson.from !== "number" || typeof connJson.to !== "number")
+      if (typeof connJson.from !== 'number' || typeof connJson.to !== 'number')
         return;
       const sourceNode = net.nodes[connJson.from];
       const targetNode = net.nodes[connJson.to];
-      const createdConnection = net.connect(sourceNode, targetNode, connJson.weight)[0];
-      if (createdConnection && connJson.gater != null && typeof connJson.gater === "number" && net.nodes[connJson.gater]) {
+      const createdConnection = net.connect(
+        sourceNode,
+        targetNode,
+        connJson.weight
+      )[0];
+      if (
+        createdConnection &&
+        connJson.gater != null &&
+        typeof connJson.gater === 'number' &&
+        net.nodes[connJson.gater]
+      ) {
         net.gate(net.nodes[connJson.gater], createdConnection);
       }
-      if (createdConnection && typeof connJson.enabled !== "undefined")
+      if (createdConnection && typeof connJson.enabled !== 'undefined')
         createdConnection.enabled = connJson.enabled;
     });
     return net;
   }
   var init_network_serialize = __esm({
-    "dist/architecture/network/network.serialize.js"() {
-      "use strict";
+    'dist/architecture/network/network.serialize.js'() {
+      'use strict';
       init_node();
       init_connection();
       init_methods();
-    }
+    },
   });
 
   // dist/architecture/network/network.genetic.js
   function crossOver(network1, network2, equal = false) {
-    if (network1.input !== network2.input || network1.output !== network2.output)
-      throw new Error("Parent networks must have the same input and output sizes for crossover.");
-    const offspring = new (init_network(), __toCommonJS(network_exports)).default(network1.input, network1.output);
+    if (
+      network1.input !== network2.input ||
+      network1.output !== network2.output
+    )
+      throw new Error(
+        'Parent networks must have the same input and output sizes for crossover.'
+      );
+    const offspring = new (init_network(),
+    __toCommonJS(network_exports)).default(network1.input, network1.output);
     offspring.connections = [];
     offspring.nodes = [];
     offspring.selfconns = [];
@@ -4850,33 +5317,30 @@
       const max = Math.max(n1Size, n2Size);
       const min = Math.min(n1Size, n2Size);
       size = Math.floor(Math.random() * (max - min + 1) + min);
-    } else
-      size = score1 > score2 ? n1Size : n2Size;
+    } else size = score1 > score2 ? n1Size : n2Size;
     const outputSize = network1.output;
-    network1.nodes.forEach((n, i) => n.index = i);
-    network2.nodes.forEach((n, i) => n.index = i);
+    network1.nodes.forEach((n, i) => (n.index = i));
+    network2.nodes.forEach((n, i) => (n.index = i));
     for (let i = 0; i < size; i++) {
       let chosen;
       const node1 = i < n1Size ? network1.nodes[i] : void 0;
       const node2 = i < n2Size ? network2.nodes[i] : void 0;
-      if (i < network1.input)
-        chosen = node1;
+      if (i < network1.input) chosen = node1;
       else if (i >= size - outputSize) {
         const o1 = n1Size - (size - i);
         const o2 = n2Size - (size - i);
-        const n1o = o1 >= network1.input && o1 < n1Size ? network1.nodes[o1] : void 0;
-        const n2o = o2 >= network2.input && o2 < n2Size ? network2.nodes[o2] : void 0;
+        const n1o =
+          o1 >= network1.input && o1 < n1Size ? network1.nodes[o1] : void 0;
+        const n2o =
+          o2 >= network2.input && o2 < n2Size ? network2.nodes[o2] : void 0;
         if (n1o && n2o)
           chosen = (network1._rand || Math.random)() >= 0.5 ? n1o : n2o;
-        else
-          chosen = n1o || n2o;
+        else chosen = n1o || n2o;
       } else {
         if (node1 && node2)
           chosen = (network1._rand || Math.random)() >= 0.5 ? node1 : node2;
-        else if (node1 && (score1 >= score2 || equal))
-          chosen = node1;
-        else if (node2 && (score2 >= score1 || equal))
-          chosen = node2;
+        else if (node1 && (score1 >= score2 || equal)) chosen = node1;
+        else if (node2 && (score2 >= score1 || equal)) chosen = node2;
       }
       if (chosen) {
         const nn = new Node(chosen.type);
@@ -4885,27 +5349,27 @@
         offspring.nodes.push(nn);
       }
     }
-    offspring.nodes.forEach((n, i) => n.index = i);
+    offspring.nodes.forEach((n, i) => (n.index = i));
     const n1conns = {};
     const n2conns = {};
     network1.connections.concat(network1.selfconns).forEach((c) => {
-      if (typeof c.from.index === "number" && typeof c.to.index === "number")
+      if (typeof c.from.index === 'number' && typeof c.to.index === 'number')
         n1conns[Connection.innovationID(c.from.index, c.to.index)] = {
           weight: c.weight,
           from: c.from.index,
           to: c.to.index,
           gater: c.gater ? c.gater.index : -1,
-          enabled: c.enabled !== false
+          enabled: c.enabled !== false,
         };
     });
     network2.connections.concat(network2.selfconns).forEach((c) => {
-      if (typeof c.from.index === "number" && typeof c.to.index === "number")
+      if (typeof c.from.index === 'number' && typeof c.to.index === 'number')
         n2conns[Connection.innovationID(c.from.index, c.to.index)] = {
           weight: c.weight,
           from: c.from.index,
           to: c.to.index,
           gater: c.gater ? c.gater.index : -1,
-          enabled: c.enabled !== false
+          enabled: c.enabled !== false,
         };
     });
     const chosenConns = [];
@@ -4943,8 +5407,7 @@
       if (cd.from < nodeCount && cd.to < nodeCount) {
         const from = offspring.nodes[cd.from];
         const to = offspring.nodes[cd.to];
-        if (cd.from >= cd.to)
-          return;
+        if (cd.from >= cd.to) return;
         if (!from.isProjectingTo(to)) {
           const conn = offspring.connect(from, to)[0];
           if (conn) {
@@ -4959,11 +5422,11 @@
     return offspring;
   }
   var init_network_genetic = __esm({
-    "dist/architecture/network/network.genetic.js"() {
-      "use strict";
+    'dist/architecture/network/network.genetic.js'() {
+      'use strict';
       init_node();
       init_connection();
-    }
+    },
   });
 
   // dist/architecture/network/network.activate.js
@@ -4971,30 +5434,30 @@
   __export(network_activate_exports, {
     activateBatch: () => activateBatch,
     activateRaw: () => activateRaw,
-    noTraceActivate: () => noTraceActivate
+    noTraceActivate: () => noTraceActivate,
   });
   function noTraceActivate(input) {
     const self = this;
-    if (self._enforceAcyclic && self._topoDirty)
-      this._computeTopoOrder();
+    if (self._enforceAcyclic && self._topoDirty) this._computeTopoOrder();
     if (!Array.isArray(input) || input.length !== this.input) {
-      throw new Error(`Input size mismatch: expected ${this.input}, got ${input ? input.length : "undefined"}`);
+      throw new Error(
+        `Input size mismatch: expected ${this.input}, got ${
+          input ? input.length : 'undefined'
+        }`
+      );
     }
     if (this._canUseFastSlab(false)) {
       try {
         return this._fastSlabActivate(input);
-      } catch {
-      }
+      } catch {}
     }
     const output = activationArrayPool.acquire(this.output);
     let outIndex = 0;
     this.nodes.forEach((node, index) => {
-      if (node.type === "input")
-        node.noTraceActivate(input[index]);
-      else if (node.type === "output")
+      if (node.type === 'input') node.noTraceActivate(input[index]);
+      else if (node.type === 'output')
         output[outIndex++] = node.noTraceActivate();
-      else
-        node.noTraceActivate();
+      else node.noTraceActivate();
     });
     const result = Array.from(output);
     activationArrayPool.release(output);
@@ -5008,29 +5471,33 @@
   }
   function activateBatch(inputs, training = false) {
     if (!Array.isArray(inputs))
-      throw new Error("inputs must be an array of input arrays");
+      throw new Error('inputs must be an array of input arrays');
     const out = new Array(inputs.length);
     for (let i = 0; i < inputs.length; i++) {
       const x = inputs[i];
       if (!Array.isArray(x) || x.length !== this.input) {
-        throw new Error(`Input[${i}] size mismatch: expected ${this.input}, got ${x ? x.length : "undefined"}`);
+        throw new Error(
+          `Input[${i}] size mismatch: expected ${this.input}, got ${
+            x ? x.length : 'undefined'
+          }`
+        );
       }
       out[i] = this.activate(x, training);
     }
     return out;
   }
   var init_network_activate = __esm({
-    "dist/architecture/network/network.activate.js"() {
-      "use strict";
+    'dist/architecture/network/network.activate.js'() {
+      'use strict';
       init_activationArrayPool();
-    }
+    },
   });
 
   // dist/architecture/group.js
   var Group;
   var init_group = __esm({
-    "dist/architecture/group.js"() {
-      "use strict";
+    'dist/architecture/group.js'() {
+      'use strict';
       init_node();
       init_layer();
       init_config();
@@ -5056,7 +5523,7 @@
           this.connections = {
             in: [],
             out: [],
-            self: []
+            self: [],
           };
           for (let i = 0; i < size; i++) {
             this.nodes.push(new Node());
@@ -5074,10 +5541,15 @@
         activate(value) {
           const values = [];
           if (value !== void 0 && value.length !== this.nodes.length) {
-            throw new Error("Array with values should be same as the amount of nodes!");
+            throw new Error(
+              'Array with values should be same as the amount of nodes!'
+            );
           }
           for (let i = 0; i < this.nodes.length; i++) {
-            const activation = value === void 0 ? this.nodes[i].activate() : this.nodes[i].activate(value[i]);
+            const activation =
+              value === void 0
+                ? this.nodes[i].activate()
+                : this.nodes[i].activate(value[i]);
             values.push(activation);
           }
           return values;
@@ -5094,7 +5566,9 @@
          */
         propagate(rate, momentum, target) {
           if (target !== void 0 && target.length !== this.nodes.length) {
-            throw new Error("Array with values should be same as the amount of nodes!");
+            throw new Error(
+              'Array with values should be same as the amount of nodes!'
+            );
           }
           for (let i = this.nodes.length - 1; i >= 0; i--) {
             if (target === void 0) {
@@ -5121,20 +5595,33 @@
             if (method === void 0) {
               if (this !== target) {
                 if (config.warnings)
-                  console.warn("No group connection specified, using ALL_TO_ALL by default.");
+                  console.warn(
+                    'No group connection specified, using ALL_TO_ALL by default.'
+                  );
                 method = connection_default.ALL_TO_ALL;
               } else {
                 if (config.warnings)
-                  console.warn("Connecting group to itself, using ONE_TO_ONE by default.");
+                  console.warn(
+                    'Connecting group to itself, using ONE_TO_ONE by default.'
+                  );
                 method = connection_default.ONE_TO_ONE;
               }
             }
-            if (method === connection_default.ALL_TO_ALL || method === connection_default.ALL_TO_ELSE) {
+            if (
+              method === connection_default.ALL_TO_ALL ||
+              method === connection_default.ALL_TO_ELSE
+            ) {
               for (i = 0; i < this.nodes.length; i++) {
                 for (j = 0; j < target.nodes.length; j++) {
-                  if (method === connection_default.ALL_TO_ELSE && this.nodes[i] === target.nodes[j])
+                  if (
+                    method === connection_default.ALL_TO_ELSE &&
+                    this.nodes[i] === target.nodes[j]
+                  )
                     continue;
-                  let connection = this.nodes[i].connect(target.nodes[j], weight);
+                  let connection = this.nodes[i].connect(
+                    target.nodes[j],
+                    weight
+                  );
                   this.connections.out.push(connection[0]);
                   target.connections.in.push(connection[0]);
                   connections.push(connection[0]);
@@ -5142,7 +5629,9 @@
               }
             } else if (method === connection_default.ONE_TO_ONE) {
               if (this.nodes.length !== target.nodes.length) {
-                throw new Error("Cannot create ONE_TO_ONE connection: source and target groups must have the same size.");
+                throw new Error(
+                  'Cannot create ONE_TO_ONE connection: source and target groups must have the same size.'
+                );
               }
               for (i = 0; i < this.nodes.length; i++) {
                 let connection = this.nodes[i].connect(target.nodes[i], weight);
@@ -5176,7 +5665,9 @@
          */
         gate(connections, method) {
           if (method === void 0) {
-            throw new Error("Please specify a gating method: Gating.INPUT, Gating.OUTPUT, or Gating.SELF");
+            throw new Error(
+              'Please specify a gating method: Gating.INPUT, Gating.OUTPUT, or Gating.SELF'
+            );
           }
           if (!Array.isArray(connections)) {
             connections = [connections];
@@ -5186,10 +5677,8 @@
           let i, j;
           for (i = 0; i < connections.length; i++) {
             const connection = connections[i];
-            if (!nodes1.includes(connection.from))
-              nodes1.push(connection.from);
-            if (!nodes2.includes(connection.to))
-              nodes2.push(connection.to);
+            if (!nodes1.includes(connection.from)) nodes1.push(connection.from);
+            if (!nodes2.includes(connection.to)) nodes2.push(connection.to);
           }
           switch (method) {
             // Gate the input to the target node(s) of the connection(s)
@@ -5218,7 +5707,9 @@
               for (i = 0; i < nodes1.length; i++) {
                 let node = nodes1[i];
                 let gater = this.nodes[i % this.nodes.length];
-                const selfConn = Array.isArray(node.connections.self) ? node.connections.self[0] : node.connections.self;
+                const selfConn = Array.isArray(node.connections.self)
+                  ? node.connections.self[0]
+                  : node.connections.self;
                 if (connections.includes(selfConn)) {
                   gater.gate(selfConn);
                 }
@@ -5257,7 +5748,10 @@
                 this.nodes[i].disconnect(target.nodes[j], twosided);
                 for (k = this.connections.out.length - 1; k >= 0; k--) {
                   let conn = this.connections.out[k];
-                  if (conn.from === this.nodes[i] && conn.to === target.nodes[j]) {
+                  if (
+                    conn.from === this.nodes[i] &&
+                    conn.to === target.nodes[j]
+                  ) {
                     this.connections.out.splice(k, 1);
                     break;
                   }
@@ -5265,21 +5759,30 @@
                 if (twosided) {
                   for (k = this.connections.in.length - 1; k >= 0; k--) {
                     let conn = this.connections.in[k];
-                    if (conn.from === target.nodes[j] && conn.to === this.nodes[i]) {
+                    if (
+                      conn.from === target.nodes[j] &&
+                      conn.to === this.nodes[i]
+                    ) {
                       this.connections.in.splice(k, 1);
                       break;
                     }
                   }
                   for (k = target.connections.out.length - 1; k >= 0; k--) {
                     let conn = target.connections.out[k];
-                    if (conn.from === target.nodes[j] && conn.to === this.nodes[i]) {
+                    if (
+                      conn.from === target.nodes[j] &&
+                      conn.to === this.nodes[i]
+                    ) {
                       target.connections.out.splice(k, 1);
                       break;
                     }
                   }
                   for (k = target.connections.in.length - 1; k >= 0; k--) {
                     let conn = target.connections.in[k];
-                    if (conn.from === this.nodes[i] && conn.to === target.nodes[j]) {
+                    if (
+                      conn.from === this.nodes[i] &&
+                      conn.to === target.nodes[j]
+                    ) {
                       target.connections.in.splice(k, 1);
                       break;
                     }
@@ -5332,23 +5835,23 @@
             connections: {
               in: this.connections.in.length,
               out: this.connections.out.length,
-              self: this.connections.self.length
-            }
+              self: this.connections.self.length,
+            },
           };
         }
       };
-    }
+    },
   });
 
   // dist/architecture/layer.js
   var layer_exports = {};
   __export(layer_exports, {
-    default: () => Layer
+    default: () => Layer,
   });
   var Layer;
   var init_layer = __esm({
-    "dist/architecture/layer.js"() {
-      "use strict";
+    'dist/architecture/layer.js'() {
+      'use strict';
       init_node();
       init_group();
       init_methods();
@@ -5405,7 +5908,9 @@
         activate(value, training = false) {
           const out = activationArrayPool.acquire(this.nodes.length);
           if (value !== void 0 && value.length !== this.nodes.length) {
-            throw new Error("Array with values should be same as the amount of nodes!");
+            throw new Error(
+              'Array with values should be same as the amount of nodes!'
+            );
           }
           let layerMask = 1;
           if (training && this.dropout > 0) {
@@ -5446,7 +5951,9 @@
          */
         propagate(rate, momentum, target) {
           if (target !== void 0 && target.length !== this.nodes.length) {
-            throw new Error("Array with values should be same as the amount of nodes!");
+            throw new Error(
+              'Array with values should be same as the amount of nodes!'
+            );
           }
           for (let i = this.nodes.length - 1; i >= 0; i--) {
             if (target === void 0) {
@@ -5471,7 +5978,9 @@
          */
         connect(target, method, weight) {
           if (!this.output) {
-            throw new Error("Layer output is not defined. Cannot connect from this layer.");
+            throw new Error(
+              'Layer output is not defined. Cannot connect from this layer.'
+            );
           }
           let connections = [];
           if (target instanceof _Layer) {
@@ -5493,7 +6002,9 @@
          */
         gate(connections, method) {
           if (!this.output) {
-            throw new Error("Layer output is not defined. Cannot gate from this layer.");
+            throw new Error(
+              'Layer output is not defined. Cannot gate from this layer.'
+            );
           }
           this.output.gate(connections, method);
         }
@@ -5536,7 +6047,10 @@
                 this.nodes[i].disconnect(target.nodes[j], twosided);
                 for (k = this.connections.out.length - 1; k >= 0; k--) {
                   let conn = this.connections.out[k];
-                  if (conn.from === this.nodes[i] && conn.to === target.nodes[j]) {
+                  if (
+                    conn.from === this.nodes[i] &&
+                    conn.to === target.nodes[j]
+                  ) {
                     this.connections.out.splice(k, 1);
                     break;
                   }
@@ -5544,7 +6058,10 @@
                 if (twosided) {
                   for (k = this.connections.in.length - 1; k >= 0; k--) {
                     let conn = this.connections.in[k];
-                    if (conn.from === target.nodes[j] && conn.to === this.nodes[i]) {
+                    if (
+                      conn.from === target.nodes[j] &&
+                      conn.to === this.nodes[i]
+                    ) {
                       this.connections.in.splice(k, 1);
                       break;
                     }
@@ -5597,11 +6114,12 @@
          * @throws {Error} If the layer's `output` group (acting as input target here) is not defined.
          */
         input(from, method, weight) {
-          if (from instanceof _Layer)
-            from = from.output;
+          if (from instanceof _Layer) from = from.output;
           method = method || connection_default.ALL_TO_ALL;
           if (!this.output) {
-            throw new Error("Layer output (acting as input target) is not defined.");
+            throw new Error(
+              'Layer output (acting as input target) is not defined.'
+            );
           }
           return from.connect(this.output, method, weight);
         }
@@ -5621,8 +6139,7 @@
           layer.nodes.push(...block.nodes);
           layer.output = block;
           layer.input = (from, method, weight) => {
-            if (from instanceof _Layer)
-              from = from.output;
+            if (from instanceof _Layer) from = from.output;
             method = method || connection_default.ALL_TO_ALL;
             return from.connect(block, method, weight);
           };
@@ -5654,17 +6171,26 @@
           memoryCell.connect(forgetGate, connection_default.ALL_TO_ALL);
           memoryCell.connect(outputGate, connection_default.ALL_TO_ALL);
           memoryCell.connect(memoryCell, connection_default.ONE_TO_ONE);
-          const output = memoryCell.connect(outputBlock, connection_default.ALL_TO_ALL);
+          const output = memoryCell.connect(
+            outputBlock,
+            connection_default.ALL_TO_ALL
+          );
           outputGate.gate(output, gating.OUTPUT);
           memoryCell.nodes.forEach((node, i) => {
-            const selfConnection = node.connections.self.find((conn) => conn.to === node && conn.from === node);
+            const selfConnection = node.connections.self.find(
+              (conn) => conn.to === node && conn.from === node
+            );
             if (selfConnection) {
               selfConnection.gater = forgetGate.nodes[i];
-              if (!forgetGate.nodes[i].connections.gated.includes(selfConnection)) {
+              if (
+                !forgetGate.nodes[i].connections.gated.includes(selfConnection)
+              ) {
                 forgetGate.nodes[i].connections.gated.push(selfConnection);
               }
             } else {
-              console.warn(`LSTM Warning: No self-connection found for memory cell node ${i}`);
+              console.warn(
+                `LSTM Warning: No self-connection found for memory cell node ${i}`
+              );
             }
           });
           layer.nodes = [
@@ -5672,19 +6198,24 @@
             ...forgetGate.nodes,
             ...memoryCell.nodes,
             ...outputGate.nodes,
-            ...outputBlock.nodes
+            ...outputBlock.nodes,
           ];
           layer.output = outputBlock;
           layer.input = (from, method, weight) => {
-            if (from instanceof _Layer)
-              from = from.output;
+            if (from instanceof _Layer) from = from.output;
             method = method || connection_default.ALL_TO_ALL;
             let connections = [];
             const input = from.connect(memoryCell, method, weight);
             connections = connections.concat(input);
-            connections = connections.concat(from.connect(inputGate, method, weight));
-            connections = connections.concat(from.connect(outputGate, method, weight));
-            connections = connections.concat(from.connect(forgetGate, method, weight));
+            connections = connections.concat(
+              from.connect(inputGate, method, weight)
+            );
+            connections = connections.concat(
+              from.connect(outputGate, method, weight)
+            );
+            connections = connections.concat(
+              from.connect(forgetGate, method, weight)
+            );
             inputGate.gate(input, gating.INPUT);
             return connections;
           };
@@ -5712,29 +6243,42 @@
             bias: 0,
             squash: activation_default.identity,
             // Pass through previous output directly
-            type: "variant"
+            type: 'variant',
             // Custom type identifier
           });
           memoryCell.set({
-            squash: activation_default.tanh
+            squash: activation_default.tanh,
             // Tanh activation for candidate state
           });
           inverseUpdateGate.set({
             bias: 0,
             squash: activation_default.inverse,
             // Activation computes 1 - input
-            type: "variant"
+            type: 'variant',
             // Custom type identifier
           });
           updateGate.set({ bias: 1 });
           resetGate.set({ bias: 0 });
           previousOutput.connect(updateGate, connection_default.ALL_TO_ALL);
           previousOutput.connect(resetGate, connection_default.ALL_TO_ALL);
-          updateGate.connect(inverseUpdateGate, connection_default.ONE_TO_ONE, 1);
-          const reset = previousOutput.connect(memoryCell, connection_default.ALL_TO_ALL);
+          updateGate.connect(
+            inverseUpdateGate,
+            connection_default.ONE_TO_ONE,
+            1
+          );
+          const reset = previousOutput.connect(
+            memoryCell,
+            connection_default.ALL_TO_ALL
+          );
           resetGate.gate(reset, gating.OUTPUT);
-          const update1 = previousOutput.connect(output, connection_default.ALL_TO_ALL);
-          const update2 = memoryCell.connect(output, connection_default.ALL_TO_ALL);
+          const update1 = previousOutput.connect(
+            output,
+            connection_default.ALL_TO_ALL
+          );
+          const update2 = memoryCell.connect(
+            output,
+            connection_default.ALL_TO_ALL
+          );
           updateGate.gate(update1, gating.OUTPUT);
           inverseUpdateGate.gate(update2, gating.OUTPUT);
           output.connect(previousOutput, connection_default.ONE_TO_ONE, 1);
@@ -5744,17 +6288,22 @@
             ...resetGate.nodes,
             ...memoryCell.nodes,
             ...output.nodes,
-            ...previousOutput.nodes
+            ...previousOutput.nodes,
           ];
           layer.output = output;
           layer.input = (from, method, weight) => {
-            if (from instanceof _Layer)
-              from = from.output;
+            if (from instanceof _Layer) from = from.output;
             method = method || connection_default.ALL_TO_ALL;
             let connections = [];
-            connections = connections.concat(from.connect(updateGate, method, weight));
-            connections = connections.concat(from.connect(resetGate, method, weight));
-            connections = connections.concat(from.connect(memoryCell, method, weight));
+            connections = connections.concat(
+              from.connect(updateGate, method, weight)
+            );
+            connections = connections.concat(
+              from.connect(resetGate, method, weight)
+            );
+            connections = connections.concat(
+              from.connect(memoryCell, method, weight)
+            );
             return connections;
           };
           return layer;
@@ -5780,7 +6329,7 @@
             block.set({
               squash: activation_default.identity,
               bias: 0,
-              type: "variant"
+              type: 'variant',
               // Custom type identifier
             });
             if (previous != null) {
@@ -5795,20 +6344,23 @@
             if (this.prototype.isGroup(group)) {
               outputGroup.nodes = outputGroup.nodes.concat(group.nodes);
             } else {
-              console.warn("Unexpected Node type found directly in Memory layer nodes list during output group creation.");
+              console.warn(
+                'Unexpected Node type found directly in Memory layer nodes list during output group creation.'
+              );
             }
           }
           layer.output = outputGroup;
           layer.input = (from, method, weight) => {
-            if (from instanceof _Layer)
-              from = from.output;
+            if (from instanceof _Layer) from = from.output;
             method = method || connection_default.ALL_TO_ALL;
             const inputBlock = layer.nodes[layer.nodes.length - 1];
             if (!this.prototype.isGroup(inputBlock)) {
-              throw new Error("Memory layer input block is not a Group.");
+              throw new Error('Memory layer input block is not a Group.');
             }
             if (from.nodes.length !== inputBlock.nodes.length) {
-              throw new Error(`Previous layer size (${from.nodes.length}) must be same as memory size (${inputBlock.nodes.length})`);
+              throw new Error(
+                `Previous layer size (${from.nodes.length}) must be same as memory size (${inputBlock.nodes.length})`
+              );
             }
             return from.connect(inputBlock, connection_default.ONE_TO_ONE, 1);
           };
@@ -5824,12 +6376,18 @@
           const layer = _Layer.dense(size);
           layer.batchNorm = true;
           const baseActivate = layer.activate.bind(layer);
-          layer.activate = function(value, training = false) {
+          layer.activate = function (value, training = false) {
             const activations = baseActivate(value, training);
-            const mean = activations.reduce((a, b) => a + b, 0) / activations.length;
-            const variance = activations.reduce((a, b) => a + (b - mean) ** 2, 0) / activations.length;
-            const epsilon = (init_neat_constants(), __toCommonJS(neat_constants_exports)).NORM_EPSILON;
-            return activations.map((a) => (a - mean) / Math.sqrt(variance + epsilon));
+            const mean =
+              activations.reduce((a, b) => a + b, 0) / activations.length;
+            const variance =
+              activations.reduce((a, b) => a + (b - mean) ** 2, 0) /
+              activations.length;
+            const epsilon = (init_neat_constants(),
+            __toCommonJS(neat_constants_exports)).NORM_EPSILON;
+            return activations.map(
+              (a) => (a - mean) / Math.sqrt(variance + epsilon)
+            );
           };
           return layer;
         }
@@ -5843,12 +6401,18 @@
           const layer = _Layer.dense(size);
           layer.layerNorm = true;
           const baseActivate = layer.activate.bind(layer);
-          layer.activate = function(value, training = false) {
+          layer.activate = function (value, training = false) {
             const activations = baseActivate(value, training);
-            const mean = activations.reduce((a, b) => a + b, 0) / activations.length;
-            const variance = activations.reduce((a, b) => a + (b - mean) ** 2, 0) / activations.length;
-            const epsilon = (init_neat_constants(), __toCommonJS(neat_constants_exports)).NORM_EPSILON;
-            return activations.map((a) => (a - mean) / Math.sqrt(variance + epsilon));
+            const mean =
+              activations.reduce((a, b) => a + b, 0) / activations.length;
+            const variance =
+              activations.reduce((a, b) => a + (b - mean) ** 2, 0) /
+              activations.length;
+            const epsilon = (init_neat_constants(),
+            __toCommonJS(neat_constants_exports)).NORM_EPSILON;
+            return activations.map(
+              (a) => (a - mean) / Math.sqrt(variance + epsilon)
+            );
           };
           return layer;
         }
@@ -5865,9 +6429,8 @@
           layer.nodes = Array.from({ length: size }, () => new Node());
           layer.output = new Group(size);
           layer.conv1d = { kernelSize, stride, padding };
-          layer.activate = function(value) {
-            if (!value)
-              return this.nodes.map((n) => n.activate());
+          layer.activate = function (value) {
+            if (!value) return this.nodes.map((n) => n.activate());
             return value.slice(0, size);
           };
           return layer;
@@ -5883,9 +6446,8 @@
           layer.nodes = Array.from({ length: size }, () => new Node());
           layer.output = new Group(size);
           layer.attention = { heads };
-          layer.activate = function(value) {
-            if (!value)
-              return this.nodes.map((n) => n.activate());
+          layer.activate = function (value) {
+            if (!value) return this.nodes.map((n) => n.activate());
             const avg = value.reduce((a, b) => a + b, 0) / value.length;
             return Array(size).fill(avg);
           };
@@ -5902,25 +6464,24 @@
          * @returns `true` if the object has `set` and `nodes` properties matching a Group, `false` otherwise.
          */
         isGroup(obj) {
-          return !!obj && typeof obj.set === "function" && Array.isArray(obj.nodes);
+          return (
+            !!obj && typeof obj.set === 'function' && Array.isArray(obj.nodes)
+          );
         }
       };
-    }
+    },
   });
 
   // dist/architecture/network/network.mutate.js
   var network_mutate_exports = {};
   __export(network_mutate_exports, {
-    mutateImpl: () => mutateImpl
+    mutateImpl: () => mutateImpl,
   });
   function mutateImpl(method) {
-    if (method == null)
-      throw new Error("No (correct) mutate method given!");
+    if (method == null) throw new Error('No (correct) mutate method given!');
     let key;
-    if (typeof method === "string")
-      key = method;
-    else
-      key = method?.name ?? method?.type ?? method?.identity;
+    if (typeof method === 'string') key = method;
+    else key = method?.name ?? method?.type ?? method?.identity;
     if (!key) {
       for (const k in mutation_default) {
         if (method === mutation_default[k]) {
@@ -5932,7 +6493,7 @@
     const fn = key ? MUTATION_DISPATCH[key] : void 0;
     if (!fn) {
       if (config.warnings) {
-        console.warn("[mutate] Unknown mutation method ignored:", key);
+        console.warn('[mutate] Unknown mutation method ignored:', key);
       }
       return;
     }
@@ -5941,27 +6502,30 @@
   }
   function _addNode() {
     const internal = this;
-    if (internal._enforceAcyclic)
-      internal._topoDirty = true;
+    if (internal._enforceAcyclic) internal._topoDirty = true;
     if (config.deterministicChainMode) {
-      const inputNode = this.nodes.find((n) => n.type === "input");
-      const outputNode = this.nodes.find((n) => n.type === "output");
-      if (!inputNode || !outputNode)
-        return;
+      const inputNode = this.nodes.find((n) => n.type === 'input');
+      const outputNode = this.nodes.find((n) => n.type === 'output');
+      if (!inputNode || !outputNode) return;
       if (!internal._detChain) {
-        if (!this.connections.some((c) => c.from === inputNode && c.to === outputNode)) {
+        if (
+          !this.connections.some(
+            (c) => c.from === inputNode && c.to === outputNode
+          )
+        ) {
           this.connect(inputNode, outputNode);
         }
         internal._detChain = [inputNode];
       }
       const chain = internal._detChain;
       const tail = chain[chain.length - 1];
-      let terminal = this.connections.find((c) => c.from === tail && c.to === outputNode);
-      if (!terminal)
-        terminal = this.connect(tail, outputNode)[0];
+      let terminal = this.connections.find(
+        (c) => c.from === tail && c.to === outputNode
+      );
+      if (!terminal) terminal = this.connect(tail, outputNode)[0];
       const prevGater2 = terminal.gater;
       this.disconnect(terminal.from, terminal.to);
-      const hidden2 = new Node("hidden", void 0, internal._rand);
+      const hidden2 = new Node('hidden', void 0, internal._rand);
       hidden2.mutate(mutation_default.MOD_ACTIVATION);
       const outIndex = this.nodes.indexOf(outputNode);
       const insertIndex2 = Math.min(outIndex, this.nodes.length - this.output);
@@ -5982,8 +6546,7 @@
             if (extra !== keep) {
               try {
                 this.disconnect(extra.from, extra.to);
-              } catch {
-              }
+              } catch {}
             }
           }
         }
@@ -5991,19 +6554,18 @@
       return;
     }
     if (this.connections.length === 0) {
-      const input = this.nodes.find((n) => n.type === "input");
-      const output = this.nodes.find((n) => n.type === "output");
-      if (input && output)
-        this.connect(input, output);
-      else
-        return;
+      const input = this.nodes.find((n) => n.type === 'input');
+      const output = this.nodes.find((n) => n.type === 'output');
+      if (input && output) this.connect(input, output);
+      else return;
     }
-    const connection = this.connections[Math.floor(internal._rand() * this.connections.length)];
-    if (!connection)
-      return;
+    const connection = this.connections[
+      Math.floor(internal._rand() * this.connections.length)
+    ];
+    if (!connection) return;
     const prevGater = connection.gater;
     this.disconnect(connection.from, connection.to);
-    const hidden = new Node("hidden", void 0, internal._rand);
+    const hidden = new Node('hidden', void 0, internal._rand);
     hidden.mutate(mutation_default.MOD_ACTIVATION);
     const targetIndex = this.nodes.indexOf(connection.to);
     const insertIndex = Math.min(targetIndex, this.nodes.length - this.output);
@@ -6012,127 +6574,173 @@
     const c1 = this.connect(connection.from, hidden)[0];
     const c2 = this.connect(hidden, connection.to)[0];
     internal._preferredChainEdge = c2;
-    if (prevGater)
-      this.gate(prevGater, internal._rand() >= 0.5 ? c1 : c2);
+    if (prevGater) this.gate(prevGater, internal._rand() >= 0.5 ? c1 : c2);
   }
   function _subNode() {
-    const hidden = this.nodes.filter((n) => n.type === "hidden");
+    const hidden = this.nodes.filter((n) => n.type === 'hidden');
     if (hidden.length === 0) {
-      if (config.warnings)
-        console.warn("No hidden nodes left to remove!");
+      if (config.warnings) console.warn('No hidden nodes left to remove!');
       return;
     }
     const internal = this;
     const victim = hidden[Math.floor(internal._rand() * hidden.length)];
     this.remove(victim);
     const anyConn = this.connections[0];
-    if (anyConn)
-      anyConn.weight += 1e-4;
+    if (anyConn) anyConn.weight += 1e-4;
   }
   function _addConn() {
     const netInternal = this;
-    if (netInternal._enforceAcyclic)
-      netInternal._topoDirty = true;
+    if (netInternal._enforceAcyclic) netInternal._topoDirty = true;
     const forwardConnectionCandidates = [];
-    for (let sourceIndex = 0; sourceIndex < this.nodes.length - this.output; sourceIndex++) {
+    for (
+      let sourceIndex = 0;
+      sourceIndex < this.nodes.length - this.output;
+      sourceIndex++
+    ) {
       const sourceNode = this.nodes[sourceIndex];
-      for (let targetIndex = Math.max(sourceIndex + 1, this.input); targetIndex < this.nodes.length; targetIndex++) {
+      for (
+        let targetIndex = Math.max(sourceIndex + 1, this.input);
+        targetIndex < this.nodes.length;
+        targetIndex++
+      ) {
         const targetNode = this.nodes[targetIndex];
         if (!sourceNode.isProjectingTo(targetNode))
           forwardConnectionCandidates.push([sourceNode, targetNode]);
       }
     }
-    if (forwardConnectionCandidates.length === 0)
-      return;
-    const selectedPair = forwardConnectionCandidates[Math.floor(netInternal._rand() * forwardConnectionCandidates.length)];
+    if (forwardConnectionCandidates.length === 0) return;
+    const selectedPair =
+      forwardConnectionCandidates[
+        Math.floor(netInternal._rand() * forwardConnectionCandidates.length)
+      ];
     this.connect(selectedPair[0], selectedPair[1]);
   }
   function _subConn() {
     const netInternal = this;
-    const removableForwardConnections = this.connections.filter((candidateConn) => {
-      const sourceHasMultipleOutgoing = candidateConn.from.connections.out.length > 1;
-      const targetHasMultipleIncoming = candidateConn.to.connections.in.length > 1;
-      const targetLayerPeers = this.nodes.filter((n) => n.type === candidateConn.to.type && Math.abs(this.nodes.indexOf(n) - this.nodes.indexOf(candidateConn.to)) < Math.max(this.input, this.output));
-      let wouldDisconnectLayerPeerGroup = false;
-      if (targetLayerPeers.length > 0) {
-        const peerConnectionsFromSource = this.connections.filter((c) => c.from === candidateConn.from && targetLayerPeers.includes(c.to));
-        if (peerConnectionsFromSource.length <= 1)
-          wouldDisconnectLayerPeerGroup = true;
+    const removableForwardConnections = this.connections.filter(
+      (candidateConn) => {
+        const sourceHasMultipleOutgoing =
+          candidateConn.from.connections.out.length > 1;
+        const targetHasMultipleIncoming =
+          candidateConn.to.connections.in.length > 1;
+        const targetLayerPeers = this.nodes.filter(
+          (n) =>
+            n.type === candidateConn.to.type &&
+            Math.abs(
+              this.nodes.indexOf(n) - this.nodes.indexOf(candidateConn.to)
+            ) < Math.max(this.input, this.output)
+        );
+        let wouldDisconnectLayerPeerGroup = false;
+        if (targetLayerPeers.length > 0) {
+          const peerConnectionsFromSource = this.connections.filter(
+            (c) =>
+              c.from === candidateConn.from && targetLayerPeers.includes(c.to)
+          );
+          if (peerConnectionsFromSource.length <= 1)
+            wouldDisconnectLayerPeerGroup = true;
+        }
+        return (
+          sourceHasMultipleOutgoing &&
+          targetHasMultipleIncoming &&
+          this.nodes.indexOf(candidateConn.to) >
+            this.nodes.indexOf(candidateConn.from) &&
+          !wouldDisconnectLayerPeerGroup
+        );
       }
-      return sourceHasMultipleOutgoing && targetHasMultipleIncoming && this.nodes.indexOf(candidateConn.to) > this.nodes.indexOf(candidateConn.from) && !wouldDisconnectLayerPeerGroup;
-    });
-    if (removableForwardConnections.length === 0)
-      return;
-    const connectionToRemove = removableForwardConnections[Math.floor(netInternal._rand() * removableForwardConnections.length)];
+    );
+    if (removableForwardConnections.length === 0) return;
+    const connectionToRemove =
+      removableForwardConnections[
+        Math.floor(netInternal._rand() * removableForwardConnections.length)
+      ];
     this.disconnect(connectionToRemove.from, connectionToRemove.to);
   }
   function _modWeight(method) {
     const allConnections = this.connections.concat(this.selfconns);
-    if (allConnections.length === 0)
-      return;
-    const connectionToPerturb = allConnections[Math.floor(this._rand() * allConnections.length)];
+    if (allConnections.length === 0) return;
+    const connectionToPerturb =
+      allConnections[Math.floor(this._rand() * allConnections.length)];
     const modification = this._rand() * (method.max - method.min) + method.min;
     connectionToPerturb.weight += modification;
   }
   function _modBias(method) {
-    if (this.nodes.length <= this.input)
-      return;
-    const targetNodeIndex = Math.floor(this._rand() * (this.nodes.length - this.input) + this.input);
+    if (this.nodes.length <= this.input) return;
+    const targetNodeIndex = Math.floor(
+      this._rand() * (this.nodes.length - this.input) + this.input
+    );
     const nodeForBiasMutation = this.nodes[targetNodeIndex];
     nodeForBiasMutation.mutate(method);
   }
   function _modActivation(method) {
     const canMutateOutput = method.mutateOutput ?? true;
-    const numMutableNodes = this.nodes.length - this.input - (canMutateOutput ? 0 : this.output);
+    const numMutableNodes =
+      this.nodes.length - this.input - (canMutateOutput ? 0 : this.output);
     if (numMutableNodes <= 0) {
       if (config.warnings)
-        console.warn("No nodes available for activation function mutation based on config.");
+        console.warn(
+          'No nodes available for activation function mutation based on config.'
+        );
       return;
     }
-    const targetNodeIndex = Math.floor(this._rand() * numMutableNodes + this.input);
+    const targetNodeIndex = Math.floor(
+      this._rand() * numMutableNodes + this.input
+    );
     const targetNode = this.nodes[targetNodeIndex];
     targetNode.mutate(method);
   }
   function _addSelfConn() {
     const netInternal = this;
-    if (netInternal._enforceAcyclic)
-      return;
-    const nodesWithoutSelfLoop = this.nodes.filter((n, idx) => idx >= this.input && n.connections.self.length === 0);
+    if (netInternal._enforceAcyclic) return;
+    const nodesWithoutSelfLoop = this.nodes.filter(
+      (n, idx) => idx >= this.input && n.connections.self.length === 0
+    );
     if (nodesWithoutSelfLoop.length === 0) {
       if (config.warnings)
-        console.warn("All eligible nodes already have self-connections.");
+        console.warn('All eligible nodes already have self-connections.');
       return;
     }
-    const nodeReceivingSelfLoop = nodesWithoutSelfLoop[Math.floor(netInternal._rand() * nodesWithoutSelfLoop.length)];
+    const nodeReceivingSelfLoop =
+      nodesWithoutSelfLoop[
+        Math.floor(netInternal._rand() * nodesWithoutSelfLoop.length)
+      ];
     this.connect(nodeReceivingSelfLoop, nodeReceivingSelfLoop);
   }
   function _subSelfConn() {
     if (this.selfconns.length === 0) {
-      if (config.warnings)
-        console.warn("No self-connections exist to remove.");
+      if (config.warnings) console.warn('No self-connections exist to remove.');
       return;
     }
-    const selfConnectionToRemove = this.selfconns[Math.floor(this._rand() * this.selfconns.length)];
+    const selfConnectionToRemove = this.selfconns[
+      Math.floor(this._rand() * this.selfconns.length)
+    ];
     this.disconnect(selfConnectionToRemove.from, selfConnectionToRemove.to);
   }
   function _addGate() {
     const netInternal = this;
     const allConnectionsIncludingSelf = this.connections.concat(this.selfconns);
-    const ungatedConnectionCandidates = allConnectionsIncludingSelf.filter((c) => c.gater === null);
-    if (ungatedConnectionCandidates.length === 0 || this.nodes.length <= this.input) {
-      if (config.warnings)
-        console.warn("All connections are already gated.");
+    const ungatedConnectionCandidates = allConnectionsIncludingSelf.filter(
+      (c) => c.gater === null
+    );
+    if (
+      ungatedConnectionCandidates.length === 0 ||
+      this.nodes.length <= this.input
+    ) {
+      if (config.warnings) console.warn('All connections are already gated.');
       return;
     }
-    const gatingNodeIndex = Math.floor(netInternal._rand() * (this.nodes.length - this.input) + this.input);
+    const gatingNodeIndex = Math.floor(
+      netInternal._rand() * (this.nodes.length - this.input) + this.input
+    );
     const gatingNode = this.nodes[gatingNodeIndex];
-    const connectionToGate = ungatedConnectionCandidates[Math.floor(netInternal._rand() * ungatedConnectionCandidates.length)];
+    const connectionToGate =
+      ungatedConnectionCandidates[
+        Math.floor(netInternal._rand() * ungatedConnectionCandidates.length)
+      ];
     this.gate(gatingNode, connectionToGate);
   }
   function _subGate() {
     if (this.gates.length === 0) {
-      if (config.warnings)
-        console.warn("No gated connections to ungate.");
+      if (config.warnings) console.warn('No gated connections to ungate.');
       return;
     }
     const gatedConnectionIndex = Math.floor(this._rand() * this.gates.length);
@@ -6141,39 +6749,65 @@
   }
   function _addBackConn() {
     const netInternal = this;
-    if (netInternal._enforceAcyclic)
-      return;
+    if (netInternal._enforceAcyclic) return;
     const backwardConnectionCandidates = [];
-    for (let laterIndex = this.input; laterIndex < this.nodes.length; laterIndex++) {
+    for (
+      let laterIndex = this.input;
+      laterIndex < this.nodes.length;
+      laterIndex++
+    ) {
       const laterNode = this.nodes[laterIndex];
-      for (let earlierIndex = this.input; earlierIndex < laterIndex; earlierIndex++) {
+      for (
+        let earlierIndex = this.input;
+        earlierIndex < laterIndex;
+        earlierIndex++
+      ) {
         const earlierNode = this.nodes[earlierIndex];
         if (!laterNode.isProjectingTo(earlierNode))
           backwardConnectionCandidates.push([laterNode, earlierNode]);
       }
     }
-    if (backwardConnectionCandidates.length === 0)
-      return;
-    const selectedBackwardPair = backwardConnectionCandidates[Math.floor(netInternal._rand() * backwardConnectionCandidates.length)];
+    if (backwardConnectionCandidates.length === 0) return;
+    const selectedBackwardPair =
+      backwardConnectionCandidates[
+        Math.floor(netInternal._rand() * backwardConnectionCandidates.length)
+      ];
     this.connect(selectedBackwardPair[0], selectedBackwardPair[1]);
   }
   function _subBackConn() {
-    const removableBackwardConnections = this.connections.filter((candidateConn) => candidateConn.from.connections.out.length > 1 && candidateConn.to.connections.in.length > 1 && this.nodes.indexOf(candidateConn.from) > this.nodes.indexOf(candidateConn.to));
-    if (removableBackwardConnections.length === 0)
-      return;
-    const backwardConnectionToRemove = removableBackwardConnections[Math.floor(this._rand() * removableBackwardConnections.length)];
-    this.disconnect(backwardConnectionToRemove.from, backwardConnectionToRemove.to);
+    const removableBackwardConnections = this.connections.filter(
+      (candidateConn) =>
+        candidateConn.from.connections.out.length > 1 &&
+        candidateConn.to.connections.in.length > 1 &&
+        this.nodes.indexOf(candidateConn.from) >
+          this.nodes.indexOf(candidateConn.to)
+    );
+    if (removableBackwardConnections.length === 0) return;
+    const backwardConnectionToRemove =
+      removableBackwardConnections[
+        Math.floor(this._rand() * removableBackwardConnections.length)
+      ];
+    this.disconnect(
+      backwardConnectionToRemove.from,
+      backwardConnectionToRemove.to
+    );
   }
   function _swapNodes(method) {
     const netInternal = this;
     const canSwapOutput = method.mutateOutput ?? true;
-    const numSwappableNodes = this.nodes.length - this.input - (canSwapOutput ? 0 : this.output);
-    if (numSwappableNodes < 2)
-      return;
-    let firstNodeIndex = Math.floor(netInternal._rand() * numSwappableNodes + this.input);
-    let secondNodeIndex = Math.floor(netInternal._rand() * numSwappableNodes + this.input);
+    const numSwappableNodes =
+      this.nodes.length - this.input - (canSwapOutput ? 0 : this.output);
+    if (numSwappableNodes < 2) return;
+    let firstNodeIndex = Math.floor(
+      netInternal._rand() * numSwappableNodes + this.input
+    );
+    let secondNodeIndex = Math.floor(
+      netInternal._rand() * numSwappableNodes + this.input
+    );
     while (firstNodeIndex === secondNodeIndex)
-      secondNodeIndex = Math.floor(netInternal._rand() * numSwappableNodes + this.input);
+      secondNodeIndex = Math.floor(
+        netInternal._rand() * numSwappableNodes + this.input
+      );
     const firstNode = this.nodes[firstNodeIndex];
     const secondNode = this.nodes[secondNodeIndex];
     const tempBias = firstNode.bias;
@@ -6185,17 +6819,17 @@
   }
   function _addLSTMNode() {
     const netInternal = this;
-    if (netInternal._enforceAcyclic)
-      return;
-    if (this.connections.length === 0)
-      return;
-    const connectionToExpand = this.connections[Math.floor(Math.random() * this.connections.length)];
+    if (netInternal._enforceAcyclic) return;
+    if (this.connections.length === 0) return;
+    const connectionToExpand = this.connections[
+      Math.floor(Math.random() * this.connections.length)
+    ];
     const gaterLSTM = connectionToExpand.gater;
     this.disconnect(connectionToExpand.from, connectionToExpand.to);
     const Layer2 = (init_layer(), __toCommonJS(layer_exports)).default;
     const lstmLayer = Layer2.lstm(1);
     lstmLayer.nodes.forEach((n) => {
-      n.type = "hidden";
+      n.type = 'hidden';
       this.nodes.push(n);
     });
     this.connect(connectionToExpand.from, lstmLayer.nodes[0]);
@@ -6205,17 +6839,17 @@
   }
   function _addGRUNode() {
     const netInternal = this;
-    if (netInternal._enforceAcyclic)
-      return;
-    if (this.connections.length === 0)
-      return;
-    const connectionToExpand = this.connections[Math.floor(Math.random() * this.connections.length)];
+    if (netInternal._enforceAcyclic) return;
+    if (this.connections.length === 0) return;
+    const connectionToExpand = this.connections[
+      Math.floor(Math.random() * this.connections.length)
+    ];
     const gaterGRU = connectionToExpand.gater;
     this.disconnect(connectionToExpand.from, connectionToExpand.to);
     const Layer2 = (init_layer(), __toCommonJS(layer_exports)).default;
     const gruLayer = Layer2.gru(1);
     gruLayer.nodes.forEach((n) => {
-      n.type = "hidden";
+      n.type = 'hidden';
       this.nodes.push(n);
     });
     this.connect(connectionToExpand.from, gruLayer.nodes[0]);
@@ -6224,33 +6858,30 @@
       this.gate(gaterGRU, this.connections[this.connections.length - 1]);
   }
   function _reinitWeight(method) {
-    if (this.nodes.length <= this.input)
-      return;
+    if (this.nodes.length <= this.input) return;
     const internal = this;
-    const idx = Math.floor(internal._rand() * (this.nodes.length - this.input) + this.input);
+    const idx = Math.floor(
+      internal._rand() * (this.nodes.length - this.input) + this.input
+    );
     const node = this.nodes[idx];
     const min = method?.min ?? -1;
     const max = method?.max ?? 1;
     const sample = () => internal._rand() * (max - min) + min;
-    for (const c of node.connections.in)
-      c.weight = sample();
-    for (const c of node.connections.out)
-      c.weight = sample();
-    for (const c of node.connections.self)
-      c.weight = sample();
+    for (const c of node.connections.in) c.weight = sample();
+    for (const c of node.connections.out) c.weight = sample();
+    for (const c of node.connections.self) c.weight = sample();
   }
   function _batchNorm() {
-    const hidden = this.nodes.filter((n) => n.type === "hidden");
-    if (!hidden.length)
-      return;
+    const hidden = this.nodes.filter((n) => n.type === 'hidden');
+    if (!hidden.length) return;
     const internal = this;
     const node = hidden[Math.floor(internal._rand() * hidden.length)];
     node._batchNorm = true;
   }
   var MUTATION_DISPATCH;
   var init_network_mutate = __esm({
-    "dist/architecture/network/network.mutate.js"() {
-      "use strict";
+    'dist/architecture/network/network.mutate.js'() {
+      'use strict';
       init_node();
       init_mutation();
       init_config();
@@ -6272,9 +6903,9 @@
         ADD_LSTM_NODE: _addLSTMNode,
         ADD_GRU_NODE: _addGRUNode,
         REINIT_WEIGHT: _reinitWeight,
-        BATCH_NORM: _batchNorm
+        BATCH_NORM: _batchNorm,
       };
-    }
+    },
   });
 
   // dist/architecture/network/network.training.js
@@ -6283,41 +6914,53 @@
     __trainingInternals: () => __trainingInternals,
     applyGradientClippingImpl: () => applyGradientClippingImpl,
     trainImpl: () => trainImpl,
-    trainSetImpl: () => trainSetImpl
+    trainSetImpl: () => trainSetImpl,
   });
   function computeMonitoredError(trainError, recentErrors, cfg, state) {
-    if (cfg.window <= 1 && cfg.type !== "ema" && cfg.type !== "adaptive-ema") {
+    if (cfg.window <= 1 && cfg.type !== 'ema' && cfg.type !== 'adaptive-ema') {
       return trainError;
     }
     const type = cfg.type;
-    if (type === "median") {
+    if (type === 'median') {
       const sorted = [...recentErrors].sort((a, b) => a - b);
       const midIndex = Math.floor(sorted.length / 2);
-      return sorted.length % 2 ? sorted[midIndex] : (sorted[midIndex - 1] + sorted[midIndex]) / 2;
+      return sorted.length % 2
+        ? sorted[midIndex]
+        : (sorted[midIndex - 1] + sorted[midIndex]) / 2;
     }
-    if (type === "ema") {
-      if (state.emaValue == null)
-        state.emaValue = trainError;
+    if (type === 'ema') {
+      if (state.emaValue == null) state.emaValue = trainError;
       else
-        state.emaValue = state.emaValue + cfg.emaAlpha * (trainError - state.emaValue);
+        state.emaValue =
+          state.emaValue + cfg.emaAlpha * (trainError - state.emaValue);
       return state.emaValue;
     }
-    if (type === "adaptive-ema") {
-      const mean = recentErrors.reduce((a, b) => a + b, 0) / recentErrors.length;
-      const variance = recentErrors.reduce((a, b) => a + (b - mean) * (b - mean), 0) / recentErrors.length;
+    if (type === 'adaptive-ema') {
+      const mean =
+        recentErrors.reduce((a, b) => a + b, 0) / recentErrors.length;
+      const variance =
+        recentErrors.reduce((a, b) => a + (b - mean) * (b - mean), 0) /
+        recentErrors.length;
       const baseAlpha = cfg.emaAlpha || 2 / (cfg.window + 1);
       const varianceScaled = variance / Math.max(mean * mean, 1e-8);
-      const adaptiveAlpha = Math.min(0.95, Math.max(baseAlpha, baseAlpha * (1 + 2 * varianceScaled)));
+      const adaptiveAlpha = Math.min(
+        0.95,
+        Math.max(baseAlpha, baseAlpha * (1 + 2 * varianceScaled))
+      );
       if (state.adaptiveBaseEmaValue == null) {
         state.adaptiveBaseEmaValue = trainError;
         state.adaptiveEmaValue = trainError;
       } else {
-        state.adaptiveBaseEmaValue = state.adaptiveBaseEmaValue + baseAlpha * (trainError - state.adaptiveBaseEmaValue);
-        state.adaptiveEmaValue = state.adaptiveEmaValue + adaptiveAlpha * (trainError - state.adaptiveEmaValue);
+        state.adaptiveBaseEmaValue =
+          state.adaptiveBaseEmaValue +
+          baseAlpha * (trainError - state.adaptiveBaseEmaValue);
+        state.adaptiveEmaValue =
+          state.adaptiveEmaValue +
+          adaptiveAlpha * (trainError - state.adaptiveEmaValue);
       }
       return Math.min(state.adaptiveEmaValue, state.adaptiveBaseEmaValue);
     }
-    if (type === "gaussian") {
+    if (type === 'gaussian') {
       const sigma = cfg.window / 3 || 1;
       let weightSum = 0;
       let weightedAccumulator = 0;
@@ -6329,14 +6972,14 @@
       }
       return weightedAccumulator / (weightSum || 1);
     }
-    if (type === "trimmed") {
+    if (type === 'trimmed') {
       const ratio = Math.min(0.49, Math.max(0, cfg.trimmedRatio || 0.1));
       const sorted = [...recentErrors].sort((a, b) => a - b);
       const drop = Math.floor(sorted.length * ratio);
       const trimmed = sorted.slice(drop, sorted.length - drop);
       return trimmed.reduce((a, b) => a + b, 0) / (trimmed.length || 1);
     }
-    if (type === "wma") {
+    if (type === 'wma') {
       let weightSum = 0;
       let weightedAccumulator = 0;
       for (let i = 0; i < recentErrors.length; i++) {
@@ -6349,25 +6992,26 @@
     return recentErrors.reduce((a, b) => a + b, 0) / recentErrors.length;
   }
   function computePlateauMetric(trainError, plateauErrors, cfg, state) {
-    if (cfg.window <= 1 && cfg.type !== "ema")
-      return trainError;
-    if (cfg.type === "median") {
+    if (cfg.window <= 1 && cfg.type !== 'ema') return trainError;
+    if (cfg.type === 'median') {
       const sorted = [...plateauErrors].sort((a, b) => a - b);
       const mid = Math.floor(sorted.length / 2);
-      return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+      return sorted.length % 2
+        ? sorted[mid]
+        : (sorted[mid - 1] + sorted[mid]) / 2;
     }
-    if (cfg.type === "ema") {
-      if (state.plateauEmaValue == null)
-        state.plateauEmaValue = trainError;
+    if (cfg.type === 'ema') {
+      if (state.plateauEmaValue == null) state.plateauEmaValue = trainError;
       else
-        state.plateauEmaValue = state.plateauEmaValue + cfg.emaAlpha * (trainError - state.plateauEmaValue);
+        state.plateauEmaValue =
+          state.plateauEmaValue +
+          cfg.emaAlpha * (trainError - state.plateauEmaValue);
       return state.plateauEmaValue;
     }
     return plateauErrors.reduce((a, b) => a + b, 0) / plateauErrors.length;
   }
   function detectMixedPrecisionOverflow(net, internalNet) {
-    if (!internalNet._mixedPrecision.enabled)
-      return false;
+    if (!internalNet._mixedPrecision.enabled) return false;
     if (internalNet._forceNextOverflow) {
       internalNet._forceNextOverflow = false;
       return true;
@@ -6375,8 +7019,7 @@
     let overflow = false;
     net.nodes.forEach((node) => {
       if (node._fp32Bias !== void 0) {
-        if (!Number.isFinite(node.bias))
-          overflow = true;
+        if (!Number.isFinite(node.bias)) overflow = true;
       }
     });
     return overflow;
@@ -6389,32 +7032,35 @@
       node.connections.self.forEach((c) => {
         c.totalDeltaWeight = 0;
       });
-      if (typeof node.totalDeltaBias === "number")
-        node.totalDeltaBias = 0;
+      if (typeof node.totalDeltaBias === 'number') node.totalDeltaBias = 0;
       node.previousDeltaBias = 0;
     });
   }
   function averageAccumulatedGradients(net, accumulationSteps) {
-    if (accumulationSteps <= 1)
-      return;
+    if (accumulationSteps <= 1) return;
     net.nodes.forEach((node) => {
       node.connections.in.forEach((c) => {
-        if (typeof c.totalDeltaWeight === "number")
+        if (typeof c.totalDeltaWeight === 'number')
           c.totalDeltaWeight /= accumulationSteps;
       });
       node.connections.self.forEach((c) => {
-        if (typeof c.totalDeltaWeight === "number")
+        if (typeof c.totalDeltaWeight === 'number')
           c.totalDeltaWeight /= accumulationSteps;
       });
-      if (typeof node.totalDeltaBias === "number")
+      if (typeof node.totalDeltaBias === 'number')
         node.totalDeltaBias /= accumulationSteps;
     });
   }
-  function applyOptimizerStep(net, optimizer, currentRate, momentum, internalNet) {
+  function applyOptimizerStep(
+    net,
+    optimizer,
+    currentRate,
+    momentum,
+    internalNet
+  ) {
     let sumSq = 0;
     net.nodes.forEach((node) => {
-      if (node.type === "input")
-        return;
+      if (node.type === 'input') return;
       node.applyBatchUpdatesWithOptimizer({
         type: optimizer.type,
         baseType: optimizer.baseType,
@@ -6426,14 +7072,14 @@
         lrScale: currentRate,
         t: internalNet._optimizerStep,
         la_k: optimizer.la_k,
-        la_alpha: optimizer.la_alpha
+        la_alpha: optimizer.la_alpha,
       });
       node.connections.in.forEach((c) => {
-        if (typeof c.previousDeltaWeight === "number")
+        if (typeof c.previousDeltaWeight === 'number')
           sumSq += c.previousDeltaWeight * c.previousDeltaWeight;
       });
       node.connections.self.forEach((c) => {
-        if (typeof c.previousDeltaWeight === "number")
+        if (typeof c.previousDeltaWeight === 'number')
           sumSq += c.previousDeltaWeight * c.previousDeltaWeight;
       });
     });
@@ -6442,175 +7088,226 @@
   function maybeIncreaseLossScale(internalNet) {
     internalNet._mixedPrecisionState.goodSteps++;
     const incEvery = internalNet._mpIncreaseEvery || 200;
-    if (internalNet._mixedPrecisionState.goodSteps >= incEvery && internalNet._mixedPrecision.lossScale < internalNet._mixedPrecisionState.maxLossScale) {
+    if (
+      internalNet._mixedPrecisionState.goodSteps >= incEvery &&
+      internalNet._mixedPrecision.lossScale <
+        internalNet._mixedPrecisionState.maxLossScale
+    ) {
       internalNet._mixedPrecision.lossScale *= 2;
       internalNet._mixedPrecisionState.goodSteps = 0;
-      internalNet._mixedPrecisionState.scaleUpEvents = (internalNet._mixedPrecisionState.scaleUpEvents || 0) + 1;
+      internalNet._mixedPrecisionState.scaleUpEvents =
+        (internalNet._mixedPrecisionState.scaleUpEvents || 0) + 1;
     }
   }
   function handleOverflow(internalNet) {
     internalNet._mixedPrecisionState.badSteps++;
     internalNet._mixedPrecisionState.goodSteps = 0;
-    internalNet._mixedPrecision.lossScale = Math.max(internalNet._mixedPrecisionState.minLossScale, Math.floor(internalNet._mixedPrecision.lossScale / 2) || 1);
-    internalNet._mixedPrecisionState.overflowCount = (internalNet._mixedPrecisionState.overflowCount || 0) + 1;
-    internalNet._mixedPrecisionState.scaleDownEvents = (internalNet._mixedPrecisionState.scaleDownEvents || 0) + 1;
+    internalNet._mixedPrecision.lossScale = Math.max(
+      internalNet._mixedPrecisionState.minLossScale,
+      Math.floor(internalNet._mixedPrecision.lossScale / 2) || 1
+    );
+    internalNet._mixedPrecisionState.overflowCount =
+      (internalNet._mixedPrecisionState.overflowCount || 0) + 1;
+    internalNet._mixedPrecisionState.scaleDownEvents =
+      (internalNet._mixedPrecisionState.scaleDownEvents || 0) + 1;
     internalNet._lastOverflowStep = internalNet._optimizerStep;
   }
   function applyGradientClippingImpl(net, cfg) {
     const internalNet = net;
     const collectGroups = () => {
       const collected = [];
-      if (cfg.mode.startsWith("layerwise")) {
+      if (cfg.mode.startsWith('layerwise')) {
         if (net.layers && net.layers.length > 0) {
           for (let li = 0; li < net.layers.length; li++) {
             const layer = net.layers[li];
-            if (!layer || !layer.nodes)
-              continue;
+            if (!layer || !layer.nodes) continue;
             const groupVals = [];
             layer.nodes.forEach((node) => {
-              if (!node || node.type === "input")
-                return;
+              if (!node || node.type === 'input') return;
               node.connections.in.forEach((c) => {
-                if (typeof c.totalDeltaWeight === "number")
+                if (typeof c.totalDeltaWeight === 'number')
                   groupVals.push(c.totalDeltaWeight);
               });
               node.connections.self.forEach((c) => {
-                if (typeof c.totalDeltaWeight === "number")
+                if (typeof c.totalDeltaWeight === 'number')
                   groupVals.push(c.totalDeltaWeight);
               });
-              if (typeof node.totalDeltaBias === "number")
+              if (typeof node.totalDeltaBias === 'number')
                 groupVals.push(node.totalDeltaBias);
             });
-            if (groupVals.length)
-              collected.push(groupVals);
+            if (groupVals.length) collected.push(groupVals);
           }
         } else {
           net.nodes.forEach((node) => {
-            if (node.type === "input")
-              return;
+            if (node.type === 'input') return;
             const groupVals = [];
             node.connections.in.forEach((c) => {
-              if (typeof c.totalDeltaWeight === "number")
+              if (typeof c.totalDeltaWeight === 'number')
                 groupVals.push(c.totalDeltaWeight);
             });
             node.connections.self.forEach((c) => {
-              if (typeof c.totalDeltaWeight === "number")
+              if (typeof c.totalDeltaWeight === 'number')
                 groupVals.push(c.totalDeltaWeight);
             });
-            if (typeof node.totalDeltaBias === "number")
+            if (typeof node.totalDeltaBias === 'number')
               groupVals.push(node.totalDeltaBias);
-            if (groupVals.length)
-              collected.push(groupVals);
+            if (groupVals.length) collected.push(groupVals);
           });
         }
       } else {
         const globalVals = [];
         net.nodes.forEach((node) => {
           node.connections.in.forEach((c) => {
-            if (typeof c.totalDeltaWeight === "number")
+            if (typeof c.totalDeltaWeight === 'number')
               globalVals.push(c.totalDeltaWeight);
           });
           node.connections.self.forEach((c) => {
-            if (typeof c.totalDeltaWeight === "number")
+            if (typeof c.totalDeltaWeight === 'number')
               globalVals.push(c.totalDeltaWeight);
           });
-          if (typeof node.totalDeltaBias === "number")
+          if (typeof node.totalDeltaBias === 'number')
             globalVals.push(node.totalDeltaBias);
         });
-        if (globalVals.length)
-          collected.push(globalVals);
+        if (globalVals.length) collected.push(globalVals);
       }
       return collected;
     };
     const groups = collectGroups();
     internalNet._lastGradClipGroupCount = groups.length;
     const computeAbsolutePercentileThreshold = (values, percentile) => {
-      if (!values.length)
-        return 0;
+      if (!values.length) return 0;
       const sortedByAbs = [...values].sort((a, b) => Math.abs(a) - Math.abs(b));
-      const rank = Math.min(sortedByAbs.length - 1, Math.max(0, Math.floor(percentile / 100 * sortedByAbs.length - 1)));
+      const rank = Math.min(
+        sortedByAbs.length - 1,
+        Math.max(0, Math.floor((percentile / 100) * sortedByAbs.length - 1))
+      );
       return Math.abs(sortedByAbs[rank]);
     };
     const applyScale = (scaleFn) => {
       let groupIndex = 0;
       net.nodes.forEach((node) => {
-        if (cfg.mode.startsWith("layerwise") && node.type === "input")
-          return;
-        const activeGroup = cfg.mode.startsWith("layerwise") ? groups[groupIndex++] : groups[0];
+        if (cfg.mode.startsWith('layerwise') && node.type === 'input') return;
+        const activeGroup = cfg.mode.startsWith('layerwise')
+          ? groups[groupIndex++]
+          : groups[0];
         node.connections.in.forEach((c) => {
-          if (typeof c.totalDeltaWeight === "number")
+          if (typeof c.totalDeltaWeight === 'number')
             c.totalDeltaWeight = scaleFn(c.totalDeltaWeight, activeGroup);
         });
         node.connections.self.forEach((c) => {
-          if (typeof c.totalDeltaWeight === "number")
+          if (typeof c.totalDeltaWeight === 'number')
             c.totalDeltaWeight = scaleFn(c.totalDeltaWeight, activeGroup);
         });
-        if (typeof node.totalDeltaBias === "number")
+        if (typeof node.totalDeltaBias === 'number')
           node.totalDeltaBias = scaleFn(node.totalDeltaBias, activeGroup);
       });
     };
-    if (cfg.mode === "norm" || cfg.mode === "layerwiseNorm") {
+    if (cfg.mode === 'norm' || cfg.mode === 'layerwiseNorm') {
       const maxAllowedNorm = cfg.maxNorm || 1;
       groups.forEach((groupValues) => {
-        const groupL2Norm = Math.sqrt(groupValues.reduce((sum, v) => sum + v * v, 0));
+        const groupL2Norm = Math.sqrt(
+          groupValues.reduce((sum, v) => sum + v * v, 0)
+        );
         if (groupL2Norm > maxAllowedNorm && groupL2Norm > 0) {
           const normScaleFactor = maxAllowedNorm / groupL2Norm;
-          applyScale((currentValue, owningGroup) => owningGroup === groupValues ? currentValue * normScaleFactor : currentValue);
+          applyScale((currentValue, owningGroup) =>
+            owningGroup === groupValues
+              ? currentValue * normScaleFactor
+              : currentValue
+          );
         }
       });
-    } else if (cfg.mode === "percentile" || cfg.mode === "layerwisePercentile") {
+    } else if (
+      cfg.mode === 'percentile' ||
+      cfg.mode === 'layerwisePercentile'
+    ) {
       const percentileSetting = cfg.percentile || 99;
       groups.forEach((groupValues) => {
-        const percentileThreshold = computeAbsolutePercentileThreshold(groupValues, percentileSetting);
-        if (percentileThreshold <= 0)
-          return;
-        applyScale((currentValue, owningGroup) => owningGroup === groupValues && Math.abs(currentValue) > percentileThreshold ? percentileThreshold * Math.sign(currentValue) : currentValue);
+        const percentileThreshold = computeAbsolutePercentileThreshold(
+          groupValues,
+          percentileSetting
+        );
+        if (percentileThreshold <= 0) return;
+        applyScale((currentValue, owningGroup) =>
+          owningGroup === groupValues &&
+          Math.abs(currentValue) > percentileThreshold
+            ? percentileThreshold * Math.sign(currentValue)
+            : currentValue
+        );
       });
     }
   }
-  function trainSetImpl(net, set, batchSize, accumulationSteps, currentRate, momentum, regularization, costFunction, optimizer) {
+  function trainSetImpl(
+    net,
+    set,
+    batchSize,
+    accumulationSteps,
+    currentRate,
+    momentum,
+    regularization,
+    costFunction,
+    optimizer
+  ) {
     const internalNet = net;
     let cumulativeError = 0;
     let batchSampleCount = 0;
     internalNet._gradAccumMicroBatches = 0;
     let totalProcessedSamples = 0;
-    const outputNodes = net.nodes.filter((n) => n.type === "output");
+    const outputNodes = net.nodes.filter((n) => n.type === 'output');
     let computeError;
-    if (typeof costFunction === "function")
-      computeError = costFunction;
-    else if (costFunction && typeof costFunction.fn === "function")
+    if (typeof costFunction === 'function') computeError = costFunction;
+    else if (costFunction && typeof costFunction.fn === 'function')
       computeError = costFunction.fn;
-    else if (costFunction && typeof costFunction.calculate === "function")
+    else if (costFunction && typeof costFunction.calculate === 'function')
       computeError = costFunction.calculate;
-    else
-      computeError = () => 0;
+    else computeError = () => 0;
     for (let sampleIndex = 0; sampleIndex < set.length; sampleIndex++) {
       const dataPoint = set[sampleIndex];
       const input = dataPoint.input;
       const target = dataPoint.output;
       if (input.length !== net.input || target.length !== net.output) {
         if (config.warnings)
-          console.warn(`Data point ${sampleIndex} has incorrect dimensions (input: ${input.length}/${net.input}, output: ${target.length}/${net.output}), skipping.`);
+          console.warn(
+            `Data point ${sampleIndex} has incorrect dimensions (input: ${input.length}/${net.input}, output: ${target.length}/${net.output}), skipping.`
+          );
         continue;
       }
       try {
         const output = net.activate(input, true);
-        if (optimizer && optimizer.type && optimizer.type !== "sgd") {
+        if (optimizer && optimizer.type && optimizer.type !== 'sgd') {
           for (let outIndex = 0; outIndex < outputNodes.length; outIndex++)
-            outputNodes[outIndex].propagate(currentRate, momentum, false, regularization, target[outIndex]);
-          for (let reverseIndex = net.nodes.length - 1; reverseIndex >= 0; reverseIndex--) {
+            outputNodes[outIndex].propagate(
+              currentRate,
+              momentum,
+              false,
+              regularization,
+              target[outIndex]
+            );
+          for (
+            let reverseIndex = net.nodes.length - 1;
+            reverseIndex >= 0;
+            reverseIndex--
+          ) {
             const node = net.nodes[reverseIndex];
-            if (node.type === "output" || node.type === "input")
-              continue;
+            if (node.type === 'output' || node.type === 'input') continue;
             node.propagate(currentRate, momentum, false, regularization);
           }
         } else {
           for (let outIndex = 0; outIndex < outputNodes.length; outIndex++)
-            outputNodes[outIndex].propagate(currentRate, momentum, true, regularization, target[outIndex]);
-          for (let reverseIndex = net.nodes.length - 1; reverseIndex >= 0; reverseIndex--) {
+            outputNodes[outIndex].propagate(
+              currentRate,
+              momentum,
+              true,
+              regularization,
+              target[outIndex]
+            );
+          for (
+            let reverseIndex = net.nodes.length - 1;
+            reverseIndex >= 0;
+            reverseIndex--
+          ) {
             const node = net.nodes[reverseIndex];
-            if (node.type === "output" || node.type === "input")
-              continue;
+            if (node.type === 'output' || node.type === 'input') continue;
             node.propagate(currentRate, momentum, true, regularization);
           }
         }
@@ -6619,15 +7316,27 @@
         totalProcessedSamples++;
       } catch (e) {
         if (config.warnings)
-          console.warn(`Error processing data point ${sampleIndex} (input: ${JSON.stringify(input)}): ${e.message}. Skipping.`);
+          console.warn(
+            `Error processing data point ${sampleIndex} (input: ${JSON.stringify(
+              input
+            )}): ${e.message}. Skipping.`
+          );
       }
-      if (batchSampleCount > 0 && ((sampleIndex + 1) % batchSize === 0 || sampleIndex === set.length - 1)) {
-        if (optimizer && optimizer.type && optimizer.type !== "sgd") {
+      if (
+        batchSampleCount > 0 &&
+        ((sampleIndex + 1) % batchSize === 0 || sampleIndex === set.length - 1)
+      ) {
+        if (optimizer && optimizer.type && optimizer.type !== 'sgd') {
           internalNet._gradAccumMicroBatches++;
-          const readyForStep = internalNet._gradAccumMicroBatches % accumulationSteps === 0 || sampleIndex === set.length - 1;
+          const readyForStep =
+            internalNet._gradAccumMicroBatches % accumulationSteps === 0 ||
+            sampleIndex === set.length - 1;
           if (readyForStep) {
             internalNet._optimizerStep = (internalNet._optimizerStep || 0) + 1;
-            const overflowDetected = detectMixedPrecisionOverflow(net, internalNet);
+            const overflowDetected = detectMixedPrecisionOverflow(
+              net,
+              internalNet
+            );
             if (overflowDetected) {
               zeroAccumulatedGradients(net);
               if (internalNet._mixedPrecision.enabled)
@@ -6636,10 +7345,19 @@
             } else {
               if (internalNet._currentGradClip)
                 applyGradientClippingImpl(net, internalNet._currentGradClip);
-              if (accumulationSteps > 1 && internalNet._accumulationReduction === "average") {
+              if (
+                accumulationSteps > 1 &&
+                internalNet._accumulationReduction === 'average'
+              ) {
                 averageAccumulatedGradients(net, accumulationSteps);
               }
-              internalNet._lastGradNorm = applyOptimizerStep(net, optimizer, currentRate, momentum, internalNet);
+              internalNet._lastGradNorm = applyOptimizerStep(
+                net,
+                optimizer,
+                currentRate,
+                momentum,
+                internalNet
+              );
               if (internalNet._mixedPrecision.enabled)
                 maybeIncreaseLossScale(internalNet);
             }
@@ -6648,60 +7366,82 @@
         }
       }
     }
-    if (internalNet._lastGradNorm == null)
-      internalNet._lastGradNorm = 0;
-    return totalProcessedSamples > 0 ? cumulativeError / totalProcessedSamples : 0;
+    if (internalNet._lastGradNorm == null) internalNet._lastGradNorm = 0;
+    return totalProcessedSamples > 0
+      ? cumulativeError / totalProcessedSamples
+      : 0;
   }
   function trainImpl(net, set, options) {
     const internalNet = net;
-    if (!set || set.length === 0 || set[0].input.length !== net.input || set[0].output.length !== net.output) {
-      throw new Error("Dataset is invalid or dimensions do not match network input/output size!");
+    if (
+      !set ||
+      set.length === 0 ||
+      set[0].input.length !== net.input ||
+      set[0].output.length !== net.output
+    ) {
+      throw new Error(
+        'Dataset is invalid or dimensions do not match network input/output size!'
+      );
     }
     options = options || {};
-    if (typeof options.iterations === "undefined" && typeof options.error === "undefined") {
+    if (
+      typeof options.iterations === 'undefined' &&
+      typeof options.error === 'undefined'
+    ) {
       if (config.warnings)
-        console.warn("Missing `iterations` or `error` option.");
-      throw new Error("Missing `iterations` or `error` option. Training requires a stopping condition.");
+        console.warn('Missing `iterations` or `error` option.');
+      throw new Error(
+        'Missing `iterations` or `error` option. Training requires a stopping condition.'
+      );
     }
     if (config.warnings) {
-      if (typeof options.rate === "undefined") {
-        console.warn("Missing `rate` option");
-        console.warn("Missing `rate` option, using default learning rate 0.3.");
+      if (typeof options.rate === 'undefined') {
+        console.warn('Missing `rate` option');
+        console.warn('Missing `rate` option, using default learning rate 0.3.');
       }
-      if (typeof options.iterations === "undefined")
-        console.warn("Missing `iterations` option. Training will run potentially indefinitely until `error` threshold is met.");
+      if (typeof options.iterations === 'undefined')
+        console.warn(
+          'Missing `iterations` option. Training will run potentially indefinitely until `error` threshold is met.'
+        );
     }
     let targetError = options.error ?? -Infinity;
     const cost = options.cost || Cost.mse;
-    if (typeof cost !== "function" && !(typeof cost === "object" && (typeof cost.fn === "function" || typeof cost.calculate === "function"))) {
-      throw new Error("Invalid cost function provided to Network.train.");
+    if (
+      typeof cost !== 'function' &&
+      !(
+        typeof cost === 'object' &&
+        (typeof cost.fn === 'function' || typeof cost.calculate === 'function')
+      )
+    ) {
+      throw new Error('Invalid cost function provided to Network.train.');
     }
     const baseRate = options.rate ?? 0.3;
     const dropout = options.dropout || 0;
     if (dropout < 0 || dropout >= 1)
-      throw new Error("dropout must be in [0,1)");
+      throw new Error('dropout must be in [0,1)');
     const momentum = options.momentum || 0;
     const batchSize = options.batchSize || 1;
     if (batchSize > set.length)
-      throw new Error("Batch size cannot be larger than the dataset length.");
+      throw new Error('Batch size cannot be larger than the dataset length.');
     const accumulationSteps = options.accumulationSteps || 1;
-    internalNet._accumulationReduction = options.accumulationReduction === "sum" ? "sum" : "average";
+    internalNet._accumulationReduction =
+      options.accumulationReduction === 'sum' ? 'sum' : 'average';
     if (accumulationSteps < 1 || !Number.isFinite(accumulationSteps))
-      throw new Error("accumulationSteps must be >=1");
+      throw new Error('accumulationSteps must be >=1');
     if (options.gradientClip) {
       const gc = options.gradientClip;
       if (gc.mode)
         internalNet._currentGradClip = {
           mode: gc.mode,
           maxNorm: gc.maxNorm,
-          percentile: gc.percentile
+          percentile: gc.percentile,
         };
-      else if (typeof gc.maxNorm === "number")
-        internalNet._currentGradClip = { mode: "norm", maxNorm: gc.maxNorm };
-      else if (typeof gc.percentile === "number")
+      else if (typeof gc.maxNorm === 'number')
+        internalNet._currentGradClip = { mode: 'norm', maxNorm: gc.maxNorm };
+      else if (typeof gc.percentile === 'number')
         internalNet._currentGradClip = {
-          mode: "percentile",
-          percentile: gc.percentile
+          mode: 'percentile',
+          percentile: gc.percentile,
         };
       internalNet._gradClipSeparateBias = !!gc.separateBias;
     } else {
@@ -6709,19 +7449,22 @@
       internalNet._gradClipSeparateBias = false;
     }
     if (options.mixedPrecision) {
-      const mp = options.mixedPrecision === true ? { lossScale: 1024 } : options.mixedPrecision;
+      const mp =
+        options.mixedPrecision === true
+          ? { lossScale: 1024 }
+          : options.mixedPrecision;
       internalNet._mixedPrecision.enabled = true;
       internalNet._mixedPrecision.lossScale = mp.lossScale || 1024;
       const dyn = mp.dynamic || {};
       internalNet._mixedPrecisionState.minLossScale = dyn.minScale || 1;
       internalNet._mixedPrecisionState.maxLossScale = dyn.maxScale || 65536;
-      internalNet._mpIncreaseEvery = dyn.increaseEvery || dyn.stableStepsForIncrease || 200;
+      internalNet._mpIncreaseEvery =
+        dyn.increaseEvery || dyn.stableStepsForIncrease || 200;
       net.connections.forEach((c) => {
         c._fp32Weight = c.weight;
       });
       net.nodes.forEach((n) => {
-        if (n.type !== "input")
-          n._fp32Bias = n.bias;
+        if (n.type !== 'input') n._fp32Bias = n.bias;
       });
     } else {
       internalNet._mixedPrecision.enabled = false;
@@ -6729,38 +7472,44 @@
       internalNet._mpIncreaseEvery = 200;
     }
     const allowedOptimizers = /* @__PURE__ */ new Set([
-      "sgd",
-      "rmsprop",
-      "adagrad",
-      "adam",
-      "adamw",
-      "amsgrad",
-      "adamax",
-      "nadam",
-      "radam",
-      "lion",
-      "adabelief",
-      "lookahead"
+      'sgd',
+      'rmsprop',
+      'adagrad',
+      'adam',
+      'adamw',
+      'amsgrad',
+      'adamax',
+      'nadam',
+      'radam',
+      'lion',
+      'adabelief',
+      'lookahead',
     ]);
     let optimizerConfig = void 0;
-    if (typeof options.optimizer !== "undefined") {
-      if (typeof options.optimizer === "string")
+    if (typeof options.optimizer !== 'undefined') {
+      if (typeof options.optimizer === 'string')
         optimizerConfig = { type: options.optimizer.toLowerCase() };
-      else if (typeof options.optimizer === "object" && options.optimizer !== null) {
+      else if (
+        typeof options.optimizer === 'object' &&
+        options.optimizer !== null
+      ) {
         optimizerConfig = { ...options.optimizer };
-        if (typeof optimizerConfig.type === "string")
+        if (typeof optimizerConfig.type === 'string')
           optimizerConfig.type = optimizerConfig.type.toLowerCase();
       } else
-        throw new Error("Invalid optimizer option; must be string or object");
+        throw new Error('Invalid optimizer option; must be string or object');
       if (!allowedOptimizers.has(optimizerConfig.type))
         throw new Error(`Unknown optimizer type: ${optimizerConfig.type}`);
-      if (optimizerConfig.type === "lookahead") {
-        if (!optimizerConfig.baseType)
-          optimizerConfig.baseType = "adam";
-        if (optimizerConfig.baseType === "lookahead")
-          throw new Error("Nested lookahead (baseType lookahead) is not supported");
+      if (optimizerConfig.type === 'lookahead') {
+        if (!optimizerConfig.baseType) optimizerConfig.baseType = 'adam';
+        if (optimizerConfig.baseType === 'lookahead')
+          throw new Error(
+            'Nested lookahead (baseType lookahead) is not supported'
+          );
         if (!allowedOptimizers.has(optimizerConfig.baseType))
-          throw new Error(`Unknown baseType for lookahead: ${optimizerConfig.baseType}`);
+          throw new Error(
+            `Unknown baseType for lookahead: ${optimizerConfig.baseType}`
+          );
         optimizerConfig.la_k = optimizerConfig.la_k || 5;
         optimizerConfig.la_alpha = optimizerConfig.la_alpha ?? 0.5;
       }
@@ -6769,20 +7518,25 @@
     const start = Date.now();
     let finalError = Infinity;
     const movingAverageWindow = Math.max(1, options.movingAverageWindow || 1);
-    const movingAverageType = options.movingAverageType || "sma";
+    const movingAverageType = options.movingAverageType || 'sma';
     const emaAlpha = (() => {
-      if (movingAverageType !== "ema")
-        return void 0;
+      if (movingAverageType !== 'ema') return void 0;
       if (options.emaAlpha && options.emaAlpha > 0 && options.emaAlpha <= 1)
         return options.emaAlpha;
       return 2 / (movingAverageWindow + 1);
     })();
-    const plateauWindow = Math.max(1, options.plateauMovingAverageWindow || movingAverageWindow);
+    const plateauWindow = Math.max(
+      1,
+      options.plateauMovingAverageWindow || movingAverageWindow
+    );
     const plateauType = options.plateauMovingAverageType || movingAverageType;
     const plateauEmaAlpha = (() => {
-      if (plateauType !== "ema")
-        return void 0;
-      if (options.plateauEmaAlpha && options.plateauEmaAlpha > 0 && options.plateauEmaAlpha <= 1)
+      if (plateauType !== 'ema') return void 0;
+      if (
+        options.plateauEmaAlpha &&
+        options.plateauEmaAlpha > 0 &&
+        options.plateauEmaAlpha <= 1
+      )
         return options.plateauEmaAlpha;
       return 2 / (plateauWindow + 1);
     })();
@@ -6803,12 +7557,10 @@
       }
       recentErrorsBuf[recentErrorsWriteIdx] = value;
       recentErrorsWriteIdx = (recentErrorsWriteIdx + 1) % recentErrorsCapacity;
-      if (recentErrorsCount < recentErrorsCapacity)
-        recentErrorsCount++;
+      if (recentErrorsCount < recentErrorsCapacity) recentErrorsCount++;
     };
     const recentErrorsChrono = () => {
-      if (recentErrorsCount === 0)
-        return [];
+      if (recentErrorsCount === 0) return [];
       if (recentErrorsCount < recentErrorsCapacity)
         return recentErrorsBuf.slice(0, recentErrorsCount);
       const out = new Array(recentErrorsCount);
@@ -6833,12 +7585,10 @@
       }
       plateauBuf[plateauWriteIdx] = value;
       plateauWriteIdx = (plateauWriteIdx + 1) % plateauCapacity;
-      if (plateauCount < plateauCapacity)
-        plateauCount++;
+      if (plateauCount < plateauCapacity) plateauCount++;
     };
     const plateauChrono = () => {
-      if (plateauCount === 0)
-        return [];
+      if (plateauCount === 0) return [];
       if (plateauCount < plateauCapacity)
         return plateauBuf.slice(0, plateauCount);
       const out = new Array(plateauCount);
@@ -6854,55 +7604,90 @@
       if (net._maybePrune) {
         net._maybePrune((internalNet._globalEpoch || 0) + iter);
       }
-      const trainError = trainSetImpl(net, set, batchSize, accumulationSteps, baseRate, momentum, {}, cost, optimizerConfig);
+      const trainError = trainSetImpl(
+        net,
+        set,
+        batchSize,
+        accumulationSteps,
+        baseRate,
+        momentum,
+        {},
+        cost,
+        optimizerConfig
+      );
       performedIterations = iter;
       recentErrorsPush(trainError);
       let monitored = trainError;
-      if (movingAverageWindow > 1 || movingAverageType === "ema" || movingAverageType === "adaptive-ema") {
+      if (
+        movingAverageWindow > 1 ||
+        movingAverageType === 'ema' ||
+        movingAverageType === 'adaptive-ema'
+      ) {
         const recentArr = recentErrorsChrono();
-        if (movingAverageType === "median") {
+        if (movingAverageType === 'median') {
           const sorted = [...recentArr].sort((a, b) => a - b);
           const mid = Math.floor(sorted.length / 2);
-          monitored = sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
-        } else if (movingAverageType === "ema") {
-          if (emaValue == null)
-            emaValue = trainError;
-          else
-            emaValue = emaValue + emaAlpha * (trainError - emaValue);
+          monitored =
+            sorted.length % 2
+              ? sorted[mid]
+              : (sorted[mid - 1] + sorted[mid]) / 2;
+        } else if (movingAverageType === 'ema') {
+          if (emaValue == null) emaValue = trainError;
+          else emaValue = emaValue + emaAlpha * (trainError - emaValue);
           monitored = emaValue;
-        } else if (movingAverageType === "adaptive-ema") {
+        } else if (movingAverageType === 'adaptive-ema') {
           const mean = recentArr.reduce((a, b) => a + b, 0) / recentArr.length;
-          const variance = recentArr.reduce((a, b) => a + (b - mean) * (b - mean), 0) / recentArr.length;
+          const variance =
+            recentArr.reduce((a, b) => a + (b - mean) * (b - mean), 0) /
+            recentArr.length;
           const baseAlpha = emaAlpha || 2 / (movingAverageWindow + 1);
           const varScaled = variance / Math.max(mean * mean, 1e-8);
-          const adaptAlpha = Math.min(0.95, Math.max(baseAlpha, baseAlpha * (1 + 2 * varScaled)));
+          const adaptAlpha = Math.min(
+            0.95,
+            Math.max(baseAlpha, baseAlpha * (1 + 2 * varScaled))
+          );
           if (adaptiveBaseEmaValue == null) {
             adaptiveBaseEmaValue = trainError;
             adaptiveEmaValue = trainError;
           } else {
-            adaptiveBaseEmaValue = adaptiveBaseEmaValue + baseAlpha * (trainError - adaptiveBaseEmaValue);
-            adaptiveEmaValue = adaptiveEmaValue + adaptAlpha * (trainError - adaptiveEmaValue);
+            adaptiveBaseEmaValue =
+              adaptiveBaseEmaValue +
+              baseAlpha * (trainError - adaptiveBaseEmaValue);
+            adaptiveEmaValue =
+              adaptiveEmaValue + adaptAlpha * (trainError - adaptiveEmaValue);
           }
           monitored = Math.min(adaptiveEmaValue, adaptiveBaseEmaValue);
-        } else if (movingAverageType === "gaussian") {
+        } else if (movingAverageType === 'gaussian') {
           const gaussianWindow = recentArr;
           const windowLength = gaussianWindow.length;
           const sigma = movingAverageWindow / 3 || 1;
           let gaussianWeightSum = 0;
           let gaussianWeightedAccumulator = 0;
           for (let gi = 0; gi < windowLength; gi++) {
-            const weight = Math.exp(-0.5 * Math.pow((gi - (windowLength - 1)) / sigma, 2));
+            const weight = Math.exp(
+              -0.5 * Math.pow((gi - (windowLength - 1)) / sigma, 2)
+            );
             gaussianWeightSum += weight;
             gaussianWeightedAccumulator += weight * gaussianWindow[gi];
           }
           monitored = gaussianWeightedAccumulator / (gaussianWeightSum || 1);
-        } else if (movingAverageType === "trimmed") {
-          const tailTrimRatio = Math.min(0.49, Math.max(0, options.trimmedRatio || 0.1));
+        } else if (movingAverageType === 'trimmed') {
+          const tailTrimRatio = Math.min(
+            0.49,
+            Math.max(0, options.trimmedRatio || 0.1)
+          );
           const sorted = [...recentArr].sort((a, b) => a - b);
-          const elementsToDropEachSide = Math.floor(sorted.length * tailTrimRatio);
-          const trimmedSegment = sorted.slice(elementsToDropEachSide, sorted.length - elementsToDropEachSide);
-          monitored = trimmedSegment.reduce((a, b) => a + b, 0) / (trimmedSegment.length || 1);
-        } else if (movingAverageType === "wma") {
+          const elementsToDropEachSide = Math.floor(
+            sorted.length * tailTrimRatio
+          );
+          const trimmedSegment = sorted.slice(
+            elementsToDropEachSide,
+            sorted.length - elementsToDropEachSide
+          );
+          monitored =
+            trimmedSegment.reduce((a, b) => a + b, 0) /
+            (trimmedSegment.length || 1);
+        } else if (movingAverageType === 'wma') {
           let linearWeightSum = 0;
           let linearWeightedAccumulator = 0;
           for (let li = 0; li < recentArr.length; li++) {
@@ -6918,65 +7703,72 @@
       finalError = monitored;
       plateauPush(trainError);
       let plateauError = trainError;
-      if (plateauWindow > 1 || plateauType === "ema") {
-        if (plateauType === "median") {
+      if (plateauWindow > 1 || plateauType === 'ema') {
+        if (plateauType === 'median') {
           const sorted = [...plateauChrono()].sort((a, b) => a - b);
           const mid = Math.floor(sorted.length / 2);
-          plateauError = sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
-        } else if (plateauType === "ema") {
-          if (plateauEmaValue == null)
-            plateauEmaValue = trainError;
+          plateauError =
+            sorted.length % 2
+              ? sorted[mid]
+              : (sorted[mid - 1] + sorted[mid]) / 2;
+        } else if (plateauType === 'ema') {
+          if (plateauEmaValue == null) plateauEmaValue = trainError;
           else
-            plateauEmaValue = plateauEmaValue + plateauEmaAlpha * (trainError - plateauEmaValue);
+            plateauEmaValue =
+              plateauEmaValue +
+              plateauEmaAlpha * (trainError - plateauEmaValue);
           plateauError = plateauEmaValue;
         } else {
           const arr = plateauChrono();
           plateauError = arr.reduce((a, b) => a + b, 0) / arr.length;
         }
       }
-      if (typeof options.metricsHook === "function") {
+      if (typeof options.metricsHook === 'function') {
         try {
           options.metricsHook({
             iteration: iter,
             error: finalError,
             plateauError,
-            gradNorm: internalNet._lastGradNorm ?? 0
+            gradNorm: internalNet._lastGradNorm ?? 0,
           });
-        } catch {
-        }
+        } catch {}
       }
-      if (options.checkpoint && typeof options.checkpoint.save === "function") {
+      if (options.checkpoint && typeof options.checkpoint.save === 'function') {
         if (options.checkpoint.last) {
           try {
             options.checkpoint.save({
-              type: "last",
+              type: 'last',
               iteration: iter,
               error: finalError,
-              network: net.toJSON()
+              network: net.toJSON(),
             });
-          } catch {
-          }
+          } catch {}
         }
         if (options.checkpoint.best) {
-          if (finalError < net._checkpointBestError || net._checkpointBestError == null) {
+          if (
+            finalError < net._checkpointBestError ||
+            net._checkpointBestError == null
+          ) {
             net._checkpointBestError = finalError;
             try {
               options.checkpoint.save({
-                type: "best",
+                type: 'best',
                 iteration: iter,
                 error: finalError,
-                network: net.toJSON()
+                network: net.toJSON(),
               });
-            } catch {
-            }
+            } catch {}
           }
         }
       }
-      if (options.schedule && options.schedule.iterations && iter % options.schedule.iterations === 0) {
+      if (
+        options.schedule &&
+        options.schedule.iterations &&
+        iter % options.schedule.iterations === 0
+      ) {
         try {
           options.schedule.function({ error: finalError, iteration: iter });
-        } catch {
-        }
+        } catch {}
       }
       if (finalError < bestError - earlyStopMinDelta) {
         bestError = finalError;
@@ -6984,52 +7776,59 @@
       } else if (earlyStopPatience) {
         noImproveCount++;
       }
-      if (earlyStopPatience && noImproveCount >= earlyStopPatience)
-        break;
-      if (finalError <= targetError)
-        break;
+      if (earlyStopPatience && noImproveCount >= earlyStopPatience) break;
+      if (finalError <= targetError) break;
     }
     net.nodes.forEach((n) => {
-      if (n.type === "hidden")
-        n.mask = 1;
+      if (n.type === 'hidden') n.mask = 1;
     });
     net.dropout = 0;
-    internalNet._globalEpoch = (internalNet._globalEpoch || 0) + performedIterations;
+    internalNet._globalEpoch =
+      (internalNet._globalEpoch || 0) + performedIterations;
     return {
       /** Final monitored (possibly smoothed) error achieved at termination. */
       error: finalError,
       /** Number of iterations actually executed (could be < requested iterations due to early stop). */
       iterations: performedIterations,
       /** Wall-clock training duration in milliseconds. */
-      time: Date.now() - start
+      time: Date.now() - start,
     };
   }
   var __trainingInternals;
   var init_network_training = __esm({
-    "dist/architecture/network/network.training.js"() {
-      "use strict";
+    'dist/architecture/network/network.training.js'() {
+      'use strict';
       init_methods();
       init_config();
       __trainingInternals = {
         computeMonitoredError,
-        computePlateauMetric
+        computePlateauMetric,
       };
-    }
+    },
   });
 
   // node_modules/util/support/isBufferBrowser.js
   var require_isBufferBrowser = __commonJS({
-    "node_modules/util/support/isBufferBrowser.js"(exports, module) {
+    'node_modules/util/support/isBufferBrowser.js'(exports, module) {
       module.exports = function isBuffer(arg) {
-        return arg && typeof arg === "object" && typeof arg.copy === "function" && typeof arg.fill === "function" && typeof arg.readUInt8 === "function";
+        return (
+          arg &&
+          typeof arg === 'object' &&
+          typeof arg.copy === 'function' &&
+          typeof arg.fill === 'function' &&
+          typeof arg.readUInt8 === 'function'
+        );
       };
-    }
+    },
   });
 
   // node_modules/util/node_modules/inherits/inherits_browser.js
   var require_inherits_browser = __commonJS({
-    "node_modules/util/node_modules/inherits/inherits_browser.js"(exports, module) {
-      if (typeof Object.create === "function") {
+    'node_modules/util/node_modules/inherits/inherits_browser.js'(
+      exports,
+      module
+    ) {
+      if (typeof Object.create === 'function') {
         module.exports = function inherits(ctor, superCtor) {
           ctor.super_ = superCtor;
           ctor.prototype = Object.create(superCtor.prototype, {
@@ -7037,51 +7836,50 @@
               value: ctor,
               enumerable: false,
               writable: true,
-              configurable: true
-            }
+              configurable: true,
+            },
           });
         };
       } else {
         module.exports = function inherits(ctor, superCtor) {
           ctor.super_ = superCtor;
-          var TempCtor = function() {
-          };
+          var TempCtor = function () {};
           TempCtor.prototype = superCtor.prototype;
           ctor.prototype = new TempCtor();
           ctor.prototype.constructor = ctor;
         };
       }
-    }
+    },
   });
 
   // node_modules/util/util.js
   var require_util = __commonJS({
-    "node_modules/util/util.js"(exports) {
+    'node_modules/util/util.js'(exports) {
       var formatRegExp = /%[sdj%]/g;
-      exports.format = function(f) {
+      exports.format = function (f) {
         if (!isString(f)) {
           var objects = [];
           for (var i = 0; i < arguments.length; i++) {
             objects.push(inspect(arguments[i]));
           }
-          return objects.join(" ");
+          return objects.join(' ');
         }
         var i = 1;
         var args = arguments;
         var len = args.length;
-        var str = String(f).replace(formatRegExp, function(x2) {
-          if (x2 === "%%") return "%";
+        var str = String(f).replace(formatRegExp, function (x2) {
+          if (x2 === '%%') return '%';
           if (i >= len) return x2;
           switch (x2) {
-            case "%s":
+            case '%s':
               return String(args[i++]);
-            case "%d":
+            case '%d':
               return Number(args[i++]);
-            case "%j":
+            case '%j':
               try {
                 return JSON.stringify(args[i++]);
               } catch (_) {
-                return "[Circular]";
+                return '[Circular]';
               }
             default:
               return x2;
@@ -7089,16 +7887,16 @@
         });
         for (var x = args[i]; i < len; x = args[++i]) {
           if (isNull(x) || !isObject(x)) {
-            str += " " + x;
+            str += ' ' + x;
           } else {
-            str += " " + inspect(x);
+            str += ' ' + inspect(x);
           }
         }
         return str;
       };
-      exports.deprecate = function(fn, msg) {
+      exports.deprecate = function (fn, msg) {
         if (isUndefined(global.process)) {
-          return function() {
+          return function () {
             return exports.deprecate(fn, msg).apply(this, arguments);
           };
         }
@@ -7123,20 +7921,19 @@
       };
       var debugs = {};
       var debugEnviron;
-      exports.debuglog = function(set) {
+      exports.debuglog = function (set) {
         if (isUndefined(debugEnviron))
-          debugEnviron = process.env.NODE_DEBUG || "";
+          debugEnviron = process.env.NODE_DEBUG || '';
         set = set.toUpperCase();
         if (!debugs[set]) {
-          if (new RegExp("\\b" + set + "\\b", "i").test(debugEnviron)) {
+          if (new RegExp('\\b' + set + '\\b', 'i').test(debugEnviron)) {
             var pid = process.pid;
-            debugs[set] = function() {
+            debugs[set] = function () {
               var msg = exports.format.apply(exports, arguments);
-              console.error("%s %d: %s", set, pid, msg);
+              console.error('%s %d: %s', set, pid, msg);
             };
           } else {
-            debugs[set] = function() {
-            };
+            debugs[set] = function () {};
           }
         }
         return debugs[set];
@@ -7144,7 +7941,7 @@
       function inspect(obj, opts) {
         var ctx = {
           seen: [],
-          stylize: stylizeNoColor
+          stylize: stylizeNoColor,
         };
         if (arguments.length >= 3) ctx.depth = arguments[2];
         if (arguments.length >= 4) ctx.colors = arguments[3];
@@ -7162,35 +7959,43 @@
       }
       exports.inspect = inspect;
       inspect.colors = {
-        "bold": [1, 22],
-        "italic": [3, 23],
-        "underline": [4, 24],
-        "inverse": [7, 27],
-        "white": [37, 39],
-        "grey": [90, 39],
-        "black": [30, 39],
-        "blue": [34, 39],
-        "cyan": [36, 39],
-        "green": [32, 39],
-        "magenta": [35, 39],
-        "red": [31, 39],
-        "yellow": [33, 39]
+        bold: [1, 22],
+        italic: [3, 23],
+        underline: [4, 24],
+        inverse: [7, 27],
+        white: [37, 39],
+        grey: [90, 39],
+        black: [30, 39],
+        blue: [34, 39],
+        cyan: [36, 39],
+        green: [32, 39],
+        magenta: [35, 39],
+        red: [31, 39],
+        yellow: [33, 39],
       };
       inspect.styles = {
-        "special": "cyan",
-        "number": "yellow",
-        "boolean": "yellow",
-        "undefined": "grey",
-        "null": "bold",
-        "string": "green",
-        "date": "magenta",
+        special: 'cyan',
+        number: 'yellow',
+        boolean: 'yellow',
+        undefined: 'grey',
+        null: 'bold',
+        string: 'green',
+        date: 'magenta',
         // "name": intentionally not styling
-        "regexp": "red"
+        regexp: 'red',
       };
       function stylizeWithColor(str, styleType) {
         var style = inspect.styles[styleType];
         if (style) {
-          return "\x1B[" + inspect.colors[style][0] + "m" + str + "\x1B[" + inspect.colors[style][1] + "m";
+          return (
+            '\x1B[' +
+            inspect.colors[style][0] +
+            'm' +
+            str +
+            '\x1B[' +
+            inspect.colors[style][1] +
+            'm'
+          );
         } else {
           return str;
         }
@@ -7200,15 +8005,19 @@
       }
       function arrayToHash(array) {
         var hash = {};
-        array.forEach(function(val, idx) {
+        array.forEach(function (val, idx) {
           hash[val] = true;
         });
         return hash;
       }
       function formatValue(ctx, value, recurseTimes) {
-        if (ctx.customInspect && value && isFunction(value.inspect) && // Filter out the util module, it's inspect function is special
-        value.inspect !== exports.inspect && // Also filter out any prototype objects using the circular check.
-        !(value.constructor && value.constructor.prototype === value)) {
+        if (
+          ctx.customInspect &&
+          value &&
+          isFunction(value.inspect) && // Filter out the util module, it's inspect function is special
+          value.inspect !== exports.inspect && // Also filter out any prototype objects using the circular check.
+          !(value.constructor && value.constructor.prototype === value)
+        ) {
           var ret = value.inspect(recurseTimes, ctx);
           if (!isString(ret)) {
             ret = formatValue(ctx, ret, recurseTimes);
@@ -7224,50 +8033,55 @@
         if (ctx.showHidden) {
           keys = Object.getOwnPropertyNames(value);
         }
-        if (isError(value) && (keys.indexOf("message") >= 0 || keys.indexOf("description") >= 0)) {
+        if (
+          isError(value) &&
+          (keys.indexOf('message') >= 0 || keys.indexOf('description') >= 0)
+        ) {
           return formatError(value);
         }
         if (keys.length === 0) {
           if (isFunction(value)) {
-            var name = value.name ? ": " + value.name : "";
-            return ctx.stylize("[Function" + name + "]", "special");
+            var name = value.name ? ': ' + value.name : '';
+            return ctx.stylize('[Function' + name + ']', 'special');
           }
           if (isRegExp(value)) {
-            return ctx.stylize(RegExp.prototype.toString.call(value), "regexp");
+            return ctx.stylize(RegExp.prototype.toString.call(value), 'regexp');
           }
           if (isDate(value)) {
-            return ctx.stylize(Date.prototype.toString.call(value), "date");
+            return ctx.stylize(Date.prototype.toString.call(value), 'date');
           }
           if (isError(value)) {
             return formatError(value);
           }
         }
-        var base = "", array = false, braces = ["{", "}"];
+        var base = '',
+          array = false,
+          braces = ['{', '}'];
         if (isArray(value)) {
           array = true;
-          braces = ["[", "]"];
+          braces = ['[', ']'];
         }
         if (isFunction(value)) {
-          var n = value.name ? ": " + value.name : "";
-          base = " [Function" + n + "]";
+          var n = value.name ? ': ' + value.name : '';
+          base = ' [Function' + n + ']';
         }
         if (isRegExp(value)) {
-          base = " " + RegExp.prototype.toString.call(value);
+          base = ' ' + RegExp.prototype.toString.call(value);
         }
         if (isDate(value)) {
-          base = " " + Date.prototype.toUTCString.call(value);
+          base = ' ' + Date.prototype.toUTCString.call(value);
         }
         if (isError(value)) {
-          base = " " + formatError(value);
+          base = ' ' + formatError(value);
         }
         if (keys.length === 0 && (!array || value.length == 0)) {
           return braces[0] + base + braces[1];
         }
         if (recurseTimes < 0) {
           if (isRegExp(value)) {
-            return ctx.stylize(RegExp.prototype.toString.call(value), "regexp");
+            return ctx.stylize(RegExp.prototype.toString.call(value), 'regexp');
           } else {
-            return ctx.stylize("[Object]", "special");
+            return ctx.stylize('[Object]', 'special');
           }
         }
         ctx.seen.push(value);
@@ -7275,76 +8089,91 @@
         if (array) {
           output = formatArray(ctx, value, recurseTimes, visibleKeys, keys);
         } else {
-          output = keys.map(function(key) {
-            return formatProperty(ctx, value, recurseTimes, visibleKeys, key, array);
+          output = keys.map(function (key) {
+            return formatProperty(
+              ctx,
+              value,
+              recurseTimes,
+              visibleKeys,
+              key,
+              array
+            );
           });
         }
         ctx.seen.pop();
         return reduceToSingleString(output, base, braces);
       }
       function formatPrimitive(ctx, value) {
-        if (isUndefined(value))
-          return ctx.stylize("undefined", "undefined");
+        if (isUndefined(value)) return ctx.stylize('undefined', 'undefined');
         if (isString(value)) {
-          var simple = "'" + JSON.stringify(value).replace(/^"|"$/g, "").replace(/'/g, "\\'").replace(/\\"/g, '"') + "'";
-          return ctx.stylize(simple, "string");
+          var simple =
+            "'" +
+            JSON.stringify(value)
+              .replace(/^"|"$/g, '')
+              .replace(/'/g, "\\'")
+              .replace(/\\"/g, '"') +
+            "'";
+          return ctx.stylize(simple, 'string');
         }
-        if (isNumber(value))
-          return ctx.stylize("" + value, "number");
-        if (isBoolean(value))
-          return ctx.stylize("" + value, "boolean");
-        if (isNull(value))
-          return ctx.stylize("null", "null");
+        if (isNumber(value)) return ctx.stylize('' + value, 'number');
+        if (isBoolean(value)) return ctx.stylize('' + value, 'boolean');
+        if (isNull(value)) return ctx.stylize('null', 'null');
       }
       function formatError(value) {
-        return "[" + Error.prototype.toString.call(value) + "]";
+        return '[' + Error.prototype.toString.call(value) + ']';
       }
       function formatArray(ctx, value, recurseTimes, visibleKeys, keys) {
         var output = [];
         for (var i = 0, l = value.length; i < l; ++i) {
           if (hasOwnProperty(value, String(i))) {
-            output.push(formatProperty(
-              ctx,
-              value,
-              recurseTimes,
-              visibleKeys,
-              String(i),
-              true
-            ));
+            output.push(
+              formatProperty(
+                ctx,
+                value,
+                recurseTimes,
+                visibleKeys,
+                String(i),
+                true
+              )
+            );
           } else {
-            output.push("");
+            output.push('');
           }
         }
-        keys.forEach(function(key) {
+        keys.forEach(function (key) {
           if (!key.match(/^\d+$/)) {
-            output.push(formatProperty(
-              ctx,
-              value,
-              recurseTimes,
-              visibleKeys,
-              key,
-              true
-            ));
+            output.push(
+              formatProperty(ctx, value, recurseTimes, visibleKeys, key, true)
+            );
           }
         });
         return output;
       }
-      function formatProperty(ctx, value, recurseTimes, visibleKeys, key, array) {
+      function formatProperty(
+        ctx,
+        value,
+        recurseTimes,
+        visibleKeys,
+        key,
+        array
+      ) {
         var name, str, desc;
-        desc = Object.getOwnPropertyDescriptor(value, key) || { value: value[key] };
+        desc = Object.getOwnPropertyDescriptor(value, key) || {
+          value: value[key],
+        };
         if (desc.get) {
           if (desc.set) {
-            str = ctx.stylize("[Getter/Setter]", "special");
+            str = ctx.stylize('[Getter/Setter]', 'special');
           } else {
-            str = ctx.stylize("[Getter]", "special");
+            str = ctx.stylize('[Getter]', 'special');
           }
         } else {
           if (desc.set) {
-            str = ctx.stylize("[Setter]", "special");
+            str = ctx.stylize('[Setter]', 'special');
           }
         }
         if (!hasOwnProperty(visibleKeys, key)) {
-          name = "[" + key + "]";
+          name = '[' + key + ']';
         }
         if (!str) {
           if (ctx.seen.indexOf(desc.value) < 0) {
@@ -7353,54 +8182,73 @@
             } else {
               str = formatValue(ctx, desc.value, recurseTimes - 1);
             }
-            if (str.indexOf("\n") > -1) {
+            if (str.indexOf('\n') > -1) {
               if (array) {
-                str = str.split("\n").map(function(line) {
-                  return "  " + line;
-                }).join("\n").substr(2);
+                str = str
+                  .split('\n')
+                  .map(function (line) {
+                    return '  ' + line;
+                  })
+                  .join('\n')
+                  .substr(2);
               } else {
-                str = "\n" + str.split("\n").map(function(line) {
-                  return "   " + line;
-                }).join("\n");
+                str =
+                  '\n' +
+                  str
+                    .split('\n')
+                    .map(function (line) {
+                      return '   ' + line;
+                    })
+                    .join('\n');
               }
             }
           } else {
-            str = ctx.stylize("[Circular]", "special");
+            str = ctx.stylize('[Circular]', 'special');
           }
         }
         if (isUndefined(name)) {
           if (array && key.match(/^\d+$/)) {
             return str;
           }
-          name = JSON.stringify("" + key);
+          name = JSON.stringify('' + key);
           if (name.match(/^"([a-zA-Z_][a-zA-Z_0-9]*)"$/)) {
             name = name.substr(1, name.length - 2);
-            name = ctx.stylize(name, "name");
+            name = ctx.stylize(name, 'name');
           } else {
-            name = name.replace(/'/g, "\\'").replace(/\\"/g, '"').replace(/(^"|"$)/g, "'");
-            name = ctx.stylize(name, "string");
+            name = name
+              .replace(/'/g, "\\'")
+              .replace(/\\"/g, '"')
+              .replace(/(^"|"$)/g, "'");
+            name = ctx.stylize(name, 'string');
           }
         }
-        return name + ": " + str;
+        return name + ': ' + str;
       }
       function reduceToSingleString(output, base, braces) {
         var numLinesEst = 0;
-        var length = output.reduce(function(prev, cur) {
+        var length = output.reduce(function (prev, cur) {
           numLinesEst++;
-          if (cur.indexOf("\n") >= 0) numLinesEst++;
-          return prev + cur.replace(/\u001b\[\d\d?m/g, "").length + 1;
+          if (cur.indexOf('\n') >= 0) numLinesEst++;
+          return prev + cur.replace(/\u001b\[\d\d?m/g, '').length + 1;
         }, 0);
         if (length > 60) {
-          return braces[0] + (base === "" ? "" : base + "\n ") + " " + output.join(",\n  ") + " " + braces[1];
+          return (
+            braces[0] +
+            (base === '' ? '' : base + '\n ') +
+            ' ' +
+            output.join(',\n  ') +
+            ' ' +
+            braces[1]
+          );
         }
-        return braces[0] + base + " " + output.join(", ") + " " + braces[1];
+        return braces[0] + base + ' ' + output.join(', ') + ' ' + braces[1];
       }
       function isArray(ar) {
         return Array.isArray(ar);
       }
       exports.isArray = isArray;
       function isBoolean(arg) {
-        return typeof arg === "boolean";
+        return typeof arg === 'boolean';
       }
       exports.isBoolean = isBoolean;
       function isNull(arg) {
@@ -7412,15 +8260,15 @@
       }
       exports.isNullOrUndefined = isNullOrUndefined;
       function isNumber(arg) {
-        return typeof arg === "number";
+        return typeof arg === 'number';
       }
       exports.isNumber = isNumber;
       function isString(arg) {
-        return typeof arg === "string";
+        return typeof arg === 'string';
       }
       exports.isString = isString;
       function isSymbol(arg) {
-        return typeof arg === "symbol";
+        return typeof arg === 'symbol';
       }
       exports.isSymbol = isSymbol;
       function isUndefined(arg) {
@@ -7428,28 +8276,37 @@
       }
       exports.isUndefined = isUndefined;
       function isRegExp(re) {
-        return isObject(re) && objectToString(re) === "[object RegExp]";
+        return isObject(re) && objectToString(re) === '[object RegExp]';
       }
       exports.isRegExp = isRegExp;
       function isObject(arg) {
-        return typeof arg === "object" && arg !== null;
+        return typeof arg === 'object' && arg !== null;
       }
       exports.isObject = isObject;
       function isDate(d) {
-        return isObject(d) && objectToString(d) === "[object Date]";
+        return isObject(d) && objectToString(d) === '[object Date]';
       }
       exports.isDate = isDate;
       function isError(e) {
-        return isObject(e) && (objectToString(e) === "[object Error]" || e instanceof Error);
+        return (
+          isObject(e) &&
+          (objectToString(e) === '[object Error]' || e instanceof Error)
+        );
       }
       exports.isError = isError;
       function isFunction(arg) {
-        return typeof arg === "function";
+        return typeof arg === 'function';
       }
       exports.isFunction = isFunction;
       function isPrimitive(arg) {
-        return arg === null || typeof arg === "boolean" || typeof arg === "number" || typeof arg === "string" || typeof arg === "symbol" || // ES6 symbol
-        typeof arg === "undefined";
+        return (
+          arg === null ||
+          typeof arg === 'boolean' ||
+          typeof arg === 'number' ||
+          typeof arg === 'string' ||
+          typeof arg === 'symbol' || // ES6 symbol
+          typeof arg === 'undefined'
+        );
       }
       exports.isPrimitive = isPrimitive;
       exports.isBuffer = require_isBufferBrowser();
@@ -7457,36 +8314,40 @@
         return Object.prototype.toString.call(o);
       }
       function pad(n) {
-        return n < 10 ? "0" + n.toString(10) : n.toString(10);
+        return n < 10 ? '0' + n.toString(10) : n.toString(10);
       }
       var months = [
-        "Jan",
-        "Feb",
-        "Mar",
-        "Apr",
-        "May",
-        "Jun",
-        "Jul",
-        "Aug",
-        "Sep",
-        "Oct",
-        "Nov",
-        "Dec"
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
       ];
       function timestamp() {
         var d = /* @__PURE__ */ new Date();
         var time = [
           pad(d.getHours()),
           pad(d.getMinutes()),
-          pad(d.getSeconds())
-        ].join(":");
-        return [d.getDate(), months[d.getMonth()], time].join(" ");
+          pad(d.getSeconds()),
+        ].join(':');
+        return [d.getDate(), months[d.getMonth()], time].join(' ');
       }
-      exports.log = function() {
-        console.log("%s - %s", timestamp(), exports.format.apply(exports, arguments));
+      exports.log = function () {
+        console.log(
+          '%s - %s',
+          timestamp(),
+          exports.format.apply(exports, arguments)
+        );
       };
       exports.inherits = require_inherits_browser();
-      exports._extend = function(origin, add) {
+      exports._extend = function (origin, add) {
         if (!add || !isObject(add)) return origin;
         var keys = Object.keys(add);
         var i = keys.length;
@@ -7498,26 +8359,25 @@
       function hasOwnProperty(obj, prop) {
         return Object.prototype.hasOwnProperty.call(obj, prop);
       }
-    }
+    },
   });
 
   // node_modules/path/path.js
   var require_path = __commonJS({
-    "node_modules/path/path.js"(exports, module) {
-      "use strict";
-      var isWindows = process.platform === "win32";
+    'node_modules/path/path.js'(exports, module) {
+      'use strict';
+      var isWindows = process.platform === 'win32';
       var util = require_util();
       function normalizeArray(parts, allowAboveRoot) {
         var res = [];
         for (var i = 0; i < parts.length; i++) {
           var p = parts[i];
-          if (!p || p === ".")
-            continue;
-          if (p === "..") {
-            if (res.length && res[res.length - 1] !== "..") {
+          if (!p || p === '.') continue;
+          if (p === '..') {
+            if (res.length && res[res.length - 1] !== '..') {
               res.pop();
             } else if (allowAboveRoot) {
-              res.push("..");
+              res.push('..');
             }
           } else {
             res.push(p);
@@ -7529,43 +8389,50 @@
         var lastIndex = arr.length - 1;
         var start = 0;
         for (; start <= lastIndex; start++) {
-          if (arr[start])
-            break;
+          if (arr[start]) break;
         }
         var end = lastIndex;
         for (; end >= 0; end--) {
-          if (arr[end])
-            break;
+          if (arr[end]) break;
         }
-        if (start === 0 && end === lastIndex)
-          return arr;
-        if (start > end)
-          return [];
+        if (start === 0 && end === lastIndex) return arr;
+        if (start > end) return [];
         return arr.slice(start, end + 1);
       }
       var splitDeviceRe = /^([a-zA-Z]:|[\\\/]{2}[^\\\/]+[\\\/]+[^\\\/]+)?([\\\/])?([\s\S]*?)$/;
       var splitTailRe = /^([\s\S]*?)((?:\.{1,2}|[^\\\/]+?|)(\.[^.\/\\]*|))(?:[\\\/]*)$/;
       var win32 = {};
       function win32SplitPath(filename) {
-        var result = splitDeviceRe.exec(filename), device = (result[1] || "") + (result[2] || ""), tail = result[3] || "";
-        var result2 = splitTailRe.exec(tail), dir = result2[1], basename = result2[2], ext = result2[3];
+        var result = splitDeviceRe.exec(filename),
+          device = (result[1] || '') + (result[2] || ''),
+          tail = result[3] || '';
+        var result2 = splitTailRe.exec(tail),
+          dir = result2[1],
+          basename = result2[2],
+          ext = result2[3];
         return [device, dir, basename, ext];
       }
       function win32StatPath(path2) {
-        var result = splitDeviceRe.exec(path2), device = result[1] || "", isUnc = !!device && device[1] !== ":";
+        var result = splitDeviceRe.exec(path2),
+          device = result[1] || '',
+          isUnc = !!device && device[1] !== ':';
         return {
           device,
           isUnc,
           isAbsolute: isUnc || !!result[2],
           // UNC paths are always absolute
-          tail: result[3]
+          tail: result[3],
         };
       }
       function normalizeUNCRoot(device) {
-        return "\\\\" + device.replace(/^[\\\/]+/, "").replace(/[\\\/]+/g, "\\");
+        return (
+          '\\\\' + device.replace(/^[\\\/]+/, '').replace(/[\\\/]+/g, '\\')
+        );
       }
-      win32.resolve = function() {
-        var resolvedDevice = "", resolvedTail = "", resolvedAbsolute = false;
+      win32.resolve = function () {
+        var resolvedDevice = '',
+          resolvedTail = '',
+          resolvedAbsolute = false;
         for (var i = arguments.length - 1; i >= -1; i--) {
           var path2;
           if (i >= 0) {
@@ -7573,25 +8440,37 @@
           } else if (!resolvedDevice) {
             path2 = process.cwd();
           } else {
-            path2 = process.env["=" + resolvedDevice];
-            if (!path2 || path2.substr(0, 3).toLowerCase() !== resolvedDevice.toLowerCase() + "\\") {
-              path2 = resolvedDevice + "\\";
+            path2 = process.env['=' + resolvedDevice];
+            if (
+              !path2 ||
+              path2.substr(0, 3).toLowerCase() !==
+                resolvedDevice.toLowerCase() + '\\'
+            ) {
+              path2 = resolvedDevice + '\\';
             }
           }
           if (!util.isString(path2)) {
-            throw new TypeError("Arguments to path.resolve must be strings");
+            throw new TypeError('Arguments to path.resolve must be strings');
           } else if (!path2) {
             continue;
           }
-          var result = win32StatPath(path2), device = result.device, isUnc = result.isUnc, isAbsolute = result.isAbsolute, tail = result.tail;
-          if (device && resolvedDevice && device.toLowerCase() !== resolvedDevice.toLowerCase()) {
+          var result = win32StatPath(path2),
+            device = result.device,
+            isUnc = result.isUnc,
+            isAbsolute = result.isAbsolute,
+            tail = result.tail;
+          if (
+            device &&
+            resolvedDevice &&
+            device.toLowerCase() !== resolvedDevice.toLowerCase()
+          ) {
             continue;
           }
           if (!resolvedDevice) {
             resolvedDevice = device;
           }
           if (!resolvedAbsolute) {
-            resolvedTail = tail + "\\" + resolvedTail;
+            resolvedTail = tail + '\\' + resolvedTail;
             resolvedAbsolute = isAbsolute;
           }
           if (resolvedDevice && resolvedAbsolute) {
@@ -7604,51 +8483,58 @@
         resolvedTail = normalizeArray(
           resolvedTail.split(/[\\\/]+/),
           !resolvedAbsolute
-        ).join("\\");
-        return resolvedDevice + (resolvedAbsolute ? "\\" : "") + resolvedTail || ".";
+        ).join('\\');
+        return (
+          resolvedDevice + (resolvedAbsolute ? '\\' : '') + resolvedTail || '.'
+        );
       };
-      win32.normalize = function(path2) {
-        var result = win32StatPath(path2), device = result.device, isUnc = result.isUnc, isAbsolute = result.isAbsolute, tail = result.tail, trailingSlash = /[\\\/]$/.test(tail);
-        tail = normalizeArray(tail.split(/[\\\/]+/), !isAbsolute).join("\\");
+      win32.normalize = function (path2) {
+        var result = win32StatPath(path2),
+          device = result.device,
+          isUnc = result.isUnc,
+          isAbsolute = result.isAbsolute,
+          tail = result.tail,
+          trailingSlash = /[\\\/]$/.test(tail);
+        tail = normalizeArray(tail.split(/[\\\/]+/), !isAbsolute).join('\\');
         if (!tail && !isAbsolute) {
-          tail = ".";
+          tail = '.';
         }
         if (tail && trailingSlash) {
-          tail += "\\";
+          tail += '\\';
         }
         if (isUnc) {
           device = normalizeUNCRoot(device);
         }
-        return device + (isAbsolute ? "\\" : "") + tail;
+        return device + (isAbsolute ? '\\' : '') + tail;
       };
-      win32.isAbsolute = function(path2) {
+      win32.isAbsolute = function (path2) {
         return win32StatPath(path2).isAbsolute;
       };
-      win32.join = function() {
+      win32.join = function () {
         var paths = [];
         for (var i = 0; i < arguments.length; i++) {
           var arg = arguments[i];
           if (!util.isString(arg)) {
-            throw new TypeError("Arguments to path.join must be strings");
+            throw new TypeError('Arguments to path.join must be strings');
           }
           if (arg) {
             paths.push(arg);
           }
         }
-        var joined = paths.join("\\");
+        var joined = paths.join('\\');
         if (!/^[\\\/]{2}[^\\\/]/.test(paths[0])) {
-          joined = joined.replace(/^[\\\/]{2,}/, "\\");
+          joined = joined.replace(/^[\\\/]{2,}/, '\\');
         }
         return win32.normalize(joined);
       };
-      win32.relative = function(from, to) {
+      win32.relative = function (from, to) {
         from = win32.resolve(from);
         to = win32.resolve(to);
         var lowerFrom = from.toLowerCase();
         var lowerTo = to.toLowerCase();
-        var toParts = trimArray(to.split("\\"));
-        var lowerFromParts = trimArray(lowerFrom.split("\\"));
-        var lowerToParts = trimArray(lowerTo.split("\\"));
+        var toParts = trimArray(to.split('\\'));
+        var lowerFromParts = trimArray(lowerFrom.split('\\'));
+        var lowerToParts = trimArray(lowerTo.split('\\'));
         var length = Math.min(lowerFromParts.length, lowerToParts.length);
         var samePartsLength = length;
         for (var i = 0; i < length; i++) {
@@ -7662,59 +8548,61 @@
         }
         var outputParts = [];
         for (var i = samePartsLength; i < lowerFromParts.length; i++) {
-          outputParts.push("..");
+          outputParts.push('..');
         }
         outputParts = outputParts.concat(toParts.slice(samePartsLength));
-        return outputParts.join("\\");
+        return outputParts.join('\\');
       };
-      win32._makeLong = function(path2) {
-        if (!util.isString(path2))
-          return path2;
+      win32._makeLong = function (path2) {
+        if (!util.isString(path2)) return path2;
         if (!path2) {
-          return "";
+          return '';
         }
         var resolvedPath = win32.resolve(path2);
         if (/^[a-zA-Z]\:\\/.test(resolvedPath)) {
-          return "\\\\?\\" + resolvedPath;
+          return '\\\\?\\' + resolvedPath;
         } else if (/^\\\\[^?.]/.test(resolvedPath)) {
-          return "\\\\?\\UNC\\" + resolvedPath.substring(2);
+          return '\\\\?\\UNC\\' + resolvedPath.substring(2);
         }
         return path2;
       };
-      win32.dirname = function(path2) {
-        var result = win32SplitPath(path2), root = result[0], dir = result[1];
+      win32.dirname = function (path2) {
+        var result = win32SplitPath(path2),
+          root = result[0],
+          dir = result[1];
         if (!root && !dir) {
-          return ".";
+          return '.';
         }
         if (dir) {
           dir = dir.substr(0, dir.length - 1);
         }
         return root + dir;
       };
-      win32.basename = function(path2, ext) {
+      win32.basename = function (path2, ext) {
         var f = win32SplitPath(path2)[2];
         if (ext && f.substr(-1 * ext.length) === ext) {
           f = f.substr(0, f.length - ext.length);
         }
         return f;
       };
-      win32.extname = function(path2) {
+      win32.extname = function (path2) {
         return win32SplitPath(path2)[3];
       };
-      win32.format = function(pathObject) {
+      win32.format = function (pathObject) {
         if (!util.isObject(pathObject)) {
           throw new TypeError(
             "Parameter 'pathObject' must be an object, not " + typeof pathObject
           );
         }
-        var root = pathObject.root || "";
+        var root = pathObject.root || '';
         if (!util.isString(root)) {
           throw new TypeError(
-            "'pathObject.root' must be a string or undefined, not " + typeof pathObject.root
+            "'pathObject.root' must be a string or undefined, not " +
+              typeof pathObject.root
           );
         }
         var dir = pathObject.dir;
-        var base = pathObject.base || "";
+        var base = pathObject.base || '';
         if (!dir) {
           return base;
         }
@@ -7723,7 +8611,7 @@
         }
         return dir + win32.sep + base;
       };
-      win32.parse = function(pathString) {
+      win32.parse = function (pathString) {
         if (!util.isString(pathString)) {
           throw new TypeError(
             "Parameter 'pathString' must be a string, not " + typeof pathString
@@ -7738,70 +8626,72 @@
           dir: allParts[0] + allParts[1].slice(0, -1),
           base: allParts[2],
           ext: allParts[3],
-          name: allParts[2].slice(0, allParts[2].length - allParts[3].length)
+          name: allParts[2].slice(0, allParts[2].length - allParts[3].length),
         };
       };
-      win32.sep = "\\";
-      win32.delimiter = ";";
+      win32.sep = '\\';
+      win32.delimiter = ';';
       var splitPathRe = /^(\/?|)([\s\S]*?)((?:\.{1,2}|[^\/]+?|)(\.[^.\/]*|))(?:[\/]*)$/;
       var posix = {};
       function posixSplitPath(filename) {
         return splitPathRe.exec(filename).slice(1);
       }
-      posix.resolve = function() {
-        var resolvedPath = "", resolvedAbsolute = false;
+      posix.resolve = function () {
+        var resolvedPath = '',
+          resolvedAbsolute = false;
         for (var i = arguments.length - 1; i >= -1 && !resolvedAbsolute; i--) {
           var path2 = i >= 0 ? arguments[i] : process.cwd();
           if (!util.isString(path2)) {
-            throw new TypeError("Arguments to path.resolve must be strings");
+            throw new TypeError('Arguments to path.resolve must be strings');
           } else if (!path2) {
             continue;
           }
-          resolvedPath = path2 + "/" + resolvedPath;
-          resolvedAbsolute = path2[0] === "/";
+          resolvedPath = path2 + '/' + resolvedPath;
+          resolvedAbsolute = path2[0] === '/';
         }
         resolvedPath = normalizeArray(
-          resolvedPath.split("/"),
+          resolvedPath.split('/'),
           !resolvedAbsolute
-        ).join("/");
-        return (resolvedAbsolute ? "/" : "") + resolvedPath || ".";
+        ).join('/');
+        return (resolvedAbsolute ? '/' : '') + resolvedPath || '.';
       };
-      posix.normalize = function(path2) {
-        var isAbsolute = posix.isAbsolute(path2), trailingSlash = path2 && path2[path2.length - 1] === "/";
-        path2 = normalizeArray(path2.split("/"), !isAbsolute).join("/");
+      posix.normalize = function (path2) {
+        var isAbsolute = posix.isAbsolute(path2),
+          trailingSlash = path2 && path2[path2.length - 1] === '/';
+        path2 = normalizeArray(path2.split('/'), !isAbsolute).join('/');
         if (!path2 && !isAbsolute) {
-          path2 = ".";
+          path2 = '.';
         }
         if (path2 && trailingSlash) {
-          path2 += "/";
+          path2 += '/';
         }
-        return (isAbsolute ? "/" : "") + path2;
+        return (isAbsolute ? '/' : '') + path2;
       };
-      posix.isAbsolute = function(path2) {
-        return path2.charAt(0) === "/";
+      posix.isAbsolute = function (path2) {
+        return path2.charAt(0) === '/';
       };
-      posix.join = function() {
-        var path2 = "";
+      posix.join = function () {
+        var path2 = '';
         for (var i = 0; i < arguments.length; i++) {
           var segment = arguments[i];
           if (!util.isString(segment)) {
-            throw new TypeError("Arguments to path.join must be strings");
+            throw new TypeError('Arguments to path.join must be strings');
           }
           if (segment) {
             if (!path2) {
               path2 += segment;
             } else {
-              path2 += "/" + segment;
+              path2 += '/' + segment;
             }
           }
         }
         return posix.normalize(path2);
       };
-      posix.relative = function(from, to) {
+      posix.relative = function (from, to) {
         from = posix.resolve(from).substr(1);
         to = posix.resolve(to).substr(1);
-        var fromParts = trimArray(from.split("/"));
-        var toParts = trimArray(to.split("/"));
+        var fromParts = trimArray(from.split('/'));
+        var toParts = trimArray(to.split('/'));
         var length = Math.min(fromParts.length, toParts.length);
         var samePartsLength = length;
         for (var i = 0; i < length; i++) {
@@ -7812,51 +8702,54 @@
         }
         var outputParts = [];
         for (var i = samePartsLength; i < fromParts.length; i++) {
-          outputParts.push("..");
+          outputParts.push('..');
         }
         outputParts = outputParts.concat(toParts.slice(samePartsLength));
-        return outputParts.join("/");
+        return outputParts.join('/');
       };
-      posix._makeLong = function(path2) {
+      posix._makeLong = function (path2) {
         return path2;
       };
-      posix.dirname = function(path2) {
-        var result = posixSplitPath(path2), root = result[0], dir = result[1];
+      posix.dirname = function (path2) {
+        var result = posixSplitPath(path2),
+          root = result[0],
+          dir = result[1];
         if (!root && !dir) {
-          return ".";
+          return '.';
         }
         if (dir) {
           dir = dir.substr(0, dir.length - 1);
         }
         return root + dir;
       };
-      posix.basename = function(path2, ext) {
+      posix.basename = function (path2, ext) {
         var f = posixSplitPath(path2)[2];
         if (ext && f.substr(-1 * ext.length) === ext) {
           f = f.substr(0, f.length - ext.length);
         }
         return f;
       };
-      posix.extname = function(path2) {
+      posix.extname = function (path2) {
         return posixSplitPath(path2)[3];
       };
-      posix.format = function(pathObject) {
+      posix.format = function (pathObject) {
         if (!util.isObject(pathObject)) {
           throw new TypeError(
             "Parameter 'pathObject' must be an object, not " + typeof pathObject
           );
         }
-        var root = pathObject.root || "";
+        var root = pathObject.root || '';
         if (!util.isString(root)) {
           throw new TypeError(
-            "'pathObject.root' must be a string or undefined, not " + typeof pathObject.root
+            "'pathObject.root' must be a string or undefined, not " +
+              typeof pathObject.root
           );
         }
-        var dir = pathObject.dir ? pathObject.dir + posix.sep : "";
-        var base = pathObject.base || "";
+        var dir = pathObject.dir ? pathObject.dir + posix.sep : '';
+        var base = pathObject.base || '';
         return dir + base;
       };
-      posix.parse = function(pathString) {
+      posix.parse = function (pathString) {
         if (!util.isString(pathString)) {
           throw new TypeError(
             "Parameter 'pathString' must be a string, not " + typeof pathString
@@ -7866,39 +8759,37 @@
         if (!allParts || allParts.length !== 4) {
           throw new TypeError("Invalid path '" + pathString + "'");
         }
-        allParts[1] = allParts[1] || "";
-        allParts[2] = allParts[2] || "";
-        allParts[3] = allParts[3] || "";
+        allParts[1] = allParts[1] || '';
+        allParts[2] = allParts[2] || '';
+        allParts[3] = allParts[3] || '';
         return {
           root: allParts[0],
           dir: allParts[0] + allParts[1].slice(0, -1),
           base: allParts[2],
           ext: allParts[3],
-          name: allParts[2].slice(0, allParts[2].length - allParts[3].length)
+          name: allParts[2].slice(0, allParts[2].length - allParts[3].length),
         };
       };
-      posix.sep = "/";
-      posix.delimiter = ":";
-      if (isWindows)
-        module.exports = win32;
-      else
-        module.exports = posix;
+      posix.sep = '/';
+      posix.delimiter = ':';
+      if (isWindows) module.exports = win32;
+      else module.exports = posix;
       module.exports.posix = posix;
       module.exports.win32 = win32;
-    }
+    },
   });
 
   // dist/multithreading/workers/node/testworker.js
   var testworker_exports = {};
   __export(testworker_exports, {
     TestWorker: () => TestWorker,
-    default: () => testworker_default
+    default: () => testworker_default,
   });
   var import_child_process, import_path, TestWorker, testworker_default;
   var init_testworker = __esm({
-    "dist/multithreading/workers/node/testworker.js"() {
-      "use strict";
-      import_child_process = __require("child_process");
+    'dist/multithreading/workers/node/testworker.js'() {
+      'use strict';
+      import_child_process = __require('child_process');
       import_path = __toESM(require_path(), 1);
       TestWorker = class {
         worker;
@@ -7912,7 +8803,9 @@
          * @param {{ name: string }} cost - The cost function to evaluate the network.
          */
         constructor(dataSet, cost) {
-          this.worker = (0, import_child_process.fork)(import_path.default.join(__dirname, "/worker"));
+          this.worker = (0, import_child_process.fork)(
+            import_path.default.join(__dirname, '/worker')
+          );
           this.worker.send({ set: dataSet, cost: cost.name });
         }
         /**
@@ -7930,11 +8823,11 @@
             const data = {
               activations: serialized[0],
               states: serialized[1],
-              conns: serialized[2]
+              conns: serialized[2],
             };
             const _that = this.worker;
-            this.worker.on("message", function callback(e) {
-              _that.removeListener("message", callback);
+            this.worker.on('message', function callback(e) {
+              _that.removeListener('message', callback);
               resolve(e);
             });
             this.worker.send(data);
@@ -7950,18 +8843,18 @@
         }
       };
       testworker_default = TestWorker;
-    }
+    },
   });
 
   // dist/multithreading/workers/browser/testworker.js
   var testworker_exports2 = {};
   __export(testworker_exports2, {
-    TestWorker: () => TestWorker2
+    TestWorker: () => TestWorker2,
   });
   var TestWorker2;
   var init_testworker2 = __esm({
-    "dist/multithreading/workers/browser/testworker.js"() {
-      "use strict";
+    'dist/multithreading/workers/browser/testworker.js'() {
+      'use strict';
       init_multi();
       TestWorker2 = class _TestWorker {
         worker;
@@ -7989,16 +8882,16 @@
             const data = {
               activations: new Float64Array(serialized[0]).buffer,
               states: new Float64Array(serialized[1]).buffer,
-              conns: new Float64Array(serialized[2]).buffer
+              conns: new Float64Array(serialized[2]).buffer,
             };
-            this.worker.onmessage = function(e) {
+            this.worker.onmessage = function (e) {
               const error = new Float64Array(e.data.buffer)[0];
               resolve(error);
             };
             this.worker.postMessage(data, [
               data.activations,
               data.states,
-              data.conns
+              data.conns,
             ]);
           });
         }
@@ -8042,21 +8935,23 @@
       };`;
         }
       };
-    }
+    },
   });
 
   // dist/multithreading/workers/workers.js
   var Workers;
   var init_workers = __esm({
-    "dist/multithreading/workers/workers.js"() {
-      "use strict";
+    'dist/multithreading/workers/workers.js'() {
+      'use strict';
       Workers = class {
         /**
          * Loads the Node.js test worker dynamically.
          * @returns {Promise<any>} A promise that resolves to the Node.js TestWorker class.
          */
         static async getNodeTestWorker() {
-          const module = await Promise.resolve().then(() => (init_testworker(), testworker_exports));
+          const module = await Promise.resolve().then(
+            () => (init_testworker(), testworker_exports)
+          );
           return module.TestWorker;
         }
         /**
@@ -8064,18 +8959,20 @@
          * @returns {Promise<any>} A promise that resolves to the browser TestWorker class.
          */
         static async getBrowserTestWorker() {
-          const module = await Promise.resolve().then(() => (init_testworker2(), testworker_exports2));
+          const module = await Promise.resolve().then(
+            () => (init_testworker2(), testworker_exports2)
+          );
           return module.TestWorker;
         }
       };
-    }
+    },
   });
 
   // dist/multithreading/multi.js
   var Multi;
   var init_multi = __esm({
-    "dist/multithreading/multi.js"() {
-      "use strict";
+    'dist/multithreading/multi.js'() {
+      'use strict';
       init_workers();
       Multi = class _Multi {
         /** Workers for multi-threading */
@@ -8090,9 +8987,9 @@
           // Tanh (1)
           (x) => x,
           // Identity (2)
-          (x) => x > 0 ? 1 : 0,
+          (x) => (x > 0 ? 1 : 0),
           // Step (3)
-          (x) => x > 0 ? x : 0,
+          (x) => (x > 0 ? x : 0),
           // ReLU (4)
           (x) => x / (1 + Math.abs(x)),
           // Softsign (5)
@@ -8102,7 +8999,7 @@
           // Gaussian (7)
           (x) => (Math.sqrt(Math.pow(x, 2) + 1) - 1) / 2 + x,
           // Bent Identity (8)
-          (x) => x > 0 ? 1 : -1,
+          (x) => (x > 0 ? 1 : -1),
           // Bipolar (9)
           (x) => 2 / (1 + Math.exp(-x)) - 1,
           // Bipolar Sigmoid (10)
@@ -8118,7 +9015,7 @@
             const fx = x > 0 ? x : alpha * Math.exp(x) - alpha;
             return fx * scale;
           },
-          (x) => Math.log(1 + Math.exp(x))
+          (x) => Math.log(1 + Math.exp(x)),
           // Softplus (15) - Added
         ];
         /**
@@ -8127,7 +9024,10 @@
          * @returns {number[]} The serialized dataset.
          */
         static serializeDataSet(dataSet) {
-          const serialized = [dataSet[0].input.length, dataSet[0].output.length];
+          const serialized = [
+            dataSet[0].input.length,
+            dataSet[0].output.length,
+          ];
           for (let i = 0; i < dataSet.length; i++) {
             for (let j = 0; j < serialized[0]; j++) {
               serialized.push(dataSet[i].input[j]);
@@ -8148,23 +9048,26 @@
          * @returns {number[]} The output values.
          */
         static activateSerializedNetwork(input, A, S, data, F) {
-          for (let i = 0; i < data[0]; i++)
-            A[i] = input[i];
+          for (let i = 0; i < data[0]; i++) A[i] = input[i];
           for (let i = 2; i < data.length; i++) {
             const index = data[i++];
             const bias = data[i++];
             const squash = data[i++];
             const selfweight = data[i++];
             const selfgater = data[i++];
-            S[index] = (selfgater === -1 ? 1 : A[selfgater]) * selfweight * S[index] + bias;
+            S[index] =
+              (selfgater === -1 ? 1 : A[selfgater]) * selfweight * S[index] +
+              bias;
             while (data[i] !== -2) {
-              S[index] += A[data[i++]] * data[i++] * (data[i++] === -1 ? 1 : A[data[i - 1]]);
+              S[index] +=
+                A[data[i++]] *
+                data[i++] *
+                (data[i++] === -1 ? 1 : A[data[i - 1]]);
             }
             A[index] = F[squash](S[index]);
           }
           const output = [];
-          for (let i = A.length - data[1]; i < A.length; i++)
-            output.push(A[i]);
+          for (let i = A.length - data[1]; i < A.length; i++) output.push(A[i]);
           return output;
         }
         /**
@@ -8177,11 +9080,19 @@
           const sampleSize = serializedSet[0] + serializedSet[1];
           for (let i = 0; i < (serializedSet.length - 2) / sampleSize; i++) {
             const input = [];
-            for (let j = 2 + i * sampleSize; j < 2 + i * sampleSize + serializedSet[0]; j++) {
+            for (
+              let j = 2 + i * sampleSize;
+              j < 2 + i * sampleSize + serializedSet[0];
+              j++
+            ) {
               input.push(serializedSet[j]);
             }
             const output = [];
-            for (let j = 2 + i * sampleSize + serializedSet[0]; j < 2 + i * sampleSize + sampleSize; j++) {
+            for (
+              let j = 2 + i * sampleSize + serializedSet[0];
+              j < 2 + i * sampleSize + sampleSize;
+              j++
+            ) {
               output.push(serializedSet[j]);
             }
             set.push({ input, output });
@@ -8332,7 +9243,13 @@
         static testSerializedSet(set, cost, A, S, data, F) {
           let error = 0;
           for (let i = 0; i < set.length; i++) {
-            const output = _Multi.activateSerializedNetwork(set[i].input, A, S, data, F);
+            const output = _Multi.activateSerializedNetwork(
+              set[i].input,
+              A,
+              S,
+              data,
+              F
+            );
             error += cost(set[i].output, output);
           }
           return error / set.length;
@@ -8342,7 +9259,9 @@
          * @returns {Promise<any>} The browser test worker.
          */
         static async getBrowserTestWorker() {
-          const { TestWorker: TestWorker3 } = await Promise.resolve().then(() => (init_testworker2(), testworker_exports2));
+          const { TestWorker: TestWorker3 } = await Promise.resolve().then(
+            () => (init_testworker2(), testworker_exports2)
+          );
           return TestWorker3;
         }
         /**
@@ -8350,24 +9269,31 @@
          * @returns {Promise<any>} The node test worker.
          */
         static async getNodeTestWorker() {
-          const { TestWorker: TestWorker3 } = await Promise.resolve().then(() => (init_testworker(), testworker_exports));
+          const { TestWorker: TestWorker3 } = await Promise.resolve().then(
+            () => (init_testworker(), testworker_exports)
+          );
           return TestWorker3;
         }
       };
-    }
+    },
   });
 
   // dist/architecture/network/network.evolve.js
   var network_evolve_exports = {};
   __export(network_evolve_exports, {
-    evolveNetwork: () => evolveNetwork
+    evolveNetwork: () => evolveNetwork,
   });
   function computeComplexityPenalty(genome, growth) {
     const n = genome.nodes.length;
     const c = genome.connections.length;
     const g = genome.gates.length;
     const cached = _complexityCache.get(genome);
-    if (cached && cached.nodes === n && cached.conns === c && cached.gates === g)
+    if (
+      cached &&
+      cached.nodes === n &&
+      cached.conns === c &&
+      cached.gates === g
+    )
       return cached.value * growth;
     const base = n - genome.input - genome.output + c + g;
     _complexityCache.set(genome, { nodes: n, conns: c, gates: g, value: base });
@@ -8381,7 +9307,11 @@
           score -= genome.test(set, cost).error;
         } catch (e) {
           if (config.warnings)
-            console.warn(`Genome evaluation failed: ${e && e.message || e}. Penalizing with -Infinity fitness.`);
+            console.warn(
+              `Genome evaluation failed: ${
+                (e && e.message) || e
+              }. Penalizing with -Infinity fitness.`
+            );
           return -Infinity;
         }
       }
@@ -8390,73 +9320,94 @@
       return score / amount;
     };
   }
-  async function buildMultiThreadFitness(set, cost, amount, growth, threads, options) {
+  async function buildMultiThreadFitness(
+    set,
+    cost,
+    amount,
+    growth,
+    threads,
+    options
+  ) {
     const serializedSet = Multi.serializeDataSet(set);
     const workers = [];
     let WorkerCtor = null;
     try {
-      const isNode = typeof process !== "undefined" && !!process.versions?.node;
+      const isNode = typeof process !== 'undefined' && !!process.versions?.node;
       if (isNode && Multi.workers?.getNodeTestWorker)
         WorkerCtor = await Multi.workers.getNodeTestWorker();
       else if (!isNode && Multi.workers?.getBrowserTestWorker)
         WorkerCtor = await Multi.workers.getBrowserTestWorker();
     } catch (e) {
       if (config.warnings)
-        console.warn("Failed to load worker class; falling back to single-thread path:", e?.message || e);
+        console.warn(
+          'Failed to load worker class; falling back to single-thread path:',
+          e?.message || e
+        );
     }
     if (!WorkerCtor)
       return {
         fitnessFunction: buildSingleThreadFitness(set, cost, amount, growth),
-        threads: 1
+        threads: 1,
       };
     for (let i = 0; i < threads; i++) {
       try {
-        workers.push(new WorkerCtor(serializedSet, {
-          name: cost.name || cost.toString?.() || "cost"
-        }));
+        workers.push(
+          new WorkerCtor(serializedSet, {
+            name: cost.name || cost.toString?.() || 'cost',
+          })
+        );
       } catch (e) {
-        if (config.warnings)
-          console.warn("Worker spawn failed", e);
+        if (config.warnings) console.warn('Worker spawn failed', e);
       }
     }
-    const fitnessFunction = (population) => new Promise((resolve) => {
-      if (!workers.length) {
-        resolve();
-        return;
-      }
-      const queue = population.slice();
-      let active = workers.length;
-      const startNext = (worker) => {
-        if (!queue.length) {
-          if (--active === 0)
-            resolve();
+    const fitnessFunction = (population) =>
+      new Promise((resolve) => {
+        if (!workers.length) {
+          resolve();
           return;
         }
-        const genome = queue.shift();
-        worker.evaluate(genome).then((result) => {
-          if (typeof genome !== "undefined" && typeof result === "number") {
-            genome.score = -result - computeComplexityPenalty(genome, growth);
-            genome.score = isNaN(result) ? -Infinity : genome.score;
+        const queue = population.slice();
+        let active = workers.length;
+        const startNext = (worker) => {
+          if (!queue.length) {
+            if (--active === 0) resolve();
+            return;
           }
-          startNext(worker);
-        }).catch(() => startNext(worker));
-      };
-      workers.forEach((w) => startNext(w));
-    });
+          const genome = queue.shift();
+          worker
+            .evaluate(genome)
+            .then((result) => {
+              if (typeof genome !== 'undefined' && typeof result === 'number') {
+                genome.score =
+                  -result - computeComplexityPenalty(genome, growth);
+                genome.score = isNaN(result) ? -Infinity : genome.score;
+              }
+              startNext(worker);
+            })
+            .catch(() => startNext(worker));
+        };
+        workers.forEach((w) => startNext(w));
+      });
     options.fitnessPopulation = true;
     options._workerTerminators = () => {
       workers.forEach((w) => {
         try {
           w.terminate && w.terminate();
-        } catch {
-        }
+        } catch {}
       });
     };
     return { fitnessFunction, threads };
   }
   async function evolveNetwork(set, options) {
-    if (!set || set.length === 0 || set[0].input.length !== this.input || set[0].output.length !== this.output) {
-      throw new Error("Dataset is invalid or dimensions do not match network input/output size!");
+    if (
+      !set ||
+      set.length === 0 ||
+      set[0].input.length !== this.input ||
+      set[0].output.length !== this.output
+    ) {
+      throw new Error(
+        'Dataset is invalid or dimensions do not match network input/output size!'
+      );
     }
     options = options || {};
     let targetError = options.error ?? 0.05;
@@ -8466,7 +9417,7 @@
     const log = options.log || 0;
     const schedule = options.schedule;
     const clear = options.clear || false;
-    let threads = typeof options.threads === "undefined" ? 1 : options.threads;
+    let threads = typeof options.threads === 'undefined' ? 1 : options.threads;
     const start = Date.now();
     const evoConfig = {
       targetError,
@@ -8476,35 +9427,45 @@
       log,
       schedule,
       clear,
-      threads
+      threads,
     };
-    if (typeof options.iterations === "undefined" && typeof options.error === "undefined") {
-      throw new Error("At least one stopping condition (`iterations` or `error`) must be specified for evolution.");
-    } else if (typeof options.error === "undefined")
-      targetError = -1;
-    else if (typeof options.iterations === "undefined")
-      options.iterations = 0;
+    if (
+      typeof options.iterations === 'undefined' &&
+      typeof options.error === 'undefined'
+    ) {
+      throw new Error(
+        'At least one stopping condition (`iterations` or `error`) must be specified for evolution.'
+      );
+    } else if (typeof options.error === 'undefined') targetError = -1;
+    else if (typeof options.iterations === 'undefined') options.iterations = 0;
     let fitnessFunction;
     if (threads === 1)
       fitnessFunction = buildSingleThreadFitness(set, cost, amount, growth);
     else {
-      const multi = await buildMultiThreadFitness(set, cost, amount, growth, threads, options);
+      const multi = await buildMultiThreadFitness(
+        set,
+        cost,
+        amount,
+        growth,
+        threads,
+        options
+      );
       fitnessFunction = multi.fitnessFunction;
       threads = multi.threads;
     }
     options.network = this;
     if (options.populationSize != null && options.popsize == null)
       options.popsize = options.populationSize;
-    if (typeof options.speciation === "undefined")
-      options.speciation = false;
-    const { default: Neat2 } = await Promise.resolve().then(() => (init_neat(), neat_exports));
+    if (typeof options.speciation === 'undefined') options.speciation = false;
+    const { default: Neat2 } = await Promise.resolve().then(
+      () => (init_neat(), neat_exports)
+    );
     const neat = new Neat2(this.input, this.output, fitnessFunction, options);
-    if (typeof options.iterations === "number" && options.iterations === 0) {
+    if (typeof options.iterations === 'number' && options.iterations === 0) {
       if (neat._warnIfNoBestGenome) {
         try {
           neat._warnIfNoBestGenome();
-        } catch {
-        }
+        } catch {}
       }
     }
     if (options.popsize && options.popsize <= 10) {
@@ -8516,70 +9477,68 @@
     let bestGenome;
     let infiniteErrorCount = 0;
     const MAX_INF = 5;
-    const iterationsSpecified = typeof options.iterations === "number";
-    while ((targetError === -1 || error > targetError) && (!iterationsSpecified || neat.generation < options.iterations)) {
+    const iterationsSpecified = typeof options.iterations === 'number';
+    while (
+      (targetError === -1 || error > targetError) &&
+      (!iterationsSpecified || neat.generation < options.iterations)
+    ) {
       const fittest = await neat.evolve();
       const fitness = fittest.score ?? -Infinity;
-      error = -(fitness - computeComplexityPenalty(fittest, growth)) || Infinity;
+      error =
+        -(fitness - computeComplexityPenalty(fittest, growth)) || Infinity;
       if (fitness > bestFitness) {
         bestFitness = fitness;
         bestGenome = fittest;
       }
       if (!isFinite(error) || isNaN(error)) {
-        if (++infiniteErrorCount >= MAX_INF)
-          break;
-      } else
-        infiniteErrorCount = 0;
+        if (++infiniteErrorCount >= MAX_INF) break;
+      } else infiniteErrorCount = 0;
       if (schedule && neat.generation % schedule.iterations === 0) {
         try {
           schedule.function({
             fitness: bestFitness,
             error,
-            iteration: neat.generation
+            iteration: neat.generation,
           });
-        } catch {
-        }
+        } catch {}
       }
     }
-    if (typeof bestGenome !== "undefined") {
+    if (typeof bestGenome !== 'undefined') {
       this.nodes = bestGenome.nodes;
       this.connections = bestGenome.connections;
       this.selfconns = bestGenome.selfconns;
       this.gates = bestGenome.gates;
-      if (clear)
-        this.clear();
+      if (clear) this.clear();
     } else if (neat._warnIfNoBestGenome) {
       try {
         neat._warnIfNoBestGenome();
-      } catch {
-      }
+      } catch {}
     }
     try {
       options._workerTerminators && options._workerTerminators();
-    } catch {
-    }
+    } catch {}
     return { error, iterations: neat.generation, time: Date.now() - start };
   }
   var _complexityCache;
   var init_network_evolve = __esm({
-    "dist/architecture/network/network.evolve.js"() {
-      "use strict";
+    'dist/architecture/network/network.evolve.js'() {
+      'use strict';
       init_methods();
       init_config();
       init_multi();
       _complexityCache = /* @__PURE__ */ new WeakMap();
-    }
+    },
   });
 
   // dist/architecture/network.js
   var network_exports = {};
   __export(network_exports, {
-    default: () => Network
+    default: () => Network,
   });
   var Network;
   var init_network = __esm({
-    "dist/architecture/network.js"() {
-      "use strict";
+    'dist/architecture/network.js'() {
+      'use strict';
       init_node();
       init_nodePool();
       init_methods();
@@ -8621,7 +9580,7 @@
         _stochasticDepthSchedule;
         _mixedPrecision = {
           enabled: false,
-          lossScale: 1
+          lossScale: 1,
         };
         _mixedPrecisionState = {
           goodSteps: 0,
@@ -8630,12 +9589,12 @@
           maxLossScale: 65536,
           overflowCount: 0,
           scaleUpEvents: 0,
-          scaleDownEvents: 0
+          scaleDownEvents: 0,
         };
         _gradAccumMicroBatches = 0;
         _currentGradClip;
         _lastRawGradNorm = 0;
-        _accumulationReduction = "average";
+        _accumulationReduction = 'average';
         _gradClipSeparateBias = false;
         _lastGradClipGroupCount = 0;
         _lastOverflowStep = -1;
@@ -8649,7 +9608,7 @@
         layers;
         _evoInitialConnCount;
         // baseline for evolution-time pruning
-        _activationPrecision = "f64";
+        _activationPrecision = 'f64';
         // typed array precision for compiled path
         _reuseActivationArrays = false;
         // reuse pooled output arrays
@@ -8690,8 +9649,8 @@
           return getConnectionSlab.call(this);
         }
         constructor(input, output, options) {
-          if (typeof input === "undefined" || typeof output === "undefined") {
-            throw new Error("No input or output size given");
+          if (typeof input === 'undefined' || typeof output === 'undefined') {
+            throw new Error('No input or output size given');
           }
           this.input = input;
           this.output = output;
@@ -8704,32 +9663,34 @@
           if (options?.activationPrecision) {
             this._activationPrecision = options.activationPrecision;
           } else if (config.float32Mode) {
-            this._activationPrecision = "f32";
+            this._activationPrecision = 'f32';
           }
           if (options?.reuseActivationArrays)
             this._reuseActivationArrays = true;
           if (options?.returnTypedActivations)
             this._returnTypedActivations = true;
           try {
-            if (typeof config.poolMaxPerBucket === "number")
+            if (typeof config.poolMaxPerBucket === 'number')
               activationArrayPool.setMaxPerBucket(config.poolMaxPerBucket);
-            const prewarm = typeof config.poolPrewarmCount === "number" ? config.poolPrewarmCount : 2;
+            const prewarm =
+              typeof config.poolPrewarmCount === 'number'
+                ? config.poolPrewarmCount
+                : 2;
             activationArrayPool.prewarm(this.output, prewarm);
-          } catch {
-          }
+          } catch {}
           if (options?.seed !== void 0) {
             this.setSeed(options.seed);
           }
           for (let i = 0; i < this.input + this.output; i++) {
-            const type = i < this.input ? "input" : "output";
+            const type = i < this.input ? 'input' : 'output';
             if (config.enableNodePooling)
               this.nodes.push(acquireNode({ type, rng: this._rand }));
-            else
-              this.nodes.push(new Node(type, void 0, this._rand));
+            else this.nodes.push(new Node(type, void 0, this._rand));
           }
           for (let i = 0; i < this.input; i++) {
             for (let j = this.input; j < this.input + this.output; j++) {
-              const weight = this._rand() * this.input * Math.sqrt(2 / this.input);
+              const weight =
+                this._rand() * this.input * Math.sqrt(2 / this.input);
               this.connect(this.nodes[i], this.nodes[j], weight);
             }
           }
@@ -8742,14 +9703,14 @@
         }
         // --- Added: structural helper referenced by constructor (split a random connection) ---
         addNodeBetween() {
-          if (this.connections.length === 0)
-            return;
+          if (this.connections.length === 0) return;
           const idx = Math.floor(this._rand() * this.connections.length);
           const conn = this.connections[idx];
-          if (!conn)
-            return;
+          if (!conn) return;
           this.disconnect(conn.from, conn.to);
-          const newNode = config.enableNodePooling ? acquireNode({ type: "hidden", rng: this._rand }) : new Node("hidden", void 0, this._rand);
+          const newNode = config.enableNodePooling
+            ? acquireNode({ type: 'hidden', rng: this._rand })
+            : new Node('hidden', void 0, this._rand);
           this.nodes.push(newNode);
           this.connect(conn.from, newNode, conn.weight);
           this.connect(newNode, conn.to, 1);
@@ -8759,7 +9720,7 @@
         // --- DropConnect API (re-added for tests) ---
         enableDropConnect(p) {
           if (p < 0 || p >= 1)
-            throw new Error("DropConnect probability must be in [0,1)");
+            throw new Error('DropConnect probability must be in [0,1)');
           this._dropConnectProb = p;
         }
         disableDropConnect() {
@@ -8779,17 +9740,17 @@
         configurePruning(cfg) {
           const { start, end, targetSparsity } = cfg;
           if (start < 0 || end < start)
-            throw new Error("Invalid pruning schedule window");
+            throw new Error('Invalid pruning schedule window');
           if (targetSparsity <= 0 || targetSparsity >= 1)
-            throw new Error("targetSparsity must be in (0,1)");
+            throw new Error('targetSparsity must be in (0,1)');
           this._pruningConfig = {
             start,
             end,
             targetSparsity,
             regrowFraction: cfg.regrowFraction ?? 0,
             frequency: cfg.frequency ?? 1,
-            method: cfg.method || "magnitude",
-            lastPruneIter: void 0
+            method: cfg.method || 'magnitude',
+            lastPruneIter: void 0,
           };
           this._initialConnectionCount = this.connections.length;
         }
@@ -8805,28 +9766,31 @@
          * @param targetSparsity fraction in (0,1). 0.8 means keep 20% of original (if first call sets baseline)
          * @param method 'magnitude' | 'snip'
          */
-        pruneToSparsity(targetSparsity, method = "magnitude") {
+        pruneToSparsity(targetSparsity, method = 'magnitude') {
           return pruneToSparsity.call(this, targetSparsity, method);
         }
         /** Enable weight noise. Provide a single std dev number or { perHiddenLayer: number[] }. */
         enableWeightNoise(stdDev) {
-          if (typeof stdDev === "number") {
-            if (stdDev < 0)
-              throw new Error("Weight noise stdDev must be >= 0");
+          if (typeof stdDev === 'number') {
+            if (stdDev < 0) throw new Error('Weight noise stdDev must be >= 0');
             this._weightNoiseStd = stdDev;
             this._weightNoisePerHidden = [];
           } else if (stdDev && Array.isArray(stdDev.perHiddenLayer)) {
             if (!this.layers || this.layers.length < 3)
-              throw new Error("Per-hidden-layer weight noise requires a layered network with at least one hidden layer");
+              throw new Error(
+                'Per-hidden-layer weight noise requires a layered network with at least one hidden layer'
+              );
             const hiddenLayerCount = this.layers.length - 2;
             if (stdDev.perHiddenLayer.length !== hiddenLayerCount)
-              throw new Error(`Expected ${hiddenLayerCount} std dev entries (one per hidden layer), got ${stdDev.perHiddenLayer.length}`);
+              throw new Error(
+                `Expected ${hiddenLayerCount} std dev entries (one per hidden layer), got ${stdDev.perHiddenLayer.length}`
+              );
             if (stdDev.perHiddenLayer.some((s) => s < 0))
-              throw new Error("Weight noise std devs must be >= 0");
+              throw new Error('Weight noise std devs must be >= 0');
             this._weightNoiseStd = 0;
             this._weightNoisePerHidden = stdDev.perHiddenLayer.slice();
           } else {
-            throw new Error("Invalid weight noise configuration");
+            throw new Error('Invalid weight noise configuration');
           }
         }
         disableWeightNoise() {
@@ -8878,14 +9842,16 @@
         /** Configure stochastic depth with survival probabilities per hidden layer (length must match hidden layer count when using layered network). */
         setStochasticDepth(survival) {
           if (!Array.isArray(survival))
-            throw new Error("survival must be an array");
+            throw new Error('survival must be an array');
           if (survival.some((p) => p <= 0 || p > 1))
-            throw new Error("Stochastic depth survival probs must be in (0,1]");
+            throw new Error('Stochastic depth survival probs must be in (0,1]');
           if (!this.layers || this.layers.length === 0)
-            throw new Error("Stochastic depth requires layer-based network");
+            throw new Error('Stochastic depth requires layer-based network');
           const hiddenLayerCount = Math.max(0, this.layers.length - 2);
           if (survival.length !== hiddenLayerCount)
-            throw new Error(`Expected ${hiddenLayerCount} survival probabilities for hidden layers, got ${survival.length}`);
+            throw new Error(
+              `Expected ${hiddenLayerCount} survival probabilities for hidden layers, got ${survival.length}`
+            );
           this._stochasticDepth = survival.slice();
         }
         disableStochasticDepth() {
@@ -8905,17 +9871,15 @@
         resetDropoutMasks() {
           if (this.layers && this.layers.length > 0) {
             for (const layer of this.layers) {
-              if (typeof layer.nodes !== "undefined") {
+              if (typeof layer.nodes !== 'undefined') {
                 for (const node of layer.nodes) {
-                  if (typeof node.mask !== "undefined")
-                    node.mask = 1;
+                  if (typeof node.mask !== 'undefined') node.mask = 1;
                 }
               }
             }
           } else {
             for (const node of this.nodes) {
-              if (typeof node.mask !== "undefined")
-                node.mask = 1;
+              if (typeof node.mask !== 'undefined') node.mask = 1;
             }
           }
         }
@@ -8937,20 +9901,24 @@
          * Internally may use pooled typed arrays; if so they are cloned before returning.
          */
         activate(input, training = false, maxActivationDepth = 1e3) {
-          if (this._enforceAcyclic && this._topoDirty)
-            this._computeTopoOrder();
+          if (this._enforceAcyclic && this._topoDirty) this._computeTopoOrder();
           if (!Array.isArray(input) || input.length !== this.input) {
-            throw new Error(`Input size mismatch: expected ${this.input}, got ${input ? input.length : "undefined"}`);
+            throw new Error(
+              `Input size mismatch: expected ${this.input}, got ${
+                input ? input.length : 'undefined'
+              }`
+            );
           }
           if (this._canUseFastSlab(training)) {
             try {
               return this._fastSlabActivate(input);
-            } catch {
-            }
+            } catch {}
           }
           const outputArr = activationArrayPool.acquire(this.output);
           if (!this.nodes || this.nodes.length === 0) {
-            throw new Error("Network structure is corrupted or empty. No nodes found.");
+            throw new Error(
+              'Network structure is corrupted or empty. No nodes found.'
+            );
           }
           let output = outputArr;
           this._lastSkippedLayers = [];
@@ -8960,7 +9928,7 @@
             droppedConnections: 0,
             totalConnections: this.connections.length,
             skippedLayers: [],
-            weightNoise: { count: 0, sumAbs: 0, maxAbs: 0, meanAbs: 0 }
+            weightNoise: { count: 0, sumAbs: 0, maxAbs: 0, meanAbs: 0 },
           };
           let appliedWeightNoise = false;
           let dynamicStd = this._weightNoiseStd;
@@ -8969,8 +9937,7 @@
               dynamicStd = this._weightNoiseSchedule(this._trainingStep);
             if (dynamicStd > 0 || this._weightNoisePerHidden.length > 0) {
               for (const c of this.connections) {
-                if (c._origWeightNoise != null)
-                  continue;
+                if (c._origWeightNoise != null) continue;
                 c._origWeightNoise = c.weight;
                 let std = dynamicStd;
                 if (this._weightNoisePerHidden.length > 0 && this.layers) {
@@ -8981,9 +9948,15 @@
                       break;
                     }
                   }
-                  if (fromLayerIndex > 0 && fromLayerIndex < this.layers.length) {
+                  if (
+                    fromLayerIndex > 0 &&
+                    fromLayerIndex < this.layers.length
+                  ) {
                     const hiddenIdx = fromLayerIndex - 1;
-                    if (hiddenIdx >= 0 && hiddenIdx < this._weightNoisePerHidden.length)
+                    if (
+                      hiddenIdx >= 0 &&
+                      hiddenIdx < this._weightNoisePerHidden.length
+                    )
                       std = this._weightNoisePerHidden[hiddenIdx];
                   }
                 }
@@ -8998,13 +9971,28 @@
               }
             }
           }
-          if (training && this._stochasticDepthSchedule && this._stochasticDepth.length > 0) {
-            const updated = this._stochasticDepthSchedule(this._trainingStep, this._stochasticDepth.slice());
-            if (Array.isArray(updated) && updated.length === this._stochasticDepth.length && !updated.some((p) => p <= 0 || p > 1)) {
+          if (
+            training &&
+            this._stochasticDepthSchedule &&
+            this._stochasticDepth.length > 0
+          ) {
+            const updated = this._stochasticDepthSchedule(
+              this._trainingStep,
+              this._stochasticDepth.slice()
+            );
+            if (
+              Array.isArray(updated) &&
+              updated.length === this._stochasticDepth.length &&
+              !updated.some((p) => p <= 0 || p > 1)
+            ) {
               this._stochasticDepth = updated.slice();
             }
           }
-          if (this.layers && this.layers.length > 0 && this._stochasticDepth.length > 0) {
+          if (
+            this.layers &&
+            this.layers.length > 0 &&
+            this._stochasticDepth.length > 0
+          ) {
             let acts;
             for (let li = 0; li < this.layers.length; li++) {
               const layer = this.layers[li];
@@ -9020,8 +10008,14 @@
                       skip = false;
                   }
                   if (!skip) {
-                    const raw2 = li === 0 ? layer.activate(input, training) : layer.activate(void 0, training);
-                    acts = surviveProb < 1 ? raw2.map((a) => a * (1 / surviveProb)) : raw2;
+                    const raw2 =
+                      li === 0
+                        ? layer.activate(input, training)
+                        : layer.activate(void 0, training);
+                    acts =
+                      surviveProb < 1
+                        ? raw2.map((a) => a * (1 / surviveProb))
+                        : raw2;
                     continue;
                   }
                 }
@@ -9031,7 +10025,10 @@
                 stats.skippedLayers.push(li);
                 continue;
               }
-              const raw = li === 0 ? layer.activate(input, training) : layer.activate(void 0, training);
+              const raw =
+                li === 0
+                  ? layer.activate(input, training)
+                  : layer.activate(void 0, training);
               acts = raw;
             }
             if (acts) {
@@ -9043,14 +10040,16 @@
             for (let li = 0; li < this.layers.length; li++) {
               const layer = this.layers[li];
               const isHidden = li > 0 && li < this.layers.length - 1;
-              const raw = li === 0 ? layer.activate(input, false) : layer.activate(void 0, false);
+              const raw =
+                li === 0
+                  ? layer.activate(input, false)
+                  : layer.activate(void 0, false);
               if (isHidden && training && this.dropout > 0) {
                 let dropped = 0;
                 for (const node of layer.nodes) {
                   node.mask = this._rand() < this.dropout ? 0 : 1;
                   stats.totalHiddenNodes++;
-                  if (node.mask === 0)
-                    stats.droppedHiddenNodes++;
+                  if (node.mask === 0) stats.droppedHiddenNodes++;
                   if (node.mask === 0) {
                     node.activation = 0;
                     dropped++;
@@ -9062,8 +10061,7 @@
                   layer.nodes[idx].activation = raw[idx];
                 }
               } else if (isHidden) {
-                for (const node of layer.nodes)
-                  node.mask = 1;
+                for (const node of layer.nodes) node.mask = 1;
               }
               lastActs = raw;
             }
@@ -9077,7 +10075,9 @@
               }
             }
           } else {
-            let hiddenNodes = this.nodes.filter((node) => node.type === "hidden");
+            let hiddenNodes = this.nodes.filter(
+              (node) => node.type === 'hidden'
+            );
             let droppedCount = 0;
             if (training && this.dropout > 0) {
               for (const node of hiddenNodes) {
@@ -9088,31 +10088,33 @@
                   stats.droppedHiddenNodes++;
                 }
               }
-              if (droppedCount === hiddenNodes.length && hiddenNodes.length > 0) {
+              if (
+                droppedCount === hiddenNodes.length &&
+                hiddenNodes.length > 0
+              ) {
                 const idx = Math.floor(this._rand() * hiddenNodes.length);
                 hiddenNodes[idx].mask = 1;
               }
             } else {
-              for (const node of hiddenNodes)
-                node.mask = 1;
+              for (const node of hiddenNodes) node.mask = 1;
             }
             if (training && this._weightNoiseStd > 0) {
               if (!this._wnOrig)
                 this._wnOrig = new Array(this.connections.length);
               for (let ci = 0; ci < this.connections.length; ci++) {
                 const c = this.connections[ci];
-                if (c._origWeightNoise != null)
-                  continue;
+                if (c._origWeightNoise != null) continue;
                 c._origWeightNoise = c.weight;
-                const noise = this._weightNoiseStd * _Network._gaussianRand(this._rand);
+                const noise =
+                  this._weightNoiseStd * _Network._gaussianRand(this._rand);
                 c.weight += noise;
               }
             }
             let outIndex = 0;
             this.nodes.forEach((node, index) => {
-              if (node.type === "input") {
+              if (node.type === 'input') {
                 node.activate(input[index]);
-              } else if (node.type === "output") {
+              } else if (node.type === 'output') {
                 const activation = node.activate();
                 output[outIndex++] = activation;
               } else {
@@ -9122,12 +10124,10 @@
             if (training && this._dropConnectProb > 0) {
               for (const conn of this.connections) {
                 const mask = this._rand() < this._dropConnectProb ? 0 : 1;
-                if (mask === 0)
-                  stats.droppedConnections++;
+                if (mask === 0) stats.droppedConnections++;
                 conn.dcMask = mask;
                 if (mask === 0) {
-                  if (conn._origWeight == null)
-                    conn._origWeight = conn.weight;
+                  if (conn._origWeight == null) conn._origWeight = conn.weight;
                   conn.weight = 0;
                 } else if (conn._origWeight != null) {
                   conn.weight = conn._origWeight;
@@ -9152,21 +10152,20 @@
               }
             }
           }
-          if (training)
-            this._trainingStep++;
+          if (training) this._trainingStep++;
           if (stats.weightNoise.count > 0)
-            stats.weightNoise.meanAbs = stats.weightNoise.sumAbs / stats.weightNoise.count;
+            stats.weightNoise.meanAbs =
+              stats.weightNoise.sumAbs / stats.weightNoise.count;
           this._lastStats = stats;
           const result = Array.from(output);
           activationArrayPool.release(output);
           return result;
         }
         static _gaussianRand(rng = Math.random) {
-          let u = 0, v = 0;
-          while (u === 0)
-            u = rng();
-          while (v === 0)
-            v = rng();
+          let u = 0,
+            v = 0;
+          while (u === 0) u = rng();
+          while (v === 0) v = rng();
           return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
         }
         /**
@@ -9182,7 +10181,8 @@
          */
         // Delegated activation helpers
         noTraceActivate(input) {
-          const { noTraceActivate: noTraceActivate2 } = (init_network_activate(), __toCommonJS(network_activate_exports));
+          const { noTraceActivate: noTraceActivate2 } =
+            (init_network_activate(), __toCommonJS(network_activate_exports));
           return noTraceActivate2.call(this, input);
         }
         /**
@@ -9190,7 +10190,8 @@
          * If reuseActivationArrays=false falls back to standard activate().
          */
         activateRaw(input, training = false, maxActivationDepth = 1e3) {
-          const { activateRaw: activateRaw2 } = (init_network_activate(), __toCommonJS(network_activate_exports));
+          const { activateRaw: activateRaw2 } =
+            (init_network_activate(), __toCommonJS(network_activate_exports));
           return activateRaw2.call(this, input, training, maxActivationDepth);
         }
         /**
@@ -9205,7 +10206,8 @@
          * @returns Array of output vectors, each length equals this.output
          */
         activateBatch(inputs, training = false) {
-          const { activateBatch: activateBatch2 } = (init_network_activate(), __toCommonJS(network_activate_exports));
+          const { activateBatch: activateBatch2 } =
+            (init_network_activate(), __toCommonJS(network_activate_exports));
           return activateBatch2.call(this, inputs, training);
         }
         /**
@@ -9227,19 +10229,49 @@
          *
          * @see {@link Node.propagate} for the node-level backpropagation logic.
          */
-        propagate(rate, momentum, update, target, regularization = 0, costDerivative) {
+        propagate(
+          rate,
+          momentum,
+          update,
+          target,
+          regularization = 0,
+          costDerivative
+        ) {
           if (!target || target.length !== this.output) {
-            throw new Error("Output target length should match network output length");
+            throw new Error(
+              'Output target length should match network output length'
+            );
           }
           let targetIndex = target.length;
-          for (let i = this.nodes.length - 1; i >= this.nodes.length - this.output; i--) {
+          for (
+            let i = this.nodes.length - 1;
+            i >= this.nodes.length - this.output;
+            i--
+          ) {
             if (costDerivative) {
-              this.nodes[i].propagate(rate, momentum, update, regularization, target[--targetIndex], costDerivative);
+              this.nodes[i].propagate(
+                rate,
+                momentum,
+                update,
+                regularization,
+                target[--targetIndex],
+                costDerivative
+              );
             } else {
-              this.nodes[i].propagate(rate, momentum, update, regularization, target[--targetIndex]);
+              this.nodes[i].propagate(
+                rate,
+                momentum,
+                update,
+                regularization,
+                target[--targetIndex]
+              );
             }
           }
-          for (let i = this.nodes.length - this.output - 1; i >= this.input; i--) {
+          for (
+            let i = this.nodes.length - this.output - 1;
+            i >= this.input;
+            i--
+          ) {
             this.nodes[i].propagate(rate, momentum, update, regularization);
           }
         }
@@ -9265,7 +10297,8 @@
          * @see {@link methods.mutation} for available mutation types.
          */
         mutate(method) {
-          const { mutateImpl: mutateImpl2 } = (init_network_mutate(), __toCommonJS(network_mutate_exports));
+          const { mutateImpl: mutateImpl2 } =
+            (init_network_mutate(), __toCommonJS(network_mutate_exports));
           return mutateImpl2.call(this, method);
         }
         /**
@@ -9317,8 +10350,7 @@
           if (config.enableNodePooling) {
             try {
               releaseNode(node);
-            } catch {
-            }
+            } catch {}
           }
           return result;
         }
@@ -9364,12 +10396,14 @@
          * @private Internal method used by `train`.
          */
         _applyGradientClipping(cfg) {
-          const { applyGradientClippingImpl: applyGradientClippingImpl2 } = (init_network_training(), __toCommonJS(network_training_exports));
+          const { applyGradientClippingImpl: applyGradientClippingImpl2 } =
+            (init_network_training(), __toCommonJS(network_training_exports));
           applyGradientClippingImpl2(this, cfg);
         }
         // Training is implemented in network.training.ts; this wrapper keeps public API stable.
         train(set, options) {
-          const { trainImpl: trainImpl2 } = (init_network_training(), __toCommonJS(network_training_exports));
+          const { trainImpl: trainImpl2 } =
+            (init_network_training(), __toCommonJS(network_training_exports));
           return trainImpl2(this, set, options);
         }
         /** Returns last recorded raw (pre-update) gradient L2 norm. */
@@ -9397,19 +10431,23 @@
               overflowCount: this._mixedPrecisionState.overflowCount || 0,
               scaleUps: this._mixedPrecisionState.scaleUpEvents || 0,
               scaleDowns: this._mixedPrecisionState.scaleDownEvents || 0,
-              lastOverflowStep: this._lastOverflowStep
-            }
+              lastOverflowStep: this._lastOverflowStep,
+            },
           };
         }
         /** Utility: adjust rate for accumulation mode (use result when switching to 'sum' to mimic 'average'). */
         static adjustRateForAccumulation(rate, accumulationSteps, reduction) {
-          if (reduction === "sum" && accumulationSteps > 1)
+          if (reduction === 'sum' && accumulationSteps > 1)
             return rate / accumulationSteps;
           return rate;
         }
         // Evolution wrapper delegates to network/network.evolve.ts implementation.
         async evolve(set, options) {
-          const { evolveNetwork: evolveNetwork2 } = await Promise.resolve().then(() => (init_network_evolve(), network_evolve_exports));
+          const {
+            evolveNetwork: evolveNetwork2,
+          } = await Promise.resolve().then(
+            () => (init_network_evolve(), network_evolve_exports)
+          );
           return evolveNetwork2.call(this, set, options);
         }
         /**
@@ -9424,22 +10462,35 @@
          */
         test(set, cost) {
           if (!Array.isArray(set) || set.length === 0) {
-            throw new Error("Test set is empty or not an array.");
+            throw new Error('Test set is empty or not an array.');
           }
           for (const sample of set) {
-            if (!Array.isArray(sample.input) || sample.input.length !== this.input) {
-              throw new Error(`Test sample input size mismatch: expected ${this.input}, got ${sample.input ? sample.input.length : "undefined"}`);
+            if (
+              !Array.isArray(sample.input) ||
+              sample.input.length !== this.input
+            ) {
+              throw new Error(
+                `Test sample input size mismatch: expected ${this.input}, got ${
+                  sample.input ? sample.input.length : 'undefined'
+                }`
+              );
             }
-            if (!Array.isArray(sample.output) || sample.output.length !== this.output) {
-              throw new Error(`Test sample output size mismatch: expected ${this.output}, got ${sample.output ? sample.output.length : "undefined"}`);
+            if (
+              !Array.isArray(sample.output) ||
+              sample.output.length !== this.output
+            ) {
+              throw new Error(
+                `Test sample output size mismatch: expected ${
+                  this.output
+                }, got ${sample.output ? sample.output.length : 'undefined'}`
+              );
             }
           }
           let error = 0;
           const costFn = cost || Cost.mse;
           const start = Date.now();
           this.nodes.forEach((node) => {
-            if (node.type === "hidden")
-              node.mask = 1;
+            if (node.type === 'hidden') node.mask = 1;
           });
           const previousDropout = this.dropout;
           if (this.dropout > 0) {
@@ -9525,10 +10576,10 @@
          */
         set(values) {
           this.nodes.forEach((node) => {
-            if (typeof values.bias !== "undefined") {
+            if (typeof values.bias !== 'undefined') {
               node.bias = values.bias;
             }
-            if (typeof values.squash !== "undefined") {
+            if (typeof values.squash !== 'undefined') {
               node.squash = values.squash;
             }
           });
@@ -9551,10 +10602,22 @@
          * @returns {Network} A new, fully connected, layered MLP
          */
         static createMLP(inputCount, hiddenCounts, outputCount) {
-          const inputNodes = Array.from({ length: inputCount }, () => new Node("input"));
-          const hiddenLayers = hiddenCounts.map((count) => Array.from({ length: count }, () => new Node("hidden")));
-          const outputNodes = Array.from({ length: outputCount }, () => new Node("output"));
-          const allNodes = [...inputNodes, ...hiddenLayers.flat(), ...outputNodes];
+          const inputNodes = Array.from(
+            { length: inputCount },
+            () => new Node('input')
+          );
+          const hiddenLayers = hiddenCounts.map((count) =>
+            Array.from({ length: count }, () => new Node('hidden'))
+          );
+          const outputNodes = Array.from(
+            { length: outputCount },
+            () => new Node('output')
+          );
+          const allNodes = [
+            ...inputNodes,
+            ...hiddenLayers.flat(),
+            ...outputNodes,
+          ];
           const net = new _Network(inputCount, outputCount);
           net.nodes = allNodes;
           let prevLayer = inputNodes;
@@ -9596,7 +10659,7 @@
           net.connections = Array.from(allConnections);
         }
       };
-    }
+    },
   });
 
   // dist/neat/neat.mutation.js
@@ -9605,19 +10668,35 @@
     for (const genome of this.population) {
       if (this.options.adaptiveMutation?.enabled) {
         if (genome._mutRate === void 0) {
-          genome._mutRate = this.options.mutationRate !== void 0 ? this.options.mutationRate : this.options.adaptiveMutation.initialRate ?? (this.options.mutationRate || 0.7);
+          genome._mutRate =
+            this.options.mutationRate !== void 0
+              ? this.options.mutationRate
+              : this.options.adaptiveMutation.initialRate ??
+                (this.options.mutationRate || 0.7);
           if (this.options.adaptiveMutation.adaptAmount)
             genome._mutAmount = this.options.mutationAmount || 1;
         }
       }
-      const effectiveRate = this.options.mutationRate !== void 0 ? this.options.mutationRate : this.options.adaptiveMutation?.enabled ? genome._mutRate : this.options.mutationRate || 0.7;
-      const effectiveAmount = this.options.adaptiveMutation?.enabled && this.options.adaptiveMutation.adaptAmount ? genome._mutAmount ?? (this.options.mutationAmount || 1) : this.options.mutationAmount || 1;
+      const effectiveRate =
+        this.options.mutationRate !== void 0
+          ? this.options.mutationRate
+          : this.options.adaptiveMutation?.enabled
+          ? genome._mutRate
+          : this.options.mutationRate || 0.7;
+      const effectiveAmount =
+        this.options.adaptiveMutation?.enabled &&
+        this.options.adaptiveMutation.adaptAmount
+          ? genome._mutAmount ?? (this.options.mutationAmount || 1)
+          : this.options.mutationAmount || 1;
       if (this._getRNG()() <= effectiveRate) {
         for (let iteration = 0; iteration < effectiveAmount; iteration++) {
           let mutationMethod = this.selectMutationMethod(genome, false);
           if (Array.isArray(mutationMethod)) {
             const operatorArray = mutationMethod;
-            mutationMethod = operatorArray[Math.floor(this._getRNG()() * operatorArray.length)];
+            mutationMethod =
+              operatorArray[
+                Math.floor(this._getRNG()() * operatorArray.length)
+              ];
           }
           if (mutationMethod && mutationMethod.name) {
             const beforeNodes = genome.nodes.length;
@@ -9626,28 +10705,34 @@
               this._mutateAddNodeReuse(genome);
               try {
                 genome.mutate(methods.mutation.MOD_WEIGHT);
-              } catch {
-              }
+              } catch {}
               this._invalidateGenomeCaches(genome);
             } else if (mutationMethod === methods.mutation.ADD_CONN) {
               this._mutateAddConnReuse(genome);
               try {
                 genome.mutate(methods.mutation.MOD_WEIGHT);
-              } catch {
-              }
+              } catch {}
               this._invalidateGenomeCaches(genome);
             } else {
               genome.mutate(mutationMethod);
-              if (mutationMethod === methods.mutation.ADD_GATE || mutationMethod === methods.mutation.SUB_NODE || mutationMethod === methods.mutation.SUB_CONN || mutationMethod === methods.mutation.ADD_SELF_CONN || mutationMethod === methods.mutation.ADD_BACK_CONN) {
+              if (
+                mutationMethod === methods.mutation.ADD_GATE ||
+                mutationMethod === methods.mutation.SUB_NODE ||
+                mutationMethod === methods.mutation.SUB_CONN ||
+                mutationMethod === methods.mutation.ADD_SELF_CONN ||
+                mutationMethod === methods.mutation.ADD_BACK_CONN
+              ) {
                 this._invalidateGenomeCaches(genome);
               }
             }
             if (this._getRNG()() < EXTRA_CONNECTION_PROBABILITY)
               this._mutateAddConnReuse(genome);
             if (this.options.operatorAdaptation?.enabled) {
-              const statsRecord = this._operatorStats.get(mutationMethod.name) || {
+              const statsRecord = this._operatorStats.get(
+                mutationMethod.name
+              ) || {
                 success: 0,
-                attempts: 0
+                attempts: 0,
               };
               statsRecord.attempts++;
               const afterNodes = genome.nodes.length;
@@ -9663,170 +10748,200 @@
   }
   function mutateAddNodeReuse(genome) {
     if (genome.connections.length === 0) {
-      const inputNode = genome.nodes.find((n) => n.type === "input");
-      const outputNode = genome.nodes.find((n) => n.type === "output");
+      const inputNode = genome.nodes.find((n) => n.type === 'input');
+      const outputNode = genome.nodes.find((n) => n.type === 'output');
       if (inputNode && outputNode) {
         try {
           genome.connect(inputNode, outputNode, 1);
-        } catch {
-        }
+        } catch {}
       }
     }
-    const enabledConnections = genome.connections.filter((c) => c.enabled !== false);
-    if (!enabledConnections.length)
-      return;
-    const chosenConn = enabledConnections[Math.floor(this._getRNG()() * enabledConnections.length)];
+    const enabledConnections = genome.connections.filter(
+      (c) => c.enabled !== false
+    );
+    if (!enabledConnections.length) return;
+    const chosenConn =
+      enabledConnections[
+        Math.floor(this._getRNG()() * enabledConnections.length)
+      ];
     const fromGeneId = chosenConn.from.geneId;
     const toGeneId = chosenConn.to.geneId;
-    const splitKey = fromGeneId + "->" + toGeneId;
+    const splitKey = fromGeneId + '->' + toGeneId;
     const originalWeight = chosenConn.weight;
     genome.disconnect(chosenConn.from, chosenConn.to);
     let splitRecord = this._nodeSplitInnovations.get(splitKey);
     const NodeClass = (init_node(), __toCommonJS(node_exports)).default;
     if (!splitRecord) {
-      const newNode = new NodeClass("hidden");
+      const newNode = new NodeClass('hidden');
       const inConn = genome.connect(chosenConn.from, newNode, 1)[0];
       const outConn = genome.connect(newNode, chosenConn.to, originalWeight)[0];
-      if (inConn)
-        inConn.innovation = this._nextGlobalInnovation++;
-      if (outConn)
-        outConn.innovation = this._nextGlobalInnovation++;
+      if (inConn) inConn.innovation = this._nextGlobalInnovation++;
+      if (outConn) outConn.innovation = this._nextGlobalInnovation++;
       splitRecord = {
         newNodeGeneId: newNode.geneId,
         inInnov: inConn?.innovation,
-        outInnov: outConn?.innovation
+        outInnov: outConn?.innovation,
       };
       this._nodeSplitInnovations.set(splitKey, splitRecord);
       const toIndex = genome.nodes.indexOf(chosenConn.to);
-      const insertIndex = Math.min(toIndex, genome.nodes.length - genome.output);
+      const insertIndex = Math.min(
+        toIndex,
+        genome.nodes.length - genome.output
+      );
       genome.nodes.splice(insertIndex, 0, newNode);
     } else {
-      const newNode = new NodeClass("hidden");
+      const newNode = new NodeClass('hidden');
       newNode.geneId = splitRecord.newNodeGeneId;
       const toIndex = genome.nodes.indexOf(chosenConn.to);
-      const insertIndex = Math.min(toIndex, genome.nodes.length - genome.output);
+      const insertIndex = Math.min(
+        toIndex,
+        genome.nodes.length - genome.output
+      );
       genome.nodes.splice(insertIndex, 0, newNode);
       const inConn = genome.connect(chosenConn.from, newNode, 1)[0];
       const outConn = genome.connect(newNode, chosenConn.to, originalWeight)[0];
-      if (inConn)
-        inConn.innovation = splitRecord.inInnov;
-      if (outConn)
-        outConn.innovation = splitRecord.outInnov;
+      if (inConn) inConn.innovation = splitRecord.inInnov;
+      if (outConn) outConn.innovation = splitRecord.outInnov;
     }
   }
   function mutateAddConnReuse(genome) {
     const candidatePairs = [];
     for (let i = 0; i < genome.nodes.length - genome.output; i++) {
       const fromNode2 = genome.nodes[i];
-      for (let j = Math.max(i + 1, genome.input); j < genome.nodes.length; j++) {
+      for (
+        let j = Math.max(i + 1, genome.input);
+        j < genome.nodes.length;
+        j++
+      ) {
         const toNode2 = genome.nodes[j];
         if (!fromNode2.isProjectingTo(toNode2))
           candidatePairs.push([fromNode2, toNode2]);
       }
     }
-    if (!candidatePairs.length)
-      return;
+    if (!candidatePairs.length) return;
     const reuseCandidates = candidatePairs.filter((pair) => {
       const idA2 = pair[0].geneId;
       const idB2 = pair[1].geneId;
-      const symmetricKey2 = idA2 < idB2 ? idA2 + "::" + idB2 : idB2 + "::" + idA2;
+      const symmetricKey2 =
+        idA2 < idB2 ? idA2 + '::' + idB2 : idB2 + '::' + idA2;
       return this._connInnovations.has(symmetricKey2);
     });
-    const hiddenPairs = reuseCandidates.length ? [] : candidatePairs.filter((pair) => pair[0].type === "hidden" && pair[1].type === "hidden");
-    const pool2 = reuseCandidates.length ? reuseCandidates : hiddenPairs.length ? hiddenPairs : candidatePairs;
-    const chosenPair = pool2.length === 1 ? pool2[0] : pool2[Math.floor(this._getRNG()() * pool2.length)];
+    const hiddenPairs = reuseCandidates.length
+      ? []
+      : candidatePairs.filter(
+          (pair) => pair[0].type === 'hidden' && pair[1].type === 'hidden'
+        );
+    const pool2 = reuseCandidates.length
+      ? reuseCandidates
+      : hiddenPairs.length
+      ? hiddenPairs
+      : candidatePairs;
+    const chosenPair =
+      pool2.length === 1
+        ? pool2[0]
+        : pool2[Math.floor(this._getRNG()() * pool2.length)];
     const fromNode = chosenPair[0];
     const toNode = chosenPair[1];
     const idA = fromNode.geneId;
     const idB = toNode.geneId;
-    const symmetricKey = idA < idB ? idA + "::" + idB : idB + "::" + idA;
+    const symmetricKey = idA < idB ? idA + '::' + idB : idB + '::' + idA;
     if (genome._enforceAcyclic) {
       const createsCycle = (() => {
         const stack = [toNode];
         const seen = /* @__PURE__ */ new Set();
         while (stack.length) {
           const n = stack.pop();
-          if (n === fromNode)
-            return true;
-          if (seen.has(n))
-            continue;
+          if (n === fromNode) return true;
+          if (seen.has(n)) continue;
           seen.add(n);
-          for (const c of n.connections.out)
-            stack.push(c.to);
+          for (const c of n.connections.out) stack.push(c.to);
         }
         return false;
       })();
-      if (createsCycle)
-        return;
+      if (createsCycle) return;
     }
     const conn = genome.connect(fromNode, toNode)[0];
-    if (!conn)
-      return;
+    if (!conn) return;
     if (this._connInnovations.has(symmetricKey)) {
       conn.innovation = this._connInnovations.get(symmetricKey);
     } else {
       const innov = this._nextGlobalInnovation++;
       conn.innovation = innov;
       this._connInnovations.set(symmetricKey, innov);
-      const legacyForward = idA + "::" + idB;
-      const legacyReverse = idB + "::" + idA;
+      const legacyForward = idA + '::' + idB;
+      const legacyReverse = idB + '::' + idA;
       this._connInnovations.set(legacyForward, innov);
       this._connInnovations.set(legacyReverse, innov);
     }
   }
   function ensureMinHiddenNodes(network, multiplierOverride) {
     const maxNodes = this.options.maxNodes || Infinity;
-    const minHidden = Math.min(this.getMinimumHiddenSize(multiplierOverride), maxNodes - network.nodes.filter((n) => n.type !== "hidden").length);
-    const inputNodes = network.nodes.filter((n) => n.type === "input");
-    const outputNodes = network.nodes.filter((n) => n.type === "output");
-    let hiddenNodes = network.nodes.filter((n) => n.type === "hidden");
+    const minHidden = Math.min(
+      this.getMinimumHiddenSize(multiplierOverride),
+      maxNodes - network.nodes.filter((n) => n.type !== 'hidden').length
+    );
+    const inputNodes = network.nodes.filter((n) => n.type === 'input');
+    const outputNodes = network.nodes.filter((n) => n.type === 'output');
+    let hiddenNodes = network.nodes.filter((n) => n.type === 'hidden');
     if (inputNodes.length === 0 || outputNodes.length === 0) {
       try {
-        console.warn("Network is missing input or output nodes \u2014 skipping minHidden enforcement");
-      } catch {
-      }
+        console.warn(
+          'Network is missing input or output nodes \u2014 skipping minHidden enforcement'
+        );
+      } catch {}
       return;
     }
     const existingCount = hiddenNodes.length;
-    for (let i = existingCount; i < minHidden && network.nodes.length < maxNodes; i++) {
+    for (
+      let i = existingCount;
+      i < minHidden && network.nodes.length < maxNodes;
+      i++
+    ) {
       const NodeClass = (init_node(), __toCommonJS(node_exports)).default;
-      const newNode = new NodeClass("hidden");
+      const newNode = new NodeClass('hidden');
       network.nodes.push(newNode);
       hiddenNodes.push(newNode);
     }
     for (const hiddenNode of hiddenNodes) {
       if (hiddenNode.connections.in.length === 0) {
-        const candidates = inputNodes.concat(hiddenNodes.filter((n) => n !== hiddenNode));
+        const candidates = inputNodes.concat(
+          hiddenNodes.filter((n) => n !== hiddenNode)
+        );
         if (candidates.length > 0) {
           const rng = this._getRNG();
           const source = candidates[Math.floor(rng() * candidates.length)];
           try {
             network.connect(source, hiddenNode);
-          } catch {
-          }
+          } catch {}
         }
       }
       if (hiddenNode.connections.out.length === 0) {
-        const candidates = outputNodes.concat(hiddenNodes.filter((n) => n !== hiddenNode));
+        const candidates = outputNodes.concat(
+          hiddenNodes.filter((n) => n !== hiddenNode)
+        );
         if (candidates.length > 0) {
           const rng = this._getRNG();
           const target = candidates[Math.floor(rng() * candidates.length)];
           try {
             network.connect(hiddenNode, target);
-          } catch {
-          }
+          } catch {}
         }
       }
     }
-    const NetworkClass = (init_network(), __toCommonJS(network_exports)).default;
+    const NetworkClass = (init_network(), __toCommonJS(network_exports))
+      .default;
     NetworkClass.rebuildConnections(network);
   }
   function ensureNoDeadEnds(network) {
-    const inputNodes = network.nodes.filter((n) => n.type === "input");
-    const outputNodes = network.nodes.filter((n) => n.type === "output");
-    const hiddenNodes = network.nodes.filter((n) => n.type === "hidden");
-    const hasOutgoing = (node) => node.connections && node.connections.out && node.connections.out.length > 0;
-    const hasIncoming = (node) => node.connections && node.connections.in && node.connections.in.length > 0;
+    const inputNodes = network.nodes.filter((n) => n.type === 'input');
+    const outputNodes = network.nodes.filter((n) => n.type === 'output');
+    const hiddenNodes = network.nodes.filter((n) => n.type === 'hidden');
+    const hasOutgoing = (node) =>
+      node.connections &&
+      node.connections.out &&
+      node.connections.out.length > 0;
+    const hasIncoming = (node) =>
+      node.connections && node.connections.in && node.connections.in.length > 0;
     for (const inputNode of inputNodes) {
       if (!hasOutgoing(inputNode)) {
         const candidates = hiddenNodes.length > 0 ? hiddenNodes : outputNodes;
@@ -9835,8 +10950,7 @@
           const target = candidates[Math.floor(rng() * candidates.length)];
           try {
             network.connect(inputNode, target);
-          } catch {
-          }
+          } catch {}
         }
       }
     }
@@ -9848,32 +10962,33 @@
           const source = candidates[Math.floor(rng() * candidates.length)];
           try {
             network.connect(source, outputNode);
-          } catch {
-          }
+          } catch {}
         }
       }
     }
     for (const hiddenNode of hiddenNodes) {
       if (!hasIncoming(hiddenNode)) {
-        const candidates = inputNodes.concat(hiddenNodes.filter((n) => n !== hiddenNode));
+        const candidates = inputNodes.concat(
+          hiddenNodes.filter((n) => n !== hiddenNode)
+        );
         if (candidates.length > 0) {
           const rng = this._getRNG();
           const source = candidates[Math.floor(rng() * candidates.length)];
           try {
             network.connect(source, hiddenNode);
-          } catch {
-          }
+          } catch {}
         }
       }
       if (!hasOutgoing(hiddenNode)) {
-        const candidates = outputNodes.concat(hiddenNodes.filter((n) => n !== hiddenNode));
+        const candidates = outputNodes.concat(
+          hiddenNodes.filter((n) => n !== hiddenNode)
+        );
         if (candidates.length > 0) {
           const rng = this._getRNG();
           const target = candidates[Math.floor(rng() * candidates.length)];
           try {
             network.connect(hiddenNode, target);
-          } catch {
-          }
+          } catch {}
         }
       }
     }
@@ -9881,29 +10996,43 @@
   function selectMutationMethod(genome, rawReturnForTest = true) {
     const methods = (init_methods(), __toCommonJS(methods_exports));
     const isFFWDirect = this.options.mutation === methods.mutation.FFW;
-    const isFFWNested = Array.isArray(this.options.mutation) && this.options.mutation.length === 1 && this.options.mutation[0] === methods.mutation.FFW;
+    const isFFWNested =
+      Array.isArray(this.options.mutation) &&
+      this.options.mutation.length === 1 &&
+      this.options.mutation[0] === methods.mutation.FFW;
     if ((isFFWDirect || isFFWNested) && rawReturnForTest)
       return methods.mutation.FFW;
     if (isFFWDirect)
-      return methods.mutation.FFW[Math.floor(this._getRNG()() * methods.mutation.FFW.length)];
+      return methods.mutation.FFW[
+        Math.floor(this._getRNG()() * methods.mutation.FFW.length)
+      ];
     if (isFFWNested)
-      return methods.mutation.FFW[Math.floor(this._getRNG()() * methods.mutation.FFW.length)];
+      return methods.mutation.FFW[
+        Math.floor(this._getRNG()() * methods.mutation.FFW.length)
+      ];
     let pool2 = this.options.mutation;
-    if (rawReturnForTest && Array.isArray(pool2) && pool2.length === methods.mutation.FFW.length && pool2.every((m, i) => m && m.name === methods.mutation.FFW[i].name)) {
+    if (
+      rawReturnForTest &&
+      Array.isArray(pool2) &&
+      pool2.length === methods.mutation.FFW.length &&
+      pool2.every((m, i) => m && m.name === methods.mutation.FFW[i].name)
+    ) {
       return methods.mutation.FFW;
     }
     if (pool2.length === 1 && Array.isArray(pool2[0]) && pool2[0].length)
       pool2 = pool2[0];
     if (this.options.phasedComplexity?.enabled && this._phase) {
       pool2 = pool2.filter((m) => !!m);
-      if (this._phase === "simplify") {
-        const simplifyPool = pool2.filter((m) => m && m.name && m.name.startsWith && m.name.startsWith("SUB_"));
-        if (simplifyPool.length)
-          pool2 = [...pool2, ...simplifyPool];
-      } else if (this._phase === "complexify") {
-        const addPool = pool2.filter((m) => m && m.name && m.name.startsWith && m.name.startsWith("ADD_"));
-        if (addPool.length)
-          pool2 = [...pool2, ...addPool];
+      if (this._phase === 'simplify') {
+        const simplifyPool = pool2.filter(
+          (m) => m && m.name && m.name.startsWith && m.name.startsWith('SUB_')
+        );
+        if (simplifyPool.length) pool2 = [...pool2, ...simplifyPool];
+      } else if (this._phase === 'complexify') {
+        const addPool = pool2.filter(
+          (m) => m && m.name && m.name.startsWith && m.name.startsWith('ADD_')
+        );
+        if (addPool.length) pool2 = [...pool2, ...addPool];
       }
     }
     if (this.options.operatorAdaptation?.enabled) {
@@ -9924,26 +11053,39 @@
       pool2 = augmented;
     }
     let mutationMethod = pool2[Math.floor(this._getRNG()() * pool2.length)];
-    if (mutationMethod === methods.mutation.ADD_GATE && genome.gates.length >= (this.options.maxGates || Infinity))
+    if (
+      mutationMethod === methods.mutation.ADD_GATE &&
+      genome.gates.length >= (this.options.maxGates || Infinity)
+    )
       return null;
-    if (mutationMethod === methods.mutation.ADD_NODE && genome.nodes.length >= (this.options.maxNodes || Infinity))
+    if (
+      mutationMethod === methods.mutation.ADD_NODE &&
+      genome.nodes.length >= (this.options.maxNodes || Infinity)
+    )
       return null;
-    if (mutationMethod === methods.mutation.ADD_CONN && genome.connections.length >= (this.options.maxConns || Infinity))
+    if (
+      mutationMethod === methods.mutation.ADD_CONN &&
+      genome.connections.length >= (this.options.maxConns || Infinity)
+    )
       return null;
     if (this.options.operatorBandit?.enabled) {
       const c = this.options.operatorBandit.c ?? 1.4;
       const minA = this.options.operatorBandit.minAttempts ?? 5;
       const stats = this._operatorStats;
       for (const m of pool2)
-        if (!stats.has(m.name))
-          stats.set(m.name, { success: 0, attempts: 0 });
-      const totalAttempts = Array.from(stats.values()).reduce((a, s) => a + s.attempts, 0) + EPSILON;
+        if (!stats.has(m.name)) stats.set(m.name, { success: 0, attempts: 0 });
+      const totalAttempts =
+        Array.from(stats.values()).reduce((a, s) => a + s.attempts, 0) +
+        EPSILON;
       let best = mutationMethod;
       let bestVal = -Infinity;
       for (const m of pool2) {
         const st = stats.get(m.name);
         const mean = st.attempts > 0 ? st.success / st.attempts : 0;
-        const bonus = st.attempts < minA ? Infinity : c * Math.sqrt(Math.log(totalAttempts) / (st.attempts + EPSILON));
+        const bonus =
+          st.attempts < minA
+            ? Infinity
+            : c * Math.sqrt(Math.log(totalAttempts) / (st.attempts + EPSILON));
         const val = mean + bonus;
         if (val > bestVal) {
           bestVal = val;
@@ -9952,41 +11094,53 @@
       }
       mutationMethod = best;
     }
-    if (mutationMethod === methods.mutation.ADD_GATE && genome.gates.length >= (this.options.maxGates || Infinity))
+    if (
+      mutationMethod === methods.mutation.ADD_GATE &&
+      genome.gates.length >= (this.options.maxGates || Infinity)
+    )
       return null;
-    if (!this.options.allowRecurrent && (mutationMethod === methods.mutation.ADD_BACK_CONN || mutationMethod === methods.mutation.ADD_SELF_CONN))
+    if (
+      !this.options.allowRecurrent &&
+      (mutationMethod === methods.mutation.ADD_BACK_CONN ||
+        mutationMethod === methods.mutation.ADD_SELF_CONN)
+    )
       return null;
     return mutationMethod;
   }
   var init_neat_mutation = __esm({
-    "dist/neat/neat.mutation.js"() {
-      "use strict";
+    'dist/neat/neat.mutation.js'() {
+      'use strict';
       init_neat_constants();
-    }
+    },
   });
 
   // dist/neat/neat.multiobjective.js
   function fastNonDominated(pop) {
     const objectiveDescriptors = this._getObjectives();
-    const valuesMatrix = pop.map((genomeItem) => objectiveDescriptors.map((descriptor) => {
-      try {
-        return descriptor.accessor(genomeItem);
-      } catch {
-        return 0;
-      }
-    }));
+    const valuesMatrix = pop.map((genomeItem) =>
+      objectiveDescriptors.map((descriptor) => {
+        try {
+          return descriptor.accessor(genomeItem);
+        } catch {
+          return 0;
+        }
+      })
+    );
     const vectorDominates = (valuesA, valuesB) => {
       let strictlyBetter = false;
-      for (let objectiveIndex = 0; objectiveIndex < valuesA.length; objectiveIndex++) {
-        const direction = objectiveDescriptors[objectiveIndex].direction || "max";
-        if (direction === "max") {
-          if (valuesA[objectiveIndex] < valuesB[objectiveIndex])
-            return false;
+      for (
+        let objectiveIndex = 0;
+        objectiveIndex < valuesA.length;
+        objectiveIndex++
+      ) {
+        const direction =
+          objectiveDescriptors[objectiveIndex].direction || 'max';
+        if (direction === 'max') {
+          if (valuesA[objectiveIndex] < valuesB[objectiveIndex]) return false;
           if (valuesA[objectiveIndex] > valuesB[objectiveIndex])
             strictlyBetter = true;
         } else {
-          if (valuesA[objectiveIndex] > valuesB[objectiveIndex])
-            return false;
+          if (valuesA[objectiveIndex] > valuesB[objectiveIndex]) return false;
           if (valuesA[objectiveIndex] < valuesB[objectiveIndex])
             strictlyBetter = true;
         }
@@ -9999,15 +11153,13 @@
     const firstFrontIndices = [];
     for (let pIndex = 0; pIndex < pop.length; pIndex++) {
       for (let qIndex = 0; qIndex < pop.length; qIndex++) {
-        if (pIndex === qIndex)
-          continue;
+        if (pIndex === qIndex) continue;
         if (vectorDominates(valuesMatrix[pIndex], valuesMatrix[qIndex]))
           dominatedIndicesByIndex[pIndex].push(qIndex);
         else if (vectorDominates(valuesMatrix[qIndex], valuesMatrix[pIndex]))
           dominationCounts[pIndex]++;
       }
-      if (dominationCounts[pIndex] === 0)
-        firstFrontIndices.push(pIndex);
+      if (dominationCounts[pIndex] === 0) firstFrontIndices.push(pIndex);
     }
     let currentFrontIndices = firstFrontIndices;
     let currentFrontRank = 0;
@@ -10017,56 +11169,72 @@
         pop[pIndex]._moRank = currentFrontRank;
         for (const qIndex of dominatedIndicesByIndex[pIndex]) {
           dominationCounts[qIndex]--;
-          if (dominationCounts[qIndex] === 0)
-            nextFrontIndices.push(qIndex);
+          if (dominationCounts[qIndex] === 0) nextFrontIndices.push(qIndex);
         }
       }
       paretoFronts.push(currentFrontIndices.map((i) => pop[i]));
       currentFrontIndices = nextFrontIndices;
       currentFrontRank++;
-      if (currentFrontRank > 50)
-        break;
+      if (currentFrontRank > 50) break;
     }
     for (const front of paretoFronts) {
-      if (front.length === 0)
-        continue;
-      for (const genomeItem of front)
-        genomeItem._moCrowd = 0;
-      for (let objectiveIndex = 0; objectiveIndex < objectiveDescriptors.length; objectiveIndex++) {
-        const sortedByCurrentObjective = front.slice().sort((genomeA, genomeB) => {
-          const valA = objectiveDescriptors[objectiveIndex].accessor(genomeA);
-          const valB = objectiveDescriptors[objectiveIndex].accessor(genomeB);
-          return valA - valB;
-        });
+      if (front.length === 0) continue;
+      for (const genomeItem of front) genomeItem._moCrowd = 0;
+      for (
+        let objectiveIndex = 0;
+        objectiveIndex < objectiveDescriptors.length;
+        objectiveIndex++
+      ) {
+        const sortedByCurrentObjective = front
+          .slice()
+          .sort((genomeA, genomeB) => {
+            const valA = objectiveDescriptors[objectiveIndex].accessor(genomeA);
+            const valB = objectiveDescriptors[objectiveIndex].accessor(genomeB);
+            return valA - valB;
+          });
         sortedByCurrentObjective[0]._moCrowd = Infinity;
-        sortedByCurrentObjective[sortedByCurrentObjective.length - 1]._moCrowd = Infinity;
-        const minVal = objectiveDescriptors[objectiveIndex].accessor(sortedByCurrentObjective[0]);
-        const maxVal = objectiveDescriptors[objectiveIndex].accessor(sortedByCurrentObjective[sortedByCurrentObjective.length - 1]);
+        sortedByCurrentObjective[
+          sortedByCurrentObjective.length - 1
+        ]._moCrowd = Infinity;
+        const minVal = objectiveDescriptors[objectiveIndex].accessor(
+          sortedByCurrentObjective[0]
+        );
+        const maxVal = objectiveDescriptors[objectiveIndex].accessor(
+          sortedByCurrentObjective[sortedByCurrentObjective.length - 1]
+        );
         const valueRange = maxVal - minVal || 1;
-        for (let sortedIndex = 1; sortedIndex < sortedByCurrentObjective.length - 1; sortedIndex++) {
-          const prevVal = objectiveDescriptors[objectiveIndex].accessor(sortedByCurrentObjective[sortedIndex - 1]);
-          const nextVal = objectiveDescriptors[objectiveIndex].accessor(sortedByCurrentObjective[sortedIndex + 1]);
-          sortedByCurrentObjective[sortedIndex]._moCrowd += (nextVal - prevVal) / valueRange;
+        for (
+          let sortedIndex = 1;
+          sortedIndex < sortedByCurrentObjective.length - 1;
+          sortedIndex++
+        ) {
+          const prevVal = objectiveDescriptors[objectiveIndex].accessor(
+            sortedByCurrentObjective[sortedIndex - 1]
+          );
+          const nextVal = objectiveDescriptors[objectiveIndex].accessor(
+            sortedByCurrentObjective[sortedIndex + 1]
+          );
+          sortedByCurrentObjective[sortedIndex]._moCrowd +=
+            (nextVal - prevVal) / valueRange;
         }
       }
     }
     if (this.options.multiObjective?.enabled) {
       this._paretoArchive.push({
         generation: this.generation,
-        fronts: paretoFronts.slice(0, 3).map((front) => (
+        fronts: paretoFronts.slice(0, 3).map((front) =>
           // map each front (array of Network) to an array of genome IDs
           front.map((genome) => genome._id)
-        ))
+        ),
       });
-      if (this._paretoArchive.length > 100)
-        this._paretoArchive.shift();
+      if (this._paretoArchive.length > 100) this._paretoArchive.shift();
     }
     return paretoFronts;
   }
   var init_neat_multiobjective = __esm({
-    "dist/neat/neat.multiobjective.js"() {
-      "use strict";
-    }
+    'dist/neat/neat.multiobjective.js'() {
+      'use strict';
+    },
   });
 
   // dist/neat/neat.adaptive.js
@@ -10077,25 +11245,26 @@
     applyComplexityBudget: () => applyComplexityBudget,
     applyMinimalCriterionAdaptive: () => applyMinimalCriterionAdaptive,
     applyOperatorAdaptation: () => applyOperatorAdaptation,
-    applyPhasedComplexity: () => applyPhasedComplexity
+    applyPhasedComplexity: () => applyPhasedComplexity,
   });
   function applyComplexityBudget() {
-    if (!this.options.complexityBudget?.enabled)
-      return;
+    if (!this.options.complexityBudget?.enabled) return;
     const complexityBudget = this.options.complexityBudget;
-    if (complexityBudget.mode === "adaptive") {
-      if (!this._cbHistory)
-        this._cbHistory = [];
+    if (complexityBudget.mode === 'adaptive') {
+      if (!this._cbHistory) this._cbHistory = [];
       this._cbHistory.push(this.population[0]?.score || 0);
       const windowSize = complexityBudget.improvementWindow ?? 10;
-      if (this._cbHistory.length > windowSize)
-        this._cbHistory.shift();
+      if (this._cbHistory.length > windowSize) this._cbHistory.shift();
       const history = this._cbHistory;
-      const improvement = history.length > 1 ? history[history.length - 1] - history[0] : 0;
+      const improvement =
+        history.length > 1 ? history[history.length - 1] - history[0] : 0;
       let slope = 0;
       if (history.length > 2) {
         const count = history.length;
-        let sumIndices = 0, sumScores = 0, sumIndexScore = 0, sumIndexSquared = 0;
+        let sumIndices = 0,
+          sumScores = 0,
+          sumIndexScore = 0,
+          sumIndexSquared = 0;
         for (let idx = 0; idx < count; idx++) {
           sumIndices += idx;
           sumScores += history[idx];
@@ -10106,36 +11275,55 @@
         slope = (count * sumIndexScore - sumIndices * sumScores) / denom;
       }
       if (this._cbMaxNodes === void 0)
-        this._cbMaxNodes = complexityBudget.maxNodesStart ?? this.input + this.output + 2;
+        this._cbMaxNodes =
+          complexityBudget.maxNodesStart ?? this.input + this.output + 2;
       const baseInc = complexityBudget.increaseFactor ?? 1.1;
       const baseStag = complexityBudget.stagnationFactor ?? 0.95;
-      const slopeMag = Math.min(2, Math.max(-2, slope / (Math.abs(history[0]) + EPSILON)));
+      const slopeMag = Math.min(
+        2,
+        Math.max(-2, slope / (Math.abs(history[0]) + EPSILON))
+      );
       const incF = baseInc + 0.05 * Math.max(0, slopeMag);
       const stagF = baseStag - 0.03 * Math.max(0, -slopeMag);
       const noveltyFactor = this._noveltyArchive.length > 5 ? 1 : 0.9;
       if (improvement > 0 || slope > 0)
-        this._cbMaxNodes = Math.min(complexityBudget.maxNodesEnd ?? this._cbMaxNodes * 4, Math.floor(this._cbMaxNodes * incF * noveltyFactor));
+        this._cbMaxNodes = Math.min(
+          complexityBudget.maxNodesEnd ?? this._cbMaxNodes * 4,
+          Math.floor(this._cbMaxNodes * incF * noveltyFactor)
+        );
       else if (history.length === windowSize)
-        this._cbMaxNodes = Math.max(complexityBudget.minNodes ?? this.input + this.output + 2, Math.floor(this._cbMaxNodes * stagF));
+        this._cbMaxNodes = Math.max(
+          complexityBudget.minNodes ?? this.input + this.output + 2,
+          Math.floor(this._cbMaxNodes * stagF)
+        );
       if (complexityBudget.minNodes !== void 0) {
-        this._cbMaxNodes = Math.max(complexityBudget.minNodes, this._cbMaxNodes);
+        this._cbMaxNodes = Math.max(
+          complexityBudget.minNodes,
+          this._cbMaxNodes
+        );
       } else {
         const implicitMin = this.input + this.output + 2;
-        if (this._cbMaxNodes < implicitMin)
-          this._cbMaxNodes = implicitMin;
+        if (this._cbMaxNodes < implicitMin) this._cbMaxNodes = implicitMin;
       }
       this.options.maxNodes = this._cbMaxNodes;
       if (complexityBudget.maxConnsStart) {
         if (this._cbMaxConns === void 0)
           this._cbMaxConns = complexityBudget.maxConnsStart;
         if (improvement > 0 || slope > 0)
-          this._cbMaxConns = Math.min(complexityBudget.maxConnsEnd ?? this._cbMaxConns * 4, Math.floor(this._cbMaxConns * incF * noveltyFactor));
+          this._cbMaxConns = Math.min(
+            complexityBudget.maxConnsEnd ?? this._cbMaxConns * 4,
+            Math.floor(this._cbMaxConns * incF * noveltyFactor)
+          );
         else if (history.length === windowSize)
-          this._cbMaxConns = Math.max(complexityBudget.maxConnsStart, Math.floor(this._cbMaxConns * stagF));
+          this._cbMaxConns = Math.max(
+            complexityBudget.maxConnsStart,
+            Math.floor(this._cbMaxConns * stagF)
+          );
         this.options.maxConns = this._cbMaxConns;
       }
     } else {
-      const maxStart = complexityBudget.maxNodesStart ?? this.input + this.output + 2;
+      const maxStart =
+        complexityBudget.maxNodesStart ?? this.input + this.output + 2;
       const maxEnd = complexityBudget.maxNodesEnd ?? maxStart * 4;
       const horizon = complexityBudget.horizon ?? 100;
       const t = Math.min(1, this.generation / horizon);
@@ -10143,21 +11331,19 @@
     }
   }
   function applyPhasedComplexity() {
-    if (!this.options.phasedComplexity?.enabled)
-      return;
+    if (!this.options.phasedComplexity?.enabled) return;
     const len = this.options.phasedComplexity.phaseLength ?? 10;
     if (!this._phase) {
-      this._phase = this.options.phasedComplexity.initialPhase ?? "complexify";
+      this._phase = this.options.phasedComplexity.initialPhase ?? 'complexify';
       this._phaseStartGeneration = this.generation;
     }
     if (this.generation - this._phaseStartGeneration >= len) {
-      this._phase = this._phase === "complexify" ? "simplify" : "complexify";
+      this._phase = this._phase === 'complexify' ? 'simplify' : 'complexify';
       this._phaseStartGeneration = this.generation;
     }
   }
   function applyMinimalCriterionAdaptive() {
-    if (!this.options.minimalCriterionAdaptive?.enabled)
-      return;
+    if (!this.options.minimalCriterionAdaptive?.enabled) return;
     const mcCfg = this.options.minimalCriterionAdaptive;
     if (this._mcThreshold === void 0)
       this._mcThreshold = mcCfg.initialThreshold ?? 0;
@@ -10166,47 +11352,49 @@
     const prop = scores.length ? accepted / scores.length : 0;
     const targetAcceptance = mcCfg.targetAcceptance ?? 0.5;
     const adjustRate = mcCfg.adjustRate ?? 0.1;
-    if (prop > targetAcceptance * 1.05)
-      this._mcThreshold *= 1 + adjustRate;
+    if (prop > targetAcceptance * 1.05) this._mcThreshold *= 1 + adjustRate;
     else if (prop < targetAcceptance * 0.95)
       this._mcThreshold *= 1 - adjustRate;
     for (const g of this.population)
-      if ((g.score || 0) < this._mcThreshold)
-        g.score = 0;
+      if ((g.score || 0) < this._mcThreshold) g.score = 0;
   }
   function applyAncestorUniqAdaptive() {
-    if (!this.options.ancestorUniqAdaptive?.enabled)
-      return;
+    if (!this.options.ancestorUniqAdaptive?.enabled) return;
     const ancestorCfg = this.options.ancestorUniqAdaptive;
     const cooldown = ancestorCfg.cooldown ?? 5;
-    if (this.generation - this._lastAncestorUniqAdjustGen < cooldown)
-      return;
+    if (this.generation - this._lastAncestorUniqAdjustGen < cooldown) return;
     const lineageBlock = this._telemetry[this._telemetry.length - 1]?.lineage;
     const ancUniq = lineageBlock ? lineageBlock.ancestorUniq : void 0;
-    if (typeof ancUniq !== "number")
-      return;
+    if (typeof ancUniq !== 'number') return;
     const lowT = ancestorCfg.lowThreshold ?? 0.25;
     const highT = ancestorCfg.highThreshold ?? 0.55;
     const adj = ancestorCfg.adjust ?? 0.01;
-    if (ancestorCfg.mode === "epsilon" && this.options.multiObjective?.adaptiveEpsilon?.enabled) {
+    if (
+      ancestorCfg.mode === 'epsilon' &&
+      this.options.multiObjective?.adaptiveEpsilon?.enabled
+    ) {
       if (ancUniq < lowT) {
-        this.options.multiObjective.dominanceEpsilon = (this.options.multiObjective.dominanceEpsilon || 0) + adj;
+        this.options.multiObjective.dominanceEpsilon =
+          (this.options.multiObjective.dominanceEpsilon || 0) + adj;
         this._lastAncestorUniqAdjustGen = this.generation;
       } else if (ancUniq > highT) {
-        this.options.multiObjective.dominanceEpsilon = Math.max(0, (this.options.multiObjective.dominanceEpsilon || 0) - adj);
+        this.options.multiObjective.dominanceEpsilon = Math.max(
+          0,
+          (this.options.multiObjective.dominanceEpsilon || 0) - adj
+        );
         this._lastAncestorUniqAdjustGen = this.generation;
       }
-    } else if (ancestorCfg.mode === "lineagePressure") {
+    } else if (ancestorCfg.mode === 'lineagePressure') {
       if (!this.options.lineagePressure)
         this.options.lineagePressure = {
           enabled: true,
-          mode: "spread",
-          strength: 0.01
+          mode: 'spread',
+          strength: 0.01,
         };
       const lpRef = this.options.lineagePressure;
       if (ancUniq < lowT) {
         lpRef.strength = (lpRef.strength || 0.01) * 1.15;
-        lpRef.mode = "spread";
+        lpRef.mode = 'spread';
         this._lastAncestorUniqAdjustGen = this.generation;
       } else if (ancUniq > highT) {
         lpRef.strength = (lpRef.strength || 0.01) * 0.9;
@@ -10215,13 +11403,11 @@
     }
   }
   function applyAdaptiveMutation() {
-    if (!this.options.adaptiveMutation?.enabled)
-      return;
+    if (!this.options.adaptiveMutation?.enabled) return;
     const adaptCfg = this.options.adaptiveMutation;
     const every = adaptCfg.adaptEvery ?? 1;
-    if (!(every <= 1 || this.generation % every === 0))
-      return;
-    const scored = this.population.filter((g) => typeof g.score === "number");
+    if (!(every <= 1 || this.generation % every === 0)) return;
+    const scored = this.population.filter((g) => typeof g.score === 'number');
     scored.sort((a, b) => (a.score || 0) - (b.score || 0));
     const mid = Math.floor(scored.length / 2);
     const topHalf = scored.slice(mid);
@@ -10229,33 +11415,34 @@
     const sigmaBase = (adaptCfg.sigma ?? 0.05) * 1.5;
     const minR = adaptCfg.minRate ?? 0.01;
     const maxR = adaptCfg.maxRate ?? 1;
-    const strategy = adaptCfg.strategy || "twoTier";
-    let anyUp = false, anyDown = false;
+    const strategy = adaptCfg.strategy || 'twoTier';
+    let anyUp = false,
+      anyDown = false;
     for (let index = 0; index < this.population.length; index++) {
       const genome = this.population[index];
-      if (genome._mutRate === void 0)
-        continue;
+      if (genome._mutRate === void 0) continue;
       let rate = genome._mutRate;
       let delta = this._getRNG()() * 2 - 1;
       delta *= sigmaBase;
-      if (strategy === "twoTier") {
+      if (strategy === 'twoTier') {
         if (topHalf.length === 0 || bottomHalf.length === 0)
           delta = index % 2 === 0 ? Math.abs(delta) : -Math.abs(delta);
-        else if (topHalf.includes(genome))
-          delta = -Math.abs(delta);
-        else if (bottomHalf.includes(genome))
-          delta = Math.abs(delta);
-      } else if (strategy === "exploreLow") {
-        delta = bottomHalf.includes(genome) ? Math.abs(delta * 1.5) : -Math.abs(delta * 0.5);
-      } else if (strategy === "anneal") {
-        const progress = Math.min(1, this.generation / (50 + this.population.length));
+        else if (topHalf.includes(genome)) delta = -Math.abs(delta);
+        else if (bottomHalf.includes(genome)) delta = Math.abs(delta);
+      } else if (strategy === 'exploreLow') {
+        delta = bottomHalf.includes(genome)
+          ? Math.abs(delta * 1.5)
+          : -Math.abs(delta * 0.5);
+      } else if (strategy === 'anneal') {
+        const progress = Math.min(
+          1,
+          this.generation / (50 + this.population.length)
+        );
         delta *= 1 - progress;
       }
       rate += delta;
-      if (rate < minR)
-        rate = minR;
-      if (rate > maxR)
-        rate = maxR;
+      if (rate < minR) rate = minR;
+      if (rate > maxR) rate = maxR;
       if (rate > (this.options.adaptiveMutation.initialRate ?? 0.5))
         anyUp = true;
       if (rate < (this.options.adaptiveMutation.initialRate ?? 0.5))
@@ -10264,41 +11451,38 @@
       if (adaptCfg.adaptAmount) {
         const aSigma = adaptCfg.amountSigma ?? 0.25;
         let aDelta = (this._getRNG()() * 2 - 1) * aSigma;
-        if (strategy === "twoTier") {
+        if (strategy === 'twoTier') {
           if (topHalf.length === 0 || bottomHalf.length === 0)
             aDelta = index % 2 === 0 ? Math.abs(aDelta) : -Math.abs(aDelta);
           else
-            aDelta = bottomHalf.includes(genome) ? Math.abs(aDelta) : -Math.abs(aDelta);
+            aDelta = bottomHalf.includes(genome)
+              ? Math.abs(aDelta)
+              : -Math.abs(aDelta);
         }
         let amt = genome._mutAmount ?? (this.options.mutationAmount || 1);
         amt += aDelta;
         amt = Math.round(amt);
         const minA = adaptCfg.minAmount ?? 1;
         const maxA = adaptCfg.maxAmount ?? 10;
-        if (amt < minA)
-          amt = minA;
-        if (amt > maxA)
-          amt = maxA;
+        if (amt < minA) amt = minA;
+        if (amt > maxA) amt = maxA;
         genome._mutAmount = amt;
       }
     }
-    if (strategy === "twoTier" && !(anyUp && anyDown)) {
+    if (strategy === 'twoTier' && !(anyUp && anyDown)) {
       const baseline = this.options.adaptiveMutation.initialRate ?? 0.5;
       const half = Math.floor(this.population.length / 2);
       for (let i = 0; i < this.population.length; i++) {
         const genome = this.population[i];
-        if (genome._mutRate === void 0)
-          continue;
+        if (genome._mutRate === void 0) continue;
         if (i < half)
           genome._mutRate = Math.min(genome._mutRate + sigmaBase, 1);
-        else
-          genome._mutRate = Math.max(genome._mutRate - sigmaBase, 0.01);
+        else genome._mutRate = Math.max(genome._mutRate - sigmaBase, 0.01);
       }
     }
   }
   function applyOperatorAdaptation() {
-    if (!this.options.operatorAdaptation?.enabled)
-      return;
+    if (!this.options.operatorAdaptation?.enabled) return;
     const decay = this.options.operatorAdaptation.decay ?? 0.9;
     for (const [k, stat] of this._operatorStats.entries()) {
       stat.success *= decay;
@@ -10307,43 +11491,40 @@
     }
   }
   var init_neat_adaptive = __esm({
-    "dist/neat/neat.adaptive.js"() {
-      "use strict";
+    'dist/neat/neat.adaptive.js'() {
+      'use strict';
       init_neat_constants();
-    }
+    },
   });
 
   // dist/neat/neat.lineage.js
   var neat_lineage_exports = {};
   __export(neat_lineage_exports, {
     buildAnc: () => buildAnc,
-    computeAncestorUniqueness: () => computeAncestorUniqueness
+    computeAncestorUniqueness: () => computeAncestorUniqueness,
   });
   function buildAnc(genome) {
     const ancestorSet = /* @__PURE__ */ new Set();
-    if (!Array.isArray(genome._parents))
-      return ancestorSet;
+    if (!Array.isArray(genome._parents)) return ancestorSet;
     const queue = [];
     for (const parentId of genome._parents) {
       queue.push({
         id: parentId,
         depth: 1,
-        genomeRef: this.population.find((gm) => gm._id === parentId)
+        genomeRef: this.population.find((gm) => gm._id === parentId),
       });
     }
     while (queue.length) {
       const current = queue.shift();
-      if (current.depth > ANCESTOR_DEPTH_WINDOW)
-        continue;
-      if (current.id != null)
-        ancestorSet.add(current.id);
+      if (current.depth > ANCESTOR_DEPTH_WINDOW) continue;
+      if (current.id != null) ancestorSet.add(current.id);
       if (current.genomeRef && Array.isArray(current.genomeRef._parents)) {
         for (const parentId of current.genomeRef._parents) {
           queue.push({
             id: parentId,
             // Depth increases as we move one layer further away from the focal genome.
             depth: current.depth + 1,
-            genomeRef: this.population.find((gm) => gm._id === parentId)
+            genomeRef: this.population.find((gm) => gm._id === parentId),
           });
         }
       }
@@ -10354,37 +11535,39 @@
     const buildAncestorSet = buildAnc.bind(this);
     let sampledPairCount = 0;
     let jaccardDistanceSum = 0;
-    const maxSamplePairs = Math.min(MAX_UNIQUENESS_SAMPLE_PAIRS, this.population.length * (this.population.length - 1) / 2);
+    const maxSamplePairs = Math.min(
+      MAX_UNIQUENESS_SAMPLE_PAIRS,
+      (this.population.length * (this.population.length - 1)) / 2
+    );
     for (let t = 0; t < maxSamplePairs; t++) {
-      if (this.population.length < 2)
-        break;
+      if (this.population.length < 2) break;
       const indexA = Math.floor(this._getRNG()() * this.population.length);
       let indexB = Math.floor(this._getRNG()() * this.population.length);
-      if (indexB === indexA)
-        indexB = (indexB + 1) % this.population.length;
+      if (indexB === indexA) indexB = (indexB + 1) % this.population.length;
       const ancestorSetA = buildAncestorSet(this.population[indexA]);
       const ancestorSetB = buildAncestorSet(this.population[indexB]);
-      if (ancestorSetA.size === 0 && ancestorSetB.size === 0)
-        continue;
+      if (ancestorSetA.size === 0 && ancestorSetB.size === 0) continue;
       let intersectionCount = 0;
       for (const id of ancestorSetA)
-        if (ancestorSetB.has(id))
-          intersectionCount++;
-      const unionSize = ancestorSetA.size + ancestorSetB.size - intersectionCount || 1;
+        if (ancestorSetB.has(id)) intersectionCount++;
+      const unionSize =
+        ancestorSetA.size + ancestorSetB.size - intersectionCount || 1;
       const jaccardDistance = 1 - intersectionCount / unionSize;
       jaccardDistanceSum += jaccardDistance;
       sampledPairCount++;
     }
-    const ancestorUniqueness = sampledPairCount ? +(jaccardDistanceSum / sampledPairCount).toFixed(3) : 0;
+    const ancestorUniqueness = sampledPairCount
+      ? +(jaccardDistanceSum / sampledPairCount).toFixed(3)
+      : 0;
     return ancestorUniqueness;
   }
   var ANCESTOR_DEPTH_WINDOW, MAX_UNIQUENESS_SAMPLE_PAIRS;
   var init_neat_lineage = __esm({
-    "dist/neat/neat.lineage.js"() {
-      "use strict";
+    'dist/neat/neat.lineage.js'() {
+      'use strict';
       ANCESTOR_DEPTH_WINDOW = 4;
       MAX_UNIQUENESS_SAMPLE_PAIRS = 30;
-    }
+    },
   });
 
   // dist/neat/neat.telemetry.js
@@ -10394,36 +11577,33 @@
     buildTelemetryEntry: () => buildTelemetryEntry,
     computeDiversityStats: () => computeDiversityStats,
     recordTelemetryEntry: () => recordTelemetryEntry,
-    structuralEntropy: () => structuralEntropy
+    structuralEntropy: () => structuralEntropy,
   });
   function applyTelemetrySelect(entry) {
-    if (!this._telemetrySelect || !this._telemetrySelect.size)
-      return entry;
+    if (!this._telemetrySelect || !this._telemetrySelect.size) return entry;
     const keep = this._telemetrySelect;
     const core = { gen: entry.gen, best: entry.best, species: entry.species };
     for (const key of Object.keys(entry)) {
-      if (key in core)
-        continue;
-      if (!keep.has(key))
-        delete entry[key];
+      if (key in core) continue;
+      if (!keep.has(key)) delete entry[key];
     }
     return Object.assign(entry, core);
   }
   function structuralEntropy(graph) {
     const anyG = graph;
-    if (anyG._entropyGen === this.generation && typeof anyG._entropyVal === "number")
+    if (
+      anyG._entropyGen === this.generation &&
+      typeof anyG._entropyVal === 'number'
+    )
       return anyG._entropyVal;
     const degreeCounts = {};
-    for (const node of graph.nodes)
-      degreeCounts[node.geneId] = 0;
+    for (const node of graph.nodes) degreeCounts[node.geneId] = 0;
     for (const conn of graph.connections)
       if (conn.enabled) {
         const fromId = conn.from.geneId;
         const toId = conn.to.geneId;
-        if (degreeCounts[fromId] !== void 0)
-          degreeCounts[fromId]++;
-        if (degreeCounts[toId] !== void 0)
-          degreeCounts[toId]++;
+        if (degreeCounts[fromId] !== void 0) degreeCounts[fromId]++;
+        if (degreeCounts[toId] !== void 0) degreeCounts[toId]++;
       }
     const degreeHistogram = {};
     const nodeCount = graph.nodes.length || 1;
@@ -10434,23 +11614,19 @@
     let entropy = 0;
     for (const k in degreeHistogram) {
       const p = degreeHistogram[k] / nodeCount;
-      if (p > 0)
-        entropy -= p * Math.log(p + EPSILON);
+      if (p > 0) entropy -= p * Math.log(p + EPSILON);
     }
     anyG._entropyGen = this.generation;
     anyG._entropyVal = entropy;
     return entropy;
   }
   function computeDiversityStats() {
-    if (!this.options.diversityMetrics?.enabled)
-      return;
+    if (!this.options.diversityMetrics?.enabled) return;
     if (this.options.fastMode && !this._fastModeTuned) {
       const dm = this.options.diversityMetrics;
       if (dm) {
-        if (dm.pairSample == null)
-          dm.pairSample = 20;
-        if (dm.graphletSample == null)
-          dm.graphletSample = 30;
+        if (dm.pairSample == null) dm.pairSample = 20;
+        if (dm.graphletSample == null) dm.graphletSample = 30;
       }
       if (this.options.novelty?.enabled && this.options.novelty.k == null)
         this.options.novelty.k = 5;
@@ -10464,29 +11640,33 @@
     let compatSq = 0;
     let compatCount = 0;
     for (let iter = 0; iter < pairSample; iter++) {
-      if (popSize < 2)
-        break;
+      if (popSize < 2) break;
       const i = Math.floor(this._getRNG()() * popSize);
       let j = Math.floor(this._getRNG()() * popSize);
-      if (j === i)
-        j = (j + 1) % popSize;
+      if (j === i) j = (j + 1) % popSize;
       const d = this._compatibilityDistance(population[i], population[j]);
       compatSum += d;
       compatSq += d * d;
       compatCount++;
     }
     const meanCompat = compatCount ? compatSum / compatCount : 0;
-    const varCompat = compatCount ? Math.max(0, compatSq / compatCount - meanCompat * meanCompat) : 0;
+    const varCompat = compatCount
+      ? Math.max(0, compatSq / compatCount - meanCompat * meanCompat)
+      : 0;
     const entropies = population.map((g) => this._structuralEntropy(g));
-    const meanEntropy = entropies.reduce((a, b) => a + b, 0) / (entropies.length || 1);
-    const varEntropy = entropies.length ? entropies.reduce((a, b) => a + (b - meanEntropy) * (b - meanEntropy), 0) / entropies.length : 0;
+    const meanEntropy =
+      entropies.reduce((a, b) => a + b, 0) / (entropies.length || 1);
+    const varEntropy = entropies.length
+      ? entropies.reduce(
+          (a, b) => a + (b - meanEntropy) * (b - meanEntropy),
+          0
+        ) / entropies.length
+      : 0;
     const motifCounts = [0, 0, 0, 0];
     for (let iter = 0; iter < graphletSample; iter++) {
       const g = population[Math.floor(this._getRNG()() * popSize)];
-      if (!g)
-        break;
-      if (g.nodes.length < 3)
-        continue;
+      if (!g) break;
+      if (g.nodes.length < 3) continue;
       const selectedIdxs = /* @__PURE__ */ new Set();
       while (selectedIdxs.size < 3)
         selectedIdxs.add(Math.floor(this._getRNG()() * g.nodes.length));
@@ -10497,16 +11677,14 @@
           if (selectedNodes.includes(c.from) && selectedNodes.includes(c.to))
             edges++;
         }
-      if (edges > 3)
-        edges = 3;
+      if (edges > 3) edges = 3;
       motifCounts[edges]++;
     }
     const totalMotifs = motifCounts.reduce((a, b) => a + b, 0) || 1;
     let graphletEntropy = 0;
     for (let k = 0; k < motifCounts.length; k++) {
       const p = motifCounts[k] / totalMotifs;
-      if (p > 0)
-        graphletEntropy -= p * Math.log(p);
+      if (p > 0) graphletEntropy -= p * Math.log(p);
     }
     let lineageMeanDepth = 0;
     let lineageMeanPairDist = 0;
@@ -10515,13 +11693,15 @@
       lineageMeanDepth = depths.reduce((a, b) => a + b, 0) / popSize;
       let lineagePairSum = 0;
       let lineagePairN = 0;
-      for (let iter = 0; iter < Math.min(pairSample, popSize * (popSize - 1) / 2); iter++) {
-        if (popSize < 2)
-          break;
+      for (
+        let iter = 0;
+        iter < Math.min(pairSample, (popSize * (popSize - 1)) / 2);
+        iter++
+      ) {
+        if (popSize < 2) break;
         const i = Math.floor(this._getRNG()() * popSize);
         let j = Math.floor(this._getRNG()() * popSize);
-        if (j === i)
-          j = (j + 1) % popSize;
+        if (j === i) j = (j + 1) % popSize;
         lineagePairSum += Math.abs(depths[i] - depths[j]);
         lineagePairN++;
       }
@@ -10534,52 +11714,62 @@
       varEntropy,
       graphletEntropy,
       lineageMeanDepth,
-      lineageMeanPairDist
+      lineageMeanPairDist,
     };
   }
   function recordTelemetryEntry(entry) {
     try {
       applyTelemetrySelect.call(this, entry);
-    } catch {
-    }
-    if (!this._telemetry)
-      this._telemetry = [];
+    } catch {}
+    if (!this._telemetry) this._telemetry = [];
     this._telemetry.push(entry);
     try {
-      if (this.options.telemetryStream?.enabled && this.options.telemetryStream.onEntry)
+      if (
+        this.options.telemetryStream?.enabled &&
+        this.options.telemetryStream.onEntry
+      )
         this.options.telemetryStream.onEntry(entry);
-    } catch {
-    }
-    if (this._telemetry.length > 500)
-      this._telemetry.shift();
+    } catch {}
+    if (this._telemetry.length > 500) this._telemetry.shift();
   }
   function buildTelemetryEntry(fittest) {
     const gen = this.generation;
     let hyperVolumeProxy = 0;
     if (this.options.multiObjective?.enabled) {
-      const complexityMetric = this.options.multiObjective.complexityMetric || "connections";
-      const primaryObjectiveScores = this.population.map((genome) => genome.score || 0);
+      const complexityMetric =
+        this.options.multiObjective.complexityMetric || 'connections';
+      const primaryObjectiveScores = this.population.map(
+        (genome) => genome.score || 0
+      );
       const minPrimaryScore = Math.min(...primaryObjectiveScores);
       const maxPrimaryScore = Math.max(...primaryObjectiveScores);
       const paretoFrontSizes = [];
       for (let r = 0; r < 5; r++) {
-        const size = this.population.filter((g) => (g._moRank ?? 0) === r).length;
-        if (!size)
-          break;
+        const size = this.population.filter((g) => (g._moRank ?? 0) === r)
+          .length;
+        if (!size) break;
         paretoFrontSizes.push(size);
       }
       for (const genome of this.population) {
         const rank = genome._moRank ?? 0;
-        if (rank !== 0)
-          continue;
-        const normalizedScore = maxPrimaryScore > minPrimaryScore ? ((genome.score || 0) - minPrimaryScore) / (maxPrimaryScore - minPrimaryScore) : 0;
-        const genomeComplexity = complexityMetric === "nodes" ? genome.nodes.length : genome.connections.length;
+        if (rank !== 0) continue;
+        const normalizedScore =
+          maxPrimaryScore > minPrimaryScore
+            ? ((genome.score || 0) - minPrimaryScore) /
+              (maxPrimaryScore - minPrimaryScore)
+            : 0;
+        const genomeComplexity =
+          complexityMetric === 'nodes'
+            ? genome.nodes.length
+            : genome.connections.length;
         hyperVolumeProxy += normalizedScore * (1 / (genomeComplexity + 1));
       }
-      const operatorStatsSnapshot = Array.from(this._operatorStats.entries()).map(([opName, stats]) => ({
+      const operatorStatsSnapshot = Array.from(
+        this._operatorStats.entries()
+      ).map(([opName, stats]) => ({
         op: opName,
         succ: stats.success,
-        att: stats.attempts
+        att: stats.attempts,
       }));
       const entry2 = {
         gen,
@@ -10588,25 +11778,32 @@
         hyper: hyperVolumeProxy,
         fronts: paretoFrontSizes,
         diversity: this._diversityStats,
-        ops: operatorStatsSnapshot
+        ops: operatorStatsSnapshot,
       };
-      if (!entry2.objImportance)
-        entry2.objImportance = {};
+      if (!entry2.objImportance) entry2.objImportance = {};
       if (this._lastObjImportance)
         entry2.objImportance = this._lastObjImportance;
       if (this._objectiveAges?.size) {
-        entry2.objAges = Array.from(this._objectiveAges.entries()).reduce((a, kv) => {
-          a[kv[0]] = kv[1];
-          return a;
-        }, {});
+        entry2.objAges = Array.from(this._objectiveAges.entries()).reduce(
+          (a, kv) => {
+            a[kv[0]] = kv[1];
+            return a;
+          },
+          {}
+        );
       }
-      if (this._pendingObjectiveAdds?.length || this._pendingObjectiveRemoves?.length) {
+      if (
+        this._pendingObjectiveAdds?.length ||
+        this._pendingObjectiveRemoves?.length
+      ) {
         entry2.objEvents = [];
         for (const k of this._pendingObjectiveAdds)
-          entry2.objEvents.push({ type: "add", key: k });
+          entry2.objEvents.push({ type: 'add', key: k });
         for (const k of this._pendingObjectiveRemoves)
-          entry2.objEvents.push({ type: "remove", key: k });
-        this._objectiveEvents.push(...entry2.objEvents.map((e) => ({ gen, type: e.type, key: e.key })));
+          entry2.objEvents.push({ type: 'remove', key: k });
+        this._objectiveEvents.push(
+          ...entry2.objEvents.map((e) => ({ gen, type: e.type, key: e.key }))
+        );
         this._pendingObjectiveAdds = [];
         this._pendingObjectiveRemoves = [];
       }
@@ -10614,46 +11811,57 @@
         entry2.speciesAlloc = this._lastOffspringAlloc.slice();
       try {
         entry2.objectives = this._getObjectives().map((o) => o.key);
-      } catch {
-      }
+      } catch {}
       if (this.options.rngState && this._rngState !== void 0)
         entry2.rng = this._rngState;
       if (this._lineageEnabled) {
         const bestGenome = this.population[0];
         const depths = this.population.map((g) => g._depth ?? 0);
-        this._lastMeanDepth = depths.reduce((a, b) => a + b, 0) / (depths.length || 1);
-        const { computeAncestorUniqueness: computeAncestorUniqueness2 } = (init_neat_lineage(), __toCommonJS(neat_lineage_exports));
+        this._lastMeanDepth =
+          depths.reduce((a, b) => a + b, 0) / (depths.length || 1);
+        const { computeAncestorUniqueness: computeAncestorUniqueness2 } =
+          (init_neat_lineage(), __toCommonJS(neat_lineage_exports));
         const ancestorUniqueness = computeAncestorUniqueness2.call(this);
         entry2.lineage = {
-          parents: Array.isArray(bestGenome._parents) ? bestGenome._parents.slice() : [],
+          parents: Array.isArray(bestGenome._parents)
+            ? bestGenome._parents.slice()
+            : [],
           depthBest: bestGenome._depth ?? 0,
           meanDepth: +this._lastMeanDepth.toFixed(2),
           inbreeding: this._prevInbreedingCount,
-          ancestorUniq: ancestorUniqueness
+          ancestorUniq: ancestorUniqueness,
         };
       }
-      if (this.options.telemetry?.hypervolume && this.options.multiObjective?.enabled)
+      if (
+        this.options.telemetry?.hypervolume &&
+        this.options.multiObjective?.enabled
+      )
         entry2.hv = +hyperVolumeProxy.toFixed(4);
       if (this.options.telemetry?.complexity) {
         const nodesArr = this.population.map((g) => g.nodes.length);
         const connsArr = this.population.map((g) => g.connections.length);
-        const meanNodes = nodesArr.reduce((a, b) => a + b, 0) / (nodesArr.length || 1);
-        const meanConns = connsArr.reduce((a, b) => a + b, 0) / (connsArr.length || 1);
+        const meanNodes =
+          nodesArr.reduce((a, b) => a + b, 0) / (nodesArr.length || 1);
+        const meanConns =
+          connsArr.reduce((a, b) => a + b, 0) / (connsArr.length || 1);
         const maxNodes = nodesArr.length ? Math.max(...nodesArr) : 0;
         const maxConns = connsArr.length ? Math.max(...connsArr) : 0;
         const enabledRatios = this.population.map((g) => {
-          let enabled = 0, disabled = 0;
+          let enabled = 0,
+            disabled = 0;
           for (const c of g.connections) {
-            if (c.enabled === false)
-              disabled++;
-            else
-              enabled++;
+            if (c.enabled === false) disabled++;
+            else enabled++;
           }
           return enabled + disabled ? enabled / (enabled + disabled) : 0;
         });
-        const meanEnabledRatio = enabledRatios.reduce((a, b) => a + b, 0) / (enabledRatios.length || 1);
-        const growthNodes = this._lastMeanNodes !== void 0 ? meanNodes - this._lastMeanNodes : 0;
-        const growthConns = this._lastMeanConns !== void 0 ? meanConns - this._lastMeanConns : 0;
+        const meanEnabledRatio =
+          enabledRatios.reduce((a, b) => a + b, 0) /
+          (enabledRatios.length || 1);
+        const growthNodes =
+          this._lastMeanNodes !== void 0 ? meanNodes - this._lastMeanNodes : 0;
+        const growthConns =
+          this._lastMeanConns !== void 0 ? meanConns - this._lastMeanConns : 0;
         this._lastMeanNodes = meanNodes;
         this._lastMeanConns = meanConns;
         entry2.complexity = {
@@ -10665,20 +11873,22 @@
           growthNodes: +growthNodes.toFixed(2),
           growthConns: +growthConns.toFixed(2),
           budgetMaxNodes: this.options.maxNodes,
-          budgetMaxConns: this.options.maxConns
+          budgetMaxConns: this.options.maxConns,
         };
       }
       if (this.options.telemetry?.performance)
         entry2.perf = {
           evalMs: this._lastEvalDuration,
-          evolveMs: this._lastEvolveDuration
+          evolveMs: this._lastEvolveDuration,
         };
       return entry2;
     }
-    const operatorStatsSnapshotMono = Array.from(this._operatorStats.entries()).map(([opName, stats]) => ({
+    const operatorStatsSnapshotMono = Array.from(
+      this._operatorStats.entries()
+    ).map(([opName, stats]) => ({
       op: opName,
       succ: stats.success,
-      att: stats.attempts
+      att: stats.attempts,
     }));
     const entry = {
       gen,
@@ -10687,22 +11897,29 @@
       hyper: hyperVolumeProxy,
       diversity: this._diversityStats,
       ops: operatorStatsSnapshotMono,
-      objImportance: {}
+      objImportance: {},
     };
-    if (this._lastObjImportance)
-      entry.objImportance = this._lastObjImportance;
+    if (this._lastObjImportance) entry.objImportance = this._lastObjImportance;
     if (this._objectiveAges?.size)
-      entry.objAges = Array.from(this._objectiveAges.entries()).reduce((a, kv) => {
-        a[kv[0]] = kv[1];
-        return a;
-      }, {});
-    if (this._pendingObjectiveAdds?.length || this._pendingObjectiveRemoves?.length) {
+      entry.objAges = Array.from(this._objectiveAges.entries()).reduce(
+        (a, kv) => {
+          a[kv[0]] = kv[1];
+          return a;
+        },
+        {}
+      );
+    if (
+      this._pendingObjectiveAdds?.length ||
+      this._pendingObjectiveRemoves?.length
+    ) {
       entry.objEvents = [];
       for (const k of this._pendingObjectiveAdds)
-        entry.objEvents.push({ type: "add", key: k });
+        entry.objEvents.push({ type: 'add', key: k });
       for (const k of this._pendingObjectiveRemoves)
-        entry.objEvents.push({ type: "remove", key: k });
-      this._objectiveEvents.push(...entry.objEvents.map((e) => ({ gen, type: e.type, key: e.key })));
+        entry.objEvents.push({ type: 'remove', key: k });
+      this._objectiveEvents.push(
+        ...entry.objEvents.map((e) => ({ gen, type: e.type, key: e.key }))
+      );
       this._pendingObjectiveAdds = [];
       this._pendingObjectiveRemoves = [];
     }
@@ -10710,69 +11927,81 @@
       entry.speciesAlloc = this._lastOffspringAlloc.slice();
     try {
       entry.objectives = this._getObjectives().map((o) => o.key);
-    } catch {
-    }
+    } catch {}
     if (this.options.rngState && this._rngState !== void 0)
       entry.rng = this._rngState;
     if (this._lineageEnabled) {
       const bestGenome = this.population[0];
       const depths = this.population.map((g) => g._depth ?? 0);
-      this._lastMeanDepth = depths.reduce((a, b) => a + b, 0) / (depths.length || 1);
-      const { buildAnc: buildAnc2 } = (init_neat_lineage(), __toCommonJS(neat_lineage_exports));
+      this._lastMeanDepth =
+        depths.reduce((a, b) => a + b, 0) / (depths.length || 1);
+      const { buildAnc: buildAnc2 } =
+        (init_neat_lineage(), __toCommonJS(neat_lineage_exports));
       let sampledPairs = 0;
       let jaccardSum = 0;
-      const samplePairs = Math.min(30, this.population.length * (this.population.length - 1) / 2);
+      const samplePairs = Math.min(
+        30,
+        (this.population.length * (this.population.length - 1)) / 2
+      );
       for (let t = 0; t < samplePairs; t++) {
-        if (this.population.length < 2)
-          break;
+        if (this.population.length < 2) break;
         const i = Math.floor(this._getRNG()() * this.population.length);
         let j = Math.floor(this._getRNG()() * this.population.length);
-        if (j === i)
-          j = (j + 1) % this.population.length;
+        if (j === i) j = (j + 1) % this.population.length;
         const ancestorsA = buildAnc2.call(this, this.population[i]);
         const ancestorsB = buildAnc2.call(this, this.population[j]);
-        if (ancestorsA.size === 0 && ancestorsB.size === 0)
-          continue;
+        if (ancestorsA.size === 0 && ancestorsB.size === 0) continue;
         let intersectionCount = 0;
         for (const id of ancestorsA)
-          if (ancestorsB.has(id))
-            intersectionCount++;
-        const union = ancestorsA.size + ancestorsB.size - intersectionCount || 1;
+          if (ancestorsB.has(id)) intersectionCount++;
+        const union =
+          ancestorsA.size + ancestorsB.size - intersectionCount || 1;
         const jaccardDistance = 1 - intersectionCount / union;
         jaccardSum += jaccardDistance;
         sampledPairs++;
       }
-      const ancestorUniqueness = sampledPairs ? +(jaccardSum / sampledPairs).toFixed(3) : 0;
+      const ancestorUniqueness = sampledPairs
+        ? +(jaccardSum / sampledPairs).toFixed(3)
+        : 0;
       entry.lineage = {
-        parents: Array.isArray(bestGenome._parents) ? bestGenome._parents.slice() : [],
+        parents: Array.isArray(bestGenome._parents)
+          ? bestGenome._parents.slice()
+          : [],
         depthBest: bestGenome._depth ?? 0,
         meanDepth: +this._lastMeanDepth.toFixed(2),
         inbreeding: this._prevInbreedingCount,
-        ancestorUniq: ancestorUniqueness
+        ancestorUniq: ancestorUniqueness,
       };
     }
-    if (this.options.telemetry?.hypervolume && this.options.multiObjective?.enabled)
+    if (
+      this.options.telemetry?.hypervolume &&
+      this.options.multiObjective?.enabled
+    )
       entry.hv = +hyperVolumeProxy.toFixed(4);
     if (this.options.telemetry?.complexity) {
       const nodesArr = this.population.map((g) => g.nodes.length);
       const connsArr = this.population.map((g) => g.connections.length);
-      const meanNodes = nodesArr.reduce((a, b) => a + b, 0) / (nodesArr.length || 1);
-      const meanConns = connsArr.reduce((a, b) => a + b, 0) / (connsArr.length || 1);
+      const meanNodes =
+        nodesArr.reduce((a, b) => a + b, 0) / (nodesArr.length || 1);
+      const meanConns =
+        connsArr.reduce((a, b) => a + b, 0) / (connsArr.length || 1);
       const maxNodes = nodesArr.length ? Math.max(...nodesArr) : 0;
       const maxConns = connsArr.length ? Math.max(...connsArr) : 0;
       const enabledRatios = this.population.map((g) => {
-        let en = 0, dis = 0;
+        let en = 0,
+          dis = 0;
         for (const c of g.connections) {
-          if (c.enabled === false)
-            dis++;
-          else
-            en++;
+          if (c.enabled === false) dis++;
+          else en++;
         }
         return en + dis ? en / (en + dis) : 0;
       });
-      const meanEnabledRatio = enabledRatios.reduce((a, b) => a + b, 0) / (enabledRatios.length || 1);
-      const growthNodes = this._lastMeanNodes !== void 0 ? meanNodes - this._lastMeanNodes : 0;
-      const growthConns = this._lastMeanConns !== void 0 ? meanConns - this._lastMeanConns : 0;
+      const meanEnabledRatio =
+        enabledRatios.reduce((a, b) => a + b, 0) / (enabledRatios.length || 1);
+      const growthNodes =
+        this._lastMeanNodes !== void 0 ? meanNodes - this._lastMeanNodes : 0;
+      const growthConns =
+        this._lastMeanConns !== void 0 ? meanConns - this._lastMeanConns : 0;
       this._lastMeanNodes = meanNodes;
       this._lastMeanConns = meanConns;
       entry.complexity = {
@@ -10784,59 +12013,79 @@
         growthNodes: +growthNodes.toFixed(2),
         growthConns: +growthConns.toFixed(2),
         budgetMaxNodes: this.options.maxNodes,
-        budgetMaxConns: this.options.maxConns
+        budgetMaxConns: this.options.maxConns,
       };
     }
     if (this.options.telemetry?.performance)
       entry.perf = {
         evalMs: this._lastEvalDuration,
-        evolveMs: this._lastEvolveDuration
+        evolveMs: this._lastEvolveDuration,
       };
     return entry;
   }
   var init_neat_telemetry = __esm({
-    "dist/neat/neat.telemetry.js"() {
-      "use strict";
+    'dist/neat/neat.telemetry.js'() {
+      'use strict';
       init_neat_constants();
-    }
+    },
   });
 
   // dist/neat/neat.pruning.js
   var neat_pruning_exports = {};
   __export(neat_pruning_exports, {
     applyAdaptivePruning: () => applyAdaptivePruning,
-    applyEvolutionPruning: () => applyEvolutionPruning
+    applyEvolutionPruning: () => applyEvolutionPruning,
   });
   function applyEvolutionPruning() {
     const evolutionPruningOpts = this.options.evolutionPruning;
-    if (!evolutionPruningOpts || this.generation < (evolutionPruningOpts.startGeneration || 0))
+    if (
+      !evolutionPruningOpts ||
+      this.generation < (evolutionPruningOpts.startGeneration || 0)
+    )
       return;
     const interval = evolutionPruningOpts.interval || 1;
-    if ((this.generation - evolutionPruningOpts.startGeneration) % interval !== 0)
+    if (
+      (this.generation - evolutionPruningOpts.startGeneration) % interval !==
+      0
+    )
       return;
     const rampGenerations = evolutionPruningOpts.rampGenerations || 0;
     let rampFraction = 1;
     if (rampGenerations > 0) {
-      const progressThroughRamp = Math.min(1, Math.max(0, (this.generation - evolutionPruningOpts.startGeneration) / rampGenerations));
+      const progressThroughRamp = Math.min(
+        1,
+        Math.max(
+          0,
+          (this.generation - evolutionPruningOpts.startGeneration) /
+            rampGenerations
+        )
+      );
       rampFraction = progressThroughRamp;
     }
-    const targetSparsityNow = (evolutionPruningOpts.targetSparsity || 0) * rampFraction;
+    const targetSparsityNow =
+      (evolutionPruningOpts.targetSparsity || 0) * rampFraction;
     for (const genome of this.population) {
-      if (genome && typeof genome.pruneToSparsity === "function") {
-        genome.pruneToSparsity(targetSparsityNow, evolutionPruningOpts.method || "magnitude");
+      if (genome && typeof genome.pruneToSparsity === 'function') {
+        genome.pruneToSparsity(
+          targetSparsityNow,
+          evolutionPruningOpts.method || 'magnitude'
+        );
       }
     }
   }
   function applyAdaptivePruning() {
-    if (!this.options.adaptivePruning?.enabled)
-      return;
+    if (!this.options.adaptivePruning?.enabled) return;
     const adaptivePruningOpts = this.options.adaptivePruning;
-    if (this._adaptivePruneLevel === void 0)
-      this._adaptivePruneLevel = 0;
-    const metricName = adaptivePruningOpts.metric || "connections";
-    const meanNodeCount = this.population.reduce((acc, g) => acc + g.nodes.length, 0) / (this.population.length || 1);
-    const meanConnectionCount = this.population.reduce((acc, g) => acc + g.connections.length, 0) / (this.population.length || 1);
-    const currentMetricValue = metricName === "nodes" ? meanNodeCount : meanConnectionCount;
+    if (this._adaptivePruneLevel === void 0) this._adaptivePruneLevel = 0;
+    const metricName = adaptivePruningOpts.metric || 'connections';
+    const meanNodeCount =
+      this.population.reduce((acc, g) => acc + g.nodes.length, 0) /
+      (this.population.length || 1);
+    const meanConnectionCount =
+      this.population.reduce((acc, g) => acc + g.connections.length, 0) /
+      (this.population.length || 1);
+    const currentMetricValue =
+      metricName === 'nodes' ? meanNodeCount : meanConnectionCount;
     if (this._adaptivePruneBaseline === void 0)
       this._adaptivePruneBaseline = currentMetricValue;
     const adaptivePruneBaseline = this._adaptivePruneBaseline;
@@ -10844,66 +12093,88 @@
     const targetRemainingMetric = adaptivePruneBaseline * (1 - desiredSparsity);
     const tolerance = adaptivePruningOpts.tolerance ?? 0.05;
     const adjustRate = adaptivePruningOpts.adjustRate ?? 0.02;
-    const normalizedDifference = (currentMetricValue - targetRemainingMetric) / (adaptivePruneBaseline || 1);
+    const normalizedDifference =
+      (currentMetricValue - targetRemainingMetric) /
+      (adaptivePruneBaseline || 1);
     if (Math.abs(normalizedDifference) > tolerance) {
-      this._adaptivePruneLevel = Math.max(0, Math.min(desiredSparsity, this._adaptivePruneLevel + adjustRate * (normalizedDifference > 0 ? 1 : -1)));
+      this._adaptivePruneLevel = Math.max(
+        0,
+        Math.min(
+          desiredSparsity,
+          this._adaptivePruneLevel +
+            adjustRate * (normalizedDifference > 0 ? 1 : -1)
+        )
+      );
       for (const g of this.population)
-        if (typeof g.pruneToSparsity === "function")
-          g.pruneToSparsity(this._adaptivePruneLevel, "magnitude");
+        if (typeof g.pruneToSparsity === 'function')
+          g.pruneToSparsity(this._adaptivePruneLevel, 'magnitude');
     }
   }
   var init_neat_pruning = __esm({
-    "dist/neat/neat.pruning.js"() {
-      "use strict";
-    }
+    'dist/neat/neat.pruning.js'() {
+      'use strict';
+    },
   });
 
   // dist/neat/neat.evolve.js
   async function evolve() {
-    const startTime = typeof performance !== "undefined" && performance.now ? performance.now() : Date.now();
+    const startTime =
+      typeof performance !== 'undefined' && performance.now
+        ? performance.now()
+        : Date.now();
     if (this.population[this.population.length - 1].score === void 0) {
       await this.evaluate();
     }
     this._objectivesList = void 0;
     try {
-      (init_neat_adaptive(), __toCommonJS(neat_adaptive_exports)).applyComplexityBudget.call(this);
-    } catch {
-    }
+      (init_neat_adaptive(),
+      __toCommonJS(neat_adaptive_exports)).applyComplexityBudget.call(this);
+    } catch {}
     try {
-      (init_neat_adaptive(), __toCommonJS(neat_adaptive_exports)).applyPhasedComplexity.call(this);
-    } catch {
-    }
+      (init_neat_adaptive(),
+      __toCommonJS(neat_adaptive_exports)).applyPhasedComplexity.call(this);
+    } catch {}
     this.sort();
     try {
       const currentBest = this.population[0]?.score;
-      if (typeof currentBest === "number" && (this._bestScoreLastGen === void 0 || currentBest > this._bestScoreLastGen)) {
+      if (
+        typeof currentBest === 'number' &&
+        (this._bestScoreLastGen === void 0 ||
+          currentBest > this._bestScoreLastGen)
+      ) {
         this._bestScoreLastGen = currentBest;
         this._lastGlobalImproveGeneration = this.generation;
       }
-    } catch {
-    }
+    } catch {}
     try {
-      (init_neat_adaptive(), __toCommonJS(neat_adaptive_exports)).applyMinimalCriterionAdaptive.call(this);
-    } catch {
-    }
+      (init_neat_adaptive(),
+      __toCommonJS(neat_adaptive_exports)).applyMinimalCriterionAdaptive.call(
+        this
+      );
+    } catch {}
     try {
       this._computeDiversityStats && this._computeDiversityStats();
-    } catch {
-    }
+    } catch {}
     if (this.options.multiObjective?.enabled) {
       const populationSnapshot = this.population;
       const paretoFronts = fastNonDominated.call(this, populationSnapshot);
       const objectives = this._getObjectives();
       const crowdingDistances = new Array(populationSnapshot.length).fill(0);
-      const objectiveValues = objectives.map((obj) => populationSnapshot.map((genome) => obj.accessor(genome)));
+      const objectiveValues = objectives.map((obj) =>
+        populationSnapshot.map((genome) => obj.accessor(genome))
+      );
       for (const front of paretoFronts) {
-        const frontIndices = front.map((genome) => this.population.indexOf(genome));
+        const frontIndices = front.map((genome) =>
+          this.population.indexOf(genome)
+        );
         if (frontIndices.length < 3) {
-          frontIndices.forEach((i) => crowdingDistances[i] = Infinity);
+          frontIndices.forEach((i) => (crowdingDistances[i] = Infinity));
           continue;
         }
         for (let oi = 0; oi < objectives.length; oi++) {
-          const sortedIdx = [...frontIndices].sort((a, b) => objectiveValues[oi][a] - objectiveValues[oi][b]);
+          const sortedIdx = [...frontIndices].sort(
+            (a, b) => objectiveValues[oi][a] - objectiveValues[oi][b]
+          );
           crowdingDistances[sortedIdx[0]] = Infinity;
           crowdingDistances[sortedIdx[sortedIdx.length - 1]] = Infinity;
           const minV = objectiveValues[oi][sortedIdx[0]];
@@ -10922,8 +12193,7 @@
       this.population.sort((a, b) => {
         const ra = a._moRank ?? 0;
         const rb = b._moRank ?? 0;
-        if (ra !== rb)
-          return ra - rb;
+        if (ra !== rb) return ra - rb;
         const ia = indexMap.get(a);
         const ib = indexMap.get(b);
         return crowdingDistances[ib] - crowdingDistances[ia];
@@ -10936,28 +12206,32 @@
           id: genome._id ?? -1,
           score: genome.score || 0,
           nodes: genome.nodes.length,
-          connections: genome.connections.length
+          connections: genome.connections.length,
         }));
         this._paretoArchive.push({
           gen: this.generation,
           size: first.length,
-          genomes: snapshot
+          genomes: snapshot,
         });
-        if (this._paretoArchive.length > 200)
-          this._paretoArchive.shift();
+        if (this._paretoArchive.length > 200) this._paretoArchive.shift();
         if (objectives.length) {
           const vectors = first.map((genome) => ({
             id: genome._id ?? -1,
-            values: objectives.map((obj) => obj.accessor(genome))
+            values: objectives.map((obj) => obj.accessor(genome)),
           }));
           this._paretoObjectivesArchive.push({ gen: this.generation, vectors });
           if (this._paretoObjectivesArchive.length > 200)
             this._paretoObjectivesArchive.shift();
         }
       }
-      if (this.options.multiObjective?.adaptiveEpsilon?.enabled && paretoFronts.length) {
+      if (
+        this.options.multiObjective?.adaptiveEpsilon?.enabled &&
+        paretoFronts.length
+      ) {
         const cfg = this.options.multiObjective.adaptiveEpsilon;
-        const target = cfg.targetFront ?? Math.max(3, Math.floor(Math.sqrt(this.population.length)));
+        const target =
+          cfg.targetFront ??
+          Math.max(3, Math.floor(Math.sqrt(this.population.length)));
         const adjust = cfg.adjust ?? 2e-3;
         const minE = cfg.min ?? 0;
         const maxE = cfg.max ?? 0.5;
@@ -10965,8 +12239,7 @@
         if (this.generation - this._lastEpsilonAdjustGen >= cooldown) {
           const currentSize = paretoFronts[0].length;
           let eps = this.options.multiObjective.dominanceEpsilon || 0;
-          if (currentSize > target * 1.2)
-            eps = Math.min(maxE, eps + adjust);
+          if (currentSize > target * 1.2) eps = Math.min(maxE, eps + adjust);
           else if (currentSize < target * 0.8)
             eps = Math.max(minE, eps - adjust);
           this.options.multiObjective.dominanceEpsilon = eps;
@@ -10978,94 +12251,101 @@
         const window2 = cfg.window ?? 5;
         const rangeEps = cfg.rangeEps ?? 1e-6;
         const protect = /* @__PURE__ */ new Set([
-          "fitness",
-          "complexity",
-          ...cfg.protect || []
+          'fitness',
+          'complexity',
+          ...(cfg.protect || []),
         ]);
         const objsList = this._getObjectives();
         const ranges = {};
         for (const obj of objsList) {
-          let min = Infinity, max = -Infinity;
+          let min = Infinity,
+            max = -Infinity;
           for (const genome of this.population) {
             const v = obj.accessor(genome);
-            if (v < min)
-              min = v;
-            if (v > max)
-              max = v;
+            if (v < min) min = v;
+            if (v > max) max = v;
           }
           ranges[obj.key] = { min, max };
         }
         const toRemove = [];
         for (const obj of objsList) {
-          if (protect.has(obj.key))
-            continue;
+          if (protect.has(obj.key)) continue;
           const objRange = ranges[obj.key];
           const span = objRange.max - objRange.min;
           if (span < rangeEps) {
             const count = (this._objectiveStale.get(obj.key) || 0) + 1;
             this._objectiveStale.set(obj.key, count);
-            if (count >= window2)
-              toRemove.push(obj.key);
+            if (count >= window2) toRemove.push(obj.key);
           } else {
             this._objectiveStale.set(obj.key, 0);
           }
         }
         if (toRemove.length && this.options.multiObjective?.objectives) {
-          this.options.multiObjective.objectives = this.options.multiObjective.objectives.filter((obj) => !toRemove.includes(obj.key));
+          this.options.multiObjective.objectives = this.options.multiObjective.objectives.filter(
+            (obj) => !toRemove.includes(obj.key)
+          );
           this._objectivesList = void 0;
         }
       }
     }
     try {
-      (init_neat_adaptive(), __toCommonJS(neat_adaptive_exports)).applyAncestorUniqAdaptive.call(this);
-    } catch {
-    }
+      (init_neat_adaptive(),
+      __toCommonJS(neat_adaptive_exports)).applyAncestorUniqAdaptive.call(this);
+    } catch {}
     if (this.options.speciation) {
       try {
         this._speciate();
-      } catch {
-      }
+      } catch {}
       try {
         this._applyFitnessSharing();
-      } catch {
-      }
+      } catch {}
       try {
         const opts = this.options;
         if (opts.autoCompatTuning?.enabled) {
-          const tgt = opts.autoCompatTuning.target ?? opts.targetSpecies ?? Math.max(2, Math.round(Math.sqrt(this.population.length)));
+          const tgt =
+            opts.autoCompatTuning.target ??
+            opts.targetSpecies ??
+            Math.max(2, Math.round(Math.sqrt(this.population.length)));
           const obs = this._species.length || 1;
           const err = tgt - obs;
           const rate = opts.autoCompatTuning.adjustRate ?? 0.01;
           const minC = opts.autoCompatTuning.minCoeff ?? 0.1;
           const maxC = opts.autoCompatTuning.maxCoeff ?? 5;
           let factor = 1 - rate * Math.sign(err);
-          if (err === 0)
-            factor = 1 + (this._getRNG()() - 0.5) * rate * 0.5;
-          opts.excessCoeff = Math.min(maxC, Math.max(minC, opts.excessCoeff * factor));
-          opts.disjointCoeff = Math.min(maxC, Math.max(minC, opts.disjointCoeff * factor));
+          if (err === 0) factor = 1 + (this._getRNG()() - 0.5) * rate * 0.5;
+          opts.excessCoeff = Math.min(
+            maxC,
+            Math.max(minC, opts.excessCoeff * factor)
+          );
+          opts.disjointCoeff = Math.min(
+            maxC,
+            Math.max(minC, opts.disjointCoeff * factor)
+          );
         }
-      } catch {
-      }
+      } catch {}
       this.sort();
       try {
         if (this.options.speciesAllocation?.extendedHistory) {
         } else {
-          if (!this._speciesHistory || this._speciesHistory.length === 0 || this._speciesHistory[this._speciesHistory.length - 1].generation !== this.generation) {
+          if (
+            !this._speciesHistory ||
+            this._speciesHistory.length === 0 ||
+            this._speciesHistory[this._speciesHistory.length - 1].generation !==
+              this.generation
+          ) {
             this._speciesHistory.push({
               generation: this.generation,
               stats: this._species.map((species) => ({
                 id: species.id,
                 size: species.members.length,
                 best: species.bestScore,
-                lastImproved: species.lastImproved
-              }))
+                lastImproved: species.lastImproved,
+              })),
             });
-            if (this._speciesHistory.length > 200)
-              this._speciesHistory.shift();
+            if (this._speciesHistory.length > 200) this._speciesHistory.shift();
           }
         }
-      } catch {
-      }
+      } catch {}
     }
     const fittest = Network.fromJSON(this.population[0].toJSON());
     fittest.score = this.population[0].score;
@@ -11077,36 +12357,64 @@
         if (dyn?.enabled) {
           const addC = dyn.addComplexityAt ?? Infinity;
           const addE = dyn.addEntropyAt ?? Infinity;
-          if (this.generation + 1 >= addC && !currentObjKeys.includes("complexity")) {
-            this.registerObjective("complexity", "min", (genome) => genome.connections.length);
-            this._pendingObjectiveAdds.push("complexity");
+          if (
+            this.generation + 1 >= addC &&
+            !currentObjKeys.includes('complexity')
+          ) {
+            this.registerObjective(
+              'complexity',
+              'min',
+              (genome) => genome.connections.length
+            );
+            this._pendingObjectiveAdds.push('complexity');
           }
-          if (this.generation + 1 >= addE && !currentObjKeys.includes("entropy")) {
-            this.registerObjective("entropy", "max", (genome) => this._structuralEntropy(genome));
-            this._pendingObjectiveAdds.push("entropy");
+          if (
+            this.generation + 1 >= addE &&
+            !currentObjKeys.includes('entropy')
+          ) {
+            this.registerObjective('entropy', 'max', (genome) =>
+              this._structuralEntropy(genome)
+            );
+            this._pendingObjectiveAdds.push('entropy');
           }
-          if (currentObjKeys.includes("entropy") && dyn.dropEntropyOnStagnation != null) {
+          if (
+            currentObjKeys.includes('entropy') &&
+            dyn.dropEntropyOnStagnation != null
+          ) {
             const stagnGen = dyn.dropEntropyOnStagnation;
             if (this.generation >= stagnGen && !this._entropyDropped) {
               if (this.options.multiObjective?.objectives) {
-                this.options.multiObjective.objectives = this.options.multiObjective.objectives.filter((obj) => obj.key !== "entropy");
+                this.options.multiObjective.objectives = this.options.multiObjective.objectives.filter(
+                  (obj) => obj.key !== 'entropy'
+                );
                 this._objectivesList = void 0;
-                this._pendingObjectiveRemoves.push("entropy");
+                this._pendingObjectiveRemoves.push('entropy');
                 this._entropyDropped = this.generation;
               }
             }
-          } else if (!currentObjKeys.includes("entropy") && this._entropyDropped && dyn.readdEntropyAfter != null) {
-            if (this.generation - this._entropyDropped >= dyn.readdEntropyAfter) {
-              this.registerObjective("entropy", "max", (genome) => this._structuralEntropy(genome));
-              this._pendingObjectiveAdds.push("entropy");
+          } else if (
+            !currentObjKeys.includes('entropy') &&
+            this._entropyDropped &&
+            dyn.readdEntropyAfter != null
+          ) {
+            if (
+              this.generation - this._entropyDropped >=
+              dyn.readdEntropyAfter
+            ) {
+              this.registerObjective('entropy', 'max', (genome) =>
+                this._structuralEntropy(genome)
+              );
+              this._pendingObjectiveAdds.push('entropy');
               this._entropyDropped = void 0;
             }
           }
         } else if (this.options.multiObjective.autoEntropy) {
           const addAt = 3;
-          if (this.generation >= addAt && !currentObjKeys.includes("entropy")) {
-            this.registerObjective("entropy", "max", (genome) => this._structuralEntropy(genome));
-            this._pendingObjectiveAdds.push("entropy");
+          if (this.generation >= addAt && !currentObjKeys.includes('entropy')) {
+            this.registerObjective('entropy', 'max', (genome) =>
+              this._structuralEntropy(genome)
+            );
+            this._pendingObjectiveAdds.push('entropy');
           }
         }
       }
@@ -11114,20 +12422,26 @@
         this._objectiveAges.set(k, (this._objectiveAges.get(k) || 0) + 1);
       for (const added of this._pendingObjectiveAdds)
         this._objectiveAges.set(added, 0);
-    } catch {
-    }
+    } catch {}
     try {
       const mo = this.options.multiObjective;
-      if (mo?.enabled && mo.pruneInactive && mo.pruneInactive.enabled === false) {
+      if (
+        mo?.enabled &&
+        mo.pruneInactive &&
+        mo.pruneInactive.enabled === false
+      ) {
         const keys = this._getObjectives().map((obj) => obj.key);
-        if (keys.includes("fitness") && keys.length > 1 && !this._fitnessSuppressedOnce) {
+        if (
+          keys.includes('fitness') &&
+          keys.length > 1 &&
+          !this._fitnessSuppressedOnce
+        ) {
           this._suppressFitnessObjective = true;
           this._fitnessSuppressedOnce = true;
           this._objectivesList = void 0;
         }
       }
-    } catch {
-    }
+    } catch {}
     let objImportance = null;
     try {
       const objsList = this._getObjectives();
@@ -11139,15 +12453,17 @@
           const min = Math.min(...vals);
           const max = Math.max(...vals);
           const mean = vals.reduce((a, b) => a + b, 0) / vals.length;
-          const varV = vals.reduce((a, b) => a + (b - mean) * (b - mean), 0) / (vals.length || 1);
+          const varV =
+            vals.reduce((a, b) => a + (b - mean) * (b - mean), 0) /
+            (vals.length || 1);
           objImportance[obj.key] = { range: max - min, var: varV };
         }
         this._lastObjImportance = objImportance;
       }
-    } catch {
-    }
+    } catch {}
     if (this.options.telemetry?.enabled || true) {
-      const telemetry = (init_neat_telemetry(), __toCommonJS(neat_telemetry_exports));
+      const telemetry =
+        (init_neat_telemetry(), __toCommonJS(neat_telemetry_exports));
       const entry = telemetry.buildTelemetryEntry.call(this, fittest);
       telemetry.recordTelemetryEntry.call(this, entry);
     }
@@ -11156,22 +12472,32 @@
       this._lastGlobalImproveGeneration = this.generation;
     }
     const newPopulation = [];
-    const elitismCount = Math.max(0, Math.min(this.options.elitism || 0, this.population.length));
+    const elitismCount = Math.max(
+      0,
+      Math.min(this.options.elitism || 0, this.population.length)
+    );
     for (let i = 0; i < elitismCount; i++) {
       const elite = this.population[i];
-      if (elite)
-        newPopulation.push(elite);
+      if (elite) newPopulation.push(elite);
     }
     const desiredPop = Math.max(0, this.options.popsize || 0);
-    const remainingSlotsAfterElites = Math.max(0, desiredPop - newPopulation.length);
-    const provenanceCount = Math.max(0, Math.min(this.options.provenance || 0, remainingSlotsAfterElites));
+    const remainingSlotsAfterElites = Math.max(
+      0,
+      desiredPop - newPopulation.length
+    );
+    const provenanceCount = Math.max(
+      0,
+      Math.min(this.options.provenance || 0, remainingSlotsAfterElites)
+    );
     for (let i = 0; i < provenanceCount; i++) {
       if (this.options.network) {
         newPopulation.push(Network.fromJSON(this.options.network.toJSON()));
       } else {
-        newPopulation.push(new Network(this.input, this.output, {
-          minHidden: this.options.minHidden
-        }));
+        newPopulation.push(
+          new Network(this.input, this.output, {
+            minHidden: this.options.minHidden,
+          })
+        );
       }
     }
     if (this.options.speciation && this._species.length > 0) {
@@ -11184,39 +12510,45 @@
         const oldT = ageCfg.oldThreshold ?? 30;
         const oldM = ageCfg.oldMultiplier ?? 0.7;
         const speciesAdjusted = this._species.map((species) => {
-          const base = species.members.reduce((a, member) => a + (member.score || 0), 0);
+          const base = species.members.reduce(
+            (a, member) => a + (member.score || 0),
+            0
+          );
           const age = this.generation - species.lastImproved;
-          if (age <= youngT)
-            return base * youngM;
-          if (age >= oldT)
-            return base * oldM;
+          if (age <= youngT) return base * youngM;
+          if (age >= oldT) return base * oldM;
           return base;
         });
         const totalAdj = speciesAdjusted.reduce((a, b) => a + b, 0) || 1;
         const minOff = this.options.speciesAllocation?.minOffspring ?? 1;
-        const rawShares = this._species.map((_, idx) => speciesAdjusted[idx] / totalAdj * remaining);
+        const rawShares = this._species.map(
+          (_, idx) => (speciesAdjusted[idx] / totalAdj) * remaining
+        );
         const offspringAlloc = rawShares.map((s) => Math.floor(s));
         for (let i = 0; i < offspringAlloc.length; i++)
-          if (offspringAlloc[i] < minOff && remaining >= this._species.length * minOff)
+          if (
+            offspringAlloc[i] < minOff &&
+            remaining >= this._species.length * minOff
+          )
             offspringAlloc[i] = minOff;
         let allocated = offspringAlloc.reduce((a, b) => a + b, 0);
         let slotsLeft = remaining - allocated;
         const remainders = rawShares.map((s, i) => ({
           i,
-          frac: s - Math.floor(s)
+          frac: s - Math.floor(s),
         }));
         remainders.sort((a, b) => b.frac - a.frac);
         for (const remainderEntry of remainders) {
-          if (slotsLeft <= 0)
-            break;
+          if (slotsLeft <= 0) break;
           offspringAlloc[remainderEntry.i]++;
           slotsLeft--;
         }
         if (slotsLeft < 0) {
-          const order = offspringAlloc.map((v, i) => ({ i, v })).sort((a, b) => b.v - a.v);
+          const order = offspringAlloc
+            .map((v, i) => ({ i, v }))
+            .sort((a, b) => b.v - a.v);
           for (const orderEntry of order) {
-            if (slotsLeft === 0)
-              break;
+            if (slotsLeft === 0) break;
             if (offspringAlloc[orderEntry.i] > minOff) {
               offspringAlloc[orderEntry.i]--;
               slotsLeft++;
@@ -11225,44 +12557,69 @@
         }
         this._lastOffspringAlloc = this._species.map((species, i) => ({
           id: species.id,
-          alloc: offspringAlloc[i] || 0
+          alloc: offspringAlloc[i] || 0,
         }));
         this._prevInbreedingCount = this._lastInbreedingCount;
         this._lastInbreedingCount = 0;
         offspringAlloc.forEach((count, idx) => {
-          if (count <= 0)
-            return;
+          if (count <= 0) return;
           const species = this._species[idx];
           this._sortSpeciesMembers(species);
-          const survivors = species.members.slice(0, Math.max(1, Math.floor(species.members.length * (this.options.survivalThreshold || 0.5))));
+          const survivors = species.members.slice(
+            0,
+            Math.max(
+              1,
+              Math.floor(
+                species.members.length * (this.options.survivalThreshold || 0.5)
+              )
+            )
+          );
           for (let k = 0; k < count; k++) {
-            const parentA = survivors[Math.floor(this._getRNG()() * survivors.length)];
+            const parentA =
+              survivors[Math.floor(this._getRNG()() * survivors.length)];
             let parentB;
-            if (this.options.crossSpeciesMatingProb && this._species.length > 1 && this._getRNG()() < (this.options.crossSpeciesMatingProb || 0)) {
+            if (
+              this.options.crossSpeciesMatingProb &&
+              this._species.length > 1 &&
+              this._getRNG()() < (this.options.crossSpeciesMatingProb || 0)
+            ) {
               let otherIdx = idx;
               let guard = 0;
               while (otherIdx === idx && guard++ < 5)
                 otherIdx = Math.floor(this._getRNG()() * this._species.length);
               const otherSpecies = this._species[otherIdx];
               this._sortSpeciesMembers(otherSpecies);
-              const otherParents = otherSpecies.members.slice(0, Math.max(1, Math.floor(otherSpecies.members.length * (this.options.survivalThreshold || 0.5))));
-              parentB = otherParents[Math.floor(this._getRNG()() * otherParents.length)];
+              const otherParents = otherSpecies.members.slice(
+                0,
+                Math.max(
+                  1,
+                  Math.floor(
+                    otherSpecies.members.length *
+                      (this.options.survivalThreshold || 0.5)
+                  )
+                )
+              );
+              parentB =
+                otherParents[
+                  Math.floor(this._getRNG()() * otherParents.length)
+                ];
             } else {
-              parentB = survivors[Math.floor(this._getRNG()() * survivors.length)];
+              parentB =
+                survivors[Math.floor(this._getRNG()() * survivors.length)];
             }
-            const child = Network.crossOver(parentA, parentB, this.options.equal || false);
+            const child = Network.crossOver(
+              parentA,
+              parentB,
+              this.options.equal || false
+            );
             child._reenableProb = this.options.reenableProb;
             child._id = this._nextGenomeId++;
             if (this._lineageEnabled) {
-              child._parents = [
-                parentA._id,
-                parentB._id
-              ];
+              child._parents = [parentA._id, parentB._id];
               const d1 = parentA._depth ?? 0;
               const d2 = parentB._depth ?? 0;
               child._depth = 1 + Math.max(d1, d2);
-              if (parentA._id === parentB._id)
-                this._lastInbreedingCount++;
+              if (parentA._id === parentB._id) this._lastInbreedingCount++;
             }
             newPopulation.push(child);
           }
@@ -11272,44 +12629,47 @@
     } else {
       this._suppressTournamentError = true;
       const toBreed = Math.max(0, desiredPop - newPopulation.length);
-      for (let i = 0; i < toBreed; i++)
-        newPopulation.push(this.getOffspring());
+      for (let i = 0; i < toBreed; i++) newPopulation.push(this.getOffspring());
       this._suppressTournamentError = false;
     }
     for (const genome of newPopulation) {
-      if (!genome)
-        continue;
+      if (!genome) continue;
       this.ensureMinHiddenNodes(genome);
       this.ensureNoDeadEnds(genome);
     }
     this.population = newPopulation;
     try {
-      (init_neat_pruning(), __toCommonJS(neat_pruning_exports)).applyEvolutionPruning.call(this);
-    } catch {
-    }
+      (init_neat_pruning(),
+      __toCommonJS(neat_pruning_exports)).applyEvolutionPruning.call(this);
+    } catch {}
     try {
-      (init_neat_pruning(), __toCommonJS(neat_pruning_exports)).applyAdaptivePruning.call(this);
-    } catch {
-    }
+      (init_neat_pruning(),
+      __toCommonJS(neat_pruning_exports)).applyAdaptivePruning.call(this);
+    } catch {}
     this.mutate();
     try {
-      (init_neat_adaptive(), __toCommonJS(neat_adaptive_exports)).applyAdaptiveMutation.call(this);
-    } catch {
-    }
+      (init_neat_adaptive(),
+      __toCommonJS(neat_adaptive_exports)).applyAdaptiveMutation.call(this);
+    } catch {}
     this.population.forEach((genome) => {
-      if (genome._compatCache)
-        delete genome._compatCache;
+      if (genome._compatCache) delete genome._compatCache;
     });
-    this.population.forEach((genome) => genome.score = void 0);
+    this.population.forEach((genome) => (genome.score = void 0));
     this.generation++;
-    if (this.options.speciation)
-      this._updateSpeciesStagnation();
-    if ((this.options.globalStagnationGenerations || 0) > 0 && this.generation - this._lastGlobalImproveGeneration > (this.options.globalStagnationGenerations || 0)) {
+    if (this.options.speciation) this._updateSpeciesStagnation();
+    if (
+      (this.options.globalStagnationGenerations || 0) > 0 &&
+      this.generation - this._lastGlobalImproveGeneration >
+        (this.options.globalStagnationGenerations || 0)
+    ) {
       const replaceFraction = 0.2;
-      const startIdx = Math.max(this.options.elitism || 0, Math.floor(this.population.length * (1 - replaceFraction)));
+      const startIdx = Math.max(
+        this.options.elitism || 0,
+        Math.floor(this.population.length * (1 - replaceFraction))
+      );
       for (let i = startIdx; i < this.population.length; i++) {
         const fresh = new Network(this.input, this.output, {
-          minHidden: this.options.minHidden
+          minHidden: this.options.minHidden,
         });
         fresh.score = void 0;
         fresh._reenableProb = this.options.reenableProb;
@@ -11321,32 +12681,31 @@
         try {
           this.ensureMinHiddenNodes(fresh);
           this.ensureNoDeadEnds(fresh);
-          const hiddenCount = fresh.nodes.filter((n) => n.type === "hidden").length;
+          const hiddenCount = fresh.nodes.filter((n) => n.type === 'hidden')
+            .length;
           if (hiddenCount === 0) {
             const NodeCls = (init_node(), __toCommonJS(node_exports)).default;
-            const newNode = new NodeCls("hidden");
+            const newNode = new NodeCls('hidden');
             fresh.nodes.splice(fresh.nodes.length - fresh.output, 0, newNode);
-            const inputNodes = fresh.nodes.filter((n) => n.type === "input");
-            const outputNodes = fresh.nodes.filter((n) => n.type === "output");
+            const inputNodes = fresh.nodes.filter((n) => n.type === 'input');
+            const outputNodes = fresh.nodes.filter((n) => n.type === 'output');
             if (inputNodes.length && outputNodes.length) {
               try {
                 fresh.connect(inputNodes[0], newNode, 1);
-              } catch {
-              }
+              } catch {}
               try {
                 fresh.connect(newNode, outputNodes[0], 1);
-              } catch {
-              }
+              } catch {}
             }
           }
-        } catch {
-        }
+        } catch {}
         this.population[i] = fresh;
       }
       this._lastGlobalImproveGeneration = this.generation;
     }
     if (this.options.reenableProb !== void 0) {
-      let reenableSuccessTotal = 0, reenableAttemptsTotal = 0;
+      let reenableSuccessTotal = 0,
+        reenableAttemptsTotal = 0;
       for (const genome of this.population) {
         reenableSuccessTotal += genome._reenableSuccess || 0;
         reenableAttemptsTotal += genome._reenableAttempts || 0;
@@ -11357,63 +12716,71 @@
         const ratio = reenableSuccessTotal / reenableAttemptsTotal;
         const target = 0.3;
         const delta = ratio - target;
-        this.options.reenableProb = Math.min(0.9, Math.max(0.05, this.options.reenableProb - delta * 0.1));
+        this.options.reenableProb = Math.min(
+          0.9,
+          Math.max(0.05, this.options.reenableProb - delta * 0.1)
+        );
       }
     }
     try {
-      (init_neat_adaptive(), __toCommonJS(neat_adaptive_exports)).applyOperatorAdaptation.call(this);
-    } catch {
-    }
-    const endTime = typeof performance !== "undefined" && performance.now ? performance.now() : Date.now();
+      (init_neat_adaptive(),
+      __toCommonJS(neat_adaptive_exports)).applyOperatorAdaptation.call(this);
+    } catch {}
+    const endTime =
+      typeof performance !== 'undefined' && performance.now
+        ? performance.now()
+        : Date.now();
     this._lastEvolveDuration = endTime - startTime;
     try {
-      if (!this._speciesHistory)
-        this._speciesHistory = [];
+      if (!this._speciesHistory) this._speciesHistory = [];
       if (!this.options.speciesAllocation?.extendedHistory) {
-        if (this._speciesHistory.length === 0 || this._speciesHistory[this._speciesHistory.length - 1].generation !== this.generation) {
+        if (
+          this._speciesHistory.length === 0 ||
+          this._speciesHistory[this._speciesHistory.length - 1].generation !==
+            this.generation
+        ) {
           this._speciesHistory.push({
             generation: this.generation,
             stats: this._species.map((species) => ({
               id: species.id,
               size: species.members.length,
               best: species.bestScore,
-              lastImproved: species.lastImproved
-            }))
+              lastImproved: species.lastImproved,
+            })),
           });
-          if (this._speciesHistory.length > 200)
-            this._speciesHistory.shift();
+          if (this._speciesHistory.length > 200) this._speciesHistory.shift();
         }
       }
-    } catch {
-    }
+    } catch {}
     return fittest;
   }
   var init_neat_evolve = __esm({
-    "dist/neat/neat.evolve.js"() {
-      "use strict";
+    'dist/neat/neat.evolve.js'() {
+      'use strict';
       init_network();
       init_neat_multiobjective();
-    }
+    },
   });
 
   // dist/neat/neat.evaluate.js
   async function evaluate() {
     const options = this.options || {};
     if (options.fitnessPopulation) {
-      if (options.clear)
-        this.population.forEach((g) => g.clear && g.clear());
+      if (options.clear) this.population.forEach((g) => g.clear && g.clear());
       await this.fitness(this.population);
     } else {
       for (const genome of this.population) {
-        if (options.clear && genome.clear)
-          genome.clear();
+        if (options.clear && genome.clear) genome.clear();
         const fitnessValue = await this.fitness(genome);
         genome.score = fitnessValue;
       }
     }
     try {
       const noveltyOptions = options.novelty;
-      if (noveltyOptions?.enabled && typeof noveltyOptions.descriptor === "function") {
+      if (
+        noveltyOptions?.enabled &&
+        typeof noveltyOptions.descriptor === 'function'
+      ) {
         const kNeighbors = Math.max(1, noveltyOptions.k || 3);
         const blendFactor = noveltyOptions.blendFactor ?? 0.3;
         const descriptors = this.population.map((g) => {
@@ -11445,24 +12812,29 @@
         for (let i = 0; i < this.population.length; i++) {
           const sortedRow = distanceMatrix[i].slice().sort((a, b) => a - b);
           const neighbours = sortedRow.slice(1, kNeighbors + 1);
-          const novelty = neighbours.length ? neighbours.reduce((a, b) => a + b, 0) / neighbours.length : 0;
+          const novelty = neighbours.length
+            ? neighbours.reduce((a, b) => a + b, 0) / neighbours.length
+            : 0;
           this.population[i]._novelty = novelty;
-          if (typeof this.population[i].score === "number") {
-            this.population[i].score = (1 - blendFactor) * this.population[i].score + blendFactor * novelty;
+          if (typeof this.population[i].score === 'number') {
+            this.population[i].score =
+              (1 - blendFactor) * this.population[i].score +
+              blendFactor * novelty;
           }
-          if (!this._noveltyArchive)
-            this._noveltyArchive = [];
-          const archiveAddThreshold = noveltyOptions.archiveAddThreshold ?? Infinity;
-          if (noveltyOptions.archiveAddThreshold === 0 || novelty > archiveAddThreshold) {
+          if (!this._noveltyArchive) this._noveltyArchive = [];
+          const archiveAddThreshold =
+            noveltyOptions.archiveAddThreshold ?? Infinity;
+          if (
+            noveltyOptions.archiveAddThreshold === 0 ||
+            novelty > archiveAddThreshold
+          ) {
             if (this._noveltyArchive.length < 200)
               this._noveltyArchive.push({ desc: descriptors[i], novelty });
           }
         }
       }
-    } catch {
-    }
-    if (!this._diversityStats)
-      this._diversityStats = {};
+    } catch {}
+    if (!this._diversityStats) this._diversityStats = {};
     try {
       const entropySharingOptions = options.entropySharingTuning;
       if (entropySharingOptions?.enabled) {
@@ -11471,7 +12843,7 @@
         const minSigma = entropySharingOptions.minSigma ?? 0.1;
         const maxSigma = entropySharingOptions.maxSigma ?? 10;
         const currentVarEntropy = this._diversityStats.varEntropy;
-        if (typeof currentVarEntropy === "number") {
+        if (typeof currentVarEntropy === 'number') {
           let sigma = this.options.sharingSigma ?? 0;
           if (currentVarEntropy < targetVar * 0.9)
             sigma = Math.max(minSigma, sigma * (1 - adjustRate));
@@ -11480,8 +12852,7 @@
           this.options.sharingSigma = sigma;
         }
       }
-    } catch {
-    }
+    } catch {}
     try {
       const entropyCompatOptions = options.entropyCompatTuning;
       if (entropyCompatOptions?.enabled) {
@@ -11490,67 +12861,102 @@
         const deadband = entropyCompatOptions.deadband ?? 0.05;
         const adjustRate = entropyCompatOptions.adjustRate ?? 0.05;
         let threshold = this.options.compatibilityThreshold ?? 3;
-        if (typeof meanEntropy === "number") {
+        if (typeof meanEntropy === 'number') {
           if (meanEntropy < targetEntropy - deadband)
-            threshold = Math.max(entropyCompatOptions.minThreshold ?? 0.5, threshold * (1 - adjustRate));
+            threshold = Math.max(
+              entropyCompatOptions.minThreshold ?? 0.5,
+              threshold * (1 - adjustRate)
+            );
           else if (meanEntropy > targetEntropy + deadband)
-            threshold = Math.min(entropyCompatOptions.maxThreshold ?? 10, threshold * (1 + adjustRate));
+            threshold = Math.min(
+              entropyCompatOptions.maxThreshold ?? 10,
+              threshold * (1 + adjustRate)
+            );
           this.options.compatibilityThreshold = threshold;
         }
       }
-    } catch {
-    }
+    } catch {}
     try {
-      if (this.options.speciation && (this.options.targetSpecies || this.options.compatAdjust || this.options.speciesAllocation?.extendedHistory)) {
+      if (
+        this.options.speciation &&
+        (this.options.targetSpecies ||
+          this.options.compatAdjust ||
+          this.options.speciesAllocation?.extendedHistory)
+      ) {
         this._speciate();
       }
-    } catch {
-    }
+    } catch {}
     try {
       const autoDistanceCoeffOptions = this.options.autoDistanceCoeffTuning;
       if (autoDistanceCoeffOptions?.enabled && this.options.speciation) {
-        const connectionSizes = this.population.map((g) => g.connections.length);
-        const meanSize = connectionSizes.reduce((a, b) => a + b, 0) / (connectionSizes.length || 1);
-        const connVar = connectionSizes.reduce((a, b) => a + (b - meanSize) * (b - meanSize), 0) / (connectionSizes.length || 1);
+        const connectionSizes = this.population.map(
+          (g) => g.connections.length
+        );
+        const meanSize =
+          connectionSizes.reduce((a, b) => a + b, 0) /
+          (connectionSizes.length || 1);
+        const connVar =
+          connectionSizes.reduce(
+            (a, b) => a + (b - meanSize) * (b - meanSize),
+            0
+          ) / (connectionSizes.length || 1);
         const adjustRate = autoDistanceCoeffOptions.adjustRate ?? 0.05;
         const minCoeff = autoDistanceCoeffOptions.minCoeff ?? 0.05;
         const maxCoeff = autoDistanceCoeffOptions.maxCoeff ?? 8;
-        if (!this._lastConnVar)
-          this._lastConnVar = connVar;
+        if (!this._lastConnVar) this._lastConnVar = connVar;
         if (connVar < this._lastConnVar * 0.95) {
-          this.options.excessCoeff = Math.min(maxCoeff, this.options.excessCoeff * (1 + adjustRate));
-          this.options.disjointCoeff = Math.min(maxCoeff, this.options.disjointCoeff * (1 + adjustRate));
+          this.options.excessCoeff = Math.min(
+            maxCoeff,
+            this.options.excessCoeff * (1 + adjustRate)
+          );
+          this.options.disjointCoeff = Math.min(
+            maxCoeff,
+            this.options.disjointCoeff * (1 + adjustRate)
+          );
         } else if (connVar > this._lastConnVar * 1.05) {
-          this.options.excessCoeff = Math.max(minCoeff, this.options.excessCoeff * (1 - adjustRate));
-          this.options.disjointCoeff = Math.max(minCoeff, this.options.disjointCoeff * (1 - adjustRate));
+          this.options.excessCoeff = Math.max(
+            minCoeff,
+            this.options.excessCoeff * (1 - adjustRate)
+          );
+          this.options.disjointCoeff = Math.max(
+            minCoeff,
+            this.options.disjointCoeff * (1 - adjustRate)
+          );
         }
         this._lastConnVar = connVar;
       }
-    } catch {
-    }
+    } catch {}
     try {
-      if (this.options.multiObjective?.enabled && this.options.multiObjective.autoEntropy) {
+      if (
+        this.options.multiObjective?.enabled &&
+        this.options.multiObjective.autoEntropy
+      ) {
         if (!this.options.multiObjective.dynamic?.enabled) {
           const keys = this._getObjectives().map((o) => o.key);
-          if (!keys.includes("entropy")) {
-            this.registerObjective("entropy", "max", (g) => this._structuralEntropy(g));
-            this._pendingObjectiveAdds.push("entropy");
+          if (!keys.includes('entropy')) {
+            this.registerObjective('entropy', 'max', (g) =>
+              this._structuralEntropy(g)
+            );
+            this._pendingObjectiveAdds.push('entropy');
             this._objectivesList = void 0;
           }
         }
       }
-    } catch {
-    }
+    } catch {}
   }
   var init_neat_evaluate = __esm({
-    "dist/neat/neat.evaluate.js"() {
-      "use strict";
-    }
+    'dist/neat/neat.evaluate.js'() {
+      'use strict';
+    },
   });
 
   // dist/neat/neat.helpers.js
   function spawnFromParent(parentGenome, mutateCount = 1) {
-    const clone = parentGenome.clone ? parentGenome.clone() : (init_network(), __toCommonJS(network_exports)).default.fromJSON(parentGenome.toJSON());
+    const clone = parentGenome.clone
+      ? parentGenome.clone()
+      : (init_network(), __toCommonJS(network_exports)).default.fromJSON(
+          parentGenome.toJSON()
+        );
     clone.score = void 0;
     clone._reenableProb = this.options.reenableProb;
     clone._id = this._nextGenomeId++;
@@ -11563,13 +12969,15 @@
         let selectedMutationMethod = this.selectMutationMethod(clone, false);
         if (Array.isArray(selectedMutationMethod)) {
           const candidateMutations = selectedMutationMethod;
-          selectedMutationMethod = candidateMutations[Math.floor(this._getRNG()() * candidateMutations.length)];
+          selectedMutationMethod =
+            candidateMutations[
+              Math.floor(this._getRNG()() * candidateMutations.length)
+            ];
         }
         if (selectedMutationMethod && selectedMutationMethod.name) {
           clone.mutate(selectedMutationMethod);
         }
-      } catch {
-      }
+      } catch {}
     }
     this._invalidateGenomeCaches(clone);
     return clone;
@@ -11582,7 +12990,10 @@
       genome._parents = Array.isArray(parents) ? parents.slice() : [];
       genome._depth = 0;
       if (genome._parents.length) {
-        const parentDepths = genome._parents.map((pid) => this.population.find((g) => g._id === pid)).filter(Boolean).map((g) => g._depth ?? 0);
+        const parentDepths = genome._parents
+          .map((pid) => this.population.find((g) => g._id === pid))
+          .filter(Boolean)
+          .map((g) => g._depth ?? 0);
         genome._depth = parentDepths.length ? Math.max(...parentDepths) + 1 : 1;
       }
       this.ensureMinHiddenNodes(genome);
@@ -11598,14 +13009,15 @@
       this.population = [];
       const poolSize = this.options?.popsize || 50;
       for (let genomeIndex = 0; genomeIndex < poolSize; genomeIndex++) {
-        const genomeCopy = seedNetwork ? Network.fromJSON(seedNetwork.toJSON()) : new Network(this.input, this.output, {
-          minHidden: this.options?.minHidden
-        });
+        const genomeCopy = seedNetwork
+          ? Network.fromJSON(seedNetwork.toJSON())
+          : new Network(this.input, this.output, {
+              minHidden: this.options?.minHidden,
+            });
         genomeCopy.score = void 0;
         try {
           this.ensureNoDeadEnds(genomeCopy);
-        } catch {
-        }
+        } catch {}
         genomeCopy._reenableProb = this.options.reenableProb;
         genomeCopy._id = this._nextGenomeId++;
         if (this._lineageEnabled) {
@@ -11614,25 +13026,23 @@
         }
         this.population.push(genomeCopy);
       }
-    } catch {
-    }
+    } catch {}
   }
   var init_neat_helpers = __esm({
-    "dist/neat/neat.helpers.js"() {
-      "use strict";
+    'dist/neat/neat.helpers.js'() {
+      'use strict';
       init_network();
-    }
+    },
   });
 
   // dist/neat/neat.objectives.js
   function _getObjectives() {
-    if (this._objectivesList)
-      return this._objectivesList;
+    if (this._objectivesList) return this._objectivesList;
     const objectivesList = [];
     if (!this._suppressFitnessObjective) {
       objectivesList.push({
-        key: "fitness",
-        direction: "max",
+        key: 'fitness',
+        direction: 'max',
         /**
          * Default accessor extracts the `score` property from a genome.
          *
@@ -11642,12 +13052,19 @@
          * const value = defaultAccessor(genome);
          * ```
          */
-        accessor: (genome) => genome.score || 0
+        accessor: (genome) => genome.score || 0,
       });
     }
-    if (this.options.multiObjective?.enabled && Array.isArray(this.options.multiObjective.objectives)) {
+    if (
+      this.options.multiObjective?.enabled &&
+      Array.isArray(this.options.multiObjective.objectives)
+    ) {
       for (const candidateObjective of this.options.multiObjective.objectives) {
-        if (!candidateObjective || !candidateObjective.key || typeof candidateObjective.accessor !== "function")
+        if (
+          !candidateObjective ||
+          !candidateObjective.key ||
+          typeof candidateObjective.accessor !== 'function'
+        )
           continue;
         objectivesList.push(candidateObjective);
       }
@@ -11661,7 +13078,9 @@
     const multiObjectiveOptions = this.options.multiObjective;
     if (!multiObjectiveOptions.objectives)
       multiObjectiveOptions.objectives = [];
-    multiObjectiveOptions.objectives = multiObjectiveOptions.objectives.filter((existingObjective) => existingObjective.key !== key);
+    multiObjectiveOptions.objectives = multiObjectiveOptions.objectives.filter(
+      (existingObjective) => existingObjective.key !== key
+    );
     multiObjectiveOptions.objectives.push({ key, direction, accessor });
     this._objectivesList = void 0;
   }
@@ -11671,19 +13090,22 @@
     this._objectivesList = void 0;
   }
   var init_neat_objectives = __esm({
-    "dist/neat/neat.objectives.js"() {
-      "use strict";
-    }
+    'dist/neat/neat.objectives.js'() {
+      'use strict';
+    },
   });
 
   // dist/neat/neat.diversity.js
   function structuralEntropy2(graph) {
-    const outDegrees = graph.nodes.map((node) => (
-      // each node exposes connections.out array in current architecture
-      node.connections.out.length
-    ));
+    const outDegrees = graph.nodes.map(
+      (node) =>
+        // each node exposes connections.out array in current architecture
+        node.connections.out.length
+    );
     const totalOut = outDegrees.reduce((acc, v) => acc + v, 0) || 1;
-    const probabilities = outDegrees.map((d) => d / totalOut).filter((p) => p > 0);
+    const probabilities = outDegrees
+      .map((d) => d / totalOut)
+      .filter((p) => p > 0);
     let entropy = 0;
     for (const p of probabilities) {
       entropy -= p * Math.log(p);
@@ -11691,22 +13113,19 @@
     return entropy;
   }
   function arrayMean(values) {
-    if (!values.length)
-      return 0;
+    if (!values.length) return 0;
     return values.reduce((sum, v) => sum + v, 0) / values.length;
   }
   function arrayVariance(values) {
-    if (!values.length)
-      return 0;
+    if (!values.length) return 0;
     const m = arrayMean(values);
     return arrayMean(values.map((v) => (v - m) * (v - m)));
   }
   function computeDiversityStats2(population, compatibilityComputer) {
-    if (!population.length)
-      return void 0;
+    if (!population.length) return void 0;
     const lineageDepths = [];
     for (const genome of population) {
-      if (typeof genome._depth === "number") {
+      if (typeof genome._depth === 'number') {
         lineageDepths.push(genome._depth);
       }
     }
@@ -11719,7 +13138,9 @@
         depthPairCount++;
       }
     }
-    const lineageMeanPairDist = depthPairCount ? depthPairAbsDiffSum / depthPairCount : 0;
+    const lineageMeanPairDist = depthPairCount
+      ? depthPairAbsDiffSum / depthPairCount
+      : 0;
     const nodeCounts = population.map((g) => g.nodes.length);
     const connectionCounts = population.map((g) => g.connections.length);
     const meanNodes = arrayMean(nodeCounts);
@@ -11730,12 +13151,17 @@
     let compatPairCount = 0;
     for (let i = 0; i < population.length && i < 25; i++) {
       for (let j = i + 1; j < population.length && j < 25; j++) {
-        compatSum += compatibilityComputer._compatibilityDistance(population[i], population[j]);
+        compatSum += compatibilityComputer._compatibilityDistance(
+          population[i],
+          population[j]
+        );
         compatPairCount++;
       }
     }
     const meanCompat = compatPairCount ? compatSum / compatPairCount : 0;
-    const graphletEntropy = arrayMean(population.map((g) => structuralEntropy2(g)));
+    const graphletEntropy = arrayMean(
+      population.map((g) => structuralEntropy2(g))
+    );
     return {
       lineageMeanDepth,
       lineageMeanPairDist,
@@ -11745,13 +13171,13 @@
       connVar,
       meanCompat,
       graphletEntropy,
-      population: population.length
+      population: population.length,
     };
   }
   var init_neat_diversity = __esm({
-    "dist/neat/neat.diversity.js"() {
-      "use strict";
-    }
+    'dist/neat/neat.diversity.js'() {
+      'use strict';
+    },
   });
 
   // dist/neat/neat.compat.js
@@ -11765,15 +13191,17 @@
       this._compatCacheGen = this.generation;
       this._compatDistCache = /* @__PURE__ */ new Map();
     }
-    const key = genomeA._id < genomeB._id ? `${genomeA._id}|${genomeB._id}` : `${genomeB._id}|${genomeA._id}`;
+    const key =
+      genomeA._id < genomeB._id
+        ? `${genomeA._id}|${genomeB._id}`
+        : `${genomeB._id}|${genomeA._id}`;
     const cacheMap = this._compatDistCache;
-    if (cacheMap.has(key))
-      return cacheMap.get(key);
+    if (cacheMap.has(key)) return cacheMap.get(key);
     const getCache = (network) => {
       if (!network._compatCache) {
         const list = network.connections.map((conn) => [
           conn.innovation ?? this._fallbackInnov(conn),
-          conn.weight
+          conn.weight,
         ]);
         list.sort((x, y) => x[0] - y[0]);
         network._compatCache = list;
@@ -11782,8 +13210,11 @@
     };
     const aList = getCache(genomeA);
     const bList = getCache(genomeB);
-    let indexA = 0, indexB = 0;
-    let matchingCount = 0, disjoint = 0, excess = 0;
+    let indexA = 0,
+      indexB = 0;
+    let matchingCount = 0,
+      disjoint = 0,
+      excess = 0;
     let weightDifferenceSum = 0;
     const maxInnovA = aList.length ? aList[aList.length - 1][0] : 0;
     const maxInnovB = bList.length ? bList[bList.length - 1][0] : 0;
@@ -11796,34 +13227,33 @@
         indexA++;
         indexB++;
       } else if (innovA < innovB) {
-        if (innovA > maxInnovB)
-          excess++;
-        else
-          disjoint++;
+        if (innovA > maxInnovB) excess++;
+        else disjoint++;
         indexA++;
       } else {
-        if (innovB > maxInnovA)
-          excess++;
-        else
-          disjoint++;
+        if (innovB > maxInnovA) excess++;
+        else disjoint++;
         indexB++;
       }
     }
-    if (indexA < aList.length)
-      excess += aList.length - indexA;
-    if (indexB < bList.length)
-      excess += bList.length - indexB;
+    if (indexA < aList.length) excess += aList.length - indexA;
+    if (indexB < bList.length) excess += bList.length - indexB;
     const N = Math.max(1, Math.max(aList.length, bList.length));
-    const avgWeightDiff = matchingCount ? weightDifferenceSum / matchingCount : 0;
+    const avgWeightDiff = matchingCount
+      ? weightDifferenceSum / matchingCount
+      : 0;
     const opts = this.options;
-    const dist = opts.excessCoeff * excess / N + opts.disjointCoeff * disjoint / N + opts.weightDiffCoeff * avgWeightDiff;
+    const dist =
+      (opts.excessCoeff * excess) / N +
+      (opts.disjointCoeff * disjoint) / N +
+      opts.weightDiffCoeff * avgWeightDiff;
     cacheMap.set(key, dist);
     return dist;
   }
   var init_neat_compat = __esm({
-    "dist/neat/neat.compat.js"() {
-      "use strict";
-    }
+    'dist/neat/neat.compat.js'() {
+      'use strict';
+    },
   });
 
   // dist/neat/neat.speciation.js
@@ -11831,15 +13261,17 @@
     this._prevSpeciesMembers.clear();
     for (const species of this._species) {
       const prevMemberSet = /* @__PURE__ */ new Set();
-      for (const member of species.members)
-        prevMemberSet.add(member._id);
+      for (const member of species.members) prevMemberSet.add(member._id);
       this._prevSpeciesMembers.set(species.id, prevMemberSet);
     }
-    this._species.forEach((species) => species.members = []);
+    this._species.forEach((species) => (species.members = []));
     for (const genome of this.population) {
       let assignedToExisting = false;
       for (const species of this._species) {
-        const compatDist = this._compatibilityDistance(genome, species.representative);
+        const compatDist = this._compatibilityDistance(
+          genome,
+          species.representative
+        );
         if (compatDist < (this.options.compatibilityThreshold || 3)) {
           species.members.push(genome);
           assignedToExisting = true;
@@ -11853,28 +13285,30 @@
           members: [genome],
           representative: genome,
           lastImproved: this.generation,
-          bestScore: genome.score || -Infinity
+          bestScore: genome.score || -Infinity,
         });
         this._speciesCreated.set(speciesId, this.generation);
       }
     }
-    this._species = this._species.filter((species) => species.members.length > 0);
+    this._species = this._species.filter(
+      (species) => species.members.length > 0
+    );
     this._species.forEach((species) => {
       species.representative = species.members[0];
     });
     const ageProtection = this.options.speciesAgeProtection || {
       grace: 3,
-      oldPenalty: 0.5
+      oldPenalty: 0.5,
     };
     for (const species of this._species) {
-      const createdGen = this._speciesCreated.get(species.id) ?? this.generation;
+      const createdGen =
+        this._speciesCreated.get(species.id) ?? this.generation;
       const speciesAge = this.generation - createdGen;
       if (speciesAge >= (ageProtection.grace ?? 3) * 10) {
         const penalty = ageProtection.oldPenalty ?? 0.5;
         if (penalty < 1)
           species.members.forEach((member) => {
-            if (typeof member.score === "number")
-              member.score *= penalty;
+            if (typeof member.score === 'number') member.score *= penalty;
           });
       }
     }
@@ -11884,11 +13318,18 @@
       const adjustConfig = this.options.compatAdjust;
       const smoothingWindow = Math.max(1, adjustConfig.smoothingWindow || 1);
       const alpha = 2 / (smoothingWindow + 1);
-      this._compatSpeciesEMA = this._compatSpeciesEMA === void 0 ? observedSpeciesCount : this._compatSpeciesEMA + alpha * (observedSpeciesCount - this._compatSpeciesEMA);
+      this._compatSpeciesEMA =
+        this._compatSpeciesEMA === void 0
+          ? observedSpeciesCount
+          : this._compatSpeciesEMA +
+            alpha * (observedSpeciesCount - this._compatSpeciesEMA);
       const smoothedSpecies = this._compatSpeciesEMA;
       const speciesError = targetSpeciesCount - smoothedSpecies;
-      this._compatIntegral = this._compatIntegral * (adjustConfig.decay || 0.95) + speciesError;
-      const delta = (adjustConfig.kp || 0) * speciesError + (adjustConfig.ki || 0) * this._compatIntegral;
+      this._compatIntegral =
+        this._compatIntegral * (adjustConfig.decay || 0.95) + speciesError;
+      const delta =
+        (adjustConfig.kp || 0) * speciesError +
+        (adjustConfig.ki || 0) * this._compatIntegral;
       let newThreshold = (this.options.compatibilityThreshold || 3) - delta;
       const minThreshold = adjustConfig.minThreshold || 0.5;
       const maxThreshold = adjustConfig.maxThreshold || 10;
@@ -11903,7 +13344,10 @@
       this.options.compatibilityThreshold = newThreshold;
     }
     if (this.options.autoCompatTuning?.enabled) {
-      const autoTarget = this.options.autoCompatTuning.target ?? this.options.targetSpecies ?? Math.max(2, Math.round(Math.sqrt(this.population.length)));
+      const autoTarget =
+        this.options.autoCompatTuning.target ??
+        this.options.targetSpecies ??
+        Math.max(2, Math.round(Math.sqrt(this.population.length)));
       const observedForTuning = this._species.length || 1;
       const tuningError = autoTarget - observedForTuning;
       const adjustRate = this.options.autoCompatTuning.adjustRate ?? 0.01;
@@ -11914,8 +13358,14 @@
       if (tuningError === 0) {
         effectiveFactor = 1 + (this._getRNG()() - 0.5) * adjustRate * 0.5;
       }
-      this.options.excessCoeff = Math.min(maxCoeff, Math.max(minCoeff, this.options.excessCoeff * effectiveFactor));
-      this.options.disjointCoeff = Math.min(maxCoeff, Math.max(minCoeff, this.options.disjointCoeff * effectiveFactor));
+      this.options.excessCoeff = Math.min(
+        maxCoeff,
+        Math.max(minCoeff, this.options.excessCoeff * effectiveFactor)
+      );
+      this.options.disjointCoeff = Math.min(
+        maxCoeff,
+        Math.max(minCoeff, this.options.disjointCoeff * effectiveFactor)
+      );
     }
     if (this.options.speciesAllocation?.extendedHistory) {
       const stats = this._species.map((species) => {
@@ -11924,14 +13374,18 @@
           conns: member.connections.length,
           score: member.score || 0,
           nov: member._novelty || 0,
-          ent: this._structuralEntropy(member)
+          ent: this._structuralEntropy(member),
         }));
-        const avg = (arr) => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
+        const avg = (arr) =>
+          arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
         let compatSum = 0;
         let compatCount = 0;
         for (let i = 0; i < species.members.length && i < 10; i++)
           for (let j = i + 1; j < species.members.length && j < 10; j++) {
-            compatSum += this._compatibilityDistance(species.members[i], species.members[j]);
+            compatSum += this._compatibilityDistance(
+              species.members[i],
+              species.members[j]
+            );
             compatCount++;
           }
         const meanCompat = compatCount ? compatSum / compatCount : 0;
@@ -11941,20 +13395,19 @@
         const deltaMeanNodes = last ? meanNodes - last.meanNodes : 0;
         const deltaMeanConns = last ? meanConns - last.meanConns : 0;
         const deltaBestScore = last ? species.bestScore - last.best : 0;
-        const createdGen = this._speciesCreated.get(species.id) ?? this.generation;
+        const createdGen =
+          this._speciesCreated.get(species.id) ?? this.generation;
         const speciesAge = this.generation - createdGen;
         let turnoverRate = 0;
         const prevSet = this._prevSpeciesMembers.get(species.id);
         if (prevSet && species.members.length) {
           let newCount = 0;
           for (const member of species.members)
-            if (!prevSet.has(member._id))
-              newCount++;
+            if (!prevSet.has(member._id)) newCount++;
           turnoverRate = newCount / species.members.length;
         }
         const varCalc = (arr) => {
-          if (!arr.length)
-            return 0;
+          if (!arr.length) return 0;
           const mean = avg(arr);
           return avg(arr.map((v) => (v - mean) * (v - mean)));
         };
@@ -11971,18 +13424,18 @@
             const innov = conn.innovation ?? this._fallbackInnov(conn);
             innovSum += innov;
             innovCount++;
-            if (innov > maxInnov)
-              maxInnov = innov;
-            if (innov < minInnov)
-              minInnov = innov;
-            if (conn.enabled === false)
-              disabled++;
-            else
-              enabled++;
+            if (innov > maxInnov) maxInnov = innov;
+            if (innov < minInnov) minInnov = innov;
+            if (conn.enabled === false) disabled++;
+            else enabled++;
           }
         const meanInnovation = innovCount ? innovSum / innovCount : 0;
-        const innovationRange = isFinite(maxInnov) && isFinite(minInnov) && maxInnov > minInnov ? maxInnov - minInnov : 0;
-        const enabledRatio = enabled + disabled > 0 ? enabled / (enabled + disabled) : 0;
+        const innovationRange =
+          isFinite(maxInnov) && isFinite(minInnov) && maxInnov > minInnov
+            ? maxInnov - minInnov
+            : 0;
+        const enabledRatio =
+          enabled + disabled > 0 ? enabled / (enabled + disabled) : 0;
         return {
           id: species.id,
           size: species.members.length,
@@ -12003,14 +13456,14 @@
           turnoverRate,
           meanInnovation,
           innovationRange,
-          enabledRatio
+          enabledRatio,
         };
       });
       for (const st of stats)
         this._speciesLastStats.set(st.id, {
           meanNodes: st.meanNodes,
           meanConns: st.meanConns,
-          best: st.best
+          best: st.best,
         });
       this._speciesHistory.push({ generation: this.generation, stats });
     } else {
@@ -12020,12 +13473,11 @@
           id: species.id,
           size: species.members.length,
           best: species.bestScore,
-          lastImproved: species.lastImproved
-        }))
+          lastImproved: species.lastImproved,
+        })),
       });
     }
-    if (this._speciesHistory.length > 200)
-      this._speciesHistory.shift();
+    if (this._speciesHistory.length > 200) this._speciesHistory.shift();
   }
   function _applyFitnessSharing() {
     const sharingSigma = this.options.sharingSigma || 0;
@@ -12034,19 +13486,18 @@
         const members = species.members;
         for (let i = 0; i < members.length; i++) {
           const memberI = members[i];
-          if (typeof memberI.score !== "number")
-            continue;
+          if (typeof memberI.score !== 'number') continue;
           let shareSum = 0;
           for (let j = 0; j < members.length; j++) {
             const memberJ = members[j];
-            const dist = i === j ? 0 : this._compatibilityDistance(memberI, memberJ);
+            const dist =
+              i === j ? 0 : this._compatibilityDistance(memberI, memberJ);
             if (dist < sharingSigma) {
               const ratio = dist / sharingSigma;
               shareSum += 1 - ratio * ratio;
             }
           }
-          if (shareSum <= 0)
-            shareSum = 1;
+          if (shareSum <= 0) shareSum = 1;
           memberI.score = memberI.score / shareSum;
         }
       });
@@ -12054,7 +13505,7 @@
       this._species.forEach((species) => {
         const size = species.members.length;
         species.members.forEach((member) => {
-          if (typeof member.score === "number")
+          if (typeof member.score === 'number')
             member.score = member.score / size;
         });
       });
@@ -12073,14 +13524,15 @@
         species.lastImproved = this.generation;
       }
     });
-    const survivors = this._species.filter((species) => this.generation - species.lastImproved <= stagnationWindow);
-    if (survivors.length)
-      this._species = survivors;
+    const survivors = this._species.filter(
+      (species) => this.generation - species.lastImproved <= stagnationWindow
+    );
+    if (survivors.length) this._species = survivors;
   }
   var init_neat_speciation = __esm({
-    "dist/neat/neat.speciation.js"() {
-      "use strict";
-    }
+    'dist/neat/neat.speciation.js'() {
+      'use strict';
+    },
   });
 
   // dist/neat/neat.species.js
@@ -12090,7 +13542,7 @@
       id: species.id,
       size: species.members.length,
       bestScore: species.bestScore,
-      lastImproved: species.lastImproved
+      lastImproved: species.lastImproved,
     }));
   }
   function getSpeciesHistory() {
@@ -12098,7 +13550,7 @@
     if (this.options?.speciesAllocation?.extendedHistory) {
       for (const generationEntry of speciesHistory) {
         for (const speciesStat of generationEntry.stats) {
-          if ("innovationRange" in speciesStat && "enabledRatio" in speciesStat)
+          if ('innovationRange' in speciesStat && 'enabledRatio' in speciesStat)
             continue;
           const speciesObj = this._species.find((s) => s.id === speciesStat.id);
           if (speciesObj && speciesObj.members && speciesObj.members.length) {
@@ -12108,19 +13560,26 @@
             let disabledCount = 0;
             for (const member of speciesObj.members) {
               for (const connection of member.connections) {
-                const innovationId = connection.innovation ?? this._fallbackInnov?.(connection) ?? 0;
-                if (innovationId > maxInnovation)
-                  maxInnovation = innovationId;
-                if (innovationId < minInnovation)
-                  minInnovation = innovationId;
-                if (connection.enabled === false)
-                  disabledCount++;
-                else
-                  enabledCount++;
+                const innovationId =
+                  connection.innovation ??
+                  this._fallbackInnov?.(connection) ??
+                  0;
+                if (innovationId > maxInnovation) maxInnovation = innovationId;
+                if (innovationId < minInnovation) minInnovation = innovationId;
+                if (connection.enabled === false) disabledCount++;
+                else enabledCount++;
               }
             }
-            speciesStat.innovationRange = isFinite(maxInnovation) && isFinite(minInnovation) && maxInnovation > minInnovation ? maxInnovation - minInnovation : 0;
-            speciesStat.enabledRatio = enabledCount + disabledCount ? enabledCount / (enabledCount + disabledCount) : 0;
+            speciesStat.innovationRange =
+              isFinite(maxInnovation) &&
+              isFinite(minInnovation) &&
+              maxInnovation > minInnovation
+                ? maxInnovation - minInnovation
+                : 0;
+            speciesStat.enabledRatio =
+              enabledCount + disabledCount
+                ? enabledCount / (enabledCount + disabledCount)
+                : 0;
           }
         }
       }
@@ -12128,26 +13587,27 @@
     return speciesHistory;
   }
   var init_neat_species = __esm({
-    "dist/neat/neat.species.js"() {
-      "use strict";
-    }
+    'dist/neat/neat.species.js'() {
+      'use strict';
+    },
   });
 
   // dist/neat/neat.telemetry.exports.js
   function exportTelemetryJSONL() {
-    return this._telemetry.map((entry) => JSON.stringify(entry)).join("\n");
+    return this._telemetry.map((entry) => JSON.stringify(entry)).join('\n');
   }
   function exportTelemetryCSV(maxEntries = 500) {
-    const recentTelemetry = Array.isArray(this._telemetry) ? this._telemetry.slice(-maxEntries) : [];
-    if (!recentTelemetry.length)
-      return "";
+    const recentTelemetry = Array.isArray(this._telemetry)
+      ? this._telemetry.slice(-maxEntries)
+      : [];
+    if (!recentTelemetry.length) return '';
     const headerInfo = collectTelemetryHeaderInfo(recentTelemetry);
     const headers = buildTelemetryHeaders(headerInfo);
-    const csvLines = [headers.join(",")];
+    const csvLines = [headers.join(',')];
     for (const telemetryEntry of recentTelemetry) {
       csvLines.push(serializeTelemetryEntry(telemetryEntry, headers));
     }
-    return csvLines.join("\n");
+    return csvLines.join('\n');
   }
   function collectTelemetryHeaderInfo(entries) {
     const baseKeys = /* @__PURE__ */ new Set();
@@ -12163,38 +13623,35 @@
     let includeObjImportance = false;
     for (const entry of entries) {
       Object.keys(entry).forEach((k) => {
-        if (k !== "complexity" && k !== "perf" && k !== "ops" && k !== HEADER_FRONTS) {
+        if (
+          k !== 'complexity' &&
+          k !== 'perf' &&
+          k !== 'ops' &&
+          k !== HEADER_FRONTS
+        ) {
           baseKeys.add(k);
         }
       });
-      if (Array.isArray(entry.fronts))
-        baseKeys.add(HEADER_FRONTS);
+      if (Array.isArray(entry.fronts)) baseKeys.add(HEADER_FRONTS);
       if (entry.complexity)
         Object.keys(entry.complexity).forEach((k) => complexityKeys.add(k));
-      if (entry.perf)
-        Object.keys(entry.perf).forEach((k) => perfKeys.add(k));
+      if (entry.perf) Object.keys(entry.perf).forEach((k) => perfKeys.add(k));
       if (entry.lineage)
         Object.keys(entry.lineage).forEach((k) => lineageKeys.add(k));
       if (entry.diversity) {
-        if ("lineageMeanDepth" in entry.diversity)
-          diversityLineageKeys.add("lineageMeanDepth");
-        if ("lineageMeanPairDist" in entry.diversity)
-          diversityLineageKeys.add("lineageMeanPairDist");
+        if ('lineageMeanDepth' in entry.diversity)
+          diversityLineageKeys.add('lineageMeanDepth');
+        if ('lineageMeanPairDist' in entry.diversity)
+          diversityLineageKeys.add('lineageMeanPairDist');
       }
-      if ("rng" in entry)
-        baseKeys.add("rng");
-      if (Array.isArray(entry.ops) && entry.ops.length)
-        includeOps = true;
-      if (Array.isArray(entry.objectives))
-        includeObjectives = true;
-      if (entry.objAges)
-        includeObjAges = true;
-      if (Array.isArray(entry.speciesAlloc))
-        includeSpeciesAlloc = true;
+      if ('rng' in entry) baseKeys.add('rng');
+      if (Array.isArray(entry.ops) && entry.ops.length) includeOps = true;
+      if (Array.isArray(entry.objectives)) includeObjectives = true;
+      if (entry.objAges) includeObjAges = true;
+      if (Array.isArray(entry.speciesAlloc)) includeSpeciesAlloc = true;
       if (Array.isArray(entry.objEvents) && entry.objEvents.length)
         includeObjEvents = true;
-      if (entry.objImportance)
-        includeObjImportance = true;
+      if (entry.objImportance) includeObjImportance = true;
     }
     return {
       baseKeys,
@@ -12207,7 +13664,7 @@
       includeObjAges,
       includeSpeciesAlloc,
       includeObjEvents,
-      includeObjImportance
+      includeObjImportance,
     };
   }
   function buildTelemetryHeaders(info) {
@@ -12216,20 +13673,14 @@
       ...[...info.complexityKeys].map((k) => `${COMPLEXITY_PREFIX}${k}`),
       ...[...info.perfKeys].map((k) => `${PERF_PREFIX}${k}`),
       ...[...info.lineageKeys].map((k) => `${LINEAGE_PREFIX}${k}`),
-      ...[...info.diversityLineageKeys].map((k) => `${DIVERSITY_PREFIX}${k}`)
+      ...[...info.diversityLineageKeys].map((k) => `${DIVERSITY_PREFIX}${k}`),
     ];
-    if (info.includeOps)
-      headers.push(HEADER_OPS);
-    if (info.includeObjectives)
-      headers.push(HEADER_OBJECTIVES);
-    if (info.includeObjAges)
-      headers.push(HEADER_OBJ_AGES);
-    if (info.includeSpeciesAlloc)
-      headers.push(HEADER_SPECIES_ALLOC);
-    if (info.includeObjEvents)
-      headers.push(HEADER_OBJ_EVENTS);
-    if (info.includeObjImportance)
-      headers.push(HEADER_OBJ_IMPORTANCE);
+    if (info.includeOps) headers.push(HEADER_OPS);
+    if (info.includeObjectives) headers.push(HEADER_OBJECTIVES);
+    if (info.includeObjAges) headers.push(HEADER_OBJ_AGES);
+    if (info.includeSpeciesAlloc) headers.push(HEADER_SPECIES_ALLOC);
+    if (info.includeObjEvents) headers.push(HEADER_OBJ_EVENTS);
+    if (info.includeObjImportance) headers.push(HEADER_OBJ_IMPORTANCE);
     return headers;
   }
   function serializeTelemetryEntry(entry, headers) {
@@ -12239,54 +13690,86 @@
         // Grouped complexity metrics
         case header.startsWith(COMPLEXITY_PREFIX): {
           const key = header.slice(COMPLEXITY_PREFIX.length);
-          row.push(entry.complexity && key in entry.complexity ? JSON.stringify(entry.complexity[key]) : "");
+          row.push(
+            entry.complexity && key in entry.complexity
+              ? JSON.stringify(entry.complexity[key])
+              : ''
+          );
           break;
         }
         // Grouped performance metrics
         case header.startsWith(PERF_PREFIX): {
           const key = header.slice(PERF_PREFIX.length);
-          row.push(entry.perf && key in entry.perf ? JSON.stringify(entry.perf[key]) : "");
+          row.push(
+            entry.perf && key in entry.perf
+              ? JSON.stringify(entry.perf[key])
+              : ''
+          );
           break;
         }
         // Grouped lineage metrics
         case header.startsWith(LINEAGE_PREFIX): {
           const key = header.slice(LINEAGE_PREFIX.length);
-          row.push(entry.lineage && key in entry.lineage ? JSON.stringify(entry.lineage[key]) : "");
+          row.push(
+            entry.lineage && key in entry.lineage
+              ? JSON.stringify(entry.lineage[key])
+              : ''
+          );
           break;
         }
         // Grouped diversity metrics
         case header.startsWith(DIVERSITY_PREFIX): {
           const key = header.slice(DIVERSITY_PREFIX.length);
-          row.push(entry.diversity && key in entry.diversity ? JSON.stringify(entry.diversity[key]) : "");
+          row.push(
+            entry.diversity && key in entry.diversity
+              ? JSON.stringify(entry.diversity[key])
+              : ''
+          );
           break;
         }
         // Array-like and optional multi-value columns
         case header === HEADER_FRONTS: {
-          row.push(Array.isArray(entry.fronts) ? JSON.stringify(entry.fronts) : "");
+          row.push(
+            Array.isArray(entry.fronts) ? JSON.stringify(entry.fronts) : ''
+          );
           break;
         }
         case header === HEADER_OPS: {
-          row.push(Array.isArray(entry.ops) ? JSON.stringify(entry.ops) : "");
+          row.push(Array.isArray(entry.ops) ? JSON.stringify(entry.ops) : '');
           break;
         }
         case header === HEADER_OBJECTIVES: {
-          row.push(Array.isArray(entry.objectives) ? JSON.stringify(entry.objectives) : "");
+          row.push(
+            Array.isArray(entry.objectives)
+              ? JSON.stringify(entry.objectives)
+              : ''
+          );
           break;
         }
         case header === HEADER_OBJ_AGES: {
-          row.push(entry.objAges ? JSON.stringify(entry.objAges) : "");
+          row.push(entry.objAges ? JSON.stringify(entry.objAges) : '');
           break;
         }
         case header === HEADER_SPECIES_ALLOC: {
-          row.push(Array.isArray(entry.speciesAlloc) ? JSON.stringify(entry.speciesAlloc) : "");
+          row.push(
+            Array.isArray(entry.speciesAlloc)
+              ? JSON.stringify(entry.speciesAlloc)
+              : ''
+          );
           break;
         }
         case header === HEADER_OBJ_EVENTS: {
-          row.push(Array.isArray(entry.objEvents) ? JSON.stringify(entry.objEvents) : "");
+          row.push(
+            Array.isArray(entry.objEvents)
+              ? JSON.stringify(entry.objEvents)
+              : ''
+          );
           break;
         }
         case header === HEADER_OBJ_IMPORTANCE: {
-          row.push(entry.objImportance ? JSON.stringify(entry.objImportance) : "");
+          row.push(
+            entry.objImportance ? JSON.stringify(entry.objImportance) : ''
+          );
           break;
         }
         // Default: treat as top-level column
@@ -12296,12 +13779,15 @@
         }
       }
     }
-    return row.join(",");
+    return row.join(',');
   }
   function exportSpeciesHistoryCSV(maxEntries = 200) {
-    if (!Array.isArray(this._speciesHistory))
-      this._speciesHistory = [];
-    if (!this._speciesHistory.length && Array.isArray(this._species) && this._species.length) {
+    if (!Array.isArray(this._speciesHistory)) this._speciesHistory = [];
+    if (
+      !this._speciesHistory.length &&
+      Array.isArray(this._species) &&
+      this._species.length
+    ) {
       const stats = this._species.map((sp) => ({
         /** Unique identifier for the species (or -1 when missing). */
         id: sp.id ?? -1,
@@ -12310,15 +13796,15 @@
         /** Best score observed in the species (fallback 0). */
         best: sp.bestScore ?? 0,
         /** Generation index when the species last improved (fallback 0). */
-        lastImproved: sp.lastImproved ?? 0
+        lastImproved: sp.lastImproved ?? 0,
       }));
       this._speciesHistory.push({ generation: this.generation || 0, stats });
     }
     const recentHistory = this._speciesHistory.slice(-maxEntries);
     if (!recentHistory.length) {
-      return "generation,id,size,best,lastImproved";
+      return 'generation,id,size,best,lastImproved';
     }
-    const headerKeySet = /* @__PURE__ */ new Set(["generation"]);
+    const headerKeySet = /* @__PURE__ */ new Set(['generation']);
     for (const entry of recentHistory)
       for (const speciesStat of entry.stats)
         Object.keys(speciesStat).forEach((k) => headerKeySet.add(k));
@@ -12326,7 +13812,7 @@
     return buildSpeciesHistoryCsv(recentHistory, headers);
   }
   function buildSpeciesHistoryCsv(recentHistory, headers) {
-    const lines = [headers.join(",")];
+    const lines = [headers.join(',')];
     for (const historyEntry of recentHistory) {
       for (const speciesStat of historyEntry.stats) {
         const rowCells = [];
@@ -12337,28 +13823,39 @@
           }
           rowCells.push(JSON.stringify(speciesStat[header]));
         }
-        lines.push(rowCells.join(","));
+        lines.push(rowCells.join(','));
       }
     }
-    return lines.join("\n");
+    return lines.join('\n');
   }
-  var COMPLEXITY_PREFIX, PERF_PREFIX, LINEAGE_PREFIX, DIVERSITY_PREFIX, HEADER_FRONTS, HEADER_OPS, HEADER_OBJECTIVES, HEADER_OBJ_AGES, HEADER_SPECIES_ALLOC, HEADER_OBJ_EVENTS, HEADER_OBJ_IMPORTANCE, HEADER_GENERATION;
+  var COMPLEXITY_PREFIX,
+    PERF_PREFIX,
+    LINEAGE_PREFIX,
+    DIVERSITY_PREFIX,
+    HEADER_FRONTS,
+    HEADER_OPS,
+    HEADER_OBJECTIVES,
+    HEADER_OBJ_AGES,
+    HEADER_SPECIES_ALLOC,
+    HEADER_OBJ_EVENTS,
+    HEADER_OBJ_IMPORTANCE,
+    HEADER_GENERATION;
   var init_neat_telemetry_exports = __esm({
-    "dist/neat/neat.telemetry.exports.js"() {
-      "use strict";
-      COMPLEXITY_PREFIX = "complexity.";
-      PERF_PREFIX = "perf.";
-      LINEAGE_PREFIX = "lineage.";
-      DIVERSITY_PREFIX = "diversity.";
-      HEADER_FRONTS = "fronts";
-      HEADER_OPS = "ops";
-      HEADER_OBJECTIVES = "objectives";
-      HEADER_OBJ_AGES = "objAges";
-      HEADER_SPECIES_ALLOC = "speciesAlloc";
-      HEADER_OBJ_EVENTS = "objEvents";
-      HEADER_OBJ_IMPORTANCE = "objImportance";
-      HEADER_GENERATION = "generation";
-    }
+    'dist/neat/neat.telemetry.exports.js'() {
+      'use strict';
+      COMPLEXITY_PREFIX = 'complexity.';
+      PERF_PREFIX = 'perf.';
+      LINEAGE_PREFIX = 'lineage.';
+      DIVERSITY_PREFIX = 'diversity.';
+      HEADER_FRONTS = 'fronts';
+      HEADER_OPS = 'ops';
+      HEADER_OBJECTIVES = 'objectives';
+      HEADER_OBJ_AGES = 'objAges';
+      HEADER_SPECIES_ALLOC = 'speciesAlloc';
+      HEADER_OBJ_EVENTS = 'objEvents';
+      HEADER_OBJ_IMPORTANCE = 'objImportance';
+      HEADER_GENERATION = 'generation';
+    },
   });
 
   // dist/neat/neat.selection.js
@@ -12371,17 +13868,27 @@
     const getRngFactory = this._getRNG.bind(this);
     const population = this.population;
     switch (selectionName) {
-      case "POWER":
-        if (population[0]?.score !== void 0 && population[1]?.score !== void 0 && population[0].score < population[1].score) {
+      case 'POWER':
+        if (
+          population[0]?.score !== void 0 &&
+          population[1]?.score !== void 0 &&
+          population[0].score < population[1].score
+        ) {
           this.sort();
         }
-        const selectedIndex = Math.floor(Math.pow(getRngFactory()(), selectionOptions.power || 1) * population.length);
+        const selectedIndex = Math.floor(
+          Math.pow(getRngFactory()(), selectionOptions.power || 1) *
+            population.length
+        );
         return population[selectedIndex];
-      case "FITNESS_PROPORTIONATE":
+      case 'FITNESS_PROPORTIONATE':
         let totalFitness = 0;
         let mostNegativeScore = 0;
         population.forEach((individual) => {
-          mostNegativeScore = Math.min(mostNegativeScore, individual.score ?? 0);
+          mostNegativeScore = Math.min(
+            mostNegativeScore,
+            individual.score ?? 0
+          );
           totalFitness += individual.score ?? 0;
         });
         const minFitnessShift = Math.abs(mostNegativeScore);
@@ -12390,25 +13897,31 @@
         let cumulative = 0;
         for (const individual of population) {
           cumulative += (individual.score ?? 0) + minFitnessShift;
-          if (threshold < cumulative)
-            return individual;
+          if (threshold < cumulative) return individual;
         }
         return population[Math.floor(getRngFactory()() * population.length)];
-      case "TOURNAMENT":
+      case 'TOURNAMENT':
         if ((selectionOptions.size || 2) > population.length) {
           if (!this._suppressTournamentError) {
-            throw new Error("Tournament size must be less than population size.");
+            throw new Error(
+              'Tournament size must be less than population size.'
+            );
           }
           return population[Math.floor(getRngFactory()() * population.length)];
         }
         const tournamentSize = selectionOptions.size || 2;
         const tournamentParticipants = [];
         for (let i = 0; i < tournamentSize; i++) {
-          tournamentParticipants.push(population[Math.floor(getRngFactory()() * population.length)]);
+          tournamentParticipants.push(
+            population[Math.floor(getRngFactory()() * population.length)]
+          );
         }
         tournamentParticipants.sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
         for (let i = 0; i < tournamentParticipants.length; i++) {
-          if (getRngFactory()() < (selectionOptions.probability ?? 0.5) || i === tournamentParticipants.length - 1)
+          if (
+            getRngFactory()() < (selectionOptions.probability ?? 0.5) ||
+            i === tournamentParticipants.length - 1
+          )
             return tournamentParticipants[i];
         }
         break;
@@ -12422,7 +13935,10 @@
     if (population[population.length - 1].score === void 0) {
       this.evaluate();
     }
-    if (population[1] && (population[0].score ?? 0) < (population[1].score ?? 0)) {
+    if (
+      population[1] &&
+      (population[0].score ?? 0) < (population[1].score ?? 0)
+    ) {
       this.sort();
     }
     return population[0];
@@ -12432,13 +13948,16 @@
     if (population[population.length - 1].score === void 0) {
       this.evaluate();
     }
-    const totalScore = population.reduce((sum, genome) => sum + (genome.score ?? 0), 0);
+    const totalScore = population.reduce(
+      (sum, genome) => sum + (genome.score ?? 0),
+      0
+    );
     return totalScore / population.length;
   }
   var init_neat_selection = __esm({
-    "dist/neat/neat.selection.js"() {
-      "use strict";
-    }
+    'dist/neat/neat.selection.js'() {
+      'use strict';
+    },
   });
 
   // dist/neat/neat.export.js
@@ -12449,26 +13968,29 @@
     fromJSONImpl: () => fromJSONImpl2,
     importPopulation: () => importPopulation,
     importStateImpl: () => importStateImpl,
-    toJSONImpl: () => toJSONImpl2
+    toJSONImpl: () => toJSONImpl2,
   });
   function exportPopulation() {
     return this.population.map((genome) => genome.toJSON());
   }
   function importPopulation(populationJSON) {
     const Network2 = (init_network(), __toCommonJS(network_exports)).default;
-    this.population = populationJSON.map((serializedGenome) => Network2.fromJSON(serializedGenome));
+    this.population = populationJSON.map((serializedGenome) =>
+      Network2.fromJSON(serializedGenome)
+    );
     this.options.popsize = this.population.length;
   }
   function exportState() {
-    const { toJSONImpl: toJSONImpl3, exportPopulation: exportPopulation2 } = (init_neat_export(), __toCommonJS(neat_export_exports));
+    const { toJSONImpl: toJSONImpl3, exportPopulation: exportPopulation2 } =
+      (init_neat_export(), __toCommonJS(neat_export_exports));
     return {
       neat: toJSONImpl3.call(this),
-      population: exportPopulation2.call(this)
+      population: exportPopulation2.call(this),
     };
   }
   function importStateImpl(stateBundle, fitnessFunction) {
-    if (!stateBundle || typeof stateBundle !== "object")
-      throw new Error("Invalid state bundle");
+    if (!stateBundle || typeof stateBundle !== 'object')
+      throw new Error('Invalid state bundle');
     const neatInstance = this.fromJSON(stateBundle.neat, fitnessFunction);
     if (Array.isArray(stateBundle.population))
       neatInstance.import(stateBundle.population);
@@ -12482,36 +14004,43 @@
       options: this.options,
       nodeSplitInnovations: Array.from(this._nodeSplitInnovations.entries()),
       connInnovations: Array.from(this._connInnovations.entries()),
-      nextGlobalInnovation: this._nextGlobalInnovation
+      nextGlobalInnovation: this._nextGlobalInnovation,
     };
   }
   function fromJSONImpl2(neatJSON, fitnessFunction) {
     const NeatClass = this;
-    const neatInstance = new NeatClass(neatJSON.input, neatJSON.output, fitnessFunction, neatJSON.options || {});
+    const neatInstance = new NeatClass(
+      neatJSON.input,
+      neatJSON.output,
+      fitnessFunction,
+      neatJSON.options || {}
+    );
     neatInstance.generation = neatJSON.generation || 0;
     if (Array.isArray(neatJSON.nodeSplitInnovations))
-      neatInstance._nodeSplitInnovations = new Map(neatJSON.nodeSplitInnovations);
+      neatInstance._nodeSplitInnovations = new Map(
+        neatJSON.nodeSplitInnovations
+      );
     if (Array.isArray(neatJSON.connInnovations))
       neatInstance._connInnovations = new Map(neatJSON.connInnovations);
-    if (typeof neatJSON.nextGlobalInnovation === "number")
+    if (typeof neatJSON.nextGlobalInnovation === 'number')
       neatInstance._nextGlobalInnovation = neatJSON.nextGlobalInnovation;
     return neatInstance;
   }
   var init_neat_export = __esm({
-    "dist/neat/neat.export.js"() {
-      "use strict";
-    }
+    'dist/neat/neat.export.js'() {
+      'use strict';
+    },
   });
 
   // dist/neat.js
   var neat_exports = {};
   __export(neat_exports, {
-    default: () => Neat
+    default: () => Neat,
   });
   var Neat;
   var init_neat = __esm({
-    "dist/neat.js"() {
-      "use strict";
+    'dist/neat.js'() {
+      'use strict';
       init_network();
       init_methods();
       init_selection();
@@ -12623,13 +14152,13 @@
         _getRNG() {
           if (!this._rng) {
             const optRng = this.options?.rng;
-            if (typeof optRng === "function")
-              this._rng = optRng;
+            if (typeof optRng === 'function') this._rng = optRng;
             else {
               if (this._rngState === void 0) {
-                let seed = (Date.now() ^ (this.population.length + 1) * 2654435761) >>> 0;
-                if (seed === 0)
-                  seed = 439041101;
+                let seed =
+                  (Date.now() ^ ((this.population.length + 1) * 2654435761)) >>>
+                  0;
+                if (seed === 0) seed = 439041101;
                 this._rngState = seed >>> 0;
               }
               this._rng = () => {
@@ -12672,45 +14201,37 @@
           this.fitness = fitness ?? ((n) => 0);
           this.options = options || {};
           const opts = this.options;
-          if (opts.popsize === void 0)
-            opts.popsize = 50;
-          if (opts.elitism === void 0)
-            opts.elitism = 0;
-          if (opts.provenance === void 0)
-            opts.provenance = 0;
-          if (opts.mutationRate === void 0)
-            opts.mutationRate = 0.7;
-          if (opts.mutationAmount === void 0)
-            opts.mutationAmount = 1;
-          if (opts.fitnessPopulation === void 0)
-            opts.fitnessPopulation = false;
-          if (opts.clear === void 0)
-            opts.clear = false;
-          if (opts.equal === void 0)
-            opts.equal = false;
+          if (opts.popsize === void 0) opts.popsize = 50;
+          if (opts.elitism === void 0) opts.elitism = 0;
+          if (opts.provenance === void 0) opts.provenance = 0;
+          if (opts.mutationRate === void 0) opts.mutationRate = 0.7;
+          if (opts.mutationAmount === void 0) opts.mutationAmount = 1;
+          if (opts.fitnessPopulation === void 0) opts.fitnessPopulation = false;
+          if (opts.clear === void 0) opts.clear = false;
+          if (opts.equal === void 0) opts.equal = false;
           if (opts.compatibilityThreshold === void 0)
             opts.compatibilityThreshold = 3;
-          if (opts.maxNodes === void 0)
-            opts.maxNodes = Infinity;
-          if (opts.maxConns === void 0)
-            opts.maxConns = Infinity;
-          if (opts.maxGates === void 0)
-            opts.maxGates = Infinity;
-          if (opts.excessCoeff === void 0)
-            opts.excessCoeff = 1;
-          if (opts.disjointCoeff === void 0)
-            opts.disjointCoeff = 1;
-          if (opts.weightDiffCoeff === void 0)
-            opts.weightDiffCoeff = 0.5;
+          if (opts.maxNodes === void 0) opts.maxNodes = Infinity;
+          if (opts.maxConns === void 0) opts.maxConns = Infinity;
+          if (opts.maxGates === void 0) opts.maxGates = Infinity;
+          if (opts.excessCoeff === void 0) opts.excessCoeff = 1;
+          if (opts.disjointCoeff === void 0) opts.disjointCoeff = 1;
+          if (opts.weightDiffCoeff === void 0) opts.weightDiffCoeff = 0.5;
           if (opts.mutation === void 0)
-            opts.mutation = mutation.ALL ? mutation.ALL.slice() : mutation.FFW ? [mutation.FFW] : [];
+            opts.mutation = mutation.ALL
+              ? mutation.ALL.slice()
+              : mutation.FFW
+              ? [mutation.FFW]
+              : [];
           if (opts.selection === void 0) {
-            opts.selection = selection && selection.TOURNAMENT || selection?.TOURNAMENT || selection.FITNESS_PROPORTIONATE;
+            opts.selection =
+              (selection && selection.TOURNAMENT) ||
+              selection?.TOURNAMENT ||
+              selection.FITNESS_PROPORTIONATE;
           }
           if (opts.crossover === void 0)
             opts.crossover = crossover ? crossover.SINGLE_POINT : void 0;
-          if (opts.novelty === void 0)
-            opts.novelty = { enabled: false };
+          if (opts.novelty === void 0) opts.novelty = { enabled: false };
           if (opts.diversityMetrics === void 0)
             opts.diversityMetrics = { enabled: true };
           if (opts.fastMode && opts.diversityMetrics) {
@@ -12722,23 +14243,27 @@
               opts.novelty.k = 5;
           }
           this._noveltyArchive = [];
-          if (opts.speciation === void 0)
-            opts.speciation = false;
-          if (opts.multiObjective && opts.multiObjective.enabled && !Array.isArray(opts.multiObjective.objectives))
+          if (opts.speciation === void 0) opts.speciation = false;
+          if (
+            opts.multiObjective &&
+            opts.multiObjective.enabled &&
+            !Array.isArray(opts.multiObjective.objectives)
+          )
             opts.multiObjective.objectives = [];
           this.population = this.population || [];
           try {
             if (this.options.network !== void 0)
               this.createPool(this.options.network);
-            else if (this.options.popsize)
-              this.createPool(null);
-          } catch {
-          }
+            else if (this.options.popsize) this.createPool(null);
+          } catch {}
           if (this.options.lineage?.enabled || this.options.provenance > 0)
             this._lineageEnabled = true;
           if (this.options.lineageTracking === true)
             this._lineageEnabled = true;
-          if (options.lineagePressure?.enabled && this._lineageEnabled !== true) {
+          if (
+            options.lineagePressure?.enabled &&
+            this._lineageEnabled !== true
+          ) {
             this._lineageEnabled = true;
           }
         }
@@ -12761,21 +14286,21 @@
          */
         createPool(network) {
           try {
-            if (createPool && typeof createPool === "function")
+            if (createPool && typeof createPool === 'function')
               return createPool.call(this, network);
-          } catch {
-          }
+          } catch {}
           this.population = [];
           const poolSize = this.options.popsize || 50;
           for (let idx = 0; idx < poolSize; idx++) {
-            const genomeCopy = network ? Network.fromJSON(network.toJSON()) : new Network(this.input, this.output, {
-              minHidden: this.options.minHidden
-            });
+            const genomeCopy = network
+              ? Network.fromJSON(network.toJSON())
+              : new Network(this.input, this.output, {
+                  minHidden: this.options.minHidden,
+                });
             genomeCopy.score = void 0;
             try {
               this.ensureNoDeadEnds(genomeCopy);
-            } catch {
-            }
+            } catch {}
             genomeCopy._reenableProb = this.options.reenableProb;
             genomeCopy._id = this._nextGenomeId++;
             if (this._lineageEnabled) {
@@ -12834,21 +14359,24 @@
           try {
             parent2 = this.getParent();
           } catch {
-            parent2 = this.population[Math.floor(this._getRNG()() * this.population.length)] || this.population[0];
+            parent2 =
+              this.population[
+                Math.floor(this._getRNG()() * this.population.length)
+              ] || this.population[0];
           }
-          const offspring = Network.crossOver(parent1, parent2, this.options.equal || false);
+          const offspring = Network.crossOver(
+            parent1,
+            parent2,
+            this.options.equal || false
+          );
           offspring._reenableProb = this.options.reenableProb;
           offspring._id = this._nextGenomeId++;
           if (this._lineageEnabled) {
-            offspring._parents = [
-              parent1._id,
-              parent2._id
-            ];
+            offspring._parents = [parent1._id, parent2._id];
             const depth1 = parent1._depth ?? 0;
             const depth2 = parent2._depth ?? 0;
             offspring._depth = 1 + Math.max(depth1, depth2);
-            if (parent1._id === parent2._id)
-              this._lastInbreedingCount++;
+            if (parent1._id === parent2._id) this._lastInbreedingCount++;
           }
           this.ensureMinHiddenNodes(offspring);
           this.ensureNoDeadEnds(offspring);
@@ -12857,9 +14385,10 @@
         /** Emit a standardized warning when evolution loop finds no valid best genome (test hook). */
         _warnIfNoBestGenome() {
           try {
-            console.warn("Evolution completed without finding a valid best genome (no fitness improvements recorded).");
-          } catch {
-          }
+            console.warn(
+              'Evolution completed without finding a valid best genome (no fitness improvements recorded).'
+            );
+          } catch {}
         }
         /**
          * Spawn a new genome derived from a single parent while preserving Neat bookkeeping.
@@ -12949,10 +14478,9 @@
         /** Minimum hidden size considering explicit minHidden or multiplier policy. */
         getMinimumHiddenSize(multiplierOverride) {
           const o = this.options;
-          if (typeof o.minHidden === "number")
-            return o.minHidden;
+          if (typeof o.minHidden === 'number') return o.minHidden;
           const mult = multiplierOverride ?? o.minHiddenMultiplier;
-          if (typeof mult === "number" && isFinite(mult)) {
+          if (typeof mult === 'number' && isFinite(mult)) {
             return Math.max(0, Math.round(mult * (this.input + this.output)));
           }
           return 0;
@@ -12961,8 +14489,7 @@
         sampleRandom(count) {
           const rng = this._getRNG();
           const arr = [];
-          for (let i = 0; i < count; i++)
-            arr.push(rng());
+          for (let i = 0; i < count; i++) arr.push(rng());
           return arr;
         }
         /** Internal: return cached objective descriptors, building if stale. */
@@ -12975,8 +14502,7 @@
         }
         /** Invalidate per-genome caches (compatibility distance, forward pass, etc.). */
         _invalidateGenomeCaches(genome) {
-          if (!genome || typeof genome !== "object")
-            return;
+          if (!genome || typeof genome !== 'object') return;
           delete genome._compatCache;
           delete genome._outputCache;
           delete genome._traceCache;
@@ -13112,7 +14638,7 @@
             crowding: genome._moCrowd ?? 0,
             score: genome.score || 0,
             nodes: genome.nodes.length,
-            connections: genome.connections.length
+            connections: genome.connections.length,
           }));
         }
         /**
@@ -13127,11 +14653,13 @@
          * @returns Array of { name, success, attempts } objects.
          */
         getOperatorStats() {
-          return Array.from(this._operatorStats.entries()).map(([operatorName, stats]) => ({
-            name: operatorName,
-            success: stats.success,
-            attempts: stats.attempts
-          }));
+          return Array.from(this._operatorStats.entries()).map(
+            ([operatorName, stats]) => ({
+              name: operatorName,
+              success: stats.success,
+              attempts: stats.attempts,
+            })
+          );
         }
         /**
          * Manually apply evolution-time pruning once using the current generation
@@ -13146,9 +14674,11 @@
          */
         applyEvolutionPruning() {
           try {
-            (init_neat_pruning(), __toCommonJS(neat_pruning_exports)).applyEvolutionPruning.call(this);
-          } catch {
-          }
+            (init_neat_pruning(),
+            __toCommonJS(neat_pruning_exports)).applyEvolutionPruning.call(
+              this
+            );
+          } catch {}
         }
         /**
          * Run the adaptive pruning controller once. This adjusts the internal
@@ -13161,9 +14691,9 @@
          */
         applyAdaptivePruning() {
           try {
-            (init_neat_pruning(), __toCommonJS(neat_pruning_exports)).applyAdaptivePruning.call(this);
-          } catch {
-          }
+            (init_neat_pruning(),
+            __toCommonJS(neat_pruning_exports)).applyAdaptivePruning.call(this);
+          } catch {}
         }
         /**
          * Return the internal telemetry buffer.
@@ -13210,7 +14740,7 @@
         getObjectives() {
           return this._getObjectives().map((o) => ({
             key: o.key,
-            direction: o.direction
+            direction: o.direction,
           }));
         }
         getObjectiveEvents() {
@@ -13220,7 +14750,9 @@
         getLineageSnapshot(limit = 20) {
           return this.population.slice(0, limit).map((genome) => ({
             id: genome._id ?? -1,
-            parents: Array.isArray(genome._parents) ? genome._parents.slice() : []
+            parents: Array.isArray(genome._parents)
+              ? genome._parents.slice()
+              : [],
           }));
         }
         /**
@@ -13243,9 +14775,10 @@
             return [[...this.population]];
           const fronts = [];
           for (let frontIdx = 0; frontIdx < maxFronts; frontIdx++) {
-            const front = this.population.filter((genome) => (genome._moRank ?? 0) === frontIdx);
-            if (!front.length)
-              break;
+            const front = this.population.filter(
+              (genome) => (genome._moRank ?? 0) === frontIdx
+            );
+            if (!front.length) break;
             fronts.push(front);
           }
           return fronts;
@@ -13316,7 +14849,7 @@
          */
         exportParetoFrontJSONL(maxEntries = 100) {
           const slice = this._paretoObjectivesArchive.slice(-maxEntries);
-          return slice.map((e) => JSON.stringify(e)).join("\n");
+          return slice.map((e) => JSON.stringify(e)).join('\n');
         }
         /**
          * Return recent performance statistics (durations in milliseconds) for the
@@ -13330,7 +14863,7 @@
         getPerformanceStats() {
           return {
             lastEvalMs: this._lastEvalDuration,
-            lastEvolveMs: this._lastEvolveDuration
+            lastEvolveMs: this._lastEvolveDuration,
           };
         }
         // Utility exports / maintenance
@@ -13345,7 +14878,7 @@
          */
         exportSpeciesHistoryJSONL(maxEntries = 200) {
           const slice = this._speciesHistory.slice(-maxEntries);
-          return slice.map((e) => JSON.stringify(e)).join("\n");
+          return slice.map((e) => JSON.stringify(e)).join('\n');
         }
         /**
          * Reset the novelty archive (clear entries).
@@ -13438,7 +14971,7 @@
           return fromJSONImpl2.call(_Neat, json, fitness);
         }
       };
-    }
+    },
   });
 
   // dist/neataptic.js
@@ -13498,15 +15031,15 @@
         fwdTotalMs: Number(totalMs.toFixed(3)),
         conn: net.connections.length,
         nodes: net.nodes.length,
-        iterations
+        iterations,
       });
     }
     return out;
   }
   window.__NEATAPTIC_BENCH__ = {
-    mode: window.__BENCH_MODE__ || "__UNDEF__",
-    generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
-    results: run()
+    mode: window.__BENCH_MODE__ || '__UNDEF__',
+    generatedAt: /* @__PURE__ */ new Date().toISOString(),
+    results: run(),
   };
-  console.log("[NEATAPTIC_BROWSER_BENCH] ready");
+  console.log('[NEATAPTIC_BROWSER_BENCH] ready');
 })();

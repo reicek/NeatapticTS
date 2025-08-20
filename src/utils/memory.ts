@@ -33,6 +33,7 @@
  */
 import { config } from '../config';
 import { nodePoolStats } from '../architecture/nodePool';
+import { getSlabAllocationStats as _getSlabAllocationStats } from '../architecture/network/network.slab';
 
 /**
  * Capture heuristic memory statistics for one or more networks with snapshot of active config flags.
@@ -49,6 +50,8 @@ export function memoryStats(targetNetworks?: any | any[]) {
   let totalNodes = 0;
   let slabBytes = 0;
   let slabArrayCount = 0;
+  let totalReservedBytes = 0; // capacity * elementSize per array
+  let totalUsedBytes = 0; // logical used slice
   let objectConnOverheadBytes = 0;
 
   /** Heuristic per-connection JS object overhead (fields / hidden class). Tuned later. */
@@ -75,6 +78,11 @@ export function memoryStats(targetNetworks?: any | any[]) {
       | undefined;
     const fromSlab = (net as any)._connFrom as Uint32Array | undefined;
     const toSlab = (net as any)._connTo as Uint32Array | undefined;
+    const flagsSlab = (net as any)._connFlags as Uint8Array | undefined; // Phase 3 flags
+    const gainSlab = (net as any)._connGain as
+      | Float32Array
+      | Float64Array
+      | undefined; // Phase 3 gain
     const fastA = (net as any)._fastA as
       | Float32Array
       | Float64Array
@@ -90,11 +98,28 @@ export function memoryStats(targetNetworks?: any | any[]) {
     if (weightSlab) typedArrays.push(weightSlab);
     if (fromSlab) typedArrays.push(fromSlab);
     if (toSlab) typedArrays.push(toSlab);
+    if (flagsSlab) typedArrays.push(flagsSlab);
+    if (gainSlab) typedArrays.push(gainSlab);
     if (fastA) typedArrays.push(fastA);
     if (fastS) typedArrays.push(fastS);
     for (const ta of typedArrays) {
       slabArrayCount++;
       slabBytes += ta.byteLength;
+    }
+    // Capacity vs used (only for connection slabs when capacity tracked)
+    const capacity = (net as any)._connCapacity as number | undefined;
+    const used = (net as any)._connCount as number | undefined;
+    if (capacity && used !== undefined && used <= capacity) {
+      // Approximate per-connection bytes across parallel arrays we manage (weights/from/to/flags/gain)
+      // Determine element sizes
+      const weightBytes = (net as any)._useFloat32Weights ? 4 : 8;
+      const gainBytes = weightBytes;
+      const fromBytes = 4;
+      const toBytes = 4;
+      const flagBytes = 1;
+      const perConn = weightBytes + gainBytes + fromBytes + toBytes + flagBytes;
+      totalReservedBytes += perConn * capacity;
+      totalUsedBytes += perConn * used;
     }
   }
 
@@ -134,8 +159,25 @@ export function memoryStats(targetNetworks?: any | any[]) {
     slabs: {
       slabBytes,
       slabArrayCount,
-      // fragmentation placeholder (computed in later phases when we track reserved vs used)
-      fragmentationPct: null,
+      fragmentationPct:
+        totalReservedBytes > 0
+          ? Math.round(
+              (100 * (totalReservedBytes - totalUsedBytes)) / totalReservedBytes
+            )
+          : null,
+      reservedBytes: totalReservedBytes || null,
+      usedBytes: totalUsedBytes || null,
+      slabVersion: (networks[0] as any)?._slabVersion ?? null, // example version (Phase 3 edu)
+      asyncBuilds: (networks[0] as any)?._slabAsyncBuilds ?? 0,
+      pooledFraction: (() => {
+        try {
+          const stats = _getSlabAllocationStats();
+          const denom = stats.fresh + stats.pooled;
+            return denom > 0 ? Number((stats.pooled / denom).toFixed(4)) : null;
+        } catch {
+          return null;
+        }
+      })(),
     },
     pools: {
       nodePool: nodePoolStats?.() ?? null,
@@ -150,6 +192,13 @@ export function memoryStats(targetNetworks?: any | any[]) {
         poolMaxPerBucket: config.poolMaxPerBucket ?? null,
         poolPrewarmCount: config.poolPrewarmCount ?? null,
         enableNodePooling: (config as any).enableNodePooling ?? false, // Phase 2 addition
+      allocStats: (() => {
+        try {
+          return _getSlabAllocationStats();
+        } catch {
+          return null;
+        }
+      })(),
       },
     },
     env,

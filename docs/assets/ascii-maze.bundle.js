@@ -4382,20 +4382,40 @@
     if (!force && !internalNet._slabDirty) return;
     if (internalNet._nodeIndexDirty) _reindexNodes.call(this);
     const connectionCount = this.connections.length;
-    const weightArray = internalNet._useFloat32Weights ? new Float32Array(connectionCount) : new Float64Array(connectionCount);
-    const fromIndexArray = new Uint32Array(connectionCount);
-    const toIndexArray = new Uint32Array(connectionCount);
+    let capacity = internalNet._connCapacity || 0;
+    const growthFactor = typeof window === "undefined" ? 1.75 : 1.25;
+    const needAllocate = capacity < connectionCount;
+    if (needAllocate) {
+      capacity = capacity === 0 ? Math.ceil(connectionCount * growthFactor) : capacity;
+      while (capacity < connectionCount)
+        capacity = Math.ceil(capacity * growthFactor);
+      internalNet._connWeights = internalNet._useFloat32Weights ? new Float32Array(capacity) : new Float64Array(capacity);
+      internalNet._connFrom = new Uint32Array(capacity);
+      internalNet._connTo = new Uint32Array(capacity);
+      internalNet._connFlags = new Uint8Array(capacity);
+      internalNet._connGain = internalNet._useFloat32Weights ? new Float32Array(capacity) : new Float64Array(capacity);
+      internalNet._connCapacity = capacity;
+    } else {
+      capacity = internalNet._connCapacity;
+    }
+    const weightArray = internalNet._connWeights;
+    const fromIndexArray = internalNet._connFrom;
+    const toIndexArray = internalNet._connTo;
+    const flagArray = internalNet._connFlags;
+    const gainArray = internalNet._connGain;
     for (let connectionIndex = 0; connectionIndex < connectionCount; connectionIndex++) {
       const connection = this.connections[connectionIndex];
       weightArray[connectionIndex] = connection.weight;
       fromIndexArray[connectionIndex] = connection.from.index >>> 0;
       toIndexArray[connectionIndex] = connection.to.index >>> 0;
+      flagArray[connectionIndex] = connection._flags & 255;
+      const g = connection.gain;
+      gainArray[connectionIndex] = g === 1 ? 1 : g;
     }
-    internalNet._connWeights = weightArray;
-    internalNet._connFrom = fromIndexArray;
-    internalNet._connTo = toIndexArray;
+    internalNet._connCount = connectionCount;
     internalNet._slabDirty = false;
     internalNet._adjDirty = true;
+    internalNet._slabVersion = (internalNet._slabVersion || 0) + 1;
   }
   function getConnectionSlab() {
     rebuildConnectionSlab.call(this);
@@ -4403,7 +4423,12 @@
     return {
       weights: internalNet._connWeights,
       from: internalNet._connFrom,
-      to: internalNet._connTo
+      to: internalNet._connTo,
+      flags: internalNet._connFlags,
+      gain: internalNet._connGain,
+      version: internalNet._slabVersion || 0,
+      used: internalNet._connCount || 0,
+      capacity: internalNet._connCapacity || internalNet._connWeights && internalNet._connWeights.length || 0
     };
   }
   function _reindexNodes() {
@@ -4416,7 +4441,7 @@
     const internalNet = this;
     if (!internalNet._connFrom || !internalNet._connTo) return;
     const nodeCount = this.nodes.length;
-    const connectionCount = internalNet._connFrom.length;
+    const connectionCount = internalNet._connCount ?? internalNet._connFrom.length;
     const fanOutCounts = new Uint32Array(nodeCount);
     for (let connectionIndex = 0; connectionIndex < connectionCount; connectionIndex++) {
       fanOutCounts[internalNet._connFrom[connectionIndex]]++;

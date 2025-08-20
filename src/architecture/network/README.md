@@ -1093,46 +1093,54 @@ Falls back to generic activate if prerequisites unavailable.
 
 ### getConnectionSlab
 
-`() => { weights: any; from: any; to: any; }`
+`() => { weights: any; from: any; to: any; flags: any; gain: any; version: any; used: any; capacity: any; }`
 
 Return current slab (building lazily).
+
+### getSlabVersion
+
+`() => number`
+
+Public accessor for current slab version (0 if never built).
 
 ### rebuildConnectionSlab
 
 `(force: boolean) => void`
 
-Fast slab (structure-of-arrays) acceleration layer.
+Fast slab (structure-of-arrays) acceleration layer (Phase 3 foundation).
+----------------------------------------------------------------------
+Motivation:
+ Object graphs suffer from pointer chasing & polymorphic inline caches in large forward passes.
+ By packing connection attributes into contiguous typed arrays we:
+   - Improve spatial locality (sequential memory scans).
+   - Enable simpler tight loops amenable to JIT & future WASM SIMD lowering.
+   - Provide a staging ground for subsequent Phase 3+ memory slimming (flags / precision / plasticity).
 
-Rationale:
- Typical neural network graphs represented as object graphs incur significant overhead during
- forward passes due to pointer chasing (cache misses) and dynamic property lookups. For large
- evolving populations where topologies change infrequently compared to evaluation frequency,
- we can amortize a one-off packing cost into contiguous typed arrays, dramatically improving
- memory locality and enabling tight inner loops.
+Phase 3 Additions (initial commit):
+ - Slab version counter (_slabVersion) incremented on each structural rebuild (educational introspection).
+ - Flags array (_connFlags Uint8Array) and gain array (_connGain Float32/64) allocated in parallel (placeholders
+   for enabled bits, drop masks, future plasticity multipliers). Currently all flags=1, gains=1.
+ - getConnectionSlab() now returns flags & gain alongside weights/from/to.
+
+Future (later Phase 3 iterations):
+ - Geometric capacity growth (avoid realloc on small structural deltas). (Implemented: capacity reuse with growth factor)
+ - Plasticity / mask bits stored compactly (bitpacking) to reduce per-connection bytes.
+ - Typed array pooling / recycling to limit GC churn on frequent rebuilds.
 
 Core Data Structures:
- - weightArray     (Float32Array|Float64Array): connection weights
- - fromIndexArray  (Uint32Array): source node indices per connection
- - toIndexArray    (Uint32Array): destination node indices per connection
- - outgoingStartIndices (Uint32Array length = nodeCount + 1): CSR row pointer style offsets
- - outgoingOrder   (Uint32Array): permutation of connection indices grouped by source node
+ weights (Float32Array|Float64Array)    : connection weights
+ from    (Uint32Array)                  : source node indices
+ to      (Uint32Array)                  : target node indices
+ flags   (Uint8Array)                   : connection enable / mask bits (placeholder value=1)
+ gain    (Float32Array|Float64Array)    : multiplicative gain (placeholder value=1)
+ outStart (Uint32Array)                 : CSR row pointer style offsets (length nodeCount+1)
+ outOrder (Uint32Array)                 : permutation of connection indices grouped by source
 
-Workflow:
- 1. rebuildConnectionSlab packs connections into SoA arrays when dirty.
- 2. _buildAdjacency converts fromIndexArray into CSR-like adjacency for each source node.
- 3. fastSlabActivate uses the packed arrays + precomputed topological order to perform a forward pass
-    with minimal branching and object access.
-
-Constraints for Fast Path (_canUseFastSlab):
- - Acyclic enforced (no recurrence) so single topological sweep suffices.
- - No gating, self-connections, dropout, stochastic depth, or per-hidden noise.
- - Topological order and node indices must be clean.
-
-Dirty Flags Touched:
- - _slabDirty: slab arrays need rebuild
- - _adjDirty: adjacency mapping (CSR) invalid
- - _nodeIndexDirty: node.index values invalid
- - _topoDirty: topological ordering invalid
+Rebuild Workflow:
+ 1. Reindex nodes if dirty.
+ 2. Allocate typed arrays sized to current connection count.
+ 3. Populate parallel arrays in a single linear pass.
+ 4. Mark adjacency dirty; increment version.
 
 ## architecture/network/network.standalone.ts
 

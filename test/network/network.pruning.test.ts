@@ -9,7 +9,7 @@ const xor = [
   { input: [1, 1], output: [0] },
 ];
 
-describe('Network structural pruning & sparsification', () => {
+describe('phase3.pruning.magnitude (structural sparsification)', () => {
   describe('magnitude pruning schedule reduces connections toward target sparsity', () => {
     const net = Network.createMLP(2, [4, 4], 1);
     const initialConns = net.connections.length;
@@ -23,13 +23,11 @@ describe('Network structural pruning & sparsification', () => {
     for (let i = 0; i < 5; i++) {
       net.train(xor, { iterations: 1, rate: 0.1, error: 0.00001, log: 0 });
     }
-    test('sparsity progressed above 0', () => {
-      expect(net.getCurrentSparsity()).toBeGreaterThan(0);
-    });
-    test('connections not below half minus tolerance', () => {
-      expect(net.connections.length).toBeGreaterThanOrEqual(
-        Math.floor(initialConns * 0.4)
-      );
+    test('sparsity >0 and connections ≥ 40% baseline', () => {
+      expect(
+        net.getCurrentSparsity() > 0 &&
+          net.connections.length >= Math.floor(initialConns * 0.4)
+      ).toBe(true);
     });
   });
 
@@ -45,12 +43,12 @@ describe('Network structural pruning & sparsification', () => {
     net.train(xor, { iterations: 1, rate: 0.1, error: 0.00001, log: 0 });
     net.train(xor, { iterations: 1, rate: 0.1, error: 0.00001, log: 0 });
     const after = net.connections.length;
-    test('after pruning+regrow connections not extremely low', () =>
-      expect(after).toBeGreaterThan(initial * 0.3));
+    test('regrow retains >30% connections', () =>
+      expect(after > initial * 0.3).toBe(true));
   });
 });
 
-describe('Acyclic enforcement', () => {
+describe('phase3.pruning.acyclic enforcement', () => {
   describe('disallows back connections and self connections when enabled', () => {
     const net = new Network(2, 1);
     net.setEnforceAcyclic(true);
@@ -59,7 +57,7 @@ describe('Acyclic enforcement', () => {
     for (let i = 0; i < 10; i++) net.mutate(methods.mutation.ADD_BACK_CONN);
     for (let i = 0; i < 10; i++) net.mutate(methods.mutation.ADD_SELF_CONN);
     const after = net.connections.length;
-    test('no new recurrent/self connections added', () =>
-      expect(after).toBe(before));
+    test('no recurrent/self connections added', () =>
+      expect(after === before).toBe(true));
   });
 });

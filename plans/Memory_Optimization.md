@@ -197,13 +197,47 @@ Interpretation & Next Focus:
 Files: `src/architecture/network.slab.ts`, `src/architecture/network.ts`
 Enhancements:
 
-1. (C) Pack gains, mask/drop flags, enabled bits, plasticity meta into typed arrays (Float32/Uint8) alongside weights.
+1. (C) Pack gains, mask/drop flags, enabled bits, plasticity meta into typed arrays (Float32/Uint8) alongside weights. (Bit-packed flags implemented: enabled/dropConnect/gater → Uint8 slab; test `network.slab.flags`.)
 2. (C) Lazy materialize legacy connection objects only when requested and `connectionObjectMode=false`.
 3. (C) Slab version counter; dev assertions on mismatch.
-4. (N) Larger growth factor (1.75–2×) to reduce reallocation frequency.
-5. (B) Smaller increments (1.25×); large copy operations chunked with cooperative yields (microtasks / `requestIdleCallback`).
+4. (N) Larger growth factor (1.75–2×) to reduce reallocation frequency. (IMPLEMENTED: geometric capacity with reuse; test `network.slab.capacity` validates growth & reuse invariants.)
+5. (B) Smaller increments (1.25×); large copy operations chunked with cooperative yields (microtasks / `requestIdleCallback`). (PENDING: chunked copy + async yield not yet added.)
 6. (H) Provide direct slab mapping for adjacency→phenotype integration (avoids duplicate arrays).
    Success: Reduced retained JS objects, forward parity vs object mode, stable or improved throughput.
+
+Progress (updates):
+Implemented:
+ - Geometric capacity growth (+reuse) in `rebuildConnectionSlab` (Node factor 1.75, Browser 1.25) with logical (`used`) vs physical (`capacity`) tracking.
+ - Bit-packed connection flags (enabled / dropConnect / gater) into `_connFlags` `Uint8Array`; gain snapshot slab `_connGain` (Float32/64) stored branch‑free (1 or custom gain).
+ - Slab version counter increments on every structural rebuild; exposed through `getConnectionSlab()`.
+ - Allocation stats for slabs (`fresh`, `pooled`) behind `enableSlabArrayPooling` flag; pooling uses small per‑key LRU (max 4) keyed by kind+bytes+length.
+ - Memory stats extended with slab fragmentation %, reserved/used bytes, slabVersion, async builds count, pooledFraction, and allocStats snapshot.
+ - Async browser rebuild `rebuildConnectionSlabAsync` now: shares pooling + geometric growth, microtask chunking, adaptive chunk sizing for very large slabs (`>200k` edges) honoring new `config.browserSlabChunkTargetMs` heuristic (est ops budget → chunk size ≈ baseOpsPerMs * targetMs, clamped).
+ - Gating incompatibility guard: `fastSlabActivate` auto‑fallback to legacy path when gating present (ensures correctness until slab gating mechanics implemented).
+ - Fast slab forward path (`fastSlabActivate`) with CSR adjacency build and activation buffer reuse.
+
+New Tests (single expectation each):
+ - `network.slab.versioning.test.ts` (version increments + arrays present).
+ - `network.slab.capacity.test.ts` (geometric growth & reuse).
+ - `network.slab.flags.test.ts` (bit packed flag enable/disable parity).
+ - `network.slab.async.test.ts` (async rebuild multi‑yield + capacity + alloc stats delta; skips in non‑browser env).
+ - `network.slab.fast.parity.test.ts` (fast slab vs legacy output parity under eligible conditions).
+ - `network.slab.fast.gating.guard.test.ts` (fallback when gating present).
+
+Config Additions:
+ - `enableSlabArrayPooling` (already present) actively used by async path.
+ - `browserSlabChunkTargetMs` (optional): adaptive per‑slice budget for async slab rebuilds in Browser.
+
+Docs / Instrumentation:
+ - `memoryStats().slabs` now includes: `asyncBuilds`, `pooledFraction`, existing fragmentation %, version, reserved/used, plus alloc stats under `flags.snapshot.allocStats`.
+
+Remaining Phase 3 Items:
+ - Plasticity packing (plan: reuse flags byte for plasticity bit & add optional per‑plastic connection rate Float32 slab on demand).
+ - Optional gain omission optimization (elide `_connGain` slab when all gains==1; lazy allocate if any diverge).
+ - Adjacency→phenotype direct mapping (avoid duplicate arrays when phenotype caching introduced in Phase 7).
+ - Additional micro benchmark: fragmentation trend across churn loop (grow→prune→grow) persisting slab metrics (optional stretch).
+ - Enhanced pooling metrics (per kind high‑water mark) & potential tail zeroing utility for deterministic diff inspection (educational mode).
+   - (In progress) Fragmentation trend test added (`benchmark.slab.fragmentation.trend.test.ts`) capturing growth→prune delta (educational assertion, minimal heuristic expectation).
 
 ### Phase 4 – Sparse Growth & Prune Budgets
 
