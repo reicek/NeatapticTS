@@ -1252,9 +1252,35 @@ Retrieve current monotonic slab version (increments on each successful rebuild).
 
 Returns: Non‑negative integer (0 if slab never built yet).
 
+### PoolKeyMetrics
+
+Per-pool-key allocation & reuse counters (educational / diagnostics).
+Tracks how many slabs were freshly created vs reused plus the high‑water
+mark (maxRetained) of simultaneously retained arrays for the key. Exposed
+indirectly via `getSlabAllocationStats()` so users can introspect the
+effectiveness of pooling under their workload.
+
 ### rebuildConnectionSlab
 
 `(force: boolean) => void`
+
+Build (or refresh) the packed connection slabs for the network synchronously.
+
+ACTIONS
+-------
+1. Optionally reindex nodes if structural mutations invalidated indices.
+2. Grow (geometric) or reuse existing typed arrays to ensure capacity >= active connections.
+3. Populate the logical slice [0, connectionCount) with weight/from/to/flag data.
+4. Lazily allocate gain & plastic slabs only on first non‑neutral / plastic encounter; omit otherwise.
+5. Release previously allocated optional slabs when they revert to neutral / unused (omission optimization).
+6. Update internal bookkeeping: logical count, dirty flags, version counter.
+
+PERFORMANCE
+-----------
+O(C) over active connections with amortized allocation cost due to geometric growth.
+
+Parameters:
+- `force` - When true forces rebuild even if network not marked dirty (useful for timing tests).
 
 ### rebuildConnectionSlabAsync
 
@@ -1274,6 +1300,12 @@ Parameters:
 - `chunkSize` - Initial maximum connections per slice (may be reduced adaptively for huge graphs).
 
 Returns: Promise resolving once rebuild completes.
+
+### TypedArray
+
+Union of slab typed array element container types. We purposefully restrict
+to the specific constructors actually used by this module so TypeScript can
+narrow accurately and editors display concise hover info.
 
 ## architecture/network/network.standalone.ts
 

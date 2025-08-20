@@ -14,18 +14,7 @@ const config = {
     library: 'Neataptic',
     libraryTarget: 'umd',
     globalObject: 'this',
-    clean: true,
-    environment: {
-      arrowFunction: true,
-      bigIntLiteral: true,
-      const: true,
-      destructuring: true,
-      dynamicImport: true,
-      forOf: true,
-      module: true,
-      optionalChaining: true,
-      templateLiteral: true
-    }
+  clean: true
   },
   resolve: {
     extensions: ['.ts', '.js'], // Resolve both TypeScript and JavaScript files
@@ -49,6 +38,7 @@ const config = {
               moduleResolution: 'Bundler',
               target: 'ES2023',
               sourceMap: true,
+              clean: true, // Enable cleaning of output directory before each build
             },
           },
         },

@@ -1,8 +1,3 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
 /**
  * generate-bench-tables.ts
  *
@@ -19,8 +14,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
  *  - Gracefully degrades when fields missing (older artifact schema).
  *  - Extend later for variance/regression annotation summaries.
  */
-const fs_1 = __importDefault(require("fs"));
-const path_1 = __importDefault(require("path"));
+import fs from 'fs';
+import path from 'path';
 /** Pad / truncate value to fixed width for monospace block. */
 function cell(v, w) {
     const s = String(v ?? '');
@@ -33,13 +28,13 @@ function fmtNum(n, digits = 4) {
     return n.toFixed(digits).replace(/0+$/, '').replace(/\.$/, '');
 }
 function loadArtifact() {
-    const file = path_1.default.resolve('test/benchmarks/benchmark.results.json');
-    if (!fs_1.default.existsSync(file)) {
+    const file = path.resolve('test/benchmarks/benchmark.results.json');
+    if (!fs.existsSync(file)) {
         console.error('[bench:tables] Artifact not found:', file);
         return null;
     }
     try {
-        return JSON.parse(fs_1.default.readFileSync(file, 'utf8'));
+        return JSON.parse(fs.readFileSync(file, 'utf8'));
     }
     catch (e) {
         console.error('[bench:tables] Parse error', e);

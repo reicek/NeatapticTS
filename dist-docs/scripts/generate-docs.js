@@ -1,66 +1,28 @@
-"use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
 /*
  * Generates per-folder README.md aggregating exported symbols' JSDoc.
  * - Copies root README.md into docs/ (manual content retained)
  * - Skips generating README for src root (leave top-level README manual)
  * Usage: npm run docs:folders
  */
-const ts_morph_1 = require("ts-morph");
-const fast_glob_1 = __importDefault(require("fast-glob"));
-const path = __importStar(require("path"));
-const fs_extra_1 = __importDefault(require("fs-extra"));
+import { Project } from 'ts-morph';
+import fg from 'fast-glob';
+import * as path from 'path';
+import fs from 'fs-extra';
 const SRC_DIR = path.resolve('src');
 const DOCS_DIR = path.resolve('docs');
 const ROOT_README_SRC = path.resolve('README.md');
 const ROOT_README_DEST = path.join(DOCS_DIR, 'README.md');
-const project = new ts_morph_1.Project({
+const project = new Project({
     tsConfigFilePath: path.resolve('tsconfig.json'),
     skipAddingFilesFromTsConfig: true
 });
 async function main() {
-    await fs_extra_1.default.ensureDir(DOCS_DIR);
+    await fs.ensureDir(DOCS_DIR);
     // Copy root README (manual) into docs
-    if (await fs_extra_1.default.pathExists(ROOT_README_SRC)) {
-        await fs_extra_1.default.copyFile(ROOT_README_SRC, ROOT_README_DEST);
+    if (await fs.pathExists(ROOT_README_SRC)) {
+        await fs.copyFile(ROOT_README_SRC, ROOT_README_DEST);
     }
-    const filePaths = await (0, fast_glob_1.default)(['**/*.ts'], { cwd: SRC_DIR, absolute: true, ignore: ['**/*.d.ts'] });
+    const filePaths = await fg(['**/*.ts'], { cwd: SRC_DIR, absolute: true, ignore: ['**/*.d.ts'] });
     for (const p of filePaths) {
         if (/\.test\.ts$/i.test(p))
             continue; // skip test specification files
@@ -216,7 +178,7 @@ async function main() {
         if (relDir.startsWith('..'))
             continue; // outside src
         const outDir = relDir === '' ? path.join(DOCS_DIR, 'src') : path.join(DOCS_DIR, relDir);
-        await fs_extra_1.default.ensureDir(outDir);
+        await fs.ensureDir(outDir);
         const outFile = path.join(outDir, 'README.md');
         const md = buildDirectoryReadme(relDir, fileMap);
         await writeIfChanged(outFile, md);
@@ -258,7 +220,7 @@ async function main() {
     }
     // Render top-level root and its children (skip a duplicate 'src' nesting)
     renderNode(rootNode, 0);
-    await fs_extra_1.default.writeFile(path.join(DOCS_DIR, 'FOLDERS.md'), lines.join('\n') + '\n', 'utf8');
+    await fs.writeFile(path.join(DOCS_DIR, 'FOLDERS.md'), lines.join('\n') + '\n', 'utf8');
     console.log('Per-folder README generation complete.');
 }
 function renderSymbol(sym, fallbackKind, filePath) {
@@ -492,22 +454,22 @@ function buildDirectoryReadme(relDir, fileMap) {
     return lines.join('\n').trim() + '\n';
 }
 async function writeIfChanged(file, content) {
-    if (await fs_extra_1.default.pathExists(file)) {
-        const prev = await fs_extra_1.default.readFile(file, 'utf8');
+    if (await fs.pathExists(file)) {
+        const prev = await fs.readFile(file, 'utf8');
         if (prev === content)
             return;
     }
-    await fs_extra_1.default.writeFile(file, content, 'utf8');
+    await fs.writeFile(file, content, 'utf8');
 }
 // Write README into src folders, but avoid overwriting a manual README unless previously generated.
 async function emitSourceReadme(file, content) {
     // Always overwrite to keep docs in sync (educational repo preference: no banner / frictionless reading)
-    if (await fs_extra_1.default.pathExists(file)) {
-        const prev = await fs_extra_1.default.readFile(file, 'utf8');
+    if (await fs.pathExists(file)) {
+        const prev = await fs.readFile(file, 'utf8');
         if (prev === content)
             return;
     }
-    await fs_extra_1.default.writeFile(file, content, 'utf8');
+    await fs.writeFile(file, content, 'utf8');
 }
 main().catch(e => {
     console.error(e);

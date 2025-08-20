@@ -7,7 +7,7 @@
   "types": "./dist/neataptic.d.ts",
   "type": "module",
   "scripts": {
-    "test": "jest --no-cache --coverage --collect-coverage --runInBand --testPathIgnorePatterns=.e2e.test.ts --verbose",
+  "test": "jest --config=jest.config.mjs --no-cache --coverage --collect-coverage --runInBand --testPathIgnorePatterns=.e2e.test.ts --verbose",
     "pretest": "npm run build",
     "test:bench": "jest --no-cache --runInBand --verbose --testPathPattern=benchmark",
     "test:silent": "jest --no-cache --coverage --collect-coverage --runInBand --testPathIgnorePatterns=.e2e.test.ts --silent",
@@ -19,16 +19,16 @@
     "test:e2e": "cross-env FORCE_COLOR=true jest e2e.test.ts --no-cache --runInBand",
     "test:e2e:logs": "npx jest e2e.test.ts --verbose --runInBand --no-cache",
     "test:dist": "npm run build:ts && jest --no-cache --coverage --collect-coverage --runInBand --testPathIgnorePatterns=.e2e.test.ts",
-    "docs:build-scripts": "tsc -p tsconfig.docs.json && node scripts/write-dist-docs-pkg.cjs",
+    "docs:build-scripts": "tsc -p tsconfig.docs.json && node scripts/write-dist-docs-pkg.mjs",
     "docs:folders": "npm run docs:build-scripts && node ./dist-docs/scripts/generate-docs.js",
     "docs:html": "npm run docs:build-scripts && node ./dist-docs/scripts/render-docs-html.js",
     "build:ascii-maze": "npx esbuild test/examples/asciiMaze/browser-entry.ts --bundle --outfile=docs/assets/ascii-maze.bundle.js --platform=browser --format=iife --sourcemap --external:fs --external:child_process",
-    "docs:examples": "node scripts/copy-examples.cjs",
+    "docs:examples": "node scripts/copy-examples.mjs",
     "prettier": "npm run prettier:tests && npm run prettier:src",
     "prettier:tests": "npx prettier --write **/*.test.ts",
     "prettier:src": "npx prettier --write src/**/*.ts",
     "docs": "npm run build:ascii-maze && npm run docs:examples && npm run docs:build-scripts && node ./dist-docs/scripts/generate-docs.js && node ./dist-docs/scripts/render-docs-html.js",
-    "onnx:export": "node scripts/export-onnx.cjs"
+    "onnx:export": "node scripts/export-onnx.mjs"
   },
   "exports": {
     ".": {
@@ -91,18 +91,13 @@
   },
   "homepage": "https://reicek.github.io/NeatapticTS/",
   "engines": {
-    "node": ">=14.0.0"
+    "node": ">=20.0.0"
   },
   "prettier": {
     "singleQuote": true
   },
   "dependencies": {
-    "build": "^0.1.4",
-    "child_process": "^1.0.2",
-    "os": "^0.1.2",
-    "path": "^0.12.7",
     "seedrandom": "^3.0.5",
-    "undici": "^5.0.0",
-    "undici-types": "^7.8.0"
+    "undici": "^5.0.0"
   }
 }

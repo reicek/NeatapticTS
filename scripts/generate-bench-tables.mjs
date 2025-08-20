@@ -1,9 +1,9 @@
 /**
- * generate-bench-tables.cjs (CommonJS version)
+ * generate-bench-tables.mjs (ESM version)
  * Emits markdown tables derived from test/benchmarks/benchmark.results.json.
  */
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
 
 function cell(v, w){
   const s = String(v ?? '');
@@ -31,9 +31,7 @@ function normalizeAggregated(artifact){
       const sizeKey = String(entry.size);
       out[mode] = out[mode] || {};
       out[mode][sizeKey] = out[mode][sizeKey] || {}; // scenario bucket
-      // Flatten metrics under 'all'
       out[mode][sizeKey].all = out[mode][sizeKey].all || {};
-      // Extract generic metrics by stripping suffixes (Mean).
       const metrics = ['buildMs','fwdAvgMs','bytesPerConn','heapUsed','rss'];
       out[mode][sizeKey].all = out[mode][sizeKey].all || {};
       for(const m of metrics){

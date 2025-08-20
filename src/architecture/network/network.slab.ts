@@ -35,27 +35,37 @@ import { config } from '../../config';
  */
 
 /**
- * (Re)build the slab representation (synchronous).
- *
- * Triggers: called explicitly OR lazily from `getConnectionSlab` / fast forward paths
- * whenever `_slabDirty` is true (set by structural mutation helpers).
- *
- * Performance:
- *  - O(C) where C = connection count.
- *  - Allocations only when capacity insufficient.
- *  - Optional slabs (gain / plastic) created only if needed; neutral arrays are released.
- *
- * @param force When true, rebuild even if not marked dirty (rarely needed; useful in tests benchmarking rebuild cost).
+ * Internal typed array pool keyed by a composite string (kind:bytes:length).
+ * Acts as a tiny per-key LRU (stack discipline via push/pop) to reuse large
+ * slabs when geometric growth forces reallocation. Pooling is gated by
+ * `config.enableSlabArrayPooling` so benchmarks / tests can measure both
+ * allocation churn scenarios. Arrays are only retained up to the cap returned
+ * by `_slabPoolCap()` (default 4) which empirically captures most reuse wins
+ * while tightly bounding retained memory. DO NOT mutate arrays pulled from
+ * here outside the intended lifecycle (acquire -> use -> _releaseTA).
  */
-// Typed array pool (small LRU per key) + metrics for reuse introspection.
 const _slabArrayPool: Record<string, Array<TypedArray>> = Object.create(null);
-// Pool metrics per key (key = kind:bytes:length) for allocator education.
+/**
+ * Per-pool-key allocation & reuse counters (educational / diagnostics).
+ * Tracks how many slabs were freshly created vs reused plus the high‑water
+ * mark (maxRetained) of simultaneously retained arrays for the key. Exposed
+ * indirectly via `getSlabAllocationStats()` so users can introspect the
+ * effectiveness of pooling under their workload.
+ */
 interface PoolKeyMetrics {
   created: number;
   reused: number;
   maxRetained: number;
 }
+/**
+ * Map backing metrics storage. Keys align 1:1 with `_slabArrayPool` entries.
+ */
 const _slabPoolMetrics: Record<string, PoolKeyMetrics> = Object.create(null);
+/**
+ * Union of slab typed array element container types. We purposefully restrict
+ * to the specific constructors actually used by this module so TypeScript can
+ * narrow accurately and editors display concise hover info.
+ */
 type TypedArray = Float32Array | Float64Array | Uint32Array | Uint8Array;
 /**
  * Compute the effective per‑key retention cap for slab pooling.
@@ -76,10 +86,16 @@ type TypedArray = Float32Array | Float64Array | Uint32Array | Uint8Array;
  * @returns Integer retention cap (≥0).
  */
 function _slabPoolCap(): number {
-  const v = (config as any).slabPoolMaxPerKey;
-  if (v === undefined) return 4;
-  return v < 0 ? 0 : v | 0; // coerce to int, clamp at 0
+  const configuredCap = config.slabPoolMaxPerKey;
+  if (configuredCap === undefined) return 4;
+  return configuredCap < 0 ? 0 : configuredCap | 0; // coerce to int, clamp at 0
 }
+/**
+ * Global allocation counters since process start / last manual reset:
+ *  - fresh: number of newly constructed typed arrays (misses or pooling disabled)
+ *  - pooled: number of arrays satisfied from the reuse pool.
+ * Used (with per-key metrics) to evaluate memory reuse efficiency.
+ */
 const _slabAllocStats = { fresh: 0, pooled: 0 };
 /**
  * Construct a unique pool key encoding kind + element byte size + logical length.
@@ -164,6 +180,24 @@ export function getSlabAllocationStats() {
   return { ..._slabAllocStats, pool: Object.assign({}, _slabPoolMetrics) };
 }
 
+/**
+ * Build (or refresh) the packed connection slabs for the network synchronously.
+ *
+ * ACTIONS
+ * -------
+ * 1. Optionally reindex nodes if structural mutations invalidated indices.
+ * 2. Grow (geometric) or reuse existing typed arrays to ensure capacity >= active connections.
+ * 3. Populate the logical slice [0, connectionCount) with weight/from/to/flag data.
+ * 4. Lazily allocate gain & plastic slabs only on first non‑neutral / plastic encounter; omit otherwise.
+ * 5. Release previously allocated optional slabs when they revert to neutral / unused (omission optimization).
+ * 6. Update internal bookkeeping: logical count, dirty flags, version counter.
+ *
+ * PERFORMANCE
+ * -----------
+ * O(C) over active connections with amortized allocation cost due to geometric growth.
+ *
+ * @param force When true forces rebuild even if network not marked dirty (useful for timing tests).
+ */
 export function rebuildConnectionSlab(this: Network, force = false): void {
   const internalNet = this as any;
   if (!force && !internalNet._slabDirty) return; // Already current; avoid reallocation churn.
@@ -250,8 +284,8 @@ export function rebuildConnectionSlab(this: Network, force = false): void {
     // Future bits (plasticity, freeze, mutation lineage) can be OR'ed here with documented positions.
     flagArray[connectionIndex] = (connection as any)._flags & 0xff; // mask to one byte
     // Gain: if virtualized gain !== 1 we snapshot it, else store 1 (keeps forward math branch-free)
-    const g = connection.gain;
-    if (g !== 1) {
+    const gainValue = connection.gain;
+    if (gainValue !== 1) {
       if (!gainArray) {
         gainArray = _acquireTA(
           'g',
@@ -262,7 +296,7 @@ export function rebuildConnectionSlab(this: Network, force = false): void {
         internalNet._connGain = gainArray;
         for (let j = 0; j < connectionIndex; j++) (gainArray as any)[j] = 1;
       }
-      (gainArray as any)[connectionIndex] = g;
+      (gainArray as any)[connectionIndex] = gainValue;
       anyNonNeutralGain = true;
     } else if (gainArray) {
       (gainArray as any)[connectionIndex] = 1;
@@ -307,7 +341,6 @@ export function rebuildConnectionSlab(this: Network, force = false): void {
   internalNet._slabVersion = (internalNet._slabVersion || 0) + 1;
 }
 
-// Browser cooperative async rebuild (experimental). Splits large copy into microtasks to reduce jank.
 /**
  * Cooperative asynchronous slab rebuild (Browser only).
  *
@@ -382,13 +415,16 @@ export async function rebuildConnectionSlabAsync(
     internalNet._connPlastic = null;
     internalNet._connCapacity = capacity;
   }
-  const w = internalNet._connWeights as Float32Array | Float64Array;
-  const fr = internalNet._connFrom as Uint32Array;
-  const to = internalNet._connTo as Uint32Array;
-  const fl = internalNet._connFlags as Uint8Array;
-  const g = internalNet._connGain as Float32Array | Float64Array | null;
+  const weights = internalNet._connWeights as Float32Array | Float64Array;
+  const fromIndices = internalNet._connFrom as Uint32Array;
+  const toIndices = internalNet._connTo as Uint32Array;
+  const flagBytes = internalNet._connFlags as Uint8Array;
+  const gainArray = internalNet._connGain as Float32Array | Float64Array | null;
   let anyNonNeutralGain = false;
-  let p = internalNet._connPlastic as Float32Array | Float64Array | null;
+  let plasticArray = internalNet._connPlastic as
+    | Float32Array
+    | Float64Array
+    | null;
   let anyPlastic = false;
   // Adaptive chunk sizing: if very large and config specifies a target ms, reduce slice size conservatively.
   if (total > 200_000) {
@@ -410,43 +446,44 @@ export async function rebuildConnectionSlabAsync(
   while (idx < total) {
     const end = Math.min(total, idx + chunkSize);
     for (let i = idx; i < end; i++) {
-      const c: any = this.connections[i];
-      w[i] = c.weight;
-      fr[i] = (c.from as any).index >>> 0;
-      to[i] = (c.to as any).index >>> 0;
-      fl[i] = c._flags & 0xff;
-      const gn = c.gain;
-      if (g) g[i] = gn === 1 ? 1 : gn;
-      if (gn !== 1) anyNonNeutralGain = true;
-      if (c._flags & 0b1000) anyPlastic = true;
+      const connection: any = this.connections[i];
+      weights[i] = connection.weight;
+      fromIndices[i] = (connection.from as any).index >>> 0;
+      toIndices[i] = (connection.to as any).index >>> 0;
+      flagBytes[i] = connection._flags & 0xff;
+      const gainValue = connection.gain;
+      if (gainArray) gainArray[i] = gainValue === 1 ? 1 : gainValue;
+      if (gainValue !== 1) anyNonNeutralGain = true;
+      if (connection._flags & 0b1000) anyPlastic = true;
     }
     idx = end;
     if (idx < total) await Promise.resolve(); // yield microtask
   }
-  if (!anyNonNeutralGain && g) {
+  if (!anyNonNeutralGain && gainArray) {
     // Release neutral gain slab to honor omission policy
     _releaseTA(
       'g',
       internalNet._useFloat32Weights ? 4 : 8,
-      g as Float32Array | Float64Array
+      gainArray as Float32Array | Float64Array
     );
     internalNet._connGain = null;
   }
-  if (anyPlastic && !p) {
-    p = _acquireTA(
+  if (anyPlastic && !plasticArray) {
+    plasticArray = _acquireTA(
       'p',
       internalNet._useFloat32Weights ? Float32Array : Float64Array,
       internalNet._connCapacity,
       internalNet._useFloat32Weights ? 4 : 8
     ) as any;
-    internalNet._connPlastic = p;
+    internalNet._connPlastic = plasticArray;
     for (let i = 0; i < total; i++)
-      (p as any)[i] = (this.connections[i] as any).plasticityRate || 0;
-  } else if (!anyPlastic && p) {
+      (plasticArray as any)[i] =
+        (this.connections[i] as any).plasticityRate || 0;
+  } else if (!anyPlastic && plasticArray) {
     _releaseTA(
       'p',
       internalNet._useFloat32Weights ? 4 : 8,
-      p as Float32Array | Float64Array
+      plasticArray as Float32Array | Float64Array
     );
     internalNet._connPlastic = null;
   }

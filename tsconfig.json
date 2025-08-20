@@ -3,10 +3,10 @@
     "baseUrl": "./",
     "outDir": "./dist",
     "rootDir": "./src",
-    // Pin to ES2023 baseline (stable, reproducible) per request.
+    // Pin to ES2023 baseline (stable, reproducible)
     "module": "ESNext",
     "target": "ES2023",
-    // Libs aligned with target + DOM for browser compatibility.
+    // Libs aligned with target + DOM for browser compatibility
     "lib": ["ES2023", "DOM"],
     "strict": true,
     "sourceMap": true,
@@ -20,7 +20,7 @@
     "moduleResolution": "Bundler",
     // Emit smaller, spec-compliant class fields
     "useDefineForClassFields": true,
-    "verbatimModuleSyntax": false
+  "verbatimModuleSyntax": true
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]
