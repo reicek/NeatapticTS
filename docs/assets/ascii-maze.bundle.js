@@ -352,60 +352,6 @@
             this._flags |= 8;
           }
         }
-        // ---------------------------------------------------------------------------
-        // Backward compatibility accessors for previously abbreviated property names
-        // (opt_m, opt_v, opt_cache, opt_vhat, opt_u, opt_m2, _la_shadowWeight)
-        // These keep external code & tests functioning while encouraging clearer names.
-        // ---------------------------------------------------------------------------
-        /** @deprecated Use firstMoment instead. */
-        get opt_m() {
-          return this.firstMoment;
-        }
-        set opt_m(v) {
-          this.firstMoment = v;
-        }
-        /** @deprecated Use secondMoment instead. */
-        get opt_v() {
-          return this.secondMoment;
-        }
-        set opt_v(v) {
-          this.secondMoment = v;
-        }
-        /** @deprecated Use gradientAccumulator instead. */
-        get opt_cache() {
-          return this.gradientAccumulator;
-        }
-        set opt_cache(v) {
-          this.gradientAccumulator = v;
-        }
-        /** @deprecated Use maxSecondMoment instead. */
-        get opt_vhat() {
-          return this.maxSecondMoment;
-        }
-        set opt_vhat(v) {
-          this.maxSecondMoment = v;
-        }
-        /** @deprecated Use infinityNorm instead. */
-        get opt_u() {
-          return this.infinityNorm;
-        }
-        set opt_u(v) {
-          this.infinityNorm = v;
-        }
-        /** @deprecated Use secondMomentum instead. */
-        get opt_m2() {
-          return this.secondMomentum;
-        }
-        set opt_m2(v) {
-          this.secondMomentum = v;
-        }
-        /** @deprecated Use lookaheadShadowWeight instead. */
-        get _la_shadowWeight() {
-          return this.lookaheadShadowWeight;
-        }
-        set _la_shadowWeight(v) {
-          this.lookaheadShadowWeight = v;
-        }
         /** Convenience alias for DropConnect mask with clearer naming. */
         get dropConnectActiveMask() {
           return this.dcMask;
@@ -1765,7 +1711,6 @@
          * The derivative of the activation function evaluated at the node's current state. Used in backpropagation.
          */
         derivative;
-        // Deprecated: `nodes` & `gates` fields removed in refactor. Backwards access still works via getters below.
         /**
          * Optional index, potentially used to identify the node's position within a layer or network structure. Not used internally by the Node class itself.
          */
@@ -1910,22 +1855,6 @@
               conn.eligibility = conn.from.activation;
           }
           return this.activation;
-        }
-        // --- Backwards compatibility accessors for deprecated fields ---
-        /** @deprecated Use connections.gated; retained for legacy tests */
-        get gates() {
-          if (config.warnings)
-            console.warn("Node.gates is deprecated; use node.connections.gated");
-          return this.connections.gated;
-        }
-        set gates(val) {
-          this.connections.gated = val || [];
-        }
-        /** @deprecated Placeholder kept for legacy structural algorithms. No longer populated. */
-        get nodes() {
-          return [];
-        }
-        set nodes(_val) {
         }
         /**
          * Back-propagates the error signal through the node and calculates weight/bias updates.

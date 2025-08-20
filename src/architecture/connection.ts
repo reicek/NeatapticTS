@@ -350,60 +350,6 @@ export default class Connection {
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // Backward compatibility accessors for previously abbreviated property names
-  // (opt_m, opt_v, opt_cache, opt_vhat, opt_u, opt_m2, _la_shadowWeight)
-  // These keep external code & tests functioning while encouraging clearer names.
-  // ---------------------------------------------------------------------------
-  /** @deprecated Use firstMoment instead. */
-  get opt_m(): number | undefined {
-    return this.firstMoment;
-  }
-  set opt_m(v: number | undefined) {
-    this.firstMoment = v;
-  }
-  /** @deprecated Use secondMoment instead. */
-  get opt_v(): number | undefined {
-    return this.secondMoment;
-  }
-  set opt_v(v: number | undefined) {
-    this.secondMoment = v;
-  }
-  /** @deprecated Use gradientAccumulator instead. */
-  get opt_cache(): number | undefined {
-    return this.gradientAccumulator;
-  }
-  set opt_cache(v: number | undefined) {
-    this.gradientAccumulator = v;
-  }
-  /** @deprecated Use maxSecondMoment instead. */
-  get opt_vhat(): number | undefined {
-    return this.maxSecondMoment;
-  }
-  set opt_vhat(v: number | undefined) {
-    this.maxSecondMoment = v;
-  }
-  /** @deprecated Use infinityNorm instead. */
-  get opt_u(): number | undefined {
-    return this.infinityNorm;
-  }
-  set opt_u(v: number | undefined) {
-    this.infinityNorm = v;
-  }
-  /** @deprecated Use secondMomentum instead. */
-  get opt_m2(): number | undefined {
-    return this.secondMomentum;
-  }
-  set opt_m2(v: number | undefined) {
-    this.secondMomentum = v;
-  }
-  /** @deprecated Use lookaheadShadowWeight instead. */
-  get _la_shadowWeight(): number | undefined {
-    return this.lookaheadShadowWeight;
-  }
-  set _la_shadowWeight(v: number | undefined) {
-    this.lookaheadShadowWeight = v;
-  }
 
   /** Convenience alias for DropConnect mask with clearer naming. */
   get dropConnectActiveMask(): number {

@@ -694,7 +694,6 @@ bit1 =&gt; DropConnect active mask (1 = not dropped this forward pass)
 bit2 =&gt; hasGater (1 = symbol field present)
 bit3 =&gt; plastic (plasticityRate &gt; 0)
 bits4+ reserved.</p>
-<h4 id="la-shadowweight">_la_shadowWeight</h4><p><strong>Deprecated:</strong> Use lookaheadShadowWeight instead.</p>
 <h4 id="acquire">acquire</h4><p><code>(from: import(&quot;D:/code-practice/NeatapticTS/src/architecture/node&quot;).default, to: import(&quot;D:/code-practice/NeatapticTS/src/architecture/node&quot;).default, weight: number | undefined) =&gt; import(&quot;D:/code-practice/NeatapticTS/src/architecture/connection&quot;).default</code></p>
 <p>Acquire a <code>Connection</code> from the pool (or construct new). Fields are fully reset &amp; given
 a fresh sequential <code>innovation</code> id. Prefer this in evolutionary algorithms that mutate
@@ -733,12 +732,6 @@ Useful when you want a stable innovation id without relying on global mutable co
 <p>Returns: Unique non-negative integer derived from the ordered pair.</p>
 <h4 id="lookaheadshadowweight">lookaheadShadowWeight</h4><p>Lookahead: shadow (slow) weight parameter (was _la_shadowWeight).</p>
 <h4 id="maxsecondmoment">maxSecondMoment</h4><p>AMSGrad: Maximum of past second moment (was opt_vhat).</p>
-<h4 id="opt-cache">opt_cache</h4><p><strong>Deprecated:</strong> Use gradientAccumulator instead.</p>
-<h4 id="opt-m">opt_m</h4><p><strong>Deprecated:</strong> Use firstMoment instead.</p>
-<h4 id="opt-m2">opt_m2</h4><p><strong>Deprecated:</strong> Use secondMomentum instead.</p>
-<h4 id="opt-u">opt_u</h4><p><strong>Deprecated:</strong> Use infinityNorm instead.</p>
-<h4 id="opt-v">opt_v</h4><p><strong>Deprecated:</strong> Use secondMoment instead.</p>
-<h4 id="opt-vhat">opt_vhat</h4><p><strong>Deprecated:</strong> Use maxSecondMoment instead.</p>
 <h4 id="plastic">plastic</h4><p>Whether this connection participates in plastic adaptation (rate &gt; 0).</p>
 <h4 id="plasticityrate">plasticityRate</h4><p>Per-connection plasticity / learning rate (0 means non-plastic). Setting &gt;0 marks plastic flag.</p>
 <h4 id="previousdeltaweight">previousDeltaWeight</h4><p>Last applied delta weight (used by classic momentum).</p>

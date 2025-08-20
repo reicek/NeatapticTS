@@ -902,10 +902,6 @@ bit2 => hasGater (1 = symbol field present)
 bit3 => plastic (plasticityRate > 0)
 bits4+ reserved.
 
-#### _la_shadowWeight
-
-**Deprecated:** Use lookaheadShadowWeight instead.
-
 #### acquire
 
 `(from: import("D:/code-practice/NeatapticTS/src/architecture/node").default, to: import("D:/code-practice/NeatapticTS/src/architecture/node").default, weight: number | undefined) => import("D:/code-practice/NeatapticTS/src/architecture/connection").default`
@@ -994,30 +990,6 @@ Lookahead: shadow (slow) weight parameter (was _la_shadowWeight).
 #### maxSecondMoment
 
 AMSGrad: Maximum of past second moment (was opt_vhat).
-
-#### opt_cache
-
-**Deprecated:** Use gradientAccumulator instead.
-
-#### opt_m
-
-**Deprecated:** Use firstMoment instead.
-
-#### opt_m2
-
-**Deprecated:** Use secondMomentum instead.
-
-#### opt_u
-
-**Deprecated:** Use infinityNorm instead.
-
-#### opt_v
-
-**Deprecated:** Use secondMoment instead.
-
-#### opt_vhat
-
-**Deprecated:** Use maxSecondMoment instead.
 
 #### plastic
 

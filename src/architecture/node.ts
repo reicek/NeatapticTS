@@ -89,7 +89,6 @@ export default class Node {
    * The derivative of the activation function evaluated at the node's current state. Used in backpropagation.
    */
   derivative?: number;
-  // Deprecated: `nodes` & `gates` fields removed in refactor. Backwards access still works via getters below.
   /**
    * Optional index, potentially used to identify the node's position within a layer or network structure. Not used internally by the Node class itself.
    */
@@ -153,7 +152,6 @@ export default class Node {
       gated: 0,
     };
 
-    // Deprecated fields no longer allocated; accessors mapped to connections.gated for backwards compat.
 
     // Assign a unique index if not already set
     if (typeof this.index === 'undefined') {
@@ -273,24 +271,6 @@ export default class Node {
     return this.activation;
   }
 
-  // --- Backwards compatibility accessors for deprecated fields ---
-  /** @deprecated Use connections.gated; retained for legacy tests */
-  get gates(): Connection[] {
-    if (config.warnings)
-      console.warn('Node.gates is deprecated; use node.connections.gated');
-    return this.connections.gated;
-  }
-  set gates(val: Connection[]) {
-    // Replace underlying gated list (used only during deserialization edge cases)
-    this.connections.gated = val || [];
-  }
-  /** @deprecated Placeholder kept for legacy structural algorithms. No longer populated. */
-  get nodes(): Node[] {
-    return [];
-  }
-  set nodes(_val: Node[]) {
-    // ignore
-  }
 
   /**
    * Back-propagates the error signal through the node and calculates weight/bias updates.

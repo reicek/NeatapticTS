@@ -489,7 +489,6 @@ bits4+ reserved.</p>
 <h4 id="globalnodeindex">_globalNodeIndex</h4><p>Global index counter for assigning unique indices to nodes.</p>
 <h4 id="invalidategenomecaches">_invalidateGenomeCaches</h4><p><code>(genome: any) =&gt; void</code></p>
 <p>Invalidate per-genome caches (compatibility distance, forward pass, etc.).</p>
-<h4 id="la-shadowweight">_la_shadowWeight</h4><p><strong>Deprecated:</strong> Use lookaheadShadowWeight instead.</p>
 <h4 id="lastancestoruniqadjustgen">_lastAncestorUniqAdjustGen</h4><p>Generation when ancestor uniqueness adjustment was last applied.</p>
 <h4 id="lastepsilonadjustgen">_lastEpsilonAdjustGen</h4><p>Generation when epsilon compatibility was last adjusted.</p>
 <h4 id="lastevalduration">_lastEvalDuration</h4><p>Duration of the last evaluation run (ms).</p>
@@ -1024,7 +1023,6 @@ Gating allows the output of a node in this group to modulate the flow of signal 
 <li>`` - - The gating mechanism to use (e.g., <code>methods.gating.INPUT</code>, <code>methods.gating.OUTPUT</code>, <code>methods.gating.SELF</code>). Specifies which part of the connection is influenced by the gater node.</li>
 </ul>
 <h4 id="gater">gater</h4><p>Optional gating node whose activation can modulate effective weight (symbol-backed).</p>
-<h4 id="gates">gates</h4><p><strong>Deprecated:</strong> Use connections.gated; retained for legacy tests</p>
 <h4 id="geneid">geneId</h4><p>Stable per-node gene identifier for NEAT innovation reuse</p>
 <h4 id="getaverage">getAverage</h4><p><code>() =&gt; number</code></p>
 <p>Calculates the average fitness score of the population.
@@ -1337,7 +1335,6 @@ and previous values of external (exogenous) input series.</p>
 <p>Returns: The constructed NARX network.</p>
 <h4 id="nodes">nodes</h4><p>An array containing all the nodes (neurons or groups) that constitute this layer.
 The order of nodes might be relevant depending on the layer type and its connections.</p>
-<p><strong>Deprecated:</strong> Placeholder kept for legacy structural algorithms. No longer populated.</p>
 <h4 id="notraceactivate">noTraceActivate</h4><p><code>(input: number[]) =&gt; number[]</code></p>
 <p>Activates the network without calculating eligibility traces.
 This is a performance optimization for scenarios where backpropagation is not needed,
@@ -1358,12 +1355,6 @@ is just making predictions, not learning) as trace calculations are only needed 
 </ul>
 <p>Returns: The calculated activation value of the node.</p>
 <h4 id="old">old</h4><p>The node&#39;s state from the previous activation cycle. Used for recurrent self-connections.</p>
-<h4 id="opt-cache">opt_cache</h4><p><strong>Deprecated:</strong> Use gradientAccumulator instead.</p>
-<h4 id="opt-m">opt_m</h4><p><strong>Deprecated:</strong> Use firstMoment instead.</p>
-<h4 id="opt-m2">opt_m2</h4><p><strong>Deprecated:</strong> Use secondMomentum instead.</p>
-<h4 id="opt-u">opt_u</h4><p><strong>Deprecated:</strong> Use infinityNorm instead.</p>
-<h4 id="opt-v">opt_v</h4><p><strong>Deprecated:</strong> Use secondMoment instead.</p>
-<h4 id="opt-vhat">opt_vhat</h4><p><strong>Deprecated:</strong> Use maxSecondMoment instead.</p>
 <h4 id="output">output</h4><p>Represents the primary output group of nodes for this layer.
 This group is typically used when connecting this layer <em>to</em> another layer or group.
 It might be null if the layer is not yet fully constructed or is an input layer.</p>

@@ -186,10 +186,6 @@ bit2 => hasGater (1 = symbol field present)
 bit3 => plastic (plasticityRate > 0)
 bits4+ reserved.
 
-#### _la_shadowWeight
-
-**Deprecated:** Use lookaheadShadowWeight instead.
-
 #### acquire
 
 `(from: import("D:/code-practice/NeatapticTS/src/architecture/node").default, to: import("D:/code-practice/NeatapticTS/src/architecture/node").default, weight: number | undefined) => import("D:/code-practice/NeatapticTS/src/architecture/connection").default`
@@ -278,30 +274,6 @@ Lookahead: shadow (slow) weight parameter (was _la_shadowWeight).
 #### maxSecondMoment
 
 AMSGrad: Maximum of past second moment (was opt_vhat).
-
-#### opt_cache
-
-**Deprecated:** Use gradientAccumulator instead.
-
-#### opt_m
-
-**Deprecated:** Use firstMoment instead.
-
-#### opt_m2
-
-**Deprecated:** Use secondMomentum instead.
-
-#### opt_u
-
-**Deprecated:** Use infinityNorm instead.
-
-#### opt_v
-
-**Deprecated:** Use secondMoment instead.
-
-#### opt_vhat
-
-**Deprecated:** Use maxSecondMoment instead.
 
 #### plastic
 
@@ -1433,10 +1405,6 @@ The connection's gain will be controlled by this node's activation value.
 Parameters:
 - `connections` - A single Connection object or an array of Connection objects to be gated.
 
-#### gates
-
-**Deprecated:** Use connections.gated; retained for legacy tests
-
 #### geneId
 
 Stable per-node gene identifier for NEAT innovation reuse
@@ -1499,10 +1467,6 @@ based on predefined mutation methods.
 
 Parameters:
 - `method` - A mutation method object, typically from `methods.mutation`. It should define the type of mutation and its parameters (e.g., allowed functions, modification range).
-
-#### nodes
-
-**Deprecated:** Placeholder kept for legacy structural algorithms. No longer populated.
 
 #### noTraceActivate
 

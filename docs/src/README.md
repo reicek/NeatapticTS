@@ -939,10 +939,6 @@ Global index counter for assigning unique indices to nodes.
 
 Invalidate per-genome caches (compatibility distance, forward pass, etc.).
 
-#### _la_shadowWeight
-
-**Deprecated:** Use lookaheadShadowWeight instead.
-
 #### _lastAncestorUniqAdjustGen
 
 Generation when ancestor uniqueness adjustment was last applied.
@@ -1858,10 +1854,6 @@ Parameters:
 
 Optional gating node whose activation can modulate effective weight (symbol-backed).
 
-#### gates
-
-**Deprecated:** Use connections.gated; retained for legacy tests
-
 #### geneId
 
 Stable per-node gene identifier for NEAT innovation reuse
@@ -2393,8 +2385,6 @@ Returns: The constructed NARX network.
 An array containing all the nodes (neurons or groups) that constitute this layer.
 The order of nodes might be relevant depending on the layer type and its connections.
 
-**Deprecated:** Placeholder kept for legacy structural algorithms. No longer populated.
-
 #### noTraceActivate
 
 `(input: number[]) => number[]`
@@ -2425,30 +2415,6 @@ Returns: The calculated activation value of the node.
 #### old
 
 The node's state from the previous activation cycle. Used for recurrent self-connections.
-
-#### opt_cache
-
-**Deprecated:** Use gradientAccumulator instead.
-
-#### opt_m
-
-**Deprecated:** Use firstMoment instead.
-
-#### opt_m2
-
-**Deprecated:** Use secondMomentum instead.
-
-#### opt_u
-
-**Deprecated:** Use infinityNorm instead.
-
-#### opt_v
-
-**Deprecated:** Use secondMoment instead.
-
-#### opt_vhat
-
-**Deprecated:** Use maxSecondMoment instead.
 
 #### output
 
