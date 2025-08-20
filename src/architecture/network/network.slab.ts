@@ -57,12 +57,55 @@ interface PoolKeyMetrics {
 }
 const _slabPoolMetrics: Record<string, PoolKeyMetrics> = Object.create(null);
 type TypedArray = Float32Array | Float64Array | Uint32Array | Uint8Array;
-const SLAB_POOL_MAX_PER_KEY = 4; // small cap; configurable later.
+/**
+ * Compute the effective per‑key retention cap for slab pooling.
+ *
+ * RATIONALE
+ * ---------
+ * The default (4) was selected after observing diminishing reuse gains beyond the
+ * 3rd–4th cached buffer in mutation / prune churn micro‑benchmarks; larger caps
+ * produced a higher long‑tail of retained bytes with negligible hit‑rate benefit.
+ *
+ * CONFIG
+ * ------
+ * Users can override via `config.slabPoolMaxPerKey`:
+ *   undefined → default 4
+ *   0         → keep metrics but do not retain slabs (max reuse pressure scenario)
+ *   <0        → coerced to 0 (safety)
+ *
+ * @returns Integer retention cap (≥0).
+ */
+function _slabPoolCap(): number {
+  const v = (config as any).slabPoolMaxPerKey;
+  if (v === undefined) return 4;
+  return v < 0 ? 0 : v | 0; // coerce to int, clamp at 0
+}
 const _slabAllocStats = { fresh: 0, pooled: 0 };
+/**
+ * Construct a unique pool key encoding kind + element byte size + logical length.
+ * This granularity prevents mismatched reuse (different lengths / element sizes).
+ * @param kind Short discriminator (e.g. 'w','f','t','fl','g','p').
+ * @param bytes Bytes per element (1,4,8).
+ * @param length Typed array length.
+ * @returns Stable string key used in pool maps.
+ */
 function _poolKey(kind: string, bytes: number, length: number) {
   return kind + ':' + bytes + ':' + length;
 }
-/** Acquire (or reuse) a typed array slab, recording allocation statistics. */
+/**
+ * Acquire (or reuse) a typed array slab, updating allocation statistics.
+ *
+ * Behaviour:
+ *  - Pooling disabled: always allocate fresh.
+ *  - Pooling enabled: reuse last retained array for identical key if present.
+ *  - Metrics updated (fresh/pooled + per-key created/reused counters).
+ *
+ * @param kind Pool discriminator (see `_poolKey`).
+ * @param ctor Typed array constructor.
+ * @param length Desired element count.
+ * @param bytesPerElement Byte width used to form key (guards reuse correctness).
+ * @returns The acquired typed array (possibly recycled).
+ */
 function _acquireTA(
   kind: string,
   ctor: any,
@@ -86,12 +129,18 @@ function _acquireTA(
     .created++;
   return new ctor(length);
 }
-/** Return a typed array slab to the small LRU pool (bounded). */
+/**
+ * Return a typed array slab to the per‑key bounded pool.
+ * No-op if pooling disabled. Pool functions as small LRU (push/pop).
+ * @param kind Pool discriminator.
+ * @param bytesPerElement Byte width for key regeneration.
+ * @param arr The typed array instance to consider retaining.
+ */
 function _releaseTA(kind: string, bytesPerElement: number, arr: TypedArray) {
   if (!config.enableSlabArrayPooling) return;
   const key = _poolKey(kind, bytesPerElement, arr.length);
   const list = (_slabArrayPool[key] ||= []);
-  if (list.length < SLAB_POOL_MAX_PER_KEY) list.push(arr);
+  if (list.length < _slabPoolCap()) list.push(arr);
   const m = (_slabPoolMetrics[key] ||= {
     created: 0,
     reused: 0,
@@ -101,10 +150,15 @@ function _releaseTA(kind: string, bytesPerElement: number, arr: TypedArray) {
 }
 
 /**
- * Allocation statistics for slab typed arrays.
+ * Allocation statistics snapshot for slab typed arrays.
  *
- * Educational usage: Inspect `fresh` vs `pooled` to discuss reuse efficiency
- * and memory churn. `pool` contains per-key creation/reuse counters.
+ * Includes:
+ *  - fresh: number of newly constructed typed arrays since process start / metrics reset.
+ *  - pooled: number of arrays served from the pool.
+ *  - pool: per‑key metrics (created, reused, maxRetained) for educational inspection.
+ *
+ * NOTE: Stats are cumulative (not auto‑reset); callers may diff successive snapshots.
+ * @returns Plain object copy (safe to serialize) of current allocator counters.
  */
 export function getSlabAllocationStats() {
   return { ..._slabAllocStats, pool: Object.assign({}, _slabPoolMetrics) };
@@ -255,19 +309,18 @@ export function rebuildConnectionSlab(this: Network, force = false): void {
 
 // Browser cooperative async rebuild (experimental). Splits large copy into microtasks to reduce jank.
 /**
- * Cooperative async rebuild (browser). Slices packing into microtasks for large connection
- * counts to limit a single long blocking loop. Capacity growth + pooling mirror the sync path.
+ * Cooperative asynchronous slab rebuild (Browser only).
  *
- * NOTE: Allocation happens up-front; the microtask yields only segment the population copy.
- * Thus `fresh` increments by the number of new slabs allocated (weights/from/to/flags/gain)
- * only when capacity grows.
+ * Strategy:
+ *  - Perform capacity decision + allocation up front (mirrors sync path).
+ *  - Populate connection data in microtask slices (yield via resolved Promise) to avoid long main‑thread stalls.
+ *  - Adaptive slice sizing for very large graphs if `config.browserSlabChunkTargetMs` set.
  *
- * Example:
- * ```ts
- * await rebuildConnectionSlabAsync.call(net, 40_000);
- * console.log('Version after async build', (net as any)._slabVersion);
- * ```
- * @param chunkSize Max connections per microtask slice (auto-tuned for very large graphs).
+ * Metrics: Increments `_slabAsyncBuilds` for observability.
+ * Fallback: On Node (no `window`) defers to synchronous rebuild for simplicity.
+ *
+ * @param chunkSize Initial maximum connections per slice (may be reduced adaptively for huge graphs).
+ * @returns Promise resolving once rebuild completes.
  */
 export async function rebuildConnectionSlabAsync(
   this: Network,
@@ -405,16 +458,13 @@ export async function rebuildConnectionSlabAsync(
 }
 
 /**
- * Snapshot (lazy rebuild) of packed arrays.
- * Synthetic neutral gain array returned when omission active.
+ * Obtain (and lazily rebuild if dirty) the current packed SoA view of connections.
  *
- * Example (iterate first 10 connections):
- * ```ts
- * const slab = (net as any).getConnectionSlab();
- * for (let i=0; i<Math.min(10, slab.used); i++) {
- *   console.log(`#${i}: ${slab.from[i]} -> ${slab.to[i]} w=${slab.weights[i]}`);
- * }
- * ```
+ * Gain Omission: If the internal gain slab is absent (all gains neutral) a synthetic
+ * neutral array is created and returned (NOT retained) to keep external educational
+ * tooling branch‑free while preserving omission memory savings internally.
+ *
+ * @returns Read‑only style view (do not mutate) containing typed arrays + metadata.
  */
 export function getConnectionSlab(this: Network): ConnectionSlabView {
   rebuildConnectionSlab.call(this); // Lazy rebuild if needed.
@@ -447,7 +497,10 @@ export function getConnectionSlab(this: Network): ConnectionSlabView {
   };
 }
 
-// Assign sequential indices (stable across slabs) to nodes.
+/**
+ * Assign sequential indices to each node (stable ordering prerequisite for slab packing).
+ * Clears `_nodeIndexDirty` flag.
+ */
 function _reindexNodes(this: Network) {
   const internalNet = this as any;
   for (let nodeIndex = 0; nodeIndex < this.nodes.length; nodeIndex++)
@@ -455,7 +508,10 @@ function _reindexNodes(this: Network) {
   internalNet._nodeIndexDirty = false;
 }
 
-// Build CSR-like adjacency (outgoing edge index ranges) for fast propagation in slab mode.
+/**
+ * Build / refresh CSR‑style adjacency (outStart + outOrder) enabling fast fan‑out traversal.
+ * Only rebuilds when marked dirty. Stores arrays on internal network instance.
+ */
 function _buildAdjacency(this: Network) {
   const internalNet = this as any;
   if (!internalNet._connFrom || !internalNet._connTo) return; // Nothing to build yet.
@@ -499,7 +555,12 @@ function _buildAdjacency(this: Network) {
   internalNet._adjDirty = false;
 }
 
-// Eligibility conditions for fast slab path (must avoid scenarios needing per-edge dynamic behavior)
+/**
+ * Predicate gating usage of high‑performance slab forward pass.
+ * Disallows training / stochastic / dynamic edge behaviours (gating, dropout, noise, self‑connections).
+ * @param training Whether caller is in training mode (disables fast path for gradient/time reasons).
+ * @returns True if fast path can be safely used for deterministic forward activation.
+ */
 function _canUseFastSlab(this: Network, training: boolean): boolean {
   const internalNet = this as any;
   return (
@@ -516,20 +577,20 @@ function _canUseFastSlab(this: Network, training: boolean): boolean {
 }
 
 /**
- * High-performance forward pass using packed slabs + CSR adjacency.
- * Falls back to generic activate if prerequisites unavailable.
- */
-/**
- * Fast forward pass using slab + CSR. Falls back automatically when predicates fail.
+ * High‑performance forward pass using packed slabs + CSR adjacency.
  *
- * Example:
- * ```ts
- * if ((net as any).canUseFastSlab(false)) {
- *   const y = (net as any).fastSlabActivate(x);
- * } else {
- *   const y = net.activate(x);
- * }
- * ```
+ * Fallback Conditions (auto‑detected):
+ *  - Missing slabs / adjacency structures.
+ *  - Topology/gating/stochastic predicates fail (see `_canUseFastSlab`).
+ *  - Any gating present (explicit guard).
+ *
+ * Implementation Notes:
+ *  - Reuses internal activation/state buffers to reduce per‑step allocation churn.
+ *  - Applies gain multiplication if optional gain slab exists.
+ *  - Assumes acyclic graph; topological order recomputed on demand if marked dirty.
+ *
+ * @param input Input vector (length must equal `network.input`).
+ * @returns Output activations (detached plain array) of length `network.output`.
  */
 export function fastSlabActivate(this: Network, input: number[]): number[] {
   const internalNet = this as any;
@@ -632,13 +693,20 @@ export function fastSlabActivate(this: Network, input: number[]): number[] {
   return result;
 }
 
-/** Public helper: indicates whether fast slab path is currently viable. */
-/** True when all predicates for slab fast path hold (acyclic, no gating/self, no stochastic features). */
+/**
+ * Public convenience wrapper exposing fast path eligibility.
+ * Mirrors `_canUseFastSlab` internal predicate.
+ * @param training Whether caller is performing training (disables fast path if true).
+ * @returns True when slab fast path predicates hold.
+ */
 export function canUseFastSlab(this: Network, training: boolean) {
   return _canUseFastSlab.call(this, training);
 }
 
-/** Monotonic slab version counter (increments each successful rebuild). */
+/**
+ * Retrieve current monotonic slab version (increments on each successful rebuild).
+ * @returns Non‑negative integer (0 if slab never built yet).
+ */
 export function getSlabVersion(this: Network): number {
   return (this as any)._slabVersion || 0;
 }

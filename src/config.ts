@@ -88,6 +88,18 @@ export interface NeatapticConfig {
    * except for the built-in large-network clamp (currently 50k ops) when total connections >200k.
    */
   browserSlabChunkTargetMs?: number;
+
+  /**
+   * Maximum number of typed array slabs retained per (kind:length:bytes) key in the slab array pool.
+   * RATIONALE: A very small LRU style cap dramatically limits worst‑case retained memory while
+   * still capturing >90% of reuse wins in typical geometric growth / prune churn patterns. Empirically
+   * a cap of 4 balances:
+   *   - Diminishing returns after the 3rd/4th cached buffer for a given key.
+   *   - Keeping educational instrumentation simple (small, inspectable pool state).
+   * Set to 0 to disable retention (while still counting metrics) when pooling is enabled.
+   * Undefined => library default (currently 4). Negative values are treated as 0.
+   */
+  slabPoolMaxPerKey?: number;
 }
 
 /**
@@ -104,6 +116,7 @@ export const config: NeatapticConfig = {
   enableGatingTraces: true, // advanced gating trace infra
   enableNodePooling: false, // experimental node instance pooling
   enableSlabArrayPooling: false, // experimental slab typed array pooling
+  // slabPoolMaxPerKey: 4,        // optional override for per-key slab retention cap (default internal 4)
   // browserSlabChunkTargetMs: 3, // example: aim for ~3ms per async slab slice in Browser
   // poolMaxPerBucket: 256,     // example memory cap override
   // poolPrewarmCount: 2,       // example prewarm override

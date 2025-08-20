@@ -1091,19 +1091,105 @@ Extended trace structure for modulatory / eligibility propagation algorithms. Pa
 
 `(kind: string, ctor: any, length: number, bytesPerElement: number) => TypedArray`
 
-Acquire (or reuse) a typed array slab, recording allocation statistics.
+Acquire (or reuse) a typed array slab, updating allocation statistics.
+
+Behaviour:
+ - Pooling disabled: always allocate fresh.
+ - Pooling enabled: reuse last retained array for identical key if present.
+ - Metrics updated (fresh/pooled + per-key created/reused counters).
+
+Parameters:
+- `kind` - Pool discriminator (see `_poolKey`).
+- `ctor` - Typed array constructor.
+- `length` - Desired element count.
+- `bytesPerElement` - Byte width used to form key (guards reuse correctness).
+
+Returns: The acquired typed array (possibly recycled).
+
+### _buildAdjacency
+
+`() => void`
+
+Build / refresh CSR‑style adjacency (outStart + outOrder) enabling fast fan‑out traversal.
+Only rebuilds when marked dirty. Stores arrays on internal network instance.
+
+### _canUseFastSlab
+
+`(training: boolean) => boolean`
+
+Predicate gating usage of high‑performance slab forward pass.
+Disallows training / stochastic / dynamic edge behaviours (gating, dropout, noise, self‑connections).
+
+Parameters:
+- `training` - Whether caller is in training mode (disables fast path for gradient/time reasons).
+
+Returns: True if fast path can be safely used for deterministic forward activation.
+
+### _poolKey
+
+`(kind: string, bytes: number, length: number) => string`
+
+Construct a unique pool key encoding kind + element byte size + logical length.
+This granularity prevents mismatched reuse (different lengths / element sizes).
+
+Parameters:
+- `kind` - Short discriminator (e.g. 'w','f','t','fl','g','p').
+- `bytes` - Bytes per element (1,4,8).
+- `length` - Typed array length.
+
+Returns: Stable string key used in pool maps.
+
+### _reindexNodes
+
+`() => void`
+
+Assign sequential indices to each node (stable ordering prerequisite for slab packing).
+Clears `_nodeIndexDirty` flag.
 
 ### _releaseTA
 
 `(kind: string, bytesPerElement: number, arr: TypedArray) => void`
 
-Return a typed array slab to the small LRU pool (bounded).
+Return a typed array slab to the per‑key bounded pool.
+No-op if pooling disabled. Pool functions as small LRU (push/pop).
+
+Parameters:
+- `kind` - Pool discriminator.
+- `bytesPerElement` - Byte width for key regeneration.
+- `arr` - The typed array instance to consider retaining.
+
+### _slabPoolCap
+
+`() => number`
+
+Compute the effective per‑key retention cap for slab pooling.
+
+RATIONALE
+---------
+The default (4) was selected after observing diminishing reuse gains beyond the
+3rd–4th cached buffer in mutation / prune churn micro‑benchmarks; larger caps
+produced a higher long‑tail of retained bytes with negligible hit‑rate benefit.
+
+CONFIG
+------
+Users can override via `config.slabPoolMaxPerKey`:
+  undefined → default 4
+  0         → keep metrics but do not retain slabs (max reuse pressure scenario)
+  <0        → coerced to 0 (safety)
+
+Returns: Integer retention cap (≥0).
 
 ### canUseFastSlab
 
 `(training: boolean) => boolean`
 
-Public helper: indicates whether fast slab path is currently viable.
+Public convenience wrapper exposing fast path eligibility.
+Mirrors `_canUseFastSlab` internal predicate.
+
+Parameters:
+- `training` - Whether caller is performing training (disables fast path if true).
+
+Returns: True when slab fast path predicates hold.
 
 ### ConnectionSlabView
 
@@ -1114,38 +1200,57 @@ Note: The arrays SHOULD NOT be mutated by callers; treat as read‑only.
 
 `(input: number[]) => number[]`
 
-High-performance forward pass using packed slabs + CSR adjacency.
-Falls back to generic activate if prerequisites unavailable.
+High‑performance forward pass using packed slabs + CSR adjacency.
+
+Fallback Conditions (auto‑detected):
+ - Missing slabs / adjacency structures.
+ - Topology/gating/stochastic predicates fail (see `_canUseFastSlab`).
+ - Any gating present (explicit guard).
+
+Implementation Notes:
+ - Reuses internal activation/state buffers to reduce per‑step allocation churn.
+ - Applies gain multiplication if optional gain slab exists.
+ - Assumes acyclic graph; topological order recomputed on demand if marked dirty.
+
+Parameters:
+- `input` - Input vector (length must equal `network.input`).
+
+Returns: Output activations (detached plain array) of length `network.output`.
 
 ### getConnectionSlab
 
 `() => import("D:/code-practice/NeatapticTS/src/architecture/network/network.slab").ConnectionSlabView`
 
-Snapshot (lazy rebuild) of packed arrays.
-Synthetic neutral gain array returned when omission active.
+Obtain (and lazily rebuild if dirty) the current packed SoA view of connections.
 
-Example (iterate first 10 connections):
-```ts
-const slab = (net as any).getConnectionSlab();
-for (let i=0; i<Math.min(10, slab.used); i++) {
-  console.log(`#${i}: ${slab.from[i]} -> ${slab.to[i]} w=${slab.weights[i]}`);
-}
-```
+Gain Omission: If the internal gain slab is absent (all gains neutral) a synthetic
+neutral array is created and returned (NOT retained) to keep external educational
+tooling branch‑free while preserving omission memory savings internally.
+
+Returns: Read‑only style view (do not mutate) containing typed arrays + metadata.
 
 ### getSlabAllocationStats
 
 `() => { pool: Record<string, PoolKeyMetrics>; fresh: number; pooled: number; }`
 
-Allocation statistics for slab typed arrays.
+Allocation statistics snapshot for slab typed arrays.
 
-Educational usage: Inspect `fresh` vs `pooled` to discuss reuse efficiency
-and memory churn. `pool` contains per-key creation/reuse counters.
+Includes:
+ - fresh: number of newly constructed typed arrays since process start / metrics reset.
+ - pooled: number of arrays served from the pool.
+ - pool: per‑key metrics (created, reused, maxRetained) for educational inspection.
+
+NOTE: Stats are cumulative (not auto‑reset); callers may diff successive snapshots.
+
+Returns: Plain object copy (safe to serialize) of current allocator counters.
 
 ### getSlabVersion
 
 `() => number`
 
-Monotonic slab version counter (increments each successful rebuild).
+Retrieve current monotonic slab version (increments on each successful rebuild).
+
+Returns: Non‑negative integer (0 if slab never built yet).
 
 ### rebuildConnectionSlab
 
@@ -1155,21 +1260,20 @@ Monotonic slab version counter (increments each successful rebuild).
 
 `(chunkSize: number) => Promise<void>`
 
-Cooperative async rebuild (browser). Slices packing into microtasks for large connection
-counts to limit a single long blocking loop. Capacity growth + pooling mirror the sync path.
+Cooperative asynchronous slab rebuild (Browser only).
 
-NOTE: Allocation happens up-front; the microtask yields only segment the population copy.
-Thus `fresh` increments by the number of new slabs allocated (weights/from/to/flags/gain)
-only when capacity grows.
+Strategy:
+ - Perform capacity decision + allocation up front (mirrors sync path).
+ - Populate connection data in microtask slices (yield via resolved Promise) to avoid long main‑thread stalls.
+ - Adaptive slice sizing for very large graphs if `config.browserSlabChunkTargetMs` set.
 
-Example:
-```ts
-await rebuildConnectionSlabAsync.call(net, 40_000);
-console.log('Version after async build', (net as any)._slabVersion);
-```
+Metrics: Increments `_slabAsyncBuilds` for observability.
+Fallback: On Node (no `window`) defers to synchronous rebuild for simplicity.
 
 Parameters:
-- `chunkSize` - Max connections per microtask slice (auto-tuned for very large graphs).
+- `chunkSize` - Initial maximum connections per slice (may be reduced adaptively for huge graphs).
+
+Returns: Promise resolving once rebuild completes.
 
 ## architecture/network/network.standalone.ts
 

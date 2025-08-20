@@ -434,6 +434,7 @@
         // experimental node instance pooling
         enableSlabArrayPooling: false
         // experimental slab typed array pooling
+        // slabPoolMaxPerKey: 4,        // optional override for per-key slab retention cap (default internal 4)
         // browserSlabChunkTargetMs: 3, // example: aim for ~3ms per async slab slice in Browser
         // poolMaxPerBucket: 256,     // example memory cap override
         // poolPrewarmCount: 2,       // example prewarm override
@@ -4406,6 +4407,11 @@
   });
 
   // src/architecture/network/network.slab.ts
+  function _slabPoolCap() {
+    const v = config.slabPoolMaxPerKey;
+    if (v === void 0) return 4;
+    return v < 0 ? 0 : v | 0;
+  }
   function _poolKey(kind, bytes, length) {
     return kind + ":" + bytes + ":" + length;
   }
@@ -4429,7 +4435,7 @@
     if (!config.enableSlabArrayPooling) return;
     const key = _poolKey(kind, bytesPerElement, arr.length);
     const list = _slabArrayPool[key] ||= [];
-    if (list.length < SLAB_POOL_MAX_PER_KEY) list.push(arr);
+    if (list.length < _slabPoolCap()) list.push(arr);
     const m = _slabPoolMetrics[key] ||= {
       created: 0,
       reused: 0,
@@ -4684,7 +4690,7 @@
   function canUseFastSlab(training) {
     return _canUseFastSlab.call(this, training);
   }
-  var _slabArrayPool, _slabPoolMetrics, SLAB_POOL_MAX_PER_KEY, _slabAllocStats;
+  var _slabArrayPool, _slabPoolMetrics, _slabAllocStats;
   var init_network_slab = __esm({
     "src/architecture/network/network.slab.ts"() {
       "use strict";
@@ -4692,7 +4698,6 @@
       init_config();
       _slabArrayPool = /* @__PURE__ */ Object.create(null);
       _slabPoolMetrics = /* @__PURE__ */ Object.create(null);
-      SLAB_POOL_MAX_PER_KEY = 4;
       _slabAllocStats = { fresh: 0, pooled: 0 };
     }
   });

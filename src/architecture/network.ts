@@ -1,12 +1,15 @@
 import Node from './node';
-import { acquireNode as _acquireNode, releaseNode as _releaseNode } from './nodePool';
+import {
+  acquireNode as _acquireNode,
+  releaseNode as _releaseNode,
+} from './nodePool';
 import Connection from './connection';
 import Multi from '../multithreading/multi';
 import * as methods from '../methods/methods';
 import mutation from '../methods/mutation'; // Import mutation methods
 import { config } from '../config'; // Import configuration settings
-import { activationArrayPool, type ActivationArray } from './activationArrayPool';
-// ONNX export/import now lives in ./network/network.onnx (re-exported via ./onnx for backwards compat)
+import { activationArrayPool } from './activationArrayPool';
+import type { ActivationArray } from './activationArrayPool';
 import { exportToONNX } from './onnx';
 import { generateStandalone } from './network/network.standalone';
 import {
@@ -983,10 +986,10 @@ export default class Network {
    * @throws {Error} If the specified `node` is not found in the network's `nodes` list.
    */
   remove(node: Node) {
-  // Existing structural removal logic
+    // Existing structural removal logic
     const result = _removeNodeStandalone.call(this, node);
-  // Phase 2: if pooling enabled release node back to pool AFTER it is fully detached.
-  // Detachment guarantees connection arrays emptied & gating cleared, so pool reset cost is minimal.
+    // Phase 2: if pooling enabled release node back to pool AFTER it is fully detached.
+    // Detachment guarantees connection arrays emptied & gating cleared, so pool reset cost is minimal.
     if (config.enableNodePooling) {
       try {
         _releaseNode(node);

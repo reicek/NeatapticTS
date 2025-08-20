@@ -1,18 +1,28 @@
 /**
- * benchmark.memory.ts
+ * benchmark.memory.test.ts
+ * ======================================
+ * Dist-only (Phase 0) memory & performance harness used in tests to:
+ *  - Construct synthetic networks at several target connection counts.
+ *  - Measure build + forward timing (with light warm-ups on large sizes).
+ *  - Capture memoryStats based estimates (bytes/connection, etc.).
+ *  - Aggregate variance, perform IQR outlier filtering, and (Phase 2) auto escalation
+ *    if Coefficient of Variation (CV%) exceeds target thresholds for large sizes.
+ *  - Persist an evolving `benchmark.results.json` artifact (≤10 history entries) with
+ *    provenance (git commit, dist bundle hash) and optional regression annotations.
  *
- * Placeholder benchmark harness (Phase 0) for memory & performance related scenarios.
- * Intentionally lightweight: no heavy constructions yet, just API surface + structure.
- *
- * Decision: Replaced legacy CJS CLI scripts with test-driven TS modules for easier coverage,
- * type safety, and incremental build variant integration. Future: real benchmarks may
- * migrate reusable logic into `src/benchmarks/` while keeping verification here.
-/** Dist-only memory & performance benchmark (simplified). */
+ * NOTE: This file intentionally lives under `test/` to leverage Jest's execution & coverage
+ * while remaining framework-agnostic for future extraction into a standalone CLI harness.
+ */
 import { memoryStats } from '../../src/utils/memory';
 import Network from '../../src/architecture/network';
 import * as fs from 'fs';
 import seedrandom from 'seedrandom';
 
+/**
+ * BaselineRecord
+ * Represents a single synthetic build + forward measurement and associated
+ * approximate memory stats for a given connection size.
+ */
 interface BaselineRecord {
   variant: string;
   size: number;
@@ -26,9 +36,20 @@ interface BaselineRecord {
   bytesPerNode: number;
 }
 
+/**
+ * Build a synthetic feedforward network targeting (approximately) a desired connection count.
+ * Strategy: start with input/output sizes derived from sqrt heuristic then prune random
+ * connections until at or below target. This keeps structure generation fast and deterministic
+ * enough for comparative timing.
+ * @param targetConnections Desired number of connections (approximate upper bound).
+ * @returns Object containing created Network instance and elapsed build time in ms.
+ */
 function buildSyntheticNetwork(
   targetConnections: number
-): { net: Network; buildMs: number } {
+): {
+  net: Network;
+  buildMs: number;
+} {
   const start = performance.now?.() ?? Date.now();
   const inputs = Math.max(1, Math.floor(Math.sqrt(targetConnections)));
   const outputs = Math.max(1, Math.ceil(targetConnections / inputs));
@@ -42,6 +63,13 @@ function buildSyntheticNetwork(
   return { net, buildMs: end - start };
 }
 
+/**
+ * Measure total & average forward pass runtime for a network over N iterations.
+ * Random input vector generated once (uniform [0,1)).
+ * @param net Network to activate.
+ * @param iterations Number of forward passes to execute (default 5).
+ * @returns Object with totalMs and avgMs fields.
+ */
 function measureForwardPass(net: Network, iterations = 5) {
   const inputLen = net.input;
   const vec = new Array(inputLen).fill(0).map(() => Math.random());
@@ -55,6 +83,9 @@ function measureForwardPass(net: Network, iterations = 5) {
 const baselineRecords: BaselineRecord[] = [];
 const warnings: any[] = [];
 let distAggregated: any[] = [];
+// Collected per‑run measurements (build + forward + memory) prior to aggregation.
+// Declared here (before tests) so inner describe blocks can push safely.
+const rawMeasurements: { size: number; metrics: Record<string, number> }[] = [];
 
 describe('benchmark.memory dist-only', () => {
   describe('memoryStats snapshot', () => {
@@ -106,10 +137,8 @@ describe('benchmark.memory dist-only', () => {
       return Number.isFinite(n) && n > 1 ? Math.min(n, 25) : 0;
     })();
     const repeatLarge = BENCH_REPEAT_LARGE > 1;
-    const rawMeasurements: {
-      size: number;
-      metrics: Record<string, number>;
-    }[] = [];
+    // NOTE: We intentionally reuse the top-level rawMeasurements (declared earlier) so that
+    // variance escalation additions append to the same collection. Shadowing removed.
     for (const size of sizes) {
       const repeats = repeatLarge && size >= 100000 ? BENCH_REPEAT_LARGE : 1;
       for (let rep = 0; rep < repeats; rep++) {
@@ -171,9 +200,19 @@ describe('benchmark.memory dist-only', () => {
     });
 
     // Variance (large sizes only)
+    /**
+     * Arithmetic mean helper.
+     * @param a Array of numbers.
+     * @returns Mean (0 if array empty).
+     */
     function mean(a: number[]) {
       return a.reduce((s, x) => s + x, 0) / (a.length || 1);
     }
+    /**
+     * Unbiased sample standard deviation (n-1 denominator) with guard for n<2.
+     * @param a Array of numbers.
+     * @returns Standard deviation (0 if insufficient samples).
+     */
     function std(a: number[]) {
       if (a.length < 2) return 0;
       const m = mean(a);
@@ -181,6 +220,12 @@ describe('benchmark.memory dist-only', () => {
         a.reduce((s, x) => s + (x - m) * (x - m), 0) / (a.length - 1)
       );
     }
+    /**
+     * IQR (Interquartile Range) based mild outlier filter (1.5*I rule).
+     * Returns original array if filtering would leave <3 points or no outliers found.
+     * @param vals Raw numeric samples.
+     * @returns Object with filtered (possibly original) and outliers arrays.
+     */
     function iqrFilter(vals: number[]) {
       if (vals.length < 4) return { filtered: vals.slice(), outliers: [] };
       const s = vals.slice().sort((a, b) => a - b);
@@ -202,6 +247,11 @@ describe('benchmark.memory dist-only', () => {
         return { filtered: vals.slice(), outliers: [] };
       return { filtered: f, outliers: o };
     }
+    /**
+     * Recompute per-size variance statistics (mean, std, CV%) after outlier filtering.
+     * @param g Aggregated group entry containing size & count.
+     * @returns Variance summary object.
+     */
     function recomputeVariance(g: any) {
       const raw = rawMeasurements.filter((r) => r.size === g.size);
       const build = raw.map((r) => r.metrics.buildMs);
@@ -231,6 +281,12 @@ describe('benchmark.memory dist-only', () => {
     const maxVarianceRepeats = 9; // hard cap to control runtime explosion
     const escalateRecords: any[] = [];
 
+    /**
+     * Execute an additional measurement repeat for a given large size to attempt variance reduction.
+     * Duplicates core measurement logic used in initial pass to keep comparable conditions.
+     * @param size Connection size bucket.
+     * @param rep Repeat index (used for deterministic seeding).
+     */
     function runAdditionalRepeat(size: number, rep: number) {
       // Mirrors logic in initial measurement loop for large sizes
       (seedrandom as any)(`size:${size}|rep:${rep}`, { global: true });
@@ -274,6 +330,11 @@ describe('benchmark.memory dist-only', () => {
       });
     }
 
+    /**
+     * Compute simple variance (CV%) metrics for a size without IQR filtering (used to drive escalation loop).
+     * @param size Connection size bucket.
+     * @returns Variance entry or null if insufficient samples.
+     */
     function computeVarianceForSize(size: number) {
       const raw = rawMeasurements.filter((r) => r.size === size);
       if (raw.length < 2) return null;
@@ -373,6 +434,11 @@ describe('benchmark.memory dist-only', () => {
           .toString()
           .trim();
       } catch {}
+      /**
+       * Strip aggregation objects down to the compact summary persisted in history snapshots.
+       * @param ag Aggregated measurement groups.
+       * @returns Array of simplified objects (size + key means).
+       */
       function summarize(ag: any[]) {
         return ag.map((g) => ({
           size: g.size,
@@ -506,4 +572,3 @@ describe('benchmark.memory dist-only', () => {
     });
   });
 });
-const rawMeasurements: { size: number; metrics: Record<string, number> }[] = [];
