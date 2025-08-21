@@ -42,7 +42,10 @@ export class NetworkRefinement {
      * - input: [N, E, S, W, ...other sensors]
      * - output: [N, E, S, W] (one-hot for direction)
      */
-    const trainingSet = [
+    const trainingSet: ReadonlyArray<{
+      input: readonly number[];
+      output: readonly number[];
+    }> = [
       // If vision indicates North is clear (1,0,0,0), output should be North (1,0,0,0)
       { input: [1, 0, 0, 0, 0.5, 0.5, 0.5, 0.5], output: [1, 0, 0, 0] }, // Move North
       { input: [0, 1, 0, 0, 0.5, 0.5, 0.5, 0.5], output: [0, 1, 0, 0] }, // Move East
@@ -62,15 +65,44 @@ export class NetworkRefinement {
     const iterations = 100;
 
     // Perform backpropagation training for the specified number of iterations
-    for (let i = 0; i < iterations; i++) {
-      for (const data of trainingSet) {
-        // The `propagate` method is part of the concrete `Network` class.
-        // It updates the network's weights based on the error between output and target.
-        networkToRefine.propagate(learningRate, momentum, true, data.output);
+    for (let iter = 0; iter < iterations; iter++) {
+      for (const { input, output } of trainingSet) {
+        // Use a small defensive wrapper so refinement remains best-effort and
+        // any unexpected propagation errors don't abort the overall process.
+        NetworkRefinement.#safePropagate(
+          networkToRefine,
+          learningRate,
+          momentum,
+          output
+        );
       }
     }
 
     // Return the refined network
     return networkToRefine;
+  }
+
+  /**
+   * Defensive propagate wrapper used during refinement.
+   * Returns true when propagation succeeded, false when an error was caught.
+   */
+  static #safePropagate(
+    net: Network,
+    learningRate: number,
+    momentum: number,
+    target: readonly number[]
+  ): boolean {
+    try {
+      // `propagate` is a concrete implementation detail on `Network` instances.
+      // Keep the original call signature (learningRate, momentum, clear, target).
+      (net as any).propagate(learningRate, momentum, true, target);
+      return true;
+    } catch (e) {
+      // Best-effort: swallow errors but keep optional debugging available via console when needed.
+      // eslint-disable-next-line no-console
+      if ((globalThis as any).DEBUG)
+        console.warn('Refinement propagate failed:', e);
+      return false;
+    }
   }
 }

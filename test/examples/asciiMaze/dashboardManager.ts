@@ -1,99 +1,76 @@
-/**
- * Dashboard Manager - Handles the visualization dashboard
- *
- * This module contains the DashboardManager class, which manages the
- * state of the dynamic terminal dashboard that displays maze solving progress
- * and optionally appends solved mazes to an archive area. The implementation
- * is designed to be readable for educational purposes: it gathers telemetry
- * from the running NEAT instance, keeps small historical series for sparklines,
- * and renders both a live view (cleared and redrawn each frame) and an
- * archive view (appended once per solved maze).
- */
+// Rebuilt clean version with private fields
 import { MazeUtils } from './mazeUtils';
 import { MazeVisualization } from './mazeVisualization';
 import { NetworkVisualization } from './networkVisualization';
 import { colors } from './colors';
 import { INetwork, IDashboardManager } from './interfaces';
 
-/**
- * DashboardManager: manages solved mazes, current best, and terminal output.
- * Supports an optional archive logger to which solved-maze blocks are appended
- * while the live logger is used for the active maze redraws.
- */
-/**
- * DashboardManager
- *
- * Responsibilities:
- * - Keep track of solved mazes and avoid duplicates.
- * - Maintain the current best solution (for live rendering).
- * - Collect small telemetry histories used to render sparklines.
- * - Render a compact terminal-style dashboard to `logFunction` and
- *   append formatted solved-maze blocks to `archiveLogFunction` when present.
- *
- * Constructor parameters are function references so the dashboard can remain
- * agnostic about where output actually goes (Node console, browser DOM, etc.).
- */
 export class DashboardManager implements IDashboardManager {
-  // List of solved maze records (keeps full maze + solution for archival display)
-  private solvedMazes: Array<{
+  #solvedMazes: Array<{
     maze: string[];
     result: any;
     network: INetwork;
     generation: number;
   }> = [];
-
-  // Set of maze keys we've already archived to avoid duplicate entries
-  private solvedMazeKeys: Set<string> = new Set<string>();
-
-  // Currently evolving/best candidate for the active maze (live view)
-  private currentBest: {
+  #solvedMazeKeys: Set<string> = new Set();
+  #currentBest: {
     result: any;
     network: INetwork;
     generation: number;
   } | null = null;
-
-  // Functions supplied by the embedding environment. Keep dashboard I/O pluggable.
-  private clearFunction: () => void;
-  private logFunction: (...args: any[]) => void;
-  private archiveLogFunction?: (...args: any[]) => void;
-
-  // Telemetry and small history windows used for rendering trends/sparklines
-  private _lastTelemetry: any = null;
-  private _lastBestFitness: number | null = null;
-  private _bestFitnessHistory: number[] = [];
-  private _complexityNodesHistory: number[] = [];
-  private _complexityConnsHistory: number[] = [];
-  private _hypervolumeHistory: number[] = [];
-  private _progressHistory: number[] = [];
-  private _speciesCountHistory: number[] = [];
-
-  // Layout constants for the ASCII-art framed display
-  private static readonly FRAME_INNER_WIDTH = 148;
-  private static readonly LEFT_PADDING = 7;
-  private static readonly RIGHT_PADDING = 1;
-  private static readonly CONTENT_WIDTH =
-    DashboardManager.FRAME_INNER_WIDTH -
-    DashboardManager.LEFT_PADDING -
-    DashboardManager.RIGHT_PADDING;
-  private static readonly STAT_LABEL_WIDTH = 28;
-  private static opennessLegend =
-    'Openness: 1=best, (0,1)=longer improving, 0.001=only backtrack, 0=wall/dead/non-improving';
-
-  /**
-   * Construct a new DashboardManager
-   *
-   * @param clearFn - function that clears the "live" output area (no-op for archive)
-   * @param logFn - function that accepts strings to render the live dashboard
-   * @param archiveLogFn - optional function to which solved-maze archive blocks are appended
-   */
+  #clearFn: () => void;
+  #logFn: (...args: any[]) => void;
+  #archiveFn?: (...args: any[]) => void;
+  #lastTelemetry: any = null;
+  #lastBestFitness: number | null = null;
+  #bestFitnessHistory: number[] = [];
+  #complexityNodesHistory: number[] = [];
+  #complexityConnsHistory: number[] = [];
+  #hypervolumeHistory: number[] = [];
+  #progressHistory: number[] = [];
+  #speciesCountHistory: number[] = [];
+  #lastDetailedStats: any = null;
+  #runStartTs: number | null = null;
+  #perfStart: number | null = null;
+  #lastGeneration: number | null = null;
+  #lastUpdateTs: number | null = null;
+  static #HISTORY_MAX = 500;
+  static #FRAME_INNER_WIDTH = 148;
+  static #LEFT_PADDING = 7;
+  static #RIGHT_PADDING = 1;
+  static #CONTENT_WIDTH =
+    DashboardManager.#FRAME_INNER_WIDTH -
+    DashboardManager.#LEFT_PADDING -
+    DashboardManager.#RIGHT_PADDING;
+  static #STAT_LABEL_WIDTH = 28;
+  // Public aliases for backwards compatibility while internals move to private fields
+  static get HISTORY_MAX() {
+    return DashboardManager.#HISTORY_MAX;
+  }
+  static get FRAME_INNER_WIDTH() {
+    return DashboardManager.#FRAME_INNER_WIDTH;
+  }
+  static get LEFT_PADDING() {
+    return DashboardManager.#LEFT_PADDING;
+  }
+  static get RIGHT_PADDING() {
+    return DashboardManager.#RIGHT_PADDING;
+  }
+  static get CONTENT_WIDTH() {
+    return DashboardManager.#CONTENT_WIDTH;
+  }
+  static get STAT_LABEL_WIDTH() {
+    return DashboardManager.#STAT_LABEL_WIDTH;
+  }
   constructor(
     clearFn: () => void,
-    logFn: (...args: any[]) => void,
-    archiveLogFn?: (...args: any[]) => void
+    logFn: (...a: any[]) => void,
+    archiveFn?: (...a: any[]) => void
   ) {
-    this.clearFunction = clearFn;
-    this.logFunction = logFn;
-    this.archiveLogFunction = archiveLogFn;
+    this.#clearFn = clearFn;
+    this.#logFn = logFn;
+    this.#archiveFn = archiveFn;
+    (this as any).logFunction = (...args: any[]) => this.#logFn(...args);
   }
 
   /**
@@ -108,22 +85,19 @@ export class DashboardManager implements IDashboardManager {
     value: string | number,
     colorLabel = colors.neonSilver,
     colorValue = colors.cyanNeon,
-    labelWidth = DashboardManager.STAT_LABEL_WIDTH
+    labelWidth = DashboardManager.#STAT_LABEL_WIDTH
   ) {
-    // Ensure label ends with ':' and pad to labelWidth for column alignment
     const lbl = label.endsWith(':') ? label : label + ':';
     const paddedLabel = lbl.padEnd(labelWidth, ' ');
-
-    // Compose colored label + value, then pad/truncate to content width
     const composed = `${colorLabel}${paddedLabel}${colorValue} ${value}${colors.reset}`;
     return `${colors.blueCore}║${' '.repeat(
-      DashboardManager.LEFT_PADDING
+      DashboardManager.#LEFT_PADDING
     )}${NetworkVisualization.pad(
       composed,
-      DashboardManager.CONTENT_WIDTH,
+      DashboardManager.#CONTENT_WIDTH,
       ' ',
       'left'
-    )}${' '.repeat(DashboardManager.RIGHT_PADDING)}${colors.blueCore}║${
+    )}${' '.repeat(DashboardManager.#RIGHT_PADDING)}${colors.blueCore}║${
       colors.reset
     }`;
   }
@@ -135,26 +109,44 @@ export class DashboardManager implements IDashboardManager {
    * series. The series is normalized to the block range and trimmed to the
    * requested width by taking the most recent values.
    */
-  private buildSparkline(data: number[], width = 32): string {
-    if (!data || !data.length) return '';
+  private buildSparkline(data: number[], width = 32) {
+    if (!data.length) return '';
     const blocks = ['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'];
-    const slice = data.slice(-width);
-    const min = Math.min(...slice);
-    const max = Math.max(...slice);
-    // Avoid division by zero
+    // Use shared small-tail helper from MazeUtils so intent is explicit and index math is centralized
+    const tail = MazeUtils.tail<number>(data, width);
+    let min = Infinity;
+    let max = -Infinity;
+    for (let i = 0; i < tail.length; i++) {
+      const v = tail[i];
+      if (v < min) min = v;
+      if (v > max) max = v;
+    }
     const range = max - min || 1;
-    return slice
-      .map((v) => {
-        // Map value into block index
-        const idx = Math.floor(((v - min) / range) * (blocks.length - 1));
-        return blocks[idx];
-      })
-      .join('');
+    const out: string[] = [];
+    for (let i = 0; i < tail.length; i++) {
+      const v = tail[i];
+      const idx = Math.floor(((v - min) / range) * (blocks.length - 1));
+      out.push(blocks[idx]);
+    }
+    return out.join('');
   }
 
   /**
-   * getMazeKey
-   *
+   * Return up to the last `n` items from `arr` as a new array.
+   * Small utility to centralize tail-window extraction logic used across the dashboard.
+   */
+  // ...getTail removed in favor of MazeUtils.tail
+
+  // Small helper to read the last element of an array safely.
+  static #last<T>(arr?: readonly T[] | null): T | undefined {
+    return MazeUtils.safeLast(arr as any) as T | undefined;
+  }
+
+  /**
+   * Push a numeric value onto a history buffer and keep it bounded to HISTORY_MAX.
+   */
+  // ...existing code...
+  /**
    * Create a lightweight key for a maze (used to dedupe solved mazes).
    * The format is intentionally simple (concatenated rows) since the set
    * is only used for equality checks within a single run.
@@ -186,15 +178,20 @@ export class DashboardManager implements IDashboardManager {
     },
     displayNumber: number
   ) {
-    // If the embedder did not supply an archive logger, there's nothing to do
-    if (!this.archiveLogFunction) return;
+    if (!this.#archiveFn) return;
 
     // Render solved maze visualization using the MazeVisualization helper
-    const endPos = solved.result.path[solved.result.path.length - 1];
+    // Use modern Array.prototype.at for last element access
+    const endPos = DashboardManager.#last(
+      solved.result.path as readonly [number, number][]
+    );
     const solvedMazeVisualization = MazeVisualization.visualizeMaze(
       solved.maze,
-      endPos,
-      solved.result.path
+      ((endPos as readonly [number, number]) ?? [0, 0]) as readonly [
+        number,
+        number
+      ],
+      solved.result.path as readonly [number, number][]
     );
     const solvedMazeLines = Array.isArray(solvedMazeVisualization)
       ? solvedMazeVisualization
@@ -242,18 +239,18 @@ export class DashboardManager implements IDashboardManager {
         solvedLabelWidth
       );
 
-    const spark = this.buildSparkline(this._bestFitnessHistory, 64);
+    const spark = this.buildSparkline(this.#bestFitnessHistory, 64);
     const sparkComplexityNodes = this.buildSparkline(
-      this._complexityNodesHistory,
+      this.#complexityNodesHistory,
       64
     );
     const sparkComplexityConns = this.buildSparkline(
-      this._complexityConnsHistory,
+      this.#complexityConnsHistory,
       64
     );
-    const sparkHyper = this.buildSparkline(this._hypervolumeHistory, 64);
-    const sparkProgress = this.buildSparkline(this._progressHistory, 64);
-    const sparkSpecies = this.buildSparkline(this._speciesCountHistory, 64);
+    const sparkHyper = this.buildSparkline(this.#hypervolumeHistory, 64);
+    const sparkProgress = this.buildSparkline(this.#progressHistory, 64);
+    const sparkSpecies = this.buildSparkline(this.#speciesCountHistory, 64);
 
     if (spark) blockLines.push(solvedStat('Fitness trend', spark));
     if (sparkComplexityNodes)
@@ -341,13 +338,10 @@ export class DashboardManager implements IDashboardManager {
     // Finally, emit the entire block using the archive logger. Pass the `{ prepend: true }`
     // option so the logger places the newest block at the top of the archive.
     try {
-      (this.archiveLogFunction as any)(blockLines.join('\n'), {
-        prepend: true,
-      });
+      (this.#archiveFn as any)(blockLines.join('\n'), { prepend: true });
     } catch {
-      // Fallback: if the archive logger doesn't accept options, just append each line
-      const append = this.archiveLogFunction ?? (() => {});
-      blockLines.forEach((ln) => append(ln));
+      const append = this.#archiveFn ?? (() => {});
+      blockLines.forEach((l) => append(l));
     }
   }
 
@@ -369,17 +363,23 @@ export class DashboardManager implements IDashboardManager {
     generation: number,
     neatInstance?: any
   ): void {
+    if (this.#runStartTs == null) {
+      this.#runStartTs = Date.now(); // wall-clock anchor
+      this.#perfStart = globalThis.performance?.now?.() ?? this.#runStartTs;
+    }
+    this.#lastUpdateTs = globalThis.performance?.now?.() ?? Date.now();
+    this.#lastGeneration = generation;
     // Update live candidate
-    this.currentBest = { result, network, generation };
+    this.#currentBest = { result, network, generation };
 
     // If this run solved the maze and it's a new maze, add & archive it
     if (result.success) {
       const mazeKey = this.getMazeKey(maze);
-      if (!this.solvedMazeKeys.has(mazeKey)) {
-        this.solvedMazes.push({ maze, result, network, generation });
-        this.solvedMazeKeys.add(mazeKey);
+      if (!this.#solvedMazeKeys.has(mazeKey)) {
+        this.#solvedMazes.push({ maze, result, network, generation });
+        this.#solvedMazeKeys.add(mazeKey);
         // Append to archive immediately when first solved
-        const displayNumber = this.solvedMazes.length; // 1-based
+        const displayNumber = this.#solvedMazes.length; // 1-based
         this.appendSolvedToArchive(
           { maze, result, network, generation },
           displayNumber
@@ -391,58 +391,138 @@ export class DashboardManager implements IDashboardManager {
     const telemetry = neatInstance?.getTelemetry?.();
     if (telemetry && telemetry.length) {
       // Keep only the most recent telemetry object
-      this._lastTelemetry = telemetry[telemetry.length - 1];
+      // Capture latest telemetry snapshot (last element)
+      this.#lastTelemetry = MazeUtils.safeLast(telemetry as any[]);
 
       // Record best fitness into a small history window for trend views
-      const bestFit = this.currentBest?.result?.fitness;
+      const bestFit = this.#currentBest?.result?.fitness;
       if (typeof bestFit === 'number') {
-        this._lastBestFitness = bestFit;
-        this._bestFitnessHistory.push(bestFit);
-        if (this._bestFitnessHistory.length > 500)
-          this._bestFitnessHistory.shift();
+        this.#lastBestFitness = bestFit;
+        this.#bestFitnessHistory = MazeUtils.pushHistory(
+          this.#bestFitnessHistory,
+          bestFit,
+          DashboardManager.HISTORY_MAX
+        );
       }
 
       // Complexity telemetry: mean nodes/connectivity across population
-      const c = this._lastTelemetry?.complexity;
+      const c = this.#lastTelemetry?.complexity;
       if (c) {
         if (typeof c.meanNodes === 'number') {
-          this._complexityNodesHistory.push(c.meanNodes);
-          if (this._complexityNodesHistory.length > 500)
-            this._complexityNodesHistory.shift();
+          this.#complexityNodesHistory = MazeUtils.pushHistory(
+            this.#complexityNodesHistory,
+            c.meanNodes,
+            DashboardManager.HISTORY_MAX
+          );
         }
         if (typeof c.meanConns === 'number') {
-          this._complexityConnsHistory.push(c.meanConns);
-          if (this._complexityConnsHistory.length > 500)
-            this._complexityConnsHistory.shift();
+          this.#complexityConnsHistory = MazeUtils.pushHistory(
+            this.#complexityConnsHistory,
+            c.meanConns,
+            DashboardManager.HISTORY_MAX
+          );
         }
       }
 
       // Hypervolume is used for multi-objective tracking
-      const h = this._lastTelemetry?.hyper;
+      const h = this.#lastTelemetry?.hyper;
       if (typeof h === 'number') {
-        this._hypervolumeHistory.push(h);
-        if (this._hypervolumeHistory.length > 500)
-          this._hypervolumeHistory.shift();
+        this.#hypervolumeHistory = MazeUtils.pushHistory(
+          this.#hypervolumeHistory,
+          h,
+          DashboardManager.HISTORY_MAX
+        );
       }
 
       // Progress: how close a candidate is to the exit
-      const prog = this.currentBest?.result?.progress;
+      const prog = this.#currentBest?.result?.progress;
       if (typeof prog === 'number') {
-        this._progressHistory.push(prog);
-        if (this._progressHistory.length > 500) this._progressHistory.shift();
+        this.#progressHistory = MazeUtils.pushHistory(
+          this.#progressHistory,
+          prog,
+          DashboardManager.HISTORY_MAX
+        );
       }
 
       // Species count history
-      const sc = this._lastTelemetry?.species;
+      const sc = this.#lastTelemetry?.species;
       if (typeof sc === 'number') {
-        this._speciesCountHistory.push(sc);
-        if (this._speciesCountHistory.length > 500)
-          this._speciesCountHistory.shift();
+        this.#speciesCountHistory = MazeUtils.pushHistory(
+          this.#speciesCountHistory,
+          sc,
+          DashboardManager.HISTORY_MAX
+        );
       }
     }
 
     // Render the live dashboard
     this.redraw(maze, neatInstance);
+
+    // Emit telemetry payload (now includes rich details previously only rendered inline)
+    try {
+      const elapsedMs =
+        this.#perfStart != null && globalThis.performance?.now
+          ? globalThis.performance.now() - this.#perfStart
+          : this.#runStartTs
+          ? Date.now() - this.#runStartTs
+          : 0;
+      const gensPerSec = elapsedMs > 0 ? generation / (elapsedMs / 1000) : 0;
+      const payload = {
+        type: 'asciiMaze:telemetry',
+        generation,
+        bestFitness: this.#lastBestFitness,
+        progress: this.#currentBest?.result?.progress ?? null,
+        speciesCount: DashboardManager.#last(this.#speciesCountHistory) ?? null,
+        gensPerSec: +gensPerSec.toFixed(3),
+        timestamp: Date.now(), // wall-clock timestamp for consumers
+        details: this.#lastDetailedStats || null,
+      };
+      // Custom event inside iframe / page
+      if (typeof window !== 'undefined') {
+        try {
+          window.dispatchEvent(
+            new CustomEvent('asciiMazeTelemetry', { detail: payload })
+          );
+        } catch {}
+        // postMessage to parent frame if different
+        try {
+          if (window.parent && window.parent !== window)
+            window.parent.postMessage(payload, '*');
+        } catch {}
+        // Expose last telemetry on global for polling
+        (window as any).asciiMazeLastTelemetry = payload;
+      }
+      // Optional userland callback hook (if injected)
+      try {
+        (this as any)._telemetryHook && (this as any)._telemetryHook(payload);
+      } catch {}
+    } catch {
+      /* ignore telemetry errors */
+    }
+  }
+
+  /**
+   * Return the most recent telemetry snapshot including rich details.
+   * Details may be null if not yet populated.
+   */
+  getLastTelemetry() {
+    const elapsedMs =
+      this.#perfStart != null && typeof performance !== 'undefined'
+        ? performance.now() - this.#perfStart
+        : this.#runStartTs
+        ? Date.now() - this.#runStartTs
+        : 0;
+    const generation = this.#lastGeneration ?? 0;
+    const gensPerSec = elapsedMs > 0 ? generation / (elapsedMs / 1000) : 0;
+    return {
+      generation,
+      bestFitness: this.#lastBestFitness,
+      progress: this.#currentBest?.result?.progress ?? null,
+      speciesCount: MazeUtils.safeLast(this.#speciesCountHistory) ?? null,
+      gensPerSec: +gensPerSec.toFixed(3),
+      timestamp: Date.now(),
+      details: this.#lastDetailedStats || null,
+    };
   }
 
   /**
@@ -456,31 +536,31 @@ export class DashboardManager implements IDashboardManager {
    */
   redraw(currentMaze: string[], neat?: any): void {
     // Clear the live area (archive is untouched)
-    this.clearFunction();
+    this.#clearFn();
 
     // Header: top frame lines
-    this.logFunction(
+    this.#logFn(
       `${colors.blueCore}╔${NetworkVisualization.pad(
         '═',
         DashboardManager.FRAME_INNER_WIDTH,
         '═'
       )}${colors.blueCore}╗${colors.reset}`
     );
-    this.logFunction(
+    this.#logFn(
       `${colors.blueCore}╚${NetworkVisualization.pad(
         '╦════════════╦',
         DashboardManager.FRAME_INNER_WIDTH,
         '═'
       )}${colors.blueCore}╝${colors.reset}`
     );
-    this.logFunction(
+    this.#logFn(
       `${colors.blueCore}${NetworkVisualization.pad(
         `║ ${colors.neonYellow}ASCII maze${colors.blueCore} ║`,
         150,
         ' '
       )}${colors.reset}`
     );
-    this.logFunction(
+    this.#logFn(
       `${colors.blueCore}╔${NetworkVisualization.pad(
         '╩════════════╩',
         DashboardManager.FRAME_INNER_WIDTH,
@@ -489,29 +569,29 @@ export class DashboardManager implements IDashboardManager {
     );
 
     // Print current best for active maze if available
-    if (this.currentBest) {
-      this.logFunction(
+    if (this.#currentBest) {
+      this.#logFn(
         `${colors.blueCore}╠${NetworkVisualization.pad(
           '══════════════════════',
           DashboardManager.FRAME_INNER_WIDTH,
           '═'
         )}${colors.blueCore}╣${colors.reset}`
       );
-      this.logFunction(
+      this.#logFn(
         `${colors.blueCore}║${NetworkVisualization.pad(
-          `${colors.orangeNeon}EVOLVING (GEN ${this.currentBest.generation})`,
+          `${colors.orangeNeon}EVOLVING (GEN ${this.#currentBest.generation})`,
           DashboardManager.FRAME_INNER_WIDTH,
           ' '
         )}${colors.blueCore}║${colors.reset}`
       );
-      this.logFunction(
+      this.#logFn(
         `${colors.blueCore}╠${NetworkVisualization.pad(
           '══════════════════════',
           DashboardManager.FRAME_INNER_WIDTH,
           '═'
         )}${colors.blueCore}╣${colors.reset}`
       );
-      this.logFunction(
+      this.#logFn(
         `${colors.blueCore}║${NetworkVisualization.pad(
           ' ',
           DashboardManager.FRAME_INNER_WIDTH,
@@ -520,17 +600,17 @@ export class DashboardManager implements IDashboardManager {
       );
 
       // Network summary (compact visualization)
-      this.logFunction(
+      this.#logFn(
         `${colors.blueCore}║${NetworkVisualization.pad(
           ' ',
           DashboardManager.FRAME_INNER_WIDTH,
           ' '
         )}${colors.blueCore}║${colors.reset}`
       );
-      this.logFunction(
-        NetworkVisualization.visualizeNetworkSummary(this.currentBest.network)
+      this.#logFn(
+        NetworkVisualization.visualizeNetworkSummary(this.#currentBest.network)
       );
-      this.logFunction(
+      this.#logFn(
         `${colors.blueCore}║${NetworkVisualization.pad(
           ' ',
           DashboardManager.FRAME_INNER_WIDTH,
@@ -539,13 +619,13 @@ export class DashboardManager implements IDashboardManager {
       );
 
       // Maze visualization for the live candidate
-      const lastPos = this.currentBest.result.path[
-        this.currentBest.result.path.length - 1
-      ];
+      const lastPos = DashboardManager.#last(
+        this.#currentBest.result.path as readonly [number, number][]
+      ) ?? [0, 0];
       const currentMazeVisualization = MazeVisualization.visualizeMaze(
         currentMaze,
-        lastPos,
-        this.currentBest.result.path
+        (lastPos as readonly [number, number]) ?? [0, 0],
+        this.#currentBest.result.path as readonly [number, number][]
       );
       const currentMazeLines = Array.isArray(currentMazeVisualization)
         ? currentMazeVisualization
@@ -560,15 +640,15 @@ export class DashboardManager implements IDashboardManager {
             )}${colors.blueCore}║`
         )
         .join('\n');
-      this.logFunction(
+      this.#logFn(
         `${colors.blueCore}║${NetworkVisualization.pad(
           ' ',
           DashboardManager.FRAME_INNER_WIDTH,
           ' '
         )}${colors.blueCore}║${colors.reset}`
       );
-      this.logFunction(centeredCurrentMaze);
-      this.logFunction(
+      this.#logFn(centeredCurrentMaze);
+      this.#logFn(
         `${colors.blueCore}║${NetworkVisualization.pad(
           ' ',
           DashboardManager.FRAME_INNER_WIDTH,
@@ -577,7 +657,7 @@ export class DashboardManager implements IDashboardManager {
       );
 
       // Print stats for the current best solution (delegates to MazeVisualization)
-      this.logFunction(
+      this.#logFn(
         `${colors.blueCore}║${NetworkVisualization.pad(
           ' ',
           DashboardManager.FRAME_INNER_WIDTH,
@@ -585,11 +665,11 @@ export class DashboardManager implements IDashboardManager {
         )}${colors.blueCore}║${colors.reset}`
       );
       MazeVisualization.printMazeStats(
-        this.currentBest,
+        this.#currentBest,
         currentMaze,
-        this.logFunction
+        this.#logFn
       );
-      this.logFunction(
+      this.#logFn(
         `${colors.blueCore}║${NetworkVisualization.pad(
           ' ',
           DashboardManager.FRAME_INNER_WIDTH,
@@ -598,17 +678,17 @@ export class DashboardManager implements IDashboardManager {
       );
 
       // Progress bar for current candidate
-      this.logFunction(
+      this.#logFn(
         `${colors.blueCore}║${NetworkVisualization.pad(
           ' ',
           DashboardManager.FRAME_INNER_WIDTH,
           ' '
         )}${colors.blueCore}║${colors.reset}`
       );
-      this.logFunction(
+      this.#logFn(
         (() => {
           const bar = `Progress to exit: ${MazeVisualization.displayProgressBar(
-            this.currentBest.result.progress
+            this.#currentBest.result.progress
           )}`;
           return `${colors.blueCore}║${NetworkVisualization.pad(
             ' ' + colors.neonSilver + bar + colors.reset,
@@ -617,7 +697,7 @@ export class DashboardManager implements IDashboardManager {
           )}${colors.blueCore}║${colors.reset}`;
         })()
       );
-      this.logFunction(
+      this.#logFn(
         `${colors.blueCore}║${NetworkVisualization.pad(
           ' ',
           DashboardManager.FRAME_INNER_WIDTH,
@@ -628,7 +708,7 @@ export class DashboardManager implements IDashboardManager {
 
     // General stats area (telemetry-derived values). These are defensive reads
     // because telemetry may be missing early in the run.
-    const last = this._lastTelemetry;
+    const last = this.#lastTelemetry;
     const complexity = last?.complexity;
     const perf = last?.perf;
     const lineage = last?.lineage;
@@ -637,7 +717,7 @@ export class DashboardManager implements IDashboardManager {
     const hyper = last?.hyper;
     const diversity = last?.diversity;
     const mutationStats = last?.mutationStats || last?.mutation?.stats;
-    const bestFitness = this.currentBest?.result?.fitness;
+    const bestFitness = this.#currentBest?.result?.fitness;
 
     // Small helpers used below when building the stats list
     const fmtNum = (v: any, digits = 2) =>
@@ -672,7 +752,9 @@ export class DashboardManager implements IDashboardManager {
       if (scores.length) {
         const sum = scores.reduce((a, b) => a + b, 0);
         popMean = (sum / scores.length).toFixed(2);
-        const sorted = scores.slice().sort((a, b) => a - b);
+        // Immutable sort using toSorted (ES2023) for clarity
+        // Use immutable toSorted to avoid mutating the original scores array
+        const sorted = scores.toSorted((a, b) => a - b);
         const mid = Math.floor(sorted.length / 2);
         popMedian = (sorted.length % 2 === 0
           ? (sorted[mid - 1] + sorted[mid]) / 2
@@ -688,269 +770,207 @@ export class DashboardManager implements IDashboardManager {
     // Build small sparklines used in the general stats area
     const firstFrontSize = fronts?.[0]?.length || 0;
     const SPARK_WIDTH = 64;
-    const spark = this.buildSparkline(this._bestFitnessHistory, SPARK_WIDTH);
+    const spark = this.buildSparkline(this.#bestFitnessHistory, SPARK_WIDTH);
     const sparkComplexityNodes = this.buildSparkline(
-      this._complexityNodesHistory,
+      this.#complexityNodesHistory,
       SPARK_WIDTH
     );
     const sparkComplexityConns = this.buildSparkline(
-      this._complexityConnsHistory,
+      this.#complexityConnsHistory,
       SPARK_WIDTH
     );
     const sparkHyper = this.buildSparkline(
-      this._hypervolumeHistory,
+      this.#hypervolumeHistory,
       SPARK_WIDTH
     );
     const sparkProgress = this.buildSparkline(
-      this._progressHistory,
+      this.#progressHistory,
       SPARK_WIDTH
     );
     const sparkSpecies = this.buildSparkline(
-      this._speciesCountHistory,
+      this.#speciesCountHistory,
       SPARK_WIDTH
     );
 
-    // Collect stat lines into an array then print via the logFunction so the
-    // ordering is explicit and easy to modify for learners exploring the code.
-    const statsLines: string[] = [];
-    statsLines.push(
-      this.formatStat(
-        'Current generation',
-        `${this.currentBest?.generation || 0}`
-      )
-    );
-    if (typeof bestFitness === 'number')
-      statsLines.push(
-        this.formatStat(
-          'Best fitness',
-          `${bestFitness.toFixed(2)}${deltaArrow(
-            bestFitness,
-            this._bestFitnessHistory.length > 1
-              ? this._bestFitnessHistory[this._bestFitnessHistory.length - 2]
-              : null
-          )}`
-        )
-      );
-    const satFrac = (this.currentBest as any)?.result?.saturationFraction;
-    if (typeof satFrac === 'number')
-      statsLines.push(
-        this.formatStat('Saturation fraction', satFrac.toFixed(3))
-      );
-    const actEnt = (this.currentBest as any)?.result?.actionEntropy;
-    if (typeof actEnt === 'number')
-      statsLines.push(
-        this.formatStat('Action entropy (path)', actEnt.toFixed(3))
-      );
-    if (popMean === '-' && typeof bestFitness === 'number')
-      popMean = bestFitness.toFixed(2);
-    if (popMedian === '-' && typeof bestFitness === 'number')
-      popMedian = bestFitness.toFixed(2);
-    statsLines.push(this.formatStat('Population mean', popMean));
-    statsLines.push(this.formatStat('Population median', popMedian));
-    if (complexity)
-      statsLines.push(
-        this.formatStat(
-          'Complexity mean n/c',
-          `${fmtNum(complexity.meanNodes, 2)}/${fmtNum(
-            complexity.meanConns,
-            2
-          )}  max ${fmtNum(complexity.maxNodes, 0)}/${fmtNum(
-            complexity.maxConns,
-            0
-          )}`,
-          colors.neonSilver,
-          colors.orangeNeon
-        )
-      );
-    if (
-      complexity &&
-      (complexity.growthNodes < 0 || complexity.growthConns < 0)
-    )
-      statsLines.push(
-        this.formatStat(
-          'Simplify phase',
-          'active',
-          colors.neonSilver,
-          colors.neonGreen
-        )
-      );
-    if (sparkComplexityNodes)
-      statsLines.push(
-        this.formatStat(
-          'Nodes trend',
-          sparkComplexityNodes,
-          colors.neonSilver,
-          colors.neonYellow
-        )
-      );
-    if (sparkComplexityConns)
-      statsLines.push(
-        this.formatStat(
-          'Conns trend',
-          sparkComplexityConns,
-          colors.neonSilver,
-          colors.neonYellow
-        )
-      );
-    statsLines.push(this.formatStat('Enabled conn ratio', enabledRatio));
-    if (perf && (perf.evalMs != null || perf.evolveMs != null))
-      statsLines.push(
-        this.formatStat(
-          'Perf eval/evolve ms',
-          `${fmtNum(perf.evalMs, 1)}/${fmtNum(perf.evolveMs, 1)}`
-        )
-      );
-    if (lineage)
-      statsLines.push(
-        this.formatStat(
-          'Lineage depth b/mean',
-          `${lineage.depthBest}/${fmtNum(lineage.meanDepth, 2)}`
-        )
-      );
-    if (lineage?.inbreeding != null)
-      statsLines.push(
-        this.formatStat('Inbreeding', fmtNum(lineage.inbreeding, 3))
-      );
-    if (speciesCount === '-' && typeof last?.species === 'number')
-      speciesCount = String(last.species);
-    statsLines.push(this.formatStat('Species count', speciesCount));
-    if (diversity?.structuralVar != null)
-      statsLines.push(
-        this.formatStat(
-          'Structural variance',
-          fmtNum(diversity.structuralVar, 3)
-        )
-      );
-    if (diversity?.objectiveSpread != null)
-      statsLines.push(
-        this.formatStat(
-          'Objective spread',
-          fmtNum(diversity.objectiveSpread, 3)
-        )
-      );
-    if (Array.isArray(neat?.species) && neat.species.length) {
-      const sizes = neat.species
-        .map((s: any) => s.members?.length || 0)
-        .sort((a: number, b: number) => b - a);
-      const top3 = sizes.slice(0, 3).join('/') || '-';
-      statsLines.push(this.formatStat('Top species sizes', top3));
-    }
-    if (fronts)
-      statsLines.push(
-        this.formatStat(
-          'Pareto fronts',
-          `${fronts.map((f: any) => f?.length || 0).join('/')}`
-        )
-      );
-    statsLines.push(
-      this.formatStat('First front size', firstFrontSize.toString())
-    );
-    if (objectives)
-      statsLines.push(
-        this.formatStat(
-          'Objectives',
-          objectives.join(', '),
-          colors.neonSilver,
-          colors.neonIndigo
-        )
-      );
-    if (hyper !== undefined)
-      statsLines.push(this.formatStat('Hypervolume', fmtNum(hyper, 4)));
-    if (sparkHyper)
-      statsLines.push(
-        this.formatStat(
-          'Hypervolume trend',
-          sparkHyper,
-          colors.neonSilver,
-          colors.neonGreen
-        )
-      );
-    if (spark)
-      statsLines.push(
-        this.formatStat(
-          'Fitness trend',
-          spark,
-          colors.neonSilver,
-          colors.neonYellow
-        )
-      );
-    if (sparkProgress)
-      statsLines.push(
-        this.formatStat(
-          'Progress trend',
-          sparkProgress,
-          colors.neonSilver,
-          colors.cyanNeon
-        )
-      );
-    if (sparkSpecies)
-      statsLines.push(
-        this.formatStat(
-          'Species trend',
-          sparkSpecies,
-          colors.neonSilver,
-          colors.neonIndigo
-        )
-      );
-    if (neat?.getNoveltyArchiveSize) {
-      try {
-        const nov = neat.getNoveltyArchiveSize();
-        statsLines.push(this.formatStat('Novelty archive', `${nov}`));
-      } catch {}
-    }
-    if (neat?.getOperatorStats) {
-      try {
-        const ops = neat.getOperatorStats();
-        if (Array.isArray(ops) && ops.length) {
-          const top = ops
-            .slice()
-            .sort(
+    // Build externalized detailed stats object (formerly rendered inline)
+    try {
+      const satFrac = (this.#currentBest as any)?.result?.saturationFraction;
+      const actEnt = (this.#currentBest as any)?.result?.actionEntropy;
+      if (popMean === '-' && typeof bestFitness === 'number')
+        popMean = bestFitness.toFixed(2);
+      if (popMedian === '-' && typeof bestFitness === 'number')
+        popMedian = bestFitness.toFixed(2);
+      if (speciesCount === '-' && typeof last?.species === 'number')
+        speciesCount = String(last.species);
+      let noveltyArchiveSize: number | null = null;
+      if (neat?.getNoveltyArchiveSize) {
+        try {
+          noveltyArchiveSize = neat.getNoveltyArchiveSize();
+        } catch {}
+      }
+      let operatorAcceptance: Array<{
+        name: string;
+        acceptancePct: number;
+      }> | null = null;
+      if (neat?.getOperatorStats) {
+        try {
+          const ops = neat.getOperatorStats();
+          if (Array.isArray(ops) && ops.length) {
+            // Sort operators by success rate (immutable sort)
+            const sortedOps = ops.toSorted(
               (a: any, b: any) =>
                 b.success / Math.max(1, b.attempts) -
                 a.success / Math.max(1, a.attempts)
-            )
-            .slice(0, 4)
-            .map(
-              (o: any) =>
-                `${o.name}:${(
+            );
+            operatorAcceptance = [];
+            const take = Math.min(6, sortedOps.length);
+            for (let i = 0; i < take; i++) {
+              const o = sortedOps[i];
+              operatorAcceptance.push({
+                name: o.name,
+                acceptancePct: +(
                   (100 * o.success) /
                   Math.max(1, o.attempts)
-                ).toFixed(0)}%`
-            )
-            .join(' ');
-          if (top)
-            statsLines.push(
-              this.formatStat(
-                'Op acceptance',
-                top,
-                colors.neonSilver,
-                colors.neonGreen
-              )
+                ).toFixed(2),
+              });
+            }
+          }
+        } catch {}
+      }
+      let topMutations: Array<{ name: string; count: number }> | null = null;
+      if (mutationStats && typeof mutationStats === 'object') {
+        try {
+          {
+            const entries = Object.entries(mutationStats).filter(
+              ([k, v]) => typeof v === 'number'
             );
-        }
-      } catch {}
-    }
-    if (mutationStats && typeof mutationStats === 'object') {
-      const entries = Object.entries(mutationStats)
-        .filter(([k, v]) => typeof v === 'number')
-        .sort((a, b) => (b[1] as number) - (a[1] as number))
-        .slice(0, 5)
-        .map(([k, v]) => `${k}:${(v as number).toFixed(0)}`)
-        .join(' ');
-      if (entries)
-        statsLines.push(
-          this.formatStat(
-            'Top mutations',
-            entries,
-            colors.neonSilver,
-            colors.neonGreen
-          )
-        );
+            const sortedEntries = entries.toSorted(
+              (a, b) => (b[1] as number) - (a[1] as number)
+            );
+            topMutations = [];
+            const takeM = Math.min(8, sortedEntries.length);
+            for (let i = 0; i < takeM; i++) {
+              const [k, v] = sortedEntries[i];
+              topMutations.push({ name: k, count: v as number });
+            }
+          }
+        } catch {}
+      }
+      const topSpeciesSizes = Array.isArray(neat?.species)
+        ? (() => {
+            const sizes = neat.species.map((s: any) => s.members?.length || 0);
+            const sortedSizes = sizes.toSorted((a: number, b: number) => b - a);
+            const out: number[] = [];
+            const takeS = Math.min(5, sortedSizes.length);
+            for (let i = 0; i < takeS; i++) out.push(sortedSizes[i]);
+            return out;
+          })()
+        : null;
+      const paretoFrontSizes = fronts
+        ? fronts.map((f: any) => f?.length || 0)
+        : null;
+      this.#lastDetailedStats = {
+        generation: this.#currentBest?.generation || 0,
+        bestFitness: typeof bestFitness === 'number' ? bestFitness : null,
+        bestFitnessDelta: ((): number | null => {
+          if (typeof bestFitness !== 'number') return null;
+          const prev =
+            this.#bestFitnessHistory.length > 1
+              ? this.#bestFitnessHistory[this.#bestFitnessHistory.length - 2]
+              : null;
+          if (prev == null) return null;
+          const diff = bestFitness - prev;
+          return +diff.toFixed(3);
+        })(),
+        saturationFraction: typeof satFrac === 'number' ? satFrac : null,
+        actionEntropy: typeof actEnt === 'number' ? actEnt : null,
+        populationMean: popMean === '-' ? null : +popMean,
+        populationMedian: popMedian === '-' ? null : +popMedian,
+        enabledConnRatio: enabledRatio === '-' ? null : +enabledRatio,
+        complexity: complexity || null,
+        simplifyPhaseActive: !!(
+          complexity &&
+          (complexity.growthNodes < 0 || complexity.growthConns < 0)
+        ),
+        perf: perf || null,
+        lineage: lineage || null,
+        diversity: diversity || null,
+        speciesCount: speciesCount === '-' ? null : +speciesCount,
+        topSpeciesSizes,
+        objectives: objectives || null,
+        paretoFrontSizes,
+        firstFrontSize,
+        hypervolume: typeof hyper === 'number' ? hyper : null,
+        noveltyArchiveSize,
+        operatorAcceptance,
+        topMutations,
+        mutationStats: mutationStats || null,
+        trends: {
+          fitness: spark || null,
+          nodes: sparkComplexityNodes || null,
+          conns: sparkComplexityConns || null,
+          hyper: sparkHyper || null,
+          progress: sparkProgress || null,
+          species: sparkSpecies || null,
+        },
+        histories: {
+          bestFitness: ((): number[] => {
+            const arr: number[] = [];
+            const start = Math.max(0, this.#bestFitnessHistory.length - 200);
+            for (let i = start; i < this.#bestFitnessHistory.length; i++)
+              arr.push(this.#bestFitnessHistory[i]);
+            return arr;
+          })(),
+          nodes: ((): number[] => {
+            const arr: number[] = [];
+            const start = Math.max(
+              0,
+              this.#complexityNodesHistory.length - 200
+            );
+            for (let i = start; i < this.#complexityNodesHistory.length; i++)
+              arr.push(this.#complexityNodesHistory[i]);
+            return arr;
+          })(),
+          conns: ((): number[] => {
+            const arr: number[] = [];
+            const start = Math.max(
+              0,
+              this.#complexityConnsHistory.length - 200
+            );
+            for (let i = start; i < this.#complexityConnsHistory.length; i++)
+              arr.push(this.#complexityConnsHistory[i]);
+            return arr;
+          })(),
+          hyper: ((): number[] => {
+            const arr: number[] = [];
+            const start = Math.max(0, this.#hypervolumeHistory.length - 200);
+            for (let i = start; i < this.#hypervolumeHistory.length; i++)
+              arr.push(this.#hypervolumeHistory[i]);
+            return arr;
+          })(),
+          progress: ((): number[] => {
+            const arr: number[] = [];
+            const start = Math.max(0, this.#progressHistory.length - 200);
+            for (let i = start; i < this.#progressHistory.length; i++)
+              arr.push(this.#progressHistory[i]);
+            return arr;
+          })(),
+          species: ((): number[] => {
+            const arr: number[] = [];
+            const start = Math.max(0, this.#speciesCountHistory.length - 200);
+            for (let i = start; i < this.#speciesCountHistory.length; i++)
+              arr.push(this.#speciesCountHistory[i]);
+            return arr;
+          })(),
+        },
+        timestamp: Date.now(),
+      };
+    } catch {
+      // Fail silently – details are optional
     }
 
-    // Emit collected stat lines using the supplied log function
-    statsLines.forEach((ln) => this.logFunction(ln));
-    this.logFunction(
+    // Replace old verbose stats area with a minimal spacer line (keeps frame aesthetics)
+    this.#logFn(
       `${colors.blueCore}║${NetworkVisualization.pad(
         ' ',
         DashboardManager.FRAME_INNER_WIDTH,
@@ -960,8 +980,8 @@ export class DashboardManager implements IDashboardManager {
   }
 
   reset(): void {
-    this.solvedMazes = [];
-    this.solvedMazeKeys.clear();
-    this.currentBest = null;
+    this.#solvedMazes = [];
+    this.#solvedMazeKeys.clear();
+    this.#currentBest = null;
   }
 }

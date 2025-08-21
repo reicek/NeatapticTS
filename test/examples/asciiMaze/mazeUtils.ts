@@ -3,6 +3,90 @@
  * Provides static methods for encoding, position finding, BFS, and progress calculation.
  */
 export class MazeUtils {
+  /** Shared set of wall characters to avoid re-allocating on every call */
+  // Private static set of wall characters (box-drawing + hash).
+  // Kept private (#) because it's an implementation detail; use `encodeMaze`.
+  static #WALL_CHARS = new Set([
+    '#',
+    '═',
+    '║',
+    '╔',
+    '╗',
+    '╚',
+    '╝',
+    '╠',
+    '╣',
+    '╦',
+    '╩',
+    '╬',
+  ]);
+
+  // Movement vectors used by BFS (N, E, S, W). Private to avoid accidental external use.
+  // Marked readonly to signal these vectors are constant and must not be mutated.
+  static #DIRECTIONS: readonly (readonly [number, number])[] = [
+    [0, -1],
+    [1, 0],
+    [0, 1],
+    [-1, 0],
+  ];
+
+  /** Convert [x,y] into canonical key string 'x,y' */
+  static posKey([x, y]: readonly [number, number]): string {
+    return `${x},${y}`;
+  }
+  /**
+   * Return up to the last `n` items from `arr` as a new array.
+   * Public helper for extracting a small tail window without allocating a full slice
+   * in hot code paths.
+   */
+  static tail<T>(arr: T[] | undefined, n: number): T[] {
+    if (!Array.isArray(arr) || n <= 0) return [];
+    const out: T[] = [];
+    const start = Math.max(0, arr.length - n);
+    for (let i = start; i < arr.length; i++) out.push(arr[i]!);
+    return out;
+  }
+  /**
+   * Return the last element of an array or undefined when empty. Public helper.
+   * @param arr - array to read from
+   * @returns last element or undefined
+   */
+  static safeLast<T>(arr?: T[] | null): T | undefined {
+    // Prefer Array.prototype.at where available (ES2022+). Fallback to classic checks.
+    if (!Array.isArray(arr) || arr.length === 0) return undefined;
+    // Use at(-1) for clarity and expressiveness.
+    // Note: `arr.at` is available in modern runtimes; guard defensively.
+    // Keep behavior identical (undefined when empty).
+    return (arr as any).at ? (arr as any).at(-1) : arr[arr.length - 1];
+  }
+
+  /**
+   * Push a value onto a bounded history buffer and trim the head if needed.
+   * Returns the (possibly new) array. Made public so many modules can reuse it.
+   * @param buf - existing buffer (may be undefined)
+   * @param v - value to push
+   * @param maxLen - maximum length to retain
+   */
+  static pushHistory<T>(buf: T[] | undefined, v: T, maxLen: number): T[] {
+    // Keep the same in-place semantics: callers may hold references to the buffer.
+    if (!Array.isArray(buf)) {
+      return [v];
+    }
+    buf.push(v);
+    if (buf.length > maxLen) {
+      // Remove any excess items from the head in one operation to avoid repeated O(n)
+      // shifts when the buffer somehow overflows by more than one element.
+      const excess = buf.length - maxLen;
+      if (excess === 1) {
+        // Common case: remove single oldest element.
+        buf.shift();
+      } else {
+        // Remove multiple at once.
+        buf.splice(0, excess);
+      }
+    }
+    return buf;
+  }
   /**
    * Converts an ASCII/Unicode maze (array of strings) into a 2D numeric array for processing by the agent.
    *
@@ -17,39 +101,18 @@ export class MazeUtils {
    * @param asciiMaze - Array of strings representing the maze.
    * @returns 2D array of numbers encoding the maze elements.
    */
-  static encodeMaze(asciiMaze: string[]): number[][] {
+  static encodeMaze(asciiMaze: ReadonlyArray<string>): number[][] {
     /**
      * Set of characters representing walls in the maze.
      * Includes box-drawing and hash characters.
      */
-    const wallChars = new Set([
-      '#',
-      '═',
-      '║',
-      '╔',
-      '╗',
-      '╚',
-      '╝',
-      '╠',
-      '╣',
-      '╦',
-      '╩',
-      '╬',
-    ]);
+    const wallChars = MazeUtils.#WALL_CHARS;
     // Map each row and cell to its numeric encoding
+    const codeMap: Record<string, number> = { '.': 0, E: 1, S: 2 };
     return asciiMaze.map((row) =>
       [...row].map((cell) => {
         if (wallChars.has(cell)) return -1;
-        switch (cell) {
-          case '.':
-            return 0;
-          case 'E':
-            return 1;
-          case 'S':
-            return 2;
-          default:
-            return 0;
-        }
+        return codeMap[cell] ?? 0;
       })
     );
   }
@@ -61,7 +124,10 @@ export class MazeUtils {
    * @returns [x, y] coordinates of the character.
    * @throws Error if the character is not found in the maze.
    */
-  static findPosition(asciiMaze: string[], char: string): [number, number] {
+  static findPosition(
+    asciiMaze: ReadonlyArray<string>,
+    char: string
+  ): readonly [number, number] {
     // Search each row for the target character
     for (let y = 0; y < asciiMaze.length; y++) {
       /**
@@ -82,9 +148,9 @@ export class MazeUtils {
    * @returns Shortest path length (number of steps), or Infinity if unreachable.
    */
   static bfsDistance(
-    encodedMaze: number[][],
-    start: [number, number],
-    goal: [number, number]
+    encodedMaze: ReadonlyArray<ReadonlyArray<number>>,
+    start: readonly [number, number],
+    goal: readonly [number, number]
   ): number {
     /**
      * Goal coordinates
@@ -95,28 +161,22 @@ export class MazeUtils {
     /**
      * BFS queue: each entry is [[x, y], distance]
      */
-    const queue: Array<[[number, number], number]> = [[start, 0]];
+    const queue: Array<[readonly [number, number], number]> = [[start, 0]];
     /**
      * Set of visited positions (as string keys)
      */
     const visited = new Set<string>();
-    /**
-     * Helper to create a unique key for a position
-     */
-    const key = ([x, y]: [number, number]) => `${x},${y}`;
-    visited.add(key(start));
+    visited.add(MazeUtils.posKey(start));
     /**
      * Possible movement directions (N, E, S, W)
      */
-    const directions = [
-      [0, -1],
-      [1, 0],
-      [0, 1],
-      [-1, 0],
-    ];
-    // BFS loop
-    while (queue.length > 0) {
-      const [[x, y], dist] = queue.shift()!;
+    // Use shared private DIRECTIONS vector for clarity and to avoid duplication.
+    const directions = MazeUtils.#DIRECTIONS;
+    // BFS loop — use index pointer instead of shift() to avoid O(n^2) behavior
+    // when the queue grows large. This keeps the algorithm O(n).
+    let qIndex = 0;
+    while (qIndex < queue.length) {
+      const [[x, y], dist] = queue[qIndex++];
       if (x === gx && y === gy) return dist;
       for (const [dx, dy] of directions) {
         const nx = x + dx;
@@ -127,9 +187,9 @@ export class MazeUtils {
           ny < encodedMaze.length &&
           nx < encodedMaze[0].length &&
           encodedMaze[ny][nx] !== -1 &&
-          !visited.has(key([nx, ny]))
+          !visited.has(MazeUtils.posKey([nx, ny]))
         ) {
-          visited.add(key([nx, ny]));
+          visited.add(MazeUtils.posKey([nx, ny]));
           queue.push([[nx, ny], dist + 1]);
         }
       }
@@ -147,10 +207,10 @@ export class MazeUtils {
    * @returns Progress percentage (0-100).
    */
   static calculateProgress(
-    encodedMaze: number[][],
-    currentPos: [number, number],
-    startPos: [number, number],
-    exitPos: [number, number]
+    encodedMaze: ReadonlyArray<ReadonlyArray<number>>,
+    currentPos: readonly [number, number],
+    startPos: readonly [number, number],
+    exitPos: readonly [number, number]
   ): number {
     /**
      * Total shortest path distance from start to exit
@@ -184,9 +244,9 @@ export class MazeUtils {
    * @returns Progress percentage (0-100)
    */
   static calculateProgressFromDistanceMap(
-    distanceMap: number[][],
-    currentPos: [number, number],
-    startPos: [number, number]
+    distanceMap: ReadonlyArray<ReadonlyArray<number>>,
+    currentPos: readonly [number, number],
+    startPos: readonly [number, number]
   ): number {
     /**
      * Start and current coordinates
@@ -220,8 +280,8 @@ export class MazeUtils {
    * @param goal - [x,y] goal position (typically exit)
    */
   static buildDistanceMap(
-    encodedMaze: number[][],
-    goal: [number, number]
+    encodedMaze: ReadonlyArray<ReadonlyArray<number>>,
+    goal: readonly [number, number]
   ): number[][] {
     /**
      * Maze height and width
@@ -247,15 +307,11 @@ export class MazeUtils {
     /**
      * Possible movement directions (N, E, S, W)
      */
-    const dirs = [
-      [0, -1],
-      [1, 0],
-      [0, 1],
-      [-1, 0],
-    ];
-    // BFS loop to fill distance map
-    while (q.length) {
-      const [x, y] = q.shift()!;
+    const dirs = MazeUtils.#DIRECTIONS;
+    // BFS loop to fill distance map. Use index pointer to avoid shift() overhead.
+    let qi = 0;
+    while (qi < q.length) {
+      const [x, y] = q[qi++];
       const d = dist[y][x];
       for (const [dx, dy] of dirs) {
         const nx = x + dx;

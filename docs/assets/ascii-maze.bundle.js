@@ -2714,877 +2714,6 @@
     }
   });
 
-  // node_modules/util/support/isBufferBrowser.js
-  var require_isBufferBrowser = __commonJS({
-    "node_modules/util/support/isBufferBrowser.js"(exports, module) {
-      module.exports = function isBuffer(arg) {
-        return arg && typeof arg === "object" && typeof arg.copy === "function" && typeof arg.fill === "function" && typeof arg.readUInt8 === "function";
-      };
-    }
-  });
-
-  // node_modules/util/node_modules/inherits/inherits_browser.js
-  var require_inherits_browser = __commonJS({
-    "node_modules/util/node_modules/inherits/inherits_browser.js"(exports, module) {
-      if (typeof Object.create === "function") {
-        module.exports = function inherits(ctor, superCtor) {
-          ctor.super_ = superCtor;
-          ctor.prototype = Object.create(superCtor.prototype, {
-            constructor: {
-              value: ctor,
-              enumerable: false,
-              writable: true,
-              configurable: true
-            }
-          });
-        };
-      } else {
-        module.exports = function inherits(ctor, superCtor) {
-          ctor.super_ = superCtor;
-          var TempCtor = function() {
-          };
-          TempCtor.prototype = superCtor.prototype;
-          ctor.prototype = new TempCtor();
-          ctor.prototype.constructor = ctor;
-        };
-      }
-    }
-  });
-
-  // node_modules/util/util.js
-  var require_util = __commonJS({
-    "node_modules/util/util.js"(exports) {
-      var formatRegExp = /%[sdj%]/g;
-      exports.format = function(f) {
-        if (!isString(f)) {
-          var objects = [];
-          for (var i = 0; i < arguments.length; i++) {
-            objects.push(inspect(arguments[i]));
-          }
-          return objects.join(" ");
-        }
-        var i = 1;
-        var args = arguments;
-        var len = args.length;
-        var str = String(f).replace(formatRegExp, function(x2) {
-          if (x2 === "%%") return "%";
-          if (i >= len) return x2;
-          switch (x2) {
-            case "%s":
-              return String(args[i++]);
-            case "%d":
-              return Number(args[i++]);
-            case "%j":
-              try {
-                return JSON.stringify(args[i++]);
-              } catch (_) {
-                return "[Circular]";
-              }
-            default:
-              return x2;
-          }
-        });
-        for (var x = args[i]; i < len; x = args[++i]) {
-          if (isNull(x) || !isObject(x)) {
-            str += " " + x;
-          } else {
-            str += " " + inspect(x);
-          }
-        }
-        return str;
-      };
-      exports.deprecate = function(fn, msg) {
-        if (isUndefined(global.process)) {
-          return function() {
-            return exports.deprecate(fn, msg).apply(this, arguments);
-          };
-        }
-        if (process.noDeprecation === true) {
-          return fn;
-        }
-        var warned = false;
-        function deprecated() {
-          if (!warned) {
-            if (process.throwDeprecation) {
-              throw new Error(msg);
-            } else if (process.traceDeprecation) {
-              console.trace(msg);
-            } else {
-              console.error(msg);
-            }
-            warned = true;
-          }
-          return fn.apply(this, arguments);
-        }
-        return deprecated;
-      };
-      var debugs = {};
-      var debugEnviron;
-      exports.debuglog = function(set) {
-        if (isUndefined(debugEnviron))
-          debugEnviron = process.env.NODE_DEBUG || "";
-        set = set.toUpperCase();
-        if (!debugs[set]) {
-          if (new RegExp("\\b" + set + "\\b", "i").test(debugEnviron)) {
-            var pid = process.pid;
-            debugs[set] = function() {
-              var msg = exports.format.apply(exports, arguments);
-              console.error("%s %d: %s", set, pid, msg);
-            };
-          } else {
-            debugs[set] = function() {
-            };
-          }
-        }
-        return debugs[set];
-      };
-      function inspect(obj, opts) {
-        var ctx = {
-          seen: [],
-          stylize: stylizeNoColor
-        };
-        if (arguments.length >= 3) ctx.depth = arguments[2];
-        if (arguments.length >= 4) ctx.colors = arguments[3];
-        if (isBoolean(opts)) {
-          ctx.showHidden = opts;
-        } else if (opts) {
-          exports._extend(ctx, opts);
-        }
-        if (isUndefined(ctx.showHidden)) ctx.showHidden = false;
-        if (isUndefined(ctx.depth)) ctx.depth = 2;
-        if (isUndefined(ctx.colors)) ctx.colors = false;
-        if (isUndefined(ctx.customInspect)) ctx.customInspect = true;
-        if (ctx.colors) ctx.stylize = stylizeWithColor;
-        return formatValue(ctx, obj, ctx.depth);
-      }
-      exports.inspect = inspect;
-      inspect.colors = {
-        "bold": [1, 22],
-        "italic": [3, 23],
-        "underline": [4, 24],
-        "inverse": [7, 27],
-        "white": [37, 39],
-        "grey": [90, 39],
-        "black": [30, 39],
-        "blue": [34, 39],
-        "cyan": [36, 39],
-        "green": [32, 39],
-        "magenta": [35, 39],
-        "red": [31, 39],
-        "yellow": [33, 39]
-      };
-      inspect.styles = {
-        "special": "cyan",
-        "number": "yellow",
-        "boolean": "yellow",
-        "undefined": "grey",
-        "null": "bold",
-        "string": "green",
-        "date": "magenta",
-        // "name": intentionally not styling
-        "regexp": "red"
-      };
-      function stylizeWithColor(str, styleType) {
-        var style = inspect.styles[styleType];
-        if (style) {
-          return "\x1B[" + inspect.colors[style][0] + "m" + str + "\x1B[" + inspect.colors[style][1] + "m";
-        } else {
-          return str;
-        }
-      }
-      function stylizeNoColor(str, styleType) {
-        return str;
-      }
-      function arrayToHash(array) {
-        var hash = {};
-        array.forEach(function(val, idx) {
-          hash[val] = true;
-        });
-        return hash;
-      }
-      function formatValue(ctx, value, recurseTimes) {
-        if (ctx.customInspect && value && isFunction(value.inspect) && // Filter out the util module, it's inspect function is special
-        value.inspect !== exports.inspect && // Also filter out any prototype objects using the circular check.
-        !(value.constructor && value.constructor.prototype === value)) {
-          var ret = value.inspect(recurseTimes, ctx);
-          if (!isString(ret)) {
-            ret = formatValue(ctx, ret, recurseTimes);
-          }
-          return ret;
-        }
-        var primitive = formatPrimitive(ctx, value);
-        if (primitive) {
-          return primitive;
-        }
-        var keys = Object.keys(value);
-        var visibleKeys = arrayToHash(keys);
-        if (ctx.showHidden) {
-          keys = Object.getOwnPropertyNames(value);
-        }
-        if (isError(value) && (keys.indexOf("message") >= 0 || keys.indexOf("description") >= 0)) {
-          return formatError(value);
-        }
-        if (keys.length === 0) {
-          if (isFunction(value)) {
-            var name = value.name ? ": " + value.name : "";
-            return ctx.stylize("[Function" + name + "]", "special");
-          }
-          if (isRegExp(value)) {
-            return ctx.stylize(RegExp.prototype.toString.call(value), "regexp");
-          }
-          if (isDate(value)) {
-            return ctx.stylize(Date.prototype.toString.call(value), "date");
-          }
-          if (isError(value)) {
-            return formatError(value);
-          }
-        }
-        var base = "", array = false, braces = ["{", "}"];
-        if (isArray(value)) {
-          array = true;
-          braces = ["[", "]"];
-        }
-        if (isFunction(value)) {
-          var n = value.name ? ": " + value.name : "";
-          base = " [Function" + n + "]";
-        }
-        if (isRegExp(value)) {
-          base = " " + RegExp.prototype.toString.call(value);
-        }
-        if (isDate(value)) {
-          base = " " + Date.prototype.toUTCString.call(value);
-        }
-        if (isError(value)) {
-          base = " " + formatError(value);
-        }
-        if (keys.length === 0 && (!array || value.length == 0)) {
-          return braces[0] + base + braces[1];
-        }
-        if (recurseTimes < 0) {
-          if (isRegExp(value)) {
-            return ctx.stylize(RegExp.prototype.toString.call(value), "regexp");
-          } else {
-            return ctx.stylize("[Object]", "special");
-          }
-        }
-        ctx.seen.push(value);
-        var output;
-        if (array) {
-          output = formatArray(ctx, value, recurseTimes, visibleKeys, keys);
-        } else {
-          output = keys.map(function(key) {
-            return formatProperty(ctx, value, recurseTimes, visibleKeys, key, array);
-          });
-        }
-        ctx.seen.pop();
-        return reduceToSingleString(output, base, braces);
-      }
-      function formatPrimitive(ctx, value) {
-        if (isUndefined(value))
-          return ctx.stylize("undefined", "undefined");
-        if (isString(value)) {
-          var simple = "'" + JSON.stringify(value).replace(/^"|"$/g, "").replace(/'/g, "\\'").replace(/\\"/g, '"') + "'";
-          return ctx.stylize(simple, "string");
-        }
-        if (isNumber(value))
-          return ctx.stylize("" + value, "number");
-        if (isBoolean(value))
-          return ctx.stylize("" + value, "boolean");
-        if (isNull(value))
-          return ctx.stylize("null", "null");
-      }
-      function formatError(value) {
-        return "[" + Error.prototype.toString.call(value) + "]";
-      }
-      function formatArray(ctx, value, recurseTimes, visibleKeys, keys) {
-        var output = [];
-        for (var i = 0, l = value.length; i < l; ++i) {
-          if (hasOwnProperty(value, String(i))) {
-            output.push(formatProperty(
-              ctx,
-              value,
-              recurseTimes,
-              visibleKeys,
-              String(i),
-              true
-            ));
-          } else {
-            output.push("");
-          }
-        }
-        keys.forEach(function(key) {
-          if (!key.match(/^\d+$/)) {
-            output.push(formatProperty(
-              ctx,
-              value,
-              recurseTimes,
-              visibleKeys,
-              key,
-              true
-            ));
-          }
-        });
-        return output;
-      }
-      function formatProperty(ctx, value, recurseTimes, visibleKeys, key, array) {
-        var name, str, desc;
-        desc = Object.getOwnPropertyDescriptor(value, key) || { value: value[key] };
-        if (desc.get) {
-          if (desc.set) {
-            str = ctx.stylize("[Getter/Setter]", "special");
-          } else {
-            str = ctx.stylize("[Getter]", "special");
-          }
-        } else {
-          if (desc.set) {
-            str = ctx.stylize("[Setter]", "special");
-          }
-        }
-        if (!hasOwnProperty(visibleKeys, key)) {
-          name = "[" + key + "]";
-        }
-        if (!str) {
-          if (ctx.seen.indexOf(desc.value) < 0) {
-            if (isNull(recurseTimes)) {
-              str = formatValue(ctx, desc.value, null);
-            } else {
-              str = formatValue(ctx, desc.value, recurseTimes - 1);
-            }
-            if (str.indexOf("\n") > -1) {
-              if (array) {
-                str = str.split("\n").map(function(line) {
-                  return "  " + line;
-                }).join("\n").substr(2);
-              } else {
-                str = "\n" + str.split("\n").map(function(line) {
-                  return "   " + line;
-                }).join("\n");
-              }
-            }
-          } else {
-            str = ctx.stylize("[Circular]", "special");
-          }
-        }
-        if (isUndefined(name)) {
-          if (array && key.match(/^\d+$/)) {
-            return str;
-          }
-          name = JSON.stringify("" + key);
-          if (name.match(/^"([a-zA-Z_][a-zA-Z_0-9]*)"$/)) {
-            name = name.substr(1, name.length - 2);
-            name = ctx.stylize(name, "name");
-          } else {
-            name = name.replace(/'/g, "\\'").replace(/\\"/g, '"').replace(/(^"|"$)/g, "'");
-            name = ctx.stylize(name, "string");
-          }
-        }
-        return name + ": " + str;
-      }
-      function reduceToSingleString(output, base, braces) {
-        var numLinesEst = 0;
-        var length = output.reduce(function(prev, cur) {
-          numLinesEst++;
-          if (cur.indexOf("\n") >= 0) numLinesEst++;
-          return prev + cur.replace(/\u001b\[\d\d?m/g, "").length + 1;
-        }, 0);
-        if (length > 60) {
-          return braces[0] + (base === "" ? "" : base + "\n ") + " " + output.join(",\n  ") + " " + braces[1];
-        }
-        return braces[0] + base + " " + output.join(", ") + " " + braces[1];
-      }
-      function isArray(ar) {
-        return Array.isArray(ar);
-      }
-      exports.isArray = isArray;
-      function isBoolean(arg) {
-        return typeof arg === "boolean";
-      }
-      exports.isBoolean = isBoolean;
-      function isNull(arg) {
-        return arg === null;
-      }
-      exports.isNull = isNull;
-      function isNullOrUndefined(arg) {
-        return arg == null;
-      }
-      exports.isNullOrUndefined = isNullOrUndefined;
-      function isNumber(arg) {
-        return typeof arg === "number";
-      }
-      exports.isNumber = isNumber;
-      function isString(arg) {
-        return typeof arg === "string";
-      }
-      exports.isString = isString;
-      function isSymbol(arg) {
-        return typeof arg === "symbol";
-      }
-      exports.isSymbol = isSymbol;
-      function isUndefined(arg) {
-        return arg === void 0;
-      }
-      exports.isUndefined = isUndefined;
-      function isRegExp(re) {
-        return isObject(re) && objectToString(re) === "[object RegExp]";
-      }
-      exports.isRegExp = isRegExp;
-      function isObject(arg) {
-        return typeof arg === "object" && arg !== null;
-      }
-      exports.isObject = isObject;
-      function isDate(d) {
-        return isObject(d) && objectToString(d) === "[object Date]";
-      }
-      exports.isDate = isDate;
-      function isError(e) {
-        return isObject(e) && (objectToString(e) === "[object Error]" || e instanceof Error);
-      }
-      exports.isError = isError;
-      function isFunction(arg) {
-        return typeof arg === "function";
-      }
-      exports.isFunction = isFunction;
-      function isPrimitive(arg) {
-        return arg === null || typeof arg === "boolean" || typeof arg === "number" || typeof arg === "string" || typeof arg === "symbol" || // ES6 symbol
-        typeof arg === "undefined";
-      }
-      exports.isPrimitive = isPrimitive;
-      exports.isBuffer = require_isBufferBrowser();
-      function objectToString(o) {
-        return Object.prototype.toString.call(o);
-      }
-      function pad(n) {
-        return n < 10 ? "0" + n.toString(10) : n.toString(10);
-      }
-      var months = [
-        "Jan",
-        "Feb",
-        "Mar",
-        "Apr",
-        "May",
-        "Jun",
-        "Jul",
-        "Aug",
-        "Sep",
-        "Oct",
-        "Nov",
-        "Dec"
-      ];
-      function timestamp() {
-        var d = /* @__PURE__ */ new Date();
-        var time = [
-          pad(d.getHours()),
-          pad(d.getMinutes()),
-          pad(d.getSeconds())
-        ].join(":");
-        return [d.getDate(), months[d.getMonth()], time].join(" ");
-      }
-      exports.log = function() {
-        console.log("%s - %s", timestamp(), exports.format.apply(exports, arguments));
-      };
-      exports.inherits = require_inherits_browser();
-      exports._extend = function(origin, add) {
-        if (!add || !isObject(add)) return origin;
-        var keys = Object.keys(add);
-        var i = keys.length;
-        while (i--) {
-          origin[keys[i]] = add[keys[i]];
-        }
-        return origin;
-      };
-      function hasOwnProperty(obj, prop) {
-        return Object.prototype.hasOwnProperty.call(obj, prop);
-      }
-    }
-  });
-
-  // node_modules/path/path.js
-  var require_path = __commonJS({
-    "node_modules/path/path.js"(exports, module) {
-      "use strict";
-      var isWindows = process.platform === "win32";
-      var util = require_util();
-      function normalizeArray(parts, allowAboveRoot) {
-        var res = [];
-        for (var i = 0; i < parts.length; i++) {
-          var p = parts[i];
-          if (!p || p === ".")
-            continue;
-          if (p === "..") {
-            if (res.length && res[res.length - 1] !== "..") {
-              res.pop();
-            } else if (allowAboveRoot) {
-              res.push("..");
-            }
-          } else {
-            res.push(p);
-          }
-        }
-        return res;
-      }
-      function trimArray(arr) {
-        var lastIndex = arr.length - 1;
-        var start2 = 0;
-        for (; start2 <= lastIndex; start2++) {
-          if (arr[start2])
-            break;
-        }
-        var end = lastIndex;
-        for (; end >= 0; end--) {
-          if (arr[end])
-            break;
-        }
-        if (start2 === 0 && end === lastIndex)
-          return arr;
-        if (start2 > end)
-          return [];
-        return arr.slice(start2, end + 1);
-      }
-      var splitDeviceRe = /^([a-zA-Z]:|[\\\/]{2}[^\\\/]+[\\\/]+[^\\\/]+)?([\\\/])?([\s\S]*?)$/;
-      var splitTailRe = /^([\s\S]*?)((?:\.{1,2}|[^\\\/]+?|)(\.[^.\/\\]*|))(?:[\\\/]*)$/;
-      var win32 = {};
-      function win32SplitPath(filename) {
-        var result = splitDeviceRe.exec(filename), device = (result[1] || "") + (result[2] || ""), tail = result[3] || "";
-        var result2 = splitTailRe.exec(tail), dir = result2[1], basename = result2[2], ext = result2[3];
-        return [device, dir, basename, ext];
-      }
-      function win32StatPath(path2) {
-        var result = splitDeviceRe.exec(path2), device = result[1] || "", isUnc = !!device && device[1] !== ":";
-        return {
-          device,
-          isUnc,
-          isAbsolute: isUnc || !!result[2],
-          // UNC paths are always absolute
-          tail: result[3]
-        };
-      }
-      function normalizeUNCRoot(device) {
-        return "\\\\" + device.replace(/^[\\\/]+/, "").replace(/[\\\/]+/g, "\\");
-      }
-      win32.resolve = function() {
-        var resolvedDevice = "", resolvedTail = "", resolvedAbsolute = false;
-        for (var i = arguments.length - 1; i >= -1; i--) {
-          var path2;
-          if (i >= 0) {
-            path2 = arguments[i];
-          } else if (!resolvedDevice) {
-            path2 = process.cwd();
-          } else {
-            path2 = process.env["=" + resolvedDevice];
-            if (!path2 || path2.substr(0, 3).toLowerCase() !== resolvedDevice.toLowerCase() + "\\") {
-              path2 = resolvedDevice + "\\";
-            }
-          }
-          if (!util.isString(path2)) {
-            throw new TypeError("Arguments to path.resolve must be strings");
-          } else if (!path2) {
-            continue;
-          }
-          var result = win32StatPath(path2), device = result.device, isUnc = result.isUnc, isAbsolute = result.isAbsolute, tail = result.tail;
-          if (device && resolvedDevice && device.toLowerCase() !== resolvedDevice.toLowerCase()) {
-            continue;
-          }
-          if (!resolvedDevice) {
-            resolvedDevice = device;
-          }
-          if (!resolvedAbsolute) {
-            resolvedTail = tail + "\\" + resolvedTail;
-            resolvedAbsolute = isAbsolute;
-          }
-          if (resolvedDevice && resolvedAbsolute) {
-            break;
-          }
-        }
-        if (isUnc) {
-          resolvedDevice = normalizeUNCRoot(resolvedDevice);
-        }
-        resolvedTail = normalizeArray(
-          resolvedTail.split(/[\\\/]+/),
-          !resolvedAbsolute
-        ).join("\\");
-        return resolvedDevice + (resolvedAbsolute ? "\\" : "") + resolvedTail || ".";
-      };
-      win32.normalize = function(path2) {
-        var result = win32StatPath(path2), device = result.device, isUnc = result.isUnc, isAbsolute = result.isAbsolute, tail = result.tail, trailingSlash = /[\\\/]$/.test(tail);
-        tail = normalizeArray(tail.split(/[\\\/]+/), !isAbsolute).join("\\");
-        if (!tail && !isAbsolute) {
-          tail = ".";
-        }
-        if (tail && trailingSlash) {
-          tail += "\\";
-        }
-        if (isUnc) {
-          device = normalizeUNCRoot(device);
-        }
-        return device + (isAbsolute ? "\\" : "") + tail;
-      };
-      win32.isAbsolute = function(path2) {
-        return win32StatPath(path2).isAbsolute;
-      };
-      win32.join = function() {
-        var paths = [];
-        for (var i = 0; i < arguments.length; i++) {
-          var arg = arguments[i];
-          if (!util.isString(arg)) {
-            throw new TypeError("Arguments to path.join must be strings");
-          }
-          if (arg) {
-            paths.push(arg);
-          }
-        }
-        var joined = paths.join("\\");
-        if (!/^[\\\/]{2}[^\\\/]/.test(paths[0])) {
-          joined = joined.replace(/^[\\\/]{2,}/, "\\");
-        }
-        return win32.normalize(joined);
-      };
-      win32.relative = function(from, to) {
-        from = win32.resolve(from);
-        to = win32.resolve(to);
-        var lowerFrom = from.toLowerCase();
-        var lowerTo = to.toLowerCase();
-        var toParts = trimArray(to.split("\\"));
-        var lowerFromParts = trimArray(lowerFrom.split("\\"));
-        var lowerToParts = trimArray(lowerTo.split("\\"));
-        var length = Math.min(lowerFromParts.length, lowerToParts.length);
-        var samePartsLength = length;
-        for (var i = 0; i < length; i++) {
-          if (lowerFromParts[i] !== lowerToParts[i]) {
-            samePartsLength = i;
-            break;
-          }
-        }
-        if (samePartsLength == 0) {
-          return to;
-        }
-        var outputParts = [];
-        for (var i = samePartsLength; i < lowerFromParts.length; i++) {
-          outputParts.push("..");
-        }
-        outputParts = outputParts.concat(toParts.slice(samePartsLength));
-        return outputParts.join("\\");
-      };
-      win32._makeLong = function(path2) {
-        if (!util.isString(path2))
-          return path2;
-        if (!path2) {
-          return "";
-        }
-        var resolvedPath = win32.resolve(path2);
-        if (/^[a-zA-Z]\:\\/.test(resolvedPath)) {
-          return "\\\\?\\" + resolvedPath;
-        } else if (/^\\\\[^?.]/.test(resolvedPath)) {
-          return "\\\\?\\UNC\\" + resolvedPath.substring(2);
-        }
-        return path2;
-      };
-      win32.dirname = function(path2) {
-        var result = win32SplitPath(path2), root = result[0], dir = result[1];
-        if (!root && !dir) {
-          return ".";
-        }
-        if (dir) {
-          dir = dir.substr(0, dir.length - 1);
-        }
-        return root + dir;
-      };
-      win32.basename = function(path2, ext) {
-        var f = win32SplitPath(path2)[2];
-        if (ext && f.substr(-1 * ext.length) === ext) {
-          f = f.substr(0, f.length - ext.length);
-        }
-        return f;
-      };
-      win32.extname = function(path2) {
-        return win32SplitPath(path2)[3];
-      };
-      win32.format = function(pathObject) {
-        if (!util.isObject(pathObject)) {
-          throw new TypeError(
-            "Parameter 'pathObject' must be an object, not " + typeof pathObject
-          );
-        }
-        var root = pathObject.root || "";
-        if (!util.isString(root)) {
-          throw new TypeError(
-            "'pathObject.root' must be a string or undefined, not " + typeof pathObject.root
-          );
-        }
-        var dir = pathObject.dir;
-        var base = pathObject.base || "";
-        if (!dir) {
-          return base;
-        }
-        if (dir[dir.length - 1] === win32.sep) {
-          return dir + base;
-        }
-        return dir + win32.sep + base;
-      };
-      win32.parse = function(pathString) {
-        if (!util.isString(pathString)) {
-          throw new TypeError(
-            "Parameter 'pathString' must be a string, not " + typeof pathString
-          );
-        }
-        var allParts = win32SplitPath(pathString);
-        if (!allParts || allParts.length !== 4) {
-          throw new TypeError("Invalid path '" + pathString + "'");
-        }
-        return {
-          root: allParts[0],
-          dir: allParts[0] + allParts[1].slice(0, -1),
-          base: allParts[2],
-          ext: allParts[3],
-          name: allParts[2].slice(0, allParts[2].length - allParts[3].length)
-        };
-      };
-      win32.sep = "\\";
-      win32.delimiter = ";";
-      var splitPathRe = /^(\/?|)([\s\S]*?)((?:\.{1,2}|[^\/]+?|)(\.[^.\/]*|))(?:[\/]*)$/;
-      var posix = {};
-      function posixSplitPath(filename) {
-        return splitPathRe.exec(filename).slice(1);
-      }
-      posix.resolve = function() {
-        var resolvedPath = "", resolvedAbsolute = false;
-        for (var i = arguments.length - 1; i >= -1 && !resolvedAbsolute; i--) {
-          var path2 = i >= 0 ? arguments[i] : process.cwd();
-          if (!util.isString(path2)) {
-            throw new TypeError("Arguments to path.resolve must be strings");
-          } else if (!path2) {
-            continue;
-          }
-          resolvedPath = path2 + "/" + resolvedPath;
-          resolvedAbsolute = path2[0] === "/";
-        }
-        resolvedPath = normalizeArray(
-          resolvedPath.split("/"),
-          !resolvedAbsolute
-        ).join("/");
-        return (resolvedAbsolute ? "/" : "") + resolvedPath || ".";
-      };
-      posix.normalize = function(path2) {
-        var isAbsolute = posix.isAbsolute(path2), trailingSlash = path2 && path2[path2.length - 1] === "/";
-        path2 = normalizeArray(path2.split("/"), !isAbsolute).join("/");
-        if (!path2 && !isAbsolute) {
-          path2 = ".";
-        }
-        if (path2 && trailingSlash) {
-          path2 += "/";
-        }
-        return (isAbsolute ? "/" : "") + path2;
-      };
-      posix.isAbsolute = function(path2) {
-        return path2.charAt(0) === "/";
-      };
-      posix.join = function() {
-        var path2 = "";
-        for (var i = 0; i < arguments.length; i++) {
-          var segment = arguments[i];
-          if (!util.isString(segment)) {
-            throw new TypeError("Arguments to path.join must be strings");
-          }
-          if (segment) {
-            if (!path2) {
-              path2 += segment;
-            } else {
-              path2 += "/" + segment;
-            }
-          }
-        }
-        return posix.normalize(path2);
-      };
-      posix.relative = function(from, to) {
-        from = posix.resolve(from).substr(1);
-        to = posix.resolve(to).substr(1);
-        var fromParts = trimArray(from.split("/"));
-        var toParts = trimArray(to.split("/"));
-        var length = Math.min(fromParts.length, toParts.length);
-        var samePartsLength = length;
-        for (var i = 0; i < length; i++) {
-          if (fromParts[i] !== toParts[i]) {
-            samePartsLength = i;
-            break;
-          }
-        }
-        var outputParts = [];
-        for (var i = samePartsLength; i < fromParts.length; i++) {
-          outputParts.push("..");
-        }
-        outputParts = outputParts.concat(toParts.slice(samePartsLength));
-        return outputParts.join("/");
-      };
-      posix._makeLong = function(path2) {
-        return path2;
-      };
-      posix.dirname = function(path2) {
-        var result = posixSplitPath(path2), root = result[0], dir = result[1];
-        if (!root && !dir) {
-          return ".";
-        }
-        if (dir) {
-          dir = dir.substr(0, dir.length - 1);
-        }
-        return root + dir;
-      };
-      posix.basename = function(path2, ext) {
-        var f = posixSplitPath(path2)[2];
-        if (ext && f.substr(-1 * ext.length) === ext) {
-          f = f.substr(0, f.length - ext.length);
-        }
-        return f;
-      };
-      posix.extname = function(path2) {
-        return posixSplitPath(path2)[3];
-      };
-      posix.format = function(pathObject) {
-        if (!util.isObject(pathObject)) {
-          throw new TypeError(
-            "Parameter 'pathObject' must be an object, not " + typeof pathObject
-          );
-        }
-        var root = pathObject.root || "";
-        if (!util.isString(root)) {
-          throw new TypeError(
-            "'pathObject.root' must be a string or undefined, not " + typeof pathObject.root
-          );
-        }
-        var dir = pathObject.dir ? pathObject.dir + posix.sep : "";
-        var base = pathObject.base || "";
-        return dir + base;
-      };
-      posix.parse = function(pathString) {
-        if (!util.isString(pathString)) {
-          throw new TypeError(
-            "Parameter 'pathString' must be a string, not " + typeof pathString
-          );
-        }
-        var allParts = posixSplitPath(pathString);
-        if (!allParts || allParts.length !== 4) {
-          throw new TypeError("Invalid path '" + pathString + "'");
-        }
-        allParts[1] = allParts[1] || "";
-        allParts[2] = allParts[2] || "";
-        allParts[3] = allParts[3] || "";
-        return {
-          root: allParts[0],
-          dir: allParts[0] + allParts[1].slice(0, -1),
-          base: allParts[2],
-          ext: allParts[3],
-          name: allParts[2].slice(0, allParts[2].length - allParts[3].length)
-        };
-      };
-      posix.sep = "/";
-      posix.delimiter = ":";
-      if (isWindows)
-        module.exports = win32;
-      else
-        module.exports = posix;
-      module.exports.posix = posix;
-      module.exports.win32 = win32;
-    }
-  });
-
   // src/multithreading/workers/node/testworker.ts
   var testworker_exports = {};
   __export(testworker_exports, {
@@ -3596,7 +2725,7 @@
     "src/multithreading/workers/node/testworker.ts"() {
       "use strict";
       import_child_process = __require("child_process");
-      import_path = __toESM(require_path(), 1);
+      import_path = __toESM(__require("path"), 1);
       TestWorker = class {
         worker;
         /**
@@ -4175,6 +3304,7 @@
           test: "jest --config=jest.config.mjs --no-cache --coverage --collect-coverage --runInBand --testPathIgnorePatterns=.e2e.test.ts --verbose",
           pretest: "npm run build",
           "test:bench": "jest --no-cache --runInBand --verbose --testPathPattern=benchmark",
+          "bench:asciiMaze": "node -r ts-node/register test/benchmarks/asciiMaze.micro.bench.ts",
           "test:silent": "jest --no-cache --coverage --collect-coverage --runInBand --testPathIgnorePatterns=.e2e.test.ts --silent",
           deploy: "npm run build && npm run test:dist && npm publish",
           build: "npm run build:webpack && npm run build:ts",
@@ -4187,10 +3317,10 @@
           "docs:build-scripts": "tsc -p tsconfig.docs.json && node scripts/write-dist-docs-pkg.mjs",
           "docs:folders": "npm run docs:build-scripts && node ./dist-docs/scripts/generate-docs.js",
           "docs:html": "npm run docs:build-scripts && node ./dist-docs/scripts/render-docs-html.js",
-          "build:ascii-maze": "npx esbuild test/examples/asciiMaze/browser-entry.ts --bundle --outfile=docs/assets/ascii-maze.bundle.js --platform=browser --format=iife --sourcemap --external:fs --external:child_process",
+          "build:ascii-maze": "npx esbuild test/examples/asciiMaze/browser-entry.ts --bundle --outfile=docs/assets/ascii-maze.bundle.js --platform=browser --format=iife --sourcemap --external:fs --external:child_process --external:path",
           "docs:examples": "node scripts/copy-examples.mjs",
           prettier: "npm run prettier:tests && npm run prettier:src",
-          "prettier:tests": "npx prettier --write **/*.test.ts",
+          "prettier:tests": "npx prettier --write test/**/*.ts",
           "prettier:src": "npx prettier --write src/**/*.ts",
           docs: "npm run build:ascii-maze && npm run docs:examples && npm run docs:build-scripts && node ./dist-docs/scripts/generate-docs.js && node ./dist-docs/scripts/render-docs-html.js",
           "onnx:export": "node scripts/export-onnx.mjs"
@@ -4212,13 +3342,16 @@
           chai: "^4.3.4",
           "copy-webpack-plugin": "^8.1.0",
           "cross-env": "^7.0.3",
+          esbuild: "^0.23.0",
           "fast-glob": "^3.3.3",
           "fs-extra": "^11.3.1",
           husky: "^6.0.0",
           jest: "^29.7.0",
+          "jest-environment-jsdom": "^29.7.0",
           "jsdoc-to-markdown": "^9.1.1",
           marked: "^12.0.2",
           mkdocs: "^0.0.1",
+          puppeteer: "^23.3.0",
           "ts-jest": "^29.1.1",
           "ts-loader": "^9.5.2",
           "ts-morph": "^22.0.0",
@@ -4226,9 +3359,7 @@
           typescript: "^5.6.3",
           "undici-types": "^7.8.0",
           webpack: "^5.99.5",
-          "webpack-cli": "^6.0.1",
-          esbuild: "^0.23.0",
-          puppeteer: "^23.3.0"
+          "webpack-cli": "^6.0.1"
         },
         repository: {
           type: "git",
@@ -11950,7 +11081,7 @@
           }
         }
         for (let i = 0; i < this.population.length; i++) {
-          const sortedRow = distanceMatrix[i].slice().sort((a, b) => a - b);
+          const sortedRow = distanceMatrix[i].toSorted((a, b) => a - b);
           const neighbours = sortedRow.slice(1, kNeighbors + 1);
           const novelty = neighbours.length ? neighbours.reduce((a, b) => a + b, 0) / neighbours.length : 0;
           this.population[i]._novelty = novelty;
@@ -12031,7 +11162,20 @@
         const adjustRate = autoDistanceCoeffOptions.adjustRate ?? 0.05;
         const minCoeff = autoDistanceCoeffOptions.minCoeff ?? 0.05;
         const maxCoeff = autoDistanceCoeffOptions.maxCoeff ?? 8;
-        if (!this._lastConnVar) this._lastConnVar = connVar;
+        if (this._lastConnVar === void 0 || this._lastConnVar === null) {
+          this._lastConnVar = connVar;
+          try {
+            this.options.excessCoeff = Math.min(
+              maxCoeff,
+              (this.options.excessCoeff ?? 1) * (1 + adjustRate)
+            );
+            this.options.disjointCoeff = Math.min(
+              maxCoeff,
+              (this.options.disjointCoeff ?? 1) * (1 + adjustRate)
+            );
+          } catch {
+          }
+        }
         if (connVar < this._lastConnVar * 0.95) {
           this.options.excessCoeff = Math.min(
             maxCoeff,
@@ -14021,6 +13165,234 @@
     }
   };
 
+  // test/examples/asciiMaze/mazeUtils.ts
+  var MazeUtils = class _MazeUtils {
+    /** Shared set of wall characters to avoid re-allocating on every call */
+    // Private static set of wall characters (box-drawing + hash).
+    // Kept private (#) because it's an implementation detail; use `encodeMaze`.
+    static #WALL_CHARS = /* @__PURE__ */ new Set([
+      "#",
+      "\u2550",
+      "\u2551",
+      "\u2554",
+      "\u2557",
+      "\u255A",
+      "\u255D",
+      "\u2560",
+      "\u2563",
+      "\u2566",
+      "\u2569",
+      "\u256C"
+    ]);
+    // Movement vectors used by BFS (N, E, S, W). Private to avoid accidental external use.
+    // Marked readonly to signal these vectors are constant and must not be mutated.
+    static #DIRECTIONS = [
+      [0, -1],
+      [1, 0],
+      [0, 1],
+      [-1, 0]
+    ];
+    /** Convert [x,y] into canonical key string 'x,y' */
+    static posKey([x, y]) {
+      return `${x},${y}`;
+    }
+    /**
+     * Return up to the last `n` items from `arr` as a new array.
+     * Public helper for extracting a small tail window without allocating a full slice
+     * in hot code paths.
+     */
+    static tail(arr, n) {
+      if (!Array.isArray(arr) || n <= 0) return [];
+      const out = [];
+      const start2 = Math.max(0, arr.length - n);
+      for (let i = start2; i < arr.length; i++) out.push(arr[i]);
+      return out;
+    }
+    /**
+     * Return the last element of an array or undefined when empty. Public helper.
+     * @param arr - array to read from
+     * @returns last element or undefined
+     */
+    static safeLast(arr) {
+      if (!Array.isArray(arr) || arr.length === 0) return void 0;
+      return arr.at ? arr.at(-1) : arr[arr.length - 1];
+    }
+    /**
+     * Push a value onto a bounded history buffer and trim the head if needed.
+     * Returns the (possibly new) array. Made public so many modules can reuse it.
+     * @param buf - existing buffer (may be undefined)
+     * @param v - value to push
+     * @param maxLen - maximum length to retain
+     */
+    static pushHistory(buf, v, maxLen) {
+      if (!Array.isArray(buf)) {
+        return [v];
+      }
+      buf.push(v);
+      if (buf.length > maxLen) {
+        const excess = buf.length - maxLen;
+        if (excess === 1) {
+          buf.shift();
+        } else {
+          buf.splice(0, excess);
+        }
+      }
+      return buf;
+    }
+    /**
+     * Converts an ASCII/Unicode maze (array of strings) into a 2D numeric array for processing by the agent.
+     *
+     * Encoding:
+     *   '#' = -1 (wall/obstacle)
+     *   Box drawing characters (═,║,╔,╗,╚,╝,╠,╣,╦,╩,╬) = -1 (wall/obstacle)
+     *   '.' = 0 (open path)
+     *   'E' = 1 (exit/goal)
+     *   'S' = 2 (start position)
+     *   any other character = 0 (treated as open path)
+     *
+     * @param asciiMaze - Array of strings representing the maze.
+     * @returns 2D array of numbers encoding the maze elements.
+     */
+    static encodeMaze(asciiMaze) {
+      const wallChars = _MazeUtils.#WALL_CHARS;
+      return asciiMaze.map(
+        (row) => [...row].map((cell) => {
+          if (wallChars.has(cell)) return -1;
+          switch (cell) {
+            case ".":
+              return 0;
+            case "E":
+              return 1;
+            case "S":
+              return 2;
+            default:
+              return 0;
+          }
+        })
+      );
+    }
+    /**
+     * Finds the (x, y) position of a given character in the ASCII maze.
+     * @param asciiMaze - Array of strings representing the maze.
+     * @param char - Character to find (e.g., 'S' for start, 'E' for exit).
+     * @returns [x, y] coordinates of the character.
+     * @throws Error if the character is not found in the maze.
+     */
+    static findPosition(asciiMaze, char) {
+      for (let y = 0; y < asciiMaze.length; y++) {
+        const x = asciiMaze[y].indexOf(char);
+        if (x !== -1) return [x, y];
+      }
+      throw new Error(`Character ${char} not found in maze`);
+    }
+    /**
+     * Computes the shortest path distance between two points in the maze using BFS.
+     * Returns Infinity if no path exists.
+     * @param encodedMaze - 2D array representation of the maze.
+     * @param start - [x, y] start position.
+     * @param goal - [x, y] goal position.
+     * @returns Shortest path length (number of steps), or Infinity if unreachable.
+     */
+    static bfsDistance(encodedMaze, start2, goal) {
+      const [gx, gy] = goal;
+      if (encodedMaze[gy][gx] === -1) return Infinity;
+      const queue = [[start2, 0]];
+      const visited = /* @__PURE__ */ new Set();
+      visited.add(_MazeUtils.posKey(start2));
+      const directions = _MazeUtils.#DIRECTIONS;
+      let qIndex = 0;
+      while (qIndex < queue.length) {
+        const [[x, y], dist] = queue[qIndex++];
+        if (x === gx && y === gy) return dist;
+        for (const [dx, dy] of directions) {
+          const nx = x + dx;
+          const ny = y + dy;
+          if (nx >= 0 && ny >= 0 && ny < encodedMaze.length && nx < encodedMaze[0].length && encodedMaze[ny][nx] !== -1 && !visited.has(_MazeUtils.posKey([nx, ny]))) {
+            visited.add(_MazeUtils.posKey([nx, ny]));
+            queue.push([[nx, ny], dist + 1]);
+          }
+        }
+      }
+      return Infinity;
+    }
+    /**
+     * Calculates the agent's progress toward the exit as a percentage.
+     * Progress is measured as the proportion of the shortest path covered from start to exit.
+     * @param encodedMaze - 2D array representation of the maze.
+     * @param currentPos - [x, y] current agent position.
+     * @param startPos - [x, y] start position.
+     * @param exitPos - [x, y] exit position.
+     * @returns Progress percentage (0-100).
+     */
+    static calculateProgress(encodedMaze, currentPos, startPos, exitPos) {
+      const totalDistance = _MazeUtils.bfsDistance(encodedMaze, startPos, exitPos);
+      if (totalDistance === 0) return 100;
+      const remainingDistance = _MazeUtils.bfsDistance(
+        encodedMaze,
+        currentPos,
+        exitPos
+      );
+      return Math.min(
+        100,
+        Math.max(
+          0,
+          Math.round((totalDistance - remainingDistance) / totalDistance * 100)
+        )
+      );
+    }
+    /**
+     * Calculates progress using a precomputed distance map (goal-centric BFS distances).
+     * Faster alternative to repeated BFS calls. Distance map holds distance from each cell TO the exit (goal).
+     * @param distanceMap - 2D array of distances (Infinity for walls/unreachable)
+     * @param currentPos - Agent current position [x,y]
+     * @param startPos - Start position [x,y]
+     * @returns Progress percentage (0-100)
+     */
+    static calculateProgressFromDistanceMap(distanceMap, currentPos, startPos) {
+      const [sx, sy] = startPos;
+      const [cx, cy] = currentPos;
+      const totalDistance = distanceMap[sy]?.[sx];
+      const remaining = distanceMap[cy]?.[cx];
+      if (totalDistance == null || remaining == null || !isFinite(totalDistance) || totalDistance <= 0)
+        return 0;
+      const prog = (totalDistance - remaining) / totalDistance * 100;
+      return Math.min(100, Math.max(0, Math.round(prog)));
+    }
+    /**
+     * Builds a full distance map (Manhattan shortest path lengths via BFS) from a goal cell to every reachable cell.
+     * Walls are marked as Infinity. Unreachable cells remain Infinity.
+     * @param encodedMaze - 2D maze encoding
+     * @param goal - [x,y] goal position (typically exit)
+     */
+    static buildDistanceMap(encodedMaze, goal) {
+      const height = encodedMaze.length;
+      const width = encodedMaze[0].length;
+      const dist = Array.from(
+        { length: height },
+        () => Array(width).fill(Infinity)
+      );
+      const [gx, gy] = goal;
+      if (encodedMaze[gy][gx] === -1) return dist;
+      const q = [[gx, gy]];
+      dist[gy][gx] = 0;
+      const dirs = _MazeUtils.#DIRECTIONS;
+      let qi = 0;
+      while (qi < q.length) {
+        const [x, y] = q[qi++];
+        const d = dist[y][x];
+        for (const [dx, dy] of dirs) {
+          const nx = x + dx;
+          const ny = y + dy;
+          if (nx >= 0 && ny >= 0 && ny < height && nx < width && encodedMaze[ny][nx] !== -1 && dist[ny][nx] === Infinity) {
+            dist[ny][nx] = d + 1;
+            q.push([nx, ny]);
+          }
+        }
+      }
+      return dist;
+    }
+  };
+
   // test/examples/asciiMaze/browserLogger.ts
   var ANSI_256_MAP = {
     205: "#ff6ac1",
@@ -14171,9 +13543,12 @@
     return (...args) => {
       const pre = ensurePre(container);
       let opts = void 0;
-      if (args.length && typeof args[args.length - 1] === "object" && args[args.length - 1] && "prepend" in args[args.length - 1]) {
-        opts = args[args.length - 1];
-        args = args.slice(0, -1);
+      if (args.length) {
+        const lastArg = MazeUtils.safeLast(args);
+        if (lastArg && typeof lastArg === "object" && "prepend" in lastArg) {
+          opts = lastArg;
+          args.pop();
+        }
       }
       const text = args.map((a) => typeof a === "string" ? a : JSON.stringify(a)).join(" ");
       const html = ansiToHtml(text).replace(/\n/g, "<br/>") + "<br/>";
@@ -14187,184 +13562,6 @@
       }
     };
   }
-
-  // test/examples/asciiMaze/mazeUtils.ts
-  var MazeUtils = class _MazeUtils {
-    /**
-     * Converts an ASCII/Unicode maze (array of strings) into a 2D numeric array for processing by the agent.
-     *
-     * Encoding:
-     *   '#' = -1 (wall/obstacle)
-     *   Box drawing characters (═,║,╔,╗,╚,╝,╠,╣,╦,╩,╬) = -1 (wall/obstacle)
-     *   '.' = 0 (open path)
-     *   'E' = 1 (exit/goal)
-     *   'S' = 2 (start position)
-     *   any other character = 0 (treated as open path)
-     *
-     * @param asciiMaze - Array of strings representing the maze.
-     * @returns 2D array of numbers encoding the maze elements.
-     */
-    static encodeMaze(asciiMaze) {
-      const wallChars = /* @__PURE__ */ new Set([
-        "#",
-        "\u2550",
-        "\u2551",
-        "\u2554",
-        "\u2557",
-        "\u255A",
-        "\u255D",
-        "\u2560",
-        "\u2563",
-        "\u2566",
-        "\u2569",
-        "\u256C"
-      ]);
-      return asciiMaze.map(
-        (row) => [...row].map((cell) => {
-          if (wallChars.has(cell)) return -1;
-          switch (cell) {
-            case ".":
-              return 0;
-            case "E":
-              return 1;
-            case "S":
-              return 2;
-            default:
-              return 0;
-          }
-        })
-      );
-    }
-    /**
-     * Finds the (x, y) position of a given character in the ASCII maze.
-     * @param asciiMaze - Array of strings representing the maze.
-     * @param char - Character to find (e.g., 'S' for start, 'E' for exit).
-     * @returns [x, y] coordinates of the character.
-     * @throws Error if the character is not found in the maze.
-     */
-    static findPosition(asciiMaze, char) {
-      for (let y = 0; y < asciiMaze.length; y++) {
-        const x = asciiMaze[y].indexOf(char);
-        if (x !== -1) return [x, y];
-      }
-      throw new Error(`Character ${char} not found in maze`);
-    }
-    /**
-     * Computes the shortest path distance between two points in the maze using BFS.
-     * Returns Infinity if no path exists.
-     * @param encodedMaze - 2D array representation of the maze.
-     * @param start - [x, y] start position.
-     * @param goal - [x, y] goal position.
-     * @returns Shortest path length (number of steps), or Infinity if unreachable.
-     */
-    static bfsDistance(encodedMaze, start2, goal) {
-      const [gx, gy] = goal;
-      if (encodedMaze[gy][gx] === -1) return Infinity;
-      const queue = [[start2, 0]];
-      const visited = /* @__PURE__ */ new Set();
-      const key = ([x, y]) => `${x},${y}`;
-      visited.add(key(start2));
-      const directions = [
-        [0, -1],
-        [1, 0],
-        [0, 1],
-        [-1, 0]
-      ];
-      while (queue.length > 0) {
-        const [[x, y], dist] = queue.shift();
-        if (x === gx && y === gy) return dist;
-        for (const [dx, dy] of directions) {
-          const nx = x + dx;
-          const ny = y + dy;
-          if (nx >= 0 && ny >= 0 && ny < encodedMaze.length && nx < encodedMaze[0].length && encodedMaze[ny][nx] !== -1 && !visited.has(key([nx, ny]))) {
-            visited.add(key([nx, ny]));
-            queue.push([[nx, ny], dist + 1]);
-          }
-        }
-      }
-      return Infinity;
-    }
-    /**
-     * Calculates the agent's progress toward the exit as a percentage.
-     * Progress is measured as the proportion of the shortest path covered from start to exit.
-     * @param encodedMaze - 2D array representation of the maze.
-     * @param currentPos - [x, y] current agent position.
-     * @param startPos - [x, y] start position.
-     * @param exitPos - [x, y] exit position.
-     * @returns Progress percentage (0-100).
-     */
-    static calculateProgress(encodedMaze, currentPos, startPos, exitPos) {
-      const totalDistance = _MazeUtils.bfsDistance(encodedMaze, startPos, exitPos);
-      if (totalDistance === 0) return 100;
-      const remainingDistance = _MazeUtils.bfsDistance(
-        encodedMaze,
-        currentPos,
-        exitPos
-      );
-      return Math.min(
-        100,
-        Math.max(
-          0,
-          Math.round((totalDistance - remainingDistance) / totalDistance * 100)
-        )
-      );
-    }
-    /**
-     * Calculates progress using a precomputed distance map (goal-centric BFS distances).
-     * Faster alternative to repeated BFS calls. Distance map holds distance from each cell TO the exit (goal).
-     * @param distanceMap - 2D array of distances (Infinity for walls/unreachable)
-     * @param currentPos - Agent current position [x,y]
-     * @param startPos - Start position [x,y]
-     * @returns Progress percentage (0-100)
-     */
-    static calculateProgressFromDistanceMap(distanceMap, currentPos, startPos) {
-      const [sx, sy] = startPos;
-      const [cx, cy] = currentPos;
-      const totalDistance = distanceMap[sy]?.[sx];
-      const remaining = distanceMap[cy]?.[cx];
-      if (totalDistance == null || remaining == null || !isFinite(totalDistance) || totalDistance <= 0)
-        return 0;
-      const prog = (totalDistance - remaining) / totalDistance * 100;
-      return Math.min(100, Math.max(0, Math.round(prog)));
-    }
-    /**
-     * Builds a full distance map (Manhattan shortest path lengths via BFS) from a goal cell to every reachable cell.
-     * Walls are marked as Infinity. Unreachable cells remain Infinity.
-     * @param encodedMaze - 2D maze encoding
-     * @param goal - [x,y] goal position (typically exit)
-     */
-    static buildDistanceMap(encodedMaze, goal) {
-      const height = encodedMaze.length;
-      const width = encodedMaze[0].length;
-      const dist = Array.from(
-        { length: height },
-        () => Array(width).fill(Infinity)
-      );
-      const [gx, gy] = goal;
-      if (encodedMaze[gy][gx] === -1) return dist;
-      const q = [[gx, gy]];
-      dist[gy][gx] = 0;
-      const dirs = [
-        [0, -1],
-        [1, 0],
-        [0, 1],
-        [-1, 0]
-      ];
-      while (q.length) {
-        const [x, y] = q.shift();
-        const d = dist[y][x];
-        for (const [dx, dy] of dirs) {
-          const nx = x + dx;
-          const ny = y + dy;
-          if (nx >= 0 && ny >= 0 && ny < height && nx < width && encodedMaze[ny][nx] !== -1 && dist[ny][nx] === Infinity) {
-            dist[ny][nx] = d + 1;
-            q.push([nx, ny]);
-          }
-        }
-      }
-      return dist;
-    }
-  };
 
   // test/examples/asciiMaze/colors.ts
   var colors = {
@@ -14544,6 +13741,11 @@
 
   // test/examples/asciiMaze/networkVisualization.ts
   var NetworkVisualization = class _NetworkVisualization {
+    // Internal layout constants (private)
+    static #ARROW = "  \u2500\u2500\u25B6  ";
+    static #ARROW_WIDTH = _NetworkVisualization.#ARROW.length;
+    static #TOTAL_WIDTH = 150;
+    // Overall visualization width
     /**
      * Pads a string to a specific width with alignment options.
      *
@@ -14571,7 +13773,7 @@
      * @param node - Neural network node object.
      * @returns Cleaned and normalized activation value.
      */
-    static getNodeValue(node) {
+    static #getNodeValue(node) {
       if (typeof node.activation === "number" && isFinite(node.activation) && !isNaN(node.activation)) {
         if (node.type === "output") {
           return Math.max(0, Math.min(1, node.activation));
@@ -14587,7 +13789,7 @@
      * @param value - Activation value to colorize.
      * @returns ANSI color code for the value.
      */
-    static getActivationColor(value) {
+    static #getActivationColor(value) {
       if (value >= 2) return colors.bgOrangeNeon + colors.bright;
       if (value >= 1) return colors.orangeNeon;
       if (value >= 0.5) return colors.cyanNeon;
@@ -14604,12 +13806,34 @@
      * @param v - Numeric value to format.
      * @returns Colorized string representation of the value.
      */
-    static fmtColoredValue(v) {
+    static #fmtColoredValue(v) {
       if (typeof v !== "number" || isNaN(v) || !isFinite(v)) return " 0.000";
-      const color = _NetworkVisualization.getActivationColor(v);
+      const color = this.#getActivationColor(v);
       let formattedValue;
       formattedValue = (v >= 0 ? " " : "") + v.toFixed(6);
       return color + formattedValue + colors.reset;
+    }
+    /**
+     * Return the last element of an array or undefined when empty.
+     */
+    static #last(arr) {
+      return MazeUtils.safeLast(arr);
+    }
+    /**
+     * Return the length of an array or 0 when missing.
+     */
+    static #lastLength(arr) {
+      return Array.isArray(arr) ? arr.length : 0;
+    }
+    /**
+     * Format a node display with a colored symbol and its colored numeric value.
+     * `extra` can include any trailing text (already colorized) and may include a leading space.
+     */
+    static #formatNode(symbolColor, symbol, node, extra) {
+      const value = _NetworkVisualization.#getNodeValue(node);
+      const fmt = _NetworkVisualization.#fmtColoredValue(value);
+      const sym = `${symbolColor}${symbol}${colors.reset}`;
+      return `${sym}${fmt}${extra ?? ""}`;
     }
     /**
      * Groups hidden nodes into layers based on their connections.
@@ -14619,7 +13843,7 @@
      * @param outputNodes - Array of output nodes.
      * @returns Array of hidden node arrays, each representing a layer.
      */
-    static groupHiddenByLayer(inputNodes, hiddenNodes, outputNodes) {
+    static #groupHiddenByLayer(inputNodes, hiddenNodes, outputNodes) {
       if (hiddenNodes.length === 0) return [];
       let layers = [];
       let prevLayer = inputNodes;
@@ -14645,9 +13869,9 @@
      * @param nodes - Array of neural network nodes to group.
      * @returns Object containing groups of nodes and corresponding labels.
      */
-    static groupNodesByActivation(nodes) {
+    static #groupNodesByActivation(nodes) {
       const activations = nodes.map(
-        (node) => _NetworkVisualization.getNodeValue(node)
+        (node) => _NetworkVisualization.#getNodeValue(node)
       );
       const ranges = [
         { min: 2, max: Infinity, label: "v-high+" },
@@ -14681,7 +13905,7 @@
      * @param maxVisiblePerLayer - Maximum number of nodes to display per layer.
      * @returns Object containing display-ready layers and metrics.
      */
-    static prepareHiddenLayersForDisplay(hiddenLayers, maxVisiblePerLayer = 10) {
+    static #prepareHiddenLayersForDisplay(hiddenLayers, maxVisiblePerLayer = 10) {
       const MAX_VISIBLE = maxVisiblePerLayer;
       const averageNodes = {};
       const displayLayers = [];
@@ -14691,7 +13915,7 @@
           displayLayers.push([...layer]);
           layerDisplayCounts.push(layer.length);
         } else {
-          const { groups, labels } = _NetworkVisualization.groupNodesByActivation(
+          const { groups, labels } = _NetworkVisualization.#groupNodesByActivation(
             layer
           );
           let finalGroups = groups;
@@ -14701,9 +13925,14 @@
               group: g,
               label: labels[i],
               size: g.length
-            })).sort((a, b) => b.size - a.size);
-            const topGroups = rankedGroups.slice(0, MAX_VISIBLE - 1);
-            const remainingGroups = rankedGroups.slice(MAX_VISIBLE - 1);
+            })).toSorted((a, b) => b.size - a.size);
+            const topGroups = [];
+            const cut = Math.max(0, MAX_VISIBLE - 1);
+            for (let i = 0; i < Math.min(cut, rankedGroups.length); i++)
+              topGroups.push(rankedGroups[i]);
+            const remainingGroups = [];
+            for (let i = cut; i < rankedGroups.length; i++)
+              remainingGroups.push(rankedGroups[i]);
             const mergedGroup = remainingGroups.reduce(
               (acc, curr) => {
                 acc.group = [...acc.group, ...curr.group];
@@ -14714,7 +13943,7 @@
             if (mergedGroup.group.length > 0) {
               topGroups.push(mergedGroup);
             }
-            topGroups.sort((a, b) => {
+            const sortedTopGroups = topGroups.toSorted((a, b) => {
               const aIsNegative = a.label.includes("-");
               const bIsNegative = b.label.includes("-");
               if (aIsNegative && !bIsNegative) return 1;
@@ -14729,13 +13958,13 @@
                 return aIsNegative ? -1 : 1;
               return 0;
             });
-            finalGroups = topGroups.map((g) => g.group);
-            finalLabels = topGroups.map((g) => g.label);
+            finalGroups = sortedTopGroups.map((g) => g.group);
+            finalLabels = sortedTopGroups.map((g) => g.label);
           }
           const avgNodes = finalGroups.map((group, groupIdx) => {
             const avgKey = `layer${layerIdx}-avg-${groupIdx}`;
             const sum = group.reduce(
-              (acc, node) => acc + _NetworkVisualization.getNodeValue(node),
+              (acc, node) => acc + _NetworkVisualization.#getNodeValue(node),
               0
             );
             const avgValue = group.length > 0 ? sum / group.length : 0;
@@ -14766,7 +13995,7 @@
      * @param index - Index of the node in the network.
      * @returns Visualization node object.
      */
-    static toVisualizationNode(node, index) {
+    static #toVisualizationNode(node, index) {
       const id = typeof node.index === "number" ? node.index : index;
       return {
         id,
@@ -14789,19 +14018,16 @@
      * @returns String containing the ASCII visualization.
      */
     static visualizeNetworkSummary(network) {
-      const ARROW = "  \u2500\u2500\u25B6  ";
-      const ARROW_WIDTH = ARROW.length;
-      const TOTAL_WIDTH = 150;
       const detectedInputNodes = (network.nodes || []).filter(
         (n) => n.type === "input" || n.type === "constant"
       );
       const INPUT_COUNT = detectedInputNodes.length || 18;
       const OUTPUT_COUNT = 4;
       const nodes = network.nodes || [];
-      const inputNodes = nodes.filter((n) => n.type === "input" || n.type === "constant").map(_NetworkVisualization.toVisualizationNode);
-      const outputNodes = nodes.filter((n) => n.type === "output").map(_NetworkVisualization.toVisualizationNode);
-      const hiddenNodesRaw = nodes.filter((n) => n.type === "hidden").map(_NetworkVisualization.toVisualizationNode);
-      const hiddenLayers = _NetworkVisualization.groupHiddenByLayer(
+      const inputNodes = nodes.filter((n) => n.type === "input" || n.type === "constant").map(_NetworkVisualization.#toVisualizationNode);
+      const outputNodes = nodes.filter((n) => n.type === "output").map(_NetworkVisualization.#toVisualizationNode);
+      const hiddenNodesRaw = nodes.filter((n) => n.type === "hidden").map(_NetworkVisualization.#toVisualizationNode);
+      const hiddenLayers = _NetworkVisualization.#groupHiddenByLayer(
         inputNodes,
         hiddenNodesRaw,
         outputNodes
@@ -14811,7 +14037,7 @@
         displayLayers,
         layerDisplayCounts,
         averageNodes
-      } = _NetworkVisualization.prepareHiddenLayersForDisplay(hiddenLayers);
+      } = _NetworkVisualization.#prepareHiddenLayersForDisplay(hiddenLayers);
       const connections = (network.connections || []).map((conn) => ({
         weight: conn.weight,
         fromUUID: String(conn.from.index),
@@ -14823,37 +14049,43 @@
         enabled: typeof conn.enabled === "boolean" ? conn.enabled : true
       }));
       const connectionCounts = [];
+      const inputIdSet = new Set(inputNodes.map((n) => Number(n.id)));
+      const outputIdSet = new Set(outputNodes.map((n) => Number(n.id)));
+      const hiddenLayerIdSets = hiddenLayers.map(
+        (layer) => new Set(layer.map((n) => Number(n.id)))
+      );
+      const firstTargetSet = hiddenLayerIdSets[0] ?? outputIdSet;
       let firstCount = 0;
-      const firstTargetLayer = hiddenLayers.length > 0 ? hiddenLayers[0] : outputNodes;
-      for (const conn of network.connections || []) {
-        if (inputNodes.some((n) => n.id === conn.from.index) && firstTargetLayer.some((n) => n.id === conn.to.index)) {
-          firstCount++;
-        }
+      for (const conn of network.connections ?? []) {
+        const fromIdx = Number(conn.from?.index ?? -1);
+        const toIdx = Number(conn.to?.index ?? -1);
+        if (inputIdSet.has(fromIdx) && firstTargetSet.has(toIdx)) firstCount++;
       }
       connectionCounts.push(firstCount);
-      for (let i = 0; i < hiddenLayers.length - 1; i++) {
+      for (let i = 0; i < hiddenLayerIdSets.length - 1; i++) {
         let count = 0;
-        for (const conn of network.connections || []) {
-          if (hiddenLayers[i].some((n) => n.id === conn.from.index) && hiddenLayers[i + 1].some((n) => n.id === conn.to.index)) {
-            count++;
-          }
+        const fromSet = hiddenLayerIdSets[i];
+        const toSet = hiddenLayerIdSets[i + 1];
+        for (const conn of network.connections ?? []) {
+          const fromIdx = Number(conn.from?.index ?? -1);
+          const toIdx = Number(conn.to?.index ?? -1);
+          if (fromSet.has(fromIdx) && toSet.has(toIdx)) count++;
         }
         connectionCounts.push(count);
       }
-      if (hiddenLayers.length > 0) {
+      if (hiddenLayerIdSets.length > 0) {
+        const lastSet = hiddenLayerIdSets[hiddenLayerIdSets.length - 1];
         let lastCount = 0;
-        for (const conn of network.connections || []) {
-          if (hiddenLayers[hiddenLayers.length - 1].some(
-            (n) => n.id === conn.from.index
-          ) && outputNodes.some((n) => n.id === conn.to.index)) {
-            lastCount++;
-          }
+        for (const conn of network.connections ?? []) {
+          const fromIdx = Number(conn.from?.index ?? -1);
+          const toIdx = Number(conn.to?.index ?? -1);
+          if (lastSet.has(fromIdx) && outputIdSet.has(toIdx)) lastCount++;
         }
         connectionCounts.push(lastCount);
       }
       const numLayers = 2 + numHiddenLayers;
       const numArrows = numLayers - 1;
-      const availableWidth = TOTAL_WIDTH - numArrows * ARROW_WIDTH;
+      const availableWidth = _NetworkVisualization.#TOTAL_WIDTH - numArrows * _NetworkVisualization.#ARROW_WIDTH;
       const columnWidth = Math.floor(availableWidth / numLayers);
       let header = "";
       header += `${colors.blueCore}\u2551` + _NetworkVisualization.pad(
@@ -14861,8 +14093,11 @@
         columnWidth - 1
       );
       const firstConnCount = connectionCounts[0];
-      const firstArrowText = `${colors.blueNeon}${firstConnCount} ${ARROW.trim()}${colors.reset}`;
-      header += _NetworkVisualization.pad(firstArrowText, ARROW_WIDTH);
+      const firstArrowText = `${colors.blueNeon}${firstConnCount} ${_NetworkVisualization.#ARROW.trim()}${colors.reset}`;
+      header += _NetworkVisualization.pad(
+        firstArrowText,
+        _NetworkVisualization.#ARROW_WIDTH
+      );
       for (let i = 0; i < numHiddenLayers; i++) {
         header += _NetworkVisualization.pad(
           `${colors.cyanNeon}Hidden ${i + 1} [${hiddenLayers[i].length}]${colors.reset}`,
@@ -14870,8 +14105,11 @@
         );
         if (i < numHiddenLayers) {
           const connCount = connectionCounts[i + 1] || 0;
-          const arrowText = `${colors.blueNeon}${connCount} ${ARROW.trim()}${colors.reset}`;
-          header += _NetworkVisualization.pad(arrowText, ARROW_WIDTH);
+          const arrowText = `${colors.blueNeon}${connCount} ${_NetworkVisualization.#ARROW.trim()}${colors.reset}`;
+          header += _NetworkVisualization.pad(
+            arrowText,
+            _NetworkVisualization.#ARROW_WIDTH
+          );
         }
       }
       header += _NetworkVisualization.pad(
@@ -14896,11 +14134,15 @@
         let row = "";
         if (rowIdx < INPUT_COUNT) {
           const node = inputDisplayNodes[rowIdx];
-          const value = _NetworkVisualization.getNodeValue(node);
           const label = rowIdx < 6 ? INPUT_LABELS6[rowIdx] : "";
           const labelStr = label ? ` ${colors.whiteNeon}${label}${colors.reset}` : "";
           row += _NetworkVisualization.pad(
-            `${colors.blueCore}\u2551   ${colors.neonGreen}\u25CF${colors.reset}${_NetworkVisualization.fmtColoredValue(value)}${labelStr}`,
+            `${colors.blueCore}\u2551   ${_NetworkVisualization.#formatNode(
+              colors.neonGreen,
+              "\u25CF",
+              node,
+              labelStr
+            )}`,
             columnWidth,
             " ",
             "left"
@@ -14917,12 +14159,12 @@
             );
             row += _NetworkVisualization.pad(
               `${colors.blueNeon}${nodeProportion} \u2500\u2500\u25B6${colors.reset}`,
-              ARROW_WIDTH
+              _NetworkVisualization.#ARROW_WIDTH
             );
           } else {
             row += _NetworkVisualization.pad(
-              `${colors.blueNeon}${ARROW}${colors.reset}`,
-              ARROW_WIDTH
+              `${colors.blueNeon}${_NetworkVisualization.#ARROW}${colors.reset}`,
+              _NetworkVisualization.#ARROW_WIDTH
             );
           }
         } else if (rowIdx < INPUT_COUNT && rowIdx < displayLayers[0]?.length) {
@@ -14934,18 +14176,18 @@
             );
             row += _NetworkVisualization.pad(
               `${colors.blueNeon}${nodeProportion} \u2500\u2500\u25B6${colors.reset}`,
-              ARROW_WIDTH
+              _NetworkVisualization.#ARROW_WIDTH
             );
           } else {
             row += _NetworkVisualization.pad(
-              `${colors.blueNeon}${ARROW}${colors.reset}`,
-              ARROW_WIDTH
+              `${colors.blueNeon}${_NetworkVisualization.#ARROW}${colors.reset}`,
+              _NetworkVisualization.#ARROW_WIDTH
             );
           }
         } else {
           row += _NetworkVisualization.pad(
-            `${colors.blueNeon}${ARROW}${colors.reset}`,
-            ARROW_WIDTH
+            `${colors.blueNeon}${_NetworkVisualization.#ARROW}${colors.reset}`,
+            _NetworkVisualization.#ARROW_WIDTH
           );
         }
         for (let layerIdx = 0; layerIdx < numHiddenLayers; layerIdx++) {
@@ -14954,12 +14196,21 @@
             const node = layer[rowIdx];
             if (node.isAverage) {
               const labelText = node.label ? `${node.label} ` : "";
-              const avgText = `${colors.cyanNeon}\u25A0${colors.reset}${_NetworkVisualization.fmtColoredValue(node.activation)} ${colors.dim}(${labelText}avg of ${node.avgCount})${colors.reset}`;
-              row += _NetworkVisualization.pad(avgText, columnWidth, " ", "left");
-            } else {
-              const value = _NetworkVisualization.getNodeValue(node);
+              const extra = ` ${colors.dim}(${labelText}avg of ${node.avgCount})${colors.reset}`;
               row += _NetworkVisualization.pad(
-                `${colors.cyanNeon}\u25A0${colors.reset}${_NetworkVisualization.fmtColoredValue(value)}`,
+                _NetworkVisualization.#formatNode(
+                  colors.cyanNeon,
+                  "\u25A0",
+                  node,
+                  extra
+                ),
+                columnWidth,
+                " ",
+                "left"
+              );
+            } else {
+              row += _NetworkVisualization.pad(
+                _NetworkVisualization.#formatNode(colors.cyanNeon, "\u25A0", node),
                 columnWidth,
                 " ",
                 "left"
@@ -14977,7 +14228,7 @@
               );
               row += _NetworkVisualization.pad(
                 `${colors.blueNeon}${nodeProportion} \u2500\u2500\u25B6${colors.reset}`,
-                ARROW_WIDTH
+                _NetworkVisualization.#ARROW_WIDTH
               );
             } else if (rowIdx < layer.length && rowIdx < displayLayers[layerIdx + 1]?.length) {
               const currentLayerSize = displayLayers[layerIdx]?.length || 1;
@@ -14988,48 +14239,47 @@
               );
               row += _NetworkVisualization.pad(
                 `${colors.blueNeon}${proportion} \u2500\u2500\u25B6${colors.reset}`,
-                ARROW_WIDTH
+                _NetworkVisualization.#ARROW_WIDTH
               );
             } else {
               row += _NetworkVisualization.pad(
-                `${colors.blueNeon}${ARROW}${colors.reset}`,
-                ARROW_WIDTH
+                `${colors.blueNeon}${_NetworkVisualization.#ARROW}${colors.reset}`,
+                _NetworkVisualization.#ARROW_WIDTH
               );
             }
           } else {
-            const connCount = connectionCounts[connectionCounts.length - 1];
+            const connCount = _NetworkVisualization.#last(connectionCounts) ?? 0;
             if (rowIdx === 0) {
-              const lastLayerSize = displayLayers[displayLayers.length - 1]?.length || 1;
+              const lastLayerSize = _NetworkVisualization.#lastLength(displayLayers) || 0 || 1;
               const nodeProportion = Math.ceil(
                 connCount / Math.max(3, lastLayerSize * 2)
               );
               row += _NetworkVisualization.pad(
                 `${colors.blueNeon}${nodeProportion} \u2500\u2500\u25B6${colors.reset}`,
-                ARROW_WIDTH
+                _NetworkVisualization.#ARROW_WIDTH
               );
             } else if (rowIdx < layer.length && rowIdx < OUTPUT_COUNT) {
-              const lastLayerSize = displayLayers[displayLayers.length - 1]?.length || 1;
+              const lastLayerSize = _NetworkVisualization.#lastLength(displayLayers) || 0 || 1;
               const proportion = Math.max(
                 1,
                 Math.min(5, Math.ceil(connCount / Math.max(5, lastLayerSize * 2)))
               );
               row += _NetworkVisualization.pad(
                 `${colors.blueNeon}${proportion} \u2500\u2500\u25B6${colors.reset}`,
-                ARROW_WIDTH
+                _NetworkVisualization.#ARROW_WIDTH
               );
             } else {
               row += _NetworkVisualization.pad(
-                `${colors.blueNeon}${ARROW}${colors.reset}`,
-                ARROW_WIDTH
+                `${colors.blueNeon}${_NetworkVisualization.#ARROW}${colors.reset}`,
+                _NetworkVisualization.#ARROW_WIDTH
               );
             }
           }
         }
         if (rowIdx < OUTPUT_COUNT) {
           const node = outputDisplayNodes[rowIdx];
-          const value = _NetworkVisualization.getNodeValue(node);
           row += _NetworkVisualization.pad(
-            `${colors.orangeNeon}\u25B2${colors.reset}${_NetworkVisualization.fmtColoredValue(value)}`,
+            _NetworkVisualization.#formatNode(colors.orangeNeon, "\u25B2", node),
             columnWidth,
             " ",
             "left"
@@ -15086,7 +14336,34 @@
   };
 
   // test/examples/asciiMaze/mazeVisualization.ts
-  var MazeVisualization = class {
+  var MazeVisualization = class _MazeVisualization {
+    // Shared set of wall characters (private implementation detail).
+    // Provide a public getter for backward compatibility.
+    static #WALL_CHARS = /* @__PURE__ */ new Set([
+      "#",
+      "\u2550",
+      "\u2551",
+      "\u2554",
+      "\u2557",
+      "\u255A",
+      "\u255D",
+      "\u2560",
+      "\u2563",
+      "\u2566",
+      "\u2569",
+      "\u256C"
+    ]);
+    static get WALL_CHARS() {
+      return _MazeVisualization.#WALL_CHARS;
+    }
+    /** Return the last element of an array or undefined when empty. */
+    static #last(arr) {
+      return MazeUtils.safeLast(arr);
+    }
+    /** Convert a [x,y] pair to the canonical 'x,y' key. */
+    static #posKey([x, y]) {
+      return `${x},${y}`;
+    }
     /**
      * Renders a single maze cell with proper coloring based on its content and agent location.
      *
@@ -15105,20 +14382,7 @@
      * @returns Colorized string representing the cell
      */
     static renderCell(cell, x, y, agentX, agentY, path2) {
-      const wallChars = /* @__PURE__ */ new Set([
-        "#",
-        "\u2550",
-        "\u2551",
-        "\u2554",
-        "\u2557",
-        "\u255A",
-        "\u255D",
-        "\u2560",
-        "\u2563",
-        "\u2566",
-        "\u2569",
-        "\u256C"
-      ]);
+      const wallChars = _MazeVisualization.WALL_CHARS;
       if (x === agentX && y === agentY) {
         if (cell === "S")
           return `${colors.bgBlack}${colors.orangeNeon}S${colors.reset}`;
@@ -15160,7 +14424,11 @@
      * @returns A multi-line string with the visualized maze
      */
     static visualizeMaze(asciiMaze, [agentX, agentY], path2) {
-      const visitedPositions = path2 ? new Set(path2.map((pos) => `${pos[0]},${pos[1]}`)) : void 0;
+      let visitedPositions = void 0;
+      if (path2) {
+        visitedPositions = /* @__PURE__ */ new Set();
+        for (const p of path2) visitedPositions.add(_MazeVisualization.#posKey(p));
+      }
       return asciiMaze.map(
         (row, y) => [...row].map(
           (cell, x) => this.renderCell(cell, x, y, agentX, agentY, visitedPositions)
@@ -15361,9 +14629,10 @@
           )}${" ".repeat(RIGHT_PAD)}\u2551${colors.reset}`
         );
       } else {
+        const lastPos = _MazeVisualization.#last(result.path) ?? startPos;
         const bestProgress = MazeUtils.calculateProgress(
           MazeUtils.encodeMaze(maze),
-          result.path[result.path.length - 1],
+          lastPos,
           startPos,
           exitPos
         );
@@ -15463,43 +14732,55 @@
 
   // test/examples/asciiMaze/dashboardManager.ts
   var DashboardManager = class _DashboardManager {
-    // List of solved maze records (keeps full maze + solution for archival display)
-    solvedMazes = [];
-    // Set of maze keys we've already archived to avoid duplicate entries
-    solvedMazeKeys = /* @__PURE__ */ new Set();
-    // Currently evolving/best candidate for the active maze (live view)
-    currentBest = null;
-    // Functions supplied by the embedding environment. Keep dashboard I/O pluggable.
-    clearFunction;
-    logFunction;
-    archiveLogFunction;
-    // Telemetry and small history windows used for rendering trends/sparklines
-    _lastTelemetry = null;
-    _lastBestFitness = null;
-    _bestFitnessHistory = [];
-    _complexityNodesHistory = [];
-    _complexityConnsHistory = [];
-    _hypervolumeHistory = [];
-    _progressHistory = [];
-    _speciesCountHistory = [];
-    // Layout constants for the ASCII-art framed display
-    static FRAME_INNER_WIDTH = 148;
-    static LEFT_PADDING = 7;
-    static RIGHT_PADDING = 1;
-    static CONTENT_WIDTH = _DashboardManager.FRAME_INNER_WIDTH - _DashboardManager.LEFT_PADDING - _DashboardManager.RIGHT_PADDING;
-    static STAT_LABEL_WIDTH = 28;
-    static opennessLegend = "Openness: 1=best, (0,1)=longer improving, 0.001=only backtrack, 0=wall/dead/non-improving";
-    /**
-     * Construct a new DashboardManager
-     *
-     * @param clearFn - function that clears the "live" output area (no-op for archive)
-     * @param logFn - function that accepts strings to render the live dashboard
-     * @param archiveLogFn - optional function to which solved-maze archive blocks are appended
-     */
-    constructor(clearFn, logFn, archiveLogFn) {
-      this.clearFunction = clearFn;
-      this.logFunction = logFn;
-      this.archiveLogFunction = archiveLogFn;
+    #solvedMazes = [];
+    #solvedMazeKeys = /* @__PURE__ */ new Set();
+    #currentBest = null;
+    #clearFn;
+    #logFn;
+    #archiveFn;
+    #lastTelemetry = null;
+    #lastBestFitness = null;
+    #bestFitnessHistory = [];
+    #complexityNodesHistory = [];
+    #complexityConnsHistory = [];
+    #hypervolumeHistory = [];
+    #progressHistory = [];
+    #speciesCountHistory = [];
+    #lastDetailedStats = null;
+    #runStartTs = null;
+    #perfStart = null;
+    #lastGeneration = null;
+    #lastUpdateTs = null;
+    static #HISTORY_MAX = 500;
+    static #FRAME_INNER_WIDTH = 148;
+    static #LEFT_PADDING = 7;
+    static #RIGHT_PADDING = 1;
+    static #CONTENT_WIDTH = _DashboardManager.#FRAME_INNER_WIDTH - _DashboardManager.#LEFT_PADDING - _DashboardManager.#RIGHT_PADDING;
+    static #STAT_LABEL_WIDTH = 28;
+    // Public aliases for backwards compatibility while internals move to private fields
+    static get HISTORY_MAX() {
+      return _DashboardManager.#HISTORY_MAX;
+    }
+    static get FRAME_INNER_WIDTH() {
+      return _DashboardManager.#FRAME_INNER_WIDTH;
+    }
+    static get LEFT_PADDING() {
+      return _DashboardManager.#LEFT_PADDING;
+    }
+    static get RIGHT_PADDING() {
+      return _DashboardManager.#RIGHT_PADDING;
+    }
+    static get CONTENT_WIDTH() {
+      return _DashboardManager.#CONTENT_WIDTH;
+    }
+    static get STAT_LABEL_WIDTH() {
+      return _DashboardManager.#STAT_LABEL_WIDTH;
+    }
+    constructor(clearFn, logFn, archiveFn) {
+      this.#clearFn = clearFn;
+      this.#logFn = logFn;
+      this.#archiveFn = archiveFn;
+      this.logFunction = (...args) => this.#logFn(...args);
     }
     /**
      * formatStat
@@ -15508,18 +14789,18 @@
      * with color codes applied. The resulting string fits into the dashboard
      * content width and includes frame padding.
      */
-    formatStat(label, value, colorLabel = colors.neonSilver, colorValue = colors.cyanNeon, labelWidth = _DashboardManager.STAT_LABEL_WIDTH) {
+    formatStat(label, value, colorLabel = colors.neonSilver, colorValue = colors.cyanNeon, labelWidth = _DashboardManager.#STAT_LABEL_WIDTH) {
       const lbl = label.endsWith(":") ? label : label + ":";
       const paddedLabel = lbl.padEnd(labelWidth, " ");
       const composed = `${colorLabel}${paddedLabel}${colorValue} ${value}${colors.reset}`;
       return `${colors.blueCore}\u2551${" ".repeat(
-        _DashboardManager.LEFT_PADDING
+        _DashboardManager.#LEFT_PADDING
       )}${NetworkVisualization.pad(
         composed,
-        _DashboardManager.CONTENT_WIDTH,
+        _DashboardManager.#CONTENT_WIDTH,
         " ",
         "left"
-      )}${" ".repeat(_DashboardManager.RIGHT_PADDING)}${colors.blueCore}\u2551${colors.reset}`;
+      )}${" ".repeat(_DashboardManager.#RIGHT_PADDING)}${colors.blueCore}\u2551${colors.reset}`;
     }
     /**
      * buildSparkline
@@ -15529,20 +14810,39 @@
      * requested width by taking the most recent values.
      */
     buildSparkline(data, width = 32) {
-      if (!data || !data.length) return "";
+      if (!data.length) return "";
       const blocks = ["\u2581", "\u2582", "\u2583", "\u2584", "\u2585", "\u2586", "\u2587", "\u2588"];
-      const slice = data.slice(-width);
-      const min = Math.min(...slice);
-      const max = Math.max(...slice);
+      const tail = MazeUtils.tail(data, width);
+      let min = Infinity;
+      let max = -Infinity;
+      for (let i = 0; i < tail.length; i++) {
+        const v = tail[i];
+        if (v < min) min = v;
+        if (v > max) max = v;
+      }
       const range = max - min || 1;
-      return slice.map((v) => {
+      const out = [];
+      for (let i = 0; i < tail.length; i++) {
+        const v = tail[i];
         const idx = Math.floor((v - min) / range * (blocks.length - 1));
-        return blocks[idx];
-      }).join("");
+        out.push(blocks[idx]);
+      }
+      return out.join("");
     }
     /**
-     * getMazeKey
-     *
+     * Return up to the last `n` items from `arr` as a new array.
+     * Small utility to centralize tail-window extraction logic used across the dashboard.
+     */
+    // ...getTail removed in favor of MazeUtils.tail
+    // Small helper to read the last element of an array safely.
+    static #last(arr) {
+      return MazeUtils.safeLast(arr);
+    }
+    /**
+     * Push a numeric value onto a history buffer and keep it bounded to HISTORY_MAX.
+     */
+    // ...existing code...
+    /**
      * Create a lightweight key for a maze (used to dedupe solved mazes).
      * The format is intentionally simple (concatenated rows) since the set
      * is only used for equality checks within a single run.
@@ -15565,11 +14865,13 @@
      * @param displayNumber - 1-based ordinal for the solved maze in the archive
      */
     appendSolvedToArchive(solved, displayNumber) {
-      if (!this.archiveLogFunction) return;
-      const endPos = solved.result.path[solved.result.path.length - 1];
+      if (!this.#archiveFn) return;
+      const endPos = _DashboardManager.#last(
+        solved.result.path
+      );
       const solvedMazeVisualization = MazeVisualization.visualizeMaze(
         solved.maze,
-        endPos,
+        endPos ?? [0, 0],
         solved.result.path
       );
       const solvedMazeLines = Array.isArray(solvedMazeVisualization) ? solvedMazeVisualization : solvedMazeVisualization.split("\n");
@@ -15603,18 +14905,18 @@
         colors.cyanNeon,
         solvedLabelWidth
       );
-      const spark = this.buildSparkline(this._bestFitnessHistory, 64);
+      const spark = this.buildSparkline(this.#bestFitnessHistory, 64);
       const sparkComplexityNodes = this.buildSparkline(
-        this._complexityNodesHistory,
+        this.#complexityNodesHistory,
         64
       );
       const sparkComplexityConns = this.buildSparkline(
-        this._complexityConnsHistory,
+        this.#complexityConnsHistory,
         64
       );
-      const sparkHyper = this.buildSparkline(this._hypervolumeHistory, 64);
-      const sparkProgress = this.buildSparkline(this._progressHistory, 64);
-      const sparkSpecies = this.buildSparkline(this._speciesCountHistory, 64);
+      const sparkHyper = this.buildSparkline(this.#hypervolumeHistory, 64);
+      const sparkProgress = this.buildSparkline(this.#progressHistory, 64);
+      const sparkSpecies = this.buildSparkline(this.#speciesCountHistory, 64);
       if (spark) blockLines.push(solvedStat("Fitness trend", spark));
       if (sparkComplexityNodes)
         blockLines.push(solvedStat("Nodes trend", sparkComplexityNodes));
@@ -15684,13 +14986,11 @@
         )}\u255D${colors.reset}`
       );
       try {
-        this.archiveLogFunction(blockLines.join("\n"), {
-          prepend: true
-        });
+        this.#archiveFn(blockLines.join("\n"), { prepend: true });
       } catch {
-        const append = this.archiveLogFunction ?? (() => {
+        const append = this.#archiveFn ?? (() => {
         });
-        blockLines.forEach((ln) => append(ln));
+        blockLines.forEach((l) => append(l));
       }
     }
     /**
@@ -15705,13 +15005,19 @@
      * - finally call `redraw` to update the live output
      */
     update(maze, result, network, generation, neatInstance) {
-      this.currentBest = { result, network, generation };
+      if (this.#runStartTs == null) {
+        this.#runStartTs = Date.now();
+        this.#perfStart = globalThis.performance?.now?.() ?? this.#runStartTs;
+      }
+      this.#lastUpdateTs = globalThis.performance?.now?.() ?? Date.now();
+      this.#lastGeneration = generation;
+      this.#currentBest = { result, network, generation };
       if (result.success) {
         const mazeKey = this.getMazeKey(maze);
-        if (!this.solvedMazeKeys.has(mazeKey)) {
-          this.solvedMazes.push({ maze, result, network, generation });
-          this.solvedMazeKeys.add(mazeKey);
-          const displayNumber = this.solvedMazes.length;
+        if (!this.#solvedMazeKeys.has(mazeKey)) {
+          this.#solvedMazes.push({ maze, result, network, generation });
+          this.#solvedMazeKeys.add(mazeKey);
+          const displayNumber = this.#solvedMazes.length;
           this.appendSolvedToArchive(
             { maze, result, network, generation },
             displayNumber
@@ -15720,46 +15026,111 @@
       }
       const telemetry = neatInstance?.getTelemetry?.();
       if (telemetry && telemetry.length) {
-        this._lastTelemetry = telemetry[telemetry.length - 1];
-        const bestFit = this.currentBest?.result?.fitness;
+        this.#lastTelemetry = MazeUtils.safeLast(telemetry);
+        const bestFit = this.#currentBest?.result?.fitness;
         if (typeof bestFit === "number") {
-          this._lastBestFitness = bestFit;
-          this._bestFitnessHistory.push(bestFit);
-          if (this._bestFitnessHistory.length > 500)
-            this._bestFitnessHistory.shift();
+          this.#lastBestFitness = bestFit;
+          this.#bestFitnessHistory = MazeUtils.pushHistory(
+            this.#bestFitnessHistory,
+            bestFit,
+            _DashboardManager.HISTORY_MAX
+          );
         }
-        const c = this._lastTelemetry?.complexity;
+        const c = this.#lastTelemetry?.complexity;
         if (c) {
           if (typeof c.meanNodes === "number") {
-            this._complexityNodesHistory.push(c.meanNodes);
-            if (this._complexityNodesHistory.length > 500)
-              this._complexityNodesHistory.shift();
+            this.#complexityNodesHistory = MazeUtils.pushHistory(
+              this.#complexityNodesHistory,
+              c.meanNodes,
+              _DashboardManager.HISTORY_MAX
+            );
           }
           if (typeof c.meanConns === "number") {
-            this._complexityConnsHistory.push(c.meanConns);
-            if (this._complexityConnsHistory.length > 500)
-              this._complexityConnsHistory.shift();
+            this.#complexityConnsHistory = MazeUtils.pushHistory(
+              this.#complexityConnsHistory,
+              c.meanConns,
+              _DashboardManager.HISTORY_MAX
+            );
           }
         }
-        const h = this._lastTelemetry?.hyper;
+        const h = this.#lastTelemetry?.hyper;
         if (typeof h === "number") {
-          this._hypervolumeHistory.push(h);
-          if (this._hypervolumeHistory.length > 500)
-            this._hypervolumeHistory.shift();
+          this.#hypervolumeHistory = MazeUtils.pushHistory(
+            this.#hypervolumeHistory,
+            h,
+            _DashboardManager.HISTORY_MAX
+          );
         }
-        const prog = this.currentBest?.result?.progress;
+        const prog = this.#currentBest?.result?.progress;
         if (typeof prog === "number") {
-          this._progressHistory.push(prog);
-          if (this._progressHistory.length > 500) this._progressHistory.shift();
+          this.#progressHistory = MazeUtils.pushHistory(
+            this.#progressHistory,
+            prog,
+            _DashboardManager.HISTORY_MAX
+          );
         }
-        const sc = this._lastTelemetry?.species;
+        const sc = this.#lastTelemetry?.species;
         if (typeof sc === "number") {
-          this._speciesCountHistory.push(sc);
-          if (this._speciesCountHistory.length > 500)
-            this._speciesCountHistory.shift();
+          this.#speciesCountHistory = MazeUtils.pushHistory(
+            this.#speciesCountHistory,
+            sc,
+            _DashboardManager.HISTORY_MAX
+          );
         }
       }
       this.redraw(maze, neatInstance);
+      try {
+        const elapsedMs = this.#perfStart != null && globalThis.performance?.now ? globalThis.performance.now() - this.#perfStart : this.#runStartTs ? Date.now() - this.#runStartTs : 0;
+        const gensPerSec = elapsedMs > 0 ? generation / (elapsedMs / 1e3) : 0;
+        const payload = {
+          type: "asciiMaze:telemetry",
+          generation,
+          bestFitness: this.#lastBestFitness,
+          progress: this.#currentBest?.result?.progress ?? null,
+          speciesCount: _DashboardManager.#last(this.#speciesCountHistory) ?? null,
+          gensPerSec: +gensPerSec.toFixed(3),
+          timestamp: Date.now(),
+          // wall-clock timestamp for consumers
+          details: this.#lastDetailedStats || null
+        };
+        if (typeof window !== "undefined") {
+          try {
+            window.dispatchEvent(
+              new CustomEvent("asciiMazeTelemetry", { detail: payload })
+            );
+          } catch {
+          }
+          try {
+            if (window.parent && window.parent !== window)
+              window.parent.postMessage(payload, "*");
+          } catch {
+          }
+          window.asciiMazeLastTelemetry = payload;
+        }
+        try {
+          this._telemetryHook && this._telemetryHook(payload);
+        } catch {
+        }
+      } catch {
+      }
+    }
+    /**
+     * Return the most recent telemetry snapshot including rich details.
+     * Details may be null if not yet populated.
+     */
+    getLastTelemetry() {
+      const elapsedMs = this.#perfStart != null && typeof performance !== "undefined" ? performance.now() - this.#perfStart : this.#runStartTs ? Date.now() - this.#runStartTs : 0;
+      const generation = this.#lastGeneration ?? 0;
+      const gensPerSec = elapsedMs > 0 ? generation / (elapsedMs / 1e3) : 0;
+      return {
+        generation,
+        bestFitness: this.#lastBestFitness,
+        progress: this.#currentBest?.result?.progress ?? null,
+        speciesCount: MazeUtils.safeLast(this.#speciesCountHistory) ?? null,
+        gensPerSec: +gensPerSec.toFixed(3),
+        timestamp: Date.now(),
+        details: this.#lastDetailedStats || null
+      };
     }
     /**
      * redraw
@@ -15771,86 +15142,88 @@
      * browser (DOM adapter).
      */
     redraw(currentMaze, neat) {
-      this.clearFunction();
-      this.logFunction(
+      this.#clearFn();
+      this.#logFn(
         `${colors.blueCore}\u2554${NetworkVisualization.pad(
           "\u2550",
           _DashboardManager.FRAME_INNER_WIDTH,
           "\u2550"
         )}${colors.blueCore}\u2557${colors.reset}`
       );
-      this.logFunction(
+      this.#logFn(
         `${colors.blueCore}\u255A${NetworkVisualization.pad(
           "\u2566\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2566",
           _DashboardManager.FRAME_INNER_WIDTH,
           "\u2550"
         )}${colors.blueCore}\u255D${colors.reset}`
       );
-      this.logFunction(
+      this.#logFn(
         `${colors.blueCore}${NetworkVisualization.pad(
           `\u2551 ${colors.neonYellow}ASCII maze${colors.blueCore} \u2551`,
           150,
           " "
         )}${colors.reset}`
       );
-      this.logFunction(
+      this.#logFn(
         `${colors.blueCore}\u2554${NetworkVisualization.pad(
           "\u2569\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2569",
           _DashboardManager.FRAME_INNER_WIDTH,
           "\u2550"
         )}${colors.blueCore}\u2557${colors.reset}`
       );
-      if (this.currentBest) {
-        this.logFunction(
+      if (this.#currentBest) {
+        this.#logFn(
           `${colors.blueCore}\u2560${NetworkVisualization.pad(
             "\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550",
             _DashboardManager.FRAME_INNER_WIDTH,
             "\u2550"
           )}${colors.blueCore}\u2563${colors.reset}`
         );
-        this.logFunction(
+        this.#logFn(
           `${colors.blueCore}\u2551${NetworkVisualization.pad(
-            `${colors.orangeNeon}EVOLVING (GEN ${this.currentBest.generation})`,
+            `${colors.orangeNeon}EVOLVING (GEN ${this.#currentBest.generation})`,
             _DashboardManager.FRAME_INNER_WIDTH,
             " "
           )}${colors.blueCore}\u2551${colors.reset}`
         );
-        this.logFunction(
+        this.#logFn(
           `${colors.blueCore}\u2560${NetworkVisualization.pad(
             "\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550",
             _DashboardManager.FRAME_INNER_WIDTH,
             "\u2550"
           )}${colors.blueCore}\u2563${colors.reset}`
         );
-        this.logFunction(
+        this.#logFn(
           `${colors.blueCore}\u2551${NetworkVisualization.pad(
             " ",
             _DashboardManager.FRAME_INNER_WIDTH,
             " "
           )}${colors.blueCore}\u2551${colors.reset}`
         );
-        this.logFunction(
+        this.#logFn(
           `${colors.blueCore}\u2551${NetworkVisualization.pad(
             " ",
             _DashboardManager.FRAME_INNER_WIDTH,
             " "
           )}${colors.blueCore}\u2551${colors.reset}`
         );
-        this.logFunction(
-          NetworkVisualization.visualizeNetworkSummary(this.currentBest.network)
+        this.#logFn(
+          NetworkVisualization.visualizeNetworkSummary(this.#currentBest.network)
         );
-        this.logFunction(
+        this.#logFn(
           `${colors.blueCore}\u2551${NetworkVisualization.pad(
             " ",
             _DashboardManager.FRAME_INNER_WIDTH,
             " "
           )}${colors.blueCore}\u2551${colors.reset}`
         );
-        const lastPos = this.currentBest.result.path[this.currentBest.result.path.length - 1];
+        const lastPos = _DashboardManager.#last(
+          this.#currentBest.result.path
+        ) ?? [0, 0];
         const currentMazeVisualization = MazeVisualization.visualizeMaze(
           currentMaze,
-          lastPos,
-          this.currentBest.result.path
+          lastPos ?? [0, 0],
+          this.#currentBest.result.path
         );
         const currentMazeLines = Array.isArray(currentMazeVisualization) ? currentMazeVisualization : currentMazeVisualization.split("\n");
         const centeredCurrentMaze = currentMazeLines.map(
@@ -15860,22 +15233,22 @@
             " "
           )}${colors.blueCore}\u2551`
         ).join("\n");
-        this.logFunction(
+        this.#logFn(
           `${colors.blueCore}\u2551${NetworkVisualization.pad(
             " ",
             _DashboardManager.FRAME_INNER_WIDTH,
             " "
           )}${colors.blueCore}\u2551${colors.reset}`
         );
-        this.logFunction(centeredCurrentMaze);
-        this.logFunction(
+        this.#logFn(centeredCurrentMaze);
+        this.#logFn(
           `${colors.blueCore}\u2551${NetworkVisualization.pad(
             " ",
             _DashboardManager.FRAME_INNER_WIDTH,
             " "
           )}${colors.blueCore}\u2551${colors.reset}`
         );
-        this.logFunction(
+        this.#logFn(
           `${colors.blueCore}\u2551${NetworkVisualization.pad(
             " ",
             _DashboardManager.FRAME_INNER_WIDTH,
@@ -15883,28 +15256,28 @@
           )}${colors.blueCore}\u2551${colors.reset}`
         );
         MazeVisualization.printMazeStats(
-          this.currentBest,
+          this.#currentBest,
           currentMaze,
-          this.logFunction
+          this.#logFn
         );
-        this.logFunction(
+        this.#logFn(
           `${colors.blueCore}\u2551${NetworkVisualization.pad(
             " ",
             _DashboardManager.FRAME_INNER_WIDTH,
             " "
           )}${colors.blueCore}\u2551${colors.reset}`
         );
-        this.logFunction(
+        this.#logFn(
           `${colors.blueCore}\u2551${NetworkVisualization.pad(
             " ",
             _DashboardManager.FRAME_INNER_WIDTH,
             " "
           )}${colors.blueCore}\u2551${colors.reset}`
         );
-        this.logFunction(
+        this.#logFn(
           (() => {
             const bar = `Progress to exit: ${MazeVisualization.displayProgressBar(
-              this.currentBest.result.progress
+              this.#currentBest.result.progress
             )}`;
             return `${colors.blueCore}\u2551${NetworkVisualization.pad(
               " " + colors.neonSilver + bar + colors.reset,
@@ -15913,7 +15286,7 @@
             )}${colors.blueCore}\u2551${colors.reset}`;
           })()
         );
-        this.logFunction(
+        this.#logFn(
           `${colors.blueCore}\u2551${NetworkVisualization.pad(
             " ",
             _DashboardManager.FRAME_INNER_WIDTH,
@@ -15921,7 +15294,7 @@
           )}${colors.blueCore}\u2551${colors.reset}`
         );
       }
-      const last = this._lastTelemetry;
+      const last = this.#lastTelemetry;
       const complexity = last?.complexity;
       const perf = last?.perf;
       const lineage = last?.lineage;
@@ -15930,7 +15303,7 @@
       const hyper = last?.hyper;
       const diversity = last?.diversity;
       const mutationStats = last?.mutationStats || last?.mutation?.stats;
-      const bestFitness = this.currentBest?.result?.fitness;
+      const bestFitness = this.#currentBest?.result?.fitness;
       const fmtNum = (v, digits = 2) => typeof v === "number" && isFinite(v) ? v.toFixed(digits) : "-";
       const deltaArrow = (curr, prev) => {
         if (curr == null || prev == null) return "";
@@ -15959,7 +15332,7 @@
         if (scores.length) {
           const sum = scores.reduce((a, b) => a + b, 0);
           popMean = (sum / scores.length).toFixed(2);
-          const sorted = scores.slice().sort((a, b) => a - b);
+          const sorted = scores.toSorted((a, b) => a - b);
           const mid = Math.floor(sorted.length / 2);
           popMedian = (sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid]).toFixed(2);
         }
@@ -15968,243 +15341,186 @@
       }
       const firstFrontSize = fronts?.[0]?.length || 0;
       const SPARK_WIDTH = 64;
-      const spark = this.buildSparkline(this._bestFitnessHistory, SPARK_WIDTH);
+      const spark = this.buildSparkline(this.#bestFitnessHistory, SPARK_WIDTH);
       const sparkComplexityNodes = this.buildSparkline(
-        this._complexityNodesHistory,
+        this.#complexityNodesHistory,
         SPARK_WIDTH
       );
       const sparkComplexityConns = this.buildSparkline(
-        this._complexityConnsHistory,
+        this.#complexityConnsHistory,
         SPARK_WIDTH
       );
       const sparkHyper = this.buildSparkline(
-        this._hypervolumeHistory,
+        this.#hypervolumeHistory,
         SPARK_WIDTH
       );
       const sparkProgress = this.buildSparkline(
-        this._progressHistory,
+        this.#progressHistory,
         SPARK_WIDTH
       );
       const sparkSpecies = this.buildSparkline(
-        this._speciesCountHistory,
+        this.#speciesCountHistory,
         SPARK_WIDTH
       );
-      const statsLines = [];
-      statsLines.push(
-        this.formatStat(
-          "Current generation",
-          `${this.currentBest?.generation || 0}`
-        )
-      );
-      if (typeof bestFitness === "number")
-        statsLines.push(
-          this.formatStat(
-            "Best fitness",
-            `${bestFitness.toFixed(2)}${deltaArrow(
-              bestFitness,
-              this._bestFitnessHistory.length > 1 ? this._bestFitnessHistory[this._bestFitnessHistory.length - 2] : null
-            )}`
-          )
-        );
-      const satFrac = this.currentBest?.result?.saturationFraction;
-      if (typeof satFrac === "number")
-        statsLines.push(
-          this.formatStat("Saturation fraction", satFrac.toFixed(3))
-        );
-      const actEnt = this.currentBest?.result?.actionEntropy;
-      if (typeof actEnt === "number")
-        statsLines.push(
-          this.formatStat("Action entropy (path)", actEnt.toFixed(3))
-        );
-      if (popMean === "-" && typeof bestFitness === "number")
-        popMean = bestFitness.toFixed(2);
-      if (popMedian === "-" && typeof bestFitness === "number")
-        popMedian = bestFitness.toFixed(2);
-      statsLines.push(this.formatStat("Population mean", popMean));
-      statsLines.push(this.formatStat("Population median", popMedian));
-      if (complexity)
-        statsLines.push(
-          this.formatStat(
-            "Complexity mean n/c",
-            `${fmtNum(complexity.meanNodes, 2)}/${fmtNum(
-              complexity.meanConns,
-              2
-            )}  max ${fmtNum(complexity.maxNodes, 0)}/${fmtNum(
-              complexity.maxConns,
-              0
-            )}`,
-            colors.neonSilver,
-            colors.orangeNeon
-          )
-        );
-      if (complexity && (complexity.growthNodes < 0 || complexity.growthConns < 0))
-        statsLines.push(
-          this.formatStat(
-            "Simplify phase",
-            "active",
-            colors.neonSilver,
-            colors.neonGreen
-          )
-        );
-      if (sparkComplexityNodes)
-        statsLines.push(
-          this.formatStat(
-            "Nodes trend",
-            sparkComplexityNodes,
-            colors.neonSilver,
-            colors.neonYellow
-          )
-        );
-      if (sparkComplexityConns)
-        statsLines.push(
-          this.formatStat(
-            "Conns trend",
-            sparkComplexityConns,
-            colors.neonSilver,
-            colors.neonYellow
-          )
-        );
-      statsLines.push(this.formatStat("Enabled conn ratio", enabledRatio));
-      if (perf && (perf.evalMs != null || perf.evolveMs != null))
-        statsLines.push(
-          this.formatStat(
-            "Perf eval/evolve ms",
-            `${fmtNum(perf.evalMs, 1)}/${fmtNum(perf.evolveMs, 1)}`
-          )
-        );
-      if (lineage)
-        statsLines.push(
-          this.formatStat(
-            "Lineage depth b/mean",
-            `${lineage.depthBest}/${fmtNum(lineage.meanDepth, 2)}`
-          )
-        );
-      if (lineage?.inbreeding != null)
-        statsLines.push(
-          this.formatStat("Inbreeding", fmtNum(lineage.inbreeding, 3))
-        );
-      if (speciesCount === "-" && typeof last?.species === "number")
-        speciesCount = String(last.species);
-      statsLines.push(this.formatStat("Species count", speciesCount));
-      if (diversity?.structuralVar != null)
-        statsLines.push(
-          this.formatStat(
-            "Structural variance",
-            fmtNum(diversity.structuralVar, 3)
-          )
-        );
-      if (diversity?.objectiveSpread != null)
-        statsLines.push(
-          this.formatStat(
-            "Objective spread",
-            fmtNum(diversity.objectiveSpread, 3)
-          )
-        );
-      if (Array.isArray(neat?.species) && neat.species.length) {
-        const sizes = neat.species.map((s) => s.members?.length || 0).sort((a, b) => b - a);
-        const top3 = sizes.slice(0, 3).join("/") || "-";
-        statsLines.push(this.formatStat("Top species sizes", top3));
-      }
-      if (fronts)
-        statsLines.push(
-          this.formatStat(
-            "Pareto fronts",
-            `${fronts.map((f) => f?.length || 0).join("/")}`
-          )
-        );
-      statsLines.push(
-        this.formatStat("First front size", firstFrontSize.toString())
-      );
-      if (objectives)
-        statsLines.push(
-          this.formatStat(
-            "Objectives",
-            objectives.join(", "),
-            colors.neonSilver,
-            colors.neonIndigo
-          )
-        );
-      if (hyper !== void 0)
-        statsLines.push(this.formatStat("Hypervolume", fmtNum(hyper, 4)));
-      if (sparkHyper)
-        statsLines.push(
-          this.formatStat(
-            "Hypervolume trend",
-            sparkHyper,
-            colors.neonSilver,
-            colors.neonGreen
-          )
-        );
-      if (spark)
-        statsLines.push(
-          this.formatStat(
-            "Fitness trend",
-            spark,
-            colors.neonSilver,
-            colors.neonYellow
-          )
-        );
-      if (sparkProgress)
-        statsLines.push(
-          this.formatStat(
-            "Progress trend",
-            sparkProgress,
-            colors.neonSilver,
-            colors.cyanNeon
-          )
-        );
-      if (sparkSpecies)
-        statsLines.push(
-          this.formatStat(
-            "Species trend",
-            sparkSpecies,
-            colors.neonSilver,
-            colors.neonIndigo
-          )
-        );
-      if (neat?.getNoveltyArchiveSize) {
-        try {
-          const nov = neat.getNoveltyArchiveSize();
-          statsLines.push(this.formatStat("Novelty archive", `${nov}`));
-        } catch {
-        }
-      }
-      if (neat?.getOperatorStats) {
-        try {
-          const ops = neat.getOperatorStats();
-          if (Array.isArray(ops) && ops.length) {
-            const top = ops.slice().sort(
-              (a, b) => b.success / Math.max(1, b.attempts) - a.success / Math.max(1, a.attempts)
-            ).slice(0, 4).map(
-              (o) => `${o.name}:${(100 * o.success / Math.max(1, o.attempts)).toFixed(0)}%`
-            ).join(" ");
-            if (top)
-              statsLines.push(
-                this.formatStat(
-                  "Op acceptance",
-                  top,
-                  colors.neonSilver,
-                  colors.neonGreen
-                )
-              );
+      try {
+        const satFrac = this.#currentBest?.result?.saturationFraction;
+        const actEnt = this.#currentBest?.result?.actionEntropy;
+        if (popMean === "-" && typeof bestFitness === "number")
+          popMean = bestFitness.toFixed(2);
+        if (popMedian === "-" && typeof bestFitness === "number")
+          popMedian = bestFitness.toFixed(2);
+        if (speciesCount === "-" && typeof last?.species === "number")
+          speciesCount = String(last.species);
+        let noveltyArchiveSize = null;
+        if (neat?.getNoveltyArchiveSize) {
+          try {
+            noveltyArchiveSize = neat.getNoveltyArchiveSize();
+          } catch {
           }
-        } catch {
         }
+        let operatorAcceptance = null;
+        if (neat?.getOperatorStats) {
+          try {
+            const ops = neat.getOperatorStats();
+            if (Array.isArray(ops) && ops.length) {
+              const sortedOps = ops.toSorted(
+                (a, b) => b.success / Math.max(1, b.attempts) - a.success / Math.max(1, a.attempts)
+              );
+              operatorAcceptance = [];
+              const take = Math.min(6, sortedOps.length);
+              for (let i = 0; i < take; i++) {
+                const o = sortedOps[i];
+                operatorAcceptance.push({
+                  name: o.name,
+                  acceptancePct: +(100 * o.success / Math.max(1, o.attempts)).toFixed(2)
+                });
+              }
+            }
+          } catch {
+          }
+        }
+        let topMutations = null;
+        if (mutationStats && typeof mutationStats === "object") {
+          try {
+            {
+              const entries = Object.entries(mutationStats).filter(
+                ([k, v]) => typeof v === "number"
+              );
+              const sortedEntries = entries.toSorted(
+                (a, b) => b[1] - a[1]
+              );
+              topMutations = [];
+              const takeM = Math.min(8, sortedEntries.length);
+              for (let i = 0; i < takeM; i++) {
+                const [k, v] = sortedEntries[i];
+                topMutations.push({ name: k, count: v });
+              }
+            }
+          } catch {
+          }
+        }
+        const topSpeciesSizes = Array.isArray(neat?.species) ? (() => {
+          const sizes = neat.species.map((s) => s.members?.length || 0);
+          const sortedSizes = sizes.toSorted((a, b) => b - a);
+          const out = [];
+          const takeS = Math.min(5, sortedSizes.length);
+          for (let i = 0; i < takeS; i++) out.push(sortedSizes[i]);
+          return out;
+        })() : null;
+        const paretoFrontSizes = fronts ? fronts.map((f) => f?.length || 0) : null;
+        this.#lastDetailedStats = {
+          generation: this.#currentBest?.generation || 0,
+          bestFitness: typeof bestFitness === "number" ? bestFitness : null,
+          bestFitnessDelta: (() => {
+            if (typeof bestFitness !== "number") return null;
+            const prev = this.#bestFitnessHistory.length > 1 ? this.#bestFitnessHistory[this.#bestFitnessHistory.length - 2] : null;
+            if (prev == null) return null;
+            const diff = bestFitness - prev;
+            return +diff.toFixed(3);
+          })(),
+          saturationFraction: typeof satFrac === "number" ? satFrac : null,
+          actionEntropy: typeof actEnt === "number" ? actEnt : null,
+          populationMean: popMean === "-" ? null : +popMean,
+          populationMedian: popMedian === "-" ? null : +popMedian,
+          enabledConnRatio: enabledRatio === "-" ? null : +enabledRatio,
+          complexity: complexity || null,
+          simplifyPhaseActive: !!(complexity && (complexity.growthNodes < 0 || complexity.growthConns < 0)),
+          perf: perf || null,
+          lineage: lineage || null,
+          diversity: diversity || null,
+          speciesCount: speciesCount === "-" ? null : +speciesCount,
+          topSpeciesSizes,
+          objectives: objectives || null,
+          paretoFrontSizes,
+          firstFrontSize,
+          hypervolume: typeof hyper === "number" ? hyper : null,
+          noveltyArchiveSize,
+          operatorAcceptance,
+          topMutations,
+          mutationStats: mutationStats || null,
+          trends: {
+            fitness: spark || null,
+            nodes: sparkComplexityNodes || null,
+            conns: sparkComplexityConns || null,
+            hyper: sparkHyper || null,
+            progress: sparkProgress || null,
+            species: sparkSpecies || null
+          },
+          histories: {
+            bestFitness: (() => {
+              const arr = [];
+              const start2 = Math.max(0, this.#bestFitnessHistory.length - 200);
+              for (let i = start2; i < this.#bestFitnessHistory.length; i++)
+                arr.push(this.#bestFitnessHistory[i]);
+              return arr;
+            })(),
+            nodes: (() => {
+              const arr = [];
+              const start2 = Math.max(
+                0,
+                this.#complexityNodesHistory.length - 200
+              );
+              for (let i = start2; i < this.#complexityNodesHistory.length; i++)
+                arr.push(this.#complexityNodesHistory[i]);
+              return arr;
+            })(),
+            conns: (() => {
+              const arr = [];
+              const start2 = Math.max(
+                0,
+                this.#complexityConnsHistory.length - 200
+              );
+              for (let i = start2; i < this.#complexityConnsHistory.length; i++)
+                arr.push(this.#complexityConnsHistory[i]);
+              return arr;
+            })(),
+            hyper: (() => {
+              const arr = [];
+              const start2 = Math.max(0, this.#hypervolumeHistory.length - 200);
+              for (let i = start2; i < this.#hypervolumeHistory.length; i++)
+                arr.push(this.#hypervolumeHistory[i]);
+              return arr;
+            })(),
+            progress: (() => {
+              const arr = [];
+              const start2 = Math.max(0, this.#progressHistory.length - 200);
+              for (let i = start2; i < this.#progressHistory.length; i++)
+                arr.push(this.#progressHistory[i]);
+              return arr;
+            })(),
+            species: (() => {
+              const arr = [];
+              const start2 = Math.max(0, this.#speciesCountHistory.length - 200);
+              for (let i = start2; i < this.#speciesCountHistory.length; i++)
+                arr.push(this.#speciesCountHistory[i]);
+              return arr;
+            })()
+          },
+          timestamp: Date.now()
+        };
+      } catch {
       }
-      if (mutationStats && typeof mutationStats === "object") {
-        const entries = Object.entries(mutationStats).filter(([k, v]) => typeof v === "number").sort((a, b) => b[1] - a[1]).slice(0, 5).map(([k, v]) => `${k}:${v.toFixed(0)}`).join(" ");
-        if (entries)
-          statsLines.push(
-            this.formatStat(
-              "Top mutations",
-              entries,
-              colors.neonSilver,
-              colors.neonGreen
-            )
-          );
-      }
-      statsLines.forEach((ln) => this.logFunction(ln));
-      this.logFunction(
+      this.#logFn(
         `${colors.blueCore}\u2551${NetworkVisualization.pad(
           " ",
           _DashboardManager.FRAME_INNER_WIDTH,
@@ -16213,9 +15529,9 @@
       );
     }
     reset() {
-      this.solvedMazes = [];
-      this.solvedMazeKeys.clear();
-      this.currentBest = null;
+      this.#solvedMazes = [];
+      this.#solvedMazeKeys.clear();
+      this.#currentBest = null;
     }
   };
 
@@ -16243,6 +15559,21 @@
   // test/examples/asciiMaze/mazeVision.ts
   var MazeVision = class _MazeVision {
     /**
+     * Pre-defined direction vectors (dx, dy, index) for N/E/S/W.
+     * Stored as a private static readonly field to avoid reallocating this
+     * tiny array on every call to `buildInputs6`.
+     */
+    static #DIRECTION_VECTORS = [
+      [0, -1, 0],
+      // North
+      [1, 0, 1],
+      // East
+      [0, 1, 2],
+      // South
+      [-1, 0, 3]
+      // West
+    ];
+    /**
      * Constructs the 6-dimensional input vector for the neural network based on the agent's current state.
      *
      * @param encodedMaze - The 2D numerical representation of the maze.
@@ -16263,18 +15594,10 @@
       const opennessHorizon = 1e3;
       const compassHorizon = 5e3;
       const neighborCells = [];
-      const DIRECTION_VECTORS = [
-        [0, -1, 0],
-        // North
-        [1, 0, 1],
-        // East
-        [0, 1, 2],
-        // South
-        [-1, 0, 3]
-        // West
-      ];
-      const currentCellDistanceToExit = distanceToExitMap && Number.isFinite(distanceToExitMap[agentY]?.[agentX]) ? distanceToExitMap[agentY][agentX] : void 0;
-      for (const [dx, dy, directionIndex] of DIRECTION_VECTORS) {
+      const currentCellDistanceToExit = Number.isFinite(
+        distanceToExitMap?.[agentY]?.[agentX]
+      ) ? distanceToExitMap[agentY][agentX] : void 0;
+      for (const [dx, dy, directionIndex] of _MazeVision.#DIRECTION_VECTORS) {
         const neighborX = agentX + dx;
         const neighborY = agentY + dy;
         if (!isCellOpen(neighborX, neighborY)) {
@@ -16288,7 +15611,9 @@
           });
           continue;
         }
-        const neighborDistanceToExit = distanceToExitMap ? distanceToExitMap[neighborY]?.[neighborX] : void 0;
+        const neighborDistanceToExit = Number.isFinite(
+          distanceToExitMap?.[neighborY]?.[neighborX]
+        ) ? distanceToExitMap[neighborY][neighborX] : void 0;
         if (neighborDistanceToExit != null && Number.isFinite(neighborDistanceToExit) && currentCellDistanceToExit != null && Number.isFinite(currentCellDistanceToExit)) {
           if (neighborDistanceToExit < currentCellDistanceToExit) {
             const pathLength = 1 + neighborDistanceToExit;
@@ -16344,10 +15669,17 @@
           else neighbor.opennessValue = minPathLength / neighbor.pathLength;
         }
       }
-      let opennessNorth = neighborCells.find((n) => n.directionIndex === 0).opennessValue;
-      let opennessEast = neighborCells.find((n) => n.directionIndex === 1).opennessValue;
-      let opennessSouth = neighborCells.find((n) => n.directionIndex === 2).opennessValue;
-      let opennessWest = neighborCells.find((n) => n.directionIndex === 3).opennessValue;
+      const openness = neighborCells.reduce(
+        (acc, nc) => {
+          acc[nc.directionIndex] = nc.opennessValue;
+          return acc;
+        },
+        [0, 0, 0, 0]
+      );
+      let opennessNorth = openness[0];
+      let opennessEast = openness[1];
+      let opennessSouth = openness[2];
+      let opennessWest = openness[3];
       if (opennessNorth === 0 && opennessEast === 0 && opennessSouth === 0 && opennessWest === 0 && previousAction != null && previousAction >= 0) {
         const oppositeDirection = (previousAction + 2) % 4;
         switch (oppositeDirection) {
@@ -16434,12 +15766,116 @@
   // test/examples/asciiMaze/mazeMovement.ts
   var MazeMovement = class _MazeMovement {
     /**
-     * Checks if a move is valid (within bounds and not a wall).
-     *
-     * @param encodedMaze - 2D array representation of the maze.
-     * @param [x, y] - Coordinates to check.
-     * @returns Boolean indicating if the position is valid for movement.
+     * Default configuration constants kept as private static fields to signal
+     * they are implementation details and to avoid re-allocation.
      */
+    static #DEFAULT_MAX_STEPS = 3e3;
+    static #MOVE_HISTORY_LENGTH = 6;
+    // Named private constants to replace magic numbers and document intent.
+    static #REWARD_SCALE = 0.5;
+    static #LOOP_PENALTY = 10;
+    // multiplied by rewardScale
+    static #MEMORY_RETURN_PENALTY = 2;
+    // multiplied by rewardScale
+    static #REVISIT_PENALTY_PER_VISIT = 0.2;
+    // per extra visit, multiplied by rewardScale
+    static #VISIT_TERMINATION_THRESHOLD = 10;
+    static #INVALID_MOVE_PENALTY_HARSH = 1e3;
+    static #INVALID_MOVE_PENALTY_MILD = 10;
+    // Saturation / collapse thresholds and penalties
+    static #OVERCONFIDENT_PROB = 0.985;
+    static #SECOND_PROB_LOW = 0.01;
+    static #LOGSTD_FLAT_THRESHOLD = 0.01;
+    static #OVERCONFIDENT_PENALTY = 0.25;
+    // * rewardScale
+    static #FLAT_COLLAPSE_PENALTY = 0.35;
+    // * rewardScale
+    static #SATURATION_ADJUST_MIN = 6;
+    static #SATURATION_ADJUST_INTERVAL = 5;
+    static #BIAS_CLAMP = 5;
+    static #BIAS_ADJUST_FACTOR = 0.5;
+    // Proximity/exploration tuning
+    static #PROXIMITY_GREEDY_DISTANCE = 2;
+    static #PROXIMITY_SUPPRESS_EXPLOR_DIST = 5;
+    static #EPSILON_INITIAL = 0.35;
+    static #EPSILON_STAGNANT_HIGH = 0.5;
+    static #EPSILON_STAGNANT_MED = 0.25;
+    static #EPSILON_SATURATIONS = 0.3;
+    static #EPSILON_MIN_NEAR_GOAL = 0.05;
+    static #NO_MOVE_STREAK_THRESHOLD = 5;
+    // Local area stagnation
+    static #LOCAL_WINDOW = 30;
+    static #LOCAL_AREA_SPAN_THRESHOLD = 5;
+    static #LOCAL_AREA_STAGNATION_STEPS = 8;
+    // Progress reward shaping
+    static #PROGRESS_REWARD_BASE = 0.3;
+    static #PROGRESS_REWARD_CONF_SCALE = 0.7;
+    static #PROGRESS_STEPS_MULT = 0.02;
+    static #PROGRESS_STEPS_MAX = 0.5;
+    // times rewardScale
+    static #DISTANCE_DELTA_SCALE = 2;
+    static #DISTANCE_DELTA_CONF_BASE = 0.4;
+    static #DISTANCE_DELTA_CONF_SCALE = 0.6;
+    // Entropy tuning
+    static #ENTROPY_HIGH_THRESHOLD = 0.95;
+    static #ENTROPY_CONFIDENT_THRESHOLD = 0.55;
+    static #ENTROPY_CONFIDENT_DIFF = 0.25;
+    static #ENTROPY_PENALTY = 0.03;
+    // * rewardScale
+    static #EXPLORATION_BONUS_SMALL = 0.015;
+    // * rewardScale
+    // Saturation penalties
+    static #SATURATION_PENALTY_BASE = 0.05;
+    // * rewardScale
+    static #SATURATION_PENALTY_ESCALATE = 0.1;
+    // * rewardScale when escalation applies
+    // Deep stagnation
+    static #DEEP_STAGNATION_THRESHOLD = 40;
+    static #DEEP_STAGNATION_PENALTY = 2;
+    // * rewardScale
+    // Near-miss penalty multiplier
+    static #NEAR_MISS_PENALTY = 30;
+    // * rewardScale
+    // Action/output dimension and softmax/entropy tuning
+    static #ACTION_DIM = 4;
+    static #STD_MIN = 1e-6;
+    static #COLLAPSE_STD_THRESHOLD = 0.01;
+    static #COLLAPSE_STD_MED = 0.03;
+    static #COLLAPSE_RATIO_FULL = 1;
+    static #COLLAPSE_RATIO_HALF = 0.5;
+    static #TEMPERATURE_BASE = 1;
+    static #TEMPERATURE_SCALE = 1.2;
+    // Network history and randomness
+    static #OUTPUT_HISTORY_LENGTH = 80;
+    static #FITNESS_RANDOMNESS = 0.01;
+    // Success fitness constants
+    static #SUCCESS_BASE_FITNESS = 650;
+    static #STEP_EFFICIENCY_SCALE = 0.2;
+    static #SUCCESS_ACTION_ENTROPY_SCALE = 5;
+    static #MIN_SUCCESS_FITNESS = 150;
+    // Exploration / revisiting tuning
+    static #NEW_CELL_EXPLORATION_BONUS = 0.3;
+    static #REVISIT_PENALTY_STRONG = 0.5;
+    // Progress shaping constants
+    static #PROGRESS_POWER = 1.3;
+    static #PROGRESS_SCALE = 500;
+    static #last(arr) {
+      return MazeUtils.safeLast(arr);
+    }
+    /**
+     * Helper: is a cell (x,y) within bounds and not a wall?
+     */
+    static #isCellOpen(encodedMaze, x, y) {
+      return y >= 0 && y < encodedMaze.length && x >= 0 && x < encodedMaze[0].length && encodedMaze[y][x] !== -1;
+    }
+    /**
+     * Helper: unified distance lookup. Prefer distance map when available,
+     * otherwise fall back to BFS. Keeps callers simple and avoids repeated
+     * ternary expressions across the file.
+     */
+    static #distanceAt(encodedMaze, [x, y], distanceMap) {
+      return Number.isFinite(distanceMap?.[y]?.[x]) ? distanceMap[y][x] : MazeUtils.bfsDistance(encodedMaze, [x, y], [x, y]);
+    }
     /**
      * Checks if a move is valid (within maze bounds and not a wall cell).
      *
@@ -16448,7 +15884,7 @@
      * @returns {boolean} True if the position is within bounds and not a wall.
      */
     static isValidMove(encodedMaze, [x, y]) {
-      return x >= 0 && y >= 0 && y < encodedMaze.length && x < encodedMaze[0].length && encodedMaze[y][x] !== -1;
+      return _MazeMovement.#isCellOpen(encodedMaze, x, y);
     }
     /**
      * Moves the agent in the given direction if possible, otherwise stays in place.
@@ -16474,9 +15910,9 @@
      */
     static moveAgent(encodedMaze, position, direction) {
       if (direction === -1) {
-        return [...position];
+        return [position[0], position[1]];
       }
-      const nextPosition = [...position];
+      const nextPosition = [position[0], position[1]];
       switch (direction) {
         case 0:
           nextPosition[1] -= 1;
@@ -16494,7 +15930,7 @@
       if (_MazeMovement.isValidMove(encodedMaze, nextPosition)) {
         return nextPosition;
       } else {
-        return position;
+        return [position[0], position[1]];
       }
     }
     /**
@@ -16513,7 +15949,7 @@
      * @returns {object} Direction index, softmax probabilities, entropy, and confidence stats.
      */
     static selectDirection(outputs) {
-      if (!outputs || outputs.length !== 4) {
+      if (!outputs || outputs.length !== _MazeMovement.#ACTION_DIM) {
         return {
           direction: -1,
           softmax: [0, 0, 0, 0],
@@ -16522,32 +15958,34 @@
           secondProb: 0
         };
       }
-      const mean = (outputs[0] + outputs[1] + outputs[2] + outputs[3]) / 4;
-      let variance = 0;
-      for (const o of outputs) variance += (o - mean) * (o - mean);
-      variance /= 4;
-      let std = Math.sqrt(variance);
-      if (!Number.isFinite(std) || std < 1e-6) std = 1e-6;
-      const centered = outputs.map((o) => o - mean);
-      const collapseRatio = std < 0.01 ? 1 : std < 0.03 ? 0.5 : 0;
-      const temperature = 1 + 1.2 * collapseRatio;
-      const max = Math.max(...centered);
-      const exps = centered.map((v) => Math.exp((v - max) / temperature));
-      const sum = exps.reduce((a, b) => a + b, 0) || 1;
-      const softmax = exps.map((e) => e / sum);
+      const meanLogit = (outputs[0] + outputs[1] + outputs[2] + outputs[3]) / _MazeMovement.#ACTION_DIM;
+      let varianceSum = 0;
+      for (const outputVal of outputs)
+        varianceSum += (outputVal - meanLogit) * (outputVal - meanLogit);
+      varianceSum /= _MazeMovement.#ACTION_DIM;
+      let stdDev = Math.sqrt(varianceSum);
+      if (!Number.isFinite(stdDev) || stdDev < _MazeMovement.#STD_MIN)
+        stdDev = _MazeMovement.#STD_MIN;
+      const centered = outputs.map((outputVal) => outputVal - meanLogit);
+      const collapseRatio = stdDev < _MazeMovement.#COLLAPSE_STD_THRESHOLD ? _MazeMovement.#COLLAPSE_RATIO_FULL : stdDev < _MazeMovement.#COLLAPSE_STD_MED ? _MazeMovement.#COLLAPSE_RATIO_HALF : 0;
+      const temperature = _MazeMovement.#TEMPERATURE_BASE + _MazeMovement.#TEMPERATURE_SCALE * collapseRatio;
+      const maxCentered = Math.max(...centered);
+      const exps = centered.map((v) => Math.exp((v - maxCentered) / temperature));
+      const expSum = exps.reduce((acc, val) => acc + val, 0) || 1;
+      const softmax = exps.map((expVal) => expVal / expSum);
       let direction = 0;
       let maxProb = -Infinity;
       let secondProb = 0;
-      softmax.forEach((p, i) => {
-        if (p > maxProb) {
+      softmax.forEach((prob, index) => {
+        if (prob > maxProb) {
           secondProb = maxProb;
-          maxProb = p;
-          direction = i;
-        } else if (p > secondProb) secondProb = p;
+          maxProb = prob;
+          direction = index;
+        } else if (prob > secondProb) secondProb = prob;
       });
       let entropy = 0;
-      softmax.forEach((p) => {
-        if (p > 0) entropy += -p * Math.log(p);
+      softmax.forEach((prob) => {
+        if (prob > 0) entropy += -prob * Math.log(prob);
       });
       entropy /= Math.log(4);
       return { direction, softmax, entropy, maxProb, secondProb };
@@ -16572,21 +16010,29 @@
      *   - progress: Percentage progress toward exit (0-100).
      */
     static simulateAgent(network, encodedMaze, startPos, exitPos, distanceMap, maxSteps = 3e3) {
-      let position = [...startPos];
+      let position = [startPos[0], startPos[1]];
       let steps = 0;
-      let path2 = [position.slice()];
+      let path2 = [[position[0], position[1]]];
       let visitedPositions = /* @__PURE__ */ new Set();
       let visitCounts = /* @__PURE__ */ new Map();
       let moveHistory = [];
       const MOVE_HISTORY_LENGTH = 6;
-      let minDistanceToExit = distanceMap ? distanceMap[position[1]]?.[position[0]] ?? Infinity : MazeUtils.bfsDistance(encodedMaze, position, exitPos);
-      const rewardScale = 0.5;
+      let minDistanceToExit = _MazeMovement.#distanceAt(
+        encodedMaze,
+        position,
+        distanceMap
+      );
+      const rewardScale = _MazeMovement.#REWARD_SCALE;
       let progressReward = 0;
       let newCellExplorationBonus = 0;
       let invalidMovePenalty = 0;
       let prevAction = -1;
       let stepsSinceImprovement = 0;
-      const startDistanceGlobal = distanceMap ? distanceMap[position[1]]?.[position[0]] ?? Infinity : MazeUtils.bfsDistance(encodedMaze, position, exitPos);
+      const startDistanceGlobal = _MazeMovement.#distanceAt(
+        encodedMaze,
+        position,
+        distanceMap
+      );
       let lastDistanceGlobal = startDistanceGlobal;
       let saturatedSteps = 0;
       const LOCAL_WINDOW = 30;
@@ -16598,17 +16044,29 @@
         const currentPosKey = `${position[0]},${position[1]}`;
         visitedPositions.add(currentPosKey);
         visitCounts.set(currentPosKey, (visitCounts.get(currentPosKey) || 0) + 1);
-        moveHistory.push(currentPosKey);
-        if (moveHistory.length > MOVE_HISTORY_LENGTH) moveHistory.shift();
+        moveHistory = MazeUtils.pushHistory(
+          moveHistory,
+          currentPosKey,
+          MOVE_HISTORY_LENGTH
+        );
         const percentExplored = visitedPositions.size / (encodedMaze.length * encodedMaze[0].length);
         let loopPenalty = 0;
-        if (moveHistory.length >= 4 && moveHistory[moveHistory.length - 1] === moveHistory[moveHistory.length - 3] && moveHistory[moveHistory.length - 2] === moveHistory[moveHistory.length - 4]) {
-          loopPenalty -= 10 * rewardScale;
+        if (moveHistory.length >= 4) {
+          const last = _MazeMovement.#last(moveHistory);
+          const thirdLast = moveHistory[moveHistory.length - 3];
+          const secondLast = moveHistory[moveHistory.length - 2];
+          const fourthLast = moveHistory[moveHistory.length - 4];
+          if (last === thirdLast && secondLast === fourthLast) {
+            loopPenalty -= _MazeMovement.#LOOP_PENALTY * rewardScale;
+          }
         }
         const loopFlag = loopPenalty < 0 ? 1 : 0;
         let memoryPenalty = 0;
-        if (moveHistory.length > 1 && moveHistory.slice(0, -1).includes(currentPosKey)) {
-          memoryPenalty -= 2 * rewardScale;
+        if (moveHistory.length > 1) {
+          const idx = moveHistory.indexOf(currentPosKey);
+          if (idx !== -1 && idx < moveHistory.length - 1) {
+            memoryPenalty -= 2 * rewardScale;
+          }
         }
         let revisitPenalty = 0;
         const visits = visitCounts.get(currentPosKey) || 1;
@@ -16616,10 +16074,10 @@
           revisitPenalty -= 0.2 * (visits - 1) * rewardScale;
         }
         if (visits > 10) {
-          invalidMovePenalty -= 1e3 * rewardScale;
+          invalidMovePenalty -= _MazeMovement.#INVALID_MOVE_PENALTY_HARSH * rewardScale;
           break;
         }
-        const prevDistLocal = distanceMap ? distanceMap[position[1]]?.[position[0]] ?? void 0 : MazeUtils.bfsDistance(encodedMaze, position, exitPos);
+        const prevDistLocal = distanceMap ? distanceMap[position[1]]?.[position[0]] ?? void 0 : _MazeMovement.#distanceAt(encodedMaze, position, distanceMap);
         const distCurrentLocal = prevDistLocal;
         const vision = MazeVision.buildInputs6(
           encodedMaze,
@@ -16631,24 +16089,29 @@
           prevAction
         );
         _MazeMovement._prevDistanceStep = distCurrentLocal;
-        const distHere = distanceMap ? distanceMap[position[1]]?.[position[0]] ?? Infinity : MazeUtils.bfsDistance(encodedMaze, position, exitPos);
+        const distHere = _MazeMovement.#distanceAt(
+          encodedMaze,
+          position,
+          distanceMap
+        );
         let direction;
         let actionStats = null;
         try {
           const outputs = network.activate(vision);
-          network._lastStepOutputs = network._lastStepOutputs || [];
-          const _ls = network._lastStepOutputs;
-          _ls.push(outputs.slice());
-          if (_ls.length > 80) _ls.shift();
+          network._lastStepOutputs = MazeUtils.pushHistory(
+            network._lastStepOutputs,
+            [...outputs],
+            _MazeMovement.#OUTPUT_HISTORY_LENGTH
+          );
           actionStats = _MazeMovement.selectDirection(outputs);
           _MazeMovement._saturations = _MazeMovement._saturations || 0;
-          const overConfident = actionStats.maxProb > 0.985 && actionStats.secondProb < 0.01;
+          const overConfident = actionStats.maxProb > _MazeMovement.#OVERCONFIDENT_PROB && actionStats.secondProb < _MazeMovement.#SECOND_PROB_LOW;
           const logitsMean = (outputs[0] + outputs[1] + outputs[2] + outputs[3]) / 4;
           let logVar = 0;
           for (const o of outputs) logVar += Math.pow(o - logitsMean, 2);
           logVar /= 4;
           const logStd = Math.sqrt(logVar);
-          const flatCollapsed = logStd < 0.01;
+          const flatCollapsed = logStd < _MazeMovement.#LOGSTD_FLAT_THRESHOLD;
           const saturatedNow = overConfident || flatCollapsed;
           if (saturatedNow) {
             _MazeMovement._saturations++;
@@ -16659,8 +16122,10 @@
               _MazeMovement._saturations - 1
             );
           }
-          if (overConfident) invalidMovePenalty -= 0.25 * rewardScale;
-          if (flatCollapsed) invalidMovePenalty -= 0.35 * rewardScale;
+          if (overConfident)
+            invalidMovePenalty -= _MazeMovement.#OVERCONFIDENT_PENALTY * rewardScale;
+          if (flatCollapsed)
+            invalidMovePenalty -= _MazeMovement.#FLAT_COLLAPSE_PENALTY * rewardScale;
           try {
             if (_MazeMovement._saturations > 6 && steps % 5 === 0) {
               const outs = network.nodes?.filter(
@@ -16680,62 +16145,97 @@
           console.error("Error activating network:", error);
           direction = -1;
         }
-        if (distHere <= 2) {
-          let bestDir = direction;
-          let bestDist = Infinity;
-          for (let d = 0; d < 4; d++) {
-            const testPos = _MazeMovement.moveAgent(encodedMaze, position, d);
+        if (distHere <= _MazeMovement.#PROXIMITY_GREEDY_DISTANCE) {
+          let bestDirection = direction;
+          let bestDistance = Infinity;
+          for (let dirIndex = 0; dirIndex < _MazeMovement.#ACTION_DIM; dirIndex++) {
+            const testPos = _MazeMovement.moveAgent(
+              encodedMaze,
+              position,
+              dirIndex
+            );
             if (testPos[0] === position[0] && testPos[1] === position[1])
               continue;
-            const dVal = distanceMap ? distanceMap[testPos[1]]?.[testPos[0]] ?? Infinity : MazeUtils.bfsDistance(encodedMaze, testPos, exitPos);
-            if (dVal < bestDist) {
-              bestDist = dVal;
-              bestDir = d;
+            const candidateDistance = _MazeMovement.#distanceAt(
+              encodedMaze,
+              testPos,
+              distanceMap
+            );
+            if (candidateDistance < bestDistance) {
+              bestDistance = candidateDistance;
+              bestDirection = dirIndex;
             }
           }
-          if (bestDir != null) direction = bestDir;
+          if (bestDirection != null) direction = bestDirection;
         }
         const stepsStagnant = stepsSinceImprovement;
         let epsilon = 0;
-        if (steps < 10) epsilon = 0.35;
-        else if (stepsStagnant > 12) epsilon = 0.5;
-        else if (stepsStagnant > 6) epsilon = 0.25;
-        else if (_MazeMovement._saturations > 3) epsilon = 0.3;
-        if (distHere <= 5) epsilon = Math.min(epsilon, 0.05);
+        if (steps < 10) epsilon = _MazeMovement.#EPSILON_INITIAL;
+        else if (stepsStagnant > 12)
+          epsilon = _MazeMovement.#EPSILON_STAGNANT_HIGH;
+        else if (stepsStagnant > 6) epsilon = _MazeMovement.#EPSILON_STAGNANT_MED;
+        else if (_MazeMovement._saturations > 3)
+          epsilon = _MazeMovement.#EPSILON_SATURATIONS;
+        if (distHere <= _MazeMovement.#PROXIMITY_SUPPRESS_EXPLOR_DIST)
+          epsilon = Math.min(epsilon, _MazeMovement.#EPSILON_MIN_NEAR_GOAL);
         if (Math.random() < epsilon) {
-          const candidates = [0, 1, 2, 3].filter((d) => d !== prevAction);
-          while (candidates.length) {
-            const idx = Math.floor(Math.random() * candidates.length);
-            const cand = candidates.splice(idx, 1)[0];
-            const testPos = _MazeMovement.moveAgent(encodedMaze, position, cand);
+          const candidateDirections = [0, 1, 2, 3].filter(
+            (dir) => dir !== prevAction
+          );
+          while (candidateDirections.length) {
+            const randomIndex = Math.floor(
+              Math.random() * candidateDirections.length
+            );
+            const candidateDirection = candidateDirections.splice(
+              randomIndex,
+              1
+            )[0];
+            const testPos = _MazeMovement.moveAgent(
+              encodedMaze,
+              position,
+              candidateDirection
+            );
             if (testPos[0] !== position[0] || testPos[1] !== position[1]) {
-              direction = cand;
+              direction = candidateDirection;
               break;
             }
           }
         }
         _MazeMovement._noMoveStreak = _MazeMovement._noMoveStreak || 0;
         if (direction === -1) _MazeMovement._noMoveStreak++;
-        if (_MazeMovement._noMoveStreak >= 5) {
-          for (let tries = 0; tries < 4; tries++) {
-            const cand = Math.floor(Math.random() * 4);
-            const testPos = _MazeMovement.moveAgent(encodedMaze, position, cand);
+        if (_MazeMovement._noMoveStreak >= _MazeMovement.#NO_MOVE_STREAK_THRESHOLD) {
+          for (let attempt = 0; attempt < _MazeMovement.#ACTION_DIM; attempt++) {
+            const candidateDirection = Math.floor(
+              Math.random() * _MazeMovement.#ACTION_DIM
+            );
+            const testPos = _MazeMovement.moveAgent(
+              encodedMaze,
+              position,
+              candidateDirection
+            );
             if (testPos[0] !== position[0] || testPos[1] !== position[1]) {
-              direction = cand;
+              direction = candidateDirection;
               break;
             }
           }
           _MazeMovement._noMoveStreak = 0;
         }
-        const prevPosition = [...position];
-        const prevDistance = distanceMap ? distanceMap[position[1]]?.[position[0]] ?? Infinity : MazeUtils.bfsDistance(encodedMaze, position, exitPos);
+        const prevPosition = [position[0], position[1]];
+        const prevDistance = _MazeMovement.#distanceAt(
+          encodedMaze,
+          position,
+          distanceMap
+        );
         position = _MazeMovement.moveAgent(encodedMaze, position, direction);
         const moved = prevPosition[0] !== position[0] || prevPosition[1] !== position[1];
         if (moved) {
-          path2.push(position.slice());
-          recentPositions.push(position.slice());
-          if (recentPositions.length > LOCAL_WINDOW) recentPositions.shift();
-          if (recentPositions.length === LOCAL_WINDOW) {
+          path2.push([position[0], position[1]]);
+          MazeUtils.pushHistory(
+            recentPositions,
+            [position[0], position[1]],
+            LOCAL_WINDOW
+          );
+          if (recentPositions.length === _MazeMovement.#LOCAL_WINDOW) {
             let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
             for (const [rx, ry] of recentPositions) {
               if (rx < minX) minX = rx;
@@ -16744,22 +16244,26 @@
               if (ry > maxY) maxY = ry;
             }
             const span = maxX - minX + (maxY - minY);
-            if (span <= 5 && stepsSinceImprovement > 8) {
+            if (span <= _MazeMovement.#LOCAL_AREA_SPAN_THRESHOLD && stepsSinceImprovement > _MazeMovement.#LOCAL_AREA_STAGNATION_STEPS) {
               localAreaPenalty -= 0.05 * rewardScale;
             }
           }
-          const currentDistance = distanceMap ? distanceMap[position[1]]?.[position[0]] ?? Infinity : MazeUtils.bfsDistance(encodedMaze, position, exitPos);
+          const currentDistance = _MazeMovement.#distanceAt(
+            encodedMaze,
+            position,
+            distanceMap
+          );
           const distanceDelta = prevDistance - currentDistance;
           if (distanceDelta > 0) {
             const conf = actionStats?.maxProb ?? 1;
-            progressReward += (0.3 + 0.7 * conf) * rewardScale;
+            progressReward += (_MazeMovement.#PROGRESS_REWARD_BASE + _MazeMovement.#PROGRESS_REWARD_CONF_SCALE * conf) * rewardScale;
             if (stepsSinceImprovement > 0)
               progressReward += Math.min(
-                stepsSinceImprovement * 0.02 * rewardScale,
-                0.5 * rewardScale
+                stepsSinceImprovement * _MazeMovement.#PROGRESS_STEPS_MULT * rewardScale,
+                _MazeMovement.#PROGRESS_STEPS_MAX * rewardScale
               );
             stepsSinceImprovement = 0;
-            progressReward += distanceDelta * 2 * (0.4 + 0.6 * conf);
+            progressReward += distanceDelta * _MazeMovement.#DISTANCE_DELTA_SCALE * (_MazeMovement.#DISTANCE_DELTA_CONF_BASE + _MazeMovement.#DISTANCE_DELTA_CONF_SCALE * conf);
           } else if (currentDistance > prevDistance) {
             const conf = actionStats?.maxProb ?? 0.5;
             progressReward -= (0.05 + 0.15 * conf) * rewardScale;
@@ -16768,16 +16272,20 @@
             stepsSinceImprovement++;
           }
           if (visits === 1) {
-            newCellExplorationBonus += 0.3 * rewardScale;
+            newCellExplorationBonus += _MazeMovement.#NEW_CELL_EXPLORATION_BONUS * rewardScale;
           } else {
-            newCellExplorationBonus -= 0.5 * rewardScale;
+            newCellExplorationBonus -= _MazeMovement.#REVISIT_PENALTY_STRONG * rewardScale;
           }
           minDistanceToExit = Math.min(minDistanceToExit, currentDistance);
         } else {
-          invalidMovePenalty -= 10 * rewardScale;
+          invalidMovePenalty -= _MazeMovement.#INVALID_MOVE_PENALTY_MILD * rewardScale;
           steps === maxSteps;
         }
-        const currentDistanceGlobal = distanceMap ? distanceMap[position[1]]?.[position[0]] ?? Infinity : MazeUtils.bfsDistance(encodedMaze, position, exitPos);
+        const currentDistanceGlobal = _MazeMovement.#distanceAt(
+          encodedMaze,
+          position,
+          distanceMap
+        );
         if (currentDistanceGlobal < lastDistanceGlobal) {
           if (stepsSinceImprovement > 10)
             progressReward += Math.min(
@@ -16804,26 +16312,26 @@
           const { entropy, maxProb, secondProb } = actionStats;
           const hasGuidance = vision[8] + vision[9] + vision[10] + vision[11] > 0 || // LOS group
           vision[12] + vision[13] + vision[14] + vision[15] > 0;
-          if (entropy > 0.95) {
-            invalidMovePenalty -= 0.03 * rewardScale;
-          } else if (hasGuidance && entropy < 0.55 && maxProb - secondProb > 0.25) {
-            newCellExplorationBonus += 0.015 * rewardScale;
+          if (entropy > _MazeMovement.#ENTROPY_HIGH_THRESHOLD) {
+            invalidMovePenalty -= _MazeMovement.#ENTROPY_PENALTY * rewardScale;
+          } else if (hasGuidance && entropy < _MazeMovement.#ENTROPY_CONFIDENT_THRESHOLD && maxProb - secondProb > _MazeMovement.#ENTROPY_CONFIDENT_DIFF) {
+            newCellExplorationBonus += _MazeMovement.#EXPLORATION_BONUS_SMALL * rewardScale;
           }
           if (_MazeMovement._saturations >= 5) {
-            invalidMovePenalty -= 0.05 * rewardScale;
+            invalidMovePenalty -= _MazeMovement.#SATURATION_PENALTY_BASE * rewardScale;
             if (_MazeMovement._saturations % 10 === 0) {
-              invalidMovePenalty -= 0.1 * rewardScale;
+              invalidMovePenalty -= _MazeMovement.#SATURATION_PENALTY_ESCALATE * rewardScale;
             }
           }
         }
-        if (stepsSinceImprovement > 40) {
+        if (stepsSinceImprovement > _MazeMovement.#DEEP_STAGNATION_THRESHOLD) {
           try {
             if (typeof window === "undefined") {
-              invalidMovePenalty -= 2 * rewardScale;
+              invalidMovePenalty -= _MazeMovement.#DEEP_STAGNATION_PENALTY * rewardScale;
               break;
             }
           } catch {
-            invalidMovePenalty -= 2 * rewardScale;
+            invalidMovePenalty -= _MazeMovement.#DEEP_STAGNATION_PENALTY * rewardScale;
             break;
           }
         }
@@ -16831,57 +16339,38 @@
         if (position[0] === exitPos[0] && position[1] === exitPos[1]) {
           const stepEfficiency = maxSteps - steps;
           const { actionEntropy: actionEntropy2 } = _MazeMovement.computeActionEntropy(path2);
-          const fitness2 = 650 + stepEfficiency * 0.2 + progressReward + newCellExplorationBonus + invalidMovePenalty + actionEntropy2 * 5;
+          const fitness2 = _MazeMovement.#SUCCESS_BASE_FITNESS + stepEfficiency * _MazeMovement.#STEP_EFFICIENCY_SCALE + progressReward + newCellExplorationBonus + invalidMovePenalty + actionEntropy2 * _MazeMovement.#SUCCESS_ACTION_ENTROPY_SCALE;
           return {
             success: true,
             steps,
             path: path2,
-            fitness: Math.max(150, fitness2),
+            fitness: Math.max(_MazeMovement.#MIN_SUCCESS_FITNESS, fitness2),
             progress: 100,
             saturationFraction: steps ? saturatedSteps / steps : 0,
             actionEntropy: actionEntropy2
           };
         }
       }
+      const lastPos = _MazeMovement.#last(path2) ?? [0, 0];
       const progress = distanceMap ? MazeUtils.calculateProgressFromDistanceMap(
         distanceMap,
-        path2[path2.length - 1],
+        lastPos,
         startPos
-      ) : MazeUtils.calculateProgress(
-        encodedMaze,
-        path2[path2.length - 1],
-        startPos,
-        exitPos
-      );
+      ) : MazeUtils.calculateProgress(encodedMaze, lastPos, startPos, exitPos);
       const progressFrac = progress / 100;
-      const shapedProgress = Math.pow(progressFrac, 1.3) * 500;
+      const shapedProgress = Math.pow(progressFrac, _MazeMovement.#PROGRESS_POWER) * _MazeMovement.#PROGRESS_SCALE;
       const explorationScore = visitedPositions.size * 1;
       const penalty = invalidMovePenalty;
       const { actionEntropy } = _MazeMovement.computeActionEntropy(path2);
       const entropyBonus = actionEntropy * 4;
-      const satFrac = steps ? saturatedSteps / steps : 0;
-      const saturationPenalty = satFrac > 0.35 ? -(satFrac - 0.35) * 40 : 0;
+      let saturationPenalty = 0;
       let outputVarPenalty = 0;
-      try {
-        const hist = network._lastStepOutputs || [];
-        if (hist.length >= 15) {
-          const recent = hist.slice(-30);
-          let lowVar = 0;
-          for (const o of recent) {
-            const m = (o[0] + o[1] + o[2] + o[3]) / 4;
-            let v = 0;
-            for (const x of o) v += (x - m) * (x - m);
-            v /= 4;
-            if (Math.sqrt(v) < 0.01) lowVar++;
-          }
-          if (lowVar > 4) outputVarPenalty -= (lowVar - 4) * 0.3;
-        }
-      } catch {
-      }
       let nearMissPenalty = 0;
-      if (minDistanceToExit === 1) nearMissPenalty -= 30 * rewardScale;
+      const satFrac = steps ? saturatedSteps / steps : 0;
+      if (minDistanceToExit === 1)
+        nearMissPenalty -= _MazeMovement.#NEAR_MISS_PENALTY * rewardScale;
       const base = shapedProgress + explorationScore + progressReward + newCellExplorationBonus + penalty + entropyBonus + localAreaPenalty + saturationPenalty + outputVarPenalty + nearMissPenalty;
-      const raw = base + Math.random() * 0.01;
+      const raw = base + Math.random() * _MazeMovement.#FITNESS_RANDOMNESS;
       const fitness = raw >= 0 ? raw : -Math.log1p(1 - raw);
       return {
         success: false,
@@ -16897,24 +16386,24 @@
   ((MazeMovement2) => {
     function computeActionEntropy(path2) {
       if (!path2 || path2.length < 2) return { actionEntropy: 0 };
-      const counts = [0, 0, 0, 0];
-      for (let i = 1; i < path2.length; i++) {
-        const dx = path2[i][0] - path2[i - 1][0];
-        const dy = path2[i][1] - path2[i - 1][1];
-        if (dx === 0 && dy === -1) counts[0]++;
-        else if (dx === 1 && dy === 0) counts[1]++;
-        else if (dx === 0 && dy === 1) counts[2]++;
-        else if (dx === -1 && dy === 0) counts[3]++;
+      const directionCounts = [0, 0, 0, 0];
+      for (let stepIndex = 1; stepIndex < path2.length; stepIndex++) {
+        const deltaX = path2[stepIndex][0] - path2[stepIndex - 1][0];
+        const deltaY = path2[stepIndex][1] - path2[stepIndex - 1][1];
+        if (deltaX === 0 && deltaY === -1) directionCounts[0]++;
+        else if (deltaX === 1 && deltaY === 0) directionCounts[1]++;
+        else if (deltaX === 0 && deltaY === 1) directionCounts[2]++;
+        else if (deltaX === -1 && deltaY === 0) directionCounts[3]++;
       }
-      const total = counts.reduce((a, b) => a + b, 0) || 1;
-      let ent = 0;
-      counts.forEach((c) => {
-        if (c > 0) {
-          const p = c / total;
-          ent += -p * Math.log(p);
+      const actionTotal = directionCounts.reduce((acc, val) => acc + val, 0) || 1;
+      let entropySum = 0;
+      directionCounts.forEach((count) => {
+        if (count > 0) {
+          const probability = count / actionTotal;
+          entropySum += -probability * Math.log(probability);
         }
       });
-      const actionEntropy = ent / Math.log(4);
+      const actionEntropy = entropySum / Math.log(4);
       return { actionEntropy };
     }
     MazeMovement2.computeActionEntropy = computeActionEntropy;
@@ -16956,12 +16445,17 @@
         maxSteps
       );
       let explorationBonus = 0;
+      const visitCounts = /* @__PURE__ */ new Map();
       for (const [x, y] of result.path) {
+        const key = `${x},${y}`;
+        visitCounts.set(key, (visitCounts.get(key) || 0) + 1);
+      }
+      for (const [x, y] of result.path) {
+        const key = `${x},${y}`;
         const distToExit = distanceMap ? distanceMap[y]?.[x] ?? Infinity : MazeUtils.bfsDistance(encodedMaze, [x, y], exitPosition);
         const proximityMultiplier = 1.5 - 0.5 * (distToExit / (encodedMaze.length + encodedMaze[0].length));
-        if (result.path.filter(([px, py]) => px === x && py === y).length === 1) {
+        if (visitCounts.get(key) === 1)
           explorationBonus += 200 * proximityMultiplier;
-        }
       }
       let fitness = result.fitness + explorationBonus;
       if (result.success) {
@@ -17177,7 +16671,7 @@
       try {
         if (typeof window === "undefined" && typeof __require === "function") {
           fs = __require("fs");
-          path2 = require_path();
+          path2 = __require("path");
         }
       } catch {
         fs = null;
@@ -17217,6 +16711,16 @@
           });
         }
         return new Promise((resolve) => setTimeout(resolve, 0));
+      };
+      const getTail = (arr, n) => {
+        if (!Array.isArray(arr) || n <= 0) return [];
+        const out = [];
+        const start2 = Math.max(0, arr.length - n);
+        for (let i = start2; i < arr.length; i++) out.push(arr[i]);
+        return out;
+      };
+      const pushHistory = (buf, v, maxLen) => {
+        return MazeUtils.pushHistory(buf, v, maxLen);
       };
       if (fs && persistDir && !fs.existsSync(persistDir)) {
         try {
@@ -17360,9 +16864,21 @@
           console.log(msg.trim());
       };
       while (true) {
-        const t0 = doProfile ? Date.now() : 0;
+        try {
+          if (options.cancellation && options.cancellation.isCancelled()) {
+            if (bestResult) bestResult.exitReason = "cancelled";
+            break;
+          }
+          if (options.signal?.aborted) {
+            if (bestResult) bestResult.exitReason = "aborted";
+            break;
+          }
+        } catch {
+        }
+        const t0 = doProfile ? globalThis.performance?.now?.() ?? Date.now() : 0;
         const fittest = await neat.evolve();
-        if (doProfile) tEvolveTotal += Date.now() - t0;
+        if (doProfile)
+          tEvolveTotal += (globalThis.performance?.now?.() ?? Date.now()) - t0;
         (neat.population || []).forEach((g) => {
           g.nodes?.forEach((n) => {
             if (n.type === "output") n.squash = methods_exports.Activation.identity;
@@ -17373,10 +16889,13 @@
           if (g.species) set.add(g.species);
           return set;
         }, /* @__PURE__ */ new Set()).size || 1;
-        _EvolutionEngine._speciesHistory.push(speciesCount);
-        if (_EvolutionEngine._speciesHistory.length > 50)
-          _EvolutionEngine._speciesHistory.shift();
-        const recent = _EvolutionEngine._speciesHistory.slice(-20);
+        _EvolutionEngine._speciesHistory = pushHistory(
+          _EvolutionEngine._speciesHistory,
+          speciesCount,
+          50
+        );
+        const _speciesHistory = _EvolutionEngine._speciesHistory || [];
+        const recent = getTail(_speciesHistory, 20);
         const collapsed = recent.length === 20 && recent.every((c) => c === 1);
         if (collapsed) {
           const neatAny = neat;
@@ -17401,13 +16920,13 @@
               dynamicPopMax - currentSize
             );
             if (targetAdd > 0) {
-              const sorted = neat.population.slice().sort(
+              const sorted = neat.population.toSorted(
                 (a, b) => (b.score || -Infinity) - (a.score || -Infinity)
               );
-              const parentPool = sorted.slice(
-                0,
-                Math.max(2, Math.ceil(sorted.length * 0.25))
-              );
+              const parentPool = [];
+              const parentCount = Math.max(2, Math.ceil(sorted.length * 0.25));
+              for (let pi = 0; pi < parentCount && pi < sorted.length; pi++)
+                parentPool.push(sorted[pi]);
               for (let i = 0; i < targetAdd; i++) {
                 const parent = parentPool[Math.floor(Math.random() * parentPool.length)];
                 try {
@@ -17465,7 +16984,7 @@
           }
         }
         if (lamarckianIterations > 0 && lamarckianTrainingSet.length) {
-          const t1 = doProfile ? Date.now() : 0;
+          const t1 = doProfile ? globalThis.performance?.now?.() ?? Date.now() : 0;
           let trainingSetRef = lamarckianTrainingSet;
           if (lamarckianSampleSize && lamarckianSampleSize < lamarckianTrainingSet.length) {
             const picked = [];
@@ -17527,7 +17046,8 @@
 `
             );
           }
-          if (doProfile) tLamarckTotal += Date.now() - t1;
+          if (doProfile)
+            tLamarckTotal += (globalThis.performance?.now?.() ?? Date.now()) - t1;
         }
         const fitness = fittest.score ?? 0;
         completedGenerations++;
@@ -17565,7 +17085,7 @@
                 1,
                 Math.floor(enabledConns.length * simplifyPruneFraction)
               );
-              let candidates = enabledConns.slice();
+              let candidates = [...enabledConns];
               if (simplifyStrategy === "weakRecurrentPreferred") {
                 const recurrent = candidates.filter(
                   (c) => c.from === c.to || c.gater
@@ -17573,25 +17093,27 @@
                 const nonRecurrent = candidates.filter(
                   (c) => !(c.from === c.to || c.gater)
                 );
-                recurrent.sort(
+                const recurrentSorted = recurrent.toSorted(
                   (a, b) => Math.abs(a.weight) - Math.abs(b.weight)
                 );
-                nonRecurrent.sort(
+                const nonRecurrentSorted = nonRecurrent.toSorted(
                   (a, b) => Math.abs(a.weight) - Math.abs(b.weight)
                 );
-                candidates = [...recurrent, ...nonRecurrent];
+                candidates = [...recurrentSorted, ...nonRecurrentSorted];
               } else {
-                candidates.sort(
+                candidates = candidates.toSorted(
                   (a, b) => Math.abs(a.weight) - Math.abs(b.weight)
                 );
               }
-              candidates.slice(0, pruneCount).forEach((c) => c.enabled = false);
+              for (let i = 0; i < Math.min(pruneCount, candidates.length); i++) {
+                candidates[i].enabled = false;
+              }
             });
             simplifyRemaining--;
             if (simplifyRemaining <= 0) simplifyMode = false;
           }
         }
-        const t2 = doProfile ? Date.now() : 0;
+        const t2 = doProfile ? globalThis.performance?.now?.() ?? Date.now() : 0;
         const generationResult = MazeMovement.simulateAgent(
           fittest,
           encodedMaze,
@@ -17601,7 +17123,8 @@
           agentSimConfig.maxSteps
         );
         try {
-          fittest._lastStepOutputs = fittest._lastStepOutputs || fittest._lastStepOutputs;
+          if (!fittest._lastStepOutputs)
+            fittest._lastStepOutputs = [];
         } catch {
         }
         fittest._saturationFraction = generationResult.saturationFraction;
@@ -17624,11 +17147,13 @@
                   0
                 ) / weights.length;
                 if (mean < 0.5 && varc < 0.01) {
-                  outs.sort(
+                  const outsSorted = outs.toSorted(
                     (a, b) => Math.abs(a.weight) - Math.abs(b.weight)
                   );
                   const disableCount = Math.max(1, Math.floor(outs.length / 2));
-                  for (let i = 0; i < disableCount; i++) outs[i].enabled = false;
+                  for (let i = 0; i < Math.min(disableCount, outsSorted.length); i++) {
+                    outsSorted[i].enabled = false;
+                  }
                 }
               }
             });
@@ -17637,26 +17162,29 @@
         }
         if (completedGenerations % logEvery === 0) {
           try {
-            const movesRaw = generationResult.path.map(
-              (p, idx, arr) => {
-                if (idx === 0) return null;
-                const prev = arr[idx - 1];
-                const dx = p[0] - prev[0];
-                const dy = p[1] - prev[1];
-                if (dx === 0 && dy === -1) return 0;
-                if (dx === 1 && dy === 0) return 1;
-                if (dx === 0 && dy === 1) return 2;
-                if (dx === -1 && dy === 0) return 3;
-                return null;
-              }
-            );
-            const moves = [];
-            for (const mv of movesRaw) {
-              if (mv !== null) moves.push(mv);
-            }
             const counts = [0, 0, 0, 0];
-            moves.forEach((m) => counts[m]++);
-            const totalMoves = moves.length || 1;
+            let totalMoves = 0;
+            const pathArr = generationResult.path;
+            for (let idx = 1; idx < pathArr.length; idx++) {
+              const p = pathArr[idx];
+              const prev = pathArr[idx - 1];
+              const dx = p[0] - prev[0];
+              const dy = p[1] - prev[1];
+              if (dx === 0 && dy === -1) {
+                counts[0]++;
+                totalMoves++;
+              } else if (dx === 1 && dy === 0) {
+                counts[1]++;
+                totalMoves++;
+              } else if (dx === 0 && dy === 1) {
+                counts[2]++;
+                totalMoves++;
+              } else if (dx === -1 && dy === 0) {
+                counts[3]++;
+                totalMoves++;
+              }
+            }
+            totalMoves = totalMoves || 1;
             const probs = counts.map((c) => c / totalMoves);
             let entropy = 0;
             probs.forEach((p) => {
@@ -17691,7 +17219,7 @@
             try {
               const lastHist = fittest._lastStepOutputs || [];
               if (lastHist.length) {
-                const recent2 = lastHist.slice(-40);
+                const recent2 = getTail(lastHist, 40);
                 const k = 4;
                 const means = new Array(k).fill(0);
                 recent2.forEach((v) => {
@@ -17750,7 +17278,10 @@
                   try {
                     const eliteCount = neat.options.elitism || 0;
                     const pop = neat.population || [];
-                    const reinitTargets = pop.slice(eliteCount).filter(() => Math.random() < 0.3);
+                    const reinitTargets = [];
+                    for (let i = eliteCount; i < pop.length; i++) {
+                      if (Math.random() < 0.3) reinitTargets.push(pop[i]);
+                    }
                     let connReset = 0, biasReset = 0;
                     reinitTargets.forEach((g) => {
                       const outs = g.nodes.filter(
@@ -17803,7 +17334,9 @@
               const total = counts2.reduce((a, b) => a + b, 0) || 1;
               const simpson = 1 - counts2.reduce((a, b) => a + Math.pow(b / total, 2), 0);
               let wMean = 0, wCount = 0;
-              const sample = pop.slice(0, Math.min(pop.length, 40));
+              const sample = [];
+              for (let i = 0; i < Math.min(pop.length, 40); i++)
+                sample.push(pop[i]);
               sample.forEach((g) => {
                 g.connections.forEach((c) => {
                   if (c.enabled !== false) {
@@ -17829,7 +17362,8 @@
           } catch {
           }
         }
-        if (doProfile) tSimTotal += Date.now() - t2;
+        if (doProfile)
+          tSimTotal += (globalThis.performance?.now?.() ?? Date.now()) - t2;
         if (fitness > bestFitness) {
           bestFitness = fitness;
           bestNetwork = fittest;
@@ -17872,18 +17406,34 @@
               simplifyMode,
               plateauCounter,
               timestamp: Date.now(),
-              telemetryTail: neat.getTelemetry ? neat.getTelemetry().slice(-5) : void 0
+              // Capture a small telemetry tail without allocating via slice().
+              telemetryTail: (() => {
+                if (!neat.getTelemetry) return void 0;
+                try {
+                  const t = neat.getTelemetry();
+                  if (Array.isArray(t)) {
+                    return getTail(t, 5);
+                  }
+                  return t;
+                } catch {
+                  return void 0;
+                }
+              })()
             };
-            const popSorted = neat.population.slice().sort(
+            const popSorted = neat.population.toSorted(
               (a, b) => (b.score || -Infinity) - (a.score || -Infinity)
             );
-            const top = popSorted.slice(0, persistTopK).map((g, idx) => ({
-              idx,
-              score: g.score,
-              nodes: g.nodes.length,
-              connections: g.connections.length,
-              json: g.toJSON ? g.toJSON() : void 0
-            }));
+            const top = [];
+            for (let i = 0; i < Math.min(persistTopK, popSorted.length); i++) {
+              const g = popSorted[i];
+              top.push({
+                idx: i,
+                score: g.score,
+                nodes: g.nodes.length,
+                connections: g.connections.length,
+                json: g.toJSON ? g.toJSON() : void 0
+              });
+            }
             snap.top = top;
             const file = path2.join(
               persistDir,
@@ -17911,7 +17461,15 @@
             try {
               if (typeof window !== "undefined") {
                 window.asciiMazePaused = true;
-                window.dispatchEvent(new CustomEvent("asciiMazeSolved", { detail: { maze, generations: completedGenerations, progress: bestResult?.progress } }));
+                window.dispatchEvent(
+                  new CustomEvent("asciiMazeSolved", {
+                    detail: {
+                      maze,
+                      generations: completedGenerations,
+                      progress: bestResult?.progress
+                    }
+                  })
+                );
               }
             } catch {
             }
@@ -18212,8 +17770,8 @@
   ];
 
   // test/examples/asciiMaze/browser-entry.ts
-  async function start(containerId = "ascii-maze-output") {
-    const host = document.getElementById(containerId);
+  async function start(container = "ascii-maze-output", opts = {}) {
+    const host = typeof container === "string" ? document.getElementById(container) : container;
     const archiveEl = host ? host.querySelector("#ascii-maze-archive") : null;
     const liveEl = host ? host.querySelector("#ascii-maze-live") : null;
     const clearFn = BrowserTerminalUtility.createTerminalClearer(
@@ -18226,7 +17784,70 @@
       liveLogFn,
       archiveLogFn
     );
-    window.asciiMazeStart = async () => {
+    const telemetryListeners = [];
+    dashboard._telemetryHook = (t) => {
+      [...telemetryListeners].forEach((fn) => {
+        try {
+          fn(t);
+        } catch {
+        }
+      });
+    };
+    try {
+      const hostEl = host || document.getElementById("ascii-maze-output");
+      if (hostEl && typeof ResizeObserver !== "undefined") {
+        let lastWidth = hostEl.clientWidth;
+        const ro = new ResizeObserver((entries) => {
+          for (const entry of entries) {
+            const w = entry.contentRect.width;
+            if (Math.abs(w - lastWidth) > 8) {
+              lastWidth = w;
+              try {
+                dashboard.redraw?.([], void 0);
+              } catch {
+              }
+            }
+          }
+        });
+        ro.observe(hostEl);
+      } else if (hostEl) {
+        let debounce = null;
+        const handler = () => {
+          if (debounce) clearTimeout(debounce);
+          debounce = setTimeout(() => {
+            try {
+              dashboard.redraw?.([], void 0);
+            } catch {
+            }
+          }, 120);
+        };
+        window.addEventListener("resize", handler);
+      }
+    } catch {
+    }
+    let cancelled = false;
+    const internalController = new AbortController();
+    const externalSignal = opts.signal;
+    const combinedSignal = (() => {
+      if (!externalSignal) return internalController.signal;
+      if (externalSignal.aborted) return externalSignal;
+      try {
+        externalSignal.addEventListener(
+          "abort",
+          () => {
+            try {
+              internalController.abort();
+            } catch {
+            }
+          },
+          { once: true }
+        );
+      } catch {
+      }
+      return internalController.signal;
+    })();
+    let running = true;
+    const runCurriculum = async () => {
       const order = [
         "tiny",
         "spiralSmall",
@@ -18239,6 +17860,7 @@
       ];
       let lastBestNetwork = void 0;
       for (const key of order) {
+        if (cancelled) break;
         const maze = mazes_exports[key];
         if (!Array.isArray(maze)) continue;
         let agentMaxSteps = 1e3;
@@ -18300,10 +17922,16 @@
               dashboardManager: dashboard,
               logEvery: 1,
               label: `browser-${key}`
-            }
+            },
+            cancellation: { isCancelled: () => cancelled },
+            signal: combinedSignal
           });
           try {
-            console.log("[asciiMaze] maze solved", key, result?.bestResult?.progress);
+            console.log(
+              "[asciiMaze] maze solved",
+              key,
+              result?.bestResult?.progress
+            );
           } catch {
           }
           if (result && result.bestNetwork)
@@ -18312,39 +17940,52 @@
           console.error("Error while running maze", key, e);
         }
       }
+      running = false;
     };
-    window.asciiMazeStart();
-    try {
-      window.asciiMazePaused = false;
-      const playPauseBtn = document.getElementById(
-        "ascii-maze-playpause"
-      );
-      const statusEl = document.getElementById("ascii-maze-status");
-      const updateUI = () => {
-        const paused = !!window.asciiMazePaused;
-        if (playPauseBtn) {
-          playPauseBtn.textContent = paused ? "Resume" : "Pause";
-          playPauseBtn.style.background = paused ? "#39632C" : "#2C3963";
-          playPauseBtn.setAttribute("aria-pressed", String(!paused));
-          playPauseBtn.disabled = false;
+    const donePromise = runCurriculum();
+    const handle = {
+      stop: () => {
+        cancelled = true;
+        try {
+          internalController.abort();
+        } catch {
         }
-      };
-      if (playPauseBtn) {
-        playPauseBtn.addEventListener("click", () => {
-          window.asciiMazePaused = !window.asciiMazePaused;
-          if (statusEl) {
-            statusEl.textContent = window.asciiMazePaused ? "Paused \u2013 evolution halted" : "Running continuously";
-          }
-          updateUI();
-        });
-        playPauseBtn.addEventListener("update-ui", updateUI);
-      }
-      updateUI();
-    } catch {
-    }
+      },
+      isRunning: () => running && !cancelled,
+      done: Promise.resolve(donePromise).catch(() => {
+      }),
+      onTelemetry: (cb) => {
+        telemetryListeners.push(cb);
+        return () => {
+          const i = telemetryListeners.indexOf(cb);
+          if (i >= 0) telemetryListeners.splice(i, 1);
+        };
+      },
+      getTelemetry: () => dashboard.getLastTelemetry?.()
+    };
+    return handle;
   }
   if (typeof window !== "undefined" && window.document) {
-    setTimeout(() => start(), 20);
+    const g = window;
+    g.asciiMaze = g.asciiMaze || {};
+    g.asciiMaze.start = start;
+    if (!g.asciiMazeStart) {
+      g.asciiMazeStart = (el) => {
+        console.warn(
+          "[asciiMaze] window.asciiMazeStart is deprecated; use import { start } ... or window.asciiMaze.start"
+        );
+        return start(el);
+      };
+    }
+    if (!g.asciiMaze._autoStarted) {
+      g.asciiMaze._autoStarted = true;
+      setTimeout(() => {
+        try {
+          if (document.getElementById("ascii-maze-output")) start();
+        } catch {
+        }
+      }, 20);
+    }
   }
 })();
 //# sourceMappingURL=ascii-maze.bundle.js.map

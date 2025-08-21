@@ -228,7 +228,7 @@ describe('benchmark.memory dist-only', () => {
      */
     function iqrFilter(vals: number[]) {
       if (vals.length < 4) return { filtered: vals.slice(), outliers: [] };
-      const s = vals.slice().sort((a, b) => a - b);
+      const s = vals.toSorted((a, b) => a - b);
       const q = (p: number) => {
         const i = (s.length - 1) * p;
         const lo = Math.floor(i),
@@ -505,7 +505,7 @@ describe('benchmark.memory dist-only', () => {
             }
           }
           const median = (arr: number[]) => {
-            const a = arr.slice().sort((x, y) => x - y);
+            const a = arr.toSorted((x, y) => x - y);
             const n = a.length;
             if (!n) return NaN;
             return a[Math.floor((n - 1) / 2)];

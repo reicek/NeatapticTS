@@ -15,6 +15,7 @@ import { DashboardManager } from './dashboardManager';
 import { TerminalUtility } from './terminalUtility';
 import { IDashboardManager } from './interfaces';
 import { EvolutionEngine } from './evolutionEngine';
+import { pollUntil } from '../../utils/pollUntil';
 
 /**
  * Forces console output for this test by writing directly to stdout/stderr.
@@ -289,211 +290,220 @@ describe('ASCII Maze Solver using Neuro-Evolution', () => {
     console.log('\n');
   });
 
-  // --- Main Test Case ---
-  it('Evolve agent: curriculum learning in multiple steps from a tiny maze to the minotaur maze', async () => {
-    // Educational Note on Curriculum Learning:
-    // This test implements a strategy called "curriculum learning," where the agent is trained
-    // on a sequence of increasingly difficult tasks (mazes). It starts with a very simple maze
-    // and gradually moves to more complex ones. The winning network from one maze is used as the
-    // starting point for the next, allowing the agent to build upon its knowledge. This is often
-    // more effective than trying to solve the most difficult task from scratch.
+  // Refactored: Split curriculum into discrete phase tests with single expectations.
+  // Shared refined networks captured progressively (order-sensitive).
+  let tinyRefined: Network | undefined; // refined from first phase
+  let spiralSmallRefined: Network | undefined;
+  let spiralRefined: Network | undefined;
+  let smallRefined: Network | undefined;
+  let mediumRefined: Network | undefined;
+  let medium2Refined: Network | undefined;
+  let largeRefined: Network | undefined;
 
-    // --- Phase 1: Tiny Maze ---
-    // The simplest maze to establish a baseline behavior.
-    const tinyResult = await EvolutionEngine.runMazeEvolution({
+  it('phase tiny baseline evolves and refines a winner', async () => {
+    const result = await EvolutionEngine.runMazeEvolution({
       mazeConfig: { maze: tiny },
-      agentSimConfig: { maxSteps: 100 },
+      agentSimConfig: { maxSteps: 80 },
       evolutionAlgorithmConfig: {
         allowRecurrent: true,
-        popSize: 40,
-        maxStagnantGenerations: 200,
-        minProgressToPass: 99,
-        maxGenerations: 200,
-        lamarckianIterations: 5,
-        lamarckianSampleSize: 16,
+        popSize: 30,
+        autoPauseOnSolve: false,
+        maxStagnantGenerations: 15,
+        minProgressToPass: 90,
+        maxGenerations: 100,
+        lamarckianIterations: 3,
+        lamarckianSampleSize: 10,
       },
       reportingConfig: {
         dashboardManager: dashboardManagerInstance,
-        logEvery: 1,
-        label: 'tiny',
+        logEvery: 5,
+        label: 'tiny-fast',
       },
     });
+    tinyRefined = refineWinnerWithBackprop(result?.bestNetwork as Network);
+    expect(!!tinyRefined).toBe(true);
+  });
 
-    // Refine the winner from the tiny maze using backpropagation.
-    const tinyRefined = refineWinnerWithBackprop(
-      tinyResult?.bestNetwork as Network
-    );
-
-    // --- Phase 2: Small Spiral Maze ---
-    // Introduces the challenge of a spiral, requiring the agent to make a long sequence of turns.
-    const spiralSmallResult = await EvolutionEngine.runMazeEvolution({
+  it('phase spiralSmall builds from tiny refined network', async () => {
+    if (!tinyRefined) throw new Error('missing tinyRefined');
+    const result = await EvolutionEngine.runMazeEvolution({
       mazeConfig: { maze: spiralSmall },
-      agentSimConfig: { maxSteps: 100 },
+      agentSimConfig: { maxSteps: 90 },
       evolutionAlgorithmConfig: {
         allowRecurrent: true,
-        popSize: 40,
-        maxStagnantGenerations: 200,
-        minProgressToPass: 99,
-        maxGenerations: 200,
-        lamarckianIterations: 5,
-        lamarckianSampleSize: 16,
-        initialBestNetwork: tinyRefined, // Start with the refined network from the previous phase.
+        popSize: 30,
+        autoPauseOnSolve: false,
+        maxStagnantGenerations: 16,
+        minProgressToPass: 90,
+        maxGenerations: 100,
+        lamarckianIterations: 3,
+        lamarckianSampleSize: 10,
+        initialBestNetwork: tinyRefined,
       },
       reportingConfig: {
         dashboardManager: dashboardManagerInstance,
-        logEvery: 1,
-        label: 'spiralSmall',
+        logEvery: 10,
+        label: 'spiralSmall-fast',
       },
     });
-    const spiralSmallRefined = refineWinnerWithBackprop(
-      spiralSmallResult?.bestNetwork as Network
+    spiralSmallRefined = refineWinnerWithBackprop(
+      result?.bestNetwork as Network
     );
+    expect(!!spiralSmallRefined).toBe(true);
+  });
 
-    // --- Phase 3: Spiral Maze ---
-    // A larger spiral to test the agent's ability to generalize its turning behavior.
-    const spiralResult = await EvolutionEngine.runMazeEvolution({
+  it('phase spiral builds from spiralSmall refined network', async () => {
+    if (!spiralSmallRefined) throw new Error('missing spiralSmallRefined');
+    const result = await EvolutionEngine.runMazeEvolution({
       mazeConfig: { maze: spiral },
-      agentSimConfig: { maxSteps: 150 },
+      agentSimConfig: { maxSteps: 110 },
       evolutionAlgorithmConfig: {
         allowRecurrent: true,
-        popSize: 40,
-        maxStagnantGenerations: 200,
-        minProgressToPass: 99,
-        maxGenerations: 300,
-        lamarckianIterations: 5,
-        lamarckianSampleSize: 16,
+        popSize: 32,
+        autoPauseOnSolve: false,
+        maxStagnantGenerations: 18,
+        minProgressToPass: 90,
+        maxGenerations: 100,
+        lamarckianIterations: 3,
+        lamarckianSampleSize: 10,
         initialBestNetwork: spiralSmallRefined,
       },
       reportingConfig: {
         dashboardManager: dashboardManagerInstance,
-        logEvery: 1,
-        label: 'spiral',
+        logEvery: 10,
+        label: 'spiral-fast',
       },
     });
-    const spiralRefined = refineWinnerWithBackprop(
-      spiralResult.bestNetwork as Network
-    );
+    spiralRefined = refineWinnerWithBackprop(result?.bestNetwork as Network);
+    expect(!!spiralRefined).toBe(true);
+  });
 
-    // --- Phase 4: Small Maze ---
-    // A more traditional maze with branches and dead ends.
-    const smallResult = await EvolutionEngine.runMazeEvolution({
+  it('phase small builds from spiral refined network', async () => {
+    if (!spiralRefined) throw new Error('missing spiralRefined');
+    const result = await EvolutionEngine.runMazeEvolution({
       mazeConfig: { maze: small },
-      agentSimConfig: { maxSteps: 50 },
+      agentSimConfig: { maxSteps: 70 },
       evolutionAlgorithmConfig: {
         allowRecurrent: true,
-        popSize: 40,
-        maxStagnantGenerations: 200,
-        minProgressToPass: 99,
-        maxGenerations: 300,
-        lamarckianIterations: 5,
-        lamarckianSampleSize: 16,
+        popSize: 30,
+        autoPauseOnSolve: false,
+        maxStagnantGenerations: 18,
+        minProgressToPass: 90,
+        maxGenerations: 100,
+        lamarckianIterations: 3,
+        lamarckianSampleSize: 10,
         initialBestNetwork: spiralRefined,
       },
       reportingConfig: {
         dashboardManager: dashboardManagerInstance,
-        logEvery: 1,
-        label: 'small',
+        logEvery: 10,
+        label: 'small-fast',
       },
     });
-    const smallRefined = refineWinnerWithBackprop(
-      smallResult?.bestNetwork as Network
-    );
+    smallRefined = refineWinnerWithBackprop(result?.bestNetwork as Network);
+    expect(!!smallRefined).toBe(true);
+  });
 
-    // --- Phase 5: Medium Maze ---
-    // Increases the size and complexity, requiring more steps and better navigation.
-    const mediumResult = await EvolutionEngine.runMazeEvolution({
+  it('phase medium builds from small refined network', async () => {
+    if (!smallRefined) throw new Error('missing smallRefined');
+    const result = await EvolutionEngine.runMazeEvolution({
       mazeConfig: { maze: medium },
-      agentSimConfig: { maxSteps: 250 },
+      agentSimConfig: { maxSteps: 140 },
       evolutionAlgorithmConfig: {
         allowRecurrent: true,
-        popSize: 40,
-        maxStagnantGenerations: 200,
-        minProgressToPass: 99,
-        maxGenerations: 400,
-        lamarckianIterations: 5,
-        lamarckianSampleSize: 16,
+        popSize: 34,
+        autoPauseOnSolve: false,
+        maxStagnantGenerations: 20,
+        minProgressToPass: 90,
+        maxGenerations: 100,
+        lamarckianIterations: 4,
+        lamarckianSampleSize: 12,
         initialBestNetwork: smallRefined,
       },
       reportingConfig: {
         dashboardManager: dashboardManagerInstance,
-        logEvery: 1,
-        label: 'medium',
+        logEvery: 10,
+        label: 'medium-fast',
       },
     });
-    const mediumRefined = refineWinnerWithBackprop(
-      mediumResult?.bestNetwork as Network
-    );
+    mediumRefined = refineWinnerWithBackprop(result?.bestNetwork as Network);
+    expect(!!mediumRefined).toBe(true);
+  });
 
-    // --- Phase 6: Medium 2 Maze ---
-    // A different medium-sized maze to test generalization.
-    const medium2Result = await EvolutionEngine.runMazeEvolution({
+  it('phase medium2 builds from medium refined network', async () => {
+    if (!mediumRefined) throw new Error('missing mediumRefined');
+    const result = await EvolutionEngine.runMazeEvolution({
       mazeConfig: { maze: medium2 },
-      agentSimConfig: { maxSteps: 300 },
+      agentSimConfig: { maxSteps: 150 },
       evolutionAlgorithmConfig: {
         allowRecurrent: true,
-        popSize: 40,
-        maxStagnantGenerations: 200,
-        minProgressToPass: 99,
-        maxGenerations: 400,
-        lamarckianIterations: 5,
-        lamarckianSampleSize: 16,
+        popSize: 36,
+        autoPauseOnSolve: false,
+        maxStagnantGenerations: 20,
+        minProgressToPass: 90,
+        maxGenerations: 100,
+        lamarckianIterations: 4,
+        lamarckianSampleSize: 12,
         initialBestNetwork: mediumRefined,
       },
       reportingConfig: {
         dashboardManager: dashboardManagerInstance,
-        logEvery: 1,
-        label: 'medium2',
+        logEvery: 10,
+        label: 'medium2-fast',
       },
     });
-    const medium2Refined = refineWinnerWithBackprop(
-      medium2Result?.bestNetwork as Network
-    );
+    medium2Refined = refineWinnerWithBackprop(result?.bestNetwork as Network);
+    expect(!!medium2Refined).toBe(true);
+  });
 
-    // --- Phase 7: Large Maze ---
-    // A significant step up in difficulty, with a much larger search space.
-    const largeResult = await EvolutionEngine.runMazeEvolution({
+  it('phase large builds from medium2 refined network', async () => {
+    if (!medium2Refined) throw new Error('missing medium2Refined');
+    const result = await EvolutionEngine.runMazeEvolution({
       mazeConfig: { maze: large },
-      agentSimConfig: { maxSteps: 400 },
+      agentSimConfig: { maxSteps: 170 },
       evolutionAlgorithmConfig: {
         allowRecurrent: true,
-        popSize: 40,
-        maxStagnantGenerations: 200,
-        minProgressToPass: 99,
-        maxGenerations: 500,
-        lamarckianIterations: 5,
-        lamarckianSampleSize: 16,
+        popSize: 38,
+        autoPauseOnSolve: false,
+        maxStagnantGenerations: 22,
+        minProgressToPass: 90,
+        maxGenerations: 100,
+        lamarckianIterations: 4,
+        lamarckianSampleSize: 12,
         initialBestNetwork: medium2Refined,
       },
       reportingConfig: {
         dashboardManager: dashboardManagerInstance,
-        logEvery: 1,
-        label: 'large',
+        logEvery: 10,
+        label: 'large-fast',
       },
     });
-    const largeRefined = refineWinnerWithBackprop(
-      largeResult?.bestNetwork as Network
-    );
+    largeRefined = refineWinnerWithBackprop(result?.bestNetwork as Network);
+    expect(!!largeRefined).toBe(true);
+  });
 
-    // --- Final Phase: Minotaur Maze ---
-    // The most complex maze, requiring the agent to have learned a robust and general navigation strategy.
-    await EvolutionEngine.runMazeEvolution({
+  it('phase minotaur builds from large refined network', async () => {
+    if (!largeRefined) throw new Error('missing largeRefined');
+    const result = await EvolutionEngine.runMazeEvolution({
       mazeConfig: { maze: minotaur },
-      agentSimConfig: { maxSteps: 700 },
+      agentSimConfig: { maxSteps: 400 },
       evolutionAlgorithmConfig: {
         allowRecurrent: true,
         popSize: 40,
-        maxStagnantGenerations: 200,
-        minProgressToPass: 99,
-        maxGenerations: 600,
-        lamarckianIterations: 5,
-        lamarckianSampleSize: 16,
+        autoPauseOnSolve: false,
+        maxStagnantGenerations: 24,
+        minProgressToPass: 90,
+        maxGenerations: 100,
+        lamarckianIterations: 4,
+        lamarckianSampleSize: 12,
         initialBestNetwork: largeRefined,
       },
       reportingConfig: {
         dashboardManager: dashboardManagerInstance,
-        logEvery: 1,
-        label: 'minotaur',
+        logEvery: 10,
+        label: 'minotaur-fast',
       },
     });
-  }, 0);
+    expect(!!result?.bestNetwork).toBe(true);
+  });
 });

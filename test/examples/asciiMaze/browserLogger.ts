@@ -7,6 +7,7 @@
  */
 
 /** Minimal mapping of 256-color palette indices used by the demo to CSS hex colors. */
+import { MazeUtils } from './mazeUtils';
 const ANSI_256_MAP: { [code: number]: string } = {
   205: '#ff6ac1',
   93: '#b48bf2',
@@ -46,11 +47,33 @@ const ANSI_256_MAP: { [code: number]: string } = {
   39: '#0078ff',
 };
 
-function escapeHtml(s: string) {
+/**
+ * Escape HTML special characters in a string.
+ * @param s - input string possibly containing HTML-sensitive chars
+ * @returns escaped string safe for insertion into innerHTML
+ */
+/**
+ * Escape HTML special characters in a string.
+ *
+ * Keeps the implementation tiny and allocation-free; used before inserting
+ * strings into innerHTML to avoid XSS and layout issues.
+ *
+ * @param s - input string possibly containing HTML-sensitive chars
+ * @returns escaped string safe for insertion into innerHTML
+ */
+function escapeHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-function ensurePre(container?: HTMLElement) {
+/**
+ * Ensure there is a <pre> element in the provided container (or default host)
+ * and return it. If the document is not present or host can't be found,
+ * returns null.
+ *
+ * @param container - Optional host element to place the <pre> into.
+ * @returns the <pre> element or null when unavailable
+ */
+function ensurePre(container?: HTMLElement): HTMLPreElement | null {
   const host =
     container ??
     (typeof document !== 'undefined'
@@ -73,8 +96,25 @@ function ensurePre(container?: HTMLElement) {
 /**
  * Convert a string that may contain SGR ANSI sequences (\x1b[...m) into HTML.
  * Supports: 0 (reset), 1 (bold), 38;5;<n> (fg), 48;5;<n> (bg), and simple color codes.
+ *
+ * This parser is intentionally small and fast; it only supports sequences used
+ * by the demo. It outputs minimal inline styles so the resulting HTML can be
+ * appended into a <pre> element without reflow-heavy DOM operations.
+ *
+ * @param input - ANSI-encoded string
+ * @returns HTML string with inline style spans
  */
-function ansiToHtml(input: string) {
+/**
+ * Convert a string that may contain SGR ANSI sequences (\x1b[...]m) into HTML.
+ * Supports: 0 (reset), 1 (bold), 38;5;<n> (fg), 48;5;<n> (bg), and simple color codes.
+ *
+ * The parser is intentionally small and fast; it only supports sequences used
+ * by the demo and outputs minimal inline styles.
+ *
+ * @param input - ANSI-encoded string
+ * @returns HTML string with inline style spans
+ */
+function ansiToHtml(input: string): string {
   const re = /\x1b\[([0-9;]*)m/g;
   let out = '';
   let lastIndex = 0;
@@ -176,7 +216,30 @@ function ansiToHtml(input: string) {
   return out;
 }
 
-export function createBrowserLogger(container?: HTMLElement) {
+/**
+ * Create a browser logger function that appends formatted, ANSI->HTML
+ * converted text to a <pre> element in `container` (or the default host).
+ *
+ * The returned logger intentionally mutates the provided `args` array to
+ * avoid creating a temporary copy when an options object is passed as the
+ * last argument (common pattern in the demo). This keeps short-lived
+ * allocations low during intensive logging.
+ *
+ * @param container - Optional host element for log output
+ * @returns logger function compatible with the demo's forceLog API
+ */
+export function createBrowserLogger(
+  container?: HTMLElement
+): (...args: any[]) => void {
+  /**
+   * Create a browser logger function that appends formatted, ANSI->HTML
+   * converted text to a <pre> element in `container` (or the default host).
+   *
+   * The returned logger intentionally mutates the provided `args` array to
+   * avoid creating a temporary copy when an options object is passed as the
+   * last argument (common pattern in the demo). This keeps short-lived
+   * allocations low during intensive logging.
+   */
   return (...args: any[]) => {
     // Resolve (or recreate) the <pre> element each time because the clearer
     // may remove it (clearFunction sets container.innerHTML = ''), leaving
@@ -188,14 +251,18 @@ export function createBrowserLogger(container?: HTMLElement) {
     // top of the log (useful for archive views where newest entries appear
     // above older ones).
     let opts: any = undefined;
-    if (
-      args.length &&
-      typeof args[args.length - 1] === 'object' &&
-      args[args.length - 1] &&
-      'prepend' in args[args.length - 1]
-    ) {
-      opts = args[args.length - 1];
-      args = args.slice(0, -1);
+    if (args.length) {
+      const lastArg = MazeUtils.safeLast(args as any);
+      if (
+        lastArg &&
+        typeof lastArg === 'object' &&
+        'prepend' in (lastArg as any)
+      ) {
+        opts = lastArg as any;
+        // Remove the last arg in-place to avoid allocating a new args array.
+        // This is a deliberate micro-optimization for hot logging paths.
+        args.pop();
+      }
     }
 
     const text = args

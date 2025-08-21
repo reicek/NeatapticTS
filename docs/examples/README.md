@@ -14,15 +14,68 @@ Demonstrates a simple environment where agents must traverse an ASCII maze layou
   <p class="example-caption">If the demo fails to load, ensure the build step <code>npm run build:ascii-maze</code> has produced <code>docs/assets/ascii-maze.bundle.js</code>.</p>
 </div>
 
-### Controls & Behaviour
+### Behaviour & Telemetry
 
-- The Play / Pause button toggles evolutionary steps & rendering.
-- Output area streams the live generation status; archived snapshots accumulate below.
-- A watchdog restarts the demo if the bundle loads slowly.
+- Output area streams the live generation status; solved maze snapshots accumulate below.
+- Lightweight telemetry (generation, best fitness, gens/sec) is exposed via:
+  - CustomEvent `asciiMazeTelemetry` on `window`.
+  - `window.asciiMazeLastTelemetry` object (latest snapshot).
+  - The `run.onTelemetry(fn)` callback API when using the ESM `start()` function.
+- Host pages can subscribe and surface summary stats outside the iframe.
+
+### Programmatic API (ESM)
+
+Import the `start` function and optionally supply an `AbortSignal` for cancellation.
+
+```ts
+import { start } from './asciiMaze/browser-entry.js';
+
+const controller = new AbortController();
+const run = await start('#ascii-maze-output', { signal: controller.signal });
+
+const unsubscribe = run.onTelemetry(t => {
+  console.log(`Gen ${t.generation} best ${t.bestFitness} (${t.gensPerSecond.toFixed(2)} gen/s)`);
+});
+
+// Early stop (either call stop or abort the signal)
+// run.stop();
+controller.abort();
+
+await run.done;
+unsubscribe();
+```
+
+API surface:
+- `start(container: string|HTMLElement, opts?: { signal?: AbortSignal }) => Promise<RunHandle>`
+- `RunHandle.stop(): void`
+- `RunHandle.isRunning(): boolean`
+- `RunHandle.done: Promise<void>`
+- `RunHandle.onTelemetry(fn) => unsubscribe`
+- `RunHandle.getTelemetry(): TelemetrySnapshot | undefined`
+
+Telemetry snapshot (fields may extend):
+```ts
+interface TelemetrySnapshot {
+  generation: number;
+  bestFitness: number;
+  gensPerSecond: number;
+  exitReason?: string;          // 'cancelled' | 'aborted' | 'solved' | etc.
+  details?: Record<string, any>; // rich metrics bundle
+}
+```
+
+Legacy global usage (compatibility):
+```html
+<script src="/assets/ascii-maze.bundle.js"></script>
+<script>
+  window.asciiMaze.start(); // preferred
+  // window.asciiMazeStart(); // deprecated alias logs a warning
+</script>
+```
 
 ### Embedding Notes
 
-The iframe isolation keeps demo CSS / JS from interfering with site chrome. For tighter integration (shared styles / dark mode variables), convert the example to an ESM entry that renders into a supplied container (see enhancement plan).
+The iframe isolation keeps demo CSS / JS from interfering with site chrome. Now that an ESM `start()` is exported, future inline embedding can attach directly to a provided container without iframe overhead (see enhancement plan).
 
 ---
 

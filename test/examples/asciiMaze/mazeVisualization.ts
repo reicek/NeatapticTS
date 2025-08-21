@@ -18,6 +18,36 @@ import { NetworkVisualization } from './networkVisualization';
  * MazeVisualization provides static methods for rendering mazes and agent progress.
  */
 export class MazeVisualization {
+  // Shared set of wall characters (private implementation detail).
+  // Provide a public getter for backward compatibility.
+  static #WALL_CHARS = new Set([
+    '#',
+    '═',
+    '║',
+    '╔',
+    '╗',
+    '╚',
+    '╝',
+    '╠',
+    '╣',
+    '╦',
+    '╩',
+    '╬',
+  ]);
+
+  static get WALL_CHARS() {
+    return MazeVisualization.#WALL_CHARS;
+  }
+
+  /** Return the last element of an array or undefined when empty. */
+  static #last<T>(arr?: readonly T[] | null): T | undefined {
+    return MazeUtils.safeLast(arr as any) as T | undefined;
+  }
+
+  /** Convert a [x,y] pair to the canonical 'x,y' key. */
+  static #posKey([x, y]: readonly [number, number]): string {
+    return `${x},${y}`;
+  }
   /**
    * Renders a single maze cell with proper coloring based on its content and agent location.
    *
@@ -41,23 +71,19 @@ export class MazeVisualization {
     y: number,
     agentX: number,
     agentY: number,
-    path: Set<string> | undefined
+    path: ReadonlySet<string> | undefined
   ): string {
-    // Unicode box drawing characters that should be treated as walls
-    const wallChars = new Set([
-      '#',
-      '═',
-      '║',
-      '╔',
-      '╗',
-      '╚',
-      '╝',
-      '╠',
-      '╣',
-      '╦',
-      '╩',
-      '╬',
-    ]);
+    /**
+     * renderCell: Render a single maze character with ANSI styling.
+     * - Agent position takes precedence.
+     * - Start/Exit are highlighted.
+     * - Visited path cells are rendered as small bullets to give breadcrumb context.
+     *
+     * The function avoids allocations on the hot path: it formats and returns
+     * the colorized string immediately and does not mutate shared state.
+     */
+    // Use shared WALL_CHARS to avoid allocating repeatedly
+    const wallChars = MazeVisualization.WALL_CHARS;
 
     // Agent's current position takes precedence in visualization
     if (x === agentX && y === agentY) {
@@ -68,24 +94,21 @@ export class MazeVisualization {
       return `${colors.bgBlack}${colors.orangeNeon}A${colors.reset}`; // 'A' for Agent - TRON cyan
     }
 
-    // Render other cell types
-    switch (cell) {
-      case 'S':
-        return `${colors.bgBlack}${colors.orangeNeon}S${colors.reset}`; // Start position
-      case 'E':
-        return `${colors.bgBlack}${colors.orangeNeon}E${colors.reset}`; // Exit position - TRON orange
-      case '.':
-        // Show path breadcrumbs if this cell was visited
-        if (path && path.has(`${x},${y}`))
-          return `${colors.floorBg}${colors.orangeNeon}•${colors.reset}`;
-        return `${colors.floorBg}${colors.gridLineText}.${colors.reset}`; // Open path - dark floor with subtle grid
-      default:
-        // For box drawing characters and # - render as wall
-        if (wallChars.has(cell)) {
-          return `${colors.bgBlack}${colors.blueNeon}${cell}${colors.reset}`;
-        }
-        return cell; // Any other character
+    // Render other cell types with explicit conditionals (avoids string switch)
+    if (cell === 'S')
+      return `${colors.bgBlack}${colors.orangeNeon}S${colors.reset}`;
+    if (cell === 'E')
+      return `${colors.bgBlack}${colors.orangeNeon}E${colors.reset}`;
+    if (cell === '.') {
+      if (path && path.has(`${x},${y}`))
+        return `${colors.floorBg}${colors.orangeNeon}•${colors.reset}`;
+      return `${colors.floorBg}${colors.gridLineText}.${colors.reset}`;
     }
+    // For box drawing characters and # - render as wall
+    if (wallChars.has(cell)) {
+      return `${colors.bgBlack}${colors.blueNeon}${cell}${colors.reset}`;
+    }
+    return cell; // Any other character
   }
 
   /**
@@ -104,13 +127,22 @@ export class MazeVisualization {
    */
   static visualizeMaze(
     asciiMaze: string[],
-    [agentX, agentY]: [number, number],
-    path?: [number, number][]
+    [agentX, agentY]: readonly [number, number],
+    path?: readonly [number, number][]
   ): string {
+    /**
+     * visualizeMaze: Convert a maze to a colored ASCII representation.
+     *
+     * For quick membership checks, we convert the optional `path` array into
+     * a Set of "x,y" strings. This reduces repeated O(n) scans when rendering
+     * large mazes and keeps the rendering loop tight.
+     */
     // Convert path array to a set of "x,y" strings for quick lookup
-    const visitedPositions = path
-      ? new Set(path.map((pos) => `${pos[0]},${pos[1]}`))
-      : undefined;
+    let visitedPositions: Set<string> | undefined = undefined;
+    if (path) {
+      visitedPositions = new Set<string>();
+      for (const p of path) visitedPositions.add(MazeVisualization.#posKey(p));
+    }
 
     // Process each row and cell
     return asciiMaze
@@ -433,9 +465,12 @@ export class MazeVisualization {
        * This helps visualize partial progress and exploration.
        */
       // Calculate best progress toward the exit (as a percent)
+      const lastPos =
+        MazeVisualization.#last(result.path as readonly [number, number][]) ??
+        startPos;
       const bestProgress = MazeUtils.calculateProgress(
         MazeUtils.encodeMaze(maze),
-        result.path[result.path.length - 1],
+        lastPos,
         startPos,
         exitPos
       );

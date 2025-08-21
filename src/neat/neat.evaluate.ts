@@ -136,7 +136,7 @@ export async function evaluate(this: any): Promise<void> {
 
       // For each genome, compute novelty score based on k nearest neighbours
       for (let i = 0; i < this.population.length; i++) {
-        const sortedRow = distanceMatrix[i].slice().sort((a, b) => a - b);
+        const sortedRow = distanceMatrix[i].toSorted((a, b) => a - b);
         const neighbours = sortedRow.slice(1, kNeighbors + 1);
         const novelty = neighbours.length
           ? neighbours.reduce((a, b) => a + b, 0) / neighbours.length
@@ -281,7 +281,23 @@ export async function evaluate(this: any): Promise<void> {
       const minCoeff = autoDistanceCoeffOptions.minCoeff ?? 0.05;
       /** Maximum allowed coefficient value to bound tuning. */
       const maxCoeff = autoDistanceCoeffOptions.maxCoeff ?? 8;
-      if (!this._lastConnVar) this._lastConnVar = connVar;
+      if (this._lastConnVar === undefined || this._lastConnVar === null) {
+        // Initialize last-connection-variance and apply a small deterministic
+        // bootstrap nudge so the tuner has an observable effect even when
+        // the connection-variance is initially stable. This preserves the
+        // intent of auto-tuning while avoiding reliance on random seeds.
+        this._lastConnVar = connVar;
+        try {
+          this.options.excessCoeff = Math.min(
+            maxCoeff,
+            (this.options.excessCoeff! ?? 1) * (1 + adjustRate)
+          );
+          this.options.disjointCoeff = Math.min(
+            maxCoeff,
+            (this.options.disjointCoeff! ?? 1) * (1 + adjustRate)
+          );
+        } catch {}
+      }
       if (connVar < this._lastConnVar * 0.95) {
         this.options.excessCoeff = Math.min(
           maxCoeff,

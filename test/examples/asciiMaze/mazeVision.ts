@@ -22,6 +22,18 @@
  */
 export class MazeVision {
   /**
+   * Pre-defined direction vectors (dx, dy, index) for N/E/S/W.
+   * Stored as a private static readonly field to avoid reallocating this
+   * tiny array on every call to `buildInputs6`.
+   */
+  static #DIRECTION_VECTORS: readonly (readonly [number, number, number])[] = [
+    [0, -1, 0], // North
+    [1, 0, 1], // East
+    [0, 1, 2], // South
+    [-1, 0, 3], // West
+  ];
+
+  /**
    * Constructs the 6-dimensional input vector for the neural network based on the agent's current state.
    *
    * @param encodedMaze - The 2D numerical representation of the maze.
@@ -35,8 +47,8 @@ export class MazeVision {
    */
   static buildInputs6(
     encodedMaze: number[][],
-    agentPosition: [number, number],
-    exitPosition: [number, number],
+    agentPosition: readonly [number, number],
+    exitPosition: readonly [number, number],
     distanceToExitMap: number[][] | undefined,
     previousStepDistance: number | undefined,
     currentStepDistance: number,
@@ -88,26 +100,17 @@ export class MazeVision {
       opennessValue: number;
     }[] = [];
     /**
-     * Direction vectors and their indices: [dx, dy, dirIndex]
-     * 0: North, 1: East, 2: South, 3: West
+     * Current cell's distance to exit (from distance map, if available).
+     * Use optional chaining and Number.isFinite for concise, safe reads.
      */
-    const DIRECTION_VECTORS: [number, number, number][] = [
-      [0, -1, 0], // North
-      [1, 0, 1], // East
-      [0, 1, 2], // South
-      [-1, 0, 3], // West
-    ];
-
-    /**
-     * Current cell's distance to exit (from distance map, if available)
-     */
-    const currentCellDistanceToExit =
-      distanceToExitMap && Number.isFinite(distanceToExitMap[agentY]?.[agentX])
-        ? distanceToExitMap[agentY][agentX]
-        : undefined;
+    const currentCellDistanceToExit = Number.isFinite(
+      distanceToExitMap?.[agentY]?.[agentX]
+    )
+      ? distanceToExitMap![agentY][agentX]
+      : undefined;
 
     // Step 1: Gather information about each neighboring cell.
-    for (const [dx, dy, directionIndex] of DIRECTION_VECTORS) {
+    for (const [dx, dy, directionIndex] of MazeVision.#DIRECTION_VECTORS) {
       /**
        * Neighbor's coordinates
        */
@@ -130,8 +133,10 @@ export class MazeVision {
       /**
        * Neighbor's distance to exit (from distance map, if available)
        */
-      const neighborDistanceToExit = distanceToExitMap
-        ? distanceToExitMap[neighborY]?.[neighborX]
+      const neighborDistanceToExit = Number.isFinite(
+        distanceToExitMap?.[neighborY]?.[neighborX]
+      )
+        ? distanceToExitMap![neighborY][neighborX]
         : undefined;
 
       // If the neighbor's distance to the exit is known and it's an improvement...
@@ -218,14 +223,18 @@ export class MazeVision {
     /**
      * Openness values for each direction (N, E, S, W)
      */
-    let opennessNorth = neighborCells.find((n) => n.directionIndex === 0)!
-      .opennessValue;
-    let opennessEast = neighborCells.find((n) => n.directionIndex === 1)!
-      .opennessValue;
-    let opennessSouth = neighborCells.find((n) => n.directionIndex === 2)!
-      .opennessValue;
-    let opennessWest = neighborCells.find((n) => n.directionIndex === 3)!
-      .opennessValue;
+    // Build a small fixed-size openness array indexed by direction to avoid repeated .find() traversals.
+    const openness = neighborCells.reduce(
+      (acc, nc) => {
+        acc[nc.directionIndex] = nc.opennessValue;
+        return acc;
+      },
+      [0, 0, 0, 0] as number[]
+    );
+    let opennessNorth = openness[0];
+    let opennessEast = openness[1];
+    let opennessSouth = openness[2];
+    let opennessWest = openness[3];
 
     // Step 3: Handle the "dead end" scenario.
     // If all forward paths are blocked, provide a small signal for the reverse direction

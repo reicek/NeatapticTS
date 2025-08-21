@@ -13,12 +13,59 @@
   <p class="example-caption">If the demo fails to load, ensure the build step <code>npm run build:ascii-maze</code> has produced <code>docs/assets/ascii-maze.bundle.js</code>.</p>
 </div>
 
-<h3 id="controls-behaviour">Controls &amp; Behaviour</h3><ul>
-<li>The Play / Pause button toggles evolutionary steps &amp; rendering.</li>
-<li>Output area streams the live generation status; archived snapshots accumulate below.</li>
-<li>A watchdog restarts the demo if the bundle loads slowly.</li>
+<h3 id="behaviour-telemetry">Behaviour &amp; Telemetry</h3><ul>
+<li>Output area streams the live generation status; solved maze snapshots accumulate below.</li>
+<li>Lightweight telemetry (generation, best fitness, gens/sec) is exposed via:<ul>
+<li>CustomEvent <code>asciiMazeTelemetry</code> on <code>window</code>.</li>
+<li><code>window.asciiMazeLastTelemetry</code> object (latest snapshot).</li>
+<li>The <code>run.onTelemetry(fn)</code> callback API when using the ESM <code>start()</code> function.</li>
 </ul>
-<h3 id="embedding-notes">Embedding Notes</h3><p>The iframe isolation keeps demo CSS / JS from interfering with site chrome. For tighter integration (shared styles / dark mode variables), convert the example to an ESM entry that renders into a supplied container (see enhancement plan).</p>
+</li>
+<li>Host pages can subscribe and surface summary stats outside the iframe.</li>
+</ul>
+<h3 id="programmatic-api-esm">Programmatic API (ESM)</h3><p>Import the <code>start</code> function and optionally supply an <code>AbortSignal</code> for cancellation.</p>
+<pre><code class="language-ts">import { start } from &#39;./asciiMaze/browser-entry.js&#39;;
+
+const controller = new AbortController();
+const run = await start(&#39;#ascii-maze-output&#39;, { signal: controller.signal });
+
+const unsubscribe = run.onTelemetry(t =&gt; {
+  console.log(`Gen ${t.generation} best ${t.bestFitness} (${t.gensPerSecond.toFixed(2)} gen/s)`);
+});
+
+// Early stop (either call stop or abort the signal)
+// run.stop();
+controller.abort();
+
+await run.done;
+unsubscribe();
+</code></pre>
+<p>API surface:</p>
+<ul>
+<li><code>start(container: string|HTMLElement, opts?: { signal?: AbortSignal }) =&gt; Promise&lt;RunHandle&gt;</code></li>
+<li><code>RunHandle.stop(): void</code></li>
+<li><code>RunHandle.isRunning(): boolean</code></li>
+<li><code>RunHandle.done: Promise&lt;void&gt;</code></li>
+<li><code>RunHandle.onTelemetry(fn) =&gt; unsubscribe</code></li>
+<li><code>RunHandle.getTelemetry(): TelemetrySnapshot | undefined</code></li>
+</ul>
+<p>Telemetry snapshot (fields may extend):</p>
+<pre><code class="language-ts">interface TelemetrySnapshot {
+  generation: number;
+  bestFitness: number;
+  gensPerSecond: number;
+  exitReason?: string;          // &#39;cancelled&#39; | &#39;aborted&#39; | &#39;solved&#39; | etc.
+  details?: Record&lt;string, any&gt;; // rich metrics bundle
+}
+</code></pre>
+<p>Legacy global usage (compatibility):</p>
+<pre><code class="language-html">&lt;script src=&quot;/assets/ascii-maze.bundle.js&quot;&gt;&lt;/script&gt;
+&lt;script&gt;
+  window.asciiMaze.start(); // preferred
+  // window.asciiMazeStart(); // deprecated alias logs a warning
+&lt;/script&gt;
+</code></pre>
+<h3 id="embedding-notes">Embedding Notes</h3><p>The iframe isolation keeps demo CSS / JS from interfering with site chrome. Now that an ESM <code>start()</code> is exported, future inline embedding can attach directly to a provided container without iframe overhead (see enhancement plan).</p>
 <hr>
 <p>Additional examples will appear here as they are added.</p>
 <footer class="site-footer">Generated from source JSDoc • <a href="https://github.com/reicek/NeatapticTS">GitHub</a></footer></main><aside class="toc"></aside></div></body></html>

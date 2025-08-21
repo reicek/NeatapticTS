@@ -40,8 +40,8 @@ export class FitnessEvaluator {
   static evaluateNetworkFitness(
     network: INetwork,
     encodedMaze: number[][],
-    startPosition: [number, number],
-    exitPosition: [number, number],
+    startPosition: readonly [number, number],
+    exitPosition: readonly [number, number],
     distanceMap: number[][] | undefined,
     maxSteps: number
   ): number {
@@ -63,26 +63,29 @@ export class FitnessEvaluator {
     let explorationBonus = 0;
 
     // Step 2: Calculate the exploration bonus.
-    // Iterate over each unique cell visited by the agent.
+    // Build a frequency map of visited cells so we can cheaply test whether
+    // a cell was visited exactly once. The previous implementation used
+    // `result.path.filter(...).length === 1` inside the loop which is O(n^2)
+    // for long paths. This preserves behavior but reduces complexity to O(n).
+    const visitCounts = new Map<string, number>();
     for (const [x, y] of result.path) {
+      const key = `${x},${y}`;
+      visitCounts.set(key, (visitCounts.get(key) || 0) + 1);
+    }
+    for (const [x, y] of result.path) {
+      const key = `${x},${y}`;
       // Determine the distance of the current cell from the exit.
       const distToExit = distanceMap
         ? distanceMap[y]?.[x] ?? Infinity
         : MazeUtils.bfsDistance(encodedMaze, [x, y], exitPosition);
 
-      // Calculate a multiplier based on proximity to the exit.
       // Cells closer to the exit are more valuable to explore.
       const proximityMultiplier =
         1.5 - 0.5 * (distToExit / (encodedMaze.length + encodedMaze[0].length));
 
-      // Reward the agent only for the *first* time it visits a cell.
-      // This prevents the agent from getting rewarded for running in circles.
-      if (
-        result.path.filter(([px, py]: [number, number]) => px === x && py === y)
-          .length === 1
-      ) {
+      // Reward only if this cell was visited exactly once (first visit bonus).
+      if (visitCounts.get(key) === 1)
         explorationBonus += 200 * proximityMultiplier;
-      }
     }
 
     // Step 3: Combine the base fitness with the exploration bonus.

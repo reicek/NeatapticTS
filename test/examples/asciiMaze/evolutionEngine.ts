@@ -87,8 +87,8 @@ export class EvolutionEngine {
       dynamicPopExpandInterval = 25, // The number of generations between population size expansions.
       dynamicPopExpandFactor = 0.15, // The factor by which to expand the population size.
       dynamicPopPlateauSlack = 0.6, // A slack factor for plateau detection when dynamic population is enabled.
-  stopOnlyOnSolve = false, // If true, ignore stagnation/maxGenerations and run until solved.
-  autoPauseOnSolve = true, // Browser demo will override to false to keep running continuously
+      stopOnlyOnSolve = false, // If true, ignore stagnation/maxGenerations and run until solved.
+      autoPauseOnSolve = true, // Browser demo will override to false to keep running continuously
     } = evolutionAlgorithmConfig;
 
     // Determine the maximum population size, with a fallback if not explicitly configured.
@@ -275,6 +275,36 @@ export class EvolutionEngine {
       return new Promise<void>((resolve) => setTimeout(resolve, 0));
     };
 
+    /**
+     * Extract the last `n` items from an array without using `slice`.
+     * This is a tiny allocation-avoiding helper (uses a single output array) used
+     * where short tail windows are needed frequently in telemetry. Kept generic
+     * so it can be reused for numeric or nested arrays.
+     * @param arr - Source array
+     * @param n - Number of items to keep from the end (>=0)
+     * @returns A new array containing up to the last `n` items from `arr`.
+     */
+    const getTail = <T>(arr: T[] | undefined, n: number): T[] => {
+      if (!Array.isArray(arr) || n <= 0) return [];
+      const out: T[] = [];
+      const start = Math.max(0, arr.length - n);
+      for (let i = start; i < arr.length; i++) out.push(arr[i]!);
+      return out;
+    };
+
+    /**
+     * Telemetry/history helper: delegate to shared MazeUtils.pushHistory.
+     * This centralizes bounded-buffer semantics and preserves in-place
+     * behavior while avoiding duplicated logic.
+     */
+    const pushHistory = <T>(
+      buf: T[] | undefined,
+      v: T,
+      maxLen: number
+    ): T[] => {
+      return MazeUtils.pushHistory(buf as any, v as any, maxLen) as T[];
+    };
+
     if (fs && persistDir && !fs.existsSync(persistDir)) {
       try {
         fs.mkdirSync(persistDir, { recursive: true });
@@ -364,6 +394,12 @@ export class EvolutionEngine {
     // --- Pre-train generation 0 population on supervised compass dataset (Lamarckian warm start) ---
     if (lamarckianTrainingSet.length) {
       // Helper: recenters output node biases to avoid all outputs saturating high simultaneously.
+      /**
+       * Re-center output node biases for a network.
+       * This subtracts the mean bias and clamps values so outputs don't saturate together.
+       * Kept defensive and best-effort: silently ignores if the net shape is unexpected.
+       * @param net - network-like object with `nodes` and numeric `bias` fields on output nodes
+       */
       const centerOutputBiases = (net: any) => {
         try {
           const outs = net.nodes?.filter((n: any) => n.type === 'output');
@@ -447,6 +483,12 @@ export class EvolutionEngine {
     let tSimTotal = 0;
 
     // Safe writer: prefer Node stdout when available, else dashboard logger, else console.log
+    /**
+     * Safe, environment-agnostic writer used for lightweight telemetry/logging.
+     * Tries Node's stdout first, then `dashboardManager.logFunction`, then falls back to console.log.
+     * This function intentionally swallows errors to avoid interfering with the evolution loop.
+     * @param msg - String to write (may include trailing newline)
+     */
     const safeWrite = (msg: string) => {
       try {
         if (
@@ -479,13 +521,28 @@ export class EvolutionEngine {
     };
 
     while (true) {
+      // Cooperative cancellation: allow external stop() to break evolution cleanly.
+      try {
+        if (options.cancellation && options.cancellation.isCancelled()) {
+          if (bestResult) (bestResult as any).exitReason = 'cancelled';
+          break;
+        }
+        // AbortSignal (modern ES) support
+        if (options.signal?.aborted) {
+          if (bestResult) (bestResult as any).exitReason = 'aborted';
+          break;
+        }
+      } catch {
+        /* ignore */
+      }
       // === Evolutionary Loop ===
       // 1. Darwinian evolution: evolve the population (shuffle genomes)
       //    Evolve one generation and get the fittest network.
       //    This applies selection, crossover, and mutation to produce the next population.
-      const t0 = doProfile ? Date.now() : 0;
+      const t0 = doProfile ? globalThis.performance?.now?.() ?? Date.now() : 0;
       const fittest = await neat.evolve();
-      if (doProfile) tEvolveTotal += Date.now() - t0;
+      if (doProfile)
+        tEvolveTotal += (globalThis.performance?.now?.() ?? Date.now()) - t0;
       // Force identity activation on output nodes; we apply softmax externally (improves gradient richness & avoids early saturation)
       (neat.population || []).forEach((g: any) => {
         g.nodes?.forEach((n: any) => {
@@ -501,10 +558,17 @@ export class EvolutionEngine {
           if (g.species) set.add(g.species);
           return set;
         }, new Set()).size || 1;
-      (EvolutionEngine as any)._speciesHistory.push(speciesCount);
-      if ((EvolutionEngine as any)._speciesHistory.length > 50)
-        (EvolutionEngine as any)._speciesHistory.shift();
-      const recent = (EvolutionEngine as any)._speciesHistory.slice(-20);
+      (EvolutionEngine as any)._speciesHistory = pushHistory<number>(
+        (EvolutionEngine as any)._speciesHistory,
+        speciesCount,
+        50
+      );
+      // Read the trailing 20 entries from the global species history without
+      // allocating a temporary slice. This keeps short-lived allocations low
+      // during the hot evolution loop where this check runs frequently.
+      const _speciesHistory: number[] =
+        (EvolutionEngine as any)._speciesHistory || [];
+      const recent: number[] = getTail<number>(_speciesHistory, 20);
       const collapsed =
         recent.length === 20 && recent.every((c: number) => c === 1);
       if (collapsed) {
@@ -541,17 +605,15 @@ export class EvolutionEngine {
             dynamicPopMax - currentSize
           );
           if (targetAdd > 0) {
-            // Sort by score descending; use top quarter as parents
-            const sorted = neat.population
-              .slice()
-              .sort(
-                (a: any, b: any) =>
-                  (b.score || -Infinity) - (a.score || -Infinity)
-              );
-            const parentPool = sorted.slice(
-              0,
-              Math.max(2, Math.ceil(sorted.length * 0.25))
+            // Sort by score descending; use top quarter as parents (immutable)
+            const sorted = neat.population.toSorted(
+              (a: any, b: any) =>
+                (b.score || -Infinity) - (a.score || -Infinity)
             );
+            const parentPool: any[] = [];
+            const parentCount = Math.max(2, Math.ceil(sorted.length * 0.25));
+            for (let pi = 0; pi < parentCount && pi < sorted.length; pi++)
+              parentPool.push(sorted[pi]);
             for (let i = 0; i < targetAdd; i++) {
               const parent =
                 parentPool[Math.floor(Math.random() * parentPool.length)];
@@ -623,7 +685,9 @@ export class EvolutionEngine {
       //    Each network is trained with a small number of supervised learning steps on the idealized set.
       //    This directly modifies the weights that will be inherited by the next generation (Lamarckian).
       if (lamarckianIterations > 0 && lamarckianTrainingSet.length) {
-        const t1 = doProfile ? Date.now() : 0;
+        const t1 = doProfile
+          ? globalThis.performance?.now?.() ?? Date.now()
+          : 0;
         // Optional sampling to cut cost
         let trainingSetRef = lamarckianTrainingSet;
         if (
@@ -696,7 +760,8 @@ export class EvolutionEngine {
             ).toFixed(4)} samples=${gradSamples}\n`
           );
         }
-        if (doProfile) tLamarckTotal += Date.now() - t1;
+        if (doProfile)
+          tLamarckTotal += (globalThis.performance?.now?.() ?? Date.now()) - t1;
       }
 
       // 3. Baldwinian refinement: further train the fittest individual for evaluation only.
@@ -733,59 +798,67 @@ export class EvolutionEngine {
             simplifyRemaining = simplifyDuration;
             plateauCounter = 0;
           }
-        } catch {/* ignore */}
+        } catch {
+          /* ignore */
+        }
       }
       // Apply simplify pruning only outside browser
       if (simplifyMode) {
-        try { if (typeof window !== 'undefined') { /* skip in browser */ throw 0; } } catch { /* skipped */ }
+        try {
+          if (typeof window !== 'undefined') {
+            /* skip in browser */ throw 0;
+          }
+        } catch {
+          /* skipped */
+        }
         if (typeof window !== 'undefined') {
           // skip pruning in browser
         } else {
-        // Disable weakest fraction of enabled connections in each genome
-        neat.population.forEach((g: any) => {
-          const enabledConns = g.connections.filter(
-            (c: any) => c.enabled !== false
-          );
-          if (!enabledConns.length) return;
-          const pruneCount = Math.max(
-            1,
-            Math.floor(enabledConns.length * simplifyPruneFraction)
-          );
-          let candidates = enabledConns.slice();
-          if (simplifyStrategy === 'weakRecurrentPreferred') {
-            // Identify recurrent (self-loop or cycle gating) connections first; heuristic: from===to or gater present
-            const recurrent = candidates.filter(
-              (c: any) => c.from === c.to || c.gater
+          // Disable weakest fraction of enabled connections in each genome
+          neat.population.forEach((g: any) => {
+            const enabledConns = g.connections.filter(
+              (c: any) => c.enabled !== false
             );
-            const nonRecurrent = candidates.filter(
-              (c: any) => !(c.from === c.to || c.gater)
+            if (!enabledConns.length) return;
+            const pruneCount = Math.max(
+              1,
+              Math.floor(enabledConns.length * simplifyPruneFraction)
             );
-            // Sort each group by absolute weight ascending
-            recurrent.sort(
-              (a: any, b: any) => Math.abs(a.weight) - Math.abs(b.weight)
-            );
-            nonRecurrent.sort(
-              (a: any, b: any) => Math.abs(a.weight) - Math.abs(b.weight)
-            );
-            // Prefer pruning weak recurrent connections first, then remaining weak weights
-            candidates = [...recurrent, ...nonRecurrent];
-          } else {
-            candidates.sort(
-              (a: any, b: any) => Math.abs(a.weight) - Math.abs(b.weight)
-            );
-          }
-          candidates
-            .slice(0, pruneCount)
-            .forEach((c: any) => (c.enabled = false));
-        });
-        simplifyRemaining--;
-        if (simplifyRemaining <= 0) simplifyMode = false;
+            let candidates = [...enabledConns];
+            if (simplifyStrategy === 'weakRecurrentPreferred') {
+              // Identify recurrent (self-loop or cycle gating) connections first; heuristic: from===to or gater present
+              const recurrent = candidates.filter(
+                (c: any) => c.from === c.to || c.gater
+              );
+              const nonRecurrent = candidates.filter(
+                (c: any) => !(c.from === c.to || c.gater)
+              );
+              // Sort each group by absolute weight ascending (immutable)
+              const recurrentSorted = recurrent.toSorted(
+                (a: any, b: any) => Math.abs(a.weight) - Math.abs(b.weight)
+              );
+              const nonRecurrentSorted = nonRecurrent.toSorted(
+                (a: any, b: any) => Math.abs(a.weight) - Math.abs(b.weight)
+              );
+              // Prefer pruning weak recurrent connections first, then remaining weak weights
+              candidates = [...recurrentSorted, ...nonRecurrentSorted];
+            } else {
+              candidates = candidates.toSorted(
+                (a: any, b: any) => Math.abs(a.weight) - Math.abs(b.weight)
+              );
+            }
+            for (let i = 0; i < Math.min(pruneCount, candidates.length); i++) {
+              candidates[i].enabled = false;
+            }
+          });
+          simplifyRemaining--;
+          if (simplifyRemaining <= 0) simplifyMode = false;
         }
       }
 
       // Simulate the agent using the fittest network
       // This provides a detailed result (success, progress, steps, etc.)
-      const t2 = doProfile ? Date.now() : 0;
+      const t2 = doProfile ? globalThis.performance?.now?.() ?? Date.now() : 0;
       const generationResult = MazeMovement.simulateAgent(
         fittest,
         encodedMaze,
@@ -794,11 +867,12 @@ export class EvolutionEngine {
         distanceMap,
         agentSimConfig.maxSteps
       );
-      // Capture output history from simulation for telemetry (mazeMovement stores on network)
+      // Capture output history from simulation for telemetry (mazeMovement stores on network).
+      // Ensure the property exists and is an array; previous code used a no-op logical OR
+      // which made intent unclear. This is behavior-preserving (initializes to [] if missing)
       try {
-        (fittest as any)._lastStepOutputs =
-          (fittest as any)._lastStepOutputs ||
-          (fittest as any)._lastStepOutputs;
+        if (!(fittest as any)._lastStepOutputs)
+          (fittest as any)._lastStepOutputs = [];
       } catch {}
       // Attach auxiliary metrics to fittest genome for potential external analysis
       (fittest as any)._saturationFraction =
@@ -833,11 +907,17 @@ export class EvolutionEngine {
                 ) / weights.length;
               if (mean < 0.5 && varc < 0.01) {
                 // Likely low-signal uniform fan-out: disable weakest half to force differentiation
-                outs.sort(
+                const outsSorted = outs.toSorted(
                   (a: any, b: any) => Math.abs(a.weight) - Math.abs(b.weight)
                 );
                 const disableCount = Math.max(1, Math.floor(outs.length / 2));
-                for (let i = 0; i < disableCount; i++) outs[i].enabled = false;
+                for (
+                  let i = 0;
+                  i < Math.min(disableCount, outsSorted.length);
+                  i++
+                ) {
+                  outsSorted[i].enabled = false;
+                }
               }
             }
           });
@@ -848,26 +928,34 @@ export class EvolutionEngine {
       // Instrumentation: log approximate action entropy (based on path move variety)
       if (completedGenerations % logEvery === 0) {
         try {
-          const movesRaw = generationResult.path.map(
-            (p: [number, number], idx: number, arr: any[]) => {
-              if (idx === 0) return null;
-              const prev = arr[idx - 1];
-              const dx = p[0] - prev[0];
-              const dy = p[1] - prev[1];
-              if (dx === 0 && dy === -1) return 0;
-              if (dx === 1 && dy === 0) return 1;
-              if (dx === 0 && dy === 1) return 2;
-              if (dx === -1 && dy === 0) return 3;
-              return null;
-            }
-          );
-          const moves: number[] = [];
-          for (const mv of movesRaw) {
-            if (mv !== null) moves.push(mv as number);
-          }
+          // Compute directional move counts in a single pass. Previously the
+          // code built an intermediate `movesRaw` array and filtered it, which
+          // creates a short-lived allocation and is slightly less efficient.
+          // This loop produces identical `counts` and `totalMoves` without
+          // allocating temporaries.
           const counts = [0, 0, 0, 0];
-          moves.forEach((m: number) => counts[m]++);
-          const totalMoves = moves.length || 1;
+          let totalMoves = 0;
+          const pathArr = generationResult.path;
+          for (let idx = 1; idx < pathArr.length; idx++) {
+            const p = pathArr[idx];
+            const prev = pathArr[idx - 1];
+            const dx = p[0] - prev[0];
+            const dy = p[1] - prev[1];
+            if (dx === 0 && dy === -1) {
+              counts[0]++;
+              totalMoves++;
+            } else if (dx === 1 && dy === 0) {
+              counts[1]++;
+              totalMoves++;
+            } else if (dx === 0 && dy === 1) {
+              counts[2]++;
+              totalMoves++;
+            } else if (dx === -1 && dy === 0) {
+              counts[3]++;
+              totalMoves++;
+            }
+          }
+          totalMoves = totalMoves || 1; // avoid divide-by-zero later
           const probs = counts.map((c) => c / totalMoves);
           let entropy = 0;
           probs.forEach((p) => {
@@ -908,7 +996,8 @@ export class EvolutionEngine {
             const lastHist: number[][] =
               (fittest as any)._lastStepOutputs || [];
             if (lastHist.length) {
-              const recent = lastHist.slice(-40);
+              // Build a small tail window from lastHist using the shared helper.
+              const recent: number[][] = getTail<number[]>(lastHist, 40);
               // Aggregate per-output mean & std
               const k = 4;
               const means = new Array(k).fill(0);
@@ -982,9 +1071,10 @@ export class EvolutionEngine {
                 try {
                   const eliteCount = neat.options.elitism || 0;
                   const pop = neat.population || [];
-                  const reinitTargets = pop
-                    .slice(eliteCount)
-                    .filter(() => Math.random() < 0.3);
+                  const reinitTargets: any[] = [];
+                  for (let i = eliteCount; i < pop.length; i++) {
+                    if (Math.random() < 0.3) reinitTargets.push(pop[i]);
+                  }
                   let connReset = 0,
                     biasReset = 0;
                   reinitTargets.forEach((g: any) => {
@@ -1048,7 +1138,9 @@ export class EvolutionEngine {
             // Weight variance sample (subset for speed)
             let wMean = 0,
               wCount = 0;
-            const sample = pop.slice(0, Math.min(pop.length, 40));
+            const sample: any[] = [];
+            for (let i = 0; i < Math.min(pop.length, 40); i++)
+              sample.push(pop[i]);
             sample.forEach((g) => {
               g.connections.forEach((c: any) => {
                 if (c.enabled !== false) {
@@ -1073,7 +1165,8 @@ export class EvolutionEngine {
           } catch {}
         } catch {}
       }
-      if (doProfile) tSimTotal += Date.now() - t2;
+      if (doProfile)
+        tSimTotal += (globalThis.performance?.now?.() ?? Date.now()) - t2;
 
       // If new best, update tracking and dashboard
       if (fitness > bestFitness) {
@@ -1124,25 +1217,34 @@ export class EvolutionEngine {
             simplifyMode,
             plateauCounter,
             timestamp: Date.now(),
-            telemetryTail: neat.getTelemetry
-              ? neat.getTelemetry().slice(-5)
-              : undefined,
+            // Capture a small telemetry tail without allocating via slice().
+            telemetryTail: ((): any => {
+              if (!neat.getTelemetry) return undefined;
+              try {
+                const t = neat.getTelemetry();
+                if (Array.isArray(t)) {
+                  return getTail<any>(t, 5);
+                }
+                return t;
+              } catch {
+                return undefined;
+              }
+            })(),
           };
-          const popSorted = neat.population
-            .slice()
-            .sort(
-              (a: any, b: any) =>
-                (b.score || -Infinity) - (a.score || -Infinity)
-            );
-          const top = popSorted
-            .slice(0, persistTopK)
-            .map((g: any, idx: number) => ({
-              idx,
+          const popSorted = neat.population.toSorted(
+            (a: any, b: any) => (b.score || -Infinity) - (a.score || -Infinity)
+          );
+          const top: any[] = [];
+          for (let i = 0; i < Math.min(persistTopK, popSorted.length); i++) {
+            const g = popSorted[i];
+            top.push({
+              idx: i,
               score: g.score,
               nodes: g.nodes.length,
               connections: g.connections.length,
               json: g.toJSON ? g.toJSON() : undefined,
-            }));
+            });
+          }
           snap.top = top;
           const file = path.join(
             persistDir,
@@ -1174,16 +1276,30 @@ export class EvolutionEngine {
             if (typeof window !== 'undefined') {
               (window as any).asciiMazePaused = true;
               // Dispatch a custom event so UI can react (status message / button update)
-              window.dispatchEvent(new CustomEvent('asciiMazeSolved', { detail: { maze, generations: completedGenerations, progress: bestResult?.progress } }));
+              window.dispatchEvent(
+                new CustomEvent('asciiMazeSolved', {
+                  detail: {
+                    maze,
+                    generations: completedGenerations,
+                    progress: bestResult?.progress,
+                  },
+                })
+              );
             }
-          } catch { /* ignore */ }
+          } catch {
+            /* ignore */
+          }
         }
         if (bestResult) (bestResult as any).exitReason = 'solved';
         break;
       }
 
       // Stop if stagnation limit reached (unless we are configured to only stop on solve)
-  if (!stopOnlyOnSolve && stagnantGenerations >= maxStagnantGenerations && isFinite(maxStagnantGenerations)) {
+      if (
+        !stopOnlyOnSolve &&
+        stagnantGenerations >= maxStagnantGenerations &&
+        isFinite(maxStagnantGenerations)
+      ) {
         if (bestNetwork && bestResult) {
           dashboardManager.update(
             maze,
@@ -1201,7 +1317,11 @@ export class EvolutionEngine {
       }
 
       // Safety cap on generations (unless only stopping on solve)
-  if (!stopOnlyOnSolve && completedGenerations >= maxGenerations && isFinite(maxGenerations)) {
+      if (
+        !stopOnlyOnSolve &&
+        completedGenerations >= maxGenerations &&
+        isFinite(maxGenerations)
+      ) {
         if (bestResult) (bestResult as any).exitReason = 'maxGenerations';
         break;
       }

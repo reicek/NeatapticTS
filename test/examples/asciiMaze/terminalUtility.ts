@@ -21,9 +21,24 @@ export class TerminalUtility {
    * @returns Function that clears the terminal when called.
    */
   static createTerminalClearer(): () => void {
+    // Return a clearer that safely writes to stdout when available. This
+    // allows the same code to run in environments where `process.stdout`
+    // may be undefined (for example, special test harnesses).
     return () => {
-      // Clear the terminal using ANSI escape code (\x1Bc resets screen)
-      process.stdout.write('\x1Bc');
+      try {
+        if (
+          typeof process !== 'undefined' &&
+          process &&
+          process.stdout &&
+          typeof process.stdout.write === 'function'
+        ) {
+          process.stdout.write('\x1Bc');
+          return;
+        }
+      } catch {
+        /* ignore */
+      }
+      // Fallback: no-op in non-Node environments
     };
   }
 

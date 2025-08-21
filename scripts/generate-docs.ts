@@ -390,7 +390,7 @@ function buildDirectoryReadme(relDir: string, fileMap: Map<string, RenderedSymbo
   for (const file of filesSorted) {
     const relFile = path.relative(SRC_DIR, file).replace(/\\/g, '/');
     lines.push(`## ${relFile}`, '');
-    const symbols = fileMap.get(file)!.slice().sort((a, b) => (a.parent || a.name).localeCompare(b.parent || b.name) || a.name.localeCompare(b.name));
+  const symbols = fileMap.get(file)!.toSorted((a, b) => (a.parent || a.name).localeCompare(b.parent || b.name) || a.name.localeCompare(b.name));
 
     // extract file summary if present
     const fileSummaryIdx = symbols.findIndex(s => s.name === '__file_summary__' && s.kind === 'File');

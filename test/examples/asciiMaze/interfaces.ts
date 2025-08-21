@@ -81,8 +81,8 @@ export interface IEvolutionAlgorithmConfig {
  */
 export interface IFitnessEvaluationContext {
   encodedMaze: number[][];
-  startPosition: [number, number];
-  exitPosition: [number, number];
+  startPosition: readonly [number, number];
+  exitPosition: readonly [number, number];
   agentSimConfig: IAgentSimulationConfig;
   distanceMap?: number[][]; // optional cached distance map for performance
 }
@@ -116,6 +116,10 @@ export interface IRunMazeEvolutionOptions {
   evolutionAlgorithmConfig: IEvolutionAlgorithmConfig;
   reportingConfig: IReportingConfig;
   fitnessEvaluator?: FitnessEvaluatorFn;
+  /** Optional cancellation signal (cooperative). When `isCancelled()` returns true the evolution loop will exit ASAP. */
+  cancellation?: { isCancelled: () => boolean };
+  /** Optional AbortSignal (ES2023 modernization). If provided, evolution should periodically check `signal.aborted` and terminate gracefully (returning partial best result). */
+  signal?: AbortSignal;
 }
 
 /**
