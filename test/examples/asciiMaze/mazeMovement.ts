@@ -184,6 +184,16 @@ export class MazeMovement {
   static #ACTION_DIM = 4;
   /** Natural log of ACTION_DIM; used to normalize entropy calculations */
   static #LOG_ACTIONS = Math.log(MazeMovement.#ACTION_DIM);
+  /**
+   * Pooled scratch buffers used by `selectDirection` to avoid per-call
+   * allocations on the softmax/entropy hot path.
+   *
+   * @remarks
+   * - These are class-private and reused across calls; `selectDirection` is
+   *   therefore not reentrant and should not be called concurrently.
+   */
+  static #SCRATCH_CENTERED = new Float64Array(4);
+  static #SCRATCH_EXPS = new Float64Array(4);
   /** Minimum path length required to compute action entropy */
   static #MIN_PATH_FOR_ENTROPY = 2;
   /** Minimum action total to avoid divide-by-zero fallbacks */
@@ -406,85 +416,66 @@ export class MazeMovement {
         secondProb: 0,
       };
     }
-    // Center logits to prevent mean bias drift
-    /**
-     * Mean of the output logits
-     */
+    // Center logits to prevent mean bias drift. Use pooled buffers to avoid
+    // allocating intermediate arrays on every call.
     const meanLogit =
       (outputs[0] + outputs[1] + outputs[2] + outputs[3]) /
       MazeMovement.#ACTION_DIM;
-    /**
-     * Variance sum of the outputs (for adaptive temperature)
-     * @type {number}
-     */
+    // variance
     let varianceSum = 0;
-    for (const outputVal of outputs)
-      varianceSum += (outputVal - meanLogit) * (outputVal - meanLogit);
+    for (let k = 0; k < MazeMovement.#ACTION_DIM; k++) {
+      const delta = outputs[k] - meanLogit;
+      varianceSum += delta * delta;
+      MazeMovement.#SCRATCH_CENTERED[k] = delta;
+    }
     varianceSum /= MazeMovement.#ACTION_DIM;
-    /**
-     * Standard deviation of the outputs
-     * @type {number}
-     */
     let stdDev = Math.sqrt(varianceSum);
     if (!Number.isFinite(stdDev) || stdDev < MazeMovement.#STD_MIN)
       stdDev = MazeMovement.#STD_MIN;
-    /**
-     * Centered logits (mean subtracted)
-     */
-    const centered = outputs.map((outputVal) => outputVal - meanLogit);
-    /**
-     * Ratio for adaptive temperature (higher if variance is tiny)
-     */
+
     const collapseRatio =
       stdDev < MazeMovement.#COLLAPSE_STD_THRESHOLD
         ? MazeMovement.#COLLAPSE_RATIO_FULL
         : stdDev < MazeMovement.#COLLAPSE_STD_MED
         ? MazeMovement.#COLLAPSE_RATIO_HALF
         : 0;
-    /**
-     * Softmax temperature (adaptive)
-     */
     const temperature =
       MazeMovement.#TEMPERATURE_BASE +
       MazeMovement.#TEMPERATURE_SCALE * collapseRatio;
-    /**
-     * Maximum centered logit value
-     */
-    const maxCentered = Math.max(...centered);
-    /**
-     * Exponentiated logits for softmax
-     */
-    const exps = centered.map((v) => Math.exp((v - maxCentered) / temperature));
-    /**
-     * Sum of exponentiated logits (softmax denominator)
-     */
-    const expSum = exps.reduce((acc, val) => acc + val, 0) || 1;
-    /**
-     * Softmax probability vector
-     */
-    const softmax = exps.map((expVal) => expVal / expSum);
-    // Find direction with highest probability
+
+    // Find max of centered logits for numerical stability
+    let maxCentered = -Infinity;
+    for (let k = 0; k < MazeMovement.#ACTION_DIM; k++) {
+      const v = MazeMovement.#SCRATCH_CENTERED[k];
+      if (v > maxCentered) maxCentered = v;
+    }
+
+    // Exponentiate into pooled buffer and sum
+    let expSum = 0;
+    for (let k = 0; k < MazeMovement.#ACTION_DIM; k++) {
+      const expVal = Math.exp(
+        (MazeMovement.#SCRATCH_CENTERED[k] - maxCentered) / temperature
+      );
+      MazeMovement.#SCRATCH_EXPS[k] = expVal;
+      expSum += expVal;
+    }
+    if (!expSum) expSum = 1;
+    // Find direction with highest probability and compute softmax in-place
     let direction = 0;
     let maxProb = -Infinity;
     let secondProb = 0;
-    softmax.forEach((prob, index) => {
-      // Prefer switch/case for multi-branch comparisons. Use switch(true)
-      // when branches are predicates evaluated in order.
-      switch (true) {
-        case prob > maxProb: {
-          secondProb = maxProb;
-          maxProb = prob;
-          direction = index;
-          break;
-        }
-        case prob > secondProb: {
-          secondProb = prob;
-          break;
-        }
-        default:
-          break;
+    const softmax: number[] = [0, 0, 0, 0];
+    for (let k = 0; k < MazeMovement.#ACTION_DIM; k++) {
+      const prob = MazeMovement.#SCRATCH_EXPS[k] / expSum;
+      softmax[k] = prob;
+      if (prob > maxProb) {
+        secondProb = maxProb;
+        maxProb = prob;
+        direction = k;
+      } else if (prob > secondProb) {
+        secondProb = prob;
       }
-    });
+    }
     // Compute entropy (uncertainty measure)
     let entropy = 0;
     softmax.forEach((prob) => {
@@ -625,11 +616,6 @@ export class MazeMovement {
      * @type {number}
      */
     let saturatedSteps = 0;
-    /**
-     * Window size for local area stagnation detection (use class private constant)
-     * @type {number}
-     */
-    // ... use MazeMovement.#LOCAL_WINDOW where needed
     /**
      * Recent positions for local area stagnation
      * @type {Array<[number, number]>}
@@ -788,7 +774,10 @@ export class MazeMovement {
         const logitsMean =
           outputs.reduce((s, v) => s + v, 0) / MazeMovement.#ACTION_DIM;
         let logVar = 0;
-        for (const o of outputs) logVar += Math.pow(o - logitsMean, 2);
+        for (const o of outputs) {
+          const delta = o - logitsMean;
+          logVar += delta * delta;
+        }
         logVar /= MazeMovement.#ACTION_DIM;
         const logStd = Math.sqrt(logVar);
         const flatCollapsed = logStd < MazeMovement.#LOGSTD_FLAT_THRESHOLD;
@@ -844,32 +833,24 @@ export class MazeMovement {
 
       // --- Step 10: Proximity exploitation (greedy move if near exit) ---
       if (distHere <= MazeMovement.#PROXIMITY_GREEDY_DISTANCE) {
-        /**
-         * Best direction found (minimizing distance to exit)
-         */
+        // Best direction found (minimizing distance to exit)
         let bestDirection = direction;
-        /**
-         * Best distance found
-         */
+        // Best distance found
         let bestDistance = Infinity;
+        // Iterate cardinal directions without allocating test position arrays
         for (
           let dirIndex = 0;
           dirIndex < MazeMovement.#ACTION_DIM;
           dirIndex++
         ) {
-          const testPos = MazeMovement.moveAgent(
-            encodedMaze,
-            position,
-            dirIndex
-          );
-          if (testPos[0] === position[0] && testPos[1] === position[1])
-            continue; // invalid
-          /**
-           * Distance value for candidate direction
-           */
+          const [ddx, ddy] = MazeMovement.#DIRECTION_DELTAS[dirIndex];
+          const tx = position[0] + ddx;
+          const ty = position[1] + ddy;
+          if (!MazeMovement.isValidMove(encodedMaze, [tx, ty])) continue; // invalid
+          // Distance value for candidate direction
           const candidateDistance = MazeMovement.#distanceAt(
             encodedMaze,
-            testPos,
+            [tx, ty],
             distanceMap
           );
           if (candidateDistance < bestDistance) {
@@ -906,35 +887,16 @@ export class MazeMovement {
         epsilon = Math.min(epsilon, MazeMovement.#EPSILON_MIN_NEAR_GOAL);
       if (Math.random() < epsilon) {
         // pick a random valid direction differing from previous when possible
-        /**
-         * Candidate directions for random exploration
-         */
-        const candidateDirections = [0, 1, 2, 3].filter(
-          (dir) => dir !== prevAction
-        );
-        while (candidateDirections.length) {
-          /**
-           * Random index into candidateDirections
-           */
-          const randomIndex = Math.floor(
-            Math.random() * candidateDirections.length
+        // Instead of allocating filtered arrays, try a few random trials.
+        for (let trial = 0; trial < MazeMovement.#ACTION_DIM; trial++) {
+          const candidateDirection = Math.floor(
+            Math.random() * MazeMovement.#ACTION_DIM
           );
-          /**
-           * Candidate direction value
-           */
-          const candidateDirection = candidateDirections.splice(
-            randomIndex,
-            1
-          )[0];
-          /**
-           * Test position for candidate direction
-           */
-          const testPos = MazeMovement.moveAgent(
-            encodedMaze,
-            position,
-            candidateDirection
-          );
-          if (testPos[0] !== position[0] || testPos[1] !== position[1]) {
+          if (candidateDirection === prevAction) continue;
+          const [ddx, ddy] = MazeMovement.#DIRECTION_DELTAS[candidateDirection];
+          const tx = position[0] + ddx;
+          const ty = position[1] + ddy;
+          if (MazeMovement.isValidMove(encodedMaze, [tx, ty])) {
             direction = candidateDirection;
             break;
           }
@@ -953,21 +915,13 @@ export class MazeMovement {
       ) {
         // pick a random cardinal direction until a valid move found (epsilon-greedy style)
         for (let attempt = 0; attempt < MazeMovement.#ACTION_DIM; attempt++) {
-          /**
-           * Candidate direction for forced exploration
-           */
           const candidateDirection = Math.floor(
             Math.random() * MazeMovement.#ACTION_DIM
           );
-          /**
-           * Test position for candidate direction
-           */
-          const testPos = MazeMovement.moveAgent(
-            encodedMaze,
-            position,
-            candidateDirection
-          );
-          if (testPos[0] !== position[0] || testPos[1] !== position[1]) {
+          const [ddx, ddy] = MazeMovement.#DIRECTION_DELTAS[candidateDirection];
+          const tx = position[0] + ddx;
+          const ty = position[1] + ddy;
+          if (MazeMovement.isValidMove(encodedMaze, [tx, ty])) {
             direction = candidateDirection;
             break;
           }
@@ -976,10 +930,9 @@ export class MazeMovement {
       }
 
       // Save previous state for reward calculation
-      /**
-       * Previous position before move
-       */
-      const prevPosition = [position[0], position[1]] as [number, number];
+      // Previous position before move (capture values to compare after in-place move)
+      const prevPositionX = position[0];
+      const prevPositionY = position[1];
       /**
        * Previous distance to exit before move
        */
@@ -989,13 +942,24 @@ export class MazeMovement {
         distanceMap
       );
 
-      // --- ACTION: Move based on network decision
-      position = MazeMovement.moveAgent(encodedMaze, position, direction);
-      /**
-       * Whether the agent actually moved this step
-       */
-      const moved =
-        prevPosition[0] !== position[0] || prevPosition[1] !== position[1];
+      // --- ACTION: Move based on network decision (do in-place to avoid allocation)
+      let moved = false;
+      if (direction === MazeMovement.#NO_MOVE) {
+        moved = false;
+      } else if (direction >= 0 && direction < MazeMovement.#ACTION_DIM) {
+        const [dx, dy] = MazeMovement.#DIRECTION_DELTAS[direction];
+        const newX = position[0] + dx;
+        const newY = position[1] + dy;
+        if (MazeMovement.isValidMove(encodedMaze, [newX, newY])) {
+          position[0] = newX;
+          position[1] = newY;
+          moved = true;
+        } else {
+          moved = false;
+        }
+      } else {
+        moved = false;
+      }
 
       // Record movement and update rewards/penalties
       if (moved) {

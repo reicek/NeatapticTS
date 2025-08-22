@@ -13167,9 +13167,10 @@
 
   // test/examples/asciiMaze/mazeUtils.ts
   var MazeUtils = class _MazeUtils {
-    /** Shared set of wall characters to avoid re-allocating on every call */
-    // Private static set of wall characters (box-drawing + hash).
-    // Kept private (#) because it's an implementation detail; use `encodeMaze`.
+    /**
+     * Shared set of wall characters (box-drawing + hash). Kept private to avoid
+     * reallocation in hot code paths. Use `encodeMaze` to convert ASCII mazes.
+     */
     static #WALL_CHARS = /* @__PURE__ */ new Set([
       "#",
       "\u2550",
@@ -13186,32 +13187,55 @@
     ]);
     // Movement vectors used by BFS (N, E, S, W). Private to avoid accidental external use.
     // Marked readonly to signal these vectors are constant and must not be mutated.
+    /** Movement vectors used by BFS (North, East, South, West). */
     static #DIRECTIONS = [
       [0, -1],
       [1, 0],
       [0, 1],
       [-1, 0]
     ];
-    /** Convert [x,y] into canonical key string 'x,y' */
-    static posKey([x, y]) {
+    /**
+     * Convert a coordinate pair into the canonical key string `"x,y"`.
+     *
+     * @param coord - Coordinate pair `[x, y]` to stringify.
+     * @returns Canonical string key suitable for Map/Set storage.
+     * @example MazeUtils.posKey([2,3]) // -> '2,3'
+     */
+    static posKey(coord) {
+      const [x, y] = coord;
       return `${x},${y}`;
     }
     /**
      * Return up to the last `n` items from `arr` as a new array.
-     * Public helper for extracting a small tail window without allocating a full slice
-     * in hot code paths.
+     * This implementation is allocation-friendly for hot paths: it preallocates
+     * the output array and copies only the required suffix.
+     *
+     * @param arr - Source array (may be undefined).
+     * @param n - Maximum number of trailing elements to return.
+     * @returns New array containing up to the last `n` items of `arr`.
+     * @example
+     * MazeUtils.tail([1,2,3,4], 2) // -> [3,4]
      */
     static tail(arr, n) {
       if (!Array.isArray(arr) || n <= 0) return [];
-      const out = [];
-      const start2 = Math.max(0, arr.length - n);
-      for (let i = start2; i < arr.length; i++) out.push(arr[i]);
-      return out;
+      const length = arr.length;
+      const startIndex = Math.max(0, length - n);
+      const resultLength = length - startIndex;
+      const result = new Array(resultLength);
+      let writeIndex = 0;
+      for (let readIndex = startIndex; readIndex < length; readIndex++) {
+        result[writeIndex++] = arr[readIndex];
+      }
+      return result;
     }
     /**
-     * Return the last element of an array or undefined when empty. Public helper.
-     * @param arr - array to read from
-     * @returns last element or undefined
+     * Return the last element of an array or undefined when empty.
+     *
+     * This helper prefers `Array.prototype.at` when available (ES2022+), but
+     * falls back gracefully for older runtimes.
+     *
+     * @param arr - Array to read from.
+     * @returns The last item or undefined.
      */
     static safeLast(arr) {
       if (!Array.isArray(arr) || arr.length === 0) return void 0;
@@ -13219,25 +13243,30 @@
     }
     /**
      * Push a value onto a bounded history buffer and trim the head if needed.
-     * Returns the (possibly new) array. Made public so many modules can reuse it.
-     * @param buf - existing buffer (may be undefined)
-     * @param v - value to push
-     * @param maxLen - maximum length to retain
+     * This helper preserves in-place semantics (the original array reference is
+     * returned and mutated) which callers may rely on for performance.
+     *
+     * @param buffer - Existing buffer (may be undefined). If undefined a new
+     *  single-element array containing `value` is returned.
+     * @param value - Value to push onto the buffer.
+     * @param maxLen - Maximum length to retain. When the buffer exceeds this
+     *  length the oldest entries are removed from the head.
+     * @returns The updated buffer containing the new value and trimmed to maxLen.
+     * @example
+     * const buf = [1,2]; MazeUtils.pushHistory(buf, 3, 3) // -> [1,2,3]
      */
-    static pushHistory(buf, v, maxLen) {
-      if (!Array.isArray(buf)) {
-        return [v];
-      }
-      buf.push(v);
-      if (buf.length > maxLen) {
-        const excess = buf.length - maxLen;
-        if (excess === 1) {
-          buf.shift();
+    static pushHistory(buffer, value, maxLen) {
+      if (!Array.isArray(buffer)) return [value];
+      buffer.push(value);
+      const excessCount = buffer.length - maxLen;
+      if (excessCount > 0) {
+        if (excessCount === 1) {
+          buffer.shift();
         } else {
-          buf.splice(0, excess);
+          buffer.splice(0, excessCount);
         }
       }
-      return buf;
+      return buffer;
     }
     /**
      * Converts an ASCII/Unicode maze (array of strings) into a 2D numeric array for processing by the agent.
@@ -13255,21 +13284,24 @@
      */
     static encodeMaze(asciiMaze) {
       const wallChars = _MazeUtils.#WALL_CHARS;
-      return asciiMaze.map(
-        (row) => [...row].map((cell) => {
-          if (wallChars.has(cell)) return -1;
-          switch (cell) {
-            case ".":
-              return 0;
-            case "E":
-              return 1;
-            case "S":
-              return 2;
-            default:
-              return 0;
+      const codeMap = /* @__PURE__ */ new Map([
+        [".", 0],
+        ["E", 1],
+        ["S", 2]
+      ]);
+      return asciiMaze.map((rowString, rowIndex) => {
+        const rowLength = rowString.length;
+        const encodedRow = new Array(rowLength);
+        for (let colIndex = 0; colIndex < rowLength; colIndex++) {
+          const cellChar = rowString[colIndex];
+          if (wallChars.has(cellChar)) {
+            encodedRow[colIndex] = -1;
+            continue;
           }
-        })
-      );
+          encodedRow[colIndex] = codeMap.get(cellChar) ?? 0;
+        }
+        return encodedRow;
+      });
     }
     /**
      * Finds the (x, y) position of a given character in the ASCII maze.
@@ -13279,9 +13311,14 @@
      * @throws Error if the character is not found in the maze.
      */
     static findPosition(asciiMaze, char) {
-      for (let y = 0; y < asciiMaze.length; y++) {
-        const x = asciiMaze[y].indexOf(char);
-        if (x !== -1) return [x, y];
+      const rowCount = asciiMaze.length;
+      for (let rowIndex = 0; rowIndex < rowCount; rowIndex++) {
+        const rowString = asciiMaze[rowIndex];
+        if (!rowString) continue;
+        const columnIndex = rowString.indexOf(char);
+        if (columnIndex !== -1) {
+          return [columnIndex, rowIndex];
+        }
       }
       throw new Error(`Character ${char} not found in maze`);
     }
@@ -13294,22 +13331,63 @@
      * @returns Shortest path length (number of steps), or Infinity if unreachable.
      */
     static bfsDistance(encodedMaze, start2, goal) {
-      const [gx, gy] = goal;
-      if (encodedMaze[gy][gx] === -1) return Infinity;
-      const queue = [[start2, 0]];
-      const visited = /* @__PURE__ */ new Set();
-      visited.add(_MazeUtils.posKey(start2));
-      const directions = _MazeUtils.#DIRECTIONS;
-      let qIndex = 0;
-      while (qIndex < queue.length) {
-        const [[x, y], dist] = queue[qIndex++];
-        if (x === gx && y === gy) return dist;
-        for (const [dx, dy] of directions) {
-          const nx = x + dx;
-          const ny = y + dy;
-          if (nx >= 0 && ny >= 0 && ny < encodedMaze.length && nx < encodedMaze[0].length && encodedMaze[ny][nx] !== -1 && !visited.has(_MazeUtils.posKey([nx, ny]))) {
-            visited.add(_MazeUtils.posKey([nx, ny]));
-            queue.push([[nx, ny], dist + 1]);
+      const [startX, startY] = start2;
+      const [goalX, goalY] = goal;
+      const height = encodedMaze.length;
+      const width = encodedMaze[0].length;
+      if (startY < 0 || startY >= height || startX < 0 || startX >= width || goalY < 0 || goalY >= height || goalX < 0 || goalX >= width)
+        return Infinity;
+      if (encodedMaze[startY][startX] === -1 || encodedMaze[goalY][goalX] === -1)
+        return Infinity;
+      if (startX === goalX && startY === goalY) return 0;
+      const cellCount = height * width;
+      const flatMaze = new Int8Array(cellCount);
+      for (let y = 0, dest = 0; y < height; y++) {
+        const row = encodedMaze[y];
+        for (let x = 0; x < width; x++, dest++) {
+          flatMaze[dest] = row[x] === -1 ? -1 : 0;
+        }
+      }
+      const distances = new Int32Array(cellCount);
+      for (let i = 0; i < cellCount; i++) distances[i] = -1;
+      const startIndex = startY * width + startX;
+      const goalIndex = goalY * width + goalX;
+      distances[startIndex] = 0;
+      const queue = new Int32Array(cellCount);
+      let head = 0;
+      let tail = 0;
+      queue[tail++] = startIndex;
+      const northOffset = -width;
+      const southOffset = width;
+      while (head < tail) {
+        const currentIndex = queue[head++];
+        const currentDistance = distances[currentIndex];
+        if (currentIndex === goalIndex) return currentDistance;
+        const currentY = currentIndex / width | 0;
+        const currentX = currentIndex - currentY * width;
+        for (let dir = 0; dir < 4; dir++) {
+          let neighborIndex;
+          switch (dir) {
+            case 0:
+              if (currentY === 0) continue;
+              neighborIndex = currentIndex + northOffset;
+              break;
+            case 1:
+              if (currentX + 1 >= width) continue;
+              neighborIndex = currentIndex + 1;
+              break;
+            case 2:
+              if (currentY + 1 >= height) continue;
+              neighborIndex = currentIndex + southOffset;
+              break;
+            default:
+              if (currentX === 0) continue;
+              neighborIndex = currentIndex - 1;
+          }
+          if (flatMaze[neighborIndex] !== -1 && distances[neighborIndex] === -1) {
+            distances[neighborIndex] = currentDistance + 1;
+            if (neighborIndex === goalIndex) return currentDistance + 1;
+            queue[tail++] = neighborIndex;
           }
         }
       }
@@ -13349,10 +13427,10 @@
      * @returns Progress percentage (0-100)
      */
     static calculateProgressFromDistanceMap(distanceMap, currentPos, startPos) {
-      const [sx, sy] = startPos;
-      const [cx, cy] = currentPos;
-      const totalDistance = distanceMap[sy]?.[sx];
-      const remaining = distanceMap[cy]?.[cx];
+      const [startX, startY] = startPos;
+      const [currentX, currentY] = currentPos;
+      const totalDistance = distanceMap[startY]?.[startX];
+      const remaining = distanceMap[currentY]?.[currentX];
       if (totalDistance == null || remaining == null || !isFinite(totalDistance) || totalDistance <= 0)
         return 0;
       const prog = (totalDistance - remaining) / totalDistance * 100;
@@ -13365,31 +13443,115 @@
      * @param goal - [x,y] goal position (typically exit)
      */
     static buildDistanceMap(encodedMaze, goal) {
+      const {
+        width,
+        height,
+        distances,
+        WALL_VALUE,
+        UNREACHABLE_VALUE
+      } = _MazeUtils.buildDistanceMapFlat(encodedMaze, goal);
+      const result = Array.from(
+        { length: height },
+        () => new Array(width)
+      );
+      for (let rowIndex = 0, flatIndex = 0; rowIndex < height; rowIndex++) {
+        const resultRow = result[rowIndex];
+        for (let colIndex = 0; colIndex < width; colIndex++, flatIndex++) {
+          const cellDistance = distances[flatIndex];
+          resultRow[colIndex] = cellDistance === WALL_VALUE || cellDistance === UNREACHABLE_VALUE ? Infinity : cellDistance;
+        }
+      }
+      return result;
+    }
+    /**
+     * High-performance variant of `buildDistanceMap` that returns a flat Int32Array
+     * distance buffer with metadata. This minimizes allocations and GC pressure for
+     * large mazes and is the recommended API for performance-sensitive code.
+     *
+     * Encoding in the returned `distances` buffer:
+     *  - wall cells => WALL_VALUE (number, -2)
+     *  - unreachable cells => UNREACHABLE_VALUE (number, -1)
+     *  - reachable cells => non-negative distance (0 ..)
+     *
+     * The returned object contains the flat buffer plus `width` and `height` so
+     * callers can translate between (x,y) and flat indices: index = y*width + x.
+     *
+     * Note: this API intentionally avoids converting the typed buffer back into
+     * nested `number[][]` to keep allocation minimal; use `buildDistanceMap` if
+     * you require the legacy `number[][]` shape.
+     *
+     * @param encodedMaze - 2D maze encoding
+     * @param goal - [x,y] goal position (typically exit)
+     * @returns Object with `width`, `height`, and `distances` (Int32Array).
+     * @example
+     * const flat = MazeUtils.buildDistanceMapFlat(encoded, [5,3]);
+     * const idx = 3 * flat.width + 5; // y*width + x
+     * console.log(flat.distances[idx]); // -2 wall, -1 unreachable, >=0 distance
+     */
+    static buildDistanceMapFlat(encodedMaze, goal) {
       const height = encodedMaze.length;
       const width = encodedMaze[0].length;
-      const dist = Array.from(
-        { length: height },
-        () => Array(width).fill(Infinity)
-      );
-      const [gx, gy] = goal;
-      if (encodedMaze[gy][gx] === -1) return dist;
-      const q = [[gx, gy]];
-      dist[gy][gx] = 0;
-      const dirs = _MazeUtils.#DIRECTIONS;
-      let qi = 0;
-      while (qi < q.length) {
-        const [x, y] = q[qi++];
-        const d = dist[y][x];
-        for (const [dx, dy] of dirs) {
-          const nx = x + dx;
-          const ny = y + dy;
-          if (nx >= 0 && ny >= 0 && ny < height && nx < width && encodedMaze[ny][nx] !== -1 && dist[ny][nx] === Infinity) {
-            dist[ny][nx] = d + 1;
-            q.push([nx, ny]);
+      const WALL_VALUE = -2;
+      const UNREACHABLE_VALUE = -1;
+      const cellCount = width * height;
+      const distances = new Int32Array(cellCount);
+      for (let flatInitIndex = 0; flatInitIndex < cellCount; flatInitIndex++)
+        distances[flatInitIndex] = UNREACHABLE_VALUE;
+      const [goalX, goalY] = goal;
+      if (goalY < 0 || goalY >= height || goalX < 0 || goalX >= width || encodedMaze[goalY][goalX] === -1) {
+        for (let rowIndex = 0, flatDest = 0; rowIndex < height; rowIndex++) {
+          const row = encodedMaze[rowIndex];
+          for (let colIndex = 0; colIndex < width; colIndex++, flatDest++) {
+            if (row[colIndex] === -1) distances[flatDest] = WALL_VALUE;
+          }
+        }
+        return { width, height, distances, WALL_VALUE, UNREACHABLE_VALUE };
+      }
+      for (let rowIndex = 0, flatDest = 0; rowIndex < height; rowIndex++) {
+        const row = encodedMaze[rowIndex];
+        for (let colIndex = 0; colIndex < width; colIndex++, flatDest++) {
+          if (row[colIndex] === -1) distances[flatDest] = WALL_VALUE;
+        }
+      }
+      const goalIndex = goalY * width + goalX;
+      distances[goalIndex] = 0;
+      const queue = new Int32Array(cellCount);
+      let queueHead = 0;
+      let queueTail = 0;
+      queue[queueTail++] = goalIndex;
+      const northOffset = -width;
+      const southOffset = width;
+      while (queueHead < queueTail) {
+        const currentIndex = queue[queueHead++];
+        const currentDistance = distances[currentIndex];
+        const currentRow = currentIndex / width | 0;
+        const currentCol = currentIndex - currentRow * width;
+        for (let dir = 0; dir < 4; dir++) {
+          let neighborFlatIndex;
+          switch (dir) {
+            case 0:
+              if (currentRow === 0) continue;
+              neighborFlatIndex = currentIndex + northOffset;
+              break;
+            case 1:
+              if (currentCol + 1 >= width) continue;
+              neighborFlatIndex = currentIndex + 1;
+              break;
+            case 2:
+              if (currentRow + 1 >= height) continue;
+              neighborFlatIndex = currentIndex + southOffset;
+              break;
+            default:
+              if (currentCol === 0) continue;
+              neighborFlatIndex = currentIndex - 1;
+          }
+          if (distances[neighborFlatIndex] === UNREACHABLE_VALUE) {
+            distances[neighborFlatIndex] = currentDistance + 1;
+            queue[queueTail++] = neighborFlatIndex;
           }
         }
       }
-      return dist;
+      return { width, height, distances, WALL_VALUE, UNREACHABLE_VALUE };
     }
   };
 
@@ -14390,24 +14552,19 @@
           return `${colors.bgBlack}${colors.orangeNeon}E${colors.reset}`;
         return `${colors.bgBlack}${colors.orangeNeon}A${colors.reset}`;
       }
-      switch (cell) {
-        case "S":
-          return `${colors.bgBlack}${colors.orangeNeon}S${colors.reset}`;
-        // Start position
-        case "E":
-          return `${colors.bgBlack}${colors.orangeNeon}E${colors.reset}`;
-        // Exit position - TRON orange
-        case ".":
-          if (path2 && path2.has(`${x},${y}`))
-            return `${colors.floorBg}${colors.orangeNeon}\u2022${colors.reset}`;
-          return `${colors.floorBg}${colors.gridLineText}.${colors.reset}`;
-        // Open path - dark floor with subtle grid
-        default:
-          if (wallChars.has(cell)) {
-            return `${colors.bgBlack}${colors.blueNeon}${cell}${colors.reset}`;
-          }
-          return cell;
+      if (cell === "S")
+        return `${colors.bgBlack}${colors.orangeNeon}S${colors.reset}`;
+      if (cell === "E")
+        return `${colors.bgBlack}${colors.orangeNeon}E${colors.reset}`;
+      if (cell === ".") {
+        if (path2 && path2.has(`${x},${y}`))
+          return `${colors.floorBg}${colors.orangeNeon}\u2022${colors.reset}`;
+        return `${colors.floorBg}${colors.gridLineText}.${colors.reset}`;
       }
+      if (wallChars.has(cell)) {
+        return `${colors.bgBlack}${colors.blueNeon}${cell}${colors.reset}`;
+      }
+      return cell;
     }
     /**
      * Renders the entire maze as a colored ASCII string, showing the agent and its path.
@@ -15559,308 +15716,532 @@
   // test/examples/asciiMaze/mazeVision.ts
   var MazeVision = class _MazeVision {
     /**
-     * Pre-defined direction vectors (dx, dy, index) for N/E/S/W.
-     * Stored as a private static readonly field to avoid reallocating this
-     * tiny array on every call to `buildInputs6`.
-     */
-    static #DIRECTION_VECTORS = [
-      [0, -1, 0],
-      // North
-      [1, 0, 1],
-      // East
-      [0, 1, 2],
-      // South
-      [-1, 0, 3]
-      // West
-    ];
-    /**
-     * Constructs the 6-dimensional input vector for the neural network based on the agent's current state.
+     * Direction table mapping cardinal direction to [dx, dy, index].
      *
-     * @param encodedMaze - The 2D numerical representation of the maze.
-     * @param position - The agent's current `[x, y]` coordinates.
-     * @param exitPos - The coordinates of the maze exit.
-     * @param distanceMap - A pre-calculated map of distances from each cell to the exit.
-     * @param prevDistance - The agent's distance to the exit from the previous step.
-     * @param currentDistance - The agent's current distance to the exit.
-     * @param prevAction - The last action taken by the agent (0:N, 1:E, 2:S, 3:W).
-     * @returns A 6-element array of numbers representing the network inputs.
+     * Each entry is a tuple where the first two values are the X/Y delta to
+     * reach the neighbor and the third value is the canonical direction index
+     * used across the class (0 = N, 1 = E, 2 = S, 3 = W).
+     * @type {readonly [number, number, number][]}
+     */
+    static #DIRECTION_DELTAS = [
+      [0, -1, 0],
+      // N
+      [1, 0, 1],
+      // E
+      [0, 1, 2],
+      // S
+      [-1, 0, 3]
+      // W
+    ];
+    // Tunable private constants
+    /** Number of cardinal directions (N, E, S, W). */
+    static #DIRECTION_COUNT = 4;
+    /**
+     * Scalar step per compass direction used to encode the compass into a single
+     * continuous value: 0 = N, 0.25 = E, 0.5 = S, 0.75 = W.
+     */
+    static #COMPASS_STEP = 0.25;
+    /** Offset to compute the opposite direction (half of direction count). */
+    static #OPPOSITE_OFFSET = 2;
+    /** Horizon (max path length) at which a neighbor is considered "open". */
+    static #OPENNESS_HORIZON = 1e3;
+    /** Horizon used when selecting compass preference from a distance map. */
+    static #COMPASS_HORIZON = 5e3;
+    /** Small scalar used to encourage backtracking from dead-ends. */
+    static #BACKTRACK_SIGNAL = 1e-3;
+    /** Absolute clip applied to step-delta used when computing progress signal. */
+    static #PROGRESS_CLIP = 2;
+    /** Scale applied to clipped progress delta before adding to neutral baseline. */
+    static #PROGRESS_SCALE = 4;
+    /** Neutral progress value returned when progress cannot be computed reliably. */
+    static #PROGRESS_NEUTRAL = 0.5;
+    /**
+     * Pooled scratch buffers reused across `buildInputs6` invocations to avoid
+     * per-call allocations in hot paths. These are class-private and must be
+     * initialized (via `fill`) at the start of each call.
+     *
+     * IMPORTANT: Because these buffers are reused, `buildInputs6` is not
+     * reentrant and callers should not rely on the buffers' contents after
+     * calling the method. See `buildInputs6` JSDoc `@remarks` for details.
+     */
+    static #SCRATCH_NEIGHBOR_X = new Int32Array(_MazeVision.#DIRECTION_COUNT);
+    static #SCRATCH_NEIGHBOR_Y = new Int32Array(_MazeVision.#DIRECTION_COUNT);
+    static #SCRATCH_NEIGHBOR_PATH = new Float32Array(_MazeVision.#DIRECTION_COUNT);
+    static #SCRATCH_NEIGHBOR_REACH = new Uint8Array(_MazeVision.#DIRECTION_COUNT);
+    static #SCRATCH_NEIGHBOR_OPEN = new Float32Array(_MazeVision.#DIRECTION_COUNT);
+    // Raw distance to exit per neighbor (NaN when not present). Pooled to avoid
+    // per-call allocation; follows same non-reentrancy warning as other buffers.
+    /**
+     * Pooled buffer holding the raw distance-to-exit for each neighbor when a
+     * `distanceToExitMap` is provided. Values are `NaN` when missing.
+     */
+    static #SCRATCH_NEIGHBOR_RAWDIST = new Float32Array(
+      _MazeVision.#DIRECTION_COUNT
+    );
+    // Small helpers
+    /**
+     * Return a neutral 6-element input vector used when inputs are invalid or
+     * incomplete. The progress element is set to the neutral baseline.
+     * @returns {[number, number, number, number, number, number]}
+     *  [compassScalar, openN, openE, openS, openW, progressDelta]
+     */
+    static #neutralInput() {
+      return [0, 0, 0, 0, 0, _MazeVision.#PROGRESS_NEUTRAL];
+    }
+    /**
+     * Fast bounds check for a 2D grid.
+     * @param grid - 2D numeric grid where each row is an array.
+     * @param col - X coordinate (column index).
+     * @param row - Y coordinate (row index).
+     * @returns True when the coordinate is within the grid bounds.
+     */
+    static #isWithinBounds(grid, col, row) {
+      return Array.isArray(grid) && row >= 0 && row < grid.length && Array.isArray(grid[row]) && col >= 0 && col < grid[row].length;
+    }
+    /**
+     * Return true if the cell at [col,row] is within bounds and not a wall.
+     * @param grid - Encoded maze where `-1` represents a wall.
+     * @param col - Column (x) coordinate.
+     * @param row - Row (y) coordinate.
+     * @returns True when the cell exists and is open (not -1).
+     */
+    static #isCellOpen(grid, col, row) {
+      return _MazeVision.#isWithinBounds(grid, col, row) && grid[row][col] !== -1;
+    }
+    /**
+     * Compute the opposite cardinal direction index.
+     * @param direction - Direction index in range [0, #DIRECTION_COUNT).
+     * @returns Opposite direction index (e.g. 0 -> 2, 1 -> 3).
+     */
+    static #opposite(direction) {
+      return (direction + _MazeVision.#OPPOSITE_OFFSET) % _MazeVision.#DIRECTION_COUNT;
+    }
+    /**
+     * Build the 6-element input vector consumed by the agent's network.
+     *
+     * The returned array has the shape: [compassScalar, openN, openE, openS, openW, progressDelta].
+     *
+     * @param encodedMaze - 2D grid where `-1` is a wall and `0+` is free space.
+     * @param agentPosition - Agent coordinates as `[x, y]`.
+     * @param exitPosition - Exit coordinates as `[x, y]` used as geometric fallback for compass.
+     * @param distanceToExitMap - Optional distance-to-exit 2D map (same shape as `encodedMaze`).
+     * @param previousStepDistance - Optional scalar distance-to-exit from the previous step.
+     * @param currentStepDistance - Scalar distance-to-exit for the current step.
+     * @param previousAction - Optional previous action index (0=N,1=E,2=S,3=W) to encourage backtracking.
+     * @returns A 6-element number array with the vision inputs described above.
+     *
+     * @remarks
+     * - This method reuses internal pooled scratch buffers (`#SCRATCH_*`) to avoid
+     *   allocations on hot paths. Because the buffers are reused, the method is
+     *   not reentrant and should not be called concurrently from multiple
+     *   contexts if they share the same process/thread.
+     * - Scratch buffers are initialized (via `.fill`) on each call so no state is
+     *   leaked between invocations.
      */
     static buildInputs6(encodedMaze, agentPosition, exitPosition, distanceToExitMap, previousStepDistance, currentStepDistance, previousAction) {
+      if (!Array.isArray(encodedMaze) || encodedMaze.length === 0)
+        return _MazeVision.#neutralInput();
       const [agentX, agentY] = agentPosition;
-      const mazeHeight = encodedMaze.length;
-      const mazeWidth = encodedMaze[0].length;
-      const isWithinBounds = (col, row) => row >= 0 && row < mazeHeight && col >= 0 && col < mazeWidth;
-      const isCellOpen = (col, row) => isWithinBounds(col, row) && encodedMaze[row][col] !== -1;
-      const opennessHorizon = 1e3;
-      const compassHorizon = 5e3;
-      const neighborCells = [];
-      const currentCellDistanceToExit = Number.isFinite(
-        distanceToExitMap?.[agentY]?.[agentX]
-      ) ? distanceToExitMap[agentY][agentX] : void 0;
-      for (const [dx, dy, directionIndex] of _MazeVision.#DIRECTION_VECTORS) {
-        const neighborX = agentX + dx;
-        const neighborY = agentY + dy;
-        if (!isCellOpen(neighborX, neighborY)) {
-          neighborCells.push({
-            directionIndex,
-            neighborX,
-            neighborY,
-            pathLength: Infinity,
-            isReachable: false,
-            opennessValue: 0
-          });
+      if (!Number.isFinite(agentX) || !Number.isFinite(agentY))
+        return _MazeVision.#neutralInput();
+      if (!_MazeVision.#isWithinBounds(encodedMaze, agentX, agentY))
+        return _MazeVision.#neutralInput();
+      const opennessHorizon = _MazeVision.#OPENNESS_HORIZON;
+      const compassHorizon = _MazeVision.#COMPASS_HORIZON;
+      const DIR_N = 0;
+      const DIR_E = 1;
+      const DIR_S = 2;
+      const DIR_W = 3;
+      const D_COUNT = _MazeVision.#DIRECTION_COUNT;
+      const neighborX = _MazeVision.#SCRATCH_NEIGHBOR_X;
+      const neighborY = _MazeVision.#SCRATCH_NEIGHBOR_Y;
+      const neighborPath = _MazeVision.#SCRATCH_NEIGHBOR_PATH;
+      const neighborReach = _MazeVision.#SCRATCH_NEIGHBOR_REACH;
+      const neighborOpen = _MazeVision.#SCRATCH_NEIGHBOR_OPEN;
+      const directionDeltas = _MazeVision.#DIRECTION_DELTAS;
+      const distMap = distanceToExitMap;
+      neighborPath.fill(Infinity);
+      neighborReach.fill(0);
+      neighborOpen.fill(0);
+      const currentCellDist = Number.isFinite(distMap?.[agentY]?.[agentX]) ? distMap[agentY][agentX] : void 0;
+      const hasCurrentCellDist = currentCellDist != null && Number.isFinite(currentCellDist);
+      const neighborRaw = _MazeVision.#SCRATCH_NEIGHBOR_RAWDIST;
+      neighborRaw.fill(NaN);
+      for (let d = 0; d < D_COUNT; d++) {
+        const delta = directionDeltas[d];
+        const deltaX = delta[0];
+        const deltaY = delta[1];
+        const directionIndex = delta[2];
+        const neighborCol = agentX + deltaX;
+        const neighborRow = agentY + deltaY;
+        neighborX[directionIndex] = neighborCol;
+        neighborY[directionIndex] = neighborRow;
+        const neighborRowRef = encodedMaze[neighborRow];
+        if (!neighborRowRef || neighborRowRef[neighborCol] === -1) {
+          neighborPath[directionIndex] = Infinity;
+          neighborReach[directionIndex] = 0;
+          neighborOpen[directionIndex] = 0;
+          neighborRaw[directionIndex] = NaN;
           continue;
         }
-        const neighborDistanceToExit = Number.isFinite(
-          distanceToExitMap?.[neighborY]?.[neighborX]
-        ) ? distanceToExitMap[neighborY][neighborX] : void 0;
-        if (neighborDistanceToExit != null && Number.isFinite(neighborDistanceToExit) && currentCellDistanceToExit != null && Number.isFinite(currentCellDistanceToExit)) {
-          if (neighborDistanceToExit < currentCellDistanceToExit) {
-            const pathLength = 1 + neighborDistanceToExit;
-            if (pathLength <= opennessHorizon)
-              neighborCells.push({
-                directionIndex,
-                neighborX,
-                neighborY,
-                pathLength,
-                isReachable: true,
-                opennessValue: 0
-              });
-            else
-              neighborCells.push({
-                directionIndex,
-                neighborX,
-                neighborY,
-                pathLength: Infinity,
-                isReachable: true,
-                opennessValue: 0
-              });
-          } else {
-            neighborCells.push({
-              directionIndex,
-              neighborX,
-              neighborY,
-              pathLength: Infinity,
-              isReachable: true,
-              opennessValue: 0
-            });
-          }
+        const distRow = distMap && distMap[neighborRow];
+        const rawDistance = distRow ? distRow[neighborCol] : void 0;
+        neighborRaw[directionIndex] = Number.isFinite(rawDistance) ? rawDistance : NaN;
+        const hasValidDistance = rawDistance != null && Number.isFinite(rawDistance);
+        neighborReach[directionIndex] = 1;
+        if (hasValidDistance && hasCurrentCellDist && rawDistance < currentCellDist) {
+          const pathLength = 1 + rawDistance;
+          neighborPath[directionIndex] = pathLength <= opennessHorizon ? pathLength : Infinity;
+          neighborOpen[directionIndex] = 0;
         } else {
-          neighborCells.push({
-            directionIndex,
-            neighborX,
-            neighborY,
-            pathLength: Infinity,
-            isReachable: true,
-            opennessValue: 0
-          });
+          neighborPath[directionIndex] = Infinity;
+          neighborOpen[directionIndex] = 0;
         }
       }
-      const reachableNeighbors = neighborCells.filter(
-        (neighbor) => neighbor.isReachable && Number.isFinite(neighbor.pathLength)
-      );
-      let minPathLength = Infinity;
-      for (const neighbor of reachableNeighbors)
-        if (neighbor.pathLength < minPathLength)
-          minPathLength = neighbor.pathLength;
-      if (reachableNeighbors.length && minPathLength < Infinity) {
-        for (const neighbor of reachableNeighbors) {
-          if (neighbor.pathLength === minPathLength) neighbor.opennessValue = 1;
-          else neighbor.opennessValue = minPathLength / neighbor.pathLength;
+      let minPath = Infinity;
+      for (let directionIndex = 0; directionIndex < D_COUNT; directionIndex++) {
+        if (neighborReach[directionIndex] && Number.isFinite(neighborPath[directionIndex]) && neighborPath[directionIndex] < minPath)
+          minPath = neighborPath[directionIndex];
+      }
+      if (minPath < Infinity) {
+        for (let directionIndex = 0; directionIndex < D_COUNT; directionIndex++) {
+          if (neighborReach[directionIndex] && Number.isFinite(neighborPath[directionIndex])) {
+            neighborOpen[directionIndex] = neighborPath[directionIndex] === minPath ? 1 : minPath / neighborPath[directionIndex];
+          }
         }
       }
-      const openness = neighborCells.reduce(
-        (acc, nc) => {
-          acc[nc.directionIndex] = nc.opennessValue;
-          return acc;
-        },
-        [0, 0, 0, 0]
-      );
-      let opennessNorth = openness[0];
-      let opennessEast = openness[1];
-      let opennessSouth = openness[2];
-      let opennessWest = openness[3];
-      if (opennessNorth === 0 && opennessEast === 0 && opennessSouth === 0 && opennessWest === 0 && previousAction != null && previousAction >= 0) {
-        const oppositeDirection = (previousAction + 2) % 4;
+      let openN = neighborOpen[DIR_N];
+      let openE = neighborOpen[DIR_E];
+      let openS = neighborOpen[DIR_S];
+      let openW = neighborOpen[DIR_W];
+      if (openN === 0 && openE === 0 && openS === 0 && openW === 0 && previousAction != null) {
+        const oppositeDirection = _MazeVision.#opposite(previousAction);
         switch (oppositeDirection) {
-          case 0:
-            if (isCellOpen(agentX, agentY - 1)) opennessNorth = 1e-3;
+          case DIR_N:
+            if (_MazeVision.#isCellOpen(encodedMaze, agentX, agentY - 1))
+              openN = _MazeVision.#BACKTRACK_SIGNAL;
             break;
-          case 1:
-            if (isCellOpen(agentX + 1, agentY)) opennessEast = 1e-3;
+          case DIR_E:
+            if (_MazeVision.#isCellOpen(encodedMaze, agentX + 1, agentY))
+              openE = _MazeVision.#BACKTRACK_SIGNAL;
             break;
-          case 2:
-            if (isCellOpen(agentX, agentY + 1)) opennessSouth = 1e-3;
+          case DIR_S:
+            if (_MazeVision.#isCellOpen(encodedMaze, agentX, agentY + 1))
+              openS = _MazeVision.#BACKTRACK_SIGNAL;
             break;
-          case 3:
-            if (isCellOpen(agentX - 1, agentY)) opennessWest = 1e-3;
+          case DIR_W:
+            if (_MazeVision.#isCellOpen(encodedMaze, agentX - 1, agentY))
+              openW = _MazeVision.#BACKTRACK_SIGNAL;
             break;
         }
       }
-      let bestDirectionToExit = 0;
+      let bestDirection = 0;
       if (distanceToExitMap) {
         let minCompassPathLength = Infinity;
-        let foundCompassPath = false;
-        for (const neighbor of neighborCells) {
-          const neighborRawDistance = distanceToExitMap[neighbor.neighborY]?.[neighbor.neighborX];
-          if (neighborRawDistance != null && Number.isFinite(neighborRawDistance)) {
-            const pathLength = neighborRawDistance + 1;
+        let found = false;
+        for (let directionIndex = 0; directionIndex < D_COUNT; directionIndex++) {
+          const neighborCachedRaw = neighborRaw[directionIndex];
+          if (Number.isFinite(neighborCachedRaw)) {
+            const pathLength = neighborCachedRaw + 1;
             if (pathLength < minCompassPathLength && pathLength <= compassHorizon) {
               minCompassPathLength = pathLength;
-              bestDirectionToExit = neighbor.directionIndex;
-              foundCompassPath = true;
+              bestDirection = directionIndex;
+              found = true;
             }
           }
         }
-        if (!foundCompassPath) {
-          const deltaXToGoal = exitPosition[0] - agentX;
-          const deltaYToGoal = exitPosition[1] - agentY;
-          if (Math.abs(deltaXToGoal) > Math.abs(deltaYToGoal))
-            bestDirectionToExit = deltaXToGoal > 0 ? 1 : 3;
-          else bestDirectionToExit = deltaYToGoal > 0 ? 2 : 0;
+        if (!found) {
+          const deltaToExitX = exitPosition[0] - agentX;
+          const deltaToExitY = exitPosition[1] - agentY;
+          bestDirection = Math.abs(deltaToExitX) > Math.abs(deltaToExitY) ? deltaToExitX > 0 ? 1 : 3 : deltaToExitY > 0 ? 2 : 0;
         }
       } else {
-        const deltaXToGoal = exitPosition[0] - agentX;
-        const deltaYToGoal = exitPosition[1] - agentY;
-        if (Math.abs(deltaXToGoal) > Math.abs(deltaYToGoal))
-          bestDirectionToExit = deltaXToGoal > 0 ? 1 : 3;
-        else bestDirectionToExit = deltaYToGoal > 0 ? 2 : 0;
+        const deltaToExitX = exitPosition[0] - agentX;
+        const deltaToExitY = exitPosition[1] - agentY;
+        bestDirection = Math.abs(deltaToExitX) > Math.abs(deltaToExitY) ? deltaToExitX > 0 ? 1 : 3 : deltaToExitY > 0 ? 2 : 0;
       }
-      const compassScalar = bestDirectionToExit * 0.25;
-      let progressDelta = 0.5;
-      if (previousStepDistance != null && Number.isFinite(previousStepDistance)) {
-        const distanceDelta = previousStepDistance - currentStepDistance;
-        const clippedDelta = Math.max(-2, Math.min(2, distanceDelta));
-        progressDelta = 0.5 + clippedDelta / 4;
+      const compassScalar = bestDirection * _MazeVision.#COMPASS_STEP;
+      let progress = _MazeVision.#PROGRESS_NEUTRAL;
+      if (previousStepDistance != null && Number.isFinite(previousStepDistance) && Number.isFinite(currentStepDistance)) {
+        const delta = previousStepDistance - currentStepDistance;
+        const clipped = Math.max(
+          -_MazeVision.#PROGRESS_CLIP,
+          Math.min(_MazeVision.#PROGRESS_CLIP, delta)
+        );
+        progress = _MazeVision.#PROGRESS_NEUTRAL + clipped / _MazeVision.#PROGRESS_SCALE;
       }
-      const inputVector = [
-        compassScalar,
-        opennessNorth,
-        opennessEast,
-        opennessSouth,
-        opennessWest,
-        progressDelta
-      ];
-      if (typeof process !== "undefined" && typeof process.env !== "undefined" && process.env.ASCII_VISION_DEBUG === "1") {
-        try {
-          const neighborSummary = neighborCells.map(
-            (neighbor) => `{dir:${neighbor.directionIndex} x:${neighbor.neighborX} y:${neighbor.neighborY} path:${Number.isFinite(neighbor.pathLength) ? neighbor.pathLength.toFixed(2) : "Inf"} open:${neighbor.opennessValue.toFixed(4)}}`
-          ).join(" ");
-          _MazeVision._dbgCounter = (_MazeVision._dbgCounter || 0) + 1;
-          if (_MazeVision._dbgCounter % 5 === 0) {
-            console.log(
-              `[VISION] pos=${agentX},${agentY} comp=${compassScalar.toFixed(
-                2
-              )} inputs=${JSON.stringify(
-                inputVector.map((v) => +v.toFixed(6))
-              )} neighbors=${neighborSummary}`
-            );
-          }
-        } catch {
-        }
-      }
-      return inputVector;
+      return [compassScalar, openN, openE, openS, openW, progress];
     }
   };
 
   // test/examples/asciiMaze/mazeMovement.ts
   var MazeMovement = class _MazeMovement {
     /**
-     * Default configuration constants kept as private static fields to signal
-     * they are implementation details and to avoid re-allocation.
+     * Maximum number of simulation steps before terminating (safety cap)
+     * @internal
      */
     static #DEFAULT_MAX_STEPS = 3e3;
+    /**
+     * Number of recent moves tracked for oscillation detection
+     * @internal
+     */
     static #MOVE_HISTORY_LENGTH = 6;
     // Named private constants to replace magic numbers and document intent.
+    /** Reward scale applied to shaping terms (smaller reduces selection pressure) */
     static #REWARD_SCALE = 0.5;
+    /** Strong penalty multiplier for short A->B oscillations */
     static #LOOP_PENALTY = 10;
     // multiplied by rewardScale
+    /** Penalty applied when returning to a recent cell (memory-based) */
     static #MEMORY_RETURN_PENALTY = 2;
     // multiplied by rewardScale
+    /** Per-visit penalty for repeated visits to same cell */
     static #REVISIT_PENALTY_PER_VISIT = 0.2;
     // per extra visit, multiplied by rewardScale
+    /** Visits threshold to trigger termination/harsh penalty */
     static #VISIT_TERMINATION_THRESHOLD = 10;
+    /** Extremely harsh penalty for invalid moves (used sparingly) */
     static #INVALID_MOVE_PENALTY_HARSH = 1e3;
+    /** Mild penalty for invalid moves to preserve learning signal */
     static #INVALID_MOVE_PENALTY_MILD = 10;
     // Saturation / collapse thresholds and penalties
+    /** Probability threshold indicating overconfidence (near-deterministic) */
     static #OVERCONFIDENT_PROB = 0.985;
+    /** Secondary-probability threshold used with overconfidence detection */
     static #SECOND_PROB_LOW = 0.01;
+    /** Threshold for flat-collapse detection using log-std of outputs */
     static #LOGSTD_FLAT_THRESHOLD = 0.01;
+    /** Penalty when network appears overconfident */
     static #OVERCONFIDENT_PENALTY = 0.25;
     // * rewardScale
+    /** Penalty for flat collapse (no variance in outputs) */
     static #FLAT_COLLAPSE_PENALTY = 0.35;
     // * rewardScale
+    /** Minimum saturations before applying bias adjustments */
     static #SATURATION_ADJUST_MIN = 6;
+    /** Interval (in steps) used for saturation bias adjustment checks */
     static #SATURATION_ADJUST_INTERVAL = 5;
+    /** Clamp for adaptive bias adjustments */
     static #BIAS_CLAMP = 5;
+    /** Scaling factor used when adjusting biases to mitigate saturation */
     static #BIAS_ADJUST_FACTOR = 0.5;
+    // Convenience thresholds and tuning knobs (centralized to avoid magic literals)
+    /** Warmup steps where exploration is encouraged */
+    static #EPSILON_WARMUP_STEPS = 10;
+    /** Steps-stagnant threshold to consider very stagnant (high epsilon) */
+    static #EPSILON_STAGNANT_HIGH_THRESHOLD = 12;
+    /** Steps-stagnant threshold to consider moderate stagnation */
+    static #EPSILON_STAGNANT_MED_THRESHOLD = 6;
+    /** Saturation count that triggers epsilon-increase behavior */
+    static #EPSILON_SATURATION_TRIGGER = 3;
+    /** Length used to detect tiny A->B oscillations */
+    static #OSCILLATION_DETECT_LENGTH = 4;
+    /** Saturation penalty trigger (>=) */
+    static #SATURATION_PENALTY_TRIGGER = 5;
+    /** Period (in steps) to escalate saturation penalty */
+    static #SATURATION_PENALTY_PERIOD = 10;
+    /** Start step for global break bonus when breaking long stagnation */
+    static #GLOBAL_BREAK_BONUS_START = 10;
+    /** Per-step bonus for global break beyond the start threshold */
+    static #GLOBAL_BREAK_BONUS_PER_STEP = 0.01;
+    /** Cap for the global break bonus */
+    static #GLOBAL_BREAK_BONUS_CAP = 0.5;
+    /** Number of steps since improvement to begin repetition penalty scaling */
+    static #REPETITION_PENALTY_START = 4;
+    /** Weight for entropy bonus on failed runs */
+    static #ENTROPY_BONUS_WEIGHT = 4;
+    // Vision input layout indices (groups used by hasGuidance checks)
+    /** Start index of LOS group within vision vector */
+    static #VISION_LOS_START = 8;
+    /** Start index of gradient group within vision vector */
+    static #VISION_GRAD_START = 12;
+    /** Number of elements in each vision group (LOS / Gradient) */
+    static #VISION_GROUP_LEN = 4;
     // Proximity/exploration tuning
+    /** Distance (in cells) within which greedy proximity moves are prioritized */
     static #PROXIMITY_GREEDY_DISTANCE = 2;
+    /** Distance threshold to reduce epsilon exploration near goal */
     static #PROXIMITY_SUPPRESS_EXPLOR_DIST = 5;
+    /** Initial epsilon for epsilon-greedy exploration */
     static #EPSILON_INITIAL = 0.35;
+    /** Epsilon used when the agent is highly stagnant */
     static #EPSILON_STAGNANT_HIGH = 0.5;
+    /** Epsilon used for moderate stagnation */
     static #EPSILON_STAGNANT_MED = 0.25;
+    /** Epsilon used when network saturations are detected */
     static #EPSILON_SATURATIONS = 0.3;
+    /** Minimum epsilon allowed when near the goal */
     static #EPSILON_MIN_NEAR_GOAL = 0.05;
+    /** Streak length used to trigger forced exploration */
     static #NO_MOVE_STREAK_THRESHOLD = 5;
     // Local area stagnation
+    /** Size of the recent-positions sliding window for local stagnation detection */
     static #LOCAL_WINDOW = 30;
+    /** Max span (in cells) considered "local" for oscillation penalties */
     static #LOCAL_AREA_SPAN_THRESHOLD = 5;
+    /** Steps without improvement before local-area stagnation penalty applies */
     static #LOCAL_AREA_STAGNATION_STEPS = 8;
+    /** Amount applied to local area penalty when tight oscillation detected (multiplied by rewardScale) */
+    static #LOCAL_AREA_PENALTY_AMOUNT = 0.05;
     // Progress reward shaping
+    /** Base reward for making forward progress toward the exit */
     static #PROGRESS_REWARD_BASE = 0.3;
+    /** Additional progress reward scaled by network confidence */
     static #PROGRESS_REWARD_CONF_SCALE = 0.7;
+    /** Multiplier applied per step-since-improvement for extra reward shaping */
     static #PROGRESS_STEPS_MULT = 0.02;
+    /** Maximum steps-based progress contribution (times rewardScale) */
     static #PROGRESS_STEPS_MAX = 0.5;
     // times rewardScale
+    /** Scale applied to raw distance-delta when shaping reward */
     static #DISTANCE_DELTA_SCALE = 2;
+    /** Base confidence factor for distance-delta shaping */
     static #DISTANCE_DELTA_CONF_BASE = 0.4;
+    /** Additional confidence scale applied to distance-delta shaping */
     static #DISTANCE_DELTA_CONF_SCALE = 0.6;
+    /** Base penalty applied when a move increases distance to goal (multiplied by rewardScale) */
+    static #PROGRESS_AWAY_BASE_PENALTY = 0.05;
+    /** Additional scaling applied to away penalty proportional to network confidence */
+    static #PROGRESS_AWAY_CONF_SCALE = 0.15;
     // Entropy tuning
+    /** Entropy value above which the action distribution is considered too uniform */
     static #ENTROPY_HIGH_THRESHOLD = 0.95;
+    /** Entropy value below which the distribution is considered confident */
     static #ENTROPY_CONFIDENT_THRESHOLD = 0.55;
+    /** Required gap between top two probs to treat as confident */
     static #ENTROPY_CONFIDENT_DIFF = 0.25;
+    /** Small penalty applied when entropy is persistently high */
     static #ENTROPY_PENALTY = 0.03;
     // * rewardScale
+    /** Tiny bonus for clear decisions that aid exploration */
     static #EXPLORATION_BONUS_SMALL = 0.015;
     // * rewardScale
+    /** Base repetition/backtrack penalty applied when repeating same action without improvement */
+    static #REPETITION_PENALTY_BASE = 0.05;
+    /** Penalty for making the direct opposite move (when it doesn't improve) */
+    static #BACK_MOVE_PENALTY = 0.2;
     // Saturation penalties
+    /** Base penalty applied when saturation is detected */
     static #SATURATION_PENALTY_BASE = 0.05;
     // * rewardScale
+    /** Escalating penalty applied periodically when saturation persists */
     static #SATURATION_PENALTY_ESCALATE = 0.1;
     // * rewardScale when escalation applies
     // Deep stagnation
+    /** Steps without improvement that trigger deep-stagnation handling */
     static #DEEP_STAGNATION_THRESHOLD = 40;
+    /** Penalty applied when deep stagnation is detected (non-browser environments) */
     static #DEEP_STAGNATION_PENALTY = 2;
     // * rewardScale
     // Near-miss penalty multiplier
+    /** Penalty multiplier for near-miss (reaching distance 1 to goal) */
     static #NEAR_MISS_PENALTY = 30;
     // * rewardScale
     // Action/output dimension and softmax/entropy tuning
+    /** Number of cardinal actions (N,E,S,W) */
     static #ACTION_DIM = 4;
+    /** Natural log of ACTION_DIM; used to normalize entropy calculations */
+    static #LOG_ACTIONS = Math.log(_MazeMovement.#ACTION_DIM);
+    /**
+     * Pooled scratch buffers used by `selectDirection` to avoid per-call
+     * allocations on the softmax/entropy hot path.
+     *
+     * @remarks
+     * - These are class-private and reused across calls; `selectDirection` is
+     *   therefore not reentrant and should not be called concurrently.
+     */
+    static #SCRATCH_CENTERED = new Float64Array(4);
+    static #SCRATCH_EXPS = new Float64Array(4);
+    /** Minimum path length required to compute action entropy */
+    static #MIN_PATH_FOR_ENTROPY = 2;
+    /** Minimum action total to avoid divide-by-zero fallbacks */
+    static #MIN_ACTION_TOTAL = 1;
+    /** Representation for 'no move' direction */
+    static #NO_MOVE = -1;
+    /** Minimum standard deviation used to prevent division by zero */
     static #STD_MIN = 1e-6;
+    /** Thresholds for collapse ratio decisions based on std */
     static #COLLAPSE_STD_THRESHOLD = 0.01;
+    /** Secondary threshold used when std indicates medium collapse */
     static #COLLAPSE_STD_MED = 0.03;
+    /** Collapse ratio constants used for adaptive temperature */
+    /** Full collapse ratio used when std is extremely low */
     static #COLLAPSE_RATIO_FULL = 1;
+    /** Partial collapse ratio used for medium collapse */
     static #COLLAPSE_RATIO_HALF = 0.5;
+    /** Base and scale used to compute softmax temperature */
     static #TEMPERATURE_BASE = 1;
+    /** Scale factor applied when computing adaptive softmax temperature */
     static #TEMPERATURE_SCALE = 1.2;
     // Network history and randomness
+    /** History length for recent output snapshots (used for variance diagnostics) */
     static #OUTPUT_HISTORY_LENGTH = 80;
+    /**
+     * Number of outputs snapshots to keep for variance diagnostics.
+     * Larger values smooth variance estimates at the cost of memory.
+     */
+    /** Small randomness added to fitness to break ties stably */
     static #FITNESS_RANDOMNESS = 0.01;
     // Success fitness constants
+    /** Base fitness given for successful maze completion */
     static #SUCCESS_BASE_FITNESS = 650;
+    /** Scale applied for remaining steps on success to reward efficiency */
     static #STEP_EFFICIENCY_SCALE = 0.2;
+    /** Weight for action-entropy bonus on successful runs */
     static #SUCCESS_ACTION_ENTROPY_SCALE = 5;
+    /** Minimum clamp for any successful-run fitness */
     static #MIN_SUCCESS_FITNESS = 150;
     // Exploration / revisiting tuning
+    /** Bonus reward for discovering a previously unvisited cell */
     static #NEW_CELL_EXPLORATION_BONUS = 0.3;
+    /** Strong penalty factor for revisiting cells */
     static #REVISIT_PENALTY_STRONG = 0.5;
     // Progress shaping constants
+    /** Exponent used in non-linear progress shaping */
     static #PROGRESS_POWER = 1.3;
+    /** Scale used to convert shaped progress into fitness contribution */
     static #PROGRESS_SCALE = 500;
+    /** Node type string used in network node objects */
+    static #NODE_TYPE_OUTPUT = "output";
+    /** Direction deltas for cardinal moves: N, E, S, W */
+    static #DIRECTION_DELTAS = [
+      [0, -1],
+      // North
+      [1, 0],
+      // East
+      [0, 1],
+      // South
+      [-1, 0]
+      // West
+    ];
+    /** Return the nth element from the end (1-based). Undefined when not available. */
+    static #nthFromEnd(arr, n) {
+      if (!arr || arr.length < n) return void 0;
+      return arr[arr.length - n];
+    }
+    /** Return opposite cardinal direction (works for ACTION_DIM even if it changes) */
+    static #opposite(direction) {
+      return (direction + _MazeMovement.#ACTION_DIM / 2) % _MazeMovement.#ACTION_DIM;
+    }
+    /** Map a (dx,dy) delta to a cardinal direction index, or #NO_MOVE when unknown */
+    static #deltaToDirection(dx, dy) {
+      for (let i = 0; i < _MazeMovement.#DIRECTION_DELTAS.length; i++) {
+        const [ddx, ddy] = _MazeMovement.#DIRECTION_DELTAS[i];
+        if (ddx === dx && ddy === dy) return i;
+      }
+      return _MazeMovement.#NO_MOVE;
+    }
+    /**
+     * Return the last element of an array or undefined.
+     * Delegates to `MazeUtils.safeLast` to centralize boundary-safe trailing access.
+     * @internal
+     */
     static #last(arr) {
       return MazeUtils.safeLast(arr);
+    }
+    /** Sum a contiguous group in the vision vector starting at `start`. */
+    static #sumVisionGroup(vision, start2) {
+      return vision.slice(start2, start2 + _MazeMovement.#VISION_GROUP_LEN).reduce((a, b) => a + b, 0);
     }
     /**
      * Helper: is a cell (x,y) within bounds and not a wall?
@@ -15887,17 +16268,6 @@
       return _MazeMovement.#isCellOpen(encodedMaze, x, y);
     }
     /**
-     * Moves the agent in the given direction if possible, otherwise stays in place.
-     *
-     * Handles collision detection with walls and maze boundaries,
-     * preventing the agent from making invalid moves.
-     *
-     * @param encodedMaze - 2D array representation of the maze.
-     * @param position - Current [x,y] position of the agent.
-     * @param direction - Direction index (0=North, 1=East, 2=South, 3=West).
-     * @returns New position after movement, or original position if move was invalid.
-     */
-    /**
      * Moves the agent in the specified direction if the move is valid.
      *
      * Handles collision detection with walls and maze boundaries,
@@ -15909,23 +16279,14 @@
      * @returns { [number, number] } New position after movement, or original position if move was invalid.
      */
     static moveAgent(encodedMaze, position, direction) {
-      if (direction === -1) {
+      if (direction === _MazeMovement.#NO_MOVE) {
         return [position[0], position[1]];
       }
       const nextPosition = [position[0], position[1]];
-      switch (direction) {
-        case 0:
-          nextPosition[1] -= 1;
-          break;
-        case 1:
-          nextPosition[0] += 1;
-          break;
-        case 2:
-          nextPosition[1] += 1;
-          break;
-        case 3:
-          nextPosition[0] -= 1;
-          break;
+      if (direction >= 0 && direction < _MazeMovement.#ACTION_DIM) {
+        const [dx, dy] = _MazeMovement.#DIRECTION_DELTAS[direction];
+        nextPosition[0] += dx;
+        nextPosition[1] += dy;
       }
       if (_MazeMovement.isValidMove(encodedMaze, nextPosition)) {
         return nextPosition;
@@ -15933,13 +16294,6 @@
         return [position[0], position[1]];
       }
     }
-    /**
-     * Selects the direction with the highest output value from the neural network.
-     * Applies softmax to interpret outputs as probabilities, then uses argmax.
-     *
-     * @param outputs - Array of output values from the neural network (length 4).
-     * @returns Index of the highest output value (0=N, 1=E, 2=S, 3=W), or -1 for no movement.
-     */
     /**
      * Selects the direction with the highest output value from the neural network.
      * Applies softmax to interpret outputs as probabilities, then uses argmax.
@@ -15951,7 +16305,7 @@
     static selectDirection(outputs) {
       if (!outputs || outputs.length !== _MazeMovement.#ACTION_DIM) {
         return {
-          direction: -1,
+          direction: _MazeMovement.#NO_MOVE,
           softmax: [0, 0, 0, 0],
           entropy: 0,
           maxProb: 0,
@@ -15960,34 +16314,51 @@
       }
       const meanLogit = (outputs[0] + outputs[1] + outputs[2] + outputs[3]) / _MazeMovement.#ACTION_DIM;
       let varianceSum = 0;
-      for (const outputVal of outputs)
-        varianceSum += (outputVal - meanLogit) * (outputVal - meanLogit);
+      for (let k = 0; k < _MazeMovement.#ACTION_DIM; k++) {
+        const delta = outputs[k] - meanLogit;
+        varianceSum += delta * delta;
+        _MazeMovement.#SCRATCH_CENTERED[k] = delta;
+      }
       varianceSum /= _MazeMovement.#ACTION_DIM;
       let stdDev = Math.sqrt(varianceSum);
       if (!Number.isFinite(stdDev) || stdDev < _MazeMovement.#STD_MIN)
         stdDev = _MazeMovement.#STD_MIN;
-      const centered = outputs.map((outputVal) => outputVal - meanLogit);
       const collapseRatio = stdDev < _MazeMovement.#COLLAPSE_STD_THRESHOLD ? _MazeMovement.#COLLAPSE_RATIO_FULL : stdDev < _MazeMovement.#COLLAPSE_STD_MED ? _MazeMovement.#COLLAPSE_RATIO_HALF : 0;
       const temperature = _MazeMovement.#TEMPERATURE_BASE + _MazeMovement.#TEMPERATURE_SCALE * collapseRatio;
-      const maxCentered = Math.max(...centered);
-      const exps = centered.map((v) => Math.exp((v - maxCentered) / temperature));
-      const expSum = exps.reduce((acc, val) => acc + val, 0) || 1;
-      const softmax = exps.map((expVal) => expVal / expSum);
+      let maxCentered = -Infinity;
+      for (let k = 0; k < _MazeMovement.#ACTION_DIM; k++) {
+        const v = _MazeMovement.#SCRATCH_CENTERED[k];
+        if (v > maxCentered) maxCentered = v;
+      }
+      let expSum = 0;
+      for (let k = 0; k < _MazeMovement.#ACTION_DIM; k++) {
+        const expVal = Math.exp(
+          (_MazeMovement.#SCRATCH_CENTERED[k] - maxCentered) / temperature
+        );
+        _MazeMovement.#SCRATCH_EXPS[k] = expVal;
+        expSum += expVal;
+      }
+      if (!expSum) expSum = 1;
       let direction = 0;
       let maxProb = -Infinity;
       let secondProb = 0;
-      softmax.forEach((prob, index) => {
+      const softmax = [0, 0, 0, 0];
+      for (let k = 0; k < _MazeMovement.#ACTION_DIM; k++) {
+        const prob = _MazeMovement.#SCRATCH_EXPS[k] / expSum;
+        softmax[k] = prob;
         if (prob > maxProb) {
           secondProb = maxProb;
           maxProb = prob;
-          direction = index;
-        } else if (prob > secondProb) secondProb = prob;
-      });
+          direction = k;
+        } else if (prob > secondProb) {
+          secondProb = prob;
+        }
+      }
       let entropy = 0;
       softmax.forEach((prob) => {
         if (prob > 0) entropy += -prob * Math.log(prob);
       });
-      entropy /= Math.log(4);
+      entropy /= _MazeMovement.#LOG_ACTIONS;
       return { direction, softmax, entropy, maxProb, secondProb };
     }
     /**
@@ -16009,14 +16380,14 @@
      *   - fitness: Calculated fitness score for evolution.
      *   - progress: Percentage progress toward exit (0-100).
      */
-    static simulateAgent(network, encodedMaze, startPos, exitPos, distanceMap, maxSteps = 3e3) {
+    static simulateAgent(network, encodedMaze, startPos, exitPos, distanceMap, maxSteps = _MazeMovement.#DEFAULT_MAX_STEPS) {
       let position = [startPos[0], startPos[1]];
       let steps = 0;
       let path2 = [[position[0], position[1]]];
       let visitedPositions = /* @__PURE__ */ new Set();
       let visitCounts = /* @__PURE__ */ new Map();
       let moveHistory = [];
-      const MOVE_HISTORY_LENGTH = 6;
+      const MOVE_HISTORY_LENGTH = _MazeMovement.#MOVE_HISTORY_LENGTH;
       let minDistanceToExit = _MazeMovement.#distanceAt(
         encodedMaze,
         position,
@@ -16026,7 +16397,7 @@
       let progressReward = 0;
       let newCellExplorationBonus = 0;
       let invalidMovePenalty = 0;
-      let prevAction = -1;
+      let prevAction = _MazeMovement.#NO_MOVE;
       let stepsSinceImprovement = 0;
       const startDistanceGlobal = _MazeMovement.#distanceAt(
         encodedMaze,
@@ -16035,7 +16406,6 @@
       );
       let lastDistanceGlobal = startDistanceGlobal;
       let saturatedSteps = 0;
-      const LOCAL_WINDOW = 30;
       const recentPositions = [];
       let localAreaPenalty = 0;
       let lastProgressRatio = 0;
@@ -16051,11 +16421,11 @@
         );
         const percentExplored = visitedPositions.size / (encodedMaze.length * encodedMaze[0].length);
         let loopPenalty = 0;
-        if (moveHistory.length >= 4) {
+        if (moveHistory.length >= _MazeMovement.#OSCILLATION_DETECT_LENGTH) {
           const last = _MazeMovement.#last(moveHistory);
-          const thirdLast = moveHistory[moveHistory.length - 3];
-          const secondLast = moveHistory[moveHistory.length - 2];
-          const fourthLast = moveHistory[moveHistory.length - 4];
+          const thirdLast = _MazeMovement.#nthFromEnd(moveHistory, 3);
+          const secondLast = _MazeMovement.#nthFromEnd(moveHistory, 2);
+          const fourthLast = _MazeMovement.#nthFromEnd(moveHistory, 4);
           if (last === thirdLast && secondLast === fourthLast) {
             loopPenalty -= _MazeMovement.#LOOP_PENALTY * rewardScale;
           }
@@ -16065,15 +16435,15 @@
         if (moveHistory.length > 1) {
           const idx = moveHistory.indexOf(currentPosKey);
           if (idx !== -1 && idx < moveHistory.length - 1) {
-            memoryPenalty -= 2 * rewardScale;
+            memoryPenalty -= _MazeMovement.#MEMORY_RETURN_PENALTY * rewardScale;
           }
         }
         let revisitPenalty = 0;
         const visits = visitCounts.get(currentPosKey) || 1;
         if (visits > 1) {
-          revisitPenalty -= 0.2 * (visits - 1) * rewardScale;
+          revisitPenalty -= _MazeMovement.#REVISIT_PENALTY_PER_VISIT * (visits - 1) * rewardScale;
         }
-        if (visits > 10) {
+        if (visits > _MazeMovement.#VISIT_TERMINATION_THRESHOLD) {
           invalidMovePenalty -= _MazeMovement.#INVALID_MOVE_PENALTY_HARSH * rewardScale;
           break;
         }
@@ -16106,10 +16476,10 @@
           actionStats = _MazeMovement.selectDirection(outputs);
           _MazeMovement._saturations = _MazeMovement._saturations || 0;
           const overConfident = actionStats.maxProb > _MazeMovement.#OVERCONFIDENT_PROB && actionStats.secondProb < _MazeMovement.#SECOND_PROB_LOW;
-          const logitsMean = (outputs[0] + outputs[1] + outputs[2] + outputs[3]) / 4;
+          const logitsMean = outputs.reduce((s, v) => s + v, 0) / _MazeMovement.#ACTION_DIM;
           let logVar = 0;
           for (const o of outputs) logVar += Math.pow(o - logitsMean, 2);
-          logVar /= 4;
+          logVar /= _MazeMovement.#ACTION_DIM;
           const logStd = Math.sqrt(logVar);
           const flatCollapsed = logStd < _MazeMovement.#LOGSTD_FLAT_THRESHOLD;
           const saturatedNow = overConfident || flatCollapsed;
@@ -16127,14 +16497,20 @@
           if (flatCollapsed)
             invalidMovePenalty -= _MazeMovement.#FLAT_COLLAPSE_PENALTY * rewardScale;
           try {
-            if (_MazeMovement._saturations > 6 && steps % 5 === 0) {
+            if (_MazeMovement._saturations > _MazeMovement.#SATURATION_ADJUST_MIN && steps % _MazeMovement.#SATURATION_ADJUST_INTERVAL === 0) {
               const outs = network.nodes?.filter(
-                (n) => n.type === "output"
+                (n) => n.type === _MazeMovement.#NODE_TYPE_OUTPUT
               );
               if (outs?.length) {
                 const mean = outs.reduce((a, n) => a + n.bias, 0) / outs.length;
                 outs.forEach((n) => {
-                  n.bias = Math.max(-5, Math.min(5, n.bias - mean * 0.5));
+                  n.bias = Math.max(
+                    -_MazeMovement.#BIAS_CLAMP,
+                    Math.min(
+                      _MazeMovement.#BIAS_CLAMP,
+                      n.bias - mean * _MazeMovement.#BIAS_ADJUST_FACTOR
+                    )
+                  );
                 });
               }
             }
@@ -16143,22 +16519,19 @@
           direction = actionStats.direction;
         } catch (error) {
           console.error("Error activating network:", error);
-          direction = -1;
+          direction = _MazeMovement.#NO_MOVE;
         }
         if (distHere <= _MazeMovement.#PROXIMITY_GREEDY_DISTANCE) {
           let bestDirection = direction;
           let bestDistance = Infinity;
           for (let dirIndex = 0; dirIndex < _MazeMovement.#ACTION_DIM; dirIndex++) {
-            const testPos = _MazeMovement.moveAgent(
-              encodedMaze,
-              position,
-              dirIndex
-            );
-            if (testPos[0] === position[0] && testPos[1] === position[1])
-              continue;
+            const [ddx, ddy] = _MazeMovement.#DIRECTION_DELTAS[dirIndex];
+            const tx = position[0] + ddx;
+            const ty = position[1] + ddy;
+            if (!_MazeMovement.isValidMove(encodedMaze, [tx, ty])) continue;
             const candidateDistance = _MazeMovement.#distanceAt(
               encodedMaze,
-              testPos,
+              [tx, ty],
               distanceMap
             );
             if (candidateDistance < bestDistance) {
@@ -16170,70 +16543,87 @@
         }
         const stepsStagnant = stepsSinceImprovement;
         let epsilon = 0;
-        if (steps < 10) epsilon = _MazeMovement.#EPSILON_INITIAL;
-        else if (stepsStagnant > 12)
-          epsilon = _MazeMovement.#EPSILON_STAGNANT_HIGH;
-        else if (stepsStagnant > 6) epsilon = _MazeMovement.#EPSILON_STAGNANT_MED;
-        else if (_MazeMovement._saturations > 3)
-          epsilon = _MazeMovement.#EPSILON_SATURATIONS;
+        switch (true) {
+          case steps < _MazeMovement.#EPSILON_WARMUP_STEPS:
+            epsilon = _MazeMovement.#EPSILON_INITIAL;
+            break;
+          case stepsStagnant > _MazeMovement.#EPSILON_STAGNANT_HIGH_THRESHOLD:
+            epsilon = _MazeMovement.#EPSILON_STAGNANT_HIGH;
+            break;
+          case stepsStagnant > _MazeMovement.#EPSILON_STAGNANT_MED_THRESHOLD:
+            epsilon = _MazeMovement.#EPSILON_STAGNANT_MED;
+            break;
+          case _MazeMovement._saturations > _MazeMovement.#EPSILON_SATURATION_TRIGGER:
+            epsilon = _MazeMovement.#EPSILON_SATURATIONS;
+            break;
+          default:
+            break;
+        }
         if (distHere <= _MazeMovement.#PROXIMITY_SUPPRESS_EXPLOR_DIST)
           epsilon = Math.min(epsilon, _MazeMovement.#EPSILON_MIN_NEAR_GOAL);
         if (Math.random() < epsilon) {
-          const candidateDirections = [0, 1, 2, 3].filter(
-            (dir) => dir !== prevAction
-          );
-          while (candidateDirections.length) {
-            const randomIndex = Math.floor(
-              Math.random() * candidateDirections.length
+          for (let trial = 0; trial < _MazeMovement.#ACTION_DIM; trial++) {
+            const candidateDirection = Math.floor(
+              Math.random() * _MazeMovement.#ACTION_DIM
             );
-            const candidateDirection = candidateDirections.splice(
-              randomIndex,
-              1
-            )[0];
-            const testPos = _MazeMovement.moveAgent(
-              encodedMaze,
-              position,
-              candidateDirection
-            );
-            if (testPos[0] !== position[0] || testPos[1] !== position[1]) {
+            if (candidateDirection === prevAction) continue;
+            const [ddx, ddy] = _MazeMovement.#DIRECTION_DELTAS[candidateDirection];
+            const tx = position[0] + ddx;
+            const ty = position[1] + ddy;
+            if (_MazeMovement.isValidMove(encodedMaze, [tx, ty])) {
               direction = candidateDirection;
               break;
             }
           }
         }
         _MazeMovement._noMoveStreak = _MazeMovement._noMoveStreak || 0;
-        if (direction === -1) _MazeMovement._noMoveStreak++;
+        if (direction === _MazeMovement.#NO_MOVE)
+          _MazeMovement._noMoveStreak++;
         if (_MazeMovement._noMoveStreak >= _MazeMovement.#NO_MOVE_STREAK_THRESHOLD) {
           for (let attempt = 0; attempt < _MazeMovement.#ACTION_DIM; attempt++) {
             const candidateDirection = Math.floor(
               Math.random() * _MazeMovement.#ACTION_DIM
             );
-            const testPos = _MazeMovement.moveAgent(
-              encodedMaze,
-              position,
-              candidateDirection
-            );
-            if (testPos[0] !== position[0] || testPos[1] !== position[1]) {
+            const [ddx, ddy] = _MazeMovement.#DIRECTION_DELTAS[candidateDirection];
+            const tx = position[0] + ddx;
+            const ty = position[1] + ddy;
+            if (_MazeMovement.isValidMove(encodedMaze, [tx, ty])) {
               direction = candidateDirection;
               break;
             }
           }
           _MazeMovement._noMoveStreak = 0;
         }
-        const prevPosition = [position[0], position[1]];
+        const prevPositionX = position[0];
+        const prevPositionY = position[1];
         const prevDistance = _MazeMovement.#distanceAt(
           encodedMaze,
           position,
           distanceMap
         );
-        position = _MazeMovement.moveAgent(encodedMaze, position, direction);
-        const moved = prevPosition[0] !== position[0] || prevPosition[1] !== position[1];
+        let moved = false;
+        if (direction === _MazeMovement.#NO_MOVE) {
+          moved = false;
+        } else if (direction >= 0 && direction < _MazeMovement.#ACTION_DIM) {
+          const [dx, dy] = _MazeMovement.#DIRECTION_DELTAS[direction];
+          const newX = position[0] + dx;
+          const newY = position[1] + dy;
+          if (_MazeMovement.isValidMove(encodedMaze, [newX, newY])) {
+            position[0] = newX;
+            position[1] = newY;
+            moved = true;
+          } else {
+            moved = false;
+          }
+        } else {
+          moved = false;
+        }
         if (moved) {
           path2.push([position[0], position[1]]);
           MazeUtils.pushHistory(
             recentPositions,
             [position[0], position[1]],
-            LOCAL_WINDOW
+            _MazeMovement.#LOCAL_WINDOW
           );
           if (recentPositions.length === _MazeMovement.#LOCAL_WINDOW) {
             let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
@@ -16245,7 +16635,7 @@
             }
             const span = maxX - minX + (maxY - minY);
             if (span <= _MazeMovement.#LOCAL_AREA_SPAN_THRESHOLD && stepsSinceImprovement > _MazeMovement.#LOCAL_AREA_STAGNATION_STEPS) {
-              localAreaPenalty -= 0.05 * rewardScale;
+              localAreaPenalty -= _MazeMovement.#LOCAL_AREA_PENALTY_AMOUNT * rewardScale;
             }
           }
           const currentDistance = _MazeMovement.#distanceAt(
@@ -16254,22 +16644,29 @@
             distanceMap
           );
           const distanceDelta = prevDistance - currentDistance;
-          if (distanceDelta > 0) {
-            const conf = actionStats?.maxProb ?? 1;
-            progressReward += (_MazeMovement.#PROGRESS_REWARD_BASE + _MazeMovement.#PROGRESS_REWARD_CONF_SCALE * conf) * rewardScale;
-            if (stepsSinceImprovement > 0)
-              progressReward += Math.min(
-                stepsSinceImprovement * _MazeMovement.#PROGRESS_STEPS_MULT * rewardScale,
-                _MazeMovement.#PROGRESS_STEPS_MAX * rewardScale
-              );
-            stepsSinceImprovement = 0;
-            progressReward += distanceDelta * _MazeMovement.#DISTANCE_DELTA_SCALE * (_MazeMovement.#DISTANCE_DELTA_CONF_BASE + _MazeMovement.#DISTANCE_DELTA_CONF_SCALE * conf);
-          } else if (currentDistance > prevDistance) {
-            const conf = actionStats?.maxProb ?? 0.5;
-            progressReward -= (0.05 + 0.15 * conf) * rewardScale;
-            stepsSinceImprovement++;
-          } else {
-            stepsSinceImprovement++;
+          switch (true) {
+            case distanceDelta > 0: {
+              const conf = actionStats?.maxProb ?? 1;
+              progressReward += (_MazeMovement.#PROGRESS_REWARD_BASE + _MazeMovement.#PROGRESS_REWARD_CONF_SCALE * conf) * rewardScale;
+              if (stepsSinceImprovement > 0)
+                progressReward += Math.min(
+                  stepsSinceImprovement * _MazeMovement.#PROGRESS_STEPS_MULT * rewardScale,
+                  _MazeMovement.#PROGRESS_STEPS_MAX * rewardScale
+                );
+              stepsSinceImprovement = 0;
+              progressReward += distanceDelta * _MazeMovement.#DISTANCE_DELTA_SCALE * (_MazeMovement.#DISTANCE_DELTA_CONF_BASE + _MazeMovement.#DISTANCE_DELTA_CONF_SCALE * conf);
+              break;
+            }
+            case currentDistance > prevDistance: {
+              const conf = actionStats?.maxProb ?? 0.5;
+              progressReward -= (_MazeMovement.#PROGRESS_AWAY_BASE_PENALTY + _MazeMovement.#PROGRESS_AWAY_CONF_SCALE * conf) * rewardScale;
+              stepsSinceImprovement++;
+              break;
+            }
+            default: {
+              stepsSinceImprovement++;
+              break;
+            }
           }
           if (visits === 1) {
             newCellExplorationBonus += _MazeMovement.#NEW_CELL_EXPLORATION_BONUS * rewardScale;
@@ -16287,39 +16684,46 @@
           distanceMap
         );
         if (currentDistanceGlobal < lastDistanceGlobal) {
-          if (stepsSinceImprovement > 10)
+          if (stepsSinceImprovement > _MazeMovement.#GLOBAL_BREAK_BONUS_START)
             progressReward += Math.min(
-              (stepsSinceImprovement - 10) * 0.01 * rewardScale,
-              0.5 * rewardScale
+              (stepsSinceImprovement - _MazeMovement.#GLOBAL_BREAK_BONUS_START) * _MazeMovement.#GLOBAL_BREAK_BONUS_PER_STEP * rewardScale,
+              _MazeMovement.#GLOBAL_BREAK_BONUS_CAP * rewardScale
             );
           stepsSinceImprovement = 0;
         }
         lastDistanceGlobal = currentDistanceGlobal;
-        if (prevAction === direction && stepsSinceImprovement > 4) {
-          invalidMovePenalty -= 0.05 * (stepsSinceImprovement - 4) * rewardScale;
+        if (prevAction === direction && stepsSinceImprovement > _MazeMovement.#REPETITION_PENALTY_START) {
+          invalidMovePenalty -= _MazeMovement.#REPETITION_PENALTY_BASE * (stepsSinceImprovement - _MazeMovement.#REPETITION_PENALTY_START) * rewardScale;
         }
         if (prevAction >= 0 && direction >= 0) {
-          const opposite = (prevAction + 2) % 4;
-          if (direction === opposite && stepsSinceImprovement > 0) {
-            invalidMovePenalty -= 0.2 * rewardScale;
+          if (direction === _MazeMovement.#opposite(prevAction) && stepsSinceImprovement > 0) {
+            invalidMovePenalty -= _MazeMovement.#BACK_MOVE_PENALTY * rewardScale;
           }
         }
         if (moved) {
           prevAction = direction;
-          prevAction = direction;
         }
         if (actionStats) {
           const { entropy, maxProb, secondProb } = actionStats;
-          const hasGuidance = vision[8] + vision[9] + vision[10] + vision[11] > 0 || // LOS group
-          vision[12] + vision[13] + vision[14] + vision[15] > 0;
-          if (entropy > _MazeMovement.#ENTROPY_HIGH_THRESHOLD) {
-            invalidMovePenalty -= _MazeMovement.#ENTROPY_PENALTY * rewardScale;
-          } else if (hasGuidance && entropy < _MazeMovement.#ENTROPY_CONFIDENT_THRESHOLD && maxProb - secondProb > _MazeMovement.#ENTROPY_CONFIDENT_DIFF) {
-            newCellExplorationBonus += _MazeMovement.#EXPLORATION_BONUS_SMALL * rewardScale;
+          const hasGuidance = _MazeMovement.#sumVisionGroup(vision, _MazeMovement.#VISION_LOS_START) > 0 || _MazeMovement.#sumVisionGroup(
+            vision,
+            _MazeMovement.#VISION_GRAD_START
+          ) > 0;
+          switch (true) {
+            case entropy > _MazeMovement.#ENTROPY_HIGH_THRESHOLD: {
+              invalidMovePenalty -= _MazeMovement.#ENTROPY_PENALTY * rewardScale;
+              break;
+            }
+            case (hasGuidance && entropy < _MazeMovement.#ENTROPY_CONFIDENT_THRESHOLD && maxProb - secondProb > _MazeMovement.#ENTROPY_CONFIDENT_DIFF): {
+              newCellExplorationBonus += _MazeMovement.#EXPLORATION_BONUS_SMALL * rewardScale;
+              break;
+            }
+            default:
+              break;
           }
-          if (_MazeMovement._saturations >= 5) {
+          if (_MazeMovement._saturations >= _MazeMovement.#SATURATION_PENALTY_TRIGGER) {
             invalidMovePenalty -= _MazeMovement.#SATURATION_PENALTY_BASE * rewardScale;
-            if (_MazeMovement._saturations % 10 === 0) {
+            if (_MazeMovement._saturations % _MazeMovement.#SATURATION_PENALTY_PERIOD === 0) {
               invalidMovePenalty -= _MazeMovement.#SATURATION_PENALTY_ESCALATE * rewardScale;
             }
           }
@@ -16362,12 +16766,12 @@
       const explorationScore = visitedPositions.size * 1;
       const penalty = invalidMovePenalty;
       const { actionEntropy } = _MazeMovement.computeActionEntropy(path2);
-      const entropyBonus = actionEntropy * 4;
+      const entropyBonus = actionEntropy * _MazeMovement.#ENTROPY_BONUS_WEIGHT;
       let saturationPenalty = 0;
       let outputVarPenalty = 0;
       let nearMissPenalty = 0;
       const satFrac = steps ? saturatedSteps / steps : 0;
-      if (minDistanceToExit === 1)
+      if (minDistanceToExit === _MazeMovement.#NEAR_MISS_PENALTY)
         nearMissPenalty -= _MazeMovement.#NEAR_MISS_PENALTY * rewardScale;
       const base = shapedProgress + explorationScore + progressReward + newCellExplorationBonus + penalty + entropyBonus + localAreaPenalty + saturationPenalty + outputVarPenalty + nearMissPenalty;
       const raw = base + Math.random() * _MazeMovement.#FITNESS_RANDOMNESS;
@@ -16382,20 +16786,24 @@
         actionEntropy
       };
     }
-  };
-  ((MazeMovement2) => {
-    function computeActionEntropy(path2) {
-      if (!path2 || path2.length < 2) return { actionEntropy: 0 };
+    /**
+     * Computes the entropy of the agent's action distribution from its path.
+     * Higher entropy means more diverse movement; lower means repetitive.
+     *
+     * @param path - Array of [x, y] positions visited by the agent.
+     * @returns {object} actionEntropy (0..1)
+     */
+    static computeActionEntropy(path2) {
+      if (!path2 || path2.length < this.#MIN_PATH_FOR_ENTROPY)
+        return { actionEntropy: 0 };
       const directionCounts = [0, 0, 0, 0];
       for (let stepIndex = 1; stepIndex < path2.length; stepIndex++) {
         const deltaX = path2[stepIndex][0] - path2[stepIndex - 1][0];
         const deltaY = path2[stepIndex][1] - path2[stepIndex - 1][1];
-        if (deltaX === 0 && deltaY === -1) directionCounts[0]++;
-        else if (deltaX === 1 && deltaY === 0) directionCounts[1]++;
-        else if (deltaX === 0 && deltaY === 1) directionCounts[2]++;
-        else if (deltaX === -1 && deltaY === 0) directionCounts[3]++;
+        const dir = _MazeMovement.#deltaToDirection(deltaX, deltaY);
+        if (dir >= 0 && dir < directionCounts.length) directionCounts[dir]++;
       }
-      const actionTotal = directionCounts.reduce((acc, val) => acc + val, 0) || 1;
+      const actionTotal = directionCounts.reduce((acc, val) => acc + val, 0) || this.#MIN_ACTION_TOTAL;
       let entropySum = 0;
       directionCounts.forEach((count) => {
         if (count > 0) {
@@ -16403,11 +16811,10 @@
           entropySum += -probability * Math.log(probability);
         }
       });
-      const actionEntropy = entropySum / Math.log(4);
+      const actionEntropy = entropySum / this.#LOG_ACTIONS;
       return { actionEntropy };
     }
-    MazeMovement2.computeActionEntropy = computeActionEntropy;
-  })(MazeMovement || (MazeMovement = {}));
+  };
 
   // test/examples/asciiMaze/fitness.ts
   var FitnessEvaluator = class _FitnessEvaluator {
@@ -16493,6 +16900,2393 @@
 
   // test/examples/asciiMaze/evolutionEngine.ts
   var EvolutionEngine = class _EvolutionEngine {
+    /**
+     * Pooled scratch buffer used by telemetry softmax/entropy calculations.
+     * @remarks Non-reentrant: telemetry functions that use this buffer must not be
+     * called concurrently (single-threaded runtime assumption holds for Node/browser).
+     */
+    static #SCRATCH_EXPS = new Float64Array(4);
+    /**
+     * Pooled stats buffers: means, standard deviations, and kurtosis accumulators.
+     * @remarks Non-reentrant; telemetry paths reuse these buffers to avoid allocations.
+     */
+    static #SCRATCH_MEANS = new Float64Array(4);
+    static #SCRATCH_STDS = new Float64Array(4);
+    static #SCRATCH_KURT = new Float64Array(4);
+    /** Raw moment accumulation buffers for fused logit stats (sum x^2,x^3,x^4). */
+    static #SCRATCH_M2_RAW = new Float64Array(4);
+    static #SCRATCH_M3_RAW = new Float64Array(4);
+    static #SCRATCH_M4_RAW = new Float64Array(4);
+    /**
+     * Small integer scratch buffer used for directional move counts (N,E,S,W).
+     * @remarks Non-reentrant: reused across telemetry calls.
+     */
+    static #SCRATCH_COUNTS = new Int32Array(4);
+    /** Packed visited coordinate buffer for exploration stats (x<<16|y). @remarks Non-reentrant */
+    static #SCRATCH_VISITED = new Int32Array(512);
+    /**
+     * Open-address hash table for visited coordinate detection (pairs packed into 32-bit int).
+     * Length is always a power of two; uses linear probing. A value of 0 represents EMPTY so we offset packed values by +1.
+     */
+    static #SCRATCH_VISITED_HASH = new Int32Array(0);
+    /** Load factor threshold (~0.7) for resizing visited hash. */
+    static #VISITED_HASH_LOAD = 0.7;
+    /** Scratch species id buffer (dynamic growth). */
+    static #SCRATCH_SPECIES_IDS = new Int32Array(64);
+    /** Scratch species count buffer parallel to ids. */
+    static #SCRATCH_SPECIES_COUNTS = new Int32Array(64);
+    /** Reusable candidate connection object buffer. */
+    static #SCRATCH_CONN_CAND = [];
+    /** Reusable hidden->output connection buffer. */
+    static #SCRATCH_HIDDEN_OUT = [];
+    /** Flags buffer for connection disabling (grown on demand). */
+    static #SCRATCH_CONN_FLAGS = new Uint8Array(128);
+    /** Scratch tail buffer reused by #getTail (grows geometrically). */
+    static #SCRATCH_TAIL = new Array(64);
+    /** Scratch sample result buffer reused by #sampleArray (ephemeral return). */
+    static #SCRATCH_SAMPLE_RESULT = new Array(64);
+    /** Scratch index buffer holding sorted indices by score (reused per generation). */
+    static #SCRATCH_SORT_IDX = new Array(512);
+    /** Scratch stack (lo,hi pairs) for quicksort on indices. */
+    static #SCRATCH_QS_STACK = new Int32Array(128);
+    /** Scratch array reused when cloning an initial population. */
+    static #SCRATCH_POP_CLONE = new Array(0);
+    /** Scratch string array for activation function names (printNetworkStructure). */
+    static #SCRATCH_ACT_NAMES = new Array(0);
+    /** Reusable object buffer for snapshot top entries. */
+    static #SCRATCH_SNAPSHOT_TOP = new Array(0);
+    /** Reusable snapshot object (fields overwritten each persistence). */
+    static #SCRATCH_SNAPSHOT_OBJ = {
+      generation: 0,
+      bestFitness: 0,
+      simplifyMode: false,
+      plateauCounter: 0,
+      timestamp: 0,
+      telemetryTail: void 0,
+      top: void 0
+    };
+    /** Pooled buffer for mutation operator indices (shuffled prefix each use). */
+    static #SCRATCH_MUTOP_IDX = new Uint16Array(0);
+    /** Number of action outputs (N,E,S,W) */
+    static #ACTION_DIM = 4;
+    /** Precomputed 1/ln(4) for entropy normalization (micro-optimization). */
+    static #INV_LOG4 = 1 / Math.log(4);
+    /** Ring buffer capacity for logits history (powers of two for mask ops). */
+    static #LOGITS_RING_CAP = 512;
+    /** Scratch preallocated ring buffer storage for logits (array of float arrays). */
+    static #SCRATCH_LOGITS_RING = (() => {
+      const cap = _EvolutionEngine.#LOGITS_RING_CAP;
+      const rows = new Array(cap);
+      for (let rowIndex = 0; rowIndex < cap; rowIndex++) {
+        rows[rowIndex] = new Float64Array(_EvolutionEngine.#ACTION_DIM);
+      }
+      return rows;
+    })();
+    /** Current write index for logits ring. */
+    static #SCRATCH_LOGITS_RING_W = 0;
+    /**
+     * Small node index scratch arrays reused when extracting nodes by type.
+     * @remarks Non-reentrant: do not call concurrently.
+     */
+    static #SCRATCH_NODE_IDX = new Int32Array(64);
+    /**
+     * Object reference scratch array used as a short sample buffer (max 40 entries).
+     * Avoids allocating small arrays inside hot telemetry paths.
+     */
+    static #SCRATCH_SAMPLE = new Array(40);
+    /** Reusable string assembly character buffer for small joins (grown geometrically). */
+    static #SCRATCH_STR = new Array(64);
+    /** Internal 32-bit state for fast LCG RNG (mul 1664525 + 1013904223). */
+    static #RNG_STATE = (Date.now() ^ 2654435769) >>> 0;
+    /** Detailed profiling enable flag (set ASCII_MAZE_PROFILE_DETAILS=1). */
+    static #PROFILE_ENABLED = (() => {
+      try {
+        return typeof process !== "undefined" && process?.env?.ASCII_MAZE_PROFILE_DETAILS === "1";
+      } catch {
+        return false;
+      }
+    })();
+    /** Accumulators for detailed profiling (ms). */
+    static #PROFILE_ACCUM = {
+      telemetry: 0,
+      simplify: 0,
+      snapshot: 0,
+      prune: 0
+    };
+    static #PROFILE_T0() {
+      return globalThis.performance?.now?.() ?? Date.now();
+    }
+    static #PROFILE_ADD(key, delta) {
+      if (!_EvolutionEngine.#PROFILE_ENABLED) return;
+      _EvolutionEngine.#PROFILE_ACCUM[key] = (_EvolutionEngine.#PROFILE_ACCUM[key] || 0) + delta;
+    }
+    /** Fast LCG producing float in [0,1). Non-crypto. @internal */
+    static #fastRandom() {
+      let state = _EvolutionEngine.#RNG_STATE * 1664525 + 1013904223 >>> 0;
+      _EvolutionEngine.#RNG_STATE = state;
+      return (state >>> 9) * (1 / 8388608);
+    }
+    /** Default tail history size used by telemetry */
+    static #RECENT_WINDOW = 40;
+    /** Default population size used when no popSize provided in cfg */
+    static #DEFAULT_POPSIZE = 500;
+    /** Default mutation rate (fraction of individuals mutated per generation) */
+    static #DEFAULT_MUTATION_RATE = 0.2;
+    /** Default mutation amount (fractional magnitude for mutation operators) */
+    static #DEFAULT_MUTATION_AMOUNT = 0.3;
+    /** Fraction of population reserved for elitism when computing elitism count */
+    static #DEFAULT_ELITISM_FRACTION = 0.1;
+    /** Fraction of population reserved for provenance when computing provenance count */
+    static #DEFAULT_PROVENANCE_FRACTION = 0.2;
+    /** Default minimum hidden nodes for new NEAT instances */
+    static #DEFAULT_MIN_HIDDEN = 6;
+    /** Default target species count for adaptive target species heuristics */
+    static #DEFAULT_TARGET_SPECIES = 10;
+    /** Default supervised training error threshold for local training */
+    static #DEFAULT_TRAIN_ERROR = 0.01;
+    /** Default supervised training learning rate for local training */
+    static #DEFAULT_TRAIN_RATE = 1e-3;
+    /** Default supervised training momentum */
+    static #DEFAULT_TRAIN_MOMENTUM = 0.2;
+    /** Default small batch size used during Lamarckian training */
+    static #DEFAULT_TRAIN_BATCH_SMALL = 2;
+    /** Default batch size used when training the fittest network for evaluation */
+    static #DEFAULT_TRAIN_BATCH_LARGE = 20;
+    /** Iterations used when training the fittest network for evaluation */
+    static #FITTEST_TRAIN_ITERATIONS = 1e3;
+    /** Saturation fraction threshold triggering hidden-output pruning */
+    static #SATURATION_PRUNE_THRESHOLD = 0.5;
+    /** Small threshold used in several numeric comparisons */
+    static #NUMERIC_EPSILON_SMALL = 0.01;
+    /** Small threshold used for std flat detection in logits */
+    static #LOGSTD_FLAT_THRESHOLD = 5e-3;
+    /** Default entropy range for adaptive target species */
+    static #DEFAULT_ENTROPY_RANGE = [0.3, 0.8];
+    /** Default smoothing factor for adaptive target species */
+    static #DEFAULT_ADAPTIVE_SMOOTH = 0.5;
+    /** Default probability used for small randomized jitter (25%) */
+    static #DEFAULT_JITTER_PROB = 0.25;
+    /** Default probability for 50/50 decisions */
+    static #DEFAULT_HALF_PROB = 0.5;
+    /** Fraction of sorted parents chosen as parent pool */
+    static #DEFAULT_PARENT_FRACTION = 0.25;
+    /** Small std threshold to consider 'small' std */
+    static #DEFAULT_STD_SMALL = 0.25;
+    /** Multiplier applied when std is small */
+    static #DEFAULT_STD_ADJUST_MULT = 0.7;
+    /** Initial weight range lower bound used by compass warm start */
+    static #W_INIT_MIN = 0.55;
+    /** Initial weight random range used by compass warm start */
+    static #W_INIT_RANGE = 0.25;
+    /** Base value for output bias initialization */
+    static #OUTPUT_BIAS_BASE = 0.05;
+    /** Step per output index when initializing output biases */
+    static #OUTPUT_BIAS_STEP = 0.01;
+    /** Bias reset half-range (bias = rand * 2*R - R) */
+    static #BIAS_RESET_HALF_RANGE = 0.1;
+    /** Connection weight reset half-range (weight = rand * 2*R - R) */
+    static #CONN_WEIGHT_RESET_HALF_RANGE = 0.2;
+    /** Log tag for action entropy telemetry lines */
+    static #LOG_TAG_ACTION_ENTROPY = "[ACTION_ENTROPY]";
+    /** Log tag for output bias telemetry lines */
+    static #LOG_TAG_OUTPUT_BIAS = "[OUTPUT_BIAS]";
+    /** Log tag for logits telemetry lines */
+    static #LOG_TAG_LOGITS = "[LOGITS]";
+    /** High target probability for the chosen action during supervised warm start */
+    static #TRAIN_OUT_PROB_HIGH = 0.92;
+    /** Low target probability for non-chosen actions during supervised warm start */
+    static #TRAIN_OUT_PROB_LOW = 0.02;
+    /** Progress intensity: medium (single open path typical) */
+    static #PROGRESS_MEDIUM = 0.7;
+    /** Progress intensity: strong forward signal */
+    static #PROGRESS_STRONG = 0.9;
+    /** Progress intensity: typical junction neutrality */
+    static #PROGRESS_JUNCTION = 0.6;
+    /** Progress intensity: four-way moderate signal */
+    static #PROGRESS_FOURWAY = 0.55;
+    /** Progress intensity: regressing / weak progress */
+    static #PROGRESS_REGRESS = 0.4;
+    /** Progress intensity: mild regression / noise */
+    static #PROGRESS_MILD_REGRESS = 0.45;
+    /** Minimal progress positive blip used in a corner-case sample */
+    static #PROGRESS_MIN_SIGNAL = 1e-3;
+    /** Augmentation: base openness jitter value */
+    static #AUGMENT_JITTER_BASE = 0.95;
+    /** Augmentation: openness jitter range added to base */
+    static #AUGMENT_JITTER_RANGE = 0.05;
+    /** Augmentation: probability to jitter progress channel */
+    static #AUGMENT_PROGRESS_JITTER_PROB = 0.35;
+    /** Augmentation: progress delta full range */
+    static #AUGMENT_PROGRESS_DELTA_RANGE = 0.1;
+    /** Augmentation: progress delta half range (range/2) */
+    static #AUGMENT_PROGRESS_DELTA_HALF = 0.05;
+    /** Max iterations used during population pretrain */
+    static #PRETRAIN_MAX_ITER = 60;
+    /** Base iterations added in pretrain (8 + floor(setLen/2)) */
+    static #PRETRAIN_BASE_ITER = 8;
+    /** Default learning rate used during pretraining population warm-start */
+    static #DEFAULT_PRETRAIN_RATE = 2e-3;
+    /** Default momentum used during pretraining population warm-start */
+    static #DEFAULT_PRETRAIN_MOMENTUM = 0.1;
+    /** Default batch size used during population pretraining */
+    static #DEFAULT_PRETRAIN_BATCH = 4;
+    /** Entropy threshold used in collapse heuristics */
+    static #ENTROPY_COLLAPSE_THRESHOLD = 0.35;
+    /** Stability threshold used in collapse heuristics */
+    static #STABILITY_COLLAPSE_THRESHOLD = 0.97;
+    /** Window size (consecutive generations) used to detect species collapse */
+    static #SPECIES_COLLAPSE_WINDOW = 20;
+    /** Max length of species history buffer */
+    static #SPECIES_HISTORY_MAX = 50;
+    /** Collapse streak trigger (consecutive collapsed gens before recovery) */
+    static #COLLAPSE_STREAK_TRIGGER = 6;
+    /** Mutation rate escalation cap during collapse recovery */
+    static #COLLAPSE_MUTRATE_CAP = 0.6;
+    /** Mutation amount escalation cap during collapse recovery */
+    static #COLLAPSE_MUTAMOUNT_CAP = 0.8;
+    /** Novelty blend factor escalation cap during collapse recovery */
+    static #COLLAPSE_NOVELTY_BLEND_CAP = 0.4;
+    /** Mutation rate escalation multiplier */
+    static #COLLAPSE_MUTRATE_MULT = 1.5;
+    /** Mutation amount escalation multiplier */
+    static #COLLAPSE_MUTAMOUNT_MULT = 1.3;
+    /** Novelty blend factor escalation multiplier */
+    static #COLLAPSE_NOVELTY_MULT = 1.2;
+    /** Small-partition cutoff for quicksort; tuned empirically (was 16). */
+    static #QS_SMALL_THRESHOLD = 24;
+    /** Branchless (dx,dy)->direction index map ((dx+1)*3 + (dy+1)) => 0..3 or -1. */
+    static #DIR_DELTA_TO_INDEX = (() => {
+      const map = new Int8Array(9);
+      map.fill(-1);
+      map[(0 + 1) * 3 + (-1 + 1)] = 0;
+      map[(1 + 1) * 3 + (0 + 1)] = 1;
+      map[(0 + 1) * 3 + (1 + 1)] = 2;
+      map[(-1 + 1) * 3 + (0 + 1)] = 3;
+      return map;
+    })();
+    /** Map a delta vector (dx,dy) to a direction index 0..3 (N,E,S,W) or -1 if unknown. @internal */
+    static #directionIndexFromDelta(deltaX, deltaY) {
+      if (deltaX === 0) {
+        if (deltaY === -1) return 0;
+        if (deltaY === 1) return 2;
+      } else if (deltaY === 0) {
+        if (deltaX === 1) return 1;
+        if (deltaX === -1) return 3;
+      }
+      return -1;
+    }
+    /**
+     * Populate internal node index scratch with indices of nodes of given type.
+     * Returns the count of matching nodes.
+     * @internal
+     */
+    static #getNodeIndicesByType(nodes, type) {
+      if (!nodes || !nodes.length) return 0;
+      let count = 0;
+      for (let nodeIndex = 0; nodeIndex < nodes.length; nodeIndex++) {
+        const node = nodes[nodeIndex];
+        if (node && node.type === type) {
+          if (count >= _EvolutionEngine.#SCRATCH_NODE_IDX.length) {
+            const nextSize = 1 << Math.ceil(Math.log2(count + 1));
+            const grown = new Int32Array(nextSize);
+            grown.set(_EvolutionEngine.#SCRATCH_NODE_IDX);
+            _EvolutionEngine.#SCRATCH_NODE_IDX = grown;
+          }
+          _EvolutionEngine.#SCRATCH_NODE_IDX[count++] = nodeIndex;
+        }
+      }
+      return count;
+    }
+    /**
+     * Compute simple exploration statistics from a path: unique visited cells and ratio.
+     * @internal
+     */
+    static #computeExplorationStats(path2) {
+      const pathLength = path2?.length || 0;
+      if (!pathLength) return { unique: 0, pathLen: 0, ratio: 0 };
+      if (pathLength < 32) {
+        if (pathLength > _EvolutionEngine.#SCRATCH_VISITED.length) {
+          const nextSize = 1 << Math.ceil(Math.log2(pathLength));
+          _EvolutionEngine.#SCRATCH_VISITED = new Int32Array(nextSize);
+        }
+        const visitedBuffer = _EvolutionEngine.#SCRATCH_VISITED;
+        let uniqueCountSmall = 0;
+        for (let pi = 0; pi < pathLength; pi++) {
+          const cp = path2[pi];
+          const packed = (cp[0] & 65535) << 16 | cp[1] & 65535;
+          let dup = false;
+          for (let si = 0; si < uniqueCountSmall; si++) {
+            if (visitedBuffer[si] === packed) {
+              dup = true;
+              break;
+            }
+          }
+          if (!dup) visitedBuffer[uniqueCountSmall++] = packed;
+        }
+        const ratioSmall = uniqueCountSmall ? uniqueCountSmall / pathLength : 0;
+        return {
+          unique: uniqueCountSmall,
+          pathLen: pathLength,
+          ratio: ratioSmall
+        };
+      }
+      const targetCap = pathLength << 1;
+      let table = _EvolutionEngine.#SCRATCH_VISITED_HASH;
+      if (table.length === 0 || targetCap > table.length * _EvolutionEngine.#VISITED_HASH_LOAD) {
+        const needed = Math.ceil(targetCap / _EvolutionEngine.#VISITED_HASH_LOAD);
+        const pow2 = 1 << Math.ceil(Math.log2(needed));
+        table = _EvolutionEngine.#SCRATCH_VISITED_HASH = new Int32Array(pow2);
+      } else {
+        table.fill(0);
+      }
+      const mask = table.length - 1;
+      let distinct = 0;
+      for (let pi = 0; pi < pathLength; pi++) {
+        const cp = path2[pi];
+        const packed = (cp[0] & 65535) << 16 | cp[1] & 65535;
+        let h = Math.imul(packed, 2654435761) >>> 0;
+        const storeVal = packed + 1 | 0;
+        while (true) {
+          const slot = h & mask;
+          const v = table[slot];
+          if (v === 0) {
+            table[slot] = storeVal;
+            distinct++;
+            break;
+          } else if (v === storeVal) {
+            break;
+          }
+          h = h + 1 | 0;
+        }
+      }
+      const ratio = distinct ? distinct / pathLength : 0;
+      return { unique: distinct, pathLen: pathLength, ratio };
+    }
+    /**
+     * Compute simple diversity metrics for a NEAT instance: species count, Simpson index and sample weight std.
+     * Uses class-level scratch sample to avoid small allocations.
+     * @internal
+     */
+    static #computeDiversityMetrics(neat, sampleSize = 40) {
+      const populationRef = neat.population || [];
+      let speciesIds = _EvolutionEngine.#SCRATCH_SPECIES_IDS;
+      let speciesCounts = _EvolutionEngine.#SCRATCH_SPECIES_COUNTS;
+      if (populationRef.length > speciesIds.length) {
+        const nextSize = 1 << Math.ceil(Math.log2(populationRef.length));
+        _EvolutionEngine.#SCRATCH_SPECIES_IDS = new Int32Array(nextSize);
+        _EvolutionEngine.#SCRATCH_SPECIES_COUNTS = new Int32Array(nextSize);
+        speciesIds = _EvolutionEngine.#SCRATCH_SPECIES_IDS;
+        speciesCounts = _EvolutionEngine.#SCRATCH_SPECIES_COUNTS;
+      }
+      let speciesUniqueCount = 0;
+      for (let pi = 0; pi < populationRef.length; pi++) {
+        const genome = populationRef[pi];
+        const speciesId = (genome && genome.species != null ? genome.species : -1) | 0;
+        let foundIndex = -1;
+        for (let si = 0; si < speciesUniqueCount; si++) {
+          if (speciesIds[si] === speciesId) {
+            foundIndex = si;
+            break;
+          }
+        }
+        if (foundIndex === -1) {
+          speciesIds[speciesUniqueCount] = speciesId;
+          speciesCounts[speciesUniqueCount] = 1;
+          speciesUniqueCount++;
+        } else {
+          speciesCounts[foundIndex]++;
+        }
+      }
+      let total = 0;
+      for (let si = 0; si < speciesUniqueCount; si++) total += speciesCounts[si];
+      total = total || 1;
+      let simpsonAcc = 0;
+      for (let si = 0; si < speciesUniqueCount; si++) {
+        const proportion = speciesCounts[si] / total;
+        simpsonAcc += proportion * proportion;
+      }
+      const simpson = 1 - simpsonAcc;
+      const sampleLength = Math.min(populationRef.length, sampleSize);
+      const sampledLen = _EvolutionEngine.#sampleIntoScratch(
+        populationRef,
+        sampleLength
+      );
+      let weightMean = 0;
+      let weightM2 = 0;
+      let weightCount = 0;
+      for (let sampleIndex = 0; sampleIndex < sampledLen; sampleIndex++) {
+        const sampleGenome = _EvolutionEngine.#SCRATCH_SAMPLE[sampleIndex];
+        const conns = sampleGenome.connections || [];
+        for (let connectionIndex = 0; connectionIndex < conns.length; connectionIndex++) {
+          const conn = conns[connectionIndex];
+          if (conn && conn.enabled !== false) {
+            weightCount++;
+            const delta = conn.weight - weightMean;
+            weightMean += delta / weightCount;
+            weightM2 += delta * (conn.weight - weightMean);
+          }
+        }
+      }
+      const wStd = weightCount ? Math.sqrt(weightM2 / weightCount) : 0;
+      return { speciesUniqueCount, simpson, wStd };
+    }
+    /**
+     * Sample `k` items from `src` with replacement. Uses SCRATCH_SAMPLE when k is small to avoid allocations.
+     * @internal
+     */
+    static #sampleArray(src, k) {
+      if (!Array.isArray(src) || k <= 0) return [];
+      const sampleCount = Math.floor(k);
+      const srcLen = src.length | 0;
+      if (srcLen === 0) return [];
+      if (sampleCount > _EvolutionEngine.#SCRATCH_SAMPLE_RESULT.length) {
+        const nextSize = 1 << Math.ceil(Math.log2(sampleCount));
+        _EvolutionEngine.#SCRATCH_SAMPLE_RESULT = new Array(nextSize);
+      }
+      const out = _EvolutionEngine.#SCRATCH_SAMPLE_RESULT;
+      for (let sampleIndex = 0; sampleIndex < sampleCount; sampleIndex++) {
+        out[sampleIndex] = src[_EvolutionEngine.#fastRandom() * srcLen | 0];
+      }
+      out.length = sampleCount;
+      return out;
+    }
+    /**
+     * Apply simplify pruning to every genome in the population, catching per-genome failures.
+     * Centralizes the simplify loop previously inlined in the main evolution loop.
+     * @internal
+     */
+    static #applySimplifyPruningToPopulation(neat, simplifyStrategy, simplifyPruneFraction) {
+      const popRef = neat.population || [];
+      for (let gidx = 0; gidx < popRef.length; gidx++) {
+        try {
+          _EvolutionEngine.#pruneWeakConnectionsForGenome(
+            popRef[gidx],
+            simplifyStrategy,
+            simplifyPruneFraction
+          );
+        } catch {
+        }
+      }
+    }
+    /**
+     * Decide whether to start the simplify/pruning phase.
+     * Returns the number of generations the simplify phase should last (0 = do not start).
+     * @internal
+     */
+    static #maybeStartSimplify(plateauCounter, plateauGenerations, simplifyDuration) {
+      try {
+        if (plateauCounter >= plateauGenerations) {
+          if (typeof window === "undefined") return simplifyDuration;
+        }
+      } catch {
+      }
+      return 0;
+    }
+    /**
+     * Run one simplify generation (centralized logic). Returns the remaining simplify generations.
+     * @internal
+     */
+    static #runSimplifyCycle(neat, simplifyRemaining, simplifyStrategy, simplifyPruneFraction) {
+      if (!simplifyRemaining) return 0;
+      try {
+        if (typeof window !== "undefined") return simplifyRemaining;
+      } catch {
+        return simplifyRemaining;
+      }
+      const t0 = _EvolutionEngine.#PROFILE_ENABLED ? _EvolutionEngine.#PROFILE_T0() : 0;
+      _EvolutionEngine.#applySimplifyPruningToPopulation(
+        neat,
+        simplifyStrategy,
+        simplifyPruneFraction
+      );
+      if (_EvolutionEngine.#PROFILE_ENABLED) {
+        _EvolutionEngine.#PROFILE_ADD(
+          "simplify",
+          _EvolutionEngine.#PROFILE_T0() - t0 || 0
+        );
+      }
+      return simplifyRemaining - 1;
+    }
+    /**
+     * Apply Lamarckian (supervised) training to the current population.
+     * Returns the elapsed time (ms) spent in training when profiling is enabled.
+     * @internal
+     */
+    static #applyLamarckianTraining(neat, lamarckianTrainingSet, lamarckianIterations, lamarckianSampleSize, safeWrite, doProfile, completedGenerations) {
+      const t1 = doProfile ? globalThis.performance?.now?.() ?? Date.now() : 0;
+      let trainingSetRef = lamarckianTrainingSet;
+      if (lamarckianSampleSize && lamarckianSampleSize < lamarckianTrainingSet.length) {
+        trainingSetRef = _EvolutionEngine.#sampleArray(
+          lamarckianTrainingSet,
+          lamarckianSampleSize
+        );
+      }
+      let gradNormSum = 0;
+      let gradSamples = 0;
+      const pop = neat.population || [];
+      for (let np = 0; np < pop.length; np++) {
+        const network = pop[np];
+        try {
+          network.train(trainingSetRef, {
+            iterations: lamarckianIterations,
+            // Small to preserve diversity
+            error: _EvolutionEngine.#DEFAULT_TRAIN_ERROR,
+            rate: _EvolutionEngine.#DEFAULT_TRAIN_RATE,
+            momentum: _EvolutionEngine.#DEFAULT_TRAIN_MOMENTUM,
+            batchSize: _EvolutionEngine.#DEFAULT_TRAIN_BATCH_SMALL,
+            allowRecurrent: true,
+            // allow recurrent connections
+            cost: methods_exports.Cost.softmaxCrossEntropy
+          });
+          _EvolutionEngine.#adjustOutputBiasesAfterTraining(network);
+          try {
+            if (typeof network.getTrainingStats === "function") {
+              const ts = network.getTrainingStats();
+              if (ts && Number.isFinite(ts.gradNorm)) {
+                gradNormSum += ts.gradNorm;
+                gradSamples++;
+              }
+            }
+          } catch {
+          }
+        } catch {
+        }
+      }
+      if (gradSamples > 0) {
+        safeWrite(
+          `[GRAD] gen=${completedGenerations} meanGradNorm=${(gradNormSum / gradSamples).toFixed(4)} samples=${gradSamples}
+`
+        );
+      }
+      const tDelta = doProfile ? (globalThis.performance?.now?.() ?? Date.now()) - t1 : 0;
+      return tDelta;
+    }
+    /**
+     * Log per-generation telemetry (action entropy, logits, exploration, diversity) and run collapse checks.
+     * @internal
+     */
+    static #logGenerationTelemetry(neat, fittest, generationResult, completedGenerations, safeWrite) {
+      const t0 = _EvolutionEngine.#PROFILE_ENABLED ? _EvolutionEngine.#PROFILE_T0() : 0;
+      try {
+        const ae = _EvolutionEngine.#computeActionEntropy(generationResult.path);
+        safeWrite(
+          `${_EvolutionEngine.#LOG_TAG_ACTION_ENTROPY} gen=${completedGenerations} entropyNorm=${ae.entropyNorm.toFixed(
+            3
+          )} uniqueMoves=${ae.uniqueMoves} pathLen=${ae.pathLen}
+`
+        );
+        try {
+          const nodesRef2 = fittest.nodes || [];
+          const outCount2 = _EvolutionEngine.#getNodeIndicesByType(
+            nodesRef2,
+            "output"
+          );
+          if (outCount2 > 0) {
+            const bstats = _EvolutionEngine.#computeOutputBiasStats(
+              nodesRef2,
+              outCount2
+            );
+            safeWrite(
+              `${_EvolutionEngine.#LOG_TAG_OUTPUT_BIAS} gen=${completedGenerations} mean=${bstats.mean.toFixed(
+                3
+              )} std=${bstats.std.toFixed(3)} biases=${bstats.biasesStr}
+`
+            );
+          }
+        } catch {
+        }
+        try {
+          const lastHist = fittest._lastStepOutputs || [];
+          if (lastHist.length) {
+            const recent = _EvolutionEngine.#getTail(
+              lastHist,
+              _EvolutionEngine.#RECENT_WINDOW
+            );
+            const stats = _EvolutionEngine.#computeLogitStats(recent);
+            safeWrite(
+              `${_EvolutionEngine.#LOG_TAG_LOGITS} gen=${completedGenerations} means=${stats.meansStr} stds=${stats.stdsStr} kurt=${stats.kurtStr} entMean=${stats.entMean.toFixed(
+                3
+              )} stability=${stats.stability.toFixed(3)} steps=${recent.length}
+`
+            );
+            _EvolutionEngine._collapseStreak = _EvolutionEngine._collapseStreak || 0;
+            let allBelow = true;
+            const stds = stats.stds;
+            for (let si = 0; si < stds.length; si++) {
+              if (!(stds[si] < _EvolutionEngine.#LOGSTD_FLAT_THRESHOLD)) {
+                allBelow = false;
+                break;
+              }
+            }
+            const collapsed = allBelow && (stats.entMean < _EvolutionEngine.#ENTROPY_COLLAPSE_THRESHOLD || stats.stability > _EvolutionEngine.#STABILITY_COLLAPSE_THRESHOLD);
+            if (collapsed) _EvolutionEngine._collapseStreak++;
+            else _EvolutionEngine._collapseStreak = 0;
+            if (_EvolutionEngine._collapseStreak === _EvolutionEngine.#COLLAPSE_STREAK_TRIGGER) {
+              _EvolutionEngine.#antiCollapseRecovery(
+                neat,
+                completedGenerations,
+                safeWrite
+              );
+            }
+          }
+        } catch {
+        }
+        try {
+          const expl = _EvolutionEngine.#computeExplorationStats(
+            generationResult.path
+          );
+          safeWrite(
+            `[EXPLORE] gen=${completedGenerations} unique=${expl.unique} pathLen=${expl.pathLen} ratio=${expl.ratio.toFixed(
+              3
+            )} progress=${generationResult.progress.toFixed(
+              1
+            )} satFrac=${generationResult.saturationFraction?.toFixed(
+              3
+            )}
+`
+          );
+        } catch {
+        }
+        try {
+          const dv = _EvolutionEngine.#computeDiversityMetrics(neat);
+          safeWrite(
+            `[DIVERSITY] gen=${completedGenerations} species=${dv.speciesUniqueCount} simpson=${dv.simpson.toFixed(3)} weightStd=${dv.wStd.toFixed(3)}
+`
+          );
+        } catch {
+        }
+      } catch {
+      }
+      if (_EvolutionEngine.#PROFILE_ENABLED) {
+        _EvolutionEngine.#PROFILE_ADD(
+          "telemetry",
+          _EvolutionEngine.#PROFILE_T0() - t0 || 0
+        );
+      }
+    }
+    /**
+     * Persist a snapshot of the state to disk when persistence is enabled and conditions met.
+     * @internal
+     */
+    static #persistSnapshotIfNeeded(fs, pathModule, persistDir, persistTopK, completedGenerations, persistEvery, neat, bestFitness, simplifyMode, plateauCounter) {
+      if (!fs || !persistDir || persistEvery <= 0) return;
+      try {
+        const t0 = _EvolutionEngine.#PROFILE_ENABLED ? _EvolutionEngine.#PROFILE_T0() : 0;
+        const snap = _EvolutionEngine.#SCRATCH_SNAPSHOT_OBJ;
+        snap.generation = completedGenerations;
+        snap.bestFitness = bestFitness;
+        snap.simplifyMode = simplifyMode;
+        snap.plateauCounter = plateauCounter;
+        snap.timestamp = Date.now();
+        snap.telemetryTail = (() => {
+          if (!neat.getTelemetry) return void 0;
+          try {
+            const telemetryValue = neat.getTelemetry();
+            if (Array.isArray(telemetryValue))
+              return _EvolutionEngine.#getTail(telemetryValue, 5);
+            return telemetryValue;
+          } catch {
+            return void 0;
+          }
+        })();
+        const populationRef = neat.population || [];
+        const sortedIdx = _EvolutionEngine.#getSortedIndicesByScore(populationRef);
+        const limit = Math.min(persistTopK, sortedIdx.length);
+        let topBuf = _EvolutionEngine.#SCRATCH_SNAPSHOT_TOP;
+        if (topBuf.length < limit) {
+          topBuf.length = limit;
+        }
+        for (let rank = 0; rank < limit; rank++) {
+          let entry = topBuf[rank];
+          if (!entry) entry = topBuf[rank] = {};
+          const genome = populationRef[sortedIdx[rank]];
+          entry.idx = sortedIdx[rank];
+          entry.score = genome.score;
+          entry.nodes = genome.nodes.length;
+          entry.connections = genome.connections.length;
+          entry.json = genome.toJSON ? genome.toJSON() : void 0;
+        }
+        topBuf.length = limit;
+        snap.top = topBuf;
+        const file = pathModule.join(
+          persistDir,
+          `snapshot_gen${completedGenerations}.json`
+        );
+        fs.writeFileSync(file, JSON.stringify(snap));
+        if (_EvolutionEngine.#PROFILE_ENABLED) {
+          _EvolutionEngine.#PROFILE_ADD(
+            "snapshot",
+            _EvolutionEngine.#PROFILE_T0() - t0 || 0
+          );
+        }
+      } catch {
+      }
+    }
+    /** Compute decision stability: fraction of consecutive identical argmaxes. @internal */
+    static #computeDecisionStability(recent) {
+      let stableCount = 0;
+      let transitionCount = 0;
+      let previousArgmax = -1;
+      for (let ri = 0; ri < recent.length; ri++) {
+        const v = recent[ri];
+        let argmax = 0;
+        let best = v[0];
+        for (let outIdx = 1; outIdx < _EvolutionEngine.#ACTION_DIM; outIdx++) {
+          if (v[outIdx] > best) {
+            best = v[outIdx];
+            argmax = outIdx;
+          }
+        }
+        if (previousArgmax === argmax) stableCount++;
+        if (previousArgmax !== -1) transitionCount++;
+        previousArgmax = argmax;
+      }
+      return transitionCount ? stableCount / transitionCount : 0;
+    }
+    /**
+     * Compute normalized softmax entropy for a single output vector `v`.
+     * Uses provided scratch `buf` to store exponentials to avoid allocations.
+     * @internal
+     */
+    static #softmaxEntropyFromVector(v, buf) {
+      if (!v || !v.length) return 0;
+      const k = Math.min(v.length, buf.length);
+      if (k === 4) {
+        const v0 = v[0] || 0;
+        const v1 = v[1] || 0;
+        const v2 = v[2] || 0;
+        const v3 = v[3] || 0;
+        let maxVal2 = v0;
+        if (v1 > maxVal2) maxVal2 = v1;
+        if (v2 > maxVal2) maxVal2 = v2;
+        if (v3 > maxVal2) maxVal2 = v3;
+        const e0 = Math.exp(v0 - maxVal2);
+        const e1 = Math.exp(v1 - maxVal2);
+        const e2 = Math.exp(v2 - maxVal2);
+        const e3 = Math.exp(v3 - maxVal2);
+        const sum2 = e0 + e1 + e2 + e3 || 1;
+        const p0 = e0 / sum2;
+        const p1 = e1 / sum2;
+        const p2 = e2 / sum2;
+        const p3 = e3 / sum2;
+        let e4 = 0;
+        if (p0 > 0) e4 += -p0 * Math.log(p0);
+        if (p2 > 0) e4 += -p2 * Math.log(p2);
+        if (p3 > 0) e4 += -p3 * Math.log(p3);
+        return e4 * _EvolutionEngine.#INV_LOG4;
+      }
+      let maxVal = -Infinity;
+      for (let i = 0; i < k; i++) {
+        const val = v[i] || 0;
+        if (val > maxVal) maxVal = val;
+      }
+      let sum = 0;
+      for (let i = 0; i < k; i++) {
+        const ex = Math.exp((v[i] || 0) - maxVal);
+        buf[i] = ex;
+        sum += ex;
+      }
+      if (!sum) sum = 1;
+      let e = 0;
+      for (let i = 0; i < k; i++) {
+        const p = buf[i] / sum;
+        if (p > 0) e += -p * Math.log(p);
+      }
+      return e / Math.log(k);
+    }
+    static #joinNumberArray(arrLike, len, digits = 3) {
+      if (len <= 0) return "";
+      if (len > _EvolutionEngine.#SCRATCH_STR.length) {
+        const nextSize = 1 << Math.ceil(Math.log2(len));
+        _EvolutionEngine.#SCRATCH_STR = new Array(nextSize);
+      }
+      const buf = _EvolutionEngine.#SCRATCH_STR;
+      for (let i = 0; i < len; i++)
+        buf[i] = arrLike[i].toFixed(digits);
+      const prevLen = buf.length;
+      buf.length = len;
+      const out = buf.join(",");
+      buf.length = prevLen;
+      return out;
+    }
+    /** Extract last n items from an array (small, allocation-aware helper). @internal */
+    static #getTail(arr, n) {
+      if (!Array.isArray(arr) || n <= 0) return [];
+      const take = Math.min(n, arr.length);
+      if (take > _EvolutionEngine.#SCRATCH_TAIL.length) {
+        const nextSize = 1 << Math.ceil(Math.log2(take));
+        _EvolutionEngine.#SCRATCH_TAIL = new Array(nextSize);
+      }
+      const tailBuf = _EvolutionEngine.#SCRATCH_TAIL;
+      const start2 = arr.length - take;
+      for (let i = 0; i < take; i++) tailBuf[i] = arr[start2 + i];
+      tailBuf.length = take;
+      return tailBuf;
+    }
+    /** Delegate to MazeUtils.pushHistory to keep bounded history semantics. @internal */
+    static #pushHistory(buf, v, maxLen) {
+      return MazeUtils.pushHistory(buf, v, maxLen);
+    }
+    /** Re-center output node biases for a network (defensive, best-effort). @internal */
+    static #centerOutputBiases(net) {
+      try {
+        const nodes = net.nodes || [];
+        let outCount = 0;
+        for (let nodeIndex = 0; nodeIndex < nodes.length; nodeIndex++) {
+          if (nodes[nodeIndex] && nodes[nodeIndex].type === "output") {
+            _EvolutionEngine.#SCRATCH_NODE_IDX[outCount++] = nodeIndex;
+          }
+        }
+        if (outCount === 0) return;
+        let mean = 0;
+        for (let oi = 0; oi < outCount; oi++) {
+          mean += nodes[_EvolutionEngine.#SCRATCH_NODE_IDX[oi]].bias;
+        }
+        mean /= outCount;
+        let varc = 0;
+        for (let oi = 0; oi < outCount; oi++) {
+          const b = nodes[_EvolutionEngine.#SCRATCH_NODE_IDX[oi]].bias;
+          const d = b - mean;
+          varc += d * d;
+        }
+        varc /= outCount;
+        const std = Math.sqrt(varc);
+        for (let oi = 0; oi < outCount; oi++) {
+          const idx = _EvolutionEngine.#SCRATCH_NODE_IDX[oi];
+          nodes[idx].bias = Math.max(-5, Math.min(5, nodes[idx].bias - mean));
+        }
+        net._outputBiasStats = { mean, std };
+      } catch {
+      }
+    }
+    /** Prune weakest connections for a genome according to the chosen strategy. @internal */
+    static #pruneWeakConnectionsForGenome(genome, simplifyStrategy, simplifyPruneFraction) {
+      try {
+        const genomeConns = genome.connections || [];
+        let candidates = _EvolutionEngine.#collectEnabledConnections(
+          genomeConns
+        );
+        const enabledCount = candidates.length;
+        if (enabledCount === 0) return;
+        const pruneCount = Math.max(
+          1,
+          Math.floor(enabledCount * simplifyPruneFraction)
+        );
+        candidates = _EvolutionEngine.#sortCandidatesByStrategy(
+          candidates || [],
+          simplifyStrategy
+        );
+        _EvolutionEngine.#disableSmallestEnabledConnections(
+          candidates,
+          Math.min(pruneCount, candidates.length)
+        );
+      } catch {
+      }
+    }
+    /** Collect enabled connections from an array of connections. @internal */
+    static #collectEnabledConnections(conns) {
+      if (!Array.isArray(conns) || conns.length === 0) return [];
+      const candBuf = _EvolutionEngine.#SCRATCH_CONN_CAND;
+      candBuf.length = 0;
+      for (let connectionIndex = 0; connectionIndex < conns.length; connectionIndex++) {
+        const connection = conns[connectionIndex];
+        if (connection && connection.enabled !== false) candBuf.push(connection);
+      }
+      return candBuf;
+    }
+    /**
+     * Collect outgoing connections from a hidden node that target any output nodes.
+     * Returns an array of matching connections (possibly using pooled buffers internally).
+     * @internal
+     */
+    static #collectHiddenToOutputConns(hiddenNode, nodesRef, outputCount) {
+      const outputBuffer = _EvolutionEngine.#SCRATCH_HIDDEN_OUT;
+      outputBuffer.length = 0;
+      if (!hiddenNode || !hiddenNode.connections) return [];
+      const outgoingConnections = hiddenNode.connections.out || [];
+      for (let connectionIndex = 0; connectionIndex < outgoingConnections.length; connectionIndex++) {
+        const connection = outgoingConnections[connectionIndex];
+        if (connection && connection.enabled !== false) {
+          for (let outputIndex = 0; outputIndex < outputCount; outputIndex++) {
+            const outputNodeIdx = _EvolutionEngine.#SCRATCH_NODE_IDX[outputIndex];
+            if (connection.to === nodesRef[outputNodeIdx]) {
+              outputBuffer.push(connection);
+              break;
+            }
+          }
+        }
+      }
+      return outputBuffer;
+    }
+    /**
+     * Sort candidate connections according to the chosen strategy.
+     * For 'weakRecurrentPreferred', recurrent/gater connections are prioritized
+     * for removal. Returns a newly ordered array (no external allocations when possible).
+     * @internal
+     */
+    static #sortCandidatesByStrategy(candidates, strategy) {
+      if (!Array.isArray(candidates) || candidates.length === 0)
+        return candidates;
+      if (strategy === "weakRecurrentPreferred") {
+        let recurrentWrite = 0;
+        for (let candidateIndex = 0; candidateIndex < candidates.length; candidateIndex++) {
+          const candidateConnection = candidates[candidateIndex];
+          if (candidateConnection && (candidateConnection.from === candidateConnection.to || candidateConnection.gater)) {
+            if (candidateIndex !== recurrentWrite) {
+              const tmp = candidates[recurrentWrite];
+              candidates[recurrentWrite] = candidates[candidateIndex];
+              candidates[candidateIndex] = tmp;
+            }
+            recurrentWrite++;
+          }
+        }
+        _EvolutionEngine.#insertionSortByAbsWeight(candidates, 0, recurrentWrite);
+        _EvolutionEngine.#insertionSortByAbsWeight(
+          candidates,
+          recurrentWrite,
+          candidates.length
+        );
+        return candidates;
+      }
+      _EvolutionEngine.#insertionSortByAbsWeight(candidates, 0, candidates.length);
+      return candidates;
+    }
+    /** Insertion sort helper for small candidate arrays (avoids allocations). @internal */
+    static #insertionSortByAbsWeight(buffer, start2, end) {
+      for (let i = start2 + 1; i < end; i++) {
+        const value = buffer[i];
+        const weightAbs = Math.abs(value.weight);
+        let j = i - 1;
+        while (j >= start2 && Math.abs(buffer[j].weight) > weightAbs) {
+          buffer[j + 1] = buffer[j];
+          j--;
+        }
+        buffer[j + 1] = value;
+      }
+    }
+    /** Disable the smallest enabled connections from candidates up to `count`. @internal */
+    static #disableSmallestEnabledConnections(candidates, count) {
+      if (!Array.isArray(candidates) || count <= 0) return;
+      let flags = _EvolutionEngine.#SCRATCH_CONN_FLAGS;
+      if (candidates.length > flags.length) {
+        _EvolutionEngine.#SCRATCH_CONN_FLAGS = new Uint8Array(candidates.length);
+        flags = _EvolutionEngine.#SCRATCH_CONN_FLAGS;
+      } else {
+        flags.fill(0, 0, candidates.length);
+      }
+      const n = candidates.length;
+      if (count >= n >>> 1) {
+        if (n <= 64) {
+          _EvolutionEngine.#insertionSortByAbsWeight(candidates, 0, n);
+        } else {
+          candidates.sort((a, b) => Math.abs(a.weight) - Math.abs(b.weight));
+        }
+        for (let i = 0, lim = Math.min(count, n); i < lim; i++) {
+          const c = candidates[i];
+          if (c && c.enabled !== false) c.enabled = false;
+        }
+        return;
+      }
+      let remaining = count;
+      let active = 0;
+      for (let i = 0; i < n; i++) {
+        const c = candidates[i];
+        if (c && c.enabled !== false) {
+          if (i !== active) candidates[active] = c;
+          active++;
+        }
+      }
+      while (remaining > 0 && active > 0) {
+        let minIdx = 0;
+        let minW = Math.abs(candidates[0].weight);
+        for (let j = 1; j < active; j++) {
+          const aw = Math.abs(candidates[j].weight);
+          if (aw < minW) {
+            minW = aw;
+            minIdx = j;
+          }
+        }
+        const target = candidates[minIdx];
+        target.enabled = false;
+        const last = --active;
+        candidates[minIdx] = candidates[last];
+        remaining--;
+      }
+    }
+    /** Compute directional action entropy and unique move count from a path. @internal */
+    static #computeActionEntropy(pathArr) {
+      const counts = _EvolutionEngine.#SCRATCH_COUNTS;
+      counts.fill(0);
+      let totalMoves = 0;
+      const dirMap = _EvolutionEngine.#DIR_DELTA_TO_INDEX;
+      for (let pathIndex = 1; pathIndex < pathArr.length; pathIndex++) {
+        const currentPoint = pathArr[pathIndex];
+        const previousPoint = pathArr[pathIndex - 1];
+        const deltaX = currentPoint[0] - previousPoint[0];
+        const deltaY = currentPoint[1] - previousPoint[1];
+        if (deltaX < -1 || deltaX > 1 || deltaY < -1 || deltaY > 1) continue;
+        const key = (deltaX + 1) * 3 + (deltaY + 1);
+        const directionIndex = dirMap[key];
+        if (directionIndex >= 0) {
+          counts[directionIndex]++;
+          totalMoves++;
+        }
+      }
+      totalMoves = totalMoves || 1;
+      let entropy = 0;
+      let uniqueMoves = 0;
+      for (let i = 0; i < counts.length; i++) {
+        const prob = counts[i] / totalMoves;
+        if (prob > 0) entropy += -prob * Math.log(prob);
+        if (counts[i] > 0) uniqueMoves++;
+      }
+      const entropyNorm = entropy * _EvolutionEngine.#INV_LOG4;
+      return { entropyNorm, uniqueMoves, pathLen: pathArr.length };
+    }
+    /** Compute statistics over recent logits: means, stds, kurtosis, mean entropy and stability. @internal */
+    static #computeLogitStats(recent) {
+      const actionDim = _EvolutionEngine.#ACTION_DIM;
+      const meansBuf = _EvolutionEngine.#SCRATCH_MEANS;
+      const stdsBuf = _EvolutionEngine.#SCRATCH_STDS;
+      const kurtBuf = _EvolutionEngine.#SCRATCH_KURT;
+      const m2Buf = _EvolutionEngine.#SCRATCH_M2_RAW;
+      const m3Buf = _EvolutionEngine.#SCRATCH_M3_RAW;
+      const m4Buf = _EvolutionEngine.#SCRATCH_M4_RAW;
+      for (let dimIndex = 0; dimIndex < actionDim; dimIndex++) {
+        meansBuf[dimIndex] = 0;
+        m2Buf[dimIndex] = 0;
+        m3Buf[dimIndex] = 0;
+        m4Buf[dimIndex] = 0;
+        stdsBuf[dimIndex] = 0;
+        kurtBuf[dimIndex] = 0;
+      }
+      const stepCount = recent.length;
+      if (!stepCount) {
+        return {
+          meansStr: "",
+          stdsStr: "",
+          kurtStr: "",
+          entMean: 0,
+          stability: 0,
+          steps: 0,
+          means: meansBuf,
+          stds: stdsBuf
+        };
+      }
+      let entropyAggregate = 0;
+      if (actionDim === 4) {
+        let mean0 = 0, mean1 = 0, mean2 = 0, mean3 = 0;
+        let M20 = 0, M21 = 0, M22 = 0, M23 = 0;
+        let M30 = 0, M31 = 0, M32 = 0, M33 = 0;
+        let M40 = 0, M41 = 0, M42 = 0, M43 = 0;
+        for (let stepIndex = 0; stepIndex < stepCount; stepIndex++) {
+          const vec = recent[stepIndex];
+          const x0 = vec[0] || 0;
+          const x1 = vec[1] || 0;
+          const x2 = vec[2] || 0;
+          const x3 = vec[3] || 0;
+          const n = stepIndex + 1;
+          let delta = x0 - mean0;
+          let delta_n = delta / n;
+          let delta_n2 = delta_n * delta_n;
+          let term1 = delta * delta_n * (n - 1);
+          M40 += term1 * delta_n2 * (n * n - 3 * n + 3) + 6 * delta_n2 * M20 - 4 * delta_n * M30;
+          M30 += term1 * delta_n * (n - 2) - 3 * delta_n * M20;
+          M20 += term1;
+          mean0 += delta_n;
+          delta = x1 - mean1;
+          delta_n = delta / n;
+          delta_n2 = delta_n * delta_n;
+          term1 = delta * delta_n * (n - 1);
+          M41 += term1 * delta_n2 * (n * n - 3 * n + 3) + 6 * delta_n2 * M21 - 4 * delta_n * M31;
+          M31 += term1 * delta_n * (n - 2) - 3 * delta_n * M21;
+          M21 += term1;
+          mean1 += delta_n;
+          delta = x2 - mean2;
+          delta_n = delta / n;
+          delta_n2 = delta_n * delta_n;
+          term1 = delta * delta_n * (n - 1);
+          M42 += term1 * delta_n2 * (n * n - 3 * n + 3) + 6 * delta_n2 * M22 - 4 * delta_n * M32;
+          M32 += term1 * delta_n * (n - 2) - 3 * delta_n * M22;
+          M22 += term1;
+          mean2 += delta_n;
+          delta = x3 - mean3;
+          delta_n = delta / n;
+          delta_n2 = delta_n * delta_n;
+          term1 = delta * delta_n * (n - 1);
+          M43 += term1 * delta_n2 * (n * n - 3 * n + 3) + 6 * delta_n2 * M23 - 4 * delta_n * M33;
+          M33 += term1 * delta_n * (n - 2) - 3 * delta_n * M23;
+          M23 += term1;
+          mean3 += delta_n;
+          entropyAggregate += _EvolutionEngine.#softmaxEntropyFromVector(vec, _EvolutionEngine.#SCRATCH_EXPS);
+        }
+        meansBuf[0] = mean0;
+        meansBuf[1] = mean1;
+        meansBuf[2] = mean2;
+        meansBuf[3] = mean3;
+        const invN = 1 / stepCount;
+        const var0 = M20 * invN;
+        const var1 = M21 * invN;
+        const var2 = M22 * invN;
+        const var3 = M23 * invN;
+        stdsBuf[0] = var0 > 0 ? Math.sqrt(var0) : 0;
+        stdsBuf[1] = var1 > 0 ? Math.sqrt(var1) : 0;
+        stdsBuf[2] = var2 > 0 ? Math.sqrt(var2) : 0;
+        stdsBuf[3] = var3 > 0 ? Math.sqrt(var3) : 0;
+        kurtBuf[0] = var0 > 1e-18 ? stepCount * M40 / (M20 * M20) - 3 : 0;
+        kurtBuf[1] = var1 > 1e-18 ? stepCount * M41 / (M21 * M21) - 3 : 0;
+        kurtBuf[2] = var2 > 1e-18 ? stepCount * M42 / (M22 * M22) - 3 : 0;
+        kurtBuf[3] = var3 > 1e-18 ? stepCount * M43 / (M23 * M23) - 3 : 0;
+      } else {
+        for (let stepIndex = 0; stepIndex < stepCount; stepIndex++) {
+          const vec = recent[stepIndex];
+          const n = stepIndex + 1;
+          for (let dimIndex = 0; dimIndex < actionDim; dimIndex++) {
+            const x = vec[dimIndex] || 0;
+            const delta = x - meansBuf[dimIndex];
+            const delta_n = delta / n;
+            const delta_n2 = delta_n * delta_n;
+            const term1 = delta * delta_n * (n - 1);
+            m4Buf[dimIndex] += term1 * delta_n2 * (n * n - 3 * n + 3) + 6 * delta_n2 * m2Buf[dimIndex] - 4 * delta_n * m3Buf[dimIndex];
+            m3Buf[dimIndex] += term1 * delta_n * (n - 2) - 3 * delta_n * m2Buf[dimIndex];
+            m2Buf[dimIndex] += term1;
+            meansBuf[dimIndex] += delta_n;
+          }
+          entropyAggregate += _EvolutionEngine.#softmaxEntropyFromVector(vec, _EvolutionEngine.#SCRATCH_EXPS);
+        }
+        for (let dimIndex = 0; dimIndex < actionDim; dimIndex++) {
+          const variance = m2Buf[dimIndex] / stepCount;
+          stdsBuf[dimIndex] = variance > 0 ? Math.sqrt(variance) : 0;
+          kurtBuf[dimIndex] = variance > 1e-18 ? stepCount * m4Buf[dimIndex] / (m2Buf[dimIndex] * m2Buf[dimIndex]) - 3 : 0;
+        }
+      }
+      const entropyMean = entropyAggregate / stepCount;
+      const stability = _EvolutionEngine.#computeDecisionStability(recent);
+      const meansStr = _EvolutionEngine.#joinNumberArray(meansBuf, actionDim, 3);
+      const stdsStr = _EvolutionEngine.#joinNumberArray(stdsBuf, actionDim, 3);
+      const kurtStr = _EvolutionEngine.#joinNumberArray(kurtBuf, actionDim, 2);
+      return {
+        meansStr,
+        stdsStr,
+        kurtStr,
+        entMean: entropyMean,
+        stability,
+        steps: stepCount,
+        means: meansBuf,
+        stds: stdsBuf
+      };
+    }
+    /**
+     * Compute summary statistics for output node biases.
+     * Uses class-level scratch buffers and avoids intermediate allocations.
+     * @param nodes - full node list from a network
+     * @param outputCount - number of output nodes (must be <= nodes.length)
+     * @returns an object with mean, std and a comma-separated biases string
+     * @internal
+     */
+    static #computeOutputBiasStats(nodes, outputCount) {
+      if (!nodes || outputCount <= 0) return { mean: 0, std: 0, biasesStr: "" };
+      let mean = 0;
+      let M2 = 0;
+      for (let outIndex = 0; outIndex < outputCount; outIndex++) {
+        const nodeIndex = _EvolutionEngine.#SCRATCH_NODE_IDX[outIndex];
+        const biasValue = nodes[nodeIndex]?.bias ?? 0;
+        const count = outIndex + 1;
+        const delta = biasValue - mean;
+        mean += delta / count;
+        M2 += delta * (biasValue - mean);
+      }
+      const std = outputCount ? Math.sqrt(M2 / outputCount) : 0;
+      if (outputCount > _EvolutionEngine.#SCRATCH_STR.length) {
+        const nextSize = 1 << Math.ceil(Math.log2(outputCount));
+        _EvolutionEngine.#SCRATCH_STR = new Array(nextSize);
+      }
+      const sBuf = _EvolutionEngine.#SCRATCH_STR;
+      for (let bi = 0; bi < outputCount; bi++) {
+        const idx = _EvolutionEngine.#SCRATCH_NODE_IDX[bi];
+        sBuf[bi] = (nodes[idx]?.bias ?? 0).toFixed(2);
+      }
+      const prevLenBias = sBuf.length;
+      sBuf.length = outputCount;
+      const biasesStr = sBuf.join(",");
+      sBuf.length = prevLenBias;
+      return { mean, std, biasesStr };
+    }
+    /**
+     * Expand population by creating up to `targetAdd` children from top parents.
+     * Uses neat-managed spawn when available, otherwise falls back to clone/mutate/add.
+     * Avoids short-lived allocations by reusing class-level scratch buffers.
+     * @internal
+     */
+    static #expandPopulation(neat, targetAdd, safeWrite, completedGenerations) {
+      const populationRef = neat.population || [];
+      const sortedIdx = _EvolutionEngine.#getSortedIndicesByScore(populationRef);
+      const parentCount = Math.max(
+        2,
+        Math.ceil(sortedIdx.length * _EvolutionEngine.#DEFAULT_PARENT_FRACTION)
+      );
+      const parentPoolSize = Math.min(parentCount, sortedIdx.length);
+      for (let addIndex = 0; addIndex < targetAdd; addIndex++) {
+        const pickIndex = _EvolutionEngine.#fastRandom() * parentPoolSize | 0;
+        const parent = populationRef[sortedIdx[pickIndex]];
+        try {
+          if (typeof neat.spawnFromParent === "function") {
+            const mutateCount = 1 + (_EvolutionEngine.#fastRandom() < _EvolutionEngine.#DEFAULT_HALF_PROB ? 1 : 0);
+            const child = neat.spawnFromParent(parent, mutateCount);
+            neat.population.push(child);
+          } else {
+            const clone = parent.clone ? parent.clone() : parent;
+            const mutateCount = 1 + (_EvolutionEngine.#fastRandom() < _EvolutionEngine.#DEFAULT_HALF_PROB ? 1 : 0);
+            try {
+              const mutOps = neat.options.mutation || [];
+              const opLen = mutOps.length | 0;
+              if (opLen) {
+                if (_EvolutionEngine.#SCRATCH_MUTOP_IDX.length < opLen) {
+                  const nextSize = 1 << Math.ceil(Math.log2(opLen));
+                  _EvolutionEngine.#SCRATCH_MUTOP_IDX = new Uint16Array(nextSize);
+                }
+                const idxBuf = _EvolutionEngine.#SCRATCH_MUTOP_IDX;
+                for (let fillIndex = 0; fillIndex < opLen; fillIndex++)
+                  idxBuf[fillIndex] = fillIndex;
+                const applyCount = Math.min(mutateCount, opLen);
+                for (let sel = 0; sel < applyCount; sel++) {
+                  const r = sel + (_EvolutionEngine.#fastRandom() * (opLen - sel) | 0);
+                  const tmp = idxBuf[sel];
+                  idxBuf[sel] = idxBuf[r];
+                  idxBuf[r] = tmp;
+                  const op = mutOps[idxBuf[sel]];
+                  try {
+                    clone.mutate(op);
+                  } catch {
+                  }
+                }
+              }
+            } catch {
+            }
+            clone.score = void 0;
+            try {
+              if (typeof neat.addGenome === "function") {
+                neat.addGenome(clone, [parent._id]);
+              } else {
+                if (neat._nextGenomeId !== void 0)
+                  clone._id = neat._nextGenomeId++;
+                if (neat._lineageEnabled) {
+                  clone._parents = [parent._id];
+                  clone._depth = (parent._depth ?? 0) + 1;
+                }
+                if (typeof neat._invalidateGenomeCaches === "function")
+                  neat._invalidateGenomeCaches(clone);
+                neat.population.push(clone);
+              }
+            } catch {
+              try {
+                neat.population.push(clone);
+              } catch {
+              }
+            }
+          }
+        } catch {
+        }
+      }
+      neat.options.popsize = neat.population.length;
+      safeWrite(
+        `[DYNAMIC_POP] Expanded population to ${neat.population.length} at gen ${completedGenerations}
+`
+      );
+    }
+    /**
+     * Return indices of population sorted descending by score using pooled index buffer.
+     * Uses iterative quicksort on the indices to avoid allocating a copy of the population.
+     * @internal
+     */
+    static #getSortedIndicesByScore(population) {
+      const len = population.length | 0;
+      if (len === 0) return [];
+      if (_EvolutionEngine.#SCRATCH_SORT_IDX.length < len) {
+        const nextSize = 1 << Math.ceil(Math.log2(len));
+        _EvolutionEngine.#SCRATCH_SORT_IDX = new Array(nextSize);
+      }
+      const idx = _EvolutionEngine.#SCRATCH_SORT_IDX;
+      for (let i = 0; i < len; i++) idx[i] = i;
+      idx.length = len;
+      let stack = _EvolutionEngine.#SCRATCH_QS_STACK;
+      if (stack.length < 2)
+        stack = _EvolutionEngine.#SCRATCH_QS_STACK = new Int32Array(128);
+      let sp = 0;
+      stack[sp++] = 0;
+      stack[sp++] = len - 1;
+      while (sp > 0) {
+        const hi = stack[--sp];
+        const lo = stack[--sp];
+        if (lo >= hi) continue;
+        if (hi - lo <= _EvolutionEngine.#QS_SMALL_THRESHOLD) {
+          for (let a = lo + 1; a <= hi; a++) {
+            const iv = idx[a];
+            const ivScore = population[iv]?.score ?? -Infinity;
+            let b = a - 1;
+            while (b >= lo && (population[idx[b]]?.score ?? -Infinity) < ivScore) {
+              idx[b + 1] = idx[b];
+              b--;
+            }
+            idx[b + 1] = iv;
+          }
+          continue;
+        }
+        let i = lo;
+        let j = hi;
+        const mid = lo + hi >> 1;
+        let aIndex = idx[lo];
+        let bIndex = idx[mid];
+        let cIndex = idx[hi];
+        let aScore = population[aIndex]?.score ?? -Infinity;
+        let bScore = population[bIndex]?.score ?? -Infinity;
+        let cScore = population[cIndex]?.score ?? -Infinity;
+        if (aScore < bScore) {
+          let tmp = aIndex;
+          aIndex = bIndex;
+          bIndex = tmp;
+          let ts = aScore;
+          aScore = bScore;
+          bScore = ts;
+        }
+        if (aScore < cScore) {
+          let tmp = aIndex;
+          aIndex = cIndex;
+          cIndex = tmp;
+          let ts = aScore;
+          aScore = cScore;
+          cScore = ts;
+        }
+        if (bScore < cScore) {
+          let tmp = bIndex;
+          bIndex = cIndex;
+          cIndex = tmp;
+          let ts = bScore;
+          bScore = cScore;
+          cScore = ts;
+        }
+        const pivotIndex = bIndex;
+        const pivotScore = bScore;
+        while (i <= j) {
+          while (true) {
+            const li = idx[i];
+            if ((population[li]?.score ?? -Infinity) <= pivotScore) break;
+            i++;
+          }
+          while (true) {
+            const rj = idx[j];
+            if ((population[rj]?.score ?? -Infinity) >= pivotScore) break;
+            j--;
+          }
+          if (i <= j) {
+            const t = idx[i];
+            idx[i] = idx[j];
+            idx[j] = t;
+            i++;
+            j--;
+          }
+        }
+        const leftSize = j - lo;
+        const rightSize = hi - i;
+        if (leftSize > rightSize) {
+          if (lo < j) {
+            if (sp + 2 > stack.length) {
+              const bigger = new Int32Array(stack.length * 2);
+              bigger.set(stack);
+              _EvolutionEngine.#SCRATCH_QS_STACK = stack = bigger;
+            }
+            stack[sp++] = lo;
+            stack[sp++] = j;
+          }
+          if (i < hi) {
+            if (sp + 2 > stack.length) {
+              const bigger = new Int32Array(stack.length * 2);
+              bigger.set(stack);
+              _EvolutionEngine.#SCRATCH_QS_STACK = stack = bigger;
+            }
+            stack[sp++] = i;
+            stack[sp++] = hi;
+          }
+        } else {
+          if (i < hi) {
+            if (sp + 2 > stack.length) {
+              const bigger = new Int32Array(stack.length * 2);
+              bigger.set(stack);
+              _EvolutionEngine.#SCRATCH_QS_STACK = stack = bigger;
+            }
+            stack[sp++] = i;
+            stack[sp++] = hi;
+          }
+          if (lo < j) {
+            if (sp + 2 > stack.length) {
+              const bigger = new Int32Array(stack.length * 2);
+              bigger.set(stack);
+              _EvolutionEngine.#SCRATCH_QS_STACK = stack = bigger;
+            }
+            stack[sp++] = lo;
+            stack[sp++] = j;
+          }
+        }
+      }
+      return idx;
+    }
+    /**
+     * Ensure all output nodes use identity activation so caller can apply softmax externally.
+     * @internal
+     */
+    static #ensureOutputIdentity(neat) {
+      try {
+        const popRef = neat.population || [];
+        for (let gi = 0; gi < popRef.length; gi++) {
+          const g = popRef[gi];
+          const nodesRef = g.nodes || [];
+          for (let ni = 0; ni < nodesRef.length; ni++) {
+            const n = nodesRef[ni];
+            if (n && n.type === "output") n.squash = methods_exports.Activation.identity;
+          }
+        }
+      } catch {
+      }
+    }
+    /**
+     * Update global species history and escalate mutation/novelty params when species collapse detected.
+     * Returns true when a collapse (20 consecutive single-species entries) was observed.
+     * @internal
+     */
+    static #handleSpeciesHistory(neat) {
+      try {
+        _EvolutionEngine._speciesHistory = _EvolutionEngine._speciesHistory || [];
+        const populationList = neat.population || [];
+        let speciesIds = _EvolutionEngine.#SCRATCH_SPECIES_IDS;
+        let speciesCounts = _EvolutionEngine.#SCRATCH_SPECIES_COUNTS;
+        if (populationList.length > speciesIds.length) {
+          const nextSize = 1 << Math.ceil(Math.log2(populationList.length));
+          _EvolutionEngine.#SCRATCH_SPECIES_IDS = new Int32Array(nextSize);
+          _EvolutionEngine.#SCRATCH_SPECIES_COUNTS = new Int32Array(nextSize);
+          speciesIds = _EvolutionEngine.#SCRATCH_SPECIES_IDS;
+          speciesCounts = _EvolutionEngine.#SCRATCH_SPECIES_COUNTS;
+        }
+        let uniqueSpeciesCount = 0;
+        for (let genomeIndex = 0; genomeIndex < populationList.length; genomeIndex++) {
+          const genome = populationList[genomeIndex];
+          if (!genome || genome.species == null) continue;
+          const sid = genome.species | 0;
+          let found = -1;
+          for (let speciesIndex = 0; speciesIndex < uniqueSpeciesCount; speciesIndex++) {
+            if (speciesIds[speciesIndex] === sid) {
+              found = speciesIndex;
+              break;
+            }
+          }
+          if (found === -1) {
+            speciesIds[uniqueSpeciesCount] = sid;
+            speciesCounts[uniqueSpeciesCount] = 1;
+            uniqueSpeciesCount++;
+          } else {
+            speciesCounts[found]++;
+          }
+        }
+        const speciesCount = uniqueSpeciesCount || 1;
+        _EvolutionEngine._speciesHistory = _EvolutionEngine.#pushHistory(
+          _EvolutionEngine._speciesHistory,
+          speciesCount,
+          _EvolutionEngine.#SPECIES_HISTORY_MAX
+        );
+        const _speciesHistory = _EvolutionEngine._speciesHistory || [];
+        const recent = _EvolutionEngine.#getTail(
+          _speciesHistory,
+          _EvolutionEngine.#SPECIES_COLLAPSE_WINDOW
+        );
+        const collapsed = recent.length === _EvolutionEngine.#SPECIES_COLLAPSE_WINDOW && recent.every((c) => c === 1);
+        if (collapsed) {
+          const neatAny = neat;
+          if (typeof neatAny.mutationRate === "number")
+            neatAny.mutationRate = Math.min(
+              _EvolutionEngine.#COLLAPSE_MUTRATE_CAP,
+              neatAny.mutationRate * _EvolutionEngine.#COLLAPSE_MUTRATE_MULT
+            );
+          if (typeof neatAny.mutationAmount === "number")
+            neatAny.mutationAmount = Math.min(
+              _EvolutionEngine.#COLLAPSE_MUTAMOUNT_CAP,
+              neatAny.mutationAmount * _EvolutionEngine.#COLLAPSE_MUTAMOUNT_MULT
+            );
+          if (neatAny.config && neatAny.config.novelty) {
+            neatAny.config.novelty.blendFactor = Math.min(
+              _EvolutionEngine.#COLLAPSE_NOVELTY_BLEND_CAP,
+              neatAny.config.novelty.blendFactor * _EvolutionEngine.#COLLAPSE_NOVELTY_MULT
+            );
+          }
+        }
+        return collapsed;
+      } catch {
+        return false;
+      }
+    }
+    /**
+     * Possibly expand the population when configured and plateau conditions met.
+     * Delegates to #expandPopulation when growth is required.
+     * @internal
+     */
+    static #maybeExpandPopulation(neat, dynamicPopEnabled, completedGenerations, dynamicPopMax, plateauGenerations, plateauCounter, dynamicPopExpandInterval, dynamicPopExpandFactor, dynamicPopPlateauSlack, safeWrite) {
+      try {
+        if (!dynamicPopEnabled || completedGenerations <= 0) return;
+        if (!neat.population || neat.population.length >= dynamicPopMax) return;
+        const plateauRatio = plateauGenerations > 0 ? plateauCounter / plateauGenerations : 0;
+        const genTrigger = completedGenerations % dynamicPopExpandInterval === 0;
+        if (genTrigger && plateauRatio >= dynamicPopPlateauSlack) {
+          const currentSize = neat.population.length;
+          const targetAdd = Math.min(
+            Math.max(1, Math.floor(currentSize * dynamicPopExpandFactor)),
+            dynamicPopMax - currentSize
+          );
+          if (targetAdd > 0)
+            _EvolutionEngine.#expandPopulation(
+              neat,
+              targetAdd,
+              safeWrite,
+              completedGenerations
+            );
+        }
+      } catch {
+      }
+    }
+    /**
+     * Update dashboard when a new best network is found and yield to the frame when requested.
+     * This helper is async because it may await `flushToFrame`.
+     * @internal
+     */
+    static async #updateDashboardAndMaybeFlush(maze, result, network, completedGenerations, neat, dashboardManager, flushToFrame) {
+      try {
+        if (dashboardManager && typeof dashboardManager.update === "function") {
+          try {
+            dashboardManager.update(
+              maze,
+              result,
+              network,
+              completedGenerations,
+              neat
+            );
+          } catch {
+          }
+        }
+        try {
+          await flushToFrame();
+        } catch {
+        }
+      } catch {
+      }
+    }
+    /**
+     * Periodic dashboard update for non-best case. Async to allow flush-to-frame.
+     * @internal
+     */
+    static async #updateDashboardPeriodic(maze, bestResult, bestNetwork, completedGenerations, neat, dashboardManager, flushToFrame) {
+      try {
+        if (dashboardManager && typeof dashboardManager.update === "function" && bestNetwork && bestResult) {
+          try {
+            dashboardManager.update(
+              maze,
+              bestResult,
+              bestNetwork,
+              completedGenerations,
+              neat
+            );
+          } catch {
+          }
+          try {
+            await flushToFrame();
+          } catch {
+          }
+        }
+      } catch {
+      }
+    }
+    /**
+     * Adjust output biases after local training using the same heuristic the original inline code used.
+     * @internal
+     */
+    static #adjustOutputBiasesAfterTraining(network) {
+      try {
+        const nodesRef = network.nodes || [];
+        const outCount = _EvolutionEngine.#getNodeIndicesByType(
+          nodesRef,
+          "output"
+        );
+        if (outCount > 0) {
+          let mean = 0;
+          for (let oi = 0; oi < outCount; oi++) {
+            mean += nodesRef[_EvolutionEngine.#SCRATCH_NODE_IDX[oi]].bias;
+          }
+          mean /= outCount;
+          let varc = 0;
+          for (let oi = 0; oi < outCount; oi++) {
+            const b = nodesRef[_EvolutionEngine.#SCRATCH_NODE_IDX[oi]].bias;
+            const d = b - mean;
+            varc += d * d;
+          }
+          varc /= outCount;
+          const std = Math.sqrt(varc);
+          for (let oi = 0; oi < outCount; oi++) {
+            const idx = _EvolutionEngine.#SCRATCH_NODE_IDX[oi];
+            let adjusted = nodesRef[idx].bias - mean;
+            if (std < _EvolutionEngine.#DEFAULT_STD_SMALL)
+              adjusted *= _EvolutionEngine.#DEFAULT_STD_ADJUST_MULT;
+            nodesRef[idx].bias = Math.max(-5, Math.min(5, adjusted));
+          }
+        }
+      } catch {
+      }
+    }
+    /**
+     * Warm-start helper: connect openness input bits and compass fan-out with light weights.
+     * Mirrors the inlined pre-train adjustments performed after supervised training.
+     * @internal
+     */
+    static #applyCompassWarmStart(net) {
+      try {
+        const nodesRef = net.nodes || [];
+        const outCount = _EvolutionEngine.#getNodeIndicesByType(
+          nodesRef,
+          "output"
+        );
+        const inCount = _EvolutionEngine.#getNodeIndicesByType(nodesRef, "input");
+        for (let dirIndex = 0; dirIndex < 4; dirIndex++) {
+          const inIdx = dirIndex + 1 < inCount ? _EvolutionEngine.#SCRATCH_NODE_IDX[dirIndex + 1] : -1;
+          const outIdx = dirIndex < outCount ? _EvolutionEngine.#SCRATCH_NODE_IDX[dirIndex] : -1;
+          const inNode = inIdx === -1 ? void 0 : nodesRef[inIdx];
+          const outNode = outIdx === -1 ? void 0 : nodesRef[outIdx];
+          if (!inNode || !outNode) continue;
+          let conn = void 0;
+          for (let connIndex = 0; connIndex < net.connections.length; connIndex++) {
+            const c = net.connections[connIndex];
+            if (c.from === inNode && c.to === outNode) {
+              conn = c;
+              break;
+            }
+          }
+          const w = _EvolutionEngine.#fastRandom() * _EvolutionEngine.#W_INIT_RANGE + _EvolutionEngine.#W_INIT_MIN;
+          if (!conn) net.connect(inNode, outNode, w);
+          else conn.weight = w;
+        }
+        const compassIdx = inCount > 0 ? _EvolutionEngine.#SCRATCH_NODE_IDX[0] : -1;
+        const compassNode = compassIdx === -1 ? void 0 : nodesRef[compassIdx];
+        if (compassNode) {
+          for (let outIndex = 0; outIndex < outCount; outIndex++) {
+            const outNode = nodesRef[_EvolutionEngine.#SCRATCH_NODE_IDX[outIndex]];
+            let conn = void 0;
+            for (let connIndex = 0; connIndex < net.connections.length; connIndex++) {
+              const c = net.connections[connIndex];
+              if (c.from === compassNode && c.to === outNode) {
+                conn = c;
+                break;
+              }
+            }
+            const base = _EvolutionEngine.#OUTPUT_BIAS_BASE + outIndex * _EvolutionEngine.#OUTPUT_BIAS_STEP;
+            if (!conn) net.connect(compassNode, outNode, base);
+            else conn.weight = base;
+          }
+        }
+      } catch {
+      }
+    }
+    /**
+     * Build the supervised training set used for Lamarckian warm-start training.
+     * @returns Array of `{ input, output }` training cases.
+     * @internal
+     */
+    static #buildLamarckianTrainingSet() {
+      const ds = [];
+      const OUT = (direction) => {
+        const out = [0, 0, 0, 0];
+        for (let dirIndex = 0; dirIndex < 4; dirIndex++) {
+          out[dirIndex] = dirIndex === direction ? _EvolutionEngine.#TRAIN_OUT_PROB_HIGH : _EvolutionEngine.#TRAIN_OUT_PROB_LOW;
+        }
+        return out;
+      };
+      const add = (inp, dir) => ds.push({ input: inp, output: OUT(dir) });
+      add([0, 1, 0, 0, 0, _EvolutionEngine.#PROGRESS_MEDIUM], 0);
+      add([0.25, 0, 1, 0, 0, _EvolutionEngine.#PROGRESS_MEDIUM], 1);
+      add([0.5, 0, 0, 1, 0, _EvolutionEngine.#PROGRESS_MEDIUM], 2);
+      add([0.75, 0, 0, 0, 1, _EvolutionEngine.#PROGRESS_MEDIUM], 3);
+      add([0, 1, 0, 0, 0, _EvolutionEngine.#PROGRESS_STRONG], 0);
+      add([0.25, 0, 1, 0, 0, _EvolutionEngine.#PROGRESS_STRONG], 1);
+      add([0, 1, 0.6, 0, 0, _EvolutionEngine.#PROGRESS_JUNCTION], 0);
+      add([0, 1, 0, 0.6, 0, _EvolutionEngine.#PROGRESS_JUNCTION], 0);
+      add([0.25, 0.6, 1, 0, 0, _EvolutionEngine.#PROGRESS_JUNCTION], 1);
+      add([0.25, 0, 1, 0.6, 0, _EvolutionEngine.#PROGRESS_JUNCTION], 1);
+      add([0.5, 0, 0.6, 1, 0, _EvolutionEngine.#PROGRESS_JUNCTION], 2);
+      add([0.5, 0, 0, 1, 0.6, _EvolutionEngine.#PROGRESS_JUNCTION], 2);
+      add([0.75, 0, 0, 0.6, 1, _EvolutionEngine.#PROGRESS_JUNCTION], 3);
+      add([0.75, 0.6, 0, 0, 1, _EvolutionEngine.#PROGRESS_JUNCTION], 3);
+      add([0, 1, 0.8, 0.5, 0.4, _EvolutionEngine.#PROGRESS_FOURWAY], 0);
+      add([0.25, 0.7, 1, 0.6, 0.5, _EvolutionEngine.#PROGRESS_FOURWAY], 1);
+      add([0.5, 0.6, 0.55, 1, 0.65, _EvolutionEngine.#PROGRESS_FOURWAY], 2);
+      add([0.75, 0.5, 0.45, 0.7, 1, _EvolutionEngine.#PROGRESS_FOURWAY], 3);
+      add([0, 1, 0.3, 0, 0, _EvolutionEngine.#PROGRESS_REGRESS], 0);
+      add([0.25, 0.5, 1, 0.4, 0, _EvolutionEngine.#PROGRESS_REGRESS], 1);
+      add([0.5, 0, 0.3, 1, 0.2, _EvolutionEngine.#PROGRESS_REGRESS], 2);
+      add([0.75, 0, 0.5, 0.4, 1, _EvolutionEngine.#PROGRESS_REGRESS], 3);
+      add(
+        [
+          0,
+          0,
+          0,
+          _EvolutionEngine.#PROGRESS_MIN_SIGNAL,
+          0,
+          _EvolutionEngine.#PROGRESS_MILD_REGRESS
+        ],
+        2
+      );
+      for (let dsi = 0; dsi < ds.length; dsi++) {
+        const caseEntry = ds[dsi];
+        for (let dirIndex = 1; dirIndex <= 4; dirIndex++) {
+          if (caseEntry.input[dirIndex] === 1 && _EvolutionEngine.#fastRandom() < _EvolutionEngine.#DEFAULT_JITTER_PROB)
+            caseEntry.input[dirIndex] = _EvolutionEngine.#AUGMENT_JITTER_BASE + _EvolutionEngine.#fastRandom() * _EvolutionEngine.#AUGMENT_JITTER_RANGE;
+        }
+        if (_EvolutionEngine.#fastRandom() < _EvolutionEngine.#AUGMENT_PROGRESS_JITTER_PROB)
+          caseEntry.input[5] = Math.min(
+            1,
+            Math.max(
+              0,
+              caseEntry.input[5] + (_EvolutionEngine.#fastRandom() * _EvolutionEngine.#AUGMENT_PROGRESS_DELTA_RANGE - _EvolutionEngine.#AUGMENT_PROGRESS_DELTA_HALF)
+            )
+          );
+      }
+      return ds;
+    }
+    /**
+     * Pretrain population with the provided supervised training set and apply warm-start heuristics.
+     * @internal
+     */
+    static #pretrainPopulationWarmStart(neat, lamarckianTrainingSet) {
+      try {
+        const populationRef = neat.population || [];
+        for (let networkIndex = 0; networkIndex < populationRef.length; networkIndex++) {
+          const net = populationRef[networkIndex];
+          try {
+            net.train(lamarckianTrainingSet, {
+              iterations: Math.min(
+                _EvolutionEngine.#PRETRAIN_MAX_ITER,
+                _EvolutionEngine.#PRETRAIN_BASE_ITER + Math.floor(lamarckianTrainingSet.length / 2)
+              ),
+              error: _EvolutionEngine.#DEFAULT_TRAIN_ERROR,
+              rate: _EvolutionEngine.#DEFAULT_PRETRAIN_RATE,
+              momentum: _EvolutionEngine.#DEFAULT_PRETRAIN_MOMENTUM,
+              batchSize: _EvolutionEngine.#DEFAULT_PRETRAIN_BATCH,
+              allowRecurrent: true,
+              cost: methods_exports.Cost.softmaxCrossEntropy
+            });
+            try {
+              _EvolutionEngine.#applyCompassWarmStart(net);
+            } catch {
+            }
+            _EvolutionEngine.#centerOutputBiases(net);
+          } catch {
+          }
+        }
+      } catch {
+      }
+    }
+    /**
+     * Create a cooperative frame-yielding function used by the evolution loop.
+     * @internal
+     * @returns function that resolves on next frame / tick
+     */
+    static #makeFlushToFrame() {
+      return () => {
+        const rafPromise = () => new Promise(
+          (resolve) => globalThis.requestAnimationFrame ? globalThis.requestAnimationFrame(() => resolve()) : setTimeout(() => resolve(), 0)
+        );
+        const immediatePromise = () => new Promise(
+          (resolve) => typeof setImmediate === "function" ? setImmediate(resolve) : setTimeout(resolve, 0)
+        );
+        if (typeof window !== "undefined" && typeof window.requestAnimationFrame === "function") {
+          return new Promise(async (resolve) => {
+            const check = async () => {
+              if (window.asciiMazePaused) {
+                await rafPromise();
+                setTimeout(check, 0);
+              } else {
+                rafPromise().then(() => resolve());
+              }
+            };
+            check();
+          });
+        }
+        if (typeof setImmediate === "function") {
+          return new Promise(async (resolve) => {
+            const check = async () => {
+              if (globalThis.asciiMazePaused) {
+                await immediatePromise();
+                setTimeout(check, 0);
+              } else {
+                immediatePromise().then(() => resolve());
+              }
+            };
+            check();
+          });
+        }
+        return new Promise((resolve) => setTimeout(resolve, 0));
+      };
+    }
+    /**
+     * Initialize persistence helpers (fs + path) and ensure directory exists if possible.
+     * @internal
+     */
+    static #initPersistence(persistDir) {
+      let fs = null;
+      let path2 = null;
+      try {
+        if (typeof window === "undefined" && typeof __require === "function") {
+          fs = __require("fs");
+          path2 = __require("path");
+        }
+      } catch {
+      }
+      if (fs && persistDir && !fs.existsSync(persistDir)) {
+        try {
+          fs.mkdirSync(persistDir, { recursive: true });
+        } catch {
+        }
+      }
+      return { fs, path: path2 };
+    }
+    /**
+     * Build a safe writer function that tries Node stdout, dashboard logger, then console.log.
+     * @internal
+     */
+    static #makeSafeWriter(dashboardManager) {
+      return (msg) => {
+        try {
+          if (typeof process !== "undefined" && process && process.stdout && typeof process.stdout.write === "function") {
+            process.stdout.write(msg);
+            return;
+          }
+        } catch {
+        }
+        try {
+          if (dashboardManager && dashboardManager.logFunction) {
+            try {
+              dashboardManager.logFunction(msg);
+              return;
+            } catch {
+            }
+          }
+        } catch {
+        }
+        if (typeof console !== "undefined" && console.log)
+          console.log(msg.trim());
+      };
+    }
+    /**
+     * Construct a configured Neat instance using the project's recommended defaults.
+     * @internal
+     * @param inputCount - number of network inputs
+     * @param outputCount - number of network outputs
+     * @param fitnessCallback - fitness evaluation callback
+     * @param cfg - small configuration bag to tweak high-level features
+     * @returns a new Neat instance
+     */
+    static #createNeat(inputCount, outputCount, fitnessCallback, cfg) {
+      const neatInstance = new Neat(inputCount, outputCount, fitnessCallback, {
+        popsize: cfg.popSize || _EvolutionEngine.#DEFAULT_POPSIZE,
+        mutation: [
+          methods_exports.mutation.ADD_NODE,
+          methods_exports.mutation.SUB_NODE,
+          methods_exports.mutation.ADD_CONN,
+          methods_exports.mutation.SUB_CONN,
+          methods_exports.mutation.MOD_BIAS,
+          methods_exports.mutation.MOD_ACTIVATION,
+          methods_exports.mutation.MOD_CONNECTION,
+          methods_exports.mutation.ADD_LSTM_NODE
+        ],
+        mutationRate: _EvolutionEngine.#DEFAULT_MUTATION_RATE,
+        mutationAmount: _EvolutionEngine.#DEFAULT_MUTATION_AMOUNT,
+        elitism: Math.max(
+          1,
+          Math.floor(
+            (cfg.popSize || _EvolutionEngine.#DEFAULT_POPSIZE) * _EvolutionEngine.#DEFAULT_ELITISM_FRACTION
+          )
+        ),
+        provenance: Math.max(
+          1,
+          Math.floor(
+            (cfg.popSize || _EvolutionEngine.#DEFAULT_POPSIZE) * _EvolutionEngine.#DEFAULT_PROVENANCE_FRACTION
+          )
+        ),
+        allowRecurrent: cfg.allowRecurrent !== false,
+        minHidden: _EvolutionEngine.#DEFAULT_MIN_HIDDEN,
+        adaptiveMutation: cfg.adaptiveMutation || {
+          enabled: true,
+          strategy: "twoTier"
+        },
+        multiObjective: cfg.multiObjective || {
+          enabled: true,
+          complexityMetric: "nodes",
+          autoEntropy: true
+        },
+        telemetry: cfg.telemetry || {
+          enabled: true,
+          performance: true,
+          complexity: true,
+          hypervolume: true
+        },
+        lineageTracking: cfg.lineageTracking === true,
+        novelty: cfg.novelty || { enabled: true, blendFactor: 0.15 },
+        targetSpecies: cfg.targetSpecies || _EvolutionEngine.#DEFAULT_TARGET_SPECIES,
+        adaptiveTargetSpecies: cfg.adaptiveTargetSpecies || {
+          enabled: true,
+          entropyRange: _EvolutionEngine.#DEFAULT_ENTROPY_RANGE,
+          speciesRange: [6, 14],
+          smooth: _EvolutionEngine.#DEFAULT_ADAPTIVE_SMOOTH
+        }
+      });
+      return neatInstance;
+    }
+    /**
+     * Seed the NEAT population from optional initial population and an optional initial best network.
+     * @internal
+     */
+    static #seedInitialPopulation(neat, initialPopulation, initialBestNetwork, targetPopSize) {
+      if (Array.isArray(initialPopulation) && initialPopulation.length > 0) {
+        const srcLen = initialPopulation.length;
+        if (_EvolutionEngine.#SCRATCH_POP_CLONE.length < srcLen) {
+          _EvolutionEngine.#SCRATCH_POP_CLONE.length = srcLen;
+        }
+        const pooled = _EvolutionEngine.#SCRATCH_POP_CLONE;
+        for (let pi = 0; pi < srcLen; pi++) {
+          pooled[pi] = initialPopulation[pi].clone();
+        }
+        pooled.length = srcLen;
+        neat.population = pooled;
+      }
+      if (initialBestNetwork) {
+        try {
+          neat.population = neat.population || [];
+          neat.population[0] = initialBestNetwork.clone();
+        } catch {
+        }
+      }
+      try {
+        neat.options = neat.options || {};
+        neat.options.popsize = neat.population ? neat.population.length : targetPopSize;
+      } catch {
+      }
+    }
+    /**
+     * Check cooperative cancellation sources (legacy cancellation object or AbortSignal).
+     * @internal
+     */
+    static #checkCancellation(options, bestResult) {
+      try {
+        if (options?.cancellation && typeof options.cancellation.isCancelled === "function" && options.cancellation.isCancelled()) {
+          if (bestResult) bestResult.exitReason = "cancelled";
+          return "cancelled";
+        }
+        if (options?.signal?.aborted) {
+          if (bestResult) bestResult.exitReason = "aborted";
+          return "aborted";
+        }
+      } catch {
+      }
+      return void 0;
+    }
+    /**
+     * Sample `k` items from `src` into the pooled SCRATCH_SAMPLE buffer (with replacement).
+     * Returns the number of items written into the scratch buffer.
+     * @internal
+     * @remarks Non-reentrant: uses shared `#SCRATCH_SAMPLE` buffer.
+     */
+    static #sampleIntoScratch(src, k) {
+      if (!Array.isArray(src) || k <= 0) return 0;
+      const sampleCount = Math.floor(k);
+      const maxBuf = _EvolutionEngine.#SCRATCH_SAMPLE;
+      const srcLen = src.length || 0;
+      if (srcLen === 0) return 0;
+      const writeCount = Math.min(sampleCount, maxBuf.length);
+      for (let wi = 0; wi < writeCount; wi++) {
+        maxBuf[wi] = src[_EvolutionEngine.#fastRandom() * srcLen | 0];
+      }
+      return writeCount;
+    }
+    /**
+     * Sample up to k items (with replacement) from src segment [segmentStart, end) into scratch buffer.
+     * @internal
+     */
+    static #sampleSegmentIntoScratch(src, segmentStart, k) {
+      if (!Array.isArray(src) || k <= 0) return 0;
+      const len = src.length | 0;
+      if (segmentStart >= len) return 0;
+      const segLen = len - segmentStart;
+      if (segLen <= 0) return 0;
+      const maxBuf = _EvolutionEngine.#SCRATCH_SAMPLE;
+      const writeCount = Math.min(Math.floor(k), maxBuf.length);
+      for (let wi = 0; wi < writeCount; wi++) {
+        const pick = _EvolutionEngine.#fastRandom() * segLen | 0;
+        maxBuf[wi] = src[segmentStart + pick];
+      }
+      return writeCount;
+    }
+    /**
+     * Run one generation: evolve, ensure output identity, update species history, maybe expand population,
+     * and run Lamarckian training if configured.
+     * @internal
+     */
+    static async #runGeneration(neat, doProfile, lamarckianIterations, lamarckianTrainingSet, lamarckianSampleSize, safeWrite, completedGenerations, dynamicPopEnabled, dynamicPopMax, plateauGenerations, plateauCounter, dynamicPopExpandInterval, dynamicPopExpandFactor, dynamicPopPlateauSlack) {
+      const t0 = doProfile ? globalThis.performance?.now?.() ?? Date.now() : 0;
+      const fittest = await neat.evolve();
+      const tEvolve = doProfile ? (globalThis.performance?.now?.() ?? Date.now()) - t0 : 0;
+      _EvolutionEngine.#ensureOutputIdentity(neat);
+      _EvolutionEngine.#handleSpeciesHistory(neat);
+      _EvolutionEngine.#maybeExpandPopulation(
+        neat,
+        dynamicPopEnabled,
+        completedGenerations,
+        dynamicPopMax,
+        plateauGenerations,
+        plateauCounter,
+        dynamicPopExpandInterval,
+        dynamicPopExpandFactor,
+        dynamicPopPlateauSlack,
+        safeWrite
+      );
+      let tLamarck = 0;
+      if (lamarckianIterations > 0 && lamarckianTrainingSet && lamarckianTrainingSet.length) {
+        tLamarck = _EvolutionEngine.#applyLamarckianTraining(
+          neat,
+          lamarckianTrainingSet,
+          lamarckianIterations,
+          lamarckianSampleSize,
+          safeWrite,
+          doProfile,
+          completedGenerations
+        );
+      }
+      return { fittest, tEvolve, tLamarck };
+    }
+    /**
+     * Update plateau detection state based on the latest fitness.
+     * @internal
+     */
+    static #updatePlateauState(fitness, lastBestFitnessForPlateau, plateauCounter, plateauImprovementThreshold) {
+      if (fitness > lastBestFitnessForPlateau + plateauImprovementThreshold) {
+        lastBestFitnessForPlateau = fitness;
+        plateauCounter = 0;
+      } else {
+        plateauCounter++;
+      }
+      return { plateauCounter, lastBestFitnessForPlateau };
+    }
+    /**
+     * Handle simplify entry and per-generation advance. Keeps caller variables small.
+     * @internal
+     */
+    static #handleSimplifyState(neat, plateauCounter, plateauGenerations, simplifyDuration, simplifyMode, simplifyRemaining, simplifyStrategy, simplifyPruneFraction) {
+      if (!simplifyMode) {
+        const dur = _EvolutionEngine.#maybeStartSimplify(
+          plateauCounter,
+          plateauGenerations,
+          simplifyDuration
+        );
+        if (dur > 0) {
+          simplifyMode = true;
+          simplifyRemaining = dur;
+          plateauCounter = 0;
+        }
+      }
+      if (simplifyMode) {
+        simplifyRemaining = _EvolutionEngine.#runSimplifyCycle(
+          neat,
+          simplifyRemaining,
+          simplifyStrategy,
+          simplifyPruneFraction
+        );
+        if (simplifyRemaining <= 0) simplifyMode = false;
+      }
+      return { simplifyMode, simplifyRemaining, plateauCounter };
+    }
+    /**
+     * Simulate the fittest network and perform post-simulation bookkeeping (attach telemetry, pruning, logging).
+     * @internal
+     */
+    static #simulateAndPostprocess(fittest, encodedMaze, startPosition, exitPosition, distanceMap, maxSteps, doProfile, safeWrite, logEvery, completedGenerations, neat) {
+      const t2 = doProfile ? globalThis.performance?.now?.() ?? Date.now() : 0;
+      const generationResult = MazeMovement.simulateAgent(
+        fittest,
+        encodedMaze,
+        startPosition,
+        exitPosition,
+        distanceMap,
+        maxSteps
+      );
+      try {
+        if (!fittest._lastStepOutputs) {
+          fittest._lastStepOutputs = _EvolutionEngine.#SCRATCH_LOGITS_RING;
+        }
+      } catch {
+      }
+      fittest._saturationFraction = generationResult.saturationFraction;
+      fittest._actionEntropy = generationResult.actionEntropy;
+      try {
+        const stepOutputs = generationResult.stepOutputs;
+        if (Array.isArray(stepOutputs)) {
+          for (let si = 0; si < stepOutputs.length; si++) {
+            const vec = stepOutputs[si];
+            if (!Array.isArray(vec)) continue;
+            const w = _EvolutionEngine.#SCRATCH_LOGITS_RING_W & _EvolutionEngine.#LOGITS_RING_CAP - 1;
+            const target = _EvolutionEngine.#SCRATCH_LOGITS_RING[w];
+            const alen = Math.min(_EvolutionEngine.#ACTION_DIM, vec.length);
+            for (let ai = 0; ai < alen; ai++) target[ai] = vec[ai] ?? 0;
+            _EvolutionEngine.#SCRATCH_LOGITS_RING_W = _EvolutionEngine.#SCRATCH_LOGITS_RING_W + 1 & 2147483647;
+          }
+        }
+      } catch {
+      }
+      if (generationResult.saturationFraction && generationResult.saturationFraction > _EvolutionEngine.#SATURATION_PRUNE_THRESHOLD) {
+        _EvolutionEngine.#pruneSaturatedHiddenOutputs(fittest);
+      }
+      if (completedGenerations % logEvery === 0) {
+        _EvolutionEngine.#logGenerationTelemetry(
+          neat,
+          fittest,
+          generationResult,
+          completedGenerations,
+          safeWrite
+        );
+      }
+      const tDelta = doProfile ? (globalThis.performance?.now?.() ?? Date.now()) - t2 : 0;
+      return { generationResult, simTime: tDelta };
+    }
+    /**
+     * Check stop conditions (solved, stagnation, maxGenerations) and run dashboard updates/pausing when needed.
+     * Returns a reason string when evolution should stop, otherwise undefined.
+     * @internal
+     */
+    static async #checkStopConditions(bestResult, bestNetwork, maze, completedGenerations, neat, dashboardManager, flushToFrame, minProgressToPass, autoPauseOnSolve, stopOnlyOnSolve, stagnantGenerations, maxStagnantGenerations, maxGenerations) {
+      if (bestResult?.success && bestResult.progress >= minProgressToPass) {
+        if (bestNetwork && bestResult) {
+          try {
+            dashboardManager.update(
+              maze,
+              bestResult,
+              bestNetwork,
+              completedGenerations,
+              neat
+            );
+          } catch {
+          }
+          try {
+            await flushToFrame();
+          } catch {
+          }
+        }
+        if (autoPauseOnSolve) {
+          try {
+            if (typeof window !== "undefined") {
+              window.asciiMazePaused = true;
+              window.dispatchEvent(
+                new CustomEvent("asciiMazeSolved", {
+                  detail: {
+                    maze,
+                    generations: completedGenerations,
+                    progress: bestResult?.progress
+                  }
+                })
+              );
+            }
+          } catch {
+          }
+        }
+        if (bestResult) bestResult.exitReason = "solved";
+        return "solved";
+      }
+      if (!stopOnlyOnSolve && stagnantGenerations >= maxStagnantGenerations && isFinite(maxStagnantGenerations)) {
+        if (bestNetwork && bestResult) {
+          try {
+            dashboardManager.update(
+              maze,
+              bestResult,
+              bestNetwork,
+              completedGenerations,
+              neat
+            );
+          } catch {
+          }
+          try {
+            await flushToFrame();
+          } catch {
+          }
+        }
+        if (bestResult) bestResult.exitReason = "stagnation";
+        return "stagnation";
+      }
+      if (!stopOnlyOnSolve && completedGenerations >= maxGenerations && isFinite(maxGenerations)) {
+        if (bestResult) bestResult.exitReason = "maxGenerations";
+        return "maxGenerations";
+      }
+      return void 0;
+    }
+    /**
+     * Expose selected private helpers for test environment only.
+     * @internal
+     * @remarks Only returns accessors when NODE_ENV === 'test'.
+     */
+    static _testExpose() {
+      try {
+        if (typeof process !== "undefined" && process && process.env && false) {
+          return {
+            sampleArray: (s, k) => _EvolutionEngine.#sampleArray(s, k),
+            pruneWeakConnectionsForGenome: (g, s, f) => _EvolutionEngine.#pruneWeakConnectionsForGenome(g, s, f),
+            computeLogitStats: (r) => _EvolutionEngine.#computeLogitStats(r)
+          };
+        }
+      } catch {
+      }
+      return void 0;
+    }
+    /**
+     * Prune weak outgoing connections from hidden nodes to outputs when saturation is detected.
+     * Mirrors the inline saturation pruning logic but centralized for reuse/testing.
+     * @internal
+     */
+    static #pruneSaturatedHiddenOutputs(genome) {
+      try {
+        const t0 = _EvolutionEngine.#PROFILE_ENABLED ? _EvolutionEngine.#PROFILE_T0() : 0;
+        const nodesRef = genome.nodes || [];
+        const outCount = _EvolutionEngine.#getNodeIndicesByType(
+          nodesRef,
+          "output"
+        );
+        const hiddenCount = _EvolutionEngine.#getNodeIndicesByType(
+          nodesRef,
+          "hidden"
+        );
+        for (let hi = 0; hi < hiddenCount; hi++) {
+          const hiddenNode = nodesRef[_EvolutionEngine.#SCRATCH_NODE_IDX[outCount + hi]];
+          const outs = _EvolutionEngine.#collectHiddenToOutputConns(
+            hiddenNode,
+            nodesRef,
+            outCount
+          );
+          const outsLen = outs.length;
+          if (outsLen >= 2) {
+            const wbuf = _EvolutionEngine.#SCRATCH_EXPS;
+            let sumW = 0;
+            const len = Math.min(outsLen, wbuf.length);
+            for (let wi = 0; wi < len; wi++) {
+              const w = Math.abs(outs[wi].weight);
+              wbuf[wi] = w;
+              sumW += w;
+            }
+            const mean = sumW / len;
+            let varc = 0;
+            for (let wi = 0; wi < len; wi++) {
+              const d = wbuf[wi] - mean;
+              varc += d * d;
+            }
+            varc /= len;
+            if (mean < 0.5 && varc < _EvolutionEngine.#NUMERIC_EPSILON_SMALL) {
+              const disableCount = Math.max(1, Math.floor(outsLen / 2));
+              const flags = _EvolutionEngine.#SCRATCH_NODE_IDX;
+              for (let fi = 0; fi < outsLen; fi++) flags[fi] = 0;
+              for (let di = 0; di < disableCount; di++) {
+                let minIdx = -1;
+                let minW = Infinity;
+                for (let j = 0; j < outsLen; j++) {
+                  if (flags[j]) continue;
+                  const conn = outs[j];
+                  if (!conn || conn.enabled === false) {
+                    flags[j] = 1;
+                    continue;
+                  }
+                  const aw = Math.abs(conn.weight);
+                  if (aw < minW) {
+                    minW = aw;
+                    minIdx = j;
+                  }
+                }
+                if (minIdx >= 0) {
+                  outs[minIdx].enabled = false;
+                  flags[minIdx] = 1;
+                } else break;
+              }
+              for (let fi = 0; fi < outsLen; fi++) flags[fi] = 0;
+            }
+          }
+        }
+        if (_EvolutionEngine.#PROFILE_ENABLED) {
+          _EvolutionEngine.#PROFILE_ADD(
+            "prune",
+            _EvolutionEngine.#PROFILE_T0() - t0 || 0
+          );
+        }
+      } catch {
+      }
+    }
+    /**
+     * Anti-collapse recovery: reinitialize a fraction of non-elite population's output biases & weights.
+     * @internal
+     */
+    static #antiCollapseRecovery(neat, completedGenerations, safeWrite) {
+      try {
+        const eliteCount = neat.options.elitism || 0;
+        const pop = neat.population || [];
+        const reinitBuf = _EvolutionEngine.#SCRATCH_SAMPLE;
+        const nonElite = pop.slice(eliteCount || 0);
+        const targetK = Math.min(
+          nonElite.length,
+          Math.floor(nonElite.length * 0.3),
+          reinitBuf.length
+        );
+        const reinitLen = _EvolutionEngine.#sampleIntoScratch(nonElite, targetK);
+        let connReset = 0, biasReset = 0;
+        for (let rti = 0; rti < reinitLen; rti++) {
+          const g = reinitBuf[rti];
+          const deltas = _EvolutionEngine.#reinitializeGenomeOutputsAndWeights(g);
+          connReset += deltas.connReset;
+          biasReset += deltas.biasReset;
+        }
+        safeWrite(
+          `[ANTICOLLAPSE] gen=${completedGenerations} reinitGenomes=${reinitLen} connReset=${connReset} biasReset=${biasReset}
+`
+        );
+      } catch {
+      }
+    }
+    /**
+     * Reinitialize output node biases and weights targeting outputs for a single genome.
+     * Returns counts of modified connections and biases.
+     * @internal
+     */
+    static #reinitializeGenomeOutputsAndWeights(genome) {
+      const nodesList = genome.nodes || [];
+      let outputsLen = 0;
+      const sampleBuf = _EvolutionEngine.#SCRATCH_SAMPLE;
+      for (let ni = 0; ni < nodesList.length; ni++) {
+        const n = nodesList[ni];
+        if (n && n.type === "output") {
+          if (outputsLen < sampleBuf.length) sampleBuf[outputsLen++] = n;
+        }
+      }
+      let biasReset = 0;
+      for (let oi = 0; oi < outputsLen; oi++) {
+        sampleBuf[oi].bias = _EvolutionEngine.#fastRandom() * (2 * _EvolutionEngine.#BIAS_RESET_HALF_RANGE) - _EvolutionEngine.#BIAS_RESET_HALF_RANGE;
+        biasReset++;
+      }
+      let connReset = 0;
+      const conns = genome.connections || [];
+      for (let ci = 0; ci < conns.length; ci++) {
+        const c = conns[ci];
+        for (let oi = 0; oi < outputsLen; oi++) {
+          if (c.to === sampleBuf[oi]) {
+            c.weight = _EvolutionEngine.#fastRandom() * (2 * _EvolutionEngine.#CONN_WEIGHT_RESET_HALF_RANGE) - _EvolutionEngine.#CONN_WEIGHT_RESET_HALF_RANGE;
+            connReset++;
+            break;
+          }
+        }
+      }
+      return { connReset, biasReset };
+    }
     /**
      * Runs the NEAT neuro-evolution process for an agent to solve a given ASCII maze.
      *
@@ -16598,65 +19392,42 @@
       const neatFitnessCallback = (network) => {
         return currentFitnessEvaluator(network, fitnessContext);
       };
-      const neat = new Neat(inputSize, outputSize, neatFitnessCallback, {
-        popsize: popSize,
-        // Define the types of mutations that can occur, allowing for structural evolution.
-        mutation: [
-          methods_exports.mutation.ADD_NODE,
-          methods_exports.mutation.SUB_NODE,
-          methods_exports.mutation.ADD_CONN,
-          methods_exports.mutation.SUB_CONN,
-          methods_exports.mutation.MOD_BIAS,
-          methods_exports.mutation.MOD_ACTIVATION,
-          methods_exports.mutation.MOD_CONNECTION,
-          methods_exports.mutation.ADD_LSTM_NODE
-          // Allow adding LSTM nodes for more complex memory.
-        ],
-        mutationRate: 0.2,
-        mutationAmount: 0.3,
-        elitism: Math.max(1, Math.floor(popSize * 0.1)),
-        // Preserve the top 10% of the population.
-        provenance: Math.max(1, Math.floor(popSize * 0.2)),
-        // Keep a portion of the population from previous species.
-        allowRecurrent,
-        minHidden: 6,
-        // Start with a minimum number of hidden nodes.
-        // Enable advanced features for more sophisticated evolution.
-        adaptiveMutation: { enabled: true, strategy: "twoTier" },
-        multiObjective: {
-          enabled: true,
-          complexityMetric: "nodes",
-          autoEntropy: true
-        },
-        telemetry: {
-          enabled: true,
-          performance: true,
-          complexity: true,
-          hypervolume: true
-        },
-        lineageTracking: true,
-        novelty: {
-          enabled: true,
-          descriptor: (g) => [g.nodes.length, g.connections.length],
-          blendFactor: 0.15
-        },
-        targetSpecies: 10,
-        // Aim for a target number of species to maintain diversity.
-        adaptiveTargetSpecies: {
-          enabled: true,
-          entropyRange: [0.3, 0.8],
-          speciesRange: [6, 14],
-          smooth: 0.5
+      const neat = _EvolutionEngine.#createNeat(
+        inputSize,
+        outputSize,
+        neatFitnessCallback,
+        {
+          popSize,
+          allowRecurrent,
+          adaptiveMutation: { enabled: true, strategy: "twoTier" },
+          multiObjective: {
+            enabled: true,
+            complexityMetric: "nodes",
+            autoEntropy: true
+          },
+          telemetry: {
+            enabled: true,
+            performance: true,
+            complexity: true,
+            hypervolume: true
+          },
+          lineageTracking: true,
+          novelty: { enabled: true, blendFactor: 0.15 },
+          targetSpecies: 10,
+          adaptiveTargetSpecies: {
+            enabled: true,
+            entropyRange: [0.3, 0.8],
+            speciesRange: [6, 14],
+            smooth: 0.5
+          }
         }
-      });
-      if (initialPopulation && initialPopulation.length > 0) {
-        neat.population = initialPopulation.map(
-          (net) => net.clone()
-        );
-      }
-      if (initialBestNetwork) {
-        neat.population[0] = initialBestNetwork.clone();
-      }
+      );
+      _EvolutionEngine.#seedInitialPopulation(
+        neat,
+        initialPopulation,
+        initialBestNetwork,
+        popSize
+      );
       let bestNetwork = evolutionAlgorithmConfig.initialBestNetwork;
       let bestFitness = -Infinity;
       let bestResult;
@@ -16666,838 +19437,152 @@
       let simplifyMode = false;
       let simplifyRemaining = 0;
       let lastBestFitnessForPlateau = -Infinity;
-      let fs = null;
-      let path2 = null;
-      try {
-        if (typeof window === "undefined" && typeof __require === "function") {
-          fs = __require("fs");
-          path2 = __require("path");
-        }
-      } catch {
-        fs = null;
-        path2 = null;
-      }
-      const flushToFrame = () => {
-        const rafPromise = () => new Promise(
-          (resolve) => window.requestAnimationFrame(() => resolve())
-        );
-        const immediatePromise = () => new Promise(
-          (resolve) => typeof setImmediate === "function" ? setImmediate(resolve) : setTimeout(resolve, 0)
-        );
-        if (typeof window !== "undefined" && typeof window.requestAnimationFrame === "function") {
-          return new Promise(async (resolve) => {
-            const check = async () => {
-              if (window.asciiMazePaused) {
-                await rafPromise();
-                setTimeout(check, 0);
-              } else {
-                rafPromise().then(() => resolve());
-              }
-            };
-            check();
-          });
-        }
-        if (typeof setImmediate === "function") {
-          return new Promise(async (resolve) => {
-            const check = async () => {
-              if (globalThis.asciiMazePaused) {
-                await immediatePromise();
-                setTimeout(check, 0);
-              } else {
-                immediatePromise().then(() => resolve());
-              }
-            };
-            check();
-          });
-        }
-        return new Promise((resolve) => setTimeout(resolve, 0));
-      };
-      const getTail = (arr, n) => {
-        if (!Array.isArray(arr) || n <= 0) return [];
-        const out = [];
-        const start2 = Math.max(0, arr.length - n);
-        for (let i = start2; i < arr.length; i++) out.push(arr[i]);
-        return out;
-      };
-      const pushHistory = (buf, v, maxLen) => {
-        return MazeUtils.pushHistory(buf, v, maxLen);
-      };
-      if (fs && persistDir && !fs.existsSync(persistDir)) {
-        try {
-          fs.mkdirSync(persistDir, { recursive: true });
-        } catch (e) {
-          console.error(
-            `Could not create persistence directory: ${persistDir}`,
-            e
-          );
-        }
-      }
-      const lamarckianTrainingSet = (() => {
-        const ds = [];
-        const OUT = (d) => [0, 1, 2, 3].map((i) => i === d ? 0.92 : 0.02);
-        const add = (inp, dir) => ds.push({ input: inp, output: OUT(dir) });
-        add([0, 1, 0, 0, 0, 0.7], 0);
-        add([0.25, 0, 1, 0, 0, 0.7], 1);
-        add([0.5, 0, 0, 1, 0, 0.7], 2);
-        add([0.75, 0, 0, 0, 1, 0.7], 3);
-        add([0, 1, 0, 0, 0, 0.9], 0);
-        add([0.25, 0, 1, 0, 0, 0.9], 1);
-        add([0, 1, 0.6, 0, 0, 0.6], 0);
-        add([0, 1, 0, 0.6, 0, 0.6], 0);
-        add([0.25, 0.6, 1, 0, 0, 0.6], 1);
-        add([0.25, 0, 1, 0.6, 0, 0.6], 1);
-        add([0.5, 0, 0.6, 1, 0, 0.6], 2);
-        add([0.5, 0, 0, 1, 0.6, 0.6], 2);
-        add([0.75, 0, 0, 0.6, 1, 0.6], 3);
-        add([0.75, 0.6, 0, 0, 1, 0.6], 3);
-        add([0, 1, 0.8, 0.5, 0.4, 0.55], 0);
-        add([0.25, 0.7, 1, 0.6, 0.5, 0.55], 1);
-        add([0.5, 0.6, 0.55, 1, 0.65, 0.55], 2);
-        add([0.75, 0.5, 0.45, 0.7, 1, 0.55], 3);
-        add([0, 1, 0.3, 0, 0, 0.4], 0);
-        add([0.25, 0.5, 1, 0.4, 0, 0.4], 1);
-        add([0.5, 0, 0.3, 1, 0.2, 0.4], 2);
-        add([0.75, 0, 0.5, 0.4, 1, 0.4], 3);
-        add([0, 0, 0, 1e-3, 0, 0.45], 2);
-        ds.forEach((p) => {
-          for (let i = 1; i <= 4; i++)
-            if (p.input[i] === 1 && Math.random() < 0.25)
-              p.input[i] = 0.95 + Math.random() * 0.05;
-          if (Math.random() < 0.35)
-            p.input[5] = Math.min(
-              1,
-              Math.max(0, p.input[5] + (Math.random() * 0.1 - 0.05))
-            );
-        });
-        return ds;
-      })();
+      const { fs, path: path2 } = _EvolutionEngine.#initPersistence(persistDir);
+      const flushToFrame = _EvolutionEngine.#makeFlushToFrame();
+      const lamarckianTrainingSet = _EvolutionEngine.#buildLamarckianTrainingSet();
       if (lamarckianTrainingSet.length) {
-        const centerOutputBiases = (net) => {
-          try {
-            const outs = net.nodes?.filter((n) => n.type === "output");
-            if (!outs?.length) return;
-            const mean = outs.reduce((a, n) => a + n.bias, 0) / outs.length;
-            let varc = 0;
-            outs.forEach((n) => {
-              varc += Math.pow(n.bias - mean, 2);
-            });
-            varc /= outs.length;
-            const std = Math.sqrt(varc);
-            outs.forEach((n) => {
-              n.bias = Math.max(-5, Math.min(5, n.bias - mean));
-            });
-            net._outputBiasStats = { mean, std };
-          } catch {
-          }
-        };
-        neat.population.forEach((net, idx) => {
-          try {
-            net.train(lamarckianTrainingSet, {
-              iterations: Math.min(
-                60,
-                8 + Math.floor(lamarckianTrainingSet.length / 2)
-              ),
-              error: 0.01,
-              rate: 2e-3,
-              momentum: 0.1,
-              batchSize: 4,
-              allowRecurrent: true,
-              cost: methods_exports.Cost.softmaxCrossEntropy
-            });
-            try {
-              const outputNodes = net.nodes.filter(
-                (n) => n.type === "output"
-              );
-              const inputNodes = net.nodes.filter((n) => n.type === "input");
-              for (let d = 0; d < 4; d++) {
-                const inNode = inputNodes[d + 1];
-                const outNode = outputNodes[d];
-                if (!inNode || !outNode) continue;
-                let conn = net.connections.find(
-                  (c) => c.from === inNode && c.to === outNode
-                );
-                const w = Math.random() * 0.25 + 0.55;
-                if (!conn) net.connect(inNode, outNode, w);
-                else conn.weight = w;
-              }
-              const compassNode = inputNodes[0];
-              if (compassNode) {
-                outputNodes.forEach((out, d) => {
-                  let conn = net.connections.find(
-                    (c) => c.from === compassNode && c.to === out
-                  );
-                  const base = 0.05 + d * 0.01;
-                  if (!conn) net.connect(compassNode, out, base);
-                  else conn.weight = base;
-                });
-              }
-            } catch {
-            }
-            centerOutputBiases(net);
-          } catch {
-          }
-        });
+        _EvolutionEngine.#pretrainPopulationWarmStart(neat, lamarckianTrainingSet);
       }
       const doProfile = typeof process !== "undefined" && typeof process.env !== "undefined" && process.env.ASCII_MAZE_PROFILE === "1";
       let tEvolveTotal = 0;
       let tLamarckTotal = 0;
       let tSimTotal = 0;
-      const safeWrite = (msg) => {
-        try {
-          if (typeof process !== "undefined" && process && process.stdout && typeof process.stdout.write === "function") {
-            process.stdout.write(msg);
-            return;
-          }
-        } catch {
-        }
-        try {
-          if (dashboardManager && dashboardManager.logFunction) {
-            try {
-              dashboardManager.logFunction(msg);
-              return;
-            } catch {
-            }
-          }
-        } catch {
-        }
-        if (typeof console !== "undefined" && console.log)
-          console.log(msg.trim());
-      };
+      const safeWrite = _EvolutionEngine.#makeSafeWriter(dashboardManager);
       while (true) {
-        try {
-          if (options.cancellation && options.cancellation.isCancelled()) {
-            if (bestResult) bestResult.exitReason = "cancelled";
-            break;
-          }
-          if (options.signal?.aborted) {
-            if (bestResult) bestResult.exitReason = "aborted";
-            break;
-          }
-        } catch {
-        }
-        const t0 = doProfile ? globalThis.performance?.now?.() ?? Date.now() : 0;
-        const fittest = await neat.evolve();
-        if (doProfile)
-          tEvolveTotal += (globalThis.performance?.now?.() ?? Date.now()) - t0;
-        (neat.population || []).forEach((g) => {
-          g.nodes?.forEach((n) => {
-            if (n.type === "output") n.squash = methods_exports.Activation.identity;
-          });
-        });
-        _EvolutionEngine._speciesHistory = _EvolutionEngine._speciesHistory || [];
-        const speciesCount = neat.population?.reduce((set, g) => {
-          if (g.species) set.add(g.species);
-          return set;
-        }, /* @__PURE__ */ new Set()).size || 1;
-        _EvolutionEngine._speciesHistory = pushHistory(
-          _EvolutionEngine._speciesHistory,
-          speciesCount,
-          50
+        const cancelReason = _EvolutionEngine.#checkCancellation(
+          options,
+          bestResult
         );
-        const _speciesHistory = _EvolutionEngine._speciesHistory || [];
-        const recent = getTail(_speciesHistory, 20);
-        const collapsed = recent.length === 20 && recent.every((c) => c === 1);
-        if (collapsed) {
-          const neatAny = neat;
-          if (typeof neatAny.mutationRate === "number")
-            neatAny.mutationRate = Math.min(0.6, neatAny.mutationRate * 1.5);
-          if (typeof neatAny.mutationAmount === "number")
-            neatAny.mutationAmount = Math.min(0.8, neatAny.mutationAmount * 1.3);
-          if (neatAny.config && neatAny.config.novelty) {
-            neatAny.config.novelty.blendFactor = Math.min(
-              0.4,
-              neatAny.config.novelty.blendFactor * 1.2
-            );
-          }
+        if (cancelReason) break;
+        const genRes = await _EvolutionEngine.#runGeneration(
+          neat,
+          doProfile,
+          lamarckianIterations,
+          lamarckianTrainingSet,
+          lamarckianSampleSize,
+          safeWrite,
+          completedGenerations,
+          dynamicPopEnabled,
+          dynamicPopMax,
+          plateauGenerations,
+          plateauCounter,
+          dynamicPopExpandInterval,
+          dynamicPopExpandFactor,
+          dynamicPopPlateauSlack
+        );
+        const fittest = genRes.fittest;
+        if (doProfile) {
+          tEvolveTotal += genRes.tEvolve || 0;
+          tLamarckTotal += genRes.tLamarck || 0;
         }
-        if (dynamicPopEnabled && completedGenerations > 0 && neat.population?.length && neat.population.length < dynamicPopMax) {
-          const plateauRatio = plateauGenerations > 0 ? plateauCounter / plateauGenerations : 0;
-          const genTrigger = completedGenerations % dynamicPopExpandInterval === 0;
-          if (genTrigger && plateauRatio >= dynamicPopPlateauSlack) {
-            const currentSize = neat.population.length;
-            const targetAdd = Math.min(
-              Math.max(1, Math.floor(currentSize * dynamicPopExpandFactor)),
-              dynamicPopMax - currentSize
-            );
-            if (targetAdd > 0) {
-              const sorted = neat.population.toSorted(
-                (a, b) => (b.score || -Infinity) - (a.score || -Infinity)
-              );
-              const parentPool = [];
-              const parentCount = Math.max(2, Math.ceil(sorted.length * 0.25));
-              for (let pi = 0; pi < parentCount && pi < sorted.length; pi++)
-                parentPool.push(sorted[pi]);
-              for (let i = 0; i < targetAdd; i++) {
-                const parent = parentPool[Math.floor(Math.random() * parentPool.length)];
-                try {
-                  if (typeof neat.spawnFromParent === "function") {
-                    const mutateCount = 1 + (Math.random() < 0.5 ? 1 : 0);
-                    const child = neat.spawnFromParent(
-                      parent,
-                      mutateCount
-                    );
-                    neat.population.push(child);
-                  } else {
-                    const clone = parent.clone ? parent.clone() : parent;
-                    const mutateCount = 1 + (Math.random() < 0.5 ? 1 : 0);
-                    for (let m = 0; m < mutateCount; m++) {
-                      try {
-                        const mutOps = neat.options.mutation || [];
-                        if (mutOps.length) {
-                          const op = mutOps[Math.floor(Math.random() * mutOps.length)];
-                          clone.mutate(op);
-                        }
-                      } catch {
-                      }
-                    }
-                    clone.score = void 0;
-                    try {
-                      if (typeof neat.addGenome === "function") {
-                        neat.addGenome(clone, [parent._id]);
-                      } else {
-                        if (neat._nextGenomeId !== void 0)
-                          clone._id = neat._nextGenomeId++;
-                        if (neat._lineageEnabled) {
-                          clone._parents = [parent._id];
-                          clone._depth = (parent._depth ?? 0) + 1;
-                        }
-                        if (typeof neat._invalidateGenomeCaches === "function")
-                          neat._invalidateGenomeCaches(clone);
-                        neat.population.push(clone);
-                      }
-                    } catch {
-                      try {
-                        neat.population.push(clone);
-                      } catch {
-                      }
-                    }
-                  }
-                } catch {
-                }
-              }
-              neat.options.popsize = neat.population.length;
-              safeWrite(
-                `[DYNAMIC_POP] Expanded population to ${neat.population.length} at gen ${completedGenerations}
-`
-              );
-            }
-          }
-        }
-        if (lamarckianIterations > 0 && lamarckianTrainingSet.length) {
-          const t1 = doProfile ? globalThis.performance?.now?.() ?? Date.now() : 0;
-          let trainingSetRef = lamarckianTrainingSet;
-          if (lamarckianSampleSize && lamarckianSampleSize < lamarckianTrainingSet.length) {
-            const picked = [];
-            for (let i = 0; i < lamarckianSampleSize; i++) {
-              picked.push(
-                lamarckianTrainingSet[Math.random() * lamarckianTrainingSet.length | 0]
-              );
-            }
-            trainingSetRef = picked;
-          }
-          let gradNormSum = 0;
-          let gradSamples = 0;
-          neat.population.forEach((network) => {
-            network.train(trainingSetRef, {
-              iterations: lamarckianIterations,
-              // Small to preserve diversity
-              error: 0.01,
-              rate: 1e-3,
-              momentum: 0.2,
-              batchSize: 2,
-              allowRecurrent: true,
-              // allow recurrent connections
-              cost: methods_exports.Cost.softmaxCrossEntropy
-            });
-            try {
-              const outs = network.nodes?.filter(
-                (n) => n.type === "output"
-              );
-              if (outs?.length) {
-                const mean = outs.reduce((a, n) => a + n.bias, 0) / outs.length;
-                let varc = 0;
-                outs.forEach((n) => {
-                  varc += Math.pow(n.bias - mean, 2);
-                });
-                varc /= outs.length;
-                const std = Math.sqrt(varc);
-                outs.forEach((n) => {
-                  let adjusted = n.bias - mean;
-                  if (std < 0.25) adjusted *= 0.7;
-                  n.bias = Math.max(-5, Math.min(5, adjusted));
-                });
-              }
-            } catch {
-            }
-            try {
-              if (typeof network.getTrainingStats === "function") {
-                const ts = network.getTrainingStats();
-                if (ts && Number.isFinite(ts.gradNorm)) {
-                  gradNormSum += ts.gradNorm;
-                  gradSamples++;
-                }
-              }
-            } catch {
-            }
+        try {
+          fittest.train(lamarckianTrainingSet, {
+            iterations: _EvolutionEngine.#FITTEST_TRAIN_ITERATIONS,
+            // Uses extracted constant
+            error: _EvolutionEngine.#DEFAULT_TRAIN_ERROR,
+            rate: _EvolutionEngine.#DEFAULT_TRAIN_RATE,
+            momentum: _EvolutionEngine.#DEFAULT_TRAIN_MOMENTUM,
+            batchSize: _EvolutionEngine.#DEFAULT_TRAIN_BATCH_LARGE,
+            allowRecurrent: true
+            // allow recurrent connections
           });
-          if (gradSamples > 0) {
-            safeWrite(
-              `[GRAD] gen=${completedGenerations} meanGradNorm=${(gradNormSum / gradSamples).toFixed(4)} samples=${gradSamples}
-`
-            );
-          }
-          if (doProfile)
-            tLamarckTotal += (globalThis.performance?.now?.() ?? Date.now()) - t1;
+        } catch (baldwinErr) {
         }
         const fitness = fittest.score ?? 0;
         completedGenerations++;
-        if (fitness > lastBestFitnessForPlateau + plateauImprovementThreshold) {
-          plateauCounter = 0;
-          lastBestFitnessForPlateau = fitness;
-        } else {
-          plateauCounter++;
-        }
-        if (!simplifyMode && plateauCounter >= plateauGenerations) {
-          try {
-            if (typeof window === "undefined") {
-              simplifyMode = true;
-              simplifyRemaining = simplifyDuration;
-              plateauCounter = 0;
-            }
-          } catch {
-          }
-        }
-        if (simplifyMode) {
-          try {
-            if (typeof window !== "undefined") {
-              throw 0;
-            }
-          } catch {
-          }
-          if (typeof window !== "undefined") {
-          } else {
-            neat.population.forEach((g) => {
-              const enabledConns = g.connections.filter(
-                (c) => c.enabled !== false
-              );
-              if (!enabledConns.length) return;
-              const pruneCount = Math.max(
-                1,
-                Math.floor(enabledConns.length * simplifyPruneFraction)
-              );
-              let candidates = [...enabledConns];
-              if (simplifyStrategy === "weakRecurrentPreferred") {
-                const recurrent = candidates.filter(
-                  (c) => c.from === c.to || c.gater
-                );
-                const nonRecurrent = candidates.filter(
-                  (c) => !(c.from === c.to || c.gater)
-                );
-                const recurrentSorted = recurrent.toSorted(
-                  (a, b) => Math.abs(a.weight) - Math.abs(b.weight)
-                );
-                const nonRecurrentSorted = nonRecurrent.toSorted(
-                  (a, b) => Math.abs(a.weight) - Math.abs(b.weight)
-                );
-                candidates = [...recurrentSorted, ...nonRecurrentSorted];
-              } else {
-                candidates = candidates.toSorted(
-                  (a, b) => Math.abs(a.weight) - Math.abs(b.weight)
-                );
-              }
-              for (let i = 0; i < Math.min(pruneCount, candidates.length); i++) {
-                candidates[i].enabled = false;
-              }
-            });
-            simplifyRemaining--;
-            if (simplifyRemaining <= 0) simplifyMode = false;
-          }
-        }
-        const t2 = doProfile ? globalThis.performance?.now?.() ?? Date.now() : 0;
-        const generationResult = MazeMovement.simulateAgent(
+        ({
+          plateauCounter,
+          lastBestFitnessForPlateau
+        } = _EvolutionEngine.#updatePlateauState(
+          fitness,
+          lastBestFitnessForPlateau,
+          plateauCounter,
+          plateauImprovementThreshold
+        ));
+        ({
+          simplifyMode,
+          simplifyRemaining
+        } = _EvolutionEngine.#handleSimplifyState(
+          neat,
+          plateauCounter,
+          plateauGenerations,
+          simplifyDuration,
+          simplifyMode,
+          simplifyRemaining,
+          simplifyStrategy,
+          simplifyPruneFraction
+        ));
+        const simRes = _EvolutionEngine.#simulateAndPostprocess(
           fittest,
           encodedMaze,
           startPosition,
           exitPosition,
           distanceMap,
-          agentSimConfig.maxSteps
+          agentSimConfig.maxSteps,
+          doProfile,
+          safeWrite,
+          logEvery,
+          completedGenerations,
+          neat
         );
-        try {
-          if (!fittest._lastStepOutputs)
-            fittest._lastStepOutputs = [];
-        } catch {
-        }
-        fittest._saturationFraction = generationResult.saturationFraction;
-        fittest._actionEntropy = generationResult.actionEntropy;
-        if (generationResult.saturationFraction && generationResult.saturationFraction > 0.5) {
-          try {
-            const outNodes = fittest.nodes.filter(
-              (n) => n.type === "output"
-            );
-            const hidden = fittest.nodes.filter((n) => n.type === "hidden");
-            hidden.forEach((h) => {
-              const outs = h.connections.out.filter(
-                (c) => outNodes.includes(c.to) && c.enabled !== false
-              );
-              if (outs.length >= 2) {
-                const weights = outs.map((c) => Math.abs(c.weight));
-                const mean = weights.reduce((a, b) => a + b, 0) / weights.length;
-                const varc = weights.reduce(
-                  (a, b) => a + Math.pow(b - mean, 2),
-                  0
-                ) / weights.length;
-                if (mean < 0.5 && varc < 0.01) {
-                  const outsSorted = outs.toSorted(
-                    (a, b) => Math.abs(a.weight) - Math.abs(b.weight)
-                  );
-                  const disableCount = Math.max(1, Math.floor(outs.length / 2));
-                  for (let i = 0; i < Math.min(disableCount, outsSorted.length); i++) {
-                    outsSorted[i].enabled = false;
-                  }
-                }
-              }
-            });
-          } catch {
-          }
-        }
-        if (completedGenerations % logEvery === 0) {
-          try {
-            const counts = [0, 0, 0, 0];
-            let totalMoves = 0;
-            const pathArr = generationResult.path;
-            for (let idx = 1; idx < pathArr.length; idx++) {
-              const p = pathArr[idx];
-              const prev = pathArr[idx - 1];
-              const dx = p[0] - prev[0];
-              const dy = p[1] - prev[1];
-              if (dx === 0 && dy === -1) {
-                counts[0]++;
-                totalMoves++;
-              } else if (dx === 1 && dy === 0) {
-                counts[1]++;
-                totalMoves++;
-              } else if (dx === 0 && dy === 1) {
-                counts[2]++;
-                totalMoves++;
-              } else if (dx === -1 && dy === 0) {
-                counts[3]++;
-                totalMoves++;
-              }
-            }
-            totalMoves = totalMoves || 1;
-            const probs = counts.map((c) => c / totalMoves);
-            let entropy = 0;
-            probs.forEach((p) => {
-              if (p > 0) entropy += -p * Math.log(p);
-            });
-            const entropyNorm = entropy / Math.log(4);
-            safeWrite(
-              `[ACTION_ENTROPY] gen=${completedGenerations} entropyNorm=${entropyNorm.toFixed(
-                3
-              )} uniqueMoves=${counts.filter((c) => c > 0).length} pathLen=${generationResult.path.length}
-`
-            );
-            try {
-              const outs = fittest.nodes.filter((n) => n.type === "output");
-              if (outs.length) {
-                const meanB = outs.reduce((a, n) => a + n.bias, 0) / outs.length;
-                let varcB = 0;
-                outs.forEach((n) => {
-                  varcB += Math.pow(n.bias - meanB, 2);
-                });
-                varcB /= outs.length;
-                const stdB = Math.sqrt(varcB);
-                safeWrite(
-                  `[OUTPUT_BIAS] gen=${completedGenerations} mean=${meanB.toFixed(
-                    3
-                  )} std=${stdB.toFixed(3)} biases=${outs.map((o) => o.bias.toFixed(2)).join(",")}
-`
-                );
-              }
-            } catch {
-            }
-            try {
-              const lastHist = fittest._lastStepOutputs || [];
-              if (lastHist.length) {
-                const recent2 = getTail(lastHist, 40);
-                const k = 4;
-                const means = new Array(k).fill(0);
-                recent2.forEach((v) => {
-                  for (let i = 0; i < k; i++) means[i] += v[i];
-                });
-                for (let i = 0; i < k; i++) means[i] /= recent2.length;
-                const stds = new Array(k).fill(0);
-                recent2.forEach((v) => {
-                  for (let i = 0; i < k; i++)
-                    stds[i] += Math.pow(v[i] - means[i], 2);
-                });
-                for (let i = 0; i < k; i++)
-                  stds[i] = Math.sqrt(stds[i] / recent2.length);
-                const kurt = new Array(k).fill(0);
-                recent2.forEach((v) => {
-                  for (let i = 0; i < k; i++)
-                    kurt[i] += Math.pow(v[i] - means[i], 4);
-                });
-                for (let i = 0; i < k; i++) {
-                  const denom = Math.pow(stds[i] || 1e-9, 4) * recent2.length;
-                  kurt[i] = denom > 0 ? kurt[i] / denom - 3 : 0;
-                }
-                let entAgg = 0;
-                recent2.forEach((v) => {
-                  const max = Math.max(...v);
-                  const exps = v.map((x) => Math.exp(x - max));
-                  const sum = exps.reduce((a, b) => a + b, 0) || 1;
-                  const probs2 = exps.map((e2) => e2 / sum);
-                  let e = 0;
-                  probs2.forEach((p) => {
-                    if (p > 0) e += -p * Math.log(p);
-                  });
-                  entAgg += e / Math.log(4);
-                });
-                const entMean = entAgg / recent2.length;
-                let stable = 0, totalTrans = 0;
-                let prevDir = -1;
-                recent2.forEach((v) => {
-                  const arg = v.indexOf(Math.max(...v));
-                  if (prevDir === arg) stable++;
-                  if (prevDir !== -1) totalTrans++;
-                  prevDir = arg;
-                });
-                const stability = totalTrans ? stable / totalTrans : 0;
-                safeWrite(
-                  `[LOGITS] gen=${completedGenerations} means=${means.map((m) => m.toFixed(3)).join(",")} stds=${stds.map((s) => s.toFixed(3)).join(",")} kurt=${kurt.map((kv) => kv.toFixed(2)).join(",")} entMean=${entMean.toFixed(
-                    3
-                  )} stability=${stability.toFixed(3)} steps=${recent2.length}
-`
-                );
-                _EvolutionEngine._collapseStreak = _EvolutionEngine._collapseStreak || 0;
-                const collapsed2 = stds.every((s) => s < 5e-3) && (entMean < 0.35 || stability > 0.97);
-                if (collapsed2) _EvolutionEngine._collapseStreak++;
-                else _EvolutionEngine._collapseStreak = 0;
-                if (_EvolutionEngine._collapseStreak === 6) {
-                  try {
-                    const eliteCount = neat.options.elitism || 0;
-                    const pop = neat.population || [];
-                    const reinitTargets = [];
-                    for (let i = eliteCount; i < pop.length; i++) {
-                      if (Math.random() < 0.3) reinitTargets.push(pop[i]);
-                    }
-                    let connReset = 0, biasReset = 0;
-                    reinitTargets.forEach((g) => {
-                      const outs = g.nodes.filter(
-                        (n) => n.type === "output"
-                      );
-                      outs.forEach((o) => {
-                        o.bias = Math.random() * 0.2 - 0.1;
-                        biasReset++;
-                      });
-                      g.connections.forEach((c) => {
-                        if (outs.includes(c.to)) {
-                          c.weight = Math.random() * 0.4 - 0.2;
-                          connReset++;
-                        }
-                      });
-                    });
-                    safeWrite(
-                      `[ANTICOLLAPSE] gen=${completedGenerations} reinitGenomes=${reinitTargets.length} connReset=${connReset} biasReset=${biasReset}
-`
-                    );
-                  } catch {
-                  }
-                }
-              }
-            } catch {
-            }
-            try {
-              const unique = generationResult.path.length ? new Set(generationResult.path.map((p) => p.join(","))).size : 0;
-              const ratio = generationResult.path.length ? unique / generationResult.path.length : 0;
-              safeWrite(
-                `[EXPLORE] gen=${completedGenerations} unique=${unique} pathLen=${generationResult.path.length} ratio=${ratio.toFixed(
-                  3
-                )} progress=${generationResult.progress.toFixed(
-                  1
-                )} satFrac=${generationResult.saturationFraction?.toFixed(
-                  3
-                )}
-`
-              );
-            } catch {
-            }
-            try {
-              const pop = neat.population || [];
-              const speciesCounts = {};
-              pop.forEach((g) => {
-                const sid = g.species != null ? String(g.species) : "none";
-                speciesCounts[sid] = (speciesCounts[sid] || 0) + 1;
-              });
-              const counts2 = Object.values(speciesCounts);
-              const total = counts2.reduce((a, b) => a + b, 0) || 1;
-              const simpson = 1 - counts2.reduce((a, b) => a + Math.pow(b / total, 2), 0);
-              let wMean = 0, wCount = 0;
-              const sample = [];
-              for (let i = 0; i < Math.min(pop.length, 40); i++)
-                sample.push(pop[i]);
-              sample.forEach((g) => {
-                g.connections.forEach((c) => {
-                  if (c.enabled !== false) {
-                    wMean += c.weight;
-                    wCount++;
-                  }
-                });
-              });
-              wMean = wCount ? wMean / wCount : 0;
-              let wVar = 0;
-              sample.forEach((g) => {
-                g.connections.forEach((c) => {
-                  if (c.enabled !== false) wVar += Math.pow(c.weight - wMean, 2);
-                });
-              });
-              const wStd = wCount ? Math.sqrt(wVar / wCount) : 0;
-              safeWrite(
-                `[DIVERSITY] gen=${completedGenerations} species=${Object.keys(speciesCounts).length} simpson=${simpson.toFixed(3)} weightStd=${wStd.toFixed(3)}
-`
-              );
-            } catch {
-            }
-          } catch {
-          }
-        }
-        if (doProfile)
-          tSimTotal += (globalThis.performance?.now?.() ?? Date.now()) - t2;
+        const generationResult = simRes.generationResult;
+        if (doProfile) tSimTotal += simRes.simTime;
         if (fitness > bestFitness) {
           bestFitness = fitness;
           bestNetwork = fittest;
           bestResult = generationResult;
           stagnantGenerations = 0;
-          dashboardManager.update(
+          await _EvolutionEngine.#updateDashboardAndMaybeFlush(
             maze,
             generationResult,
             fittest,
             completedGenerations,
-            neat
+            neat,
+            dashboardManager,
+            flushToFrame
           );
-          try {
-            await flushToFrame();
-          } catch {
-          }
         } else {
           stagnantGenerations++;
           if (completedGenerations % logEvery === 0) {
-            if (bestNetwork && bestResult) {
-              dashboardManager.update(
-                maze,
-                bestResult,
-                bestNetwork,
-                completedGenerations,
-                neat
-              );
-              try {
-                await flushToFrame();
-              } catch {
-              }
-            }
-          }
-        }
-        if (persistEvery > 0 && completedGenerations % persistEvery === 0 && bestNetwork) {
-          try {
-            const snap = {
-              generation: completedGenerations,
-              bestFitness,
-              simplifyMode,
-              plateauCounter,
-              timestamp: Date.now(),
-              // Capture a small telemetry tail without allocating via slice().
-              telemetryTail: (() => {
-                if (!neat.getTelemetry) return void 0;
-                try {
-                  const t = neat.getTelemetry();
-                  if (Array.isArray(t)) {
-                    return getTail(t, 5);
-                  }
-                  return t;
-                } catch {
-                  return void 0;
-                }
-              })()
-            };
-            const popSorted = neat.population.toSorted(
-              (a, b) => (b.score || -Infinity) - (a.score || -Infinity)
-            );
-            const top = [];
-            for (let i = 0; i < Math.min(persistTopK, popSorted.length); i++) {
-              const g = popSorted[i];
-              top.push({
-                idx: i,
-                score: g.score,
-                nodes: g.nodes.length,
-                connections: g.connections.length,
-                json: g.toJSON ? g.toJSON() : void 0
-              });
-            }
-            snap.top = top;
-            const file = path2.join(
-              persistDir,
-              `snapshot_gen${completedGenerations}.json`
-            );
-            fs.writeFileSync(file, JSON.stringify(snap, null, 2));
-          } catch (e) {
-          }
-        }
-        if (bestResult?.success && bestResult.progress >= minProgressToPass) {
-          if (bestNetwork && bestResult) {
-            dashboardManager.update(
+            await _EvolutionEngine.#updateDashboardPeriodic(
               maze,
               bestResult,
               bestNetwork,
               completedGenerations,
-              neat
+              neat,
+              dashboardManager,
+              flushToFrame
             );
-            try {
-              await flushToFrame();
-            } catch {
-            }
           }
-          if (autoPauseOnSolve) {
-            try {
-              if (typeof window !== "undefined") {
-                window.asciiMazePaused = true;
-                window.dispatchEvent(
-                  new CustomEvent("asciiMazeSolved", {
-                    detail: {
-                      maze,
-                      generations: completedGenerations,
-                      progress: bestResult?.progress
-                    }
-                  })
-                );
-              }
-            } catch {
-            }
-          }
-          if (bestResult) bestResult.exitReason = "solved";
-          break;
         }
-        if (!stopOnlyOnSolve && stagnantGenerations >= maxStagnantGenerations && isFinite(maxStagnantGenerations)) {
-          if (bestNetwork && bestResult) {
-            dashboardManager.update(
-              maze,
-              bestResult,
-              bestNetwork,
-              completedGenerations,
-              neat
-            );
-            try {
-              await flushToFrame();
-            } catch {
-            }
-          }
-          if (bestResult) bestResult.exitReason = "stagnation";
-          break;
-        }
-        if (!stopOnlyOnSolve && completedGenerations >= maxGenerations && isFinite(maxGenerations)) {
-          if (bestResult) bestResult.exitReason = "maxGenerations";
-          break;
-        }
+        _EvolutionEngine.#persistSnapshotIfNeeded(
+          fs,
+          path2,
+          persistDir,
+          persistTopK,
+          completedGenerations,
+          persistEvery,
+          neat,
+          bestFitness,
+          simplifyMode,
+          plateauCounter
+        );
+        const stopReason = await _EvolutionEngine.#checkStopConditions(
+          bestResult,
+          bestNetwork,
+          maze,
+          completedGenerations,
+          neat,
+          dashboardManager,
+          flushToFrame,
+          minProgressToPass,
+          autoPauseOnSolve,
+          stopOnlyOnSolve,
+          stagnantGenerations,
+          maxStagnantGenerations,
+          maxGenerations
+        );
+        if (stopReason) break;
       }
       if (doProfile && completedGenerations > 0) {
         const gen = completedGenerations;
@@ -17509,6 +19594,14 @@
 [PROFILE] Generations=${gen} avg(ms): evolve=${avgEvolve} lamarck=${avgLamarck} sim=${avgSim} totalPerGen=${(+avgEvolve + +avgLamarck + +avgSim).toFixed(2)}
 `
         );
+        if (_EvolutionEngine.#PROFILE_ENABLED) {
+          const det = _EvolutionEngine.#PROFILE_ACCUM;
+          const denom = gen || 1;
+          safeWrite(
+            `[PROFILE_DETAIL] avgTelemetry=${(det.telemetry / denom).toFixed(2)} avgSimplify=${(det.simplify / denom).toFixed(2)} avgSnapshot=${(det.snapshot / denom).toFixed(2)} avgPrune=${(det.prune / denom).toFixed(2)}
+`
+          );
+        }
       }
       return {
         bestNetwork,
@@ -17524,25 +19617,47 @@
      * It prints the number of nodes, their types, activation functions, and connection details.
      *
      * @param network - The neural network to inspect.
+     * @returns void
      */
     static printNetworkStructure(network) {
       console.log("Network Structure:");
       console.log("Nodes: ", network.nodes?.length);
-      const inputNodes = network.nodes?.filter((n) => n.type === "input");
-      const outputNodes = network.nodes?.filter((n) => n.type === "output");
-      const hiddenNodes = network.nodes?.filter((n) => n.type === "hidden");
+      const inputNodes = [];
+      const outputNodes = [];
+      const hiddenNodes = [];
+      const nodeList = network.nodes || [];
+      for (let nodeIndex = 0; nodeIndex < nodeList.length; nodeIndex++) {
+        const node = nodeList[nodeIndex];
+        if (!node) continue;
+        if (node.type === "input") inputNodes.push(node);
+        else if (node.type === "output") outputNodes.push(node);
+        else if (node.type === "hidden") hiddenNodes.push(node);
+      }
       console.log("Input nodes: ", inputNodes?.length);
       console.log("Hidden nodes: ", hiddenNodes?.length);
       console.log("Output nodes: ", outputNodes?.length);
-      console.log(
-        "Activation functions: ",
-        network.nodes?.map((n) => n.squash?.name || n.squash)
-      );
+      const nodesList = network.nodes || [];
+      if (_EvolutionEngine.#SCRATCH_ACT_NAMES.length < nodesList.length) {
+        _EvolutionEngine.#SCRATCH_ACT_NAMES.length = nodesList.length;
+      }
+      const actNames = _EvolutionEngine.#SCRATCH_ACT_NAMES;
+      for (let ni = 0; ni < nodesList.length; ni++) {
+        const n = nodesList[ni];
+        actNames[ni] = n?.squash?.name || String(n?.squash);
+      }
+      actNames.length = nodesList.length;
+      console.log("Activation functions: ", actNames);
       console.log("Connections: ", network.connections?.length);
-      const recurrent = network.connections?.some(
-        (c) => c.gater || c.from === c.to
-      );
-      console.log("Has recurrent/gated connections: ", recurrent);
+      let hasRecurrent = false;
+      const connsList = network.connections || [];
+      for (let connIndex = 0; connIndex < connsList.length; connIndex++) {
+        const c = connsList[connIndex];
+        if (c && (c.gater || c.from === c.to)) {
+          hasRecurrent = true;
+          break;
+        }
+      }
+      console.log("Has recurrent/gated connections: ", hasRecurrent);
     }
   };
 
@@ -17770,38 +19885,40 @@
   ];
 
   // test/examples/asciiMaze/browser-entry.ts
+  var RESIZE_WIDTH_THRESHOLD = 8;
   async function start(container = "ascii-maze-output", opts = {}) {
-    const host = typeof container === "string" ? document.getElementById(container) : container;
-    const archiveEl = host ? host.querySelector("#ascii-maze-archive") : null;
-    const liveEl = host ? host.querySelector("#ascii-maze-live") : null;
-    const clearFn = BrowserTerminalUtility.createTerminalClearer(
-      liveEl ?? void 0
+    const hostElement = typeof container === "string" ? document.getElementById(container) : container;
+    const archiveElement = hostElement ? hostElement.querySelector("#ascii-maze-archive") : null;
+    const liveElement = hostElement ? hostElement.querySelector("#ascii-maze-live") : null;
+    const clearer = BrowserTerminalUtility.createTerminalClearer(
+      liveElement ?? void 0
     );
-    const liveLogFn = createBrowserLogger(liveEl ?? void 0);
-    const archiveLogFn = createBrowserLogger(archiveEl ?? void 0);
+    const liveLogger = createBrowserLogger(liveElement ?? void 0);
+    const archiveLogger = createBrowserLogger(archiveElement ?? void 0);
     const dashboard = new DashboardManager(
-      clearFn,
-      liveLogFn,
-      archiveLogFn
+      clearer,
+      liveLogger,
+      archiveLogger
     );
-    const telemetryListeners = [];
-    dashboard._telemetryHook = (t) => {
-      [...telemetryListeners].forEach((fn) => {
+    const telemetryListeners = /* @__PURE__ */ new Set();
+    dashboard._telemetryHook = (telemetry) => {
+      const snapshot = Array.from(telemetryListeners);
+      for (const listener of snapshot) {
         try {
-          fn(t);
+          listener(telemetry);
         } catch {
         }
-      });
+      }
     };
     try {
-      const hostEl = host || document.getElementById("ascii-maze-output");
-      if (hostEl && typeof ResizeObserver !== "undefined") {
-        let lastWidth = hostEl.clientWidth;
-        const ro = new ResizeObserver((entries) => {
+      const observeTarget = hostElement ?? document.getElementById("ascii-maze-output");
+      if (observeTarget && typeof ResizeObserver !== "undefined") {
+        let lastObservedWidth = observeTarget.clientWidth;
+        const resizeObserver = new ResizeObserver((entries) => {
           for (const entry of entries) {
-            const w = entry.contentRect.width;
-            if (Math.abs(w - lastWidth) > 8) {
-              lastWidth = w;
+            const width = entry.contentRect.width;
+            if (Math.abs(width - lastObservedWidth) > RESIZE_WIDTH_THRESHOLD) {
+              lastObservedWidth = width;
               try {
                 dashboard.redraw?.([], void 0);
               } catch {
@@ -17809,12 +19926,12 @@
             }
           }
         });
-        ro.observe(hostEl);
-      } else if (hostEl) {
-        let debounce = null;
+        resizeObserver.observe(observeTarget);
+      } else if (observeTarget) {
+        let debounceTimer = void 0;
         const handler = () => {
-          if (debounce) clearTimeout(debounce);
-          debounce = setTimeout(() => {
+          if (typeof debounceTimer === "number") clearTimeout(debounceTimer);
+          debounceTimer = window.setTimeout(() => {
             try {
               dashboard.redraw?.([], void 0);
             } catch {
@@ -17828,11 +19945,11 @@
     let cancelled = false;
     const internalController = new AbortController();
     const externalSignal = opts.signal;
-    const combinedSignal = (() => {
-      if (!externalSignal) return internalController.signal;
-      if (externalSignal.aborted) return externalSignal;
+    const composeAbortSignal = (maybeExternal) => {
+      if (!maybeExternal) return internalController.signal;
+      if (maybeExternal.aborted) return maybeExternal;
       try {
-        externalSignal.addEventListener(
+        maybeExternal.addEventListener(
           "abort",
           () => {
             try {
@@ -17845,10 +19962,11 @@
       } catch {
       }
       return internalController.signal;
-    })();
+    };
+    const combinedSignal = composeAbortSignal(externalSignal);
     let running = true;
     const runCurriculum = async () => {
-      const order = [
+      const curriculumOrder = [
         "tiny",
         "spiralSmall",
         "spiral",
@@ -17858,47 +19976,27 @@
         "large",
         "minotaur"
       ];
+      const PHASE_SETTINGS = {
+        tiny: { agentMaxSteps: 100, maxGenerations: 200 },
+        spiralSmall: { agentMaxSteps: 100, maxGenerations: 200 },
+        spiral: { agentMaxSteps: 150, maxGenerations: 300 },
+        small: { agentMaxSteps: 50, maxGenerations: 300 },
+        medium: { agentMaxSteps: 250, maxGenerations: 400 },
+        medium2: { agentMaxSteps: 300, maxGenerations: 400 },
+        large: { agentMaxSteps: 400, maxGenerations: 500 },
+        minotaur: { agentMaxSteps: 700, maxGenerations: 600 }
+      };
       let lastBestNetwork = void 0;
-      for (const key of order) {
+      for (const phaseKey of curriculumOrder) {
         if (cancelled) break;
-        const maze = mazes_exports[key];
+        const maze = mazes_exports[phaseKey];
         if (!Array.isArray(maze)) continue;
-        let agentMaxSteps = 1e3;
-        let maxGenerations = 500;
-        switch (key) {
-          case "tiny":
-            agentMaxSteps = 100;
-            maxGenerations = 200;
-            break;
-          case "spiralSmall":
-            agentMaxSteps = 100;
-            maxGenerations = 200;
-            break;
-          case "spiral":
-            agentMaxSteps = 150;
-            maxGenerations = 300;
-            break;
-          case "small":
-            agentMaxSteps = 50;
-            maxGenerations = 300;
-            break;
-          case "medium":
-            agentMaxSteps = 250;
-            maxGenerations = 400;
-            break;
-          case "medium2":
-            agentMaxSteps = 300;
-            maxGenerations = 400;
-            break;
-          case "large":
-            agentMaxSteps = 400;
-            maxGenerations = 500;
-            break;
-          case "minotaur":
-            agentMaxSteps = 700;
-            maxGenerations = 600;
-            break;
-        }
+        const phaseSettings = PHASE_SETTINGS[phaseKey] ?? {
+          agentMaxSteps: 1e3,
+          maxGenerations: 500
+        };
+        const agentMaxSteps = phaseSettings.agentMaxSteps;
+        const maxGenerations = phaseSettings.maxGenerations;
         try {
           const result = await EvolutionEngine.runMazeEvolution({
             mazeConfig: { maze },
@@ -17907,9 +20005,9 @@
               allowRecurrent: true,
               popSize: 40,
               // Run indefinitely until solved; remove stagnation pressure for demo clarity
-              maxStagnantGenerations: Number.POSITIVE_INFINITY,
+              maxStagnantGenerations: Infinity,
               minProgressToPass: 99,
-              maxGenerations: Number.POSITIVE_INFINITY,
+              maxGenerations: Infinity,
               stopOnlyOnSolve: false,
               autoPauseOnSolve: false,
               // Disable Lamarckian/backprop refinement for browser runs per request
@@ -17921,7 +20019,7 @@
             reportingConfig: {
               dashboardManager: dashboard,
               logEvery: 1,
-              label: `browser-${key}`
+              label: `browser-${phaseKey}`
             },
             cancellation: { isCancelled: () => cancelled },
             signal: combinedSignal
@@ -17929,15 +20027,15 @@
           try {
             console.log(
               "[asciiMaze] maze solved",
-              key,
+              phaseKey,
               result?.bestResult?.progress
             );
           } catch {
           }
           if (result && result.bestNetwork)
             lastBestNetwork = result.bestNetwork;
-        } catch (e) {
-          console.error("Error while running maze", key, e);
+        } catch (error) {
+          console.error("Error while running maze", phaseKey, error);
         }
       }
       running = false;
@@ -17955,10 +20053,9 @@
       done: Promise.resolve(donePromise).catch(() => {
       }),
       onTelemetry: (cb) => {
-        telemetryListeners.push(cb);
+        telemetryListeners.add(cb);
         return () => {
-          const i = telemetryListeners.indexOf(cb);
-          if (i >= 0) telemetryListeners.splice(i, 1);
+          telemetryListeners.delete(cb);
         };
       },
       getTelemetry: () => dashboard.getLastTelemetry?.()

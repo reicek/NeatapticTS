@@ -81,6 +81,40 @@ In classes prefer `static #PRIVATE_CONSTANT` and name them in CLEAR_DESCRIPTIVE_
 
 ---
 
+### Typed-array pooling and scratch buffers (strong preference)
+
+- For performance-sensitive, hot-path code (for example vision/preprocessing, inner-loop simulators, and small per-step helpers) prefer reuse of typed-array scratch buffers instead of allocating new typed arrays on every call.
+- Benefits:
+  - Reduces GC pressure and short-lived allocations in tight loops.
+  - Often yields measurable throughput improvements in microbenchmarks for per-step code.
+
+- Rules and caveats:
+  - Keep the pooled buffers private to the module or class (use `static #` fields) so ownership is clear.
+  - Document the non-reentrant nature of pooled buffers in the JSDoc for the method (for example: "This method reuses internal scratch buffers and is not reentrant/should not be called concurrently").
+  - Initialize (`fill`) the scratch buffers at the start of each invocation to avoid leaking state between calls.
+  - Do not expose pooled buffers directly to callers — copy or return plain numbers/objects when returning results.
+
+- Example (class-private pooling pattern):
+
+```ts
+// class-private pooled buffers
+static #SCRATCH_X = new Int32Array(4);
+static #SCRATCH_Y = new Int32Array(4);
+
+// In the hot method:
+const xs = MazeVision.#SCRATCH_X;
+const ys = MazeVision.#SCRATCH_Y;
+xs.fill(0); ys.fill(0);
+// populate & use xs/ys for local work; do not return them directly
+```
+
+- When to avoid pooling:
+  - Large, rarely-used data structures (pooling adds complexity without payoff).
+  - When your code must be safely reentrant or run concurrently — prefer per-call allocations or explicit pool checkout semantics.
+
+Add an inline `@remarks` note to methods that rely on pooled buffers so readers of generated docs see the constraint.
+
+
 ### Vision inputs and grouped indices
 
 - For structured input vectors (for example the maze "vision" arrays), avoid scattered numeric index literals across the codebase. Instead:

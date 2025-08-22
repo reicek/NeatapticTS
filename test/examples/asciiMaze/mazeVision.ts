@@ -1,49 +1,148 @@
 /**
- * @file Implements the agent's "vision" system, which processes the maze environment into numerical inputs for the neural network.
+ * MazeVision — agent sensory preprocessing for the ASCII maze examples.
  *
- * @description
- * This module defines the `MazeVision` class, responsible for creating the sensory input vector that the agent's neural network
- * uses to make decisions. The vision system is sophisticated, providing not just immediate surroundings but also long-range,
- * goal-oriented information. This rich sensory data is crucial for enabling the agent to learn complex navigation strategies.
+ * Produces a 6-element vector consumed by the agent's neural network:
+ * [compassScalar, openN, openE, openS, openW, progressDelta]
  *
- * The vision system generates a 6-dimensional input vector:
- * 1.  **Compass Scalar**: A value in `{0, 0.25, 0.5, 0.75}` indicating the general direction of the exit (N, E, S, W).
- *     This acts as a global guide, always pointing towards the goal.
- * 2.  **Openness North**: A value from 0 to 1 representing the quality of the path starting with a move to the North.
- * 3.  **Openness East**: Path quality for East.
- * 4.  **Openness South**: Path quality for South.
- * 5.  **Openness West**: Path quality for West.
- * 6.  **Progress Delta**: A value indicating recent progress towards or away from the exit.
- *
- * The "Openness" values are calculated using a long-range lookahead based on a pre-computed `distanceMap`. A value of `1`
- * indicates the best possible path from the current location, while values less than `1` represent suboptimal but still viable paths.
- * A value of `0` signifies a wall, a dead end, or a path that moves away from the exit. This allows the network to make
- * informed decisions based on the long-term consequences of a move, rather than just immediate obstacles.
+ * Implementation notes:
+ * - Uses private static constants and helpers per STYLEGUIDE.
+ * - Uses small typed arrays internally to minimize allocations on hot paths.
  */
 export class MazeVision {
   /**
-   * Pre-defined direction vectors (dx, dy, index) for N/E/S/W.
-   * Stored as a private static readonly field to avoid reallocating this
-   * tiny array on every call to `buildInputs6`.
+   * Direction table mapping cardinal direction to [dx, dy, index].
+   *
+   * Each entry is a tuple where the first two values are the X/Y delta to
+   * reach the neighbor and the third value is the canonical direction index
+   * used across the class (0 = N, 1 = E, 2 = S, 3 = W).
+   * @type {readonly [number, number, number][]}
    */
-  static #DIRECTION_VECTORS: readonly (readonly [number, number, number])[] = [
-    [0, -1, 0], // North
-    [1, 0, 1], // East
-    [0, 1, 2], // South
-    [-1, 0, 3], // West
+  static #DIRECTION_DELTAS: readonly [number, number, number][] = [
+    [0, -1, 0], // N
+    [1, 0, 1], // E
+    [0, 1, 2], // S
+    [-1, 0, 3], // W
   ];
 
+  // Tunable private constants
+  /** Number of cardinal directions (N, E, S, W). */
+  static #DIRECTION_COUNT = 4;
   /**
-   * Constructs the 6-dimensional input vector for the neural network based on the agent's current state.
+   * Scalar step per compass direction used to encode the compass into a single
+   * continuous value: 0 = N, 0.25 = E, 0.5 = S, 0.75 = W.
+   */
+  static #COMPASS_STEP = 0.25;
+  /** Offset to compute the opposite direction (half of direction count). */
+  static #OPPOSITE_OFFSET = 2;
+  /** Horizon (max path length) at which a neighbor is considered "open". */
+  static #OPENNESS_HORIZON = 1000;
+  /** Horizon used when selecting compass preference from a distance map. */
+  static #COMPASS_HORIZON = 5000;
+  /** Small scalar used to encourage backtracking from dead-ends. */
+  static #BACKTRACK_SIGNAL = 0.001;
+  /** Absolute clip applied to step-delta used when computing progress signal. */
+  static #PROGRESS_CLIP = 2;
+  /** Scale applied to clipped progress delta before adding to neutral baseline. */
+  static #PROGRESS_SCALE = 4;
+  /** Neutral progress value returned when progress cannot be computed reliably. */
+  static #PROGRESS_NEUTRAL = 0.5;
+
+  /**
+   * Pooled scratch buffers reused across `buildInputs6` invocations to avoid
+   * per-call allocations in hot paths. These are class-private and must be
+   * initialized (via `fill`) at the start of each call.
    *
-   * @param encodedMaze - The 2D numerical representation of the maze.
-   * @param position - The agent's current `[x, y]` coordinates.
-   * @param exitPos - The coordinates of the maze exit.
-   * @param distanceMap - A pre-calculated map of distances from each cell to the exit.
-   * @param prevDistance - The agent's distance to the exit from the previous step.
-   * @param currentDistance - The agent's current distance to the exit.
-   * @param prevAction - The last action taken by the agent (0:N, 1:E, 2:S, 3:W).
-   * @returns A 6-element array of numbers representing the network inputs.
+   * IMPORTANT: Because these buffers are reused, `buildInputs6` is not
+   * reentrant and callers should not rely on the buffers' contents after
+   * calling the method. See `buildInputs6` JSDoc `@remarks` for details.
+   */
+  static #SCRATCH_NEIGHBOR_X = new Int32Array(MazeVision.#DIRECTION_COUNT);
+  static #SCRATCH_NEIGHBOR_Y = new Int32Array(MazeVision.#DIRECTION_COUNT);
+  static #SCRATCH_NEIGHBOR_PATH = new Float32Array(MazeVision.#DIRECTION_COUNT);
+  static #SCRATCH_NEIGHBOR_REACH = new Uint8Array(MazeVision.#DIRECTION_COUNT);
+  static #SCRATCH_NEIGHBOR_OPEN = new Float32Array(MazeVision.#DIRECTION_COUNT);
+  // Raw distance to exit per neighbor (NaN when not present). Pooled to avoid
+  // per-call allocation; follows same non-reentrancy warning as other buffers.
+  /**
+   * Pooled buffer holding the raw distance-to-exit for each neighbor when a
+   * `distanceToExitMap` is provided. Values are `NaN` when missing.
+   */
+  static #SCRATCH_NEIGHBOR_RAWDIST = new Float32Array(
+    MazeVision.#DIRECTION_COUNT
+  );
+
+  // Small helpers
+  /**
+   * Return a neutral 6-element input vector used when inputs are invalid or
+   * incomplete. The progress element is set to the neutral baseline.
+   * @returns {[number, number, number, number, number, number]}
+   *  [compassScalar, openN, openE, openS, openW, progressDelta]
+   */
+  static #neutralInput(): number[] {
+    return [0, 0, 0, 0, 0, MazeVision.#PROGRESS_NEUTRAL];
+  }
+
+  /**
+   * Fast bounds check for a 2D grid.
+   * @param grid - 2D numeric grid where each row is an array.
+   * @param col - X coordinate (column index).
+   * @param row - Y coordinate (row index).
+   * @returns True when the coordinate is within the grid bounds.
+   */
+  static #isWithinBounds(grid: number[][], col: number, row: number): boolean {
+    return (
+      Array.isArray(grid) &&
+      row >= 0 &&
+      row < grid.length &&
+      Array.isArray(grid[row]) &&
+      col >= 0 &&
+      col < grid[row].length
+    );
+  }
+
+  /**
+   * Return true if the cell at [col,row] is within bounds and not a wall.
+   * @param grid - Encoded maze where `-1` represents a wall.
+   * @param col - Column (x) coordinate.
+   * @param row - Row (y) coordinate.
+   * @returns True when the cell exists and is open (not -1).
+   */
+  static #isCellOpen(grid: number[][], col: number, row: number): boolean {
+    return MazeVision.#isWithinBounds(grid, col, row) && grid[row][col] !== -1;
+  }
+
+  /**
+   * Compute the opposite cardinal direction index.
+   * @param direction - Direction index in range [0, #DIRECTION_COUNT).
+   * @returns Opposite direction index (e.g. 0 -> 2, 1 -> 3).
+   */
+  static #opposite(direction: number) {
+    return (
+      (direction + MazeVision.#OPPOSITE_OFFSET) % MazeVision.#DIRECTION_COUNT
+    );
+  }
+
+  /**
+   * Build the 6-element input vector consumed by the agent's network.
+   *
+   * The returned array has the shape: [compassScalar, openN, openE, openS, openW, progressDelta].
+   *
+   * @param encodedMaze - 2D grid where `-1` is a wall and `0+` is free space.
+   * @param agentPosition - Agent coordinates as `[x, y]`.
+   * @param exitPosition - Exit coordinates as `[x, y]` used as geometric fallback for compass.
+   * @param distanceToExitMap - Optional distance-to-exit 2D map (same shape as `encodedMaze`).
+   * @param previousStepDistance - Optional scalar distance-to-exit from the previous step.
+   * @param currentStepDistance - Scalar distance-to-exit for the current step.
+   * @param previousAction - Optional previous action index (0=N,1=E,2=S,3=W) to encourage backtracking.
+   * @returns A 6-element number array with the vision inputs described above.
+   *
+   * @remarks
+   * - This method reuses internal pooled scratch buffers (`#SCRATCH_*`) to avoid
+   *   allocations on hot paths. Because the buffers are reused, the method is
+   *   not reentrant and should not be called concurrently from multiple
+   *   contexts if they share the same process/thread.
+   * - Scratch buffers are initialized (via `.fill`) on each call so no state is
+   *   leaked between invocations.
    */
   static buildInputs6(
     encodedMaze: number[][],
@@ -54,358 +153,250 @@ export class MazeVision {
     currentStepDistance: number,
     previousAction: number | undefined
   ): number[] {
-    // --- Initialization ---
-    /**
-     * Agent's current X and Y coordinates
-     */
+    // Step 0: Basic validation of inputs. Return a neutral vector when inputs
+    // cannot be interpreted reliably (this keeps callers simple and avoids
+    // throwing in tutorial/demo code paths).
+    if (!Array.isArray(encodedMaze) || encodedMaze.length === 0)
+      return MazeVision.#neutralInput();
     const [agentX, agentY] = agentPosition;
-    /**
-     * Number of rows in the maze
-     */
-    const mazeHeight = encodedMaze.length;
-    /**
-     * Number of columns in the maze
-     */
-    const mazeWidth = encodedMaze[0].length;
-    /**
-     * Checks if a coordinate is within maze bounds
-     */
-    const isWithinBounds = (col: number, row: number) =>
-      row >= 0 && row < mazeHeight && col >= 0 && col < mazeWidth;
-    /**
-     * Checks if a cell is not a wall and within bounds
-     */
-    const isCellOpen = (col: number, row: number) =>
-      isWithinBounds(col, row) && encodedMaze[row][col] !== -1;
+    if (!Number.isFinite(agentX) || !Number.isFinite(agentY))
+      return MazeVision.#neutralInput();
+    if (!MazeVision.#isWithinBounds(encodedMaze, agentX, agentY))
+      return MazeVision.#neutralInput();
 
-    /**
-     * Maximum path length considered viable for openness calculation
-     */
-    const opennessHorizon = 1000;
-    /**
-     * Maximum path length for compass guidance
-     */
-    const compassHorizon = 5000;
+    const opennessHorizon = MazeVision.#OPENNESS_HORIZON;
+    const compassHorizon = MazeVision.#COMPASS_HORIZON;
 
-    // --- Neighbor Analysis ---
-    /**
-     * Array to store detailed information about each of the four adjacent cells
-     */
-    const neighborCells: {
-      directionIndex: number;
-      neighborX: number;
-      neighborY: number;
-      pathLength: number;
-      isReachable: boolean;
-      opennessValue: number;
-    }[] = [];
-    /**
-     * Current cell's distance to exit (from distance map, if available).
-     * Use optional chaining and Number.isFinite for concise, safe reads.
-     */
-    const currentCellDistanceToExit = Number.isFinite(
-      distanceToExitMap?.[agentY]?.[agentX]
-    )
-      ? distanceToExitMap![agentY][agentX]
+    // Step 1: Local symbolic constants. These provide readable names for
+    // direction indices used throughout the function and a local alias for the
+    // number of directions to avoid repeated private-field access inside loops.
+    /** Direction index: North (0). */
+    const DIR_N = 0;
+    /** Direction index: East (1). */
+    const DIR_E = 1;
+    /** Direction index: South (2). */
+    const DIR_S = 2;
+    /** Direction index: West (3). */
+    const DIR_W = 3;
+    /** Local alias for `#DIRECTION_COUNT` to clarify intent and avoid repeated private-field access. */
+    const D_COUNT = MazeVision.#DIRECTION_COUNT;
+
+    // Step 2: Acquire pooled scratch buffers. These are class-private
+    // Float32/Int32/Uint8 arrays that are reused to eliminate per-call heap
+    // allocations. They are zeroed/initialized below before use.
+    const neighborX = MazeVision.#SCRATCH_NEIGHBOR_X;
+    const neighborY = MazeVision.#SCRATCH_NEIGHBOR_Y;
+    const neighborPath = MazeVision.#SCRATCH_NEIGHBOR_PATH;
+    const neighborReach = MazeVision.#SCRATCH_NEIGHBOR_REACH;
+    const neighborOpen = MazeVision.#SCRATCH_NEIGHBOR_OPEN;
+
+    // Cache hot lookups locally to avoid repeated private-field/property access
+    const directionDeltas = MazeVision.#DIRECTION_DELTAS;
+    const distMap = distanceToExitMap;
+
+    // Step 3: Initialize scratch buffers for this invocation. We use
+    // `.fill` to ensure no state from previous calls leaks into this call.
+    neighborPath.fill(Infinity);
+    neighborReach.fill(0);
+    neighborOpen.fill(0);
+
+    const currentCellDist = Number.isFinite(distMap?.[agentY]?.[agentX])
+      ? distMap![agentY][agentX]
       : undefined;
+    const hasCurrentCellDist =
+      currentCellDist != null && Number.isFinite(currentCellDist);
 
-    // Step 1: Gather information about each neighboring cell.
-    for (const [dx, dy, directionIndex] of MazeVision.#DIRECTION_VECTORS) {
-      /**
-       * Neighbor's coordinates
-       */
-      const neighborX = agentX + dx;
-      const neighborY = agentY + dy;
+    // Step 4: Gather neighbor info for each cardinal direction.
+    // For each neighbor we compute:
+    //  - neighborX/Y: coordinates
+    //  - neighborReach: whether the neighbor cell is traversable (0/1)
+    //  - neighborRaw: raw distance-to-exit from the optional dist map (NaN when missing)
+    //  - neighborPath: finite path length when neighbor improves toward the exit
+    //  - neighborOpen: preliminary openness metric (filled later)
+    const neighborRaw = MazeVision.#SCRATCH_NEIGHBOR_RAWDIST;
+    // initialize raw-dist buffer to NaN (represents missing)
+    neighborRaw.fill(NaN);
+    for (let d = 0; d < D_COUNT; d++) {
+      const delta = directionDeltas[d];
+      const deltaX = delta[0];
+      const deltaY = delta[1];
+      const directionIndex = delta[2];
 
-      // If the neighbor is a wall, it's unreachable with a value of 0.
-      if (!isCellOpen(neighborX, neighborY)) {
-        neighborCells.push({
-          directionIndex,
-          neighborX,
-          neighborY,
-          pathLength: Infinity,
-          isReachable: false,
-          opennessValue: 0,
-        });
+      const neighborCol = agentX + deltaX;
+      const neighborRow = agentY + deltaY;
+      neighborX[directionIndex] = neighborCol;
+      neighborY[directionIndex] = neighborRow;
+
+      // Fast inline bounds/open check: reading the row reference directly is
+      // much cheaper than calling helper functions repeatedly on hot paths.
+      const neighborRowRef = encodedMaze[neighborRow];
+      if (!neighborRowRef || neighborRowRef[neighborCol] === -1) {
+        neighborPath[directionIndex] = Infinity;
+        neighborReach[directionIndex] = 0;
+        neighborOpen[directionIndex] = 0;
+        neighborRaw[directionIndex] = NaN;
         continue;
       }
 
-      /**
-       * Neighbor's distance to exit (from distance map, if available)
-       */
-      const neighborDistanceToExit = Number.isFinite(
-        distanceToExitMap?.[neighborY]?.[neighborX]
-      )
-        ? distanceToExitMap![neighborY][neighborX]
-        : undefined;
+      // Cache the raw distance row reference if present to avoid chained lookups
+      const distRow = distMap && distMap[neighborRow];
+      const rawDistance = distRow ? distRow[neighborCol] : undefined;
+      neighborRaw[directionIndex] = Number.isFinite(rawDistance)
+        ? (rawDistance as number)
+        : NaN;
 
-      // If the neighbor's distance to the exit is known and it's an improvement...
+      const hasValidDistance =
+        rawDistance != null && Number.isFinite(rawDistance);
+      neighborReach[directionIndex] = 1;
       if (
-        neighborDistanceToExit != null &&
-        Number.isFinite(neighborDistanceToExit) &&
-        currentCellDistanceToExit != null &&
-        Number.isFinite(currentCellDistanceToExit)
+        hasValidDistance &&
+        hasCurrentCellDist &&
+        rawDistance! < currentCellDist!
       ) {
-        if (neighborDistanceToExit < currentCellDistanceToExit) {
-          /**
-           * Path length to exit if moving in this direction
-           */
-          const pathLength = 1 + neighborDistanceToExit;
-          // If it's within the horizon, record its distance.
-          if (pathLength <= opennessHorizon)
-            neighborCells.push({
-              directionIndex,
-              neighborX,
-              neighborY,
-              pathLength,
-              isReachable: true,
-              opennessValue: 0,
-            });
-          // Otherwise, treat it as unreachable.
-          else
-            neighborCells.push({
-              directionIndex,
-              neighborX,
-              neighborY,
-              pathLength: Infinity,
-              isReachable: true,
-              opennessValue: 0,
-            });
-        } else {
-          // Non-improving moves are treated as dead ends (value 0).
-          neighborCells.push({
-            directionIndex,
-            neighborX,
-            neighborY,
-            pathLength: Infinity,
-            isReachable: true,
-            opennessValue: 0,
-          });
-        }
+        const pathLength = 1 + (rawDistance as number);
+        neighborPath[directionIndex] =
+          pathLength <= opennessHorizon ? pathLength : Infinity;
+        neighborOpen[directionIndex] = 0;
       } else {
-        // If distances are unknown, treat as unreachable for now.
-        neighborCells.push({
-          directionIndex,
-          neighborX,
-          neighborY,
-          pathLength: Infinity,
-          isReachable: true,
-          opennessValue: 0,
-        });
+        neighborPath[directionIndex] = Infinity;
+        neighborOpen[directionIndex] = 0;
       }
     }
 
-    // Step 2: Calculate the "openness" values based on the best path.
-    /**
-     * All reachable neighbors with finite distance
-     */
-    const reachableNeighbors = neighborCells.filter(
-      (neighbor) => neighbor.isReachable && Number.isFinite(neighbor.pathLength)
-    );
-    /**
-     * Minimum path length among all neighbors
-     */
-    let minPathLength = Infinity;
-    for (const neighbor of reachableNeighbors)
-      if (neighbor.pathLength < minPathLength)
-        minPathLength = neighbor.pathLength;
-
-    // If there's at least one viable path forward...
-    if (reachableNeighbors.length && minPathLength < Infinity) {
-      for (const neighbor of reachableNeighbors) {
-        // The best path(s) get a value of 1.
-        if (neighbor.pathLength === minPathLength) neighbor.opennessValue = 1;
-        // Other viable paths get a value proportional to how good they are.
-        else neighbor.opennessValue = minPathLength / neighbor.pathLength;
-      }
+    // Step 5: Compute openness values. We treat the smallest finite path as
+    // the most "open" (1.0) and scale other finite paths down relative to it.
+    // Cells without a finite path remain 0.
+    let minPath = Infinity;
+    for (let directionIndex = 0; directionIndex < D_COUNT; directionIndex++) {
+      if (
+        neighborReach[directionIndex] &&
+        Number.isFinite(neighborPath[directionIndex]) &&
+        neighborPath[directionIndex] < minPath
+      )
+        minPath = neighborPath[directionIndex];
     }
-
-    /**
-     * Openness values for each direction (N, E, S, W)
-     */
-    // Build a small fixed-size openness array indexed by direction to avoid repeated .find() traversals.
-    const openness = neighborCells.reduce(
-      (acc, nc) => {
-        acc[nc.directionIndex] = nc.opennessValue;
-        return acc;
-      },
-      [0, 0, 0, 0] as number[]
-    );
-    let opennessNorth = openness[0];
-    let opennessEast = openness[1];
-    let opennessSouth = openness[2];
-    let opennessWest = openness[3];
-
-    // Step 3: Handle the "dead end" scenario.
-    // If all forward paths are blocked, provide a small signal for the reverse direction
-    // to encourage the agent to backtrack.
-    if (
-      opennessNorth === 0 &&
-      opennessEast === 0 &&
-      opennessSouth === 0 &&
-      opennessWest === 0 &&
-      previousAction != null &&
-      previousAction >= 0
-    ) {
-      /**
-       * Opposite direction to previous action
-       */
-      const oppositeDirection = (previousAction + 2) % 4;
-      switch (oppositeDirection) {
-        case 0:
-          if (isCellOpen(agentX, agentY - 1)) opennessNorth = 0.001;
-          break;
-        case 1:
-          if (isCellOpen(agentX + 1, agentY)) opennessEast = 0.001;
-          break;
-        case 2:
-          if (isCellOpen(agentX, agentY + 1)) opennessSouth = 0.001;
-          break;
-        case 3:
-          if (isCellOpen(agentX - 1, agentY)) opennessWest = 0.001;
-          break;
-      }
-    }
-
-    // Step 4: Calculate the compass scalar.
-    // This points in the direction of the cell with the absolute shortest path to the exit,
-    // even if it's very far away (using the extended compass horizon).
-    /**
-     * Best direction to the exit (0=N, 1=E, 2=S, 3=W)
-     */
-    let bestDirectionToExit = 0;
-    if (distanceToExitMap) {
-      /**
-       * Minimum path length found for compass
-       */
-      let minCompassPathLength = Infinity;
-      /**
-       * Whether a valid path was found for compass
-       */
-      let foundCompassPath = false;
-      for (const neighbor of neighborCells) {
-        /**
-         * Raw distance to exit for neighbor
-         */
-        const neighborRawDistance =
-          distanceToExitMap[neighbor.neighborY]?.[neighbor.neighborX];
+    if (minPath < Infinity) {
+      for (let directionIndex = 0; directionIndex < D_COUNT; directionIndex++) {
         if (
-          neighborRawDistance != null &&
-          Number.isFinite(neighborRawDistance)
+          neighborReach[directionIndex] &&
+          Number.isFinite(neighborPath[directionIndex])
         ) {
-          const pathLength = neighborRawDistance + 1;
+          neighborOpen[directionIndex] =
+            neighborPath[directionIndex] === minPath
+              ? 1
+              : minPath / neighborPath[directionIndex];
+        }
+      }
+    }
+
+    // Expose named open values for clarity below.
+    let openN = neighborOpen[DIR_N];
+    let openE = neighborOpen[DIR_E];
+    let openS = neighborOpen[DIR_S];
+    let openW = neighborOpen[DIR_W];
+
+    // Step 6: Dead-end backtrack encouragement. If all four openness values
+    // are zero we encourage the agent to return the way it came by exposing a
+    // tiny BACKTRACK_SIGNAL value on the opposite direction of the previous
+    // action. This nudges learning away from getting stuck.
+    if (
+      openN === 0 &&
+      openE === 0 &&
+      openS === 0 &&
+      openW === 0 &&
+      previousAction != null
+    ) {
+      const oppositeDirection = MazeVision.#opposite(previousAction);
+      switch (oppositeDirection) {
+        case DIR_N:
+          if (MazeVision.#isCellOpen(encodedMaze, agentX, agentY - 1))
+            openN = MazeVision.#BACKTRACK_SIGNAL;
+          break;
+        case DIR_E:
+          if (MazeVision.#isCellOpen(encodedMaze, agentX + 1, agentY))
+            openE = MazeVision.#BACKTRACK_SIGNAL;
+          break;
+        case DIR_S:
+          if (MazeVision.#isCellOpen(encodedMaze, agentX, agentY + 1))
+            openS = MazeVision.#BACKTRACK_SIGNAL;
+          break;
+        case DIR_W:
+          if (MazeVision.#isCellOpen(encodedMaze, agentX - 1, agentY))
+            openW = MazeVision.#BACKTRACK_SIGNAL;
+          break;
+      }
+    }
+
+    // Step 7: Compass selection. Prefer the neighbor with the shortest cached
+    // raw path to exit (if the `distanceToExitMap` is available). If no
+    // suitable neighbor is found we fall back to a geometric heuristic that
+    // points roughly toward the exit.
+    let bestDirection = 0;
+    if (distanceToExitMap) {
+      let minCompassPathLength = Infinity;
+      let found = false;
+      for (let directionIndex = 0; directionIndex < D_COUNT; directionIndex++) {
+        const neighborCachedRaw = neighborRaw[directionIndex];
+        if (Number.isFinite(neighborCachedRaw)) {
+          const pathLength = neighborCachedRaw + 1;
           if (
             pathLength < minCompassPathLength &&
             pathLength <= compassHorizon
           ) {
             minCompassPathLength = pathLength;
-            bestDirectionToExit = neighbor.directionIndex;
-            foundCompassPath = true;
+            bestDirection = directionIndex;
+            found = true;
           }
         }
       }
-      // If no path is found via distance map, fall back to a simple geometric heuristic.
-      if (!foundCompassPath) {
-        /**
-         * X and Y deltas to goal
-         */
-        const deltaXToGoal = exitPosition[0] - agentX;
-        const deltaYToGoal = exitPosition[1] - agentY;
-        if (Math.abs(deltaXToGoal) > Math.abs(deltaYToGoal))
-          bestDirectionToExit = deltaXToGoal > 0 ? 1 : 3;
-        else bestDirectionToExit = deltaYToGoal > 0 ? 2 : 0;
+      if (!found) {
+        const deltaToExitX = exitPosition[0] - agentX;
+        const deltaToExitY = exitPosition[1] - agentY;
+        bestDirection =
+          Math.abs(deltaToExitX) > Math.abs(deltaToExitY)
+            ? deltaToExitX > 0
+              ? 1
+              : 3
+            : deltaToExitY > 0
+            ? 2
+            : 0;
       }
     } else {
-      // Fallback if no distance map is available.
-      /**
-       * X and Y deltas to goal
-       */
-      const deltaXToGoal = exitPosition[0] - agentX;
-      const deltaYToGoal = exitPosition[1] - agentY;
-      if (Math.abs(deltaXToGoal) > Math.abs(deltaYToGoal))
-        bestDirectionToExit = deltaXToGoal > 0 ? 1 : 3;
-      else bestDirectionToExit = deltaYToGoal > 0 ? 2 : 0;
+      const deltaToExitX = exitPosition[0] - agentX;
+      const deltaToExitY = exitPosition[1] - agentY;
+      bestDirection =
+        Math.abs(deltaToExitX) > Math.abs(deltaToExitY)
+          ? deltaToExitX > 0
+            ? 1
+            : 3
+          : deltaToExitY > 0
+          ? 2
+          : 0;
     }
-    /**
-     * Compass scalar (0=N, 0.25=E, 0.5=S, 0.75=W)
-     */
-    const compassScalar = bestDirectionToExit * 0.25;
+    const compassScalar = bestDirection * MazeVision.#COMPASS_STEP;
 
-    // Step 5: Calculate the progress delta.
-    // This value is > 0.5 if the agent moved closer to the exit, < 0.5 if it moved further away,
-    // and 0.5 for no change.
-    /**
-     * Progress delta (recent progress toward/away from exit)
-     */
-    let progressDelta = 0.5;
-    if (previousStepDistance != null && Number.isFinite(previousStepDistance)) {
-      /**
-       * Change in distance to exit since last step (clipped)
-       */
-      const distanceDelta = previousStepDistance - currentStepDistance;
-      const clippedDelta = Math.max(-2, Math.min(2, distanceDelta)); // Clip to prevent extreme values.
-      progressDelta = 0.5 + clippedDelta / 4;
-    }
-
-    // Step 6: Assemble and return the final input vector.
-    /**
-     * Final input vector for the neural network
-     * [compassScalar, openN, openE, openS, openW, progressDelta]
-     */
-    const inputVector = [
-      compassScalar,
-      opennessNorth,
-      opennessEast,
-      opennessSouth,
-      opennessWest,
-      progressDelta,
-    ];
-
-    // Optional debug logging for educational/diagnostic purposes.
-    // Prints a summary of the agent's vision and neighbor analysis every 5 calls if the environment variable is set.
+    // Step 8: Progress delta mapping. Map the change in distance-to-exit from
+    // the previous step to a bounded progress signal centered at PROGRESS_NEUTRAL.
+    let progress = MazeVision.#PROGRESS_NEUTRAL;
     if (
-      typeof process !== 'undefined' &&
-      typeof process.env !== 'undefined' &&
-      process.env.ASCII_VISION_DEBUG === '1'
+      previousStepDistance != null &&
+      Number.isFinite(previousStepDistance) &&
+      Number.isFinite(currentStepDistance)
     ) {
-      try {
-        /**
-         * String summary of neighbor info for debugging, showing direction, coordinates, path length, and openness value.
-         */
-        const neighborSummary = neighborCells
-          .map(
-            (neighbor) =>
-              `{dir:${neighbor.directionIndex} x:${neighbor.neighborX} y:${
-                neighbor.neighborY
-              } path:${
-                Number.isFinite(neighbor.pathLength)
-                  ? neighbor.pathLength.toFixed(2)
-                  : 'Inf'
-              } open:${neighbor.opennessValue.toFixed(4)}}`
-          )
-          .join(' ');
-        // Internal debug counter to throttle log output
-        (MazeVision as any)._dbgCounter =
-          ((MazeVision as any)._dbgCounter || 0) + 1;
-        if ((MazeVision as any)._dbgCounter % 5 === 0) {
-          // Print a detailed summary of the agent's current vision state
-          console.log(
-            `[VISION] pos=${agentX},${agentY} comp=${compassScalar.toFixed(
-              2
-            )} inputs=${JSON.stringify(
-              inputVector.map((v) => +v.toFixed(6))
-            )} neighbors=${neighborSummary}`
-          );
-        }
-      } catch {
-        // Fail silently if any debug logic throws
-      }
+      const delta = previousStepDistance - currentStepDistance;
+      const clipped = Math.max(
+        -MazeVision.#PROGRESS_CLIP,
+        Math.min(MazeVision.#PROGRESS_CLIP, delta)
+      );
+      progress =
+        MazeVision.#PROGRESS_NEUTRAL + clipped / MazeVision.#PROGRESS_SCALE;
     }
-    /**
-     * Returns the 6-dimensional input vector for the agent's neural network:
-     * [compassScalar, opennessNorth, opennessEast, opennessSouth, opennessWest, progressDelta]
-     */
-    return inputVector;
+
+    // Step 9: Return the canonical 6-element vision vector consumed by the
+    // agent's network. We return plain numbers (not shared buffers) to avoid
+    // exposing pooled buffers to callers.
+    return [compassScalar, openN, openE, openS, openW, progress];
   }
 }
+
 export default MazeVision;
