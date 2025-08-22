@@ -5,6 +5,73 @@ import { NetworkVisualization } from './networkVisualization';
 import { colors } from './colors';
 import { INetwork, IDashboardManager } from './interfaces';
 
+// Region: Type Interfaces ----------------------------------------------------
+/** Detailed stats structure produced inside the dashboard. */
+interface AsciiMazeDetailedStats {
+  generation: number;
+  bestFitness: number | null;
+  bestFitnessDelta: number | null;
+  saturationFraction: number | null;
+  actionEntropy: number | null;
+  populationMean: number | null;
+  populationMedian: number | null;
+  enabledConnRatio: number | null;
+  complexity: any;
+  simplifyPhaseActive: boolean;
+  perf: any;
+  lineage: any;
+  diversity: any;
+  speciesCount: number | null;
+  topSpeciesSizes: number[] | null;
+  objectives: any;
+  paretoFrontSizes: number[] | null;
+  firstFrontSize: number;
+  hypervolume: number | null;
+  noveltyArchiveSize: number | null;
+  operatorAcceptance: Array<{ name: string; acceptancePct: number }> | null;
+  topMutations: Array<{ name: string; count: number }> | null;
+  mutationStats: any;
+  trends: {
+    fitness: string | null;
+    nodes: string | null;
+    conns: string | null;
+    hyper: string | null;
+    progress: string | null;
+    species: string | null;
+  };
+  histories: {
+    bestFitness: number[];
+    nodes: number[];
+    conns: number[];
+    hyper: number[];
+    progress: number[];
+    species: number[];
+  };
+  timestamp: number;
+}
+
+/** Public snapshot returned by getLastTelemetry(). */
+interface AsciiMazeTelemetrySnapshot {
+  generation: number;
+  bestFitness: number | null;
+  progress: number | null;
+  speciesCount: number | null;
+  gensPerSec: number;
+  timestamp: number;
+  details: AsciiMazeDetailedStats | null;
+}
+
+/**
+ * DashboardManager
+ *
+ * ASCII dashboard for the maze NEAT example. Tracks current best genome,
+ * bounded histories (fitness, complexity, hypervolume, progress, species),
+ * archives solved mazes with efficiency stats, and emits telemetry events.
+ *
+ * @remarks
+ * Not reentrant; create a new instance per evolution run. History buffers
+ * are capped at `HISTORY_MAX` samples for predictable memory usage.
+ */
 export class DashboardManager implements IDashboardManager {
   #solvedMazes: Array<{
     maze: string[];
@@ -29,7 +96,7 @@ export class DashboardManager implements IDashboardManager {
   #hypervolumeHistory: number[] = [];
   #progressHistory: number[] = [];
   #speciesCountHistory: number[] = [];
-  #lastDetailedStats: any = null;
+  #lastDetailedStats: AsciiMazeDetailedStats | null = null;
   #runStartTs: number | null = null;
   #perfStart: number | null = null;
   #lastGeneration: number | null = null;
@@ -43,6 +110,10 @@ export class DashboardManager implements IDashboardManager {
     DashboardManager.#LEFT_PADDING -
     DashboardManager.#RIGHT_PADDING;
   static #STAT_LABEL_WIDTH = 28;
+  static #ARCHIVE_SPARK_WIDTH = 64; // spark width in archive blocks
+  static #GENERAL_SPARK_WIDTH = 64; // spark width in live panel
+  static #SOLVED_LABEL_WIDTH = 22; // label width in archive stats
+  static #HISTORY_EXPORT_WINDOW = 200; // samples exported in telemetry details
   // Public aliases for backwards compatibility while internals move to private fields
   static get HISTORY_MAX() {
     return DashboardManager.#HISTORY_MAX;
@@ -61,6 +132,16 @@ export class DashboardManager implements IDashboardManager {
   }
   static get STAT_LABEL_WIDTH() {
     return DashboardManager.#STAT_LABEL_WIDTH;
+  }
+  /** Emit a blank padded line inside the frame to avoid duplication. */
+  private logBlank(): void {
+    this.#logFn(
+      `${colors.blueCore}║${NetworkVisualization.pad(
+        ' ',
+        DashboardManager.FRAME_INNER_WIDTH,
+        ' '
+      )}${colors.blueCore}║${colors.reset}`
+    );
   }
   constructor(
     clearFn: () => void,
@@ -117,16 +198,18 @@ export class DashboardManager implements IDashboardManager {
     let min = Infinity;
     let max = -Infinity;
     for (let i = 0; i < tail.length; i++) {
-      const v = tail[i];
-      if (v < min) min = v;
-      if (v > max) max = v;
+      const value = tail[i];
+      if (value < min) min = value;
+      if (value > max) max = value;
     }
     const range = max - min || 1;
     const out: string[] = [];
     for (let i = 0; i < tail.length; i++) {
-      const v = tail[i];
-      const idx = Math.floor(((v - min) / range) * (blocks.length - 1));
-      out.push(blocks[idx]);
+      const value = tail[i];
+      const blockIndex = Math.floor(
+        ((value - min) / range) * (blocks.length - 1)
+      );
+      out.push(blocks[blockIndex]);
     }
     return out.join('');
   }
@@ -138,9 +221,7 @@ export class DashboardManager implements IDashboardManager {
   // ...getTail removed in favor of MazeUtils.tail
 
   // Small helper to read the last element of an array safely.
-  static #last<T>(arr?: readonly T[] | null): T | undefined {
-    return MazeUtils.safeLast(arr as any) as T | undefined;
-  }
+  // Removed legacy #last helper; native Array.prototype.at(-1) is used directly (ES2023).
 
   /**
    * Push a numeric value onto a history buffer and keep it bounded to HISTORY_MAX.
@@ -182,9 +263,7 @@ export class DashboardManager implements IDashboardManager {
 
     // Render solved maze visualization using the MazeVisualization helper
     // Use modern Array.prototype.at for last element access
-    const endPos = DashboardManager.#last(
-      solved.result.path as readonly [number, number][]
-    );
+    const endPos = (solved.result.path as readonly [number, number][])?.at(-1);
     const solvedMazeVisualization = MazeVisualization.visualizeMaze(
       solved.maze,
       ((endPos as readonly [number, number]) ?? [0, 0]) as readonly [
@@ -229,7 +308,7 @@ export class DashboardManager implements IDashboardManager {
     blockLines.push(sep);
 
     // Optional trending sparklines derived from stored history windows
-    const solvedLabelWidth = 22;
+    const solvedLabelWidth = DashboardManager.#SOLVED_LABEL_WIDTH;
     const solvedStat = (label: string, value: string) =>
       this.formatStat(
         label,
@@ -239,18 +318,30 @@ export class DashboardManager implements IDashboardManager {
         solvedLabelWidth
       );
 
-    const spark = this.buildSparkline(this.#bestFitnessHistory, 64);
+    const spark = this.buildSparkline(
+      this.#bestFitnessHistory,
+      DashboardManager.#ARCHIVE_SPARK_WIDTH
+    );
     const sparkComplexityNodes = this.buildSparkline(
       this.#complexityNodesHistory,
-      64
+      DashboardManager.#ARCHIVE_SPARK_WIDTH
     );
     const sparkComplexityConns = this.buildSparkline(
       this.#complexityConnsHistory,
-      64
+      DashboardManager.#ARCHIVE_SPARK_WIDTH
     );
-    const sparkHyper = this.buildSparkline(this.#hypervolumeHistory, 64);
-    const sparkProgress = this.buildSparkline(this.#progressHistory, 64);
-    const sparkSpecies = this.buildSparkline(this.#speciesCountHistory, 64);
+    const sparkHyper = this.buildSparkline(
+      this.#hypervolumeHistory,
+      DashboardManager.#ARCHIVE_SPARK_WIDTH
+    );
+    const sparkProgress = this.buildSparkline(
+      this.#progressHistory,
+      DashboardManager.#ARCHIVE_SPARK_WIDTH
+    );
+    const sparkSpecies = this.buildSparkline(
+      this.#speciesCountHistory,
+      DashboardManager.#ARCHIVE_SPARK_WIDTH
+    );
 
     if (spark) blockLines.push(solvedStat('Fitness trend', spark));
     if (sparkComplexityNodes)
@@ -356,6 +447,15 @@ export class DashboardManager implements IDashboardManager {
    * - stash the latest telemetry values into small circular buffers for sparklines
    * - finally call `redraw` to update the live output
    */
+  /**
+   * Ingest a new evolution update (called by the engine each generation or candidate improvement).
+   * @param maze Current maze layout being solved.
+   * @param result Candidate evaluation result (includes fitness, path, progress, etc.).
+   * @param network Neural network associated with the candidate.
+   * @param generation Current generation number.
+   * @param neatInstance Optional NEAT framework instance exposing telemetry helpers.
+   * @returns void
+   */
   update(
     maze: string[],
     result: any,
@@ -406,50 +506,50 @@ export class DashboardManager implements IDashboardManager {
       }
 
       // Complexity telemetry: mean nodes/connectivity across population
-      const c = this.#lastTelemetry?.complexity;
-      if (c) {
-        if (typeof c.meanNodes === 'number') {
+      const complexityTelemetry = this.#lastTelemetry?.complexity;
+      if (complexityTelemetry) {
+        if (typeof complexityTelemetry.meanNodes === 'number') {
           this.#complexityNodesHistory = MazeUtils.pushHistory(
             this.#complexityNodesHistory,
-            c.meanNodes,
+            complexityTelemetry.meanNodes,
             DashboardManager.HISTORY_MAX
           );
         }
-        if (typeof c.meanConns === 'number') {
+        if (typeof complexityTelemetry.meanConns === 'number') {
           this.#complexityConnsHistory = MazeUtils.pushHistory(
             this.#complexityConnsHistory,
-            c.meanConns,
+            complexityTelemetry.meanConns,
             DashboardManager.HISTORY_MAX
           );
         }
       }
 
       // Hypervolume is used for multi-objective tracking
-      const h = this.#lastTelemetry?.hyper;
-      if (typeof h === 'number') {
+      const hyperVolumeValue = this.#lastTelemetry?.hyper;
+      if (typeof hyperVolumeValue === 'number') {
         this.#hypervolumeHistory = MazeUtils.pushHistory(
           this.#hypervolumeHistory,
-          h,
+          hyperVolumeValue,
           DashboardManager.HISTORY_MAX
         );
       }
 
       // Progress: how close a candidate is to the exit
-      const prog = this.#currentBest?.result?.progress;
-      if (typeof prog === 'number') {
+      const progressValue = this.#currentBest?.result?.progress;
+      if (typeof progressValue === 'number') {
         this.#progressHistory = MazeUtils.pushHistory(
           this.#progressHistory,
-          prog,
+          progressValue,
           DashboardManager.HISTORY_MAX
         );
       }
 
       // Species count history
-      const sc = this.#lastTelemetry?.species;
-      if (typeof sc === 'number') {
+      const speciesCountValue = this.#lastTelemetry?.species;
+      if (typeof speciesCountValue === 'number') {
         this.#speciesCountHistory = MazeUtils.pushHistory(
           this.#speciesCountHistory,
-          sc,
+          speciesCountValue,
           DashboardManager.HISTORY_MAX
         );
       }
@@ -472,7 +572,7 @@ export class DashboardManager implements IDashboardManager {
         generation,
         bestFitness: this.#lastBestFitness,
         progress: this.#currentBest?.result?.progress ?? null,
-        speciesCount: DashboardManager.#last(this.#speciesCountHistory) ?? null,
+        speciesCount: this.#speciesCountHistory.at(-1) ?? null,
         gensPerSec: +gensPerSec.toFixed(3),
         timestamp: Date.now(), // wall-clock timestamp for consumers
         details: this.#lastDetailedStats || null,
@@ -504,8 +604,9 @@ export class DashboardManager implements IDashboardManager {
   /**
    * Return the most recent telemetry snapshot including rich details.
    * Details may be null if not yet populated.
+   * @returns Snapshot object with generation, fitness, progress and detail block.
    */
-  getLastTelemetry() {
+  getLastTelemetry(): AsciiMazeTelemetrySnapshot {
     const elapsedMs =
       this.#perfStart != null && typeof performance !== 'undefined'
         ? performance.now() - this.#perfStart
@@ -533,6 +634,9 @@ export class DashboardManager implements IDashboardManager {
    * several telemetry-derived stats. The function uses `logFunction` for all
    * output lines so the same renderer can be used both in Node and in the
    * browser (DOM adapter).
+   * @param currentMaze The maze currently being evolved.
+   * @param neat Optional NEAT implementation instance for population-level stats.
+   * @returns void
    */
   redraw(currentMaze: string[], neat?: any): void {
     // Clear the live area (archive is untouched)
@@ -591,37 +695,20 @@ export class DashboardManager implements IDashboardManager {
           '═'
         )}${colors.blueCore}╣${colors.reset}`
       );
-      this.#logFn(
-        `${colors.blueCore}║${NetworkVisualization.pad(
-          ' ',
-          DashboardManager.FRAME_INNER_WIDTH,
-          ' '
-        )}${colors.blueCore}║${colors.reset}`
-      );
+      this.logBlank();
 
       // Network summary (compact visualization)
-      this.#logFn(
-        `${colors.blueCore}║${NetworkVisualization.pad(
-          ' ',
-          DashboardManager.FRAME_INNER_WIDTH,
-          ' '
-        )}${colors.blueCore}║${colors.reset}`
-      );
+      this.logBlank();
       this.#logFn(
         NetworkVisualization.visualizeNetworkSummary(this.#currentBest.network)
       );
-      this.#logFn(
-        `${colors.blueCore}║${NetworkVisualization.pad(
-          ' ',
-          DashboardManager.FRAME_INNER_WIDTH,
-          ' '
-        )}${colors.blueCore}║${colors.reset}`
-      );
+      this.logBlank();
 
       // Maze visualization for the live candidate
-      const lastPos = DashboardManager.#last(
-        this.#currentBest.result.path as readonly [number, number][]
-      ) ?? [0, 0];
+      const lastPos = (this.#currentBest.result.path as readonly [
+        number,
+        number
+      ][])?.at(-1) ?? [0, 0];
       const currentMazeVisualization = MazeVisualization.visualizeMaze(
         currentMaze,
         (lastPos as readonly [number, number]) ?? [0, 0],
@@ -640,42 +727,18 @@ export class DashboardManager implements IDashboardManager {
             )}${colors.blueCore}║`
         )
         .join('\n');
-      this.#logFn(
-        `${colors.blueCore}║${NetworkVisualization.pad(
-          ' ',
-          DashboardManager.FRAME_INNER_WIDTH,
-          ' '
-        )}${colors.blueCore}║${colors.reset}`
-      );
+      this.logBlank();
       this.#logFn(centeredCurrentMaze);
-      this.#logFn(
-        `${colors.blueCore}║${NetworkVisualization.pad(
-          ' ',
-          DashboardManager.FRAME_INNER_WIDTH,
-          ' '
-        )}${colors.blueCore}║${colors.reset}`
-      );
+      this.logBlank();
 
       // Print stats for the current best solution (delegates to MazeVisualization)
-      this.#logFn(
-        `${colors.blueCore}║${NetworkVisualization.pad(
-          ' ',
-          DashboardManager.FRAME_INNER_WIDTH,
-          ' '
-        )}${colors.blueCore}║${colors.reset}`
-      );
+      this.logBlank();
       MazeVisualization.printMazeStats(
         this.#currentBest,
         currentMaze,
         this.#logFn
       );
-      this.#logFn(
-        `${colors.blueCore}║${NetworkVisualization.pad(
-          ' ',
-          DashboardManager.FRAME_INNER_WIDTH,
-          ' '
-        )}${colors.blueCore}║${colors.reset}`
-      );
+      this.logBlank();
 
       // Progress bar for current candidate
       this.#logFn(
@@ -720,8 +783,10 @@ export class DashboardManager implements IDashboardManager {
     const bestFitness = this.#currentBest?.result?.fitness;
 
     // Small helpers used below when building the stats list
-    const fmtNum = (v: any, digits = 2) =>
-      typeof v === 'number' && isFinite(v) ? v.toFixed(digits) : '-';
+    const fmtNum = (numericValue: any, digits = 2) =>
+      typeof numericValue === 'number' && isFinite(numericValue)
+        ? numericValue.toFixed(digits)
+        : '-';
     const deltaArrow = (curr?: number | null, prev?: number | null) => {
       if (curr == null || prev == null) return '';
       const diff = curr - prev;
@@ -743,18 +808,22 @@ export class DashboardManager implements IDashboardManager {
       neat.population.forEach((g: any) => {
         if (typeof g.score === 'number') scores.push(g.score);
         if (Array.isArray(g.connections)) {
-          g.connections.forEach((c: any) => {
+          g.connections.forEach((connection: any) => {
             total++;
-            if (c.enabled !== false) enabled++;
+            if (connection.enabled !== false) enabled++;
           });
         }
       });
       if (scores.length) {
-        const sum = scores.reduce((a, b) => a + b, 0);
+        const sum = scores.reduce(
+          (runningTotal, scoreValue) => runningTotal + scoreValue,
+          0
+        );
         popMean = (sum / scores.length).toFixed(2);
-        // Immutable sort using toSorted (ES2023) for clarity
-        // Use immutable toSorted to avoid mutating the original scores array
-        const sorted = scores.toSorted((a, b) => a - b);
+        // Immutable copy before sort to avoid mutating original scores array
+        const sorted = [...scores].sort(
+          (leftScore, rightScore) => leftScore - rightScore
+        );
         const mid = Math.floor(sorted.length / 2);
         popMedian = (sorted.length % 2 === 0
           ? (sorted[mid - 1] + sorted[mid]) / 2
@@ -769,7 +838,7 @@ export class DashboardManager implements IDashboardManager {
 
     // Build small sparklines used in the general stats area
     const firstFrontSize = fronts?.[0]?.length || 0;
-    const SPARK_WIDTH = 64;
+    const SPARK_WIDTH = DashboardManager.#GENERAL_SPARK_WIDTH;
     const spark = this.buildSparkline(this.#bestFitnessHistory, SPARK_WIDTH);
     const sparkComplexityNodes = this.buildSparkline(
       this.#complexityNodesHistory,
@@ -817,20 +886,20 @@ export class DashboardManager implements IDashboardManager {
           const ops = neat.getOperatorStats();
           if (Array.isArray(ops) && ops.length) {
             // Sort operators by success rate (immutable sort)
-            const sortedOps = ops.toSorted(
-              (a: any, b: any) =>
-                b.success / Math.max(1, b.attempts) -
-                a.success / Math.max(1, a.attempts)
+            const sortedOps = [...ops].sort(
+              (leftOp: any, rightOp: any) =>
+                rightOp.success / Math.max(1, rightOp.attempts) -
+                leftOp.success / Math.max(1, leftOp.attempts)
             );
             operatorAcceptance = [];
             const take = Math.min(6, sortedOps.length);
             for (let i = 0; i < take; i++) {
-              const o = sortedOps[i];
+              const opStats = sortedOps[i];
               operatorAcceptance.push({
-                name: o.name,
+                name: opStats.name,
                 acceptancePct: +(
-                  (100 * o.success) /
-                  Math.max(1, o.attempts)
+                  (100 * opStats.success) /
+                  Math.max(1, opStats.attempts)
                 ).toFixed(2),
               });
             }
@@ -842,16 +911,21 @@ export class DashboardManager implements IDashboardManager {
         try {
           {
             const entries = Object.entries(mutationStats).filter(
-              ([k, v]) => typeof v === 'number'
+              ([mutationKey, mutationValue]) =>
+                typeof mutationValue === 'number'
             );
-            const sortedEntries = entries.toSorted(
-              (a, b) => (b[1] as number) - (a[1] as number)
+            const sortedEntries = [...(entries as [string, number][])]!.sort(
+              (leftEntry, rightEntry) =>
+                (rightEntry[1] as number) - (leftEntry[1] as number)
             );
             topMutations = [];
             const takeM = Math.min(8, sortedEntries.length);
             for (let i = 0; i < takeM; i++) {
-              const [k, v] = sortedEntries[i];
-              topMutations.push({ name: k, count: v as number });
+              const [mutationName, mutationCount] = sortedEntries[i];
+              topMutations.push({
+                name: mutationName,
+                count: mutationCount as number,
+              });
             }
           }
         } catch {}
@@ -859,7 +933,9 @@ export class DashboardManager implements IDashboardManager {
       const topSpeciesSizes = Array.isArray(neat?.species)
         ? (() => {
             const sizes = neat.species.map((s: any) => s.members?.length || 0);
-            const sortedSizes = sizes.toSorted((a: number, b: number) => b - a);
+            const sortedSizes = [...sizes].sort(
+              (sizeA: number, sizeB: number) => sizeB - sizeA
+            );
             const out: number[] = [];
             const takeS = Math.min(5, sortedSizes.length);
             for (let i = 0; i < takeS; i++) out.push(sortedSizes[i]);
@@ -874,10 +950,7 @@ export class DashboardManager implements IDashboardManager {
         bestFitness: typeof bestFitness === 'number' ? bestFitness : null,
         bestFitnessDelta: ((): number | null => {
           if (typeof bestFitness !== 'number') return null;
-          const prev =
-            this.#bestFitnessHistory.length > 1
-              ? this.#bestFitnessHistory[this.#bestFitnessHistory.length - 2]
-              : null;
+          const prev = this.#bestFitnessHistory.at(-2) ?? null;
           if (prev == null) return null;
           const diff = bestFitness - prev;
           return +diff.toFixed(3);
@@ -914,54 +987,12 @@ export class DashboardManager implements IDashboardManager {
           species: sparkSpecies || null,
         },
         histories: {
-          bestFitness: ((): number[] => {
-            const arr: number[] = [];
-            const start = Math.max(0, this.#bestFitnessHistory.length - 200);
-            for (let i = start; i < this.#bestFitnessHistory.length; i++)
-              arr.push(this.#bestFitnessHistory[i]);
-            return arr;
-          })(),
-          nodes: ((): number[] => {
-            const arr: number[] = [];
-            const start = Math.max(
-              0,
-              this.#complexityNodesHistory.length - 200
-            );
-            for (let i = start; i < this.#complexityNodesHistory.length; i++)
-              arr.push(this.#complexityNodesHistory[i]);
-            return arr;
-          })(),
-          conns: ((): number[] => {
-            const arr: number[] = [];
-            const start = Math.max(
-              0,
-              this.#complexityConnsHistory.length - 200
-            );
-            for (let i = start; i < this.#complexityConnsHistory.length; i++)
-              arr.push(this.#complexityConnsHistory[i]);
-            return arr;
-          })(),
-          hyper: ((): number[] => {
-            const arr: number[] = [];
-            const start = Math.max(0, this.#hypervolumeHistory.length - 200);
-            for (let i = start; i < this.#hypervolumeHistory.length; i++)
-              arr.push(this.#hypervolumeHistory[i]);
-            return arr;
-          })(),
-          progress: ((): number[] => {
-            const arr: number[] = [];
-            const start = Math.max(0, this.#progressHistory.length - 200);
-            for (let i = start; i < this.#progressHistory.length; i++)
-              arr.push(this.#progressHistory[i]);
-            return arr;
-          })(),
-          species: ((): number[] => {
-            const arr: number[] = [];
-            const start = Math.max(0, this.#speciesCountHistory.length - 200);
-            for (let i = start; i < this.#speciesCountHistory.length; i++)
-              arr.push(this.#speciesCountHistory[i]);
-            return arr;
-          })(),
+          bestFitness: this.sliceHistoryForExport(this.#bestFitnessHistory),
+          nodes: this.sliceHistoryForExport(this.#complexityNodesHistory),
+          conns: this.sliceHistoryForExport(this.#complexityConnsHistory),
+          hyper: this.sliceHistoryForExport(this.#hypervolumeHistory),
+          progress: this.sliceHistoryForExport(this.#progressHistory),
+          species: this.sliceHistoryForExport(this.#speciesCountHistory),
         },
         timestamp: Date.now(),
       };
@@ -970,18 +1001,33 @@ export class DashboardManager implements IDashboardManager {
     }
 
     // Replace old verbose stats area with a minimal spacer line (keeps frame aesthetics)
-    this.#logFn(
-      `${colors.blueCore}║${NetworkVisualization.pad(
-        ' ',
-        DashboardManager.FRAME_INNER_WIDTH,
-        ' '
-      )}${colors.blueCore}║${colors.reset}`
-    );
+    this.logBlank();
   }
 
   reset(): void {
     this.#solvedMazes = [];
     this.#solvedMazeKeys.clear();
     this.#currentBest = null;
+  }
+
+  /**
+   * Return the last export window slice of a numeric history (immutable copy).
+   * @param history Source numeric history buffer.
+   * @returns New array containing up to HISTORY_EXPORT_WINDOW most recent samples.
+   */
+  private sliceHistoryForExport(history: number[]): number[] {
+    if (!history.length) return [];
+    const startIndex = Math.max(
+      0,
+      history.length - DashboardManager.#HISTORY_EXPORT_WINDOW
+    );
+    // Fast path: if the window covers entire array, return a shallow copy.
+    if (startIndex === 0) return history.slice();
+    const outLength = history.length - startIndex;
+    const out = new Array(outLength);
+    for (let i = 0; i < outLength; i++) {
+      out[i] = history[startIndex + i];
+    }
+    return out;
   }
 }

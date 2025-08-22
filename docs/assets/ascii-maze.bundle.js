@@ -14914,6 +14914,14 @@
     static #RIGHT_PADDING = 1;
     static #CONTENT_WIDTH = _DashboardManager.#FRAME_INNER_WIDTH - _DashboardManager.#LEFT_PADDING - _DashboardManager.#RIGHT_PADDING;
     static #STAT_LABEL_WIDTH = 28;
+    static #ARCHIVE_SPARK_WIDTH = 64;
+    // spark width in archive blocks
+    static #GENERAL_SPARK_WIDTH = 64;
+    // spark width in live panel
+    static #SOLVED_LABEL_WIDTH = 22;
+    // label width in archive stats
+    static #HISTORY_EXPORT_WINDOW = 200;
+    // samples exported in telemetry details
     // Public aliases for backwards compatibility while internals move to private fields
     static get HISTORY_MAX() {
       return _DashboardManager.#HISTORY_MAX;
@@ -14932,6 +14940,16 @@
     }
     static get STAT_LABEL_WIDTH() {
       return _DashboardManager.#STAT_LABEL_WIDTH;
+    }
+    /** Emit a blank padded line inside the frame to avoid duplication. */
+    logBlank() {
+      this.#logFn(
+        `${colors.blueCore}\u2551${NetworkVisualization.pad(
+          " ",
+          _DashboardManager.FRAME_INNER_WIDTH,
+          " "
+        )}${colors.blueCore}\u2551${colors.reset}`
+      );
     }
     constructor(clearFn, logFn, archiveFn) {
       this.#clearFn = clearFn;
@@ -14973,16 +14991,18 @@
       let min = Infinity;
       let max = -Infinity;
       for (let i = 0; i < tail.length; i++) {
-        const v = tail[i];
-        if (v < min) min = v;
-        if (v > max) max = v;
+        const value = tail[i];
+        if (value < min) min = value;
+        if (value > max) max = value;
       }
       const range = max - min || 1;
       const out = [];
       for (let i = 0; i < tail.length; i++) {
-        const v = tail[i];
-        const idx = Math.floor((v - min) / range * (blocks.length - 1));
-        out.push(blocks[idx]);
+        const value = tail[i];
+        const blockIndex = Math.floor(
+          (value - min) / range * (blocks.length - 1)
+        );
+        out.push(blocks[blockIndex]);
       }
       return out.join("");
     }
@@ -14992,9 +15012,7 @@
      */
     // ...getTail removed in favor of MazeUtils.tail
     // Small helper to read the last element of an array safely.
-    static #last(arr) {
-      return MazeUtils.safeLast(arr);
-    }
+    // Removed legacy #last helper; native Array.prototype.at(-1) is used directly (ES2023).
     /**
      * Push a numeric value onto a history buffer and keep it bounded to HISTORY_MAX.
      */
@@ -15023,9 +15041,7 @@
      */
     appendSolvedToArchive(solved, displayNumber) {
       if (!this.#archiveFn) return;
-      const endPos = _DashboardManager.#last(
-        solved.result.path
-      );
+      const endPos = solved.result.path?.at(-1);
       const solvedMazeVisualization = MazeVisualization.visualizeMaze(
         solved.maze,
         endPos ?? [0, 0],
@@ -15054,7 +15070,7 @@
       blockLines.push(header);
       blockLines.push(title);
       blockLines.push(sep);
-      const solvedLabelWidth = 22;
+      const solvedLabelWidth = _DashboardManager.#SOLVED_LABEL_WIDTH;
       const solvedStat = (label, value) => this.formatStat(
         label,
         value,
@@ -15062,18 +15078,30 @@
         colors.cyanNeon,
         solvedLabelWidth
       );
-      const spark = this.buildSparkline(this.#bestFitnessHistory, 64);
+      const spark = this.buildSparkline(
+        this.#bestFitnessHistory,
+        _DashboardManager.#ARCHIVE_SPARK_WIDTH
+      );
       const sparkComplexityNodes = this.buildSparkline(
         this.#complexityNodesHistory,
-        64
+        _DashboardManager.#ARCHIVE_SPARK_WIDTH
       );
       const sparkComplexityConns = this.buildSparkline(
         this.#complexityConnsHistory,
-        64
+        _DashboardManager.#ARCHIVE_SPARK_WIDTH
       );
-      const sparkHyper = this.buildSparkline(this.#hypervolumeHistory, 64);
-      const sparkProgress = this.buildSparkline(this.#progressHistory, 64);
-      const sparkSpecies = this.buildSparkline(this.#speciesCountHistory, 64);
+      const sparkHyper = this.buildSparkline(
+        this.#hypervolumeHistory,
+        _DashboardManager.#ARCHIVE_SPARK_WIDTH
+      );
+      const sparkProgress = this.buildSparkline(
+        this.#progressHistory,
+        _DashboardManager.#ARCHIVE_SPARK_WIDTH
+      );
+      const sparkSpecies = this.buildSparkline(
+        this.#speciesCountHistory,
+        _DashboardManager.#ARCHIVE_SPARK_WIDTH
+      );
       if (spark) blockLines.push(solvedStat("Fitness trend", spark));
       if (sparkComplexityNodes)
         blockLines.push(solvedStat("Nodes trend", sparkComplexityNodes));
@@ -15161,6 +15189,15 @@
      * - stash the latest telemetry values into small circular buffers for sparklines
      * - finally call `redraw` to update the live output
      */
+    /**
+     * Ingest a new evolution update (called by the engine each generation or candidate improvement).
+     * @param maze Current maze layout being solved.
+     * @param result Candidate evaluation result (includes fitness, path, progress, etc.).
+     * @param network Neural network associated with the candidate.
+     * @param generation Current generation number.
+     * @param neatInstance Optional NEAT framework instance exposing telemetry helpers.
+     * @returns void
+     */
     update(maze, result, network, generation, neatInstance) {
       if (this.#runStartTs == null) {
         this.#runStartTs = Date.now();
@@ -15193,44 +15230,44 @@
             _DashboardManager.HISTORY_MAX
           );
         }
-        const c = this.#lastTelemetry?.complexity;
-        if (c) {
-          if (typeof c.meanNodes === "number") {
+        const complexityTelemetry = this.#lastTelemetry?.complexity;
+        if (complexityTelemetry) {
+          if (typeof complexityTelemetry.meanNodes === "number") {
             this.#complexityNodesHistory = MazeUtils.pushHistory(
               this.#complexityNodesHistory,
-              c.meanNodes,
+              complexityTelemetry.meanNodes,
               _DashboardManager.HISTORY_MAX
             );
           }
-          if (typeof c.meanConns === "number") {
+          if (typeof complexityTelemetry.meanConns === "number") {
             this.#complexityConnsHistory = MazeUtils.pushHistory(
               this.#complexityConnsHistory,
-              c.meanConns,
+              complexityTelemetry.meanConns,
               _DashboardManager.HISTORY_MAX
             );
           }
         }
-        const h = this.#lastTelemetry?.hyper;
-        if (typeof h === "number") {
+        const hyperVolumeValue = this.#lastTelemetry?.hyper;
+        if (typeof hyperVolumeValue === "number") {
           this.#hypervolumeHistory = MazeUtils.pushHistory(
             this.#hypervolumeHistory,
-            h,
+            hyperVolumeValue,
             _DashboardManager.HISTORY_MAX
           );
         }
-        const prog = this.#currentBest?.result?.progress;
-        if (typeof prog === "number") {
+        const progressValue = this.#currentBest?.result?.progress;
+        if (typeof progressValue === "number") {
           this.#progressHistory = MazeUtils.pushHistory(
             this.#progressHistory,
-            prog,
+            progressValue,
             _DashboardManager.HISTORY_MAX
           );
         }
-        const sc = this.#lastTelemetry?.species;
-        if (typeof sc === "number") {
+        const speciesCountValue = this.#lastTelemetry?.species;
+        if (typeof speciesCountValue === "number") {
           this.#speciesCountHistory = MazeUtils.pushHistory(
             this.#speciesCountHistory,
-            sc,
+            speciesCountValue,
             _DashboardManager.HISTORY_MAX
           );
         }
@@ -15244,7 +15281,7 @@
           generation,
           bestFitness: this.#lastBestFitness,
           progress: this.#currentBest?.result?.progress ?? null,
-          speciesCount: _DashboardManager.#last(this.#speciesCountHistory) ?? null,
+          speciesCount: this.#speciesCountHistory.at(-1) ?? null,
           gensPerSec: +gensPerSec.toFixed(3),
           timestamp: Date.now(),
           // wall-clock timestamp for consumers
@@ -15274,6 +15311,7 @@
     /**
      * Return the most recent telemetry snapshot including rich details.
      * Details may be null if not yet populated.
+     * @returns Snapshot object with generation, fitness, progress and detail block.
      */
     getLastTelemetry() {
       const elapsedMs = this.#perfStart != null && typeof performance !== "undefined" ? performance.now() - this.#perfStart : this.#runStartTs ? Date.now() - this.#runStartTs : 0;
@@ -15297,6 +15335,9 @@
      * several telemetry-derived stats. The function uses `logFunction` for all
      * output lines so the same renderer can be used both in Node and in the
      * browser (DOM adapter).
+     * @param currentMaze The maze currently being evolved.
+     * @param neat Optional NEAT implementation instance for population-level stats.
+     * @returns void
      */
     redraw(currentMaze, neat) {
       this.#clearFn();
@@ -15350,33 +15391,13 @@
             "\u2550"
           )}${colors.blueCore}\u2563${colors.reset}`
         );
-        this.#logFn(
-          `${colors.blueCore}\u2551${NetworkVisualization.pad(
-            " ",
-            _DashboardManager.FRAME_INNER_WIDTH,
-            " "
-          )}${colors.blueCore}\u2551${colors.reset}`
-        );
-        this.#logFn(
-          `${colors.blueCore}\u2551${NetworkVisualization.pad(
-            " ",
-            _DashboardManager.FRAME_INNER_WIDTH,
-            " "
-          )}${colors.blueCore}\u2551${colors.reset}`
-        );
+        this.logBlank();
+        this.logBlank();
         this.#logFn(
           NetworkVisualization.visualizeNetworkSummary(this.#currentBest.network)
         );
-        this.#logFn(
-          `${colors.blueCore}\u2551${NetworkVisualization.pad(
-            " ",
-            _DashboardManager.FRAME_INNER_WIDTH,
-            " "
-          )}${colors.blueCore}\u2551${colors.reset}`
-        );
-        const lastPos = _DashboardManager.#last(
-          this.#currentBest.result.path
-        ) ?? [0, 0];
+        this.logBlank();
+        const lastPos = this.#currentBest.result.path?.at(-1) ?? [0, 0];
         const currentMazeVisualization = MazeVisualization.visualizeMaze(
           currentMaze,
           lastPos ?? [0, 0],
@@ -15390,40 +15411,16 @@
             " "
           )}${colors.blueCore}\u2551`
         ).join("\n");
-        this.#logFn(
-          `${colors.blueCore}\u2551${NetworkVisualization.pad(
-            " ",
-            _DashboardManager.FRAME_INNER_WIDTH,
-            " "
-          )}${colors.blueCore}\u2551${colors.reset}`
-        );
+        this.logBlank();
         this.#logFn(centeredCurrentMaze);
-        this.#logFn(
-          `${colors.blueCore}\u2551${NetworkVisualization.pad(
-            " ",
-            _DashboardManager.FRAME_INNER_WIDTH,
-            " "
-          )}${colors.blueCore}\u2551${colors.reset}`
-        );
-        this.#logFn(
-          `${colors.blueCore}\u2551${NetworkVisualization.pad(
-            " ",
-            _DashboardManager.FRAME_INNER_WIDTH,
-            " "
-          )}${colors.blueCore}\u2551${colors.reset}`
-        );
+        this.logBlank();
+        this.logBlank();
         MazeVisualization.printMazeStats(
           this.#currentBest,
           currentMaze,
           this.#logFn
         );
-        this.#logFn(
-          `${colors.blueCore}\u2551${NetworkVisualization.pad(
-            " ",
-            _DashboardManager.FRAME_INNER_WIDTH,
-            " "
-          )}${colors.blueCore}\u2551${colors.reset}`
-        );
+        this.logBlank();
         this.#logFn(
           `${colors.blueCore}\u2551${NetworkVisualization.pad(
             " ",
@@ -15461,7 +15458,7 @@
       const diversity = last?.diversity;
       const mutationStats = last?.mutationStats || last?.mutation?.stats;
       const bestFitness = this.#currentBest?.result?.fitness;
-      const fmtNum = (v, digits = 2) => typeof v === "number" && isFinite(v) ? v.toFixed(digits) : "-";
+      const fmtNum = (numericValue, digits = 2) => typeof numericValue === "number" && isFinite(numericValue) ? numericValue.toFixed(digits) : "-";
       const deltaArrow = (curr, prev) => {
         if (curr == null || prev == null) return "";
         const diff = curr - prev;
@@ -15480,16 +15477,21 @@
         neat.population.forEach((g) => {
           if (typeof g.score === "number") scores.push(g.score);
           if (Array.isArray(g.connections)) {
-            g.connections.forEach((c) => {
+            g.connections.forEach((connection) => {
               total++;
-              if (c.enabled !== false) enabled++;
+              if (connection.enabled !== false) enabled++;
             });
           }
         });
         if (scores.length) {
-          const sum = scores.reduce((a, b) => a + b, 0);
+          const sum = scores.reduce(
+            (runningTotal, scoreValue) => runningTotal + scoreValue,
+            0
+          );
           popMean = (sum / scores.length).toFixed(2);
-          const sorted = scores.toSorted((a, b) => a - b);
+          const sorted = [...scores].sort(
+            (leftScore, rightScore) => leftScore - rightScore
+          );
           const mid = Math.floor(sorted.length / 2);
           popMedian = (sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid]).toFixed(2);
         }
@@ -15497,7 +15499,7 @@
         speciesCount = Array.isArray(neat.species) ? neat.species.length.toString() : speciesCount;
       }
       const firstFrontSize = fronts?.[0]?.length || 0;
-      const SPARK_WIDTH = 64;
+      const SPARK_WIDTH = _DashboardManager.#GENERAL_SPARK_WIDTH;
       const spark = this.buildSparkline(this.#bestFitnessHistory, SPARK_WIDTH);
       const sparkComplexityNodes = this.buildSparkline(
         this.#complexityNodesHistory,
@@ -15540,16 +15542,16 @@
           try {
             const ops = neat.getOperatorStats();
             if (Array.isArray(ops) && ops.length) {
-              const sortedOps = ops.toSorted(
-                (a, b) => b.success / Math.max(1, b.attempts) - a.success / Math.max(1, a.attempts)
+              const sortedOps = [...ops].sort(
+                (leftOp, rightOp) => rightOp.success / Math.max(1, rightOp.attempts) - leftOp.success / Math.max(1, leftOp.attempts)
               );
               operatorAcceptance = [];
               const take = Math.min(6, sortedOps.length);
               for (let i = 0; i < take; i++) {
-                const o = sortedOps[i];
+                const opStats = sortedOps[i];
                 operatorAcceptance.push({
-                  name: o.name,
-                  acceptancePct: +(100 * o.success / Math.max(1, o.attempts)).toFixed(2)
+                  name: opStats.name,
+                  acceptancePct: +(100 * opStats.success / Math.max(1, opStats.attempts)).toFixed(2)
                 });
               }
             }
@@ -15561,16 +15563,19 @@
           try {
             {
               const entries = Object.entries(mutationStats).filter(
-                ([k, v]) => typeof v === "number"
+                ([mutationKey, mutationValue]) => typeof mutationValue === "number"
               );
-              const sortedEntries = entries.toSorted(
-                (a, b) => b[1] - a[1]
+              const sortedEntries = [...entries].sort(
+                (leftEntry, rightEntry) => rightEntry[1] - leftEntry[1]
               );
               topMutations = [];
               const takeM = Math.min(8, sortedEntries.length);
               for (let i = 0; i < takeM; i++) {
-                const [k, v] = sortedEntries[i];
-                topMutations.push({ name: k, count: v });
+                const [mutationName, mutationCount] = sortedEntries[i];
+                topMutations.push({
+                  name: mutationName,
+                  count: mutationCount
+                });
               }
             }
           } catch {
@@ -15578,7 +15583,9 @@
         }
         const topSpeciesSizes = Array.isArray(neat?.species) ? (() => {
           const sizes = neat.species.map((s) => s.members?.length || 0);
-          const sortedSizes = sizes.toSorted((a, b) => b - a);
+          const sortedSizes = [...sizes].sort(
+            (sizeA, sizeB) => sizeB - sizeA
+          );
           const out = [];
           const takeS = Math.min(5, sortedSizes.length);
           for (let i = 0; i < takeS; i++) out.push(sortedSizes[i]);
@@ -15590,7 +15597,7 @@
           bestFitness: typeof bestFitness === "number" ? bestFitness : null,
           bestFitnessDelta: (() => {
             if (typeof bestFitness !== "number") return null;
-            const prev = this.#bestFitnessHistory.length > 1 ? this.#bestFitnessHistory[this.#bestFitnessHistory.length - 2] : null;
+            const prev = this.#bestFitnessHistory.at(-2) ?? null;
             if (prev == null) return null;
             const diff = bestFitness - prev;
             return +diff.toFixed(3);
@@ -15624,71 +15631,42 @@
             species: sparkSpecies || null
           },
           histories: {
-            bestFitness: (() => {
-              const arr = [];
-              const start2 = Math.max(0, this.#bestFitnessHistory.length - 200);
-              for (let i = start2; i < this.#bestFitnessHistory.length; i++)
-                arr.push(this.#bestFitnessHistory[i]);
-              return arr;
-            })(),
-            nodes: (() => {
-              const arr = [];
-              const start2 = Math.max(
-                0,
-                this.#complexityNodesHistory.length - 200
-              );
-              for (let i = start2; i < this.#complexityNodesHistory.length; i++)
-                arr.push(this.#complexityNodesHistory[i]);
-              return arr;
-            })(),
-            conns: (() => {
-              const arr = [];
-              const start2 = Math.max(
-                0,
-                this.#complexityConnsHistory.length - 200
-              );
-              for (let i = start2; i < this.#complexityConnsHistory.length; i++)
-                arr.push(this.#complexityConnsHistory[i]);
-              return arr;
-            })(),
-            hyper: (() => {
-              const arr = [];
-              const start2 = Math.max(0, this.#hypervolumeHistory.length - 200);
-              for (let i = start2; i < this.#hypervolumeHistory.length; i++)
-                arr.push(this.#hypervolumeHistory[i]);
-              return arr;
-            })(),
-            progress: (() => {
-              const arr = [];
-              const start2 = Math.max(0, this.#progressHistory.length - 200);
-              for (let i = start2; i < this.#progressHistory.length; i++)
-                arr.push(this.#progressHistory[i]);
-              return arr;
-            })(),
-            species: (() => {
-              const arr = [];
-              const start2 = Math.max(0, this.#speciesCountHistory.length - 200);
-              for (let i = start2; i < this.#speciesCountHistory.length; i++)
-                arr.push(this.#speciesCountHistory[i]);
-              return arr;
-            })()
+            bestFitness: this.sliceHistoryForExport(this.#bestFitnessHistory),
+            nodes: this.sliceHistoryForExport(this.#complexityNodesHistory),
+            conns: this.sliceHistoryForExport(this.#complexityConnsHistory),
+            hyper: this.sliceHistoryForExport(this.#hypervolumeHistory),
+            progress: this.sliceHistoryForExport(this.#progressHistory),
+            species: this.sliceHistoryForExport(this.#speciesCountHistory)
           },
           timestamp: Date.now()
         };
       } catch {
       }
-      this.#logFn(
-        `${colors.blueCore}\u2551${NetworkVisualization.pad(
-          " ",
-          _DashboardManager.FRAME_INNER_WIDTH,
-          " "
-        )}${colors.blueCore}\u2551${colors.reset}`
-      );
+      this.logBlank();
     }
     reset() {
       this.#solvedMazes = [];
       this.#solvedMazeKeys.clear();
       this.#currentBest = null;
+    }
+    /**
+     * Return the last export window slice of a numeric history (immutable copy).
+     * @param history Source numeric history buffer.
+     * @returns New array containing up to HISTORY_EXPORT_WINDOW most recent samples.
+     */
+    sliceHistoryForExport(history) {
+      if (!history.length) return [];
+      const startIndex = Math.max(
+        0,
+        history.length - _DashboardManager.#HISTORY_EXPORT_WINDOW
+      );
+      if (startIndex === 0) return history.slice();
+      const outLength = history.length - startIndex;
+      const out = new Array(outLength);
+      for (let i = 0; i < outLength; i++) {
+        out[i] = history[startIndex + i];
+      }
+      return out;
     }
   };
 
@@ -16478,7 +16456,10 @@
           const overConfident = actionStats.maxProb > _MazeMovement.#OVERCONFIDENT_PROB && actionStats.secondProb < _MazeMovement.#SECOND_PROB_LOW;
           const logitsMean = outputs.reduce((s, v) => s + v, 0) / _MazeMovement.#ACTION_DIM;
           let logVar = 0;
-          for (const o of outputs) logVar += Math.pow(o - logitsMean, 2);
+          for (const o of outputs) {
+            const delta = o - logitsMean;
+            logVar += delta * delta;
+          }
           logVar /= _MazeMovement.#ACTION_DIM;
           const logStd = Math.sqrt(logVar);
           const flatCollapsed = logStd < _MazeMovement.#LOGSTD_FLAT_THRESHOLD;
@@ -16922,8 +16903,6 @@
      * @remarks Non-reentrant: reused across telemetry calls.
      */
     static #SCRATCH_COUNTS = new Int32Array(4);
-    /** Packed visited coordinate buffer for exploration stats (x<<16|y). @remarks Non-reentrant */
-    static #SCRATCH_VISITED = new Int32Array(512);
     /**
      * Open-address hash table for visited coordinate detection (pairs packed into 32-bit int).
      * Length is always a power of two; uses linear probing. A value of 0 represents EMPTY so we offset packed values by +1.
@@ -17013,6 +16992,8 @@
       snapshot: 0,
       prune: 0
     };
+    /** Small fixed-size visited table for tiny path exploration (<32) to avoid O(n^2) duplicate scan. */
+    static #SMALL_EXPLORE_TABLE = new Int32Array(64);
     static #PROFILE_T0() {
       return globalThis.performance?.now?.() ?? Date.now();
     }
@@ -17020,11 +17001,22 @@
       if (!_EvolutionEngine.#PROFILE_ENABLED) return;
       _EvolutionEngine.#PROFILE_ACCUM[key] = (_EvolutionEngine.#PROFILE_ACCUM[key] || 0) + delta;
     }
-    /** Fast LCG producing float in [0,1). Non-crypto. @internal */
+    /** RNG cache (batched 4 draws) to amortize state writes in tight loops. */
+    static #RNG_CACHE = new Float64Array(4);
+    static #RNG_CACHE_INDEX = 4;
+    // force initial refill
+    /** Fast LCG producing float in [0,1). Non-crypto. Uses 4-value batch cache. @internal */
     static #fastRandom() {
-      let state = _EvolutionEngine.#RNG_STATE * 1664525 + 1013904223 >>> 0;
-      _EvolutionEngine.#RNG_STATE = state;
-      return (state >>> 9) * (1 / 8388608);
+      if (_EvolutionEngine.#RNG_CACHE_INDEX >= 4) {
+        let state = _EvolutionEngine.#RNG_STATE >>> 0;
+        for (let fillIndex = 0; fillIndex < 4; fillIndex++) {
+          state = state * 1664525 + 1013904223 >>> 0;
+          _EvolutionEngine.#RNG_CACHE[fillIndex] = (state >>> 9) * (1 / 8388608);
+        }
+        _EvolutionEngine.#RNG_STATE = state >>> 0;
+        _EvolutionEngine.#RNG_CACHE_INDEX = 0;
+      }
+      return _EvolutionEngine.#RNG_CACHE[_EvolutionEngine.#RNG_CACHE_INDEX++];
     }
     /** Default tail history size used by telemetry */
     static #RECENT_WINDOW = 40;
@@ -17164,17 +17156,6 @@
       map[(-1 + 1) * 3 + (0 + 1)] = 3;
       return map;
     })();
-    /** Map a delta vector (dx,dy) to a direction index 0..3 (N,E,S,W) or -1 if unknown. @internal */
-    static #directionIndexFromDelta(deltaX, deltaY) {
-      if (deltaX === 0) {
-        if (deltaY === -1) return 0;
-        if (deltaY === 1) return 2;
-      } else if (deltaY === 0) {
-        if (deltaX === 1) return 1;
-        if (deltaX === -1) return 3;
-      }
-      return -1;
-    }
     /**
      * Populate internal node index scratch with indices of nodes of given type.
      * Returns the count of matching nodes.
@@ -17205,29 +17186,31 @@
       const pathLength = path2?.length || 0;
       if (!pathLength) return { unique: 0, pathLen: 0, ratio: 0 };
       if (pathLength < 32) {
-        if (pathLength > _EvolutionEngine.#SCRATCH_VISITED.length) {
-          const nextSize = 1 << Math.ceil(Math.log2(pathLength));
-          _EvolutionEngine.#SCRATCH_VISITED = new Int32Array(nextSize);
-        }
-        const visitedBuffer = _EvolutionEngine.#SCRATCH_VISITED;
-        let uniqueCountSmall = 0;
-        for (let pi = 0; pi < pathLength; pi++) {
-          const cp = path2[pi];
-          const packed = (cp[0] & 65535) << 16 | cp[1] & 65535;
-          let dup = false;
-          for (let si = 0; si < uniqueCountSmall; si++) {
-            if (visitedBuffer[si] === packed) {
-              dup = true;
+        const table2 = _EvolutionEngine.#SMALL_EXPLORE_TABLE;
+        table2.fill(0);
+        let distinctTiny = 0;
+        const maskTiny = table2.length - 1;
+        for (let pathIndex = 0; pathIndex < pathLength; pathIndex++) {
+          const point = path2[pathIndex];
+          const packed = (point[0] & 65535) << 16 | point[1] & 65535;
+          let h = Math.imul(packed, 2654435761) >>> 0;
+          const storeVal = packed + 1 | 0;
+          while (true) {
+            const slot = h & maskTiny;
+            const v = table2[slot];
+            if (v === 0) {
+              table2[slot] = storeVal;
+              distinctTiny++;
               break;
             }
+            if (v === storeVal) break;
+            h = h + 1 | 0;
           }
-          if (!dup) visitedBuffer[uniqueCountSmall++] = packed;
         }
-        const ratioSmall = uniqueCountSmall ? uniqueCountSmall / pathLength : 0;
         return {
-          unique: uniqueCountSmall,
+          unique: distinctTiny,
           pathLen: pathLength,
-          ratio: ratioSmall
+          ratio: distinctTiny ? distinctTiny / pathLength : 0
         };
       }
       const targetCap = pathLength << 1;
@@ -17739,18 +17722,15 @@
         }
         if (outCount === 0) return;
         let mean = 0;
-        for (let oi = 0; oi < outCount; oi++) {
-          mean += nodes[_EvolutionEngine.#SCRATCH_NODE_IDX[oi]].bias;
+        let M2 = 0;
+        for (let outIndex = 0; outIndex < outCount; outIndex++) {
+          const b = nodes[_EvolutionEngine.#SCRATCH_NODE_IDX[outIndex]].bias;
+          const n = outIndex + 1;
+          const delta = b - mean;
+          mean += delta / n;
+          M2 += delta * (b - mean);
         }
-        mean /= outCount;
-        let varc = 0;
-        for (let oi = 0; oi < outCount; oi++) {
-          const b = nodes[_EvolutionEngine.#SCRATCH_NODE_IDX[oi]].bias;
-          const d = b - mean;
-          varc += d * d;
-        }
-        varc /= outCount;
-        const std = Math.sqrt(varc);
+        const std = outCount ? Math.sqrt(M2 / outCount) : 0;
         for (let oi = 0; oi < outCount; oi++) {
           const idx = _EvolutionEngine.#SCRATCH_NODE_IDX[oi];
           nodes[idx].bias = Math.max(-5, Math.min(5, nodes[idx].bias - mean));
@@ -17916,7 +17896,10 @@
     /** Compute directional action entropy and unique move count from a path. @internal */
     static #computeActionEntropy(pathArr) {
       const counts = _EvolutionEngine.#SCRATCH_COUNTS;
-      counts.fill(0);
+      counts[0] = 0;
+      counts[1] = 0;
+      counts[2] = 0;
+      counts[3] = 0;
       let totalMoves = 0;
       const dirMap = _EvolutionEngine.#DIR_DELTA_TO_INDEX;
       for (let pathIndex = 1; pathIndex < pathArr.length; pathIndex++) {
@@ -18018,7 +18001,10 @@
           M33 += term1 * delta_n * (n - 2) - 3 * delta_n * M23;
           M23 += term1;
           mean3 += delta_n;
-          entropyAggregate += _EvolutionEngine.#softmaxEntropyFromVector(vec, _EvolutionEngine.#SCRATCH_EXPS);
+          entropyAggregate += _EvolutionEngine.#softmaxEntropyFromVector(
+            vec,
+            _EvolutionEngine.#SCRATCH_EXPS
+          );
         }
         meansBuf[0] = mean0;
         meansBuf[1] = mean1;
@@ -18052,7 +18038,10 @@
             m2Buf[dimIndex] += term1;
             meansBuf[dimIndex] += delta_n;
           }
-          entropyAggregate += _EvolutionEngine.#softmaxEntropyFromVector(vec, _EvolutionEngine.#SCRATCH_EXPS);
+          entropyAggregate += _EvolutionEngine.#softmaxEntropyFromVector(
+            vec,
+            _EvolutionEngine.#SCRATCH_EXPS
+          );
         }
         for (let dimIndex = 0; dimIndex < actionDim; dimIndex++) {
           const variance = m2Buf[dimIndex] / stepCount;
@@ -18138,7 +18127,7 @@
             const clone = parent.clone ? parent.clone() : parent;
             const mutateCount = 1 + (_EvolutionEngine.#fastRandom() < _EvolutionEngine.#DEFAULT_HALF_PROB ? 1 : 0);
             try {
-              const mutOps = neat.options.mutation || [];
+              const mutOps = _EvolutionEngine.#getMutationOps(neat);
               const opLen = mutOps.length | 0;
               if (opLen) {
                 if (_EvolutionEngine.#SCRATCH_MUTOP_IDX.length < opLen) {
@@ -18149,14 +18138,33 @@
                 for (let fillIndex = 0; fillIndex < opLen; fillIndex++)
                   idxBuf[fillIndex] = fillIndex;
                 const applyCount = Math.min(mutateCount, opLen);
-                for (let sel = 0; sel < applyCount; sel++) {
+                if (applyCount > 0) {
+                  const r0 = _EvolutionEngine.#fastRandom() * opLen | 0;
+                  const tmp0 = idxBuf[0];
+                  idxBuf[0] = idxBuf[r0];
+                  idxBuf[r0] = tmp0;
+                  try {
+                    clone.mutate(mutOps[idxBuf[0]]);
+                  } catch {
+                  }
+                }
+                if (applyCount > 1) {
+                  const r1 = 1 + (_EvolutionEngine.#fastRandom() * (opLen - 1) | 0);
+                  const tmp1 = idxBuf[1];
+                  idxBuf[1] = idxBuf[r1];
+                  idxBuf[r1] = tmp1;
+                  try {
+                    clone.mutate(mutOps[idxBuf[1]]);
+                  } catch {
+                  }
+                }
+                for (let sel = 2; sel < applyCount; sel++) {
                   const r = sel + (_EvolutionEngine.#fastRandom() * (opLen - sel) | 0);
                   const tmp = idxBuf[sel];
                   idxBuf[sel] = idxBuf[r];
                   idxBuf[r] = tmp;
-                  const op = mutOps[idxBuf[sel]];
                   try {
-                    clone.mutate(op);
+                    clone.mutate(mutOps[idxBuf[sel]]);
                   } catch {
                   }
                 }
@@ -18329,6 +18337,20 @@
         }
       }
       return idx;
+    }
+    /** Cached reference to mutation ops array (invalidated if reference changes). */
+    static #CACHED_MUTATION_OPS = null;
+    /** Return cached mutation operations array to avoid repeated options lookup in hot paths. @internal */
+    static #getMutationOps(neat) {
+      try {
+        const current = neat?.options?.mutation;
+        if (current && _EvolutionEngine.#CACHED_MUTATION_OPS !== current) {
+          _EvolutionEngine.#CACHED_MUTATION_OPS = current;
+        }
+        return _EvolutionEngine.#CACHED_MUTATION_OPS || [];
+      } catch {
+        return [];
+      }
     }
     /**
      * Ensure all output nodes use identity activation so caller can apply softmax externally.
@@ -18514,18 +18536,15 @@
         );
         if (outCount > 0) {
           let mean = 0;
-          for (let oi = 0; oi < outCount; oi++) {
-            mean += nodesRef[_EvolutionEngine.#SCRATCH_NODE_IDX[oi]].bias;
+          let M2 = 0;
+          for (let outIndex = 0; outIndex < outCount; outIndex++) {
+            const b = nodesRef[_EvolutionEngine.#SCRATCH_NODE_IDX[outIndex]].bias;
+            const n = outIndex + 1;
+            const delta = b - mean;
+            mean += delta / n;
+            M2 += delta * (b - mean);
           }
-          mean /= outCount;
-          let varc = 0;
-          for (let oi = 0; oi < outCount; oi++) {
-            const b = nodesRef[_EvolutionEngine.#SCRATCH_NODE_IDX[oi]].bias;
-            const d = b - mean;
-            varc += d * d;
-          }
-          varc /= outCount;
-          const std = Math.sqrt(varc);
+          const std = outCount ? Math.sqrt(M2 / outCount) : 0;
           for (let oi = 0; oi < outCount; oi++) {
             const idx = _EvolutionEngine.#SCRATCH_NODE_IDX[oi];
             let adjusted = nodesRef[idx].bias - mean;
@@ -18904,13 +18923,23 @@
       const srcLen = src.length || 0;
       if (srcLen === 0) return 0;
       const writeCount = Math.min(sampleCount, maxBuf.length);
-      for (let wi = 0; wi < writeCount; wi++) {
-        maxBuf[wi] = src[_EvolutionEngine.#fastRandom() * srcLen | 0];
+      let wi = 0;
+      const fastRand = _EvolutionEngine.#fastRandom;
+      const bound = writeCount & ~3;
+      while (wi < bound) {
+        maxBuf[wi++] = src[fastRand() * srcLen | 0];
+        maxBuf[wi++] = src[fastRand() * srcLen | 0];
+        maxBuf[wi++] = src[fastRand() * srcLen | 0];
+        maxBuf[wi++] = src[fastRand() * srcLen | 0];
+      }
+      while (wi < writeCount) {
+        maxBuf[wi++] = src[fastRand() * srcLen | 0];
       }
       return writeCount;
     }
     /**
      * Sample up to k items (with replacement) from src segment [segmentStart, end) into scratch buffer.
+     * Avoids temporary slice allocation for segment sampling.
      * @internal
      */
     static #sampleSegmentIntoScratch(src, segmentStart, k) {
@@ -18921,9 +18950,18 @@
       if (segLen <= 0) return 0;
       const maxBuf = _EvolutionEngine.#SCRATCH_SAMPLE;
       const writeCount = Math.min(Math.floor(k), maxBuf.length);
-      for (let wi = 0; wi < writeCount; wi++) {
-        const pick = _EvolutionEngine.#fastRandom() * segLen | 0;
-        maxBuf[wi] = src[segmentStart + pick];
+      let wi = 0;
+      const fastRand = _EvolutionEngine.#fastRandom;
+      const base = segmentStart;
+      const bound = writeCount & ~3;
+      while (wi < bound) {
+        maxBuf[wi++] = src[base + (fastRand() * segLen | 0)];
+        maxBuf[wi++] = src[base + (fastRand() * segLen | 0)];
+        maxBuf[wi++] = src[base + (fastRand() * segLen | 0)];
+        maxBuf[wi++] = src[base + (fastRand() * segLen | 0)];
+      }
+      while (wi < writeCount) {
+        maxBuf[wi++] = src[base + (fastRand() * segLen | 0)];
       }
       return writeCount;
     }
@@ -19170,22 +19208,18 @@
           );
           const outsLen = outs.length;
           if (outsLen >= 2) {
-            const wbuf = _EvolutionEngine.#SCRATCH_EXPS;
-            let sumW = 0;
-            const len = Math.min(outsLen, wbuf.length);
-            for (let wi = 0; wi < len; wi++) {
-              const w = Math.abs(outs[wi].weight);
-              wbuf[wi] = w;
-              sumW += w;
+            const limit = Math.min(outsLen, _EvolutionEngine.#SCRATCH_EXPS.length);
+            let mean = 0;
+            let M2 = 0;
+            for (let wi = 0; wi < limit; wi++) {
+              const w = Math.abs(outs[wi].weight) || 0;
+              const n = wi + 1;
+              const delta = w - mean;
+              mean += delta / n;
+              M2 += delta * (w - mean);
             }
-            const mean = sumW / len;
-            let varc = 0;
-            for (let wi = 0; wi < len; wi++) {
-              const d = wbuf[wi] - mean;
-              varc += d * d;
-            }
-            varc /= len;
-            if (mean < 0.5 && varc < _EvolutionEngine.#NUMERIC_EPSILON_SMALL) {
+            const variance = limit ? M2 / limit : 0;
+            if (mean < 0.5 && variance < _EvolutionEngine.#NUMERIC_EPSILON_SMALL) {
               const disableCount = Math.max(1, Math.floor(outsLen / 2));
               const flags = _EvolutionEngine.#SCRATCH_NODE_IDX;
               for (let fi = 0; fi < outsLen; fi++) flags[fi] = 0;
@@ -19232,13 +19266,18 @@
         const eliteCount = neat.options.elitism || 0;
         const pop = neat.population || [];
         const reinitBuf = _EvolutionEngine.#SCRATCH_SAMPLE;
-        const nonElite = pop.slice(eliteCount || 0);
+        const nonEliteStart = eliteCount | 0;
+        const nonEliteLen = pop.length - nonEliteStart;
         const targetK = Math.min(
-          nonElite.length,
-          Math.floor(nonElite.length * 0.3),
+          nonEliteLen,
+          Math.floor(nonEliteLen * 0.3),
           reinitBuf.length
         );
-        const reinitLen = _EvolutionEngine.#sampleIntoScratch(nonElite, targetK);
+        const reinitLen = _EvolutionEngine.#sampleSegmentIntoScratch(
+          pop,
+          nonEliteStart,
+          targetK
+        );
         let connReset = 0, biasReset = 0;
         for (let rti = 0; rti < reinitLen; rti++) {
           const g = reinitBuf[rti];
@@ -19598,7 +19637,9 @@
           const det = _EvolutionEngine.#PROFILE_ACCUM;
           const denom = gen || 1;
           safeWrite(
-            `[PROFILE_DETAIL] avgTelemetry=${(det.telemetry / denom).toFixed(2)} avgSimplify=${(det.simplify / denom).toFixed(2)} avgSnapshot=${(det.snapshot / denom).toFixed(2)} avgPrune=${(det.prune / denom).toFixed(2)}
+            `[PROFILE_DETAIL] avgTelemetry=${(det.telemetry / denom).toFixed(
+              2
+            )} avgSimplify=${(det.simplify / denom).toFixed(2)} avgSnapshot=${(det.snapshot / denom).toFixed(2)} avgPrune=${(det.prune / denom).toFixed(2)}
 `
           );
         }
