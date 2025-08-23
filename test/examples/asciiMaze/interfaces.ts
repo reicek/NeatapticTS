@@ -73,6 +73,16 @@ export interface IEvolutionAlgorithmConfig {
   dynamicPopExpandInterval?: number;
   dynamicPopExpandFactor?: number;
   dynamicPopPlateauSlack?: number;
+  /** If true, enables deterministic RNG seeding (uses randomSeed if provided, else a fixed fallback). */
+  deterministic?: boolean;
+  /** Optional generation interval for memory compaction (removal of disabled connections). Default handled internally. */
+  memoryCompactionInterval?: number;
+  /** If true, reduces telemetry math (skip kurtosis / higher moments) to lower CPU + scratch usage. */
+  telemetryReduceStats?: boolean;
+  /** If true, disables higher-cost per-generation telemetry (entropy, logits, diversity, bias stats). */
+  telemetryMinimal?: boolean;
+  /** If true, skips Baldwinian refinement phase (post-evolve extra training of fittest). */
+  disableBaldwinianRefinement?: boolean;
 }
 
 /**
@@ -104,6 +114,8 @@ export interface IReportingConfig {
   logEvery?: number;
   dashboardManager: IDashboardManager;
   label?: string;
+  /** If true, evolution yields to the browser (requestAnimationFrame) after every generation for smoother UI. */
+  paceEveryGeneration?: boolean;
 }
 
 /**

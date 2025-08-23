@@ -175,10 +175,6 @@ export class MazeMovement {
   static #DEEP_STAGNATION_THRESHOLD = 40;
   /** Penalty applied when deep stagnation is detected (non-browser environments) */
   static #DEEP_STAGNATION_PENALTY = 2; // * rewardScale
-
-  // Near-miss penalty multiplier
-  /** Penalty multiplier for near-miss (reaching distance 1 to goal) */
-  static #NEAR_MISS_PENALTY = 30; // * rewardScale
   // Action/output dimension and softmax/entropy tuning
   /** Number of cardinal actions (N,E,S,W) */
   static #ACTION_DIM = 4;
@@ -194,10 +190,6 @@ export class MazeMovement {
    */
   static #SCRATCH_CENTERED = new Float64Array(4);
   static #SCRATCH_EXPS = new Float64Array(4);
-  /** Minimum path length required to compute action entropy */
-  static #MIN_PATH_FOR_ENTROPY = 2;
-  /** Minimum action total to avoid divide-by-zero fallbacks */
-  static #MIN_ACTION_TOTAL = 1;
   /** Representation for 'no move' direction */
   static #NO_MOVE = -1;
   /** Minimum standard deviation used to prevent division by zero */
@@ -259,10 +251,117 @@ export class MazeMovement {
     [-1, 0], // West
   ];
 
-  /** Return the nth element from the end (1-based). Undefined when not available. */
-  static #nthFromEnd<T>(arr: T[] | null | undefined, n: number): T | undefined {
-    if (!arr || arr.length < n) return undefined;
-    return arr[arr.length - n];
+  // ---------------------------------------------------------------------------
+  // Pooled / reusable typed-array buffers (non‑reentrant) for simulation state
+  // ---------------------------------------------------------------------------
+  /** Visited flag per cell (0/1). Reused across simulations. @remarks Non-reentrant. */
+  static #VisitedFlags: Uint8Array | null = null;
+  /** Visit counts per cell (clamped). @remarks Non-reentrant. */
+  static #VisitCounts: Uint16Array | null = null;
+  /** Path X coordinates (index-aligned with #PathY). */
+  static #PathX: Int32Array | null = null;
+  /** Path Y coordinates (index-aligned with #PathX). */
+  static #PathY: Int32Array | null = null;
+  /** Capacity (cells) currently allocated for grid‑dependent arrays. */
+  static #GridCapacity = 0;
+  /** Capacity (steps) currently allocated for path arrays. */
+  static #PathCapacity = 0;
+  /** Cached maze width for index calculations. */
+  static #CachedWidth = 0;
+  /** Cached maze height for bounds validation. */
+  static #CachedHeight = 0;
+
+  /** Pooled softmax output (returned as a cloned plain array). */
+  static #SOFTMAX = new Float64Array(4);
+
+  /** Seedable PRNG state (Mulberry32 style). Undefined => Math.random(). */
+  static #PRNGState: number | null = null;
+  /**
+   * Enable deterministic pseudo-randomness for simulations executed after this call.
+   *
+   * Uses a lightweight Mulberry32 generator so repeated runs with the same seed
+   * produce identical stochastic choices (epsilon exploration, tie‑breaking, etc.).
+   * Because internal buffers are shared, calls are not reentrant / thread‑safe.
+   *
+   * @param seed 32-bit unsigned integer seed. If 0 is provided a fixed default constant is used.
+   * @returns void
+   * @example
+   * // Ensure reproducible simulation ordering
+   * MazeMovement.seedDeterministic(1234);
+   * const result = MazeMovement.simulateAgent(network, maze, start, exit);
+   */
+  static seedDeterministic(seed: number): void {
+    MazeMovement.#PRNGState = seed >>> 0 || 0x9e3779b9;
+  }
+
+  /**
+   * Disable deterministic seeding and return to Math.random based randomness.
+   *
+   * @returns void
+   * @example
+   * MazeMovement.clearDeterministicSeed();
+   */
+  static clearDeterministicSeed(): void {
+    MazeMovement.#PRNGState = null;
+  }
+
+  /** Generate a random float in [0,1). Deterministic when seed set. */
+  static #rand(): number {
+    if (MazeMovement.#PRNGState == null) return Math.random();
+    // Mulberry32
+    let t = (MazeMovement.#PRNGState += 0x6d2b79f5);
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  }
+
+  /** Encode (x,y) -> linear cell index. */
+  static #index(x: number, y: number): number {
+    return y * MazeMovement.#CachedWidth + x;
+  }
+
+  /** Ensure pooled buffers sized for given maze & path. */
+  static #initBuffers(width: number, height: number, maxSteps: number) {
+    const cellCount = width * height;
+    // Grow grid buffers if needed (never shrink synchronously to preserve reuse)
+    if (!this.#VisitedFlags || cellCount > this.#GridCapacity) {
+      const nextCellCap = MazeMovement.#nextPow2(cellCount);
+      this.#VisitedFlags = new Uint8Array(nextCellCap);
+      this.#VisitCounts = new Uint16Array(nextCellCap);
+      this.#GridCapacity = nextCellCap;
+    } else {
+      // Fast clear only required portion (rest retains old zeros or stale data not addressed)
+      this.#VisitedFlags.fill(0, 0, cellCount);
+      this.#VisitCounts!.fill(0, 0, cellCount);
+    }
+    // Grow path buffers
+    if (!this.#PathX || maxSteps + 1 > this.#PathCapacity) {
+      const nextPathCap = MazeMovement.#nextPow2(maxSteps + 1);
+      this.#PathX = new Int32Array(nextPathCap);
+      this.#PathY = new Int32Array(nextPathCap);
+      this.#PathCapacity = nextPathCap;
+    }
+    this.#CachedWidth = width;
+    this.#CachedHeight = height;
+  }
+
+  /** Next power of two helper (>= n). */
+  static #nextPow2(n: number): number {
+    let p = 1;
+    while (p < n) p <<= 1;
+    return p;
+  }
+
+  /** Materialize the path arrays into an array<tuple>. */
+  static #materializePath(length: number): [number, number][] {
+    const out: [number, number][] = new Array(length);
+    for (let positionIndex = 0; positionIndex < length; positionIndex++) {
+      out[positionIndex] = [
+        MazeMovement.#PathX![positionIndex],
+        MazeMovement.#PathY![positionIndex],
+      ];
+    }
+    return out;
   }
 
   /** Return opposite cardinal direction (works for ACTION_DIM even if it changes) */
@@ -281,21 +380,14 @@ export class MazeMovement {
     return MazeMovement.#NO_MOVE;
   }
 
-  /**
-   * Return the last element of an array or undefined.
-   * Delegates to `MazeUtils.safeLast` to centralize boundary-safe trailing access.
-   * @internal
-   */
-  static #last<T>(arr?: T[] | null): T | undefined {
-    // Delegate to MazeUtils.safeLast to centralize trailing-element access
-    return MazeUtils.safeLast(arr as any) as T | undefined;
-  }
-
   /** Sum a contiguous group in the vision vector starting at `start`. */
   static #sumVisionGroup(vision: number[], start: number) {
-    return vision
-      .slice(start, start + MazeMovement.#VISION_GROUP_LEN)
-      .reduce((a, b) => a + b, 0);
+    // Manual unrolled/loop sum to avoid intermediate slice allocation (hot path)
+    let total = 0;
+    const end = start + MazeMovement.#VISION_GROUP_LEN;
+    for (let visionIndex = start; visionIndex < end; visionIndex++)
+      total += vision[visionIndex];
+    return total;
   }
 
   /**
@@ -327,7 +419,7 @@ export class MazeMovement {
   ): number {
     return Number.isFinite(distanceMap?.[y]?.[x])
       ? distanceMap![y][x]
-      : MazeUtils.bfsDistance(encodedMaze, [x, y], [x, y]);
+      : Infinity;
   }
 
   /**
@@ -464,10 +556,10 @@ export class MazeMovement {
     let direction = 0;
     let maxProb = -Infinity;
     let secondProb = 0;
-    const softmax: number[] = [0, 0, 0, 0];
+    const pooled = MazeMovement.#SOFTMAX; // pooled softmax output
     for (let k = 0; k < MazeMovement.#ACTION_DIM; k++) {
       const prob = MazeMovement.#SCRATCH_EXPS[k] / expSum;
-      softmax[k] = prob;
+      pooled[k] = prob;
       if (prob > maxProb) {
         secondProb = maxProb;
         maxProb = prob;
@@ -478,11 +570,19 @@ export class MazeMovement {
     }
     // Compute entropy (uncertainty measure)
     let entropy = 0;
-    softmax.forEach((prob) => {
+    for (let k = 0; k < MazeMovement.#ACTION_DIM; k++) {
+      const prob = pooled[k];
       if (prob > 0) entropy += -prob * Math.log(prob);
-    });
+    }
     entropy /= MazeMovement.#LOG_ACTIONS; // Normalize to [0,1]
-    return { direction, softmax, entropy, maxProb, secondProb };
+    // Return a copy so caller cannot mutate pooled buffer (educational safety)
+    return {
+      direction,
+      softmax: Array.from(pooled),
+      entropy,
+      maxProb,
+      secondProb,
+    };
   }
 
   /**
@@ -520,41 +620,41 @@ export class MazeMovement {
     saturationFraction?: number;
     actionEntropy?: number;
   } {
-    /**
-     * Current position of the agent [x, y]
-     * @type {[number, number]}
-     */
-    let position = [startPos[0], startPos[1]] as [number, number];
-    /**
-     * Number of steps taken so far
-     * @type {number}
-     */
+    // ---------------------------------------------------------------------
+    // Initialization & pooled buffer sizing
+    // ---------------------------------------------------------------------
+    const width = encodedMaze[0].length;
+    const height = encodedMaze.length;
+    MazeMovement.#initBuffers(width, height, maxSteps);
+    // Position (mutable tuple) & path start
+    const position = [startPos[0], startPos[1]] as [number, number];
     let steps = 0;
-    /**
-     * Path of positions visited by the agent
-     * @type {Array<[number, number]>}
-     */
-    let path = [[position[0], position[1]] as [number, number]];
-    /**
-     * Set of visited positions (as string keys)
-     * @type {Set<string>}
-     */
-    let visitedPositions = new Set<string>();
-    /**
-     * Map of visit counts per cell
-     * @type {Map<string, number>}
-     */
-    let visitCounts = new Map<string, number>();
-    /**
-     * Short-term memory for last N positions (for loop/oscillation detection)
-     * @type {string[]}
-     */
-    let moveHistory: string[] = [];
-    /**
-     * Number of positions to keep in moveHistory
-     * @type {number}
-     */
-    const MOVE_HISTORY_LENGTH = MazeMovement.#MOVE_HISTORY_LENGTH;
+    // Initialize path arrays (first element)
+    MazeMovement.#PathX![0] = position[0];
+    MazeMovement.#PathY![0] = position[1];
+    let pathLength = 1;
+    // Tracking unique visitation & revisit counts via typed arrays
+    let visitedUniqueCount = 0;
+    const visitedFlags = MazeMovement.#VisitedFlags!;
+    const visitCountsTA = MazeMovement.#VisitCounts!;
+    const pathX = MazeMovement.#PathX!;
+    const pathY = MazeMovement.#PathY!;
+    const cellCountForPct = width * height;
+    // Move history ring buffer (cell indices)
+    const historyCapacity = MazeMovement.#MOVE_HISTORY_LENGTH;
+    const moveHistoryRing = new Int32Array(historyCapacity);
+    let moveHistoryLength = 0;
+    let moveHistoryHead = 0; // points to next write position
+    const pushHistory = (cellIndex: number) => {
+      moveHistoryRing[moveHistoryHead] = cellIndex;
+      moveHistoryHead = (moveHistoryHead + 1) % historyCapacity;
+      if (moveHistoryLength < historyCapacity) moveHistoryLength++;
+    };
+    const nthFromHistoryEnd = (n: number): number | undefined => {
+      if (n > moveHistoryLength) return undefined;
+      const idx = (moveHistoryHead - n + historyCapacity) % historyCapacity;
+      return moveHistoryRing[idx];
+    };
     /**
      * Closest distance to exit found so far
      * @type {number}
@@ -627,61 +727,73 @@ export class MazeMovement {
      */
     let localAreaPenalty = 0;
 
+    // Direction counts for online entropy computation (avoid materializing path early)
+    const directionCounts = [0, 0, 0, 0];
+
+    // Helper: record visitation of current position
+    const recordVisit = () => {
+      const cellIndex = MazeMovement.#index(position[0], position[1]);
+      if (!visitedFlags[cellIndex]) {
+        visitedFlags[cellIndex] = 1;
+        visitedUniqueCount++;
+      }
+      // Clamp visit count silently (Uint16 rolls over at 65535—maze sizes tiny so fine)
+      visitCountsTA[cellIndex]++;
+      pushHistory(cellIndex);
+      return cellIndex;
+    };
+
+    // Record starting cell
+    recordVisit();
+
     // Main simulation loop: agent moves until maxSteps or exit is reached
     let lastProgressRatio = 0;
     while (steps < maxSteps) {
       steps++;
-
-      // --- Step 1: Record current position as visited ---
-      /**
-       * String key for the agent's current position
-       */
-      const currentPosKey = `${position[0]},${position[1]}`;
-      visitedPositions.add(currentPosKey);
-      visitCounts.set(currentPosKey, (visitCounts.get(currentPosKey) || 0) + 1);
-      // Record recent move into a small bounded history used for oscillation detection
-      moveHistory = MazeUtils.pushHistory(
-        moveHistory,
-        currentPosKey,
-        MOVE_HISTORY_LENGTH
-      );
+      // --- Step 1: Record current position as visited (typed arrays) ---
+      const currentCellIndex = recordVisit();
 
       // --- Step 2: Calculate percent of maze explored so far ---
-      /**
-       * Percent of maze explored so far
-       */
-      const percentExplored =
-        visitedPositions.size / (encodedMaze.length * encodedMaze[0].length);
+      // (Percent explored previously tracked; removed as unused for current shaping logic.)
 
       // --- Step 3: Oscillation/loop detection (A->B->A->B) ---
       /**
        * Penalty for oscillation/looping
        */
       let loopPenalty = 0;
-      if (moveHistory.length >= MazeMovement.#OSCILLATION_DETECT_LENGTH) {
-        const last = MazeMovement.#last(moveHistory)!;
-        const thirdLast = MazeMovement.#nthFromEnd(moveHistory, 3);
-        const secondLast = MazeMovement.#nthFromEnd(moveHistory, 2);
-        const fourthLast = MazeMovement.#nthFromEnd(moveHistory, 4);
-        if (last === thirdLast && secondLast === fourthLast) {
-          // detected A->B->A->B oscillation
-          loopPenalty -= MazeMovement.#LOOP_PENALTY * rewardScale; // Strong penalty for 2-step loop
+      if (moveHistoryLength >= MazeMovement.#OSCILLATION_DETECT_LENGTH) {
+        const last = nthFromHistoryEnd(1)!;
+        const thirdLast = nthFromHistoryEnd(3);
+        const secondLast = nthFromHistoryEnd(2);
+        const fourthLast = nthFromHistoryEnd(4);
+        if (
+          thirdLast !== undefined &&
+          secondLast !== undefined &&
+          fourthLast !== undefined &&
+          last === thirdLast &&
+          secondLast === fourthLast
+        ) {
+          loopPenalty -= MazeMovement.#LOOP_PENALTY * rewardScale;
         }
       }
       /**
        * Memory loop indicator input (1 if loop detected, else 0)
        */
-      const loopFlag = loopPenalty < 0 ? 1 : 0;
+      // loopFlag previously fed into vision; no longer required here.
 
       // --- Step 4: Penalty for returning to any cell in recent history ---
       /**
        * Penalty for returning to a cell in recent history
        */
       let memoryPenalty = 0;
-      if (moveHistory.length > 1) {
-        const idx = moveHistory.indexOf(currentPosKey);
-        if (idx !== -1 && idx < moveHistory.length - 1) {
-          memoryPenalty -= MazeMovement.#MEMORY_RETURN_PENALTY * rewardScale;
+      if (moveHistoryLength > 1) {
+        // Scan ring (excluding most recent) for duplicates -> return penalty
+        for (let scan = 2; scan <= moveHistoryLength; scan++) {
+          const idxVal = nthFromHistoryEnd(scan);
+          if (idxVal === currentCellIndex) {
+            memoryPenalty -= MazeMovement.#MEMORY_RETURN_PENALTY * rewardScale;
+            break;
+          }
         }
       }
 
@@ -693,7 +805,7 @@ export class MazeMovement {
       /**
        * Number of times the current cell has been visited
        */
-      const visits = visitCounts.get(currentPosKey) || 1;
+      const visits = visitCountsTA[currentCellIndex];
       if (visits > 1) {
         revisitPenalty -=
           MazeMovement.#REVISIT_PENALTY_PER_VISIT * (visits - 1) * rewardScale; // Penalty increases with each revisit
@@ -885,12 +997,12 @@ export class MazeMovement {
       // Suppress exploration when near goal to encourage completion
       if (distHere <= MazeMovement.#PROXIMITY_SUPPRESS_EXPLOR_DIST)
         epsilon = Math.min(epsilon, MazeMovement.#EPSILON_MIN_NEAR_GOAL);
-      if (Math.random() < epsilon) {
+      if (MazeMovement.#rand() < epsilon) {
         // pick a random valid direction differing from previous when possible
         // Instead of allocating filtered arrays, try a few random trials.
         for (let trial = 0; trial < MazeMovement.#ACTION_DIM; trial++) {
           const candidateDirection = Math.floor(
-            Math.random() * MazeMovement.#ACTION_DIM
+            MazeMovement.#rand() * MazeMovement.#ACTION_DIM
           );
           if (candidateDirection === prevAction) continue;
           const [ddx, ddy] = MazeMovement.#DIRECTION_DELTAS[candidateDirection];
@@ -916,7 +1028,7 @@ export class MazeMovement {
         // pick a random cardinal direction until a valid move found (epsilon-greedy style)
         for (let attempt = 0; attempt < MazeMovement.#ACTION_DIM; attempt++) {
           const candidateDirection = Math.floor(
-            Math.random() * MazeMovement.#ACTION_DIM
+            MazeMovement.#rand() * MazeMovement.#ACTION_DIM
           );
           const [ddx, ddy] = MazeMovement.#DIRECTION_DELTAS[candidateDirection];
           const tx = position[0] + ddx;
@@ -931,8 +1043,7 @@ export class MazeMovement {
 
       // Save previous state for reward calculation
       // Previous position before move (capture values to compare after in-place move)
-      const prevPositionX = position[0];
-      const prevPositionY = position[1];
+      // (Previous position variables removed – deltas inferred directly from path arrays / position.)
       /**
        * Previous distance to exit before move
        */
@@ -963,7 +1074,9 @@ export class MazeMovement {
 
       // Record movement and update rewards/penalties
       if (moved) {
-        path.push([position[0], position[1]] as [number, number]);
+        pathX[pathLength] = position[0];
+        pathY[pathLength] = position[1];
+        pathLength++;
         // Add to a small bounded window of recent positions used for local stagnation
         // detection. Use the shared helper to preserve in-place semantics and avoid
         // repeated O(n) shift() operations when trimming the head.
@@ -1063,6 +1176,9 @@ export class MazeMovement {
           newCellExplorationBonus -=
             MazeMovement.#REVISIT_PENALTY_STRONG * rewardScale; // Stronger penalty for revisiting
         }
+
+        // Update direction counts (entropy stats) using movement delta
+        if (direction >= 0) directionCounts[direction]++;
 
         // Track closest approach to exit
         minDistanceToExit = Math.min(minDistanceToExit, currentDistance);
@@ -1197,7 +1313,22 @@ export class MazeMovement {
         /**
          * Action entropy for the successful path
          */
-        const { actionEntropy } = MazeMovement.computeActionEntropy(path);
+        const actionEntropy = (() => {
+          let entropySum = 0;
+          const total =
+            directionCounts[0] +
+              directionCounts[1] +
+              directionCounts[2] +
+              directionCounts[3] || 1;
+          for (let di = 0; di < 4; di++) {
+            const c = directionCounts[di];
+            if (c) {
+              const p = c / total;
+              entropySum += -p * Math.log(p);
+            }
+          }
+          return entropySum / MazeMovement.#LOG_ACTIONS;
+        })();
         /**
          * Fitness score for successful completion
          */
@@ -1209,10 +1340,12 @@ export class MazeMovement {
           invalidMovePenalty +
           actionEntropy * MazeMovement.#SUCCESS_ACTION_ENTROPY_SCALE;
 
+        const pathMaterialized = MazeMovement.#materializePath(pathLength);
+
         return {
           success: true,
           steps,
-          path,
+          path: pathMaterialized,
           fitness: Math.max(MazeMovement.#MIN_SUCCESS_FITNESS, fitness),
           progress: 100,
           saturationFraction: steps ? saturatedSteps / steps : 0,
@@ -1225,7 +1358,10 @@ export class MazeMovement {
     /**
      * Progress percentage toward exit (0-100)
      */
-    const lastPos = MazeMovement.#last(path) ?? [0, 0];
+    const lastPos: [number, number] = [
+      pathX[pathLength - 1] ?? 0,
+      pathY[pathLength - 1] ?? 0,
+    ];
     const progress = distanceMap
       ? MazeUtils.calculateProgressFromDistanceMap(
           distanceMap,
@@ -1248,7 +1384,7 @@ export class MazeMovement {
     /**
      * Exploration score (number of unique cells visited)
      */
-    const explorationScore = visitedPositions.size * 1.0; // increase weight so exploration differentiates genomes
+    const explorationScore = visitedUniqueCount * 1.0; // increase weight so exploration differentiates genomes
     /**
      * Aggregated penalty
      */
@@ -1257,7 +1393,22 @@ export class MazeMovement {
     /**
      * Action entropy for the failed path
      */
-    const { actionEntropy } = MazeMovement.computeActionEntropy(path);
+    const actionEntropy = (() => {
+      const total =
+        directionCounts[0] +
+          directionCounts[1] +
+          directionCounts[2] +
+          directionCounts[3] || 1;
+      let entropySum = 0;
+      for (let di = 0; di < 4; di++) {
+        const c = directionCounts[di];
+        if (c) {
+          const p = c / total;
+          entropySum += -p * Math.log(p);
+        }
+      }
+      return entropySum / MazeMovement.#LOG_ACTIONS;
+    })();
     /**
      * Bonus for action entropy
      */
@@ -1270,14 +1421,7 @@ export class MazeMovement {
      */
     let saturationPenalty = 0;
     let outputVarPenalty = 0;
-    let nearMissPenalty = 0;
     const satFrac = steps ? saturatedSteps / steps : 0;
-
-    if (
-      minDistanceToExit ===
-      MazeMovement.#NEAR_MISS_PENALTY /* placeholder check kept for semantics */
-    )
-      nearMissPenalty -= MazeMovement.#NEAR_MISS_PENALTY * rewardScale;
 
     /**
      * Base fitness score before final adjustment
@@ -1291,64 +1435,21 @@ export class MazeMovement {
       entropyBonus +
       localAreaPenalty +
       saturationPenalty +
-      outputVarPenalty +
-      nearMissPenalty;
-    const raw = base + Math.random() * MazeMovement.#FITNESS_RANDOMNESS;
+      outputVarPenalty; // near-miss placeholder removed
+    const raw = base + MazeMovement.#rand() * MazeMovement.#FITNESS_RANDOMNESS;
     /**
      * Final fitness score (nonlinear squash for negatives)
      */
     const fitness = raw >= 0 ? raw : -Math.log1p(1 - raw);
+    const pathMaterialized = MazeMovement.#materializePath(pathLength);
     return {
       success: false,
       steps,
-      path,
+      path: pathMaterialized,
       fitness,
       progress,
       saturationFraction: satFrac,
       actionEntropy,
     };
-  }
-
-  /**
-   * Computes the entropy of the agent's action distribution from its path.
-   * Higher entropy means more diverse movement; lower means repetitive.
-   *
-   * @param path - Array of [x, y] positions visited by the agent.
-   * @returns {object} actionEntropy (0..1)
-   */
-  static computeActionEntropy(path: readonly [number, number][]) {
-    if (!path || path.length < this.#MIN_PATH_FOR_ENTROPY)
-      return { actionEntropy: 0 };
-    /**
-     * Counts of each direction taken (N, E, S, W)
-     * @type {number[]}
-     */
-    const directionCounts = [0, 0, 0, 0];
-    for (let stepIndex = 1; stepIndex < path.length; stepIndex++) {
-      const deltaX = path[stepIndex][0] - path[stepIndex - 1][0];
-      const deltaY = path[stepIndex][1] - path[stepIndex - 1][1];
-      // Map the delta to a direction index using the centralized deltas table
-      const dir = MazeMovement.#deltaToDirection(deltaX, deltaY);
-      if (dir >= 0 && dir < directionCounts.length) directionCounts[dir]++;
-    }
-    /**
-     * Total number of actions taken
-     */
-    const actionTotal =
-      directionCounts.reduce((acc, val) => acc + val, 0) ||
-      this.#MIN_ACTION_TOTAL;
-    let entropySum = 0;
-    directionCounts.forEach((count) => {
-      if (count > 0) {
-        const probability = count / actionTotal;
-        entropySum += -probability * Math.log(probability);
-      }
-    });
-    /**
-     * Normalized entropy of the action distribution (0=deterministic, 1=uniform)
-     * @type {number}
-     */
-    const actionEntropy = entropySum / this.#LOG_ACTIONS;
-    return { actionEntropy };
   }
 }

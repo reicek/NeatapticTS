@@ -9,10 +9,6 @@
 
 NeatapticTS is an open TypeScript library for constructing and evolving neural networks. It focuses on instructional clarity over micro‑optimised performance and is intended for readers who want to inspect how neuro‑evolutionary ideas (NEAT and related extensions) are implemented in practice.
 
-> Runtime & Module Format
->
-> This project is **100% native ESM** and targets the **ES2023** language baseline. You need **Node.js >= 20.0.0** (or a browser with equivalent ES2023 support) to run the code and tests. The published package has `"type": "module"`; there is no CommonJS build. If you require CJS interop, consume via dynamic `import()` inside CommonJS or build a compatibility layer externally.
-
 Key ES2023 features relied upon (examples): `Array.prototype.findLast`, `Array.prototype.toSorted`, `Object.hasOwn`, ergonomic brand checks, and stable top-level `await` through tooling. Polyfills for Node core modules are intentionally removed—Node 20 supplies all required built‑ins.
 
 If your environment is older than Node 20, upgrade or transpile with a custom toolchain; issues about missing ES2023 runtime features will be closed as environment unsupported.

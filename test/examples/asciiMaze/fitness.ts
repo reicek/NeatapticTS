@@ -13,6 +13,37 @@ import { IFitnessEvaluationContext } from './interfaces';
  * networks for reproduction. This class provides static methods, so it doesn't need to be instantiated.
  */
 export class FitnessEvaluator {
+  /** Base bonus applied for each unique (visited-once) cell, scaled by proximity. */
+  static #EXPLORATION_UNIQUE_CELL_BONUS = 200;
+  /** Proximity multiplier base (max factor when distance fraction is 0). */
+  static #PROXIMITY_MULTIPLIER_BASE = 1.5;
+  /** Proximity multiplier slope (value subtracted times normalized distance). */
+  static #PROXIMITY_MULTIPLIER_SLOPE = 0.5;
+  /** Fixed success bonus when the exit is reached. */
+  static #SUCCESS_BONUS = 5000;
+  /** Baseline efficiency bonus before subtracting overhead penalty. */
+  static #EFFICIENCY_BASE = 8000;
+  /** Scale factor converting path overhead percent into penalty. */
+  static #EFFICIENCY_PENALTY_SCALE = 80;
+
+  // --- Typed-array scratch buffers (non-reentrant) -------------------------
+  /** @internal Scratch array for visit counts (flattened y*width + x). */
+  static #VISIT_COUNT_SCRATCH: Uint16Array = new Uint16Array(0);
+  static #SCRATCH_WIDTH = 0;
+  static #SCRATCH_HEIGHT = 0;
+
+  /** Ensure scratch visit-count buffer has capacity for given maze dims. */
+  static #ensureVisitScratch(width: number, height: number) {
+    if (width <= 0 || height <= 0) return;
+    if (width === this.#SCRATCH_WIDTH && height === this.#SCRATCH_HEIGHT) {
+      // Existing buffer is correct size – just clear.
+      this.#VISIT_COUNT_SCRATCH.fill(0);
+      return;
+    }
+    this.#SCRATCH_WIDTH = width;
+    this.#SCRATCH_HEIGHT = height;
+    this.#VISIT_COUNT_SCRATCH = new Uint16Array(width * height); // zeroed
+  }
   /**
    * Evaluates the fitness of a single neural network based on its performance in a maze simulation.
    *
@@ -43,7 +74,7 @@ export class FitnessEvaluator {
     startPosition: readonly [number, number],
     exitPosition: readonly [number, number],
     distanceMap: number[][] | undefined,
-    maxSteps: number
+    maxAllowedSteps: number
   ): number {
     // Step 1: Simulate the agent's journey through the maze using its network "brain".
     // The result object contains detailed statistics about the run, like the path taken,
@@ -54,55 +85,63 @@ export class FitnessEvaluator {
       startPosition,
       exitPosition,
       distanceMap,
-      maxSteps
+      maxAllowedSteps
     );
 
-    /**
-     * @var {number} explorationBonus - A bonus rewarding the agent for exploring new territory.
-     */
+    // Step 2: Calculate exploration bonus using a pooled typed array (avoids Map + strings).
+    // @remarks Not reentrant – shared scratch buffer reused each call.
     let explorationBonus = 0;
+    const mazeHeight = encodedMaze.length;
+    const mazeWidth = encodedMaze[0]?.length || 0;
+    FitnessEvaluator.#ensureVisitScratch(mazeWidth, mazeHeight);
+    const visitCountsScratch = FitnessEvaluator.#VISIT_COUNT_SCRATCH;
+    const strideWidth = FitnessEvaluator.#SCRATCH_WIDTH; // alias
 
-    // Step 2: Calculate the exploration bonus.
-    // Build a frequency map of visited cells so we can cheaply test whether
-    // a cell was visited exactly once. The previous implementation used
-    // `result.path.filter(...).length === 1` inside the loop which is O(n^2)
-    // for long paths. This preserves behavior but reduces complexity to O(n).
-    const visitCounts = new Map<string, number>();
-    for (const [x, y] of result.path) {
-      const key = `${x},${y}`;
-      visitCounts.set(key, (visitCounts.get(key) || 0) + 1);
+    // Pass 1: count visits.
+    for (let pathIndex = 0; pathIndex < result.path.length; pathIndex++) {
+      const [cellX, cellY] = result.path[pathIndex];
+      const flatIndex = cellY * strideWidth + cellX;
+      visitCountsScratch[flatIndex]++;
     }
-    for (const [x, y] of result.path) {
-      const key = `${x},${y}`;
-      // Determine the distance of the current cell from the exit.
-      const distToExit = distanceMap
-        ? distanceMap[y]?.[x] ?? Infinity
-        : MazeUtils.bfsDistance(encodedMaze, [x, y], exitPosition);
 
-      // Cells closer to the exit are more valuable to explore.
+    // Pass 2: accumulate bonus for unique cells.
+    const dimensionSum = mazeHeight + mazeWidth;
+    for (let pathIndex = 0; pathIndex < result.path.length; pathIndex++) {
+      const [cellX, cellY] = result.path[pathIndex];
+      const flatIndex = cellY * strideWidth + cellX;
+      if (visitCountsScratch[flatIndex] !== 1) continue; // only unique cells
+      const distanceToExit = distanceMap
+        ? distanceMap[cellY]?.[cellX] ?? Infinity
+        : MazeUtils.bfsDistance(encodedMaze, [cellX, cellY], exitPosition);
       const proximityMultiplier =
-        1.5 - 0.5 * (distToExit / (encodedMaze.length + encodedMaze[0].length));
-
-      // Reward only if this cell was visited exactly once (first visit bonus).
-      if (visitCounts.get(key) === 1)
-        explorationBonus += 200 * proximityMultiplier;
+        FitnessEvaluator.#PROXIMITY_MULTIPLIER_BASE -
+        FitnessEvaluator.#PROXIMITY_MULTIPLIER_SLOPE *
+          (distanceToExit / dimensionSum);
+      explorationBonus +=
+        FitnessEvaluator.#EXPLORATION_UNIQUE_CELL_BONUS * proximityMultiplier;
     }
+    // Optional: zero only touched cells to reduce work; here we clear whole buffer for simplicity.
+    visitCountsScratch.fill(0);
 
     // Step 3: Combine the base fitness with the exploration bonus.
     let fitness = result.fitness + explorationBonus;
 
     // Step 4: Apply large bonuses for success and efficiency.
     if (result.success) {
-      // A significant, constant bonus for reaching the exit.
-      fitness += 5000;
-
-      // An additional bonus for path efficiency.
-      // The closer the agent's path length is to the optimal path length, the higher the bonus.
-      const optimal = distanceMap
+      // Success bonus (constant).
+      fitness += FitnessEvaluator.#SUCCESS_BONUS;
+      // Efficiency bonus scaled by path overhead.
+      const optimalPathLength = distanceMap
         ? distanceMap[startPosition[1]]?.[startPosition[0]] ?? Infinity
         : MazeUtils.bfsDistance(encodedMaze, startPosition, exitPosition);
-      const pathOverhead = ((result.path.length - 1) / optimal) * 100 - 100;
-      fitness += Math.max(0, 8000 - pathOverhead * 80);
+      const pathOverheadPercent =
+        ((result.path.length - 1) / optimalPathLength) * 100 - 100;
+      const efficiencyBonus = Math.max(
+        0,
+        FitnessEvaluator.#EFFICIENCY_BASE -
+          pathOverheadPercent * FitnessEvaluator.#EFFICIENCY_PENALTY_SCALE
+      );
+      fitness += efficiencyBonus;
     }
 
     // Step 5: Return the final, comprehensive fitness score.

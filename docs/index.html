@@ -10,10 +10,6 @@
 <img src="https://cdn-images-1.medium.com/max/800/1*THG2__H9YHxYIt2sulzlTw.png" width="500px"/>
 
 <p>NeatapticTS is an open TypeScript library for constructing and evolving neural networks. It focuses on instructional clarity over micro‑optimised performance and is intended for readers who want to inspect how neuro‑evolutionary ideas (NEAT and related extensions) are implemented in practice.</p>
-<blockquote>
-<p>Runtime &amp; Module Format</p>
-<p>This project is <strong>100% native ESM</strong> and targets the <strong>ES2023</strong> language baseline. You need <strong>Node.js &gt;= 20.0.0</strong> (or a browser with equivalent ES2023 support) to run the code and tests. The published package has <code>&quot;type&quot;: &quot;module&quot;</code>; there is no CommonJS build. If you require CJS interop, consume via dynamic <code>import()</code> inside CommonJS or build a compatibility layer externally.</p>
-</blockquote>
 <p>Key ES2023 features relied upon (examples): <code>Array.prototype.findLast</code>, <code>Array.prototype.toSorted</code>, <code>Object.hasOwn</code>, ergonomic brand checks, and stable top-level <code>await</code> through tooling. Polyfills for Node core modules are intentionally removed—Node 20 supplies all required built‑ins.</p>
 <p>If your environment is older than Node 20, upgrade or transpile with a custom toolchain; issues about missing ES2023 runtime features will be closed as environment unsupported.</p>
 <p>The repository contains the TypeScript sources (<code>src/</code>) plus auto‑generated Markdown and HTML documentation (<code>src/*/README.md</code>, <code>docs/</code>) derived from JSDoc comments. Keeping documentation co‑located with code lets learners trace from concept → implementation → rendered docs without context switching.</p>

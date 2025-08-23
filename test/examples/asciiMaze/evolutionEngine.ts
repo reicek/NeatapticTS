@@ -30,17 +30,14 @@ export class EvolutionEngine {
    * called concurrently (single-threaded runtime assumption holds for Node/browser).
    */
   static #SCRATCH_EXPS = new Float64Array(4);
-  /**
-   * Pooled stats buffers: means, standard deviations, and kurtosis accumulators.
-   * @remarks Non-reentrant; telemetry paths reuse these buffers to avoid allocations.
-   */
+  /** Pooled stats buffers (always resident) for means & stds. */
   static #SCRATCH_MEANS = new Float64Array(4);
   static #SCRATCH_STDS = new Float64Array(4);
-  static #SCRATCH_KURT = new Float64Array(4);
-  /** Raw moment accumulation buffers for fused logit stats (sum x^2,x^3,x^4). */
+  /** Kurtosis related buffers allocated lazily when first needed (non-reduced telemetry). */
+  static #SCRATCH_KURT: Float64Array | undefined;
   static #SCRATCH_M2_RAW = new Float64Array(4);
-  static #SCRATCH_M3_RAW = new Float64Array(4);
-  static #SCRATCH_M4_RAW = new Float64Array(4);
+  static #SCRATCH_M3_RAW: Float64Array | undefined;
+  static #SCRATCH_M4_RAW: Float64Array | undefined;
   /**
    * Small integer scratch buffer used for directional move counts (N,E,S,W).
    * @remarks Non-reentrant: reused across telemetry calls.
@@ -93,19 +90,87 @@ export class EvolutionEngine {
   static #ACTION_DIM = 4;
   /** Precomputed 1/ln(4) for entropy normalization (micro-optimization). */
   static #INV_LOG4 = 1 / Math.log(4);
-  /** Ring buffer capacity for logits history (powers of two for mask ops). */
+  /** Adaptive logits ring capacity (power-of-two). */
   static #LOGITS_RING_CAP = 512;
-  /** Scratch preallocated ring buffer storage for logits (array of float arrays). */
-  static #SCRATCH_LOGITS_RING: Float64Array[] = (() => {
-    const cap = EvolutionEngine.#LOGITS_RING_CAP;
-    const rows: Float64Array[] = new Array(cap);
-    for (let rowIndex = 0; rowIndex < cap; rowIndex++) {
-      rows[rowIndex] = new Float64Array(EvolutionEngine.#ACTION_DIM);
-    }
+  /** Max allowed ring capacity (safety bound). */
+  static #LOGITS_RING_CAP_MAX = 8192;
+  /** Indicates SharedArrayBuffer-backed ring is active. */
+  static #LOGITS_RING_SHARED = false;
+  /** Logits ring (fallback non-shared row-of-vectors). */
+  static #SCRATCH_LOGITS_RING: Float32Array[] = (() => {
+    const cap = 512;
+    const rows: Float32Array[] = new Array(cap);
+    for (let i = 0; i < cap; i++)
+      rows[i] = new Float32Array(EvolutionEngine.#ACTION_DIM);
     return rows;
   })();
-  /** Current write index for logits ring. */
+  /** Shared flat logits storage when shared mode enabled (length = cap * ACTION_DIM). */
+  static #SCRATCH_LOGITS_SHARED: Float32Array | undefined;
+  /** Shared atomic write index (length=1 Int32). */
+  static #SCRATCH_LOGITS_SHARED_W: Int32Array | undefined;
+  /** Write cursor for non-shared ring. */
   static #SCRATCH_LOGITS_RING_W = 0;
+  /** Internal helper: allocate a non-shared ring with specified capacity. */
+  static #allocateLogitsRing(cap: number): Float32Array[] {
+    const rows: Float32Array[] = new Array(cap);
+    for (let i = 0; i < cap; i++)
+      rows[i] = new Float32Array(EvolutionEngine.#ACTION_DIM);
+    return rows;
+  }
+  /** Attempt to initialize SharedArrayBuffer-backed ring if environment isolated (COOP+COEP). */
+  static #initSharedLogitsRing(cap: number) {
+    try {
+      if (typeof SharedArrayBuffer === 'undefined') return;
+      if ((globalThis as any).crossOriginIsolated !== true) return; // must be true in browsers
+      const actionDim = EvolutionEngine.#ACTION_DIM;
+      const totalFloats = cap * actionDim;
+      const sab = new SharedArrayBuffer(4 + totalFloats * 4);
+      EvolutionEngine.#SCRATCH_LOGITS_SHARED_W = new Int32Array(sab, 0, 1);
+      EvolutionEngine.#SCRATCH_LOGITS_SHARED = new Float32Array(
+        sab,
+        4,
+        totalFloats
+      );
+      Atomics.store(EvolutionEngine.#SCRATCH_LOGITS_SHARED_W, 0, 0);
+      EvolutionEngine.#LOGITS_RING_SHARED = true;
+    } catch {
+      EvolutionEngine.#LOGITS_RING_SHARED = false;
+      EvolutionEngine.#SCRATCH_LOGITS_SHARED = undefined;
+      EvolutionEngine.#SCRATCH_LOGITS_SHARED_W = undefined;
+    }
+  }
+  /** Ensure ring has capacity for desired recent steps (grow/shrink heuristics). */
+  static #ensureLogitsRingCapacity(desiredRecentSteps: number) {
+    let cap = EvolutionEngine.#LOGITS_RING_CAP;
+    let target = cap;
+    if (
+      desiredRecentSteps > (cap * 3) / 4 &&
+      cap < EvolutionEngine.#LOGITS_RING_CAP_MAX
+    ) {
+      // grow: next pow2 >= desired*2
+      let next = 1;
+      while (
+        next < desiredRecentSteps * 2 &&
+        next < EvolutionEngine.#LOGITS_RING_CAP_MAX
+      )
+        next <<= 1;
+      target = Math.min(next, EvolutionEngine.#LOGITS_RING_CAP_MAX);
+    } else if (desiredRecentSteps < cap / 4 && cap > 128) {
+      // shrink while still leaving 2x headroom
+      let shrink = cap;
+      while (shrink > 128 && desiredRecentSteps * 2 <= shrink / 2) shrink >>= 1;
+      target = Math.max(shrink, 128);
+    }
+    if (target !== cap) {
+      EvolutionEngine.#LOGITS_RING_CAP = target;
+      EvolutionEngine.#SCRATCH_LOGITS_RING_W = 0;
+      EvolutionEngine.#SCRATCH_LOGITS_RING = EvolutionEngine.#allocateLogitsRing(
+        target
+      );
+      if (EvolutionEngine.#LOGITS_RING_SHARED)
+        EvolutionEngine.#initSharedLogitsRing(target);
+    }
+  }
   /**
    * Small node index scratch arrays reused when extracting nodes by type.
    * @remarks Non-reentrant: do not call concurrently.
@@ -141,7 +206,7 @@ export class EvolutionEngine {
   /** Small fixed-size visited table for tiny path exploration (<32) to avoid O(n^2) duplicate scan. */
   static #SMALL_EXPLORE_TABLE = new Int32Array(64);
   static #PROFILE_T0(): number {
-    return globalThis.performance?.now?.() ?? Date.now();
+    return EvolutionEngine.#now();
   }
   static #PROFILE_ADD(key: string, delta: number) {
     if (!EvolutionEngine.#PROFILE_ENABLED) return;
@@ -164,6 +229,34 @@ export class EvolutionEngine {
     }
     return EvolutionEngine.#RNG_CACHE[EvolutionEngine.#RNG_CACHE_INDEX++];
   }
+  /** Deterministic mode flag (enables reproducible seeded RNG). */
+  static #DETERMINISTIC = false;
+  /** High-resolution time helper. */
+  static #now(): number {
+    return globalThis.performance?.now?.() ?? Date.now();
+  }
+  /**
+   * Enable deterministic mode and optionally re-seed RNG.
+   * @param seed Optional 32-bit seed (unsigned). Zero is remapped to a non-zero constant.
+   */
+  static setDeterministic(seed?: number): void {
+    EvolutionEngine.#DETERMINISTIC = true;
+    if (typeof seed === 'number' && Number.isFinite(seed)) {
+      const s = seed >>> 0 || 0x9e3779b9;
+      EvolutionEngine.#RNG_STATE = s;
+      EvolutionEngine.#RNG_CACHE_INDEX = 4; // force refill
+    }
+  }
+  /** Disable deterministic mode. */
+  static clearDeterministic(): void {
+    EvolutionEngine.#DETERMINISTIC = false;
+  }
+  /** When true, telemetry skips higher-moment stats (kurtosis) for speed. */
+  static #REDUCED_TELEMETRY = false;
+  /** Skip most telemetry logging & higher moment stats when true (minimal mode). */
+  static #TELEMETRY_MINIMAL = false;
+  /** Disable Baldwinian refinement phase when true. */
+  static #DISABLE_BALDWIN = false;
   /** Default tail history size used by telemetry */
   static #RECENT_WINDOW = 40;
   /** Default population size used when no popSize provided in cfg */
@@ -177,7 +270,12 @@ export class EvolutionEngine {
   /** Fraction of population reserved for provenance when computing provenance count */
   static #DEFAULT_PROVENANCE_FRACTION = 0.2;
   /** Default minimum hidden nodes for new NEAT instances */
-  static #DEFAULT_MIN_HIDDEN = 6;
+  /**
+   * Default minimum hidden nodes enforced for each evolved network.
+   * Raised from 6 -> 12 to increase representational capacity for maze scaling.
+   * Adjust via code edit if future experiments need a different baseline.
+   */
+  static #DEFAULT_MIN_HIDDEN = 20;
   /** Default target species count for adaptive target species heuristics */
   static #DEFAULT_TARGET_SPECIES = 10;
   /** Default supervised training error threshold for local training */
@@ -597,7 +695,7 @@ export class EvolutionEngine {
     doProfile: boolean,
     completedGenerations: number
   ): number {
-    const t1 = doProfile ? globalThis.performance?.now?.() ?? Date.now() : 0;
+    const t1 = doProfile ? EvolutionEngine.#now() : 0;
     // Optional sampling to cut cost
     let trainingSetRef = lamarckianTrainingSet;
     if (
@@ -649,9 +747,7 @@ export class EvolutionEngine {
         ).toFixed(4)} samples=${gradSamples}\n`
       );
     }
-    const tDelta = doProfile
-      ? (globalThis.performance?.now?.() ?? Date.now()) - t1
-      : 0;
+    const tDelta = doProfile ? EvolutionEngine.#now() - t1 : 0;
     return tDelta;
   }
 
@@ -666,6 +762,7 @@ export class EvolutionEngine {
     completedGenerations: number,
     safeWrite: (msg: string) => void
   ) {
+    if (EvolutionEngine.#TELEMETRY_MINIMAL) return; // skip heavy telemetry
     const t0 = EvolutionEngine.#PROFILE_ENABLED
       ? EvolutionEngine.#PROFILE_T0()
       : 0;
@@ -1248,22 +1345,30 @@ export class EvolutionEngine {
 
   /** Compute statistics over recent logits: means, stds, kurtosis, mean entropy and stability. @internal */
   static #computeLogitStats(recent: number[][]) {
+    const reduced = EvolutionEngine.#REDUCED_TELEMETRY;
     const actionDim = EvolutionEngine.#ACTION_DIM;
     const meansBuf = EvolutionEngine.#SCRATCH_MEANS;
     const stdsBuf = EvolutionEngine.#SCRATCH_STDS;
-    const kurtBuf = EvolutionEngine.#SCRATCH_KURT;
-    // Extended Welford (Pébay) accumulators per dimension
+    // Lazy allocate higher-moment buffers only when needed
+    if (!reduced && !EvolutionEngine.#SCRATCH_KURT) {
+      EvolutionEngine.#SCRATCH_KURT = new Float64Array(actionDim);
+      EvolutionEngine.#SCRATCH_M3_RAW = new Float64Array(actionDim);
+      EvolutionEngine.#SCRATCH_M4_RAW = new Float64Array(actionDim);
+    }
+    const kurtBuf = EvolutionEngine.#SCRATCH_KURT; // may be undefined in reduced mode
     const m2Buf = EvolutionEngine.#SCRATCH_M2_RAW;
     const m3Buf = EvolutionEngine.#SCRATCH_M3_RAW;
     const m4Buf = EvolutionEngine.#SCRATCH_M4_RAW;
-    // Reset
+    // Reset base buffers
     for (let dimIndex = 0; dimIndex < actionDim; dimIndex++) {
       meansBuf[dimIndex] = 0;
       m2Buf[dimIndex] = 0;
-      m3Buf[dimIndex] = 0;
-      m4Buf[dimIndex] = 0;
       stdsBuf[dimIndex] = 0;
-      kurtBuf[dimIndex] = 0;
+      if (!reduced) {
+        m3Buf![dimIndex] = 0;
+        m4Buf![dimIndex] = 0;
+        kurtBuf![dimIndex] = 0;
+      }
     }
     const stepCount = recent.length;
     if (!stepCount) {
@@ -1279,8 +1384,30 @@ export class EvolutionEngine {
       } as any;
     }
     let entropyAggregate = 0;
-    // Unrolled fast path for 4 outputs (dominant case)
-    if (actionDim === 4) {
+    // Reduced mode: skip higher moments (kurtosis) to save CPU
+    if (reduced) {
+      // Compute mean/std only (generic path)
+      for (let stepIndex = 0; stepIndex < stepCount; stepIndex++) {
+        const vec = recent[stepIndex];
+        const n = stepIndex + 1;
+        for (let dimIndex = 0; dimIndex < actionDim; dimIndex++) {
+          const x = vec[dimIndex] || 0;
+          const delta = x - meansBuf[dimIndex];
+          meansBuf[dimIndex] += delta / n;
+          const delta2 = x - meansBuf[dimIndex];
+          m2Buf[dimIndex] += delta * delta2;
+        }
+        entropyAggregate += EvolutionEngine.#softmaxEntropyFromVector(
+          vec,
+          EvolutionEngine.#SCRATCH_EXPS
+        );
+      }
+      for (let dimIndex = 0; dimIndex < actionDim; dimIndex++) {
+        const variance = m2Buf[dimIndex] / stepCount;
+        stdsBuf[dimIndex] = variance > 0 ? Math.sqrt(variance) : 0;
+      }
+    } else if (actionDim === 4) {
+      // Unrolled fast path for 4 outputs (dominant case)
       let mean0 = 0,
         mean1 = 0,
         mean2 = 0,
@@ -1372,10 +1499,12 @@ export class EvolutionEngine {
       stdsBuf[2] = var2 > 0 ? Math.sqrt(var2) : 0;
       stdsBuf[3] = var3 > 0 ? Math.sqrt(var3) : 0;
       // Excess kurtosis
-      kurtBuf[0] = var0 > 1e-18 ? (stepCount * M40) / (M20 * M20) - 3 : 0;
-      kurtBuf[1] = var1 > 1e-18 ? (stepCount * M41) / (M21 * M21) - 3 : 0;
-      kurtBuf[2] = var2 > 1e-18 ? (stepCount * M42) / (M22 * M22) - 3 : 0;
-      kurtBuf[3] = var3 > 1e-18 ? (stepCount * M43) / (M23 * M23) - 3 : 0;
+      if (!reduced) {
+        kurtBuf![0] = var0 > 1e-18 ? (stepCount * M40) / (M20 * M20) - 3 : 0;
+        kurtBuf![1] = var1 > 1e-18 ? (stepCount * M41) / (M21 * M21) - 3 : 0;
+        kurtBuf![2] = var2 > 1e-18 ? (stepCount * M42) / (M22 * M22) - 3 : 0;
+        kurtBuf![3] = var3 > 1e-18 ? (stepCount * M43) / (M23 * M23) - 3 : 0;
+      }
     } else {
       // Generic path (rare in this maze task but kept for completeness)
       for (let stepIndex = 0; stepIndex < stepCount; stepIndex++) {
@@ -1388,12 +1517,14 @@ export class EvolutionEngine {
           const delta_n2 = delta_n * delta_n;
           const term1 = delta * delta_n * (n - 1);
           // Update higher moments (Pébay 2008)
-          m4Buf[dimIndex] +=
-            term1 * delta_n2 * (n * n - 3 * n + 3) +
-            6 * delta_n2 * m2Buf[dimIndex] -
-            4 * delta_n * m3Buf[dimIndex];
-          m3Buf[dimIndex] +=
-            term1 * delta_n * (n - 2) - 3 * delta_n * m2Buf[dimIndex];
+          if (!reduced)
+            m4Buf![dimIndex] +=
+              term1 * delta_n2 * (n * n - 3 * n + 3) +
+              6 * delta_n2 * m2Buf[dimIndex] -
+              4 * delta_n * (m3Buf ? m3Buf[dimIndex] : 0);
+          if (!reduced)
+            m3Buf![dimIndex] +=
+              term1 * delta_n * (n - 2) - 3 * delta_n * m2Buf[dimIndex];
           m2Buf[dimIndex] += term1;
           meansBuf[dimIndex] += delta_n;
         }
@@ -1405,19 +1536,22 @@ export class EvolutionEngine {
       for (let dimIndex = 0; dimIndex < actionDim; dimIndex++) {
         const variance = m2Buf[dimIndex] / stepCount;
         stdsBuf[dimIndex] = variance > 0 ? Math.sqrt(variance) : 0;
-        kurtBuf[dimIndex] =
-          variance > 1e-18
-            ? (stepCount * m4Buf[dimIndex]) /
-                (m2Buf[dimIndex] * m2Buf[dimIndex]) -
-              3
-            : 0;
+        if (!reduced) {
+          const m4v = m4Buf![dimIndex];
+          kurtBuf![dimIndex] =
+            variance > 1e-18
+              ? (stepCount * m4v) / (m2Buf[dimIndex] * m2Buf[dimIndex]) - 3
+              : 0;
+        }
       }
     }
     const entropyMean = entropyAggregate / stepCount;
     const stability = EvolutionEngine.#computeDecisionStability(recent);
     const meansStr = EvolutionEngine.#joinNumberArray(meansBuf, actionDim, 3);
     const stdsStr = EvolutionEngine.#joinNumberArray(stdsBuf, actionDim, 3);
-    const kurtStr = EvolutionEngine.#joinNumberArray(kurtBuf, actionDim, 2);
+    const kurtStr = reduced
+      ? ''
+      : EvolutionEngine.#joinNumberArray(kurtBuf!, actionDim, 2);
     return {
       meansStr,
       stdsStr,
@@ -2535,11 +2669,9 @@ export class EvolutionEngine {
     dynamicPopExpandFactor: number,
     dynamicPopPlateauSlack: number
   ) {
-    const t0 = doProfile ? globalThis.performance?.now?.() ?? Date.now() : 0;
+    const t0 = doProfile ? EvolutionEngine.#now() : 0;
     const fittest = await neat.evolve();
-    const tEvolve = doProfile
-      ? (globalThis.performance?.now?.() ?? Date.now()) - t0
-      : 0;
+    const tEvolve = doProfile ? EvolutionEngine.#now() - t0 : 0;
     EvolutionEngine.#ensureOutputIdentity(neat);
     EvolutionEngine.#handleSpeciesHistory(neat);
     EvolutionEngine.#maybeExpandPopulation(
@@ -2651,7 +2783,7 @@ export class EvolutionEngine {
     completedGenerations: number,
     neat: any
   ): { generationResult: any; simTime: number } {
-    const t2 = doProfile ? globalThis.performance?.now?.() ?? Date.now() : 0;
+    const t2 = doProfile ? EvolutionEngine.#now() : 0;
     const generationResult = MazeMovement.simulateAgent(
       fittest,
       encodedMaze,
@@ -2670,22 +2802,46 @@ export class EvolutionEngine {
     (fittest as any)._saturationFraction = generationResult.saturationFraction;
     (fittest as any)._actionEntropy = generationResult.actionEntropy;
     try {
-      // If generationResult exposes per-step logits, stream them into ring
       const stepOutputs: number[][] | undefined = (generationResult as any)
         .stepOutputs;
-      if (Array.isArray(stepOutputs)) {
-        for (let si = 0; si < stepOutputs.length; si++) {
-          const vec = stepOutputs[si];
-          if (!Array.isArray(vec)) continue;
-          const w =
-            EvolutionEngine.#SCRATCH_LOGITS_RING_W &
-            (EvolutionEngine.#LOGITS_RING_CAP - 1);
-          const target = EvolutionEngine.#SCRATCH_LOGITS_RING[w];
-          // Copy min(actionDim, vec.length)
-          const alen = Math.min(EvolutionEngine.#ACTION_DIM, vec.length);
-          for (let ai = 0; ai < alen; ai++) target[ai] = vec[ai] ?? 0;
-          EvolutionEngine.#SCRATCH_LOGITS_RING_W =
-            (EvolutionEngine.#SCRATCH_LOGITS_RING_W + 1) & 0x7fffffff;
+      if (Array.isArray(stepOutputs) && stepOutputs.length) {
+        EvolutionEngine.#ensureLogitsRingCapacity(stepOutputs.length);
+        if (
+          EvolutionEngine.#LOGITS_RING_SHARED &&
+          EvolutionEngine.#SCRATCH_LOGITS_SHARED &&
+          EvolutionEngine.#SCRATCH_LOGITS_SHARED_W
+        ) {
+          const shared = EvolutionEngine.#SCRATCH_LOGITS_SHARED;
+          const idxView = EvolutionEngine.#SCRATCH_LOGITS_SHARED_W;
+          const capMask = EvolutionEngine.#LOGITS_RING_CAP - 1;
+          const actionDim = EvolutionEngine.#ACTION_DIM;
+          for (let si = 0; si < stepOutputs.length; si++) {
+            const vec = stepOutputs[si];
+            if (!Array.isArray(vec)) continue;
+            const current = Atomics.load(idxView, 0) & capMask;
+            const base = current * actionDim;
+            const copyLen = Math.min(actionDim, vec.length);
+            for (let di = 0; di < copyLen; di++)
+              shared[base + di] = vec[di] ?? 0;
+            Atomics.store(
+              idxView,
+              0,
+              (Atomics.load(idxView, 0) + 1) & 0x7fffffff
+            );
+          }
+        } else {
+          for (let si = 0; si < stepOutputs.length; si++) {
+            const vec = stepOutputs[si];
+            if (!Array.isArray(vec)) continue;
+            const w =
+              EvolutionEngine.#SCRATCH_LOGITS_RING_W &
+              (EvolutionEngine.#LOGITS_RING_CAP - 1);
+            const target = EvolutionEngine.#SCRATCH_LOGITS_RING[w];
+            const alen = Math.min(EvolutionEngine.#ACTION_DIM, vec.length);
+            for (let ai = 0; ai < alen; ai++) target[ai] = vec[ai] ?? 0;
+            EvolutionEngine.#SCRATCH_LOGITS_RING_W =
+              (EvolutionEngine.#SCRATCH_LOGITS_RING_W + 1) & 0x7fffffff;
+          }
         }
       }
     } catch {}
@@ -2696,7 +2852,10 @@ export class EvolutionEngine {
     ) {
       EvolutionEngine.#pruneSaturatedHiddenOutputs(fittest);
     }
-    if (completedGenerations % logEvery === 0) {
+    if (
+      !EvolutionEngine.#TELEMETRY_MINIMAL &&
+      completedGenerations % logEvery === 0
+    ) {
       EvolutionEngine.#logGenerationTelemetry(
         neat,
         fittest,
@@ -2705,9 +2864,7 @@ export class EvolutionEngine {
         safeWrite
       );
     }
-    const tDelta = doProfile
-      ? (globalThis.performance?.now?.() ?? Date.now()) - t2
-      : 0;
+    const tDelta = doProfile ? EvolutionEngine.#now() - t2 : 0;
     return { generationResult, simTime: tDelta } as any;
   }
 
@@ -2991,6 +3148,49 @@ export class EvolutionEngine {
     }
     return { connReset, biasReset };
   }
+  /** Compact one genome's disabled connections in-place. @internal */
+  static #compactGenomeConnections(genome: any): number {
+    try {
+      const list: any[] = genome.connections || [];
+      let write = 0;
+      for (let read = 0; read < list.length; read++) {
+        const c = list[read];
+        if (c && c.enabled !== false) {
+          if (read !== write) list[write] = c;
+          write++;
+        }
+      }
+      const removed = list.length - write;
+      if (removed > 0) list.length = write;
+      return removed;
+    } catch {
+      return 0;
+    }
+  }
+  /** Compact entire population; returns total removed disabled connections. @internal */
+  static #compactPopulation(neat: any): number {
+    try {
+      const pop: any[] = neat.population || [];
+      let total = 0;
+      for (let i = 0; i < pop.length; i++)
+        total += EvolutionEngine.#compactGenomeConnections(pop[i]);
+      return total;
+    } catch {
+      return 0;
+    }
+  }
+  /** Shrink oversize scratch buffers after compaction if they exceed heuristic threshold. @internal */
+  static #maybeShrinkScratch(neat: any) {
+    try {
+      const popSize = (neat.population && neat.population.length) || 0;
+      if (popSize && EvolutionEngine.#SCRATCH_SORT_IDX.length > popSize * 8) {
+        const nextSize = 1 << Math.ceil(Math.log2(Math.max(8, popSize)));
+        EvolutionEngine.#SCRATCH_SORT_IDX = new Array(nextSize);
+      }
+    } catch {
+      /* ignore */
+    }
+  }
 
   /**
    * Runs the NEAT neuro-evolution process for an agent to solve a given ASCII maze.
@@ -3028,7 +3228,11 @@ export class EvolutionEngine {
       fitnessEvaluator,
     } = options;
     const { maze } = mazeConfig;
-    const { logEvery = 10, dashboardManager } = reportingConfig;
+    const {
+      logEvery = 10,
+      dashboardManager,
+      paceEveryGeneration,
+    } = reportingConfig as any;
 
     // Extract evolution parameters, providing sensible defaults for any that are not specified.
     const {
@@ -3057,7 +3261,21 @@ export class EvolutionEngine {
       dynamicPopPlateauSlack = 0.6, // A slack factor for plateau detection when dynamic population is enabled.
       stopOnlyOnSolve = false, // If true, ignore stagnation/maxGenerations and run until solved.
       autoPauseOnSolve = true, // Browser demo will override to false to keep running continuously
+      deterministic = false,
+      memoryCompactionInterval = 50,
+      telemetryReduceStats = false,
+      telemetryMinimal = false,
+      disableBaldwinianRefinement = false,
     } = evolutionAlgorithmConfig;
+    // Deterministic seeding if requested
+    if (deterministic || typeof randomSeed === 'number') {
+      EvolutionEngine.setDeterministic(
+        typeof randomSeed === 'number' ? randomSeed : 0x12345678
+      );
+    }
+    EvolutionEngine.#REDUCED_TELEMETRY = !!telemetryReduceStats;
+    EvolutionEngine.#TELEMETRY_MINIMAL = !!telemetryMinimal;
+    EvolutionEngine.#DISABLE_BALDWIN = !!disableBaldwinianRefinement;
 
     // Determine the maximum population size, with a fallback if not explicitly configured.
     const dynamicPopMax =
@@ -3189,6 +3407,7 @@ export class EvolutionEngine {
     let tEvolveTotal = 0;
     let tLamarckTotal = 0;
     let tSimTotal = 0;
+    let lastCompactionGen = 0;
 
     // Safe writer: prefer Node stdout when available, else dashboard logger, else console.log
     const safeWrite = EvolutionEngine.#makeSafeWriter(dashboardManager);
@@ -3231,18 +3450,19 @@ export class EvolutionEngine {
       // generation's fittest individual to improve evaluation performance.
       // These refinements are NOT inherited (keeps genetic search exploratory),
       // unlike Lamarckian updates earlier. Disable if pure Lamarckian desired.
-      try {
-        fittest.train(lamarckianTrainingSet, {
-          iterations: EvolutionEngine.#FITTEST_TRAIN_ITERATIONS, // Uses extracted constant
-          error: EvolutionEngine.#DEFAULT_TRAIN_ERROR,
-          rate: EvolutionEngine.#DEFAULT_TRAIN_RATE,
-          momentum: EvolutionEngine.#DEFAULT_TRAIN_MOMENTUM,
-          batchSize: EvolutionEngine.#DEFAULT_TRAIN_BATCH_LARGE,
-          allowRecurrent: true, // allow recurrent connections
-        });
-      } catch (baldwinErr) {
-        // Non-fatal: continue evolution even if refinement fails
-        // (e.g., empty training set edge case)
+      if (!EvolutionEngine.#DISABLE_BALDWIN) {
+        try {
+          fittest.train(lamarckianTrainingSet, {
+            iterations: EvolutionEngine.#FITTEST_TRAIN_ITERATIONS,
+            error: EvolutionEngine.#DEFAULT_TRAIN_ERROR,
+            rate: EvolutionEngine.#DEFAULT_TRAIN_RATE,
+            momentum: EvolutionEngine.#DEFAULT_TRAIN_MOMENTUM,
+            batchSize: EvolutionEngine.#DEFAULT_TRAIN_BATCH_LARGE,
+            allowRecurrent: true,
+          });
+        } catch {
+          /* ignore refinement failure */
+        }
       }
 
       // 4. Evaluate and track progress
@@ -3352,6 +3572,28 @@ export class EvolutionEngine {
         maxGenerations
       );
       if (stopReason) break;
+      // Periodic memory compaction: remove disabled connections & optionally shrink scratch arrays
+      if (
+        memoryCompactionInterval > 0 &&
+        completedGenerations - lastCompactionGen >= memoryCompactionInterval
+      ) {
+        const removedDisabled = EvolutionEngine.#compactPopulation(neat);
+        if (removedDisabled > 0) {
+          EvolutionEngine.#maybeShrinkScratch(neat);
+          safeWrite(
+            `[COMPACT] gen=${completedGenerations} removedDisabledConns=${removedDisabled}\n`
+          );
+        }
+        lastCompactionGen = completedGenerations;
+      }
+      // Optional per-generation pacing to yield back to browser for smoother UI (demo mode)
+      if (paceEveryGeneration) {
+        try {
+          await flushToFrame();
+        } catch {
+          /* ignore pacing errors */
+        }
+      }
     }
 
     if (doProfile && completedGenerations > 0) {

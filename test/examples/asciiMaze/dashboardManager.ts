@@ -105,15 +105,45 @@ export class DashboardManager implements IDashboardManager {
   static #FRAME_INNER_WIDTH = 148;
   static #LEFT_PADDING = 7;
   static #RIGHT_PADDING = 1;
-  static #CONTENT_WIDTH =
-    DashboardManager.#FRAME_INNER_WIDTH -
-    DashboardManager.#LEFT_PADDING -
-    DashboardManager.#RIGHT_PADDING;
   static #STAT_LABEL_WIDTH = 28;
   static #ARCHIVE_SPARK_WIDTH = 64; // spark width in archive blocks
   static #GENERAL_SPARK_WIDTH = 64; // spark width in live panel
   static #SOLVED_LABEL_WIDTH = 22; // label width in archive stats
   static #HISTORY_EXPORT_WINDOW = 200; // samples exported in telemetry details
+  /** Unicode blocks used for sparklines (ascending). */
+  static #SPARK_BLOCKS = Object.freeze([
+    '▁',
+    '▂',
+    '▃',
+    '▄',
+    '▅',
+    '▆',
+    '▇',
+    '█',
+  ]);
+  /** Floating comparison epsilon for tiny deltas. */
+  static #DELTA_EPSILON = 1e-9;
+  /** Max operators listed in acceptance stats. */
+  static #TOP_OPERATOR_LIMIT = 6;
+  /** Max mutations listed. */
+  static #TOP_MUTATION_LIMIT = 8;
+  /** Max species sizes listed. */
+  static #TOP_SPECIES_LIMIT = 5;
+  /** Safety multiplier for hidden layer inference loop. */
+  static #LAYER_INFER_LOOP_MULTIPLIER = 4;
+  /** Label strings reused (dedup hidden classes). */
+  static #LABEL_PATH_EFF = 'Path efficiency';
+  static #LABEL_PATH_OVER = 'Path overhead';
+  static #LABEL_UNIQUE = 'Unique cells visited';
+  static #LABEL_REVISITS = 'Cells revisited';
+  static #LABEL_STEPS = 'Steps';
+  static #LABEL_FITNESS = 'Fitness';
+  static #LABEL_ARCH = 'Architecture';
+  /** Frame pattern segments reused in redraw. */
+  static #FRAME_SINGLE_LINE_CHAR = '═';
+  static #FRAME_BRIDGE_TOP = '╦════════════╦';
+  static #FRAME_BRIDGE_BOTTOM = '╩════════════╩';
+  static #EVOLVING_SECTION_LINE = '══════════════════════';
   // Public aliases for backwards compatibility while internals move to private fields
   static get HISTORY_MAX() {
     return DashboardManager.#HISTORY_MAX;
@@ -128,7 +158,11 @@ export class DashboardManager implements IDashboardManager {
     return DashboardManager.#RIGHT_PADDING;
   }
   static get CONTENT_WIDTH() {
-    return DashboardManager.#CONTENT_WIDTH;
+    return (
+      DashboardManager.#FRAME_INNER_WIDTH -
+      DashboardManager.#LEFT_PADDING -
+      DashboardManager.#RIGHT_PADDING
+    );
   }
   static get STAT_LABEL_WIDTH() {
     return DashboardManager.#STAT_LABEL_WIDTH;
@@ -175,7 +209,7 @@ export class DashboardManager implements IDashboardManager {
       DashboardManager.#LEFT_PADDING
     )}${NetworkVisualization.pad(
       composed,
-      DashboardManager.#CONTENT_WIDTH,
+      DashboardManager.CONTENT_WIDTH,
       ' ',
       'left'
     )}${' '.repeat(DashboardManager.#RIGHT_PADDING)}${colors.blueCore}║${
@@ -192,20 +226,20 @@ export class DashboardManager implements IDashboardManager {
    */
   private buildSparkline(data: number[], width = 32) {
     if (!data.length) return '';
-    const blocks = ['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'];
+    const blocks = DashboardManager.#SPARK_BLOCKS;
     // Use shared small-tail helper from MazeUtils so intent is explicit and index math is centralized
     const tail = MazeUtils.tail<number>(data, width);
     let min = Infinity;
     let max = -Infinity;
-    for (let i = 0; i < tail.length; i++) {
-      const value = tail[i];
+    for (let tailIndex = 0; tailIndex < tail.length; tailIndex++) {
+      const value = tail[tailIndex];
       if (value < min) min = value;
       if (value > max) max = value;
     }
     const range = max - min || 1;
     const out: string[] = [];
-    for (let i = 0; i < tail.length; i++) {
-      const value = tail[i];
+    for (let tailIndex = 0; tailIndex < tail.length; tailIndex++) {
+      const value = tail[tailIndex];
       const blockIndex = Math.floor(
         ((value - min) / range) * (blocks.length - 1)
       );
@@ -260,30 +294,21 @@ export class DashboardManager implements IDashboardManager {
     displayNumber: number
   ) {
     if (!this.#archiveFn) return;
+    const blockLines: string[] = [];
+    this.#appendSolvedHeader(blockLines, solved, displayNumber);
+    this.#appendSolvedSparklines(blockLines);
+    this.#appendSolvedMaze(blockLines, solved);
+    this.#appendSolvedPathStats(blockLines, solved);
+    this.#appendSolvedArchitecture(blockLines, solved.network);
+    this.#appendSolvedFooterAndEmit(blockLines);
+  }
 
-    // Render solved maze visualization using the MazeVisualization helper
-    // Use modern Array.prototype.at for last element access
-    const endPos = (solved.result.path as readonly [number, number][])?.at(-1);
-    const solvedMazeVisualization = MazeVisualization.visualizeMaze(
-      solved.maze,
-      ((endPos as readonly [number, number]) ?? [0, 0]) as readonly [
-        number,
-        number
-      ],
-      solved.result.path as readonly [number, number][]
-    );
-    const solvedMazeLines = Array.isArray(solvedMazeVisualization)
-      ? solvedMazeVisualization
-      : solvedMazeVisualization.split('\n');
-
-    // Center each maze line to the frame width
-    const centeredSolvedMaze = solvedMazeLines
-      .map((line) =>
-        NetworkVisualization.pad(line, DashboardManager.FRAME_INNER_WIDTH, ' ')
-      )
-      .join('\n');
-
-    // Create boxed header / title / separator lines consistent with the dashboard frame
+  /** Append header/title/separator lines for a solved maze block. */
+  #appendSolvedHeader(
+    blockLines: string[],
+    solved: { generation: number },
+    displayNumber: number
+  ): void {
     const header = `${colors.blueCore}╠${NetworkVisualization.pad(
       '═'.repeat(DashboardManager.FRAME_INNER_WIDTH),
       DashboardManager.FRAME_INNER_WIDTH,
@@ -299,15 +324,11 @@ export class DashboardManager implements IDashboardManager {
       DashboardManager.FRAME_INNER_WIDTH,
       '─'
     )}╣${colors.reset}`;
+    blockLines.push(header, title, sep);
+  }
 
-    // Build the entire boxed block as one string so we can prepend it to the
-    // archive (newest-first). Building a single string also reduces DOM churn.
-    const blockLines: string[] = [];
-    blockLines.push(header);
-    blockLines.push(title);
-    blockLines.push(sep);
-
-    // Optional trending sparklines derived from stored history windows
+  /** Append trending sparklines for solved archive block. */
+  #appendSolvedSparklines(blockLines: string[]): void {
     const solvedLabelWidth = DashboardManager.#SOLVED_LABEL_WIDTH;
     const solvedStat = (label: string, value: string) =>
       this.formatStat(
@@ -317,44 +338,51 @@ export class DashboardManager implements IDashboardManager {
         colors.cyanNeon,
         solvedLabelWidth
       );
-
-    const spark = this.buildSparkline(
-      this.#bestFitnessHistory,
-      DashboardManager.#ARCHIVE_SPARK_WIDTH
+    const pushIf = (label: string, value: string) =>
+      value && blockLines.push(solvedStat(label, value));
+    pushIf(
+      'Fitness trend',
+      this.buildSparkline(
+        this.#bestFitnessHistory,
+        DashboardManager.#ARCHIVE_SPARK_WIDTH
+      )
     );
-    const sparkComplexityNodes = this.buildSparkline(
-      this.#complexityNodesHistory,
-      DashboardManager.#ARCHIVE_SPARK_WIDTH
+    pushIf(
+      'Nodes trend',
+      this.buildSparkline(
+        this.#complexityNodesHistory,
+        DashboardManager.#ARCHIVE_SPARK_WIDTH
+      )
     );
-    const sparkComplexityConns = this.buildSparkline(
-      this.#complexityConnsHistory,
-      DashboardManager.#ARCHIVE_SPARK_WIDTH
+    pushIf(
+      'Conns trend',
+      this.buildSparkline(
+        this.#complexityConnsHistory,
+        DashboardManager.#ARCHIVE_SPARK_WIDTH
+      )
     );
-    const sparkHyper = this.buildSparkline(
-      this.#hypervolumeHistory,
-      DashboardManager.#ARCHIVE_SPARK_WIDTH
+    pushIf(
+      'Hypervol trend',
+      this.buildSparkline(
+        this.#hypervolumeHistory,
+        DashboardManager.#ARCHIVE_SPARK_WIDTH
+      )
     );
-    const sparkProgress = this.buildSparkline(
-      this.#progressHistory,
-      DashboardManager.#ARCHIVE_SPARK_WIDTH
+    pushIf(
+      'Progress trend',
+      this.buildSparkline(
+        this.#progressHistory,
+        DashboardManager.#ARCHIVE_SPARK_WIDTH
+      )
     );
-    const sparkSpecies = this.buildSparkline(
-      this.#speciesCountHistory,
-      DashboardManager.#ARCHIVE_SPARK_WIDTH
+    pushIf(
+      'Species trend',
+      this.buildSparkline(
+        this.#speciesCountHistory,
+        DashboardManager.#ARCHIVE_SPARK_WIDTH
+      )
     );
-
-    if (spark) blockLines.push(solvedStat('Fitness trend', spark));
-    if (sparkComplexityNodes)
-      blockLines.push(solvedStat('Nodes trend', sparkComplexityNodes));
-    if (sparkComplexityConns)
-      blockLines.push(solvedStat('Conns trend', sparkComplexityConns));
-    if (sparkHyper) blockLines.push(solvedStat('Hypervol trend', sparkHyper));
-    if (sparkProgress)
-      blockLines.push(solvedStat('Progress trend', sparkProgress));
-    if (sparkSpecies)
-      blockLines.push(solvedStat('Species trend', sparkSpecies));
-
-    // Blank spacer line inside the box
+    // Spacer
     blockLines.push(
       `${colors.blueCore}║${NetworkVisualization.pad(
         ' ',
@@ -362,62 +390,117 @@ export class DashboardManager implements IDashboardManager {
         ' '
       )}${colors.blueCore}║${colors.reset}`
     );
+  }
 
-    // Append the centered maze drawing, row by row (each padded into the frame)
-    centeredSolvedMaze
+  /** Append centered solved maze drawing. */
+  #appendSolvedMaze(
+    blockLines: string[],
+    solved: { maze: string[]; result: any }
+  ): void {
+    const endPosition = (solved.result.path as readonly [number, number][])?.at(
+      -1
+    );
+    const visualization = MazeVisualization.visualizeMaze(
+      solved.maze,
+      ((endPosition as readonly [number, number]) ?? [0, 0]) as readonly [
+        number,
+        number
+      ],
+      solved.result.path as readonly [number, number][]
+    );
+    const lines = Array.isArray(visualization)
+      ? visualization
+      : visualization.split('\n');
+    const centered = lines
+      .map((line) =>
+        NetworkVisualization.pad(line, DashboardManager.FRAME_INNER_WIDTH, ' ')
+      )
+      .join('\n');
+    centered
       .split('\n')
-      .forEach((l) =>
+      .forEach((mazeLine) =>
         blockLines.push(
           `${colors.blueCore}║${NetworkVisualization.pad(
-            l,
+            mazeLine,
             DashboardManager.FRAME_INNER_WIDTH,
             ' '
           )}${colors.blueCore}║${colors.reset}`
         )
       );
+  }
 
-    // Compute a few path efficiency stats: optimal length (BFS), actual path length, revisit counts
-    const startPos = MazeUtils.findPosition(solved.maze, 'S');
-    const exitPos = MazeUtils.findPosition(solved.maze, 'E');
-    const optimalLength = MazeUtils.bfsDistance(
-      MazeUtils.encodeMaze(solved.maze),
-      startPos,
-      exitPos
-    );
-    const pathLength = solved.result.path.length - 1;
-    const efficiency = Math.min(
-      100,
-      Math.round((optimalLength / pathLength) * 100)
-    ).toFixed(1);
-    const overhead = ((pathLength / optimalLength) * 100 - 100).toFixed(1);
-
-    // Count unique vs revisited cells along the path
-    const uniqueCells = new Set<string>();
-    let revisitedCells = 0;
-    for (const [x, y] of solved.result.path) {
-      const cellKey = `${x},${y}`;
-      if (uniqueCells.has(cellKey)) revisitedCells++;
-      else uniqueCells.add(cellKey);
-    }
-
-    // Append efficiency & fitness stats
+  /** Compute path metrics & append stats lines. */
+  #appendSolvedPathStats(
+    blockLines: string[],
+    solved: { maze: string[]; result: any }
+  ): void {
+    const solvedLabelWidth = DashboardManager.#SOLVED_LABEL_WIDTH;
+    const solvedStat = (label: string, value: string) =>
+      this.formatStat(
+        label,
+        value,
+        colors.neonSilver,
+        colors.cyanNeon,
+        solvedLabelWidth
+      );
+    const metrics = this.#computePathMetrics(solved.maze, solved.result);
     blockLines.push(
       solvedStat(
-        'Path efficiency',
-        `${optimalLength}/${pathLength} (${efficiency}%)`
+        DashboardManager.#LABEL_PATH_EFF,
+        `${metrics.optimalLength}/${metrics.pathLength} (${metrics.efficiencyPct}%)`
       )
     );
     blockLines.push(
-      solvedStat('Path overhead', `${overhead}% longer than optimal`)
+      solvedStat(
+        DashboardManager.#LABEL_PATH_OVER,
+        `${metrics.overheadPct}% longer than optimal`
+      )
     );
-    blockLines.push(solvedStat('Unique cells visited', `${uniqueCells.size}`));
-    blockLines.push(solvedStat('Cells revisited', `${revisitedCells} times`));
-    blockLines.push(solvedStat('Steps', `${solved.result.steps}`));
     blockLines.push(
-      solvedStat('Fitness', `${solved.result.fitness.toFixed(2)}`)
+      solvedStat(
+        DashboardManager.#LABEL_UNIQUE,
+        `${metrics.uniqueCellsVisited}`
+      )
     );
+    blockLines.push(
+      solvedStat(
+        DashboardManager.#LABEL_REVISITS,
+        `${metrics.revisitedCells} times`
+      )
+    );
+    blockLines.push(
+      solvedStat(DashboardManager.#LABEL_STEPS, `${metrics.totalSteps}`)
+    );
+    blockLines.push(
+      solvedStat(
+        DashboardManager.#LABEL_FITNESS,
+        `${metrics.fitnessValue.toFixed(2)}`
+      )
+    );
+  }
 
-    // Bottom border of the boxed block
+  /** Append derived architecture string. */
+  #appendSolvedArchitecture(blockLines: string[], network: INetwork): void {
+    const solvedLabelWidth = DashboardManager.#SOLVED_LABEL_WIDTH;
+    const solvedStat = (label: string, value: string) =>
+      this.formatStat(
+        label,
+        value,
+        colors.neonSilver,
+        colors.cyanNeon,
+        solvedLabelWidth
+      );
+    let architecture = 'n/a';
+    try {
+      architecture = this.#deriveArchitecture(network as any);
+    } catch {
+      architecture = 'n/a';
+    }
+    blockLines.push(solvedStat(DashboardManager.#LABEL_ARCH, architecture));
+  }
+
+  /** Emit footer & send archive block to logger. */
+  #appendSolvedFooterAndEmit(blockLines: string[]): void {
     blockLines.push(
       `${colors.blueCore}╚${NetworkVisualization.pad(
         '═'.repeat(DashboardManager.FRAME_INNER_WIDTH),
@@ -425,15 +508,138 @@ export class DashboardManager implements IDashboardManager {
         '═'
       )}╝${colors.reset}`
     );
-
-    // Finally, emit the entire block using the archive logger. Pass the `{ prepend: true }`
-    // option so the logger places the newest block at the top of the archive.
     try {
       (this.#archiveFn as any)(blockLines.join('\n'), { prepend: true });
     } catch {
       const append = this.#archiveFn ?? (() => {});
-      blockLines.forEach((l) => append(l));
+      blockLines.forEach((singleLine) => append(singleLine));
     }
+  }
+
+  /** Compute path metrics from maze + result object. */
+  #computePathMetrics(
+    maze: string[],
+    result: { path: [number, number][]; steps: number; fitness: number }
+  ): {
+    optimalLength: number;
+    pathLength: number;
+    efficiencyPct: string;
+    overheadPct: string;
+    uniqueCellsVisited: number;
+    revisitedCells: number;
+    totalSteps: number;
+    fitnessValue: number;
+  } {
+    const startPosition = MazeUtils.findPosition(maze, 'S');
+    const exitPosition = MazeUtils.findPosition(maze, 'E');
+    const optimalLength = MazeUtils.bfsDistance(
+      MazeUtils.encodeMaze(maze),
+      startPosition,
+      exitPosition
+    );
+    const pathLength = result.path.length - 1;
+    const efficiencyPct = Math.min(
+      100,
+      Math.round((optimalLength / pathLength) * 100)
+    ).toFixed(1);
+    const overheadPct = ((pathLength / optimalLength) * 100 - 100).toFixed(1);
+    const uniqueCells = new Set<string>();
+    let revisitedCells = 0;
+    for (const [cellX, cellY] of result.path) {
+      const key = `${cellX},${cellY}`;
+      if (uniqueCells.has(key)) revisitedCells++;
+      else uniqueCells.add(key);
+    }
+    return {
+      optimalLength,
+      pathLength,
+      efficiencyPct,
+      overheadPct,
+      uniqueCellsVisited: uniqueCells.size,
+      revisitedCells,
+      totalSteps: result.steps,
+      fitnessValue: result.fitness,
+    };
+  }
+
+  /** Derive architecture string (Input - Hidden... - Output). */
+  #deriveArchitecture(networkInstance: any): string {
+    if (!networkInstance) return 'n/a';
+    if (
+      Array.isArray(networkInstance.layers) &&
+      networkInstance.layers.length >= 2
+    ) {
+      const sizes: number[] = [];
+      for (
+        let layerIndex = 0;
+        layerIndex < networkInstance.layers.length;
+        layerIndex++
+      ) {
+        const layerRef = networkInstance.layers[layerIndex];
+        const size = Array.isArray(layerRef?.nodes)
+          ? layerRef.nodes.length
+          : Array.isArray(layerRef)
+          ? layerRef.length
+          : 0;
+        sizes.push(size);
+      }
+      return sizes.join(' - ');
+    }
+    if (Array.isArray(networkInstance.nodes)) {
+      const inputNodes = networkInstance.nodes.filter(
+        (n: any) => n.type === 'input'
+      );
+      const outputNodes = networkInstance.nodes.filter(
+        (n: any) => n.type === 'output'
+      );
+      const hiddenNodesAll = networkInstance.nodes.filter(
+        (n: any) => n.type === 'hidden'
+      );
+      if (!hiddenNodesAll.length) {
+        if (
+          typeof networkInstance.input === 'number' &&
+          typeof networkInstance.output === 'number'
+        ) {
+          return `${networkInstance.input} - ${networkInstance.output}`;
+        }
+        return `${inputNodes.length} - ${outputNodes.length}`;
+      }
+      const assignedSet = new Set<any>(inputNodes);
+      let remainingHidden = hiddenNodesAll.slice();
+      const hiddenSizes: number[] = [];
+      const safetyLimit =
+        hiddenNodesAll.length * DashboardManager.#LAYER_INFER_LOOP_MULTIPLIER;
+      let iterationCounter = 0;
+      while (remainingHidden.length && iterationCounter < safetyLimit) {
+        iterationCounter++;
+        const current = remainingHidden.filter((hiddenNode: any) =>
+          hiddenNode.connections?.in?.every((conn: any) =>
+            assignedSet.has(conn.from)
+          )
+        );
+        if (!current.length) {
+          hiddenSizes.push(remainingHidden.length);
+          break;
+        }
+        hiddenSizes.push(current.length);
+        for (const nodeRef of current) assignedSet.add(nodeRef);
+        remainingHidden = remainingHidden.filter(
+          (n: any) => !assignedSet.has(n)
+        );
+      }
+      return [
+        `${inputNodes.length}`,
+        ...hiddenSizes.map((hs) => `${hs}`),
+        `${outputNodes.length}`,
+      ].join(' - ');
+    }
+    if (
+      typeof networkInstance.input === 'number' &&
+      typeof networkInstance.output === 'number'
+    ) {
+      return `${networkInstance.input} - ${networkInstance.output}`;
+    }
+    return 'n/a';
   }
 
   /**
@@ -639,135 +845,9 @@ export class DashboardManager implements IDashboardManager {
    * @returns void
    */
   redraw(currentMaze: string[], neat?: any): void {
-    // Clear the live area (archive is untouched)
     this.#clearFn();
-
-    // Header: top frame lines
-    this.#logFn(
-      `${colors.blueCore}╔${NetworkVisualization.pad(
-        '═',
-        DashboardManager.FRAME_INNER_WIDTH,
-        '═'
-      )}${colors.blueCore}╗${colors.reset}`
-    );
-    this.#logFn(
-      `${colors.blueCore}╚${NetworkVisualization.pad(
-        '╦════════════╦',
-        DashboardManager.FRAME_INNER_WIDTH,
-        '═'
-      )}${colors.blueCore}╝${colors.reset}`
-    );
-    this.#logFn(
-      `${colors.blueCore}${NetworkVisualization.pad(
-        `║ ${colors.neonYellow}ASCII maze${colors.blueCore} ║`,
-        150,
-        ' '
-      )}${colors.reset}`
-    );
-    this.#logFn(
-      `${colors.blueCore}╔${NetworkVisualization.pad(
-        '╩════════════╩',
-        DashboardManager.FRAME_INNER_WIDTH,
-        '═'
-      )}${colors.blueCore}╗${colors.reset}`
-    );
-
-    // Print current best for active maze if available
-    if (this.#currentBest) {
-      this.#logFn(
-        `${colors.blueCore}╠${NetworkVisualization.pad(
-          '══════════════════════',
-          DashboardManager.FRAME_INNER_WIDTH,
-          '═'
-        )}${colors.blueCore}╣${colors.reset}`
-      );
-      this.#logFn(
-        `${colors.blueCore}║${NetworkVisualization.pad(
-          `${colors.orangeNeon}EVOLVING (GEN ${this.#currentBest.generation})`,
-          DashboardManager.FRAME_INNER_WIDTH,
-          ' '
-        )}${colors.blueCore}║${colors.reset}`
-      );
-      this.#logFn(
-        `${colors.blueCore}╠${NetworkVisualization.pad(
-          '══════════════════════',
-          DashboardManager.FRAME_INNER_WIDTH,
-          '═'
-        )}${colors.blueCore}╣${colors.reset}`
-      );
-      this.logBlank();
-
-      // Network summary (compact visualization)
-      this.logBlank();
-      this.#logFn(
-        NetworkVisualization.visualizeNetworkSummary(this.#currentBest.network)
-      );
-      this.logBlank();
-
-      // Maze visualization for the live candidate
-      const lastPos = (this.#currentBest.result.path as readonly [
-        number,
-        number
-      ][])?.at(-1) ?? [0, 0];
-      const currentMazeVisualization = MazeVisualization.visualizeMaze(
-        currentMaze,
-        (lastPos as readonly [number, number]) ?? [0, 0],
-        this.#currentBest.result.path as readonly [number, number][]
-      );
-      const currentMazeLines = Array.isArray(currentMazeVisualization)
-        ? currentMazeVisualization
-        : currentMazeVisualization.split('\n');
-      const centeredCurrentMaze = currentMazeLines
-        .map(
-          (line) =>
-            `${colors.blueCore}║${NetworkVisualization.pad(
-              line,
-              DashboardManager.FRAME_INNER_WIDTH,
-              ' '
-            )}${colors.blueCore}║`
-        )
-        .join('\n');
-      this.logBlank();
-      this.#logFn(centeredCurrentMaze);
-      this.logBlank();
-
-      // Print stats for the current best solution (delegates to MazeVisualization)
-      this.logBlank();
-      MazeVisualization.printMazeStats(
-        this.#currentBest,
-        currentMaze,
-        this.#logFn
-      );
-      this.logBlank();
-
-      // Progress bar for current candidate
-      this.#logFn(
-        `${colors.blueCore}║${NetworkVisualization.pad(
-          ' ',
-          DashboardManager.FRAME_INNER_WIDTH,
-          ' '
-        )}${colors.blueCore}║${colors.reset}`
-      );
-      this.#logFn(
-        (() => {
-          const bar = `Progress to exit: ${MazeVisualization.displayProgressBar(
-            this.#currentBest.result.progress
-          )}`;
-          return `${colors.blueCore}║${NetworkVisualization.pad(
-            ' ' + colors.neonSilver + bar + colors.reset,
-            DashboardManager.FRAME_INNER_WIDTH,
-            ' '
-          )}${colors.blueCore}║${colors.reset}`;
-        })()
-      );
-      this.#logFn(
-        `${colors.blueCore}║${NetworkVisualization.pad(
-          ' ',
-          DashboardManager.FRAME_INNER_WIDTH,
-          ' '
-        )}${colors.blueCore}║${colors.reset}`
-      );
-    }
+    this.#printTopFrame();
+    if (this.#currentBest) this.#printCurrentBestSection(currentMaze);
 
     // General stats area (telemetry-derived values). These are defensive reads
     // because telemetry may be missing early in the run.
@@ -790,7 +870,8 @@ export class DashboardManager implements IDashboardManager {
     const deltaArrow = (curr?: number | null, prev?: number | null) => {
       if (curr == null || prev == null) return '';
       const diff = curr - prev;
-      if (Math.abs(diff) < 1e-9) return `${colors.neonSilver} (↔0)`;
+      if (Math.abs(diff) < DashboardManager.#DELTA_EPSILON)
+        return `${colors.neonSilver} (↔0)`;
       const color = diff > 0 ? colors.cyanNeon : colors.neonRed;
       const arrow = diff > 0 ? '↑' : '↓';
       return `${color} (${arrow}${diff.toFixed(2)})${colors.neonSilver}`;
@@ -892,9 +973,16 @@ export class DashboardManager implements IDashboardManager {
                 leftOp.success / Math.max(1, leftOp.attempts)
             );
             operatorAcceptance = [];
-            const take = Math.min(6, sortedOps.length);
-            for (let i = 0; i < take; i++) {
-              const opStats = sortedOps[i];
+            const operatorTake = Math.min(
+              DashboardManager.#TOP_OPERATOR_LIMIT,
+              sortedOps.length
+            );
+            for (
+              let operatorIndex = 0;
+              operatorIndex < operatorTake;
+              operatorIndex++
+            ) {
+              const opStats = sortedOps[operatorIndex];
               operatorAcceptance.push({
                 name: opStats.name,
                 acceptancePct: +(
@@ -919,9 +1007,18 @@ export class DashboardManager implements IDashboardManager {
                 (rightEntry[1] as number) - (leftEntry[1] as number)
             );
             topMutations = [];
-            const takeM = Math.min(8, sortedEntries.length);
-            for (let i = 0; i < takeM; i++) {
-              const [mutationName, mutationCount] = sortedEntries[i];
+            const mutationTake = Math.min(
+              DashboardManager.#TOP_MUTATION_LIMIT,
+              sortedEntries.length
+            );
+            for (
+              let mutationIndex = 0;
+              mutationIndex < mutationTake;
+              mutationIndex++
+            ) {
+              const [mutationName, mutationCount] = sortedEntries[
+                mutationIndex
+              ];
               topMutations.push({
                 name: mutationName,
                 count: mutationCount as number,
@@ -936,10 +1033,19 @@ export class DashboardManager implements IDashboardManager {
             const sortedSizes = [...sizes].sort(
               (sizeA: number, sizeB: number) => sizeB - sizeA
             );
-            const out: number[] = [];
-            const takeS = Math.min(5, sortedSizes.length);
-            for (let i = 0; i < takeS; i++) out.push(sortedSizes[i]);
-            return out;
+            const outArray: number[] = [];
+            const speciesTake = Math.min(
+              DashboardManager.#TOP_SPECIES_LIMIT,
+              sortedSizes.length
+            );
+            for (
+              let speciesIndex = 0;
+              speciesIndex < speciesTake;
+              speciesIndex++
+            ) {
+              outArray.push(sortedSizes[speciesIndex]);
+            }
+            return outArray;
           })()
         : null;
       const paretoFrontSizes = fronts
@@ -1002,6 +1108,151 @@ export class DashboardManager implements IDashboardManager {
 
     // Replace old verbose stats area with a minimal spacer line (keeps frame aesthetics)
     this.logBlank();
+  }
+
+  /** Print the static top frame (title header). */
+  #printTopFrame(): void {
+    this.#logFn(
+      `${colors.blueCore}╔${NetworkVisualization.pad(
+        DashboardManager.#FRAME_SINGLE_LINE_CHAR,
+        DashboardManager.FRAME_INNER_WIDTH,
+        DashboardManager.#FRAME_SINGLE_LINE_CHAR
+      )}${colors.blueCore}╗${colors.reset}`
+    );
+    this.#logFn(
+      `${colors.blueCore}╚${NetworkVisualization.pad(
+        DashboardManager.#FRAME_BRIDGE_TOP,
+        DashboardManager.FRAME_INNER_WIDTH,
+        DashboardManager.#FRAME_SINGLE_LINE_CHAR
+      )}${colors.blueCore}╝${colors.reset}`
+    );
+    this.#logFn(
+      (() => {
+        const rawLabel = '║ ASCII maze ║';
+        const rawLength = rawLabel.length; // visible columns
+        const width = DashboardManager.FRAME_INNER_WIDTH;
+        const remaining = width - rawLength;
+        const leftPad = Math.max(0, Math.ceil(remaining / 2)) + 1; // bias right by giving extra space to left side
+        const rightPad = Math.max(0, remaining - leftPad);
+        const coloredLabel = `║ ${colors.neonYellow}ASCII maze${colors.blueCore} ║`;
+        return `${colors.blueCore}${' '.repeat(
+          leftPad
+        )}${coloredLabel}${' '.repeat(rightPad)}${colors.reset}`;
+      })()
+    );
+    this.#logFn(
+      `${colors.blueCore}╔${NetworkVisualization.pad(
+        DashboardManager.#FRAME_BRIDGE_BOTTOM,
+        DashboardManager.FRAME_INNER_WIDTH,
+        DashboardManager.#FRAME_SINGLE_LINE_CHAR
+      )}${colors.blueCore}╗${colors.reset}`
+    );
+  }
+
+  /** Orchestrate printing of evolving section (network + maze + stats + progress). */
+  #printCurrentBestSection(currentMaze: string[]): void {
+    const generation = this.#currentBest!.generation;
+    // Section delim lines
+    const sectionLine = DashboardManager.#EVOLVING_SECTION_LINE;
+    this.#logFn(
+      `${colors.blueCore}╠${NetworkVisualization.pad(
+        sectionLine,
+        DashboardManager.FRAME_INNER_WIDTH,
+        '═'
+      )}${colors.blueCore}╣${colors.reset}`
+    );
+    this.#logFn(
+      `${colors.blueCore}║${NetworkVisualization.pad(
+        `${colors.orangeNeon}EVOLVING (GEN ${generation})`,
+        DashboardManager.FRAME_INNER_WIDTH,
+        ' '
+      )}${colors.blueCore}║${colors.reset}`
+    );
+    this.#logFn(
+      `${colors.blueCore}╠${NetworkVisualization.pad(
+        sectionLine,
+        DashboardManager.FRAME_INNER_WIDTH,
+        '═'
+      )}${colors.blueCore}╣${colors.reset}`
+    );
+    this.logBlank();
+    this.#printNetworkSummary();
+    this.#printLiveMaze(currentMaze);
+    this.#printLiveStats(currentMaze);
+    this.#printProgressBar();
+  }
+
+  /** Print network summary visualization. */
+  #printNetworkSummary(): void {
+    this.logBlank();
+    this.#logFn(
+      NetworkVisualization.visualizeNetworkSummary(this.#currentBest!.network)
+    );
+    this.logBlank();
+  }
+
+  /** Print the maze visualization for current best. */
+  #printLiveMaze(currentMaze: string[]): void {
+    const lastPosition = (this.#currentBest!.result.path as readonly [
+      number,
+      number
+    ][])?.at(-1) ?? [0, 0];
+    const visualization = MazeVisualization.visualizeMaze(
+      currentMaze,
+      (lastPosition as readonly [number, number]) ?? [0, 0],
+      this.#currentBest!.result.path as readonly [number, number][]
+    );
+    const lines = Array.isArray(visualization)
+      ? visualization
+      : visualization.split('\n');
+    const centered = lines
+      .map(
+        (line) =>
+          `${colors.blueCore}║${NetworkVisualization.pad(
+            line,
+            DashboardManager.FRAME_INNER_WIDTH,
+            ' '
+          )}${colors.blueCore}║`
+      )
+      .join('\n');
+    this.logBlank();
+    this.#logFn(centered);
+    this.logBlank();
+  }
+
+  /** Print current best maze stats. */
+  #printLiveStats(currentMaze: string[]): void {
+    this.logBlank();
+    MazeVisualization.printMazeStats(
+      this.#currentBest!,
+      currentMaze,
+      this.#logFn
+    );
+    this.logBlank();
+  }
+
+  /** Print progress bar lines. */
+  #printProgressBar(): void {
+    const padBlank = () =>
+      this.#logFn(
+        `${colors.blueCore}║${NetworkVisualization.pad(
+          ' ',
+          DashboardManager.FRAME_INNER_WIDTH,
+          ' '
+        )}${colors.blueCore}║${colors.reset}`
+      );
+    padBlank();
+    const bar = `Progress to exit: ${MazeVisualization.displayProgressBar(
+      this.#currentBest!.result.progress
+    )}`;
+    this.#logFn(
+      `${colors.blueCore}║${NetworkVisualization.pad(
+        ' ' + colors.neonSilver + bar + colors.reset,
+        DashboardManager.FRAME_INNER_WIDTH,
+        ' '
+      )}${colors.blueCore}║${colors.reset}`
+    );
+    padBlank();
   }
 
   reset(): void {

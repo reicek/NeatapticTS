@@ -2,17 +2,82 @@ import { BrowserTerminalUtility } from './browserTerminalUtility';
 import { createBrowserLogger } from './browserLogger';
 import { DashboardManager } from './dashboardManager';
 import { EvolutionEngine } from './evolutionEngine';
-import * as mazes from './mazes';
 import { INetwork } from './interfaces';
+import { MazeGenerator } from './mazes';
+import { refineWinnerWithBackprop } from './refineWinner';
 
 /** Default host container id used when a string is supplied to `start`. */
 const DEFAULT_CONTAINER_ID = 'ascii-maze-output';
-/** Width change (px) that triggers a dashboard redraw. */
+/** Width delta (px) that triggers a dashboard redraw to avoid noisy renders. */
 const RESIZE_WIDTH_THRESHOLD = 8;
 /** Debounce for fallback window.resize handler (ms). */
 const RESIZE_DEBOUNCE_MS = 120;
 /** Delay before auto-starting the demo when loaded as a script (ms). */
 const AUTO_START_DELAY_MS = 20;
+/** Minimum progress percentage required to consider a maze solved (mirrors e2e test). */
+const MIN_PROGRESS_TO_PASS = 90;
+/** Default stagnation generation threshold used across most curriculum phases. */
+const DEFAULT_MAX_STAGNANT_GENERATIONS = 50;
+/** Default max generations (hard cap) for most curriculum phases. */
+const DEFAULT_MAX_GENERATIONS = 100;
+/** Per-generation log/telemetry frequency for interactive demo (always 1). */
+const PER_GENERATION_LOG_FREQUENCY = 1;
+/** Initial side length (cells) of the generated procedural maze. */
+const INITIAL_MAZE_DIMENSION = 8;
+/** Maximum side length (cells) to grow the maze to. */
+const MAX_MAZE_DIMENSION = 28;
+/** Dimension increment (cells per axis) applied after each solved maze. */
+const MAZE_DIMENSION_INCREMENT = 4;
+/** Maximum agent steps before termination (scaled mazes). */
+const AGENT_MAX_STEPS = 200;
+/** Population size for evolution across maze scalings. */
+const POPULATION_SIZE = 20;
+
+/**
+ * Create immutable evolution settings for a given maze dimension.
+ *
+ * @param dimension - Maze side length in cells (square maze).
+ * @returns Readonly configuration object consumed by a single evolution run.
+ */
+function createEvolutionSettings(dimension: number) {
+  return {
+    agentMaxSteps: AGENT_MAX_STEPS,
+    popSize: POPULATION_SIZE,
+    maxStagnantGenerations: DEFAULT_MAX_STAGNANT_GENERATIONS,
+    maxGenerations: DEFAULT_MAX_GENERATIONS,
+    lamarckianIterations: 4,
+    lamarckianSampleSize: 12,
+    mazeFactory: () => new MazeGenerator(dimension, dimension).generate(),
+  } as const;
+}
+
+/**
+ * Lightweight telemetry hub using a Set + snapshot iteration (micro-optimized for small listener counts).
+ * EventTarget would work here, but Set keeps call overhead extremely low and avoids string event names.
+ */
+class TelemetryHub<TTelemetry extends Record<string, unknown>> {
+  /** Registered listener callbacks (unique). */
+  #listeners = new Set<(payload: TTelemetry) => void>();
+
+  /** Add a listener and return an unsubscribe function. */
+  add(listener: (payload: TTelemetry) => void): () => void {
+    this.#listeners.add(listener);
+    return () => this.#listeners.delete(listener);
+  }
+
+  /** Dispatch to a snapshot of listeners so mutations during iteration are safe. */
+  dispatch(payload: TTelemetry): void {
+    // Step: Snapshot listeners (defensive against unsubscribe inside callback)
+    const snapshot = Array.from(this.#listeners);
+    for (const listener of snapshot) {
+      try {
+        listener(payload);
+      } catch {
+        // Listener exceptions are isolated so evolution cannot be disrupted.
+      }
+    }
+  }
+}
 
 /**
  * Handle returned by {@link start} providing lifecycle & telemetry access.
@@ -32,17 +97,23 @@ export interface AsciiMazeRunHandle {
   /** Promise that resolves when the curriculum naturally finishes or is stopped. */
   done: Promise<void>;
   /** Subscribe to per-generation telemetry events. Returns an unsubscribe function. */
-  onTelemetry: (cb: (telemetry: Record<string, unknown>) => void) => () => void;
+  onTelemetry: (
+    listener: (telemetry: Record<string, unknown>) => void
+  ) => () => void;
   /** Return the last telemetry snapshot produced by the dashboard, if any. */
   getTelemetry: () => unknown;
 }
 
 /**
- * Start the ASCII Maze evolutionary demo.
+ * Start the ASCII Maze evolutionary demo (progressively larger procedural mazes).
  *
- * Boots a multi-maze curriculum (in a fixed order) that evolves a NEAT population
- * repeatedly until each maze is solved (or `stop()` is invoked). The returned
- * handle provides lifecycle controls and lightweight telemetry hooks.
+ * Steps:
+ * 1. Generate an initial procedural maze (20x20) and evolve a NEAT population.
+ * 2. Emit telemetry each generation (logEvery=1) and pace via requestAnimationFrame for UI responsiveness.
+ * 3. When solved (progress >= MIN_PROGRESS_TO_PASS) grow maze size by +2 on each axis (up to 40x40) and repeat.
+ * 4. Continue until maximum dimension reached or `stop()` / external abort invoked.
+ *
+ * This progressive curriculum demonstrates transfer of learned structure to larger mazes via fresh evolution runs.
  *
  * @param container - Element id or HTMLElement to host the demo (defaults to 'ascii-maze-output').
  * @param opts - Optional configuration. `opts.signal` (AbortSignal) can be supplied by the caller to
@@ -50,9 +121,10 @@ export interface AsciiMazeRunHandle {
  * @returns A {@link AsciiMazeRunHandle} exposing lifecycle controls and telemetry hooks.
  */
 export async function start(
-  container: string | HTMLElement = 'ascii-maze-output',
+  container: string | HTMLElement = DEFAULT_CONTAINER_ID,
   opts: { signal?: AbortSignal } = {}
 ): Promise<AsciiMazeRunHandle> {
+  // Step 0: Resolve host elements & loggers
   const hostElement =
     typeof container === 'string'
       ? document.getElementById(container)
@@ -79,23 +151,10 @@ export async function start(
     archiveLogger as any
   );
 
-  // Telemetry listeners stored in a Set to simplify add/remove and avoid array splices
-  const telemetryListeners = new Set<
-    (telemetry: Record<string, unknown>) => void
-  >();
-
-  // Inject hook so DashboardManager can call into listeners. We iterate a snapshot
-  // to avoid reentrancy if a listener unsubscribes during iteration.
-  (dashboard as any)._telemetryHook = (telemetry: Record<string, unknown>) => {
-    const snapshot = Array.from(telemetryListeners);
-    for (const listener of snapshot) {
-      try {
-        listener(telemetry);
-      } catch {
-        // Keep the loop robust: telemetry listeners must not be able to break evolution
-      }
-    }
-  };
+  // Telemetry hub mediating dashboard -> external listeners
+  const telemetryHub = new TelemetryHub<Record<string, unknown>>();
+  (dashboard as any)._telemetryHook = (telemetry: Record<string, unknown>) =>
+    telemetryHub.dispatch(telemetry);
 
   // Responsive resize: re-render dashboard when host width changes significantly.
   try {
@@ -129,7 +188,7 @@ export async function start(
           } catch {
             // ignore
           }
-        }, 120);
+        }, RESIZE_DEBOUNCE_MS);
       };
       window.addEventListener('resize', handler);
     }
@@ -143,27 +202,41 @@ export async function start(
   const externalSignal = opts.signal;
 
   /**
-   * Compose an external signal with the internal controller. If the external
-   * signal aborts, the internal controller is aborted. If no external signal
-   * is provided, the internal signal is returned directly.
+   * Compose the internal abort controller signal with an optional external signal.
+   * If the external signal aborts first we propagate that abort to the internal controller.
+   *
+   * @param maybeExternal - Optional external AbortSignal provided by the caller.
+   * @returns A signal that will abort when either the internal controller or the external signal aborts.
    */
   const composeAbortSignal = (maybeExternal?: AbortSignal): AbortSignal => {
-    if (!maybeExternal) return internalController.signal;
-    if ((maybeExternal as any).aborted) return maybeExternal; // already aborted
-    try {
-      maybeExternal.addEventListener(
-        'abort',
-        () => {
-          try {
-            internalController.abort();
-          } catch {
-            // ignore
-          }
-        },
-        { once: true }
-      );
-    } catch {
-      // ignore event wiring errors
+    // Modern path: AbortSignal.any is available (2023+ browsers & recent Node) -> compose both.
+    if (maybeExternal) {
+      if ((maybeExternal as any).aborted) return maybeExternal;
+      if (typeof (AbortSignal as any).any === 'function') {
+        try {
+          return (AbortSignal as any).any([
+            maybeExternal,
+            internalController.signal,
+          ]);
+        } catch {
+          // fall through to manual wiring
+        }
+      }
+      try {
+        maybeExternal.addEventListener(
+          'abort',
+          () => {
+            try {
+              internalController.abort();
+            } catch {
+              /* ignore */
+            }
+          },
+          { once: true }
+        );
+      } catch {
+        // ignore event wiring errors
+      }
     }
     return internalController.signal;
   };
@@ -171,102 +244,111 @@ export async function start(
   const combinedSignal = composeAbortSignal(externalSignal);
   let running = true;
 
-  const runCurriculum = async () => {
-    // Run mazes in the same curriculum order as the e2e test and mirror its
-    // evolution settings where practical. We intentionally disable the
-    // post-evolution backprop refinement (lamarckian iterations = 0) for
-    // the browser demo as requested.
-    const curriculumOrder = [
-      'tiny',
-      'spiralSmall',
-      'spiral',
-      'small',
-      'medium',
-      'medium2',
-      'large',
-      'minotaur',
-    ];
+  // Progressive scaling state
+  let currentDimension = INITIAL_MAZE_DIMENSION;
+  let resolveDone: (() => void) | undefined;
+  const donePromise = new Promise<void>((resolve) => (resolveDone = resolve));
 
-    // Centralized phase settings table to avoid switch/case and magic numbers.
-    const PHASE_SETTINGS: Record<
-      string,
-      { agentMaxSteps: number; maxGenerations: number }
-    > = {
-      tiny: { agentMaxSteps: 100, maxGenerations: 200 },
-      spiralSmall: { agentMaxSteps: 100, maxGenerations: 200 },
-      spiral: { agentMaxSteps: 150, maxGenerations: 300 },
-      small: { agentMaxSteps: 50, maxGenerations: 300 },
-      medium: { agentMaxSteps: 250, maxGenerations: 400 },
-      medium2: { agentMaxSteps: 300, maxGenerations: 400 },
-      large: { agentMaxSteps: 400, maxGenerations: 500 },
-      minotaur: { agentMaxSteps: 700, maxGenerations: 600 },
-    };
+  // --- Cross-maze curriculum transfer state ---
+  // Holds the best network from the most recently completed evolution run.
+  // Updated after each run finishes and passed as `initialBestNetwork` into the next
+  // run to encourage structural transfer to larger mazes. Starts undefined so the
+  // first maze evolves from a fresh random population.
+  let previousBestNetwork: INetwork | undefined;
 
-    // Carry the winning network forward between phases (curriculum transfer)
-    let lastBestNetwork: INetwork | undefined = undefined;
-
-    for (const phaseKey of curriculumOrder) {
-      if (cancelled) break;
-      const maze = (mazes as any)[phaseKey] as string[];
-      if (!Array.isArray(maze)) continue; // skip missing exports
-
-      const phaseSettings = PHASE_SETTINGS[phaseKey] ?? {
-        agentMaxSteps: 1000,
-        maxGenerations: 500,
-      };
-      const agentMaxSteps = phaseSettings.agentMaxSteps;
-      const maxGenerations = phaseSettings.maxGenerations;
-
-      try {
-        const result = await EvolutionEngine.runMazeEvolution({
-          mazeConfig: { maze },
-          agentSimConfig: { maxSteps: agentMaxSteps },
-          evolutionAlgorithmConfig: {
-            allowRecurrent: true,
-            popSize: 40,
-            // Run indefinitely until solved; remove stagnation pressure for demo clarity
-            maxStagnantGenerations: Infinity,
-            minProgressToPass: 99,
-            maxGenerations: Infinity,
-            stopOnlyOnSolve: false,
-            autoPauseOnSolve: false,
-            // Disable Lamarckian/backprop refinement for browser runs per request
-            lamarckianIterations: 0,
-            lamarckianSampleSize: 0,
-            // seed previous winner if available
-            initialBestNetwork: lastBestNetwork,
-          },
-          reportingConfig: {
-            dashboardManager: dashboard,
-            logEvery: 1,
-            label: `browser-${phaseKey}`,
-          },
-          cancellation: { isCancelled: () => cancelled },
-          signal: combinedSignal,
-        });
-
-        try {
-          console.log(
-            '[asciiMaze] maze solved',
-            phaseKey,
-            (result as any)?.bestResult?.progress
-          );
-        } catch {
-          // ignore logging errors
-        }
-
-        if (result && (result as any).bestNetwork)
-          lastBestNetwork = (result as any).bestNetwork;
-      } catch (error) {
-        console.error('Error while running maze', phaseKey, error);
-      }
+  /** Schedule a callback on the next animation frame with a setTimeout(0) fallback. */
+  const scheduleNextMaze = (cb: () => void) => {
+    try {
+      if (typeof requestAnimationFrame === 'function')
+        requestAnimationFrame(cb);
+      else setTimeout(cb, 0);
+    } catch {
+      setTimeout(cb, 0);
     }
-
-    running = false;
   };
 
-  // Kick off asynchronous curriculum immediately for convenience
-  const donePromise = runCurriculum();
+  const runEvolution = async () => {
+    if (cancelled) {
+      running = false;
+      resolveDone?.();
+      return;
+    }
+    // Best network carried forward across curriculum phases (progressively larger mazes).
+    // This lets the next maze seed its population with the prior best to encourage transfer.
+    const settings = createEvolutionSettings(currentDimension);
+    const mazeLayout = settings.mazeFactory();
+    let solved = false;
+    try {
+      const result = await EvolutionEngine.runMazeEvolution({
+        mazeConfig: { maze: mazeLayout },
+        agentSimConfig: { maxSteps: settings.agentMaxSteps },
+        evolutionAlgorithmConfig: {
+          allowRecurrent: true,
+          popSize: settings.popSize,
+          maxStagnantGenerations: settings.maxStagnantGenerations,
+          minProgressToPass: MIN_PROGRESS_TO_PASS,
+          maxGenerations: settings.maxGenerations,
+          autoPauseOnSolve: false,
+          stopOnlyOnSolve: false,
+          lamarckianIterations: settings.lamarckianIterations,
+          lamarckianSampleSize: settings.lamarckianSampleSize,
+          initialBestNetwork: previousBestNetwork,
+        },
+        reportingConfig: {
+          dashboardManager: dashboard,
+          logEvery: PER_GENERATION_LOG_FREQUENCY,
+          label: `browser-procedural-${currentDimension}x${currentDimension}`,
+          paceEveryGeneration: true, // custom flag (consumed if supported) to yield between generations
+        },
+        cancellation: { isCancelled: () => cancelled },
+        signal: combinedSignal,
+      });
+      const progress = (result as any)?.bestResult?.progress;
+      // Capture & refine best network for seeding next curriculum phase (if any).
+      try {
+        const bestNet = (result as any)?.bestNetwork as INetwork | undefined;
+        if (bestNet) {
+          const refined = refineWinnerWithBackprop(bestNet as any);
+          previousBestNetwork = (refined as any) || bestNet;
+        }
+      } catch {
+        /* ignore refinement */
+      }
+      solved = typeof progress === 'number' && progress >= MIN_PROGRESS_TO_PASS;
+      try {
+        console.log(
+          '[asciiMaze] maze complete',
+          currentDimension,
+          'solved?',
+          solved,
+          'progress',
+          progress
+        );
+      } catch {
+        /* ignore */
+      }
+    } catch (error) {
+      console.error(
+        'Error while running procedural maze',
+        currentDimension,
+        error
+      );
+    }
+
+    if (!cancelled && solved && currentDimension < MAX_MAZE_DIMENSION) {
+      currentDimension = Math.min(
+        currentDimension + MAZE_DIMENSION_INCREMENT,
+        MAX_MAZE_DIMENSION
+      );
+      scheduleNextMaze(() => runEvolution());
+    } else {
+      running = false;
+      resolveDone?.();
+    }
+  };
+
+  // Kick off first maze immediately
+  runEvolution();
 
   const handle: AsciiMazeRunHandle = {
     stop: () => {
@@ -279,12 +361,8 @@ export async function start(
     },
     isRunning: () => running && !cancelled,
     done: Promise.resolve(donePromise).catch(() => {}) as Promise<void>,
-    onTelemetry: (cb) => {
-      telemetryListeners.add(cb as any);
-      return () => {
-        telemetryListeners.delete(cb as any);
-      };
-    },
+    onTelemetry: (telemetryCallback) =>
+      telemetryHub.add(telemetryCallback as any),
     getTelemetry: () => (dashboard as any).getLastTelemetry?.(),
   };
 
@@ -296,26 +374,26 @@ export async function start(
 // If loaded directly (no module loader), expose window.asciiMaze.start() and legacy asciiMazeStart().
 declare const __webpack_require__: any; // silence TS if bundler injects
 if (typeof window !== 'undefined' && (window as any).document) {
-  const g: any = window as any;
-  g.asciiMaze = g.asciiMaze || {};
-  g.asciiMaze.start = start;
-  if (!g.asciiMazeStart) {
-    g.asciiMazeStart = (el?: any) => {
+  const globalWindow: any = window as any;
+  globalWindow.asciiMaze = globalWindow.asciiMaze || {};
+  globalWindow.asciiMaze.start = start;
+  if (!globalWindow.asciiMazeStart) {
+    globalWindow.asciiMazeStart = (containerElement?: any) => {
       console.warn(
         '[asciiMaze] window.asciiMazeStart is deprecated; use import { start } ... or window.asciiMaze.start'
       );
-      return start(el);
+      return start(containerElement);
     };
   }
   // Guard against duplicate auto-start
-  if (!g.asciiMaze._autoStarted) {
-    g.asciiMaze._autoStarted = true;
+  if (!globalWindow.asciiMaze._autoStarted) {
+    globalWindow.asciiMaze._autoStarted = true;
     setTimeout(() => {
       try {
-        if (document.getElementById('ascii-maze-output')) start();
+        if (document.getElementById(DEFAULT_CONTAINER_ID)) start();
       } catch {
         /* ignore */
       }
-    }, 20);
+    }, AUTO_START_DELAY_MS);
   }
 }

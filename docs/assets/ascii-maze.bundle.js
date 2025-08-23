@@ -12148,9 +12148,9 @@
     return this.population.map((genome) => genome.toJSON());
   }
   function importPopulation(populationJSON) {
-    const Network6 = (init_network(), __toCommonJS(network_exports)).default;
+    const Network7 = (init_network(), __toCommonJS(network_exports)).default;
     this.population = populationJSON.map(
-      (serializedGenome) => Network6.fromJSON(serializedGenome)
+      (serializedGenome) => Network7.fromJSON(serializedGenome)
     );
     this.options.popsize = this.population.length;
   }
@@ -13133,35 +13133,45 @@
   });
 
   // test/examples/asciiMaze/browserTerminalUtility.ts
-  var BrowserTerminalUtility = class {
+  var BrowserTerminalUtility = class _BrowserTerminalUtility {
+    /** Default minimum progress percentage that counts as sufficiently solved. */
+    static #DefaultMinProgressToPass = 60;
+    /** Default maximum number of evolutionary attempts before aborting. */
+    static #DefaultMaxAttemptCount = 10;
+    /** Backwards compatibility alias for attempt count (deprecated). */
+    static deprecatedTriesKey = "tries";
+    /** Resolve (or locate) the host element used for output. */
+    static #resolveHostElement(container) {
+      return container ?? (typeof document !== "undefined" ? document.getElementById("ascii-maze-output") : null);
+    }
     /**
      * Create a clearer that clears a DOM container's contents.
      * If no container is provided it will try to use an element with id "ascii-maze-output".
      */
     static createTerminalClearer(container) {
-      const el = container ?? (typeof document !== "undefined" ? document.getElementById("ascii-maze-output") : null);
+      const hostElement = this.#resolveHostElement(container);
       return () => {
-        if (el) el.innerHTML = "";
+        if (hostElement) hostElement.innerHTML = "";
       };
     }
     /**
      * Same semantics as the Node version: repeatedly call evolveFn until success or threshold reached.
      */
-    static async evolveUntilSolved(evolveFn, minProgressToPass = 60, maxTries = 10) {
-      let tries = 0;
+    static async evolveUntilSolved(evolveFn, minProgressToPass = _BrowserTerminalUtility.#DefaultMinProgressToPass, maxAttemptCount = _BrowserTerminalUtility.#DefaultMaxAttemptCount) {
+      let attemptCount = 0;
       let lastResult = {
         success: false,
         progress: 0
       };
-      while (tries < maxTries) {
-        tries++;
+      while (attemptCount < maxAttemptCount) {
+        attemptCount++;
         const { finalResult } = await evolveFn();
         lastResult = finalResult;
         if (finalResult.success || finalResult.progress >= minProgressToPass) {
-          return { finalResult, tries };
+          return { finalResult, attemptCount, tries: attemptCount };
         }
       }
-      return { finalResult: lastResult, tries };
+      return { finalResult: lastResult, attemptCount, tries: attemptCount };
     }
   };
 
@@ -13556,7 +13566,7 @@
   };
 
   // test/examples/asciiMaze/browserLogger.ts
-  var ANSI_256_MAP = {
+  var ANSI_256_MAP = Object.freeze({
     205: "#ff6ac1",
     93: "#b48bf2",
     154: "#a6d189",
@@ -13593,134 +13603,311 @@
     17: "#000b16",
     16: "#000000",
     39: "#0078ff"
-  };
-  function escapeHtml(s) {
-    return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  });
+  var FONT_WEIGHT_BOLD = "700";
+  var SGR_RESET = 0;
+  var SGR_BOLD = 1;
+  var SGR_BOLD_OFF = 22;
+  var SGR_FG_EXTENDED = 38;
+  var SGR_BG_EXTENDED = 48;
+  var SGR_FG_DEFAULT = 39;
+  var SGR_BG_DEFAULT = 49;
+  var HTML_ESCAPE_PRESENCE = /[&<>]/;
+  var BASIC_FG_COLORS = Object.freeze([
+    "#000000",
+    "#800000",
+    "#008000",
+    "#808000",
+    "#000080",
+    "#800080",
+    "#008080",
+    "#c0c0c0"
+  ]);
+  var BRIGHT_FG_COLORS = Object.freeze([
+    "#808080",
+    "#ff0000",
+    "#00ff00",
+    "#ffff00",
+    "#0000ff",
+    "#ff00ff",
+    "#00ffff",
+    "#ffffff"
+  ]);
+  function escapeHtml(raw) {
+    if (!HTML_ESCAPE_PRESENCE.test(raw)) return raw;
+    return raw.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   }
   function ensurePre(container) {
-    const host = container ?? (typeof document !== "undefined" ? document.getElementById("ascii-maze-output") : null);
-    if (!host) return null;
-    let pre = host.querySelector("pre");
-    if (!pre) {
-      pre = document.createElement("pre");
-      pre.style.fontFamily = "monospace";
-      pre.style.whiteSpace = "pre";
-      pre.style.margin = "0";
-      pre.style.padding = "4px";
-      pre.style.fontSize = "10px";
-      host.appendChild(pre);
+    const hostElement = container ?? (typeof document !== "undefined" ? document.getElementById("ascii-maze-output") : null);
+    if (!hostElement) return null;
+    let preElement = hostElement.querySelector("pre");
+    if (!preElement) {
+      preElement = document.createElement("pre");
+      preElement.style.fontFamily = "monospace";
+      preElement.style.whiteSpace = "pre";
+      preElement.style.margin = "0";
+      preElement.style.padding = "4px";
+      preElement.style.fontSize = "10px";
+      hostElement.appendChild(preElement);
     }
-    return pre;
+    return preElement;
   }
-  function ansiToHtml(input) {
-    const re = /\x1b\[([0-9;]*)m/g;
-    let out = "";
-    let lastIndex = 0;
-    let style = {};
-    let match;
-    while ((match = re.exec(input)) !== null) {
-      const chunk = input.substring(lastIndex, match.index);
-      if (chunk) {
-        const text = escapeHtml(chunk);
-        if (Object.keys(style).length) {
-          const css = [];
-          if (style.color) css.push(`color: ${style.color}`);
-          if (style.background) css.push(`background: ${style.background}`);
-          if (style.fontWeight) css.push(`font-weight: ${style.fontWeight}`);
-          out += `<span style="${css.join(";")}">${text}</span>`;
-        } else {
-          out += text;
+  var AnsiHtmlConverter = class _AnsiHtmlConverter {
+    /**
+     * Global regex used to locate SGR parameter sequences. Reset before each parse.
+     * `([0-9;]*)` captures the parameter list which may be empty (equivalent to reset).
+     */
+    static #SgrSequencePattern = /\x1b\[([0-9;]*)m/g;
+    /** Marker inserted for newline during streaming conversion (literal `<br/>`). */
+    static #HtmlNewline = "<br/>";
+    /** Small object pool for converter instances (avoid GC churn under heavy logging). */
+    static #Pool = [];
+    static #POOL_SIZE_LIMIT = 32;
+    // Safety cap – logging lines are short, pool doesn't need to grow large.
+    /** Cache mapping style signature -> opening span tag for reuse. */
+    static #StyleCache = /* @__PURE__ */ new Map();
+    // Per-instance mutable state (cleared between uses via #resetForInput).
+    #input = "";
+    #htmlOutput = "";
+    #lastProcessedIndex = 0;
+    // Current style fields.
+    #currentColor;
+    #currentBackground;
+    #currentFontWeight;
+    #hasActiveStyle = false;
+    #currentStyleSpanStart = "";
+    // Scratch array reused for parsed numeric codes (grown as needed, not shrunk).
+    #parsedCodes = [];
+    constructor() {
+    }
+    /** Acquire a converter instance (from pool or new). */
+    static #acquire(input) {
+      const instance = this.#Pool.pop() ?? new _AnsiHtmlConverter();
+      instance.#resetForInput(input);
+      return instance;
+    }
+    /** Return a used instance back into the pool (bounded). */
+    static #release(instance) {
+      if (this.#Pool.length < this.#POOL_SIZE_LIMIT) {
+        this.#Pool.push(instance);
+      }
+    }
+    /** Public entry point: convert ANSI encoded text into HTML (single pass, pooled). */
+    static convert(input) {
+      const instance = this.#acquire(input);
+      try {
+        instance.#process();
+        return instance.#htmlOutput;
+      } finally {
+        this.#release(instance);
+      }
+    }
+    /** Prepare internal state for a fresh parse. */
+    #resetForInput(input) {
+      this.#input = input;
+      this.#htmlOutput = "";
+      this.#lastProcessedIndex = 0;
+      this.#resetStyles();
+      _AnsiHtmlConverter.#SgrSequencePattern.lastIndex = 0;
+    }
+    /** Main processing loop: walk all SGR sequences and emit transformed HTML. */
+    #process() {
+      let ansiMatch;
+      while ((ansiMatch = _AnsiHtmlConverter.#SgrSequencePattern.exec(this.#input)) !== null) {
+        this.#emitPlainTextSegment(ansiMatch.index);
+        this.#applyRawCodeSequence(ansiMatch[1]);
+        this.#lastProcessedIndex = _AnsiHtmlConverter.#SgrSequencePattern.lastIndex;
+      }
+      this.#emitPlainTextSegment(this.#input.length);
+    }
+    /** Emit plain (non-ANSI) text between the previous index and the supplied stop. */
+    #emitPlainTextSegment(stopExclusive) {
+      if (this.#lastProcessedIndex >= stopExclusive) return;
+      const rawChunk = this.#input.substring(
+        this.#lastProcessedIndex,
+        stopExclusive
+      );
+      if (!rawChunk) return;
+      if (!rawChunk.includes("\n")) {
+        const escapedSingle = escapeHtml(rawChunk);
+        this.#htmlOutput += this.#wrapIfStyled(escapedSingle);
+        return;
+      }
+      let segmentStart = 0;
+      for (let scanIndex = 0; scanIndex <= rawChunk.length; scanIndex++) {
+        const isEnd = scanIndex === rawChunk.length;
+        const isNewline = !isEnd && rawChunk.charCodeAt(scanIndex) === 10;
+        if (isNewline || isEnd) {
+          if (scanIndex > segmentStart) {
+            const sub = rawChunk.substring(segmentStart, scanIndex);
+            this.#htmlOutput += this.#wrapIfStyled(escapeHtml(sub));
+          }
+          if (isNewline) this.#htmlOutput += _AnsiHtmlConverter.#HtmlNewline;
+          segmentStart = scanIndex + 1;
         }
       }
-      const codes = match[1].split(";").filter((c) => c.length).map((c) => parseInt(c, 10));
-      if (codes.length === 0) {
-        style = {};
-      } else {
-        for (let i = 0; i < codes.length; i++) {
-          const c = codes[i];
-          if (c === 0) {
-            style = {};
-          } else if (c === 1) {
-            style.fontWeight = "700";
-          } else if (c === 22) {
-            delete style.fontWeight;
-          } else if (c === 38 && codes[i + 1] === 5) {
-            const n = codes[i + 2];
-            if (typeof n === "number" && ANSI_256_MAP[n])
-              style.color = ANSI_256_MAP[n];
-            i += 2;
-          } else if (c === 48 && codes[i + 1] === 5) {
-            const n = codes[i + 2];
-            if (typeof n === "number" && ANSI_256_MAP[n])
-              style.background = ANSI_256_MAP[n];
-            i += 2;
-          } else if (c >= 30 && c <= 37) {
-            const basic = [
-              "#000000",
-              "#800000",
-              "#008000",
-              "#808000",
-              "#000080",
-              "#800080",
-              "#008080",
-              "#c0c0c0"
-            ];
-            style.color = basic[c - 30];
-          } else if (c >= 90 && c <= 97) {
-            const bright = [
-              "#808080",
-              "#ff0000",
-              "#00ff00",
-              "#ffff00",
-              "#0000ff",
-              "#ff00ff",
-              "#00ffff",
-              "#ffffff"
-            ];
-            style.color = bright[c - 90];
-          } else if (c === 39) {
-            delete style.color;
-          } else if (c === 49) {
-            delete style.background;
+    }
+    /** Apply a raw parameter string (could be empty meaning reset) to update style state. */
+    #applyRawCodeSequence(rawCodes) {
+      if (rawCodes === "") {
+        this.#resetStyles();
+        return;
+      }
+      let accumulator = "";
+      let parsedCount = 0;
+      for (let charIndex = 0; charIndex < rawCodes.length; charIndex++) {
+        const character = rawCodes[charIndex];
+        if (character === ";") {
+          if (accumulator) {
+            this.#parsedCodes[parsedCount++] = parseInt(accumulator, 10);
+            accumulator = "";
+          }
+        } else {
+          accumulator += character;
+        }
+      }
+      if (accumulator)
+        this.#parsedCodes[parsedCount++] = parseInt(accumulator, 10);
+      this.#applyParsedCodes(parsedCount);
+      this.#rebuildStyleSpanStart();
+    }
+    /** Apply parsed numeric codes currently buffered in #parsedCodes (length = count). */
+    #applyParsedCodes(parsedCount) {
+      for (let codeIndex = 0; codeIndex < parsedCount; codeIndex++) {
+        const ansiCode = this.#parsedCodes[codeIndex];
+        switch (true) {
+          case ansiCode === SGR_RESET: {
+            this.#resetStyles();
+            break;
+          }
+          case ansiCode === SGR_BOLD: {
+            this.#currentFontWeight = FONT_WEIGHT_BOLD;
+            this.#hasActiveStyle = true;
+            break;
+          }
+          case ansiCode === SGR_BOLD_OFF: {
+            this.#currentFontWeight = void 0;
+            this.#hasActiveStyle = Boolean(
+              this.#currentColor || this.#currentBackground || this.#currentFontWeight
+            );
+            break;
+          }
+          case (ansiCode === SGR_FG_EXTENDED && this.#parsedCodes[codeIndex + 1] === 5): {
+            const paletteIndex = this.#parsedCodes[codeIndex + 2];
+            if (paletteIndex != null) {
+              const mapped = ANSI_256_MAP[paletteIndex];
+              if (mapped) {
+                this.#currentColor = mapped;
+                this.#hasActiveStyle = true;
+              }
+            }
+            codeIndex += 2;
+            break;
+          }
+          case (ansiCode === SGR_BG_EXTENDED && this.#parsedCodes[codeIndex + 1] === 5): {
+            const paletteIndex = this.#parsedCodes[codeIndex + 2];
+            if (paletteIndex != null) {
+              const mapped = ANSI_256_MAP[paletteIndex];
+              if (mapped) {
+                this.#currentBackground = mapped;
+                this.#hasActiveStyle = true;
+              }
+            }
+            codeIndex += 2;
+            break;
+          }
+          case (ansiCode >= 30 && ansiCode <= 37): {
+            this.#currentColor = BASIC_FG_COLORS[ansiCode - 30];
+            this.#hasActiveStyle = true;
+            break;
+          }
+          case (ansiCode >= 90 && ansiCode <= 97): {
+            this.#currentColor = BRIGHT_FG_COLORS[ansiCode - 90];
+            this.#hasActiveStyle = true;
+            break;
+          }
+          case ansiCode === SGR_FG_DEFAULT: {
+            this.#currentColor = void 0;
+            this.#hasActiveStyle = Boolean(
+              this.#currentBackground || this.#currentFontWeight
+            );
+            break;
+          }
+          case ansiCode === SGR_BG_DEFAULT: {
+            this.#currentBackground = void 0;
+            this.#hasActiveStyle = Boolean(
+              this.#currentColor || this.#currentFontWeight
+            );
+            break;
+          }
+          default: {
           }
         }
       }
-      lastIndex = re.lastIndex;
     }
-    if (lastIndex < input.length) {
-      const tail = escapeHtml(input.substring(lastIndex));
-      if (Object.keys(style).length) {
-        const css = [];
-        if (style.color) css.push(`color: ${style.color}`);
-        if (style.background) css.push(`background: ${style.background}`);
-        if (style.fontWeight) css.push(`font-weight: ${style.fontWeight}`);
-        out += `<span style="${css.join(";")}">${tail}</span>`;
-      } else {
-        out += tail;
+    /** Reset style-related state to defaults (SGR 0 or empty parameter list). */
+    #resetStyles() {
+      this.#currentColor = this.#currentBackground = this.#currentFontWeight = void 0;
+      this.#hasActiveStyle = false;
+      this.#currentStyleSpanStart = "";
+    }
+    /** Rebuild the opening span tag (if any style active) using deterministic property ordering. */
+    #rebuildStyleSpanStart() {
+      if (!this.#hasActiveStyle) {
+        this.#currentStyleSpanStart = "";
+        return;
       }
+      const signatureColor = this.#currentColor ?? "";
+      const signatureBg = this.#currentBackground ?? "";
+      const signatureWeight = this.#currentFontWeight ?? "";
+      const signature = `${signatureColor}|${signatureBg}|${signatureWeight}`;
+      const cached = _AnsiHtmlConverter.#StyleCache.get(signature);
+      if (cached) {
+        this.#currentStyleSpanStart = cached;
+        return;
+      }
+      const styleFragments = [];
+      if (signatureColor) styleFragments.push(`color: ${signatureColor}`);
+      if (signatureBg) styleFragments.push(`background: ${signatureBg}`);
+      if (signatureWeight) styleFragments.push(`font-weight: ${signatureWeight}`);
+      const built = styleFragments.length ? `<span style="${styleFragments.join(";")}">` : "";
+      _AnsiHtmlConverter.#StyleCache.set(signature, built);
+      this.#currentStyleSpanStart = built;
     }
-    return out;
-  }
+    /** Wrap a text segment with current style if active. */
+    #wrapIfStyled(text) {
+      return this.#currentStyleSpanStart ? `${this.#currentStyleSpanStart}${text}</span>` : text;
+    }
+    /** Convert ANSI-coded text to HTML (newlines already streamed into `<br/>`). */
+    static formatWithNewlines(input) {
+      return this.convert(input);
+    }
+  };
   function createBrowserLogger(container) {
     return (...args) => {
-      const pre = ensurePre(container);
-      let opts = void 0;
+      const logPreElement = ensurePre(container);
+      let logOptions = void 0;
       if (args.length) {
-        const lastArg = MazeUtils.safeLast(args);
-        if (lastArg && typeof lastArg === "object" && "prepend" in lastArg) {
-          opts = lastArg;
+        const lastArgument = MazeUtils.safeLast(args);
+        if (lastArgument && typeof lastArgument === "object" && "prepend" in lastArgument) {
+          logOptions = lastArgument;
           args.pop();
         }
       }
-      const text = args.map((a) => typeof a === "string" ? a : JSON.stringify(a)).join(" ");
-      const html = ansiToHtml(text).replace(/\n/g, "<br/>") + "<br/>";
-      if (!pre) return;
-      if (opts && opts.prepend) {
-        pre.innerHTML = html + pre.innerHTML;
-        pre.scrollTop = 0;
+      let combinedText = "";
+      for (let argumentIndex = 0; argumentIndex < args.length; argumentIndex++) {
+        if (argumentIndex) combinedText += " ";
+        const argumentValue = args[argumentIndex];
+        combinedText += typeof argumentValue === "string" ? argumentValue : JSON.stringify(argumentValue);
+      }
+      if (!logPreElement) return;
+      const html = AnsiHtmlConverter.formatWithNewlines(combinedText) + "<br/>";
+      if (logOptions && logOptions.prepend) {
+        logPreElement.insertAdjacentHTML("afterbegin", html);
+        logPreElement.scrollTop = 0;
       } else {
-        pre.innerHTML += html;
-        pre.scrollTop = pre.scrollHeight;
+        logPreElement.insertAdjacentHTML("beforeend", html);
+        logPreElement.scrollTop = logPreElement.scrollHeight;
       }
     };
   }
@@ -14912,7 +15099,6 @@
     static #FRAME_INNER_WIDTH = 148;
     static #LEFT_PADDING = 7;
     static #RIGHT_PADDING = 1;
-    static #CONTENT_WIDTH = _DashboardManager.#FRAME_INNER_WIDTH - _DashboardManager.#LEFT_PADDING - _DashboardManager.#RIGHT_PADDING;
     static #STAT_LABEL_WIDTH = 28;
     static #ARCHIVE_SPARK_WIDTH = 64;
     // spark width in archive blocks
@@ -14922,6 +15108,40 @@
     // label width in archive stats
     static #HISTORY_EXPORT_WINDOW = 200;
     // samples exported in telemetry details
+    /** Unicode blocks used for sparklines (ascending). */
+    static #SPARK_BLOCKS = Object.freeze([
+      "\u2581",
+      "\u2582",
+      "\u2583",
+      "\u2584",
+      "\u2585",
+      "\u2586",
+      "\u2587",
+      "\u2588"
+    ]);
+    /** Floating comparison epsilon for tiny deltas. */
+    static #DELTA_EPSILON = 1e-9;
+    /** Max operators listed in acceptance stats. */
+    static #TOP_OPERATOR_LIMIT = 6;
+    /** Max mutations listed. */
+    static #TOP_MUTATION_LIMIT = 8;
+    /** Max species sizes listed. */
+    static #TOP_SPECIES_LIMIT = 5;
+    /** Safety multiplier for hidden layer inference loop. */
+    static #LAYER_INFER_LOOP_MULTIPLIER = 4;
+    /** Label strings reused (dedup hidden classes). */
+    static #LABEL_PATH_EFF = "Path efficiency";
+    static #LABEL_PATH_OVER = "Path overhead";
+    static #LABEL_UNIQUE = "Unique cells visited";
+    static #LABEL_REVISITS = "Cells revisited";
+    static #LABEL_STEPS = "Steps";
+    static #LABEL_FITNESS = "Fitness";
+    static #LABEL_ARCH = "Architecture";
+    /** Frame pattern segments reused in redraw. */
+    static #FRAME_SINGLE_LINE_CHAR = "\u2550";
+    static #FRAME_BRIDGE_TOP = "\u2566\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2566";
+    static #FRAME_BRIDGE_BOTTOM = "\u2569\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2569";
+    static #EVOLVING_SECTION_LINE = "\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550";
     // Public aliases for backwards compatibility while internals move to private fields
     static get HISTORY_MAX() {
       return _DashboardManager.#HISTORY_MAX;
@@ -14936,7 +15156,7 @@
       return _DashboardManager.#RIGHT_PADDING;
     }
     static get CONTENT_WIDTH() {
-      return _DashboardManager.#CONTENT_WIDTH;
+      return _DashboardManager.#FRAME_INNER_WIDTH - _DashboardManager.#LEFT_PADDING - _DashboardManager.#RIGHT_PADDING;
     }
     static get STAT_LABEL_WIDTH() {
       return _DashboardManager.#STAT_LABEL_WIDTH;
@@ -14972,7 +15192,7 @@
         _DashboardManager.#LEFT_PADDING
       )}${NetworkVisualization.pad(
         composed,
-        _DashboardManager.#CONTENT_WIDTH,
+        _DashboardManager.CONTENT_WIDTH,
         " ",
         "left"
       )}${" ".repeat(_DashboardManager.#RIGHT_PADDING)}${colors.blueCore}\u2551${colors.reset}`;
@@ -14986,19 +15206,19 @@
      */
     buildSparkline(data, width = 32) {
       if (!data.length) return "";
-      const blocks = ["\u2581", "\u2582", "\u2583", "\u2584", "\u2585", "\u2586", "\u2587", "\u2588"];
+      const blocks = _DashboardManager.#SPARK_BLOCKS;
       const tail = MazeUtils.tail(data, width);
       let min = Infinity;
       let max = -Infinity;
-      for (let i = 0; i < tail.length; i++) {
-        const value = tail[i];
+      for (let tailIndex = 0; tailIndex < tail.length; tailIndex++) {
+        const value = tail[tailIndex];
         if (value < min) min = value;
         if (value > max) max = value;
       }
       const range = max - min || 1;
       const out = [];
-      for (let i = 0; i < tail.length; i++) {
-        const value = tail[i];
+      for (let tailIndex = 0; tailIndex < tail.length; tailIndex++) {
+        const value = tail[tailIndex];
         const blockIndex = Math.floor(
           (value - min) / range * (blocks.length - 1)
         );
@@ -15041,16 +15261,16 @@
      */
     appendSolvedToArchive(solved, displayNumber) {
       if (!this.#archiveFn) return;
-      const endPos = solved.result.path?.at(-1);
-      const solvedMazeVisualization = MazeVisualization.visualizeMaze(
-        solved.maze,
-        endPos ?? [0, 0],
-        solved.result.path
-      );
-      const solvedMazeLines = Array.isArray(solvedMazeVisualization) ? solvedMazeVisualization : solvedMazeVisualization.split("\n");
-      const centeredSolvedMaze = solvedMazeLines.map(
-        (line) => NetworkVisualization.pad(line, _DashboardManager.FRAME_INNER_WIDTH, " ")
-      ).join("\n");
+      const blockLines = [];
+      this.#appendSolvedHeader(blockLines, solved, displayNumber);
+      this.#appendSolvedSparklines(blockLines);
+      this.#appendSolvedMaze(blockLines, solved);
+      this.#appendSolvedPathStats(blockLines, solved);
+      this.#appendSolvedArchitecture(blockLines, solved.network);
+      this.#appendSolvedFooterAndEmit(blockLines);
+    }
+    /** Append header/title/separator lines for a solved maze block. */
+    #appendSolvedHeader(blockLines, solved, displayNumber) {
       const header = `${colors.blueCore}\u2560${NetworkVisualization.pad(
         "\u2550".repeat(_DashboardManager.FRAME_INNER_WIDTH),
         _DashboardManager.FRAME_INNER_WIDTH,
@@ -15066,10 +15286,10 @@
         _DashboardManager.FRAME_INNER_WIDTH,
         "\u2500"
       )}\u2563${colors.reset}`;
-      const blockLines = [];
-      blockLines.push(header);
-      blockLines.push(title);
-      blockLines.push(sep);
+      blockLines.push(header, title, sep);
+    }
+    /** Append trending sparklines for solved archive block. */
+    #appendSolvedSparklines(blockLines) {
       const solvedLabelWidth = _DashboardManager.#SOLVED_LABEL_WIDTH;
       const solvedStat = (label, value) => this.formatStat(
         label,
@@ -15078,40 +15298,49 @@
         colors.cyanNeon,
         solvedLabelWidth
       );
-      const spark = this.buildSparkline(
-        this.#bestFitnessHistory,
-        _DashboardManager.#ARCHIVE_SPARK_WIDTH
+      const pushIf = (label, value) => value && blockLines.push(solvedStat(label, value));
+      pushIf(
+        "Fitness trend",
+        this.buildSparkline(
+          this.#bestFitnessHistory,
+          _DashboardManager.#ARCHIVE_SPARK_WIDTH
+        )
       );
-      const sparkComplexityNodes = this.buildSparkline(
-        this.#complexityNodesHistory,
-        _DashboardManager.#ARCHIVE_SPARK_WIDTH
+      pushIf(
+        "Nodes trend",
+        this.buildSparkline(
+          this.#complexityNodesHistory,
+          _DashboardManager.#ARCHIVE_SPARK_WIDTH
+        )
       );
-      const sparkComplexityConns = this.buildSparkline(
-        this.#complexityConnsHistory,
-        _DashboardManager.#ARCHIVE_SPARK_WIDTH
+      pushIf(
+        "Conns trend",
+        this.buildSparkline(
+          this.#complexityConnsHistory,
+          _DashboardManager.#ARCHIVE_SPARK_WIDTH
+        )
       );
-      const sparkHyper = this.buildSparkline(
-        this.#hypervolumeHistory,
-        _DashboardManager.#ARCHIVE_SPARK_WIDTH
+      pushIf(
+        "Hypervol trend",
+        this.buildSparkline(
+          this.#hypervolumeHistory,
+          _DashboardManager.#ARCHIVE_SPARK_WIDTH
+        )
       );
-      const sparkProgress = this.buildSparkline(
-        this.#progressHistory,
-        _DashboardManager.#ARCHIVE_SPARK_WIDTH
+      pushIf(
+        "Progress trend",
+        this.buildSparkline(
+          this.#progressHistory,
+          _DashboardManager.#ARCHIVE_SPARK_WIDTH
+        )
       );
-      const sparkSpecies = this.buildSparkline(
-        this.#speciesCountHistory,
-        _DashboardManager.#ARCHIVE_SPARK_WIDTH
+      pushIf(
+        "Species trend",
+        this.buildSparkline(
+          this.#speciesCountHistory,
+          _DashboardManager.#ARCHIVE_SPARK_WIDTH
+        )
       );
-      if (spark) blockLines.push(solvedStat("Fitness trend", spark));
-      if (sparkComplexityNodes)
-        blockLines.push(solvedStat("Nodes trend", sparkComplexityNodes));
-      if (sparkComplexityConns)
-        blockLines.push(solvedStat("Conns trend", sparkComplexityConns));
-      if (sparkHyper) blockLines.push(solvedStat("Hypervol trend", sparkHyper));
-      if (sparkProgress)
-        blockLines.push(solvedStat("Progress trend", sparkProgress));
-      if (sparkSpecies)
-        blockLines.push(solvedStat("Species trend", sparkSpecies));
       blockLines.push(
         `${colors.blueCore}\u2551${NetworkVisualization.pad(
           " ",
@@ -15119,50 +15348,96 @@
           " "
         )}${colors.blueCore}\u2551${colors.reset}`
       );
-      centeredSolvedMaze.split("\n").forEach(
-        (l) => blockLines.push(
+    }
+    /** Append centered solved maze drawing. */
+    #appendSolvedMaze(blockLines, solved) {
+      const endPosition = solved.result.path?.at(
+        -1
+      );
+      const visualization = MazeVisualization.visualizeMaze(
+        solved.maze,
+        endPosition ?? [0, 0],
+        solved.result.path
+      );
+      const lines = Array.isArray(visualization) ? visualization : visualization.split("\n");
+      const centered = lines.map(
+        (line) => NetworkVisualization.pad(line, _DashboardManager.FRAME_INNER_WIDTH, " ")
+      ).join("\n");
+      centered.split("\n").forEach(
+        (mazeLine) => blockLines.push(
           `${colors.blueCore}\u2551${NetworkVisualization.pad(
-            l,
+            mazeLine,
             _DashboardManager.FRAME_INNER_WIDTH,
             " "
           )}${colors.blueCore}\u2551${colors.reset}`
         )
       );
-      const startPos = MazeUtils.findPosition(solved.maze, "S");
-      const exitPos = MazeUtils.findPosition(solved.maze, "E");
-      const optimalLength = MazeUtils.bfsDistance(
-        MazeUtils.encodeMaze(solved.maze),
-        startPos,
-        exitPos
+    }
+    /** Compute path metrics & append stats lines. */
+    #appendSolvedPathStats(blockLines, solved) {
+      const solvedLabelWidth = _DashboardManager.#SOLVED_LABEL_WIDTH;
+      const solvedStat = (label, value) => this.formatStat(
+        label,
+        value,
+        colors.neonSilver,
+        colors.cyanNeon,
+        solvedLabelWidth
       );
-      const pathLength = solved.result.path.length - 1;
-      const efficiency = Math.min(
-        100,
-        Math.round(optimalLength / pathLength * 100)
-      ).toFixed(1);
-      const overhead = (pathLength / optimalLength * 100 - 100).toFixed(1);
-      const uniqueCells = /* @__PURE__ */ new Set();
-      let revisitedCells = 0;
-      for (const [x, y] of solved.result.path) {
-        const cellKey = `${x},${y}`;
-        if (uniqueCells.has(cellKey)) revisitedCells++;
-        else uniqueCells.add(cellKey);
-      }
+      const metrics = this.#computePathMetrics(solved.maze, solved.result);
       blockLines.push(
         solvedStat(
-          "Path efficiency",
-          `${optimalLength}/${pathLength} (${efficiency}%)`
+          _DashboardManager.#LABEL_PATH_EFF,
+          `${metrics.optimalLength}/${metrics.pathLength} (${metrics.efficiencyPct}%)`
         )
       );
       blockLines.push(
-        solvedStat("Path overhead", `${overhead}% longer than optimal`)
+        solvedStat(
+          _DashboardManager.#LABEL_PATH_OVER,
+          `${metrics.overheadPct}% longer than optimal`
+        )
       );
-      blockLines.push(solvedStat("Unique cells visited", `${uniqueCells.size}`));
-      blockLines.push(solvedStat("Cells revisited", `${revisitedCells} times`));
-      blockLines.push(solvedStat("Steps", `${solved.result.steps}`));
       blockLines.push(
-        solvedStat("Fitness", `${solved.result.fitness.toFixed(2)}`)
+        solvedStat(
+          _DashboardManager.#LABEL_UNIQUE,
+          `${metrics.uniqueCellsVisited}`
+        )
       );
+      blockLines.push(
+        solvedStat(
+          _DashboardManager.#LABEL_REVISITS,
+          `${metrics.revisitedCells} times`
+        )
+      );
+      blockLines.push(
+        solvedStat(_DashboardManager.#LABEL_STEPS, `${metrics.totalSteps}`)
+      );
+      blockLines.push(
+        solvedStat(
+          _DashboardManager.#LABEL_FITNESS,
+          `${metrics.fitnessValue.toFixed(2)}`
+        )
+      );
+    }
+    /** Append derived architecture string. */
+    #appendSolvedArchitecture(blockLines, network) {
+      const solvedLabelWidth = _DashboardManager.#SOLVED_LABEL_WIDTH;
+      const solvedStat = (label, value) => this.formatStat(
+        label,
+        value,
+        colors.neonSilver,
+        colors.cyanNeon,
+        solvedLabelWidth
+      );
+      let architecture = "n/a";
+      try {
+        architecture = this.#deriveArchitecture(network);
+      } catch {
+        architecture = "n/a";
+      }
+      blockLines.push(solvedStat(_DashboardManager.#LABEL_ARCH, architecture));
+    }
+    /** Emit footer & send archive block to logger. */
+    #appendSolvedFooterAndEmit(blockLines) {
       blockLines.push(
         `${colors.blueCore}\u255A${NetworkVisualization.pad(
           "\u2550".repeat(_DashboardManager.FRAME_INNER_WIDTH),
@@ -15175,8 +15450,102 @@
       } catch {
         const append = this.#archiveFn ?? (() => {
         });
-        blockLines.forEach((l) => append(l));
+        blockLines.forEach((singleLine) => append(singleLine));
       }
+    }
+    /** Compute path metrics from maze + result object. */
+    #computePathMetrics(maze, result) {
+      const startPosition = MazeUtils.findPosition(maze, "S");
+      const exitPosition = MazeUtils.findPosition(maze, "E");
+      const optimalLength = MazeUtils.bfsDistance(
+        MazeUtils.encodeMaze(maze),
+        startPosition,
+        exitPosition
+      );
+      const pathLength = result.path.length - 1;
+      const efficiencyPct = Math.min(
+        100,
+        Math.round(optimalLength / pathLength * 100)
+      ).toFixed(1);
+      const overheadPct = (pathLength / optimalLength * 100 - 100).toFixed(1);
+      const uniqueCells = /* @__PURE__ */ new Set();
+      let revisitedCells = 0;
+      for (const [cellX, cellY] of result.path) {
+        const key = `${cellX},${cellY}`;
+        if (uniqueCells.has(key)) revisitedCells++;
+        else uniqueCells.add(key);
+      }
+      return {
+        optimalLength,
+        pathLength,
+        efficiencyPct,
+        overheadPct,
+        uniqueCellsVisited: uniqueCells.size,
+        revisitedCells,
+        totalSteps: result.steps,
+        fitnessValue: result.fitness
+      };
+    }
+    /** Derive architecture string (Input - Hidden... - Output). */
+    #deriveArchitecture(networkInstance) {
+      if (!networkInstance) return "n/a";
+      if (Array.isArray(networkInstance.layers) && networkInstance.layers.length >= 2) {
+        const sizes = [];
+        for (let layerIndex = 0; layerIndex < networkInstance.layers.length; layerIndex++) {
+          const layerRef = networkInstance.layers[layerIndex];
+          const size = Array.isArray(layerRef?.nodes) ? layerRef.nodes.length : Array.isArray(layerRef) ? layerRef.length : 0;
+          sizes.push(size);
+        }
+        return sizes.join(" - ");
+      }
+      if (Array.isArray(networkInstance.nodes)) {
+        const inputNodes = networkInstance.nodes.filter(
+          (n) => n.type === "input"
+        );
+        const outputNodes = networkInstance.nodes.filter(
+          (n) => n.type === "output"
+        );
+        const hiddenNodesAll = networkInstance.nodes.filter(
+          (n) => n.type === "hidden"
+        );
+        if (!hiddenNodesAll.length) {
+          if (typeof networkInstance.input === "number" && typeof networkInstance.output === "number") {
+            return `${networkInstance.input} - ${networkInstance.output}`;
+          }
+          return `${inputNodes.length} - ${outputNodes.length}`;
+        }
+        const assignedSet = new Set(inputNodes);
+        let remainingHidden = hiddenNodesAll.slice();
+        const hiddenSizes = [];
+        const safetyLimit = hiddenNodesAll.length * _DashboardManager.#LAYER_INFER_LOOP_MULTIPLIER;
+        let iterationCounter = 0;
+        while (remainingHidden.length && iterationCounter < safetyLimit) {
+          iterationCounter++;
+          const current = remainingHidden.filter(
+            (hiddenNode) => hiddenNode.connections?.in?.every(
+              (conn) => assignedSet.has(conn.from)
+            )
+          );
+          if (!current.length) {
+            hiddenSizes.push(remainingHidden.length);
+            break;
+          }
+          hiddenSizes.push(current.length);
+          for (const nodeRef of current) assignedSet.add(nodeRef);
+          remainingHidden = remainingHidden.filter(
+            (n) => !assignedSet.has(n)
+          );
+        }
+        return [
+          `${inputNodes.length}`,
+          ...hiddenSizes.map((hs) => `${hs}`),
+          `${outputNodes.length}`
+        ].join(" - ");
+      }
+      if (typeof networkInstance.input === "number" && typeof networkInstance.output === "number") {
+        return `${networkInstance.input} - ${networkInstance.output}`;
+      }
+      return "n/a";
     }
     /**
      * update
@@ -15341,113 +15710,8 @@
      */
     redraw(currentMaze, neat) {
       this.#clearFn();
-      this.#logFn(
-        `${colors.blueCore}\u2554${NetworkVisualization.pad(
-          "\u2550",
-          _DashboardManager.FRAME_INNER_WIDTH,
-          "\u2550"
-        )}${colors.blueCore}\u2557${colors.reset}`
-      );
-      this.#logFn(
-        `${colors.blueCore}\u255A${NetworkVisualization.pad(
-          "\u2566\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2566",
-          _DashboardManager.FRAME_INNER_WIDTH,
-          "\u2550"
-        )}${colors.blueCore}\u255D${colors.reset}`
-      );
-      this.#logFn(
-        `${colors.blueCore}${NetworkVisualization.pad(
-          `\u2551 ${colors.neonYellow}ASCII maze${colors.blueCore} \u2551`,
-          150,
-          " "
-        )}${colors.reset}`
-      );
-      this.#logFn(
-        `${colors.blueCore}\u2554${NetworkVisualization.pad(
-          "\u2569\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2569",
-          _DashboardManager.FRAME_INNER_WIDTH,
-          "\u2550"
-        )}${colors.blueCore}\u2557${colors.reset}`
-      );
-      if (this.#currentBest) {
-        this.#logFn(
-          `${colors.blueCore}\u2560${NetworkVisualization.pad(
-            "\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550",
-            _DashboardManager.FRAME_INNER_WIDTH,
-            "\u2550"
-          )}${colors.blueCore}\u2563${colors.reset}`
-        );
-        this.#logFn(
-          `${colors.blueCore}\u2551${NetworkVisualization.pad(
-            `${colors.orangeNeon}EVOLVING (GEN ${this.#currentBest.generation})`,
-            _DashboardManager.FRAME_INNER_WIDTH,
-            " "
-          )}${colors.blueCore}\u2551${colors.reset}`
-        );
-        this.#logFn(
-          `${colors.blueCore}\u2560${NetworkVisualization.pad(
-            "\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550",
-            _DashboardManager.FRAME_INNER_WIDTH,
-            "\u2550"
-          )}${colors.blueCore}\u2563${colors.reset}`
-        );
-        this.logBlank();
-        this.logBlank();
-        this.#logFn(
-          NetworkVisualization.visualizeNetworkSummary(this.#currentBest.network)
-        );
-        this.logBlank();
-        const lastPos = this.#currentBest.result.path?.at(-1) ?? [0, 0];
-        const currentMazeVisualization = MazeVisualization.visualizeMaze(
-          currentMaze,
-          lastPos ?? [0, 0],
-          this.#currentBest.result.path
-        );
-        const currentMazeLines = Array.isArray(currentMazeVisualization) ? currentMazeVisualization : currentMazeVisualization.split("\n");
-        const centeredCurrentMaze = currentMazeLines.map(
-          (line) => `${colors.blueCore}\u2551${NetworkVisualization.pad(
-            line,
-            _DashboardManager.FRAME_INNER_WIDTH,
-            " "
-          )}${colors.blueCore}\u2551`
-        ).join("\n");
-        this.logBlank();
-        this.#logFn(centeredCurrentMaze);
-        this.logBlank();
-        this.logBlank();
-        MazeVisualization.printMazeStats(
-          this.#currentBest,
-          currentMaze,
-          this.#logFn
-        );
-        this.logBlank();
-        this.#logFn(
-          `${colors.blueCore}\u2551${NetworkVisualization.pad(
-            " ",
-            _DashboardManager.FRAME_INNER_WIDTH,
-            " "
-          )}${colors.blueCore}\u2551${colors.reset}`
-        );
-        this.#logFn(
-          (() => {
-            const bar = `Progress to exit: ${MazeVisualization.displayProgressBar(
-              this.#currentBest.result.progress
-            )}`;
-            return `${colors.blueCore}\u2551${NetworkVisualization.pad(
-              " " + colors.neonSilver + bar + colors.reset,
-              _DashboardManager.FRAME_INNER_WIDTH,
-              " "
-            )}${colors.blueCore}\u2551${colors.reset}`;
-          })()
-        );
-        this.#logFn(
-          `${colors.blueCore}\u2551${NetworkVisualization.pad(
-            " ",
-            _DashboardManager.FRAME_INNER_WIDTH,
-            " "
-          )}${colors.blueCore}\u2551${colors.reset}`
-        );
-      }
+      this.#printTopFrame();
+      if (this.#currentBest) this.#printCurrentBestSection(currentMaze);
       const last = this.#lastTelemetry;
       const complexity = last?.complexity;
       const perf = last?.perf;
@@ -15462,7 +15726,8 @@
       const deltaArrow = (curr, prev) => {
         if (curr == null || prev == null) return "";
         const diff = curr - prev;
-        if (Math.abs(diff) < 1e-9) return `${colors.neonSilver} (\u21940)`;
+        if (Math.abs(diff) < _DashboardManager.#DELTA_EPSILON)
+          return `${colors.neonSilver} (\u21940)`;
         const color = diff > 0 ? colors.cyanNeon : colors.neonRed;
         const arrow = diff > 0 ? "\u2191" : "\u2193";
         return `${color} (${arrow}${diff.toFixed(2)})${colors.neonSilver}`;
@@ -15546,9 +15811,12 @@
                 (leftOp, rightOp) => rightOp.success / Math.max(1, rightOp.attempts) - leftOp.success / Math.max(1, leftOp.attempts)
               );
               operatorAcceptance = [];
-              const take = Math.min(6, sortedOps.length);
-              for (let i = 0; i < take; i++) {
-                const opStats = sortedOps[i];
+              const operatorTake = Math.min(
+                _DashboardManager.#TOP_OPERATOR_LIMIT,
+                sortedOps.length
+              );
+              for (let operatorIndex = 0; operatorIndex < operatorTake; operatorIndex++) {
+                const opStats = sortedOps[operatorIndex];
                 operatorAcceptance.push({
                   name: opStats.name,
                   acceptancePct: +(100 * opStats.success / Math.max(1, opStats.attempts)).toFixed(2)
@@ -15569,9 +15837,12 @@
                 (leftEntry, rightEntry) => rightEntry[1] - leftEntry[1]
               );
               topMutations = [];
-              const takeM = Math.min(8, sortedEntries.length);
-              for (let i = 0; i < takeM; i++) {
-                const [mutationName, mutationCount] = sortedEntries[i];
+              const mutationTake = Math.min(
+                _DashboardManager.#TOP_MUTATION_LIMIT,
+                sortedEntries.length
+              );
+              for (let mutationIndex = 0; mutationIndex < mutationTake; mutationIndex++) {
+                const [mutationName, mutationCount] = sortedEntries[mutationIndex];
                 topMutations.push({
                   name: mutationName,
                   count: mutationCount
@@ -15586,10 +15857,15 @@
           const sortedSizes = [...sizes].sort(
             (sizeA, sizeB) => sizeB - sizeA
           );
-          const out = [];
-          const takeS = Math.min(5, sortedSizes.length);
-          for (let i = 0; i < takeS; i++) out.push(sortedSizes[i]);
-          return out;
+          const outArray = [];
+          const speciesTake = Math.min(
+            _DashboardManager.#TOP_SPECIES_LIMIT,
+            sortedSizes.length
+          );
+          for (let speciesIndex = 0; speciesIndex < speciesTake; speciesIndex++) {
+            outArray.push(sortedSizes[speciesIndex]);
+          }
+          return outArray;
         })() : null;
         const paretoFrontSizes = fronts ? fronts.map((f) => f?.length || 0) : null;
         this.#lastDetailedStats = {
@@ -15643,6 +15919,135 @@
       } catch {
       }
       this.logBlank();
+    }
+    /** Print the static top frame (title header). */
+    #printTopFrame() {
+      this.#logFn(
+        `${colors.blueCore}\u2554${NetworkVisualization.pad(
+          _DashboardManager.#FRAME_SINGLE_LINE_CHAR,
+          _DashboardManager.FRAME_INNER_WIDTH,
+          _DashboardManager.#FRAME_SINGLE_LINE_CHAR
+        )}${colors.blueCore}\u2557${colors.reset}`
+      );
+      this.#logFn(
+        `${colors.blueCore}\u255A${NetworkVisualization.pad(
+          _DashboardManager.#FRAME_BRIDGE_TOP,
+          _DashboardManager.FRAME_INNER_WIDTH,
+          _DashboardManager.#FRAME_SINGLE_LINE_CHAR
+        )}${colors.blueCore}\u255D${colors.reset}`
+      );
+      this.#logFn(
+        (() => {
+          const rawLabel = "\u2551 ASCII maze \u2551";
+          const rawLength = rawLabel.length;
+          const width = _DashboardManager.FRAME_INNER_WIDTH;
+          const remaining = width - rawLength;
+          const leftPad = Math.max(0, Math.ceil(remaining / 2)) + 1;
+          const rightPad = Math.max(0, remaining - leftPad);
+          const coloredLabel = `\u2551 ${colors.neonYellow}ASCII maze${colors.blueCore} \u2551`;
+          return `${colors.blueCore}${" ".repeat(
+            leftPad
+          )}${coloredLabel}${" ".repeat(rightPad)}${colors.reset}`;
+        })()
+      );
+      this.#logFn(
+        `${colors.blueCore}\u2554${NetworkVisualization.pad(
+          _DashboardManager.#FRAME_BRIDGE_BOTTOM,
+          _DashboardManager.FRAME_INNER_WIDTH,
+          _DashboardManager.#FRAME_SINGLE_LINE_CHAR
+        )}${colors.blueCore}\u2557${colors.reset}`
+      );
+    }
+    /** Orchestrate printing of evolving section (network + maze + stats + progress). */
+    #printCurrentBestSection(currentMaze) {
+      const generation = this.#currentBest.generation;
+      const sectionLine = _DashboardManager.#EVOLVING_SECTION_LINE;
+      this.#logFn(
+        `${colors.blueCore}\u2560${NetworkVisualization.pad(
+          sectionLine,
+          _DashboardManager.FRAME_INNER_WIDTH,
+          "\u2550"
+        )}${colors.blueCore}\u2563${colors.reset}`
+      );
+      this.#logFn(
+        `${colors.blueCore}\u2551${NetworkVisualization.pad(
+          `${colors.orangeNeon}EVOLVING (GEN ${generation})`,
+          _DashboardManager.FRAME_INNER_WIDTH,
+          " "
+        )}${colors.blueCore}\u2551${colors.reset}`
+      );
+      this.#logFn(
+        `${colors.blueCore}\u2560${NetworkVisualization.pad(
+          sectionLine,
+          _DashboardManager.FRAME_INNER_WIDTH,
+          "\u2550"
+        )}${colors.blueCore}\u2563${colors.reset}`
+      );
+      this.logBlank();
+      this.#printNetworkSummary();
+      this.#printLiveMaze(currentMaze);
+      this.#printLiveStats(currentMaze);
+      this.#printProgressBar();
+    }
+    /** Print network summary visualization. */
+    #printNetworkSummary() {
+      this.logBlank();
+      this.#logFn(
+        NetworkVisualization.visualizeNetworkSummary(this.#currentBest.network)
+      );
+      this.logBlank();
+    }
+    /** Print the maze visualization for current best. */
+    #printLiveMaze(currentMaze) {
+      const lastPosition = this.#currentBest.result.path?.at(-1) ?? [0, 0];
+      const visualization = MazeVisualization.visualizeMaze(
+        currentMaze,
+        lastPosition ?? [0, 0],
+        this.#currentBest.result.path
+      );
+      const lines = Array.isArray(visualization) ? visualization : visualization.split("\n");
+      const centered = lines.map(
+        (line) => `${colors.blueCore}\u2551${NetworkVisualization.pad(
+          line,
+          _DashboardManager.FRAME_INNER_WIDTH,
+          " "
+        )}${colors.blueCore}\u2551`
+      ).join("\n");
+      this.logBlank();
+      this.#logFn(centered);
+      this.logBlank();
+    }
+    /** Print current best maze stats. */
+    #printLiveStats(currentMaze) {
+      this.logBlank();
+      MazeVisualization.printMazeStats(
+        this.#currentBest,
+        currentMaze,
+        this.#logFn
+      );
+      this.logBlank();
+    }
+    /** Print progress bar lines. */
+    #printProgressBar() {
+      const padBlank = () => this.#logFn(
+        `${colors.blueCore}\u2551${NetworkVisualization.pad(
+          " ",
+          _DashboardManager.FRAME_INNER_WIDTH,
+          " "
+        )}${colors.blueCore}\u2551${colors.reset}`
+      );
+      padBlank();
+      const bar = `Progress to exit: ${MazeVisualization.displayProgressBar(
+        this.#currentBest.result.progress
+      )}`;
+      this.#logFn(
+        `${colors.blueCore}\u2551${NetworkVisualization.pad(
+          " " + colors.neonSilver + bar + colors.reset,
+          _DashboardManager.FRAME_INNER_WIDTH,
+          " "
+        )}${colors.blueCore}\u2551${colors.reset}`
+      );
+      padBlank();
     }
     reset() {
       this.#solvedMazes = [];
@@ -16111,10 +16516,6 @@
     /** Penalty applied when deep stagnation is detected (non-browser environments) */
     static #DEEP_STAGNATION_PENALTY = 2;
     // * rewardScale
-    // Near-miss penalty multiplier
-    /** Penalty multiplier for near-miss (reaching distance 1 to goal) */
-    static #NEAR_MISS_PENALTY = 30;
-    // * rewardScale
     // Action/output dimension and softmax/entropy tuning
     /** Number of cardinal actions (N,E,S,W) */
     static #ACTION_DIM = 4;
@@ -16130,10 +16531,6 @@
      */
     static #SCRATCH_CENTERED = new Float64Array(4);
     static #SCRATCH_EXPS = new Float64Array(4);
-    /** Minimum path length required to compute action entropy */
-    static #MIN_PATH_FOR_ENTROPY = 2;
-    /** Minimum action total to avoid divide-by-zero fallbacks */
-    static #MIN_ACTION_TOTAL = 1;
     /** Representation for 'no move' direction */
     static #NO_MOVE = -1;
     /** Minimum standard deviation used to prevent division by zero */
@@ -16192,10 +16589,105 @@
       [-1, 0]
       // West
     ];
-    /** Return the nth element from the end (1-based). Undefined when not available. */
-    static #nthFromEnd(arr, n) {
-      if (!arr || arr.length < n) return void 0;
-      return arr[arr.length - n];
+    // ---------------------------------------------------------------------------
+    // Pooled / reusable typed-array buffers (non‑reentrant) for simulation state
+    // ---------------------------------------------------------------------------
+    /** Visited flag per cell (0/1). Reused across simulations. @remarks Non-reentrant. */
+    static #VisitedFlags = null;
+    /** Visit counts per cell (clamped). @remarks Non-reentrant. */
+    static #VisitCounts = null;
+    /** Path X coordinates (index-aligned with #PathY). */
+    static #PathX = null;
+    /** Path Y coordinates (index-aligned with #PathX). */
+    static #PathY = null;
+    /** Capacity (cells) currently allocated for grid‑dependent arrays. */
+    static #GridCapacity = 0;
+    /** Capacity (steps) currently allocated for path arrays. */
+    static #PathCapacity = 0;
+    /** Cached maze width for index calculations. */
+    static #CachedWidth = 0;
+    /** Cached maze height for bounds validation. */
+    static #CachedHeight = 0;
+    /** Pooled softmax output (returned as a cloned plain array). */
+    static #SOFTMAX = new Float64Array(4);
+    /** Seedable PRNG state (Mulberry32 style). Undefined => Math.random(). */
+    static #PRNGState = null;
+    /**
+     * Enable deterministic pseudo-randomness for simulations executed after this call.
+     *
+     * Uses a lightweight Mulberry32 generator so repeated runs with the same seed
+     * produce identical stochastic choices (epsilon exploration, tie‑breaking, etc.).
+     * Because internal buffers are shared, calls are not reentrant / thread‑safe.
+     *
+     * @param seed 32-bit unsigned integer seed. If 0 is provided a fixed default constant is used.
+     * @returns void
+     * @example
+     * // Ensure reproducible simulation ordering
+     * MazeMovement.seedDeterministic(1234);
+     * const result = MazeMovement.simulateAgent(network, maze, start, exit);
+     */
+    static seedDeterministic(seed) {
+      _MazeMovement.#PRNGState = seed >>> 0 || 2654435769;
+    }
+    /**
+     * Disable deterministic seeding and return to Math.random based randomness.
+     *
+     * @returns void
+     * @example
+     * MazeMovement.clearDeterministicSeed();
+     */
+    static clearDeterministicSeed() {
+      _MazeMovement.#PRNGState = null;
+    }
+    /** Generate a random float in [0,1). Deterministic when seed set. */
+    static #rand() {
+      if (_MazeMovement.#PRNGState == null) return Math.random();
+      let t = _MazeMovement.#PRNGState += 1831565813;
+      t = Math.imul(t ^ t >>> 15, t | 1);
+      t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    }
+    /** Encode (x,y) -> linear cell index. */
+    static #index(x, y) {
+      return y * _MazeMovement.#CachedWidth + x;
+    }
+    /** Ensure pooled buffers sized for given maze & path. */
+    static #initBuffers(width, height, maxSteps) {
+      const cellCount = width * height;
+      if (!this.#VisitedFlags || cellCount > this.#GridCapacity) {
+        const nextCellCap = _MazeMovement.#nextPow2(cellCount);
+        this.#VisitedFlags = new Uint8Array(nextCellCap);
+        this.#VisitCounts = new Uint16Array(nextCellCap);
+        this.#GridCapacity = nextCellCap;
+      } else {
+        this.#VisitedFlags.fill(0, 0, cellCount);
+        this.#VisitCounts.fill(0, 0, cellCount);
+      }
+      if (!this.#PathX || maxSteps + 1 > this.#PathCapacity) {
+        const nextPathCap = _MazeMovement.#nextPow2(maxSteps + 1);
+        this.#PathX = new Int32Array(nextPathCap);
+        this.#PathY = new Int32Array(nextPathCap);
+        this.#PathCapacity = nextPathCap;
+      }
+      this.#CachedWidth = width;
+      this.#CachedHeight = height;
+    }
+    /** Next power of two helper (>= n). */
+    static #nextPow2(n) {
+      let p = 1;
+      while (p < n) p <<= 1;
+      return p;
+    }
+    /** Materialize the path arrays into an array<tuple>. */
+    static #materializePath(length) {
+      const out = new Array(length);
+      for (let positionIndex = 0; positionIndex < length; positionIndex++) {
+        out[positionIndex] = [
+          _MazeMovement.#PathX[positionIndex],
+          _MazeMovement.#PathY[positionIndex]
+        ];
+      }
+      return out;
     }
     /** Return opposite cardinal direction (works for ACTION_DIM even if it changes) */
     static #opposite(direction) {
@@ -16209,17 +16701,13 @@
       }
       return _MazeMovement.#NO_MOVE;
     }
-    /**
-     * Return the last element of an array or undefined.
-     * Delegates to `MazeUtils.safeLast` to centralize boundary-safe trailing access.
-     * @internal
-     */
-    static #last(arr) {
-      return MazeUtils.safeLast(arr);
-    }
     /** Sum a contiguous group in the vision vector starting at `start`. */
     static #sumVisionGroup(vision, start2) {
-      return vision.slice(start2, start2 + _MazeMovement.#VISION_GROUP_LEN).reduce((a, b) => a + b, 0);
+      let total = 0;
+      const end = start2 + _MazeMovement.#VISION_GROUP_LEN;
+      for (let visionIndex = start2; visionIndex < end; visionIndex++)
+        total += vision[visionIndex];
+      return total;
     }
     /**
      * Helper: is a cell (x,y) within bounds and not a wall?
@@ -16233,7 +16721,7 @@
      * ternary expressions across the file.
      */
     static #distanceAt(encodedMaze, [x, y], distanceMap) {
-      return Number.isFinite(distanceMap?.[y]?.[x]) ? distanceMap[y][x] : MazeUtils.bfsDistance(encodedMaze, [x, y], [x, y]);
+      return Number.isFinite(distanceMap?.[y]?.[x]) ? distanceMap[y][x] : Infinity;
     }
     /**
      * Checks if a move is valid (within maze bounds and not a wall cell).
@@ -16320,10 +16808,10 @@
       let direction = 0;
       let maxProb = -Infinity;
       let secondProb = 0;
-      const softmax = [0, 0, 0, 0];
+      const pooled = _MazeMovement.#SOFTMAX;
       for (let k = 0; k < _MazeMovement.#ACTION_DIM; k++) {
         const prob = _MazeMovement.#SCRATCH_EXPS[k] / expSum;
-        softmax[k] = prob;
+        pooled[k] = prob;
         if (prob > maxProb) {
           secondProb = maxProb;
           maxProb = prob;
@@ -16333,11 +16821,18 @@
         }
       }
       let entropy = 0;
-      softmax.forEach((prob) => {
+      for (let k = 0; k < _MazeMovement.#ACTION_DIM; k++) {
+        const prob = pooled[k];
         if (prob > 0) entropy += -prob * Math.log(prob);
-      });
+      }
       entropy /= _MazeMovement.#LOG_ACTIONS;
-      return { direction, softmax, entropy, maxProb, secondProb };
+      return {
+        direction,
+        softmax: Array.from(pooled),
+        entropy,
+        maxProb,
+        secondProb
+      };
     }
     /**
      * Simulates the agent navigating the maze using its neural network.
@@ -16359,13 +16854,34 @@
      *   - progress: Percentage progress toward exit (0-100).
      */
     static simulateAgent(network, encodedMaze, startPos, exitPos, distanceMap, maxSteps = _MazeMovement.#DEFAULT_MAX_STEPS) {
-      let position = [startPos[0], startPos[1]];
+      const width = encodedMaze[0].length;
+      const height = encodedMaze.length;
+      _MazeMovement.#initBuffers(width, height, maxSteps);
+      const position = [startPos[0], startPos[1]];
       let steps = 0;
-      let path2 = [[position[0], position[1]]];
-      let visitedPositions = /* @__PURE__ */ new Set();
-      let visitCounts = /* @__PURE__ */ new Map();
-      let moveHistory = [];
-      const MOVE_HISTORY_LENGTH = _MazeMovement.#MOVE_HISTORY_LENGTH;
+      _MazeMovement.#PathX[0] = position[0];
+      _MazeMovement.#PathY[0] = position[1];
+      let pathLength = 1;
+      let visitedUniqueCount = 0;
+      const visitedFlags = _MazeMovement.#VisitedFlags;
+      const visitCountsTA = _MazeMovement.#VisitCounts;
+      const pathX = _MazeMovement.#PathX;
+      const pathY = _MazeMovement.#PathY;
+      const cellCountForPct = width * height;
+      const historyCapacity = _MazeMovement.#MOVE_HISTORY_LENGTH;
+      const moveHistoryRing = new Int32Array(historyCapacity);
+      let moveHistoryLength = 0;
+      let moveHistoryHead = 0;
+      const pushHistory = (cellIndex) => {
+        moveHistoryRing[moveHistoryHead] = cellIndex;
+        moveHistoryHead = (moveHistoryHead + 1) % historyCapacity;
+        if (moveHistoryLength < historyCapacity) moveHistoryLength++;
+      };
+      const nthFromHistoryEnd = (n) => {
+        if (n > moveHistoryLength) return void 0;
+        const idx = (moveHistoryHead - n + historyCapacity) % historyCapacity;
+        return moveHistoryRing[idx];
+      };
       let minDistanceToExit = _MazeMovement.#distanceAt(
         encodedMaze,
         position,
@@ -16386,38 +16902,44 @@
       let saturatedSteps = 0;
       const recentPositions = [];
       let localAreaPenalty = 0;
+      const directionCounts = [0, 0, 0, 0];
+      const recordVisit = () => {
+        const cellIndex = _MazeMovement.#index(position[0], position[1]);
+        if (!visitedFlags[cellIndex]) {
+          visitedFlags[cellIndex] = 1;
+          visitedUniqueCount++;
+        }
+        visitCountsTA[cellIndex]++;
+        pushHistory(cellIndex);
+        return cellIndex;
+      };
+      recordVisit();
       let lastProgressRatio = 0;
       while (steps < maxSteps) {
         steps++;
-        const currentPosKey = `${position[0]},${position[1]}`;
-        visitedPositions.add(currentPosKey);
-        visitCounts.set(currentPosKey, (visitCounts.get(currentPosKey) || 0) + 1);
-        moveHistory = MazeUtils.pushHistory(
-          moveHistory,
-          currentPosKey,
-          MOVE_HISTORY_LENGTH
-        );
-        const percentExplored = visitedPositions.size / (encodedMaze.length * encodedMaze[0].length);
+        const currentCellIndex = recordVisit();
         let loopPenalty = 0;
-        if (moveHistory.length >= _MazeMovement.#OSCILLATION_DETECT_LENGTH) {
-          const last = _MazeMovement.#last(moveHistory);
-          const thirdLast = _MazeMovement.#nthFromEnd(moveHistory, 3);
-          const secondLast = _MazeMovement.#nthFromEnd(moveHistory, 2);
-          const fourthLast = _MazeMovement.#nthFromEnd(moveHistory, 4);
-          if (last === thirdLast && secondLast === fourthLast) {
+        if (moveHistoryLength >= _MazeMovement.#OSCILLATION_DETECT_LENGTH) {
+          const last = nthFromHistoryEnd(1);
+          const thirdLast = nthFromHistoryEnd(3);
+          const secondLast = nthFromHistoryEnd(2);
+          const fourthLast = nthFromHistoryEnd(4);
+          if (thirdLast !== void 0 && secondLast !== void 0 && fourthLast !== void 0 && last === thirdLast && secondLast === fourthLast) {
             loopPenalty -= _MazeMovement.#LOOP_PENALTY * rewardScale;
           }
         }
-        const loopFlag = loopPenalty < 0 ? 1 : 0;
         let memoryPenalty = 0;
-        if (moveHistory.length > 1) {
-          const idx = moveHistory.indexOf(currentPosKey);
-          if (idx !== -1 && idx < moveHistory.length - 1) {
-            memoryPenalty -= _MazeMovement.#MEMORY_RETURN_PENALTY * rewardScale;
+        if (moveHistoryLength > 1) {
+          for (let scan = 2; scan <= moveHistoryLength; scan++) {
+            const idxVal = nthFromHistoryEnd(scan);
+            if (idxVal === currentCellIndex) {
+              memoryPenalty -= _MazeMovement.#MEMORY_RETURN_PENALTY * rewardScale;
+              break;
+            }
           }
         }
         let revisitPenalty = 0;
-        const visits = visitCounts.get(currentPosKey) || 1;
+        const visits = visitCountsTA[currentCellIndex];
         if (visits > 1) {
           revisitPenalty -= _MazeMovement.#REVISIT_PENALTY_PER_VISIT * (visits - 1) * rewardScale;
         }
@@ -16542,10 +17064,10 @@
         }
         if (distHere <= _MazeMovement.#PROXIMITY_SUPPRESS_EXPLOR_DIST)
           epsilon = Math.min(epsilon, _MazeMovement.#EPSILON_MIN_NEAR_GOAL);
-        if (Math.random() < epsilon) {
+        if (_MazeMovement.#rand() < epsilon) {
           for (let trial = 0; trial < _MazeMovement.#ACTION_DIM; trial++) {
             const candidateDirection = Math.floor(
-              Math.random() * _MazeMovement.#ACTION_DIM
+              _MazeMovement.#rand() * _MazeMovement.#ACTION_DIM
             );
             if (candidateDirection === prevAction) continue;
             const [ddx, ddy] = _MazeMovement.#DIRECTION_DELTAS[candidateDirection];
@@ -16563,7 +17085,7 @@
         if (_MazeMovement._noMoveStreak >= _MazeMovement.#NO_MOVE_STREAK_THRESHOLD) {
           for (let attempt = 0; attempt < _MazeMovement.#ACTION_DIM; attempt++) {
             const candidateDirection = Math.floor(
-              Math.random() * _MazeMovement.#ACTION_DIM
+              _MazeMovement.#rand() * _MazeMovement.#ACTION_DIM
             );
             const [ddx, ddy] = _MazeMovement.#DIRECTION_DELTAS[candidateDirection];
             const tx = position[0] + ddx;
@@ -16575,8 +17097,6 @@
           }
           _MazeMovement._noMoveStreak = 0;
         }
-        const prevPositionX = position[0];
-        const prevPositionY = position[1];
         const prevDistance = _MazeMovement.#distanceAt(
           encodedMaze,
           position,
@@ -16600,7 +17120,9 @@
           moved = false;
         }
         if (moved) {
-          path2.push([position[0], position[1]]);
+          pathX[pathLength] = position[0];
+          pathY[pathLength] = position[1];
+          pathLength++;
           MazeUtils.pushHistory(
             recentPositions,
             [position[0], position[1]],
@@ -16654,6 +17176,7 @@
           } else {
             newCellExplorationBonus -= _MazeMovement.#REVISIT_PENALTY_STRONG * rewardScale;
           }
+          if (direction >= 0) directionCounts[direction]++;
           minDistanceToExit = Math.min(minDistanceToExit, currentDistance);
         } else {
           invalidMovePenalty -= _MazeMovement.#INVALID_MOVE_PENALTY_MILD * rewardScale;
@@ -16723,12 +17246,24 @@
         invalidMovePenalty += loopPenalty + memoryPenalty + revisitPenalty;
         if (position[0] === exitPos[0] && position[1] === exitPos[1]) {
           const stepEfficiency = maxSteps - steps;
-          const { actionEntropy: actionEntropy2 } = _MazeMovement.computeActionEntropy(path2);
+          const actionEntropy2 = (() => {
+            let entropySum = 0;
+            const total = directionCounts[0] + directionCounts[1] + directionCounts[2] + directionCounts[3] || 1;
+            for (let di = 0; di < 4; di++) {
+              const c = directionCounts[di];
+              if (c) {
+                const p = c / total;
+                entropySum += -p * Math.log(p);
+              }
+            }
+            return entropySum / _MazeMovement.#LOG_ACTIONS;
+          })();
           const fitness2 = _MazeMovement.#SUCCESS_BASE_FITNESS + stepEfficiency * _MazeMovement.#STEP_EFFICIENCY_SCALE + progressReward + newCellExplorationBonus + invalidMovePenalty + actionEntropy2 * _MazeMovement.#SUCCESS_ACTION_ENTROPY_SCALE;
+          const pathMaterialized2 = _MazeMovement.#materializePath(pathLength);
           return {
             success: true,
             steps,
-            path: path2,
+            path: pathMaterialized2,
             fitness: Math.max(_MazeMovement.#MIN_SUCCESS_FITNESS, fitness2),
             progress: 100,
             saturationFraction: steps ? saturatedSteps / steps : 0,
@@ -16736,7 +17271,10 @@
           };
         }
       }
-      const lastPos = _MazeMovement.#last(path2) ?? [0, 0];
+      const lastPos = [
+        pathX[pathLength - 1] ?? 0,
+        pathY[pathLength - 1] ?? 0
+      ];
       const progress = distanceMap ? MazeUtils.calculateProgressFromDistanceMap(
         distanceMap,
         lastPos,
@@ -16744,61 +17282,70 @@
       ) : MazeUtils.calculateProgress(encodedMaze, lastPos, startPos, exitPos);
       const progressFrac = progress / 100;
       const shapedProgress = Math.pow(progressFrac, _MazeMovement.#PROGRESS_POWER) * _MazeMovement.#PROGRESS_SCALE;
-      const explorationScore = visitedPositions.size * 1;
+      const explorationScore = visitedUniqueCount * 1;
       const penalty = invalidMovePenalty;
-      const { actionEntropy } = _MazeMovement.computeActionEntropy(path2);
+      const actionEntropy = (() => {
+        const total = directionCounts[0] + directionCounts[1] + directionCounts[2] + directionCounts[3] || 1;
+        let entropySum = 0;
+        for (let di = 0; di < 4; di++) {
+          const c = directionCounts[di];
+          if (c) {
+            const p = c / total;
+            entropySum += -p * Math.log(p);
+          }
+        }
+        return entropySum / _MazeMovement.#LOG_ACTIONS;
+      })();
       const entropyBonus = actionEntropy * _MazeMovement.#ENTROPY_BONUS_WEIGHT;
       let saturationPenalty = 0;
       let outputVarPenalty = 0;
-      let nearMissPenalty = 0;
       const satFrac = steps ? saturatedSteps / steps : 0;
-      if (minDistanceToExit === _MazeMovement.#NEAR_MISS_PENALTY)
-        nearMissPenalty -= _MazeMovement.#NEAR_MISS_PENALTY * rewardScale;
-      const base = shapedProgress + explorationScore + progressReward + newCellExplorationBonus + penalty + entropyBonus + localAreaPenalty + saturationPenalty + outputVarPenalty + nearMissPenalty;
-      const raw = base + Math.random() * _MazeMovement.#FITNESS_RANDOMNESS;
+      const base = shapedProgress + explorationScore + progressReward + newCellExplorationBonus + penalty + entropyBonus + localAreaPenalty + saturationPenalty + outputVarPenalty;
+      const raw = base + _MazeMovement.#rand() * _MazeMovement.#FITNESS_RANDOMNESS;
       const fitness = raw >= 0 ? raw : -Math.log1p(1 - raw);
+      const pathMaterialized = _MazeMovement.#materializePath(pathLength);
       return {
         success: false,
         steps,
-        path: path2,
+        path: pathMaterialized,
         fitness,
         progress,
         saturationFraction: satFrac,
         actionEntropy
       };
     }
-    /**
-     * Computes the entropy of the agent's action distribution from its path.
-     * Higher entropy means more diverse movement; lower means repetitive.
-     *
-     * @param path - Array of [x, y] positions visited by the agent.
-     * @returns {object} actionEntropy (0..1)
-     */
-    static computeActionEntropy(path2) {
-      if (!path2 || path2.length < this.#MIN_PATH_FOR_ENTROPY)
-        return { actionEntropy: 0 };
-      const directionCounts = [0, 0, 0, 0];
-      for (let stepIndex = 1; stepIndex < path2.length; stepIndex++) {
-        const deltaX = path2[stepIndex][0] - path2[stepIndex - 1][0];
-        const deltaY = path2[stepIndex][1] - path2[stepIndex - 1][1];
-        const dir = _MazeMovement.#deltaToDirection(deltaX, deltaY);
-        if (dir >= 0 && dir < directionCounts.length) directionCounts[dir]++;
-      }
-      const actionTotal = directionCounts.reduce((acc, val) => acc + val, 0) || this.#MIN_ACTION_TOTAL;
-      let entropySum = 0;
-      directionCounts.forEach((count) => {
-        if (count > 0) {
-          const probability = count / actionTotal;
-          entropySum += -probability * Math.log(probability);
-        }
-      });
-      const actionEntropy = entropySum / this.#LOG_ACTIONS;
-      return { actionEntropy };
-    }
   };
 
   // test/examples/asciiMaze/fitness.ts
   var FitnessEvaluator = class _FitnessEvaluator {
+    /** Base bonus applied for each unique (visited-once) cell, scaled by proximity. */
+    static #EXPLORATION_UNIQUE_CELL_BONUS = 200;
+    /** Proximity multiplier base (max factor when distance fraction is 0). */
+    static #PROXIMITY_MULTIPLIER_BASE = 1.5;
+    /** Proximity multiplier slope (value subtracted times normalized distance). */
+    static #PROXIMITY_MULTIPLIER_SLOPE = 0.5;
+    /** Fixed success bonus when the exit is reached. */
+    static #SUCCESS_BONUS = 5e3;
+    /** Baseline efficiency bonus before subtracting overhead penalty. */
+    static #EFFICIENCY_BASE = 8e3;
+    /** Scale factor converting path overhead percent into penalty. */
+    static #EFFICIENCY_PENALTY_SCALE = 80;
+    // --- Typed-array scratch buffers (non-reentrant) -------------------------
+    /** @internal Scratch array for visit counts (flattened y*width + x). */
+    static #VISIT_COUNT_SCRATCH = new Uint16Array(0);
+    static #SCRATCH_WIDTH = 0;
+    static #SCRATCH_HEIGHT = 0;
+    /** Ensure scratch visit-count buffer has capacity for given maze dims. */
+    static #ensureVisitScratch(width, height) {
+      if (width <= 0 || height <= 0) return;
+      if (width === this.#SCRATCH_WIDTH && height === this.#SCRATCH_HEIGHT) {
+        this.#VISIT_COUNT_SCRATCH.fill(0);
+        return;
+      }
+      this.#SCRATCH_WIDTH = width;
+      this.#SCRATCH_HEIGHT = height;
+      this.#VISIT_COUNT_SCRATCH = new Uint16Array(width * height);
+    }
     /**
      * Evaluates the fitness of a single neural network based on its performance in a maze simulation.
      *
@@ -16823,34 +17370,46 @@
      * @param maxSteps - The maximum number of steps the agent is allowed to take in the simulation.
      * @returns The final computed fitness score for the network.
      */
-    static evaluateNetworkFitness(network, encodedMaze, startPosition, exitPosition, distanceMap, maxSteps) {
+    static evaluateNetworkFitness(network, encodedMaze, startPosition, exitPosition, distanceMap, maxAllowedSteps) {
       const result = MazeMovement.simulateAgent(
         network,
         encodedMaze,
         startPosition,
         exitPosition,
         distanceMap,
-        maxSteps
+        maxAllowedSteps
       );
       let explorationBonus = 0;
-      const visitCounts = /* @__PURE__ */ new Map();
-      for (const [x, y] of result.path) {
-        const key = `${x},${y}`;
-        visitCounts.set(key, (visitCounts.get(key) || 0) + 1);
+      const mazeHeight = encodedMaze.length;
+      const mazeWidth = encodedMaze[0]?.length || 0;
+      _FitnessEvaluator.#ensureVisitScratch(mazeWidth, mazeHeight);
+      const visitCountsScratch = _FitnessEvaluator.#VISIT_COUNT_SCRATCH;
+      const strideWidth = _FitnessEvaluator.#SCRATCH_WIDTH;
+      for (let pathIndex = 0; pathIndex < result.path.length; pathIndex++) {
+        const [cellX, cellY] = result.path[pathIndex];
+        const flatIndex = cellY * strideWidth + cellX;
+        visitCountsScratch[flatIndex]++;
       }
-      for (const [x, y] of result.path) {
-        const key = `${x},${y}`;
-        const distToExit = distanceMap ? distanceMap[y]?.[x] ?? Infinity : MazeUtils.bfsDistance(encodedMaze, [x, y], exitPosition);
-        const proximityMultiplier = 1.5 - 0.5 * (distToExit / (encodedMaze.length + encodedMaze[0].length));
-        if (visitCounts.get(key) === 1)
-          explorationBonus += 200 * proximityMultiplier;
+      const dimensionSum = mazeHeight + mazeWidth;
+      for (let pathIndex = 0; pathIndex < result.path.length; pathIndex++) {
+        const [cellX, cellY] = result.path[pathIndex];
+        const flatIndex = cellY * strideWidth + cellX;
+        if (visitCountsScratch[flatIndex] !== 1) continue;
+        const distanceToExit = distanceMap ? distanceMap[cellY]?.[cellX] ?? Infinity : MazeUtils.bfsDistance(encodedMaze, [cellX, cellY], exitPosition);
+        const proximityMultiplier = _FitnessEvaluator.#PROXIMITY_MULTIPLIER_BASE - _FitnessEvaluator.#PROXIMITY_MULTIPLIER_SLOPE * (distanceToExit / dimensionSum);
+        explorationBonus += _FitnessEvaluator.#EXPLORATION_UNIQUE_CELL_BONUS * proximityMultiplier;
       }
+      visitCountsScratch.fill(0);
       let fitness = result.fitness + explorationBonus;
       if (result.success) {
-        fitness += 5e3;
-        const optimal = distanceMap ? distanceMap[startPosition[1]]?.[startPosition[0]] ?? Infinity : MazeUtils.bfsDistance(encodedMaze, startPosition, exitPosition);
-        const pathOverhead = (result.path.length - 1) / optimal * 100 - 100;
-        fitness += Math.max(0, 8e3 - pathOverhead * 80);
+        fitness += _FitnessEvaluator.#SUCCESS_BONUS;
+        const optimalPathLength = distanceMap ? distanceMap[startPosition[1]]?.[startPosition[0]] ?? Infinity : MazeUtils.bfsDistance(encodedMaze, startPosition, exitPosition);
+        const pathOverheadPercent = (result.path.length - 1) / optimalPathLength * 100 - 100;
+        const efficiencyBonus = Math.max(
+          0,
+          _FitnessEvaluator.#EFFICIENCY_BASE - pathOverheadPercent * _FitnessEvaluator.#EFFICIENCY_PENALTY_SCALE
+        );
+        fitness += efficiencyBonus;
       }
       return fitness;
     }
@@ -16887,17 +17446,14 @@
      * called concurrently (single-threaded runtime assumption holds for Node/browser).
      */
     static #SCRATCH_EXPS = new Float64Array(4);
-    /**
-     * Pooled stats buffers: means, standard deviations, and kurtosis accumulators.
-     * @remarks Non-reentrant; telemetry paths reuse these buffers to avoid allocations.
-     */
+    /** Pooled stats buffers (always resident) for means & stds. */
     static #SCRATCH_MEANS = new Float64Array(4);
     static #SCRATCH_STDS = new Float64Array(4);
-    static #SCRATCH_KURT = new Float64Array(4);
-    /** Raw moment accumulation buffers for fused logit stats (sum x^2,x^3,x^4). */
+    /** Kurtosis related buffers allocated lazily when first needed (non-reduced telemetry). */
+    static #SCRATCH_KURT;
     static #SCRATCH_M2_RAW = new Float64Array(4);
-    static #SCRATCH_M3_RAW = new Float64Array(4);
-    static #SCRATCH_M4_RAW = new Float64Array(4);
+    static #SCRATCH_M3_RAW;
+    static #SCRATCH_M4_RAW;
     /**
      * Small integer scratch buffer used for directional move counts (N,E,S,W).
      * @remarks Non-reentrant: reused across telemetry calls.
@@ -16950,19 +17506,79 @@
     static #ACTION_DIM = 4;
     /** Precomputed 1/ln(4) for entropy normalization (micro-optimization). */
     static #INV_LOG4 = 1 / Math.log(4);
-    /** Ring buffer capacity for logits history (powers of two for mask ops). */
+    /** Adaptive logits ring capacity (power-of-two). */
     static #LOGITS_RING_CAP = 512;
-    /** Scratch preallocated ring buffer storage for logits (array of float arrays). */
+    /** Max allowed ring capacity (safety bound). */
+    static #LOGITS_RING_CAP_MAX = 8192;
+    /** Indicates SharedArrayBuffer-backed ring is active. */
+    static #LOGITS_RING_SHARED = false;
+    /** Logits ring (fallback non-shared row-of-vectors). */
     static #SCRATCH_LOGITS_RING = (() => {
-      const cap = _EvolutionEngine.#LOGITS_RING_CAP;
+      const cap = 512;
       const rows = new Array(cap);
-      for (let rowIndex = 0; rowIndex < cap; rowIndex++) {
-        rows[rowIndex] = new Float64Array(_EvolutionEngine.#ACTION_DIM);
-      }
+      for (let i = 0; i < cap; i++)
+        rows[i] = new Float32Array(_EvolutionEngine.#ACTION_DIM);
       return rows;
     })();
-    /** Current write index for logits ring. */
+    /** Shared flat logits storage when shared mode enabled (length = cap * ACTION_DIM). */
+    static #SCRATCH_LOGITS_SHARED;
+    /** Shared atomic write index (length=1 Int32). */
+    static #SCRATCH_LOGITS_SHARED_W;
+    /** Write cursor for non-shared ring. */
     static #SCRATCH_LOGITS_RING_W = 0;
+    /** Internal helper: allocate a non-shared ring with specified capacity. */
+    static #allocateLogitsRing(cap) {
+      const rows = new Array(cap);
+      for (let i = 0; i < cap; i++)
+        rows[i] = new Float32Array(_EvolutionEngine.#ACTION_DIM);
+      return rows;
+    }
+    /** Attempt to initialize SharedArrayBuffer-backed ring if environment isolated (COOP+COEP). */
+    static #initSharedLogitsRing(cap) {
+      try {
+        if (typeof SharedArrayBuffer === "undefined") return;
+        if (globalThis.crossOriginIsolated !== true) return;
+        const actionDim = _EvolutionEngine.#ACTION_DIM;
+        const totalFloats = cap * actionDim;
+        const sab = new SharedArrayBuffer(4 + totalFloats * 4);
+        _EvolutionEngine.#SCRATCH_LOGITS_SHARED_W = new Int32Array(sab, 0, 1);
+        _EvolutionEngine.#SCRATCH_LOGITS_SHARED = new Float32Array(
+          sab,
+          4,
+          totalFloats
+        );
+        Atomics.store(_EvolutionEngine.#SCRATCH_LOGITS_SHARED_W, 0, 0);
+        _EvolutionEngine.#LOGITS_RING_SHARED = true;
+      } catch {
+        _EvolutionEngine.#LOGITS_RING_SHARED = false;
+        _EvolutionEngine.#SCRATCH_LOGITS_SHARED = void 0;
+        _EvolutionEngine.#SCRATCH_LOGITS_SHARED_W = void 0;
+      }
+    }
+    /** Ensure ring has capacity for desired recent steps (grow/shrink heuristics). */
+    static #ensureLogitsRingCapacity(desiredRecentSteps) {
+      let cap = _EvolutionEngine.#LOGITS_RING_CAP;
+      let target = cap;
+      if (desiredRecentSteps > cap * 3 / 4 && cap < _EvolutionEngine.#LOGITS_RING_CAP_MAX) {
+        let next = 1;
+        while (next < desiredRecentSteps * 2 && next < _EvolutionEngine.#LOGITS_RING_CAP_MAX)
+          next <<= 1;
+        target = Math.min(next, _EvolutionEngine.#LOGITS_RING_CAP_MAX);
+      } else if (desiredRecentSteps < cap / 4 && cap > 128) {
+        let shrink = cap;
+        while (shrink > 128 && desiredRecentSteps * 2 <= shrink / 2) shrink >>= 1;
+        target = Math.max(shrink, 128);
+      }
+      if (target !== cap) {
+        _EvolutionEngine.#LOGITS_RING_CAP = target;
+        _EvolutionEngine.#SCRATCH_LOGITS_RING_W = 0;
+        _EvolutionEngine.#SCRATCH_LOGITS_RING = _EvolutionEngine.#allocateLogitsRing(
+          target
+        );
+        if (_EvolutionEngine.#LOGITS_RING_SHARED)
+          _EvolutionEngine.#initSharedLogitsRing(target);
+      }
+    }
     /**
      * Small node index scratch arrays reused when extracting nodes by type.
      * @remarks Non-reentrant: do not call concurrently.
@@ -16995,7 +17611,7 @@
     /** Small fixed-size visited table for tiny path exploration (<32) to avoid O(n^2) duplicate scan. */
     static #SMALL_EXPLORE_TABLE = new Int32Array(64);
     static #PROFILE_T0() {
-      return globalThis.performance?.now?.() ?? Date.now();
+      return _EvolutionEngine.#now();
     }
     static #PROFILE_ADD(key, delta) {
       if (!_EvolutionEngine.#PROFILE_ENABLED) return;
@@ -17018,6 +17634,34 @@
       }
       return _EvolutionEngine.#RNG_CACHE[_EvolutionEngine.#RNG_CACHE_INDEX++];
     }
+    /** Deterministic mode flag (enables reproducible seeded RNG). */
+    static #DETERMINISTIC = false;
+    /** High-resolution time helper. */
+    static #now() {
+      return globalThis.performance?.now?.() ?? Date.now();
+    }
+    /**
+     * Enable deterministic mode and optionally re-seed RNG.
+     * @param seed Optional 32-bit seed (unsigned). Zero is remapped to a non-zero constant.
+     */
+    static setDeterministic(seed) {
+      _EvolutionEngine.#DETERMINISTIC = true;
+      if (typeof seed === "number" && Number.isFinite(seed)) {
+        const s = seed >>> 0 || 2654435769;
+        _EvolutionEngine.#RNG_STATE = s;
+        _EvolutionEngine.#RNG_CACHE_INDEX = 4;
+      }
+    }
+    /** Disable deterministic mode. */
+    static clearDeterministic() {
+      _EvolutionEngine.#DETERMINISTIC = false;
+    }
+    /** When true, telemetry skips higher-moment stats (kurtosis) for speed. */
+    static #REDUCED_TELEMETRY = false;
+    /** Skip most telemetry logging & higher moment stats when true (minimal mode). */
+    static #TELEMETRY_MINIMAL = false;
+    /** Disable Baldwinian refinement phase when true. */
+    static #DISABLE_BALDWIN = false;
     /** Default tail history size used by telemetry */
     static #RECENT_WINDOW = 40;
     /** Default population size used when no popSize provided in cfg */
@@ -17031,7 +17675,12 @@
     /** Fraction of population reserved for provenance when computing provenance count */
     static #DEFAULT_PROVENANCE_FRACTION = 0.2;
     /** Default minimum hidden nodes for new NEAT instances */
-    static #DEFAULT_MIN_HIDDEN = 6;
+    /**
+     * Default minimum hidden nodes enforced for each evolved network.
+     * Raised from 6 -> 12 to increase representational capacity for maze scaling.
+     * Adjust via code edit if future experiments need a different baseline.
+     */
+    static #DEFAULT_MIN_HIDDEN = 20;
     /** Default target species count for adaptive target species heuristics */
     static #DEFAULT_TARGET_SPECIES = 10;
     /** Default supervised training error threshold for local training */
@@ -17396,7 +18045,7 @@
      * @internal
      */
     static #applyLamarckianTraining(neat, lamarckianTrainingSet, lamarckianIterations, lamarckianSampleSize, safeWrite, doProfile, completedGenerations) {
-      const t1 = doProfile ? globalThis.performance?.now?.() ?? Date.now() : 0;
+      const t1 = doProfile ? _EvolutionEngine.#now() : 0;
       let trainingSetRef = lamarckianTrainingSet;
       if (lamarckianSampleSize && lamarckianSampleSize < lamarckianTrainingSet.length) {
         trainingSetRef = _EvolutionEngine.#sampleArray(
@@ -17441,7 +18090,7 @@
 `
         );
       }
-      const tDelta = doProfile ? (globalThis.performance?.now?.() ?? Date.now()) - t1 : 0;
+      const tDelta = doProfile ? _EvolutionEngine.#now() - t1 : 0;
       return tDelta;
     }
     /**
@@ -17449,6 +18098,7 @@
      * @internal
      */
     static #logGenerationTelemetry(neat, fittest, generationResult, completedGenerations, safeWrite) {
+      if (_EvolutionEngine.#TELEMETRY_MINIMAL) return;
       const t0 = _EvolutionEngine.#PROFILE_ENABLED ? _EvolutionEngine.#PROFILE_T0() : 0;
       try {
         const ae = _EvolutionEngine.#computeActionEntropy(generationResult.path);
@@ -17928,9 +18578,15 @@
     }
     /** Compute statistics over recent logits: means, stds, kurtosis, mean entropy and stability. @internal */
     static #computeLogitStats(recent) {
+      const reduced = _EvolutionEngine.#REDUCED_TELEMETRY;
       const actionDim = _EvolutionEngine.#ACTION_DIM;
       const meansBuf = _EvolutionEngine.#SCRATCH_MEANS;
       const stdsBuf = _EvolutionEngine.#SCRATCH_STDS;
+      if (!reduced && !_EvolutionEngine.#SCRATCH_KURT) {
+        _EvolutionEngine.#SCRATCH_KURT = new Float64Array(actionDim);
+        _EvolutionEngine.#SCRATCH_M3_RAW = new Float64Array(actionDim);
+        _EvolutionEngine.#SCRATCH_M4_RAW = new Float64Array(actionDim);
+      }
       const kurtBuf = _EvolutionEngine.#SCRATCH_KURT;
       const m2Buf = _EvolutionEngine.#SCRATCH_M2_RAW;
       const m3Buf = _EvolutionEngine.#SCRATCH_M3_RAW;
@@ -17938,10 +18594,12 @@
       for (let dimIndex = 0; dimIndex < actionDim; dimIndex++) {
         meansBuf[dimIndex] = 0;
         m2Buf[dimIndex] = 0;
-        m3Buf[dimIndex] = 0;
-        m4Buf[dimIndex] = 0;
         stdsBuf[dimIndex] = 0;
-        kurtBuf[dimIndex] = 0;
+        if (!reduced) {
+          m3Buf[dimIndex] = 0;
+          m4Buf[dimIndex] = 0;
+          kurtBuf[dimIndex] = 0;
+        }
       }
       const stepCount = recent.length;
       if (!stepCount) {
@@ -17957,7 +18615,27 @@
         };
       }
       let entropyAggregate = 0;
-      if (actionDim === 4) {
+      if (reduced) {
+        for (let stepIndex = 0; stepIndex < stepCount; stepIndex++) {
+          const vec = recent[stepIndex];
+          const n = stepIndex + 1;
+          for (let dimIndex = 0; dimIndex < actionDim; dimIndex++) {
+            const x = vec[dimIndex] || 0;
+            const delta = x - meansBuf[dimIndex];
+            meansBuf[dimIndex] += delta / n;
+            const delta2 = x - meansBuf[dimIndex];
+            m2Buf[dimIndex] += delta * delta2;
+          }
+          entropyAggregate += _EvolutionEngine.#softmaxEntropyFromVector(
+            vec,
+            _EvolutionEngine.#SCRATCH_EXPS
+          );
+        }
+        for (let dimIndex = 0; dimIndex < actionDim; dimIndex++) {
+          const variance = m2Buf[dimIndex] / stepCount;
+          stdsBuf[dimIndex] = variance > 0 ? Math.sqrt(variance) : 0;
+        }
+      } else if (actionDim === 4) {
         let mean0 = 0, mean1 = 0, mean2 = 0, mean3 = 0;
         let M20 = 0, M21 = 0, M22 = 0, M23 = 0;
         let M30 = 0, M31 = 0, M32 = 0, M33 = 0;
@@ -18019,10 +18697,12 @@
         stdsBuf[1] = var1 > 0 ? Math.sqrt(var1) : 0;
         stdsBuf[2] = var2 > 0 ? Math.sqrt(var2) : 0;
         stdsBuf[3] = var3 > 0 ? Math.sqrt(var3) : 0;
-        kurtBuf[0] = var0 > 1e-18 ? stepCount * M40 / (M20 * M20) - 3 : 0;
-        kurtBuf[1] = var1 > 1e-18 ? stepCount * M41 / (M21 * M21) - 3 : 0;
-        kurtBuf[2] = var2 > 1e-18 ? stepCount * M42 / (M22 * M22) - 3 : 0;
-        kurtBuf[3] = var3 > 1e-18 ? stepCount * M43 / (M23 * M23) - 3 : 0;
+        if (!reduced) {
+          kurtBuf[0] = var0 > 1e-18 ? stepCount * M40 / (M20 * M20) - 3 : 0;
+          kurtBuf[1] = var1 > 1e-18 ? stepCount * M41 / (M21 * M21) - 3 : 0;
+          kurtBuf[2] = var2 > 1e-18 ? stepCount * M42 / (M22 * M22) - 3 : 0;
+          kurtBuf[3] = var3 > 1e-18 ? stepCount * M43 / (M23 * M23) - 3 : 0;
+        }
       } else {
         for (let stepIndex = 0; stepIndex < stepCount; stepIndex++) {
           const vec = recent[stepIndex];
@@ -18033,8 +18713,10 @@
             const delta_n = delta / n;
             const delta_n2 = delta_n * delta_n;
             const term1 = delta * delta_n * (n - 1);
-            m4Buf[dimIndex] += term1 * delta_n2 * (n * n - 3 * n + 3) + 6 * delta_n2 * m2Buf[dimIndex] - 4 * delta_n * m3Buf[dimIndex];
-            m3Buf[dimIndex] += term1 * delta_n * (n - 2) - 3 * delta_n * m2Buf[dimIndex];
+            if (!reduced)
+              m4Buf[dimIndex] += term1 * delta_n2 * (n * n - 3 * n + 3) + 6 * delta_n2 * m2Buf[dimIndex] - 4 * delta_n * (m3Buf ? m3Buf[dimIndex] : 0);
+            if (!reduced)
+              m3Buf[dimIndex] += term1 * delta_n * (n - 2) - 3 * delta_n * m2Buf[dimIndex];
             m2Buf[dimIndex] += term1;
             meansBuf[dimIndex] += delta_n;
           }
@@ -18046,14 +18728,17 @@
         for (let dimIndex = 0; dimIndex < actionDim; dimIndex++) {
           const variance = m2Buf[dimIndex] / stepCount;
           stdsBuf[dimIndex] = variance > 0 ? Math.sqrt(variance) : 0;
-          kurtBuf[dimIndex] = variance > 1e-18 ? stepCount * m4Buf[dimIndex] / (m2Buf[dimIndex] * m2Buf[dimIndex]) - 3 : 0;
+          if (!reduced) {
+            const m4v = m4Buf[dimIndex];
+            kurtBuf[dimIndex] = variance > 1e-18 ? stepCount * m4v / (m2Buf[dimIndex] * m2Buf[dimIndex]) - 3 : 0;
+          }
         }
       }
       const entropyMean = entropyAggregate / stepCount;
       const stability = _EvolutionEngine.#computeDecisionStability(recent);
       const meansStr = _EvolutionEngine.#joinNumberArray(meansBuf, actionDim, 3);
       const stdsStr = _EvolutionEngine.#joinNumberArray(stdsBuf, actionDim, 3);
-      const kurtStr = _EvolutionEngine.#joinNumberArray(kurtBuf, actionDim, 2);
+      const kurtStr = reduced ? "" : _EvolutionEngine.#joinNumberArray(kurtBuf, actionDim, 2);
       return {
         meansStr,
         stdsStr,
@@ -18971,9 +19656,9 @@
      * @internal
      */
     static async #runGeneration(neat, doProfile, lamarckianIterations, lamarckianTrainingSet, lamarckianSampleSize, safeWrite, completedGenerations, dynamicPopEnabled, dynamicPopMax, plateauGenerations, plateauCounter, dynamicPopExpandInterval, dynamicPopExpandFactor, dynamicPopPlateauSlack) {
-      const t0 = doProfile ? globalThis.performance?.now?.() ?? Date.now() : 0;
+      const t0 = doProfile ? _EvolutionEngine.#now() : 0;
       const fittest = await neat.evolve();
-      const tEvolve = doProfile ? (globalThis.performance?.now?.() ?? Date.now()) - t0 : 0;
+      const tEvolve = doProfile ? _EvolutionEngine.#now() - t0 : 0;
       _EvolutionEngine.#ensureOutputIdentity(neat);
       _EvolutionEngine.#handleSpeciesHistory(neat);
       _EvolutionEngine.#maybeExpandPopulation(
@@ -19048,7 +19733,7 @@
      * @internal
      */
     static #simulateAndPostprocess(fittest, encodedMaze, startPosition, exitPosition, distanceMap, maxSteps, doProfile, safeWrite, logEvery, completedGenerations, neat) {
-      const t2 = doProfile ? globalThis.performance?.now?.() ?? Date.now() : 0;
+      const t2 = doProfile ? _EvolutionEngine.#now() : 0;
       const generationResult = MazeMovement.simulateAgent(
         fittest,
         encodedMaze,
@@ -19067,15 +19752,37 @@
       fittest._actionEntropy = generationResult.actionEntropy;
       try {
         const stepOutputs = generationResult.stepOutputs;
-        if (Array.isArray(stepOutputs)) {
-          for (let si = 0; si < stepOutputs.length; si++) {
-            const vec = stepOutputs[si];
-            if (!Array.isArray(vec)) continue;
-            const w = _EvolutionEngine.#SCRATCH_LOGITS_RING_W & _EvolutionEngine.#LOGITS_RING_CAP - 1;
-            const target = _EvolutionEngine.#SCRATCH_LOGITS_RING[w];
-            const alen = Math.min(_EvolutionEngine.#ACTION_DIM, vec.length);
-            for (let ai = 0; ai < alen; ai++) target[ai] = vec[ai] ?? 0;
-            _EvolutionEngine.#SCRATCH_LOGITS_RING_W = _EvolutionEngine.#SCRATCH_LOGITS_RING_W + 1 & 2147483647;
+        if (Array.isArray(stepOutputs) && stepOutputs.length) {
+          _EvolutionEngine.#ensureLogitsRingCapacity(stepOutputs.length);
+          if (_EvolutionEngine.#LOGITS_RING_SHARED && _EvolutionEngine.#SCRATCH_LOGITS_SHARED && _EvolutionEngine.#SCRATCH_LOGITS_SHARED_W) {
+            const shared = _EvolutionEngine.#SCRATCH_LOGITS_SHARED;
+            const idxView = _EvolutionEngine.#SCRATCH_LOGITS_SHARED_W;
+            const capMask = _EvolutionEngine.#LOGITS_RING_CAP - 1;
+            const actionDim = _EvolutionEngine.#ACTION_DIM;
+            for (let si = 0; si < stepOutputs.length; si++) {
+              const vec = stepOutputs[si];
+              if (!Array.isArray(vec)) continue;
+              const current = Atomics.load(idxView, 0) & capMask;
+              const base = current * actionDim;
+              const copyLen = Math.min(actionDim, vec.length);
+              for (let di = 0; di < copyLen; di++)
+                shared[base + di] = vec[di] ?? 0;
+              Atomics.store(
+                idxView,
+                0,
+                Atomics.load(idxView, 0) + 1 & 2147483647
+              );
+            }
+          } else {
+            for (let si = 0; si < stepOutputs.length; si++) {
+              const vec = stepOutputs[si];
+              if (!Array.isArray(vec)) continue;
+              const w = _EvolutionEngine.#SCRATCH_LOGITS_RING_W & _EvolutionEngine.#LOGITS_RING_CAP - 1;
+              const target = _EvolutionEngine.#SCRATCH_LOGITS_RING[w];
+              const alen = Math.min(_EvolutionEngine.#ACTION_DIM, vec.length);
+              for (let ai = 0; ai < alen; ai++) target[ai] = vec[ai] ?? 0;
+              _EvolutionEngine.#SCRATCH_LOGITS_RING_W = _EvolutionEngine.#SCRATCH_LOGITS_RING_W + 1 & 2147483647;
+            }
           }
         }
       } catch {
@@ -19083,7 +19790,7 @@
       if (generationResult.saturationFraction && generationResult.saturationFraction > _EvolutionEngine.#SATURATION_PRUNE_THRESHOLD) {
         _EvolutionEngine.#pruneSaturatedHiddenOutputs(fittest);
       }
-      if (completedGenerations % logEvery === 0) {
+      if (!_EvolutionEngine.#TELEMETRY_MINIMAL && completedGenerations % logEvery === 0) {
         _EvolutionEngine.#logGenerationTelemetry(
           neat,
           fittest,
@@ -19092,7 +19799,7 @@
           safeWrite
         );
       }
-      const tDelta = doProfile ? (globalThis.performance?.now?.() ?? Date.now()) - t2 : 0;
+      const tDelta = doProfile ? _EvolutionEngine.#now() - t2 : 0;
       return { generationResult, simTime: tDelta };
     }
     /**
@@ -19326,6 +20033,48 @@
       }
       return { connReset, biasReset };
     }
+    /** Compact one genome's disabled connections in-place. @internal */
+    static #compactGenomeConnections(genome) {
+      try {
+        const list = genome.connections || [];
+        let write = 0;
+        for (let read = 0; read < list.length; read++) {
+          const c = list[read];
+          if (c && c.enabled !== false) {
+            if (read !== write) list[write] = c;
+            write++;
+          }
+        }
+        const removed = list.length - write;
+        if (removed > 0) list.length = write;
+        return removed;
+      } catch {
+        return 0;
+      }
+    }
+    /** Compact entire population; returns total removed disabled connections. @internal */
+    static #compactPopulation(neat) {
+      try {
+        const pop = neat.population || [];
+        let total = 0;
+        for (let i = 0; i < pop.length; i++)
+          total += _EvolutionEngine.#compactGenomeConnections(pop[i]);
+        return total;
+      } catch {
+        return 0;
+      }
+    }
+    /** Shrink oversize scratch buffers after compaction if they exceed heuristic threshold. @internal */
+    static #maybeShrinkScratch(neat) {
+      try {
+        const popSize = neat.population && neat.population.length || 0;
+        if (popSize && _EvolutionEngine.#SCRATCH_SORT_IDX.length > popSize * 8) {
+          const nextSize = 1 << Math.ceil(Math.log2(Math.max(8, popSize)));
+          _EvolutionEngine.#SCRATCH_SORT_IDX = new Array(nextSize);
+        }
+      } catch {
+      }
+    }
     /**
      * Runs the NEAT neuro-evolution process for an agent to solve a given ASCII maze.
      *
@@ -19360,7 +20109,11 @@
         fitnessEvaluator
       } = options;
       const { maze } = mazeConfig;
-      const { logEvery = 10, dashboardManager } = reportingConfig;
+      const {
+        logEvery = 10,
+        dashboardManager,
+        paceEveryGeneration
+      } = reportingConfig;
       const {
         allowRecurrent = true,
         // Allow networks to have connections that loop back, enabling memory.
@@ -19410,9 +20163,22 @@
         // A slack factor for plateau detection when dynamic population is enabled.
         stopOnlyOnSolve = false,
         // If true, ignore stagnation/maxGenerations and run until solved.
-        autoPauseOnSolve = true
+        autoPauseOnSolve = true,
         // Browser demo will override to false to keep running continuously
+        deterministic = false,
+        memoryCompactionInterval = 50,
+        telemetryReduceStats = false,
+        telemetryMinimal = false,
+        disableBaldwinianRefinement = false
       } = evolutionAlgorithmConfig;
+      if (deterministic || typeof randomSeed === "number") {
+        _EvolutionEngine.setDeterministic(
+          typeof randomSeed === "number" ? randomSeed : 305419896
+        );
+      }
+      _EvolutionEngine.#REDUCED_TELEMETRY = !!telemetryReduceStats;
+      _EvolutionEngine.#TELEMETRY_MINIMAL = !!telemetryMinimal;
+      _EvolutionEngine.#DISABLE_BALDWIN = !!disableBaldwinianRefinement;
       const dynamicPopMax = typeof dynamicPopMaxCfg === "number" ? dynamicPopMaxCfg : Math.max(popSize, 120);
       const encodedMaze = MazeUtils.encodeMaze(maze);
       const startPosition = MazeUtils.findPosition(maze, "S");
@@ -19486,6 +20252,7 @@
       let tEvolveTotal = 0;
       let tLamarckTotal = 0;
       let tSimTotal = 0;
+      let lastCompactionGen = 0;
       const safeWrite = _EvolutionEngine.#makeSafeWriter(dashboardManager);
       while (true) {
         const cancelReason = _EvolutionEngine.#checkCancellation(
@@ -19514,18 +20281,18 @@
           tEvolveTotal += genRes.tEvolve || 0;
           tLamarckTotal += genRes.tLamarck || 0;
         }
-        try {
-          fittest.train(lamarckianTrainingSet, {
-            iterations: _EvolutionEngine.#FITTEST_TRAIN_ITERATIONS,
-            // Uses extracted constant
-            error: _EvolutionEngine.#DEFAULT_TRAIN_ERROR,
-            rate: _EvolutionEngine.#DEFAULT_TRAIN_RATE,
-            momentum: _EvolutionEngine.#DEFAULT_TRAIN_MOMENTUM,
-            batchSize: _EvolutionEngine.#DEFAULT_TRAIN_BATCH_LARGE,
-            allowRecurrent: true
-            // allow recurrent connections
-          });
-        } catch (baldwinErr) {
+        if (!_EvolutionEngine.#DISABLE_BALDWIN) {
+          try {
+            fittest.train(lamarckianTrainingSet, {
+              iterations: _EvolutionEngine.#FITTEST_TRAIN_ITERATIONS,
+              error: _EvolutionEngine.#DEFAULT_TRAIN_ERROR,
+              rate: _EvolutionEngine.#DEFAULT_TRAIN_RATE,
+              momentum: _EvolutionEngine.#DEFAULT_TRAIN_MOMENTUM,
+              batchSize: _EvolutionEngine.#DEFAULT_TRAIN_BATCH_LARGE,
+              allowRecurrent: true
+            });
+          } catch {
+          }
         }
         const fitness = fittest.score ?? 0;
         completedGenerations++;
@@ -19622,6 +20389,23 @@
           maxGenerations
         );
         if (stopReason) break;
+        if (memoryCompactionInterval > 0 && completedGenerations - lastCompactionGen >= memoryCompactionInterval) {
+          const removedDisabled = _EvolutionEngine.#compactPopulation(neat);
+          if (removedDisabled > 0) {
+            _EvolutionEngine.#maybeShrinkScratch(neat);
+            safeWrite(
+              `[COMPACT] gen=${completedGenerations} removedDisabledConns=${removedDisabled}
+`
+            );
+          }
+          lastCompactionGen = completedGenerations;
+        }
+        if (paceEveryGeneration) {
+          try {
+            await flushToFrame();
+          } catch {
+          }
+        }
       }
       if (doProfile && completedGenerations > 0) {
         const gen = completedGenerations;
@@ -19703,231 +20487,385 @@
   };
 
   // test/examples/asciiMaze/mazes.ts
-  var mazes_exports = {};
-  __export(mazes_exports, {
-    large: () => large,
-    medium: () => medium,
-    medium2: () => medium2,
-    minotaur: () => minotaur,
-    small: () => small,
-    spiral: () => spiral,
-    spiralSmall: () => spiralSmall,
-    tiny: () => tiny
-  });
-  var tiny = [
-    "\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557",
-    "\u2551S...................\u2551",
-    "\u2560\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550.\u2551",
-    "\u2551....................\u2551",
-    "\u2551.\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2563",
-    "\u2551....................\u2551",
-    "\u255A\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557E\u2551"
-  ];
-  var spiralSmall = [
-    "\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557",
-    "\u2551...........\u2551",
-    "\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557.\u2551",
-    "\u2551.\u2551.......\u2551.\u2551",
-    "\u2551.\u2551.\u2554\u2550\u2550\u2550\u2557.\u2551.\u2551",
-    "\u2551.\u2551.\u2551...\u2551.\u2551.\u2551",
-    "\u2551.\u2551.\u2551S\u2551.\u2551.\u2551.\u2551",
-    "\u2551.\u2551.\u255A\u2550\u255D.\u2551.\u2551.\u2551",
-    "\u2551.\u2551.....\u2551.\u2551.\u2551",
-    "\u2551.\u255A\u2550\u2550\u2550\u2550\u2550\u255D.\u2551.\u2551",
-    "\u2551.........\u2551.\u2551",
-    "\u255A\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2563E\u2551"
-  ];
-  var spiral = [
-    "\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557",
-    "\u2551...............\u2551",
-    "\u2551.\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2563",
-    "\u2551.\u2551.\u2551...........\u2551",
-    "\u2551.\u2551.\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557.\u2551",
-    "\u2551.\u2551.\u2551.\u2551.......\u2551.\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2554\u2550\u2550\u2550\u2557.\u2551.\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2551...\u2551.\u2551.\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2551S\u2551.\u2551.\u2551.\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u255A\u2550\u255D.\u2551.\u2551.\u2551",
-    "\u2551.\u2551.\u2551.\u2551.....\u2551.\u2551.\u2551",
-    "\u2551.\u2551.\u2551.\u255A\u2550\u2550\u2550\u2550\u2550\u255D.\u2551.\u2551",
-    "\u2551.\u2551.\u2551.........\u2551.\u2551",
-    "\u2551.\u2551.\u255A\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D.\u2551",
-    "\u2551.\u2551.............\u2551",
-    "\u2551E\u2560\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D"
-  ];
-  var small = [
-    "\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2566\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557",
-    "\u2551S......\u2551..........\u2551",
-    "\u2560\u2550\u2550.\u2554\u2550\u2550.\u2551.\u2554\u2550\u2550.\u2551.\u2551..\u2551",
-    "\u2551...\u2551...\u2551.\u2551...\u2551.\u2551..\u2551",
-    "\u2551.\u2551.\u2551.\u2550\u2550\u255D.\u255A\u2550\u2550\u2550\u255D.\u255A\u2550\u2550\u2563",
-    "\u2551.\u2551.\u2551..............\u2551",
-    "\u2551.\u2551.\u255A\u2550\u2550\u2550\u2550\u2550\u2550.\u2550\u2550\u2566\u2550\u2557..\u2551",
-    "\u2551.\u2551...........\u2551.\u2551..\u2551",
-    "\u2551.\u255A\u2550\u2550\u2550\u2550\u2550\u2557.\u2550\u2550\u2550\u2550\u2563.\u2551..\u2551",
-    "\u2551.......\u2551.....\u2551.\u2551..\u2551",
-    "\u2560\u2550\u2550\u2550\u2550\u2550\u2550.\u255A\u2550\u2550\u2550\u2557.\u2551.\u255A\u2550\u2550\u2563",
-    "\u2551...........\u2551.\u2551....\u2551",
-    "\u2551.\u2550\u2550\u2550.\u2554\u2550\u2550\u2550\u2550.\u2551.\u255A\u2550\u2550\u2550.\u2551",
-    "\u2551.....\u2551.....\u2551......\u2551",
-    "\u255A\u2550\u2550\u2550\u2550\u2550\u2563E\u2554\u2550\u2550\u2550\u2569\u2550\u2550\u2550\u2550\u2550\u2550\u255D"
-  ];
-  var medium = [
-    "\u2554\u2550\u2566\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2566\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557",
-    "\u2551S\u2551.......\u2551.............\u2551",
-    "\u2551.\u2551.\u2550\u2550\u2550\u2550\u2557.\u2560\u2550\u2550\u2550\u2550\u2550\u2557.\u2550\u2550\u2550\u2550\u2557.\u2551",
-    "\u2551.\u2551.....\u2551.\u2551.....\u2551.....\u2551.\u2551",
-    "\u2551.\u255A\u2550\u2550\u2550\u2557.\u2551.\u255A\u2550\u2550\u2550\u2557.\u255A\u2550\u2557.\u2551.\u2551.\u2551",
-    "\u2551.....\u2551.\u2551.....\u2551...\u2551.\u2551.\u2551.\u2551",
-    "\u2560\u2550\u2550\u2550\u2557.\u2551.\u255A\u2550\u2550\u2550\u2557.\u2560\u2550\u2550.\u2551.\u2551.\u2551.\u2551",
-    "\u2551...\u2551.\u2551.....\u2551.\u2551...\u2551.\u2551.\u2551.\u2551",
-    "\u2551.\u2551.\u2551.\u255A\u2550\u2550\u2550\u2557.\u2551.\u2551.\u2550\u2550\u255D.\u2551.\u2551.\u2551",
-    "\u2551.\u2551.\u2551.....\u2551.\u2551.\u2551.....\u2551.\u2551.\u2551",
-    "\u2551.\u2551.\u255A\u2550\u2550\u2550\u2557.\u2551.\u2551.\u255A\u2550\u2550\u2550\u2550\u2550\u255D.\u2551.\u2551",
-    "\u2551.\u2551.....\u2551.\u2551.\u2551.........\u2551.\u2551",
-    "\u2551.\u255A\u2550\u2550\u2550\u2557.\u2551.\u2551.\u255A\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2563.\u2551",
-    "\u2551.....\u2551.\u2551.\u2551...........\u2551.\u2551",
-    "\u2560\u2550\u2550\u2550\u2550.\u2551.\u2551.\u255A\u2550\u2550\u2550\u2550\u2550\u2566\u2550\u2550\u2550\u2557.\u2551.\u2551",
-    "\u2551.....\u2551.........\u2551...\u2551.\u2551.\u2551",
-    "\u2551.\u2550\u2550\u2550\u2550\u2569\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D.\u2551.\u2551.\u2551.\u2551",
-    "\u2551.................\u2551.\u2551.\u2551.\u2551",
-    "\u2560\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550.\u2551.\u2551.\u2551.\u2551.\u2551",
-    "\u2551...............\u2551.\u2551...\u2551.\u2551",
-    "\u2560\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2569\u2550\u2569\u2550\u2550\u2550\u255D.\u2551",
-    "\u2551.......................\u2551",
-    "\u2551E\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D"
-  ];
-  var medium2 = [
-    "\u2554\u2550\u2566\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2566\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2566\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557",
-    "\u2551S\u2551.......\u2551.....................\u2551.............\u2551",
-    "\u2551.\u2551.\u2550\u2550\u2550\u2550\u2557.\u2560\u2550\u2550\u2550\u2550\u2550\u2557.\u2550\u2550\u2550\u2550\u2557.\u2551.\u2550\u2550\u2550\u2550\u2557.\u2551.\u2550\u2550\u2550\u2550\u2557.\u2550\u2550\u2550\u2550\u2557.\u2551",
-    "\u2551.\u2551.....\u2551.\u2551.....\u2551.....\u2551.\u2551.....\u2551.\u2551.....\u2551.....\u2551.\u2551",
-    "\u2551.\u255A\u2550\u2550\u2550\u2557.\u2551.\u255A\u2550\u2550\u2550\u2557.\u255A\u2550\u2557.\u2551.\u2551.\u2551.\u255A\u2550\u2550\u2550\u2563.\u2551.\u255A\u2550\u2550\u2550\u2563.\u255A\u2550\u2557.\u2551.\u2551",
-    "\u2551.....\u2551.\u2551.....\u2551...\u2551.\u2551.\u2551.\u2551.....\u2551.\u2551.....\u2551...\u2551.\u2551.\u2551",
-    "\u2560\u2550\u2550\u2550\u2557.\u2551.\u255A\u2550\u2550\u2550\u2557.\u2560\u2550\u2550.\u2551.\u2551.\u2551.\u2560\u2550\u2550\u2550\u2557.\u2551.\u255A\u2550\u2550\u2550\u2557.\u2560\u2550\u2550.\u2551.\u2551.\u2551",
-    "\u2551...\u2551.\u2551.....\u2551.\u2551...\u2551.\u2551.\u2551.\u2551...\u2551.\u2551.....\u2551.\u2551...\u2551.\u2551.\u2551",
-    "\u2551.\u2551.\u2551.\u255A\u2550\u2550\u2550\u2557.\u2551.\u2551.\u2550\u2550\u255D.\u2551.\u2551.\u2551.\u2551.\u2551.\u255A\u2550\u2550\u2550\u2557.\u2551.\u2551.\u2550\u2550\u255D.\u2551.\u2551",
-    "\u2551.\u2551.\u2551.....\u2551.\u2551.\u2551.....\u2551.\u2551.\u2551.\u2551.\u2551.....\u2551.\u2551.\u2551.....\u2551.\u2551",
-    "\u2551.\u2551.\u255A\u2550\u2550\u2550\u2557.\u2551.\u2551.\u255A\u2550\u2550\u2550\u2550\u2550\u255D.\u2551.\u2551.\u2551.\u255A\u2550\u2550\u2550\u2557.\u2551.\u2551.\u255A\u2550\u2550\u2550\u2550\u2550\u255D.\u2551",
-    "\u2551.\u2551.....\u2551.\u2551.\u2551.........\u2551.\u2551.\u2551.....\u2551.\u2551.\u2551.........\u2551",
-    "\u2551.\u255A\u2550\u2550\u2550\u2557.\u2551.\u2551.\u255A\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2563.\u2551.\u255A\u2550\u2550\u2550\u2557.\u2551.\u2551.\u255A\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2563",
-    "\u2551.....\u2551.\u2551.\u2551...........\u2551.\u2551.....\u2551.\u2551.\u2551...........\u2551",
-    "\u2560\u2550\u2550\u2550\u2550.\u2551.\u2551.\u255A\u2550\u2550\u2550\u2550\u2550\u2566\u2550\u2550\u2550\u2557.\u2551.\u2551\u2550\u2550\u2550\u2550\u2550\u2563.\u2551.\u255A\u2550\u2550\u2550\u2550\u2550\u2566\u2550\u2550\u2550\u2557.\u2551",
-    "\u2551.....\u2551.........\u2551...\u2551.\u2551.\u2551.....\u2551.........\u2551...\u2551.\u2551",
-    "\u2551.\u2550\u2550\u2550\u2550\u2569\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D.\u2551.\u2551.\u2551.\u2551.\u2550\u2550\u2550\u2550\u2569\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D.\u2551.\u2551.\u2551",
-    "\u2551.................\u2551.\u2551.\u2551.\u2551.................\u2551.\u2551.\u2551",
-    "\u2560\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550.\u2551.\u2551.\u2551.\u2551.\u2560\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550.\u2551.\u2551.\u2551.\u2551",
-    "\u2551...............\u2551.\u2551...\u2551.\u2551...............\u2551.\u2551...\u2551",
-    "\u2560\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2569\u2550\u2569\u2550\u2550\u2550\u2569\u2550\u2569\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D.\u255A\u2550\u2550\u2550\u2563",
-    "\u2551.............................................\u2551",
-    "\u2551E\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D"
-  ];
-  var large = [
-    "\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2566\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557",
-    "\u2551S.......................................\u2551................\u2551",
-    "\u2560\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550.\u2554\u2550\u2550\u2550\u2550\u2550.\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2566\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2569\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2566\u2550\u2550.\u2551",
-    "\u2551..........\u2551...................\u2551......................\u2551...\u2551",
-    "\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550.\u2554\u2569\u2550.\u2550\u2550\u2550\u2550\u2557.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2569\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557.\u2554\u2550\u2550\u2550\u2550\u2550\u2557.\u2550\u2569\u2550\u2550.\u2551",
-    "\u2551.\u2551.......\u2551.......\u2551.\u2551......................\u2551.\u2551.....\u2551......\u2551",
-    "\u2551.\u2560\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D.\u2550\u2550\u2550\u2550\u2550\u2550\u255D.\u2551.\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2563.\u2551.\u2550\u2550\u2550\u2550\u256C\u2550\u2550.\u2550\u2550\u2550\u2563",
-    "\u2551.\u2551.................\u2551.\u2551.\u2551..................\u2551.\u2551.....\u2551......\u2551",
-    "\u2551.\u2551.\u2550\u2550\u2550\u2550\u2566\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2563.\u2551.\u2551.\u2551.\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550.\u2551.\u2560\u2550\u2550\u2550\u2550.\u2551.\u2550\u2550\u2550\u2550\u2550\u2563",
-    "\u2551.\u2551....\u2554\u2569\u2557..........\u255A\u2566\u255D.\u2551.\u2551..............\u2551.\u2551.\u2551.....\u2551......\u2551",
-    "\u2560\u2550\u255D..\u2551.\u2551.\u2560\u2550\u2550.\u2551.\u2551.\u2551...\u2551..\u255A\u2550\u2569\u2566\u2550\u2557.\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550.\u2551.\u2551.\u2551.\u2550\u2550\u2550\u2550\u2569\u2550\u2550\u2550\u2550\u2550\u2550\u2563",
-    "\u2551....\u2551.\u2551.\u2551...\u2551.\u2551.\u2551.\u2551.\u2551.....\u2551.\u2551.......\u2551...\u2551.\u2551..............\u2551",
-    "\u2560\u2550.\u2550\u2550\u2569\u2550\u255D.\u255A\u2550\u2550\u2550\u2569\u2550\u255D.\u255A\u2550\u2569\u2566\u2569\u2550\u2550\u2550\u2550\u2566\u255D.\u2551.\u2550\u2550\u2550\u2566\u2550\u2550\u255D.\u2550\u2550\u2569\u2566\u2569\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550.\u2550\u2563",
-    "\u2551...................\u2551.....\u2551..\u2551....\u2551.......\u2551...............\u2551",
-    "\u2560\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550.\u2551.\u2551.\u2550\u2550\u2563.\u2554\u2550\u2550\u2550\u2550\u2550\u2569\u2550\u2550\u2550\u2550.\u2554\u2550\u255D.\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2563",
-    "\u2551...................\u2551.\u2551...\u2551.\u2551...........\u2551.................\u2551",
-    "\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D.\u255A\u2550\u2550\u2550\u255D.\u2551.\u2554\u2550\u2550.\u2550\u2550\u2550\u2550\u2550\u2550\u2569\u2550\u2550\u2550\u2550\u2550\u2566\u2550.\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2563",
-    "\u2551.\u2551.....................\u2551...\u2551.\u2551...............\u2551...........\u2551",
-    "\u2551.\u255A\u2550\u2557.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2566\u2550\u2550\u2550\u2566\u2550\u2550\u2550\u2550.\u2551.\u2554\u2550\u255D.\u255A\u2550\u2557..\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557.\u2560\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550.\u2550\u2563",
-    "\u2551...\u2551.\u2551.......\u2551...\u2551.....\u2551.\u2551.....\u2551...........\u2551.\u2551...........\u2551",
-    "\u2560\u2550\u2557.\u2551.\u255A\u2550\u2550\u2550\u2557.\u2551.\u2551.\u2551.\u2551.\u2551.\u2550\u2550\u255D.\u2554\u2550\u2550.\u2554\u2550\u2569\u2550\u2550\u2550\u2550.\u2554\u2550\u2566\u2550\u2550.\u2551.\u2551.\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550.\u2551",
-    "\u2551.\u2551.\u2551.....\u2551.\u2551...\u2551.\u2551.\u2551.....\u2551...\u2551.......\u2551.\u2551...\u2551.............\u2551",
-    "\u2551.\u2551.\u255A\u2550\u2550\u2550\u2550\u2550\u2563.\u2551.\u2554\u2550\u2563.\u255A\u2550\u255D.\u2554\u2550\u2550.\u2551.\u2554\u2550\u2569\u2550\u2550.\u2550\u2550\u2550\u2550\u255D.\u2551.\u2550\u2550\u2569\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2563",
-    "\u2551.\u2551.......\u2551...\u2551.\u2551.....\u2551...\u2551.\u2551...........\u2551.................\u2551",
-    "\u2551.\u255A\u2550\u2550\u2550\u2550\u2550\u2550.\u255A\u2550\u2550.\u2551.\u2560\u2550\u2550\u2550\u2550.\u255A\u2550\u2550\u2550\u255D.\u255A\u2550\u2550.\u2550\u2566\u2550\u2566\u2550\u2550\u2550\u2550\u2569\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550.\u2551",
-    "\u2551.............\u2551.\u2551................\u2551.\u2551......................\u2551",
-    "\u2560\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550.\u2551.\u2551.\u2550\u2550\u2550\u2550\u2566\u2550\u2550\u2550\u2550\u2550\u2550.\u2550\u2550\u2550\u255D.\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550.\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2563",
-    "\u2551.............\u2551.......\u2551............\u2551.\u2551....................\u2551",
-    "\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550.\u255A\u2550\u2550\u2550\u2566\u2550\u2550\u2550\u2563.\u2554\u2550\u2566\u2550\u2566\u2550\u2550\u2550\u2550\u2550\u2550\u2569\u2550\u2569\u2557.\u2554\u2550\u2550\u2550\u2550\u2550\u2550.\u2551.\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2563",
-    "\u2551.\u2551...............\u2551...\u2551.\u2551.\u2551.\u2551.........\u2551.\u2551.......\u2551.........\u2551",
-    "\u2551.\u2560\u2550\u2557.\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D.\u2550\u2550\u255D.\u2551.\u2551.\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D.\u2551.\u2550\u2550\u2550\u2550\u2550\u2550\u2569\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2563",
-    "\u2551.\u2551.\u2551.....................\u2551.\u2551.\u2551.........\u2551.................\u2551",
-    "\u2551.\u2551.\u255A\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550.\u2550\u2550\u2550\u2550\u2550\u255D.\u2551.\u2551.\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550...\u2551",
-    "\u2551.\u2551.......................................................\u2551",
-    "\u2560\u2550\u2569\u2550\u2566\u2550\u2550\u2550\u2566\u2550\u2550\u2550\u2566\u2550\u2550\u2550\u2566\u2550\u2550\u2550\u2566\u2550\u2550\u2550\u2566\u2550\u2550\u2550\u2566\u2550\u2557.\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2563",
-    "\u2551...\u2551...\u2551...\u2551...\u2551...\u2551...\u2551...\u2551.\u2551...........................\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u255A\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550.\u2551",
-    "\u2551.\u2551...\u2551...\u2551...\u2551...\u2551...\u2551...\u2551...............................\u2551",
-    "\u2551E\u2554\u2550\u2550\u2550\u2569\u2550\u2550\u2550\u2569\u2550\u2550\u2550\u2569\u2550\u2550\u2550\u2569\u2550\u2550\u2550\u2569\u2550\u2550\u2550\u2569\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D"
-  ];
-  var minotaur = [
-    "\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557",
-    "\u2551..............................................................................\u2551",
-    "\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557..\u2551",
-    "\u2551.\u2551............\u2551.\u2551.........................................\u2551.\u2551..............\u2551..\u2551",
-    "\u2551.\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557.\u2551.\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557.\u2551.\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557.\u2551.\u2551..\u2551",
-    "\u2551.\u2551.\u2551........\u2551.\u2551.\u2551.\u2551.....................................\u2551.\u2551.\u2551.\u2551........\u2551.\u2551.\u2551..\u2551",
-    "\u2551.\u2551.\u2551.\u2554\u2550\u2550\u2550\u2550\u2557.\u2551.\u2551.\u2551.\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557.\u2551.\u2551.\u2551.\u2551.\u2554\u2550\u2550\u2550\u2550\u2557.\u2551.\u2551.\u2551..\u2551",
-    "\u2551.\u2551.\u2551.\u2551....\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.................................\u2551.\u2551.\u2551.\u2551.\u2551.\u2551....\u2551.\u2551.\u2551.\u2551..\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2554\u2550.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2554\u2550.\u2551.\u2551.\u2551.\u2551..\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2551..\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.............................\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551..\u2551.\u2551.\u2551.\u2551..\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2551.\u2550\u255D.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2550\u2563.\u2551.\u2551.\u2551..\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2551....\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.........................\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551....\u2551.\u2551.\u2551.\u2551..\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u255A\u2550\u2550\u2550\u2550\u255D.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u255A\u2550\u2550\u2550\u2550\u255D.\u2551.\u2551.\u2551..\u2551",
-    "\u2551.\u2551.\u2551.\u2551........\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.....................\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551........\u2551.\u2551.\u2551..\u2551",
-    "\u2551.\u2551.\u2551.\u255A\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u255A\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D.\u2551.\u2551..\u2551",
-    "\u2551.\u2551.\u2551............\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.................\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551............\u2551.\u2551..\u2551",
-    "\u2551.\u2551.\u255A\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u255A\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D.\u2551..\u2551",
-    "\u2551.\u2551................\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.............\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551................\u2551..\u2551",
-    "\u2551.\u2560\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u255A\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2563..\u2551",
-    "\u2551.\u2551..................\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.........\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551..................\u2551..\u2551",
-    "\u2551.\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2557.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u255A\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557.\u2551..\u2551",
-    "\u2551.\u2551.\u2551..................\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.....\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551..................\u2551.\u2551..\u2551",
-    "\u2551.\u2551.\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2554\u2550\u2557.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u255A\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557.\u2551.\u2551..\u2551",
-    "\u2551.\u2551.\u2551.\u2551..................\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551S\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551..................\u2551.\u2551.\u2551..\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u255A\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557.\u2551.\u2551.\u2551..\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2551..................\u2551.\u2551.\u2551.\u2551.\u2551.\u2551...\u2551.\u2551.\u2551.\u2551.\u2551.\u2551..................\u2551.\u2551.\u2551.\u2551..\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D.\u2551.\u2551.\u2551.\u2551.\u2560\u2550\u2550\u2550\u255D.\u2551.\u2551.\u2551.\u2551.\u2551.\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2563.\u2551.\u2551.\u2551..\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2551.\u2551..................\u2551.\u2551.\u2551.\u2551.\u2551.....\u2551.\u2551.\u2551.\u2551.\u2551..................\u2551.\u2551.\u2551.\u2551..\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D.\u2551.\u2551.\u2551.\u255A\u2550\u2550\u2550\u2550\u2550\u255D.\u2551.\u2551.\u2551.\u255A\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557.\u2551.\u2551.\u2551.\u2551..\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551..................\u2551.\u2551.\u2551.........\u2551.\u2551.\u2551..................\u2551.\u2551.\u2551.\u2551.\u2551..\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D.\u2551.\u255A\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D.\u2551.\u255A\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557.\u2551.\u2551.\u2551.\u2551.\u2551..\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551..................\u2551................................\u2551.\u2551.\u2551.\u2551.\u2560\u2550\u255D..\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2569\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557.\u2554\u2569\u2566\u2569\u2566\u2569\u2566\u2569\u2566\u2569\u2557...\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551..............................................\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557..\u2551.\u2551...\u2551.\u2551.\u2551.\u2551.\u2551.\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551..........\u2551.\u2551............................\u2551..\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2557.\u2551.\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557.\u255A\u2557.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551......\u2551.\u2551.\u2551.\u2551........................\u2551..\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2560\u2550\u2550\u2557.\u2551.\u2551.\u2551.\u2551.\u2560\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557..\u2554\u2569\u2557.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551..\u2551.\u2551.\u2551.\u2551.\u2551.\u2551....................\u2551..\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2550\u255D.\u2551.\u2551.\u2551.\u2551.\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557.\u255A\u2557.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551....\u2551.\u2551.\u2551.\u2551.\u2551.\u2551................\u2551..\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u255A\u2550\u2550\u2550\u2550\u255D.\u2551.\u2551.\u2551.\u2551.\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557.\u255A\u2557.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551........\u2551.\u2551.\u2551.\u2551.\u2551.\u2551............\u2551..\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u255A\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D.\u2551.\u2551.\u2551.\u2551.\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550.\u2560\u2550.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551............\u2551.\u2551.\u2551.\u2551.\u2551.\u2551..........\u2551..\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u255A\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D.\u2551.\u2551.\u2551.\u2551.\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2557.\u255A\u2557.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2551.\u2551....................\u2551.\u2551.\u2551.\u2551.\u2551.\u2551......\u2551..\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D.\u2551.\u2551.\u2551.\u2551.\u2551.\u2554\u2550\u2550\u2557.\u255A\u2557.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2551.\u2551......................\u2551.\u2551.\u2551.\u2551.\u2551.\u2551..\u2551..\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u255A\u2550\u2569\u2550\u2550.\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D.\u2551.\u2551.\u2551.\u2551.\u2551.\u2550\u255D.\u2554\u255D.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551",
-    "\u2551.\u2551.\u2551.\u2551............................\u2551.\u2551.\u2551.\u2551.\u2551....\u2551..\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551",
-    "\u2551.\u2551.\u2551.\u255A\u2550.\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D.\u2551.\u2551.\u2551.\u2550\u2550\u2550\u2569\u2550\u2550\u2569\u2566\u255D.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551",
-    "\u2551.\u2551....................................\u2551.\u2551.\u2551........\u2551..\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551",
-    "\u2551.\u2551.\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D.\u2551.\u2551.\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2569\u2550\u2550\u2563.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551",
-    "\u2551........................................\u2551.\u2551...........\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551",
-    "\u2551.\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D.\u255A\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551",
-    "\u2551..........................................................\u2551.....\u2551.\u2551.........\u2551.\u2551",
-    "\u255A\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2569\u2550\u2550\u2550\u2550\u2550\u2569\u2550\u2569\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2563E\u2551"
-  ];
+  var MazeGenerator = class _MazeGenerator {
+    #width;
+    #height;
+    #grid = [];
+    #startX = 0;
+    #startY = 0;
+    #farthest = { x: 0, y: 0, depth: 0 };
+    // Cell markers
+    static WALL = 1;
+    static PATH = 0;
+    static START = 2;
+    static EXIT = 3;
+    constructor(rawWidth, rawHeight) {
+      this.#width = rawWidth;
+      this.#height = rawHeight;
+      this.#normalizeDimensions();
+      this.#initializeGrid();
+      this.#carvePerfectMaze();
+      this.#markStartAndExit();
+    }
+    /**
+     * STEP 1: Normalize requested dimensions.
+     * - Floors values.
+     * - Enforces minimum size 5.
+     * - Forces odd numbers so corridors are one cell thick with surrounding walls.
+     */
+    #normalizeDimensions() {
+      this.#width = Math.max(5, Math.floor(this.#width));
+      this.#height = Math.max(5, Math.floor(this.#height));
+      if (this.#width % 2 === 0) this.#width -= 1;
+      if (this.#height % 2 === 0) this.#height -= 1;
+    }
+    /**
+     * STEP 2: Initialize full wall grid and compute central starting cell (odd coordinates).
+     */
+    #initializeGrid() {
+      this.#grid = Array.from(
+        { length: this.#height },
+        () => Array.from({ length: this.#width }, () => _MazeGenerator.WALL)
+      );
+      const toOdd = (value) => value % 2 === 0 ? value - 1 : value;
+      this.#startX = toOdd(Math.floor(this.#width / 2));
+      this.#startY = toOdd(Math.floor(this.#height / 2));
+      this.#grid[this.#startY][this.#startX] = _MazeGenerator.PATH;
+      this.#farthest = { x: this.#startX, y: this.#startY, depth: 0 };
+    }
+    /**
+     * Helper: bounds check for safe coordinate access.
+     */
+    #inBounds(column, row) {
+      return column >= 0 && row >= 0 && column < this.#width && row < this.#height;
+    }
+    /**
+     * STEP 3: Carve a perfect maze using an iterative depth-first search (recursive backtracker).
+     * Maintains a stack of frontier cells; at each step chooses a random unvisited neighbor
+     * two cells away, carving both the intermediary wall cell and the target cell. Tracks
+     * the farthest cell (by depth) from the start for later exit placement.
+     */
+    #carvePerfectMaze() {
+      const stack = [
+        { x: this.#startX, y: this.#startY, depth: 0 }
+      ];
+      while (stack.length) {
+        const current = stack[stack.length - 1];
+        const neighborDirections = [
+          { deltaX: 0, deltaY: -2 },
+          { deltaX: 2, deltaY: 0 },
+          { deltaX: 0, deltaY: 2 },
+          { deltaX: -2, deltaY: 0 }
+        ];
+        for (let remaining = neighborDirections.length - 1; remaining > 0; remaining--) {
+          const randomFloat = Math.random();
+          const swapIndex = randomFloat * (remaining + 1) | 0;
+          if (swapIndex !== remaining) {
+            const tmp = neighborDirections[remaining];
+            neighborDirections[remaining] = neighborDirections[swapIndex];
+            neighborDirections[swapIndex] = tmp;
+          }
+        }
+        const unvisited = [];
+        for (const direction of neighborDirections) {
+          const nextX = current.x + direction.deltaX;
+          const nextY = current.y + direction.deltaY;
+          if (!this.#inBounds(nextX, nextY)) continue;
+          if (nextX <= 0 || nextY <= 0 || nextX >= this.#width - 1 || nextY >= this.#height - 1)
+            continue;
+          if (this.#grid[nextY][nextX] !== _MazeGenerator.WALL) continue;
+          unvisited.push({
+            nextX,
+            nextY,
+            wallX: current.x + direction.deltaX / 2,
+            wallY: current.y + direction.deltaY / 2
+          });
+        }
+        if (unvisited.length === 0) {
+          stack.pop();
+          continue;
+        }
+        const chosen = unvisited[0];
+        this.#grid[chosen.wallY][chosen.wallX] = _MazeGenerator.PATH;
+        this.#grid[chosen.nextY][chosen.nextX] = _MazeGenerator.PATH;
+        const depth = current.depth + 1;
+        stack.push({ x: chosen.nextX, y: chosen.nextY, depth });
+        if (depth > this.#farthest.depth)
+          this.#farthest = { x: chosen.nextX, y: chosen.nextY, depth };
+      }
+    }
+    /**
+     * STEP 4: Mark start and farthest cell (exit) on the grid.
+     */
+    #markStartAndExit() {
+      this.#grid[this.#startY][this.#startX] = _MazeGenerator.START;
+      this.#placeEdgeExit();
+    }
+    /**
+     * Compute shortest-path distances (BFS) from the start across carved PATH cells.
+     * @returns 2D array of distances (or -1 if unreachable).
+     */
+    #computeDistances() {
+      const distances = Array.from(
+        { length: this.#height },
+        () => Array.from({ length: this.#width }, () => -1)
+      );
+      const queue = [];
+      queue.push({ x: this.#startX, y: this.#startY });
+      distances[this.#startY][this.#startX] = 0;
+      let readIndex = 0;
+      while (readIndex < queue.length) {
+        const current = queue[readIndex++];
+        const baseDistance = distances[current.y][current.x];
+        const neighbors = [
+          { x: current.x, y: current.y - 1 },
+          { x: current.x + 1, y: current.y },
+          { x: current.x, y: current.y + 1 },
+          { x: current.x - 1, y: current.y }
+        ];
+        for (const neighbor of neighbors) {
+          if (!this.#inBounds(neighbor.x, neighbor.y)) continue;
+          const cell = this.#grid[neighbor.y][neighbor.x];
+          if (![_MazeGenerator.PATH, _MazeGenerator.START].includes(cell) || distances[neighbor.y][neighbor.x] !== -1)
+            continue;
+          distances[neighbor.y][neighbor.x] = baseDistance + 1;
+          queue.push(neighbor);
+        }
+      }
+      return distances;
+    }
+    /**
+     * Select a border-adjacent interior path cell maximizing distance from the start
+     * and open an actual edge (outer frame) cell, marking that outer cell as EXIT.
+     * If no interior candidate is found (degenerate tiny maze), fallback to previous
+     * farthest internal cell marking.
+     */
+    #placeEdgeExit() {
+      const distances = this.#computeDistances();
+      const candidates = [];
+      for (let y = 1; y < this.#height - 1; y++) {
+        for (let x = 1; x < this.#width - 1; x++) {
+          if (distances[y][x] < 0) continue;
+          if (this.#grid[y][x] === _MazeGenerator.START) continue;
+          if (y === 1) {
+            candidates.push({
+              interiorX: x,
+              interiorY: y,
+              borderX: x,
+              borderY: 0,
+              distance: distances[y][x]
+            });
+          }
+          if (y === this.#height - 2) {
+            candidates.push({
+              interiorX: x,
+              interiorY: y,
+              borderX: x,
+              borderY: this.#height - 1,
+              distance: distances[y][x]
+            });
+          }
+          if (x === 1) {
+            candidates.push({
+              interiorX: x,
+              interiorY: y,
+              borderX: 0,
+              borderY: y,
+              distance: distances[y][x]
+            });
+          }
+          if (x === this.#width - 2) {
+            candidates.push({
+              interiorX: x,
+              interiorY: y,
+              borderX: this.#width - 1,
+              borderY: y,
+              distance: distances[y][x]
+            });
+          }
+        }
+      }
+      if (candidates.length === 0) {
+        this.#grid[this.#farthest.y][this.#farthest.x] = _MazeGenerator.EXIT;
+        return;
+      }
+      candidates.sort((a, b) => b.distance - a.distance);
+      const chosen = candidates[0];
+      if (this.#grid[chosen.interiorY][chosen.interiorX] === _MazeGenerator.EXIT)
+        this.#grid[chosen.interiorY][chosen.interiorX] = _MazeGenerator.PATH;
+      this.#grid[chosen.borderY][chosen.borderX] = _MazeGenerator.EXIT;
+    }
+    /**
+     * STEP 5: Derive box drawing wall character from neighboring wall continuity.
+     * Considers the four cardinal neighbors as wall/not-wall and maps bitmask to glyph.
+     * Falls back to a solid block if an unexpected isolated pattern appears.
+     */
+    #wallGlyph(column, row) {
+      const isWall = (c, r) => this.#inBounds(c, r) && ![_MazeGenerator.PATH, _MazeGenerator.START, _MazeGenerator.EXIT].includes(
+        this.#grid[r][c]
+      );
+      const north = isWall(column, row - 1);
+      const east = isWall(column + 1, row);
+      const south = isWall(column, row + 1);
+      const west = isWall(column - 1, row);
+      const mask = (north ? 1 : 0) | (east ? 2 : 0) | (south ? 4 : 0) | (west ? 8 : 0);
+      switch (mask) {
+        case 5:
+        case 1:
+        case 4:
+          return "\u2551";
+        case 10:
+        case 2:
+        case 8:
+          return "\u2550";
+        case 3:
+          return "\u255A";
+        case 9:
+          return "\u255D";
+        case 6:
+          return "\u2554";
+        case 12:
+          return "\u2557";
+        case 14:
+          return "\u2566";
+        case 11:
+          return "\u2569";
+        case 7:
+          return "\u2560";
+        case 13:
+          return "\u2563";
+        case 15:
+          return "\u256C";
+        default:
+          return "\u2588";
+      }
+    }
+    /**
+     * STEP 6: Render final ASCII maze lines.
+     * Preserves a continuous rectangular outer frame using the standard corner/edge glyphs.
+     */
+    #render() {
+      const lines = [];
+      for (let rowIndex = 0; rowIndex < this.#height; rowIndex++) {
+        let rendered = "";
+        for (let columnIndex = 0; columnIndex < this.#width; columnIndex++) {
+          const cellValue = this.#grid[rowIndex][columnIndex];
+          if (cellValue === _MazeGenerator.PATH) rendered += ".";
+          else if (cellValue === _MazeGenerator.START) rendered += "S";
+          else if (cellValue === _MazeGenerator.EXIT) rendered += "E";
+          else if (rowIndex === 0 && columnIndex === 0) rendered += "\u2554";
+          else if (rowIndex === 0 && columnIndex === this.#width - 1)
+            rendered += "\u2557";
+          else if (rowIndex === this.#height - 1 && columnIndex === 0)
+            rendered += "\u255A";
+          else if (rowIndex === this.#height - 1 && columnIndex === this.#width - 1)
+            rendered += "\u255D";
+          else if (rowIndex === 0 || rowIndex === this.#height - 1)
+            rendered += "\u2550";
+          else if (columnIndex === 0 || columnIndex === this.#width - 1)
+            rendered += "\u2551";
+          else rendered += this.#wallGlyph(columnIndex, rowIndex);
+        }
+        lines.push(rendered);
+      }
+      return lines;
+    }
+    /**
+     * Public entry: returns the rendered maze as string lines.
+     */
+    generate() {
+      return this.#render();
+    }
+  };
+
+  // test/examples/asciiMaze/refineWinner.ts
+  init_network();
+  function refineWinnerWithBackprop(winner) {
+    if (!winner) return void 0;
+    try {
+      winner.nodes.forEach((node) => {
+        if (typeof node.squash !== "function") {
+          node.squash = methods_exports.Activation.logistic;
+        }
+      });
+    } catch {
+    }
+    const trainingSet = [];
+    const OUT = (dirIndex) => [0, 1, 2, 3].map((i) => i === dirIndex ? 0.92 : 0.02);
+    const add = (inp, d) => trainingSet.push({ input: inp, output: OUT(d) });
+    const compassDirs = [0, 0.25, 0.5, 0.75];
+    for (let dir = 0; dir < 4; dir++) {
+      const compass = compassDirs[dir];
+      const open = [0, 0, 0, 0];
+      open[dir] = 1;
+      add([compass, ...open, 0.85], dir);
+      add([compass, ...open, 0.65], dir);
+      add([compass, ...open, 0.55], dir);
+      add([compass, ...open, 0.5], dir);
+    }
+    try {
+      winner.train(trainingSet, {
+        iterations: 220,
+        error: 5e-3,
+        rate: 1e-3,
+        momentum: 0.1,
+        batchSize: 8,
+        cost: methods_exports.Cost.softmaxCrossEntropy
+      });
+    } catch {
+    }
+    try {
+      return winner.clone();
+    } catch {
+      return winner;
+    }
+  }
 
   // test/examples/asciiMaze/browser-entry.ts
+  var DEFAULT_CONTAINER_ID = "ascii-maze-output";
   var RESIZE_WIDTH_THRESHOLD = 8;
-  async function start(container = "ascii-maze-output", opts = {}) {
+  var RESIZE_DEBOUNCE_MS = 120;
+  var AUTO_START_DELAY_MS = 20;
+  var MIN_PROGRESS_TO_PASS = 90;
+  var DEFAULT_MAX_STAGNANT_GENERATIONS = 50;
+  var DEFAULT_MAX_GENERATIONS = 100;
+  var PER_GENERATION_LOG_FREQUENCY = 1;
+  var INITIAL_MAZE_DIMENSION = 8;
+  var MAX_MAZE_DIMENSION = 28;
+  var MAZE_DIMENSION_INCREMENT = 4;
+  var AGENT_MAX_STEPS = 200;
+  var POPULATION_SIZE = 20;
+  function createEvolutionSettings(dimension) {
+    return {
+      agentMaxSteps: AGENT_MAX_STEPS,
+      popSize: POPULATION_SIZE,
+      maxStagnantGenerations: DEFAULT_MAX_STAGNANT_GENERATIONS,
+      maxGenerations: DEFAULT_MAX_GENERATIONS,
+      lamarckianIterations: 4,
+      lamarckianSampleSize: 12,
+      mazeFactory: () => new MazeGenerator(dimension, dimension).generate()
+    };
+  }
+  var TelemetryHub = class {
+    /** Registered listener callbacks (unique). */
+    #listeners = /* @__PURE__ */ new Set();
+    /** Add a listener and return an unsubscribe function. */
+    add(listener) {
+      this.#listeners.add(listener);
+      return () => this.#listeners.delete(listener);
+    }
+    /** Dispatch to a snapshot of listeners so mutations during iteration are safe. */
+    dispatch(payload) {
+      const snapshot = Array.from(this.#listeners);
+      for (const listener of snapshot) {
+        try {
+          listener(payload);
+        } catch {
+        }
+      }
+    }
+  };
+  async function start(container = DEFAULT_CONTAINER_ID, opts = {}) {
     const hostElement = typeof container === "string" ? document.getElementById(container) : container;
     const archiveElement = hostElement ? hostElement.querySelector("#ascii-maze-archive") : null;
     const liveElement = hostElement ? hostElement.querySelector("#ascii-maze-live") : null;
@@ -19941,16 +20879,8 @@
       liveLogger,
       archiveLogger
     );
-    const telemetryListeners = /* @__PURE__ */ new Set();
-    dashboard._telemetryHook = (telemetry) => {
-      const snapshot = Array.from(telemetryListeners);
-      for (const listener of snapshot) {
-        try {
-          listener(telemetry);
-        } catch {
-        }
-      }
-    };
+    const telemetryHub = new TelemetryHub();
+    dashboard._telemetryHook = (telemetry) => telemetryHub.dispatch(telemetry);
     try {
       const observeTarget = hostElement ?? document.getElementById("ascii-maze-output");
       if (observeTarget && typeof ResizeObserver !== "undefined") {
@@ -19977,7 +20907,7 @@
               dashboard.redraw?.([], void 0);
             } catch {
             }
-          }, 120);
+          }, RESIZE_DEBOUNCE_MS);
         };
         window.addEventListener("resize", handler);
       }
@@ -19987,101 +20917,123 @@
     const internalController = new AbortController();
     const externalSignal = opts.signal;
     const composeAbortSignal = (maybeExternal) => {
-      if (!maybeExternal) return internalController.signal;
-      if (maybeExternal.aborted) return maybeExternal;
-      try {
-        maybeExternal.addEventListener(
-          "abort",
-          () => {
-            try {
-              internalController.abort();
-            } catch {
-            }
-          },
-          { once: true }
-        );
-      } catch {
+      if (maybeExternal) {
+        if (maybeExternal.aborted) return maybeExternal;
+        if (typeof AbortSignal.any === "function") {
+          try {
+            return AbortSignal.any([
+              maybeExternal,
+              internalController.signal
+            ]);
+          } catch {
+          }
+        }
+        try {
+          maybeExternal.addEventListener(
+            "abort",
+            () => {
+              try {
+                internalController.abort();
+              } catch {
+              }
+            },
+            { once: true }
+          );
+        } catch {
+        }
       }
       return internalController.signal;
     };
     const combinedSignal = composeAbortSignal(externalSignal);
     let running = true;
-    const runCurriculum = async () => {
-      const curriculumOrder = [
-        "tiny",
-        "spiralSmall",
-        "spiral",
-        "small",
-        "medium",
-        "medium2",
-        "large",
-        "minotaur"
-      ];
-      const PHASE_SETTINGS = {
-        tiny: { agentMaxSteps: 100, maxGenerations: 200 },
-        spiralSmall: { agentMaxSteps: 100, maxGenerations: 200 },
-        spiral: { agentMaxSteps: 150, maxGenerations: 300 },
-        small: { agentMaxSteps: 50, maxGenerations: 300 },
-        medium: { agentMaxSteps: 250, maxGenerations: 400 },
-        medium2: { agentMaxSteps: 300, maxGenerations: 400 },
-        large: { agentMaxSteps: 400, maxGenerations: 500 },
-        minotaur: { agentMaxSteps: 700, maxGenerations: 600 }
-      };
-      let lastBestNetwork = void 0;
-      for (const phaseKey of curriculumOrder) {
-        if (cancelled) break;
-        const maze = mazes_exports[phaseKey];
-        if (!Array.isArray(maze)) continue;
-        const phaseSettings = PHASE_SETTINGS[phaseKey] ?? {
-          agentMaxSteps: 1e3,
-          maxGenerations: 500
-        };
-        const agentMaxSteps = phaseSettings.agentMaxSteps;
-        const maxGenerations = phaseSettings.maxGenerations;
-        try {
-          const result = await EvolutionEngine.runMazeEvolution({
-            mazeConfig: { maze },
-            agentSimConfig: { maxSteps: agentMaxSteps },
-            evolutionAlgorithmConfig: {
-              allowRecurrent: true,
-              popSize: 40,
-              // Run indefinitely until solved; remove stagnation pressure for demo clarity
-              maxStagnantGenerations: Infinity,
-              minProgressToPass: 99,
-              maxGenerations: Infinity,
-              stopOnlyOnSolve: false,
-              autoPauseOnSolve: false,
-              // Disable Lamarckian/backprop refinement for browser runs per request
-              lamarckianIterations: 0,
-              lamarckianSampleSize: 0,
-              // seed previous winner if available
-              initialBestNetwork: lastBestNetwork
-            },
-            reportingConfig: {
-              dashboardManager: dashboard,
-              logEvery: 1,
-              label: `browser-${phaseKey}`
-            },
-            cancellation: { isCancelled: () => cancelled },
-            signal: combinedSignal
-          });
-          try {
-            console.log(
-              "[asciiMaze] maze solved",
-              phaseKey,
-              result?.bestResult?.progress
-            );
-          } catch {
-          }
-          if (result && result.bestNetwork)
-            lastBestNetwork = result.bestNetwork;
-        } catch (error) {
-          console.error("Error while running maze", phaseKey, error);
-        }
+    let currentDimension = INITIAL_MAZE_DIMENSION;
+    let resolveDone;
+    const donePromise = new Promise((resolve) => resolveDone = resolve);
+    let previousBestNetwork;
+    const scheduleNextMaze = (cb) => {
+      try {
+        if (typeof requestAnimationFrame === "function")
+          requestAnimationFrame(cb);
+        else setTimeout(cb, 0);
+      } catch {
+        setTimeout(cb, 0);
       }
-      running = false;
     };
-    const donePromise = runCurriculum();
+    const runEvolution = async () => {
+      if (cancelled) {
+        running = false;
+        resolveDone?.();
+        return;
+      }
+      const settings = createEvolutionSettings(currentDimension);
+      const mazeLayout = settings.mazeFactory();
+      let solved = false;
+      try {
+        const result = await EvolutionEngine.runMazeEvolution({
+          mazeConfig: { maze: mazeLayout },
+          agentSimConfig: { maxSteps: settings.agentMaxSteps },
+          evolutionAlgorithmConfig: {
+            allowRecurrent: true,
+            popSize: settings.popSize,
+            maxStagnantGenerations: settings.maxStagnantGenerations,
+            minProgressToPass: MIN_PROGRESS_TO_PASS,
+            maxGenerations: settings.maxGenerations,
+            autoPauseOnSolve: false,
+            stopOnlyOnSolve: false,
+            lamarckianIterations: settings.lamarckianIterations,
+            lamarckianSampleSize: settings.lamarckianSampleSize,
+            initialBestNetwork: previousBestNetwork
+          },
+          reportingConfig: {
+            dashboardManager: dashboard,
+            logEvery: PER_GENERATION_LOG_FREQUENCY,
+            label: `browser-procedural-${currentDimension}x${currentDimension}`,
+            paceEveryGeneration: true
+            // custom flag (consumed if supported) to yield between generations
+          },
+          cancellation: { isCancelled: () => cancelled },
+          signal: combinedSignal
+        });
+        const progress = result?.bestResult?.progress;
+        try {
+          const bestNet = result?.bestNetwork;
+          if (bestNet) {
+            const refined = refineWinnerWithBackprop(bestNet);
+            previousBestNetwork = refined || bestNet;
+          }
+        } catch {
+        }
+        solved = typeof progress === "number" && progress >= MIN_PROGRESS_TO_PASS;
+        try {
+          console.log(
+            "[asciiMaze] maze complete",
+            currentDimension,
+            "solved?",
+            solved,
+            "progress",
+            progress
+          );
+        } catch {
+        }
+      } catch (error) {
+        console.error(
+          "Error while running procedural maze",
+          currentDimension,
+          error
+        );
+      }
+      if (!cancelled && solved && currentDimension < MAX_MAZE_DIMENSION) {
+        currentDimension = Math.min(
+          currentDimension + MAZE_DIMENSION_INCREMENT,
+          MAX_MAZE_DIMENSION
+        );
+        scheduleNextMaze(() => runEvolution());
+      } else {
+        running = false;
+        resolveDone?.();
+      }
+    };
+    runEvolution();
     const handle = {
       stop: () => {
         cancelled = true;
@@ -20093,36 +21045,31 @@
       isRunning: () => running && !cancelled,
       done: Promise.resolve(donePromise).catch(() => {
       }),
-      onTelemetry: (cb) => {
-        telemetryListeners.add(cb);
-        return () => {
-          telemetryListeners.delete(cb);
-        };
-      },
+      onTelemetry: (telemetryCallback) => telemetryHub.add(telemetryCallback),
       getTelemetry: () => dashboard.getLastTelemetry?.()
     };
     return handle;
   }
   if (typeof window !== "undefined" && window.document) {
-    const g = window;
-    g.asciiMaze = g.asciiMaze || {};
-    g.asciiMaze.start = start;
-    if (!g.asciiMazeStart) {
-      g.asciiMazeStart = (el) => {
+    const globalWindow = window;
+    globalWindow.asciiMaze = globalWindow.asciiMaze || {};
+    globalWindow.asciiMaze.start = start;
+    if (!globalWindow.asciiMazeStart) {
+      globalWindow.asciiMazeStart = (containerElement) => {
         console.warn(
           "[asciiMaze] window.asciiMazeStart is deprecated; use import { start } ... or window.asciiMaze.start"
         );
-        return start(el);
+        return start(containerElement);
       };
     }
-    if (!g.asciiMaze._autoStarted) {
-      g.asciiMaze._autoStarted = true;
+    if (!globalWindow.asciiMaze._autoStarted) {
+      globalWindow.asciiMaze._autoStarted = true;
       setTimeout(() => {
         try {
-          if (document.getElementById("ascii-maze-output")) start();
+          if (document.getElementById(DEFAULT_CONTAINER_ID)) start();
         } catch {
         }
-      }, 20);
+      }, AUTO_START_DELAY_MS);
     }
   }
 })();

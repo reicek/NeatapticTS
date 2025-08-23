@@ -2,6 +2,8 @@
 
 This repository is an educational neural-network library. Clarity, pedagogy, and reproducibility matter as much as correctness. This style guide enforces strict naming, documentation, and testing practices to make the codebase approachable and maintainable.
 
+> Modernization note (2025 refresh): This guide now embeds ES2023+ language features and deeper performance + memory best practices for browser + Node targets. The neural components should be both *educative* and *fast*: predictable object shapes, pooled typed arrays, cache‑friendly data layouts, and off‑main‑thread scheduling where appropriate. Sections added/expanded: ES2023 Modern Features, Memory & Layout, Typed-Array Pooling (deep dive), Caching Strategy, Parallelism & Scheduling, Microbenchmarking, and Determinism.
+
 ---
 
 ## Goals
@@ -11,6 +13,10 @@ This repository is an educational neural-network library. Clarity, pedagogy, and
 - Keep behavior stable: no semantic changes without tests and/or benchmarks.
 - Use ES2023 idioms where they improve clarity (private `#` fields, readonly types).
 - Protect performance-sensitive code (especially `src/neat/**`) behind micro-benchmarks before changing algorithms.
+- Optimize for *steady-state throughput* of large populations in browsers (GC pressure minimization, cache locality, minimal hidden class churn).
+- Maintain deterministic simulation modes (seeded RNG + stable iteration ordering) for reproducible research demos.
+- Encourage ergonomic profiling: embed lightweight instrumentation hooks guarded by feature flags (no permanent perf tax).
+- Provide clear extension seams for WASM / WebGPU acceleration without forcing them.
 
 ---
 
@@ -48,6 +54,20 @@ switch (true) {
 
 Consistent naming makes intent obvious and reduces cognitive load when reading learning algorithms.
 
+### ES2023+ Modern Language Features (Use Intentionally)
+
+Adopt modern features when they *increase clarity or safety* — not just novelty.
+
+- Private fields & methods: `#privateField` for internal state, especially pooled buffers and scratch counters. Prefer these over closures that allocate per-instance.
+- Static initialization blocks: use sparingly to precompute lookup tables (e.g. activation function dispatch maps) once per class.
+- New Array helpers: `toSorted()`, `toReversed()`, `with()`, `findLast()`, `findLastIndex()` — prefer non-mutating forms in pure utility paths; retain in-place ops in hot loops when mutation avoids allocations.
+- `structuredClone` over manual deep copies for simple graph-free objects (avoid for large typed arrays—prefer explicit `slice()` or shared views).
+- Optional chaining / nullish coalescing for concise guard code (avoid stacking in hot inner loops where explicit branching improves JIT clarity).
+- Temporal / Records-Tuples: **Do not use** until fully standardized & broadly shipped—keep portability.
+- Top-level await: avoid in library code (increases module graph latency); prefer explicit async init functions.
+
+Performance caveat: Non-mutating array helpers allocate new arrays. In hot loops use preallocated buffers or in-place mutation, adding comments clarifying the decision.
+
 ---
 
 ### Enums and lookup tables for small fixed mappings
@@ -66,6 +86,8 @@ static #opposite(d:number) { return (d + MazeMovement.#DIRECTION_DELTAS.length/2
 
 Use such helpers instead of ad-hoc arithmetic sprinkled throughout the code.
 
+When mapping operation kinds (activation, mutation operators), prefer a single frozen `const` dispatch object or a `switch` — measure both. Enumerations should avoid sparse numeric assignments (dense 0..N improves branch prediction & potential table lookups).
+
 ## Constants and magic numbers
 
 - Replace magic numbers with private class constants (`static #MY_CONST = ...`) when they are implementation details.
@@ -78,6 +100,10 @@ export const trainingDemoTimeout = 5000;
 ```
 
 In classes prefer `static #PRIVATE_CONSTANT` and name them in CLEAR_DESCRIPTIVE_STYLE but in this repo we use `#CamelCase` for private statics to emphasize readability.
+
+Prefer *numeric* constants over string literals inside tight loops. Convert human-readable string configuration to numeric codes **during setup** (one-time) then operate on numeric codes during simulation/evolution.
+
+Freeze large shared configuration objects (`Object.freeze`) after construction to lock hidden class shape early and help engines optimize property access.
 
 ---
 
@@ -113,6 +139,213 @@ xs.fill(0); ys.fill(0);
   - When your code must be safely reentrant or run concurrently — prefer per-call allocations or explicit pool checkout semantics.
 
 Add an inline `@remarks` note to methods that rely on pooled buffers so readers of generated docs see the constraint.
+
+#### Deep Dive: Patterns & Anti‑Patterns
+
+| Scenario | Recommended Pattern | Rationale |
+|----------|--------------------|-----------|
+| Repeated forward pass over many genomes | Single contiguous weight `Float32Array` slice per network, views for layers | Improves cache line utilization & enables vectorized/WebGPU future path |
+| Short-lived intermediate activations | Class-static pooled `Float32Array` sized to max layer width | Avoid per-pass allocation & GC | 
+| Variable-sized temporary (depends on layer count) | Size bucket pools (e.g. powers of two) + checkout function | Amortizes large reallocation spikes |
+| Rare debug path (export JSON) | Allocate ad-hoc arrays normally | Keeps pooling surface minimal |
+
+##### Pool Implementation Guidelines
+
+1. Centralize pools per *concern* (activation scratch, mutation temp weights, maze vision) — avoid one generic mega-pool.
+2. Provide a small internal helper: `checkoutActivationBuffer(requiredLength)` that returns a view large enough (grows underlying array if needed) — **never** shrink synchronously (let caller reuse).
+3. Return *views* (`subarray`) instead of copying when safe; document aliasing semantics.
+4. Always clear or `fill(0)` buffers on paths where stale values could impact logic or determinism; skip clearing when the algorithm overwrites every index deterministically (document the invariant).
+5. NEVER expose pooled buffers directly through public API return values; copy if external mutation risk exists.
+6. For cross-call reentrancy (e.g., parallel evaluation in a Worker pool) either:
+   - Use per-Worker pools (simplest), or
+   - Implement a lock-free ring of buffers (Array of N typed arrays) and an atomic index (with `Atomics.add` on a `SharedArrayBuffer`).
+
+##### Choosing Element Types
+
+- Default to `Float32Array` for neural weights & activations (browser-friendly, GPU-aligned, halved bandwidth vs `Float64Array`).
+- Use `Int32Array` or `Uint16Array` for indices, innovation numbers, or categorical encodings.
+- Avoid `Float64Array` unless a precision error demonstrably harms learning (document the experiment showing necessity).
+
+##### Layout: Structure of Arrays (SoA) vs Array of Structures (AoS)
+
+- Prefer SoA for evolutionary metadata (separate typed arrays: `fitness`, `species`, `age`) to enable vector-style scans & SIMD-friendly future paths.
+- Use AoS (objects) only for surfaces consumed directly by end users or for sparse optional metadata.
+
+##### Determinism Considerations
+
+- Reusing buffers can leak nondeterministic content if not cleared and if algorithms read before write; enforce ordering or zero-fill.
+- Provide a `DETERMINISTIC` build flag (env or constant) to force zeroing + stable sorts (avoid `Array.prototype.sort` without comparator—spec allows tie reordering).
+
+##### Example Pattern (Expanded)
+
+```ts
+class ActivationRunner {
+  static #ActivationScratch = new Float32Array(1024); // grows dynamically
+  static #MaxSize = 1024;
+
+  /** Acquire a scratch buffer (view) of at least the requested length. */
+  static #acquire(length: number): Float32Array {
+    if (length > ActivationRunner.#MaxSize) {
+      // Grow by 2x strategy to reduce realloc churn
+      let newSize = ActivationRunner.#MaxSize;
+      while (newSize < length) newSize *= 2;
+      ActivationRunner.#ActivationScratch = new Float32Array(newSize);
+      ActivationRunner.#MaxSize = newSize;
+    }
+    return ActivationRunner.#ActivationScratch.subarray(0, length);
+  }
+
+  /**
+   * Compute layer activations.
+   * @remarks Non-reentrant (shared scratch). Zero-fills only in deterministic mode.
+   */
+  static runLayer(weights: Float32Array, inputs: Float32Array, length: number, deterministic = false): Float32Array {
+    const out = ActivationRunner.#acquire(length);
+    if (deterministic) out.fill(0);
+    // Hot loop: overwrite every index (safe to skip fill in non-deterministic mode)
+    for (let index = 0; index < length; index++) {
+      out[index] = Math.tanh(weights[index] * inputs[index]);
+    }
+    return out;
+  }
+}
+```
+
+##### Anti-Patterns
+
+- Creating new typed arrays inside *nested* loops.
+- Using `Array<number>` for dense numeric vectors in hot paths (boxed numbers, poorer locality).
+- Returning pooled buffers to user code that might store them long-term.
+- Over-pooling (managing pools for objects created a handful of times per second—added complexity with no benefit).
+
+##### Memory Pressure Monitoring
+
+Instrument occasionally with `performance.measure()` around evolutionary generations and record allocated bytes deltas (in Node via `process.memoryUsage().heapUsed`). Document any significant regressions in PR descriptions.
+
+---
+
+### Memory & Data Layout Optimization
+
+1. Flatten network weight matrices into a single `Float32Array` per genome; maintain an index map for layer offsets. Avoid nested arrays.
+2. Precompute activation function dispatch indices (e.g., 0 = tanh, 1 = sigmoid) and store in a compact `Uint8Array` aligned with neuron ordering.
+3. Keep frequently accessed scalar properties (e.g., `fitness`, `age`) on the root genome object (first allocation) to reduce property lookups through nested objects.
+4. Avoid polymorphism in hot loops: ensure objects iterated in large batches share the same hidden class (construct them via a single factory function in consistent property order).
+5. Use bit packs (`Uint32` flags) for boolean feature toggles when they are evaluated in tight evolutionary scoring loops.
+6. Reuse `TextEncoder` / `TextDecoder` instances (class-static) for serialization tasks.
+7. For large immutable lookup data (e.g., activation LUTs), place them in module scope and freeze.
+
+#### Contiguous Genome Buffer (Illustrative)
+
+```ts
+// Single buffer layout (example): [ meta (4 ints) | layer1 weights | layer2 weights | biases | ... ]
+// meta: [inputCount, hiddenCount, outputCount, activationTableOffset]
+```
+
+Provide helper offsets so code never hardcodes numeric positions; document structure in JSDoc.
+
+---
+
+### Caching Strategy & Invalidations
+
+Use caching where recomputation cost dominates and inputs are stable; *never* silently cache mutable objects without versioning.
+
+- Derive cache keys from structural hashes (counts + configuration) not from object identity.
+- Maintain a simple `generationTag` (increment per topology mutation) — invalidate any topology-derived caches when it changes.
+- For computed innovation maps, store a `Map<string, number>` and reuse across genome mutations within the same generation.
+- Provide explicit `clearCaches()` dev helper for debugging memory leaks.
+
+Document each cache with: purpose, key composition, invalidation triggers.
+
+---
+
+### Parallelism, Workers & Scheduling
+
+Browser main thread must remain responsive:
+
+1. Offload bulk fitness evaluation to a Worker pool (size = `navigator.hardwareConcurrency - 1` capped at 4 by default).
+2. Use transferable objects (`ArrayBuffer`) rather than structured clone for large numeric buffers between main and workers.
+3. Batch messages (evaluate multiple genomes per postMessage) to amortize overhead.
+4. Optionally explore `Atomics.wait` + shared ring buffer for streaming tasks (advanced, document thoroughly if added).
+5. Use microtask checkpoints: yield control (`await 0` pattern via `queueMicrotask`) after configurable work units to keep UI fluid when running on main thread (educational demos).
+
+#### Worker Pool Skeleton (Pseudo-code)
+
+```ts
+// main thread
+pool.runGenomes(weightBuffer, genomeDescriptors, (results) => render(results));
+
+// worker
+self.onmessage = ({ data }) => {
+  const { weightBuffer, tasks } = data;
+  const weights = new Float32Array(weightBuffer); // zero copy
+  const results = tasks.map(runFitness);
+  self.postMessage(results, []);
+};
+```
+
+---
+
+### Microbenchmarking & Profiling
+
+Include minimal benchmarks for *changed hot paths* before merging.
+
+- Use high-resolution timers: `performance.now()` in browser, `perf_hooks.performance` in Node.
+- Warm up: execute the function ~200–500 times before measuring to stabilize JIT optimizations.
+- Measure variance: run multiple iterations; log median not mean (robust against outliers).
+- Track allocation rate: optionally wrap code with `const before = performance.memory?.usedJSHeapSize` (when available) for manual inspection.
+
+Keep benchmark scripts deterministic (seed RNG) and exclude I/O.
+
+---
+
+### Determinism & Reproducibility
+
+Provide a deterministic mode for educational reproduction:
+
+- Central seeded PRNG (e.g., Mulberry32) stored as a module-scoped object with methods `nextFloat()`, `nextInt(max)`.
+- Avoid `Math.random()` in core code when deterministic mode is enabled.
+- Stable iteration: avoid relying on property enumeration order of plain objects — iterate arrays or sorted keys.
+- Document any intentional nondeterminism (e.g., tie-breaking random mutations) with a JSDoc `@remarks`.
+
+---
+
+### Error Handling & Assertions
+
+- Use lightweight internal invariant checks (throwing) in debug/dev builds only; guard them behind `if (process.env.NODE_ENV !== 'production')` or a compiled constant to allow dead code elimination.
+- Prefer early throws with detailed messages over silent NaN propagation.
+- Validate external user inputs at public API boundaries; internal performance-sensitive functions may assume validated invariants.
+
+---
+
+### Serialization & Export (ONNX / Custom)
+
+- Perform shape validation & canonical ordering once before export; reuse cached shape metadata.
+- Avoid constructing large intermediate JS objects; stream write directly into typed-array buffers or incremental JSON strings where feasible.
+- Reuse encoder instances; avoid repeated `JSON.stringify` of large graphs — serialize directly.
+
+---
+
+### Documentation of Performance-Sensitive Methods
+
+Every performance-sensitive method should add to its JSDoc:
+
+- Complexity: `O(n)` with `n = neurons` (for example).
+- Mutability notes: which parameters are read-only, which buffers are reused.
+- Determinism notes: whether output depends on random state.
+- Reentrancy: explicit statement if using shared scratch.
+
+Example snippet:
+
+```ts
+/**
+ * Mutate weights in-place.
+ * @param weights - Contiguous weight buffer (modified in-place).
+ * @param rate - Mutation probability per weight.
+ * @remarks Non-reentrant (shared RNG). Uses pooled temp buffer for Gaussian noise. O(W) time.
+ */
+```
+
+---
 
 
 ### Vision inputs and grouped indices
