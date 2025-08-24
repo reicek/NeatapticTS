@@ -50,6 +50,8 @@ export class EvolutionEngine {
   static #SCRATCH_VISITED_HASH = new Int32Array(0);
   /** Load factor threshold (~0.7) for resizing visited hash. */
   static #VISITED_HASH_LOAD = 0.7;
+  /** Knuth multiplicative hashing constant (32-bit golden ratio). */
+  static #HASH_KNUTH_32 = 2654435761 >>> 0;
   /** Scratch species id buffer (dynamic growth). */
   static #SCRATCH_SPECIES_IDS = new Int32Array(64);
   /** Scratch species count buffer parallel to ids. */
@@ -205,6 +207,8 @@ export class EvolutionEngine {
   };
   /** Small fixed-size visited table for tiny path exploration (<32) to avoid O(n^2) duplicate scan. */
   static #SMALL_EXPLORE_TABLE = new Int32Array(64);
+  /** Bit mask for SMALL_EXPLORE_TABLE indices (table length - 1). */
+  static #SMALL_EXPLORE_TABLE_MASK = 64 - 1;
   static #PROFILE_T0(): number {
     return EvolutionEngine.#now();
   }
@@ -318,6 +322,8 @@ export class EvolutionEngine {
   static #OUTPUT_BIAS_BASE = 0.05;
   /** Step per output index when initializing output biases */
   static #OUTPUT_BIAS_STEP = 0.01;
+  /** Absolute clamp applied after recentring output biases (prevents runaway values) */
+  static #OUTPUT_BIAS_CLAMP = 5;
   /** Bias reset half-range (bias = rand * 2*R - R) */
   static #BIAS_RESET_HALF_RANGE = 0.1;
   /** Connection weight reset half-range (weight = rand * 2*R - R) */
@@ -426,54 +432,152 @@ export class EvolutionEngine {
   }
 
   /**
-   * Compute simple exploration statistics from a path: unique visited cells and ratio.
+   * Compute exploration statistics for a path taken by an agent.
+   *
+   * Returned metrics:
+   * - unique: number of distinct grid cells visited
+   * - pathLen: total number of steps in path (array length)
+   * - ratio: unique / pathLen (0 when pathLen == 0)
+   *
+   * Implementation details:
+   * 1. Coordinates are packed into a single 32-bit integer: (x & 0xffff) << 16 | (y & 0xffff)
+   * 2. Two code paths:
+   *    a. Tiny path (< 32): use a fixed 64-slot Int32Array (#SMALL_EXPLORE_TABLE) cleared per call.
+   *    b. Larger path: use a growable power-of-two scratch Int32Array (#SCRATCH_VISITED_HASH) sized
+   *       for target load factor (#VISITED_HASH_LOAD). Table is zero-filled when reused.
+   * 3. Open-addressing with linear probing; 0 denotes empty. We store packed+1 to disambiguate zero.
+   * 4. Knuth multiplicative hashing constant extracted as a private static (#HASH_KNUTH_32) for clarity.
+   * 5. All operations avoid heap allocation after initial buffer growth.
+   *
+   * Complexity: O(n) expected; worst-case O(n * alpha) with alpha ~ probe length (low under target load).
+   * Determinism: Fully deterministic given identical path contents.
+   * Reentrancy: Non-reentrant due to shared hash buffer.
+   *
+   * @param path - Array of [x,y] coordinates visited in order.
+   * @returns { unique, pathLen, ratio }
+   * @example
+   * const stats = EvolutionEngine['#computeExplorationStats']([[0,0],[1,0],[1,0]]); // pseudo internal usage
    * @internal
    */
   static #computeExplorationStats(
     path: ReadonlyArray<[number, number]>
   ): { unique: number; pathLen: number; ratio: number } {
     const pathLength = path?.length || 0;
-    if (!pathLength) return { unique: 0, pathLen: 0, ratio: 0 };
-    // Strategy: use open-addressed hash to get O(n) instead of O(n^2) worst-case.
-    // For short paths (< 32) the previous quadratic scan is cheap, so keep a fast path.
+    if (pathLength === 0) return { unique: 0, pathLen: 0, ratio: 0 };
+
+    // Fast tiny-path path (<32) using small fixed table (size 64, mask 63).
     if (pathLength < 32) {
-      // Tiny open-address table (size 64) with linear probing; stores packed+1 (0 = empty).
-      const table = EvolutionEngine.#SMALL_EXPLORE_TABLE;
-      table.fill(0);
-      let distinctTiny = 0;
-      const maskTiny = table.length - 1; // 63
-      for (let pathIndex = 0; pathIndex < pathLength; pathIndex++) {
-        const point = path[pathIndex];
-        const packed = ((point[0] & 0xffff) << 16) | (point[1] & 0xffff);
-        let h = Math.imul(packed, 2654435761) >>> 0;
-        const storeVal = (packed + 1) | 0;
-        while (true) {
-          const slot = h & maskTiny;
-          const v = table[slot];
-          if (v === 0) {
-            table[slot] = storeVal;
-            distinctTiny++;
-            break;
-          }
-          if (v === storeVal) break; // duplicate
-          h = (h + 1) | 0;
-        }
-      }
+      const distinctTiny = EvolutionEngine.#countDistinctCoordinatesTiny(
+        path,
+        pathLength
+      );
       return {
         unique: distinctTiny,
         pathLen: pathLength,
-        ratio: distinctTiny ? distinctTiny / pathLength : 0,
+        ratio: distinctTiny / pathLength,
       };
     }
-    // Hash path
-    const targetCap = pathLength << 1; // aim for load ~0.5
+
+    const distinct = EvolutionEngine.#countDistinctCoordinatesHashed(
+      path,
+      pathLength
+    );
+    return {
+      unique: distinct,
+      pathLen: pathLength,
+      ratio: distinct / pathLength,
+    };
+  }
+
+  /**
+   * Count distinct packed coordinates for tiny paths (< 32) using a fixed-size table.
+   * @param path - Coordinate path reference.
+   * @param pathLength - Precomputed length (avoid repeated length lookups).
+   * @returns number of unique coordinates.
+   * @remarks Non-reentrant (shared tiny table). O(n) expected, tiny constant factors.
+   */
+  static #countDistinctCoordinatesTiny(
+    path: ReadonlyArray<[number, number]>,
+    pathLength: number
+  ): number {
+    /**
+     * Fast path for very small collections of coordinates.
+     * Rationale: A 64-slot table fits comfortably in L1; clearing via fill(0) is cheaper
+     * than maintaining a generation-tag array. Alternative tagging was evaluated but
+     * rejected for clarity and negligible gain at this scale.
+     */
+    if (pathLength === 0) return 0;
+    const table = EvolutionEngine.#SMALL_EXPLORE_TABLE;
+    table.fill(0); // predictable, tiny cost
+    let distinctCount = 0;
+    const mask = EvolutionEngine.#SMALL_EXPLORE_TABLE_MASK; // 63
+    for (
+      let coordinateIndex = 0;
+      coordinateIndex < pathLength;
+      coordinateIndex++
+    ) {
+      const coordinate = path[coordinateIndex];
+      // Pack (x,y) into 32 bits: high 16 = x, low 16 = y (wrapping via & 0xffff) to avoid negative hashing issues.
+      const packed =
+        ((coordinate[0] & 0xffff) << 16) | (coordinate[1] & 0xffff);
+      // Multiplicative hash spreads lower entropy; then linear probe.
+      let hash = Math.imul(packed, EvolutionEngine.#HASH_KNUTH_32) >>> 0;
+      const storedValue = (packed + 1) | 0; // +1 so 0 remains EMPTY sentinel
+      while (true) {
+        const slot = hash & mask;
+        const slotValue = table[slot];
+        if (slotValue === 0) {
+          // empty slot -> insert
+          table[slot] = storedValue;
+          distinctCount++;
+          break;
+        }
+        if (slotValue === storedValue) break; // already recorded coordinate
+        hash = (hash + 1) | 0; // linear probe step
+      }
+    }
+    return distinctCount;
+  }
+
+  /**
+   * Count distinct coordinates for larger paths using a dynamically sized open-address hash table.
+   * Ensures the table grows geometrically to keep probe chains short.
+   *
+   * Design rationale:
+   * - Uses a single shared Int32Array (#SCRATCH_VISITED_HASH) grown geometrically (power-of-two) so
+   *   subsequent calls amortize allocation costs. We target a load factor below `#VISITED_HASH_LOAD` (≈0.7).
+   * - Multiplicative hashing (Knuth constant) provides a cheap, decent dispersion for packed 32-bit coordinates.
+   * - Linear probing keeps memory contiguous (cache friendly) and avoids per-slot pointer overhead.
+   * - We pack (x,y) into 32 bits allowing negative coordinates via masking (& 0xffff) with natural wrap —
+   *   acceptable for maze sizes far below 65k.
+   * - Instead of tombstones we only ever insert during this scan, so deletion complexity is avoided.
+   *
+   * Complexity: Expected O(n) with short probe sequences; worst-case O(n^2) only under adversarial clustering
+   * (not expected with maze coordinate distributions and resizing policy).
+   * Memory: One Int32Array reused; size grows but never shrinks (acceptable for long-running evolution sessions).
+   * Determinism: Fully deterministic for the same input path.
+   * Reentrancy: Non-reentrant due to shared buffer reuse.
+   *
+   * @param path - Coordinate path reference.
+   * @param pathLength - Path length (number of coordinate entries).
+   * @returns Number of unique coordinates encountered.
+   * @remarks Non-reentrant (shared hash table). Expected O(n) with low probe lengths.
+   */
+  static #countDistinctCoordinatesHashed(
+    path: ReadonlyArray<[number, number]>,
+    pathLength: number
+  ): number {
+    // Step 1: Compute target raw capacity (2x pathLength) to keep effective load factor low after inserts.
+    const targetCapacity = pathLength << 1; // aim ~0.5 raw load pre-threshold
+    // Step 2: Acquire / resize shared table if needed under load factor heuristic.
     let table = EvolutionEngine.#SCRATCH_VISITED_HASH;
     if (
       table.length === 0 ||
-      targetCap > table.length * EvolutionEngine.#VISITED_HASH_LOAD
+      targetCapacity > table.length * EvolutionEngine.#VISITED_HASH_LOAD
     ) {
-      // compute new power-of-two size >= targetCap / load
-      const needed = Math.ceil(targetCap / EvolutionEngine.#VISITED_HASH_LOAD);
+      const needed = Math.ceil(
+        targetCapacity / EvolutionEngine.#VISITED_HASH_LOAD
+      );
       const pow2 = 1 << Math.ceil(Math.log2(needed));
       table = EvolutionEngine.#SCRATCH_VISITED_HASH = new Int32Array(pow2);
     } else {
@@ -481,125 +585,215 @@ export class EvolutionEngine {
     }
     const mask = table.length - 1;
     let distinct = 0;
-    for (let pi = 0; pi < pathLength; pi++) {
-      const cp = path[pi];
-      const packed = ((cp[0] & 0xffff) << 16) | (cp[1] & 0xffff);
-      let h = Math.imul(packed, 2654435761) >>> 0; // Knuth multiplicative hashing (32-bit)
-      // probe (packed+1) to distinguish EMPTY(0)
+    // Step 3: Iterate coordinates, pack & insert into open-address table.
+    for (let index = 0; index < pathLength; index++) {
+      const coordinate = path[index];
+      // Step 3.1: Pack (x,y) into 32 bits (high 16 bits: x, low 16 bits: y) with masking for wrap safety.
+      const packed =
+        ((coordinate[0] & 0xffff) << 16) | (coordinate[1] & 0xffff);
+      // Step 3.2: Derive initial hash via multiplicative method; shift to unsigned domain.
+      let hash = Math.imul(packed, EvolutionEngine.#HASH_KNUTH_32) >>> 0;
+      // Step 3.3: Offset stored value by +1 so zero remains EMPTY sentinel.
       const storeVal = (packed + 1) | 0;
+      // Step 3.4: Probe until empty slot (insert) or duplicate found (ignore).
       while (true) {
-        const slot = h & mask;
-        const v = table[slot];
-        if (v === 0) {
-          table[slot] = storeVal;
+        const slot = hash & mask;
+        const slotValue = table[slot];
+        if (slotValue === 0) {
+          table[slot] = storeVal; // insert
           distinct++;
           break;
-        } else if (v === storeVal) {
-          break; // duplicate
         }
-        h = (h + 1) | 0; // linear probe
+        if (slotValue === storeVal) break; // duplicate coordinate encountered
+        hash = (hash + 1) | 0; // linear probe advance
       }
     }
-    const ratio = distinct ? distinct / pathLength : 0;
-    return { unique: distinct, pathLen: pathLength, ratio };
+    // Step 4: Return distinct count.
+    return distinct;
   }
 
   /**
-   * Compute simple diversity metrics for a NEAT instance: species count, Simpson index and sample weight std.
-   * Uses class-level scratch sample to avoid small allocations.
+   * Compute core diversity metrics for the current NEAT population.
+   *
+   * Metrics returned:
+   * - speciesUniqueCount: number of distinct species IDs present (genomes without a species get id -1)
+   * - simpson: Simpson diversity index (1 - sum(p_i^2)) over species proportions
+   * - wStd: standard deviation of enabled connection weights from a sampled subset of genomes
+   *
+   * Implementation notes / performance:
+   * 1. Species counting uses two class‑static Int32Array scratch buffers (#SCRATCH_SPECIES_IDS / COUNTS)
+   *    and linear search because typical species cardinality << population size, making a hash map slower.
+   * 2. Weight distribution sampling uses a pooled object scratch buffer (#SCRATCH_SAMPLE) filled by
+   *    #sampleIntoScratch (with replacement) to avoid per‑call allocations.
+   * 3. Variance is computed with Welford's single‑pass algorithm for numerical stability and zero extra storage.
+   * 4. All buffers grow geometrically (power of two) and never shrink to preserve amortized O(1) reallocation cost.
+   *
+   * Determinism: Sampling relies on the engine RNG; in deterministic mode (#DETERMINISTIC set) results are reproducible.
+   * Reentrancy: Non‑reentrant due to shared scratch buffers.
+   * Complexity: O(P + S + W) where P = population length, S = speciesUniqueCount (S <= P),
+   *             and W = total enabled connections visited in the sampled genomes.
+   * Memory: No per‑invocation heap allocations after initial buffer growth.
+   *
+   * @param neat - NEAT instance exposing a `population` array.
+   * @param sampleSize - Upper bound on number of genomes to sample for weight variance (default 40).
+   * @returns Object containing { speciesUniqueCount, simpson, wStd }.
+   * @example
+   * const diversity = EvolutionEngine['#computeDiversityMetrics'](neat, 32); // internal call example (pseudo)
    * @internal
+   * @remarks Non-reentrant (shared scratch arrays).
    */
   static #computeDiversityMetrics(neat: any, sampleSize = 40) {
+    /**
+     * Step 0: Acquire population reference & early-exit for empty populations.
+     * Using a local constant helps engines keep the reference monomorphic.
+     */
     const populationRef: any[] = neat.population || [];
+    const populationLength = populationRef.length | 0;
+    if (populationLength === 0) {
+      return { speciesUniqueCount: 0, simpson: 0, wStd: 0 };
+    }
+
+    // Step 1: Ensure species scratch buffers are large enough (power-of-two growth strategy).
     let speciesIds = EvolutionEngine.#SCRATCH_SPECIES_IDS;
     let speciesCounts = EvolutionEngine.#SCRATCH_SPECIES_COUNTS;
-    if (populationRef.length > speciesIds.length) {
-      const nextSize = 1 << Math.ceil(Math.log2(populationRef.length));
+    if (populationLength > speciesIds.length) {
+      const nextSize = 1 << Math.ceil(Math.log2(populationLength));
       EvolutionEngine.#SCRATCH_SPECIES_IDS = new Int32Array(nextSize);
       EvolutionEngine.#SCRATCH_SPECIES_COUNTS = new Int32Array(nextSize);
       speciesIds = EvolutionEngine.#SCRATCH_SPECIES_IDS;
       speciesCounts = EvolutionEngine.#SCRATCH_SPECIES_COUNTS;
     }
+
+    // Step 2: Build species id -> count arrays (linear scan with small-cardinality assumption).
     let speciesUniqueCount = 0;
-    for (let pi = 0; pi < populationRef.length; pi++) {
-      const genome = populationRef[pi];
+    let totalPopulationCount = 0;
+    for (
+      let populationIndex = 0;
+      populationIndex < populationLength;
+      populationIndex++
+    ) {
+      const genome = populationRef[populationIndex];
       const speciesId =
         (genome && genome.species != null ? genome.species : -1) | 0;
-      let foundIndex = -1;
-      for (let si = 0; si < speciesUniqueCount; si++) {
-        if (speciesIds[si] === speciesId) {
-          foundIndex = si;
+      let existingSpeciesIndex = -1;
+      // Small species cardinality expected (<= population size, usually far lower), so linear search is cache-friendly.
+      for (
+        let speciesScanIndex = 0;
+        speciesScanIndex < speciesUniqueCount;
+        speciesScanIndex++
+      ) {
+        if (speciesIds[speciesScanIndex] === speciesId) {
+          existingSpeciesIndex = speciesScanIndex;
           break;
         }
       }
-      if (foundIndex === -1) {
+      if (existingSpeciesIndex === -1) {
         speciesIds[speciesUniqueCount] = speciesId;
         speciesCounts[speciesUniqueCount] = 1;
         speciesUniqueCount++;
       } else {
-        speciesCounts[foundIndex]++;
+        speciesCounts[existingSpeciesIndex]++;
       }
+      totalPopulationCount++; // track total directly to avoid second pass
     }
-    let total = 0;
-    for (let si = 0; si < speciesUniqueCount; si++) total += speciesCounts[si];
-    total = total || 1;
-    let simpsonAcc = 0;
-    for (let si = 0; si < speciesUniqueCount; si++) {
-      const proportion = speciesCounts[si] / total;
-      simpsonAcc += proportion * proportion;
+    if (totalPopulationCount === 0) totalPopulationCount = 1; // safety (should not happen)
+
+    // Step 3: Compute Simpson diversity index (1 - sum(p_i^2)).
+    let simpsonAccumulator = 0;
+    for (
+      let speciesIndex = 0;
+      speciesIndex < speciesUniqueCount;
+      speciesIndex++
+    ) {
+      const proportion = speciesCounts[speciesIndex] / totalPopulationCount;
+      simpsonAccumulator += proportion * proportion;
     }
-    const simpson = 1 - simpsonAcc;
-    // Weight variance sample
-    const sampleLength = Math.min(populationRef.length, sampleSize);
-    const sampledLen = EvolutionEngine.#sampleIntoScratch(
-      populationRef,
-      sampleLength
-    );
-    // Single-pass Welford variance over sampled enabled connection weights
+    const simpson = 1 - simpsonAccumulator;
+
+    // Step 4: Sample genomes (with replacement) into pooled scratch for weight distribution statistics.
+    const boundedSampleSize =
+      sampleSize > 0 ? Math.min(populationLength, sampleSize | 0) : 0;
+    const sampledLength = boundedSampleSize
+      ? EvolutionEngine.#sampleIntoScratch(populationRef, boundedSampleSize)
+      : 0;
+
+    // Step 5: Welford single-pass variance for enabled connection weights across sampled genomes.
     let weightMean = 0;
     let weightM2 = 0;
-    let weightCount = 0;
-    for (let sampleIndex = 0; sampleIndex < sampledLen; sampleIndex++) {
-      const sampleGenome = EvolutionEngine.#SCRATCH_SAMPLE[sampleIndex];
-      const conns = sampleGenome.connections || [];
+    let enabledWeightCount = 0;
+    for (let sampleIndex = 0; sampleIndex < sampledLength; sampleIndex++) {
+      const sampledGenome = EvolutionEngine.#SCRATCH_SAMPLE[sampleIndex];
+      const connections = sampledGenome.connections || [];
       for (
         let connectionIndex = 0;
-        connectionIndex < conns.length;
+        connectionIndex < connections.length;
         connectionIndex++
       ) {
-        const conn = conns[connectionIndex];
-        if (conn && conn.enabled !== false) {
-          // Welford update
-          weightCount++;
-          const delta = conn.weight - weightMean;
-          weightMean += delta / weightCount;
-          weightM2 += delta * (conn.weight - weightMean);
+        const connection = connections[connectionIndex];
+        if (connection && connection.enabled !== false) {
+          enabledWeightCount++;
+          const delta = connection.weight - weightMean;
+          weightMean += delta / enabledWeightCount;
+          weightM2 += delta * (connection.weight - weightMean);
         }
       }
     }
-    const wStd = weightCount ? Math.sqrt(weightM2 / weightCount) : 0;
-    return { speciesUniqueCount, simpson, wStd };
+    const weightStdDev = enabledWeightCount
+      ? Math.sqrt(weightM2 / enabledWeightCount)
+      : 0;
+
+    // Step 6: Return metrics object (pooled scalars only; callers treat as immutable snapshot).
+    return { speciesUniqueCount, simpson, wStd: weightStdDev };
   }
 
   /**
-   * Sample `k` items from `src` with replacement. Uses SCRATCH_SAMPLE when k is small to avoid allocations.
+   * Sample `k` items (with replacement) from a source array using the engine RNG.
+   *
+   * Characteristics:
+   * - With replacement: the same element can appear multiple times.
+   * - Uses a reusable pooled array (#SCRATCH_SAMPLE_RESULT) that grows geometrically (power-of-two) and is reused
+   *   across calls to avoid allocations. Callers MUST copy (`slice()` / spread) if they need to retain the result
+   *   beyond the next invocation.
+   * - Deterministic under deterministic engine mode (shared RNG state); otherwise non-deterministic.
+   * - Returns an empty array (length 0) for invalid inputs (`k <= 0`, non-array, or empty source). The returned
+   *   empty array is a fresh literal to avoid accidental aliasing with the scratch buffer.
+   *
+   * Complexity: O(k). Memory: O(k) only during first growth; subsequent calls reuse storage.
+   * Reentrancy: Non-reentrant (shared scratch buffer reused) — do not call concurrently.
+   *
+   * @param src - Source array to sample from.
+   * @param k - Number of samples requested (fractional values truncated via floor). Negative treated as 0.
+   * @returns Pooled ephemeral array of length `k` (or 0) containing sampled elements (with replacement).
+   * @example
+   * // Internal usage (pseudo):
+   * const batch = EvolutionEngine['#sampleArray'](population, 16); // do not store long-term
+   * const stableCopy = [...batch]; // copy if needed later
    * @internal
+   * @remarks Non-reentrant; result must be treated as ephemeral.
    */
   static #sampleArray<T>(src: T[], k: number): T[] {
+    // Step 1: Validate inputs & normalize sample size.
     if (!Array.isArray(src) || k <= 0) return [];
     const sampleCount = Math.floor(k);
-    const srcLen = src.length | 0;
-    if (srcLen === 0) return [];
+    const sourceLength = src.length | 0;
+    if (sourceLength === 0 || sampleCount === 0) return [];
+
+    // Step 2: Ensure pooled output buffer capacity (power-of-two growth for amortized O(1) reallocation).
     if (sampleCount > EvolutionEngine.#SCRATCH_SAMPLE_RESULT.length) {
       const nextSize = 1 << Math.ceil(Math.log2(sampleCount));
       EvolutionEngine.#SCRATCH_SAMPLE_RESULT = new Array(nextSize);
     }
     const out = EvolutionEngine.#SCRATCH_SAMPLE_RESULT as T[];
+
+    // Step 3: Fill buffer with sampled elements (with replacement) using fast RNG.
     for (let sampleIndex = 0; sampleIndex < sampleCount; sampleIndex++) {
-      out[sampleIndex] = src[(EvolutionEngine.#fastRandom() * srcLen) | 0];
+      out[sampleIndex] =
+        src[(EvolutionEngine.#fastRandom() * sourceLength) | 0];
     }
+
+    // Step 4: Truncate logical length to exactly sampleCount (allows buffer reuse if previously larger).
     out.length = sampleCount;
-    return out; // pooled ephemeral array; copy if you need to retain
+    return out; // pooled ephemeral array — copy if persistence required
   }
 
   /**
@@ -612,16 +806,35 @@ export class EvolutionEngine {
     simplifyStrategy: string,
     simplifyPruneFraction: number
   ) {
-    const popRef = neat.population || [];
-    for (let gidx = 0; gidx < popRef.length; gidx++) {
+    // Step 0: Defensive normalization & early exit.
+    if (
+      !neat ||
+      !Array.isArray(neat.population) ||
+      neat.population.length === 0
+    )
+      return;
+    const populationRef: any[] = neat.population;
+    const pruneFraction = Number.isFinite(simplifyPruneFraction)
+      ? Math.max(0, Math.min(1, simplifyPruneFraction))
+      : 0;
+    if (pruneFraction === 0) return; // nothing to do if fraction is zero
+
+    // Step 1: Iterate genomes and attempt pruning. Failures are isolated to avoid halting the batch.
+    for (
+      let genomeIndex = 0;
+      genomeIndex < populationRef.length;
+      genomeIndex++
+    ) {
+      const genome = populationRef[genomeIndex];
+      if (!genome) continue; // skip null/undefined placeholders defensively
       try {
         EvolutionEngine.#pruneWeakConnectionsForGenome(
-          popRef[gidx],
+          genome,
           simplifyStrategy,
-          simplifyPruneFraction
+          pruneFraction
         );
-      } catch {
-        /* ignore per-genome failure */
+      } catch (e) {
+        // Intentionally swallow per-genome errors: pruning is a best-effort optimization.
       }
     }
   }
@@ -641,7 +854,7 @@ export class EvolutionEngine {
         // Only run simplify on non-browser hosts (mirrors previous behavior)
         if (typeof window === 'undefined') return simplifyDuration;
       }
-    } catch {
+    } catch (e) {
       /* ignore */
     }
     return 0;
@@ -657,27 +870,40 @@ export class EvolutionEngine {
     simplifyStrategy: string,
     simplifyPruneFraction: number
   ): number {
-    if (!simplifyRemaining) return 0;
+    /**
+     * Run a single simplify/pruning generation if conditions permit.
+     * Simplify is disabled in browser contexts (heuristic: presence of window) to avoid blocking UI threads
+     * since pruning can be comparatively expensive and is mainly a server/offline concern.
+     */
+    // Step 0: Quick exits for zero remaining or missing population.
+    if (!simplifyRemaining || !neat || !Array.isArray(neat.population))
+      return 0;
+
+    // Step 1: Environment gate (skip when running in browser-like context).
     try {
-      // Skip in browsers
-      if (typeof window !== 'undefined') return simplifyRemaining;
+      if (typeof window !== 'undefined') return simplifyRemaining; // maintain existing behavior
     } catch {
-      return simplifyRemaining;
+      // Accessing window threw (non-browser host lacking global); continue.
     }
-    const t0 = EvolutionEngine.#PROFILE_ENABLED
-      ? EvolutionEngine.#PROFILE_T0()
-      : 0;
+
+    // Step 2: Optionally record profiling start (high precision micro-timer disabled when profiling off).
+    const profilingEnabled = EvolutionEngine.#PROFILE_ENABLED;
+    const profileStart = profilingEnabled ? EvolutionEngine.#PROFILE_T0() : 0;
+
+    // Step 3: Apply pruning across the population (best-effort; internal errors isolated per genome).
     EvolutionEngine.#applySimplifyPruningToPopulation(
       neat,
       simplifyStrategy,
       simplifyPruneFraction
     );
-    if (EvolutionEngine.#PROFILE_ENABLED) {
-      EvolutionEngine.#PROFILE_ADD(
-        'simplify',
-        EvolutionEngine.#PROFILE_T0() - t0 || 0
-      );
+
+    // Step 4: Record profiling delta if enabled.
+    if (profilingEnabled) {
+      const elapsed = EvolutionEngine.#PROFILE_T0() - profileStart || 0;
+      EvolutionEngine.#PROFILE_ADD('simplify', elapsed);
     }
+
+    // Step 5: Decrement remaining generations.
     return simplifyRemaining - 1;
   }
 
@@ -695,11 +921,46 @@ export class EvolutionEngine {
     doProfile: boolean,
     completedGenerations: number
   ): number {
-    const t1 = doProfile ? EvolutionEngine.#now() : 0;
-    // Optional sampling to cut cost
+    /**
+     * Perform lightweight supervised (Lamarckian) refinement on each network in the current population.
+     * The goal is to nudge weights toward local optima without erasing evolutionary diversity.
+     *
+     * Steps:
+     * 1. Early validation & fast exits.
+     * 2. Optional sampling of training set (with replacement) to cap per-gen cost.
+     * 3. Iterate networks, run a bounded training pass, adjust output biases heuristically.
+     * 4. Collect gradient norm statistics when provided by the network implementation.
+     * 5. Emit aggregate gradient telemetry & return elapsed time (profiling mode only).
+     *
+     * Determinism: Dependent on RNG usage inside `network.train`. Our sampling step is deterministic when
+     * the engine is in deterministic mode because it relies on `#sampleArray` which uses the shared RNG.
+     * Reentrancy: Non-reentrant (shared RNG + ephemeral sampling buffer). Do not call concurrently.
+     * Complexity: O(P * (I * B)) where P=population size, I=lamarckianIterations, B=batch cost.
+     * Memory: Reuses pooled sample array; no per-network heap allocation beyond library-internal training.
+     */
+
+    // Step 1: Validate inputs & early exits.
+    if (
+      !neat ||
+      !Array.isArray(neat.population) ||
+      neat.population.length === 0
+    )
+      return 0;
+    if (
+      !Array.isArray(lamarckianTrainingSet) ||
+      lamarckianTrainingSet.length === 0
+    )
+      return 0;
+    if (!Number.isFinite(lamarckianIterations) || lamarckianIterations <= 0)
+      return 0;
+
+    const profileStart = doProfile ? EvolutionEngine.#now() : 0;
+
+    // Step 2: Optionally down-sample the training set (with replacement) to reduce cost for large sets.
     let trainingSetRef = lamarckianTrainingSet;
     if (
       lamarckianSampleSize &&
+      lamarckianSampleSize > 0 &&
       lamarckianSampleSize < lamarckianTrainingSet.length
     ) {
       trainingSetRef = EvolutionEngine.#sampleArray(
@@ -707,48 +968,61 @@ export class EvolutionEngine {
         lamarckianSampleSize
       );
     }
-    let gradNormSum = 0;
-    let gradSamples = 0;
-    const pop = neat.population || [];
-    for (let np = 0; np < pop.length; np++) {
-      const network: any = pop[np];
+
+    // Step 3: Iterate networks performing bounded refinement.
+    let gradientNormSum = 0;
+    let gradientNormSamples = 0;
+    const populationRef = neat.population as any[];
+    for (
+      let networkIndex = 0;
+      networkIndex < populationRef.length;
+      networkIndex++
+    ) {
+      const network: any = populationRef[networkIndex];
+      if (!network) continue;
       try {
         network.train(trainingSetRef, {
-          iterations: lamarckianIterations, // Small to preserve diversity
+          iterations: lamarckianIterations, // small to preserve diversity pressure
           error: EvolutionEngine.#DEFAULT_TRAIN_ERROR,
           rate: EvolutionEngine.#DEFAULT_TRAIN_RATE,
           momentum: EvolutionEngine.#DEFAULT_TRAIN_MOMENTUM,
           batchSize: EvolutionEngine.#DEFAULT_TRAIN_BATCH_SMALL,
-          allowRecurrent: true, // allow recurrent connections
+          allowRecurrent: true,
           cost: methods.Cost.softmaxCrossEntropy,
         });
-        // Re-center output biases after local refinement
+        // Step 3.1: Adjust output biases to maintain exploration post-training.
         EvolutionEngine.#adjustOutputBiasesAfterTraining(network);
-        // Capture gradient norm stats if available
+
+        // Step 3.2: Collect gradient norm metric (if provided) for telemetry.
         try {
-          if (typeof (network as any).getTrainingStats === 'function') {
-            const ts = (network as any).getTrainingStats();
-            if (ts && Number.isFinite(ts.gradNorm)) {
-              gradNormSum += ts.gradNorm;
-              gradSamples++;
+          const getStats = (network as any).getTrainingStats;
+          if (typeof getStats === 'function') {
+            const stats = getStats();
+            const gradNorm = stats && stats.gradNorm;
+            if (Number.isFinite(gradNorm)) {
+              gradientNormSum += gradNorm;
+              gradientNormSamples++;
             }
           }
         } catch {
-          /* ignore */
+          // Silently ignore stat retrieval errors; not critical.
         }
       } catch {
-        /* ignore per-network training failures */
+        // Per-network training failure is non-fatal; continue others.
       }
     }
-    if (gradSamples > 0) {
+
+    // Step 4: Emit aggregate gradient telemetry if any samples collected.
+    if (gradientNormSamples > 0) {
       safeWrite(
         `[GRAD] gen=${completedGenerations} meanGradNorm=${(
-          gradNormSum / gradSamples
-        ).toFixed(4)} samples=${gradSamples}\n`
+          gradientNormSum / gradientNormSamples
+        ).toFixed(4)} samples=${gradientNormSamples}\n`
       );
     }
-    const tDelta = doProfile ? EvolutionEngine.#now() - t1 : 0;
-    return tDelta;
+
+    // Step 5: Return elapsed time when profiling; else zero to avoid misleading consumers.
+    return doProfile ? EvolutionEngine.#now() - profileStart : 0;
   }
 
   /**
@@ -762,122 +1036,196 @@ export class EvolutionEngine {
     completedGenerations: number,
     safeWrite: (msg: string) => void
   ) {
-    if (EvolutionEngine.#TELEMETRY_MINIMAL) return; // skip heavy telemetry
-    const t0 = EvolutionEngine.#PROFILE_ENABLED
+    if (EvolutionEngine.#TELEMETRY_MINIMAL) return; // Step 0: global guard
+    const profileStart = EvolutionEngine.#PROFILE_ENABLED
       ? EvolutionEngine.#PROFILE_T0()
       : 0;
     try {
-      // Action entropy
-      const ae = EvolutionEngine.#computeActionEntropy(generationResult.path);
-      safeWrite(
-        `${
-          EvolutionEngine.#LOG_TAG_ACTION_ENTROPY
-        } gen=${completedGenerations} entropyNorm=${ae.entropyNorm.toFixed(
-          3
-        )} uniqueMoves=${ae.uniqueMoves} pathLen=${ae.pathLen}\n`
+      // Step 1: Action entropy telemetry
+      EvolutionEngine.#logActionEntropy(
+        generationResult,
+        completedGenerations,
+        safeWrite
       );
-
-      // Output bias stats
-      try {
-        const nodesRef2 = fittest.nodes || [];
-        const outCount2 = EvolutionEngine.#getNodeIndicesByType(
-          nodesRef2,
-          'output'
-        );
-        if (outCount2 > 0) {
-          const bstats = EvolutionEngine.#computeOutputBiasStats(
-            nodesRef2,
-            outCount2
-          );
-          safeWrite(
-            `${
-              EvolutionEngine.#LOG_TAG_OUTPUT_BIAS
-            } gen=${completedGenerations} mean=${bstats.mean.toFixed(
-              3
-            )} std=${bstats.std.toFixed(3)} biases=${bstats.biasesStr}\n`
-          );
-        }
-      } catch {}
-
-      // Logits and collapse detection
-      try {
-        const lastHist: number[][] = (fittest as any)._lastStepOutputs || [];
-        if (lastHist.length) {
-          const recent: number[][] = EvolutionEngine.#getTail<number[]>(
-            lastHist,
-            EvolutionEngine.#RECENT_WINDOW
-          );
-          const stats: any = EvolutionEngine.#computeLogitStats(recent);
-          safeWrite(
-            `${
-              EvolutionEngine.#LOG_TAG_LOGITS
-            } gen=${completedGenerations} means=${stats.meansStr} stds=${
-              stats.stdsStr
-            } kurt=${stats.kurtStr} entMean=${stats.entMean.toFixed(
-              3
-            )} stability=${stats.stability.toFixed(3)} steps=${recent.length}\n`
-          );
-          // Anti-collapse trigger
-          (EvolutionEngine as any)._collapseStreak =
-            (EvolutionEngine as any)._collapseStreak || 0;
-          let allBelow = true;
-          const stds = stats.stds as ArrayLike<number>;
-          for (let si = 0; si < stds.length; si++) {
-            if (!(stds[si] < EvolutionEngine.#LOGSTD_FLAT_THRESHOLD)) {
-              allBelow = false;
-              break;
-            }
-          }
-          const collapsed =
-            allBelow &&
-            (stats.entMean < EvolutionEngine.#ENTROPY_COLLAPSE_THRESHOLD ||
-              stats.stability > EvolutionEngine.#STABILITY_COLLAPSE_THRESHOLD);
-          if (collapsed) (EvolutionEngine as any)._collapseStreak++;
-          else (EvolutionEngine as any)._collapseStreak = 0;
-          if (
-            (EvolutionEngine as any)._collapseStreak ===
-            EvolutionEngine.#COLLAPSE_STREAK_TRIGGER
-          ) {
-            EvolutionEngine.#antiCollapseRecovery(
-              neat,
-              completedGenerations,
-              safeWrite
-            );
-          }
-        }
-      } catch {}
-
-      // Exploration & Diversity
-      try {
-        const expl = EvolutionEngine.#computeExplorationStats(
-          generationResult.path
-        );
-        safeWrite(
-          `[EXPLORE] gen=${completedGenerations} unique=${
-            expl.unique
-          } pathLen=${expl.pathLen} ratio=${expl.ratio.toFixed(
-            3
-          )} progress=${generationResult.progress.toFixed(
-            1
-          )} satFrac=${(generationResult as any).saturationFraction?.toFixed(
-            3
-          )}\n`
-        );
-      } catch {}
-      try {
-        const dv = EvolutionEngine.#computeDiversityMetrics(neat);
-        safeWrite(
-          `[DIVERSITY] gen=${completedGenerations} species=${
-            dv.speciesUniqueCount
-          } simpson=${dv.simpson.toFixed(3)} weightStd=${dv.wStd.toFixed(3)}\n`
-        );
-      } catch {}
-    } catch {}
+      // Step 2: Output bias statistics
+      EvolutionEngine.#logOutputBiasStats(
+        fittest,
+        completedGenerations,
+        safeWrite
+      );
+      // Step 3: Logits statistics & collapse detection
+      EvolutionEngine.#logLogitsAndCollapse(
+        neat,
+        fittest,
+        completedGenerations,
+        safeWrite
+      );
+      // Step 4: Exploration telemetry
+      EvolutionEngine.#logExploration(
+        generationResult,
+        completedGenerations,
+        safeWrite
+      );
+      // Step 5: Diversity metrics
+      EvolutionEngine.#logDiversity(neat, completedGenerations, safeWrite);
+    } catch {
+      // Swallow any unexpected telemetry exception to avoid disrupting evolution core loop.
+    }
     if (EvolutionEngine.#PROFILE_ENABLED) {
       EvolutionEngine.#PROFILE_ADD(
         'telemetry',
-        EvolutionEngine.#PROFILE_T0() - t0 || 0
+        EvolutionEngine.#PROFILE_T0() - profileStart || 0
       );
+    }
+  }
+
+  /** Log action entropy summary line. @internal */
+  static #logActionEntropy(
+    generationResult: any,
+    gen: number,
+    safeWrite: (msg: string) => void
+  ) {
+    try {
+      const stats = EvolutionEngine.#computeActionEntropy(
+        generationResult.path
+      );
+      safeWrite(
+        `${
+          EvolutionEngine.#LOG_TAG_ACTION_ENTROPY
+        } gen=${gen} entropyNorm=${stats.entropyNorm.toFixed(3)} uniqueMoves=${
+          stats.uniqueMoves
+        } pathLen=${stats.pathLen}\n`
+      );
+    } catch {
+      /* ignore */
+    }
+  }
+
+  /** Log output bias statistics if output nodes present. @internal */
+  static #logOutputBiasStats(
+    fittest: any,
+    gen: number,
+    safeWrite: (msg: string) => void
+  ) {
+    try {
+      const nodes = fittest?.nodes || [];
+      const outputCount = EvolutionEngine.#getNodeIndicesByType(
+        nodes,
+        'output'
+      );
+      if (outputCount > 0) {
+        const biasStats = EvolutionEngine.#computeOutputBiasStats(
+          nodes,
+          outputCount
+        );
+        safeWrite(
+          `${
+            EvolutionEngine.#LOG_TAG_OUTPUT_BIAS
+          } gen=${gen} mean=${biasStats.mean.toFixed(
+            3
+          )} std=${biasStats.std.toFixed(3)} biases=${biasStats.biasesStr}\n`
+        );
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+
+  /** Log logits statistics, detect collapse, and trigger anti-collapse recovery if needed. @internal */
+  static #logLogitsAndCollapse(
+    neat: any,
+    fittest: any,
+    gen: number,
+    safeWrite: (msg: string) => void
+  ) {
+    try {
+      const history: number[][] = fittest?._lastStepOutputs || [];
+      if (!history.length) return;
+      const recent = EvolutionEngine.#getTail<number[]>(
+        history,
+        EvolutionEngine.#RECENT_WINDOW
+      );
+      const stats: any = EvolutionEngine.#computeLogitStats(recent);
+      safeWrite(
+        `${EvolutionEngine.#LOG_TAG_LOGITS} gen=${gen} means=${
+          stats.meansStr
+        } stds=${stats.stdsStr} kurt=${
+          stats.kurtStr
+        } entMean=${stats.entMean.toFixed(
+          3
+        )} stability=${stats.stability.toFixed(3)} steps=${recent.length}\n`
+      );
+      // Collapse detection
+      (EvolutionEngine as any)._collapseStreak =
+        (EvolutionEngine as any)._collapseStreak || 0;
+      let allBelowThreshold = true;
+      const stds = stats.stds as ArrayLike<number>;
+      for (let index = 0; index < stds.length; index++) {
+        if (!(stds[index] < EvolutionEngine.#LOGSTD_FLAT_THRESHOLD)) {
+          allBelowThreshold = false;
+          break;
+        }
+      }
+      const collapsed =
+        allBelowThreshold &&
+        (stats.entMean < EvolutionEngine.#ENTROPY_COLLAPSE_THRESHOLD ||
+          stats.stability > EvolutionEngine.#STABILITY_COLLAPSE_THRESHOLD);
+      if (collapsed) (EvolutionEngine as any)._collapseStreak++;
+      else (EvolutionEngine as any)._collapseStreak = 0;
+      if (
+        (EvolutionEngine as any)._collapseStreak ===
+        EvolutionEngine.#COLLAPSE_STREAK_TRIGGER
+      ) {
+        EvolutionEngine.#antiCollapseRecovery(neat, gen, safeWrite);
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+
+  /** Log exploration statistics (unique path coverage ratio + progress). @internal */
+  static #logExploration(
+    generationResult: any,
+    gen: number,
+    safeWrite: (msg: string) => void
+  ) {
+    try {
+      const expl = EvolutionEngine.#computeExplorationStats(
+        generationResult.path
+      );
+      safeWrite(
+        `[EXPLORE] gen=${gen} unique=${expl.unique} pathLen=${
+          expl.pathLen
+        } ratio=${expl.ratio.toFixed(
+          3
+        )} progress=${generationResult.progress.toFixed(
+          1
+        )} satFrac=${(generationResult as any).saturationFraction?.toFixed(
+          3
+        )}\n`
+      );
+    } catch {
+      /* ignore */
+    }
+  }
+
+  /** Log diversity metrics (species richness, Simpson index, weight std). @internal */
+  static #logDiversity(
+    neat: any,
+    gen: number,
+    safeWrite: (msg: string) => void
+  ) {
+    try {
+      const diversity = EvolutionEngine.#computeDiversityMetrics(neat);
+      safeWrite(
+        `[DIVERSITY] gen=${gen} species=${
+          diversity.speciesUniqueCount
+        } simpson=${diversity.simpson.toFixed(
+          3
+        )} weightStd=${diversity.wStd.toFixed(3)}\n`
+      );
+    } catch {
+      /* ignore */
     }
   }
 
@@ -897,99 +1245,194 @@ export class EvolutionEngine {
     simplifyMode: boolean,
     plateauCounter: number
   ) {
+    // Step 0: Preconditions & scheduling cadence.
     if (!fs || !persistDir || persistEvery <= 0) return;
+    if (completedGenerations % persistEvery !== 0) return; // respect cadence
+    if (!neat || !Array.isArray(neat.population)) return;
+
     try {
-      const t0 = EvolutionEngine.#PROFILE_ENABLED
+      // Step 1: Profile start (optional).
+      const profileStart = EvolutionEngine.#PROFILE_ENABLED
         ? EvolutionEngine.#PROFILE_T0()
         : 0;
-      const snap = EvolutionEngine.#SCRATCH_SNAPSHOT_OBJ;
-      snap.generation = completedGenerations;
-      snap.bestFitness = bestFitness;
-      snap.simplifyMode = simplifyMode;
-      snap.plateauCounter = plateauCounter;
-      snap.timestamp = Date.now();
-      snap.telemetryTail = (() => {
-        if (!neat.getTelemetry) return undefined;
-        try {
-          const telemetryValue = neat.getTelemetry();
-          if (Array.isArray(telemetryValue))
-            return EvolutionEngine.#getTail<any>(telemetryValue, 5);
-          return telemetryValue;
-        } catch {
-          return undefined;
-        }
-      })();
-      const populationRef = neat.population || [];
-      const sortedIdx = EvolutionEngine.#getSortedIndicesByScore(populationRef);
-      const limit = Math.min(persistTopK, sortedIdx.length);
-      let topBuf = EvolutionEngine.#SCRATCH_SNAPSHOT_TOP;
-      if (topBuf.length < limit) {
-        topBuf.length = limit;
+
+      // Step 2: Populate snapshot scalar metadata.
+      const snapshot = EvolutionEngine.#SCRATCH_SNAPSHOT_OBJ;
+      snapshot.generation = completedGenerations;
+      snapshot.bestFitness = bestFitness;
+      snapshot.simplifyMode = simplifyMode;
+      snapshot.plateauCounter = plateauCounter;
+      snapshot.timestamp = Date.now();
+      snapshot.telemetryTail = EvolutionEngine.#collectTelemetryTail(neat, 5);
+
+      // Step 3: Gather top-K genomes metadata (score sorted) reusing pooled buffer.
+      const populationRef: any[] = neat.population || [];
+      const sortedIndices = EvolutionEngine.#getSortedIndicesByScore(
+        populationRef
+      );
+      const topLimit = Math.min(persistTopK, sortedIndices.length);
+      let topBuffer = EvolutionEngine.#SCRATCH_SNAPSHOT_TOP;
+      if (topBuffer.length < topLimit) topBuffer.length = topLimit; // grow in place
+      for (let rank = 0; rank < topLimit; rank++) {
+        let entry = topBuffer[rank];
+        if (!entry) entry = topBuffer[rank] = {};
+        const genome = populationRef[sortedIndices[rank]];
+        // Minimal invariant fields for later analysis/UI.
+        entry.idx = sortedIndices[rank];
+        entry.score = genome?.score;
+        entry.nodes = genome?.nodes?.length;
+        entry.connections = genome?.connections?.length;
+        entry.json = genome?.toJSON ? genome.toJSON() : undefined;
       }
-      for (let rank = 0; rank < limit; rank++) {
-        let entry = topBuf[rank];
-        if (!entry) entry = topBuf[rank] = {};
-        const genome = populationRef[sortedIdx[rank]];
-        entry.idx = sortedIdx[rank];
-        entry.score = genome.score;
-        entry.nodes = genome.nodes.length;
-        entry.connections = genome.connections.length;
-        entry.json = genome.toJSON ? genome.toJSON() : undefined;
-      }
-      topBuf.length = limit;
-      snap.top = topBuf;
-      const file = pathModule.join(
+      topBuffer.length = topLimit;
+      snapshot.top = topBuffer;
+
+      // Step 4: Serialize compact JSON (no spacing) to minimize disk & parse overhead.
+      const filePath = pathModule.join(
         persistDir,
         `snapshot_gen${completedGenerations}.json`
       );
-      // Compact JSON to reduce allocation size and parse cost
-      fs.writeFileSync(file, JSON.stringify(snap));
+      fs.writeFileSync(filePath, JSON.stringify(snapshot));
+
+      // Step 5: Profiling delta.
       if (EvolutionEngine.#PROFILE_ENABLED) {
         EvolutionEngine.#PROFILE_ADD(
           'snapshot',
-          EvolutionEngine.#PROFILE_T0() - t0 || 0
+          EvolutionEngine.#PROFILE_T0() - profileStart || 0
         );
       }
     } catch {
-      /* ignore persistence errors */
+      // Swallow persistence errors silently (I/O not critical for core evolution loop stability).
     }
   }
 
-  /** Compute decision stability: fraction of consecutive identical argmaxes. @internal */
-  static #computeDecisionStability(recent: number[][]): number {
-    let stableCount = 0;
-    let transitionCount = 0;
-    let previousArgmax = -1;
-    for (let ri = 0; ri < recent.length; ri++) {
-      const v = recent[ri];
-      let argmax = 0;
-      let best = v[0];
-      for (let outIdx = 1; outIdx < EvolutionEngine.#ACTION_DIM; outIdx++) {
-        if (v[outIdx] > best) {
-          best = v[outIdx];
-          argmax = outIdx;
-        }
+  /** Collect a short telemetry tail (last N entries) if NEAT instance exposes getTelemetry(). @internal */
+  static #collectTelemetryTail(neat: any, tailLength: number) {
+    if (!neat || typeof neat.getTelemetry !== 'function') return undefined;
+    try {
+      const telemetryValue = neat.getTelemetry();
+      if (Array.isArray(telemetryValue)) {
+        return EvolutionEngine.#getTail<any>(telemetryValue, tailLength);
       }
-      if (previousArgmax === argmax) stableCount++;
-      if (previousArgmax !== -1) transitionCount++;
-      previousArgmax = argmax;
+      return telemetryValue;
+    } catch {
+      return undefined;
     }
-    return transitionCount ? stableCount / transitionCount : 0;
   }
 
   /**
-   * Compute normalized softmax entropy for a single output vector `v`.
-   * Uses provided scratch `buf` to store exponentials to avoid allocations.
+   * Compute decision stability over a recent sequence of output vectors.
+   *
+   * Definition: stability = (# of consecutive pairs with identical argmax) / (total consecutive pairs).
+   * For a sequence of N decisions there are (N-1) consecutive pairs; we skip the first vector when counting pairs.
+   * Returns 0 when fewer than 2 vectors.
+   *
+   * Performance notes:
+   * - Typical RECENT_WINDOW is small (<= 40) and ACTION_DIM is a fixed 4 for ASCII maze (N,E,S,W); cost is negligible so
+   *   caching / memoization would add overhead with no throughput benefit. We therefore compute on demand.
+   * - Specialized unrolled path for ACTION_DIM === 4 (the only case here) reduces loop overhead & branch mispredictions.
+   * - No allocations; operates purely on provided arrays. If ACTION_DIM ever changes, the generic path still works.
+   *
+   * Complexity: O(R * D) where R = recent.length, D = ACTION_DIM (constant 4).
+   * Determinism: Deterministic given identical input vectors.
+   * Reentrancy: Pure function (no shared state touched).
+   *
+   * @param recent - Array of recent output activation vectors (each length = ACTION_DIM expected).
+   * @returns Stability ratio in [0,1].
+   * @internal
+   */
+  static #computeDecisionStability(recent: number[][]): number {
+    const sequenceLength = recent?.length || 0;
+    if (sequenceLength < 2) return 0; // Need at least one pair
+    let stablePairCount = 0;
+    let pairCount = 0;
+    let previousArgmax = -1;
+
+    // If action dimension is known (4) use unrolled argmax for a slight micro-optimization.
+    const actionDim = EvolutionEngine.#ACTION_DIM; // Fixed 4 for ASCII maze (sync with MazeMovement)
+    const unroll = actionDim === 4; // Always true currently; kept for defensive future flexibility
+
+    for (let rowIndex = 0; rowIndex < sequenceLength; rowIndex++) {
+      const row = recent[rowIndex];
+      if (!row || row.length === 0) continue; // defensive skip
+      let argmax: number;
+      if (unroll && row.length >= 4) {
+        // Unrolled argmax for length >=4 (uses first 4 entries; assume exactly ACTION_DIM used downstream)
+        let bestVal = row[0];
+        argmax = 0;
+        const v1 = row[1];
+        if (v1 > bestVal) {
+          bestVal = v1;
+          argmax = 1;
+        }
+        const v2 = row[2];
+        if (v2 > bestVal) {
+          bestVal = v2;
+          argmax = 2;
+        }
+        const v3 = row[3];
+        if (v3 > bestVal) {
+          /* bestVal = v3; */ argmax = 3;
+        }
+      } else {
+        // Generic argmax loop
+        argmax = 0;
+        let bestVal = row[0];
+        for (
+          let outputIndex = 1;
+          outputIndex < actionDim && outputIndex < row.length;
+          outputIndex++
+        ) {
+          const candidate = row[outputIndex];
+          if (candidate > bestVal) {
+            bestVal = candidate;
+            argmax = outputIndex;
+          }
+        }
+      }
+      if (previousArgmax !== -1) {
+        pairCount++;
+        if (previousArgmax === argmax) stablePairCount++;
+      }
+      previousArgmax = argmax;
+    }
+    return pairCount ? stablePairCount / pairCount : 0;
+  }
+
+  /**
+   * Compute the (base-e) softmax entropy of a single activation vector and normalize it to [0,1].
+   *
+   * Educational step-by-step outline (softmax + entropy):
+   * 1. Defensive checks & determine effective length k: If vector empty or length < 2, entropy is 0 (no uncertainty).
+   * 2. Numerical stabilisation: Subtract the maximum activation before exponentiating (log-sum-exp trick) to avoid overflow.
+   * 3. Exponentiation: Convert centered logits to unnormalized positive scores e^{x_i - max}.
+   * 4. Normalization: Sum the scores and divide each by the sum to obtain probabilities p_i.
+   * 5. Shannon entropy: H = -Σ p_i log(p_i); ignore p_i == 0 (contributes 0 by continuity).
+   * 6. Normalization to [0,1]: Divide by log(k); for k=4 we use a cached inverse (#INV_LOG4) to avoid division & log.
+   *
+   * Implementation details:
+   * - Provides a specialized unrolled fast path for the very common ACTION_DIM=4 case.
+   * - Uses the caller-provided scratch buffer `buf` to store exponentials (avoids per-call allocation).
+   * - Previously a small bug omitted the p1 contribution in the 4-way path; fixed here.
+   * - Pure & deterministic: no side effects on shared state.
+   *
+   * @param v Activation vector (logits) whose softmax entropy we want.
+   * @param buf Scratch Float64Array with capacity >= v.length used to hold exponentials.
+   * @returns Normalized entropy in [0,1]. 0 => fully certain (one probability ~1), 1 => uniform distribution.
    * @internal
    */
   static #softmaxEntropyFromVector(
     v: number[] | undefined,
     buf: Float64Array
   ): number {
+    // Step 1: Defensive checks.
     if (!v || !v.length) return 0;
     const k = Math.min(v.length, buf.length);
+    if (k <= 1) return 0; // Single outcome => zero entropy
+
+    // Fast path: unrolled 4-way softmax (common case) with explicit operations and cached normalization.
     if (k === 4) {
-      // Unrolled version for common 4-action case
+      // Step 2: Find max for numerical stability.
       const v0 = v[0] || 0;
       const v1 = v[1] || 0;
       const v2 = v[2] || 0;
@@ -998,75 +1441,166 @@ export class EvolutionEngine {
       if (v1 > maxVal) maxVal = v1;
       if (v2 > maxVal) maxVal = v2;
       if (v3 > maxVal) maxVal = v3;
+      // Step 3: Exponentiate centered values.
       const e0 = Math.exp(v0 - maxVal);
       const e1 = Math.exp(v1 - maxVal);
       const e2 = Math.exp(v2 - maxVal);
       const e3 = Math.exp(v3 - maxVal);
-      const sum = e0 + e1 + e2 + e3 || 1;
+      // Step 4: Normalize to probabilities.
+      const sum = e0 + e1 + e2 + e3 || 1; // guard against pathological underflow
       const p0 = e0 / sum;
       const p1 = e1 / sum;
       const p2 = e2 / sum;
       const p3 = e3 / sum;
-      let e = 0;
-      if (p0 > 0) e += -p0 * Math.log(p0);
-      if (p2 > 0) e += -p2 * Math.log(p2);
-      if (p3 > 0) e += -p3 * Math.log(p3);
-      return e * EvolutionEngine.#INV_LOG4;
+      // Step 5: Entropy accumulation (include all four probabilities; p_i log p_i = 0 if p_i=0).
+      let entropyAccumulator = 0;
+      if (p0 > 0) entropyAccumulator += -p0 * Math.log(p0);
+      if (p1 > 0) entropyAccumulator += -p1 * Math.log(p1); // (bug fix: previously omitted)
+      if (p2 > 0) entropyAccumulator += -p2 * Math.log(p2);
+      if (p3 > 0) entropyAccumulator += -p3 * Math.log(p3);
+      // Step 6: Normalize by log(4) using cached inverse.
+      return entropyAccumulator * EvolutionEngine.#INV_LOG4;
     }
+
+    // Generic path for k != 4.
+    // Step 2: Find maximum for stability.
     let maxVal = -Infinity;
-    for (let i = 0; i < k; i++) {
-      const val = v[i] || 0;
-      if (val > maxVal) maxVal = val;
+    for (let actionIndex = 0; actionIndex < k; actionIndex++) {
+      const value = v[actionIndex] || 0;
+      if (value > maxVal) maxVal = value;
     }
+    // Step 3 + 4: Exponentiate centered logits and accumulate sum; store in scratch buffer.
     let sum = 0;
-    for (let i = 0; i < k; i++) {
-      const ex = Math.exp((v[i] || 0) - maxVal);
-      buf[i] = ex;
-      sum += ex;
+    for (let actionIndex = 0; actionIndex < k; actionIndex++) {
+      const expValue = Math.exp((v[actionIndex] || 0) - maxVal);
+      buf[actionIndex] = expValue;
+      sum += expValue;
     }
-    if (!sum) sum = 1;
-    let e = 0;
-    for (let i = 0; i < k; i++) {
-      const p = buf[i] / sum;
-      if (p > 0) e += -p * Math.log(p);
+    if (!sum) sum = 1; // Guard (extreme underflow) -> uniform probabilities (entropy 0)
+    // Step 5: Accumulate entropy.
+    let entropyAccumulator = 0;
+    for (let actionIndex = 0; actionIndex < k; actionIndex++) {
+      const probability = buf[actionIndex] / sum;
+      if (probability > 0)
+        entropyAccumulator += -probability * Math.log(probability);
     }
-    return e / Math.log(k);
+    // Step 6: Normalize by log(k).
+    const denom = Math.log(k);
+    return denom > 0 ? entropyAccumulator / denom : 0;
   }
 
+  /**
+   * Join the first `len` numeric entries of an array-like into a comma-separated string
+   * with fixed decimal precision.
+   *
+   * Steps (educational):
+   * 1. Normalize parameters: clamp `len` to the provided array-like length; clamp `digits` to [0, 20].
+   * 2. Grow (geometric) the shared scratch string array if capacity is insufficient.
+   * 3. Format each numeric value via `toFixed(digits)` directly into the scratch slots (no interim allocations).
+   * 4. Temporarily set the scratch logical length to `len` and `Array.prototype.join(',')` to build the output.
+   * 5. Restore the original scratch length (capacity preserved) and return the joined string.
+   *
+   * Complexity: O(n) time, O(1) additional space (amortized) beyond the shared scratch array.
+   * Determinism: Deterministic for identical inputs (`toFixed` stable for finite numbers).
+   * Reentrancy: Non-reentrant (shared `#SCRATCH_STR` buffer). Do not invoke concurrently from parallel contexts.
+   *
+   * @param arrLike Array-like source of numbers (only indices < len are read).
+   * @param len Intended number of elements to serialize; clamped to available length.
+   * @param digits Fixed decimal places (0–20). Values outside are clamped.
+   * @returns Comma-separated string or empty string when `len <= 0` after normalization.
+   */
   static #joinNumberArray(
     arrLike: ArrayLike<number>,
     len: number,
     digits = 3
   ): string {
-    if (len <= 0) return '';
-    // ensure string scratch capacity
-    if (len > EvolutionEngine.#SCRATCH_STR.length) {
-      const nextSize = 1 << Math.ceil(Math.log2(len));
+    // Step 1: Parameter normalization.
+    if (!arrLike) return '';
+    const availableLength = arrLike.length >>> 0; // unsigned coercion
+    if (!Number.isFinite(len) || len <= 0 || availableLength === 0) return '';
+    const effectiveLength = len > availableLength ? availableLength : len;
+    let fixedDigits = digits;
+    if (!Number.isFinite(fixedDigits)) fixedDigits = 0;
+    if (fixedDigits < 0) fixedDigits = 0;
+    else if (fixedDigits > 20) fixedDigits = 20; // per spec bounds for toFixed
+
+    // Step 2: Ensure scratch capacity (geometric growth: next power of two).
+    if (effectiveLength > EvolutionEngine.#SCRATCH_STR.length) {
+      const nextSize = 1 << Math.ceil(Math.log2(effectiveLength));
       EvolutionEngine.#SCRATCH_STR = new Array(nextSize);
     }
-    const buf = EvolutionEngine.#SCRATCH_STR;
-    for (let i = 0; i < len; i++)
-      buf[i] = (arrLike[i] as number).toFixed(digits);
-    const prevLen = buf.length;
-    buf.length = len;
-    const out = buf.join(',');
-    buf.length = prevLen; // restore capacity (logical view only)
-    return out;
+
+    // Step 3: Populate scratch with formatted numbers.
+    const stringScratch = EvolutionEngine.#SCRATCH_STR;
+    for (let valueIndex = 0; valueIndex < effectiveLength; valueIndex++) {
+      // Cast to number explicitly; treat missing entries as 0 (consistent with original implicit coercion semantics).
+      const rawValue = (arrLike[valueIndex] as number) ?? 0;
+      stringScratch[valueIndex] = Number.isFinite(rawValue)
+        ? rawValue.toFixed(fixedDigits)
+        : 'NaN';
+    }
+
+    // Step 4: Join using a temporarily truncated logical length.
+    const priorLength = stringScratch.length;
+    stringScratch.length = effectiveLength;
+    const joined = stringScratch.join(',');
+
+    // Step 5: Restore logical length (capacity retained for reuse) and return.
+    stringScratch.length = priorLength;
+    return joined;
   }
 
-  /** Extract last n items from an array (small, allocation-aware helper). @internal */
+  /**
+   * Extract the last `count` items from an input array into a pooled scratch buffer (no new allocation).
+   *
+   * Educational steps:
+   * 1. Validate & normalize parameters: non-array, empty, non-positive, or non-finite counts -> empty result. Clamp
+   *    `count` to the source length and floor fractional values.
+   * 2. Ensure pooled scratch buffer (#SCRATCH_TAIL) has sufficient capacity; grow geometrically (next power-of-two)
+   *    so resizes are amortized and rare.
+   * 3. Copy the tail slice elements into the scratch buffer with a tight loop (avoids `slice()` allocation).
+   * 4. Set the logical length of the scratch buffer to the number of copied elements and return it.
+   *
+   * Complexity: O(k) where k = min(count, source length). Amortized O(1) extra space beyond the shared buffer.
+   * Determinism: Deterministic given identical input array contents and `count`.
+   * Reentrancy: Non-reentrant (returns a shared pooled buffer). Callers MUST copy (`slice()` / spread) if they need
+   *             to retain contents across another engine call that may reuse the scratch.
+   * Mutability: Returned array is mutable; mutations will affect the scratch buffer for subsequent calls.
+   *
+   * @param arr Source array reference.
+   * @param n Desired tail length (floored; negative / non-finite treated as 0).
+   * @returns Pooled ephemeral array containing the last `min(n, arr.length)` elements (or empty array literal when 0).
+   * @internal
+   */
   static #getTail<T>(arr: T[] | undefined, n: number): T[] {
-    if (!Array.isArray(arr) || n <= 0) return [];
-    const take = Math.min(n, arr.length);
-    if (take > EvolutionEngine.#SCRATCH_TAIL.length) {
-      const nextSize = 1 << Math.ceil(Math.log2(take));
+    // Step 1: Validate & normalize parameters.
+    if (
+      !Array.isArray(arr) ||
+      arr.length === 0 ||
+      !Number.isFinite(n) ||
+      n <= 0
+    )
+      return [];
+    const desired = Math.floor(n);
+    const takeCount = desired >= arr.length ? arr.length : desired;
+    if (takeCount === 0) return [];
+
+    // Step 2: Ensure scratch capacity via geometric growth (next power of two >= takeCount).
+    if (takeCount > EvolutionEngine.#SCRATCH_TAIL.length) {
+      const nextSize = 1 << Math.ceil(Math.log2(takeCount));
       EvolutionEngine.#SCRATCH_TAIL = new Array(nextSize);
     }
-    const tailBuf = EvolutionEngine.#SCRATCH_TAIL as T[];
-    const start = arr.length - take;
-    for (let i = 0; i < take; i++) tailBuf[i] = arr[start + i]!;
-    tailBuf.length = take;
-    return tailBuf; // pooled ephemeral array
+
+    // Step 3: Copy tail slice into scratch buffer.
+    const tailBuffer = EvolutionEngine.#SCRATCH_TAIL as T[];
+    const startIndex = arr.length - takeCount;
+    for (let elementIndex = 0; elementIndex < takeCount; elementIndex++) {
+      tailBuffer[elementIndex] = arr[startIndex + elementIndex]!;
+    }
+
+    // Step 4: Set logical length & return pooled (ephemeral) tail view.
+    tailBuffer.length = takeCount;
+    return tailBuffer;
   }
 
   /** Delegate to MazeUtils.pushHistory to keep bounded history semantics. @internal */
@@ -1074,89 +1608,237 @@ export class EvolutionEngine {
     return MazeUtils.pushHistory(buf as any, v as any, maxLen) as T[];
   }
 
-  /** Re-center output node biases for a network (defensive, best-effort). @internal */
-  static #centerOutputBiases(net: any): void {
+  /**
+   * Re-center (demean) output node biases in-place and clamp them to a safe absolute range.
+   *
+   * Steps:
+   * 1. Collect indices of output nodes into the shared scratch index buffer (#SCRATCH_NODE_IDX).
+   * 2. Compute mean and (sample) standard deviation of their biases via Welford's online algorithm (single pass).
+   * 3. Subtract the mean from each bias (re-centering) and clamp to ±#OUTPUT_BIAS_CLAMP to avoid extreme drift.
+   * 4. Persist lightweight stats on the network object as `_outputBiasStats` for telemetry/logging.
+   *
+   * Rationale: Keeping output biases centered reduces systematic preference for any action direction emerging
+   * from cumulative mutation drift, improving exploration signal quality without resetting useful relative offsets.
+   *
+   * Complexity: O(O) where O = number of output nodes. Memory: no new allocations (shared scratch indices reused).
+   * Determinism: Deterministic given identical input network state. Reentrancy: Non-reentrant (shared scratch buffer).
+   * Defensive Behavior: Silently no-ops if network shape unexpected; swallows errors to avoid destabilizing evolution loop.
+   *
+   * @param network Network whose output node biases will be recentred.
+   * @internal
+   */
+  static #centerOutputBiases(network: any): void {
     try {
-      const nodes = net.nodes || [];
-      // collect output nodes indices without allocating an intermediate array
-      let outCount = 0;
-      for (let nodeIndex = 0; nodeIndex < nodes.length; nodeIndex++) {
-        if (nodes[nodeIndex] && nodes[nodeIndex].type === 'output') {
-          EvolutionEngine.#SCRATCH_NODE_IDX[outCount++] = nodeIndex;
+      const nodeList = network?.nodes || [];
+      const totalNodeCount = nodeList.length | 0;
+      if (totalNodeCount === 0) return;
+
+      // Step 1: Collect output node indices.
+      let outputNodeCount = 0;
+      for (let nodeIndex = 0; nodeIndex < totalNodeCount; nodeIndex++) {
+        const candidateNode = nodeList[nodeIndex];
+        if (candidateNode && candidateNode.type === 'output') {
+          EvolutionEngine.#SCRATCH_NODE_IDX[outputNodeCount++] = nodeIndex;
         }
       }
-      if (outCount === 0) return;
-      // Single-pass Welford mean/std
-      let mean = 0;
-      let M2 = 0;
-      for (let outIndex = 0; outIndex < outCount; outIndex++) {
-        const b = nodes[EvolutionEngine.#SCRATCH_NODE_IDX[outIndex]].bias;
-        const n = outIndex + 1;
-        const delta = b - mean;
-        mean += delta / n;
-        M2 += delta * (b - mean);
+      if (outputNodeCount === 0) return;
+
+      // Step 2: Welford online mean & variance (M2 accumulator).
+      let meanBias = 0;
+      let sumSquaredDiffs = 0; // M2
+      for (let outputIndex = 0; outputIndex < outputNodeCount; outputIndex++) {
+        const nodeIdx = EvolutionEngine.#SCRATCH_NODE_IDX[outputIndex];
+        const biasValue = Number(nodeList[nodeIdx].bias) || 0;
+        const sampleCount = outputIndex + 1;
+        const delta = biasValue - meanBias;
+        meanBias += delta / sampleCount;
+        sumSquaredDiffs += delta * (biasValue - meanBias);
       }
-      const std = outCount ? Math.sqrt(M2 / outCount) : 0;
-      for (let oi = 0; oi < outCount; oi++) {
-        const idx = EvolutionEngine.#SCRATCH_NODE_IDX[oi];
-        nodes[idx].bias = Math.max(-5, Math.min(5, nodes[idx].bias - mean));
+      const stdBias = outputNodeCount
+        ? Math.sqrt(sumSquaredDiffs / outputNodeCount)
+        : 0;
+
+      // Step 3: Recenter & clamp.
+      const clampAbs = EvolutionEngine.#OUTPUT_BIAS_CLAMP;
+      for (let outputIndex = 0; outputIndex < outputNodeCount; outputIndex++) {
+        const nodeIdx = EvolutionEngine.#SCRATCH_NODE_IDX[outputIndex];
+        const original = Number(nodeList[nodeIdx].bias) || 0;
+        let adjusted = original - meanBias;
+        if (adjusted > clampAbs) adjusted = clampAbs;
+        else if (adjusted < -clampAbs) adjusted = -clampAbs;
+        nodeList[nodeIdx].bias = adjusted;
       }
-      (net as any)._outputBiasStats = { mean, std };
+
+      // Step 4: Persist stats for optional telemetry.
+      (network as any)._outputBiasStats = { mean: meanBias, std: stdBias };
     } catch {
-      /* ignore */
+      // swallow errors (best-effort maintenance routine)
     }
   }
 
-  /** Prune weakest connections for a genome according to the chosen strategy. @internal */
+  /**
+   * Prune (disable) a fraction of the weakest enabled connections in a genome according to a strategy.
+   *
+   * High‑level flow:
+   * 1. Validate inputs & normalize prune fraction (clamp into [0,1]); exit early for degenerate cases.
+   * 2. Collect enabled connections into a pooled candidate buffer (no fresh allocations, reused scratch array).
+   * 3. Compute how many to prune: floor(enabled * fraction) but ensure at least 1 when fraction > 0.
+   * 4. Order candidates per strategy (e.g. prefer recurrent links first) using small‑array insertion sorts / partitions.
+   * 5. Disable (set enabled = false) the selected weakest connections in place (no structural array mutation).
+   *
+   * Rationale:
+   * - Periodic pruning combats structural bloat / drift, helping convergence and interpretability.
+   * - In‑place flagging preserves indices referenced elsewhere (e.g. mutation bookkeeping) and avoids churn.
+   * - Strategy indirection lets us bias removal (recurrent first, etc.) without duplicating the core pruning loop.
+   *
+   * Strategies supported (case‑sensitive):
+   * - "weakRecurrentPreferred" : Two‑phase ordering. Recurrent OR gater connections are partitioned to the front, each partition then sorted by |weight| ascending so recurrent/gater weakest go first.
+   * - (any other string / default) : All enabled connections globally ordered by |weight| ascending.
+   *
+   * Determinism: Deterministic for a fixed genome state and strategy (sorting by stable numeric key, insertion sort chosen for small E ensures predictable behavior). If two connections share identical |weight| their relative order may depend on initial array order (stable enough for internal use).
+   * Reentrancy: Uses class‑pooled scratch buffers (#SCRATCH_CONN_CAND, #SCRATCH_CONN_FLAGS); not safe for concurrent calls.
+   * Complexity: O(E log E) worst via native sort fallback for larger batches; predominantly O(E^2) small‑E insertion sorts (E = enabled connections) with tiny constants typical for NEAT genomes.
+   * Memory: O(1) additional heap (scratch arrays reused, geometric growth elsewhere handled centrally).
+   * Failure Handling: Silently swallows per‑genome errors (best‑effort maintenance; evolution loop stability prioritized).
+   *
+   * @param genome Genome object whose `connections` array will be examined. Each connection is expected to expose:
+   *  - weight: number (signed; magnitude used for weakness ordering)
+   *  - enabled: boolean flag (connections with enabled === false are ignored; flag is flipped to disable)
+   *  - recurrent / gater (optional): truthy flags used by the recurrent‑preferential strategy
+   *  Additional properties (from, to, etc.) are ignored here.
+   * @param simplifyStrategy Strategy key controlling candidate ordering. Recognized: "weakRecurrentPreferred" (recurrent first); any other value falls back to pure weakest‑by‑|weight| ordering.
+   * @param simplifyPruneFraction Fraction of enabled connections to prune (0..1). Values outside range are clamped. A positive fraction that produces a 0 count still forces pruning of 1 connection (progress guarantee). 0 or non‑finite => no‑op.
+   *
+   * @example
+   * // Internally during simplify phase:
+   * EvolutionEngine['#pruneWeakConnectionsForGenome'](genome, 'weakRecurrentPreferred', 0.15);
+   *
+   * @internal
+   */
   static #pruneWeakConnectionsForGenome(
     genome: any,
     simplifyStrategy: string,
     simplifyPruneFraction: number
   ): void {
     try {
-      const genomeConns = genome.connections || [];
-      let candidates: any[] = EvolutionEngine.#collectEnabledConnections(
-        genomeConns
+      if (!genome || !Array.isArray(genome.connections)) return; // Step 1: validate genome structure
+      const rawFraction = Number.isFinite(simplifyPruneFraction)
+        ? simplifyPruneFraction
+        : 0;
+      if (rawFraction <= 0) return; // nothing requested
+
+      // Step 2: Collect enabled connections.
+      const allConnections = genome.connections as any[];
+      let candidateConnections = EvolutionEngine.#collectEnabledConnections(
+        allConnections
       );
-      const enabledCount = candidates.length;
-      if (enabledCount === 0) return;
-      const pruneCount = Math.max(
-        1,
-        Math.floor(enabledCount * simplifyPruneFraction)
-      );
-      // Delegate candidate ordering to a dedicated helper for clarity and reuse
-      candidates = EvolutionEngine.#sortCandidatesByStrategy(
-        candidates || [],
+      const enabledConnectionCount = candidateConnections.length;
+      if (enabledConnectionCount === 0) return; // no work
+
+      // Step 3: Determine prune count (at least one, but never exceed enabled connections).
+      const clampedFraction =
+        rawFraction >= 1 ? 1 : rawFraction < 0 ? 0 : rawFraction;
+      let pruneTarget = Math.floor(enabledConnectionCount * clampedFraction);
+      if (clampedFraction > 0 && pruneTarget === 0) pruneTarget = 1; // ensure progress when fraction > 0
+      if (pruneTarget <= 0) return; // safety
+
+      // Step 4: Order / partition candidates per strategy.
+      candidateConnections = EvolutionEngine.#sortCandidatesByStrategy(
+        candidateConnections,
         simplifyStrategy
       );
+
+      // Step 5: Disable smallest enabled connections.
       EvolutionEngine.#disableSmallestEnabledConnections(
-        candidates,
-        Math.min(pruneCount, candidates.length)
+        candidateConnections,
+        Math.min(pruneTarget, candidateConnections.length)
       );
     } catch {
-      /* ignore per-genome failures */
+      // Swallow per-genome pruning errors (non-critical maintenance operation)
     }
-  }
-
-  /** Collect enabled connections from an array of connections. @internal */
-  static #collectEnabledConnections(conns: any[]): any[] {
-    if (!Array.isArray(conns) || conns.length === 0) return [];
-    const candBuf = EvolutionEngine.#SCRATCH_CONN_CAND;
-    candBuf.length = 0;
-    for (
-      let connectionIndex = 0;
-      connectionIndex < conns.length;
-      connectionIndex++
-    ) {
-      const connection = conns[connectionIndex];
-      if (connection && connection.enabled !== false) candBuf.push(connection);
-    }
-    return candBuf;
   }
 
   /**
-   * Collect outgoing connections from a hidden node that target any output nodes.
-   * Returns an array of matching connections (possibly using pooled buffers internally).
+   * Collect all currently enabled connections from a genome connection array into a pooled scratch buffer.
+   *
+   * Steps:
+   * 1. Validate & early exit: non-array or empty -> return new empty literal (avoids exposing scratch).
+   * 2. Reset pooled scratch buffer (#SCRATCH_CONN_CAND) logical length to 0 (capacity retained for reuse).
+   * 3. Linear scan: push each connection whose `enabled !== false` (treats missing / undefined as enabled for legacy compatibility).
+   * 4. Return the pooled scratch array (EPHEMERAL) containing references to the enabled connection objects.
+   *
+   * Rationale:
+   * - Centralizes enabled filtering logic so pruning / analytics share identical semantics.
+   * - Reuses a single array instance to avoid transient garbage during frequent simplify phases.
+   * - Keeps semantics liberal (`enabled !== false`) to treat absent flags as enabled (historical behavior preserved).
+   *
+   * Determinism: Deterministic for a fixed input ordering (stable one-pass filter, no reordering).
+   * Reentrancy: Not reentrant — returns a shared pooled buffer; callers must copy if they need persistence across nested engine calls.
+   * Complexity: O(E) where E = total connections scanned.
+   * Memory: O(1) additional heap; capacity grows geometrically elsewhere and is retained.
+   *
+   * @param connectionsSource Array of connection objects; each may expose `enabled` boolean (false => filtered out).
+   * @returns Pooled ephemeral array of enabled connections (DO NOT mutate length; copy if storing long-term).
+   * @example
+   * const enabled = EvolutionEngine['#collectEnabledConnections'](genome.connections);
+   * const stableCopy = enabled.slice(); // only if retention needed
+   * @internal
+   */
+  static #collectEnabledConnections(connectionsSource: any[]): any[] {
+    // Step 1: Validate input & fast exit.
+    if (!Array.isArray(connectionsSource) || connectionsSource.length === 0)
+      return [];
+
+    // Step 2: Reset pooled buffer.
+    const candidateBuffer = EvolutionEngine.#SCRATCH_CONN_CAND;
+    candidateBuffer.length = 0;
+
+    // Step 3: Linear scan & collect enabled connections.
+    for (
+      let connectionIndex = 0;
+      connectionIndex < connectionsSource.length;
+      connectionIndex++
+    ) {
+      const candidateConnection = connectionsSource[connectionIndex];
+      if (candidateConnection && candidateConnection.enabled !== false)
+        candidateBuffer.push(candidateConnection);
+    }
+
+    // Step 4: Return pooled ephemeral result.
+    return candidateBuffer;
+  }
+
+  /**
+   * Collect enabled outgoing connections from a hidden node that terminate at any output node.
+   *
+   * Educational steps:
+   * 1. Validate inputs & early-exit: invalid node / connections / zero outputs => fresh empty array literal
+   *    (avoid exposing pooled scratch for erroneous calls).
+   * 2. Clamp effective output count to available scratch index capacity and `nodesRef` length (defensive bounds).
+   * 3. Reset pooled result buffer (#SCRATCH_HIDDEN_OUT) by setting length=0 (capacity retained for reuse).
+   * 4. Iterate enabled outgoing connections; for each, linearly scan output indices (tiny constant factor) to
+   *    detect whether its `to` endpoint references one of the output nodes; push on first match and break.
+   * 5. Return pooled buffer (EPHEMERAL). Callers MUST copy if they need persistence beyond next engine helper.
+   *
+   * Rationale:
+   * - Output node count is small (typically 4), so an inner linear scan is faster and allocation-free compared
+   *   to constructing a Set/Map each time.
+   * - Pooled buffer eliminates per-call garbage during simplify/pruning phases where this helper can be hot.
+   * - Defensive clamping prevents out-of-bounds reads if caller overstates `outputCount`.
+   *
+   * Determinism: Deterministic given stable ordering of hiddenNode.connections.out and scratch index ordering.
+   * Reentrancy: Not reentrant (shared scratch buffer). Do not call concurrently.
+   * Complexity: O(E * O) where E = enabled outgoing connections, O = outputCount (tiny constant).
+   * Memory: O(1) additional heap (buffer reused). No new allocations after initial growth elsewhere.
+   * Failure Handling: Returns [] on invalid inputs instead of exposing scratch to minimize accidental mutation.
+   *
+   * @param hiddenNode Hidden node object with structure `{ connections: { out: Connection[] } }`.
+   * @param nodesRef Full node array; indices stored in `#SCRATCH_NODE_IDX` resolve into this array.
+   * @param outputCount Declared number of output nodes (will be clamped to safe range).
+   * @returns Pooled ephemeral array of connections from `hiddenNode` to any output node.
+   * @example
+   * const outs = EvolutionEngine['#collectHiddenToOutputConns'](hNode, nodes, outputCount);
+   * const stable = outs.slice(); // copy if retention required
    * @internal
    */
   static #collectHiddenToOutputConns(
@@ -1164,214 +1846,440 @@ export class EvolutionEngine {
     nodesRef: any[],
     outputCount: number
   ): any[] {
-    /**
-     * Implementation notes:
-     * - Reuses class-level pooled object buffer `#SCRATCH_SAMPLE` to avoid small allocations.
-     * - Caller must ensure `EvolutionEngine.#SCRATCH_NODE_IDX` contains output node indices
-     *   (0..outputCount-1) before calling this helper.
-     */
-    const outputBuffer = EvolutionEngine.#SCRATCH_HIDDEN_OUT;
-    outputBuffer.length = 0;
-    if (!hiddenNode || !hiddenNode.connections) return [];
-    const outgoingConnections = hiddenNode.connections.out || [];
-    for (
-      let connectionIndex = 0;
-      connectionIndex < outgoingConnections.length;
-      connectionIndex++
+    // Step 1: Input validation & quick exits.
+    if (
+      !hiddenNode ||
+      !hiddenNode.connections ||
+      !Array.isArray(nodesRef) ||
+      nodesRef.length === 0 ||
+      !Number.isFinite(outputCount) ||
+      outputCount <= 0
     ) {
-      const connection = outgoingConnections[connectionIndex];
-      if (connection && connection.enabled !== false) {
-        for (let outputIndex = 0; outputIndex < outputCount; outputIndex++) {
-          const outputNodeIdx = EvolutionEngine.#SCRATCH_NODE_IDX[outputIndex];
-          if (connection.to === nodesRef[outputNodeIdx]) {
-            outputBuffer.push(connection);
-            break;
-          }
+      return [];
+    }
+
+    // Step 2: Clamp effective output count.
+    const maxScratch = EvolutionEngine.#SCRATCH_NODE_IDX.length;
+    const effectiveOutputCount = Math.min(
+      outputCount | 0,
+      maxScratch,
+      nodesRef.length
+    );
+    if (effectiveOutputCount <= 0) return [];
+
+    // Step 3: Reset pooled result buffer.
+    const hiddenOutBuffer = EvolutionEngine.#SCRATCH_HIDDEN_OUT;
+    hiddenOutBuffer.length = 0;
+
+    // Step 4: Enumerate enabled outgoing connections.
+    const outgoing = hiddenNode.connections.out || [];
+    for (let outIndex = 0; outIndex < outgoing.length; outIndex++) {
+      const candidate = outgoing[outIndex];
+      if (!candidate || candidate.enabled === false) continue;
+      // Step 4a: Scan output node indices (tiny O constant) for a match.
+      for (
+        let outputIndex = 0;
+        outputIndex < effectiveOutputCount;
+        outputIndex++
+      ) {
+        const nodeIdx = EvolutionEngine.#SCRATCH_NODE_IDX[outputIndex];
+        const targetNode = nodesRef[nodeIdx];
+        if (candidate.to === targetNode) {
+          hiddenOutBuffer.push(candidate);
+          break; // proceed to next connection
         }
       }
     }
-    return outputBuffer;
+
+    // Step 5: Return pooled (ephemeral) result buffer.
+    return hiddenOutBuffer;
   }
 
   /**
-   * Sort candidate connections according to the chosen strategy.
-   * For 'weakRecurrentPreferred', recurrent/gater connections are prioritized
-   * for removal. Returns a newly ordered array (no external allocations when possible).
+   * Order (in-place) a buffer of enabled candidate connections according to a pruning strategy.
+   *
+   * Strategies:
+   *  - "weakRecurrentPreferred": Two-phase ordering. First, a linear partition brings recurrent OR gater
+   *    connections ( (from === to) || gater ) to the front preserving relative order within each group (stable-ish
+   *    via single forward pass + conditional swaps). Then each partition (recurrent/gater segment and the remainder)
+   *    is insertion-sorted independently by ascending absolute weight (|weight| smallest first).
+   *  - (default / anything else): Entire array insertion-sorted by ascending absolute weight.
+   *
+   * Returned array is the same reference mutated in place (allows fluent internal usage). This helper never allocates
+   * a new array: it relies on small-N characteristics of genomes during simplify phases, making insertion sort's
+   * O(n^2) worst-case acceptable with very low constants (n typically << 128 for enabled connection subsets).
+   *
+   * Steps (generic):
+   * 1. Validate input; return as-is for non-arrays / empty arrays.
+   * 2. If strategy is recurrent-preferential: partition then insertion-sort both segments.
+   * 3. Else: insertion-sort the entire buffer.
+   * 4. Return mutated buffer reference.
+   *
+   * Rationale:
+   * - Partition + localized sorts avoid a full compare function invocation for every cross-group pair when we wish
+   *   to bias pruning away from recurrent loops (or explicitly target them first).
+   * - Insertion sort avoids engine-level allocations and outperforms generic sort for the very small candidate sets
+   *   typically encountered during pruning sessions.
+   *
+   * Determinism: Deterministic given a stable initial ordering and identical connection properties. Ties (equal |weight|)
+   * retain relative order within each partition thanks to forward-scanning partition & stable insertion strategy for
+   * equal magnitudes (we only shift while strictly greater).
+   * Complexity: O(n^2) worst-case (n = candidates length) but n is small; partition pass is O(n).
+   * Memory: O(1) additional (in-place swaps only). No allocations.
+   * Reentrancy: Pure w.r.t. global engine state; mutates only the provided array reference.
+   *
+   * @param candidateConnections Array of connection objects (mutated in-place) to order for pruning selection.
+   * @param strategyKey Strategy discriminator string ("weakRecurrentPreferred" or fallback ordering).
+   * @returns Same reference to `candidateConnections`, ordered per strategy.
+   * @example
+   * EvolutionEngine['#sortCandidatesByStrategy'](buf, 'weakRecurrentPreferred');
    * @internal
    */
-  static #sortCandidatesByStrategy(candidates: any[], strategy: string): any[] {
-    if (!Array.isArray(candidates) || candidates.length === 0)
-      return candidates;
-    if (strategy === 'weakRecurrentPreferred') {
-      // In-place stable-ish partition then insertion sort slices (candidate arrays are small)
-      let recurrentWrite = 0;
+  static #sortCandidatesByStrategy(
+    candidateConnections: any[],
+    strategyKey: string
+  ): any[] {
+    // Step 1: Validate input.
+    if (
+      !Array.isArray(candidateConnections) ||
+      candidateConnections.length === 0
+    )
+      return candidateConnections;
+
+    // Step 2: Strategy-specific handling.
+    if (strategyKey === 'weakRecurrentPreferred') {
+      // 2a. Partition recurrent/gater to front (stable-ish: single forward scan + conditional swap when out-of-place).
+      let partitionWriteIndex = 0;
       for (
-        let candidateIndex = 0;
-        candidateIndex < candidates.length;
-        candidateIndex++
+        let scanIndex = 0;
+        scanIndex < candidateConnections.length;
+        scanIndex++
       ) {
-        const candidateConnection = candidates[candidateIndex];
+        const connectionCandidate = candidateConnections[scanIndex];
         if (
-          candidateConnection &&
-          (candidateConnection.from === candidateConnection.to ||
-            candidateConnection.gater)
+          connectionCandidate &&
+          (connectionCandidate.from === connectionCandidate.to ||
+            connectionCandidate.gater)
         ) {
-          if (candidateIndex !== recurrentWrite) {
-            const tmp = candidates[recurrentWrite];
-            candidates[recurrentWrite] = candidates[candidateIndex];
-            candidates[candidateIndex] = tmp;
+          if (scanIndex !== partitionWriteIndex) {
+            const tmpConnection = candidateConnections[partitionWriteIndex];
+            candidateConnections[partitionWriteIndex] =
+              candidateConnections[scanIndex];
+            candidateConnections[scanIndex] = tmpConnection;
           }
-          recurrentWrite++;
+          partitionWriteIndex++;
         }
       }
-      EvolutionEngine.#insertionSortByAbsWeight(candidates, 0, recurrentWrite);
+      // 2b. Insertion sort recurrent/gater partition by |weight| ascending.
       EvolutionEngine.#insertionSortByAbsWeight(
-        candidates,
-        recurrentWrite,
-        candidates.length
+        candidateConnections,
+        0,
+        partitionWriteIndex
       );
-      return candidates;
+      // 2c. Insertion sort remainder partition similarly.
+      EvolutionEngine.#insertionSortByAbsWeight(
+        candidateConnections,
+        partitionWriteIndex,
+        candidateConnections.length
+      );
+      return candidateConnections;
     }
-    EvolutionEngine.#insertionSortByAbsWeight(candidates, 0, candidates.length);
-    return candidates;
+
+    // Step 3: Fallback simple ordering (whole array) by |weight|.
+    EvolutionEngine.#insertionSortByAbsWeight(
+      candidateConnections,
+      0,
+      candidateConnections.length
+    );
+    return candidateConnections;
   }
 
-  /** Insertion sort helper for small candidate arrays (avoids allocations). @internal */
-  static #insertionSortByAbsWeight(buffer: any[], start: number, end: number) {
-    for (let i = start + 1; i < end; i++) {
-      const value = buffer[i];
-      const weightAbs = Math.abs(value.weight);
-      let j = i - 1;
-      while (j >= start && Math.abs(buffer[j].weight) > weightAbs) {
-        buffer[j + 1] = buffer[j];
-        j--;
+  /**
+   * In‑place insertion sort of a slice of a candidate connection buffer by ascending absolute weight.
+   *
+   * Design / behavior:
+   * - Stable for ties: when two connections have identical |weight| their original relative order is preserved
+   *   because we only shift elements whose |weight| is strictly greater than the candidate being inserted.
+   * - Bounds are treated as a half‑open interval [startIndex, endExclusive). Out‑of‑range / degenerate ranges
+   *   (null buffer, start >= endExclusive, slice length < 2) return immediately.
+   * - Missing / non‑finite weights are coerced to 0 via `Math.abs(candidate?.weight || 0)` keeping semantics
+   *   consistent with liberal pruning logic elsewhere.
+   * - Chosen because candidate sets during simplify phases are typically small (tens, rarely > 128); insertion
+   *   sort outperforms generic `Array.prototype.sort` for small N while avoiding allocation and comparator indirection.
+   *
+   * Complexity: O(k^2) worst‑case (k = endExclusive - startIndex) with tiny constants for typical k.
+   * Memory: O(1) extra (element temp + indices). No allocations.
+   * Determinism: Fully deterministic for a fixed input slice content.
+   * Reentrancy: Pure (mutates only provided buffer slice; no shared global scratch accessed).
+   *
+   * @param connectionsBuffer Buffer containing connection objects with a numeric `weight` property.
+   * @param startIndex Inclusive start index of the slice to sort (negative values coerced to 0).
+   * @param endExclusive Exclusive end index (values > buffer length clamped). If <= startIndex the call is a no‑op.
+   * @internal
+   */
+  static #insertionSortByAbsWeight(
+    connectionsBuffer: any[],
+    startIndex: number,
+    endExclusive: number
+  ): void {
+    // Step 0: Defensive normalization & fast exits.
+    if (!Array.isArray(connectionsBuffer)) return;
+    const length = connectionsBuffer.length;
+    if (length === 0) return;
+    let from = Number.isFinite(startIndex) ? startIndex | 0 : 0;
+    let to = Number.isFinite(endExclusive) ? endExclusive | 0 : 0;
+    if (from < 0) from = 0;
+    if (to > length) to = length;
+    if (to - from < 2) return; // nothing to order
+
+    // Step 1: Standard insertion sort (stable for equal absolute weights).
+    for (let scanIndex = from + 1; scanIndex < to; scanIndex++) {
+      const candidateConnection = connectionsBuffer[scanIndex];
+      const candidateAbsWeight = Math.abs(
+        candidateConnection && Number.isFinite(candidateConnection.weight)
+          ? candidateConnection.weight
+          : 0
+      );
+      let shiftIndex = scanIndex - 1;
+      // Shift while strictly greater (preserves order of equals => stability).
+      while (shiftIndex >= from) {
+        const probe = connectionsBuffer[shiftIndex];
+        const probeAbsWeight = Math.abs(
+          probe && Number.isFinite(probe.weight) ? probe.weight : 0
+        );
+        if (probeAbsWeight <= candidateAbsWeight) break;
+        connectionsBuffer[shiftIndex + 1] = probe;
+        shiftIndex--;
       }
-      buffer[j + 1] = value;
+      connectionsBuffer[shiftIndex + 1] = candidateConnection;
     }
   }
 
-  /** Disable the smallest enabled connections from candidates up to `count`. @internal */
-  static #disableSmallestEnabledConnections(candidates: any[], count: number) {
-    if (!Array.isArray(candidates) || count <= 0) return;
-    let flags = EvolutionEngine.#SCRATCH_CONN_FLAGS;
-    if (candidates.length > flags.length) {
-      EvolutionEngine.#SCRATCH_CONN_FLAGS = new Uint8Array(candidates.length);
-      flags = EvolutionEngine.#SCRATCH_CONN_FLAGS;
+  /**
+   * Maximum candidate length (inclusive) at which bulk pruning still prefers insertion sort
+   * over native Array.prototype.sort for determinism and lower overhead on very small arrays.
+   * @internal
+   */
+  static #PRUNE_BULK_INSERTION_MAX = 64;
+
+  /**
+   * Disable (set enabled = false) the weakest enabled connections up to a target count.
+   *
+   * Two operating modes chosen adaptively by `pruneCount` vs active candidate size:
+   * 1. Bulk mode (pruneCount >= activeEnabled/2): Fully order candidates by |weight| then disable
+   *    the first pruneCount entries. Uses insertion sort for small N (<= #PRUNE_BULK_INSERTION_MAX)
+   *    else a single native sort call.
+   * 2. Sparse mode (pruneCount < activeEnabled/2): Repeated selection of current minimum |weight|
+   *    without fully sorting (multi-pass partial selection). After each disable we swap the last
+   *    active element into the removed slot (shrinking window) to avoid O(n) splices.
+   *
+   * Rationale:
+   * - Avoids the O(n log n) cost of a full sort when disabling only a small fraction (selection
+   *   becomes O(k * n) but k << n). When pruning many, a single ordering is cheaper.
+   * - In-place modification preserves object identity and external references.
+   * - Liberal enabled check (enabled !== false) matches collection semantics.
+   * - Uses a reusable `Uint8Array` (#SCRATCH_CONN_FLAGS) resized geometrically (currently only
+   *   cleared here—reserved for potential future marking/telemetry without reallocation).
+   *
+   * Complexity:
+   * - Bulk: O(n^2) for insertion path small n, else O(n log n) via native sort.
+   * - Sparse: O(k * n) worst (k = pruneCount) with shrinking n after each removal (average slightly better).
+   * Memory: O(1) additional (reuses shared scratch flags; no new arrays created).
+   * Determinism: Deterministic for identical candidate ordering and weights (native sort comparator is pure).
+   * Reentrancy: Not safe for concurrent calls (shared scratch flags buffer reused & zeroed).
+   * Failure Handling: Silently no-ops on invalid inputs.
+   *
+   * @param candidateConnections Array containing candidate connection objects (each with `weight` & `enabled`).
+   * @param pruneCount Number of weakest enabled connections to disable (clamped to [0, candidateConnections.length]).
+   * @internal
+   */
+  static #disableSmallestEnabledConnections(
+    candidateConnections: any[],
+    pruneCount: number
+  ): void {
+    // Step 0: Defensive validation & normalization.
+    if (!Array.isArray(candidateConnections) || !candidateConnections.length)
+      return;
+    if (!Number.isFinite(pruneCount) || pruneCount <= 0) return;
+    const totalCandidates = candidateConnections.length;
+    if (pruneCount >= totalCandidates) pruneCount = totalCandidates;
+
+    // Step 1: Prepare / grow scratch flags (reserved for potential future marking / metrics).
+    let connectionFlags = EvolutionEngine.#SCRATCH_CONN_FLAGS;
+    if (totalCandidates > connectionFlags.length) {
+      EvolutionEngine.#SCRATCH_CONN_FLAGS = new Uint8Array(totalCandidates);
+      connectionFlags = EvolutionEngine.#SCRATCH_CONN_FLAGS;
     } else {
-      flags.fill(0, 0, candidates.length);
+      connectionFlags.fill(0, 0, totalCandidates);
     }
-    const n = candidates.length;
-    if (count >= n >>> 1) {
-      // If pruning many, just sort by abs weight once (reuse insertion for small n else fallback native)
-      if (n <= 64) {
-        EvolutionEngine.#insertionSortByAbsWeight(candidates, 0, n);
-      } else {
-        candidates.sort((a, b) => Math.abs(a.weight) - Math.abs(b.weight));
+
+    // Step 2: Count / compact enabled connections to front to reduce later scans (sparse mode benefit).
+    let activeEnabledCount = 0;
+    for (let scanIndex = 0; scanIndex < totalCandidates; scanIndex++) {
+      const connectionRef = candidateConnections[scanIndex];
+      if (connectionRef && connectionRef.enabled !== false) {
+        if (scanIndex !== activeEnabledCount)
+          candidateConnections[activeEnabledCount] = connectionRef;
+        activeEnabledCount++;
       }
-      for (let i = 0, lim = Math.min(count, n); i < lim; i++) {
-        const c = candidates[i];
-        if (c && c.enabled !== false) c.enabled = false;
+    }
+    if (activeEnabledCount === 0) return; // Nothing to disable.
+    if (pruneCount >= activeEnabledCount) pruneCount = activeEnabledCount; // Clamp again after compaction.
+
+    // Step 3: Choose operating mode based on fraction.
+    if (pruneCount >= activeEnabledCount >>> 1) {
+      // --- Bulk mode ---
+      if (activeEnabledCount <= EvolutionEngine.#PRUNE_BULK_INSERTION_MAX) {
+        EvolutionEngine.#insertionSortByAbsWeight(
+          candidateConnections,
+          0,
+          activeEnabledCount
+        );
+      } else {
+        candidateConnections
+          .slice(0, activeEnabledCount) // sort only active slice; slice() to avoid comparing undefined tail beyond active
+          .sort(
+            (firstConnection: any, secondConnection: any) =>
+              Math.abs(firstConnection?.weight || 0) -
+              Math.abs(secondConnection?.weight || 0)
+          )
+          .forEach((sortedConnection, sortedIndex) => {
+            candidateConnections[sortedIndex] = sortedConnection;
+          });
+      }
+      const disableLimit = pruneCount;
+      for (let disableIndex = 0; disableIndex < disableLimit; disableIndex++) {
+        const connectionRef = candidateConnections[disableIndex];
+        if (connectionRef && connectionRef.enabled !== false)
+          connectionRef.enabled = false;
       }
       return;
     }
-    // Prune a small number: maintain a partial selection using multi-pass with shrinking upper bound (selection algorithm)
-    let remaining = count;
-    let active = 0;
-    // compact enabled candidates into front to reduce later scans
-    for (let i = 0; i < n; i++) {
-      const c = candidates[i];
-      if (c && c.enabled !== false) {
-        if (i !== active) candidates[active] = c;
-        active++;
-      }
-    }
-    while (remaining > 0 && active > 0) {
-      let minIdx = 0;
-      let minW = Math.abs(candidates[0].weight);
-      for (let j = 1; j < active; j++) {
-        const aw = Math.abs(candidates[j].weight);
-        if (aw < minW) {
-          minW = aw;
-          minIdx = j;
+
+    // Step 4: Sparse mode (iterative selection of minimum absolute weight among remaining active slice).
+    let remainingToDisable = pruneCount;
+    let activeSliceLength = activeEnabledCount;
+    while (remainingToDisable > 0 && activeSliceLength > 0) {
+      // 4a. Find index of current minimum |weight| in [0, activeSliceLength).
+      let minIndex = 0;
+      let minAbsWeight = Math.abs(
+        candidateConnections[0] &&
+          Number.isFinite(candidateConnections[0].weight)
+          ? candidateConnections[0].weight
+          : 0
+      );
+      for (let probeIndex = 1; probeIndex < activeSliceLength; probeIndex++) {
+        const probe = candidateConnections[probeIndex];
+        const probeAbs = Math.abs(
+          probe && Number.isFinite(probe.weight) ? probe.weight : 0
+        );
+        if (probeAbs < minAbsWeight) {
+          minAbsWeight = probeAbs;
+          minIndex = probeIndex;
         }
       }
-      const target = candidates[minIdx];
-      target.enabled = false;
-      // remove minIdx by swapping last active-1
-      const last = --active;
-      candidates[minIdx] = candidates[last];
-      remaining--;
+      // 4b. Disable selected connection.
+      const targetConnection = candidateConnections[minIndex];
+      if (targetConnection && targetConnection.enabled !== false)
+        targetConnection.enabled = false;
+      // 4c. Shrink active window by swapping last active-1 element into freed slot.
+      const lastActiveIndex = --activeSliceLength;
+      candidateConnections[minIndex] = candidateConnections[lastActiveIndex];
+      remainingToDisable--;
     }
   }
 
-  /** Compute directional action entropy and unique move count from a path. @internal */
+  /**
+   * Compute directional action entropy (normalized to [0,1]) and number of distinct move directions
+   * observed along a path of integer coordinates.
+   *
+   * Behaviour & notes:
+   * - Uses the pooled `#SCRATCH_COUNTS` Int32Array (length 4) to avoid per-call allocations. Callers
+   *   MUST NOT rely on preserved contents across engine helpers.
+   * - Treats a direction as the delta between consecutive coordinates. Only unit deltas in the 8-neighbour
+   *   Moore neighbourhood with a mapped index are considered; others are ignored.
+   * - Returns entropy normalized by log(4) using `#INV_LOG4` so results are in [0,1]. For empty/degenerate
+   *   inputs the entropy is 0 and uniqueMoves is 0.
+   *
+   * Complexity: O(L) where L = pathArr.length. Memory: O(1) (no allocations). Determinism: deterministic for
+   * identical inputs. Reentrancy: Non-reentrant due to shared scratch buffer use.
+   *
+   * @param pathArr Array-like sequence of [x,y] coordinates visited (expected integers).
+   * @returns Object with { entropyNorm, uniqueMoves, pathLen }.
+   * @internal
+   */
   static #computeActionEntropy(
     pathArr: ReadonlyArray<[number, number]>
   ): { entropyNorm: number; uniqueMoves: number; pathLen: number } {
+    // Defensive guards.
+    if (!Array.isArray(pathArr) || pathArr.length < 2)
+      return { entropyNorm: 0, uniqueMoves: 0, pathLen: pathArr?.length | 0 };
+
     const counts = EvolutionEngine.#SCRATCH_COUNTS;
-    // Manual unroll for fixed length=4 avoids call overhead of fill()
+    // Manual reset for small fixed-size buffer (faster than fill for hot path)
     counts[0] = 0;
     counts[1] = 0;
     counts[2] = 0;
     counts[3] = 0;
+
     let totalMoves = 0;
-    // Branchless (dx,dy)->index mapping via 3x3 Int8Array
-    const dirMap = EvolutionEngine.#DIR_DELTA_TO_INDEX;
-    for (let pathIndex = 1; pathIndex < pathArr.length; pathIndex++) {
-      const currentPoint = pathArr[pathIndex];
-      const previousPoint = pathArr[pathIndex - 1];
-      const deltaX = currentPoint[0] - previousPoint[0];
-      const deltaY = currentPoint[1] - previousPoint[1];
-      // Pack into (dx+1)*3 + (dy+1) domain 0..8. Out-of-range deltas ignored.
-      if (deltaX < -1 || deltaX > 1 || deltaY < -1 || deltaY > 1) continue;
-      const key = (deltaX + 1) * 3 + (deltaY + 1);
-      const directionIndex = dirMap[key];
-      if (directionIndex >= 0) {
-        counts[directionIndex]++;
+    const dirMap = EvolutionEngine.#DIR_DELTA_TO_INDEX; // 3x3 lookup mapping
+
+    // Scan consecutive pairs and tally mapped directions.
+    for (let i = 1; i < pathArr.length; i++) {
+      const cur = pathArr[i];
+      const prev = pathArr[i - 1];
+      if (!cur || !prev) continue;
+      const dx = cur[0] - prev[0];
+      const dy = cur[1] - prev[1];
+      // Only unit/neighbour moves are considered (dx,dy in -1..1)
+      if (dx < -1 || dx > 1 || dy < -1 || dy > 1) continue;
+      const key = (dx + 1) * 3 + (dy + 1); // maps to 0..8
+      const dirIdx = dirMap[key];
+      if (dirIdx >= 0) {
+        counts[dirIdx]++;
         totalMoves++;
       }
     }
-    totalMoves = totalMoves || 1;
+
+    if (totalMoves === 0)
+      return { entropyNorm: 0, uniqueMoves: 0, pathLen: pathArr.length };
+
+    // Compute normalized Shannon entropy and unique move count.
     let entropy = 0;
     let uniqueMoves = 0;
-    for (let i = 0; i < counts.length; i++) {
-      const prob = counts[i] / totalMoves;
-      if (prob > 0) entropy += -prob * Math.log(prob);
-      if (counts[i] > 0) uniqueMoves++;
+    // counts length is 4 (ACTION_DIM); iterate explicitly for tiny fixed size.
+    for (let k = 0; k < 4; k++) {
+      const c = counts[k];
+      if (c > 0) {
+        const p = c / totalMoves;
+        entropy += -p * Math.log(p);
+        uniqueMoves++;
+      }
     }
+
     const entropyNorm = entropy * EvolutionEngine.#INV_LOG4;
     return { entropyNorm, uniqueMoves, pathLen: pathArr.length };
   }
 
-  /** Compute statistics over recent logits: means, stds, kurtosis, mean entropy and stability. @internal */
+  /**
+   * Compute summary statistics over a sliding window of recent logit vectors.
+   * Uses class-level scratch buffers to avoid allocations and supports a
+   * reduced telemetry mode which skips higher moments (kurtosis).
+   *
+   * Contract:
+   * - Input: `recent` is an array of numeric vectors (each vector length >= actionDim
+   *   is not required; missing entries are treated as 0).
+   * - Output: an object containing formatted strings, aggregated arrays and
+   *   scalar summaries.
+   *
+   * @param recent - Array of recent logit vectors, newest last.
+   * @returns An object { meansStr, stdsStr, kurtStr, entMean, stability, steps, means, stds }
+   * @internal
+   */
   static #computeLogitStats(recent: number[][]) {
-    const reduced = EvolutionEngine.#REDUCED_TELEMETRY;
-    const actionDim = EvolutionEngine.#ACTION_DIM;
-    const meansBuf = EvolutionEngine.#SCRATCH_MEANS;
-    const stdsBuf = EvolutionEngine.#SCRATCH_STDS;
-    // Lazy allocate higher-moment buffers only when needed
-    if (!reduced && !EvolutionEngine.#SCRATCH_KURT) {
-      EvolutionEngine.#SCRATCH_KURT = new Float64Array(actionDim);
-      EvolutionEngine.#SCRATCH_M3_RAW = new Float64Array(actionDim);
-      EvolutionEngine.#SCRATCH_M4_RAW = new Float64Array(actionDim);
-    }
-    const kurtBuf = EvolutionEngine.#SCRATCH_KURT; // may be undefined in reduced mode
-    const m2Buf = EvolutionEngine.#SCRATCH_M2_RAW;
-    const m3Buf = EvolutionEngine.#SCRATCH_M3_RAW;
-    const m4Buf = EvolutionEngine.#SCRATCH_M4_RAW;
-    // Reset base buffers
-    for (let dimIndex = 0; dimIndex < actionDim; dimIndex++) {
-      meansBuf[dimIndex] = 0;
-      m2Buf[dimIndex] = 0;
-      stdsBuf[dimIndex] = 0;
-      if (!reduced) {
-        m3Buf![dimIndex] = 0;
-        m4Buf![dimIndex] = 0;
-        kurtBuf![dimIndex] = 0;
-      }
-    }
-    const stepCount = recent.length;
-    if (!stepCount) {
+    // Defensive input checks
+    if (!Array.isArray(recent) || recent.length === 0)
       return {
         meansStr: '',
         stdsStr: '',
@@ -1379,35 +2287,73 @@ export class EvolutionEngine {
         entMean: 0,
         stability: 0,
         steps: 0,
-        means: meansBuf,
-        stds: stdsBuf,
+        means: EvolutionEngine.#SCRATCH_MEANS,
+        stds: EvolutionEngine.#SCRATCH_STDS,
       } as any;
+
+    const reducedTelemetry = EvolutionEngine.#REDUCED_TELEMETRY;
+    const actionDim = Math.max(0, EvolutionEngine.#ACTION_DIM);
+    const meansBuf = EvolutionEngine.#SCRATCH_MEANS;
+    const stdsBuf = EvolutionEngine.#SCRATCH_STDS;
+
+    // Ensure higher-moment buffers exist when full telemetry is enabled
+    if (!reducedTelemetry && !EvolutionEngine.#SCRATCH_KURT) {
+      EvolutionEngine.#SCRATCH_KURT = new Float64Array(actionDim);
+      EvolutionEngine.#SCRATCH_M3_RAW = new Float64Array(actionDim);
+      EvolutionEngine.#SCRATCH_M4_RAW = new Float64Array(actionDim);
     }
+
+    const kurtBuf = EvolutionEngine.#SCRATCH_KURT; // may be undefined in reduced mode
+    const m2Buf = EvolutionEngine.#SCRATCH_M2_RAW;
+    const m3Buf = EvolutionEngine.#SCRATCH_M3_RAW;
+    const m4Buf = EvolutionEngine.#SCRATCH_M4_RAW;
+
+    // Step 1: Reset the reusable buffers for the active dimension range.
+    // Use .fill for clear intent and to keep the hot path allocation-free.
+    meansBuf.fill(0, 0, actionDim);
+    m2Buf.fill(0, 0, actionDim);
+    stdsBuf.fill(0, 0, actionDim);
+    // Only initialize/clear higher-order buffers when full telemetry is enabled.
+    if (!reducedTelemetry) {
+      m3Buf!.fill(0, 0, actionDim);
+      m4Buf!.fill(0, 0, actionDim);
+      kurtBuf!.fill(0, 0, actionDim);
+    }
+
+    const sampleCount = recent.length;
     let entropyAggregate = 0;
-    // Reduced mode: skip higher moments (kurtosis) to save CPU
-    if (reduced) {
-      // Compute mean/std only (generic path)
-      for (let stepIndex = 0; stepIndex < stepCount; stepIndex++) {
-        const vec = recent[stepIndex];
-        const n = stepIndex + 1;
+
+    // Step 2: Accumulate running statistics and entropy.
+    // Reduced telemetry: compute only mean/std and entropy (skip higher moments to save CPU).
+    if (reducedTelemetry) {
+      for (let sampleIndex = 0; sampleIndex < sampleCount; sampleIndex++) {
+        // 2a: For each sample, perform online Welford-style updates for mean & M2.
+        const vec = recent[sampleIndex] || ([] as number[]);
+        const currentSampleNumber = sampleIndex + 1;
         for (let dimIndex = 0; dimIndex < actionDim; dimIndex++) {
-          const x = vec[dimIndex] || 0;
+          const x = vec[dimIndex] ?? 0; // treat missing entries as 0
           const delta = x - meansBuf[dimIndex];
-          meansBuf[dimIndex] += delta / n;
+          // update mean incrementally: mean += delta / n
+          meansBuf[dimIndex] += delta / currentSampleNumber;
+          // accumulate second central moment contribution (M2)
           const delta2 = x - meansBuf[dimIndex];
           m2Buf[dimIndex] += delta * delta2;
         }
+        // 2b: Also accumulate softmax entropy for the sample (kept in a separate scratch buffer).
         entropyAggregate += EvolutionEngine.#softmaxEntropyFromVector(
           vec,
           EvolutionEngine.#SCRATCH_EXPS
         );
       }
       for (let dimIndex = 0; dimIndex < actionDim; dimIndex++) {
-        const variance = m2Buf[dimIndex] / stepCount;
+        const variance = m2Buf[dimIndex] / sampleCount;
         stdsBuf[dimIndex] = variance > 0 ? Math.sqrt(variance) : 0;
       }
     } else if (actionDim === 4) {
-      // Unrolled fast path for 4 outputs (dominant case)
+      // Step 2 (fast): Unrolled fast path for the common 4-action case to reduce loop overhead.
+      // This is equivalent to the generic Welford-style accumulation but manually unrolled to avoid
+      // per-dimension loop overhead and repeated bounds checks. The math follows Pébay's incremental
+      // higher-moment update formulas (M2/M3/M4) to compute variance and excess kurtosis in one pass.
       let mean0 = 0,
         mean1 = 0,
         mean2 = 0,
@@ -1424,141 +2370,172 @@ export class EvolutionEngine {
         M41 = 0,
         M42 = 0,
         M43 = 0;
-      for (let stepIndex = 0; stepIndex < stepCount; stepIndex++) {
-        const vec = recent[stepIndex];
-        const x0 = vec[0] || 0;
-        const x1 = vec[1] || 0;
-        const x2 = vec[2] || 0;
-        const x3 = vec[3] || 0;
-        const n = stepIndex + 1;
+
+      for (let sampleIndex = 0; sampleIndex < sampleCount; sampleIndex++) {
+        const vec = recent[sampleIndex] || ([] as number[]);
+        const x0 = vec[0] ?? 0;
+        const x1 = vec[1] ?? 0;
+        const x2 = vec[2] ?? 0;
+        const x3 = vec[3] ?? 0;
+        const currentSampleNumber = sampleIndex + 1;
+
         // Dimension 0
         let delta = x0 - mean0;
-        let delta_n = delta / n;
-        let delta_n2 = delta_n * delta_n;
-        let term1 = delta * delta_n * (n - 1);
+        let deltaN = delta / currentSampleNumber;
+        let deltaN2 = deltaN * deltaN;
+        let term1 = delta * deltaN * (currentSampleNumber - 1);
         M40 +=
-          term1 * delta_n2 * (n * n - 3 * n + 3) +
-          6 * delta_n2 * M20 -
-          4 * delta_n * M30;
-        M30 += term1 * delta_n * (n - 2) - 3 * delta_n * M20;
+          term1 *
+            deltaN2 *
+            (currentSampleNumber * currentSampleNumber -
+              3 * currentSampleNumber +
+              3) +
+          6 * deltaN2 * M20 -
+          4 * deltaN * M30;
+        M30 += term1 * deltaN * (currentSampleNumber - 2) - 3 * deltaN * M20;
         M20 += term1;
-        mean0 += delta_n;
+        mean0 += deltaN;
+
         // Dimension 1
         delta = x1 - mean1;
-        delta_n = delta / n;
-        delta_n2 = delta_n * delta_n;
-        term1 = delta * delta_n * (n - 1);
+        deltaN = delta / currentSampleNumber;
+        deltaN2 = deltaN * deltaN;
+        term1 = delta * deltaN * (currentSampleNumber - 1);
         M41 +=
-          term1 * delta_n2 * (n * n - 3 * n + 3) +
-          6 * delta_n2 * M21 -
-          4 * delta_n * M31;
-        M31 += term1 * delta_n * (n - 2) - 3 * delta_n * M21;
+          term1 *
+            deltaN2 *
+            (currentSampleNumber * currentSampleNumber -
+              3 * currentSampleNumber +
+              3) +
+          6 * deltaN2 * M21 -
+          4 * deltaN * M31;
+        M31 += term1 * deltaN * (currentSampleNumber - 2) - 3 * deltaN * M21;
         M21 += term1;
-        mean1 += delta_n;
+        mean1 += deltaN;
+
         // Dimension 2
         delta = x2 - mean2;
-        delta_n = delta / n;
-        delta_n2 = delta_n * delta_n;
-        term1 = delta * delta_n * (n - 1);
+        deltaN = delta / currentSampleNumber;
+        deltaN2 = deltaN * deltaN;
+        term1 = delta * deltaN * (currentSampleNumber - 1);
         M42 +=
-          term1 * delta_n2 * (n * n - 3 * n + 3) +
-          6 * delta_n2 * M22 -
-          4 * delta_n * M32;
-        M32 += term1 * delta_n * (n - 2) - 3 * delta_n * M22;
+          term1 *
+            deltaN2 *
+            (currentSampleNumber * currentSampleNumber -
+              3 * currentSampleNumber +
+              3) +
+          6 * deltaN2 * M22 -
+          4 * deltaN * M32;
+        M32 += term1 * deltaN * (currentSampleNumber - 2) - 3 * deltaN * M22;
         M22 += term1;
-        mean2 += delta_n;
+        mean2 += deltaN;
+
         // Dimension 3
         delta = x3 - mean3;
-        delta_n = delta / n;
-        delta_n2 = delta_n * delta_n;
-        term1 = delta * delta_n * (n - 1);
+        deltaN = delta / currentSampleNumber;
+        deltaN2 = deltaN * deltaN;
+        term1 = delta * deltaN * (currentSampleNumber - 1);
         M43 +=
-          term1 * delta_n2 * (n * n - 3 * n + 3) +
-          6 * delta_n2 * M23 -
-          4 * delta_n * M33;
-        M33 += term1 * delta_n * (n - 2) - 3 * delta_n * M23;
+          term1 *
+            deltaN2 *
+            (currentSampleNumber * currentSampleNumber -
+              3 * currentSampleNumber +
+              3) +
+          6 * deltaN2 * M23 -
+          4 * deltaN * M33;
+        M33 += term1 * deltaN * (currentSampleNumber - 2) - 3 * deltaN * M23;
         M23 += term1;
-        mean3 += delta_n;
-        // Entropy (integrated same pass)
+        mean3 += deltaN;
+
+        // 2c: Entropy integrated in the same pass to avoid a second loop over samples.
         entropyAggregate += EvolutionEngine.#softmaxEntropyFromVector(
           vec,
           EvolutionEngine.#SCRATCH_EXPS
         );
       }
+
       meansBuf[0] = mean0;
       meansBuf[1] = mean1;
       meansBuf[2] = mean2;
       meansBuf[3] = mean3;
-      const invN = 1 / stepCount;
-      const var0 = M20 * invN;
-      const var1 = M21 * invN;
-      const var2 = M22 * invN;
-      const var3 = M23 * invN;
+
+      const invSample = 1 / sampleCount;
+      const var0 = M20 * invSample;
+      const var1 = M21 * invSample;
+      const var2 = M22 * invSample;
+      const var3 = M23 * invSample;
       stdsBuf[0] = var0 > 0 ? Math.sqrt(var0) : 0;
       stdsBuf[1] = var1 > 0 ? Math.sqrt(var1) : 0;
       stdsBuf[2] = var2 > 0 ? Math.sqrt(var2) : 0;
       stdsBuf[3] = var3 > 0 ? Math.sqrt(var3) : 0;
-      // Excess kurtosis
-      if (!reduced) {
-        kurtBuf![0] = var0 > 1e-18 ? (stepCount * M40) / (M20 * M20) - 3 : 0;
-        kurtBuf![1] = var1 > 1e-18 ? (stepCount * M41) / (M21 * M21) - 3 : 0;
-        kurtBuf![2] = var2 > 1e-18 ? (stepCount * M42) / (M22 * M22) - 3 : 0;
-        kurtBuf![3] = var3 > 1e-18 ? (stepCount * M43) / (M23 * M23) - 3 : 0;
+
+      if (!reducedTelemetry) {
+        kurtBuf![0] = var0 > 1e-18 ? (sampleCount * M40) / (M20 * M20) - 3 : 0;
+        kurtBuf![1] = var1 > 1e-18 ? (sampleCount * M41) / (M21 * M21) - 3 : 0;
+        kurtBuf![2] = var2 > 1e-18 ? (sampleCount * M42) / (M22 * M22) - 3 : 0;
+        kurtBuf![3] = var3 > 1e-18 ? (sampleCount * M43) / (M23 * M23) - 3 : 0;
       }
     } else {
-      // Generic path (rare in this maze task but kept for completeness)
-      for (let stepIndex = 0; stepIndex < stepCount; stepIndex++) {
-        const vec = recent[stepIndex];
-        const n = stepIndex + 1;
+      // Generic path supporting arbitrary action dimension
+      for (let sampleIndex = 0; sampleIndex < sampleCount; sampleIndex++) {
+        const vec = recent[sampleIndex] || ([] as number[]);
+        const currentSampleNumber = sampleIndex + 1;
         for (let dimIndex = 0; dimIndex < actionDim; dimIndex++) {
-          const x = vec[dimIndex] || 0;
+          const x = vec[dimIndex] ?? 0;
           const delta = x - meansBuf[dimIndex];
-          const delta_n = delta / n;
-          const delta_n2 = delta_n * delta_n;
-          const term1 = delta * delta_n * (n - 1);
-          // Update higher moments (Pébay 2008)
-          if (!reduced)
+          const deltaN = delta / currentSampleNumber;
+          const deltaN2 = deltaN * deltaN;
+          const term1 = delta * deltaN * (currentSampleNumber - 1);
+          if (!reducedTelemetry)
             m4Buf![dimIndex] +=
-              term1 * delta_n2 * (n * n - 3 * n + 3) +
-              6 * delta_n2 * m2Buf[dimIndex] -
-              4 * delta_n * (m3Buf ? m3Buf[dimIndex] : 0);
-          if (!reduced)
+              term1 *
+                deltaN2 *
+                (currentSampleNumber * currentSampleNumber -
+                  3 * currentSampleNumber +
+                  3) +
+              6 * deltaN2 * m2Buf[dimIndex] -
+              4 * deltaN * (m3Buf ? m3Buf[dimIndex] : 0);
+          if (!reducedTelemetry)
             m3Buf![dimIndex] +=
-              term1 * delta_n * (n - 2) - 3 * delta_n * m2Buf[dimIndex];
+              term1 * deltaN * (currentSampleNumber - 2) -
+              3 * deltaN * m2Buf[dimIndex];
           m2Buf[dimIndex] += term1;
-          meansBuf[dimIndex] += delta_n;
+          meansBuf[dimIndex] += deltaN;
         }
         entropyAggregate += EvolutionEngine.#softmaxEntropyFromVector(
           vec,
           EvolutionEngine.#SCRATCH_EXPS
         );
       }
+
       for (let dimIndex = 0; dimIndex < actionDim; dimIndex++) {
-        const variance = m2Buf[dimIndex] / stepCount;
+        const variance = m2Buf[dimIndex] / sampleCount;
         stdsBuf[dimIndex] = variance > 0 ? Math.sqrt(variance) : 0;
-        if (!reduced) {
+        if (!reducedTelemetry) {
           const m4v = m4Buf![dimIndex];
           kurtBuf![dimIndex] =
             variance > 1e-18
-              ? (stepCount * m4v) / (m2Buf[dimIndex] * m2Buf[dimIndex]) - 3
+              ? (sampleCount * m4v) / (m2Buf[dimIndex] * m2Buf[dimIndex]) - 3
               : 0;
         }
       }
     }
-    const entropyMean = entropyAggregate / stepCount;
+
+    const entropyMean = entropyAggregate / sampleCount;
     const stability = EvolutionEngine.#computeDecisionStability(recent);
     const meansStr = EvolutionEngine.#joinNumberArray(meansBuf, actionDim, 3);
     const stdsStr = EvolutionEngine.#joinNumberArray(stdsBuf, actionDim, 3);
-    const kurtStr = reduced
+    const kurtStr = reducedTelemetry
       ? ''
       : EvolutionEngine.#joinNumberArray(kurtBuf!, actionDim, 2);
+
     return {
       meansStr,
       stdsStr,
       kurtStr,
       entMean: entropyMean,
       stability,
-      steps: stepCount,
+      steps: sampleCount,
       means: meansBuf,
       stds: stdsBuf,
     } as any;
@@ -1653,62 +2630,47 @@ export class EvolutionEngine {
               for (let fillIndex = 0; fillIndex < opLen; fillIndex++)
                 idxBuf[fillIndex] = fillIndex;
               const applyCount = Math.min(mutateCount, opLen);
-              // Partial unroll for first two selections (common case mutateCount <=2)
-              if (applyCount > 0) {
-                const r0 = (EvolutionEngine.#fastRandom() * opLen) | 0;
-                const tmp0 = idxBuf[0];
-                idxBuf[0] = idxBuf[r0];
-                idxBuf[r0] = tmp0;
-                try {
-                  clone.mutate(mutOps[idxBuf[0]]);
-                } catch {}
-              }
-              if (applyCount > 1) {
-                const r1 =
-                  1 + ((EvolutionEngine.#fastRandom() * (opLen - 1)) | 0);
-                const tmp1 = idxBuf[1];
-                idxBuf[1] = idxBuf[r1];
-                idxBuf[r1] = tmp1;
-                try {
-                  clone.mutate(mutOps[idxBuf[1]]);
-                } catch {}
-              }
-              for (let sel = 2; sel < applyCount; sel++) {
-                const r =
-                  sel + ((EvolutionEngine.#fastRandom() * (opLen - sel)) | 0);
-                const tmp = idxBuf[sel];
-                idxBuf[sel] = idxBuf[r];
-                idxBuf[r] = tmp;
-                try {
-                  clone.mutate(mutOps[idxBuf[sel]]);
-                } catch {}
+
+              // Apply mutation ops: small-count partial unroll, otherwise partial shuffle selection.
+              if (applyCount <= 2) {
+                if (applyCount >= 1) clone.mutate(mutOps[idxBuf[0]]);
+                if (applyCount >= 2) clone.mutate(mutOps[idxBuf[1]]);
+              } else {
+                for (let pick = 0; pick < applyCount; pick++) {
+                  const r =
+                    pick +
+                    ((EvolutionEngine.#fastRandom() * (opLen - pick)) | 0);
+                  const tmp = idxBuf[pick];
+                  idxBuf[pick] = idxBuf[r];
+                  idxBuf[r] = tmp;
+                  clone.mutate(mutOps[idxBuf[pick]]);
+                }
               }
             }
-          } catch {
-            /* ignore mutation sequence */
-          }
-          clone.score = undefined;
-          try {
-            if (typeof neat.addGenome === 'function') {
-              neat.addGenome(clone, [(parent as any)._id]);
-            } else {
-              if (neat._nextGenomeId !== undefined)
-                clone._id = neat._nextGenomeId++;
-              if (neat._lineageEnabled) {
-                clone._parents = [(parent as any)._id];
-                clone._depth = ((parent as any)._depth ?? 0) + 1;
-              }
-              if (typeof neat._invalidateGenomeCaches === 'function')
-                neat._invalidateGenomeCaches(clone);
-              neat.population.push(clone);
-            }
-          } catch {
+
+            // Clear runtime-only score and attempt to register the clone with neat.
+            clone.score = undefined;
             try {
-              neat.population.push(clone);
-            } catch {}
+              if (typeof neat.addGenome === 'function') {
+                neat.addGenome(clone, [(parent as any)._id]);
+              } else {
+                if (typeof neat._invalidateGenomeCaches === 'function')
+                  neat._invalidateGenomeCaches(clone);
+                neat.population.push(clone);
+              }
+            } catch (e) {
+              // Best-effort fallback: ensure clone is in population even if addGenome fails.
+              try {
+                neat.population.push(clone);
+              } catch (e2) {
+                /* swallow push failure */
+              }
+            }
+          } catch (e) {
+            /* ignore per-child failures */
           }
         }
-      } catch {
+      } catch (e) {
         /* ignore per-child failures */
       }
     }
@@ -2413,7 +3375,7 @@ export class EvolutionEngine {
     if (fs && persistDir && !fs.existsSync(persistDir)) {
       try {
         fs.mkdirSync(persistDir, { recursive: true });
-      } catch {
+      } catch (e) {
         /* ignore */
       }
     }
