@@ -25,11 +25,11 @@ const PER_GENERATION_LOG_FREQUENCY = 1;
 /** Initial side length (cells) of the generated procedural maze. */
 const INITIAL_MAZE_DIMENSION = 8;
 /** Maximum side length (cells) to grow the maze to. */
-const MAX_MAZE_DIMENSION = 28;
+const MAX_MAZE_DIMENSION = 40;
 /** Dimension increment (cells per axis) applied after each solved maze. */
 const MAZE_DIMENSION_INCREMENT = 4;
 /** Maximum agent steps before termination (scaled mazes). */
-const AGENT_MAX_STEPS = 200;
+const AGENT_MAX_STEPS = 600;
 /** Population size for evolution across maze scalings. */
 const POPULATION_SIZE = 20;
 
@@ -243,6 +243,29 @@ export async function start(
 
   const combinedSignal = composeAbortSignal(externalSignal);
   let running = true;
+  // Immediate abort reaction: ensure handle.isRunning() reflects abort promptly (before
+  // heavy generation loop completes). This decouples external cancellation latency from
+  // potentially long per-generation work inside EvolutionEngine, improving test robustness.
+  try {
+    combinedSignal.addEventListener(
+      'abort',
+      () => {
+        // Step: mark cancelled state so cooperative checks exit early.
+        cancelled = true;
+        // Step: reflect non-running state immediately for consumers polling isRunning().
+        running = false;
+        // Step: resolve done Promise eagerly; underlying evolution will short‑circuit soon.
+        try {
+          resolveDone?.();
+        } catch {
+          /* ignore */
+        }
+      },
+      { once: true }
+    );
+  } catch {
+    /* ignore listener wiring errors */
+  }
 
   // Progressive scaling state
   let currentDimension = INITIAL_MAZE_DIMENSION;
@@ -358,8 +381,11 @@ export async function start(
       } catch {
         // ignore
       }
+      // Reflect stopped state immediately.
+      running = false;
     },
-    isRunning: () => running && !cancelled,
+    // Include AbortSignal aborted state so external aborts flip isRunning() without relying solely on listener side-effects.
+    isRunning: () => running && !cancelled && !combinedSignal.aborted,
     done: Promise.resolve(donePromise).catch(() => {}) as Promise<void>,
     onTelemetry: (telemetryCallback) =>
       telemetryHub.add(telemetryCallback as any),

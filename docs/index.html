@@ -7,547 +7,399 @@
   <a href="docs/index.html"><img src="https://img.shields.io/badge/docs-generated-2c3963.svg" alt="Docs"/></a>
 </div>
 
-<img src="https://cdn-images-1.medium.com/max/800/1*THG2__H9YHxYIt2sulzlTw.png" width="500px"/>
+<img src="https://cdn-images-1.medium.com/max/800/1*THG2__H9YHxYIt2sulzlTw.png" width="480"/>
 
-<p>NeatapticTS is an open TypeScript library for constructing and evolving neural networks. It focuses on instructional clarity over micro‑optimised performance and is intended for readers who want to inspect how neuro‑evolutionary ideas (NEAT and related extensions) are implemented in practice.</p>
-<p>Key ES2023 features relied upon (examples): <code>Array.prototype.findLast</code>, <code>Array.prototype.toSorted</code>, <code>Object.hasOwn</code>, ergonomic brand checks, and stable top-level <code>await</code> through tooling. Polyfills for Node core modules are intentionally removed—Node 20 supplies all required built‑ins.</p>
-<p>If your environment is older than Node 20, upgrade or transpile with a custom toolchain; issues about missing ES2023 runtime features will be closed as environment unsupported.</p>
-<p>The repository contains the TypeScript sources (<code>src/</code>) plus auto‑generated Markdown and HTML documentation (<code>src/*/README.md</code>, <code>docs/</code>) derived from JSDoc comments. Keeping documentation co‑located with code lets learners trace from concept → implementation → rendered docs without context switching.</p>
-<p>Principal characteristics:</p>
+<blockquote>
+<p>The unofficial modern, typed evolution of <strong>Neataptic</strong> – focused on <em>clarity you can learn from</em> + <em>features you actually tweak</em>.</p>
+</blockquote>
+<p><strong>NeatapticTS</strong> is a TypeScript library for <em>evolving</em> neural networks (topology + weights) using a modern NEAT core plus opt‑in research extras: multi‑objective Pareto fronts, novelty &amp; diversity pressure, adaptive complexity budgets, operator credit assignment, lineage &amp; performance telemetry, mixed evolution + gradient fine‑tuning, and ONNX round‑trip export.</p>
+<p>If you loved the original Neataptic but want type safety, transparent internals, richer telemetry, reproducibility, and current Node (ES2023) ergonomics—this is the forward path.</p>
+<p><strong>Tagline:</strong> <em>Readable neuro‑evolution you can inspect, extend, and trust.</em></p>
+<p>Node ≥ 20 required (native ES2023 features used; no polyfill layer). Older runtimes: transpile yourself.</p>
+<hr>
+<h2 id="table-of-contents">Table of Contents</h2><ol>
+<li><a href="#why-it-exists">Why it exists</a></li>
+<li><a href="#core-feature-snapshot">Core feature snapshot</a></li>
+<li><a href="#install--quick-start">Install &amp; Quick start</a></li>
+<li><a href="#key-concepts--workflow">Key concepts &amp; workflow</a></li>
+<li><a href="#from-original-neataptic--neatapticts">From original Neataptic → NeatapticTS</a></li>
+<li><a href="#when-to-enable-advanced-levers">When to enable advanced levers</a></li>
+<li><a href="#performance-shorthand">Performance shorthand</a></li>
+<li><a href="#training-optional-polish-phase">Training (optional polish phase)</a></li>
+<li><a href="#onnx-interop">ONNX interop</a></li>
+<li><a href="#documentation-map">Documentation map</a></li>
+<li><a href="#contributing">Contributing</a></li>
+<li><a href="#need-help">Need help?</a></li>
+</ol>
+<hr>
+<h2 id="why-it-exists">Why it exists</h2><p>Most evolutionary NN libs make you pick between speed and pedagogy. NeatapticTS targets <em>explainable power</em> with three pillars: (1) readable algorithms, (2) explicit experiment levers, (3) reproducible telemetry.</p>
+<p>You get:</p>
 <ul>
-<li>Concise, readable code emphasising algorithmic transparency.</li>
-<li>Evolution of both weights and topology (nodes / connections) with speciation, crossover and structural mutation operators modelled after NEAT (Stanley &amp; Miikkulainen, 2002) and later practical adaptations.</li>
-<li>Progressive additions: multi‑objective (Pareto) optimisation, diversity &amp; novelty pressure, adaptive complexity budgets, lineage tracking, and performance telemetry—each feature isolated so it can be studied or disabled independently.</li>
-<li>Threaded (worker) evaluation path for populations, illustrating how parallel fitness evaluation can be layered on top of a mostly synchronous core without obscuring logic.</li>
+<li>Code that reads like annotated pseudocode (algorithms first, micro‑opts second).</li>
+<li>Every major lever surfaced: mutation dynamics, diversity / novelty, parsimony, multi‑objective trade‑offs.</li>
+<li>Rich telemetry (species, complexity, fronts, operators, lineage, performance) → faster intuition loops.</li>
+<li>Deterministic seeds + RNG snapshot/restore for trustworthy benchmarks &amp; regression tests.</li>
+<li>Progressive opt‑in: begin with plain NEAT; toggle extras one by one without re‑authoring code.</li>
 </ul>
-<p>The design goal is that a motivated reader can treat the codebase as a worked commentary on core neuro‑evolution mechanisms while still running meaningful experiments.</p>
-<h2 id="overview-core-concepts">Overview &amp; Core Concepts</h2><table>
+<p>If you are learning NEAT: start plain, enable only <code>telemetry.performance</code>, then add a single enhancement (e.g. multi‑objective) once you understand baseline curves.</p>
+<hr>
+<h2 id="core-feature-snapshot">Core feature snapshot</h2><table>
+<thead>
+<tr>
+<th>Theme</th>
+<th>Highlights</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Evolution</td>
+<td>NEAT topology + weight evolution, speciation, crossover, structural mutations</td>
+</tr>
+<tr>
+<td>Diversity</td>
+<td>Novelty archive, motif / lineage pressures, adaptive sharing, anti‑inbreeding modes</td>
+</tr>
+<tr>
+<td>Multi‑Objective</td>
+<td>Fast non‑dominated sort (fitness + complexity + optional entropy / custom) with hypervolume telemetry</td>
+</tr>
+<tr>
+<td>Parsimony</td>
+<td>Linear or adaptive complexity budgets, pruning &amp; phased simplify cycles</td>
+</tr>
+<tr>
+<td>Adaptation</td>
+<td>Self‑adaptive mutation rates/amounts, operator bandit / success weighting</td>
+</tr>
+<tr>
+<td>Telemetry</td>
+<td>Per‑gen generation log: performance, species history, fronts, complexity, lineage, operator stats, RNG snapshots</td>
+</tr>
+<tr>
+<td>Training</td>
+<td>Optional gradient fine‑tune: schedulers, advanced optimizers, mixed precision simulation, clipping, dropout / dropconnect / stochastic depth, weight noise</td>
+</tr>
+<tr>
+<td>Interop</td>
+<td>ONNX export/import (layered + experimental recurrent stubs)</td>
+</tr>
+<tr>
+<td>Reproducibility</td>
+<td>Seed + RNG snapshot/export/import, deterministic chain mode (test utility)</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="install-quick-start">Install & Quick start</h2><p>Install (Node 20+):</p>
+<pre><code class="language-powershell">npm install @reicek/neataptic-ts
+</code></pre>
+<p>Minimal evolve loop:</p>
+<pre><code class="language-ts">import { Neat } from &#39;@reicek/neataptic-ts&#39;;
+
+// Goal: output ~2 when input is 1
+const fitness = (net: any) =&gt; {
+  const y = net.activate([1])[0];
+  return -(y - 2) ** 2; // higher is better (negative error)
+};
+
+const neat = new Neat(1, 1, fitness, { popsize: 30, fastMode: true, seed: 42 });
+
+await neat.evaluate();
+await neat.evolve();
+console.log(&#39;best score&#39;, neat.getBest()?.score);
+</code></pre>
+<p>Docs (auto‑generated from JSDoc) live in <code>docs/</code> (<code>docs/index.html</code>) and mirrored summaries in <code>src/*/README.md</code>.</p>
+<p>Add multi‑objective + novelty quickly:</p>
+<pre><code class="language-ts">import { Neat } from &#39;@reicek/neataptic-ts&#39;;
+
+const neatMo = new Neat(2, 1, fitness, {
+  popsize: 60,
+  multiObjective: { enabled: true, complexityMetric: &#39;nodes&#39; },
+  novelty: { enabled: true, descriptor: g =&gt; [g.nodes.length, g.connections.length], k: 8, blendFactor: 0.25 },
+  seed: 7,
+});
+await neatMo.evaluate();
+await neatMo.evolve();
+console.log(neatMo.getParetoFronts()[0].length, &#39;front-0 size&#39;);
+</code></pre>
+<p>Export telemetry for plotting:</p>
+<pre><code class="language-ts">import { Neat } from &#39;@reicek/neataptic-ts&#39;;
+import { writeFileSync } from &#39;node:fs&#39;;
+
+// ...after evolution
+const csv = neat.exportTelemetryCSV();
+writeFileSync(&#39;telemetry.csv&#39;, csv);
+</code></pre>
+<hr>
+<h2 id="key-concepts-workflow">Key concepts & workflow</h2><table>
 <thead>
 <tr>
 <th>Term</th>
-<th>Brief definition</th>
+<th>Meaning</th>
 </tr>
 </thead>
 <tbody><tr>
 <td>Genome</td>
-<td>Data structure representing a candidate solution (nodes + connections + parameters).</td>
+<td>Structural blueprint (nodes + connections + params).</td>
 </tr>
 <tr>
-<td>Phenotype / Network</td>
-<td>Executable neural network built from the genome; produced on demand or mutated in place.</td>
-</tr>
-<tr>
-<td>Structural mutation</td>
-<td>Topology changes: add node / add connection / modify or disable connection; may increase representational capacity.</td>
+<td>Network</td>
+<td>Executable phenotype built from a genome.</td>
 </tr>
 <tr>
 <td>Speciation</td>
-<td>Partitioning genomes into similarity clusters (compatibility distance) to preserve innovation by reducing direct competition between divergent structures.</td>
+<td>Clustering by compatibility distance to protect new structure.</td>
 </tr>
 <tr>
-<td>Fitness</td>
-<td>Scalar score supplied by the user’s evaluation function; may be one objective among several in multi‑objective mode.</td>
+<td>Structural mutation</td>
+<td>Topology change: add node / connection, disable / modify link.</td>
 </tr>
 <tr>
 <td>Pareto front</td>
-<td>Set of non‑dominated genomes when optimising multiple objectives simultaneously (no member is worse in all objectives).</td>
+<td>Non‑dominated set across active objectives.</td>
 </tr>
 <tr>
 <td>Novelty archive</td>
-<td>Auxiliary store of behaviour descriptors used to reward behavioural diversity.</td>
+<td>Stores behaviour descriptors to reward exploration.</td>
 </tr>
 <tr>
 <td>Lineage depth</td>
-<td>Derived ancestral distance (max parent depth + 1); used for telemetry and optional pressure mechanisms.</td>
+<td>Max parent depth + 1; used for tracking &amp; diversity pressure.</td>
 </tr>
 </tbody></table>
-<p>Conceptual workflow:</p>
+<p><strong>Evolution workflow (baseline):</strong></p>
 <ol>
-<li>Initialise a population of minimal or seeded genomes.</li>
-<li>Evaluate each genome (possibly in parallel) to obtain fitness (and auxiliary objective metrics if enabled).</li>
-<li>Apply selection + reproduction (crossover, mutation) within or across species.</li>
-<li>Optionally adjust adaptive controllers (mutation rates, complexity budget, diversity pressures).</li>
-<li>Record telemetry (performance timings, complexity statistics, Pareto ranks, lineage, operator success) for later analysis.</li>
-<li>Iterate until a stopping criterion (target fitness, generation budget, stagnation triggers) is met.</li>
+<li>Initialise minimal population (inputs, outputs, optional seed).</li>
+<li>Evaluate each genome to assign fitness (+ any objective metrics).</li>
+<li>Speciate + apply selection and reproduction (crossover + structural / parameter mutation).</li>
+<li>Apply optional adaptive controllers (mutation rate, complexity budget, novelty blending, operator credit).</li>
+<li>Record telemetry snapshot (for CSV / JSONL export).</li>
+<li>Repeat until stopping condition (target score, max generations, stagnation trigger) then optionally fine‑tune best with gradient training.</li>
 </ol>
-<p>Readers exploring the source may find it helpful to open <code>src/neat.ts</code> (evolution orchestration), <code>src/architecture/network.ts</code> (execution), and the mutation / selection operator modules under <code>src/methods/</code> side by side. Each subsystem is documented so that the code can double as annotated pseudocode.</p>
-<p>Why this project can be useful for learning:</p>
-<ul>
-<li>Demonstrates incremental layering: core NEAT mechanics first; advanced research‑style embellishments optional and isolated behind flags.</li>
-<li>Includes a wide telemetry surface so internal dynamics (species counts, front sizes, operator efficacy, structural growth) can be observed empirically—a key aid in forming intuitions.</li>
-<li>Shows pragmatic trade‑offs (e.g. activation pooling, precision toggles) to connect algorithm design with performance engineering without obscuring clarity.</li>
-</ul>
-<h2 id="origins-comparison">Origins &amp; Comparison</h2><p>NeatapticTS is a TypeScript re-imagining of the original Neataptic project by Thomas Wagenaar (<code>wagenaartje</code>). The upstream Neataptic site (<a href="https://wagenaartje.github.io/neataptic/">https://wagenaartje.github.io/neataptic/</a>) and repository (<a href="https://github.com/wagenaartje/neataptic">https://github.com/wagenaartje/neataptic</a>) remain valuable for historical context, examples, and classic API references. This section clarifies lineage, shared philosophy, and deliberate divergences aimed at instructional clarity and modern experimentation.</p>
-<h3 id="original-neataptic-highlights">Original Neataptic Highlights</h3><table>
+<p>Tip: Keep a small rolling diff of telemetry CSVs between runs to spot whether a new lever actually improved early‑generation slope instead of just final score variance.</p>
+<hr>
+<h2 id="from-original-neataptic-neatapticts">From original Neataptic → NeatapticTS</h2><table>
 <thead>
 <tr>
-<th>Aspect</th>
-<th>Original Neataptic (JS)</th>
-<th>Notes</th>
+<th>Area</th>
+<th>Original</th>
+<th>This project</th>
 </tr>
 </thead>
 <tbody><tr>
-<td>Language / Targets</td>
-<td>Plain JavaScript (browser + Node)</td>
-<td>Emphasis on easy inclusion in demos &amp; tutorials.</td>
+<td>Language</td>
+<td>JS (browser + Node)</td>
+<td>TypeScript (Node 20+, modern ES)</td>
 </tr>
 <tr>
-<td>Core Features</td>
-<td>Neuro‑evolution (Instinct / NEAT style), backprop training, architect helpers (Perceptron, LSTM, GRU, etc.)</td>
-<td>Mixed evolution + gradient utilities from early versions.</td>
+<td>Focus</td>
+<td>Quick demos</td>
+<td>Readability + experiment discipline</td>
 </tr>
 <tr>
-<td>API Style</td>
-<td>Chainable objects, dynamic typing</td>
-<td>Fast iteration; less explicit contracts.</td>
-</tr>
-<tr>
-<td>Educational Aids</td>
-<td>Playground / visualization demos, blog posts, example gallery</td>
-<td>Strong on approachable examples &amp; visual feedback.</td>
-</tr>
-<tr>
-<td>Performance Claims</td>
-<td>“Fast” backprop + evolution relative to contemporary JS libs</td>
-<td>Focused on user-facing responsiveness.</td>
-</tr>
-<tr>
-<td>Maintenance Status</td>
-<td>Periods of reduced maintenance (see upstream issues)</td>
-<td>Consult upstream for any updates.</td>
-</tr>
-</tbody></table>
-<h3 id="neatapticts-design-goals-differentiators">NeatapticTS Design Goals (Differentiators)</h3><table>
-<thead>
-<tr>
-<th>Goal</th>
-<th>Rationale</th>
-<th>Concrete Mechanisms in This Repo</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>Strong typing &amp; explicit contracts</td>
-<td>Easier code tracing &amp; safer refactors while learning</td>
-<td>TypeScript everywhere; JSDoc → generated READMEs</td>
-</tr>
-<tr>
-<td>Inspectable evolution internals</td>
-<td>Turn algorithms into readable “annotated pseudocode”</td>
-<td>Modular <code>src/neat.ts</code>, clear mutation/operator modules</td>
-</tr>
-<tr>
-<td>Rich telemetry &amp; diagnostics</td>
-<td>Build intuition from empirical signals</td>
-<td>Species history, Pareto fronts, operator stats, complexity &amp; lineage blocks</td>
-</tr>
-<tr>
-<td>Reproducibility &amp; experiment hygiene</td>
-<td>Enable fair comparisons &amp; debugging</td>
-<td>Deterministic seeds, RNG snapshot/restore, CSV/JSONL exports</td>
-</tr>
-<tr>
-<td>Configurable parsimony &amp; diversity controls</td>
-<td>Demonstrate modern NEAT extensions without black boxes</td>
-<td>Complexity budgets (linear/adaptive), novelty, diversityPressure, lineagePressure</td>
-</tr>
-<tr>
-<td>Multi‑objective support out of the box</td>
-<td>Realistic trade‑offs (accuracy vs size/latency)</td>
-<td>Pareto sorting, hypervolume proxy, adaptive epsilon, dynamic objective scheduling</td>
-</tr>
-<tr>
-<td>Performance ergonomics without obscurity</td>
-<td>Show how throughput tweaks fit around clarity</td>
-<td>Threaded evaluation, activation pooling, precision toggle, fastMode auto-tuning</td>
-</tr>
-<tr>
-<td>Incremental learning path</td>
-<td>Let readers enable one concept at a time</td>
-<td>Feature flags / nested option blocks, conservative defaults</td>
-</tr>
-</tbody></table>
-<h3 id="feature-mapping-high-level">Feature Mapping (High-Level)</h3><table>
-<thead>
-<tr>
-<th>Domain</th>
-<th>Original Neataptic</th>
-<th>NeatapticTS</th>
-<th>Extension / Difference</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>Structural Evolution</td>
-<td>Yes (NEAT-inspired)</td>
-<td>Yes + adaptive complexity / pruning options</td>
-<td>Adds parsimony governance &amp; adaptive budgets</td>
-</tr>
-<tr>
-<td>Gradient Training</td>
-<td>Yes (multiple optimizers)</td>
-<td>Yes (expanded optimizer &amp; scheduler set)</td>
-<td>Adds mixed precision simulation, richer clipping &amp; accumulation</td>
-</tr>
-<tr>
-<td>Multi‑Objective</td>
-<td>Limited / manual</td>
-<td>Built-in Pareto fronts &amp; dynamic objectives</td>
-<td>Adds hypervolume, entropy objective, adaptive epsilon</td>
-</tr>
-<tr>
-<td>Diversity Pressure</td>
+<td>Diversity</td>
 <td>Basic speciation</td>
-<td>Speciation + novelty + motif &amp; lineage pressures</td>
-<td>Multiple orthogonal diversity signals</td>
+<td>Speciation + novelty + lineage/motif pressures</td>
+</tr>
+<tr>
+<td>Objectives</td>
+<td>Mostly scalar fitness</td>
+<td>Built‑in multi‑objective (fitness + complexity + custom)</td>
 </tr>
 <tr>
 <td>Telemetry</td>
 <td>Basic stats</td>
-<td>Extensive per-gen telemetry &amp; species history</td>
-<td>CSV/JSONL export &amp; operator credit stats</td>
+<td>Rich per‑gen logs &amp; export (CSV / JSONL)</td>
 </tr>
 <tr>
-<td>ONNX Interop</td>
-<td>Not provided</td>
-<td>Export / import (layered + experimental recurrence)</td>
-<td>Roadmap for richer recurrent handling</td>
+<td>Reproducibility</td>
+<td>Basic seeding</td>
+<td>Seed + RNG state snapshot/restore</td>
 </tr>
 <tr>
-<td>Deterministic Tools</td>
-<td>Seed usage limited</td>
-<td>Seed + RNG snapshot + deterministic chain mutation</td>
-<td>Facilitates regression tests &amp; reproducible research</td>
+<td>Interop</td>
+<td>–</td>
+<td>ONNX export/import</td>
+</tr>
+<tr>
+<td>Training</td>
+<td>Backprop utilities</td>
+<td>Extended schedulers, optimizers, regularizers</td>
 </tr>
 </tbody></table>
-<h3 id="why-a-separate-typescript-variant-instead-of-patching-upstream">Why a Separate TypeScript Variant Instead of Patching Upstream?</h3><p>Maintaining a clean pedagogical surface often conflicts with retrofitting larger, older codebases. Starting with a typed rewrite allowed:</p>
-<ol>
-<li>Consistent option schema evolution (nested adaptive objects) without breaking historical JS ergonomics.</li>
-<li>Telemetry-first design—data structures shaped around analysis &amp; CSV export from the outset.</li>
-<li>Separation of concern between core evolutionary loop and optional extensions (each toggled).</li>
-<li>Clearer future extension points (e.g., faster dominance algorithms, motif analytics) without entangling legacy patterns.</li>
-</ol>
-<h3 id="when-to-consult-the-original-project">When to Consult the Original Project</h3><table>
+<p>NeatapticTS is <em>not</em> a drop‑in API clone; it’s a pedagogical, typed successor. Keep the upstream repo open for historical demos &amp; architectural helpers you may want to port.</p>
+<p>Upstream references:</p>
+<ul>
+<li>Original project: <a href="https://github.com/wagenaartje/neataptic">https://github.com/wagenaartje/neataptic</a></li>
+<li>Historical docs / playground: <a href="https://wagenaartje.github.io/neataptic/">https://wagenaartje.github.io/neataptic/</a></li>
+</ul>
+<hr>
+<h2 id="when-to-enable-advanced-levers">When to enable advanced levers</h2><p>Principle: add one lever at a time and measure its <em>telemetry delta</em> (front size, meanNodes slope, species count variance) before stacking more. Over‑activating early hides causal impact and can slow convergence.</p>
+<table>
 <thead>
 <tr>
-<th>You Want</th>
-<th>Suggestion</th>
+<th>Situation</th>
+<th>Try</th>
 </tr>
 </thead>
 <tbody><tr>
-<td>Visual, interactive browser demos</td>
-<td>Browse original Neataptic playground &amp; tutorials</td>
+<td>Early stagnation</td>
+<td><code>adaptiveMutation</code> or light <code>novelty</code> (blend 0.2)</td>
 </tr>
 <tr>
-<td>Historical API patterns or migration hints</td>
-<td>Compare upstream docs to generated TypeScript README tables</td>
+<td>Bloat (eval cost rising)</td>
+<td><code>complexityBudget</code> (start linear) + mild <code>growth</code> penalty</td>
 </tr>
 <tr>
-<td>Additional architect helpers (e.g., GRU/LSTM composite examples)</td>
-<td>Use upstream examples; port patterns into typed layers if needed</td>
+<td>Need compact &amp; accurate variants</td>
+<td><code>multiObjective.enabled</code> (complexityMetric:&#39;nodes&#39;)</td>
 </tr>
 <tr>
-<td>Quick untyped experimentation in a sandbox</td>
-<td>Use original (drop in script tag)</td>
+<td>Homogeneous species</td>
+<td>Add <code>novelty</code> + <code>diversityPressure</code> or enable lineage pressure</td>
+</tr>
+<tr>
+<td>Operator monopoly</td>
+<td><code>operatorBandit</code> or <code>operatorAdaptation</code></td>
+</tr>
+<tr>
+<td>Reproducible benchmark</td>
+<td>Set <code>seed</code>, export telemetry CSV, snapshot RNG state</td>
 </tr>
 </tbody></table>
-<h3 id="migration-sketch-conceptual">Migration Sketch (Conceptual)</h3><table>
-<thead>
-<tr>
-<th>Original Concept</th>
-<th>Approx. NeatapticTS Equivalent</th>
-<th>Notes</th>
-</tr>
-</thead>
-<tbody><tr>
-<td><code>architect.Perceptron(a,b,c)</code></td>
-<td><code>Architect.perceptron(a,b,c)</code> (if present) or build via sequential adds</td>
-<td>API style aligned; types added</td>
-</tr>
-<tr>
-<td><code>trainer.train(...)</code></td>
-<td><code>net.train(data, {...})</code></td>
-<td>Extended scheduler / optimizer config surface</td>
-</tr>
-<tr>
-<td><code>network.evolve</code> (basic)</td>
-<td><code>neat.evaluate(); neat.evolve();</code> loop</td>
-<td>Evolution orchestrated through <code>Neat</code> wrapper with telemetry</td>
-</tr>
-<tr>
-<td>Visualization helpers</td>
-<td>Not bundled (focus on core); export telemetry instead</td>
-<td>External plotting recommended (e.g., notebook + CSV)</td>
-</tr>
-</tbody></table>
-<h3 id="philosophy-summary">Philosophy Summary</h3><p>Original Neataptic emphasised accessibility &amp; quick demos. NeatapticTS emphasises <em>traceability</em> (being able to open a file and understand each evolutionary step) and <em>experiment discipline</em> (telemetry, reproducibility). Both share the aim of making neuro‑evolution approachable.</p>
-<p>Notes</p>
-<ul>
-<li><p>This project builds on the ideas and API style of the original Neataptic, but it is a TypeScript-first rework with some API differences. It is not guaranteed to be a drop-in replacement; consult the generated per-folder docs in <code>src/*/README.md</code> or <code>docs/</code> for exact signatures and behaviors.</p>
-</li>
-<li><p>For the canonical original project, demos, and historical context see:</p>
-</li>
-<li><p>Neataptic site &amp; docs: <a href="https://wagenaartje.github.io/neataptic/">https://wagenaartje.github.io/neataptic/</a></p>
-</li>
-<li><p>Neataptic GitHub: <a href="https://github.com/wagenaartje/neataptic">https://github.com/wagenaartje/neataptic</a></p>
-</li>
-</ul>
-<p>Quick links</p>
-<ul>
-<li>Documentation (auto-generated): <code>docs/</code> (open <code>docs/index.html</code> in a browser)</li>
-<li>Live API summaries mirrored into source: <code>src/*/README.md</code> (auto-generated)</li>
-<li>Tests &amp; examples: <code>test/</code> and <code>test/examples/</code></li>
-</ul>
-<h2 id="table-of-contents">Table of Contents</h2><p>Overview</p>
-<ul>
-<li><a href="#overview--core-concepts">Overview &amp; core concepts</a></li>
-<li><a href="#origins--comparison">Origins &amp; comparison</a></li>
-<li><a href="#original-neataptic-highlights">Original Neataptic Highlights</a></li>
-<li><a href="#neatapticts-design-goals-differentiators">NeatapticTS Design Goals (Differentiators)</a></li>
-<li><a href="#feature-mapping-high-level">Feature Mapping (High-Level)</a></li>
-<li><a href="#why-a-separate-typescript-variant-instead-of-patching-upstream">Why a Separate TypeScript Variant Instead of Patching Upstream?</a></li>
-<li><a href="#when-to-consult-the-original-project">When to Consult the Original Project</a></li>
-<li><a href="#migration-sketch-conceptual">Migration Sketch (Conceptual)</a></li>
-<li><a href="#philosophy-summary">Philosophy Summary</a></li>
-<li><a href="#note-about-helper-apis">Note about helper APIs</a>
-Quick start</li>
-<li><a href="#installation">Installation</a></li>
-<li><a href="#minimal-example">Minimal example</a></li>
-<li><a href="#documentation--api">Documentation &amp; API</a>
-Performance</li>
-<li><a href="#performance--tuning">Performance &amp; Tuning</a></li>
-<li><a href="#tuning-cheat-sheet">Tuning Cheat Sheet</a></li>
-<li><a href="#interpreting-telemetry">Interpreting Telemetry</a></li>
-<li><a href="#common-symptoms--fixes">Common Symptoms &amp; Fixes</a></li>
-<li><a href="#minimal-experimental-loop">Minimal Experimental Loop</a></li>
-<li><a href="#hybrid-strategy-evolve--train">Hybrid Strategy (Evolve + Train)</a></li>
-<li><a href="#performance--parallelism-tuning">Performance &amp; Parallelism Tuning</a> - <a href="#core-levers">Core Levers</a> - <a href="#structural-complexity-caching">Structural Complexity Caching</a> - <a href="#profiling">Profiling</a> - <a href="#suggested-workflow">Suggested Workflow</a> - <a href="#determinism-caveat">Determinism Caveat</a> - <a href="#example-minimal-perf-config">Example Minimal Perf Config</a> - <a href="#memory-optimizations-activation-pooling--precision">Memory Optimizations (Activation Pooling &amp; Precision)</a> - <a href="#deterministic-chain-mode-test-utility">Deterministic Chain Mode (Test Utility)</a>
-Evolution features</li>
-<li><a href="#new-evolution-enhancements">New Evolution Enhancements</a><ul>
-<li><a href="#multi-objective-usage">Multi-Objective Usage</a></li>
-<li><a href="#adaptive-complexity-budget">Adaptive Complexity Budget</a></li>
-<li><a href="#species-extended-history">Species Extended History</a></li>
-<li><a href="#diversity--novelty">Diversity &amp; Novelty</a></li>
-<li><a href="#inactive-objective-pruning">Inactive Objective Pruning</a></li>
-<li><a href="#fast-mode-auto-tuning">Fast Mode Auto-Tuning</a></li>
-<li><a href="#lineage-pressure--anti-inbreeding-optional">Lineage Pressure &amp; Anti-Inbreeding (Optional)</a></li>
-<li><a href="#rng-state-snapshot--reproducibility">RNG State Snapshot &amp; Reproducibility</a></li>
-<li><a href="#operator-adaptation--mutation-self-adaptation">Operator Adaptation &amp; Mutation Self-Adaptation</a></li>
-<li><a href="#objective-lifetime--species-allocation-telemetry">Objective Lifetime &amp; Species Allocation Telemetry</a></li>
-<li><a href="#csv-export-columns-extended">CSV Export Columns (Extended)</a></li>
-</ul>
-</li>
-<li><a href="#network-constructor-update">Network Constructor Update</a></li>
-<li><a href="#neat-evolution-minhidden-option">Neat Evolution minHidden Option</a></li>
-<li><a href="#onnx-importexport">ONNX Import/Export</a></li>
-<li><a href="#basic-usage">Basic Usage</a></li>
-<li><a href="#round-trip-checklist">Round-Trip Checklist</a></li>
-<li><a href="#import-failure-diagnostics">Import Failure Diagnostics</a></li>
-<li><a href="#additional-capabilities-phase-2--3-roadmap">Additional Capabilities (Phase 2 &amp; 3 roadmap)</a></li>
-<li><a href="#limitations--todo">Limitations / TODO</a></li>
-<li><a href="#validation--tests">Validation &amp; Tests</a>
-Training extensions</li>
-<li><a href="#added-training-features">Added Training Features</a> - <a href="#gradient-improvements">Gradient Improvements</a> - <a href="#learning-rate-scheduler-usage">Learning Rate Scheduler Usage</a> - <a href="#early-stopping-extensions">Early Stopping Extensions</a> - <a href="#scheduler-reference">Scheduler Reference</a> - <a href="#evolution-warning">Evolution Warning</a> - <a href="#composing-schedulers-warmup-then-plateau">Composing Schedulers (Warmup then Plateau)</a> - <a href="#metrics-hook--checkpoints">Metrics Hook &amp; Checkpoints</a> - <a href="#advanced-optimizers">Advanced Optimizers</a> - <a href="#label-smoothing">Label Smoothing</a> - <a href="#weight-noise">Weight Noise</a> - <a href="#stochastic-depth-layer-drop">Stochastic Depth (Layer Drop)</a> - <a href="#dropconnect-recap">DropConnect (recap)</a>
-Architecture &amp; Analysis</li>
-<li><a href="#architecture--evolution">Architecture &amp; Evolution</a></li>
-<li><a href="#advanced-evolution-extensions">Advanced Evolution Extensions</a></li>
-<li><a href="#example-entropy-guided-sharing-sigma--ancestor-uniqueness-adaptive-tuning">Example: Entropy-Guided Sharing Sigma &amp; Ancestor Uniqueness Adaptive Tuning</a></li>
-<li><a href="#example-enabling-novelty--multi-objective">Example: Enabling Novelty + Multi-Objective</a></li>
-<li><a href="#example-phased-complexity--operator-adaptation">Example: Phased Complexity + Operator Adaptation</a></li>
-<li><a href="#minimal-criterion">Minimal Criterion</a></li>
-<li><a href="#adaptive-sharing">Adaptive Sharing</a></li>
-<li><a href="#multi-objective-notes--strategy">Multi-Objective Notes &amp; Strategy</a></li>
-<li><a href="#ascii-maze-example-6-input-long-range-vision-mazevision">ASCII Maze Example: 6‑Input Long-Range Vision (MazeVision)</a><ul>
-<li><a href="#openness-semantics">Openness Semantics (openN/E/S/W)</a></li>
-<li><a href="#progressdelta">progressDelta</a></li>
-<li><a href="#debugging">Debugging</a></li>
-<li><a href="#quick-reference">Quick Reference</a></li>
-</ul>
-</li>
-<li><a href="#roadmap--backlog">Roadmap / Backlog</a></li>
-</ul>
-<h2 id="installation">Installation</h2><p>This project is primarily intended as a library you develop from source. To install the
-published package (when available) or run locally:</p>
-<ol>
-<li>Clone the repository and install dev dependencies:</li>
-</ol>
-<pre><code class="language-powershell">git clone https://github.com/reicek/NeatapticTS.git
-cd NeatapticTS
-npm install
+<hr>
+<h2 id="performance-shorthand">Performance shorthand</h2><p>Fast iteration recipe:</p>
+<pre><code class="language-ts">const neat = new Neat(inp, out, fit, {
+  popsize: 120,
+  fastMode: true,
+  threads:  (require(&#39;os&#39;).cpus().length - 1),
+  adaptiveMutation: { enabled: true, strategy: &#39;twoTier&#39; },
+  telemetry: { enabled: true, performance: true, complexity: true }
+});
 </code></pre>
-<ol start="2">
-<li>Build and run the docs generator (the repo keeps generated READMEs inside <code>src/</code>):</li>
-</ol>
-<pre><code class="language-powershell">npm run docs
-</code></pre>
-<h2 id="minimal-example">Minimal Example</h2><p>The example below shows a tiny setup that creates a <code>Neat</code> population and runs evaluate + evolve
-for a few iterations. See per-folder READMEs in <code>src/</code> for detailed API surface.</p>
-<pre><code class="language-ts">import { Neat, Network } from &#39;./src/neat&#39;;
-
-// simple fitness: maximize negative squared error for x-&gt;2x mapping
-const fitness = (net: any) =&gt; {
-  const out = net.activate([1])[0];
-  return -Math.pow(out - 2, 2);
-};
-
-const neat = new Neat(1, 1, fitness, { popsize: 30, fastMode: true });
-
-async function run() {
-  await neat.evaluate();
-  await neat.evolve();
-  console.log(&#39;best&#39;, neat.getBest());
-}
-
-run();
-</code></pre>
-<h2 id="documentation-api">Documentation &amp; API</h2><ul>
-<li>The <code>docs/</code> folder contains rendered HTML pages (generated from the same READMEs) for
-browsing locally or publishing as static pages. See <code>docs/index.html</code>.</li>
-<li>Per-file and per-folder API summaries are kept inside <code>src/*/README.md</code> and are regenerated
-using the JSDoc comments in the TypeScript sources. Run <code>npm run docs</code> to refresh them.</li>
-</ul>
-<h2 id="note-about-helper-apis">Note About Helper APIs</h2><p>The <code>Neat</code> class exposes two small helpers intended for safe programmatic genome
-management:</p>
-<ul>
-<li><code>spawnFromParent(parent, mutateCount?)</code> — clone a single parent, apply a small
-number of mutations, and preserve lineage fields. The function returns an
-unregistered child (it does NOT add the child to <code>neat.population</code>).</li>
-<li><code>addGenome(genome, parents?)</code> — register an externally created genome into the
-population while assigning <code>_id</code>, estimating <code>_depth</code> from provided parents,
-enforcing structural invariants, and invalidating caches.</li>
-</ul>
-<p>These helpers are documented inline via JSDoc in <code>src/neat.ts</code>; keep those
-comments updated so the generated per-folder READMEs and HTML docs include the
-public contract and usage notes.</p>
-<h2 id="performance-tuning">Performance &amp; Tuning</h2><p>This library exposes most “cost knobs” so you can decide where to spend compute: population breadth vs structural growth vs per‑genome refinement. Smart tuning can yield &gt;10× faster experimentation at comparable quality.</p>
-<p>Core levers are summarized again under <a href="#performance--parallelism-tuning">Performance &amp; Parallelism Tuning</a>; here we give a workflow and interpretation heuristics.</p>
-<h3 id="tuning-cheat-sheet">Tuning Cheat Sheet</h3><table>
+<p>Watch <code>getTelemetry().at(-1).perf</code> for <code>evalMs</code> vs <code>evolveMs</code>.</p>
+<p>Micro‑guide:</p>
+<table>
 <thead>
 <tr>
 <th>Goal</th>
-<th>Primary Levers</th>
-<th>Secondary / Fine Grained</th>
-<th>Telemetry Signals to Watch</th>
+<th>First lever</th>
+<th>Secondary</th>
 </tr>
 </thead>
 <tbody><tr>
-<td>Faster generations (wall clock)</td>
-<td><code>threads</code>, lower <code>lamarckianIterations</code>, enable <code>fastMode</code></td>
-<td>Reduce novelty / diversity sample sizes, prune telemetry blocks</td>
-<td><code>perf.evalMs</code>, <code>perf.evolveMs</code></td>
+<td>Eval too slow</td>
+<td><code>threads</code> or reduce <code>popsize</code></td>
+<td>Lower <code>lamarckianIterations</code> / switch <code>activationPrecision:&#39;f32&#39;</code></td>
 </tr>
 <tr>
-<td>Escape stagnation</td>
-<td>Raise <code>mutationRate/Amount</code>, enable <code>adaptiveMutation</code> (<code>exploreLow</code>), add light novelty (<code>blendFactor 0.1–0.3</code>)</td>
-<td>Temporarily relax <code>complexityBudget</code>, enable <code>crossSpeciesMatingProb</code></td>
-<td>Rising species count, new innovation IDs, front size growth</td>
+<td>Bloat w/o gain</td>
+<td>Enable linear <code>complexityBudget</code></td>
+<td>Add mild <code>growth</code> penalty (e.g. 5e-5)</td>
 </tr>
 <tr>
-<td>Control bloat</td>
-<td>Enable <code>complexityBudget</code> (linear first), modest <code>growth</code> penalty, phased simplify phase</td>
-<td>Adaptive complexity mode, pruning (magnitude)</td>
-<td><code>complexity.meanNodes</code> slope flattening while fitness still increases</td>
+<td>Stagnation</td>
+<td>Adaptive mutation (<code>twoTier</code>)</td>
+<td>Light novelty (blend 0.2)</td>
 </tr>
 <tr>
-<td>Strengthen diversity</td>
-<td>Novelty archive, <code>diversityPressure</code>, <code>lineagePressure:spread</code>, adaptive sharing</td>
-<td><code>autoEntropy</code>, dynamic objectives</td>
-<td>Species count variance, ancestor uniqueness, novelty archive size</td>
-</tr>
-<tr>
-<td>Reduce overfitting (training mode)</td>
-<td>Regularization (dropout, weight noise, L2), early stopping smoothing</td>
-<td>Scheduler decay, label smoothing</td>
-<td>Validation vs training error divergence</td>
-</tr>
-<tr>
-<td>Reproduce a run</td>
-<td>Set <code>seed</code>, snapshot RNG state periodically</td>
-<td>Export telemetry JSONL/CSV</td>
-<td>Matching <code>rng</code> column &amp; objective sequence</td>
+<td>Large front 0</td>
+<td><code>adaptiveEpsilon</code> (if multi‑objective)</td>
+<td>Add discriminating complexity objective later</td>
 </tr>
 </tbody></table>
-<h3 id="interpreting-telemetry">Interpreting Telemetry</h3><table>
+<p>Advanced perf, memory pooling, deterministic chain mode, and deep tuning: see performance docs.</p>
+<hr>
+<h2 id="training-optional-polish-phase">Training (optional polish phase)</h2><p>Evolve topology first, then fine‑tune weights:</p>
+<pre><code class="language-ts">const best = neat.getBest();
+await best?.train(data, { iterations: 500, rate: 0.01, optimizer: &#39;adam&#39;,
+  gradientClip: { mode: &#39;norm&#39;, maxNorm: 1 },
+  movingAverageWindow: 5,
+});
+</code></pre>
+<p>Features available: schedulers (cosine, warm restarts, plateau, warmup+decay), optimizers (adamw / radam / lion / adabelief / lookahead wrapper, etc.), gradient clipping (norm/percentile, layerwise variants), micro‑batch accumulation, mixed precision simulation, dropout / dropconnect / stochastic depth, weight noise, label smoothing, SNIP &amp; magnitude pruning.</p>
+<p>Metrics hook example:</p>
+<pre><code class="language-ts">await best?.train(data, {
+  iterations: 800,
+  rate: 0.01,
+  optimizer: &#39;adamw&#39;,
+  gradientClip: { mode: &#39;norm&#39;, maxNorm: 1 },
+  movingAverageWindow: 7,
+  metricsHook: m =&gt; console.log(m.iteration, m.error, m.gradNorm)
+});
+</code></pre>
+<p>Training docs cover scheduler composition (e.g. warmup → plateau) &amp; pruning schedules.</p>
+<hr>
+<h2 id="onnx-interop">ONNX interop</h2><p>Export layered (and experimental recurrent) networks for external tooling:</p>
+<pre><code class="language-ts">import { exportToONNX, importFromONNX } from &#39;@reicek/neataptic-ts&#39;;
+const bytes = exportToONNX(best, { includeMetadata: true });
+const roundTrip = importFromONNX(bytes);
+</code></pre>
+<p>Current scope: feed‑forward layered perceptrons + heuristic simple recurrence grouping (experimental). Arbitrary cyclic graphs not guaranteed. Constraints:</p>
+<ul>
+<li>Supported activations only (see docs); unsupported → error or fallback.</li>
+<li>Hidden layers must be derivable as a clean sequence (no irregular skip sets) for clean export metadata.</li>
+<li>Recurrent export limited to single‑step diagonal self‑recurrence heuristics.</li>
+<li>Fused LSTM/GRU emission still experimental; verify round‑trip before production use.</li>
+</ul>
+<p>See ONNX docs for roadmap (partial connectivity, richer recurrent forms, pruning of unfused subgraphs).</p>
+<hr>
+<h2 id="documentation-map">Documentation map</h2><table>
 <thead>
 <tr>
-<th>Field</th>
-<th>Interpretation</th>
-<th>Action When Problematic</th>
+<th>Topic</th>
+<th>Where</th>
 </tr>
 </thead>
 <tbody><tr>
-<td><code>species</code></td>
-<td>Current number of species</td>
-<td>Too low &amp; falling → raise <code>targetSpecies</code>, loosen compatibility coefficients</td>
+<td>API reference</td>
+<td><code>docs/index.html</code> / <code>src/*/README.md</code></td>
 </tr>
 <tr>
-<td><code>fronts[0]</code> length</td>
-<td>Pareto front size</td>
-<td>If &gt;40% pop → tighten dominance (<code>adaptiveEpsilon</code>), if collapsing to 1 → add diversity objective or novelty</td>
+<td>Performance &amp; parallelism</td>
+<td>Docs: Performance section</td>
 </tr>
 <tr>
-<td><code>complexity.meanNodes/meanConns</code></td>
-<td>Structural growth trend</td>
-<td>Steady rise without fitness gain → introduce pruning or complexity budget</td>
+<td>Multi‑objective &amp; fronts</td>
+<td>Docs: Evolution Enhancements</td>
 </tr>
 <tr>
-<td><code>lineage.inbreeding</code></td>
-<td>Low-diversity mating rate</td>
-<td>High → enable <code>lineagePressure:&#39;antiInbreeding&#39;</code> or raise <code>crossSpeciesMatingProb</code></td>
+<td>Novelty / diversity</td>
+<td>Docs: Diversity &amp; Novelty</td>
 </tr>
 <tr>
-<td><code>perf.evalMs</code></td>
-<td>Evaluation cost per generation</td>
-<td>High → increase <code>threads</code>, reduce population, reduce Lamarckian steps</td>
+<td>Adaptive complexity budgets</td>
+<td>Docs: Adaptive Complexity Budget</td>
 </tr>
 <tr>
-<td><code>ops</code> success ratios</td>
-<td>Mutation operator efficacy</td>
-<td>One operator monopolizing → enable <code>operatorBandit</code> or rebalance weights</td>
+<td>Training extensions</td>
+<td>Docs: Added Training Features</td>
 </tr>
 <tr>
-<td><code>diversity.lineageMeanPairDist</code></td>
-<td>Genealogical dispersion</td>
-<td>Flat &amp; low → add novelty / diversity pressure</td>
+<td>ONNX import/export</td>
+<td>Docs: ONNX Import/Export</td>
+</tr>
+<tr>
+<td>Telemetry export</td>
+<td><code>Neat.exportTelemetryCSV()</code> / JSONL</td>
 </tr>
 </tbody></table>
-<h3 id="common-symptoms-fixes">Common Symptoms &amp; Fixes</h3><table>
-<thead>
-<tr>
-<th>Symptom</th>
-<th>Likely Cause</th>
-<th>Fast Mitigation</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>Sudden species collapse</td>
-<td>Threshold drifted high / bloat penalty harsh</td>
-<td>Clamp <code>compatAdjust.maxThreshold</code>, reduce <code>growth</code> penalty</td>
-</tr>
-<tr>
-<td>Wild fitness oscillation</td>
-<td>Mutation too aggressive</td>
-<td>Lower <code>mutationAmount</code>, switch adaptive strategy to <code>anneal</code></td>
-</tr>
-<tr>
-<td>Huge first Pareto front</td>
-<td>Weak objective discrimination</td>
-<td>Prune inactive objectives, enable <code>adaptiveEpsilon</code></td>
-</tr>
-<tr>
-<td>Early node explosion</td>
-<td>No parsimony constraint</td>
-<td>Add linear <code>complexityBudget</code> + mild <code>growth</code> penalty</td>
-</tr>
-<tr>
-<td>Novelty archive large &amp; inert</td>
-<td>Descriptor too coarse</td>
-<td>Enrich descriptor, lower <code>k</code>, adjust <code>addThreshold</code></td>
-</tr>
-<tr>
-<td>Telemetry overhead</td>
-<td>Logging too many blocks</td>
-<td>Use <code>telemetrySelect</code> to restrict</td>
-</tr>
-</tbody></table>
+<p>Telemetry export helpers: <code>exportTelemetryCSV()</code>, <code>exportTelemetryJSONL()</code>, <code>exportParetoFrontJSONL()</code>, <code>getParetoArchive()</code>.</p>
+<p>If a README section you expected is missing, it moved into focused docs to keep this front page lean.</p>
+<hr>
+<h2 id="contributing">Contributing</h2><p>Pull requests that improve clarity, examples, or diagnostics are welcome. Please:</p>
+<ol>
+<li>Read <code>STYLEGUIDE.md</code> (naming, JSDoc, tests: single expect rule).</li>
+<li>Add / update tests for behavior changes (<code>npm test</code>).</li>
+<li>Update JSDoc in source; run <code>npm run docs</code> to regenerate outputs.</li>
+<li>Keep patches focused; include brief rationale in PR description.</li>
+</ol>
+<h2 id="license-attribution">License & Attribution</h2><p>MIT. Builds upon ideas/code from <strong>Neataptic</strong> (Thomas Wagenaar / <code>wagenaartje</code>) and <strong>Synaptic</strong> (Juan Cazala). The original Neataptic project appears largely unmaintained; this repo is an educational, modern continuation—not an official fork.</p>
+<h2 id="need-help">Need help?</h2><p>Open an issue describing: (a) your goal, (b) what you tried, (c) which doc section was unclear. We prioritise improvements to learning clarity over adding opaque features.</p>
+<p>Enjoy exploring neuro‑evolution — and read the code. :)</p>
+<hr>
+<p><sub>Key ES2023 features used: <code>Array.prototype.findLast</code>, <code>Array.prototype.toSorted</code>, <code>Object.hasOwn</code>, top‑level await. No polyfills; use Node ≥ 20 or transpile.</sub></p>
+<hr>
+<h3 id="appendix">Appendix</h3><p>Extra deep‑dive reference material (extended operator tables, advanced tuning heuristics, internal ONNX metadata, large example narratives) lives in the generated docs (<code>docs/index.html</code>) to keep this README focused for first‑time users.</p>
+<p>If you need something not linked here, open an issue and we can surface it.</p>
 <h3 id="minimal-experimental-loop">Minimal Experimental Loop</h3><ol>
 <li>Baseline: defaults + <code>telemetry:{ enabled:true, performance:true, complexity:true }</code> for ~30 generations.</li>
 <li>Diagnose: decide if evaluation or evolution phase is dominant (<code>perf.evalMs</code> vs <code>perf.evolveMs</code>).</li>
@@ -559,24 +411,7 @@ public contract and usage notes.</p>
 <blockquote>
 <p>Tip: Export best genome, clone into a fresh <code>Network</code>, disable stochastic regularizers, and run a focused training regimen with early stopping to polish weights.</p>
 </blockquote>
-<p>See <code>docs/src/README.md</code> and per-folder READMEs for exhaustive option reference.</p>
-<h2 id="contributing">Contributing</h2><ul>
-<li>This is a public, educational project. Contributions that improve clarity, add examples,
-or simplify the learning path are especially welcome.</li>
-<li>Please follow the repository&#39;s coding conventions and include tests for behavioral changes.</li>
-<li>For docs changes, update JSDoc comments in <code>src/</code> and run <code>npm run docs</code> to regenerate the
-markdown/html outputs.</li>
-</ul>
-<h2 id="license">License</h2><p>This project is released under the MIT License — see the <code>LICENSE</code> file.</p>
-<h2 id="attribution">Attribution</h2><ul>
-<li>Core ideas and some code are derived from Neataptic (Thomas Wagenaar, <code>wagenaartje</code>) and Synaptic (Juan Cazala). See <code>LICENSE</code> for details and original copyrights.</li>
-</ul>
-<h2 id="need-help">Need help?</h2><p>If something in the API is unclear, open an issue describing what you were trying to do and
-which part of the documentation could have helped. We prioritize documentation improvements
-and small example additions for educational clarity.</p>
-<p>Enjoy learning and experimenting with neuro-evolution!</p>
-<h2 id="design-philosophy-flexibility">Design Philosophy (Flexibility)</h2><p>The library treats network structure as an evolvable resource: nodes and connections are added, disabled, or pruned incrementally so architectural capacity adapts to task difficulty. This mirrors the original NEAT insight—protect structural innovations via speciation while allowing complexification only when it yields measurable improvement. For learners, inspecting mutation operators side‑by‑side with telemetry (growth curves, species diversity) illustrates how unchecked structural additions can cause diminishing returns (evaluation cost rises faster than fitness). The included pruning / complexity budget and adaptive growth controls demonstrate common strategies to balance exploration (adding representational degrees of freedom) with parsimony (retaining only task‑useful structure).</p>
-<h2 id="performance-parallelism-tuning">Performance &amp; Parallelism Tuning</h2><p>This section summarizes practical knobs to accelerate evolution while preserving solution quality.</p>
+<h2 id="performance-parallelism-tuning">Performance & Parallelism Tuning</h2><p>This section summarizes practical knobs to accelerate evolution while preserving solution quality.</p>
 <h3 id="core-levers">Core Levers</h3><table>
 <thead>
 <tr>
@@ -651,7 +486,7 @@ and small example additions for educational clarity.</p>
 });
 </code></pre>
 <p>Monitor <code>getTelemetry().slice(-1)[0].perf</code> for current timings.</p>
-<h3 id="memory-optimizations-activation-pooling-precision">Memory Optimizations (Activation Pooling &amp; Precision)</h3><p><code>Network</code> constructor now accepts:</p>
+<h3 id="memory-optimizations-activation-pooling-precision">Memory Optimizations (Activation Pooling & Precision)</h3><p><code>Network</code> constructor now accepts:</p>
 <pre><code class="language-ts">new Network(input, output, {
   activationPrecision: &#39;f32&#39;, // default &#39;f64&#39;; use float32 activations
   reuseActivationArrays: true, // reuse a pooled output buffer each forward pass
@@ -887,16 +722,16 @@ console.log(neat.getTelemetry().slice(-1)[0].complexity); // { meanNodes, meanCo
 </tbody></table>
 <p>Configure an adaptive schedule that expands limits when improvement slope is positive and contracts during stagnation. This mirrors a common parsimony heuristic: permit complexification only while marginal fitness gain per added structural unit remains appreciable; otherwise bias toward consolidation to reduce evaluation cost and overfitting risk:</p>
 <pre><code class="language-ts">complexityBudget: {
-    enabled:true,
-    mode:&#39;adaptive&#39;,
-    maxNodesStart: input+output+2,
-    maxNodesEnd: (input+output+2)*6,
-    improvementWindow: 8,
-    increaseFactor:1.15,
-    stagnationFactor:0.93,
-    minNodes: input+output+2,
-    maxConnsStart: 40,
-    maxConnsEnd: 400
+	enabled:true,
+	mode:&#39;adaptive&#39;,
+	maxNodesStart: input+output+2,
+	maxNodesEnd: (input+output+2)*6,
+	improvementWindow: 8,
+	increaseFactor:1.15,
+	stagnationFactor:0.93,
+	minNodes: input+output+2,
+	maxConnsStart: 40,
+	maxConnsEnd: 400
 }
 </code></pre>
 <p>Linear schedule alternative: set <code>mode:&#39;linear&#39;</code> and optionally <code>horizon</code> (generations) to interpolate from <code>maxNodesStart</code> to <code>maxNodesEnd</code>.</p>
@@ -940,7 +775,7 @@ console.log(neat.getTelemetry().slice(-1)[0].complexity); // { meanNodes, meanCo
 <li><code>innovationRange</code>: spread of innovation IDs inside species.</li>
 <li><code>enabledRatio</code>: enabled / total connections ratio (structural activation health).</li>
 </ul>
-<h3 id="diversity-novelty">Diversity &amp; Novelty</h3><p>Use novelty when: (a) deceptive fitness landscape causes premature convergence, (b) behavioural diversity is itself valuable, or (c) you need a reservoir of stepping stones. Keep <code>blendFactor</code> modest initially so raw fitness remains influential.</p>
+<h3 id="diversity-novelty">Diversity & Novelty</h3><p>Use novelty when: (a) deceptive fitness landscape causes premature convergence, (b) behavioural diversity is itself valuable, or (c) you need a reservoir of stepping stones. Keep <code>blendFactor</code> modest initially so raw fitness remains influential.</p>
 <p>Descriptor design tips:</p>
 <table>
 <thead>
@@ -974,21 +809,21 @@ console.log(neat.getTelemetry().slice(-1)[0].complexity); // { meanNodes, meanCo
 </code></pre>
 <p>Adaptive novelty threshold targeting an archive insertion rate:</p>
 <pre><code class="language-ts">novelty:{
-    enabled:true,
-    descriptor:g=&gt;[g.nodes.length, g.connections.length],
-    archiveAddThreshold:0.5,
-    dynamicThreshold:{ enabled:true, targetRate:0.15, adjust:0.1, min:0.01, max:10 }
+	enabled:true,
+	descriptor:g=&gt;[g.nodes.length, g.connections.length],
+	archiveAddThreshold:0.5,
+	dynamicThreshold:{ enabled:true, targetRate:0.15, adjust:0.1, min:0.01, max:10 }
 }
 </code></pre>
 <p>After each evaluation the threshold is nudged up/down so the fraction of inserted descriptors approximates <code>targetRate</code>.</p>
 <h3 id="inactive-objective-pruning">Inactive Objective Pruning</h3><p>If you experiment with many custom objectives it is common for some to become constant (providing no ranking discrimination). Enable automatic removal of such stagnant objectives:</p>
 <pre><code class="language-ts">multiObjective:{
-    enabled:true,
-    objectives:[
-        { key:&#39;fitness&#39;, direction:&#39;max&#39;, accessor: g =&gt; g.score },
-        { key:&#39;novelty&#39;, direction:&#39;max&#39;, accessor: g =&gt; (g as any)._novelty }
-    ],
-    pruneInactive:{ enabled:true, window:5, rangeEps:1e-9, protect:[&#39;fitness&#39;] }
+	enabled:true,
+	objectives:[
+		{ key:&#39;fitness&#39;, direction:&#39;max&#39;, accessor: g =&gt; g.score },
+		{ key:&#39;novelty&#39;, direction:&#39;max&#39;, accessor: g =&gt; (g as any)._novelty }
+	],
+	pruneInactive:{ enabled:true, window:5, rangeEps:1e-9, protect:[&#39;fitness&#39;] }
 }
 </code></pre>
 <p>Mechanics:</p>
@@ -1026,14 +861,14 @@ Telemetry <code>lineage</code> block now also includes:</li>
 <li><code>ancestorUniq</code>: average Jaccard distance (0..1) between ancestor sets of sampled genome pairs within a small depth window (higher = more genealogical diversification).</li>
 </ul>
 <p>Use these to detect genealogical stagnation (both remaining near zero) vs broad exploration (rising pair distance).</p>
-<h3 id="lineage-pressure-anti-inbreeding-optional">Lineage Pressure &amp; Anti-Inbreeding (Optional)</h3><p>Apply score adjustments based on lineage structure (depth dispersion) or penalize inbreeding (high ancestor overlap):</p>
+<h3 id="lineage-pressure-anti-inbreeding-optional">Lineage Pressure & Anti-Inbreeding (Optional)</h3><p>Apply score adjustments based on lineage structure (depth dispersion) or penalize inbreeding (high ancestor overlap):</p>
 <pre><code class="language-ts">lineagePressure:{
-    enabled:true,
-    mode:&#39;antiInbreeding&#39;,   // &#39;penalizeDeep&#39; | &#39;rewardShallow&#39; | &#39;spread&#39; | &#39;antiInbreeding&#39;
-    strength:0.02,           // generic scaling for depth modes
-    ancestorWindow:4,        // generations to look back when computing ancestor sets
-    inbreedingPenalty:0.04,  // override penalty scaling (defaults to strength*2)
-    diversityBonus:0.02      // bonus scaling for very distinct parent lineages
+	enabled:true,
+	mode:&#39;antiInbreeding&#39;,   // &#39;penalizeDeep&#39; | &#39;rewardShallow&#39; | &#39;spread&#39; | &#39;antiInbreeding&#39;
+	strength:0.02,           // generic scaling for depth modes
+	ancestorWindow:4,        // generations to look back when computing ancestor sets
+	inbreedingPenalty:0.04,  // override penalty scaling (defaults to strength*2)
+	diversityBonus:0.02      // bonus scaling for very distinct parent lineages
 }
 </code></pre>
 <p>Modes:</p>
@@ -1044,7 +879,7 @@ Telemetry <code>lineage</code> block now also includes:</li>
 <li><code>antiInbreeding</code>: computes Jaccard overlap of ancestor sets of both parents (including parents) within <code>ancestorWindow</code> generations. Penalizes high overlap (&gt;0.75) and rewards very distinct ancestry (&lt;0.25). Penalty/bonus magnitude scales with overlap distance and the configured penalty/bonus parameters.</li>
 </ul>
 <p>Runs after evaluation/speciation before sorting so it integrates with all other mechanisms.</p>
-<h3 id="rng-state-snapshot-reproducibility">RNG State Snapshot &amp; Reproducibility</h3><p>When a numeric <code>seed</code> is provided, a fast deterministic PRNG drives stochastic choices. You can snapshot/restore mid-run:</p>
+<h3 id="rng-state-snapshot-reproducibility">RNG State Snapshot & Reproducibility</h3><p>When a numeric <code>seed</code> is provided, a fast deterministic PRNG drives stochastic choices. You can snapshot/restore mid-run:</p>
 <pre><code class="language-ts">const neat = new Neat(3, 1, fit, { seed: 1234 });
 await neat.evolve();
 const snap = neat.snapshotRNGState(); // { state }
@@ -1057,7 +892,7 @@ const neat2 = new Neat(3, 1, fit, {});
 neat2.importRNGState(json);
 </code></pre>
 <p>Restoring installs the internal deterministic generator if it wasn&#39;t active.</p>
-<h3 id="operator-adaptation-mutation-self-adaptation">Operator Adaptation &amp; Mutation Self-Adaptation</h3><p>Operator adaptation vs bandit:</p>
+<h3 id="operator-adaptation-mutation-self-adaptation">Operator Adaptation & Mutation Self-Adaptation</h3><p>Operator adaptation vs bandit:</p>
 <table>
 <thead>
 <tr>
@@ -1087,7 +922,7 @@ neat2.importRNGState(json);
 <pre><code class="language-ts">neat.getOperatorStats(); // [{ name, success, attempts }, ...]
 </code></pre>
 <p>Telemetry now also records an <code>ops</code> array each generation with lightweight success/attempt counts.</p>
-<h3 id="objective-lifetime-species-allocation-telemetry">Objective Lifetime &amp; Species Allocation Telemetry</h3><p>Each telemetry entry now may include:</p>
+<h3 id="objective-lifetime-species-allocation-telemetry">Objective Lifetime & Species Allocation Telemetry</h3><p>Each telemetry entry now may include:</p>
 <ul>
 <li><code>objectives</code>: array of active objective keys that generation (already used internally for auditing dynamic scheduling).</li>
 <li><code>objAges</code>: object mapping objective key -&gt; consecutive generations active. When an objective is removed (e.g. via pruning or dynamic delay) its age resets to 0 if later reintroduced.</li>
@@ -1238,7 +1073,7 @@ console.log(imported.activate(sample)[0]);
 <td>Ensure hidden size divisible by expected gate count (5 LSTM / 4 GRU).</td>
 </tr>
 </tbody></table>
-<h3 id="additional-capabilities-phase-2-3-roadmap">Additional Capabilities (Phase 2 &amp; 3 roadmap)</h3><ul>
+<h3 id="additional-capabilities-phase-2-3-roadmap">Additional Capabilities (Phase 2 & 3 roadmap)</h3><ul>
 <li>Partial connectivity (enable with <code>{ allowPartialConnectivity:true }</code>) inserts zero-weight placeholders for missing edges.</li>
 <li>Mixed activation layers (enable <code>{ allowMixedActivations:true }</code>) are decomposed into per-neuron Gemm + Activation + Concat.</li>
 <li>Multi-layer self‑recurrence single-step form (enable <code>{ allowRecurrent:true, recurrentSingleStep:true }</code>) exports each recurrent hidden layer with:<ul>
@@ -1288,11 +1123,11 @@ console.log(imported.activate(sample)[0]);
 <li>Redundant unfused Gemm subgraph is not yet pruned when fused nodes are emitted.</li>
 <li>Only self-produced models are guaranteed to round-trip; arbitrary ONNX graphs are out of scope.</li>
 </ul>
-<h3 id="validation-tests">Validation &amp; Tests</h3><p>See <code>test/network/onnx.export.test.ts</code> / <code>onnx.import.test.ts</code> for MLP &amp; basic recurrence coverage. Fused LSTM/GRU tests pending finalization of gate ordering normalization.</p>
+<h3 id="validation-tests">Validation & Tests</h3><p>See <code>test/network/onnx.export.test.ts</code> / <code>onnx.import.test.ts</code> for MLP &amp; basic recurrence coverage. Fused LSTM/GRU tests pending finalization of gate ordering normalization.</p>
 <hr>
 <h3 id="further-notices">Further notices</h3><p>NeatapticTS is based on <a href="https://github.com/wagenaartje/neataptic">Neataptic</a>. Parts of <a href="https://github.com/cazala/synaptic">Synaptic</a> were used to develop Neataptic.</p>
 <p>The neuro-evolution algorithm used is the <a href="https://medium.com/@ThomasWagenaar/neuro-evolution-on-steroids-82bd14ddc2f6">Instinct</a> algorithm.</p>
-<h5 id="original-repository-in-now-unmaintained">Original <a href="https://github.com/wagenaartje/neataptic">repository</a> in now <a href="https://github.com/wagenaartje/neataptic/issues/112">unmaintained</a></h5><hr>
+<h5 id="original-repository-https-github-com-wagenaartje-neataptic-in-now-unmaintained-https-github-com-wagenaartje-neataptic-issues-112">Original [repository](https://github.com/wagenaartje/neataptic) in now [unmaintained](https://github.com/wagenaartje/neataptic/issues/112)</h5><hr>
 <h2 id="added-training-features">Added Training Features</h2><ul>
 <li>Learning rate schedulers: fixed, step, exp, inv, cosine annealing, cosine annealing w/ warm restarts, linear warmup+decay, reduce-on-plateau.</li>
 <li>Regularization (L1, L2, custom function), dropout, DropConnect.</li>
@@ -1403,20 +1238,20 @@ net.train(data, { iterations: 5000, rate: 0.05, ratePolicy: rop });
 </code></pre>
 <h4 id="early-stopping-extensions">Early Stopping Extensions</h4><p>You can enable moving-average smoothing and independent early-stop patience separate from any scheduler plateau logic. You can also give the learning-rate scheduler (e.g. reduce-on-plateau) its OWN smoothing configuration if you want it to react differently than early stopping:</p>
 <pre><code class="language-ts">net.train(data, {
-    rate: 0.05,
-    iterations: 10000,
-    error: 0.02,                // target threshold (checked on SMOOTHED early-stop error)
-    movingAverageType: &#39;median&#39;,
-    movingAverageWindow: 7,     // EARLY STOP smoothing (robust to spikes)
-    earlyStopPatience: 25,
-    earlyStopMinDelta: 0.0005,
+	rate: 0.05,
+	iterations: 10000,
+	error: 0.02,                // target threshold (checked on SMOOTHED early-stop error)
+	movingAverageType: &#39;median&#39;,
+	movingAverageWindow: 7,     // EARLY STOP smoothing (robust to spikes)
+	earlyStopPatience: 25,
+	earlyStopMinDelta: 0.0005,
 
-    ---
-    // Separate plateau smoothing: scheduler sees a faster EMA over shorter horizon
-    plateauMovingAverageType: &#39;ema&#39;,
-    plateauMovingAverageWindow: 3,
-    plateauEmaAlpha: 0.6,       // (otherwise defaults to 2/(N+1))
-    ratePolicy: methods.Rate.reduceOnPlateau({ patience: 10, factor: 0.5, minRate: 1e-5 })
+	---
+	// Separate plateau smoothing: scheduler sees a faster EMA over shorter horizon
+	plateauMovingAverageType: &#39;ema&#39;,
+	plateauMovingAverageWindow: 3,
+	plateauEmaAlpha: 0.6,       // (otherwise defaults to 2/(N+1))
+	ratePolicy: methods.Rate.reduceOnPlateau({ patience: 10, factor: 0.5, minRate: 1e-5 })
 });
 </code></pre>
 <p>Behavior details:
@@ -1576,7 +1411,7 @@ const hybrid = (base: number, t: number, err?: number) =&gt; {
 net.train(data, { iterations: 2000, rate: 0.05, ratePolicy: hybrid });
 </code></pre>
 <p>For more elaborate chaining (e.g., staged cosine cycles then plateau), follow the same pattern: evaluate <code>t</code>, decide which inner policy to call, adjust <code>t</code> relative to that stage, and pass along <code>error</code> if the target policy needs it.</p>
-<h3 id="metrics-hook-checkpoints">Metrics Hook &amp; Checkpoints</h3><pre><code class="language-ts">net.train(data, {
+<h3 id="metrics-hook-checkpoints">Metrics Hook & Checkpoints</h3><pre><code class="language-ts">net.train(data, {
   iterations: 800,
   rate: 0.05,
   metricsHook: ({ iteration, error, gradNorm }) =&gt;
@@ -1813,7 +1648,7 @@ for (let i = 0; i &lt; 10; i++) {
 net.train(data, { iterations: 200, rate: 0.02 });
 net.disableDropConnect();
 </code></pre>
-<h2 id="architecture-evolution">Architecture &amp; Evolution</h2><pre><code>Structural pruning: magnitude-based &amp; SNIP-style (|w * grad| saliency) prune+optional regrow, scheduled window.
+<h2 id="architecture-evolution">Architecture & Evolution</h2><pre><code>Structural pruning: magnitude-based &amp; SNIP-style (|w * grad| saliency) prune+optional regrow, scheduled window.
 Connection sparsification: progressive schedule toward target sparsity.
 Neuroevolution: speciation (compatibility distance: excess, disjoint, weight diff), dynamic threshold (optional targetSpecies), kernel fitness sharing (quadratic within-species), stagnation injection (global refresh after N stagnant generations).
 Innovation tracking: per-connection monotonically increasing counter (serialized); fallback Cantor pairing for missing.
@@ -1981,7 +1816,7 @@ Re-enable probability is controlled by <code>reenableProb</code> (default 0.25).
 | <code>lineageTracking</code>             | <code>boolean</code>                                                                                                                                   | Track parent genome ids &amp; depth; adds <code>_parents</code>/<code>_depth</code> on genomes and enriched telemetry lineage block                                                                                                                                                                | true                                                                                                                |
 | <code>multiObjective.autoEntropy</code>  | <code>boolean</code>                                                                                                                                   | Automatically append entropy (structure diversity proxy) objective (maximize)                                                                                                                                                                                            | false                                                                                                               |
 | <code>multiObjective.dynamic</code>      | <code>{ enabled, addComplexityAt, addEntropyAt, dropEntropyOnStagnation, readdEntropyAfter }</code>                                                    | Dynamic scheduling of complexity/entropy objectives: delay adding complexity &amp; entropy to let pure fitness search early; temporarily drop entropy during stagnation then re-add after cooldown.                                                                          | disabled                                                                                                            |</p>
-<h4 id="example-entropy-guided-sharing-sigma-ancestor-uniqueness-adaptive-tuning">Example: Entropy-guided sharing sigma &amp; ancestor uniqueness adaptive tuning</h4><pre><code class="language-ts">const neat = new Neat(inputs, outputs, fitness, {
+<h4 id="example-entropy-guided-sharing-sigma-ancestor-uniqueness-adaptive-tuning">Example: Entropy-guided sharing sigma & ancestor uniqueness adaptive tuning</h4><pre><code class="language-ts">const neat = new Neat(inputs, outputs, fitness, {
   seed: 42,
   sharingSigma: 3.0,
   entropySharingTuning: {

@@ -20,7 +20,9 @@ const arg = (name, def) => {
 const flag = (name) => args.includes(name);
 
 if (flag('--help') || flag('-h')) {
-  console.log(`Usage: node scripts/export-onnx.mjs --in network.json --out model.onnx.json [--metadata] [--batch] [--legacy] [--partial] [--mixed]\n`);
+  console.log(
+    `Usage: node scripts/export-onnx.mjs --in network.json --out model.onnx.json [--metadata] [--batch] [--legacy] [--partial] [--mixed]\n`
+  );
   process.exit(0);
 }
 
@@ -40,12 +42,20 @@ const allowMixedActivations = flag('--mixed');
 // Dynamic import of built library (dist) in ESM context
 async function loadDist() {
   // Use pathToFileURL to avoid Windows path issues
-  const onnxMod = await import(pathToFileURL(path.resolve('dist', 'architecture', 'onnx.js')).href).catch(async () => {
+  const onnxMod = await import(
+    pathToFileURL(path.resolve('dist', 'architecture', 'onnx.js')).href
+  ).catch(async () => {
     // Fallback to network/network.onnx if direct path changed
-    return import(pathToFileURL(path.resolve('dist', 'architecture', 'network', 'network.onnx.js')).href);
+    return import(
+      pathToFileURL(
+        path.resolve('dist', 'architecture', 'network', 'network.onnx.js')
+      ).href
+    );
   });
   // network default export
-  const netMod = await import(pathToFileURL(path.resolve('dist', 'architecture', 'network.js')).href);
+  const netMod = await import(
+    pathToFileURL(path.resolve('dist', 'architecture', 'network.js')).href
+  );
   const Network = netMod.default;
   const { exportToONNX, importFromONNX } = onnxMod; // importFromONNX unused but re-exported for completeness
   return { Network, exportToONNX, importFromONNX };
@@ -56,8 +66,18 @@ async function loadDist() {
     const { Network, exportToONNX } = await loadDist();
     const raw = JSON.parse(fs.readFileSync(path.resolve(inputFile), 'utf8'));
     const net = Network.fromJSON(raw);
-    const onnx = exportToONNX(net, { includeMetadata, batchDimension, legacyNodeOrdering, allowPartialConnectivity, allowMixedActivations });
-    fs.writeFileSync(path.resolve(outputFile), JSON.stringify(onnx, null, 2), 'utf8');
+    const onnx = exportToONNX(net, {
+      includeMetadata,
+      batchDimension,
+      legacyNodeOrdering,
+      allowPartialConnectivity,
+      allowMixedActivations,
+    });
+    fs.writeFileSync(
+      path.resolve(outputFile),
+      JSON.stringify(onnx, null, 2),
+      'utf8'
+    );
     console.log(`ONNX JSON written to ${outputFile}`);
   } catch (err) {
     console.error('Export failed:', err.message || err);

@@ -6,7 +6,9 @@ import path from 'path';
 function copyAsciiMaze() {
   const srcDir = path.resolve('test', 'examples', 'asciiMaze');
   if (!fs.existsSync(srcDir)) {
-    console.warn('[docs:examples] asciiMaze source directory not found, skipping');
+    console.warn(
+      '[docs:examples] asciiMaze source directory not found, skipping'
+    );
     return;
   }
   const destDir = path.resolve('docs', 'examples', 'asciiMaze');

@@ -3332,33 +3332,33 @@
           }
         },
         devDependencies: {
-          "@types/chai": "^5.2.1",
+          "@types/chai": "^5.2.2",
           "@types/fs-extra": "^11.0.4",
-          "@types/jest": "^29.5.11",
-          "@types/node": "^20.19.10",
+          "@types/jest": "^30.0.0",
+          "@types/node": "^24.3.0",
           "@types/seedrandom": "^3.0.8",
           "@types/webpack": "^5.28.5",
           "@types/webpack-dev-server": "^4.7.2",
-          chai: "^4.3.4",
-          "copy-webpack-plugin": "^8.1.0",
-          "cross-env": "^7.0.3",
-          esbuild: "^0.23.0",
+          chai: "^6.0.1",
+          "copy-webpack-plugin": "^13.0.1",
+          "cross-env": "^10.0.0",
+          esbuild: "^0.25.9",
           "fast-glob": "^3.3.3",
           "fs-extra": "^11.3.1",
-          husky: "^6.0.0",
-          jest: "^29.7.0",
-          "jest-environment-jsdom": "^29.7.0",
-          "jsdoc-to-markdown": "^9.1.1",
-          marked: "^12.0.2",
+          husky: "^9.1.7",
+          jest: "^30.0.5",
+          "jest-environment-jsdom": "^30.0.5",
+          "jsdoc-to-markdown": "^9.1.2",
+          marked: "^16.2.0",
           mkdocs: "^0.0.1",
-          puppeteer: "^23.3.0",
-          "ts-jest": "^29.1.1",
+          puppeteer: "^24.17.0",
+          "ts-jest": "^29.4.1",
           "ts-loader": "^9.5.2",
-          "ts-morph": "^22.0.0",
+          "ts-morph": "^26.0.0",
           "ts-node": "^10.9.2",
-          typescript: "^5.6.3",
-          "undici-types": "^7.8.0",
-          webpack: "^5.99.5",
+          typescript: "^5.9.2",
+          "undici-types": "^7.15.0",
+          webpack: "^5.101.3",
           "webpack-cli": "^6.0.1"
         },
         repository: {
@@ -3387,14 +3387,14 @@
         },
         homepage: "https://reicek.github.io/NeatapticTS/",
         engines: {
-          node: ">=20.0.0"
+          node: ">=22.0.0"
         },
         prettier: {
           singleQuote: true
         },
         dependencies: {
           seedrandom: "^3.0.5",
-          undici: "^5.0.0"
+          undici: "^7.15.0"
         }
       };
     }
@@ -14095,6 +14095,25 @@
     static #ARROW_WIDTH = _NetworkVisualization.#ARROW.length;
     static #TOTAL_WIDTH = 150;
     // Overall visualization width
+    /** Activation range buckets (ordered, positive to negative). */
+    static #ACTIVATION_RANGES = [
+      { min: 2, max: Infinity, label: "v-high+" },
+      { min: 1, max: 2, label: "high+" },
+      { min: 0.5, max: 1, label: "mid+" },
+      { min: 0.1, max: 0.5, label: "low+" },
+      { min: -0.1, max: 0.1, label: "zero\xB1" },
+      { min: -0.5, max: -0.1, label: "low-" },
+      { min: -1, max: -0.5, label: "mid-" },
+      { min: -2, max: -1, label: "high-" },
+      { min: -Infinity, max: -2, label: "v-high-" }
+    ];
+    /** Scratch array for connection counts (reused / grown). @remarks Non-reentrant. */
+    static #ConnectionCountsScratch = new Int32Array(16);
+    static #ConnectionCountsLen = 0;
+    /** Scratch list for building output rows before join. @remarks Non-reentrant. */
+    static #ScratchRows = [];
+    /** Scratch list for header construction. */
+    static #ScratchHeaderParts = [];
     /**
      * Pads a string to a specific width with alignment options.
      *
@@ -14163,18 +14182,6 @@
       return color + formattedValue + colors.reset;
     }
     /**
-     * Return the last element of an array or undefined when empty.
-     */
-    static #last(arr) {
-      return MazeUtils.safeLast(arr);
-    }
-    /**
-     * Return the length of an array or 0 when missing.
-     */
-    static #lastLength(arr) {
-      return Array.isArray(arr) ? arr.length : 0;
-    }
-    /**
      * Format a node display with a colored symbol and its colored numeric value.
      * `extra` can include any trailing text (already colorized) and may include a leading space.
      */
@@ -14222,20 +14229,9 @@
       const activations = nodes.map(
         (node) => _NetworkVisualization.#getNodeValue(node)
       );
-      const ranges = [
-        { min: 2, max: Infinity, label: "v-high+" },
-        { min: 1, max: 2, label: "high+" },
-        { min: 0.5, max: 1, label: "mid+" },
-        { min: 0.1, max: 0.5, label: "low+" },
-        { min: -0.1, max: 0.1, label: "zero\xB1" },
-        { min: -0.5, max: -0.1, label: "low-" },
-        { min: -1, max: -0.5, label: "mid-" },
-        { min: -2, max: -1, label: "high-" },
-        { min: -Infinity, max: -2, label: "v-high-" }
-      ];
       const groups = [];
       const labels = [];
-      for (const range of ranges) {
+      for (const range of _NetworkVisualization.#ACTIVATION_RANGES) {
         const nodesInRange = nodes.filter(
           (_, i) => activations[i] >= range.min && activations[i] < range.max
         );
@@ -14264,78 +14260,122 @@
           displayLayers.push([...layer]);
           layerDisplayCounts.push(layer.length);
         } else {
-          const { groups, labels } = _NetworkVisualization.#groupNodesByActivation(
-            layer
-          );
-          let finalGroups = groups;
-          let finalLabels = labels;
-          if (groups.length > MAX_VISIBLE) {
-            const rankedGroups = groups.map((g, i) => ({
-              group: g,
-              label: labels[i],
-              size: g.length
-            })).toSorted((a, b) => b.size - a.size);
-            const topGroups = [];
-            const cut = Math.max(0, MAX_VISIBLE - 1);
-            for (let i = 0; i < Math.min(cut, rankedGroups.length); i++)
-              topGroups.push(rankedGroups[i]);
-            const remainingGroups = [];
-            for (let i = cut; i < rankedGroups.length; i++)
-              remainingGroups.push(rankedGroups[i]);
-            const mergedGroup = remainingGroups.reduce(
-              (acc, curr) => {
-                acc.group = [...acc.group, ...curr.group];
-                return acc;
-              },
-              { group: [], label: "other\xB1", size: 0 }
-            );
-            if (mergedGroup.group.length > 0) {
-              topGroups.push(mergedGroup);
-            }
-            const sortedTopGroups = topGroups.toSorted((a, b) => {
-              const aIsNegative = a.label.includes("-");
-              const bIsNegative = b.label.includes("-");
-              if (aIsNegative && !bIsNegative) return 1;
-              if (!aIsNegative && bIsNegative) return -1;
-              if (a.label.includes("v-") && !b.label.includes("v-"))
-                return aIsNegative ? 1 : -1;
-              if (!a.label.includes("v-") && b.label.includes("v-"))
-                return aIsNegative ? -1 : 1;
-              if (a.label.includes("high") && !b.label.includes("high"))
-                return aIsNegative ? 1 : -1;
-              if (!a.label.includes("high") && b.label.includes("high"))
-                return aIsNegative ? -1 : 1;
-              return 0;
-            });
-            finalGroups = sortedTopGroups.map((g) => g.group);
-            finalLabels = sortedTopGroups.map((g) => g.label);
-          }
-          const avgNodes = finalGroups.map((group, groupIdx) => {
-            const avgKey = `layer${layerIdx}-avg-${groupIdx}`;
-            const sum = group.reduce(
-              (acc, node) => acc + _NetworkVisualization.#getNodeValue(node),
-              0
-            );
-            const avgValue = group.length > 0 ? sum / group.length : 0;
-            averageNodes[avgKey] = {
-              avgValue,
-              count: group.length
-            };
-            return {
-              id: -1 * (layerIdx * 1e3 + groupIdx),
-              uuid: avgKey,
-              type: "hidden",
-              activation: avgValue,
-              isAverage: true,
-              avgCount: group.length,
-              label: finalLabels[groupIdx]
-            };
+          const {
+            avgNodes,
+            count
+          } = _NetworkVisualization.#createAverageNodesForLargeLayer({
+            layer,
+            layerIndex: layerIdx,
+            maxVisible: MAX_VISIBLE,
+            averageNodesStore: averageNodes
           });
           displayLayers.push(avgNodes);
-          layerDisplayCounts.push(avgNodes.length);
+          layerDisplayCounts.push(count);
         }
       });
       return { displayLayers, layerDisplayCounts, averageNodes };
+    }
+    /**
+     * Create average nodes representation for a large hidden layer.
+     * Decomposed from #prepareHiddenLayersForDisplay for clarity.
+     */
+    static #createAverageNodesForLargeLayer(params) {
+      const { layer, layerIndex, maxVisible, averageNodesStore } = params;
+      const { groups, labels } = _NetworkVisualization.#groupNodesByActivation(
+        layer
+      );
+      const { finalGroups, finalLabels } = groups.length > maxVisible ? _NetworkVisualization.#rankMergeAndOrderGroups({
+        groups,
+        labels,
+        maxVisible
+      }) : { finalGroups: groups, finalLabels: labels };
+      const averageNodes = finalGroups.map(
+        (group, groupIndex) => _NetworkVisualization.#buildAverageNode({
+          group,
+          groupIndex,
+          layerIndex,
+          label: finalLabels[groupIndex],
+          averageNodesStore
+        })
+      );
+      return { avgNodes: averageNodes, count: averageNodes.length };
+    }
+    /** Build a single average node descriptor from a group. */
+    static #buildAverageNode(params) {
+      const { group, groupIndex, layerIndex, label, averageNodesStore } = params;
+      const avgKey = `layer${layerIndex}-avg-${groupIndex}`;
+      const sum = group.reduce(
+        (runningTotal, node) => runningTotal + _NetworkVisualization.#getNodeValue(node),
+        0
+      );
+      const avgValue = group.length ? sum / group.length : 0;
+      averageNodesStore[avgKey] = { avgValue, count: group.length };
+      return {
+        id: -1 * (layerIndex * 1e3 + groupIndex),
+        uuid: avgKey,
+        type: "hidden",
+        activation: avgValue,
+        isAverage: true,
+        avgCount: group.length,
+        label
+      };
+    }
+    /** Rank groups by size, merge overflow into one group, then order by activation semantics. */
+    static #rankMergeAndOrderGroups(params) {
+      const { groups, labels, maxVisible } = params;
+      const groupMeta = groups.map((group, index) => ({
+        group,
+        label: labels[index],
+        size: group.length
+      }));
+      const ranked = _NetworkVisualization.#safeToSorted(
+        groupMeta,
+        (a, b) => b.size - a.size
+      );
+      const cutPoint = Math.max(0, maxVisible - 1);
+      const top = ranked.slice(0, cutPoint);
+      const remainder = ranked.slice(cutPoint);
+      if (remainder.length)
+        top.push(_NetworkVisualization.#mergeOverflowGroups(remainder));
+      const ordered = _NetworkVisualization.#safeToSorted(
+        top,
+        _NetworkVisualization.#activationLabelComparator
+      );
+      return {
+        finalGroups: ordered.map((m) => m.group),
+        finalLabels: ordered.map((m) => m.label)
+      };
+    }
+    /** Merge overflow group metadata into a single synthetic bucket. */
+    static #mergeOverflowGroups(metadataList) {
+      return metadataList.reduce(
+        (acc, current) => {
+          acc.group.push(...current.group);
+          acc.size += current.size;
+          return acc;
+        },
+        { group: [], label: "other\xB1", size: 0 }
+      );
+    }
+    /** Safe wrapper around ES2023 Array.prototype.toSorted with graceful fallback. */
+    static #safeToSorted(array, compare) {
+      const anyArray = array;
+      if (typeof anyArray.toSorted === "function")
+        return anyArray.toSorted(compare);
+      return [...array].sort(compare);
+    }
+    /** Comparator for activation range label ordering (heuristic). */
+    static #activationLabelComparator(a, b) {
+      const aNeg = a.label.includes("-");
+      const bNeg = b.label.includes("-");
+      if (aNeg !== bNeg) return aNeg ? 1 : -1;
+      const veryA = a.label.startsWith("v-high");
+      const veryB = b.label.startsWith("v-high");
+      if (veryA !== veryB) return veryA ? -1 : 1;
+      const highA = a.label.includes("high");
+      const highB = b.label.includes("high");
+      if (highA !== highB) return highA ? -1 : 1;
+      return 0;
     }
     /**
      * Utility to create a visualization node from a neataptic node.
@@ -14354,120 +14394,274 @@
         bias: node.bias
       };
     }
-    /**
-     * Visualizes a neural network's structure and activations in ASCII format.
-     *
-     * Creates a comprehensive terminal-friendly visualization showing:
-     * - Network architecture with layers
-     * - Node activation values with color coding
-     * - Connection counts between layers
-     * - Condensed representation of large hidden layers
-     *
-     * @param network - The neural network to visualize.
-     * @returns String containing the ASCII visualization.
-     */
-    static visualizeNetworkSummary(network) {
-      const detectedInputNodes = (network.nodes || []).filter(
-        (n) => n.type === "input" || n.type === "constant"
-      );
-      const INPUT_COUNT = detectedInputNodes.length || 18;
-      const OUTPUT_COUNT = 4;
+    /** Categorize nodes in a single pass (avoids 3 separate filter passes). */
+    static #categorizeNodes(network) {
+      const inputNodes = [];
+      const hiddenNodes = [];
+      const outputNodes = [];
       const nodes = network.nodes || [];
-      const inputNodes = nodes.filter((n) => n.type === "input" || n.type === "constant").map(_NetworkVisualization.#toVisualizationNode);
-      const outputNodes = nodes.filter((n) => n.type === "output").map(_NetworkVisualization.#toVisualizationNode);
-      const hiddenNodesRaw = nodes.filter((n) => n.type === "hidden").map(_NetworkVisualization.#toVisualizationNode);
-      const hiddenLayers = _NetworkVisualization.#groupHiddenByLayer(
+      for (let index = 0; index < nodes.length; index++) {
+        const node = nodes[index];
+        const viz = _NetworkVisualization.#toVisualizationNode(node, index);
+        switch (node.type) {
+          case "input":
+          case "constant":
+            inputNodes.push(viz);
+            break;
+          case "hidden":
+            hiddenNodes.push(viz);
+            break;
+          case "output":
+            outputNodes.push(viz);
+            break;
+          default:
+            break;
+        }
+      }
+      return {
         inputNodes,
-        hiddenNodesRaw,
-        outputNodes
-      );
+        hiddenNodes,
+        outputNodes,
+        inputCountDetected: inputNodes.length
+      };
+    }
+    /** Ensure connection-count scratch buffer is large enough. */
+    static #ensureConnectionScratch(required) {
+      if (_NetworkVisualization.#ConnectionCountsScratch.length < required) {
+        let newSize = _NetworkVisualization.#ConnectionCountsScratch.length;
+        while (newSize < required) newSize *= 2;
+        _NetworkVisualization.#ConnectionCountsScratch = new Int32Array(newSize);
+      }
+      return _NetworkVisualization.#ConnectionCountsScratch;
+    }
+    /** Compute connection counts between sequential layer boundaries. */
+    static #computeConnectionCounts(network, inputNodes, hiddenLayers, outputNodes) {
       const numHiddenLayers = hiddenLayers.length;
-      const {
-        displayLayers,
-        layerDisplayCounts,
-        averageNodes
-      } = _NetworkVisualization.#prepareHiddenLayersForDisplay(hiddenLayers);
-      const connections = (network.connections || []).map((conn) => ({
-        weight: conn.weight,
-        fromUUID: String(conn.from.index),
-        // Use .index directly as per INodeStruct
-        toUUID: String(conn.to.index),
-        // Use .index directly as per INodeStruct
-        gaterUUID: conn.gater ? String(conn.gater.index) : null,
-        // Use .index directly
-        enabled: typeof conn.enabled === "boolean" ? conn.enabled : true
-      }));
-      const connectionCounts = [];
+      const arrows = numHiddenLayers > 0 ? numHiddenLayers + 1 : 1;
+      const scratch = _NetworkVisualization.#ensureConnectionScratch(arrows);
+      scratch.fill(0, 0, arrows);
+      _NetworkVisualization.#ConnectionCountsLen = arrows;
       const inputIdSet = new Set(inputNodes.map((n) => Number(n.id)));
       const outputIdSet = new Set(outputNodes.map((n) => Number(n.id)));
-      const hiddenLayerIdSets = hiddenLayers.map(
+      const hiddenSets = hiddenLayers.map(
         (layer) => new Set(layer.map((n) => Number(n.id)))
       );
-      const firstTargetSet = hiddenLayerIdSets[0] ?? outputIdSet;
-      let firstCount = 0;
-      for (const conn of network.connections ?? []) {
+      const connections = network.connections || [];
+      for (let ci = 0; ci < connections.length; ci++) {
+        const conn = connections[ci];
         const fromIdx = Number(conn.from?.index ?? -1);
         const toIdx = Number(conn.to?.index ?? -1);
-        if (inputIdSet.has(fromIdx) && firstTargetSet.has(toIdx)) firstCount++;
-      }
-      connectionCounts.push(firstCount);
-      for (let i = 0; i < hiddenLayerIdSets.length - 1; i++) {
-        let count = 0;
-        const fromSet = hiddenLayerIdSets[i];
-        const toSet = hiddenLayerIdSets[i + 1];
-        for (const conn of network.connections ?? []) {
-          const fromIdx = Number(conn.from?.index ?? -1);
-          const toIdx = Number(conn.to?.index ?? -1);
-          if (fromSet.has(fromIdx) && toSet.has(toIdx)) count++;
+        if (inputIdSet.has(fromIdx)) {
+          if (hiddenSets[0] && hiddenSets[0].has(toIdx)) scratch[0]++;
+          else if (hiddenSets.length === 0 && outputIdSet.has(toIdx))
+            scratch[0]++;
+          continue;
         }
-        connectionCounts.push(count);
-      }
-      if (hiddenLayerIdSets.length > 0) {
-        const lastSet = hiddenLayerIdSets[hiddenLayerIdSets.length - 1];
-        let lastCount = 0;
-        for (const conn of network.connections ?? []) {
-          const fromIdx = Number(conn.from?.index ?? -1);
-          const toIdx = Number(conn.to?.index ?? -1);
-          if (lastSet.has(fromIdx) && outputIdSet.has(toIdx)) lastCount++;
+        for (let h = 0; h < hiddenSets.length; h++) {
+          const fromSet = hiddenSets[h];
+          if (!fromSet.has(fromIdx)) continue;
+          const lastHidden = h === hiddenSets.length - 1;
+          if (!lastHidden) {
+            const toSet = hiddenSets[h + 1];
+            if (toSet.has(toIdx)) {
+              scratch[1 + h]++;
+              break;
+            }
+          } else {
+            if (outputIdSet.has(toIdx)) {
+              scratch[hiddenSets.length]++;
+              break;
+            }
+          }
         }
-        connectionCounts.push(lastCount);
       }
-      const numLayers = 2 + numHiddenLayers;
-      const numArrows = numLayers - 1;
-      const availableWidth = _NetworkVisualization.#TOTAL_WIDTH - numArrows * _NetworkVisualization.#ARROW_WIDTH;
-      const columnWidth = Math.floor(availableWidth / numLayers);
-      let header = "";
-      header += `${colors.blueCore}\u2551` + _NetworkVisualization.pad(
-        `${colors.neonGreen}Input Layer [${INPUT_COUNT}]${colors.reset}`,
-        columnWidth - 1
+      return scratch;
+    }
+    /** Build header string. */
+    static #buildHeader(inputCount, hiddenLayers, outputCount, connectionCounts) {
+      const numHiddenLayers = hiddenLayers.length;
+      const { columnWidth } = _NetworkVisualization.#computeLayout(
+        numHiddenLayers
       );
-      const firstConnCount = connectionCounts[0];
-      const firstArrowText = `${colors.blueNeon}${firstConnCount} ${_NetworkVisualization.#ARROW.trim()}${colors.reset}`;
-      header += _NetworkVisualization.pad(
-        firstArrowText,
-        _NetworkVisualization.#ARROW_WIDTH
+      const parts = _NetworkVisualization.#ScratchHeaderParts;
+      parts.length = 0;
+      parts.push(
+        _NetworkVisualization.#buildHeaderSegment({
+          prefix: `${colors.blueCore}\u2551`,
+          label: `${colors.neonGreen}Input Layer [${inputCount}]${colors.reset}`,
+          width: columnWidth - 1
+        })
       );
-      for (let i = 0; i < numHiddenLayers; i++) {
-        header += _NetworkVisualization.pad(
-          `${colors.cyanNeon}Hidden ${i + 1} [${hiddenLayers[i].length}]${colors.reset}`,
-          columnWidth
+      parts.push(
+        _NetworkVisualization.#formatHeaderArrow(connectionCounts[0] ?? 0)
+      );
+      for (let hiddenLayerIndex = 0; hiddenLayerIndex < numHiddenLayers; hiddenLayerIndex++) {
+        parts.push(
+          _NetworkVisualization.pad(
+            `${colors.cyanNeon}Hidden ${hiddenLayerIndex + 1} [${hiddenLayers[hiddenLayerIndex].length}]${colors.reset}`,
+            columnWidth
+          )
         );
-        if (i < numHiddenLayers) {
-          const connCount = connectionCounts[i + 1] || 0;
-          const arrowText = `${colors.blueNeon}${connCount} ${_NetworkVisualization.#ARROW.trim()}${colors.reset}`;
-          header += _NetworkVisualization.pad(
-            arrowText,
-            _NetworkVisualization.#ARROW_WIDTH
-          );
-        }
+        parts.push(
+          _NetworkVisualization.#formatHeaderArrow(
+            connectionCounts[hiddenLayerIndex + 1] || 0
+          )
+        );
       }
-      header += _NetworkVisualization.pad(
-        `${colors.orangeNeon}Output Layer [${OUTPUT_COUNT}]${colors.reset}`,
-        columnWidth,
-        " ",
-        "center"
-      ) + `${colors.blueCore}\u2551${colors.reset}`;
-      const inputDisplayNodes = Array(INPUT_COUNT).fill(null).map((_, i) => inputNodes[i] || { activation: 0 });
+      parts.push(
+        _NetworkVisualization.pad(
+          `${colors.orangeNeon}Output Layer [${outputCount}]${colors.reset}`,
+          columnWidth,
+          " ",
+          "center"
+        ) + `${colors.blueCore}\u2551${colors.reset}`
+      );
+      return parts.join("");
+    }
+    /** Build a single header segment with optional prefix. */
+    static #buildHeaderSegment(params) {
+      const { prefix = "", label, width } = params;
+      return prefix + _NetworkVisualization.pad(label, width, " ", "center");
+    }
+    /** Format a header arrow segment including connection count label. */
+    static #formatHeaderArrow(connectionCount) {
+      const text = `${colors.blueNeon}${connectionCount} ${_NetworkVisualization.#ARROW.trim()}${colors.reset}`;
+      return _NetworkVisualization.pad(text, _NetworkVisualization.#ARROW_WIDTH);
+    }
+    /** Build legend footer lines. */
+    static #buildLegend() {
+      return [
+        // Spacer
+        `${colors.blueCore}\u2551       ${_NetworkVisualization.pad(" ", 140)} \u2551${colors.reset}`,
+        `${colors.blueCore}\u2551       ${_NetworkVisualization.pad(
+          "Arrows indicate feed-forward flow.",
+          140,
+          " ",
+          "left"
+        )} ${colors.blueCore}\u2551${colors.reset}`,
+        `${colors.blueCore}\u2551       ${_NetworkVisualization.pad(" ", 140)} \u2551${colors.reset}`,
+        `${colors.blueCore}\u2551       ${_NetworkVisualization.pad(
+          `${colors.whiteNeon}Legend:  ${colors.neonGreen}\u25CF${colors.reset}=Input                    ${colors.cyanNeon}\u25A0${colors.reset}=Hidden                    ${colors.orangeNeon}\u25B2${colors.reset}=Output`,
+          140,
+          " ",
+          "left"
+        )} ${colors.blueCore}\u2551${colors.reset}`,
+        `${colors.blueCore}\u2551       ${_NetworkVisualization.pad(
+          `${colors.whiteNeon}Groups:  ${colors.bgOrangeNeon}${colors.bright}v-high+${colors.reset}=Very high positive   ${colors.orangeNeon}high+${colors.reset}=High positive    ${colors.cyanNeon}mid+${colors.reset}=Medium positive    ${colors.neonGreen}low+${colors.reset}=Low positive`,
+          140,
+          " ",
+          "left"
+        )} ${colors.blueCore}\u2551${colors.reset}`,
+        `${colors.blueCore}\u2551       ${_NetworkVisualization.pad(
+          `${colors.whiteNeon}         zero\xB1${colors.reset}=Near zero`,
+          140,
+          " ",
+          "left"
+        )} ${colors.blueCore}\u2551${colors.reset}`,
+        `${colors.blueCore}\u2551       ${_NetworkVisualization.pad(
+          `         ${colors.bgBlueCore}${colors.bright}v-high-${colors.reset}=Very high negative   ${colors.blueNeon}${colors.bright}high-${colors.reset}=High negative    ${colors.blueCore}mid-${colors.reset}=Medium negative    ${colors.blue}low-${colors.reset}=Low negative`,
+          140,
+          " ",
+          "left"
+        )} ${colors.blueCore}\u2551${colors.reset}`
+      ];
+    }
+    /** Build row strings for body. */
+    static #buildRows(params, columnWidth) {
+      const context = _NetworkVisualization.#buildRowsInit(params);
+      const {
+        maxRows,
+        rows,
+        inputDisplayNodes,
+        outputDisplayNodes,
+        numHiddenLayers,
+        inputCount,
+        outputCount,
+        inputNodes,
+        displayLayers,
+        connectionCounts
+      } = context;
+      for (let rowIndex = 0; rowIndex < maxRows; rowIndex++) {
+        let line = "";
+        line += _NetworkVisualization.#buildInputCell({
+          rowIndex,
+          inputCount,
+          columnWidth,
+          inputDisplayNodes
+        });
+        line += _NetworkVisualization.#buildFirstArrowCell({
+          rowIndex,
+          inputCount,
+          inputNodes,
+          displayLayers,
+          connectionCounts
+        });
+        for (let layerIndex = 0; layerIndex < numHiddenLayers; layerIndex++) {
+          line += _NetworkVisualization.#buildHiddenLayerCell({
+            rowIndex,
+            layerIndex,
+            columnWidth,
+            displayLayers
+          });
+          line += _NetworkVisualization.#buildInterLayerArrowCell({
+            rowIndex,
+            layerIndex,
+            numHiddenLayers,
+            displayLayers,
+            connectionCounts,
+            outputCount
+          });
+        }
+        line += _NetworkVisualization.#buildOutputCell({
+          rowIndex,
+          outputCount,
+          outputDisplayNodes,
+          columnWidth
+        });
+        rows.push(line);
+      }
+      return rows.slice();
+    }
+    /** Initialize reusable structures for row building. */
+    static #buildRowsInit(params) {
+      const {
+        inputCount,
+        outputCount,
+        inputNodes,
+        displayLayers,
+        layerDisplayCounts,
+        outputNodes,
+        connectionCounts
+      } = params;
+      const maxRows = Math.max(inputCount, ...layerDisplayCounts, outputCount);
+      const rows = _NetworkVisualization.#ScratchRows;
+      rows.length = 0;
+      const inputDisplayNodes = Array.from(
+        { length: inputCount },
+        (_, idx) => inputNodes[idx] || { activation: 0 }
+      );
+      const outputDisplayNodes = Array.from(
+        { length: outputCount },
+        (_, idx) => outputNodes[idx] || { activation: 0 }
+      );
+      return {
+        maxRows,
+        rows,
+        inputDisplayNodes,
+        outputDisplayNodes,
+        numHiddenLayers: displayLayers.length,
+        inputCount,
+        outputCount,
+        inputNodes,
+        displayLayers,
+        connectionCounts
+      };
+    }
+    /** Build cell for an input row (including label). */
+    static #buildInputCell(params) {
+      const { rowIndex, inputCount, columnWidth, inputDisplayNodes } = params;
+      if (rowIndex >= inputCount)
+        return _NetworkVisualization.pad("", columnWidth);
       const INPUT_LABELS6 = [
         "compass",
         "openN",
@@ -14476,211 +14670,230 @@
         "openW",
         "progress"
       ];
-      const outputDisplayNodes = Array(OUTPUT_COUNT).fill(null).map((_, i) => outputNodes[i] || { activation: 0 });
-      const maxRows = Math.max(INPUT_COUNT, ...layerDisplayCounts, OUTPUT_COUNT);
-      const rows = [];
-      for (let rowIdx = 0; rowIdx < maxRows; rowIdx++) {
-        let row = "";
-        if (rowIdx < INPUT_COUNT) {
-          const node = inputDisplayNodes[rowIdx];
-          const label = rowIdx < 6 ? INPUT_LABELS6[rowIdx] : "";
-          const labelStr = label ? ` ${colors.whiteNeon}${label}${colors.reset}` : "";
-          row += _NetworkVisualization.pad(
-            `${colors.blueCore}\u2551   ${_NetworkVisualization.#formatNode(
-              colors.neonGreen,
-              "\u25CF",
-              node,
-              labelStr
-            )}`,
-            columnWidth,
-            " ",
-            "left"
+      const node = inputDisplayNodes[rowIndex];
+      const label = rowIndex < 6 ? INPUT_LABELS6[rowIndex] : "";
+      const labelStr = label ? ` ${colors.whiteNeon}${label}${colors.reset}` : "";
+      return _NetworkVisualization.pad(
+        `${colors.blueCore}\u2551   ${_NetworkVisualization.#formatNode(
+          colors.neonGreen,
+          "\u25CF",
+          node,
+          labelStr
+        )}`,
+        columnWidth,
+        " ",
+        "left"
+      );
+    }
+    /** Build arrow cell between input and first hidden layer. */
+    static #buildFirstArrowCell(params) {
+      const {
+        rowIndex,
+        inputCount,
+        inputNodes,
+        displayLayers,
+        connectionCounts
+      } = params;
+      const firstHiddenTotal = displayLayers[0]?.length || 0;
+      const totalInputs = Math.min(inputCount, inputNodes.length);
+      const base = `${colors.blueNeon}${_NetworkVisualization.#ARROW}${colors.reset}`;
+      if (rowIndex === 0 && totalInputs && firstHiddenTotal) {
+        const nodeProportion = Math.ceil(
+          (connectionCounts[0] || 0) / Math.max(1, totalInputs)
+        );
+        return _NetworkVisualization.pad(
+          `${colors.blueNeon}${nodeProportion} \u2500\u2500\u25B6${colors.reset}`,
+          _NetworkVisualization.#ARROW_WIDTH
+        );
+      }
+      if (rowIndex < inputCount && rowIndex < firstHiddenTotal && totalInputs && firstHiddenTotal) {
+        const nodeProportion = Math.ceil(
+          (connectionCounts[0] || 0) / Math.max(3, totalInputs * 2)
+        );
+        return _NetworkVisualization.pad(
+          `${colors.blueNeon}${nodeProportion} \u2500\u2500\u25B6${colors.reset}`,
+          _NetworkVisualization.#ARROW_WIDTH
+        );
+      }
+      return _NetworkVisualization.pad(base, _NetworkVisualization.#ARROW_WIDTH);
+    }
+    /** Build hidden layer node cell. */
+    static #buildHiddenLayerCell(params) {
+      const { rowIndex, layerIndex, columnWidth, displayLayers } = params;
+      const layer = displayLayers[layerIndex];
+      if (rowIndex >= layer.length)
+        return _NetworkVisualization.pad(" ", columnWidth);
+      const node = layer[rowIndex];
+      if (node.isAverage) {
+        const labelText = node.label ? `${node.label} ` : "";
+        const extra = ` ${colors.dim}(${labelText}avg of ${node.avgCount})${colors.reset}`;
+        return _NetworkVisualization.pad(
+          _NetworkVisualization.#formatNode(colors.cyanNeon, "\u25A0", node, extra),
+          columnWidth,
+          " ",
+          "left"
+        );
+      }
+      return _NetworkVisualization.pad(
+        _NetworkVisualization.#formatNode(colors.cyanNeon, "\u25A0", node),
+        columnWidth,
+        " ",
+        "left"
+      );
+    }
+    /** Build arrow cell either between hidden layers or from last hidden to outputs. */
+    static #buildInterLayerArrowCell(params) {
+      const {
+        rowIndex,
+        layerIndex,
+        numHiddenLayers,
+        displayLayers,
+        connectionCounts,
+        outputCount
+      } = params;
+      const layer = displayLayers[layerIndex];
+      const arrowPlaceholder = `${colors.blueNeon}${_NetworkVisualization.#ARROW}${colors.reset}`;
+      const isLast = layerIndex === numHiddenLayers - 1;
+      if (!isLast) {
+        const connCount = connectionCounts[layerIndex + 1] || 0;
+        if (rowIndex === 0) {
+          const currentLayerSize = layer.length || 1;
+          const nodeProportion = Math.ceil(
+            connCount / Math.max(3, currentLayerSize * 2)
           );
-        } else {
-          row += _NetworkVisualization.pad("", columnWidth);
-        }
-        if (rowIdx === 0) {
-          const totalInputs = Math.min(INPUT_COUNT, inputNodes.length);
-          const firstHiddenTotal = displayLayers[0]?.length || 0;
-          if (totalInputs > 0 && firstHiddenTotal > 0) {
-            const nodeProportion = Math.ceil(
-              connectionCounts[0] / Math.max(1, totalInputs)
-            );
-            row += _NetworkVisualization.pad(
-              `${colors.blueNeon}${nodeProportion} \u2500\u2500\u25B6${colors.reset}`,
-              _NetworkVisualization.#ARROW_WIDTH
-            );
-          } else {
-            row += _NetworkVisualization.pad(
-              `${colors.blueNeon}${_NetworkVisualization.#ARROW}${colors.reset}`,
-              _NetworkVisualization.#ARROW_WIDTH
-            );
-          }
-        } else if (rowIdx < INPUT_COUNT && rowIdx < displayLayers[0]?.length) {
-          const totalInputs = Math.min(INPUT_COUNT, inputNodes.length);
-          const firstHiddenTotal = displayLayers[0]?.length || 0;
-          if (totalInputs > 0 && firstHiddenTotal > 0) {
-            const nodeProportion = Math.ceil(
-              connectionCounts[0] / Math.max(3, totalInputs * 2)
-            );
-            row += _NetworkVisualization.pad(
-              `${colors.blueNeon}${nodeProportion} \u2500\u2500\u25B6${colors.reset}`,
-              _NetworkVisualization.#ARROW_WIDTH
-            );
-          } else {
-            row += _NetworkVisualization.pad(
-              `${colors.blueNeon}${_NetworkVisualization.#ARROW}${colors.reset}`,
-              _NetworkVisualization.#ARROW_WIDTH
-            );
-          }
-        } else {
-          row += _NetworkVisualization.pad(
-            `${colors.blueNeon}${_NetworkVisualization.#ARROW}${colors.reset}`,
+          return _NetworkVisualization.pad(
+            `${colors.blueNeon}${nodeProportion} \u2500\u2500\u25B6${colors.reset}`,
             _NetworkVisualization.#ARROW_WIDTH
           );
         }
-        for (let layerIdx = 0; layerIdx < numHiddenLayers; layerIdx++) {
-          const layer = displayLayers[layerIdx];
-          if (rowIdx < layer.length) {
-            const node = layer[rowIdx];
-            if (node.isAverage) {
-              const labelText = node.label ? `${node.label} ` : "";
-              const extra = ` ${colors.dim}(${labelText}avg of ${node.avgCount})${colors.reset}`;
-              row += _NetworkVisualization.pad(
-                _NetworkVisualization.#formatNode(
-                  colors.cyanNeon,
-                  "\u25A0",
-                  node,
-                  extra
-                ),
-                columnWidth,
-                " ",
-                "left"
-              );
-            } else {
-              row += _NetworkVisualization.pad(
-                _NetworkVisualization.#formatNode(colors.cyanNeon, "\u25A0", node),
-                columnWidth,
-                " ",
-                "left"
-              );
-            }
-          } else {
-            row += _NetworkVisualization.pad(" ", columnWidth);
-          }
-          if (layerIdx < numHiddenLayers - 1) {
-            const connCount = connectionCounts[layerIdx + 1];
-            if (rowIdx === 0) {
-              const currentLayerSize = displayLayers[layerIdx]?.length || 1;
-              const nodeProportion = Math.ceil(
-                connCount / Math.max(3, currentLayerSize * 2)
-              );
-              row += _NetworkVisualization.pad(
-                `${colors.blueNeon}${nodeProportion} \u2500\u2500\u25B6${colors.reset}`,
-                _NetworkVisualization.#ARROW_WIDTH
-              );
-            } else if (rowIdx < layer.length && rowIdx < displayLayers[layerIdx + 1]?.length) {
-              const currentLayerSize = displayLayers[layerIdx]?.length || 1;
-              const nextLayerSize = displayLayers[layerIdx + 1]?.length || 1;
-              const proportion = Math.max(
-                1,
-                Math.min(5, Math.ceil(connCount / Math.max(3, currentLayerSize)))
-              );
-              row += _NetworkVisualization.pad(
-                `${colors.blueNeon}${proportion} \u2500\u2500\u25B6${colors.reset}`,
-                _NetworkVisualization.#ARROW_WIDTH
-              );
-            } else {
-              row += _NetworkVisualization.pad(
-                `${colors.blueNeon}${_NetworkVisualization.#ARROW}${colors.reset}`,
-                _NetworkVisualization.#ARROW_WIDTH
-              );
-            }
-          } else {
-            const connCount = _NetworkVisualization.#last(connectionCounts) ?? 0;
-            if (rowIdx === 0) {
-              const lastLayerSize = _NetworkVisualization.#lastLength(displayLayers) || 0 || 1;
-              const nodeProportion = Math.ceil(
-                connCount / Math.max(3, lastLayerSize * 2)
-              );
-              row += _NetworkVisualization.pad(
-                `${colors.blueNeon}${nodeProportion} \u2500\u2500\u25B6${colors.reset}`,
-                _NetworkVisualization.#ARROW_WIDTH
-              );
-            } else if (rowIdx < layer.length && rowIdx < OUTPUT_COUNT) {
-              const lastLayerSize = _NetworkVisualization.#lastLength(displayLayers) || 0 || 1;
-              const proportion = Math.max(
-                1,
-                Math.min(5, Math.ceil(connCount / Math.max(5, lastLayerSize * 2)))
-              );
-              row += _NetworkVisualization.pad(
-                `${colors.blueNeon}${proportion} \u2500\u2500\u25B6${colors.reset}`,
-                _NetworkVisualization.#ARROW_WIDTH
-              );
-            } else {
-              row += _NetworkVisualization.pad(
-                `${colors.blueNeon}${_NetworkVisualization.#ARROW}${colors.reset}`,
-                _NetworkVisualization.#ARROW_WIDTH
-              );
-            }
-          }
+        if (rowIndex < layer.length && rowIndex < (displayLayers[layerIndex + 1]?.length || 0)) {
+          const currentLayerSize = layer.length || 1;
+          const proportion = Math.max(
+            1,
+            Math.min(5, Math.ceil(connCount / Math.max(3, currentLayerSize)))
+          );
+          return _NetworkVisualization.pad(
+            `${colors.blueNeon}${proportion} \u2500\u2500\u25B6${colors.reset}`,
+            _NetworkVisualization.#ARROW_WIDTH
+          );
         }
-        if (rowIdx < OUTPUT_COUNT) {
-          const node = outputDisplayNodes[rowIdx];
-          row += _NetworkVisualization.pad(
-            _NetworkVisualization.#formatNode(colors.orangeNeon, "\u25B2", node),
-            columnWidth,
-            " ",
-            "left"
-          ) + `${colors.blueCore}\u2551${colors.reset}`;
-        } else {
-          row += _NetworkVisualization.pad("", columnWidth);
-        }
-        rows.push(row);
+        return _NetworkVisualization.pad(
+          arrowPlaceholder,
+          _NetworkVisualization.#ARROW_WIDTH
+        );
       }
-      return [
-        header,
-        ...rows,
-        // Spacer row
-        `${colors.blueCore}\u2551       ${_NetworkVisualization.pad(" ", 140)} \u2551${colors.reset}`,
-        // Feed-forward flow explanation
-        `${colors.blueCore}\u2551       ${_NetworkVisualization.pad(
-          "Arrows indicate feed-forward flow.",
-          140,
-          " ",
-          "left"
-        )} ${colors.blueCore}\u2551${colors.reset}`,
-        // Spacer row
-        `${colors.blueCore}\u2551       ${_NetworkVisualization.pad(" ", 140)} \u2551${colors.reset}`,
-        // Legend for node types
-        `${colors.blueCore}\u2551       ${_NetworkVisualization.pad(
-          `${colors.whiteNeon}Legend:  ${colors.neonGreen}\u25CF${colors.reset}=Input                    ${colors.cyanNeon}\u25A0${colors.reset}=Hidden                    ${colors.orangeNeon}\u25B2${colors.reset}=Output`,
-          140,
-          " ",
-          "left"
-        )} ${colors.blueCore}\u2551${colors.reset}`,
-        // Legend for activation groups
-        `${colors.blueCore}\u2551       ${_NetworkVisualization.pad(
-          `${colors.whiteNeon}Groups:  ${colors.bgOrangeNeon}${colors.bright}v-high+${colors.reset}=Very high positive   ${colors.orangeNeon}high+${colors.reset}=High positive    ${colors.cyanNeon}mid+${colors.reset}=Medium positive    ${colors.neonGreen}low+${colors.reset}=Low positive`,
-          140,
-          " ",
-          "left"
-        )} ${colors.blueCore}\u2551${colors.reset}`,
-        // Legend for near-zero group
-        `${colors.blueCore}\u2551       ${_NetworkVisualization.pad(
-          `${colors.whiteNeon}         zero\xB1${colors.reset}=Near zero`,
-          140,
-          " ",
-          "left"
-        )} ${colors.blueCore}\u2551${colors.reset}`,
-        // Legend for negative groups
-        `${colors.blueCore}\u2551       ${_NetworkVisualization.pad(
-          `         ${colors.bgBlueCore}${colors.bright}v-high-${colors.reset}=Very high negative   ${colors.blueNeon}${colors.bright}high-${colors.reset}=High negative    ${colors.blueCore}mid-${colors.reset}=Medium negative    ${colors.blue}low-${colors.reset}=Low negative`,
-          140,
-          " ",
-          "left"
-        )} ${colors.blueCore}\u2551${colors.reset}`
-      ].join("\n");
+      const lastConnCount = connectionCounts[numHiddenLayers] || 0;
+      if (rowIndex === 0) {
+        const lastLayerSize = layer.length || 1;
+        const nodeProportion = Math.ceil(
+          lastConnCount / Math.max(3, lastLayerSize * 2)
+        );
+        return _NetworkVisualization.pad(
+          `${colors.blueNeon}${nodeProportion} \u2500\u2500\u25B6${colors.reset}`,
+          _NetworkVisualization.#ARROW_WIDTH
+        );
+      }
+      if (rowIndex < layer.length && rowIndex < outputCount) {
+        const lastLayerSize = layer.length || 1;
+        const proportion = Math.max(
+          1,
+          Math.min(5, Math.ceil(lastConnCount / Math.max(5, lastLayerSize * 2)))
+        );
+        return _NetworkVisualization.pad(
+          `${colors.blueNeon}${proportion} \u2500\u2500\u25B6${colors.reset}`,
+          _NetworkVisualization.#ARROW_WIDTH
+        );
+      }
+      return _NetworkVisualization.pad(
+        arrowPlaceholder,
+        _NetworkVisualization.#ARROW_WIDTH
+      );
+    }
+    /** Build output layer cell. */
+    static #buildOutputCell(params) {
+      const { rowIndex, outputCount, outputDisplayNodes, columnWidth } = params;
+      if (rowIndex >= outputCount)
+        return _NetworkVisualization.pad("", columnWidth);
+      const node = outputDisplayNodes[rowIndex];
+      return _NetworkVisualization.pad(
+        _NetworkVisualization.#formatNode(colors.orangeNeon, "\u25B2", node),
+        columnWidth,
+        " ",
+        "left"
+      ) + `${colors.blueCore}\u2551${colors.reset}`;
+    }
+    /**
+     * Generate a multi-line, colorized ASCII summary of the provided neural network.
+     * The output includes:
+     * - Layer headers with node counts and approximate connection counts between layers.
+     * - Node activation values (numeric + color) for inputs, hidden (or averaged groups), and outputs.
+     * - Condensed legend explaining symbols and activation grouping ranges.
+     *
+     * Hidden layer condensation: For large hidden layers, nodes are grouped into activation buckets;
+     * each bucket is displayed as a single "average" virtual node whose value is the mean activation.
+     * Buckets beyond the configured visible limit are merged into an "other±" meta-group.
+     *
+     * Performance: Uses internal scratch buffers to minimize intermediate allocations. Sorting relies
+     * on ES2023 `toSorted` when available (with a stable fallback) ensuring deterministic grouping.
+     *
+     * @param network - The neural network (expects `nodes` and optional `connections`).
+     * @returns Formatted multi-line string ready for terminal output (ANSI colors included).
+     * @example
+     * ```ts
+     * import { NetworkVisualization } from './networkVisualization';
+     * const ascii = NetworkVisualization.visualizeNetworkSummary(myNetwork);
+     * console.log(ascii);
+     * ```
+     */
+    static visualizeNetworkSummary(network) {
+      const categorized = _NetworkVisualization.#categorizeNodes(network);
+      const INPUT_COUNT = categorized.inputCountDetected || 18;
+      const OUTPUT_COUNT = 4;
+      const hiddenLayers = _NetworkVisualization.#groupHiddenByLayer(
+        categorized.inputNodes,
+        categorized.hiddenNodes,
+        categorized.outputNodes
+      );
+      const prepared = _NetworkVisualization.#prepareHiddenLayersForDisplay(
+        hiddenLayers
+      );
+      const connectionCounts = _NetworkVisualization.#computeConnectionCounts(
+        network,
+        categorized.inputNodes,
+        hiddenLayers,
+        categorized.outputNodes
+      );
+      const { columnWidth } = _NetworkVisualization.#computeLayout(
+        hiddenLayers.length
+      );
+      const header = _NetworkVisualization.#buildHeader(
+        INPUT_COUNT,
+        hiddenLayers,
+        OUTPUT_COUNT,
+        connectionCounts
+      );
+      const rows = _NetworkVisualization.#buildRows(
+        {
+          inputCount: INPUT_COUNT,
+          outputCount: OUTPUT_COUNT,
+          inputNodes: categorized.inputNodes,
+          displayLayers: prepared.displayLayers,
+          layerDisplayCounts: prepared.layerDisplayCounts,
+          outputNodes: categorized.outputNodes,
+          connectionCounts
+        },
+        columnWidth
+      );
+      const legendLines = _NetworkVisualization.#buildLegend();
+      return [header, ...rows, ...legendLines].join("\n");
+    }
+    /** Compute layout derived widths for given hidden layer count. */
+    static #computeLayout(numHiddenLayers) {
+      const numLayers = 2 + numHiddenLayers;
+      const numArrows = numLayers - 1;
+      const availableWidth = _NetworkVisualization.#TOTAL_WIDTH - numArrows * _NetworkVisualization.#ARROW_WIDTH;
+      const columnWidth = Math.floor(availableWidth / numLayers);
+      return { columnWidth };
     }
   };
 
@@ -15079,9 +15292,6 @@
     #solvedMazes = [];
     #solvedMazeKeys = /* @__PURE__ */ new Set();
     #currentBest = null;
-    #clearFn;
-    #logFn;
-    #archiveFn;
     #lastTelemetry = null;
     #lastBestFitness = null;
     #bestFitnessHistory = [];
@@ -15095,6 +15305,9 @@
     #perfStart = null;
     #lastGeneration = null;
     #lastUpdateTs = null;
+    #logFn;
+    #clearFn;
+    #archiveFn;
     static #HISTORY_MAX = 500;
     static #FRAME_INNER_WIDTH = 148;
     static #LEFT_PADDING = 7;
@@ -15108,7 +15321,6 @@
     // label width in archive stats
     static #HISTORY_EXPORT_WINDOW = 200;
     // samples exported in telemetry details
-    /** Unicode blocks used for sparklines (ascending). */
     static #SPARK_BLOCKS = Object.freeze([
       "\u2581",
       "\u2582",
@@ -15119,17 +15331,11 @@
       "\u2587",
       "\u2588"
     ]);
-    /** Floating comparison epsilon for tiny deltas. */
     static #DELTA_EPSILON = 1e-9;
-    /** Max operators listed in acceptance stats. */
     static #TOP_OPERATOR_LIMIT = 6;
-    /** Max mutations listed. */
     static #TOP_MUTATION_LIMIT = 8;
-    /** Max species sizes listed. */
     static #TOP_SPECIES_LIMIT = 5;
-    /** Safety multiplier for hidden layer inference loop. */
     static #LAYER_INFER_LOOP_MULTIPLIER = 4;
-    /** Label strings reused (dedup hidden classes). */
     static #LABEL_PATH_EFF = "Path efficiency";
     static #LABEL_PATH_OVER = "Path overhead";
     static #LABEL_UNIQUE = "Unique cells visited";
@@ -15137,15 +15343,10 @@
     static #LABEL_STEPS = "Steps";
     static #LABEL_FITNESS = "Fitness";
     static #LABEL_ARCH = "Architecture";
-    /** Frame pattern segments reused in redraw. */
     static #FRAME_SINGLE_LINE_CHAR = "\u2550";
     static #FRAME_BRIDGE_TOP = "\u2566\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2566";
     static #FRAME_BRIDGE_BOTTOM = "\u2569\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2569";
     static #EVOLVING_SECTION_LINE = "\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550";
-    // Public aliases for backwards compatibility while internals move to private fields
-    static get HISTORY_MAX() {
-      return _DashboardManager.#HISTORY_MAX;
-    }
     static get FRAME_INNER_WIDTH() {
       return _DashboardManager.#FRAME_INNER_WIDTH;
     }
@@ -15161,8 +15362,29 @@
     static get STAT_LABEL_WIDTH() {
       return _DashboardManager.#STAT_LABEL_WIDTH;
     }
+    static get HISTORY_MAX() {
+      return _DashboardManager.#HISTORY_MAX;
+    }
+    /**
+     * Create a new DashboardManager.
+     *
+     * @param clearFn Function that clears the live dashboard region (terminal or DOM). Required.
+     * @param logFn Function used for streaming live panel lines. Required.
+     * @param archiveFn Optional function used to prepend/append solved-maze archive blocks (separate area / element).
+     *
+     * Defensive notes:
+     * - Non-function arguments are coerced to no-ops to avoid runtime crashes in mixed environments (browser / node tests).
+     * - All three functions are stored as private fields (#clearFn, #logFn, #archiveFn) for later reuse.
+     */
+    constructor(clearFn, logFn, archiveFn) {
+      const noop = () => {
+      };
+      this.#clearFn = typeof clearFn === "function" ? clearFn : noop;
+      this.#logFn = typeof logFn === "function" ? logFn : noop;
+      this.#archiveFn = typeof archiveFn === "function" ? archiveFn : void 0;
+    }
     /** Emit a blank padded line inside the frame to avoid duplication. */
-    logBlank() {
+    #logBlank() {
       this.#logFn(
         `${colors.blueCore}\u2551${NetworkVisualization.pad(
           " ",
@@ -15171,175 +15393,688 @@
         )}${colors.blueCore}\u2551${colors.reset}`
       );
     }
-    constructor(clearFn, logFn, archiveFn) {
-      this.#clearFn = clearFn;
-      this.#logFn = logFn;
-      this.#archiveFn = archiveFn;
-      this.logFunction = (...args) => this.#logFn(...args);
-    }
     /**
-     * formatStat
+     * Format a single statistic line (label + value) framed for the dashboard.
      *
-     * Small helper that returns a prettified line containing a label and value
-     * with color codes applied. The resulting string fits into the dashboard
-     * content width and includes frame padding.
+     * Educational goals:
+     * - Demonstrates consistent alignment via fixed label column width.
+     * - Centralizes color application so other helpers (`#appendSolvedPathStats`, etc.) remain lean.
+     * - Shows simple, allocation‑aware string building without external libs.
+     *
+     * Steps:
+     * 1. Canonicalize label (ensure trailing colon) for uniform appearance.
+     * 2. Pad label to `labelWidth` (left aligned) creating a fixed column.
+     * 3. Normalize the value to string (numbers preserved; null/undefined become literal strings for transparency).
+     * 4. Compose colored content segment (`label` + single space + `value`).
+     * 5. Left/right pad inside the frame content width and wrap with vertical border glyphs.
+     *
+     * Performance notes:
+     * - O(L) where L = composed string length; dominated by `padEnd` + `NetworkVisualization.pad`.
+     * - Avoids template churn inside loops by keeping construction linear.
+     * - No truncation: labels longer than `labelWidth` intentionally overflow to surface overly verbose labels during development.
+     *
+     * Determinism: Pure formatting; no external state or randomness.
+     * Reentrancy: Safe; relies only on parameters and static sizing constants.
+     * Edge cases: Empty label yields just a colon after canonicalization (":"); nullish values become "null" / "undefined" explicitly.
+     *
+     * @param label Descriptive metric label (colon appended if missing).
+     * @param value Metric value (string or number) displayed after a space.
+     * @param colorLabel ANSI / style token for the label portion.
+     * @param colorValue ANSI / style token for the value portion.
+     * @param labelWidth Fixed width for the label column (default derives from class constant).
+     * @returns Fully framed, colorized line ready for logging.
+     * @example
+     * const line = (dashboard as any)["#formatStat"]("Fitness", 12.34);
+     * // => "║  Fitness: 12.34  ... ║" (color codes omitted here)
      */
-    formatStat(label, value, colorLabel = colors.neonSilver, colorValue = colors.cyanNeon, labelWidth = _DashboardManager.#STAT_LABEL_WIDTH) {
-      const lbl = label.endsWith(":") ? label : label + ":";
-      const paddedLabel = lbl.padEnd(labelWidth, " ");
-      const composed = `${colorLabel}${paddedLabel}${colorValue} ${value}${colors.reset}`;
-      return `${colors.blueCore}\u2551${" ".repeat(
-        _DashboardManager.#LEFT_PADDING
-      )}${NetworkVisualization.pad(
-        composed,
+    #formatStat(label, value, colorLabel = colors.neonSilver, colorValue = colors.cyanNeon, labelWidth = _DashboardManager.#STAT_LABEL_WIDTH) {
+      const canonicalLabel = label.endsWith(":") ? label : `${label}:`;
+      const paddedLabel = canonicalLabel.padEnd(labelWidth, " ");
+      const valueString = typeof value === "number" ? `${value}` : String(value);
+      const coloredContent = `${colorLabel}${paddedLabel}${colorValue} ${valueString}${colors.reset}`;
+      const leftPadSpaces = " ".repeat(_DashboardManager.LEFT_PADDING);
+      const framed = `${colors.blueCore}\u2551${leftPadSpaces}${NetworkVisualization.pad(
+        coloredContent,
         _DashboardManager.CONTENT_WIDTH,
         " ",
         "left"
-      )}${" ".repeat(_DashboardManager.#RIGHT_PADDING)}${colors.blueCore}\u2551${colors.reset}`;
+      )}${" ".repeat(_DashboardManager.RIGHT_PADDING)}${colors.blueCore}\u2551${colors.reset}`;
+      return framed;
     }
     /**
-     * buildSparkline
+     * Convert the tail of a numeric series into a compact Unicode sparkline.
      *
-     * Create a compact sparkline string (using block characters) from a numeric
-     * series. The series is normalized to the block range and trimmed to the
-     * requested width by taking the most recent values.
+     * Educational intent: illustrates how a simple per-frame trend visualization
+     * can be produced without external dependencies, while keeping allocation
+     * costs minimal for frequent refreshes (every generation / UI frame).
+     *
+     * Steps:
+     * 1. Slice the most recent `width` samples (via `MazeUtils.tail`) — bounded O(width).
+     * 2. Filter out non‑finite samples (defensive; telemetry may contain NaN during warmup).
+     * 3. Scan once to derive `minValue` / `maxValue` (range baseline).
+     * 4. Map each sample to an index in the precomputed block ramp (#SPARK_BLOCKS).
+     * 5. Append corresponding block characters into a single result string.
+     *
+     * Performance notes:
+     * - Single pass min/max + single pass mapping: O(n) with n = min(series.length, width).
+     * - No intermediate arrays beyond the tail slice (which reuses existing util) & final string builder.
+     * - Uses descriptive local names to keep code educational; hot path is still trivial compared to rendering.
+     * - Avoids `Math.min(...spread)` / `Array.prototype.map` to prevent temporary arrays & GC churn.
+     *
+     * Determinism: Pure function of input array slice (no randomness, no external state).
+     * Reentrancy: Safe; no shared mutable scratch used.
+     * Edge cases: Returns empty string for empty / all non‑finite input; collapses zero range to uniform block.
+     *
+     * @param series Numeric history (older -> newer) to visualize.
+     * @param width Maximum number of most recent samples to encode (default 32); values <= 0 produce ''.
+     * @returns Sparkline string (length <= width). Empty string when insufficient valid data.
+     * @example
+     * // Given recent fitness scores
+     * const spark = dashboardManager["#buildSparkline"]([10,11,11.5,12,13], 4); // -> e.g. "▃▄▆█"
      */
-    buildSparkline(data, width = 32) {
-      if (!data.length) return "";
+    #buildSparkline(series, width = 32) {
+      if (!Array.isArray(series) || !series.length || width <= 0) return "";
+      const tailSlice = MazeUtils.tail(series, width);
+      const sampleCount = tailSlice.length;
+      if (!sampleCount) return "";
+      let writeIndex = 0;
+      for (let readIndex = 0; readIndex < sampleCount; readIndex++) {
+        const sampleValue = tailSlice[readIndex];
+        if (Number.isFinite(sampleValue)) {
+          tailSlice[writeIndex++] = sampleValue;
+        }
+      }
+      if (writeIndex === 0) return "";
+      let minValue = Infinity;
+      let maxValue = -Infinity;
+      for (let scanIndex = 0; scanIndex < writeIndex; scanIndex++) {
+        const value = tailSlice[scanIndex];
+        if (value < minValue) minValue = value;
+        if (value > maxValue) maxValue = value;
+      }
+      const valueRange = maxValue - minValue || 1;
       const blocks = _DashboardManager.#SPARK_BLOCKS;
-      const tail = MazeUtils.tail(data, width);
-      let min = Infinity;
-      let max = -Infinity;
-      for (let tailIndex = 0; tailIndex < tail.length; tailIndex++) {
-        const value = tail[tailIndex];
-        if (value < min) min = value;
-        if (value > max) max = value;
-      }
-      const range = max - min || 1;
-      const out = [];
-      for (let tailIndex = 0; tailIndex < tail.length; tailIndex++) {
-        const value = tail[tailIndex];
-        const blockIndex = Math.floor(
-          (value - min) / range * (blocks.length - 1)
+      const blocksCount = blocks.length - 1;
+      let sparkline = "";
+      for (let encodeIndex = 0; encodeIndex < writeIndex; encodeIndex++) {
+        const normalized = (tailSlice[encodeIndex] - minValue) / valueRange;
+        const blockIndex = Math.min(
+          blocksCount,
+          Math.max(0, Math.floor(normalized * blocksCount))
         );
-        out.push(blocks[blockIndex]);
+        sparkline += blocks[blockIndex];
       }
-      return out.join("");
+      return sparkline;
     }
-    /**
-     * Return up to the last `n` items from `arr` as a new array.
-     * Small utility to centralize tail-window extraction logic used across the dashboard.
-     */
-    // ...getTail removed in favor of MazeUtils.tail
-    // Small helper to read the last element of an array safely.
-    // Removed legacy #last helper; native Array.prototype.at(-1) is used directly (ES2023).
-    /**
-     * Push a numeric value onto a history buffer and keep it bounded to HISTORY_MAX.
-     */
-    // ...existing code...
-    /**
-     * Create a lightweight key for a maze (used to dedupe solved mazes).
-     * The format is intentionally simple (concatenated rows) since the set
-     * is only used for equality checks within a single run.
-     */
-    getMazeKey(maze) {
+    /** Create a lightweight key for a maze (dedupe solved mazes). */
+    #getMazeKey(maze) {
       return maze.join("");
     }
-    /**
-     * appendSolvedToArchive
-     *
-     * When a maze is solved for the first time, format and append a boxed
-     * representation of the solved maze to the provided `archiveLogFunction`.
-     * The block includes a header, optional small trend sparklines, the
-     * centered maze drawing, and several efficiency stats derived from the path.
-     *
-     * This function is careful to be a no-op if no archive logger was provided
-     * during construction.
-     *
-     * @param solved - record containing maze, solution and generation
-     * @param displayNumber - 1-based ordinal for the solved maze in the archive
-     */
-    appendSolvedToArchive(solved, displayNumber) {
+    /** Wrapper to append solved archive block (public logic retained from original). */
+    #appendSolvedToArchive(solved, displayNumber) {
       if (!this.#archiveFn) return;
       const blockLines = [];
       this.#appendSolvedHeader(blockLines, solved, displayNumber);
-      this.#appendSolvedSparklines(blockLines);
+      this.#appendSolvedSparklines(blockLines, solved.network);
       this.#appendSolvedMaze(blockLines, solved);
       this.#appendSolvedPathStats(blockLines, solved);
-      this.#appendSolvedArchitecture(blockLines, solved.network);
       this.#appendSolvedFooterAndEmit(blockLines);
     }
-    /** Append header/title/separator lines for a solved maze block. */
-    #appendSolvedHeader(blockLines, solved, displayNumber) {
-      const header = `${colors.blueCore}\u2560${NetworkVisualization.pad(
-        "\u2550".repeat(_DashboardManager.FRAME_INNER_WIDTH),
-        _DashboardManager.FRAME_INNER_WIDTH,
-        "\u2550"
-      )}\u2563${colors.reset}`;
-      const title = `${colors.blueCore}\u2551${NetworkVisualization.pad(
-        `${colors.orangeNeon} SOLVED #${displayNumber} (Gen ${solved.generation})${colors.reset}${colors.blueCore}`,
-        _DashboardManager.FRAME_INNER_WIDTH,
-        " "
-      )}\u2551${colors.reset}`;
-      const sep = `${colors.blueCore}\u2560${NetworkVisualization.pad(
-        "\u2500".repeat(_DashboardManager.FRAME_INNER_WIDTH),
-        _DashboardManager.FRAME_INNER_WIDTH,
-        "\u2500"
-      )}\u2563${colors.reset}`;
-      blockLines.push(header, title, sep);
+    /**
+     * redraw
+     *
+     * Clear + repaint the live dashboard frame while updating rich stats snapshot.
+     *
+     * Steps (delegated to focused helpers for readability & GC awareness):
+     * 1. beginFrameRefresh: clear terminal region & print static frame header.
+     * 2. printCurrentBestSection: conditionally render evolving section (network, maze, stats, progress).
+     * 3. updateDetailedStatsSnapshot: build/export metrics & sparklines using scratch arrays (bounded histories).
+     * 4. Emit a spacer line to preserve the original layout rhythm.
+     *
+     * Performance considerations:
+     * - Reuses `#scratch` arrays to avoid per-frame allocations when deriving top lists.
+     * - Histories are already bounded (HISTORY_MAX) so sparkline work is O(width).
+     * - Early exit when no telemetry & no current best yet.
+     *
+     * Determinism: Purely formatting & aggregation (no randomness).
+     * Reentrancy: Not reentrant (mutates internal state and shared scratch buffers). One instance per run.
+     * @param currentMaze Maze currently being evolved.
+     * @param neat Optional NEAT implementation instance for population-level stats.
+     */
+    redraw(currentMaze, neat) {
+      this.#beginFrameRefresh();
+      if (this.#currentBest) this.#printCurrentBestSection(currentMaze);
+      this.#updateDetailedStatsSnapshot(neat);
+      this.#logBlank();
     }
-    /** Append trending sparklines for solved archive block. */
-    #appendSolvedSparklines(blockLines) {
+    /** Shared scratch allocations reused across redraw cycles to reduce GC churn. */
+    #scratch = { scores: [], speciesSizes: [], operatorStats: [], mutationEntries: [] };
+    /** Clear & print static frame top. (Step 1 of redraw) */
+    #beginFrameRefresh() {
+      this.#clearFn();
+      this.#printTopFrame();
+    }
+    /**
+     * Build the rich detailed stats snapshot consumed by external telemetry observers.
+     *
+     * Educational overview:
+     * This method aggregates multiple orthogonal evolution signals (fitness trends, structural complexity,
+     * diversity, Pareto front geometry, operator acceptance, mutation frequencies, species distribution, etc.) into
+     * one immutable plain object assigned to `#lastDetailedStats`. It is invoked once per redraw cycle (not per
+     * individual genome evaluation) to amortize cost and keep UI refresh predictable.
+     *
+     * Steps (high‑level):
+     * 1. Guard: if we have neither telemetry nor a current best candidate, skip work (no data yet).
+     * 2. Destructure relevant sub-snapshots from the raw telemetry (complexity, perf, lineage, diversity, objectives...).
+     * 3. Derive population statistics via `#computePopulationStats` (mean/median/species/enabled ratio) and patch gaps
+     *    with the current best's fitness / species count as reasonable fallbacks for early generations.
+     * 4. Generate sparkline trend strings for tracked bounded histories (fitness, nodes, conns, hypervolume, progress, species).
+     * 5. Derive Pareto front size metrics & novelty archive size (defensive wrappers to tolerate optional APIs).
+     * 6. Compute operator acceptance, top mutation operator counts, and largest species sizes (scratch-buffer reuse inside helpers).
+     * 7. Compute best fitness delta (difference vs previous sample) for quick “is improving” signal.
+     * 8. Assemble and assign a consolidated snapshot object with timestamps & derived boolean flags (e.g. simplifyPhaseActive).
+     *
+     * Performance notes:
+     * - All history arrays are already bounded (HISTORY_MAX); sparkline generation is O(width) each.
+     * - Sorting work (operator / mutation / species) is limited to top-N extraction with small fixed caps (config constants).
+     * - Uses defensive optional chaining + nullish coalescing to avoid cascading throws; a single try/catch wraps overall build.
+     * - Allocations: one snapshot object + a handful of small arrays (top lists). Histories are sliced lazily via helper.
+     *
+     * Determinism: Pure aggregation of previously captured deterministic data. No RNG usage.
+     * Reentrancy: Not reentrant; mutates `#lastDetailedStats`. Acceptable because a single dashboard instance services one run.
+     * Failure handling: Any unexpected error aborts this build silently (stats are opportunistic, UI remains functional).
+     *
+     * @param neat Optional NEAT engine instance (used for population stats, operator stats, novelty archive size, species sizes).
+     */
+    #updateDetailedStatsSnapshot(neat) {
+      const telemetry = this.#lastTelemetry;
+      if (!telemetry && !this.#currentBest) return;
+      try {
+        const complexitySnapshot = telemetry?.complexity;
+        const perfSnapshot = telemetry?.perf;
+        const lineageSnapshot = telemetry?.lineage;
+        const diversitySnapshot = telemetry?.diversity;
+        const rawFrontsArray = Array.isArray(telemetry?.fronts) ? telemetry.fronts : null;
+        const objectivesSnapshot = telemetry?.objectives;
+        const hypervolumeValue = telemetry?.hyper;
+        const mutationStatsObj = telemetry?.mutationStats || telemetry?.mutation?.stats;
+        const bestFitnessValue = this.#currentBest?.result?.fitness;
+        const saturationFractionValue = this.#currentBest?.result?.saturationFraction;
+        const actionEntropyValue = this.#currentBest?.result?.actionEntropy;
+        const populationStats = this.#computePopulationStats(neat);
+        if (populationStats.mean == null && typeof bestFitnessValue === "number") {
+          populationStats.mean = +bestFitnessValue.toFixed(2);
+        }
+        if (populationStats.median == null && typeof bestFitnessValue === "number") {
+          populationStats.median = +bestFitnessValue.toFixed(2);
+        }
+        if (populationStats.speciesCount == null && typeof telemetry?.species === "number") {
+          populationStats.speciesCount = telemetry.species;
+        }
+        const sparkWidth = _DashboardManager.#GENERAL_SPARK_WIDTH;
+        const sparklines = {
+          fitness: this.#buildSparkline(this.#bestFitnessHistory, sparkWidth) || null,
+          nodes: this.#buildSparkline(this.#complexityNodesHistory, sparkWidth) || null,
+          conns: this.#buildSparkline(this.#complexityConnsHistory, sparkWidth) || null,
+          hyper: this.#buildSparkline(this.#hypervolumeHistory, sparkWidth) || null,
+          progress: this.#buildSparkline(this.#progressHistory, sparkWidth) || null,
+          species: this.#buildSparkline(this.#speciesCountHistory, sparkWidth) || null
+        };
+        const firstFrontSize = rawFrontsArray?.[0]?.length || 0;
+        const paretoFrontSizes = rawFrontsArray ? rawFrontsArray.map((front) => front?.length || 0) : null;
+        const noveltyArchiveSize = this.#safeInvoke(
+          () => neat?.getNoveltyArchiveSize ? neat.getNoveltyArchiveSize() : null,
+          null
+        );
+        const operatorAcceptance = this.#computeOperatorAcceptance(neat);
+        const topMutations = this.#computeTopMutations(mutationStatsObj);
+        const topSpeciesSizes = this.#computeTopSpeciesSizes(neat);
+        const bestFitnessDelta = (() => {
+          if (typeof bestFitnessValue !== "number") return null;
+          const previousSample = this.#bestFitnessHistory.at(-2) ?? null;
+          if (previousSample == null) return null;
+          return +(bestFitnessValue - previousSample).toFixed(3);
+        })();
+        this.#lastDetailedStats = {
+          generation: this.#currentBest?.generation || 0,
+          bestFitness: typeof bestFitnessValue === "number" ? bestFitnessValue : null,
+          bestFitnessDelta,
+          saturationFraction: typeof saturationFractionValue === "number" ? saturationFractionValue : null,
+          actionEntropy: typeof actionEntropyValue === "number" ? actionEntropyValue : null,
+          populationMean: populationStats.mean,
+          populationMedian: populationStats.median,
+          enabledConnRatio: populationStats.enabledRatio,
+          complexity: complexitySnapshot || null,
+          simplifyPhaseActive: !!(complexitySnapshot && (complexitySnapshot.growthNodes < 0 || complexitySnapshot.growthConns < 0)),
+          perf: perfSnapshot || null,
+          lineage: lineageSnapshot || null,
+          diversity: diversitySnapshot || null,
+          speciesCount: populationStats.speciesCount,
+          topSpeciesSizes,
+          objectives: objectivesSnapshot || null,
+          paretoFrontSizes,
+          firstFrontSize,
+          hypervolume: typeof hypervolumeValue === "number" ? hypervolumeValue : null,
+          noveltyArchiveSize,
+          operatorAcceptance,
+          topMutations,
+          mutationStats: mutationStatsObj || null,
+          trends: sparklines,
+          histories: {
+            bestFitness: this.#sliceHistoryForExport(this.#bestFitnessHistory),
+            nodes: this.#sliceHistoryForExport(this.#complexityNodesHistory),
+            conns: this.#sliceHistoryForExport(this.#complexityConnsHistory),
+            hyper: this.#sliceHistoryForExport(this.#hypervolumeHistory),
+            progress: this.#sliceHistoryForExport(this.#progressHistory),
+            species: this.#sliceHistoryForExport(this.#speciesCountHistory)
+          },
+          timestamp: Date.now()
+        };
+      } catch {
+      }
+    }
+    /**
+     * Aggregate basic population-wide statistics (mean & median fitness, species count, enabled connection ratio).
+     *
+     * Educational intent:
+     * Centralizes lightweight descriptive statistics needed for trend visualization and telemetry export
+     * while demonstrating reuse of a shared scratch array to minimize per-generation allocations.
+     *
+     * Steps:
+     * 1. Guard & early return if the provided engine instance lacks a population array.
+     * 2. Reuse `#scratch.scores` (cleared in-place) to collect numeric fitness scores.
+     * 3. Count total vs enabled connections across genomes to derive an enabled ratio (structural sparsity signal).
+     * 4. Compute mean in a single pass over the scores scratch array.
+     * 5. Clone & sort scores (ascending) to compute median (keeps original order intact for any other readers).
+     * 6. Derive species count defensively (array length or null when absent).
+     * 7. Return a small plain object (all numbers formatted to 2 decimals where derived) — consumers may patch
+     *    missing values later (see fallback logic in `#updateDetailedStatsSnapshot`).
+     *
+     * Complexity:
+     * - Score collection: O(G) with G = population size.
+     * - Connection scan: O(E) with E = total number of connection entries (linear).
+     * - Sorting for median: O(G log G) — acceptable for modest populations; if G became very large, a selection
+     *   algorithm (nth_element style) could replace the sort (document trade-offs first if changed).
+     *
+     * Performance notes:
+     * - Reuses a single scores scratch array (cleared via length reset) to avoid churn.
+     * - Uses numeric formatting only at final aggregation (minimizes intermediate string creation).
+     * - Avoids repeated optional chaining in inner loops by shallow local references.
+     *
+     * Determinism: Pure function of the provided `neat.population` snapshot (iteration order is respected).
+     * Reentrancy: Safe; scratch array is instance-scoped but method is not expected to be invoked concurrently.
+     * Edge cases: Empty / missing population returns all-null fields; division by zero guarded by connection count checks.
+     *
+     * @param neat NEAT-like engine instance exposing `population`, optional `species` collection.
+     * @returns Object with `mean`, `median`, `speciesCount`, `enabledRatio` (each nullable when not derivable).
+     */
+    #computePopulationStats(neat) {
+      if (!neat || !Array.isArray(neat.population) || neat.population.length === 0) {
+        return {
+          mean: null,
+          median: null,
+          speciesCount: null,
+          enabledRatio: null
+        };
+      }
+      const { scores } = this.#scratch;
+      scores.length = 0;
+      let enabledConnectionsCount = 0;
+      let totalConnectionsCount = 0;
+      for (const genome of neat.population) {
+        if (typeof genome?.score === "number") scores.push(genome.score);
+        const genomeConns = genome?.connections;
+        if (Array.isArray(genomeConns)) {
+          for (const connection of genomeConns) {
+            totalConnectionsCount++;
+            if (connection?.enabled !== false) enabledConnectionsCount++;
+          }
+        }
+      }
+      let mean = null;
+      let median = null;
+      if (scores.length) {
+        let sum = 0;
+        for (let scoreIndex = 0; scoreIndex < scores.length; scoreIndex++) {
+          sum += scores[scoreIndex];
+        }
+        mean = +(sum / scores.length).toFixed(2);
+        const sortedScores = [...scores].sort((a, b) => a - b);
+        const middleIndex = Math.floor(sortedScores.length / 2);
+        const medianRaw = sortedScores.length % 2 === 0 ? (sortedScores[middleIndex - 1] + sortedScores[middleIndex]) / 2 : sortedScores[middleIndex];
+        median = +medianRaw.toFixed(2);
+      }
+      const enabledRatio = totalConnectionsCount ? +(enabledConnectionsCount / totalConnectionsCount).toFixed(2) : null;
+      const speciesCount = Array.isArray(neat.species) ? neat.species.length : null;
+      return { mean, median, speciesCount, enabledRatio };
+    }
+    /**
+     * Derive a ranked list of operator acceptance percentages from the (optional) evolution engine.
+     *
+     * Educational focus:
+     * - Demonstrates defensive integration with a loosely‑typed external API (`getOperatorStats`).
+     * - Shows how to reuse an instance scratch buffer to avoid per‑refresh allocations.
+     * - Illustrates compact ranking logic (copy + sort + slice) while preserving original raw snapshot.
+     *
+     * Acceptance definition:
+     *   acceptancePct = (success / max(1, attempts)) * 100   (formatted to 2 decimals)
+     *   A zero attempts count is clamped to 1 to avoid division by zero; this treats a (success>0, attempts==0)
+     *   anomaly as full success rather than NaN — acceptable for a resilience‑biased dashboard.
+     *
+     * Steps:
+     * 1. Guard: verify `neat.getOperatorStats` is a function (else return null to signal absence of data).
+     * 2. Safe invoke inside try/catch (engines may throw while stats are initializing).
+     * 3. Filter raw entries into `#scratch.operatorStats` keeping only { name:string, success:number, attempts:number }.
+     * 4. Create a ranked copy sorted by descending acceptance ratio (stable for ties in modern JS engines).
+     * 5. Map the top N (`#TOP_OPERATOR_LIMIT`) into a lightweight exported shape `{ name, acceptancePct }`.
+     * 6. Return `null` when no valid entries remain after filtering (downstream rendering can simply skip the block).
+     *
+     * Complexity:
+     * - Let K be the number of operator entries. Filtering O(K); sort O(K log K); slice/map O(min(N, K)).
+     * - K is typically tiny (single digits), so the impact per redraw is negligible.
+     *
+     * Performance notes:
+     * - Scratch buffer cleared via length reset (no new array each call).
+     * - Only one extra array allocation (`rankedCopy`) for isolation of sort side‑effects.
+     * - Formatting (toFixed) deferred until final mapping to limit transient string creation.
+     *
+     * Determinism: Pure given the operator stats snapshot (no randomness). Relies on stable `Array.prototype.sort` for tie ordering.
+     * Reentrancy: Safe under single‑threaded assumption; scratch buffer is reused but not shared across concurrent calls.
+     * Edge cases & error handling:
+     * - Missing API / thrown error => null.
+     * - Malformed entries (missing numeric fields) silently excluded.
+     * - Division by zero avoided via denominator clamp.
+     * - Empty post‑filter set => null (consistent sentinel).
+     *
+     * @param neat Optional engine exposing `getOperatorStats(): Array<{name:string, success:number, attempts:number}>`.
+     * @returns Array of top operators with acceptance percentages or null when unavailable / no data.
+     * @example
+     * const acceptance = (dashboard as any)["#computeOperatorAcceptance"](neatInstance);
+     * // => [ { name: 'mutateAddNode', acceptancePct: 62.5 }, ... ] or null
+     */
+    #computeOperatorAcceptance(neat) {
+      if (typeof neat?.getOperatorStats !== "function") return null;
+      let rawOperatorStats;
+      try {
+        rawOperatorStats = neat.getOperatorStats();
+      } catch {
+        return null;
+      }
+      if (!Array.isArray(rawOperatorStats) || rawOperatorStats.length === 0)
+        return null;
+      const scratchBuffer = this.#scratch.operatorStats;
+      scratchBuffer.length = 0;
+      for (const operatorStat of rawOperatorStats) {
+        if (operatorStat && typeof operatorStat.name === "string" && typeof operatorStat.success === "number" && typeof operatorStat.attempts === "number") {
+          scratchBuffer.push(operatorStat);
+        }
+      }
+      if (!scratchBuffer.length) return null;
+      const rankedCopy = [...scratchBuffer].sort((leftStat, rightStat) => {
+        const leftAcceptance = leftStat.success / Math.max(1, leftStat.attempts);
+        const rightAcceptance = rightStat.success / Math.max(1, rightStat.attempts);
+        if (rightAcceptance !== leftAcceptance)
+          return rightAcceptance - leftAcceptance;
+        return 0;
+      });
+      const limit = Math.min(
+        _DashboardManager.#TOP_OPERATOR_LIMIT,
+        rankedCopy.length
+      );
+      const acceptanceList = [];
+      for (let rankIndex = 0; rankIndex < limit; rankIndex++) {
+        const rankedStat = rankedCopy[rankIndex];
+        const acceptancePct = +(100 * rankedStat.success / Math.max(1, rankedStat.attempts)).toFixed(2);
+        acceptanceList.push({ name: rankedStat.name, acceptancePct });
+      }
+      return acceptanceList.length ? acceptanceList : null;
+    }
+    /**
+     * Produce a ranked list of the most frequent mutation operators observed so far.
+     *
+     * Educational focus:
+     * - Demonstrates reuse of an in-place scratch tuple array to avoid allocation churn.
+     * - Shows defensive extraction from a loosely-typed stats object (filtering only numeric counts).
+     * - Illustrates a simple top-N selection pattern (sort + bounded slice) with explicit caps.
+     *
+     * Steps:
+     * 1. Guard: return null if `mutationStats` is not a plain object.
+     * 2. Clear and repopulate `#scratch.mutationEntries` with `[name, count]` tuples for numeric fields.
+     * 3. Early return null when no valid entries collected (simplifies downstream rendering conditions).
+     * 4. Sort the scratch array in-place by descending count (highest frequency first) using descriptive comparator param names.
+     * 5. Take the top N (bounded by `#TOP_MUTATION_LIMIT`) and map to output objects `{ name, count }`.
+     * 6. Return the resulting array (guaranteed non-empty) or null if absent.
+     *
+     * Complexity:
+     * - Collection: O(K) with K = enumerable keys on `mutationStats`.
+     * - Sort: O(K log K); K is typically modest (dozens at most) so overhead is negligible.
+     * - Slice/map: O(min(N, K)).
+     *
+     * Performance notes:
+     * - Scratch array is reused (length reset) preventing repeated allocation of tuple arrays each frame.
+     * - In-place sort avoids cloning (`[...entries]`) found in earlier version, eliminating one transient array.
+     * - Comparator accesses tuple indices directly, avoiding destructuring overhead in the hot call.
+     *
+     * Determinism: Pure transformation of the provided stats snapshot; no randomness.
+     * Reentrancy: Safe for single-threaded invocation pattern; scratch state is not shared across instances.
+     * Edge cases:
+     * - Non-object or empty object => null.
+     * - Non-numeric values silently skipped.
+     * - Negative counts retained (still sorted numerically) under the assumption they signal net effects; could be filtered if undesired.
+     *
+     * @param mutationStats Arbitrary object mapping mutation operator names to numeric invocation counts.
+     * @returns Array of top mutation operators (name + count) or null when no data.
+     * @example
+     * const top = (dashboard as any)["#computeTopMutations"]({ addNode: 42, addConn: 17 });
+     * // => [ { name: 'addNode', count: 42 }, { name: 'addConn', count: 17 } ]
+     */
+    #computeTopMutations(mutationStats) {
+      if (!mutationStats || typeof mutationStats !== "object") return null;
+      const mutationEntriesScratch = this.#scratch.mutationEntries;
+      mutationEntriesScratch.length = 0;
+      for (const mutationName of Object.keys(mutationStats)) {
+        const occurrenceCount = mutationStats[mutationName];
+        if (typeof occurrenceCount === "number" && Number.isFinite(occurrenceCount)) {
+          mutationEntriesScratch.push([mutationName, occurrenceCount]);
+        }
+      }
+      if (!mutationEntriesScratch.length) return null;
+      mutationEntriesScratch.sort(
+        (leftEntry, rightEntry) => rightEntry[1] - leftEntry[1]
+      );
+      const limit = Math.min(
+        _DashboardManager.#TOP_MUTATION_LIMIT,
+        mutationEntriesScratch.length
+      );
+      const topMutations = [];
+      for (let rankIndex = 0; rankIndex < limit; rankIndex++) {
+        const [mutationName, occurrenceCount] = mutationEntriesScratch[rankIndex];
+        topMutations.push({ name: mutationName, count: occurrenceCount });
+      }
+      return topMutations;
+    }
+    /**
+     * Compute the sizes (member counts) of the largest species (Top-N) in the current population snapshot.
+     *
+     * Educational focus:
+     * - Demonstrates reuse of an integer scratch array to avoid new allocations every redraw.
+     * - Highlights a simple pattern for extracting a Top-N ranking from a small set (in-place sort + bounded copy).
+     * - Shows defensive handling of loosely-typed engine data (species objects may omit `members`).
+     *
+     * Steps:
+     * 1. Guard: return null when `neat.species` is absent or empty.
+     * 2. Repopulate `#scratch.speciesSizes` with numeric member counts (fallback 0 when ambiguous).
+     * 3. In-place sort scratch array descending (largest first).
+     * 4. Copy the first N (`#TOP_SPECIES_LIMIT`) values into a new output array for immutability to callers.
+     * 5. Return the ranked sizes or null when no data.
+     *
+     * Complexity:
+     * - Let S = species count. Population: O(S). Sort: O(S log S). Copy: O(min(S, N)). S is typically modest, so cost is trivial.
+     *
+     * Performance notes:
+     * - Reuses a single scratch array (cleared via length assignment) to avoid allocation churn.
+     * - In-place sort avoids creating an additional clone (`[...scratch]`), reducing temporary memory.
+     * - Output array is sized at most `#TOP_SPECIES_LIMIT` (small, bounded allocation) for downstream display safety.
+     *
+     * Determinism: Pure function of the `neat.species` snapshot (ordering depends only on numerical counts; stable for equal sizes because JS sort is stable in modern engines but equal sizes preserve original order).
+     * Reentrancy: Safe under single-threaded invocation pattern (scratch array reused but not shared concurrently).
+     * Edge cases:
+     * - Missing / non-array / empty species list => null.
+     * - Species object missing `members` => treated as size 0.
+     * - Negative member counts (unexpected) retained and sorted numerically; could be filtered if a real engine produced them.
+     *
+     * @param neat Optional NEAT-like engine instance exposing an array `species` with `members` arrays.
+     * @returns Array of top species sizes (descending) or null when no species present.
+     * @example
+     * const sizes = (dashboard as any)["#computeTopSpeciesSizes"](neat);
+     * // => [34, 21, 10] (up to 5 elements) or null
+     */
+    #computeTopSpeciesSizes(neat) {
+      if (!Array.isArray(neat?.species) || neat.species.length === 0) return null;
+      const speciesSizesScratch = this.#scratch.speciesSizes;
+      speciesSizesScratch.length = 0;
+      for (const speciesEntry of neat.species) {
+        const sizeValue = Array.isArray(speciesEntry?.members) ? speciesEntry.members.length : 0;
+        speciesSizesScratch.push(sizeValue);
+      }
+      if (!speciesSizesScratch.length) return null;
+      speciesSizesScratch.sort((leftSize, rightSize) => rightSize - leftSize);
+      const limit = Math.min(
+        _DashboardManager.#TOP_SPECIES_LIMIT,
+        speciesSizesScratch.length
+      );
+      const topSpeciesSizes = [];
+      for (let rankIndex = 0; rankIndex < limit; rankIndex++) {
+        topSpeciesSizes.push(speciesSizesScratch[rankIndex]);
+      }
+      return topSpeciesSizes;
+    }
+    /** Safe invoke wrapper returning fallback on throw. */
+    #safeInvoke(fn, fallback) {
+      try {
+        return fn();
+      } catch {
+        return fallback;
+      }
+    }
+    /**
+     * Append the top header lines for a solved maze archive block.
+     *
+     * Format mirrors other framed sections: a top border, a centered label line
+     * identifying the solved ordinal and generation, and one spacer line to
+     * visually separate from subsequent sparkline + maze content.
+     *
+     * We keep this lean: no dynamic width calculations beyond centering, and we
+     * avoid extra temporary arrays (push directly into the provided accumulator).
+     *
+     * @param blockLines Accumulator array mutated by appending formatted lines.
+     * @param solved Object containing result + generation metadata.
+     * @param displayNumber 1-based solved maze index for user-friendly labeling.
+     */
+    #appendSolvedHeader(blockLines, solved, displayNumber) {
+      const innerWidth = _DashboardManager.FRAME_INNER_WIDTH;
+      blockLines.push(
+        `${colors.blueCore}\u2554${NetworkVisualization.pad(
+          "\u2550".repeat(innerWidth),
+          innerWidth,
+          "\u2550"
+        )}\u2557${colors.reset}`
+      );
+      const { result, generation } = solved;
+      const rawFitness = result?.fitness;
+      const formattedFitness = typeof rawFitness === "number" && Number.isFinite(rawFitness) ? rawFitness.toFixed(2) : "n/a";
+      const title = ` SOLVED #${Math.max(
+        1,
+        displayNumber
+      )} (GEN ${generation})  FITNESS ${formattedFitness} `;
+      const leftPaddingSize = Math.max(
+        0,
+        Math.floor((innerWidth - title.length) / 2)
+      );
+      const rightPaddingSize = Math.max(
+        0,
+        innerWidth - title.length - leftPaddingSize
+      );
+      blockLines.push(
+        `${colors.blueCore}\u2551${" ".repeat(leftPaddingSize)}${colors.orangeNeon}${title}${colors.blueCore}${" ".repeat(rightPaddingSize)}\u2551${colors.reset}`
+      );
+      blockLines.push(
+        `${colors.blueCore}\u2551${NetworkVisualization.pad(" ", innerWidth, " ")}\u2551${colors.reset}`
+      );
+    }
+    /**
+     * Append solved-run sparklines plus a one-line architecture summary.
+     *
+     * Additions over the original implementation:
+     * - Includes current network architecture (layer sizes) using arrow formatting ("I <=> H1 <=> ... <=> O").
+     * - Consolidates architecture here (removed separate later architecture line to avoid duplication).
+     * - Retains aligned label formatting via shared `#formatStat` helper for consistency.
+     *
+     * Architecture derivation:
+     * - Uses `#deriveArchitecture` (returns e.g. "6 - 6 - 5 - 4").
+     * - Converts hyphen-delimited form to bi-directional arrow form replacing " - " with " <=> " for clearer layer transitions.
+     * - Skips line when result is 'n/a'.
+     *
+     * Steps:
+     * 1. Build architecture string (if derivable) and push as first line.
+     * 2. For each tracked history series build a sparkline (bounded width) and push if non-empty.
+     * 3. Emit a trailing blank framed line as a visual separator before maze rendering.
+     *
+     * Determinism: Pure formatting/read-only usage of snapshot histories & network.
+     * Reentrancy: Safe; only mutates provided accumulator.
+     * Edge cases: Empty histories yield omitted lines; architecture omitted when unknown.
+     *
+     * @param blockLines Accumulator mutated in place.
+     * @param network Network whose architecture will be summarized; optional (can be nullish).
+     */
+    #appendSolvedSparklines(blockLines, network) {
       const solvedLabelWidth = _DashboardManager.#SOLVED_LABEL_WIDTH;
-      const solvedStat = (label, value) => this.formatStat(
+      const solvedStat = (label, value) => this.#formatStat(
         label,
         value,
         colors.neonSilver,
         colors.cyanNeon,
         solvedLabelWidth
       );
-      const pushIf = (label, value) => value && blockLines.push(solvedStat(label, value));
+      const pushIf = (label, value) => {
+        if (value) blockLines.push(solvedStat(label, value));
+      };
+      if (network) {
+        let architectureRaw = "n/a";
+        try {
+          architectureRaw = this.#deriveArchitecture(network);
+        } catch {
+          architectureRaw = "n/a";
+        }
+        if (architectureRaw !== "n/a") {
+          const arrowArchitecture = architectureRaw.split(/\s*-\s*/).join(" <=> ");
+          pushIf("Architecture", arrowArchitecture);
+        }
+      }
+      const archiveWidth = _DashboardManager.#ARCHIVE_SPARK_WIDTH;
       pushIf(
         "Fitness trend",
-        this.buildSparkline(
-          this.#bestFitnessHistory,
-          _DashboardManager.#ARCHIVE_SPARK_WIDTH
-        )
+        this.#buildSparkline(this.#bestFitnessHistory, archiveWidth)
       );
       pushIf(
         "Nodes trend",
-        this.buildSparkline(
-          this.#complexityNodesHistory,
-          _DashboardManager.#ARCHIVE_SPARK_WIDTH
-        )
+        this.#buildSparkline(this.#complexityNodesHistory, archiveWidth)
       );
       pushIf(
         "Conns trend",
-        this.buildSparkline(
-          this.#complexityConnsHistory,
-          _DashboardManager.#ARCHIVE_SPARK_WIDTH
-        )
+        this.#buildSparkline(this.#complexityConnsHistory, archiveWidth)
       );
       pushIf(
         "Hypervol trend",
-        this.buildSparkline(
-          this.#hypervolumeHistory,
-          _DashboardManager.#ARCHIVE_SPARK_WIDTH
-        )
+        this.#buildSparkline(this.#hypervolumeHistory, archiveWidth)
       );
       pushIf(
         "Progress trend",
-        this.buildSparkline(
-          this.#progressHistory,
-          _DashboardManager.#ARCHIVE_SPARK_WIDTH
-        )
+        this.#buildSparkline(this.#progressHistory, archiveWidth)
       );
       pushIf(
         "Species trend",
-        this.buildSparkline(
-          this.#speciesCountHistory,
-          _DashboardManager.#ARCHIVE_SPARK_WIDTH
-        )
+        this.#buildSparkline(this.#speciesCountHistory, archiveWidth)
       );
       blockLines.push(
         `${colors.blueCore}\u2551${NetworkVisualization.pad(
@@ -15349,41 +16084,91 @@
         )}${colors.blueCore}\u2551${colors.reset}`
       );
     }
-    /** Append centered solved maze drawing. */
+    /**
+     * Append a centered maze visualization for a newly solved maze.
+     *
+     * The visualization is produced by `MazeVisualization.visualizeMaze`, which
+     * returns either a multi‑line string or an array of row strings. We normalize
+     * the output to an array and then emit each row framed inside the dashboard
+     * box. Rows are padded horizontally to the fixed `FRAME_INNER_WIDTH` so that
+     * varying maze sizes (small corridors vs larger layouts) remain visually
+     * centered and consistent with surrounding stats blocks.
+     *
+     * Steps (educational):
+     * 1. Determine the terminal path position (last coordinate) – used to draw the agent end state.
+     * 2. Generate a textual maze representation (string[] or string) including the path highlight.
+     * 3. Normalize to an array of raw row strings (split on newlines if needed).
+     * 4. Pad each row to the inner frame width (acts as horizontal centering) and push framed lines to `blockLines`.
+     *
+     * Performance & ES2023 notes:
+     * - Uses `Array.prototype.at(-1)` for the final path coordinate (clearer than `path[path.length-1]`).
+     * - Avoids the previous join/split round‑trip (now pads & pushes in a single pass), reducing temporary string allocations.
+     * - Relies on local constants to minimize repeated property lookups (`innerWidth`).
+     *
+     * Determinism: purely formatting; does not mutate input arrays or rely on random state.
+     * Reentrancy: safe (no shared scratch buffers used here).
+     *
+     * @param blockLines - Accumulated output lines for the solved maze archive block (mutated in place by appending framed rows).
+     * @param solved - Object containing the raw `maze` character grid and a `result` with a `path` of `[x,y]` coordinates.
+     * @remarks The `result.path` is expected to include the start cell; if empty, a fallback position `[0,0]` is used (rare edge case for defensive coding in examples).
+     */
     #appendSolvedMaze(blockLines, solved) {
-      const endPosition = solved.result.path?.at(
-        -1
-      );
+      const pathCoordinates = solved.result.path;
+      const endPosition = pathCoordinates?.at(-1) ?? [0, 0];
       const visualization = MazeVisualization.visualizeMaze(
         solved.maze,
-        endPosition ?? [0, 0],
-        solved.result.path
+        endPosition,
+        pathCoordinates ?? []
       );
-      const lines = Array.isArray(visualization) ? visualization : visualization.split("\n");
-      const centered = lines.map(
-        (line) => NetworkVisualization.pad(line, _DashboardManager.FRAME_INNER_WIDTH, " ")
-      ).join("\n");
-      centered.split("\n").forEach(
-        (mazeLine) => blockLines.push(
+      const rawLines = Array.isArray(visualization) ? visualization : visualization.split("\n");
+      const innerWidth = _DashboardManager.FRAME_INNER_WIDTH;
+      for (const rawLine of rawLines) {
+        const paddedRow = NetworkVisualization.pad(rawLine, innerWidth, " ");
+        blockLines.push(
           `${colors.blueCore}\u2551${NetworkVisualization.pad(
-            mazeLine,
-            _DashboardManager.FRAME_INNER_WIDTH,
+            paddedRow,
+            innerWidth,
             " "
           )}${colors.blueCore}\u2551${colors.reset}`
-        )
-      );
+        );
+      }
     }
-    /** Compute path metrics & append stats lines. */
+    /**
+     * Compute and append human‑readable path efficiency statistics for a solved maze.
+     *
+     * Metrics exposed (educational rationale):
+     * - Path efficiency: optimal BFS distance vs actual traversed length – demonstrates how close evolution came to shortest path.
+     * - Path overhead: percent longer than optimal – highlights wasted exploration after reaching a viable route.
+     * - Unique cells visited / revisits: proxy for exploration vs dithering; useful to tune mutation operators.
+     * - Steps: raw action count taken (often equals `pathLength`).
+     * - Fitness: final scalar used for selection (displayed with two decimals for compactness).
+     *
+     * Steps:
+     * 1. Derive aggregated path metrics via `#computePathMetrics` (encapsulates BFS optimal distance + visitation stats).
+     * 2. Format each metric with consistent label width & colors using `formatStat` (keeps styling centralized).
+     * 3. Push each formatted line to the `blockLines` accumulator.
+     *
+     * Performance notes:
+     * - Single metrics object reused for string interpolation (no intermediate arrays created).
+     * - Uses template literals directly; minimal extra allocations beyond the final output strings.
+     * - Order is fixed to preserve snapshot diff stability for external log parsers.
+     *
+     * Determinism: relies on deterministic BFS + pure counting; no randomness.
+     * Reentrancy: safe; no shared mutable scratch state.
+     *
+     * @param blockLines - Accumulator array mutated by appending formatted stat lines.
+     * @param solved - Object holding the `maze` layout and `result` containing at least `path`, `steps`, and `fitness`.
+     */
     #appendSolvedPathStats(blockLines, solved) {
-      const solvedLabelWidth = _DashboardManager.#SOLVED_LABEL_WIDTH;
-      const solvedStat = (label, value) => this.formatStat(
+      const metrics = this.#computePathMetrics(solved.maze, solved.result);
+      const labelWidth = _DashboardManager.#SOLVED_LABEL_WIDTH;
+      const solvedStat = (label, value) => this.#formatStat(
         label,
         value,
         colors.neonSilver,
         colors.cyanNeon,
-        solvedLabelWidth
+        labelWidth
       );
-      const metrics = this.#computePathMetrics(solved.maze, solved.result);
       blockLines.push(
         solvedStat(
           _DashboardManager.#LABEL_PATH_EFF,
@@ -15418,24 +16203,6 @@
         )
       );
     }
-    /** Append derived architecture string. */
-    #appendSolvedArchitecture(blockLines, network) {
-      const solvedLabelWidth = _DashboardManager.#SOLVED_LABEL_WIDTH;
-      const solvedStat = (label, value) => this.formatStat(
-        label,
-        value,
-        colors.neonSilver,
-        colors.cyanNeon,
-        solvedLabelWidth
-      );
-      let architecture = "n/a";
-      try {
-        architecture = this.#deriveArchitecture(network);
-      } catch {
-        architecture = "n/a";
-      }
-      blockLines.push(solvedStat(_DashboardManager.#LABEL_ARCH, architecture));
-    }
     /** Emit footer & send archive block to logger. */
     #appendSolvedFooterAndEmit(blockLines) {
       blockLines.push(
@@ -15453,21 +16220,66 @@
         blockLines.forEach((singleLine) => append(singleLine));
       }
     }
-    /** Compute path metrics from maze + result object. */
+    /**
+     * Compute derived path metrics for a solved (or partially solved) maze run.
+     *
+     * Metrics returned (educational focus):
+     * - optimalLength: Shortest possible path length (BFS over encoded maze). Provides a baseline for efficiency.
+     * - pathLength: Actual traversed path length (steps between first & last coordinate). Used for overhead calculations.
+     * - efficiencyPct: (optimal / actual * 100) clamped to 100%. Indicates how close the agent was to an optimal route.
+     * - overheadPct: Percent the actual path exceeds optimal ((actual/optimal)*100 - 100). Negative values are clamped to 0 in practice by optimal <= path.
+     * - uniqueCellsVisited: Distinct grid cells in the path – proxy for exploration breadth.
+     * - revisitedCells: Times a cell coordinate was encountered after the first visit – proxy for dithering / loops.
+     * - totalSteps: Reported step counter from the result object (may equal pathLength, but kept separate for clarity / future divergence like wait actions).
+     * - fitnessValue: Raw fitness scalar copied through for convenience (avoids re-threading the original result where only metrics are needed).
+     *
+     * Steps:
+     * 1. Locate start 'S' and exit 'E' positions in the maze (single pass each via MazeUtils helpers).
+     * 2. Run BFS to obtain the optimal shortest path length between S and E (O(C) with C = cell count).
+     * 3. Derive actual path length from provided coordinate list (defensive against empty / single-node path).
+     * 4. Compute efficiency & overhead percentages with divide-by-zero guards (fallback to 0.0 when ambiguous).
+     * 5. Count unique vs revisited cells in a single pass through the path (O(P) with P = pathLength+1 nodes).
+     * 6. Return an immutable plain object used by formatting helpers.
+     *
+     * Complexity:
+     * - BFS: O(C) where C = maze cell count.
+     * - Path scan: O(P) where P = number of coordinates in path.
+     * - Overall: O(C + P) per invocation, acceptable for archive-time formatting (not in a hot inner evolution loop).
+     *
+     * Determinism: Fully deterministic given identical maze + path (no randomness, stable BFS ordering assumed from MazeUtils implementation).
+     * Reentrancy: Safe (allocates only local structures: Set + return object).
+     * Memory: Extra allocations are bounded (Set size <= P). Suitable for occasional solved-maze archival.
+     *
+     * Edge cases handled:
+     * - Empty or single-coordinate path: pathLength coerces to 0; efficiency & overhead emit '0.0'.
+     * - Unreachable BFS (negative / non-positive optimalLength): treated as 0 for ratios (prevents NaN/Infinity).
+     * - Division by zero avoided via guards; percentages formatted with one decimal place.
+     *
+     * @param maze Maze layout as array of row strings containing 'S' and 'E'.
+     * @param result Evaluation result containing at least { path, steps, fitness }.
+     * @returns Object with path + efficiency metrics (see description).
+     * @example
+     * const metrics = dashboard.#computePathMetrics(maze, { path, steps: path.length, fitness });
+     * console.log(metrics.efficiencyPct); // e.g. '87.5'
+     */
     #computePathMetrics(maze, result) {
       const startPosition = MazeUtils.findPosition(maze, "S");
       const exitPosition = MazeUtils.findPosition(maze, "E");
-      const optimalLength = MazeUtils.bfsDistance(
+      const bfsLength = MazeUtils.bfsDistance(
         MazeUtils.encodeMaze(maze),
         startPosition,
         exitPosition
       );
-      const pathLength = result.path.length - 1;
-      const efficiencyPct = Math.min(
-        100,
-        Math.round(optimalLength / pathLength * 100)
-      ).toFixed(1);
-      const overheadPct = (pathLength / optimalLength * 100 - 100).toFixed(1);
+      const optimalLength = typeof bfsLength === "number" ? bfsLength : 0;
+      const rawPathLength = Math.max(0, result.path.length - 1);
+      let efficiencyPct = "0.0";
+      let overheadPct = "0.0";
+      if (rawPathLength > 0 && optimalLength > 0) {
+        const efficiency = Math.min(1, optimalLength / rawPathLength) * 100;
+        efficiencyPct = efficiency.toFixed(1);
+        const overhead = rawPathLength / optimalLength * 100 - 100;
+        overheadPct = overhead.toFixed(1);
+      }
       const uniqueCells = /* @__PURE__ */ new Set();
       let revisitedCells = 0;
       for (const [cellX, cellY] of result.path) {
@@ -15477,7 +16289,7 @@
       }
       return {
         optimalLength,
-        pathLength,
+        pathLength: rawPathLength,
         efficiencyPct,
         overheadPct,
         uniqueCellsVisited: uniqueCells.size,
@@ -15486,27 +16298,64 @@
         fitnessValue: result.fitness
       };
     }
-    /** Derive architecture string (Input - Hidden... - Output). */
+    /**
+     * Infer a compact, human‑readable architecture string (e.g. "3 - 5 - 2" or "4 - 8 - 8 - 1").
+     *
+     * Supports several internal network representations encountered in examples:
+     * 1. Layered form: `network.layers = [layer0, layer1, ...]` where each layer has `nodes` or is an array.
+     * 2. Flat node list: `network.nodes = [...]` each node declaring a `type` ('input' | 'hidden' | 'output'). Hidden layers are
+     *    approximated by a simple topological layering pass: we iteratively collect hidden nodes whose inbound connection sources
+     *    are already assigned to earlier layers. Remaining nodes after no progress count as a single ambiguous layer (safety / cycle guard).
+     * 3. Scalar fallback: numeric `input` & `output` counts (no hidden layers) -> returns "I - O".
+     *
+     * Steps:
+     * 1. Early null/undefined guard.
+     * 2. If a layered structure exists (>=2 layers) derive each layer size in order and return immediately (fast path).
+     * 3. Else if a flat node list exists, split into input / hidden / output categories.
+     * 4. If no hidden nodes: use explicit numeric counts (prefer explicit `input`/`output` props if present).
+     * 5. Perform iterative hidden layer inference with a safety iteration cap to avoid infinite loops for malformed cyclic graphs.
+     * 6. Assemble final size list: input size, inferred hidden sizes, output size.
+     * 7. Fallback: if only scalar counts available, return them; otherwise 'n/a'.
+     *
+     * Algorithmic notes:
+     * - Hidden layering pass is O(H * E_in) where H = hidden nodes, E_in = mean in-degree, acceptable for formatting/UI.
+     * - The safety cap (`hiddenCount * LAYER_INFER_LOOP_MULTIPLIER`) prevents pathological spins on cyclic graphs lacking
+     *   proper DAG layering; any leftover hidden nodes are grouped into a terminal bucket for transparency.
+     * - We intentionally avoid mutating the original node objects (pure inspection) to keep side‑effects nil.
+     *
+     * Determinism: given a stable ordering of `network.nodes` and their connections, output is deterministic.
+     * Reentrancy: safe; all state kept in local sets/arrays.
+     *
+     * @param networkInstance Arbitrary network-like object from examples or NEAT internals.
+     * @returns Architecture string in the form "Input - Hidden... - Output" or 'n/a' if shape cannot be inferred.
+     * @example
+     * // Layered network
+     * deriveArchitecture({ layers:[ {nodes:[1,2,3]}, {nodes:[4,5]}, {nodes:[6,7]} ] }) => "3 - 2 - 2"
+     * @example
+     * // Flat node list with inferred hidden tiers
+     * deriveArchitecture({ nodes:[{type:'input'}, {type:'hidden'}, {type:'output'}] }) => "1 - 1 - 1"
+     */
     #deriveArchitecture(networkInstance) {
       if (!networkInstance) return "n/a";
-      if (Array.isArray(networkInstance.layers) && networkInstance.layers.length >= 2) {
-        const sizes = [];
-        for (let layerIndex = 0; layerIndex < networkInstance.layers.length; layerIndex++) {
-          const layerRef = networkInstance.layers[layerIndex];
+      const layerArray = networkInstance.layers;
+      if (Array.isArray(layerArray) && layerArray.length >= 2) {
+        const layerSizes = [];
+        for (const layerRef of layerArray) {
           const size = Array.isArray(layerRef?.nodes) ? layerRef.nodes.length : Array.isArray(layerRef) ? layerRef.length : 0;
-          sizes.push(size);
+          layerSizes.push(size);
         }
-        return sizes.join(" - ");
+        return layerSizes.join(" - ");
       }
-      if (Array.isArray(networkInstance.nodes)) {
-        const inputNodes = networkInstance.nodes.filter(
-          (n) => n.type === "input"
+      const flatNodes = networkInstance.nodes;
+      if (Array.isArray(flatNodes)) {
+        const inputNodes = flatNodes.filter(
+          (nodeItem) => nodeItem.type === "input"
         );
-        const outputNodes = networkInstance.nodes.filter(
-          (n) => n.type === "output"
+        const outputNodes = flatNodes.filter(
+          (nodeItem) => nodeItem.type === "output"
         );
-        const hiddenNodesAll = networkInstance.nodes.filter(
-          (n) => n.type === "hidden"
+        const hiddenNodesAll = flatNodes.filter(
+          (nodeItem) => nodeItem.type === "hidden"
         );
         if (!hiddenNodesAll.length) {
           if (typeof networkInstance.input === "number" && typeof networkInstance.output === "number") {
@@ -15514,31 +16363,31 @@
           }
           return `${inputNodes.length} - ${outputNodes.length}`;
         }
-        const assignedSet = new Set(inputNodes);
+        const assignedNodes = new Set(inputNodes);
         let remainingHidden = hiddenNodesAll.slice();
-        const hiddenSizes = [];
+        const inferredHiddenSizes = [];
         const safetyLimit = hiddenNodesAll.length * _DashboardManager.#LAYER_INFER_LOOP_MULTIPLIER;
         let iterationCounter = 0;
         while (remainingHidden.length && iterationCounter < safetyLimit) {
           iterationCounter++;
-          const current = remainingHidden.filter(
+          const currentLayer = remainingHidden.filter(
             (hiddenNode) => hiddenNode.connections?.in?.every(
-              (conn) => assignedSet.has(conn.from)
+              (conn) => assignedNodes.has(conn.from)
             )
           );
-          if (!current.length) {
-            hiddenSizes.push(remainingHidden.length);
+          if (!currentLayer.length) {
+            inferredHiddenSizes.push(remainingHidden.length);
             break;
           }
-          hiddenSizes.push(current.length);
-          for (const nodeRef of current) assignedSet.add(nodeRef);
+          inferredHiddenSizes.push(currentLayer.length);
+          for (const nodeRef of currentLayer) assignedNodes.add(nodeRef);
           remainingHidden = remainingHidden.filter(
-            (n) => !assignedSet.has(n)
+            (nodeCandidate) => !assignedNodes.has(nodeCandidate)
           );
         }
         return [
           `${inputNodes.length}`,
-          ...hiddenSizes.map((hs) => `${hs}`),
+          ...inferredHiddenSizes.map((hiddenSize) => `${hiddenSize}`),
           `${outputNodes.length}`
         ].join(" - ");
       }
@@ -15548,24 +16397,34 @@
       return "n/a";
     }
     /**
-     * update
+     * Ingest an evolution engine update (generation tick or improved candidate) and refresh live + archived displays.
      *
-     * Called by the evolution engine to report the latest candidate solution
-     * (or the current best). The dashboard will:
-     * - update the currentBest reference used for the live view
-     * - if the provided result is a successful solve and it's the first time
-     *   we've seen this maze, append an archive block
-     * - stash the latest telemetry values into small circular buffers for sparklines
-     * - finally call `redraw` to update the live output
-     */
-    /**
-     * Ingest a new evolution update (called by the engine each generation or candidate improvement).
-     * @param maze Current maze layout being solved.
-     * @param result Candidate evaluation result (includes fitness, path, progress, etc.).
-     * @param network Neural network associated with the candidate.
-     * @param generation Current generation number.
-     * @param neatInstance Optional NEAT framework instance exposing telemetry helpers.
-     * @returns void
+     * High‑level responsibilities:
+     * 1. Lazy initialize timing anchors (wall clock + perf) on first call.
+     * 2. Stash generation/time metadata for later telemetry sampling.
+     * 3. Update the current best candidate reference.
+     * 4. Archive a newly solved maze (once per unique layout) with rich stats.
+     * 5. Pull the latest telemetry snapshot from the NEAT instance (if provided) and update bounded history buffers.
+     * 6. Redraw the live ASCII dashboard (network summary, maze, stats, progress bar).
+     * 7. Emit a structured telemetry payload (custom DOM event + postMessage + optional hook) for external consumers.
+     *
+     * Performance notes:
+     * - History buffers are bounded (HISTORY_MAX) using push-with-trim helpers; memory growth is capped.
+     * - Telemetry extraction takes only the last snapshot (`safeLast`) to minimize per-tick work.
+     * - All formatting for the archive occurs only when a maze is first solved (amortized, infrequent).
+     * - Uses `performance.now()` when available for higher‑resolution generation throughput metrics.
+     *
+     * Determinism: All state changes here are observational (no RNG). Ordering of history pushes is fixed.
+     * Reentrancy: Not safe (instance maintains mutable internal single-run state). Use one instance per run.
+     * Side‑effects: Console / logger output, optional DOM events (browser), optional parent frame messaging.
+     *
+     * @param maze - Current maze layout under evolution (array of row strings).
+     * @param result - Candidate evaluation result (expects fields: fitness, path, success, progress, etc.).
+     * @param network - Network associated with the candidate result.
+     * @param generation - Current generation number reported by the engine.
+     * @param neatInstance - Optional NEAT framework instance exposing `getTelemetry()` and optional stats helpers.
+     * @example
+     * dashboard.update(maze, evaluationResult, genome.network, generation, neat);
      */
     update(maze, result, network, generation, neatInstance) {
       if (this.#runStartTs == null) {
@@ -15575,68 +16434,68 @@
       this.#lastUpdateTs = globalThis.performance?.now?.() ?? Date.now();
       this.#lastGeneration = generation;
       this.#currentBest = { result, network, generation };
-      if (result.success) {
-        const mazeKey = this.getMazeKey(maze);
-        if (!this.#solvedMazeKeys.has(mazeKey)) {
+      if (result?.success) {
+        const solvedMazeKey = this.#getMazeKey(maze);
+        if (!this.#solvedMazeKeys.has(solvedMazeKey)) {
           this.#solvedMazes.push({ maze, result, network, generation });
-          this.#solvedMazeKeys.add(mazeKey);
-          const displayNumber = this.#solvedMazes.length;
-          this.appendSolvedToArchive(
+          this.#solvedMazeKeys.add(solvedMazeKey);
+          const displayOrdinal = this.#solvedMazes.length;
+          this.#appendSolvedToArchive(
             { maze, result, network, generation },
-            displayNumber
+            displayOrdinal
           );
         }
       }
-      const telemetry = neatInstance?.getTelemetry?.();
-      if (telemetry && telemetry.length) {
-        this.#lastTelemetry = MazeUtils.safeLast(telemetry);
-        const bestFit = this.#currentBest?.result?.fitness;
-        if (typeof bestFit === "number") {
-          this.#lastBestFitness = bestFit;
+      const telemetrySeries = neatInstance?.getTelemetry?.();
+      if (Array.isArray(telemetrySeries) && telemetrySeries.length) {
+        this.#lastTelemetry = MazeUtils.safeLast(telemetrySeries);
+        const latestFitness = this.#currentBest?.result?.fitness;
+        if (typeof latestFitness === "number") {
+          this.#lastBestFitness = latestFitness;
           this.#bestFitnessHistory = MazeUtils.pushHistory(
             this.#bestFitnessHistory,
-            bestFit,
+            latestFitness,
             _DashboardManager.HISTORY_MAX
           );
         }
-        const complexityTelemetry = this.#lastTelemetry?.complexity;
-        if (complexityTelemetry) {
-          if (typeof complexityTelemetry.meanNodes === "number") {
+        const complexitySnapshot = this.#lastTelemetry?.complexity;
+        if (complexitySnapshot) {
+          if (typeof complexitySnapshot.meanNodes === "number") {
             this.#complexityNodesHistory = MazeUtils.pushHistory(
               this.#complexityNodesHistory,
-              complexityTelemetry.meanNodes,
+              complexitySnapshot.meanNodes,
               _DashboardManager.HISTORY_MAX
             );
           }
-          if (typeof complexityTelemetry.meanConns === "number") {
+          if (typeof complexitySnapshot.meanConns === "number") {
             this.#complexityConnsHistory = MazeUtils.pushHistory(
               this.#complexityConnsHistory,
-              complexityTelemetry.meanConns,
+              complexitySnapshot.meanConns,
               _DashboardManager.HISTORY_MAX
             );
           }
         }
-        const hyperVolumeValue = this.#lastTelemetry?.hyper;
-        if (typeof hyperVolumeValue === "number") {
+        const hyperVolumeLatest = this.#lastTelemetry?.hyper;
+        if (typeof hyperVolumeLatest === "number") {
           this.#hypervolumeHistory = MazeUtils.pushHistory(
             this.#hypervolumeHistory,
-            hyperVolumeValue,
+            hyperVolumeLatest,
             _DashboardManager.HISTORY_MAX
           );
         }
-        const progressValue = this.#currentBest?.result?.progress;
-        if (typeof progressValue === "number") {
+        const progressFraction = this.#currentBest?.result?.progress;
+        if (typeof progressFraction === "number") {
           this.#progressHistory = MazeUtils.pushHistory(
             this.#progressHistory,
-            progressValue,
+            progressFraction,
             _DashboardManager.HISTORY_MAX
           );
         }
-        const speciesCountValue = this.#lastTelemetry?.species;
-        if (typeof speciesCountValue === "number") {
+        const speciesCountSnapshot = this.#lastTelemetry?.species;
+        if (typeof speciesCountSnapshot === "number") {
           this.#speciesCountHistory = MazeUtils.pushHistory(
             this.#speciesCountHistory,
-            speciesCountValue,
+            speciesCountSnapshot,
             _DashboardManager.HISTORY_MAX
           );
         }
@@ -15644,16 +16503,15 @@
       this.redraw(maze, neatInstance);
       try {
         const elapsedMs = this.#perfStart != null && globalThis.performance?.now ? globalThis.performance.now() - this.#perfStart : this.#runStartTs ? Date.now() - this.#runStartTs : 0;
-        const gensPerSec = elapsedMs > 0 ? generation / (elapsedMs / 1e3) : 0;
+        const generationsPerSecond = elapsedMs > 0 ? generation / (elapsedMs / 1e3) : 0;
         const payload = {
           type: "asciiMaze:telemetry",
           generation,
           bestFitness: this.#lastBestFitness,
           progress: this.#currentBest?.result?.progress ?? null,
           speciesCount: this.#speciesCountHistory.at(-1) ?? null,
-          gensPerSec: +gensPerSec.toFixed(3),
+          gensPerSec: +generationsPerSecond.toFixed(3),
           timestamp: Date.now(),
-          // wall-clock timestamp for consumers
           details: this.#lastDetailedStats || null
         };
         if (typeof window !== "undefined") {
@@ -15697,265 +16555,66 @@
       };
     }
     /**
-     * redraw
+     * Print the static top frame (dashboard title header) once at construction / first redraw.
      *
-     * Responsible for clearing the live area and printing a compact snapshot of
-     * the current best candidate, a short network summary, the maze drawing and
-     * several telemetry-derived stats. The function uses `logFunction` for all
-     * output lines so the same renderer can be used both in Node and in the
-     * browser (DOM adapter).
-     * @param currentMaze The maze currently being evolved.
-     * @param neat Optional NEAT implementation instance for population-level stats.
-     * @returns void
+     * Educational focus:
+     * - Demonstrates consistent frame construction (symmetric width) using shared constants.
+     * - Shows explicit centering math for a colored title while measuring width from an uncolored template.
+     * - Avoids ad‑hoc IIFEs: clearer sequential steps improve readability for newcomers.
+     *
+     * Steps:
+     * 1. Emit a solid single‑line top border (full inner width).
+     * 2. Emit a bridge line (visual taper) using preconfigured characters.
+     * 3. Center and print the title "ASCII maze" with color accents, preserving frame alignment.
+     * 4. Emit a lower bridge line to transition into evolving content sections.
+     *
+     * Centering approach:
+     * - We compute visible width using an uncolored template string (box glyph + spaces + raw title + trailing glyph).
+     * - Remaining horizontal space is split; a slight left‑bias (ceil on left) improves stability with odd widths.
+     * - ANSI color codes are injected only after padding is determined so they don't skew calculations.
+     *
+     * Performance notes:
+     * - Only a handful of short-lived strings are created; cost is negligible (runs once per session).
+     * - Uses direct `this.#logFn` calls (no intermediate array joins) to keep GC pressure minimal.
+     *
+     * Determinism: Pure formatting (no randomness). Reentrancy not required (idempotent semantics acceptable).
+     * Edge cases: If the frame width shrinks below the label length, padding clamps to zero and label is still printed.
+     *
+     * @example
+     * (dashboard as any)["#printTopFrame"](); // Emits header block
      */
-    redraw(currentMaze, neat) {
-      this.#clearFn();
-      this.#printTopFrame();
-      if (this.#currentBest) this.#printCurrentBestSection(currentMaze);
-      const last = this.#lastTelemetry;
-      const complexity = last?.complexity;
-      const perf = last?.perf;
-      const lineage = last?.lineage;
-      const fronts = Array.isArray(last?.fronts) ? last.fronts : null;
-      const objectives = last?.objectives;
-      const hyper = last?.hyper;
-      const diversity = last?.diversity;
-      const mutationStats = last?.mutationStats || last?.mutation?.stats;
-      const bestFitness = this.#currentBest?.result?.fitness;
-      const fmtNum = (numericValue, digits = 2) => typeof numericValue === "number" && isFinite(numericValue) ? numericValue.toFixed(digits) : "-";
-      const deltaArrow = (curr, prev) => {
-        if (curr == null || prev == null) return "";
-        const diff = curr - prev;
-        if (Math.abs(diff) < _DashboardManager.#DELTA_EPSILON)
-          return `${colors.neonSilver} (\u21940)`;
-        const color = diff > 0 ? colors.cyanNeon : colors.neonRed;
-        const arrow = diff > 0 ? "\u2191" : "\u2193";
-        return `${color} (${arrow}${diff.toFixed(2)})${colors.neonSilver}`;
-      };
-      let popMean = "-";
-      let popMedian = "-";
-      let speciesCount = "-";
-      let enabledRatio = "-";
-      if (neat && Array.isArray(neat.population)) {
-        const scores = [];
-        let enabled = 0, total = 0;
-        neat.population.forEach((g) => {
-          if (typeof g.score === "number") scores.push(g.score);
-          if (Array.isArray(g.connections)) {
-            g.connections.forEach((connection) => {
-              total++;
-              if (connection.enabled !== false) enabled++;
-            });
-          }
-        });
-        if (scores.length) {
-          const sum = scores.reduce(
-            (runningTotal, scoreValue) => runningTotal + scoreValue,
-            0
-          );
-          popMean = (sum / scores.length).toFixed(2);
-          const sorted = [...scores].sort(
-            (leftScore, rightScore) => leftScore - rightScore
-          );
-          const mid = Math.floor(sorted.length / 2);
-          popMedian = (sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid]).toFixed(2);
-        }
-        if (total) enabledRatio = (enabled / total).toFixed(2);
-        speciesCount = Array.isArray(neat.species) ? neat.species.length.toString() : speciesCount;
-      }
-      const firstFrontSize = fronts?.[0]?.length || 0;
-      const SPARK_WIDTH = _DashboardManager.#GENERAL_SPARK_WIDTH;
-      const spark = this.buildSparkline(this.#bestFitnessHistory, SPARK_WIDTH);
-      const sparkComplexityNodes = this.buildSparkline(
-        this.#complexityNodesHistory,
-        SPARK_WIDTH
-      );
-      const sparkComplexityConns = this.buildSparkline(
-        this.#complexityConnsHistory,
-        SPARK_WIDTH
-      );
-      const sparkHyper = this.buildSparkline(
-        this.#hypervolumeHistory,
-        SPARK_WIDTH
-      );
-      const sparkProgress = this.buildSparkline(
-        this.#progressHistory,
-        SPARK_WIDTH
-      );
-      const sparkSpecies = this.buildSparkline(
-        this.#speciesCountHistory,
-        SPARK_WIDTH
-      );
-      try {
-        const satFrac = this.#currentBest?.result?.saturationFraction;
-        const actEnt = this.#currentBest?.result?.actionEntropy;
-        if (popMean === "-" && typeof bestFitness === "number")
-          popMean = bestFitness.toFixed(2);
-        if (popMedian === "-" && typeof bestFitness === "number")
-          popMedian = bestFitness.toFixed(2);
-        if (speciesCount === "-" && typeof last?.species === "number")
-          speciesCount = String(last.species);
-        let noveltyArchiveSize = null;
-        if (neat?.getNoveltyArchiveSize) {
-          try {
-            noveltyArchiveSize = neat.getNoveltyArchiveSize();
-          } catch {
-          }
-        }
-        let operatorAcceptance = null;
-        if (neat?.getOperatorStats) {
-          try {
-            const ops = neat.getOperatorStats();
-            if (Array.isArray(ops) && ops.length) {
-              const sortedOps = [...ops].sort(
-                (leftOp, rightOp) => rightOp.success / Math.max(1, rightOp.attempts) - leftOp.success / Math.max(1, leftOp.attempts)
-              );
-              operatorAcceptance = [];
-              const operatorTake = Math.min(
-                _DashboardManager.#TOP_OPERATOR_LIMIT,
-                sortedOps.length
-              );
-              for (let operatorIndex = 0; operatorIndex < operatorTake; operatorIndex++) {
-                const opStats = sortedOps[operatorIndex];
-                operatorAcceptance.push({
-                  name: opStats.name,
-                  acceptancePct: +(100 * opStats.success / Math.max(1, opStats.attempts)).toFixed(2)
-                });
-              }
-            }
-          } catch {
-          }
-        }
-        let topMutations = null;
-        if (mutationStats && typeof mutationStats === "object") {
-          try {
-            {
-              const entries = Object.entries(mutationStats).filter(
-                ([mutationKey, mutationValue]) => typeof mutationValue === "number"
-              );
-              const sortedEntries = [...entries].sort(
-                (leftEntry, rightEntry) => rightEntry[1] - leftEntry[1]
-              );
-              topMutations = [];
-              const mutationTake = Math.min(
-                _DashboardManager.#TOP_MUTATION_LIMIT,
-                sortedEntries.length
-              );
-              for (let mutationIndex = 0; mutationIndex < mutationTake; mutationIndex++) {
-                const [mutationName, mutationCount] = sortedEntries[mutationIndex];
-                topMutations.push({
-                  name: mutationName,
-                  count: mutationCount
-                });
-              }
-            }
-          } catch {
-          }
-        }
-        const topSpeciesSizes = Array.isArray(neat?.species) ? (() => {
-          const sizes = neat.species.map((s) => s.members?.length || 0);
-          const sortedSizes = [...sizes].sort(
-            (sizeA, sizeB) => sizeB - sizeA
-          );
-          const outArray = [];
-          const speciesTake = Math.min(
-            _DashboardManager.#TOP_SPECIES_LIMIT,
-            sortedSizes.length
-          );
-          for (let speciesIndex = 0; speciesIndex < speciesTake; speciesIndex++) {
-            outArray.push(sortedSizes[speciesIndex]);
-          }
-          return outArray;
-        })() : null;
-        const paretoFrontSizes = fronts ? fronts.map((f) => f?.length || 0) : null;
-        this.#lastDetailedStats = {
-          generation: this.#currentBest?.generation || 0,
-          bestFitness: typeof bestFitness === "number" ? bestFitness : null,
-          bestFitnessDelta: (() => {
-            if (typeof bestFitness !== "number") return null;
-            const prev = this.#bestFitnessHistory.at(-2) ?? null;
-            if (prev == null) return null;
-            const diff = bestFitness - prev;
-            return +diff.toFixed(3);
-          })(),
-          saturationFraction: typeof satFrac === "number" ? satFrac : null,
-          actionEntropy: typeof actEnt === "number" ? actEnt : null,
-          populationMean: popMean === "-" ? null : +popMean,
-          populationMedian: popMedian === "-" ? null : +popMedian,
-          enabledConnRatio: enabledRatio === "-" ? null : +enabledRatio,
-          complexity: complexity || null,
-          simplifyPhaseActive: !!(complexity && (complexity.growthNodes < 0 || complexity.growthConns < 0)),
-          perf: perf || null,
-          lineage: lineage || null,
-          diversity: diversity || null,
-          speciesCount: speciesCount === "-" ? null : +speciesCount,
-          topSpeciesSizes,
-          objectives: objectives || null,
-          paretoFrontSizes,
-          firstFrontSize,
-          hypervolume: typeof hyper === "number" ? hyper : null,
-          noveltyArchiveSize,
-          operatorAcceptance,
-          topMutations,
-          mutationStats: mutationStats || null,
-          trends: {
-            fitness: spark || null,
-            nodes: sparkComplexityNodes || null,
-            conns: sparkComplexityConns || null,
-            hyper: sparkHyper || null,
-            progress: sparkProgress || null,
-            species: sparkSpecies || null
-          },
-          histories: {
-            bestFitness: this.sliceHistoryForExport(this.#bestFitnessHistory),
-            nodes: this.sliceHistoryForExport(this.#complexityNodesHistory),
-            conns: this.sliceHistoryForExport(this.#complexityConnsHistory),
-            hyper: this.sliceHistoryForExport(this.#hypervolumeHistory),
-            progress: this.sliceHistoryForExport(this.#progressHistory),
-            species: this.sliceHistoryForExport(this.#speciesCountHistory)
-          },
-          timestamp: Date.now()
-        };
-      } catch {
-      }
-      this.logBlank();
-    }
-    /** Print the static top frame (title header). */
     #printTopFrame() {
+      const innerWidth = _DashboardManager.FRAME_INNER_WIDTH;
       this.#logFn(
         `${colors.blueCore}\u2554${NetworkVisualization.pad(
           _DashboardManager.#FRAME_SINGLE_LINE_CHAR,
-          _DashboardManager.FRAME_INNER_WIDTH,
+          innerWidth,
           _DashboardManager.#FRAME_SINGLE_LINE_CHAR
-        )}${colors.blueCore}\u2557${colors.reset}`
+        )}\u2557${colors.reset}`
       );
       this.#logFn(
         `${colors.blueCore}\u255A${NetworkVisualization.pad(
           _DashboardManager.#FRAME_BRIDGE_TOP,
-          _DashboardManager.FRAME_INNER_WIDTH,
+          innerWidth,
           _DashboardManager.#FRAME_SINGLE_LINE_CHAR
-        )}${colors.blueCore}\u255D${colors.reset}`
+        )}\u255D${colors.reset}`
       );
-      this.#logFn(
-        (() => {
-          const rawLabel = "\u2551 ASCII maze \u2551";
-          const rawLength = rawLabel.length;
-          const width = _DashboardManager.FRAME_INNER_WIDTH;
-          const remaining = width - rawLength;
-          const leftPad = Math.max(0, Math.ceil(remaining / 2)) + 1;
-          const rightPad = Math.max(0, remaining - leftPad);
-          const coloredLabel = `\u2551 ${colors.neonYellow}ASCII maze${colors.blueCore} \u2551`;
-          return `${colors.blueCore}${" ".repeat(
-            leftPad
-          )}${coloredLabel}${" ".repeat(rightPad)}${colors.reset}`;
-        })()
-      );
+      const uncoloredTemplate = "\u2551 ASCII maze \u2551";
+      const templateLength = uncoloredTemplate.length;
+      const remainingSpace = innerWidth - templateLength;
+      const leftPaddingCount = Math.max(0, Math.ceil(remainingSpace / 2)) + 1;
+      const rightPaddingCount = Math.max(0, remainingSpace - leftPaddingCount);
+      const coloredTitleSegment = `\u2551 ${colors.neonYellow}ASCII maze${colors.blueCore} \u2551`;
+      const centeredTitleLine = `${colors.blueCore}${" ".repeat(
+        leftPaddingCount
+      )}${coloredTitleSegment}${" ".repeat(rightPaddingCount)}${colors.reset}`;
+      this.#logFn(centeredTitleLine);
       this.#logFn(
         `${colors.blueCore}\u2554${NetworkVisualization.pad(
           _DashboardManager.#FRAME_BRIDGE_BOTTOM,
-          _DashboardManager.FRAME_INNER_WIDTH,
+          innerWidth,
           _DashboardManager.#FRAME_SINGLE_LINE_CHAR
-        )}${colors.blueCore}\u2557${colors.reset}`
+        )}\u2557${colors.reset}`
       );
     }
     /** Orchestrate printing of evolving section (network + maze + stats + progress). */
@@ -15983,7 +16642,7 @@
           "\u2550"
         )}${colors.blueCore}\u2563${colors.reset}`
       );
-      this.logBlank();
+      this.#logBlank();
       this.#printNetworkSummary();
       this.#printLiveMaze(currentMaze);
       this.#printLiveStats(currentMaze);
@@ -15991,41 +16650,70 @@
     }
     /** Print network summary visualization. */
     #printNetworkSummary() {
-      this.logBlank();
+      this.#logBlank();
       this.#logFn(
         NetworkVisualization.visualizeNetworkSummary(this.#currentBest.network)
       );
-      this.logBlank();
+      this.#logBlank();
     }
-    /** Print the maze visualization for current best. */
+    /**
+     * Render (and frame) the live maze for the current best candidate.
+     *
+     * Educational focus:
+     * - Demonstrates safe use of `Array.prototype.at(-1)` for final coordinate extraction.
+     * - Streams framed rows directly to the logger (avoids building one large joined string).
+     * - Normalizes flexible visualization return types (string or string[]) into a unified iteration path.
+     *
+     * Steps:
+     * 1. Resolve the agent's last path position (fallback `[0,0]` if path absent) for end‑marker highlighting.
+     * 2. Ask `MazeVisualization.visualizeMaze` for a textual representation containing the path overlay.
+     * 3. Normalize the result into an array of raw row strings (split on newlines when a single string is returned).
+     * 4. For each row, pad to the fixed frame width and emit a framed line (borders + color) via `#logFn`.
+     * 5. Surround the block with blank spacer lines for visual separation from adjacent sections.
+     *
+     * Performance notes:
+     * - Avoids intermediate `.map().join()` allocation; writes each row immediately (lower peak memory for large mazes).
+     * - Uses a local `innerWidth` alias to prevent repeated static property lookups in the hot loop.
+     * - Only allocates one padded string per row (the framing template is assembled inline).
+     *
+     * Determinism: Pure formatting based on current maze + candidate path (no randomness).
+     * Reentrancy: Not designed for concurrent invocation but method is self‑contained (no shared scratch mutation).
+     * Edge cases:
+     * - Empty visualization yields just spacer lines.
+     * - Extremely long rows are hard-clipped visually by frame padding (consistent with rest of dashboard design).
+     *
+     * @param currentMaze Current maze layout (array of row strings) being evolved.
+     */
     #printLiveMaze(currentMaze) {
-      const lastPosition = this.#currentBest.result.path?.at(-1) ?? [0, 0];
-      const visualization = MazeVisualization.visualizeMaze(
+      const pathCoordinates = this.#currentBest.result.path;
+      const endOfPathPosition = pathCoordinates?.at(-1) ?? [0, 0];
+      const rawVisualization = MazeVisualization.visualizeMaze(
         currentMaze,
-        lastPosition ?? [0, 0],
-        this.#currentBest.result.path
+        endOfPathPosition,
+        pathCoordinates
       );
-      const lines = Array.isArray(visualization) ? visualization : visualization.split("\n");
-      const centered = lines.map(
-        (line) => `${colors.blueCore}\u2551${NetworkVisualization.pad(
-          line,
-          _DashboardManager.FRAME_INNER_WIDTH,
-          " "
-        )}${colors.blueCore}\u2551`
-      ).join("\n");
-      this.logBlank();
-      this.#logFn(centered);
-      this.logBlank();
+      const visualizationLines = Array.isArray(
+        rawVisualization
+      ) ? rawVisualization : rawVisualization.split("\n");
+      const innerWidth = _DashboardManager.FRAME_INNER_WIDTH;
+      this.#logBlank();
+      for (const unpaddedRow of visualizationLines) {
+        const paddedRow = NetworkVisualization.pad(unpaddedRow, innerWidth, " ");
+        this.#logFn(
+          `${colors.blueCore}\u2551${paddedRow}${colors.blueCore}\u2551${colors.reset}`
+        );
+      }
+      this.#logBlank();
     }
     /** Print current best maze stats. */
     #printLiveStats(currentMaze) {
-      this.logBlank();
+      this.#logBlank();
       MazeVisualization.printMazeStats(
         this.#currentBest,
         currentMaze,
         this.#logFn
       );
-      this.logBlank();
+      this.#logBlank();
     }
     /** Print progress bar lines. */
     #printProgressBar() {
@@ -16055,23 +16743,55 @@
       this.#currentBest = null;
     }
     /**
-     * Return the last export window slice of a numeric history (immutable copy).
-     * @param history Source numeric history buffer.
-     * @returns New array containing up to HISTORY_EXPORT_WINDOW most recent samples.
+     * Produce an immutable tail slice of a bounded numeric history buffer.
+     *
+     * Educational focus:
+     * - Encapsulates export window logic so callers don't duplicate clamp arithmetic.
+     * - Demonstrates a micro-optimized manual copy for partial slices while using
+     *   the native fast path (`Array.prototype.slice`) when returning the full buffer.
+     * - Adds defensive guards for null / non-array input (returns empty array) to simplify callers.
+     *
+     * Steps:
+     * 1. Guard: if the provided reference is not a non-empty array, return a new empty array.
+     * 2. Compute the starting index for the export window (clamped to 0).
+     * 3. If the window spans the entire history, return a shallow copy via `.slice()` (fast path).
+     * 4. Allocate an output array sized exactly to the window length.
+     * 5. Manually copy values (forward loop) to avoid creating an intermediate subarray before clone.
+     * 6. Return the populated tail slice (caller receives an independent array).
+     *
+     * Complexity:
+     * - Let N = history length, W = export window size (<= HISTORY_EXPORT_WINDOW).
+     * - Computation: O(min(N, W)) element copies.
+     * - Memory: O(min(N, W)) for the returned array.
+     *
+     * Performance notes:
+     * - Manual copy avoids constructing a temporary array then cloning it; though engines optimize slice well,
+     *   the explicit loop keeps intent clear and allows descriptive index naming for style compliance.
+     * - Uses descriptive loop index (`offsetIndex`) instead of a terse variable to satisfy style guidelines.
+     *
+     * Determinism: Pure function of input array contents and static window constant.
+     * Reentrancy: Safe (no shared mutable state). Input array is never mutated.
+     * Edge cases:
+     * - Null / undefined / non-array -> returns [].
+     * - Empty array -> returns [].
+     * - HISTORY_EXPORT_WINDOW >= history length -> returns shallow clone of entire history.
+     *
+     * @param history Source numeric history buffer (may be longer than export window).
+     * @returns New array containing up to `HISTORY_EXPORT_WINDOW` most recent samples (oldest first inside the window).
      */
-    sliceHistoryForExport(history) {
-      if (!history.length) return [];
+    #sliceHistoryForExport(history) {
+      if (!Array.isArray(history) || !history.length) return [];
       const startIndex = Math.max(
         0,
         history.length - _DashboardManager.#HISTORY_EXPORT_WINDOW
       );
       if (startIndex === 0) return history.slice();
-      const outLength = history.length - startIndex;
-      const out = new Array(outLength);
-      for (let i = 0; i < outLength; i++) {
-        out[i] = history[startIndex + i];
+      const windowLength = history.length - startIndex;
+      const windowSlice = new Array(windowLength);
+      for (let offsetIndex = 0; offsetIndex < windowLength; offsetIndex++) {
+        windowSlice[offsetIndex] = history[startIndex + offsetIndex];
       }
-      return out;
+      return windowSlice;
     }
   };
 
@@ -16589,6 +17309,8 @@
       [-1, 0]
       // West
     ];
+    /** Lookup table for opposite directions (index -> opposite index). */
+    static #OPPOSITE_DIR = [2, 3, 0, 1];
     // ---------------------------------------------------------------------------
     // Pooled / reusable typed-array buffers (non‑reentrant) for simulation state
     // ---------------------------------------------------------------------------
@@ -16612,6 +17334,15 @@
     static #SOFTMAX = new Float64Array(4);
     /** Seedable PRNG state (Mulberry32 style). Undefined => Math.random(). */
     static #PRNGState = null;
+    // ---------------------------------------------------------------------------
+    // Internal mutable run-scoped state (replaces (MazeMovement as any).foo uses)
+    // ---------------------------------------------------------------------------
+    /** Rolling saturation counter used for adaptive penalties */
+    static #StateSaturations = 0;
+    /** Consecutive steps with no movement to trigger forced exploration */
+    static #StateNoMoveStreak = 0;
+    /** Previous distance value supplied to vision builder */
+    static #StatePrevDistanceStep = void 0;
     /**
      * Enable deterministic pseudo-randomness for simulations executed after this call.
      *
@@ -16680,26 +17411,17 @@
     }
     /** Materialize the path arrays into an array<tuple>. */
     static #materializePath(length) {
+      const px = _MazeMovement.#PathX;
+      const py = _MazeMovement.#PathY;
       const out = new Array(length);
       for (let positionIndex = 0; positionIndex < length; positionIndex++) {
-        out[positionIndex] = [
-          _MazeMovement.#PathX[positionIndex],
-          _MazeMovement.#PathY[positionIndex]
-        ];
+        out[positionIndex] = [px[positionIndex], py[positionIndex]];
       }
       return out;
     }
     /** Return opposite cardinal direction (works for ACTION_DIM even if it changes) */
     static #opposite(direction) {
       return (direction + _MazeMovement.#ACTION_DIM / 2) % _MazeMovement.#ACTION_DIM;
-    }
-    /** Map a (dx,dy) delta to a cardinal direction index, or #NO_MOVE when unknown */
-    static #deltaToDirection(dx, dy) {
-      for (let i = 0; i < _MazeMovement.#DIRECTION_DELTAS.length; i++) {
-        const [ddx, ddy] = _MazeMovement.#DIRECTION_DELTAS[i];
-        if (ddx === dx && ddy === dy) return i;
-      }
-      return _MazeMovement.#NO_MOVE;
     }
     /** Sum a contiguous group in the vision vector starting at `start`. */
     static #sumVisionGroup(vision, start2) {
@@ -16708,6 +17430,32 @@
       for (let visionIndex = start2; visionIndex < end; visionIndex++)
         total += vision[visionIndex];
       return total;
+    }
+    /**
+     * Compute adaptive epsilon used for epsilon-greedy exploration.
+     * Extracted from the main loop to shrink hot path complexity and enable reuse.
+     */
+    static #computeEpsilon(stepNumber, stepsSinceImprovement, distHere, saturations) {
+      let epsilon = 0;
+      switch (true) {
+        case stepNumber < _MazeMovement.#EPSILON_WARMUP_STEPS:
+          epsilon = _MazeMovement.#EPSILON_INITIAL;
+          break;
+        case stepsSinceImprovement > _MazeMovement.#EPSILON_STAGNANT_HIGH_THRESHOLD:
+          epsilon = _MazeMovement.#EPSILON_STAGNANT_HIGH;
+          break;
+        case stepsSinceImprovement > _MazeMovement.#EPSILON_STAGNANT_MED_THRESHOLD:
+          epsilon = _MazeMovement.#EPSILON_STAGNANT_MED;
+          break;
+        case saturations > _MazeMovement.#EPSILON_SATURATION_TRIGGER:
+          epsilon = _MazeMovement.#EPSILON_SATURATIONS;
+          break;
+        default:
+          break;
+      }
+      if (distHere <= _MazeMovement.#PROXIMITY_SUPPRESS_EXPLOR_DIST)
+        epsilon = Math.min(epsilon, _MazeMovement.#EPSILON_MIN_NEAR_GOAL);
+      return epsilon;
     }
     /**
      * Helper: is a cell (x,y) within bounds and not a wall?
@@ -16723,15 +17471,16 @@
     static #distanceAt(encodedMaze, [x, y], distanceMap) {
       return Number.isFinite(distanceMap?.[y]?.[x]) ? distanceMap[y][x] : Infinity;
     }
-    /**
-     * Checks if a move is valid (within maze bounds and not a wall cell).
-     *
-     * @param encodedMaze - 2D array representation of the maze (cells: -1=wall, 0+=open).
-     * @param coords - [x, y] coordinates to check for validity.
-     * @returns {boolean} True if the position is within bounds and not a wall.
-     */
-    static isValidMove(encodedMaze, [x, y]) {
-      return _MazeMovement.#isCellOpen(encodedMaze, x, y);
+    static isValidMove(encodedMaze, positionOrX, yMaybe) {
+      if (Array.isArray(positionOrX)) {
+        const [x, y] = positionOrX;
+        return _MazeMovement.#isCellOpen(encodedMaze, x, y);
+      }
+      return _MazeMovement.#isCellOpen(
+        encodedMaze,
+        positionOrX,
+        yMaybe
+      );
     }
     /**
      * Moves the agent in the specified direction if the move is valid.
@@ -16854,463 +17603,567 @@
      *   - progress: Percentage progress toward exit (0-100).
      */
     static simulateAgent(network, encodedMaze, startPos, exitPos, distanceMap, maxSteps = _MazeMovement.#DEFAULT_MAX_STEPS) {
-      const width = encodedMaze[0].length;
-      const height = encodedMaze.length;
-      _MazeMovement.#initBuffers(width, height, maxSteps);
-      const position = [startPos[0], startPos[1]];
-      let steps = 0;
-      _MazeMovement.#PathX[0] = position[0];
-      _MazeMovement.#PathY[0] = position[1];
-      let pathLength = 1;
-      let visitedUniqueCount = 0;
-      const visitedFlags = _MazeMovement.#VisitedFlags;
-      const visitCountsTA = _MazeMovement.#VisitCounts;
-      const pathX = _MazeMovement.#PathX;
-      const pathY = _MazeMovement.#PathY;
-      const cellCountForPct = width * height;
-      const historyCapacity = _MazeMovement.#MOVE_HISTORY_LENGTH;
-      const moveHistoryRing = new Int32Array(historyCapacity);
-      let moveHistoryLength = 0;
-      let moveHistoryHead = 0;
-      const pushHistory = (cellIndex) => {
-        moveHistoryRing[moveHistoryHead] = cellIndex;
-        moveHistoryHead = (moveHistoryHead + 1) % historyCapacity;
-        if (moveHistoryLength < historyCapacity) moveHistoryLength++;
-      };
-      const nthFromHistoryEnd = (n) => {
-        if (n > moveHistoryLength) return void 0;
-        const idx = (moveHistoryHead - n + historyCapacity) % historyCapacity;
-        return moveHistoryRing[idx];
-      };
-      let minDistanceToExit = _MazeMovement.#distanceAt(
+      const state = _MazeMovement.#initRunState(
         encodedMaze,
-        position,
-        distanceMap
+        startPos,
+        distanceMap,
+        maxSteps
       );
-      const rewardScale = _MazeMovement.#REWARD_SCALE;
-      let progressReward = 0;
-      let newCellExplorationBonus = 0;
-      let invalidMovePenalty = 0;
-      let prevAction = _MazeMovement.#NO_MOVE;
-      let stepsSinceImprovement = 0;
-      const startDistanceGlobal = _MazeMovement.#distanceAt(
-        encodedMaze,
-        position,
-        distanceMap
-      );
-      let lastDistanceGlobal = startDistanceGlobal;
-      let saturatedSteps = 0;
-      const recentPositions = [];
-      let localAreaPenalty = 0;
-      const directionCounts = [0, 0, 0, 0];
-      const recordVisit = () => {
-        const cellIndex = _MazeMovement.#index(position[0], position[1]);
-        if (!visitedFlags[cellIndex]) {
-          visitedFlags[cellIndex] = 1;
-          visitedUniqueCount++;
-        }
-        visitCountsTA[cellIndex]++;
-        pushHistory(cellIndex);
-        return cellIndex;
-      };
-      recordVisit();
-      let lastProgressRatio = 0;
-      while (steps < maxSteps) {
-        steps++;
-        const currentCellIndex = recordVisit();
-        let loopPenalty = 0;
-        if (moveHistoryLength >= _MazeMovement.#OSCILLATION_DETECT_LENGTH) {
-          const last = nthFromHistoryEnd(1);
-          const thirdLast = nthFromHistoryEnd(3);
-          const secondLast = nthFromHistoryEnd(2);
-          const fourthLast = nthFromHistoryEnd(4);
-          if (thirdLast !== void 0 && secondLast !== void 0 && fourthLast !== void 0 && last === thirdLast && secondLast === fourthLast) {
-            loopPenalty -= _MazeMovement.#LOOP_PENALTY * rewardScale;
-          }
-        }
-        let memoryPenalty = 0;
-        if (moveHistoryLength > 1) {
-          for (let scan = 2; scan <= moveHistoryLength; scan++) {
-            const idxVal = nthFromHistoryEnd(scan);
-            if (idxVal === currentCellIndex) {
-              memoryPenalty -= _MazeMovement.#MEMORY_RETURN_PENALTY * rewardScale;
-              break;
-            }
-          }
-        }
-        let revisitPenalty = 0;
-        const visits = visitCountsTA[currentCellIndex];
-        if (visits > 1) {
-          revisitPenalty -= _MazeMovement.#REVISIT_PENALTY_PER_VISIT * (visits - 1) * rewardScale;
-        }
-        if (visits > _MazeMovement.#VISIT_TERMINATION_THRESHOLD) {
-          invalidMovePenalty -= _MazeMovement.#INVALID_MOVE_PENALTY_HARSH * rewardScale;
-          break;
-        }
-        const prevDistLocal = distanceMap ? distanceMap[position[1]]?.[position[0]] ?? void 0 : _MazeMovement.#distanceAt(encodedMaze, position, distanceMap);
-        const distCurrentLocal = prevDistLocal;
-        const vision = MazeVision.buildInputs6(
+      while (state.steps < maxSteps) {
+        state.steps++;
+        _MazeMovement.#recordVisitAndUpdatePenalties(state, encodedMaze);
+        _MazeMovement.#buildVisionAndDistance(
+          state,
           encodedMaze,
-          position,
           exitPos,
-          distanceMap,
-          _MazeMovement._prevDistanceStep,
-          distCurrentLocal,
-          prevAction
-        );
-        _MazeMovement._prevDistanceStep = distCurrentLocal;
-        const distHere = _MazeMovement.#distanceAt(
-          encodedMaze,
-          position,
           distanceMap
         );
-        let direction;
-        let actionStats = null;
-        try {
-          const outputs = network.activate(vision);
-          network._lastStepOutputs = MazeUtils.pushHistory(
-            network._lastStepOutputs,
-            [...outputs],
-            _MazeMovement.#OUTPUT_HISTORY_LENGTH
-          );
-          actionStats = _MazeMovement.selectDirection(outputs);
-          _MazeMovement._saturations = _MazeMovement._saturations || 0;
-          const overConfident = actionStats.maxProb > _MazeMovement.#OVERCONFIDENT_PROB && actionStats.secondProb < _MazeMovement.#SECOND_PROB_LOW;
-          const logitsMean = outputs.reduce((s, v) => s + v, 0) / _MazeMovement.#ACTION_DIM;
-          let logVar = 0;
-          for (const o of outputs) {
-            const delta = o - logitsMean;
-            logVar += delta * delta;
-          }
-          logVar /= _MazeMovement.#ACTION_DIM;
-          const logStd = Math.sqrt(logVar);
-          const flatCollapsed = logStd < _MazeMovement.#LOGSTD_FLAT_THRESHOLD;
-          const saturatedNow = overConfident || flatCollapsed;
-          if (saturatedNow) {
-            _MazeMovement._saturations++;
-            saturatedSteps++;
-          } else {
-            _MazeMovement._saturations = Math.max(
-              0,
-              _MazeMovement._saturations - 1
-            );
-          }
-          if (overConfident)
-            invalidMovePenalty -= _MazeMovement.#OVERCONFIDENT_PENALTY * rewardScale;
-          if (flatCollapsed)
-            invalidMovePenalty -= _MazeMovement.#FLAT_COLLAPSE_PENALTY * rewardScale;
-          try {
-            if (_MazeMovement._saturations > _MazeMovement.#SATURATION_ADJUST_MIN && steps % _MazeMovement.#SATURATION_ADJUST_INTERVAL === 0) {
-              const outs = network.nodes?.filter(
-                (n) => n.type === _MazeMovement.#NODE_TYPE_OUTPUT
-              );
-              if (outs?.length) {
-                const mean = outs.reduce((a, n) => a + n.bias, 0) / outs.length;
-                outs.forEach((n) => {
-                  n.bias = Math.max(
-                    -_MazeMovement.#BIAS_CLAMP,
-                    Math.min(
-                      _MazeMovement.#BIAS_CLAMP,
-                      n.bias - mean * _MazeMovement.#BIAS_ADJUST_FACTOR
-                    )
-                  );
-                });
-              }
-            }
-          } catch {
-          }
-          direction = actionStats.direction;
-        } catch (error) {
-          console.error("Error activating network:", error);
-          direction = _MazeMovement.#NO_MOVE;
-        }
-        if (distHere <= _MazeMovement.#PROXIMITY_GREEDY_DISTANCE) {
-          let bestDirection = direction;
-          let bestDistance = Infinity;
-          for (let dirIndex = 0; dirIndex < _MazeMovement.#ACTION_DIM; dirIndex++) {
-            const [ddx, ddy] = _MazeMovement.#DIRECTION_DELTAS[dirIndex];
-            const tx = position[0] + ddx;
-            const ty = position[1] + ddy;
-            if (!_MazeMovement.isValidMove(encodedMaze, [tx, ty])) continue;
-            const candidateDistance = _MazeMovement.#distanceAt(
-              encodedMaze,
-              [tx, ty],
-              distanceMap
-            );
-            if (candidateDistance < bestDistance) {
-              bestDistance = candidateDistance;
-              bestDirection = dirIndex;
-            }
-          }
-          if (bestDirection != null) direction = bestDirection;
-        }
-        const stepsStagnant = stepsSinceImprovement;
-        let epsilon = 0;
-        switch (true) {
-          case steps < _MazeMovement.#EPSILON_WARMUP_STEPS:
-            epsilon = _MazeMovement.#EPSILON_INITIAL;
-            break;
-          case stepsStagnant > _MazeMovement.#EPSILON_STAGNANT_HIGH_THRESHOLD:
-            epsilon = _MazeMovement.#EPSILON_STAGNANT_HIGH;
-            break;
-          case stepsStagnant > _MazeMovement.#EPSILON_STAGNANT_MED_THRESHOLD:
-            epsilon = _MazeMovement.#EPSILON_STAGNANT_MED;
-            break;
-          case _MazeMovement._saturations > _MazeMovement.#EPSILON_SATURATION_TRIGGER:
-            epsilon = _MazeMovement.#EPSILON_SATURATIONS;
-            break;
-          default:
-            break;
-        }
-        if (distHere <= _MazeMovement.#PROXIMITY_SUPPRESS_EXPLOR_DIST)
-          epsilon = Math.min(epsilon, _MazeMovement.#EPSILON_MIN_NEAR_GOAL);
-        if (_MazeMovement.#rand() < epsilon) {
-          for (let trial = 0; trial < _MazeMovement.#ACTION_DIM; trial++) {
-            const candidateDirection = Math.floor(
-              _MazeMovement.#rand() * _MazeMovement.#ACTION_DIM
-            );
-            if (candidateDirection === prevAction) continue;
-            const [ddx, ddy] = _MazeMovement.#DIRECTION_DELTAS[candidateDirection];
-            const tx = position[0] + ddx;
-            const ty = position[1] + ddy;
-            if (_MazeMovement.isValidMove(encodedMaze, [tx, ty])) {
-              direction = candidateDirection;
-              break;
-            }
-          }
-        }
-        _MazeMovement._noMoveStreak = _MazeMovement._noMoveStreak || 0;
-        if (direction === _MazeMovement.#NO_MOVE)
-          _MazeMovement._noMoveStreak++;
-        if (_MazeMovement._noMoveStreak >= _MazeMovement.#NO_MOVE_STREAK_THRESHOLD) {
-          for (let attempt = 0; attempt < _MazeMovement.#ACTION_DIM; attempt++) {
-            const candidateDirection = Math.floor(
-              _MazeMovement.#rand() * _MazeMovement.#ACTION_DIM
-            );
-            const [ddx, ddy] = _MazeMovement.#DIRECTION_DELTAS[candidateDirection];
-            const tx = position[0] + ddx;
-            const ty = position[1] + ddy;
-            if (_MazeMovement.isValidMove(encodedMaze, [tx, ty])) {
-              direction = candidateDirection;
-              break;
-            }
-          }
-          _MazeMovement._noMoveStreak = 0;
-        }
-        const prevDistance = _MazeMovement.#distanceAt(
-          encodedMaze,
-          position,
-          distanceMap
-        );
-        let moved = false;
-        if (direction === _MazeMovement.#NO_MOVE) {
-          moved = false;
-        } else if (direction >= 0 && direction < _MazeMovement.#ACTION_DIM) {
-          const [dx, dy] = _MazeMovement.#DIRECTION_DELTAS[direction];
-          const newX = position[0] + dx;
-          const newY = position[1] + dy;
-          if (_MazeMovement.isValidMove(encodedMaze, [newX, newY])) {
-            position[0] = newX;
-            position[1] = newY;
-            moved = true;
-          } else {
-            moved = false;
-          }
-        } else {
-          moved = false;
-        }
-        if (moved) {
-          pathX[pathLength] = position[0];
-          pathY[pathLength] = position[1];
-          pathLength++;
-          MazeUtils.pushHistory(
-            recentPositions,
-            [position[0], position[1]],
-            _MazeMovement.#LOCAL_WINDOW
-          );
-          if (recentPositions.length === _MazeMovement.#LOCAL_WINDOW) {
-            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-            for (const [rx, ry] of recentPositions) {
-              if (rx < minX) minX = rx;
-              if (rx > maxX) maxX = rx;
-              if (ry < minY) minY = ry;
-              if (ry > maxY) maxY = ry;
-            }
-            const span = maxX - minX + (maxY - minY);
-            if (span <= _MazeMovement.#LOCAL_AREA_SPAN_THRESHOLD && stepsSinceImprovement > _MazeMovement.#LOCAL_AREA_STAGNATION_STEPS) {
-              localAreaPenalty -= _MazeMovement.#LOCAL_AREA_PENALTY_AMOUNT * rewardScale;
-            }
-          }
-          const currentDistance = _MazeMovement.#distanceAt(
-            encodedMaze,
-            position,
-            distanceMap
-          );
-          const distanceDelta = prevDistance - currentDistance;
-          switch (true) {
-            case distanceDelta > 0: {
-              const conf = actionStats?.maxProb ?? 1;
-              progressReward += (_MazeMovement.#PROGRESS_REWARD_BASE + _MazeMovement.#PROGRESS_REWARD_CONF_SCALE * conf) * rewardScale;
-              if (stepsSinceImprovement > 0)
-                progressReward += Math.min(
-                  stepsSinceImprovement * _MazeMovement.#PROGRESS_STEPS_MULT * rewardScale,
-                  _MazeMovement.#PROGRESS_STEPS_MAX * rewardScale
-                );
-              stepsSinceImprovement = 0;
-              progressReward += distanceDelta * _MazeMovement.#DISTANCE_DELTA_SCALE * (_MazeMovement.#DISTANCE_DELTA_CONF_BASE + _MazeMovement.#DISTANCE_DELTA_CONF_SCALE * conf);
-              break;
-            }
-            case currentDistance > prevDistance: {
-              const conf = actionStats?.maxProb ?? 0.5;
-              progressReward -= (_MazeMovement.#PROGRESS_AWAY_BASE_PENALTY + _MazeMovement.#PROGRESS_AWAY_CONF_SCALE * conf) * rewardScale;
-              stepsSinceImprovement++;
-              break;
-            }
-            default: {
-              stepsSinceImprovement++;
-              break;
-            }
-          }
-          if (visits === 1) {
-            newCellExplorationBonus += _MazeMovement.#NEW_CELL_EXPLORATION_BONUS * rewardScale;
-          } else {
-            newCellExplorationBonus -= _MazeMovement.#REVISIT_PENALTY_STRONG * rewardScale;
-          }
-          if (direction >= 0) directionCounts[direction]++;
-          minDistanceToExit = Math.min(minDistanceToExit, currentDistance);
-        } else {
-          invalidMovePenalty -= _MazeMovement.#INVALID_MOVE_PENALTY_MILD * rewardScale;
-          steps === maxSteps;
-        }
-        const currentDistanceGlobal = _MazeMovement.#distanceAt(
-          encodedMaze,
-          position,
-          distanceMap
-        );
-        if (currentDistanceGlobal < lastDistanceGlobal) {
-          if (stepsSinceImprovement > _MazeMovement.#GLOBAL_BREAK_BONUS_START)
-            progressReward += Math.min(
-              (stepsSinceImprovement - _MazeMovement.#GLOBAL_BREAK_BONUS_START) * _MazeMovement.#GLOBAL_BREAK_BONUS_PER_STEP * rewardScale,
-              _MazeMovement.#GLOBAL_BREAK_BONUS_CAP * rewardScale
-            );
-          stepsSinceImprovement = 0;
-        }
-        lastDistanceGlobal = currentDistanceGlobal;
-        if (prevAction === direction && stepsSinceImprovement > _MazeMovement.#REPETITION_PENALTY_START) {
-          invalidMovePenalty -= _MazeMovement.#REPETITION_PENALTY_BASE * (stepsSinceImprovement - _MazeMovement.#REPETITION_PENALTY_START) * rewardScale;
-        }
-        if (prevAction >= 0 && direction >= 0) {
-          if (direction === _MazeMovement.#opposite(prevAction) && stepsSinceImprovement > 0) {
-            invalidMovePenalty -= _MazeMovement.#BACK_MOVE_PENALTY * rewardScale;
-          }
-        }
-        if (moved) {
-          prevAction = direction;
-        }
-        if (actionStats) {
-          const { entropy, maxProb, secondProb } = actionStats;
-          const hasGuidance = _MazeMovement.#sumVisionGroup(vision, _MazeMovement.#VISION_LOS_START) > 0 || _MazeMovement.#sumVisionGroup(
-            vision,
-            _MazeMovement.#VISION_GRAD_START
-          ) > 0;
-          switch (true) {
-            case entropy > _MazeMovement.#ENTROPY_HIGH_THRESHOLD: {
-              invalidMovePenalty -= _MazeMovement.#ENTROPY_PENALTY * rewardScale;
-              break;
-            }
-            case (hasGuidance && entropy < _MazeMovement.#ENTROPY_CONFIDENT_THRESHOLD && maxProb - secondProb > _MazeMovement.#ENTROPY_CONFIDENT_DIFF): {
-              newCellExplorationBonus += _MazeMovement.#EXPLORATION_BONUS_SMALL * rewardScale;
-              break;
-            }
-            default:
-              break;
-          }
-          if (_MazeMovement._saturations >= _MazeMovement.#SATURATION_PENALTY_TRIGGER) {
-            invalidMovePenalty -= _MazeMovement.#SATURATION_PENALTY_BASE * rewardScale;
-            if (_MazeMovement._saturations % _MazeMovement.#SATURATION_PENALTY_PERIOD === 0) {
-              invalidMovePenalty -= _MazeMovement.#SATURATION_PENALTY_ESCALATE * rewardScale;
-            }
-          }
-        }
-        if (stepsSinceImprovement > _MazeMovement.#DEEP_STAGNATION_THRESHOLD) {
-          try {
-            if (typeof window === "undefined") {
-              invalidMovePenalty -= _MazeMovement.#DEEP_STAGNATION_PENALTY * rewardScale;
-              break;
-            }
-          } catch {
-            invalidMovePenalty -= _MazeMovement.#DEEP_STAGNATION_PENALTY * rewardScale;
-            break;
-          }
-        }
-        invalidMovePenalty += loopPenalty + memoryPenalty + revisitPenalty;
-        if (position[0] === exitPos[0] && position[1] === exitPos[1]) {
-          const stepEfficiency = maxSteps - steps;
-          const actionEntropy2 = (() => {
-            let entropySum = 0;
-            const total = directionCounts[0] + directionCounts[1] + directionCounts[2] + directionCounts[3] || 1;
-            for (let di = 0; di < 4; di++) {
-              const c = directionCounts[di];
-              if (c) {
-                const p = c / total;
-                entropySum += -p * Math.log(p);
-              }
-            }
-            return entropySum / _MazeMovement.#LOG_ACTIONS;
-          })();
-          const fitness2 = _MazeMovement.#SUCCESS_BASE_FITNESS + stepEfficiency * _MazeMovement.#STEP_EFFICIENCY_SCALE + progressReward + newCellExplorationBonus + invalidMovePenalty + actionEntropy2 * _MazeMovement.#SUCCESS_ACTION_ENTROPY_SCALE;
-          const pathMaterialized2 = _MazeMovement.#materializePath(pathLength);
-          return {
-            success: true,
-            steps,
-            path: pathMaterialized2,
-            fitness: Math.max(_MazeMovement.#MIN_SUCCESS_FITNESS, fitness2),
-            progress: 100,
-            saturationFraction: steps ? saturatedSteps / steps : 0,
-            actionEntropy: actionEntropy2
-          };
+        _MazeMovement.#decideDirection(state, network, encodedMaze, distanceMap);
+        _MazeMovement.#maybeApplyProximityGreedy(state, encodedMaze, distanceMap);
+        _MazeMovement.#maybeApplyEpsilonExploration(state, encodedMaze);
+        _MazeMovement.#maybeForceExploration(state, encodedMaze);
+        _MazeMovement.#executeMoveAndRewards(state, encodedMaze, distanceMap);
+        _MazeMovement.#applyPostActionPenalties(state);
+        if (_MazeMovement.#maybeTerminateDeepStagnation(state)) break;
+        if (state.position[0] === exitPos[0] && state.position[1] === exitPos[1]) {
+          return _MazeMovement.#finalizeSuccess(state, maxSteps);
         }
       }
+      return _MazeMovement.#finalizeFailure(
+        state,
+        encodedMaze,
+        startPos,
+        exitPos,
+        distanceMap
+      );
+    }
+    // ---------------------------------------------------------------------------
+    // Private helper methods (refactored from large simulateAgent body)
+    // ---------------------------------------------------------------------------
+    /** Internal aggregate simulation state (not exported). */
+    static #initRunState(encodedMaze, startPos, distanceMap, maxSteps) {
+      _MazeMovement.#StateSaturations = 0;
+      _MazeMovement.#StateNoMoveStreak = 0;
+      _MazeMovement.#StatePrevDistanceStep = void 0;
+      const height = encodedMaze.length;
+      const width = encodedMaze[0].length;
+      const hasDistanceMap = Array.isArray(distanceMap) && distanceMap.length === height;
+      _MazeMovement.#initBuffers(width, height, maxSteps);
+      const position = [startPos[0], startPos[1]];
+      _MazeMovement.#PathX[0] = position[0];
+      _MazeMovement.#PathY[0] = position[1];
+      const historyCapacity = _MazeMovement.#MOVE_HISTORY_LENGTH;
+      const state = {
+        position,
+        steps: 0,
+        pathLength: 1,
+        visitedUniqueCount: 0,
+        hasDistanceMap,
+        distanceMap,
+        minDistanceToExit: hasDistanceMap ? distanceMap[position[1]]?.[position[0]] ?? Infinity : _MazeMovement.#distanceAt(encodedMaze, position, distanceMap),
+        progressReward: 0,
+        newCellExplorationBonus: 0,
+        invalidMovePenalty: 0,
+        prevAction: _MazeMovement.#NO_MOVE,
+        stepsSinceImprovement: 0,
+        lastDistanceGlobal: _MazeMovement.#distanceAt(
+          encodedMaze,
+          position,
+          distanceMap
+        ),
+        saturatedSteps: 0,
+        recentPositions: [],
+        localAreaPenalty: 0,
+        directionCounts: [0, 0, 0, 0],
+        moveHistoryRing: new Int32Array(historyCapacity),
+        moveHistoryLength: 0,
+        moveHistoryHead: 0,
+        currentCellIndex: 0,
+        loopPenalty: 0,
+        memoryPenalty: 0,
+        revisitPenalty: 0,
+        visitsAtCurrent: 0,
+        distHere: Infinity,
+        vision: [],
+        actionStats: null,
+        direction: _MazeMovement.#NO_MOVE,
+        moved: false,
+        prevDistance: Infinity,
+        earlyTerminate: false
+      };
+      return state;
+    }
+    /** Push a cell index into circular history (A->B loop detection). */
+    static #pushHistory(state, cellIndex) {
+      const { moveHistoryRing, moveHistoryHead, moveHistoryLength } = state;
+      const capacity = moveHistoryRing.length;
+      moveHistoryRing[moveHistoryHead] = cellIndex;
+      state.moveHistoryHead = (moveHistoryHead + 1) % capacity;
+      if (moveHistoryLength < capacity) state.moveHistoryLength++;
+    }
+    /** nth (1-based) from history end; 1 == last; undefined if not present. */
+    static #nthFromHistoryEnd(state, n) {
+      if (n > state.moveHistoryLength) return void 0;
+      const capacity = state.moveHistoryRing.length;
+      const index = (state.moveHistoryHead - n + capacity) % capacity;
+      return state.moveHistoryRing[index];
+    }
+    /** Record visit + compute loop/memory/revisit penalties and optionally early terminate. */
+    static #recordVisitAndUpdatePenalties(state, encodedMaze) {
+      const visitedFlags = _MazeMovement.#VisitedFlags;
+      const visitCountsTyped = _MazeMovement.#VisitCounts;
+      const rewardScale = _MazeMovement.#REWARD_SCALE;
+      const cellIndex = _MazeMovement.#index(state.position[0], state.position[1]);
+      state.currentCellIndex = cellIndex;
+      if (!visitedFlags[cellIndex]) {
+        visitedFlags[cellIndex] = 1;
+        state.visitedUniqueCount++;
+      }
+      visitCountsTyped[cellIndex]++;
+      _MazeMovement.#pushHistory(state, cellIndex);
+      const visits = state.visitsAtCurrent = visitCountsTyped[cellIndex];
+      state.loopPenalty = 0;
+      if (state.moveHistoryLength >= _MazeMovement.#OSCILLATION_DETECT_LENGTH) {
+        const last = _MazeMovement.#nthFromHistoryEnd(state, 1);
+        const secondLast = _MazeMovement.#nthFromHistoryEnd(state, 2);
+        const thirdLast = _MazeMovement.#nthFromHistoryEnd(state, 3);
+        const fourthLast = _MazeMovement.#nthFromHistoryEnd(state, 4);
+        if (last === thirdLast && secondLast !== void 0 && fourthLast !== void 0 && secondLast === fourthLast) {
+          state.loopPenalty -= _MazeMovement.#LOOP_PENALTY * rewardScale;
+        }
+      }
+      state.memoryPenalty = 0;
+      if (state.moveHistoryLength > 1) {
+        for (let scan = 2; scan <= state.moveHistoryLength; scan++) {
+          const candidateIndex = _MazeMovement.#nthFromHistoryEnd(state, scan);
+          if (candidateIndex === cellIndex) {
+            state.memoryPenalty -= _MazeMovement.#MEMORY_RETURN_PENALTY * rewardScale;
+            break;
+          }
+        }
+      }
+      state.revisitPenalty = 0;
+      if (visits > 1) {
+        state.revisitPenalty -= _MazeMovement.#REVISIT_PENALTY_PER_VISIT * (visits - 1) * rewardScale;
+      }
+      if (visits > _MazeMovement.#VISIT_TERMINATION_THRESHOLD) {
+        state.invalidMovePenalty -= _MazeMovement.#INVALID_MOVE_PENALTY_HARSH * rewardScale;
+        state.earlyTerminate = true;
+      }
+    }
+    /** Build vision inputs & compute distHere for proximity / epsilon logic. */
+    static #buildVisionAndDistance(state, encodedMaze, exitPos, distanceMap) {
+      if (state.earlyTerminate) return;
+      const hasDistanceMap = state.hasDistanceMap;
+      const prevDistLocal = hasDistanceMap ? distanceMap[state.position[1]]?.[state.position[0]] ?? void 0 : _MazeMovement.#distanceAt(encodedMaze, state.position, distanceMap);
+      const distCurrentLocal = prevDistLocal;
+      state.vision = MazeVision.buildInputs6(
+        encodedMaze,
+        state.position,
+        exitPos,
+        distanceMap,
+        _MazeMovement.#StatePrevDistanceStep,
+        distCurrentLocal,
+        state.prevAction
+      );
+      _MazeMovement.#StatePrevDistanceStep = distCurrentLocal;
+      state.distHere = hasDistanceMap ? distanceMap[state.position[1]]?.[state.position[0]] ?? Infinity : _MazeMovement.#distanceAt(encodedMaze, state.position, distanceMap);
+    }
+    /** Activate network, compute direction, update saturation counters & penalties. */
+    static #decideDirection(state, network, encodedMaze, distanceMap) {
+      if (state.earlyTerminate) return;
+      try {
+        const outputs = network.activate(state.vision);
+        network._lastStepOutputs = MazeUtils.pushHistory(
+          network._lastStepOutputs,
+          [...outputs],
+          _MazeMovement.#OUTPUT_HISTORY_LENGTH
+        );
+        state.actionStats = _MazeMovement.selectDirection(outputs);
+        _MazeMovement.#applySaturationAndBiasAdjust(state, outputs, network);
+        state.direction = state.actionStats.direction;
+      } catch (error) {
+        console.error("Error activating network:", error);
+        state.direction = _MazeMovement.#NO_MOVE;
+      }
+    }
+    /** Greedy override when close to exit: choose direction minimizing distance. */
+    static #maybeApplyProximityGreedy(state, encodedMaze, distanceMap) {
+      if (state.earlyTerminate) return;
+      if (state.distHere <= _MazeMovement.#PROXIMITY_GREEDY_DISTANCE) {
+        let bestDirection = state.direction;
+        let bestDistance = Infinity;
+        for (let directionIndex = 0; directionIndex < _MazeMovement.#ACTION_DIM; directionIndex++) {
+          const [deltaX, deltaY] = _MazeMovement.#DIRECTION_DELTAS[directionIndex];
+          const testX = state.position[0] + deltaX;
+          const testY = state.position[1] + deltaY;
+          if (!_MazeMovement.isValidMove(encodedMaze, testX, testY)) continue;
+          const candidateDistance = _MazeMovement.#distanceAt(
+            encodedMaze,
+            [testX, testY],
+            distanceMap
+          );
+          if (candidateDistance < bestDistance) {
+            bestDistance = candidateDistance;
+            bestDirection = directionIndex;
+          }
+        }
+        if (bestDirection != null) state.direction = bestDirection;
+      }
+    }
+    /** Epsilon-greedy exploration override. */
+    static #maybeApplyEpsilonExploration(state, encodedMaze) {
+      if (state.earlyTerminate) return;
+      const epsilon = _MazeMovement.#computeEpsilon(
+        state.steps,
+        state.stepsSinceImprovement,
+        state.distHere,
+        _MazeMovement.#StateSaturations
+      );
+      if (_MazeMovement.#rand() < epsilon) {
+        for (let trialIndex = 0; trialIndex < _MazeMovement.#ACTION_DIM; trialIndex++) {
+          const candidateDirection = Math.floor(
+            _MazeMovement.#rand() * _MazeMovement.#ACTION_DIM
+          );
+          if (candidateDirection === state.prevAction) continue;
+          const [deltaX, deltaY] = _MazeMovement.#DIRECTION_DELTAS[candidateDirection];
+          const testX = state.position[0] + deltaX;
+          const testY = state.position[1] + deltaY;
+          if (_MazeMovement.isValidMove(encodedMaze, testX, testY)) {
+            state.direction = candidateDirection;
+            break;
+          }
+        }
+      }
+    }
+    /** Force exploration if no-move streak triggered. */
+    static #maybeForceExploration(state, encodedMaze) {
+      if (state.earlyTerminate) return;
+      if (state.direction === _MazeMovement.#NO_MOVE)
+        _MazeMovement.#StateNoMoveStreak++;
+      else _MazeMovement.#StateNoMoveStreak = 0;
+      if (_MazeMovement.#StateNoMoveStreak >= _MazeMovement.#NO_MOVE_STREAK_THRESHOLD) {
+        for (let attemptIndex = 0; attemptIndex < _MazeMovement.#ACTION_DIM; attemptIndex++) {
+          const candidateDirection = Math.floor(
+            _MazeMovement.#rand() * _MazeMovement.#ACTION_DIM
+          );
+          const [deltaX, deltaY] = _MazeMovement.#DIRECTION_DELTAS[candidateDirection];
+          const testX = state.position[0] + deltaX;
+          const testY = state.position[1] + deltaY;
+          if (_MazeMovement.isValidMove(encodedMaze, testX, testY)) {
+            state.direction = candidateDirection;
+            break;
+          }
+        }
+        _MazeMovement.#StateNoMoveStreak = 0;
+      }
+    }
+    /** Execute move and compute progress / exploration rewards. */
+    static #executeMoveAndRewards(state, encodedMaze, distanceMap) {
+      if (state.earlyTerminate) return;
+      state.prevDistance = _MazeMovement.#distanceAt(
+        encodedMaze,
+        state.position,
+        distanceMap
+      );
+      state.moved = false;
+      if (state.direction >= 0 && state.direction < _MazeMovement.#ACTION_DIM) {
+        const [deltaX, deltaY] = _MazeMovement.#DIRECTION_DELTAS[state.direction];
+        const newX = state.position[0] + deltaX;
+        const newY = state.position[1] + deltaY;
+        if (_MazeMovement.isValidMove(encodedMaze, newX, newY)) {
+          state.position[0] = newX;
+          state.position[1] = newY;
+          state.moved = true;
+        }
+      }
+      const rewardScale = _MazeMovement.#REWARD_SCALE;
+      const pathX = _MazeMovement.#PathX;
+      const pathY = _MazeMovement.#PathY;
+      if (state.moved) {
+        pathX[state.pathLength] = state.position[0];
+        pathY[state.pathLength] = state.position[1];
+        state.pathLength++;
+        MazeUtils.pushHistory(
+          state.recentPositions,
+          [state.position[0], state.position[1]],
+          _MazeMovement.#LOCAL_WINDOW
+        );
+        _MazeMovement.#maybeApplyLocalAreaPenalty(state, rewardScale);
+        const currentDistance = state.hasDistanceMap ? state.distanceMap[state.position[1]]?.[state.position[0]] ?? Infinity : _MazeMovement.#distanceAt(
+          encodedMaze,
+          state.position,
+          state.distanceMap
+        );
+        const distanceDelta = state.prevDistance - currentDistance;
+        const improved = distanceDelta > 0;
+        const worsened = !improved && currentDistance > state.prevDistance;
+        _MazeMovement.#applyProgressShaping(
+          state,
+          distanceDelta,
+          improved,
+          worsened,
+          rewardScale
+        );
+        _MazeMovement.#applyExplorationVisitAdjustment(state, rewardScale);
+        if (state.direction >= 0) state.directionCounts[state.direction]++;
+        state.minDistanceToExit = Math.min(
+          state.minDistanceToExit,
+          currentDistance
+        );
+      } else {
+        state.invalidMovePenalty -= _MazeMovement.#INVALID_MOVE_PENALTY_MILD * rewardScale;
+      }
+      _MazeMovement.#applyGlobalDistanceImprovementBonus(
+        state,
+        encodedMaze,
+        rewardScale
+      );
+    }
+    /** Apply repetition / entropy / saturation penalties & update prevAction. */
+    static #applyPostActionPenalties(state) {
+      if (state.earlyTerminate) return;
+      const rewardScale = _MazeMovement.#REWARD_SCALE;
+      _MazeMovement.#applyRepetitionAndBacktrackPenalties(state, rewardScale);
+      if (state.moved) state.prevAction = state.direction;
+      _MazeMovement.#applyEntropyGuidanceShaping(state, rewardScale);
+      _MazeMovement.#applySaturationPenaltyCycle(state, rewardScale);
+      state.invalidMovePenalty += state.loopPenalty + state.memoryPenalty + state.revisitPenalty;
+    }
+    /** Apply local area stagnation penalty if oscillating tightly without improvements. */
+    static #maybeApplyLocalAreaPenalty(state, rewardScale) {
+      if (state.recentPositions.length !== _MazeMovement.#LOCAL_WINDOW) return;
+      let minX = Infinity;
+      let maxX = -Infinity;
+      let minY = Infinity;
+      let maxY = -Infinity;
+      for (const [rx, ry] of state.recentPositions) {
+        if (rx < minX) minX = rx;
+        if (rx > maxX) maxX = rx;
+        if (ry < minY) minY = ry;
+        if (ry > maxY) maxY = ry;
+      }
+      const span = maxX - minX + (maxY - minY);
+      if (span <= _MazeMovement.#LOCAL_AREA_SPAN_THRESHOLD && state.stepsSinceImprovement > _MazeMovement.#LOCAL_AREA_STAGNATION_STEPS) {
+        state.localAreaPenalty -= _MazeMovement.#LOCAL_AREA_PENALTY_AMOUNT * rewardScale;
+      }
+    }
+    /** Progress shaping rewards / penalties based on distance delta. */
+    static #applyProgressShaping(state, distanceDelta, improved, worsened, rewardScale) {
+      if (improved) {
+        const confidence = state.actionStats?.maxProb ?? 1;
+        const baseProgress = (_MazeMovement.#PROGRESS_REWARD_BASE + _MazeMovement.#PROGRESS_REWARD_CONF_SCALE * confidence) * rewardScale;
+        if (state.stepsSinceImprovement > 0) {
+          state.progressReward += Math.min(
+            state.stepsSinceImprovement * _MazeMovement.#PROGRESS_STEPS_MULT * rewardScale,
+            _MazeMovement.#PROGRESS_STEPS_MAX * rewardScale
+          );
+        }
+        state.progressReward += baseProgress;
+        state.stepsSinceImprovement = 0;
+        state.progressReward += distanceDelta * _MazeMovement.#DISTANCE_DELTA_SCALE * (_MazeMovement.#DISTANCE_DELTA_CONF_BASE + _MazeMovement.#DISTANCE_DELTA_CONF_SCALE * confidence);
+      } else if (worsened) {
+        const confidence = state.actionStats?.maxProb ?? 0.5;
+        state.progressReward -= (_MazeMovement.#PROGRESS_AWAY_BASE_PENALTY + _MazeMovement.#PROGRESS_AWAY_CONF_SCALE * confidence) * rewardScale;
+        state.stepsSinceImprovement++;
+      } else {
+        state.stepsSinceImprovement++;
+      }
+    }
+    /** Exploration bonus / revisit penalties for the just-visited cell. */
+    static #applyExplorationVisitAdjustment(state, rewardScale) {
+      if (state.visitsAtCurrent === 1) {
+        state.newCellExplorationBonus += _MazeMovement.#NEW_CELL_EXPLORATION_BONUS * rewardScale;
+      } else {
+        state.newCellExplorationBonus -= _MazeMovement.#REVISIT_PENALTY_STRONG * rewardScale;
+      }
+    }
+    /** Global distance improvement bonus for breaking long stagnation. */
+    static #applyGlobalDistanceImprovementBonus(state, encodedMaze, rewardScale) {
+      const currentDistanceGlobal = state.hasDistanceMap ? state.distanceMap[state.position[1]]?.[state.position[0]] ?? Infinity : _MazeMovement.#distanceAt(
+        encodedMaze,
+        state.position,
+        state.distanceMap
+      );
+      if (currentDistanceGlobal < state.lastDistanceGlobal) {
+        if (state.stepsSinceImprovement > _MazeMovement.#GLOBAL_BREAK_BONUS_START)
+          state.progressReward += Math.min(
+            (state.stepsSinceImprovement - _MazeMovement.#GLOBAL_BREAK_BONUS_START) * _MazeMovement.#GLOBAL_BREAK_BONUS_PER_STEP * rewardScale,
+            _MazeMovement.#GLOBAL_BREAK_BONUS_CAP * rewardScale
+          );
+        state.stepsSinceImprovement = 0;
+      }
+      state.lastDistanceGlobal = currentDistanceGlobal;
+    }
+    /** Repetition and backward (opposite) move penalties. */
+    static #applyRepetitionAndBacktrackPenalties(state, rewardScale) {
+      if (state.prevAction === state.direction && state.stepsSinceImprovement > _MazeMovement.#REPETITION_PENALTY_START) {
+        state.invalidMovePenalty -= _MazeMovement.#REPETITION_PENALTY_BASE * (state.stepsSinceImprovement - _MazeMovement.#REPETITION_PENALTY_START) * rewardScale;
+      }
+      if (state.prevAction >= 0 && state.direction >= 0 && state.stepsSinceImprovement > 0 && state.direction === _MazeMovement.#OPPOSITE_DIR[state.prevAction]) {
+        state.invalidMovePenalty -= _MazeMovement.#BACK_MOVE_PENALTY * rewardScale;
+      }
+    }
+    /** Entropy / guidance shaping (confidence vs ambiguity). */
+    static #applyEntropyGuidanceShaping(state, rewardScale) {
+      if (!state.actionStats) return;
+      const { entropy, maxProb, secondProb } = state.actionStats;
+      const hasGuidance = _MazeMovement.#sumVisionGroup(
+        state.vision,
+        _MazeMovement.#VISION_LOS_START
+      ) > 0 || _MazeMovement.#sumVisionGroup(
+        state.vision,
+        _MazeMovement.#VISION_GRAD_START
+      ) > 0;
+      switch (true) {
+        case entropy > _MazeMovement.#ENTROPY_HIGH_THRESHOLD:
+          state.invalidMovePenalty -= _MazeMovement.#ENTROPY_PENALTY * rewardScale;
+          break;
+        case (hasGuidance && entropy < _MazeMovement.#ENTROPY_CONFIDENT_THRESHOLD && maxProb - secondProb > _MazeMovement.#ENTROPY_CONFIDENT_DIFF):
+          state.newCellExplorationBonus += _MazeMovement.#EXPLORATION_BONUS_SMALL * rewardScale;
+          break;
+        default:
+          break;
+      }
+    }
+    /** Saturation penalty application (periodic escalation). */
+    static #applySaturationPenaltyCycle(state, rewardScale) {
+      if (_MazeMovement.#StateSaturations < _MazeMovement.#SATURATION_PENALTY_TRIGGER)
+        return;
+      state.invalidMovePenalty -= _MazeMovement.#SATURATION_PENALTY_BASE * rewardScale;
+      if (_MazeMovement.#StateSaturations % _MazeMovement.#SATURATION_PENALTY_PERIOD === 0) {
+        state.invalidMovePenalty -= _MazeMovement.#SATURATION_PENALTY_ESCALATE * rewardScale;
+      }
+    }
+    /** Handle saturation/overconfidence detection, penalties and adaptive bias adjustment. */
+    static #applySaturationAndBiasAdjust(state, outputs, network) {
+      const rewardScale = _MazeMovement.#REWARD_SCALE;
+      const overConfident = state.actionStats.maxProb > _MazeMovement.#OVERCONFIDENT_PROB && state.actionStats.secondProb < _MazeMovement.#SECOND_PROB_LOW;
+      const meanLogit = outputs.reduce((accumulator, value) => accumulator + value, 0) / _MazeMovement.#ACTION_DIM;
+      let varianceSum = 0;
+      for (const logit of outputs) {
+        const delta = logit - meanLogit;
+        varianceSum += delta * delta;
+      }
+      varianceSum /= _MazeMovement.#ACTION_DIM;
+      const logStd = Math.sqrt(varianceSum);
+      const flatCollapsed = logStd < _MazeMovement.#LOGSTD_FLAT_THRESHOLD;
+      let saturationCounter = _MazeMovement.#StateSaturations;
+      if (overConfident || flatCollapsed) {
+        saturationCounter++;
+        state.saturatedSteps++;
+      } else if (saturationCounter > 0) {
+        saturationCounter--;
+      }
+      _MazeMovement.#StateSaturations = saturationCounter;
+      if (overConfident) {
+        state.invalidMovePenalty -= _MazeMovement.#OVERCONFIDENT_PENALTY * rewardScale;
+      }
+      if (flatCollapsed) {
+        state.invalidMovePenalty -= _MazeMovement.#FLAT_COLLAPSE_PENALTY * rewardScale;
+      }
+      if (_MazeMovement.#StateSaturations > _MazeMovement.#SATURATION_ADJUST_MIN && state.steps % _MazeMovement.#SATURATION_ADJUST_INTERVAL === 0) {
+        try {
+          const outputNodes = network.nodes?.filter(
+            (node) => node.type === _MazeMovement.#NODE_TYPE_OUTPUT
+          );
+          if (outputNodes?.length) {
+            const meanBias = outputNodes.reduce(
+              (total, node) => total + node.bias,
+              0
+            ) / outputNodes.length;
+            for (const node of outputNodes) {
+              node.bias = Math.max(
+                -_MazeMovement.#BIAS_CLAMP,
+                Math.min(
+                  _MazeMovement.#BIAS_CLAMP,
+                  node.bias - meanBias * _MazeMovement.#BIAS_ADJUST_FACTOR
+                )
+              );
+            }
+          }
+        } catch {
+        }
+      }
+    }
+    /** Check deep stagnation and optionally terminate. */
+    static #maybeTerminateDeepStagnation(state) {
+      if (state.stepsSinceImprovement > _MazeMovement.#DEEP_STAGNATION_THRESHOLD) {
+        const rewardScale = _MazeMovement.#REWARD_SCALE;
+        try {
+          if (typeof window === "undefined") {
+            state.invalidMovePenalty -= _MazeMovement.#DEEP_STAGNATION_PENALTY * rewardScale;
+            return true;
+          }
+        } catch {
+          state.invalidMovePenalty -= _MazeMovement.#DEEP_STAGNATION_PENALTY * rewardScale;
+          return true;
+        }
+      }
+      return state.earlyTerminate;
+    }
+    /** Compute entropy from direction counts (shared by success & failure finalization). */
+    static #computeActionEntropyFromCounts(directionCounts) {
+      const total = directionCounts.reduce((s, v) => s + v, 0) || 1;
+      let entropySum = 0;
+      for (const count of directionCounts) {
+        if (!count) continue;
+        const probability = count / total;
+        entropySum -= probability * Math.log(probability);
+      }
+      return entropySum / _MazeMovement.#LOG_ACTIONS;
+    }
+    /** Build and return result object for success scenario. */
+    static #finalizeSuccess(state, maxSteps) {
+      const stepEfficiency = maxSteps - state.steps;
+      const actionEntropy = _MazeMovement.#computeActionEntropyFromCounts(
+        state.directionCounts
+      );
+      const fitness = _MazeMovement.#SUCCESS_BASE_FITNESS + stepEfficiency * _MazeMovement.#STEP_EFFICIENCY_SCALE + state.progressReward + state.newCellExplorationBonus + state.invalidMovePenalty + actionEntropy * _MazeMovement.#SUCCESS_ACTION_ENTROPY_SCALE;
+      const pathMaterialized = _MazeMovement.#materializePath(state.pathLength);
+      return {
+        success: true,
+        steps: state.steps,
+        path: pathMaterialized,
+        fitness: Math.max(_MazeMovement.#MIN_SUCCESS_FITNESS, fitness),
+        progress: 100,
+        saturationFraction: state.steps ? state.saturatedSteps / state.steps : 0,
+        actionEntropy
+      };
+    }
+    /** Build and return result object for failure scenario. */
+    static #finalizeFailure(state, encodedMaze, startPos, exitPos, distanceMap) {
+      const pathX = _MazeMovement.#PathX;
+      const pathY = _MazeMovement.#PathY;
       const lastPos = [
-        pathX[pathLength - 1] ?? 0,
-        pathY[pathLength - 1] ?? 0
+        pathX[state.pathLength - 1] ?? 0,
+        pathY[state.pathLength - 1] ?? 0
       ];
       const progress = distanceMap ? MazeUtils.calculateProgressFromDistanceMap(
         distanceMap,
         lastPos,
         startPos
       ) : MazeUtils.calculateProgress(encodedMaze, lastPos, startPos, exitPos);
-      const progressFrac = progress / 100;
-      const shapedProgress = Math.pow(progressFrac, _MazeMovement.#PROGRESS_POWER) * _MazeMovement.#PROGRESS_SCALE;
-      const explorationScore = visitedUniqueCount * 1;
-      const penalty = invalidMovePenalty;
-      const actionEntropy = (() => {
-        const total = directionCounts[0] + directionCounts[1] + directionCounts[2] + directionCounts[3] || 1;
-        let entropySum = 0;
-        for (let di = 0; di < 4; di++) {
-          const c = directionCounts[di];
-          if (c) {
-            const p = c / total;
-            entropySum += -p * Math.log(p);
-          }
-        }
-        return entropySum / _MazeMovement.#LOG_ACTIONS;
-      })();
+      const progressFraction = progress / 100;
+      const shapedProgress = Math.pow(progressFraction, _MazeMovement.#PROGRESS_POWER) * _MazeMovement.#PROGRESS_SCALE;
+      const explorationScore = state.visitedUniqueCount * 1;
+      const actionEntropy = _MazeMovement.#computeActionEntropyFromCounts(
+        state.directionCounts
+      );
       const entropyBonus = actionEntropy * _MazeMovement.#ENTROPY_BONUS_WEIGHT;
-      let saturationPenalty = 0;
-      let outputVarPenalty = 0;
-      const satFrac = steps ? saturatedSteps / steps : 0;
-      const base = shapedProgress + explorationScore + progressReward + newCellExplorationBonus + penalty + entropyBonus + localAreaPenalty + saturationPenalty + outputVarPenalty;
-      const raw = base + _MazeMovement.#rand() * _MazeMovement.#FITNESS_RANDOMNESS;
+      const saturationPenalty = 0;
+      const outputVarPenalty = 0;
+      const baseFitness = shapedProgress + explorationScore + state.progressReward + state.newCellExplorationBonus + state.invalidMovePenalty + entropyBonus + state.localAreaPenalty + saturationPenalty + outputVarPenalty;
+      const raw = baseFitness + _MazeMovement.#rand() * _MazeMovement.#FITNESS_RANDOMNESS;
       const fitness = raw >= 0 ? raw : -Math.log1p(1 - raw);
-      const pathMaterialized = _MazeMovement.#materializePath(pathLength);
+      const pathMaterialized = _MazeMovement.#materializePath(state.pathLength);
       return {
         success: false,
-        steps,
+        steps: state.steps,
         path: pathMaterialized,
         fitness,
         progress,
-        saturationFraction: satFrac,
+        saturationFraction: state.steps ? state.saturatedSteps / state.steps : 0,
         actionEntropy
       };
     }
@@ -20831,9 +21684,9 @@
   var DEFAULT_MAX_GENERATIONS = 100;
   var PER_GENERATION_LOG_FREQUENCY = 1;
   var INITIAL_MAZE_DIMENSION = 8;
-  var MAX_MAZE_DIMENSION = 28;
+  var MAX_MAZE_DIMENSION = 40;
   var MAZE_DIMENSION_INCREMENT = 4;
-  var AGENT_MAX_STEPS = 200;
+  var AGENT_MAX_STEPS = 600;
   var POPULATION_SIZE = 20;
   function createEvolutionSettings(dimension) {
     return {
@@ -20946,6 +21799,21 @@
     };
     const combinedSignal = composeAbortSignal(externalSignal);
     let running = true;
+    try {
+      combinedSignal.addEventListener(
+        "abort",
+        () => {
+          cancelled = true;
+          running = false;
+          try {
+            resolveDone?.();
+          } catch {
+          }
+        },
+        { once: true }
+      );
+    } catch {
+    }
     let currentDimension = INITIAL_MAZE_DIMENSION;
     let resolveDone;
     const donePromise = new Promise((resolve) => resolveDone = resolve);
@@ -21041,8 +21909,10 @@
           internalController.abort();
         } catch {
         }
+        running = false;
       },
-      isRunning: () => running && !cancelled,
+      // Include AbortSignal aborted state so external aborts flip isRunning() without relying solely on listener side-effects.
+      isRunning: () => running && !cancelled && !combinedSignal.aborted,
       done: Promise.resolve(donePromise).catch(() => {
       }),
       onTelemetry: (telemetryCallback) => telemetryHub.add(telemetryCallback),

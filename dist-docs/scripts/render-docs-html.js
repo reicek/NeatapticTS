@@ -36,7 +36,14 @@ async function main() {
                 groupsMap.set(seg, { name: seg, items: [] });
             groupsMap.get(seg).items.push(p);
         }
-        const order = ['root', 'architecture', 'methods', 'neat', 'multithreading', 'examples'];
+        const order = [
+            'root',
+            'architecture',
+            'methods',
+            'neat',
+            'multithreading',
+            'examples',
+        ];
         const makeLink = (page) => {
             const isCurrent = page.relDir === currentDir;
             const relLink = path.posix.relative(currentDir || '.', page.relDir || '.') || '.';
@@ -55,15 +62,17 @@ async function main() {
                     return `<li><a href="${href}">examples/asciiMaze</a></li>`;
                 }
             }
-            catch { /* ignore */ }
+            catch {
+                /* ignore */
+            }
             return '';
         };
         const groupsHtml = Array.from(groupsMap.values())
             .sort((a, b) => order.indexOf(a.name) - order.indexOf(b.name))
-            .map(g => {
+            .map((g) => {
             const items = g.items.sort((a, b) => a.relDir.localeCompare(b.relDir));
             if (g.name === 'root')
-                return makeLink(items.find(i => i.relDir === ''));
+                return makeLink(items.find((i) => i.relDir === ''));
             return `<li class="group"><div class="g-head">${g.name}</div><ul>${items.map(makeLink).join('')}${g.name === 'examples' ? asciiExample() : ''}</ul></li>`;
         })
             .join('');
@@ -93,10 +102,15 @@ async function main() {
         // Configure marked renderer with deterministic heading IDs so anchors match our TOC.
         const renderer = new marked.Renderer();
         const originalHeading = renderer.heading?.bind(renderer);
-        renderer.heading = (text, level, raw) => {
-            // raw is the unescaped heading text; use it for id to align with our parsing.
-            const id = slugify(raw.trim());
-            return `<h${level} id="${id}">${text}</h${level}>`;
+        // Marked >= v16 passes a single Heading token object { text, depth, raw, tokens }
+        // See: https://marked.js.org/using_pro#renderer for updated signature.
+        renderer.heading = ({ text, depth, raw }) => {
+            const source = (raw ?? text ?? '')
+                .toString()
+                .replace(/<[^>]+>/g, '')
+                .trim();
+            const id = slugify(source);
+            return `<h${depth} id="${id}">${text}</h${depth}>`;
         };
         marked.use({ renderer });
         const htmlBody = marked.parse(md, { async: false });
@@ -110,7 +124,9 @@ async function main() {
                 .join('')}</div>`
             : '';
         const outFile = path.join(path.dirname(meta.abs), 'index.html');
-        const relToRoot = path.relative(path.dirname(meta.abs), DOCS_DIR).replace(/\\/g, '/');
+        const relToRoot = path
+            .relative(path.dirname(meta.abs), DOCS_DIR)
+            .replace(/\\/g, '/');
         const cssHref = (relToRoot ? relToRoot + '/' : '') + 'assets/theme.css';
         // Add Examples top-level nav; active when current dir starts with examples
         const examplesHref = (relToRoot || '.') + '/examples/index.html';

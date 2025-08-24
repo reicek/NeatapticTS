@@ -15,6 +15,12 @@ import { MazeUtils } from './mazeUtils';
 import { colors } from './colors';
 import { IVisualizationNode, IVisualizationConnection } from './interfaces';
 
+// Ambient declaration fallback: some TS lib bundlings in test build may not surface ES2023 array methods.
+// This doesn't polyfill at runtime (Node 20+ already supports them); it merely satisfies the type checker.
+interface Array<T> {
+  toSorted?(compareFn?: (a: T, b: T) => number): T[];
+}
+
 /**
  * NetworkVisualization
  *
@@ -23,11 +29,44 @@ import { IVisualizationNode, IVisualizationConnection } from './interfaces';
  * for terminal display. Performance-sensitive areas avoid temporary
  * allocations when possible (e.g., building small windowed arrays).
  */
+/**
+ * Provides ES2023-friendly, terminal-oriented ASCII visualizations for neural network
+ * architectures used in the ASCII maze demo. Emphasizes low allocation patterns and
+ * color-enhanced readability for activations and structural summaries.
+ *
+ * Design goals:
+ * 1. Low GC pressure during rapid re-render loops (reuse scratch arrays/strings).
+ * 2. Clear, color-coded activation ranges (TRON-inspired palette).
+ * 3. Graceful condensation of very large hidden layers via averaged activation groups.
+ * 4. Deterministic ordering using stable, non-mutating sort helpers (ES2023 toSorted fallback).
+ *
+ * Key public surface:
+ * - {@link NetworkVisualization.visualizeNetworkSummary} produces a multi-line string summary.
+ */
 export class NetworkVisualization {
   // Internal layout constants (private)
   static readonly #ARROW = '  ──▶  ';
   static readonly #ARROW_WIDTH = NetworkVisualization.#ARROW.length;
   static readonly #TOTAL_WIDTH = 150; // Overall visualization width
+  /** Activation range buckets (ordered, positive to negative). */
+  static readonly #ACTIVATION_RANGES = [
+    { min: 2.0, max: Infinity, label: 'v-high+' },
+    { min: 1.0, max: 2.0, label: 'high+' },
+    { min: 0.5, max: 1.0, label: 'mid+' },
+    { min: 0.1, max: 0.5, label: 'low+' },
+    { min: -0.1, max: 0.1, label: 'zero±' },
+    { min: -0.5, max: -0.1, label: 'low-' },
+    { min: -1.0, max: -0.5, label: 'mid-' },
+    { min: -2.0, max: -1.0, label: 'high-' },
+    { min: -Infinity, max: -2.0, label: 'v-high-' },
+  ] as const;
+  /** Scratch array for connection counts (reused / grown). @remarks Non-reentrant. */
+  static #ConnectionCountsScratch: Int32Array = new Int32Array(16);
+  static #ConnectionCountsLen = 0;
+  /** Scratch list for building output rows before join. @remarks Non-reentrant. */
+  static #ScratchRows: string[] = [];
+  /** Scratch list for header construction. */
+  static #ScratchHeaderParts: string[] = [];
   /**
    * Pads a string to a specific width with alignment options.
    *
@@ -117,20 +156,6 @@ export class NetworkVisualization {
   }
 
   /**
-   * Return the last element of an array or undefined when empty.
-   */
-  static #last<T>(arr?: readonly T[] | null): T | undefined {
-    return MazeUtils.safeLast(arr as any) as T | undefined;
-  }
-
-  /**
-   * Return the length of an array or 0 when missing.
-   */
-  static #lastLength(arr?: any[] | null): number {
-    return Array.isArray(arr) ? arr.length : 0;
-  }
-
-  /**
    * Format a node display with a colored symbol and its colored numeric value.
    * `extra` can include any trailing text (already colorized) and may include a leading space.
    */
@@ -200,37 +225,18 @@ export class NetworkVisualization {
     groups: any[][];
     labels: string[];
   } {
-    // Calculate activation values
-    /**
-     * Activation values for each node, used for grouping.
-     */
+    // Calculate activation values once (reuse for range checks)
     const activations = nodes.map((node) =>
       NetworkVisualization.#getNodeValue(node)
     );
-
-    /**
-     * Activation ranges for grouping nodes by value.
-     */
-    const ranges = [
-      { min: 2.0, max: Infinity, label: 'v-high+' },
-      { min: 1.0, max: 2.0, label: 'high+' },
-      { min: 0.5, max: 1.0, label: 'mid+' },
-      { min: 0.1, max: 0.5, label: 'low+' },
-      { min: -0.1, max: 0.1, label: 'zero±' },
-      { min: -0.5, max: -0.1, label: 'low-' },
-      { min: -1.0, max: -0.5, label: 'mid-' },
-      { min: -2.0, max: -1.0, label: 'high-' },
-      { min: -Infinity, max: -2.0, label: 'v-high-' },
-    ];
-
     /**
      * Arrays to hold groups of nodes and their labels.
      */
     const groups: any[][] = [];
     const labels: string[] = [];
 
-    // Group nodes by activation ranges
-    for (const range of ranges) {
+    // Group nodes by predefined activation ranges
+    for (const range of NetworkVisualization.#ACTIVATION_RANGES) {
       const nodesInRange = nodes.filter(
         (_, i) => activations[i] >= range.min && activations[i] < range.max
       );
@@ -260,6 +266,7 @@ export class NetworkVisualization {
     layerDisplayCounts: number[];
     averageNodes: { [key: string]: { avgValue: number; count: number } };
   } {
+    // Step 0: Fast return if no hidden layers
     /**
      * Maximum number of nodes to display per layer (rest are averaged).
      */
@@ -285,116 +292,157 @@ export class NetworkVisualization {
         layerDisplayCounts.push(layer.length);
       } else {
         // For large layers, show all nodes as averages to better represent distribution
-
-        // Group nodes by activation values
-        const { groups, labels } = NetworkVisualization.#groupNodesByActivation(
-          layer
-        );
-
-        // If we have too many groups, we need to merge some to fit in MAX_VISIBLE
-        let finalGroups = groups;
-        let finalLabels = labels;
-
-        if (groups.length > MAX_VISIBLE) {
-          // We deliberately avoid allocating temporary slices when selecting
-          // top groups vs remaining groups. The original implementation used
-          // `slice(0, k)` and `slice(k)` which creates short-lived arrays; we
-          // instead build the two result arrays with simple index loops above
-          // (see `topGroups` / `remainingGroups`) to reduce pressure on the
-          // garbage collector during frequent renders.
-          // We'll prioritize groups with more nodes and merge smaller ones
-          const rankedGroups = groups
-            .map((g, i) => ({
-              group: g,
-              label: labels[i],
-              size: g.length,
-            }))
-            .toSorted((a, b) => b.size - a.size);
-
-          // Take top MAX_VISIBLE-1 groups
-          const topGroups: any[] = [];
-          const cut = Math.max(0, MAX_VISIBLE - 1);
-          for (let i = 0; i < Math.min(cut, rankedGroups.length); i++)
-            topGroups.push(rankedGroups[i]);
-
-          // Combine all remaining small groups
-          const remainingGroups: any[] = [];
-          for (let i = cut; i < rankedGroups.length; i++)
-            remainingGroups.push(rankedGroups[i]);
-          const mergedGroup = remainingGroups.reduce(
-            (acc, curr) => {
-              acc.group = [...acc.group, ...curr.group];
-              return acc;
-            },
-            { group: [], label: 'other±', size: 0 }
-          );
-
-          if (mergedGroup.group.length > 0) {
-            topGroups.push(mergedGroup);
-          }
-
-          // Sort back to original order by activation range (assumed by label)
-          // Use immutable toSorted to avoid mutating topGroups when reordering display groups
-          const sortedTopGroups = topGroups.toSorted((a, b) => {
-            // Sort by activation range - very high+ first, very high- last
-            const aIsNegative = a.label.includes('-');
-            const bIsNegative = b.label.includes('-');
-
-            if (aIsNegative && !bIsNegative) return 1;
-            if (!aIsNegative && bIsNegative) return -1;
-
-            if (a.label.includes('v-') && !b.label.includes('v-'))
-              return aIsNegative ? 1 : -1;
-            if (!a.label.includes('v-') && b.label.includes('v-'))
-              return aIsNegative ? -1 : 1;
-
-            if (a.label.includes('high') && !b.label.includes('high'))
-              return aIsNegative ? 1 : -1;
-            if (!a.label.includes('high') && b.label.includes('high'))
-              return aIsNegative ? -1 : 1;
-
-            return 0;
-          });
-
-          finalGroups = sortedTopGroups.map((g) => g.group);
-          finalLabels = sortedTopGroups.map((g) => g.label);
-        }
-
-        // Create "virtual" average nodes for each group
-        const avgNodes = finalGroups.map((group, groupIdx) => {
-          const avgKey = `layer${layerIdx}-avg-${groupIdx}`;
-          const sum = group.reduce(
-            (acc: number, node: any) =>
-              acc + NetworkVisualization.#getNodeValue(node),
-            0
-          );
-          const avgValue = group.length > 0 ? sum / group.length : 0;
-
-          // Store average node info
-          averageNodes[avgKey] = {
-            avgValue,
-            count: group.length,
-          };
-
-          // Create a "virtual" average node to display
-          return {
-            id: -1 * (layerIdx * 1000 + groupIdx),
-            uuid: avgKey,
-            type: 'hidden',
-            activation: avgValue,
-            isAverage: true,
-            avgCount: group.length,
-            label: finalLabels[groupIdx],
-          };
+        const {
+          avgNodes,
+          count,
+        } = NetworkVisualization.#createAverageNodesForLargeLayer({
+          layer,
+          layerIndex: layerIdx,
+          maxVisible: MAX_VISIBLE,
+          averageNodesStore: averageNodes,
         });
-
-        // Add only the average nodes
         displayLayers.push(avgNodes);
-        layerDisplayCounts.push(avgNodes.length);
+        layerDisplayCounts.push(count);
       }
     });
 
     return { displayLayers, layerDisplayCounts, averageNodes };
+  }
+
+  /**
+   * Create average nodes representation for a large hidden layer.
+   * Decomposed from #prepareHiddenLayersForDisplay for clarity.
+   */
+  static #createAverageNodesForLargeLayer(params: {
+    layer: any[];
+    layerIndex: number;
+    maxVisible: number;
+    averageNodesStore: { [key: string]: { avgValue: number; count: number } };
+  }): { avgNodes: any[]; count: number } {
+    const { layer, layerIndex, maxVisible, averageNodesStore } = params;
+    const { groups, labels } = NetworkVisualization.#groupNodesByActivation(
+      layer
+    );
+    // If too many groups, merge using ranking strategy
+    const { finalGroups, finalLabels } =
+      groups.length > maxVisible
+        ? NetworkVisualization.#rankMergeAndOrderGroups({
+            groups,
+            labels,
+            maxVisible,
+          })
+        : { finalGroups: groups, finalLabels: labels };
+    // Map groups to virtual average nodes
+    const averageNodes = finalGroups.map((group, groupIndex) =>
+      NetworkVisualization.#buildAverageNode({
+        group,
+        groupIndex,
+        layerIndex,
+        label: finalLabels[groupIndex],
+        averageNodesStore,
+      })
+    );
+    return { avgNodes: averageNodes, count: averageNodes.length };
+  }
+
+  /** Build a single average node descriptor from a group. */
+  static #buildAverageNode(params: {
+    group: any[];
+    groupIndex: number;
+    layerIndex: number;
+    label: string;
+    averageNodesStore: { [key: string]: { avgValue: number; count: number } };
+  }): any {
+    const { group, groupIndex, layerIndex, label, averageNodesStore } = params;
+    const avgKey = `layer${layerIndex}-avg-${groupIndex}`;
+    const sum = group.reduce(
+      (runningTotal: number, node: any) =>
+        runningTotal + NetworkVisualization.#getNodeValue(node),
+      0
+    );
+    const avgValue = group.length ? sum / group.length : 0;
+    averageNodesStore[avgKey] = { avgValue, count: group.length };
+    return {
+      id: -1 * (layerIndex * 1000 + groupIndex),
+      uuid: avgKey,
+      type: 'hidden',
+      activation: avgValue,
+      isAverage: true,
+      avgCount: group.length,
+      label,
+    };
+  }
+
+  /** Rank groups by size, merge overflow into one group, then order by activation semantics. */
+  static #rankMergeAndOrderGroups(params: {
+    groups: any[][];
+    labels: string[];
+    maxVisible: number;
+  }): { finalGroups: any[][]; finalLabels: string[] } {
+    const { groups, labels, maxVisible } = params;
+    // Pair groups with metadata
+    const groupMeta = groups.map((group, index) => ({
+      group,
+      label: labels[index],
+      size: group.length,
+    }));
+    // Use ES2023 toSorted via helper (non-mutating, with fallback)
+    const ranked = NetworkVisualization.#safeToSorted(
+      groupMeta,
+      (a, b) => b.size - a.size
+    );
+    const cutPoint = Math.max(0, maxVisible - 1);
+    const top = ranked.slice(0, cutPoint);
+    const remainder = ranked.slice(cutPoint);
+    if (remainder.length)
+      top.push(NetworkVisualization.#mergeOverflowGroups(remainder));
+    // Order by qualitative activation label bucket: positive high -> negative high
+    const ordered = NetworkVisualization.#safeToSorted(
+      top,
+      NetworkVisualization.#activationLabelComparator
+    );
+    return {
+      finalGroups: ordered.map((m) => m.group),
+      finalLabels: ordered.map((m) => m.label),
+    };
+  }
+
+  /** Merge overflow group metadata into a single synthetic bucket. */
+  static #mergeOverflowGroups(
+    metadataList: { group: any[]; label: string; size: number }[]
+  ) {
+    // Use reduce with spread push; could also use flatMap but this is explicit.
+    return metadataList.reduce(
+      (acc, current) => {
+        acc.group.push(...current.group);
+        acc.size += current.size;
+        return acc;
+      },
+      { group: [] as any[], label: 'other±', size: 0 }
+    );
+  }
+
+  /** Safe wrapper around ES2023 Array.prototype.toSorted with graceful fallback. */
+  static #safeToSorted<T>(array: T[], compare: (a: T, b: T) => number): T[] {
+    const anyArray: any = array as any;
+    if (typeof anyArray.toSorted === 'function')
+      return anyArray.toSorted(compare);
+    return [...array].sort(compare);
+  }
+
+  /** Comparator for activation range label ordering (heuristic). */
+  static #activationLabelComparator(a: any, b: any): number {
+    const aNeg = a.label.includes('-');
+    const bNeg = b.label.includes('-');
+    if (aNeg !== bNeg) return aNeg ? 1 : -1; // positives first
+    // Very high variants first within polarity
+    const veryA = a.label.startsWith('v-high');
+    const veryB = b.label.startsWith('v-high');
+    if (veryA !== veryB) return veryA ? -1 : 1;
+    const highA = a.label.includes('high');
+    const highB = b.label.includes('high');
+    if (highA !== highB) return highA ? -1 : 1;
+    return 0;
   }
 
   /**
@@ -416,212 +464,343 @@ export class NetworkVisualization {
     };
   }
 
-  /**
-   * Visualizes a neural network's structure and activations in ASCII format.
-   *
-   * Creates a comprehensive terminal-friendly visualization showing:
-   * - Network architecture with layers
-   * - Node activation values with color coding
-   * - Connection counts between layers
-   * - Condensed representation of large hidden layers
-   *
-   * @param network - The neural network to visualize.
-   * @returns String containing the ASCII visualization.
-   */
-  static visualizeNetworkSummary(network: INetwork): string {
-    // (Constants now provided via private static fields.)
-
-    /**
-     * Determine input count dynamically (inputs + constants).
-     * Fallback to 18 if not detected (for legacy schemas).
-     */
-    const detectedInputNodes = (network.nodes || []).filter(
-      (n: any) => n.type === 'input' || n.type === 'constant'
-    );
-    const INPUT_COUNT = detectedInputNodes.length || 18; // fallback to expected 18 with memory inputs
-
-    /**
-     * Number of output nodes (hardcoded for maze solver: N, E, S, W).
-     */
-    const OUTPUT_COUNT = 4;
-
-    // Extract nodes from network
+  /** Categorize nodes in a single pass (avoids 3 separate filter passes). */
+  static #categorizeNodes(
+    network: INetwork
+  ): {
+    inputNodes: IVisualizationNode[];
+    hiddenNodes: IVisualizationNode[];
+    outputNodes: IVisualizationNode[];
+    inputCountDetected: number;
+  } {
+    const inputNodes: IVisualizationNode[] = [];
+    const hiddenNodes: IVisualizationNode[] = [];
+    const outputNodes: IVisualizationNode[] = [];
     const nodes = network.nodes || [];
-
-    /**
-     * Arrays of input, output, and hidden nodes for visualization.
-     */
-    const inputNodes: IVisualizationNode[] = nodes
-      .filter((n) => n.type === 'input' || n.type === 'constant')
-      .map(NetworkVisualization.#toVisualizationNode);
-    const outputNodes: IVisualizationNode[] = nodes
-      .filter((n) => n.type === 'output')
-      .map(NetworkVisualization.#toVisualizationNode);
-    const hiddenNodesRaw: IVisualizationNode[] = nodes
-      .filter((n) => n.type === 'hidden')
-      .map(NetworkVisualization.#toVisualizationNode);
-
-    /**
-     * Group hidden nodes into layers for visualization.
-     */
-    const hiddenLayers = NetworkVisualization.#groupHiddenByLayer(
+    for (let index = 0; index < nodes.length; index++) {
+      const node = nodes[index];
+      const viz = NetworkVisualization.#toVisualizationNode(node, index);
+      switch (node.type) {
+        case 'input':
+        case 'constant':
+          inputNodes.push(viz);
+          break;
+        case 'hidden':
+          hiddenNodes.push(viz);
+          break;
+        case 'output':
+          outputNodes.push(viz);
+          break;
+        default:
+          // ignore other experimental types
+          break;
+      }
+    }
+    return {
       inputNodes,
-      hiddenNodesRaw,
-      outputNodes
-    );
+      hiddenNodes,
+      outputNodes,
+      inputCountDetected: inputNodes.length,
+    };
+  }
+
+  /** Ensure connection-count scratch buffer is large enough. */
+  static #ensureConnectionScratch(required: number): Int32Array {
+    if (NetworkVisualization.#ConnectionCountsScratch.length < required) {
+      let newSize = NetworkVisualization.#ConnectionCountsScratch.length;
+      while (newSize < required) newSize *= 2;
+      NetworkVisualization.#ConnectionCountsScratch = new Int32Array(newSize);
+    }
+    return NetworkVisualization.#ConnectionCountsScratch;
+  }
+
+  /** Compute connection counts between sequential layer boundaries. */
+  static #computeConnectionCounts(
+    network: INetwork,
+    inputNodes: IVisualizationNode[],
+    hiddenLayers: any[][],
+    outputNodes: IVisualizationNode[]
+  ): Int32Array {
     const numHiddenLayers = hiddenLayers.length;
-
-    /**
-     * Prepare hidden layers for display (condensing large layers to averages).
-     */
-    const {
-      displayLayers,
-      layerDisplayCounts,
-      averageNodes,
-    } = NetworkVisualization.#prepareHiddenLayersForDisplay(hiddenLayers);
-
-    /**
-     * Map connections using node index as unique identifier for visualization.
-     */
-    const connections: IVisualizationConnection[] = (
-      network.connections || []
-    ).map((conn: any) => ({
-      weight: conn.weight,
-      fromUUID: String(conn.from.index), // Use .index directly as per INodeStruct
-      toUUID: String(conn.to.index), // Use .index directly as per INodeStruct
-      gaterUUID: conn.gater ? String(conn.gater.index) : null, // Use .index directly
-      enabled: typeof conn.enabled === 'boolean' ? conn.enabled : true,
-    }));
-
-    /**
-     * Calculate connection counts between layers for summary display.
-     * We precompute Sets of node ids per layer to avoid repeated O(N) `.some`
-     * checks while scanning connections (clearer and faster).
-     */
-    const connectionCounts: number[] = [];
-
-    // Precompute id sets for input, output and each hidden layer
+    const arrows = numHiddenLayers > 0 ? numHiddenLayers + 1 : 1; // input->first/ output plus between hidden
+    const scratch = NetworkVisualization.#ensureConnectionScratch(arrows);
+    scratch.fill(0, 0, arrows);
+    NetworkVisualization.#ConnectionCountsLen = arrows;
     const inputIdSet = new Set<number>(inputNodes.map((n) => Number(n.id)));
     const outputIdSet = new Set<number>(outputNodes.map((n) => Number(n.id)));
-    const hiddenLayerIdSets: Set<number>[] = hiddenLayers.map(
-      (layer) => new Set<number>(layer.map((n) => Number(n.id)))
+    const hiddenSets: Set<number>[] = hiddenLayers.map(
+      (layer) => new Set(layer.map((n: any) => Number(n.id)))
     );
-
-    // Count input → first hidden (or output if no hidden)
-    const firstTargetSet = hiddenLayerIdSets[0] ?? outputIdSet;
-    let firstCount = 0;
-    for (const conn of network.connections ?? []) {
+    const connections = network.connections || [];
+    for (let ci = 0; ci < connections.length; ci++) {
+      const conn: any = connections[ci];
       const fromIdx = Number(conn.from?.index ?? -1);
       const toIdx = Number(conn.to?.index ?? -1);
-      if (inputIdSet.has(fromIdx) && firstTargetSet.has(toIdx)) firstCount++;
-    }
-    connectionCounts.push(firstCount);
-
-    // Count between hidden layers
-    for (let i = 0; i < hiddenLayerIdSets.length - 1; i++) {
-      let count = 0;
-      const fromSet = hiddenLayerIdSets[i];
-      const toSet = hiddenLayerIdSets[i + 1];
-      for (const conn of network.connections ?? []) {
-        const fromIdx = Number(conn.from?.index ?? -1);
-        const toIdx = Number(conn.to?.index ?? -1);
-        if (fromSet.has(fromIdx) && toSet.has(toIdx)) count++;
+      // input -> first target
+      if (inputIdSet.has(fromIdx)) {
+        if (hiddenSets[0] && hiddenSets[0].has(toIdx)) scratch[0]++;
+        else if (hiddenSets.length === 0 && outputIdSet.has(toIdx))
+          scratch[0]++;
+        continue;
       }
-      connectionCounts.push(count);
-    }
-
-    // Count last hidden → output (if any hidden layers)
-    if (hiddenLayerIdSets.length > 0) {
-      const lastSet = hiddenLayerIdSets[hiddenLayerIdSets.length - 1];
-      let lastCount = 0;
-      for (const conn of network.connections ?? []) {
-        const fromIdx = Number(conn.from?.index ?? -1);
-        const toIdx = Number(conn.to?.index ?? -1);
-        if (lastSet.has(fromIdx) && outputIdSet.has(toIdx)) lastCount++;
+      // hidden -> hidden or hidden -> output
+      for (let h = 0; h < hiddenSets.length; h++) {
+        const fromSet = hiddenSets[h];
+        if (!fromSet.has(fromIdx)) continue;
+        const lastHidden = h === hiddenSets.length - 1;
+        if (!lastHidden) {
+          const toSet = hiddenSets[h + 1];
+          if (toSet.has(toIdx)) {
+            scratch[1 + h]++;
+            break;
+          }
+        } else {
+          if (outputIdSet.has(toIdx)) {
+            scratch[hiddenSets.length]++;
+            break;
+          }
+        }
       }
-      connectionCounts.push(lastCount);
     }
+    return scratch;
+  }
 
-    // --- Layer/connection summary footer ---
-
-    /**
-     * Layout calculations for columns and arrows.
-     * - numLayers: total number of layers (input + hidden + output)
-     * - numArrows: number of arrows between layers
-     * - availableWidth: width for all columns
-     * - columnWidth: width of each column
-     */
-    const numLayers = 2 + numHiddenLayers; // input + hidden + output
-    const numArrows = numLayers - 1;
-    const availableWidth =
-      NetworkVisualization.#TOTAL_WIDTH -
-      numArrows * NetworkVisualization.#ARROW_WIDTH;
-    const columnWidth = Math.floor(availableWidth / numLayers);
-
-    /**
-     * Build the header row for the visualization, including layer names and connection counts.
-     */
-    let header = '';
-    header +=
-      `${colors.blueCore}║` +
-      NetworkVisualization.pad(
-        `${colors.neonGreen}Input Layer [${INPUT_COUNT}]${colors.reset}`,
-        columnWidth - 1
-      );
-
-    // First arrow with connection count on the left
-    const firstConnCount = connectionCounts[0];
-    const firstArrowText = `${
-      colors.blueNeon
-    }${firstConnCount} ${NetworkVisualization.#ARROW.trim()}${colors.reset}`;
-    header += NetworkVisualization.pad(
-      firstArrowText,
-      NetworkVisualization.#ARROW_WIDTH
+  /** Build header string. */
+  static #buildHeader(
+    inputCount: number,
+    hiddenLayers: any[][],
+    outputCount: number,
+    connectionCounts: Int32Array
+  ): string {
+    const numHiddenLayers = hiddenLayers.length;
+    const { columnWidth } = NetworkVisualization.#computeLayout(
+      numHiddenLayers
     );
-
-    // Add hidden layer headers with connection counts
-    for (let i = 0; i < numHiddenLayers; i++) {
-      header += NetworkVisualization.pad(
-        `${colors.cyanNeon}Hidden ${i + 1} [${hiddenLayers[i].length}]${
-          colors.reset
-        }`,
-        columnWidth
+    const parts = NetworkVisualization.#ScratchHeaderParts;
+    parts.length = 0;
+    parts.push(
+      NetworkVisualization.#buildHeaderSegment({
+        prefix: `${colors.blueCore}║`,
+        label: `${colors.neonGreen}Input Layer [${inputCount}]${colors.reset}`,
+        width: columnWidth - 1,
+      })
+    );
+    parts.push(
+      NetworkVisualization.#formatHeaderArrow(connectionCounts[0] ?? 0)
+    );
+    for (
+      let hiddenLayerIndex = 0;
+      hiddenLayerIndex < numHiddenLayers;
+      hiddenLayerIndex++
+    ) {
+      parts.push(
+        NetworkVisualization.pad(
+          `${colors.cyanNeon}Hidden ${hiddenLayerIndex + 1} [${
+            hiddenLayers[hiddenLayerIndex].length
+          }]${colors.reset}`,
+          columnWidth
+        )
       );
-
-      if (i < numHiddenLayers) {
-        // Arrow with connection count on the left
-        const connCount = connectionCounts[i + 1] || 0;
-        const arrowText = `${
-          colors.blueNeon
-        }${connCount} ${NetworkVisualization.#ARROW.trim()}${colors.reset}`;
-        header += NetworkVisualization.pad(
-          arrowText,
-          NetworkVisualization.#ARROW_WIDTH
-        );
-      }
+      parts.push(
+        NetworkVisualization.#formatHeaderArrow(
+          connectionCounts[hiddenLayerIndex + 1] || 0
+        )
+      );
     }
-
-    header +=
+    parts.push(
       NetworkVisualization.pad(
-        `${colors.orangeNeon}Output Layer [${OUTPUT_COUNT}]${colors.reset}`,
+        `${colors.orangeNeon}Output Layer [${outputCount}]${colors.reset}`,
         columnWidth,
         ' ',
         'center'
-      ) + `${colors.blueCore}║${colors.reset}`;
+      ) + `${colors.blueCore}║${colors.reset}`
+    );
+    return parts.join('');
+  }
 
-    // Prepare display data for each layer
-    // For input nodes: Always show all detected inputs.
-    // Annotate first 6 (if present) with semantic labels of current minimal vision schema.
-    /**
-     * Array of input nodes to display, padded to INPUT_COUNT.
-     */
-    const inputDisplayNodes = Array(INPUT_COUNT)
-      .fill(null)
-      .map((_, i) => inputNodes[i] || { activation: 0 });
+  /** Build a single header segment with optional prefix. */
+  static #buildHeaderSegment(params: {
+    prefix?: string;
+    label: string;
+    width: number;
+  }): string {
+    const { prefix = '', label, width } = params;
+    return prefix + NetworkVisualization.pad(label, width, ' ', 'center');
+  }
 
-    /**
-     * Semantic labels for the first 6 input nodes (if present).
-     */
+  /** Format a header arrow segment including connection count label. */
+  static #formatHeaderArrow(connectionCount: number): string {
+    const text = `${
+      colors.blueNeon
+    }${connectionCount} ${NetworkVisualization.#ARROW.trim()}${colors.reset}`;
+    return NetworkVisualization.pad(text, NetworkVisualization.#ARROW_WIDTH);
+  }
+
+  /** Build legend footer lines. */
+  static #buildLegend(): string[] {
+    return [
+      // Spacer
+      `${colors.blueCore}║       ${NetworkVisualization.pad(' ', 140)} ║${
+        colors.reset
+      }`,
+      `${colors.blueCore}║       ${NetworkVisualization.pad(
+        'Arrows indicate feed-forward flow.',
+        140,
+        ' ',
+        'left'
+      )} ${colors.blueCore}║${colors.reset}`,
+      `${colors.blueCore}║       ${NetworkVisualization.pad(' ', 140)} ║${
+        colors.reset
+      }`,
+      `${colors.blueCore}║       ${NetworkVisualization.pad(
+        `${colors.whiteNeon}Legend:  ${colors.neonGreen}●${colors.reset}=Input                    ${colors.cyanNeon}■${colors.reset}=Hidden                    ${colors.orangeNeon}▲${colors.reset}=Output`,
+        140,
+        ' ',
+        'left'
+      )} ${colors.blueCore}║${colors.reset}`,
+      `${colors.blueCore}║       ${NetworkVisualization.pad(
+        `${colors.whiteNeon}Groups:  ${colors.bgOrangeNeon}${colors.bright}v-high+${colors.reset}=Very high positive   ${colors.orangeNeon}high+${colors.reset}=High positive    ${colors.cyanNeon}mid+${colors.reset}=Medium positive    ${colors.neonGreen}low+${colors.reset}=Low positive`,
+        140,
+        ' ',
+        'left'
+      )} ${colors.blueCore}║${colors.reset}`,
+      `${colors.blueCore}║       ${NetworkVisualization.pad(
+        `${colors.whiteNeon}         zero±${colors.reset}=Near zero`,
+        140,
+        ' ',
+        'left'
+      )} ${colors.blueCore}║${colors.reset}`,
+      `${colors.blueCore}║       ${NetworkVisualization.pad(
+        `         ${colors.bgBlueCore}${colors.bright}v-high-${colors.reset}=Very high negative   ${colors.blueNeon}${colors.bright}high-${colors.reset}=High negative    ${colors.blueCore}mid-${colors.reset}=Medium negative    ${colors.blue}low-${colors.reset}=Low negative`,
+        140,
+        ' ',
+        'left'
+      )} ${colors.blueCore}║${colors.reset}`,
+    ];
+  }
+
+  /** Build row strings for body. */
+  static #buildRows(
+    params: {
+      inputCount: number;
+      outputCount: number;
+      inputNodes: IVisualizationNode[];
+      displayLayers: any[][];
+      layerDisplayCounts: number[];
+      outputNodes: IVisualizationNode[];
+      connectionCounts: Int32Array;
+    },
+    columnWidth: number
+  ): string[] {
+    const context = NetworkVisualization.#buildRowsInit(params);
+    const {
+      maxRows,
+      rows,
+      inputDisplayNodes,
+      outputDisplayNodes,
+      numHiddenLayers,
+      inputCount,
+      outputCount,
+      inputNodes,
+      displayLayers,
+      connectionCounts,
+    } = context;
+    for (let rowIndex = 0; rowIndex < maxRows; rowIndex++) {
+      let line = '';
+      line += NetworkVisualization.#buildInputCell({
+        rowIndex,
+        inputCount,
+        columnWidth,
+        inputDisplayNodes,
+      });
+      line += NetworkVisualization.#buildFirstArrowCell({
+        rowIndex,
+        inputCount,
+        inputNodes,
+        displayLayers,
+        connectionCounts,
+      });
+      for (let layerIndex = 0; layerIndex < numHiddenLayers; layerIndex++) {
+        line += NetworkVisualization.#buildHiddenLayerCell({
+          rowIndex,
+          layerIndex,
+          columnWidth,
+          displayLayers,
+        });
+        line += NetworkVisualization.#buildInterLayerArrowCell({
+          rowIndex,
+          layerIndex,
+          numHiddenLayers,
+          displayLayers,
+          connectionCounts,
+          outputCount,
+        });
+      }
+      line += NetworkVisualization.#buildOutputCell({
+        rowIndex,
+        outputCount,
+        outputDisplayNodes,
+        columnWidth,
+      });
+      rows.push(line);
+    }
+    return rows.slice();
+  }
+
+  /** Initialize reusable structures for row building. */
+  static #buildRowsInit(params: {
+    inputCount: number;
+    outputCount: number;
+    inputNodes: IVisualizationNode[];
+    displayLayers: any[][];
+    layerDisplayCounts: number[];
+    outputNodes: IVisualizationNode[];
+    connectionCounts: Int32Array;
+  }) {
+    const {
+      inputCount,
+      outputCount,
+      inputNodes,
+      displayLayers,
+      layerDisplayCounts,
+      outputNodes,
+      connectionCounts,
+    } = params;
+    const maxRows = Math.max(inputCount, ...layerDisplayCounts, outputCount);
+    const rows = NetworkVisualization.#ScratchRows;
+    rows.length = 0;
+    const inputDisplayNodes = Array.from(
+      { length: inputCount },
+      (_, idx) => inputNodes[idx] || { activation: 0 }
+    );
+    const outputDisplayNodes = Array.from(
+      { length: outputCount },
+      (_, idx) => outputNodes[idx] || { activation: 0 }
+    );
+    return {
+      maxRows,
+      rows,
+      inputDisplayNodes,
+      outputDisplayNodes,
+      numHiddenLayers: displayLayers.length,
+      inputCount,
+      outputCount,
+      inputNodes,
+      displayLayers,
+      connectionCounts,
+    };
+  }
+
+  /** Build cell for an input row (including label). */
+  static #buildInputCell(params: {
+    rowIndex: number;
+    inputCount: number;
+    columnWidth: number;
+    inputDisplayNodes: any[];
+  }): string {
+    const { rowIndex, inputCount, columnWidth, inputDisplayNodes } = params;
+    if (rowIndex >= inputCount)
+      return NetworkVisualization.pad('', columnWidth);
     const INPUT_LABELS6 = [
       'compass',
       'openN',
@@ -630,318 +809,275 @@ export class NetworkVisualization {
       'openW',
       'progress',
     ];
+    const node = inputDisplayNodes[rowIndex];
+    const label = rowIndex < 6 ? INPUT_LABELS6[rowIndex] : '';
+    const labelStr = label ? ` ${colors.whiteNeon}${label}${colors.reset}` : '';
+    return NetworkVisualization.pad(
+      `${colors.blueCore}║   ${NetworkVisualization.#formatNode(
+        colors.neonGreen,
+        '●',
+        node,
+        labelStr
+      )}`,
+      columnWidth,
+      ' ',
+      'left'
+    );
+  }
 
-    /**
-     * Array of output nodes to display, always 4 (N, E, S, W), padded if needed.
-     */
-    const outputDisplayNodes = Array(OUTPUT_COUNT)
-      .fill(null)
-      .map((_, i) => outputNodes[i] || { activation: 0 });
+  /** Build arrow cell between input and first hidden layer. */
+  static #buildFirstArrowCell(params: {
+    rowIndex: number;
+    inputCount: number;
+    inputNodes: IVisualizationNode[];
+    displayLayers: any[][];
+    connectionCounts: Int32Array;
+  }): string {
+    const {
+      rowIndex,
+      inputCount,
+      inputNodes,
+      displayLayers,
+      connectionCounts,
+    } = params;
+    const firstHiddenTotal = displayLayers[0]?.length || 0;
+    const totalInputs = Math.min(inputCount, inputNodes.length);
+    const base = `${colors.blueNeon}${NetworkVisualization.#ARROW}${
+      colors.reset
+    }`;
+    if (rowIndex === 0 && totalInputs && firstHiddenTotal) {
+      const nodeProportion = Math.ceil(
+        (connectionCounts[0] || 0) / Math.max(1, totalInputs)
+      );
+      return NetworkVisualization.pad(
+        `${colors.blueNeon}${nodeProportion} ──▶${colors.reset}`,
+        NetworkVisualization.#ARROW_WIDTH
+      );
+    }
+    if (
+      rowIndex < inputCount &&
+      rowIndex < firstHiddenTotal &&
+      totalInputs &&
+      firstHiddenTotal
+    ) {
+      const nodeProportion = Math.ceil(
+        (connectionCounts[0] || 0) / Math.max(3, totalInputs * 2)
+      );
+      return NetworkVisualization.pad(
+        `${colors.blueNeon}${nodeProportion} ──▶${colors.reset}`,
+        NetworkVisualization.#ARROW_WIDTH
+      );
+    }
+    return NetworkVisualization.pad(base, NetworkVisualization.#ARROW_WIDTH);
+  }
 
-    /**
-     * Maximum number of rows needed for the visualization table.
-     */
-    const maxRows = Math.max(INPUT_COUNT, ...layerDisplayCounts, OUTPUT_COUNT);
+  /** Build hidden layer node cell. */
+  static #buildHiddenLayerCell(params: {
+    rowIndex: number;
+    layerIndex: number;
+    columnWidth: number;
+    displayLayers: any[][];
+  }): string {
+    const { rowIndex, layerIndex, columnWidth, displayLayers } = params;
+    const layer = displayLayers[layerIndex];
+    if (rowIndex >= layer.length)
+      return NetworkVisualization.pad(' ', columnWidth);
+    const node = layer[rowIndex];
+    if (node.isAverage) {
+      const labelText = node.label ? `${node.label} ` : '';
+      const extra = ` ${colors.dim}(${labelText}avg of ${node.avgCount})${colors.reset}`;
+      return NetworkVisualization.pad(
+        NetworkVisualization.#formatNode(colors.cyanNeon, '■', node, extra),
+        columnWidth,
+        ' ',
+        'left'
+      );
+    }
+    return NetworkVisualization.pad(
+      NetworkVisualization.#formatNode(colors.cyanNeon, '■', node),
+      columnWidth,
+      ' ',
+      'left'
+    );
+  }
 
-    /**
-     * Array to hold each row of the visualization table.
-     */
-    const rows: string[] = [];
-    for (let rowIdx = 0; rowIdx < maxRows; rowIdx++) {
-      /**
-       * String for the current row being built.
-       */
-      let row = '';
-
-      // Input column
-      if (rowIdx < INPUT_COUNT) {
-        /**
-         * Node and value for this input row.
-         */
-        const node = inputDisplayNodes[rowIdx];
-        /**
-         * Optional semantic label for the first 6 inputs.
-         */
-        const label = rowIdx < 6 ? INPUT_LABELS6[rowIdx] : '';
-        const labelStr = label
-          ? ` ${colors.whiteNeon}${label}${colors.reset}`
-          : '';
-        row += NetworkVisualization.pad(
-          `${colors.blueCore}║   ${NetworkVisualization.#formatNode(
-            colors.neonGreen,
-            '●',
-            node,
-            labelStr
-          )}`,
-          columnWidth,
-          ' ',
-          'left'
+  /** Build arrow cell either between hidden layers or from last hidden to outputs. */
+  static #buildInterLayerArrowCell(params: {
+    rowIndex: number;
+    layerIndex: number;
+    numHiddenLayers: number;
+    displayLayers: any[][];
+    connectionCounts: Int32Array;
+    outputCount: number;
+  }): string {
+    const {
+      rowIndex,
+      layerIndex,
+      numHiddenLayers,
+      displayLayers,
+      connectionCounts,
+      outputCount,
+    } = params;
+    const layer = displayLayers[layerIndex];
+    const arrowPlaceholder = `${colors.blueNeon}${NetworkVisualization.#ARROW}${
+      colors.reset
+    }`;
+    const isLast = layerIndex === numHiddenLayers - 1;
+    if (!isLast) {
+      const connCount = connectionCounts[layerIndex + 1] || 0;
+      if (rowIndex === 0) {
+        const currentLayerSize = layer.length || 1;
+        const nodeProportion = Math.ceil(
+          connCount / Math.max(3, currentLayerSize * 2)
         );
-      } else {
-        row += NetworkVisualization.pad('', columnWidth);
-      }
-
-      // First arrow - calculate proportional connection counts
-      if (rowIdx === 0) {
-        /**
-         * For the first row, show proportional connection count (not total).
-         */
-        const totalInputs = Math.min(INPUT_COUNT, inputNodes.length);
-        const firstHiddenTotal = displayLayers[0]?.length || 0;
-
-        if (totalInputs > 0 && firstHiddenTotal > 0) {
-          /**
-           * Proportional number of connections for the first visible row.
-           */
-          const nodeProportion = Math.ceil(
-            connectionCounts[0] / Math.max(1, totalInputs)
-          );
-          row += NetworkVisualization.pad(
-            `${colors.blueNeon}${nodeProportion} ──▶${colors.reset}`,
-            NetworkVisualization.#ARROW_WIDTH
-          );
-        } else {
-          row += NetworkVisualization.pad(
-            `${colors.blueNeon}${NetworkVisualization.#ARROW}${colors.reset}`,
-            NetworkVisualization.#ARROW_WIDTH
-          );
-        }
-      } else if (rowIdx < INPUT_COUNT && rowIdx < displayLayers[0]?.length) {
-        /**
-         * For input rows, show proportional connections to first hidden layer.
-         */
-        const totalInputs = Math.min(INPUT_COUNT, inputNodes.length);
-        const firstHiddenTotal = displayLayers[0]?.length || 0;
-
-        if (totalInputs > 0 && firstHiddenTotal > 0) {
-          /**
-           * Proportional number of connections for this input node.
-           */
-          const nodeProportion = Math.ceil(
-            connectionCounts[0] / Math.max(3, totalInputs * 2)
-          );
-          row += NetworkVisualization.pad(
-            `${colors.blueNeon}${nodeProportion} ──▶${colors.reset}`,
-            NetworkVisualization.#ARROW_WIDTH
-          );
-        } else {
-          row += NetworkVisualization.pad(
-            `${colors.blueNeon}${NetworkVisualization.#ARROW}${colors.reset}`,
-            NetworkVisualization.#ARROW_WIDTH
-          );
-        }
-      } else {
-        // For other rows, just show the arrow without a number
-        row += NetworkVisualization.pad(
-          `${colors.blueNeon}${NetworkVisualization.#ARROW}${colors.reset}`,
+        return NetworkVisualization.pad(
+          `${colors.blueNeon}${nodeProportion} ──▶${colors.reset}`,
           NetworkVisualization.#ARROW_WIDTH
         );
       }
-
-      // Hidden layers
-      for (let layerIdx = 0; layerIdx < numHiddenLayers; layerIdx++) {
-        /**
-         * The current hidden layer for this column.
-         */
-        const layer = displayLayers[layerIdx];
-        if (rowIdx < layer.length) {
-          /**
-           * The node (or average node) for this row in the current layer.
-           */
-          const node = layer[rowIdx];
-
-          if (node.isAverage) {
-            // Special formatting for average nodes
-            /**
-             * Label for the average node group (if present).
-             */
-            const labelText = node.label ? `${node.label} ` : '';
-            const extra = ` ${colors.dim}(${labelText}avg of ${node.avgCount})${colors.reset}`;
-            row += NetworkVisualization.pad(
-              NetworkVisualization.#formatNode(
-                colors.cyanNeon,
-                '■',
-                node,
-                extra
-              ),
-              columnWidth,
-              ' ',
-              'left'
-            );
-          } else {
-            /**
-             * Value for this hidden node.
-             */
-            row += NetworkVisualization.pad(
-              NetworkVisualization.#formatNode(colors.cyanNeon, '■', node),
-              columnWidth,
-              ' ',
-              'left'
-            );
-          }
-        } else {
-          row += NetworkVisualization.pad(' ', columnWidth);
-        }
-
-        // Arrow between columns - calculate proportional connection counts
-        if (layerIdx < numHiddenLayers - 1) {
-          /**
-           * Arrow to next hidden layer, with proportional connection count.
-           */
-          const connCount = connectionCounts[layerIdx + 1];
-          if (rowIdx === 0) {
-            /**
-             * Proportional connection count for first row.
-             */
-            const currentLayerSize = displayLayers[layerIdx]?.length || 1;
-            const nodeProportion = Math.ceil(
-              connCount / Math.max(3, currentLayerSize * 2)
-            );
-            row += NetworkVisualization.pad(
-              `${colors.blueNeon}${nodeProportion} ──▶${colors.reset}`,
-              NetworkVisualization.#ARROW_WIDTH
-            );
-          } else if (
-            rowIdx < layer.length &&
-            rowIdx < displayLayers[layerIdx + 1]?.length
-          ) {
-            /**
-             * Proportional connections between these hidden layers.
-             */
-            const currentLayerSize = displayLayers[layerIdx]?.length || 1;
-            const nextLayerSize = displayLayers[layerIdx + 1]?.length || 1;
-
-            // For hidden → hidden connections, distribute more evenly based on layer sizes
-            const proportion = Math.max(
-              1,
-              Math.min(5, Math.ceil(connCount / Math.max(3, currentLayerSize)))
-            );
-            row += NetworkVisualization.pad(
-              `${colors.blueNeon}${proportion} ──▶${colors.reset}`,
-              NetworkVisualization.#ARROW_WIDTH
-            );
-          } else {
-            // Otherwise just show arrow
-            row += NetworkVisualization.pad(
-              `${colors.blueNeon}${NetworkVisualization.#ARROW}${colors.reset}`,
-              NetworkVisualization.#ARROW_WIDTH
-            );
-          }
-        } else {
-          // Last arrow to output layer
-          /**
-           * Connection count from last hidden to output layer.
-           */
-          const connCount = NetworkVisualization.#last(connectionCounts) ?? 0;
-          if (rowIdx === 0) {
-            /**
-             * Proportional connection count for first row to output.
-             */
-            const lastLayerSize =
-              NetworkVisualization.#lastLength(displayLayers) || 0 || 1;
-            const nodeProportion = Math.ceil(
-              connCount / Math.max(3, lastLayerSize * 2)
-            );
-            row += NetworkVisualization.pad(
-              `${colors.blueNeon}${nodeProportion} ──▶${colors.reset}`,
-              NetworkVisualization.#ARROW_WIDTH
-            );
-          } else if (rowIdx < layer.length && rowIdx < OUTPUT_COUNT) {
-            /**
-             * Proportional connections to output layer.
-             */
-            const lastLayerSize =
-              NetworkVisualization.#lastLength(displayLayers) || 0 || 1;
-
-            // For last hidden → output, calculate a reasonable proportion
-            // This should show a small number, typically 1-5, not the total
-            const proportion = Math.max(
-              1,
-              Math.min(5, Math.ceil(connCount / Math.max(5, lastLayerSize * 2)))
-            );
-            row += NetworkVisualization.pad(
-              `${colors.blueNeon}${proportion} ──▶${colors.reset}`,
-              NetworkVisualization.#ARROW_WIDTH
-            );
-          } else {
-            // Otherwise just show arrow
-            row += NetworkVisualization.pad(
-              `${colors.blueNeon}${NetworkVisualization.#ARROW}${colors.reset}`,
-              NetworkVisualization.#ARROW_WIDTH
-            );
-          }
-        }
+      if (
+        rowIndex < layer.length &&
+        rowIndex < (displayLayers[layerIndex + 1]?.length || 0)
+      ) {
+        const currentLayerSize = layer.length || 1;
+        const proportion = Math.max(
+          1,
+          Math.min(5, Math.ceil(connCount / Math.max(3, currentLayerSize)))
+        );
+        return NetworkVisualization.pad(
+          `${colors.blueNeon}${proportion} ──▶${colors.reset}`,
+          NetworkVisualization.#ARROW_WIDTH
+        );
       }
-
-      // Output column - ALWAYS show all 4 outputs
-      if (rowIdx < OUTPUT_COUNT) {
-        /**
-         * Output node and value for this row.
-         */
-        const node = outputDisplayNodes[rowIdx];
-        row +=
-          NetworkVisualization.pad(
-            NetworkVisualization.#formatNode(colors.orangeNeon, '▲', node),
-            columnWidth,
-            ' ',
-            'left'
-          ) + `${colors.blueCore}║${colors.reset}`;
-      } else {
-        row += NetworkVisualization.pad('', columnWidth);
-      }
-
-      // Add the completed row to the visualization table.
-      rows.push(row);
+      return NetworkVisualization.pad(
+        arrowPlaceholder,
+        NetworkVisualization.#ARROW_WIDTH
+      );
     }
+    // Last hidden -> output
+    const lastConnCount = connectionCounts[numHiddenLayers] || 0;
+    if (rowIndex === 0) {
+      const lastLayerSize = layer.length || 1;
+      const nodeProportion = Math.ceil(
+        lastConnCount / Math.max(3, lastLayerSize * 2)
+      );
+      return NetworkVisualization.pad(
+        `${colors.blueNeon}${nodeProportion} ──▶${colors.reset}`,
+        NetworkVisualization.#ARROW_WIDTH
+      );
+    }
+    if (rowIndex < layer.length && rowIndex < outputCount) {
+      const lastLayerSize = layer.length || 1;
+      const proportion = Math.max(
+        1,
+        Math.min(5, Math.ceil(lastConnCount / Math.max(5, lastLayerSize * 2)))
+      );
+      return NetworkVisualization.pad(
+        `${colors.blueNeon}${proportion} ──▶${colors.reset}`,
+        NetworkVisualization.#ARROW_WIDTH
+      );
+    }
+    return NetworkVisualization.pad(
+      arrowPlaceholder,
+      NetworkVisualization.#ARROW_WIDTH
+    );
+  }
 
-    // Combine all parts with a legend and helpful explanations
-    return [
-      header,
-      ...rows,
-      // Spacer row
-      `${colors.blueCore}║       ${NetworkVisualization.pad(' ', 140)} ║${
-        colors.reset
-      }`,
-      // Feed-forward flow explanation
-      `${colors.blueCore}║       ${NetworkVisualization.pad(
-        'Arrows indicate feed-forward flow.',
-        140,
+  /** Build output layer cell. */
+  static #buildOutputCell(params: {
+    rowIndex: number;
+    outputCount: number;
+    outputDisplayNodes: any[];
+    columnWidth: number;
+  }): string {
+    const { rowIndex, outputCount, outputDisplayNodes, columnWidth } = params;
+    if (rowIndex >= outputCount)
+      return NetworkVisualization.pad('', columnWidth);
+    const node = outputDisplayNodes[rowIndex];
+    return (
+      NetworkVisualization.pad(
+        NetworkVisualization.#formatNode(colors.orangeNeon, '▲', node),
+        columnWidth,
         ' ',
         'left'
-      )} ${colors.blueCore}║${colors.reset}`,
-      // Spacer row
-      `${colors.blueCore}║       ${NetworkVisualization.pad(' ', 140)} ║${
-        colors.reset
-      }`,
+      ) + `${colors.blueCore}║${colors.reset}`
+    );
+  }
 
-      // Legend for node types
-      `${colors.blueCore}║       ${NetworkVisualization.pad(
-        `${colors.whiteNeon}Legend:  ${colors.neonGreen}●${colors.reset}=Input                    ${colors.cyanNeon}■${colors.reset}=Hidden                    ${colors.orangeNeon}▲${colors.reset}=Output`,
-        140,
-        ' ',
-        'left'
-      )} ${colors.blueCore}║${colors.reset}`,
-      // Legend for activation groups
-      `${colors.blueCore}║       ${NetworkVisualization.pad(
-        `${colors.whiteNeon}Groups:  ${colors.bgOrangeNeon}${colors.bright}v-high+${colors.reset}=Very high positive   ${colors.orangeNeon}high+${colors.reset}=High positive    ${colors.cyanNeon}mid+${colors.reset}=Medium positive    ${colors.neonGreen}low+${colors.reset}=Low positive`,
-        140,
-        ' ',
-        'left'
-      )} ${colors.blueCore}║${colors.reset}`,
-      // Legend for near-zero group
-      `${colors.blueCore}║       ${NetworkVisualization.pad(
-        `${colors.whiteNeon}         zero±${colors.reset}=Near zero`,
-        140,
-        ' ',
-        'left'
-      )} ${colors.blueCore}║${colors.reset}`,
-      // Legend for negative groups
-      `${colors.blueCore}║       ${NetworkVisualization.pad(
-        `         ${colors.bgBlueCore}${colors.bright}v-high-${colors.reset}=Very high negative   ${colors.blueNeon}${colors.bright}high-${colors.reset}=High negative    ${colors.blueCore}mid-${colors.reset}=Medium negative    ${colors.blue}low-${colors.reset}=Low negative`,
-        140,
-        ' ',
-        'left'
-      )} ${colors.blueCore}║${colors.reset}`,
-    ].join('\n');
+  /**
+   * Generate a multi-line, colorized ASCII summary of the provided neural network.
+   * The output includes:
+   * - Layer headers with node counts and approximate connection counts between layers.
+   * - Node activation values (numeric + color) for inputs, hidden (or averaged groups), and outputs.
+   * - Condensed legend explaining symbols and activation grouping ranges.
+   *
+   * Hidden layer condensation: For large hidden layers, nodes are grouped into activation buckets;
+   * each bucket is displayed as a single "average" virtual node whose value is the mean activation.
+   * Buckets beyond the configured visible limit are merged into an "other±" meta-group.
+   *
+   * Performance: Uses internal scratch buffers to minimize intermediate allocations. Sorting relies
+   * on ES2023 `toSorted` when available (with a stable fallback) ensuring deterministic grouping.
+   *
+   * @param network - The neural network (expects `nodes` and optional `connections`).
+   * @returns Formatted multi-line string ready for terminal output (ANSI colors included).
+   * @example
+   * ```ts
+   * import { NetworkVisualization } from './networkVisualization';
+   * const ascii = NetworkVisualization.visualizeNetworkSummary(myNetwork);
+   * console.log(ascii);
+   * ```
+   */
+  static visualizeNetworkSummary(network: INetwork): string {
+    const categorized = NetworkVisualization.#categorizeNodes(network);
+    const INPUT_COUNT = categorized.inputCountDetected || 18; // legacy fallback retained
+    const OUTPUT_COUNT = 4; // maze solver fixed
+    const hiddenLayers = NetworkVisualization.#groupHiddenByLayer(
+      categorized.inputNodes,
+      categorized.hiddenNodes,
+      categorized.outputNodes
+    );
+    const prepared = NetworkVisualization.#prepareHiddenLayersForDisplay(
+      hiddenLayers
+    );
+    const connectionCounts = NetworkVisualization.#computeConnectionCounts(
+      network,
+      categorized.inputNodes,
+      hiddenLayers,
+      categorized.outputNodes
+    );
+    const { columnWidth } = NetworkVisualization.#computeLayout(
+      hiddenLayers.length
+    );
+    const header = NetworkVisualization.#buildHeader(
+      INPUT_COUNT,
+      hiddenLayers,
+      OUTPUT_COUNT,
+      connectionCounts
+    );
+    const rows = NetworkVisualization.#buildRows(
+      {
+        inputCount: INPUT_COUNT,
+        outputCount: OUTPUT_COUNT,
+        inputNodes: categorized.inputNodes,
+        displayLayers: prepared.displayLayers,
+        layerDisplayCounts: prepared.layerDisplayCounts,
+        outputNodes: categorized.outputNodes,
+        connectionCounts,
+      },
+      columnWidth
+    );
+    const legendLines = NetworkVisualization.#buildLegend();
+    return [header, ...rows, ...legendLines].join('\n');
+  }
+
+  /** Compute layout derived widths for given hidden layer count. */
+  static #computeLayout(numHiddenLayers: number): { columnWidth: number } {
+    const numLayers = 2 + numHiddenLayers;
+    const numArrows = numLayers - 1;
+    const availableWidth =
+      NetworkVisualization.#TOTAL_WIDTH -
+      numArrows * NetworkVisualization.#ARROW_WIDTH;
+    const columnWidth = Math.floor(availableWidth / numLayers);
+    return { columnWidth };
   }
 }

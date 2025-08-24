@@ -14,6 +14,42 @@ import { INetwork } from './interfaces';
 import { MazeUtils } from './mazeUtils';
 import { MazeVision } from './mazeVision';
 
+/** Internal (non-exported) aggregate state for a single simulation run. */
+interface SimulationState {
+  position: [number, number];
+  steps: number;
+  pathLength: number;
+  visitedUniqueCount: number;
+  hasDistanceMap: boolean;
+  distanceMap?: number[][];
+  minDistanceToExit: number;
+  progressReward: number;
+  newCellExplorationBonus: number;
+  invalidMovePenalty: number;
+  prevAction: number;
+  stepsSinceImprovement: number;
+  lastDistanceGlobal: number;
+  saturatedSteps: number;
+  recentPositions: [number, number][];
+  localAreaPenalty: number;
+  directionCounts: number[];
+  moveHistoryRing: Int32Array;
+  moveHistoryLength: number;
+  moveHistoryHead: number;
+  currentCellIndex: number;
+  loopPenalty: number;
+  memoryPenalty: number;
+  revisitPenalty: number;
+  visitsAtCurrent: number;
+  distHere: number;
+  vision: number[];
+  actionStats: any;
+  direction: number;
+  moved: boolean;
+  prevDistance: number;
+  earlyTerminate: boolean;
+}
+
 /**
  * MazeMovement provides static methods for agent movement and simulation.
  */
@@ -250,6 +286,8 @@ export class MazeMovement {
     [0, 1], // South
     [-1, 0], // West
   ];
+  /** Lookup table for opposite directions (index -> opposite index). */
+  static #OPPOSITE_DIR: readonly number[] = [2, 3, 0, 1];
 
   // ---------------------------------------------------------------------------
   // Pooled / reusable typed-array buffers (non‑reentrant) for simulation state
@@ -276,6 +314,16 @@ export class MazeMovement {
 
   /** Seedable PRNG state (Mulberry32 style). Undefined => Math.random(). */
   static #PRNGState: number | null = null;
+
+  // ---------------------------------------------------------------------------
+  // Internal mutable run-scoped state (replaces (MazeMovement as any).foo uses)
+  // ---------------------------------------------------------------------------
+  /** Rolling saturation counter used for adaptive penalties */
+  static #StateSaturations = 0;
+  /** Consecutive steps with no movement to trigger forced exploration */
+  static #StateNoMoveStreak = 0;
+  /** Previous distance value supplied to vision builder */
+  static #StatePrevDistanceStep: number | undefined = undefined;
   /**
    * Enable deterministic pseudo-randomness for simulations executed after this call.
    *
@@ -354,12 +402,11 @@ export class MazeMovement {
 
   /** Materialize the path arrays into an array<tuple>. */
   static #materializePath(length: number): [number, number][] {
-    const out: [number, number][] = new Array(length);
+    const px = MazeMovement.#PathX!;
+    const py = MazeMovement.#PathY!;
+    const out = new Array(length) as [number, number][];
     for (let positionIndex = 0; positionIndex < length; positionIndex++) {
-      out[positionIndex] = [
-        MazeMovement.#PathX![positionIndex],
-        MazeMovement.#PathY![positionIndex],
-      ];
+      out[positionIndex] = [px[positionIndex], py[positionIndex]];
     }
     return out;
   }
@@ -371,15 +418,6 @@ export class MazeMovement {
     );
   }
 
-  /** Map a (dx,dy) delta to a cardinal direction index, or #NO_MOVE when unknown */
-  static #deltaToDirection(dx: number, dy: number): number {
-    for (let i = 0; i < MazeMovement.#DIRECTION_DELTAS.length; i++) {
-      const [ddx, ddy] = MazeMovement.#DIRECTION_DELTAS[i];
-      if (ddx === dx && ddy === dy) return i;
-    }
-    return MazeMovement.#NO_MOVE;
-  }
-
   /** Sum a contiguous group in the vision vector starting at `start`. */
   static #sumVisionGroup(vision: number[], start: number) {
     // Manual unrolled/loop sum to avoid intermediate slice allocation (hot path)
@@ -388,6 +426,39 @@ export class MazeMovement {
     for (let visionIndex = start; visionIndex < end; visionIndex++)
       total += vision[visionIndex];
     return total;
+  }
+
+  /**
+   * Compute adaptive epsilon used for epsilon-greedy exploration.
+   * Extracted from the main loop to shrink hot path complexity and enable reuse.
+   */
+  static #computeEpsilon(
+    stepNumber: number,
+    stepsSinceImprovement: number,
+    distHere: number,
+    saturations: number
+  ): number {
+    let epsilon = 0;
+    switch (true) {
+      case stepNumber < MazeMovement.#EPSILON_WARMUP_STEPS:
+        epsilon = MazeMovement.#EPSILON_INITIAL;
+        break;
+      case stepsSinceImprovement >
+        MazeMovement.#EPSILON_STAGNANT_HIGH_THRESHOLD:
+        epsilon = MazeMovement.#EPSILON_STAGNANT_HIGH;
+        break;
+      case stepsSinceImprovement > MazeMovement.#EPSILON_STAGNANT_MED_THRESHOLD:
+        epsilon = MazeMovement.#EPSILON_STAGNANT_MED;
+        break;
+      case saturations > MazeMovement.#EPSILON_SATURATION_TRIGGER:
+        epsilon = MazeMovement.#EPSILON_SATURATIONS;
+        break;
+      default:
+        break;
+    }
+    if (distHere <= MazeMovement.#PROXIMITY_SUPPRESS_EXPLOR_DIST)
+      epsilon = Math.min(epsilon, MazeMovement.#EPSILON_MIN_NEAR_GOAL);
+    return epsilon;
   }
 
   /**
@@ -431,10 +502,27 @@ export class MazeMovement {
    */
   static isValidMove(
     encodedMaze: ReadonlyArray<ReadonlyArray<number>>,
-    [x, y]: readonly [number, number]
+    position: readonly [number, number]
+  ): boolean;
+  static isValidMove(
+    encodedMaze: ReadonlyArray<ReadonlyArray<number>>,
+    x: number,
+    y: number
+  ): boolean;
+  static isValidMove(
+    encodedMaze: ReadonlyArray<ReadonlyArray<number>>,
+    positionOrX: any,
+    yMaybe?: any
   ): boolean {
-    // Delegate to the private helper which centralizes the bounds/wall check
-    return MazeMovement.#isCellOpen(encodedMaze, x, y);
+    if (Array.isArray(positionOrX)) {
+      const [x, y] = positionOrX as [number, number];
+      return MazeMovement.#isCellOpen(encodedMaze, x, y);
+    }
+    return MazeMovement.#isCellOpen(
+      encodedMaze,
+      positionOrX as number,
+      yMaybe as number
+    );
   }
 
   /**
@@ -620,747 +708,780 @@ export class MazeMovement {
     saturationFraction?: number;
     actionEntropy?: number;
   } {
-    // ---------------------------------------------------------------------
-    // Initialization & pooled buffer sizing
-    // ---------------------------------------------------------------------
-    const width = encodedMaze[0].length;
-    const height = encodedMaze.length;
-    MazeMovement.#initBuffers(width, height, maxSteps);
-    // Position (mutable tuple) & path start
-    const position = [startPos[0], startPos[1]] as [number, number];
-    let steps = 0;
-    // Initialize path arrays (first element)
-    MazeMovement.#PathX![0] = position[0];
-    MazeMovement.#PathY![0] = position[1];
-    let pathLength = 1;
-    // Tracking unique visitation & revisit counts via typed arrays
-    let visitedUniqueCount = 0;
-    const visitedFlags = MazeMovement.#VisitedFlags!;
-    const visitCountsTA = MazeMovement.#VisitCounts!;
-    const pathX = MazeMovement.#PathX!;
-    const pathY = MazeMovement.#PathY!;
-    const cellCountForPct = width * height;
-    // Move history ring buffer (cell indices)
-    const historyCapacity = MazeMovement.#MOVE_HISTORY_LENGTH;
-    const moveHistoryRing = new Int32Array(historyCapacity);
-    let moveHistoryLength = 0;
-    let moveHistoryHead = 0; // points to next write position
-    const pushHistory = (cellIndex: number) => {
-      moveHistoryRing[moveHistoryHead] = cellIndex;
-      moveHistoryHead = (moveHistoryHead + 1) % historyCapacity;
-      if (moveHistoryLength < historyCapacity) moveHistoryLength++;
-    };
-    const nthFromHistoryEnd = (n: number): number | undefined => {
-      if (n > moveHistoryLength) return undefined;
-      const idx = (moveHistoryHead - n + historyCapacity) % historyCapacity;
-      return moveHistoryRing[idx];
-    };
-    /**
-     * Closest distance to exit found so far
-     * @type {number}
-     */
-    let minDistanceToExit = MazeMovement.#distanceAt(
+    const state = MazeMovement.#initRunState(
       encodedMaze,
-      position,
-      distanceMap
+      startPos,
+      distanceMap,
+      maxSteps
     );
 
-    /**
-     * Reward scaling factor for all reward/penalty calculations
-     * @type {number}
-     */
-    const rewardScale = MazeMovement.#REWARD_SCALE;
+    while (state.steps < maxSteps) {
+      state.steps++;
+      // Record cell visit & derive penalties for loops / memory / revisits
+      MazeMovement.#recordVisitAndUpdatePenalties(state, encodedMaze);
 
-    /**
-     * Accumulated reward for progress toward exit
-     * @type {number}
-     */
-    let progressReward = 0;
-    /**
-     * Bonus for exploring new cells
-     * @type {number}
-     */
-    let newCellExplorationBonus = 0;
-    /**
-     * Penalty for invalid moves or stagnation
-     * @type {number}
-     */
-    let invalidMovePenalty = 0;
-
-    /**
-     * Last direction taken (0-3 or -1)
-     * @type {number}
-     */
-    let prevAction = MazeMovement.#NO_MOVE;
-    /**
-     * Steps since last improvement in distance to exit
-     * @type {number}
-     */
-    let stepsSinceImprovement = 0;
-    /**
-     * Initial global distance to exit
-     * @type {number}
-     */
-    const startDistanceGlobal = MazeMovement.#distanceAt(
-      encodedMaze,
-      position,
-      distanceMap
-    );
-    /**
-     * Last global distance to exit
-     * @type {number}
-     */
-    let lastDistanceGlobal = startDistanceGlobal;
-    /**
-     * Number of saturated steps (output collapse or overconfidence)
-     * @type {number}
-     */
-    let saturatedSteps = 0;
-    /**
-     * Recent positions for local area stagnation
-     * @type {Array<[number, number]>}
-     */
-    const recentPositions: [number, number][] = [];
-    /**
-     * Penalty for local area stagnation
-     * @type {number}
-     */
-    let localAreaPenalty = 0;
-
-    // Direction counts for online entropy computation (avoid materializing path early)
-    const directionCounts = [0, 0, 0, 0];
-
-    // Helper: record visitation of current position
-    const recordVisit = () => {
-      const cellIndex = MazeMovement.#index(position[0], position[1]);
-      if (!visitedFlags[cellIndex]) {
-        visitedFlags[cellIndex] = 1;
-        visitedUniqueCount++;
-      }
-      // Clamp visit count silently (Uint16 rolls over at 65535—maze sizes tiny so fine)
-      visitCountsTA[cellIndex]++;
-      pushHistory(cellIndex);
-      return cellIndex;
-    };
-
-    // Record starting cell
-    recordVisit();
-
-    // Main simulation loop: agent moves until maxSteps or exit is reached
-    let lastProgressRatio = 0;
-    while (steps < maxSteps) {
-      steps++;
-      // --- Step 1: Record current position as visited (typed arrays) ---
-      const currentCellIndex = recordVisit();
-
-      // --- Step 2: Calculate percent of maze explored so far ---
-      // (Percent explored previously tracked; removed as unused for current shaping logic.)
-
-      // --- Step 3: Oscillation/loop detection (A->B->A->B) ---
-      /**
-       * Penalty for oscillation/looping
-       */
-      let loopPenalty = 0;
-      if (moveHistoryLength >= MazeMovement.#OSCILLATION_DETECT_LENGTH) {
-        const last = nthFromHistoryEnd(1)!;
-        const thirdLast = nthFromHistoryEnd(3);
-        const secondLast = nthFromHistoryEnd(2);
-        const fourthLast = nthFromHistoryEnd(4);
-        if (
-          thirdLast !== undefined &&
-          secondLast !== undefined &&
-          fourthLast !== undefined &&
-          last === thirdLast &&
-          secondLast === fourthLast
-        ) {
-          loopPenalty -= MazeMovement.#LOOP_PENALTY * rewardScale;
-        }
-      }
-      /**
-       * Memory loop indicator input (1 if loop detected, else 0)
-       */
-      // loopFlag previously fed into vision; no longer required here.
-
-      // --- Step 4: Penalty for returning to any cell in recent history ---
-      /**
-       * Penalty for returning to a cell in recent history
-       */
-      let memoryPenalty = 0;
-      if (moveHistoryLength > 1) {
-        // Scan ring (excluding most recent) for duplicates -> return penalty
-        for (let scan = 2; scan <= moveHistoryLength; scan++) {
-          const idxVal = nthFromHistoryEnd(scan);
-          if (idxVal === currentCellIndex) {
-            memoryPenalty -= MazeMovement.#MEMORY_RETURN_PENALTY * rewardScale;
-            break;
-          }
-        }
-      }
-
-      // --- Step 5: Dynamic penalty for multiple visits ---
-      /**
-       * Penalty for revisiting cells
-       */
-      let revisitPenalty = 0;
-      /**
-       * Number of times the current cell has been visited
-       */
-      const visits = visitCountsTA[currentCellIndex];
-      if (visits > 1) {
-        revisitPenalty -=
-          MazeMovement.#REVISIT_PENALTY_PER_VISIT * (visits - 1) * rewardScale; // Penalty increases with each revisit
-      }
-
-      // --- Step 6: Early termination if a cell is visited too many times ---
-      if (visits > MazeMovement.#VISIT_TERMINATION_THRESHOLD) {
-        invalidMovePenalty -=
-          MazeMovement.#INVALID_MOVE_PENALTY_HARSH * rewardScale;
-        break;
-      }
-
-      // --- Step 7: Build agent's perception (vision inputs) ---
-      /**
-       * Previous local distance to exit
-       */
-      const prevDistLocal = distanceMap
-        ? distanceMap[position[1]]?.[position[0]] ?? undefined
-        : MazeMovement.#distanceAt(encodedMaze, position, distanceMap);
-      /**
-       * Current local distance to exit (same as prev before move)
-       */
-      const distCurrentLocal = prevDistLocal;
-      /**
-       * Vision input vector for the agent
-       */
-      const vision = MazeVision.buildInputs6(
+      // Build perception & compute current distance for exploration logic
+      MazeMovement.#buildVisionAndDistance(
+        state,
         encodedMaze,
-        position,
         exitPos,
-        distanceMap,
-        (MazeMovement as any)._prevDistanceStep,
-        distCurrentLocal,
-        prevAction
-      );
-      (MazeMovement as any)._prevDistanceStep = distCurrentLocal;
-
-      // --- Step 8: Get distance at current location (for proximity logic) ---
-      /**
-       * Distance at current location (pre-action) for proximity exploitation logic
-       */
-      const distHere = MazeMovement.#distanceAt(
-        encodedMaze,
-        position,
         distanceMap
       );
 
-      // --- Step 9: Neural network decision making ---
-      /**
-       * Chosen direction for this step
-       */
-      let direction;
-      /**
-       * Action statistics (softmax, entropy, etc.)
-       */
-      let actionStats: any = null;
-      try {
-        // Activate the network with vision inputs
-        /**
-         * Output vector from the neural network
-         */
-        const outputs = network.activate(vision) as number[];
-        // Track outputs for variance diagnostics using a bounded sliding window
-        (network as any)._lastStepOutputs = MazeUtils.pushHistory(
-          (network as any)._lastStepOutputs,
-          [...outputs],
-          MazeMovement.#OUTPUT_HISTORY_LENGTH
-        );
-        // Select direction and compute stats
-        actionStats = MazeMovement.selectDirection(outputs);
-        // Detect output saturation (overconfidence or flat collapse)
-        (MazeMovement as any)._saturations =
-          (MazeMovement as any)._saturations || 0;
-        const overConfident =
-          actionStats.maxProb > MazeMovement.#OVERCONFIDENT_PROB &&
-          actionStats.secondProb < MazeMovement.#SECOND_PROB_LOW;
-        // Recompute std on centered logits
-        const logitsMean =
-          outputs.reduce((s, v) => s + v, 0) / MazeMovement.#ACTION_DIM;
-        let logVar = 0;
-        for (const o of outputs) {
-          const delta = o - logitsMean;
-          logVar += delta * delta;
-        }
-        logVar /= MazeMovement.#ACTION_DIM;
-        const logStd = Math.sqrt(logVar);
-        const flatCollapsed = logStd < MazeMovement.#LOGSTD_FLAT_THRESHOLD;
-        const saturatedNow = overConfident || flatCollapsed;
-        if (saturatedNow) {
-          (MazeMovement as any)._saturations++;
-          saturatedSteps++;
-        } else {
-          (MazeMovement as any)._saturations = Math.max(
-            0,
-            (MazeMovement as any)._saturations - 1
-          );
-        }
-        // Penalties for saturation
-        if (overConfident)
-          invalidMovePenalty -=
-            MazeMovement.#OVERCONFIDENT_PENALTY * rewardScale;
-        if (flatCollapsed)
-          invalidMovePenalty -=
-            MazeMovement.#FLAT_COLLAPSE_PENALTY * rewardScale;
-        // Adaptive bias anti-saturation: gently reduce output biases if chronic
-        try {
-          if (
-            (MazeMovement as any)._saturations >
-              MazeMovement.#SATURATION_ADJUST_MIN &&
-            steps % MazeMovement.#SATURATION_ADJUST_INTERVAL === 0
-          ) {
-            const outs = (network as any).nodes?.filter(
-              (n: any) => n.type === MazeMovement.#NODE_TYPE_OUTPUT
-            );
-            if (outs?.length) {
-              const mean =
-                outs.reduce((a: number, n: any) => a + n.bias, 0) / outs.length;
-              outs.forEach((n: any) => {
-                n.bias = Math.max(
-                  -MazeMovement.#BIAS_CLAMP,
-                  Math.min(
-                    MazeMovement.#BIAS_CLAMP,
-                    n.bias - mean * MazeMovement.#BIAS_ADJUST_FACTOR
-                  )
-                );
-              });
-            }
-          }
-        } catch {
-          /* ignore */
-        }
-        direction = actionStats.direction;
-      } catch (error) {
-        console.error('Error activating network:', error);
-        direction = MazeMovement.#NO_MOVE; // Fallback: don't move
-      }
+      // Neural net activation & saturation handling
+      MazeMovement.#decideDirection(state, network, encodedMaze, distanceMap);
 
-      // --- Step 10: Proximity exploitation (greedy move if near exit) ---
-      if (distHere <= MazeMovement.#PROXIMITY_GREEDY_DISTANCE) {
-        // Best direction found (minimizing distance to exit)
-        let bestDirection = direction;
-        // Best distance found
-        let bestDistance = Infinity;
-        // Iterate cardinal directions without allocating test position arrays
-        for (
-          let dirIndex = 0;
-          dirIndex < MazeMovement.#ACTION_DIM;
-          dirIndex++
-        ) {
-          const [ddx, ddy] = MazeMovement.#DIRECTION_DELTAS[dirIndex];
-          const tx = position[0] + ddx;
-          const ty = position[1] + ddy;
-          if (!MazeMovement.isValidMove(encodedMaze, [tx, ty])) continue; // invalid
-          // Distance value for candidate direction
-          const candidateDistance = MazeMovement.#distanceAt(
-            encodedMaze,
-            [tx, ty],
-            distanceMap
-          );
-          if (candidateDistance < bestDistance) {
-            bestDistance = candidateDistance;
-            bestDirection = dirIndex;
-          }
-        }
-        if (bestDirection != null) direction = bestDirection;
-      }
+      // Proximity greedy override
+      MazeMovement.#maybeApplyProximityGreedy(state, encodedMaze, distanceMap);
 
-      // Epsilon-greedy exploration: encourage divergence early & when stagnant
-      const stepsStagnant = stepsSinceImprovement;
-      let epsilon = 0;
-      // Select epsilon using a switch over ordered predicates for clarity
-      switch (true) {
-        case steps < MazeMovement.#EPSILON_WARMUP_STEPS:
-          epsilon = MazeMovement.#EPSILON_INITIAL;
-          break;
-        case stepsStagnant > MazeMovement.#EPSILON_STAGNANT_HIGH_THRESHOLD:
-          epsilon = MazeMovement.#EPSILON_STAGNANT_HIGH;
-          break;
-        case stepsStagnant > MazeMovement.#EPSILON_STAGNANT_MED_THRESHOLD:
-          epsilon = MazeMovement.#EPSILON_STAGNANT_MED;
-          break;
-        case (MazeMovement as any)._saturations >
-          MazeMovement.#EPSILON_SATURATION_TRIGGER:
-          epsilon = MazeMovement.#EPSILON_SATURATIONS;
-          break;
-        default:
-          break;
-      }
-      // Suppress exploration when near goal to encourage completion
-      if (distHere <= MazeMovement.#PROXIMITY_SUPPRESS_EXPLOR_DIST)
-        epsilon = Math.min(epsilon, MazeMovement.#EPSILON_MIN_NEAR_GOAL);
-      if (MazeMovement.#rand() < epsilon) {
-        // pick a random valid direction differing from previous when possible
-        // Instead of allocating filtered arrays, try a few random trials.
-        for (let trial = 0; trial < MazeMovement.#ACTION_DIM; trial++) {
-          const candidateDirection = Math.floor(
-            MazeMovement.#rand() * MazeMovement.#ACTION_DIM
-          );
-          if (candidateDirection === prevAction) continue;
-          const [ddx, ddy] = MazeMovement.#DIRECTION_DELTAS[candidateDirection];
-          const tx = position[0] + ddx;
-          const ty = position[1] + ddy;
-          if (MazeMovement.isValidMove(encodedMaze, [tx, ty])) {
-            direction = candidateDirection;
-            break;
-          }
-        }
-      }
+      // Epsilon exploration
+      MazeMovement.#maybeApplyEpsilonExploration(state, encodedMaze);
 
-      // --- Anti-stagnation: if we haven't moved in several attempts, force exploratory move
-      // Track consecutive failed moves
-      (MazeMovement as any)._noMoveStreak =
-        (MazeMovement as any)._noMoveStreak || 0;
-      if (direction === MazeMovement.#NO_MOVE)
-        (MazeMovement as any)._noMoveStreak++;
+      // Force exploration if stuck
+      MazeMovement.#maybeForceExploration(state, encodedMaze);
+
+      // Execute move & update rewards
+      MazeMovement.#executeMoveAndRewards(state, encodedMaze, distanceMap);
+
+      // Post‑action repetition / entropy / saturation penalties
+      MazeMovement.#applyPostActionPenalties(state);
+
+      // Deep stagnation termination
+      if (MazeMovement.#maybeTerminateDeepStagnation(state)) break;
+
+      // Success check
       if (
-        (MazeMovement as any)._noMoveStreak >=
-        MazeMovement.#NO_MOVE_STREAK_THRESHOLD
+        state.position[0] === exitPos[0] &&
+        state.position[1] === exitPos[1]
       ) {
-        // pick a random cardinal direction until a valid move found (epsilon-greedy style)
-        for (let attempt = 0; attempt < MazeMovement.#ACTION_DIM; attempt++) {
-          const candidateDirection = Math.floor(
-            MazeMovement.#rand() * MazeMovement.#ACTION_DIM
-          );
-          const [ddx, ddy] = MazeMovement.#DIRECTION_DELTAS[candidateDirection];
-          const tx = position[0] + ddx;
-          const ty = position[1] + ddy;
-          if (MazeMovement.isValidMove(encodedMaze, [tx, ty])) {
-            direction = candidateDirection;
-            break;
-          }
-        }
-        (MazeMovement as any)._noMoveStreak = 0;
-      }
-
-      // Save previous state for reward calculation
-      // Previous position before move (capture values to compare after in-place move)
-      // (Previous position variables removed – deltas inferred directly from path arrays / position.)
-      /**
-       * Previous distance to exit before move
-       */
-      const prevDistance = MazeMovement.#distanceAt(
-        encodedMaze,
-        position,
-        distanceMap
-      );
-
-      // --- ACTION: Move based on network decision (do in-place to avoid allocation)
-      let moved = false;
-      if (direction === MazeMovement.#NO_MOVE) {
-        moved = false;
-      } else if (direction >= 0 && direction < MazeMovement.#ACTION_DIM) {
-        const [dx, dy] = MazeMovement.#DIRECTION_DELTAS[direction];
-        const newX = position[0] + dx;
-        const newY = position[1] + dy;
-        if (MazeMovement.isValidMove(encodedMaze, [newX, newY])) {
-          position[0] = newX;
-          position[1] = newY;
-          moved = true;
-        } else {
-          moved = false;
-        }
-      } else {
-        moved = false;
-      }
-
-      // Record movement and update rewards/penalties
-      if (moved) {
-        pathX[pathLength] = position[0];
-        pathY[pathLength] = position[1];
-        pathLength++;
-        // Add to a small bounded window of recent positions used for local stagnation
-        // detection. Use the shared helper to preserve in-place semantics and avoid
-        // repeated O(n) shift() operations when trimming the head.
-        MazeUtils.pushHistory(
-          recentPositions,
-          [position[0], position[1]] as [number, number],
-          MazeMovement.#LOCAL_WINDOW
-        );
-        if (recentPositions.length === MazeMovement.#LOCAL_WINDOW) {
-          /**
-           * Minimum and maximum X/Y in recent positions
-           */
-          let minX = Infinity,
-            maxX = -Infinity,
-            minY = Infinity,
-            maxY = -Infinity;
-          for (const [rx, ry] of recentPositions) {
-            if (rx < minX) minX = rx;
-            if (rx > maxX) maxX = rx;
-            if (ry < minY) minY = ry;
-            if (ry > maxY) maxY = ry;
-          }
-          /**
-           * Span of recent positions (for local oscillation detection)
-           */
-          const span = maxX - minX + (maxY - minY);
-          // Penalize tight oscillation in a small neighborhood when no improvements recently
-          if (
-            span <= MazeMovement.#LOCAL_AREA_SPAN_THRESHOLD &&
-            stepsSinceImprovement > MazeMovement.#LOCAL_AREA_STAGNATION_STEPS
-          ) {
-            localAreaPenalty -=
-              MazeMovement.#LOCAL_AREA_PENALTY_AMOUNT * rewardScale; // accumulate gradually
-          }
-        }
-
-        // Calculate current distance to exit
-        /**
-         * Current distance to exit after move
-         */
-        const currentDistance = MazeMovement.#distanceAt(
-          encodedMaze,
-          position,
-          distanceMap
-        );
-
-        // Reward for getting closer to exit, penalty for moving away
-        /**
-         * Change in distance to exit (positive if improved)
-         */
-        const distanceDelta = prevDistance - currentDistance; // positive if improved
-        // Use switch(true) to clearly express ordered predicates for distance changes
-        switch (true) {
-          case distanceDelta > 0: {
-            // Confidence shaping if available
-            const conf = actionStats?.maxProb ?? 1;
-            progressReward +=
-              (MazeMovement.#PROGRESS_REWARD_BASE +
-                MazeMovement.#PROGRESS_REWARD_CONF_SCALE * conf) *
-              rewardScale;
-            if (stepsSinceImprovement > 0)
-              progressReward += Math.min(
-                stepsSinceImprovement *
-                  MazeMovement.#PROGRESS_STEPS_MULT *
-                  rewardScale,
-                MazeMovement.#PROGRESS_STEPS_MAX * rewardScale
-              );
-            stepsSinceImprovement = 0;
-            // Additional proportional reward to create gradient
-            progressReward +=
-              distanceDelta *
-              MazeMovement.#DISTANCE_DELTA_SCALE *
-              (MazeMovement.#DISTANCE_DELTA_CONF_BASE +
-                MazeMovement.#DISTANCE_DELTA_CONF_SCALE * conf); // scale by confidence
-            break;
-          }
-          case currentDistance > prevDistance: {
-            const conf = actionStats?.maxProb ?? 0.5;
-            progressReward -=
-              (MazeMovement.#PROGRESS_AWAY_BASE_PENALTY +
-                MazeMovement.#PROGRESS_AWAY_CONF_SCALE * conf) *
-              rewardScale;
-            stepsSinceImprovement++;
-            break;
-          }
-          default: {
-            stepsSinceImprovement++;
-            break;
-          }
-        }
-
-        // Bonus for exploring new cells, penalty for revisiting
-        if (visits === 1) {
-          newCellExplorationBonus +=
-            MazeMovement.#NEW_CELL_EXPLORATION_BONUS * rewardScale;
-        } else {
-          newCellExplorationBonus -=
-            MazeMovement.#REVISIT_PENALTY_STRONG * rewardScale; // Stronger penalty for revisiting
-        }
-
-        // Update direction counts (entropy stats) using movement delta
-        if (direction >= 0) directionCounts[direction]++;
-
-        // Track closest approach to exit
-        minDistanceToExit = Math.min(minDistanceToExit, currentDistance);
-      } else {
-        // Penalty for invalid move (collision or out of bounds)
-        // Previously this was extremely punitive (-1000 * scale) causing all genomes to bottom-out at the clamp
-        // which destroyed selection pressure. Keep it mild so progress/exploration dominate.
-        invalidMovePenalty -=
-          MazeMovement.#INVALID_MOVE_PENALTY_MILD * rewardScale; // mild penalty now
-        // No tolerance for invalid moves; break if needed
-        steps === maxSteps;
-      }
-      // Update global distance improvement memory
-      /**
-       * Current global distance to exit
-       */
-      const currentDistanceGlobal = MazeMovement.#distanceAt(
-        encodedMaze,
-        position,
-        distanceMap
-      );
-      if (currentDistanceGlobal < lastDistanceGlobal) {
-        // bonus for breaking a long stagnation globally
-        if (stepsSinceImprovement > MazeMovement.#GLOBAL_BREAK_BONUS_START)
-          progressReward += Math.min(
-            (stepsSinceImprovement - MazeMovement.#GLOBAL_BREAK_BONUS_START) *
-              MazeMovement.#GLOBAL_BREAK_BONUS_PER_STEP *
-              rewardScale,
-            MazeMovement.#GLOBAL_BREAK_BONUS_CAP * rewardScale
-          );
-        stepsSinceImprovement = 0;
-      }
-      lastDistanceGlobal = currentDistanceGlobal;
-      // Repetition penalty: if repeating same action without improvement
-      if (
-        prevAction === direction &&
-        stepsSinceImprovement > MazeMovement.#REPETITION_PENALTY_START
-      ) {
-        invalidMovePenalty -=
-          MazeMovement.#REPETITION_PENALTY_BASE *
-          (stepsSinceImprovement - MazeMovement.#REPETITION_PENALTY_START) *
-          rewardScale;
-      }
-      // Penalize backward (opposite) moves strongly if they do not improve
-      if (prevAction >= 0 && direction >= 0) {
-        // Opposite direction to previous action (use helper in case ACTION_DIM changes)
-        if (
-          direction === MazeMovement.#opposite(prevAction) &&
-          stepsSinceImprovement > 0
-        ) {
-          invalidMovePenalty -= MazeMovement.#BACK_MOVE_PENALTY * rewardScale;
-        }
-      }
-      // Only record previous action if movement succeeded to avoid mismatches
-      if (moved) {
-        prevAction = direction; // record last successful move for back-direction suppression
-      }
-
-      // Encourage decisiveness: slight penalty for very high entropy (uniform outputs),
-      // slight bonus for confident low-entropy when some guidance signal (gradient or LOS) exists.
-      if (actionStats) {
-        const { entropy, maxProb, secondProb } = actionStats;
-        // Compute presence of directional guidance (any non-zero gradient or LOS)
-        const hasGuidance =
-          MazeMovement.#sumVisionGroup(vision, MazeMovement.#VISION_LOS_START) >
-            0 ||
-          MazeMovement.#sumVisionGroup(
-            vision,
-            MazeMovement.#VISION_GRAD_START
-          ) > 0;
-        // Use switch(true) to express ordered predicate logic clearly
-        switch (true) {
-          case entropy > MazeMovement.#ENTROPY_HIGH_THRESHOLD: {
-            invalidMovePenalty -= MazeMovement.#ENTROPY_PENALTY * rewardScale; // discourage persistent ambiguity
-            break;
-          }
-          case hasGuidance &&
-            entropy < MazeMovement.#ENTROPY_CONFIDENT_THRESHOLD &&
-            maxProb - secondProb > MazeMovement.#ENTROPY_CONFIDENT_DIFF: {
-            newCellExplorationBonus +=
-              MazeMovement.#EXPLORATION_BONUS_SMALL * rewardScale; // tiny shaping bonus for clear decision
-            break;
-          }
-          default:
-            break;
-        }
-        // Penalty for prolonged saturation (uninformative all-ones behavior)
-        if (
-          (MazeMovement as any)._saturations >=
-          MazeMovement.#SATURATION_PENALTY_TRIGGER
-        ) {
-          invalidMovePenalty -=
-            MazeMovement.#SATURATION_PENALTY_BASE * rewardScale;
-          if (
-            (MazeMovement as any)._saturations %
-              MazeMovement.#SATURATION_PENALTY_PERIOD ===
-            0
-          ) {
-            invalidMovePenalty -=
-              MazeMovement.#SATURATION_PENALTY_ESCALATE * rewardScale; // escalating periodically when saturated
-          }
-        }
-      }
-
-      // Early termination on deep stagnation (disabled for browser demo to allow full exploration)
-      if (stepsSinceImprovement > MazeMovement.#DEEP_STAGNATION_THRESHOLD) {
-        try {
-          if (typeof window === 'undefined') {
-            invalidMovePenalty -=
-              MazeMovement.#DEEP_STAGNATION_PENALTY * rewardScale;
-            break; // keep for non-browser environments (tests / Node)
-          }
-        } catch {
-          // if window check failed, proceed with default behavior
-          invalidMovePenalty -=
-            MazeMovement.#DEEP_STAGNATION_PENALTY * rewardScale;
-          break;
-        }
-      }
-
-      // Apply oscillation/loop/memory/revisit penalties
-      invalidMovePenalty += loopPenalty + memoryPenalty + revisitPenalty;
-
-      // --- SUCCESS CHECK: Exit reached
-      if (position[0] === exitPos[0] && position[1] === exitPos[1]) {
-        // Calculate fitness for successful completion
-        /**
-         * Step efficiency (remaining steps)
-         */
-        const stepEfficiency = maxSteps - steps;
-        // Action entropy bonus for successful runs (promote balanced yet decisive policies)
-        /**
-         * Action entropy for the successful path
-         */
-        const actionEntropy = (() => {
-          let entropySum = 0;
-          const total =
-            directionCounts[0] +
-              directionCounts[1] +
-              directionCounts[2] +
-              directionCounts[3] || 1;
-          for (let di = 0; di < 4; di++) {
-            const c = directionCounts[di];
-            if (c) {
-              const p = c / total;
-              entropySum += -p * Math.log(p);
-            }
-          }
-          return entropySum / MazeMovement.#LOG_ACTIONS;
-        })();
-        /**
-         * Fitness score for successful completion
-         */
-        const fitness =
-          MazeMovement.#SUCCESS_BASE_FITNESS +
-          stepEfficiency * MazeMovement.#STEP_EFFICIENCY_SCALE +
-          progressReward +
-          newCellExplorationBonus +
-          invalidMovePenalty +
-          actionEntropy * MazeMovement.#SUCCESS_ACTION_ENTROPY_SCALE;
-
-        const pathMaterialized = MazeMovement.#materializePath(pathLength);
-
-        return {
-          success: true,
-          steps,
-          path: pathMaterialized,
-          fitness: Math.max(MazeMovement.#MIN_SUCCESS_FITNESS, fitness),
-          progress: 100,
-          saturationFraction: steps ? saturatedSteps / steps : 0,
-          actionEntropy,
-        };
+        return MazeMovement.#finalizeSuccess(state, maxSteps);
       }
     }
 
-    // --- FAILURE CASE: Did not reach exit
-    /**
-     * Progress percentage toward exit (0-100)
-     */
+    return MazeMovement.#finalizeFailure(
+      state,
+      encodedMaze,
+      startPos,
+      exitPos,
+      distanceMap
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Private helper methods (refactored from large simulateAgent body)
+  // ---------------------------------------------------------------------------
+
+  /** Internal aggregate simulation state (not exported). */
+  static #initRunState(
+    encodedMaze: number[][],
+    startPos: readonly [number, number],
+    distanceMap: number[][] | undefined,
+    maxSteps: number
+  ): SimulationState {
+    // Reset global mutable counters reused across runs
+    MazeMovement.#StateSaturations = 0;
+    MazeMovement.#StateNoMoveStreak = 0;
+    MazeMovement.#StatePrevDistanceStep = undefined;
+    const height = encodedMaze.length;
+    const width = encodedMaze[0].length;
+    const hasDistanceMap =
+      Array.isArray(distanceMap) && distanceMap.length === height;
+    MazeMovement.#initBuffers(width, height, maxSteps);
+    // Seed path with start position
+    const position: [number, number] = [startPos[0], startPos[1]];
+    MazeMovement.#PathX![0] = position[0];
+    MazeMovement.#PathY![0] = position[1];
+    const historyCapacity = MazeMovement.#MOVE_HISTORY_LENGTH;
+    const state: SimulationState = {
+      position,
+      steps: 0,
+      pathLength: 1,
+      visitedUniqueCount: 0,
+      hasDistanceMap,
+      distanceMap,
+      minDistanceToExit: hasDistanceMap
+        ? distanceMap![position[1]]?.[position[0]] ?? Infinity
+        : MazeMovement.#distanceAt(encodedMaze, position, distanceMap),
+      progressReward: 0,
+      newCellExplorationBonus: 0,
+      invalidMovePenalty: 0,
+      prevAction: MazeMovement.#NO_MOVE,
+      stepsSinceImprovement: 0,
+      lastDistanceGlobal: MazeMovement.#distanceAt(
+        encodedMaze,
+        position,
+        distanceMap
+      ),
+      saturatedSteps: 0,
+      recentPositions: [] as [number, number][],
+      localAreaPenalty: 0,
+      directionCounts: [0, 0, 0, 0] as number[],
+      moveHistoryRing: new Int32Array(historyCapacity),
+      moveHistoryLength: 0,
+      moveHistoryHead: 0,
+      currentCellIndex: 0,
+      loopPenalty: 0,
+      memoryPenalty: 0,
+      revisitPenalty: 0,
+      visitsAtCurrent: 0,
+      distHere: Infinity,
+      vision: [] as number[],
+      actionStats: null as any,
+      direction: MazeMovement.#NO_MOVE,
+      moved: false,
+      prevDistance: Infinity,
+      earlyTerminate: false,
+    };
+    return state;
+  }
+
+  /** Push a cell index into circular history (A->B loop detection). */
+  static #pushHistory(state: SimulationState, cellIndex: number) {
+    const { moveHistoryRing, moveHistoryHead, moveHistoryLength } = state;
+    const capacity = moveHistoryRing.length;
+    moveHistoryRing[moveHistoryHead] = cellIndex;
+    state.moveHistoryHead = (moveHistoryHead + 1) % capacity;
+    if (moveHistoryLength < capacity) state.moveHistoryLength++;
+  }
+
+  /** nth (1-based) from history end; 1 == last; undefined if not present. */
+  static #nthFromHistoryEnd(
+    state: SimulationState,
+    n: number
+  ): number | undefined {
+    if (n > state.moveHistoryLength) return undefined;
+    const capacity = state.moveHistoryRing.length;
+    const index = (state.moveHistoryHead - n + capacity) % capacity;
+    return state.moveHistoryRing[index];
+  }
+
+  /** Record visit + compute loop/memory/revisit penalties and optionally early terminate. */
+  static #recordVisitAndUpdatePenalties(
+    state: SimulationState,
+    encodedMaze: number[][]
+  ) {
+    const visitedFlags = MazeMovement.#VisitedFlags!;
+    const visitCountsTyped = MazeMovement.#VisitCounts!;
+    const rewardScale = MazeMovement.#REWARD_SCALE;
+    // Record current cell
+    const cellIndex = MazeMovement.#index(state.position[0], state.position[1]);
+    state.currentCellIndex = cellIndex;
+    if (!visitedFlags[cellIndex]) {
+      visitedFlags[cellIndex] = 1;
+      state.visitedUniqueCount++;
+    }
+    visitCountsTyped[cellIndex]++;
+    MazeMovement.#pushHistory(state, cellIndex);
+    const visits = (state.visitsAtCurrent = visitCountsTyped[cellIndex]);
+
+    // Loop detection (A->B->A->B)
+    state.loopPenalty = 0;
+    if (state.moveHistoryLength >= MazeMovement.#OSCILLATION_DETECT_LENGTH) {
+      const last = MazeMovement.#nthFromHistoryEnd(state, 1)!;
+      const secondLast = MazeMovement.#nthFromHistoryEnd(state, 2);
+      const thirdLast = MazeMovement.#nthFromHistoryEnd(state, 3);
+      const fourthLast = MazeMovement.#nthFromHistoryEnd(state, 4);
+      if (
+        last === thirdLast &&
+        secondLast !== undefined &&
+        fourthLast !== undefined &&
+        secondLast === fourthLast
+      ) {
+        state.loopPenalty -= MazeMovement.#LOOP_PENALTY * rewardScale;
+      }
+    }
+    // Memory penalty: returning to any recent cell (excluding immediate previous)
+    state.memoryPenalty = 0;
+    if (state.moveHistoryLength > 1) {
+      for (let scan = 2; scan <= state.moveHistoryLength; scan++) {
+        const candidateIndex = MazeMovement.#nthFromHistoryEnd(state, scan);
+        if (candidateIndex === cellIndex) {
+          state.memoryPenalty -=
+            MazeMovement.#MEMORY_RETURN_PENALTY * rewardScale;
+          break;
+        }
+      }
+    }
+    // Revisit penalty (dynamic scaling)
+    state.revisitPenalty = 0;
+    if (visits > 1) {
+      state.revisitPenalty -=
+        MazeMovement.#REVISIT_PENALTY_PER_VISIT * (visits - 1) * rewardScale;
+    }
+    if (visits > MazeMovement.#VISIT_TERMINATION_THRESHOLD) {
+      state.invalidMovePenalty -=
+        MazeMovement.#INVALID_MOVE_PENALTY_HARSH * rewardScale;
+      state.earlyTerminate = true;
+    }
+  }
+
+  /** Build vision inputs & compute distHere for proximity / epsilon logic. */
+  static #buildVisionAndDistance(
+    state: SimulationState,
+    encodedMaze: number[][],
+    exitPos: readonly [number, number],
+    distanceMap?: number[][]
+  ) {
+    if (state.earlyTerminate) return;
+    const hasDistanceMap = state.hasDistanceMap;
+    const prevDistLocal = hasDistanceMap
+      ? distanceMap![state.position[1]]?.[state.position[0]] ?? undefined
+      : MazeMovement.#distanceAt(encodedMaze, state.position, distanceMap);
+    const distCurrentLocal = prevDistLocal; // same pre-move
+    state.vision = MazeVision.buildInputs6(
+      encodedMaze,
+      state.position,
+      exitPos,
+      distanceMap,
+      MazeMovement.#StatePrevDistanceStep,
+      distCurrentLocal,
+      state.prevAction
+    );
+    MazeMovement.#StatePrevDistanceStep = distCurrentLocal;
+    state.distHere = hasDistanceMap
+      ? distanceMap![state.position[1]]?.[state.position[0]] ?? Infinity
+      : MazeMovement.#distanceAt(encodedMaze, state.position, distanceMap);
+  }
+
+  /** Activate network, compute direction, update saturation counters & penalties. */
+  static #decideDirection(
+    state: SimulationState,
+    network: INetwork,
+    encodedMaze: number[][],
+    distanceMap?: number[][]
+  ) {
+    if (state.earlyTerminate) return;
+    try {
+      const outputs = network.activate(state.vision) as number[];
+      (network as any)._lastStepOutputs = MazeUtils.pushHistory(
+        (network as any)._lastStepOutputs,
+        [...outputs],
+        MazeMovement.#OUTPUT_HISTORY_LENGTH
+      );
+      state.actionStats = MazeMovement.selectDirection(outputs);
+      // Extracted saturation + bias handling
+      MazeMovement.#applySaturationAndBiasAdjust(state, outputs, network);
+      state.direction = state.actionStats.direction;
+    } catch (error) {
+      console.error('Error activating network:', error);
+      state.direction = MazeMovement.#NO_MOVE;
+    }
+  }
+
+  /** Greedy override when close to exit: choose direction minimizing distance. */
+  static #maybeApplyProximityGreedy(
+    state: SimulationState,
+    encodedMaze: number[][],
+    distanceMap?: number[][]
+  ) {
+    if (state.earlyTerminate) return;
+    if (state.distHere <= MazeMovement.#PROXIMITY_GREEDY_DISTANCE) {
+      let bestDirection = state.direction;
+      let bestDistance = Infinity;
+      for (
+        let directionIndex = 0;
+        directionIndex < MazeMovement.#ACTION_DIM;
+        directionIndex++
+      ) {
+        const [deltaX, deltaY] = MazeMovement.#DIRECTION_DELTAS[directionIndex];
+        const testX = state.position[0] + deltaX;
+        const testY = state.position[1] + deltaY;
+        if (!MazeMovement.isValidMove(encodedMaze, testX, testY)) continue;
+        const candidateDistance = MazeMovement.#distanceAt(
+          encodedMaze,
+          [testX, testY],
+          distanceMap
+        );
+        if (candidateDistance < bestDistance) {
+          bestDistance = candidateDistance;
+          bestDirection = directionIndex;
+        }
+      }
+      if (bestDirection != null) state.direction = bestDirection;
+    }
+  }
+
+  /** Epsilon-greedy exploration override. */
+  static #maybeApplyEpsilonExploration(
+    state: SimulationState,
+    encodedMaze: number[][]
+  ) {
+    if (state.earlyTerminate) return;
+    const epsilon = MazeMovement.#computeEpsilon(
+      state.steps,
+      state.stepsSinceImprovement,
+      state.distHere,
+      MazeMovement.#StateSaturations
+    );
+    if (MazeMovement.#rand() < epsilon) {
+      for (
+        let trialIndex = 0;
+        trialIndex < MazeMovement.#ACTION_DIM;
+        trialIndex++
+      ) {
+        const candidateDirection = Math.floor(
+          MazeMovement.#rand() * MazeMovement.#ACTION_DIM
+        );
+        if (candidateDirection === state.prevAction) continue;
+        const [deltaX, deltaY] = MazeMovement.#DIRECTION_DELTAS[
+          candidateDirection
+        ];
+        const testX = state.position[0] + deltaX;
+        const testY = state.position[1] + deltaY;
+        if (MazeMovement.isValidMove(encodedMaze, testX, testY)) {
+          state.direction = candidateDirection;
+          break;
+        }
+      }
+    }
+  }
+
+  /** Force exploration if no-move streak triggered. */
+  static #maybeForceExploration(
+    state: SimulationState,
+    encodedMaze: number[][]
+  ) {
+    if (state.earlyTerminate) return;
+    if (state.direction === MazeMovement.#NO_MOVE)
+      MazeMovement.#StateNoMoveStreak++;
+    else MazeMovement.#StateNoMoveStreak = 0;
+    if (
+      MazeMovement.#StateNoMoveStreak >= MazeMovement.#NO_MOVE_STREAK_THRESHOLD
+    ) {
+      for (
+        let attemptIndex = 0;
+        attemptIndex < MazeMovement.#ACTION_DIM;
+        attemptIndex++
+      ) {
+        const candidateDirection = Math.floor(
+          MazeMovement.#rand() * MazeMovement.#ACTION_DIM
+        );
+        const [deltaX, deltaY] = MazeMovement.#DIRECTION_DELTAS[
+          candidateDirection
+        ];
+        const testX = state.position[0] + deltaX;
+        const testY = state.position[1] + deltaY;
+        if (MazeMovement.isValidMove(encodedMaze, testX, testY)) {
+          state.direction = candidateDirection;
+          break;
+        }
+      }
+      MazeMovement.#StateNoMoveStreak = 0;
+    }
+  }
+
+  /** Execute move and compute progress / exploration rewards. */
+  static #executeMoveAndRewards(
+    state: SimulationState,
+    encodedMaze: number[][],
+    distanceMap?: number[][]
+  ) {
+    if (state.earlyTerminate) return;
+    state.prevDistance = MazeMovement.#distanceAt(
+      encodedMaze,
+      state.position,
+      distanceMap
+    );
+    // Move
+    state.moved = false;
+    if (state.direction >= 0 && state.direction < MazeMovement.#ACTION_DIM) {
+      const [deltaX, deltaY] = MazeMovement.#DIRECTION_DELTAS[state.direction];
+      const newX = state.position[0] + deltaX;
+      const newY = state.position[1] + deltaY;
+      if (MazeMovement.isValidMove(encodedMaze, newX, newY)) {
+        state.position[0] = newX;
+        state.position[1] = newY;
+        state.moved = true;
+      }
+    }
+    const rewardScale = MazeMovement.#REWARD_SCALE;
+    const pathX = MazeMovement.#PathX!;
+    const pathY = MazeMovement.#PathY!;
+    if (state.moved) {
+      pathX[state.pathLength] = state.position[0];
+      pathY[state.pathLength] = state.position[1];
+      state.pathLength++;
+      MazeUtils.pushHistory(
+        state.recentPositions,
+        [state.position[0], state.position[1]] as [number, number],
+        MazeMovement.#LOCAL_WINDOW
+      );
+      MazeMovement.#maybeApplyLocalAreaPenalty(state, rewardScale);
+      const currentDistance = state.hasDistanceMap
+        ? state.distanceMap![state.position[1]]?.[state.position[0]] ?? Infinity
+        : MazeMovement.#distanceAt(
+            encodedMaze,
+            state.position,
+            state.distanceMap
+          );
+      const distanceDelta = state.prevDistance - currentDistance; // positive if improved
+      const improved = distanceDelta > 0;
+      const worsened = !improved && currentDistance > state.prevDistance;
+      MazeMovement.#applyProgressShaping(
+        state,
+        distanceDelta,
+        improved,
+        worsened,
+        rewardScale
+      );
+      MazeMovement.#applyExplorationVisitAdjustment(state, rewardScale);
+      if (state.direction >= 0) state.directionCounts[state.direction]++;
+      state.minDistanceToExit = Math.min(
+        state.minDistanceToExit,
+        currentDistance
+      );
+    } else {
+      state.invalidMovePenalty -=
+        MazeMovement.#INVALID_MOVE_PENALTY_MILD * rewardScale;
+    }
+    // Global distance improvement bonus
+    MazeMovement.#applyGlobalDistanceImprovementBonus(
+      state,
+      encodedMaze,
+      rewardScale
+    );
+    // Repetition / back-move penalties now in post action stage
+  }
+
+  /** Apply repetition / entropy / saturation penalties & update prevAction. */
+  static #applyPostActionPenalties(state: SimulationState) {
+    if (state.earlyTerminate) return;
+    const rewardScale = MazeMovement.#REWARD_SCALE;
+    MazeMovement.#applyRepetitionAndBacktrackPenalties(state, rewardScale);
+    if (state.moved) state.prevAction = state.direction;
+    MazeMovement.#applyEntropyGuidanceShaping(state, rewardScale);
+    MazeMovement.#applySaturationPenaltyCycle(state, rewardScale);
+    // Aggregate penalties captured earlier
+    state.invalidMovePenalty +=
+      state.loopPenalty + state.memoryPenalty + state.revisitPenalty;
+  }
+
+  /** Apply local area stagnation penalty if oscillating tightly without improvements. */
+  static #maybeApplyLocalAreaPenalty(
+    state: SimulationState,
+    rewardScale: number
+  ) {
+    if (state.recentPositions.length !== MazeMovement.#LOCAL_WINDOW) return;
+    let minX = Infinity;
+    let maxX = -Infinity;
+    let minY = Infinity;
+    let maxY = -Infinity;
+    for (const [rx, ry] of state.recentPositions) {
+      if (rx < minX) minX = rx;
+      if (rx > maxX) maxX = rx;
+      if (ry < minY) minY = ry;
+      if (ry > maxY) maxY = ry;
+    }
+    const span = maxX - minX + (maxY - minY);
+    if (
+      span <= MazeMovement.#LOCAL_AREA_SPAN_THRESHOLD &&
+      state.stepsSinceImprovement > MazeMovement.#LOCAL_AREA_STAGNATION_STEPS
+    ) {
+      state.localAreaPenalty -=
+        MazeMovement.#LOCAL_AREA_PENALTY_AMOUNT * rewardScale;
+    }
+  }
+
+  /** Progress shaping rewards / penalties based on distance delta. */
+  static #applyProgressShaping(
+    state: SimulationState,
+    distanceDelta: number,
+    improved: boolean,
+    worsened: boolean,
+    rewardScale: number
+  ) {
+    if (improved) {
+      const confidence = state.actionStats?.maxProb ?? 1;
+      const baseProgress =
+        (MazeMovement.#PROGRESS_REWARD_BASE +
+          MazeMovement.#PROGRESS_REWARD_CONF_SCALE * confidence) *
+        rewardScale;
+      if (state.stepsSinceImprovement > 0) {
+        state.progressReward += Math.min(
+          state.stepsSinceImprovement *
+            MazeMovement.#PROGRESS_STEPS_MULT *
+            rewardScale,
+          MazeMovement.#PROGRESS_STEPS_MAX * rewardScale
+        );
+      }
+      state.progressReward += baseProgress;
+      state.stepsSinceImprovement = 0;
+      state.progressReward +=
+        distanceDelta *
+        MazeMovement.#DISTANCE_DELTA_SCALE *
+        (MazeMovement.#DISTANCE_DELTA_CONF_BASE +
+          MazeMovement.#DISTANCE_DELTA_CONF_SCALE * confidence);
+    } else if (worsened) {
+      const confidence = state.actionStats?.maxProb ?? 0.5;
+      state.progressReward -=
+        (MazeMovement.#PROGRESS_AWAY_BASE_PENALTY +
+          MazeMovement.#PROGRESS_AWAY_CONF_SCALE * confidence) *
+        rewardScale;
+      state.stepsSinceImprovement++;
+    } else {
+      state.stepsSinceImprovement++;
+    }
+  }
+
+  /** Exploration bonus / revisit penalties for the just-visited cell. */
+  static #applyExplorationVisitAdjustment(
+    state: SimulationState,
+    rewardScale: number
+  ) {
+    if (state.visitsAtCurrent === 1) {
+      state.newCellExplorationBonus +=
+        MazeMovement.#NEW_CELL_EXPLORATION_BONUS * rewardScale;
+    } else {
+      state.newCellExplorationBonus -=
+        MazeMovement.#REVISIT_PENALTY_STRONG * rewardScale;
+    }
+  }
+
+  /** Global distance improvement bonus for breaking long stagnation. */
+  static #applyGlobalDistanceImprovementBonus(
+    state: SimulationState,
+    encodedMaze: number[][],
+    rewardScale: number
+  ) {
+    const currentDistanceGlobal = state.hasDistanceMap
+      ? state.distanceMap![state.position[1]]?.[state.position[0]] ?? Infinity
+      : MazeMovement.#distanceAt(
+          encodedMaze,
+          state.position,
+          state.distanceMap
+        );
+    if (currentDistanceGlobal < state.lastDistanceGlobal) {
+      if (state.stepsSinceImprovement > MazeMovement.#GLOBAL_BREAK_BONUS_START)
+        state.progressReward += Math.min(
+          (state.stepsSinceImprovement -
+            MazeMovement.#GLOBAL_BREAK_BONUS_START) *
+            MazeMovement.#GLOBAL_BREAK_BONUS_PER_STEP *
+            rewardScale,
+          MazeMovement.#GLOBAL_BREAK_BONUS_CAP * rewardScale
+        );
+      state.stepsSinceImprovement = 0;
+    }
+    state.lastDistanceGlobal = currentDistanceGlobal;
+  }
+
+  /** Repetition and backward (opposite) move penalties. */
+  static #applyRepetitionAndBacktrackPenalties(
+    state: SimulationState,
+    rewardScale: number
+  ) {
+    if (
+      state.prevAction === state.direction &&
+      state.stepsSinceImprovement > MazeMovement.#REPETITION_PENALTY_START
+    ) {
+      state.invalidMovePenalty -=
+        MazeMovement.#REPETITION_PENALTY_BASE *
+        (state.stepsSinceImprovement - MazeMovement.#REPETITION_PENALTY_START) *
+        rewardScale;
+    }
+    if (
+      state.prevAction >= 0 &&
+      state.direction >= 0 &&
+      state.stepsSinceImprovement > 0 &&
+      state.direction === MazeMovement.#OPPOSITE_DIR[state.prevAction]
+    ) {
+      state.invalidMovePenalty -= MazeMovement.#BACK_MOVE_PENALTY * rewardScale;
+    }
+  }
+
+  /** Entropy / guidance shaping (confidence vs ambiguity). */
+  static #applyEntropyGuidanceShaping(
+    state: SimulationState,
+    rewardScale: number
+  ) {
+    if (!state.actionStats) return;
+    const { entropy, maxProb, secondProb } = state.actionStats;
+    const hasGuidance =
+      MazeMovement.#sumVisionGroup(
+        state.vision,
+        MazeMovement.#VISION_LOS_START
+      ) > 0 ||
+      MazeMovement.#sumVisionGroup(
+        state.vision,
+        MazeMovement.#VISION_GRAD_START
+      ) > 0;
+    switch (true) {
+      case entropy > MazeMovement.#ENTROPY_HIGH_THRESHOLD:
+        state.invalidMovePenalty -= MazeMovement.#ENTROPY_PENALTY * rewardScale;
+        break;
+      case hasGuidance &&
+        entropy < MazeMovement.#ENTROPY_CONFIDENT_THRESHOLD &&
+        maxProb - secondProb > MazeMovement.#ENTROPY_CONFIDENT_DIFF:
+        state.newCellExplorationBonus +=
+          MazeMovement.#EXPLORATION_BONUS_SMALL * rewardScale;
+        break;
+      default:
+        break;
+    }
+  }
+
+  /** Saturation penalty application (periodic escalation). */
+  static #applySaturationPenaltyCycle(
+    state: SimulationState,
+    rewardScale: number
+  ) {
+    if (
+      MazeMovement.#StateSaturations < MazeMovement.#SATURATION_PENALTY_TRIGGER
+    )
+      return;
+    state.invalidMovePenalty -=
+      MazeMovement.#SATURATION_PENALTY_BASE * rewardScale;
+    if (
+      MazeMovement.#StateSaturations %
+        MazeMovement.#SATURATION_PENALTY_PERIOD ===
+      0
+    ) {
+      state.invalidMovePenalty -=
+        MazeMovement.#SATURATION_PENALTY_ESCALATE * rewardScale;
+    }
+  }
+
+  /** Handle saturation/overconfidence detection, penalties and adaptive bias adjustment. */
+  static #applySaturationAndBiasAdjust(
+    state: SimulationState,
+    outputs: number[],
+    network: INetwork
+  ) {
+    const rewardScale = MazeMovement.#REWARD_SCALE;
+    // Overconfidence detection (probability based)
+    const overConfident =
+      state.actionStats.maxProb > MazeMovement.#OVERCONFIDENT_PROB &&
+      state.actionStats.secondProb < MazeMovement.#SECOND_PROB_LOW;
+    // Centered logits variance (std dev) for flat collapse detection
+    const meanLogit =
+      outputs.reduce((accumulator, value) => accumulator + value, 0) /
+      MazeMovement.#ACTION_DIM;
+    let varianceSum = 0;
+    for (const logit of outputs) {
+      const delta = logit - meanLogit;
+      varianceSum += delta * delta;
+    }
+    varianceSum /= MazeMovement.#ACTION_DIM;
+    const logStd = Math.sqrt(varianceSum);
+    const flatCollapsed = logStd < MazeMovement.#LOGSTD_FLAT_THRESHOLD;
+    // Update rolling saturation counter
+    let saturationCounter = MazeMovement.#StateSaturations;
+    if (overConfident || flatCollapsed) {
+      saturationCounter++;
+      state.saturatedSteps++;
+    } else if (saturationCounter > 0) {
+      saturationCounter--;
+    }
+    MazeMovement.#StateSaturations = saturationCounter;
+    // Penalties
+    if (overConfident) {
+      state.invalidMovePenalty -=
+        MazeMovement.#OVERCONFIDENT_PENALTY * rewardScale;
+    }
+    if (flatCollapsed) {
+      state.invalidMovePenalty -=
+        MazeMovement.#FLAT_COLLAPSE_PENALTY * rewardScale;
+    }
+    // Adaptive bias dampening when chronic saturation persists
+    if (
+      MazeMovement.#StateSaturations > MazeMovement.#SATURATION_ADJUST_MIN &&
+      state.steps % MazeMovement.#SATURATION_ADJUST_INTERVAL === 0
+    ) {
+      try {
+        const outputNodes = (network as any).nodes?.filter(
+          (node: any) => node.type === MazeMovement.#NODE_TYPE_OUTPUT
+        );
+        if (outputNodes?.length) {
+          const meanBias =
+            outputNodes.reduce(
+              (total: number, node: any) => total + node.bias,
+              0
+            ) / outputNodes.length;
+          for (const node of outputNodes) {
+            node.bias = Math.max(
+              -MazeMovement.#BIAS_CLAMP,
+              Math.min(
+                MazeMovement.#BIAS_CLAMP,
+                node.bias - meanBias * MazeMovement.#BIAS_ADJUST_FACTOR
+              )
+            );
+          }
+        }
+      } catch {
+        // Swallow bias adjustment errors (network shape may differ in some tests)
+      }
+    }
+  }
+
+  /** Check deep stagnation and optionally terminate. */
+  static #maybeTerminateDeepStagnation(state: SimulationState): boolean {
+    if (state.stepsSinceImprovement > MazeMovement.#DEEP_STAGNATION_THRESHOLD) {
+      const rewardScale = MazeMovement.#REWARD_SCALE;
+      try {
+        if (typeof window === 'undefined') {
+          state.invalidMovePenalty -=
+            MazeMovement.#DEEP_STAGNATION_PENALTY * rewardScale;
+          return true;
+        }
+      } catch {
+        state.invalidMovePenalty -=
+          MazeMovement.#DEEP_STAGNATION_PENALTY * rewardScale;
+        return true;
+      }
+    }
+    // Early termination from visit threshold
+    return state.earlyTerminate;
+  }
+
+  /** Compute entropy from direction counts (shared by success & failure finalization). */
+  static #computeActionEntropyFromCounts(directionCounts: number[]): number {
+    const total = directionCounts.reduce((s, v) => s + v, 0) || 1;
+    let entropySum = 0;
+    for (const count of directionCounts) {
+      if (!count) continue;
+      const probability = count / total;
+      entropySum -= probability * Math.log(probability);
+    }
+    return entropySum / MazeMovement.#LOG_ACTIONS;
+  }
+
+  /** Build and return result object for success scenario. */
+  static #finalizeSuccess(state: SimulationState, maxSteps: number) {
+    const stepEfficiency = maxSteps - state.steps;
+    const actionEntropy = MazeMovement.#computeActionEntropyFromCounts(
+      state.directionCounts
+    );
+    const fitness =
+      MazeMovement.#SUCCESS_BASE_FITNESS +
+      stepEfficiency * MazeMovement.#STEP_EFFICIENCY_SCALE +
+      state.progressReward +
+      state.newCellExplorationBonus +
+      state.invalidMovePenalty +
+      actionEntropy * MazeMovement.#SUCCESS_ACTION_ENTROPY_SCALE;
+    const pathMaterialized = MazeMovement.#materializePath(state.pathLength);
+    return {
+      success: true,
+      steps: state.steps,
+      path: pathMaterialized,
+      fitness: Math.max(MazeMovement.#MIN_SUCCESS_FITNESS, fitness),
+      progress: 100,
+      saturationFraction: state.steps ? state.saturatedSteps / state.steps : 0,
+      actionEntropy,
+    };
+  }
+
+  /** Build and return result object for failure scenario. */
+  static #finalizeFailure(
+    state: SimulationState,
+    encodedMaze: number[][],
+    startPos: readonly [number, number],
+    exitPos: readonly [number, number],
+    distanceMap?: number[][]
+  ) {
+    const pathX = MazeMovement.#PathX!;
+    const pathY = MazeMovement.#PathY!;
     const lastPos: [number, number] = [
-      pathX[pathLength - 1] ?? 0,
-      pathY[pathLength - 1] ?? 0,
+      pathX[state.pathLength - 1] ?? 0,
+      pathY[state.pathLength - 1] ?? 0,
     ];
     const progress = distanceMap
       ? MazeUtils.calculateProgressFromDistanceMap(
@@ -1369,86 +1490,38 @@ export class MazeMovement {
           startPos
         )
       : MazeUtils.calculateProgress(encodedMaze, lastPos, startPos, exitPos);
-
-    // Fitness for unsuccessful attempts: emphasize progress & exploration with moderated penalties
-    /**
-     * Fractional progress toward exit (0..1)
-     */
-    const progressFrac = progress / 100;
-    /**
-     * Shaped progress score (concave for early gradient)
-     */
+    const progressFraction = progress / 100;
     const shapedProgress =
-      Math.pow(progressFrac, MazeMovement.#PROGRESS_POWER) *
+      Math.pow(progressFraction, MazeMovement.#PROGRESS_POWER) *
       MazeMovement.#PROGRESS_SCALE;
-    /**
-     * Exploration score (number of unique cells visited)
-     */
-    const explorationScore = visitedUniqueCount * 1.0; // increase weight so exploration differentiates genomes
-    /**
-     * Aggregated penalty
-     */
-    const penalty = invalidMovePenalty; // already aggregated
-    // Action entropy based on path
-    /**
-     * Action entropy for the failed path
-     */
-    const actionEntropy = (() => {
-      const total =
-        directionCounts[0] +
-          directionCounts[1] +
-          directionCounts[2] +
-          directionCounts[3] || 1;
-      let entropySum = 0;
-      for (let di = 0; di < 4; di++) {
-        const c = directionCounts[di];
-        if (c) {
-          const p = c / total;
-          entropySum += -p * Math.log(p);
-        }
-      }
-      return entropySum / MazeMovement.#LOG_ACTIONS;
-    })();
-    /**
-     * Bonus for action entropy
-     */
-    const entropyBonus = actionEntropy * MazeMovement.#ENTROPY_BONUS_WEIGHT; // weight
-    /**
-     * Additional optional penalties initialized to zero. In earlier
-     * revisions these were computed from output-variance, saturation and
-     * near-miss heuristics. Initialize them here so the final fitness
-     * calculation remains stable while we modernize incrementally.
-     */
-    let saturationPenalty = 0;
-    let outputVarPenalty = 0;
-    const satFrac = steps ? saturatedSteps / steps : 0;
-
-    /**
-     * Base fitness score before final adjustment
-     */
-    const base =
+    const explorationScore = state.visitedUniqueCount * 1.0;
+    const actionEntropy = MazeMovement.#computeActionEntropyFromCounts(
+      state.directionCounts
+    );
+    const entropyBonus = actionEntropy * MazeMovement.#ENTROPY_BONUS_WEIGHT;
+    const saturationPenalty = 0; // placeholder kept for future heuristics
+    const outputVarPenalty = 0; // placeholder
+    const baseFitness =
       shapedProgress +
       explorationScore +
-      progressReward +
-      newCellExplorationBonus +
-      penalty +
+      state.progressReward +
+      state.newCellExplorationBonus +
+      state.invalidMovePenalty +
       entropyBonus +
-      localAreaPenalty +
+      state.localAreaPenalty +
       saturationPenalty +
-      outputVarPenalty; // near-miss placeholder removed
-    const raw = base + MazeMovement.#rand() * MazeMovement.#FITNESS_RANDOMNESS;
-    /**
-     * Final fitness score (nonlinear squash for negatives)
-     */
+      outputVarPenalty;
+    const raw =
+      baseFitness + MazeMovement.#rand() * MazeMovement.#FITNESS_RANDOMNESS;
     const fitness = raw >= 0 ? raw : -Math.log1p(1 - raw);
-    const pathMaterialized = MazeMovement.#materializePath(pathLength);
+    const pathMaterialized = MazeMovement.#materializePath(state.pathLength);
     return {
       success: false,
-      steps,
+      steps: state.steps,
       path: pathMaterialized,
       fitness,
       progress,
-      saturationFraction: satFrac,
+      saturationFraction: state.steps ? state.saturatedSteps / state.steps : 0,
       actionEntropy,
     };
   }

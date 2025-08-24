@@ -209,7 +209,7 @@ describe('ASCII Maze Solver using Neuro-Evolution', () => {
     it(`Procedural maze ${dim}x${dim}`, async () => {
       const result = await EvolutionEngine.runMazeEvolution({
         mazeConfig: { maze: new MazeGenerator(dim, dim).generate() },
-        agentSimConfig: { maxSteps: 400 }, // matches browser AGENT_MAX_STEPS
+        agentSimConfig: { maxSteps: 600 }, // matches browser AGENT_MAX_STEPS
         evolutionAlgorithmConfig: {
           allowRecurrent: true,
           popSize: 20, // matches browser POPULATION_SIZE

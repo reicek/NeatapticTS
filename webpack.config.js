@@ -32,14 +32,8 @@ const config = {
         use: {
           loader: 'ts-loader', // Use ts-loader to transpile TypeScript
           options: {
-            transpileOnly: true, // Skip type checking for faster builds
-            compilerOptions: {
-              module: 'ESNext',
-              moduleResolution: 'Bundler',
-              target: 'ES2023',
-              sourceMap: true,
-              clean: true, // Enable cleaning of output directory before each build
-            },
+            // Rely on central tsconfig.json for compiler options; keep fast transpile path.
+            transpileOnly: true
           },
         },
       },
