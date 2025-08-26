@@ -1,9 +1,3 @@
-/*
- * Generates per-folder README.md aggregating exported symbols' JSDoc.
- * - Copies root README.md into docs/ (manual content retained)
- * - Skips generating README for src root (leave top-level README manual)
- * Usage: npm run docs:folders
- */
 import { Project } from 'ts-morph';
 import fg from 'fast-glob';
 import * as path from 'path';
@@ -18,14 +12,13 @@ const project = new Project({
 });
 async function main() {
     await fs.ensureDir(DOCS_DIR);
-    // Copy root README (manual) into docs
     if (await fs.pathExists(ROOT_README_SRC)) {
         await fs.copyFile(ROOT_README_SRC, ROOT_README_DEST);
     }
     const filePaths = await fg(['**/*.ts'], { cwd: SRC_DIR, absolute: true, ignore: ['**/*.d.ts'] });
     for (const p of filePaths) {
         if (/\.test\.ts$/i.test(p))
-            continue; // skip test specification files
+            continue;
         project.addSourceFileAtPath(p);
     }
     const all = project.getSourceFiles();
@@ -37,11 +30,9 @@ async function main() {
     const dirMap = new Map();
     for (const sf of sourceFiles) {
         const exported = sf.getExportedDeclarations();
-        // capture file-level/module JSDoc if present
         const fileJsDocs = sf.getJsDocs?.() || [];
         const fileDocPrimary = fileJsDocs[0];
         const fileDocDesc = fileDocPrimary?.getDescription?.()?.trim();
-        // ensure fileMap exists early so we can add file-level doc
         const dir = path.dirname(sf.getFilePath());
         let fileMap = dirMap.get(dir);
         if (!fileMap) {
@@ -73,7 +64,6 @@ async function main() {
                         arr.push(rendered);
                         fileMap.set(sf.getFilePath(), arr);
                     }
-                    // special-case: exported variable with object literal initializer (e.g. Activation = { ... })
                     try {
                         if (decl.getKindName && decl.getKindName() === 'VariableDeclaration') {
                             const init = decl.getInitializer?.();
@@ -91,8 +81,7 @@ async function main() {
                             }
                         }
                     }
-                    catch (e) { /* ignore introspection errors */ }
-                    // special-case: exported class -> include members
+                    catch (e) { }
                     try {
                         if (decl.getKindName && decl.getKindName() === 'ClassDeclaration') {
                             const members = decl.getMembers?.() || [];
@@ -109,11 +98,10 @@ async function main() {
                             }
                         }
                     }
-                    catch (e) { /* ignore */ }
+                    catch (e) { }
                 }
             }
         }
-        // Additionally capture top-level, non-exported declarations if they have JSDoc
         try {
             const stmts = sf.getStatements?.() || [];
             for (const st of stmts) {
@@ -122,8 +110,7 @@ async function main() {
                     const jsdocs = d.getJsDocs?.() || [];
                     const hasExport = (d.getSymbol && d.getSymbol()?.getDeclarations?.()?.some((x) => x.isExported && x.isExported())) || false;
                     if (!jsdocs.length)
-                        continue; // only include documented non-exported declarations
-                    // skip if already added via exported processing
+                        continue;
                     const name = d.getName?.() || (d.getSymbol && d.getSymbol()?.getName?.());
                     if (!name)
                         continue;
@@ -139,20 +126,17 @@ async function main() {
                 }
             }
         }
-        catch (e) { /* ignore */ }
+        catch (e) { }
     }
     for (const [dir, fileMap] of dirMap) {
-        // Tidy & deduplicate symbols per file before rendering
         for (const [filePath, symbols] of fileMap) {
             const seen = new Map();
             const deduped = [];
             for (const s of symbols) {
-                // normalize name
                 const normName = normalizeName(s, filePath);
                 const key = `${s.parent || ''}::${normName}::${s.signature || ''}`;
                 const existing = seen.get(key);
                 if (existing) {
-                    // merge jsdoc fields conservatively
                     existing.jsdoc.description = existing.jsdoc.description || s.jsdoc.description;
                     existing.jsdoc.summary = existing.jsdoc.summary || s.jsdoc.summary;
                     existing.jsdoc.deprecated = existing.jsdoc.deprecated || s.jsdoc.deprecated;
@@ -174,15 +158,14 @@ async function main() {
             }
             fileMap.set(filePath, deduped);
         }
-        const relDir = path.relative(SRC_DIR, dir); // '' means src root
+        const relDir = path.relative(SRC_DIR, dir);
         if (relDir.startsWith('..'))
-            continue; // outside src
+            continue;
         const outDir = relDir === '' ? path.join(DOCS_DIR, 'src') : path.join(DOCS_DIR, relDir);
         await fs.ensureDir(outDir);
         const outFile = path.join(outDir, 'README.md');
         const md = buildDirectoryReadme(relDir, fileMap);
         await writeIfChanged(outFile, md);
-        // Also emit directly into the src folder tree so GitHub shows it inline when browsing code.
         const srcTargetDir = path.join(SRC_DIR, relDir);
         const srcReadme = path.join(srcTargetDir, 'README.md');
         await emitSourceReadme(srcReadme, md);
@@ -201,7 +184,6 @@ async function main() {
             }
             node = node.children.get(part);
         }
-        // attach file count if available
         const abs = path.join(SRC_DIR, rel === '' ? '' : rel);
         const fm = dirMap.get(abs);
         if (fm)
@@ -218,7 +200,6 @@ async function main() {
         for (const k of childNames)
             renderNode(n.children.get(k), level + 1);
     }
-    // Render top-level root and its children (skip a duplicate 'src' nesting)
     renderNode(rootNode, 0);
     await fs.writeFile(path.join(DOCS_DIR, 'FOLDERS.md'), lines.join('\n') + '\n', 'utf8');
     console.log('Per-folder README generation complete.');
@@ -231,7 +212,6 @@ function renderSymbol(sym, fallbackKind, filePath) {
     const allow = /ClassDeclaration|FunctionDeclaration|InterfaceDeclaration|EnumDeclaration|TypeAliasDeclaration|VariableDeclaration/;
     if (!allow.test(kind))
         return null;
-    // ts-morph Declaration with JSDoc support; cast to any to access getJsDocs generically
     const jsDocs = decl.getJsDocs?.() || [];
     if (jsDocs.some((j) => j.getTags().some((t) => t.getTagName() === 'internal')))
         return null;
@@ -255,7 +235,7 @@ function renderSymbol(sym, fallbackKind, filePath) {
             signature = `(${params}) => ${ret}`;
         }
     }
-    catch { /* ignore */ }
+    catch { }
     const params = paramsTags.map(t => {
         const text = t.getText();
         const match = text.match(/@param\s+(\w+)/);
@@ -279,7 +259,6 @@ function renderSymbol(sym, fallbackKind, filePath) {
         }
     };
 }
-// Render a declaration-like object (node) which may not have a symbol
 function renderDeclaration(decl, forcedName, forcedKind, filePath, parentName) {
     if (!decl)
         return null;
@@ -312,7 +291,7 @@ function renderDeclaration(decl, forcedName, forcedKind, filePath, parentName) {
                 signature = `(${params}) => ${ret}`;
             }
         }
-        catch { /* ignore */ }
+        catch { }
         const params = paramsTags.map(t => {
             const text = t.getText?.() || '';
             const match = text.match(/@param\s+(\w+)/);
@@ -340,23 +319,18 @@ function renderDeclaration(decl, forcedName, forcedKind, filePath, parentName) {
         return null;
     }
 }
-// Normalize a symbol name: prefer meaningful names over 'default', fallback to file basename
 function normalizeName(s, filePath) {
     let name = (s.name || '').toString();
     if (!name || name === 'default' || name === '__file_summary__') {
-        // try to derive from file path or signature
         const base = path.basename(filePath || '', '.ts');
         if (s.kind === 'File' || name === '__file_summary__')
             return base;
-        // if parent exists, qualify with parent
         if (s.parent)
             return `${s.parent}.${base}`;
-        // try to extract from signature
         if (s.signature)
             return `${base}${s.signature.split(')')[0]})`;
         return base;
     }
-    // strip trailing redundant '()' or 'function ' prefixes
     name = name.replace(/^function\s+/, '').replace(/\(\)$/, '');
     return name;
 }
@@ -371,14 +345,12 @@ function buildDirectoryReadme(relDir, fileMap) {
         const relFile = path.relative(SRC_DIR, file).replace(/\\/g, '/');
         lines.push(`## ${relFile}`, '');
         const symbols = fileMap.get(file).toSorted((a, b) => (a.parent || a.name).localeCompare(b.parent || b.name) || a.name.localeCompare(b.name));
-        // extract file summary if present
         const fileSummaryIdx = symbols.findIndex(s => s.name === '__file_summary__' && s.kind === 'File');
         if (fileSummaryIdx >= 0) {
             const fsym = symbols.splice(fileSummaryIdx, 1)[0];
             if (fsym.jsdoc.description)
                 lines.push(fsym.jsdoc.description, '');
         }
-        // Group by parent: top-level (no parent) and parent groups
         const topLevel = symbols.filter(s => !s.parent);
         const byParent = new Map();
         for (const s of symbols.filter(s => s.parent)) {
@@ -386,7 +358,6 @@ function buildDirectoryReadme(relDir, fileMap) {
             arr.push(s);
             byParent.set(s.parent, arr);
         }
-        // render top-level symbols
         for (const s of topLevel) {
             lines.push(`### ${s.name}`);
             if (s.signature)
@@ -403,7 +374,6 @@ function buildDirectoryReadme(relDir, fileMap) {
             if (s.jsdoc.returns)
                 lines.push('', `Returns: ${s.jsdoc.returns}`);
             lines.push('');
-            // if this top-level has grouped children (byParent keyed by this name), render them nested
             const children = byParent.get(s.name);
             if (children) {
                 children.sort((a, b) => a.name.localeCompare(b.name));
@@ -426,10 +396,9 @@ function buildDirectoryReadme(relDir, fileMap) {
                 }
             }
         }
-        // Render any parent groups that didn't have a top-level parent symbol (e.g., object literal properties grouped under exported var)
         for (const [parentName, group] of byParent) {
             if (topLevel.some(t => t.name === parentName))
-                continue; // already rendered under its parent item
+                continue;
             lines.push(`### ${parentName}`, '');
             group.sort((a, b) => a.name.localeCompare(b.name));
             for (const c of group) {
@@ -461,9 +430,7 @@ async function writeIfChanged(file, content) {
     }
     await fs.writeFile(file, content, 'utf8');
 }
-// Write README into src folders, but avoid overwriting a manual README unless previously generated.
 async function emitSourceReadme(file, content) {
-    // Always overwrite to keep docs in sync (educational repo preference: no banner / frictionless reading)
     if (await fs.pathExists(file)) {
         const prev = await fs.readFile(file, 'utf8');
         if (prev === content)

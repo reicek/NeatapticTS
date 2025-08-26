@@ -1,7 +1,3 @@
-/*
- * Converts every README.md inside docs/ (including root copy) into an index.html in the same directory.
- * Usage: npm run docs:html
- */
 import fg from 'fast-glob';
 import path from 'path';
 import fs from 'fs-extra';
@@ -27,7 +23,6 @@ async function main() {
             .replace(/\\/g, '/');
         pages.push({ abs: mdFile, relDir, title });
     }
-    // Build nav list; group top-level folders similar to original sections.
     const navHtmlFor = (currentDir) => {
         const groupsMap = new Map();
         for (const p of pages) {
@@ -51,7 +46,6 @@ async function main() {
             const label = page.relDir === '' ? 'Overview' : page.relDir.replace(/\\/g, '/');
             return `<li${isCurrent ? ' class="current"' : ''}><a href="${href}">${label}${isCurrent ? '' : ''}</a></li>`;
         };
-        // Add asciiMaze example explicitly if present
         const asciiExample = () => {
             try {
                 const copiedExampleAbs = path.resolve(DOCS_DIR, 'examples', 'asciiMaze', 'index.html');
@@ -63,7 +57,6 @@ async function main() {
                 }
             }
             catch {
-                /* ignore */
             }
             return '';
         };
@@ -80,7 +73,6 @@ async function main() {
     };
     for (const meta of pages) {
         const md = await fs.readFile(meta.abs, 'utf8');
-        // Extract headings for TOC (## file, ### symbol)
         const fileHeadings = [];
         const lines = md.split(/\r?\n/);
         let currentFile = null;
@@ -99,11 +91,8 @@ async function main() {
                 currentFile.symbols.push({ name: sym, anchor: slugify(sym) });
             }
         }
-        // Configure marked renderer with deterministic heading IDs so anchors match our TOC.
         const renderer = new marked.Renderer();
         const originalHeading = renderer.heading?.bind(renderer);
-        // Marked >= v16 passes a single Heading token object { text, depth, raw, tokens }
-        // See: https://marked.js.org/using_pro#renderer for updated signature.
         renderer.heading = ({ text, depth, raw }) => {
             const source = (raw ?? text ?? '')
                 .toString()
@@ -128,7 +117,6 @@ async function main() {
             .relative(path.dirname(meta.abs), DOCS_DIR)
             .replace(/\\/g, '/');
         const cssHref = (relToRoot ? relToRoot + '/' : '') + 'assets/theme.css';
-        // Add Examples top-level nav; active when current dir starts with examples
         const examplesHref = (relToRoot || '.') + '/examples/index.html';
         const onExamples = meta.relDir.startsWith('examples');
         const docsActive = !onExamples ? ' class="active"' : '';
