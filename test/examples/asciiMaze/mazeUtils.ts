@@ -1,8 +1,139 @@
 /**
  * Utility class for maze logic and encoding.
- * Provides static methods for encoding, position finding, BFS, and progress calculation.
+ *
+ * Provides helpers used by the ASCII maze examples and tests such as
+ * encoding, position lookup, BFS distance computations and progress
+ * calculations. Methods are intentionally small and well-documented to
+ * support educational consumption.
+ *
+ * @example
+ * const encoded = MazeUtils.encodeMaze(['S..','.#E','...']);
  */
 export class MazeUtils {
+  /**
+   * Shared set of wall characters (box-drawing + hash). Kept private to avoid
+   * reallocation in hot code paths. Use `encodeMaze` to convert ASCII mazes.
+   */
+  static #WALL_CHARS = new Set([
+    '#',
+    '═',
+    '║',
+    '╔',
+    '╗',
+    '╚',
+    '╝',
+    '╠',
+    '╣',
+    '╦',
+    '╩',
+    '╬',
+  ]);
+
+  // Movement vectors used by BFS (N, E, S, W). Private to avoid accidental external use.
+  // Marked readonly to signal these vectors are constant and must not be mutated.
+  /** Movement vectors used by BFS (North, East, South, West). */
+  static #DIRECTIONS: readonly (readonly [number, number])[] = [
+    [0, -1],
+    [1, 0],
+    [0, 1],
+    [-1, 0],
+  ];
+
+  /**
+   * Convert a coordinate pair into the canonical key string `"x,y"`.
+   *
+   * @param coord - Coordinate pair `[x, y]` to stringify.
+   * @returns Canonical string key suitable for Map/Set storage.
+   * @example MazeUtils.posKey([2,3]) // -> '2,3'
+   */
+  static posKey(coord: readonly [number, number]): string {
+    const [x, y] = coord;
+    return `${x},${y}`;
+  }
+
+  /**
+   * Return up to the last `n` items from `arr` as a new array.
+   * This implementation is allocation-friendly for hot paths: it preallocates
+   * the output array and copies only the required suffix.
+   *
+   * @param arr - Source array (may be undefined).
+   * @param n - Maximum number of trailing elements to return.
+   * @returns New array containing up to the last `n` items of `arr`.
+   * @example
+   * MazeUtils.tail([1,2,3,4], 2) // -> [3,4]
+   */
+  static tail<T>(arr: T[] | undefined, n: number): T[] {
+    // Step 0: handle invalid inputs fast.
+    if (!Array.isArray(arr) || n <= 0) return [];
+
+    // Step 1: compute bounds for the suffix to copy.
+    const length = arr.length;
+    const startIndex = Math.max(0, length - n);
+    const resultLength = length - startIndex;
+
+    // Step 2: preallocate result and copy elements (avoids push churn).
+    const result: T[] = new Array(resultLength);
+    let writeIndex = 0;
+    for (let readIndex = startIndex; readIndex < length; readIndex++) {
+      result[writeIndex++] = arr[readIndex]!;
+    }
+    return result;
+  }
+
+  /**
+   * Return the last element of an array or undefined when empty.
+   *
+   * This helper prefers `Array.prototype.at` when available (ES2022+), but
+   * falls back gracefully for older runtimes.
+   *
+   * @param arr - Array to read from.
+   * @returns The last item or undefined.
+   */
+  static safeLast<T>(arr?: T[] | null): T | undefined {
+    if (!Array.isArray(arr) || arr.length === 0) return undefined;
+    return (arr as any).at ? (arr as any).at(-1) : arr[arr.length - 1];
+  }
+
+  /**
+   * Push a value onto a bounded history buffer and trim the head if needed.
+   * This helper preserves in-place semantics (the original array reference is
+   * returned and mutated) which callers may rely on for performance.
+   *
+   * @param buffer - Existing buffer (may be undefined). If undefined a new
+   *  single-element array containing `value` is returned.
+   * @param value - Value to push onto the buffer.
+   * @param maxLen - Maximum length to retain. When the buffer exceeds this
+   *  length the oldest entries are removed from the head.
+   * @returns The updated buffer containing the new value and trimmed to maxLen.
+   * @example
+   * const buf = [1,2]; MazeUtils.pushHistory(buf, 3, 3) // -> [1,2,3]
+   */
+  static pushHistory<T>(
+    buffer: T[] | undefined,
+    value: T,
+    maxLen: number
+  ): T[] {
+    // Fast-path: if no existing buffer, return a new one containing the value.
+    if (!Array.isArray(buffer)) return [value];
+
+    // Keep in-place semantics: append the new value onto the provided buffer.
+    buffer.push(value);
+
+    // If we exceed the allowed length, remove excess items from the head.
+    const excessCount = buffer.length - maxLen;
+    if (excessCount > 0) {
+      if (excessCount === 1) {
+        // Common-case optimization: remove single oldest element.
+        buffer.shift();
+      } else {
+        // Remove multiple oldest elements in one splice operation.
+        buffer.splice(0, excessCount);
+      }
+    }
+
+    return buffer;
+  }
+
   /**
    * Converts an ASCII/Unicode maze (array of strings) into a 2D numeric array for processing by the agent.
    *
@@ -17,41 +148,37 @@ export class MazeUtils {
    * @param asciiMaze - Array of strings representing the maze.
    * @returns 2D array of numbers encoding the maze elements.
    */
-  static encodeMaze(asciiMaze: string[]): number[][] {
+  static encodeMaze(asciiMaze: ReadonlyArray<string>): number[][] {
     /**
-     * Set of characters representing walls in the maze.
-     * Includes box-drawing and hash characters.
+     * Characters treated as walls. Kept as a private Set for fast `has()` lookups.
      */
-    const wallChars = new Set([
-      '#',
-      '═',
-      '║',
-      '╔',
-      '╗',
-      '╚',
-      '╝',
-      '╠',
-      '╣',
-      '╦',
-      '╩',
-      '╬',
+    const wallChars = MazeUtils.#WALL_CHARS;
+
+    // Small lookup for non-wall special characters. Map is explicit and avoids
+    // accidental coercion when checking membership.
+    const codeMap = new Map<string, number>([
+      ['.', 0],
+      ['E', 1],
+      ['S', 2],
     ]);
-    // Map each row and cell to its numeric encoding
-    return asciiMaze.map((row) =>
-      [...row].map((cell) => {
-        if (wallChars.has(cell)) return -1;
-        switch (cell) {
-          case '.':
-            return 0;
-          case 'E':
-            return 1;
-          case 'S':
-            return 2;
-          default:
-            return 0;
+
+    // Step: convert each ASCII row into a numeric row. Preallocate the numeric
+    // row to avoid intermediate arrays and reduce allocations in hot code paths.
+    return asciiMaze.map((rowString, rowIndex) => {
+      const rowLength = rowString.length;
+      const encodedRow: number[] = new Array(rowLength);
+      for (let colIndex = 0; colIndex < rowLength; colIndex++) {
+        const cellChar = rowString[colIndex];
+        // Wall characters take precedence.
+        if (wallChars.has(cellChar)) {
+          encodedRow[colIndex] = -1;
+          continue;
         }
-      })
-    );
+        // Lookup special encodings, default to 0 (open path).
+        encodedRow[colIndex] = codeMap.get(cellChar) ?? 0;
+      }
+      return encodedRow;
+    });
   }
 
   /**
@@ -61,15 +188,28 @@ export class MazeUtils {
    * @returns [x, y] coordinates of the character.
    * @throws Error if the character is not found in the maze.
    */
-  static findPosition(asciiMaze: string[], char: string): [number, number] {
-    // Search each row for the target character
-    for (let y = 0; y < asciiMaze.length; y++) {
-      /**
-       * Index of the character in the current row, or -1 if not found.
-       */
-      const x = asciiMaze[y].indexOf(char);
-      if (x !== -1) return [x, y];
+  static findPosition(
+    asciiMaze: ReadonlyArray<string>,
+    char: string
+  ): readonly [number, number] {
+    // Fast, low-allocation search:
+    // - Use an index-based loop to avoid iterator allocations.
+    // - Cache the row count for one-time lookup.
+    // - Use `String#indexOf` which is the fastest way to locate a substring/char in V8.
+    const rowCount = asciiMaze.length;
+    for (let rowIndex = 0; rowIndex < rowCount; rowIndex++) {
+      const rowString = asciiMaze[rowIndex];
+      // Skip empty rows quickly.
+      if (!rowString) continue;
+
+      const columnIndex = rowString.indexOf(char);
+      if (columnIndex !== -1) {
+        // Return coordinates as a readonly tuple to match existing contract.
+        return [columnIndex, rowIndex] as const;
+      }
     }
+
+    // Not found: preserve original behavior and raise an explicit error.
     throw new Error(`Character ${char} not found in maze`);
   }
 
@@ -82,58 +222,109 @@ export class MazeUtils {
    * @returns Shortest path length (number of steps), or Infinity if unreachable.
    */
   static bfsDistance(
-    encodedMaze: number[][],
-    start: [number, number],
-    goal: [number, number]
+    encodedMaze: ReadonlyArray<ReadonlyArray<number>>,
+    start: readonly [number, number],
+    goal: readonly [number, number]
   ): number {
-    /**
-     * Goal coordinates
-     */
-    const [gx, gy] = goal;
-    // If the goal is a wall, return Infinity
-    if (encodedMaze[gy][gx] === -1) return Infinity;
-    /**
-     * BFS queue: each entry is [[x, y], distance]
-     */
-    const queue: Array<[[number, number], number]> = [[start, 0]];
-    /**
-     * Set of visited positions (as string keys)
-     */
-    const visited = new Set<string>();
-    /**
-     * Helper to create a unique key for a position
-     */
-    const key = ([x, y]: [number, number]) => `${x},${y}`;
-    visited.add(key(start));
-    /**
-     * Possible movement directions (N, E, S, W)
-     */
-    const directions = [
-      [0, -1],
-      [1, 0],
-      [0, 1],
-      [-1, 0],
-    ];
-    // BFS loop
-    while (queue.length > 0) {
-      const [[x, y], dist] = queue.shift()!;
-      if (x === gx && y === gy) return dist;
-      for (const [dx, dy] of directions) {
-        const nx = x + dx;
-        const ny = y + dy;
-        if (
-          nx >= 0 &&
-          ny >= 0 &&
-          ny < encodedMaze.length &&
-          nx < encodedMaze[0].length &&
-          encodedMaze[ny][nx] !== -1 &&
-          !visited.has(key([nx, ny]))
-        ) {
-          visited.add(key([nx, ny]));
-          queue.push([[nx, ny], dist + 1]);
+    // Step 1: Validate coordinates and prepare grid metadata.
+    const [startX, startY] = start;
+    const [goalX, goalY] = goal;
+    const height = encodedMaze.length;
+    const width = encodedMaze[0].length;
+
+    // Bounds/sanity checks: ensure start/goal are inside the grid.
+    if (
+      startY < 0 ||
+      startY >= height ||
+      startX < 0 ||
+      startX >= width ||
+      goalY < 0 ||
+      goalY >= height ||
+      goalX < 0 ||
+      goalX >= width
+    )
+      return Infinity;
+
+    // If start or goal is a wall, unreachable immediately.
+    if (encodedMaze[startY][startX] === -1 || encodedMaze[goalY][goalX] === -1)
+      return Infinity;
+
+    // Quick success case.
+    if (startX === goalX && startY === goalY) return 0;
+
+    // Step 2: Flatten the maze into a single typed array for O(1) neighbor checks.
+    // -1 => wall, 0 => walkable. This avoids repeated 2D indexing in hotspots.
+    const cellCount = height * width;
+    const flatMaze = new Int8Array(cellCount);
+    for (let y = 0, dest = 0; y < height; y++) {
+      const row = encodedMaze[y];
+      for (let x = 0; x < width; x++, dest++) {
+        flatMaze[dest] = row[x] === -1 ? -1 : 0;
+      }
+    }
+
+    // Step 3: Prepare typed structures for BFS: distances and a fixed-size queue.
+    // distances: -1 = unvisited, >=0 = distance from start.
+    const distances = new Int32Array(cellCount);
+    for (let i = 0; i < cellCount; i++) distances[i] = -1;
+
+    const startIndex = startY * width + startX;
+    const goalIndex = goalY * width + goalX;
+
+    distances[startIndex] = 0;
+
+    // Preallocated queue (circular semantics not required because each cell is enqueued once).
+    const queue = new Int32Array(cellCount);
+    let head = 0;
+    let tail = 0;
+    queue[tail++] = startIndex;
+
+    // Offsets for the four cardinal directions on the flattened grid.
+    const northOffset = -width;
+    const southOffset = width;
+
+    while (head < tail) {
+      const currentIndex = queue[head++];
+      const currentDistance = distances[currentIndex];
+
+      // Early goal check.
+      if (currentIndex === goalIndex) return currentDistance;
+
+      const currentY = (currentIndex / width) | 0; // fast floor for positive ints
+      const currentX = currentIndex - currentY * width;
+
+      // Process four cardinal neighbors via a small switch to centralize enqueue logic
+      // and avoid duplicating the visit/enqueue checks.
+      for (let dir = 0; dir < 4; dir++) {
+        let neighborIndex: number;
+        switch (dir) {
+          case 0: // North
+            if (currentY === 0) continue;
+            neighborIndex = currentIndex + northOffset;
+            break;
+          case 1: // East
+            if (currentX + 1 >= width) continue;
+            neighborIndex = currentIndex + 1;
+            break;
+          case 2: // South
+            if (currentY + 1 >= height) continue;
+            neighborIndex = currentIndex + southOffset;
+            break;
+          default:
+            // West
+            if (currentX === 0) continue;
+            neighborIndex = currentIndex - 1;
+        }
+
+        if (flatMaze[neighborIndex] !== -1 && distances[neighborIndex] === -1) {
+          distances[neighborIndex] = currentDistance + 1;
+          if (neighborIndex === goalIndex) return currentDistance + 1;
+          queue[tail++] = neighborIndex;
         }
       }
     }
+
+    // Goal not reachable
     return Infinity;
   }
 
@@ -147,10 +338,10 @@ export class MazeUtils {
    * @returns Progress percentage (0-100).
    */
   static calculateProgress(
-    encodedMaze: number[][],
-    currentPos: [number, number],
-    startPos: [number, number],
-    exitPos: [number, number]
+    encodedMaze: ReadonlyArray<ReadonlyArray<number>>,
+    currentPos: readonly [number, number],
+    startPos: readonly [number, number],
+    exitPos: readonly [number, number]
   ): number {
     /**
      * Total shortest path distance from start to exit
@@ -184,23 +375,23 @@ export class MazeUtils {
    * @returns Progress percentage (0-100)
    */
   static calculateProgressFromDistanceMap(
-    distanceMap: number[][],
-    currentPos: [number, number],
-    startPos: [number, number]
+    distanceMap: ReadonlyArray<ReadonlyArray<number>>,
+    currentPos: readonly [number, number],
+    startPos: readonly [number, number]
   ): number {
     /**
      * Start and current coordinates
      */
-    const [sx, sy] = startPos;
-    const [cx, cy] = currentPos;
+    const [startX, startY] = startPos;
+    const [currentX, currentY] = currentPos;
     /**
      * Total distance from start to goal (from distance map)
      */
-    const totalDistance = distanceMap[sy]?.[sx];
+    const totalDistance = distanceMap[startY]?.[startX];
     /**
      * Remaining distance from current position to goal (from distance map)
      */
-    const remaining = distanceMap[cy]?.[cx];
+    const remaining = distanceMap[currentY]?.[currentX];
     if (
       totalDistance == null ||
       remaining == null ||
@@ -220,59 +411,161 @@ export class MazeUtils {
    * @param goal - [x,y] goal position (typically exit)
    */
   static buildDistanceMap(
-    encodedMaze: number[][],
-    goal: [number, number]
+    encodedMaze: ReadonlyArray<ReadonlyArray<number>>,
+    goal: readonly [number, number]
   ): number[][] {
-    /**
-     * Maze height and width
-     */
+    // Use the fast flat variant internally, then convert to the legacy number[][] shape.
+    const {
+      width,
+      height,
+      distances,
+      WALL_VALUE,
+      UNREACHABLE_VALUE,
+    } = MazeUtils.buildDistanceMapFlat(encodedMaze, goal);
+
+    const result: number[][] = Array.from(
+      { length: height },
+      () => new Array<number>(width)
+    );
+
+    // Convert flat typed-array distances back into legacy 2D shape.
+    for (let rowIndex = 0, flatIndex = 0; rowIndex < height; rowIndex++) {
+      const resultRow = result[rowIndex];
+      for (let colIndex = 0; colIndex < width; colIndex++, flatIndex++) {
+        const cellDistance = distances[flatIndex];
+        // Walls and unreachable cells map to Infinity to preserve the original API.
+        resultRow[colIndex] =
+          cellDistance === WALL_VALUE || cellDistance === UNREACHABLE_VALUE
+            ? Infinity
+            : cellDistance;
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * High-performance variant of `buildDistanceMap` that returns a flat Int32Array
+   * distance buffer with metadata. This minimizes allocations and GC pressure for
+   * large mazes and is the recommended API for performance-sensitive code.
+   *
+   * Encoding in the returned `distances` buffer:
+   *  - wall cells => WALL_VALUE (number, -2)
+   *  - unreachable cells => UNREACHABLE_VALUE (number, -1)
+   *  - reachable cells => non-negative distance (0 ..)
+   *
+   * The returned object contains the flat buffer plus `width` and `height` so
+   * callers can translate between (x,y) and flat indices: index = y*width + x.
+   *
+   * Note: this API intentionally avoids converting the typed buffer back into
+   * nested `number[][]` to keep allocation minimal; use `buildDistanceMap` if
+   * you require the legacy `number[][]` shape.
+   *
+   * @param encodedMaze - 2D maze encoding
+   * @param goal - [x,y] goal position (typically exit)
+   * @returns Object with `width`, `height`, and `distances` (Int32Array).
+   * @example
+   * const flat = MazeUtils.buildDistanceMapFlat(encoded, [5,3]);
+   * const idx = 3 * flat.width + 5; // y*width + x
+   * console.log(flat.distances[idx]); // -2 wall, -1 unreachable, >=0 distance
+   */
+  static buildDistanceMapFlat(
+    encodedMaze: ReadonlyArray<ReadonlyArray<number>>,
+    goal: readonly [number, number]
+  ): {
+    width: number;
+    height: number;
+    distances: Int32Array;
+    readonly WALL_VALUE: number;
+    readonly UNREACHABLE_VALUE: number;
+  } {
     const height = encodedMaze.length;
     const width = encodedMaze[0].length;
-    /**
-     * Distance map (initialized to Infinity)
-     */
-    const dist: number[][] = Array.from({ length: height }, () =>
-      Array(width).fill(Infinity)
-    );
-    /**
-     * Goal coordinates
-     */
-    const [gx, gy] = goal;
-    if (encodedMaze[gy][gx] === -1) return dist;
-    /**
-     * BFS queue for distance propagation
-     */
-    const q: Array<[number, number]> = [[gx, gy]];
-    dist[gy][gx] = 0;
-    /**
-     * Possible movement directions (N, E, S, W)
-     */
-    const dirs = [
-      [0, -1],
-      [1, 0],
-      [0, 1],
-      [-1, 0],
-    ];
-    // BFS loop to fill distance map
-    while (q.length) {
-      const [x, y] = q.shift()!;
-      const d = dist[y][x];
-      for (const [dx, dy] of dirs) {
-        const nx = x + dx;
-        const ny = y + dy;
-        if (
-          nx >= 0 &&
-          ny >= 0 &&
-          ny < height &&
-          nx < width &&
-          encodedMaze[ny][nx] !== -1 &&
-          dist[ny][nx] === Infinity
-        ) {
-          dist[ny][nx] = d + 1;
-          q.push([nx, ny]);
+
+    const WALL_VALUE = -2; // distinct sentinel for walls
+    const UNREACHABLE_VALUE = -1; // sentinel for unvisited / unreachable
+
+    const cellCount = width * height;
+    const distances = new Int32Array(cellCount);
+    // initialize all cells to UNREACHABLE
+    for (let flatInitIndex = 0; flatInitIndex < cellCount; flatInitIndex++)
+      distances[flatInitIndex] = UNREACHABLE_VALUE;
+
+    const [goalX, goalY] = goal;
+    // if goal is out of bounds or a wall, return early with walls marked
+    if (
+      goalY < 0 ||
+      goalY >= height ||
+      goalX < 0 ||
+      goalX >= width ||
+      encodedMaze[goalY][goalX] === -1
+    ) {
+      // mark walls and return
+      for (let rowIndex = 0, flatDest = 0; rowIndex < height; rowIndex++) {
+        const row = encodedMaze[rowIndex];
+        for (let colIndex = 0; colIndex < width; colIndex++, flatDest++) {
+          if (row[colIndex] === -1) distances[flatDest] = WALL_VALUE;
+        }
+      }
+      return { width, height, distances, WALL_VALUE, UNREACHABLE_VALUE };
+    }
+
+    // mark walls in distances buffer
+    for (let rowIndex = 0, flatDest = 0; rowIndex < height; rowIndex++) {
+      const row = encodedMaze[rowIndex];
+      for (let colIndex = 0; colIndex < width; colIndex++, flatDest++) {
+        if (row[colIndex] === -1) distances[flatDest] = WALL_VALUE;
+      }
+    }
+
+    const goalIndex = goalY * width + goalX;
+    distances[goalIndex] = 0;
+
+    // typed queue
+    const queue = new Int32Array(cellCount);
+    let queueHead = 0;
+    let queueTail = 0;
+    queue[queueTail++] = goalIndex;
+
+    const northOffset = -width;
+    const southOffset = width;
+
+    while (queueHead < queueTail) {
+      const currentIndex = queue[queueHead++];
+      const currentDistance = distances[currentIndex];
+
+      const currentRow = (currentIndex / width) | 0;
+      const currentCol = currentIndex - currentRow * width;
+
+      // Process four cardinal neighbors via a small switch to centralize logic
+      for (let dir = 0; dir < 4; dir++) {
+        let neighborFlatIndex: number;
+        switch (dir) {
+          case 0: // North
+            if (currentRow === 0) continue;
+            neighborFlatIndex = currentIndex + northOffset;
+            break;
+          case 1: // East
+            if (currentCol + 1 >= width) continue;
+            neighborFlatIndex = currentIndex + 1;
+            break;
+          case 2: // South
+            if (currentRow + 1 >= height) continue;
+            neighborFlatIndex = currentIndex + southOffset;
+            break;
+          default:
+            // West
+            if (currentCol === 0) continue;
+            neighborFlatIndex = currentIndex - 1;
+        }
+
+        if (distances[neighborFlatIndex] === UNREACHABLE_VALUE) {
+          distances[neighborFlatIndex] = currentDistance + 1;
+          queue[queueTail++] = neighborFlatIndex;
         }
       }
     }
-    return dist;
+
+    return { width, height, distances, WALL_VALUE, UNREACHABLE_VALUE };
   }
 }

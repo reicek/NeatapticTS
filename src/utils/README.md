@@ -1,11 +1,5 @@
 # utils
 
-## utils/deprecation.ts
-
-### onceWarn
-
-`(key: string, message: string) => void`
-
 ## utils/memory.ts
 
 ### memoryStats

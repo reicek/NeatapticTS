@@ -62,15 +62,36 @@ function buildVariantDeltaTable(artifact) {
                 dPct = sMean === 0 ? undefined : (dAbs / sMean) * 100;
             }
             const threshold = metric === 'bytesPerConn' ? 3 : 5;
-            const flag = typeof dPct === 'number' ? (Math.abs(dPct) > threshold ? '(REG)' : 'OK') : '';
-            const note = metric === 'bytesPerConn' ? (flag === '(REG)' ? 'Dist bytes divergence' : 'Parity') : (flag === '(REG)' ? `Dist ${dAbs > 0 ? 'slower' : 'faster'} ${metric}` : 'Parity');
-            rows.push(cell(size, 6) + '  ' +
-                cell(metric + 'Mean', 17) + ' ' +
-                cell(typeof sMean === 'number' ? fmtNum(sMean, 4) : '', 13) + ' ' +
-                cell(typeof dMean === 'number' ? fmtNum(dMean, 4) : '', 13) + ' ' +
-                cell(typeof dAbs === 'number' ? (dAbs >= 0 ? '+' : '') + fmtNum(dAbs, 4) : '', 13) + ' ' +
-                cell(typeof dPct === 'number' ? (dPct >= 0 ? '+' : '') + fmtNum(dPct, 2) : '', 10) + ' ' +
-                cell(flag, 13) + ' ' +
+            const flag = typeof dPct === 'number'
+                ? Math.abs(dPct) > threshold
+                    ? '(REG)'
+                    : 'OK'
+                : '';
+            const note = metric === 'bytesPerConn'
+                ? flag === '(REG)'
+                    ? 'Dist bytes divergence'
+                    : 'Parity'
+                : flag === '(REG)'
+                    ? `Dist ${dAbs > 0 ? 'slower' : 'faster'} ${metric}`
+                    : 'Parity';
+            rows.push(cell(size, 6) +
+                '  ' +
+                cell(metric + 'Mean', 17) +
+                ' ' +
+                cell(typeof sMean === 'number' ? fmtNum(sMean, 4) : '', 13) +
+                ' ' +
+                cell(typeof dMean === 'number' ? fmtNum(dMean, 4) : '', 13) +
+                ' ' +
+                cell(typeof dAbs === 'number'
+                    ? (dAbs >= 0 ? '+' : '') + fmtNum(dAbs, 4)
+                    : '', 13) +
+                ' ' +
+                cell(typeof dPct === 'number'
+                    ? (dPct >= 0 ? '+' : '') + fmtNum(dPct, 2)
+                    : '', 10) +
+                ' ' +
+                cell(flag, 13) +
+                ' ' +
                 note);
         }
     }
@@ -91,14 +112,22 @@ function buildHeapTable(artifact) {
                 continue;
             const dBytes = d - s;
             const dPct = s === 0 ? 0 : (dBytes / s) * 100;
-            rows.push(cell(size, 6) + '  ' +
-                cell(metric + 'Mean', 14) + ' ' +
-                cell(s, 12) + ' ' +
-                cell(d, 12) + ' ' +
-                cell((s / 1048576).toFixed(1), 9) + ' ' +
-                cell((d / 1048576).toFixed(1), 9) + ' ' +
-                cell((dBytes >= 0 ? '+' : '') + dBytes, 11) + ' ' +
-                cell((dPct >= 0 ? '+' : '') + dPct.toFixed(2), 7) + ' ' +
+            rows.push(cell(size, 6) +
+                '  ' +
+                cell(metric + 'Mean', 14) +
+                ' ' +
+                cell(s, 12) +
+                ' ' +
+                cell(d, 12) +
+                ' ' +
+                cell((s / 1048576).toFixed(1), 9) +
+                ' ' +
+                cell((d / 1048576).toFixed(1), 9) +
+                ' ' +
+                cell((dBytes >= 0 ? '+' : '') + dBytes, 11) +
+                ' ' +
+                cell((dPct >= 0 ? '+' : '') + dPct.toFixed(2), 7) +
+                ' ' +
                 'Informational');
         }
     }
@@ -115,7 +144,7 @@ function main() {
         '',
         '```',
         buildHeapTable(artifact),
-        '```'
+        '```',
     ].join('\n');
     console.log(out);
 }

@@ -1,10 +1,8 @@
 "use strict";
 (() => {
-  var __create = Object.create;
   var __defProp = Object.defineProperty;
   var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
   var __getOwnPropNames = Object.getOwnPropertyNames;
-  var __getProtoOf = Object.getPrototypeOf;
   var __hasOwnProp = Object.prototype.hasOwnProperty;
   var __require = /* @__PURE__ */ ((x) => typeof require !== "undefined" ? require : typeof Proxy !== "undefined" ? new Proxy(x, {
     get: (a, b) => (typeof require !== "undefined" ? require : a)[b]
@@ -30,14 +28,6 @@
     }
     return to;
   };
-  var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
-    // If the importer is in node compatibility mode or this is not an ESM
-    // file that has been converted to a CommonJS file using a Babel-
-    // compatible transform (i.e. "__esModule" has not been set), then set
-    // "default" to the CommonJS "module.exports" for node compatibility.
-    isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
-    mod
-  ));
   var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
   // src/architecture/connection.ts
@@ -2714,889 +2704,17 @@
     }
   });
 
-  // node_modules/util/support/isBufferBrowser.js
-  var require_isBufferBrowser = __commonJS({
-    "node_modules/util/support/isBufferBrowser.js"(exports, module) {
-      module.exports = function isBuffer(arg) {
-        return arg && typeof arg === "object" && typeof arg.copy === "function" && typeof arg.fill === "function" && typeof arg.readUInt8 === "function";
-      };
-    }
-  });
-
-  // node_modules/util/node_modules/inherits/inherits_browser.js
-  var require_inherits_browser = __commonJS({
-    "node_modules/util/node_modules/inherits/inherits_browser.js"(exports, module) {
-      if (typeof Object.create === "function") {
-        module.exports = function inherits(ctor, superCtor) {
-          ctor.super_ = superCtor;
-          ctor.prototype = Object.create(superCtor.prototype, {
-            constructor: {
-              value: ctor,
-              enumerable: false,
-              writable: true,
-              configurable: true
-            }
-          });
-        };
-      } else {
-        module.exports = function inherits(ctor, superCtor) {
-          ctor.super_ = superCtor;
-          var TempCtor = function() {
-          };
-          TempCtor.prototype = superCtor.prototype;
-          ctor.prototype = new TempCtor();
-          ctor.prototype.constructor = ctor;
-        };
-      }
-    }
-  });
-
-  // node_modules/util/util.js
-  var require_util = __commonJS({
-    "node_modules/util/util.js"(exports) {
-      var formatRegExp = /%[sdj%]/g;
-      exports.format = function(f) {
-        if (!isString(f)) {
-          var objects = [];
-          for (var i = 0; i < arguments.length; i++) {
-            objects.push(inspect(arguments[i]));
-          }
-          return objects.join(" ");
-        }
-        var i = 1;
-        var args = arguments;
-        var len = args.length;
-        var str = String(f).replace(formatRegExp, function(x2) {
-          if (x2 === "%%") return "%";
-          if (i >= len) return x2;
-          switch (x2) {
-            case "%s":
-              return String(args[i++]);
-            case "%d":
-              return Number(args[i++]);
-            case "%j":
-              try {
-                return JSON.stringify(args[i++]);
-              } catch (_) {
-                return "[Circular]";
-              }
-            default:
-              return x2;
-          }
-        });
-        for (var x = args[i]; i < len; x = args[++i]) {
-          if (isNull(x) || !isObject(x)) {
-            str += " " + x;
-          } else {
-            str += " " + inspect(x);
-          }
-        }
-        return str;
-      };
-      exports.deprecate = function(fn, msg) {
-        if (isUndefined(global.process)) {
-          return function() {
-            return exports.deprecate(fn, msg).apply(this, arguments);
-          };
-        }
-        if (process.noDeprecation === true) {
-          return fn;
-        }
-        var warned = false;
-        function deprecated() {
-          if (!warned) {
-            if (process.throwDeprecation) {
-              throw new Error(msg);
-            } else if (process.traceDeprecation) {
-              console.trace(msg);
-            } else {
-              console.error(msg);
-            }
-            warned = true;
-          }
-          return fn.apply(this, arguments);
-        }
-        return deprecated;
-      };
-      var debugs = {};
-      var debugEnviron;
-      exports.debuglog = function(set) {
-        if (isUndefined(debugEnviron))
-          debugEnviron = process.env.NODE_DEBUG || "";
-        set = set.toUpperCase();
-        if (!debugs[set]) {
-          if (new RegExp("\\b" + set + "\\b", "i").test(debugEnviron)) {
-            var pid = process.pid;
-            debugs[set] = function() {
-              var msg = exports.format.apply(exports, arguments);
-              console.error("%s %d: %s", set, pid, msg);
-            };
-          } else {
-            debugs[set] = function() {
-            };
-          }
-        }
-        return debugs[set];
-      };
-      function inspect(obj, opts) {
-        var ctx = {
-          seen: [],
-          stylize: stylizeNoColor
-        };
-        if (arguments.length >= 3) ctx.depth = arguments[2];
-        if (arguments.length >= 4) ctx.colors = arguments[3];
-        if (isBoolean(opts)) {
-          ctx.showHidden = opts;
-        } else if (opts) {
-          exports._extend(ctx, opts);
-        }
-        if (isUndefined(ctx.showHidden)) ctx.showHidden = false;
-        if (isUndefined(ctx.depth)) ctx.depth = 2;
-        if (isUndefined(ctx.colors)) ctx.colors = false;
-        if (isUndefined(ctx.customInspect)) ctx.customInspect = true;
-        if (ctx.colors) ctx.stylize = stylizeWithColor;
-        return formatValue(ctx, obj, ctx.depth);
-      }
-      exports.inspect = inspect;
-      inspect.colors = {
-        "bold": [1, 22],
-        "italic": [3, 23],
-        "underline": [4, 24],
-        "inverse": [7, 27],
-        "white": [37, 39],
-        "grey": [90, 39],
-        "black": [30, 39],
-        "blue": [34, 39],
-        "cyan": [36, 39],
-        "green": [32, 39],
-        "magenta": [35, 39],
-        "red": [31, 39],
-        "yellow": [33, 39]
-      };
-      inspect.styles = {
-        "special": "cyan",
-        "number": "yellow",
-        "boolean": "yellow",
-        "undefined": "grey",
-        "null": "bold",
-        "string": "green",
-        "date": "magenta",
-        // "name": intentionally not styling
-        "regexp": "red"
-      };
-      function stylizeWithColor(str, styleType) {
-        var style = inspect.styles[styleType];
-        if (style) {
-          return "\x1B[" + inspect.colors[style][0] + "m" + str + "\x1B[" + inspect.colors[style][1] + "m";
-        } else {
-          return str;
-        }
-      }
-      function stylizeNoColor(str, styleType) {
-        return str;
-      }
-      function arrayToHash(array) {
-        var hash = {};
-        array.forEach(function(val, idx) {
-          hash[val] = true;
-        });
-        return hash;
-      }
-      function formatValue(ctx, value, recurseTimes) {
-        if (ctx.customInspect && value && isFunction(value.inspect) && // Filter out the util module, it's inspect function is special
-        value.inspect !== exports.inspect && // Also filter out any prototype objects using the circular check.
-        !(value.constructor && value.constructor.prototype === value)) {
-          var ret = value.inspect(recurseTimes, ctx);
-          if (!isString(ret)) {
-            ret = formatValue(ctx, ret, recurseTimes);
-          }
-          return ret;
-        }
-        var primitive = formatPrimitive(ctx, value);
-        if (primitive) {
-          return primitive;
-        }
-        var keys = Object.keys(value);
-        var visibleKeys = arrayToHash(keys);
-        if (ctx.showHidden) {
-          keys = Object.getOwnPropertyNames(value);
-        }
-        if (isError(value) && (keys.indexOf("message") >= 0 || keys.indexOf("description") >= 0)) {
-          return formatError(value);
-        }
-        if (keys.length === 0) {
-          if (isFunction(value)) {
-            var name = value.name ? ": " + value.name : "";
-            return ctx.stylize("[Function" + name + "]", "special");
-          }
-          if (isRegExp(value)) {
-            return ctx.stylize(RegExp.prototype.toString.call(value), "regexp");
-          }
-          if (isDate(value)) {
-            return ctx.stylize(Date.prototype.toString.call(value), "date");
-          }
-          if (isError(value)) {
-            return formatError(value);
-          }
-        }
-        var base = "", array = false, braces = ["{", "}"];
-        if (isArray(value)) {
-          array = true;
-          braces = ["[", "]"];
-        }
-        if (isFunction(value)) {
-          var n = value.name ? ": " + value.name : "";
-          base = " [Function" + n + "]";
-        }
-        if (isRegExp(value)) {
-          base = " " + RegExp.prototype.toString.call(value);
-        }
-        if (isDate(value)) {
-          base = " " + Date.prototype.toUTCString.call(value);
-        }
-        if (isError(value)) {
-          base = " " + formatError(value);
-        }
-        if (keys.length === 0 && (!array || value.length == 0)) {
-          return braces[0] + base + braces[1];
-        }
-        if (recurseTimes < 0) {
-          if (isRegExp(value)) {
-            return ctx.stylize(RegExp.prototype.toString.call(value), "regexp");
-          } else {
-            return ctx.stylize("[Object]", "special");
-          }
-        }
-        ctx.seen.push(value);
-        var output;
-        if (array) {
-          output = formatArray(ctx, value, recurseTimes, visibleKeys, keys);
-        } else {
-          output = keys.map(function(key) {
-            return formatProperty(ctx, value, recurseTimes, visibleKeys, key, array);
-          });
-        }
-        ctx.seen.pop();
-        return reduceToSingleString(output, base, braces);
-      }
-      function formatPrimitive(ctx, value) {
-        if (isUndefined(value))
-          return ctx.stylize("undefined", "undefined");
-        if (isString(value)) {
-          var simple = "'" + JSON.stringify(value).replace(/^"|"$/g, "").replace(/'/g, "\\'").replace(/\\"/g, '"') + "'";
-          return ctx.stylize(simple, "string");
-        }
-        if (isNumber(value))
-          return ctx.stylize("" + value, "number");
-        if (isBoolean(value))
-          return ctx.stylize("" + value, "boolean");
-        if (isNull(value))
-          return ctx.stylize("null", "null");
-      }
-      function formatError(value) {
-        return "[" + Error.prototype.toString.call(value) + "]";
-      }
-      function formatArray(ctx, value, recurseTimes, visibleKeys, keys) {
-        var output = [];
-        for (var i = 0, l = value.length; i < l; ++i) {
-          if (hasOwnProperty(value, String(i))) {
-            output.push(formatProperty(
-              ctx,
-              value,
-              recurseTimes,
-              visibleKeys,
-              String(i),
-              true
-            ));
-          } else {
-            output.push("");
-          }
-        }
-        keys.forEach(function(key) {
-          if (!key.match(/^\d+$/)) {
-            output.push(formatProperty(
-              ctx,
-              value,
-              recurseTimes,
-              visibleKeys,
-              key,
-              true
-            ));
-          }
-        });
-        return output;
-      }
-      function formatProperty(ctx, value, recurseTimes, visibleKeys, key, array) {
-        var name, str, desc;
-        desc = Object.getOwnPropertyDescriptor(value, key) || { value: value[key] };
-        if (desc.get) {
-          if (desc.set) {
-            str = ctx.stylize("[Getter/Setter]", "special");
-          } else {
-            str = ctx.stylize("[Getter]", "special");
-          }
-        } else {
-          if (desc.set) {
-            str = ctx.stylize("[Setter]", "special");
-          }
-        }
-        if (!hasOwnProperty(visibleKeys, key)) {
-          name = "[" + key + "]";
-        }
-        if (!str) {
-          if (ctx.seen.indexOf(desc.value) < 0) {
-            if (isNull(recurseTimes)) {
-              str = formatValue(ctx, desc.value, null);
-            } else {
-              str = formatValue(ctx, desc.value, recurseTimes - 1);
-            }
-            if (str.indexOf("\n") > -1) {
-              if (array) {
-                str = str.split("\n").map(function(line) {
-                  return "  " + line;
-                }).join("\n").substr(2);
-              } else {
-                str = "\n" + str.split("\n").map(function(line) {
-                  return "   " + line;
-                }).join("\n");
-              }
-            }
-          } else {
-            str = ctx.stylize("[Circular]", "special");
-          }
-        }
-        if (isUndefined(name)) {
-          if (array && key.match(/^\d+$/)) {
-            return str;
-          }
-          name = JSON.stringify("" + key);
-          if (name.match(/^"([a-zA-Z_][a-zA-Z_0-9]*)"$/)) {
-            name = name.substr(1, name.length - 2);
-            name = ctx.stylize(name, "name");
-          } else {
-            name = name.replace(/'/g, "\\'").replace(/\\"/g, '"').replace(/(^"|"$)/g, "'");
-            name = ctx.stylize(name, "string");
-          }
-        }
-        return name + ": " + str;
-      }
-      function reduceToSingleString(output, base, braces) {
-        var numLinesEst = 0;
-        var length = output.reduce(function(prev, cur) {
-          numLinesEst++;
-          if (cur.indexOf("\n") >= 0) numLinesEst++;
-          return prev + cur.replace(/\u001b\[\d\d?m/g, "").length + 1;
-        }, 0);
-        if (length > 60) {
-          return braces[0] + (base === "" ? "" : base + "\n ") + " " + output.join(",\n  ") + " " + braces[1];
-        }
-        return braces[0] + base + " " + output.join(", ") + " " + braces[1];
-      }
-      function isArray(ar) {
-        return Array.isArray(ar);
-      }
-      exports.isArray = isArray;
-      function isBoolean(arg) {
-        return typeof arg === "boolean";
-      }
-      exports.isBoolean = isBoolean;
-      function isNull(arg) {
-        return arg === null;
-      }
-      exports.isNull = isNull;
-      function isNullOrUndefined(arg) {
-        return arg == null;
-      }
-      exports.isNullOrUndefined = isNullOrUndefined;
-      function isNumber(arg) {
-        return typeof arg === "number";
-      }
-      exports.isNumber = isNumber;
-      function isString(arg) {
-        return typeof arg === "string";
-      }
-      exports.isString = isString;
-      function isSymbol(arg) {
-        return typeof arg === "symbol";
-      }
-      exports.isSymbol = isSymbol;
-      function isUndefined(arg) {
-        return arg === void 0;
-      }
-      exports.isUndefined = isUndefined;
-      function isRegExp(re) {
-        return isObject(re) && objectToString(re) === "[object RegExp]";
-      }
-      exports.isRegExp = isRegExp;
-      function isObject(arg) {
-        return typeof arg === "object" && arg !== null;
-      }
-      exports.isObject = isObject;
-      function isDate(d) {
-        return isObject(d) && objectToString(d) === "[object Date]";
-      }
-      exports.isDate = isDate;
-      function isError(e) {
-        return isObject(e) && (objectToString(e) === "[object Error]" || e instanceof Error);
-      }
-      exports.isError = isError;
-      function isFunction(arg) {
-        return typeof arg === "function";
-      }
-      exports.isFunction = isFunction;
-      function isPrimitive(arg) {
-        return arg === null || typeof arg === "boolean" || typeof arg === "number" || typeof arg === "string" || typeof arg === "symbol" || // ES6 symbol
-        typeof arg === "undefined";
-      }
-      exports.isPrimitive = isPrimitive;
-      exports.isBuffer = require_isBufferBrowser();
-      function objectToString(o) {
-        return Object.prototype.toString.call(o);
-      }
-      function pad(n) {
-        return n < 10 ? "0" + n.toString(10) : n.toString(10);
-      }
-      var months = [
-        "Jan",
-        "Feb",
-        "Mar",
-        "Apr",
-        "May",
-        "Jun",
-        "Jul",
-        "Aug",
-        "Sep",
-        "Oct",
-        "Nov",
-        "Dec"
-      ];
-      function timestamp() {
-        var d = /* @__PURE__ */ new Date();
-        var time = [
-          pad(d.getHours()),
-          pad(d.getMinutes()),
-          pad(d.getSeconds())
-        ].join(":");
-        return [d.getDate(), months[d.getMonth()], time].join(" ");
-      }
-      exports.log = function() {
-        console.log("%s - %s", timestamp(), exports.format.apply(exports, arguments));
-      };
-      exports.inherits = require_inherits_browser();
-      exports._extend = function(origin, add) {
-        if (!add || !isObject(add)) return origin;
-        var keys = Object.keys(add);
-        var i = keys.length;
-        while (i--) {
-          origin[keys[i]] = add[keys[i]];
-        }
-        return origin;
-      };
-      function hasOwnProperty(obj, prop) {
-        return Object.prototype.hasOwnProperty.call(obj, prop);
-      }
-    }
-  });
-
-  // node_modules/path/path.js
-  var require_path = __commonJS({
-    "node_modules/path/path.js"(exports, module) {
-      "use strict";
-      var isWindows = process.platform === "win32";
-      var util = require_util();
-      function normalizeArray(parts, allowAboveRoot) {
-        var res = [];
-        for (var i = 0; i < parts.length; i++) {
-          var p = parts[i];
-          if (!p || p === ".")
-            continue;
-          if (p === "..") {
-            if (res.length && res[res.length - 1] !== "..") {
-              res.pop();
-            } else if (allowAboveRoot) {
-              res.push("..");
-            }
-          } else {
-            res.push(p);
-          }
-        }
-        return res;
-      }
-      function trimArray(arr) {
-        var lastIndex = arr.length - 1;
-        var start2 = 0;
-        for (; start2 <= lastIndex; start2++) {
-          if (arr[start2])
-            break;
-        }
-        var end = lastIndex;
-        for (; end >= 0; end--) {
-          if (arr[end])
-            break;
-        }
-        if (start2 === 0 && end === lastIndex)
-          return arr;
-        if (start2 > end)
-          return [];
-        return arr.slice(start2, end + 1);
-      }
-      var splitDeviceRe = /^([a-zA-Z]:|[\\\/]{2}[^\\\/]+[\\\/]+[^\\\/]+)?([\\\/])?([\s\S]*?)$/;
-      var splitTailRe = /^([\s\S]*?)((?:\.{1,2}|[^\\\/]+?|)(\.[^.\/\\]*|))(?:[\\\/]*)$/;
-      var win32 = {};
-      function win32SplitPath(filename) {
-        var result = splitDeviceRe.exec(filename), device = (result[1] || "") + (result[2] || ""), tail = result[3] || "";
-        var result2 = splitTailRe.exec(tail), dir = result2[1], basename = result2[2], ext = result2[3];
-        return [device, dir, basename, ext];
-      }
-      function win32StatPath(path2) {
-        var result = splitDeviceRe.exec(path2), device = result[1] || "", isUnc = !!device && device[1] !== ":";
-        return {
-          device,
-          isUnc,
-          isAbsolute: isUnc || !!result[2],
-          // UNC paths are always absolute
-          tail: result[3]
-        };
-      }
-      function normalizeUNCRoot(device) {
-        return "\\\\" + device.replace(/^[\\\/]+/, "").replace(/[\\\/]+/g, "\\");
-      }
-      win32.resolve = function() {
-        var resolvedDevice = "", resolvedTail = "", resolvedAbsolute = false;
-        for (var i = arguments.length - 1; i >= -1; i--) {
-          var path2;
-          if (i >= 0) {
-            path2 = arguments[i];
-          } else if (!resolvedDevice) {
-            path2 = process.cwd();
-          } else {
-            path2 = process.env["=" + resolvedDevice];
-            if (!path2 || path2.substr(0, 3).toLowerCase() !== resolvedDevice.toLowerCase() + "\\") {
-              path2 = resolvedDevice + "\\";
-            }
-          }
-          if (!util.isString(path2)) {
-            throw new TypeError("Arguments to path.resolve must be strings");
-          } else if (!path2) {
-            continue;
-          }
-          var result = win32StatPath(path2), device = result.device, isUnc = result.isUnc, isAbsolute = result.isAbsolute, tail = result.tail;
-          if (device && resolvedDevice && device.toLowerCase() !== resolvedDevice.toLowerCase()) {
-            continue;
-          }
-          if (!resolvedDevice) {
-            resolvedDevice = device;
-          }
-          if (!resolvedAbsolute) {
-            resolvedTail = tail + "\\" + resolvedTail;
-            resolvedAbsolute = isAbsolute;
-          }
-          if (resolvedDevice && resolvedAbsolute) {
-            break;
-          }
-        }
-        if (isUnc) {
-          resolvedDevice = normalizeUNCRoot(resolvedDevice);
-        }
-        resolvedTail = normalizeArray(
-          resolvedTail.split(/[\\\/]+/),
-          !resolvedAbsolute
-        ).join("\\");
-        return resolvedDevice + (resolvedAbsolute ? "\\" : "") + resolvedTail || ".";
-      };
-      win32.normalize = function(path2) {
-        var result = win32StatPath(path2), device = result.device, isUnc = result.isUnc, isAbsolute = result.isAbsolute, tail = result.tail, trailingSlash = /[\\\/]$/.test(tail);
-        tail = normalizeArray(tail.split(/[\\\/]+/), !isAbsolute).join("\\");
-        if (!tail && !isAbsolute) {
-          tail = ".";
-        }
-        if (tail && trailingSlash) {
-          tail += "\\";
-        }
-        if (isUnc) {
-          device = normalizeUNCRoot(device);
-        }
-        return device + (isAbsolute ? "\\" : "") + tail;
-      };
-      win32.isAbsolute = function(path2) {
-        return win32StatPath(path2).isAbsolute;
-      };
-      win32.join = function() {
-        var paths = [];
-        for (var i = 0; i < arguments.length; i++) {
-          var arg = arguments[i];
-          if (!util.isString(arg)) {
-            throw new TypeError("Arguments to path.join must be strings");
-          }
-          if (arg) {
-            paths.push(arg);
-          }
-        }
-        var joined = paths.join("\\");
-        if (!/^[\\\/]{2}[^\\\/]/.test(paths[0])) {
-          joined = joined.replace(/^[\\\/]{2,}/, "\\");
-        }
-        return win32.normalize(joined);
-      };
-      win32.relative = function(from, to) {
-        from = win32.resolve(from);
-        to = win32.resolve(to);
-        var lowerFrom = from.toLowerCase();
-        var lowerTo = to.toLowerCase();
-        var toParts = trimArray(to.split("\\"));
-        var lowerFromParts = trimArray(lowerFrom.split("\\"));
-        var lowerToParts = trimArray(lowerTo.split("\\"));
-        var length = Math.min(lowerFromParts.length, lowerToParts.length);
-        var samePartsLength = length;
-        for (var i = 0; i < length; i++) {
-          if (lowerFromParts[i] !== lowerToParts[i]) {
-            samePartsLength = i;
-            break;
-          }
-        }
-        if (samePartsLength == 0) {
-          return to;
-        }
-        var outputParts = [];
-        for (var i = samePartsLength; i < lowerFromParts.length; i++) {
-          outputParts.push("..");
-        }
-        outputParts = outputParts.concat(toParts.slice(samePartsLength));
-        return outputParts.join("\\");
-      };
-      win32._makeLong = function(path2) {
-        if (!util.isString(path2))
-          return path2;
-        if (!path2) {
-          return "";
-        }
-        var resolvedPath = win32.resolve(path2);
-        if (/^[a-zA-Z]\:\\/.test(resolvedPath)) {
-          return "\\\\?\\" + resolvedPath;
-        } else if (/^\\\\[^?.]/.test(resolvedPath)) {
-          return "\\\\?\\UNC\\" + resolvedPath.substring(2);
-        }
-        return path2;
-      };
-      win32.dirname = function(path2) {
-        var result = win32SplitPath(path2), root = result[0], dir = result[1];
-        if (!root && !dir) {
-          return ".";
-        }
-        if (dir) {
-          dir = dir.substr(0, dir.length - 1);
-        }
-        return root + dir;
-      };
-      win32.basename = function(path2, ext) {
-        var f = win32SplitPath(path2)[2];
-        if (ext && f.substr(-1 * ext.length) === ext) {
-          f = f.substr(0, f.length - ext.length);
-        }
-        return f;
-      };
-      win32.extname = function(path2) {
-        return win32SplitPath(path2)[3];
-      };
-      win32.format = function(pathObject) {
-        if (!util.isObject(pathObject)) {
-          throw new TypeError(
-            "Parameter 'pathObject' must be an object, not " + typeof pathObject
-          );
-        }
-        var root = pathObject.root || "";
-        if (!util.isString(root)) {
-          throw new TypeError(
-            "'pathObject.root' must be a string or undefined, not " + typeof pathObject.root
-          );
-        }
-        var dir = pathObject.dir;
-        var base = pathObject.base || "";
-        if (!dir) {
-          return base;
-        }
-        if (dir[dir.length - 1] === win32.sep) {
-          return dir + base;
-        }
-        return dir + win32.sep + base;
-      };
-      win32.parse = function(pathString) {
-        if (!util.isString(pathString)) {
-          throw new TypeError(
-            "Parameter 'pathString' must be a string, not " + typeof pathString
-          );
-        }
-        var allParts = win32SplitPath(pathString);
-        if (!allParts || allParts.length !== 4) {
-          throw new TypeError("Invalid path '" + pathString + "'");
-        }
-        return {
-          root: allParts[0],
-          dir: allParts[0] + allParts[1].slice(0, -1),
-          base: allParts[2],
-          ext: allParts[3],
-          name: allParts[2].slice(0, allParts[2].length - allParts[3].length)
-        };
-      };
-      win32.sep = "\\";
-      win32.delimiter = ";";
-      var splitPathRe = /^(\/?|)([\s\S]*?)((?:\.{1,2}|[^\/]+?|)(\.[^.\/]*|))(?:[\/]*)$/;
-      var posix = {};
-      function posixSplitPath(filename) {
-        return splitPathRe.exec(filename).slice(1);
-      }
-      posix.resolve = function() {
-        var resolvedPath = "", resolvedAbsolute = false;
-        for (var i = arguments.length - 1; i >= -1 && !resolvedAbsolute; i--) {
-          var path2 = i >= 0 ? arguments[i] : process.cwd();
-          if (!util.isString(path2)) {
-            throw new TypeError("Arguments to path.resolve must be strings");
-          } else if (!path2) {
-            continue;
-          }
-          resolvedPath = path2 + "/" + resolvedPath;
-          resolvedAbsolute = path2[0] === "/";
-        }
-        resolvedPath = normalizeArray(
-          resolvedPath.split("/"),
-          !resolvedAbsolute
-        ).join("/");
-        return (resolvedAbsolute ? "/" : "") + resolvedPath || ".";
-      };
-      posix.normalize = function(path2) {
-        var isAbsolute = posix.isAbsolute(path2), trailingSlash = path2 && path2[path2.length - 1] === "/";
-        path2 = normalizeArray(path2.split("/"), !isAbsolute).join("/");
-        if (!path2 && !isAbsolute) {
-          path2 = ".";
-        }
-        if (path2 && trailingSlash) {
-          path2 += "/";
-        }
-        return (isAbsolute ? "/" : "") + path2;
-      };
-      posix.isAbsolute = function(path2) {
-        return path2.charAt(0) === "/";
-      };
-      posix.join = function() {
-        var path2 = "";
-        for (var i = 0; i < arguments.length; i++) {
-          var segment = arguments[i];
-          if (!util.isString(segment)) {
-            throw new TypeError("Arguments to path.join must be strings");
-          }
-          if (segment) {
-            if (!path2) {
-              path2 += segment;
-            } else {
-              path2 += "/" + segment;
-            }
-          }
-        }
-        return posix.normalize(path2);
-      };
-      posix.relative = function(from, to) {
-        from = posix.resolve(from).substr(1);
-        to = posix.resolve(to).substr(1);
-        var fromParts = trimArray(from.split("/"));
-        var toParts = trimArray(to.split("/"));
-        var length = Math.min(fromParts.length, toParts.length);
-        var samePartsLength = length;
-        for (var i = 0; i < length; i++) {
-          if (fromParts[i] !== toParts[i]) {
-            samePartsLength = i;
-            break;
-          }
-        }
-        var outputParts = [];
-        for (var i = samePartsLength; i < fromParts.length; i++) {
-          outputParts.push("..");
-        }
-        outputParts = outputParts.concat(toParts.slice(samePartsLength));
-        return outputParts.join("/");
-      };
-      posix._makeLong = function(path2) {
-        return path2;
-      };
-      posix.dirname = function(path2) {
-        var result = posixSplitPath(path2), root = result[0], dir = result[1];
-        if (!root && !dir) {
-          return ".";
-        }
-        if (dir) {
-          dir = dir.substr(0, dir.length - 1);
-        }
-        return root + dir;
-      };
-      posix.basename = function(path2, ext) {
-        var f = posixSplitPath(path2)[2];
-        if (ext && f.substr(-1 * ext.length) === ext) {
-          f = f.substr(0, f.length - ext.length);
-        }
-        return f;
-      };
-      posix.extname = function(path2) {
-        return posixSplitPath(path2)[3];
-      };
-      posix.format = function(pathObject) {
-        if (!util.isObject(pathObject)) {
-          throw new TypeError(
-            "Parameter 'pathObject' must be an object, not " + typeof pathObject
-          );
-        }
-        var root = pathObject.root || "";
-        if (!util.isString(root)) {
-          throw new TypeError(
-            "'pathObject.root' must be a string or undefined, not " + typeof pathObject.root
-          );
-        }
-        var dir = pathObject.dir ? pathObject.dir + posix.sep : "";
-        var base = pathObject.base || "";
-        return dir + base;
-      };
-      posix.parse = function(pathString) {
-        if (!util.isString(pathString)) {
-          throw new TypeError(
-            "Parameter 'pathString' must be a string, not " + typeof pathString
-          );
-        }
-        var allParts = posixSplitPath(pathString);
-        if (!allParts || allParts.length !== 4) {
-          throw new TypeError("Invalid path '" + pathString + "'");
-        }
-        allParts[1] = allParts[1] || "";
-        allParts[2] = allParts[2] || "";
-        allParts[3] = allParts[3] || "";
-        return {
-          root: allParts[0],
-          dir: allParts[0] + allParts[1].slice(0, -1),
-          base: allParts[2],
-          ext: allParts[3],
-          name: allParts[2].slice(0, allParts[2].length - allParts[3].length)
-        };
-      };
-      posix.sep = "/";
-      posix.delimiter = ":";
-      if (isWindows)
-        module.exports = win32;
-      else
-        module.exports = posix;
-      module.exports.posix = posix;
-      module.exports.win32 = win32;
-    }
-  });
-
   // src/multithreading/workers/node/testworker.ts
   var testworker_exports = {};
   __export(testworker_exports, {
     TestWorker: () => TestWorker,
     default: () => testworker_default
   });
-  var import_child_process, import_path, TestWorker, testworker_default;
+  var import_child_process, TestWorker, testworker_default;
   var init_testworker = __esm({
     "src/multithreading/workers/node/testworker.ts"() {
       "use strict";
       import_child_process = __require("child_process");
-      import_path = __toESM(require_path(), 1);
       TestWorker = class {
         worker;
         /**
@@ -3609,7 +2727,13 @@
          * @param {{ name: string }} cost - The cost function to evaluate the network.
          */
         constructor(dataSet, cost) {
-          this.worker = (0, import_child_process.fork)(import_path.default.join(__dirname, "/worker"));
+          let pathModule = null;
+          try {
+            pathModule = __require("path");
+          } catch {
+          }
+          const workerPath = pathModule ? pathModule.join(__dirname, "/worker") : "./worker";
+          this.worker = (0, import_child_process.fork)(workerPath);
           this.worker.send({ set: dataSet, cost: cost.name });
         }
         /**
@@ -3620,20 +2744,46 @@
          *
          * @param {any} network - The neural network to evaluate. It must implement a `serialize` method.
          * @returns {Promise<number>} A promise that resolves to the evaluation result.
+         *
+         * @example
+         * // Example: evaluate a mock network (assumes `worker` is an instance of TestWorker)
+         * // Note: `evaluate` returns a Promise — use `await` inside an async function.
+         * const mockNetwork = { serialize: () => [[0], [0], [0]] };
+         * const score = await worker.evaluate(mockNetwork);
+         * console.log('score', score);
          */
-        evaluate(network) {
-          return new Promise((resolve) => {
-            const serialized = network.serialize();
-            const data = {
-              activations: serialized[0],
-              states: serialized[1],
-              conns: serialized[2]
-            };
-            const _that = this.worker;
-            this.worker.on("message", function callback(e) {
-              _that.removeListener("message", callback);
+        async evaluate(network) {
+          const serialized = network.serialize();
+          const data = {
+            activations: serialized[0],
+            states: serialized[1],
+            conns: serialized[2]
+          };
+          return new Promise((resolve, reject) => {
+            const onMessage = (e) => {
+              cleanup();
               resolve(e);
-            });
+            };
+            const onError = (err) => {
+              cleanup();
+              reject(err);
+            };
+            const onExit = (code, signal) => {
+              cleanup();
+              reject(
+                new Error(
+                  `worker exited${code != null ? ` with code ${code}` : signal ? ` with signal ${signal}` : ""}`
+                )
+              );
+            };
+            const cleanup = () => {
+              this.worker.off("message", onMessage);
+              this.worker.off("error", onError);
+              this.worker.off("exit", onExit);
+            };
+            this.worker.once("message", onMessage);
+            this.worker.once("error", onError);
+            this.worker.once("exit", onExit);
             this.worker.send(data);
           });
         }
@@ -3641,6 +2791,12 @@
          * Terminates the worker process.
          *
          * This method ensures that the worker process is properly terminated to free up system resources.
+         *
+         * @example
+         * // Create and terminate a worker when it's no longer needed
+         * const worker = new TestWorker([0, 1, 2], { name: 'mse' });
+         * // ...use worker.evaluate(...) as needed
+         * worker.terminate();
          */
         terminate() {
           this.worker.kill();
@@ -4165,7 +3321,7 @@
     "package.json"(exports, module) {
       module.exports = {
         name: "@reicek/neataptic-ts",
-        version: "0.1.10",
+        version: "0.1.11",
         description: "Architecture-free neural network library with genetic algorithm implementations",
         main: "./dist/neataptic.js",
         module: "./dist/neataptic.js",
@@ -4175,6 +3331,7 @@
           test: "jest --config=jest.config.mjs --no-cache --coverage --collect-coverage --runInBand --testPathIgnorePatterns=.e2e.test.ts --verbose",
           pretest: "npm run build",
           "test:bench": "jest --no-cache --runInBand --verbose --testPathPattern=benchmark",
+          "bench:asciiMaze": "node -r ts-node/register test/benchmarks/asciiMaze.micro.bench.ts",
           "test:silent": "jest --no-cache --coverage --collect-coverage --runInBand --testPathIgnorePatterns=.e2e.test.ts --silent",
           deploy: "npm run build && npm run test:dist && npm publish",
           build: "npm run build:webpack && npm run build:ts",
@@ -4187,10 +3344,10 @@
           "docs:build-scripts": "tsc -p tsconfig.docs.json && node scripts/write-dist-docs-pkg.mjs",
           "docs:folders": "npm run docs:build-scripts && node ./dist-docs/scripts/generate-docs.js",
           "docs:html": "npm run docs:build-scripts && node ./dist-docs/scripts/render-docs-html.js",
-          "build:ascii-maze": "npx esbuild test/examples/asciiMaze/browser-entry.ts --bundle --outfile=docs/assets/ascii-maze.bundle.js --platform=browser --format=iife --sourcemap --external:fs --external:child_process",
+          "build:ascii-maze": "npx esbuild test/examples/asciiMaze/browser-entry.ts --bundle --outfile=docs/assets/ascii-maze.bundle.js --platform=browser --format=iife --sourcemap --external:fs --external:child_process --external:path",
           "docs:examples": "node scripts/copy-examples.mjs",
           prettier: "npm run prettier:tests && npm run prettier:src",
-          "prettier:tests": "npx prettier --write **/*.test.ts",
+          "prettier:tests": "npx prettier --write test/**/*.ts",
           "prettier:src": "npx prettier --write src/**/*.ts",
           docs: "npm run build:ascii-maze && npm run docs:examples && npm run docs:build-scripts && node ./dist-docs/scripts/generate-docs.js && node ./dist-docs/scripts/render-docs-html.js",
           "onnx:export": "node scripts/export-onnx.mjs"
@@ -4202,33 +3359,34 @@
           }
         },
         devDependencies: {
-          "@types/chai": "^5.2.1",
+          "@types/chai": "^5.2.2",
           "@types/fs-extra": "^11.0.4",
-          "@types/jest": "^29.5.11",
-          "@types/node": "^20.19.10",
+          "@types/jest": "^30.0.0",
+          "@types/node": "^24.3.0",
           "@types/seedrandom": "^3.0.8",
           "@types/webpack": "^5.28.5",
           "@types/webpack-dev-server": "^4.7.2",
-          chai: "^4.3.4",
-          "copy-webpack-plugin": "^8.1.0",
-          "cross-env": "^7.0.3",
+          chai: "^6.0.1",
+          "copy-webpack-plugin": "^13.0.1",
+          "cross-env": "^10.0.0",
+          esbuild: "^0.25.9",
           "fast-glob": "^3.3.3",
           "fs-extra": "^11.3.1",
-          husky: "^6.0.0",
-          jest: "^29.7.0",
-          "jsdoc-to-markdown": "^9.1.1",
-          marked: "^12.0.2",
+          husky: "^9.1.7",
+          jest: "^30.0.5",
+          "jest-environment-jsdom": "^30.0.5",
+          "jsdoc-to-markdown": "^9.1.2",
+          marked: "^16.2.0",
           mkdocs: "^0.0.1",
-          "ts-jest": "^29.1.1",
+          puppeteer: "^24.17.0",
+          "ts-jest": "^29.4.1",
           "ts-loader": "^9.5.2",
-          "ts-morph": "^22.0.0",
+          "ts-morph": "^26.0.0",
           "ts-node": "^10.9.2",
-          typescript: "^5.6.3",
-          "undici-types": "^7.8.0",
-          webpack: "^5.99.5",
-          "webpack-cli": "^6.0.1",
-          esbuild: "^0.23.0",
-          puppeteer: "^23.3.0"
+          typescript: "^5.9.2",
+          "undici-types": "^7.15.0",
+          webpack: "^5.101.3",
+          "webpack-cli": "^6.0.1"
         },
         repository: {
           type: "git",
@@ -4256,14 +3414,14 @@
         },
         homepage: "https://reicek.github.io/NeatapticTS/",
         engines: {
-          node: ">=20.0.0"
+          node: ">=22.0.0"
         },
         prettier: {
           singleQuote: true
         },
         dependencies: {
           seedrandom: "^3.0.5",
-          undici: "^5.0.0"
+          undici: "^7.15.0"
         }
       };
     }
@@ -11950,7 +11108,7 @@
           }
         }
         for (let i = 0; i < this.population.length; i++) {
-          const sortedRow = distanceMatrix[i].slice().sort((a, b) => a - b);
+          const sortedRow = distanceMatrix[i].toSorted((a, b) => a - b);
           const neighbours = sortedRow.slice(1, kNeighbors + 1);
           const novelty = neighbours.length ? neighbours.reduce((a, b) => a + b, 0) / neighbours.length : 0;
           this.population[i]._novelty = novelty;
@@ -12031,7 +11189,20 @@
         const adjustRate = autoDistanceCoeffOptions.adjustRate ?? 0.05;
         const minCoeff = autoDistanceCoeffOptions.minCoeff ?? 0.05;
         const maxCoeff = autoDistanceCoeffOptions.maxCoeff ?? 8;
-        if (!this._lastConnVar) this._lastConnVar = connVar;
+        if (this._lastConnVar === void 0 || this._lastConnVar === null) {
+          this._lastConnVar = connVar;
+          try {
+            this.options.excessCoeff = Math.min(
+              maxCoeff,
+              (this.options.excessCoeff ?? 1) * (1 + adjustRate)
+            );
+            this.options.disjointCoeff = Math.min(
+              maxCoeff,
+              (this.options.disjointCoeff ?? 1) * (1 + adjustRate)
+            );
+          } catch {
+          }
+        }
         if (connVar < this._lastConnVar * 0.95) {
           this.options.excessCoeff = Math.min(
             maxCoeff,
@@ -13004,9 +12175,9 @@
     return this.population.map((genome) => genome.toJSON());
   }
   function importPopulation(populationJSON) {
-    const Network6 = (init_network(), __toCommonJS(network_exports)).default;
+    const Network7 = (init_network(), __toCommonJS(network_exports)).default;
     this.population = populationJSON.map(
-      (serializedGenome) => Network6.fromJSON(serializedGenome)
+      (serializedGenome) => Network7.fromJSON(serializedGenome)
     );
     this.options.popsize = this.population.length;
   }
@@ -13989,207 +13160,151 @@
   });
 
   // test/examples/asciiMaze/browserTerminalUtility.ts
-  var BrowserTerminalUtility = class {
+  var BrowserTerminalUtility = class _BrowserTerminalUtility {
+    /** Default minimum progress percentage that counts as sufficiently solved. */
+    static #DefaultMinProgressToPass = 60;
+    /** Default maximum number of evolutionary attempts before aborting. */
+    static #DefaultMaxAttemptCount = 10;
+    /** Backwards compatibility alias for attempt count (deprecated). */
+    static deprecatedTriesKey = "tries";
+    /** Resolve (or locate) the host element used for output. */
+    static #resolveHostElement(container) {
+      return container ?? (typeof document !== "undefined" ? document.getElementById("ascii-maze-output") : null);
+    }
     /**
      * Create a clearer that clears a DOM container's contents.
      * If no container is provided it will try to use an element with id "ascii-maze-output".
      */
     static createTerminalClearer(container) {
-      const el = container ?? (typeof document !== "undefined" ? document.getElementById("ascii-maze-output") : null);
+      const hostElement = this.#resolveHostElement(container);
       return () => {
-        if (el) el.innerHTML = "";
+        if (hostElement) hostElement.innerHTML = "";
       };
     }
     /**
      * Same semantics as the Node version: repeatedly call evolveFn until success or threshold reached.
      */
-    static async evolveUntilSolved(evolveFn, minProgressToPass = 60, maxTries = 10) {
-      let tries = 0;
+    static async evolveUntilSolved(evolveFn, minProgressToPass = _BrowserTerminalUtility.#DefaultMinProgressToPass, maxAttemptCount = _BrowserTerminalUtility.#DefaultMaxAttemptCount) {
+      let attemptCount = 0;
       let lastResult = {
         success: false,
         progress: 0
       };
-      while (tries < maxTries) {
-        tries++;
+      while (attemptCount < maxAttemptCount) {
+        attemptCount++;
         const { finalResult } = await evolveFn();
         lastResult = finalResult;
         if (finalResult.success || finalResult.progress >= minProgressToPass) {
-          return { finalResult, tries };
+          return { finalResult, attemptCount, tries: attemptCount };
         }
       }
-      return { finalResult: lastResult, tries };
+      return { finalResult: lastResult, attemptCount, tries: attemptCount };
     }
   };
-
-  // test/examples/asciiMaze/browserLogger.ts
-  var ANSI_256_MAP = {
-    205: "#ff6ac1",
-    93: "#b48bf2",
-    154: "#a6d189",
-    51: "#00bcd4",
-    226: "#ffd166",
-    214: "#ff9f43",
-    196: "#ff3b30",
-    46: "#00e676",
-    123: "#6ec6ff",
-    177: "#caa6ff",
-    80: "#00bfa5",
-    121: "#9bdc8a",
-    203: "#ff6b9f",
-    99: "#6b62d6",
-    44: "#00a9e0",
-    220: "#ffd54f",
-    250: "#ececec",
-    45: "#00aaff",
-    201: "#ff4fc4",
-    231: "#ffffff",
-    218: "#ffc6d3",
-    217: "#ffcdb5",
-    117: "#6fb3ff",
-    118: "#6ee07a",
-    48: "#00a300",
-    57: "#2f78ff",
-    33: "#1e90ff",
-    87: "#00d7ff",
-    159: "#cfeeff",
-    208: "#ff8a00",
-    197: "#ff5ea6",
-    234: "#0e1114",
-    23: "#123044",
-    17: "#000b16",
-    16: "#000000",
-    39: "#0078ff"
-  };
-  function escapeHtml(s) {
-    return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  }
-  function ensurePre(container) {
-    const host = container ?? (typeof document !== "undefined" ? document.getElementById("ascii-maze-output") : null);
-    if (!host) return null;
-    let pre = host.querySelector("pre");
-    if (!pre) {
-      pre = document.createElement("pre");
-      pre.style.fontFamily = "monospace";
-      pre.style.whiteSpace = "pre";
-      pre.style.margin = "0";
-      pre.style.padding = "4px";
-      pre.style.fontSize = "10px";
-      host.appendChild(pre);
-    }
-    return pre;
-  }
-  function ansiToHtml(input) {
-    const re = /\x1b\[([0-9;]*)m/g;
-    let out = "";
-    let lastIndex = 0;
-    let style = {};
-    let match;
-    while ((match = re.exec(input)) !== null) {
-      const chunk = input.substring(lastIndex, match.index);
-      if (chunk) {
-        const text = escapeHtml(chunk);
-        if (Object.keys(style).length) {
-          const css = [];
-          if (style.color) css.push(`color: ${style.color}`);
-          if (style.background) css.push(`background: ${style.background}`);
-          if (style.fontWeight) css.push(`font-weight: ${style.fontWeight}`);
-          out += `<span style="${css.join(";")}">${text}</span>`;
-        } else {
-          out += text;
-        }
-      }
-      const codes = match[1].split(";").filter((c) => c.length).map((c) => parseInt(c, 10));
-      if (codes.length === 0) {
-        style = {};
-      } else {
-        for (let i = 0; i < codes.length; i++) {
-          const c = codes[i];
-          if (c === 0) {
-            style = {};
-          } else if (c === 1) {
-            style.fontWeight = "700";
-          } else if (c === 22) {
-            delete style.fontWeight;
-          } else if (c === 38 && codes[i + 1] === 5) {
-            const n = codes[i + 2];
-            if (typeof n === "number" && ANSI_256_MAP[n])
-              style.color = ANSI_256_MAP[n];
-            i += 2;
-          } else if (c === 48 && codes[i + 1] === 5) {
-            const n = codes[i + 2];
-            if (typeof n === "number" && ANSI_256_MAP[n])
-              style.background = ANSI_256_MAP[n];
-            i += 2;
-          } else if (c >= 30 && c <= 37) {
-            const basic = [
-              "#000000",
-              "#800000",
-              "#008000",
-              "#808000",
-              "#000080",
-              "#800080",
-              "#008080",
-              "#c0c0c0"
-            ];
-            style.color = basic[c - 30];
-          } else if (c >= 90 && c <= 97) {
-            const bright = [
-              "#808080",
-              "#ff0000",
-              "#00ff00",
-              "#ffff00",
-              "#0000ff",
-              "#ff00ff",
-              "#00ffff",
-              "#ffffff"
-            ];
-            style.color = bright[c - 90];
-          } else if (c === 39) {
-            delete style.color;
-          } else if (c === 49) {
-            delete style.background;
-          }
-        }
-      }
-      lastIndex = re.lastIndex;
-    }
-    if (lastIndex < input.length) {
-      const tail = escapeHtml(input.substring(lastIndex));
-      if (Object.keys(style).length) {
-        const css = [];
-        if (style.color) css.push(`color: ${style.color}`);
-        if (style.background) css.push(`background: ${style.background}`);
-        if (style.fontWeight) css.push(`font-weight: ${style.fontWeight}`);
-        out += `<span style="${css.join(";")}">${tail}</span>`;
-      } else {
-        out += tail;
-      }
-    }
-    return out;
-  }
-  function createBrowserLogger(container) {
-    return (...args) => {
-      const pre = ensurePre(container);
-      let opts = void 0;
-      if (args.length && typeof args[args.length - 1] === "object" && args[args.length - 1] && "prepend" in args[args.length - 1]) {
-        opts = args[args.length - 1];
-        args = args.slice(0, -1);
-      }
-      const text = args.map((a) => typeof a === "string" ? a : JSON.stringify(a)).join(" ");
-      const html = ansiToHtml(text).replace(/\n/g, "<br/>") + "<br/>";
-      if (!pre) return;
-      if (opts && opts.prepend) {
-        pre.innerHTML = html + pre.innerHTML;
-        pre.scrollTop = 0;
-      } else {
-        pre.innerHTML += html;
-        pre.scrollTop = pre.scrollHeight;
-      }
-    };
-  }
 
   // test/examples/asciiMaze/mazeUtils.ts
   var MazeUtils = class _MazeUtils {
+    /**
+     * Shared set of wall characters (box-drawing + hash). Kept private to avoid
+     * reallocation in hot code paths. Use `encodeMaze` to convert ASCII mazes.
+     */
+    static #WALL_CHARS = /* @__PURE__ */ new Set([
+      "#",
+      "\u2550",
+      "\u2551",
+      "\u2554",
+      "\u2557",
+      "\u255A",
+      "\u255D",
+      "\u2560",
+      "\u2563",
+      "\u2566",
+      "\u2569",
+      "\u256C"
+    ]);
+    // Movement vectors used by BFS (N, E, S, W). Private to avoid accidental external use.
+    // Marked readonly to signal these vectors are constant and must not be mutated.
+    /** Movement vectors used by BFS (North, East, South, West). */
+    static #DIRECTIONS = [
+      [0, -1],
+      [1, 0],
+      [0, 1],
+      [-1, 0]
+    ];
+    /**
+     * Convert a coordinate pair into the canonical key string `"x,y"`.
+     *
+     * @param coord - Coordinate pair `[x, y]` to stringify.
+     * @returns Canonical string key suitable for Map/Set storage.
+     * @example MazeUtils.posKey([2,3]) // -> '2,3'
+     */
+    static posKey(coord) {
+      const [x, y] = coord;
+      return `${x},${y}`;
+    }
+    /**
+     * Return up to the last `n` items from `arr` as a new array.
+     * This implementation is allocation-friendly for hot paths: it preallocates
+     * the output array and copies only the required suffix.
+     *
+     * @param arr - Source array (may be undefined).
+     * @param n - Maximum number of trailing elements to return.
+     * @returns New array containing up to the last `n` items of `arr`.
+     * @example
+     * MazeUtils.tail([1,2,3,4], 2) // -> [3,4]
+     */
+    static tail(arr, n) {
+      if (!Array.isArray(arr) || n <= 0) return [];
+      const length = arr.length;
+      const startIndex = Math.max(0, length - n);
+      const resultLength = length - startIndex;
+      const result = new Array(resultLength);
+      let writeIndex = 0;
+      for (let readIndex = startIndex; readIndex < length; readIndex++) {
+        result[writeIndex++] = arr[readIndex];
+      }
+      return result;
+    }
+    /**
+     * Return the last element of an array or undefined when empty.
+     *
+     * This helper prefers `Array.prototype.at` when available (ES2022+), but
+     * falls back gracefully for older runtimes.
+     *
+     * @param arr - Array to read from.
+     * @returns The last item or undefined.
+     */
+    static safeLast(arr) {
+      if (!Array.isArray(arr) || arr.length === 0) return void 0;
+      return arr.at ? arr.at(-1) : arr[arr.length - 1];
+    }
+    /**
+     * Push a value onto a bounded history buffer and trim the head if needed.
+     * This helper preserves in-place semantics (the original array reference is
+     * returned and mutated) which callers may rely on for performance.
+     *
+     * @param buffer - Existing buffer (may be undefined). If undefined a new
+     *  single-element array containing `value` is returned.
+     * @param value - Value to push onto the buffer.
+     * @param maxLen - Maximum length to retain. When the buffer exceeds this
+     *  length the oldest entries are removed from the head.
+     * @returns The updated buffer containing the new value and trimmed to maxLen.
+     * @example
+     * const buf = [1,2]; MazeUtils.pushHistory(buf, 3, 3) // -> [1,2,3]
+     */
+    static pushHistory(buffer, value, maxLen) {
+      if (!Array.isArray(buffer)) return [value];
+      buffer.push(value);
+      const excessCount = buffer.length - maxLen;
+      if (excessCount > 0) {
+        if (excessCount === 1) {
+          buffer.shift();
+        } else {
+          buffer.splice(0, excessCount);
+        }
+      }
+      return buffer;
+    }
     /**
      * Converts an ASCII/Unicode maze (array of strings) into a 2D numeric array for processing by the agent.
      *
@@ -14205,35 +13320,25 @@
      * @returns 2D array of numbers encoding the maze elements.
      */
     static encodeMaze(asciiMaze) {
-      const wallChars = /* @__PURE__ */ new Set([
-        "#",
-        "\u2550",
-        "\u2551",
-        "\u2554",
-        "\u2557",
-        "\u255A",
-        "\u255D",
-        "\u2560",
-        "\u2563",
-        "\u2566",
-        "\u2569",
-        "\u256C"
+      const wallChars = _MazeUtils.#WALL_CHARS;
+      const codeMap = /* @__PURE__ */ new Map([
+        [".", 0],
+        ["E", 1],
+        ["S", 2]
       ]);
-      return asciiMaze.map(
-        (row) => [...row].map((cell) => {
-          if (wallChars.has(cell)) return -1;
-          switch (cell) {
-            case ".":
-              return 0;
-            case "E":
-              return 1;
-            case "S":
-              return 2;
-            default:
-              return 0;
+      return asciiMaze.map((rowString, rowIndex) => {
+        const rowLength = rowString.length;
+        const encodedRow = new Array(rowLength);
+        for (let colIndex = 0; colIndex < rowLength; colIndex++) {
+          const cellChar = rowString[colIndex];
+          if (wallChars.has(cellChar)) {
+            encodedRow[colIndex] = -1;
+            continue;
           }
-        })
-      );
+          encodedRow[colIndex] = codeMap.get(cellChar) ?? 0;
+        }
+        return encodedRow;
+      });
     }
     /**
      * Finds the (x, y) position of a given character in the ASCII maze.
@@ -14243,9 +13348,14 @@
      * @throws Error if the character is not found in the maze.
      */
     static findPosition(asciiMaze, char) {
-      for (let y = 0; y < asciiMaze.length; y++) {
-        const x = asciiMaze[y].indexOf(char);
-        if (x !== -1) return [x, y];
+      const rowCount = asciiMaze.length;
+      for (let rowIndex = 0; rowIndex < rowCount; rowIndex++) {
+        const rowString = asciiMaze[rowIndex];
+        if (!rowString) continue;
+        const columnIndex = rowString.indexOf(char);
+        if (columnIndex !== -1) {
+          return [columnIndex, rowIndex];
+        }
       }
       throw new Error(`Character ${char} not found in maze`);
     }
@@ -14258,27 +13368,63 @@
      * @returns Shortest path length (number of steps), or Infinity if unreachable.
      */
     static bfsDistance(encodedMaze, start2, goal) {
-      const [gx, gy] = goal;
-      if (encodedMaze[gy][gx] === -1) return Infinity;
-      const queue = [[start2, 0]];
-      const visited = /* @__PURE__ */ new Set();
-      const key = ([x, y]) => `${x},${y}`;
-      visited.add(key(start2));
-      const directions = [
-        [0, -1],
-        [1, 0],
-        [0, 1],
-        [-1, 0]
-      ];
-      while (queue.length > 0) {
-        const [[x, y], dist] = queue.shift();
-        if (x === gx && y === gy) return dist;
-        for (const [dx, dy] of directions) {
-          const nx = x + dx;
-          const ny = y + dy;
-          if (nx >= 0 && ny >= 0 && ny < encodedMaze.length && nx < encodedMaze[0].length && encodedMaze[ny][nx] !== -1 && !visited.has(key([nx, ny]))) {
-            visited.add(key([nx, ny]));
-            queue.push([[nx, ny], dist + 1]);
+      const [startX, startY] = start2;
+      const [goalX, goalY] = goal;
+      const height = encodedMaze.length;
+      const width = encodedMaze[0].length;
+      if (startY < 0 || startY >= height || startX < 0 || startX >= width || goalY < 0 || goalY >= height || goalX < 0 || goalX >= width)
+        return Infinity;
+      if (encodedMaze[startY][startX] === -1 || encodedMaze[goalY][goalX] === -1)
+        return Infinity;
+      if (startX === goalX && startY === goalY) return 0;
+      const cellCount = height * width;
+      const flatMaze = new Int8Array(cellCount);
+      for (let y = 0, dest = 0; y < height; y++) {
+        const row = encodedMaze[y];
+        for (let x = 0; x < width; x++, dest++) {
+          flatMaze[dest] = row[x] === -1 ? -1 : 0;
+        }
+      }
+      const distances = new Int32Array(cellCount);
+      for (let i = 0; i < cellCount; i++) distances[i] = -1;
+      const startIndex = startY * width + startX;
+      const goalIndex = goalY * width + goalX;
+      distances[startIndex] = 0;
+      const queue = new Int32Array(cellCount);
+      let head = 0;
+      let tail = 0;
+      queue[tail++] = startIndex;
+      const northOffset = -width;
+      const southOffset = width;
+      while (head < tail) {
+        const currentIndex = queue[head++];
+        const currentDistance = distances[currentIndex];
+        if (currentIndex === goalIndex) return currentDistance;
+        const currentY = currentIndex / width | 0;
+        const currentX = currentIndex - currentY * width;
+        for (let dir = 0; dir < 4; dir++) {
+          let neighborIndex;
+          switch (dir) {
+            case 0:
+              if (currentY === 0) continue;
+              neighborIndex = currentIndex + northOffset;
+              break;
+            case 1:
+              if (currentX + 1 >= width) continue;
+              neighborIndex = currentIndex + 1;
+              break;
+            case 2:
+              if (currentY + 1 >= height) continue;
+              neighborIndex = currentIndex + southOffset;
+              break;
+            default:
+              if (currentX === 0) continue;
+              neighborIndex = currentIndex - 1;
+          }
+          if (flatMaze[neighborIndex] !== -1 && distances[neighborIndex] === -1) {
+            distances[neighborIndex] = currentDistance + 1;
+            if (neighborIndex === goalIndex) return currentDistance + 1;
+            queue[tail++] = neighborIndex;
           }
         }
       }
@@ -14318,10 +13464,10 @@
      * @returns Progress percentage (0-100)
      */
     static calculateProgressFromDistanceMap(distanceMap, currentPos, startPos) {
-      const [sx, sy] = startPos;
-      const [cx, cy] = currentPos;
-      const totalDistance = distanceMap[sy]?.[sx];
-      const remaining = distanceMap[cy]?.[cx];
+      const [startX, startY] = startPos;
+      const [currentX, currentY] = currentPos;
+      const totalDistance = distanceMap[startY]?.[startX];
+      const remaining = distanceMap[currentY]?.[currentX];
       if (totalDistance == null || remaining == null || !isFinite(totalDistance) || totalDistance <= 0)
         return 0;
       const prog = (totalDistance - remaining) / totalDistance * 100;
@@ -14334,37 +13480,464 @@
      * @param goal - [x,y] goal position (typically exit)
      */
     static buildDistanceMap(encodedMaze, goal) {
+      const {
+        width,
+        height,
+        distances,
+        WALL_VALUE,
+        UNREACHABLE_VALUE
+      } = _MazeUtils.buildDistanceMapFlat(encodedMaze, goal);
+      const result = Array.from(
+        { length: height },
+        () => new Array(width)
+      );
+      for (let rowIndex = 0, flatIndex = 0; rowIndex < height; rowIndex++) {
+        const resultRow = result[rowIndex];
+        for (let colIndex = 0; colIndex < width; colIndex++, flatIndex++) {
+          const cellDistance = distances[flatIndex];
+          resultRow[colIndex] = cellDistance === WALL_VALUE || cellDistance === UNREACHABLE_VALUE ? Infinity : cellDistance;
+        }
+      }
+      return result;
+    }
+    /**
+     * High-performance variant of `buildDistanceMap` that returns a flat Int32Array
+     * distance buffer with metadata. This minimizes allocations and GC pressure for
+     * large mazes and is the recommended API for performance-sensitive code.
+     *
+     * Encoding in the returned `distances` buffer:
+     *  - wall cells => WALL_VALUE (number, -2)
+     *  - unreachable cells => UNREACHABLE_VALUE (number, -1)
+     *  - reachable cells => non-negative distance (0 ..)
+     *
+     * The returned object contains the flat buffer plus `width` and `height` so
+     * callers can translate between (x,y) and flat indices: index = y*width + x.
+     *
+     * Note: this API intentionally avoids converting the typed buffer back into
+     * nested `number[][]` to keep allocation minimal; use `buildDistanceMap` if
+     * you require the legacy `number[][]` shape.
+     *
+     * @param encodedMaze - 2D maze encoding
+     * @param goal - [x,y] goal position (typically exit)
+     * @returns Object with `width`, `height`, and `distances` (Int32Array).
+     * @example
+     * const flat = MazeUtils.buildDistanceMapFlat(encoded, [5,3]);
+     * const idx = 3 * flat.width + 5; // y*width + x
+     * console.log(flat.distances[idx]); // -2 wall, -1 unreachable, >=0 distance
+     */
+    static buildDistanceMapFlat(encodedMaze, goal) {
       const height = encodedMaze.length;
       const width = encodedMaze[0].length;
-      const dist = Array.from(
-        { length: height },
-        () => Array(width).fill(Infinity)
-      );
-      const [gx, gy] = goal;
-      if (encodedMaze[gy][gx] === -1) return dist;
-      const q = [[gx, gy]];
-      dist[gy][gx] = 0;
-      const dirs = [
-        [0, -1],
-        [1, 0],
-        [0, 1],
-        [-1, 0]
-      ];
-      while (q.length) {
-        const [x, y] = q.shift();
-        const d = dist[y][x];
-        for (const [dx, dy] of dirs) {
-          const nx = x + dx;
-          const ny = y + dy;
-          if (nx >= 0 && ny >= 0 && ny < height && nx < width && encodedMaze[ny][nx] !== -1 && dist[ny][nx] === Infinity) {
-            dist[ny][nx] = d + 1;
-            q.push([nx, ny]);
+      const WALL_VALUE = -2;
+      const UNREACHABLE_VALUE = -1;
+      const cellCount = width * height;
+      const distances = new Int32Array(cellCount);
+      for (let flatInitIndex = 0; flatInitIndex < cellCount; flatInitIndex++)
+        distances[flatInitIndex] = UNREACHABLE_VALUE;
+      const [goalX, goalY] = goal;
+      if (goalY < 0 || goalY >= height || goalX < 0 || goalX >= width || encodedMaze[goalY][goalX] === -1) {
+        for (let rowIndex = 0, flatDest = 0; rowIndex < height; rowIndex++) {
+          const row = encodedMaze[rowIndex];
+          for (let colIndex = 0; colIndex < width; colIndex++, flatDest++) {
+            if (row[colIndex] === -1) distances[flatDest] = WALL_VALUE;
+          }
+        }
+        return { width, height, distances, WALL_VALUE, UNREACHABLE_VALUE };
+      }
+      for (let rowIndex = 0, flatDest = 0; rowIndex < height; rowIndex++) {
+        const row = encodedMaze[rowIndex];
+        for (let colIndex = 0; colIndex < width; colIndex++, flatDest++) {
+          if (row[colIndex] === -1) distances[flatDest] = WALL_VALUE;
+        }
+      }
+      const goalIndex = goalY * width + goalX;
+      distances[goalIndex] = 0;
+      const queue = new Int32Array(cellCount);
+      let queueHead = 0;
+      let queueTail = 0;
+      queue[queueTail++] = goalIndex;
+      const northOffset = -width;
+      const southOffset = width;
+      while (queueHead < queueTail) {
+        const currentIndex = queue[queueHead++];
+        const currentDistance = distances[currentIndex];
+        const currentRow = currentIndex / width | 0;
+        const currentCol = currentIndex - currentRow * width;
+        for (let dir = 0; dir < 4; dir++) {
+          let neighborFlatIndex;
+          switch (dir) {
+            case 0:
+              if (currentRow === 0) continue;
+              neighborFlatIndex = currentIndex + northOffset;
+              break;
+            case 1:
+              if (currentCol + 1 >= width) continue;
+              neighborFlatIndex = currentIndex + 1;
+              break;
+            case 2:
+              if (currentRow + 1 >= height) continue;
+              neighborFlatIndex = currentIndex + southOffset;
+              break;
+            default:
+              if (currentCol === 0) continue;
+              neighborFlatIndex = currentIndex - 1;
+          }
+          if (distances[neighborFlatIndex] === UNREACHABLE_VALUE) {
+            distances[neighborFlatIndex] = currentDistance + 1;
+            queue[queueTail++] = neighborFlatIndex;
           }
         }
       }
-      return dist;
+      return { width, height, distances, WALL_VALUE, UNREACHABLE_VALUE };
     }
   };
+
+  // test/examples/asciiMaze/browserLogger.ts
+  var ANSI_256_MAP = Object.freeze({
+    205: "#ff6ac1",
+    93: "#b48bf2",
+    154: "#a6d189",
+    51: "#00bcd4",
+    226: "#ffd166",
+    214: "#ff9f43",
+    196: "#ff3b30",
+    46: "#00e676",
+    123: "#6ec6ff",
+    177: "#caa6ff",
+    80: "#00bfa5",
+    121: "#9bdc8a",
+    203: "#ff6b9f",
+    99: "#6b62d6",
+    44: "#00a9e0",
+    220: "#ffd54f",
+    250: "#ececec",
+    45: "#00aaff",
+    201: "#ff4fc4",
+    231: "#ffffff",
+    218: "#ffc6d3",
+    217: "#ffcdb5",
+    117: "#6fb3ff",
+    118: "#6ee07a",
+    48: "#00a300",
+    57: "#2f78ff",
+    33: "#1e90ff",
+    87: "#00d7ff",
+    159: "#cfeeff",
+    208: "#ff8a00",
+    197: "#ff5ea6",
+    234: "#0e1114",
+    23: "#123044",
+    17: "#000b16",
+    16: "#000000",
+    39: "#0078ff"
+  });
+  var FONT_WEIGHT_BOLD = "700";
+  var SGR_RESET = 0;
+  var SGR_BOLD = 1;
+  var SGR_BOLD_OFF = 22;
+  var SGR_FG_EXTENDED = 38;
+  var SGR_BG_EXTENDED = 48;
+  var SGR_FG_DEFAULT = 39;
+  var SGR_BG_DEFAULT = 49;
+  var HTML_ESCAPE_PRESENCE = /[&<>]/;
+  var BASIC_FG_COLORS = Object.freeze([
+    "#000000",
+    "#800000",
+    "#008000",
+    "#808000",
+    "#000080",
+    "#800080",
+    "#008080",
+    "#c0c0c0"
+  ]);
+  var BRIGHT_FG_COLORS = Object.freeze([
+    "#808080",
+    "#ff0000",
+    "#00ff00",
+    "#ffff00",
+    "#0000ff",
+    "#ff00ff",
+    "#00ffff",
+    "#ffffff"
+  ]);
+  function escapeHtml(raw) {
+    if (!HTML_ESCAPE_PRESENCE.test(raw)) return raw;
+    return raw.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+  function ensurePre(container) {
+    const hostElement = container ?? (typeof document !== "undefined" ? document.getElementById("ascii-maze-output") : null);
+    if (!hostElement) return null;
+    let preElement = hostElement.querySelector("pre");
+    if (!preElement) {
+      preElement = document.createElement("pre");
+      preElement.style.fontFamily = "monospace";
+      preElement.style.whiteSpace = "pre";
+      preElement.style.margin = "0";
+      preElement.style.padding = "4px";
+      preElement.style.fontSize = "10px";
+      hostElement.appendChild(preElement);
+    }
+    return preElement;
+  }
+  var AnsiHtmlConverter = class _AnsiHtmlConverter {
+    /**
+     * Global regex used to locate SGR parameter sequences. Reset before each parse.
+     * `([0-9;]*)` captures the parameter list which may be empty (equivalent to reset).
+     */
+    static #SgrSequencePattern = /\x1b\[([0-9;]*)m/g;
+    /** Marker inserted for newline during streaming conversion (literal `<br/>`). */
+    static #HtmlNewline = "<br/>";
+    /** Small object pool for converter instances (avoid GC churn under heavy logging). */
+    static #Pool = [];
+    static #POOL_SIZE_LIMIT = 32;
+    // Safety cap – logging lines are short, pool doesn't need to grow large.
+    /** Cache mapping style signature -> opening span tag for reuse. */
+    static #StyleCache = /* @__PURE__ */ new Map();
+    // Per-instance mutable state (cleared between uses via #resetForInput).
+    #input = "";
+    #htmlOutput = "";
+    #lastProcessedIndex = 0;
+    // Current style fields.
+    #currentColor;
+    #currentBackground;
+    #currentFontWeight;
+    #hasActiveStyle = false;
+    #currentStyleSpanStart = "";
+    // Scratch array reused for parsed numeric codes (grown as needed, not shrunk).
+    #parsedCodes = [];
+    constructor() {
+    }
+    /** Acquire a converter instance (from pool or new). */
+    static #acquire(input) {
+      const instance = this.#Pool.pop() ?? new _AnsiHtmlConverter();
+      instance.#resetForInput(input);
+      return instance;
+    }
+    /** Return a used instance back into the pool (bounded). */
+    static #release(instance) {
+      if (this.#Pool.length < this.#POOL_SIZE_LIMIT) {
+        this.#Pool.push(instance);
+      }
+    }
+    /** Public entry point: convert ANSI encoded text into HTML (single pass, pooled). */
+    static convert(input) {
+      const instance = this.#acquire(input);
+      try {
+        instance.#process();
+        return instance.#htmlOutput;
+      } finally {
+        this.#release(instance);
+      }
+    }
+    /** Prepare internal state for a fresh parse. */
+    #resetForInput(input) {
+      this.#input = input;
+      this.#htmlOutput = "";
+      this.#lastProcessedIndex = 0;
+      this.#resetStyles();
+      _AnsiHtmlConverter.#SgrSequencePattern.lastIndex = 0;
+    }
+    /** Main processing loop: walk all SGR sequences and emit transformed HTML. */
+    #process() {
+      let ansiMatch;
+      while ((ansiMatch = _AnsiHtmlConverter.#SgrSequencePattern.exec(this.#input)) !== null) {
+        this.#emitPlainTextSegment(ansiMatch.index);
+        this.#applyRawCodeSequence(ansiMatch[1]);
+        this.#lastProcessedIndex = _AnsiHtmlConverter.#SgrSequencePattern.lastIndex;
+      }
+      this.#emitPlainTextSegment(this.#input.length);
+    }
+    /** Emit plain (non-ANSI) text between the previous index and the supplied stop. */
+    #emitPlainTextSegment(stopExclusive) {
+      if (this.#lastProcessedIndex >= stopExclusive) return;
+      const rawChunk = this.#input.substring(
+        this.#lastProcessedIndex,
+        stopExclusive
+      );
+      if (!rawChunk) return;
+      if (!rawChunk.includes("\n")) {
+        const escapedSingle = escapeHtml(rawChunk);
+        this.#htmlOutput += this.#wrapIfStyled(escapedSingle);
+        return;
+      }
+      let segmentStart = 0;
+      for (let scanIndex = 0; scanIndex <= rawChunk.length; scanIndex++) {
+        const isEnd = scanIndex === rawChunk.length;
+        const isNewline = !isEnd && rawChunk.charCodeAt(scanIndex) === 10;
+        if (isNewline || isEnd) {
+          if (scanIndex > segmentStart) {
+            const sub = rawChunk.substring(segmentStart, scanIndex);
+            this.#htmlOutput += this.#wrapIfStyled(escapeHtml(sub));
+          }
+          if (isNewline) this.#htmlOutput += _AnsiHtmlConverter.#HtmlNewline;
+          segmentStart = scanIndex + 1;
+        }
+      }
+    }
+    /** Apply a raw parameter string (could be empty meaning reset) to update style state. */
+    #applyRawCodeSequence(rawCodes) {
+      if (rawCodes === "") {
+        this.#resetStyles();
+        return;
+      }
+      let accumulator = "";
+      let parsedCount = 0;
+      for (let charIndex = 0; charIndex < rawCodes.length; charIndex++) {
+        const character = rawCodes[charIndex];
+        if (character === ";") {
+          if (accumulator) {
+            this.#parsedCodes[parsedCount++] = parseInt(accumulator, 10);
+            accumulator = "";
+          }
+        } else {
+          accumulator += character;
+        }
+      }
+      if (accumulator)
+        this.#parsedCodes[parsedCount++] = parseInt(accumulator, 10);
+      this.#applyParsedCodes(parsedCount);
+      this.#rebuildStyleSpanStart();
+    }
+    /** Apply parsed numeric codes currently buffered in #parsedCodes (length = count). */
+    #applyParsedCodes(parsedCount) {
+      for (let codeIndex = 0; codeIndex < parsedCount; codeIndex++) {
+        const ansiCode = this.#parsedCodes[codeIndex];
+        switch (true) {
+          case ansiCode === SGR_RESET: {
+            this.#resetStyles();
+            break;
+          }
+          case ansiCode === SGR_BOLD: {
+            this.#currentFontWeight = FONT_WEIGHT_BOLD;
+            this.#hasActiveStyle = true;
+            break;
+          }
+          case ansiCode === SGR_BOLD_OFF: {
+            this.#currentFontWeight = void 0;
+            this.#hasActiveStyle = Boolean(
+              this.#currentColor || this.#currentBackground || this.#currentFontWeight
+            );
+            break;
+          }
+          case (ansiCode === SGR_FG_EXTENDED && this.#parsedCodes[codeIndex + 1] === 5): {
+            const paletteIndex = this.#parsedCodes[codeIndex + 2];
+            if (paletteIndex != null) {
+              const mapped = ANSI_256_MAP[paletteIndex];
+              if (mapped) {
+                this.#currentColor = mapped;
+                this.#hasActiveStyle = true;
+              }
+            }
+            codeIndex += 2;
+            break;
+          }
+          case (ansiCode === SGR_BG_EXTENDED && this.#parsedCodes[codeIndex + 1] === 5): {
+            const paletteIndex = this.#parsedCodes[codeIndex + 2];
+            if (paletteIndex != null) {
+              const mapped = ANSI_256_MAP[paletteIndex];
+              if (mapped) {
+                this.#currentBackground = mapped;
+                this.#hasActiveStyle = true;
+              }
+            }
+            codeIndex += 2;
+            break;
+          }
+          case (ansiCode >= 30 && ansiCode <= 37): {
+            this.#currentColor = BASIC_FG_COLORS[ansiCode - 30];
+            this.#hasActiveStyle = true;
+            break;
+          }
+          case (ansiCode >= 90 && ansiCode <= 97): {
+            this.#currentColor = BRIGHT_FG_COLORS[ansiCode - 90];
+            this.#hasActiveStyle = true;
+            break;
+          }
+          case ansiCode === SGR_FG_DEFAULT: {
+            this.#currentColor = void 0;
+            this.#hasActiveStyle = Boolean(
+              this.#currentBackground || this.#currentFontWeight
+            );
+            break;
+          }
+          case ansiCode === SGR_BG_DEFAULT: {
+            this.#currentBackground = void 0;
+            this.#hasActiveStyle = Boolean(
+              this.#currentColor || this.#currentFontWeight
+            );
+            break;
+          }
+          default: {
+          }
+        }
+      }
+    }
+    /** Reset style-related state to defaults (SGR 0 or empty parameter list). */
+    #resetStyles() {
+      this.#currentColor = this.#currentBackground = this.#currentFontWeight = void 0;
+      this.#hasActiveStyle = false;
+      this.#currentStyleSpanStart = "";
+    }
+    /** Rebuild the opening span tag (if any style active) using deterministic property ordering. */
+    #rebuildStyleSpanStart() {
+      if (!this.#hasActiveStyle) {
+        this.#currentStyleSpanStart = "";
+        return;
+      }
+      const signatureColor = this.#currentColor ?? "";
+      const signatureBg = this.#currentBackground ?? "";
+      const signatureWeight = this.#currentFontWeight ?? "";
+      const signature = `${signatureColor}|${signatureBg}|${signatureWeight}`;
+      const cached = _AnsiHtmlConverter.#StyleCache.get(signature);
+      if (cached) {
+        this.#currentStyleSpanStart = cached;
+        return;
+      }
+      const styleFragments = [];
+      if (signatureColor) styleFragments.push(`color: ${signatureColor}`);
+      if (signatureBg) styleFragments.push(`background: ${signatureBg}`);
+      if (signatureWeight) styleFragments.push(`font-weight: ${signatureWeight}`);
+      const built = styleFragments.length ? `<span style="${styleFragments.join(";")}">` : "";
+      _AnsiHtmlConverter.#StyleCache.set(signature, built);
+      this.#currentStyleSpanStart = built;
+    }
+    /** Wrap a text segment with current style if active. */
+    #wrapIfStyled(text) {
+      return this.#currentStyleSpanStart ? `${this.#currentStyleSpanStart}${text}</span>` : text;
+    }
+    /** Convert ANSI-coded text to HTML (newlines already streamed into `<br/>`). */
+    static formatWithNewlines(input) {
+      return this.convert(input);
+    }
+  };
+  function createBrowserLogger(container) {
+    return (...args) => {
+      const logPreElement = ensurePre(container);
+      let logOptions = void 0;
+      if (args.length) {
+        const lastArgument = MazeUtils.safeLast(args);
+        if (lastArgument && typeof lastArgument === "object" && "prepend" in lastArgument) {
+          logOptions = lastArgument;
+          args.pop();
+        }
+      }
+      let combinedText = "";
+      for (let argumentIndex = 0; argumentIndex < args.length; argumentIndex++) {
+        if (argumentIndex) combinedText += " ";
+        const argumentValue = args[argumentIndex];
+        combinedText += typeof argumentValue === "string" ? argumentValue : JSON.stringify(argumentValue);
+      }
+      if (!logPreElement) return;
+      const html = AnsiHtmlConverter.formatWithNewlines(combinedText) + "<br/>";
+      if (logOptions && logOptions.prepend) {
+        logPreElement.insertAdjacentHTML("afterbegin", html);
+        logPreElement.scrollTop = 0;
+      } else {
+        logPreElement.insertAdjacentHTML("beforeend", html);
+        logPreElement.scrollTop = logPreElement.scrollHeight;
+      }
+    };
+  }
 
   // test/examples/asciiMaze/colors.ts
   var colors = {
@@ -14544,6 +14117,30 @@
 
   // test/examples/asciiMaze/networkVisualization.ts
   var NetworkVisualization = class _NetworkVisualization {
+    // Internal layout constants (private)
+    static #ARROW = "  \u2500\u2500\u25B6  ";
+    static #ARROW_WIDTH = _NetworkVisualization.#ARROW.length;
+    static #TOTAL_WIDTH = 150;
+    // Overall visualization width
+    /** Activation range buckets (ordered, positive to negative). */
+    static #ACTIVATION_RANGES = [
+      { min: 2, max: Infinity, label: "v-high+" },
+      { min: 1, max: 2, label: "high+" },
+      { min: 0.5, max: 1, label: "mid+" },
+      { min: 0.1, max: 0.5, label: "low+" },
+      { min: -0.1, max: 0.1, label: "zero\xB1" },
+      { min: -0.5, max: -0.1, label: "low-" },
+      { min: -1, max: -0.5, label: "mid-" },
+      { min: -2, max: -1, label: "high-" },
+      { min: -Infinity, max: -2, label: "v-high-" }
+    ];
+    /** Scratch array for connection counts (reused / grown). @remarks Non-reentrant. */
+    static #ConnectionCountsScratch = new Int32Array(16);
+    static #ConnectionCountsLen = 0;
+    /** Scratch list for building output rows before join. @remarks Non-reentrant. */
+    static #ScratchRows = [];
+    /** Scratch list for header construction. */
+    static #ScratchHeaderParts = [];
     /**
      * Pads a string to a specific width with alignment options.
      *
@@ -14571,7 +14168,7 @@
      * @param node - Neural network node object.
      * @returns Cleaned and normalized activation value.
      */
-    static getNodeValue(node) {
+    static #getNodeValue(node) {
       if (typeof node.activation === "number" && isFinite(node.activation) && !isNaN(node.activation)) {
         if (node.type === "output") {
           return Math.max(0, Math.min(1, node.activation));
@@ -14587,7 +14184,7 @@
      * @param value - Activation value to colorize.
      * @returns ANSI color code for the value.
      */
-    static getActivationColor(value) {
+    static #getActivationColor(value) {
       if (value >= 2) return colors.bgOrangeNeon + colors.bright;
       if (value >= 1) return colors.orangeNeon;
       if (value >= 0.5) return colors.cyanNeon;
@@ -14604,12 +14201,22 @@
      * @param v - Numeric value to format.
      * @returns Colorized string representation of the value.
      */
-    static fmtColoredValue(v) {
+    static #fmtColoredValue(v) {
       if (typeof v !== "number" || isNaN(v) || !isFinite(v)) return " 0.000";
-      const color = _NetworkVisualization.getActivationColor(v);
+      const color = this.#getActivationColor(v);
       let formattedValue;
       formattedValue = (v >= 0 ? " " : "") + v.toFixed(6);
       return color + formattedValue + colors.reset;
+    }
+    /**
+     * Format a node display with a colored symbol and its colored numeric value.
+     * `extra` can include any trailing text (already colorized) and may include a leading space.
+     */
+    static #formatNode(symbolColor, symbol, node, extra) {
+      const value = _NetworkVisualization.#getNodeValue(node);
+      const fmt = _NetworkVisualization.#fmtColoredValue(value);
+      const sym = `${symbolColor}${symbol}${colors.reset}`;
+      return `${sym}${fmt}${extra ?? ""}`;
     }
     /**
      * Groups hidden nodes into layers based on their connections.
@@ -14619,7 +14226,7 @@
      * @param outputNodes - Array of output nodes.
      * @returns Array of hidden node arrays, each representing a layer.
      */
-    static groupHiddenByLayer(inputNodes, hiddenNodes, outputNodes) {
+    static #groupHiddenByLayer(inputNodes, hiddenNodes, outputNodes) {
       if (hiddenNodes.length === 0) return [];
       let layers = [];
       let prevLayer = inputNodes;
@@ -14645,24 +14252,13 @@
      * @param nodes - Array of neural network nodes to group.
      * @returns Object containing groups of nodes and corresponding labels.
      */
-    static groupNodesByActivation(nodes) {
+    static #groupNodesByActivation(nodes) {
       const activations = nodes.map(
-        (node) => _NetworkVisualization.getNodeValue(node)
+        (node) => _NetworkVisualization.#getNodeValue(node)
       );
-      const ranges = [
-        { min: 2, max: Infinity, label: "v-high+" },
-        { min: 1, max: 2, label: "high+" },
-        { min: 0.5, max: 1, label: "mid+" },
-        { min: 0.1, max: 0.5, label: "low+" },
-        { min: -0.1, max: 0.1, label: "zero\xB1" },
-        { min: -0.5, max: -0.1, label: "low-" },
-        { min: -1, max: -0.5, label: "mid-" },
-        { min: -2, max: -1, label: "high-" },
-        { min: -Infinity, max: -2, label: "v-high-" }
-      ];
       const groups = [];
       const labels = [];
-      for (const range of ranges) {
+      for (const range of _NetworkVisualization.#ACTIVATION_RANGES) {
         const nodesInRange = nodes.filter(
           (_, i) => activations[i] >= range.min && activations[i] < range.max
         );
@@ -14681,7 +14277,7 @@
      * @param maxVisiblePerLayer - Maximum number of nodes to display per layer.
      * @returns Object containing display-ready layers and metrics.
      */
-    static prepareHiddenLayersForDisplay(hiddenLayers, maxVisiblePerLayer = 10) {
+    static #prepareHiddenLayersForDisplay(hiddenLayers, maxVisiblePerLayer = 10) {
       const MAX_VISIBLE = maxVisiblePerLayer;
       const averageNodes = {};
       const displayLayers = [];
@@ -14691,73 +14287,122 @@
           displayLayers.push([...layer]);
           layerDisplayCounts.push(layer.length);
         } else {
-          const { groups, labels } = _NetworkVisualization.groupNodesByActivation(
-            layer
-          );
-          let finalGroups = groups;
-          let finalLabels = labels;
-          if (groups.length > MAX_VISIBLE) {
-            const rankedGroups = groups.map((g, i) => ({
-              group: g,
-              label: labels[i],
-              size: g.length
-            })).sort((a, b) => b.size - a.size);
-            const topGroups = rankedGroups.slice(0, MAX_VISIBLE - 1);
-            const remainingGroups = rankedGroups.slice(MAX_VISIBLE - 1);
-            const mergedGroup = remainingGroups.reduce(
-              (acc, curr) => {
-                acc.group = [...acc.group, ...curr.group];
-                return acc;
-              },
-              { group: [], label: "other\xB1", size: 0 }
-            );
-            if (mergedGroup.group.length > 0) {
-              topGroups.push(mergedGroup);
-            }
-            topGroups.sort((a, b) => {
-              const aIsNegative = a.label.includes("-");
-              const bIsNegative = b.label.includes("-");
-              if (aIsNegative && !bIsNegative) return 1;
-              if (!aIsNegative && bIsNegative) return -1;
-              if (a.label.includes("v-") && !b.label.includes("v-"))
-                return aIsNegative ? 1 : -1;
-              if (!a.label.includes("v-") && b.label.includes("v-"))
-                return aIsNegative ? -1 : 1;
-              if (a.label.includes("high") && !b.label.includes("high"))
-                return aIsNegative ? 1 : -1;
-              if (!a.label.includes("high") && b.label.includes("high"))
-                return aIsNegative ? -1 : 1;
-              return 0;
-            });
-            finalGroups = topGroups.map((g) => g.group);
-            finalLabels = topGroups.map((g) => g.label);
-          }
-          const avgNodes = finalGroups.map((group, groupIdx) => {
-            const avgKey = `layer${layerIdx}-avg-${groupIdx}`;
-            const sum = group.reduce(
-              (acc, node) => acc + _NetworkVisualization.getNodeValue(node),
-              0
-            );
-            const avgValue = group.length > 0 ? sum / group.length : 0;
-            averageNodes[avgKey] = {
-              avgValue,
-              count: group.length
-            };
-            return {
-              id: -1 * (layerIdx * 1e3 + groupIdx),
-              uuid: avgKey,
-              type: "hidden",
-              activation: avgValue,
-              isAverage: true,
-              avgCount: group.length,
-              label: finalLabels[groupIdx]
-            };
+          const {
+            avgNodes,
+            count
+          } = _NetworkVisualization.#createAverageNodesForLargeLayer({
+            layer,
+            layerIndex: layerIdx,
+            maxVisible: MAX_VISIBLE,
+            averageNodesStore: averageNodes
           });
           displayLayers.push(avgNodes);
-          layerDisplayCounts.push(avgNodes.length);
+          layerDisplayCounts.push(count);
         }
       });
       return { displayLayers, layerDisplayCounts, averageNodes };
+    }
+    /**
+     * Create average nodes representation for a large hidden layer.
+     * Decomposed from #prepareHiddenLayersForDisplay for clarity.
+     */
+    static #createAverageNodesForLargeLayer(params) {
+      const { layer, layerIndex, maxVisible, averageNodesStore } = params;
+      const { groups, labels } = _NetworkVisualization.#groupNodesByActivation(
+        layer
+      );
+      const { finalGroups, finalLabels } = groups.length > maxVisible ? _NetworkVisualization.#rankMergeAndOrderGroups({
+        groups,
+        labels,
+        maxVisible
+      }) : { finalGroups: groups, finalLabels: labels };
+      const averageNodes = finalGroups.map(
+        (group, groupIndex) => _NetworkVisualization.#buildAverageNode({
+          group,
+          groupIndex,
+          layerIndex,
+          label: finalLabels[groupIndex],
+          averageNodesStore
+        })
+      );
+      return { avgNodes: averageNodes, count: averageNodes.length };
+    }
+    /** Build a single average node descriptor from a group. */
+    static #buildAverageNode(params) {
+      const { group, groupIndex, layerIndex, label, averageNodesStore } = params;
+      const avgKey = `layer${layerIndex}-avg-${groupIndex}`;
+      const sum = group.reduce(
+        (runningTotal, node) => runningTotal + _NetworkVisualization.#getNodeValue(node),
+        0
+      );
+      const avgValue = group.length ? sum / group.length : 0;
+      averageNodesStore[avgKey] = { avgValue, count: group.length };
+      return {
+        id: -1 * (layerIndex * 1e3 + groupIndex),
+        uuid: avgKey,
+        type: "hidden",
+        activation: avgValue,
+        isAverage: true,
+        avgCount: group.length,
+        label
+      };
+    }
+    /** Rank groups by size, merge overflow into one group, then order by activation semantics. */
+    static #rankMergeAndOrderGroups(params) {
+      const { groups, labels, maxVisible } = params;
+      const groupMeta = groups.map((group, index) => ({
+        group,
+        label: labels[index],
+        size: group.length
+      }));
+      const ranked = _NetworkVisualization.#safeToSorted(
+        groupMeta,
+        (a, b) => b.size - a.size
+      );
+      const cutPoint = Math.max(0, maxVisible - 1);
+      const top = ranked.slice(0, cutPoint);
+      const remainder = ranked.slice(cutPoint);
+      if (remainder.length)
+        top.push(_NetworkVisualization.#mergeOverflowGroups(remainder));
+      const ordered = _NetworkVisualization.#safeToSorted(
+        top,
+        _NetworkVisualization.#activationLabelComparator
+      );
+      return {
+        finalGroups: ordered.map((m) => m.group),
+        finalLabels: ordered.map((m) => m.label)
+      };
+    }
+    /** Merge overflow group metadata into a single synthetic bucket. */
+    static #mergeOverflowGroups(metadataList) {
+      return metadataList.reduce(
+        (acc, current) => {
+          acc.group.push(...current.group);
+          acc.size += current.size;
+          return acc;
+        },
+        { group: [], label: "other\xB1", size: 0 }
+      );
+    }
+    /** Safe wrapper around ES2023 Array.prototype.toSorted with graceful fallback. */
+    static #safeToSorted(array, compare) {
+      const anyArray = array;
+      if (typeof anyArray.toSorted === "function")
+        return anyArray.toSorted(compare);
+      return [...array].sort(compare);
+    }
+    /** Comparator for activation range label ordering (heuristic). */
+    static #activationLabelComparator(a, b) {
+      const aNeg = a.label.includes("-");
+      const bNeg = b.label.includes("-");
+      if (aNeg !== bNeg) return aNeg ? 1 : -1;
+      const veryA = a.label.startsWith("v-high");
+      const veryB = b.label.startsWith("v-high");
+      if (veryA !== veryB) return veryA ? -1 : 1;
+      const highA = a.label.includes("high");
+      const highB = b.label.includes("high");
+      if (highA !== highB) return highA ? -1 : 1;
+      return 0;
     }
     /**
      * Utility to create a visualization node from a neataptic node.
@@ -14766,7 +14411,7 @@
      * @param index - Index of the node in the network.
      * @returns Visualization node object.
      */
-    static toVisualizationNode(node, index) {
+    static #toVisualizationNode(node, index) {
       const id = typeof node.index === "number" ? node.index : index;
       return {
         id,
@@ -14776,111 +14421,274 @@
         bias: node.bias
       };
     }
-    /**
-     * Visualizes a neural network's structure and activations in ASCII format.
-     *
-     * Creates a comprehensive terminal-friendly visualization showing:
-     * - Network architecture with layers
-     * - Node activation values with color coding
-     * - Connection counts between layers
-     * - Condensed representation of large hidden layers
-     *
-     * @param network - The neural network to visualize.
-     * @returns String containing the ASCII visualization.
-     */
-    static visualizeNetworkSummary(network) {
-      const ARROW = "  \u2500\u2500\u25B6  ";
-      const ARROW_WIDTH = ARROW.length;
-      const TOTAL_WIDTH = 150;
-      const detectedInputNodes = (network.nodes || []).filter(
-        (n) => n.type === "input" || n.type === "constant"
-      );
-      const INPUT_COUNT = detectedInputNodes.length || 18;
-      const OUTPUT_COUNT = 4;
+    /** Categorize nodes in a single pass (avoids 3 separate filter passes). */
+    static #categorizeNodes(network) {
+      const inputNodes = [];
+      const hiddenNodes = [];
+      const outputNodes = [];
       const nodes = network.nodes || [];
-      const inputNodes = nodes.filter((n) => n.type === "input" || n.type === "constant").map(_NetworkVisualization.toVisualizationNode);
-      const outputNodes = nodes.filter((n) => n.type === "output").map(_NetworkVisualization.toVisualizationNode);
-      const hiddenNodesRaw = nodes.filter((n) => n.type === "hidden").map(_NetworkVisualization.toVisualizationNode);
-      const hiddenLayers = _NetworkVisualization.groupHiddenByLayer(
+      for (let index = 0; index < nodes.length; index++) {
+        const node = nodes[index];
+        const viz = _NetworkVisualization.#toVisualizationNode(node, index);
+        switch (node.type) {
+          case "input":
+          case "constant":
+            inputNodes.push(viz);
+            break;
+          case "hidden":
+            hiddenNodes.push(viz);
+            break;
+          case "output":
+            outputNodes.push(viz);
+            break;
+          default:
+            break;
+        }
+      }
+      return {
         inputNodes,
-        hiddenNodesRaw,
-        outputNodes
-      );
+        hiddenNodes,
+        outputNodes,
+        inputCountDetected: inputNodes.length
+      };
+    }
+    /** Ensure connection-count scratch buffer is large enough. */
+    static #ensureConnectionScratch(required) {
+      if (_NetworkVisualization.#ConnectionCountsScratch.length < required) {
+        let newSize = _NetworkVisualization.#ConnectionCountsScratch.length;
+        while (newSize < required) newSize *= 2;
+        _NetworkVisualization.#ConnectionCountsScratch = new Int32Array(newSize);
+      }
+      return _NetworkVisualization.#ConnectionCountsScratch;
+    }
+    /** Compute connection counts between sequential layer boundaries. */
+    static #computeConnectionCounts(network, inputNodes, hiddenLayers, outputNodes) {
       const numHiddenLayers = hiddenLayers.length;
+      const arrows = numHiddenLayers > 0 ? numHiddenLayers + 1 : 1;
+      const scratch = _NetworkVisualization.#ensureConnectionScratch(arrows);
+      scratch.fill(0, 0, arrows);
+      _NetworkVisualization.#ConnectionCountsLen = arrows;
+      const inputIdSet = new Set(inputNodes.map((n) => Number(n.id)));
+      const outputIdSet = new Set(outputNodes.map((n) => Number(n.id)));
+      const hiddenSets = hiddenLayers.map(
+        (layer) => new Set(layer.map((n) => Number(n.id)))
+      );
+      const connections = network.connections || [];
+      for (let ci = 0; ci < connections.length; ci++) {
+        const conn = connections[ci];
+        const fromIdx = Number(conn.from?.index ?? -1);
+        const toIdx = Number(conn.to?.index ?? -1);
+        if (inputIdSet.has(fromIdx)) {
+          if (hiddenSets[0] && hiddenSets[0].has(toIdx)) scratch[0]++;
+          else if (hiddenSets.length === 0 && outputIdSet.has(toIdx))
+            scratch[0]++;
+          continue;
+        }
+        for (let h = 0; h < hiddenSets.length; h++) {
+          const fromSet = hiddenSets[h];
+          if (!fromSet.has(fromIdx)) continue;
+          const lastHidden = h === hiddenSets.length - 1;
+          if (!lastHidden) {
+            const toSet = hiddenSets[h + 1];
+            if (toSet.has(toIdx)) {
+              scratch[1 + h]++;
+              break;
+            }
+          } else {
+            if (outputIdSet.has(toIdx)) {
+              scratch[hiddenSets.length]++;
+              break;
+            }
+          }
+        }
+      }
+      return scratch;
+    }
+    /** Build header string. */
+    static #buildHeader(inputCount, hiddenLayers, outputCount, connectionCounts) {
+      const numHiddenLayers = hiddenLayers.length;
+      const { columnWidth } = _NetworkVisualization.#computeLayout(
+        numHiddenLayers
+      );
+      const parts = _NetworkVisualization.#ScratchHeaderParts;
+      parts.length = 0;
+      parts.push(
+        _NetworkVisualization.#buildHeaderSegment({
+          prefix: `${colors.blueCore}\u2551`,
+          label: `${colors.neonGreen}Input Layer [${inputCount}]${colors.reset}`,
+          width: columnWidth - 1
+        })
+      );
+      parts.push(
+        _NetworkVisualization.#formatHeaderArrow(connectionCounts[0] ?? 0)
+      );
+      for (let hiddenLayerIndex = 0; hiddenLayerIndex < numHiddenLayers; hiddenLayerIndex++) {
+        parts.push(
+          _NetworkVisualization.pad(
+            `${colors.cyanNeon}Hidden ${hiddenLayerIndex + 1} [${hiddenLayers[hiddenLayerIndex].length}]${colors.reset}`,
+            columnWidth
+          )
+        );
+        parts.push(
+          _NetworkVisualization.#formatHeaderArrow(
+            connectionCounts[hiddenLayerIndex + 1] || 0
+          )
+        );
+      }
+      parts.push(
+        _NetworkVisualization.pad(
+          `${colors.orangeNeon}Output Layer [${outputCount}]${colors.reset}`,
+          columnWidth,
+          " ",
+          "center"
+        ) + `${colors.blueCore}\u2551${colors.reset}`
+      );
+      return parts.join("");
+    }
+    /** Build a single header segment with optional prefix. */
+    static #buildHeaderSegment(params) {
+      const { prefix = "", label, width } = params;
+      return prefix + _NetworkVisualization.pad(label, width, " ", "center");
+    }
+    /** Format a header arrow segment including connection count label. */
+    static #formatHeaderArrow(connectionCount) {
+      const text = `${colors.blueNeon}${connectionCount} ${_NetworkVisualization.#ARROW.trim()}${colors.reset}`;
+      return _NetworkVisualization.pad(text, _NetworkVisualization.#ARROW_WIDTH);
+    }
+    /** Build legend footer lines. */
+    static #buildLegend() {
+      return [
+        // Spacer
+        `${colors.blueCore}\u2551       ${_NetworkVisualization.pad(" ", 140)} \u2551${colors.reset}`,
+        `${colors.blueCore}\u2551       ${_NetworkVisualization.pad(
+          "Arrows indicate feed-forward flow.",
+          140,
+          " ",
+          "left"
+        )} ${colors.blueCore}\u2551${colors.reset}`,
+        `${colors.blueCore}\u2551       ${_NetworkVisualization.pad(" ", 140)} \u2551${colors.reset}`,
+        `${colors.blueCore}\u2551       ${_NetworkVisualization.pad(
+          `${colors.whiteNeon}Legend:  ${colors.neonGreen}\u25CF${colors.reset}=Input                    ${colors.cyanNeon}\u25A0${colors.reset}=Hidden                    ${colors.orangeNeon}\u25B2${colors.reset}=Output`,
+          140,
+          " ",
+          "left"
+        )} ${colors.blueCore}\u2551${colors.reset}`,
+        `${colors.blueCore}\u2551       ${_NetworkVisualization.pad(
+          `${colors.whiteNeon}Groups:  ${colors.bgOrangeNeon}${colors.bright}v-high+${colors.reset}=Very high positive   ${colors.orangeNeon}high+${colors.reset}=High positive    ${colors.cyanNeon}mid+${colors.reset}=Medium positive    ${colors.neonGreen}low+${colors.reset}=Low positive`,
+          140,
+          " ",
+          "left"
+        )} ${colors.blueCore}\u2551${colors.reset}`,
+        `${colors.blueCore}\u2551       ${_NetworkVisualization.pad(
+          `${colors.whiteNeon}         zero\xB1${colors.reset}=Near zero`,
+          140,
+          " ",
+          "left"
+        )} ${colors.blueCore}\u2551${colors.reset}`,
+        `${colors.blueCore}\u2551       ${_NetworkVisualization.pad(
+          `         ${colors.bgBlueCore}${colors.bright}v-high-${colors.reset}=Very high negative   ${colors.blueNeon}${colors.bright}high-${colors.reset}=High negative    ${colors.blueCore}mid-${colors.reset}=Medium negative    ${colors.blue}low-${colors.reset}=Low negative`,
+          140,
+          " ",
+          "left"
+        )} ${colors.blueCore}\u2551${colors.reset}`
+      ];
+    }
+    /** Build row strings for body. */
+    static #buildRows(params, columnWidth) {
+      const context = _NetworkVisualization.#buildRowsInit(params);
       const {
+        maxRows,
+        rows,
+        inputDisplayNodes,
+        outputDisplayNodes,
+        numHiddenLayers,
+        inputCount,
+        outputCount,
+        inputNodes,
+        displayLayers,
+        connectionCounts
+      } = context;
+      for (let rowIndex = 0; rowIndex < maxRows; rowIndex++) {
+        let line = "";
+        line += _NetworkVisualization.#buildInputCell({
+          rowIndex,
+          inputCount,
+          columnWidth,
+          inputDisplayNodes
+        });
+        line += _NetworkVisualization.#buildFirstArrowCell({
+          rowIndex,
+          inputCount,
+          inputNodes,
+          displayLayers,
+          connectionCounts
+        });
+        for (let layerIndex = 0; layerIndex < numHiddenLayers; layerIndex++) {
+          line += _NetworkVisualization.#buildHiddenLayerCell({
+            rowIndex,
+            layerIndex,
+            columnWidth,
+            displayLayers
+          });
+          line += _NetworkVisualization.#buildInterLayerArrowCell({
+            rowIndex,
+            layerIndex,
+            numHiddenLayers,
+            displayLayers,
+            connectionCounts,
+            outputCount
+          });
+        }
+        line += _NetworkVisualization.#buildOutputCell({
+          rowIndex,
+          outputCount,
+          outputDisplayNodes,
+          columnWidth
+        });
+        rows.push(line);
+      }
+      return rows.slice();
+    }
+    /** Initialize reusable structures for row building. */
+    static #buildRowsInit(params) {
+      const {
+        inputCount,
+        outputCount,
+        inputNodes,
         displayLayers,
         layerDisplayCounts,
-        averageNodes
-      } = _NetworkVisualization.prepareHiddenLayersForDisplay(hiddenLayers);
-      const connections = (network.connections || []).map((conn) => ({
-        weight: conn.weight,
-        fromUUID: String(conn.from.index),
-        // Use .index directly as per INodeStruct
-        toUUID: String(conn.to.index),
-        // Use .index directly as per INodeStruct
-        gaterUUID: conn.gater ? String(conn.gater.index) : null,
-        // Use .index directly
-        enabled: typeof conn.enabled === "boolean" ? conn.enabled : true
-      }));
-      const connectionCounts = [];
-      let firstCount = 0;
-      const firstTargetLayer = hiddenLayers.length > 0 ? hiddenLayers[0] : outputNodes;
-      for (const conn of network.connections || []) {
-        if (inputNodes.some((n) => n.id === conn.from.index) && firstTargetLayer.some((n) => n.id === conn.to.index)) {
-          firstCount++;
-        }
-      }
-      connectionCounts.push(firstCount);
-      for (let i = 0; i < hiddenLayers.length - 1; i++) {
-        let count = 0;
-        for (const conn of network.connections || []) {
-          if (hiddenLayers[i].some((n) => n.id === conn.from.index) && hiddenLayers[i + 1].some((n) => n.id === conn.to.index)) {
-            count++;
-          }
-        }
-        connectionCounts.push(count);
-      }
-      if (hiddenLayers.length > 0) {
-        let lastCount = 0;
-        for (const conn of network.connections || []) {
-          if (hiddenLayers[hiddenLayers.length - 1].some(
-            (n) => n.id === conn.from.index
-          ) && outputNodes.some((n) => n.id === conn.to.index)) {
-            lastCount++;
-          }
-        }
-        connectionCounts.push(lastCount);
-      }
-      const numLayers = 2 + numHiddenLayers;
-      const numArrows = numLayers - 1;
-      const availableWidth = TOTAL_WIDTH - numArrows * ARROW_WIDTH;
-      const columnWidth = Math.floor(availableWidth / numLayers);
-      let header = "";
-      header += `${colors.blueCore}\u2551` + _NetworkVisualization.pad(
-        `${colors.neonGreen}Input Layer [${INPUT_COUNT}]${colors.reset}`,
-        columnWidth - 1
+        outputNodes,
+        connectionCounts
+      } = params;
+      const maxRows = Math.max(inputCount, ...layerDisplayCounts, outputCount);
+      const rows = _NetworkVisualization.#ScratchRows;
+      rows.length = 0;
+      const inputDisplayNodes = Array.from(
+        { length: inputCount },
+        (_, idx) => inputNodes[idx] || { activation: 0 }
       );
-      const firstConnCount = connectionCounts[0];
-      const firstArrowText = `${colors.blueNeon}${firstConnCount} ${ARROW.trim()}${colors.reset}`;
-      header += _NetworkVisualization.pad(firstArrowText, ARROW_WIDTH);
-      for (let i = 0; i < numHiddenLayers; i++) {
-        header += _NetworkVisualization.pad(
-          `${colors.cyanNeon}Hidden ${i + 1} [${hiddenLayers[i].length}]${colors.reset}`,
-          columnWidth
-        );
-        if (i < numHiddenLayers) {
-          const connCount = connectionCounts[i + 1] || 0;
-          const arrowText = `${colors.blueNeon}${connCount} ${ARROW.trim()}${colors.reset}`;
-          header += _NetworkVisualization.pad(arrowText, ARROW_WIDTH);
-        }
-      }
-      header += _NetworkVisualization.pad(
-        `${colors.orangeNeon}Output Layer [${OUTPUT_COUNT}]${colors.reset}`,
-        columnWidth,
-        " ",
-        "center"
-      ) + `${colors.blueCore}\u2551${colors.reset}`;
-      const inputDisplayNodes = Array(INPUT_COUNT).fill(null).map((_, i) => inputNodes[i] || { activation: 0 });
+      const outputDisplayNodes = Array.from(
+        { length: outputCount },
+        (_, idx) => outputNodes[idx] || { activation: 0 }
+      );
+      return {
+        maxRows,
+        rows,
+        inputDisplayNodes,
+        outputDisplayNodes,
+        numHiddenLayers: displayLayers.length,
+        inputCount,
+        outputCount,
+        inputNodes,
+        displayLayers,
+        connectionCounts
+      };
+    }
+    /** Build cell for an input row (including label). */
+    static #buildInputCell(params) {
+      const { rowIndex, inputCount, columnWidth, inputDisplayNodes } = params;
+      if (rowIndex >= inputCount)
+        return _NetworkVisualization.pad("", columnWidth);
       const INPUT_LABELS6 = [
         "compass",
         "openN",
@@ -14889,204 +14697,262 @@
         "openW",
         "progress"
       ];
-      const outputDisplayNodes = Array(OUTPUT_COUNT).fill(null).map((_, i) => outputNodes[i] || { activation: 0 });
-      const maxRows = Math.max(INPUT_COUNT, ...layerDisplayCounts, OUTPUT_COUNT);
-      const rows = [];
-      for (let rowIdx = 0; rowIdx < maxRows; rowIdx++) {
-        let row = "";
-        if (rowIdx < INPUT_COUNT) {
-          const node = inputDisplayNodes[rowIdx];
-          const value = _NetworkVisualization.getNodeValue(node);
-          const label = rowIdx < 6 ? INPUT_LABELS6[rowIdx] : "";
-          const labelStr = label ? ` ${colors.whiteNeon}${label}${colors.reset}` : "";
-          row += _NetworkVisualization.pad(
-            `${colors.blueCore}\u2551   ${colors.neonGreen}\u25CF${colors.reset}${_NetworkVisualization.fmtColoredValue(value)}${labelStr}`,
-            columnWidth,
-            " ",
-            "left"
-          );
-        } else {
-          row += _NetworkVisualization.pad("", columnWidth);
-        }
-        if (rowIdx === 0) {
-          const totalInputs = Math.min(INPUT_COUNT, inputNodes.length);
-          const firstHiddenTotal = displayLayers[0]?.length || 0;
-          if (totalInputs > 0 && firstHiddenTotal > 0) {
-            const nodeProportion = Math.ceil(
-              connectionCounts[0] / Math.max(1, totalInputs)
-            );
-            row += _NetworkVisualization.pad(
-              `${colors.blueNeon}${nodeProportion} \u2500\u2500\u25B6${colors.reset}`,
-              ARROW_WIDTH
-            );
-          } else {
-            row += _NetworkVisualization.pad(
-              `${colors.blueNeon}${ARROW}${colors.reset}`,
-              ARROW_WIDTH
-            );
-          }
-        } else if (rowIdx < INPUT_COUNT && rowIdx < displayLayers[0]?.length) {
-          const totalInputs = Math.min(INPUT_COUNT, inputNodes.length);
-          const firstHiddenTotal = displayLayers[0]?.length || 0;
-          if (totalInputs > 0 && firstHiddenTotal > 0) {
-            const nodeProportion = Math.ceil(
-              connectionCounts[0] / Math.max(3, totalInputs * 2)
-            );
-            row += _NetworkVisualization.pad(
-              `${colors.blueNeon}${nodeProportion} \u2500\u2500\u25B6${colors.reset}`,
-              ARROW_WIDTH
-            );
-          } else {
-            row += _NetworkVisualization.pad(
-              `${colors.blueNeon}${ARROW}${colors.reset}`,
-              ARROW_WIDTH
-            );
-          }
-        } else {
-          row += _NetworkVisualization.pad(
-            `${colors.blueNeon}${ARROW}${colors.reset}`,
-            ARROW_WIDTH
-          );
-        }
-        for (let layerIdx = 0; layerIdx < numHiddenLayers; layerIdx++) {
-          const layer = displayLayers[layerIdx];
-          if (rowIdx < layer.length) {
-            const node = layer[rowIdx];
-            if (node.isAverage) {
-              const labelText = node.label ? `${node.label} ` : "";
-              const avgText = `${colors.cyanNeon}\u25A0${colors.reset}${_NetworkVisualization.fmtColoredValue(node.activation)} ${colors.dim}(${labelText}avg of ${node.avgCount})${colors.reset}`;
-              row += _NetworkVisualization.pad(avgText, columnWidth, " ", "left");
-            } else {
-              const value = _NetworkVisualization.getNodeValue(node);
-              row += _NetworkVisualization.pad(
-                `${colors.cyanNeon}\u25A0${colors.reset}${_NetworkVisualization.fmtColoredValue(value)}`,
-                columnWidth,
-                " ",
-                "left"
-              );
-            }
-          } else {
-            row += _NetworkVisualization.pad(" ", columnWidth);
-          }
-          if (layerIdx < numHiddenLayers - 1) {
-            const connCount = connectionCounts[layerIdx + 1];
-            if (rowIdx === 0) {
-              const currentLayerSize = displayLayers[layerIdx]?.length || 1;
-              const nodeProportion = Math.ceil(
-                connCount / Math.max(3, currentLayerSize * 2)
-              );
-              row += _NetworkVisualization.pad(
-                `${colors.blueNeon}${nodeProportion} \u2500\u2500\u25B6${colors.reset}`,
-                ARROW_WIDTH
-              );
-            } else if (rowIdx < layer.length && rowIdx < displayLayers[layerIdx + 1]?.length) {
-              const currentLayerSize = displayLayers[layerIdx]?.length || 1;
-              const nextLayerSize = displayLayers[layerIdx + 1]?.length || 1;
-              const proportion = Math.max(
-                1,
-                Math.min(5, Math.ceil(connCount / Math.max(3, currentLayerSize)))
-              );
-              row += _NetworkVisualization.pad(
-                `${colors.blueNeon}${proportion} \u2500\u2500\u25B6${colors.reset}`,
-                ARROW_WIDTH
-              );
-            } else {
-              row += _NetworkVisualization.pad(
-                `${colors.blueNeon}${ARROW}${colors.reset}`,
-                ARROW_WIDTH
-              );
-            }
-          } else {
-            const connCount = connectionCounts[connectionCounts.length - 1];
-            if (rowIdx === 0) {
-              const lastLayerSize = displayLayers[displayLayers.length - 1]?.length || 1;
-              const nodeProportion = Math.ceil(
-                connCount / Math.max(3, lastLayerSize * 2)
-              );
-              row += _NetworkVisualization.pad(
-                `${colors.blueNeon}${nodeProportion} \u2500\u2500\u25B6${colors.reset}`,
-                ARROW_WIDTH
-              );
-            } else if (rowIdx < layer.length && rowIdx < OUTPUT_COUNT) {
-              const lastLayerSize = displayLayers[displayLayers.length - 1]?.length || 1;
-              const proportion = Math.max(
-                1,
-                Math.min(5, Math.ceil(connCount / Math.max(5, lastLayerSize * 2)))
-              );
-              row += _NetworkVisualization.pad(
-                `${colors.blueNeon}${proportion} \u2500\u2500\u25B6${colors.reset}`,
-                ARROW_WIDTH
-              );
-            } else {
-              row += _NetworkVisualization.pad(
-                `${colors.blueNeon}${ARROW}${colors.reset}`,
-                ARROW_WIDTH
-              );
-            }
-          }
-        }
-        if (rowIdx < OUTPUT_COUNT) {
-          const node = outputDisplayNodes[rowIdx];
-          const value = _NetworkVisualization.getNodeValue(node);
-          row += _NetworkVisualization.pad(
-            `${colors.orangeNeon}\u25B2${colors.reset}${_NetworkVisualization.fmtColoredValue(value)}`,
-            columnWidth,
-            " ",
-            "left"
-          ) + `${colors.blueCore}\u2551${colors.reset}`;
-        } else {
-          row += _NetworkVisualization.pad("", columnWidth);
-        }
-        rows.push(row);
+      const node = inputDisplayNodes[rowIndex];
+      const label = rowIndex < 6 ? INPUT_LABELS6[rowIndex] : "";
+      const labelStr = label ? ` ${colors.whiteNeon}${label}${colors.reset}` : "";
+      return _NetworkVisualization.pad(
+        `${colors.blueCore}\u2551   ${_NetworkVisualization.#formatNode(
+          colors.neonGreen,
+          "\u25CF",
+          node,
+          labelStr
+        )}`,
+        columnWidth,
+        " ",
+        "left"
+      );
+    }
+    /** Build arrow cell between input and first hidden layer. */
+    static #buildFirstArrowCell(params) {
+      const {
+        rowIndex,
+        inputCount,
+        inputNodes,
+        displayLayers,
+        connectionCounts
+      } = params;
+      const firstHiddenTotal = displayLayers[0]?.length || 0;
+      const totalInputs = Math.min(inputCount, inputNodes.length);
+      const base = `${colors.blueNeon}${_NetworkVisualization.#ARROW}${colors.reset}`;
+      if (rowIndex === 0 && totalInputs && firstHiddenTotal) {
+        const nodeProportion = Math.ceil(
+          (connectionCounts[0] || 0) / Math.max(1, totalInputs)
+        );
+        return _NetworkVisualization.pad(
+          `${colors.blueNeon}${nodeProportion} \u2500\u2500\u25B6${colors.reset}`,
+          _NetworkVisualization.#ARROW_WIDTH
+        );
       }
-      return [
-        header,
-        ...rows,
-        // Spacer row
-        `${colors.blueCore}\u2551       ${_NetworkVisualization.pad(" ", 140)} \u2551${colors.reset}`,
-        // Feed-forward flow explanation
-        `${colors.blueCore}\u2551       ${_NetworkVisualization.pad(
-          "Arrows indicate feed-forward flow.",
-          140,
+      if (rowIndex < inputCount && rowIndex < firstHiddenTotal && totalInputs && firstHiddenTotal) {
+        const nodeProportion = Math.ceil(
+          (connectionCounts[0] || 0) / Math.max(3, totalInputs * 2)
+        );
+        return _NetworkVisualization.pad(
+          `${colors.blueNeon}${nodeProportion} \u2500\u2500\u25B6${colors.reset}`,
+          _NetworkVisualization.#ARROW_WIDTH
+        );
+      }
+      return _NetworkVisualization.pad(base, _NetworkVisualization.#ARROW_WIDTH);
+    }
+    /** Build hidden layer node cell. */
+    static #buildHiddenLayerCell(params) {
+      const { rowIndex, layerIndex, columnWidth, displayLayers } = params;
+      const layer = displayLayers[layerIndex];
+      if (rowIndex >= layer.length)
+        return _NetworkVisualization.pad(" ", columnWidth);
+      const node = layer[rowIndex];
+      if (node.isAverage) {
+        const labelText = node.label ? `${node.label} ` : "";
+        const extra = ` ${colors.dim}(${labelText}avg of ${node.avgCount})${colors.reset}`;
+        return _NetworkVisualization.pad(
+          _NetworkVisualization.#formatNode(colors.cyanNeon, "\u25A0", node, extra),
+          columnWidth,
           " ",
           "left"
-        )} ${colors.blueCore}\u2551${colors.reset}`,
-        // Spacer row
-        `${colors.blueCore}\u2551       ${_NetworkVisualization.pad(" ", 140)} \u2551${colors.reset}`,
-        // Legend for node types
-        `${colors.blueCore}\u2551       ${_NetworkVisualization.pad(
-          `${colors.whiteNeon}Legend:  ${colors.neonGreen}\u25CF${colors.reset}=Input                    ${colors.cyanNeon}\u25A0${colors.reset}=Hidden                    ${colors.orangeNeon}\u25B2${colors.reset}=Output`,
-          140,
-          " ",
-          "left"
-        )} ${colors.blueCore}\u2551${colors.reset}`,
-        // Legend for activation groups
-        `${colors.blueCore}\u2551       ${_NetworkVisualization.pad(
-          `${colors.whiteNeon}Groups:  ${colors.bgOrangeNeon}${colors.bright}v-high+${colors.reset}=Very high positive   ${colors.orangeNeon}high+${colors.reset}=High positive    ${colors.cyanNeon}mid+${colors.reset}=Medium positive    ${colors.neonGreen}low+${colors.reset}=Low positive`,
-          140,
-          " ",
-          "left"
-        )} ${colors.blueCore}\u2551${colors.reset}`,
-        // Legend for near-zero group
-        `${colors.blueCore}\u2551       ${_NetworkVisualization.pad(
-          `${colors.whiteNeon}         zero\xB1${colors.reset}=Near zero`,
-          140,
-          " ",
-          "left"
-        )} ${colors.blueCore}\u2551${colors.reset}`,
-        // Legend for negative groups
-        `${colors.blueCore}\u2551       ${_NetworkVisualization.pad(
-          `         ${colors.bgBlueCore}${colors.bright}v-high-${colors.reset}=Very high negative   ${colors.blueNeon}${colors.bright}high-${colors.reset}=High negative    ${colors.blueCore}mid-${colors.reset}=Medium negative    ${colors.blue}low-${colors.reset}=Low negative`,
-          140,
-          " ",
-          "left"
-        )} ${colors.blueCore}\u2551${colors.reset}`
-      ].join("\n");
+        );
+      }
+      return _NetworkVisualization.pad(
+        _NetworkVisualization.#formatNode(colors.cyanNeon, "\u25A0", node),
+        columnWidth,
+        " ",
+        "left"
+      );
+    }
+    /** Build arrow cell either between hidden layers or from last hidden to outputs. */
+    static #buildInterLayerArrowCell(params) {
+      const {
+        rowIndex,
+        layerIndex,
+        numHiddenLayers,
+        displayLayers,
+        connectionCounts,
+        outputCount
+      } = params;
+      const layer = displayLayers[layerIndex];
+      const arrowPlaceholder = `${colors.blueNeon}${_NetworkVisualization.#ARROW}${colors.reset}`;
+      const isLast = layerIndex === numHiddenLayers - 1;
+      if (!isLast) {
+        const connCount = connectionCounts[layerIndex + 1] || 0;
+        if (rowIndex === 0) {
+          const currentLayerSize = layer.length || 1;
+          const nodeProportion = Math.ceil(
+            connCount / Math.max(3, currentLayerSize * 2)
+          );
+          return _NetworkVisualization.pad(
+            `${colors.blueNeon}${nodeProportion} \u2500\u2500\u25B6${colors.reset}`,
+            _NetworkVisualization.#ARROW_WIDTH
+          );
+        }
+        if (rowIndex < layer.length && rowIndex < (displayLayers[layerIndex + 1]?.length || 0)) {
+          const currentLayerSize = layer.length || 1;
+          const proportion = Math.max(
+            1,
+            Math.min(5, Math.ceil(connCount / Math.max(3, currentLayerSize)))
+          );
+          return _NetworkVisualization.pad(
+            `${colors.blueNeon}${proportion} \u2500\u2500\u25B6${colors.reset}`,
+            _NetworkVisualization.#ARROW_WIDTH
+          );
+        }
+        return _NetworkVisualization.pad(
+          arrowPlaceholder,
+          _NetworkVisualization.#ARROW_WIDTH
+        );
+      }
+      const lastConnCount = connectionCounts[numHiddenLayers] || 0;
+      if (rowIndex === 0) {
+        const lastLayerSize = layer.length || 1;
+        const nodeProportion = Math.ceil(
+          lastConnCount / Math.max(3, lastLayerSize * 2)
+        );
+        return _NetworkVisualization.pad(
+          `${colors.blueNeon}${nodeProportion} \u2500\u2500\u25B6${colors.reset}`,
+          _NetworkVisualization.#ARROW_WIDTH
+        );
+      }
+      if (rowIndex < layer.length && rowIndex < outputCount) {
+        const lastLayerSize = layer.length || 1;
+        const proportion = Math.max(
+          1,
+          Math.min(5, Math.ceil(lastConnCount / Math.max(5, lastLayerSize * 2)))
+        );
+        return _NetworkVisualization.pad(
+          `${colors.blueNeon}${proportion} \u2500\u2500\u25B6${colors.reset}`,
+          _NetworkVisualization.#ARROW_WIDTH
+        );
+      }
+      return _NetworkVisualization.pad(
+        arrowPlaceholder,
+        _NetworkVisualization.#ARROW_WIDTH
+      );
+    }
+    /** Build output layer cell. */
+    static #buildOutputCell(params) {
+      const { rowIndex, outputCount, outputDisplayNodes, columnWidth } = params;
+      if (rowIndex >= outputCount)
+        return _NetworkVisualization.pad("", columnWidth);
+      const node = outputDisplayNodes[rowIndex];
+      return _NetworkVisualization.pad(
+        _NetworkVisualization.#formatNode(colors.orangeNeon, "\u25B2", node),
+        columnWidth,
+        " ",
+        "left"
+      ) + `${colors.blueCore}\u2551${colors.reset}`;
+    }
+    /**
+     * Generate a multi-line, colorized ASCII summary of the provided neural network.
+     * The output includes:
+     * - Layer headers with node counts and approximate connection counts between layers.
+     * - Node activation values (numeric + color) for inputs, hidden (or averaged groups), and outputs.
+     * - Condensed legend explaining symbols and activation grouping ranges.
+     *
+     * Hidden layer condensation: For large hidden layers, nodes are grouped into activation buckets;
+     * each bucket is displayed as a single "average" virtual node whose value is the mean activation.
+     * Buckets beyond the configured visible limit are merged into an "other±" meta-group.
+     *
+     * Performance: Uses internal scratch buffers to minimize intermediate allocations. Sorting relies
+     * on ES2023 `toSorted` when available (with a stable fallback) ensuring deterministic grouping.
+     *
+     * @param network - The neural network (expects `nodes` and optional `connections`).
+     * @returns Formatted multi-line string ready for terminal output (ANSI colors included).
+     * @example
+     * ```ts
+     * import { NetworkVisualization } from './networkVisualization';
+     * const ascii = NetworkVisualization.visualizeNetworkSummary(myNetwork);
+     * console.log(ascii);
+     * ```
+     */
+    static visualizeNetworkSummary(network) {
+      const categorized = _NetworkVisualization.#categorizeNodes(network);
+      const INPUT_COUNT = categorized.inputCountDetected || 18;
+      const OUTPUT_COUNT = 4;
+      const hiddenLayers = _NetworkVisualization.#groupHiddenByLayer(
+        categorized.inputNodes,
+        categorized.hiddenNodes,
+        categorized.outputNodes
+      );
+      const prepared = _NetworkVisualization.#prepareHiddenLayersForDisplay(
+        hiddenLayers
+      );
+      const connectionCounts = _NetworkVisualization.#computeConnectionCounts(
+        network,
+        categorized.inputNodes,
+        hiddenLayers,
+        categorized.outputNodes
+      );
+      const { columnWidth } = _NetworkVisualization.#computeLayout(
+        hiddenLayers.length
+      );
+      const header = _NetworkVisualization.#buildHeader(
+        INPUT_COUNT,
+        hiddenLayers,
+        OUTPUT_COUNT,
+        connectionCounts
+      );
+      const rows = _NetworkVisualization.#buildRows(
+        {
+          inputCount: INPUT_COUNT,
+          outputCount: OUTPUT_COUNT,
+          inputNodes: categorized.inputNodes,
+          displayLayers: prepared.displayLayers,
+          layerDisplayCounts: prepared.layerDisplayCounts,
+          outputNodes: categorized.outputNodes,
+          connectionCounts
+        },
+        columnWidth
+      );
+      const legendLines = _NetworkVisualization.#buildLegend();
+      return [header, ...rows, ...legendLines].join("\n");
+    }
+    /** Compute layout derived widths for given hidden layer count. */
+    static #computeLayout(numHiddenLayers) {
+      const numLayers = 2 + numHiddenLayers;
+      const numArrows = numLayers - 1;
+      const availableWidth = _NetworkVisualization.#TOTAL_WIDTH - numArrows * _NetworkVisualization.#ARROW_WIDTH;
+      const columnWidth = Math.floor(availableWidth / numLayers);
+      return { columnWidth };
     }
   };
 
   // test/examples/asciiMaze/mazeVisualization.ts
-  var MazeVisualization = class {
+  var MazeVisualization = class _MazeVisualization {
+    // Shared set of wall characters (private implementation detail).
+    // Provide a public getter for backward compatibility.
+    static #WALL_CHARS = /* @__PURE__ */ new Set([
+      "#",
+      "\u2550",
+      "\u2551",
+      "\u2554",
+      "\u2557",
+      "\u255A",
+      "\u255D",
+      "\u2560",
+      "\u2563",
+      "\u2566",
+      "\u2569",
+      "\u256C"
+    ]);
+    static get WALL_CHARS() {
+      return _MazeVisualization.#WALL_CHARS;
+    }
+    /** Return the last element of an array or undefined when empty. */
+    static #last(arr) {
+      return MazeUtils.safeLast(arr);
+    }
+    /** Convert a [x,y] pair to the canonical 'x,y' key. */
+    static #posKey([x, y]) {
+      return `${x},${y}`;
+    }
     /**
      * Renders a single maze cell with proper coloring based on its content and agent location.
      *
@@ -15104,21 +14970,8 @@
      * @param path - Optional set of visited coordinates in "x,y" format
      * @returns Colorized string representing the cell
      */
-    static renderCell(cell, x, y, agentX, agentY, path2) {
-      const wallChars = /* @__PURE__ */ new Set([
-        "#",
-        "\u2550",
-        "\u2551",
-        "\u2554",
-        "\u2557",
-        "\u255A",
-        "\u255D",
-        "\u2560",
-        "\u2563",
-        "\u2566",
-        "\u2569",
-        "\u256C"
-      ]);
+    static renderCell(cell, x, y, agentX, agentY, path) {
+      const wallChars = _MazeVisualization.WALL_CHARS;
       if (x === agentX && y === agentY) {
         if (cell === "S")
           return `${colors.bgBlack}${colors.orangeNeon}S${colors.reset}`;
@@ -15126,24 +14979,19 @@
           return `${colors.bgBlack}${colors.orangeNeon}E${colors.reset}`;
         return `${colors.bgBlack}${colors.orangeNeon}A${colors.reset}`;
       }
-      switch (cell) {
-        case "S":
-          return `${colors.bgBlack}${colors.orangeNeon}S${colors.reset}`;
-        // Start position
-        case "E":
-          return `${colors.bgBlack}${colors.orangeNeon}E${colors.reset}`;
-        // Exit position - TRON orange
-        case ".":
-          if (path2 && path2.has(`${x},${y}`))
-            return `${colors.floorBg}${colors.orangeNeon}\u2022${colors.reset}`;
-          return `${colors.floorBg}${colors.gridLineText}.${colors.reset}`;
-        // Open path - dark floor with subtle grid
-        default:
-          if (wallChars.has(cell)) {
-            return `${colors.bgBlack}${colors.blueNeon}${cell}${colors.reset}`;
-          }
-          return cell;
+      if (cell === "S")
+        return `${colors.bgBlack}${colors.orangeNeon}S${colors.reset}`;
+      if (cell === "E")
+        return `${colors.bgBlack}${colors.orangeNeon}E${colors.reset}`;
+      if (cell === ".") {
+        if (path && path.has(`${x},${y}`))
+          return `${colors.floorBg}${colors.orangeNeon}\u2022${colors.reset}`;
+        return `${colors.floorBg}${colors.gridLineText}.${colors.reset}`;
       }
+      if (wallChars.has(cell)) {
+        return `${colors.bgBlack}${colors.blueNeon}${cell}${colors.reset}`;
+      }
+      return cell;
     }
     /**
      * Renders the entire maze as a colored ASCII string, showing the agent and its path.
@@ -15159,8 +15007,12 @@
      * @param path - Optional array of positions representing the agent's path
      * @returns A multi-line string with the visualized maze
      */
-    static visualizeMaze(asciiMaze, [agentX, agentY], path2) {
-      const visitedPositions = path2 ? new Set(path2.map((pos) => `${pos[0]},${pos[1]}`)) : void 0;
+    static visualizeMaze(asciiMaze, [agentX, agentY], path) {
+      let visitedPositions = void 0;
+      if (path) {
+        visitedPositions = /* @__PURE__ */ new Set();
+        for (const p of path) visitedPositions.add(_MazeVisualization.#posKey(p));
+      }
       return asciiMaze.map(
         (row, y) => [...row].map(
           (cell, x) => this.renderCell(cell, x, y, agentX, agentY, visitedPositions)
@@ -15361,9 +15213,10 @@
           )}${" ".repeat(RIGHT_PAD)}\u2551${colors.reset}`
         );
       } else {
+        const lastPos = _MazeVisualization.#last(result.path) ?? startPos;
         const bestProgress = MazeUtils.calculateProgress(
           MazeUtils.encodeMaze(maze),
-          result.path[result.path.length - 1],
+          lastPos,
           startPos,
           exitPos
         );
@@ -15463,168 +15316,797 @@
 
   // test/examples/asciiMaze/dashboardManager.ts
   var DashboardManager = class _DashboardManager {
-    // List of solved maze records (keeps full maze + solution for archival display)
-    solvedMazes = [];
-    // Set of maze keys we've already archived to avoid duplicate entries
-    solvedMazeKeys = /* @__PURE__ */ new Set();
-    // Currently evolving/best candidate for the active maze (live view)
-    currentBest = null;
-    // Functions supplied by the embedding environment. Keep dashboard I/O pluggable.
-    clearFunction;
-    logFunction;
-    archiveLogFunction;
-    // Telemetry and small history windows used for rendering trends/sparklines
-    _lastTelemetry = null;
-    _lastBestFitness = null;
-    _bestFitnessHistory = [];
-    _complexityNodesHistory = [];
-    _complexityConnsHistory = [];
-    _hypervolumeHistory = [];
-    _progressHistory = [];
-    _speciesCountHistory = [];
-    // Layout constants for the ASCII-art framed display
-    static FRAME_INNER_WIDTH = 148;
-    static LEFT_PADDING = 7;
-    static RIGHT_PADDING = 1;
-    static CONTENT_WIDTH = _DashboardManager.FRAME_INNER_WIDTH - _DashboardManager.LEFT_PADDING - _DashboardManager.RIGHT_PADDING;
-    static STAT_LABEL_WIDTH = 28;
-    static opennessLegend = "Openness: 1=best, (0,1)=longer improving, 0.001=only backtrack, 0=wall/dead/non-improving";
-    /**
-     * Construct a new DashboardManager
-     *
-     * @param clearFn - function that clears the "live" output area (no-op for archive)
-     * @param logFn - function that accepts strings to render the live dashboard
-     * @param archiveLogFn - optional function to which solved-maze archive blocks are appended
-     */
-    constructor(clearFn, logFn, archiveLogFn) {
-      this.clearFunction = clearFn;
-      this.logFunction = logFn;
-      this.archiveLogFunction = archiveLogFn;
+    #solvedMazes = [];
+    #solvedMazeKeys = /* @__PURE__ */ new Set();
+    #currentBest = null;
+    #lastTelemetry = null;
+    #lastBestFitness = null;
+    #bestFitnessHistory = [];
+    #complexityNodesHistory = [];
+    #complexityConnsHistory = [];
+    #hypervolumeHistory = [];
+    #progressHistory = [];
+    #speciesCountHistory = [];
+    #lastDetailedStats = null;
+    #runStartTs = null;
+    #perfStart = null;
+    #lastGeneration = null;
+    #lastUpdateTs = null;
+    #logFn;
+    #clearFn;
+    #archiveFn;
+    static #HISTORY_MAX = 500;
+    static #FRAME_INNER_WIDTH = 148;
+    static #LEFT_PADDING = 7;
+    static #RIGHT_PADDING = 1;
+    static #STAT_LABEL_WIDTH = 28;
+    static #ARCHIVE_SPARK_WIDTH = 64;
+    // spark width in archive blocks
+    static #GENERAL_SPARK_WIDTH = 64;
+    // spark width in live panel
+    static #SOLVED_LABEL_WIDTH = 22;
+    // label width in archive stats
+    static #HISTORY_EXPORT_WINDOW = 200;
+    // samples exported in telemetry details
+    static #SPARK_BLOCKS = Object.freeze([
+      "\u2581",
+      "\u2582",
+      "\u2583",
+      "\u2584",
+      "\u2585",
+      "\u2586",
+      "\u2587",
+      "\u2588"
+    ]);
+    static #DELTA_EPSILON = 1e-9;
+    static #TOP_OPERATOR_LIMIT = 6;
+    static #TOP_MUTATION_LIMIT = 8;
+    static #TOP_SPECIES_LIMIT = 5;
+    static #LAYER_INFER_LOOP_MULTIPLIER = 4;
+    static #LABEL_PATH_EFF = "Path efficiency";
+    static #LABEL_PATH_OVER = "Path overhead";
+    static #LABEL_UNIQUE = "Unique cells visited";
+    static #LABEL_REVISITS = "Cells revisited";
+    static #LABEL_STEPS = "Steps";
+    static #LABEL_FITNESS = "Fitness";
+    static #LABEL_ARCH = "Architecture";
+    static #FRAME_SINGLE_LINE_CHAR = "\u2550";
+    static #FRAME_BRIDGE_TOP = "\u2566\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2566";
+    static #FRAME_BRIDGE_BOTTOM = "\u2569\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2569";
+    static #EVOLVING_SECTION_LINE = "\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550";
+    static get FRAME_INNER_WIDTH() {
+      return _DashboardManager.#FRAME_INNER_WIDTH;
+    }
+    static get LEFT_PADDING() {
+      return _DashboardManager.#LEFT_PADDING;
+    }
+    static get RIGHT_PADDING() {
+      return _DashboardManager.#RIGHT_PADDING;
+    }
+    static get CONTENT_WIDTH() {
+      return _DashboardManager.#FRAME_INNER_WIDTH - _DashboardManager.#LEFT_PADDING - _DashboardManager.#RIGHT_PADDING;
+    }
+    static get STAT_LABEL_WIDTH() {
+      return _DashboardManager.#STAT_LABEL_WIDTH;
+    }
+    static get HISTORY_MAX() {
+      return _DashboardManager.#HISTORY_MAX;
     }
     /**
-     * formatStat
+     * Create a new DashboardManager.
      *
-     * Small helper that returns a prettified line containing a label and value
-     * with color codes applied. The resulting string fits into the dashboard
-     * content width and includes frame padding.
+     * @param clearFn Function that clears the live dashboard region (terminal or DOM). Required.
+     * @param logFn Function used for streaming live panel lines. Required.
+     * @param archiveFn Optional function used to prepend/append solved-maze archive blocks (separate area / element).
+     *
+     * Defensive notes:
+     * - Non-function arguments are coerced to no-ops to avoid runtime crashes in mixed environments (browser / node tests).
+     * - All three functions are stored as private fields (#clearFn, #logFn, #archiveFn) for later reuse.
      */
-    formatStat(label, value, colorLabel = colors.neonSilver, colorValue = colors.cyanNeon, labelWidth = _DashboardManager.STAT_LABEL_WIDTH) {
-      const lbl = label.endsWith(":") ? label : label + ":";
-      const paddedLabel = lbl.padEnd(labelWidth, " ");
-      const composed = `${colorLabel}${paddedLabel}${colorValue} ${value}${colors.reset}`;
-      return `${colors.blueCore}\u2551${" ".repeat(
-        _DashboardManager.LEFT_PADDING
-      )}${NetworkVisualization.pad(
-        composed,
+    constructor(clearFn, logFn, archiveFn) {
+      const noop = () => {
+      };
+      this.#clearFn = typeof clearFn === "function" ? clearFn : noop;
+      this.#logFn = typeof logFn === "function" ? logFn : noop;
+      this.#archiveFn = typeof archiveFn === "function" ? archiveFn : void 0;
+    }
+    /** Emit a blank padded line inside the frame to avoid duplication. */
+    #logBlank() {
+      this.#logFn(
+        `${colors.blueCore}\u2551${NetworkVisualization.pad(
+          " ",
+          _DashboardManager.FRAME_INNER_WIDTH,
+          " "
+        )}${colors.blueCore}\u2551${colors.reset}`
+      );
+    }
+    /**
+     * Format a single statistic line (label + value) framed for the dashboard.
+     *
+     * Educational goals:
+     * - Demonstrates consistent alignment via fixed label column width.
+     * - Centralizes color application so other helpers (`#appendSolvedPathStats`, etc.) remain lean.
+     * - Shows simple, allocation‑aware string building without external libs.
+     *
+     * Steps:
+     * 1. Canonicalize label (ensure trailing colon) for uniform appearance.
+     * 2. Pad label to `labelWidth` (left aligned) creating a fixed column.
+     * 3. Normalize the value to string (numbers preserved; null/undefined become literal strings for transparency).
+     * 4. Compose colored content segment (`label` + single space + `value`).
+     * 5. Left/right pad inside the frame content width and wrap with vertical border glyphs.
+     *
+     * Performance notes:
+     * - O(L) where L = composed string length; dominated by `padEnd` + `NetworkVisualization.pad`.
+     * - Avoids template churn inside loops by keeping construction linear.
+     * - No truncation: labels longer than `labelWidth` intentionally overflow to surface overly verbose labels during development.
+     *
+     * Determinism: Pure formatting; no external state or randomness.
+     * Reentrancy: Safe; relies only on parameters and static sizing constants.
+     * Edge cases: Empty label yields just a colon after canonicalization (":"); nullish values become "null" / "undefined" explicitly.
+     *
+     * @param label Descriptive metric label (colon appended if missing).
+     * @param value Metric value (string or number) displayed after a space.
+     * @param colorLabel ANSI / style token for the label portion.
+     * @param colorValue ANSI / style token for the value portion.
+     * @param labelWidth Fixed width for the label column (default derives from class constant).
+     * @returns Fully framed, colorized line ready for logging.
+     * @example
+     * const line = (dashboard as any)["#formatStat"]("Fitness", 12.34);
+     * // => "║  Fitness: 12.34  ... ║" (color codes omitted here)
+     */
+    #formatStat(label, value, colorLabel = colors.neonSilver, colorValue = colors.cyanNeon, labelWidth = _DashboardManager.#STAT_LABEL_WIDTH) {
+      const canonicalLabel = label.endsWith(":") ? label : `${label}:`;
+      const paddedLabel = canonicalLabel.padEnd(labelWidth, " ");
+      const valueString = typeof value === "number" ? `${value}` : String(value);
+      const coloredContent = `${colorLabel}${paddedLabel}${colorValue} ${valueString}${colors.reset}`;
+      const leftPadSpaces = " ".repeat(_DashboardManager.LEFT_PADDING);
+      const framed = `${colors.blueCore}\u2551${leftPadSpaces}${NetworkVisualization.pad(
+        coloredContent,
         _DashboardManager.CONTENT_WIDTH,
         " ",
         "left"
       )}${" ".repeat(_DashboardManager.RIGHT_PADDING)}${colors.blueCore}\u2551${colors.reset}`;
+      return framed;
     }
     /**
-     * buildSparkline
+     * Convert the tail of a numeric series into a compact Unicode sparkline.
      *
-     * Create a compact sparkline string (using block characters) from a numeric
-     * series. The series is normalized to the block range and trimmed to the
-     * requested width by taking the most recent values.
+     * Educational intent: illustrates how a simple per-frame trend visualization
+     * can be produced without external dependencies, while keeping allocation
+     * costs minimal for frequent refreshes (every generation / UI frame).
+     *
+     * Steps:
+     * 1. Slice the most recent `width` samples (via `MazeUtils.tail`) — bounded O(width).
+     * 2. Filter out non‑finite samples (defensive; telemetry may contain NaN during warmup).
+     * 3. Scan once to derive `minValue` / `maxValue` (range baseline).
+     * 4. Map each sample to an index in the precomputed block ramp (#SPARK_BLOCKS).
+     * 5. Append corresponding block characters into a single result string.
+     *
+     * Performance notes:
+     * - Single pass min/max + single pass mapping: O(n) with n = min(series.length, width).
+     * - No intermediate arrays beyond the tail slice (which reuses existing util) & final string builder.
+     * - Uses descriptive local names to keep code educational; hot path is still trivial compared to rendering.
+     * - Avoids `Math.min(...spread)` / `Array.prototype.map` to prevent temporary arrays & GC churn.
+     *
+     * Determinism: Pure function of input array slice (no randomness, no external state).
+     * Reentrancy: Safe; no shared mutable scratch used.
+     * Edge cases: Returns empty string for empty / all non‑finite input; collapses zero range to uniform block.
+     *
+     * @param series Numeric history (older -> newer) to visualize.
+     * @param width Maximum number of most recent samples to encode (default 32); values <= 0 produce ''.
+     * @returns Sparkline string (length <= width). Empty string when insufficient valid data.
+     * @example
+     * // Given recent fitness scores
+     * const spark = dashboardManager["#buildSparkline"]([10,11,11.5,12,13], 4); // -> e.g. "▃▄▆█"
      */
-    buildSparkline(data, width = 32) {
-      if (!data || !data.length) return "";
-      const blocks = ["\u2581", "\u2582", "\u2583", "\u2584", "\u2585", "\u2586", "\u2587", "\u2588"];
-      const slice = data.slice(-width);
-      const min = Math.min(...slice);
-      const max = Math.max(...slice);
-      const range = max - min || 1;
-      return slice.map((v) => {
-        const idx = Math.floor((v - min) / range * (blocks.length - 1));
-        return blocks[idx];
-      }).join("");
+    #buildSparkline(series, width = 32) {
+      if (!Array.isArray(series) || !series.length || width <= 0) return "";
+      const tailSlice = MazeUtils.tail(series, width);
+      const sampleCount = tailSlice.length;
+      if (!sampleCount) return "";
+      let writeIndex = 0;
+      for (let readIndex = 0; readIndex < sampleCount; readIndex++) {
+        const sampleValue = tailSlice[readIndex];
+        if (Number.isFinite(sampleValue)) {
+          tailSlice[writeIndex++] = sampleValue;
+        }
+      }
+      if (writeIndex === 0) return "";
+      let minValue = Infinity;
+      let maxValue = -Infinity;
+      for (let scanIndex = 0; scanIndex < writeIndex; scanIndex++) {
+        const value = tailSlice[scanIndex];
+        if (value < minValue) minValue = value;
+        if (value > maxValue) maxValue = value;
+      }
+      let valueRange = maxValue - minValue;
+      if (Math.abs(valueRange) < _DashboardManager.#DELTA_EPSILON) {
+        valueRange = _DashboardManager.#DELTA_EPSILON;
+      }
+      const blocks = _DashboardManager.#SPARK_BLOCKS;
+      const blocksCount = blocks.length - 1;
+      let sparkline = "";
+      for (let encodeIndex = 0; encodeIndex < writeIndex; encodeIndex++) {
+        const normalized = (tailSlice[encodeIndex] - minValue) / valueRange;
+        const blockIndex = Math.min(
+          blocksCount,
+          Math.max(0, Math.floor(normalized * blocksCount))
+        );
+        sparkline += blocks[blockIndex];
+      }
+      return sparkline;
     }
-    /**
-     * getMazeKey
-     *
-     * Create a lightweight key for a maze (used to dedupe solved mazes).
-     * The format is intentionally simple (concatenated rows) since the set
-     * is only used for equality checks within a single run.
-     */
-    getMazeKey(maze) {
+    /** Create a lightweight key for a maze (dedupe solved mazes). */
+    #getMazeKey(maze) {
       return maze.join("");
     }
-    /**
-     * appendSolvedToArchive
-     *
-     * When a maze is solved for the first time, format and append a boxed
-     * representation of the solved maze to the provided `archiveLogFunction`.
-     * The block includes a header, optional small trend sparklines, the
-     * centered maze drawing, and several efficiency stats derived from the path.
-     *
-     * This function is careful to be a no-op if no archive logger was provided
-     * during construction.
-     *
-     * @param solved - record containing maze, solution and generation
-     * @param displayNumber - 1-based ordinal for the solved maze in the archive
-     */
-    appendSolvedToArchive(solved, displayNumber) {
-      if (!this.archiveLogFunction) return;
-      const endPos = solved.result.path[solved.result.path.length - 1];
-      const solvedMazeVisualization = MazeVisualization.visualizeMaze(
-        solved.maze,
-        endPos,
-        solved.result.path
-      );
-      const solvedMazeLines = Array.isArray(solvedMazeVisualization) ? solvedMazeVisualization : solvedMazeVisualization.split("\n");
-      const centeredSolvedMaze = solvedMazeLines.map(
-        (line) => NetworkVisualization.pad(line, _DashboardManager.FRAME_INNER_WIDTH, " ")
-      ).join("\n");
-      const header = `${colors.blueCore}\u2560${NetworkVisualization.pad(
-        "\u2550".repeat(_DashboardManager.FRAME_INNER_WIDTH),
-        _DashboardManager.FRAME_INNER_WIDTH,
-        "\u2550"
-      )}\u2563${colors.reset}`;
-      const title = `${colors.blueCore}\u2551${NetworkVisualization.pad(
-        `${colors.orangeNeon} SOLVED #${displayNumber} (Gen ${solved.generation})${colors.reset}${colors.blueCore}`,
-        _DashboardManager.FRAME_INNER_WIDTH,
-        " "
-      )}\u2551${colors.reset}`;
-      const sep = `${colors.blueCore}\u2560${NetworkVisualization.pad(
-        "\u2500".repeat(_DashboardManager.FRAME_INNER_WIDTH),
-        _DashboardManager.FRAME_INNER_WIDTH,
-        "\u2500"
-      )}\u2563${colors.reset}`;
+    /** Wrapper to append solved archive block (public logic retained from original). */
+    #appendSolvedToArchive(solved, displayNumber) {
+      if (!this.#archiveFn) return;
       const blockLines = [];
-      blockLines.push(header);
-      blockLines.push(title);
-      blockLines.push(sep);
-      const solvedLabelWidth = 22;
-      const solvedStat = (label, value) => this.formatStat(
+      this.#appendSolvedHeader(blockLines, solved, displayNumber);
+      this.#appendSolvedSparklines(blockLines, solved.network);
+      this.#appendSolvedMaze(blockLines, solved);
+      this.#appendSolvedPathStats(blockLines, solved);
+      this.#appendSolvedFooterAndEmit(blockLines);
+    }
+    /**
+     * redraw
+     *
+     * Clear + repaint the live dashboard frame while updating rich stats snapshot.
+     *
+     * Steps (delegated to focused helpers for readability & GC awareness):
+     * 1. beginFrameRefresh: clear terminal region & print static frame header.
+     * 2. printCurrentBestSection: conditionally render evolving section (network, maze, stats, progress).
+     * 3. updateDetailedStatsSnapshot: build/export metrics & sparklines using scratch arrays (bounded histories).
+     * 4. Emit a spacer line to preserve the original layout rhythm.
+     *
+     * Performance considerations:
+     * - Reuses `#scratch` arrays to avoid per-frame allocations when deriving top lists.
+     * - Histories are already bounded (HISTORY_MAX) so sparkline work is O(width).
+     * - Early exit when no telemetry & no current best yet.
+     *
+     * Determinism: Purely formatting & aggregation (no randomness).
+     * Reentrancy: Not reentrant (mutates internal state and shared scratch buffers). One instance per run.
+     * @param currentMaze Maze currently being evolved.
+     * @param neat Optional NEAT implementation instance for population-level stats.
+     */
+    redraw(currentMaze, neat) {
+      this.#lastUpdateTs = globalThis.performance?.now?.() ?? Date.now();
+      this.#beginFrameRefresh();
+      if (this.#currentBest) this.#printCurrentBestSection(currentMaze);
+      this.#updateDetailedStatsSnapshot(neat);
+      this.#logBlank();
+    }
+    /** Shared scratch allocations reused across redraw cycles to reduce GC churn. */
+    #scratch = { scores: [], speciesSizes: [], operatorStats: [], mutationEntries: [] };
+    /** Clear & print static frame top. (Step 1 of redraw) */
+    #beginFrameRefresh() {
+      this.#clearFn();
+      this.#printTopFrame();
+    }
+    /**
+     * Build the rich detailed stats snapshot consumed by external telemetry observers.
+     *
+     * Educational overview:
+     * This method aggregates multiple orthogonal evolution signals (fitness trends, structural complexity,
+     * diversity, Pareto front geometry, operator acceptance, mutation frequencies, species distribution, etc.) into
+     * one immutable plain object assigned to `#lastDetailedStats`. It is invoked once per redraw cycle (not per
+     * individual genome evaluation) to amortize cost and keep UI refresh predictable.
+     *
+     * Steps (high‑level):
+     * 1. Guard: if we have neither telemetry nor a current best candidate, skip work (no data yet).
+     * 2. Destructure relevant sub-snapshots from the raw telemetry (complexity, perf, lineage, diversity, objectives...).
+     * 3. Derive population statistics via `#computePopulationStats` (mean/median/species/enabled ratio) and patch gaps
+     *    with the current best's fitness / species count as reasonable fallbacks for early generations.
+     * 4. Generate sparkline trend strings for tracked bounded histories (fitness, nodes, conns, hypervolume, progress, species).
+     * 5. Derive Pareto front size metrics & novelty archive size (defensive wrappers to tolerate optional APIs).
+     * 6. Compute operator acceptance, top mutation operator counts, and largest species sizes (scratch-buffer reuse inside helpers).
+     * 7. Compute best fitness delta (difference vs previous sample) for quick “is improving” signal.
+     * 8. Assemble and assign a consolidated snapshot object with timestamps & derived boolean flags (e.g. simplifyPhaseActive).
+     *
+     * Performance notes:
+     * - All history arrays are already bounded (HISTORY_MAX); sparkline generation is O(width) each.
+     * - Sorting work (operator / mutation / species) is limited to top-N extraction with small fixed caps (config constants).
+     * - Uses defensive optional chaining + nullish coalescing to avoid cascading throws; a single try/catch wraps overall build.
+     * - Allocations: one snapshot object + a handful of small arrays (top lists). Histories are sliced lazily via helper.
+     *
+     * Determinism: Pure aggregation of previously captured deterministic data. No RNG usage.
+     * Reentrancy: Not reentrant; mutates `#lastDetailedStats`. Acceptable because a single dashboard instance services one run.
+     * Failure handling: Any unexpected error aborts this build silently (stats are opportunistic, UI remains functional).
+     *
+     * @param neat Optional NEAT engine instance (used for population stats, operator stats, novelty archive size, species sizes).
+     */
+    #updateDetailedStatsSnapshot(neat) {
+      const telemetry = this.#lastTelemetry;
+      if (!telemetry && !this.#currentBest) return;
+      try {
+        const complexitySnapshot = telemetry?.complexity;
+        const perfSnapshot = telemetry?.perf;
+        const lineageSnapshot = telemetry?.lineage;
+        const diversitySnapshot = telemetry?.diversity;
+        const rawFrontsArray = Array.isArray(telemetry?.fronts) ? telemetry.fronts : null;
+        const objectivesSnapshot = telemetry?.objectives;
+        const hypervolumeValue = telemetry?.hyper;
+        const mutationStatsObj = telemetry?.mutationStats || telemetry?.mutation?.stats;
+        const bestFitnessValue = this.#currentBest?.result?.fitness;
+        const saturationFractionValue = this.#currentBest?.result?.saturationFraction;
+        const actionEntropyValue = this.#currentBest?.result?.actionEntropy;
+        const populationStats = this.#computePopulationStats(neat);
+        if (populationStats.mean == null && typeof bestFitnessValue === "number") {
+          populationStats.mean = +bestFitnessValue.toFixed(2);
+        }
+        if (populationStats.median == null && typeof bestFitnessValue === "number") {
+          populationStats.median = +bestFitnessValue.toFixed(2);
+        }
+        if (populationStats.speciesCount == null && typeof telemetry?.species === "number") {
+          populationStats.speciesCount = telemetry.species;
+        }
+        const sparkWidth = _DashboardManager.#GENERAL_SPARK_WIDTH;
+        const sparklines = {
+          fitness: this.#buildSparkline(this.#bestFitnessHistory, sparkWidth) || null,
+          nodes: this.#buildSparkline(this.#complexityNodesHistory, sparkWidth) || null,
+          conns: this.#buildSparkline(this.#complexityConnsHistory, sparkWidth) || null,
+          hyper: this.#buildSparkline(this.#hypervolumeHistory, sparkWidth) || null,
+          progress: this.#buildSparkline(this.#progressHistory, sparkWidth) || null,
+          species: this.#buildSparkline(this.#speciesCountHistory, sparkWidth) || null
+        };
+        const firstFrontSize = rawFrontsArray?.[0]?.length || 0;
+        const paretoFrontSizes = rawFrontsArray ? rawFrontsArray.map((front) => front?.length || 0) : null;
+        const noveltyArchiveSize = this.#safeInvoke(
+          () => neat?.getNoveltyArchiveSize ? neat.getNoveltyArchiveSize() : null,
+          null
+        );
+        const operatorAcceptance = this.#computeOperatorAcceptance(neat);
+        const topMutations = this.#computeTopMutations(mutationStatsObj);
+        const topSpeciesSizes = this.#computeTopSpeciesSizes(neat);
+        const bestFitnessDelta = (() => {
+          if (typeof bestFitnessValue !== "number") return null;
+          const previousSample = this.#bestFitnessHistory.at(-2) ?? null;
+          if (previousSample == null) return null;
+          return +(bestFitnessValue - previousSample).toFixed(3);
+        })();
+        this.#lastDetailedStats = {
+          generation: this.#currentBest?.generation || 0,
+          bestFitness: typeof bestFitnessValue === "number" ? bestFitnessValue : null,
+          bestFitnessDelta,
+          saturationFraction: typeof saturationFractionValue === "number" ? saturationFractionValue : null,
+          actionEntropy: typeof actionEntropyValue === "number" ? actionEntropyValue : null,
+          populationMean: populationStats.mean,
+          populationMedian: populationStats.median,
+          enabledConnRatio: populationStats.enabledRatio,
+          complexity: complexitySnapshot || null,
+          simplifyPhaseActive: !!(complexitySnapshot && (complexitySnapshot.growthNodes < 0 || complexitySnapshot.growthConns < 0)),
+          perf: perfSnapshot || null,
+          lineage: lineageSnapshot || null,
+          diversity: diversitySnapshot || null,
+          speciesCount: populationStats.speciesCount,
+          topSpeciesSizes,
+          objectives: objectivesSnapshot || null,
+          paretoFrontSizes,
+          firstFrontSize,
+          hypervolume: typeof hypervolumeValue === "number" ? hypervolumeValue : null,
+          noveltyArchiveSize,
+          operatorAcceptance,
+          topMutations,
+          mutationStats: mutationStatsObj || null,
+          trends: sparklines,
+          histories: {
+            bestFitness: this.#sliceHistoryForExport(this.#bestFitnessHistory),
+            nodes: this.#sliceHistoryForExport(this.#complexityNodesHistory),
+            conns: this.#sliceHistoryForExport(this.#complexityConnsHistory),
+            hyper: this.#sliceHistoryForExport(this.#hypervolumeHistory),
+            progress: this.#sliceHistoryForExport(this.#progressHistory),
+            species: this.#sliceHistoryForExport(this.#speciesCountHistory)
+          },
+          timestamp: Date.now()
+        };
+      } catch {
+      }
+    }
+    /**
+     * Aggregate basic population-wide statistics (mean & median fitness, species count, enabled connection ratio).
+     *
+     * Educational intent:
+     * Centralizes lightweight descriptive statistics needed for trend visualization and telemetry export
+     * while demonstrating reuse of a shared scratch array to minimize per-generation allocations.
+     *
+     * Steps:
+     * 1. Guard & early return if the provided engine instance lacks a population array.
+     * 2. Reuse `#scratch.scores` (cleared in-place) to collect numeric fitness scores.
+     * 3. Count total vs enabled connections across genomes to derive an enabled ratio (structural sparsity signal).
+     * 4. Compute mean in a single pass over the scores scratch array.
+     * 5. Clone & sort scores (ascending) to compute median (keeps original order intact for any other readers).
+     * 6. Derive species count defensively (array length or null when absent).
+     * 7. Return a small plain object (all numbers formatted to 2 decimals where derived) — consumers may patch
+     *    missing values later (see fallback logic in `#updateDetailedStatsSnapshot`).
+     *
+     * Complexity:
+     * - Score collection: O(G) with G = population size.
+     * - Connection scan: O(E) with E = total number of connection entries (linear).
+     * - Sorting for median: O(G log G) — acceptable for modest populations; if G became very large, a selection
+     *   algorithm (nth_element style) could replace the sort (document trade-offs first if changed).
+     *
+     * Performance notes:
+     * - Reuses a single scores scratch array (cleared via length reset) to avoid churn.
+     * - Uses numeric formatting only at final aggregation (minimizes intermediate string creation).
+     * - Avoids repeated optional chaining in inner loops by shallow local references.
+     *
+     * Determinism: Pure function of the provided `neat.population` snapshot (iteration order is respected).
+     * Reentrancy: Safe; scratch array is instance-scoped but method is not expected to be invoked concurrently.
+     * Edge cases: Empty / missing population returns all-null fields; division by zero guarded by connection count checks.
+     *
+     * @param neat NEAT-like engine instance exposing `population`, optional `species` collection.
+     * @returns Object with `mean`, `median`, `speciesCount`, `enabledRatio` (each nullable when not derivable).
+     */
+    #computePopulationStats(neat) {
+      if (!neat || !Array.isArray(neat.population) || neat.population.length === 0) {
+        return {
+          mean: null,
+          median: null,
+          speciesCount: null,
+          enabledRatio: null
+        };
+      }
+      const { scores } = this.#scratch;
+      scores.length = 0;
+      let enabledConnectionsCount = 0;
+      let totalConnectionsCount = 0;
+      for (const genome of neat.population) {
+        if (typeof genome?.score === "number") scores.push(genome.score);
+        const genomeConns = genome?.connections;
+        if (Array.isArray(genomeConns)) {
+          for (const connection of genomeConns) {
+            totalConnectionsCount++;
+            if (connection?.enabled !== false) enabledConnectionsCount++;
+          }
+        }
+      }
+      let mean = null;
+      let median = null;
+      if (scores.length) {
+        let sum = 0;
+        for (let scoreIndex = 0; scoreIndex < scores.length; scoreIndex++) {
+          sum += scores[scoreIndex];
+        }
+        mean = +(sum / scores.length).toFixed(2);
+        const sortedScores = [...scores].sort((a, b) => a - b);
+        const middleIndex = Math.floor(sortedScores.length / 2);
+        const medianRaw = sortedScores.length % 2 === 0 ? (sortedScores[middleIndex - 1] + sortedScores[middleIndex]) / 2 : sortedScores[middleIndex];
+        median = +medianRaw.toFixed(2);
+      }
+      const enabledRatio = totalConnectionsCount ? +(enabledConnectionsCount / totalConnectionsCount).toFixed(2) : null;
+      const speciesCount = Array.isArray(neat.species) ? neat.species.length : null;
+      return { mean, median, speciesCount, enabledRatio };
+    }
+    /**
+     * Derive a ranked list of operator acceptance percentages from the (optional) evolution engine.
+     *
+     * Educational focus:
+     * - Demonstrates defensive integration with a loosely‑typed external API (`getOperatorStats`).
+     * - Shows how to reuse an instance scratch buffer to avoid per‑refresh allocations.
+     * - Illustrates compact ranking logic (copy + sort + slice) while preserving original raw snapshot.
+     *
+     * Acceptance definition:
+     *   acceptancePct = (success / max(1, attempts)) * 100   (formatted to 2 decimals)
+     *   A zero attempts count is clamped to 1 to avoid division by zero; this treats a (success>0, attempts==0)
+     *   anomaly as full success rather than NaN — acceptable for a resilience‑biased dashboard.
+     *
+     * Steps:
+     * 1. Guard: verify `neat.getOperatorStats` is a function (else return null to signal absence of data).
+     * 2. Safe invoke inside try/catch (engines may throw while stats are initializing).
+     * 3. Filter raw entries into `#scratch.operatorStats` keeping only { name:string, success:number, attempts:number }.
+     * 4. Create a ranked copy sorted by descending acceptance ratio (stable for ties in modern JS engines).
+     * 5. Map the top N (`#TOP_OPERATOR_LIMIT`) into a lightweight exported shape `{ name, acceptancePct }`.
+     * 6. Return `null` when no valid entries remain after filtering (downstream rendering can simply skip the block).
+     *
+     * Complexity:
+     * - Let K be the number of operator entries. Filtering O(K); sort O(K log K); slice/map O(min(N, K)).
+     * - K is typically tiny (single digits), so the impact per redraw is negligible.
+     *
+     * Performance notes:
+     * - Scratch buffer cleared via length reset (no new array each call).
+     * - Only one extra array allocation (`rankedCopy`) for isolation of sort side‑effects.
+     * - Formatting (toFixed) deferred until final mapping to limit transient string creation.
+     *
+     * Determinism: Pure given the operator stats snapshot (no randomness). Relies on stable `Array.prototype.sort` for tie ordering.
+     * Reentrancy: Safe under single‑threaded assumption; scratch buffer is reused but not shared across concurrent calls.
+     * Edge cases & error handling:
+     * - Missing API / thrown error => null.
+     * - Malformed entries (missing numeric fields) silently excluded.
+     * - Division by zero avoided via denominator clamp.
+     * - Empty post‑filter set => null (consistent sentinel).
+     *
+     * @param neat Optional engine exposing `getOperatorStats(): Array<{name:string, success:number, attempts:number}>`.
+     * @returns Array of top operators with acceptance percentages or null when unavailable / no data.
+     * @example
+     * const acceptance = (dashboard as any)["#computeOperatorAcceptance"](neatInstance);
+     * // => [ { name: 'mutateAddNode', acceptancePct: 62.5 }, ... ] or null
+     */
+    #computeOperatorAcceptance(neat) {
+      if (typeof neat?.getOperatorStats !== "function") return null;
+      let rawOperatorStats;
+      try {
+        rawOperatorStats = neat.getOperatorStats();
+      } catch {
+        return null;
+      }
+      if (!Array.isArray(rawOperatorStats) || rawOperatorStats.length === 0)
+        return null;
+      const scratchBuffer = this.#scratch.operatorStats;
+      scratchBuffer.length = 0;
+      for (const operatorStat of rawOperatorStats) {
+        if (operatorStat && typeof operatorStat.name === "string" && typeof operatorStat.success === "number" && typeof operatorStat.attempts === "number") {
+          scratchBuffer.push(operatorStat);
+        }
+      }
+      if (!scratchBuffer.length) return null;
+      const rankedCopy = [...scratchBuffer].sort((leftStat, rightStat) => {
+        const leftAcceptance = leftStat.success / Math.max(1, leftStat.attempts);
+        const rightAcceptance = rightStat.success / Math.max(1, rightStat.attempts);
+        if (rightAcceptance !== leftAcceptance)
+          return rightAcceptance - leftAcceptance;
+        return 0;
+      });
+      const limit = Math.min(
+        _DashboardManager.#TOP_OPERATOR_LIMIT,
+        rankedCopy.length
+      );
+      const acceptanceList = [];
+      for (let rankIndex = 0; rankIndex < limit; rankIndex++) {
+        const rankedStat = rankedCopy[rankIndex];
+        const acceptancePct = +(100 * rankedStat.success / Math.max(1, rankedStat.attempts)).toFixed(2);
+        acceptanceList.push({ name: rankedStat.name, acceptancePct });
+      }
+      return acceptanceList.length ? acceptanceList : null;
+    }
+    /**
+     * Produce a ranked list of the most frequent mutation operators observed so far.
+     *
+     * Educational focus:
+     * - Demonstrates reuse of an in-place scratch tuple array to avoid allocation churn.
+     * - Shows defensive extraction from a loosely-typed stats object (filtering only numeric counts).
+     * - Illustrates a simple top-N selection pattern (sort + bounded slice) with explicit caps.
+     *
+     * Steps:
+     * 1. Guard: return null if `mutationStats` is not a plain object.
+     * 2. Clear and repopulate `#scratch.mutationEntries` with `[name, count]` tuples for numeric fields.
+     * 3. Early return null when no valid entries collected (simplifies downstream rendering conditions).
+     * 4. Sort the scratch array in-place by descending count (highest frequency first) using descriptive comparator param names.
+     * 5. Take the top N (bounded by `#TOP_MUTATION_LIMIT`) and map to output objects `{ name, count }`.
+     * 6. Return the resulting array (guaranteed non-empty) or null if absent.
+     *
+     * Complexity:
+     * - Collection: O(K) with K = enumerable keys on `mutationStats`.
+     * - Sort: O(K log K); K is typically modest (dozens at most) so overhead is negligible.
+     * - Slice/map: O(min(N, K)).
+     *
+     * Performance notes:
+     * - Scratch array is reused (length reset) preventing repeated allocation of tuple arrays each frame.
+     * - In-place sort avoids cloning (`[...entries]`) found in earlier version, eliminating one transient array.
+     * - Comparator accesses tuple indices directly, avoiding destructuring overhead in the hot call.
+     *
+     * Determinism: Pure transformation of the provided stats snapshot; no randomness.
+     * Reentrancy: Safe for single-threaded invocation pattern; scratch state is not shared across instances.
+     * Edge cases:
+     * - Non-object or empty object => null.
+     * - Non-numeric values silently skipped.
+     * - Negative counts retained (still sorted numerically) under the assumption they signal net effects; could be filtered if undesired.
+     *
+     * @param mutationStats Arbitrary object mapping mutation operator names to numeric invocation counts.
+     * @returns Array of top mutation operators (name + count) or null when no data.
+     * @example
+     * const top = (dashboard as any)["#computeTopMutations"]({ addNode: 42, addConn: 17 });
+     * // => [ { name: 'addNode', count: 42 }, { name: 'addConn', count: 17 } ]
+     */
+    #computeTopMutations(mutationStats) {
+      if (!mutationStats || typeof mutationStats !== "object") return null;
+      const mutationEntriesScratch = this.#scratch.mutationEntries;
+      mutationEntriesScratch.length = 0;
+      for (const mutationName of Object.keys(mutationStats)) {
+        const occurrenceCount = mutationStats[mutationName];
+        if (typeof occurrenceCount === "number" && Number.isFinite(occurrenceCount)) {
+          mutationEntriesScratch.push([mutationName, occurrenceCount]);
+        }
+      }
+      if (!mutationEntriesScratch.length) return null;
+      mutationEntriesScratch.sort(
+        (leftEntry, rightEntry) => rightEntry[1] - leftEntry[1]
+      );
+      const limit = Math.min(
+        _DashboardManager.#TOP_MUTATION_LIMIT,
+        mutationEntriesScratch.length
+      );
+      const topMutations = [];
+      for (let rankIndex = 0; rankIndex < limit; rankIndex++) {
+        const [mutationName, occurrenceCount] = mutationEntriesScratch[rankIndex];
+        topMutations.push({ name: mutationName, count: occurrenceCount });
+      }
+      return topMutations;
+    }
+    /**
+     * Compute the sizes (member counts) of the largest species (Top-N) in the current population snapshot.
+     *
+     * Educational focus:
+     * - Demonstrates reuse of an integer scratch array to avoid new allocations every redraw.
+     * - Highlights a simple pattern for extracting a Top-N ranking from a small set (in-place sort + bounded copy).
+     * - Shows defensive handling of loosely-typed engine data (species objects may omit `members`).
+     *
+     * Steps:
+     * 1. Guard: return null when `neat.species` is absent or empty.
+     * 2. Repopulate `#scratch.speciesSizes` with numeric member counts (fallback 0 when ambiguous).
+     * 3. In-place sort scratch array descending (largest first).
+     * 4. Copy the first N (`#TOP_SPECIES_LIMIT`) values into a new output array for immutability to callers.
+     * 5. Return the ranked sizes or null when no data.
+     *
+     * Complexity:
+     * - Let S = species count. Population: O(S). Sort: O(S log S). Copy: O(min(S, N)). S is typically modest, so cost is trivial.
+     *
+     * Performance notes:
+     * - Reuses a single scratch array (cleared via length assignment) to avoid allocation churn.
+     * - In-place sort avoids creating an additional clone (`[...scratch]`), reducing temporary memory.
+     * - Output array is sized at most `#TOP_SPECIES_LIMIT` (small, bounded allocation) for downstream display safety.
+     *
+     * Determinism: Pure function of the `neat.species` snapshot (ordering depends only on numerical counts; stable for equal sizes because JS sort is stable in modern engines but equal sizes preserve original order).
+     * Reentrancy: Safe under single-threaded invocation pattern (scratch array reused but not shared concurrently).
+     * Edge cases:
+     * - Missing / non-array / empty species list => null.
+     * - Species object missing `members` => treated as size 0.
+     * - Negative member counts (unexpected) retained and sorted numerically; could be filtered if a real engine produced them.
+     *
+     * @param neat Optional NEAT-like engine instance exposing an array `species` with `members` arrays.
+     * @returns Array of top species sizes (descending) or null when no species present.
+     * @example
+     * const sizes = (dashboard as any)["#computeTopSpeciesSizes"](neat);
+     * // => [34, 21, 10] (up to 5 elements) or null
+     */
+    #computeTopSpeciesSizes(neat) {
+      if (!Array.isArray(neat?.species) || neat.species.length === 0) return null;
+      const speciesSizesScratch = this.#scratch.speciesSizes;
+      speciesSizesScratch.length = 0;
+      for (const speciesEntry of neat.species) {
+        const sizeValue = Array.isArray(speciesEntry?.members) ? speciesEntry.members.length : 0;
+        speciesSizesScratch.push(sizeValue);
+      }
+      if (!speciesSizesScratch.length) return null;
+      speciesSizesScratch.sort((leftSize, rightSize) => rightSize - leftSize);
+      const limit = Math.min(
+        _DashboardManager.#TOP_SPECIES_LIMIT,
+        speciesSizesScratch.length
+      );
+      const topSpeciesSizes = [];
+      for (let rankIndex = 0; rankIndex < limit; rankIndex++) {
+        topSpeciesSizes.push(speciesSizesScratch[rankIndex]);
+      }
+      return topSpeciesSizes;
+    }
+    /** Safe invoke wrapper returning fallback on throw. */
+    #safeInvoke(fn, fallback) {
+      try {
+        return fn();
+      } catch {
+        return fallback;
+      }
+    }
+    /**
+     * Append the top header lines for a solved maze archive block.
+     *
+     * Format mirrors other framed sections: a top border, a centered label line
+     * identifying the solved ordinal and generation, and one spacer line to
+     * visually separate from subsequent sparkline + maze content.
+     *
+     * We keep this lean: no dynamic width calculations beyond centering, and we
+     * avoid extra temporary arrays (push directly into the provided accumulator).
+     *
+     * @param blockLines Accumulator array mutated by appending formatted lines.
+     * @param solved Object containing result + generation metadata.
+     * @param displayNumber 1-based solved maze index for user-friendly labeling.
+     */
+    #appendSolvedHeader(blockLines, solved, displayNumber) {
+      const innerWidth = _DashboardManager.FRAME_INNER_WIDTH;
+      blockLines.push(
+        `${colors.blueCore}\u2554${NetworkVisualization.pad(
+          "\u2550".repeat(innerWidth),
+          innerWidth,
+          "\u2550"
+        )}\u2557${colors.reset}`
+      );
+      const { result, generation } = solved;
+      const rawFitness = result?.fitness;
+      const formattedFitness = typeof rawFitness === "number" && Number.isFinite(rawFitness) ? rawFitness.toFixed(2) : "n/a";
+      const title = ` SOLVED #${Math.max(
+        1,
+        displayNumber
+      )} (GEN ${generation})  FITNESS ${formattedFitness} `;
+      const leftPaddingSize = Math.max(
+        0,
+        Math.floor((innerWidth - title.length) / 2)
+      );
+      const rightPaddingSize = Math.max(
+        0,
+        innerWidth - title.length - leftPaddingSize
+      );
+      blockLines.push(
+        `${colors.blueCore}\u2551${" ".repeat(leftPaddingSize)}${colors.orangeNeon}${title}${colors.blueCore}${" ".repeat(rightPaddingSize)}\u2551${colors.reset}`
+      );
+      blockLines.push(
+        `${colors.blueCore}\u2551${NetworkVisualization.pad(" ", innerWidth, " ")}\u2551${colors.reset}`
+      );
+    }
+    /**
+     * Append solved-run sparklines plus a one-line architecture summary.
+     *
+     * Additions over the original implementation:
+     * - Includes current network architecture (layer sizes) using arrow formatting ("I <=> H1 <=> ... <=> O").
+     * - Consolidates architecture here (removed separate later architecture line to avoid duplication).
+     * - Retains aligned label formatting via shared `#formatStat` helper for consistency.
+     *
+     * Architecture derivation:
+     * - Uses `#deriveArchitecture` (returns e.g. "6 - 6 - 5 - 4").
+     * - Converts hyphen-delimited form to bi-directional arrow form replacing " - " with " <=> " for clearer layer transitions.
+     * - Skips line when result is 'n/a'.
+     *
+     * Steps:
+     * 1. Build architecture string (if derivable) and push as first line.
+     * 2. For each tracked history series build a sparkline (bounded width) and push if non-empty.
+     * 3. Emit a trailing blank framed line as a visual separator before maze rendering.
+     *
+     * Determinism: Pure formatting/read-only usage of snapshot histories & network.
+     * Reentrancy: Safe; only mutates provided accumulator.
+     * Edge cases: Empty histories yield omitted lines; architecture omitted when unknown.
+     *
+     * @param blockLines Accumulator mutated in place.
+     * @param network Network whose architecture will be summarized; optional (can be nullish).
+     */
+    #appendSolvedSparklines(blockLines, network) {
+      const solvedLabelWidth = _DashboardManager.#SOLVED_LABEL_WIDTH;
+      const solvedStat = (label, value) => this.#formatStat(
         label,
         value,
         colors.neonSilver,
         colors.cyanNeon,
         solvedLabelWidth
       );
-      const spark = this.buildSparkline(this._bestFitnessHistory, 64);
-      const sparkComplexityNodes = this.buildSparkline(
-        this._complexityNodesHistory,
-        64
+      const pushIf = (label, value) => {
+        if (value) blockLines.push(solvedStat(label, value));
+      };
+      if (network) {
+        let architectureRaw = "n/a";
+        try {
+          architectureRaw = this.#deriveArchitecture(network);
+        } catch {
+          architectureRaw = "n/a";
+        }
+        if (architectureRaw !== "n/a") {
+          const arrowArchitecture = architectureRaw.split(/\s*-\s*/).join(" <=> ");
+          pushIf(_DashboardManager.#LABEL_ARCH, arrowArchitecture);
+        }
+      }
+      const archiveWidth = _DashboardManager.#ARCHIVE_SPARK_WIDTH;
+      pushIf(
+        "Fitness trend",
+        this.#buildSparkline(this.#bestFitnessHistory, archiveWidth)
       );
-      const sparkComplexityConns = this.buildSparkline(
-        this._complexityConnsHistory,
-        64
+      pushIf(
+        "Nodes trend",
+        this.#buildSparkline(this.#complexityNodesHistory, archiveWidth)
       );
-      const sparkHyper = this.buildSparkline(this._hypervolumeHistory, 64);
-      const sparkProgress = this.buildSparkline(this._progressHistory, 64);
-      const sparkSpecies = this.buildSparkline(this._speciesCountHistory, 64);
-      if (spark) blockLines.push(solvedStat("Fitness trend", spark));
-      if (sparkComplexityNodes)
-        blockLines.push(solvedStat("Nodes trend", sparkComplexityNodes));
-      if (sparkComplexityConns)
-        blockLines.push(solvedStat("Conns trend", sparkComplexityConns));
-      if (sparkHyper) blockLines.push(solvedStat("Hypervol trend", sparkHyper));
-      if (sparkProgress)
-        blockLines.push(solvedStat("Progress trend", sparkProgress));
-      if (sparkSpecies)
-        blockLines.push(solvedStat("Species trend", sparkSpecies));
+      pushIf(
+        "Conns trend",
+        this.#buildSparkline(this.#complexityConnsHistory, archiveWidth)
+      );
+      pushIf(
+        "Hypervol trend",
+        this.#buildSparkline(this.#hypervolumeHistory, archiveWidth)
+      );
+      pushIf(
+        "Progress trend",
+        this.#buildSparkline(this.#progressHistory, archiveWidth)
+      );
+      pushIf(
+        "Species trend",
+        this.#buildSparkline(this.#speciesCountHistory, archiveWidth)
+      );
       blockLines.push(
         `${colors.blueCore}\u2551${NetworkVisualization.pad(
           " ",
@@ -15632,590 +16114,822 @@
           " "
         )}${colors.blueCore}\u2551${colors.reset}`
       );
-      centeredSolvedMaze.split("\n").forEach(
-        (l) => blockLines.push(
+    }
+    /**
+     * Append a centered maze visualization for a newly solved maze.
+     *
+     * The visualization is produced by `MazeVisualization.visualizeMaze`, which
+     * returns either a multi‑line string or an array of row strings. We normalize
+     * the output to an array and then emit each row framed inside the dashboard
+     * box. Rows are padded horizontally to the fixed `FRAME_INNER_WIDTH` so that
+     * varying maze sizes (small corridors vs larger layouts) remain visually
+     * centered and consistent with surrounding stats blocks.
+     *
+     * Steps (educational):
+     * 1. Determine the terminal path position (last coordinate) – used to draw the agent end state.
+     * 2. Generate a textual maze representation (string[] or string) including the path highlight.
+     * 3. Normalize to an array of raw row strings (split on newlines if needed).
+     * 4. Pad each row to the inner frame width (acts as horizontal centering) and push framed lines to `blockLines`.
+     *
+     * Performance & ES2023 notes:
+     * - Uses `Array.prototype.at(-1)` for the final path coordinate (clearer than `path[path.length-1]`).
+     * - Avoids the previous join/split round‑trip (now pads & pushes in a single pass), reducing temporary string allocations.
+     * - Relies on local constants to minimize repeated property lookups (`innerWidth`).
+     *
+     * Determinism: purely formatting; does not mutate input arrays or rely on random state.
+     * Reentrancy: safe (no shared scratch buffers used here).
+     *
+     * @param blockLines - Accumulated output lines for the solved maze archive block (mutated in place by appending framed rows).
+     * @param solved - Object containing the raw `maze` character grid and a `result` with a `path` of `[x,y]` coordinates.
+     * @remarks The `result.path` is expected to include the start cell; if empty, a fallback position `[0,0]` is used (rare edge case for defensive coding in examples).
+     */
+    #appendSolvedMaze(blockLines, solved) {
+      const pathCoordinates = solved.result.path;
+      const endPosition = pathCoordinates?.at(-1) ?? [0, 0];
+      const visualization = MazeVisualization.visualizeMaze(
+        solved.maze,
+        endPosition,
+        pathCoordinates ?? []
+      );
+      const rawLines = Array.isArray(visualization) ? visualization : visualization.split("\n");
+      const innerWidth = _DashboardManager.FRAME_INNER_WIDTH;
+      for (const rawLine of rawLines) {
+        const paddedRow = NetworkVisualization.pad(rawLine, innerWidth, " ");
+        blockLines.push(
           `${colors.blueCore}\u2551${NetworkVisualization.pad(
-            l,
-            _DashboardManager.FRAME_INNER_WIDTH,
+            paddedRow,
+            innerWidth,
             " "
           )}${colors.blueCore}\u2551${colors.reset}`
-        )
-      );
-      const startPos = MazeUtils.findPosition(solved.maze, "S");
-      const exitPos = MazeUtils.findPosition(solved.maze, "E");
-      const optimalLength = MazeUtils.bfsDistance(
-        MazeUtils.encodeMaze(solved.maze),
-        startPos,
-        exitPos
-      );
-      const pathLength = solved.result.path.length - 1;
-      const efficiency = Math.min(
-        100,
-        Math.round(optimalLength / pathLength * 100)
-      ).toFixed(1);
-      const overhead = (pathLength / optimalLength * 100 - 100).toFixed(1);
-      const uniqueCells = /* @__PURE__ */ new Set();
-      let revisitedCells = 0;
-      for (const [x, y] of solved.result.path) {
-        const cellKey = `${x},${y}`;
-        if (uniqueCells.has(cellKey)) revisitedCells++;
-        else uniqueCells.add(cellKey);
-      }
-      blockLines.push(
-        solvedStat(
-          "Path efficiency",
-          `${optimalLength}/${pathLength} (${efficiency}%)`
-        )
-      );
-      blockLines.push(
-        solvedStat("Path overhead", `${overhead}% longer than optimal`)
-      );
-      blockLines.push(solvedStat("Unique cells visited", `${uniqueCells.size}`));
-      blockLines.push(solvedStat("Cells revisited", `${revisitedCells} times`));
-      blockLines.push(solvedStat("Steps", `${solved.result.steps}`));
-      blockLines.push(
-        solvedStat("Fitness", `${solved.result.fitness.toFixed(2)}`)
-      );
-      blockLines.push(
-        `${colors.blueCore}\u255A${NetworkVisualization.pad(
-          "\u2550".repeat(_DashboardManager.FRAME_INNER_WIDTH),
-          _DashboardManager.FRAME_INNER_WIDTH,
-          "\u2550"
-        )}\u255D${colors.reset}`
-      );
-      try {
-        this.archiveLogFunction(blockLines.join("\n"), {
-          prepend: true
-        });
-      } catch {
-        const append = this.archiveLogFunction ?? (() => {
-        });
-        blockLines.forEach((ln) => append(ln));
+        );
       }
     }
     /**
-     * update
+     * Compute and append human‑readable path efficiency statistics for a solved maze.
      *
-     * Called by the evolution engine to report the latest candidate solution
-     * (or the current best). The dashboard will:
-     * - update the currentBest reference used for the live view
-     * - if the provided result is a successful solve and it's the first time
-     *   we've seen this maze, append an archive block
-     * - stash the latest telemetry values into small circular buffers for sparklines
-     * - finally call `redraw` to update the live output
+     * Metrics exposed (educational rationale):
+     * - Path efficiency: optimal BFS distance vs actual traversed length – demonstrates how close evolution came to shortest path.
+     * - Path overhead: percent longer than optimal – highlights wasted exploration after reaching a viable route.
+     * - Unique cells visited / revisits: proxy for exploration vs dithering; useful to tune mutation operators.
+     * - Steps: raw action count taken (often equals `pathLength`).
+     * - Fitness: final scalar used for selection (displayed with two decimals for compactness).
+     *
+     * Steps:
+     * 1. Derive aggregated path metrics via `#computePathMetrics` (encapsulates BFS optimal distance + visitation stats).
+     * 2. Format each metric with consistent label width & colors using `formatStat` (keeps styling centralized).
+     * 3. Push each formatted line to the `blockLines` accumulator.
+     *
+     * Performance notes:
+     * - Single metrics object reused for string interpolation (no intermediate arrays created).
+     * - Uses template literals directly; minimal extra allocations beyond the final output strings.
+     * - Order is fixed to preserve snapshot diff stability for external log parsers.
+     *
+     * Determinism: relies on deterministic BFS + pure counting; no randomness.
+     * Reentrancy: safe; no shared mutable scratch state.
+     *
+     * @param blockLines - Accumulator array mutated by appending formatted stat lines.
+     * @param solved - Object holding the `maze` layout and `result` containing at least `path`, `steps`, and `fitness`.
+     */
+    #appendSolvedPathStats(blockLines, solved) {
+      const metrics = this.#computePathMetrics(solved.maze, solved.result);
+      const labelWidth = _DashboardManager.#SOLVED_LABEL_WIDTH;
+      const solvedStat = (label, value) => this.#formatStat(
+        label,
+        value,
+        colors.neonSilver,
+        colors.cyanNeon,
+        labelWidth
+      );
+      blockLines.push(
+        solvedStat(
+          _DashboardManager.#LABEL_PATH_EFF,
+          `${metrics.optimalLength}/${metrics.pathLength} (${metrics.efficiencyPct}%)`
+        )
+      );
+      blockLines.push(
+        solvedStat(
+          _DashboardManager.#LABEL_PATH_OVER,
+          `${metrics.overheadPct}% longer than optimal`
+        )
+      );
+      blockLines.push(
+        solvedStat(
+          _DashboardManager.#LABEL_UNIQUE,
+          `${metrics.uniqueCellsVisited}`
+        )
+      );
+      blockLines.push(
+        solvedStat(
+          _DashboardManager.#LABEL_REVISITS,
+          `${metrics.revisitedCells} times`
+        )
+      );
+      blockLines.push(
+        solvedStat(_DashboardManager.#LABEL_STEPS, `${metrics.totalSteps}`)
+      );
+      blockLines.push(
+        solvedStat(
+          _DashboardManager.#LABEL_FITNESS,
+          `${metrics.fitnessValue.toFixed(2)}`
+        )
+      );
+    }
+    /** Emit footer & send archive block to logger. */
+    static #CACHED_SOLVED_FOOTER_BORDER = null;
+    /**
+     * Append the solved-archive footer border and emit the accumulated block to the archive logger.
+     *
+     * Implementation notes:
+     * - Reuses an internal cached bottom-border string to avoid recomputing the padded border on every solved maze.
+     * - Emits the block as a single joined payload for efficiency; falls back to a line-wise append if the
+     *   archive function throws or is not compatible with the single-string API.
+     * - Clears the provided `blockLines` accumulator in-place after emission so callers (and tests) can reuse the
+     *   same array as a scratch buffer, reducing GC churn in tight loops.
+     *
+     * Steps (inline):
+     * 1. Ensure cached border exists (lazy-init).
+     * 2. Append the bottom border to the provided accumulator.
+     * 3. Attempt single-string emission with `{ prepend: true }`.
+     * 4. On failure, fallback to line-by-line emission using the archive function or a no-op.
+     * 5. Clear the accumulator for reuse.
+     *
+     * @param blockLines Mutable accumulator of framed lines representing a solved maze archive block. This
+     *   function will append the closing border and emit the payload; the array will be emptied on return.
+     * @example
+     * const lines: string[] = [];
+     * // ... various helpers push frame header, stats, maze rows into `lines` ...
+     * (dashboard as any)["#appendSolvedFooterAndEmit"](lines);
+     */
+    #appendSolvedFooterAndEmit(blockLines) {
+      const innerFrameWidth = _DashboardManager.FRAME_INNER_WIDTH;
+      if (_DashboardManager.#CACHED_SOLVED_FOOTER_BORDER === null) {
+        _DashboardManager.#CACHED_SOLVED_FOOTER_BORDER = `${colors.blueCore}\u255A${NetworkVisualization.pad(
+          "\u2550".repeat(innerFrameWidth),
+          innerFrameWidth,
+          "\u2550"
+        )}\u255D${colors.reset}`;
+      }
+      blockLines.push(_DashboardManager.#CACHED_SOLVED_FOOTER_BORDER);
+      try {
+        this.#archiveFn(blockLines.join("\n"), { prepend: true });
+        blockLines.length = 0;
+        return;
+      } catch {
+        const archiveAppend = this.#archiveFn ?? (() => {
+        });
+        for (let lineIndex = 0; lineIndex < blockLines.length; lineIndex++) {
+          archiveAppend(blockLines[lineIndex]);
+        }
+        blockLines.length = 0;
+      }
+    }
+    /**
+     * Compute derived path metrics for a solved (or partially solved) maze run.
+     *
+     * Metrics returned (educational focus):
+     * - optimalLength: Shortest possible path length (BFS over encoded maze). Provides a baseline for efficiency.
+     * - pathLength: Actual traversed path length (steps between first & last coordinate). Used for overhead calculations.
+     * - efficiencyPct: (optimal / actual * 100) clamped to 100%. Indicates how close the agent was to an optimal route.
+     * - overheadPct: Percent the actual path exceeds optimal ((actual/optimal)*100 - 100). Negative values are clamped to 0 in practice by optimal <= path.
+     * - uniqueCellsVisited: Distinct grid cells in the path – proxy for exploration breadth.
+     * - revisitedCells: Times a cell coordinate was encountered after the first visit – proxy for dithering / loops.
+     * - totalSteps: Reported step counter from the result object (may equal pathLength, but kept separate for clarity / future divergence like wait actions).
+     * - fitnessValue: Raw fitness scalar copied through for convenience (avoids re-threading the original result where only metrics are needed).
+     *
+     * Steps:
+     * 1. Locate start 'S' and exit 'E' positions in the maze (single pass each via MazeUtils helpers).
+     * 2. Run BFS to obtain the optimal shortest path length between S and E (O(C) with C = cell count).
+     * 3. Derive actual path length from provided coordinate list (defensive against empty / single-node path).
+     * 4. Compute efficiency & overhead percentages with divide-by-zero guards (fallback to 0.0 when ambiguous).
+     * 5. Count unique vs revisited cells in a single pass through the path (O(P) with P = pathLength+1 nodes).
+     * 6. Return an immutable plain object used by formatting helpers.
+     *
+     * Complexity:
+     * - BFS: O(C) where C = maze cell count.
+     * - Path scan: O(P) where P = number of coordinates in path.
+     * - Overall: O(C + P) per invocation, acceptable for archive-time formatting (not in a hot inner evolution loop).
+     *
+     * Determinism: Fully deterministic given identical maze + path (no randomness, stable BFS ordering assumed from MazeUtils implementation).
+     * Reentrancy: Safe (allocates only local structures: Set + return object).
+     * Memory: Extra allocations are bounded (Set size <= P). Suitable for occasional solved-maze archival.
+     *
+     * Edge cases handled:
+     * - Empty or single-coordinate path: pathLength coerces to 0; efficiency & overhead emit '0.0'.
+     * - Unreachable BFS (negative / non-positive optimalLength): treated as 0 for ratios (prevents NaN/Infinity).
+     * - Division by zero avoided via guards; percentages formatted with one decimal place.
+     *
+     * @param maze Maze layout as array of row strings containing 'S' and 'E'.
+     * @param result Evaluation result containing at least { path, steps, fitness }.
+     * @returns Object with path + efficiency metrics (see description).
+     * @example
+     * const metrics = dashboard.#computePathMetrics(maze, { path, steps: path.length, fitness });
+     * console.log(metrics.efficiencyPct); // e.g. '87.5'
+     */
+    #computePathMetrics(maze, result) {
+      const startPosition = MazeUtils.findPosition(maze, "S");
+      const exitPosition = MazeUtils.findPosition(maze, "E");
+      const bfsLength = MazeUtils.bfsDistance(
+        MazeUtils.encodeMaze(maze),
+        startPosition,
+        exitPosition
+      );
+      const optimalLength = typeof bfsLength === "number" ? bfsLength : 0;
+      const rawPathLength = Math.max(0, result.path.length - 1);
+      let efficiencyPct = "0.0";
+      let overheadPct = "0.0";
+      if (rawPathLength > 0 && optimalLength > 0) {
+        const efficiency = Math.min(1, optimalLength / rawPathLength) * 100;
+        efficiencyPct = efficiency.toFixed(1);
+        const overhead = rawPathLength / optimalLength * 100 - 100;
+        overheadPct = overhead.toFixed(1);
+      }
+      const uniqueCells = /* @__PURE__ */ new Set();
+      let revisitedCells = 0;
+      for (const [cellX, cellY] of result.path) {
+        const key = `${cellX},${cellY}`;
+        if (uniqueCells.has(key)) revisitedCells++;
+        else uniqueCells.add(key);
+      }
+      return {
+        optimalLength,
+        pathLength: rawPathLength,
+        efficiencyPct,
+        overheadPct,
+        uniqueCellsVisited: uniqueCells.size,
+        revisitedCells,
+        totalSteps: result.steps,
+        fitnessValue: result.fitness
+      };
+    }
+    /**
+     * Infer a compact, human‑readable architecture string (e.g. "3 - 5 - 2" or "4 - 8 - 8 - 1").
+     *
+     * Supports several internal network representations encountered in examples:
+     * 1. Layered form: `network.layers = [layer0, layer1, ...]` where each layer has `nodes` or is an array.
+     * 2. Flat node list: `network.nodes = [...]` each node declaring a `type` ('input' | 'hidden' | 'output'). Hidden layers are
+     *    approximated by a simple topological layering pass: we iteratively collect hidden nodes whose inbound connection sources
+     *    are already assigned to earlier layers. Remaining nodes after no progress count as a single ambiguous layer (safety / cycle guard).
+     * 3. Scalar fallback: numeric `input` & `output` counts (no hidden layers) -> returns "I - O".
+     *
+     * Steps:
+     * 1. Early null/undefined guard.
+     * 2. If a layered structure exists (>=2 layers) derive each layer size in order and return immediately (fast path).
+     * 3. Else if a flat node list exists, split into input / hidden / output categories.
+     * 4. If no hidden nodes: use explicit numeric counts (prefer explicit `input`/`output` props if present).
+     * 5. Perform iterative hidden layer inference with a safety iteration cap to avoid infinite loops for malformed cyclic graphs.
+     * 6. Assemble final size list: input size, inferred hidden sizes, output size.
+     * 7. Fallback: if only scalar counts available, return them; otherwise 'n/a'.
+     *
+     * Algorithmic notes:
+     * - Hidden layering pass is O(H * E_in) where H = hidden nodes, E_in = mean in-degree, acceptable for formatting/UI.
+     * - The safety cap (`hiddenCount * LAYER_INFER_LOOP_MULTIPLIER`) prevents pathological spins on cyclic graphs lacking
+     *   proper DAG layering; any leftover hidden nodes are grouped into a terminal bucket for transparency.
+     * - We intentionally avoid mutating the original node objects (pure inspection) to keep side‑effects nil.
+     *
+     * Determinism: given a stable ordering of `network.nodes` and their connections, output is deterministic.
+     * Reentrancy: safe; all state kept in local sets/arrays.
+     *
+     * @param networkInstance Arbitrary network-like object from examples or NEAT internals.
+     * @returns Architecture string in the form "Input - Hidden... - Output" or 'n/a' if shape cannot be inferred.
+     * @example
+     * // Layered network
+     * deriveArchitecture({ layers:[ {nodes:[1,2,3]}, {nodes:[4,5]}, {nodes:[6,7]} ] }) => "3 - 2 - 2"
+     * @example
+     * // Flat node list with inferred hidden tiers
+     * deriveArchitecture({ nodes:[{type:'input'}, {type:'hidden'}, {type:'output'}] }) => "1 - 1 - 1"
+     */
+    #deriveArchitecture(networkInstance) {
+      if (!networkInstance) return "n/a";
+      const layerArray = networkInstance.layers;
+      if (Array.isArray(layerArray) && layerArray.length >= 2) {
+        const layerSizes = [];
+        for (const layerRef of layerArray) {
+          const size = Array.isArray(layerRef?.nodes) ? layerRef.nodes.length : Array.isArray(layerRef) ? layerRef.length : 0;
+          layerSizes.push(size);
+        }
+        return layerSizes.join(" - ");
+      }
+      const flatNodes = networkInstance.nodes;
+      if (Array.isArray(flatNodes)) {
+        const inputNodes = flatNodes.filter(
+          (nodeItem) => nodeItem.type === "input"
+        );
+        const outputNodes = flatNodes.filter(
+          (nodeItem) => nodeItem.type === "output"
+        );
+        const hiddenNodesAll = flatNodes.filter(
+          (nodeItem) => nodeItem.type === "hidden"
+        );
+        if (!hiddenNodesAll.length) {
+          if (typeof networkInstance.input === "number" && typeof networkInstance.output === "number") {
+            return `${networkInstance.input} - ${networkInstance.output}`;
+          }
+          return `${inputNodes.length} - ${outputNodes.length}`;
+        }
+        const assignedNodes = new Set(inputNodes);
+        let remainingHidden = hiddenNodesAll.slice();
+        const inferredHiddenSizes = [];
+        const safetyLimit = hiddenNodesAll.length * _DashboardManager.#LAYER_INFER_LOOP_MULTIPLIER;
+        let iterationCounter = 0;
+        while (remainingHidden.length && iterationCounter < safetyLimit) {
+          iterationCounter++;
+          const currentLayer = remainingHidden.filter(
+            (hiddenNode) => hiddenNode.connections?.in?.every(
+              (conn) => assignedNodes.has(conn.from)
+            )
+          );
+          if (!currentLayer.length) {
+            inferredHiddenSizes.push(remainingHidden.length);
+            break;
+          }
+          inferredHiddenSizes.push(currentLayer.length);
+          for (const nodeRef of currentLayer) assignedNodes.add(nodeRef);
+          remainingHidden = remainingHidden.filter(
+            (nodeCandidate) => !assignedNodes.has(nodeCandidate)
+          );
+        }
+        return [
+          `${inputNodes.length}`,
+          ...inferredHiddenSizes.map((hiddenSize) => `${hiddenSize}`),
+          `${outputNodes.length}`
+        ].join(" - ");
+      }
+      if (typeof networkInstance.input === "number" && typeof networkInstance.output === "number") {
+        return `${networkInstance.input} - ${networkInstance.output}`;
+      }
+      return "n/a";
+    }
+    /**
+     * Ingest an evolution engine update (generation tick or improved candidate) and refresh live + archived displays.
+     *
+     * High‑level responsibilities:
+     * 1. Lazy initialize timing anchors (wall clock + perf) on first call.
+     * 2. Stash generation/time metadata for later telemetry sampling.
+     * 3. Update the current best candidate reference.
+     * 4. Archive a newly solved maze (once per unique layout) with rich stats.
+     * 5. Pull the latest telemetry snapshot from the NEAT instance (if provided) and update bounded history buffers.
+     * 6. Redraw the live ASCII dashboard (network summary, maze, stats, progress bar).
+     * 7. Emit a structured telemetry payload (custom DOM event + postMessage + optional hook) for external consumers.
+     *
+     * Performance notes:
+     * - History buffers are bounded (HISTORY_MAX) using push-with-trim helpers; memory growth is capped.
+     * - Telemetry extraction takes only the last snapshot (`safeLast`) to minimize per-tick work.
+     * - All formatting for the archive occurs only when a maze is first solved (amortized, infrequent).
+     * - Uses `performance.now()` when available for higher‑resolution generation throughput metrics.
+     *
+     * Determinism: All state changes here are observational (no RNG). Ordering of history pushes is fixed.
+     * Reentrancy: Not safe (instance maintains mutable internal single-run state). Use one instance per run.
+     * Side‑effects: Console / logger output, optional DOM events (browser), optional parent frame messaging.
+     *
+     * @param maze - Current maze layout under evolution (array of row strings).
+     * @param result - Candidate evaluation result (expects fields: fitness, path, success, progress, etc.).
+     * @param network - Network associated with the candidate result.
+     * @param generation - Current generation number reported by the engine.
+     * @param neatInstance - Optional NEAT framework instance exposing `getTelemetry()` and optional stats helpers.
+     * @example
+     * dashboard.update(maze, evaluationResult, genome.network, generation, neat);
      */
     update(maze, result, network, generation, neatInstance) {
-      this.currentBest = { result, network, generation };
-      if (result.success) {
-        const mazeKey = this.getMazeKey(maze);
-        if (!this.solvedMazeKeys.has(mazeKey)) {
-          this.solvedMazes.push({ maze, result, network, generation });
-          this.solvedMazeKeys.add(mazeKey);
-          const displayNumber = this.solvedMazes.length;
-          this.appendSolvedToArchive(
+      if (this.#runStartTs == null) {
+        this.#runStartTs = Date.now();
+        this.#perfStart = globalThis.performance?.now?.() ?? this.#runStartTs;
+      }
+      this.#lastUpdateTs = globalThis.performance?.now?.() ?? Date.now();
+      this.#lastGeneration = generation;
+      this.#currentBest = { result, network, generation };
+      if (result?.success) {
+        const solvedMazeKey = this.#getMazeKey(maze);
+        if (!this.#solvedMazeKeys.has(solvedMazeKey)) {
+          this.#solvedMazes.push({ maze, result, network, generation });
+          this.#solvedMazeKeys.add(solvedMazeKey);
+          const displayOrdinal = this.#solvedMazes.length;
+          this.#appendSolvedToArchive(
             { maze, result, network, generation },
-            displayNumber
+            displayOrdinal
           );
         }
       }
-      const telemetry = neatInstance?.getTelemetry?.();
-      if (telemetry && telemetry.length) {
-        this._lastTelemetry = telemetry[telemetry.length - 1];
-        const bestFit = this.currentBest?.result?.fitness;
-        if (typeof bestFit === "number") {
-          this._lastBestFitness = bestFit;
-          this._bestFitnessHistory.push(bestFit);
-          if (this._bestFitnessHistory.length > 500)
-            this._bestFitnessHistory.shift();
+      const telemetrySeries = neatInstance?.getTelemetry?.();
+      if (Array.isArray(telemetrySeries) && telemetrySeries.length) {
+        this.#lastTelemetry = MazeUtils.safeLast(telemetrySeries);
+        const latestFitness = this.#currentBest?.result?.fitness;
+        if (typeof latestFitness === "number") {
+          this.#lastBestFitness = latestFitness;
+          this.#bestFitnessHistory = MazeUtils.pushHistory(
+            this.#bestFitnessHistory,
+            latestFitness,
+            _DashboardManager.HISTORY_MAX
+          );
         }
-        const c = this._lastTelemetry?.complexity;
-        if (c) {
-          if (typeof c.meanNodes === "number") {
-            this._complexityNodesHistory.push(c.meanNodes);
-            if (this._complexityNodesHistory.length > 500)
-              this._complexityNodesHistory.shift();
+        const complexitySnapshot = this.#lastTelemetry?.complexity;
+        if (complexitySnapshot) {
+          if (typeof complexitySnapshot.meanNodes === "number") {
+            this.#complexityNodesHistory = MazeUtils.pushHistory(
+              this.#complexityNodesHistory,
+              complexitySnapshot.meanNodes,
+              _DashboardManager.HISTORY_MAX
+            );
           }
-          if (typeof c.meanConns === "number") {
-            this._complexityConnsHistory.push(c.meanConns);
-            if (this._complexityConnsHistory.length > 500)
-              this._complexityConnsHistory.shift();
+          if (typeof complexitySnapshot.meanConns === "number") {
+            this.#complexityConnsHistory = MazeUtils.pushHistory(
+              this.#complexityConnsHistory,
+              complexitySnapshot.meanConns,
+              _DashboardManager.HISTORY_MAX
+            );
           }
         }
-        const h = this._lastTelemetry?.hyper;
-        if (typeof h === "number") {
-          this._hypervolumeHistory.push(h);
-          if (this._hypervolumeHistory.length > 500)
-            this._hypervolumeHistory.shift();
+        const hyperVolumeLatest = this.#lastTelemetry?.hyper;
+        if (typeof hyperVolumeLatest === "number") {
+          this.#hypervolumeHistory = MazeUtils.pushHistory(
+            this.#hypervolumeHistory,
+            hyperVolumeLatest,
+            _DashboardManager.HISTORY_MAX
+          );
         }
-        const prog = this.currentBest?.result?.progress;
-        if (typeof prog === "number") {
-          this._progressHistory.push(prog);
-          if (this._progressHistory.length > 500) this._progressHistory.shift();
+        const progressFraction = this.#currentBest?.result?.progress;
+        if (typeof progressFraction === "number") {
+          this.#progressHistory = MazeUtils.pushHistory(
+            this.#progressHistory,
+            progressFraction,
+            _DashboardManager.HISTORY_MAX
+          );
         }
-        const sc = this._lastTelemetry?.species;
-        if (typeof sc === "number") {
-          this._speciesCountHistory.push(sc);
-          if (this._speciesCountHistory.length > 500)
-            this._speciesCountHistory.shift();
+        const speciesCountSnapshot = this.#lastTelemetry?.species;
+        if (typeof speciesCountSnapshot === "number") {
+          this.#speciesCountHistory = MazeUtils.pushHistory(
+            this.#speciesCountHistory,
+            speciesCountSnapshot,
+            _DashboardManager.HISTORY_MAX
+          );
         }
       }
       this.redraw(maze, neatInstance);
+      try {
+        const elapsedMs = this.#perfStart != null && globalThis.performance?.now ? globalThis.performance.now() - this.#perfStart : this.#runStartTs ? Date.now() - this.#runStartTs : 0;
+        const generationsPerSecond = elapsedMs > 0 ? generation / (elapsedMs / 1e3) : 0;
+        const payload = {
+          type: "asciiMaze:telemetry",
+          generation,
+          bestFitness: this.#lastBestFitness,
+          progress: this.#currentBest?.result?.progress ?? null,
+          speciesCount: this.#speciesCountHistory.at(-1) ?? null,
+          gensPerSec: +generationsPerSecond.toFixed(3),
+          timestamp: Date.now(),
+          details: this.#lastDetailedStats || null
+        };
+        if (typeof window !== "undefined") {
+          try {
+            window.dispatchEvent(
+              new CustomEvent("asciiMazeTelemetry", { detail: payload })
+            );
+          } catch {
+          }
+          try {
+            if (window.parent && window.parent !== window)
+              window.parent.postMessage(payload, "*");
+          } catch {
+          }
+          window.asciiMazeLastTelemetry = payload;
+        }
+        try {
+          this._telemetryHook && this._telemetryHook(payload);
+        } catch {
+        }
+      } catch {
+      }
     }
     /**
-     * redraw
-     *
-     * Responsible for clearing the live area and printing a compact snapshot of
-     * the current best candidate, a short network summary, the maze drawing and
-     * several telemetry-derived stats. The function uses `logFunction` for all
-     * output lines so the same renderer can be used both in Node and in the
-     * browser (DOM adapter).
+     * Return the most recent telemetry snapshot including rich details.
+     * Details may be null if not yet populated.
+     * @returns Snapshot object with generation, fitness, progress and detail block.
      */
-    redraw(currentMaze, neat) {
-      this.clearFunction();
-      this.logFunction(
-        `${colors.blueCore}\u2554${NetworkVisualization.pad(
-          "\u2550",
-          _DashboardManager.FRAME_INNER_WIDTH,
-          "\u2550"
-        )}${colors.blueCore}\u2557${colors.reset}`
-      );
-      this.logFunction(
-        `${colors.blueCore}\u255A${NetworkVisualization.pad(
-          "\u2566\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2566",
-          _DashboardManager.FRAME_INNER_WIDTH,
-          "\u2550"
-        )}${colors.blueCore}\u255D${colors.reset}`
-      );
-      this.logFunction(
-        `${colors.blueCore}${NetworkVisualization.pad(
-          `\u2551 ${colors.neonYellow}ASCII maze${colors.blueCore} \u2551`,
-          150,
-          " "
-        )}${colors.reset}`
-      );
-      this.logFunction(
-        `${colors.blueCore}\u2554${NetworkVisualization.pad(
-          "\u2569\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2569",
-          _DashboardManager.FRAME_INNER_WIDTH,
-          "\u2550"
-        )}${colors.blueCore}\u2557${colors.reset}`
-      );
-      if (this.currentBest) {
-        this.logFunction(
-          `${colors.blueCore}\u2560${NetworkVisualization.pad(
-            "\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550",
-            _DashboardManager.FRAME_INNER_WIDTH,
-            "\u2550"
-          )}${colors.blueCore}\u2563${colors.reset}`
-        );
-        this.logFunction(
-          `${colors.blueCore}\u2551${NetworkVisualization.pad(
-            `${colors.orangeNeon}EVOLVING (GEN ${this.currentBest.generation})`,
-            _DashboardManager.FRAME_INNER_WIDTH,
-            " "
-          )}${colors.blueCore}\u2551${colors.reset}`
-        );
-        this.logFunction(
-          `${colors.blueCore}\u2560${NetworkVisualization.pad(
-            "\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550",
-            _DashboardManager.FRAME_INNER_WIDTH,
-            "\u2550"
-          )}${colors.blueCore}\u2563${colors.reset}`
-        );
-        this.logFunction(
-          `${colors.blueCore}\u2551${NetworkVisualization.pad(
-            " ",
-            _DashboardManager.FRAME_INNER_WIDTH,
-            " "
-          )}${colors.blueCore}\u2551${colors.reset}`
-        );
-        this.logFunction(
-          `${colors.blueCore}\u2551${NetworkVisualization.pad(
-            " ",
-            _DashboardManager.FRAME_INNER_WIDTH,
-            " "
-          )}${colors.blueCore}\u2551${colors.reset}`
-        );
-        this.logFunction(
-          NetworkVisualization.visualizeNetworkSummary(this.currentBest.network)
-        );
-        this.logFunction(
-          `${colors.blueCore}\u2551${NetworkVisualization.pad(
-            " ",
-            _DashboardManager.FRAME_INNER_WIDTH,
-            " "
-          )}${colors.blueCore}\u2551${colors.reset}`
-        );
-        const lastPos = this.currentBest.result.path[this.currentBest.result.path.length - 1];
-        const currentMazeVisualization = MazeVisualization.visualizeMaze(
-          currentMaze,
-          lastPos,
-          this.currentBest.result.path
-        );
-        const currentMazeLines = Array.isArray(currentMazeVisualization) ? currentMazeVisualization : currentMazeVisualization.split("\n");
-        const centeredCurrentMaze = currentMazeLines.map(
-          (line) => `${colors.blueCore}\u2551${NetworkVisualization.pad(
-            line,
-            _DashboardManager.FRAME_INNER_WIDTH,
-            " "
-          )}${colors.blueCore}\u2551`
-        ).join("\n");
-        this.logFunction(
-          `${colors.blueCore}\u2551${NetworkVisualization.pad(
-            " ",
-            _DashboardManager.FRAME_INNER_WIDTH,
-            " "
-          )}${colors.blueCore}\u2551${colors.reset}`
-        );
-        this.logFunction(centeredCurrentMaze);
-        this.logFunction(
-          `${colors.blueCore}\u2551${NetworkVisualization.pad(
-            " ",
-            _DashboardManager.FRAME_INNER_WIDTH,
-            " "
-          )}${colors.blueCore}\u2551${colors.reset}`
-        );
-        this.logFunction(
-          `${colors.blueCore}\u2551${NetworkVisualization.pad(
-            " ",
-            _DashboardManager.FRAME_INNER_WIDTH,
-            " "
-          )}${colors.blueCore}\u2551${colors.reset}`
-        );
-        MazeVisualization.printMazeStats(
-          this.currentBest,
-          currentMaze,
-          this.logFunction
-        );
-        this.logFunction(
-          `${colors.blueCore}\u2551${NetworkVisualization.pad(
-            " ",
-            _DashboardManager.FRAME_INNER_WIDTH,
-            " "
-          )}${colors.blueCore}\u2551${colors.reset}`
-        );
-        this.logFunction(
-          `${colors.blueCore}\u2551${NetworkVisualization.pad(
-            " ",
-            _DashboardManager.FRAME_INNER_WIDTH,
-            " "
-          )}${colors.blueCore}\u2551${colors.reset}`
-        );
-        this.logFunction(
-          (() => {
-            const bar = `Progress to exit: ${MazeVisualization.displayProgressBar(
-              this.currentBest.result.progress
-            )}`;
-            return `${colors.blueCore}\u2551${NetworkVisualization.pad(
-              " " + colors.neonSilver + bar + colors.reset,
-              _DashboardManager.FRAME_INNER_WIDTH,
-              " "
-            )}${colors.blueCore}\u2551${colors.reset}`;
-          })()
-        );
-        this.logFunction(
-          `${colors.blueCore}\u2551${NetworkVisualization.pad(
-            " ",
-            _DashboardManager.FRAME_INNER_WIDTH,
-            " "
-          )}${colors.blueCore}\u2551${colors.reset}`
-        );
-      }
-      const last = this._lastTelemetry;
-      const complexity = last?.complexity;
-      const perf = last?.perf;
-      const lineage = last?.lineage;
-      const fronts = Array.isArray(last?.fronts) ? last.fronts : null;
-      const objectives = last?.objectives;
-      const hyper = last?.hyper;
-      const diversity = last?.diversity;
-      const mutationStats = last?.mutationStats || last?.mutation?.stats;
-      const bestFitness = this.currentBest?.result?.fitness;
-      const fmtNum = (v, digits = 2) => typeof v === "number" && isFinite(v) ? v.toFixed(digits) : "-";
-      const deltaArrow = (curr, prev) => {
-        if (curr == null || prev == null) return "";
-        const diff = curr - prev;
-        if (Math.abs(diff) < 1e-9) return `${colors.neonSilver} (\u21940)`;
-        const color = diff > 0 ? colors.cyanNeon : colors.neonRed;
-        const arrow = diff > 0 ? "\u2191" : "\u2193";
-        return `${color} (${arrow}${diff.toFixed(2)})${colors.neonSilver}`;
+    getLastTelemetry() {
+      const elapsedMs = this.#perfStart != null && typeof performance !== "undefined" ? performance.now() - this.#perfStart : this.#runStartTs ? Date.now() - this.#runStartTs : 0;
+      const generation = this.#lastGeneration ?? 0;
+      const gensPerSec = elapsedMs > 0 ? generation / (elapsedMs / 1e3) : 0;
+      return {
+        generation,
+        bestFitness: this.#lastBestFitness,
+        progress: this.#currentBest?.result?.progress ?? null,
+        speciesCount: MazeUtils.safeLast(this.#speciesCountHistory) ?? null,
+        gensPerSec: +gensPerSec.toFixed(3),
+        // Expose the last update time if available; convert high-resolution perf time to
+        // wall-clock ms when possible so consumers receive an absolute timestamp.
+        timestamp: this.#resolveLastUpdateWallMs(),
+        details: this.#lastDetailedStats || null
       };
-      let popMean = "-";
-      let popMedian = "-";
-      let speciesCount = "-";
-      let enabledRatio = "-";
-      if (neat && Array.isArray(neat.population)) {
-        const scores = [];
-        let enabled = 0, total = 0;
-        neat.population.forEach((g) => {
-          if (typeof g.score === "number") scores.push(g.score);
-          if (Array.isArray(g.connections)) {
-            g.connections.forEach((c) => {
-              total++;
-              if (c.enabled !== false) enabled++;
-            });
-          }
-        });
-        if (scores.length) {
-          const sum = scores.reduce((a, b) => a + b, 0);
-          popMean = (sum / scores.length).toFixed(2);
-          const sorted = scores.slice().sort((a, b) => a - b);
-          const mid = Math.floor(sorted.length / 2);
-          popMedian = (sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid]).toFixed(2);
+    }
+    /**
+     * Resolve the stored last-update timestamp to a wall-clock millisecond value.
+     * If the stored value is a high-resolution perf.now() reading, convert it to
+     * Date.now() anchored by the recorded `#runStartTs` / `#perfStart` pair. If no
+     * last-update is available fall back to Date.now().
+     */
+    #resolveLastUpdateWallMs() {
+      if (this.#lastUpdateTs == null) return Date.now();
+      if (this.#perfStart != null && typeof globalThis.performance?.now === "function" && this.#runStartTs != null) {
+        return this.#runStartTs + (this.#lastUpdateTs - this.#perfStart);
+      }
+      return this.#lastUpdateTs;
+    }
+    /**
+     * Print the static top frame (dashboard title header) once at construction / first redraw.
+     *
+     * Educational focus:
+     * - Demonstrates consistent frame construction (symmetric width) using shared constants.
+     * - Shows explicit centering math for a colored title while measuring width from an uncolored template.
+     * - Avoids ad‑hoc IIFEs: clearer sequential steps improve readability for newcomers.
+     *
+     * Steps:
+     * 1. Emit a solid single‑line top border (full inner width).
+     * 2. Emit a bridge line (visual taper) using preconfigured characters.
+     * 3. Center and print the title "ASCII maze" with color accents, preserving frame alignment.
+     * 4. Emit a lower bridge line to transition into evolving content sections.
+     *
+     * Centering approach:
+     * - We compute visible width using an uncolored template string (box glyph + spaces + raw title + trailing glyph).
+     * - Remaining horizontal space is split; a slight left‑bias (ceil on left) improves stability with odd widths.
+     * - ANSI color codes are injected only after padding is determined so they don't skew calculations.
+     *
+     * Performance notes:
+     * - Only a handful of short-lived strings are created; cost is negligible (runs once per session).
+     * - Uses direct `this.#logFn` calls (no intermediate array joins) to keep GC pressure minimal.
+     *
+     * Determinism: Pure formatting (no randomness). Reentrancy not required (idempotent semantics acceptable).
+     * Edge cases: If the frame width shrinks below the label length, padding clamps to zero and label is still printed.
+     *
+     * @example
+     * (dashboard as any)["#printTopFrame"](); // Emits header block
+     */
+    #printTopFrame() {
+      const innerWidth = _DashboardManager.FRAME_INNER_WIDTH;
+      this.#logFn(
+        `${colors.blueCore}\u2554${NetworkVisualization.pad(
+          _DashboardManager.#FRAME_SINGLE_LINE_CHAR,
+          innerWidth,
+          _DashboardManager.#FRAME_SINGLE_LINE_CHAR
+        )}\u2557${colors.reset}`
+      );
+      this.#logFn(
+        `${colors.blueCore}\u255A${NetworkVisualization.pad(
+          _DashboardManager.#FRAME_BRIDGE_TOP,
+          innerWidth,
+          _DashboardManager.#FRAME_SINGLE_LINE_CHAR
+        )}\u255D${colors.reset}`
+      );
+      const uncoloredTemplate = "\u2551 ASCII maze \u2551";
+      const templateLength = uncoloredTemplate.length;
+      const remainingSpace = innerWidth - templateLength;
+      const leftPaddingCount = Math.max(0, Math.ceil(remainingSpace / 2)) + 1;
+      const rightPaddingCount = Math.max(0, remainingSpace - leftPaddingCount);
+      const coloredTitleSegment = `\u2551 ${colors.neonYellow}ASCII maze${colors.blueCore} \u2551`;
+      const centeredTitleLine = `${colors.blueCore}${" ".repeat(
+        leftPaddingCount
+      )}${coloredTitleSegment}${" ".repeat(rightPaddingCount)}${colors.reset}`;
+      this.#logFn(centeredTitleLine);
+      this.#logFn(
+        `${colors.blueCore}\u2554${NetworkVisualization.pad(
+          _DashboardManager.#FRAME_BRIDGE_BOTTOM,
+          innerWidth,
+          _DashboardManager.#FRAME_SINGLE_LINE_CHAR
+        )}\u2557${colors.reset}`
+      );
+    }
+    /** Orchestrate printing of evolving section (network + maze + stats + progress). */
+    #printCurrentBestSection(currentMaze) {
+      const generation = this.#currentBest.generation;
+      const sectionLine = _DashboardManager.#EVOLVING_SECTION_LINE;
+      this.#logFn(
+        `${colors.blueCore}\u2560${NetworkVisualization.pad(
+          sectionLine,
+          _DashboardManager.FRAME_INNER_WIDTH,
+          "\u2550"
+        )}${colors.blueCore}\u2563${colors.reset}`
+      );
+      this.#logFn(
+        `${colors.blueCore}\u2551${NetworkVisualization.pad(
+          `${colors.orangeNeon}EVOLVING (GEN ${generation})`,
+          _DashboardManager.FRAME_INNER_WIDTH,
+          " "
+        )}${colors.blueCore}\u2551${colors.reset}`
+      );
+      this.#logFn(
+        `${colors.blueCore}\u2560${NetworkVisualization.pad(
+          sectionLine,
+          _DashboardManager.FRAME_INNER_WIDTH,
+          "\u2550"
+        )}${colors.blueCore}\u2563${colors.reset}`
+      );
+      this.#logBlank();
+      this.#printNetworkSummary();
+      this.#printLiveMaze(currentMaze);
+      this.#printLiveStats(currentMaze);
+      this.#printProgressBar();
+    }
+    /** Print network summary visualization. */
+    #printNetworkSummary() {
+      this.#logBlank();
+      this.#logFn(
+        NetworkVisualization.visualizeNetworkSummary(this.#currentBest.network)
+      );
+      this.#logBlank();
+    }
+    /**
+     * Render (and frame) the live maze for the current best candidate.
+     *
+     * Educational focus:
+     * - Demonstrates safe use of `Array.prototype.at(-1)` for final coordinate extraction.
+     * - Streams framed rows directly to the logger (avoids building one large joined string).
+     * - Normalizes flexible visualization return types (string or string[]) into a unified iteration path.
+     *
+     * Steps:
+     * 1. Resolve the agent's last path position (fallback `[0,0]` if path absent) for end‑marker highlighting.
+     * 2. Ask `MazeVisualization.visualizeMaze` for a textual representation containing the path overlay.
+     * 3. Normalize the result into an array of raw row strings (split on newlines when a single string is returned).
+     * 4. For each row, pad to the fixed frame width and emit a framed line (borders + color) via `#logFn`.
+     * 5. Surround the block with blank spacer lines for visual separation from adjacent sections.
+     *
+     * Performance notes:
+     * - Avoids intermediate `.map().join()` allocation; writes each row immediately (lower peak memory for large mazes).
+     * - Uses a local `innerWidth` alias to prevent repeated static property lookups in the hot loop.
+     * - Only allocates one padded string per row (the framing template is assembled inline).
+     *
+     * Determinism: Pure formatting based on current maze + candidate path (no randomness).
+     * Reentrancy: Not designed for concurrent invocation but method is self‑contained (no shared scratch mutation).
+     * Edge cases:
+     * - Empty visualization yields just spacer lines.
+     * - Extremely long rows are hard-clipped visually by frame padding (consistent with rest of dashboard design).
+     *
+     * @param currentMaze Current maze layout (array of row strings) being evolved.
+     */
+    #printLiveMaze(currentMaze) {
+      const pathCoordinates = this.#currentBest.result.path;
+      const endOfPathPosition = pathCoordinates?.at(-1) ?? [0, 0];
+      const rawVisualization = MazeVisualization.visualizeMaze(
+        currentMaze,
+        endOfPathPosition,
+        pathCoordinates
+      );
+      const visualizationLines = Array.isArray(
+        rawVisualization
+      ) ? rawVisualization : rawVisualization.split("\n");
+      const innerWidth = _DashboardManager.FRAME_INNER_WIDTH;
+      this.#logBlank();
+      for (const unpaddedRow of visualizationLines) {
+        const paddedRow = NetworkVisualization.pad(unpaddedRow, innerWidth, " ");
+        this.#logFn(
+          `${colors.blueCore}\u2551${paddedRow}${colors.blueCore}\u2551${colors.reset}`
+        );
+      }
+      this.#logBlank();
+    }
+    static #INT32_SCRATCH_POOL = [];
+    /**
+     * Render the live statistics block for the current best candidate.
+     *
+     * Enhancements over the original:
+     * - Provides a concise JSDoc with parameter & example usage.
+     * - Uses a small Int32Array pooling strategy for temporary numeric scratch space to reduce
+     *   short-lived allocation churn during frequent redraws.
+     * - Employs descriptive local variable names and step-level inline comments for clarity.
+     *
+     * Steps:
+     * 1. Guard and emit a small spacer when no current best candidate exists.
+     * 2. Rent a temporary typed-array buffer to hold derived numeric summary values.
+     * 3. Populate the buffer with fitness, steps, and progress (scaled where appropriate).
+     * 4. Emit a small, framed summary via existing `#formatStat` helper to preserve dashboard styling.
+     * 5. Delegate the detailed printing to `MazeVisualization.printMazeStats` (keeps single-responsibility).
+     * 6. Return the rented buffer to the internal pool and emit a trailing spacer.
+     *
+     * @param currentMaze Current maze layout used to compute/print maze-specific stats.
+     * @example
+     * // invoked internally by `update()` during redraw
+     * (dashboard as any)["#printLiveStats"](maze);
+     */
+    #printLiveStats(currentMaze) {
+      this.#logBlank();
+      const currentBestCandidate = this.#currentBest;
+      if (!currentBestCandidate) {
+        this.#logBlank();
+        return;
+      }
+      const rentInt32 = (requestedLength) => {
+        const pooled = _DashboardManager.#INT32_SCRATCH_POOL.pop();
+        if (pooled && pooled.length >= requestedLength)
+          return pooled.subarray(0, requestedLength);
+        return new Int32Array(requestedLength);
+      };
+      const releaseInt32 = (buffer) => {
+        if (_DashboardManager.#INT32_SCRATCH_POOL.length < 8) {
+          _DashboardManager.#INT32_SCRATCH_POOL.push(buffer);
         }
-        if (total) enabledRatio = (enabled / total).toFixed(2);
-        speciesCount = Array.isArray(neat.species) ? neat.species.length.toString() : speciesCount;
-      }
-      const firstFrontSize = fronts?.[0]?.length || 0;
-      const SPARK_WIDTH = 64;
-      const spark = this.buildSparkline(this._bestFitnessHistory, SPARK_WIDTH);
-      const sparkComplexityNodes = this.buildSparkline(
-        this._complexityNodesHistory,
-        SPARK_WIDTH
+      };
+      const scratch = rentInt32(3);
+      const reportedFitness = currentBestCandidate.result?.fitness;
+      scratch[0] = typeof reportedFitness === "number" && Number.isFinite(reportedFitness) ? Math.round(reportedFitness * 100) : 0;
+      const reportedSteps = Number(currentBestCandidate.result?.steps ?? 0);
+      scratch[1] = Number.isFinite(reportedSteps) ? reportedSteps : 0;
+      const reportedProgress = Number(currentBestCandidate.result?.progress ?? 0);
+      scratch[2] = Number.isFinite(reportedProgress) ? Math.round(reportedProgress * 100) : 0;
+      const formattedFitness = (scratch[0] / 100).toFixed(2);
+      const formattedSteps = `${scratch[1]}`;
+      const formattedProgress = `${scratch[2]}%`;
+      const liveLabelWidth = _DashboardManager.#SOLVED_LABEL_WIDTH;
+      const liveStat = (label, value) => this.#formatStat(
+        label,
+        value,
+        colors.neonSilver,
+        colors.cyanNeon,
+        liveLabelWidth
       );
-      const sparkComplexityConns = this.buildSparkline(
-        this._complexityConnsHistory,
-        SPARK_WIDTH
+      this.#logFn(liveStat("Fitness", formattedFitness));
+      this.#logFn(liveStat("Steps", formattedSteps));
+      this.#logFn(liveStat("Progress", formattedProgress));
+      MazeVisualization.printMazeStats(
+        currentBestCandidate,
+        currentMaze,
+        this.#logFn
       );
-      const sparkHyper = this.buildSparkline(
-        this._hypervolumeHistory,
-        SPARK_WIDTH
-      );
-      const sparkProgress = this.buildSparkline(
-        this._progressHistory,
-        SPARK_WIDTH
-      );
-      const sparkSpecies = this.buildSparkline(
-        this._speciesCountHistory,
-        SPARK_WIDTH
-      );
-      const statsLines = [];
-      statsLines.push(
-        this.formatStat(
-          "Current generation",
-          `${this.currentBest?.generation || 0}`
-        )
-      );
-      if (typeof bestFitness === "number")
-        statsLines.push(
-          this.formatStat(
-            "Best fitness",
-            `${bestFitness.toFixed(2)}${deltaArrow(
-              bestFitness,
-              this._bestFitnessHistory.length > 1 ? this._bestFitnessHistory[this._bestFitnessHistory.length - 2] : null
-            )}`
-          )
-        );
-      const satFrac = this.currentBest?.result?.saturationFraction;
-      if (typeof satFrac === "number")
-        statsLines.push(
-          this.formatStat("Saturation fraction", satFrac.toFixed(3))
-        );
-      const actEnt = this.currentBest?.result?.actionEntropy;
-      if (typeof actEnt === "number")
-        statsLines.push(
-          this.formatStat("Action entropy (path)", actEnt.toFixed(3))
-        );
-      if (popMean === "-" && typeof bestFitness === "number")
-        popMean = bestFitness.toFixed(2);
-      if (popMedian === "-" && typeof bestFitness === "number")
-        popMedian = bestFitness.toFixed(2);
-      statsLines.push(this.formatStat("Population mean", popMean));
-      statsLines.push(this.formatStat("Population median", popMedian));
-      if (complexity)
-        statsLines.push(
-          this.formatStat(
-            "Complexity mean n/c",
-            `${fmtNum(complexity.meanNodes, 2)}/${fmtNum(
-              complexity.meanConns,
-              2
-            )}  max ${fmtNum(complexity.maxNodes, 0)}/${fmtNum(
-              complexity.maxConns,
-              0
-            )}`,
-            colors.neonSilver,
-            colors.orangeNeon
-          )
-        );
-      if (complexity && (complexity.growthNodes < 0 || complexity.growthConns < 0))
-        statsLines.push(
-          this.formatStat(
-            "Simplify phase",
-            "active",
-            colors.neonSilver,
-            colors.neonGreen
-          )
-        );
-      if (sparkComplexityNodes)
-        statsLines.push(
-          this.formatStat(
-            "Nodes trend",
-            sparkComplexityNodes,
-            colors.neonSilver,
-            colors.neonYellow
-          )
-        );
-      if (sparkComplexityConns)
-        statsLines.push(
-          this.formatStat(
-            "Conns trend",
-            sparkComplexityConns,
-            colors.neonSilver,
-            colors.neonYellow
-          )
-        );
-      statsLines.push(this.formatStat("Enabled conn ratio", enabledRatio));
-      if (perf && (perf.evalMs != null || perf.evolveMs != null))
-        statsLines.push(
-          this.formatStat(
-            "Perf eval/evolve ms",
-            `${fmtNum(perf.evalMs, 1)}/${fmtNum(perf.evolveMs, 1)}`
-          )
-        );
-      if (lineage)
-        statsLines.push(
-          this.formatStat(
-            "Lineage depth b/mean",
-            `${lineage.depthBest}/${fmtNum(lineage.meanDepth, 2)}`
-          )
-        );
-      if (lineage?.inbreeding != null)
-        statsLines.push(
-          this.formatStat("Inbreeding", fmtNum(lineage.inbreeding, 3))
-        );
-      if (speciesCount === "-" && typeof last?.species === "number")
-        speciesCount = String(last.species);
-      statsLines.push(this.formatStat("Species count", speciesCount));
-      if (diversity?.structuralVar != null)
-        statsLines.push(
-          this.formatStat(
-            "Structural variance",
-            fmtNum(diversity.structuralVar, 3)
-          )
-        );
-      if (diversity?.objectiveSpread != null)
-        statsLines.push(
-          this.formatStat(
-            "Objective spread",
-            fmtNum(diversity.objectiveSpread, 3)
-          )
-        );
-      if (Array.isArray(neat?.species) && neat.species.length) {
-        const sizes = neat.species.map((s) => s.members?.length || 0).sort((a, b) => b - a);
-        const top3 = sizes.slice(0, 3).join("/") || "-";
-        statsLines.push(this.formatStat("Top species sizes", top3));
-      }
-      if (fronts)
-        statsLines.push(
-          this.formatStat(
-            "Pareto fronts",
-            `${fronts.map((f) => f?.length || 0).join("/")}`
-          )
-        );
-      statsLines.push(
-        this.formatStat("First front size", firstFrontSize.toString())
-      );
-      if (objectives)
-        statsLines.push(
-          this.formatStat(
-            "Objectives",
-            objectives.join(", "),
-            colors.neonSilver,
-            colors.neonIndigo
-          )
-        );
-      if (hyper !== void 0)
-        statsLines.push(this.formatStat("Hypervolume", fmtNum(hyper, 4)));
-      if (sparkHyper)
-        statsLines.push(
-          this.formatStat(
-            "Hypervolume trend",
-            sparkHyper,
-            colors.neonSilver,
-            colors.neonGreen
-          )
-        );
-      if (spark)
-        statsLines.push(
-          this.formatStat(
-            "Fitness trend",
-            spark,
-            colors.neonSilver,
-            colors.neonYellow
-          )
-        );
-      if (sparkProgress)
-        statsLines.push(
-          this.formatStat(
-            "Progress trend",
-            sparkProgress,
-            colors.neonSilver,
-            colors.cyanNeon
-          )
-        );
-      if (sparkSpecies)
-        statsLines.push(
-          this.formatStat(
-            "Species trend",
-            sparkSpecies,
-            colors.neonSilver,
-            colors.neonIndigo
-          )
-        );
-      if (neat?.getNoveltyArchiveSize) {
-        try {
-          const nov = neat.getNoveltyArchiveSize();
-          statsLines.push(this.formatStat("Novelty archive", `${nov}`));
-        } catch {
-        }
-      }
-      if (neat?.getOperatorStats) {
-        try {
-          const ops = neat.getOperatorStats();
-          if (Array.isArray(ops) && ops.length) {
-            const top = ops.slice().sort(
-              (a, b) => b.success / Math.max(1, b.attempts) - a.success / Math.max(1, a.attempts)
-            ).slice(0, 4).map(
-              (o) => `${o.name}:${(100 * o.success / Math.max(1, o.attempts)).toFixed(0)}%`
-            ).join(" ");
-            if (top)
-              statsLines.push(
-                this.formatStat(
-                  "Op acceptance",
-                  top,
-                  colors.neonSilver,
-                  colors.neonGreen
-                )
-              );
-          }
-        } catch {
-        }
-      }
-      if (mutationStats && typeof mutationStats === "object") {
-        const entries = Object.entries(mutationStats).filter(([k, v]) => typeof v === "number").sort((a, b) => b[1] - a[1]).slice(0, 5).map(([k, v]) => `${k}:${v.toFixed(0)}`).join(" ");
-        if (entries)
-          statsLines.push(
-            this.formatStat(
-              "Top mutations",
-              entries,
-              colors.neonSilver,
-              colors.neonGreen
-            )
-          );
-      }
-      statsLines.forEach((ln) => this.logFunction(ln));
-      this.logFunction(
+      releaseInt32(scratch);
+      this.#logBlank();
+    }
+    /** Print progress bar lines. */
+    #printProgressBar() {
+      const padBlank = () => this.#logFn(
         `${colors.blueCore}\u2551${NetworkVisualization.pad(
           " ",
           _DashboardManager.FRAME_INNER_WIDTH,
           " "
         )}${colors.blueCore}\u2551${colors.reset}`
       );
+      padBlank();
+      const bar = `Progress to exit: ${MazeVisualization.displayProgressBar(
+        this.#currentBest.result.progress
+      )}`;
+      this.#logFn(
+        `${colors.blueCore}\u2551${NetworkVisualization.pad(
+          " " + colors.neonSilver + bar + colors.reset,
+          _DashboardManager.FRAME_INNER_WIDTH,
+          " "
+        )}${colors.blueCore}\u2551${colors.reset}`
+      );
+      padBlank();
     }
     reset() {
-      this.solvedMazes = [];
-      this.solvedMazeKeys.clear();
-      this.currentBest = null;
+      this.#solvedMazes = [];
+      this.#solvedMazeKeys.clear();
+      this.#currentBest = null;
+    }
+    /**
+     * Produce an immutable tail slice of a bounded numeric history buffer.
+     *
+     * Educational focus:
+     * - Encapsulates export window logic so callers don't duplicate clamp arithmetic.
+     * - Demonstrates a micro-optimized manual copy for partial slices while using
+     *   the native fast path (`Array.prototype.slice`) when returning the full buffer.
+     * - Adds defensive guards for null / non-array input (returns empty array) to simplify callers.
+     *
+     * Steps:
+     * 1. Guard: if the provided reference is not a non-empty array, return a new empty array.
+     * 2. Compute the starting index for the export window (clamped to 0).
+     * 3. If the window spans the entire history, return a shallow copy via `.slice()` (fast path).
+     * 4. Allocate an output array sized exactly to the window length.
+     * 5. Manually copy values (forward loop) to avoid creating an intermediate subarray before clone.
+     * 6. Return the populated tail slice (caller receives an independent array).
+     *
+     * Complexity:
+     * - Let N = history length, W = export window size (<= HISTORY_EXPORT_WINDOW).
+     * - Computation: O(min(N, W)) element copies.
+     * - Memory: O(min(N, W)) for the returned array.
+     *
+     * Performance notes:
+     * - Manual copy avoids constructing a temporary array then cloning it; though engines optimize slice well,
+     *   the explicit loop keeps intent clear and allows descriptive index naming for style compliance.
+     * - Uses descriptive loop index (`offsetIndex`) instead of a terse variable to satisfy style guidelines.
+     *
+     * Determinism: Pure function of input array contents and static window constant.
+     * Reentrancy: Safe (no shared mutable state). Input array is never mutated.
+     * Edge cases:
+     * - Null / undefined / non-array -> returns [].
+     * - Empty array -> returns [].
+     * - HISTORY_EXPORT_WINDOW >= history length -> returns shallow clone of entire history.
+     *
+     * @param history Source numeric history buffer (may be longer than export window).
+     * @returns New array containing up to `HISTORY_EXPORT_WINDOW` most recent samples (oldest first inside the window).
+     */
+    #sliceHistoryForExport(history) {
+      if (!Array.isArray(history) || !history.length) return [];
+      const startIndex = Math.max(
+        0,
+        history.length - _DashboardManager.#HISTORY_EXPORT_WINDOW
+      );
+      if (startIndex === 0) return history.slice();
+      const windowLength = history.length - startIndex;
+      const windowSlice = new Array(windowLength);
+      for (let offsetIndex = 0; offsetIndex < windowLength; offsetIndex++) {
+        windowSlice[offsetIndex] = history[startIndex + offsetIndex];
+      }
+      return windowSlice;
     }
   };
 
@@ -16243,224 +16957,669 @@
   // test/examples/asciiMaze/mazeVision.ts
   var MazeVision = class _MazeVision {
     /**
-     * Constructs the 6-dimensional input vector for the neural network based on the agent's current state.
+     * Direction table mapping cardinal direction to [dx, dy, index].
      *
-     * @param encodedMaze - The 2D numerical representation of the maze.
-     * @param position - The agent's current `[x, y]` coordinates.
-     * @param exitPos - The coordinates of the maze exit.
-     * @param distanceMap - A pre-calculated map of distances from each cell to the exit.
-     * @param prevDistance - The agent's distance to the exit from the previous step.
-     * @param currentDistance - The agent's current distance to the exit.
-     * @param prevAction - The last action taken by the agent (0:N, 1:E, 2:S, 3:W).
-     * @returns A 6-element array of numbers representing the network inputs.
+     * Each entry is a tuple where the first two values are the X/Y delta to
+     * reach the neighbor and the third value is the canonical direction index
+     * used across the class (0 = N, 1 = E, 2 = S, 3 = W).
+     * @type {readonly [number, number, number][]}
+     */
+    static #DIRECTION_DELTAS = [
+      [0, -1, 0],
+      // N
+      [1, 0, 1],
+      // E
+      [0, 1, 2],
+      // S
+      [-1, 0, 3]
+      // W
+    ];
+    // Tunable private constants
+    /** Number of cardinal directions (N, E, S, W). */
+    static #DIRECTION_COUNT = 4;
+    /**
+     * Scalar step per compass direction used to encode the compass into a single
+     * continuous value: 0 = N, 0.25 = E, 0.5 = S, 0.75 = W.
+     */
+    static #COMPASS_STEP = 0.25;
+    /** Offset to compute the opposite direction (half of direction count). */
+    static #OPPOSITE_OFFSET = 2;
+    /** Horizon (max path length) at which a neighbor is considered "open". */
+    static #OPENNESS_HORIZON = 1e3;
+    /** Horizon used when selecting compass preference from a distance map. */
+    static #COMPASS_HORIZON = 5e3;
+    /** Small scalar used to encourage backtracking from dead-ends. */
+    static #BACKTRACK_SIGNAL = 1e-3;
+    /** Absolute clip applied to step-delta used when computing progress signal. */
+    static #PROGRESS_CLIP = 2;
+    /** Scale applied to clipped progress delta before adding to neutral baseline. */
+    static #PROGRESS_SCALE = 4;
+    /** Neutral progress value returned when progress cannot be computed reliably. */
+    static #PROGRESS_NEUTRAL = 0.5;
+    /**
+     * Pooled scratch buffers reused across `buildInputs6` invocations to avoid
+     * per-call allocations in hot paths. These are class-private and must be
+     * initialized (via `fill`) at the start of each call.
+     *
+     * IMPORTANT: Because these buffers are reused, `buildInputs6` is not
+     * reentrant and callers should not rely on the buffers' contents after
+     * calling the method. See `buildInputs6` JSDoc `@remarks` for details.
+     */
+    static #SCRATCH_NEIGHBOR_X = new Int32Array(_MazeVision.#DIRECTION_COUNT);
+    static #SCRATCH_NEIGHBOR_Y = new Int32Array(_MazeVision.#DIRECTION_COUNT);
+    static #SCRATCH_NEIGHBOR_PATH = new Float32Array(_MazeVision.#DIRECTION_COUNT);
+    static #SCRATCH_NEIGHBOR_REACH = new Uint8Array(_MazeVision.#DIRECTION_COUNT);
+    static #SCRATCH_NEIGHBOR_OPEN = new Float32Array(_MazeVision.#DIRECTION_COUNT);
+    // Raw distance to exit per neighbor (NaN when not present). Pooled to avoid
+    // per-call allocation; follows same non-reentrancy warning as other buffers.
+    /**
+     * Pooled buffer holding the raw distance-to-exit for each neighbor when a
+     * `distanceToExitMap` is provided. Values are `NaN` when missing.
+     */
+    static #SCRATCH_NEIGHBOR_RAWDIST = new Float32Array(
+      _MazeVision.#DIRECTION_COUNT
+    );
+    // Small helpers
+    /**
+     * Return a neutral 6-element input vector used when inputs are invalid or
+     * incomplete. The progress element is set to the neutral baseline.
+     * @returns {[number, number, number, number, number, number]}
+     *  [compassScalar, openN, openE, openS, openW, progressDelta]
+     */
+    static #neutralInput() {
+      return [0, 0, 0, 0, 0, _MazeVision.#PROGRESS_NEUTRAL];
+    }
+    /**
+     * Fast bounds check for a 2D grid.
+     * @param grid - 2D numeric grid where each row is an array.
+     * @param col - X coordinate (column index).
+     * @param row - Y coordinate (row index).
+     * @returns True when the coordinate is within the grid bounds.
+     */
+    static #isWithinBounds(grid, col, row) {
+      return Array.isArray(grid) && row >= 0 && row < grid.length && Array.isArray(grid[row]) && col >= 0 && col < grid[row].length;
+    }
+    /**
+     * Return true if the cell at [col,row] is within bounds and not a wall.
+     * @param grid - Encoded maze where `-1` represents a wall.
+     * @param col - Column (x) coordinate.
+     * @param row - Row (y) coordinate.
+     * @returns True when the cell exists and is open (not -1).
+     */
+    static #isCellOpen(grid, col, row) {
+      return _MazeVision.#isWithinBounds(grid, col, row) && grid[row][col] !== -1;
+    }
+    /**
+     * Compute the opposite cardinal direction index.
+     * @param direction - Direction index in range [0, #DIRECTION_COUNT).
+     * @returns Opposite direction index (e.g. 0 -> 2, 1 -> 3).
+     */
+    static #opposite(direction) {
+      return (direction + _MazeVision.#OPPOSITE_OFFSET) % _MazeVision.#DIRECTION_COUNT;
+    }
+    /**
+     * Build the 6-element input vector consumed by the agent's network.
+     *
+     * The returned array has the shape: [compassScalar, openN, openE, openS, openW, progressDelta].
+     *
+     * @param encodedMaze - 2D grid where `-1` is a wall and `0+` is free space.
+     * @param agentPosition - Agent coordinates as `[x, y]`.
+     * @param exitPosition - Exit coordinates as `[x, y]` used as geometric fallback for compass.
+     * @param distanceToExitMap - Optional distance-to-exit 2D map (same shape as `encodedMaze`).
+     * @param previousStepDistance - Optional scalar distance-to-exit from the previous step.
+     * @param currentStepDistance - Scalar distance-to-exit for the current step.
+     * @param previousAction - Optional previous action index (0=N,1=E,2=S,3=W) to encourage backtracking.
+     * @returns A 6-element number array with the vision inputs described above.
+     *
+     * @remarks
+     * - This method reuses internal pooled scratch buffers (`#SCRATCH_*`) to avoid
+     *   allocations on hot paths. Because the buffers are reused, the method is
+     *   not reentrant and should not be called concurrently from multiple
+     *   contexts if they share the same process/thread.
+     * - Scratch buffers are initialized (via `.fill`) on each call so no state is
+     *   leaked between invocations.
      */
     static buildInputs6(encodedMaze, agentPosition, exitPosition, distanceToExitMap, previousStepDistance, currentStepDistance, previousAction) {
+      if (!Array.isArray(encodedMaze) || encodedMaze.length === 0)
+        return _MazeVision.#neutralInput();
       const [agentX, agentY] = agentPosition;
-      const mazeHeight = encodedMaze.length;
-      const mazeWidth = encodedMaze[0].length;
-      const isWithinBounds = (col, row) => row >= 0 && row < mazeHeight && col >= 0 && col < mazeWidth;
-      const isCellOpen = (col, row) => isWithinBounds(col, row) && encodedMaze[row][col] !== -1;
-      const opennessHorizon = 1e3;
-      const compassHorizon = 5e3;
-      const neighborCells = [];
-      const DIRECTION_VECTORS = [
-        [0, -1, 0],
-        // North
-        [1, 0, 1],
-        // East
-        [0, 1, 2],
-        // South
-        [-1, 0, 3]
-        // West
-      ];
-      const currentCellDistanceToExit = distanceToExitMap && Number.isFinite(distanceToExitMap[agentY]?.[agentX]) ? distanceToExitMap[agentY][agentX] : void 0;
-      for (const [dx, dy, directionIndex] of DIRECTION_VECTORS) {
-        const neighborX = agentX + dx;
-        const neighborY = agentY + dy;
-        if (!isCellOpen(neighborX, neighborY)) {
-          neighborCells.push({
-            directionIndex,
-            neighborX,
-            neighborY,
-            pathLength: Infinity,
-            isReachable: false,
-            opennessValue: 0
-          });
+      if (!Number.isFinite(agentX) || !Number.isFinite(agentY))
+        return _MazeVision.#neutralInput();
+      if (!_MazeVision.#isWithinBounds(encodedMaze, agentX, agentY))
+        return _MazeVision.#neutralInput();
+      const opennessHorizon = _MazeVision.#OPENNESS_HORIZON;
+      const compassHorizon = _MazeVision.#COMPASS_HORIZON;
+      const DIR_N = 0;
+      const DIR_E = 1;
+      const DIR_S = 2;
+      const DIR_W = 3;
+      const D_COUNT = _MazeVision.#DIRECTION_COUNT;
+      const neighborX = _MazeVision.#SCRATCH_NEIGHBOR_X;
+      const neighborY = _MazeVision.#SCRATCH_NEIGHBOR_Y;
+      const neighborPath = _MazeVision.#SCRATCH_NEIGHBOR_PATH;
+      const neighborReach = _MazeVision.#SCRATCH_NEIGHBOR_REACH;
+      const neighborOpen = _MazeVision.#SCRATCH_NEIGHBOR_OPEN;
+      const directionDeltas = _MazeVision.#DIRECTION_DELTAS;
+      const distMap = distanceToExitMap;
+      neighborPath.fill(Infinity);
+      neighborReach.fill(0);
+      neighborOpen.fill(0);
+      const currentCellDist = Number.isFinite(distMap?.[agentY]?.[agentX]) ? distMap[agentY][agentX] : void 0;
+      const hasCurrentCellDist = currentCellDist != null && Number.isFinite(currentCellDist);
+      const neighborRaw = _MazeVision.#SCRATCH_NEIGHBOR_RAWDIST;
+      neighborRaw.fill(NaN);
+      for (let d = 0; d < D_COUNT; d++) {
+        const delta = directionDeltas[d];
+        const deltaX = delta[0];
+        const deltaY = delta[1];
+        const directionIndex = delta[2];
+        const neighborCol = agentX + deltaX;
+        const neighborRow = agentY + deltaY;
+        neighborX[directionIndex] = neighborCol;
+        neighborY[directionIndex] = neighborRow;
+        const neighborRowRef = encodedMaze[neighborRow];
+        if (!neighborRowRef || neighborRowRef[neighborCol] === -1) {
+          neighborPath[directionIndex] = Infinity;
+          neighborReach[directionIndex] = 0;
+          neighborOpen[directionIndex] = 0;
+          neighborRaw[directionIndex] = NaN;
           continue;
         }
-        const neighborDistanceToExit = distanceToExitMap ? distanceToExitMap[neighborY]?.[neighborX] : void 0;
-        if (neighborDistanceToExit != null && Number.isFinite(neighborDistanceToExit) && currentCellDistanceToExit != null && Number.isFinite(currentCellDistanceToExit)) {
-          if (neighborDistanceToExit < currentCellDistanceToExit) {
-            const pathLength = 1 + neighborDistanceToExit;
-            if (pathLength <= opennessHorizon)
-              neighborCells.push({
-                directionIndex,
-                neighborX,
-                neighborY,
-                pathLength,
-                isReachable: true,
-                opennessValue: 0
-              });
-            else
-              neighborCells.push({
-                directionIndex,
-                neighborX,
-                neighborY,
-                pathLength: Infinity,
-                isReachable: true,
-                opennessValue: 0
-              });
-          } else {
-            neighborCells.push({
-              directionIndex,
-              neighborX,
-              neighborY,
-              pathLength: Infinity,
-              isReachable: true,
-              opennessValue: 0
-            });
-          }
+        const distRow = distMap && distMap[neighborRow];
+        const rawDistance = distRow ? distRow[neighborCol] : void 0;
+        neighborRaw[directionIndex] = Number.isFinite(rawDistance) ? rawDistance : NaN;
+        const hasValidDistance = rawDistance != null && Number.isFinite(rawDistance);
+        neighborReach[directionIndex] = 1;
+        if (hasValidDistance && hasCurrentCellDist && rawDistance < currentCellDist) {
+          const pathLength = 1 + rawDistance;
+          neighborPath[directionIndex] = pathLength <= opennessHorizon ? pathLength : Infinity;
+          neighborOpen[directionIndex] = 0;
         } else {
-          neighborCells.push({
-            directionIndex,
-            neighborX,
-            neighborY,
-            pathLength: Infinity,
-            isReachable: true,
-            opennessValue: 0
-          });
+          neighborPath[directionIndex] = Infinity;
+          neighborOpen[directionIndex] = 0;
         }
       }
-      const reachableNeighbors = neighborCells.filter(
-        (neighbor) => neighbor.isReachable && Number.isFinite(neighbor.pathLength)
-      );
-      let minPathLength = Infinity;
-      for (const neighbor of reachableNeighbors)
-        if (neighbor.pathLength < minPathLength)
-          minPathLength = neighbor.pathLength;
-      if (reachableNeighbors.length && minPathLength < Infinity) {
-        for (const neighbor of reachableNeighbors) {
-          if (neighbor.pathLength === minPathLength) neighbor.opennessValue = 1;
-          else neighbor.opennessValue = minPathLength / neighbor.pathLength;
+      let minPath = Infinity;
+      for (let directionIndex = 0; directionIndex < D_COUNT; directionIndex++) {
+        if (neighborReach[directionIndex] && Number.isFinite(neighborPath[directionIndex]) && neighborPath[directionIndex] < minPath)
+          minPath = neighborPath[directionIndex];
+      }
+      if (minPath < Infinity) {
+        for (let directionIndex = 0; directionIndex < D_COUNT; directionIndex++) {
+          if (neighborReach[directionIndex] && Number.isFinite(neighborPath[directionIndex])) {
+            neighborOpen[directionIndex] = neighborPath[directionIndex] === minPath ? 1 : minPath / neighborPath[directionIndex];
+          }
         }
       }
-      let opennessNorth = neighborCells.find((n) => n.directionIndex === 0).opennessValue;
-      let opennessEast = neighborCells.find((n) => n.directionIndex === 1).opennessValue;
-      let opennessSouth = neighborCells.find((n) => n.directionIndex === 2).opennessValue;
-      let opennessWest = neighborCells.find((n) => n.directionIndex === 3).opennessValue;
-      if (opennessNorth === 0 && opennessEast === 0 && opennessSouth === 0 && opennessWest === 0 && previousAction != null && previousAction >= 0) {
-        const oppositeDirection = (previousAction + 2) % 4;
+      let openN = neighborOpen[DIR_N];
+      let openE = neighborOpen[DIR_E];
+      let openS = neighborOpen[DIR_S];
+      let openW = neighborOpen[DIR_W];
+      if (openN === 0 && openE === 0 && openS === 0 && openW === 0 && previousAction != null) {
+        const oppositeDirection = _MazeVision.#opposite(previousAction);
         switch (oppositeDirection) {
-          case 0:
-            if (isCellOpen(agentX, agentY - 1)) opennessNorth = 1e-3;
+          case DIR_N:
+            if (_MazeVision.#isCellOpen(encodedMaze, agentX, agentY - 1))
+              openN = _MazeVision.#BACKTRACK_SIGNAL;
             break;
-          case 1:
-            if (isCellOpen(agentX + 1, agentY)) opennessEast = 1e-3;
+          case DIR_E:
+            if (_MazeVision.#isCellOpen(encodedMaze, agentX + 1, agentY))
+              openE = _MazeVision.#BACKTRACK_SIGNAL;
             break;
-          case 2:
-            if (isCellOpen(agentX, agentY + 1)) opennessSouth = 1e-3;
+          case DIR_S:
+            if (_MazeVision.#isCellOpen(encodedMaze, agentX, agentY + 1))
+              openS = _MazeVision.#BACKTRACK_SIGNAL;
             break;
-          case 3:
-            if (isCellOpen(agentX - 1, agentY)) opennessWest = 1e-3;
+          case DIR_W:
+            if (_MazeVision.#isCellOpen(encodedMaze, agentX - 1, agentY))
+              openW = _MazeVision.#BACKTRACK_SIGNAL;
             break;
         }
       }
-      let bestDirectionToExit = 0;
+      let bestDirection = 0;
       if (distanceToExitMap) {
         let minCompassPathLength = Infinity;
-        let foundCompassPath = false;
-        for (const neighbor of neighborCells) {
-          const neighborRawDistance = distanceToExitMap[neighbor.neighborY]?.[neighbor.neighborX];
-          if (neighborRawDistance != null && Number.isFinite(neighborRawDistance)) {
-            const pathLength = neighborRawDistance + 1;
+        let found = false;
+        for (let directionIndex = 0; directionIndex < D_COUNT; directionIndex++) {
+          const neighborCachedRaw = neighborRaw[directionIndex];
+          if (Number.isFinite(neighborCachedRaw)) {
+            const pathLength = neighborCachedRaw + 1;
             if (pathLength < minCompassPathLength && pathLength <= compassHorizon) {
               minCompassPathLength = pathLength;
-              bestDirectionToExit = neighbor.directionIndex;
-              foundCompassPath = true;
+              bestDirection = directionIndex;
+              found = true;
             }
           }
         }
-        if (!foundCompassPath) {
-          const deltaXToGoal = exitPosition[0] - agentX;
-          const deltaYToGoal = exitPosition[1] - agentY;
-          if (Math.abs(deltaXToGoal) > Math.abs(deltaYToGoal))
-            bestDirectionToExit = deltaXToGoal > 0 ? 1 : 3;
-          else bestDirectionToExit = deltaYToGoal > 0 ? 2 : 0;
+        if (!found) {
+          const deltaToExitX = exitPosition[0] - agentX;
+          const deltaToExitY = exitPosition[1] - agentY;
+          bestDirection = Math.abs(deltaToExitX) > Math.abs(deltaToExitY) ? deltaToExitX > 0 ? 1 : 3 : deltaToExitY > 0 ? 2 : 0;
         }
       } else {
-        const deltaXToGoal = exitPosition[0] - agentX;
-        const deltaYToGoal = exitPosition[1] - agentY;
-        if (Math.abs(deltaXToGoal) > Math.abs(deltaYToGoal))
-          bestDirectionToExit = deltaXToGoal > 0 ? 1 : 3;
-        else bestDirectionToExit = deltaYToGoal > 0 ? 2 : 0;
+        const deltaToExitX = exitPosition[0] - agentX;
+        const deltaToExitY = exitPosition[1] - agentY;
+        bestDirection = Math.abs(deltaToExitX) > Math.abs(deltaToExitY) ? deltaToExitX > 0 ? 1 : 3 : deltaToExitY > 0 ? 2 : 0;
       }
-      const compassScalar = bestDirectionToExit * 0.25;
-      let progressDelta = 0.5;
-      if (previousStepDistance != null && Number.isFinite(previousStepDistance)) {
-        const distanceDelta = previousStepDistance - currentStepDistance;
-        const clippedDelta = Math.max(-2, Math.min(2, distanceDelta));
-        progressDelta = 0.5 + clippedDelta / 4;
+      const compassScalar = bestDirection * _MazeVision.#COMPASS_STEP;
+      let progress = _MazeVision.#PROGRESS_NEUTRAL;
+      if (previousStepDistance != null && Number.isFinite(previousStepDistance) && Number.isFinite(currentStepDistance)) {
+        const delta = previousStepDistance - currentStepDistance;
+        const clipped = Math.max(
+          -_MazeVision.#PROGRESS_CLIP,
+          Math.min(_MazeVision.#PROGRESS_CLIP, delta)
+        );
+        progress = _MazeVision.#PROGRESS_NEUTRAL + clipped / _MazeVision.#PROGRESS_SCALE;
       }
-      const inputVector = [
-        compassScalar,
-        opennessNorth,
-        opennessEast,
-        opennessSouth,
-        opennessWest,
-        progressDelta
-      ];
-      if (typeof process !== "undefined" && typeof process.env !== "undefined" && process.env.ASCII_VISION_DEBUG === "1") {
-        try {
-          const neighborSummary = neighborCells.map(
-            (neighbor) => `{dir:${neighbor.directionIndex} x:${neighbor.neighborX} y:${neighbor.neighborY} path:${Number.isFinite(neighbor.pathLength) ? neighbor.pathLength.toFixed(2) : "Inf"} open:${neighbor.opennessValue.toFixed(4)}}`
-          ).join(" ");
-          _MazeVision._dbgCounter = (_MazeVision._dbgCounter || 0) + 1;
-          if (_MazeVision._dbgCounter % 5 === 0) {
-            console.log(
-              `[VISION] pos=${agentX},${agentY} comp=${compassScalar.toFixed(
-                2
-              )} inputs=${JSON.stringify(
-                inputVector.map((v) => +v.toFixed(6))
-              )} neighbors=${neighborSummary}`
-            );
-          }
-        } catch {
-        }
-      }
-      return inputVector;
+      return [compassScalar, openN, openE, openS, openW, progress];
     }
   };
 
   // test/examples/asciiMaze/mazeMovement.ts
   var MazeMovement = class _MazeMovement {
     /**
-     * Checks if a move is valid (within bounds and not a wall).
-     *
-     * @param encodedMaze - 2D array representation of the maze.
-     * @param [x, y] - Coordinates to check.
-     * @returns Boolean indicating if the position is valid for movement.
+     * Maximum number of simulation steps before terminating (safety cap)
+     * @internal
      */
+    static #DEFAULT_MAX_STEPS = 3e3;
     /**
-     * Checks if a move is valid (within maze bounds and not a wall cell).
-     *
-     * @param encodedMaze - 2D array representation of the maze (cells: -1=wall, 0+=open).
-     * @param coords - [x, y] coordinates to check for validity.
-     * @returns {boolean} True if the position is within bounds and not a wall.
+     * Number of recent moves tracked for oscillation detection
+     * @internal
      */
-    static isValidMove(encodedMaze, [x, y]) {
-      return x >= 0 && y >= 0 && y < encodedMaze.length && x < encodedMaze[0].length && encodedMaze[y][x] !== -1;
+    static #MOVE_HISTORY_LENGTH = 6;
+    // Named private constants to replace magic numbers and document intent.
+    /** Reward scale applied to shaping terms (smaller reduces selection pressure) */
+    static #REWARD_SCALE = 0.5;
+    /** Strong penalty multiplier for short A->B oscillations */
+    static #LOOP_PENALTY = 10;
+    // multiplied by rewardScale
+    /** Penalty applied when returning to a recent cell (memory-based) */
+    static #MEMORY_RETURN_PENALTY = 2;
+    // multiplied by rewardScale
+    /** Per-visit penalty for repeated visits to same cell */
+    static #REVISIT_PENALTY_PER_VISIT = 0.2;
+    // per extra visit, multiplied by rewardScale
+    /** Visits threshold to trigger termination/harsh penalty */
+    static #VISIT_TERMINATION_THRESHOLD = 10;
+    /** Extremely harsh penalty for invalid moves (used sparingly) */
+    static #INVALID_MOVE_PENALTY_HARSH = 1e3;
+    /** Mild penalty for invalid moves to preserve learning signal */
+    static #INVALID_MOVE_PENALTY_MILD = 10;
+    // Saturation / collapse thresholds and penalties
+    /** Probability threshold indicating overconfidence (near-deterministic) */
+    static #OVERCONFIDENT_PROB = 0.985;
+    /** Secondary-probability threshold used with overconfidence detection */
+    static #SECOND_PROB_LOW = 0.01;
+    /** Threshold for flat-collapse detection using log-std of outputs */
+    static #LOGSTD_FLAT_THRESHOLD = 0.01;
+    /** Penalty when network appears overconfident */
+    static #OVERCONFIDENT_PENALTY = 0.25;
+    // * rewardScale
+    /** Penalty for flat collapse (no variance in outputs) */
+    static #FLAT_COLLAPSE_PENALTY = 0.35;
+    // * rewardScale
+    /** Minimum saturations before applying bias adjustments */
+    static #SATURATION_ADJUST_MIN = 6;
+    /** Interval (in steps) used for saturation bias adjustment checks */
+    static #SATURATION_ADJUST_INTERVAL = 5;
+    /** Clamp for adaptive bias adjustments */
+    static #BIAS_CLAMP = 5;
+    /** Scaling factor used when adjusting biases to mitigate saturation */
+    static #BIAS_ADJUST_FACTOR = 0.5;
+    // Convenience thresholds and tuning knobs (centralized to avoid magic literals)
+    /** Warmup steps where exploration is encouraged */
+    static #EPSILON_WARMUP_STEPS = 10;
+    /** Steps-stagnant threshold to consider very stagnant (high epsilon) */
+    static #EPSILON_STAGNANT_HIGH_THRESHOLD = 12;
+    /** Steps-stagnant threshold to consider moderate stagnation */
+    static #EPSILON_STAGNANT_MED_THRESHOLD = 6;
+    /** Saturation count that triggers epsilon-increase behavior */
+    static #EPSILON_SATURATION_TRIGGER = 3;
+    /** Length used to detect tiny A->B oscillations */
+    static #OSCILLATION_DETECT_LENGTH = 4;
+    /** Saturation penalty trigger (>=) */
+    static #SATURATION_PENALTY_TRIGGER = 5;
+    /** Period (in steps) to escalate saturation penalty */
+    static #SATURATION_PENALTY_PERIOD = 10;
+    /** Start step for global break bonus when breaking long stagnation */
+    static #GLOBAL_BREAK_BONUS_START = 10;
+    /** Per-step bonus for global break beyond the start threshold */
+    static #GLOBAL_BREAK_BONUS_PER_STEP = 0.01;
+    /** Cap for the global break bonus */
+    static #GLOBAL_BREAK_BONUS_CAP = 0.5;
+    /** Number of steps since improvement to begin repetition penalty scaling */
+    static #REPETITION_PENALTY_START = 4;
+    /** Weight for entropy bonus on failed runs */
+    static #ENTROPY_BONUS_WEIGHT = 4;
+    // Vision input layout indices (groups used by hasGuidance checks)
+    /** Start index of LOS group within vision vector */
+    static #VISION_LOS_START = 8;
+    /** Start index of gradient group within vision vector */
+    static #VISION_GRAD_START = 12;
+    /** Number of elements in each vision group (LOS / Gradient) */
+    static #VISION_GROUP_LEN = 4;
+    // Proximity/exploration tuning
+    /** Distance (in cells) within which greedy proximity moves are prioritized */
+    static #PROXIMITY_GREEDY_DISTANCE = 2;
+    /** Distance threshold to reduce epsilon exploration near goal */
+    static #PROXIMITY_SUPPRESS_EXPLOR_DIST = 5;
+    /** Initial epsilon for epsilon-greedy exploration */
+    static #EPSILON_INITIAL = 0.35;
+    /** Epsilon used when the agent is highly stagnant */
+    static #EPSILON_STAGNANT_HIGH = 0.5;
+    /** Epsilon used for moderate stagnation */
+    static #EPSILON_STAGNANT_MED = 0.25;
+    /** Epsilon used when network saturations are detected */
+    static #EPSILON_SATURATIONS = 0.3;
+    /** Minimum epsilon allowed when near the goal */
+    static #EPSILON_MIN_NEAR_GOAL = 0.05;
+    /** Streak length used to trigger forced exploration */
+    static #NO_MOVE_STREAK_THRESHOLD = 5;
+    // Local area stagnation
+    /** Size of the recent-positions sliding window for local stagnation detection */
+    static #LOCAL_WINDOW = 30;
+    /** Max span (in cells) considered "local" for oscillation penalties */
+    static #LOCAL_AREA_SPAN_THRESHOLD = 5;
+    /** Steps without improvement before local-area stagnation penalty applies */
+    static #LOCAL_AREA_STAGNATION_STEPS = 8;
+    /** Amount applied to local area penalty when tight oscillation detected (multiplied by rewardScale) */
+    static #LOCAL_AREA_PENALTY_AMOUNT = 0.05;
+    // Progress reward shaping
+    /** Base reward for making forward progress toward the exit */
+    static #PROGRESS_REWARD_BASE = 0.3;
+    /** Additional progress reward scaled by network confidence */
+    static #PROGRESS_REWARD_CONF_SCALE = 0.7;
+    /** Multiplier applied per step-since-improvement for extra reward shaping */
+    static #PROGRESS_STEPS_MULT = 0.02;
+    /** Maximum steps-based progress contribution (times rewardScale) */
+    static #PROGRESS_STEPS_MAX = 0.5;
+    // times rewardScale
+    /** Scale applied to raw distance-delta when shaping reward */
+    static #DISTANCE_DELTA_SCALE = 2;
+    /** Base confidence factor for distance-delta shaping */
+    static #DISTANCE_DELTA_CONF_BASE = 0.4;
+    /** Additional confidence scale applied to distance-delta shaping */
+    static #DISTANCE_DELTA_CONF_SCALE = 0.6;
+    /** Base penalty applied when a move increases distance to goal (multiplied by rewardScale) */
+    static #PROGRESS_AWAY_BASE_PENALTY = 0.05;
+    /** Additional scaling applied to away penalty proportional to network confidence */
+    static #PROGRESS_AWAY_CONF_SCALE = 0.15;
+    // Entropy tuning
+    /** Entropy value above which the action distribution is considered too uniform */
+    static #ENTROPY_HIGH_THRESHOLD = 0.95;
+    /** Entropy value below which the distribution is considered confident */
+    static #ENTROPY_CONFIDENT_THRESHOLD = 0.55;
+    /** Required gap between top two probs to treat as confident */
+    static #ENTROPY_CONFIDENT_DIFF = 0.25;
+    /** Small penalty applied when entropy is persistently high */
+    static #ENTROPY_PENALTY = 0.03;
+    // * rewardScale
+    /** Tiny bonus for clear decisions that aid exploration */
+    static #EXPLORATION_BONUS_SMALL = 0.015;
+    // * rewardScale
+    /** Base repetition/backtrack penalty applied when repeating same action without improvement */
+    static #REPETITION_PENALTY_BASE = 0.05;
+    /** Penalty for making the direct opposite move (when it doesn't improve) */
+    static #BACK_MOVE_PENALTY = 0.2;
+    // Saturation penalties
+    /** Base penalty applied when saturation is detected */
+    static #SATURATION_PENALTY_BASE = 0.05;
+    // * rewardScale
+    /** Escalating penalty applied periodically when saturation persists */
+    static #SATURATION_PENALTY_ESCALATE = 0.1;
+    // * rewardScale when escalation applies
+    // Deep stagnation
+    /** Steps without improvement that trigger deep-stagnation handling */
+    static #DEEP_STAGNATION_THRESHOLD = 40;
+    /** Penalty applied when deep stagnation is detected (non-browser environments) */
+    static #DEEP_STAGNATION_PENALTY = 2;
+    // * rewardScale
+    // Action/output dimension and softmax/entropy tuning
+    /** Number of cardinal actions (N,E,S,W) */
+    static #ACTION_DIM = 4;
+    /** Natural log of ACTION_DIM; used to normalize entropy calculations */
+    static #LOG_ACTIONS = Math.log(_MazeMovement.#ACTION_DIM);
+    /**
+     * Pooled scratch buffers used by `selectDirection` to avoid per-call
+     * allocations on the softmax/entropy hot path.
+     *
+     * @remarks
+     * - These are class-private and reused across calls; `selectDirection` is
+     *   therefore not reentrant and should not be called concurrently.
+     */
+    static #SCRATCH_CENTERED = new Float64Array(4);
+    static #SCRATCH_EXPS = new Float64Array(4);
+    /** Representation for 'no move' direction */
+    static #NO_MOVE = -1;
+    /** Minimum standard deviation used to prevent division by zero */
+    static #STD_MIN = 1e-6;
+    /** Thresholds for collapse ratio decisions based on std */
+    static #COLLAPSE_STD_THRESHOLD = 0.01;
+    /** Secondary threshold used when std indicates medium collapse */
+    static #COLLAPSE_STD_MED = 0.03;
+    /** Collapse ratio constants used for adaptive temperature */
+    /** Full collapse ratio used when std is extremely low */
+    static #COLLAPSE_RATIO_FULL = 1;
+    /** Partial collapse ratio used for medium collapse */
+    static #COLLAPSE_RATIO_HALF = 0.5;
+    /** Base and scale used to compute softmax temperature */
+    static #TEMPERATURE_BASE = 1;
+    /** Scale factor applied when computing adaptive softmax temperature */
+    static #TEMPERATURE_SCALE = 1.2;
+    // Network history and randomness
+    /** History length for recent output snapshots (used for variance diagnostics) */
+    static #OUTPUT_HISTORY_LENGTH = 80;
+    /**
+     * Number of outputs snapshots to keep for variance diagnostics.
+     * Larger values smooth variance estimates at the cost of memory.
+     */
+    /** Small randomness added to fitness to break ties stably */
+    static #FITNESS_RANDOMNESS = 0.01;
+    // Success fitness constants
+    /** Base fitness given for successful maze completion */
+    static #SUCCESS_BASE_FITNESS = 650;
+    /** Scale applied for remaining steps on success to reward efficiency */
+    static #STEP_EFFICIENCY_SCALE = 0.2;
+    /** Weight for action-entropy bonus on successful runs */
+    static #SUCCESS_ACTION_ENTROPY_SCALE = 5;
+    /** Minimum clamp for any successful-run fitness */
+    static #MIN_SUCCESS_FITNESS = 150;
+    // Exploration / revisiting tuning
+    /** Bonus reward for discovering a previously unvisited cell */
+    static #NEW_CELL_EXPLORATION_BONUS = 0.3;
+    /** Strong penalty factor for revisiting cells */
+    static #REVISIT_PENALTY_STRONG = 0.5;
+    // Progress shaping constants
+    /** Exponent used in non-linear progress shaping */
+    static #PROGRESS_POWER = 1.3;
+    /** Scale used to convert shaped progress into fitness contribution */
+    static #PROGRESS_SCALE = 500;
+    /** Node type string used in network node objects */
+    static #NODE_TYPE_OUTPUT = "output";
+    /** Direction deltas for cardinal moves: N, E, S, W */
+    static #DIRECTION_DELTAS = [
+      [0, -1],
+      // North
+      [1, 0],
+      // East
+      [0, 1],
+      // South
+      [-1, 0]
+      // West
+    ];
+    /** Lookup table for opposite directions (index -> opposite index). */
+    static #OPPOSITE_DIR = [2, 3, 0, 1];
+    // ---------------------------------------------------------------------------
+    // Pooled / reusable typed-array buffers (non‑reentrant) for simulation state
+    // ---------------------------------------------------------------------------
+    /** Visited flag per cell (0/1). Reused across simulations. @remarks Non-reentrant. */
+    static #VisitedFlags = null;
+    /** Visit counts per cell (clamped). @remarks Non-reentrant. */
+    static #VisitCounts = null;
+    /** Path X coordinates (index-aligned with #PathY). */
+    static #PathX = null;
+    /** Path Y coordinates (index-aligned with #PathX). */
+    static #PathY = null;
+    /** Capacity (cells) currently allocated for grid‑dependent arrays. */
+    static #GridCapacity = 0;
+    /** Capacity (steps) currently allocated for path arrays. */
+    static #PathCapacity = 0;
+    /** Cached maze width for index calculations. */
+    static #CachedWidth = 0;
+    /** Cached maze height for bounds validation. */
+    static #CachedHeight = 0;
+    /** Pooled softmax output (returned as a cloned plain array). */
+    static #SOFTMAX = new Float64Array(4);
+    /** Seedable PRNG state (Mulberry32 style). Undefined => Math.random(). */
+    static #PRNGState = null;
+    // ---------------------------------------------------------------------------
+    // Internal mutable run-scoped state (replaces (MazeMovement as any).foo uses)
+    // ---------------------------------------------------------------------------
+    /** Rolling saturation counter used for adaptive penalties */
+    static #StateSaturations = 0;
+    /** Consecutive steps with no movement to trigger forced exploration */
+    static #StateNoMoveStreak = 0;
+    /** Previous distance value supplied to vision builder */
+    static #StatePrevDistanceStep = void 0;
+    /**
+     * Enable deterministic pseudo-randomness for simulations executed after this call.
+     *
+     * Uses a lightweight Mulberry32 generator so repeated runs with the same seed
+     * produce identical stochastic choices (epsilon exploration, tie‑breaking, etc.).
+     * Because internal buffers are shared, calls are not reentrant / thread‑safe.
+     *
+     * @param seed 32-bit unsigned integer seed. If 0 is provided a fixed default constant is used.
+     * @returns void
+     * @example
+     * // Ensure reproducible simulation ordering
+     * MazeMovement.seedDeterministic(1234);
+     * const result = MazeMovement.simulateAgent(network, maze, start, exit);
+     */
+    static seedDeterministic(seed) {
+      _MazeMovement.#PRNGState = seed >>> 0 || 2654435769;
     }
     /**
-     * Moves the agent in the given direction if possible, otherwise stays in place.
+     * Disable deterministic seeding and return to Math.random based randomness.
      *
-     * Handles collision detection with walls and maze boundaries,
-     * preventing the agent from making invalid moves.
-     *
-     * @param encodedMaze - 2D array representation of the maze.
-     * @param position - Current [x,y] position of the agent.
-     * @param direction - Direction index (0=North, 1=East, 2=South, 3=West).
-     * @returns New position after movement, or original position if move was invalid.
+     * @returns void
+     * @example
+     * MazeMovement.clearDeterministicSeed();
      */
+    static clearDeterministicSeed() {
+      _MazeMovement.#PRNGState = null;
+    }
+    /** Generate a random float in [0,1). Deterministic when seed set. */
+    static #rand() {
+      if (_MazeMovement.#PRNGState == null) return Math.random();
+      let t = _MazeMovement.#PRNGState += 1831565813;
+      t = Math.imul(t ^ t >>> 15, t | 1);
+      t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    }
+    /** Encode (x,y) -> linear cell index. */
+    static #index(x, y) {
+      return y * _MazeMovement.#CachedWidth + x;
+    }
+    /** Ensure pooled buffers sized for given maze & path. */
+    static #initBuffers(width, height, maxSteps) {
+      const cellCount = width * height;
+      if (!this.#VisitedFlags || cellCount > this.#GridCapacity) {
+        const nextCellCap = _MazeMovement.#nextPow2(cellCount);
+        this.#VisitedFlags = new Uint8Array(nextCellCap);
+        this.#VisitCounts = new Uint16Array(nextCellCap);
+        this.#GridCapacity = nextCellCap;
+      } else {
+        this.#VisitedFlags.fill(0, 0, cellCount);
+        this.#VisitCounts.fill(0, 0, cellCount);
+      }
+      if (!this.#PathX || maxSteps + 1 > this.#PathCapacity) {
+        const nextPathCap = _MazeMovement.#nextPow2(maxSteps + 1);
+        this.#PathX = new Int32Array(nextPathCap);
+        this.#PathY = new Int32Array(nextPathCap);
+        this.#PathCapacity = nextPathCap;
+      }
+      this.#CachedWidth = width;
+      this.#CachedHeight = height;
+    }
+    /** Next power of two helper (>= n). */
+    static #nextPow2(n) {
+      let p = 1;
+      while (p < n) p <<= 1;
+      return p;
+    }
+    /** Materialize the path arrays into an array<tuple>. */
+    static #materializePath(length) {
+      const px = _MazeMovement.#PathX;
+      const py = _MazeMovement.#PathY;
+      const out = new Array(length);
+      for (let positionIndex = 0; positionIndex < length; positionIndex++) {
+        out[positionIndex] = [px[positionIndex], py[positionIndex]];
+      }
+      return out;
+    }
+    /** Return opposite cardinal direction (works for ACTION_DIM even if it changes) */
+    static #opposite(direction) {
+      return (direction + _MazeMovement.#ACTION_DIM / 2) % _MazeMovement.#ACTION_DIM;
+    }
+    /** Sum a contiguous group in the vision vector starting at `start`. */
+    static #sumVisionGroup(vision, start2) {
+      let total = 0;
+      const end = start2 + _MazeMovement.#VISION_GROUP_LEN;
+      for (let visionIndex = start2; visionIndex < end; visionIndex++)
+        total += vision[visionIndex];
+      return total;
+    }
+    /**
+     * Compute adaptive epsilon used for epsilon-greedy exploration.
+     * Extracted from the main loop to shrink hot path complexity and enable reuse.
+     */
+    static #computeEpsilon(stepNumber, stepsSinceImprovement, distHere, saturations) {
+      let epsilon = 0;
+      switch (true) {
+        case stepNumber < _MazeMovement.#EPSILON_WARMUP_STEPS:
+          epsilon = _MazeMovement.#EPSILON_INITIAL;
+          break;
+        case stepsSinceImprovement > _MazeMovement.#EPSILON_STAGNANT_HIGH_THRESHOLD:
+          epsilon = _MazeMovement.#EPSILON_STAGNANT_HIGH;
+          break;
+        case stepsSinceImprovement > _MazeMovement.#EPSILON_STAGNANT_MED_THRESHOLD:
+          epsilon = _MazeMovement.#EPSILON_STAGNANT_MED;
+          break;
+        case saturations > _MazeMovement.#EPSILON_SATURATION_TRIGGER:
+          epsilon = _MazeMovement.#EPSILON_SATURATIONS;
+          break;
+        default:
+          break;
+      }
+      if (distHere <= _MazeMovement.#PROXIMITY_SUPPRESS_EXPLOR_DIST)
+        epsilon = Math.min(epsilon, _MazeMovement.#EPSILON_MIN_NEAR_GOAL);
+      return epsilon;
+    }
+    /**
+     * Helper: is a cell (x,y) within bounds and not a wall?
+     */
+    static #isCellOpen(encodedMaze, x, y) {
+      return y >= 0 && y < encodedMaze.length && x >= 0 && x < encodedMaze[0].length && encodedMaze[y][x] !== -1;
+    }
+    /**
+     * Helper: unified distance lookup. Prefer distance map when available,
+     * otherwise fall back to BFS. Keeps callers simple and avoids repeated
+     * ternary expressions across the file.
+     */
+    static #distanceAt(encodedMaze, [x, y], distanceMap) {
+      return Number.isFinite(distanceMap?.[y]?.[x]) ? distanceMap[y][x] : Infinity;
+    }
+    static isValidMove(encodedMaze, positionOrX, yMaybe) {
+      if (Array.isArray(positionOrX)) {
+        const [x, y] = positionOrX;
+        return _MazeMovement.#isCellOpen(encodedMaze, x, y);
+      }
+      return _MazeMovement.#isCellOpen(
+        encodedMaze,
+        positionOrX,
+        yMaybe
+      );
+    }
     /**
      * Moves the agent in the specified direction if the move is valid.
      *
@@ -16473,37 +17632,21 @@
      * @returns { [number, number] } New position after movement, or original position if move was invalid.
      */
     static moveAgent(encodedMaze, position, direction) {
-      if (direction === -1) {
-        return [...position];
+      if (direction === _MazeMovement.#NO_MOVE) {
+        return [position[0], position[1]];
       }
-      const nextPosition = [...position];
-      switch (direction) {
-        case 0:
-          nextPosition[1] -= 1;
-          break;
-        case 1:
-          nextPosition[0] += 1;
-          break;
-        case 2:
-          nextPosition[1] += 1;
-          break;
-        case 3:
-          nextPosition[0] -= 1;
-          break;
+      const nextPosition = [position[0], position[1]];
+      if (direction >= 0 && direction < _MazeMovement.#ACTION_DIM) {
+        const [dx, dy] = _MazeMovement.#DIRECTION_DELTAS[direction];
+        nextPosition[0] += dx;
+        nextPosition[1] += dy;
       }
       if (_MazeMovement.isValidMove(encodedMaze, nextPosition)) {
         return nextPosition;
       } else {
-        return position;
+        return [position[0], position[1]];
       }
     }
-    /**
-     * Selects the direction with the highest output value from the neural network.
-     * Applies softmax to interpret outputs as probabilities, then uses argmax.
-     *
-     * @param outputs - Array of output values from the neural network (length 4).
-     * @returns Index of the highest output value (0=N, 1=E, 2=S, 3=W), or -1 for no movement.
-     */
     /**
      * Selects the direction with the highest output value from the neural network.
      * Applies softmax to interpret outputs as probabilities, then uses argmax.
@@ -16513,44 +17656,70 @@
      * @returns {object} Direction index, softmax probabilities, entropy, and confidence stats.
      */
     static selectDirection(outputs) {
-      if (!outputs || outputs.length !== 4) {
+      if (!outputs || outputs.length !== _MazeMovement.#ACTION_DIM) {
         return {
-          direction: -1,
+          direction: _MazeMovement.#NO_MOVE,
           softmax: [0, 0, 0, 0],
           entropy: 0,
           maxProb: 0,
           secondProb: 0
         };
       }
-      const mean = (outputs[0] + outputs[1] + outputs[2] + outputs[3]) / 4;
-      let variance = 0;
-      for (const o of outputs) variance += (o - mean) * (o - mean);
-      variance /= 4;
-      let std = Math.sqrt(variance);
-      if (!Number.isFinite(std) || std < 1e-6) std = 1e-6;
-      const centered = outputs.map((o) => o - mean);
-      const collapseRatio = std < 0.01 ? 1 : std < 0.03 ? 0.5 : 0;
-      const temperature = 1 + 1.2 * collapseRatio;
-      const max = Math.max(...centered);
-      const exps = centered.map((v) => Math.exp((v - max) / temperature));
-      const sum = exps.reduce((a, b) => a + b, 0) || 1;
-      const softmax = exps.map((e) => e / sum);
+      const meanLogit = (outputs[0] + outputs[1] + outputs[2] + outputs[3]) / _MazeMovement.#ACTION_DIM;
+      let varianceSum = 0;
+      for (let k = 0; k < _MazeMovement.#ACTION_DIM; k++) {
+        const delta = outputs[k] - meanLogit;
+        varianceSum += delta * delta;
+        _MazeMovement.#SCRATCH_CENTERED[k] = delta;
+      }
+      varianceSum /= _MazeMovement.#ACTION_DIM;
+      let stdDev = Math.sqrt(varianceSum);
+      if (!Number.isFinite(stdDev) || stdDev < _MazeMovement.#STD_MIN)
+        stdDev = _MazeMovement.#STD_MIN;
+      const collapseRatio = stdDev < _MazeMovement.#COLLAPSE_STD_THRESHOLD ? _MazeMovement.#COLLAPSE_RATIO_FULL : stdDev < _MazeMovement.#COLLAPSE_STD_MED ? _MazeMovement.#COLLAPSE_RATIO_HALF : 0;
+      const temperature = _MazeMovement.#TEMPERATURE_BASE + _MazeMovement.#TEMPERATURE_SCALE * collapseRatio;
+      let maxCentered = -Infinity;
+      for (let k = 0; k < _MazeMovement.#ACTION_DIM; k++) {
+        const v = _MazeMovement.#SCRATCH_CENTERED[k];
+        if (v > maxCentered) maxCentered = v;
+      }
+      let expSum = 0;
+      for (let k = 0; k < _MazeMovement.#ACTION_DIM; k++) {
+        const expVal = Math.exp(
+          (_MazeMovement.#SCRATCH_CENTERED[k] - maxCentered) / temperature
+        );
+        _MazeMovement.#SCRATCH_EXPS[k] = expVal;
+        expSum += expVal;
+      }
+      if (!expSum) expSum = 1;
       let direction = 0;
       let maxProb = -Infinity;
       let secondProb = 0;
-      softmax.forEach((p, i) => {
-        if (p > maxProb) {
+      const pooled = _MazeMovement.#SOFTMAX;
+      for (let k = 0; k < _MazeMovement.#ACTION_DIM; k++) {
+        const prob = _MazeMovement.#SCRATCH_EXPS[k] / expSum;
+        pooled[k] = prob;
+        if (prob > maxProb) {
           secondProb = maxProb;
-          maxProb = p;
-          direction = i;
-        } else if (p > secondProb) secondProb = p;
-      });
+          maxProb = prob;
+          direction = k;
+        } else if (prob > secondProb) {
+          secondProb = prob;
+        }
+      }
       let entropy = 0;
-      softmax.forEach((p) => {
-        if (p > 0) entropy += -p * Math.log(p);
-      });
-      entropy /= Math.log(4);
-      return { direction, softmax, entropy, maxProb, secondProb };
+      for (let k = 0; k < _MazeMovement.#ACTION_DIM; k++) {
+        const prob = pooled[k];
+        if (prob > 0) entropy += -prob * Math.log(prob);
+      }
+      entropy /= _MazeMovement.#LOG_ACTIONS;
+      return {
+        direction,
+        softmax: Array.from(pooled),
+        entropy,
+        maxProb,
+        secondProb
+      };
     }
     /**
      * Simulates the agent navigating the maze using its neural network.
@@ -16571,350 +17740,603 @@
      *   - fitness: Calculated fitness score for evolution.
      *   - progress: Percentage progress toward exit (0-100).
      */
-    static simulateAgent(network, encodedMaze, startPos, exitPos, distanceMap, maxSteps = 3e3) {
-      let position = [...startPos];
-      let steps = 0;
-      let path2 = [position.slice()];
-      let visitedPositions = /* @__PURE__ */ new Set();
-      let visitCounts = /* @__PURE__ */ new Map();
-      let moveHistory = [];
-      const MOVE_HISTORY_LENGTH = 6;
-      let minDistanceToExit = distanceMap ? distanceMap[position[1]]?.[position[0]] ?? Infinity : MazeUtils.bfsDistance(encodedMaze, position, exitPos);
-      const rewardScale = 0.5;
-      let progressReward = 0;
-      let newCellExplorationBonus = 0;
-      let invalidMovePenalty = 0;
-      let prevAction = -1;
-      let stepsSinceImprovement = 0;
-      const startDistanceGlobal = distanceMap ? distanceMap[position[1]]?.[position[0]] ?? Infinity : MazeUtils.bfsDistance(encodedMaze, position, exitPos);
-      let lastDistanceGlobal = startDistanceGlobal;
-      let saturatedSteps = 0;
-      const LOCAL_WINDOW = 30;
-      const recentPositions = [];
-      let localAreaPenalty = 0;
-      let lastProgressRatio = 0;
-      while (steps < maxSteps) {
-        steps++;
-        const currentPosKey = `${position[0]},${position[1]}`;
-        visitedPositions.add(currentPosKey);
-        visitCounts.set(currentPosKey, (visitCounts.get(currentPosKey) || 0) + 1);
-        moveHistory.push(currentPosKey);
-        if (moveHistory.length > MOVE_HISTORY_LENGTH) moveHistory.shift();
-        const percentExplored = visitedPositions.size / (encodedMaze.length * encodedMaze[0].length);
-        let loopPenalty = 0;
-        if (moveHistory.length >= 4 && moveHistory[moveHistory.length - 1] === moveHistory[moveHistory.length - 3] && moveHistory[moveHistory.length - 2] === moveHistory[moveHistory.length - 4]) {
-          loopPenalty -= 10 * rewardScale;
+    static simulateAgent(network, encodedMaze, startPos, exitPos, distanceMap, maxSteps = _MazeMovement.#DEFAULT_MAX_STEPS) {
+      const state = _MazeMovement.#initRunState(
+        encodedMaze,
+        startPos,
+        distanceMap,
+        maxSteps
+      );
+      while (state.steps < maxSteps) {
+        state.steps++;
+        _MazeMovement.#recordVisitAndUpdatePenalties(state, encodedMaze);
+        _MazeMovement.#buildVisionAndDistance(
+          state,
+          encodedMaze,
+          exitPos,
+          distanceMap
+        );
+        _MazeMovement.#decideDirection(state, network, encodedMaze, distanceMap);
+        _MazeMovement.#maybeApplyProximityGreedy(state, encodedMaze, distanceMap);
+        _MazeMovement.#maybeApplyEpsilonExploration(state, encodedMaze);
+        _MazeMovement.#maybeForceExploration(state, encodedMaze);
+        _MazeMovement.#executeMoveAndRewards(state, encodedMaze, distanceMap);
+        _MazeMovement.#applyPostActionPenalties(state);
+        if (_MazeMovement.#maybeTerminateDeepStagnation(state)) break;
+        if (state.position[0] === exitPos[0] && state.position[1] === exitPos[1]) {
+          return _MazeMovement.#finalizeSuccess(state, maxSteps);
         }
-        const loopFlag = loopPenalty < 0 ? 1 : 0;
-        let memoryPenalty = 0;
-        if (moveHistory.length > 1 && moveHistory.slice(0, -1).includes(currentPosKey)) {
-          memoryPenalty -= 2 * rewardScale;
-        }
-        let revisitPenalty = 0;
-        const visits = visitCounts.get(currentPosKey) || 1;
-        if (visits > 1) {
-          revisitPenalty -= 0.2 * (visits - 1) * rewardScale;
-        }
-        if (visits > 10) {
-          invalidMovePenalty -= 1e3 * rewardScale;
-          break;
-        }
-        const prevDistLocal = distanceMap ? distanceMap[position[1]]?.[position[0]] ?? void 0 : MazeUtils.bfsDistance(encodedMaze, position, exitPos);
-        const distCurrentLocal = prevDistLocal;
-        const vision = MazeVision.buildInputs6(
+      }
+      return _MazeMovement.#finalizeFailure(
+        state,
+        encodedMaze,
+        startPos,
+        exitPos,
+        distanceMap
+      );
+    }
+    // ---------------------------------------------------------------------------
+    // Private helper methods (refactored from large simulateAgent body)
+    // ---------------------------------------------------------------------------
+    /** Internal aggregate simulation state (not exported). */
+    static #initRunState(encodedMaze, startPos, distanceMap, maxSteps) {
+      _MazeMovement.#StateSaturations = 0;
+      _MazeMovement.#StateNoMoveStreak = 0;
+      _MazeMovement.#StatePrevDistanceStep = void 0;
+      const height = encodedMaze.length;
+      const width = encodedMaze[0].length;
+      const hasDistanceMap = Array.isArray(distanceMap) && distanceMap.length === height;
+      _MazeMovement.#initBuffers(width, height, maxSteps);
+      const position = [startPos[0], startPos[1]];
+      _MazeMovement.#PathX[0] = position[0];
+      _MazeMovement.#PathY[0] = position[1];
+      const historyCapacity = _MazeMovement.#MOVE_HISTORY_LENGTH;
+      const state = {
+        position,
+        steps: 0,
+        pathLength: 1,
+        visitedUniqueCount: 0,
+        hasDistanceMap,
+        distanceMap,
+        minDistanceToExit: hasDistanceMap ? distanceMap[position[1]]?.[position[0]] ?? Infinity : _MazeMovement.#distanceAt(encodedMaze, position, distanceMap),
+        progressReward: 0,
+        newCellExplorationBonus: 0,
+        invalidMovePenalty: 0,
+        prevAction: _MazeMovement.#NO_MOVE,
+        stepsSinceImprovement: 0,
+        lastDistanceGlobal: _MazeMovement.#distanceAt(
           encodedMaze,
           position,
-          exitPos,
-          distanceMap,
-          _MazeMovement._prevDistanceStep,
-          distCurrentLocal,
-          prevAction
-        );
-        _MazeMovement._prevDistanceStep = distCurrentLocal;
-        const distHere = distanceMap ? distanceMap[position[1]]?.[position[0]] ?? Infinity : MazeUtils.bfsDistance(encodedMaze, position, exitPos);
-        let direction;
-        let actionStats = null;
-        try {
-          const outputs = network.activate(vision);
-          network._lastStepOutputs = network._lastStepOutputs || [];
-          const _ls = network._lastStepOutputs;
-          _ls.push(outputs.slice());
-          if (_ls.length > 80) _ls.shift();
-          actionStats = _MazeMovement.selectDirection(outputs);
-          _MazeMovement._saturations = _MazeMovement._saturations || 0;
-          const overConfident = actionStats.maxProb > 0.985 && actionStats.secondProb < 0.01;
-          const logitsMean = (outputs[0] + outputs[1] + outputs[2] + outputs[3]) / 4;
-          let logVar = 0;
-          for (const o of outputs) logVar += Math.pow(o - logitsMean, 2);
-          logVar /= 4;
-          const logStd = Math.sqrt(logVar);
-          const flatCollapsed = logStd < 0.01;
-          const saturatedNow = overConfident || flatCollapsed;
-          if (saturatedNow) {
-            _MazeMovement._saturations++;
-            saturatedSteps++;
-          } else {
-            _MazeMovement._saturations = Math.max(
-              0,
-              _MazeMovement._saturations - 1
-            );
-          }
-          if (overConfident) invalidMovePenalty -= 0.25 * rewardScale;
-          if (flatCollapsed) invalidMovePenalty -= 0.35 * rewardScale;
-          try {
-            if (_MazeMovement._saturations > 6 && steps % 5 === 0) {
-              const outs = network.nodes?.filter(
-                (n) => n.type === "output"
-              );
-              if (outs?.length) {
-                const mean = outs.reduce((a, n) => a + n.bias, 0) / outs.length;
-                outs.forEach((n) => {
-                  n.bias = Math.max(-5, Math.min(5, n.bias - mean * 0.5));
-                });
-              }
-            }
-          } catch {
-          }
-          direction = actionStats.direction;
-        } catch (error) {
-          console.error("Error activating network:", error);
-          direction = -1;
-        }
-        if (distHere <= 2) {
-          let bestDir = direction;
-          let bestDist = Infinity;
-          for (let d = 0; d < 4; d++) {
-            const testPos = _MazeMovement.moveAgent(encodedMaze, position, d);
-            if (testPos[0] === position[0] && testPos[1] === position[1])
-              continue;
-            const dVal = distanceMap ? distanceMap[testPos[1]]?.[testPos[0]] ?? Infinity : MazeUtils.bfsDistance(encodedMaze, testPos, exitPos);
-            if (dVal < bestDist) {
-              bestDist = dVal;
-              bestDir = d;
-            }
-          }
-          if (bestDir != null) direction = bestDir;
-        }
-        const stepsStagnant = stepsSinceImprovement;
-        let epsilon = 0;
-        if (steps < 10) epsilon = 0.35;
-        else if (stepsStagnant > 12) epsilon = 0.5;
-        else if (stepsStagnant > 6) epsilon = 0.25;
-        else if (_MazeMovement._saturations > 3) epsilon = 0.3;
-        if (distHere <= 5) epsilon = Math.min(epsilon, 0.05);
-        if (Math.random() < epsilon) {
-          const candidates = [0, 1, 2, 3].filter((d) => d !== prevAction);
-          while (candidates.length) {
-            const idx = Math.floor(Math.random() * candidates.length);
-            const cand = candidates.splice(idx, 1)[0];
-            const testPos = _MazeMovement.moveAgent(encodedMaze, position, cand);
-            if (testPos[0] !== position[0] || testPos[1] !== position[1]) {
-              direction = cand;
-              break;
-            }
-          }
-        }
-        _MazeMovement._noMoveStreak = _MazeMovement._noMoveStreak || 0;
-        if (direction === -1) _MazeMovement._noMoveStreak++;
-        if (_MazeMovement._noMoveStreak >= 5) {
-          for (let tries = 0; tries < 4; tries++) {
-            const cand = Math.floor(Math.random() * 4);
-            const testPos = _MazeMovement.moveAgent(encodedMaze, position, cand);
-            if (testPos[0] !== position[0] || testPos[1] !== position[1]) {
-              direction = cand;
-              break;
-            }
-          }
-          _MazeMovement._noMoveStreak = 0;
-        }
-        const prevPosition = [...position];
-        const prevDistance = distanceMap ? distanceMap[position[1]]?.[position[0]] ?? Infinity : MazeUtils.bfsDistance(encodedMaze, position, exitPos);
-        position = _MazeMovement.moveAgent(encodedMaze, position, direction);
-        const moved = prevPosition[0] !== position[0] || prevPosition[1] !== position[1];
-        if (moved) {
-          path2.push(position.slice());
-          recentPositions.push(position.slice());
-          if (recentPositions.length > LOCAL_WINDOW) recentPositions.shift();
-          if (recentPositions.length === LOCAL_WINDOW) {
-            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-            for (const [rx, ry] of recentPositions) {
-              if (rx < minX) minX = rx;
-              if (rx > maxX) maxX = rx;
-              if (ry < minY) minY = ry;
-              if (ry > maxY) maxY = ry;
-            }
-            const span = maxX - minX + (maxY - minY);
-            if (span <= 5 && stepsSinceImprovement > 8) {
-              localAreaPenalty -= 0.05 * rewardScale;
-            }
-          }
-          const currentDistance = distanceMap ? distanceMap[position[1]]?.[position[0]] ?? Infinity : MazeUtils.bfsDistance(encodedMaze, position, exitPos);
-          const distanceDelta = prevDistance - currentDistance;
-          if (distanceDelta > 0) {
-            const conf = actionStats?.maxProb ?? 1;
-            progressReward += (0.3 + 0.7 * conf) * rewardScale;
-            if (stepsSinceImprovement > 0)
-              progressReward += Math.min(
-                stepsSinceImprovement * 0.02 * rewardScale,
-                0.5 * rewardScale
-              );
-            stepsSinceImprovement = 0;
-            progressReward += distanceDelta * 2 * (0.4 + 0.6 * conf);
-          } else if (currentDistance > prevDistance) {
-            const conf = actionStats?.maxProb ?? 0.5;
-            progressReward -= (0.05 + 0.15 * conf) * rewardScale;
-            stepsSinceImprovement++;
-          } else {
-            stepsSinceImprovement++;
-          }
-          if (visits === 1) {
-            newCellExplorationBonus += 0.3 * rewardScale;
-          } else {
-            newCellExplorationBonus -= 0.5 * rewardScale;
-          }
-          minDistanceToExit = Math.min(minDistanceToExit, currentDistance);
-        } else {
-          invalidMovePenalty -= 10 * rewardScale;
-          steps === maxSteps;
-        }
-        const currentDistanceGlobal = distanceMap ? distanceMap[position[1]]?.[position[0]] ?? Infinity : MazeUtils.bfsDistance(encodedMaze, position, exitPos);
-        if (currentDistanceGlobal < lastDistanceGlobal) {
-          if (stepsSinceImprovement > 10)
-            progressReward += Math.min(
-              (stepsSinceImprovement - 10) * 0.01 * rewardScale,
-              0.5 * rewardScale
-            );
-          stepsSinceImprovement = 0;
-        }
-        lastDistanceGlobal = currentDistanceGlobal;
-        if (prevAction === direction && stepsSinceImprovement > 4) {
-          invalidMovePenalty -= 0.05 * (stepsSinceImprovement - 4) * rewardScale;
-        }
-        if (prevAction >= 0 && direction >= 0) {
-          const opposite = (prevAction + 2) % 4;
-          if (direction === opposite && stepsSinceImprovement > 0) {
-            invalidMovePenalty -= 0.2 * rewardScale;
-          }
-        }
-        if (moved) {
-          prevAction = direction;
-          prevAction = direction;
-        }
-        if (actionStats) {
-          const { entropy, maxProb, secondProb } = actionStats;
-          const hasGuidance = vision[8] + vision[9] + vision[10] + vision[11] > 0 || // LOS group
-          vision[12] + vision[13] + vision[14] + vision[15] > 0;
-          if (entropy > 0.95) {
-            invalidMovePenalty -= 0.03 * rewardScale;
-          } else if (hasGuidance && entropy < 0.55 && maxProb - secondProb > 0.25) {
-            newCellExplorationBonus += 0.015 * rewardScale;
-          }
-          if (_MazeMovement._saturations >= 5) {
-            invalidMovePenalty -= 0.05 * rewardScale;
-            if (_MazeMovement._saturations % 10 === 0) {
-              invalidMovePenalty -= 0.1 * rewardScale;
-            }
-          }
-        }
-        if (stepsSinceImprovement > 40) {
-          invalidMovePenalty -= 2 * rewardScale;
-          break;
-        }
-        invalidMovePenalty += loopPenalty + memoryPenalty + revisitPenalty;
-        if (position[0] === exitPos[0] && position[1] === exitPos[1]) {
-          const stepEfficiency = maxSteps - steps;
-          const { actionEntropy: actionEntropy2 } = _MazeMovement.computeActionEntropy(path2);
-          const fitness2 = 650 + stepEfficiency * 0.2 + progressReward + newCellExplorationBonus + invalidMovePenalty + actionEntropy2 * 5;
-          return {
-            success: true,
-            steps,
-            path: path2,
-            fitness: Math.max(150, fitness2),
-            progress: 100,
-            saturationFraction: steps ? saturatedSteps / steps : 0,
-            actionEntropy: actionEntropy2
-          };
+          distanceMap
+        ),
+        saturatedSteps: 0,
+        recentPositions: [],
+        localAreaPenalty: 0,
+        directionCounts: [0, 0, 0, 0],
+        moveHistoryRing: new Int32Array(historyCapacity),
+        moveHistoryLength: 0,
+        moveHistoryHead: 0,
+        currentCellIndex: 0,
+        loopPenalty: 0,
+        memoryPenalty: 0,
+        revisitPenalty: 0,
+        visitsAtCurrent: 0,
+        distHere: Infinity,
+        vision: [],
+        actionStats: null,
+        direction: _MazeMovement.#NO_MOVE,
+        moved: false,
+        prevDistance: Infinity,
+        earlyTerminate: false
+      };
+      return state;
+    }
+    /** Push a cell index into circular history (A->B loop detection). */
+    static #pushHistory(state, cellIndex) {
+      const { moveHistoryRing, moveHistoryHead, moveHistoryLength } = state;
+      const capacity = moveHistoryRing.length;
+      moveHistoryRing[moveHistoryHead] = cellIndex;
+      state.moveHistoryHead = (moveHistoryHead + 1) % capacity;
+      if (moveHistoryLength < capacity) state.moveHistoryLength++;
+    }
+    /** nth (1-based) from history end; 1 == last; undefined if not present. */
+    static #nthFromHistoryEnd(state, n) {
+      if (n > state.moveHistoryLength) return void 0;
+      const capacity = state.moveHistoryRing.length;
+      const index = (state.moveHistoryHead - n + capacity) % capacity;
+      return state.moveHistoryRing[index];
+    }
+    /** Record visit + compute loop/memory/revisit penalties and optionally early terminate. */
+    static #recordVisitAndUpdatePenalties(state, encodedMaze) {
+      const visitedFlags = _MazeMovement.#VisitedFlags;
+      const visitCountsTyped = _MazeMovement.#VisitCounts;
+      const rewardScale = _MazeMovement.#REWARD_SCALE;
+      const cellIndex = _MazeMovement.#index(state.position[0], state.position[1]);
+      state.currentCellIndex = cellIndex;
+      if (!visitedFlags[cellIndex]) {
+        visitedFlags[cellIndex] = 1;
+        state.visitedUniqueCount++;
+      }
+      visitCountsTyped[cellIndex]++;
+      _MazeMovement.#pushHistory(state, cellIndex);
+      const visits = state.visitsAtCurrent = visitCountsTyped[cellIndex];
+      state.loopPenalty = 0;
+      if (state.moveHistoryLength >= _MazeMovement.#OSCILLATION_DETECT_LENGTH) {
+        const last = _MazeMovement.#nthFromHistoryEnd(state, 1);
+        const secondLast = _MazeMovement.#nthFromHistoryEnd(state, 2);
+        const thirdLast = _MazeMovement.#nthFromHistoryEnd(state, 3);
+        const fourthLast = _MazeMovement.#nthFromHistoryEnd(state, 4);
+        if (last === thirdLast && secondLast !== void 0 && fourthLast !== void 0 && secondLast === fourthLast) {
+          state.loopPenalty -= _MazeMovement.#LOOP_PENALTY * rewardScale;
         }
       }
+      state.memoryPenalty = 0;
+      if (state.moveHistoryLength > 1) {
+        for (let scan = 2; scan <= state.moveHistoryLength; scan++) {
+          const candidateIndex = _MazeMovement.#nthFromHistoryEnd(state, scan);
+          if (candidateIndex === cellIndex) {
+            state.memoryPenalty -= _MazeMovement.#MEMORY_RETURN_PENALTY * rewardScale;
+            break;
+          }
+        }
+      }
+      state.revisitPenalty = 0;
+      if (visits > 1) {
+        state.revisitPenalty -= _MazeMovement.#REVISIT_PENALTY_PER_VISIT * (visits - 1) * rewardScale;
+      }
+      if (visits > _MazeMovement.#VISIT_TERMINATION_THRESHOLD) {
+        state.invalidMovePenalty -= _MazeMovement.#INVALID_MOVE_PENALTY_HARSH * rewardScale;
+        state.earlyTerminate = true;
+      }
+    }
+    /** Build vision inputs & compute distHere for proximity / epsilon logic. */
+    static #buildVisionAndDistance(state, encodedMaze, exitPos, distanceMap) {
+      if (state.earlyTerminate) return;
+      const hasDistanceMap = state.hasDistanceMap;
+      const prevDistLocal = hasDistanceMap ? distanceMap[state.position[1]]?.[state.position[0]] ?? void 0 : _MazeMovement.#distanceAt(encodedMaze, state.position, distanceMap);
+      const distCurrentLocal = prevDistLocal;
+      state.vision = MazeVision.buildInputs6(
+        encodedMaze,
+        state.position,
+        exitPos,
+        distanceMap,
+        _MazeMovement.#StatePrevDistanceStep,
+        distCurrentLocal,
+        state.prevAction
+      );
+      _MazeMovement.#StatePrevDistanceStep = distCurrentLocal;
+      state.distHere = hasDistanceMap ? distanceMap[state.position[1]]?.[state.position[0]] ?? Infinity : _MazeMovement.#distanceAt(encodedMaze, state.position, distanceMap);
+    }
+    /** Activate network, compute direction, update saturation counters & penalties. */
+    static #decideDirection(state, network, encodedMaze, distanceMap) {
+      if (state.earlyTerminate) return;
+      try {
+        const outputs = network.activate(state.vision);
+        network._lastStepOutputs = MazeUtils.pushHistory(
+          network._lastStepOutputs,
+          [...outputs],
+          _MazeMovement.#OUTPUT_HISTORY_LENGTH
+        );
+        state.actionStats = _MazeMovement.selectDirection(outputs);
+        _MazeMovement.#applySaturationAndBiasAdjust(state, outputs, network);
+        state.direction = state.actionStats.direction;
+      } catch (error) {
+        console.error("Error activating network:", error);
+        state.direction = _MazeMovement.#NO_MOVE;
+      }
+    }
+    /** Greedy override when close to exit: choose direction minimizing distance. */
+    static #maybeApplyProximityGreedy(state, encodedMaze, distanceMap) {
+      if (state.earlyTerminate) return;
+      if (state.distHere <= _MazeMovement.#PROXIMITY_GREEDY_DISTANCE) {
+        let bestDirection = state.direction;
+        let bestDistance = Infinity;
+        for (let directionIndex = 0; directionIndex < _MazeMovement.#ACTION_DIM; directionIndex++) {
+          const [deltaX, deltaY] = _MazeMovement.#DIRECTION_DELTAS[directionIndex];
+          const testX = state.position[0] + deltaX;
+          const testY = state.position[1] + deltaY;
+          if (!_MazeMovement.isValidMove(encodedMaze, testX, testY)) continue;
+          const candidateDistance = _MazeMovement.#distanceAt(
+            encodedMaze,
+            [testX, testY],
+            distanceMap
+          );
+          if (candidateDistance < bestDistance) {
+            bestDistance = candidateDistance;
+            bestDirection = directionIndex;
+          }
+        }
+        if (bestDirection != null) state.direction = bestDirection;
+      }
+    }
+    /** Epsilon-greedy exploration override. */
+    static #maybeApplyEpsilonExploration(state, encodedMaze) {
+      if (state.earlyTerminate) return;
+      const epsilon = _MazeMovement.#computeEpsilon(
+        state.steps,
+        state.stepsSinceImprovement,
+        state.distHere,
+        _MazeMovement.#StateSaturations
+      );
+      if (_MazeMovement.#rand() < epsilon) {
+        for (let trialIndex = 0; trialIndex < _MazeMovement.#ACTION_DIM; trialIndex++) {
+          const candidateDirection = Math.floor(
+            _MazeMovement.#rand() * _MazeMovement.#ACTION_DIM
+          );
+          if (candidateDirection === state.prevAction) continue;
+          const [deltaX, deltaY] = _MazeMovement.#DIRECTION_DELTAS[candidateDirection];
+          const testX = state.position[0] + deltaX;
+          const testY = state.position[1] + deltaY;
+          if (_MazeMovement.isValidMove(encodedMaze, testX, testY)) {
+            state.direction = candidateDirection;
+            break;
+          }
+        }
+      }
+    }
+    /** Force exploration if no-move streak triggered. */
+    static #maybeForceExploration(state, encodedMaze) {
+      if (state.earlyTerminate) return;
+      if (state.direction === _MazeMovement.#NO_MOVE)
+        _MazeMovement.#StateNoMoveStreak++;
+      else _MazeMovement.#StateNoMoveStreak = 0;
+      if (_MazeMovement.#StateNoMoveStreak >= _MazeMovement.#NO_MOVE_STREAK_THRESHOLD) {
+        for (let attemptIndex = 0; attemptIndex < _MazeMovement.#ACTION_DIM; attemptIndex++) {
+          const candidateDirection = Math.floor(
+            _MazeMovement.#rand() * _MazeMovement.#ACTION_DIM
+          );
+          const [deltaX, deltaY] = _MazeMovement.#DIRECTION_DELTAS[candidateDirection];
+          const testX = state.position[0] + deltaX;
+          const testY = state.position[1] + deltaY;
+          if (_MazeMovement.isValidMove(encodedMaze, testX, testY)) {
+            state.direction = candidateDirection;
+            break;
+          }
+        }
+        _MazeMovement.#StateNoMoveStreak = 0;
+      }
+    }
+    /** Execute move and compute progress / exploration rewards. */
+    static #executeMoveAndRewards(state, encodedMaze, distanceMap) {
+      if (state.earlyTerminate) return;
+      state.prevDistance = _MazeMovement.#distanceAt(
+        encodedMaze,
+        state.position,
+        distanceMap
+      );
+      state.moved = false;
+      if (state.direction >= 0 && state.direction < _MazeMovement.#ACTION_DIM) {
+        const [deltaX, deltaY] = _MazeMovement.#DIRECTION_DELTAS[state.direction];
+        const newX = state.position[0] + deltaX;
+        const newY = state.position[1] + deltaY;
+        if (_MazeMovement.isValidMove(encodedMaze, newX, newY)) {
+          state.position[0] = newX;
+          state.position[1] = newY;
+          state.moved = true;
+        }
+      }
+      const rewardScale = _MazeMovement.#REWARD_SCALE;
+      const pathX = _MazeMovement.#PathX;
+      const pathY = _MazeMovement.#PathY;
+      if (state.moved) {
+        pathX[state.pathLength] = state.position[0];
+        pathY[state.pathLength] = state.position[1];
+        state.pathLength++;
+        MazeUtils.pushHistory(
+          state.recentPositions,
+          [state.position[0], state.position[1]],
+          _MazeMovement.#LOCAL_WINDOW
+        );
+        _MazeMovement.#maybeApplyLocalAreaPenalty(state, rewardScale);
+        const currentDistance = state.hasDistanceMap ? state.distanceMap[state.position[1]]?.[state.position[0]] ?? Infinity : _MazeMovement.#distanceAt(
+          encodedMaze,
+          state.position,
+          state.distanceMap
+        );
+        const distanceDelta = state.prevDistance - currentDistance;
+        const improved = distanceDelta > 0;
+        const worsened = !improved && currentDistance > state.prevDistance;
+        _MazeMovement.#applyProgressShaping(
+          state,
+          distanceDelta,
+          improved,
+          worsened,
+          rewardScale
+        );
+        _MazeMovement.#applyExplorationVisitAdjustment(state, rewardScale);
+        if (state.direction >= 0) state.directionCounts[state.direction]++;
+        state.minDistanceToExit = Math.min(
+          state.minDistanceToExit,
+          currentDistance
+        );
+      } else {
+        state.invalidMovePenalty -= _MazeMovement.#INVALID_MOVE_PENALTY_MILD * rewardScale;
+      }
+      _MazeMovement.#applyGlobalDistanceImprovementBonus(
+        state,
+        encodedMaze,
+        rewardScale
+      );
+    }
+    /** Apply repetition / entropy / saturation penalties & update prevAction. */
+    static #applyPostActionPenalties(state) {
+      if (state.earlyTerminate) return;
+      const rewardScale = _MazeMovement.#REWARD_SCALE;
+      _MazeMovement.#applyRepetitionAndBacktrackPenalties(state, rewardScale);
+      if (state.moved) state.prevAction = state.direction;
+      _MazeMovement.#applyEntropyGuidanceShaping(state, rewardScale);
+      _MazeMovement.#applySaturationPenaltyCycle(state, rewardScale);
+      state.invalidMovePenalty += state.loopPenalty + state.memoryPenalty + state.revisitPenalty;
+    }
+    /** Apply local area stagnation penalty if oscillating tightly without improvements. */
+    static #maybeApplyLocalAreaPenalty(state, rewardScale) {
+      if (state.recentPositions.length !== _MazeMovement.#LOCAL_WINDOW) return;
+      let minX = Infinity;
+      let maxX = -Infinity;
+      let minY = Infinity;
+      let maxY = -Infinity;
+      for (const [rx, ry] of state.recentPositions) {
+        if (rx < minX) minX = rx;
+        if (rx > maxX) maxX = rx;
+        if (ry < minY) minY = ry;
+        if (ry > maxY) maxY = ry;
+      }
+      const span = maxX - minX + (maxY - minY);
+      if (span <= _MazeMovement.#LOCAL_AREA_SPAN_THRESHOLD && state.stepsSinceImprovement > _MazeMovement.#LOCAL_AREA_STAGNATION_STEPS) {
+        state.localAreaPenalty -= _MazeMovement.#LOCAL_AREA_PENALTY_AMOUNT * rewardScale;
+      }
+    }
+    /** Progress shaping rewards / penalties based on distance delta. */
+    static #applyProgressShaping(state, distanceDelta, improved, worsened, rewardScale) {
+      if (improved) {
+        const confidence = state.actionStats?.maxProb ?? 1;
+        const baseProgress = (_MazeMovement.#PROGRESS_REWARD_BASE + _MazeMovement.#PROGRESS_REWARD_CONF_SCALE * confidence) * rewardScale;
+        if (state.stepsSinceImprovement > 0) {
+          state.progressReward += Math.min(
+            state.stepsSinceImprovement * _MazeMovement.#PROGRESS_STEPS_MULT * rewardScale,
+            _MazeMovement.#PROGRESS_STEPS_MAX * rewardScale
+          );
+        }
+        state.progressReward += baseProgress;
+        state.stepsSinceImprovement = 0;
+        state.progressReward += distanceDelta * _MazeMovement.#DISTANCE_DELTA_SCALE * (_MazeMovement.#DISTANCE_DELTA_CONF_BASE + _MazeMovement.#DISTANCE_DELTA_CONF_SCALE * confidence);
+      } else if (worsened) {
+        const confidence = state.actionStats?.maxProb ?? 0.5;
+        state.progressReward -= (_MazeMovement.#PROGRESS_AWAY_BASE_PENALTY + _MazeMovement.#PROGRESS_AWAY_CONF_SCALE * confidence) * rewardScale;
+        state.stepsSinceImprovement++;
+      } else {
+        state.stepsSinceImprovement++;
+      }
+    }
+    /** Exploration bonus / revisit penalties for the just-visited cell. */
+    static #applyExplorationVisitAdjustment(state, rewardScale) {
+      if (state.visitsAtCurrent === 1) {
+        state.newCellExplorationBonus += _MazeMovement.#NEW_CELL_EXPLORATION_BONUS * rewardScale;
+      } else {
+        state.newCellExplorationBonus -= _MazeMovement.#REVISIT_PENALTY_STRONG * rewardScale;
+      }
+    }
+    /** Global distance improvement bonus for breaking long stagnation. */
+    static #applyGlobalDistanceImprovementBonus(state, encodedMaze, rewardScale) {
+      const currentDistanceGlobal = state.hasDistanceMap ? state.distanceMap[state.position[1]]?.[state.position[0]] ?? Infinity : _MazeMovement.#distanceAt(
+        encodedMaze,
+        state.position,
+        state.distanceMap
+      );
+      if (currentDistanceGlobal < state.lastDistanceGlobal) {
+        if (state.stepsSinceImprovement > _MazeMovement.#GLOBAL_BREAK_BONUS_START)
+          state.progressReward += Math.min(
+            (state.stepsSinceImprovement - _MazeMovement.#GLOBAL_BREAK_BONUS_START) * _MazeMovement.#GLOBAL_BREAK_BONUS_PER_STEP * rewardScale,
+            _MazeMovement.#GLOBAL_BREAK_BONUS_CAP * rewardScale
+          );
+        state.stepsSinceImprovement = 0;
+      }
+      state.lastDistanceGlobal = currentDistanceGlobal;
+    }
+    /** Repetition and backward (opposite) move penalties. */
+    static #applyRepetitionAndBacktrackPenalties(state, rewardScale) {
+      if (state.prevAction === state.direction && state.stepsSinceImprovement > _MazeMovement.#REPETITION_PENALTY_START) {
+        state.invalidMovePenalty -= _MazeMovement.#REPETITION_PENALTY_BASE * (state.stepsSinceImprovement - _MazeMovement.#REPETITION_PENALTY_START) * rewardScale;
+      }
+      if (state.prevAction >= 0 && state.direction >= 0 && state.stepsSinceImprovement > 0 && state.direction === _MazeMovement.#OPPOSITE_DIR[state.prevAction]) {
+        state.invalidMovePenalty -= _MazeMovement.#BACK_MOVE_PENALTY * rewardScale;
+      }
+    }
+    /** Entropy / guidance shaping (confidence vs ambiguity). */
+    static #applyEntropyGuidanceShaping(state, rewardScale) {
+      if (!state.actionStats) return;
+      const { entropy, maxProb, secondProb } = state.actionStats;
+      const hasGuidance = _MazeMovement.#sumVisionGroup(
+        state.vision,
+        _MazeMovement.#VISION_LOS_START
+      ) > 0 || _MazeMovement.#sumVisionGroup(
+        state.vision,
+        _MazeMovement.#VISION_GRAD_START
+      ) > 0;
+      switch (true) {
+        case entropy > _MazeMovement.#ENTROPY_HIGH_THRESHOLD:
+          state.invalidMovePenalty -= _MazeMovement.#ENTROPY_PENALTY * rewardScale;
+          break;
+        case (hasGuidance && entropy < _MazeMovement.#ENTROPY_CONFIDENT_THRESHOLD && maxProb - secondProb > _MazeMovement.#ENTROPY_CONFIDENT_DIFF):
+          state.newCellExplorationBonus += _MazeMovement.#EXPLORATION_BONUS_SMALL * rewardScale;
+          break;
+        default:
+          break;
+      }
+    }
+    /** Saturation penalty application (periodic escalation). */
+    static #applySaturationPenaltyCycle(state, rewardScale) {
+      if (_MazeMovement.#StateSaturations < _MazeMovement.#SATURATION_PENALTY_TRIGGER)
+        return;
+      state.invalidMovePenalty -= _MazeMovement.#SATURATION_PENALTY_BASE * rewardScale;
+      if (_MazeMovement.#StateSaturations % _MazeMovement.#SATURATION_PENALTY_PERIOD === 0) {
+        state.invalidMovePenalty -= _MazeMovement.#SATURATION_PENALTY_ESCALATE * rewardScale;
+      }
+    }
+    /** Handle saturation/overconfidence detection, penalties and adaptive bias adjustment. */
+    static #applySaturationAndBiasAdjust(state, outputs, network) {
+      const rewardScale = _MazeMovement.#REWARD_SCALE;
+      const overConfident = state.actionStats.maxProb > _MazeMovement.#OVERCONFIDENT_PROB && state.actionStats.secondProb < _MazeMovement.#SECOND_PROB_LOW;
+      const meanLogit = outputs.reduce((accumulator, value) => accumulator + value, 0) / _MazeMovement.#ACTION_DIM;
+      let varianceSum = 0;
+      for (const logit of outputs) {
+        const delta = logit - meanLogit;
+        varianceSum += delta * delta;
+      }
+      varianceSum /= _MazeMovement.#ACTION_DIM;
+      const logStd = Math.sqrt(varianceSum);
+      const flatCollapsed = logStd < _MazeMovement.#LOGSTD_FLAT_THRESHOLD;
+      let saturationCounter = _MazeMovement.#StateSaturations;
+      if (overConfident || flatCollapsed) {
+        saturationCounter++;
+        state.saturatedSteps++;
+      } else if (saturationCounter > 0) {
+        saturationCounter--;
+      }
+      _MazeMovement.#StateSaturations = saturationCounter;
+      if (overConfident) {
+        state.invalidMovePenalty -= _MazeMovement.#OVERCONFIDENT_PENALTY * rewardScale;
+      }
+      if (flatCollapsed) {
+        state.invalidMovePenalty -= _MazeMovement.#FLAT_COLLAPSE_PENALTY * rewardScale;
+      }
+      if (_MazeMovement.#StateSaturations > _MazeMovement.#SATURATION_ADJUST_MIN && state.steps % _MazeMovement.#SATURATION_ADJUST_INTERVAL === 0) {
+        try {
+          const outputNodes = network.nodes?.filter(
+            (node) => node.type === _MazeMovement.#NODE_TYPE_OUTPUT
+          );
+          if (outputNodes?.length) {
+            const meanBias = outputNodes.reduce(
+              (total, node) => total + node.bias,
+              0
+            ) / outputNodes.length;
+            for (const node of outputNodes) {
+              node.bias = Math.max(
+                -_MazeMovement.#BIAS_CLAMP,
+                Math.min(
+                  _MazeMovement.#BIAS_CLAMP,
+                  node.bias - meanBias * _MazeMovement.#BIAS_ADJUST_FACTOR
+                )
+              );
+            }
+          }
+        } catch {
+        }
+      }
+    }
+    /** Check deep stagnation and optionally terminate. */
+    static #maybeTerminateDeepStagnation(state) {
+      if (state.stepsSinceImprovement > _MazeMovement.#DEEP_STAGNATION_THRESHOLD) {
+        const rewardScale = _MazeMovement.#REWARD_SCALE;
+        try {
+          if (typeof window === "undefined") {
+            state.invalidMovePenalty -= _MazeMovement.#DEEP_STAGNATION_PENALTY * rewardScale;
+            return true;
+          }
+        } catch {
+          state.invalidMovePenalty -= _MazeMovement.#DEEP_STAGNATION_PENALTY * rewardScale;
+          return true;
+        }
+      }
+      return state.earlyTerminate;
+    }
+    /** Compute entropy from direction counts (shared by success & failure finalization). */
+    static #computeActionEntropyFromCounts(directionCounts) {
+      const total = directionCounts.reduce((s, v) => s + v, 0) || 1;
+      let entropySum = 0;
+      for (const count of directionCounts) {
+        if (!count) continue;
+        const probability = count / total;
+        entropySum -= probability * Math.log(probability);
+      }
+      return entropySum / _MazeMovement.#LOG_ACTIONS;
+    }
+    /** Build and return result object for success scenario. */
+    static #finalizeSuccess(state, maxSteps) {
+      const stepEfficiency = maxSteps - state.steps;
+      const actionEntropy = _MazeMovement.#computeActionEntropyFromCounts(
+        state.directionCounts
+      );
+      const fitness = _MazeMovement.#SUCCESS_BASE_FITNESS + stepEfficiency * _MazeMovement.#STEP_EFFICIENCY_SCALE + state.progressReward + state.newCellExplorationBonus + state.invalidMovePenalty + actionEntropy * _MazeMovement.#SUCCESS_ACTION_ENTROPY_SCALE;
+      const pathMaterialized = _MazeMovement.#materializePath(state.pathLength);
+      return {
+        success: true,
+        steps: state.steps,
+        path: pathMaterialized,
+        fitness: Math.max(_MazeMovement.#MIN_SUCCESS_FITNESS, fitness),
+        progress: 100,
+        saturationFraction: state.steps ? state.saturatedSteps / state.steps : 0,
+        actionEntropy
+      };
+    }
+    /** Build and return result object for failure scenario. */
+    static #finalizeFailure(state, encodedMaze, startPos, exitPos, distanceMap) {
+      const pathX = _MazeMovement.#PathX;
+      const pathY = _MazeMovement.#PathY;
+      const lastPos = [
+        pathX[state.pathLength - 1] ?? 0,
+        pathY[state.pathLength - 1] ?? 0
+      ];
       const progress = distanceMap ? MazeUtils.calculateProgressFromDistanceMap(
         distanceMap,
-        path2[path2.length - 1],
+        lastPos,
         startPos
-      ) : MazeUtils.calculateProgress(
-        encodedMaze,
-        path2[path2.length - 1],
-        startPos,
-        exitPos
+      ) : MazeUtils.calculateProgress(encodedMaze, lastPos, startPos, exitPos);
+      const progressFraction = progress / 100;
+      const shapedProgress = Math.pow(progressFraction, _MazeMovement.#PROGRESS_POWER) * _MazeMovement.#PROGRESS_SCALE;
+      const explorationScore = state.visitedUniqueCount * 1;
+      const actionEntropy = _MazeMovement.#computeActionEntropyFromCounts(
+        state.directionCounts
       );
-      const progressFrac = progress / 100;
-      const shapedProgress = Math.pow(progressFrac, 1.3) * 500;
-      const explorationScore = visitedPositions.size * 1;
-      const penalty = invalidMovePenalty;
-      const { actionEntropy } = _MazeMovement.computeActionEntropy(path2);
-      const entropyBonus = actionEntropy * 4;
-      const satFrac = steps ? saturatedSteps / steps : 0;
-      const saturationPenalty = satFrac > 0.35 ? -(satFrac - 0.35) * 40 : 0;
-      let outputVarPenalty = 0;
-      try {
-        const hist = network._lastStepOutputs || [];
-        if (hist.length >= 15) {
-          const recent = hist.slice(-30);
-          let lowVar = 0;
-          for (const o of recent) {
-            const m = (o[0] + o[1] + o[2] + o[3]) / 4;
-            let v = 0;
-            for (const x of o) v += (x - m) * (x - m);
-            v /= 4;
-            if (Math.sqrt(v) < 0.01) lowVar++;
-          }
-          if (lowVar > 4) outputVarPenalty -= (lowVar - 4) * 0.3;
-        }
-      } catch {
-      }
-      let nearMissPenalty = 0;
-      if (minDistanceToExit === 1) nearMissPenalty -= 30 * rewardScale;
-      const base = shapedProgress + explorationScore + progressReward + newCellExplorationBonus + penalty + entropyBonus + localAreaPenalty + saturationPenalty + outputVarPenalty + nearMissPenalty;
-      const raw = base + Math.random() * 0.01;
+      const entropyBonus = actionEntropy * _MazeMovement.#ENTROPY_BONUS_WEIGHT;
+      const saturationPenalty = 0;
+      const outputVarPenalty = 0;
+      const baseFitness = shapedProgress + explorationScore + state.progressReward + state.newCellExplorationBonus + state.invalidMovePenalty + entropyBonus + state.localAreaPenalty + saturationPenalty + outputVarPenalty;
+      const raw = baseFitness + _MazeMovement.#rand() * _MazeMovement.#FITNESS_RANDOMNESS;
       const fitness = raw >= 0 ? raw : -Math.log1p(1 - raw);
+      const pathMaterialized = _MazeMovement.#materializePath(state.pathLength);
       return {
         success: false,
-        steps,
-        path: path2,
+        steps: state.steps,
+        path: pathMaterialized,
         fitness,
         progress,
-        saturationFraction: satFrac,
+        saturationFraction: state.steps ? state.saturatedSteps / state.steps : 0,
         actionEntropy
       };
     }
   };
-  ((MazeMovement2) => {
-    function computeActionEntropy(path2) {
-      if (!path2 || path2.length < 2) return { actionEntropy: 0 };
-      const counts = [0, 0, 0, 0];
-      for (let i = 1; i < path2.length; i++) {
-        const dx = path2[i][0] - path2[i - 1][0];
-        const dy = path2[i][1] - path2[i - 1][1];
-        if (dx === 0 && dy === -1) counts[0]++;
-        else if (dx === 1 && dy === 0) counts[1]++;
-        else if (dx === 0 && dy === 1) counts[2]++;
-        else if (dx === -1 && dy === 0) counts[3]++;
-      }
-      const total = counts.reduce((a, b) => a + b, 0) || 1;
-      let ent = 0;
-      counts.forEach((c) => {
-        if (c > 0) {
-          const p = c / total;
-          ent += -p * Math.log(p);
-        }
-      });
-      const actionEntropy = ent / Math.log(4);
-      return { actionEntropy };
-    }
-    MazeMovement2.computeActionEntropy = computeActionEntropy;
-  })(MazeMovement || (MazeMovement = {}));
 
   // test/examples/asciiMaze/fitness.ts
   var FitnessEvaluator = class _FitnessEvaluator {
+    /** Base bonus applied for each unique (visited-once) cell, scaled by proximity. */
+    static #EXPLORATION_UNIQUE_CELL_BONUS = 200;
+    /** Proximity multiplier base (max factor when distance fraction is 0). */
+    static #PROXIMITY_MULTIPLIER_BASE = 1.5;
+    /** Proximity multiplier slope (value subtracted times normalized distance). */
+    static #PROXIMITY_MULTIPLIER_SLOPE = 0.5;
+    /** Fixed success bonus when the exit is reached. */
+    static #SUCCESS_BONUS = 5e3;
+    /** Baseline efficiency bonus before subtracting overhead penalty. */
+    static #EFFICIENCY_BASE = 8e3;
+    /** Scale factor converting path overhead percent into penalty. */
+    static #EFFICIENCY_PENALTY_SCALE = 80;
+    // --- Typed-array scratch buffers (non-reentrant) -------------------------
+    /** @internal Scratch array for visit counts (flattened y*width + x). */
+    static #VISIT_COUNT_SCRATCH = new Uint16Array(0);
+    static #SCRATCH_WIDTH = 0;
+    static #SCRATCH_HEIGHT = 0;
+    /** Ensure scratch visit-count buffer has capacity for given maze dims. */
+    static #ensureVisitScratch(width, height) {
+      if (width <= 0 || height <= 0) return;
+      if (width === this.#SCRATCH_WIDTH && height === this.#SCRATCH_HEIGHT) {
+        this.#VISIT_COUNT_SCRATCH.fill(0);
+        return;
+      }
+      this.#SCRATCH_WIDTH = width;
+      this.#SCRATCH_HEIGHT = height;
+      this.#VISIT_COUNT_SCRATCH = new Uint16Array(width * height);
+    }
     /**
      * Evaluates the fitness of a single neural network based on its performance in a maze simulation.
      *
@@ -16939,29 +18361,46 @@
      * @param maxSteps - The maximum number of steps the agent is allowed to take in the simulation.
      * @returns The final computed fitness score for the network.
      */
-    static evaluateNetworkFitness(network, encodedMaze, startPosition, exitPosition, distanceMap, maxSteps) {
+    static evaluateNetworkFitness(network, encodedMaze, startPosition, exitPosition, distanceMap, maxAllowedSteps) {
       const result = MazeMovement.simulateAgent(
         network,
         encodedMaze,
         startPosition,
         exitPosition,
         distanceMap,
-        maxSteps
+        maxAllowedSteps
       );
       let explorationBonus = 0;
-      for (const [x, y] of result.path) {
-        const distToExit = distanceMap ? distanceMap[y]?.[x] ?? Infinity : MazeUtils.bfsDistance(encodedMaze, [x, y], exitPosition);
-        const proximityMultiplier = 1.5 - 0.5 * (distToExit / (encodedMaze.length + encodedMaze[0].length));
-        if (result.path.filter(([px, py]) => px === x && py === y).length === 1) {
-          explorationBonus += 200 * proximityMultiplier;
-        }
+      const mazeHeight = encodedMaze.length;
+      const mazeWidth = encodedMaze[0]?.length || 0;
+      _FitnessEvaluator.#ensureVisitScratch(mazeWidth, mazeHeight);
+      const visitCountsScratch = _FitnessEvaluator.#VISIT_COUNT_SCRATCH;
+      const strideWidth = _FitnessEvaluator.#SCRATCH_WIDTH;
+      for (let pathIndex = 0; pathIndex < result.path.length; pathIndex++) {
+        const [cellX, cellY] = result.path[pathIndex];
+        const flatIndex = cellY * strideWidth + cellX;
+        visitCountsScratch[flatIndex]++;
       }
+      const dimensionSum = mazeHeight + mazeWidth;
+      for (let pathIndex = 0; pathIndex < result.path.length; pathIndex++) {
+        const [cellX, cellY] = result.path[pathIndex];
+        const flatIndex = cellY * strideWidth + cellX;
+        if (visitCountsScratch[flatIndex] !== 1) continue;
+        const distanceToExit = distanceMap ? distanceMap[cellY]?.[cellX] ?? Infinity : MazeUtils.bfsDistance(encodedMaze, [cellX, cellY], exitPosition);
+        const proximityMultiplier = _FitnessEvaluator.#PROXIMITY_MULTIPLIER_BASE - _FitnessEvaluator.#PROXIMITY_MULTIPLIER_SLOPE * (distanceToExit / dimensionSum);
+        explorationBonus += _FitnessEvaluator.#EXPLORATION_UNIQUE_CELL_BONUS * proximityMultiplier;
+      }
+      visitCountsScratch.fill(0);
       let fitness = result.fitness + explorationBonus;
       if (result.success) {
-        fitness += 5e3;
-        const optimal = distanceMap ? distanceMap[startPosition[1]]?.[startPosition[0]] ?? Infinity : MazeUtils.bfsDistance(encodedMaze, startPosition, exitPosition);
-        const pathOverhead = (result.path.length - 1) / optimal * 100 - 100;
-        fitness += Math.max(0, 8e3 - pathOverhead * 80);
+        fitness += _FitnessEvaluator.#SUCCESS_BONUS;
+        const optimalPathLength = distanceMap ? distanceMap[startPosition[1]]?.[startPosition[0]] ?? Infinity : MazeUtils.bfsDistance(encodedMaze, startPosition, exitPosition);
+        const pathOverheadPercent = (result.path.length - 1) / optimalPathLength * 100 - 100;
+        const efficiencyBonus = Math.max(
+          0,
+          _FitnessEvaluator.#EFFICIENCY_BASE - pathOverheadPercent * _FitnessEvaluator.#EFFICIENCY_PENALTY_SCALE
+        );
+        fitness += efficiencyBonus;
       }
       return fitness;
     }
@@ -16992,6 +18431,5074 @@
 
   // test/examples/asciiMaze/evolutionEngine.ts
   var EvolutionEngine = class _EvolutionEngine {
+    /**
+     * Pooled scratch buffer used by telemetry softmax/entropy calculations.
+     * @remarks Non-reentrant: telemetry functions that use this buffer must not be
+     * called concurrently (single-threaded runtime assumption holds for Node/browser).
+     */
+    static #SCRATCH_EXPS = new Float64Array(4);
+    /** Reusable empty vector constant to avoid ephemeral allocations from `|| []` fallbacks. */
+    static #EMPTY_VEC = [];
+    /** Pooled stats buffers (always resident) for means & stds. */
+    static #SCRATCH_MEANS = new Float64Array(4);
+    static #SCRATCH_STDS = new Float64Array(4);
+    /** Kurtosis related buffers allocated lazily when first needed (non-reduced telemetry). */
+    static #SCRATCH_KURT;
+    static #SCRATCH_M2_RAW = new Float64Array(4);
+    static #SCRATCH_M3_RAW;
+    static #SCRATCH_M4_RAW;
+    /**
+     * Small integer scratch buffer used for directional move counts (N,E,S,W).
+     * @remarks Non-reentrant: reused across telemetry calls.
+     */
+    static #SCRATCH_COUNTS = new Int32Array(4);
+    /**
+     * Open-address hash table for visited coordinate detection (pairs packed into 32-bit int).
+     * Length is always a power of two; uses linear probing. A value of 0 represents EMPTY so we offset packed values by +1.
+     */
+    static #SCRATCH_VISITED_HASH = new Int32Array(0);
+    /** Load factor threshold (~0.7) for resizing visited hash. */
+    static #VISITED_HASH_LOAD = 0.7;
+    /** Knuth multiplicative hashing constant (32-bit golden ratio). */
+    static #HASH_KNUTH_32 = 2654435761 >>> 0;
+    /** Scratch species id buffer (dynamic growth). */
+    static #SCRATCH_SPECIES_IDS = new Int32Array(64);
+    /** Scratch species count buffer parallel to ids. */
+    static #SCRATCH_SPECIES_COUNTS = new Int32Array(64);
+    /** Reusable candidate connection object buffer. */
+    static #SCRATCH_CONN_CAND = [];
+    /** Reusable hidden->output connection buffer. */
+    static #SCRATCH_HIDDEN_OUT = [];
+    /** Flags buffer for connection disabling (grown on demand). */
+    static #SCRATCH_CONN_FLAGS = new Uint8Array(128);
+    /** Scratch tail buffer reused by #getTail (grows geometrically). */
+    static #SCRATCH_TAIL = new Array(64);
+    /** Scratch sample result buffer reused by #sampleArray (ephemeral return). */
+    static #SCRATCH_SAMPLE_RESULT = new Array(64);
+    /** Scratch index buffer holding sorted indices by score (reused per generation). */
+    static #SCRATCH_SORT_IDX = new Array(512);
+    /** Optional typed-array scratch used internally to accelerate sorting without allocating each call. */
+    static #SCRATCH_SORT_IDX_TA;
+    /** Scratch stack (lo,hi pairs) for quicksort on indices. */
+    static #SCRATCH_QS_STACK = new Int32Array(128);
+    /** Scratch array reused when cloning an initial population. */
+    static #SCRATCH_POP_CLONE = new Array(0);
+    /** Scratch string array for activation function names (printNetworkStructure). */
+    static #SCRATCH_ACT_NAMES = new Array(0);
+    /** Reusable object buffer for snapshot top entries. */
+    static #SCRATCH_SNAPSHOT_TOP = new Array(0);
+    /** Reusable snapshot object (fields overwritten each persistence). */
+    static #SCRATCH_SNAPSHOT_OBJ = {
+      generation: 0,
+      bestFitness: 0,
+      simplifyMode: false,
+      plateauCounter: 0,
+      timestamp: 0,
+      telemetryTail: void 0,
+      top: void 0
+    };
+    /** Pooled buffer for mutation operator indices (shuffled prefix each use). */
+    static #SCRATCH_MUTOP_IDX = new Uint16Array(0);
+    /** Number of action outputs (N,E,S,W) */
+    static #ACTION_DIM = 4;
+    /** Precomputed 1/ln(4) for entropy normalization (micro-optimization). */
+    static #INV_LOG4 = 1 / Math.log(4);
+    /** LCG multiplier (1664525) used by the fast RNG (32-bit LCG). */
+    static #LCG_MULT = 1664525;
+    /** LCG additive constant (1013904223) used by the fast RNG. */
+    static #LCG_ADD = 1013904223;
+    /** Number of cached RNG outputs per refill (batched to amortize state writes). */
+    static #RNG_CACHE_SIZE = 4;
+    /** Bit shift applied when converting 32-bit state to fractional mantissa (>> 9). */
+    static #RNG_SHIFT = 9;
+    /** Scale factor to map shifted integer to [0,1): 1 / 0x800000. */
+    static #RNG_SCALE = 1 / 8388608;
+    /** Adaptive logits ring capacity (power-of-two). */
+    static #LOGITS_RING_CAP = 512;
+    /** Max allowed ring capacity (safety bound). */
+    static #LOGITS_RING_CAP_MAX = 8192;
+    /** Indicates SharedArrayBuffer-backed ring is active. */
+    static #LOGITS_RING_SHARED = false;
+    /** Logits ring (fallback non-shared row-of-vectors). */
+    static #SCRATCH_LOGITS_RING = (() => {
+      const cap = _EvolutionEngine.#LOGITS_RING_CAP;
+      const rows = new Array(cap);
+      for (let i = 0; i < cap; i++)
+        rows[i] = new Float32Array(_EvolutionEngine.#ACTION_DIM);
+      return rows;
+    })();
+    /** Shared flat logits storage when shared mode enabled (length = cap * ACTION_DIM). */
+    static #SCRATCH_LOGITS_SHARED;
+    /** Shared atomic write index (length=1 Int32). */
+    static #SCRATCH_LOGITS_SHARED_W;
+    /** Write cursor for non-shared ring. */
+    static #SCRATCH_LOGITS_RING_W = 0;
+    /** Internal helper: allocate a non-shared ring with specified capacity. */
+    static #allocateLogitsRing(cap) {
+      const rows = new Array(cap);
+      for (let i = 0; i < cap; i++)
+        rows[i] = new Float32Array(_EvolutionEngine.#ACTION_DIM);
+      return rows;
+    }
+    /**
+     * Behavior & environment constraints:
+     * - No-op when `SharedArrayBuffer` is unavailable or when the global context is not
+     *   `crossOriginIsolated` (the browser COOP+COEP requirement). In those cases the engine will
+     *   continue using the fallback non-shared `#SCRATCH_LOGITS_RING`.
+     * - Any exception during allocation or view creation is caught; on failure the method clears
+     *   any partially-initialized shared references and leaves `#LOGITS_RING_SHARED` as false.
+     *
+     * Memory layout details:
+     * - The SAB size is 4 + (cap * ACTION_DIM * 4) bytes.
+     *   - Byte offset 0: Int32Array view of length 1 used as the atomic write index (4 bytes).
+     *   - Byte offset 4: Float32Array view of length (cap * ACTION_DIM) storing the flattened logits.
+     * - Consumers should treat the Float32Array as rows of length `ACTION_DIM` and use the
+     *   atomic write index to coordinate producer/consumer access.
+     *
+     * Safety / assumptions:
+     * - `cap` should be a sensible ring capacity (the rest of the ring logic prefers power-of-two
+     *   capacities, though this method does not enforce it).
+     * - Atomics.store is used to initialize the write index to 0.
+     *
+     * @param cap Number of rows (ring capacity). The Float32 storage length will be `cap * ACTION_DIM`.
+     * @internal
+     * @remarks This is a best-effort performance optimization for worker/agent setups; when the
+     *          environment doesn't permit SAB usage the engine gracefully falls back to the
+     *          per-row `#SCRATCH_LOGITS_RING` representation.
+     * @example
+     * // internal usage (may succeed only in cross-origin-isolated browsers or compatible worker hosts)
+     * EvolutionEngine['#initSharedLogitsRing'](512);
+     */
+    static #initSharedLogitsRing(cap) {
+      try {
+        if (typeof SharedArrayBuffer === "undefined") return;
+        if (globalThis?.crossOriginIsolated !== true) return;
+        if (!Number.isInteger(cap) || cap <= 0) return;
+        const actionDim = _EvolutionEngine.#ACTION_DIM;
+        const totalFloats = cap * actionDim;
+        const indexBytes = Int32Array.BYTES_PER_ELEMENT;
+        const floatBytes = Float32Array.BYTES_PER_ELEMENT;
+        const sab = new SharedArrayBuffer(indexBytes + totalFloats * floatBytes);
+        _EvolutionEngine.#SCRATCH_LOGITS_SHARED_W = new Int32Array(sab, 0, 1);
+        _EvolutionEngine.#SCRATCH_LOGITS_SHARED = new Float32Array(
+          sab,
+          indexBytes,
+          totalFloats
+        );
+        Atomics.store(_EvolutionEngine.#SCRATCH_LOGITS_SHARED_W, 0, 0);
+        _EvolutionEngine.#SCRATCH_LOGITS_SHARED.fill(0);
+        _EvolutionEngine.#LOGITS_RING_SHARED = true;
+      } catch {
+        _EvolutionEngine.#LOGITS_RING_SHARED = false;
+        _EvolutionEngine.#SCRATCH_LOGITS_SHARED = void 0;
+        _EvolutionEngine.#SCRATCH_LOGITS_SHARED_W = void 0;
+      }
+    }
+    /**
+     * Ensure the logits ring has sufficient capacity for `desiredRecentSteps`.
+     *
+     * Heuristics:
+     * - Grow when usage exceeds ~75% of capacity (and cap < max); growth chooses the next
+     *   power-of-two >= desiredRecentSteps * 2 to leave headroom.
+     * - Shrink when usage drops below 25% of capacity while maintaining a lower bound (128).
+     * - All sizes are clamped to [128, #LOGITS_RING_CAP_MAX] and kept as powers of two.
+     *
+     * Behavior:
+     * - On resize we reset the non-shared write cursor, reallocate the non-shared per-row ring,
+     *   and attempt to reinitialize the SharedArrayBuffer-backed ring if shared mode is active.
+     * - The method is best-effort and non-blocking; callers should avoid concurrent calls from
+     *   multiple threads/workers because internal scratch state (non-shared ring) is replaced.
+     *
+     * @param desiredRecentSteps Estimated number of recent rows that need to be stored.
+     * @internal
+     */
+    static #ensureLogitsRingCapacity(desiredRecentSteps) {
+      if (!Number.isFinite(desiredRecentSteps) || desiredRecentSteps < 0) return;
+      const MIN_CAP = 128;
+      const maxCap = _EvolutionEngine.#LOGITS_RING_CAP_MAX;
+      let cap = _EvolutionEngine.#LOGITS_RING_CAP;
+      let target = cap;
+      const nextPow2 = (n) => {
+        if (n <= 1) return 1;
+        return 1 << Math.ceil(Math.log2(n));
+      };
+      if (desiredRecentSteps > cap * 3 / 4 && cap < maxCap) {
+        const desired = Math.min(desiredRecentSteps * 2, maxCap);
+        target = Math.min(nextPow2(Math.ceil(desired)), maxCap);
+      } else if (desiredRecentSteps < cap / 4 && cap > MIN_CAP) {
+        let shrink = cap;
+        while (shrink > MIN_CAP && desiredRecentSteps * 2 <= shrink / 2)
+          shrink >>= 1;
+        target = Math.max(shrink, MIN_CAP);
+      }
+      if (target !== cap) {
+        _EvolutionEngine.#LOGITS_RING_CAP = target;
+        _EvolutionEngine.#SCRATCH_LOGITS_RING_W = 0;
+        _EvolutionEngine.#SCRATCH_LOGITS_RING = _EvolutionEngine.#allocateLogitsRing(
+          target
+        );
+        if (_EvolutionEngine.#LOGITS_RING_SHARED)
+          _EvolutionEngine.#initSharedLogitsRing(target);
+      }
+    }
+    /**
+     * Small node index scratch arrays reused when extracting nodes by type.
+     * @remarks Non-reentrant: do not call concurrently.
+     */
+    static #SCRATCH_NODE_IDX = new Int32Array(64);
+    /**
+     * Object reference scratch array used as a short sample buffer (max 40 entries).
+     * Avoids allocating small arrays inside hot telemetry paths.
+     */
+    static #SCRATCH_SAMPLE = new Array(40);
+    /** Reusable string assembly character buffer for small joins (grown geometrically). */
+    static #SCRATCH_STR = new Array(64);
+    /** Internal 32-bit state for fast LCG RNG (mul 1664525 + 1013904223). */
+    static #RNG_STATE = (Date.now() ^ 2654435769) >>> 0;
+    /** Detailed profiling enable flag (set ASCII_MAZE_PROFILE_DETAILS=1). */
+    static #PROFILE_ENABLED = (() => {
+      try {
+        return typeof process !== "undefined" && process?.env?.ASCII_MAZE_PROFILE_DETAILS === "1";
+      } catch {
+        return false;
+      }
+    })();
+    /** Accumulators for detailed profiling (ms). */
+    static #PROFILE_ACCUM = {
+      telemetry: 0,
+      simplify: 0,
+      snapshot: 0,
+      prune: 0
+    };
+    /** Small fixed-size visited table for tiny path exploration (<32) to avoid O(n^2) duplicate scan. */
+    static #SMALL_EXPLORE_TABLE = new Int32Array(64);
+    /** Bit mask for SMALL_EXPLORE_TABLE indices (table length - 1). */
+    static #SMALL_EXPLORE_TABLE_MASK = 64 - 1;
+    static #PROFILE_T0() {
+      return _EvolutionEngine.#now();
+    }
+    static #PROFILE_ADD(key, delta) {
+      if (!_EvolutionEngine.#PROFILE_ENABLED) return;
+      _EvolutionEngine.#PROFILE_ACCUM[key] = (_EvolutionEngine.#PROFILE_ACCUM[key] || 0) + delta;
+    }
+    /**
+     * RNG cache (batched draws) to amortize LCG state updates in tight loops.
+     * Size is taken from `#RNG_CACHE_SIZE` so the batch parameter is centralized.
+     */
+    static #RNG_CACHE = new Float64Array(_EvolutionEngine.#RNG_CACHE_SIZE);
+    // Force initial refill by setting index to cache size.
+    static #RNG_CACHE_INDEX = _EvolutionEngine.#RNG_CACHE_SIZE;
+    /**
+     * Fast LCG producing a float in [0,1).
+     *
+     * Notes:
+     * - Non-cryptographic: simple 32-bit LCG (mul/add) used for high-performance sampling.
+     * - Batches `#RNG_CACHE_SIZE` outputs to reduce the number of state writes.
+     * - Deterministic when `#DETERMINISTIC` is set and seeded via `setDeterministic`.
+     * - Returns a double in [0,1). Consumers relying on high-quality randomness should
+     *   replace this with a cryptographic RNG.
+     *
+     * @returns float in [0,1)
+     * @internal
+     */
+    static #fastRandom() {
+      if (_EvolutionEngine.#RNG_CACHE_INDEX >= _EvolutionEngine.#RNG_CACHE_SIZE) {
+        let localRngState = _EvolutionEngine.#RNG_STATE >>> 0;
+        for (let cacheFillIndex = 0; cacheFillIndex < _EvolutionEngine.#RNG_CACHE_SIZE; cacheFillIndex++) {
+          localRngState = localRngState * _EvolutionEngine.#LCG_MULT + _EvolutionEngine.#LCG_ADD >>> 0;
+          _EvolutionEngine.#RNG_CACHE[cacheFillIndex] = (localRngState >>> _EvolutionEngine.#RNG_SHIFT) * _EvolutionEngine.#RNG_SCALE;
+        }
+        _EvolutionEngine.#RNG_STATE = localRngState >>> 0;
+        _EvolutionEngine.#RNG_CACHE_INDEX = 0;
+      }
+      const nextValue = _EvolutionEngine.#RNG_CACHE[_EvolutionEngine.#RNG_CACHE_INDEX++];
+      return nextValue;
+    }
+    /** Deterministic mode flag (enables reproducible seeded RNG). */
+    static #DETERMINISTIC = false;
+    /** High-resolution time helper. */
+    static #now() {
+      return globalThis.performance?.now?.() ?? Date.now();
+    }
+    /**
+     * Enable deterministic mode and optionally reseed the internal RNG.
+     *
+     * Behaviour (stepwise):
+     * 1. Set the internal deterministic flag so other helpers can opt-in to deterministic behaviour.
+     * 2. If `seed` is provided and finite, normalise it to an unsigned 32-bit integer. A seed value of
+     *    `0` is remapped to the golden-ratio-derived constant `0x9e3779b9` to avoid the degenerate LCG state.
+     * 3. Persist the chosen u32 seed into `#RNG_STATE` and force the RNG cache to refill so the next
+     *    `#fastRandom()` call yields the deterministic sequence starting from the new seed.
+     *
+     * Notes:
+     * - If `seed` is omitted the method only enables deterministic mode without reseeding the RNG state.
+     * - The method is intentionally conservative about input coercion: only finite numeric seeds are accepted.
+     *
+     * @param seed Optional numeric seed. Fractional values are coerced via `>>> 0`. Passing `0` results in
+     *             a non-zero canonical seed to avoid trivial cycles.
+     * @example
+     * // Enable deterministic mode with an explicit seed:
+     * EvolutionEngine.setDeterministic(12345);
+     *
+     * @internal
+     */
+    static setDeterministic(seed) {
+      _EvolutionEngine.#DETERMINISTIC = true;
+      if (typeof seed === "number" && Number.isFinite(seed)) {
+        const normalised = seed >>> 0 || 2654435769;
+        _EvolutionEngine.#RNG_STATE = normalised >>> 0;
+        _EvolutionEngine.#RNG_CACHE_INDEX = _EvolutionEngine.#RNG_CACHE_SIZE;
+      }
+    }
+    /** Disable deterministic mode. */
+    static clearDeterministic() {
+      _EvolutionEngine.#DETERMINISTIC = false;
+    }
+    /** When true, telemetry skips higher-moment stats (kurtosis) for speed. */
+    static #REDUCED_TELEMETRY = false;
+    /** Skip most telemetry logging & higher moment stats when true (minimal mode). */
+    static #TELEMETRY_MINIMAL = false;
+    /** Disable Baldwinian refinement phase when true. */
+    static #DISABLE_BALDWIN = false;
+    /** Default tail history size used by telemetry */
+    static #RECENT_WINDOW = 40;
+    /** Default population size used when no popSize provided in cfg */
+    static #DEFAULT_POPSIZE = 500;
+    /** Default mutation rate (fraction of individuals mutated per generation) */
+    static #DEFAULT_MUTATION_RATE = 0.2;
+    /** Default mutation amount (fractional magnitude for mutation operators) */
+    static #DEFAULT_MUTATION_AMOUNT = 0.3;
+    /** Fraction of population reserved for elitism when computing elitism count */
+    static #DEFAULT_ELITISM_FRACTION = 0.1;
+    /** Fraction of population reserved for provenance when computing provenance count */
+    static #DEFAULT_PROVENANCE_FRACTION = 0.2;
+    /** Default minimum hidden nodes for new NEAT instances */
+    /**
+     * Default minimum hidden nodes enforced for each evolved network.
+     * Raised from 6 -> 12 to increase representational capacity for maze scaling.
+     * Adjust via code edit if future experiments need a different baseline.
+     */
+    static #DEFAULT_MIN_HIDDEN = 20;
+    /** Default target species count for adaptive target species heuristics */
+    static #DEFAULT_TARGET_SPECIES = 10;
+    /** Default supervised training error threshold for local training */
+    static #DEFAULT_TRAIN_ERROR = 0.01;
+    /** Default supervised training learning rate for local training */
+    static #DEFAULT_TRAIN_RATE = 1e-3;
+    /** Default supervised training momentum */
+    static #DEFAULT_TRAIN_MOMENTUM = 0.2;
+    /** Default small batch size used during Lamarckian training */
+    static #DEFAULT_TRAIN_BATCH_SMALL = 2;
+    /** Default batch size used when training the fittest network for evaluation */
+    static #DEFAULT_TRAIN_BATCH_LARGE = 20;
+    /** Iterations used when training the fittest network for evaluation */
+    static #FITTEST_TRAIN_ITERATIONS = 1e3;
+    /** Saturation fraction threshold triggering hidden-output pruning */
+    static #SATURATION_PRUNE_THRESHOLD = 0.5;
+    /** Small threshold used in several numeric comparisons */
+    static #NUMERIC_EPSILON_SMALL = 0.01;
+    /** Small threshold used for std flat detection in logits */
+    static #LOGSTD_FLAT_THRESHOLD = 5e-3;
+    /** Default entropy range for adaptive target species */
+    static #DEFAULT_ENTROPY_RANGE = [0.3, 0.8];
+    /** Default smoothing factor for adaptive target species */
+    static #DEFAULT_ADAPTIVE_SMOOTH = 0.5;
+    /** Default probability used for small randomized jitter (25%) */
+    static #DEFAULT_JITTER_PROB = 0.25;
+    /** Default probability for 50/50 decisions */
+    static #DEFAULT_HALF_PROB = 0.5;
+    /** Fraction of sorted parents chosen as parent pool */
+    static #DEFAULT_PARENT_FRACTION = 0.25;
+    /** Small std threshold to consider 'small' std */
+    static #DEFAULT_STD_SMALL = 0.25;
+    /** Multiplier applied when std is small */
+    static #DEFAULT_STD_ADJUST_MULT = 0.7;
+    /** Initial weight range lower bound used by compass warm start */
+    static #W_INIT_MIN = 0.55;
+    /** Initial weight random range used by compass warm start */
+    static #W_INIT_RANGE = 0.25;
+    /** Base value for output bias initialization */
+    static #OUTPUT_BIAS_BASE = 0.05;
+    /** Step per output index when initializing output biases */
+    static #OUTPUT_BIAS_STEP = 0.01;
+    /** Absolute clamp applied after recentring output biases (prevents runaway values) */
+    static #OUTPUT_BIAS_CLAMP = 5;
+    /** Bias reset half-range (bias = rand * 2*R - R) */
+    static #BIAS_RESET_HALF_RANGE = 0.1;
+    /** Connection weight reset half-range (weight = rand * 2*R - R) */
+    static #CONN_WEIGHT_RESET_HALF_RANGE = 0.2;
+    /** Log tag for action entropy telemetry lines */
+    static #LOG_TAG_ACTION_ENTROPY = "[ACTION_ENTROPY]";
+    /** Log tag for output bias telemetry lines */
+    static #LOG_TAG_OUTPUT_BIAS = "[OUTPUT_BIAS]";
+    /** Log tag for logits telemetry lines */
+    static #LOG_TAG_LOGITS = "[LOGITS]";
+    /** High target probability for the chosen action during supervised warm start */
+    static #TRAIN_OUT_PROB_HIGH = 0.92;
+    /** Low target probability for non-chosen actions during supervised warm start */
+    static #TRAIN_OUT_PROB_LOW = 0.02;
+    /** Progress intensity: medium (single open path typical) */
+    static #PROGRESS_MEDIUM = 0.7;
+    /** Progress intensity: strong forward signal */
+    static #PROGRESS_STRONG = 0.9;
+    /** Progress intensity: typical junction neutrality */
+    static #PROGRESS_JUNCTION = 0.6;
+    /** Progress intensity: four-way moderate signal */
+    static #PROGRESS_FOURWAY = 0.55;
+    /** Progress intensity: regressing / weak progress */
+    static #PROGRESS_REGRESS = 0.4;
+    /** Progress intensity: mild regression / noise */
+    static #PROGRESS_MILD_REGRESS = 0.45;
+    /** Minimal progress positive blip used in a corner-case sample */
+    static #PROGRESS_MIN_SIGNAL = 1e-3;
+    /** Augmentation: base openness jitter value */
+    static #AUGMENT_JITTER_BASE = 0.95;
+    /** Augmentation: openness jitter range added to base */
+    static #AUGMENT_JITTER_RANGE = 0.05;
+    /** Augmentation: probability to jitter progress channel */
+    static #AUGMENT_PROGRESS_JITTER_PROB = 0.35;
+    /** Augmentation: progress delta full range */
+    static #AUGMENT_PROGRESS_DELTA_RANGE = 0.1;
+    /** Augmentation: progress delta half range (range/2) */
+    static #AUGMENT_PROGRESS_DELTA_HALF = 0.05;
+    /** Max iterations used during population pretrain */
+    static #PRETRAIN_MAX_ITER = 60;
+    /** Base iterations added in pretrain (8 + floor(setLen/2)) */
+    static #PRETRAIN_BASE_ITER = 8;
+    /** Default learning rate used during pretraining population warm-start */
+    static #DEFAULT_PRETRAIN_RATE = 2e-3;
+    /** Default momentum used during pretraining population warm-start */
+    static #DEFAULT_PRETRAIN_MOMENTUM = 0.1;
+    /** Default batch size used during population pretraining */
+    static #DEFAULT_PRETRAIN_BATCH = 4;
+    /** Entropy threshold used in collapse heuristics */
+    static #ENTROPY_COLLAPSE_THRESHOLD = 0.35;
+    /** Stability threshold used in collapse heuristics */
+    static #STABILITY_COLLAPSE_THRESHOLD = 0.97;
+    /** Window size (consecutive generations) used to detect species collapse */
+    static #SPECIES_COLLAPSE_WINDOW = 20;
+    /** Max length of species history buffer */
+    static #SPECIES_HISTORY_MAX = 50;
+    /** Collapse streak trigger (consecutive collapsed gens before recovery) */
+    static #COLLAPSE_STREAK_TRIGGER = 6;
+    /** Mutation rate escalation cap during collapse recovery */
+    static #COLLAPSE_MUTRATE_CAP = 0.6;
+    /** Mutation amount escalation cap during collapse recovery */
+    static #COLLAPSE_MUTAMOUNT_CAP = 0.8;
+    /** Novelty blend factor escalation cap during collapse recovery */
+    static #COLLAPSE_NOVELTY_BLEND_CAP = 0.4;
+    /** Mutation rate escalation multiplier */
+    static #COLLAPSE_MUTRATE_MULT = 1.5;
+    /** Mutation amount escalation multiplier */
+    static #COLLAPSE_MUTAMOUNT_MULT = 1.3;
+    /** Novelty blend factor escalation multiplier */
+    static #COLLAPSE_NOVELTY_MULT = 1.2;
+    /** Small-partition cutoff for quicksort; tuned empirically (was 16). */
+    static #QS_SMALL_THRESHOLD = 24;
+    /** Branchless (dx,dy)->direction index map ((dx+1)*3 + (dy+1)) => 0..3 or -1. */
+    static #DIR_DELTA_TO_INDEX = (() => {
+      const map = new Int8Array(9);
+      map.fill(-1);
+      map[(0 + 1) * 3 + (-1 + 1)] = 0;
+      map[(1 + 1) * 3 + (0 + 1)] = 1;
+      map[(0 + 1) * 3 + (1 + 1)] = 2;
+      map[(-1 + 1) * 3 + (0 + 1)] = 3;
+      return map;
+    })();
+    /**
+     * Populate the engine's pooled node-index scratch buffer with indices of nodes matching `type`.
+     *
+     * Steps:
+     * 1. Validate inputs and early-exit for empty or missing `nodes`.
+     * 2. Iterate the node array once, selecting nodes whose `node.type === type`.
+     * 3. Grow the pooled `#SCRATCH_NODE_IDX` Int32Array geometrically (power-of-two) when capacity
+     *    is insufficient to avoid frequent allocations.
+     * 4. Write matching indices into the scratch buffer and return the count of matches.
+     *
+     * Notes:
+     * - The method mutates `EvolutionEngine.#SCRATCH_NODE_IDX` and is therefore not reentrant. Callers
+     *   must copy the first `N` entries if they need persistence across subsequent engine calls.
+     * - Returns the number of matched nodes; the first `N` entries of `#SCRATCH_NODE_IDX` contain the indices.
+     *
+     * @param nodes - Optional array of node objects (each expected to expose a `type` property).
+     * @param type - Node type key to match (for example 'input', 'hidden', 'output').
+     * @returns Number of matching nodes written into `#SCRATCH_NODE_IDX`.
+     * @example
+     * // Populate scratch with output node indices and get the count:
+     * const outCount = EvolutionEngine['#getNodeIndicesByType'](nodes, 'output');
+     * // Use the first outCount entries of EvolutionEngine['#SCRATCH_NODE_IDX'] as indices into nodes.
+     *
+     * @internal
+     */
+    static #getNodeIndicesByType(nodes, type) {
+      if (!Array.isArray(nodes) || nodes.length === 0) return 0;
+      const nodesRef = nodes;
+      const desiredType = type;
+      let writeCount = 0;
+      let scratch = _EvolutionEngine.#SCRATCH_NODE_IDX;
+      for (let nodeIndex = 0; nodeIndex < nodesRef.length; nodeIndex++) {
+        const nodeRef = nodesRef[nodeIndex];
+        if (!nodeRef || nodeRef.type !== desiredType) continue;
+        if (writeCount >= scratch.length) {
+          const nextCapacity = 1 << Math.ceil(Math.log2(writeCount + 1));
+          const grown = new Int32Array(nextCapacity);
+          grown.set(scratch);
+          _EvolutionEngine.#SCRATCH_NODE_IDX = grown;
+          scratch = grown;
+        }
+        scratch[writeCount++] = nodeIndex;
+      }
+      return writeCount;
+    }
+    /**
+     * Compute exploration statistics for a path taken by an agent.
+     *
+     * Returned metrics:
+     * - unique: number of distinct grid cells visited
+     * - pathLen: total number of steps in path (array length)
+     * - ratio: unique / pathLen (0 when pathLen == 0)
+     *
+     * Implementation details:
+     * 1. Coordinates are packed into a single 32-bit integer: (x & 0xffff) << 16 | (y & 0xffff)
+     * 2. Two code paths:
+     *    a. Tiny path (< 32): use a fixed 64-slot Int32Array (#SMALL_EXPLORE_TABLE) cleared per call.
+     *    b. Larger path: use a growable power-of-two scratch Int32Array (#SCRATCH_VISITED_HASH) sized
+     *       for target load factor (#VISITED_HASH_LOAD). Table is zero-filled when reused.
+     * 3. Open-addressing with linear probing; 0 denotes empty. We store packed+1 to disambiguate zero.
+     * 4. Knuth multiplicative hashing constant extracted as a private static (#HASH_KNUTH_32) for clarity.
+     * 5. All operations avoid heap allocation after initial buffer growth.
+     *
+     * Complexity: O(n) expected; worst-case O(n * alpha) with alpha ~ probe length (low under target load).
+     * Determinism: Fully deterministic given identical path contents.
+     * Reentrancy: Non-reentrant due to shared hash buffer.
+     *
+     * @param path - Array of [x,y] coordinates visited in order.
+     * @returns { unique, pathLen, ratio }
+     * @example
+     * const stats = EvolutionEngine['#computeExplorationStats']([[0,0],[1,0],[1,0]]); // pseudo internal usage
+     * @internal
+     */
+    static #computeExplorationStats(path) {
+      const pathLength = path?.length || 0;
+      if (pathLength === 0) return { unique: 0, pathLen: 0, ratio: 0 };
+      if (pathLength < 32) {
+        const distinctTiny = _EvolutionEngine.#countDistinctCoordinatesTiny(
+          path,
+          pathLength
+        );
+        return {
+          unique: distinctTiny,
+          pathLen: pathLength,
+          ratio: distinctTiny / pathLength
+        };
+      }
+      const distinct = _EvolutionEngine.#countDistinctCoordinatesHashed(
+        path,
+        pathLength
+      );
+      return {
+        unique: distinct,
+        pathLen: pathLength,
+        ratio: distinct / pathLength
+      };
+    }
+    /**
+     * Count distinct packed coordinates for tiny paths (< 32) using a fixed-size table.
+     * @param path - Coordinate path reference.
+     * @param pathLength - Precomputed length (avoid repeated length lookups).
+     * @returns number of unique coordinates.
+     * @remarks Non-reentrant (shared tiny table). O(n) expected, tiny constant factors.
+     */
+    static #countDistinctCoordinatesTiny(path, pathLength) {
+      if (pathLength === 0) return 0;
+      const table = _EvolutionEngine.#SMALL_EXPLORE_TABLE;
+      table.fill(0);
+      let distinctCount = 0;
+      const mask = _EvolutionEngine.#SMALL_EXPLORE_TABLE_MASK;
+      for (let coordinateIndex = 0; coordinateIndex < pathLength; coordinateIndex++) {
+        const coordinate = path[coordinateIndex];
+        const packed = (coordinate[0] & 65535) << 16 | coordinate[1] & 65535;
+        let hash = Math.imul(packed, _EvolutionEngine.#HASH_KNUTH_32) >>> 0;
+        const storedValue = packed + 1 | 0;
+        while (true) {
+          const slot = hash & mask;
+          const slotValue = table[slot];
+          if (slotValue === 0) {
+            table[slot] = storedValue;
+            distinctCount++;
+            break;
+          }
+          if (slotValue === storedValue) break;
+          hash = hash + 1 | 0;
+        }
+      }
+      return distinctCount;
+    }
+    /**
+     * Count distinct coordinates for larger paths using a dynamically sized open-address hash table.
+     * Ensures the table grows geometrically to keep probe chains short.
+     *
+     * Design rationale:
+     * - Uses a single shared Int32Array (#SCRATCH_VISITED_HASH) grown geometrically (power-of-two) so
+     *   subsequent calls amortize allocation costs. We target a load factor below `#VISITED_HASH_LOAD` (≈0.7).
+     * - Multiplicative hashing (Knuth constant) provides a cheap, decent dispersion for packed 32-bit coordinates.
+     * - Linear probing keeps memory contiguous (cache friendly) and avoids per-slot pointer overhead.
+     * - We pack (x,y) into 32 bits allowing negative coordinates via masking (& 0xffff) with natural wrap —
+     *   acceptable for maze sizes far below 65k.
+     * - Instead of tombstones we only ever insert during this scan, so deletion complexity is avoided.
+     *
+     * Complexity: Expected O(n) with short probe sequences; worst-case O(n^2) only under adversarial clustering
+     * (not expected with maze coordinate distributions and resizing policy).
+     * Memory: One Int32Array reused; size grows but never shrinks (acceptable for long-running evolution sessions).
+     * Determinism: Fully deterministic for the same input path.
+     * Reentrancy: Non-reentrant due to shared buffer reuse.
+     *
+     * @param path - Coordinate path reference.
+     * @param pathLength - Path length (number of coordinate entries).
+     * @returns Number of unique coordinates encountered.
+     * @remarks Non-reentrant (shared hash table). Expected O(n) with low probe lengths.
+     */
+    static #countDistinctCoordinatesHashed(path, pathLength) {
+      const targetCapacity = pathLength << 1;
+      let table = _EvolutionEngine.#SCRATCH_VISITED_HASH;
+      if (table.length === 0 || targetCapacity > table.length * _EvolutionEngine.#VISITED_HASH_LOAD) {
+        const needed = Math.ceil(
+          targetCapacity / _EvolutionEngine.#VISITED_HASH_LOAD
+        );
+        const pow2 = 1 << Math.ceil(Math.log2(needed));
+        table = _EvolutionEngine.#SCRATCH_VISITED_HASH = new Int32Array(pow2);
+      } else {
+        table.fill(0);
+      }
+      const mask = table.length - 1;
+      let distinct = 0;
+      for (let index = 0; index < pathLength; index++) {
+        const coordinate = path[index];
+        const packed = (coordinate[0] & 65535) << 16 | coordinate[1] & 65535;
+        let hash = Math.imul(packed, _EvolutionEngine.#HASH_KNUTH_32) >>> 0;
+        const storeVal = packed + 1 | 0;
+        while (true) {
+          const slot = hash & mask;
+          const slotValue = table[slot];
+          if (slotValue === 0) {
+            table[slot] = storeVal;
+            distinct++;
+            break;
+          }
+          if (slotValue === storeVal) break;
+          hash = hash + 1 | 0;
+        }
+      }
+      return distinct;
+    }
+    /**
+     * Compute core diversity metrics for the current NEAT population.
+     *
+     * Metrics returned:
+     * - speciesUniqueCount: number of distinct species IDs present (genomes without a species get id -1)
+     * - simpson: Simpson diversity index (1 - sum(p_i^2)) over species proportions
+     * - wStd: standard deviation of enabled connection weights from a sampled subset of genomes
+     *
+     * Implementation notes / performance:
+     * 1. Species counting uses two class‑static Int32Array scratch buffers (#SCRATCH_SPECIES_IDS / COUNTS)
+     *    and linear search because typical species cardinality << population size, making a hash map slower.
+     * 2. Weight distribution sampling uses a pooled object scratch buffer (#SCRATCH_SAMPLE) filled by
+     *    #sampleIntoScratch (with replacement) to avoid per‑call allocations.
+     * 3. Variance is computed with Welford's single‑pass algorithm for numerical stability and zero extra storage.
+     * 4. All buffers grow geometrically (power of two) and never shrink to preserve amortized O(1) reallocation cost.
+     *
+     * Determinism: Sampling relies on the engine RNG; in deterministic mode (#DETERMINISTIC set) results are reproducible.
+     * Reentrancy: Non‑reentrant due to shared scratch buffers.
+     * Complexity: O(P + S + W) where P = population length, S = speciesUniqueCount (S <= P),
+     *             and W = total enabled connections visited in the sampled genomes.
+     * Memory: No per‑invocation heap allocations after initial buffer growth.
+     *
+     * @param neat - NEAT instance exposing a `population` array.
+     * @param sampleSize - Upper bound on number of genomes to sample for weight variance (default 40).
+     * @returns Object containing { speciesUniqueCount, simpson, wStd }.
+     * @example
+     * const diversity = EvolutionEngine['#computeDiversityMetrics'](neat, 32); // internal call example (pseudo)
+     * @internal
+     * @remarks Non-reentrant (shared scratch arrays).
+     */
+    static #computeDiversityMetrics(neat, sampleSize = 40) {
+      const populationRef = neat.population ?? _EvolutionEngine.#EMPTY_VEC;
+      const populationLength = populationRef.length | 0;
+      if (populationLength === 0) {
+        return { speciesUniqueCount: 0, simpson: 0, wStd: 0 };
+      }
+      let speciesIds = _EvolutionEngine.#SCRATCH_SPECIES_IDS;
+      let speciesCounts = _EvolutionEngine.#SCRATCH_SPECIES_COUNTS;
+      if (populationLength > speciesIds.length) {
+        const nextSize = 1 << Math.ceil(Math.log2(populationLength));
+        _EvolutionEngine.#SCRATCH_SPECIES_IDS = new Int32Array(nextSize);
+        _EvolutionEngine.#SCRATCH_SPECIES_COUNTS = new Int32Array(nextSize);
+        speciesIds = _EvolutionEngine.#SCRATCH_SPECIES_IDS;
+        speciesCounts = _EvolutionEngine.#SCRATCH_SPECIES_COUNTS;
+      }
+      let speciesUniqueCount = 0;
+      let totalPopulationCount = 0;
+      for (let populationIndex = 0; populationIndex < populationLength; populationIndex++) {
+        const genome = populationRef[populationIndex];
+        const speciesId = (genome && genome.species != null ? genome.species : -1) | 0;
+        let existingSpeciesIndex = -1;
+        for (let speciesScanIndex = 0; speciesScanIndex < speciesUniqueCount; speciesScanIndex++) {
+          if (speciesIds[speciesScanIndex] === speciesId) {
+            existingSpeciesIndex = speciesScanIndex;
+            break;
+          }
+        }
+        if (existingSpeciesIndex === -1) {
+          speciesIds[speciesUniqueCount] = speciesId;
+          speciesCounts[speciesUniqueCount] = 1;
+          speciesUniqueCount++;
+        } else {
+          speciesCounts[existingSpeciesIndex]++;
+        }
+        totalPopulationCount++;
+      }
+      if (totalPopulationCount === 0) totalPopulationCount = 1;
+      let simpsonAccumulator = 0;
+      for (let speciesIndex = 0; speciesIndex < speciesUniqueCount; speciesIndex++) {
+        const proportion = speciesCounts[speciesIndex] / totalPopulationCount;
+        simpsonAccumulator += proportion * proportion;
+      }
+      const simpson = 1 - simpsonAccumulator;
+      const boundedSampleSize = sampleSize > 0 ? Math.min(populationLength, sampleSize | 0) : 0;
+      const sampledLength = boundedSampleSize ? _EvolutionEngine.#sampleIntoScratch(populationRef, boundedSampleSize) : 0;
+      let weightMean = 0;
+      let weightM2 = 0;
+      let enabledWeightCount = 0;
+      for (let sampleIndex = 0; sampleIndex < sampledLength; sampleIndex++) {
+        const sampledGenome = _EvolutionEngine.#SCRATCH_SAMPLE[sampleIndex];
+        const connections = sampledGenome.connections ?? _EvolutionEngine.#EMPTY_VEC;
+        for (let connectionIndex = 0; connectionIndex < connections.length; connectionIndex++) {
+          const connection = connections[connectionIndex];
+          if (connection && connection.enabled !== false) {
+            enabledWeightCount++;
+            const delta = connection.weight - weightMean;
+            weightMean += delta / enabledWeightCount;
+            weightM2 += delta * (connection.weight - weightMean);
+          }
+        }
+      }
+      const weightStdDev = enabledWeightCount ? Math.sqrt(weightM2 / enabledWeightCount) : 0;
+      return { speciesUniqueCount, simpson, wStd: weightStdDev };
+    }
+    /**
+     * Sample `k` items (with replacement) from a source array using the engine RNG.
+     *
+     * Characteristics:
+     * - With replacement: the same element can appear multiple times.
+     * - Uses a reusable pooled array (#SCRATCH_SAMPLE_RESULT) that grows geometrically (power-of-two) and is reused
+     *   across calls to avoid allocations. Callers MUST copy (`slice()` / spread) if they need to retain the result
+     *   beyond the next invocation.
+     * - Deterministic under deterministic engine mode (shared RNG state); otherwise non-deterministic.
+     * - Returns an empty array (length 0) for invalid inputs (`k <= 0`, non-array, or empty source). The returned
+     *   empty array is a fresh literal to avoid accidental aliasing with the scratch buffer.
+     *
+     * Complexity: O(k). Memory: O(k) only during first growth; subsequent calls reuse storage.
+     * Reentrancy: Non-reentrant (shared scratch buffer reused) — do not call concurrently.
+     *
+     * @param src - Source array to sample from.
+     * @param k - Number of samples requested (fractional values truncated via floor). Negative treated as 0.
+     * @returns Pooled ephemeral array of length `k` (or 0) containing sampled elements (with replacement).
+     * @example
+     * // Internal usage (pseudo):
+     * const batch = EvolutionEngine['#sampleArray'](population, 16); // do not store long-term
+     * const stableCopy = [...batch]; // copy if needed later
+     * @internal
+     * @remarks Non-reentrant; result must be treated as ephemeral.
+     */
+    static #sampleArray(src, k) {
+      if (!Array.isArray(src) || k <= 0) return [];
+      const sampleCount = Math.floor(k);
+      const sourceLength = src.length | 0;
+      if (sourceLength === 0 || sampleCount === 0) return [];
+      if (sampleCount > _EvolutionEngine.#SCRATCH_SAMPLE_RESULT.length) {
+        const nextSize = 1 << Math.ceil(Math.log2(sampleCount));
+        _EvolutionEngine.#SCRATCH_SAMPLE_RESULT = new Array(nextSize);
+      }
+      const out = _EvolutionEngine.#SCRATCH_SAMPLE_RESULT;
+      for (let sampleIndex = 0; sampleIndex < sampleCount; sampleIndex++) {
+        out[sampleIndex] = src[_EvolutionEngine.#fastRandom() * sourceLength | 0];
+      }
+      out.length = sampleCount;
+      return out;
+    }
+    /**
+     * Apply simplify/prune pass to every genome in the provided NEAT population.
+     *
+     * Steps:
+     * 1) Validate inputs and normalize prune fraction into [0,1]. If fraction is 0, exit early.
+     * 2) Iterate the population, invoking the central per-genome pruning helper
+     *    (#pruneWeakConnectionsForGenome) for each genome.
+     * 3) Isolate failures: catch and ignore exceptions on a per-genome basis so a single
+     *    faulty genome cannot abort the entire simplify phase (best-effort maintenance).
+     *
+     * Notes:
+     * - This helper intentionally reuses existing per-genome helpers and class-level
+     *   pooled buffers (via those helpers) to remain allocation-light. It itself does
+     *   not allocate intermediate arrays.
+     * - Non-reentrant: callers must not invoke concurrently due to shared scratch buffers
+     *   used by downstream helpers.
+     *
+     * @param neat NEAT instance with a `population` array of genomes.
+     * @param simplifyStrategy Strategy key forwarded to per-genome pruning logic.
+     * @param simplifyPruneFraction Fraction in [0,1] controlling pruning aggressiveness.
+     * @example
+     * // Perform a single simplify generation across the population.
+     * EvolutionEngine['#applySimplifyPruningToPopulation'](neatInstance, 'weakRecurrentPreferred', 0.12);
+     */
+    static #applySimplifyPruningToPopulation(neat, simplifyStrategy, simplifyPruneFraction) {
+      if (!neat || !Array.isArray(neat.population) || neat.population.length === 0)
+        return;
+      const populationRef = neat.population;
+      const pruneFraction = Number.isFinite(simplifyPruneFraction) ? Math.max(0, Math.min(1, simplifyPruneFraction)) : 0;
+      if (pruneFraction === 0) return;
+      for (let genomeIndex = 0; genomeIndex < populationRef.length; genomeIndex++) {
+        const genome = populationRef[genomeIndex];
+        try {
+          if (!genome || !Array.isArray(genome.connections)) continue;
+          _EvolutionEngine.#pruneWeakConnectionsForGenome(
+            genome,
+            simplifyStrategy ?? "",
+            pruneFraction
+          );
+        } catch {
+        }
+      }
+    }
+    /**
+     * Warm-start wiring for compass and directional openness inputs.
+     *
+     * Purpose:
+     *  - Ensure the four directional input->output pathways and a compass fan-out exist with
+     *    light initial weights so freshly-warmed networks have sensible starting connectivity.
+     *  - This helper is allocation-light and reuses class-level scratch buffers (notably
+     *    `#SCRATCH_NODE_IDX`) to avoid per-call allocations.
+     *
+     * Behaviour / steps:
+     *  1) Fast-guard when `net` is missing or has no node list.
+     *  2) For each of the 4 compass directions try to find an input node and the corresponding
+     *     output node (indices are taken from `#SCRATCH_NODE_IDX` populated by callers).
+     *  3) For each input->output pair ensure a connection exists; create it or set its weight
+     *     to a small random initialization in [W_INIT_MIN, W_INIT_MIN+W_INIT_RANGE].
+     *  4) Finally, connect the special 'compass' input (index 0 when present) to all outputs
+     *     with a deterministic base weight computed from engine constants.
+     *  5) Swallow unexpected errors to preserve best-effort semantics.
+     *
+     * Notes:
+     *  - Non-reentrant: shared scratch arrays may be mutated elsewhere; callers must avoid
+     *    concurrent use.
+     *  - No temporary arrays are allocated; loops use local length aliases to minimize property reads.
+     *
+     * @param net - Network-like object with `nodes` and `connections` arrays and `connect(from,to,w)` method.
+     * @example
+     * // After constructing or pretraining `net`:
+     * EvolutionEngine['#applyCompassWarmStart'](net);
+     */
+    static #applyCompassWarmStart(net) {
+      try {
+        if (!net) return;
+        const nodesRef = net.nodes ?? _EvolutionEngine.#EMPTY_VEC;
+        const connectionsRef = net.connections ?? _EvolutionEngine.#EMPTY_VEC;
+        const outputCount = _EvolutionEngine.#getNodeIndicesByType(
+          nodesRef,
+          "output"
+        );
+        const inputCount = _EvolutionEngine.#getNodeIndicesByType(
+          nodesRef,
+          "input"
+        );
+        const wInitRange = _EvolutionEngine.#W_INIT_RANGE;
+        const wInitMin = _EvolutionEngine.#W_INIT_MIN;
+        for (let direction = 0; direction < 4; direction++) {
+          const inputNodeIndex = direction + 1 < inputCount ? _EvolutionEngine.#SCRATCH_NODE_IDX[direction + 1] : -1;
+          const outputNodeIndex = direction < outputCount ? _EvolutionEngine.#SCRATCH_NODE_IDX[direction] : -1;
+          const inputNode = inputNodeIndex === -1 ? void 0 : nodesRef[inputNodeIndex];
+          const outputNode = outputNodeIndex === -1 ? void 0 : nodesRef[outputNodeIndex];
+          if (!inputNode || !outputNode) continue;
+          let existingConn = void 0;
+          for (let ci = 0, cLen = connectionsRef.length; ci < cLen; ci++) {
+            const conn = connectionsRef[ci];
+            if (conn.from === inputNode && conn.to === outputNode) {
+              existingConn = conn;
+              break;
+            }
+          }
+          const initWeight = _EvolutionEngine.#fastRandom() * wInitRange + wInitMin;
+          if (!existingConn) net.connect(inputNode, outputNode, initWeight);
+          else existingConn.weight = initWeight;
+        }
+        const compassNodeIndex = inputCount > 0 ? _EvolutionEngine.#SCRATCH_NODE_IDX[0] : -1;
+        const compassNode = compassNodeIndex === -1 ? void 0 : nodesRef[compassNodeIndex];
+        if (!compassNode) return;
+        for (let outIndex = 0; outIndex < outputCount; outIndex++) {
+          const outNode = nodesRef[_EvolutionEngine.#SCRATCH_NODE_IDX[outIndex]];
+          if (!outNode) continue;
+          let existingConn = void 0;
+          for (let ci = 0, cLen = connectionsRef.length; ci < cLen; ci++) {
+            const conn = connectionsRef[ci];
+            if (conn.from === compassNode && conn.to === outNode) {
+              existingConn = conn;
+              break;
+            }
+          }
+          const baseWeight = _EvolutionEngine.#OUTPUT_BIAS_BASE + outIndex * _EvolutionEngine.#OUTPUT_BIAS_STEP;
+          if (!existingConn) net.connect(compassNode, outNode, baseWeight);
+          else existingConn.weight = baseWeight;
+        }
+      } catch {
+      }
+    }
+    /**
+     * Decide whether to start the simplify/pruning phase and return its duration in generations.
+     *
+     * Behaviour (stepwise):
+     * 1. Normalise inputs defensively; non-finite or missing values are treated as 0.
+     * 2. If the observed plateau counter meets or exceeds the configured plateau generations,
+     *    the method will start a simplify phase only when running in a non-browser host (previous
+     *    behaviour gated on `typeof window === 'undefined'`).
+     * 3. Returns `simplifyDuration` when the simplify phase should start, or `0` to indicate no start.
+     *
+     * Rationale: Simplify/pruning is potentially expensive and historically skipped in browser contexts
+     * to avoid blocking the UI; this helper preserves that heuristic while sanitising inputs.
+     *
+     * @param plateauCounter - Observed consecutive plateau generations (may be non-finite).
+     * @param plateauGenerations - Configured threshold to trigger simplify phase (may be non-finite).
+     * @param simplifyDuration - Requested simplify phase length in generations (returned when starting).
+     * @returns Number of generations the simplify phase should run (0 means "do not start").
+     * @example
+     * const dur = EvolutionEngine['#maybeStartSimplify'](plateauCount, 10, 5);
+     * if (dur > 0) { // begin simplify for dur generations
+     *   // ...start simplify loop for `dur` generations
+     * }
+     * @internal
+     */
+    static #maybeStartSimplify(plateauCounter, plateauGenerations, simplifyDuration) {
+      const observedPlateau = Number.isFinite(plateauCounter) ? Math.max(0, Math.floor(plateauCounter)) : 0;
+      const requiredPlateau = Number.isFinite(plateauGenerations) ? Math.max(0, Math.floor(plateauGenerations)) : 0;
+      const requestedDuration = Number.isFinite(simplifyDuration) ? Math.max(0, Math.floor(simplifyDuration)) : 0;
+      if (observedPlateau < requiredPlateau) return 0;
+      try {
+        if (typeof window !== "undefined") return 0;
+      } catch {
+      }
+      return requestedDuration;
+    }
+    /**
+     * Run a single simplify/pruning generation if conditions permit.
+     *
+     * Steps:
+     * 1. Normalize inputs and perform fast exits for zero remaining or invalid population.
+     * 2. Environment gate: retain existing behaviour that skips heavy pruning in browser-like hosts.
+     * 3. Optionally record profiling start time when profiling is enabled.
+     * 4. Execute the centralized pruning pass across the population (best-effort per-genome).
+     * 5. Record profiling delta and return the remaining simplify generations minus one.
+     *
+     * Notes:
+     * - The method preserves historical behaviour where presence of a `window` global causes an early
+     *   return to avoid blocking UI threads. A try/catch is used to safely probe the host environment.
+     * - Inputs are defensively coerced to finite non-negative integers to avoid surprising arithmetic.
+     *
+     * @param neat - NEAT instance exposing a `population` array of genomes to be pruned.
+     * @param simplifyRemaining - Number of simplify generations remaining before exiting (will be coerced to integer >= 0).
+     * @param simplifyStrategy - Strategy identifier used by pruning routines (string, engine-specific).
+     * @param simplifyPruneFraction - Fraction in [0,1] controlling pruning aggressiveness; non-finite values treated as 0.
+     * @returns Remaining simplify generations after executing one cycle (0 means no further simplify).
+     * @example
+     * // Internal usage (pseudo): attempt one simplify generation and update remaining counter
+     * const remaining = EvolutionEngine['#runSimplifyCycle'](neatInstance, simplifyRemaining, 'pruneWeak', 0.2);
+     * // if remaining === 0 the simplify phase is complete or skipped
+     * @internal
+     */
+    static #runSimplifyCycle(neat, simplifyRemaining, simplifyStrategy, simplifyPruneFraction) {
+      const remainingGens = Number.isFinite(simplifyRemaining) ? Math.max(0, Math.floor(simplifyRemaining)) : 0;
+      if (remainingGens === 0) return 0;
+      if (!neat || !Array.isArray(neat.population) || neat.population.length === 0)
+        return 0;
+      try {
+        if (typeof window !== "undefined") return remainingGens;
+      } catch {
+      }
+      const profilingEnabled = _EvolutionEngine.#PROFILE_ENABLED;
+      const profileStartMs = profilingEnabled ? _EvolutionEngine.#PROFILE_T0() : 0;
+      _EvolutionEngine.#applySimplifyPruningToPopulation(
+        neat,
+        simplifyStrategy,
+        simplifyPruneFraction
+      );
+      if (profilingEnabled) {
+        const elapsedMs = _EvolutionEngine.#PROFILE_T0() - profileStartMs || 0;
+        _EvolutionEngine.#PROFILE_ADD("simplify", elapsedMs);
+      }
+      return Math.max(0, remainingGens - 1);
+    }
+    /**
+     * Apply Lamarckian (supervised) training to the current population.
+     *
+     * Description:
+     * Runs a short, bounded supervised training pass on each network in the population. This
+     * refinement is intentionally conservative (few iterations / small batch) to improve
+     * local performance without collapsing evolutionary diversity.
+     *
+     * Steps:
+     * 1. Validate inputs and early-exit for empty population or training set.
+     * 2. Optionally down-sample the training set (with replacement) to bound per-generation cost.
+     * 3. Iterate each network and run a small training pass. Adjust output biases heuristically.
+     * 4. Collect optional training statistics (gradient norm) for telemetry when available.
+     * 5. Emit telemetry and return elapsed time when profiling is enabled.
+     *
+     * @param neat - NEAT instance exposing a `population` array of networks.
+     * @param trainingSet - Array of supervised examples (engine-specific format) used for local training.
+     * @param iterations - Number of training iterations to run per-network (must be > 0).
+     * @param sampleSize - Optional sample size to down-sample `trainingSet` (with replacement). Fractional/invalid treated as no sampling.
+     * @param safeWrite - Logging helper used for telemetry lines (string writer).
+     * @param profileEnabled - When true, function returns elapsed ms spent training; otherwise returns 0.
+     * @param completedGenerations - Generation index used when emitting telemetry lines.
+     * @returns Elapsed milliseconds spent in training when profiling is enabled; otherwise 0.
+     * @example
+     * // Internal usage (pseudo): run a short Lamarckian pass and get elapsed time when profiling
+     * const elapsed = EvolutionEngine['#applyLamarckianTraining'](neat, trainExamples, 2, 8, console.log, true, gen);
+     * @internal
+     */
+    static #applyLamarckianTraining(neat, trainingSet, iterations, sampleSize, safeWrite, profileEnabled, completedGenerations) {
+      if (!neat || !Array.isArray(neat.population) || neat.population.length === 0)
+        return 0;
+      if (!Array.isArray(trainingSet) || trainingSet.length === 0) return 0;
+      if (!Number.isFinite(iterations) || iterations <= 0) return 0;
+      const profileStart = profileEnabled ? _EvolutionEngine.#now() : 0;
+      const trainingSetRef = sampleSize && sampleSize > 0 && sampleSize < trainingSet.length ? _EvolutionEngine.#sampleArray(trainingSet, sampleSize) : trainingSet;
+      let gradientNormSum = 0;
+      let gradientNormSamples = 0;
+      const populationRef = neat.population;
+      for (const network of populationRef) {
+        if (!network) continue;
+        try {
+          network.train(trainingSetRef, {
+            iterations,
+            error: _EvolutionEngine.#DEFAULT_TRAIN_ERROR,
+            rate: _EvolutionEngine.#DEFAULT_TRAIN_RATE,
+            momentum: _EvolutionEngine.#DEFAULT_TRAIN_MOMENTUM,
+            batchSize: _EvolutionEngine.#DEFAULT_TRAIN_BATCH_SMALL,
+            allowRecurrent: true,
+            cost: methods_exports.Cost.softmaxCrossEntropy
+          });
+          _EvolutionEngine.#adjustOutputBiasesAfterTraining(network);
+          try {
+            const stats = network.getTrainingStats?.();
+            const gradNorm = stats?.gradNorm;
+            if (Number.isFinite(gradNorm)) {
+              gradientNormSum += gradNorm;
+              gradientNormSamples++;
+            }
+          } catch {
+          }
+        } catch {
+        }
+      }
+      if (gradientNormSamples > 0) {
+        const meanGrad = gradientNormSum / gradientNormSamples;
+        safeWrite(
+          `[GRAD] gen=${completedGenerations} meanGradNorm=${meanGrad.toFixed(
+            4
+          )} samples=${gradientNormSamples}
+`
+        );
+      }
+      return profileEnabled ? _EvolutionEngine.#now() - profileStart : 0;
+    }
+    /**
+     * Aggregate and emit per-generation telemetry and run collapse/anti-collapse checks.
+     *
+     * This method centralises all higher-level telemetry duties for a single generation. It is
+     * intentionally best-effort: all internal telemetry calls are wrapped in a try/catch so that
+     * telemetry failures cannot interrupt the main evolution loop.
+     *
+     * Steps:
+     * 0. Global guard: skip telemetry entirely when `#TELEMETRY_MINIMAL` is enabled.
+     * 1. Emit action-entropy metrics (path-based uncertainty).
+     * 2. Emit output-bias statistics for the fittest network when available.
+     * 3. Compute logits-level statistics and run collapse detection / recovery heuristics.
+     * 4. Emit exploration telemetry (unique coverage / progress).
+     * 5. Emit diversity metrics (species richness, Simpson index, weight std).
+     * 6. Optionally record profiling timings into `#PROFILE_ACCUM`.
+     *
+     * @param neat - NEAT instance exposing `population` and related internals used by some telemetry probes.
+     * @param fittest - The current fittest genome/network (may be undefined during initialization).
+     * @param genResult - Per-generation result object (expected to contain `path` and other telemetry fields).
+     * @param generationIndex - Completed generation index used in telemetry labels.
+     * @param writeLog - Logging helper used to emit telemetry lines (accepts a single string argument).
+     * @returns void
+     * @example
+     * EvolutionEngine['#logGenerationTelemetry'](neat, neat.fittest, genResult, gen, msg => process.stdout.write(msg));
+     * @internal
+     */
+    static #logGenerationTelemetry(neat, fittest, genResult, generationIndex, writeLog) {
+      if (_EvolutionEngine.#TELEMETRY_MINIMAL) return;
+      const profilingEnabled = _EvolutionEngine.#PROFILE_ENABLED;
+      const profilingStart = profilingEnabled ? _EvolutionEngine.#PROFILE_T0() : 0;
+      try {
+        _EvolutionEngine.#logActionEntropy(genResult, generationIndex, writeLog);
+        _EvolutionEngine.#logOutputBiasStats(fittest, generationIndex, writeLog);
+        _EvolutionEngine.#logLogitsAndCollapse(
+          neat,
+          fittest,
+          generationIndex,
+          writeLog
+        );
+        _EvolutionEngine.#logExploration(genResult, generationIndex, writeLog);
+        _EvolutionEngine.#logDiversity(neat, generationIndex, writeLog);
+      } catch {
+      }
+      if (profilingEnabled) {
+        _EvolutionEngine.#PROFILE_ADD(
+          "telemetry",
+          _EvolutionEngine.#PROFILE_T0() - profilingStart || 0
+        );
+      }
+    }
+    /**
+     * Emit a compact action-entropy telemetry summary line.
+     *
+     * Steps:
+     * 1. Defensive guards: validate `safeWrite` and read `generationResult.path` safely.
+     * 2. Compute action-entropy metrics via `#computeActionEntropy` (pure function).
+     * 3. Format a single-line telemetry record and emit it using `safeWrite`.
+     *
+     * @param generationResult - Per-generation result object (expected to expose `.path` array of visited coordinates).
+     * @param gen - Completed generation index used in telemetry labels.
+     * @param safeWrite - Writer function that accepts a single-string telemetry line (for example `msg => process.stdout.write(msg)`).
+     * @internal
+     * @example
+     * // Internal usage: write to stdout
+     * EvolutionEngine['#logActionEntropy'](genResult, 12, msg => process.stdout.write(msg));
+     */
+    static #logActionEntropy(generationResult, gen, safeWrite) {
+      if (typeof safeWrite !== "function") return;
+      const pathRef = generationResult?.path;
+      try {
+        const stats = _EvolutionEngine.#computeActionEntropy(pathRef);
+        const logTag = _EvolutionEngine.#LOG_TAG_ACTION_ENTROPY;
+        const entropyNormStr = Number.isFinite(stats?.entropyNorm) ? stats.entropyNorm.toFixed(3) : "0.000";
+        const uniqueMovesStr = Number.isFinite(stats?.uniqueMoves) ? String(stats.uniqueMoves) : "0";
+        const pathLenStr = Number.isFinite(stats?.pathLen) ? String(stats.pathLen) : "0";
+        safeWrite(
+          `${logTag} gen=${gen} entropyNorm=${entropyNormStr} uniqueMoves=${uniqueMovesStr} pathLen=${pathLenStr}
+`
+        );
+      } catch {
+      }
+    }
+    /**
+     * Emit output-bias statistics for the provided fittest genome's output nodes.
+     *
+     * Steps:
+     * 1. Defensive guards: ensure `safeWrite` is a function and obtain `nodes` from `fittest` safely.
+     * 2. Query pooled node indices for outputs using `#getNodeIndicesByType` (non-reentrant scratch buffer).
+     * 3. If outputs exist, compute bias statistics via `#computeOutputBiasStats` and format a single-line record.
+     * 4. Emit the formatted line via `safeWrite`. All errors are swallowed to keep telemetry best-effort.
+     *
+     * @param fittest - Candidate genome/network expected to expose a `.nodes` array (may be undefined during init).
+     * @param gen - Completed generation index used in telemetry labels.
+     * @param safeWrite - Telemetry writer accepting a single string (for example `msg => process.stdout.write(msg)`).
+     * @internal
+     * @example
+     * // Internal use: write bias stats to stdout
+     * EvolutionEngine['#logOutputBiasStats'](neat.fittest, 5, msg => process.stdout.write(msg));
+     */
+    static #logOutputBiasStats(fittest, gen, safeWrite) {
+      if (typeof safeWrite !== "function") return;
+      const nodesRef = fittest?.nodes ?? [];
+      try {
+        const outputCount = _EvolutionEngine.#getNodeIndicesByType(
+          nodesRef,
+          "output"
+        );
+        if (outputCount <= 0) return;
+        const biasStats = _EvolutionEngine.#computeOutputBiasStats(
+          nodesRef,
+          outputCount
+        );
+        const tag = _EvolutionEngine.#LOG_TAG_OUTPUT_BIAS;
+        const meanStr = Number.isFinite(biasStats?.mean) ? biasStats.mean.toFixed(3) : "0.000";
+        const stdStr = Number.isFinite(biasStats?.std) ? biasStats.std.toFixed(3) : "0.000";
+        const biasesStr = String(biasStats?.biasesStr ?? "");
+        safeWrite(
+          `${tag} gen=${gen} mean=${meanStr} std=${stdStr} biases=${biasesStr}
+`
+        );
+      } catch {
+      }
+    }
+    /**
+     * Compute and emit logits-level statistics, detect a collapse condition, and trigger
+     * anti-collapse recovery when the collapse streak threshold is reached.
+     *
+     * Steps:
+     * 1. Guard & extract the recent output history from the `fittest` candidate.
+     * 2. Compute aggregated logit statistics for the recent tail via `#computeLogitStats`.
+     * 3. Emit a single-line telemetry record containing means, stds, kurtosis, entropy mean and stability.
+     * 4. Detect a collapse when all output stds are below `#LOGSTD_FLAT_THRESHOLD` AND
+     *    (entropy mean is low OR decision stability is high). Maintain a collapse streak counter.
+     * 5. When the streak reaches `#COLLAPSE_STREAK_TRIGGER`, invoke `#antiCollapseRecovery` to attempt recovery.
+     *
+     * @param neat - NEAT instance (passed to recovery helper when triggered).
+     * @param fittest - Current fittest genome/network which may expose `_lastStepOutputs` (array of output vectors).
+     * @param gen - Completed generation index used in telemetry labels and recovery actions.
+     * @param safeWrite - Writer accepting a single-string telemetry line (for example `msg => process.stdout.write(msg)`).
+     * @internal
+     * @example
+     * EvolutionEngine['#logLogitsAndCollapse'](neat, neat.fittest, gen, msg => process.stdout.write(msg));
+     */
+    static #logLogitsAndCollapse(neat, fittest, gen, safeWrite) {
+      if (typeof safeWrite !== "function") return;
+      try {
+        const fullHistory = fittest?._lastStepOutputs ?? _EvolutionEngine.#EMPTY_VEC;
+        if (!fullHistory.length) return;
+        const recentTail = _EvolutionEngine.#getTail(
+          fullHistory,
+          _EvolutionEngine.#RECENT_WINDOW
+        );
+        const logitStats = _EvolutionEngine.#computeLogitStats(recentTail);
+        safeWrite(
+          `${_EvolutionEngine.#LOG_TAG_LOGITS} gen=${gen} means=${logitStats.meansStr} stds=${logitStats.stdsStr} kurt=${logitStats.kurtStr} entMean=${Number.isFinite(logitStats.entMean) ? logitStats.entMean.toFixed(3) : "0.000"} stability=${Number.isFinite(logitStats.stability) ? logitStats.stability.toFixed(3) : "0.000"} steps=${recentTail.length}
+`
+        );
+        _EvolutionEngine._collapseStreak = _EvolutionEngine._collapseStreak || 0;
+        const stdArray = logitStats.stds || [];
+        let allStdsBelowThreshold = true;
+        for (let stdIndex = 0; stdIndex < stdArray.length; stdIndex++) {
+          const stdValue = stdArray[stdIndex];
+          if (!(stdValue < _EvolutionEngine.#LOGSTD_FLAT_THRESHOLD)) {
+            allStdsBelowThreshold = false;
+            break;
+          }
+        }
+        const isCollapsed = allStdsBelowThreshold && (logitStats.entMean < _EvolutionEngine.#ENTROPY_COLLAPSE_THRESHOLD || logitStats.stability > _EvolutionEngine.#STABILITY_COLLAPSE_THRESHOLD);
+        if (isCollapsed) _EvolutionEngine._collapseStreak++;
+        else _EvolutionEngine._collapseStreak = 0;
+        if (_EvolutionEngine._collapseStreak === _EvolutionEngine.#COLLAPSE_STREAK_TRIGGER) {
+          _EvolutionEngine.#antiCollapseRecovery(neat, gen, safeWrite);
+        }
+      } catch {
+      }
+    }
+    /**
+     * Emit exploration telemetry: unique coverage, path length, coverage ratio, progress and saturation fraction.
+     *
+     * Steps:
+     * 1. Validate inputs (`safeWrite`) and safely extract `path` and numeric fields from `generationResult`.
+     * 2. Compute exploration statistics via `#computeExplorationStats` (returns { unique, pathLen, ratio }).
+     * 3. Format a single-line telemetry message with stable numeric formatting and emit via `safeWrite`.
+     *
+     * @param generationResult - Per-generation result object expected to expose `.path`, `.progress` and optional `.saturationFraction`.
+     * @param gen - Completed generation index used in telemetry labels.
+     * @param safeWrite - Writer function accepting a single telemetry string (for example `msg => process.stdout.write(msg)`).
+     * @internal
+     * @example
+     * // Internal usage: emit exploration line to stdout
+     * EvolutionEngine['#logExploration'](genResult, 7, msg => process.stdout.write(msg));
+     */
+    static #logExploration(generationResult, gen, safeWrite) {
+      if (typeof safeWrite !== "function") return;
+      const pathRef = generationResult?.path;
+      const rawProgress = generationResult?.progress;
+      const rawSatFrac = generationResult?.saturationFraction;
+      try {
+        const exploration = _EvolutionEngine.#computeExplorationStats(pathRef);
+        const tag = "[EXPLORE]";
+        const uniqueStr = Number.isFinite(exploration?.unique) ? String(exploration.unique) : "0";
+        const pathLenStr = Number.isFinite(exploration?.pathLen) ? String(exploration.pathLen) : "0";
+        const ratioStr = Number.isFinite(exploration?.ratio) ? exploration.ratio.toFixed(3) : "0.000";
+        const progressStr = Number.isFinite(rawProgress) ? rawProgress.toFixed(1) : "0.0";
+        const satFracStr = Number.isFinite(rawSatFrac) ? rawSatFrac.toFixed(3) : "0.000";
+        safeWrite(
+          `${tag} gen=${gen} unique=${uniqueStr} pathLen=${pathLenStr} ratio=${ratioStr} progress=${progressStr} satFrac=${satFracStr}
+`
+        );
+      } catch {
+      }
+    }
+    /**
+     * Emit core diversity metrics for the current population.
+     *
+     * Steps:
+     * 1. Defensive guards: validate `safeWrite` and that `neat` exposes a population.
+     * 2. Compute diversity metrics via `#computeDiversityMetrics` (species count, Simpson index, weight std).
+     * 3. Format a concise telemetry line with stable numeric formatting and emit via `safeWrite`.
+     *
+     * @param neat - NEAT instance exposing a `population` array used to compute diversity metrics.
+     * @param gen - Completed generation index used in telemetry labels.
+     * @param safeWrite - Telemetry writer accepting a single string (for example `msg => process.stdout.write(msg)`).
+     * @internal
+     * @example
+     * // Internal usage: write diversity metrics to stdout
+     * EvolutionEngine['#logDiversity'](neatInstance, 42, msg => process.stdout.write(msg));
+     */
+    static #logDiversity(neat, gen, safeWrite) {
+      if (typeof safeWrite !== "function") return;
+      if (!neat || !Array.isArray(neat.population)) return;
+      try {
+        const metrics = _EvolutionEngine.#computeDiversityMetrics(neat);
+        const tag = "[DIVERSITY]";
+        const speciesCountStr = Number.isFinite(metrics?.speciesUniqueCount) ? String(metrics.speciesUniqueCount) : "0";
+        const simpsonStr = Number.isFinite(metrics?.simpson) ? metrics.simpson.toFixed(3) : "0.000";
+        const weightStdStr = Number.isFinite(metrics?.wStd) ? metrics.wStd.toFixed(3) : "0.000";
+        safeWrite(
+          `${tag} gen=${gen} species=${speciesCountStr} simpson=${simpsonStr} weightStd=${weightStdStr}
+`
+        );
+      } catch {
+      }
+    }
+    /**
+     * Persist a compact snapshot file when persistence is enabled and cadence matches.
+     *
+     * Steps:
+     * 1. Defensive validation of IO primitives, scheduling cadence and NEAT shape.
+     * 2. Start optional profiling window.
+     * 3. Populate a pooled snapshot object with scalar metadata and a short telemetry tail.
+     * 4. Reuse a pooled top-K buffer to write minimal per-genome metadata for the best genomes.
+     * 5. Serialize the compact snapshot JSON and write it to disk using the provided `fs`.
+     * 6. Record profiling delta (best-effort) and swallow any IO/errors to avoid destabilizing the loop.
+     *
+     * @param fs - File-system-like object with `writeFileSync(path, data)` (for example Node's `fs`).
+     * @param pathModule - Path-like object exposing `join(...parts)` (for example Node's `path`).
+     * @param persistDir - Directory where snapshots should be written; falsy disables persistence.
+     * @param persistTopK - How many top genomes to include metadata for (0 disables top list).
+     * @param completedGenerations - Current completed generation index (used for filename & metadata).
+     * @param persistEvery - Cadence (in generations) at which to persist; <=0 disables persistence.
+     * @param neat - NEAT instance exposing a `population` array.
+     * @param bestFitness - Best fitness scalar to record in the snapshot metadata.
+     * @param simplifyMode - Whether the engine is currently simplifying (recorded for diagnostics/UI).
+     * @param plateauCounter - Plateau counter value recorded for diagnostics/UI.
+     * @internal
+     * @example
+     * // Typical Node usage inside engine loop:
+     * EvolutionEngine['#persistSnapshotIfNeeded'](require('fs'), require('path'), './snapshots', 5, gen, 10, neat, best, false, 0);
+     */
+    static #persistSnapshotIfNeeded(fs, pathModule, persistDir, persistTopK, completedGenerations, persistEvery, neat, bestFitness, simplifyMode, plateauCounter) {
+      if (!fs || typeof fs.writeFileSync !== "function" || !pathModule || typeof pathModule.join !== "function" || !persistDir || !Number.isFinite(persistEvery) || persistEvery <= 0)
+        return;
+      if (!Number.isFinite(completedGenerations) || completedGenerations % persistEvery !== 0)
+        return;
+      if (!neat || !Array.isArray(neat.population) || neat.population.length === 0)
+        return;
+      try {
+        const profileStart = _EvolutionEngine.#PROFILE_ENABLED ? _EvolutionEngine.#PROFILE_T0() : 0;
+        const snapshot = _EvolutionEngine.#SCRATCH_SNAPSHOT_OBJ;
+        snapshot.generation = completedGenerations;
+        snapshot.bestFitness = bestFitness;
+        snapshot.simplifyMode = Boolean(simplifyMode);
+        snapshot.plateauCounter = Number.isFinite(plateauCounter) ? plateauCounter : 0;
+        snapshot.timestamp = Date.now();
+        snapshot.telemetryTail = _EvolutionEngine.#collectTelemetryTail(neat, 5);
+        const populationRef = neat.population ?? _EvolutionEngine.#EMPTY_VEC;
+        const sortedIndices = _EvolutionEngine.#getSortedIndicesByScore(populationRef) ?? _EvolutionEngine.#EMPTY_VEC;
+        const normalizedTopK = Math.max(
+          0,
+          Math.floor(Number.isFinite(persistTopK) ? persistTopK : 0)
+        );
+        const topLimit = Math.min(normalizedTopK, sortedIndices.length);
+        const topBuffer = _EvolutionEngine.#SCRATCH_SNAPSHOT_TOP;
+        if (topBuffer.length < topLimit) topBuffer.length = topLimit;
+        for (let rank = 0; rank < topLimit; rank++) {
+          let entry = topBuffer[rank] ?? (topBuffer[rank] = {});
+          const genome = populationRef[sortedIndices[rank]];
+          entry.idx = sortedIndices[rank];
+          entry.score = genome?.score;
+          entry.nodes = genome?.nodes?.length ?? 0;
+          entry.connections = genome?.connections?.length ?? 0;
+          entry.json = typeof genome?.toJSON === "function" ? genome.toJSON() : void 0;
+        }
+        topBuffer.length = topLimit;
+        snapshot.top = topBuffer;
+        const snapshotFilePath = pathModule.join(
+          persistDir,
+          `snapshot_gen${completedGenerations}.json`
+        );
+        fs.writeFileSync(snapshotFilePath, JSON.stringify(snapshot));
+        if (_EvolutionEngine.#PROFILE_ENABLED) {
+          _EvolutionEngine.#PROFILE_ADD(
+            "snapshot",
+            _EvolutionEngine.#PROFILE_T0() - profileStart || 0
+          );
+        }
+      } catch {
+      }
+    }
+    /**
+     * Collect a short telemetry tail (last N entries) from a NEAT instance if available.
+     *
+     * Steps:
+     * 1. Validate that `neat` exists and exposes a callable `getTelemetry` method.
+     * 2. Normalise `tailLength` to a non-negative integer (floor) with a sensible default.
+     * 3. Call `neat.getTelemetry()` inside a try/catch to avoid propagation of telemetry errors.
+     * 4. If telemetry is an array, return the last `tailLength` entries via `#getTail`; otherwise return the raw value.
+     *
+     * Behavioural notes:
+     * - This helper is best-effort: any thrown error from `getTelemetry` will be swallowed and `undefined` returned.
+     * - When the telemetry value is an array we reuse the pooled tail helper to avoid allocations.
+     *
+     * @param neat - NEAT instance that may implement `getTelemetry(): unknown`.
+     * @param tailLength - Desired tail length (floored to integer >= 0). Defaults to 10 when invalid.
+     * @returns An array containing the last `tailLength` telemetry entries when telemetry is an array,
+     *          the raw telemetry value when non-array, or `undefined` on missing API / errors.
+     * @example
+     * // Internal usage: request last 5 telemetry entries when available
+     * const tail = EvolutionEngine['#collectTelemetryTail'](neatInstance, 5);
+     * @internal
+     */
+    static #collectTelemetryTail(neat, tailLength = 10) {
+      if (!neat || typeof neat.getTelemetry !== "function") return void 0;
+      const normalizedTailLength = Number.isFinite(tailLength) ? Math.max(0, Math.floor(tailLength)) : 10;
+      try {
+        const telemetryRaw = neat.getTelemetry?.();
+        if (Array.isArray(telemetryRaw)) {
+          return _EvolutionEngine.#getTail(
+            telemetryRaw,
+            normalizedTailLength
+          );
+        }
+        return telemetryRaw;
+      } catch (err) {
+        return void 0;
+      }
+    }
+    /**
+     * Compute decision stability over a recent sequence of output vectors.
+     *
+     * Definition: stability = (# of consecutive pairs with identical argmax) / (total consecutive pairs).
+     * For a sequence of N decisions there are (N-1) consecutive pairs; we skip the first vector when counting pairs.
+     * Returns 0 when fewer than 2 vectors.
+     *
+     * Performance notes:
+     * - Typical RECENT_WINDOW is small (<= 40) and ACTION_DIM is a fixed 4 for ASCII maze (N,E,S,W); cost is negligible so
+     *   caching / memoization would add overhead with no throughput benefit. We therefore compute on demand.
+     * - Specialized unrolled path for ACTION_DIM === 4 (the only case here) reduces loop overhead & branch mispredictions.
+     * - No allocations; operates purely on provided arrays. If ACTION_DIM ever changes, the generic path still works.
+     *
+     * Complexity: O(R * D) where R = recent.length, D = ACTION_DIM (constant 4).
+     * Determinism: Deterministic given identical input vectors.
+     * Reentrancy: Pure function (no shared state touched).
+     *
+     * @param recent - Array of recent output activation vectors (each length = ACTION_DIM expected).
+     * @returns Stability ratio in [0,1].
+     * @internal
+     */
+    static #computeDecisionStability(recent) {
+      const sequenceLength = recent?.length || 0;
+      if (sequenceLength < 2) return 0;
+      let stablePairCount = 0;
+      let pairCount = 0;
+      let previousArgmax = -1;
+      const actionDim = _EvolutionEngine.#ACTION_DIM;
+      const unroll = actionDim === 4;
+      for (let rowIndex = 0; rowIndex < sequenceLength; rowIndex++) {
+        const row = recent[rowIndex];
+        if (!row || row.length === 0) continue;
+        let argmax;
+        if (unroll && row.length >= 4) {
+          let bestVal = row[0];
+          argmax = 0;
+          const v1 = row[1];
+          if (v1 > bestVal) {
+            bestVal = v1;
+            argmax = 1;
+          }
+          const v2 = row[2];
+          if (v2 > bestVal) {
+            bestVal = v2;
+            argmax = 2;
+          }
+          const v3 = row[3];
+          if (v3 > bestVal) {
+            argmax = 3;
+          }
+        } else {
+          argmax = 0;
+          let bestVal = row[0];
+          for (let outputIndex = 1; outputIndex < actionDim && outputIndex < row.length; outputIndex++) {
+            const candidate = row[outputIndex];
+            if (candidate > bestVal) {
+              bestVal = candidate;
+              argmax = outputIndex;
+            }
+          }
+        }
+        if (previousArgmax !== -1) {
+          pairCount++;
+          if (previousArgmax === argmax) stablePairCount++;
+        }
+        previousArgmax = argmax;
+      }
+      return pairCount ? stablePairCount / pairCount : 0;
+    }
+    /**
+     * Compute the (base-e) softmax entropy of a single activation vector and normalize it to [0,1].
+     *
+     * Educational step-by-step outline (softmax + entropy):
+     * 1. Defensive checks & determine effective length k: If vector empty or length < 2, entropy is 0 (no uncertainty).
+     * 2. Numerical stabilisation: Subtract the maximum activation before exponentiating (log-sum-exp trick) to avoid overflow.
+     * 3. Exponentiation: Convert centered logits to unnormalized positive scores e^{x_i - max}.
+     * 4. Normalization: Sum the scores and divide each by the sum to obtain probabilities p_i.
+     * 5. Shannon entropy: H = -Σ p_i log(p_i); ignore p_i == 0 (contributes 0 by continuity).
+     * 6. Normalization to [0,1]: Divide by log(k); for k=4 we use a cached inverse (#INV_LOG4) to avoid division & log.
+     *
+     * Implementation details:
+     * - Provides a specialized unrolled fast path for the very common ACTION_DIM=4 case.
+     * - Uses the caller-provided scratch buffer `buf` to store exponentials (avoids per-call allocation).
+     * - Previously a small bug omitted the p1 contribution in the 4-way path; fixed here.
+     * - Pure & deterministic: no side effects on shared state.
+     *
+     * @param v Activation vector (logits) whose softmax entropy we want.
+     * @param buf Scratch Float64Array with capacity >= v.length used to hold exponentials.
+     * @returns Normalized entropy in [0,1]. 0 => fully certain (one probability ~1), 1 => uniform distribution.
+     * @internal
+     */
+    static #softmaxEntropyFromVector(v, buf) {
+      if (!v || !v.length) return 0;
+      const k = Math.min(v.length, buf.length);
+      if (k <= 1) return 0;
+      if (k === 4) {
+        const v0 = v[0] || 0;
+        const v1 = v[1] || 0;
+        const v2 = v[2] || 0;
+        const v3 = v[3] || 0;
+        let maxVal2 = v0;
+        if (v1 > maxVal2) maxVal2 = v1;
+        if (v2 > maxVal2) maxVal2 = v2;
+        if (v3 > maxVal2) maxVal2 = v3;
+        const e0 = Math.exp(v0 - maxVal2);
+        const e1 = Math.exp(v1 - maxVal2);
+        const e2 = Math.exp(v2 - maxVal2);
+        const e3 = Math.exp(v3 - maxVal2);
+        const sum2 = e0 + e1 + e2 + e3 || 1;
+        const p0 = e0 / sum2;
+        const p1 = e1 / sum2;
+        const p2 = e2 / sum2;
+        const p3 = e3 / sum2;
+        let entropyAccumulator2 = 0;
+        if (p0 > 0) entropyAccumulator2 += -p0 * Math.log(p0);
+        if (p1 > 0) entropyAccumulator2 += -p1 * Math.log(p1);
+        if (p2 > 0) entropyAccumulator2 += -p2 * Math.log(p2);
+        if (p3 > 0) entropyAccumulator2 += -p3 * Math.log(p3);
+        return entropyAccumulator2 * _EvolutionEngine.#INV_LOG4;
+      }
+      let maxVal = -Infinity;
+      for (let actionIndex = 0; actionIndex < k; actionIndex++) {
+        const value = v[actionIndex] || 0;
+        if (value > maxVal) maxVal = value;
+      }
+      let sum = 0;
+      for (let actionIndex = 0; actionIndex < k; actionIndex++) {
+        const expValue = Math.exp((v[actionIndex] || 0) - maxVal);
+        buf[actionIndex] = expValue;
+        sum += expValue;
+      }
+      if (!sum) sum = 1;
+      let entropyAccumulator = 0;
+      for (let actionIndex = 0; actionIndex < k; actionIndex++) {
+        const probability = buf[actionIndex] / sum;
+        if (probability > 0)
+          entropyAccumulator += -probability * Math.log(probability);
+      }
+      const denom = Math.log(k);
+      return denom > 0 ? entropyAccumulator / denom : 0;
+    }
+    /**
+     * Join the first `len` numeric entries of an array-like into a comma-separated string
+     * with fixed decimal precision.
+     *
+     * Steps (educational):
+     * 1. Normalize parameters: clamp `len` to the provided array-like length; clamp `digits` to [0, 20].
+     * 2. Grow (geometric) the shared scratch string array if capacity is insufficient.
+     * 3. Format each numeric value via `toFixed(digits)` directly into the scratch slots (no interim allocations).
+     * 4. Temporarily set the scratch logical length to `len` and `Array.prototype.join(',')` to build the output.
+     * 5. Restore the original scratch length (capacity preserved) and return the joined string.
+     *
+     * Complexity: O(n) time, O(1) additional space (amortized) beyond the shared scratch array.
+     * Determinism: Deterministic for identical inputs (`toFixed` stable for finite numbers).
+     * Reentrancy: Non-reentrant (shared `#SCRATCH_STR` buffer). Do not invoke concurrently from parallel contexts.
+     *
+     * @param arrLike Array-like source of numbers (only indices < len are read).
+     * @param len Intended number of elements to serialize; clamped to available length.
+     * @param digits Fixed decimal places (0–20). Values outside are clamped.
+     * @returns Comma-separated string or empty string when `len <= 0` after normalization.
+     */
+    static #joinNumberArray(arrLike, len, digits = 3) {
+      if (!arrLike) return "";
+      const availableLength = arrLike.length >>> 0;
+      if (!Number.isFinite(len) || len <= 0 || availableLength === 0) return "";
+      const effectiveLength = len > availableLength ? availableLength : len;
+      let fixedDigits = digits;
+      if (!Number.isFinite(fixedDigits)) fixedDigits = 0;
+      if (fixedDigits < 0) fixedDigits = 0;
+      else if (fixedDigits > 20) fixedDigits = 20;
+      if (effectiveLength > _EvolutionEngine.#SCRATCH_STR.length) {
+        const nextSize = 1 << Math.ceil(Math.log2(effectiveLength));
+        _EvolutionEngine.#SCRATCH_STR = new Array(nextSize);
+      }
+      const stringScratch = _EvolutionEngine.#SCRATCH_STR;
+      for (let valueIndex = 0; valueIndex < effectiveLength; valueIndex++) {
+        const rawValue = arrLike[valueIndex] ?? 0;
+        stringScratch[valueIndex] = Number.isFinite(rawValue) ? rawValue.toFixed(fixedDigits) : "NaN";
+      }
+      const priorLength = stringScratch.length;
+      stringScratch.length = effectiveLength;
+      const joined = stringScratch.join(",");
+      stringScratch.length = priorLength;
+      return joined;
+    }
+    /**
+     * Extract the last `count` items from an input array into a pooled scratch buffer (no new allocation).
+     *
+     * Educational steps:
+     * 1. Validate & normalize parameters: non-array, empty, non-positive, or non-finite counts -> empty result. Clamp
+     *    `count` to the source length and floor fractional values.
+     * 2. Ensure pooled scratch buffer (#SCRATCH_TAIL) has sufficient capacity; grow geometrically (next power-of-two)
+     *    so resizes are amortized and rare.
+     * 3. Copy the tail slice elements into the scratch buffer with a tight loop (avoids `slice()` allocation).
+     * 4. Set the logical length of the scratch buffer to the number of copied elements and return it.
+     *
+     * Complexity: O(k) where k = min(count, source length). Amortized O(1) extra space beyond the shared buffer.
+     * Determinism: Deterministic given identical input array contents and `count`.
+     * Reentrancy: Non-reentrant (returns a shared pooled buffer). Callers MUST copy (`slice()` / spread) if they need
+     *             to retain contents across another engine call that may reuse the scratch.
+     * Mutability: Returned array is mutable; mutations will affect the scratch buffer for subsequent calls.
+     *
+     * @param arr Source array reference.
+     * @param n Desired tail length (floored; negative / non-finite treated as 0).
+     * @returns Pooled ephemeral array containing the last `min(n, arr.length)` elements (or empty array literal when 0).
+     * @internal
+     */
+    static #getTail(arr, n) {
+      if (!Array.isArray(arr) || arr.length === 0 || !Number.isFinite(n) || n <= 0)
+        return [];
+      const desired = Math.floor(n);
+      const takeCount = desired >= arr.length ? arr.length : desired;
+      if (takeCount === 0) return [];
+      if (takeCount > _EvolutionEngine.#SCRATCH_TAIL.length) {
+        const nextSize = 1 << Math.ceil(Math.log2(takeCount));
+        _EvolutionEngine.#SCRATCH_TAIL = new Array(nextSize);
+      }
+      const tailBuffer = _EvolutionEngine.#SCRATCH_TAIL;
+      const startIndex = arr.length - takeCount;
+      for (let elementIndex = 0; elementIndex < takeCount; elementIndex++) {
+        tailBuffer[elementIndex] = arr[startIndex + elementIndex];
+      }
+      tailBuffer.length = takeCount;
+      return tailBuffer;
+    }
+    /** Delegate to MazeUtils.pushHistory to keep bounded history semantics. @internal */
+    static #pushHistory(buf, v, maxLen) {
+      return MazeUtils.pushHistory(buf, v, maxLen);
+    }
+    /**
+     * Re-center (demean) output node biases in-place and clamp them to a safe absolute range.
+     *
+     * Steps:
+     * 1. Collect indices of output nodes into the shared scratch index buffer (#SCRATCH_NODE_IDX).
+     * 2. Compute mean and (sample) standard deviation of their biases via Welford's online algorithm (single pass).
+     * 3. Subtract the mean from each bias (re-centering) and clamp to ±#OUTPUT_BIAS_CLAMP to avoid extreme drift.
+     * 4. Persist lightweight stats on the network object as `_outputBiasStats` for telemetry/logging.
+     *
+     * Rationale: Keeping output biases centered reduces systematic preference for any action direction emerging
+     * from cumulative mutation drift, improving exploration signal quality without resetting useful relative offsets.
+     *
+     * Complexity: O(O) where O = number of output nodes. Memory: no new allocations (shared scratch indices reused).
+     * Determinism: Deterministic given identical input network state. Reentrancy: Non-reentrant (shared scratch buffer).
+     * Defensive Behavior: Silently no-ops if network shape unexpected; swallows errors to avoid destabilizing evolution loop.
+     *
+     * @param network Network whose output node biases will be recentred.
+     * @internal
+     */
+    static #centerOutputBiases(network) {
+      try {
+        const nodeList = network?.nodes ?? _EvolutionEngine.#EMPTY_VEC;
+        const totalNodeCount = nodeList.length | 0;
+        if (totalNodeCount === 0) return;
+        let outputNodeCount = 0;
+        for (let nodeIndex = 0; nodeIndex < totalNodeCount; nodeIndex++) {
+          const candidateNode = nodeList[nodeIndex];
+          if (candidateNode && candidateNode.type === "output") {
+            _EvolutionEngine.#SCRATCH_NODE_IDX[outputNodeCount++] = nodeIndex;
+          }
+        }
+        if (outputNodeCount === 0) return;
+        let meanBias = 0;
+        let sumSquaredDiffs = 0;
+        for (let outputIndex = 0; outputIndex < outputNodeCount; outputIndex++) {
+          const nodeIdx = _EvolutionEngine.#SCRATCH_NODE_IDX[outputIndex];
+          const biasValue = Number(nodeList[nodeIdx].bias) || 0;
+          const sampleCount = outputIndex + 1;
+          const delta = biasValue - meanBias;
+          meanBias += delta / sampleCount;
+          sumSquaredDiffs += delta * (biasValue - meanBias);
+        }
+        const stdBias = outputNodeCount ? Math.sqrt(sumSquaredDiffs / outputNodeCount) : 0;
+        const clampAbs = _EvolutionEngine.#OUTPUT_BIAS_CLAMP;
+        for (let outputIndex = 0; outputIndex < outputNodeCount; outputIndex++) {
+          const nodeIdx = _EvolutionEngine.#SCRATCH_NODE_IDX[outputIndex];
+          const original = Number(nodeList[nodeIdx].bias) || 0;
+          let adjusted = original - meanBias;
+          if (adjusted > clampAbs) adjusted = clampAbs;
+          else if (adjusted < -clampAbs) adjusted = -clampAbs;
+          nodeList[nodeIdx].bias = adjusted;
+        }
+        network._outputBiasStats = { mean: meanBias, std: stdBias };
+      } catch {
+      }
+    }
+    /**
+     * Prune (disable) a fraction of the weakest enabled connections in a genome according to a strategy.
+     *
+     * High‑level flow:
+     * 1. Validate inputs & normalize prune fraction (clamp into [0,1]); exit early for degenerate cases.
+     * 2. Collect enabled connections into a pooled candidate buffer (no fresh allocations, reused scratch array).
+     * 3. Compute how many to prune: floor(enabled * fraction) but ensure at least 1 when fraction > 0.
+     * 4. Order candidates per strategy (e.g. prefer recurrent links first) using small‑array insertion sorts / partitions.
+     * 5. Disable (set enabled = false) the selected weakest connections in place (no structural array mutation).
+     *
+     * Rationale:
+     * - Periodic pruning combats structural bloat / drift, helping convergence and interpretability.
+     * - In‑place flagging preserves indices referenced elsewhere (e.g. mutation bookkeeping) and avoids churn.
+     * - Strategy indirection lets us bias removal (recurrent first, etc.) without duplicating the core pruning loop.
+     *
+     * Strategies supported (case‑sensitive):
+     * - "weakRecurrentPreferred" : Two‑phase ordering. Recurrent OR gater connections are partitioned to the front, each partition then sorted by |weight| ascending so recurrent/gater weakest go first.
+     * - (any other string / default) : All enabled connections globally ordered by |weight| ascending.
+     *
+     * Determinism: Deterministic for a fixed genome state and strategy (sorting by stable numeric key, insertion sort chosen for small E ensures predictable behavior). If two connections share identical |weight| their relative order may depend on initial array order (stable enough for internal use).
+     * Reentrancy: Uses class‑pooled scratch buffers (#SCRATCH_CONN_CAND, #SCRATCH_CONN_FLAGS); not safe for concurrent calls.
+     * Complexity: O(E log E) worst via native sort fallback for larger batches; predominantly O(E^2) small‑E insertion sorts (E = enabled connections) with tiny constants typical for NEAT genomes.
+     * Memory: O(1) additional heap (scratch arrays reused, geometric growth elsewhere handled centrally).
+     * Failure Handling: Silently swallows per‑genome errors (best‑effort maintenance; evolution loop stability prioritized).
+     *
+     * @param genome Genome object whose `connections` array will be examined. Each connection is expected to expose:
+     *  - weight: number (signed; magnitude used for weakness ordering)
+     *  - enabled: boolean flag (connections with enabled === false are ignored; flag is flipped to disable)
+     *  - recurrent / gater (optional): truthy flags used by the recurrent‑preferential strategy
+     *  Additional properties (from, to, etc.) are ignored here.
+     * @param simplifyStrategy Strategy key controlling candidate ordering. Recognized: "weakRecurrentPreferred" (recurrent first); any other value falls back to pure weakest‑by‑|weight| ordering.
+     * @param simplifyPruneFraction Fraction of enabled connections to prune (0..1). Values outside range are clamped. A positive fraction that produces a 0 count still forces pruning of 1 connection (progress guarantee). 0 or non‑finite => no‑op.
+     *
+     * @example
+     * // Internally during simplify phase:
+     * EvolutionEngine['#pruneWeakConnectionsForGenome'](genome, 'weakRecurrentPreferred', 0.15);
+     *
+     * @internal
+     */
+    static #pruneWeakConnectionsForGenome(genome, simplifyStrategy, simplifyPruneFraction) {
+      try {
+        if (!genome || !Array.isArray(genome.connections)) return;
+        const rawFraction = Number.isFinite(simplifyPruneFraction) ? simplifyPruneFraction : 0;
+        if (rawFraction <= 0) return;
+        const allConnections = genome.connections;
+        let candidateConnections = _EvolutionEngine.#collectEnabledConnections(
+          allConnections
+        );
+        const enabledConnectionCount = candidateConnections.length;
+        if (enabledConnectionCount === 0) return;
+        const clampedFraction = rawFraction >= 1 ? 1 : rawFraction < 0 ? 0 : rawFraction;
+        let pruneTarget = Math.floor(enabledConnectionCount * clampedFraction);
+        if (clampedFraction > 0 && pruneTarget === 0) pruneTarget = 1;
+        if (pruneTarget <= 0) return;
+        candidateConnections = _EvolutionEngine.#sortCandidatesByStrategy(
+          candidateConnections,
+          simplifyStrategy
+        );
+        _EvolutionEngine.#disableSmallestEnabledConnections(
+          candidateConnections,
+          Math.min(pruneTarget, candidateConnections.length)
+        );
+      } catch {
+      }
+    }
+    /**
+     * Collect all currently enabled connections from a genome connection array into a pooled scratch buffer.
+     *
+     * Steps:
+     * 1. Validate & early exit: non-array or empty -> return new empty literal (avoids exposing scratch).
+     * 2. Reset pooled scratch buffer (#SCRATCH_CONN_CAND) logical length to 0 (capacity retained for reuse).
+     * 3. Linear scan: push each connection whose `enabled !== false` (treats missing / undefined as enabled for legacy compatibility).
+     * 4. Return the pooled scratch array (EPHEMERAL) containing references to the enabled connection objects.
+     *
+     * Rationale:
+     * - Centralizes enabled filtering logic so pruning / analytics share identical semantics.
+     * - Reuses a single array instance to avoid transient garbage during frequent simplify phases.
+     * - Keeps semantics liberal (`enabled !== false`) to treat absent flags as enabled (historical behavior preserved).
+     *
+     * Determinism: Deterministic for a fixed input ordering (stable one-pass filter, no reordering).
+     * Reentrancy: Not reentrant — returns a shared pooled buffer; callers must copy if they need persistence across nested engine calls.
+     * Complexity: O(E) where E = total connections scanned.
+     * Memory: O(1) additional heap; capacity grows geometrically elsewhere and is retained.
+     *
+     * @param connectionsSource Array of connection objects; each may expose `enabled` boolean (false => filtered out).
+     * @returns Pooled ephemeral array of enabled connections (DO NOT mutate length; copy if storing long-term).
+     * @example
+     * const enabled = EvolutionEngine['#collectEnabledConnections'](genome.connections);
+     * const stableCopy = enabled.slice(); // only if retention needed
+     * @internal
+     */
+    static #collectEnabledConnections(connectionsSource) {
+      if (!Array.isArray(connectionsSource) || connectionsSource.length === 0)
+        return [];
+      const candidateBuffer = _EvolutionEngine.#SCRATCH_CONN_CAND;
+      candidateBuffer.length = 0;
+      for (let connectionIndex = 0; connectionIndex < connectionsSource.length; connectionIndex++) {
+        const candidateConnection = connectionsSource[connectionIndex];
+        if (candidateConnection && candidateConnection.enabled !== false)
+          candidateBuffer.push(candidateConnection);
+      }
+      return candidateBuffer;
+    }
+    /**
+     * Collect enabled outgoing connections from a hidden node that terminate at any output node.
+     *
+     * Educational steps:
+     * 1. Validate inputs & early-exit: invalid node / connections / zero outputs => fresh empty array literal
+     *    (avoid exposing pooled scratch for erroneous calls).
+     * 2. Clamp effective output count to available scratch index capacity and `nodesRef` length (defensive bounds).
+     * 3. Reset pooled result buffer (#SCRATCH_HIDDEN_OUT) by setting length=0 (capacity retained for reuse).
+     * 4. Iterate enabled outgoing connections; for each, linearly scan output indices (tiny constant factor) to
+     *    detect whether its `to` endpoint references one of the output nodes; push on first match and break.
+     * 5. Return pooled buffer (EPHEMERAL). Callers MUST copy if they need persistence beyond next engine helper.
+     *
+     * Rationale:
+     * - Output node count is small (typically 4), so an inner linear scan is faster and allocation-free compared
+     *   to constructing a Set/Map each time.
+     * - Pooled buffer eliminates per-call garbage during simplify/pruning phases where this helper can be hot.
+     * - Defensive clamping prevents out-of-bounds reads if caller overstates `outputCount`.
+     *
+     * Determinism: Deterministic given stable ordering of hiddenNode.connections.out and scratch index ordering.
+     * Reentrancy: Not reentrant (shared scratch buffer). Do not call concurrently.
+     * Complexity: O(E * O) where E = enabled outgoing connections, O = outputCount (tiny constant).
+     * Memory: O(1) additional heap (buffer reused). No new allocations after initial growth elsewhere.
+     * Failure Handling: Returns [] on invalid inputs instead of exposing scratch to minimize accidental mutation.
+     *
+     * @param hiddenNode Hidden node object with structure `{ connections: { out: Connection[] } }`.
+     * @param nodesRef Full node array; indices stored in `#SCRATCH_NODE_IDX` resolve into this array.
+     * @param outputCount Declared number of output nodes (will be clamped to safe range).
+     * @returns Pooled ephemeral array of connections from `hiddenNode` to any output node.
+     * @example
+     * const outs = EvolutionEngine['#collectHiddenToOutputConns'](hNode, nodes, outputCount);
+     * const stable = outs.slice(); // copy if retention required
+     * @internal
+     */
+    static #collectHiddenToOutputConns(hiddenNode, nodesRef, outputCount) {
+      if (!hiddenNode || !hiddenNode.connections || !Array.isArray(nodesRef) || nodesRef.length === 0 || !Number.isFinite(outputCount) || outputCount <= 0) {
+        return [];
+      }
+      const maxScratch = _EvolutionEngine.#SCRATCH_NODE_IDX.length;
+      const effectiveOutputCount = Math.min(
+        outputCount | 0,
+        maxScratch,
+        nodesRef.length
+      );
+      if (effectiveOutputCount <= 0) return [];
+      const hiddenOutBuffer = _EvolutionEngine.#SCRATCH_HIDDEN_OUT;
+      hiddenOutBuffer.length = 0;
+      const outgoing = hiddenNode.connections.out ?? _EvolutionEngine.#EMPTY_VEC;
+      for (let outIndex = 0; outIndex < outgoing.length; outIndex++) {
+        const candidate = outgoing[outIndex];
+        if (!candidate || candidate.enabled === false) continue;
+        for (let outputIndex = 0; outputIndex < effectiveOutputCount; outputIndex++) {
+          const nodeIdx = _EvolutionEngine.#SCRATCH_NODE_IDX[outputIndex];
+          const targetNode = nodesRef[nodeIdx];
+          if (candidate.to === targetNode) {
+            hiddenOutBuffer.push(candidate);
+            break;
+          }
+        }
+      }
+      return hiddenOutBuffer;
+    }
+    /**
+     * Order (in-place) a buffer of enabled candidate connections according to a pruning strategy.
+     *
+     * Strategies:
+     *  - "weakRecurrentPreferred": Two-phase ordering. First, a linear partition brings recurrent OR gater
+     *    connections ( (from === to) || gater ) to the front preserving relative order within each group (stable-ish
+     *    via single forward pass + conditional swaps). Then each partition (recurrent/gater segment and the remainder)
+     *    is insertion-sorted independently by ascending absolute weight (|weight| smallest first).
+     *  - (default / anything else): Entire array insertion-sorted by ascending absolute weight.
+     *
+     * Returned array is the same reference mutated in place (allows fluent internal usage). This helper never allocates
+     * a new array: it relies on small-N characteristics of genomes during simplify phases, making insertion sort's
+     * O(n^2) worst-case acceptable with very low constants (n typically << 128 for enabled connection subsets).
+     *
+     * Steps (generic):
+     * 1. Validate input; return as-is for non-arrays / empty arrays.
+     * 2. If strategy is recurrent-preferential: partition then insertion-sort both segments.
+     * 3. Else: insertion-sort the entire buffer.
+     * 4. Return mutated buffer reference.
+     *
+     * Rationale:
+     * - Partition + localized sorts avoid a full compare function invocation for every cross-group pair when we wish
+     *   to bias pruning away from recurrent loops (or explicitly target them first).
+     * - Insertion sort avoids engine-level allocations and outperforms generic sort for the very small candidate sets
+     *   typically encountered during pruning sessions.
+     *
+     * Determinism: Deterministic given a stable initial ordering and identical connection properties. Ties (equal |weight|)
+     * retain relative order within each partition thanks to forward-scanning partition & stable insertion strategy for
+     * equal magnitudes (we only shift while strictly greater).
+     * Complexity: O(n^2) worst-case (n = candidates length) but n is small; partition pass is O(n).
+     * Memory: O(1) additional (in-place swaps only). No allocations.
+     * Reentrancy: Pure w.r.t. global engine state; mutates only the provided array reference.
+     *
+     * @param candidateConnections Array of connection objects (mutated in-place) to order for pruning selection.
+     * @param strategyKey Strategy discriminator string ("weakRecurrentPreferred" or fallback ordering).
+     * @returns Same reference to `candidateConnections`, ordered per strategy.
+     * @example
+     * EvolutionEngine['#sortCandidatesByStrategy'](buf, 'weakRecurrentPreferred');
+     * @internal
+     */
+    static #sortCandidatesByStrategy(candidateConnections, strategyKey) {
+      if (!Array.isArray(candidateConnections) || candidateConnections.length === 0)
+        return candidateConnections;
+      if (strategyKey === "weakRecurrentPreferred") {
+        let partitionWriteIndex = 0;
+        for (let scanIndex = 0; scanIndex < candidateConnections.length; scanIndex++) {
+          const connectionCandidate = candidateConnections[scanIndex];
+          if (connectionCandidate && (connectionCandidate.from === connectionCandidate.to || connectionCandidate.gater)) {
+            if (scanIndex !== partitionWriteIndex) {
+              const tmpConnection = candidateConnections[partitionWriteIndex];
+              candidateConnections[partitionWriteIndex] = candidateConnections[scanIndex];
+              candidateConnections[scanIndex] = tmpConnection;
+            }
+            partitionWriteIndex++;
+          }
+        }
+        _EvolutionEngine.#insertionSortByAbsWeight(
+          candidateConnections,
+          0,
+          partitionWriteIndex
+        );
+        _EvolutionEngine.#insertionSortByAbsWeight(
+          candidateConnections,
+          partitionWriteIndex,
+          candidateConnections.length
+        );
+        return candidateConnections;
+      }
+      _EvolutionEngine.#insertionSortByAbsWeight(
+        candidateConnections,
+        0,
+        candidateConnections.length
+      );
+      return candidateConnections;
+    }
+    /**
+     * In‑place insertion sort of a slice of a candidate connection buffer by ascending absolute weight.
+     *
+     * Design / behavior:
+     * - Stable for ties: when two connections have identical |weight| their original relative order is preserved
+     *   because we only shift elements whose |weight| is strictly greater than the candidate being inserted.
+     * - Bounds are treated as a half‑open interval [startIndex, endExclusive). Out‑of‑range / degenerate ranges
+     *   (null buffer, start >= endExclusive, slice length < 2) return immediately.
+     * - Missing / non‑finite weights are coerced to 0 via `Math.abs(candidate?.weight || 0)` keeping semantics
+     *   consistent with liberal pruning logic elsewhere.
+     * - Chosen because candidate sets during simplify phases are typically small (tens, rarely > 128); insertion
+     *   sort outperforms generic `Array.prototype.sort` for small N while avoiding allocation and comparator indirection.
+     *
+     * Complexity: O(k^2) worst‑case (k = endExclusive - startIndex) with tiny constants for typical k.
+     * Memory: O(1) extra (element temp + indices). No allocations.
+     * Determinism: Fully deterministic for a fixed input slice content.
+     * Reentrancy: Pure (mutates only provided buffer slice; no shared global scratch accessed).
+     *
+     * @param connectionsBuffer Buffer containing connection objects with a numeric `weight` property.
+     * @param startIndex Inclusive start index of the slice to sort (negative values coerced to 0).
+     * @param endExclusive Exclusive end index (values > buffer length clamped). If <= startIndex the call is a no‑op.
+     * @internal
+     */
+    static #insertionSortByAbsWeight(connectionsBuffer, startIndex, endExclusive) {
+      if (!Array.isArray(connectionsBuffer)) return;
+      const length = connectionsBuffer.length;
+      if (length === 0) return;
+      let from = Number.isFinite(startIndex) ? startIndex | 0 : 0;
+      let to = Number.isFinite(endExclusive) ? endExclusive | 0 : 0;
+      if (from < 0) from = 0;
+      if (to > length) to = length;
+      if (to - from < 2) return;
+      for (let scanIndex = from + 1; scanIndex < to; scanIndex++) {
+        const candidateConnection = connectionsBuffer[scanIndex];
+        const candidateAbsWeight = Math.abs(
+          candidateConnection && Number.isFinite(candidateConnection.weight) ? candidateConnection.weight : 0
+        );
+        let shiftIndex = scanIndex - 1;
+        while (shiftIndex >= from) {
+          const probe = connectionsBuffer[shiftIndex];
+          const probeAbsWeight = Math.abs(
+            probe && Number.isFinite(probe.weight) ? probe.weight : 0
+          );
+          if (probeAbsWeight <= candidateAbsWeight) break;
+          connectionsBuffer[shiftIndex + 1] = probe;
+          shiftIndex--;
+        }
+        connectionsBuffer[shiftIndex + 1] = candidateConnection;
+      }
+    }
+    /**
+     * Maximum candidate length (inclusive) at which bulk pruning still prefers insertion sort
+     * over native Array.prototype.sort for determinism and lower overhead on very small arrays.
+     * @internal
+     */
+    static #PRUNE_BULK_INSERTION_MAX = 64;
+    /**
+     * Disable (set enabled = false) the weakest enabled connections up to a target count.
+     *
+     * Two operating modes chosen adaptively by `pruneCount` vs active candidate size:
+     * 1. Bulk mode (pruneCount >= activeEnabled/2): Fully order candidates by |weight| then disable
+     *    the first pruneCount entries. Uses insertion sort for small N (<= #PRUNE_BULK_INSERTION_MAX)
+     *    else a single native sort call.
+     * 2. Sparse mode (pruneCount < activeEnabled/2): Repeated selection of current minimum |weight|
+     *    without fully sorting (multi-pass partial selection). After each disable we swap the last
+     *    active element into the removed slot (shrinking window) to avoid O(n) splices.
+     *
+     * Rationale:
+     * - Avoids the O(n log n) cost of a full sort when disabling only a small fraction (selection
+     *   becomes O(k * n) but k << n). When pruning many, a single ordering is cheaper.
+     * - In-place modification preserves object identity and external references.
+     * - Liberal enabled check (enabled !== false) matches collection semantics.
+     * - Uses a reusable `Uint8Array` (#SCRATCH_CONN_FLAGS) resized geometrically (currently only
+     *   cleared here—reserved for potential future marking/telemetry without reallocation).
+     *
+     * Complexity:
+     * - Bulk: O(n^2) for insertion path small n, else O(n log n) via native sort.
+     * - Sparse: O(k * n) worst (k = pruneCount) with shrinking n after each removal (average slightly better).
+     * Memory: O(1) additional (reuses shared scratch flags; no new arrays created).
+     * Determinism: Deterministic for identical candidate ordering and weights (native sort comparator is pure).
+     * Reentrancy: Not safe for concurrent calls (shared scratch flags buffer reused & zeroed).
+     * Failure Handling: Silently no-ops on invalid inputs.
+     *
+     * @param candidateConnections Array containing candidate connection objects (each with `weight` & `enabled`).
+     * @param pruneCount Number of weakest enabled connections to disable (clamped to [0, candidateConnections.length]).
+     * @internal
+     */
+    static #disableSmallestEnabledConnections(candidateConnections, pruneCount) {
+      if (!Array.isArray(candidateConnections) || !candidateConnections.length)
+        return;
+      if (!Number.isFinite(pruneCount) || pruneCount <= 0) return;
+      const totalCandidates = candidateConnections.length;
+      if (pruneCount >= totalCandidates) pruneCount = totalCandidates;
+      let connectionFlags = _EvolutionEngine.#SCRATCH_CONN_FLAGS;
+      if (totalCandidates > connectionFlags.length) {
+        _EvolutionEngine.#SCRATCH_CONN_FLAGS = new Uint8Array(totalCandidates);
+        connectionFlags = _EvolutionEngine.#SCRATCH_CONN_FLAGS;
+      } else {
+        connectionFlags.fill(0, 0, totalCandidates);
+      }
+      let activeEnabledCount = 0;
+      for (let scanIndex = 0; scanIndex < totalCandidates; scanIndex++) {
+        const connectionRef = candidateConnections[scanIndex];
+        if (connectionRef && connectionRef.enabled !== false) {
+          if (scanIndex !== activeEnabledCount)
+            candidateConnections[activeEnabledCount] = connectionRef;
+          activeEnabledCount++;
+        }
+      }
+      if (activeEnabledCount === 0) return;
+      if (pruneCount >= activeEnabledCount) pruneCount = activeEnabledCount;
+      if (pruneCount >= activeEnabledCount >>> 1) {
+        if (activeEnabledCount <= _EvolutionEngine.#PRUNE_BULK_INSERTION_MAX) {
+          _EvolutionEngine.#insertionSortByAbsWeight(
+            candidateConnections,
+            0,
+            activeEnabledCount
+          );
+        } else {
+          candidateConnections.slice(0, activeEnabledCount).sort(
+            (firstConnection, secondConnection) => Math.abs(firstConnection?.weight || 0) - Math.abs(secondConnection?.weight || 0)
+          ).forEach((sortedConnection, sortedIndex) => {
+            candidateConnections[sortedIndex] = sortedConnection;
+          });
+        }
+        const disableLimit = pruneCount;
+        for (let disableIndex = 0; disableIndex < disableLimit; disableIndex++) {
+          const connectionRef = candidateConnections[disableIndex];
+          if (connectionRef && connectionRef.enabled !== false)
+            connectionRef.enabled = false;
+        }
+        return;
+      }
+      let remainingToDisable = pruneCount;
+      let activeSliceLength = activeEnabledCount;
+      while (remainingToDisable > 0 && activeSliceLength > 0) {
+        let minIndex = 0;
+        let minAbsWeight = Math.abs(
+          candidateConnections[0] && Number.isFinite(candidateConnections[0].weight) ? candidateConnections[0].weight : 0
+        );
+        for (let probeIndex = 1; probeIndex < activeSliceLength; probeIndex++) {
+          const probe = candidateConnections[probeIndex];
+          const probeAbs = Math.abs(
+            probe && Number.isFinite(probe.weight) ? probe.weight : 0
+          );
+          if (probeAbs < minAbsWeight) {
+            minAbsWeight = probeAbs;
+            minIndex = probeIndex;
+          }
+        }
+        const targetConnection = candidateConnections[minIndex];
+        if (targetConnection && targetConnection.enabled !== false)
+          targetConnection.enabled = false;
+        const lastActiveIndex = --activeSliceLength;
+        candidateConnections[minIndex] = candidateConnections[lastActiveIndex];
+        remainingToDisable--;
+      }
+    }
+    /**
+     * Compute directional action entropy (normalized to [0,1]) and number of distinct move directions
+     * observed along a path of integer coordinates.
+     *
+     * Behaviour & notes:
+     * - Uses the pooled `#SCRATCH_COUNTS` Int32Array (length 4) to avoid per-call allocations. Callers
+     *   MUST NOT rely on preserved contents across engine helpers.
+     * - Treats a direction as the delta between consecutive coordinates. Only unit deltas in the 8-neighbour
+     *   Moore neighbourhood with a mapped index are considered; others are ignored.
+     * - Returns entropy normalized by log(4) using `#INV_LOG4` so results are in [0,1]. For empty/degenerate
+     *   inputs the entropy is 0 and uniqueMoves is 0.
+     *
+     * Complexity: O(L) where L = pathArr.length. Memory: O(1) (no allocations). Determinism: deterministic for
+     * identical inputs. Reentrancy: Non-reentrant due to shared scratch buffer use.
+     *
+     * @param pathArr Array-like sequence of [x,y] coordinates visited (expected integers).
+     * @returns Object with { entropyNorm, uniqueMoves, pathLen }.
+     * @internal
+     */
+    static #computeActionEntropy(pathArr) {
+      if (!Array.isArray(pathArr) || pathArr.length < 2)
+        return { entropyNorm: 0, uniqueMoves: 0, pathLen: pathArr?.length | 0 };
+      const counts = _EvolutionEngine.#SCRATCH_COUNTS;
+      counts[0] = 0;
+      counts[1] = 0;
+      counts[2] = 0;
+      counts[3] = 0;
+      let totalMoves = 0;
+      const dirMap = _EvolutionEngine.#DIR_DELTA_TO_INDEX;
+      for (let i = 1; i < pathArr.length; i++) {
+        const cur = pathArr[i];
+        const prev = pathArr[i - 1];
+        if (!cur || !prev) continue;
+        const dx = cur[0] - prev[0];
+        const dy = cur[1] - prev[1];
+        if (dx < -1 || dx > 1 || dy < -1 || dy > 1) continue;
+        const key = (dx + 1) * 3 + (dy + 1);
+        const dirIdx = dirMap[key];
+        if (dirIdx >= 0) {
+          counts[dirIdx]++;
+          totalMoves++;
+        }
+      }
+      if (totalMoves === 0)
+        return { entropyNorm: 0, uniqueMoves: 0, pathLen: pathArr.length };
+      let entropy = 0;
+      let uniqueMoves = 0;
+      for (let k = 0; k < 4; k++) {
+        const c = counts[k];
+        if (c > 0) {
+          const p = c / totalMoves;
+          entropy += -p * Math.log(p);
+          uniqueMoves++;
+        }
+      }
+      const entropyNorm = entropy * _EvolutionEngine.#INV_LOG4;
+      return { entropyNorm, uniqueMoves, pathLen: pathArr.length };
+    }
+    /**
+     * Compute summary statistics over a sliding window of recent logit vectors.
+     * Uses class-level scratch buffers to avoid allocations and supports a
+     * reduced telemetry mode which skips higher moments (kurtosis).
+     *
+     * Contract:
+     * - Input: `recent` is an array of numeric vectors (each vector length >= actionDim
+     *   is not required; missing entries are treated as 0).
+     * - Output: an object containing formatted strings, aggregated arrays and
+     *   scalar summaries.
+     *
+     * @param recent - Array of recent logit vectors, newest last.
+     * @returns An object { meansStr, stdsStr, kurtStr, entMean, stability, steps, means, stds }
+     * @internal
+     */
+    static #computeLogitStats(recent) {
+      if (!Array.isArray(recent) || recent.length === 0)
+        return {
+          meansStr: "",
+          stdsStr: "",
+          kurtStr: "",
+          entMean: 0,
+          stability: 0,
+          steps: 0,
+          means: _EvolutionEngine.#SCRATCH_MEANS,
+          stds: _EvolutionEngine.#SCRATCH_STDS
+        };
+      const reducedTelemetry = _EvolutionEngine.#REDUCED_TELEMETRY;
+      const actionDim = Math.max(0, _EvolutionEngine.#ACTION_DIM);
+      const sampleCount = recent.length;
+      _EvolutionEngine.#resetLogitScratch(actionDim, reducedTelemetry);
+      let entropyAggregate = 0;
+      if (reducedTelemetry) {
+        entropyAggregate = _EvolutionEngine.#accumulateLogitStatsReduced(
+          recent,
+          actionDim
+        );
+        _EvolutionEngine.#finalizeLogitStatsReduced(actionDim, sampleCount);
+      } else if (actionDim === 4) {
+        entropyAggregate = _EvolutionEngine.#accumulateLogitStatsUnrolled4(
+          recent,
+          sampleCount
+        );
+        _EvolutionEngine.#finalizeLogitStatsFull(actionDim, sampleCount);
+      } else {
+        entropyAggregate = _EvolutionEngine.#accumulateLogitStatsGeneric(
+          recent,
+          actionDim
+        );
+        _EvolutionEngine.#finalizeLogitStatsFull(actionDim, sampleCount);
+      }
+      const entropyMean = entropyAggregate / sampleCount;
+      const stability = _EvolutionEngine.#computeDecisionStability(recent);
+      const meansStr = _EvolutionEngine.#joinNumberArray(
+        _EvolutionEngine.#SCRATCH_MEANS,
+        actionDim,
+        3
+      );
+      const stdsStr = _EvolutionEngine.#joinNumberArray(
+        _EvolutionEngine.#SCRATCH_STDS,
+        actionDim,
+        3
+      );
+      const kurtStr = reducedTelemetry ? "" : _EvolutionEngine.#joinNumberArray(
+        _EvolutionEngine.#SCRATCH_KURT,
+        actionDim,
+        2
+      );
+      return {
+        meansStr,
+        stdsStr,
+        kurtStr,
+        entMean: entropyMean,
+        stability,
+        steps: sampleCount,
+        means: _EvolutionEngine.#SCRATCH_MEANS,
+        stds: _EvolutionEngine.#SCRATCH_STDS
+      };
+    }
+    /**
+     * Prepare and zero the class-level scratch buffers used by logit statistics.
+     *
+     * Steps:
+     * 1. Normalize `actionDim` to a non-negative integer and fast-exit on zero.
+     * 2. Grow (only when needed) the pooled Float64Array buffers to at least `actionDim` length.
+     * 3. Zero the active prefix [0, actionDim) of means, second-moment (M2) and std buffers.
+     * 4. When full telemetry is enabled also ensure/zero M3/M4/kurtosis buffers.
+     *
+     * Notes:
+     * - This helper intentionally avoids preserving previous contents when resizing — callers always
+     *   expect zeroed buffers after invocation.
+     * - Allocations are kept minimal: a new backing array is created only when the existing capacity
+     *   is insufficient; new capacity is chosen to be at least `actionDim` (no aggressive over-sizing).
+     *
+     * @param actionDim - Number of active action dimensions (will be floored & clamped to >= 0).
+     * @param reducedTelemetry - When true skip higher-moment buffers (M3/M4/kurtosis) to save memory/CPU.
+     * @example
+     * // Internal usage: prepare scratch for 4 actions with full telemetry enabled
+     * EvolutionEngine['#resetLogitScratch'](4, false);
+     * @internal
+     */
+    static #resetLogitScratch(actionDim, reducedTelemetry) {
+      const dim = Number.isFinite(actionDim) ? Math.max(0, Math.floor(actionDim)) : 0;
+      if (dim === 0) return;
+      if (!_EvolutionEngine.#SCRATCH_MEANS || _EvolutionEngine.#SCRATCH_MEANS.length < dim) {
+        _EvolutionEngine.#SCRATCH_MEANS = new Float64Array(dim);
+      }
+      if (!_EvolutionEngine.#SCRATCH_M2_RAW || _EvolutionEngine.#SCRATCH_M2_RAW.length < dim) {
+        _EvolutionEngine.#SCRATCH_M2_RAW = new Float64Array(dim);
+      }
+      if (!_EvolutionEngine.#SCRATCH_STDS || _EvolutionEngine.#SCRATCH_STDS.length < dim) {
+        _EvolutionEngine.#SCRATCH_STDS = new Float64Array(dim);
+      }
+      const meansBuffer = _EvolutionEngine.#SCRATCH_MEANS;
+      const secondMomentBuffer = _EvolutionEngine.#SCRATCH_M2_RAW;
+      const stdBuffer = _EvolutionEngine.#SCRATCH_STDS;
+      meansBuffer.fill(0, 0, dim);
+      secondMomentBuffer.fill(0, 0, dim);
+      stdBuffer.fill(0, 0, dim);
+      if (!reducedTelemetry) {
+        if (!_EvolutionEngine.#SCRATCH_M3_RAW || _EvolutionEngine.#SCRATCH_M3_RAW.length < dim) {
+          _EvolutionEngine.#SCRATCH_M3_RAW = new Float64Array(dim);
+        }
+        if (!_EvolutionEngine.#SCRATCH_M4_RAW || _EvolutionEngine.#SCRATCH_M4_RAW.length < dim) {
+          _EvolutionEngine.#SCRATCH_M4_RAW = new Float64Array(dim);
+        }
+        if (!_EvolutionEngine.#SCRATCH_KURT || _EvolutionEngine.#SCRATCH_KURT.length < dim) {
+          _EvolutionEngine.#SCRATCH_KURT = new Float64Array(dim);
+        }
+        _EvolutionEngine.#SCRATCH_M3_RAW.fill(0, 0, dim);
+        _EvolutionEngine.#SCRATCH_M4_RAW.fill(0, 0, dim);
+        _EvolutionEngine.#SCRATCH_KURT.fill(0, 0, dim);
+      }
+    }
+    /**
+     * Accumulate running means and second raw moments (M2) using a reduced-telemetry
+     * Welford pass (no higher moments) and also accumulate per-sample softmax entropy.
+     *
+     * Contract / side-effects:
+     * - Fills the class-level scratch buffers: `#SCRATCH_MEANS`, `#SCRATCH_M2_RAW`, and `#SCRATCH_STDS`.
+     * - Returns the aggregated entropy sum (caller will divide by sample count to get mean entropy).
+     *
+     * Example:
+     * const entropySum = EvolutionEngine['#accumulateLogitStatsReduced'](recentLogits, 4);
+     *
+     * @param recent Array of recent logit vectors (newest last). Missing entries treated as 0.
+     * @param actionDim Number of action dimensions to process (floored & clamped by caller).
+     * @returns Sum of softmax entropies for each vector in `recent`.
+     */
+    static #accumulateLogitStatsReduced(recent, actionDim) {
+      const sampleCount = Array.isArray(recent) ? recent.length : 0;
+      if (sampleCount === 0 || actionDim <= 0) return 0;
+      const meansBuffer = _EvolutionEngine.#SCRATCH_MEANS;
+      const secondMomentBuffer = _EvolutionEngine.#SCRATCH_M2_RAW;
+      const stdsBuffer = _EvolutionEngine.#SCRATCH_STDS;
+      let entropyAccumulator = 0;
+      for (const [sampleIndex, rawVector] of recent.entries()) {
+        const vector = rawVector ?? _EvolutionEngine.#EMPTY_VEC;
+        const sampleNumber = sampleIndex + 1;
+        for (let dimIndex = 0; dimIndex < actionDim; dimIndex++) {
+          const observedValue = vector[dimIndex] ?? 0;
+          const previousMean = meansBuffer[dimIndex];
+          const delta = observedValue - previousMean;
+          const deltaNormalized = delta / sampleNumber;
+          const updatedMean = previousMean + deltaNormalized;
+          meansBuffer[dimIndex] = updatedMean;
+          const correction = observedValue - updatedMean;
+          secondMomentBuffer[dimIndex] += delta * correction;
+        }
+        entropyAccumulator += _EvolutionEngine.#softmaxEntropyFromVector(
+          vector,
+          _EvolutionEngine.#SCRATCH_EXPS
+        );
+      }
+      const invSampleCount = 1 / sampleCount;
+      for (let dimIndex = 0; dimIndex < actionDim; dimIndex++) {
+        const variance = secondMomentBuffer[dimIndex] * invSampleCount;
+        stdsBuffer[dimIndex] = variance > 0 ? Math.sqrt(variance) : 0;
+      }
+      return entropyAccumulator;
+    }
+    /**
+     * Compute unrolled Welford moments for the common ACTION_DIM === 4 case.
+     *
+     * Steps (high level):
+     * 1. Stream over samples and update running means and raw central moments (M2/M3/M4)
+     *    for each of the four action dimensions using numerically-stable recurrence.
+     * 2. Accumulate per-sample softmax entropy into `entropyAccumulator` for later averaging.
+     * 3. After the streaming pass write final means/stds into the shared scratch buffers and
+     *    compute kurtosis when full telemetry is enabled.
+     *
+     * Notes:
+     * - Uses descriptive local names for the four directions (North/East/South/West) to clarify intent.
+     * - Preserves the original numeric formulas and ordering to remain bit-for-bit compatible.
+     *
+     * @param recent Array of sample vectors (may contain undefined entries; missing values treated as 0).
+     * @param sampleCount Number of samples to process (should equal recent.length)
+     * @returns Sum of softmax entropies across samples (caller computes mean if desired)
+     * @example
+     * const entropySum = EvolutionEngine['#accumulateLogitStatsUnrolled4'](recentLogits, recentLogits.length);
+     */
+    static #accumulateLogitStatsUnrolled4(recent, sampleCount) {
+      if (!Array.isArray(recent) || sampleCount === 0) return 0;
+      let meanNorth = 0, meanEast = 0, meanSouth = 0, meanWest = 0;
+      let M2North = 0, M2East = 0, M2South = 0, M2West = 0;
+      let M3North = 0, M3East = 0, M3South = 0, M3West = 0;
+      let M4North = 0, M4East = 0, M4South = 0, M4West = 0;
+      let entropyAccumulator = 0;
+      const expsBuf = _EvolutionEngine.#SCRATCH_EXPS;
+      for (let sampleIndex = 0; sampleIndex < sampleCount; sampleIndex++) {
+        const vec = recent[sampleIndex] ?? _EvolutionEngine.#EMPTY_VEC;
+        const xNorth = vec[0] ?? 0;
+        const xEast = vec[1] ?? 0;
+        const xSouth = vec[2] ?? 0;
+        const xWest = vec[3] ?? 0;
+        const n = sampleIndex + 1;
+        {
+          const delta = xNorth - meanNorth;
+          const deltaN = delta / n;
+          const deltaN2 = deltaN * deltaN;
+          const term1 = delta * deltaN * (n - 1);
+          M4North += term1 * deltaN2 * (n * n - 3 * n + 3) + 6 * deltaN2 * M2North - 4 * deltaN * M3North;
+          M3North += term1 * deltaN * (n - 2) - 3 * deltaN * M2North;
+          M2North += term1;
+          meanNorth += deltaN;
+        }
+        {
+          const delta = xEast - meanEast;
+          const deltaN = delta / n;
+          const deltaN2 = deltaN * deltaN;
+          const term1 = delta * deltaN * (n - 1);
+          M4East += term1 * deltaN2 * (n * n - 3 * n + 3) + 6 * deltaN2 * M2East - 4 * deltaN * M3East;
+          M3East += term1 * deltaN * (n - 2) - 3 * deltaN * M2East;
+          M2East += term1;
+          meanEast += deltaN;
+        }
+        {
+          const delta = xSouth - meanSouth;
+          const deltaN = delta / n;
+          const deltaN2 = deltaN * deltaN;
+          const term1 = delta * deltaN * (n - 1);
+          M4South += term1 * deltaN2 * (n * n - 3 * n + 3) + 6 * deltaN2 * M2South - 4 * deltaN * M3South;
+          M3South += term1 * deltaN * (n - 2) - 3 * deltaN * M2South;
+          M2South += term1;
+          meanSouth += deltaN;
+        }
+        {
+          const delta = xWest - meanWest;
+          const deltaN = delta / n;
+          const deltaN2 = deltaN * deltaN;
+          const term1 = delta * deltaN * (n - 1);
+          M4West += term1 * deltaN2 * (n * n - 3 * n + 3) + 6 * deltaN2 * M2West - 4 * deltaN * M3West;
+          M3West += term1 * deltaN * (n - 2) - 3 * deltaN * M2West;
+          M2West += term1;
+          meanWest += deltaN;
+        }
+        entropyAccumulator += _EvolutionEngine.#softmaxEntropyFromVector(
+          vec,
+          expsBuf
+        );
+      }
+      const meansBuf = _EvolutionEngine.#SCRATCH_MEANS;
+      meansBuf[0] = meanNorth;
+      meansBuf[1] = meanEast;
+      meansBuf[2] = meanSouth;
+      meansBuf[3] = meanWest;
+      const invSample = 1 / sampleCount;
+      const varNorth = M2North * invSample;
+      const varEast = M2East * invSample;
+      const varSouth = M2South * invSample;
+      const varWest = M2West * invSample;
+      const stdsBuf = _EvolutionEngine.#SCRATCH_STDS;
+      stdsBuf[0] = varNorth > 0 ? Math.sqrt(varNorth) : 0;
+      stdsBuf[1] = varEast > 0 ? Math.sqrt(varEast) : 0;
+      stdsBuf[2] = varSouth > 0 ? Math.sqrt(varSouth) : 0;
+      stdsBuf[3] = varWest > 0 ? Math.sqrt(varWest) : 0;
+      if (!_EvolutionEngine.#REDUCED_TELEMETRY) {
+        const kurtBuf = _EvolutionEngine.#SCRATCH_KURT;
+        kurtBuf[0] = varNorth > 1e-18 ? sampleCount * M4North / (M2North * M2North) - 3 : 0;
+        kurtBuf[1] = varEast > 1e-18 ? sampleCount * M4East / (M2East * M2East) - 3 : 0;
+        kurtBuf[2] = varSouth > 1e-18 ? sampleCount * M4South / (M2South * M2South) - 3 : 0;
+        kurtBuf[3] = varWest > 1e-18 ? sampleCount * M4West / (M2West * M2West) - 3 : 0;
+      }
+      return entropyAccumulator;
+    }
+    /**
+     * Generic accumulation for arbitrary action dimension including higher moments when enabled.
+     * @internal
+     */
+    static #accumulateLogitStatsGeneric(recent, actionDim) {
+      const meansBuf = _EvolutionEngine.#SCRATCH_MEANS;
+      const m2Buf = _EvolutionEngine.#SCRATCH_M2_RAW;
+      const m3Buf = _EvolutionEngine.#SCRATCH_M3_RAW;
+      const m4Buf = _EvolutionEngine.#SCRATCH_M4_RAW;
+      const sampleCount = recent.length;
+      let entropyAccumulator = 0;
+      for (let sampleIndex = 0; sampleIndex < sampleCount; sampleIndex++) {
+        const vector = recent[sampleIndex] ?? _EvolutionEngine.#EMPTY_VEC;
+        const seqNumber = sampleIndex + 1;
+        for (let dimIndex = 0; dimIndex < actionDim; dimIndex++) {
+          const x = vector[dimIndex] ?? 0;
+          const delta = x - meansBuf[dimIndex];
+          const deltaN = delta / seqNumber;
+          const deltaN2 = deltaN * deltaN;
+          const term1 = delta * deltaN * (seqNumber - 1);
+          if (!_EvolutionEngine.#REDUCED_TELEMETRY)
+            m4Buf[dimIndex] += term1 * deltaN2 * (seqNumber * seqNumber - 3 * seqNumber + 3) + 6 * deltaN2 * m2Buf[dimIndex] - 4 * deltaN * (m3Buf ? m3Buf[dimIndex] : 0);
+          if (!_EvolutionEngine.#REDUCED_TELEMETRY)
+            m3Buf[dimIndex] += term1 * deltaN * (seqNumber - 2) - 3 * deltaN * m2Buf[dimIndex];
+          m2Buf[dimIndex] += term1;
+          meansBuf[dimIndex] += deltaN;
+        }
+        entropyAccumulator += _EvolutionEngine.#softmaxEntropyFromVector(
+          vector,
+          _EvolutionEngine.#SCRATCH_EXPS
+        );
+      }
+      return entropyAccumulator;
+    }
+    /**
+     * Finalize full-statistics values (stds and kurtosis) after accumulation.
+     * @internal
+     */
+    static #finalizeLogitStatsFull(actionDim, sampleCount) {
+      const m2Buf = _EvolutionEngine.#SCRATCH_M2_RAW;
+      const m4Buf = _EvolutionEngine.#SCRATCH_M4_RAW;
+      const stdsBuf = _EvolutionEngine.#SCRATCH_STDS;
+      const kurtBuf = _EvolutionEngine.#SCRATCH_KURT;
+      for (let dimIndex = 0; dimIndex < actionDim; dimIndex++) {
+        const variance = m2Buf[dimIndex] / sampleCount;
+        stdsBuf[dimIndex] = variance > 0 ? Math.sqrt(variance) : 0;
+        if (!_EvolutionEngine.#REDUCED_TELEMETRY) {
+          const m4v = m4Buf[dimIndex];
+          kurtBuf[dimIndex] = variance > 1e-18 ? sampleCount * m4v / (m2Buf[dimIndex] * m2Buf[dimIndex]) - 3 : 0;
+        }
+      }
+    }
+    /**
+     * Finalize reduced-statistics values (only stds) after accumulation.
+     * @internal
+     */
+    static #finalizeLogitStatsReduced(actionDim, sampleCount) {
+      const m2Buf = _EvolutionEngine.#SCRATCH_M2_RAW;
+      const stdsBuf = _EvolutionEngine.#SCRATCH_STDS;
+      for (let dimIndex = 0; dimIndex < actionDim; dimIndex++) {
+        const variance = m2Buf[dimIndex] / sampleCount;
+        stdsBuf[dimIndex] = variance > 0 ? Math.sqrt(variance) : 0;
+      }
+    }
+    /**
+     * Compute summary statistics for output node biases.
+     * Uses class-level scratch buffers and avoids intermediate allocations.
+     * @param nodes - full node list from a network
+     * @param outputCount - number of output nodes (must be <= nodes.length)
+     * @returns an object with mean, std and a comma-separated biases string
+     * @internal
+     */
+    static #computeOutputBiasStats(nodes, outputCount) {
+      if (!nodes || outputCount <= 0) return { mean: 0, std: 0, biasesStr: "" };
+      let mean = 0;
+      let M2 = 0;
+      for (let outIndex = 0; outIndex < outputCount; outIndex++) {
+        const nodeIndex = _EvolutionEngine.#SCRATCH_NODE_IDX[outIndex];
+        const biasValue = nodes[nodeIndex]?.bias ?? 0;
+        const count = outIndex + 1;
+        const delta = biasValue - mean;
+        mean += delta / count;
+        M2 += delta * (biasValue - mean);
+      }
+      const std = outputCount ? Math.sqrt(M2 / outputCount) : 0;
+      if (outputCount > _EvolutionEngine.#SCRATCH_STR.length) {
+        const nextSize = 1 << Math.ceil(Math.log2(outputCount));
+        _EvolutionEngine.#SCRATCH_STR = new Array(nextSize);
+      }
+      const sBuf = _EvolutionEngine.#SCRATCH_STR;
+      for (let bi = 0; bi < outputCount; bi++) {
+        const idx = _EvolutionEngine.#SCRATCH_NODE_IDX[bi];
+        sBuf[bi] = (nodes[idx]?.bias ?? 0).toFixed(2);
+      }
+      const prevLenBias = sBuf.length;
+      sBuf.length = outputCount;
+      const biasesStr = sBuf.join(",");
+      sBuf.length = prevLenBias;
+      return { mean, std, biasesStr };
+    }
+    /**
+     * Expand population by creating up to `targetAdd` children from top parents.
+     * Uses neat-managed spawn when available, otherwise falls back to clone/mutate/add.
+     * Avoids short-lived allocations by reusing class-level scratch buffers.
+     * Contract / behaviour:
+     * - Inputs: `neat` driver (may provide `spawnFromParent`, `addGenome`, or `_invalidateGenomeCaches`),
+     *   `targetAdd` (desired number of new genomes), `safeWrite` logger and generation counter.
+     * - Output: side-effects on `neat.population` and `neat.options.popsize`; emits a single status line.
+     * - Error model: per-child exceptions are swallowed (best-effort growth). The method is non-throwing.
+     * Edge cases:
+     * - If `neat.population` is missing or empty nothing is done.
+     * - `targetAdd` is clamped to non-negative integer; fractional values are floored.
+     * @internal
+     */
+    static #expandPopulation(neat, targetAdd, safeWrite, completedGenerations) {
+      const wanted = Number.isFinite(targetAdd) ? Math.max(0, Math.floor(targetAdd)) : 0;
+      if (wanted <= 0) return;
+      const {
+        populationRef,
+        sortedIdx,
+        parentPoolSize
+      } = _EvolutionEngine.#prepareExpansion(neat, wanted);
+      if (!populationRef?.length || parentPoolSize === 0) return;
+      for (let addIndex = 0; addIndex < wanted; addIndex++) {
+        const pickIndex = _EvolutionEngine.#fastRandom() * parentPoolSize | 0;
+        const parent = populationRef[sortedIdx[pickIndex]];
+        try {
+          _EvolutionEngine.#createChildFromParent(neat, parent);
+        } catch {
+        }
+      }
+      neat.options.popsize = neat.population.length;
+      safeWrite(
+        `[DYNAMIC_POP] Expanded population to ${neat.population.length} at gen ${completedGenerations}
+`
+      );
+    }
+    /**
+     * Prepare and validate working sets used when expanding the population.
+     *
+     * @param neat - NEAT driver object which may expose a `population` array.
+     * @param _targetAdd - Requested number of additions (unused here; kept for API symmetry).
+     * @returns An object with:
+     *  - `populationRef`: reference to the population array (or [] when missing),
+     *  - `sortedIdx`: indices of `populationRef` sorted by descending score (empty if no population),
+     *  - `parentPoolSize`: number of parents to sample from (0 when none available).
+     *
+     * Example:
+     * const { populationRef, sortedIdx, parentPoolSize } =
+     *   EvolutionEngine['#prepareExpansion'](neat, 4);
+     * // if populationRef.length === 0 then parentPoolSize === 0 and expansion is skipped.
+     *
+     * @internal
+     */
+    static #prepareExpansion(neat, _targetAdd) {
+      const populationRef = Array.isArray(neat?.population) ? neat.population : [];
+      if (populationRef.length === 0) {
+        return { populationRef, sortedIdx: [], parentPoolSize: 0 };
+      }
+      const sortedIdx = _EvolutionEngine.#getSortedIndicesByScore(populationRef);
+      const desiredParentCount = Math.ceil(
+        sortedIdx.length * _EvolutionEngine.#DEFAULT_PARENT_FRACTION
+      );
+      const parentCount = Math.max(2, desiredParentCount);
+      const parentPoolSize = Math.min(parentCount, sortedIdx.length);
+      return { populationRef, sortedIdx, parentPoolSize };
+    }
+    /**
+     * Determine how many mutation operations to attempt for a new child (1 or 2).
+     * @internal
+     */
+    static #determineMutateCount() {
+      return 1 + (_EvolutionEngine.#fastRandom() < _EvolutionEngine.#DEFAULT_HALF_PROB ? 1 : 0);
+    }
+    /**
+     * Apply up to `mutateCount` distinct mutation operations to `clone`.
+     *
+     * Behavioural contract:
+     * 1. Uses the engine's cached mutation operation array (via `#getMutationOps`) as the operation pool.
+     * 2. Selects up to `mutateCount` unique operations without allocating a fresh permutation array by
+     *    reusing the pooled `#SCRATCH_MUTOP_IDX` Uint16Array and performing a partial Fisher–Yates shuffle.
+     * 3. For very small `mutateCount` values the method takes an unrolled fast path to avoid shuffle overhead.
+     * 4. Mutation is applied by calling `clone.mutate(op)` for each chosen op when `clone.mutate` exists.
+     *
+     * Implementation notes:
+     * - Defensive: clamps and validates inputs; no-ops when there are zero available mutation ops or when
+     *   `mutateCount` <= 0.
+     * - Uses descriptive local names and avoids temporary allocations other than those grown on the pooled buffer.
+     * - Side-effects: mutates the pooled `#SCRATCH_MUTOP_IDX` contents but restores no state (caller must treat
+     *   the scratch buffer as ephemeral).
+     *
+     * Complexity:
+     * - O(opCount) to initialise the pooled index buffer. Partial Fisher–Yates costs O(k) where k = applied count.
+     * - Memory: O(1) extra (reuses class scratch buffer).
+     *
+     * @param clone - Genome-like object expected to expose `mutate(op)`; if missing, mutation calls are skipped.
+     * @param neat - NEAT driver used to resolve the available mutation operations via `#getMutationOps`.
+     * @param mutateCount - Desired number of distinct mutation ops to apply (floored to integer and clamped).
+     * @example
+     * // Apply up to two random distinct mutations from the configured mutation set:
+     * EvolutionEngine['#applyMutationsToClone'](someClone, neat, 2);
+     *
+     * @internal
+     */
+    static #applyMutationsToClone(clone, neat, mutateCount) {
+      const mutationOps = _EvolutionEngine.#getMutationOps(neat);
+      const operationCount = mutationOps.length | 0;
+      if (operationCount === 0) return;
+      if (_EvolutionEngine.#SCRATCH_MUTOP_IDX.length < operationCount) {
+        const nextSize = 1 << Math.ceil(Math.log2(operationCount));
+        _EvolutionEngine.#SCRATCH_MUTOP_IDX = new Uint16Array(nextSize);
+      }
+      const indexBuffer = _EvolutionEngine.#SCRATCH_MUTOP_IDX;
+      for (let writeIndex = 0; writeIndex < operationCount; writeIndex++) {
+        indexBuffer[writeIndex] = writeIndex;
+      }
+      const wanted = Math.max(0, Math.floor(mutateCount || 0));
+      const toApply = Math.min(wanted, operationCount);
+      if (toApply === 0) return;
+      if (toApply === 1) {
+        const opIndex = indexBuffer[0];
+        const op = mutationOps[opIndex];
+        if (typeof clone?.mutate === "function") clone.mutate(op);
+        return;
+      }
+      if (toApply === 2) {
+        const firstIndex = indexBuffer[0];
+        const secondIndex = indexBuffer[1];
+        if (typeof clone?.mutate === "function") {
+          clone.mutate(mutationOps[firstIndex]);
+          clone.mutate(mutationOps[secondIndex]);
+        }
+        return;
+      }
+      for (let selectionCursor = 0; selectionCursor < toApply; selectionCursor++) {
+        const remaining = operationCount - selectionCursor;
+        const offset = _EvolutionEngine.#fastRandom() * remaining | 0;
+        const swapPosition = selectionCursor + offset;
+        const temp = indexBuffer[selectionCursor];
+        indexBuffer[selectionCursor] = indexBuffer[swapPosition];
+        indexBuffer[swapPosition] = temp;
+        const chosenOpIndex = indexBuffer[selectionCursor];
+        const chosenOp = mutationOps[chosenOpIndex];
+        if (typeof clone?.mutate === "function") clone.mutate(chosenOp);
+      }
+    }
+    /**
+     * Register a newly-created clone with the NEAT driver if supported, falling back to a simple push.
+     * Preserves the original best-effort semantics and cache invalidation hook.
+     *
+     * Contract & behaviour:
+     * 1. Prefer calling `neat.addGenome(clone, [parentId])` when the driver exposes it. This allows
+     *    driver-specific bookkeeping (species, id assignment, telemetry).
+     * 2. When `addGenome` is absent, attempt a lightweight fallback: call `_invalidateGenomeCaches` if
+     *    present, then push the clone into `neat.population` (creating the array if missing).
+     * 3. Best-effort error model: per-registration exceptions are swallowed; the method tries to ensure the
+     *    clone is present in `neat.population` before returning.
+     *
+     * Notes:
+     * - The helper mutates the provided `neat` object to guarantee a `population` array exists when falling back.
+     * - This is intentionally forgiving to avoid breaking the evolution loop on driver edge cases.
+     *
+     * @param neat - NEAT driver / manager object (may be undefined in tests; guarded defensively).
+     * @param clone - Genome object to register (expected to be a valid genome instance).
+     * @param parentId - Optional identifier or array of parent ids used by driver-level registration.
+     * @example
+     * // Preferred (driver-aware) registration when using a full NEAT manager:
+     * EvolutionEngine['#registerClone'](neat, genomeClone, parentId);
+     *
+     * @internal
+     */
+    static #registerClone(neat, clone, parentId) {
+      if (!neat || !clone) return;
+      try {
+        if (typeof neat.addGenome === "function") {
+          neat.addGenome(clone, [parentId]);
+          return;
+        }
+        if (!Array.isArray(neat.population)) neat.population = [];
+        if (typeof neat._invalidateGenomeCaches === "function") {
+          try {
+            neat._invalidateGenomeCaches(clone);
+          } catch {
+          }
+        }
+        neat.population.push(clone);
+        return;
+      } catch (err) {
+        try {
+          if (neat && !Array.isArray(neat.population)) neat.population = [];
+          neat?.population?.push(clone);
+        } catch {
+        }
+      }
+    }
+    /**
+     * Create and register a single child derived from `parent`.
+     *
+     * Behavioural contract (best-effort):
+     * 1. Prefer the driver-level `neat.spawnFromParent(parent, mutateCount)` when available. If it returns a
+     *    child-like object we register it via `#registerClone` so driver bookkeeping remains consistent.
+     * 2. If the driver doesn't provide spawn or spawn fails, fall back to cloning the parent, applying
+     *    `mutateCount` mutation operations, sanitising the clone (clear score) and registering it.
+     * 3. All steps are non-throwing from the caller's perspective; internal exceptions are swallowed
+     *    so expansion remains best-effort and doesn't abort the evolution loop.
+     *
+     * Steps (inline):
+     * 1. Defensive guard: exit when `neat` or `parent` are missing.
+     * 2. Compute `mutateCount` once and reuse for both driver-spawn and fallback paths.
+     * 3. Try driver spawn inside a protective try/catch; if a child is produced, register and return.
+     * 4. Fallback: produce a clone (use `parent.clone()` when available), apply mutations, clear score,
+     *    and register the clone.
+     * 5. Swallow any errors and return silently (best-effort).
+     *
+     * @param neat - NEAT driver / manager object.
+     * @param parent - Parent genome object used as the basis for spawning/cloning.
+     * @example
+     * EvolutionEngine['#createChildFromParent'](neat, someParentGenome);
+     *
+     * @internal
+     */
+    static #createChildFromParent(neat, parent) {
+      if (!neat || !parent) return;
+      const mutateCount = _EvolutionEngine.#determineMutateCount();
+      if (typeof neat.spawnFromParent === "function") {
+        try {
+          const spawnedChild = neat.spawnFromParent(parent, mutateCount);
+          if (spawnedChild) {
+            _EvolutionEngine.#registerClone(
+              neat,
+              spawnedChild,
+              parent?._id
+            );
+            return;
+          }
+        } catch {
+        }
+      }
+      try {
+        const clone = typeof parent.clone === "function" ? parent.clone() : parent;
+        try {
+          _EvolutionEngine.#applyMutationsToClone(clone, neat, mutateCount);
+        } catch {
+        }
+        try {
+          clone.score = void 0;
+        } catch {
+        }
+        _EvolutionEngine.#registerClone(neat, clone, parent?._id);
+      } catch {
+      }
+    }
+    /**
+     * Return indices of population sorted descending by score using pooled index buffer.
+     * Uses iterative quicksort on the indices to avoid allocating a copy of the population.
+     * @internal
+     */
+    /**
+     * Return indices of `population` sorted by descending `score` using a pooled, allocation-free sorter.
+     *
+     * Steps:
+     * 1. Validate inputs and fast-exit for empty populations.
+     * 2. Prepare a pooled index buffer (number[] or typed Int32Array) sized to `len`.
+     * 3. Initialize the index buffer with the identity permutation [0,1,2,...].
+     * 4. Sort indices by descending `population[idx].score` using an iterative quicksort with median-of-three pivot
+     *    and an insertion-sort fallback for small partitions. All work uses pooled scratch (no per-call allocations
+     *    aside from a minimal typed-array growth when required).
+     * 5. Return a number[] view trimmed to `len` (public API remains number[] for compatibility).
+     *
+     * @param population - Array-like population where each entry may expose a numeric `.score` property.
+     * @returns number[] Sorted indices (highest score first). Empty array when input empty.
+     * @example
+     * const indices = EvolutionEngine['#getSortedIndicesByScore'](population);
+     */
+    static #getSortedIndicesByScore(population) {
+      const populationLength = population.length | 0;
+      if (populationLength === 0) return [];
+      let useTypedScratch = false;
+      const typedScratchBuf = _EvolutionEngine.#SCRATCH_SORT_IDX_TA;
+      if (typedScratchBuf && typedScratchBuf.length >= populationLength) {
+        useTypedScratch = true;
+      } else if (!typedScratchBuf && populationLength > 512) {
+        const allocSize = 1 << Math.ceil(Math.log2(populationLength));
+        _EvolutionEngine.#SCRATCH_SORT_IDX_TA = new Int32Array(allocSize);
+        useTypedScratch = true;
+      }
+      if (_EvolutionEngine.#SCRATCH_SORT_IDX.length < populationLength) {
+        const nextSize = 1 << Math.ceil(Math.log2(populationLength));
+        _EvolutionEngine.#SCRATCH_SORT_IDX = new Array(nextSize);
+      }
+      const indexScratch = useTypedScratch ? _EvolutionEngine.#SCRATCH_SORT_IDX_TA : _EvolutionEngine.#SCRATCH_SORT_IDX;
+      for (let initIdx = 0; initIdx < populationLength; initIdx++)
+        indexScratch[initIdx] = initIdx;
+      if (!useTypedScratch)
+        _EvolutionEngine.#SCRATCH_SORT_IDX.length = populationLength;
+      let qsStack = _EvolutionEngine.#SCRATCH_QS_STACK;
+      if (qsStack.length < 2)
+        qsStack = _EvolutionEngine.#SCRATCH_QS_STACK = new Int32Array(128);
+      let stackPtr = 0;
+      qsStack[stackPtr++] = 0;
+      qsStack[stackPtr++] = populationLength - 1;
+      while (stackPtr > 0) {
+        const hi = qsStack[--stackPtr];
+        const lo = qsStack[--stackPtr];
+        if (lo >= hi) continue;
+        if (hi - lo <= _EvolutionEngine.#QS_SMALL_THRESHOLD) {
+          _EvolutionEngine.#insertionSortIndices(indexScratch, lo, hi, population);
+          continue;
+        }
+        let leftPtr = lo;
+        let rightPtr = hi;
+        const pivotScore = _EvolutionEngine.#medianOfThreePivot(
+          indexScratch,
+          lo,
+          hi,
+          population
+        );
+        while (leftPtr <= rightPtr) {
+          while (true) {
+            const li = indexScratch[leftPtr];
+            if ((population[li]?.score ?? -Infinity) <= pivotScore) break;
+            leftPtr++;
+          }
+          while (true) {
+            const rj = indexScratch[rightPtr];
+            if ((population[rj]?.score ?? -Infinity) >= pivotScore) break;
+            rightPtr--;
+          }
+          if (leftPtr <= rightPtr) {
+            const t = indexScratch[leftPtr];
+            indexScratch[leftPtr] = indexScratch[rightPtr];
+            indexScratch[rightPtr] = t;
+            leftPtr++;
+            rightPtr--;
+          }
+        }
+        const leftPartitionSize = rightPtr - lo;
+        const rightPartitionSize = hi - leftPtr;
+        if (leftPartitionSize > rightPartitionSize) {
+          if (lo < rightPtr) {
+            stackPtr = _EvolutionEngine.#qsPushRange(stackPtr, lo, rightPtr);
+            qsStack = _EvolutionEngine.#SCRATCH_QS_STACK;
+          }
+          if (leftPtr < hi) {
+            stackPtr = _EvolutionEngine.#qsPushRange(stackPtr, leftPtr, hi);
+            qsStack = _EvolutionEngine.#SCRATCH_QS_STACK;
+          }
+        } else {
+          if (leftPtr < hi) {
+            stackPtr = _EvolutionEngine.#qsPushRange(stackPtr, leftPtr, hi);
+            qsStack = _EvolutionEngine.#SCRATCH_QS_STACK;
+          }
+          if (lo < rightPtr) {
+            stackPtr = _EvolutionEngine.#qsPushRange(stackPtr, lo, rightPtr);
+            qsStack = _EvolutionEngine.#SCRATCH_QS_STACK;
+          }
+        }
+      }
+      if (useTypedScratch) {
+        if (_EvolutionEngine.#SCRATCH_SORT_IDX.length < populationLength)
+          _EvolutionEngine.#SCRATCH_SORT_IDX = new Array(
+            1 << Math.ceil(Math.log2(populationLength))
+          );
+        const out = _EvolutionEngine.#SCRATCH_SORT_IDX;
+        const ta = _EvolutionEngine.#SCRATCH_SORT_IDX_TA;
+        for (let k = 0; k < populationLength; k++) out[k] = ta[k];
+        out.length = populationLength;
+        return out;
+      }
+      _EvolutionEngine.#SCRATCH_SORT_IDX.length = populationLength;
+      return _EvolutionEngine.#SCRATCH_SORT_IDX;
+    }
+    /**
+     * In-place insertion sort of an index buffer slice by descending `population[idx].score`.
+     *
+     * Behaviour / contract:
+     *  - Sorts the half-open slice [lo, hi] inclusive of both bounds (legacy behaviour preserved).
+     *  - Operates in-place on `indexBuf` (no new arrays are allocated). `indexBuf` may be a
+     *    `number[]` or an `Int32Array` typed buffer. Callers relying on a `number[]` view should
+     *    ensure the appropriate buffer type is supplied (the pooled sorter orchestrator handles
+     *    typed->number[] copy when necessary).
+     *  - Comparison uses `population[index]?.score` with missing scores treated as -Infinity
+     *    so entries without numeric scores sink to the end (lowest priority).
+     *  - Stable for equal scores: ties preserve original relative ordering because we only shift
+     *    when strictly less-than the current key.
+     *
+     * Steps (high level):
+     *  1. Validate inputs and fast-exit for degenerate ranges.
+     *  2. For each element in the slice, extract its index and score (the "key").
+     *  3. Shift larger elements rightwards until the insertion point is found.
+     *  4. Write the key into its final slot.
+     *
+     * Notes:
+     *  - This method is intentionally allocation-free and non-reentrant (it mutates the
+     *    provided buffer). Do not call concurrently with other helpers that reuse the same
+     *    pooled scratch buffers.
+     *
+     * @param indexBuf - Mutable index buffer (either `number[]` or `Int32Array`) containing
+     *                   integer indices into `population` to be partially-sorted.
+     * @param lo - Inclusive lower bound of the slice to sort (will be clamped by caller).
+     * @param hi - Inclusive upper bound of the slice to sort (if hi <= lo the call is a no-op).
+     * @param population - Array-like population where `.score` is read for each index.
+     * @example
+     * // Sort the indices 0..(n-1) stored in `idxBuf` by descending score
+     * EvolutionEngine['#insertionSortIndices'](idxBuf, 0, n - 1, population);
+     *
+     * @internal
+     */
+    static #insertionSortIndices(indexBuf, lo, hi, population) {
+      if (!indexBuf || lo >= hi) return;
+      const populationRef = population ?? _EvolutionEngine.#EMPTY_VEC;
+      const scoreOf = (idx) => populationRef[idx]?.score ?? Number.NEGATIVE_INFINITY;
+      for (let writePos = lo + 1; writePos <= hi; writePos++) {
+        const keyIndex = indexBuf[writePos];
+        const keyScore = scoreOf(keyIndex);
+        let scanPos = writePos - 1;
+        while (scanPos >= lo && scoreOf(indexBuf[scanPos]) < keyScore) {
+          indexBuf[scanPos + 1] = indexBuf[scanPos];
+          scanPos--;
+        }
+        indexBuf[scanPos + 1] = keyIndex;
+      }
+    }
+    /**
+     * Compute the median-of-three pivot score taken from indices at `lo`, `mid`, `hi`.
+     *
+     * Behaviour / contract:
+     *  - Reads three candidate indices from `indexBuf` at positions `lo`, `mid`, `hi` and returns
+     *    the median of their `population[idx].score` values.
+     *  - `indexBuf` may be a `number[]` or an `Int32Array` (the sorter uses pooled typed buffers);
+     *    this helper performs reads only and does not allocate new arrays.
+     *  - Missing or non-numeric `.score` values are treated as `Number.NEGATIVE_INFINITY`, so
+     *    entries without a score sort to the end.
+     *
+     * Steps (high level):
+     *  1. Compute the middle position and load the three candidate indices.
+     *  2. Fetch their scores with a safe fallback.
+     *  3. Use a small sequence of comparisons and swaps (no allocations) to determine the median
+     *     score value and return it.
+     *
+     * Notes:
+     *  - This method is intentionally small and allocation-free so it can be used in hot sorting
+     *    paths. It's non-reentrant when used with shared pooled buffers but it performs only local reads.
+     *
+     * @param indexBuf - Index buffer (either `number[]` or `Int32Array`) containing population indices.
+     * @param lo - Inclusive low index in `indexBuf`.
+     * @param hi - Inclusive high index in `indexBuf`.
+     * @param population - Array-like population where `.score` is read for each index.
+     * @returns The median score (a number) among the three candidate positions.
+     * @example
+     * const pivot = EvolutionEngine['#medianOfThreePivot'](idxBuf, 0, n-1, population);
+     *
+     * @internal
+     */
+    static #medianOfThreePivot(indexBuf, lo, hi, population) {
+      const mid = lo + hi >> 1;
+      const leftIndex = indexBuf[lo];
+      const middleIndex = indexBuf[mid];
+      const rightIndex = indexBuf[hi];
+      const popRef = population ?? _EvolutionEngine.#EMPTY_VEC;
+      let leftScore = popRef[leftIndex]?.score ?? Number.NEGATIVE_INFINITY;
+      let middleScore = popRef[middleIndex]?.score ?? Number.NEGATIVE_INFINITY;
+      let rightScore = popRef[rightIndex]?.score ?? Number.NEGATIVE_INFINITY;
+      if (leftScore > middleScore) {
+        const tmp = leftScore;
+        leftScore = middleScore;
+        middleScore = tmp;
+      }
+      if (middleScore > rightScore) {
+        const tmp = middleScore;
+        middleScore = rightScore;
+        rightScore = tmp;
+        if (leftScore > middleScore) {
+          const tmp2 = leftScore;
+          leftScore = middleScore;
+          middleScore = tmp2;
+        }
+      }
+      return middleScore;
+    }
+    /**
+     * Push a [lo, hi] pair onto the pooled quicksort stack.
+     *
+     * Behaviour / contract:
+     *  - Uses the class-level `#SCRATCH_QS_STACK` Int32Array as a reusable stack to avoid
+     *    per-call allocations in the hot sorting path. The backing buffer may be grown when
+     *    capacity is insufficient; growth size follows power-of-two doubling to bound
+     *    amortized allocations.
+     *  - Mutates the pooled stack and returns the updated `stackPtr` (the index of the next
+     *    free slot). Callers should use the returned value; the method does not update any
+     *    external stack pointer state beyond returning it.
+     *  - Non-reentrant: the pooled stack is shared and must not be used concurrently.
+     *
+     * Steps:
+     *  1. Ensure the pooled `Int32Array` exists and has capacity for two more elements.
+     *  2. If capacity is insufficient, allocate a new `Int32Array` with at least double the
+     *     previous length (or large enough to accommodate the required size), copy contents,
+     *   and swap it into the pooled field.
+     *  3. Push `rangeLo` then `rangeHi` into the stack and return the incremented pointer.
+     *
+     * @param stackPtr - Current stack pointer (next free slot index) into `#SCRATCH_QS_STACK`.
+     * @param rangeLo - Inclusive lower bound of the range to push.
+     * @param rangeHi - Inclusive upper bound of the range to push.
+     * @returns Updated stack pointer (after the push).
+     * @example
+     * // push initial full range onto pooled stack
+     * let ptr = 0;
+     * ptr = EvolutionEngine['#qsPushRange'](ptr, 0, population.length - 1);
+     *
+     * @internal
+     */
+    static #qsPushRange(stackPtr, rangeLo, rangeHi) {
+      let stackBuf = _EvolutionEngine.#SCRATCH_QS_STACK;
+      const required = stackPtr + 2;
+      if (required > stackBuf.length) {
+        let newCapacity = Math.max(stackBuf.length << 1, 4);
+        while (newCapacity < required) newCapacity <<= 1;
+        const grown = new Int32Array(newCapacity);
+        grown.set(stackBuf);
+        _EvolutionEngine.#SCRATCH_QS_STACK = stackBuf = grown;
+      }
+      stackBuf[stackPtr++] = rangeLo | 0;
+      stackBuf[stackPtr++] = rangeHi | 0;
+      return stackPtr;
+    }
+    /** Cached reference to mutation ops array (invalidated if the driver replaces the reference). */
+    static #CACHED_MUTATION_OPS = null;
+    /**
+     * Pooled scratch buffer for temporary bias storage when computing output-bias statistics.
+     * - Lazily grown with power-of-two sizing to avoid per-call allocations.
+     * - Shared across engine helpers; non-reentrant (callers must not use concurrently).
+     */
+    static #SCRATCH_BIAS_TA = new Float64Array(0);
+    /**
+     * Resolve and cache the configured mutation operations from the NEAT driver options.
+     *
+     * Behaviour / contract:
+     *  - Reads `neat?.options?.mutation` and returns a stable array reference when available.
+     *  - Caches the resolved reference in `#CACHED_MUTATION_OPS` to avoid repeated property
+     *    lookups on hot paths. If the driver later replaces its `mutation` reference, the cache
+     *    is updated on the next call.
+     *  - Minimises allocations: when the driver provides an actual `Array` we use it directly.
+     *    When a non-array object is provided, we attempt a cheap, one-time normalization and
+     *    cache the result (this may allocate once).
+     *  - The returned array should be treated as read-only by callers. Mutating it may break
+     *    the driver's expectations and the engine's caching semantics.
+     *
+     * Steps:
+     *  1. Fast-guard for a missing `neat` or options object -> return shared empty vector.
+     *  2. Read the candidate `mutation` value and compare by reference with the cached value.
+     *  3. If the reference changed, resolve to an array (use directly if already an Array,
+     *     attempt to reuse array-like shapes, or perform a one-time Object->Array conversion).
+     *  4. Return the cached array or the shared empty vector.
+     *
+     * @param neat - NEAT driver object (may be undefined in tests).
+     * @returns Read-only array of mutation operation descriptors (may be `#EMPTY_VEC`).
+     * @example
+     * const ops = EvolutionEngine['#getMutationOps'](neat);
+     * // if (ops.length) { apply mutations }
+     * @internal
+     */
+    static #getMutationOps(neat) {
+      try {
+        if (!neat) return _EvolutionEngine.#EMPTY_VEC;
+        const candidate = neat?.options?.mutation;
+        if (candidate && _EvolutionEngine.#CACHED_MUTATION_OPS !== candidate) {
+          if (Array.isArray(candidate)) {
+            _EvolutionEngine.#CACHED_MUTATION_OPS = candidate;
+          } else if (candidate && typeof candidate === "object") {
+            const maybeLen = candidate.length;
+            if (Number.isFinite(maybeLen) && maybeLen >= 0) {
+              _EvolutionEngine.#CACHED_MUTATION_OPS = candidate;
+            } else {
+              _EvolutionEngine.#CACHED_MUTATION_OPS = Object.values(
+                candidate
+              );
+            }
+          } else {
+            _EvolutionEngine.#CACHED_MUTATION_OPS = _EvolutionEngine.#EMPTY_VEC;
+          }
+        }
+        return _EvolutionEngine.#CACHED_MUTATION_OPS ?? _EvolutionEngine.#EMPTY_VEC;
+      } catch {
+        return _EvolutionEngine.#EMPTY_VEC;
+      }
+    }
+    /**
+     * Ensure every output node in the provided NEAT population uses the identity activation.
+     *
+     * Rationale:
+     * - Some evaluation paths expect raw network outputs (logits) so callers may apply softmax
+     *   externally. This helper enforces `Activation.identity` on all nodes typed as `output`.
+     * - Uses pooled references and performs no allocations.
+     *
+     * Steps:
+     * 1. Defensive: verify `neat` and `neat.population` exist; fast-exit when missing.
+     * 2. Iterate genomes and their `nodes` arrays (fall back to shared empty vector when absent).
+     * 3. For each node object that declares `type === 'output'` set `node.squash = methods.Activation.identity`.
+     * 4. Swallow errors to preserve best-effort, non-throwing behaviour in the evolution loop.
+     *
+     * Notes:
+     * - The helper mutates node objects in-place. Callers should not rely on this being reentrant
+     *   or safe to call concurrently with other helpers that mutate the same population.
+     *
+     * @param neat - NEAT driver object which may contain a `population` array (optional).
+     * @example
+     * EvolutionEngine['#ensureOutputIdentity'](neat);
+     * @internal
+     */
+    static #ensureOutputIdentity(neat) {
+      try {
+        if (!neat) return;
+        const populationRef = Array.isArray(neat.population) ? neat.population : _EvolutionEngine.#EMPTY_VEC;
+        for (let genomeIndex = 0; genomeIndex < populationRef.length; genomeIndex++) {
+          const genome = populationRef[genomeIndex];
+          if (!genome) continue;
+          const nodesRef = Array.isArray(genome.nodes) ? genome.nodes : _EvolutionEngine.#EMPTY_VEC;
+          for (let nodeIndex = 0; nodeIndex < nodesRef.length; nodeIndex++) {
+            const node = nodesRef[nodeIndex];
+            if (node && node.type === "output") {
+              node.squash = methods_exports.Activation.identity;
+            }
+          }
+        }
+      } catch {
+      }
+    }
+    /**
+     * Update the engine-wide species history and adapt mutation/novelty parameters when a
+     * species collapse is detected.
+     *
+     * Behaviour / contract:
+     *  - Counts unique species ids present in `neat.population` using pooled Int32Array scratch
+     *    buffers to avoid per-call allocations.
+     *  - Pushes the computed species count into a global history buffer and inspects the
+     *    most-recent window to detect collapse (consecutive single-species entries).
+     *  - When a collapse is detected the function applies conservative escalations to
+     *    `mutationRate`, `mutationAmount` and `config.novelty.blendFactor` (when present).
+     *  - Returns `true` when a collapse was observed, `false` otherwise. Silently returns
+     *    `false` on unexpected errors to preserve the evolution loop.
+     *
+     * Steps:
+     *  1. Normalize and fast-exit when `neat` or `neat.population` is missing.
+     *  2. Ensure pooled species scratch buffers (`#SCRATCH_SPECIES_IDS`, `#SCRATCH_SPECIES_COUNTS`)
+     *     have capacity for the population size (grow using power-of-two sizing when needed).
+     3. Count unique species using a small in-place table in the scratch arrays.
+     4. Push the species count into `_speciesHistory` and inspect the rolling window for collapse.
+     5. When collapsed, escalate mutation/novelty parameters using configured caps/multipliers.
+     6. Return the collapse detection boolean.
+     *
+     * @param neat - NEAT driver instance which may expose a `population` array.
+     * @returns boolean `true` when species collapse observed; `false` otherwise.
+     * @example
+     * const collapsed = EvolutionEngine['#handleSpeciesHistory'](neat);
+     * if (collapsed) console.log('Species collapse: escalated mutation params');
+     * @internal
+     */
+    static #handleSpeciesHistory(neat) {
+      try {
+        _EvolutionEngine._speciesHistory = _EvolutionEngine._speciesHistory ?? _EvolutionEngine.#EMPTY_VEC;
+        const populationRef = Array.isArray(neat?.population) ? neat.population : _EvolutionEngine.#EMPTY_VEC;
+        let speciesIdsBuf = _EvolutionEngine.#SCRATCH_SPECIES_IDS;
+        let speciesCountsBuf = _EvolutionEngine.#SCRATCH_SPECIES_COUNTS;
+        if (populationRef.length > speciesIdsBuf.length) {
+          const nextSize = 1 << Math.ceil(Math.log2(populationRef.length || 1));
+          _EvolutionEngine.#SCRATCH_SPECIES_IDS = new Int32Array(nextSize);
+          _EvolutionEngine.#SCRATCH_SPECIES_COUNTS = new Int32Array(nextSize);
+          speciesIdsBuf = _EvolutionEngine.#SCRATCH_SPECIES_IDS;
+          speciesCountsBuf = _EvolutionEngine.#SCRATCH_SPECIES_COUNTS;
+        }
+        let uniqueCount = 0;
+        for (let genomeIndex = 0; genomeIndex < populationRef.length; genomeIndex++) {
+          const genome = populationRef[genomeIndex];
+          if (!genome || genome.species == null) continue;
+          const speciesId = genome.species | 0;
+          let foundIndex = -1;
+          for (let scan = 0; scan < uniqueCount; scan++) {
+            if (speciesIdsBuf[scan] === speciesId) {
+              foundIndex = scan;
+              break;
+            }
+          }
+          if (foundIndex === -1) {
+            speciesIdsBuf[uniqueCount] = speciesId;
+            speciesCountsBuf[uniqueCount] = 1;
+            uniqueCount++;
+          } else {
+            speciesCountsBuf[foundIndex]++;
+          }
+        }
+        const speciesCount = uniqueCount || 1;
+        _EvolutionEngine._speciesHistory = _EvolutionEngine.#pushHistory(
+          _EvolutionEngine._speciesHistory,
+          speciesCount,
+          _EvolutionEngine.#SPECIES_HISTORY_MAX
+        );
+        const _speciesHistory = _EvolutionEngine._speciesHistory ?? _EvolutionEngine.#EMPTY_VEC;
+        const recentWindow = _EvolutionEngine.#getTail(
+          _speciesHistory,
+          _EvolutionEngine.#SPECIES_COLLAPSE_WINDOW
+        );
+        const collapsed = recentWindow.length === _EvolutionEngine.#SPECIES_COLLAPSE_WINDOW && recentWindow.every((v) => v === 1);
+        if (collapsed) {
+          const neatAny = neat;
+          if (typeof neatAny.mutationRate === "number") {
+            neatAny.mutationRate = Math.min(
+              _EvolutionEngine.#COLLAPSE_MUTRATE_CAP,
+              neatAny.mutationRate * _EvolutionEngine.#COLLAPSE_MUTRATE_MULT
+            );
+          }
+          if (typeof neatAny.mutationAmount === "number") {
+            neatAny.mutationAmount = Math.min(
+              _EvolutionEngine.#COLLAPSE_MUTAMOUNT_CAP,
+              neatAny.mutationAmount * _EvolutionEngine.#COLLAPSE_MUTAMOUNT_MULT
+            );
+          }
+          if (neatAny.config && neatAny.config.novelty) {
+            neatAny.config.novelty.blendFactor = Math.min(
+              _EvolutionEngine.#COLLAPSE_NOVELTY_BLEND_CAP,
+              neatAny.config.novelty.blendFactor * _EvolutionEngine.#COLLAPSE_NOVELTY_MULT
+            );
+          }
+        }
+        return collapsed;
+      } catch {
+        return false;
+      }
+    }
+    /**
+     * Possibly expand the population when configured and plateau conditions are met.
+     * This helper decides whether to grow the NEAT population and delegates the
+     * actual creation of children to `#expandPopulation` when required.
+     *
+     * Behaviour & guarantees:
+     * - Best-effort: non-throwing and swallows internal errors to avoid breaking the
+     *   evolution loop. Any growth side-effects are performed by `#expandPopulation`.
+     * - Allocation-light: performs numeric checks and uses pooled references; it does
+     *   not allocate per-call data structures.
+     *
+     * @param neat - NEAT driver instance; expected to expose a `population` array and `options`.
+     * @param dynamicPopEnabled - When falsy no expansion will be attempted.
+     * @param completedGenerations - Current generation counter (integer, newest generation).
+     * @param dynamicPopMax - Maximum allowed population size (upper bound, integer).
+     * @param plateauGenerations - Window length used to compute plateau ratio (integer > 0).
+     * @param plateauCounter - Number of plateaued generations observed within the window.
+     * @param dynamicPopExpandInterval - Generation interval to attempt expansion (e.g. every N gens).
+     * @param dynamicPopExpandFactor - Fractional growth factor used to compute additions (e.g. 0.1 -> 10%).
+     * @param dynamicPopPlateauSlack - Minimum plateau ratio (0..1) required to trigger expansion.
+     * @param safeWrite - Logger function used by `#expandPopulation` to emit status lines.
+     *
+     * @example
+     * // Attempt an expansion every 5 generations when at least 75% of the plateau
+     * // window is 'stalled'. The call is best-effort and will not throw.
+     * EvolutionEngine['#maybeExpandPopulation'](
+     *   neat,
+     *   true,        // dynamicPopEnabled
+     *   100,         // completedGenerations
+     *   500,         // dynamicPopMax
+     *   10,          // plateauGenerations
+     *   8,           // plateauCounter
+     *   5,           // dynamicPopExpandInterval
+     *   0.1,         // dynamicPopExpandFactor
+     *   0.75,        // dynamicPopPlateauSlack
+     *   console.log  // safeWrite
+     * );
+     *
+     * @internal
+     */
+    static #maybeExpandPopulation(neat, dynamicPopEnabled, completedGenerations, dynamicPopMax, plateauGenerations, plateauCounter, dynamicPopExpandInterval, dynamicPopExpandFactor, dynamicPopPlateauSlack, safeWrite) {
+      try {
+        if (!dynamicPopEnabled || completedGenerations <= 0) return;
+        const populationRef = Array.isArray(neat?.population) ? neat.population : _EvolutionEngine.#EMPTY_VEC;
+        const maxAllowed = Number.isFinite(dynamicPopMax) ? Math.max(0, dynamicPopMax | 0) : 0;
+        if (populationRef.length >= maxAllowed) return;
+        const plateauWindow = Number.isFinite(plateauGenerations) && plateauGenerations > 0 ? plateauGenerations | 0 : 0;
+        const plateauRatio = plateauWindow > 0 ? Math.min(1, (plateauCounter | 0) / plateauWindow) : 0;
+        const expandInterval = Number.isFinite(dynamicPopExpandInterval) && dynamicPopExpandInterval > 0 ? Math.max(1, dynamicPopExpandInterval | 0) : 0;
+        if (expandInterval === 0) return;
+        const isGenerationTrigger = (completedGenerations | 0) % expandInterval === 0;
+        if (!isGenerationTrigger) return;
+        const slackThreshold = Number.isFinite(dynamicPopPlateauSlack) ? dynamicPopPlateauSlack : 0;
+        if (plateauRatio < slackThreshold) return;
+        const currentSize = populationRef.length | 0;
+        const factor = Number.isFinite(dynamicPopExpandFactor) ? Math.max(0, dynamicPopExpandFactor) : 0;
+        const computedAdd = Math.floor(Math.max(1, currentSize * factor));
+        const allowed = Math.max(0, maxAllowed - currentSize);
+        const targetAdd = Math.min(computedAdd, allowed);
+        if (targetAdd > 0) {
+          _EvolutionEngine.#expandPopulation(
+            neat,
+            targetAdd,
+            safeWrite,
+            completedGenerations | 0
+          );
+        }
+      } catch {
+      }
+    }
+    /**
+     * Safely update a UI dashboard with the latest run state and optionally yield to the
+     * host/frame via an awaited flush function.
+     *
+     * Behaviour (best-effort):
+     *  1) If `dashboardManager.update` exists and is callable, call it with the stable
+     *     argument order (maze, result, network, completedGenerations, neat). Any exception
+     *     raised by the dashboard is swallowed to avoid interrupting the evolution loop.
+     *  2) If `flushToFrame` is supplied as an async function, await it to yield control to
+     *     the event loop or renderer (for example `() => new Promise(r => requestAnimationFrame(r))`).
+     *  3) The helper avoids heap allocations and relies on existing pooled scratch buffers in
+     *     the engine for heavy telemetry elsewhere; this method intentionally performs only
+     *     short-lived control flow and minimal work.
+     *
+     * @param maze - Maze instance or descriptor used by dashboard rendering.
+     * @param result - Per-run result object (path, progress, telemetry, etc.).
+     * @param network - Network or genome object that should be visualised.
+     * @param completedGenerations - Integer index of the completed generation.
+     * @param neat - NEAT manager instance (context passed to the dashboard update).
+     * @param dashboardManager - Optional manager exposing `update(maze, result, network, gen, neat)`.
+     * @param flushToFrame - Optional async function used to yield to the host/frame scheduler; may be omitted.
+     *
+     * @example
+     * // Yield to the browser's next repaint after dashboard update:
+     * await EvolutionEngine['#updateDashboardAndMaybeFlush'](
+     *   maze, genResult, fittestNetwork, gen, neatInstance, dashboard, () => new Promise(r => requestAnimationFrame(r))
+     * );
+     *
+     * @internal
+     */
+    static async #updateDashboardAndMaybeFlush(maze, result, network, completedGenerations, neat, dashboardManager, flushToFrame) {
+      const manager = dashboardManager;
+      const yieldFrame = flushToFrame;
+      if (manager?.update && typeof manager.update === "function") {
+        try {
+          manager.update(maze, result, network, completedGenerations, neat);
+        } catch (_updateError) {
+        }
+      }
+      if (typeof yieldFrame === "function") {
+        try {
+          await yieldFrame();
+        } catch (_flushError) {
+        }
+      }
+    }
+    /**
+     * Periodic dashboard update used when the engine wants to refresh a non-primary
+     * dashboard view (for example background or periodic reporting). This helper is
+     * intentionally small, allocation-light and best-effort: dashboard errors are
+     * swallowed so the evolution loop cannot be interrupted by UI issues.
+     *
+     * Behavioural contract:
+     *  1) If `dashboardManager.update` is present and callable the method invokes it with
+     *     the stable argument order: (maze, bestResult, bestNetwork, completedGenerations, neat).
+     *  2) If `flushToFrame` is supplied the helper awaits it after the update to yield to
+     *     the host renderer (eg. requestAnimationFrame). Any exceptions raised by the
+     *     flush are swallowed.
+     *  3) The helper avoids creating ephemeral arrays/objects and therefore does not use
+     *     typed-array scratch buffers here — there is no hot numerical work to pool. Other
+     *     engine helpers already reuse class-level scratch buffers where appropriate.
+     *
+     * Steps / inline intent:
+     *  1. Fast-guard when an update cannot be performed (missing manager, update method,
+     *     or missing content to visualise).
+     *  2. Call the dashboard update in a try/catch to preserve best-effort semantics.
+     *  3. Optionally await the provided `flushToFrame` function to yield to the host.
+     *
+     * @param maze - Maze descriptor passed to the dashboard renderer.
+     * @param bestResult - Best-run result object used for display (may be falsy when not present).
+     * @param bestNetwork - Network or genome object to visualise (may be falsy when not present).
+     * @param completedGenerations - Completed generation index (number).
+     * @param neat - NEAT manager instance (passed through to dashboard update).
+     * @param dashboardManager - Optional manager exposing `update(maze, result, network, gen, neat)`.
+     * @param flushToFrame - Optional async function used to yield to the host/frame scheduler
+     *                      (for example: `() => new Promise(r => requestAnimationFrame(r))`).
+     * @example
+     * // Safe periodic update and yield to next frame
+     * await EvolutionEngine['#updateDashboardPeriodic'](
+     *   maze, result, network, gen, neatInstance, dashboard, () => new Promise(r => requestAnimationFrame(r))
+     * );
+     *
+     * @internal
+     */
+    static async #updateDashboardPeriodic(maze, bestResult, bestNetwork, completedGenerations, neat, dashboardManager, flushToFrame) {
+      const dashboard = dashboardManager;
+      const updateFunction = dashboard?.update;
+      const frameFlush = flushToFrame;
+      if (typeof updateFunction !== "function" || !bestNetwork || !bestResult)
+        return;
+      try {
+        updateFunction.call(
+          dashboard,
+          maze,
+          bestResult,
+          bestNetwork,
+          completedGenerations,
+          neat
+        );
+      } catch (updateError) {
+      }
+      if (typeof frameFlush === "function") {
+        try {
+          await frameFlush();
+        } catch (flushError) {
+        }
+      }
+    }
+    /**
+     * Re-centers and clamps output node biases after local training.
+     *
+     * Behaviour & contract:
+     *  - Computes the mean and (population) standard deviation of the output node biases
+     *    using a numerically-stable single-pass Welford accumulator.
+     *  - Subtracts the mean from each output bias and applies a small-scale multiplier when
+     *    the measured std is below a configured small-std threshold to avoid collapsing to zero.
+     *  - Clamps final biases into the safe range [-5, 5] and writes them back in-place.
+     *  - Uses a pooled Float64Array (`#SCRATCH_BIAS_TA`) to avoid per-call allocations when
+     *    collecting bias values; the buffer grows lazily and uses power-of-two sizing.
+     *  - Best-effort: swallows internal errors to preserve the evolution loop.
+     *
+     * Steps:
+     *  1. Fast-guard when `network` is missing or contains no output nodes.
+     *  2. Ensure pooled bias scratch buffer has capacity for `outCount` elements.
+     *  3. One-pass Welford accumulation over biases to compute mean and M2.
+     *  4. Compute population std = sqrt(M2 / outCount) and optionally apply small-std multiplier.
+     *  5. Subtract mean from each bias, scale if needed, clamp to [-5,5], and write back.
+     *
+     * @param network - Network object containing a `nodes` array. Missing nodes are treated as empty.
+     * @internal
+     * @example
+     * // After performing local training on `net` run:
+     * EvolutionEngine['#adjustOutputBiasesAfterTraining'](net);
+     */
+    static #adjustOutputBiasesAfterTraining(network) {
+      try {
+        if (!network) return;
+        const nodesRef = network.nodes ?? _EvolutionEngine.#EMPTY_VEC;
+        const outputNodeCount = _EvolutionEngine.#getNodeIndicesByType(
+          nodesRef,
+          "output"
+        );
+        if (outputNodeCount <= 0) return;
+        let biasScratch = _EvolutionEngine.#SCRATCH_BIAS_TA;
+        if (biasScratch.length < outputNodeCount) {
+          let newCap = biasScratch.length || 1;
+          while (newCap < outputNodeCount) newCap <<= 1;
+          biasScratch = _EvolutionEngine.#SCRATCH_BIAS_TA = new Float64Array(
+            newCap
+          );
+        }
+        let mean = 0;
+        let M2 = 0;
+        for (let oi = 0; oi < outputNodeCount; oi++) {
+          const nodeIndex = _EvolutionEngine.#SCRATCH_NODE_IDX[oi];
+          const currentBias = nodesRef[nodeIndex]?.bias ?? 0;
+          biasScratch[oi] = currentBias;
+          const sampleIndex = oi + 1;
+          const delta = currentBias - mean;
+          mean += delta / sampleIndex;
+          M2 += delta * (currentBias - mean);
+        }
+        const populationStd = outputNodeCount > 0 ? Math.sqrt(M2 / outputNodeCount) : 0;
+        const smallStdThreshold = _EvolutionEngine.#DEFAULT_STD_SMALL;
+        const smallStdMultiplier = _EvolutionEngine.#DEFAULT_STD_ADJUST_MULT;
+        for (let oi = 0; oi < outputNodeCount; oi++) {
+          const nodeIndex = _EvolutionEngine.#SCRATCH_NODE_IDX[oi];
+          let adjusted = biasScratch[oi] - mean;
+          if (populationStd < smallStdThreshold) adjusted *= smallStdMultiplier;
+          nodesRef[nodeIndex].bias = Math.max(-5, Math.min(5, adjusted));
+        }
+      } catch {
+      }
+    }
+    /**
+     * Build the supervised training set used for Lamarckian warm-start training.
+     * @returns Array of training cases. Each case has:
+     *  - `input`: [compassScalar, openN, openE, openS, openW, progressDelta]
+     *  - `output`: one-hot desired move [N,E,S,W] with soft probabilities (TRAIN_OUT_PROB_HIGH/LOW)
+     * @example
+     * // Typical usage (warm-start pretraining):
+     * const ds = EvolutionEngine['#buildLamarckianTrainingSet']();
+     * EvolutionEngine['#pretrainPopulationWarmStart'](neat, ds);
+     * @internal
+     */
+    static #buildLamarckianTrainingSet() {
+      const trainingSet = [];
+      const high = _EvolutionEngine.#TRAIN_OUT_PROB_HIGH;
+      const low = _EvolutionEngine.#TRAIN_OUT_PROB_LOW;
+      const OUTPUTS = [
+        [high, low, low, low],
+        [low, high, low, low],
+        [low, low, high, low],
+        [low, low, low, high]
+      ];
+      const makeInput = (compassScalar, openN, openE, openS, openW, progressDelta) => [compassScalar, openN, openE, openS, openW, progressDelta];
+      const pushCase = (inp, direction) => trainingSet.push({ input: inp, output: OUTPUTS[direction] });
+      pushCase(makeInput(0, 1, 0, 0, 0, _EvolutionEngine.#PROGRESS_MEDIUM), 0);
+      pushCase(makeInput(0.25, 0, 1, 0, 0, _EvolutionEngine.#PROGRESS_MEDIUM), 1);
+      pushCase(makeInput(0.5, 0, 0, 1, 0, _EvolutionEngine.#PROGRESS_MEDIUM), 2);
+      pushCase(makeInput(0.75, 0, 0, 0, 1, _EvolutionEngine.#PROGRESS_MEDIUM), 3);
+      pushCase(makeInput(0, 1, 0, 0, 0, _EvolutionEngine.#PROGRESS_STRONG), 0);
+      pushCase(makeInput(0.25, 0, 1, 0, 0, _EvolutionEngine.#PROGRESS_STRONG), 1);
+      pushCase(makeInput(0, 1, 0.6, 0, 0, _EvolutionEngine.#PROGRESS_JUNCTION), 0);
+      pushCase(makeInput(0, 1, 0, 0.6, 0, _EvolutionEngine.#PROGRESS_JUNCTION), 0);
+      pushCase(
+        makeInput(0.25, 0.6, 1, 0, 0, _EvolutionEngine.#PROGRESS_JUNCTION),
+        1
+      );
+      pushCase(
+        makeInput(0.25, 0, 1, 0.6, 0, _EvolutionEngine.#PROGRESS_JUNCTION),
+        1
+      );
+      pushCase(
+        makeInput(0.5, 0, 0.6, 1, 0, _EvolutionEngine.#PROGRESS_JUNCTION),
+        2
+      );
+      pushCase(
+        makeInput(0.5, 0, 0, 1, 0.6, _EvolutionEngine.#PROGRESS_JUNCTION),
+        2
+      );
+      pushCase(
+        makeInput(0.75, 0, 0, 0.6, 1, _EvolutionEngine.#PROGRESS_JUNCTION),
+        3
+      );
+      pushCase(
+        makeInput(0.75, 0.6, 0, 0, 1, _EvolutionEngine.#PROGRESS_JUNCTION),
+        3
+      );
+      pushCase(
+        makeInput(0, 1, 0.8, 0.5, 0.4, _EvolutionEngine.#PROGRESS_FOURWAY),
+        0
+      );
+      pushCase(
+        makeInput(0.25, 0.7, 1, 0.6, 0.5, _EvolutionEngine.#PROGRESS_FOURWAY),
+        1
+      );
+      pushCase(
+        makeInput(0.5, 0.6, 0.55, 1, 0.65, _EvolutionEngine.#PROGRESS_FOURWAY),
+        2
+      );
+      pushCase(
+        makeInput(0.75, 0.5, 0.45, 0.7, 1, _EvolutionEngine.#PROGRESS_FOURWAY),
+        3
+      );
+      pushCase(makeInput(0, 1, 0.3, 0, 0, _EvolutionEngine.#PROGRESS_REGRESS), 0);
+      pushCase(
+        makeInput(0.25, 0.5, 1, 0.4, 0, _EvolutionEngine.#PROGRESS_REGRESS),
+        1
+      );
+      pushCase(
+        makeInput(0.5, 0, 0.3, 1, 0.2, _EvolutionEngine.#PROGRESS_REGRESS),
+        2
+      );
+      pushCase(
+        makeInput(0.75, 0, 0.5, 0.4, 1, _EvolutionEngine.#PROGRESS_REGRESS),
+        3
+      );
+      pushCase(
+        makeInput(
+          0,
+          0,
+          0,
+          _EvolutionEngine.#PROGRESS_MIN_SIGNAL,
+          0,
+          _EvolutionEngine.#PROGRESS_MILD_REGRESS
+        ),
+        2
+      );
+      for (let dsi = 0; dsi < trainingSet.length; dsi++) {
+        const caseEntry = trainingSet[dsi];
+        for (let dirIndex = 1; dirIndex <= 4; dirIndex++) {
+          if (caseEntry.input[dirIndex] === 1 && _EvolutionEngine.#fastRandom() < _EvolutionEngine.#DEFAULT_JITTER_PROB)
+            caseEntry.input[dirIndex] = _EvolutionEngine.#AUGMENT_JITTER_BASE + _EvolutionEngine.#fastRandom() * _EvolutionEngine.#AUGMENT_JITTER_RANGE;
+        }
+        if (_EvolutionEngine.#fastRandom() < _EvolutionEngine.#AUGMENT_PROGRESS_JITTER_PROB)
+          caseEntry.input[5] = Math.min(
+            1,
+            Math.max(
+              0,
+              caseEntry.input[5] + (_EvolutionEngine.#fastRandom() * _EvolutionEngine.#AUGMENT_PROGRESS_DELTA_RANGE - _EvolutionEngine.#AUGMENT_PROGRESS_DELTA_HALF)
+            )
+          );
+      }
+      return trainingSet;
+    }
+    /**
+     * Pretrain the population using a small supervised dataset and apply a warm-start.
+     *
+     * Behaviour & contract:
+     *  - Runs a short supervised training pass (backprop) on each network in `neat.population`.
+     *  - Applies lightweight warm-start heuristics after training: compass wiring and output bias centering.
+     *  - Errors are isolated per-network: a failing network does not abort the overall pretrain step.
+     *  - This helper is allocation-light and does not create sizable temporary buffers; it delegates heavy
+     *    work to `net.train` and the `#applyCompassWarmStart` / `#centerOutputBiases` helpers which reuse
+     *    class-level scratch buffers where appropriate.
+     *
+     * Steps:
+     *  1) Validate inputs and obtain `population` (fast-exit on empty populations).
+     *  2) For each network: guard missing `train` method, compute conservative iteration budget, then call `train`.
+     *  3) Apply warm-start heuristics (compass wiring + bias centering). Swallow any per-network exceptions.
+     *
+     * @param neat NEAT instance exposing a `population` array of networks. Missing/empty populations are a no-op.
+     * @param lamarckianTrainingSet Array of `{input:number[], output:number[]}` training cases used for warm-start.
+     * @internal
+     */
+    static #pretrainPopulationWarmStart(neat, lamarckianTrainingSet) {
+      if (!neat) return;
+      const population = neat.population ?? _EvolutionEngine.#EMPTY_VEC;
+      if (!Array.isArray(population) || population.length === 0) return;
+      for (let networkIndex = 0; networkIndex < population.length; networkIndex++) {
+        const network = population[networkIndex];
+        try {
+          if (!network || typeof network.train !== "function") continue;
+          const iterations = Math.min(
+            _EvolutionEngine.#PRETRAIN_MAX_ITER,
+            _EvolutionEngine.#PRETRAIN_BASE_ITER + Math.floor((lamarckianTrainingSet?.length || 0) / 2)
+          );
+          network.train(lamarckianTrainingSet, {
+            iterations,
+            error: _EvolutionEngine.#DEFAULT_TRAIN_ERROR,
+            rate: _EvolutionEngine.#DEFAULT_PRETRAIN_RATE,
+            momentum: _EvolutionEngine.#DEFAULT_PRETRAIN_MOMENTUM,
+            batchSize: _EvolutionEngine.#DEFAULT_PRETRAIN_BATCH,
+            allowRecurrent: true,
+            cost: methods_exports.Cost.softmaxCrossEntropy
+          });
+          try {
+            _EvolutionEngine.#applyCompassWarmStart(network);
+          } catch {
+          }
+          try {
+            _EvolutionEngine.#centerOutputBiases(network);
+          } catch {
+          }
+        } catch {
+        }
+      }
+    }
+    /**
+     * Create a cooperative frame-yielding function used by the evolution loop.
+     * @internal
+     * @returns A function that yields cooperatively to the next animation frame / tick.
+     *
+     * Behaviour:
+     *  - Prefers `requestAnimationFrame` when available (browser hosts).
+     *  - Falls back to `setImmediate` when available (Node) or `setTimeout(...,0)` otherwise.
+     *  - Respects a cooperative pause flag (`globalThis.asciiMazePaused`) by polling between ticks
+     *    without busy-waiting. The returned function resolves once a single new frame/tick is available
+     *    and the pause flag is not set.
+     *
+     * Steps:
+     *  1) Choose the preferred tick function based on the host runtime.
+     *  2) When called, await the preferred tick; if `asciiMazePaused` is true poll again after the tick.
+     *  3) Resolve once a tick passed while not paused.
+     */
+    static #makeFlushToFrame() {
+      const rafTick = () => new Promise(
+        (resolve) => globalThis.requestAnimationFrame ? globalThis.requestAnimationFrame(() => resolve()) : setTimeout(() => resolve(), 0)
+      );
+      const immediateTick = () => new Promise(
+        (resolve) => typeof setImmediate === "function" ? setImmediate(resolve) : setTimeout(resolve, 0)
+      );
+      const timeoutTick = () => new Promise((resolve) => setTimeout(resolve, 0));
+      const preferredTick = typeof globalThis.requestAnimationFrame === "function" ? rafTick : typeof setImmediate === "function" ? immediateTick : timeoutTick;
+      return async () => {
+        while (true) {
+          await preferredTick();
+          if (!globalThis.asciiMazePaused) return;
+        }
+      };
+    }
+    /**
+     * Initialize persistence helpers (Node `fs` & `path`) when available and ensure the target
+     * directory exists. This helper intentionally does nothing in browser-like hosts.
+     *
+     * Steps:
+     * 1) Detect whether a Node-like `require` is available and attempt to load `fs` and `path`.
+     * 2) If both modules are available and `persistDir` is provided, ensure the directory exists
+     *    by creating it recursively when necessary.
+     * 3) Return an object containing the (possibly null) `{ fs, path }` references for callers to use.
+     *
+     * Notes:
+     * - This helper deliberately performs defensive checks and swallows synchronous errors because
+     *   persistence is optional in many host environments (tests, browser demos).
+     * - No large allocations are performed here; the function returns lightweight references.
+     *
+     * @param persistDir Optional directory to ensure exists. If falsy, no filesystem mutations are attempted.
+     * @returns Object with `{ fs, path }` where each value may be `null` when unavailable.
+     * @internal
+     */
+    static #initPersistence(persistDir) {
+      let fs = null;
+      let path = null;
+      try {
+        const maybeRequire = globalThis.require ?? (typeof __require === "function" ? __require : null);
+        if (maybeRequire) {
+          try {
+            fs = maybeRequire("fs");
+            path = maybeRequire("path");
+          } catch {
+          }
+        }
+      } catch {
+      }
+      if (fs && typeof fs.existsSync === "function" && persistDir) {
+        try {
+          if (!fs.existsSync(persistDir)) {
+            if (typeof fs.mkdirSync === "function")
+              fs.mkdirSync(persistDir, { recursive: true });
+          }
+        } catch {
+        }
+      }
+      return { fs, path };
+    }
+    /**
+     * Build a resilient writer that attempts to write to Node stdout, then a provided
+     * dashboard logger, and finally `console.log` as a last resort.
+     *
+     * Steps:
+     * 1) If Node `process.stdout.write` is available, use it (no trailing newline forced).
+     * 2) Else if `dashboardManager.logFunction` exists, call it.
+     * 3) Else fall back to `console.log` and trim the message.
+     *
+     * Notes:
+     * - Errors are swallowed; logging must never throw and disrupt the evolution loop.
+     * - This factory is allocation-light; the returned function only creates a trimmed string
+     *   when falling back to `console.log`.
+     *
+     * @param dashboardManager Optional manager exposing `logFunction(msg:string)` used in some UIs.
+     * @returns A function accepting a single string message to write.
+     * @internal
+     */
+    static #makeSafeWriter(dashboardManager) {
+      const hasProcessStdout = (() => {
+        try {
+          return typeof process !== "undefined" && process && process.stdout && typeof process.stdout.write === "function";
+        } catch {
+          return false;
+        }
+      })();
+      const dashboardLogFn = (() => {
+        try {
+          return dashboardManager && dashboardManager.logFunction ? dashboardManager.logFunction.bind(dashboardManager) : null;
+        } catch {
+          return null;
+        }
+      })();
+      return (msg) => {
+        if (!msg && msg !== "") return;
+        if (hasProcessStdout) {
+          try {
+            process.stdout.write(msg);
+            return;
+          } catch {
+          }
+        }
+        if (dashboardLogFn) {
+          try {
+            dashboardLogFn(msg);
+            return;
+          } catch {
+          }
+        }
+        try {
+          if (typeof console !== "undefined" && typeof console.log === "function")
+            console.log(msg.trim());
+        } catch {
+        }
+      };
+    }
+    /**
+     * Construct a configured Neat instance using the project's recommended defaults.
+     *
+     * Steps:
+     * 1) Normalize `cfg` into a local `conf` bag so we can use nullish coalescing for defaults.
+     * 2) Derive commonly-used numeric settings (popsize, elitism, provenance) into descriptive locals.
+     * 3) Assemble the final options object and instantiate the `Neat` driver.
+     *
+     * Notes:
+     * - This helper centralizes engine opinionated defaults so other parts of the engine remain concise.
+     * - No typed-array scratch buffers are required here; the configuration objects are small and infrequently created.
+     *
+     * @param inputCount Number of inputs for the networks.
+     * @param outputCount Number of outputs for the networks.
+     * @param fitnessCallback Function receiving a network and returning its fitness score.
+     * @param cfg Optional configuration overrides (popSize, mutation, telemetry, etc.).
+     * @returns A new configured `Neat` instance.
+     * @example
+     * // Create a neat instance with a custom population size and disabled lineage tracking
+     * const neat = EvolutionEngine['#createNeat'](10, 4, fitnessFn, { popSize: 200, lineageTracking: false });
+     * @internal
+     */
+    static #createNeat(inputCount, outputCount, fitnessCallback, cfg) {
+      const conf = cfg ?? {};
+      const popSize = Number.isFinite(conf.popSize) ? conf.popSize : _EvolutionEngine.#DEFAULT_POPSIZE;
+      const mutationOps = Array.isArray(conf.mutation) ? conf.mutation : [
+        methods_exports.mutation.ADD_NODE,
+        methods_exports.mutation.SUB_NODE,
+        methods_exports.mutation.ADD_CONN,
+        methods_exports.mutation.SUB_CONN,
+        methods_exports.mutation.MOD_BIAS,
+        methods_exports.mutation.MOD_ACTIVATION,
+        methods_exports.mutation.MOD_CONNECTION,
+        methods_exports.mutation.ADD_LSTM_NODE
+      ];
+      const elitism = Math.max(
+        1,
+        Math.floor(popSize * _EvolutionEngine.#DEFAULT_ELITISM_FRACTION)
+      );
+      const provenance = Math.max(
+        1,
+        Math.floor(popSize * _EvolutionEngine.#DEFAULT_PROVENANCE_FRACTION)
+      );
+      const allowRecurrent = conf.allowRecurrent !== false;
+      const adaptiveMutation = conf.adaptiveMutation ?? {
+        enabled: true,
+        strategy: "twoTier"
+      };
+      const multiObjective = conf.multiObjective ?? {
+        enabled: true,
+        complexityMetric: "nodes",
+        autoEntropy: true
+      };
+      const telemetry = conf.telemetry ?? {
+        enabled: true,
+        performance: true,
+        complexity: true,
+        hypervolume: true
+      };
+      const lineageTracking = conf.lineageTracking === true;
+      const novelty = conf.novelty ?? { enabled: true, blendFactor: 0.15 };
+      const targetSpecies = conf.targetSpecies ?? _EvolutionEngine.#DEFAULT_TARGET_SPECIES;
+      const adaptiveTargetSpecies = conf.adaptiveTargetSpecies ?? {
+        enabled: true,
+        entropyRange: _EvolutionEngine.#DEFAULT_ENTROPY_RANGE,
+        speciesRange: [6, 14],
+        smooth: _EvolutionEngine.#DEFAULT_ADAPTIVE_SMOOTH
+      };
+      const neatInstance = new Neat(inputCount, outputCount, fitnessCallback, {
+        popsize: popSize,
+        mutation: mutationOps,
+        mutationRate: _EvolutionEngine.#DEFAULT_MUTATION_RATE,
+        mutationAmount: _EvolutionEngine.#DEFAULT_MUTATION_AMOUNT,
+        elitism,
+        provenance,
+        allowRecurrent,
+        minHidden: _EvolutionEngine.#DEFAULT_MIN_HIDDEN,
+        adaptiveMutation,
+        multiObjective,
+        telemetry,
+        lineageTracking,
+        novelty,
+        targetSpecies,
+        adaptiveTargetSpecies
+      });
+      return neatInstance;
+    }
+    /**
+     * Seed the NEAT population from an optional initial population and/or an optional
+     * initial best network.
+     *
+     * This method is intentionally best-effort and non-throwing: any cloning or
+     * driver mutating errors are swallowed so the evolution loop can continue.
+     *
+     * Parameters:
+     * @param neat - NEAT driver/manager object which may receive the initial population.
+     * @param initialPopulation - Optional array of networks to use as the starting population.
+     * @param initialBestNetwork - Optional single network to place at index 0 (best seed).
+     * @param targetPopSize - Fallback population size used when `neat.population` is missing.
+     *
+     * Example:
+     * // Use a provided population and ensure `neat.options.popsize` is kept in sync
+     * EvolutionEngine['#seedInitialPopulation'](neat, providedPopulation, providedBest, 150);
+     *
+     * Implementation notes / steps:
+     * 1) Fast-guard when `neat` is falsy (nothing to seed).
+     * 2) When `initialPopulation` is provided, clone entries into the pooled
+     *    `#SCRATCH_POP_CLONE` buffer (grow the pool only when needed). This avoids
+     *    per-call allocations while still returning a fresh logical array length.
+     * 3) If `initialBestNetwork` is supplied, ensure `neat.population` exists and
+     *    overwrite index 0 with a clone of the supplied best network.
+     * 4) Keep `neat.options.popsize` consistent with the actual population length
+     *    (best-effort, swallowed errors).
+     *
+     * The method prefers calling `.clone()` on network objects when available and
+     * falls back to referencing the original object on clone failure.
+     *
+     * @internal
+     */
+    static #seedInitialPopulation(neat, initialPopulation, initialBestNetwork, targetPopSize) {
+      if (!neat) return;
+      try {
+        if (Array.isArray(initialPopulation) && initialPopulation.length > 0) {
+          const sourceLength = initialPopulation.length;
+          let pooledCloneBuffer = _EvolutionEngine.#SCRATCH_POP_CLONE;
+          if (!Array.isArray(pooledCloneBuffer) || pooledCloneBuffer.length < sourceLength) {
+            pooledCloneBuffer = new Array(sourceLength);
+            _EvolutionEngine.#SCRATCH_POP_CLONE = pooledCloneBuffer;
+          }
+          for (let sourceIndex = 0; sourceIndex < sourceLength; sourceIndex++) {
+            const candidateNetwork = initialPopulation[sourceIndex];
+            try {
+              pooledCloneBuffer[sourceIndex] = candidateNetwork && typeof candidateNetwork.clone === "function" ? candidateNetwork.clone() : candidateNetwork;
+            } catch (cloneError) {
+              pooledCloneBuffer[sourceIndex] = candidateNetwork;
+            }
+          }
+          pooledCloneBuffer.length = sourceLength;
+          neat.population = pooledCloneBuffer;
+        }
+        if (initialBestNetwork) {
+          if (!Array.isArray(neat.population)) neat.population = [];
+          try {
+            neat.population[0] = typeof initialBestNetwork.clone === "function" ? initialBestNetwork.clone() : initialBestNetwork;
+          } catch {
+          }
+        }
+        try {
+          neat.options = neat.options || {};
+          neat.options.popsize = Array.isArray(neat.population) ? neat.population.length : targetPopSize;
+        } catch {
+        }
+      } catch (outerError) {
+        try {
+          neat.options = neat.options || {};
+          neat.options.popsize = Array.isArray(neat.population) ? neat.population.length : targetPopSize;
+        } catch {
+        }
+      }
+    }
+    /**
+     * Inspect cooperative cancellation sources and annotate the provided result when cancelled.
+     *
+     * Behaviour & contract:
+     *  - Prefer non-allocating, cheap checks. This helper is allocation-free and uses only
+     *    short-lived local references (no typed-array scratch buffers are necessary here).
+     *  - Checks two cancellation sources in priority order:
+     *      1) `options.cancellation.isCancelled()` (legacy cancellation object)
+     *      2) `options.signal.aborted` (standard AbortSignal)
+     *  - When a cancellation is observed the helper sets `bestResult.exitReason` to the
+     *    canonical string ('cancelled' or 'aborted') and returns that string.
+     *  - All checks are best-effort: exceptions are swallowed to avoid disrupting the
+     *    evolution control loop.
+     *
+     * Parameters:
+     * @param options - Optional run configuration which may contain `cancellation` and/or `signal`.
+     * @param bestResult - Optional mutable result object that will be annotated with `exitReason`.
+     * @returns A reason string ('cancelled' | 'aborted') when cancellation is detected, otherwise `undefined`.
+     *
+     * Example:
+     * const cancelReason = EvolutionEngine['#checkCancellation'](opts, runResult);
+     * if (cancelReason) return cancelReason;
+     *
+     * Notes:
+     *  - No pooling or typed-array scratch buffers are required for this small helper.
+     *  - Keep this method allocation-free and safe to call on hot paths.
+     *
+     * @internal
+     */
+    static #checkCancellation(options, bestResult) {
+      try {
+        const legacyCancellation = options?.cancellation;
+        if (legacyCancellation && typeof legacyCancellation.isCancelled === "function" && legacyCancellation.isCancelled()) {
+          if (bestResult) bestResult.exitReason = "cancelled";
+          return "cancelled";
+        }
+        const abortSignal = options?.signal;
+        if (abortSignal?.aborted) {
+          if (bestResult) bestResult.exitReason = "aborted";
+          return "aborted";
+        }
+      } catch (err) {
+      }
+      return void 0;
+    }
+    /**
+     * Sample `k` items from `src` into the pooled SCRATCH_SAMPLE buffer (with replacement).
+     * Returns the number of items written into the scratch buffer.
+     * @internal
+     * @remarks Non-reentrant: uses shared `#SCRATCH_SAMPLE` buffer.
+     */
+    static #sampleIntoScratch(src, k) {
+      if (!Array.isArray(src) || k <= 0) return 0;
+      const requestedSampleCount = Math.floor(k);
+      const sourceLength = src.length | 0;
+      if (sourceLength === 0) return 0;
+      let pooledBuffer = _EvolutionEngine.#SCRATCH_SAMPLE;
+      if (!Array.isArray(pooledBuffer))
+        pooledBuffer = _EvolutionEngine.#SCRATCH_SAMPLE = [];
+      if (pooledBuffer.length < requestedSampleCount) {
+        let newCapacity = pooledBuffer.length > 0 ? pooledBuffer.length : 1;
+        while (newCapacity < requestedSampleCount) newCapacity <<= 1;
+        const newBuf = new Array(newCapacity);
+        for (let i = 0; i < pooledBuffer.length; i++) newBuf[i] = pooledBuffer[i];
+        _EvolutionEngine.#SCRATCH_SAMPLE = newBuf;
+        pooledBuffer = newBuf;
+      }
+      const writeCount = Math.min(requestedSampleCount, pooledBuffer.length);
+      let writeIndex = 0;
+      const fastRand = _EvolutionEngine.#fastRandom;
+      const blockBound = writeCount & ~3;
+      while (writeIndex < blockBound) {
+        pooledBuffer[writeIndex++] = src[fastRand() * sourceLength | 0];
+        pooledBuffer[writeIndex++] = src[fastRand() * sourceLength | 0];
+        pooledBuffer[writeIndex++] = src[fastRand() * sourceLength | 0];
+        pooledBuffer[writeIndex++] = src[fastRand() * sourceLength | 0];
+      }
+      while (writeIndex < writeCount) {
+        pooledBuffer[writeIndex++] = src[fastRand() * sourceLength | 0];
+      }
+      return writeCount;
+    }
+    /**
+     * Sample up to k items (with replacement) from src segment [segmentStart, end) into scratch buffer.
+     * Avoids temporary slice allocation for segment sampling.
+     * @internal
+     * @remarks Non-reentrant: uses shared `#SCRATCH_SAMPLE` buffer.
+     *
+     * Example:
+     * // Sample 10 items from src starting at index 20 into the engine scratch buffer
+     * const written = EvolutionEngine['#sampleSegmentIntoScratch'](srcArray, 20, 10);
+     */
+    static #sampleSegmentIntoScratch(src, segmentStart, k) {
+      if (!Array.isArray(src) || k <= 0) return 0;
+      const sourceLength = src.length | 0;
+      if (segmentStart >= sourceLength) return 0;
+      const segmentLength = sourceLength - (segmentStart | 0);
+      if (segmentLength <= 0) return 0;
+      const requestedSampleCount = Math.floor(k);
+      let pooledBuffer = _EvolutionEngine.#SCRATCH_SAMPLE;
+      if (!Array.isArray(pooledBuffer))
+        pooledBuffer = _EvolutionEngine.#SCRATCH_SAMPLE = [];
+      if (pooledBuffer.length < requestedSampleCount) {
+        let newCapacity = pooledBuffer.length > 0 ? pooledBuffer.length : 1;
+        while (newCapacity < requestedSampleCount) newCapacity <<= 1;
+        const newBuf = new Array(newCapacity);
+        for (let i = 0; i < pooledBuffer.length; i++) newBuf[i] = pooledBuffer[i];
+        _EvolutionEngine.#SCRATCH_SAMPLE = newBuf;
+        pooledBuffer = newBuf;
+      }
+      const writeCount = Math.min(requestedSampleCount, pooledBuffer.length);
+      let writeIndex = 0;
+      const fastRand = _EvolutionEngine.#fastRandom;
+      const baseIndex = segmentStart | 0;
+      const blockBound = writeCount & ~3;
+      while (writeIndex < blockBound) {
+        pooledBuffer[writeIndex++] = src[baseIndex + (fastRand() * segmentLength | 0)];
+        pooledBuffer[writeIndex++] = src[baseIndex + (fastRand() * segmentLength | 0)];
+        pooledBuffer[writeIndex++] = src[baseIndex + (fastRand() * segmentLength | 0)];
+        pooledBuffer[writeIndex++] = src[baseIndex + (fastRand() * segmentLength | 0)];
+      }
+      while (writeIndex < writeCount) {
+        pooledBuffer[writeIndex++] = src[baseIndex + (fastRand() * segmentLength | 0)];
+      }
+      return writeCount;
+    }
+    /**
+     * Run one generation: evolve, ensure output identity, update species history, maybe expand population,
+     * and run Lamarckian training if configured.
+     *
+     * Behaviour & contract:
+     *  - Performs a single NEAT generation step in a best-effort, non-throwing manner.
+     *  - Measures profiling durations when `doProfile` is truthy. Profiling is optional and
+     *    kept allocation-free (uses local numeric temporaries only).
+     *  - Invokes the following steps in order (each step is wrapped in a try/catch so
+     *    the evolution loop remains resilient to per-stage failures):
+     *      1) `neat.evolve()` to produce the fittest network for this generation.
+     *      2) `#ensureOutputIdentity` to normalise output activations for consumers.
+     *      3) `#handleSpeciesHistory` to update species statistics and history.
+     *      4) `#maybeExpandPopulation` to grow the population when configured and warranted.
+     *      5) Optional Lamarckian warm-start training via `#applyLamarckianTraining`.
+     *  - The method is allocation-light and reuses engine helpers / pooled buffers where
+     *    appropriate. It never throws; internal errors are swallowed and optionally logged
+     *    via the provided `safeWrite` function.
+     *
+     * Parameters (props):
+     * @param neat - NEAT driver instance used for evolving the generation.
+     * @param doProfile - When truthy measure timing for the evolve step (ms) using engine clock.
+     * @param lamarckianIterations - Number of supervised training iterations to run per genome (0 to skip).
+     * @param lamarckianTrainingSet - Array of supervised training cases used for warm-start (may be empty).
+     * @param lamarckianSampleSize - Optional per-network sample size used by the warm-start routine.
+     * @param safeWrite - Safe logging function; used only for best-effort diagnostic messages.
+     * @param completedGenerations - Current generation index (used by expansion heuristics).
+     * @param dynamicPopEnabled - Whether dynamic population expansion is enabled.
+     * @param dynamicPopMax - Upper bound on population size for expansion.
+     * @param plateauGenerations - Window size used by plateau detection.
+     * @param plateauCounter - Current plateau counter used by expansion heuristics.
+     * @param dynamicPopExpandInterval - Generation interval to attempt expansion.
+     * @param dynamicPopExpandFactor - Fractional growth factor used to compute new members.
+     * @param dynamicPopPlateauSlack - Minimum plateau ratio required to trigger expansion.
+     *
+     * @returns An object shaped { fittest, tEvolve, tLamarck } where:
+     *  - `fittest` is the network returned by `neat.evolve()` (may be null on error),
+     *  - `tEvolve` is the measured evolve duration in milliseconds when `doProfile` is true (0 otherwise),
+     *  - `tLamarck` is the total time spent in Lamarckian training (0 when skipped).
+     *
+     * @example
+     * // Run a single generation with profiling and optional Lamarckian warm-start
+     * const { fittest, tEvolve, tLamarck } = await EvolutionEngine['#runGeneration'](
+     *   neatInstance,
+     *   true,   // doProfile
+     *   5,      // lamarckianIterations
+     *   trainingSet,
+     *   16,     // lamarckianSampleSize
+     *   console.log,
+     *   genIndex,
+     *   true,
+     *   500,
+     *   10,
+     *   plateauCounter,
+     *   5,
+     *   0.1,
+     *   0.75
+     * );
+     *
+     * @internal
+     */
+    static async #runGeneration(neat, doProfile, lamarckianIterations, lamarckianTrainingSet, lamarckianSampleSize, safeWrite, completedGenerations, dynamicPopEnabled, dynamicPopMax, plateauGenerations, plateauCounter, dynamicPopExpandInterval, dynamicPopExpandFactor, dynamicPopPlateauSlack) {
+      const profileEnabled = Boolean(doProfile);
+      const clockNow = () => _EvolutionEngine.#now();
+      const startTime = profileEnabled ? clockNow() : 0;
+      let fittestNetwork = null;
+      let evolveDuration = 0;
+      let lamarckDuration = 0;
+      try {
+        fittestNetwork = await neat?.evolve();
+        if (profileEnabled) evolveDuration = clockNow() - startTime;
+      } catch (evolveError) {
+        try {
+          safeWrite?.(`#runGeneration: evolve() threw: ${String(evolveError)}`);
+        } catch {
+        }
+      }
+      try {
+        _EvolutionEngine.#ensureOutputIdentity(neat);
+      } catch (identityError) {
+        try {
+          safeWrite?.(
+            `#runGeneration: ensureOutputIdentity failed: ${String(
+              identityError
+            )}`
+          );
+        } catch {
+        }
+      }
+      try {
+        _EvolutionEngine.#handleSpeciesHistory(neat);
+      } catch (speciesError) {
+        try {
+          safeWrite?.(
+            `#runGeneration: handleSpeciesHistory failed: ${String(speciesError)}`
+          );
+        } catch {
+        }
+      }
+      try {
+        _EvolutionEngine.#maybeExpandPopulation(
+          neat,
+          Boolean(dynamicPopEnabled),
+          completedGenerations,
+          dynamicPopMax,
+          plateauGenerations,
+          plateauCounter,
+          dynamicPopExpandInterval,
+          dynamicPopExpandFactor,
+          dynamicPopPlateauSlack,
+          safeWrite
+        );
+      } catch (expandError) {
+        try {
+          safeWrite?.(
+            `#runGeneration: maybeExpandPopulation failed: ${String(expandError)}`
+          );
+        } catch {
+        }
+      }
+      try {
+        const shouldRunLamarckian = Number.isFinite(lamarckianIterations) && lamarckianIterations > 0 && Array.isArray(lamarckianTrainingSet) && lamarckianTrainingSet.length > 0;
+        if (shouldRunLamarckian) {
+          lamarckDuration = _EvolutionEngine.#applyLamarckianTraining(
+            neat,
+            lamarckianTrainingSet,
+            lamarckianIterations,
+            lamarckianSampleSize,
+            safeWrite,
+            doProfile,
+            completedGenerations
+          );
+        }
+      } catch (lamarckError) {
+        try {
+          safeWrite?.(
+            `#runGeneration: applyLamarckianTraining failed: ${String(
+              lamarckError
+            )}`
+          );
+        } catch {
+        }
+      }
+      return {
+        fittest: fittestNetwork,
+        tEvolve: evolveDuration,
+        tLamarck: lamarckDuration
+      };
+    }
+    /**
+     * Update plateau detection state based on the latest fitness.
+     *
+     * Behaviour & contract:
+     *  - Compare the provided `fitness` with the last recorded best-for-plateau plus a
+     *    configurable improvement threshold. If the new fitness exceeds that value the
+     *    plateau counter is reset and the last-best-for-plateau is updated.
+     *  - Otherwise the plateau counter is incremented (capped to avoid overflow).
+     *  - The helper is allocation-free and intentionally simple; no pooled scratch
+     *    buffers are required for this numeric operation.
+     *
+     * Steps (high level):
+     *  1) Validate numeric inputs and normalise the improvement threshold to a non-negative number.
+     *  2) If `fitness` represents a meaningful improvement then reset the counter and update the last-best.
+     *  3) Otherwise increment the counter (with a safe cap) and return the updated state.
+     *
+     * Parameters:
+     * @param fitness - Latest measured fitness (finite number expected).
+     * @param lastBestFitnessForPlateau - Previous best fitness used as the plateau baseline.
+     * @param plateauCounter - Current plateau counter (integer >= 0).
+     * @param plateauImprovementThreshold - Minimum improvement required to reset plateau (>= 0).
+     * @returns Updated `{ plateauCounter, lastBestFitnessForPlateau }`.
+     *
+     * @example
+     * const state = EvolutionEngine['#updatePlateauState'](1.23, 1.1, 3, 0.05);
+     * // state => { plateauCounter: 0, lastBestFitnessForPlateau: 1.23 }
+     *
+     * @internal
+     */
+    static #updatePlateauState(fitness, lastBestFitnessForPlateau, plateauCounter, plateauImprovementThreshold) {
+      if (!Number.isFinite(fitness)) {
+        return { plateauCounter, lastBestFitnessForPlateau };
+      }
+      const baseline = Number.isFinite(lastBestFitnessForPlateau) ? lastBestFitnessForPlateau : -Infinity;
+      const improvementThreshold = Number.isFinite(plateauImprovementThreshold) && plateauImprovementThreshold > 0 ? plateauImprovementThreshold : 0;
+      let counter = Number.isFinite(plateauCounter) && plateauCounter >= 0 ? Math.floor(plateauCounter) : 0;
+      if (fitness > baseline + improvementThreshold) {
+        lastBestFitnessForPlateau = fitness;
+        counter = 0;
+        return { plateauCounter: counter, lastBestFitnessForPlateau };
+      }
+      const SAFE_CAP = 536870911;
+      counter = Math.min(SAFE_CAP, counter + 1);
+      return { plateauCounter: counter, lastBestFitnessForPlateau: baseline };
+    }
+    /**
+     * Handle simplify entry and per-generation advance.
+     *
+     * Behaviour & contract:
+     *  - Decides when to enter a simplification phase and runs one simplify cycle per
+     *    generation while active. The helper is intentionally small and allocation-free.
+     *  - It delegates the decision to start simplifying to `#maybeStartSimplify` and the
+     *    per-generation work to `#runSimplifyCycle`. Both calls are best-effort and any
+     *    internal errors are swallowed so the evolution loop remains resilient.
+     *
+     * Steps:
+     *  1) Fast-guard and normalise numeric inputs.
+     *  2) If not currently simplifying, ask `#maybeStartSimplify` whether to begin and
+     *     initialise `simplifyRemaining` accordingly (reset plateau counter when started).
+     *  3) If simplifying, run one simplify cycle and update remaining duration; turn off
+     *     simplify mode when the remaining budget is exhausted.
+     *
+     * Notes:
+     *  - This helper does not allocate scratch buffers; no typed-array pooling is necessary.
+     *  - Returns the minimal state the caller needs to persist between generations.
+     *
+     * @param neat - NEAT driver instance used for simplification operations.
+     * @param plateauCounter - Current plateau counter (integer >= 0).
+     * @param plateauGenerations - Window size used to decide when to attempt simplification.
+     * @param simplifyDuration - Requested simplify duration (generations) when starting.
+     * @param simplifyMode - Current boolean indicating whether a simplify cycle is active.
+     * @param simplifyRemaining - Remaining simplify generations (integer >= 0).
+     * @param simplifyStrategy - Strategy identifier passed to the simplify cycle.
+     * @param simplifyPruneFraction - Fraction of connections to prune when simplifying.
+     * @returns Object with updated { simplifyMode, simplifyRemaining, plateauCounter }.
+     *
+     * @example
+     * const state = EvolutionEngine['#handleSimplifyState'](neat, 3, 10, 5, false, 0, 'aggressive', 0.2);
+     * // use returned state in the next generation loop
+     *
+     * @internal
+     */
+    static #handleSimplifyState(neat, plateauCounter, plateauGenerations, simplifyDuration, simplifyMode, simplifyRemaining, simplifyStrategy, simplifyPruneFraction) {
+      let counter = Number.isFinite(plateauCounter) && plateauCounter >= 0 ? Math.floor(plateauCounter) : 0;
+      const windowSize = Number.isFinite(plateauGenerations) && plateauGenerations > 0 ? Math.floor(plateauGenerations) : 0;
+      const requestedDuration = Number.isFinite(simplifyDuration) && simplifyDuration > 0 ? Math.floor(simplifyDuration) : 0;
+      let remaining = Number.isFinite(simplifyRemaining) && simplifyRemaining > 0 ? Math.floor(simplifyRemaining) : 0;
+      let active = Boolean(simplifyMode);
+      if (!active) {
+        try {
+          const startBudget = _EvolutionEngine.#maybeStartSimplify(
+            counter,
+            windowSize,
+            requestedDuration
+          );
+          if (Number.isFinite(startBudget) && startBudget > 0) {
+            active = true;
+            remaining = Math.floor(startBudget);
+            counter = 0;
+          }
+        } catch (startError) {
+        }
+      }
+      if (active) {
+        try {
+          remaining = _EvolutionEngine.#runSimplifyCycle(
+            neat,
+            remaining,
+            simplifyStrategy,
+            simplifyPruneFraction
+          );
+          if (!Number.isFinite(remaining) || remaining <= 0) {
+            active = false;
+            remaining = 0;
+          }
+        } catch (cycleError) {
+          active = false;
+          remaining = 0;
+        }
+      }
+      return {
+        simplifyMode: active,
+        simplifyRemaining: remaining,
+        plateauCounter: counter
+      };
+    }
+    /**
+     * Simulate the supplied `fittest` genome/network and perform allocation-light postprocessing.
+     *
+     * Behaviour & contract:
+     *  - Runs the simulation via `MazeMovement.simulateAgent` and attaches compact telemetry
+     *    (saturation fraction, action entropy) directly onto the `fittest` object (in-place).
+     *  - When per-step logits are returned the helper attempts to copy them into the engine's pooled
+     *    ring buffers to avoid per-run allocations. Two copy modes are supported:
+     *      1) Shared SAB-backed flat Float32Array with an atomic Int32 write index (cross-worker safe).
+     *      2) Local in-process per-row Float32Array ring (`#SCRATCH_LOGITS_RING`).
+     *  - Best-effort: all mutation and buffer-copy steps are guarded; failures are swallowed so the
+     *    evolution loop is not interrupted. Use `safeWrite` for optional diagnostic messages.
+     *
+     * Steps (high level):
+     *  1) Run the simulator and capture wall-time when `doProfile` is truthy.
+     *  2) Attach compact telemetry fields to `fittest` and ensure legacy `_lastStepOutputs` exists.
+     *  3) If per-step logits are available, ensure ring capacity and copy them into the selected ring.
+     *  4) Optionally prune saturated hidden->output connections and emit telemetry via `#logGenerationTelemetry`.
+     *  5) Return the raw simulation result and elapsed simulation time (ms when profiling enabled).
+     *
+     * Notes on pooling / reentrancy:
+     *  - The local ring `#SCRATCH_LOGITS_RING` is not re-entrant; callers must avoid concurrent writes.
+     *  - When `#LOGITS_RING_SHARED` is true we prefer the SAB-backed path which uses Atomics and is safe
+     *    for cross-thread producers.
+     *
+     * @param fittest Genome/network considered the generation's best; may be mutated with metadata.
+     * @param encodedMaze Maze descriptor used by the simulator.
+     * @param startPosition Start co-ordinates passed as-is to the simulator.
+     * @param exitPosition Exit co-ordinates passed as-is to the simulator.
+     * @param distanceMap Optional precomputed distance map consumed by the simulator.
+     * @param maxSteps Optional maximum simulation steps; may be undefined to allow default.
+     * @param doProfile When truthy measure and return the simulation time in milliseconds.
+     * @param safeWrite Optional logger used for non-fatal diagnostic messages.
+     * @param logEvery Emit telemetry every `logEvery` generations (0 disables periodic telemetry).
+     * @param completedGenerations Current generation index used for conditional telemetry.
+     * @param neat NEAT driver instance passed to telemetry hooks.
+     * @returns An object { generationResult, simTime } where simTime is ms when profiling is enabled.
+     * @example
+     * const { generationResult, simTime } = EvolutionEngine['#simulateAndPostprocess'](
+     *   bestGenome, maze, start, exit, distMap, 1000, true, console.log, 10, genIdx, neat
+     * );
+     * @internal
+     */
+    static #simulateAndPostprocess(fittest, encodedMaze, startPosition, exitPosition, distanceMap, maxSteps, doProfile, safeWrite, logEvery, completedGenerations, neat) {
+      const startTime = doProfile ? _EvolutionEngine.#now() : 0;
+      const simResult = MazeMovement.simulateAgent(
+        fittest,
+        encodedMaze,
+        startPosition,
+        exitPosition,
+        distanceMap,
+        maxSteps
+      );
+      try {
+        if (!fittest._lastStepOutputs) {
+          fittest._lastStepOutputs = _EvolutionEngine.#SCRATCH_LOGITS_RING;
+        }
+      } catch {
+      }
+      try {
+        fittest._saturationFraction = simResult?.saturationFraction ?? 0;
+        fittest._actionEntropy = simResult?.actionEntropy ?? 0;
+      } catch {
+      }
+      try {
+        const perStepLogits = simResult?.stepOutputs;
+        if (Array.isArray(perStepLogits) && perStepLogits.length > 0) {
+          _EvolutionEngine.#ensureLogitsRingCapacity(perStepLogits.length);
+          const useSharedSAB = _EvolutionEngine.#LOGITS_RING_SHARED && _EvolutionEngine.#SCRATCH_LOGITS_SHARED && _EvolutionEngine.#SCRATCH_LOGITS_SHARED_W;
+          const actionDim = _EvolutionEngine.#ACTION_DIM;
+          if (useSharedSAB) {
+            const sharedBuffer = _EvolutionEngine.#SCRATCH_LOGITS_SHARED;
+            const atomicIndexView = _EvolutionEngine.#SCRATCH_LOGITS_SHARED_W;
+            const capacityMask = _EvolutionEngine.#LOGITS_RING_CAP - 1;
+            for (let stepIndex = 0; stepIndex < perStepLogits.length; stepIndex++) {
+              const logitsVector = perStepLogits[stepIndex];
+              if (!Array.isArray(logitsVector)) continue;
+              const currentWriteIndex = Atomics.load(atomicIndexView, 0) & capacityMask;
+              const baseOffset = currentWriteIndex * actionDim;
+              const copyLength = Math.min(actionDim, logitsVector.length);
+              for (let dimIndex = 0; dimIndex < copyLength; dimIndex++) {
+                sharedBuffer[baseOffset + dimIndex] = logitsVector[dimIndex] ?? 0;
+              }
+              Atomics.store(
+                atomicIndexView,
+                0,
+                Atomics.load(atomicIndexView, 0) + 1 & 2147483647
+              );
+            }
+          } else {
+            const ringCapacityMask = _EvolutionEngine.#LOGITS_RING_CAP - 1;
+            for (let stepIndex = 0; stepIndex < perStepLogits.length; stepIndex++) {
+              const logitsVector = perStepLogits[stepIndex];
+              if (!Array.isArray(logitsVector)) continue;
+              const writePos = _EvolutionEngine.#SCRATCH_LOGITS_RING_W & ringCapacityMask;
+              const targetRow = _EvolutionEngine.#SCRATCH_LOGITS_RING[writePos];
+              const copyLength = Math.min(actionDim, logitsVector.length);
+              for (let dimIndex = 0; dimIndex < copyLength; dimIndex++) {
+                targetRow[dimIndex] = logitsVector[dimIndex] ?? 0;
+              }
+              _EvolutionEngine.#SCRATCH_LOGITS_RING_W = _EvolutionEngine.#SCRATCH_LOGITS_RING_W + 1 & 2147483647;
+            }
+          }
+        }
+      } catch {
+      }
+      try {
+        if (simResult?.saturationFraction && simResult.saturationFraction > _EvolutionEngine.#SATURATION_PRUNE_THRESHOLD) {
+          _EvolutionEngine.#pruneSaturatedHiddenOutputs(fittest);
+        }
+      } catch {
+      }
+      try {
+        if (!_EvolutionEngine.#TELEMETRY_MINIMAL && logEvery > 0 && completedGenerations % logEvery === 0) {
+          _EvolutionEngine.#logGenerationTelemetry(
+            neat,
+            fittest,
+            simResult,
+            completedGenerations,
+            safeWrite
+          );
+        }
+      } catch {
+      }
+      const elapsed = doProfile ? _EvolutionEngine.#now() - startTime : 0;
+      return { generationResult: simResult, simTime: elapsed };
+    }
+    /**
+     * Inspect common termination conditions and perform minimal, best-effort side-effects.
+     *
+     * Behaviour & contract:
+     *  - Checks three canonical stop reasons in priority order: `solved`, `stagnation`, then `maxGenerations`.
+     *  - When a stop condition is met the helper will:
+     *      a) Annotate `bestResult.exitReason` with the canonical reason string.
+     *      b) Attempt to update the `dashboardManager` (if present) and await `flushToFrame` to yield to the host.
+     *      c) On solve, optionally toggle a cooperative pause flag and emit a small `asciiMazeSolved` event.
+     *  - All side-effects are best-effort: exceptions are caught and swallowed so the evolution loop cannot be aborted.
+     *  - The helper is allocation-light and uses only local references; it is safe to call frequently.
+     *
+     * Steps (high-level):
+     *  1) Fast-check `solved` using `bestResult.success` and `minProgressToPass`.
+     *  2) If solved: update dashboard, await flush, emit optional pause/event, set exit reason and return 'solved'.
+     *  3) Check stagnation (bounded by `maxStagnantGenerations`) and, if triggered, update dashboard/flush and return 'stagnation'.
+     *  4) Check max generations and return 'maxGenerations' when reached.
+     *  5) Return `undefined` when no stop condition applies.
+     *
+     * @param bestResult Mutable run summary object (may be mutated with `exitReason`).
+     * @param bestNetwork Network object associated with the best result (used for dashboard rendering).
+     * @param maze Maze descriptor passed to dashboard updates/events.
+     * @param completedGenerations Current generation index (integer).
+     * @param neat NEAT driver instance (passed to dashboard update).
+     * @param dashboardManager Optional manager exposing `update(maze, result, network, gen, neat)`.
+     * @param flushToFrame Async function used to yield to the host renderer (e.g. requestAnimationFrame); may be a no-op.
+     * @param minProgressToPass Numeric threshold used to consider a run 'solved'.
+     * @param autoPauseOnSolve When truthy set cooperative pause flag and emit an event on solve.
+     * @param stopOnlyOnSolve When true ignore stagnation/maxGenerations as stop reasons.
+     * @param stagnantGenerations Current count of stagnant generations observed.
+     * @param maxStagnantGenerations Max allowed stagnant generations before stopping.
+     * @param maxGenerations Absolute generation cap after which the run stops.
+     * @returns A canonical reason string ('solved'|'stagnation'|'maxGenerations') when stopping, otherwise `undefined`.
+     * @example
+     * const reason = await EvolutionEngine['#checkStopConditions'](bestResult, bestNet, maze, gen, neat, dashboard, flush, 95, true, false, stagnant, 500, 10000);
+     * if (reason) console.log('Stopping due to', reason);
+     * @internal
+     */
+    static async #checkStopConditions(bestResult, bestNetwork, maze, completedGenerations, neat, dashboardManager, flushToFrame, minProgressToPass, autoPauseOnSolve, stopOnlyOnSolve, stagnantGenerations, maxStagnantGenerations, maxGenerations) {
+      const hasBest = Boolean(bestResult);
+      const shouldConsiderStops = !stopOnlyOnSolve;
+      if (bestResult?.success && bestResult.progress >= (minProgressToPass ?? 0)) {
+        try {
+          dashboardManager?.update?.(
+            maze,
+            bestResult,
+            bestNetwork,
+            completedGenerations,
+            neat
+          );
+        } catch {
+        }
+        try {
+          await flushToFrame?.();
+        } catch {
+        }
+        if (autoPauseOnSolve) {
+          try {
+            if (typeof window !== "undefined") {
+              window.asciiMazePaused = true;
+              try {
+                window.dispatchEvent(
+                  new CustomEvent("asciiMazeSolved", {
+                    detail: {
+                      maze,
+                      generations: completedGenerations,
+                      progress: bestResult?.progress
+                    }
+                  })
+                );
+              } catch {
+              }
+            }
+          } catch {
+          }
+        }
+        if (hasBest) bestResult.exitReason = "solved";
+        return "solved";
+      }
+      if (shouldConsiderStops && isFinite(maxStagnantGenerations) && stagnantGenerations >= maxStagnantGenerations) {
+        try {
+          dashboardManager?.update?.(
+            maze,
+            bestResult,
+            bestNetwork,
+            completedGenerations,
+            neat
+          );
+        } catch {
+        }
+        try {
+          await flushToFrame?.();
+        } catch {
+        }
+        if (hasBest) bestResult.exitReason = "stagnation";
+        return "stagnation";
+      }
+      if (shouldConsiderStops && isFinite(maxGenerations) && completedGenerations >= maxGenerations) {
+        if (hasBest) bestResult.exitReason = "maxGenerations";
+        return "maxGenerations";
+      }
+      return void 0;
+    }
+    /**
+     * Prune weak outgoing connections from hidden->output when a hidden node appears
+     * saturated (low mean absolute outgoing weight and near-zero variance).
+     *
+     * Behaviour & contract:
+     *  - Performs a single-pass Welford accumulation over absolute outgoing weights to
+     *    decide whether a hidden node's outputs are collapsed.
+     *  - Uses engine-level typed-array scratch buffers (Float32Array) to avoid per-call
+     *    allocations when collecting absolute weights. The scratch buffer will grow lazily
+     *    using power-of-two sizing when necessary.
+     *  - When saturation is detected we deterministically disable roughly half of the
+     *    outgoing connections with smallest absolute weight. Mutation is done in-place.
+     *  - All work is best-effort: internal exceptions are swallowed to keep the evolution
+     *    loop resilient.
+     *
+     * Steps (inline):
+     *  1) Fast-guard & profiling snapshot.
+     *  2) Iterate hidden nodes, collect their outgoing-to-output connections.
+     *  3) Copy absolute weights into the pooled Float32Array and run Welford to compute mean/M2.
+     *  4) If mean and variance indicate collapse, disable the smallest half of active connections.
+     *  5) Record profiling delta when enabled.
+     *
+     * @param genome Mutable genome object containing a `nodes` array.
+     * @internal
+     * @example
+     * // Soft-prune a single genome after a high-saturation simulation:
+     * EvolutionEngine['#pruneSaturatedHiddenOutputs'](genome);
+     */
+    static #pruneSaturatedHiddenOutputs(genome) {
+      try {
+        const startProfile = _EvolutionEngine.#PROFILE_ENABLED ? _EvolutionEngine.#PROFILE_T0() : 0;
+        const nodesRef = genome?.nodes ?? _EvolutionEngine.#EMPTY_VEC;
+        const outputCount = _EvolutionEngine.#getNodeIndicesByType(
+          nodesRef,
+          "output"
+        );
+        const hiddenCount = _EvolutionEngine.#getNodeIndicesByType(
+          nodesRef,
+          "hidden"
+        );
+        let absWeightsTA = _EvolutionEngine.#SCRATCH_EXPS;
+        const indexFlags = _EvolutionEngine.#SCRATCH_NODE_IDX;
+        for (let hiddenIndex = 0; hiddenIndex < hiddenCount; hiddenIndex++) {
+          const hiddenNode = nodesRef[Number(_EvolutionEngine.#SCRATCH_NODE_IDX[outputCount + hiddenIndex])];
+          if (!hiddenNode) continue;
+          const outConns = _EvolutionEngine.#collectHiddenToOutputConns(
+            hiddenNode,
+            nodesRef,
+            outputCount
+          ) || [];
+          const outConnsLen = outConns.length;
+          if (outConnsLen < 2) continue;
+          const needed = outConnsLen;
+          if (!absWeightsTA || absWeightsTA.length < needed) {
+            let newCap = 1;
+            while (newCap < needed) newCap <<= 1;
+            absWeightsTA = new Float64Array(newCap);
+            _EvolutionEngine.#SCRATCH_EXPS = absWeightsTA;
+          }
+          const fillLimit = Math.min(outConnsLen, absWeightsTA.length);
+          for (let wi = 0; wi < fillLimit; wi++) {
+            const conn = outConns[wi];
+            absWeightsTA[wi] = Math.abs(conn?.weight) || 0;
+          }
+          let mean = 0;
+          let M2 = 0;
+          for (let wi = 0; wi < fillLimit; wi++) {
+            const value = absWeightsTA[wi];
+            const n = wi + 1;
+            const delta = value - mean;
+            mean += delta / n;
+            M2 += delta * (value - mean);
+          }
+          const variance = fillLimit ? M2 / fillLimit : 0;
+          if (mean < 0.5 && variance < _EvolutionEngine.#NUMERIC_EPSILON_SMALL) {
+            const disableTarget = Math.max(1, Math.floor(outConnsLen / 2));
+            for (let fi = 0; fi < outConnsLen; fi++) indexFlags[fi] = 0;
+            for (let di = 0; di < disableTarget; di++) {
+              let minPos = -1;
+              let minAbs = Infinity;
+              for (let j = 0; j < outConnsLen; j++) {
+                if (indexFlags[j]) continue;
+                const candidate = outConns[j];
+                if (!candidate || candidate.enabled === false) {
+                  indexFlags[j] = 1;
+                  continue;
+                }
+                const weightAbs = Math.abs(candidate.weight) || 0;
+                if (weightAbs < minAbs) {
+                  minAbs = weightAbs;
+                  minPos = j;
+                }
+              }
+              if (minPos >= 0) {
+                outConns[minPos].enabled = false;
+                indexFlags[minPos] = 1;
+              } else {
+                break;
+              }
+            }
+            for (let fi = 0; fi < outConnsLen; fi++) indexFlags[fi] = 0;
+          }
+        }
+        if (_EvolutionEngine.#PROFILE_ENABLED) {
+          _EvolutionEngine.#PROFILE_ADD(
+            "prune",
+            _EvolutionEngine.#PROFILE_T0() - startProfile || 0
+          );
+        }
+      } catch {
+      }
+    }
+    /**
+     * Anti-collapse recovery: reinitialise a fraction of the non-elite population's
+     * output biases and their outgoing weights.
+     *
+     * Behaviour & contract:
+     *  - Selects a deterministic fraction (up to 30%) of non-elite genomes and reinitialises
+     *    their output-node biases and any outgoing connections targeting outputs.
+     *  - Uses the engine's pooled sample buffer (`#SCRATCH_SAMPLE`) to avoid per-call
+     *    allocations. Sampling is done via `#sampleSegmentIntoScratch` into that pool.
+     *  - Returns nothing; diagnostic summaries are emitted via the provided `safeWrite`.
+     *  - Best-effort and non-throwing: internal errors are swallowed to keep the
+     *    evolution loop resilient.
+     *
+     * Props / Parameters:
+     * @param neat - NEAT driver instance which must expose `population` and `options.elitism`.
+     * @param completedGenerations - Current generation index used for diagnostic logging.
+     * @param safeWrite - Lightweight writer function used for best-effort diagnostics.
+     *
+     * Example:
+     * // Periodically call from the generation loop to recover from weight/bias collapse
+     * EvolutionEngine['#antiCollapseRecovery'](neatInstance, generationIndex, console.log);
+     *
+     * @internal
+     */
+    static #antiCollapseRecovery(neat, completedGenerations, safeWrite) {
+      try {
+        const neatInstance = neat ?? null;
+        if (!neatInstance) return;
+        const elitismCount = Number.isFinite(neatInstance?.options?.elitism) ? Math.max(0, Math.floor(neatInstance.options.elitism)) : 0;
+        const population = Array.isArray(neatInstance.population) ? neatInstance.population : _EvolutionEngine.#EMPTY_VEC;
+        const nonEliteStartIndex = elitismCount;
+        const nonEliteCount = Math.max(0, population.length - nonEliteStartIndex);
+        if (nonEliteCount === 0) return;
+        const fractionToReinit = 0.3;
+        const maxCandidates = Math.floor(nonEliteCount * fractionToReinit) || 1;
+        let pooledSampleBuffer = _EvolutionEngine.#SCRATCH_SAMPLE;
+        if (!Array.isArray(pooledSampleBuffer)) {
+          pooledSampleBuffer = _EvolutionEngine.#SCRATCH_SAMPLE = [];
+        }
+        const sampledCount = _EvolutionEngine.#sampleSegmentIntoScratch(
+          population,
+          nonEliteStartIndex,
+          maxCandidates
+        );
+        if (sampledCount <= 0) return;
+        let totalConnectionResets = 0;
+        let totalBiasResets = 0;
+        for (let sampleIndex = 0; sampleIndex < sampledCount; sampleIndex++) {
+          const genome = pooledSampleBuffer[sampleIndex];
+          if (!genome) continue;
+          try {
+            const {
+              connReset,
+              biasReset
+            } = _EvolutionEngine.#reinitializeGenomeOutputsAndWeights(genome) || {
+              connReset: 0,
+              biasReset: 0
+            };
+            totalConnectionResets += Number(connReset) || 0;
+            totalBiasResets += Number(biasReset) || 0;
+          } catch (genomeErr) {
+          }
+        }
+        try {
+          safeWrite(
+            `[ANTICOLLAPSE] gen=${completedGenerations} reinitGenomes=${sampledCount} connReset=${totalConnectionResets} biasReset=${totalBiasResets}
+`
+          );
+        } catch {
+        }
+      } catch {
+      }
+    }
+    /**
+     * Reinitialize output-node biases and outgoing weights that target those outputs
+     * for a single genome. This helper is used by the anti-collapse recovery routine
+     * to inject fresh variability into non-elite individuals.
+     *
+     * Behaviour & contract:
+     *  - Reuses the engine's pooled sample buffer `#SCRATCH_SAMPLE` to collect output
+     *    nodes without allocating a temporary array per-call.
+     *  - Randomises each output node's `bias` within [-BIAS_RESET_HALF_RANGE, +BIAS_RESET_HALF_RANGE].
+     *  - Resets connection `weight` values for any connection where `conn.to` points to an
+     *    output node to a value sampled from the symmetric range defined by
+     *    `#CONN_WEIGHT_RESET_HALF_RANGE`.
+     *  - Best-effort: the function swallows internal errors and returns zeroed counts on failure.
+     *
+     * Steps / inline intent:
+     *  1) Fast-guard and obtain the genome's node list.
+     *  2) Ensure the pooled sample buffer exists and has capacity (grow by power-of-two).
+     *  3) Collect references to output nodes into the pooled buffer.
+     *  4) Reinitialise each collected output's bias.
+     *  5) Reset connection weights that target any collected output (use a Set for O(1) lookup).
+     *
+     * @param genome - Mutable genome object containing `nodes` and `connections` arrays.
+     * @returns Object with counts: `{ connReset: number, biasReset: number }`.
+     * @example
+     * // Reinitialise outputs for a single genome and inspect the number of changes
+     * const deltas = EvolutionEngine['#reinitializeGenomeOutputsAndWeights'](genome);
+     * console.log(`connReset=${deltas.connReset} biasReset=${deltas.biasReset}`);
+     * @internal
+     */
+    static #reinitializeGenomeOutputsAndWeights(genome) {
+      try {
+        const nodesList = Array.isArray(genome?.nodes) ? genome.nodes : [];
+        let sampleBuf = _EvolutionEngine.#SCRATCH_SAMPLE;
+        if (!Array.isArray(sampleBuf))
+          sampleBuf = _EvolutionEngine.#SCRATCH_SAMPLE = [];
+        const requiredCapacity = nodesList.length;
+        if (sampleBuf.length < requiredCapacity) {
+          let newCapacity = Math.max(1, sampleBuf.length);
+          while (newCapacity < requiredCapacity) newCapacity <<= 1;
+          sampleBuf.length = newCapacity;
+        }
+        let outputCount = 0;
+        for (const node of nodesList) {
+          if (node && node.type === "output") {
+            sampleBuf[outputCount++] = node;
+          }
+        }
+        let biasReset = 0;
+        const biasHalfRange = Number(_EvolutionEngine.#BIAS_RESET_HALF_RANGE) || 0;
+        for (let idx = 0; idx < outputCount; idx++) {
+          const outNode = sampleBuf[idx];
+          if (!outNode) continue;
+          outNode.bias = _EvolutionEngine.#fastRandom() * (2 * biasHalfRange) - biasHalfRange;
+          biasReset++;
+        }
+        let connReset = 0;
+        const connections = Array.isArray(genome?.connections) ? genome.connections : [];
+        if (connections.length > 0 && outputCount > 0) {
+          const outputsSet = /* @__PURE__ */ new Set();
+          for (let idx = 0; idx < outputCount; idx++) {
+            const outNode = sampleBuf[idx];
+            if (outNode) outputsSet.add(outNode);
+          }
+          const weightHalfRange = Number(_EvolutionEngine.#CONN_WEIGHT_RESET_HALF_RANGE) || 0;
+          for (const conn of connections) {
+            try {
+              if (outputsSet.has(conn?.to)) {
+                conn.weight = _EvolutionEngine.#fastRandom() * (2 * weightHalfRange) - weightHalfRange;
+                connReset++;
+              }
+            } catch {
+            }
+          }
+        }
+        return { connReset, biasReset };
+      } catch {
+        return { connReset: 0, biasReset: 0 };
+      }
+    }
+    /**
+     * Compact a single genome's connection list in-place by removing disabled connections.
+     *
+     * Behaviour & contract:
+     *  - Performs an in-place stable compaction of `genome.connections`, preserving the
+     *    relative order of enabled connections while removing entries where `conn.enabled === false`.
+     *  - The operation is allocation-light and avoids creating temporary arrays for most
+     *    workloads. It follows a two-pointer write/read technique that is optimiser-friendly.
+     *  - Best-effort and non-throwing: any internal error is swallowed and the method returns 0.
+     *
+     * Steps (inline):
+     *  1) Fast-guard and obtain the connections list reference.
+     *  2) Walk the array with a read pointer and copy enabled connections forward to the write pointer.
+     *  3) Truncate the array if disabled connections were removed and return the number removed.
+     *
+     * @param genome - Mutable genome object that may contain a `connections` array.
+     * @returns Number of removed (disabled) connections. Returns 0 on error or when nothing was removed.
+     * @example
+     * // Compact the connections for a genome and inspect how many disabled connections were removed
+     * const removed = EvolutionEngine['#compactGenomeConnections'](genome);
+     * console.log(`removed disabled connections: ${removed}`);
+     * @internal
+     */
+    static #compactGenomeConnections(genome) {
+      try {
+        const connectionsList = Array.isArray(genome?.connections) ? genome.connections : [];
+        const totalConnections = connectionsList.length;
+        if (totalConnections === 0) return 0;
+        let writeIndex = 0;
+        for (let readIndex = 0; readIndex < totalConnections; readIndex++) {
+          const connection = connectionsList[readIndex];
+          if (connection && connection.enabled !== false) {
+            if (readIndex !== writeIndex)
+              connectionsList[writeIndex] = connection;
+            writeIndex++;
+          }
+        }
+        const removedCount = totalConnections - writeIndex;
+        if (removedCount > 0) connectionsList.length = writeIndex;
+        return removedCount;
+      } catch {
+        return 0;
+      }
+    }
+    /**
+     * Compact the entire population by removing disabled connections from each genome.
+     *
+     * Behaviour & contract:
+     *  - Iterates the `neat.population` array and compacts each genome's connection list
+     *    in-place using `#compactGenomeConnections`.
+     *  - Uses the engine's pooled sample buffer (`#SCRATCH_SAMPLE`) as a temporary
+     *    per-genome removed-counts scratch area to avoid per-call allocations.
+     *  - Grows the pooled scratch buffer lazily using power-of-two sizing when necessary.
+     *  - Returns the total number of removed (disabled) connections across the population.
+     *  - Best-effort and non-throwing: internal errors are swallowed and zero is returned
+     *    when compaction cannot be completed.
+     *
+     * Steps (inline):
+     *  1) Fast-guard and obtain the population reference.
+     *  2) Ensure the pooled scratch buffer exists and has capacity for the population length.
+     *  3) For each genome, run `#compactGenomeConnections` in isolation and store the removed
+     *     count into the pooled buffer.
+     *  4) Sum the removed counts and return the total.
+     *
+     * @param neat - NEAT driver exposing a `population` array.
+     * @returns Total removed disabled connections across the population (integer >= 0).
+     * @example
+     * // Compact all genomes and obtain the total number of connections removed
+     * const totalRemoved = EvolutionEngine['#compactPopulation'](neatInstance);
+     * console.log(`removed connections: ${totalRemoved}`);
+     * @internal
+     */
+    static #compactPopulation(neat) {
+      try {
+        const populationList = Array.isArray(neat?.population) ? neat.population : [];
+        const populationSize = populationList.length;
+        if (populationSize === 0) return 0;
+        let scratchCounts = _EvolutionEngine.#SCRATCH_SAMPLE;
+        if (!Array.isArray(scratchCounts))
+          scratchCounts = _EvolutionEngine.#SCRATCH_SAMPLE = [];
+        if (scratchCounts.length < populationSize) {
+          let newCapacity = Math.max(1, scratchCounts.length);
+          while (newCapacity < populationSize) newCapacity <<= 1;
+          scratchCounts.length = newCapacity;
+        }
+        let totalRemoved = 0;
+        for (let idx = 0; idx < populationSize; idx++) {
+          try {
+            const genome = populationList[idx];
+            const removedForGenome = _EvolutionEngine.#compactGenomeConnections(genome) | 0;
+            scratchCounts[idx] = removedForGenome;
+            totalRemoved += removedForGenome;
+          } catch {
+            scratchCounts[idx] = 0;
+          }
+        }
+        return totalRemoved;
+      } catch {
+        return 0;
+      }
+    }
+    /**
+     * Shrink oversize pooled scratch buffers when they grow much larger than the population.
+     *
+     * Behaviour & contract:
+     *  - Heuristically shrink pooled buffers (plain arrays and typed arrays) when their
+     *    capacity exceeds a configurable multiple of the current population size. This
+     *    reduces memory pressure after large compaction or temporary peaks.
+     *  - Uses power-of-two sizing for the target capacity to keep growth/shrinkage cache-friendly.
+     *  - When shrinking typed arrays the helper creates a new typed array and copies the
+     *    preserved prefix (min(oldLen, newLen)) to avoid losing useful scratch state.
+     *  - Best-effort: all errors are swallowed so this maintenance helper cannot throw.
+     *
+     * Steps (inline):
+     *  1) Fast-guard and compute the population size.
+     *  2) Compute a target capacity (power-of-two) for pools using a small minimum.
+     *  3) For each known pool: if current capacity >> target threshold, allocate a smaller
+     *     pool and copy preserved items where appropriate.
+     *
+     * @param neat - NEAT instance used to derive population size for heuristics.
+     * @internal
+     */
+    static #maybeShrinkScratch(neat) {
+      try {
+        const populationSize = Array.isArray(neat?.population) ? neat.population.length : 0;
+        if (!populationSize) return;
+        const SHRINK_THRESHOLD_FACTOR = 8;
+        const MIN_POOL_SIZE = 8;
+        const nextPowerOfTwo = (n) => 1 << Math.ceil(Math.log2(Math.max(1, n)));
+        const desiredCapacity = nextPowerOfTwo(
+          Math.max(MIN_POOL_SIZE, populationSize)
+        );
+        try {
+          const sortIdx = _EvolutionEngine.#SCRATCH_SORT_IDX;
+          if (Array.isArray(sortIdx) && sortIdx.length > populationSize * SHRINK_THRESHOLD_FACTOR) {
+            _EvolutionEngine.#SCRATCH_SORT_IDX = new Array(desiredCapacity);
+          }
+        } catch {
+        }
+        try {
+          let samplePool = _EvolutionEngine.#SCRATCH_SAMPLE;
+          if (!Array.isArray(samplePool))
+            samplePool = _EvolutionEngine.#SCRATCH_SAMPLE = [];
+          if (samplePool.length > populationSize * SHRINK_THRESHOLD_FACTOR) {
+            samplePool.length = desiredCapacity;
+            _EvolutionEngine.#SCRATCH_SAMPLE = samplePool;
+          }
+        } catch {
+        }
+        try {
+          const exps = _EvolutionEngine.#SCRATCH_EXPS;
+          if (exps instanceof Float64Array && exps.length > populationSize * SHRINK_THRESHOLD_FACTOR) {
+            const newLen = desiredCapacity;
+            const smaller = new Float64Array(newLen);
+            smaller.set(exps.subarray(0, Math.min(exps.length, newLen)));
+            _EvolutionEngine.#SCRATCH_EXPS = smaller;
+          }
+        } catch {
+        }
+        try {
+          const biasTa = _EvolutionEngine.#SCRATCH_BIAS_TA;
+          if (biasTa instanceof Float64Array && biasTa.length > populationSize * SHRINK_THRESHOLD_FACTOR) {
+            const newLen = desiredCapacity;
+            const smaller = new Float64Array(newLen);
+            smaller.set(biasTa.subarray(0, Math.min(biasTa.length, newLen)));
+            _EvolutionEngine.#SCRATCH_BIAS_TA = smaller;
+          }
+        } catch {
+        }
+        try {
+          const nodeIdx = _EvolutionEngine.#SCRATCH_NODE_IDX;
+          if (nodeIdx instanceof Int32Array && nodeIdx.length > populationSize * SHRINK_THRESHOLD_FACTOR) {
+            const newLen = desiredCapacity;
+            const smaller = new Int32Array(newLen);
+            smaller.set(nodeIdx.subarray(0, Math.min(nodeIdx.length, newLen)));
+            _EvolutionEngine.#SCRATCH_NODE_IDX = smaller;
+          }
+        } catch {
+        }
+      } catch {
+      }
+    }
     /**
      * Runs the NEAT neuro-evolution process for an agent to solve a given ASCII maze.
      *
@@ -17026,7 +23533,11 @@
         fitnessEvaluator
       } = options;
       const { maze } = mazeConfig;
-      const { logEvery = 10, dashboardManager } = reportingConfig;
+      const {
+        logEvery = 10,
+        dashboardManager,
+        paceEveryGeneration
+      } = reportingConfig;
       const {
         allowRecurrent = true,
         // Allow networks to have connections that loop back, enabling memory.
@@ -17072,9 +23583,26 @@
         // The number of generations between population size expansions.
         dynamicPopExpandFactor = 0.15,
         // The factor by which to expand the population size.
-        dynamicPopPlateauSlack = 0.6
+        dynamicPopPlateauSlack = 0.6,
         // A slack factor for plateau detection when dynamic population is enabled.
+        stopOnlyOnSolve = false,
+        // If true, ignore stagnation/maxGenerations and run until solved.
+        autoPauseOnSolve = true,
+        // Browser demo will override to false to keep running continuously
+        deterministic = false,
+        memoryCompactionInterval = 50,
+        telemetryReduceStats = false,
+        telemetryMinimal = false,
+        disableBaldwinianRefinement = false
       } = evolutionAlgorithmConfig;
+      if (deterministic || typeof randomSeed === "number") {
+        _EvolutionEngine.setDeterministic(
+          typeof randomSeed === "number" ? randomSeed : 305419896
+        );
+      }
+      _EvolutionEngine.#REDUCED_TELEMETRY = !!telemetryReduceStats;
+      _EvolutionEngine.#TELEMETRY_MINIMAL = !!telemetryMinimal;
+      _EvolutionEngine.#DISABLE_BALDWIN = !!disableBaldwinianRefinement;
       const dynamicPopMax = typeof dynamicPopMaxCfg === "number" ? dynamicPopMaxCfg : Math.max(popSize, 120);
       const encodedMaze = MazeUtils.encodeMaze(maze);
       const startPosition = MazeUtils.findPosition(maze, "S");
@@ -17093,65 +23621,42 @@
       const neatFitnessCallback = (network) => {
         return currentFitnessEvaluator(network, fitnessContext);
       };
-      const neat = new Neat(inputSize, outputSize, neatFitnessCallback, {
-        popsize: popSize,
-        // Define the types of mutations that can occur, allowing for structural evolution.
-        mutation: [
-          methods_exports.mutation.ADD_NODE,
-          methods_exports.mutation.SUB_NODE,
-          methods_exports.mutation.ADD_CONN,
-          methods_exports.mutation.SUB_CONN,
-          methods_exports.mutation.MOD_BIAS,
-          methods_exports.mutation.MOD_ACTIVATION,
-          methods_exports.mutation.MOD_CONNECTION,
-          methods_exports.mutation.ADD_LSTM_NODE
-          // Allow adding LSTM nodes for more complex memory.
-        ],
-        mutationRate: 0.2,
-        mutationAmount: 0.3,
-        elitism: Math.max(1, Math.floor(popSize * 0.1)),
-        // Preserve the top 10% of the population.
-        provenance: Math.max(1, Math.floor(popSize * 0.2)),
-        // Keep a portion of the population from previous species.
-        allowRecurrent,
-        minHidden: 6,
-        // Start with a minimum number of hidden nodes.
-        // Enable advanced features for more sophisticated evolution.
-        adaptiveMutation: { enabled: true, strategy: "twoTier" },
-        multiObjective: {
-          enabled: true,
-          complexityMetric: "nodes",
-          autoEntropy: true
-        },
-        telemetry: {
-          enabled: true,
-          performance: true,
-          complexity: true,
-          hypervolume: true
-        },
-        lineageTracking: true,
-        novelty: {
-          enabled: true,
-          descriptor: (g) => [g.nodes.length, g.connections.length],
-          blendFactor: 0.15
-        },
-        targetSpecies: 10,
-        // Aim for a target number of species to maintain diversity.
-        adaptiveTargetSpecies: {
-          enabled: true,
-          entropyRange: [0.3, 0.8],
-          speciesRange: [6, 14],
-          smooth: 0.5
+      const neat = _EvolutionEngine.#createNeat(
+        inputSize,
+        outputSize,
+        neatFitnessCallback,
+        {
+          popSize,
+          allowRecurrent,
+          adaptiveMutation: { enabled: true, strategy: "twoTier" },
+          multiObjective: {
+            enabled: true,
+            complexityMetric: "nodes",
+            autoEntropy: true
+          },
+          telemetry: {
+            enabled: true,
+            performance: true,
+            complexity: true,
+            hypervolume: true
+          },
+          lineageTracking: true,
+          novelty: { enabled: true, blendFactor: 0.15 },
+          targetSpecies: 10,
+          adaptiveTargetSpecies: {
+            enabled: true,
+            entropyRange: [0.3, 0.8],
+            speciesRange: [6, 14],
+            smooth: 0.5
+          }
         }
-      });
-      if (initialPopulation && initialPopulation.length > 0) {
-        neat.population = initialPopulation.map(
-          (net) => net.clone()
-        );
-      }
-      if (initialBestNetwork) {
-        neat.population[0] = initialBestNetwork.clone();
-      }
+      );
+      _EvolutionEngine.#seedInitialPopulation(
+        neat,
+        initialPopulation,
+        initialBestNetwork,
+        popSize
+      );
       let bestNetwork = evolutionAlgorithmConfig.initialBestNetwork;
       let bestFitness = -Infinity;
       let bestResult;
@@ -17161,747 +23666,169 @@
       let simplifyMode = false;
       let simplifyRemaining = 0;
       let lastBestFitnessForPlateau = -Infinity;
-      let fs = null;
-      let path2 = null;
-      try {
-        if (typeof window === "undefined" && typeof __require === "function") {
-          fs = __require("fs");
-          path2 = require_path();
-        }
-      } catch {
-        fs = null;
-        path2 = null;
-      }
-      const flushToFrame = () => {
-        const rafPromise = () => new Promise(
-          (resolve) => window.requestAnimationFrame(() => resolve())
-        );
-        const immediatePromise = () => new Promise(
-          (resolve) => typeof setImmediate === "function" ? setImmediate(resolve) : setTimeout(resolve, 0)
-        );
-        if (typeof window !== "undefined" && typeof window.requestAnimationFrame === "function") {
-          return new Promise(async (resolve) => {
-            const check = async () => {
-              if (window.asciiMazePaused) {
-                await rafPromise();
-                setTimeout(check, 0);
-              } else {
-                rafPromise().then(() => resolve());
-              }
-            };
-            check();
-          });
-        }
-        if (typeof setImmediate === "function") {
-          return new Promise(async (resolve) => {
-            const check = async () => {
-              if (globalThis.asciiMazePaused) {
-                await immediatePromise();
-                setTimeout(check, 0);
-              } else {
-                immediatePromise().then(() => resolve());
-              }
-            };
-            check();
-          });
-        }
-        return new Promise((resolve) => setTimeout(resolve, 0));
-      };
-      if (fs && persistDir && !fs.existsSync(persistDir)) {
-        try {
-          fs.mkdirSync(persistDir, { recursive: true });
-        } catch (e) {
-          console.error(
-            `Could not create persistence directory: ${persistDir}`,
-            e
-          );
-        }
-      }
-      const lamarckianTrainingSet = (() => {
-        const ds = [];
-        const OUT = (d) => [0, 1, 2, 3].map((i) => i === d ? 0.92 : 0.02);
-        const add = (inp, dir) => ds.push({ input: inp, output: OUT(dir) });
-        add([0, 1, 0, 0, 0, 0.7], 0);
-        add([0.25, 0, 1, 0, 0, 0.7], 1);
-        add([0.5, 0, 0, 1, 0, 0.7], 2);
-        add([0.75, 0, 0, 0, 1, 0.7], 3);
-        add([0, 1, 0, 0, 0, 0.9], 0);
-        add([0.25, 0, 1, 0, 0, 0.9], 1);
-        add([0, 1, 0.6, 0, 0, 0.6], 0);
-        add([0, 1, 0, 0.6, 0, 0.6], 0);
-        add([0.25, 0.6, 1, 0, 0, 0.6], 1);
-        add([0.25, 0, 1, 0.6, 0, 0.6], 1);
-        add([0.5, 0, 0.6, 1, 0, 0.6], 2);
-        add([0.5, 0, 0, 1, 0.6, 0.6], 2);
-        add([0.75, 0, 0, 0.6, 1, 0.6], 3);
-        add([0.75, 0.6, 0, 0, 1, 0.6], 3);
-        add([0, 1, 0.8, 0.5, 0.4, 0.55], 0);
-        add([0.25, 0.7, 1, 0.6, 0.5, 0.55], 1);
-        add([0.5, 0.6, 0.55, 1, 0.65, 0.55], 2);
-        add([0.75, 0.5, 0.45, 0.7, 1, 0.55], 3);
-        add([0, 1, 0.3, 0, 0, 0.4], 0);
-        add([0.25, 0.5, 1, 0.4, 0, 0.4], 1);
-        add([0.5, 0, 0.3, 1, 0.2, 0.4], 2);
-        add([0.75, 0, 0.5, 0.4, 1, 0.4], 3);
-        add([0, 0, 0, 1e-3, 0, 0.45], 2);
-        ds.forEach((p) => {
-          for (let i = 1; i <= 4; i++)
-            if (p.input[i] === 1 && Math.random() < 0.25)
-              p.input[i] = 0.95 + Math.random() * 0.05;
-          if (Math.random() < 0.35)
-            p.input[5] = Math.min(
-              1,
-              Math.max(0, p.input[5] + (Math.random() * 0.1 - 0.05))
-            );
-        });
-        return ds;
-      })();
+      const { fs, path } = _EvolutionEngine.#initPersistence(persistDir);
+      const flushToFrame = _EvolutionEngine.#makeFlushToFrame();
+      const lamarckianTrainingSet = _EvolutionEngine.#buildLamarckianTrainingSet();
       if (lamarckianTrainingSet.length) {
-        const centerOutputBiases = (net) => {
-          try {
-            const outs = net.nodes?.filter((n) => n.type === "output");
-            if (!outs?.length) return;
-            const mean = outs.reduce((a, n) => a + n.bias, 0) / outs.length;
-            let varc = 0;
-            outs.forEach((n) => {
-              varc += Math.pow(n.bias - mean, 2);
-            });
-            varc /= outs.length;
-            const std = Math.sqrt(varc);
-            outs.forEach((n) => {
-              n.bias = Math.max(-5, Math.min(5, n.bias - mean));
-            });
-            net._outputBiasStats = { mean, std };
-          } catch {
-          }
-        };
-        neat.population.forEach((net, idx) => {
-          try {
-            net.train(lamarckianTrainingSet, {
-              iterations: Math.min(
-                60,
-                8 + Math.floor(lamarckianTrainingSet.length / 2)
-              ),
-              error: 0.01,
-              rate: 2e-3,
-              momentum: 0.1,
-              batchSize: 4,
-              allowRecurrent: true,
-              cost: methods_exports.Cost.softmaxCrossEntropy
-            });
-            try {
-              const outputNodes = net.nodes.filter(
-                (n) => n.type === "output"
-              );
-              const inputNodes = net.nodes.filter((n) => n.type === "input");
-              for (let d = 0; d < 4; d++) {
-                const inNode = inputNodes[d + 1];
-                const outNode = outputNodes[d];
-                if (!inNode || !outNode) continue;
-                let conn = net.connections.find(
-                  (c) => c.from === inNode && c.to === outNode
-                );
-                const w = Math.random() * 0.25 + 0.55;
-                if (!conn) net.connect(inNode, outNode, w);
-                else conn.weight = w;
-              }
-              const compassNode = inputNodes[0];
-              if (compassNode) {
-                outputNodes.forEach((out, d) => {
-                  let conn = net.connections.find(
-                    (c) => c.from === compassNode && c.to === out
-                  );
-                  const base = 0.05 + d * 0.01;
-                  if (!conn) net.connect(compassNode, out, base);
-                  else conn.weight = base;
-                });
-              }
-            } catch {
-            }
-            centerOutputBiases(net);
-          } catch {
-          }
-        });
+        _EvolutionEngine.#pretrainPopulationWarmStart(neat, lamarckianTrainingSet);
       }
       const doProfile = typeof process !== "undefined" && typeof process.env !== "undefined" && process.env.ASCII_MAZE_PROFILE === "1";
       let tEvolveTotal = 0;
       let tLamarckTotal = 0;
       let tSimTotal = 0;
-      const safeWrite = (msg) => {
-        try {
-          if (typeof process !== "undefined" && process && process.stdout && typeof process.stdout.write === "function") {
-            process.stdout.write(msg);
-            return;
-          }
-        } catch {
-        }
-        try {
-          if (dashboardManager && dashboardManager.logFunction) {
-            try {
-              dashboardManager.logFunction(msg);
-              return;
-            } catch {
-            }
-          }
-        } catch {
-        }
-        if (typeof console !== "undefined" && console.log)
-          console.log(msg.trim());
-      };
+      let lastCompactionGen = 0;
+      const safeWrite = _EvolutionEngine.#makeSafeWriter(dashboardManager);
       while (true) {
-        const t0 = doProfile ? Date.now() : 0;
-        const fittest = await neat.evolve();
-        if (doProfile) tEvolveTotal += Date.now() - t0;
-        (neat.population || []).forEach((g) => {
-          g.nodes?.forEach((n) => {
-            if (n.type === "output") n.squash = methods_exports.Activation.identity;
-          });
-        });
-        _EvolutionEngine._speciesHistory = _EvolutionEngine._speciesHistory || [];
-        const speciesCount = neat.population?.reduce((set, g) => {
-          if (g.species) set.add(g.species);
-          return set;
-        }, /* @__PURE__ */ new Set()).size || 1;
-        _EvolutionEngine._speciesHistory.push(speciesCount);
-        if (_EvolutionEngine._speciesHistory.length > 50)
-          _EvolutionEngine._speciesHistory.shift();
-        const recent = _EvolutionEngine._speciesHistory.slice(-20);
-        const collapsed = recent.length === 20 && recent.every((c) => c === 1);
-        if (collapsed) {
-          const neatAny = neat;
-          if (typeof neatAny.mutationRate === "number")
-            neatAny.mutationRate = Math.min(0.6, neatAny.mutationRate * 1.5);
-          if (typeof neatAny.mutationAmount === "number")
-            neatAny.mutationAmount = Math.min(0.8, neatAny.mutationAmount * 1.3);
-          if (neatAny.config && neatAny.config.novelty) {
-            neatAny.config.novelty.blendFactor = Math.min(
-              0.4,
-              neatAny.config.novelty.blendFactor * 1.2
-            );
-          }
+        const cancelReason = _EvolutionEngine.#checkCancellation(
+          options,
+          bestResult
+        );
+        if (cancelReason) break;
+        const genRes = await _EvolutionEngine.#runGeneration(
+          neat,
+          doProfile,
+          lamarckianIterations,
+          lamarckianTrainingSet,
+          lamarckianSampleSize,
+          safeWrite,
+          completedGenerations,
+          dynamicPopEnabled,
+          dynamicPopMax,
+          plateauGenerations,
+          plateauCounter,
+          dynamicPopExpandInterval,
+          dynamicPopExpandFactor,
+          dynamicPopPlateauSlack
+        );
+        const fittest = genRes.fittest;
+        if (doProfile) {
+          tEvolveTotal += genRes.tEvolve || 0;
+          tLamarckTotal += genRes.tLamarck || 0;
         }
-        if (dynamicPopEnabled && completedGenerations > 0 && neat.population?.length && neat.population.length < dynamicPopMax) {
-          const plateauRatio = plateauGenerations > 0 ? plateauCounter / plateauGenerations : 0;
-          const genTrigger = completedGenerations % dynamicPopExpandInterval === 0;
-          if (genTrigger && plateauRatio >= dynamicPopPlateauSlack) {
-            const currentSize = neat.population.length;
-            const targetAdd = Math.min(
-              Math.max(1, Math.floor(currentSize * dynamicPopExpandFactor)),
-              dynamicPopMax - currentSize
-            );
-            if (targetAdd > 0) {
-              const sorted = neat.population.slice().sort(
-                (a, b) => (b.score || -Infinity) - (a.score || -Infinity)
-              );
-              const parentPool = sorted.slice(
-                0,
-                Math.max(2, Math.ceil(sorted.length * 0.25))
-              );
-              for (let i = 0; i < targetAdd; i++) {
-                const parent = parentPool[Math.floor(Math.random() * parentPool.length)];
-                try {
-                  if (typeof neat.spawnFromParent === "function") {
-                    const mutateCount = 1 + (Math.random() < 0.5 ? 1 : 0);
-                    const child = neat.spawnFromParent(
-                      parent,
-                      mutateCount
-                    );
-                    neat.population.push(child);
-                  } else {
-                    const clone = parent.clone ? parent.clone() : parent;
-                    const mutateCount = 1 + (Math.random() < 0.5 ? 1 : 0);
-                    for (let m = 0; m < mutateCount; m++) {
-                      try {
-                        const mutOps = neat.options.mutation || [];
-                        if (mutOps.length) {
-                          const op = mutOps[Math.floor(Math.random() * mutOps.length)];
-                          clone.mutate(op);
-                        }
-                      } catch {
-                      }
-                    }
-                    clone.score = void 0;
-                    try {
-                      if (typeof neat.addGenome === "function") {
-                        neat.addGenome(clone, [parent._id]);
-                      } else {
-                        if (neat._nextGenomeId !== void 0)
-                          clone._id = neat._nextGenomeId++;
-                        if (neat._lineageEnabled) {
-                          clone._parents = [parent._id];
-                          clone._depth = (parent._depth ?? 0) + 1;
-                        }
-                        if (typeof neat._invalidateGenomeCaches === "function")
-                          neat._invalidateGenomeCaches(clone);
-                        neat.population.push(clone);
-                      }
-                    } catch {
-                      try {
-                        neat.population.push(clone);
-                      } catch {
-                      }
-                    }
-                  }
-                } catch {
-                }
-              }
-              neat.options.popsize = neat.population.length;
-              safeWrite(
-                `[DYNAMIC_POP] Expanded population to ${neat.population.length} at gen ${completedGenerations}
-`
-              );
-            }
-          }
-        }
-        if (lamarckianIterations > 0 && lamarckianTrainingSet.length) {
-          const t1 = doProfile ? Date.now() : 0;
-          let trainingSetRef = lamarckianTrainingSet;
-          if (lamarckianSampleSize && lamarckianSampleSize < lamarckianTrainingSet.length) {
-            const picked = [];
-            for (let i = 0; i < lamarckianSampleSize; i++) {
-              picked.push(
-                lamarckianTrainingSet[Math.random() * lamarckianTrainingSet.length | 0]
-              );
-            }
-            trainingSetRef = picked;
-          }
-          let gradNormSum = 0;
-          let gradSamples = 0;
-          neat.population.forEach((network) => {
-            network.train(trainingSetRef, {
-              iterations: lamarckianIterations,
-              // Small to preserve diversity
-              error: 0.01,
-              rate: 1e-3,
-              momentum: 0.2,
-              batchSize: 2,
-              allowRecurrent: true,
-              // allow recurrent connections
-              cost: methods_exports.Cost.softmaxCrossEntropy
+        if (!_EvolutionEngine.#DISABLE_BALDWIN) {
+          try {
+            fittest.train(lamarckianTrainingSet, {
+              iterations: _EvolutionEngine.#FITTEST_TRAIN_ITERATIONS,
+              error: _EvolutionEngine.#DEFAULT_TRAIN_ERROR,
+              rate: _EvolutionEngine.#DEFAULT_TRAIN_RATE,
+              momentum: _EvolutionEngine.#DEFAULT_TRAIN_MOMENTUM,
+              batchSize: _EvolutionEngine.#DEFAULT_TRAIN_BATCH_LARGE,
+              allowRecurrent: true
             });
-            try {
-              const outs = network.nodes?.filter(
-                (n) => n.type === "output"
-              );
-              if (outs?.length) {
-                const mean = outs.reduce((a, n) => a + n.bias, 0) / outs.length;
-                let varc = 0;
-                outs.forEach((n) => {
-                  varc += Math.pow(n.bias - mean, 2);
-                });
-                varc /= outs.length;
-                const std = Math.sqrt(varc);
-                outs.forEach((n) => {
-                  let adjusted = n.bias - mean;
-                  if (std < 0.25) adjusted *= 0.7;
-                  n.bias = Math.max(-5, Math.min(5, adjusted));
-                });
-              }
-            } catch {
-            }
-            try {
-              if (typeof network.getTrainingStats === "function") {
-                const ts = network.getTrainingStats();
-                if (ts && Number.isFinite(ts.gradNorm)) {
-                  gradNormSum += ts.gradNorm;
-                  gradSamples++;
-                }
-              }
-            } catch {
-            }
-          });
-          if (gradSamples > 0) {
-            safeWrite(
-              `[GRAD] gen=${completedGenerations} meanGradNorm=${(gradNormSum / gradSamples).toFixed(4)} samples=${gradSamples}
-`
-            );
+          } catch {
           }
-          if (doProfile) tLamarckTotal += Date.now() - t1;
         }
         const fitness = fittest.score ?? 0;
         completedGenerations++;
-        if (fitness > lastBestFitnessForPlateau + plateauImprovementThreshold) {
-          plateauCounter = 0;
-          lastBestFitnessForPlateau = fitness;
-        } else {
-          plateauCounter++;
-        }
-        if (!simplifyMode && plateauCounter >= plateauGenerations) {
-          simplifyMode = true;
-          simplifyRemaining = simplifyDuration;
-          plateauCounter = 0;
-        }
-        if (simplifyMode) {
-          neat.population.forEach((g) => {
-            const enabledConns = g.connections.filter(
-              (c) => c.enabled !== false
-            );
-            if (!enabledConns.length) return;
-            const pruneCount = Math.max(
-              1,
-              Math.floor(enabledConns.length * simplifyPruneFraction)
-            );
-            let candidates = enabledConns.slice();
-            if (simplifyStrategy === "weakRecurrentPreferred") {
-              const recurrent = candidates.filter(
-                (c) => c.from === c.to || c.gater
-              );
-              const nonRecurrent = candidates.filter(
-                (c) => !(c.from === c.to || c.gater)
-              );
-              recurrent.sort(
-                (a, b) => Math.abs(a.weight) - Math.abs(b.weight)
-              );
-              nonRecurrent.sort(
-                (a, b) => Math.abs(a.weight) - Math.abs(b.weight)
-              );
-              candidates = [...recurrent, ...nonRecurrent];
-            } else {
-              candidates.sort(
-                (a, b) => Math.abs(a.weight) - Math.abs(b.weight)
-              );
-            }
-            candidates.slice(0, pruneCount).forEach((c) => c.enabled = false);
-          });
-          simplifyRemaining--;
-          if (simplifyRemaining <= 0) simplifyMode = false;
-        }
-        const t2 = doProfile ? Date.now() : 0;
-        const generationResult = MazeMovement.simulateAgent(
+        ({
+          plateauCounter,
+          lastBestFitnessForPlateau
+        } = _EvolutionEngine.#updatePlateauState(
+          fitness,
+          lastBestFitnessForPlateau,
+          plateauCounter,
+          plateauImprovementThreshold
+        ));
+        ({
+          simplifyMode,
+          simplifyRemaining
+        } = _EvolutionEngine.#handleSimplifyState(
+          neat,
+          plateauCounter,
+          plateauGenerations,
+          simplifyDuration,
+          simplifyMode,
+          simplifyRemaining,
+          simplifyStrategy,
+          simplifyPruneFraction
+        ));
+        const simRes = _EvolutionEngine.#simulateAndPostprocess(
           fittest,
           encodedMaze,
           startPosition,
           exitPosition,
           distanceMap,
-          agentSimConfig.maxSteps
+          agentSimConfig.maxSteps,
+          doProfile,
+          safeWrite,
+          logEvery,
+          completedGenerations,
+          neat
         );
-        try {
-          fittest._lastStepOutputs = fittest._lastStepOutputs || fittest._lastStepOutputs;
-        } catch {
-        }
-        fittest._saturationFraction = generationResult.saturationFraction;
-        fittest._actionEntropy = generationResult.actionEntropy;
-        if (generationResult.saturationFraction && generationResult.saturationFraction > 0.5) {
-          try {
-            const outNodes = fittest.nodes.filter(
-              (n) => n.type === "output"
-            );
-            const hidden = fittest.nodes.filter((n) => n.type === "hidden");
-            hidden.forEach((h) => {
-              const outs = h.connections.out.filter(
-                (c) => outNodes.includes(c.to) && c.enabled !== false
-              );
-              if (outs.length >= 2) {
-                const weights = outs.map((c) => Math.abs(c.weight));
-                const mean = weights.reduce((a, b) => a + b, 0) / weights.length;
-                const varc = weights.reduce(
-                  (a, b) => a + Math.pow(b - mean, 2),
-                  0
-                ) / weights.length;
-                if (mean < 0.5 && varc < 0.01) {
-                  outs.sort(
-                    (a, b) => Math.abs(a.weight) - Math.abs(b.weight)
-                  );
-                  const disableCount = Math.max(1, Math.floor(outs.length / 2));
-                  for (let i = 0; i < disableCount; i++) outs[i].enabled = false;
-                }
-              }
-            });
-          } catch {
-          }
-        }
-        if (completedGenerations % logEvery === 0) {
-          try {
-            const movesRaw = generationResult.path.map(
-              (p, idx, arr) => {
-                if (idx === 0) return null;
-                const prev = arr[idx - 1];
-                const dx = p[0] - prev[0];
-                const dy = p[1] - prev[1];
-                if (dx === 0 && dy === -1) return 0;
-                if (dx === 1 && dy === 0) return 1;
-                if (dx === 0 && dy === 1) return 2;
-                if (dx === -1 && dy === 0) return 3;
-                return null;
-              }
-            );
-            const moves = [];
-            for (const mv of movesRaw) {
-              if (mv !== null) moves.push(mv);
-            }
-            const counts = [0, 0, 0, 0];
-            moves.forEach((m) => counts[m]++);
-            const totalMoves = moves.length || 1;
-            const probs = counts.map((c) => c / totalMoves);
-            let entropy = 0;
-            probs.forEach((p) => {
-              if (p > 0) entropy += -p * Math.log(p);
-            });
-            const entropyNorm = entropy / Math.log(4);
-            safeWrite(
-              `[ACTION_ENTROPY] gen=${completedGenerations} entropyNorm=${entropyNorm.toFixed(
-                3
-              )} uniqueMoves=${counts.filter((c) => c > 0).length} pathLen=${generationResult.path.length}
-`
-            );
-            try {
-              const outs = fittest.nodes.filter((n) => n.type === "output");
-              if (outs.length) {
-                const meanB = outs.reduce((a, n) => a + n.bias, 0) / outs.length;
-                let varcB = 0;
-                outs.forEach((n) => {
-                  varcB += Math.pow(n.bias - meanB, 2);
-                });
-                varcB /= outs.length;
-                const stdB = Math.sqrt(varcB);
-                safeWrite(
-                  `[OUTPUT_BIAS] gen=${completedGenerations} mean=${meanB.toFixed(
-                    3
-                  )} std=${stdB.toFixed(3)} biases=${outs.map((o) => o.bias.toFixed(2)).join(",")}
-`
-                );
-              }
-            } catch {
-            }
-            try {
-              const lastHist = fittest._lastStepOutputs || [];
-              if (lastHist.length) {
-                const recent2 = lastHist.slice(-40);
-                const k = 4;
-                const means = new Array(k).fill(0);
-                recent2.forEach((v) => {
-                  for (let i = 0; i < k; i++) means[i] += v[i];
-                });
-                for (let i = 0; i < k; i++) means[i] /= recent2.length;
-                const stds = new Array(k).fill(0);
-                recent2.forEach((v) => {
-                  for (let i = 0; i < k; i++)
-                    stds[i] += Math.pow(v[i] - means[i], 2);
-                });
-                for (let i = 0; i < k; i++)
-                  stds[i] = Math.sqrt(stds[i] / recent2.length);
-                const kurt = new Array(k).fill(0);
-                recent2.forEach((v) => {
-                  for (let i = 0; i < k; i++)
-                    kurt[i] += Math.pow(v[i] - means[i], 4);
-                });
-                for (let i = 0; i < k; i++) {
-                  const denom = Math.pow(stds[i] || 1e-9, 4) * recent2.length;
-                  kurt[i] = denom > 0 ? kurt[i] / denom - 3 : 0;
-                }
-                let entAgg = 0;
-                recent2.forEach((v) => {
-                  const max = Math.max(...v);
-                  const exps = v.map((x) => Math.exp(x - max));
-                  const sum = exps.reduce((a, b) => a + b, 0) || 1;
-                  const probs2 = exps.map((e2) => e2 / sum);
-                  let e = 0;
-                  probs2.forEach((p) => {
-                    if (p > 0) e += -p * Math.log(p);
-                  });
-                  entAgg += e / Math.log(4);
-                });
-                const entMean = entAgg / recent2.length;
-                let stable = 0, totalTrans = 0;
-                let prevDir = -1;
-                recent2.forEach((v) => {
-                  const arg = v.indexOf(Math.max(...v));
-                  if (prevDir === arg) stable++;
-                  if (prevDir !== -1) totalTrans++;
-                  prevDir = arg;
-                });
-                const stability = totalTrans ? stable / totalTrans : 0;
-                safeWrite(
-                  `[LOGITS] gen=${completedGenerations} means=${means.map((m) => m.toFixed(3)).join(",")} stds=${stds.map((s) => s.toFixed(3)).join(",")} kurt=${kurt.map((kv) => kv.toFixed(2)).join(",")} entMean=${entMean.toFixed(
-                    3
-                  )} stability=${stability.toFixed(3)} steps=${recent2.length}
-`
-                );
-                _EvolutionEngine._collapseStreak = _EvolutionEngine._collapseStreak || 0;
-                const collapsed2 = stds.every((s) => s < 5e-3) && (entMean < 0.35 || stability > 0.97);
-                if (collapsed2) _EvolutionEngine._collapseStreak++;
-                else _EvolutionEngine._collapseStreak = 0;
-                if (_EvolutionEngine._collapseStreak === 6) {
-                  try {
-                    const eliteCount = neat.options.elitism || 0;
-                    const pop = neat.population || [];
-                    const reinitTargets = pop.slice(eliteCount).filter(() => Math.random() < 0.3);
-                    let connReset = 0, biasReset = 0;
-                    reinitTargets.forEach((g) => {
-                      const outs = g.nodes.filter(
-                        (n) => n.type === "output"
-                      );
-                      outs.forEach((o) => {
-                        o.bias = Math.random() * 0.2 - 0.1;
-                        biasReset++;
-                      });
-                      g.connections.forEach((c) => {
-                        if (outs.includes(c.to)) {
-                          c.weight = Math.random() * 0.4 - 0.2;
-                          connReset++;
-                        }
-                      });
-                    });
-                    safeWrite(
-                      `[ANTICOLLAPSE] gen=${completedGenerations} reinitGenomes=${reinitTargets.length} connReset=${connReset} biasReset=${biasReset}
-`
-                    );
-                  } catch {
-                  }
-                }
-              }
-            } catch {
-            }
-            try {
-              const unique = generationResult.path.length ? new Set(generationResult.path.map((p) => p.join(","))).size : 0;
-              const ratio = generationResult.path.length ? unique / generationResult.path.length : 0;
-              safeWrite(
-                `[EXPLORE] gen=${completedGenerations} unique=${unique} pathLen=${generationResult.path.length} ratio=${ratio.toFixed(
-                  3
-                )} progress=${generationResult.progress.toFixed(
-                  1
-                )} satFrac=${generationResult.saturationFraction?.toFixed(
-                  3
-                )}
-`
-              );
-            } catch {
-            }
-            try {
-              const pop = neat.population || [];
-              const speciesCounts = {};
-              pop.forEach((g) => {
-                const sid = g.species != null ? String(g.species) : "none";
-                speciesCounts[sid] = (speciesCounts[sid] || 0) + 1;
-              });
-              const counts2 = Object.values(speciesCounts);
-              const total = counts2.reduce((a, b) => a + b, 0) || 1;
-              const simpson = 1 - counts2.reduce((a, b) => a + Math.pow(b / total, 2), 0);
-              let wMean = 0, wCount = 0;
-              const sample = pop.slice(0, Math.min(pop.length, 40));
-              sample.forEach((g) => {
-                g.connections.forEach((c) => {
-                  if (c.enabled !== false) {
-                    wMean += c.weight;
-                    wCount++;
-                  }
-                });
-              });
-              wMean = wCount ? wMean / wCount : 0;
-              let wVar = 0;
-              sample.forEach((g) => {
-                g.connections.forEach((c) => {
-                  if (c.enabled !== false) wVar += Math.pow(c.weight - wMean, 2);
-                });
-              });
-              const wStd = wCount ? Math.sqrt(wVar / wCount) : 0;
-              safeWrite(
-                `[DIVERSITY] gen=${completedGenerations} species=${Object.keys(speciesCounts).length} simpson=${simpson.toFixed(3)} weightStd=${wStd.toFixed(3)}
-`
-              );
-            } catch {
-            }
-          } catch {
-          }
-        }
-        if (doProfile) tSimTotal += Date.now() - t2;
+        const generationResult = simRes.generationResult;
+        if (doProfile) tSimTotal += simRes.simTime;
         if (fitness > bestFitness) {
           bestFitness = fitness;
           bestNetwork = fittest;
           bestResult = generationResult;
           stagnantGenerations = 0;
-          dashboardManager.update(
+          await _EvolutionEngine.#updateDashboardAndMaybeFlush(
             maze,
             generationResult,
             fittest,
             completedGenerations,
-            neat
+            neat,
+            dashboardManager,
+            flushToFrame
           );
+        } else {
+          stagnantGenerations++;
+          if (completedGenerations % logEvery === 0) {
+            await _EvolutionEngine.#updateDashboardPeriodic(
+              maze,
+              bestResult,
+              bestNetwork,
+              completedGenerations,
+              neat,
+              dashboardManager,
+              flushToFrame
+            );
+          }
+        }
+        _EvolutionEngine.#persistSnapshotIfNeeded(
+          fs,
+          path,
+          persistDir,
+          persistTopK,
+          completedGenerations,
+          persistEvery,
+          neat,
+          bestFitness,
+          simplifyMode,
+          plateauCounter
+        );
+        const stopReason = await _EvolutionEngine.#checkStopConditions(
+          bestResult,
+          bestNetwork,
+          maze,
+          completedGenerations,
+          neat,
+          dashboardManager,
+          flushToFrame,
+          minProgressToPass,
+          autoPauseOnSolve,
+          stopOnlyOnSolve,
+          stagnantGenerations,
+          maxStagnantGenerations,
+          maxGenerations
+        );
+        if (stopReason) break;
+        if (memoryCompactionInterval > 0 && completedGenerations - lastCompactionGen >= memoryCompactionInterval) {
+          const removedDisabled = _EvolutionEngine.#compactPopulation(neat);
+          if (removedDisabled > 0) {
+            _EvolutionEngine.#maybeShrinkScratch(neat);
+            safeWrite(
+              `[COMPACT] gen=${completedGenerations} removedDisabledConns=${removedDisabled}
+`
+            );
+          }
+          lastCompactionGen = completedGenerations;
+        }
+        if (paceEveryGeneration) {
           try {
             await flushToFrame();
           } catch {
           }
-        } else {
-          stagnantGenerations++;
-          if (completedGenerations % logEvery === 0) {
-            if (bestNetwork && bestResult) {
-              dashboardManager.update(
-                maze,
-                bestResult,
-                bestNetwork,
-                completedGenerations,
-                neat
-              );
-              try {
-                await flushToFrame();
-              } catch {
-              }
-            }
-          }
-        }
-        if (persistEvery > 0 && completedGenerations % persistEvery === 0 && bestNetwork) {
-          try {
-            const snap = {
-              generation: completedGenerations,
-              bestFitness,
-              simplifyMode,
-              plateauCounter,
-              timestamp: Date.now(),
-              telemetryTail: neat.getTelemetry ? neat.getTelemetry().slice(-5) : void 0
-            };
-            const popSorted = neat.population.slice().sort(
-              (a, b) => (b.score || -Infinity) - (a.score || -Infinity)
-            );
-            const top = popSorted.slice(0, persistTopK).map((g, idx) => ({
-              idx,
-              score: g.score,
-              nodes: g.nodes.length,
-              connections: g.connections.length,
-              json: g.toJSON ? g.toJSON() : void 0
-            }));
-            snap.top = top;
-            const file = path2.join(
-              persistDir,
-              `snapshot_gen${completedGenerations}.json`
-            );
-            fs.writeFileSync(file, JSON.stringify(snap, null, 2));
-          } catch (e) {
-          }
-        }
-        if (bestResult?.success && bestResult.progress >= minProgressToPass) {
-          if (bestNetwork && bestResult) {
-            dashboardManager.update(
-              maze,
-              bestResult,
-              bestNetwork,
-              completedGenerations,
-              neat
-            );
-            try {
-              await flushToFrame();
-            } catch {
-            }
-          }
-          break;
-        }
-        if (stagnantGenerations >= maxStagnantGenerations) {
-          if (bestNetwork && bestResult) {
-            dashboardManager.update(
-              maze,
-              bestResult,
-              bestNetwork,
-              completedGenerations,
-              neat
-            );
-            try {
-              await flushToFrame();
-            } catch {
-            }
-          }
-          break;
-        }
-        if (completedGenerations >= maxGenerations) {
-          break;
         }
       }
       if (doProfile && completedGenerations > 0) {
@@ -17914,386 +23841,825 @@
 [PROFILE] Generations=${gen} avg(ms): evolve=${avgEvolve} lamarck=${avgLamarck} sim=${avgSim} totalPerGen=${(+avgEvolve + +avgLamarck + +avgSim).toFixed(2)}
 `
         );
+        if (_EvolutionEngine.#PROFILE_ENABLED) {
+          const det = _EvolutionEngine.#PROFILE_ACCUM;
+          const denom = gen || 1;
+          safeWrite(
+            `[PROFILE_DETAIL] avgTelemetry=${(det.telemetry / denom).toFixed(
+              2
+            )} avgSimplify=${(det.simplify / denom).toFixed(2)} avgSnapshot=${(det.snapshot / denom).toFixed(2)} avgPrune=${(det.prune / denom).toFixed(2)}
+`
+          );
+        }
       }
       return {
         bestNetwork,
         bestResult,
-        neat
+        neat,
+        exitReason: bestResult?.exitReason ?? "incomplete"
       };
     }
     /**
-     * Prints the structure of a given neural network to the console.
+     * Print a concise, human-readable summary of a network's topology and runtime metadata.
      *
-     * This is useful for debugging and understanding the evolved architectures.
-     * It prints the number of nodes, their types, activation functions, and connection details.
+     * This method is intentionally a thin orchestrator: heavy lifting is delegated to
+     * small private helper methods so callers can quickly understand the high-level
+     * structure without digging through implementation details.
      *
-     * @param network - The neural network to inspect.
+     * Props / Parameters:
+     * @param network - The network (genome) to inspect. Expected shape: { nodes: any[], connections: any[] }.
+     *
+     * Returns: void (logs to the console). The function never throws and will tolerate
+     * partially-formed network objects.
+     *
+     * Example:
+     * // Print a neat summary of the best evolved network for debugging
+     * EvolutionEngine.printNetworkStructure(bestNetwork);
      */
     static printNetworkStructure(network) {
-      console.log("Network Structure:");
-      console.log("Nodes: ", network.nodes?.length);
-      const inputNodes = network.nodes?.filter((n) => n.type === "input");
-      const outputNodes = network.nodes?.filter((n) => n.type === "output");
-      const hiddenNodes = network.nodes?.filter((n) => n.type === "hidden");
-      console.log("Input nodes: ", inputNodes?.length);
-      console.log("Hidden nodes: ", hiddenNodes?.length);
-      console.log("Output nodes: ", outputNodes?.length);
-      console.log(
-        "Activation functions: ",
-        network.nodes?.map((n) => n.squash?.name || n.squash)
-      );
-      console.log("Connections: ", network.connections?.length);
-      const recurrent = network.connections?.some(
-        (c) => c.gater || c.from === c.to
-      );
-      console.log("Has recurrent/gated connections: ", recurrent);
+      try {
+        console.log("Network Structure:");
+        const {
+          nodeList,
+          inputNodes,
+          hiddenNodes,
+          outputNodes
+        } = _EvolutionEngine.#classifyNodes(network);
+        console.log("Nodes:", nodeList.length);
+        console.log("  Input nodes:", inputNodes.length);
+        console.log("  Hidden nodes:", hiddenNodes.length);
+        console.log("  Output nodes:", outputNodes.length);
+        const activationNames = _EvolutionEngine.#gatherActivationNames(network);
+        console.log("Activation functions:", activationNames);
+        const connectionsList = Array.isArray(network?.connections) ? network.connections : [];
+        console.log("Connections:", connectionsList.length);
+        const hasRecurrentOrGated = _EvolutionEngine.#detectRecurrentOrGated(
+          connectionsList
+        );
+        console.log("Has recurrent/gated connections:", hasRecurrentOrGated);
+      } catch (e) {
+        console.log(
+          "printNetworkStructure: failed to inspect network (partial data)"
+        );
+      }
+    }
+    /**
+     * Classify nodes into input / hidden / output buckets.
+     *
+     * Behavior & contract:
+     *  - Allocation-light: returns references into the original node array (no cloning).
+     *  - Tolerates missing network or sparse node arrays (holes preserved by skipping).
+     *  - Reuses a small pooled buckets structure across calls to reduce per-call allocations.
+     *
+     * Props:
+     * @param network - Network-like object with an optional `nodes` array.
+     * @returns An object { nodeList, inputNodes, hiddenNodes, outputNodes } where each
+     *          bucket is a (pooled) array referencing nodes from the original `nodes`.
+     *
+     * Example:
+     * const { nodeList, inputNodes, hiddenNodes, outputNodes } = EvolutionEngine['#classifyNodes'](someNet);
+     * console.log(`inputs=${inputNodes.length} hidden=${hiddenNodes.length} outputs=${outputNodes.length}`);
+     */
+    static #classifyNodes(network) {
+      const normalizedNodeList = _EvolutionEngine.#normalizeNodesArray(network);
+      return _EvolutionEngine.#classifyNodesFromArray(normalizedNodeList);
+    }
+    /**
+     * Normalize the incoming network into a safe node list reference.
+     * Small helper to keep the main method focused on orchestration.
+     */
+    static #normalizeNodesArray(network) {
+      return Array.isArray(network?.nodes) ? network.nodes : [];
+    }
+    /**
+     * Core classifier that performs a single pass over `nodesArray` and fills three pooled buckets.
+     * Implementation notes / steps:
+     *  1) Lazily ensure a pooled buckets structure exists on the class to avoid allocating new arrays.
+     *  2) Clear the pooled buckets by setting .length = 0 (non-allocating when capacity is sufficient).
+     *  3) Iterate the node list once and push references into the appropriate bucket using descriptive names.
+     *  4) Return the buckets alongside the original node list.
+     *
+     * This method intentionally keeps the hot loop tiny and readable.
+     */
+    static #classifyNodesFromArray(nodesArray) {
+      if (!_EvolutionEngine._SCRATCH_NODE_BUCKETS) {
+        _EvolutionEngine._SCRATCH_NODE_BUCKETS = [[], [], []];
+      }
+      const pooledBuckets = _EvolutionEngine._SCRATCH_NODE_BUCKETS;
+      const inputBucket = pooledBuckets[0];
+      const hiddenBucket = pooledBuckets[1];
+      const outputBucket = pooledBuckets[2];
+      inputBucket.length = 0;
+      hiddenBucket.length = 0;
+      outputBucket.length = 0;
+      for (let nodeIndex = 0; nodeIndex < nodesArray.length; nodeIndex++) {
+        const node = nodesArray[nodeIndex];
+        if (!node) continue;
+        const nodeType = String(node.type ?? "hidden");
+        if (nodeType === "input") {
+          inputBucket.push(node);
+        } else if (nodeType === "output") {
+          outputBucket.push(node);
+        } else {
+          hiddenBucket.push(node);
+        }
+      }
+      return {
+        nodeList: nodesArray,
+        inputNodes: inputBucket,
+        hiddenNodes: hiddenBucket,
+        outputNodes: outputBucket
+      };
+    }
+    /**
+     * Populate and return a pooled array of activation function names for the network's nodes.
+     * Uses the engine-level SCRATCH_ACT_NAMES pool to avoid per-call allocation.
+     */
+    static #gatherActivationNames(network) {
+      const nodesArray = Array.isArray(network?.nodes) ? network.nodes : [];
+      if (!Array.isArray(_EvolutionEngine.#SCRATCH_ACT_NAMES)) {
+        _EvolutionEngine.#SCRATCH_ACT_NAMES = [];
+      }
+      const pooledNames = _EvolutionEngine.#SCRATCH_ACT_NAMES;
+      if (pooledNames.length < nodesArray.length)
+        pooledNames.length = nodesArray.length;
+      for (let i = 0; i < nodesArray.length; i++) {
+        const n = nodesArray[i];
+        pooledNames[i] = n?.squash?.name ?? String(n?.squash ?? "unknown");
+      }
+      pooledNames.length = nodesArray.length;
+      return pooledNames;
+    }
+    /**
+     * Detect whether any connection is recurrent (from === to) or gated (has a gater).
+     * Accepts the connections list as input to avoid re-indexing network object.
+     * Uses a small pooled Int8Array as a temporary flag buffer when the connection list is large.
+     */
+    static #detectRecurrentOrGated(connectionsList) {
+      if (!Array.isArray(connectionsList) || connectionsList.length === 0)
+        return false;
+      const listLen = connectionsList.length;
+      const SMALL_LIST_THRESHOLD = 128;
+      if (listLen < SMALL_LIST_THRESHOLD) {
+        for (let index = 0; index < listLen; index++) {
+          const connection = connectionsList[index];
+          if (!connection) continue;
+          if (connection.gater) return true;
+          if (connection.from === connection.to) return true;
+        }
+        return false;
+      }
+      try {
+        const pooledFlags = _EvolutionEngine.#ensureConnFlagsCapacity(listLen);
+        if (!pooledFlags) {
+          for (let index = 0; index < listLen; index++) {
+            const connection = connectionsList[index];
+            if (!connection) continue;
+            if (connection.gater || connection.from === connection.to)
+              return true;
+          }
+          return false;
+        }
+        for (let index = 0; index < listLen; index++) {
+          const connection = connectionsList[index];
+          if (!connection) continue;
+          if (connection.gater) return true;
+          if (connection.from === connection.to) return true;
+          pooledFlags[index] = 1;
+        }
+        return false;
+      } catch {
+        for (let index = 0; index < listLen; index++) {
+          const connection = connectionsList[index];
+          if (!connection) continue;
+          if (connection.gater || connection.from === connection.to) return true;
+        }
+        return false;
+      }
+    }
+    /**
+     * Ensure the pooled connection-flag Int8Array has at least `minCapacity` entries.
+     * Returns the pooled buffer or `null` when allocation fails.
+     */
+    static #ensureConnFlagsCapacity(minCapacity) {
+      try {
+        const clsAny = _EvolutionEngine;
+        const existing = clsAny._SCRATCH_CONN_FLAGS;
+        if (existing instanceof Int8Array && existing.length >= minCapacity)
+          return existing;
+        let cap = 1;
+        while (cap < minCapacity) cap <<= 1;
+        const newBuf = new Int8Array(cap);
+        clsAny._SCRATCH_CONN_FLAGS = newBuf;
+        return newBuf;
+      } catch {
+        return null;
+      }
     }
   };
 
   // test/examples/asciiMaze/mazes.ts
-  var mazes_exports = {};
-  __export(mazes_exports, {
-    large: () => large,
-    medium: () => medium,
-    medium2: () => medium2,
-    minotaur: () => minotaur,
-    small: () => small,
-    spiral: () => spiral,
-    spiralSmall: () => spiralSmall,
-    tiny: () => tiny
-  });
-  var tiny = [
-    "\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557",
-    "\u2551S...................\u2551",
-    "\u2560\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550.\u2551",
-    "\u2551....................\u2551",
-    "\u2551.\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2563",
-    "\u2551....................\u2551",
-    "\u255A\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557E\u2551"
-  ];
-  var spiralSmall = [
-    "\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557",
-    "\u2551...........\u2551",
-    "\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557.\u2551",
-    "\u2551.\u2551.......\u2551.\u2551",
-    "\u2551.\u2551.\u2554\u2550\u2550\u2550\u2557.\u2551.\u2551",
-    "\u2551.\u2551.\u2551...\u2551.\u2551.\u2551",
-    "\u2551.\u2551.\u2551S\u2551.\u2551.\u2551.\u2551",
-    "\u2551.\u2551.\u255A\u2550\u255D.\u2551.\u2551.\u2551",
-    "\u2551.\u2551.....\u2551.\u2551.\u2551",
-    "\u2551.\u255A\u2550\u2550\u2550\u2550\u2550\u255D.\u2551.\u2551",
-    "\u2551.........\u2551.\u2551",
-    "\u255A\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2563E\u2551"
-  ];
-  var spiral = [
-    "\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557",
-    "\u2551...............\u2551",
-    "\u2551.\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2563",
-    "\u2551.\u2551.\u2551...........\u2551",
-    "\u2551.\u2551.\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557.\u2551",
-    "\u2551.\u2551.\u2551.\u2551.......\u2551.\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2554\u2550\u2550\u2550\u2557.\u2551.\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2551...\u2551.\u2551.\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2551S\u2551.\u2551.\u2551.\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u255A\u2550\u255D.\u2551.\u2551.\u2551",
-    "\u2551.\u2551.\u2551.\u2551.....\u2551.\u2551.\u2551",
-    "\u2551.\u2551.\u2551.\u255A\u2550\u2550\u2550\u2550\u2550\u255D.\u2551.\u2551",
-    "\u2551.\u2551.\u2551.........\u2551.\u2551",
-    "\u2551.\u2551.\u255A\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D.\u2551",
-    "\u2551.\u2551.............\u2551",
-    "\u2551E\u2560\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D"
-  ];
-  var small = [
-    "\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2566\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557",
-    "\u2551S......\u2551..........\u2551",
-    "\u2560\u2550\u2550.\u2554\u2550\u2550.\u2551.\u2554\u2550\u2550.\u2551.\u2551..\u2551",
-    "\u2551...\u2551...\u2551.\u2551...\u2551.\u2551..\u2551",
-    "\u2551.\u2551.\u2551.\u2550\u2550\u255D.\u255A\u2550\u2550\u2550\u255D.\u255A\u2550\u2550\u2563",
-    "\u2551.\u2551.\u2551..............\u2551",
-    "\u2551.\u2551.\u255A\u2550\u2550\u2550\u2550\u2550\u2550.\u2550\u2550\u2566\u2550\u2557..\u2551",
-    "\u2551.\u2551...........\u2551.\u2551..\u2551",
-    "\u2551.\u255A\u2550\u2550\u2550\u2550\u2550\u2557.\u2550\u2550\u2550\u2550\u2563.\u2551..\u2551",
-    "\u2551.......\u2551.....\u2551.\u2551..\u2551",
-    "\u2560\u2550\u2550\u2550\u2550\u2550\u2550.\u255A\u2550\u2550\u2550\u2557.\u2551.\u255A\u2550\u2550\u2563",
-    "\u2551...........\u2551.\u2551....\u2551",
-    "\u2551.\u2550\u2550\u2550.\u2554\u2550\u2550\u2550\u2550.\u2551.\u255A\u2550\u2550\u2550.\u2551",
-    "\u2551.....\u2551.....\u2551......\u2551",
-    "\u255A\u2550\u2550\u2550\u2550\u2550\u2563E\u2554\u2550\u2550\u2550\u2569\u2550\u2550\u2550\u2550\u2550\u2550\u255D"
-  ];
-  var medium = [
-    "\u2554\u2550\u2566\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2566\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557",
-    "\u2551S\u2551.......\u2551.............\u2551",
-    "\u2551.\u2551.\u2550\u2550\u2550\u2550\u2557.\u2560\u2550\u2550\u2550\u2550\u2550\u2557.\u2550\u2550\u2550\u2550\u2557.\u2551",
-    "\u2551.\u2551.....\u2551.\u2551.....\u2551.....\u2551.\u2551",
-    "\u2551.\u255A\u2550\u2550\u2550\u2557.\u2551.\u255A\u2550\u2550\u2550\u2557.\u255A\u2550\u2557.\u2551.\u2551.\u2551",
-    "\u2551.....\u2551.\u2551.....\u2551...\u2551.\u2551.\u2551.\u2551",
-    "\u2560\u2550\u2550\u2550\u2557.\u2551.\u255A\u2550\u2550\u2550\u2557.\u2560\u2550\u2550.\u2551.\u2551.\u2551.\u2551",
-    "\u2551...\u2551.\u2551.....\u2551.\u2551...\u2551.\u2551.\u2551.\u2551",
-    "\u2551.\u2551.\u2551.\u255A\u2550\u2550\u2550\u2557.\u2551.\u2551.\u2550\u2550\u255D.\u2551.\u2551.\u2551",
-    "\u2551.\u2551.\u2551.....\u2551.\u2551.\u2551.....\u2551.\u2551.\u2551",
-    "\u2551.\u2551.\u255A\u2550\u2550\u2550\u2557.\u2551.\u2551.\u255A\u2550\u2550\u2550\u2550\u2550\u255D.\u2551.\u2551",
-    "\u2551.\u2551.....\u2551.\u2551.\u2551.........\u2551.\u2551",
-    "\u2551.\u255A\u2550\u2550\u2550\u2557.\u2551.\u2551.\u255A\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2563.\u2551",
-    "\u2551.....\u2551.\u2551.\u2551...........\u2551.\u2551",
-    "\u2560\u2550\u2550\u2550\u2550.\u2551.\u2551.\u255A\u2550\u2550\u2550\u2550\u2550\u2566\u2550\u2550\u2550\u2557.\u2551.\u2551",
-    "\u2551.....\u2551.........\u2551...\u2551.\u2551.\u2551",
-    "\u2551.\u2550\u2550\u2550\u2550\u2569\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D.\u2551.\u2551.\u2551.\u2551",
-    "\u2551.................\u2551.\u2551.\u2551.\u2551",
-    "\u2560\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550.\u2551.\u2551.\u2551.\u2551.\u2551",
-    "\u2551...............\u2551.\u2551...\u2551.\u2551",
-    "\u2560\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2569\u2550\u2569\u2550\u2550\u2550\u255D.\u2551",
-    "\u2551.......................\u2551",
-    "\u2551E\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D"
-  ];
-  var medium2 = [
-    "\u2554\u2550\u2566\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2566\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2566\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557",
-    "\u2551S\u2551.......\u2551.....................\u2551.............\u2551",
-    "\u2551.\u2551.\u2550\u2550\u2550\u2550\u2557.\u2560\u2550\u2550\u2550\u2550\u2550\u2557.\u2550\u2550\u2550\u2550\u2557.\u2551.\u2550\u2550\u2550\u2550\u2557.\u2551.\u2550\u2550\u2550\u2550\u2557.\u2550\u2550\u2550\u2550\u2557.\u2551",
-    "\u2551.\u2551.....\u2551.\u2551.....\u2551.....\u2551.\u2551.....\u2551.\u2551.....\u2551.....\u2551.\u2551",
-    "\u2551.\u255A\u2550\u2550\u2550\u2557.\u2551.\u255A\u2550\u2550\u2550\u2557.\u255A\u2550\u2557.\u2551.\u2551.\u2551.\u255A\u2550\u2550\u2550\u2563.\u2551.\u255A\u2550\u2550\u2550\u2563.\u255A\u2550\u2557.\u2551.\u2551",
-    "\u2551.....\u2551.\u2551.....\u2551...\u2551.\u2551.\u2551.\u2551.....\u2551.\u2551.....\u2551...\u2551.\u2551.\u2551",
-    "\u2560\u2550\u2550\u2550\u2557.\u2551.\u255A\u2550\u2550\u2550\u2557.\u2560\u2550\u2550.\u2551.\u2551.\u2551.\u2560\u2550\u2550\u2550\u2557.\u2551.\u255A\u2550\u2550\u2550\u2557.\u2560\u2550\u2550.\u2551.\u2551.\u2551",
-    "\u2551...\u2551.\u2551.....\u2551.\u2551...\u2551.\u2551.\u2551.\u2551...\u2551.\u2551.....\u2551.\u2551...\u2551.\u2551.\u2551",
-    "\u2551.\u2551.\u2551.\u255A\u2550\u2550\u2550\u2557.\u2551.\u2551.\u2550\u2550\u255D.\u2551.\u2551.\u2551.\u2551.\u2551.\u255A\u2550\u2550\u2550\u2557.\u2551.\u2551.\u2550\u2550\u255D.\u2551.\u2551",
-    "\u2551.\u2551.\u2551.....\u2551.\u2551.\u2551.....\u2551.\u2551.\u2551.\u2551.\u2551.....\u2551.\u2551.\u2551.....\u2551.\u2551",
-    "\u2551.\u2551.\u255A\u2550\u2550\u2550\u2557.\u2551.\u2551.\u255A\u2550\u2550\u2550\u2550\u2550\u255D.\u2551.\u2551.\u2551.\u255A\u2550\u2550\u2550\u2557.\u2551.\u2551.\u255A\u2550\u2550\u2550\u2550\u2550\u255D.\u2551",
-    "\u2551.\u2551.....\u2551.\u2551.\u2551.........\u2551.\u2551.\u2551.....\u2551.\u2551.\u2551.........\u2551",
-    "\u2551.\u255A\u2550\u2550\u2550\u2557.\u2551.\u2551.\u255A\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2563.\u2551.\u255A\u2550\u2550\u2550\u2557.\u2551.\u2551.\u255A\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2563",
-    "\u2551.....\u2551.\u2551.\u2551...........\u2551.\u2551.....\u2551.\u2551.\u2551...........\u2551",
-    "\u2560\u2550\u2550\u2550\u2550.\u2551.\u2551.\u255A\u2550\u2550\u2550\u2550\u2550\u2566\u2550\u2550\u2550\u2557.\u2551.\u2551\u2550\u2550\u2550\u2550\u2550\u2563.\u2551.\u255A\u2550\u2550\u2550\u2550\u2550\u2566\u2550\u2550\u2550\u2557.\u2551",
-    "\u2551.....\u2551.........\u2551...\u2551.\u2551.\u2551.....\u2551.........\u2551...\u2551.\u2551",
-    "\u2551.\u2550\u2550\u2550\u2550\u2569\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D.\u2551.\u2551.\u2551.\u2551.\u2550\u2550\u2550\u2550\u2569\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D.\u2551.\u2551.\u2551",
-    "\u2551.................\u2551.\u2551.\u2551.\u2551.................\u2551.\u2551.\u2551",
-    "\u2560\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550.\u2551.\u2551.\u2551.\u2551.\u2560\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550.\u2551.\u2551.\u2551.\u2551",
-    "\u2551...............\u2551.\u2551...\u2551.\u2551...............\u2551.\u2551...\u2551",
-    "\u2560\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2569\u2550\u2569\u2550\u2550\u2550\u2569\u2550\u2569\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D.\u255A\u2550\u2550\u2550\u2563",
-    "\u2551.............................................\u2551",
-    "\u2551E\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D"
-  ];
-  var large = [
-    "\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2566\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557",
-    "\u2551S.......................................\u2551................\u2551",
-    "\u2560\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550.\u2554\u2550\u2550\u2550\u2550\u2550.\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2566\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2569\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2566\u2550\u2550.\u2551",
-    "\u2551..........\u2551...................\u2551......................\u2551...\u2551",
-    "\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550.\u2554\u2569\u2550.\u2550\u2550\u2550\u2550\u2557.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2569\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557.\u2554\u2550\u2550\u2550\u2550\u2550\u2557.\u2550\u2569\u2550\u2550.\u2551",
-    "\u2551.\u2551.......\u2551.......\u2551.\u2551......................\u2551.\u2551.....\u2551......\u2551",
-    "\u2551.\u2560\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D.\u2550\u2550\u2550\u2550\u2550\u2550\u255D.\u2551.\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2563.\u2551.\u2550\u2550\u2550\u2550\u256C\u2550\u2550.\u2550\u2550\u2550\u2563",
-    "\u2551.\u2551.................\u2551.\u2551.\u2551..................\u2551.\u2551.....\u2551......\u2551",
-    "\u2551.\u2551.\u2550\u2550\u2550\u2550\u2566\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2563.\u2551.\u2551.\u2551.\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550.\u2551.\u2560\u2550\u2550\u2550\u2550.\u2551.\u2550\u2550\u2550\u2550\u2550\u2563",
-    "\u2551.\u2551....\u2554\u2569\u2557..........\u255A\u2566\u255D.\u2551.\u2551..............\u2551.\u2551.\u2551.....\u2551......\u2551",
-    "\u2560\u2550\u255D..\u2551.\u2551.\u2560\u2550\u2550.\u2551.\u2551.\u2551...\u2551..\u255A\u2550\u2569\u2566\u2550\u2557.\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550.\u2551.\u2551.\u2551.\u2550\u2550\u2550\u2550\u2569\u2550\u2550\u2550\u2550\u2550\u2550\u2563",
-    "\u2551....\u2551.\u2551.\u2551...\u2551.\u2551.\u2551.\u2551.\u2551.....\u2551.\u2551.......\u2551...\u2551.\u2551..............\u2551",
-    "\u2560\u2550.\u2550\u2550\u2569\u2550\u255D.\u255A\u2550\u2550\u2550\u2569\u2550\u255D.\u255A\u2550\u2569\u2566\u2569\u2550\u2550\u2550\u2550\u2566\u255D.\u2551.\u2550\u2550\u2550\u2566\u2550\u2550\u255D.\u2550\u2550\u2569\u2566\u2569\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550.\u2550\u2563",
-    "\u2551...................\u2551.....\u2551..\u2551....\u2551.......\u2551...............\u2551",
-    "\u2560\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550.\u2551.\u2551.\u2550\u2550\u2563.\u2554\u2550\u2550\u2550\u2550\u2550\u2569\u2550\u2550\u2550\u2550.\u2554\u2550\u255D.\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2563",
-    "\u2551...................\u2551.\u2551...\u2551.\u2551...........\u2551.................\u2551",
-    "\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D.\u255A\u2550\u2550\u2550\u255D.\u2551.\u2554\u2550\u2550.\u2550\u2550\u2550\u2550\u2550\u2550\u2569\u2550\u2550\u2550\u2550\u2550\u2566\u2550.\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2563",
-    "\u2551.\u2551.....................\u2551...\u2551.\u2551...............\u2551...........\u2551",
-    "\u2551.\u255A\u2550\u2557.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2566\u2550\u2550\u2550\u2566\u2550\u2550\u2550\u2550.\u2551.\u2554\u2550\u255D.\u255A\u2550\u2557..\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557.\u2560\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550.\u2550\u2563",
-    "\u2551...\u2551.\u2551.......\u2551...\u2551.....\u2551.\u2551.....\u2551...........\u2551.\u2551...........\u2551",
-    "\u2560\u2550\u2557.\u2551.\u255A\u2550\u2550\u2550\u2557.\u2551.\u2551.\u2551.\u2551.\u2551.\u2550\u2550\u255D.\u2554\u2550\u2550.\u2554\u2550\u2569\u2550\u2550\u2550\u2550.\u2554\u2550\u2566\u2550\u2550.\u2551.\u2551.\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550.\u2551",
-    "\u2551.\u2551.\u2551.....\u2551.\u2551...\u2551.\u2551.\u2551.....\u2551...\u2551.......\u2551.\u2551...\u2551.............\u2551",
-    "\u2551.\u2551.\u255A\u2550\u2550\u2550\u2550\u2550\u2563.\u2551.\u2554\u2550\u2563.\u255A\u2550\u255D.\u2554\u2550\u2550.\u2551.\u2554\u2550\u2569\u2550\u2550.\u2550\u2550\u2550\u2550\u255D.\u2551.\u2550\u2550\u2569\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2563",
-    "\u2551.\u2551.......\u2551...\u2551.\u2551.....\u2551...\u2551.\u2551...........\u2551.................\u2551",
-    "\u2551.\u255A\u2550\u2550\u2550\u2550\u2550\u2550.\u255A\u2550\u2550.\u2551.\u2560\u2550\u2550\u2550\u2550.\u255A\u2550\u2550\u2550\u255D.\u255A\u2550\u2550.\u2550\u2566\u2550\u2566\u2550\u2550\u2550\u2550\u2569\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550.\u2551",
-    "\u2551.............\u2551.\u2551................\u2551.\u2551......................\u2551",
-    "\u2560\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550.\u2551.\u2551.\u2550\u2550\u2550\u2550\u2566\u2550\u2550\u2550\u2550\u2550\u2550.\u2550\u2550\u2550\u255D.\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550.\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2563",
-    "\u2551.............\u2551.......\u2551............\u2551.\u2551....................\u2551",
-    "\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550.\u255A\u2550\u2550\u2550\u2566\u2550\u2550\u2550\u2563.\u2554\u2550\u2566\u2550\u2566\u2550\u2550\u2550\u2550\u2550\u2550\u2569\u2550\u2569\u2557.\u2554\u2550\u2550\u2550\u2550\u2550\u2550.\u2551.\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2563",
-    "\u2551.\u2551...............\u2551...\u2551.\u2551.\u2551.\u2551.........\u2551.\u2551.......\u2551.........\u2551",
-    "\u2551.\u2560\u2550\u2557.\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D.\u2550\u2550\u255D.\u2551.\u2551.\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D.\u2551.\u2550\u2550\u2550\u2550\u2550\u2550\u2569\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2563",
-    "\u2551.\u2551.\u2551.....................\u2551.\u2551.\u2551.........\u2551.................\u2551",
-    "\u2551.\u2551.\u255A\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550.\u2550\u2550\u2550\u2550\u2550\u255D.\u2551.\u2551.\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550...\u2551",
-    "\u2551.\u2551.......................................................\u2551",
-    "\u2560\u2550\u2569\u2550\u2566\u2550\u2550\u2550\u2566\u2550\u2550\u2550\u2566\u2550\u2550\u2550\u2566\u2550\u2550\u2550\u2566\u2550\u2550\u2550\u2566\u2550\u2550\u2550\u2566\u2550\u2557.\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2563",
-    "\u2551...\u2551...\u2551...\u2551...\u2551...\u2551...\u2551...\u2551.\u2551...........................\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u255A\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550.\u2551",
-    "\u2551.\u2551...\u2551...\u2551...\u2551...\u2551...\u2551...\u2551...............................\u2551",
-    "\u2551E\u2554\u2550\u2550\u2550\u2569\u2550\u2550\u2550\u2569\u2550\u2550\u2550\u2569\u2550\u2550\u2550\u2569\u2550\u2550\u2550\u2569\u2550\u2550\u2550\u2569\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D"
-  ];
-  var minotaur = [
-    "\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557",
-    "\u2551..............................................................................\u2551",
-    "\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557..\u2551",
-    "\u2551.\u2551............\u2551.\u2551.........................................\u2551.\u2551..............\u2551..\u2551",
-    "\u2551.\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557.\u2551.\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557.\u2551.\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557.\u2551.\u2551..\u2551",
-    "\u2551.\u2551.\u2551........\u2551.\u2551.\u2551.\u2551.....................................\u2551.\u2551.\u2551.\u2551........\u2551.\u2551.\u2551..\u2551",
-    "\u2551.\u2551.\u2551.\u2554\u2550\u2550\u2550\u2550\u2557.\u2551.\u2551.\u2551.\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557.\u2551.\u2551.\u2551.\u2551.\u2554\u2550\u2550\u2550\u2550\u2557.\u2551.\u2551.\u2551..\u2551",
-    "\u2551.\u2551.\u2551.\u2551....\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.................................\u2551.\u2551.\u2551.\u2551.\u2551.\u2551....\u2551.\u2551.\u2551.\u2551..\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2554\u2550.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2554\u2550.\u2551.\u2551.\u2551.\u2551..\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2551..\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.............................\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551..\u2551.\u2551.\u2551.\u2551..\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2551.\u2550\u255D.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2550\u2563.\u2551.\u2551.\u2551..\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2551....\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.........................\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551....\u2551.\u2551.\u2551.\u2551..\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u255A\u2550\u2550\u2550\u2550\u255D.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u255A\u2550\u2550\u2550\u2550\u255D.\u2551.\u2551.\u2551..\u2551",
-    "\u2551.\u2551.\u2551.\u2551........\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.....................\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551........\u2551.\u2551.\u2551..\u2551",
-    "\u2551.\u2551.\u2551.\u255A\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u255A\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D.\u2551.\u2551..\u2551",
-    "\u2551.\u2551.\u2551............\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.................\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551............\u2551.\u2551..\u2551",
-    "\u2551.\u2551.\u255A\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u255A\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D.\u2551..\u2551",
-    "\u2551.\u2551................\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.............\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551................\u2551..\u2551",
-    "\u2551.\u2560\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u255A\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2563..\u2551",
-    "\u2551.\u2551..................\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.........\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551..................\u2551..\u2551",
-    "\u2551.\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2557.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u255A\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557.\u2551..\u2551",
-    "\u2551.\u2551.\u2551..................\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.....\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551..................\u2551.\u2551..\u2551",
-    "\u2551.\u2551.\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2554\u2550\u2557.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u255A\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557.\u2551.\u2551..\u2551",
-    "\u2551.\u2551.\u2551.\u2551..................\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551S\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551..................\u2551.\u2551.\u2551..\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u255A\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557.\u2551.\u2551.\u2551..\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2551..................\u2551.\u2551.\u2551.\u2551.\u2551.\u2551...\u2551.\u2551.\u2551.\u2551.\u2551.\u2551..................\u2551.\u2551.\u2551.\u2551..\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D.\u2551.\u2551.\u2551.\u2551.\u2560\u2550\u2550\u2550\u255D.\u2551.\u2551.\u2551.\u2551.\u2551.\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2563.\u2551.\u2551.\u2551..\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2551.\u2551..................\u2551.\u2551.\u2551.\u2551.\u2551.....\u2551.\u2551.\u2551.\u2551.\u2551..................\u2551.\u2551.\u2551.\u2551..\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D.\u2551.\u2551.\u2551.\u255A\u2550\u2550\u2550\u2550\u2550\u255D.\u2551.\u2551.\u2551.\u255A\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557.\u2551.\u2551.\u2551.\u2551..\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551..................\u2551.\u2551.\u2551.........\u2551.\u2551.\u2551..................\u2551.\u2551.\u2551.\u2551.\u2551..\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D.\u2551.\u255A\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D.\u2551.\u255A\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557.\u2551.\u2551.\u2551.\u2551.\u2551..\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551..................\u2551................................\u2551.\u2551.\u2551.\u2551.\u2560\u2550\u255D..\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2569\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557.\u2554\u2569\u2566\u2569\u2566\u2569\u2566\u2569\u2566\u2569\u2557...\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551..............................................\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557..\u2551.\u2551...\u2551.\u2551.\u2551.\u2551.\u2551.\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551..........\u2551.\u2551............................\u2551..\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2557.\u2551.\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557.\u255A\u2557.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551......\u2551.\u2551.\u2551.\u2551........................\u2551..\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2560\u2550\u2550\u2557.\u2551.\u2551.\u2551.\u2551.\u2560\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557..\u2554\u2569\u2557.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551..\u2551.\u2551.\u2551.\u2551.\u2551.\u2551....................\u2551..\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2550\u255D.\u2551.\u2551.\u2551.\u2551.\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557.\u255A\u2557.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551....\u2551.\u2551.\u2551.\u2551.\u2551.\u2551................\u2551..\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u255A\u2550\u2550\u2550\u2550\u255D.\u2551.\u2551.\u2551.\u2551.\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557.\u255A\u2557.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551........\u2551.\u2551.\u2551.\u2551.\u2551.\u2551............\u2551..\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u255A\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D.\u2551.\u2551.\u2551.\u2551.\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550.\u2560\u2550.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551............\u2551.\u2551.\u2551.\u2551.\u2551.\u2551..........\u2551..\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u255A\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D.\u2551.\u2551.\u2551.\u2551.\u2551.\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2557.\u255A\u2557.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2551.\u2551....................\u2551.\u2551.\u2551.\u2551.\u2551.\u2551......\u2551..\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D.\u2551.\u2551.\u2551.\u2551.\u2551.\u2554\u2550\u2550\u2557.\u255A\u2557.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u2551.\u2551......................\u2551.\u2551.\u2551.\u2551.\u2551.\u2551..\u2551..\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551",
-    "\u2551.\u2551.\u2551.\u2551.\u255A\u2550\u2569\u2550\u2550.\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D.\u2551.\u2551.\u2551.\u2551.\u2551.\u2550\u255D.\u2554\u255D.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551",
-    "\u2551.\u2551.\u2551.\u2551............................\u2551.\u2551.\u2551.\u2551.\u2551....\u2551..\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551",
-    "\u2551.\u2551.\u2551.\u255A\u2550.\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D.\u2551.\u2551.\u2551.\u2550\u2550\u2550\u2569\u2550\u2550\u2569\u2566\u255D.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551",
-    "\u2551.\u2551....................................\u2551.\u2551.\u2551........\u2551..\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551",
-    "\u2551.\u2551.\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D.\u2551.\u2551.\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2569\u2550\u2550\u2563.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551",
-    "\u2551........................................\u2551.\u2551...........\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551",
-    "\u2551.\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D.\u255A\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551.\u2551",
-    "\u2551..........................................................\u2551.....\u2551.\u2551.........\u2551.\u2551",
-    "\u255A\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2569\u2550\u2550\u2550\u2550\u2550\u2569\u2550\u2569\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2563E\u2551"
-  ];
-
-  // test/examples/asciiMaze/browser-entry.ts
-  async function start(containerId = "ascii-maze-output") {
-    const host = document.getElementById(containerId);
-    const archiveEl = host ? host.querySelector("#ascii-maze-archive") : null;
-    const liveEl = host ? host.querySelector("#ascii-maze-live") : null;
-    const clearFn = BrowserTerminalUtility.createTerminalClearer(
-      liveEl ?? void 0
-    );
-    const liveLogFn = createBrowserLogger(liveEl ?? void 0);
-    const archiveLogFn = createBrowserLogger(archiveEl ?? void 0);
-    const dashboard = new DashboardManager(
-      clearFn,
-      liveLogFn,
-      archiveLogFn
-    );
-    window.asciiMazeStart = async () => {
-      const order = [
-        "tiny",
-        "spiralSmall",
-        "spiral",
-        "small",
-        "medium",
-        "medium2",
-        "large",
-        "minotaur"
-      ];
-      let lastBestNetwork = void 0;
-      for (const key of order) {
-        const maze = mazes_exports[key];
-        if (!Array.isArray(maze)) continue;
-        let agentMaxSteps = 1e3;
-        let maxGenerations = 500;
-        switch (key) {
-          case "tiny":
-            agentMaxSteps = 100;
-            maxGenerations = 200;
-            break;
-          case "spiralSmall":
-            agentMaxSteps = 100;
-            maxGenerations = 200;
-            break;
-          case "spiral":
-            agentMaxSteps = 150;
-            maxGenerations = 300;
-            break;
-          case "small":
-            agentMaxSteps = 50;
-            maxGenerations = 300;
-            break;
-          case "medium":
-            agentMaxSteps = 250;
-            maxGenerations = 400;
-            break;
-          case "medium2":
-            agentMaxSteps = 300;
-            maxGenerations = 400;
-            break;
-          case "large":
-            agentMaxSteps = 400;
-            maxGenerations = 500;
-            break;
-          case "minotaur":
-            agentMaxSteps = 700;
-            maxGenerations = 600;
-            break;
-        }
-        try {
-          const result = await EvolutionEngine.runMazeEvolution({
-            mazeConfig: { maze },
-            agentSimConfig: { maxSteps: agentMaxSteps },
-            evolutionAlgorithmConfig: {
-              allowRecurrent: true,
-              popSize: 40,
-              maxStagnantGenerations: 200,
-              minProgressToPass: 99,
-              maxGenerations,
-              // Disable Lamarckian/backprop refinement for browser runs per request
-              lamarckianIterations: 0,
-              lamarckianSampleSize: 0,
-              // seed previous winner if available
-              initialBestNetwork: lastBestNetwork
-            },
-            reportingConfig: {
-              dashboardManager: dashboard,
-              logEvery: 1,
-              label: `browser-${key}`
-            }
-          });
-          if (result && result.bestNetwork)
-            lastBestNetwork = result.bestNetwork;
-        } catch (e) {
-          console.error("Error while running maze", key, e);
-        }
-      }
-    };
-    window.asciiMazeStart();
-    try {
-      window.asciiMazePaused = false;
-      const playPauseBtn = document.getElementById(
-        "ascii-maze-playpause"
+  var MazeGenerator = class _MazeGenerator {
+    #width;
+    #height;
+    #grid = [];
+    #startX = 0;
+    #startY = 0;
+    #farthest = { x: 0, y: 0, depth: 0 };
+    // Cell markers
+    static WALL = 1;
+    static PATH = 0;
+    static START = 2;
+    static EXIT = 3;
+    constructor(rawWidth, rawHeight) {
+      this.#width = rawWidth;
+      this.#height = rawHeight;
+      this.#normalizeDimensions();
+      this.#initializeGrid();
+      this.#carvePerfectMaze();
+      this.#markStartAndExit();
+    }
+    /**
+     * STEP 1: Normalize requested dimensions.
+     * - Floors values.
+     * - Enforces minimum size 5.
+     * - Forces odd numbers so corridors are one cell thick with surrounding walls.
+     */
+    #normalizeDimensions() {
+      this.#width = Math.max(5, Math.floor(this.#width));
+      this.#height = Math.max(5, Math.floor(this.#height));
+      if (this.#width % 2 === 0) this.#width -= 1;
+      if (this.#height % 2 === 0) this.#height -= 1;
+    }
+    /**
+     * STEP 2: Initialize full wall grid and compute central starting cell (odd coordinates).
+     */
+    #initializeGrid() {
+      this.#grid = Array.from(
+        { length: this.#height },
+        () => Array.from({ length: this.#width }, () => _MazeGenerator.WALL)
       );
-      const updateUI = () => {
-        const paused = !!window.asciiMazePaused;
-        if (playPauseBtn) {
-          playPauseBtn.textContent = paused ? "Play" : "Pause";
-          playPauseBtn.style.background = paused ? "#39632C" : "#2C3963";
-          playPauseBtn.setAttribute("aria-pressed", String(paused));
+      const toOdd = (value) => value % 2 === 0 ? value - 1 : value;
+      this.#startX = toOdd(Math.floor(this.#width / 2));
+      this.#startY = toOdd(Math.floor(this.#height / 2));
+      this.#grid[this.#startY][this.#startX] = _MazeGenerator.PATH;
+      this.#farthest = { x: this.#startX, y: this.#startY, depth: 0 };
+    }
+    /**
+     * Helper: bounds check for safe coordinate access.
+     */
+    #inBounds(column, row) {
+      return column >= 0 && row >= 0 && column < this.#width && row < this.#height;
+    }
+    /**
+     * STEP 3: Carve a perfect maze using an iterative depth-first search (recursive backtracker).
+     * Maintains a stack of frontier cells; at each step chooses a random unvisited neighbor
+     * two cells away, carving both the intermediary wall cell and the target cell. Tracks
+     * the farthest cell (by depth) from the start for later exit placement.
+     */
+    #carvePerfectMaze() {
+      const stack = [
+        { x: this.#startX, y: this.#startY, depth: 0 }
+      ];
+      while (stack.length) {
+        const current = stack[stack.length - 1];
+        const neighborDirections = [
+          { deltaX: 0, deltaY: -2 },
+          { deltaX: 2, deltaY: 0 },
+          { deltaX: 0, deltaY: 2 },
+          { deltaX: -2, deltaY: 0 }
+        ];
+        for (let remaining = neighborDirections.length - 1; remaining > 0; remaining--) {
+          const randomFloat = Math.random();
+          const swapIndex = randomFloat * (remaining + 1) | 0;
+          if (swapIndex !== remaining) {
+            const tmp = neighborDirections[remaining];
+            neighborDirections[remaining] = neighborDirections[swapIndex];
+            neighborDirections[swapIndex] = tmp;
+          }
         }
-      };
-      if (playPauseBtn) {
-        playPauseBtn.addEventListener("click", () => {
-          window.asciiMazePaused = !window.asciiMazePaused;
-          updateUI();
-        });
+        const unvisited = [];
+        for (const direction of neighborDirections) {
+          const nextX = current.x + direction.deltaX;
+          const nextY = current.y + direction.deltaY;
+          if (!this.#inBounds(nextX, nextY)) continue;
+          if (nextX <= 0 || nextY <= 0 || nextX >= this.#width - 1 || nextY >= this.#height - 1)
+            continue;
+          if (this.#grid[nextY][nextX] !== _MazeGenerator.WALL) continue;
+          unvisited.push({
+            nextX,
+            nextY,
+            wallX: current.x + direction.deltaX / 2,
+            wallY: current.y + direction.deltaY / 2
+          });
+        }
+        if (unvisited.length === 0) {
+          stack.pop();
+          continue;
+        }
+        const chosen = unvisited[0];
+        this.#grid[chosen.wallY][chosen.wallX] = _MazeGenerator.PATH;
+        this.#grid[chosen.nextY][chosen.nextX] = _MazeGenerator.PATH;
+        const depth = current.depth + 1;
+        stack.push({ x: chosen.nextX, y: chosen.nextY, depth });
+        if (depth > this.#farthest.depth)
+          this.#farthest = { x: chosen.nextX, y: chosen.nextY, depth };
       }
-      updateUI();
+    }
+    /**
+     * STEP 4: Mark start and farthest cell (exit) on the grid.
+     */
+    #markStartAndExit() {
+      this.#grid[this.#startY][this.#startX] = _MazeGenerator.START;
+      this.#placeEdgeExit();
+    }
+    /**
+     * Compute shortest-path distances (BFS) from the start across carved PATH cells.
+     * @returns 2D array of distances (or -1 if unreachable).
+     */
+    #computeDistances() {
+      const distances = Array.from(
+        { length: this.#height },
+        () => Array.from({ length: this.#width }, () => -1)
+      );
+      const queue = [];
+      queue.push({ x: this.#startX, y: this.#startY });
+      distances[this.#startY][this.#startX] = 0;
+      let readIndex = 0;
+      while (readIndex < queue.length) {
+        const current = queue[readIndex++];
+        const baseDistance = distances[current.y][current.x];
+        const neighbors = [
+          { x: current.x, y: current.y - 1 },
+          { x: current.x + 1, y: current.y },
+          { x: current.x, y: current.y + 1 },
+          { x: current.x - 1, y: current.y }
+        ];
+        for (const neighbor of neighbors) {
+          if (!this.#inBounds(neighbor.x, neighbor.y)) continue;
+          const cell = this.#grid[neighbor.y][neighbor.x];
+          if (![_MazeGenerator.PATH, _MazeGenerator.START].includes(cell) || distances[neighbor.y][neighbor.x] !== -1)
+            continue;
+          distances[neighbor.y][neighbor.x] = baseDistance + 1;
+          queue.push(neighbor);
+        }
+      }
+      return distances;
+    }
+    /**
+     * Select a border-adjacent interior path cell maximizing distance from the start
+     * and open an actual edge (outer frame) cell, marking that outer cell as EXIT.
+     * If no interior candidate is found (degenerate tiny maze), fallback to previous
+     * farthest internal cell marking.
+     */
+    #placeEdgeExit() {
+      const distances = this.#computeDistances();
+      const candidates = [];
+      for (let y = 1; y < this.#height - 1; y++) {
+        for (let x = 1; x < this.#width - 1; x++) {
+          if (distances[y][x] < 0) continue;
+          if (this.#grid[y][x] === _MazeGenerator.START) continue;
+          if (y === 1) {
+            candidates.push({
+              interiorX: x,
+              interiorY: y,
+              borderX: x,
+              borderY: 0,
+              distance: distances[y][x]
+            });
+          }
+          if (y === this.#height - 2) {
+            candidates.push({
+              interiorX: x,
+              interiorY: y,
+              borderX: x,
+              borderY: this.#height - 1,
+              distance: distances[y][x]
+            });
+          }
+          if (x === 1) {
+            candidates.push({
+              interiorX: x,
+              interiorY: y,
+              borderX: 0,
+              borderY: y,
+              distance: distances[y][x]
+            });
+          }
+          if (x === this.#width - 2) {
+            candidates.push({
+              interiorX: x,
+              interiorY: y,
+              borderX: this.#width - 1,
+              borderY: y,
+              distance: distances[y][x]
+            });
+          }
+        }
+      }
+      if (candidates.length === 0) {
+        this.#grid[this.#farthest.y][this.#farthest.x] = _MazeGenerator.EXIT;
+        return;
+      }
+      candidates.sort((a, b) => b.distance - a.distance);
+      const chosen = candidates[0];
+      if (this.#grid[chosen.interiorY][chosen.interiorX] === _MazeGenerator.EXIT)
+        this.#grid[chosen.interiorY][chosen.interiorX] = _MazeGenerator.PATH;
+      this.#grid[chosen.borderY][chosen.borderX] = _MazeGenerator.EXIT;
+    }
+    /**
+     * STEP 5: Derive box drawing wall character from neighboring wall continuity.
+     * Considers the four cardinal neighbors as wall/not-wall and maps bitmask to glyph.
+     * Falls back to a solid block if an unexpected isolated pattern appears.
+     */
+    #wallGlyph(column, row) {
+      const isWall = (c, r) => this.#inBounds(c, r) && ![_MazeGenerator.PATH, _MazeGenerator.START, _MazeGenerator.EXIT].includes(
+        this.#grid[r][c]
+      );
+      const north = isWall(column, row - 1);
+      const east = isWall(column + 1, row);
+      const south = isWall(column, row + 1);
+      const west = isWall(column - 1, row);
+      const mask = (north ? 1 : 0) | (east ? 2 : 0) | (south ? 4 : 0) | (west ? 8 : 0);
+      switch (mask) {
+        case 5:
+        case 1:
+        case 4:
+          return "\u2551";
+        case 10:
+        case 2:
+        case 8:
+          return "\u2550";
+        case 3:
+          return "\u255A";
+        case 9:
+          return "\u255D";
+        case 6:
+          return "\u2554";
+        case 12:
+          return "\u2557";
+        case 14:
+          return "\u2566";
+        case 11:
+          return "\u2569";
+        case 7:
+          return "\u2560";
+        case 13:
+          return "\u2563";
+        case 15:
+          return "\u256C";
+        default:
+          return "\u2588";
+      }
+    }
+    /**
+     * STEP 6: Render final ASCII maze lines.
+     * Preserves a continuous rectangular outer frame using the standard corner/edge glyphs.
+     */
+    #render() {
+      const lines = [];
+      for (let rowIndex = 0; rowIndex < this.#height; rowIndex++) {
+        let rendered = "";
+        for (let columnIndex = 0; columnIndex < this.#width; columnIndex++) {
+          const cellValue = this.#grid[rowIndex][columnIndex];
+          if (cellValue === _MazeGenerator.PATH) rendered += ".";
+          else if (cellValue === _MazeGenerator.START) rendered += "S";
+          else if (cellValue === _MazeGenerator.EXIT) rendered += "E";
+          else if (rowIndex === 0 && columnIndex === 0) rendered += "\u2554";
+          else if (rowIndex === 0 && columnIndex === this.#width - 1)
+            rendered += "\u2557";
+          else if (rowIndex === this.#height - 1 && columnIndex === 0)
+            rendered += "\u255A";
+          else if (rowIndex === this.#height - 1 && columnIndex === this.#width - 1)
+            rendered += "\u255D";
+          else if (rowIndex === 0 || rowIndex === this.#height - 1)
+            rendered += "\u2550";
+          else if (columnIndex === 0 || columnIndex === this.#width - 1)
+            rendered += "\u2551";
+          else rendered += this.#wallGlyph(columnIndex, rowIndex);
+        }
+        lines.push(rendered);
+      }
+      return lines;
+    }
+    /**
+     * Public entry: returns the rendered maze as string lines.
+     */
+    generate() {
+      return this.#render();
+    }
+  };
+
+  // test/examples/asciiMaze/refineWinner.ts
+  init_network();
+  function refineWinnerWithBackprop(winner) {
+    if (!winner) return void 0;
+    try {
+      winner.nodes.forEach((node) => {
+        if (typeof node.squash !== "function") {
+          node.squash = methods_exports.Activation.logistic;
+        }
+      });
     } catch {
     }
+    const trainingSet = [];
+    const OUT = (dirIndex) => [0, 1, 2, 3].map((i) => i === dirIndex ? 0.92 : 0.02);
+    const add = (inp, d) => trainingSet.push({ input: inp, output: OUT(d) });
+    const compassDirs = [0, 0.25, 0.5, 0.75];
+    for (let dir = 0; dir < 4; dir++) {
+      const compass = compassDirs[dir];
+      const open = [0, 0, 0, 0];
+      open[dir] = 1;
+      add([compass, ...open, 0.85], dir);
+      add([compass, ...open, 0.65], dir);
+      add([compass, ...open, 0.55], dir);
+      add([compass, ...open, 0.5], dir);
+    }
+    try {
+      winner.train(trainingSet, {
+        iterations: 220,
+        error: 5e-3,
+        rate: 1e-3,
+        momentum: 0.1,
+        batchSize: 8,
+        cost: methods_exports.Cost.softmaxCrossEntropy
+      });
+    } catch {
+    }
+    try {
+      return winner.clone();
+    } catch {
+      return winner;
+    }
+  }
+
+  // test/examples/asciiMaze/browser-entry.ts
+  var DEFAULT_CONTAINER_ID = "ascii-maze-output";
+  var RESIZE_WIDTH_THRESHOLD = 8;
+  var RESIZE_DEBOUNCE_MS = 120;
+  var AUTO_START_DELAY_MS = 20;
+  var MIN_PROGRESS_TO_PASS = 90;
+  var DEFAULT_MAX_STAGNANT_GENERATIONS = 50;
+  var DEFAULT_MAX_GENERATIONS = 100;
+  var PER_GENERATION_LOG_FREQUENCY = 1;
+  var INITIAL_MAZE_DIMENSION = 8;
+  var MAX_MAZE_DIMENSION = 40;
+  var MAZE_DIMENSION_INCREMENT = 4;
+  var AGENT_MAX_STEPS = 600;
+  var POPULATION_SIZE = 20;
+  function createEvolutionSettings(dimension) {
+    return {
+      agentMaxSteps: AGENT_MAX_STEPS,
+      popSize: POPULATION_SIZE,
+      maxStagnantGenerations: DEFAULT_MAX_STAGNANT_GENERATIONS,
+      maxGenerations: DEFAULT_MAX_GENERATIONS,
+      lamarckianIterations: 4,
+      lamarckianSampleSize: 12,
+      mazeFactory: () => new MazeGenerator(dimension, dimension).generate()
+    };
+  }
+  var TelemetryHub = class {
+    /** Registered listener callbacks (unique). */
+    #listeners = /* @__PURE__ */ new Set();
+    /** Add a listener and return an unsubscribe function. */
+    add(listener) {
+      this.#listeners.add(listener);
+      return () => this.#listeners.delete(listener);
+    }
+    /** Dispatch to a snapshot of listeners so mutations during iteration are safe. */
+    dispatch(payload) {
+      const snapshot = Array.from(this.#listeners);
+      for (const listener of snapshot) {
+        try {
+          listener(payload);
+        } catch {
+        }
+      }
+    }
+  };
+  async function start(container = DEFAULT_CONTAINER_ID, opts = {}) {
+    const hostElement = typeof container === "string" ? document.getElementById(container) : container;
+    const archiveElement = hostElement ? hostElement.querySelector("#ascii-maze-archive") : null;
+    const liveElement = hostElement ? hostElement.querySelector("#ascii-maze-live") : null;
+    const clearer = BrowserTerminalUtility.createTerminalClearer(
+      liveElement ?? void 0
+    );
+    const liveLogger = createBrowserLogger(liveElement ?? void 0);
+    const archiveLogger = createBrowserLogger(archiveElement ?? void 0);
+    const dashboard = new DashboardManager(
+      clearer,
+      liveLogger,
+      archiveLogger
+    );
+    const telemetryHub = new TelemetryHub();
+    dashboard._telemetryHook = (telemetry) => telemetryHub.dispatch(telemetry);
+    try {
+      const observeTarget = hostElement ?? document.getElementById("ascii-maze-output");
+      if (observeTarget && typeof ResizeObserver !== "undefined") {
+        let lastObservedWidth = observeTarget.clientWidth;
+        const resizeObserver = new ResizeObserver((entries) => {
+          for (const entry of entries) {
+            const width = entry.contentRect.width;
+            if (Math.abs(width - lastObservedWidth) > RESIZE_WIDTH_THRESHOLD) {
+              lastObservedWidth = width;
+              try {
+                dashboard.redraw?.([], void 0);
+              } catch {
+              }
+            }
+          }
+        });
+        resizeObserver.observe(observeTarget);
+      } else if (observeTarget) {
+        let debounceTimer = void 0;
+        const handler = () => {
+          if (typeof debounceTimer === "number") clearTimeout(debounceTimer);
+          debounceTimer = window.setTimeout(() => {
+            try {
+              dashboard.redraw?.([], void 0);
+            } catch {
+            }
+          }, RESIZE_DEBOUNCE_MS);
+        };
+        window.addEventListener("resize", handler);
+      }
+    } catch {
+    }
+    let cancelled = false;
+    const internalController = new AbortController();
+    const externalSignal = opts.signal;
+    const composeAbortSignal = (maybeExternal) => {
+      if (maybeExternal) {
+        if (maybeExternal.aborted) return maybeExternal;
+        if (typeof AbortSignal.any === "function") {
+          try {
+            return AbortSignal.any([
+              maybeExternal,
+              internalController.signal
+            ]);
+          } catch {
+          }
+        }
+        try {
+          maybeExternal.addEventListener(
+            "abort",
+            () => {
+              try {
+                internalController.abort();
+              } catch {
+              }
+            },
+            { once: true }
+          );
+        } catch {
+        }
+      }
+      return internalController.signal;
+    };
+    const combinedSignal = composeAbortSignal(externalSignal);
+    let running = true;
+    try {
+      combinedSignal.addEventListener(
+        "abort",
+        () => {
+          cancelled = true;
+          running = false;
+          try {
+            resolveDone?.();
+          } catch {
+          }
+        },
+        { once: true }
+      );
+    } catch {
+    }
+    let currentDimension = INITIAL_MAZE_DIMENSION;
+    let resolveDone;
+    const donePromise = new Promise((resolve) => resolveDone = resolve);
+    let previousBestNetwork;
+    const scheduleNextMaze = (cb) => {
+      try {
+        if (typeof requestAnimationFrame === "function")
+          requestAnimationFrame(cb);
+        else setTimeout(cb, 0);
+      } catch {
+        setTimeout(cb, 0);
+      }
+    };
+    const runEvolution = async () => {
+      if (cancelled) {
+        running = false;
+        resolveDone?.();
+        return;
+      }
+      const settings = createEvolutionSettings(currentDimension);
+      const mazeLayout = settings.mazeFactory();
+      let solved = false;
+      try {
+        const result = await EvolutionEngine.runMazeEvolution({
+          mazeConfig: { maze: mazeLayout },
+          agentSimConfig: { maxSteps: settings.agentMaxSteps },
+          evolutionAlgorithmConfig: {
+            allowRecurrent: true,
+            popSize: settings.popSize,
+            maxStagnantGenerations: settings.maxStagnantGenerations,
+            minProgressToPass: MIN_PROGRESS_TO_PASS,
+            maxGenerations: settings.maxGenerations,
+            autoPauseOnSolve: false,
+            stopOnlyOnSolve: false,
+            lamarckianIterations: settings.lamarckianIterations,
+            lamarckianSampleSize: settings.lamarckianSampleSize,
+            initialBestNetwork: previousBestNetwork
+          },
+          reportingConfig: {
+            dashboardManager: dashboard,
+            logEvery: PER_GENERATION_LOG_FREQUENCY,
+            label: `browser-procedural-${currentDimension}x${currentDimension}`,
+            paceEveryGeneration: true
+            // custom flag (consumed if supported) to yield between generations
+          },
+          cancellation: { isCancelled: () => cancelled },
+          signal: combinedSignal
+        });
+        const progress = result?.bestResult?.progress;
+        try {
+          const bestNet = result?.bestNetwork;
+          if (bestNet) {
+            const refined = refineWinnerWithBackprop(bestNet);
+            previousBestNetwork = refined || bestNet;
+          }
+        } catch {
+        }
+        solved = typeof progress === "number" && progress >= MIN_PROGRESS_TO_PASS;
+        try {
+          console.log(
+            "[asciiMaze] maze complete",
+            currentDimension,
+            "solved?",
+            solved,
+            "progress",
+            progress
+          );
+        } catch {
+        }
+      } catch (error) {
+        console.error(
+          "Error while running procedural maze",
+          currentDimension,
+          error
+        );
+      }
+      if (!cancelled && solved && currentDimension < MAX_MAZE_DIMENSION) {
+        currentDimension = Math.min(
+          currentDimension + MAZE_DIMENSION_INCREMENT,
+          MAX_MAZE_DIMENSION
+        );
+        scheduleNextMaze(() => runEvolution());
+      } else {
+        running = false;
+        resolveDone?.();
+      }
+    };
+    runEvolution();
+    const handle = {
+      stop: () => {
+        cancelled = true;
+        try {
+          internalController.abort();
+        } catch {
+        }
+        running = false;
+      },
+      // Include AbortSignal aborted state so external aborts flip isRunning() without relying solely on listener side-effects.
+      isRunning: () => running && !cancelled && !combinedSignal.aborted,
+      done: Promise.resolve(donePromise).catch(() => {
+      }),
+      onTelemetry: (telemetryCallback) => telemetryHub.add(telemetryCallback),
+      getTelemetry: () => dashboard.getLastTelemetry?.()
+    };
+    return handle;
   }
   if (typeof window !== "undefined" && window.document) {
-    setTimeout(() => start(), 20);
+    const globalWindow = window;
+    globalWindow.asciiMaze = globalWindow.asciiMaze || {};
+    globalWindow.asciiMaze.start = start;
+    if (!globalWindow.asciiMazeStart) {
+      globalWindow.asciiMazeStart = (containerElement) => {
+        console.warn(
+          "[asciiMaze] window.asciiMazeStart is deprecated; use import { start } ... or window.asciiMaze.start"
+        );
+        return start(containerElement);
+      };
+    }
+    if (!globalWindow.asciiMaze._autoStarted) {
+      globalWindow.asciiMaze._autoStarted = true;
+      setTimeout(() => {
+        try {
+          if (document.getElementById(DEFAULT_CONTAINER_ID)) start();
+        } catch {
+        }
+      }, AUTO_START_DELAY_MS);
+    }
   }
 })();
 //# sourceMappingURL=ascii-maze.bundle.js.map

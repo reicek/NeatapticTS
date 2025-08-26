@@ -48,6 +48,10 @@ export interface IEvolutionAlgorithmConfig {
   maxStagnantGenerations?: number;
   minProgressToPass?: number;
   maxGenerations?: number; // Safety cap on total generations
+  /** If true, ignore stagnation / generation caps and only stop when the agent actually solves the maze (success flag true AND progress threshold met). */
+  stopOnlyOnSolve?: boolean;
+  /** If true (default), engine sets window.asciiMazePaused=true after a solve; browser demo now disables this for continuous run. */
+  autoPauseOnSolve?: boolean;
   randomSeed?: number;
   initialPopulation?: INetwork[];
   initialBestNetwork?: INetwork;
@@ -69,6 +73,16 @@ export interface IEvolutionAlgorithmConfig {
   dynamicPopExpandInterval?: number;
   dynamicPopExpandFactor?: number;
   dynamicPopPlateauSlack?: number;
+  /** If true, enables deterministic RNG seeding (uses randomSeed if provided, else a fixed fallback). */
+  deterministic?: boolean;
+  /** Optional generation interval for memory compaction (removal of disabled connections). Default handled internally. */
+  memoryCompactionInterval?: number;
+  /** If true, reduces telemetry math (skip kurtosis / higher moments) to lower CPU + scratch usage. */
+  telemetryReduceStats?: boolean;
+  /** If true, disables higher-cost per-generation telemetry (entropy, logits, diversity, bias stats). */
+  telemetryMinimal?: boolean;
+  /** If true, skips Baldwinian refinement phase (post-evolve extra training of fittest). */
+  disableBaldwinianRefinement?: boolean;
 }
 
 /**
@@ -77,8 +91,8 @@ export interface IEvolutionAlgorithmConfig {
  */
 export interface IFitnessEvaluationContext {
   encodedMaze: number[][];
-  startPosition: [number, number];
-  exitPosition: [number, number];
+  startPosition: readonly [number, number];
+  exitPosition: readonly [number, number];
   agentSimConfig: IAgentSimulationConfig;
   distanceMap?: number[][]; // optional cached distance map for performance
 }
@@ -100,6 +114,8 @@ export interface IReportingConfig {
   logEvery?: number;
   dashboardManager: IDashboardManager;
   label?: string;
+  /** If true, evolution yields to the browser (requestAnimationFrame) after every generation for smoother UI. */
+  paceEveryGeneration?: boolean;
 }
 
 /**
@@ -112,6 +128,10 @@ export interface IRunMazeEvolutionOptions {
   evolutionAlgorithmConfig: IEvolutionAlgorithmConfig;
   reportingConfig: IReportingConfig;
   fitnessEvaluator?: FitnessEvaluatorFn;
+  /** Optional cancellation signal (cooperative). When `isCancelled()` returns true the evolution loop will exit ASAP. */
+  cancellation?: { isCancelled: () => boolean };
+  /** Optional AbortSignal (ES2023 modernization). If provided, evolution should periodically check `signal.aborted` and terminate gracefully (returning partial best result). */
+  signal?: AbortSignal;
 }
 
 /**

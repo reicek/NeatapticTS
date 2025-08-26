@@ -1,4 +1,4 @@
-ES2023 Migration Plan (Consolidated)
+ES2023 Migration Plan
 ====================================
 
 Objective
@@ -72,11 +72,6 @@ Feature Modernization Matrix
 
 Detailed Phase Actions
 ----------------------
-Phase 0: Baseline
-	- Run tests, record coverage (% lines).  
-	- Bench: population sizes (100, 1k, 5k) on representative network depth; capture avg & p95 generation time.  
-	- Memory: Run churn scenario (create/destroy networks) gather peak RSS & memoryStats snapshot.  
-	- Commit tag `baseline-es2023-pre` + baseline report file.
 
 Phase 1: Mechanical Upgrades
 	- Apply toSorted change in `neat.evaluate.ts` (distance matrix).  
@@ -124,8 +119,8 @@ Phase 7: Documentation & Wrap-Up
 Phase 8: Automation & PR Enforcement
 	Goal: Prevent regressions by automatically validating ES2023 patterns on every PR and guiding contributors (humans + Copilot) toward approved idioms.
 	Steps:
-		8.1 Add GitHub Action `.github/workflows/es2023-validation.yml` triggered on `pull_request` & `push` to main branches.
-		8.2 Implement `scripts/validate-es2023.mjs` performing fast checks:
+		8.1 Add GitHub Action `.github/workflows/ES2023-validation.yml` triggered on `pull_request` & `push` to main branches.
+		8.2 Implement `scripts/validate-ES2023.mjs` performing fast checks:
 			- Fail on new occurrences of disallowed guard chains (`/\b[a-zA-Z0-9_]+ && [a-zA-Z0-9_]+\.[a-zA-Z0-9_]+ &&/`).
 			- Fail on `slice().sort(` where not whitelisted (expect `toSorted`).
 			- Warn (not fail) on `arr.length - 1` if candidate for `.at(-1)` outside hot paths (hot path list in allowlist JSON).
@@ -140,7 +135,7 @@ Phase 8: Automation & PR Enforcement
 
 Automation Tooling Notes:
 	- Validation script kept dependency-free (pure Node, regex scanning) for speed (<1s on typical codebase size).
-	- Provide allowlist file: `config/es2023-allowlist.json` enumerating acceptable legacy patterns (regex array). Contributors can extend with justification PR.
+	- Provide allowlist file: `config/ES2023-allowlist.json` enumerating acceptable legacy patterns (regex array). Contributors can extend with justification PR.
 	- CI matrix can include Node LTS + latest to ensure new features (structuredClone) remain available.
 	- Optional: Add a weekly scheduled run to detect drift (e.g., dependencies introducing CommonJS shims) and open an issue automatically.
 
@@ -198,7 +193,7 @@ Build (tsc) | Lint | Tests | Bench delta | Memory snapshot — all must PASS / w
 
 Completion Criteria
 -------------------
-All phases executed, metrics within targets, documentation updated, and no open regression issues tagged `es2023-migration`.
+All phases executed, metrics within targets, documentation updated, and no open regression issues tagged `ES2023-migration`.
 
 End of consolidated plan.
 

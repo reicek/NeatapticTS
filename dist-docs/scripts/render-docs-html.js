@@ -36,7 +36,14 @@ async function main() {
                 groupsMap.set(seg, { name: seg, items: [] });
             groupsMap.get(seg).items.push(p);
         }
-        const order = ['root', 'architecture', 'methods', 'neat', 'multithreading', 'examples'];
+        const order = [
+            'root',
+            'architecture',
+            'methods',
+            'neat',
+            'multithreading',
+            'examples',
+        ];
         const makeLink = (page) => {
             const isCurrent = page.relDir === currentDir;
             const relLink = path.posix.relative(currentDir || '.', page.relDir || '.') || '.';
@@ -55,15 +62,17 @@ async function main() {
                     return `<li><a href="${href}">examples/asciiMaze</a></li>`;
                 }
             }
-            catch { /* ignore */ }
+            catch {
+                /* ignore */
+            }
             return '';
         };
         const groupsHtml = Array.from(groupsMap.values())
             .sort((a, b) => order.indexOf(a.name) - order.indexOf(b.name))
-            .map(g => {
+            .map((g) => {
             const items = g.items.sort((a, b) => a.relDir.localeCompare(b.relDir));
             if (g.name === 'root')
-                return makeLink(items.find(i => i.relDir === ''));
+                return makeLink(items.find((i) => i.relDir === ''));
             return `<li class="group"><div class="g-head">${g.name}</div><ul>${items.map(makeLink).join('')}${g.name === 'examples' ? asciiExample() : ''}</ul></li>`;
         })
             .join('');
@@ -93,10 +102,15 @@ async function main() {
         // Configure marked renderer with deterministic heading IDs so anchors match our TOC.
         const renderer = new marked.Renderer();
         const originalHeading = renderer.heading?.bind(renderer);
-        renderer.heading = (text, level, raw) => {
-            // raw is the unescaped heading text; use it for id to align with our parsing.
-            const id = slugify(raw.trim());
-            return `<h${level} id="${id}">${text}</h${level}>`;
+        // Marked >= v16 passes a single Heading token object { text, depth, raw, tokens }
+        // See: https://marked.js.org/using_pro#renderer for updated signature.
+        renderer.heading = ({ text, depth, raw }) => {
+            const source = (raw ?? text ?? '')
+                .toString()
+                .replace(/<[^>]+>/g, '')
+                .trim();
+            const id = slugify(source);
+            return `<h${depth} id="${id}">${text}</h${depth}>`;
         };
         marked.use({ renderer });
         const htmlBody = marked.parse(md, { async: false });
@@ -110,9 +124,16 @@ async function main() {
                 .join('')}</div>`
             : '';
         const outFile = path.join(path.dirname(meta.abs), 'index.html');
-        const relToRoot = path.relative(path.dirname(meta.abs), DOCS_DIR).replace(/\\/g, '/');
+        const relToRoot = path
+            .relative(path.dirname(meta.abs), DOCS_DIR)
+            .replace(/\\/g, '/');
         const cssHref = (relToRoot ? relToRoot + '/' : '') + 'assets/theme.css';
-        const page = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>${meta.title} – NeatapticTS Docs</title><meta name="viewport" content="width=device-width,initial-scale=1">\n<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;600;700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">\n<link rel="stylesheet" href="${cssHref}"></head><body class="${meta.relDir === '' ? 'is-root' : ''}">\n<header class="topbar"><div class="inner"><div class="brand"><a href="${relToRoot || '.'}/index.html">NeatapticTS</a></div><nav class="main-nav"><a href="${relToRoot || '.'}/index.html">Home</a><a href="${relToRoot || '.'}/index.html" class="active">Docs</a><a href="https://github.com/reicek/NeatapticTS" target="_blank" rel="noopener">GitHub</a></nav></div></header>\n<div class="layout"><aside class="sidebar">${navHtmlFor(meta.relDir)}</aside><main class="content">${htmlBody}<footer class="site-footer">Generated from source JSDoc • <a href="https://github.com/reicek/NeatapticTS">GitHub</a></footer></main><aside class="toc">${toc}</aside></div></body></html>`;
+        // Add Examples top-level nav; active when current dir starts with examples
+        const examplesHref = (relToRoot || '.') + '/examples/index.html';
+        const onExamples = meta.relDir.startsWith('examples');
+        const docsActive = !onExamples ? ' class="active"' : '';
+        const examplesActive = onExamples ? ' class="active"' : '';
+        const page = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>${meta.title} – NeatapticTS Docs</title><meta name="viewport" content="width=device-width,initial-scale=1">\n<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;600;700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">\n<link rel="stylesheet" href="${cssHref}"></head><body class="${meta.relDir === '' ? 'is-root' : ''}">\n<header class="topbar"><div class="inner"><div class="brand"><a href="${relToRoot || '.'}/index.html">NeatapticTS</a></div><nav class="main-nav"><a href="${relToRoot || '.'}/index.html">Home</a><a href="${relToRoot || '.'}/index.html"${docsActive}>Docs</a><a href="${examplesHref}"${examplesActive}>Examples</a><a href="https://github.com/reicek/NeatapticTS" target="_blank" rel="noopener">GitHub</a></nav></div></header>\n<div class="layout"><aside class="sidebar">${navHtmlFor(meta.relDir)}</aside><main class="content">${htmlBody}<footer class="site-footer">Generated from source JSDoc • <a href="https://github.com/reicek/NeatapticTS">GitHub</a></footer></main><aside class="toc">${toc}</aside></div></body></html>`;
         await fs.writeFile(outFile, page, 'utf8');
     }
     console.log('HTML docs generated.');

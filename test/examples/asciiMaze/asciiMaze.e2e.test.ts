@@ -9,12 +9,15 @@ import {
   medium2,
   large,
   minotaur,
+  MazeGenerator,
 } from './mazes';
 import { colors } from './colors';
 import { DashboardManager } from './dashboardManager';
 import { TerminalUtility } from './terminalUtility';
 import { IDashboardManager } from './interfaces';
 import { EvolutionEngine } from './evolutionEngine';
+import { refineWinnerWithBackprop } from './refineWinner';
+import { pollUntil } from '../../utils/pollUntil';
 
 /**
  * Forces console output for this test by writing directly to stdout/stderr.
@@ -39,7 +42,7 @@ const dashboardManagerInstance: IDashboardManager = new DashboardManager(
   forceLog
 );
 
-jest.setTimeout(3600000);
+jest.setTimeout(3600000); //
 
 /**
  * Educational Note: This example demonstrates a powerful combination of neuro-evolution and supervised learning.
@@ -82,98 +85,6 @@ jest.setTimeout(3600000);
  * @returns A new `Network` instance that is a clone of the winner, further trained via backpropagation.
  * @throws Error if no `winner` network is provided.
  */
-function refineWinnerWithBackprop(winner?: Network) {
-  // Step 1: Validate that a winning network was provided.
-  if (!winner) {
-    throw new Error('No winning network provided for refinement.');
-  }
-
-  // Step 2: Ensure all nodes in the network have a valid activation function.
-  // Backpropagation requires a differentiable activation function to work correctly.
-  // The logistic function is a common and suitable choice.
-  winner.nodes.forEach((n) => {
-    if (typeof n.squash !== 'function') {
-      // Assign the logistic activation function if one is not already set.
-      n.squash = methods.Activation.logistic;
-    }
-  });
-
-  /**
-   * @const {Array<Object>} trainingSet - A supervised training dataset for refining the network.
-   * This set contains idealized scenarios where there is only one clear path to the exit.
-   * The goal is to teach the network the fundamental rule: "If there is only one open direction that leads to progress, take it."
-   * Each entry has an `input` array and a corresponding `output` array.
-   *
-   * Inputs: `[compassScalar, openN, openE, openS, openW, progressDelta]`
-   * Outputs: An array of probabilities, with the target direction having a high value (0.92) and others a low value (0.02).
-   */
-  const trainingSet: { input: number[]; output: number[] }[] = [];
-
-  /**
-   * A helper function to create the target output array for the training set.
-   * @param {number} d - The index of the correct direction (0:N, 1:E, 2:S, 3:W).
-   * @returns {number[]} An array of probabilities for the output layer.
-   */
-  const OUT = (d: number) => [0, 1, 2, 3].map((i) => (i === d ? 0.92 : 0.02));
-
-  /**
-   * A helper function to add a new entry to the training set.
-   * @param {number[]} i - The input vector.
-   * @param {number} d - The index of the target output direction.
-   */
-  const add = (i: number[], d: number) =>
-    trainingSet.push({ input: i, output: OUT(d) });
-
-  // Step 3: Populate the training set with clear, unambiguous examples.
-  // For each cardinal direction, add cases where it's the only open path.
-  // Vary the `progressDelta` to ensure the network doesn't overfit to a specific progress value.
-
-  // North-only open scenarios
-  add([0, 1, 0, 0, 0, 0.85], 0);
-  add([0, 1, 0, 0, 0, 0.65], 0);
-  add([0, 1, 0, 0, 0, 0.55], 0); // Case with milder progress
-
-  // East-only open scenarios
-  add([0.25, 0, 1, 0, 0, 0.85], 1);
-  add([0.25, 0, 1, 0, 0, 0.65], 1);
-  add([0.25, 0, 1, 0, 0, 0.55], 1);
-
-  // South-only open scenarios
-  add([0.5, 0, 0, 1, 0, 0.85], 2);
-  add([0.5, 0, 0, 1, 0, 0.65], 2);
-  add([0.5, 0, 0, 1, 0, 0.55], 2);
-
-  // West-only open scenarios
-  add([0.75, 0, 0, 0, 1, 0.85], 3);
-  add([0.75, 0, 0, 0, 1, 0.65], 3);
-  add([0.75, 0, 0, 0, 1, 0.55], 3);
-
-  // Add examples with near-neutral progress to cover more situations.
-  add([0, 1, 0, 0, 0, 0.5], 0);
-  add([0.25, 0, 1, 0, 0, 0.5], 1);
-  add([0.5, 0, 0, 1, 0, 0.5], 2);
-  add([0.75, 0, 0, 0, 1, 0.5], 3);
-
-  // This line can be uncommented for deep debugging to analyze the network's state before training.
-  // analizeWinner(winner.clone(), trainingSet);
-
-  // Step 4: Train the network using the prepared training set.
-  // The `train` method uses backpropagation to adjust the network's weights
-  // to minimize the difference between its output and the target output.
-  winner.train(trainingSet, {
-    iterations: 220, // The maximum number of training iterations.
-    error: 0.005, // The target error threshold to stop training.
-    rate: 0.001, // The learning rate, controlling the step size of weight adjustments.
-    momentum: 0.1, // Momentum helps to avoid local minima and speed up convergence.
-    batchSize: 8, // The number of samples to process before updating weights.
-    cost: methods.Cost.softmaxCrossEntropy, // A cost function suitable for classification with softmax output.
-  });
-
-  // Step 5: Return a clone of the refined network.
-  // Cloning ensures that the original object from the evolution process is not mutated,
-  // which is good practice for maintaining a clear data flow.
-  return winner.clone();
-}
 
 /**
  * Analyzes the weights and outputs of a network before and after training.
@@ -289,211 +200,52 @@ describe('ASCII Maze Solver using Neuro-Evolution', () => {
     console.log('\n');
   });
 
-  // --- Main Test Case ---
-  it('Evolve agent: curriculum learning in multiple steps from a tiny maze to the minotaur maze', async () => {
-    // Educational Note on Curriculum Learning:
-    // This test implements a strategy called "curriculum learning," where the agent is trained
-    // on a sequence of increasingly difficult tasks (mazes). It starts with a very simple maze
-    // and gradually moves to more complex ones. The winning network from one maze is used as the
-    // starting point for the next, allowing the agent to build upon its knowledge. This is often
-    // more effective than trying to solve the most difficult task from scratch.
+  // Curriculum-style procedural maze evolution (mirrors browser demo):
+  // Progressive dimensions 8 -> 40 (step 4). Each phase seeds next with prior best network.
+  /**
+   * Generate a curriculum of square maze dimensions.
+   * Starts at 8 and increments by `increment` up to `max` (inclusive).
+   * @param increment step between consecutive dimensions
+   * @param max maximum dimension (inclusive)
+   */
+  function curriculumDimensions(increment: number, max: number): number[] {
+    const seq: number[] = [];
+    for (let size = 8; size <= max; size += increment) {
+      seq.push(size);
+    }
+    return seq;
+  }
 
-    // --- Phase 1: Tiny Maze ---
-    // The simplest maze to establish a baseline behavior.
-    const tinyResult = await EvolutionEngine.runMazeEvolution({
-      mazeConfig: { maze: tiny },
-      agentSimConfig: { maxSteps: 100 },
-      evolutionAlgorithmConfig: {
-        allowRecurrent: true,
-        popSize: 40,
-        maxStagnantGenerations: 200,
-        minProgressToPass: 99,
-        maxGenerations: 200,
-        lamarckianIterations: 5,
-        lamarckianSampleSize: 16,
-      },
-      reportingConfig: {
-        dashboardManager: dashboardManagerInstance,
-        logEvery: 1,
-        label: 'tiny',
-      },
+  let proceduralPrevBest: Network | undefined;
+
+  for (const dim of curriculumDimensions(4, 200)) {
+    it(`Procedural maze ${dim}x${dim}`, async () => {
+      const result = await EvolutionEngine.runMazeEvolution({
+        mazeConfig: { maze: new MazeGenerator(dim, dim).generate() },
+        agentSimConfig: { maxSteps: 600 }, // matches browser AGENT_MAX_STEPS
+        evolutionAlgorithmConfig: {
+          allowRecurrent: true,
+          popSize: 40,
+          autoPauseOnSolve: false,
+          maxStagnantGenerations: 50,
+          minProgressToPass: 95,
+          // hard cap per phase (browser DEFAULT_MAX_GENERATIONS)
+          maxGenerations: 100,
+          lamarckianIterations: 4,
+          lamarckianSampleSize: 12,
+          initialBestNetwork: proceduralPrevBest, // seed from previous phase (undefined for first)
+        },
+        reportingConfig: {
+          dashboardManager: dashboardManagerInstance,
+          logEvery: 1, // per-generation logging like browser PER_GENERATION_LOG_FREQUENCY
+          label: `procedural-curriculum-${dim}x${dim}`,
+        },
+      });
+      proceduralPrevBest = result
+        ? refineWinnerWithBackprop(result.bestNetwork as Network)
+        : undefined;
+
+      expect(!!result?.bestNetwork).toBe(true);
     });
-
-    // Refine the winner from the tiny maze using backpropagation.
-    const tinyRefined = refineWinnerWithBackprop(
-      tinyResult?.bestNetwork as Network
-    );
-
-    // --- Phase 2: Small Spiral Maze ---
-    // Introduces the challenge of a spiral, requiring the agent to make a long sequence of turns.
-    const spiralSmallResult = await EvolutionEngine.runMazeEvolution({
-      mazeConfig: { maze: spiralSmall },
-      agentSimConfig: { maxSteps: 100 },
-      evolutionAlgorithmConfig: {
-        allowRecurrent: true,
-        popSize: 40,
-        maxStagnantGenerations: 200,
-        minProgressToPass: 99,
-        maxGenerations: 200,
-        lamarckianIterations: 5,
-        lamarckianSampleSize: 16,
-        initialBestNetwork: tinyRefined, // Start with the refined network from the previous phase.
-      },
-      reportingConfig: {
-        dashboardManager: dashboardManagerInstance,
-        logEvery: 1,
-        label: 'spiralSmall',
-      },
-    });
-    const spiralSmallRefined = refineWinnerWithBackprop(
-      spiralSmallResult?.bestNetwork as Network
-    );
-
-    // --- Phase 3: Spiral Maze ---
-    // A larger spiral to test the agent's ability to generalize its turning behavior.
-    const spiralResult = await EvolutionEngine.runMazeEvolution({
-      mazeConfig: { maze: spiral },
-      agentSimConfig: { maxSteps: 150 },
-      evolutionAlgorithmConfig: {
-        allowRecurrent: true,
-        popSize: 40,
-        maxStagnantGenerations: 200,
-        minProgressToPass: 99,
-        maxGenerations: 300,
-        lamarckianIterations: 5,
-        lamarckianSampleSize: 16,
-        initialBestNetwork: spiralSmallRefined,
-      },
-      reportingConfig: {
-        dashboardManager: dashboardManagerInstance,
-        logEvery: 1,
-        label: 'spiral',
-      },
-    });
-    const spiralRefined = refineWinnerWithBackprop(
-      spiralResult.bestNetwork as Network
-    );
-
-    // --- Phase 4: Small Maze ---
-    // A more traditional maze with branches and dead ends.
-    const smallResult = await EvolutionEngine.runMazeEvolution({
-      mazeConfig: { maze: small },
-      agentSimConfig: { maxSteps: 50 },
-      evolutionAlgorithmConfig: {
-        allowRecurrent: true,
-        popSize: 40,
-        maxStagnantGenerations: 200,
-        minProgressToPass: 99,
-        maxGenerations: 300,
-        lamarckianIterations: 5,
-        lamarckianSampleSize: 16,
-        initialBestNetwork: spiralRefined,
-      },
-      reportingConfig: {
-        dashboardManager: dashboardManagerInstance,
-        logEvery: 1,
-        label: 'small',
-      },
-    });
-    const smallRefined = refineWinnerWithBackprop(
-      smallResult?.bestNetwork as Network
-    );
-
-    // --- Phase 5: Medium Maze ---
-    // Increases the size and complexity, requiring more steps and better navigation.
-    const mediumResult = await EvolutionEngine.runMazeEvolution({
-      mazeConfig: { maze: medium },
-      agentSimConfig: { maxSteps: 250 },
-      evolutionAlgorithmConfig: {
-        allowRecurrent: true,
-        popSize: 40,
-        maxStagnantGenerations: 200,
-        minProgressToPass: 99,
-        maxGenerations: 400,
-        lamarckianIterations: 5,
-        lamarckianSampleSize: 16,
-        initialBestNetwork: smallRefined,
-      },
-      reportingConfig: {
-        dashboardManager: dashboardManagerInstance,
-        logEvery: 1,
-        label: 'medium',
-      },
-    });
-    const mediumRefined = refineWinnerWithBackprop(
-      mediumResult?.bestNetwork as Network
-    );
-
-    // --- Phase 6: Medium 2 Maze ---
-    // A different medium-sized maze to test generalization.
-    const medium2Result = await EvolutionEngine.runMazeEvolution({
-      mazeConfig: { maze: medium2 },
-      agentSimConfig: { maxSteps: 300 },
-      evolutionAlgorithmConfig: {
-        allowRecurrent: true,
-        popSize: 40,
-        maxStagnantGenerations: 200,
-        minProgressToPass: 99,
-        maxGenerations: 400,
-        lamarckianIterations: 5,
-        lamarckianSampleSize: 16,
-        initialBestNetwork: mediumRefined,
-      },
-      reportingConfig: {
-        dashboardManager: dashboardManagerInstance,
-        logEvery: 1,
-        label: 'medium2',
-      },
-    });
-    const medium2Refined = refineWinnerWithBackprop(
-      medium2Result?.bestNetwork as Network
-    );
-
-    // --- Phase 7: Large Maze ---
-    // A significant step up in difficulty, with a much larger search space.
-    const largeResult = await EvolutionEngine.runMazeEvolution({
-      mazeConfig: { maze: large },
-      agentSimConfig: { maxSteps: 400 },
-      evolutionAlgorithmConfig: {
-        allowRecurrent: true,
-        popSize: 40,
-        maxStagnantGenerations: 200,
-        minProgressToPass: 99,
-        maxGenerations: 500,
-        lamarckianIterations: 5,
-        lamarckianSampleSize: 16,
-        initialBestNetwork: medium2Refined,
-      },
-      reportingConfig: {
-        dashboardManager: dashboardManagerInstance,
-        logEvery: 1,
-        label: 'large',
-      },
-    });
-    const largeRefined = refineWinnerWithBackprop(
-      largeResult?.bestNetwork as Network
-    );
-
-    // --- Final Phase: Minotaur Maze ---
-    // The most complex maze, requiring the agent to have learned a robust and general navigation strategy.
-    await EvolutionEngine.runMazeEvolution({
-      mazeConfig: { maze: minotaur },
-      agentSimConfig: { maxSteps: 700 },
-      evolutionAlgorithmConfig: {
-        allowRecurrent: true,
-        popSize: 40,
-        maxStagnantGenerations: 200,
-        minProgressToPass: 99,
-        maxGenerations: 600,
-        lamarckianIterations: 5,
-        lamarckianSampleSize: 16,
-        initialBestNetwork: largeRefined,
-      },
-      reportingConfig: {
-        dashboardManager: dashboardManagerInstance,
-        logEvery: 1,
-        label: 'minotaur',
-      },
-    });
-  }, 0);
+  }
 });

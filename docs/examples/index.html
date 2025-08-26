@@ -1,0 +1,71 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Examples – NeatapticTS Docs</title><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;600;700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/theme.css"></head><body class="">
+<header class="topbar"><div class="inner"><div class="brand"><a href="../index.html">NeatapticTS</a></div><nav class="main-nav"><a href="../index.html">Home</a><a href="../index.html">Docs</a><a href="../examples/index.html" class="active">Examples</a><a href="https://github.com/reicek/NeatapticTS" target="_blank" rel="noopener">GitHub</a></nav></div></header>
+<div class="layout"><aside class="sidebar"><ul class="sidebar-sections"><li class="group"><div class="g-head">src</div><ul><li><a href="../src/index.html">src</a></li></ul></li><li class="group"><div class="g-head">utils</div><ul><li><a href="../utils/index.html">utils</a></li></ul></li><li><a href="../index.html">Overview</a></li><li class="group"><div class="g-head">architecture</div><ul><li><a href="../architecture/index.html">architecture</a></li><li><a href="../architecture/network/index.html">architecture/network</a></li></ul></li><li class="group"><div class="g-head">methods</div><ul><li><a href="../methods/index.html">methods</a></li></ul></li><li class="group"><div class="g-head">neat</div><ul><li><a href="../neat/index.html">neat</a></li></ul></li><li class="group"><div class="g-head">multithreading</div><ul><li><a href="../multithreading/index.html">multithreading</a></li><li><a href="../multithreading/workers/index.html">multithreading/workers</a></li><li><a href="../multithreading/workers/browser/index.html">multithreading/workers/browser</a></li><li><a href="../multithreading/workers/node/index.html">multithreading/workers/node</a></li></ul></li><li class="group"><div class="g-head">examples</div><ul><li class="current"><a href="./index.html">examples</a></li><li><a href="asciiMaze/index.html">examples/asciiMaze</a></li></ul></li></ul></aside><main class="content"><!-- Auto-generated into HTML by scripts/render-docs-html.ts -->
+<h1 id="examples">Examples</h1><p>Interactive demos showcasing NeatapticTS concepts in the browser. Each example is self‑contained and built with native ES2023 features – no transpilation.</p>
+<blockquote>
+<p>Tip: Open DevTools console while an example runs to inspect logged telemetry or errors.</p>
+</blockquote>
+<h2 id="asciimaze-neuro-evolving-maze-agent">asciiMaze (Neuro‑evolving maze agent)</h2><p>Demonstrates a simple environment where agents must traverse an ASCII maze layout. The population evolves weights / topology over generations; progress prints in real time.</p>
+<div class="example-frame">
+  <iframe src="./asciiMaze/index.html" title="ASCII Maze Example" loading="lazy" referrerpolicy="no-referrer" sandbox="allow-scripts allow-same-origin" aria-label="ASCII Maze interactive example"></iframe>
+  <p class="example-caption">If the demo fails to load, ensure the build step <code>npm run build:ascii-maze</code> has produced <code>docs/assets/ascii-maze.bundle.js</code>.</p>
+</div>
+
+<h3 id="behaviour-telemetry">Behaviour & Telemetry</h3><ul>
+<li>Output area streams the live generation status; solved maze snapshots accumulate below.</li>
+<li>Lightweight telemetry (generation, best fitness, gens/sec) is exposed via:<ul>
+<li>CustomEvent <code>asciiMazeTelemetry</code> on <code>window</code>.</li>
+<li><code>window.asciiMazeLastTelemetry</code> object (latest snapshot).</li>
+<li>The <code>run.onTelemetry(fn)</code> callback API when using the ESM <code>start()</code> function.</li>
+</ul>
+</li>
+<li>Host pages can subscribe and surface summary stats outside the iframe.</li>
+</ul>
+<h3 id="programmatic-api-esm">Programmatic API (ESM)</h3><p>Import the <code>start</code> function and optionally supply an <code>AbortSignal</code> for cancellation.</p>
+<pre><code class="language-ts">import { start } from &#39;./asciiMaze/browser-entry.js&#39;;
+
+const controller = new AbortController();
+const run = await start(&#39;#ascii-maze-output&#39;, { signal: controller.signal });
+
+const unsubscribe = run.onTelemetry(t =&gt; {
+  console.log(`Gen ${t.generation} best ${t.bestFitness} (${t.gensPerSecond.toFixed(2)} gen/s)`);
+});
+
+// Early stop (either call stop or abort the signal)
+// run.stop();
+controller.abort();
+
+await run.done;
+unsubscribe();
+</code></pre>
+<p>API surface:</p>
+<ul>
+<li><code>start(container: string|HTMLElement, opts?: { signal?: AbortSignal }) =&gt; Promise&lt;RunHandle&gt;</code></li>
+<li><code>RunHandle.stop(): void</code></li>
+<li><code>RunHandle.isRunning(): boolean</code></li>
+<li><code>RunHandle.done: Promise&lt;void&gt;</code></li>
+<li><code>RunHandle.onTelemetry(fn) =&gt; unsubscribe</code></li>
+<li><code>RunHandle.getTelemetry(): TelemetrySnapshot | undefined</code></li>
+</ul>
+<p>Telemetry snapshot (fields may extend):</p>
+<pre><code class="language-ts">interface TelemetrySnapshot {
+  generation: number;
+  bestFitness: number;
+  gensPerSecond: number;
+  exitReason?: string;          // &#39;cancelled&#39; | &#39;aborted&#39; | &#39;solved&#39; | etc.
+  details?: Record&lt;string, any&gt;; // rich metrics bundle
+}
+</code></pre>
+<p>Legacy global usage (compatibility):</p>
+<pre><code class="language-html">&lt;script src=&quot;/assets/ascii-maze.bundle.js&quot;&gt;&lt;/script&gt;
+&lt;script&gt;
+  window.asciiMaze.start(); // preferred
+  // window.asciiMazeStart(); // deprecated alias logs a warning
+&lt;/script&gt;
+</code></pre>
+<h3 id="embedding-notes">Embedding Notes</h3><p>The iframe isolation keeps demo CSS / JS from interfering with site chrome. Now that an ESM <code>start()</code> is exported, future inline embedding can attach directly to a provided container without iframe overhead (see enhancement plan).</p>
+<hr>
+<p>Additional examples will appear here as they are added.</p>
+<footer class="site-footer">Generated from source JSDoc • <a href="https://github.com/reicek/NeatapticTS">GitHub</a></footer></main><aside class="toc"></aside></div></body></html>
