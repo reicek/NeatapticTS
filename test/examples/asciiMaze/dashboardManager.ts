@@ -319,7 +319,14 @@ export class DashboardManager implements IDashboardManager {
       if (value < minValue) minValue = value;
       if (value > maxValue) maxValue = value;
     }
-    const valueRange = maxValue - minValue || 1; // avoid divide-by-zero
+    // Use a small epsilon to guard against zero or near-zero ranges so
+    // normalization remains stable (avoids divide-by-zero and huge
+    // normalized values when min ~= max). Prefer the class constant for
+    // easy tuning in one place.
+    let valueRange = maxValue - minValue;
+    if (Math.abs(valueRange) < DashboardManager.#DELTA_EPSILON) {
+      valueRange = DashboardManager.#DELTA_EPSILON;
+    }
 
     // Step 4: Map each sample to a block index
     const blocks = DashboardManager.#SPARK_BLOCKS;
@@ -383,6 +390,8 @@ export class DashboardManager implements IDashboardManager {
    * @param neat Optional NEAT implementation instance for population-level stats.
    */
   redraw(currentMaze: string[], neat?: any): void {
+    // Update the high-resolution last-update timestamp when a redraw happens.
+    this.#lastUpdateTs = globalThis.performance?.now?.() ?? Date.now();
     this.#beginFrameRefresh();
     if (this.#currentBest) this.#printCurrentBestSection(currentMaze);
     this.#updateDetailedStatsSnapshot(neat); // updates #lastDetailedStats (used by getLastTelemetry())
@@ -1086,7 +1095,7 @@ export class DashboardManager implements IDashboardManager {
         const arrowArchitecture = architectureRaw
           .split(/\s*-\s*/)
           .join(' <=> ');
-        pushIf('Architecture', arrowArchitecture);
+        pushIf(DashboardManager.#LABEL_ARCH, arrowArchitecture);
       }
     }
 
@@ -1278,19 +1287,69 @@ export class DashboardManager implements IDashboardManager {
   }
 
   /** Emit footer & send archive block to logger. */
+  static #CACHED_SOLVED_FOOTER_BORDER: string | null = null;
+
+  /**
+   * Append the solved-archive footer border and emit the accumulated block to the archive logger.
+   *
+   * Implementation notes:
+   * - Reuses an internal cached bottom-border string to avoid recomputing the padded border on every solved maze.
+   * - Emits the block as a single joined payload for efficiency; falls back to a line-wise append if the
+   *   archive function throws or is not compatible with the single-string API.
+   * - Clears the provided `blockLines` accumulator in-place after emission so callers (and tests) can reuse the
+   *   same array as a scratch buffer, reducing GC churn in tight loops.
+   *
+   * Steps (inline):
+   * 1. Ensure cached border exists (lazy-init).
+   * 2. Append the bottom border to the provided accumulator.
+   * 3. Attempt single-string emission with `{ prepend: true }`.
+   * 4. On failure, fallback to line-by-line emission using the archive function or a no-op.
+   * 5. Clear the accumulator for reuse.
+   *
+   * @param blockLines Mutable accumulator of framed lines representing a solved maze archive block. This
+   *   function will append the closing border and emit the payload; the array will be emptied on return.
+   * @example
+   * const lines: string[] = [];
+   * // ... various helpers push frame header, stats, maze rows into `lines` ...
+   * (dashboard as any)["#appendSolvedFooterAndEmit"](lines);
+   */
   #appendSolvedFooterAndEmit(blockLines: string[]): void {
-    blockLines.push(
-      `${colors.blueCore}╚${NetworkVisualization.pad(
-        '═'.repeat(DashboardManager.FRAME_INNER_WIDTH),
-        DashboardManager.FRAME_INNER_WIDTH,
+    // Step 1: Lazy-initialize a cached bottom-border string to avoid repeated pad/repeat work.
+    const innerFrameWidth = DashboardManager.FRAME_INNER_WIDTH;
+    if (DashboardManager.#CACHED_SOLVED_FOOTER_BORDER === null) {
+      // Build once and reuse; this avoids allocating a new long string on every solved maze.
+      DashboardManager.#CACHED_SOLVED_FOOTER_BORDER = `${
+        colors.blueCore
+      }╚${NetworkVisualization.pad(
+        '═'.repeat(innerFrameWidth),
+        innerFrameWidth,
         '═'
-      )}╝${colors.reset}`
-    );
+      )}╝${colors.reset}`;
+    }
+
+    // Step 2: Append cached bottom border to the provided accumulator (no intermediate arrays).
+    blockLines.push(DashboardManager.#CACHED_SOLVED_FOOTER_BORDER);
+
+    // Step 3: Prefer a single-string emission for efficiency (smaller call overhead and fewer allocations).
     try {
+      // Favor the original API shape: archiveFn(payload, { prepend: true }). Use a permissive any-cast
+      // because test harnesses may provide different shapes.
       (this.#archiveFn as any)(blockLines.join('\n'), { prepend: true });
+
+      // Step 5: Clear the accumulator in-place to allow caller reuse (reduces GC pressure in tests).
+      blockLines.length = 0;
+      return;
     } catch {
-      const append = this.#archiveFn ?? (() => {});
-      blockLines.forEach((singleLine) => append(singleLine));
+      // Step 4: Fallback to line-wise appends when the single-string API fails.
+      const archiveAppend = this.#archiveFn ?? (() => {});
+
+      // Use a conventional indexed loop with a descriptive iterator variable to avoid short-name warnings.
+      for (let lineIndex = 0; lineIndex < blockLines.length; lineIndex++) {
+        archiveAppend(blockLines[lineIndex]);
+      }
+
+      // Clear the accumulator for reuse by the caller.
+      blockLines.length = 0;
     }
   }
 
@@ -1706,9 +1765,31 @@ export class DashboardManager implements IDashboardManager {
       progress: this.#currentBest?.result?.progress ?? null,
       speciesCount: MazeUtils.safeLast(this.#speciesCountHistory) ?? null,
       gensPerSec: +gensPerSec.toFixed(3),
-      timestamp: Date.now(),
+      // Expose the last update time if available; convert high-resolution perf time to
+      // wall-clock ms when possible so consumers receive an absolute timestamp.
+      timestamp: this.#resolveLastUpdateWallMs(),
       details: this.#lastDetailedStats || null,
     };
+  }
+
+  /**
+   * Resolve the stored last-update timestamp to a wall-clock millisecond value.
+   * If the stored value is a high-resolution perf.now() reading, convert it to
+   * Date.now() anchored by the recorded `#runStartTs` / `#perfStart` pair. If no
+   * last-update is available fall back to Date.now().
+   */
+  #resolveLastUpdateWallMs(): number {
+    if (this.#lastUpdateTs == null) return Date.now();
+    // If we have both perfStart and runStart anchors then #lastUpdateTs is likely a perf.now() value.
+    if (
+      this.#perfStart != null &&
+      typeof globalThis.performance?.now === 'function' &&
+      this.#runStartTs != null
+    ) {
+      return this.#runStartTs + (this.#lastUpdateTs - this.#perfStart);
+    }
+    // Otherwise #lastUpdateTs should already be a wall-clock timestamp.
+    return this.#lastUpdateTs;
   }
 
   /**
@@ -1888,14 +1969,103 @@ export class DashboardManager implements IDashboardManager {
     this.#logBlank(); // trailing spacer (Step 5b)
   }
 
-  /** Print current best maze stats. */
+  static #INT32_SCRATCH_POOL: Int32Array[] = [];
+
+  /**
+   * Render the live statistics block for the current best candidate.
+   *
+   * Enhancements over the original:
+   * - Provides a concise JSDoc with parameter & example usage.
+   * - Uses a small Int32Array pooling strategy for temporary numeric scratch space to reduce
+   *   short-lived allocation churn during frequent redraws.
+   * - Employs descriptive local variable names and step-level inline comments for clarity.
+   *
+   * Steps:
+   * 1. Guard and emit a small spacer when no current best candidate exists.
+   * 2. Rent a temporary typed-array buffer to hold derived numeric summary values.
+   * 3. Populate the buffer with fitness, steps, and progress (scaled where appropriate).
+   * 4. Emit a small, framed summary via existing `#formatStat` helper to preserve dashboard styling.
+   * 5. Delegate the detailed printing to `MazeVisualization.printMazeStats` (keeps single-responsibility).
+   * 6. Return the rented buffer to the internal pool and emit a trailing spacer.
+   *
+   * @param currentMaze Current maze layout used to compute/print maze-specific stats.
+   * @example
+   * // invoked internally by `update()` during redraw
+   * (dashboard as any)["#printLiveStats"](maze);
+   */
   #printLiveStats(currentMaze: string[]): void {
+    // Step 1: Leading spacer for visual separation
     this.#logBlank();
+
+    // Defensive guard: if there's no current best candidate, just emit spacer and exit.
+    const currentBestCandidate = this.#currentBest;
+    if (!currentBestCandidate) {
+      this.#logBlank();
+      return;
+    }
+
+    // Helper: rent a typed Int32Array of requested length from pool or allocate new.
+    const rentInt32 = (requestedLength: number): Int32Array => {
+      const pooled = DashboardManager.#INT32_SCRATCH_POOL.pop();
+      if (pooled && pooled.length >= requestedLength)
+        return pooled.subarray(0, requestedLength) as Int32Array;
+      return new Int32Array(requestedLength);
+    };
+
+    // Helper: return buffer to pool (clear view references by pushing the underlying buffer view).
+    const releaseInt32 = (buffer: Int32Array) => {
+      // Keep pool bounded to avoid unbounded memory growth.
+      if (DashboardManager.#INT32_SCRATCH_POOL.length < 8) {
+        DashboardManager.#INT32_SCRATCH_POOL.push(buffer);
+      }
+    };
+
+    // Step 2: Rent a small scratch buffer for numeric summaries: [fitnessScaled, steps, progressPct]
+    const scratch = rentInt32(3);
+
+    // Step 3: Populate numeric summary values defensively.
+    const reportedFitness = currentBestCandidate.result?.fitness;
+    scratch[0] =
+      typeof reportedFitness === 'number' && Number.isFinite(reportedFitness)
+        ? Math.round(reportedFitness * 100)
+        : 0; // fitness * 100 as integer
+    const reportedSteps = Number(currentBestCandidate.result?.steps ?? 0);
+    scratch[1] = Number.isFinite(reportedSteps) ? reportedSteps : 0;
+    const reportedProgress = Number(currentBestCandidate.result?.progress ?? 0);
+    scratch[2] = Number.isFinite(reportedProgress)
+      ? Math.round(reportedProgress * 100)
+      : 0; // percent
+
+    // Step 4: Emit a compact framed summary using existing formatting helper to keep consistent style.
+    // We convert scaled integers back into user-friendly strings for display.
+    const formattedFitness = (scratch[0] / 100).toFixed(2);
+    const formattedSteps = `${scratch[1]}`;
+    const formattedProgress = `${scratch[2]}%`;
+
+    // Use the same label width as solved stats for alignment with other dashboard lines.
+    const liveLabelWidth = DashboardManager.#SOLVED_LABEL_WIDTH;
+    const liveStat = (label: string, value: string) =>
+      this.#formatStat(
+        label,
+        value,
+        colors.neonSilver,
+        colors.cyanNeon,
+        liveLabelWidth
+      );
+
+    this.#logFn(liveStat('Fitness', formattedFitness));
+    this.#logFn(liveStat('Steps', formattedSteps));
+    this.#logFn(liveStat('Progress', formattedProgress));
+
+    // Step 5: Delegate the more detailed maze/stat printing to the existing visualization helper.
     MazeVisualization.printMazeStats(
-      this.#currentBest!,
+      currentBestCandidate,
       currentMaze,
       this.#logFn
     );
+
+    // Step 6: Release typed-array scratch buffer back to pool and trailing spacer for readability.
+    releaseInt32(scratch);
     this.#logBlank();
   }
 

@@ -202,20 +202,33 @@ describe('ASCII Maze Solver using Neuro-Evolution', () => {
 
   // Curriculum-style procedural maze evolution (mirrors browser demo):
   // Progressive dimensions 8 -> 40 (step 4). Each phase seeds next with prior best network.
-  const curriculumDimensions = [8, 12, 16, 20, 24, 28, 32, 36, 40];
+  /**
+   * Generate a curriculum of square maze dimensions.
+   * Starts at 8 and increments by `increment` up to `max` (inclusive).
+   * @param increment step between consecutive dimensions
+   * @param max maximum dimension (inclusive)
+   */
+  function curriculumDimensions(increment: number, max: number): number[] {
+    const seq: number[] = [];
+    for (let size = 8; size <= max; size += increment) {
+      seq.push(size);
+    }
+    return seq;
+  }
+
   let proceduralPrevBest: Network | undefined;
 
-  for (const dim of curriculumDimensions) {
+  for (const dim of curriculumDimensions(4, 200)) {
     it(`Procedural maze ${dim}x${dim}`, async () => {
       const result = await EvolutionEngine.runMazeEvolution({
         mazeConfig: { maze: new MazeGenerator(dim, dim).generate() },
         agentSimConfig: { maxSteps: 600 }, // matches browser AGENT_MAX_STEPS
         evolutionAlgorithmConfig: {
           allowRecurrent: true,
-          popSize: 20, // matches browser POPULATION_SIZE
+          popSize: 40,
           autoPauseOnSolve: false,
           maxStagnantGenerations: 50,
-          minProgressToPass: 90,
+          minProgressToPass: 95,
           // hard cap per phase (browser DEFAULT_MAX_GENERATIONS)
           maxGenerations: 100,
           lamarckianIterations: 4,
