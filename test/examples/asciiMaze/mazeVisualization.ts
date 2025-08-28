@@ -48,6 +48,20 @@ export class MazeVisualization {
   static #posKey([x, y]: readonly [number, number]): string {
     return `${x},${y}`;
   }
+
+  // Shared scratch buffer used for temporary per-call computations such as
+  // counting walkable cells. Reusing a single Int8Array reduces allocations
+  // when `printMazeStats` is invoked repeatedly during benchmarks.
+  static #SCRATCH_INT8 = new Int8Array(0);
+
+  static #getScratchInt8(minLength: number): Int8Array {
+    if (MazeVisualization.#SCRATCH_INT8.length < minLength) {
+      let newCapacity = MazeVisualization.#SCRATCH_INT8.length || 1;
+      while (newCapacity < minLength) newCapacity <<= 1;
+      MazeVisualization.#SCRATCH_INT8 = new Int8Array(newCapacity);
+    }
+    return MazeVisualization.#SCRATCH_INT8;
+  }
   /**
    * Renders a single maze cell with proper coloring based on its content and agent location.
    *
@@ -157,16 +171,18 @@ export class MazeVisualization {
   }
 
   /**
-   * Prints a summary of the agent's attempt, including success, steps, and efficiency.
+   * Print a concise, colorized summary of the agent's attempt.
    *
-   * Provides performance metrics about the agent's solution attempt:
-   * - Whether it successfully reached the exit
-   * - How many steps it took
-   * - How efficient the path was compared to the optimal BFS distance
+   * This function aggregates key run metrics and prints them using `forceLog`.
+   * It is intended for human-friendly terminal output and is optimized to
+   * minimize intermediate allocations (reusing a typed scratch buffer).
    *
-   * @param currentBest - Object containing the simulation results, network, and generation
-   * @param maze - Array of strings representing the maze layout
-   * @param forceLog - Function used for logging output
+   * @example
+   * MazeVisualization.printMazeStats(currentBest, asciiMaze, console.log);
+   *
+   * @param currentBest - Object containing the run `result`, `network` and `generation`.
+   * @param maze - Array of strings representing the ASCII maze layout.
+   * @param forceLog - Logging function used for emitting formatted lines.
    */
   static printMazeStats(
     currentBest: {
@@ -177,10 +193,11 @@ export class MazeVisualization {
     maze: string[],
     forceLog: (...args: any[]) => void
   ): void {
+    // --- Step 0: unpack inputs and derive colors ---
     const { result, generation } = currentBest;
     const successColor = result.success ? colors.cyanNeon : colors.neonRed;
 
-    // Find maze start and end positions
+    // --- Step 1: locate important maze positions and compute optimal length ---
     const startPos = MazeUtils.findPosition(maze, 'S');
     const exitPos = MazeUtils.findPosition(maze, 'E');
     const optimalLength = MazeUtils.bfsDistance(
@@ -270,123 +287,83 @@ export class MazeVisualization {
     );
 
     if (result.success) {
-      /**
-       * If the agent succeeded, calculate and display detailed path statistics.
-       * This includes path efficiency, overhead, direction changes, unique cells, revisits, and decisions per cell.
-       */
-
-      /**
-       * Path length is the number of steps taken (excluding the starting cell).
-       * Used to compare actual path to optimal path.
-       */
+      // --- Step 2: basic path metrics ---
       const pathLength = result.path.length - 1;
 
-      /**
-       * Efficiency: ratio of optimal path to actual path, capped at 100%.
-       * Shows how close the agent's path is to the shortest possible.
-       */
+      // Efficiency: ratio of optimal path to actual path, capped at 100%.
       const efficiency = Math.min(
         100,
         Math.round((optimalLength / pathLength) * 100)
       ).toFixed(1);
 
-      /**
-       * Overhead: how much longer the path is compared to optimal, as a percent.
-       * Positive values mean the agent took a longer route than necessary.
-       */
+      // Overhead: percent longer than optimal (positive = worse).
       const overhead = ((pathLength / optimalLength) * 100 - 100).toFixed(1);
 
-      /**
-       * Set of unique cells visited by the agent, for coverage and revisit stats.
-       */
+      // --- Step 3: analyze the path for unique cells, revisits and direction changes ---
       const uniqueCells = new Set<string>();
-
-      /**
-       * Number of times the agent revisited a cell it had already visited.
-       */
       let revisitedCells = 0;
-
-      /**
-       * Number of times the agent changed direction (N, S, E, W) during its path.
-       */
       let directionChanges = 0;
-
-      /**
-       * Tracks the last direction moved, to count direction changes.
-       */
       let lastDirection: string | null = null;
 
-      // Analyze the path for revisits and direction changes
-      for (let i = 0; i < result.path.length; i++) {
-        /**
-         * Current cell coordinates in the path.
-         */
-        const [x, y] = result.path[i];
-        /**
-         * Unique string key for the cell, used in the Set.
-         */
-        const cellKey = `${x},${y}`;
+      for (let stepIndex = 0; stepIndex < result.path.length; stepIndex++) {
+        const [cellX, cellY] = result.path[stepIndex];
+        const cellKey = `${cellX},${cellY}`;
 
-        // Count revisits
-        if (uniqueCells.has(cellKey)) {
-          revisitedCells++;
-        } else {
-          uniqueCells.add(cellKey);
-        }
+        // Track revisits
+        if (uniqueCells.has(cellKey)) revisitedCells++;
+        else uniqueCells.add(cellKey);
 
-        // Count direction changes (if not the first step)
-        if (i > 0) {
-          /**
-           * Previous cell coordinates in the path.
-           */
-          const [prevX, prevY] = result.path[i - 1];
-          /**
-           * Delta X and Y to determine direction.
-           */
-          const dx = x - prevX;
-          const dy = y - prevY;
+        // Count direction changes (skip first step)
+        if (stepIndex > 0) {
+          const [prevX, prevY] = result.path[stepIndex - 1];
+          const dx = cellX - prevX;
+          const dy = cellY - prevY;
 
-          // Determine direction: N, S, E, W
+          // Replace chained if/else with a switch for clarity and JIT-friendliness.
           let currentDirection = '';
-          if (dx > 0) currentDirection = 'E';
-          else if (dx < 0) currentDirection = 'W';
-          else if (dy > 0) currentDirection = 'S';
-          else if (dy < 0) currentDirection = 'N';
-
-          // Increment if direction changed
-          if (lastDirection !== null && currentDirection !== lastDirection) {
-            directionChanges++;
+          switch (true) {
+            case dx > 0:
+              currentDirection = 'E';
+              break;
+            case dx < 0:
+              currentDirection = 'W';
+              break;
+            case dy > 0:
+              currentDirection = 'S';
+              break;
+            case dy < 0:
+              currentDirection = 'N';
+              break;
+            default:
+              currentDirection = '';
           }
+
+          if (lastDirection !== null && currentDirection !== lastDirection)
+            directionChanges++;
           lastDirection = currentDirection;
         }
       }
 
-      /**
-       * Maze width and height, used for coverage calculation.
-       */
       const mazeWidth = maze[0].length;
       const mazeHeight = maze.length;
 
-      /**
-       * Encoded maze (walls as -1, open as 0), for walkable cell counting.
-       */
+      // Encode the maze and count walkable cells using a reusable Int8Array
       const encodedMaze = MazeUtils.encodeMaze(maze);
 
-      /**
-       * Number of walkable (non-wall) cells in the maze.
-       */
-      let walkableCells = 0;
-      for (let y = 0; y < mazeHeight; y++) {
-        for (let x = 0; x < mazeWidth; x++) {
-          if (encodedMaze[y][x] !== -1) {
-            walkableCells++;
-          }
+      // Use scratch Int8Array: 1 => walkable, 0 => wall. Then count ones.
+      const flatCellCount = mazeWidth * mazeHeight;
+      const scratch = MazeVisualization.#getScratchInt8(flatCellCount);
+      let scratchIndex = 0;
+      for (let rowY = 0; rowY < mazeHeight; rowY++) {
+        const row = encodedMaze[rowY];
+        for (let colX = 0; colX < mazeWidth; colX++, scratchIndex++) {
+          scratch[scratchIndex] = row[colX] === -1 ? 0 : 1;
         }
       }
 
-      /**
-       * Percentage of walkable cells visited by the agent.
-       */
+      let walkableCells = 0;
+      for (let i = 0; i < flatCellCount; i++) walkableCells += scratch[i];
+
       const coveragePercent = (
         (uniqueCells.size / walkableCells) *
         100
@@ -460,11 +437,7 @@ export class MazeVisualization {
         )}${' '.repeat(RIGHT_PAD)}║${colors.reset}`
       );
     } else {
-      /**
-       * If the agent did not succeed, display progress toward the exit and unique cells visited.
-       * This helps visualize partial progress and exploration.
-       */
-      // Calculate best progress toward the exit (as a percent)
+      // If the agent did not succeed, display progress toward the exit and unique cells visited.
       const lastPos =
         MazeVisualization.#last(result.path as readonly [number, number][]) ??
         startPos;
@@ -475,11 +448,8 @@ export class MazeVisualization {
         exitPos
       );
 
-      // Track unique cells visited
       const uniqueCells = new Set<string>();
-      for (const [x, y] of result.path) {
-        uniqueCells.add(`${x},${y}`);
-      }
+      for (const [x, y] of result.path) uniqueCells.add(`${x},${y}`);
 
       // Display partial progress statistics
       forceLog(
@@ -523,62 +493,61 @@ export class MazeVisualization {
    * Creates a visual representation of the agent's progress toward the exit
    * as a horizontal bar with appropriate coloring based on percentage.
    *
-   * @param progress - Progress percentage (0-100)
-   * @param length - Length of the progress bar in characters (default: 60)
-   * @returns A string containing the formatted progress bar
+   * @example
+   * // Render a 40% progress bar of default length
+   * MazeVisualization.displayProgressBar(40);
+   *
+   * @param progress - Progress percentage (0-100). Values outside the range
+   *  will be clamped to [0,100].
+   * @param length - Total length of the bar in characters (defaults to 60).
+   * @returns A colorized string containing the formatted progress bar.
    */
   static displayProgressBar(progress: number, length: number = 60): string {
-    /**
-     * Number of filled positions in the progress bar, based on percent complete.
-     */
-    const filledLength = Math.max(
+    // --- Step 1: normalize inputs and compute filled/empty counts ---
+    const clampedProgress = Math.max(0, Math.min(100, Math.round(progress)));
+    const filledCount = Math.max(
       0,
-      Math.min(length, Math.floor((length * progress) / 100))
+      Math.min(length, Math.floor((length * clampedProgress) / 100))
     );
 
-    /**
-     * Characters for the progress bar:
-     * - startChar: left cap
-     * - endChar: right cap
-     * - fillChar: filled section
-     * - emptyChar: unfilled section
-     * - pointerChar: current progress pointer
-     */
-    const startChar = `${colors.blueCore}|>|`;
-    const endChar = `${colors.blueCore}|<|`;
-    const fillChar = `${colors.neonOrange}═`;
-    const emptyChar = `${colors.neonIndigo}:`;
-    const pointerChar = `${colors.neonOrange}▶`; // Indicates the current progress point
+    // Characters for the progress bar visuals
+    const startCap = `${colors.blueCore}|>|`;
+    const endCap = `${colors.blueCore}|<|`;
+    const fillSegment = `${colors.neonOrange}═`;
+    const emptySegment = `${colors.neonIndigo}:`;
+    const pointerGlyph = `${colors.neonOrange}▶`; // Indicates the current progress point
 
-    // Build the progress bar string
+    // Build the progress bar using clearer variable names and fewer branches
     let bar = '';
-    bar += startChar;
+    bar += startCap;
 
-    if (filledLength > 0) {
-      bar += fillChar.repeat(filledLength - 1);
-      bar += pointerChar;
+    if (filledCount > 0) {
+      // Fill all but the last filled position with the fill segment, then
+      // place a pointer glyph at the current progress location.
+      if (filledCount > 1) bar += fillSegment.repeat(filledCount - 1);
+      bar += pointerGlyph;
     }
 
-    /**
-     * Number of empty positions remaining in the bar.
-     */
-    const emptyLength = length - filledLength;
-    if (emptyLength > 0) {
-      bar += emptyChar.repeat(emptyLength);
+    // Remaining (empty) slots
+    const remainingCount = length - filledCount;
+    if (remainingCount > 0) bar += emptySegment.repeat(remainingCount);
+
+    bar += endCap;
+
+    // --- Step 3: choose color based on progress using a switch for clarity ---
+    let barColor = colors.cyanNeon;
+    switch (true) {
+      case clampedProgress < 30:
+        barColor = colors.neonYellow;
+        break;
+      case clampedProgress < 70:
+        barColor = colors.orangeNeon;
+        break;
+      default:
+        barColor = colors.cyanNeon;
     }
 
-    bar += endChar;
-
-    /**
-     * Color for the bar, based on progress percent (TRON palette).
-     */
-    const color =
-      progress < 30
-        ? colors.neonYellow
-        : progress < 70
-        ? colors.orangeNeon
-        : colors.cyanNeon;
-    return `${color}${bar}${colors.reset} ${progress}%`;
+    return `${barColor}${bar}${colors.reset} ${clampedProgress}%`;
   }
 
   /**
@@ -590,7 +559,7 @@ export class MazeVisualization {
    * @param seconds - Time in seconds
    * @returns Formatted string (e.g., "5.3s", "2m 30s", "1h 15m")
    */
-  static formatElapsedTime(seconds: number): string {
+  static(seconds: number): string {
     // If less than a minute, show seconds with one decimal
     if (seconds < 60) return `${seconds.toFixed(1)}s`;
 

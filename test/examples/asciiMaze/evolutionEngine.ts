@@ -386,8 +386,9 @@ export class EvolutionEngine {
 
     // Step 2: if a finite numeric seed was supplied, normalise to u32 and persist.
     if (typeof seed === 'number' && Number.isFinite(seed)) {
-      // Coerce to unsigned 32-bit. If result is 0, remap to a safe non-zero constant.
+      /** Coerce to unsigned 32-bit. If result is 0, remap to a safe non-zero constant. */
       const normalised = seed >>> 0 || 0x9e3779b9;
+
       EvolutionEngine.#RNG_STATE = normalised >>> 0;
 
       // Step 3: force the RNG cache to refill on next use so the sequence starts from the new seed.
@@ -589,13 +590,19 @@ export class EvolutionEngine {
 
     // Step 2: Single-pass scan collecting matching indices.
     for (let nodeIndex = 0; nodeIndex < nodesRef.length; nodeIndex++) {
+      /**
+       * Reference to the current node being processed.
+       */
       const nodeRef = nodesRef[nodeIndex];
       if (!nodeRef || nodeRef.type !== desiredType) continue;
 
       // Step 3: Grow pooled scratch geometrically when capacity insufficient.
       if (writeCount >= scratch.length) {
+        /** Grow the pooled scratch buffer geometrically when capacity is insufficient. */
         const nextCapacity = 1 << Math.ceil(Math.log2(writeCount + 1));
+        /** Create a new Int32Array with the increased capacity.*/
         const grown = new Int32Array(nextCapacity);
+
         grown.set(scratch);
         EvolutionEngine.#SCRATCH_NODE_IDX = grown;
         scratch = grown; // update local alias to the new buffer
@@ -639,6 +646,7 @@ export class EvolutionEngine {
   static #computeExplorationStats(
     path: ReadonlyArray<[number, number]>
   ): { unique: number; pathLen: number; ratio: number } {
+    /** Compute exploration statistics for a path taken by an agent. */
     const pathLength = path?.length || 0;
     if (pathLength === 0) return { unique: 0, pathLen: 0, ratio: 0 };
 
@@ -655,10 +663,12 @@ export class EvolutionEngine {
       };
     }
 
+    /** Count distinct packed coordinates for larger paths using a dynamic hash table. */
     const distinct = EvolutionEngine.#countDistinctCoordinatesHashed(
       path,
       pathLength
     );
+
     return {
       unique: distinct,
       pathLen: pathLength,
@@ -683,37 +693,35 @@ export class EvolutionEngine {
      * than maintaining a generation-tag array. Alternative tagging was evaluated but
      * rejected for clarity and negligible gain at this scale.
      */
-    if (pathLength === 0) return 0;
-    const table = EvolutionEngine.#SMALL_EXPLORE_TABLE;
-    table.fill(0); // predictable, tiny cost
-    let distinctCount = 0;
+    if (pathLength === 0) return 0; // Step 0: trivial length guard
+    const table = EvolutionEngine.#SMALL_EXPLORE_TABLE; // Step 1: local aliases for pooled table
     const mask = EvolutionEngine.#SMALL_EXPLORE_TABLE_MASK; // 63
+    table.fill(0); // Step 2: clear previous contents (cheap for 64 slots) and prepare counters.
+    let uniqueCount = 0; // Step 3: iterate coordinates, pack into 32-bit key and insert via linear probing.
     for (
       let coordinateIndex = 0;
       coordinateIndex < pathLength;
       coordinateIndex++
     ) {
-      const coordinate = path[coordinateIndex];
-      // Pack (x,y) into 32 bits: high 16 = x, low 16 = y (wrapping via & 0xffff) to avoid negative hashing issues.
+      const coordinate = path[coordinateIndex]; // Step 3.1: pack (x,y) into 32 bits: high 16 bits = x, low 16 bits = y.
       const packed =
         ((coordinate[0] & 0xffff) << 16) | (coordinate[1] & 0xffff);
-      // Multiplicative hash spreads lower entropy; then linear probe.
-      let hash = Math.imul(packed, EvolutionEngine.#HASH_KNUTH_32) >>> 0;
-      const storedValue = (packed + 1) | 0; // +1 so 0 remains EMPTY sentinel
+      let hash = Math.imul(packed, EvolutionEngine.#HASH_KNUTH_32) >>> 0; // Step 3.2: multiplicative hash (Knuth) then convert to unsigned domain.
+      const storedVal = (packed + 1) | 0; // Step 3.3: stored value offset (+1) so 0 remains the EMPTY sentinel.
       while (true) {
+        // Step 3.4: linear probe until empty (insert) or duplicate (skip).
         const slot = hash & mask;
         const slotValue = table[slot];
         if (slotValue === 0) {
-          // empty slot -> insert
-          table[slot] = storedValue;
-          distinctCount++;
+          table[slot] = storedVal; // insert packed+1
+          uniqueCount++;
           break;
         }
-        if (slotValue === storedValue) break; // already recorded coordinate
-        hash = (hash + 1) | 0; // linear probe step
+        if (slotValue === storedVal) break; // duplicate found
+        hash = (hash + 1) | 0; // advance probe
       }
     }
-    return distinctCount;
+    return uniqueCount; // Step 4: return distinct count collected in pooled table.
   }
 
   /**
@@ -820,74 +828,65 @@ export class EvolutionEngine {
    * @remarks Non-reentrant (shared scratch arrays).
    */
   static #computeDiversityMetrics(neat: any, sampleSize = 40) {
-    /**
-     * Step 0: Acquire population reference & early-exit for empty populations.
-     * Using a local constant helps engines keep the reference monomorphic.
-     */
-    const populationRef: any[] = neat.population ?? EvolutionEngine.#EMPTY_VEC;
+    // Step 0: Acquire population reference & fast-exit on empty population.
+    const populationRef: any[] = Array.isArray(neat?.population)
+      ? neat.population
+      : EvolutionEngine.#EMPTY_VEC;
     const populationLength = populationRef.length | 0;
-    if (populationLength === 0) {
+    if (populationLength === 0)
       return { speciesUniqueCount: 0, simpson: 0, wStd: 0 };
-    }
 
-    // Step 1: Ensure species scratch buffers are large enough (power-of-two growth strategy).
+    // Step 1: Ensure species scratch buffers are large enough (power-of-two growth).
     let speciesIds = EvolutionEngine.#SCRATCH_SPECIES_IDS;
     let speciesCounts = EvolutionEngine.#SCRATCH_SPECIES_COUNTS;
     if (populationLength > speciesIds.length) {
-      const nextSize = 1 << Math.ceil(Math.log2(populationLength));
-      EvolutionEngine.#SCRATCH_SPECIES_IDS = new Int32Array(nextSize);
-      EvolutionEngine.#SCRATCH_SPECIES_COUNTS = new Int32Array(nextSize);
+      const newSize = 1 << Math.ceil(Math.log2(populationLength));
+      EvolutionEngine.#SCRATCH_SPECIES_IDS = new Int32Array(newSize);
+      EvolutionEngine.#SCRATCH_SPECIES_COUNTS = new Int32Array(newSize);
       speciesIds = EvolutionEngine.#SCRATCH_SPECIES_IDS;
       speciesCounts = EvolutionEngine.#SCRATCH_SPECIES_COUNTS;
+    } else {
+      // Clear counts for deterministic reuse (fast for typical small arrays).
+      speciesCounts.fill(0);
     }
 
-    // Step 2: Build species id -> count arrays (linear scan with small-cardinality assumption).
+    // Step 2: Linear scan to build species -> counts mapping (small-cardinality assumption).
     let speciesUniqueCount = 0;
     let totalPopulationCount = 0;
-    for (
-      let populationIndex = 0;
-      populationIndex < populationLength;
-      populationIndex++
-    ) {
-      const genome = populationRef[populationIndex];
+    for (let i = 0; i < populationLength; i++) {
+      const genome = populationRef[i];
       const speciesId =
         (genome && genome.species != null ? genome.species : -1) | 0;
-      let existingSpeciesIndex = -1;
-      // Small species cardinality expected (<= population size, usually far lower), so linear search is cache-friendly.
-      for (
-        let speciesScanIndex = 0;
-        speciesScanIndex < speciesUniqueCount;
-        speciesScanIndex++
-      ) {
-        if (speciesIds[speciesScanIndex] === speciesId) {
-          existingSpeciesIndex = speciesScanIndex;
+
+      // Find existing species index (linear scan; fast for small S).
+      let foundIndex = -1;
+      for (let s = 0; s < speciesUniqueCount; s++) {
+        if (speciesIds[s] === speciesId) {
+          foundIndex = s;
           break;
         }
       }
-      if (existingSpeciesIndex === -1) {
+
+      if (foundIndex === -1) {
         speciesIds[speciesUniqueCount] = speciesId;
         speciesCounts[speciesUniqueCount] = 1;
         speciesUniqueCount++;
       } else {
-        speciesCounts[existingSpeciesIndex]++;
+        speciesCounts[foundIndex]++;
       }
-      totalPopulationCount++; // track total directly to avoid second pass
+      totalPopulationCount++;
     }
-    if (totalPopulationCount === 0) totalPopulationCount = 1; // safety (should not happen)
+    if (totalPopulationCount === 0) totalPopulationCount = 1; // defensive guard
 
     // Step 3: Compute Simpson diversity index (1 - sum(p_i^2)).
-    let simpsonAccumulator = 0;
-    for (
-      let speciesIndex = 0;
-      speciesIndex < speciesUniqueCount;
-      speciesIndex++
-    ) {
-      const proportion = speciesCounts[speciesIndex] / totalPopulationCount;
-      simpsonAccumulator += proportion * proportion;
+    let simpsonSqAcc = 0;
+    for (let s = 0; s < speciesUniqueCount; s++) {
+      const proportion = speciesCounts[s] / totalPopulationCount;
+      simpsonSqAcc += proportion * proportion;
     }
-    const simpson = 1 - simpsonAccumulator;
+    const simpson = 1 - simpsonSqAcc;
 
-    // Step 4: Sample genomes (with replacement) into pooled scratch for weight distribution statistics.
+    // Step 4: Sample genomes (with replacement) into pooled scratch for weight variance.
     const boundedSampleSize =
       sampleSize > 0 ? Math.min(populationLength, sampleSize | 0) : 0;
     const sampledLength = boundedSampleSize
@@ -898,21 +897,18 @@ export class EvolutionEngine {
     let weightMean = 0;
     let weightM2 = 0;
     let enabledWeightCount = 0;
-    for (let sampleIndex = 0; sampleIndex < sampledLength; sampleIndex++) {
-      const sampledGenome = EvolutionEngine.#SCRATCH_SAMPLE[sampleIndex];
+    for (let si = 0; si < sampledLength; si++) {
+      const sampledGenome = EvolutionEngine.#SCRATCH_SAMPLE[si];
       const connections =
-        sampledGenome.connections ?? EvolutionEngine.#EMPTY_VEC;
-      for (
-        let connectionIndex = 0;
-        connectionIndex < connections.length;
-        connectionIndex++
-      ) {
-        const connection = connections[connectionIndex];
-        if (connection && connection.enabled !== false) {
+        sampledGenome?.connections ?? EvolutionEngine.#EMPTY_VEC;
+      for (let ci = 0; ci < connections.length; ci++) {
+        const conn = connections[ci];
+        if (conn && conn.enabled !== false) {
+          const w = Number.isFinite(conn.weight) ? conn.weight : 0;
           enabledWeightCount++;
-          const delta = connection.weight - weightMean;
+          const delta = w - weightMean;
           weightMean += delta / enabledWeightCount;
-          weightM2 += delta * (connection.weight - weightMean);
+          weightM2 += delta * (w - weightMean);
         }
       }
     }
@@ -920,7 +916,7 @@ export class EvolutionEngine {
       ? Math.sqrt(weightM2 / enabledWeightCount)
       : 0;
 
-    // Step 6: Return metrics object (pooled scalars only; callers treat as immutable snapshot).
+    // Step 6: Return concise metrics snapshot.
     return { speciesUniqueCount, simpson, wStd: weightStdDev };
   }
 
@@ -2636,26 +2632,26 @@ export class EvolutionEngine {
   }
 
   /**
-   * In‑place insertion sort of a slice of a candidate connection buffer by ascending absolute weight.
+   * In-place insertion sort of a slice of a candidate connection buffer by ascending absolute weight.
    *
-   * Design / behavior:
-   * - Stable for ties: when two connections have identical |weight| their original relative order is preserved
-   *   because we only shift elements whose |weight| is strictly greater than the candidate being inserted.
-   * - Bounds are treated as a half‑open interval [startIndex, endExclusive). Out‑of‑range / degenerate ranges
-   *   (null buffer, start >= endExclusive, slice length < 2) return immediately.
-   * - Missing / non‑finite weights are coerced to 0 via `Math.abs(candidate?.weight || 0)` keeping semantics
-   *   consistent with liberal pruning logic elsewhere.
-   * - Chosen because candidate sets during simplify phases are typically small (tens, rarely > 128); insertion
-   *   sort outperforms generic `Array.prototype.sort` for small N while avoiding allocation and comparator indirection.
+   * Behaviour & contract:
+   * - Sorts the half-open slice [startIndex, endExclusive) in-place by ascending |weight|.
+   * - Stable for ties: equal absolute weights retain their original relative order.
+   * - Defensive: non-array input, empty buffer, or degenerate ranges are no-ops.
+   * - No allocations: single temporary slot used by reusing existing array elements.
    *
-   * Complexity: O(k^2) worst‑case (k = endExclusive - startIndex) with tiny constants for typical k.
-   * Memory: O(1) extra (element temp + indices). No allocations.
-   * Determinism: Fully deterministic for a fixed input slice content.
-   * Reentrancy: Pure (mutates only provided buffer slice; no shared global scratch accessed).
+   * Steps:
+   * 1. Validate inputs and clamp the slice bounds to the buffer length.
+   * 2. For each element in the slice (left-to-right), remove it and shift larger items rightwards.
+   * 3. Insert the candidate at the first position where its |weight| is >= probe's |weight|.
    *
-   * @param connectionsBuffer Buffer containing connection objects with a numeric `weight` property.
-   * @param startIndex Inclusive start index of the slice to sort (negative values coerced to 0).
-   * @param endExclusive Exclusive end index (values > buffer length clamped). If <= startIndex the call is a no‑op.
+   * @param connectionsBuffer Array of connection-like objects (each may expose a numeric `weight`).
+   * @param startIndex Inclusive start index of the slice to sort (floored & clamped to >= 0).
+   * @param endExclusive Exclusive end index of the slice (floored & clamped to buffer length).
+   * @returns void
+   * @example
+   * // Sort first 10 elements of the candidate buffer by ascending absolute weight
+   * EvolutionEngine['#insertionSortByAbsWeight'](buf, 0, 10);
    * @internal
    */
   static #insertionSortByAbsWeight(
@@ -2663,36 +2659,39 @@ export class EvolutionEngine {
     startIndex: number,
     endExclusive: number
   ): void {
-    // Step 0: Defensive normalization & fast exits.
-    if (!Array.isArray(connectionsBuffer)) return;
-    const length = connectionsBuffer.length;
-    if (length === 0) return;
+    // Step 1: Defensive validation & clamp bounds.
+    if (!Array.isArray(connectionsBuffer) || connectionsBuffer.length === 0)
+      return;
+    const bufferLength = connectionsBuffer.length;
     let from = Number.isFinite(startIndex) ? startIndex | 0 : 0;
     let to = Number.isFinite(endExclusive) ? endExclusive | 0 : 0;
     if (from < 0) from = 0;
-    if (to > length) to = length;
-    if (to - from < 2) return; // nothing to order
+    if (to > bufferLength) to = bufferLength;
+    if (to - from < 2) return; // nothing to sort
 
-    // Step 1: Standard insertion sort (stable for equal absolute weights).
+    // Step 2: Standard stable insertion sort (left-to-right).
     for (let scanIndex = from + 1; scanIndex < to; scanIndex++) {
-      const candidateConnection = connectionsBuffer[scanIndex];
-      const candidateAbsWeight = Math.abs(
-        candidateConnection && Number.isFinite(candidateConnection.weight)
-          ? candidateConnection.weight
-          : 0
+      // 2.1: Extract the candidate and compute its absolute weight (treat non-finite as 0).
+      const candidate = connectionsBuffer[scanIndex];
+      const candidateAbs = Math.abs(
+        candidate && Number.isFinite(candidate.weight) ? candidate.weight : 0
       );
-      let shiftIndex = scanIndex - 1;
-      // Shift while strictly greater (preserves order of equals => stability).
-      while (shiftIndex >= from) {
-        const probe = connectionsBuffer[shiftIndex];
-        const probeAbsWeight = Math.abs(
+
+      // 2.2: Shift larger elements one slot to the right to make room for the candidate.
+      let writePos = scanIndex - 1;
+      while (writePos >= from) {
+        const probe = connectionsBuffer[writePos];
+        const probeAbs = Math.abs(
           probe && Number.isFinite(probe.weight) ? probe.weight : 0
         );
-        if (probeAbsWeight <= candidateAbsWeight) break;
-        connectionsBuffer[shiftIndex + 1] = probe;
-        shiftIndex--;
+        // Preserve stability: stop when probe <= candidate (no swap for equals).
+        if (probeAbs <= candidateAbs) break;
+        connectionsBuffer[writePos + 1] = probe;
+        writePos--;
       }
-      connectionsBuffer[shiftIndex + 1] = candidateConnection;
+
+      // 2.3: Place the candidate into its sorted position.
+      connectionsBuffer[writePos + 1] = candidate;
     }
   }
 
@@ -2852,54 +2851,74 @@ export class EvolutionEngine {
   static #computeActionEntropy(
     pathArr: ReadonlyArray<[number, number]>
   ): { entropyNorm: number; uniqueMoves: number; pathLen: number } {
-    // Defensive guards.
-    if (!Array.isArray(pathArr) || pathArr.length < 2)
+    // Step 0: Defensive validation — need at least two points to observe a move.
+    if (!Array.isArray(pathArr) || pathArr.length < 2) {
       return { entropyNorm: 0, uniqueMoves: 0, pathLen: pathArr?.length | 0 };
+    }
 
-    const counts = EvolutionEngine.#SCRATCH_COUNTS;
-    // Manual reset for small fixed-size buffer (faster than fill for hot path)
-    counts[0] = 0;
-    counts[1] = 0;
-    counts[2] = 0;
-    counts[3] = 0;
+    // Step 1: Acquire the pooled counts buffer (Int32Array) or a safe temporary fallback.
+    // Using the pooled buffer avoids allocations on hot telemetry paths.
+    const counts = EvolutionEngine.#SCRATCH_COUNTS ?? new Int32Array(4);
+    const countsLen = counts.length;
 
+    // Step 2: Zero the active prefix of the counts buffer. Manual loop is fast for tiny fixed-size buffers.
+    for (let i = 0; i < countsLen; i++) counts[i] = 0;
+
+    // Step 3: Scan consecutive coordinate pairs and tally mapped directional moves.
     let totalMoves = 0;
-    const dirMap = EvolutionEngine.#DIR_DELTA_TO_INDEX; // 3x3 lookup mapping
-
-    // Scan consecutive pairs and tally mapped directions.
+    const dirMap = EvolutionEngine.#DIR_DELTA_TO_INDEX; // 3x3 lookup mapping (keys 0..8)
     for (let i = 1; i < pathArr.length; i++) {
       const cur = pathArr[i];
       const prev = pathArr[i - 1];
       if (!cur || !prev) continue;
-      const dx = cur[0] - prev[0];
-      const dy = cur[1] - prev[1];
+
+      // Use robust numeric extraction to tolerate non-integer or missing components.
+      const dx =
+        (Number.isFinite(cur[0]) ? cur[0] : 0) -
+        (Number.isFinite(prev[0]) ? prev[0] : 0);
+      const dy =
+        (Number.isFinite(cur[1]) ? cur[1] : 0) -
+        (Number.isFinite(prev[1]) ? prev[1] : 0);
+
       // Only unit/neighbour moves are considered (dx,dy in -1..1)
       if (dx < -1 || dx > 1 || dy < -1 || dy > 1) continue;
-      const key = (dx + 1) * 3 + (dy + 1); // maps to 0..8
-      const dirIdx = dirMap[key];
-      if (dirIdx >= 0) {
-        counts[dirIdx]++;
+
+      // Map (dx,dy) into the dirMap key space (0..8) and increment the mapped bucket when valid.
+      const mapKey = (dx + 1) * 3 + (dy + 1);
+      const mappedIndex = dirMap[mapKey];
+      if (
+        Number.isFinite(mappedIndex) &&
+        mappedIndex >= 0 &&
+        mappedIndex < countsLen
+      ) {
+        counts[mappedIndex] = (counts[mappedIndex] | 0) + 1;
         totalMoves++;
       }
     }
 
+    // Step 4: If no valid moves were observed return early.
     if (totalMoves === 0)
       return { entropyNorm: 0, uniqueMoves: 0, pathLen: pathArr.length };
 
-    // Compute normalized Shannon entropy and unique move count.
+    // Step 5: Compute Shannon entropy (natural log) normalized by log(4) and count unique directions.
     let entropy = 0;
     let uniqueMoves = 0;
-    // counts length is 4 (ACTION_DIM); iterate explicitly for tiny fixed size.
-    for (let k = 0; k < 4; k++) {
+    const invTotal = 1 / totalMoves;
+    const normFactor = EvolutionEngine.#INV_LOG4 ?? 1 / Math.log(4);
+
+    // ACTION_DIM is 4 for this domain; iterate only over the first 4 direction buckets.
+    const dimIter = Math.min(4, countsLen);
+    for (let k = 0; k < dimIter; k++) {
       const c = counts[k];
       if (c > 0) {
-        const p = c / totalMoves;
+        const p = c * invTotal;
         entropy += -p * Math.log(p);
         uniqueMoves++;
       }
     }
 
-    const entropyNorm = entropy * EvolutionEngine.#INV_LOG4;
+    // Step 6: Normalize entropy into [0,1] and return structured result.
+    const entropyNorm = entropy * normFactor;
     return { entropyNorm, uniqueMoves, pathLen: pathArr.length };
   }
 
@@ -3324,135 +3343,325 @@ export class EvolutionEngine {
   }
 
   /**
-   * Generic accumulation for arbitrary action dimension including higher moments when enabled.
+   * Generic accumulation of running moments (mean, M2, M3, M4) for an arbitrary
+   * action dimensionality and simultaneous softmax entropy accumulation.
+   *
+   * Behaviour / contract:
+   * - Streams over `recent` samples (newest last) and updates the shared pooled
+   *   scratch buffers: `#SCRATCH_MEANS`, `#SCRATCH_M2_RAW`, `#SCRATCH_M3_RAW`,
+   *   `#SCRATCH_M4_RAW` in-place for the first `actionDim` entries.
+   * - Returns the sum of per-sample softmax entropies (caller may divide by sample
+   *   count to obtain the mean entropy).
+   * - Reuses the engine's exponent scratch buffer (`#SCRATCH_EXPS`) for entropy
+   *   computation to avoid per-call allocations.
+   * - Defensive fallbacks: when a pooled buffer is missing (tests / partial init), a
+   *   temporary typed-array is used so the helper remains robust.
+   *
+   * Steps (high level):
+   * 1. Validate inputs and obtain pooled typed-array references (with safe fallbacks).
+   * 2. Stream each sample: for every active dimension compute delta, update
+   *    M4/M3/M2 and mean using numerically stable recurrences (Welford-style).
+   * 3. Accumulate softmax entropy for each sample using the pooled exponent buffer.
+   *
+   * @param recent - Array of numeric vectors (each may be shorter than actionDim; missing values treated as 0).
+   * @param actionDim - Number of active dimensions to update (floor & clamp performed by caller).
+   * @returns Sum of softmax entropies across all processed samples (number).
+   * @example
+   * // Internally used by computeLogitStats orchestration:
+   * const entropySum = EvolutionEngine['#accumulateLogitStatsGeneric'](recentLogits, 6);
    * @internal
    */
   static #accumulateLogitStatsGeneric(
     recent: number[][],
     actionDim: number
   ): number {
-    const meansBuf = EvolutionEngine.#SCRATCH_MEANS;
-    const m2Buf = EvolutionEngine.#SCRATCH_M2_RAW;
-    const m3Buf = EvolutionEngine.#SCRATCH_M3_RAW;
-    const m4Buf = EvolutionEngine.#SCRATCH_M4_RAW;
-    const sampleCount = recent.length;
-    let entropyAccumulator = 0;
+    // Step 1: Defensive early checks and pooled buffer acquisition.
+    const sampleCount = Array.isArray(recent) ? recent.length : 0;
+    if (sampleCount === 0 || actionDim <= 0) return 0;
 
-    for (let sampleIndex = 0; sampleIndex < sampleCount; sampleIndex++) {
-      const vector = recent[sampleIndex] ?? EvolutionEngine.#EMPTY_VEC;
-      const seqNumber = sampleIndex + 1;
-      for (let dimIndex = 0; dimIndex < actionDim; dimIndex++) {
-        const x = vector[dimIndex] ?? 0;
-        const delta = x - meansBuf[dimIndex];
-        const deltaN = delta / seqNumber;
+    // Prefer pooled typed arrays; fall back to fresh zero'd buffers when tests or
+    // partial initialization omitted reset helpers.
+    const meansBuf =
+      EvolutionEngine.#SCRATCH_MEANS ?? new Float64Array(actionDim);
+    const m2Buf =
+      EvolutionEngine.#SCRATCH_M2_RAW ?? new Float64Array(actionDim);
+    const m3Buf =
+      EvolutionEngine.#SCRATCH_M3_RAW ??
+      (EvolutionEngine.#REDUCED_TELEMETRY
+        ? undefined
+        : new Float64Array(actionDim));
+    const m4Buf =
+      EvolutionEngine.#SCRATCH_M4_RAW ??
+      (EvolutionEngine.#REDUCED_TELEMETRY
+        ? undefined
+        : new Float64Array(actionDim));
+
+    // Reuse exponent scratch buffer for entropy computation when available.
+    const expsBuf =
+      EvolutionEngine.#SCRATCH_EXPS ?? new Float64Array(Math.max(4, actionDim));
+
+    // Step 2: Streaming accumulation loop.
+    let entropyAccumulator = 0;
+    for (let sampleIdx = 0; sampleIdx < sampleCount; sampleIdx++) {
+      // 2.1: Load the vector, defaulting to an empty constant to avoid branching.
+      const vec = recent[sampleIdx] ?? EvolutionEngine.#EMPTY_VEC;
+      const seqNum = sampleIdx + 1; // 1-based sample index used in recurrence
+
+      // 2.2: Update moments for each active dimension.
+      // Guard inner loop by the smaller of actionDim and available buffer length.
+      const dimLimit = Math.min(actionDim, meansBuf.length);
+      for (let dim = 0; dim < dimLimit; dim++) {
+        const x = Number.isFinite(vec[dim]) ? vec[dim] : 0;
+
+        // delta from previous mean, and scaled delta terms used in stable recurrences
+        const delta = x - meansBuf[dim];
+        const deltaN = delta / seqNum;
         const deltaN2 = deltaN * deltaN;
-        const term1 = delta * deltaN * (seqNumber - 1);
-        if (!EvolutionEngine.#REDUCED_TELEMETRY)
-          m4Buf![dimIndex] +=
-            term1 * deltaN2 * (seqNumber * seqNumber - 3 * seqNumber + 3) +
-            6 * deltaN2 * m2Buf[dimIndex] -
-            4 * deltaN * (m3Buf ? m3Buf[dimIndex] : 0);
-        if (!EvolutionEngine.#REDUCED_TELEMETRY)
-          m3Buf![dimIndex] +=
-            term1 * deltaN * (seqNumber - 2) - 3 * deltaN * m2Buf[dimIndex];
-        m2Buf[dimIndex] += term1;
-        meansBuf[dimIndex] += deltaN;
+        const term1 = delta * deltaN * (seqNum - 1);
+
+        // 2.2.1: Update fourth and third central moment accumulators when full telemetry enabled.
+        if (!EvolutionEngine.#REDUCED_TELEMETRY) {
+          // m4 contribution: term1 * deltaN^2 * (n^2 - 3n + 3) + 6*deltaN^2*M2 - 4*deltaN*M3
+          const prevM2 = m2Buf[dim];
+          const prevM3 = m3Buf ? m3Buf[dim] : 0;
+          m4Buf![dim] +=
+            term1 * deltaN2 * (seqNum * seqNum - 3 * seqNum + 3) +
+            6 * deltaN2 * prevM2 -
+            4 * deltaN * prevM3;
+
+          // m3 contribution: term1 * deltaN * (n - 2) - 3*deltaN*M2
+          m3Buf![dim] += term1 * deltaN * (seqNum - 2) - 3 * deltaN * prevM2;
+        }
+
+        // 2.2.2: Update second raw moment and running mean.
+        m2Buf[dim] += term1;
+        meansBuf[dim] += deltaN;
       }
+
+      // Step 2.3: Accumulate entropy using pooled exponent buffer to avoid allocations.
       entropyAccumulator += EvolutionEngine.#softmaxEntropyFromVector(
-        vector,
-        EvolutionEngine.#SCRATCH_EXPS
+        vec,
+        expsBuf
       );
     }
+
+    // Step 3: Return aggregated entropy (caller will compute mean if required).
     return entropyAccumulator;
   }
 
   /**
    * Finalize full-statistics values (stds and kurtosis) after accumulation.
+   *
+   * Behaviour:
+   *  - Converts accumulated raw second (M2) and fourth (M4) moments into population
+   *    standard deviations and excess kurtosis for the first `actionDim` dimensions.
+   *  - Defensive: handles missing/zero sample counts by writing zeros to outputs to avoid NaNs.
+   *  - Uses pooled typed arrays (`#SCRATCH_M2_RAW`, `#SCRATCH_M4_RAW`, `#SCRATCH_STDS`, `#SCRATCH_KURT`)
+   *    when available; falls back to temporary buffers to remain robust in tests.
+   *
+   * Steps:
+   *  1. Validate and normalize inputs (clamp/zero degenerate values).
+   *  2. Acquire pooled typed-array buffers, creating safe fallbacks only when necessary.
+   *  3. Compute inverse sample count once and finalize stds; compute kurtosis when full telemetry enabled
+   *     using a guarded denominator to avoid division-by-zero or overflow.
+   *
+   * @param actionDim - Number of action dimensions to finalize (floored & clamped by caller).
+   * @param sampleCount - Number of samples accumulated (population denominator for variance).
+   * @example
+   * EvolutionEngine['#finalizeLogitStatsFull'](4, recent.length);
    * @internal
    */
   static #finalizeLogitStatsFull(actionDim: number, sampleCount: number) {
-    const m2Buf = EvolutionEngine.#SCRATCH_M2_RAW;
-    const m4Buf = EvolutionEngine.#SCRATCH_M4_RAW;
-    const stdsBuf = EvolutionEngine.#SCRATCH_STDS;
-    const kurtBuf = EvolutionEngine.#SCRATCH_KURT!;
+    // Step 1: Defensive normalization
+    const dim = Number.isFinite(actionDim)
+      ? Math.max(0, Math.floor(actionDim))
+      : 0;
+    const samples =
+      Number.isFinite(sampleCount) && sampleCount > 0
+        ? Math.floor(sampleCount)
+        : 0;
+    if (dim === 0) return;
 
-    for (let dimIndex = 0; dimIndex < actionDim; dimIndex++) {
-      const variance = m2Buf[dimIndex] / sampleCount;
+    // Step 2: Acquire pooled buffers or safe fallbacks (zero-filled when necessary).
+    const m2Buf = EvolutionEngine.#SCRATCH_M2_RAW ?? new Float64Array(dim);
+    const m4Buf = EvolutionEngine.#SCRATCH_M4_RAW ?? new Float64Array(dim);
+    if (!EvolutionEngine.#SCRATCH_STDS)
+      EvolutionEngine.#SCRATCH_STDS = new Float64Array(dim);
+    const stdsBuf = EvolutionEngine.#SCRATCH_STDS;
+    if (!EvolutionEngine.#SCRATCH_KURT)
+      EvolutionEngine.#SCRATCH_KURT = new Float64Array(dim);
+    const kurtBuf = EvolutionEngine.#SCRATCH_KURT;
+
+    // Step 3: Finalize per-dimension statistics.
+    const invSamples = samples > 0 ? 1 / samples : 0;
+    // Tolerance used to guard kurtosis denominator and tiny variances.
+    const VAR_TOLERANCE = 1e-18;
+    for (let dimIndex = 0; dimIndex < dim; dimIndex++) {
+      const m2 = m2Buf[dimIndex] || 0;
+      const variance = invSamples > 0 ? m2 * invSamples : 0;
       stdsBuf[dimIndex] = variance > 0 ? Math.sqrt(variance) : 0;
+
       if (!EvolutionEngine.#REDUCED_TELEMETRY) {
-        const m4v = m4Buf![dimIndex];
-        kurtBuf[dimIndex] =
-          variance > 1e-18
-            ? (sampleCount * m4v) / (m2Buf[dimIndex] * m2Buf[dimIndex]) - 3
-            : 0;
+        const m4v = m4Buf[dimIndex] || 0;
+        const denom = m2 * m2; // (raw M2)^2
+        // Compute excess kurtosis using guarded denominator; fall back to 0 when unstable.
+        if (denom > 0 && variance > VAR_TOLERANCE && samples > 0) {
+          kurtBuf[dimIndex] = (samples * m4v) / denom - 3;
+        } else {
+          kurtBuf[dimIndex] = 0;
+        }
       }
     }
   }
 
   /**
-   * Finalize reduced-statistics values (only stds) after accumulation.
+   * Finalize reduced logit statistics (compute population stds) after accumulation.
+   *
+   * Behaviour & contract:
+   * - Consumes the accumulated second raw moments (`#SCRATCH_M2_RAW`) and writes population
+   *   standard deviations into `#SCRATCH_STDS` for the first `actionDim` entries.
+   * - Defensive: treats non-finite or zero `sampleCount` as a no-op (writes zeros) to avoid
+   *   division-by-zero and ensure stable telemetry.
+   * - Uses pooled typed arrays to avoid per-call allocations; grown elsewhere by reset helpers.
+   *
+   * Steps:
+   * 1. Validate inputs and short-circuit on degenerate `actionDim` or `sampleCount`.
+   * 2. Acquire pooled buffers (create zero-filled typed arrays if missing to preserve safety).
+   * 3. Compute inverse sample count once and finalize each dimension's population std into the stds buffer.
+   *
+   * @param actionDim - Number of active action dimensions to finalize (floored & clamped by caller).
+   * @param sampleCount - Number of samples accumulated (must be > 0 for meaningful stds).
+   * @example
+   * EvolutionEngine['#finalizeLogitStatsReduced'](4, recent.length);
    * @internal
    */
   static #finalizeLogitStatsReduced(actionDim: number, sampleCount: number) {
-    const m2Buf = EvolutionEngine.#SCRATCH_M2_RAW;
+    // Step 1: Defensive guards.
+    const dim = Number.isFinite(actionDim)
+      ? Math.max(0, Math.floor(actionDim))
+      : 0;
+    const samples =
+      Number.isFinite(sampleCount) && sampleCount > 0
+        ? Math.floor(sampleCount)
+        : 0;
+    if (dim === 0) return;
+
+    // Step 2: Acquire pooled buffers, falling back to safe temporary buffers if not present.
+    // These pools are expected to be initialized by `#resetLogitScratch` during the orchestration.
+    const m2Buf = EvolutionEngine.#SCRATCH_M2_RAW ?? new Float64Array(dim);
+    if (!EvolutionEngine.#SCRATCH_STDS)
+      EvolutionEngine.#SCRATCH_STDS = new Float64Array(dim);
     const stdsBuf = EvolutionEngine.#SCRATCH_STDS;
-    for (let dimIndex = 0; dimIndex < actionDim; dimIndex++) {
-      const variance = m2Buf[dimIndex] / sampleCount;
+
+    // Step 3: Compute inverse sample count and finalize standard deviations.
+    // If samples === 0 we write zeros to stds to maintain a consistent zeroed state.
+    const invSample = samples > 0 ? 1 / samples : 0;
+    for (let dimIndex = 0; dimIndex < dim; dimIndex++) {
+      const variance = invSample > 0 ? m2Buf[dimIndex] * invSample : 0;
       stdsBuf[dimIndex] = variance > 0 ? Math.sqrt(variance) : 0;
     }
   }
 
   /**
    * Compute summary statistics for output node biases.
-   * Uses class-level scratch buffers and avoids intermediate allocations.
-   * @param nodes - full node list from a network
-   * @param outputCount - number of output nodes (must be <= nodes.length)
-   * @returns an object with mean, std and a comma-separated biases string
+   *
+   * This helper uses pooled engine scratch buffers to avoid per-call allocations:
+   * - numeric accumulation uses `#SCRATCH_BIAS_TA` (Float64Array) when available/large enough.
+   * - string formatting uses `#SCRATCH_STR` (Array) as an ephemeral formatting buffer.
+   *
+   * Steps (educational):
+   * 1. Defensive validation: ensure `nodes` and `outputCount` are sane; return zeroed result for degenerate inputs.
+   * 2. Materialize a numeric bias prefix into the pooled `#SCRATCH_BIAS_TA` to avoid repeated property reads.
+   * 3. Compute mean and population standard deviation via a single-pass Welford algorithm over the pooled prefix.
+   * 4. Format the bias values into a comma-separated string using the pooled `#SCRATCH_STR` (toFixed(2)).
+   *
+   * Contract:
+   * @param nodes - full node list from a network (each node may expose `.bias`).
+   * @param outputCount - number of output nodes to consider (must be <= nodes.length).
+   * @returns Object { mean, std, biasesStr } where `biasesStr` is a CSV of biases formatted with two decimals.
+   * @example
+   * const { mean, std, biasesStr } = EvolutionEngine['#computeOutputBiasStats'](nodes, 4);
    * @internal
    */
   static #computeOutputBiasStats(nodes: any[], outputCount: number) {
-    if (!nodes || outputCount <= 0) return { mean: 0, std: 0, biasesStr: '' };
-    // Single-pass Welford for mean/std
+    // Step 1: Defensive validation & normalization
+    if (
+      !Array.isArray(nodes) ||
+      !Number.isFinite(outputCount) ||
+      outputCount <= 0
+    )
+      return { mean: 0, std: 0, biasesStr: '' };
+
+    // Step 2: Ensure a pooled Float64Array exists and has capacity for outputCount values.
+    // Use a geometric (power-of-two) growth policy to amortize future resizes.
+    if (
+      !EvolutionEngine.#SCRATCH_BIAS_TA ||
+      EvolutionEngine.#SCRATCH_BIAS_TA.length < outputCount
+    ) {
+      const newSize = 1 << Math.ceil(Math.log2(Math.max(1, outputCount)));
+      EvolutionEngine.#SCRATCH_BIAS_TA = new Float64Array(newSize);
+    }
+    const biasTa = EvolutionEngine.#SCRATCH_BIAS_TA;
+
+    // Step 2.1: Fill the numeric scratch from nodes using the precomputed node-index mapping.
+    for (let i = 0; i < outputCount; i++) {
+      const nodeIndex = EvolutionEngine.#SCRATCH_NODE_IDX[i];
+      biasTa[i] = nodes[nodeIndex]?.bias ?? 0;
+    }
+
+    // Step 3: Single-pass Welford to compute mean and population std (numerically stable).
     let mean = 0;
     let M2 = 0;
-    for (let outIndex = 0; outIndex < outputCount; outIndex++) {
-      const nodeIndex = EvolutionEngine.#SCRATCH_NODE_IDX[outIndex];
-      const biasValue = nodes[nodeIndex]?.bias ?? 0;
-      const count = outIndex + 1;
-      const delta = biasValue - mean;
+    for (let i = 0; i < outputCount; i++) {
+      const value = biasTa[i];
+      const count = i + 1;
+      const delta = value - mean;
       mean += delta / count;
-      M2 += delta * (biasValue - mean);
+      M2 += delta * (value - mean);
     }
-    const std = outputCount ? Math.sqrt(M2 / outputCount) : 0;
-    // build compact biases string using reusable string buffer
+    const std = outputCount > 0 ? Math.sqrt(M2 / outputCount) : 0;
+
+    // Step 4: Format CSV using pooled string buffer (#SCRATCH_STR) with toFixed(2).
+    // Grow the pooled string buffer geometrically when capacity insufficient.
     if (outputCount > EvolutionEngine.#SCRATCH_STR.length) {
-      const nextSize = 1 << Math.ceil(Math.log2(outputCount));
+      const nextSize = 1 << Math.ceil(Math.log2(Math.max(1, outputCount)));
       EvolutionEngine.#SCRATCH_STR = new Array(nextSize);
     }
     const sBuf = EvolutionEngine.#SCRATCH_STR;
     for (let bi = 0; bi < outputCount; bi++) {
-      const idx = EvolutionEngine.#SCRATCH_NODE_IDX[bi];
-      sBuf[bi] = (nodes[idx]?.bias ?? 0).toFixed(2);
+      sBuf[bi] = biasTa[bi].toFixed(2);
     }
-    const prevLenBias = sBuf.length;
+    const prevLength = sBuf.length;
     sBuf.length = outputCount;
     const biasesStr = sBuf.join(',');
-    sBuf.length = prevLenBias;
+    sBuf.length = prevLength;
+
     return { mean, std, biasesStr };
   }
 
   /**
-   * Expand population by creating up to `targetAdd` children from top parents.
-   * Uses neat-managed spawn when available, otherwise falls back to clone/mutate/add.
-   * Avoids short-lived allocations by reusing class-level scratch buffers.
-   * Contract / behaviour:
-   * - Inputs: `neat` driver (may provide `spawnFromParent`, `addGenome`, or `_invalidateGenomeCaches`),
-   *   `targetAdd` (desired number of new genomes), `safeWrite` logger and generation counter.
-   * - Output: side-effects on `neat.population` and `neat.options.popsize`; emits a single status line.
-   * - Error model: per-child exceptions are swallowed (best-effort growth). The method is non-throwing.
-   * Edge cases:
-   * - If `neat.population` is missing or empty nothing is done.
-   * - `targetAdd` is clamped to non-negative integer; fractional values are floored.
+   * Expand the population by adding up to `targetAdd` new children derived from top parents.
+   *
+   * Behaviour (best-effort):
+   *  - Prefer driver-provided spawn mechanics when available; fall back to clone+mutate when necessary.
+   *  - Swallow per-child errors so expansion never aborts the evolution loop.
+   *  - Reuse engine helpers/scratch where possible; no fresh allocations aside from driver-managed registration.
+   *
+   * Steps (high level):
+   *  1. Normalize and clamp `targetAdd` to a non-negative integer.
+   *  2. Prepare working sets (population reference, sorted parent indices and parent pool size).
+   *  3. Sample parents uniformly from the top parent pool and create children via
+   *     `#createChildFromParent` (per-child failures are ignored).
+   *  4. Update `neat.options.popsize` and emit a single status line to `safeWrite`.
+   *
+   * @param neat - NEAT driver / manager object. May provide `population`, `options`, and optional spawn helpers.
+   * @param targetAdd - Desired number of new genomes to create (floored & clamped to >= 0).
+   * @param safeWrite - Logging callback for a single-line status message (called with a trailing '\n').
+   * @param completedGenerations - Generation counter appended to the status message for telemetry.
+   * @example
+   * // Add 10 children and log the result
+   * EvolutionEngine['#expandPopulation'](neat, 10, msg => process.stdout.write(msg), currentGen);
+   *
    * @internal
    */
   static #expandPopulation(
@@ -3461,39 +3670,55 @@ export class EvolutionEngine {
     safeWrite: (msg: string) => void,
     completedGenerations: number
   ) {
-    // Defensive normalization of requested add count.
-    const wanted = Number.isFinite(targetAdd)
+    // Step 0: Defensive normalization of requested add count.
+    const additionsWanted = Number.isFinite(targetAdd)
       ? Math.max(0, Math.floor(targetAdd))
       : 0;
-    if (wanted <= 0) return;
+    if (additionsWanted <= 0) return;
 
     // Step 1: Compute working sets (population reference, sorted indices and parent pool size).
     const {
       populationRef,
       sortedIdx,
       parentPoolSize,
-    } = EvolutionEngine.#prepareExpansion(neat, wanted);
+    } = EvolutionEngine.#prepareExpansion(neat, additionsWanted);
 
-    // If there are no parents to sample from, bail early.
-    if (!populationRef?.length || parentPoolSize === 0) return;
+    // Fast exit when there are no parents to sample from.
+    if (!Array.isArray(populationRef) || populationRef.length === 0) return;
+    if (!Number.isFinite(parentPoolSize) || parentPoolSize === 0) return;
 
-    // Step 2: Create requested number of children by repeatedly sampling parents.
-    for (let addIndex = 0; addIndex < wanted; addIndex++) {
-      const pickIndex = (EvolutionEngine.#fastRandom() * parentPoolSize) | 0;
-      const parent = populationRef[sortedIdx[pickIndex]];
-      // Delegate per-child creation to a dedicated helper to keep the loop simple and testable.
+    // Step 2: Create the requested number of children by repeatedly sampling parents.
+    // Note: uniform sampling over the top `parentPoolSize` indices.
+    for (let childIndex = 0; childIndex < additionsWanted; childIndex++) {
+      // 2.1 Sample a parent index in [0, parentPoolSize)
+      const sampledParentIndex = Math.floor(
+        EvolutionEngine.#fastRandom() * parentPoolSize
+      );
+      // 2.2 Resolve parent genome from the sorted index map.
+      const parentGenome = populationRef[sortedIdx[sampledParentIndex]];
+
+      // 2.3 Delegate child creation to the dedicated helper; swallow per-child failures.
       try {
-        EvolutionEngine.#createChildFromParent(neat, parent);
+        EvolutionEngine.#createChildFromParent(neat, parentGenome);
       } catch {
-        /* ignore per-child failures - best-effort expansion */
+        // best-effort: ignore failures to keep evolution loop stable
       }
     }
 
     // Step 3: Finalize bookkeeping and emit a compact status line.
-    neat.options.popsize = neat.population.length;
-    safeWrite(
-      `[DYNAMIC_POP] Expanded population to ${neat.population.length} at gen ${completedGenerations}\n`
-    );
+    // Be defensive: ensure options/population exist before writing lengths.
+    if (!neat.options) neat.options = neat.options || {};
+    const currentPopSize = Array.isArray(neat.population)
+      ? neat.population.length
+      : 0;
+    neat.options.popsize = currentPopSize;
+    try {
+      safeWrite?.(
+        `[DYNAMIC_POP] Expanded population to ${currentPopSize} at gen ${completedGenerations}\n`
+      );
+    } catch {
+      // swallow logging errors; expansion is already applied
+    }
   }
 
   /**
@@ -3795,11 +4020,6 @@ export class EvolutionEngine {
     }
   }
 
-  /**
-   * Return indices of population sorted descending by score using pooled index buffer.
-   * Uses iterative quicksort on the indices to avoid allocating a copy of the population.
-   * @internal
-   */
   /**
    * Return indices of `population` sorted by descending `score` using a pooled, allocation-free sorter.
    *
@@ -5522,72 +5742,100 @@ export class EvolutionEngine {
   }
 
   /**
-   * Sample up to k items (with replacement) from src segment [segmentStart, end) into scratch buffer.
-   * Avoids temporary slice allocation for segment sampling.
-   * @internal
-   * @remarks Non-reentrant: uses shared `#SCRATCH_SAMPLE` buffer.
+   * Sample up to `k` items (with replacement) from a contiguous segment of `src` into
+   * the engine's pooled scratch buffer (`#SCRATCH_SAMPLE`). This avoids creating a
+   * temporary slice for the segment and reduces per-call allocations.
+   *
+   * Behaviour & contract:
+   *  - The method samples uniformly at random with replacement from the source segment
+   *    `[segmentStart, src.length)` and writes references into the pooled buffer.
+   *  - It grows the pooled buffer conservatively using power-of-two resizing. Growth is
+   *    done by allocating a new array and copying the preserved prefix.
+   *  - The function is intentionally allocation-light for hot paths but is not
+   *    re-entrant: callers must not use the pooled `#SCRATCH_SAMPLE` concurrently.
+   *  - Sampling is best-effort and will silently return 0 when inputs are invalid.
+   *
+   * Steps (high-level):
+   *  1) Fast-validate inputs and normalise numeric arguments.
+   *  2) Compute the available segment length and the requested sample count.
+   *  3) Ensure the pooled `#SCRATCH_SAMPLE` exists and grow it by power-of-two when needed.
+   *  4) Sample uniformly (with replacement) from the segment into the pooled buffer using a
+   *     tight loop (4x unrolled) for throughput.
+   *  5) Return the number of items written into the pooled buffer (may be less than `k`
+   *     when the pool capacity bounds the write).
+   *
+   * Props / Parameters:
+   * @param src - Source array to sample from (must be an array-like object).
+   * @param segmentStart - Inclusive start index within `src` where sampling begins (integer >= 0).
+   * @param sampleCount - Number of items to sample (samples with replacement); will be floored to an integer.
+   * @returns Number of items written into the engine pooled scratch buffer (integer >= 0).
+   *
+   * Notes on pooling / reentrancy:
+   *  - The pooled buffer is shared across the engine and is not thread-safe or re-entrant.
+   *  - This helper is intended for internal use; consumers should copy the pooled items
+   *    out if they need to retain them across subsequent engine operations.
    *
    * Example:
    * // Sample 10 items from src starting at index 20 into the engine scratch buffer
    * const written = EvolutionEngine['#sampleSegmentIntoScratch'](srcArray, 20, 10);
+   * // Then read items via EvolutionEngine.#SCRATCH_SAMPLE[0..written-1]
+   *
+   * @internal
    */
   static #sampleSegmentIntoScratch<T>(
     src: T[],
     segmentStart: number,
-    k: number
+    sampleCount: number
   ): number {
-    // Step 0: Validate inputs
-    if (!Array.isArray(src) || k <= 0) return 0;
+    // Step 0: Validate inputs quickly and normalise numeric arguments.
+    if (!Array.isArray(src) || sampleCount <= 0) return 0;
+    const totalLength = src.length | 0;
+    const startIndex = Math.max(0, segmentStart | 0);
+    if (startIndex >= totalLength) return 0;
 
-    // Normalize lengths safely
-    const sourceLength = src.length | 0;
-    if (segmentStart >= sourceLength) return 0;
+    // Step 1: Determine segment size and requested sample count.
+    const segmentSize = totalLength - startIndex;
+    if (segmentSize <= 0) return 0;
+    const requestedCount = Math.max(0, Math.floor(sampleCount));
+    if (requestedCount === 0) return 0;
 
-    // Compute segment length (number of candidate items to sample from)
-    const segmentLength = sourceLength - (segmentStart | 0);
-    if (segmentLength <= 0) return 0;
+    // Step 2: Ensure the pooled sample buffer exists and has sufficient capacity.
+    // Grow the pool conservatively by powers-of-two to reduce future resizes.
+    let pooledBuffer: any[] = Array.isArray(EvolutionEngine.#SCRATCH_SAMPLE)
+      ? EvolutionEngine.#SCRATCH_SAMPLE
+      : (EvolutionEngine.#SCRATCH_SAMPLE = []);
 
-    // Normalize requested sample count
-    const requestedSampleCount = Math.floor(k);
-
-    // Step 1: Ensure pooled scratch buffer exists and has capacity. Grow using power-of-two sizing.
-    let pooledBuffer = EvolutionEngine.#SCRATCH_SAMPLE;
-    if (!Array.isArray(pooledBuffer))
-      pooledBuffer = EvolutionEngine.#SCRATCH_SAMPLE = [];
-
-    if (pooledBuffer.length < requestedSampleCount) {
+    if (pooledBuffer.length < requestedCount) {
       let newCapacity = pooledBuffer.length > 0 ? pooledBuffer.length : 1;
-      while (newCapacity < requestedSampleCount) newCapacity <<= 1;
-      const newBuf: any[] = new Array(newCapacity);
-      for (let i = 0; i < pooledBuffer.length; i++) newBuf[i] = pooledBuffer[i];
-      EvolutionEngine.#SCRATCH_SAMPLE = newBuf;
-      pooledBuffer = newBuf;
+      while (newCapacity < requestedCount) newCapacity <<= 1;
+      const extended: any[] = new Array(newCapacity);
+      for (let copyIndex = 0; copyIndex < pooledBuffer.length; copyIndex++) {
+        extended[copyIndex] = pooledBuffer[copyIndex];
+      }
+      EvolutionEngine.#SCRATCH_SAMPLE = extended;
+      pooledBuffer = extended;
     }
 
-    // Step 2: Bound the write count by the pooled buffer capacity.
-    const writeCount = Math.min(requestedSampleCount, pooledBuffer.length);
+    // Step 3: Determine how many items we will actually write (bounded by pool capacity).
+    const writeCount = Math.min(requestedCount, pooledBuffer.length);
 
-    // Step 3: Fill the pooled buffer by sampling uniformly (with replacement) from the segment.
+    // Step 4: Fill the pooled buffer by sampling uniformly (with replacement) from the segment.
+    // Keep the loop tight; unroll in blocks of 4 for throughput on typical engines.
+    const rand = EvolutionEngine.#fastRandom;
+    const base = startIndex;
+    const blockLimit = writeCount & ~3; // largest multiple of 4
     let writeIndex = 0;
-    const fastRand = EvolutionEngine.#fastRandom;
-    const baseIndex = segmentStart | 0;
-    const blockBound = writeCount & ~3; // largest multiple of 4
-    while (writeIndex < blockBound) {
-      pooledBuffer[writeIndex++] =
-        src[baseIndex + ((fastRand() * segmentLength) | 0)];
-      pooledBuffer[writeIndex++] =
-        src[baseIndex + ((fastRand() * segmentLength) | 0)];
-      pooledBuffer[writeIndex++] =
-        src[baseIndex + ((fastRand() * segmentLength) | 0)];
-      pooledBuffer[writeIndex++] =
-        src[baseIndex + ((fastRand() * segmentLength) | 0)];
+    while (writeIndex < blockLimit) {
+      pooledBuffer[writeIndex++] = src[base + ((rand() * segmentSize) | 0)];
+      pooledBuffer[writeIndex++] = src[base + ((rand() * segmentSize) | 0)];
+      pooledBuffer[writeIndex++] = src[base + ((rand() * segmentSize) | 0)];
+      pooledBuffer[writeIndex++] = src[base + ((rand() * segmentSize) | 0)];
     }
     while (writeIndex < writeCount) {
-      pooledBuffer[writeIndex++] =
-        src[baseIndex + ((fastRand() * segmentLength) | 0)];
+      pooledBuffer[writeIndex++] = src[base + ((rand() * segmentSize) | 0)];
     }
 
-    // Return how many items were written into the pooled scratch buffer.
+    // Step 5: Return number of items written into the shared pooled buffer.
     return writeCount;
   }
 
@@ -6911,18 +7159,6 @@ export class EvolutionEngine {
    * algorithm to train a population of neural networks. Each network acts as the "brain" for an
    * agent, controlling its movement through the maze from a start point 'S' to an exit 'E'.
    *
-   * The process involves several key steps:
-   * 1.  **Initialization**: Sets up the maze, NEAT parameters, and the initial population of networks.
-   * 2.  **Generational Loop**: Iterates through generations, performing the following for each:
-   *     a. **Evaluation**: Each network's performance (fitness) is measured by how well its agent navigates the maze.
-   *        Fitness is typically based on progress towards the exit, speed, and efficiency.
-   *     b. **Lamarckian Refinement**: Each individual in the population undergoes a brief period of supervised training
-   *        (backpropagation) on a set of ideal sensory-action pairs. This helps to fine-tune promising behaviors.
-   *     c. **Selection & Reproduction**: The NEAT algorithm selects the fittest individuals to become parents for the
-   *        next generation. It uses genetic operators (crossover and mutation) to create offspring.
-   * 3.  **Termination**: The loop continues until a solution is found (an agent successfully reaches the exit) or other
-   *     stopping criteria are met (e.g., maximum generations, stagnation).
-   *
    * This hybrid approach, combining the global search of evolution with the local search of backpropagation,
    * can significantly accelerate learning and lead to more robust solutions.
    *
@@ -6930,56 +7166,772 @@ export class EvolutionEngine {
    * @returns A Promise that resolves with an object containing the best network found, its simulation result, and the final NEAT instance.
    */
   static async runMazeEvolution(options: IRunMazeEvolutionOptions) {
-    // --- Step 1: Destructure and Default Configuration ---
-    // Extract all the necessary configuration objects from the main options parameter.
-    const {
-      mazeConfig,
-      agentSimConfig,
-      evolutionAlgorithmConfig,
-      reportingConfig,
-      fitnessEvaluator,
-    } = options;
-    const { maze } = mazeConfig;
-    const {
-      logEvery = 10,
-      dashboardManager,
-      paceEveryGeneration,
-    } = reportingConfig as any;
+    // 1) Normalise and validate options (descriptive names, defaulting).
+    const opts = EvolutionEngine.#normalizeRunOptions(options);
 
-    // Extract evolution parameters, providing sensible defaults for any that are not specified.
+    // 2) Prepare maze, encoded maps and fitness context. This reuses pooled buffers where possible.
     const {
-      allowRecurrent = true, // Allow networks to have connections that loop back, enabling memory.
-      popSize = 500, // The number of neural networks in each generation.
-      maxStagnantGenerations = 500, // Stop evolution if the best fitness doesn't improve for this many generations.
-      minProgressToPass = 95, // The percentage of progress required to consider the maze "solved".
-      maxGenerations = Infinity, // A safety cap on the total number of generations to prevent infinite loops.
-      randomSeed, // An optional seed for the random number generator to ensure reproducible results.
-      initialPopulation, // An optional population of networks to start with.
-      initialBestNetwork, // An optional pre-trained network to seed the population.
-      lamarckianIterations = 10, // The number of backpropagation steps for each individual per generation.
-      lamarckianSampleSize, // If set, use a random subset of the training data for Lamarckian learning.
-      plateauGenerations = 40, // Number of generations to wait for improvement before considering the population to be on a plateau.
-      plateauImprovementThreshold = 1e-6, // The minimum fitness improvement required to reset the plateau counter.
-      simplifyDuration = 30, // The number of generations to run the network simplification process.
-      simplifyPruneFraction = 0.05, // The fraction of weak connections to prune during simplification.
-      simplifyStrategy = 'weakWeight', // The strategy for choosing which connections to prune.
-      persistEvery = 25, // Save a snapshot of the best networks every N generations.
-      persistDir = './ascii_maze_snapshots', // The directory to save snapshots in.
-      persistTopK = 3, // The number of top-performing networks to save in each snapshot.
-      dynamicPopEnabled = true, // Enable dynamic adjustment of the population size.
-      dynamicPopMax: dynamicPopMaxCfg, // The maximum population size for dynamic adjustments.
-      dynamicPopExpandInterval = 25, // The number of generations between population size expansions.
-      dynamicPopExpandFactor = 0.15, // The factor by which to expand the population size.
-      dynamicPopPlateauSlack = 0.6, // A slack factor for plateau detection when dynamic population is enabled.
-      stopOnlyOnSolve = false, // If true, ignore stagnation/maxGenerations and run until solved.
-      autoPauseOnSolve = true, // Browser demo will override to false to keep running continuously
+      encodedMaze,
+      startPosition,
+      exitPosition,
+      distanceMap,
+      inputSize,
+      outputSize,
+      fitnessContext,
+    } = EvolutionEngine.#prepareEnvironmentForRun(opts);
+
+    // 3) Create and seed NEAT instance via a descriptive helper.
+    const neat = EvolutionEngine.#createAndSeedNeat(
+      opts,
+      inputSize,
+      outputSize,
+      fitnessContext
+    );
+
+    // 4) Ensure internal scratch/pooling capacity is sufficient for the configured population & network sizes.
+    EvolutionEngine.#ensureScratchCapacity(opts.popSize, inputSize, outputSize);
+
+    // 5) Lamarckian warm-start (pretrain generation 0) when training cases exist.
+    const lamarckianTrainingSet = EvolutionEngine.#buildLamarckianTrainingSet();
+    EvolutionEngine.#warmStartPopulationIfNeeded(neat, lamarckianTrainingSet);
+
+    // 6) Prepare loop helpers and run the full evolution loop inside a private helper.
+    const loopHelpers = EvolutionEngine.#prepareLoopHelpers(opts);
+
+    // Lightweight profiling (opt-in): set env ASCII_MAZE_PROFILE=1 to enable
+    const doProfile = !!(
+      typeof process !== 'undefined' &&
+      typeof process.env !== 'undefined' &&
+      process.env.ASCII_MAZE_PROFILE === '1'
+    );
+
+    const runResult = await EvolutionEngine.#runEvolutionLoop(
+      neat,
+      opts,
+      lamarckianTrainingSet,
+      encodedMaze,
+      startPosition,
+      exitPosition,
+      distanceMap,
+      loopHelpers,
+      doProfile
+    );
+
+    // Unpack results from the loop helper
+    const {
+      bestNetwork,
+      bestResult,
+      completedGenerations,
+      totalEvolveMs,
+      totalLamarckMs,
+      totalSimMs,
+    } = runResult;
+
+    // Emit profiling summary when enabled (use loopHelpers.safeWrite to avoid duplicating writer resolution)
+    if (doProfile && completedGenerations > 0) {
+      EvolutionEngine.#emitProfileSummary(
+        loopHelpers.safeWrite,
+        completedGenerations,
+        totalEvolveMs,
+        totalLamarckMs,
+        totalSimMs
+      );
+    }
+
+    // Final return: best network, its simulation result, the NEAT instance and exit reason
+    return {
+      bestNetwork,
+      bestResult,
+      neat,
+      exitReason: (bestResult as any)?.exitReason ?? 'incomplete',
+    };
+  }
+
+  /**
+   * Print a compact, human-readable profile summary for the completed run.
+   *
+   * This helper is intentionally allocation-light: it reuses a small pooled
+   * Float64Array as a scratch buffer to compute averages and avoid creating
+   * temporary arrays on every call. The function is best-effort and will swallow
+   * any internal errors so that logging never throws from hot paths.
+   *
+   * Props:
+   * @param safeWrite - A resilient writer function (no trailing newline assumed).
+   * @param completedGenerations - Number of completed generations (must be >= 0).
+   * @param totalEvolveMs - Accumulated milliseconds spent in the evolve step.
+   * @param totalLamarckMs - Accumulated milliseconds spent in Lamarckian training.
+   * @param totalSimMs - Accumulated milliseconds spent in simulations.
+   *
+   * Example:
+   * // Print averages after a run that completed 100 generations
+   * EvolutionEngine['#emitProfileSummary'](console.log, 100, 12000, 3000, 4500);
+   */
+  static #emitProfileSummary(
+    safeWrite: (msg: string) => void,
+    completedGenerations: number,
+    totalEvolveMs: number,
+    totalLamarckMs: number,
+    totalSimMs: number
+  ) {
+    try {
+      // Step 1: Normalise inputs and guard against divide-by-zero.
+      const generations =
+        Number.isFinite(completedGenerations) && completedGenerations > 0
+          ? Math.floor(completedGenerations)
+          : 0;
+      if (generations === 0) return; // nothing to report
+
+      // Step 2: Obtain a small pooled Float64Array (4 slots) to avoid per-call allocations.
+      // Layout: [0]=totalEvolveMs, [1]=totalLamarckMs, [2]=totalSimMs, [3]=totalPerGen
+      const scratch: Float64Array =
+        (EvolutionEngine as any)._PROFILE_SCRATCH_TA ??
+        ((EvolutionEngine as any)._PROFILE_SCRATCH_TA = new Float64Array(4));
+      scratch[0] = Number.isFinite(totalEvolveMs) ? totalEvolveMs : 0;
+      scratch[1] = Number.isFinite(totalLamarckMs) ? totalLamarckMs : 0;
+      scratch[2] = Number.isFinite(totalSimMs) ? totalSimMs : 0;
+
+      // Step 3: Compute per-generation averages using the pooled buffer.
+      scratch[0] = scratch[0] / generations; // avg evolve
+      scratch[1] = scratch[1] / generations; // avg lamarck
+      scratch[2] = scratch[2] / generations; // avg sim
+      scratch[3] = scratch[0] + scratch[1] + scratch[2]; // avg total per gen
+
+      // Step 4: Format numbers with two decimals and print the compact summary.
+      const avgEvolveStr = scratch[0].toFixed(2);
+      const avgLamarckStr = scratch[1].toFixed(2);
+      const avgSimStr = scratch[2].toFixed(2);
+      const avgTotalPerGenStr = scratch[3].toFixed(2);
+
+      safeWrite(
+        `\n[PROFILE] Generations=${generations} avg(ms): evolve=${avgEvolveStr} lamarck=${avgLamarckStr} sim=${avgSimStr} totalPerGen=${avgTotalPerGenStr}\n`
+      );
+
+      // Step 5: If the engine accumulates detailed profiling, print averaged detail line.
+      if ((EvolutionEngine as any).#PROFILE_ENABLED) {
+        const detailAccum = (EvolutionEngine as any).#PROFILE_ACCUM;
+        const denom = generations || 1;
+        // Defensive numeric extraction and formatting (do not allocate intermediate arrays)
+        const avgTelemetry = Number.isFinite(detailAccum?.telemetry)
+          ? (detailAccum.telemetry / denom).toFixed(2)
+          : '0.00';
+        const avgSimplify = Number.isFinite(detailAccum?.simplify)
+          ? (detailAccum.simplify / denom).toFixed(2)
+          : '0.00';
+        const avgSnapshot = Number.isFinite(detailAccum?.snapshot)
+          ? (detailAccum.snapshot / denom).toFixed(2)
+          : '0.00';
+        const avgPrune = Number.isFinite(detailAccum?.prune)
+          ? (detailAccum.prune / denom).toFixed(2)
+          : '0.00';
+        safeWrite(
+          `[PROFILE_DETAIL] avgTelemetry=${avgTelemetry} avgSimplify=${avgSimplify} avgSnapshot=${avgSnapshot} avgPrune=${avgPrune}\n`
+        );
+      }
+    } catch {
+      // Best-effort: never let profiling output disrupt the run.
+    }
+  }
+
+  /**
+   * Create and seed a configured NEAT driver for the run.
+   *
+   * This wrapper centralises two responsibilities:
+   *  1) Construct a domain-aware fitness callback bound to the provided
+   *     `fitnessContext` and configured `opts`.
+   *  2) Instantiate the NEAT driver via `#createNeat` and seed its population
+   *     using `#seedInitialPopulation` (best-effort; cloning errors are swallowed).
+   *
+   * Implementation notes:
+   * - The function is allocation-light and uses modern ES2023 features (nullish coalescing,
+   *   optional chaining, and descriptive local names).
+   * - It will attempt a best-effort warm-up of any engine pooled sample buffer
+   *   (for example `#SCRATCH_SAMPLE`) to reduce first-run allocation spikes.
+   * - All side-effects are intentionally guarded; this helper never throws.
+   *
+   * @param opts - Normalised run options produced by `#normalizeRunOptions`.
+   * @param inputSize - Expected network input dimension.
+   * @param outputSize - Expected network output dimension.
+   * @param fitnessContext - Context object passed into the fitness evaluator.
+   * @returns A configured and seeded NEAT driver instance (best-effort seeded).
+   * @example
+   * const neatDriver = EvolutionEngine['#createAndSeedNeat'](opts, 6, 4, fitnessContext);
+   */
+  static #createAndSeedNeat(
+    opts: any,
+    inputSize: number,
+    outputSize: number,
+    fitnessContext: IFitnessEvaluationContext
+  ) {
+    try {
+      // Step 1: Build a descriptive, bound fitness callback.
+      const fitnessCallback = (network: Network) =>
+        (opts.fitnessEvaluator ?? FitnessEvaluator.defaultFitnessEvaluator)(
+          network,
+          fitnessContext
+        );
+
+      // Step 2: Instantiate the NEAT driver with the derived options.
+      const neatDriver = EvolutionEngine.#createNeat(
+        inputSize,
+        outputSize,
+        fitnessCallback,
+        opts.neatOptions
+      );
+
+      // Step 3: Seed the newly created driver using provided initial population / best network.
+      EvolutionEngine.#seedInitialPopulation(
+        neatDriver,
+        opts.initialPopulation ?? undefined,
+        opts.initialBestNetwork ?? undefined,
+        Number.isFinite(opts.popSize)
+          ? Math.max(0, Math.floor(opts.popSize))
+          : 0
+      );
+
+      // Step 4 (optional best-effort): warm-up a pooled sample buffer to avoid
+      // first-use reallocation spikes. This is intentionally non-essential and
+      // wrapped in try/catch so failures don't affect the driver.
+      try {
+        // If the engine exposes a pooled sample array, ensure it has at least
+        // a small capacity matching the configured population to reduce immediate growth.
+        const targetPopulation = Number.isFinite(opts.popSize)
+          ? Math.max(0, Math.floor(opts.popSize))
+          : 0;
+        if (targetPopulation > 0) {
+          const pooledSample = (EvolutionEngine as any).#SCRATCH_SAMPLE;
+          if (
+            Array.isArray(pooledSample) &&
+            pooledSample.length < targetPopulation
+          ) {
+            // Grow by powers of two to reduce frequent resizes.
+            let newCapacity = pooledSample.length || 1;
+            while (newCapacity < targetPopulation) newCapacity <<= 1;
+            pooledSample.length = newCapacity;
+          }
+        }
+      } catch {
+        // best-effort; ignore any warming errors
+      }
+
+      return neatDriver;
+    } catch {
+      // Best-effort: return a fallback null-like driver when instantiation fails.
+      // The outer code should handle a badly-formed driver; do not throw here.
+      return null as any;
+    }
+  }
+
+  /**
+   * Conditionally warm-start / pretrain the population using a provided training set.
+   *
+   * Behaviour & contract:
+   * - If a non-empty `trainingSet` is provided this method will attempt a best-effort
+   *   invocation of `#pretrainPopulationWarmStart(neat, trainingSet)`.
+   * - To reduce first-use allocation spikes the helper will also attempt to ensure
+   *   engine-level pooled buffers exist and have a reasonable capacity before
+   *   pretraining begins (plain Array for sampling and Float64Array for numeric work).
+   * - All operations are non-throwing; any internal error is swallowed to keep the
+   *   evolution loop resilient.
+   *
+   * Props:
+   * @param neat - NEAT driver instance which will be pre-trained (may be `null`/`undefined`).
+   * @param trainingSet - Array of supervised training cases used for warm-start; ignored when empty.
+   *
+   * Example:
+   * // Best-effort warm-start when training cases exist
+   * EvolutionEngine['#warmStartPopulationIfNeeded'](neatDriver, trainingCasesArray);
+   */
+  static #warmStartPopulationIfNeeded(neat: any, trainingSet: any[]) {
+    try {
+      // Step 1: Fast-guard invalid inputs – nothing to do when no data or driver.
+      const hasTrainingCases =
+        Array.isArray(trainingSet) && trainingSet.length > 0;
+      if (!hasTrainingCases || !neat) return; // best-effort: quietly skip
+
+      // Step 2: Best-effort ensure pooled buffers exist and have capacity.
+      // Determine a sensible sizing target (prefer driver configured popSize when available).
+      const configuredPopulationSize = Number.isFinite(neat?.options?.popSize)
+        ? Math.max(0, Math.floor(neat.options.popSize))
+        : Math.max(8, trainingSet.length);
+
+      // Helper: next power-of-two >= n
+      const nextPowerOfTwo = (n: number) =>
+        1 << Math.ceil(Math.log2(Math.max(1, n)));
+      const targetCapacity = nextPowerOfTwo(
+        Math.max(8, configuredPopulationSize)
+      );
+
+      // Ensure a plain-array pooled sample buffer exists and has the target capacity.
+      try {
+        let pooledSampleBuffer: any[] = (EvolutionEngine as any)
+          ._SCRATCH_SAMPLE;
+        if (!Array.isArray(pooledSampleBuffer))
+          pooledSampleBuffer = (EvolutionEngine as any)._SCRATCH_SAMPLE = [];
+        if (pooledSampleBuffer.length < targetCapacity)
+          pooledSampleBuffer.length = targetCapacity;
+      } catch {
+        // ignore pooling failures – non-critical
+      }
+
+      // Ensure a numeric scratch Float64Array for temporary numeric reductions exists.
+      try {
+        let pooledNumericScratch: Float64Array = (EvolutionEngine as any)
+          ._SCRATCH_EXPS;
+        if (
+          !(pooledNumericScratch instanceof Float64Array) ||
+          pooledNumericScratch.length < 16
+        ) {
+          // allocate with a small power-of-two size (preserve previous capacity when possible)
+          const numericSize = Math.max(
+            16,
+            nextPowerOfTwo(Math.min(256, configuredPopulationSize))
+          );
+          pooledNumericScratch = (EvolutionEngine as any)._SCRATCH_EXPS = new Float64Array(
+            numericSize
+          );
+        }
+      } catch {
+        // ignore allocation failures – continue without pooled numeric scratch
+      }
+
+      // Step 3: Invoke the pretrain helper (best-effort). This may mutate the NEAT driver.
+      try {
+        EvolutionEngine.#pretrainPopulationWarmStart(neat, trainingSet);
+      } catch {
+        // swallow – pretraining is optional and must not disrupt the run
+      }
+    } catch {
+      // global swallow: keep best-effort semantics
+    }
+  }
+
+  /**
+   * Build lightweight helpers used inside the evolution loop.
+   *
+   * Responsibilities:
+   *  - Provide a `flushToFrame` async yield helper (requestAnimationFrame-like).
+   *  - Initialise optional Node persistence helpers (`fs` / `path`) when available.
+   *  - Construct a safe, resilient writer function used for non-fatal logging.
+   *  - Best-effort: ensure commonly-used pooled scratch buffers exist to reduce
+   *    first-use allocation spikes (plain array and Float64Array pools).
+   *
+   * Notes:
+   *  - All pool initialisation is non-essential and wrapped in try/catch so that
+   *    failures cannot abort the evolution run.
+   *
+   * Props:
+   * @param opts - Normalised run options (see `#normalizeRunOptions`).
+   * @returns Helpers object: { flushToFrame, fs, path, safeWrite }
+   *
+   * Example:
+   * const { flushToFrame, fs, path, safeWrite } = EvolutionEngine['#prepareLoopHelpers'](opts);
+   */
+  static #prepareLoopHelpers(opts: any) {
+    // Step 1: Create the lightweight host-yield helper first.
+    const flushToFrame = EvolutionEngine.#makeFlushToFrame();
+
+    // Step 2: Initialise persistence handles (best-effort; may be null in browsers).
+    const { fs, path } = EvolutionEngine.#initPersistence(opts?.persistDir);
+
+    // Step 3: Build a resilient writer that falls back to console when necessary.
+    const safeWrite = EvolutionEngine.#makeSafeWriter(
+      opts?.reportingConfig?.dashboardManager
+    );
+
+    // Step 4 (non-critical): Warm-up common pooled scratch buffers to avoid
+    // surprising allocations during the first few generations. All failures are
+    // swallowed so the engine remains robust.
+    try {
+      // Ensure a plain-array sample pool exists.
+      if (!Array.isArray((EvolutionEngine as any)._SCRATCH_SAMPLE)) {
+        (EvolutionEngine as any)._SCRATCH_SAMPLE = [];
+      }
+
+      // Ensure a small profile scratch Float64Array is present.
+      if (
+        !((EvolutionEngine as any)._PROFILE_SCRATCH_TA instanceof Float64Array)
+      ) {
+        (EvolutionEngine as any)._PROFILE_SCRATCH_TA = new Float64Array(4);
+      }
+
+      // Ensure a numeric scratch Float64Array for intermediate reductions exists.
+      if (!((EvolutionEngine as any)._SCRATCH_EXPS instanceof Float64Array)) {
+        // Reserve a modest default capacity that scales well for typical runs.
+        (EvolutionEngine as any)._SCRATCH_EXPS = new Float64Array(64);
+      }
+    } catch {
+      // Intentionally ignore pool initialisation failures; not essential.
+    }
+
+    // Return the same simple shape the rest of the engine expects.
+    return { flushToFrame, fs, path, safeWrite };
+  }
+
+  /**
+   * Internal evolution loop that executes generations until a stop condition or cancellation.
+   *
+   * Behaviour & contract:
+   *  - Runs generations in a resilient, best-effort manner; internal errors are swallowed
+   *    so a single failure cannot abort the whole run.
+   *  - When `doProfile` is truthy the loop accumulates timing into a pooled Float64Array
+   *    to avoid per-iteration allocations. The pooled buffer is reused across calls.
+   *  - The helper performs side-effects (dashboard updates, persistence) in a non-fatal
+   *    fashion and yields to the host when requested via `helpers.flushToFrame`.
+   *
+   * Props / Parameters:
+   * @param neat - NEAT driver instance used to perform evolution and mutation operations.
+   * @param opts - Normalised run options (produced by `#normalizeRunOptions`).
+   * @param lamarckianTrainingSet - Optional supervised training cases used for Lamarckian warm-start.
+   * @param encodedMaze - Encoded maze representation consumed by simulators.
+   * @param startPosition - Start coordinates for the simulated agent.
+   * @param exitPosition - Exit coordinates for the simulated agent.
+   * @param distanceMap - Optional precomputed distance map to speed simulation.
+   * @param helpers - Helper utilities: { flushToFrame, fs, path, safeWrite }.
+   * @param doProfile - When truthy collect and return millisecond timings in the result.
+   *
+   * @returns Promise resolving to an object:
+   *  { bestNetwork, bestResult, neat, completedGenerations, totalEvolveMs, totalLamarckMs, totalSimMs }
+   *  - `bestNetwork`: best genome/network found (may be undefined)
+   *  - `bestResult`: simulation result associated with the best network
+   *  - `completedGenerations`: number of generations executed
+   *  - `totalEvolveMs`, `totalLamarckMs`, `totalSimMs`: accumulated timings (ms)
+   *
+   * @example
+   * // Private helper invoked by `runMazeEvolution` (use bracket notation to access private method in tests)
+   * const runSummary = await EvolutionEngine['#runEvolutionLoop'](
+   *   neatDriver,
+   *   opts,
+   *   trainingCasesArray,
+   *   encodedMaze,
+   *   startPos,
+   *   exitPos,
+   *   distanceMap,
+   *   { flushToFrame: () => Promise.resolve(), fs: null, path: null, safeWrite: console.log },
+   *   true // doProfile
+   * );
+   * console.log(`completed generations: ${runSummary.completedGenerations}`);
+   *
+   * @internal
+   */
+  static async #runEvolutionLoop(
+    neat: any,
+    opts: any,
+    lamarckianTrainingSet: any[],
+    encodedMaze: any,
+    startPosition: any,
+    exitPosition: any,
+    distanceMap: any,
+    helpers: {
+      flushToFrame: () => Promise<void>;
+      fs: any;
+      path: any;
+      safeWrite: (msg: string) => void;
+    },
+    doProfile: boolean
+  ) {
+    const { flushToFrame, fs, path, safeWrite } = helpers;
+
+    /**
+     * State: descriptive local names improve readability for future maintainers.
+     */
+    let bestNetworkSoFar: INetwork | undefined = opts.initialBestNetwork;
+    let bestFitnessSoFar = -Infinity;
+    let bestRunResult: any = undefined;
+    let stagnantGenerationsCount = 0;
+    let completedGenerations = 0;
+    let plateauCounter = 0;
+    let simplifyMode = false;
+    let simplifyRemaining = 0;
+    let lastBestFitnessForPlateau = -Infinity;
+    let lastCompactionGeneration = 0;
+
+    // Profiling accumulators are stored in a pooled Float64Array to avoid
+    // per-run object creation. Layout: [0]=evolveMs, [1]=lamarckMs, [2]=simMs, [3]=reserved
+    const profileScratch: Float64Array =
+      (EvolutionEngine as any)._PROFILE_SCRATCH_TA ??
+      ((EvolutionEngine as any)._PROFILE_SCRATCH_TA = new Float64Array(4));
+    profileScratch[0] = 0; // total evolve ms
+    profileScratch[1] = 0; // total lamarck ms
+    profileScratch[2] = 0; // total sim ms
+
+    // Main evolution loop: resilient and best-effort. Uses descriptive names
+    // and keeps allocations to a minimum.
+    while (true) {
+      // Step 1: cooperative cancellation check (non-allocating, safe)
+      const cancelReason = EvolutionEngine.#checkCancellation(
+        opts,
+        bestRunResult
+      );
+      if (cancelReason) break;
+
+      // Step 2: perform one generation and collect per-stage timings when enabled
+      const generationOutcome = await EvolutionEngine.#runGeneration(
+        neat,
+        doProfile,
+        opts.lamarckianIterations,
+        lamarckianTrainingSet,
+        opts.lamarckianSampleSize,
+        safeWrite,
+        completedGenerations,
+        opts.dynamicPopEnabled,
+        opts.dynamicPopMax,
+        opts.plateauGenerations,
+        plateauCounter,
+        opts.dynamicPopExpandInterval,
+        opts.dynamicPopExpandFactor,
+        opts.dynamicPopPlateauSlack
+      );
+
+      const fittest = generationOutcome.fittest;
+      if (doProfile) {
+        // Use pooled scratch to accumulate totals (avoid creating new numbers/objects)
+        profileScratch[0] += Number(generationOutcome.tEvolve ?? 0);
+        profileScratch[1] += Number(generationOutcome.tLamarck ?? 0);
+      }
+
+      // Step 3: optional Lamarckian refinement (best-effort)
+      if (!EvolutionEngine.#DISABLE_BALDWIN) {
+        try {
+          fittest.train(lamarckianTrainingSet, {
+            iterations: EvolutionEngine.#FITTEST_TRAIN_ITERATIONS,
+            error: EvolutionEngine.#DEFAULT_TRAIN_ERROR,
+            rate: EvolutionEngine.#DEFAULT_TRAIN_RATE,
+            momentum: EvolutionEngine.#DEFAULT_TRAIN_MOMENTUM,
+            batchSize: EvolutionEngine.#DEFAULT_TRAIN_BATCH_LARGE,
+            allowRecurrent: true,
+          });
+        } catch {
+          // ignore training errors - non-fatal
+        }
+      }
+
+      // Step 4: update per-generation counters and plateau/simplify state
+      const fitnessScore = fittest.score ?? 0;
+      completedGenerations += 1;
+
+      ({
+        plateauCounter,
+        lastBestFitnessForPlateau,
+      } = EvolutionEngine.#updatePlateauState(
+        fitnessScore,
+        lastBestFitnessForPlateau,
+        plateauCounter,
+        opts.plateauImprovementThreshold
+      ));
+
+      ({
+        simplifyMode,
+        simplifyRemaining,
+        plateauCounter,
+      } = EvolutionEngine.#handleSimplifyState(
+        neat,
+        plateauCounter,
+        opts.plateauGenerations,
+        opts.simplifyDuration,
+        simplifyMode,
+        simplifyRemaining,
+        opts.simplifyStrategy,
+        opts.simplifyPruneFraction
+      ));
+
+      // Step 5: simulate the fittest genome and optionally capture sim time
+      const simulationResult = EvolutionEngine.#simulateAndPostprocess(
+        fittest,
+        encodedMaze,
+        startPosition,
+        exitPosition,
+        distanceMap,
+        opts.agentSimConfig?.maxSteps,
+        doProfile,
+        safeWrite,
+        opts.reportingConfig?.logEvery ?? 10,
+        completedGenerations,
+        neat
+      );
+      const generationResult = simulationResult.generationResult;
+      if (doProfile) profileScratch[2] += Number(simulationResult.simTime ?? 0);
+
+      // Step 6: update best-so-far and dashboard periodically
+      if (fitnessScore > bestFitnessSoFar) {
+        bestFitnessSoFar = fitnessScore;
+        bestNetworkSoFar = fittest;
+        bestRunResult = generationResult;
+        stagnantGenerationsCount = 0;
+        try {
+          await EvolutionEngine.#updateDashboardAndMaybeFlush(
+            opts.mazeConfig.maze,
+            generationResult,
+            fittest,
+            completedGenerations,
+            neat,
+            opts.reportingConfig?.dashboardManager,
+            flushToFrame
+          );
+        } catch {
+          // best-effort: ignore dashboard errors
+        }
+      } else {
+        stagnantGenerationsCount += 1;
+        if (
+          completedGenerations % (opts.reportingConfig?.logEvery ?? 10) ===
+          0
+        ) {
+          try {
+            await EvolutionEngine.#updateDashboardPeriodic(
+              opts.mazeConfig.maze,
+              bestRunResult,
+              bestNetworkSoFar,
+              completedGenerations,
+              neat,
+              opts.reportingConfig?.dashboardManager,
+              flushToFrame
+            );
+          } catch {
+            // best-effort
+          }
+        }
+      }
+
+      // Step 7: persist snapshot if configured (best-effort)
+      EvolutionEngine.#persistSnapshotIfNeeded(
+        fs,
+        path,
+        opts.persistDir,
+        opts.persistTopK,
+        completedGenerations,
+        opts.persistEvery,
+        neat,
+        bestFitnessSoFar,
+        simplifyMode,
+        plateauCounter
+      );
+
+      // Step 8: check stop conditions
+      const stopReason = await EvolutionEngine.#checkStopConditions(
+        bestRunResult,
+        bestNetworkSoFar,
+        opts.mazeConfig.maze,
+        completedGenerations,
+        neat,
+        opts.reportingConfig?.dashboardManager,
+        flushToFrame,
+        opts.minProgressToPass,
+        opts.autoPauseOnSolve,
+        opts.stopOnlyOnSolve,
+        stagnantGenerationsCount,
+        opts.maxStagnantGenerations,
+        opts.maxGenerations
+      );
+      if (stopReason) break;
+
+      // Step 9: periodic memory compaction and scratch shrinking
+      if (
+        opts.memoryCompactionInterval > 0 &&
+        completedGenerations - lastCompactionGeneration >=
+          opts.memoryCompactionInterval
+      ) {
+        const removedDisabled = EvolutionEngine.#compactPopulation(neat);
+        if (removedDisabled > 0) {
+          EvolutionEngine.#maybeShrinkScratch(neat);
+          safeWrite(
+            `[COMPACT] gen=${completedGenerations} removedDisabledConns=${removedDisabled}\n`
+          );
+        }
+        lastCompactionGeneration = completedGenerations;
+      }
+
+      // Step 10: optionally yield to host between generations
+      if (opts.reportingConfig?.paceEveryGeneration) {
+        try {
+          await flushToFrame();
+        } catch {
+          // ignore host-yield failures
+        }
+      }
+    }
+
+    // Prepare totals to return (read from pooled scratch to avoid ephemeral numbers earlier)
+    const totalEvolveMs = Number(profileScratch[0] || 0);
+    const totalLamarckMs = Number(profileScratch[1] || 0);
+    const totalSimMs = Number(profileScratch[2] || 0);
+
+    return {
+      bestNetwork: bestNetworkSoFar,
+      bestResult: bestRunResult,
+      neat,
+      completedGenerations,
+      totalEvolveMs,
+      totalLamarckMs,
+      totalSimMs,
+    } as any;
+  }
+
+  /**
+   * Normalise and validate the options passed into `runMazeEvolution`.
+   *
+   * Behaviour & contract:
+   *  - Produces a stable, fully-populated `opts` object used by the engine.
+   *  - Applies sensible defaults and normalises types (numbers -> integers where applicable).
+   *  - Applies deterministic seed logic when requested and initialises a few
+   *    global engine flags (telemetry / Baldwinian refinement) as a side-effect.
+   *  - The function is allocation-light and intentionally forgiving of partially-formed input.
+   *
+   * Steps (high-level):
+   *  1) Fast-guard and normalise top-level option groups (maze, agentSim, evolutionAlgorithm, reporting).
+   *  2) Destructure evolution algorithm settings with explicit defaults and descriptive local names.
+   *  3) Apply determinism / seed handling and set global engine flags.
+   *  4) Compute derived values (for example dynamic population max) conservatively.
+   *  5) Return the fully-populated options object consumed by the rest of the engine.
+   *
+   * @param options - Partial run options supplied by the caller; may be missing fields.
+   * @returns Normalised options object used by the engine.
+   *
+   * @example
+   * const opts = EvolutionEngine['#normalizeRunOptions']({ mazeConfig: { maze }, evolutionAlgorithmConfig: { popSize: 100 } });
+   * console.log(opts.popSize); // 100
+   */
+  static #normalizeRunOptions(options: IRunMazeEvolutionOptions) {
+    // Step 1: normalise option groups using nullish coalescing for robustness.
+    const mazeConfig = options?.mazeConfig;
+    const agentSimConfig = options?.agentSimConfig ?? {};
+    const evolutionAlgorithmConfig = options?.evolutionAlgorithmConfig ?? {};
+    const reportingConfig = options?.reportingConfig ?? {};
+
+    // Step 2: pull algorithm-level settings with clear defaults and descriptive locals.
+    const {
+      allowRecurrent = true,
+      popSize = 500,
+      maxStagnantGenerations = 500,
+      minProgressToPass = 95,
+      maxGenerations = Infinity,
+      randomSeed,
+      initialPopulation,
+      initialBestNetwork,
+      lamarckianIterations = 10,
+      lamarckianSampleSize,
+      plateauGenerations = 40,
+      plateauImprovementThreshold = 1e-6,
+      simplifyDuration = 30,
+      simplifyPruneFraction = 0.05,
+      simplifyStrategy = 'weakWeight',
+      persistEvery = 25,
+      persistDir = './ascii_maze_snapshots',
+      persistTopK = 3,
+      dynamicPopEnabled = true,
+      dynamicPopMax: dynamicPopulationMaxCfg,
+      dynamicPopExpandInterval = 25,
+      dynamicPopExpandFactor = 0.15,
+      dynamicPopPlateauSlack = 0.6,
+      stopOnlyOnSolve = false,
+      autoPauseOnSolve = true,
       deterministic = false,
       memoryCompactionInterval = 50,
       telemetryReduceStats = false,
       telemetryMinimal = false,
       disableBaldwinianRefinement = false,
     } = evolutionAlgorithmConfig;
-    // Deterministic seeding if requested
+
+    // Step 3: determinism and engine global flags (best-effort side-effects).
     if (deterministic || typeof randomSeed === 'number') {
       EvolutionEngine.setDeterministic(
         typeof randomSeed === 'number' ? randomSeed : 0x12345678
@@ -6989,56 +7941,50 @@ export class EvolutionEngine {
     EvolutionEngine.#TELEMETRY_MINIMAL = !!telemetryMinimal;
     EvolutionEngine.#DISABLE_BALDWIN = !!disableBaldwinianRefinement;
 
-    // Determine the maximum population size, with a fallback if not explicitly configured.
+    // Step 4: derive conservative dynamic-population max when not explicitly provided.
     const dynamicPopMax =
-      typeof dynamicPopMaxCfg === 'number'
-        ? dynamicPopMaxCfg
+      typeof dynamicPopulationMaxCfg === 'number'
+        ? dynamicPopulationMaxCfg
         : Math.max(popSize, 120);
 
-    // --- Step 2: Maze and Environment Setup ---
-    // Encode the maze into a numerical format (0 for walls, 1 for paths) for efficient processing.
-    const encodedMaze = MazeUtils.encodeMaze(maze);
-    // Locate the starting 'S' and exit 'E' positions within the maze.
-    const startPosition = MazeUtils.findPosition(maze, 'S');
-    const exitPosition = MazeUtils.findPosition(maze, 'E');
-    // Pre-calculate the distance from every point in the maze to the exit. This is a crucial
-    // optimization and provides a rich source of information for the fitness function.
-    const distanceMap = MazeUtils.buildDistanceMap(encodedMaze, exitPosition);
-
-    // Define the structure of the neural network: 6 inputs and 4 outputs.
-    // Inputs: [compassScalar, openN, openE, openS, openW, progressDelta]
-    // Outputs: [moveN, moveE, moveS, moveW]
-    const inputSize = 6;
-    const outputSize = 4;
-
-    // Select the fitness evaluator function. Use the provided one or a default.
-    const currentFitnessEvaluator =
-      fitnessEvaluator || FitnessEvaluator.defaultFitnessEvaluator;
-
-    // --- Step 3: Fitness Evaluation Context ---
-    // Bundle all the necessary environmental data into a context object. This object will be
-    // passed to the fitness function, so it has all the information it needs to evaluate a network.
-    const fitnessContext: IFitnessEvaluationContext = {
-      encodedMaze,
-      startPosition,
-      exitPosition,
+    // Step 5: compose the final normalised options object (shape expected by callers).
+    return {
+      mazeConfig,
       agentSimConfig,
-      distanceMap,
-    };
-
-    // Create the fitness callback function that NEAT will use. This function takes a network,
-    // runs the simulation, and returns a single numerical score representing its fitness.
-    const neatFitnessCallback = (network: Network): number => {
-      return currentFitnessEvaluator(network, fitnessContext);
-    };
-
-    // --- Step 4: NEAT Algorithm Initialization ---
-    // Create and seed the NEAT instance.
-    const neat = EvolutionEngine.#createNeat(
-      inputSize,
-      outputSize,
-      neatFitnessCallback,
-      {
+      evolutionAlgorithmConfig,
+      reportingConfig,
+      fitnessEvaluator: options?.fitnessEvaluator,
+      popSize,
+      allowRecurrent,
+      maxStagnantGenerations,
+      minProgressToPass,
+      maxGenerations,
+      randomSeed,
+      initialPopulation,
+      initialBestNetwork,
+      lamarckianIterations,
+      lamarckianSampleSize,
+      plateauGenerations,
+      plateauImprovementThreshold,
+      simplifyDuration,
+      simplifyPruneFraction,
+      simplifyStrategy,
+      persistEvery,
+      persistDir,
+      persistTopK,
+      dynamicPopEnabled,
+      dynamicPopMax,
+      dynamicPopExpandInterval,
+      dynamicPopExpandFactor,
+      dynamicPopPlateauSlack,
+      stopOnlyOnSolve,
+      autoPauseOnSolve,
+      deterministic,
+      memoryCompactionInterval,
+      telemetryReduceStats,
+      telemetryMinimal,
+      disableBaldwinianRefinement,
+      neatOptions: {
         popSize,
         allowRecurrent,
         adaptiveMutation: { enabled: true, strategy: 'twoTier' },
@@ -7062,285 +8008,177 @@ export class EvolutionEngine {
           speciesRange: [6, 14],
           smooth: 0.5,
         },
-      }
-    );
-    EvolutionEngine.#seedInitialPopulation(
-      neat,
-      initialPopulation,
-      initialBestNetwork,
-      popSize
-    );
+      },
+      maze: mazeConfig?.maze,
+    } as any;
+  }
 
-    // --- Step 5: Evolution State Tracking ---
-    // Initialize variables to track the progress of the evolution.
-    let bestNetwork: INetwork | undefined =
-      evolutionAlgorithmConfig.initialBestNetwork;
-    let bestFitness = -Infinity;
-    let bestResult: any;
-    let stagnantGenerations = 0;
-    let completedGenerations = 0;
-    let plateauCounter = 0;
-    let simplifyMode = false;
-    let simplifyRemaining = 0;
-    let lastBestFitnessForPlateau = -Infinity;
+  /**
+   * Prepare maze encoding, start/exit positions, distance map, and fitness context for the run.
+   *
+   * Behaviour & contract:
+   *  - Accepts the normalised `opts` object and returns a small bundle of precomputed
+   *    artifacts consumed by the evolution loop: encoded maze, start/exit coords, distance map,
+   *    fixed I/O sizes and a compact `fitnessContext` used by the fitness evaluator.
+   *  - Uses descriptive, allocation-light locals and makes a best-effort to warm a couple of
+   *    engine-level scratch pools to reduce first-use allocation spikes. Pool warm-ups are
+   *    non-fatal and any failures are swallowed.
+   *
+   * Steps (high-level):
+   *  1) Resolve maze source from `opts` (top-level `maze` or nested `mazeConfig.maze`).
+   *  2) Encode the maze into a simulator-friendly representation.
+   *  3) Locate start ('S') and exit ('E') coordinates.
+   *  4) Build a distance map from the exit to speed simulations.
+   *  5) Assemble fixed I/O sizes and a `fitnessContext` object and return everything.
+   *
+   * Props:
+   * @param opts - Normalised run options produced by `#normalizeRunOptions`. May be partially-formed.
+   * @returns Object with properties: { encodedMaze, startPosition, exitPosition, distanceMap, inputSize, outputSize, fitnessContext }
+   *
+   * @example
+   * const env = EvolutionEngine['#prepareEnvironmentForRun'](opts);
+   * // env.encodedMaze, env.startPosition, env.fitnessContext etc.
+   */
+  static #prepareEnvironmentForRun(opts: any) {
+    // Step 1: Resolve the maze input in a null-safe way.
+    const mazeSource = opts?.maze ?? opts?.mazeConfig?.maze;
 
-    // --- Step 6: Filesystem, Persistence and Helpers Setup ---
-    const { fs, path } = EvolutionEngine.#initPersistence(persistDir);
-    const flushToFrame = EvolutionEngine.#makeFlushToFrame();
+    // Step 2: Encode the maze (delegated to MazeUtils). Keep the variable name explicit.
+    const encodedMaze = MazeUtils.encodeMaze(mazeSource);
 
-    // --- Step 7: Lamarckian Learning Setup ---
-    // Define the supervised training set for the Lamarckian refinement process.
-    // This dataset consists of idealized sensory inputs and the corresponding optimal actions.
-    // It helps to quickly teach the networks basic, correct behaviors.
-    /**
-     * @const {Array<Object>} lamarckianTrainingSet
-     * Encodes idealized agent perceptions and the optimal action for each case.
-     * This is used for local search (backpropagation) to refine networks between generations.
-     *
-     * Input format: `[compassScalar, openN, openE, openS, openW, progressDelta]`
-     * - `compassScalar`: Direction to the exit (0=N, 0.25=E, 0.5=S, 0.75=W).
-     * - `openN/E/S/W`: Whether the path is open in that direction (1=open, 0=wall).
-     * - `progressDelta`: Change in distance to the exit ( >0.5 is good, <0.5 is bad).
-     *
-     * Output format: A one-hot encoded array representing the desired move `[N, E, S, W]`.
-     */
-    const lamarckianTrainingSet = EvolutionEngine.#buildLamarckianTrainingSet();
+    // Step 3: Locate start and exit coordinates used by simulators.
+    const startPosition = MazeUtils.findPosition(mazeSource, 'S');
+    const exitPosition = MazeUtils.findPosition(mazeSource, 'E');
 
-    // --- Pre-train generation 0 population on supervised compass dataset (Lamarckian warm start) ---
-    if (lamarckianTrainingSet.length) {
-      EvolutionEngine.#pretrainPopulationWarmStart(neat, lamarckianTrainingSet);
-    }
+    // Step 4: Build or obtain a distance-map from the exit to speed up agent simulation.
+    const distanceMap = MazeUtils.buildDistanceMap(encodedMaze, exitPosition);
 
-    // Lightweight profiling (opt-in): set env ASCII_MAZE_PROFILE=1 to enable
-    const doProfile =
-      typeof process !== 'undefined' &&
-      typeof process.env !== 'undefined' &&
-      process.env.ASCII_MAZE_PROFILE === '1';
-    let tEvolveTotal = 0;
-    let tLamarckTotal = 0;
-    let tSimTotal = 0;
-    let lastCompactionGen = 0;
+    // Step 5: Fixed network I/O sizes for this domain - named constants for readability.
+    const inputSize = 6; // [compassScalar, openN, openE, openS, openW, progressDelta]
+    const outputSize = 4; // [moveN, moveE, moveS, moveW]
 
-    // Safe writer: prefer Node stdout when available, else dashboard logger, else console.log
-    const safeWrite = EvolutionEngine.#makeSafeWriter(dashboardManager);
-
-    while (true) {
-      // Cooperative cancellation check
-      const cancelReason = EvolutionEngine.#checkCancellation(
-        options,
-        bestResult
-      );
-      if (cancelReason) break;
-
-      // Run generation-level work (evolve, species/dynamic-pop, and optional Lamarckian training)
-      const genRes = await EvolutionEngine.#runGeneration(
-        neat,
-        doProfile,
-        lamarckianIterations,
-        lamarckianTrainingSet,
-        lamarckianSampleSize,
-        safeWrite,
-        completedGenerations,
-        dynamicPopEnabled,
-        dynamicPopMax,
-        plateauGenerations,
-        plateauCounter,
-        dynamicPopExpandInterval,
-        dynamicPopExpandFactor,
-        dynamicPopPlateauSlack
-      );
-      const fittest = genRes.fittest;
-      if (doProfile) {
-        tEvolveTotal += genRes.tEvolve || 0;
-        tLamarckTotal += genRes.tLamarck || 0;
-      }
-
-      // 3. Baldwinian refinement: further train the fittest individual for evaluation only.
-      //    This improves its performance for this generation's evaluation, but only the Lamarckian-trained
-      //    weights are inherited by offspring. (If you want pure Lamarckian, remove this step.)
-      // Baldwinian refinement phase: extra training applied only to the current
-      // generation's fittest individual to improve evaluation performance.
-      // These refinements are NOT inherited (keeps genetic search exploratory),
-      // unlike Lamarckian updates earlier. Disable if pure Lamarckian desired.
-      if (!EvolutionEngine.#DISABLE_BALDWIN) {
-        try {
-          fittest.train(lamarckianTrainingSet, {
-            iterations: EvolutionEngine.#FITTEST_TRAIN_ITERATIONS,
-            error: EvolutionEngine.#DEFAULT_TRAIN_ERROR,
-            rate: EvolutionEngine.#DEFAULT_TRAIN_RATE,
-            momentum: EvolutionEngine.#DEFAULT_TRAIN_MOMENTUM,
-            batchSize: EvolutionEngine.#DEFAULT_TRAIN_BATCH_LARGE,
-            allowRecurrent: true,
-          });
-        } catch {
-          /* ignore refinement failure */
-        }
-      }
-
-      // 4. Evaluate and track progress
-      const fitness = fittest.score ?? 0;
-      completedGenerations++;
-
-      // Plateau detection logic
-      ({
-        plateauCounter,
-        lastBestFitnessForPlateau,
-      } = EvolutionEngine.#updatePlateauState(
-        fitness,
-        lastBestFitnessForPlateau,
-        plateauCounter,
-        plateauImprovementThreshold
-      ));
-
-      // Simplify handling
-      ({
-        simplifyMode,
-        simplifyRemaining,
-      } = EvolutionEngine.#handleSimplifyState(
-        neat,
-        plateauCounter,
-        plateauGenerations,
-        simplifyDuration,
-        simplifyMode,
-        simplifyRemaining,
-        simplifyStrategy,
-        simplifyPruneFraction
-      ));
-
-      // Simulate and postprocess
-      const simRes = EvolutionEngine.#simulateAndPostprocess(
-        fittest,
-        encodedMaze,
-        startPosition,
-        exitPosition,
-        distanceMap,
-        agentSimConfig.maxSteps,
-        doProfile,
-        safeWrite,
-        logEvery,
-        completedGenerations,
-        neat
-      );
-      const generationResult = simRes.generationResult;
-      if (doProfile) tSimTotal += simRes.simTime;
-
-      // If new best, update tracking and dashboard
-      if (fitness > bestFitness) {
-        bestFitness = fitness;
-        bestNetwork = fittest;
-        bestResult = generationResult;
-        stagnantGenerations = 0;
-        await EvolutionEngine.#updateDashboardAndMaybeFlush(
-          maze,
-          generationResult,
-          fittest,
-          completedGenerations,
-          neat,
-          dashboardManager,
-          flushToFrame
-        );
-      } else {
-        stagnantGenerations++;
-        if (completedGenerations % logEvery === 0) {
-          await EvolutionEngine.#updateDashboardPeriodic(
-            maze,
-            bestResult,
-            bestNetwork,
-            completedGenerations,
-            neat,
-            dashboardManager,
-            flushToFrame
-          );
-        }
-      }
-
-      // Persistence snapshot
-      EvolutionEngine.#persistSnapshotIfNeeded(
-        fs,
-        path,
-        persistDir,
-        persistTopK,
-        completedGenerations,
-        persistEvery,
-        neat,
-        bestFitness,
-        simplifyMode,
-        plateauCounter
-      );
-      // Check stop conditions via helper (solved, stagnation, max generations)
-      const stopReason = await EvolutionEngine.#checkStopConditions(
-        bestResult,
-        bestNetwork,
-        maze,
-        completedGenerations,
-        neat,
-        dashboardManager,
-        flushToFrame,
-        minProgressToPass,
-        autoPauseOnSolve,
-        stopOnlyOnSolve,
-        stagnantGenerations,
-        maxStagnantGenerations,
-        maxGenerations
-      );
-      if (stopReason) break;
-      // Periodic memory compaction: remove disabled connections & optionally shrink scratch arrays
-      if (
-        memoryCompactionInterval > 0 &&
-        completedGenerations - lastCompactionGen >= memoryCompactionInterval
-      ) {
-        const removedDisabled = EvolutionEngine.#compactPopulation(neat);
-        if (removedDisabled > 0) {
-          EvolutionEngine.#maybeShrinkScratch(neat);
-          safeWrite(
-            `[COMPACT] gen=${completedGenerations} removedDisabledConns=${removedDisabled}\n`
-          );
-        }
-        lastCompactionGen = completedGenerations;
-      }
-      // Optional per-generation pacing to yield back to browser for smoother UI (demo mode)
-      if (paceEveryGeneration) {
-        try {
-          await flushToFrame();
-        } catch {
-          /* ignore pacing errors */
-        }
-      }
-    }
-
-    if (doProfile && completedGenerations > 0) {
-      const gen = completedGenerations;
-      const avgEvolve = (tEvolveTotal / gen).toFixed(2);
-      const avgLamarck = (tLamarckTotal / gen).toFixed(2);
-      const avgSim = (tSimTotal / gen).toFixed(2);
-      // Direct stdout to avoid jest buffering suppression
-      safeWrite(
-        `\n[PROFILE] Generations=${gen} avg(ms): evolve=${avgEvolve} lamarck=${avgLamarck} sim=${avgSim} totalPerGen=${(
-          +avgEvolve +
-          +avgLamarck +
-          +avgSim
-        ).toFixed(2)}\n`
-      );
-      if (EvolutionEngine.#PROFILE_ENABLED) {
-        const det = EvolutionEngine.#PROFILE_ACCUM;
-        const denom = gen || 1;
-        safeWrite(
-          `[PROFILE_DETAIL] avgTelemetry=${(det.telemetry / denom).toFixed(
-            2
-          )} avgSimplify=${(det.simplify / denom).toFixed(2)} avgSnapshot=${(
-            det.snapshot / denom
-          ).toFixed(2)} avgPrune=${(det.prune / denom).toFixed(2)}\n`
-        );
-      }
-    }
-
-    // Return the best network, its result, and the NEAT instance
-    return {
-      bestNetwork,
-      bestResult,
-      neat,
-      exitReason: (bestResult as any)?.exitReason ?? 'incomplete',
+    // Assemble the compact fitness evaluation context consumed by the evaluator.
+    const fitnessContext: IFitnessEvaluationContext = {
+      encodedMaze,
+      startPosition,
+      exitPosition,
+      agentSimConfig: opts?.agentSimConfig ?? {},
+      distanceMap,
     };
+
+    // Best-effort: warm a couple of small engine-level pools to reduce first-use allocations.
+    try {
+      const clsAny = EvolutionEngine as any;
+      if (!Array.isArray(clsAny._SCRATCH_SAMPLE))
+        clsAny._SCRATCH_SAMPLE = new Array(32);
+      if (!clsAny._PROFILE_SCRATCH_TA)
+        clsAny._PROFILE_SCRATCH_TA = new Float64Array(4);
+    } catch {
+      // Swallow pool allocation errors - they are non-fatal and only an optimisation.
+    }
+
+    return {
+      encodedMaze,
+      startPosition,
+      exitPosition,
+      distanceMap,
+      inputSize,
+      outputSize,
+      fitnessContext,
+    };
+  }
+
+  /**
+   * Ensure pooled scratch buffers / typed arrays exist and have capacity for the run.
+   *
+   * Behaviour & contract:
+   *  - Lazily creates or grows engine-level scratch pools to conservative, power-of-two
+   *    capacities. This reduces allocation churn during the evolution loop and keeps
+   *    growth cache-friendly.
+   *  - Typed arrays are resized by allocating a new buffer and copying the preserved
+   *    prefix to avoid losing useful scratch state.
+   *  - All operations are best-effort: allocation failures are swallowed so the
+   *    evolution engine remains resilient (it will fallback to on-demand allocations).
+   *
+   * Steps (high-level):
+   *  1) Compute power-of-two target capacities for sample and numeric scratch pools.
+   *  2) Ensure an Array-based sample pool (`#SCRATCH_SAMPLE`) exists and has capacity.
+   *  3) Ensure numeric typed-array pools (`#SCRATCH_EXPS`, `#SCRATCH_BIAS_TA`) exist and grow them
+   *     conservatively using power-of-two sizes; copy preserved prefix when growing.
+   *  4) Optionally ensure other small pools (conn flags, logits ring, profile scratch) exist.
+   *
+   * Props:
+   * @param popSize - Planned population size for the run (used to size sample scratch).
+   * @param inputSize - Network input dimensionality (used to size numeric scratch).
+   * @param outputSize - Network output dimensionality (used to size numeric scratch).
+   * @returns void (best-effort side-effect on engine pools).
+   *
+   * @example
+   * EvolutionEngine['#ensureScratchCapacity'](500, 6, 4);
+   */
+  static #ensureScratchCapacity(
+    popSize: number,
+    inputSize: number,
+    outputSize: number
+  ) {
+    // Local helper: next power-of-two at or above `v`.
+    const nextPowerOfTwo = (v: number): number => {
+      if (v <= 1) return 1;
+      return 2 ** Math.ceil(Math.log2(v));
+    };
+
+    try {
+      // Step 1: desired capacities (use reasonable minima to avoid tiny buffers)
+      const desiredSampleCap = Math.max(
+        32,
+        nextPowerOfTwo(Math.max(1, popSize))
+      );
+      const numericBase = Math.max(1, inputSize + outputSize);
+      const desiredNumericCap = Math.max(64, nextPowerOfTwo(numericBase));
+
+      // Step 2: Ensure the pooled sample array exists and has at least desired capacity.
+      if (!EvolutionEngine.#SCRATCH_SAMPLE) {
+        EvolutionEngine.#SCRATCH_SAMPLE = new Array(desiredSampleCap);
+      } else if (EvolutionEngine.#SCRATCH_SAMPLE.length < desiredSampleCap) {
+        EvolutionEngine.#SCRATCH_SAMPLE.length = desiredSampleCap;
+      }
+
+      // Helper to grow a Float64Array pool preserving the prefix contents.
+      const growFloat64Pool = (
+        old: Float64Array | undefined,
+        minCap: number
+      ) => {
+        if (old && old.length >= minCap) return old;
+        const newCap = Math.max(minCap, nextPowerOfTwo(minCap));
+        const next = new Float64Array(newCap);
+        if (old && old.length > 0)
+          next.set(old.subarray(0, Math.min(old.length, newCap)));
+        return next;
+      };
+
+      // Step 3: Ensure numeric typed-array scratch used by other helpers exists and is grown safely.
+      EvolutionEngine.#SCRATCH_EXPS = growFloat64Pool(
+        EvolutionEngine.#SCRATCH_EXPS,
+        desiredNumericCap
+      ) as any;
+      EvolutionEngine.#SCRATCH_BIAS_TA = growFloat64Pool(
+        EvolutionEngine.#SCRATCH_BIAS_TA,
+        desiredNumericCap
+      ) as any;
+
+      // Step 4 (optional): ensure other small pools exist to avoid first-use allocations.
+      // These are non-essential and created conservatively.
+      if (!(EvolutionEngine as any).#SCRATCH_CONN_FLAGS)
+        (EvolutionEngine as any).#SCRATCH_CONN_FLAGS = new Uint8Array(32);
+      if (!(EvolutionEngine as any)._PROFILE_SCRATCH_TA)
+        (EvolutionEngine as any)._PROFILE_SCRATCH_TA = new Float64Array(4);
+      if (!Array.isArray((EvolutionEngine as any)._SCRATCH_NODE_BUCKETS))
+        (EvolutionEngine as any)._SCRATCH_NODE_BUCKETS = [[], [], []];
+      if (!Array.isArray((EvolutionEngine as any)._SCRATCH_ACT_NAMES))
+        (EvolutionEngine as any)._SCRATCH_ACT_NAMES = [];
+    } catch {
+      // Best-effort: silently ignore pool setup failures.
+    }
   }
 
   /**
@@ -7433,14 +8271,31 @@ export class EvolutionEngine {
   }
 
   /**
-   * Core classifier that performs a single pass over `nodesArray` and fills three pooled buckets.
-   * Implementation notes / steps:
-   *  1) Lazily ensure a pooled buckets structure exists on the class to avoid allocating new arrays.
-   *  2) Clear the pooled buckets by setting .length = 0 (non-allocating when capacity is sufficient).
-   *  3) Iterate the node list once and push references into the appropriate bucket using descriptive names.
-   *  4) Return the buckets alongside the original node list.
+   * Classify a node array into input / hidden / output buckets using pooled arrays.
    *
-   * This method intentionally keeps the hot loop tiny and readable.
+   * Description:
+   * Performs a single in-place pass over `nodesArray` and places references into
+   * three pooled buckets attached to the class to avoid per-call allocations.
+   * The returned buckets are backed by pooled arrays and are reused by subsequent
+   * callers; do not mutate them if you intend to reuse the engine pools.
+   *
+   * Implementation details:
+   * - The pool is stored on `EvolutionEngine._SCRATCH_NODE_BUCKETS` and lazily created.
+   * - Buckets are cleared by setting `.length = 0` which preserves allocated capacity.
+   * - The method is allocation-light and suitable for hot paths.
+   *
+   * @internal
+   * @param nodesArray - Array-like collection of node objects (each node may have a `type` property).
+   * @returns An object with the following properties:
+   *  - `{ nodeList }` - The original (normalized) node array reference used for classification.
+   *  - `{ inputNodes }` - Pooled array containing all nodes whose `type` is `'input'`.
+   *  - `{ hiddenNodes }` - Pooled array containing all non-input/non-output nodes.
+   *  - `{ outputNodes }` - Pooled array containing all nodes whose `type` is `'output'`.
+   *
+   * @example
+   * // Use for quick inspection without allocating new arrays per-call
+   * const { nodeList, inputNodes, hiddenNodes, outputNodes } = EvolutionEngine['#classifyNodesFromArray'](net.nodes || []);
+   * console.log(`inputs=${inputNodes.length} hidden=${hiddenNodes.length} outputs=${outputNodes.length}`);
    */
   static #classifyNodesFromArray(
     nodesArray: any[]
@@ -7450,47 +8305,46 @@ export class EvolutionEngine {
     hiddenNodes: any[];
     outputNodes: any[];
   } {
-    // Step 1: Ensure a pooled buckets holder exists. We attach a plain property to avoid
-    // depending on other private static fields that may not exist in this test file.
-    // The structure is [ inputBucket, hiddenBucket, outputBucket ] to avoid creating
-    // separate arrays on every call.
-    if (!(EvolutionEngine as any)._SCRATCH_NODE_BUCKETS) {
-      (EvolutionEngine as any)._SCRATCH_NODE_BUCKETS = [[], [], []];
-    }
+    // Step 1: Normalise the incoming node list to a safe, non-null array reference.
+    const nodeList: any[] = Array.isArray(nodesArray) ? nodesArray : [];
 
-    const pooledBuckets: any[][] = (EvolutionEngine as any)
-      ._SCRATCH_NODE_BUCKETS;
+    // Step 2: Lazily create / reuse the pooled buckets structure on the class.
+    const clsAny = EvolutionEngine as any;
+    if (!clsAny._SCRATCH_NODE_BUCKETS)
+      clsAny._SCRATCH_NODE_BUCKETS = [[], [], []];
+    const pooledBuckets: any[][] = clsAny._SCRATCH_NODE_BUCKETS;
 
+    // Descriptive bucket aliases for readability.
     const inputBucket = pooledBuckets[0];
     const hiddenBucket = pooledBuckets[1];
     const outputBucket = pooledBuckets[2];
 
-    // Step 2: Clear buckets in-place (cheap when capacity is already adequate).
+    // Step 3: Clear buckets in-place (cheap; preserves allocated capacity where possible).
     inputBucket.length = 0;
     hiddenBucket.length = 0;
     outputBucket.length = 0;
 
-    // Step 3: Single-pass classification. Use descriptive variable names for clarity.
-    for (let nodeIndex = 0; nodeIndex < nodesArray.length; nodeIndex++) {
-      const node = nodesArray[nodeIndex];
-      // Tolerate array holes and malformed entries.
+    // Step 4: Single-pass classification. Keep the loop small and optimiser-friendly.
+    for (let nodeIndex = 0; nodeIndex < nodeList.length; nodeIndex++) {
+      const node = nodeList[nodeIndex];
+      // Tolerate holes and malformed entries quickly.
       if (!node) continue;
 
-      // Normalize node type to a string and classify deterministically.
+      // Normalise the node type to a stable string and classify deterministically.
       const nodeType = String(node.type ?? 'hidden');
       if (nodeType === 'input') {
         inputBucket.push(node);
       } else if (nodeType === 'output') {
         outputBucket.push(node);
       } else {
-        // Everything else is treated as hidden. This includes 'hidden', undefined, or custom types.
+        // Treat everything else as hidden (includes undefined/custom types).
         hiddenBucket.push(node);
       }
     }
 
-    // Step 4: Return references into the original node list along with pooled buckets.
+    // Step 5: Return references (note: returned arrays are pooled and reused by subsequent callers).
     return {
-      nodeList: nodesArray,
+      nodeList,
       inputNodes: inputBucket,
       hiddenNodes: hiddenBucket,
       outputNodes: outputBucket,
@@ -7498,83 +8352,124 @@ export class EvolutionEngine {
   }
 
   /**
-   * Populate and return a pooled array of activation function names for the network's nodes.
-   * Uses the engine-level SCRATCH_ACT_NAMES pool to avoid per-call allocation.
+   * Populate and return a pooled array of activation (squash) function names for `network.nodes`.
+   *
+   * Behaviour & contract:
+   * - Reuses a private pooled string array (`#SCRATCH_ACT_NAMES`) to avoid per-call allocations.
+   * - Grows the pool capacity using a power-of-two strategy (next power-of-two) to reduce resize frequency.
+   * - Fills the pooled array with readable names and trims `.length` to the exact node count before returning.
+   *
+   * Steps (high level):
+   * 1) Normalise the incoming node list to a safe array reference.
+   * 2) Lazily create the shared pooled names array when first used.
+   * 3) Grow the pooled array to a power-of-two capacity when current capacity is insufficient.
+   * 4) Populate the used prefix with function `name` when available or a stable string fallback.
+   * 5) Trim the pooled array to `nodesCount` and return it (note: the returned array is reused; callers must not mutate it).
+   *
+   * @internal
+   * @param network Network-like object with an optional `nodes` array.
+   * @returns Pooled array of activation function names (length === number of nodes).
+   * @example
+   * // Obtain activation names for quick inspection without allocating a new array each call
+   * const names = EvolutionEngine['#gatherActivationNames'](someNet);
+   * console.log(names.join(','));
    */
   static #gatherActivationNames(network: INetwork): string[] {
+    // Step 1: Safe normalisation of the node list reference.
     const nodesArray: any[] = Array.isArray(network?.nodes)
       ? network.nodes
       : [];
-    // Lazily ensure the shared pool array exists.
+    const nodesCount = nodesArray.length;
+
+    // Step 2: Lazily ensure the shared pool exists. Use a cast to bypass private-field creation quirks.
     if (!Array.isArray((EvolutionEngine as any).#SCRATCH_ACT_NAMES)) {
-      // @ts-ignore - private static creation
+      // @ts-ignore - create the private static pool slot on first use
       (EvolutionEngine as any).#SCRATCH_ACT_NAMES = [];
     }
+
     const pooledNames: string[] = EvolutionEngine.#SCRATCH_ACT_NAMES;
 
-    // Grow the pool length if needed (avoid slice / new allocations)
-    if (pooledNames.length < nodesArray.length)
-      pooledNames.length = nodesArray.length;
+    // Helper: compute next power-of-two for growth (keeps growth jumps friendly to the allocator).
+    const nextPowerOfTwo = (value: number): number => {
+      let power = 1;
+      while (power < value) power <<= 1;
+      return power;
+    };
 
-    for (let i = 0; i < nodesArray.length; i++) {
-      const n = nodesArray[i];
-      // Prefer readable squash function name when available
-      pooledNames[i] = n?.squash?.name ?? String(n?.squash ?? 'unknown');
+    // Step 3: Grow pooled capacity to the next power-of-two when necessary.
+    if (pooledNames.length < nodesCount) {
+      const targetCapacity = nextPowerOfTwo(Math.max(1, nodesCount));
+      pooledNames.length = targetCapacity;
     }
 
-    // Trim to exact length for consumer-readable output (non-allocating since we set .length)
-    pooledNames.length = nodesArray.length;
+    // Step 4: Populate the used prefix with readable names.
+    for (let idx = 0; idx < nodesCount; idx++) {
+      const nodeEntry = nodesArray[idx];
+      const squashCandidate = nodeEntry?.squash;
+
+      // Prefer explicit function name when available; fall back to a stable string.
+      if (typeof squashCandidate === 'function') {
+        // Some anonymous functions may have an empty .name; normalise to 'anonymous' then.
+        pooledNames[idx] =
+          squashCandidate.name && squashCandidate.name.length
+            ? squashCandidate.name
+            : 'anonymous';
+      } else {
+        pooledNames[idx] = String(squashCandidate ?? 'unknown');
+      }
+    }
+
+    // Step 5: Trim to exact length for consumer readability (non-allocating when shrinking a pre-sized array).
+    pooledNames.length = nodesCount;
     return pooledNames;
   }
 
   /**
-   * Detect whether any connection is recurrent (from === to) or gated (has a gater).
-   * Accepts the connections list as input to avoid re-indexing network object.
-   * Uses a small pooled Int8Array as a temporary flag buffer when the connection list is large.
+   * Fast, allocation-aware detector for recurrent or gated connections.
+   *
+   * Steps:
+   * 1) Fast-guard invalid inputs (non-array / empty -> false).
+   * 2) For small connection lists use a plain loop (lowest overhead).
+   * 3) For large lists rent a pooled Int8Array via `#ensureConnFlagsCapacity` and
+   *    reuse it as a tiny scratch bitmap to reduce allocations and improve cache locality.
+   * 4) Early-return on first detection (gated or recurrent), otherwise mark seen indices
+   *    in the scratch buffer and return false when complete.
+   * 5) Defensive fallback: if the pooled allocation fails, revert to the plain loop.
+   *
+   * @param connectionsList Array of connection-like objects with optional `from`, `to`, `gater`.
+   * @returns true when any connection is recurrent (from === to) or gated (gater truthy), false otherwise.
+   * @example
+   * const hasSpecial = EvolutionEngine['#detectRecurrentOrGated'](network.connections);
    */
   static #detectRecurrentOrGated(connectionsList: any[]): boolean {
-    /**
-     * JSDoc & contract:
-     * - Fast, allocation-light detection of any recurrent (conn.from === conn.to)
-     *   or gated (conn.gater truthy) connection in `connectionsList`.
-     * - Small lists use a plain loop to avoid typed-array overhead.
-     * - Large lists reuse a pooled Int8Array scratch buffer to reduce allocation churn.
-     *
-     * Props:
-     * @param connectionsList - Array-like list of connection objects with optional `from`, `to`, and `gater` fields.
-     * @returns true when any connection is recurrent or gated; false otherwise.
-     *
-     * Example:
-     * const hasSpecial = EvolutionEngine['#detectRecurrentOrGated'](network.connections);
-     */
-
+    // Step 1: Validate input quickly
     if (!Array.isArray(connectionsList) || connectionsList.length === 0)
       return false;
 
-    // Use a descriptive name for list length and pick a small-list fast-path threshold.
-    const listLen = connectionsList.length;
-    const SMALL_LIST_THRESHOLD = 128;
+    const connectionCount = connectionsList.length;
+    const SMALL_LIST_THRESHOLD = 128; // tuned threshold for typed-array trade-off
 
-    // === Fast path for small connection lists ===
-    if (listLen < SMALL_LIST_THRESHOLD) {
-      for (let index = 0; index < listLen; index++) {
-        const connection = connectionsList[index];
+    // Step 2: Small-list fast path: direct inspection avoids typed-array overhead
+    if (connectionCount < SMALL_LIST_THRESHOLD) {
+      for (let i = 0; i < connectionCount; i++) {
+        const connection = connectionsList[i];
         if (!connection) continue; // tolerate sparse arrays
-        if (connection.gater) return true; // gated connection found
-        if (connection.from === connection.to) return true; // direct recurrent self-connection
+        if (connection.gater) return true; // gated connection detected
+        if (connection.from === connection.to) return true; // recurrent self-connection
       }
       return false;
     }
 
-    // === Large-list path: reuse pooled Int8Array as a tiny scratch buffer ===
-    // Intent: reduce allocation churn when this function is called repeatedly on large graphs.
+    // Step 3: Large-list path: attempt to rent a pooled Int8Array for scratch flags
     try {
-      const pooledFlags = EvolutionEngine.#ensureConnFlagsCapacity(listLen);
+      const scratchFlags = EvolutionEngine.#ensureConnFlagsCapacity(
+        connectionCount
+      );
 
-      // If allocation failed, fall back to safe loop below.
-      if (!pooledFlags) {
-        for (let index = 0; index < listLen; index++) {
-          const connection = connectionsList[index];
+      // Step 5: Fallback to plain loop when pool allocation fails
+      if (!scratchFlags) {
+        for (let i = 0; i < connectionCount; i++) {
+          const connection = connectionsList[i];
           if (!connection) continue;
           if (connection.gater || connection.from === connection.to)
             return true;
@@ -7582,22 +8477,23 @@ export class EvolutionEngine {
         return false;
       }
 
-      // Iterate and early-return on detection. We also write to the pooled buffer to
-      // demonstrate and exercise the scratch space without relying on external semantics.
-      for (let index = 0; index < listLen; index++) {
-        const connection = connectionsList[index];
+      // Initialize only the used prefix for deterministic behavior (cheap for Int8Array)
+      scratchFlags.fill(0, 0, connectionCount);
+
+      // Step 4: Iterate, early-return on detection, and mark seen indices in scratch buffer
+      for (let i = 0; i < connectionCount; i++) {
+        const connection = connectionsList[i];
         if (!connection) continue;
         if (connection.gater) return true;
         if (connection.from === connection.to) return true;
-        // Mark this connection index in the scratch buffer (cheap and helps keep memory hot)
-        pooledFlags[index] = 1;
+        scratchFlags[i] = 1; // mark index as visited in the pooled scratch
       }
 
       return false;
     } catch {
-      // Allocation or runtime error: gracefully degrade to safe loop.
-      for (let index = 0; index < listLen; index++) {
-        const connection = connectionsList[index];
+      // Robust degradation: on any runtime error, use the safe plain loop.
+      for (let i = 0; i < connectionCount; i++) {
+        const connection = connectionsList[i];
         if (!connection) continue;
         if (connection.gater || connection.from === connection.to) return true;
       }
@@ -7608,22 +8504,67 @@ export class EvolutionEngine {
   /**
    * Ensure the pooled connection-flag Int8Array has at least `minCapacity` entries.
    * Returns the pooled buffer or `null` when allocation fails.
+   *
+   * Implementation details / contract:
+   * - Reuses an engine-level pooled Int8Array stored at `_SCRATCH_CONN_FLAGS` to avoid
+   *   repeated allocations when analyzing large connection lists.
+   * - Grows the pooled buffer lazily using a power-of-two strategy (nextPow2) to
+   *   keep resize frequency low and preserve cache-friendliness.
+   * - When growing, copies the preserved prefix (old length) into the new buffer so
+   *   callers can rely on stable scratch contents across resizes.
+   * - Defensive guards ensure we only accept sensible integer capacities and return
+   *   `null` when memory allocation fails.
+   *
+   * @param minCapacity Minimum required capacity (integer >= 0).
+   * @returns The pooled Int8Array with capacity >= `minCapacity`, or `null` if allocation failed.
+   * @example
+   * const flags = EvolutionEngine['#ensureConnFlagsCapacity'](1024);
+   * if (flags) { // use flags as temporary Int8Array
+   *   // use flags as temporary Int8Array
+   * }
    */
   static #ensureConnFlagsCapacity(minCapacity: number): Int8Array | null {
     try {
-      const clsAny = EvolutionEngine as any;
-      const existing: Int8Array | undefined = clsAny._SCRATCH_CONN_FLAGS;
-      if (existing instanceof Int8Array && existing.length >= minCapacity)
-        return existing;
+      // Step 0: Validate input
+      const requiredCapacity = Math.max(
+        0,
+        Math.trunc(Number(minCapacity) || 0)
+      );
 
-      // Compute next power-of-two capacity to reduce future resizes.
-      let cap = 1;
-      while (cap < minCapacity) cap <<= 1;
-      const newBuf = new Int8Array(cap);
-      // Store the pooled buffer for reuse.
-      clsAny._SCRATCH_CONN_FLAGS = newBuf;
-      return newBuf;
+      // Fast-path: if no capacity requested return an empty small buffer (avoid null callers)
+      if (requiredCapacity === 0) {
+        const tiny = new Int8Array(0);
+        return tiny;
+      }
+
+      // Acquire class-owned pool slot (we operate via a plain property to avoid TS private access quirks)
+      const clsAny = EvolutionEngine as any;
+      const pooled: Int8Array | undefined = clsAny._SCRATCH_CONN_FLAGS;
+
+      // If an existing pooled buffer is already large enough, reuse it directly.
+      if (pooled instanceof Int8Array && pooled.length >= requiredCapacity) {
+        return pooled;
+      }
+
+      // Step 1: Compute new capacity as next power-of-two >= requiredCapacity to reduce future resizes.
+      let newCapacity = 1;
+      while (newCapacity < requiredCapacity) newCapacity <<= 1;
+
+      // Step 2: Allocate the new typed array.
+      const newBuffer = new Int8Array(newCapacity);
+
+      // Step 3: If a previous pooled buffer existed, copy preserved prefix into the new buffer.
+      if (pooled instanceof Int8Array && pooled.length > 0) {
+        // Copy only the preserved portion (min of old length and new capacity)
+        const preserved = Math.min(pooled.length, newBuffer.length);
+        newBuffer.set(pooled.subarray(0, preserved), 0);
+      }
+
+      // Step 4: Store the new buffer on the class for future reuse and return it.
+      clsAny._SCRATCH_CONN_FLAGS = newBuffer;
+      return newBuffer;
     } catch {
+      // Allocation failure or other fatal error: signal caller by returning null.
       return null;
     }
   }

@@ -1,23 +1,11 @@
-import { methods } from '../../../src/neataptic';
 import Network from '../../../src/architecture/network'; // Correct import for Network
-import {
-  tiny,
-  spiralSmall,
-  spiral,
-  small,
-  medium,
-  medium2,
-  large,
-  minotaur,
-  MazeGenerator,
-} from './mazes';
+import { MazeGenerator } from './mazes';
 import { colors } from './colors';
 import { DashboardManager } from './dashboardManager';
 import { TerminalUtility } from './terminalUtility';
 import { IDashboardManager } from './interfaces';
 import { EvolutionEngine } from './evolutionEngine';
-import { refineWinnerWithBackprop } from './refineWinner';
-import { pollUntil } from '../../utils/pollUntil';
+import { NetworkRefinement } from './networkRefinement';
 
 /**
  * Forces console output for this test by writing directly to stdout/stderr.
@@ -222,7 +210,7 @@ describe('ASCII Maze Solver using Neuro-Evolution', () => {
     it(`Procedural maze ${dim}x${dim}`, async () => {
       const result = await EvolutionEngine.runMazeEvolution({
         mazeConfig: { maze: new MazeGenerator(dim, dim).generate() },
-        agentSimConfig: { maxSteps: 600 }, // matches browser AGENT_MAX_STEPS
+        agentSimConfig: { maxSteps: 2000 }, // matches browser AGENT_MAX_STEPS
         evolutionAlgorithmConfig: {
           allowRecurrent: true,
           popSize: 40,
@@ -242,7 +230,9 @@ describe('ASCII Maze Solver using Neuro-Evolution', () => {
         },
       });
       proceduralPrevBest = result
-        ? refineWinnerWithBackprop(result.bestNetwork as Network)
+        ? NetworkRefinement.refineWinnerWithBackprop(
+            result.bestNetwork as Network
+          )
         : undefined;
 
       expect(!!result?.bestNetwork).toBe(true);

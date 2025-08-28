@@ -13,6 +13,7 @@
     "declaration": true,
     "skipLibCheck": true,
     "declarationMap": true,
+    "removeComments": true,
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true,
@@ -20,8 +21,8 @@
     "moduleResolution": "Bundler",
     // Emit smaller, spec-compliant class fields
     "useDefineForClassFields": true,
-  "verbatimModuleSyntax": true
+    "verbatimModuleSyntax": true
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist"]
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist", "test", "docs"]
 }

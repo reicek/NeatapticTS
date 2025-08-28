@@ -514,100 +514,222 @@ export class NetworkVisualization {
     return NetworkVisualization.#ConnectionCountsScratch;
   }
 
-  /** Compute connection counts between sequential layer boundaries. */
+  /**
+   * Compute connection counts between sequential layer boundaries.
+   *
+   * Steps (high-level):
+   * 1. Allocate / reuse an Int32Array scratch buffer sized to the number of
+   *    connection segments (input->hidden0, hidden0->hidden1, ..., lastHidden->output).
+   * 2. Build fast lookup Sets for node id membership for input/hidden/output layers.
+   * 3. Iterate network connections once, classify each connection's source as
+   *    an input node, a hidden node (identify which hidden layer), or other.
+   * 4. Use a switch-based branch on the classified source to increment the
+   *    appropriate scratch counter. This replaces long else-if chains for clarity.
+   *
+   * @param network - Neural network (expects `connections` array).
+   * @param inputNodes - Flat array of input visualization nodes.
+   * @param hiddenLayers - Array of hidden layers (each is array of visualization nodes).
+   * @param outputNodes - Flat array of output visualization nodes.
+   * @returns Int32Array where indexes map to sequential connection-segments:
+   *   0 -> input -> firstHidden (or input -> output when no hidden layers exist)
+   *   1..N -> between hidden layers
+   *   last -> lastHidden -> output
+   *
+   * @example
+   * // Count connections for a small feed-forward network
+   * const counts = NetworkVisualization.#computeConnectionCounts(net, inputs, hiddenLayers, outputs);
+   * console.log(counts[0]); // connections input -> firstHidden
+   */
   static #computeConnectionCounts(
     network: INetwork,
     inputNodes: IVisualizationNode[],
     hiddenLayers: any[][],
     outputNodes: IVisualizationNode[]
   ): Int32Array {
-    const numHiddenLayers = hiddenLayers.length;
-    const arrows = numHiddenLayers > 0 ? numHiddenLayers + 1 : 1; // input->first/ output plus between hidden
-    const scratch = NetworkVisualization.#ensureConnectionScratch(arrows);
-    scratch.fill(0, 0, arrows);
-    NetworkVisualization.#ConnectionCountsLen = arrows;
-    const inputIdSet = new Set<number>(inputNodes.map((n) => Number(n.id)));
-    const outputIdSet = new Set<number>(outputNodes.map((n) => Number(n.id)));
-    const hiddenSets: Set<number>[] = hiddenLayers.map(
-      (layer) => new Set(layer.map((n: any) => Number(n.id)))
+    // Step 1: determine number of connection segments and get pooled buffer
+    const hiddenLayerCount = hiddenLayers.length;
+    const connectionSegments = hiddenLayerCount > 0 ? hiddenLayerCount + 1 : 1; // segments between layer boundaries
+    const countsBuffer = NetworkVisualization.#ensureConnectionScratch(
+      connectionSegments
     );
-    const connections = network.connections || [];
-    for (let ci = 0; ci < connections.length; ci++) {
-      const conn: any = connections[ci];
-      const fromIdx = Number(conn.from?.index ?? -1);
-      const toIdx = Number(conn.to?.index ?? -1);
-      // input -> first target
-      if (inputIdSet.has(fromIdx)) {
-        if (hiddenSets[0] && hiddenSets[0].has(toIdx)) scratch[0]++;
-        else if (hiddenSets.length === 0 && outputIdSet.has(toIdx))
-          scratch[0]++;
-        continue;
-      }
-      // hidden -> hidden or hidden -> output
-      for (let h = 0; h < hiddenSets.length; h++) {
-        const fromSet = hiddenSets[h];
-        if (!fromSet.has(fromIdx)) continue;
-        const lastHidden = h === hiddenSets.length - 1;
-        if (!lastHidden) {
-          const toSet = hiddenSets[h + 1];
-          if (toSet.has(toIdx)) {
-            scratch[1 + h]++;
-            break;
-          }
-        } else {
-          if (outputIdSet.has(toIdx)) {
-            scratch[hiddenSets.length]++;
+    // Zero only the used portion of the pooled buffer for minimal overhead
+    countsBuffer.fill(0, 0, connectionSegments);
+    NetworkVisualization.#ConnectionCountsLen = connectionSegments;
+
+    // Step 2: build fast membership sets (one-pass mappings)
+    const inputIdSet = new Set<number>(
+      inputNodes.map((node) => Number(node.id))
+    );
+    const outputIdSet = new Set<number>(
+      outputNodes.map((node) => Number(node.id))
+    );
+    const hiddenIdSets: Set<number>[] = hiddenLayers.map(
+      (layer) => new Set(layer.map((node: any) => Number(node.id)))
+    );
+
+    // Step 3: single-pass connection scan; use descriptive names for clarity
+    const connections = network.connections ?? [];
+    for (
+      let connectionIndex = 0;
+      connectionIndex < connections.length;
+      connectionIndex++
+    ) {
+      const connection: any = connections[connectionIndex];
+      const fromNodeIndex = Number(connection.from?.index ?? -1);
+      const toNodeIndex = Number(connection.to?.index ?? -1);
+
+      // Classify source: 'input' | 'hidden' | 'other' and capture hidden source layer when present
+      let sourceKind: 'input' | 'hidden' | 'other' = 'other';
+      let sourceHiddenLayerIndex = -1;
+
+      if (inputIdSet.has(fromNodeIndex)) {
+        sourceKind = 'input';
+      } else {
+        // Try to find which hidden layer the source belongs to (if any)
+        for (
+          let hiddenIndex = 0;
+          hiddenIndex < hiddenIdSets.length;
+          hiddenIndex++
+        ) {
+          if (hiddenIdSets[hiddenIndex].has(fromNodeIndex)) {
+            sourceKind = 'hidden';
+            sourceHiddenLayerIndex = hiddenIndex;
             break;
           }
         }
       }
+
+      // Step 4: switch on the classified source kind and increment the corresponding bucket
+      switch (sourceKind) {
+        case 'input': {
+          // Input -> first hidden OR Input -> output (when no hidden layers exist)
+          if (hiddenIdSets[0] && hiddenIdSets[0].has(toNodeIndex)) {
+            countsBuffer[0]++;
+          } else if (
+            hiddenIdSets.length === 0 &&
+            outputIdSet.has(toNodeIndex)
+          ) {
+            countsBuffer[0]++;
+          }
+          break;
+        }
+        case 'hidden': {
+          // Hidden -> next hidden OR hidden -> output (if source is in last hidden layer)
+          const isLastHiddenLayer =
+            sourceHiddenLayerIndex === hiddenIdSets.length - 1;
+          if (!isLastHiddenLayer) {
+            const nextLayerSet = hiddenIdSets[sourceHiddenLayerIndex + 1];
+            if (nextLayerSet.has(toNodeIndex)) {
+              // Connection is between hidden layers. Map to buffer index: 1 + sourceHiddenLayerIndex
+              countsBuffer[1 + sourceHiddenLayerIndex]++;
+            }
+          } else {
+            if (outputIdSet.has(toNodeIndex)) {
+              // Last hidden -> output maps to final buffer index
+              countsBuffer[hiddenIdSets.length]++;
+            }
+          }
+          break;
+        }
+        default:
+          // Other/unknown source types are ignored for feed-forward summary counts
+          break;
+      }
     }
-    return scratch;
+
+    return countsBuffer;
   }
 
-  /** Build header string. */
+  /**
+   * Build the single-line header for the ASCII network visualization.
+   *
+   * Produces a left framed input segment, a series of column segments for
+   * hidden layers (if any) separated by arrow glyphs, and a right framed
+   * output segment. The implementation intentionally reuses the module-level
+   * string scratch buffer to avoid allocations during frequent re-renders.
+   *
+   * Steps (high level):
+   * 1) Compute layout widths for the given number of hidden layers.
+   * 2) Acquire and clear the shared string parts scratch buffer.
+   * 3) Read connection counts from the provided Int32Array (or a pooled
+   *    fallback) and render arrows with connection counts.
+   * 4) Append input, hidden and output segments into the scratch buffer and
+   *    join them into the final header string.
+   *
+   * @param inputCount - Number of input display slots (legacy fallback used elsewhere).
+   * @param hiddenLayers - Array of hidden-layer node arrays (each entry is a layer).
+   * @param outputCount - Number of outputs (maze solver fixed count).
+   * @param connectionCounts - Int32Array of connection counts for layer boundaries.
+   *                           Buffer layout: [in->h0, h0->h1, ..., lastH->out]
+   * @returns A single-line string containing ANSI color codes ready for terminal output.
+   *
+   * @example
+   * const header = NetworkVisualization.#buildHeader(18, hiddenLayers, 4, connectionCounts);
+   */
   static #buildHeader(
     inputCount: number,
     hiddenLayers: any[][],
     outputCount: number,
     connectionCounts: Int32Array
   ): string {
-    const numHiddenLayers = hiddenLayers.length;
+    // Step 1: derive layout widths for the number of hidden layers
+    const hiddenLayerCount = hiddenLayers.length;
     const { columnWidth } = NetworkVisualization.#computeLayout(
-      numHiddenLayers
+      hiddenLayerCount
     );
-    const parts = NetworkVisualization.#ScratchHeaderParts;
-    parts.length = 0;
-    parts.push(
+
+    // Step 2: reuse the shared header parts scratch buffer to avoid per-frame allocs
+    const headerSegments = NetworkVisualization.#ScratchHeaderParts;
+    headerSegments.length = 0; // clear in-place
+
+    // Step 3: use the supplied connectionCounts Int32Array when available;
+    // otherwise fall back to the pooled typed-array to avoid allocation.
+    const countsView: Int32Array =
+      connectionCounts ?? NetworkVisualization.#ensureConnectionScratch(1);
+
+    // Left-hand input segment (prefixed with a colored frame glyph)
+    headerSegments.push(
       NetworkVisualization.#buildHeaderSegment({
         prefix: `${colors.blueCore}║`,
         label: `${colors.neonGreen}Input Layer [${inputCount}]${colors.reset}`,
         width: columnWidth - 1,
       })
     );
-    parts.push(
-      NetworkVisualization.#formatHeaderArrow(connectionCounts[0] ?? 0)
+
+    // Arrow after input: include connection count from countsView[0]
+    headerSegments.push(
+      NetworkVisualization.#formatHeaderArrow(countsView[0] ?? 0)
     );
-    for (
-      let hiddenLayerIndex = 0;
-      hiddenLayerIndex < numHiddenLayers;
-      hiddenLayerIndex++
-    ) {
-      parts.push(
-        NetworkVisualization.pad(
-          `${colors.cyanNeon}Hidden ${hiddenLayerIndex + 1} [${
-            hiddenLayers[hiddenLayerIndex].length
-          }]${colors.reset}`,
-          columnWidth
-        )
-      );
-      parts.push(
-        NetworkVisualization.#formatHeaderArrow(
-          connectionCounts[hiddenLayerIndex + 1] || 0
-        )
-      );
+
+    // Step 4: hidden layers (if any). Use a switch to handle 0 vs many hidden layers
+    switch (hiddenLayerCount) {
+      case 0:
+        // No hidden layers; nothing to append between input and output beyond the
+        // initial arrow already pushed above. (Intentionally fall through)
+        break;
+      default:
+        // Iterate using ES2023 iterator helpers for clarity and avoid index arithmetic
+        for (const [layerIndex, layer] of hiddenLayers.entries()) {
+          headerSegments.push(
+            NetworkVisualization.pad(
+              `${colors.cyanNeon}Hidden ${layerIndex + 1} [${layer.length}]${
+                colors.reset
+              }`,
+              columnWidth
+            )
+          );
+          // Use nullish coalescing to gracefully handle missing counts
+          headerSegments.push(
+            NetworkVisualization.#formatHeaderArrow(
+              countsView[layerIndex + 1] ?? 0
+            )
+          );
+        }
+        break;
     }
-    parts.push(
+
+    // Right-hand output column and closing frame
+    headerSegments.push(
       NetworkVisualization.pad(
         `${colors.orangeNeon}Output Layer [${outputCount}]${colors.reset}`,
         columnWidth,
@@ -615,7 +737,9 @@ export class NetworkVisualization {
         'center'
       ) + `${colors.blueCore}║${colors.reset}`
     );
-    return parts.join('');
+
+    // Join the pre-allocated parts into the single header string and return
+    return headerSegments.join('');
   }
 
   /** Build a single header segment with optional prefix. */
@@ -918,69 +1042,100 @@ export class NetworkVisualization {
       connectionCounts,
       outputCount,
     } = params;
-    const layer = displayLayers[layerIndex];
+
+    // Friendly/descriptive local names for clarity
+    const currentLayer = displayLayers[layerIndex];
+    const nextLayer = displayLayers[layerIndex + 1];
     const arrowPlaceholder = `${colors.blueNeon}${NetworkVisualization.#ARROW}${
       colors.reset
     }`;
-    const isLast = layerIndex === numHiddenLayers - 1;
-    if (!isLast) {
-      const connCount = connectionCounts[layerIndex + 1] || 0;
-      if (rowIndex === 0) {
-        const currentLayerSize = layer.length || 1;
-        const nodeProportion = Math.ceil(
-          connCount / Math.max(3, currentLayerSize * 2)
-        );
+    const isLastHiddenLayer = layerIndex === numHiddenLayers - 1;
+
+    // Reuse provided Int32Array or fall back to the pooled scratch buffer.
+    const countsView: Int32Array =
+      connectionCounts ??
+      NetworkVisualization.#ensureConnectionScratch(numHiddenLayers + 1);
+
+    /**
+     * Render a compact arrow cell with a numeric proportion prefix.
+     * This helper keeps formatting consistent across branches.
+     */
+    const renderArrowWithNumber = (value: number) =>
+      NetworkVisualization.pad(
+        `${colors.blueNeon}${value} ──▶${colors.reset}`,
+        NetworkVisualization.#ARROW_WIDTH
+      );
+
+    // Use a switch to clearly separate logic for interior vs final hidden-layer arrows
+    switch (isLastHiddenLayer) {
+      case false: {
+        // Interior hidden-layer arrow (hidden_i -> hidden_{i+1})
+        const connectionCountBetweenLayers = countsView[layerIndex + 1] ?? 0;
+
+        // Row 0: present a more aggregated proportion metric
+        if (rowIndex === 0) {
+          const currentLayerSize = currentLayer.length || 1;
+          const aggregatedProportion = Math.ceil(
+            connectionCountBetweenLayers / Math.max(3, currentLayerSize * 2)
+          );
+          return renderArrowWithNumber(aggregatedProportion);
+        }
+
+        // Rows where both the current and next layer have nodes: show per-node proportion
+        if (
+          rowIndex < currentLayer.length &&
+          rowIndex < (nextLayer?.length ?? 0)
+        ) {
+          const currentLayerSize = currentLayer.length || 1;
+          const perNodeProportion = Math.max(
+            1,
+            Math.min(
+              5,
+              Math.ceil(
+                connectionCountBetweenLayers / Math.max(3, currentLayerSize)
+              )
+            )
+          );
+          return renderArrowWithNumber(perNodeProportion);
+        }
+
+        // Default placeholder when there is no matching node on the row
         return NetworkVisualization.pad(
-          `${colors.blueNeon}${nodeProportion} ──▶${colors.reset}`,
+          arrowPlaceholder,
           NetworkVisualization.#ARROW_WIDTH
         );
       }
-      if (
-        rowIndex < layer.length &&
-        rowIndex < (displayLayers[layerIndex + 1]?.length || 0)
-      ) {
-        const currentLayerSize = layer.length || 1;
-        const proportion = Math.max(
-          1,
-          Math.min(5, Math.ceil(connCount / Math.max(3, currentLayerSize)))
-        );
+
+      case true: {
+        // Last hidden -> output arrow logic
+        const lastLayerToOutputCount = countsView[numHiddenLayers] ?? 0;
+
+        if (rowIndex === 0) {
+          const lastLayerSize = currentLayer.length || 1;
+          const aggregatedProportion = Math.ceil(
+            lastLayerToOutputCount / Math.max(3, lastLayerSize * 2)
+          );
+          return renderArrowWithNumber(aggregatedProportion);
+        }
+
+        if (rowIndex < currentLayer.length && rowIndex < outputCount) {
+          const lastLayerSize = currentLayer.length || 1;
+          const perNodeProportion = Math.max(
+            1,
+            Math.min(
+              5,
+              Math.ceil(lastLayerToOutputCount / Math.max(5, lastLayerSize * 2))
+            )
+          );
+          return renderArrowWithNumber(perNodeProportion);
+        }
+
         return NetworkVisualization.pad(
-          `${colors.blueNeon}${proportion} ──▶${colors.reset}`,
+          arrowPlaceholder,
           NetworkVisualization.#ARROW_WIDTH
         );
       }
-      return NetworkVisualization.pad(
-        arrowPlaceholder,
-        NetworkVisualization.#ARROW_WIDTH
-      );
     }
-    // Last hidden -> output
-    const lastConnCount = connectionCounts[numHiddenLayers] || 0;
-    if (rowIndex === 0) {
-      const lastLayerSize = layer.length || 1;
-      const nodeProportion = Math.ceil(
-        lastConnCount / Math.max(3, lastLayerSize * 2)
-      );
-      return NetworkVisualization.pad(
-        `${colors.blueNeon}${nodeProportion} ──▶${colors.reset}`,
-        NetworkVisualization.#ARROW_WIDTH
-      );
-    }
-    if (rowIndex < layer.length && rowIndex < outputCount) {
-      const lastLayerSize = layer.length || 1;
-      const proportion = Math.max(
-        1,
-        Math.min(5, Math.ceil(lastConnCount / Math.max(5, lastLayerSize * 2)))
-      );
-      return NetworkVisualization.pad(
-        `${colors.blueNeon}${proportion} ──▶${colors.reset}`,
-        NetworkVisualization.#ARROW_WIDTH
-      );
-    }
-    return NetworkVisualization.pad(
-      arrowPlaceholder,
-      NetworkVisualization.#ARROW_WIDTH
-    );
   }
 
   /** Build output layer cell. */

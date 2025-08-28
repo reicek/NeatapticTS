@@ -2069,9 +2069,26 @@ export class DashboardManager implements IDashboardManager {
     this.#logBlank();
   }
 
-  /** Print progress bar lines. */
+  /**
+   * Render the progress bar section for the currently tracked best candidate.
+   *
+   * Steps:
+   * 1. Emit a top spacer framed line to separate the section from above content.
+   * 2. Safely derive the current progress fraction (0..1) from the candidate result.
+   * 3. Build the human-friendly progress bar text via `MazeVisualization.displayProgressBar`.
+   * 4. Frame and emit the progress line using `NetworkVisualization.pad` to maintain consistent width.
+   * 5. Emit a trailing spacer framed line.
+   *
+   * Implementation notes:
+   * - Defensive numeric parsing avoids NaN/Infinity leaking into the display when data is malformed.
+   * - Uses descriptive local names and a small helper `emitFrameBlank` for clarity.
+   *
+   * @example
+   * (dashboard as any)["#printProgressBar"]();
+   */
   #printProgressBar(): void {
-    const padBlank = () =>
+    // Helper to emit an empty framed row (kept as a local const for readability)
+    const emitFrameBlank = () =>
       this.#logFn(
         `${colors.blueCore}║${NetworkVisualization.pad(
           ' ',
@@ -2079,18 +2096,34 @@ export class DashboardManager implements IDashboardManager {
           ' '
         )}${colors.blueCore}║${colors.reset}`
       );
-    padBlank();
-    const bar = `Progress to exit: ${MazeVisualization.displayProgressBar(
-      this.#currentBest!.result.progress
-    )}`;
+
+    // Step 1: Top spacer
+    emitFrameBlank();
+
+    // Step 2: Defensive extraction of progress fraction from current best candidate
+    const rawProgressValue = this.#currentBest?.result?.progress ?? 0;
+    const parsedProgressFraction = Number(rawProgressValue);
+    const safeProgressFraction = Number.isFinite(parsedProgressFraction)
+      ? parsedProgressFraction
+      : 0;
+
+    // Step 3: Build readable progress bar text
+    const humanReadableBar = MazeVisualization.displayProgressBar(
+      safeProgressFraction
+    );
+    const progressLabel = `Progress to exit: ${humanReadableBar}`;
+
+    // Step 4: Frame and emit the progress label with consistent padding and color accents
     this.#logFn(
       `${colors.blueCore}║${NetworkVisualization.pad(
-        ' ' + colors.neonSilver + bar + colors.reset,
+        ' ' + colors.neonSilver + progressLabel + colors.reset,
         DashboardManager.FRAME_INNER_WIDTH,
         ' '
       )}${colors.blueCore}║${colors.reset}`
     );
-    padBlank();
+
+    // Step 5: Trailing spacer
+    emitFrameBlank();
   }
 
   reset(): void {

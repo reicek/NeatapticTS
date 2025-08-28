@@ -7,7 +7,7 @@
 
 <img src="https://cdn-images-1.medium.com/max/800/1*THG2__H9YHxYIt2sulzlTw.png" width="480"/>
 
-> The unofficial modern, typed evolution of **Neataptic** – focused on *clarity you can learn from* + *features you actually tweak*.
+> The unofficial modern, typed evolution of **Neataptic**.
 
 **NeatapticTS** is a TypeScript library for *evolving* neural networks (topology + weights) using a modern NEAT core plus opt‑in research extras: multi‑objective Pareto fronts, novelty & diversity pressure, adaptive complexity budgets, operator credit assignment, lineage & performance telemetry, mixed evolution + gradient fine‑tuning, and ONNX round‑trip export.
 

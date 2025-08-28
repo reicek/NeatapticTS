@@ -1,27 +1,9 @@
-/**
- * generate-bench-tables.ts
- *
- * Reads the unified benchmark artifact (benchmark.results.json) and emits two markdown table
- * snippets to STDOUT for easy inclusion in Memory_Optimization.md:
- *  1. Variant Delta Table (timings + bytes/conn)
- *  2. Node Heap Metrics Table (heapUsed/rss)
- *
- * Usage:
- *   npm run bench:tables > bench_tables.md
- *
- * Design notes:
- *  - No external dependencies (keep execution lightweight & CI friendly).
- *  - Gracefully degrades when fields missing (older artifact schema).
- *  - Extend later for variance/regression annotation summaries.
- */
 import fs from 'fs';
 import path from 'path';
-/** Pad / truncate value to fixed width for monospace block. */
 function cell(v, w) {
     const s = String(v ?? '');
     return s.length >= w ? s.slice(0, w) : s + ' '.repeat(w - s.length);
 }
-/** Format number with trimmed trailing zeros. */
 function fmtNum(n, digits = 4) {
     if (typeof n !== 'number' || !isFinite(n))
         return '';
