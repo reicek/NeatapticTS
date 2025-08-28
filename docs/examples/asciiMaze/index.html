@@ -26,8 +26,8 @@
   <div id="ascii-maze-status" aria-live="polite" style="margin-top:8px;color:#f88"></div>
   <!-- Deterministic script path (test environment -> docs assets) -->
   <script
-    src="../../../docs/assets/ascii-maze.bundle.js"
-    data-ascii-maze-root="../../../docs/assets/"
+  src="../../assets/ascii-maze.bundle.js"
+  data-ascii-maze-root="../../assets/"
     defer
     onload="(window.asciiMazeStart ? window.asciiMazeStart('ascii-maze-output') : (window.asciiMaze && window.asciiMaze.start && window.asciiMaze.start()))"
     onerror="document.getElementById('ascii-maze-status').textContent='Failed to load ascii-maze.bundle.js';"
