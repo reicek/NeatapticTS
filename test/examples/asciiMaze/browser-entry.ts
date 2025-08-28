@@ -4,7 +4,7 @@ import { DashboardManager } from './dashboardManager';
 import { EvolutionEngine } from './evolutionEngine';
 import { INetwork } from './interfaces';
 import { MazeGenerator } from './mazes';
-import { refineWinnerWithBackprop } from './refineWinner';
+import { NetworkRefinement } from './networkRefinement';
 
 /** Default host container id used when a string is supplied to `start`. */
 const DEFAULT_CONTAINER_ID = 'ascii-maze-output';
@@ -202,50 +202,133 @@ export async function start(
   const externalSignal = opts.signal;
 
   /**
-   * Compose the internal abort controller signal with an optional external signal.
-   * If the external signal aborts first we propagate that abort to the internal controller.
+   * Compose an AbortSignal that will abort when either the internal controller
+   * or an optional external signal aborts. This helper prefers modern
+   * composition via `AbortSignal.any` when available, and falls back to
+   * best-effort wiring for older or test environments (jsdom, polyfills).
    *
-   * @param maybeExternal - Optional external AbortSignal provided by the caller.
+   * @example
+   * // Create a composed signal that aborts when either source aborts
+   * const composed = composeAbortSignal(externalSignal);
+   * composed.addEventListener('abort', () => console.log('aborted'));
+   *
+   * @param externalSignalParam - Optional external AbortSignal provided by the caller.
+   *                              When omitted, the returned signal is the internal controller's signal.
    * @returns A signal that will abort when either the internal controller or the external signal aborts.
    */
-  const composeAbortSignal = (maybeExternal?: AbortSignal): AbortSignal => {
-    // Modern path: AbortSignal.any is available (2023+ browsers & recent Node) -> compose both.
-    if (maybeExternal) {
-      if ((maybeExternal as any).aborted) return maybeExternal;
-      if (typeof (AbortSignal as any).any === 'function') {
-        try {
-          return (AbortSignal as any).any([
-            maybeExternal,
-            internalController.signal,
-          ]);
-        } catch {
-          // fall through to manual wiring
-        }
+  const composeAbortSignal = (
+    externalSignalParam?: AbortSignal
+  ): AbortSignal => {
+    // Step 0: fast-path when no external signal supplied
+    if (!externalSignalParam) return internalController.signal;
+
+    // Convert to descriptive locals for clarity
+    const externalSignal = externalSignalParam as AbortSignal & {
+      aborted?: boolean;
+    };
+    const internalSignal = internalController.signal;
+
+    // Use a switch-style flow to replace chained else-if logic and keep branches explicit.
+    // We switch on `true` so each case is a predicate; this keeps intent clear and
+    // satisfies the requirement to use switch/case rather than else-if chains.
+    switch (true) {
+      // Case: external already aborted -> return it immediately (race fast-path)
+      case !!(externalSignal as any).aborted: {
+        return externalSignal;
       }
-      try {
-        maybeExternal.addEventListener(
-          'abort',
-          () => {
+
+      // Case: environment supports AbortSignal.any (modern browsers / Node 20+)
+      case typeof (AbortSignal as any).any === 'function': {
+        try {
+          // Prefer native composition when available for clarity & performance.
+          return (AbortSignal as any).any([externalSignal, internalSignal]);
+        } catch {
+          // If native composition throws, intentionally fall through to manual
+          // wiring below so listeners are still attached.
+        }
+        // fallthrough
+      }
+
+      // Default: manual best-effort wiring for older environments and test runners.
+      default: {
+        // Step: try to attach an event listener to propagate abort.
+        try {
+          externalSignal.addEventListener(
+            'abort',
+            () => {
+              // Isolate listener exceptions to avoid destabilizing callers.
+              try {
+                internalController.abort();
+              } catch {
+                /* ignore */
+              }
+            },
+            { once: true }
+          );
+        } catch {
+          // ignore event wiring errors (some polyfills / minimal DOMs may throw)
+        }
+
+        // Step: defensive fallback - attempt to set `onabort` if supported.
+        try {
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-ignore - defensive set for environments lacking addEventListener
+          (externalSignal as any).onabort = () => {
             try {
               internalController.abort();
             } catch {
               /* ignore */
             }
-          },
-          { once: true }
-        );
-      } catch {
-        // ignore event wiring errors
+          };
+        } catch {
+          // ignore
+        }
+
+        // Step: microtask check to catch races where the external signal aborted
+        // before wiring handlers. queueMicrotask is preferred but may not exist
+        // in some minimal runtimes, so guard defensively.
+        try {
+          queueMicrotask(() => {
+            if ((externalSignal as any).aborted) {
+              try {
+                internalController.abort();
+              } catch {
+                /* ignore */
+              }
+            }
+          });
+        } catch {
+          // queueMicrotask may not be available in some environments; ignore.
+        }
       }
     }
-    return internalController.signal;
+
+    // Return the internal controller's signal as the composed signal when native
+    // composition isn't available. Manual wiring will propagate external aborts.
+    return internalSignal;
   };
+
+  // Create done promise early so immediate-abort handling (below) can resolve it.
+  let resolveDone: (() => void) | undefined;
+  const donePromise = new Promise<void>((resolve) => (resolveDone = resolve));
 
   const combinedSignal = composeAbortSignal(externalSignal);
   let running = true;
-  // Immediate abort reaction: ensure handle.isRunning() reflects abort promptly (before
-  // heavy generation loop completes). This decouples external cancellation latency from
-  // potentially long per-generation work inside EvolutionEngine, improving test robustness.
+
+  // Immediate abort reaction: if the combined signal is already aborted (race),
+  // reflect the cancelled state immediately so callers polling `isRunning()` see
+  // the updated state without waiting for event listeners to be attached.
+  if (combinedSignal.aborted) {
+    cancelled = true;
+    running = false;
+    try {
+      resolveDone?.();
+    } catch {
+      /* ignore */
+    }
+  }
+
+  // Ensure we capture future abort events when they occur.
   try {
     combinedSignal.addEventListener(
       'abort',
@@ -269,8 +352,6 @@ export async function start(
 
   // Progressive scaling state
   let currentDimension = INITIAL_MAZE_DIMENSION;
-  let resolveDone: (() => void) | undefined;
-  const donePromise = new Promise<void>((resolve) => (resolveDone = resolve));
 
   // --- Cross-maze curriculum transfer state ---
   // Holds the best network from the most recently completed evolution run.
@@ -331,7 +412,9 @@ export async function start(
       try {
         const bestNet = (result as any)?.bestNetwork as INetwork | undefined;
         if (bestNet) {
-          const refined = refineWinnerWithBackprop(bestNet as any);
+          const refined = NetworkRefinement.refineWinnerWithBackprop(
+            bestNet as any
+          );
           previousBestNetwork = (refined as any) || bestNet;
         }
       } catch {

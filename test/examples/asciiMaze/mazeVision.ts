@@ -164,9 +164,6 @@ export class MazeVision {
     if (!MazeVision.#isWithinBounds(encodedMaze, agentX, agentY))
       return MazeVision.#neutralInput();
 
-    const opennessHorizon = MazeVision.#OPENNESS_HORIZON;
-    const compassHorizon = MazeVision.#COMPASS_HORIZON;
-
     // Step 1: Local symbolic constants. These provide readable names for
     // direction indices used throughout the function and a local alias for the
     // number of directions to avoid repeated private-field access inside loops.
@@ -254,9 +251,22 @@ export class MazeVision {
         rawDistance! < currentCellDist!
       ) {
         const pathLength = 1 + (rawDistance as number);
-        neighborPath[directionIndex] =
-          pathLength <= opennessHorizon ? pathLength : Infinity;
-        neighborOpen[directionIndex] = 0;
+        if (pathLength <= MazeVision.#OPENNESS_HORIZON) {
+          // Path is within openness horizon. If it still exceeds the
+          // compass horizon, mark openness as neutral so very long but
+          // improving paths aren't treated as closed.
+          neighborPath[directionIndex] = pathLength;
+          neighborOpen[directionIndex] =
+            pathLength > MazeVision.#COMPASS_HORIZON
+              ? MazeVision.#PROGRESS_NEUTRAL
+              : 0;
+        } else {
+          // Path beyond openness horizon: don't mark as closed (0);
+          // use neutral signal so the agent doesn't incorrectly assume
+          // no information for very long paths.
+          neighborPath[directionIndex] = Infinity;
+          neighborOpen[directionIndex] = MazeVision.#PROGRESS_NEUTRAL;
+        }
       } else {
         neighborPath[directionIndex] = Infinity;
         neighborOpen[directionIndex] = 0;
@@ -341,7 +351,7 @@ export class MazeVision {
           const pathLength = neighborCachedRaw + 1;
           if (
             pathLength < minCompassPathLength &&
-            pathLength <= compassHorizon
+            pathLength <= MazeVision.#COMPASS_HORIZON
           ) {
             minCompassPathLength = pathLength;
             bestDirection = directionIndex;

@@ -39,6 +39,26 @@ export class MazeUtils {
     [-1, 0],
   ];
 
+  // Shared, resizable queue buffer used by BFS to avoid allocating a new
+  // Int32Array on each invocation. This is a simple pooling strategy: the
+  // buffer grows as needed and is reused for subsequent calls.
+  static #QUEUE_BUFFER: Int32Array = new Int32Array(0);
+
+  /**
+   * Ensure the internal shared queue buffer has at least `minLength` capacity.
+   * Returns the buffer (may be newly allocated). Maintaining a shared buffer
+   * reduces GC churn in hot code paths that repeatedly run BFS on many mazes.
+   */
+  static #getQueueBuffer(minLength: number): Int32Array {
+    if (MazeUtils.#QUEUE_BUFFER.length < minLength) {
+      // Grow to the next power-of-two for exponential growth behaviour.
+      let grownCapacity = MazeUtils.#QUEUE_BUFFER.length || 1;
+      while (grownCapacity < minLength) grownCapacity <<= 1;
+      MazeUtils.#QUEUE_BUFFER = new Int32Array(grownCapacity);
+    }
+    return MazeUtils.#QUEUE_BUFFER;
+  }
+
   /**
    * Convert a coordinate pair into the canonical key string `"x,y"`.
    *
@@ -214,117 +234,142 @@ export class MazeUtils {
   }
 
   /**
-   * Computes the shortest path distance between two points in the maze using BFS.
-   * Returns Infinity if no path exists.
-   * @param encodedMaze - 2D array representation of the maze.
-   * @param start - [x, y] start position.
-   * @param goal - [x, y] goal position.
-   * @returns Shortest path length (number of steps), or Infinity if unreachable.
+   * Compute the Manhattan shortest-path length between two cells using a
+   * breadth-first search (BFS).
+   *
+   * This implementation is allocation-friendly and optimized for hot paths:
+   * - Flattens the maze into a typed Int8Array for O(1) cell checks.
+   * - Uses an Int32Array distances buffer with sentinel -1 for unvisited cells.
+   * - Reuses a shared Int32Array queue buffer (pool) to avoid per-call allocations.
+   *
+   * @example
+   * const encoded = MazeUtils.encodeMaze(['S..','.#E','...']);
+   * const start = MazeUtils.findPosition(['S..','.#E','...'], 'S');
+   * const exit = MazeUtils.findPosition(['S..','.#E','...'], 'E');
+   * const steps = MazeUtils.bfsDistance(encoded, start, exit); // => number | Infinity
+   *
+   * @param encodedMaze - 2D numeric maze encoding where -1 are walls and other
+   *  values are walkable. Array shape is [rows][cols].
+   * @param start - Start coordinates as [x, y].
+   * @param goal - Goal coordinates as [x, y].
+   * @returns Number of steps in the shortest path, or Infinity when unreachable.
    */
   static bfsDistance(
     encodedMaze: ReadonlyArray<ReadonlyArray<number>>,
     start: readonly [number, number],
     goal: readonly [number, number]
   ): number {
-    // Step 1: Validate coordinates and prepare grid metadata.
+    // --- Step 1: validate inputs and derive grid metadata ---
     const [startX, startY] = start;
     const [goalX, goalY] = goal;
-    const height = encodedMaze.length;
-    const width = encodedMaze[0].length;
+    const rowCount = encodedMaze.length;
+    const colCount = encodedMaze[0].length;
 
-    // Bounds/sanity checks: ensure start/goal are inside the grid.
+    // Ensure start and goal are within bounds; return Infinity for invalid coords.
     if (
       startY < 0 ||
-      startY >= height ||
+      startY >= rowCount ||
       startX < 0 ||
-      startX >= width ||
+      startX >= colCount ||
       goalY < 0 ||
-      goalY >= height ||
+      goalY >= rowCount ||
       goalX < 0 ||
-      goalX >= width
-    )
+      goalX >= colCount
+    ) {
       return Infinity;
+    }
 
-    // If start or goal is a wall, unreachable immediately.
-    if (encodedMaze[startY][startX] === -1 || encodedMaze[goalY][goalX] === -1)
+    // If either start or goal is a wall, there is no path.
+    if (
+      encodedMaze[startY][startX] === -1 ||
+      encodedMaze[goalY][goalX] === -1
+    ) {
       return Infinity;
+    }
 
-    // Quick success case.
+    // Trivial same-cell case.
     if (startX === goalX && startY === goalY) return 0;
 
-    // Step 2: Flatten the maze into a single typed array for O(1) neighbor checks.
-    // -1 => wall, 0 => walkable. This avoids repeated 2D indexing in hotspots.
-    const cellCount = height * width;
-    const flatMaze = new Int8Array(cellCount);
-    for (let y = 0, dest = 0; y < height; y++) {
-      const row = encodedMaze[y];
-      for (let x = 0; x < width; x++, dest++) {
-        flatMaze[dest] = row[x] === -1 ? -1 : 0;
+    // --- Step 2: flatten maze into an Int8Array for fast neighbor checks ---
+    const cellCount = rowCount * colCount;
+    const flatWalkable = new Int8Array(cellCount);
+    for (let rowIndex = 0, flatWrite = 0; rowIndex < rowCount; rowIndex++) {
+      const row = encodedMaze[rowIndex];
+      for (let colIndex = 0; colIndex < colCount; colIndex++, flatWrite++) {
+        // -1 denotes wall; anything else is walkable (0).
+        flatWalkable[flatWrite] = row[colIndex] === -1 ? -1 : 0;
       }
     }
 
-    // Step 3: Prepare typed structures for BFS: distances and a fixed-size queue.
-    // distances: -1 = unvisited, >=0 = distance from start.
+    // --- Step 3: distances buffer (-1 = unvisited) ---
     const distances = new Int32Array(cellCount);
-    for (let i = 0; i < cellCount; i++) distances[i] = -1;
+    for (let fillIndex = 0; fillIndex < cellCount; fillIndex++)
+      distances[fillIndex] = -1;
 
-    const startIndex = startY * width + startX;
-    const goalIndex = goalY * width + goalX;
+    const startFlatIndex = startY * colCount + startX;
+    const goalFlatIndex = goalY * colCount + goalX;
+    distances[startFlatIndex] = 0;
 
-    distances[startIndex] = 0;
+    // --- Step 4: queue (shared buffer) and BFS core loop ---
+    // Borrow a shared Int32Array buffer large enough for the grid.
+    const queue = MazeUtils.#getQueueBuffer(cellCount);
+    let queueHead = 0;
+    let queueTail = 0;
+    queue[queueTail++] = startFlatIndex;
 
-    // Preallocated queue (circular semantics not required because each cell is enqueued once).
-    const queue = new Int32Array(cellCount);
-    let head = 0;
-    let tail = 0;
-    queue[tail++] = startIndex;
+    // Precompute vertical offsets for neighbors on the flattened grid.
+    const northOffset = -colCount;
+    const southOffset = colCount;
 
-    // Offsets for the four cardinal directions on the flattened grid.
-    const northOffset = -width;
-    const southOffset = width;
+    // BFS: each cell is visited at most once, so this loop is O(cellCount).
+    while (queueHead < queueTail) {
+      const currentFlatIndex = queue[queueHead++];
+      const currentDistance = distances[currentFlatIndex];
 
-    while (head < tail) {
-      const currentIndex = queue[head++];
-      const currentDistance = distances[currentIndex];
+      // Early exit: if we reached the goal return its distance now.
+      if (currentFlatIndex === goalFlatIndex) return currentDistance;
 
-      // Early goal check.
-      if (currentIndex === goalIndex) return currentDistance;
+      // Compute 2D coordinates from the flattened index.
+      const currentRow = (currentFlatIndex / colCount) | 0; // fast floor
+      const currentCol = currentFlatIndex - currentRow * colCount;
 
-      const currentY = (currentIndex / width) | 0; // fast floor for positive ints
-      const currentX = currentIndex - currentY * width;
-
-      // Process four cardinal neighbors via a small switch to centralize enqueue logic
-      // and avoid duplicating the visit/enqueue checks.
-      for (let dir = 0; dir < 4; dir++) {
-        let neighborIndex: number;
-        switch (dir) {
+      // Examine cardinal neighbors using a small switch to centralize bounds
+      // checks and enqueue logic (keeps code generation compact and JIT-friendly).
+      for (let direction = 0; direction < 4; direction++) {
+        let neighborFlatIndex: number;
+        switch (direction) {
           case 0: // North
-            if (currentY === 0) continue;
-            neighborIndex = currentIndex + northOffset;
+            if (currentRow === 0) continue;
+            neighborFlatIndex = currentFlatIndex + northOffset;
             break;
           case 1: // East
-            if (currentX + 1 >= width) continue;
-            neighborIndex = currentIndex + 1;
+            if (currentCol + 1 >= colCount) continue;
+            neighborFlatIndex = currentFlatIndex + 1;
             break;
           case 2: // South
-            if (currentY + 1 >= height) continue;
-            neighborIndex = currentIndex + southOffset;
+            if (currentRow + 1 >= rowCount) continue;
+            neighborFlatIndex = currentFlatIndex + southOffset;
             break;
           default:
             // West
-            if (currentX === 0) continue;
-            neighborIndex = currentIndex - 1;
+            if (currentCol === 0) continue;
+            neighborFlatIndex = currentFlatIndex - 1;
         }
 
-        if (flatMaze[neighborIndex] !== -1 && distances[neighborIndex] === -1) {
-          distances[neighborIndex] = currentDistance + 1;
-          if (neighborIndex === goalIndex) return currentDistance + 1;
-          queue[tail++] = neighborIndex;
+        // If the neighbor is walkable and unvisited, mark distance and enqueue.
+        if (
+          flatWalkable[neighborFlatIndex] !== -1 &&
+          distances[neighborFlatIndex] === -1
+        ) {
+          const neighborDistance = currentDistance + 1;
+          distances[neighborFlatIndex] = neighborDistance;
+          if (neighborFlatIndex === goalFlatIndex) return neighborDistance;
+          queue[queueTail++] = neighborFlatIndex;
         }
       }
     }
 
-    // Goal not reachable
+    // Goal not reachable from start.
     return Infinity;
   }
 

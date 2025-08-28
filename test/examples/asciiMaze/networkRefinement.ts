@@ -8,6 +8,21 @@ import Network from '../../../src/architecture/network'; // Corrected import for
  * using supervised backpropagation after neuro-evolution.
  */
 export class NetworkRefinement {
+  // Pooled scratch buffers to avoid allocating arrays for each training example.
+  static #INPUT_SCRATCH: Float32Array = new Float32Array(0);
+  static #OUTPUT_SCRATCH: Float32Array = new Float32Array(0);
+
+  static #ensureScratchCapacity(
+    scratch: Float32Array,
+    minLength: number
+  ): Float32Array {
+    if (scratch.length < minLength) {
+      let capacity = scratch.length || 1;
+      while (capacity < minLength) capacity <<= 1;
+      return new Float32Array(capacity);
+    }
+    return scratch;
+  }
   /**
    * Refines a winning neural network using backpropagation.
    *
@@ -36,22 +51,19 @@ export class NetworkRefinement {
      */
     const networkToRefine = winner.clone();
 
+    // Ensure pooled scratch buffers have sufficient capacity when used below.
+
     /**
      * Training set: maps idealized sensory states to optimal actions.
-     * Each input/output pair represents a scenario the agent should learn.
-     * - input: [N, E, S, W, ...other sensors]
-     * - output: [N, E, S, W] (one-hot for direction)
      */
     const trainingSet: ReadonlyArray<{
       input: readonly number[];
       output: readonly number[];
     }> = [
-      // If vision indicates North is clear (1,0,0,0), output should be North (1,0,0,0)
-      { input: [1, 0, 0, 0, 0.5, 0.5, 0.5, 0.5], output: [1, 0, 0, 0] }, // Move North
-      { input: [0, 1, 0, 0, 0.5, 0.5, 0.5, 0.5], output: [0, 1, 0, 0] }, // Move East
-      { input: [0, 0, 1, 0, 0.5, 0.5, 0.5, 0.5], output: [0, 0, 1, 0] }, // Move South
-      { input: [0, 0, 0, 1, 0.5, 0.5, 0.5, 0.5], output: [0, 0, 0, 1] }, // Move West
-      // Add more nuanced scenarios if necessary
+      { input: [0, 1, 0, 0, 0, 0.7], output: [1, 0, 0, 0] }, // Move North
+      { input: [0.25, 0, 1, 0, 0, 0.7], output: [0, 1, 0, 0] }, // Move East
+      { input: [0.5, 0, 0, 1, 0, 0.7], output: [0, 0, 1, 0] }, // Move South
+      { input: [0.75, 0, 0, 0, 1, 0.7], output: [0, 0, 0, 1] }, // Move West
     ];
 
     /**
@@ -67,13 +79,36 @@ export class NetworkRefinement {
     // Perform backpropagation training for the specified number of iterations
     for (let iter = 0; iter < iterations; iter++) {
       for (const { input, output } of trainingSet) {
+        // Prepare pooled scratch buffers for this sample to avoid allocations.
+        NetworkRefinement.#INPUT_SCRATCH = NetworkRefinement.#ensureScratchCapacity(
+          NetworkRefinement.#INPUT_SCRATCH,
+          input.length
+        );
+        NetworkRefinement.#OUTPUT_SCRATCH = NetworkRefinement.#ensureScratchCapacity(
+          NetworkRefinement.#OUTPUT_SCRATCH,
+          output.length
+        );
+
+        for (let i = 0; i < input.length; i++)
+          NetworkRefinement.#INPUT_SCRATCH[i] = input[i];
+        for (let i = 0; i < output.length; i++)
+          NetworkRefinement.#OUTPUT_SCRATCH[i] = output[i];
+
+        // Activate the network with the input sample (best-effort).
+        try {
+          (networkToRefine as any).activate(NetworkRefinement.#INPUT_SCRATCH);
+        } catch (e) {
+          if ((globalThis as any).DEBUG)
+            console.warn('Activation failed during refinement:', e);
+        }
+
         // Use a small defensive wrapper so refinement remains best-effort and
         // any unexpected propagation errors don't abort the overall process.
         NetworkRefinement.#safePropagate(
           networkToRefine,
           learningRate,
           momentum,
-          output
+          NetworkRefinement.#OUTPUT_SCRATCH
         );
       }
     }
@@ -90,12 +125,13 @@ export class NetworkRefinement {
     net: Network,
     learningRate: number,
     momentum: number,
-    target: readonly number[]
+    target: ArrayLike<number>
   ): boolean {
     try {
       // `propagate` is a concrete implementation detail on `Network` instances.
       // Keep the original call signature (learningRate, momentum, clear, target).
-      (net as any).propagate(learningRate, momentum, true, target);
+      // Convert array-like to a plain array once here (centralized allocation).
+      (net as any).propagate(learningRate, momentum, true, Array.from(target));
       return true;
     } catch (e) {
       // Best-effort: swallow errors but keep optional debugging available via console when needed.
