@@ -1,6 +1,6 @@
 # ONNX Export / Import Plan for NeatapticTS
 
-_Last updated: 2025-08-17 (Phase 4 progressing: Conv2D + Pool + sharing validation + heuristic conv inference metadata + flatten-after-pool option; Phase 3 Step 6 deep tests still pending)_
+_Last updated: 2025-09-06 (Phase 4 initial increment complete; Phase 3 deep testing finalizing)_
 
 ## 0. Purpose
 
@@ -17,7 +17,7 @@ Completed (Phase 0):
 - Layer inference & validation: detects non-layered or missing full connectivity; enforces homogeneous activation per non-input layer.
 - Supported activations mapped to ONNX: ReLU, Tanh, Sigmoid (Logistic), Identity (fallback with warning for unknown custom activations).
 - Parameter export: weights + biases as ONNX initializers (float32 scalars in `float_data`).
-- Graph structure assembly with a pair of nodes per layer transition (Gemm + Activation) — currently activation node is emitted before Gemm (historical project ordering, but non-standard for ONNX).
+- Graph structure assembly with a pair of nodes per layer transition (Gemm + Activation). The initial implementation emitted nodes in a non-standard `Activation -> Gemm` order, which was corrected in Phase 1 to the standard `Gemm -> Activation` sequence.
 - Bias handling integrated in Gemm (alpha=1, beta=1, transB=1 attributes included).
 - Single-layer perceptron edge case handled (inputs → outputs only).
 
@@ -85,9 +85,7 @@ Baseline IMPLEMENTED (extended):
 
 1. Self-recurrence support for ANY hidden layer (one or multiple) in single-step form when `allowRecurrent && recurrentSingleStep`.
 
-- For each recurrent hidden layer `k` a previous-state input is added:
-  - First recurrent layer: `hidden_prev`
-  - Subsequent recurrent layers: `hidden_prev_l{k}`
+- For each recurrent hidden layer `k` a previous-state input is added with a consistent naming convention: `hidden_prev_l{k}`.
 - Forward path per recurrent layer: Gemm (`gemm_in_l{k}`) + recurrent Gemm (`gemm_rec_l{k}` using `R{k-1}`) -> Add (`add_recurrent_l{k}`) -> Activation (`act_l{k}`).
 - Recurrent weight matrices `Rk` currently diagonal (self-connections only) but sized for future dense intra-layer recurrence.
 - Metadata `recurrent_single_step` now stores JSON array of recurrent layer indices (1-based) instead of boolean.
@@ -114,7 +112,7 @@ LSTM / GRU Heuristic Sub-plan Progress:
 3. ONNX Node Emission – COMPLETED (emits experimental single-step `LSTM` / `GRU` nodes alongside unfused Gemm path; no pruning yet).
 4. Metadata & Fallback – COMPLETED (`lstm_emitted_layers`, `gru_emitted_layers`, `rnn_pattern_fallback`).
 5. Import Path Extension – COMPLETED (reconstructs Layer.lstm / Layer.gru using emitted tensors; best-effort, silent skip on mismatch).
-6. Testing – IN PROGRESS (to be added now):
+6. Testing – FINALIZING (deep parity tests to be integrated):
 
 - Unit tests for LSTM/GRU emission presence (initializers + node types) under controlled synthetic layer partitions.
 - Round-trip reconstruction tests verifying gate weight & bias mapping fidelity within tolerance (1e-9) and self-connection restoration.
@@ -194,7 +192,7 @@ Next Planned Increment (proposed order):
 3.  Heuristic Conv auto-promotion (feature-flagged): if sharing validation passes (or small layer), emit Conv instead of Gemm, preserving a fallback path during transition.
 4.  Multi-channel heuristic extension: detect repeated kernel tiles across channels, infer inChannels > 1.
 5.  Negative tests for flatten + pooling interplay (ensure metadata only – forward outputs unchanged vs baseline).
-6.  Begin deeper recurrent parity tests (Phase 3 Step 6) in parallel once spatial metadata foundation stable.
+6.  Finalize and integrate deeper recurrent parity tests (Phase 3 Step 6) in parallel with spatial feature development.
 
 ### Phase 5 (Advanced Graph Constructs)
 
@@ -274,8 +272,8 @@ Backward compatibility: default options reproduce current behavior except correc
 
 ## 11. Short-Term Action Items (Post Phase 2 Completion)
 
-1. Link schema doc from root README & docs index. (Pending)
-2. Provide CLI example for exporting an evolved genome (README snippet). (Pending)
+1. Link schema doc from root README & docs index. (COMPLETED - Link now present in `README.md`)
+2. Provide CLI example for exporting an evolved genome (README snippet). (COMPLETED - Example now present in `README.md`)
 3. Property-based randomized topology tests (1–6 hidden layers; varying sparsity & mixed activations) ensure import/export fidelity. (Planned)
 4. Fusion optimization pass for decomposed layers (homogeneity collapse). (Planned)
 5. Sparse representation design (`sparseFormat` CSR draft spec). (Planned)

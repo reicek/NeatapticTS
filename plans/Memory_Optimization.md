@@ -1,10 +1,6 @@
 # Memory Optimization Plan (Multi-Layer Strategy for Very Large Networks)
 
-Goal: Enable construction, evolution, and training of networks scaling toward **10^6+ (stretch 10^7)** connections on commodity JS/TS runtimes across **Node** and **Browser** environments while preserving performance, responsiveness, and determinism. This revision separates **Common Core Optimizations** (portable) from **Targeted Environment Optimizations** (Node-only or Browser-only) and aligns later phases explicitly with **Hyper MorphoNEAT** (indirect encodings, morphogenesis, caching). All optimizations follow pay‑for‑use: zero (or near-zero) overhead when disabled.
-
----
-
-## Guiding Principles
+Goal: Enable construction, evolution, and training of networks scaling toward **10^6+ (stretch 10^7)** connections on commodity JS/TS runtimes across **Node** and \*_Browser_## Guiding Principles
 
 1. Pay-for-use: No overhead unless feature enabled (flags + lazy allocation).
 2. Reuse & Pool: Prefer object pooling / typed array slabs over many small objects (already partially implemented for `Connection`).
@@ -14,10 +10,11 @@ Goal: Enable construction, evolution, and training of networks scaling toward **
 6. Environment Awareness: Node path may adopt heavier instrumentation & persistent caches; Browser path emphasizes chunking, responsiveness, and quota safety.
 7. Hyper Alignment: Memory layers anticipate Hyper MorphoNEAT phases (indirect generation, morphogenesis churn, phenotype/adjacency caches).
 8. Transparent API: All environment-specific memory optimizations (Node vs Browser, slabs, pooling, precision) remain behind a stable public memory/network API; callers never branch on environment—feature flags + `memoryStats()` abstraction handle differences.
+9. Performance Trade-off Management: Acknowledge that initial memory optimizations (like instrumentation and slab packing) may introduce temporary performance overhead. The plan must track these trade-offs and ensure that subsequent optimizations (e.g., caching, sparsity) deliver a net performance gain at scale.
 
-> Build Baseline Update (Aug 2025): TypeScript/webpack target pinned to **ES2023** (previously floating `ESNext`) to ensure reproducible emitted output and educational clarity. Modern features beyond ES2023 may still appear behind feature flags with graceful degradation or transpilation guidance.
+> Build Baseline Update (Q3 2025): TypeScript/webpack target pinned to **ES2023** (previously floating `ESNext`) to ensure reproducible emitted output and educational clarity. Modern features beyond ES2023 may still appear behind feature flags with graceful degradation or transpilation guidance.
 
-> Dist-Only Benchmark Pivot (Aug 2025): The benchmarking infrastructure no longer performs src vs dist variant comparisons. Only the built `dist` bundle metrics are recorded. Historical entries with dual-mode deltas persist in the rolling history until aged out (≤10 snapshots). This reduces noise and maintenance; future re-introduction of a second variant will only occur if a materially different optimized production build (treeshaken/minified) diverges behaviorally or structurally from the reference `dist` artifact.
+> Dist-Only Benchmark Pivot (Q3 2025): The benchmarking infrastructure no longer performs src vs dist variant comparisons. Only the built `dist` bundle metrics are recorded. Historical entries with dual-mode deltas persist in the rolling history until aged out (≤10 snapshots). This reduces noise and maintenance; future re-introduction of a second variant will only occur if a materially different optimized production build (treeshaken/minified) diverges behaviorally or structurally from the reference `dist` artifact.
 
 ---
 
@@ -39,12 +36,14 @@ Implications: Browser emphasizes **cooperative scheduling, micro-chunk allocatio
 
 ## Target Metrics (Refine After Baseline Measurement)
 
-| Metric                                        | Baseline (TBD) | Target Phase | Goal                              |
-| --------------------------------------------- | -------------- | ------------ | --------------------------------- |
-| Avg bytes / active connection                 | measure        | 4            | -25% vs baseline                  |
-| Peak heap growth per 100k added connections   | measure        | 5            | < 12 MB                           |
-| GC pause impact (allocation-heavy evolutions) | measure        | 6            | -30% vs baseline                  |
-| Phenotype rebuild allocation churn            | measure        | 7            | amortized O(1) per edge via reuse |
+| Metric                                        | Baseline (Post-Phase 0)  | Target Phase | Goal                              |
+| --------------------------------------------- | ------------------------ | ------------ | --------------------------------- |
+| Avg bytes / active connection                 | ~64-69                   | 4            | -25% vs baseline (via sparsity)   |
+| Peak heap growth per 100k added connections   | TBD (measure in Phase 4) | 5            | < 12 MB                           |
+| GC pause impact (allocation-heavy evolutions) | TBD (measure in Phase 6) | 6            | -30% vs baseline                  |
+| Phenotype rebuild allocation churn            | TBD (measure in Phase 7) | 7            | amortized O(1) per edge via reuse |
+
+Note on Bytes/Connection: The baseline of ~64 bytes/connection reflects the overhead of individual JavaScript objects. The slab packing in Phase 3 was designed to change the _memory layout_ to enable future gains but did not reduce the _data payload_ itself, hence the flat metric. The targeted 25% reduction is contingent on **Phase 4 (Sparsity)**, where connections are selectively pruned, directly reducing the average memory cost across the network.
 
 ### Additional Hyper-Specific Metrics (Introduced Once Hyper Phases Land)
 
@@ -91,6 +90,7 @@ Each phase notes: (C) Common, (N) Node-specific, (B) Browser-specific, (H) Hyper
 Purpose: Establish reproducible dist‑only performance & memory baseline plus variance framework to support later optimizations.
 
 Key Deliverables:
+
 - Dist-only benchmark artifact (JSON): baseline, variantRaw (dist raw), aggregated, variance, history (≤10), meta, fieldAudit, warnings.
 - Deterministic seeding, warm‑up discard, adaptive forward iteration counts, IQR (1.5) outlier filtering.
 - Field audit (enumerable keys) tracking structural slimming impact.
@@ -101,7 +101,7 @@ Key Deliverables:
 Representative Final Baseline (pre-pooling/slab) (dist snapshot – earlier Phase 0 run):
 
 | Size | buildMsMean | fwdAvgMsMean | bytesPerConnMean |
-|------|-------------|--------------|------------------|
+| ---- | ----------- | ------------ | ---------------- |
 | 1k   | ~2          | ~0.4         | 69               |
 | 10k  | ~8–12       | ~3–4         | 65               |
 | 50k  | ~40–46      | ~4–7         | 65               |
@@ -109,11 +109,13 @@ Representative Final Baseline (pre-pooling/slab) (dist snapshot – earlier Phas
 | 200k | ~149–170    | ~19–26       | 64               |
 
 Outcomes:
+
 - Plateau bytes/conn ≈64–69 (object overhead dominates; validates need for pooling/slab path).
 - Variance still > target at larger scales → auto escalation deferred to Phase 2.
 - Artifact schema stable; foundation ready for pooling, slab packing and future gating.
 
 Carry-Over to Phase 2:
+
 - Variance auto escalation (adaptive repeats).
 - Browser parity memory test (defer until CV stabilized).
 - Optional production optimized build (only if a materially different bundle path is introduced).
@@ -123,11 +125,13 @@ Carry-Over to Phase 2:
 Purpose: Reduce per-object overhead & lock in structural introspection before deeper memory model changes.
 
 Slimming Actions:
+
 - Connection virtualization: neutral gain & gater removed from enumerable set.
 - Bitfield `_flags` (enabled, dropConnect mask, hasGater) reduced Connection enumerable keys to 9 (target maintained).
 - Canonical layout documented (guards hidden class stability & future WASM alignment).
 
 Instrumentation Enhancements:
+
 - Regression annotation (informational timing deltas).
 - History retention policy (≤10 snapshots) with provenance (dist bundle bytes + sha256 prefix).
 - Variance tracking (CV%) persisted; gating logic deferred until stability.
@@ -135,19 +139,21 @@ Instrumentation Enhancements:
 Final Phase 1 Metrics (dist snapshot):
 | Size | buildMsMean | fwdAvgMsMean | bytesPerConnMean | Samples |
 |------|-------------|--------------|------------------|---------|
-| 1k   | 1.99        | 0.37         | 69               | 1       |
-| 10k  | 7.95        | 3.64         | 65               | 1       |
-| 50k  | 45.40       | 3.91         | 65               | 1       |
-| 100k | 62.89       | 9.71         | 64               | 7       |
-| 200k | 149.08      | 19.66        | 64               | 7       |
+| 1k | 1.99 | 0.37 | 69 | 1 |
+| 10k | 7.95 | 3.64 | 65 | 1 |
+| 50k | 45.40 | 3.91 | 65 | 1 |
+| 100k | 62.89 | 9.71 | 64 | 7 |
+| 200k | 149.08 | 19.66 | 64 | 7 |
 
 Achievements:
+
 - Connection enumerable keys ≤9 (goal met).
 - Deterministic reproducibility baseline in place.
 - NodePool skeleton prepared (no network integration yet at end of Phase 1).
 - Bytes/connection stable (pre-slab reference).
 
 Deferred / Hand-off to Phase 2:
+
 - Variance stabilization (<7% CV at 100k & 200k).
 - Further slimming (node error SoA) scheduled for Phase 3 (slab introduction).
 - Enforcement gate (fail on Connection key regression) postponed until post-pooling variance stabilization.
@@ -155,6 +161,7 @@ Deferred / Hand-off to Phase 2:
 ### Phase 2 – Node Pooling & Governance (Finalized – COMPLETE)
 
 Completion Summary:
+
 - Pool integration (construction, addNodeBetween, remove()) behind enableNodePooling flag.
 - Release on remove with defensive swallow.
 - memoryStats() exposes pools.nodePool.
@@ -167,19 +174,21 @@ Completion Summary:
 Final Stress Metrics (representative run):
 | recycledRatio | highWaterMarkTailΔ | Thresholds | Status |
 |---------------|--------------------|------------|--------|
-| ~0.66         | 0                  | ≥0.5 / ≤2  | PASS   |
+| ~0.66 | 0 | ≥0.5 / ≤2 | PASS |
 
 Notes:
+
 - Active variance stabilization provides statistically reliable baseline ahead of Phase 3 slab packing comparisons.
 - Next tasks shift entirely to slab packing + bytes/conn reductions without needing to revisit repeat governance.
 
 Proceeding Next: Phase 3 – slab packing prototype with stable pooling + variance foundations.
 
 Achievements (Quantitative Metrics):
+
 - Large-size variance escalation engaged both monitored sizes to cap (max repeats=9) due to CV above 7% target; escalation trail recorded (3 events per size: 2 escalate + 1 stop each).
 - Post‑escalation variance (cap reached – still above target, informing Phase 3 optimization focus):
-   - 100k: build CV 9.53%, forward CV 21.13% (samples=9).
-   - 200k: build CV 11.79%, forward CV 23.11% (samples=9).
+  - 100k: build CV 9.53%, forward CV 21.13% (samples=9).
+  - 200k: build CV 11.79%, forward CV 23.11% (samples=9).
 - Build throughput (dist, escalated means): 100k buildMsMean ≈82.54ms; 200k ≈172.39ms.
 - Forward average latency (dist, escalated means): 100k fwdAvgMsMean ≈15.98ms; 200k ≈24.07ms.
 - Bytes per connection plateau preserved at 64 (reference pre‑slab target baseline maintained; no regression introduced by pooling/escalation harness adjustments).
@@ -188,6 +197,7 @@ Achievements (Quantitative Metrics):
 - Determinism parity tests pass with pooling enabled (forward outputs identical to non‑pooled path under seeded RNG).
 
 Interpretation & Next Focus:
+
 - Elevated forward CV ( >20%) at large sizes suggests remaining noise sources (allocation jitter, warm-cache effects) that slab packing + reduced object churn should attenuate.
 - Maintaining bytes/conn plateau while adding governance instrumentation validates pay‑for‑use principle (no incidental bloat).
 - Pool reuse efficiency metrics will become meaningful once Phase 3 introduces slab-backed connection packing and more aggressive mutation/prune cycles; present zeroed stats serve as baseline.
@@ -197,11 +207,13 @@ Interpretation & Next Focus:
 Scope Files: `src/architecture/network.slab.ts`, `src/architecture/network.ts`
 
 Objectives:
+
 - Pack connection data into Structure‑of‑Arrays slabs (weights, flags, optional gains, optional plasticity) with geometric growth & pooling.
 - Preserve forward correctness (parity) and enable a fast CSR activation path with pay‑for‑use optional slabs.
 - Instrument memory (fragmentation, pooled reuse, alloc stats) without inflating bytes/connection when features unused.
 
 Implemented Features (consolidated):
+
 1. Geometric capacity growth (Node 1.75×, Browser 1.25×) with slab reuse and fragmentation accounting.
 2. Bit‑packed connection flags (enabled, dropConnect mask, gater, plastic) in a `Uint8Array` slab.
 3. Optional gain slab (`_connGain`) allocated only on first non‑neutral gain; released when all revert to 1.
@@ -221,24 +233,25 @@ Deferred (post‑Phase 3): chunked copy yield refinements (browser large slabs),
 Source: `test/benchmarks/benchmark.results.json` (latest history entry vs earliest recorded baseline in same file).
 
 | Size | Baseline Build ms (mean) | Phase 3 Build ms (mean) | Δ Build % | Baseline Fwd Avg ms | Phase 3 Fwd Avg ms | Δ Fwd % | Bytes/Conn Baseline | Bytes/Conn Phase 3 | Δ Bytes/Conn |
-|------|--------------------------|-------------------------|----------:|---------------------|--------------------|--------:|---------------------|--------------------|-------------:|
-| 1k   | 2.0415                   | 1.9435                  |  -4.8%    | 0.4045              | 0.6797             | +68%*   | 69                  | 69                 | 0           |
-| 10k  | 7.0529                   | 9.8183                  | +39.3%    | 3.9449              | 4.5383             | +15.0%  | 65                  | 65                 | 0           |
-| 50k  | 46.2062                  | 48.6405                 |  +5.3%    | 6.2795              | 7.4799             | +19.1%  | 65                  | 65                 | 0           |
-| 100k | 60.1772                  | 77.2990                 | +28.4%    | 9.2725              | 13.6824            | +47.6%  | 64                  | 64                 | 0           |
-| 200k | 153.4771                 | 189.3520                | +23.4%    | 22.2546             | 29.4639            | +32.4%  | 64                  | 64                 | 0           |
+| ---- | ------------------------ | ----------------------- | --------: | ------------------- | ------------------ | ------: | ------------------- | ------------------ | -----------: |
+| 1k   | 2.0415                   | 1.9435                  |     -4.8% | 0.4045              | 0.6797             |  +68%\* | 69                  | 69                 |            0 |
+| 10k  | 7.0529                   | 9.8183                  |    +39.3% | 3.9449              | 4.5383             |  +15.0% | 65                  | 65                 |            0 |
+| 50k  | 46.2062                  | 48.6405                 |     +5.3% | 6.2795              | 7.4799             |  +19.1% | 65                  | 65                 |            0 |
+| 100k | 60.1772                  | 77.2990                 |    +28.4% | 9.2725              | 13.6824            |  +47.6% | 64                  | 64                 |            0 |
+| 200k | 153.4771                 | 189.3520                |    +23.4% | 22.2546             | 29.4639            |  +32.4% | 64                  | 64                 |            0 |
 
-*The 1k forward increase reflects early-run warm cache variance (small absolute delta). Larger sizes show expected overhead from added instrumentation (slab stats, async rebuild hooks) while keeping bytes/connection flat—primary Phase 3 memory objective met.
+The 1k forward pass time shows a significant increase (+68%). While this may be related to test overhead on very small networks or initial cache warm-up effects, the magnitude warrants further investigation in Phase 6 (Allocation Churn Reduction) to rule out any underlying inefficiencies in the slab implementation at small scales. The primary Phase 3 memory objective—stabilizing bytes/connection while adding features—was met.
 
 Variance (CV%) snapshot (from `variance` section):
 | Size | Build CV% | Fwd CV% | Target CV% |
 |------|-----------|---------|------------|
-| 100k | 4.7       | 11.41   | 7 (build met, forward above) |
-| 200k | 11.34     | 13.13   | 7 (above) |
+| 100k | 4.7 | 11.41 | 7 (build met, forward above) |
+| 200k | 11.34 | 13.13 | 7 (above) |
 
 Notes:
+
 - Phase 3 prioritized memory layout & feature packing (plasticity bit + optional slabs, gain omission) over variance suppression; forward CV remains elevated at high scales—scheduled for attention in Phase 6 (allocation churn) & Phase 7 (caching reuse) where rebuild frequency drops.
-- Bytes/connection held constant (no regression) despite added optional slabs; gain omission and plasticity pay‑for‑use prevented per-connection inflation.
+- Bytes/connection held constant (no regression) despite added optional slabs; gain omission and plasticity pay‑for‑use prevented per-connection inflation. This confirms the pay-for-use principle is working but highlights that progress on the bytes/connection reduction metric is dependent on Phase 4 (Sparsity).
 - Field audit counts: Connection enumerable keys = 9 (stable), Node = 15 (stable) per benchmark `fieldAudit` confirmation.
 
 Results Notes & Next Step: For quantitative deltas see table above; variance & invariant consolidation detailed in Phase 3 Conclusion below. Proceed to Hyper MorphoNEAT work with stable slab foundation.
@@ -248,6 +261,7 @@ Results Notes & Next Step: For quantitative deltas see table above; variance & i
 All planned Phase 3 memory layout features are implemented, documented, and validated by tests; the slab system now provides a pay‑for‑use foundation for forthcoming Hyper MorphoNEAT caching & morphogenesis work.
 
 Delivered Enhancements (Recap):
+
 1. Optional slabs (gain, plasticity) allocated lazily, released when neutral / absent.
 2. Bit‑packed connection flags with added plastic bit.
 3. Geometric capacity growth with pooling + fragmentation tracking.
@@ -257,28 +271,32 @@ Delivered Enhancements (Recap):
 7. Plasticity packing (bit + optional slab) and gain omission optimization (ensures zero overhead when unused).
 
 Verified Invariants (Backed by Tests):
+
 1. Parity: Fast vs legacy activation (baseline, with gating guard fallback, with non‑neutral gains).
-2. Optional gain slab: allocated on first non‑neutral gain; released when all revert to 1 (`network.slab.gain.omission`, gain release test).
-3. Optional plasticity slab: allocated only when any connection plastic; released when none plastic (`network.slab.plasticity`).
-4. Slab version increments on structural rebuilds (sync & async) (`network.slab.versioning`).
+2. Optional gain slab: allocated on first non‑neutral gain; released when all revert to 1.
+3. Optional plasticity slab: allocated only when any connection plastic; released when none plastic.
+4. Slab version increments on structural rebuilds (sync & async).
 5. Fragmentation metrics: trend test plus bounds test guarantee 0 ≤ fragmentationPct ≤ 100 across churn.
 6. Pooling reuse: repeated rebuilds without growth show non‑decreasing pooled allocation counter.
 7. Gating guard correctness: fast path defers when gating present to avoid incorrect math.
 8. Bytes/connection: stable plateau (≈64–69) despite added optional features (no unconditional inflation).
-9. Gain parity: fast path multiplies weight*gain if gain slab present (explicit gain parity test).
+9. Gain parity: fast path multiplies weight\*gain if gain slab present.
 
-New / Final Validation Tests Added Late in Phase 3:
-- `network.slab.fast.gain.parity.test.ts`
-- `benchmark.slab.fragmentation.bounds.test.ts`
-- `network.slab.alloc.stats.reuse.test.ts`
-- `network.slab.gain.release-on-reset.test.ts`
+New / Final Validation Concepts Tested in Phase 3:
+
+- Fast path gain multiplication parity.
+- Slab fragmentation bounds (0-100%).
+- Allocation statistics and reuse tracking.
+- Release of optional gain slab upon reset.
 
 Risk & Deferred Items:
+
 - Forward pass variance (> target at large sizes) deferred to Phase 6/7 (allocation churn + caching reuse).
 - Adjacency → phenotype direct mapping postponed to caching phase to avoid premature duplication work.
 - Potential future packing of plasticity side parameters (rates/traces) once learning rules land.
 
 Exit Criteria (Met):
+
 - Pay‑for‑use: Optional slabs only when demanded; released afterward.
 - Fast path correctness across gain & plastic scenarios verified.
 - Fragmentation metric correctness (bounded & trend tested).
@@ -287,7 +305,62 @@ Exit Criteria (Met):
 
 Ready for Next Phase: Hyper MorphoNEAT work can proceed atop a stable, instrumented slab foundation with confidence in memory invariants and optional feature overhead discipline.
 
-### Phase 4 – Sparse Growth & Prune Budgets (on hold until Hyper MorphoNeat is implemented)
+### Phase 3.5 – Centralized Memory Management & Browser Validation
+
+**Status: Active**
+
+This phase addresses a critical architectural gap by implementing a `Centralized Memory Manager` as the single source of truth for all memory-related operations. It also establishes a formal browser benchmark harness to validate environment-specific features.
+
+#### Part 1: Centralized Memory Manager
+
+To ensure consistent behavior, feature gating, and pay‑for‑use semantics, this module will be the canonical contract between the runtime, benchmarking harness, and platform-specific adaptations.
+
+**Scope Files:** `src/memory/config.ts`, `src/memory/manager.ts`, `test/memory/manager.test.ts`
+
+**Responsibilities & Design:**
+
+- **Centralize Flags and Defaults:**
+  - Global feature flags (`enableSlabs`, `enablePooling`, `precisionMode`, `browserAsyncRebuild`).
+  - Typed-array growth factors and alignment preferences (`nodeFactor`, `browserFactor`, `baseCapacity`).
+  - Pool defaults (`maxRetainedPerKey`, `initialReserve`).
+- **Provide Pay-for-Use Primitives:**
+  - Lazy allocation helpers for optional slabs (e.g., gain, plasticity).
+  - Typed-array allocator wrappers that consult pooling and growth configurations.
+  - A registration API for pools to enable centralized instrumentation and controlled teardown.
+- **Expose a Stable `MemoryManager` API:**
+  - `getConfig()`: Snapshot of current flags & growth factors.
+  - `setFlag(name, value)`: Controlled mutation with validation.
+  - `allocateTypedArray(type, length)`: Pooled/aligned allocation.
+  - `releaseTypedArray(obj)`: Releases back to the appropriate pool.
+  - `registerPool(name, poolDescriptor)`: Instrumentation handle.
+  - `memoryStats()`: Populated from manager internals.
+  - `init()/teardown()`: Controlled lifecycle for tests.
+- **Environment Awareness & Gating:**
+  - Automatic platform defaults (Node vs. Browser) chosen at initialization.
+  - Feature flags default to `false`; enabling must be explicit.
+
+**Key Deliverables:**
+
+1.  **`src/memory/config.ts`**: Will export `const` values for all flags and numeric defaults with detailed JSDoc.
+2.  **`src/memory/manager.ts`**: Will export a `class MemoryManager` and a `defaultMemoryManager` singleton instance.
+3.  **Refactoring**: Existing code in `network.ts` and `network.slab.ts` will be updated to use the `defaultMemoryManager`.
+4.  **Unit Tests**: Tests will be added to assert `getConfig()`/`setFlag()` behavior and verify that `allocate`/`release` operations respect the pay-for-use principle when flags are toggled.
+
+#### Part 2: Browser Benchmark Harness
+
+**Scope Files:** `bench-browser/harness.ts`
+
+**Key Deliverables:**
+
+1.  A dedicated test harness in `bench-browser/` to capture the same core metrics as the Node.js benchmarks (build time, forward pass time, memory usage via `performance.memory`).
+2.  Specific tests to validate browser-only features, such as measuring UI thread blocking during `asyncBuilds` to confirm cooperative scheduling is effective.
+3.  The plan will be updated to document the browser harness setup and results.
+
+**Status:** Under development. Initial results will be added here once the harness is operational.
+
+### Phase 4 – Sparse Growth & Prune Budgets
+
+**Status: Next Up**
 
 Files: `network.prune.ts`, `network.ts`, new `network.sparsityBudget.ts`
 Steps:
@@ -297,34 +370,11 @@ Steps:
 3. (N) Integrate soft heap monitor vs `nodeHeapSoftLimitMB` for early pruning.
 4. (B) Use `browserMemoryBudgetMB` soft target; preempt budget breaches proactively.
 5. (C) Exponential backoff for repeated denied growth.
-6. (C) Tests verifying cap adherence.
-7. (H) Morphogenesis growth/prune uses same budget API (no duplicate logic).
+6. (C) Tests verifying cap adherence and budget-driven pruning.
+7. (C) **Validation:** Add a benchmark scenario to measure and report the `bytes/connection` metric before and after pruning, verifying progress toward the -25% target.
+8. (H) While some hooks align with Morphogenesis, the core sparsity and budget logic is independent and critical for the `-25% bytes/connection` target. This work will proceed in parallel.
 
-### Phase 5 – Adaptive Precision & Mixed Precision
-
-Files: `network.ts`, `node.ts`, `activationArrayPool.ts`
-Actions:
-
-1. (C) Consolidate precision flags into `PrecisionConfig` object.
-2. (C) Float16 path (Uint16 storage; on-the-fly convert) inference-only; measure drift (<1e-4 median abs diff).
-3. (N) Explore bfloat16 via WASM kernel (if `wasmKernels` enabled).
-4. (B) Chunk large conversions; yield between blocks.
-5. (C) Loss scaling with overflow/underflow counters auto-adjusting scale.
-6. (H) Apply precision modes to large Hyper-generated adjacency/phenotype slabs.
-
-### Phase 6 – Allocation Churn Reduction
-
-Files: `activationArrayPool.ts`, `network.connect.ts`
-Steps:
-
-1. (C) Batch connection creation API (reserve capacity upfront per growth event).
-2. (C) Extend activation pool with LRU trimming + compaction stats.
-3. (C) Ring-buffer reuse for temporal sequences (`reuseSequenceBuffers`).
-4. (N) Background compaction (idle tick) after large prune.
-5. (B) Cooperative compaction (microtask slices / idle callbacks) to avoid jank.
-6. (H) Morphogenesis growth bursts use batch API to cap reallocations.
-
-### Phase 7 – Genotype / Phenotype & Adjacency Caching (Hyper Intensive)
+### Phase 5 – Genotype / Phenotype & Adjacency Caching (Hyper Intensive)
 
 Files: `hyper/phenotypeBuilder.ts`, `hyper/genotype.ts`, new `hyper/adjacencyCache.ts`
 Steps:
@@ -336,6 +386,30 @@ Steps:
 5. (C) LRU eviction with byte cap (`hyperAdjacencyCacheMaxBytes`).
 6. (C) Tests: deterministic hits; eviction preserves correctness; stale pointer detection.
 7. (H) Metrics: hit ratio, rebuild speed-up (>2× target), cache memory overhead per active connection, eviction cost (<5% build time).
+
+### Phase 6 – Adaptive Precision & Mixed Precision
+
+Files: `network.ts`, `node.ts`, `activationArrayPool.ts`
+Actions:
+
+1. (C) Consolidate precision flags into `PrecisionConfig` object.
+2. (C) Float16 path (Uint16 storage; on-the-fly convert) inference-only; measure drift (<1e-4 median abs diff).
+3. (N) Explore bfloat16 via WASM kernel (if `wasmKernels` enabled).
+4. (B) Chunk large conversions; yield between blocks.
+5. (C) Loss scaling with overflow/underflow counters auto-adjusting scale.
+6. (H) Apply precision modes to large Hyper-generated adjacency/phenotype slabs.
+
+### Phase 7 – Allocation Churn Reduction
+
+Files: `activationArrayPool.ts`, `network.connect.ts`
+Steps:
+
+1. (C) Batch connection creation API (reserve capacity upfront per growth event).
+2. (C) Extend activation pool with LRU trimming + compaction stats.
+3. (C) Ring-buffer reuse for temporal sequences (`reuseSequenceBuffers`).
+4. (N) Background compaction (idle tick) after large prune.
+5. (B) Cooperative compaction (microtask slices / idle callbacks) to avoid jank.
+6. (H) Morphogenesis growth bursts use batch API to cap reallocations.
 
 ### Phase 8 – Serialization Compression
 
@@ -360,36 +434,31 @@ Use Cases: Deep recurrent nets, streaming sensor data, on-device low-memory infe
 4. (C) API `forwardWindowed(inputs[])` + docs on trade-offs.
 5. (H) Align morphogenesis events to window boundaries to stabilize temporal metrics for module focus scoring.
 
----
-
 ## Cross-Cutting Utilities
 
-1. `memoryStats()` : counts & approximate bytes (connections, nodes, slabs, pools, caches) + active flag states + environment heuristics (browser only).
+1. `memoryStats()` : counts & approximate bytes (connections, nodes, slabs, pools, caches) + active flag states + environment heuristics (browser only). All data will be sourced from the `Centralized Memory Manager`.
 2. Flag definitions in `config.ts` with environment gating (auto-disable unsupported features; expose status via stats).
-3. `adjacencyCacheStats()` (Hyper): entries, bytes, hit/miss, evictions, persistence bytes.
-4. `precisionStats()` capturing current precision modes, overflow/underflow counters, scaling adjustments.
-5. `poolHighWaterMarks()` for churn leak detection and morphogenesis stress tests.
-
----
+3. `wiringStats()`: Tracks wiring cost metrics required by Hyper MorphoNEAT, such as `totalWiringLength`, `interModuleEdgeCount`, `meanEdgeLength`, and `modularityQ`.
+4. `adjacencyCacheStats()` (Hyper): entries, bytes, hit/miss, evictions, persistence bytes.
+5. `precisionStats()` capturing current precision modes, overflow/underflow counters, scaling adjustments.
+6. `poolHighWaterMarks()` for churn leak detection and morphogenesis stress tests.
 
 ## Risk Matrix (Expanded)
 
-| Risk                             | Impact              | Env Bias | Mitigation                                    |
-| -------------------------------- | ------------------- | -------- | --------------------------------------------- |
-| Pool reset bug (stale gradients) | Incorrect training  | Both     | Comprehensive reset + tests                   |
-| Typed array vs object desync     | Silent logic errors | Both     | Version counter + dev asserts                 |
-| Precision downcast loss          | Accuracy degradation| Both     | Opt-in + drift tests + fallback               |
-| Cache retention leak             | Memory bloat        | Node     | Ref counts + weak maps + idle sweep           |
-| Adjacency cache blow-up          | OOM / GC thrash     | Browser  | Byte cap + LRU + soft budget trigger          |
-| Plasticity buffer leak           | Gradual creep       | Both     | Pool reset tests + leak harness               |
-| Morphogenesis fragmentation      | Retained wasted bytes| Browser | Periodic compaction + metrics                 |
-| Large slab copy jank             | UI stalls           | Browser  | Chunked copies + cooperative scheduling       |
-| IndexedDB growth overflow        | Quota errors        | Browser  | Size accounting + eviction threshold          |
-| Disk cache stale bloat           | Disk waste          | Node     | TTL metadata + size pruning                   |
-| WASM incompatibility             | Crash / wrong math  | Both     | Feature detection + test parity               |
-| SAB unavailable                  | Worker perf drop    | Browser  | Graceful downgrade to standard workers        |
-
----
+| Risk                             | Impact                | Env Bias | Mitigation                              |
+| -------------------------------- | --------------------- | -------- | --------------------------------------- |
+| Pool reset bug (stale gradients) | Incorrect training    | Both     | Comprehensive reset + tests             |
+| Typed array vs object desync     | Silent logic errors   | Both     | Version counter + dev asserts           |
+| Precision downcast loss          | Accuracy degradation  | Both     | Opt-in + drift tests + fallback         |
+| Cache retention leak             | Memory bloat          | Node     | Ref counts + weak maps + idle sweep     |
+| Adjacency cache blow-up          | OOM / GC thrash       | Browser  | Byte cap + LRU + soft budget trigger    |
+| Plasticity buffer leak           | Gradual creep         | Both     | Pool reset tests + leak harness         |
+| Morphogenesis fragmentation      | Retained wasted bytes | Browser  | Periodic compaction + metrics           |
+| Large slab copy jank             | UI stalls             | Browser  | Chunked copies + cooperative scheduling |
+| IndexedDB growth overflow        | Quota errors          | Browser  | Size accounting + eviction threshold    |
+| Disk cache stale bloat           | Disk waste            | Node     | TTL metadata + size pruning             |
+| WASM incompatibility             | Crash / wrong math    | Both     | Feature detection + test parity         |
+| SAB unavailable                  | Worker perf drop      | Browser  | Graceful downgrade to standard workers  |
 
 ## Test Strategy Additions (Environment Aware)
 
@@ -407,8 +476,6 @@ Use Cases: Deep recurrent nets, streaming sensor data, on-device low-memory infe
 | Persistence        | Disk/IndexedDB eviction & size accounting                    | Node/Browser     |
 | WASM Kernels       | Parity + performance improvement metrics                     | Feature-detected |
 
----
-
 ## Benchmark Scenarios (Initial Set)
 
 1. Build-only: construct 100k sparse connections (Browser variant 50k if limits encountered).
@@ -423,14 +490,6 @@ Use Cases: Deep recurrent nets, streaming sensor data, on-device low-memory infe
 
 Metrics: wall time, RSS / usedJSHeapSize, GC events, bytes/connection, slab fragmentation %, cache hit ratio, frame overrun %, compression ratio, copy bandwidth (MB/s), heuristic error factor (Browser).
 
----
-
-## Incremental Adoption Flags (config.ts)
-
-See extended flag table (not yet implemented). Add environment gating & expose flag activation status in `memoryStats().flags`.
-
----
-
 ## Documentation & Developer Guidance
 
 1. Update README performance section after Phase 3 (slabs) & Phase 5 (precision) with environment notes.
@@ -438,8 +497,6 @@ See extended flag table (not yet implemented). Add environment gating & expose f
 3. Diagrams (ASCII → SVG) for slab layout, cache layering (adjacency / phenotype), environment flows.
 4. Troubleshooting guide: leak detection, reading stats, tuning budgets, Browser responsiveness tips.
 5. Hyper docs cross-link memory flags required for adjacency/phenotype caching.
-
----
 
 ## Baseline & Progress Logging
 
@@ -455,8 +512,6 @@ Metrics (Env): frame jank %, disk/IndexedDB bytes, heuristic error factor, compr
 Notes:
 ```
 
----
-
 ## Coordination With Hyper MorphoNEAT Plan (Expanded)
 
 Dependency Mapping:
@@ -468,19 +523,18 @@ Hyper Phase -> Memory Requirement -> Memory Phase
 8 (Scale validation) -> Bench infra -> Phase 0,6,7
 
 Extended Mapping (Granular Alignment, Environment nuance):
-Hyper Phase | Memory Concern | Memory Layer / Phase | Notes
-------------------------- | -------------- | -------------------- | -----
-0 (Scaffolding)           | Flag isolation & zero overhead | Flags + baseline instrumentation (Phase 0) | Ensure feature off path identical
-1 (Genotype/Substrate)    | Genotype size vs phenotype ratio | Metrics extension (Target + Additional) | Track bytes/genotype
-2 (Rule Engine)           | Deterministic expansion cost | Phase 1 slimming + profiling harness | Avoid premature allocations
-3 (CPPN Indirect)         | Adjacency generation & cache | L7 (adjacency cache) + Phase 7 | Hit ratio & byte cap
-4 (Morphogenesis)         | Churn & budget enforcement | Phase 2,4 + churn tests | Monitor pool high-water marks
-5 (Plasticity)            | Side buffer footprint | Phase 3 packing + new flag | Optional typed arrays only
-6 (Telemetry)             | Lazy metrics buffers | Cross-cutting utilities | Zero retained when disabled
-7 (Evolution Integration) | Multi-offspring rebuild reuse | Phenotype cache (L7) | Minimize rebuild duplicates
-8 (Scale Validation)      | Peak memory, rebuild variance | Benchmark suite & CI thresholds | Pass/fail gating
 
----
+| Hyper Phase               | Memory Concern                   | Memory Layer / Phase                       | Notes                             |
+| ------------------------- | -------------------------------- | ------------------------------------------ | --------------------------------- |
+| 0 (Scaffolding)           | Flag isolation & zero overhead   | Flags + baseline instrumentation (Phase 0) | Ensure feature off path identical |
+| 1 (Genotype/Substrate)    | Genotype size vs phenotype ratio | Metrics extension (Target + Additional)    | Track bytes/genotype              |
+| 2 (Rule Engine)           | Deterministic expansion cost     | Phase 1 slimming + profiling harness       | Avoid premature allocations       |
+| 3 (CPPN Indirect)         | Adjacency generation & cache     | L7 (adjacency cache) + Phase 7             | Hit ratio & byte cap              |
+| 4 (Morphogenesis)         | Churn & budget enforcement       | Phase 2,4 + churn tests                    | Monitor pool high-water marks     |
+| 5 (Plasticity)            | Side buffer footprint            | Phase 3 packing + new flag                 | Optional typed arrays only        |
+| 6 (Telemetry)             | Lazy metrics buffers             | Cross-cutting utilities                    | Zero retained when disabled       |
+| 7 (Evolution Integration) | Multi-offspring rebuild reuse    | Phenotype cache (L7)                       | Minimize rebuild duplicates       |
+| 8 (Scale Validation)      | Peak memory, rebuild variance    | Benchmark suite & CI thresholds            | Pass/fail gating                  |
 
 ## Future (Post Core) Environment-Specific Explorations
 
@@ -498,21 +552,49 @@ Hyper Phase | Memory Concern | Memory Layer / Phase | Notes
 
 ### Dev Notes
 
+This section contains active, project-wide guidelines for development and testing. All contributions should adhere to these standards to maintain code quality, consistency, and educational clarity.
+
 Testing requirements:
+
 - all tests should have a single expectation.
-- follow AAA pattern (arrange, act, assert) 
+- follow AAA pattern (arrange, act, assert)
 - group tests into scenarios with describe(), nest scenarios as needed, no limit on layers.
 - when possible, define common testing data directly on the describe() and then write the assertions for it, this also applies for nested scenarios as they each represent more specific cases as it goes down into sub branches.
 - aim for 100% testing coverage
 - make sure to check existing files before creating/updating one, to be sure you are using the right file, in the right folder, for example `test/neat/` and also to be following the same file pattern inside that folder.
 
-describe(() => {
-  describe(() => {
-    it('should...');
+A good test structure follows the single-expectation rule:
+
+```typescript
+describe('Scenario: A group of related tests', () => {
+  // Arrange: Set up common data or mocks here
+  const testData = {
+    /* ... */
+  };
+
+  describe('Context: A more specific sub-scenario', () => {
+    // Act: Perform a common action for this context
+    const result = performAction(testData);
+
+    it('should fulfill a single, specific expectation', () => {
+      // Assert
+      expect(result.property).toBe(true);
+    });
+
+    it('should meet another distinct expectation', () => {
+      // Assert
+      expect(result.otherValue).toEqual(42);
+    });
   });
 });
+```
 
 Also:
+
 - Always add JSDocs to all methods, classes, const, let
 - Add or update inline comments within methods to explain each step or detail.
 - This is an educative NN library, keep the docs detailed and educative
+
+```
+
+```
