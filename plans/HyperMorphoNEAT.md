@@ -1,419 +1,285 @@
-# Hyper MorphoNEAT: Concrete Implementation Plan (Aligned With Current NeatapticTS Core)
+# Hyper MorphoNEAT (draft)
 
-Hyper MorphoNEAT is a proposed hybrid framework for neural network evolution that unifies key principles from:
+Hyper MorphoNEAT sits between HyperNEAT and a small developmental language: it keeps HyperNEAT's compact spatial patterns, but adds a deterministic rule layer and runtime morph policies so evolution can both propose macro motifs and let the phenotype adapt locally during lifetime. It excels when geometry + lifelong adaptation + scalability are all important.
 
-- NEAT (incremental complexification, speciation, innovation tracking)
-- HyperNEAT / ES-HyperNEAT (indirect CPPN encodings over geometric substrates, scalable connectivity sampling)
-- Evo-Devo / Developmental Biology (rule‑driven staged growth, differentiation, symmetry, modular morphogenesis)
-- NeuroMorph / Structural Plasticity research (activity‑driven synaptogenesis & pruning, local rewiring)
-- Classic synaptic plasticity (Hebbian / anti-Hebbian, homeostatic adjustments)
+Hyper MorphoNEAT is deliberately pragmatic: introduce an indirect, rule‑driven layer that remains opt‑in and deterministic, provide lightweight runtime morph policies that act only when enabled, and preserve the current NEAT/Network behavior when the feature flag is off.
 
-Its long‑term goal: mimic a simplified “digital embryogenesis + lifelong adaptation” pipeline—starting from a handful of proto‑cells (minimal input/output scaffold) plus a _genetic rulebook_ (developmental & pattern genes) that can:
-
-1. Elaborate structure (grow) when additional capacity is _demonstrably_ needed.
-2. Reshape or prune (shrink) when regions are underutilized or wasteful.
-3. Focus evolutionary search dynamically on emergent _bottlenecks_ or _frontier regions_ rather than the entire brain uniformly.
-4. Maintain indirect encodings so extremely large phenotypes (millions of potential connections) are generated _on demand_ without materializing every dormant element.
-
-This document both (A) expands the conceptual/educational narrative and (B) refines the pragmatic phased implementation grounded in the existing codebase (`src/architecture/*`, `src/neat/*`, pruning, slabs, pooling, optimizers). The aim: introduce indirect & developmental encodings, run‑time morphogenesis, and adaptive large‑scale network support without destabilizing current NEAT / Network functionality.
+What follows is a phased implementation plan and rationale. Each phase lists safe, reviewable changes, validation checks (determinism, small smoke tests, typechecks), and explicit rollback boundaries so reviewers can validate correctness and performance before accepting further complexity.
 
 ---
 
-## 1. Conceptual Expansion: “From Proto-Brain to Adaptive Cortex”
+## Conceptual Expansion: “From Proto‑Brain to Adaptive Cortex”
 
-This section formalizes the developmental metaphor underpinning the architecture. Instead of treating topology growth as a flat sequence of structural mutations, we frame the system as a staged developmental process: _pattern specification → proliferation → differentiation → guidance → refinement → lifelong adaptation_. Each mechanism (developmental rules, CPPNs, morphogenesis hooks) is deliberately aligned to one of these abstracted biological roles so that (1) contributors can predict emergent behavior, (2) design trade‑offs inherit a coherent vocabulary, and (3) future extensions (e.g. chemical gradient analogues, temporal morph phases) have an obvious insertion point.
+Hyper MorphoNEAT reframes topology growth as a staged, deterministic engineering pipeline rather than ad‑hoc structural mutation. The pipeline is intentionally compositional: small, well‑specified rule primitives and compact pattern generators (CPPNs) produce large, traceable phenotypes via repeatable passes. That design lets evolution operate on a concise, high‑leverage symbolic layer (the genotype) while runtime morph policies make bounded, local trade‑offs during an individual's lifetime (the phenotype).
 
-Analogy to biological development (simplified):
+Practical design principles applied throughout this plan:
 
-| Stage                | Biological Inspiration                             | Hyper MorphoNEAT Analog                                                  |
-| -------------------- | -------------------------------------------------- | ------------------------------------------------------------------------ |
-| Embryonic Seed       | Few stem cells                                     | Minimal genotype with input/output anchor nodes                          |
-| Patterning Gradients | Morphogens, HOX genes                              | CPPN fields + developmental rules assigning coordinates & tags           |
-| Proliferation        | Cell division                                      | `replicate` rules splitting regions / subdividing connection paths       |
-| Differentiation      | Neurons specialize (sensory / interneuron / motor) | Rule‑based assignment of activation fn, plasticity mode, gating role     |
-| Axon Guidance        | Growth cones follow gradients                      | Spatial CPPN thresholds & local activity heuristics form new connections |
-| Pruning & Refinement | Synaptic pruning (use-it-or-lose-it)               | Activity/frequency / contribution metrics drive removal                  |
-| Lifelong Plasticity  | Hebbian, structural changes                        | Morphogenesis hooks + plastic weight adaptation                          |
+- Opt‑in and isolated: hyper features live under guarded flags and an isolated namespace to avoid regressions.
+- Deterministic by default: genotype + seed → canonical phenotype; canonical hashing and stable ordering are required for reproducible experiments.
+- Budgeted growth: all expansions obey explicit complexity caps (nodes, edges, memory) and are reversible or roll‑backable for safety.
+- Lazy instrumentation: telemetry and extra buffers allocate only when enabled to preserve baseline performance.
+- Traceability: every developmental action carries ancestry/trace metadata to help debugging and analysis.
 
-### 1.1 Core Idea
+Analogy to biological development (engineered mapping):
 
-Motivates a _rule‑first_ search strategy: by beginning with a minimal developmental program the algorithm explores a compact, high‑leverage encoding space where each mutation can reshape large swaths of potential phenotype. This delays costly exploration of the vast combinatorial topology space until rules and pattern generators establish macro‑regularities (symmetry, modular bands, coordinate partitions) that scaffold efficient scaling. The approach mirrors biological canalization: early developmental constraints bias later structural elaboration toward coherent, reusable motifs.
-Start _tiny_ to minimize initial search space. Instead of evolving a large static genome, we evolve a **compact developmental program** that is repeatedly executed (or partially re‑executed) to refine the phenotype. Evolution acts on rules & CPPN weights (indirect), while _runtime morphogenesis_ adjusts expression intensity and local connectivity. The phenotype thus becomes an emergent, continually reshaped structure rather than a fixed topology.
+| Stage                     | Biological Inspiration            | Hyper MorphoNEAT Engineering Analog                                                                                                                      |
+| ------------------------- | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Embryonic Seed            | Few stem cells                    | Minimal, deterministic genotype with input/output anchors                                                                                                |
+| Patterning Gradients      | Morphogens, HOX genes             | CPPN fields + compact developmental rules that assign coordinates, tags and role metadata                                                                |
+| Proliferation             | Cell division                     | Deterministic `replicate` rules that expand regions or bands under growth budgets                                                                        |
+| Differentiation           | Neurons specialize                | Rules assign activation families, plasticity profiles, and gating behaviors (explicit, testable traits)                                                  |
+| Axon Guidance             | Growth cones follow gradients     | Spatial CPPN thresholds, local heuristics and wiring‑cost bias producing sparse, locality‑aware connectivity                                             |
+| Pruning & Refinement      | Synaptic pruning                  | Activity and contribution metrics drive removal; pruning prefers long or low‑contribution inter‑module links under budget                                |
+| Lifelong Plasticity       | Hebbian and structural remodeling | Optional, gated plasticity + morph hooks that adjust weights and (rarely) local structure during runtime                                                 |
+| Wiring cost (engineering) | Metabolic / material cost         | Explicit per‑genotype wiring knobs (counts, length, inter‑module penalties) used by CPPNs, morph policies and selection to favor compact, modular wiring |
 
-### 1.2 Genotype vs Phenotype Layering
+The remainder of this section spells out how these mappings are realized as deterministic passes, safe runtime hooks, and explicit validation checks. See the next subsection for the core "rule‑first" rationale and the planned deterministic invariants that must hold across phases.
 
-Defines a strict stratification between _heritable specification_ (rules + CPPN parameters) and _ephemeral realization_ (instantiated nodes, connections, plastic state). This boundary supports determinism (phenotypes can be reconstructed bit‑exactly from genotype + seed), enables aggressive memory reclamation (transient runtime arrays can be discarded or downsampled between evaluations), and decouples evolutionary operators from runtime adaptation. The layering also allows analytical tooling (diffing, hashing, compression) to operate on a concise symbolic genome rather than sprawling structural graphs.
-| Component | Genotype (Stored) | Phenotype (Materialized / Runtime) |
-|------------------------|----------------------------------------|---------------------------------------------------------------------|
-| Node existence | Rule-derived (virtual slots) | Instantiated `Node` objects (possibly pooled) |
-| Connection potential | CPPN output, rule masks | Subset realized (meets thresholds + budget) |
-| Module boundaries | Hierarchy / symmetry rules | Tag arrays on nodes/edges, used for focused evolution & pruning |
-| Plasticity configuration | Gene flags (hebbian rate, gating ability) | Runtime per-connection accumulators (optional) |
+### Core Idea
 
-### 1.3 Dynamic Evolution Focus
+Hyper MorphoNEAT adopts a rule‑first engineering strategy: treat the genotype as a compact, declarative program and execute it in deterministic, well‑scoped passes to produce a runtime phenotype. Evolution operates on concise symbolic elements (rules, CPPNs, substrate modifiers) while runtime morph policies perform bounded, local adjustments under explicit budgets. This separation keeps the heritable search space small and interpretable, and makes large structural effects reproducible and debuggable.
 
-Explains the allocation of evolutionary variance as an _adaptive resource scheduling_ problem: mutation budget is directed toward regions exhibiting evidence of constraint (high error attribution relative to size), stagnation (age without improvement), or under‑exploration (low structural diversity). By contrast, mature, stable, and well‑performing regions experience mutation cooling, reducing destructive interference. This dynamic focus mimics targeted neurogenesis and synaptic remodeling phenomena, yielding faster convergence for a fixed total mutation rate and curbing indiscriminate bloat.
-Rather than applying uniform mutation pressure, we maintain _region metrics_ (error attribution, novelty, saturation). Evolution probabilities shift toward regions that are:
+Pipeline (high level):
 
-- Bottlenecked (high gradient / error flow concentration)
-- Under-explored (low structural entropy, few recent mutations)
-- Recently regressed (performance dip localized)
+1. Substrate: deterministically assign coordinates and region tags for inputs/outputs/hidden slots.
+2. Rule passes: apply prioritized, deterministic rules (replicate, symmetry, hierarchy, etc.) to expand a virtual node list and attach ancestry/trace metadata.
+3. CPPN evaluation: procedurally score candidate pairs (weight, mask, meta) with cost‑aware thresholding; cache adjacency results keyed by canonical genotype/substrate hashes and wiring prefs.
+4. Materialize: instantiate pooled Node/Connection slabs from the realized adjacency list; apply activation/plasticity traits.
 
-Conceptually:
+Deterministic invariants & safety guarantees:
 
-```
-focusScore(region) = w_err * normalizedErrorShare
-                   + w_nov * (1 - structuralDiversity)
-                   + w_regress * recentPerfDrop
-                   - w_stable * stabilityAge
-```
+- Reproducibility: genotype + seed → canonical phenotype (stable ordering, canonical JSON/hash).
+- Idempotence: repeated builds produce identical node/edge orderings and hashes unless the genotype or seed changes.
+- Budget enforcement: all expansion steps respect explicit caps (maxNodes, maxEdges, memoryBudget) and are reversible or roll‑backable.
+- No global side effects: imports and builds must not mutate global runtime state when hyper mode is disabled.
+- Lazy diagnostics: telemetry, traces, and per‑connection extras allocate only when enabled.
 
-Sampling of mutation targets becomes weighted by `focusScore` to _steer_ complexification.
+Minimal pseudocode example: (canonical snippet retained in the Implementation section below — see "Minimal pseudocode example")
 
-                  Objectives:
-                  - Introduce namespace, feature gating, and minimal type contracts without altering runtime behavior.
-                  - Establish deterministic seeds & hashing utility stubs used in later phases.
-                  - Guarantee zero performance / bundle size regression when flag disabled.
+> NOTE: To avoid duplicate snippets and drift, keep the `buildPhenotype` example only in the Implementation section; this line acts as a local pointer.
 
-                  Scope Inclusions:
-                  - Directory skeleton, preliminary interfaces, config flag, smoke tests, documentation pointer in README.
-                  Scope Exclusions:
-                  - Any allocation of new runtime arrays; mutation / reproduction changes.
+These rules keep the implementation auditable and allow later phases (morph hooks, plasticity, evolution integration) to build on a deterministic, testable foundation.
 
-                  Key Tasks:
-                  1. Create `src/hyper/` with placeholder modules (`genotype.ts`, `developmentalRules.ts`, `substrate.ts`, `phenotypeBuilder.ts`, `internal/hash.ts`).
-                  2. Extend `config.ts` with `enableHyper` & `enableHyperTelemetry` flags (default false).
-                  3. Implement a minimal `createHyperContext(seed)` returning deterministic RNG + version tag.
-                  4. Add TypeScript interfaces with TODO JSDoc blocks referencing later phases (versioned via `@phase` tag).
-                  5. Add Jest smoke test: importing hyper entry when disabled does not mutate global state (heap snapshot diff < threshold, optional if infra present).
-                  6. Add build size guard (compare gzip bundle delta; skip if tooling unavailable—document).
+### Genotype vs Phenotype Layering
 
-                  Interfaces Added / Changed:
-                  - `config.enableHyper?: boolean`
-                  - `HyperVersion = { major:1, minor:0, phase:0 }` constant.
+This document maintains a single canonical "Layer responsibilities" section in the Implementation area (see the "Layer responsibilities" and "Pipeline (high level)" headings later). To avoid duplication and maintenance drift, readers should consult that canonical section for details on genotype/phenotype separation, invariants, and practical guidelines.
 
-                  Tests:
-                  - `hyper.disabled.import.spec.ts`: ensures side‑effect free import.
-                  - `config.flag.default.spec.ts`: asserts flag false by default.
+### Dynamic Evolution Focus
 
-                  Metrics & Exit Criteria:
-                  - Bundle delta < 1% (or documented if tooling absent).
-                  - No additional failing tests; coverage for new lines ≥ 80% (interface lines excluded).
+In Hyper MorphoNEAT we treat mutation targeting as a controlled allocation problem: rather than applying uniform mutation pressure across the entire phenotype, we compute per‑region focus scores from multiple, complementary signals and use those scores to bias where evolutionary operators and runtime morph actions apply. The intention is practical and measurable: concentrate structural edits (rule mutations, local growth/prune, CPPN perturbations) where they are most likely to reduce task error or increase useful diversity, while cooling mature, stable regions to avoid destructive churn.
 
-                  Risks & Mitigations:
-                  - Risk: Accidental circular import with existing `neat` modules → Mitigation: forbid `src/hyper` importing `src/neat` in linter rule.
-                  - Risk: Silent performance regression → Mitigation: micro benchmark baseline captured (no hyper usage).
+Key signals
 
-                  Deferred Items:
-                  - Hash canonicalization logic (implemented in Phase 1 with real genotype structure).
-                  - CLI / docs surface.
+- errShare: fraction of total error attributed to the region (backprop attribution, gradient magnitude, or surrogate credit).
+- utilization: fraction of active units / firing rate baseline (indicates capacity in use).
+- contribGradient: aggregate magnitude of gradients flowing through the region (proxy for learning pressure).
+- noveltyScore: structural or activation novelty relative to recent history (encourages exploration).
+- stabilityAge: time since last successful mutation / performance improvement (cooling factor).
+- wiringMetrics: meanEdgeLength, interModuleRatio, totalConnections (used to weight wiring‑cost penalties).
 
-                  Acceptance:
-                  - Tree contains hyper skeleton; CI green; disabling flag yields identical test timings (± variance threshold).
+Normalized focus score
 
-- If memory near cap → prune least-contributing edges/nodes (respecting module diversity quotas).
-- Else if sustained high error & high utilization → targeted growth (replicate high‑pressure path or densify a sparse region).
-- Else if plateau & low exploration → mutate developmental rules / CPPN (global structural shift) before adding raw capacity.
-  Objectives: - Define persistent `HyperGenotype` schema and deterministic build path to a baseline phenotype. - Provide substrate coordinate assignment + hashing for regeneration equivalence. - Implement serialization & hash stability tests.
+- Normalize each signal to [0,1] using rolling statistics (mean/var) or robust quantiles to avoid outlier domination.
+- Combine with configurable weights and a small L2 regularizer to avoid score collapse:
 
-                    Key Tasks:
-                    1. Factory: `createInitialGenotype({ input, output, seed })` producing minimal rule list (empty for now) & substrate spec.
-                    2. Substrate: implement 1D / simple 2D coordinate assignment strategies (line, grid) with deterministic ordering.
-                    3. Phenotype builder (baseline): instantiate input & output nodes; create fully connected edges input→output only.
-                    4. Stable hashing: `hashGenotype(geno)` (order‑independent rule hash, sorted JSON canonicalization).
-                    5. Serialization: `encodeGenotype(geno)` / `decodeGenotype(json)`; version field check.
-                    6. Determinism test: repeated build from same seed produces identical edge weight ordering & hash.
-                    7. Performance micro‑benchmark harness (optional) to record baseline build time.
+focusScore(region) = Σ*k w_k * norm*k(region) - w_cost * norm_wiring(region) - γ \* ||w||^2
 
-                    Interfaces Added:
-                    - `interface HyperGenotype { seed:number; input:number; output:number; rules:DevelopmentalRule[]; substrateSpec:SubstrateSpec; version:1; }`
-                    - `buildPhenotype(geno, { config })` (returns `Network`).
+where norm_k are per-signal normalizers, w_k are configuration weights, w_cost encodes wiring penalties, and γ stabilizes weights if learned/adapted.
 
-                    Tests:
-                    - Round trip serialization parity.
-                    - Hash stability after neutral no‑op mutate attempt.
-                    - Memory footprint comparison vs direct `Network` baseline (connections count equality).
+Sampling & operator placement
 
-                    Metrics & Exit Criteria:
-                    - Deterministic hash reproducibility = 100% across N=50 rebuilds.
-                    - Build time overhead ≤ 1.1× direct instantiation.
+1. Compute focusScore for all modules/regions each epoch (or lower cadence).
+2. Convert scores to sampling probabilities via softmax with temperature τ to control selection sparsity:
 
-                    Risks & Mitigations:
-                    - Risk: Order dependence in JSON serialization → canonical sort property keys.
-                    - Risk: Hidden mutable references (arrays reused) → deep freeze in test environment when possible.
+prob(region) ∝ exp(focusScore(region) / τ)
 
-                    Deferred Items:
-                    - Rules execution engine (Phase 2).
-                    - Indirect connectivity (Phase 3).
+3. Sample a small set of targets (top‑K or N draws without replacement) and apply bounded, local edits:
+   - Local edits must be budgeted (maxNewEdgesPerCycle, maxNodesPerCycle) and test‑rollbackable.
+   - Prefer low‑latency edits first (edge densification, small replicate); defer expensive global replays.
 
-                    Acceptance:
-                    - All genotype round‑trip & determinism tests pass; documentation updated with example.
+Safety invariants and limits
 
-  if (ctx.memory.pressure > 0.9) pruneLowContribution(net, ctx);
-  else if (ctx.error.stagnant && ctx.utilization.high) replicateCriticalPath(geno, ctx);
-  else if (ctx.novelty.low) diversifyRules(geno);
-  Objectives: - Introduce deterministic multi‑pass rule application with priority & probability handling. - Support initial structural motif expansion (replication, symmetry, hierarchy tagging). - Ensure repeated genotype build yields identical phenotype for fixed random stream.
+- Budget caps: every morph or mutation is rejected if it would violate maxNodes, maxEdges, or memoryBudget.
+- Cooldown: a region that was edited resets a cooldown counter preventing repeated edits for N epochs.
+- Dry run validation: for costly edits perform a dry‑build check (no allocation) to validate referential integrity before committing.
+- Deterministic seed usage: stochastic choices in sampling use a deterministic RNG seeded from (genotype.hash + epochCounter) for reproducibility.
 
-                    Key Tasks:
-                    1. Rule interface finalization: `priority`, `probability`, `enabled` semantics; stable normalized param hashing.
-                    2. Execution engine: sort by priority; iterate applying rules; for probabilistic rules use deterministic RNG seeded from (genotype.seed + rule.id).
-                    3. Implement rule kinds:
-                      - `replicate`: duplicate coordinate bands / node groups (maintain mapping table for ancestry).
-                      - `symmetry`: generate mirrored coordinates and optional parameter tying metadata.
-                      - `hierarchy`: assign module IDs & nested scopes.
-                    4. Extend phenotype builder to expand virtual node list before physical instantiation.
-                    5. Add complexity guard (maxNodes, maxRules) pre‑instantiation.
-                    6. Mutation operators: toggle enable, adjust numeric params, shift priority (bounded), adjust probability sigmoid‑clamped.
-                    7. Deterministic test battery: same seed + rule set produces identical node ordering & ancestry map.
+Practical notes for implementation & experiments
 
-                    Metrics & Exit Criteria:
-                    - Phenotype node count scaling validates expected multiplicative factors for staged replication.
-                    - Rule application runtime ≤ 10% of total build time for small networks (<5k nodes) in benchmark harness.
+- Use online, robust normalization (e.g., exponential moving mean/std or median/MAD) to make norm_k stable across training phases.
+- Start with conservative weights (favor errShare + utilization) and anneal toward novelty when stagnation persists.
+- Evaluate ablations:
+  - uniform vs focus sampling (measure evals/sec to convergence).
+  - with/without wiringCost in the score (measure modularity Q, meanEdgeLength, task performance).
+- Logging: record per‑epoch focusScore distributions, sampled regions, and before/after deltas for node/edge counts so causal effects are traceable.
 
-                    Risks:
-                    - Cascading replication explosion → enforce geometric growth cap per pass.
-                    - Symmetry drift (floating point coordinate error) → use rational or fixed‑point representation for mirror axes.
-
-                    Deferred:
-                    - Differentiation / activation assignment (future rule kind) if excluded here.
-
-                    Acceptance:
-                    - All rule semantics tests pass; no nondeterministic drift across multi‑build sequences.
-
-  Nodes inherit _base role_ (input/output/hidden). Developmental rules add _traits_: gating, recurrence permission, plasticity profile, activation family set. A `differentiate` rule might look like:
+Example sketch (pseudo)
 
 ```ts
-{ kind: 'differentiate', params: { region: 'motor', chooseActivation: ['tanh','relu'], plasticity: 'hebbian_fast' } }
-                  Objectives:
-                  - Replace exhaustive direct edge enumeration with procedural generation via CPPNs to enable large coordinate substrates.
-                  - Introduce controllable sparsity & pattern regularity.
-                  - Maintain cache for adjacency & weight pattern reuse across evaluations.
+const scores = regions.map((r) =>
+  computeFocusScore(r, metrics, geno.wiringPreferences)
+);
+const probs = softmax(scores, config.focusTemperature);
+const targets = sampleWithoutReplacement(
+  regions,
+  probs,
+  config.maxRegionsPerEpoch
+);
+for (const t of targets) {
+  if (!withinBudgets(t)) continue;
+  applyLocalEditSafely(net, geno, t);
+}
+```
 
-                  Key Tasks:
-                  1. `CPPNGene` definition: layers spec, activations list, weights TypedArray, innovation id.
-                  2. Implement forward evaluator (pure function, no dynamic allocation in hot loop).
-                  3. Candidate pair sampling strategy: configurable (all pairs up to dimension bound; radius-limited; focus-guided subset placeholder for later).
-                  4. Connectivity decision: compute outputs (weight, mask probability, optional metadata channels), threshold to realize edge.
-                  5. Weight scaling & optional normalization (e.g., fan-in scaling) hooks.
-                  6. Adjacency cache keyed by (genotype structural hash, substrate hash, CPPN hash, threshold) → returns list of (src,dst,weight,meta).
-                  7. Cache invalidation on CPPN mutation or substrate change.
-                  8. Benchmark harness: measure generation vs baseline direct full connect for moderate size (e.g., 2k×2k potential pairs pruned to <5%).
-                  9. Tests: symmetry invariance for mirrored coordinates; deterministic adjacency ordering; threshold monotonicity (higher threshold → subset).
+This focused allocation framework keeps Hyper MorphoNEAT’s evolutionary pressure intentional and measurable: edits are data‑driven, budget‑bounded, reproducible, and amenable to systematic ablation studies.
 
-                  Metrics & Exit Criteria:
-                  - Indirect build time ≤ 1.5× baseline for medium nets (document exact ratio & hardware).
-                  - Memory footprint: adjacency cache reuses buffers; additional overhead per realized connection < +8 bytes vs baseline.
+## Lifecycle Timeline
 
-                  Risks & Mitigations:
-                  - Risk: Cache blowup for many thresholds → LRU eviction & size cap.
-                  - Risk: Floating mismatch causing non-determinism → fixed precision rounding for CPPN inputs.
-
-                  Deferred:
-                  - Multi-CPPN stacking & plasticity channel usage (Phase 5/7).
-
-                  Acceptance:
-                  - Patterns reproducible; scaling metrics logged.
-Describes hierarchical assembly as recursive, scope‑stacked rule evaluation: a parent rule can spawn sub‑scopes whose local coordinate frames and probability adjustments produce self‑similar yet diversified descendants. This generates fractal‑like scaling (band → stripe cluster → columnar macro‑module) while preserving traceability (each object carries an ancestry chain). The result is exponential phenotype expressivity from logarithmic genotype growth.
-Rules can recursively introduce *proto‑modules* which themselves run a localized rule subset (mini developmental pass) enabling fractal expansion without a huge flat genome.
-
-                  Objectives:
-                  - Enable intra‑generation structural adjustments driven by live telemetry.
-                  - Enforce memory and sparsity budgets dynamically.
-                  - Provide consistent event sequencing & transactional rebuild semantics.
-
-                  Key Tasks:
-                  1. Metrics collectors: per module (activity mean/var, utilization, contribution proxy) updated post‑epoch.
-                  2. Event dispatcher: `maybeMorph(event: MorphEvent, metrics)` gating by cooldown & budget state.
-                  3. Actions:
-                    - `activity_expand`: local replicate path or add focused edges (calls CPPN subset eval or direct small add).
-                    - `low_contrib_prune`: integrate existing pruning API with module tags; maintain target sparsity.
-                    - `module_split`: duplicate module nodes + incident edges; reassign subset based on coordinate partition.
-                  4. Transaction layer: queue structural edits, apply in batch, rebuild slabs if size changed; reuse pools.
-                  5. Budget enforcement: connection/node hard caps; forced prune order by (contribution score ↑ age).
-                  6. Trace logging: append event entries with before/after counts & focus scores.
-                  7. Tests: deterministic morph under fixed metrics stream; rollback safety test (simulate failed morph then revert).
-
-                  Metrics & Exit Criteria:
-                  - Morph hook overhead (disabled) <1% runtime; (enabled idle) <5%.
-                  - No memory leak (object pool size returns after prune cycles).
-
-                  Risks:
-                  - Concurrent training modifications → apply morph only between batches / epochs.
-                  - Cascading rebuild thrash → cooldown period & action quota per event.
-
-                  Deferred:
-                  - Focus scoring integration (Phase 7) beyond baseline metrics.
-
-                  Acceptance:
-                  - Structural edits validated by tests; performance overhead documented.
-| HyperNEAT                           | CPPN encodes connectivity over geometric substrate         | CPPN(s) produce weight *and* activation / plasticity hints; substrate may be multi-dimensional                 |
-| ES-HyperNEAT                        | Adaptive sampling of large substrates                      | Deferred generation: only sample connection candidates near active regions or flagged by focus metrics        |
-| Evo-Devo (Dev. Biology)             | Growth via rules, differentiation, symmetry                | Rule engine with execution probabilities & priorities                                                         |
-                  Objectives:
-                  - Add activity‑dependent micro‑update channel (Hebbian / anti‑Hebbian) plus optional decay for transient potentiation.
-                  - Guarantee negligible overhead when disabled.
-
-                  Key Tasks:
-                  1. Extend `Connection` with optional side buffers (e.g., `trace`, `plasticAccum`), allocated only when enabled.
-                  2. Implement update rule: `Δw = η * pre * post - λ * w` (configurable terms) executed post forward pass.
-                  3. Config gating: early return fast path; ensure branch predictability.
-                  4. Reset semantics on connection pooling release.
-                  5. Integrate with morphogenesis (optional): plasticity metrics feed utilization / growth decisions.
-                  6. Tests: numerical validation on toy 2‑node network; performance micro‑benchmark toggling plasticity.
-
-                  Metrics & Exit Criteria:
-                  - Overhead disabled <1%; enabled small net <10% additional time (doc exact numbers).
-                  - Weight drift stable (bounded by decay) over long run test.
-
-                  Risks:
-                  - Accidental interference with gradient updates → apply plasticity adjustments after optimizer step or in dedicated buffer.
-
-                  Deferred:
-                  - Heterosynaptic or triplet rules; plasticity-driven structural triggers (future extension).
-
-                  Acceptance:
-                  - Correctness + performance tests pass; documentation includes usage example.
-## 3. Lifecycle Timeline (Educational Walkthrough)
 Supplies a stage‑wise state machine perspective enabling contributors to reason about invariants (e.g., phenotype immutability within a training epoch) and side‑effects (cache invalidation boundaries). Each numbered stage defines clear preconditions and postconditions, reducing coupling: reproduction only manipulates symbolic genotype; rebuild regenerates material state; morphogenesis edits runtime graph under strict budget guards. This segregation eases targeted profiling and correctness auditing.
 
-                  Objectives:
-                  - Provide structured introspection (metrics snapshots, developmental trace, module lineage) with opt‑in overhead.
-                  - Expose stable JSON schemas for external tooling.
+| Build Step                   | Implemented In | Description                                                                                                            | Artifacts                           |
+| ---------------------------- | -------------- | ---------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| 1. Static Development Pass   | Phase 2        | Apply rules in priority order (replicate, symmetry, hierarchy, differentiate) to expand virtual node set & module tags | Interim developmental trace entries |
+| 2. Indirect Connectivity     | Phase 3        | Evaluate CPPN(s) selectively over candidate coordinate pairs (sparse sampling) to decide edges + initial weights       | Edge candidate list (lazy)          |
+| 3. Phenotype Materialization | Phase 1-3      | Instantiate pooled `Node` / `Connection` objects; pack into slabs; apply activation/plasticity traits                  | Runtime `Network`                   |
 
-                  Key Tasks:
-                  1. Metrics aggregator API: `collectModuleMetrics(net)` returns typed array views / plain objects.
-                  2. Developmental trace structure: sequence of events with timestamps, hashes, delta summaries.
-                  3. Export APIs: `exportTrace()`, `exportModuleReport()`, embed subset into ONNX metadata (if feature present) under reserved namespace.
-                  4. Lazy allocation design: allocate buffers only on first enable call; free or mark reusable when disabled.
-                  5. Tests: allocation counts via instrumentation harness; schema validation against JSON schema file.
+Objectives:
 
-                  Metrics & Exit Criteria:
-                  - Disabled path adds zero additional retained objects (heap diff baseline).
-                  - Trace export round‑trip size overhead <5% of serialized genotype for 100 events (document).
+- Introduce full hyper‑aware mutation & recombination operators with innovation tracking and speciation distance extensions.
+- Maintain evolutionary performance (throughput) within acceptable overhead bounds.
 
-                  Risks:
-                  - Telemetry misuse in hot loop causing overhead → guidance docs + runtime warning when sampling frequency too high.
+Key Tasks:
 
-                  Deferred:
-                  - Live streaming / websocket visualizer.
+1. Mutation operators: add/remove rule, tweak rule params, adjust priority/probability, CPPN weight perturb, CPPN topology add‑layer/add‑node, substrate scale/rotation adjust.
+2. Crossover implementation: multi‑family alignment (rules, CPPNs, substrate modifiers) with blending modes & conflict resolution.
+3. Innovation tracking: extend registry to assign IDs to new rule signatures & CPPN topology changes.
+4. Speciation metric: weighted combination of (rule hash edit distance, CPPN topology distance, averaged CPPN weight cosine distance, substrate modifier delta) + existing compatibility coefficients.
+5. Population loop integration: hyper mode branch using new reproduction path; preserve classic mode unaffected.
+6. Cache reuse: precompute parent phenotype hashes, reuse adjacency caches when structural invariants retained.
+7. Reproduction tests & correctness: determinism under seeded RNG, invalid genome rejection, budget enforcement.
+8. Performance test: evolving small population (e.g., 50) for N generations measuring evals/sec vs baseline NEAT.
 
-                  Acceptance:
-                  - Introspection APIs stable & documented; performance invariants verified.
-| 2       | Development Pass (Static)       | Building phenotype (Phase 1–2 implementation)                | Apply rules in priority order (replicate, symmetry, hierarchy, differentiate) to expand virtual node set & module tags | Interim developmental trace entries |
-| 3       | Indirect Connectivity Synthesis | After rules applied; before instantiating physical network   | Evaluate CPPN(s) selectively over candidate coordinate pairs (sparse sampling) to decide edges + initial weights + metadata | Edge candidate list (lazy) |
-| 4       | Phenotype Materialization       | Edge candidates + nodes prepared                             | Instantiate pooled `Node` / `Connection` objects; pack into slabs; apply activation/plasticity traits | Runtime `Network` |
-                  Objectives:
-                  - Introduce full hyper‑aware mutation & recombination operators with innovation tracking and speciation distance extensions.
-                  - Maintain evolutionary performance (throughput) within acceptable overhead bounds.
+Metrics & Exit Criteria:
 
-                  Key Tasks:
-                  1. Mutation operators: add/remove rule, tweak rule params, adjust priority/probability, CPPN weight perturb, CPPN topology add‑layer/add‑node, substrate scale/rotation adjust.
-                  2. Crossover implementation: multi‑family alignment (rules, CPPNs, substrate modifiers) with blending modes & conflict resolution.
-                  3. Innovation tracking: extend registry to assign IDs to new rule signatures & CPPN topology changes.
-                  4. Speciation metric: weighted combination of (rule hash edit distance, CPPN topology distance, averaged CPPN weight cosine distance, substrate modifier delta) + existing compatibility coefficients.
-                  5. Population loop integration: hyper mode branch using new reproduction path; preserve classic mode unaffected.
-                  6. Cache reuse: precompute parent phenotype hashes, reuse adjacency caches when structural invariants retained.
-                  7. Reproduction tests & correctness: determinism under seeded RNG, invalid genome rejection, budget enforcement.
-                  8. Performance test: evolving small population (e.g., 50) for N generations measuring evals/sec vs baseline NEAT.
+- Throughput ≥ 60% of baseline NEAT at comparable population sizes (document conditions).
+- Speciation maintains diversity (no single species >80% population after burn‑in unless directed).
+- Crossover failure (invalid child) rate <5% (above triggers validation tuning).
 
-                  Metrics & Exit Criteria:
-                  - Throughput ≥ 60% of baseline NEAT at comparable population sizes (document conditions).
-                  - Speciation maintains diversity (no single species >80% population after burn‑in unless directed).
-                  - Crossover failure (invalid child) rate <5% (above triggers validation tuning).
+Risks:
 
-                  Risks:
-                  - Overly punitive distance causing species fragmentation → dynamic coefficient adjustment algorithm.
-                  - Genome bloat through blended duplication → complexity budgets enforced pre‑speciation assignment.
+- Overly punitive distance causing species fragmentation → dynamic coefficient adjustment algorithm.
+- Genome bloat through blended duplication → complexity budgets enforced pre‑speciation assignment.
 
-                  Deferred:
-                  - Multi‑parent crossover; adaptive crossover operator selection.
+Deferred:
 
-                  Acceptance:
-                  - End‑to‑end evolutionary run stable; diversity & performance metrics recorded.
+- Multi‑parent crossover; adaptive crossover operator selection.
+
+Acceptance:
+
+- End‑to‑end evolutionary run stable; diversity & performance metrics recorded.
 
 Unlike classic NEAT where crossover aligns by innovation numbers for direct connection genes, Hyper MorphoNEAT must align heterogeneous gene families:
-1. Developmental Rules
-                  Objectives:
-                  - Demonstrate linear (or sublinear) memory growth with active connections and acceptable build/morph latencies at large scale.
-                  - Validate absence of memory leaks under churn (grow/prune cycles).
-                  - Produce public guidance (tuning flags, thresholds) prior to general availability.
 
-                  Key Tasks:
-                  1. Synthetic benchmark suite: varying substrate sizes, sparsity thresholds, morph cycle frequencies.
-                  2. Long‑run churn test: repeated morph cycles (e.g., 10k iterations) measuring pool high‑water marks & GC stabilized memory.
-                  3. Profiling: identify hottest functions (CPPN eval, rule pass) and micro‑optimize (loop unrolling, typed array reusage) if >30% total time each.
-                  4. Memory accounting: compute bytes/active connection (including pools) vs baseline; break down into slabs, metadata, plasticity extras.
-                  5. Regression thresholds integrated into CI (fail if build time or memory exceeds stored baseline by >10%).
-                  6. Documentation: produce scaling appendix with empirical curves (edges vs memory, edges vs build time).
+1.  Developmental Rules
+    Objectives: - Demonstrate linear (or sublinear) memory growth with active connections and acceptable build/morph latencies at large scale. - Validate absence of memory leaks under churn (grow/prune cycles). - Produce public guidance (tuning flags, thresholds) prior to general availability.
 
-                  Metrics & Exit Criteria:
-                  - Peak bytes per active connection within target (establish numeric after Phase 5 measurement).
-                  - No upward trend in pool size after churn plateau (slope ~0 over final 20% iterations).
-                  - Build + morph latency percentiles (p95) documented and acceptable for release goals.
+Key Tasks:
 
-                  Risks:
-                  - Benchmark instability across environments → pin Node.js version & isolate CPU scaling (single thread) for CI.
-                  - Hidden fragmentation in pooled arrays → implement periodic compaction or sentinel leak detection.
+1. Synthetic benchmark suite: varying substrate sizes, sparsity thresholds, morph cycle frequencies.
+2. Long‑run churn test: repeated morph cycles (e.g., 10k iterations) measuring pool high‑water marks & GC stabilized memory.
+3. Profiling: identify hottest functions (CPPN eval, rule pass) and micro‑optimize (loop unrolling, typed array reusage) if >30% total time each.
+4. Memory accounting: compute bytes/active connection (including pools) vs baseline; break down into slabs, metadata, plasticity extras.
+5. Regression thresholds integrated into CI (fail if build time or memory exceeds stored baseline by >10%).
+6. Documentation: produce scaling appendix with empirical curves (edges vs memory, edges vs build time).
 
-                  Deferred:
-                  - GPU/WebGPU fast path; advanced compression.
+Metrics & Exit Criteria:
 
-                  Acceptance:
-                  - Scaling report published; CI thresholds enforced; release readiness sign‑off.
+- Peak bytes per active connection within target (establish numeric after Phase 5 measurement).
+- No upward trend in pool size after churn plateau (slope ~0 over final 20% iterations).
+- Build + morph latency percentiles (p95) documented and acceptable for release goals.
+
+Risks:
+
+- Benchmark instability across environments → pin Node.js version & isolate CPU scaling (single thread) for CI.
+- Hidden fragmentation in pooled arrays → implement periodic compaction or sentinel leak detection.
+
+Deferred:
+
+- GPU/WebGPU fast path; advanced compression.
+
+Acceptance:
+
+- Scaling report published; CI thresholds enforced; release readiness sign‑off.
+
 |-------------|------------------------|---------------------|-----------------------|
-| Rule        | Innovation ID or (kind + canonical param signature hash) | Same kind & equal normalized params | Uniform pick or parameter-wise blend |
-| CPPN        | Innovation ID (per layer addition) + topology hash        | Identical layer counts + activation sequence | Weight crossover (per-weight uniform or arithmetic) |
+| Rule | Innovation ID or (kind + canonical param signature hash) | Same kind & equal normalized params | Uniform pick or parameter-wise blend |
+| CPPN | Innovation ID (per layer addition) + topology hash | Identical layer counts + activation sequence | Weight crossover (per-weight uniform or arithmetic) |
 | Substrate Modifier | Modifier type (e.g., scale, rotation) + axis | Same type & axis | Average numeric params; random tie-break on enums |
-| Module Tag  | Module ID (if shared ancestry) | ID equality | Inherit or merge (union of roles) |
+| Module Tag | Module ID (if shared ancestry) | ID equality | Inherit or merge (union of roles) |
 
 Unmatched (disjoint / excess) genes: inclusion probability biased toward fitter parent (like NEAT) but capped to avoid bloat.
 
-#### 3.1.2 Rule Parameter Blending
-Argues for continuous parameter interpolation to buffer offspring against abrupt fitness cliffs introduced by discrete rule parameter jumps (e.g., replicate.times from 1→3). Blending supports *semantic continuity*: small α adjustments generate proportionally moderate structural differences after development, smoothing the adaptive landscape and improving combined efficacy of mutation + crossover.
-For numeric params we can apply *biased arithmetic crossover* (BAC):
+#### Rule Parameter Blending
+
+Argues for continuous parameter interpolation to buffer offspring against abrupt fitness cliffs introduced by discrete rule parameter jumps (e.g., replicate.times from 1→3). Blending supports _semantic continuity_: small α adjustments generate proportionally moderate structural differences after development, smoothing the adaptive landscape and improving combined efficacy of mutation + crossover.
+For numeric params we can apply _biased arithmetic crossover_ (BAC):
+
+```
+childParam = α _ paramA + (1-α) _ paramB, α ~ U(0,1) (optionally biased toward fitter)
 ```
 
-childParam = α _ paramA + (1-α) _ paramB, α ~ U(0,1) (optionally biased toward fitter)
-
-````
 Boolean / categorical: coin flip or frequency-based if more than 2 parents (future multi-parent reproduction).
 
-#### 3.1.3 CPPN Weight Crossover
+#### CPPN Weight Crossover
+
 Characterizes crossover operator choice as shaping the exploration–stability frontier: uniform promotes high exploratory variance (diversity of micro‑patterns), arithmetic maintains macro‑structural coherence, and SBX simulates sampled interpolation with controllable spread parameter η. Operator selection can be meta‑optimized via telemetry feedback (tracking post‑crossover disruption metrics) to adapt exploration pressure over evolutionary time.
 Mode options (configurable):
-* `uniform`: per weight pick A or B.
-* `arithmetic`: `w_child = 0.5*(wA+wB)` with occasional noise injection.
-* `simulated_binary_crossover (SBX)`: for more exploratory offspring.
 
-#### 3.1.4 Innovation & History Tracking
+- `uniform`: per weight pick A or B.
+- `arithmetic`: `w_child = 0.5*(wA+wB)` with occasional noise injection.
+- `simulated_binary_crossover (SBX)`: for more exploratory offspring.
+
+#### Innovation & History Tracking
+
 Generalizes innovation numbers beyond direct connection genes to heterogeneous developmental and indirect encoding elements. This preserves historical distance metrics used in speciation clustering, preventing premature mixing of distinct morphogenetic strategies. Canonical hashing of normalized rule parameters minimizes spurious innovation inflation while allowing genuinely novel composite configurations to register distinct lineage identity.
 We extend innovation bookkeeping: every new blended rule or CPPN structure receives a fresh innovation id; however if two parents share the same canonical hash we preserve the id to aid speciation distance continuity.
 
-#### 3.1.5 Post-Crossover Normalization
+#### Post-Crossover Normalization
+
 Details a sanitation pass ensuring the offspring genotype respects global complexity budgets and semantic minimality. Redundant or shadowed rules (those whose effects are subsumed by a higher‑priority equivalent) are culled; priorities are rebalanced to avoid starvation of late but essential rule classes; and heuristic impact estimates (e.g., historical contribution deltas) guide which excess elements to discard when budget pressure is high.
 After merging:
-* Re-sort rules by (priority → probability → innovation).
-* Deduplicate semantically equivalent rules (same normalized hash) keeping the one from fitter parent.
-* Enforce complexity budget (rule count <= configurable max) dropping lowest impact (estimated contribution heuristic) first.
 
-#### 3.1.6 Offspring Validation Pass
+- Re-sort rules by (priority → probability → innovation).
+- Deduplicate semantically equivalent rules (same normalized hash) keeping the one from fitter parent.
+- Enforce complexity budget (rule count <= configurable max) dropping lowest impact (estimated contribution heuristic) first.
+
+#### Offspring Validation Pass
+
 Defines a lightweight static checking phase performing referential integrity (regions, module tags), feasibility (symmetry without axis definition), and budget alignment validation before incurring allocation costs. Early rejection reduces wasted CPU cycles and prevents subtle runtime invariants (e.g., slab index density assumptions) from being violated in downstream materialization.
-Run a *dry build* (no object instantiation) to ensure no invalid combinations (e.g., differentiate targets region that no longer exists after rule pruning). Invalid references are either re-mapped (if a similar region persists) or rule disabled.
+Run a _dry build_ (no object instantiation) to ensure no invalid combinations (e.g., differentiate targets region that no longer exists after rule pruning). Invalid references are either re-mapped (if a similar region persists) or rule disabled.
 
-#### 3.1.7 Pseudocode
+#### Pseudocode
+
 Supplies a reference pseudocode outlining data flow and decision ordering so reviewers can validate conceptual correctness (alignment before normalization; budget enforcement post‑merge) independent of TypeScript specifics. This separation accelerates design iteration and lowers risk of misimplementation during incremental PRs.
+
 ```ts
-function crossoverHyperGenotype(a: HyperGenotype, b: HyperGenotype, cfg: CrossCfg): HyperGenotype {
+function crossoverHyperGenotype(
+  a: HyperGenotype,
+  b: HyperGenotype,
+  cfg: CrossCfg
+): HyperGenotype {
   const child: HyperGenotype = seedChildBase(a, b);
   // 1. Align rules
   const aligned = alignRules(a.rules, b.rules);
   for (const pair of aligned) {
     if (pair.match) child.rules.push(blendRule(pair.a, pair.b, cfg));
-    else child.rules.push(selectDisjoint(pair, fitnessBias(a,b)));
+    else child.rules.push(selectDisjoint(pair, fitnessBias(a, b)));
   }
   // 2. Merge CPPNs
   const cppnPairs = alignCPPNs(a.cppns, b.cppns);
-  child.cppns = cppnPairs.map(p => p.match ? crossoverCPPN(p.a, p.b, cfg) : preferFitter(p, a, b));
+  child.cppns = cppnPairs.map((p) =>
+    p.match ? crossoverCPPN(p.a, p.b, cfg) : preferFitter(p, a, b)
+  );
   // 3. Substrate modifiers
   child.substrateSpec = mergeSubstrate(a.substrateSpec, b.substrateSpec, cfg);
   // 4. Clean up
@@ -422,31 +288,32 @@ function crossoverHyperGenotype(a: HyperGenotype, b: HyperGenotype, cfg: CrossCf
   validateChild(child);
   return child;
 }
-````
+```
 
-### 3.2 Educational Comparison: Classic NEAT vs Hyper MorphoNEAT Reproduction
+### Educational Comparison: Classic NEAT vs Hyper MorphoNEAT Reproduction
 
 Synthesizes the structural and informational expansion introduced by indirect + developmental encodings, clarifying why increased crossover complexity yields disproportionate expressive gains (large structural motifs negotiated at symbolic level). It contextualizes the trade‑off: added bookkeeping overhead versus potential for emergent macro‑regularities and smoother scaling to high node counts.
-| Aspect | Classic NEAT Crossover | Hyper MorphoNEAT Crossover |
-|---------------------|-----------------------------------------------|-----------------------------------------------------------------|
-| Alignment Basis | Innovation numbers (node/connection genes) | Multi-family: rules, CPPNs, substrate modifiers, tags |
-| Genome Size Control | Excess/disjoint from fitter | Budgeted + heuristic pruning post-merge |
-| Expressivity Change | Structural genes directly swapped | Developmental programs blended (indirect structural consequences)|
-| Weight Handling | A/B pick for matching connection weights | Mode selectable: uniform / arithmetic / SBX for CPPN weights |
-| Phenotype Rebuild | Direct reconstitution | Regeneration via rule + CPPN re-execution (cached) |
 
-### 3.3 Reproduction Placement in Timeline
+| Aspect              | Classic NEAT Crossover                     | Hyper MorphoNEAT Crossover                                        |
+| ------------------- | ------------------------------------------ | ----------------------------------------------------------------- |
+| Alignment Basis     | Innovation numbers (node/connection genes) | Multi-family: rules, CPPNs, substrate modifiers, tags             |
+| Genome Size Control | Excess/disjoint from fitter                | Budgeted + heuristic pruning post-merge                           |
+| Expressivity Change | Structural genes directly swapped          | Developmental programs blended (indirect structural consequences) |
+| Weight Handling     | A/B pick for matching connection weights   | Mode selectable: uniform / arithmetic / SBX for CPPN weights      |
+| Phenotype Rebuild   | Direct reconstitution                      | Regeneration via rule + CPPN re-execution (cached)                |
+
+### Reproduction Placement in Timeline
 
 Explains that placing reproduction _before_ any growth/prune cycle in the offspring epoch guarantees a clean separation of heritable innovation and individual lifetime adaptation. This ordering preserves analytical decomposability: fitness deltas can be partitioned into genetic vs morphogenetic contribution without confounding carry‑over artifacts.
 Reproduction occurs _after_ selection and _before_ new morphogenesis-driven growth of the offspring. This preserves the principle that runtime morphogenesis acts on each individual's phenotype _post_ genetic inheritance, avoiding entangling heritable rules with ephemeral runtime adjustments.
 
-### 3.4 Exported Genome Mix Example (Conceptual)
+### Exported Genome Mix Example (Conceptual)
 
 Demonstrates how overlapping parental rule sets synthesize into hybrid developmental trajectories: blended replication depth adjusts module proliferation rate, symmetry alignment ensures spatial coherence, and retained differentiation preserves functional specialization. The example concretely shows genotype‑level arithmetic producing qualitatively interpretable phenotype differences post‑development, reinforcing the utility of rule interpolation.
 Parent A (excerpt):
 
 ```
-Rules: [ replicate(times=2), symmetry(axis=y), differentiate(region=motor, act=tanh) ]
+Rules: [ replicate(times=2), symmetry(axis=y), differentiate(region=motor, act='tanh') ]
 CPPN: topology hash H1, weights WA
 Substrate: dims=2, scale=1.0
 ```
@@ -462,18 +329,14 @@ Substrate: dims=2, scale=1.2 (stretched x-axis)
 Child (result):
 
 ```
-Rules: [ replicate(times=2 or 1→2 blended), symmetry(axis=y), hierarchy(levels=2), differentiate(region=motor, act=tanh) ]
+Rules: [ replicate(times=2 or 1→2 blended), symmetry(axis=y), hierarchy(levels=2), differentiate(region=motor, act='tanh') ]
 CPPN: crossover(H1(WA,WB))
 Substrate: dims=2, scale ~1.1 (blended) with normalization
 ```
 
 Development then proceeds (rules executed, CPPN queried, phenotype materialized) producing a network that inherits broad symmetry + replication depth + motor differentiation.
 
----
-
----
-
-## 4. Focusing Evolution Dynamically
+## Focusing Evolution Dynamically
 
 Frames focus scoring as a multi‑objective prioritization heuristic balancing exploitation (error attribution, gradient contribution) with exploration (novelty deficits, structural entropy). By converting heterogeneous signals into a scalar sampling weight, the system produces a soft, continuous pressure distribution that adapts as modules mature or regress, reducing manual tuning of per‑operator probabilities.
 We maintain per-module metrics:
@@ -481,7 +344,11 @@ We maintain per-module metrics:
 ```
 ModuleMetric = {
   id, errShare, actMean, actVar, age, lastMutationIter,
-  contribGradient, noveltyScore, sparsity, utilization
+  contribGradient, noveltyScore, sparsity, utilization,
+  // wiring and modularity signals used to prefer compact/regular wiring
+  meanEdgeLength?: number,
+  interModuleEdgeRatio?: number,
+  modularityQ?: number
 }
 ```
 
@@ -493,7 +360,8 @@ function computeFocus(m: ModuleMetric) {
     0.35 * norm(m.errShare) +
     0.2 * (1 - norm(m.noveltyScore)) +
     0.25 * norm(m.contribGradient) +
-    0.2 * underUtilPenalty(m.utilization)
+    0.15 * (1 - norm(m.modularityQ || 0)) + // prefer modules that increase modularity score
+    0.15 * underUtilPenalty(m.utilization)
   );
 }
 ```
@@ -504,13 +372,131 @@ Modules chosen for:
 - Diversification if low novelty + moderate error.
 - Pruning if very low contribution & low utilization.
 
+Notes:
+
+- `meanEdgeLength` and `interModuleEdgeRatio` feed into focusScore and can increase pruning pressure on long or cross‑module links.
+- `modularityQ` is used to prefer mutations/morphs that increase modular structure; it can also be used as a speciation axis.
+
 ---
 
-## 5. Example Genotype Snippets
+## High-Level Goals
+
+Links biologically inspired constructs (symmetry, differentiation, plasticity) to concrete engineering KPIs (sample efficiency, scaling curvature, memory per effective edge) to ensure aesthetic analogies are instrumented and falsifiable. This guards against ornamental complexity by demanding metric justification for each added mechanism.
+
+1. Add a compact Evo‑Devo genotype layer that can generate / regenerate phenotypic `Network` graphs deterministically.
+2. Support CPPN‑driven structural & weight pattern generation (indirect encoding) with caching for large substrates.
+3. Introduce morphogenesis (runtime growth/prune rules) integrated with existing pruning + connection pooling.
+4. Maintain or reduce memory per active connection via slab packing + sparsity while enabling growth to millions of edges incrementally.
+5. Provide introspection (modules, regions, developmental lineage) without heavy overhead when disabled.
+6. Provide wiring‑cost primitives and selection hooks so evolution and morphogenesis can prefer compact, modular, and regular wiring (configurable penalties and Pareto options).
+
+---
+
+## How to use these instructions
+
+These instructions describe a step‑by‑step plan to implement the features of Hyper MorphoNEAT in a series of incremental, testable phases. Each section details a conceptual component, followed by a precise specification of the corresponding implementation step.
+
+For each phase:
+
+- Review the objectives and key tasks to understand the goals and technical requirements.
+- Implement the changes in small, reviewable increments, following the specified order and guidelines.
+- Validate correctness and performance at each step, using the provided acceptance criteria and tests.
+- Update this plan as needed to reflect any changes or discoveries during implementation.
+
+### Policy & contribution notes (short)
+
+For strict rules, automated validations, and contribution guidance see the canonical repository documents:
+
+- `.github/copilot-instructions.md` — repo-specific contributor instructions and strict rules.
+- `STYLEGUIDE.md` — coding/style/test conventions (tests: single-expect rule, naming, JSDoc requirements, etc.).
+
+Summary (local): keep changes small and reviewable, gate hyper features behind a flag, and run the repo validation suite before merging (tests, lint, typecheck, build). Use the canonical files above as source-of-truth; do not duplicate policy here.
+
+### Minimal pseudocode example
+
+To ground the conceptual pipeline in a concrete example, the following pseudocode illustrates the high-level function calls and data flow for building a phenotype from a genotype.
+
+```ts
+function buildPhenotype(geno, seed) {
+  const substrate = layoutSubstrate(geno.substrateSpec);
+  const virtualNodes = applyRules(geno.rules, substrate, { seed });
+  const adjacency = evaluateCPPNSafe(
+    geno.cppns,
+    virtualNodes,
+    geno.wiringPreferences
+  );
+
+  return materializeNetwork(virtualNodes, adjacency, { poolReuse: true });
+}
+```
+
+### Layer responsibilities
+
+To maintain a clean separation of concerns, the system is divided into two primary layers: the Genotype and the Phenotype. This division is crucial for ensuring that the genetic representation remains compact and heritable, while the materialized network can be optimized for runtime performance.
+
+1. Genotype (persistent, small)
+
+- Encodes rules, CPPN parameters, substrate spec, wiring preferences and version metadata.
+- Must be immutable during a build pass; mutations create a new genotype object.
+- Provides canonical serialization and deterministic hashing (order‑independent where appropriate).
+- Small and cheap to copy/compare; used by evolutionary operators and CI checks.
+
+2. Phenotype (materialized, transient)
+
+- Instantiates Node/Connection objects, activation buffers, plasticity accumulators and runtime telemetry.
+- May be pooled and reused across builds; must be reconstructible from the genotype + seed.
+- Holds transient performance state (running statistics, per‑connection traces) that is optional and lazy‑allocated.
+- Subject to explicit budgets (maxNodes, maxEdges, memoryBudget) and reversible morph operations.
+
+### Key invariants & safety guarantees
+
+To ensure robust and predictable behavior, the Hyper MorphoNEAT implementation must adhere to a set of key invariants and safety guarantees. These principles are designed to prevent common pitfalls in complex evolutionary systems, such as non-determinism and uncontrolled resource consumption.
+
+- Determinism: genotype + seed → canonical phenotype (stable ordering and stable hash).
+- Referential safety: no runtime phenotype object is retained as part of a genotype; genotype serialization contains only serializable fields.
+- Lazy allocation: telemetry and per‑connection extras allocate only when enabled.
+- Budget enforcement: all builds and morphs check and honor configured resource caps before committing structural changes.
+- Side‑effect free import: importing hyper modules with the feature flag disabled must not mutate global runtime state.
+
+### Practical guidelines
+
+To complement the strict invariants, the following practical guidelines should be followed during development. These are best practices that will help maintain code quality, performance, and debuggability.
+
+- Canonicalize before hashing: sort rule lists and normalize numeric fields prior to JSON/string hashing to avoid order-dependent innovation ids.
+- Use shallow, copy-on‑write genotype mutations for evolutionary operators; avoid mutating arrays in place.
+- Cache adjacency/CPPN outputs keyed by canonical fingerprints (genotype hash, substrate hash, wiring prefs) and invalidate conservatively on genotype changes.
+- Pool ephemeral storage (slabs, activation arrays, plasticity buffers) and reset on release to avoid steady heap growth.
+- Include lightweight ancestry/trace metadata in phenotype objects when telemetry is enabled; keep it out of core runtime paths otherwise.
+
+## Memory & performance alignment
+
+Efficient memory management and high performance are critical for evolving complex neural networks. Hyper MorphoNEAT's implementation is therefore tightly aligned with the repository's dedicated memory and performance optimization roadmap. This section summarizes the key targets and how they map to the phased implementation.
+
+**All memory operations, feature flags, and constants within the Hyper MorphoNEAT implementation must be sourced from the `Centralized Memory Manager` defined in Phase 3.5 of the `Memory_Optimization.md` plan. This ensures architectural consistency and adherence to the pay-for-use principle.**
+
+Hyper MorphoNEAT relies on the repository's dedicated memory roadmap; this section summarizes the concrete targets and phase mapping from `plans/Memory_Optimization.md` so implementers and reviewers share the same acceptance criteria.
+
+- Bytes / active connection: target ≈ 64 bytes per active connection (empirical baseline and Phase 1/3 goals in `plans/Memory_Optimization.md`). Use slab packing, bit‑flags, and optional pay‑for‑use slabs (gain, plasticity) to achieve this.
+- Adjacency / phenotype caching: aim for an adjacency cache hit ratio > 70% in repeated evaluation scenarios (see Memory plan L7 and Hyper phases). Budget adjacency cache bytes to remain small (goal: ~+6 bytes amortized per active connection when the cache is effective).
+- Rebuild variance: p95/median rebuild time ratio target < 2.5× (see Memory plan Phase targets for rebuild variance and slab reuse guidance).
+- Plasticity side‑buffers and gains: keep optional side‑buffers < 8 bytes per plastic connection when enabled (Memory plan Phase 5/Hyper-specific targets).
+
+Mapping to Memory phases (canonical references)
+
+- Phase 0: Baseline instrumentation and dist‑only snapshots — use this to establish the Hyper baseline before enabling morphogenesis.
+- Phase 1: Field audit & slimming — enforces connection enumerable key limits and documents bytes/connection baseline (~64–69 bytes observed).
+- Phase 2: Node pooling — reuse reduces churn and enables deterministic parity when pooling is toggled on/off.
+- Phase 3: Slab packing & optional slabs — the primary mechanism Hyper features should rely on to meet bytes/connection targets and to support low-overhead morphogenesis churn.
+
+Implementers should consult `plans/Memory_Optimization.md` for benchmark artifacts, CV targets, and the detailed slab/pooling rules; Hyper PRs that touch growth/prune or caching must reference the relevant Memory phase tests (Field audit, NodePool stats, slab parity & gain omission tests) in their CI checklist.
+
+### Example Genotype Snippets
+
+To help developers and users get started, this section provides canonical genotype examples. These snippets serve as reproducible starting points for experiments and as fixtures for regression tests, ensuring that the developmental process is both deterministic and performant.
 
 Offers canonical genotype archetypes that encode best‑practice starting conditions (minimal symmetric scaffold, hierarchical seed) enabling reproducible baselines for benchmarking. These snippets reduce ramp‑up cost for new users and function as fixtures in regression tests ensuring deterministic development and stable performance signatures across releases.
 
-### 5.1 Minimal Seed
+#### Minimal Seed
 
 Establishes a deterministic seed configuration with just enough structural variability (symmetry + shallow hierarchy) to exercise rule execution pathways while remaining analytically tractable. This baseline underpins performance profiling (isolated from higher‑order morphogenesis) and provides a control for evaluating incremental feature flags.
 
@@ -529,7 +515,12 @@ const geno: HyperGenotype = {
     { id: 2, kind: 'symmetry', params: { axis: 'y' }, probability: 0.7 },
     { id: 3, kind: 'hierarchy', params: { levels: 2 }, probability: 1 },
   ],
-  cppns: [seedCPPN(/* architecture spec */)],
+  // TODO: replace with a concrete CPPNGene example; minimal example: seedCPPN({ layers:[{units:8,act:'tanh'},{units:1,act:'identity'}], seed:42 })
+  cppns: [
+    seedCPPN({
+      /* minimal architecture spec: layers, activations, seed */
+    }),
+  ],
   substrateSpec: {
     dims: 2,
     inputLayout: 'line',
@@ -540,7 +531,7 @@ const geno: HyperGenotype = {
 };
 ```
 
-### 5.2 Rule Mutation Example
+#### Rule Mutation Example
 
 Showcases a parameter mutation that incrementally increases structural capacity along an existing replication axis, illustrating fine‑grained controllability of developmental expansion without introducing novel rule kinds. This emphasizes mutation granularity: small numeric shifts propagate into proportionate phenotype elaboration, aiding smooth fitness landscape traversal.
 
@@ -553,7 +544,7 @@ mutateRule(
 );
 ```
 
-### 5.3 Activity-Based Synaptogenesis (Runtime)
+#### Activity-Based Synaptogenesis (Runtime)
 
 Exemplifies a morphogenesis policy that reacts to instantaneous utilization and error signals to add localized capacity, distinct from heritable genome alteration. This separation enables temporally adaptive fine‑tuning (short horizon structural adjustments) while preserving the slower evolutionary channel for consolidating successful motifs into heritable rules.
 
@@ -565,403 +556,83 @@ for (const region of regionsSortedByFocus(net)) {
 }
 ```
 
----
+### Connection costs & wiring penalties
 
-## 6. Indirect Connectivity Example
+A common challenge in generative neural network systems like HyperNEAT is the tendency to produce highly regular but inefficient wiring. To address this, Hyper MorphoNEAT treats wiring cost as a first-class citizen, allowing evolution to favor more compact and modular structures. This section details how wiring penalties are integrated into the system.
 
-Explains how coordinate‑based CPPN queries transform geometric relations (relative displacement, distance) into correlated weight patterns and probabilistic connectivity masks. This yields structured sparsity (e.g., banded, radial, or mirrored motifs) whose regularity enhances parameter sharing and reduces overfitting compared to unstructured random sparse graphs at equal edge budgets.
-Given node coordinates `(x_i,y_i)` and `(x_j,y_j)`, the CPPN input vector:
+Plain HyperNEAT often produces highly regular but non‑modular wiring (many long inter‑module links) because there is no explicit penalty for wiring length or inter‑module connections. To reliably encourage compact, modular networks the plan should treat wiring cost as a first‑class signal across CPPN decisioning, morphogenesis, and telemetry.
+
+- Treat wiring cost (connection count, euclidean length, inter‑module links) as an explicit, configurable signal used across CPPN decisioning, morphogenesis policies, and selection/fitness. In the developmental metaphor this is equivalent to metabolic or material costs that bias growth and pruning.
+- Practically: CPPNs can combine a mask output with a cost term to produce an effective score used to realize edges; morph policies prefer local densification and prune long/inter‑module edges first under budget pressure; evolution may expose per‑genotype wiring preference weights (λ_count, λ_len, λ_inter) so wiring economics can be tuned or evolved.
+- Making wiring cost explicit enables traceable trade‑offs (task performance vs wiring economy) and supports Pareto or penalized selection strategies described later in this plan.
+
+High level recommendations (what and why):
+
+- Add wiring cost terms to genotype/network bookkeeping: per‑genotype knobs (connectionCountWeight, lengthCostWeight, interModulePenalty) and an optional per‑genotype evolved preference for wiring economy.
+- Apply cost awareness at three layers: (A) CPPN adjacency decision (cheap early pruning), (B) fitness/selection (global tradeoff), and (C) morphogenesis/telemetry (local growth/prune policy signals).
+
+Concrete lightweight API & formulas:
+
+- Track per‑network summary values: totalConnections, totalWiringLength (sum of euclidean distances of realized edges), interModuleEdgeCount.
+- Single‑objective penalty (simple):
 
 ```
-v = [x_i, y_i, x_j, y_j, |x_i-x_j|, |y_i-y_j|, dist, 1]
+penalizedFitness = rawFitness - λ_count * totalConnections
+                              - λ_len   * totalWiringLength
+                              - λ_inter * interModuleEdgeCount
 ```
 
-CPPN output channels (example):
+- Multi‑objective alternative: treat (taskFitness, wiringCost) as a Pareto pair and use Pareto selection (e.g., NSGA variants) to explore the trade‑off surface without scalarizing.
 
-- `o0`: raw weight value
-- `o1`: connection mask probability (threshold)
-- `o2`: plasticity rate hint
-- `o3`: symmetry tag (for future tying)
+CPPN & adjacency recommendations (cheap, local bias):
 
-Edge realized if `sigmoid(o1) > maskThreshold`. Weight = `scale(o0)`. Optional plasticity metadata attached only if feature flag.
+- Make the CPPN adjacency decision cost‑aware by combining the mask output with a distance / inter‑module cost term before thresholding:
 
----
+```
+effectiveScore = maskOutput - costCoeff * (normalizedDistance + interModuleFlag)
+realizeEdge if sigmoid(effectiveScore) > maskThreshold
+```
 
-## 7. Morphogenesis Event Cycle (Detailed Example)
+- Provide per‑module mask bonuses so CPPNs can be biased toward intra‑module connectivity (e.g., boost maskOutput if src.module === dst.module).
+
+Morphogenesis & pruning recommendations:
+
+- Under memory pressure or when pruning is considered, prefer removing inter‑module or long‑distance edges first (unless they show high contribution score).
+- When growing, prefer local densification (intra‑module) before adding long‑range shortcuts; allow occasional long links but gate by a budget or cooldown.
+
+Telemetry & metrics:
+
+- Expose wiring metrics in `telemetry.ts`: meanEdgeLength, interModuleRatio, modularityQ. Use these to track emergent modularity and guide focusScore adjustments.
+
+Practical experiment suggestions (to tune λ values and policies):
+
+- A/B test: no cost vs scalar penalty vs Pareto selection; measure task performance vs modularity (Q), interModuleRatio, and edge count.
+- Compare CPPN cost‑aware thresholding vs cost only in selection to see which induces more modularity with less performance loss.
+
+Risks & mitigations:
+
+- Over‑penalizing wiring reduces achievable task performance — mitigate by annealing λs, evolving λ per genotype, or using Pareto selection.
+- Metric compute cost (modularity, length) — compute telemetry incrementally and at low cadence (end of epoch) or sample subnetworks.
+
+Where to add this in the phased plan (quick mapping):
+
+- Phase 1: add config flags and genotype fields for wiring‑cost weights and basic wiring telemetry counters.
+- Phase 3 (CPPN): implement cost‑aware adjacency thresholding and per‑module mask bonuses; include adjacency cache keys for cost parameters.
+- Phase 4 (Morphogenesis): prefer local growth and prune inter‑module edges first; include wiring metrics in morph decision inputs.
+- Phase 6 (Telemetry): export wiring metrics and modularity Q; add automated ablation dashboard entries.
+- Phase 7 (Evolution): support penalized fitness option and/or Pareto selection; include wiringCost component in speciation distance if desired.
+
+This section intentionally keeps changes incremental and opt‑in: wiring penalties are gated by config flags and can be tuned or evolved, so users keep the option to explore pure regular HyperNEAT behaviour or wiring‑aware morphogenesis.
+
+### Morphogenesis Event Cycle (Detailed Example)
+
+To illustrate how runtime adaptations occur, this section provides a detailed example of the morphogenesis event cycle. It documents the sequence of actions—pruning, growing, and rebuilding—and the invariants that ensure state consistency and prevent race conditions. This example serves as both a pedagogical tool and a reference for implementation.
 
 Documents the order and conditionality of runtime adaptation actions (prune → grow → rebuild), making explicit the invariants (metrics snapshot immutability during a cycle, deferred rebuild) that guard against race conditions and inconsistent state. This trace form facilitates reproducibility and pedagogical walkthroughs.
 
-```
-// Called after each training epoch
-onEpochEnd(net, geno, stats) {
-  const metrics = collectModuleMetrics(net, stats);
-  const focusOrder = rankModules(metrics);
-  for (const m of focusOrder) {
-    if (shouldPrune(m)) pruneModuleEdges(net, m, { keepFraction:0.6 });
-    else if (shouldGrow(m)) growModule(net, geno, m, { strategy:'replicate_path' });
-  }
-  if (genoMutated) rebuildPhenotype(geno, net, { reuse: true });
-  recordTrace(metrics, actionsTaken);
-}
-```
-
----
-
-## 8. Educational Comparison Summary
-
-Consolidates distinguishing dimensions (encoding granularity, growth triggers, scalability levers, plasticity integration) into a comparative matrix to contextualize Hyper MorphoNEAT’s hybrid positioning. The summary aids evaluators in mapping application constraints (e.g., need for extreme scaling, interpretability) to algorithm choice.
-| Aspect | Classic NEAT | HyperNEAT | Hyper MorphoNEAT |
-|------------------------|-------------------------------------|--------------------------|-------------------------------------------------------------|
-| Encoding | Direct genes (nodes/conns) | Indirect (CPPN) | Hybrid: rules + CPPN + runtime growth |
-| Growth Trigger | Genetic mutation only | Genetic (CPPN changes) | Genetic + runtime morphogenesis + focus policies |
-| Scalability Mechanism | Gradual complexification | Geometric regularities | Deferred materialization + region focus + sparsity budgets |
-| Plasticity | (Optional) weight updates | Not central | Built-in local synaptogenesis + Hebbian optional |
-| Speciation | Yes | Typically via CPPN genes | Extended to rules + CPPN + module signatures |
-| Pruning | Limited / manual | Not primary | Integrated cyclical prune/regrow + memory guards |
-
----
-
-## 9. Educational Hooks & Introspection
-
-Justifies first‑class introspection: complex indirect encodings risk opacity without structured tracing and metric surfacing. By instrumenting genotype→phenotype lineage, module utilization, and morph event deltas under optional flags, the system supports hypothesis‑driven debugging, comparative ablation studies, and educational visualization without imposing default overhead.
-Planned user-facing helpers:
-
-- `hyper.inspectGenotype(geno)` → prints rule list, CPPN summaries.
-- `hyper.trace()` → chronological list of developmental & morph actions.
-- `hyper.moduleReport(net)` → table of metrics (utilization, error share, sparsity, age).
-- `hyper.replay(traceLog)` → reproduce growth decisions (determinism demo).
-
----
-
-## 10. Alignment With Implementation Phases
-
-Articulates how conceptual pillars (indirect encoding, developmental rules, runtime morphogenesis, plasticity, telemetry, evolutionary integration) are deliberately staged to minimize compounded uncertainty. Each phase establishes a stable substrate (e.g., deterministic genotype regeneration) before layering on adaptive complexity, reducing confounding when performance regressions appear.
-| Concept Section | Implementation Phase(s) |
-|---------------------------------|-------------------------|
-| Seed Genotype & Substrate | 0–1 |
-| Replication / Symmetry Rules | 2 |
-| Indirect CPPN Connectivity | 3 |
-| Runtime Morphogenesis Hooks | 4 |
-| Plasticity Variables | 5 |
-| Telemetry / Trace Export | 6 |
-| Speciation Extensions | 7 |
-| Scaling Validation / Memory Budgets | 8 |
-
----
-
-## 11. Future Educational Enhancements
-
-Enumerates future pedagogical tooling (interactive developmental replays, rule mutation sandboxes, lineage visualization) intended to lower cognitive barriers for newcomers and support empirical methodology (e.g., side‑by‑side growth trajectory comparison). These extensions act as force multipliers for community experimentation and reproducibility.
-
-- Interactive visualization: animate rule application passes.
-- Module lineage tree export (GraphViz / JSON).
-- “What-if” sandbox: apply hypothetical rule mutation and preview delta in nodes/edges before committing.
-- Tutorial notebooks: build from seed → mid complexity → large modular brain.
-
----
-
-> NOTE: All conceptual elaborations above are descriptive; actual code remains gated behind flags and phases below.
-
----
-
-## High-Level Goals
-
-Links biologically inspired constructs (symmetry, differentiation, plasticity) to concrete engineering KPIs (sample efficiency, scaling curvature, memory per effective edge) to ensure aesthetic analogies are instrumented and falsifiable. This guards against ornamental complexity by demanding metric justification for each added mechanism.
-
-1. Add a compact Evo‑Devo genotype layer that can generate / regenerate phenotypic `Network` graphs deterministically.
-2. Support CPPN‑driven structural & weight pattern generation (indirect encoding) with caching for large substrates.
-3. Introduce morphogenesis (runtime growth/prune rules) integrated with existing pruning + connection pooling.
-4. Maintain or reduce memory per active connection via slab packing + sparsity while enabling growth to millions of edges incrementally.
-5. Provide introspection (modules, regions, developmental lineage) without heavy overhead when disabled.
-
----
-
-## Current Baseline (What We Leverage)
-
-Surveys core infrastructural assets (connection pooling, slab packing, pruning logic, deterministic RNG) leveraged to accelerate development and reduce risk. Emphasizing reuse clarifies that innovation is concentrated in encoding and adaptive control layers, not low‑level numerical plumbing.
-
-Already present & reused:
-
-- `Connection.acquire/release` pooling.
-- Packed connection slab (`network.slab.ts`) + activation array pool.
-- Configurable pruning (`network.prune.ts`) and sparsity targeting.
-- Deterministic RNG snapshot / restore.
-- Multi‑optimizer update paths in `Node`.
-- NEAT mutation operators (can be extended to developmental rule mutation).
-
-Gaps to fill:
-
-- No genotype <-> phenotype separation beyond classic NEAT gene lists.
-- No spatial substrate abstraction or coordinate system.
-- No CPPN module.
-- No runtime growth triggers aside from pruning & add‑node mutation.
-- No hierarchical/module metadata structure.
-
----
-
-## Module Layout (Proposed New Files / Folders)
-
-Defines a modular namespace that enforces separation of concerns: genotype logic isolated from runtime morph policies, CPPN generation segregated from phenotype materialization, and telemetry decoupled via lazy hooks. This isolation simplifies dependency analysis and reduces inadvertent cross‑layer coupling.
-
-```
-src/hyper/
-  genotype.ts              // Core Evo-Devo genotype (rule list, CPPN refs, seeds)
-  developmentalRules.ts    // Rule interfaces + execution engine
-  cppn/
-    cppn.ts                // Minimal differentiable / evolvable CPPN (reuse existing activations)
-    compiler.ts            // Optional fast-path compilation to slab weights
-  substrate.ts             // Spatial substrate (coords, regions, symmetry helpers)
-  morphogenesis.ts         // Runtime growth & pruning coordinator
-  phenotypeBuilder.ts      // Builds a Network from genotype + substrate
-  telemetry.ts             // Lightweight hooks, lazy when disabled
-  serialization.ts         // Genotype (not full Network) persistence
-  mutation.ts              // Mutations specific to rules / CPPN structure
-  spec.md                  // (Design notes, constraints)
-```
-
-All additions are additive; existing APIs remain stable until an eventual major version.
-
----
-
-## Data Contracts (Initial Draft)
-
-Introduces stable interface nuclei enabling early consumer code (tests, tooling) to target contracts while internal algorithms iterate. Early formalization also enables forward‑compatible serialization (version tagging, optional field evolution) and eases future compression or remote execution strategies.
-
-Genotype core:
-
-```ts
-interface DevelopmentalRule {
-  id: number;
-  kind:
-    | 'replicate'
-    | 'differentiate'
-    | 'symmetry'
-    | 'hierarchy'
-    | 'prune_hint'
-    | 'densify_region';
-  params: Record<string, number | string | boolean>;
-  probability?: number; // execution probability in a pass
-  priority?: number; // ordering
-  enabled?: boolean;
-}
-
-interface HyperGenotype {
-  seed: number;
-  input: number;
-  output: number;
-  rules: DevelopmentalRule[];
-  cppns: CPPNGene[]; // Each produces pattern(s)
-  substrateSpec: SubstrateSpec; // Dimensions, coordinate frames
-  version: 1;
-}
-```
-
-Phenotype build call:
-
-```ts
-buildPhenotype(geno: HyperGenotype, opts): Network; // Reuses Connection pooling + slab
-```
-
-Runtime morphogenesis callback hook signature:
-
-```ts
-type MorphEvent =
-  | 'epochEnd'
-  | 'stagnation'
-  | 'memoryPressure'
-  | 'externalSignal';
-type MorphogenesisHook = (
-  net: Network,
-  ctx: { event: MorphEvent; metrics: any }
-) => void;
-```
-
-## Risk & Mitigation Summary
-
-Transforms diffuse architectural risks into an actionable ledger, pairing each risk with concrete mitigation levers (caching, budgets, feature flags). This supports proactive monitoring and simplifies post‑mortem attribution if regressions emerge.
-| Risk | Mitigation |
-|------|------------|
-| Rebuild overhead for large CPPN substrates | Caching + incremental diff generation |
-| Memory blowup from plasticity state | Optional feature; pooled typed arrays with reuse |
-| Rule explosion causing combinatorial growth | Global complexity budget + rule priority throttle |
-| API instability | Feature-flag entire hyper layer until Phase 6 |
-
----
-
-## Incremental PR Sequencing (Granular Checklist)
-
-Breaks delivery into reviewable micro‑increments so semantic drift or performance regressions are localized; each PR carries its own acceptance tests and plan diff, forming an auditable evolution trail of the design document itself.
-
-1. PR1: Scaffolding + config flag + empty tests.
-2. PR2: Genotype + basic phenotype builder.
-3. PR3: Developmental rules (replicate/symmetry) + tests.
-4. PR4: CPPN core + indirect edge generation.
-5. PR5: Morphogenesis hooks + activity metrics.
-6. PR6: Plasticity (Hebbian) + gating.
-7. PR7: Telemetry + export trace.
-8. PR8: Evolution integration (mutation + speciation extension).
-9. PR9: Scaling benchmarks + docs.
-10. PR10: Stabilization & API doc examples.
-
-Each PR keeps surface area small, adds tests, and updates this plan (append CHANGELOG section).
-
----
-
-## Example (Future) User API Sketch (Post Phase 5)
-
-Provides a provisional user‑facing construct to validate naming consistency, configuration surface minimality, and composability with existing library patterns before hardening interfaces post Phase 6.
-
-```ts
-import { createHyper } from 'neataptic-ts/hyper';
-
-const hyper = createHyper({
-  input: 16,
-  output: 4,
-  rules: [{ kind: 'replicate', params: { times: 2 } }],
-  cppn: { layers: [8, 8], activation: 'tanh' },
-  enableMorphogenesis: true,
-  plasticity: { mode: 'hebbian', rate: 1e-3 },
-});
-
-const net = hyper.build();
-// training loop ... hyper.maybeMorph(eventMetrics)
-```
-
----
-
-## Acceptance & Success Metrics
-
-Anchors success to quantifiable, automatable metrics (build time ratio, memory per active connection, deterministic hash reproducibility) ensuring progress narratives are evidence‑based; thresholds provide regression guards in CI.
-| Metric | Target (initial) | Rationale |
-|----------------------------------|-------------------------------------------------|--------------------------|
-| Phenotype build time (50k edges) | < 1.2× baseline Network construction | Maintain responsiveness |
-| Memory per active connection | TBD after measurement (< baseline by Phase 8) | Scale to big nets |
-| Morph hook overhead (disabled) | < 1% runtime | Pay only when used |
-| Deterministic rebuild hash match | 100% | Reproducibility |
-
----
-
-## Future Extensions (Post v1)
-
-Signals strategic extension vectors (symbolic modules, GPU path, compressed serialization) to align community contributions and prevent ad‑hoc divergence once the core is stable.
-
-- Spatially aware neuro-symbolic modules.
-- GPU/WebGPU execution path using slab + typed buffers.
-- Compressed serialization (delta-coded genotype + pattern seeds).
-
----
-
-## Maintenance Notes
-
-Enumerates non‑negotiable constraints (optional fields, isolation of hyper namespace, pooled state hygiene) that reviewers should enforce to avoid gradual entropy accumulation and maintain predictable memory/performance profiles.
-
-- Keep `hyper/` isolated; do not import from it inside baseline `Network` unless flag enabled to avoid bundle bloat.
-- All added fields on `Network` must be optional and lazily allocated.
-- Pool any added per-connection arrays (plasticity, tags) via indexed side buffers.
-
----
-
-
----
-
-## Phased Implementation Plan
-
-Specifies an incremental delivery roadmap where each phase yields a self‑contained, benchmark‑able capability with explicit rollback boundaries. This staging supports empirical validation (performance, memory) and confines failure domains—problems in morphogenesis (Phase 4) cannot corrupt genotype determinism established in earlier phases.
-
-### Phase 0 – Groundwork (Low Risk / Enablers)
-
-Focuses on infrastructural enablement: feature flags for conditional compilation, placeholder interfaces for type stability, and sentinel tests ensuring future expansions do not regress baseline construction pathways. No algorithmic semantics change in this phase, de‑risking the branch point.
-Goal: Create scaffolding without behavior changes.
-Steps:
-
-1. Add `src/hyper/` folder with placeholder `genotype.ts`, `developmentalRules.ts`, `substrate.ts` exporting empty interfaces + TODO comments.
-2. Add feature flag to `config` (e.g. `config.enableHyper = false`).
-3. Add `test/hyper/` folder.
-4. Add unit test stubs verifying import does not throw. Naming pattern: `hyper.*.test.ts` using the topic or focus on the file name.
-   Acceptance: Build + tests unchanged; tree includes new folder.
-
-### Phase 1 – Genotype & Substrate Core
-
-Delivers reproducible genotype→phenotype translation with hashing and serialization hooks so subsequent adaptive layers (rules, CPPNs) inherit a verifiable foundation. Determinism here is pivotal for isolating non‑deterministic variance sources in later performance analyses.
-Steps:
-
-1. Implement `HyperGenotype` structure & factory (`createInitialGenotype(input, output, seed)`).
-2. Implement minimal `substrate.ts` with coordinate assignment for input/output nodes (e.g., 1D normalized positions).
-3. Implement deterministic rebuild to a trivial `Network` (linear fully‑connected input→output) via `phenotypeBuilder.ts`.
-4. Add serialization for genotype only (`toJSONGenotype`, `fromJSONGenotype`).
-5. Add tests: round‑trip genotype + phenotype equivalence vs direct Network baseline.
-   Acceptance: Can build network from genotype deterministically, coverage >= existing threshold for new lines.
-
-### Phase 2 – Developmental Rule Engine (Static Application)
-
-Confirms that static developmental rule application yields predictable, parameter‑controlled structural transformations (node/edge count scaling laws) before introducing temporal dependencies or indirect connectivity. This isolates semantic bugs (e.g., symmetry duplication drift) early.
-Steps:
-
-1. Define rule execution ordering & priority.
-2. Implement rule kinds: `replicate` (split connection region), `symmetry` (mirror coordinates), `hierarchy` (tag modular region ids).
-3. Extend phenotype builder to apply rules in passes (no runtime dynamics yet).
-4. Provide mutation operators for enabling/disabling rules & parameter tweak.
-5. Tests: Rule application changes node & connection counts as expected; determinism with identical seeds.
-   Acceptance: Complexity scaling via rules validated on synthetic tests.
-
-### Phase 3 – CPPN Integration (Indirect Encoding)
-
-Adds CPPN‑based pattern synthesis to decouple connection enumeration from explicit genome length, enabling graceful scaling to large substrates via procedural generation plus sparsity thresholds. Performance and caching instrumentation ensure tractability before layering dynamic growth.
-Steps:
-
-1. Implement lightweight CPPN (feedforward multi‑layer perceptron) using existing `Node` activation functions (no recursion) in `cppn/cppn.ts`.
-2. Define `CPPNGene` (architecture description + weights array reused via typed arrays for memory efficiency).
-3. Add mapping: for each candidate pair (i,j) the CPPN queries `(x_i, y_i, x_j, y_j, distance, bias)` to produce weight or mask.
-4. Introduce sparsity threshold (e.g. absolute output < t -> skip connection) feeding into existing slab rebuild.
-5. Cache generated adjacency (fingerprint genotype + substrate + threshold) to avoid recomputation across evaluations.
-6. Tests: Weight pattern symmetry; threshold controls edge count.
-   Acceptance: Indirect generation path within 1.5× baseline time for medium nets; memory overhead bounded (document).
-
-### Phase 4 – Morphogenesis (Runtime Growth & Pruning Hooks)
-
-Installs runtime evaluators that adjust structure in response to short‑horizon performance signals, establishing a middle adaptation timescale between gradient updates and generational evolution. Policies are bounded by memory/growth budgets to preserve predictability.
-Steps:
-
-1. Implement `morphogenesis.ts` maintaining counters: activity, error trend, stagnation iterations.
-2. Expose `registerMorphHook` on Network (only active if hyper mode enabled) storing a list of `MorphogenesisHook`.
-3. Provide built‑in policies: `activity_expand`, `low_contrib_prune` (leveraging existing pruning API), `module_split` (clone subgraph tag).
-4. Introduce growth budget guard referencing memory plan (max connections & nodes; triggers forced pruning).
-5. Tests: Controlled mock metrics trigger expected growth/prune actions (assert node/connection deltas).
-   Acceptance: Hooks fire without breaking forward / backward passes; pool usage stable.
-
-### Phase 5 – Plasticity & Local Adaptation
-
-Augments standard optimizer updates with local activity‑dependent modifications (Hebbian/anti‑Hebbian) providing rapid micro‑adaptation where gradient signals may be sparse or noisy, potentially improving credit assignment in deep or recurrent motifs.
-Steps:
-
-1. Add optional per‑connection short‑term plasticity variables (reuse existing `Connection` extension fields; ensure pooling reset).
-2. Implement Hebbian update option executed post‑activation batch (scales small typed array of weight deltas, not reusing `propagate`).
-3. Provide configuration gating to avoid overhead when disabled.
-4. Tests: Hebbian updates modify weights in isolation; disabled path adds near‑zero overhead (<5% baseline runtime for small net).
-   Acceptance: Plasticity coexists with backprop/evolution.
-
-### Phase 6 – Telemetry & Introspection (Lazy)
-
-Ensures instrumentation cost is pay‑as‑you‑go: metric buffers and trace arrays allocate only when enabled, and hot paths retain branch‑predictable checks. This design encourages pervasive measurability without penalizing production performance.
-Steps:
-
-1. `telemetry.ts` gathers per‑module stats (avg activity, sparsity) only when `enableTelemetry` flag set.
-2. Add `network.exportDevelopmentalTrace()` returning rule application + growth events.
-3. Add optional ONNX metadata section embedding module tags.
-4. Tests: Telemetry off -> no extra allocations (assert via heap sampling harness later). Basic JSON output validated.
-   Acceptance: Non‑intrusive diagnostics present.
-
-### Phase 7 – Evolutionary Integration (Mutation + Reproduction)
-
-Integrates multi‑family crossover and expanded distance metrics so population dynamics can exploit recombination benefits (innovation combination, deleterious mutation masking) while maintaining ecological niche protection for divergent developmental strategies.
-Steps:
-
-1. Extend existing NEAT mutation registry with hyper‑aware mutations (add/remove rule, mutate CPPN weight/topology, adjust substrate scale, modify rule probabilities/priorities).
-2. Implement `crossoverHyperGenotype(a,b,cfg)` with alignment & blending strategies (rules, CPPNs, substrate modifiers) + validation pass.
-3. Add speciation distance components for genotype differences (rule vector hash distance, CPPN topology/weight signature, substrate modifier delta).
-4. Integrate reproduction into population loop: select parents, generate offspring genotype(s), regenerate phenotype using cached artifacts.
-5. Fitness evaluation optionally rebuilds phenotype each generation if genotype mutated or crossover occurred (cache reuse across offspring clones).
-6. Tests:
+1a. Add mutations / crossover support for genotype wiring preference fields; allow `wiringPreferences.evolvePreference` to enable evolution of λ weights.
+1b. Add fitness options: scalarized penalized fitness (fitness' = fitness - λ*count * count - λ*len * length - λ_inter \* interModule) and a Pareto multi‑objective mode. Make selection method configurable.
+1c. Optionally add wiringCost component into speciation distance to discourage mixing of very different wiring preferences unless desired. 2. Implement `crossoverHyperGenotype(a,b,cfg)` with alignment & blending strategies (rules, CPPNs, substrate modifiers) + validation pass. 3. Add speciation distance components for genotype differences (rule vector hash distance, CPPN topology/weight signature, substrate modifier delta). 4. Integrate reproduction into population loop: select parents, generate offspring genotype(s), regenerate phenotype using cached artifacts. 5. Fitness evaluation optionally rebuilds phenotype each generation if genotype mutated or crossover occurred (cache reuse across offspring clones). 6. Tests:
 
 - Crossover determinism under fixed RNG.
 - Speciation separation on crafted genotype pairs.
@@ -978,6 +649,109 @@ Steps:
 2. Stress test morphogenesis growing then pruning to ensure no memory leaks (pool sizes stable).
 3. Document scaling heuristics & recommended flags.
 4. CI job thresholding memory & run time.
-   Acceptance: Peak memory per active connection meets target (<X bytes; finalize after measurement Phase 6).
+   Acceptance: Peak memory per active connection meets target (TODO: finalize numeric target after Phase 8 measurement; suggested temporary target: <= 64 bytes/active connection measured on CI harness).
 
----
+## Phases 0–1: Acceptance, Objectives, Key Tasks, Tests, Risks (polished)
+
+Thesis: Deliver a minimal Hyper MorphoNEAT skeleton that is opt‑in, deterministic, and verifiable; provide an explicit pruning policy for morphogenesis with deterministic validation and measurable acceptance targets.
+
+1. Objectives
+
+1) Provide a guarded hyper feature flag that is off by default.
+2) Define a persistent HyperGenotype schema and deterministic build path to a baseline phenotype.
+3) Add substrate coordinate assignment and canonical genotype hashing/serialization.
+4) Specify a deterministic pruning policy for morphogenesis with budget checks and rollback safety.
+5) Surface concrete tests and numeric acceptance criteria for CI gating.
+
+2. Key tasks
+
+1) Feature flag: add config.enableHyper (default false). All hyper imports must be no‑op when false.
+2) Genotype factory: implement createInitialGenotype({ input, output, seed }) returning a minimal rule list and substrateSpec.
+3) Substrate: deterministic 1D/2D coordinate assignment with canonical ordering.
+4) Serialization & hash: implement encodeGenotype/decodeGenotype and hashGenotype(geno) using canonical JSON (sorted keys) and stable numeric formatting.
+5) Phenotype builder: baseline materialization producing fully connected input→output network when hyper is enabled.
+6) Pruning policy: implement the stepwise pruning algorithm below (deterministic RNG, explicit budgets, dry‑run validation and rollback).
+7) Tests & microbench: add deterministic rebuild tests (N=50), serialization round‑trip, and build-time microbenchmark harness.
+
+3. Morphogenesis Event Cycle — Pruning policy (compact algorithm)
+
+- Invariants:
+
+  - genotype + seed -> canonical phenotype ordering and hash.
+  - All stochastic choices use a deterministic RNG seeded via a canonical helper `combineSeeds(genoHash, epochCounter)` (e.g., concat+xxhash64 or HMAC with fixed key). TODO: define exact `combineSeeds` implementation and expose helper in `src/hyper/utils.ts` for reproducibility.
+  - Budgets: maxNodes, maxEdges, memoryBudget are checked before commit.
+
+- Deterministic pruning algorithm (stepwise):
+
+```typescript
+// Pseudocode: prunePolicy.ts
+// deterministicSeed := combineSeeds(genoHash, epochCounter)
+// NOTE: `combineSeeds` must be a documented, canonical combiner (stable across platforms).
+
+/**
+ * pruneModuleEdges(net, moduleId, ctx)
+ * - Prefer inter-module and long edges.
+ * - Perform dry‑run removals to validate budget/constraints before commit.
+ */
+function pruneModuleEdges(net, moduleId, ctx) {
+  // Step 1: Snapshot metrics (no mutation)
+  const edges = net.getEdgesForModule(moduleId); // stable ordering
+  // Step 2: Score edges (higher -> better candidate for removal)
+  // score = λ_len * normalizedLength + λ_inter * interModuleFlag - contributionScore
+  const scored = edges.map((e) => ({
+    edge: e,
+    score:
+      ctx.wiringCost.lengthWeight * normalize(e.length) +
+      ctx.wiringCost.interWeight * (e.src.module !== e.dst.module ? 1 : 0) -
+      normalizeContribution(e.contribution),
+  }));
+  // Step 3: Sort descending by score (tie-break deterministic by edge.id)
+  scored.sort((a, b) =>
+    a.score === b.score ? a.edge.id - b.edge.id : b.score - a.score
+  );
+  // Step 4: Select batch to remove until targetFraction or budget satisfied
+  const toRemove = [];
+  let removalCount = 0;
+  for (const s of scored) {
+    if (removalCount >= ctx.maxRemovalsPerCycle) break;
+    if (wouldViolateConnectivity(net, s.edge)) continue; // preserve minimal connectivity heuristics
+    toRemove.push(s.edge);
+    removalCount++;
+  }
+  // Step 5: Dry run validation
+  const dryNet = net.cloneDry(); // no heavy allocation, returns simulated counts
+  dryNet.removeEdges(toRemove);
+  if (!dryNet.withinBudgets(ctx.budgets)) {
+    return { success: false, reason: 'budget-violation' }; // abort, no mutation
+  }
+  // Step 6: Commit
+  net.removeEdges(toRemove);
+  // Step 7: Record trace entry (lazy allocate only when telemetry enabled)
+  traceAppend({
+    type: 'prune',
+    moduleId,
+    removed: toRemove.length,
+    seed: deterministicSeed,
+  });
+  return { success: true, removed: toRemove.length };
+}
+```
+
+4. Tests (single‑expect rule; deterministic seeds; numeric targets)
+
+1) Unit: "prune selects inter-module edges first" — set up a small net with known inter/intra edges; run prunePolicy; expect(topRemovedIsInterModule). (1 expect)
+2) Determinism: "build + prune repeatability N=50" — rebuild from same genotype+seed 50 times, run prunePolicy with same epochCounter; expect(allHashesEqual). (1 expect)
+3) Safety: "dry‑run rejects budget violation" — construct net where proposed removals would violate minConnectivity; expect(dryRunRejected). (1 expect)
+
+5. Metrics and Acceptance criteria (numeric)
+
+1) Deterministic rebuild reproducibility: 100% identical phenotype ordering and hash across N=50 rebuilds.
+2) Pruning policy overhead: disabled path adds <1% runtime; enabled idle adds <5% runtime in microbench (instrumented).
+3) Pruned edges preference: top 75% of first batch removals should be inter‑module or top 25% longest edges (measured on synthetic nets).
+4) Build time overhead for Phase 1 baseline: ≤1.1× direct instantiation for small nets (<=1k nodes).
+
+6. Risks & mitigations
+
+1) Risk: Non‑determinism from float rounding. Mitigation: canonical numeric formatting and fixed‑precision rounding for hashing and CPPN inputs.
+2) Risk: Cascade removal causing disconnected modules. Mitigation: connectivity checks in wouldViolateConnectivity and dry‑run validation.
+3) Risk: Memory blowup from adjacency cache. Mitigation: LRU eviction and explicit cache size config.

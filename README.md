@@ -103,8 +103,7 @@ import { Neat } from '@reicek/neataptic-ts';
 
 const neatMo = new Neat(2, 1, fitness, {
   popsize: 60,
-  multiObjective: { enabled: true, complexityMetric: 'nodes' },
-  novelty: { enabled: true, descriptor: g => [g.nodes.length, g.connections.length], k: 8, blendFactor: 0.25 },
+  multiObjective: { enabled: true },
   seed: 7,
 });
 await neatMo.evaluate();
@@ -191,10 +190,12 @@ Principle: add one lever at a time and measure its *telemetry delta* (front size
 Fast iteration recipe:
 
 ```ts
+import { cpus } from 'node:os';
+
 const neat = new Neat(inp, out, fit, {
   popsize: 120,
   fastMode: true,
-  threads:  (require('os').cpus().length - 1),
+  threads: cpus().length > 1 ? cpus().length - 1 : 1,
   adaptiveMutation: { enabled: true, strategy: 'twoTier' },
   telemetry: { enabled: true, performance: true, complexity: true }
 });
@@ -221,7 +222,10 @@ Evolve topology first, then fine‑tune weights:
 
 ```ts
 const best = neat.getBest();
-await best?.train(data, { iterations: 500, rate: 0.01, optimizer: 'adam',
+await best?.train(data, {
+  iterations: 500,
+  rate: 0.01,
+  optimizer: 'adam',
   gradientClip: { mode: 'norm', maxNorm: 1 },
   movingAverageWindow: 5,
 });
@@ -238,7 +242,7 @@ await best?.train(data, {
   optimizer: 'adamw',
   gradientClip: { mode: 'norm', maxNorm: 1 },
   movingAverageWindow: 7,
-  metricsHook: m => console.log(m.iteration, m.error, m.gradNorm)
+  metricsHook: m => console.log(m.iteration, m.error, m.gradNorm),
 });
 ```
 
@@ -351,7 +355,7 @@ This section summarizes practical knobs to accelerate evolution while preserving
 
 ### Structural Complexity Caching
 
-`network.evolve` caches per-genome complexity metrics (nodes / connections / gates). This avoids recomputing counts each evaluation when unchanged, reducing overhead for large populations or deep architectures.
+`neat.evolve` caches per-genome complexity metrics (nodes / connections / gates). This avoids recomputing counts each evaluation when unchanged, reducing overhead for large populations or deep architectures.
 
 ### Profiling
 
@@ -380,8 +384,6 @@ const neat = new Neat(inputs, outputs, fitness, {
   popsize: 120,
   threads: 8,
   telemetry: { enabled: true, performance: true },
-  telemetrySelect: ['performance', 'complexity'],
-  adaptiveMutation: { enabled: true, strategy: 'twoTier' },
   fastMode: true,
 });
 ```
@@ -427,7 +429,7 @@ When enabled BEFORE constructing / mutating a `Network`:
 Intended Usage:
 
 ```ts
-import { config } from 'neataptic';
+import { config, methods } from '@reicek/neataptic-ts';
 config.deterministicChainMode = true; // enable
 const net = new Network(1, 1);
 for (let i = 0; i < 5; i++) net.mutate(methods.mutation.ADD_NODE); // guaranteed 5 hidden chain
@@ -524,9 +526,7 @@ const neat = new Neat(4, 2, fitnessFn, {
   multiObjective: { enabled: true, complexityMetric: 'nodes' },
 });
 // Add structural entropy (maximize)
-neat.registerObjective('entropy', 'max', (g) =>
-  (neat as any)._structuralEntropy(g)
-);
+neat.registerObjective('entropy', 'max', g => (neat as any)._structuralEntropy(g));
 await neat.evaluate();
 await neat.evolve();
 console.log(neat.getObjectives()); // [{key:'fitness',...},{key:'complexity',...},{key:'entropy',...}]
@@ -583,16 +583,16 @@ Configure an adaptive schedule that expands limits when improvement slope is pos
 
 ```ts
 complexityBudget: {
-	enabled:true,
-	mode:'adaptive',
-	maxNodesStart: input+output+2,
-	maxNodesEnd: (input+output+2)*6,
-	improvementWindow: 8,
-	increaseFactor:1.15,
-	stagnationFactor:0.93,
-	minNodes: input+output+2,
-	maxConnsStart: 40,
-	maxConnsEnd: 400
+  enabled: true,
+  mode: 'adaptive',
+  maxNodesStart: 4,
+  maxNodesEnd: 24,
+  improvementWindow: 8,
+  increaseFactor: 1.15,
+  stagnationFactor: 0.93,
+  minNodes: 4,
+  maxConnsStart: 40,
+  maxConnsEnd: 400,
 }
 ```
 
@@ -669,11 +669,11 @@ diversityPressure:{ enabled:true, motifSample:25, penaltyStrength:0.05 }
 Adaptive novelty threshold targeting an archive insertion rate:
 
 ```ts
-novelty:{
-	enabled:true,
-	descriptor:g=>[g.nodes.length, g.connections.length],
-	archiveAddThreshold:0.5,
-	dynamicThreshold:{ enabled:true, targetRate:0.15, adjust:0.1, min:0.01, max:10 }
+novelty: {
+  enabled: true,
+  descriptor: g => [g.nodes.length, g.connections.length],
+  archiveAddThreshold: 0.5,
+  dynamicThreshold: { enabled: true, targetRate: 0.15, adjust: 0.1, min: 0.01, max: 10 },
 }
 ```
 
@@ -684,13 +684,13 @@ After each evaluation the threshold is nudged up/down so the fraction of inserte
 If you experiment with many custom objectives it is common for some to become constant (providing no ranking discrimination). Enable automatic removal of such stagnant objectives:
 
 ```ts
-multiObjective:{
-	enabled:true,
-	objectives:[
-		{ key:'fitness', direction:'max', accessor: g => g.score },
-		{ key:'novelty', direction:'max', accessor: g => (g as any)._novelty }
-	],
-	pruneInactive:{ enabled:true, window:5, rangeEps:1e-9, protect:['fitness'] }
+multiObjective: {
+  enabled: true,
+  objectives: [
+    { key: 'fitness', direction: 'max', accessor: g => g.score },
+    { key: 'novelty', direction: 'max', accessor: g => (g as any)._novelty },
+  ],
+  pruneInactive: { enabled: true, window: 5, rangeEps: 1e-9, protect: ['fitness'] },
 }
 ```
 
@@ -742,13 +742,13 @@ Use these to detect genealogical stagnation (both remaining near zero) vs broad 
 Apply score adjustments based on lineage structure (depth dispersion) or penalize inbreeding (high ancestor overlap):
 
 ```ts
-lineagePressure:{
-	enabled:true,
-	mode:'antiInbreeding',   // 'penalizeDeep' | 'rewardShallow' | 'spread' | 'antiInbreeding'
-	strength:0.02,           // generic scaling for depth modes
-	ancestorWindow:4,        // generations to look back when computing ancestor sets
-	inbreedingPenalty:0.04,  // override penalty scaling (defaults to strength*2)
-	diversityBonus:0.02      // bonus scaling for very distinct parent lineages
+lineagePressure: {
+  enabled: true,
+  mode: 'antiInbreeding', // 'penalizeDeep' | 'rewardShallow' | 'spread' | 'antiInbreeding'
+  strength: 0.02, // generic scaling for depth modes
+  ancestorWindow: 4, // generations to look back when computing ancestor sets
+  inbreedingPenalty: 0.04, // override penalty scaling (defaults to strength*2)
+  diversityBonus: 0.02, // bonus scaling for very distinct parent lineages
 }
 ```
 
@@ -791,7 +791,7 @@ Operator adaptation vs bandit:
 Per-genome mutation rate/amount adapt each generation under strategies (`twoTier`, `exploreLow`, `anneal`). Use:
 
 ```ts
-adaptiveMutation:{ enabled:true, strategy:'twoTier', sigma:0.08, adaptAmount:true }
+adaptiveMutation: { enabled: true, strategy: 'twoTier', sigma: 0.08, adaptAmount: true }
 ```
 
 Operator success statistics (bandit + weighting):
@@ -875,7 +875,7 @@ const csv = neat.exportSpeciesHistoryCSV();
 
 These APIs are evolving; consult source `src/neat.ts` for full option surfaces while docs finalize.
 
-Full option & telemetry reference: [docs/API.md](./docs/API.md)
+Full option & telemetry reference: See the generated documentation in the `docs/` directory.
 
 # Network Constructor Update
 
@@ -888,6 +888,7 @@ new Network(input: number, output: number, options?: { minHidden?: number })
 - `input`: Number of input nodes (required)
 - `output`: Number of output nodes (required)
 - `options.minHidden`: (optional) If set, enforces a minimum number of hidden nodes. If omitted or 0, no minimum is enforced. This allows true 1-1 (input-output only) networks.
+- `options.seed`: (optional) A numeric seed for the random number generator to ensure reproducible initial weights and biases.
 
 **Example:**
 
@@ -895,21 +896,25 @@ new Network(input: number, output: number, options?: { minHidden?: number })
 // Standard 1-1 network (no hidden nodes)
 const net = new Network(1, 1);
 
-// Enforce at least 3 hidden nodes
-const netWithHidden = new Network(2, 1, { minHidden: 3 });
+// Enforce at least 3 hidden nodes and set a seed
+const netWithHidden = new Network(2, 1, { minHidden: 3, seed: 123 });
 ```
 
-# Neat Evolution minHidden Option
+# Neat Evolution Options
 
-The `minHidden` option can also be passed to the `Neat` class to enforce a minimum number of hidden nodes in all evolved networks:
+The `Neat` class constructor accepts an options object that includes all `Network` options (`minHidden`, `seed`) plus evolution-specific settings.
 
 ```ts
-import Neat from './src/neat';
-const neat = new Neat(2, 1, fitnessFn, { popsize: 50, minHidden: 5 });
+import { Neat } from '@reicek/neataptic-ts';
+const neat = new Neat(2, 1, fitnessFn, {
+  popsize: 50,
+  minHidden: 5, // Passed to Network constructor
+  seed: 4242,   // Passed to both Neat and Network constructors
+});
 ```
 
 - All networks created by the evolutionary process will have at least 5 hidden nodes.
-- This is useful for ensuring a minimum network complexity during neuro-evolution.
+- The `seed` ensures that the entire evolutionary process, including initial population creation, is reproducible.
 
 See tests in `test/neat.ts` for usage and verification.
 
@@ -922,7 +927,7 @@ Interoperability layer for exchanging strictly layered MLP (and experimental rec
 ### Basic Usage
 
 ```ts
-import { exportToONNX, importFromONNX } from './src/architecture/onnx';
+import { exportToONNX, importFromONNX } from '@reicek/neataptic-ts';
 
 // Export
 const onnxModel = exportToONNX(network, { includeMetadata: true });
@@ -1088,7 +1093,7 @@ Notes:
 ### Learning Rate Scheduler Usage
 
 ```ts
-import methods from './src/methods/methods';
+import { methods } from '@reicek/neataptic-ts';
 const ratePolicy = methods.Rate.cosineAnnealingWarmRestarts(200, 1e-5, 2);
 net.train(data, { iterations: 1000, rate: 0.1, ratePolicy });
 ```
@@ -1330,8 +1335,7 @@ Optimizer reference (choose based on signal quality & overfitting risk):
 | adamax    | beta1, beta2, eps              | Infinity norm (u) instead of v                             |
 | nadam     | beta1, beta2, eps              | Nesterov variant of Adam                                   |
 | radam     | beta1, beta2, eps              | Rectifies variance early in training                       |
-| lion      | beta1, beta2                   | Direction = sign(beta1*m + beta2*m2)                       |
-| adabelief | beta1, beta2, eps              | Second moment of (g - m) (gradient surprise)               |
+| AdaBelief | beta1, beta2, eps              | Second moment of (g - m) (gradient surprise)               |
 | lookahead | baseType, la_k, la_alpha       | Interpolates toward slow weights every k steps             |
 
 General guidance:
@@ -1658,92 +1662,3 @@ const neat = new Neat(2, 1, fitness, {
 ```
 
 Use when raw search space contains huge numbers of trivial zero-score genomes (e.g. all-linear tiny nets). The filter prevents them from influencing speciation/dominance ordering; they still evolve structurally until criterion passes.
-
-```
-
-#### Adaptive Sharing
-
-If `adaptiveSharing.enabled` the system adjusts `sharingSigma` each generation:
-
-```
-
-sigma += step \* sign(fragmentation - target)
-
-```
-
-within `[minSigma,maxSigma]`.
-
-#### Multi-Objective Notes & Strategy {#multi-objective-notes--strategy}
-
-Implements a simplified NSGA-II style pass: fast non-dominated sort (O(N^2) current implementation) + crowding distance; final ordering uses (rank asc, crowding desc, fitness desc) before truncation. Practical guidance:
-
-- Start single-objective until baseline performance plateaus, then enable `multiObjective.enabled` with `complexityMetric:'nodes'`.
-- If early search stagnates due to premature parsimony, delay complexity with `multiObjective.dynamic.addComplexityAt`.
-- Use `autoEntropy` to seed a third diversity proxy objective only when structural collapse is observed (few species, low ancestor uniqueness).
-- Monitor front size; if it grows too large relative to population, enable `adaptiveEpsilon` to tighten dominance criteria.
-
-Planned (future): faster dominance (divide-and-conquer), richer motif diversity pressure, automated compatibility coefficient tuning.
-
-## ASCII Maze Example: 6‑Input Long-Range Vision (MazeVision)
-
-The ASCII maze example uses a compact 6‑input perception schema ("MazeVision") with long‑range lookahead via a precomputed distance map. Inputs (order fixed):
-
-1. compassScalar: Encodes the direction of the globally best next step toward the exit as a discrete scalar in {0,0.25,0.5,0.75} corresponding to N,E,S,W. Uses an extended horizon (H_COMPASS=5000) so it can see deeper than openness ratios.
-2. openN
-3. openE
-4. openS
-5. openW
-6. progressDelta: Normalized recent progress signal around 0.5 ( >0.5 improving, <0.5 regressing ).
-
-### Openness Semantics (openN/E/S/W) {#openness-semantics}
-
-Each openness value describes the quality of the shortest path to the exit if the agent moves first in that direction, using a bounded lookahead horizon H=1000 over the distance map.
-
-Value encoding:
-
-- 1: Direction(s) whose total path length Ldir is minimal among all strictly improving neighbors (ties allowed; multiple 1s possible).
-- Ratio 0 < Lmin / Ldir < 1: Direction is a valid strictly improving path but longer than the best (Lmin is the shortest improving path cost; Ldir = 1 + distance of neighbor cell). This supplies graded preference rather than binary pruning.
-- 0: Wall, unreachable cell, dead end, or any non‑improving move (neighbor distance >= current distance) – all treated uniformly.
-- 0.001: Special back‑only escape marker. When all four openness values would otherwise be 0 but the opposite of the previous successful action is traversable, that single opposite direction is set to 0.001 to indicate a pure retreat (pattern e.g. [0,0,0,0.001]).
-
-Rules / Notes:
-
-- Strict improvement filter: Only neighbors whose distanceMap value is strictly less than the current cell distance are considered for 1 or ratio values.
-- Horizon clipping: Paths with Ldir > H are treated as unreachable (value 0) to bound search cost.
-- Multiple bests: Corridors that fork into equivalently short routes produce multiple 1s, encouraging neutrality across equally optimal choices.
-- Backtrack marker is intentionally very small (0.001) so evolution distinguishes "retreat only" states from true walls without overweighting them.
-- Supervised refinement dataset intentionally contains ONLY deterministic single‑path cases (exactly one openness=1, others 0) for clarity; richer ratio/backtrack patterns appear only in the Lamarckian / evolutionary phase.
-
-### progressDelta
-
-Computed from recent distance improvement: delta = prevDistance - currentDistance, clipped to [-2,2], then mapped to [0,1] as 0.5 + delta/4. Values >0.5 mean progress toward exit; <0.5 regression or stalling.
-
-### Debugging
-
-Set ASCII_VISION_DEBUG=1 to emit periodic vision lines: current position, compassScalar, input vector, and per‑direction distance/ratio breakdown for auditing mismatches between maze geometry and distance map.
-
-### Quick Reference
-
-| Signal | Meaning                                             |
-| ------ | --------------------------------------------------- |
-| 1      | Best strictly improving path(s) (minimal Ldir)      |
-| (0,1)  | Longer but improving path (ratio Lmin/Ldir)         |
-| 0.001  | Only backtrack available (opposite of prior action) |
-| 0      | Wall / dead end / non‑improving / unreachable       |
-
-Implementation: `test/examples/asciiMaze/mazeVision.ts` (function `MazeVision.buildInputs6`).
-
-This design minimizes input size (6 vs earlier large encodings) while preserving directional discrimination and long‑range planning cues, aiding faster evolutionary convergence and avoiding overfitting to local dead‑end noise.
-
-## Roadmap / Backlog
-
-Planned or partially designed enhancements not yet merged:
-
-- Structural motif diversity pressure: penalize over-represented connection patterns (entropy-based sharing) to sustain innovation.
-- Automated compatibility coefficient tuning: search or adapt excess/disjoint/weight coefficients to stabilize species counts without manual calibration.
-- Faster Pareto sorting: divide-and-conquer or incremental dominance maintenance to reduce O(N^2) overhead for large populations.
-- Connection complexity budget (current budget targets nodes only) and dual-objective weighting option.
-- Diversity-aware parent selection leveraging motif entropy and archive dispersion.
-- Extended novelty descriptors helper utilities (e.g. built-in graph metrics: depth, feedforwardness, clustering).
-- Visualization hooks (species lineage graph, archive embedding projection) for diagnostics.
-```
