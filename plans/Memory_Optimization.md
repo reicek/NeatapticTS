@@ -1,8 +1,9 @@
 # Memory Optimization Plan (Multi-Layer Strategy for Very Large Networks)
 
-Goal: Enable construction, evolution, and training of networks scaling toward **10^6+ (stretch 10^7)** connections on commodity JS/TS runtimes across **Node** and *_Browser_.
+Goal: Enable construction, evolution, and training of networks scaling toward **10^6+ (stretch 10^7)** connections on commodity JS/TS runtimes across **Node** and \*_Browser_.
 
 ## Guiding Principles
+
 1. Pay-for-use: No overhead unless feature enabled (flags + lazy allocation).
 2. Reuse & Pool: Prefer object pooling / typed array slabs over many small objects (already partially implemented for `Connection`).
 3. Structural Sparsity First: Keep graphs sparse; optimize dense fast-paths only when needed.
