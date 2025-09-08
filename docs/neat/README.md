@@ -887,58 +887,17 @@ performance and to preserve references to genome objects.
 
 `() => void`
 
-Apply fitness sharing within each species.
-
-Fitness sharing reduces the effective fitness of genomes that are clustered
-tightly together (close compatibility distance), promoting diversity by
-penalizing dense species. Two modes are supported:
- - Kernel sharing with bandwidth `sharingSigma` (quadratic kernel)
- - Equal sharing based on species size when `sharingSigma` is 0
-
-Example:
-neat.options.sharingSigma = 3;
-neat._applyFitnessSharing();
-
 ### _sortSpeciesMembers
 
-`(sp: any) => void`
-
-Sort members of a species in descending order by score.
-
-Simple utility used by stagnation checks and selection routines to ensure
-the top-performing genomes are at index 0.
-
-Parameters:
-- `sp` - species-like object with a `members` array and member `.score`
+`(sp: import("D:/code-practice/NeatapticTS/src/neat/neat.types").SpeciesLike) => void`
 
 ### _speciate
 
 `() => void`
 
-Assign genomes into species based on compatibility distance and maintain species structures.
-This function creates new species for unassigned genomes, prunes empty species, updates
-dynamic compatibility threshold controllers, performs optional auto coefficient tuning, and
-records per‑species history statistics used by telemetry and adaptive controllers.
-
-Implementation notes:
-- Uses existing representatives; any unassigned genome that doesn't fit an existing species
-  creates a new species with itself as representative.
-- Representatives are refreshed each generation (first member heuristic) to reduce drift cost.
-- Includes optional age penalty for very old species to gently reduce their reproductive share.
-- PID‑style controller adjusts the global compatibility threshold toward `targetSpecies`.
-- Auto compatibility coefficient tuning slightly nudges excess/disjoint coefficients to influence
-  clustering granularity when enabled.
-- Extended history snapshot captures structural and innovation statistics for richer telemetry.
-
 ### _updateSpeciesStagnation
 
 `() => void`
-
-Update species stagnation statistics and prune species that have not
-improved within the configured stagnation window.
-
-This updates each species' `bestScore` and `lastImproved` fields and then
-removes species whose age since last improvement exceeds `stagnationGenerations`.
 
 ## neat/neat.species.ts
 
@@ -1001,94 +960,17 @@ Returns: Array of per-species summaries suitable for reporting.
 
 ## neat/neat.telemetry.exports.ts
 
-### buildSpeciesHistoryCsv
-
-`(recentHistory: { generation: number; stats: any[]; }[], headers: string[]) => string`
-
-Build the full CSV string for species history given ordered headers and
-a slice of history entries.
-
-Implementation notes:
-- The history is a 2‑level structure (generation entry -> species stats[]).
-- We emit one CSV row per species stat, repeating the generation value.
-- Values are JSON.stringify'd to remain safe for commas/quotes.
-
-### buildTelemetryHeaders
-
-`(info: TelemetryHeaderInfo) => string[]`
-
-Build the ordered list of CSV headers from collected metadata.
-Flattened nested metrics are emitted using group prefixes (group.key).
-
-### collectTelemetryHeaderInfo
-
-`(entries: any[]) => TelemetryHeaderInfo`
-
-Collect header metadata from the raw telemetry entries.
-- Discovers base (top‑level) keys excluding grouped objects.
-- Discovers nested keys inside complexity, perf, lineage, diversity groups.
-- Tracks presence of optional multi-value structures (ops, objectives, etc.).
-
 ### exportSpeciesHistoryCSV
 
 `(maxEntries: number) => string`
-
-Export species history snapshots to CSV.
-
-Each row represents a single species at a specific generation; the generation
-value is repeated per species. Dynamically discovers species stat keys so
-custom metadata added at runtime is preserved.
-
-Behavior:
-- If `_speciesHistory` is absent/empty but `_species` exists, synthesizes a
-  minimal snapshot to ensure deterministic headers early in a run.
-- Returns a header-only CSV when there is no history or species.
-
-Parameters:
-- `this` - Neat instance (expects `_speciesHistory` and optionally `_species`).
-- `maxEntries` - Maximum number of most recent history snapshots (generations) to include (default 200).
-
-Returns: CSV string (headers + rows) describing species evolution timeline.
 
 ### exportTelemetryCSV
 
 `(maxEntries: number) => string`
 
-Export recent telemetry entries to a CSV string.
-
-Responsibilities:
-- Collect a bounded slice (`maxEntries`) of recent telemetry records.
-- Discover and flatten dynamic header keys (top-level + grouped metrics).
-- Serialize each entry into a CSV row with stable, parseable values.
-
-Flattening Rules:
-- Nested groups (complexity, perf, lineage, diversity) become group.key columns.
-- Optional arrays/maps (ops, objectives, objAges, speciesAlloc, objEvents, objImportance, fronts) included only if present.
-
-Parameters:
-- `this` - Neat instance (expects `_telemetry` array field).
-- `maxEntries` - Maximum number of most recent telemetry entries to include (default 500).
-
-Returns: CSV string (headers + rows) or empty string when no telemetry.
-
 ### exportTelemetryJSONL
 
 `() => string`
-
-Telemetry export helpers extracted from `neat.ts`.
-
-This module exposes small helpers intended to serialize the internal
-telemetry gathered by the NeatapticTS `Neat` runtime into common
-data-export formats (JSONL and CSV). The functions intentionally
-operate against `this` so they can be attached to instances.
-
-### serializeTelemetryEntry
-
-`(entry: any, headers: string[]) => string`
-
-Serialize one telemetry entry into a CSV row using previously computed headers.
-Uses a `switch(true)` pattern instead of a long if/else chain to reduce
-cognitive complexity while preserving readability of each scenario.
 
 ### TelemetryHeaderInfo
 
@@ -1098,7 +980,7 @@ Shape describing collected telemetry header discovery info.
 
 ### applyTelemetrySelect
 
-`(entry: any) => any`
+`(entry: Record<string, unknown>) => Record<string, unknown>`
 
 Apply a telemetry selection whitelist to a telemetry entry.
 
@@ -1116,7 +998,7 @@ Returns: The filtered telemetry object (same reference as input).
 
 ### buildTelemetryEntry
 
-`(fittest: any) => import("D:/code-practice/NeatapticTS/src/neat/neat.types").TelemetryEntry`
+`(fittest: Record<string, unknown>) => import("D:/code-practice/NeatapticTS/src/neat/neat.types").TelemetryEntry`
 
 Build a comprehensive telemetry entry for the current generation.
 
@@ -1140,14 +1022,7 @@ Returns: A TelemetryEntry object suitable for recording/streaming.
 
 Compute several diversity statistics used by telemetry reporting.
 
-This helper is intentionally conservative in runtime: when `fastMode` is
-enabled it will automatically tune a few sampling defaults to keep the
-computation cheap. The computed statistics are written to
-`this._diversityStats` as an object with keys like `meanCompat` and
-`graphletEntropy`.
-
-The method mutates instance-level temporary fields and reads a number of
-runtime options from `this.options`.
+This helper is intentionally conservative in runtime: when `fastMode` is enabled it will automatically tune a few sampling defaults to keep the computation cheap. The computed statistics are written to `this._diversityStats` as an object with keys like `meanCompat` and `graphletEntropy`.
 
 ### recordTelemetryEntry
 
@@ -1169,7 +1044,7 @@ Parameters:
 
 ### structuralEntropy
 
-`(graph: any) => number`
+`(graph: { [key: string]: unknown; nodes: { geneId: number; }[]; connections: { from: { geneId: number; }; to: { geneId: number; }; enabled: boolean; }[]; }) => number`
 
 Lightweight proxy for structural entropy based on degree-distribution.
 
@@ -1184,6 +1059,18 @@ Parameters:
 - `graph` - - A genome-like object with `nodes` and `connections` arrays.
 
 Returns: A non-negative number approximating structural entropy.
+
+### TelemetryContext
+
+Context view used within telemetry helpers to access optional internal
+fields with descriptive names rather than repeated inline casts.
+
+### TelemetryDiversityOptions
+
+### TelemetryGenome
+
+Minimal genome shape used by telemetry helpers (kept local to avoid
+scattering lightweight shapes across other type files).
 
 ## neat/neat.types.ts
 
@@ -1205,11 +1092,21 @@ Guidelines:
 
 Aggregate structural complexity metrics capturing size & growth pressure.
 
+### ConnectionLike
+
+Lightweight connection representation used by telemetry and structural helpers.
+
 ### DiversityStats
 
 Diversity statistics captured each generation. Individual fields may be
 omitted in telemetry output if diversity tracking is partially disabled to
 reduce runtime cost.
+
+### GenomeDetailed
+
+More concrete genome surface used by telemetry and lineage helpers.
+Extends the minimal `GenomeLike` with node/connection shapes and a few
+internal bookkeeping fields used by telemetry.
 
 ### GenomeLike
 
@@ -1225,8 +1122,18 @@ Snapshot of lineage & ancestry statistics for the current generation.
 ### NeatLike
 
 Minimal surface every helper currently expects from a NEAT instance while
-extraction continues. At present it carries no guaranteed properties besides
-an index signature. As helpers converge, promote concrete, documented fields.
+extraction continues. Kept intentionally loose; prefer concrete fields
+when helpers are stabilised. Represented as a simple record to avoid an
+empty interface that duplicates its supertype.
+
+### NeatOptions
+
+Options subset used by telemetry helpers. Kept narrow to avoid leaking
+full runtime options into the helper type surface.
+
+### NodeLike
+
+Lightweight node representation used by telemetry and structural helpers.
 
 ### ObjAges
 
@@ -1265,6 +1172,11 @@ Aggregated success / attempt counters over a window or entire run.
 
 Timing metrics for coarse evolutionary phases (milliseconds).
 
+### SpeciationOptions
+
+Speciation options for NEAT speciation controller.
+Extends NeatOptions with additional fields for compatibility threshold control and species allocation.
+
 ### SpeciesAlloc
 
 Offspring allocation for a species during reproduction.
@@ -1276,6 +1188,15 @@ Species statistics captured for a particular generation.
 ### SpeciesHistoryStat
 
 Species statistics at a single historical snapshot (generation boundary).
+
+### SpeciesHistoryStatExtended
+
+Extended per-species historical snapshot with optional backfilled metrics
+that may be computed lazily (innovationRange, enabledRatio).
+
+### SpeciesLike
+
+Internal species representation used by helpers. Kept minimal and structural.
 
 ### TelemetryEntry
 

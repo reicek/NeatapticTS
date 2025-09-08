@@ -69,7 +69,7 @@ effective fitness for similar genomes to promote diversity.</p>
 <h4 id="rng">_rng</h4><p>Cached RNG function; created lazily and seeded from <code>_rngState</code> when used.</p>
 <h4 id="rngstate">_rngState</h4><p>Internal numeric state for the deterministic xorshift RNG when no user RNG
 is provided. Stored as a 32-bit unsigned integer.</p>
-<h4 id="sortspeciesmembers">_sortSpeciesMembers</h4><p><code>(sp: { members: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default[]; }) =&gt; void</code></p>
+<h4 id="sortspeciesmembers">_sortSpeciesMembers</h4><p><code>(sp: import(&quot;D:/code-practice/NeatapticTS/src/neat/neat.types&quot;).SpeciesLike) =&gt; void</code></p>
 <p>Sort members of a species in-place by descending score.</p>
 <p>Parameters:</p>
 <ul>
@@ -410,41 +410,17 @@ preserve best-effort behavior during population seeding/expansion.</li>
 <p>Returns: A new <code>Network</code> instance derived from <code>parent</code>. The child is unregistered.</p>
 <h4 id="tojson">toJSON</h4><p><code>() =&gt; any</code></p>
 <p>Import a previously exported state bundle and rehydrate a Neat instance.</p>
-<h2 id="neataptic-ts">neataptic.ts</h2><h3 id="neataptic">neataptic</h3><h1 id="network-evolvable-trainable-graph">Network (Evolvable / Trainable Graph)</h1><p>Represents a directed neural computation graph used both as a NEAT genome
-phenotype and (optionally) as a gradient‑trainable model. The class binds
-together specialized modules (topology, pruning, serialization, slab packing)
-to keep the core surface approachable for learners.</p>
-<p>Educational Highlights:</p>
+<h2 id="neataptic-ts">neataptic.ts</h2><h3 id="neataptic">neataptic</h3><h1 id="node-neuron">Node (Neuron)</h1><p>Fundamental computational unit: aggregates weighted inputs, applies an activation
+function (squash) and emits an activation value. Supports:</p>
 <ul>
-<li>Structural Mutation: functions like <code>addNodeBetween()</code> and evolutionary
-helpers (in higher-level <code>Neat</code>) mutate topology to explore architectures.</li>
-<li>Fast Execution Paths: a Structure‑of‑Arrays (SoA) slab (<code>rebuildConnectionSlab</code>)
-packs connection data into typed arrays to improve cache locality.</li>
-<li>Memory Optimization: node pooling &amp; typed array pooling demonstrate how
-allocation patterns affect performance and GC pressure.</li>
-<li>Determinism: RNG snapshot/restore methods allow reproducible experiments.</li>
-<li>Hybrid Workflows: dropout, stochastic depth, weight noise and mixed precision
-illustrate gradient‑era regularization applied to evolved topologies.</li>
+<li>Types: &#39;input&#39; | &#39;hidden&#39; | &#39;output&#39; (affects bias initialization &amp; error handling)</li>
+<li>Recurrent self‑connections &amp; gated connections (for dynamic / RNN behavior)</li>
+<li>Dropout mask (<code>mask</code>), momentum terms, eligibility &amp; extended traces (for
+a variety of learning rules beyond simple backprop).</li>
 </ul>
-<p>Typical Usage:</p>
-<pre><code class="language-ts">const net = new Network(4, 2);           // create network
-const out = net.activate([0.1,0.3,0.2,0.9]);
-net.addNodeBetween();                    // structural mutation
-const slab = (net as any).getConnectionSlab(); // inspect packed arrays
-const clone = net.clone();               // deep copy
-</code></pre>
-<p>Performance Guidance:</p>
-<ul>
-<li>Invoke <code>activate()</code> normally; the class auto‑selects slab vs object path.</li>
-<li>Batch structural mutations then call <code>rebuildConnectionSlab(true)</code> if you
-need an immediate fast‑path (it is invoked lazily otherwise).</li>
-<li>Keep input array length exactly equal to <code>input</code>; mismatches throw early.</li>
-</ul>
-<p>Serialization:</p>
-<ul>
-<li><code>toJSON()</code> / <code>fromJSON()</code> support experiment checkpointing.</li>
-<li>ONNX export (<code>exportToONNX</code>) enables interoperability with other tools.</li>
-</ul>
+<p>Educational note: Traces (<code>eligibility</code> and <code>xtrace</code>) illustrate how recurrent credit
+assignment works in algorithms like RTRL / policy gradients. They are updated only when
+using the traced activation path (<code>activate</code>) vs <code>noTraceActivate</code> (inference fast path).</p>
 <h3 id="default">default</h3><h4 id="activatecore">_activateCore</h4><p><code>(withTrace: boolean, input: number | undefined) =&gt; number</code></p>
 <p>Internal shared implementation for activate/noTraceActivate.</p>
 <p>Parameters:</p>
@@ -519,7 +495,7 @@ bits4+ reserved.</p>
 is provided. Stored as a 32-bit unsigned integer.</p>
 <h4 id="safeupdateweight">_safeUpdateWeight</h4><p><code>(connection: import(&quot;D:/code-practice/NeatapticTS/src/architecture/connection&quot;).default, delta: number) =&gt; void</code></p>
 <p>Internal helper to safely update a connection weight with clipping and NaN checks.</p>
-<h4 id="sortspeciesmembers">_sortSpeciesMembers</h4><p><code>(sp: { members: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default[]; }) =&gt; void</code></p>
+<h4 id="sortspeciesmembers">_sortSpeciesMembers</h4><p><code>(sp: import(&quot;D:/code-practice/NeatapticTS/src/neat/neat.types&quot;).SpeciesLike) =&gt; void</code></p>
 <p>Sort members of a species in-place by descending score.</p>
 <p>Parameters:</p>
 <ul>

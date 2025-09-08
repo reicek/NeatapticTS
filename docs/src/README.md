@@ -213,7 +213,7 @@ is provided. Stored as a 32-bit unsigned integer.
 
 #### _sortSpeciesMembers
 
-`(sp: { members: import("D:/code-practice/NeatapticTS/src/architecture/network").default[]; }) => void`
+`(sp: import("D:/code-practice/NeatapticTS/src/neat/neat.types").SpeciesLike) => void`
 
 Sort members of a species in-place by descending score.
 
@@ -809,42 +809,18 @@ Import a previously exported state bundle and rehydrate a Neat instance.
 
 ### neataptic
 
-Network (Evolvable / Trainable Graph)
-=====================================
-Represents a directed neural computation graph used both as a NEAT genome
-phenotype and (optionally) as a gradient‑trainable model. The class binds
-together specialized modules (topology, pruning, serialization, slab packing)
-to keep the core surface approachable for learners.
+Node (Neuron)
+=============
+Fundamental computational unit: aggregates weighted inputs, applies an activation
+function (squash) and emits an activation value. Supports:
+ - Types: 'input' | 'hidden' | 'output' (affects bias initialization & error handling)
+ - Recurrent self‑connections & gated connections (for dynamic / RNN behavior)
+ - Dropout mask (`mask`), momentum terms, eligibility & extended traces (for
+   a variety of learning rules beyond simple backprop).
 
-Educational Highlights:
- - Structural Mutation: functions like `addNodeBetween()` and evolutionary
-   helpers (in higher-level `Neat`) mutate topology to explore architectures.
- - Fast Execution Paths: a Structure‑of‑Arrays (SoA) slab (`rebuildConnectionSlab`)
-   packs connection data into typed arrays to improve cache locality.
- - Memory Optimization: node pooling & typed array pooling demonstrate how
-   allocation patterns affect performance and GC pressure.
- - Determinism: RNG snapshot/restore methods allow reproducible experiments.
- - Hybrid Workflows: dropout, stochastic depth, weight noise and mixed precision
-   illustrate gradient‑era regularization applied to evolved topologies.
-
-Typical Usage:
-```ts
-const net = new Network(4, 2);           // create network
-const out = net.activate([0.1,0.3,0.2,0.9]);
-net.addNodeBetween();                    // structural mutation
-const slab = (net as any).getConnectionSlab(); // inspect packed arrays
-const clone = net.clone();               // deep copy
-```
-
-Performance Guidance:
- - Invoke `activate()` normally; the class auto‑selects slab vs object path.
- - Batch structural mutations then call `rebuildConnectionSlab(true)` if you
-   need an immediate fast‑path (it is invoked lazily otherwise).
- - Keep input array length exactly equal to `input`; mismatches throw early.
-
-Serialization:
- - `toJSON()` / `fromJSON()` support experiment checkpointing.
- - ONNX export (`exportToONNX`) enables interoperability with other tools.
+Educational note: Traces (`eligibility` and `xtrace`) illustrate how recurrent credit
+assignment works in algorithms like RTRL / policy gradients. They are updated only when
+using the traced activation path (`activate`) vs `noTraceActivate` (inference fast path).
 
 ### default
 
@@ -1056,7 +1032,7 @@ Internal helper to safely update a connection weight with clipping and NaN check
 
 #### _sortSpeciesMembers
 
-`(sp: { members: import("D:/code-practice/NeatapticTS/src/architecture/network").default[]; }) => void`
+`(sp: import("D:/code-practice/NeatapticTS/src/neat/neat.types").SpeciesLike) => void`
 
 Sort members of a species in-place by descending score.
 

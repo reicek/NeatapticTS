@@ -610,46 +610,9 @@ console.log(neat.population[0].score); // highest score</p>
 selection and evaluation routines; it intentionally sorts in-place for
 performance and to preserve references to genome objects.</p>
 <h2 id="neat-neat-speciation-ts">neat/neat.speciation.ts</h2><h3 id="applyfitnesssharing">_applyFitnessSharing</h3><p><code>() =&gt; void</code></p>
-<p>Apply fitness sharing within each species.</p>
-<p>Fitness sharing reduces the effective fitness of genomes that are clustered
-tightly together (close compatibility distance), promoting diversity by
-penalizing dense species. Two modes are supported:</p>
-<ul>
-<li>Kernel sharing with bandwidth <code>sharingSigma</code> (quadratic kernel)</li>
-<li>Equal sharing based on species size when <code>sharingSigma</code> is 0</li>
-</ul>
-<p>Example:
-neat.options.sharingSigma = 3;
-neat._applyFitnessSharing();</p>
-<h3 id="sortspeciesmembers">_sortSpeciesMembers</h3><p><code>(sp: any) =&gt; void</code></p>
-<p>Sort members of a species in descending order by score.</p>
-<p>Simple utility used by stagnation checks and selection routines to ensure
-the top-performing genomes are at index 0.</p>
-<p>Parameters:</p>
-<ul>
-<li><code>sp</code> - species-like object with a <code>members</code> array and member <code>.score</code></li>
-</ul>
+<h3 id="sortspeciesmembers">_sortSpeciesMembers</h3><p><code>(sp: import(&quot;D:/code-practice/NeatapticTS/src/neat/neat.types&quot;).SpeciesLike) =&gt; void</code></p>
 <h3 id="speciate">_speciate</h3><p><code>() =&gt; void</code></p>
-<p>Assign genomes into species based on compatibility distance and maintain species structures.
-This function creates new species for unassigned genomes, prunes empty species, updates
-dynamic compatibility threshold controllers, performs optional auto coefficient tuning, and
-records per‑species history statistics used by telemetry and adaptive controllers.</p>
-<p>Implementation notes:</p>
-<ul>
-<li>Uses existing representatives; any unassigned genome that doesn&#39;t fit an existing species
-creates a new species with itself as representative.</li>
-<li>Representatives are refreshed each generation (first member heuristic) to reduce drift cost.</li>
-<li>Includes optional age penalty for very old species to gently reduce their reproductive share.</li>
-<li>PID‑style controller adjusts the global compatibility threshold toward <code>targetSpecies</code>.</li>
-<li>Auto compatibility coefficient tuning slightly nudges excess/disjoint coefficients to influence
-clustering granularity when enabled.</li>
-<li>Extended history snapshot captures structural and innovation statistics for richer telemetry.</li>
-</ul>
 <h3 id="updatespeciesstagnation">_updateSpeciesStagnation</h3><p><code>() =&gt; void</code></p>
-<p>Update species stagnation statistics and prune species that have not
-improved within the configured stagnation window.</p>
-<p>This updates each species&#39; <code>bestScore</code> and <code>lastImproved</code> fields and then
-removes species whose age since last improvement exceeds <code>stagnationGenerations</code>.</p>
 <h2 id="neat-neat-species-ts">neat/neat.species.ts</h2><h3 id="getspecieshistory">getSpeciesHistory</h3><p><code>() =&gt; import(&quot;D:/code-practice/NeatapticTS/src/neat/neat.types&quot;).SpeciesHistoryEntry[]</code></p>
 <p>Retrieve the recorded species history across generations.</p>
 <p>Each entry in the returned array corresponds to a recorded generation and
@@ -692,73 +655,11 @@ and <code>lastImproved</code>.</li>
 <li>Does not expose or return references to internal member arrays.</li>
 </ul>
 <p>Returns: Array of per-species summaries suitable for reporting.</p>
-<h2 id="neat-neat-telemetry-exports-ts">neat/neat.telemetry.exports.ts</h2><h3 id="buildspecieshistorycsv">buildSpeciesHistoryCsv</h3><p><code>(recentHistory: { generation: number; stats: any[]; }[], headers: string[]) =&gt; string</code></p>
-<p>Build the full CSV string for species history given ordered headers and
-a slice of history entries.</p>
-<p>Implementation notes:</p>
-<ul>
-<li>The history is a 2‑level structure (generation entry -&gt; species stats[]).</li>
-<li>We emit one CSV row per species stat, repeating the generation value.</li>
-<li>Values are JSON.stringify&#39;d to remain safe for commas/quotes.</li>
-</ul>
-<h3 id="buildtelemetryheaders">buildTelemetryHeaders</h3><p><code>(info: TelemetryHeaderInfo) =&gt; string[]</code></p>
-<p>Build the ordered list of CSV headers from collected metadata.
-Flattened nested metrics are emitted using group prefixes (group.key).</p>
-<h3 id="collecttelemetryheaderinfo">collectTelemetryHeaderInfo</h3><p><code>(entries: any[]) =&gt; TelemetryHeaderInfo</code></p>
-<p>Collect header metadata from the raw telemetry entries.</p>
-<ul>
-<li>Discovers base (top‑level) keys excluding grouped objects.</li>
-<li>Discovers nested keys inside complexity, perf, lineage, diversity groups.</li>
-<li>Tracks presence of optional multi-value structures (ops, objectives, etc.).</li>
-</ul>
-<h3 id="exportspecieshistorycsv">exportSpeciesHistoryCSV</h3><p><code>(maxEntries: number) =&gt; string</code></p>
-<p>Export species history snapshots to CSV.</p>
-<p>Each row represents a single species at a specific generation; the generation
-value is repeated per species. Dynamically discovers species stat keys so
-custom metadata added at runtime is preserved.</p>
-<p>Behavior:</p>
-<ul>
-<li>If <code>_speciesHistory</code> is absent/empty but <code>_species</code> exists, synthesizes a
-minimal snapshot to ensure deterministic headers early in a run.</li>
-<li>Returns a header-only CSV when there is no history or species.</li>
-</ul>
-<p>Parameters:</p>
-<ul>
-<li><code>this</code> - Neat instance (expects <code>_speciesHistory</code> and optionally <code>_species</code>).</li>
-<li><code>maxEntries</code> - Maximum number of most recent history snapshots (generations) to include (default 200).</li>
-</ul>
-<p>Returns: CSV string (headers + rows) describing species evolution timeline.</p>
+<h2 id="neat-neat-telemetry-exports-ts">neat/neat.telemetry.exports.ts</h2><h3 id="exportspecieshistorycsv">exportSpeciesHistoryCSV</h3><p><code>(maxEntries: number) =&gt; string</code></p>
 <h3 id="exporttelemetrycsv">exportTelemetryCSV</h3><p><code>(maxEntries: number) =&gt; string</code></p>
-<p>Export recent telemetry entries to a CSV string.</p>
-<p>Responsibilities:</p>
-<ul>
-<li>Collect a bounded slice (<code>maxEntries</code>) of recent telemetry records.</li>
-<li>Discover and flatten dynamic header keys (top-level + grouped metrics).</li>
-<li>Serialize each entry into a CSV row with stable, parseable values.</li>
-</ul>
-<p>Flattening Rules:</p>
-<ul>
-<li>Nested groups (complexity, perf, lineage, diversity) become group.key columns.</li>
-<li>Optional arrays/maps (ops, objectives, objAges, speciesAlloc, objEvents, objImportance, fronts) included only if present.</li>
-</ul>
-<p>Parameters:</p>
-<ul>
-<li><code>this</code> - Neat instance (expects <code>_telemetry</code> array field).</li>
-<li><code>maxEntries</code> - Maximum number of most recent telemetry entries to include (default 500).</li>
-</ul>
-<p>Returns: CSV string (headers + rows) or empty string when no telemetry.</p>
 <h3 id="exporttelemetryjsonl">exportTelemetryJSONL</h3><p><code>() =&gt; string</code></p>
-<p>Telemetry export helpers extracted from <code>neat.ts</code>.</p>
-<p>This module exposes small helpers intended to serialize the internal
-telemetry gathered by the NeatapticTS <code>Neat</code> runtime into common
-data-export formats (JSONL and CSV). The functions intentionally
-operate against <code>this</code> so they can be attached to instances.</p>
-<h3 id="serializetelemetryentry">serializeTelemetryEntry</h3><p><code>(entry: any, headers: string[]) =&gt; string</code></p>
-<p>Serialize one telemetry entry into a CSV row using previously computed headers.
-Uses a <code>switch(true)</code> pattern instead of a long if/else chain to reduce
-cognitive complexity while preserving readability of each scenario.</p>
 <h3 id="telemetryheaderinfo">TelemetryHeaderInfo</h3><p>Shape describing collected telemetry header discovery info.</p>
-<h2 id="neat-neat-telemetry-ts">neat/neat.telemetry.ts</h2><h3 id="applytelemetryselect">applyTelemetrySelect</h3><p><code>(entry: any) =&gt; any</code></p>
+<h2 id="neat-neat-telemetry-ts">neat/neat.telemetry.ts</h2><h3 id="applytelemetryselect">applyTelemetrySelect</h3><p><code>(entry: Record&lt;string, unknown&gt;) =&gt; Record&lt;string, unknown&gt;</code></p>
 <p>Apply a telemetry selection whitelist to a telemetry entry.</p>
 <p>This helper inspects a per-instance Set of telemetry keys stored at
 <code>this._telemetrySelect</code>. If present, only keys included in the set are
@@ -770,7 +671,7 @@ species count) are always preserved.</p>
 <li><code>entry</code> - - Raw telemetry object to be filtered in-place.</li>
 </ul>
 <p>Returns: The filtered telemetry object (same reference as input).</p>
-<h3 id="buildtelemetryentry">buildTelemetryEntry</h3><p><code>(fittest: any) =&gt; import(&quot;D:/code-practice/NeatapticTS/src/neat/neat.types&quot;).TelemetryEntry</code></p>
+<h3 id="buildtelemetryentry">buildTelemetryEntry</h3><p><code>(fittest: Record&lt;string, unknown&gt;) =&gt; import(&quot;D:/code-practice/NeatapticTS/src/neat/neat.types&quot;).TelemetryEntry</code></p>
 <p>Build a comprehensive telemetry entry for the current generation.</p>
 <p>The returned object contains a snapshot of population statistics, multi-
 objective front sizes, operator statistics, lineage summaries and optional
@@ -785,13 +686,7 @@ to preserve behavior relied upon by tests and consumers.</p>
 <p>Returns: A TelemetryEntry object suitable for recording/streaming.</p>
 <h3 id="computediversitystats">computeDiversityStats</h3><p><code>() =&gt; void</code></p>
 <p>Compute several diversity statistics used by telemetry reporting.</p>
-<p>This helper is intentionally conservative in runtime: when <code>fastMode</code> is
-enabled it will automatically tune a few sampling defaults to keep the
-computation cheap. The computed statistics are written to
-<code>this._diversityStats</code> as an object with keys like <code>meanCompat</code> and
-<code>graphletEntropy</code>.</p>
-<p>The method mutates instance-level temporary fields and reads a number of
-runtime options from <code>this.options</code>.</p>
+<p>This helper is intentionally conservative in runtime: when <code>fastMode</code> is enabled it will automatically tune a few sampling defaults to keep the computation cheap. The computed statistics are written to <code>this._diversityStats</code> as an object with keys like <code>meanCompat</code> and <code>graphletEntropy</code>.</p>
 <h3 id="recordtelemetryentry">recordTelemetryEntry</h3><p><code>(entry: import(&quot;D:/code-practice/NeatapticTS/src/neat/neat.types&quot;).TelemetryEntry) =&gt; void</code></p>
 <p>Record a telemetry entry into the instance buffer and optionally stream it.</p>
 <p>Steps:
@@ -807,7 +702,7 @@ This method performs the following steps to persist and optionally stream teleme
 <ul>
 <li><code>entry</code> - - Telemetry entry to record.</li>
 </ul>
-<h3 id="structuralentropy">structuralEntropy</h3><p><code>(graph: any) =&gt; number</code></p>
+<h3 id="structuralentropy">structuralEntropy</h3><p><code>(graph: { [key: string]: unknown; nodes: { geneId: number; }[]; connections: { from: { geneId: number; }; to: { geneId: number; }; enabled: boolean; }[]; }) =&gt; number</code></p>
 <p>Lightweight proxy for structural entropy based on degree-distribution.</p>
 <p>This function computes an approximate entropy of a graph topology by
 counting node degrees and computing the entropy of the degree histogram.
@@ -819,6 +714,10 @@ The result is cached on the graph object for the current generation in
 <li><code>graph</code> - - A genome-like object with <code>nodes</code> and <code>connections</code> arrays.</li>
 </ul>
 <p>Returns: A non-negative number approximating structural entropy.</p>
+<h3 id="telemetrycontext">TelemetryContext</h3><p>Context view used within telemetry helpers to access optional internal
+fields with descriptive names rather than repeated inline casts.</p>
+<h3 id="telemetrydiversityoptions">TelemetryDiversityOptions</h3><h3 id="telemetrygenome">TelemetryGenome</h3><p>Minimal genome shape used by telemetry helpers (kept local to avoid
+scattering lightweight shapes across other type files).</p>
 <h2 id="neat-neat-types-ts">neat/neat.types.ts</h2><h3 id="anyobj">AnyObj</h3><p>Shared lightweight structural types for modular NEAT components.</p>
 <p>These are deliberately kept small &amp; structural (duck-typed) so that helper
 modules can interoperate without importing the concrete (heavier) <code>Neat</code>
@@ -831,16 +730,24 @@ progressively extracted / refactored.</p>
 <li>Feature‑detect optional telemetry fields – they may be omitted to save cost.</li>
 </ul>
 <h3 id="complexitymetrics">ComplexityMetrics</h3><p>Aggregate structural complexity metrics capturing size &amp; growth pressure.</p>
+<h3 id="connectionlike">ConnectionLike</h3><p>Lightweight connection representation used by telemetry and structural helpers.</p>
 <h3 id="diversitystats">DiversityStats</h3><p>Diversity statistics captured each generation. Individual fields may be
 omitted in telemetry output if diversity tracking is partially disabled to
 reduce runtime cost.</p>
+<h3 id="genomedetailed">GenomeDetailed</h3><p>More concrete genome surface used by telemetry and lineage helpers.
+Extends the minimal <code>GenomeLike</code> with node/connection shapes and a few
+internal bookkeeping fields used by telemetry.</p>
 <h3 id="genomelike">GenomeLike</h3><p>Minimal genome structural surface used by several helpers (incrementally expanded).</p>
 <p>NOTE: <code>nodes</code> &amp; <code>connections</code> intentionally remain <code>any[]</code> until a stable
 <code>NodeLike</code> / <code>ConnectionLike</code> abstraction is finalised.</p>
 <h3 id="lineagesnapshot">LineageSnapshot</h3><p>Snapshot of lineage &amp; ancestry statistics for the current generation.</p>
 <h3 id="neatlike">NeatLike</h3><p>Minimal surface every helper currently expects from a NEAT instance while
-extraction continues. At present it carries no guaranteed properties besides
-an index signature. As helpers converge, promote concrete, documented fields.</p>
+extraction continues. Kept intentionally loose; prefer concrete fields
+when helpers are stabilised. Represented as a simple record to avoid an
+empty interface that duplicates its supertype.</p>
+<h3 id="neatoptions">NeatOptions</h3><p>Options subset used by telemetry helpers. Kept narrow to avoid leaking
+full runtime options into the helper type surface.</p>
+<h3 id="nodelike">NodeLike</h3><p>Lightweight node representation used by telemetry and structural helpers.</p>
 <h3 id="objages">ObjAges</h3><p>Map of objective key to age in generations since introduction.</p>
 <h3 id="objectivedescriptor">ObjectiveDescriptor</h3><p>Descriptor for a single optimisation objective (single or multi‑objective runs).</p>
 <h3 id="objevent">ObjEvent</h3><p>Dynamic objective lifecycle event (addition or removal).</p>
@@ -853,9 +760,14 @@ A high attempt count with low success can indicate constraints becoming tight
 (e.g. structural budgets reached) – useful for adaptive operator scheduling.</p>
 <h3 id="operatorstatsrecord">OperatorStatsRecord</h3><p>Aggregated success / attempt counters over a window or entire run.</p>
 <h3 id="performancemetrics">PerformanceMetrics</h3><p>Timing metrics for coarse evolutionary phases (milliseconds).</p>
+<h3 id="speciationoptions">SpeciationOptions</h3><p>Speciation options for NEAT speciation controller.
+Extends NeatOptions with additional fields for compatibility threshold control and species allocation.</p>
 <h3 id="speciesalloc">SpeciesAlloc</h3><p>Offspring allocation for a species during reproduction.</p>
 <h3 id="specieshistoryentry">SpeciesHistoryEntry</h3><p>Species statistics captured for a particular generation.</p>
 <h3 id="specieshistorystat">SpeciesHistoryStat</h3><p>Species statistics at a single historical snapshot (generation boundary).</p>
+<h3 id="specieshistorystatextended">SpeciesHistoryStatExtended</h3><p>Extended per-species historical snapshot with optional backfilled metrics
+that may be computed lazily (innovationRange, enabledRatio).</p>
+<h3 id="specieslike">SpeciesLike</h3><p>Internal species representation used by helpers. Kept minimal and structural.</p>
 <h3 id="telemetryentry">TelemetryEntry</h3><p>Telemetry summary for one generation.</p>
 <p>Optional properties are feature‑dependent; consumers MUST test for presence.</p>
-<footer class="site-footer">Generated from source JSDoc • <a href="https://github.com/reicek/NeatapticTS">GitHub</a></footer></main><aside class="toc"><div class="page-toc"><h2>Files</h2><div class="toc-file"><a href="#neat-neat-adaptive-ts">neat/neat.adaptive.ts</a><ul><li><a href=#applyadaptivemutation>applyAdaptiveMutation</a></li><li><a href=#applyancestoruniqadaptive>applyAncestorUniqAdaptive</a></li><li><a href=#applycomplexitybudget>applyComplexityBudget</a></li><li><a href=#applyminimalcriterionadaptive>applyMinimalCriterionAdaptive</a></li><li><a href=#applyoperatoradaptation>applyOperatorAdaptation</a></li><li><a href=#applyphasedcomplexity>applyPhasedComplexity</a></li></ul></div><div class="toc-file"><a href="#neat-neat-compat-ts">neat/neat.compat.ts</a><ul><li><a href=#compatibilitydistance>_compatibilityDistance</a></li><li><a href=#fallbackinnov>_fallbackInnov</a></li></ul></div><div class="toc-file"><a href="#neat-neat-constants-ts">neat/neat.constants.ts</a><ul><li><a href=#epsilon>EPSILON</a></li><li><a href=#extra-connection-probability>EXTRA_CONNECTION_PROBABILITY</a></li><li><a href=#norm-epsilon>NORM_EPSILON</a></li><li><a href=#prob-epsilon>PROB_EPSILON</a></li></ul></div><div class="toc-file"><a href="#neat-neat-diversity-ts">neat/neat.diversity.ts</a><ul><li><a href=#arraymean>arrayMean</a></li><li><a href=#arrayvariance>arrayVariance</a></li><li><a href=#compatcomputer>CompatComputer</a></li><li><a href=#computediversitystats>computeDiversityStats</a></li><li><a href=#diversitystats>DiversityStats</a></li><li><a href=#structuralentropy>structuralEntropy</a></li></ul></div><div class="toc-file"><a href="#neat-neat-evaluate-ts">neat/neat.evaluate.ts</a><ul><li><a href=#evaluate>evaluate</a></li></ul></div><div class="toc-file"><a href="#neat-neat-evolve-ts">neat/neat.evolve.ts</a><ul><li><a href=#evolve>evolve</a></li></ul></div><div class="toc-file"><a href="#neat-neat-export-ts">neat/neat.export.ts</a><ul><li><a href=#exportpopulation>exportPopulation</a></li><li><a href=#exportstate>exportState</a></li><li><a href=#fromjsonimpl>fromJSONImpl</a></li><li><a href=#genomejson>GenomeJSON</a></li><li><a href=#importpopulation>importPopulation</a></li><li><a href=#importstateimpl>importStateImpl</a></li><li><a href=#neatmetajson>NeatMetaJSON</a></li><li><a href=#neatstatejson>NeatStateJSON</a></li><li><a href=#tojsonimpl>toJSONImpl</a></li></ul></div><div class="toc-file"><a href="#neat-neat-helpers-ts">neat/neat.helpers.ts</a><ul><li><a href=#addgenome>addGenome</a></li><li><a href=#createpool>createPool</a></li><li><a href=#spawnfromparent>spawnFromParent</a></li></ul></div><div class="toc-file"><a href="#neat-neat-lineage-ts">neat/neat.lineage.ts</a><ul><li><a href=#buildanc>buildAnc</a></li><li><a href=#computeancestoruniqueness>computeAncestorUniqueness</a></li><li><a href=#genomelike>GenomeLike</a></li><li><a href=#neatlineagecontext>NeatLineageContext</a></li></ul></div><div class="toc-file"><a href="#neat-neat-multiobjective-ts">neat/neat.multiobjective.ts</a><ul><li><a href=#fastnondominated>fastNonDominated</a></li><li><a href=#objectivedescriptor>ObjectiveDescriptor</a></li></ul></div><div class="toc-file"><a href="#neat-neat-mutation-ts">neat/neat.mutation.ts</a><ul><li><a href=#ensureminhiddennodes>ensureMinHiddenNodes</a></li><li><a href=#ensurenodeadends>ensureNoDeadEnds</a></li><li><a href=#mutate>mutate</a></li><li><a href=#mutateaddconnreuse>mutateAddConnReuse</a></li><li><a href=#mutateaddnodereuse>mutateAddNodeReuse</a></li><li><a href=#selectmutationmethod>selectMutationMethod</a></li></ul></div><div class="toc-file"><a href="#neat-neat-objectives-ts">neat/neat.objectives.ts</a><ul><li><a href=#getobjectives>_getObjectives</a></li><li><a href=#clearobjectives>clearObjectives</a></li><li><a href=#registerobjective>registerObjective</a></li></ul></div><div class="toc-file"><a href="#neat-neat-pruning-ts">neat/neat.pruning.ts</a><ul><li><a href=#applyadaptivepruning>applyAdaptivePruning</a></li><li><a href=#applyevolutionpruning>applyEvolutionPruning</a></li></ul></div><div class="toc-file"><a href="#neat-neat-selection-ts">neat/neat.selection.ts</a><ul><li><a href=#getaverage>getAverage</a></li><li><a href=#getfittest>getFittest</a></li><li><a href=#getparent>getParent</a></li><li><a href=#sort>sort</a></li></ul></div><div class="toc-file"><a href="#neat-neat-speciation-ts">neat/neat.speciation.ts</a><ul><li><a href=#applyfitnesssharing>_applyFitnessSharing</a></li><li><a href=#sortspeciesmembers>_sortSpeciesMembers</a></li><li><a href=#speciate>_speciate</a></li><li><a href=#updatespeciesstagnation>_updateSpeciesStagnation</a></li></ul></div><div class="toc-file"><a href="#neat-neat-species-ts">neat/neat.species.ts</a><ul><li><a href=#getspecieshistory>getSpeciesHistory</a></li><li><a href=#getspeciesstats>getSpeciesStats</a></li></ul></div><div class="toc-file"><a href="#neat-neat-telemetry-exports-ts">neat/neat.telemetry.exports.ts</a><ul><li><a href=#buildspecieshistorycsv>buildSpeciesHistoryCsv</a></li><li><a href=#buildtelemetryheaders>buildTelemetryHeaders</a></li><li><a href=#collecttelemetryheaderinfo>collectTelemetryHeaderInfo</a></li><li><a href=#exportspecieshistorycsv>exportSpeciesHistoryCSV</a></li><li><a href=#exporttelemetrycsv>exportTelemetryCSV</a></li><li><a href=#exporttelemetryjsonl>exportTelemetryJSONL</a></li><li><a href=#serializetelemetryentry>serializeTelemetryEntry</a></li><li><a href=#telemetryheaderinfo>TelemetryHeaderInfo</a></li></ul></div><div class="toc-file"><a href="#neat-neat-telemetry-ts">neat/neat.telemetry.ts</a><ul><li><a href=#applytelemetryselect>applyTelemetrySelect</a></li><li><a href=#buildtelemetryentry>buildTelemetryEntry</a></li><li><a href=#computediversitystats>computeDiversityStats</a></li><li><a href=#recordtelemetryentry>recordTelemetryEntry</a></li><li><a href=#structuralentropy>structuralEntropy</a></li></ul></div><div class="toc-file"><a href="#neat-neat-types-ts">neat/neat.types.ts</a><ul><li><a href=#anyobj>AnyObj</a></li><li><a href=#complexitymetrics>ComplexityMetrics</a></li><li><a href=#diversitystats>DiversityStats</a></li><li><a href=#genomelike>GenomeLike</a></li><li><a href=#lineagesnapshot>LineageSnapshot</a></li><li><a href=#neatlike>NeatLike</a></li><li><a href=#objages>ObjAges</a></li><li><a href=#objectivedescriptor>ObjectiveDescriptor</a></li><li><a href=#objevent>ObjEvent</a></li><li><a href=#objimportance>ObjImportance</a></li><li><a href=#objimportanceentry>ObjImportanceEntry</a></li><li><a href=#operatorstat>OperatorStat</a></li><li><a href=#operatorstatsrecord>OperatorStatsRecord</a></li><li><a href=#performancemetrics>PerformanceMetrics</a></li><li><a href=#speciesalloc>SpeciesAlloc</a></li><li><a href=#specieshistoryentry>SpeciesHistoryEntry</a></li><li><a href=#specieshistorystat>SpeciesHistoryStat</a></li><li><a href=#telemetryentry>TelemetryEntry</a></li></ul></div></div></aside></div></body></html>
+<footer class="site-footer">Generated from source JSDoc • <a href="https://github.com/reicek/NeatapticTS">GitHub</a></footer></main><aside class="toc"><div class="page-toc"><h2>Files</h2><div class="toc-file"><a href="#neat-neat-adaptive-ts">neat/neat.adaptive.ts</a><ul><li><a href=#applyadaptivemutation>applyAdaptiveMutation</a></li><li><a href=#applyancestoruniqadaptive>applyAncestorUniqAdaptive</a></li><li><a href=#applycomplexitybudget>applyComplexityBudget</a></li><li><a href=#applyminimalcriterionadaptive>applyMinimalCriterionAdaptive</a></li><li><a href=#applyoperatoradaptation>applyOperatorAdaptation</a></li><li><a href=#applyphasedcomplexity>applyPhasedComplexity</a></li></ul></div><div class="toc-file"><a href="#neat-neat-compat-ts">neat/neat.compat.ts</a><ul><li><a href=#compatibilitydistance>_compatibilityDistance</a></li><li><a href=#fallbackinnov>_fallbackInnov</a></li></ul></div><div class="toc-file"><a href="#neat-neat-constants-ts">neat/neat.constants.ts</a><ul><li><a href=#epsilon>EPSILON</a></li><li><a href=#extra-connection-probability>EXTRA_CONNECTION_PROBABILITY</a></li><li><a href=#norm-epsilon>NORM_EPSILON</a></li><li><a href=#prob-epsilon>PROB_EPSILON</a></li></ul></div><div class="toc-file"><a href="#neat-neat-diversity-ts">neat/neat.diversity.ts</a><ul><li><a href=#arraymean>arrayMean</a></li><li><a href=#arrayvariance>arrayVariance</a></li><li><a href=#compatcomputer>CompatComputer</a></li><li><a href=#computediversitystats>computeDiversityStats</a></li><li><a href=#diversitystats>DiversityStats</a></li><li><a href=#structuralentropy>structuralEntropy</a></li></ul></div><div class="toc-file"><a href="#neat-neat-evaluate-ts">neat/neat.evaluate.ts</a><ul><li><a href=#evaluate>evaluate</a></li></ul></div><div class="toc-file"><a href="#neat-neat-evolve-ts">neat/neat.evolve.ts</a><ul><li><a href=#evolve>evolve</a></li></ul></div><div class="toc-file"><a href="#neat-neat-export-ts">neat/neat.export.ts</a><ul><li><a href=#exportpopulation>exportPopulation</a></li><li><a href=#exportstate>exportState</a></li><li><a href=#fromjsonimpl>fromJSONImpl</a></li><li><a href=#genomejson>GenomeJSON</a></li><li><a href=#importpopulation>importPopulation</a></li><li><a href=#importstateimpl>importStateImpl</a></li><li><a href=#neatmetajson>NeatMetaJSON</a></li><li><a href=#neatstatejson>NeatStateJSON</a></li><li><a href=#tojsonimpl>toJSONImpl</a></li></ul></div><div class="toc-file"><a href="#neat-neat-helpers-ts">neat/neat.helpers.ts</a><ul><li><a href=#addgenome>addGenome</a></li><li><a href=#createpool>createPool</a></li><li><a href=#spawnfromparent>spawnFromParent</a></li></ul></div><div class="toc-file"><a href="#neat-neat-lineage-ts">neat/neat.lineage.ts</a><ul><li><a href=#buildanc>buildAnc</a></li><li><a href=#computeancestoruniqueness>computeAncestorUniqueness</a></li><li><a href=#genomelike>GenomeLike</a></li><li><a href=#neatlineagecontext>NeatLineageContext</a></li></ul></div><div class="toc-file"><a href="#neat-neat-multiobjective-ts">neat/neat.multiobjective.ts</a><ul><li><a href=#fastnondominated>fastNonDominated</a></li><li><a href=#objectivedescriptor>ObjectiveDescriptor</a></li></ul></div><div class="toc-file"><a href="#neat-neat-mutation-ts">neat/neat.mutation.ts</a><ul><li><a href=#ensureminhiddennodes>ensureMinHiddenNodes</a></li><li><a href=#ensurenodeadends>ensureNoDeadEnds</a></li><li><a href=#mutate>mutate</a></li><li><a href=#mutateaddconnreuse>mutateAddConnReuse</a></li><li><a href=#mutateaddnodereuse>mutateAddNodeReuse</a></li><li><a href=#selectmutationmethod>selectMutationMethod</a></li></ul></div><div class="toc-file"><a href="#neat-neat-objectives-ts">neat/neat.objectives.ts</a><ul><li><a href=#getobjectives>_getObjectives</a></li><li><a href=#clearobjectives>clearObjectives</a></li><li><a href=#registerobjective>registerObjective</a></li></ul></div><div class="toc-file"><a href="#neat-neat-pruning-ts">neat/neat.pruning.ts</a><ul><li><a href=#applyadaptivepruning>applyAdaptivePruning</a></li><li><a href=#applyevolutionpruning>applyEvolutionPruning</a></li></ul></div><div class="toc-file"><a href="#neat-neat-selection-ts">neat/neat.selection.ts</a><ul><li><a href=#getaverage>getAverage</a></li><li><a href=#getfittest>getFittest</a></li><li><a href=#getparent>getParent</a></li><li><a href=#sort>sort</a></li></ul></div><div class="toc-file"><a href="#neat-neat-speciation-ts">neat/neat.speciation.ts</a><ul><li><a href=#applyfitnesssharing>_applyFitnessSharing</a></li><li><a href=#sortspeciesmembers>_sortSpeciesMembers</a></li><li><a href=#speciate>_speciate</a></li><li><a href=#updatespeciesstagnation>_updateSpeciesStagnation</a></li></ul></div><div class="toc-file"><a href="#neat-neat-species-ts">neat/neat.species.ts</a><ul><li><a href=#getspecieshistory>getSpeciesHistory</a></li><li><a href=#getspeciesstats>getSpeciesStats</a></li></ul></div><div class="toc-file"><a href="#neat-neat-telemetry-exports-ts">neat/neat.telemetry.exports.ts</a><ul><li><a href=#exportspecieshistorycsv>exportSpeciesHistoryCSV</a></li><li><a href=#exporttelemetrycsv>exportTelemetryCSV</a></li><li><a href=#exporttelemetryjsonl>exportTelemetryJSONL</a></li><li><a href=#telemetryheaderinfo>TelemetryHeaderInfo</a></li></ul></div><div class="toc-file"><a href="#neat-neat-telemetry-ts">neat/neat.telemetry.ts</a><ul><li><a href=#applytelemetryselect>applyTelemetrySelect</a></li><li><a href=#buildtelemetryentry>buildTelemetryEntry</a></li><li><a href=#computediversitystats>computeDiversityStats</a></li><li><a href=#recordtelemetryentry>recordTelemetryEntry</a></li><li><a href=#structuralentropy>structuralEntropy</a></li><li><a href=#telemetrycontext>TelemetryContext</a></li><li><a href=#telemetrydiversityoptions>TelemetryDiversityOptions</a></li><li><a href=#telemetrygenome>TelemetryGenome</a></li></ul></div><div class="toc-file"><a href="#neat-neat-types-ts">neat/neat.types.ts</a><ul><li><a href=#anyobj>AnyObj</a></li><li><a href=#complexitymetrics>ComplexityMetrics</a></li><li><a href=#connectionlike>ConnectionLike</a></li><li><a href=#diversitystats>DiversityStats</a></li><li><a href=#genomedetailed>GenomeDetailed</a></li><li><a href=#genomelike>GenomeLike</a></li><li><a href=#lineagesnapshot>LineageSnapshot</a></li><li><a href=#neatlike>NeatLike</a></li><li><a href=#neatoptions>NeatOptions</a></li><li><a href=#nodelike>NodeLike</a></li><li><a href=#objages>ObjAges</a></li><li><a href=#objectivedescriptor>ObjectiveDescriptor</a></li><li><a href=#objevent>ObjEvent</a></li><li><a href=#objimportance>ObjImportance</a></li><li><a href=#objimportanceentry>ObjImportanceEntry</a></li><li><a href=#operatorstat>OperatorStat</a></li><li><a href=#operatorstatsrecord>OperatorStatsRecord</a></li><li><a href=#performancemetrics>PerformanceMetrics</a></li><li><a href=#speciationoptions>SpeciationOptions</a></li><li><a href=#speciesalloc>SpeciesAlloc</a></li><li><a href=#specieshistoryentry>SpeciesHistoryEntry</a></li><li><a href=#specieshistorystat>SpeciesHistoryStat</a></li><li><a href=#specieshistorystatextended>SpeciesHistoryStatExtended</a></li><li><a href=#specieslike>SpeciesLike</a></li><li><a href=#telemetryentry>TelemetryEntry</a></li></ul></div></div></aside></div></body></html>

@@ -441,77 +441,7 @@ the configuration is applied recursively to the nodes within that group.</p>
 <li><code>values</code> - - An object containing the properties and their values to set.
 Example: <code>{ bias: 0.5, squash: methods.Activation.ReLU }</code></li>
 </ul>
-<h2 id="architecture-network-ts">architecture/network.ts</h2><h3 id="network">network</h3><h1 id="network-evolvable-trainable-graph">Network (Evolvable / Trainable Graph)</h1><p>Represents a directed neural computation graph used both as a NEAT genome
-phenotype and (optionally) as a gradient‑trainable model. The class binds
-together specialized modules (topology, pruning, serialization, slab packing)
-to keep the core surface approachable for learners.</p>
-<p>Educational Highlights:</p>
-<ul>
-<li>Structural Mutation: functions like <code>addNodeBetween()</code> and evolutionary
-helpers (in higher-level <code>Neat</code>) mutate topology to explore architectures.</li>
-<li>Fast Execution Paths: a Structure‑of‑Arrays (SoA) slab (<code>rebuildConnectionSlab</code>)
-packs connection data into typed arrays to improve cache locality.</li>
-<li>Memory Optimization: node pooling &amp; typed array pooling demonstrate how
-allocation patterns affect performance and GC pressure.</li>
-<li>Determinism: RNG snapshot/restore methods allow reproducible experiments.</li>
-<li>Hybrid Workflows: dropout, stochastic depth, weight noise and mixed precision
-illustrate gradient‑era regularization applied to evolved topologies.</li>
-</ul>
-<p>Typical Usage:</p>
-<pre><code class="language-ts">const net = new Network(4, 2);           // create network
-const out = net.activate([0.1,0.3,0.2,0.9]);
-net.addNodeBetween();                    // structural mutation
-const slab = (net as any).getConnectionSlab(); // inspect packed arrays
-const clone = net.clone();               // deep copy
-</code></pre>
-<p>Performance Guidance:</p>
-<ul>
-<li>Invoke <code>activate()</code> normally; the class auto‑selects slab vs object path.</li>
-<li>Batch structural mutations then call <code>rebuildConnectionSlab(true)</code> if you
-need an immediate fast‑path (it is invoked lazily otherwise).</li>
-<li>Keep input array length exactly equal to <code>input</code>; mismatches throw early.</li>
-</ul>
-<p>Serialization:</p>
-<ul>
-<li><code>toJSON()</code> / <code>fromJSON()</code> support experiment checkpointing.</li>
-<li>ONNX export (<code>exportToONNX</code>) enables interoperability with other tools.</li>
-</ul>
-<h3 id="network">Network</h3><h1 id="network-evolvable-trainable-graph">Network (Evolvable / Trainable Graph)</h1><p>Represents a directed neural computation graph used both as a NEAT genome
-phenotype and (optionally) as a gradient‑trainable model. The class binds
-together specialized modules (topology, pruning, serialization, slab packing)
-to keep the core surface approachable for learners.</p>
-<p>Educational Highlights:</p>
-<ul>
-<li>Structural Mutation: functions like <code>addNodeBetween()</code> and evolutionary
-helpers (in higher-level <code>Neat</code>) mutate topology to explore architectures.</li>
-<li>Fast Execution Paths: a Structure‑of‑Arrays (SoA) slab (<code>rebuildConnectionSlab</code>)
-packs connection data into typed arrays to improve cache locality.</li>
-<li>Memory Optimization: node pooling &amp; typed array pooling demonstrate how
-allocation patterns affect performance and GC pressure.</li>
-<li>Determinism: RNG snapshot/restore methods allow reproducible experiments.</li>
-<li>Hybrid Workflows: dropout, stochastic depth, weight noise and mixed precision
-illustrate gradient‑era regularization applied to evolved topologies.</li>
-</ul>
-<p>Typical Usage:</p>
-<pre><code class="language-ts">const net = new Network(4, 2);           // create network
-const out = net.activate([0.1,0.3,0.2,0.9]);
-net.addNodeBetween();                    // structural mutation
-const slab = (net as any).getConnectionSlab(); // inspect packed arrays
-const clone = net.clone();               // deep copy
-</code></pre>
-<p>Performance Guidance:</p>
-<ul>
-<li>Invoke <code>activate()</code> normally; the class auto‑selects slab vs object path.</li>
-<li>Batch structural mutations then call <code>rebuildConnectionSlab(true)</code> if you
-need an immediate fast‑path (it is invoked lazily otherwise).</li>
-<li>Keep input array length exactly equal to <code>input</code>; mismatches throw early.</li>
-</ul>
-<p>Serialization:</p>
-<ul>
-<li><code>toJSON()</code> / <code>fromJSON()</code> support experiment checkpointing.</li>
-<li>ONNX export (<code>exportToONNX</code>) enables interoperability with other tools.</li>
-</ul>
-<h3 id="default">default</h3><h4 id="applygradientclipping">_applyGradientClipping</h4><p><code>(cfg: { mode: &quot;norm&quot; | &quot;percentile&quot; | &quot;layerwiseNorm&quot; | &quot;layerwisePercentile&quot;; maxNorm?: number | undefined; percentile?: number | undefined; }) =&gt; void</code></p>
+<h2 id="architecture-network-ts">architecture/network.ts</h2><h3 id="network">network</h3><h3 id="default">default</h3><h4 id="applygradientclipping">_applyGradientClipping</h4><p><code>(cfg: { mode: &quot;norm&quot; | &quot;percentile&quot; | &quot;layerwiseNorm&quot; | &quot;layerwisePercentile&quot;; maxNorm?: number | undefined; percentile?: number | undefined; }) =&gt; void</code></p>
 <p>Trains the network on a given dataset subset for one pass (epoch or batch).
 Performs activation and backpropagation for each item in the set.
 Updates weights based on batch size configuration.</p>
@@ -1064,4 +994,4 @@ by replacing the corresponding hidden node block with a freshly constructed Laye
 </ul>
 <h3 id="onnxexportoptions">OnnxExportOptions</h3><p>Options controlling ONNX export behavior (Phase 1).</p>
 <h3 id="onnxmodel">OnnxModel</h3><h3 id="pool2dmapping">Pool2DMapping</h3><p>Mapping describing a pooling operation inserted after a given export-layer index.</p>
-<footer class="site-footer">Generated from source JSDoc • <a href="https://github.com/reicek/NeatapticTS">GitHub</a></footer></main><aside class="toc"><div class="page-toc"><h2>Files</h2><div class="toc-file"><a href="#architecture-activationarraypool-ts">architecture/activationArrayPool.ts</a><ul><li><a href=#activationarray>ActivationArray</a></li><li><a href=#activationarraypool>activationArrayPool</a></li><li><a href=#activationarraypool>ActivationArrayPool</a></li></ul></div><div class="toc-file"><a href="#architecture-architect-ts">architecture/architect.ts</a><ul><li><a href=#architect>architect</a></li><li><a href=#architect>Architect</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#architecture-connection-ts">architecture/connection.ts</a><ul><li><a href=#connection>connection</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#architecture-group-ts">architecture/group.ts</a><ul><li><a href=#group>group</a></li><li><a href=#group>Group</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#architecture-layer-ts">architecture/layer.ts</a><ul><li><a href=#layer>layer</a></li><li><a href=#layer>Layer</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#architecture-network-ts">architecture/network.ts</a><ul><li><a href=#network>network</a></li><li><a href=#network>Network</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#architecture-node-ts">architecture/node.ts</a><ul><li><a href=#node>node</a></li><li><a href=#node>Node</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#architecture-nodepool-ts">architecture/nodePool.ts</a><ul><li><a href=#acquirenode>acquireNode</a></li><li><a href=#acquirenodeoptions>AcquireNodeOptions</a></li><li><a href=#nodepoolstats>nodePoolStats</a></li><li><a href=#releasenode>releaseNode</a></li><li><a href=#resetnode>resetNode</a></li><li><a href=#resetnodepool>resetNodePool</a></li><li><a href=#resettablenodefields>ResettableNodeFields</a></li></ul></div><div class="toc-file"><a href="#architecture-onnx-ts">architecture/onnx.ts</a><ul><li><a href=#conv2dmapping>Conv2DMapping</a></li><li><a href=#exporttoonnx>exportToONNX</a></li><li><a href=#importfromonnx>importFromONNX</a></li><li><a href=#onnxexportoptions>OnnxExportOptions</a></li><li><a href=#onnxmodel>OnnxModel</a></li><li><a href=#pool2dmapping>Pool2DMapping</a></li></ul></div></div></aside></div></body></html>
+<footer class="site-footer">Generated from source JSDoc • <a href="https://github.com/reicek/NeatapticTS">GitHub</a></footer></main><aside class="toc"><div class="page-toc"><h2>Files</h2><div class="toc-file"><a href="#architecture-activationarraypool-ts">architecture/activationArrayPool.ts</a><ul><li><a href=#activationarray>ActivationArray</a></li><li><a href=#activationarraypool>activationArrayPool</a></li><li><a href=#activationarraypool>ActivationArrayPool</a></li></ul></div><div class="toc-file"><a href="#architecture-architect-ts">architecture/architect.ts</a><ul><li><a href=#architect>architect</a></li><li><a href=#architect>Architect</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#architecture-connection-ts">architecture/connection.ts</a><ul><li><a href=#connection>connection</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#architecture-group-ts">architecture/group.ts</a><ul><li><a href=#group>group</a></li><li><a href=#group>Group</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#architecture-layer-ts">architecture/layer.ts</a><ul><li><a href=#layer>layer</a></li><li><a href=#layer>Layer</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#architecture-network-ts">architecture/network.ts</a><ul><li><a href=#network>network</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#architecture-node-ts">architecture/node.ts</a><ul><li><a href=#node>node</a></li><li><a href=#node>Node</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#architecture-nodepool-ts">architecture/nodePool.ts</a><ul><li><a href=#acquirenode>acquireNode</a></li><li><a href=#acquirenodeoptions>AcquireNodeOptions</a></li><li><a href=#nodepoolstats>nodePoolStats</a></li><li><a href=#releasenode>releaseNode</a></li><li><a href=#resetnode>resetNode</a></li><li><a href=#resetnodepool>resetNodePool</a></li><li><a href=#resettablenodefields>ResettableNodeFields</a></li></ul></div><div class="toc-file"><a href="#architecture-onnx-ts">architecture/onnx.ts</a><ul><li><a href=#conv2dmapping>Conv2DMapping</a></li><li><a href=#exporttoonnx>exportToONNX</a></li><li><a href=#importfromonnx>importFromONNX</a></li><li><a href=#onnxexportoptions>OnnxExportOptions</a></li><li><a href=#onnxmodel>OnnxModel</a></li><li><a href=#pool2dmapping>Pool2DMapping</a></li></ul></div></div></aside></div></body></html>
