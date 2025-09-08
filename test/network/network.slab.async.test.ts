@@ -7,7 +7,7 @@ import Network from '../../src/architecture/network';
 import Node from '../../src/architecture/node';
 import { config } from '../../src/config';
 import { rebuildConnectionSlabAsync } from '../../src/architecture/network/network.slab';
-import { memoryStats } from '../../src/utils/memory';
+import { memoryStats, type SlabAllocStats } from '../../src/utils/memory';
 
 // Helper to fabricate large network with many connections (>100k) deterministically.
 function buildDenseNetwork(input: number, hidden: number, output: number) {
@@ -52,7 +52,8 @@ describe('network.slab.async', () => {
     (net as any)._topoDirty = true;
     (net as any)._nodeIndexDirty = true;
     (net as any)._slabDirty = true;
-    const statsBefore = memoryStats(net).flags.snapshot.allocStats;
+  const statsBefore = memoryStats(net).flags.snapshot.allocStats as SlabAllocStats;
+  if (!statsBefore) throw new Error('statsBefore is null');
     const versionBefore = (net as any)._slabVersion || 0;
 
     // Act: perform async rebuild with small chunkSize to force >1 yield
@@ -68,7 +69,8 @@ describe('network.slab.async', () => {
     (Promise.prototype as any).then = origThen; // restore
 
     const slabAsync = (net as any).getConnectionSlab();
-    const statsAfter = memoryStats(net).flags.snapshot.allocStats;
+  const statsAfter = memoryStats(net).flags.snapshot.allocStats as SlabAllocStats;
+  if (!statsAfter) throw new Error('statsAfter is null');
 
     // Force a sync rebuild after a dummy structural no-op to compare parity
     (net as any)._slabDirty = true;

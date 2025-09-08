@@ -40,6 +40,10 @@ export default defineConfig([
 
     languageOptions: {
       parser: tsParser,
+      ecmaVersion: 2023,
+      globals: {
+        es2023: true, // Enables ES2023 globals
+      },
     },
 
     rules: {

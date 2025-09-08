@@ -4,6 +4,7 @@ import type {
   ObjectiveDescriptor,
   SpeciesHistoryEntry,
   OperatorStatsRecord,
+  SpeciesLike,
 } from './neat/neat.types';
 import * as methods from './methods/methods';
 import { selection as selectionMethods } from './methods/selection';
@@ -636,7 +637,7 @@ export default class Neat {
    * Sort members of a species in-place by descending score.
    * @param sp - Species object with `members` array.
    */
-  private _sortSpeciesMembers(sp: { members: Network[] }) {
+  private _sortSpeciesMembers(sp: SpeciesLike) {
     return _sortSpeciesMembers.call(this as any, sp);
   }
   /**

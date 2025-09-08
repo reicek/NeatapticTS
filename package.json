@@ -30,7 +30,7 @@
     "prettier:src": "npx prettier --write src/**/*.ts",
     "docs": "npm run build:ascii-maze && npm run docs:examples && npm run docs:build-scripts && node ./dist-docs/scripts/generate-docs.js && node ./dist-docs/scripts/render-docs-html.js",
     "lint": "eslint src/ test/",
-    "lint:fix": "eslint src/ test/ --fix",
+    "lint:fix": "eslint src/ --fix",
     "onnx:export": "node scripts/export-onnx.mjs"
   },
   "exports": {

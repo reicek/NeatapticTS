@@ -423,7 +423,8 @@ describe('Structure & Serialization', () => {
           if (inputNodeIndex >= 0 && outputNodeIndex >= 0) {
             // Create a minimal JSON with an invalid gater
             const minimalJson = {
-              nodes: network.nodes.map((n, i) => ({
+              // index not required for JSON node representation
+              nodes: network.nodes.map((n) => ({
                 bias: n.bias,
                 type: n.type,
                 squash: 'LOGISTIC',

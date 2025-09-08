@@ -4,7 +4,7 @@
  */
 import Network from '../../src/architecture/network';
 import { config } from '../../src/config';
-import { memoryStats } from '../../src/utils/memory';
+import { memoryStats, type SlabAllocStats } from '../../src/utils/memory';
 
 describe('network.slab.alloc.stats.reuse', () => {
   it('pooled allocations increase with repeated rebuilds absent structural growth', () => {
@@ -13,13 +13,15 @@ describe('network.slab.alloc.stats.reuse', () => {
     const net = new Network(6, 3, { enforceAcyclic: true });
     (net as any)._slabDirty = true;
     (net as any).getConnectionSlab();
-    const before = memoryStats(net).flags.snapshot.allocStats;
+  const before = memoryStats(net).flags.snapshot.allocStats as SlabAllocStats;
+  if (!before) throw new Error('before is null');
     // Perform several slab rebuilds without changing structure
     for (let i = 0; i < 5; i++) {
       (net as any)._slabDirty = true;
       (net as any).getConnectionSlab();
     }
-    const after = memoryStats(net).flags.snapshot.allocStats;
+  const after = memoryStats(net).flags.snapshot.allocStats as SlabAllocStats;
+  if (!after) throw new Error('after is null');
     // Fresh may remain constant; pooled should be >= before.pooled
     expect(after.pooled >= before.pooled).toBe(true);
   });

@@ -1,3 +1,9 @@
+import type {
+  NeatLike,
+  TelemetryEntry,
+  SpeciesHistoryEntry,
+  SpeciesHistoryStat,
+} from './neat.types';
 /**
  * Telemetry export helpers extracted from `neat.ts`.
  *
@@ -6,7 +12,7 @@
  * data-export formats (JSONL and CSV). The functions intentionally
  * operate against `this` so they can be attached to instances.
  */
-export function exportTelemetryJSONL(this: any): string {
+export const exportTelemetryJSONL = function (this: NeatLike & { _telemetry: TelemetryEntry[] }): string {
   /**
    * Serialize the internal telemetry array to JSON Lines (JSONL).
    * Each telemetry entry is stringified and separated by a newline.
@@ -22,7 +28,7 @@ export function exportTelemetryJSONL(this: any): string {
    * log processors and line-based parsers. Each line is independent
    * and can be parsed with JSON.parse.
    */
-  return this._telemetry.map((entry: any) => JSON.stringify(entry)).join('\n');
+  return this._telemetry.map((entry: TelemetryEntry) => JSON.stringify(entry)).join('\n');
 }
 /**
  * Export recent telemetry entries to a CSV string.
@@ -40,11 +46,11 @@ export function exportTelemetryJSONL(this: any): string {
  * @param maxEntries Maximum number of most recent telemetry entries to include (default 500).
  * @returns CSV string (headers + rows) or empty string when no telemetry.
  */
-export function exportTelemetryCSV(this: any, maxEntries = 500): string {
+export const exportTelemetryCSV = function (this: NeatLike & { _telemetry: TelemetryEntry[] }, maxEntries = 500): string {
   /**
    * Recent telemetry entries to export. Contains at most `maxEntries` items.
    */
-  const recentTelemetry = Array.isArray(this._telemetry)
+  const recentTelemetry: TelemetryEntry[] = Array.isArray(this._telemetry)
     ? this._telemetry.slice(-maxEntries)
     : [];
   if (!recentTelemetry.length) return '';
@@ -124,7 +130,7 @@ interface TelemetryHeaderInfo {
  * - Discovers nested keys inside complexity, perf, lineage, diversity groups.
  * - Tracks presence of optional multi-value structures (ops, objectives, etc.).
  */
-function collectTelemetryHeaderInfo(entries: any[]): TelemetryHeaderInfo {
+const collectTelemetryHeaderInfo = (entries: TelemetryEntry[]): TelemetryHeaderInfo => {
   /** Discovered base keys (excluding grouped containers). */
   const baseKeys = new Set<string>();
   /** Discovered complexity metric keys. */
@@ -212,7 +218,7 @@ function collectTelemetryHeaderInfo(entries: any[]): TelemetryHeaderInfo {
  * Build the ordered list of CSV headers from collected metadata.
  * Flattened nested metrics are emitted using group prefixes (group.key).
  */
-function buildTelemetryHeaders(info: TelemetryHeaderInfo): string[] {
+const buildTelemetryHeaders = (info: TelemetryHeaderInfo): string[] => {
   /** Aggregated headers list (ordered). */
   const headers: string[] = [
     ...info.baseKeys,
@@ -235,7 +241,7 @@ function buildTelemetryHeaders(info: TelemetryHeaderInfo): string[] {
  * Uses a `switch(true)` pattern instead of a long if/else chain to reduce
  * cognitive complexity while preserving readability of each scenario.
  */
-function serializeTelemetryEntry(entry: any, headers: string[]): string {
+const serializeTelemetryEntry = (entry: TelemetryEntry, headers: string[]): string => {
   /** Accumulator for serialized cell values for one telemetry row. */
   const row: string[] = [];
   for (const header of headers) {
@@ -246,47 +252,39 @@ function serializeTelemetryEntry(entry: any, headers: string[]): string {
         // (e.g., node counts, connection counts, depth). We flatten them as
         // complexity.<metric>. Missing metrics serialize as an empty cell.
         const key = header.slice(COMPLEXITY_PREFIX.length);
+        // TypeScript: safe dynamic access
+        const complexity = entry.complexity as Record<string, unknown> | undefined;
         row.push(
-          entry.complexity && key in entry.complexity
-            ? JSON.stringify(entry.complexity[key])
+          complexity && key in complexity
+            ? JSON.stringify(complexity[key])
             : ''
         );
         break;
       }
       // Grouped performance metrics
       case header.startsWith(PERF_PREFIX): {
-        // Performance (perf.*) captures runtime / evaluation timing or cost
-        // figures (e.g., ms per generation, fitness evaluation cost). Allows
-        // profiling & trend analysis. Empty when metric not present.
         const key = header.slice(PERF_PREFIX.length);
+        const perf = entry.perf as Record<string, unknown> | undefined;
         row.push(
-          entry.perf && key in entry.perf ? JSON.stringify(entry.perf[key]) : ''
+          perf && key in perf ? JSON.stringify(perf[key]) : ''
         );
         break;
       }
       // Grouped lineage metrics
       case header.startsWith(LINEAGE_PREFIX): {
-        // Lineage metrics (lineage.*) reflect genealogical statistics such as
-        // ancestor depth, branch factors, or identifiers helpful for tracing
-        // evolutionary history.
         const key = header.slice(LINEAGE_PREFIX.length);
+        const lineage = entry.lineage as Record<string, unknown> | undefined;
         row.push(
-          entry.lineage && key in entry.lineage
-            ? JSON.stringify(entry.lineage[key])
-            : ''
+          lineage && key in lineage ? JSON.stringify(lineage[key]) : ''
         );
         break;
       }
       // Grouped diversity metrics
       case header.startsWith(DIVERSITY_PREFIX): {
-        // Diversity metrics (diversity.*) quantify population variety to guard
-        // against premature convergence (e.g., mean lineage depth / pairwise
-        // distance). Only curated subset exported for header stability.
         const key = header.slice(DIVERSITY_PREFIX.length);
+        const diversity = entry.diversity as Record<string, unknown> | undefined;
         row.push(
-          entry.diversity && key in entry.diversity
-            ? JSON.stringify(entry.diversity[key])
-            : ''
+          diversity && key in diversity ? JSON.stringify(diversity[key]) : ''
         );
         break;
       }
@@ -356,7 +354,7 @@ function serializeTelemetryEntry(entry: any, headers: string[]): string {
         // All remaining headers correspond to primitive / object top‑level
         // properties (e.g., generation, population size, best score). Use
         // JSON.stringify so objects/arrays stay parseable and commas safe.
-        row.push(JSON.stringify(entry[header]));
+  row.push(JSON.stringify((entry as unknown as Record<string, unknown>)[header]));
         break;
       }
     }
@@ -379,7 +377,7 @@ function serializeTelemetryEntry(entry: any, headers: string[]): string {
  * @param maxEntries Maximum number of most recent history snapshots (generations) to include (default 200).
  * @returns CSV string (headers + rows) describing species evolution timeline.
  */
-export function exportSpeciesHistoryCSV(this: any, maxEntries = 200): string {
+export const exportSpeciesHistoryCSV = function (this: NeatLike & { _speciesHistory?: SpeciesHistoryEntry[]; _species?: SpeciesHistoryStat[]; generation?: number }, maxEntries = 200): string {
   /** Ensure the species history structure exists on the instance. */
   if (!Array.isArray(this._speciesHistory)) this._speciesHistory = [];
 
@@ -395,21 +393,18 @@ export function exportSpeciesHistoryCSV(this: any, maxEntries = 200): string {
     this._species.length
   ) {
     // Create a minimal snapshot on demand so early exports (before evolve/speciate) still yield a header row
-    const stats = this._species.map((sp: any) => ({
-      /** Unique identifier for the species (or -1 when missing). */
-      id: sp.id ?? -1,
-      /** Current size (number of members) in the species. */
-      size: Array.isArray(sp.members) ? sp.members.length : 0,
-      /** Best score observed in the species (fallback 0). */
-      best: sp.bestScore ?? 0,
-      /** Generation index when the species last improved (fallback 0). */
-      lastImproved: sp.lastImproved ?? 0,
+    // Defensive: allow for legacy or incomplete species objects
+    const stats: SpeciesHistoryStat[] = (this._species as unknown as Record<string, unknown>[]).map((sp) => ({
+      id: typeof sp.id === 'number' ? sp.id : -1,
+      size: Array.isArray(sp.members) ? sp.members.length : (typeof sp.size === 'number' ? sp.size : 0),
+      bestScore: typeof sp.bestScore === 'number' ? sp.bestScore : (typeof sp.best === 'number' ? sp.best : 0),
+      lastImproved: typeof sp.lastImproved === 'number' ? sp.lastImproved : 0,
     }));
     this._speciesHistory.push({ generation: this.generation || 0, stats });
   }
 
   /** Recent slice of the species history we will export. */
-  const recentHistory = this._speciesHistory.slice(-maxEntries);
+  const recentHistory: SpeciesHistoryEntry[] = this._speciesHistory.slice(-maxEntries);
   if (!recentHistory.length) {
     // Emit header-only CSV for deterministic empty export
     return 'generation,id,size,best,lastImproved';
@@ -440,10 +435,10 @@ const HEADER_GENERATION = 'generation';
  * - We emit one CSV row per species stat, repeating the generation value.
  * - Values are JSON.stringify'd to remain safe for commas/quotes.
  */
-function buildSpeciesHistoryCsv(
-  recentHistory: Array<{ generation: number; stats: any[] }>,
+const buildSpeciesHistoryCsv = (
+  recentHistory: SpeciesHistoryEntry[],
   headers: string[]
-): string {
+): string => {
   /** Accumulates lines; seeded with header row. */
   const lines: string[] = [headers.join(',')];
   // Iterate each generation snapshot
@@ -454,13 +449,12 @@ function buildSpeciesHistoryCsv(
       const rowCells: string[] = [];
       // Maintain header order while extracting values
       for (const header of headers) {
-        // Special-case generation (lives on outer entry rather than per species)
         if (header === HEADER_GENERATION) {
           rowCells.push(JSON.stringify(historyEntry.generation));
           continue;
         }
-        // Generic species stat field (may be undefined -> serialized as undefined)
-        rowCells.push(JSON.stringify((speciesStat as any)[header]));
+        // Use index signature for dynamic keys
+  rowCells.push(JSON.stringify((speciesStat as unknown as Record<string, unknown>)[header]));
       }
       lines.push(rowCells.join(','));
     }

@@ -91,7 +91,9 @@ import { crossOver as _crossOver } from './network/network.genetic';
  *  - `toJSON()` / `fromJSON()` support experiment checkpointing.
  *  - ONNX export (`exportToONNX`) enables interoperability with other tools.
  */
-export default class Network {
+import type { NetworkView } from '../utils/memory';
+
+export default class Network implements NetworkView {
   input: number;
   output: number;
   score?: number;
@@ -100,7 +102,7 @@ export default class Network {
   gates: Connection[];
   selfconns: Connection[];
   dropout: number = 0;
-  private _dropConnectProb: number = 0;
+    protected _dropConnectProb: number = 0;
   private _lastGradNorm?: number;
   private _optimizerStep: number = 0;
   private _weightNoiseStd: number = 0;
@@ -170,20 +172,20 @@ export default class Network {
   private _returnTypedActivations: boolean = false; // if true and reuse enabled, return typed array directly
   private _activationPool?: Float32Array | Float64Array; // pooled output array
   // Packed connection slab fields (for memory + cache efficiency when iterating connections)
-  private _connWeights?: Float32Array | Float64Array;
-  private _connFrom?: Uint32Array;
-  private _connTo?: Uint32Array;
-  private _slabDirty: boolean = true;
-  private _useFloat32Weights: boolean = true;
+    public _connWeights?: Float32Array | Float64Array;
+    public _connFrom?: Uint32Array;
+    public _connTo?: Uint32Array;
+    public _slabDirty: boolean = true;
+    public _useFloat32Weights: boolean = true;
   // Cached node.index maintenance (avoids repeated this.nodes.indexOf in hot paths like slab rebuild)
-  private _nodeIndexDirty: boolean = true; // when true, node.index values must be reassigned sequentially
+  public _nodeIndexDirty: boolean = true; // when true, node.index values must be reassigned sequentially
   // Fast slab forward path structures
   private _outStart?: Uint32Array;
   private _outOrder?: Uint32Array;
   private _adjDirty: boolean = true;
   // Cached typed arrays for fast slab forward pass
-  private _fastA?: Float32Array | Float64Array;
-  private _fastS?: Float32Array | Float64Array;
+  public _fastA?: Float32Array | Float64Array;
+  public _fastS?: Float32Array | Float64Array;
   // Internal hint: track a preferred linear chain edge to split on subsequent ADD_NODE mutations
   // to encourage deep path formation even in stochastic modes. Updated each time we split it.
   private _preferredChainEdge?: Connection;

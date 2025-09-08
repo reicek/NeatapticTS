@@ -682,11 +682,11 @@ describe('Dropout & Regularization', () => {
       type DataSample = { input: number[]; output: number[] };
 
       const createMulberry32 = (seed: number) => {
-        return function () {
-          let t = (seed += 0x6d2b79f5);
-          t = Math.imul(t ^ (t >>> 15), t | 1);
-          t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-          return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        return () => {
+          let temp = (seed += 0x6d2b79f5);
+          temp = Math.imul(temp ^ (temp >>> 15), temp | 1);
+          temp ^= temp + Math.imul(temp ^ (temp >>> 7), temp | 61);
+          return ((temp ^ (temp >>> 14)) >>> 0) / 4294967296;
         };
       };
 
@@ -785,8 +785,11 @@ describe('Dropout & Regularization', () => {
           dropoutApplied = false;
           // Spy
           originalActivate = net.activate;
-          net.activate = function (input, training) {
-            if (training && this.dropout > 0) {
+          net.activate = (input: unknown, training?: boolean) => {
+            if (
+              training &&
+              ((net as unknown) as { dropout?: number }).dropout! > 0
+            ) {
               const hiddenNodes = net.nodes.filter(
                 (n: Node) => n.type === 'hidden'
               );
@@ -794,7 +797,11 @@ describe('Dropout & Regularization', () => {
                 dropoutApplied = true;
               }
             }
-            return originalActivate.call(this, input, training);
+            return (originalActivate as (...args: unknown[]) => unknown).call(
+              net,
+              input,
+              training
+            );
           };
         });
 

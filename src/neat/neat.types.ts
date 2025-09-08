@@ -1,4 +1,16 @@
 /**
+ * Speciation options for NEAT speciation controller.
+ * Extends NeatOptions with additional fields for compatibility threshold control and species allocation.
+ */
+export type SpeciationOptions = NeatOptions & {
+  compatibilityThreshold?: number;
+  minThreshold?: number;
+  maxThreshold?: number;
+  targetSpecies?: number;
+  speciesAllocation?: { extendedHistory?: boolean };
+  speciesAgeProtection?: { grace?: number; oldPenalty?: number };
+};
+/**
  * Shared lightweight structural types for modular NEAT components.
  *
  * These are deliberately kept small & structural (duck-typed) so that helper
@@ -16,14 +28,15 @@
  * Generic map type used as a stop‑gap where the precise shape is still in flux.
  * Prefer a specific interface once the surface stabilises.
  */
-export type AnyObj = { [k: string]: any };
+export type AnyObj = Record<string, unknown>;
 
 /**
  * Minimal surface every helper currently expects from a NEAT instance while
- * extraction continues. At present it carries no guaranteed properties besides
- * an index signature. As helpers converge, promote concrete, documented fields.
+ * extraction continues. Kept intentionally loose; prefer concrete fields
+ * when helpers are stabilised. Represented as a simple record to avoid an
+ * empty interface that duplicates its supertype.
  */
-export interface NeatLike extends AnyObj {}
+export type NeatLike = Record<string, unknown>;
 
 // Objective system ---------------------------------------------------------
 /**
@@ -45,16 +58,12 @@ export interface NeatLike extends AnyObj {}
  *   direction: 'min',
  *   accessor: g => (g.nodes.length + g.connections.length)
  * };
- * ```
- *
- * @property key Stable identifier (used as a key in telemetry & objective maps).
- * @property direction Optimisation direction – maximise ("max") or minimise ("min").
- * @property accessor Pure extractor returning a scalar value for the objective.
- */
+* ```
+*/
 export interface ObjectiveDescriptor {
   key: string;
   direction: 'max' | 'min';
-  accessor: (g: GenomeLike) => number; // narrowed from any
+  accessor: (g: GenomeLike) => number;
 }
 
 /**
@@ -65,15 +74,121 @@ export interface ObjectiveDescriptor {
  */
 export interface GenomeLike {
   /** Collection of node objects (structure intentionally opaque for now). */
-  nodes: any[]; // will refine with NodeLike
+  /** Collection of node objects (structure intentionally opaque for now). */
+
   /** Collection of connection objects (structure intentionally opaque for now). */
-  connections: any[];
+  connections: unknown[];
   /** Primary fitness / score (convention: higher is better unless objective flips). */
   score?: number;
   /** Number of network input nodes (cached for convenience in some helpers). */
   input?: number;
   /** Number of network output nodes. */
   output?: number;
+}
+
+/**
+ * Lightweight node representation used by telemetry and structural helpers.
+ */
+export interface NodeLike {
+  geneId?: number;
+  [k: string]: unknown;
+}
+
+/**
+ * Lightweight connection representation used by telemetry and structural helpers.
+ */
+export interface ConnectionLike {
+  from: NodeLike | Record<string, unknown>;
+  to: NodeLike | Record<string, unknown>;
+  enabled?: boolean;
+  /** Optional innovation identifier for tracking historical origin of a connection */
+  innovation?: number;
+  [k: string]: unknown;
+}
+
+/**
+ * More concrete genome surface used by telemetry and lineage helpers.
+ * Extends the minimal `GenomeLike` with node/connection shapes and a few
+ * internal bookkeeping fields used by telemetry.
+ */
+export interface GenomeDetailed extends GenomeLike {
+  nodes: NodeLike[];
+  connections: ConnectionLike[];
+  _id: number;
+  _depth?: number;
+  _moRank?: number;
+  _parents?: number[];
+  [k: string]: unknown;
+}
+
+/**
+ * Internal species representation used by helpers. Kept minimal and structural.
+ */
+export interface SpeciesLike {
+  id: number;
+  members: GenomeDetailed[] | GenomeLike[];
+  bestScore?: number;
+  lastImproved?: number;
+  [k: string]: unknown;
+}
+
+/**
+ * Options subset used by telemetry helpers. Kept narrow to avoid leaking
+ * full runtime options into the helper type surface.
+ */
+export interface NeatOptions {
+  multiObjective?: {
+    enabled?: boolean;
+    complexityMetric?: 'nodes' | 'connections';
+  };
+  rngState?: boolean;
+  telemetry?: {
+    hypervolume?: boolean;
+    complexity?: boolean;
+    performance?: boolean;
+  };
+  maxNodes?: number;
+  maxConns?: number;
+  diversityMetrics?: {
+    enabled?: boolean;
+    pairSample?: number;
+    graphletSample?: number;
+  };
+  fastMode?: boolean;
+  novelty?: { enabled?: boolean; k?: number };
+  speciesAllocation?: {
+    extendedHistory?: boolean;
+    // Add other properties as needed
+    [k: string]: unknown;
+  };
+  /** Soft age protection settings for species (grace generations and penalty) */
+  speciesAgeProtection?: {
+    grace?: number;
+    oldPenalty?: number;
+  };
+  /** PID-like compatibility adjustment configuration */
+  compatAdjust?: {
+    smoothingWindow?: number;
+    decay?: number;
+    kp?: number;
+    ki?: number;
+    minThreshold?: number;
+    maxThreshold?: number;
+  };
+  /** Automatic coefficient tuning options for compatibility coefficients */
+  autoCompatTuning?: {
+    enabled?: boolean;
+    target?: number;
+    adjustRate?: number;
+    minCoeff?: number;
+    maxCoeff?: number;
+  };
+  /** Working coefficients used by compatibility distance (may be tuned) */
+  excessCoeff?: number;
+  disjointCoeff?: number;
+  /** Optional target species count used by controllers */
+  targetSpecies?: number;
+  [k: string]: unknown;
 }
 
 /**
@@ -239,6 +354,8 @@ export interface TelemetryEntry {
   best: number;
   species: number;
   hyper: number; // hypervolume-like proxy
+  // allow additional optional telemetry fields to be attached dynamically
+  [k: string]: unknown;
   fronts?: number[]; // first few pareto front sizes when MO enabled
   diversity?: DiversityStats;
   ops: OperatorStat[];
@@ -272,4 +389,13 @@ export interface SpeciesHistoryStat {
 export interface SpeciesHistoryEntry {
   generation: number;
   stats: SpeciesHistoryStat[];
+}
+
+/**
+ * Extended per-species historical snapshot with optional backfilled metrics
+ * that may be computed lazily (innovationRange, enabledRatio).
+ */
+export interface SpeciesHistoryStatExtended extends SpeciesHistoryStat {
+  innovationRange?: number;
+  enabledRatio?: number;
 }
