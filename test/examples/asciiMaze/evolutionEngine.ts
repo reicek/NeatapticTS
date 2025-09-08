@@ -216,7 +216,7 @@ export class EvolutionEngine {
 
     const MIN_CAP = 128;
     const maxCap = EvolutionEngine.#LOGITS_RING_CAP_MAX;
-    let cap = EvolutionEngine.#LOGITS_RING_CAP;
+    const cap = EvolutionEngine.#LOGITS_RING_CAP;
     let target = cap;
 
     // Helper to compute next power-of-two >= n (for n > 0).
@@ -1872,7 +1872,7 @@ export class EvolutionEngine {
 
       for (let rank = 0; rank < topLimit; rank++) {
         // Reuse or create an entry object in the pooled topBuffer.
-        let entry = topBuffer[rank] ?? (topBuffer[rank] = {});
+        const entry = topBuffer[rank] ?? (topBuffer[rank] = {});
         const genome = populationRef[sortedIndices[rank]];
 
         // Minimal invariant fields for later analysis/UI. Use optional chaining and defaults.
@@ -5302,7 +5302,6 @@ export class EvolutionEngine {
 
     // Step 1: Safe detection of Node-style `require` without crashing bundlers that rewrite `require`.
     try {
-      // eslint-disable-next-line @typescript-eslint/no-implied-eval
       const maybeRequire =
         (globalThis as any).require ??
         (typeof require === 'function' ? require : null);
@@ -8231,7 +8230,7 @@ export class EvolutionEngine {
     } catch (e) {
       // Best-effort logging: swallow and surface a minimal message.
       // Avoid throwing from a debug helper.
-      // eslint-disable-next-line no-console
+
       console.log(
         'printNetworkStructure: failed to inspect network (partial data)'
       );

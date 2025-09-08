@@ -3,7 +3,13 @@ import Network from '../../src/architecture/network';
 // Simple dataset: y = 0 for x = 1
 const set = [{ input: [1], output: [0] }];
 
-const optimizers: Array<any> = ['sgd', 'rmsprop', 'adagrad', 'adam', 'adamw'];
+const optimizers: Array<string> = [
+  'sgd',
+  'rmsprop',
+  'adagrad',
+  'adam',
+  'adamw',
+];
 
 describe('training.optimizer', () => {
   optimizers.forEach((opt) => {
@@ -14,7 +20,12 @@ describe('training.optimizer', () => {
       let hasAccumulator = false;
       beforeAll(() => {
         const net = new Network(1, 1);
-        const conn: any = net.connections[0];
+        const conn = (net.connections[0] as unknown) as {
+          weight: number;
+          firstMoment?: number;
+          secondMoment?: number;
+          gradientAccumulator?: number;
+        };
         const w0 = conn.weight;
         net.train(set, {
           iterations: 1,

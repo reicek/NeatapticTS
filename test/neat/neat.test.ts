@@ -254,18 +254,18 @@ describe('Deep Network Evolution', () => {
       // Find the longest path from input to output
       const input = net.nodes.find((n) => n.type === 'input');
       const output = net.nodes.find((n) => n.type === 'output');
-      function dfs(node: any, visited = new Set()): number {
+      const dfs = (node: unknown, visited = new Set()): number => {
         if (node === output) return 0;
         visited.add(node);
         let maxDepth = 0;
-        for (const conn of node.connections.out) {
+        for (const conn of (node as any).connections.out) {
           if (!visited.has(conn.to)) {
             maxDepth = Math.max(maxDepth, 1 + dfs(conn.to, visited));
           }
         }
         visited.delete(node);
         return maxDepth;
-      }
+      };
       const depth = dfs(input!);
       // Assert
       // Note: Random mutation does not guarantee a deep chain, only that deep paths are possible
@@ -316,14 +316,18 @@ describe('Connection Preservation', () => {
     const outputNode = net.nodes.find((n) => n.type === 'output')!;
     const neat = new Neat(2, 1, () => 1, { hiddenLayerMultiplier: 1 });
     (neat as any).ensureMinHiddenNodes(net, 1);
-    function hasPath(from: any, to: any, visited = new Set()): boolean {
+    const hasPath = (
+      from: unknown,
+      to: unknown,
+      visited = new Set()
+    ): boolean => {
       if (from === to) return true;
       visited.add(from);
-      for (const conn of from.connections.out) {
+      for (const conn of (from as any).connections.out) {
         if (!visited.has(conn.to) && hasPath(conn.to, to, visited)) return true;
       }
       return false;
-    }
+    };
     it('input node 1 has a path to output', () => {
       // Act
       const pathExists = hasPath(inputNodes[0], outputNode);

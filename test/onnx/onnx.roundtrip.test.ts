@@ -27,10 +27,10 @@ describe('ONNX Export/Import Round-Trip Numerical Equivalence', () => {
       return (state & 0xffffffff) / 0xffffffff;
     };
     // Assign weights & biases deterministically
-    net.connections.forEach((c: any, idx: number) => {
+    net.connections.forEach((c: { weight: number }, idx: number) => {
       c.weight = (rand() * 2 - 1) * 0.5 + idx * 1e-6; // slight variation
     });
-    net.nodes.forEach((n: any, idx: number) => {
+    net.nodes.forEach((n: { type?: string; bias?: number }, idx: number) => {
       if (n.type !== 'input') n.bias = (rand() * 2 - 1) * 0.1 + idx * 1e-6;
     });
     return net;

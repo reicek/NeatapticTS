@@ -532,7 +532,7 @@ export default class Network {
       );
     }
 
-    let output: ActivationArray = outputArr;
+    const output: ActivationArray = outputArr;
     (this as any)._lastSkippedLayers = [];
     const stats = {
       droppedHiddenNodes: 0,
@@ -697,7 +697,7 @@ export default class Network {
       }
     } else {
       // Node-based activation (legacy, node-level dropout)
-      let hiddenNodes = this.nodes.filter((node) => node.type === 'hidden');
+      const hiddenNodes = this.nodes.filter((node) => node.type === 'hidden');
       let droppedCount = 0;
       if (training && this.dropout > 0) {
         // Randomly drop hidden nodes

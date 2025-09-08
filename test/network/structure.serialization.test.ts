@@ -20,11 +20,11 @@ describe('Structure & Serialization', () => {
         jest.setTimeout(30000);
         const network1 = new Network(2, 2);
         const network2 = new Network(2, 2);
-        for (let i = 0; i < 100; i++) {
+        for (let iterIndex = 0; iterIndex < 100; iterIndex++) {
           network1.mutate(methods.mutation.ADD_NODE);
           network2.mutate(methods.mutation.ADD_NODE);
         }
-        for (let i = 0; i < 400; i++) {
+        for (let iterIndex = 0; iterIndex < 400; iterIndex++) {
           network1.mutate(methods.mutation.ADD_CONN);
           network2.mutate(methods.mutation.ADD_NODE);
         }
@@ -33,28 +33,32 @@ describe('Structure & Serialization', () => {
       });
       it('should have all connections feed-forward', () => {
         // Assert
-        const allFeedForward = network.connections.every((conn: any) => {
-          const fromNode = conn.from;
-          const toNode = conn.to;
-          if (
-            network.nodes.includes(fromNode) &&
-            network.nodes.includes(toNode)
-          ) {
-            const fromIndex = network.nodes.indexOf(fromNode);
-            const toIndex = network.nodes.indexOf(toNode);
-            return fromIndex < toIndex;
-          } else {
-            // Spy
-            const errorSpy = jest
-              .spyOn(console, 'error')
-              .mockImplementation(() => {});
-            console.error(
-              `Connection node not found in network nodes array: from=${fromNode?.index}, to=${toNode?.index}`
-            );
-            errorSpy.mockRestore();
-            return false;
+        const allFeedForward = network.connections.every(
+          (conn: { from?: Node; to?: Node }) => {
+            const fromNode = conn.from;
+            const toNode = conn.to;
+            if (
+              fromNode &&
+              toNode &&
+              network.nodes.includes(fromNode) &&
+              network.nodes.includes(toNode)
+            ) {
+              const fromIndex = network.nodes.indexOf(fromNode);
+              const toIndex = network.nodes.indexOf(toNode);
+              return fromIndex < toIndex;
+            } else {
+              // Spy
+              const errorSpy = jest
+                .spyOn(console, 'error')
+                .mockImplementation(() => {});
+              console.error(
+                `Connection node not found in network nodes array: from=${fromNode?.index}, to=${toNode?.index}`
+              );
+              errorSpy.mockRestore();
+              return false;
+            }
           }
-        });
+        );
         expect(allFeedForward).toBe(true);
       });
     });
@@ -75,8 +79,8 @@ describe('Structure & Serialization', () => {
         beforeAll(() => {
           // Arrange
           original = createNetwork();
-          const json: any = original.toJSON();
-          copy = Network.fromJSON(json);
+          const json = original.toJSON() as Record<string, unknown>;
+          copy = Network.fromJSON((json as unknown) as Record<string, unknown>);
           input = Array.from({ length: original.input }, () => Math.random());
           originalOutput = original.activate(input);
           copyOutput = copy.activate(input);
@@ -99,19 +103,21 @@ describe('Structure & Serialization', () => {
         describe('Scenario: fromJSON throws on corrupted data', () => {
           it('throws error if nodes field is missing', () => {
             // Arrange
-            const json: any = original.toJSON();
-            delete json.nodes;
+            const json = original.toJSON() as Record<string, unknown>;
+            delete ((json as unknown) as { nodes?: unknown }).nodes;
             // Act
-            const act = () => Network.fromJSON(json);
+            const act = () =>
+              Network.fromJSON((json as unknown) as Record<string, unknown>);
             // Assert
             expect(act).toThrow();
           });
           it('throws error if connections field is missing', () => {
             // Arrange
-            const json: any = original.toJSON();
-            delete json.connections;
+            const json = original.toJSON() as Record<string, unknown>;
+            delete ((json as unknown) as { connections?: unknown }).connections;
             // Act
-            const act = () => Network.fromJSON(json);
+            const act = () =>
+              Network.fromJSON((json as unknown) as Record<string, unknown>);
             // Assert
             expect(act).toThrow();
           });
@@ -222,16 +228,7 @@ describe('Structure & Serialization', () => {
       globalWarnSpy.mockClear();
     });
 
-    // Helper for warning assertion testing
-    const expectWarning = (fn: () => any, warningText: string) => {
-      const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
-      const result = fn();
-      expect(warnSpy).toHaveBeenCalledWith(
-        expect.stringContaining(warningText)
-      );
-      warnSpy.mockRestore();
-      return result;
-    };
+    // Note: inline warning assertions using `globalWarnSpy` are preferred; helper removed.
 
     describe('Scenario: invalid connection indices', () => {
       it('should skip invalid connection indices', () => {
@@ -328,13 +325,17 @@ describe('Structure & Serialization', () => {
       it('should fall back to identity for unknown squash in fromJSON', () => {
         // Arrange - Create a valid network first
         const validNetwork = new Network(1, 1);
-        const validJson = validNetwork.toJSON() as any;
+        const validJson = validNetwork.toJSON() as Record<string, unknown>;
 
         // Modify the squash function to an unknown value
-        validJson.nodes[0].squash = 'UNKNOWN_FUNCTION';
+        ((validJson as unknown) as {
+          nodes?: Array<Record<string, unknown>>;
+        }).nodes![0].squash = 'UNKNOWN_FUNCTION';
 
         // Act
-        const network = Network.fromJSON(validJson);
+        const network = Network.fromJSON(
+          (validJson as unknown) as Record<string, unknown>
+        );
 
         // Assert - Only verify the core functionality (fallback to identity)
         expect(network.nodes[0].squash).toBe(methods.Activation.identity);
@@ -367,38 +368,32 @@ describe('Structure & Serialization', () => {
 
           if (inputNodeIndex >= 0 && outputNodeIndex >= 0) {
             // This is what we want to test - that the library handles the invalid case
-            try {
-              // Create a minimal JSON with a valid and an invalid connection
-              const minimalJson = {
-                nodes: network.nodes.map((n, i) => ({
-                  bias: n.bias,
-                  type: n.type,
-                  squash: 'LOGISTIC', // Use standard squash for simplicity
-                })),
-                connections: [
-                  // Valid connection
-                  { from: inputNodeIndex, to: outputNodeIndex, weight: 0.5 },
-                  // Invalid 'from' index
-                  { from: 999, to: outputNodeIndex, weight: 0.5 },
-                ],
-                input: [inputNodeIndex],
-                output: [outputNodeIndex],
-                gates: [],
-              };
+            // Create a minimal JSON with a valid and an invalid connection
+            const minimalJson: Record<string, unknown> = {
+              nodes: network.nodes.map((n) => ({
+                bias: n.bias,
+                type: n.type,
+                squash: 'LOGISTIC', // Use standard squash for simplicity
+              })),
+              connections: [
+                // Valid connection
+                { from: inputNodeIndex, to: outputNodeIndex, weight: 0.5 },
+                // Invalid 'from' index
+                { from: 999, to: outputNodeIndex, weight: 0.5 },
+              ],
+              input: [inputNodeIndex],
+              output: [outputNodeIndex],
+              gates: [],
+            };
 
-              // This should not throw, but may log warnings
-              const result = Network.fromJSON(minimalJson);
+            // This should not throw, but may log warnings
+            const result = Network.fromJSON(
+              (minimalJson as unknown) as Record<string, unknown>
+            );
 
-              // If we get here, we succeeded
-              expect(result).toBeInstanceOf(Network);
-              expect(result.connections.length).toBe(1); // Only the valid connection
-            } catch (innerError) {
-              // If the implementation throws on invalid indices, that's okay too
-              // Just log it and continue
-              console.log(
-                'Network.fromJSON handled invalid indices by throwing, which is acceptable'
-              );
-            }
+            // If we get here, we succeeded
+            expect(result).toBeInstanceOf(Network);
+            expect(result.connections.length).toBe(1); // Only the valid connection
           }
         } finally {
           errorSpy.mockRestore();
@@ -444,18 +439,13 @@ describe('Structure & Serialization', () => {
             };
 
             // This should handle the invalid gater gracefully
-            try {
-              const result = Network.fromJSON(minimalJson);
+            const result = Network.fromJSON(
+              (minimalJson as unknown) as Record<string, unknown>
+            );
 
-              // Verify it worked
-              expect(result).toBeInstanceOf(Network);
-              expect(result.gates.length).toBeLessThanOrEqual(0); // Invalid gate should be skipped
-            } catch (innerError) {
-              // If the implementation throws on invalid gater, that's okay too
-              console.log(
-                'Network.fromJSON handled invalid gater by throwing, which is acceptable'
-              );
-            }
+            // Verify it worked
+            expect(result).toBeInstanceOf(Network);
+            expect(result.gates.length).toBeLessThanOrEqual(0); // Invalid gate should be skipped
           }
         } finally {
           errorSpy.mockRestore();
@@ -472,7 +462,7 @@ describe('Structure & Serialization', () => {
     it('should ignore extra/unexpected fields in JSON', () => {
       // Arrange
       const net = new Network(2, 1);
-      const json = net.toJSON() as any;
+      const json = net.toJSON() as Record<string, unknown>;
       json.extraField = 'shouldBeIgnored';
       // Act
       const deserialized = Network.fromJSON(json);
@@ -483,11 +473,16 @@ describe('Structure & Serialization', () => {
     it('should handle missing optional fields (squash, gater)', () => {
       // Arrange
       const net = new Network(2, 1);
-      const json = net.toJSON() as any;
-      delete json.nodes[0].squash;
-      delete json.connections[0].gater;
+      const json = net.toJSON() as Record<string, unknown>;
+      delete ((json as unknown) as { nodes?: Array<Record<string, unknown>> })
+        .nodes![0].squash;
+      delete ((json as unknown) as {
+        connections?: Array<Record<string, unknown>>;
+      }).connections![0].gater;
       // Act
-      const deserialized = Network.fromJSON(json);
+      const deserialized = Network.fromJSON(
+        (json as unknown) as Record<string, unknown>
+      );
       // Assert
       expect(deserialized.nodes[0].squash).toBeDefined();
       expect(deserialized.connections[0].gater).toBeNull();
@@ -495,9 +490,16 @@ describe('Structure & Serialization', () => {
 
     it('should handle empty nodes and connections arrays', () => {
       // Arrange
-      const json = { nodes: [], connections: [], input: 1, output: 1 } as any;
+      const json = {
+        nodes: [],
+        connections: [],
+        input: 1,
+        output: 1,
+      } as Record<string, unknown>;
       // Act
-      const deserialized = Network.fromJSON(json);
+      const deserialized = Network.fromJSON(
+        (json as unknown) as Record<string, unknown>
+      );
       // Assert
       expect(deserialized.nodes.length).toBe(0);
       expect(deserialized.connections.length).toBe(0);
@@ -506,20 +508,20 @@ describe('Structure & Serialization', () => {
     describe('Scenario: custom activation functions', () => {
       let network: Network,
         customFn: (x: number, derivate?: boolean) => number,
-        json: any,
+        json: Record<string, unknown>,
         deserialized: Network;
       beforeEach(() => {
         // Arrange
         network = new Network(1, 1);
-        customFn = function customSquash(x: number, derivate = false) {
-          return derivate ? 0 : x * 100;
-        };
+        customFn = (x: number, derivate = false) => (derivate ? 0 : x * 100);
         network.nodes[0].squash = customFn;
         Object.defineProperty(network.nodes[0].squash, 'name', {
           value: 'MY_CUSTOM_SQUASH',
         });
-        json = network.toJSON();
-        deserialized = Network.fromJSON(json);
+        json = network.toJSON() as Record<string, unknown>;
+        deserialized = Network.fromJSON(
+          (json as unknown) as Record<string, unknown>
+        );
       });
       it('should not preserve the custom function', () => {
         // Assert
@@ -540,9 +542,11 @@ describe('Structure & Serialization', () => {
       // Arrange
       const net = new Network(2, 1);
       net.mutate(methods.mutation.ADD_NODE);
-      const json = net.toJSON() as any;
+      const json = net.toJSON() as Record<string, unknown>;
       // Act
-      const deserialized = Network.fromJSON(json);
+      const deserialized = Network.fromJSON(
+        (json as unknown) as Record<string, unknown>
+      );
       // Assert
       expect(deserialized.nodes.length).toBeGreaterThan(2);
     });
@@ -550,21 +554,22 @@ describe('Structure & Serialization', () => {
     describe('Scenario: deserializing custom activation functions', () => {
       let network: Network,
         customSquashFn: (x: number, derivate?: boolean) => number,
-        json: any,
+        json: Record<string, unknown>,
         deserialized: Network,
         testValue: number;
       beforeEach(() => {
         // Arrange
         network = new Network(1, 1);
-        customSquashFn = function customSquash(x: number, derivate = false) {
-          return derivate ? 0 : x * x;
-        };
+        customSquashFn = (x: number, derivate = false) =>
+          derivate ? 0 : x * x;
         network.nodes[0].squash = customSquashFn;
         Object.defineProperty(network.nodes[0].squash, 'name', {
           value: 'MY_CUSTOM_SQUASH',
         });
-        json = network.toJSON();
-        deserialized = Network.fromJSON(json);
+        json = network.toJSON() as Record<string, unknown>;
+        deserialized = Network.fromJSON(
+          (json as unknown) as Record<string, unknown>
+        );
         testValue = 0.5;
       });
       it('should replace the custom function with a standard one', () => {
@@ -598,17 +603,15 @@ describe('Structure & Serialization', () => {
         // Arrange
         network = new Network(1, 1);
         testInput = 0.5;
-        network.nodes[0].squash = function customSquash(
-          x: number,
-          derivate = false
-        ) {
-          return derivate ? 0 : x + 100;
-        };
+        network.nodes[0].squash = (x: number, derivate = false) =>
+          derivate ? 0 : x + 100;
         Object.defineProperty(network.nodes[0].squash, 'name', {
           value: 'MY_CUSTOM_SQUASH',
         });
-        const json = network.toJSON();
-        const deserialized = Network.fromJSON(json);
+        const json = network.toJSON() as Record<string, unknown>;
+        const deserialized = Network.fromJSON(
+          (json as unknown) as Record<string, unknown>
+        );
         originalResult = network.nodes[0].squash(testInput);
         deserializedResult = deserialized.nodes[0].squash(testInput);
       });

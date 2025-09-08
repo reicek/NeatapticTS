@@ -10,7 +10,7 @@ describe('Training Early Stopping Extensions', () => {
     );
     let idx = 0;
     const cost = () => rawErrors[Math.min(idx++, rawErrors.length - 1)];
-    let result: any;
+    let result: { error?: number; iterations?: number } | undefined;
     beforeAll(() => {
       result = net.train([{ input: [0], output: [0] }], {
         iterations: 20,
@@ -22,7 +22,7 @@ describe('Training Early Stopping Extensions', () => {
       });
     });
     it('performs all iterations when smoothed error stays above target', () => {
-      expect(result.iterations).toBe(20);
+      expect(result?.iterations ?? 0).toBe(20);
     });
   });
 
@@ -31,7 +31,7 @@ describe('Training Early Stopping Extensions', () => {
     const errs = [0.9, 0.8, 0.7, 0.6, 0.5];
     let i = 0;
     const cost = () => errs[Math.min(i++, errs.length - 1)];
-    let result: any;
+    let result: { error?: number; iterations?: number } | undefined;
     beforeAll(() => {
       result = net.train([{ input: [0], output: [0] }], {
         iterations: 5,
@@ -44,14 +44,14 @@ describe('Training Early Stopping Extensions', () => {
       });
     });
     it('reports final error lower than initial raw error due to EMA progression', () => {
-      expect(result.error).toBeLessThan(0.9);
+      expect(result?.error ?? Infinity).toBeLessThan(0.9);
     });
   });
 
   describe('Scenario: earlyStopPatience triggers stop when no improvement', () => {
     const net = new Network(1, 1);
     const cost = () => 0.4;
-    let result: any;
+    let result: { error?: number; iterations?: number } | undefined;
     beforeAll(() => {
       result = net.train([{ input: [0], output: [0] }], {
         iterations: 50,
@@ -63,7 +63,7 @@ describe('Training Early Stopping Extensions', () => {
       });
     });
     it('stops before reaching max iterations due to earlyStopPatience', () => {
-      expect(result.iterations).toBeLessThan(50);
+      expect(result?.iterations ?? 0).toBeLessThan(50);
     });
   });
 
@@ -72,7 +72,7 @@ describe('Training Early Stopping Extensions', () => {
     const seq = [0.5, 0.49, 0.49, 0.48, 0.48, 0.47];
     let i = 0;
     const cost = () => seq[Math.min(i++, seq.length - 1)];
-    let result: any;
+    let result: { error?: number; iterations?: number } | undefined;
     beforeAll(() => {
       result = net.train([{ input: [0], output: [0] }], {
         iterations: 30,
@@ -85,7 +85,7 @@ describe('Training Early Stopping Extensions', () => {
       });
     });
     it('runs past initial patience window because improvements occurred', () => {
-      expect(result.iterations).toBeGreaterThan(4);
+      expect(result?.iterations ?? 0).toBeGreaterThan(4);
     });
   });
 });

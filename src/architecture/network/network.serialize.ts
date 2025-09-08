@@ -281,6 +281,21 @@ export function fromJSONImpl(json: any): Network {
   json.connections.forEach((connJson: any) => {
     if (typeof connJson.from !== 'number' || typeof connJson.to !== 'number')
       return;
+
+    // Defensive bounds check: ensure indices reference existing nodes before attempting to connect.
+    const nodesLength = (net as any).nodes.length;
+    if (
+      connJson.from < 0 ||
+      connJson.to < 0 ||
+      connJson.from >= nodesLength ||
+      connJson.to >= nodesLength
+    ) {
+      console.warn(
+        'Invalid connection indices encountered during fromJSONImpl; skipping connection.'
+      );
+      return;
+    }
+
     /** Source node for connection gene. */
     const sourceNode = (net as any).nodes[connJson.from];
     /** Destination node for connection gene. */
@@ -294,10 +309,18 @@ export function fromJSONImpl(json: any): Network {
     if (
       createdConnection &&
       connJson.gater != null &&
-      typeof connJson.gater === 'number' &&
-      (net as any).nodes[connJson.gater]
+      typeof connJson.gater === 'number'
     ) {
-      (net as any).gate((net as any).nodes[connJson.gater], createdConnection);
+      if (connJson.gater >= 0 && connJson.gater < nodesLength) {
+        (net as any).gate(
+          (net as any).nodes[connJson.gater],
+          createdConnection
+        );
+      } else {
+        console.warn(
+          'Invalid gater index encountered during fromJSONImpl; skipping gater assignment.'
+        );
+      }
     }
     if (createdConnection && typeof connJson.enabled !== 'undefined')
       (createdConnection as any).enabled = connJson.enabled;

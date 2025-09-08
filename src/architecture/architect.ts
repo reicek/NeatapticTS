@@ -193,7 +193,10 @@ export default class Architect {
     // Construct the final Network object from the assembled layers.
     const net = Architect.construct(nodes);
     // Attach ordered Layer instances (excluding any Group) to enable layer-based features (e.g. stochastic depth)
-    (net as any).layers = nodes.filter((n) => n instanceof Layer);
+
+    ((net as unknown) as { layers: Layer[] }).layers = nodes.filter(
+      (n) => n instanceof Layer
+    );
     return net;
   }
 

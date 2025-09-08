@@ -244,7 +244,7 @@ export default class Node {
     // Accumulate incoming weighted activations
     if (this.connections.in.length) {
       for (const conn of this.connections.in) {
-        if (conn.dcMask === 0 || (conn as any).enabled === false) continue;
+        if (conn.dcMask === 0 || conn.enabled === false) continue;
         newState += conn.from.activation * conn.weight * conn.gain;
       }
     }

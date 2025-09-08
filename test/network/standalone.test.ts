@@ -32,7 +32,7 @@ describe('stripCoverage utility', () => {
     expect(result.trim()).toBe('');
   });
 });
-import { Architect, Network, methods } from '../../src/neataptic';
+import { Architect, Network } from '../../src/neataptic';
 
 // Helper function to strip coverage code
 const stripCoverage = (code: string): string => {
@@ -169,15 +169,17 @@ describe('Standalone Functionality', () => {
   });
 
   describe('Standalone Function Scenarios', () => {
+    /**
+     * If a custom squash function is unknown at standalone codegen time,
+     * the generator should fall back to identity behavior.
+     */
     describe('Scenario: fallback to identity for unknown squash function', () => {
       let net: Network;
       let code: string;
       beforeAll(() => {
         // Arrange
         net = new Network(2, 1);
-        net.nodes[0].squash = function customUnknownSquash(x) {
-          return x * 2;
-        };
+        net.nodes[0].squash = (x: number) => x * 2;
         code = net.standalone();
       });
       it('returns a string for standalone code', () => {

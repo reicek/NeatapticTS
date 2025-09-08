@@ -58,27 +58,27 @@ let freshCount = 0;
  */
 function resetNode(node: Node, type?: string, rng: () => number = Math.random) {
   // Preserve or update type
-  if (type) (node as any).type = type;
-  const t = (node as any).type;
+  if (type) node.type = type;
+  const t = node.type;
   // Reinitialize bias identical to constructor semantics
-  (node as any).bias = t === 'input' ? 0 : rng() * 0.2 - 0.1;
+  node.bias = t === 'input' ? 0 : rng() * 0.2 - 0.1;
   // Core dynamic state
-  (node as any).activation = 0;
-  (node as any).state = 0;
-  (node as any).old = 0;
-  (node as any).mask = 1;
-  (node as any).previousDeltaBias = 0;
-  (node as any).totalDeltaBias = 0;
-  (node as any).derivative = undefined;
+  node.activation = 0;
+  node.state = 0;
+  node.old = 0;
+  node.mask = 1;
+  node.previousDeltaBias = 0;
+  node.totalDeltaBias = 0;
+  node.derivative = undefined;
   // Reset connections arrays in-place to retain original array identities (helps hidden class stability)
   node.connections.in.length = 0;
   node.connections.out.length = 0;
   node.connections.gated.length = 0;
   node.connections.self.length = 0;
   // Error object (replace wholesale)
-  (node as any).error = { responsibility: 0, projected: 0, gated: 0 };
+  node.error = { responsibility: 0, projected: 0, gated: 0 };
   // Assign new stable gene id (distinct from original run usage)
-  (node as any).geneId = nextGeneId++;
+  node.geneId = nextGeneId++;
   // Index is preserved; we do NOT recycle indices here (network rebuild logic may reassign in future phase)
 }
 
@@ -103,10 +103,10 @@ export function acquireNode(opts: AcquireNodeOptions = {}): Node {
     node = pool.pop()!;
     reusedCount++;
     resetNode(node, type, rng);
-    if (activationFn) (node as any).squash = activationFn;
+    if (activationFn) node.squash = activationFn;
   } else {
     node = new Node(type, activationFn, rng);
-    (node as any).geneId = nextGeneId++;
+    node.geneId = nextGeneId++;
     freshCount++;
   }
   // NOTE: highWaterMark reflects MAX retained pool size; updated only on release().
@@ -126,7 +126,7 @@ export function releaseNode(node: Node) {
   node.connections.out.length = 0;
   node.connections.gated.length = 0;
   node.connections.self.length = 0;
-  (node as any).error = { responsibility: 0, projected: 0, gated: 0 };
+  node.error = { responsibility: 0, projected: 0, gated: 0 };
   pool.push(node);
   if (pool.length > highWaterMark) highWaterMark = pool.length;
 }

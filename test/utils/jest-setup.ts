@@ -9,19 +9,19 @@ const BENCH_PRETTY = process.env.JEST_BENCH_PRETTY === '1';
 
 let __benchRunSeq = 0;
 
-function humanBytes(v: any) {
+const humanBytes = (v: unknown): string | unknown => {
   if (typeof v !== 'number' || !isFinite(v)) return v;
   const units = ['B', 'KB', 'MB', 'GB'];
   let u = 0;
-  let n = v;
+  let n = v as number;
   while (n >= 1024 && u < units.length - 1) {
     n /= 1024;
     u++;
   }
   return `${n.toFixed(n < 10 && u > 0 ? 2 : 1)}${units[u]}`;
-}
+};
 
-function detectCaller(): string {
+const detectCaller = (): string => {
   try {
     const raw = new Error().stack || '';
     const lines = raw.split(/\n+/).slice(2);
@@ -33,15 +33,17 @@ function detectCaller(): string {
         return `${file}:${m[2]}`;
       }
     }
-  } catch {}
+  } catch (e) {
+    void e;
+  }
   return 'unknown';
-}
+};
 
 // Global structured benchmark logger (phase 0 formatting)
-(global as any).benchLog = (
+const _benchLog = (
   tag: string,
   section: string,
-  kv: Record<string, any>
+  kv: Record<string, unknown>
 ) => {
   const caller = detectCaller();
   const seq = ++__benchRunSeq;
@@ -59,18 +61,19 @@ function detectCaller(): string {
     'estBytes',
     'bytesPerConn',
   ];
-  const ordered: [string, any][] = [];
+  const ordered: [string, unknown][] = [];
   const keys = Object.keys(kv);
-  for (const k of primaryOrder)
-    if (keys.includes(k)) ordered.push([k, (kv as any)[k]]);
-  for (const k of keys)
-    if (!primaryOrder.includes(k)) ordered.push([k, (kv as any)[k]]);
+  for (const k of primaryOrder) if (keys.includes(k)) ordered.push([k, kv[k]]);
+  for (const k of keys) if (!primaryOrder.includes(k)) ordered.push([k, kv[k]]);
 
   // Derive human-friendly extras
   const extras: Record<string, string> = {};
-  if (kv.estBytes != null) extras.estBytesHuman = humanBytes(kv.estBytes);
-  if (kv.bytesPerConn != null)
-    extras.bytesPerConnHuman = humanBytes(kv.bytesPerConn).replace(
+  const estBytes = kv['estBytes'];
+  if (typeof estBytes === 'number')
+    extras.estBytesHuman = String(humanBytes(estBytes));
+  const bytesPerConn = kv['bytesPerConn'];
+  if (typeof bytesPerConn === 'number')
+    extras.bytesPerConnHuman = String(humanBytes(bytesPerConn)).replace(
       /B$/,
       'B/conn'
     );
@@ -103,46 +106,51 @@ function detectCaller(): string {
   originalLog(`${BENCH_PREFIX}────────────────────────────────────────`);
 };
 
-console.log = (...args: any[]) => {
-  if (ALLOW_ALL) return originalLog(...args);
-  if (typeof args[0] === 'string' && args[0].startsWith(BENCH_PREFIX)) {
-    return originalLog(...args); // pass through benchmark output
+console.log = (...args: unknown[]) => {
+  if (ALLOW_ALL) return originalLog(...(args as [unknown]));
+  if (
+    typeof args[0] === 'string' &&
+    (args[0] as string).startsWith(BENCH_PREFIX)
+  ) {
+    return originalLog(...(args as [unknown])); // pass through benchmark output
   }
   // otherwise swallow (kept as noop for test clarity)
 };
-console.warn = (...args: any[]) => {
-  if (ALLOW_ALL) return originalWarn(...args);
+console.warn = (...args: unknown[]) => {
+  if (ALLOW_ALL) return originalWarn(...(args as [unknown]));
 };
-console.error = (...args: any[]) => {
-  if (ALLOW_ALL) return originalError(...args);
+console.error = (...args: unknown[]) => {
+  if (ALLOW_ALL) return originalError(...(args as [unknown]));
 };
 
 // Add custom matchers
 expect.extend({
-  toBeCloseToArray(received: any[], expected: any[], precision = 5) {
-    if (!Array.isArray(received) || !Array.isArray(expected)) {
+  toBeCloseToArray: (received: unknown, expected: unknown, precision = 5) => {
+    const r = received as number[];
+    const e = expected as number[];
+    if (!Array.isArray(r) || !Array.isArray(e)) {
       return {
         pass: false,
         message: () => `Expected ${received} and ${expected} to be arrays`,
       };
     }
 
-    if (received.length !== expected.length) {
+    if (r.length !== e.length) {
       return {
         pass: false,
         message: () =>
-          `Expected arrays to have same length but got ${received.length} and ${expected.length}`,
+          `Expected arrays to have same length but got ${r.length} and ${e.length}`,
       };
     }
 
-    for (let i = 0; i < received.length; i++) {
-      const diff = Math.abs(received[i] - expected[i]);
+    for (let i = 0; i < r.length; i++) {
+      const diff = Math.abs(r[i] - e[i]);
       const epsilon = Math.pow(10, -precision) / 2;
       if (diff > epsilon) {
         return {
           pass: false,
           message: () =>
-            `Expected ${received[i]} to be close to ${expected[i]} (at index ${i})`,
+            `Expected ${r[i]} to be close to ${e[i]} (at index ${i})`,
         };
       }
     }
@@ -153,6 +161,11 @@ expect.extend({
     };
   },
 });
+
+// Expose bench logger on globalThis with a precise type
+((globalThis as unknown) as {
+  benchLog?: typeof _benchLog;
+}).benchLog = _benchLog;
 
 // Add this line to prevent "Your test suite must contain at least one test." error
 describe('Setup', () => {

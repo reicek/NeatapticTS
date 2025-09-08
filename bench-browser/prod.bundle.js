@@ -1,12 +1,12 @@
 'use strict';
 (() => {
-  var Ii = Object.create;
-  var te = Object.defineProperty;
-  var Ti = Object.getOwnPropertyDescriptor;
-  var Di = Object.getOwnPropertyNames;
-  var ki = Object.getPrototypeOf,
+  const Ii = Object.create;
+  const te = Object.defineProperty;
+  const Ti = Object.getOwnPropertyDescriptor;
+  const Di = Object.getOwnPropertyNames;
+  const ki = Object.getPrototypeOf,
     ji = Object.prototype.hasOwnProperty;
-  var Li = ((n) =>
+  const Li = ((n) =>
     typeof require < 'u'
       ? require
       : typeof Proxy < 'u'
@@ -15,16 +15,16 @@
     if (typeof require < 'u') return require.apply(this, arguments);
     throw Error('Dynamic require of "' + n + '" is not supported');
   });
-  var C = (n, t) => () => (n && (t = n((n = 0))), t);
-  var qt = (n, t) => () => (
+  const C = (n, t) => () => (n && (t = n((n = 0))), t);
+  const qt = (n, t) => () => (
       t || n((t = { exports: {} }).exports, t), t.exports
     ),
     ct = (n, t) => {
-      for (var e in t) te(n, e, { get: t[e], enumerable: !0 });
+      for (const e in t) te(n, e, { get: t[e], enumerable: !0 });
     },
     pn = (n, t, e, o) => {
       if ((t && typeof t == 'object') || typeof t == 'function')
-        for (let s of Di(t))
+        for (const s of Di(t))
           !ji.call(n, s) &&
             s !== e &&
             te(n, s, {
@@ -33,7 +33,7 @@
             });
       return n;
     };
-  var Pi = (n, t, e) => (
+  const Pi = (n, t, e) => (
       (e = n != null ? Ii(ki(n)) : {}),
       pn(
         t || !n || !n.__esModule
@@ -43,7 +43,7 @@
       )
     ),
     q = (n) => pn(te({}, '__esModule', { value: !0 }), n);
-  var It,
+  let It,
     Tt,
     Bt,
     ht,
@@ -74,7 +74,7 @@
               (this.innovation = n._nextInnovation++);
           }
           toJSON() {
-            let t = {
+            const t = {
               from: this.from.index ?? void 0,
               to: this.to.index ?? void 0,
               weight: this.weight,
@@ -83,7 +83,7 @@
               enabled: this.enabled,
             };
             if (this._flags & 4) {
-              let e = this[Tt];
+              const e = this[Tt];
               e && typeof e.index < 'u' && (t.gater = e.index);
             }
             return t;
@@ -147,12 +147,12 @@
             return t || ((t = {}), (this[Bt] = t)), t;
           }
           _getOpt(t) {
-            let e = this[Bt];
+            const e = this[Bt];
             return e ? e[t] : void 0;
           }
           _setOpt(t, e) {
             if (e === void 0) {
-              let o = this[Bt];
+              const o = this[Bt];
               o && delete o[t];
             } else this._ensureOptBag()[t] = e;
           }
@@ -257,7 +257,7 @@
           }
         });
     });
-  var G,
+  let G,
     vt = C(() => {
       'use strict';
       G = {
@@ -268,14 +268,14 @@
         enableNodePooling: !1,
       };
     });
-  var xe = {};
+  const xe = {};
   ct(xe, {
     EPSILON: () => Nt,
     EXTRA_CONNECTION_PROBABILITY: () => Se,
     NORM_EPSILON: () => Wi,
     PROB_EPSILON: () => kt,
   });
-  var Nt,
+  let Nt,
     kt,
     Wi,
     Se,
@@ -283,7 +283,7 @@
       'use strict';
       (Nt = 1e-9), (kt = 1e-15), (Wi = 1e-5), (Se = 0.5);
     });
-  var wt,
+  let wt,
     fn = C(() => {
       'use strict';
       jt();
@@ -296,7 +296,7 @@
               'Target and output arrays must have the same length.'
             );
           for (let i = 0; i < e.length; i++) {
-            let r = t[i],
+            const r = t[i],
               a = e[i],
               l = Math.max(s, Math.min(1 - s, a));
             r === 1
@@ -314,7 +314,7 @@
             );
           let o = e.length,
             s = 0;
-          for (let c of t) s += c;
+          for (const c of t) s += c;
           let i = s > 0 ? t.map((c) => c / s) : t.slice(),
             r = Math.max(...e),
             a = e.map((c) => Math.exp(c - r)),
@@ -323,7 +323,7 @@
             u = 0,
             p = 1e-15;
           for (let c = 0; c < o; c++) {
-            let d = Math.min(1 - p, Math.max(p, h[c])),
+            const d = Math.min(1 - p, Math.max(p, h[c])),
               f = i[c];
             u -= f * Math.log(d);
           }
@@ -377,7 +377,7 @@
             s = 1e-15;
           return (
             e.forEach((i, r) => {
-              let a = t[r];
+              const a = t[r];
               o += Math.abs((a - i) / Math.max(Math.abs(a), s));
             }),
             o / e.length
@@ -391,7 +391,7 @@
           let o = 0;
           return (
             e.forEach((s, i) => {
-              let r = t[i],
+              const r = t[i],
                 a = Math.log(Math.max(r, 0) + 1),
                 l = Math.log(Math.max(s, 0) + 1);
               o += Math.pow(a - l, 2);
@@ -407,7 +407,7 @@
           let o = 0;
           return (
             e.forEach((s, i) => {
-              let r = t[i];
+              const r = t[i];
               o += Math.max(0, 1 - r * s);
             }),
             o / e.length
@@ -421,7 +421,7 @@
               'Target and output arrays must have the same length.'
             );
           for (let a = 0; a < e.length; a++) {
-            let l = t[a],
+            const l = t[a],
               h = Math.max(r, Math.min(1 - r, e[a])),
               u = l === 1 ? h : 1 - h,
               p = l === 1 ? s : 1 - s;
@@ -437,7 +437,7 @@
               'Target and output arrays must have the same length.'
             );
           for (let r = 0; r < e.length; r++) {
-            let a = t[r] * (1 - o) + 0.5 * o,
+            const a = t[r] * (1 - o) + 0.5 * o,
               l = Math.max(i, Math.min(1 - i, e[r]));
             s -= a * Math.log(l) + (1 - a) * Math.log(1 - l);
           }
@@ -445,7 +445,7 @@
         }
       };
     });
-  var Ut,
+  let Ut,
     dn = C(() => {
       'use strict';
       Ut = class {
@@ -463,7 +463,7 @@
         }
         static cosineAnnealing(t = 1e3, e = 0) {
           return (s, i) => {
-            let r = i % t,
+            const r = i % t,
               a = 0.5 * (1 + Math.cos((r / t) * Math.PI));
             return e + (s - e) * a;
           };
@@ -475,18 +475,18 @@
           return (a, l) => {
             for (; l >= r; )
               (i = r), (s = Math.max(1, Math.round(s * o))), (r = i + s);
-            let h = l - i,
+            const h = l - i,
               u = 0.5 * (1 + Math.cos((h / s) * Math.PI));
             return e + (a - e) * u;
           };
         }
         static linearWarmupDecay(t, e, o = 0) {
           if (t <= 0) throw new Error('totalSteps must be > 0');
-          let s = Math.min(e ?? Math.max(1, Math.floor(t * 0.1)), t - 1);
+          const s = Math.min(e ?? Math.max(1, Math.floor(t * 0.1)), t - 1);
           return (i, r) => {
             if (r <= s) return i * (r / Math.max(1, s));
             if (r >= t) return o;
-            let a = t - s,
+            const a = t - s,
               l = (r - s) / a;
             return o + (i - o) * (1 - l);
           };
@@ -508,7 +508,7 @@
             if ((l === void 0 && (l = c), f !== void 0)) {
               if (h === void 0 || f < h - s) (h = f), (u = d);
               else if (d - u >= o && d >= p) {
-                let m = Math.max(r, l * e);
+                const m = Math.max(r, l * e);
                 m < l && ((l = m), (p = d + i), (u = d));
               }
             }
@@ -517,17 +517,17 @@
         }
       };
     });
-  var Bi,
+  let Bi,
     F,
     Ne = C(() => {
       'use strict';
       (Bi = {
         logistic: (n, t = !1) => {
-          let e = 1 / (1 + Math.exp(-n));
+          const e = 1 / (1 + Math.exp(-n));
           return t ? e * (1 - e) : e;
         },
         sigmoid: (n, t = !1) => {
-          let e = 1 / (1 + Math.exp(-n));
+          const e = 1 / (1 + Math.exp(-n));
           return t ? e * (1 - e) : e;
         },
         tanh: (n, t = !1) => (t ? 1 - Math.pow(Math.tanh(n), 2) : Math.tanh(n)),
@@ -535,21 +535,21 @@
         step: (n, t = !1) => (t ? 0 : n > 0 ? 1 : 0),
         relu: (n, t = !1) => (t ? (n > 0 ? 1 : 0) : n > 0 ? n : 0),
         softsign: (n, t = !1) => {
-          let e = 1 + Math.abs(n);
+          const e = 1 + Math.abs(n);
           return t ? 1 / Math.pow(e, 2) : n / e;
         },
         sinusoid: (n, t = !1) => (t ? Math.cos(n) : Math.sin(n)),
         gaussian: (n, t = !1) => {
-          let e = Math.exp(-Math.pow(n, 2));
+          const e = Math.exp(-Math.pow(n, 2));
           return t ? -2 * n * e : e;
         },
         bentIdentity: (n, t = !1) => {
-          let e = Math.sqrt(Math.pow(n, 2) + 1);
+          const e = Math.sqrt(Math.pow(n, 2) + 1);
           return t ? n / (2 * e) + 1 : (e - 1) / 2 + n;
         },
         bipolar: (n, t = !1) => (t ? 0 : n > 0 ? 1 : -1),
         bipolarSigmoid: (n, t = !1) => {
-          let e = 2 / (1 + Math.exp(-n)) - 1;
+          const e = 2 / (1 + Math.exp(-n)) - 1;
           return t ? 0.5 * (1 + e) * (1 - e) : e;
         },
         hardTanh: (n, t = !1) =>
@@ -557,13 +557,13 @@
         absolute: (n, t = !1) => (t ? (n < 0 ? -1 : 1) : Math.abs(n)),
         inverse: (n, t = !1) => (t ? -1 : 1 - n),
         selu: (n, t = !1) => {
-          let e = 1.6732632423543772,
+          const e = 1.6732632423543772,
             o = 1.0507009873554805,
             s = n > 0 ? n : e * Math.exp(n) - e;
           return t ? (n > 0 ? o : (s + e) * o) : s * o;
         },
         softplus: (n, t = !1) => {
-          let e = 1 / (1 + Math.exp(-n));
+          const e = 1 / (1 + Math.exp(-n));
           return t
             ? e
             : n > 30
@@ -573,21 +573,21 @@
             : Math.max(0, n) + Math.log(1 + Math.exp(-Math.abs(n)));
         },
         swish: (n, t = !1) => {
-          let e = 1 / (1 + Math.exp(-n));
+          const e = 1 / (1 + Math.exp(-n));
           if (t) {
-            let o = n * e;
+            const o = n * e;
             return o + e * (1 - o);
           } else return n * e;
         },
         gelu: (n, t = !1) => {
-          let e =
+          const e =
             0.5 *
             (1 +
               Math.tanh(
                 Math.sqrt(2 / Math.PI) * (n + 0.044715 * Math.pow(n, 3))
               ));
           if (t) {
-            let o = Math.sqrt(2 / Math.PI) * (1 + 0.134145 * n * n),
+            const o = Math.sqrt(2 / Math.PI) * (1 + 0.134145 * n * n),
               s = Math.sqrt(2 / Math.PI) * (n + 0.044715 * Math.pow(n, 3)),
               i = 1 / Math.cosh(s),
               r = i * i;
@@ -601,9 +601,9 @@
             : n < -30
             ? (e = Math.exp(n))
             : (e = Math.max(0, n) + Math.log(1 + Math.exp(-Math.abs(n))));
-          let o = Math.tanh(e);
+          const o = Math.tanh(e);
           if (t) {
-            let s = 1 / (1 + Math.exp(-n)),
+            const s = 1 / (1 + Math.exp(-n)),
               i = 1 / Math.cosh(e),
               r = i * i;
             return o + n * r * s;
@@ -612,7 +612,7 @@
       }),
         (F = Bi);
     });
-  var _t,
+  let _t,
     mn = C(() => {
       'use strict';
       _t = {
@@ -621,7 +621,7 @@
         SELF: { name: 'SELF' },
       };
     });
-  var P,
+  let P,
     Gt,
     ee = C(() => {
       'use strict';
@@ -706,7 +706,7 @@
       ];
       Gt = P;
     });
-  var At,
+  let At,
     Ae = C(() => {
       'use strict';
       At = {
@@ -715,7 +715,7 @@
         TOURNAMENT: { name: 'TOURNAMENT', size: 5, probability: 0.5 },
       };
     });
-  var zt,
+  let zt,
     gn = C(() => {
       'use strict';
       zt = {
@@ -725,7 +725,7 @@
         AVERAGE: { name: 'AVERAGE' },
       };
     });
-  var Gi,
+  let Gi,
     X,
     yn = C(() => {
       'use strict';
@@ -736,7 +736,7 @@
       })),
         (X = Gi);
     });
-  var ut = {};
+  const ut = {};
   ct(ut, {
     Activation: () => F,
     Cost: () => wt,
@@ -747,7 +747,7 @@
     mutation: () => P,
     selection: () => At,
   });
-  var pt = C(() => {
+  const pt = C(() => {
     'use strict';
     fn();
     dn();
@@ -758,9 +758,9 @@
     gn();
     yn();
   });
-  var ne = {};
+  const ne = {};
   ct(ne, { default: () => K });
-  var K,
+  let K,
     mt = C(() => {
       'use strict';
       Dt();
@@ -816,19 +816,19 @@
             (this.state = e),
               (this.activation = this.squash(this.state) * this.mask),
               (this.derivative = this.squash(this.state, !0));
-            for (let s of this.connections.gated) s.gain = this.activation;
+            for (const s of this.connections.gated) s.gain = this.activation;
             if (t)
-              for (let s of this.connections.in)
+              for (const s of this.connections.in)
                 s.eligibility = s.from.activation;
             return this.activation;
           }
           this.old = this.state;
           let o = this.bias;
           if (this.connections.self.length)
-            for (let s of this.connections.self)
+            for (const s of this.connections.self)
               s.dcMask !== 0 && (o += s.gain * s.weight * this.old);
           if (this.connections.in.length)
-            for (let s of this.connections.in)
+            for (const s of this.connections.in)
               s.dcMask === 0 ||
                 s.enabled === !1 ||
                 (o += s.from.activation * s.weight * s.gain);
@@ -843,9 +843,9 @@
             (this.derivative = this.squash(this.state, !0)),
             this.connections.gated.length)
           )
-            for (let s of this.connections.gated) s.gain = this.activation;
+            for (const s of this.connections.gated) s.gain = this.activation;
           if (t)
-            for (let s of this.connections.in)
+            for (const s of this.connections.in)
               s.eligibility = s.from.activation;
           return this.activation;
         }
@@ -867,7 +867,7 @@
         set nodes(t) {}
         propagate(t, e, o, s = 0, i) {
           if (o && e > 0) {
-            for (let l of this.connections.in)
+            for (const l of this.connections.in)
               (l.weight += e * l.previousDeltaWeight), (l.eligibility += 1e-12);
             this.bias += e * this.previousDeltaBias;
           }
@@ -876,10 +876,10 @@
             this.error.responsibility = this.error.projected =
               i - this.activation;
           else {
-            for (let l of this.connections.out)
+            for (const l of this.connections.out)
               r += l.to.error.responsibility * l.weight * l.gain;
             (this.error.projected = this.derivative * r), (r = 0);
-            for (let l of this.connections.gated) {
+            for (const l of this.connections.gated) {
               let h = l.to,
                 u = h.connections.self.reduce(
                   (p, c) => p + (c.gater === this ? h.old : 0),
@@ -893,14 +893,14 @@
                 this.error.projected + this.error.gated);
           }
           if (this.type === 'constant') return;
-          for (let l of this.connections.in) {
+          for (const l of this.connections.in) {
             if (l.dcMask === 0) {
               l.totalDeltaWeight += 0;
               continue;
             }
             let h = this.error.projected * l.eligibility;
             for (let c = 0; c < l.xtrace.nodes.length; c++) {
-              let d = l.xtrace.nodes[c],
+              const d = l.xtrace.nodes[c],
                 f = l.xtrace.values[c];
               h += d.error.responsibility * f;
             }
@@ -953,14 +953,14 @@
                 (l.totalDeltaWeight = 0);
             }
           }
-          for (let l of this.connections.self) {
+          for (const l of this.connections.self) {
             if (l.dcMask === 0) {
               l.totalDeltaWeight += 0;
               continue;
             }
             let h = this.error.projected * l.eligibility;
             for (let c = 0; c < l.xtrace.nodes.length; c++) {
-              let d = l.xtrace.nodes[c],
+              const d = l.xtrace.nodes[c],
                 f = l.xtrace.values[c];
               h += d.error.responsibility * f;
             }
@@ -1062,9 +1062,9 @@
           };
         }
         static fromJSON(t) {
-          let e = new n(t.type);
+          const e = new n(t.type);
           if (((e.bias = t.bias), (e.mask = t.mask), t.squash)) {
-            let o = F[t.squash];
+            const o = F[t.squash];
             typeof o == 'function'
               ? (e.squash = o)
               : (console.warn(
@@ -1100,19 +1100,19 @@
                 (this.squash = e[s]);
               break;
             case P.MOD_BIAS:
-              let i = t.min ?? -1,
+              const i = t.min ?? -1,
                 r = t.max ?? 1,
                 a = Math.random() * (r - i) + i;
               this.bias += a;
               break;
             case P.REINIT_WEIGHT:
-              let l = t.min ?? -1,
+              const l = t.min ?? -1,
                 h = t.max ?? 1;
-              for (let u of this.connections.in)
+              for (const u of this.connections.in)
                 u.weight = Math.random() * (h - l) + l;
-              for (let u of this.connections.out)
+              for (const u of this.connections.out)
                 u.weight = Math.random() * (h - l) + l;
-              for (let u of this.connections.self)
+              for (const u of this.connections.self)
                 u.weight = Math.random() * (h - l) + l;
               break;
             case P.BATCH_NORM:
@@ -1123,22 +1123,22 @@
           }
         }
         connect(t, e) {
-          let o = [];
+          const o = [];
           if (!t) throw new Error('Cannot connect to an undefined target.');
           if ('bias' in t) {
-            let s = t;
+            const s = t;
             if (s === this) {
               if (this.connections.self.length === 0) {
-                let i = ht.acquire(this, this, e ?? 1);
+                const i = ht.acquire(this, this, e ?? 1);
                 this.connections.self.push(i), o.push(i);
               }
             } else {
-              let i = ht.acquire(this, s, e);
+              const i = ht.acquire(this, s, e);
               s.connections.in.push(i), this.connections.out.push(i), o.push(i);
             }
           } else if ('nodes' in t && Array.isArray(t.nodes))
-            for (let s of t.nodes) {
-              let i = ht.acquire(this, s, e);
+            for (const s of t.nodes) {
+              const i = ht.acquire(this, s, e);
               s.connections.in.push(i), this.connections.out.push(i), o.push(i);
             }
           else
@@ -1163,7 +1163,7 @@
         }
         gate(t) {
           Array.isArray(t) || (t = [t]);
-          for (let e of t) {
+          for (const e of t) {
             if (!e || !e.from || !e.to) {
               console.warn(
                 'Attempted to gate an invalid or incomplete connection.'
@@ -1185,9 +1185,9 @@
         }
         ungate(t) {
           Array.isArray(t) || (t = [t]);
-          for (let e of t) {
+          for (const e of t) {
             if (!e) continue;
-            let o = this.connections.gated.indexOf(e);
+            const o = this.connections.gated.indexOf(e);
             o !== -1 &&
               (this.connections.gated.splice(o, 1),
               (e.gater = null),
@@ -1195,11 +1195,11 @@
           }
         }
         clear() {
-          for (let t of this.connections.in)
+          for (const t of this.connections.in)
             (t.eligibility = 0), (t.xtrace = { nodes: [], values: [] });
-          for (let t of this.connections.self)
+          for (const t of this.connections.self)
             (t.eligibility = 0), (t.xtrace = { nodes: [], values: [] });
-          for (let t of this.connections.gated) t.gain = 0;
+          for (const t of this.connections.gated) t.gain = 0;
           (this.error = { responsibility: 0, projected: 0, gated: 0 }),
             (this.old = this.state = this.activation = 0);
         }
@@ -1220,7 +1220,7 @@
           });
         }
         applyBatchUpdatesWithOptimizer(t) {
-          let e = t.type || 'sgd',
+          const e = t.type || 'sgd',
             o = e === 'lookahead' ? t.baseType || 'sgd' : e,
             s = t.momentum ?? 0,
             i = t.beta1 ?? 0.9,
@@ -1234,19 +1234,19 @@
             (this._la_alpha = this._la_alpha || t.la_alpha || 0.5),
             (this._la_step = (this._la_step || 0) + 1),
             this._la_shadowBias || (this._la_shadowBias = this.bias));
-          let p = (c) => {
+          const p = (c) => {
             let d = c.totalDeltaWeight || 0;
             switch ((Number.isFinite(d) || (d = 0), o)) {
               case 'rmsprop': {
                 c.gradientAccumulator =
                   (c.gradientAccumulator ?? 0) * 0.9 + 0.1 * (d * d);
-                let f = d / (Math.sqrt(c.gradientAccumulator) + a);
+                const f = d / (Math.sqrt(c.gradientAccumulator) + a);
                 this._safeUpdateWeight(c, f * h);
                 break;
               }
               case 'adagrad': {
                 c.gradientAccumulator = (c.gradientAccumulator ?? 0) + d * d;
-                let f = d / (Math.sqrt(c.gradientAccumulator) + a);
+                const f = d / (Math.sqrt(c.gradientAccumulator) + a);
                 this._safeUpdateWeight(c, f * h);
                 break;
               }
@@ -1275,7 +1275,7 @@
                     (c.infinityNorm ?? 0) * r,
                     Math.abs(d)
                   ));
-                let m =
+                const m =
                   (c.firstMoment /
                     (1 - Math.pow(i, u)) /
                     (c.infinityNorm || 1e-12)) *
@@ -1287,7 +1287,7 @@
                 (c.firstMoment = (c.firstMoment ?? 0) * i + (1 - i) * d),
                   (c.secondMoment =
                     (c.secondMoment ?? 0) * r + (1 - r) * (d * d));
-                let f = c.firstMoment / (1 - Math.pow(i, u)),
+                const f = c.firstMoment / (1 - Math.pow(i, u)),
                   m = c.secondMoment / (1 - Math.pow(r, u)),
                   _ = f * i + ((1 - i) * d) / (1 - Math.pow(i, u));
                 this._safeUpdateWeight(c, (_ / (Math.sqrt(m) + a)) * h);
@@ -1297,12 +1297,12 @@
                 (c.firstMoment = (c.firstMoment ?? 0) * i + (1 - i) * d),
                   (c.secondMoment =
                     (c.secondMoment ?? 0) * r + (1 - r) * (d * d));
-                let f = c.firstMoment / (1 - Math.pow(i, u)),
+                const f = c.firstMoment / (1 - Math.pow(i, u)),
                   m = c.secondMoment / (1 - Math.pow(r, u)),
                   _ = 2 / (1 - r) - 1,
                   y = _ - (2 * u * Math.pow(r, u)) / (1 - Math.pow(r, u));
                 if (y > 4) {
-                  let g = Math.sqrt(
+                  const g = Math.sqrt(
                     ((y - 4) * (y - 2) * _) / ((_ - 4) * (_ - 2) * y)
                   );
                   this._safeUpdateWeight(c, ((g * f) / (Math.sqrt(m) + a)) * h);
@@ -1313,7 +1313,7 @@
                 (c.firstMoment = (c.firstMoment ?? 0) * i + (1 - i) * d),
                   (c.secondMomentum =
                     (c.secondMomentum ?? 0) * r + (1 - r) * d);
-                let f = Math.sign(
+                const f = Math.sign(
                   (c.firstMoment || 0) + (c.secondMomentum || 0)
                 );
                 this._safeUpdateWeight(c, -f * h);
@@ -1321,9 +1321,9 @@
               }
               case 'adabelief': {
                 c.firstMoment = (c.firstMoment ?? 0) * i + (1 - i) * d;
-                let f = d - c.firstMoment;
+                const f = d - c.firstMoment;
                 c.secondMoment = (c.secondMoment ?? 0) * r + (1 - r) * (f * f);
-                let m = c.firstMoment / (1 - Math.pow(i, u)),
+                const m = c.firstMoment / (1 - Math.pow(i, u)),
                   _ = c.secondMoment / (1 - Math.pow(r, u));
                 this._safeUpdateWeight(c, (m / (Math.sqrt(_) + a + 1e-12)) * h);
                 break;
@@ -1341,8 +1341,8 @@
               this._safeUpdateWeight(c, -l * (c.weight || 0) * h),
               (c.totalDeltaWeight = 0);
           };
-          for (let c of this.connections.in) p(c);
-          for (let c of this.connections.self) p(c);
+          for (const c of this.connections.in) p(c);
+          for (const c of this.connections.self) p(c);
           if (this.type !== 'input' && this.type !== 'constant') {
             let c = this.totalDeltaBias || 0;
             if (
@@ -1383,7 +1383,7 @@
                     (Math.sqrt(m) + a)) *
                   h;
               else if (o === 'radam') {
-                let g = 2 / (1 - r) - 1,
+                const g = 2 / (1 - r) - 1,
                   w = g - (2 * u * Math.pow(r, u)) / (1 - Math.pow(r, u));
                 w > 4
                   ? (_ =
@@ -1418,20 +1418,20 @@
             this.totalDeltaBias = 0;
           } else (this.previousDeltaBias = 0), (this.totalDeltaBias = 0);
           if (e === 'lookahead') {
-            let c = this._la_k || 5,
+            const c = this._la_k || 5,
               d = this._la_alpha || 0.5;
             if (this._la_step % c === 0) {
               (this._la_shadowBias =
                 (1 - d) * this._la_shadowBias + d * this.bias),
                 (this.bias = this._la_shadowBias);
-              let f = (m) => {
+              const f = (m) => {
                 m.lookaheadShadowWeight || (m.lookaheadShadowWeight = m.weight),
                   (m.lookaheadShadowWeight =
                     (1 - d) * m.lookaheadShadowWeight + d * m.weight),
                   (m.weight = m.lookaheadShadowWeight);
               };
-              for (let m of this.connections.in) f(m);
-              for (let m of this.connections.self) f(m);
+              for (const m of this.connections.in) f(m);
+              for (const m of this.connections.self) f(m);
             }
           }
         }
@@ -1445,7 +1445,7 @@
     });
   function Hi(n, t, e = Math.random) {
     t && (n.type = t);
-    let o = n.type;
+    const o = n.type;
     (n.bias = o === 'input' ? 0 : e() * 0.2 - 0.1),
       (n.activation = 0),
       (n.state = 0),
@@ -1481,7 +1481,7 @@
       Lt.push(n),
       Lt.length > oe && (oe = Lt.length);
   }
-  var Lt,
+  let Lt,
     oe,
     _n,
     Fi,
@@ -1491,7 +1491,7 @@
       mt();
       (Lt = []), (oe = 0), (_n = 1), (Fi = 0), ($i = 0);
     });
-  var Ce,
+  let Ce,
     ft,
     Jt = C(() => {
       'use strict';
@@ -1502,10 +1502,10 @@
         reused = 0;
         maxPerBucket = Number.POSITIVE_INFINITY;
         acquire(t) {
-          let e = this.buckets.get(t);
+          const e = this.buckets.get(t);
           if (e && e.length > 0) {
             this.reused++;
-            let o = e.pop();
+            const o = e.pop();
             return o.fill(0), o;
           }
           return (
@@ -1514,9 +1514,9 @@
           );
         }
         release(t) {
-          let e = t.length >>> 0;
+          const e = t.length >>> 0;
           this.buckets.has(e) || this.buckets.set(e, []);
-          let o = this.buckets.get(e);
+          const o = this.buckets.get(e);
           o.length < this.maxPerBucket && o.push(t);
         }
         clear() {
@@ -1533,11 +1533,11 @@
           typeof t == 'number' && t >= 0 && (this.maxPerBucket = t);
         }
         prewarm(t, e) {
-          let o = Math.max(0, Math.floor(e));
+          const o = Math.max(0, Math.floor(e));
           this.buckets.has(t) || this.buckets.set(t, []);
-          let s = this.buckets.get(t);
+          const s = this.buckets.get(t);
           for (let i = 0; i < o && s.length < this.maxPerBucket; i++) {
-            let r = G.float32Mode ? new Float32Array(t) : new Array(t).fill(0);
+            const r = G.float32Mode ? new Float32Array(t) : new Array(t).fill(0);
             s.push(r), this.created++;
           }
         }
@@ -1547,7 +1547,7 @@
       }),
         (ft = new Ce());
     });
-  var bn = qt((Ur, qi) => {
+  const bn = qt((Ur, qi) => {
     qi.exports = {
       name: '@reicek/neataptic-ts',
       version: '0.1.10',
@@ -1660,12 +1660,12 @@
     };
   });
   function Ui(n) {
-    let t = new Set();
+    const t = new Set();
     n.nodes.forEach((e) => e.connections?.out.forEach((o) => t.add(o))),
       (n.connections = Array.from(t));
   }
   function Vt(n) {
-    let t = (n?.name || '').toUpperCase();
+    const t = (n?.name || '').toUpperCase();
     return t.includes('TANH')
       ? 'Tanh'
       : t.includes('LOGISTIC') || t.includes('SIGMOID')
@@ -1679,7 +1679,7 @@
         'Identity');
   }
   function zi(n) {
-    let t = n.nodes.filter((a) => a.type === 'input'),
+    const t = n.nodes.filter((a) => a.type === 'input'),
       e = n.nodes.filter((a) => a.type === 'output'),
       o = n.nodes.filter((a) => a.type === 'hidden');
     if (o.length === 0) return [t, e];
@@ -1687,7 +1687,7 @@
       i = t,
       r = [];
     for (; s.length; ) {
-      let a = s.filter((l) =>
+      const a = s.filter((l) =>
         l.connections.in.every((h) => i.includes(h.from))
       );
       if (!a.length)
@@ -1700,7 +1700,7 @@
   }
   function Ji(n, t, e) {
     for (let o = 1; o < n.length; o++) {
-      let s = n[o - 1],
+      const s = n[o - 1],
         i = n[o],
         r = new Set(i.map((a) => a.squash && a.squash.name));
       if (r.size > 1 && !e.allowMixedActivations)
@@ -1712,8 +1712,8 @@
         console.warn(
           `Warning: Mixed activations in layer ${o}; exporting per-neuron Gemm + Activation (+Concat) baseline.`
         );
-      for (let a of i)
-        for (let l of s)
+      for (const a of i)
+        for (const l of s)
           if (
             !a.connections.in.some((u) => u.from === l) &&
             !e.allowPartialConnectivity
@@ -1760,7 +1760,7 @@
         },
       };
     if (o) {
-      let g = (() => {
+      const g = (() => {
         try {
           return bn().version;
         } catch {
@@ -1778,10 +1778,10 @@
       _ = [];
     if (e.allowRecurrent && e.recurrentSingleStep)
       for (let g = 1; g < t.length - 1; g++) {
-        let w = t[g];
+        const w = t[g];
         if (w.some((v) => v.connections.self.length > 0)) {
           _.push(g);
-          let v = g === 1 ? 'hidden_prev' : `hidden_prev_l${g}`;
+          const v = g === 1 ? 'hidden_prev' : `hidden_prev_l${g}`;
           f.graph.inputs.push({
             name: v,
             type: {
@@ -1797,15 +1797,15 @@
           });
         }
       }
-    let y = [];
+    const y = [];
     for (let g = 1; g < t.length; g++) {
-      let w = t[g - 1],
+      const w = t[g - 1],
         v = t[g],
         b = g === t.length - 1;
       b || y.push(v.length);
-      let M = e.conv2dMappings?.find((N) => N.layerIndex === g);
+      const M = e.conv2dMappings?.find((N) => N.layerIndex === g);
       if (M) {
-        let N = M.inHeight * M.inWidth * M.inChannels,
+        const N = M.inHeight * M.inWidth * M.inChannels,
           T = w.length,
           k = M.outChannels * M.outHeight * M.outWidth,
           R = v.length,
@@ -1820,22 +1820,22 @@
             `Conv2D mapping for layer ${g} skipped: dimension mismatch (expected prev=${N} got ${T}; expected this=${k} got ${R}).`
           );
         else {
-          let S = [],
+          const S = [],
             A = [];
           for (let H = 0; H < M.outChannels; H++) {
-            let rt = H * M.outHeight * M.outWidth,
+            const rt = H * M.outHeight * M.outWidth,
               lt = v[rt];
             A.push(lt.bias);
             for (let L = 0; L < M.inChannels; L++)
               for (let V = 0; V < M.kernelHeight; V++)
                 for (let U = 0; U < M.kernelWidth; U++) {
-                  let nt = L * (M.inHeight * M.inWidth) + V * M.inWidth + U,
+                  const nt = L * (M.inHeight * M.inWidth) + V * M.inWidth + U,
                     Q = w[nt],
                     $ = lt.connections.in.find((et) => et.from === Q);
                   S.push($ ? $.weight : 0);
                 }
           }
-          let O = `ConvW${g - 1}`,
+          const O = `ConvW${g - 1}`,
             E = `ConvB${g - 1}`;
           f.graph.initializer.push({
             name: O,
@@ -1849,7 +1849,7 @@
               dims: [M.outChannels],
               float_data: A,
             });
-          let B = `Conv_${g}`;
+          const B = `Conv_${g}`;
           f.graph.node.push({
             op_type: 'Conv',
             input: [m, O, E],
@@ -1869,7 +1869,7 @@
               { name: 'pads', type: 'INTS', ints: j },
             ],
           });
-          let D = M.activation || Vt(v[0].squash),
+          const D = M.activation || Vt(v[0].squash),
             J = `Layer_${g}`;
           f.graph.node.push({
             op_type: D,
@@ -1878,9 +1878,9 @@
             name: `act_conv_l${g}`,
           }),
             (m = J);
-          let I = e.pool2dMappings?.find((H) => H.afterLayerIndex === g);
+          const I = e.pool2dMappings?.find((H) => H.afterLayerIndex === g);
           if (I) {
-            let H = [I.kernelHeight, I.kernelWidth],
+            const H = [I.kernelHeight, I.kernelWidth],
               rt = [I.strideHeight, I.strideWidth],
               lt = [
                 I.padTop || 0,
@@ -1904,7 +1904,7 @@
               (m = L),
               e.flattenAfterPooling)
             ) {
-              let nt = `PoolFlat_${g}`;
+              const nt = `PoolFlat_${g}`;
               f.graph.node.push({
                 op_type: 'Flatten',
                 input: [m],
@@ -1914,10 +1914,10 @@
               }),
                 (m = nt),
                 (f.metadata_props = f.metadata_props || []);
-              let Q = f.metadata_props.find(($) => $.key === 'flatten_layers');
+              const Q = f.metadata_props.find(($) => $.key === 'flatten_layers');
               if (Q)
                 try {
-                  let $ = JSON.parse(Q.value);
+                  const $ = JSON.parse(Q.value);
                   Array.isArray($) &&
                     !$.includes(g) &&
                     ($.push(g), (Q.value = JSON.stringify($)));
@@ -1931,10 +1931,10 @@
                 });
             }
             f.metadata_props = f.metadata_props || [];
-            let V = f.metadata_props.find((nt) => nt.key === 'pool2d_layers');
+            const V = f.metadata_props.find((nt) => nt.key === 'pool2d_layers');
             if (V)
               try {
-                let nt = JSON.parse(V.value);
+                const nt = JSON.parse(V.value);
                 Array.isArray(nt) &&
                   !nt.includes(g) &&
                   (nt.push(g), (V.value = JSON.stringify(nt)));
@@ -1946,10 +1946,10 @@
                 key: 'pool2d_layers',
                 value: JSON.stringify([g]),
               });
-            let U = f.metadata_props.find((nt) => nt.key === 'pool2d_specs');
+            const U = f.metadata_props.find((nt) => nt.key === 'pool2d_specs');
             if (U)
               try {
-                let nt = JSON.parse(U.value);
+                const nt = JSON.parse(U.value);
                 Array.isArray(nt) &&
                   (nt.push({ ...I }), (U.value = JSON.stringify(nt)));
               } catch {
@@ -1962,10 +1962,10 @@
               });
           }
           f.metadata_props = f.metadata_props || [];
-          let Z = f.metadata_props.find((H) => H.key === 'conv2d_layers');
+          const Z = f.metadata_props.find((H) => H.key === 'conv2d_layers');
           if (Z)
             try {
-              let H = JSON.parse(Z.value);
+              const H = JSON.parse(Z.value);
               Array.isArray(H) &&
                 !H.includes(g) &&
                 (H.push(g), (Z.value = JSON.stringify(H)));
@@ -1977,10 +1977,10 @@
               key: 'conv2d_layers',
               value: JSON.stringify([g]),
             });
-          let z = f.metadata_props.find((H) => H.key === 'conv2d_specs');
+          const z = f.metadata_props.find((H) => H.key === 'conv2d_specs');
           if (z)
             try {
-              let H = JSON.parse(z.value);
+              const H = JSON.parse(z.value);
               Array.isArray(H) &&
                 (H.push({ ...M }), (z.value = JSON.stringify(H)));
             } catch {
@@ -1994,7 +1994,7 @@
           continue;
         }
       }
-      let x =
+      const x =
         e.allowMixedActivations &&
         new Set(v.map((N) => N.squash && N.squash.name)).size > 1;
       if (_.includes(g) && !b) {
@@ -2002,18 +2002,18 @@
           throw new Error(
             `Recurrent export does not yet support mixed activations in hidden layer ${g}.`
           );
-        let N = [],
+        const N = [],
           T = new Array(v.length).fill(0);
         for (let A = 0; A < v.length; A++) {
-          let O = v[A];
+          const O = v[A];
           T[A] = O.bias;
           for (let E = 0; E < w.length; E++) {
-            let B = w[E],
+            const B = w[E],
               D = O.connections.in.find((J) => J.from === B);
             N.push(D ? D.weight : 0);
           }
         }
-        let k = `W${g - 1}`,
+        const k = `W${g - 1}`,
           R = `B${g - 1}`;
         f.graph.initializer.push({
           name: k,
@@ -2027,14 +2027,14 @@
             dims: [v.length],
             float_data: T,
           });
-        let j = [];
+        const j = [];
         for (let A = 0; A < v.length; A++)
           for (let O = 0; O < v.length; O++)
             if (A === O) {
-              let E = v[A].connections.self[0];
+              const E = v[A].connections.self[0];
               j.push(E ? E.weight : 0);
             } else j.push(0);
-        let W = `R${g - 1}`;
+        const W = `R${g - 1}`;
         f.graph.initializer.push({
           name: W,
           data_type: 1,
@@ -2052,7 +2052,7 @@
               { name: 'transB', type: 'INT', i: 1 },
             ],
           });
-        let S = g === 1 ? 'hidden_prev' : `hidden_prev_l${g}`;
+        const S = g === 1 ? 'hidden_prev' : `hidden_prev_l${g}`;
         f.graph.node.push({
           op_type: 'Gemm',
           input: [S, W],
@@ -2078,15 +2078,15 @@
           }),
           (m = `Layer_${g}`);
       } else if (x) {
-        let N = [];
+        const N = [];
         v.forEach((R, j) => {
-          let W = [];
+          const W = [];
           for (let B = 0; B < w.length; B++) {
-            let D = w[B],
+            const D = w[B],
               J = R.connections.in.find((I) => I.from === D);
             W.push(J ? J.weight : 0);
           }
-          let S = `W${g - 1}_n${j}`,
+          const S = `W${g - 1}_n${j}`,
             A = `B${g - 1}_n${j}`,
             O = `Gemm_${g}_n${j}`,
             E = `Layer_${g}_n${j}`;
@@ -2121,7 +2121,7 @@
             }),
             N.push(E);
         });
-        let T = `Layer_${g}`;
+        const T = `Layer_${g}`;
         f.graph.node.push({
           op_type: 'Concat',
           input: N,
@@ -2130,9 +2130,9 @@
           attributes: [{ name: 'axis', type: 'INT', i: i ? 1 : 0 }],
         }),
           (m = T);
-        let k = e.pool2dMappings?.find((R) => R.afterLayerIndex === g);
+        const k = e.pool2dMappings?.find((R) => R.afterLayerIndex === g);
         if (k) {
-          let R = [k.kernelHeight, k.kernelWidth],
+          const R = [k.kernelHeight, k.kernelWidth],
             j = [k.strideHeight, k.strideWidth],
             W = [
               k.padTop || 0,
@@ -2156,7 +2156,7 @@
             (m = S),
             e.flattenAfterPooling)
           ) {
-            let E = `PoolFlat_${g}`;
+            const E = `PoolFlat_${g}`;
             f.graph.node.push({
               op_type: 'Flatten',
               input: [m],
@@ -2166,10 +2166,10 @@
             }),
               (m = E),
               (f.metadata_props = f.metadata_props || []);
-            let B = f.metadata_props.find((D) => D.key === 'flatten_layers');
+            const B = f.metadata_props.find((D) => D.key === 'flatten_layers');
             if (B)
               try {
-                let D = JSON.parse(B.value);
+                const D = JSON.parse(B.value);
                 Array.isArray(D) &&
                   !D.includes(g) &&
                   (D.push(g), (B.value = JSON.stringify(D)));
@@ -2183,10 +2183,10 @@
               });
           }
           f.metadata_props = f.metadata_props || [];
-          let A = f.metadata_props.find((E) => E.key === 'pool2d_layers');
+          const A = f.metadata_props.find((E) => E.key === 'pool2d_layers');
           if (A)
             try {
-              let E = JSON.parse(A.value);
+              const E = JSON.parse(A.value);
               Array.isArray(E) &&
                 !E.includes(g) &&
                 (E.push(g), (A.value = JSON.stringify(E)));
@@ -2198,10 +2198,10 @@
               key: 'pool2d_layers',
               value: JSON.stringify([g]),
             });
-          let O = f.metadata_props.find((E) => E.key === 'pool2d_specs');
+          const O = f.metadata_props.find((E) => E.key === 'pool2d_specs');
           if (O)
             try {
-              let E = JSON.parse(O.value);
+              const E = JSON.parse(O.value);
               Array.isArray(E) &&
                 (E.push({ ...k }), (O.value = JSON.stringify(E)));
             } catch {
@@ -2214,18 +2214,18 @@
             });
         }
       } else {
-        let N = [],
+        const N = [],
           T = new Array(v.length).fill(0);
         for (let A = 0; A < v.length; A++) {
-          let O = v[A];
+          const O = v[A];
           T[A] = O.bias;
           for (let E = 0; E < w.length; E++) {
-            let B = w[E],
+            const B = w[E],
               D = O.connections.in.find((J) => J.from === B);
             N.push(D ? D.weight : 0);
           }
         }
-        let k = `W${g - 1}`,
+        const k = `W${g - 1}`,
           R = `B${g - 1}`,
           j = `Gemm_${g}`,
           W = `Layer_${g}`;
@@ -2277,9 +2277,9 @@
                 name: `act_l${g}`,
               })),
           (m = W);
-        let S = e.pool2dMappings?.find((A) => A.afterLayerIndex === g);
+        const S = e.pool2dMappings?.find((A) => A.afterLayerIndex === g);
         if (S) {
-          let A = [S.kernelHeight, S.kernelWidth],
+          const A = [S.kernelHeight, S.kernelWidth],
             O = [S.strideHeight, S.strideWidth],
             E = [
               S.padTop || 0,
@@ -2303,7 +2303,7 @@
             (m = B),
             e.flattenAfterPooling)
           ) {
-            let I = `PoolFlat_${g}`;
+            const I = `PoolFlat_${g}`;
             f.graph.node.push({
               op_type: 'Flatten',
               input: [m],
@@ -2313,10 +2313,10 @@
             }),
               (m = I),
               (f.metadata_props = f.metadata_props || []);
-            let Z = f.metadata_props.find((z) => z.key === 'flatten_layers');
+            const Z = f.metadata_props.find((z) => z.key === 'flatten_layers');
             if (Z)
               try {
-                let z = JSON.parse(Z.value);
+                const z = JSON.parse(Z.value);
                 Array.isArray(z) &&
                   !z.includes(g) &&
                   (z.push(g), (Z.value = JSON.stringify(z)));
@@ -2330,10 +2330,10 @@
               });
           }
           f.metadata_props = f.metadata_props || [];
-          let D = f.metadata_props.find((I) => I.key === 'pool2d_layers');
+          const D = f.metadata_props.find((I) => I.key === 'pool2d_layers');
           if (D)
             try {
-              let I = JSON.parse(D.value);
+              const I = JSON.parse(D.value);
               Array.isArray(I) &&
                 !I.includes(g) &&
                 (I.push(g), (D.value = JSON.stringify(I)));
@@ -2345,10 +2345,10 @@
               key: 'pool2d_layers',
               value: JSON.stringify([g]),
             });
-          let J = f.metadata_props.find((I) => I.key === 'pool2d_specs');
+          const J = f.metadata_props.find((I) => I.key === 'pool2d_specs');
           if (J)
             try {
-              let I = JSON.parse(J.value);
+              const I = JSON.parse(J.value);
               Array.isArray(I) &&
                 (I.push({ ...S }), (J.value = JSON.stringify(I)));
             } catch {
@@ -2364,7 +2364,7 @@
     }
     if (e.allowRecurrent)
       for (let g = 1; g < t.length - 1; g++) {
-        let w = t[g],
+        const w = t[g],
           v = w.length;
         if (
           (f.metadata_props || (f.metadata_props = []),
@@ -2379,7 +2379,7 @@
             }),
           v >= 10 && v % 5 === 0)
         ) {
-          let b = v / 5,
+          const b = v / 5,
             M = t[g - 1],
             x = w.slice(0, b),
             N = w.slice(b, b * 2),
@@ -2393,17 +2393,17 @@
             O = [],
             E = [];
           for (let D = 0; D < W; D++) {
-            let J = j[D];
+            const J = j[D];
             for (let I = 0; I < b; I++) {
-              let Z = J[I];
+              const Z = J[I];
               for (let z = 0; z < S; z++) {
-                let H = M[z],
+                const H = M[z],
                   rt = Z.connections.in.find((lt) => lt.from === H);
                 A.push(rt ? rt.weight : 0);
               }
               for (let z = 0; z < b; z++)
                 if (J === T && z === I) {
-                  let H = Z.connections.self[0];
+                  const H = Z.connections.self[0];
                   O.push(H ? H.weight : 0);
                 } else O.push(0);
               E.push(Z.bias);
@@ -2438,12 +2438,12 @@
               ],
             }),
             (f.metadata_props = f.metadata_props || []);
-          let B = f.metadata_props.findIndex(
+          const B = f.metadata_props.findIndex(
             (D) => D.key === 'lstm_emitted_layers'
           );
           if (B >= 0)
             try {
-              let D = JSON.parse(f.metadata_props[B].value);
+              const D = JSON.parse(f.metadata_props[B].value);
               Array.isArray(D) &&
                 !D.includes(g) &&
                 (D.push(g), (f.metadata_props[B].value = JSON.stringify(D)));
@@ -2457,7 +2457,7 @@
             });
         }
         if (v >= 8 && v % 4 === 0) {
-          let b = v / 4,
+          const b = v / 4,
             M = t[g - 1],
             x = w.slice(0, b),
             N = w.slice(b, b * 2),
@@ -2470,17 +2470,17 @@
             A = [],
             O = [];
           for (let D = 0; D < j; D++) {
-            let J = R[D];
+            const J = R[D];
             for (let I = 0; I < b; I++) {
-              let Z = J[I];
+              const Z = J[I];
               for (let z = 0; z < W; z++) {
-                let H = M[z],
+                const H = M[z],
                   rt = Z.connections.in.find((lt) => lt.from === H);
                 S.push(rt ? rt.weight : 0);
               }
               for (let z = 0; z < b; z++)
                 if (J === T && z === I) {
-                  let H = Z.connections.self[0];
+                  const H = Z.connections.self[0];
                   A.push(H ? H.weight : 0);
                 } else A.push(0);
               O.push(Z.bias);
@@ -2504,7 +2504,7 @@
               dims: [j * b],
               float_data: O,
             });
-          let E = g === 1 ? 'input' : `Layer_${g - 1}`;
+          const E = g === 1 ? 'input' : `Layer_${g - 1}`;
           f.graph.node.push({
             op_type: 'GRU',
             input: [E, `GRU_W${g - 1}`, `GRU_R${g - 1}`, `GRU_B${g - 1}`],
@@ -2516,12 +2516,12 @@
             ],
           }),
             (f.metadata_props = f.metadata_props || []);
-          let B = f.metadata_props.findIndex(
+          const B = f.metadata_props.findIndex(
             (D) => D.key === 'gru_emitted_layers'
           );
           if (B >= 0)
             try {
-              let D = JSON.parse(f.metadata_props[B].value);
+              const D = JSON.parse(f.metadata_props[B].value);
               Array.isArray(D) &&
                 !D.includes(g) &&
                 (D.push(g), (f.metadata_props[B].value = JSON.stringify(D)));
@@ -2546,49 +2546,49 @@
         }),
       e.validateConvSharing && e.conv2dMappings && e.conv2dMappings.length)
     ) {
-      let g = [],
+      const g = [],
         w = [];
-      for (let v of e.conv2dMappings) {
-        let b = v.layerIndex,
+      for (const v of e.conv2dMappings) {
+        const b = v.layerIndex,
           M = t[b - 1],
           x = t[b];
         if (!x || !M) continue;
         let N = [],
           T = !0;
         for (let R = 0; R < v.outChannels; R++) {
-          let j = R * (v.outHeight * v.outWidth),
+          const j = R * (v.outHeight * v.outWidth),
             W = x[j],
             S = [];
           for (let A = 0; A < v.inChannels; A++)
             for (let O = 0; O < v.kernelHeight; O++)
               for (let E = 0; E < v.kernelWidth; E++) {
-                let B = A * (v.inHeight * v.inWidth) + O * v.inWidth + E,
+                const B = A * (v.inHeight * v.inWidth) + O * v.inWidth + E,
                   D = M[B],
                   J = W.connections.in.find((I) => I.from === D);
                 S.push(J ? J.weight : 0);
               }
           N.push(S);
         }
-        let k = 1e-9;
+        const k = 1e-9;
         for (let R = 0; R < v.outChannels && T; R++)
           for (let j = 0; j < v.outHeight && T; j++)
             for (let W = 0; W < v.outWidth && T; W++) {
-              let S = R * (v.outHeight * v.outWidth) + j * v.outWidth + W,
+              const S = R * (v.outHeight * v.outWidth) + j * v.outWidth + W,
                 A = x[S];
               if (!A) continue;
               let O = 0;
               for (let E = 0; E < v.inChannels && T; E++) {
-                let B = j * v.strideHeight - (v.padTop || 0),
+                const B = j * v.strideHeight - (v.padTop || 0),
                   D = W * v.strideWidth - (v.padLeft || 0);
                 for (let J = 0; J < v.kernelHeight && T; J++)
                   for (let I = 0; I < v.kernelWidth && T; I++) {
-                    let Z = B + J,
+                    const Z = B + J,
                       z = D + I;
                     if (Z < 0 || Z >= v.inHeight || z < 0 || z >= v.inWidth) {
                       O++;
                       continue;
                     }
-                    let H = E * (v.inHeight * v.inWidth) + Z * v.inWidth + z,
+                    const H = E * (v.inHeight * v.inWidth) + Z * v.inWidth + z,
                       rt = M[H],
                       lt = A.connections.in.find((V) => V.from === rt),
                       L = lt ? lt.weight : 0;
@@ -2624,15 +2624,15 @@
       !n.connections || n.connections.length === 0)
     )
       throw new Error('ONNX export currently only supports simple MLPs');
-    let e = zi(n),
+    const e = zi(n),
       o = [];
     if (t.allowRecurrent)
       try {
         for (let i = 1; i < e.length - 1; i++) {
-          let r = e[i],
+          const r = e[i],
             a = r.length;
           if (a >= 10 && a % 5 === 0) {
-            let l = a / 5;
+            const l = a / 5;
             r
               .slice(l * 2, l * 3)
               .every((p) => p.connections.self.length === 1) &&
@@ -2641,19 +2641,19 @@
         }
       } catch {}
     Ji(e, n, t);
-    let s = Vi(n, e, t);
+    const s = Vi(n, e, t);
     if (t.includeMetadata) {
-      let i = [],
+      const i = [],
         r = [];
       for (let a = 1; a < e.length - 1; a++) {
-        let l = e[a - 1].length,
+        const l = e[a - 1].length,
           h = e[a].length,
           u = Math.sqrt(l);
         if (Math.abs(u - Math.round(u)) > 1e-9) continue;
-        let p = Math.round(u);
-        for (let c of [3, 2]) {
+        const p = Math.round(u);
+        for (const c of [3, 2]) {
           if (c >= p) continue;
-          let d = p - c + 1;
+          const d = p - c + 1;
           if (d * d === h) {
             if (t.conv2dMappings?.some((m) => m.layerIndex === a)) break;
             r.push(a),
@@ -2696,12 +2696,12 @@
       s
     );
   }
-  var Ie = C(() => {
+  const Ie = C(() => {
     'use strict';
     pt();
     Dt();
   });
-  var wn = C(() => {
+  const wn = C(() => {
     'use strict';
     Ie();
     Ie();
@@ -2751,7 +2751,7 @@
     }),
       a.push('for(var i = 0; i < input.length; i++) A[i] = input[i];');
     for (let d = n.input; d < n.nodes.length; d++) {
-      let f = n.nodes[d],
+      const f = n.nodes[d],
         m = f.squash,
         _ = m.name || `anonymous_squash_${d}`;
       if (!(_ in t)) {
@@ -2772,9 +2772,9 @@
           e.push(b),
           (o[_] = s++);
       }
-      let y = o[_],
+      const y = o[_],
         g = [];
-      for (let b of f.connections.in) {
+      for (const b of f.connections.in) {
         if (typeof b.from.index > 'u') continue;
         let M = `A[${b.from.index}] * ${b.weight}`;
         b.gater &&
@@ -2790,12 +2790,12 @@
           (M += ` * A[${b.gater.index}]`),
           g.push(M);
       }
-      let w = g.length > 0 ? g.join(' + ') : '0';
+      const w = g.length > 0 ? g.join(' + ') : '0';
       a.push(`S[${d}] = ${w} + ${f.bias};`);
-      let v = typeof f.mask == 'number' && f.mask !== 1 ? f.mask : 1;
+      const v = typeof f.mask == 'number' && f.mask !== 1 ? f.mask : 1;
       a.push(`A[${d}] = F[${y}](S[${d}])${v !== 1 ? ` * ${v}` : ''};`);
     }
-    let h = [];
+    const h = [];
     for (let d = n.nodes.length - n.output; d < n.nodes.length; d++)
       typeof n.nodes[d]?.index < 'u' && h.push(n.nodes[d].index);
     a.push(`return [${h.map((d) => `A[${d}]`).join(',')}];`);
@@ -2830,7 +2830,7 @@
       c
     );
   }
-  var Mn,
+  let Mn,
     xn = C(() => {
       'use strict';
       Mn = (n) => (
@@ -2848,26 +2848,26 @@
       );
     });
   function Nn() {
-    let n = this;
+    const n = this;
     if (!n._enforceAcyclic) {
       (n._topoOrder = null), (n._topoDirty = !1);
       return;
     }
-    let t = new Map();
+    const t = new Map();
     this.nodes.forEach((s) => t.set(s, 0));
-    for (let s of this.connections)
+    for (const s of this.connections)
       s.from !== s.to && t.set(s.to, (t.get(s.to) || 0) + 1);
-    let e = [];
+    const e = [];
     this.nodes.forEach((s) => {
       (s.type === 'input' || (t.get(s) || 0) === 0) && e.push(s);
     });
-    let o = [];
+    const o = [];
     for (; e.length; ) {
-      let s = e.shift();
+      const s = e.shift();
       o.push(s);
-      for (let i of s.connections.out) {
+      for (const i of s.connections.out) {
         if (i.to === s) continue;
-        let r = (t.get(i.to) || 0) - 1;
+        const r = (t.get(i.to) || 0) - 1;
         t.set(i.to, r), r === 0 && e.push(i.to);
       }
     }
@@ -2876,31 +2876,31 @@
   }
   function An(n, t) {
     if (n === t) return !0;
-    let e = new Set(),
+    const e = new Set(),
       o = [n];
     for (; o.length; ) {
-      let s = o.pop();
+      const s = o.pop();
       if (s === t) return !0;
       if (!e.has(s)) {
         e.add(s);
-        for (let i of s.connections.out) i.to !== s && o.push(i.to);
+        for (const i of s.connections.out) i.to !== s && o.push(i.to);
       }
     }
     return !1;
   }
-  var On = C(() => {
+  const On = C(() => {
     'use strict';
   });
   function se(n = !1) {
-    let t = this;
+    const t = this;
     if (!n && !t._slabDirty) return;
     t._nodeIndexDirty && Cn.call(this);
-    let e = this.connections.length,
+    const e = this.connections.length,
       o = t._useFloat32Weights ? new Float32Array(e) : new Float64Array(e),
       s = new Uint32Array(e),
       i = new Uint32Array(e);
     for (let r = 0; r < e; r++) {
-      let a = this.connections[r];
+      const a = this.connections[r];
       (o[r] = a.weight), (s[r] = a.from.index >>> 0), (i[r] = a.to.index >>> 0);
     }
     (t._connWeights = o),
@@ -2911,18 +2911,18 @@
   }
   function En() {
     se.call(this);
-    let n = this;
+    const n = this;
     return { weights: n._connWeights, from: n._connFrom, to: n._connTo };
   }
   function Cn() {
-    let n = this;
+    const n = this;
     for (let t = 0; t < this.nodes.length; t++) this.nodes[t].index = t;
     n._nodeIndexDirty = !1;
   }
   function Ki() {
-    let n = this;
+    const n = this;
     if (!n._connFrom || !n._connTo) return;
-    let t = this.nodes.length,
+    const t = this.nodes.length,
       e = n._connFrom.length,
       o = new Uint32Array(t);
     for (let l = 0; l < e; l++) o[n._connFrom[l]]++;
@@ -2930,16 +2930,16 @@
       i = 0;
     for (let l = 0; l < t; l++) (s[l] = i), (i += o[l]);
     s[t] = i;
-    let r = new Uint32Array(e),
+    const r = new Uint32Array(e),
       a = s.slice();
     for (let l = 0; l < e; l++) {
-      let h = n._connFrom[l];
+      const h = n._connFrom[l];
       r[a[h]++] = l;
     }
     (n._outStart = s), (n._outOrder = r), (n._adjDirty = !1);
   }
   function Xi(n) {
-    let t = this;
+    const t = this;
     return (
       !n &&
       t._enforceAcyclic &&
@@ -2953,7 +2953,7 @@
     );
   }
   function In(n) {
-    let t = this;
+    const t = this;
     if (
       (se.call(this),
       t._adjDirty && Ki.call(this),
@@ -2966,7 +2966,7 @@
       return this.activate(n, !1);
     t._topoDirty && this._computeTopoOrder(),
       t._nodeIndexDirty && Cn.call(this);
-    let e = t._topoOrder || this.nodes,
+    const e = t._topoOrder || this.nodes,
       o = this.nodes.length,
       s = t._activationPrecision === 'f32';
     (!t._fastA ||
@@ -2979,52 +2979,52 @@
         (s && !(t._fastS instanceof Float32Array)) ||
         (!s && !(t._fastS instanceof Float64Array))) &&
         (t._fastS = s ? new Float32Array(o) : new Float64Array(o));
-    let i = t._fastA,
+    const i = t._fastA,
       r = t._fastS;
     r.fill(0);
     for (let f = 0; f < this.input; f++)
       (i[f] = n[f]),
         (this.nodes[f].activation = n[f]),
         (this.nodes[f].state = 0);
-    let a = t._connWeights,
+    const a = t._connWeights,
       l = t._connTo,
       h = t._outOrder,
       u = t._outStart;
     for (let f = 0; f < e.length; f++) {
-      let m = e[f],
+      const m = e[f],
         _ = m.index >>> 0;
       if (_ >= this.input) {
-        let v = r[_] + m.bias,
+        const v = r[_] + m.bias,
           b = m.squash(v);
         (m.state = r[_]), (m.activation = b), (i[_] = b);
       }
-      let y = u[_],
+      const y = u[_],
         g = u[_ + 1],
         w = i[_];
       for (let v = y; v < g; v++) {
-        let b = h[v];
+        const b = h[v];
         r[l[b]] += w * a[b];
       }
     }
-    let p = o - this.output,
+    const p = o - this.output,
       c = ft.acquire(this.output);
     for (let f = 0; f < this.output; f++) c[f] = i[p + f];
-    let d = Array.from(c);
+    const d = Array.from(c);
     return ft.release(c), d;
   }
   function Tn(n) {
     return Xi.call(this, n);
   }
-  var Dn = C(() => {
+  const Dn = C(() => {
     'use strict';
     Jt();
   });
   function kn(n, t) {
-    let e = [...n];
+    const e = [...n];
     return (
       t === 'snip'
         ? e.sort((o, s) => {
-            let i =
+            const i =
                 Math.abs(o.totalDeltaWeight) ||
                 Math.abs(o.previousDeltaWeight) ||
                 0,
@@ -3045,7 +3045,7 @@
       s = 0;
     for (; n.connections.length < t && s < e; ) {
       s++;
-      let i = n.nodes[Math.floor(o._rand() * n.nodes.length)],
+      const i = n.nodes[Math.floor(o._rand() * n.nodes.length)],
         r = n.nodes[Math.floor(o._rand() * n.nodes.length)];
       !i ||
         !r ||
@@ -3056,7 +3056,7 @@
     }
   }
   function jn(n) {
-    let t = this._pruningConfig;
+    const t = this._pruningConfig;
     if (
       !t ||
       n < t.start ||
@@ -3065,9 +3065,9 @@
       (n - t.start) % (t.frequency || 1) !== 0
     )
       return;
-    let e = this._initialConnectionCount;
+    const e = this._initialConnectionCount;
     if (!e) return;
-    let o = (n - t.start) / Math.max(1, t.end - t.start),
+    const o = (n - t.start) / Math.max(1, t.end - t.start),
       s = t.targetSparsity * Math.min(1, Math.max(0, o)),
       i = Math.max(1, Math.floor(e * (1 - s))),
       r = this.connections.length - i;
@@ -3075,12 +3075,12 @@
       t.lastPruneIter = n;
       return;
     }
-    let l = kn(this.connections, t.method || 'magnitude').slice(0, r);
+    const l = kn(this.connections, t.method || 'magnitude').slice(0, r);
     if (
       (l.forEach((h) => this.disconnect(h.from, h.to)),
       t.regrowFraction && t.regrowFraction > 0)
     ) {
-      let h = Math.floor(l.length * t.regrowFraction);
+      const h = Math.floor(l.length * t.regrowFraction);
       Yi(this, i, h * 10);
     }
     (t.lastPruneIter = n), (this._topoDirty = !0);
@@ -3088,10 +3088,10 @@
   function Ln(n, t = 'magnitude') {
     if (n <= 0) return;
     n >= 1 && (n = 0.999);
-    let e = this;
+    const e = this;
     e._evoInitialConnCount ||
       (e._evoInitialConnCount = this.connections.length);
-    let o = e._evoInitialConnCount,
+    const o = e._evoInitialConnCount,
       s = Math.max(1, Math.floor(o * (1 - n))),
       i = this.connections.length - s;
     if (i <= 0) return;
@@ -3101,10 +3101,10 @@
       (e._topoDirty = !0);
   }
   function Pn() {
-    let n = this._initialConnectionCount;
+    const n = this._initialConnectionCount;
     return n ? 1 - this.connections.length / n : 0;
   }
-  var Rn = C(() => {
+  const Rn = C(() => {
     'use strict';
   });
   function Wn(n, t) {
@@ -3119,7 +3119,7 @@
     n.gate(t), this.gates.push(t);
   }
   function Bn(n) {
-    let t = this.gates.indexOf(n);
+    const t = this.gates.indexOf(n);
     if (t === -1) {
       G.warnings &&
         console.warn('Attempted to ungate a connection not in the gates list.');
@@ -3127,7 +3127,7 @@
     }
     this.gates.splice(t, 1), n.gater?.ungate(n);
   }
-  var Gn = C(() => {
+  const Gn = C(() => {
     'use strict';
     ee();
     vt();
@@ -3158,7 +3158,7 @@
   function Un(n) {
     typeof n == 'number' && (this._rngState = n >>> 0);
   }
-  var zn = C(() => {
+  const zn = C(() => {
     'use strict';
   });
   function Zi(n) {
@@ -3171,14 +3171,14 @@
     }
   }
   function Jn() {
-    let n = this._lastStats;
+    const n = this._lastStats;
     return n ? Zi(n) : null;
   }
-  var Vn = C(() => {
+  const Vn = C(() => {
     'use strict';
   });
   function Kn(n) {
-    let t = this,
+    const t = this,
       e = this.nodes.indexOf(n);
     if (e === -1) throw new Error('Node not in network');
     if (n.type === 'input' || n.type === 'output')
@@ -3186,12 +3186,12 @@
     this.gates = this.gates.filter((r) =>
       r.gater === n ? ((r.gater = null), !1) : !0
     );
-    let o = n.connections.in.slice(),
+    const o = n.connections.in.slice(),
       s = n.connections.out.slice();
     o.forEach((r) => this.disconnect(r.from, r.to)),
       s.forEach((r) => this.disconnect(r.from, r.to)),
       n.connections.self.slice().forEach(() => this.disconnect(n, n));
-    let i = this.nodes.splice(e, 1)[0];
+    const i = this.nodes.splice(e, 1)[0];
     G.enableNodePooling && i && ie(i),
       o.forEach((r) => {
         s.forEach((a) => {
@@ -3205,7 +3205,7 @@
       (t._slabDirty = !0),
       (t._adjDirty = !0);
   }
-  var Xn = C(() => {
+  const Xn = C(() => {
     'use strict';
     Ee();
     vt();
@@ -3213,8 +3213,8 @@
   function Yn(n, t, e) {
     if (this._enforceAcyclic && this.nodes.indexOf(n) > this.nodes.indexOf(t))
       return [];
-    let o = n.connect(t, e);
-    for (let s of o)
+    const o = n.connect(t, e);
+    for (const s of o)
       if (n !== t) this.connections.push(s);
       else {
         if (this._enforceAcyclic) continue;
@@ -3223,9 +3223,9 @@
     return o.length && ((this._topoDirty = !0), (this._slabDirty = !0)), o;
   }
   function Zn(n, t) {
-    let e = n === t ? this.selfconns : this.connections;
+    const e = n === t ? this.selfconns : this.connections;
     for (let o = 0; o < e.length; o++) {
-      let s = e[o];
+      const s = e[o];
       if (s.from === n && s.to === t) {
         s.gater && this.ungate(s), e.splice(o, 1);
         break;
@@ -3233,12 +3233,12 @@
     }
     n.disconnect(t), (this._topoDirty = !0), (this._slabDirty = !0);
   }
-  var Qn = C(() => {
+  const Qn = C(() => {
     'use strict';
   });
   function to() {
     this.nodes.forEach((r, a) => (r.index = a));
-    let n = this.nodes.map((r) => r.activation),
+    const n = this.nodes.map((r) => r.activation),
       t = this.nodes.map((r) => r.state),
       e = this.nodes.map((r) => r.squash.name),
       o = this.connections
@@ -3254,7 +3254,7 @@
     return [n, t, e, o, s, i];
   }
   function eo(n, t, e) {
-    let [o, s, i, r, a, l] = n,
+    const [o, s, i, r, a, l] = n,
       h = typeof t == 'number' ? t : a || 0,
       u = typeof e == 'number' ? e : l || 0,
       p = new (bt(), q(Pt)).default(h, u);
@@ -3270,9 +3270,9 @@
           : d >= o.length - u
           ? (f = 'output')
           : (f = 'hidden');
-        let m = new K(f);
+        const m = new K(f);
         (m.activation = c), (m.state = s[d]);
-        let _ = i[d];
+        const _ = i[d];
         F[_] ||
           console.warn(
             `Unknown squash function '${String(
@@ -3285,7 +3285,7 @@
       }),
       r.forEach((c) => {
         if (c.from < p.nodes.length && c.to < p.nodes.length) {
-          let d = p.nodes[c.from],
+          const d = p.nodes[c.from],
             f = p.nodes[c.to],
             m = p.connect(d, f, c.weight)[0];
           m &&
@@ -3304,7 +3304,7 @@
     );
   }
   function no() {
-    let n = {
+    const n = {
       formatVersion: 2,
       input: this.input,
       output: this.output,
@@ -3325,7 +3325,7 @@
           }),
           t.connections.self.length > 0)
         ) {
-          let o = t.connections.self[0];
+          const o = t.connections.self[0];
           n.connections.push({
             from: e,
             to: e,
@@ -3354,7 +3354,7 @@
       throw new Error('Invalid JSON for network.');
     n.formatVersion !== 2 &&
       console.warn('fromJSONImpl: Unknown formatVersion, attempting import.');
-    let t = new (bt(), q(Pt)).default(n.input, n.output);
+    const t = new (bt(), q(Pt)).default(n.input, n.output);
     return (
       (t.dropout = n.dropout || 0),
       (t.nodes = []),
@@ -3362,7 +3362,7 @@
       (t.selfconns = []),
       (t.gates = []),
       n.nodes.forEach((e, o) => {
-        let s = new K(e.type);
+        const s = new K(e.type);
         (s.bias = e.bias),
           (s.squash = F[e.squash] || F.identity),
           (s.index = o),
@@ -3371,7 +3371,7 @@
       }),
       n.connections.forEach((e) => {
         if (typeof e.from != 'number' || typeof e.to != 'number') return;
-        let o = t.nodes[e.from],
+        const o = t.nodes[e.from],
           s = t.nodes[e.to],
           i = t.connect(o, s, e.weight)[0];
         i &&
@@ -3384,7 +3384,7 @@
       t
     );
   }
-  var io = C(() => {
+  const io = C(() => {
     'use strict';
     mt();
     Dt();
@@ -3395,7 +3395,7 @@
       throw new Error(
         'Parent networks must have the same input and output sizes for crossover.'
       );
-    let o = new (bt(), q(Pt)).default(n.input, n.output);
+    const o = new (bt(), q(Pt)).default(n.input, n.output);
     (o.connections = []), (o.nodes = []), (o.selfconns = []), (o.gates = []);
     let s = n.score || 0,
       i = t.score || 0,
@@ -3403,11 +3403,11 @@
       a = t.nodes.length,
       l;
     if (e || s === i) {
-      let m = Math.max(r, a),
+      const m = Math.max(r, a),
         _ = Math.min(r, a);
       l = Math.floor(Math.random() * (m - _ + 1) + _);
     } else l = s > i ? r : a;
-    let h = n.output;
+    const h = n.output;
     n.nodes.forEach((m, _) => (m.index = _)),
       t.nodes.forEach((m, _) => (m.index = _));
     for (let m = 0; m < l; m++) {
@@ -3416,7 +3416,7 @@
         g = m < a ? t.nodes[m] : void 0;
       if (m < n.input) _ = y;
       else if (m >= l - h) {
-        let w = r - (l - m),
+        const w = r - (l - m),
           v = a - (l - m),
           b = w >= n.input && w < r ? n.nodes[w] : void 0,
           M = v >= t.input && v < a ? t.nodes[v] : void 0;
@@ -3428,12 +3428,12 @@
           ? (_ = y)
           : g && (i >= s || e) && (_ = g);
       if (_) {
-        let w = new K(_.type);
+        const w = new K(_.type);
         (w.bias = _.bias), (w.squash = _.squash), o.nodes.push(w);
       }
     }
     o.nodes.forEach((m, _) => (m.index = _));
-    let u = {},
+    const u = {},
       p = {};
     n.connections.concat(n.selfconns).forEach((m) => {
       typeof m.from.index == 'number' &&
@@ -3457,20 +3457,20 @@
             enabled: m.enabled !== !1,
           });
       });
-    let c = [];
+    const c = [];
     Object.keys(u).forEach((m) => {
-      let _ = u[m];
+      const _ = u[m];
       if (p[m]) {
-        let y = p[m],
+        const y = p[m],
           g = (n._rand || Math.random)() >= 0.5 ? _ : y;
         if (_.enabled === !1 || y.enabled === !1) {
-          let w = n._reenableProb ?? t._reenableProb ?? 0.25;
+          const w = n._reenableProb ?? t._reenableProb ?? 0.25;
           g.enabled = Math.random() < w;
         }
         c.push(g), delete p[m];
       } else if (s >= i || e) {
         if (_.enabled === !1) {
-          let y = n._reenableProb ?? 0.25;
+          const y = n._reenableProb ?? 0.25;
           _.enabled = Math.random() < y;
         }
         c.push(_);
@@ -3478,22 +3478,22 @@
     }),
       (i >= s || e) &&
         Object.keys(p).forEach((m) => {
-          let _ = p[m];
+          const _ = p[m];
           if (_.enabled === !1) {
-            let y = t._reenableProb ?? 0.25;
+            const y = t._reenableProb ?? 0.25;
             _.enabled = Math.random() < y;
           }
           c.push(_);
         });
-    let f = o.nodes.length;
+    const f = o.nodes.length;
     return (
       c.forEach((m) => {
         if (m.from < f && m.to < f) {
-          let _ = o.nodes[m.from],
+          const _ = o.nodes[m.from],
             y = o.nodes[m.to];
           if (m.from >= m.to) return;
           if (!_.isProjectingTo(y)) {
-            let g = o.connect(_, y)[0];
+            const g = o.connect(_, y)[0];
             g &&
               ((g.weight = m.weight),
               (g.enabled = m.enabled !== !1),
@@ -3504,19 +3504,19 @@
       o
     );
   }
-  var ro = C(() => {
+  const ro = C(() => {
     'use strict';
     mt();
     Dt();
   });
-  var re = {};
+  const re = {};
   ct(re, {
     activateBatch: () => es,
     activateRaw: () => ts,
     noTraceActivate: () => Qi,
   });
   function Qi(n) {
-    let t = this;
+    const t = this;
     if (
       (t._enforceAcyclic && t._topoDirty && this._computeTopoOrder(),
       !Array.isArray(n) || n.length !== this.input)
@@ -3539,7 +3539,7 @@
         ? (e[o++] = i.noTraceActivate())
         : i.noTraceActivate();
     });
-    let s = Array.from(e);
+    const s = Array.from(e);
     return ft.release(e), s;
   }
   function ts(n, t = !1, e = 1e3) {
@@ -3550,9 +3550,9 @@
   function es(n, t = !1) {
     if (!Array.isArray(n))
       throw new Error('inputs must be an array of input arrays');
-    let e = new Array(n.length);
+    const e = new Array(n.length);
     for (let o = 0; o < n.length; o++) {
-      let s = n[o];
+      const s = n[o];
       if (!Array.isArray(s) || s.length !== this.input)
         throw new Error(
           `Input[${o}] size mismatch: expected ${this.input}, got ${
@@ -3563,11 +3563,11 @@
     }
     return e;
   }
-  var ae = C(() => {
+  const ae = C(() => {
     'use strict';
     Jt();
   });
-  var tt,
+  let tt,
     ce = C(() => {
       'use strict';
       mt();
@@ -3582,13 +3582,13 @@
           for (let e = 0; e < t; e++) this.nodes.push(new K());
         }
         activate(t) {
-          let e = [];
+          const e = [];
           if (t !== void 0 && t.length !== this.nodes.length)
             throw new Error(
               'Array with values should be same as the amount of nodes!'
             );
           for (let o = 0; o < this.nodes.length; o++) {
-            let s =
+            const s =
               t === void 0
                 ? this.nodes[o].activate()
                 : this.nodes[o].activate(t[o]);
@@ -3630,7 +3630,7 @@
                 for (r = 0; r < t.nodes.length; r++) {
                   if (e === X.ALL_TO_ELSE && this.nodes[i] === t.nodes[r])
                     continue;
-                  let a = this.nodes[i].connect(t.nodes[r], o);
+                  const a = this.nodes[i].connect(t.nodes[r], o);
                   this.connections.out.push(a[0]),
                     t.connections.in.push(a[0]),
                     s.push(a[0]);
@@ -3641,7 +3641,7 @@
                   'Cannot create ONE_TO_ONE connection: source and target groups must have the same size.'
                 );
               for (i = 0; i < this.nodes.length; i++) {
-                let a = this.nodes[i].connect(t.nodes[i], o);
+                const a = this.nodes[i].connect(t.nodes[i], o);
                 this === t
                   ? this.connections.self.push(a[0])
                   : (this.connections.out.push(a[0]),
@@ -3652,7 +3652,7 @@
           } else if (t instanceof Ot) s = t.input(this, e, o);
           else if (t instanceof K)
             for (i = 0; i < this.nodes.length; i++) {
-              let a = this.nodes[i].connect(t, o);
+              const a = this.nodes[i].connect(t, o);
               this.connections.out.push(a[0]), s.push(a[0]);
             }
           return s;
@@ -3668,30 +3668,30 @@
             i,
             r;
           for (i = 0; i < t.length; i++) {
-            let a = t[i];
+            const a = t[i];
             o.includes(a.from) || o.push(a.from),
               s.includes(a.to) || s.push(a.to);
           }
           switch (e) {
             case _t.INPUT:
               for (let a = 0; a < t.length; a++) {
-                let l = t[a];
+                const l = t[a];
                 this.nodes[a % this.nodes.length].gate(l);
               }
               break;
             case _t.OUTPUT:
               for (i = 0; i < o.length; i++) {
-                let a = o[i],
+                const a = o[i],
                   l = this.nodes[i % this.nodes.length];
                 for (r = 0; r < a.connections.out.length; r++) {
-                  let h = a.connections.out[r];
+                  const h = a.connections.out[r];
                   t.includes(h) && l.gate(h);
                 }
               }
               break;
             case _t.SELF:
               for (i = 0; i < o.length; i++) {
-                let a = o[i],
+                const a = o[i],
                   l = this.nodes[i % this.nodes.length],
                   h = Array.isArray(a.connections.self)
                     ? a.connections.self[0]
@@ -3718,7 +3718,7 @@
                   i >= 0;
                   i--
                 ) {
-                  let r = this.connections.out[i];
+                  const r = this.connections.out[i];
                   if (r.from === this.nodes[o] && r.to === t.nodes[s]) {
                     this.connections.out.splice(i, 1);
                     break;
@@ -3726,21 +3726,21 @@
                 }
                 if (e) {
                   for (i = this.connections.in.length - 1; i >= 0; i--) {
-                    let r = this.connections.in[i];
+                    const r = this.connections.in[i];
                     if (r.from === t.nodes[s] && r.to === this.nodes[o]) {
                       this.connections.in.splice(i, 1);
                       break;
                     }
                   }
                   for (i = t.connections.out.length - 1; i >= 0; i--) {
-                    let r = t.connections.out[i];
+                    const r = t.connections.out[i];
                     if (r.from === t.nodes[s] && r.to === this.nodes[o]) {
                       t.connections.out.splice(i, 1);
                       break;
                     }
                   }
                   for (i = t.connections.in.length - 1; i >= 0; i--) {
-                    let r = t.connections.in[i];
+                    const r = t.connections.in[i];
                     if (r.from === this.nodes[o] && r.to === t.nodes[s]) {
                       t.connections.in.splice(i, 1);
                       break;
@@ -3756,7 +3756,7 @@
                 s >= 0;
                 s--
               ) {
-                let r = this.connections.out[s];
+                const r = this.connections.out[s];
                 if (r.from === this.nodes[o] && r.to === t) {
                   this.connections.out.splice(s, 1);
                   break;
@@ -3764,7 +3764,7 @@
               }
               if (e)
                 for (s = this.connections.in.length - 1; s >= 0; s--) {
-                  let r = this.connections.in[s];
+                  const r = this.connections.in[s];
                   if (r.from === t && r.to === this.nodes[o]) {
                     this.connections.in.splice(s, 1);
                     break;
@@ -3788,7 +3788,7 @@
         }
       };
     });
-  var Te = {};
+  const Te = {};
   ct(Te, { default: () => Ot });
   var Ot,
     Ft = C(() => {
@@ -3808,7 +3808,7 @@
             (this.connections = { in: [], out: [], self: [] });
         }
         activate(t, e = !1) {
-          let o = ft.acquire(this.nodes.length);
+          const o = ft.acquire(this.nodes.length);
           if (t !== void 0 && t.length !== this.nodes.length)
             throw new Error(
               'Array with values should be same as the amount of nodes!'
@@ -3829,7 +3829,7 @@
               : (a = this.nodes[r].activate(t[r])),
               (o[r] = a);
           }
-          let i = Array.from(o);
+          const i = Array.from(o);
           return ft.release(o), i;
         }
         propagate(t, e, o) {
@@ -3865,7 +3865,7 @@
         }
         set(t) {
           for (let e = 0; e < this.nodes.length; e++) {
-            let o = this.nodes[e];
+            const o = this.nodes[e];
             o instanceof K
               ? (t.bias !== void 0 && (o.bias = t.bias),
                 (o.squash = t.squash || o.squash),
@@ -3885,7 +3885,7 @@
                   i >= 0;
                   i--
                 ) {
-                  let r = this.connections.out[i];
+                  const r = this.connections.out[i];
                   if (r.from === this.nodes[o] && r.to === t.nodes[s]) {
                     this.connections.out.splice(i, 1);
                     break;
@@ -3893,7 +3893,7 @@
                 }
                 if (e)
                   for (i = this.connections.in.length - 1; i >= 0; i--) {
-                    let r = this.connections.in[i];
+                    const r = this.connections.in[i];
                     if (r.from === t.nodes[s] && r.to === this.nodes[o]) {
                       this.connections.in.splice(i, 1);
                       break;
@@ -3908,7 +3908,7 @@
                 s >= 0;
                 s--
               ) {
-                let r = this.connections.out[s];
+                const r = this.connections.out[s];
                 if (r.from === this.nodes[o] && r.to === t) {
                   this.connections.out.splice(s, 1);
                   break;
@@ -3916,7 +3916,7 @@
               }
               if (e)
                 for (i = this.connections.in.length - 1; i >= 0; i--) {
-                  let r = this.connections.in[i];
+                  const r = this.connections.in[i];
                   if (r.from === t && r.to === this.nodes[o]) {
                     this.connections.in.splice(i, 1);
                     break;
@@ -3939,7 +3939,7 @@
           return t.connect(this.output, e, o);
         }
         static dense(t) {
-          let e = new n(),
+          const e = new n(),
             o = new tt(t);
           return (
             e.nodes.push(...o.nodes),
@@ -3953,7 +3953,7 @@
           );
         }
         static lstm(t) {
-          let e = new n(),
+          const e = new n(),
             o = new tt(t),
             s = new tt(t),
             i = new tt(t),
@@ -3968,11 +3968,11 @@
             i.connect(s, X.ALL_TO_ALL),
             i.connect(r, X.ALL_TO_ALL),
             i.connect(i, X.ONE_TO_ONE);
-          let l = i.connect(a, X.ALL_TO_ALL);
+          const l = i.connect(a, X.ALL_TO_ALL);
           return (
             r.gate(l, _t.OUTPUT),
             i.nodes.forEach((h, u) => {
-              let p = h.connections.self.find(
+              const p = h.connections.self.find(
                 (c) => c.to === h && c.from === h
               );
               p
@@ -4008,7 +4008,7 @@
           );
         }
         static gru(t) {
-          let e = new n(),
+          const e = new n(),
             o = new tt(t),
             s = new tt(t),
             i = new tt(t),
@@ -4023,9 +4023,9 @@
             l.connect(o, X.ALL_TO_ALL),
             l.connect(i, X.ALL_TO_ALL),
             o.connect(s, X.ONE_TO_ONE, 1);
-          let h = l.connect(r, X.ALL_TO_ALL);
+          const h = l.connect(r, X.ALL_TO_ALL);
           i.gate(h, _t.OUTPUT);
-          let u = l.connect(a, X.ALL_TO_ALL),
+          const u = l.connect(a, X.ALL_TO_ALL),
             p = r.connect(a, X.ALL_TO_ALL);
           return (
             o.gate(u, _t.OUTPUT),
@@ -4057,15 +4057,15 @@
           let o = new n(),
             s = null;
           for (let r = 0; r < e; r++) {
-            let a = new tt(t);
+            const a = new tt(t);
             a.set({ squash: F.identity, bias: 0, type: 'variant' }),
               s?.connect(a, X.ONE_TO_ONE, 1),
               o.nodes.push(a),
               (s = a);
           }
           o.nodes.reverse();
-          let i = new tt(0);
-          for (let r of o.nodes)
+          const i = new tt(0);
+          for (const r of o.nodes)
             this.prototype.isGroup(r)
               ? (i.nodes = i.nodes.concat(r.nodes))
               : console.warn(
@@ -4075,7 +4075,7 @@
             (o.output = i),
             (o.input = (r, a, l) => {
               r instanceof n && (r = r.output), (a = a || X.ALL_TO_ALL);
-              let h = o.nodes[o.nodes.length - 1];
+              const h = o.nodes[o.nodes.length - 1];
               if (!this.prototype.isGroup(h))
                 throw new Error('Memory layer input block is not a Group.');
               if (r.nodes.length !== h.nodes.length)
@@ -4088,12 +4088,12 @@
           );
         }
         static batchNorm(t) {
-          let e = n.dense(t);
+          const e = n.dense(t);
           e.batchNorm = !0;
-          let o = e.activate.bind(e);
+          const o = e.activate.bind(e);
           return (
             (e.activate = function (s, i = !1) {
-              let r = o(s, i),
+              const r = o(s, i),
                 a = r.reduce((u, p) => u + p, 0) / r.length,
                 l = r.reduce((u, p) => u + (p - a) ** 2, 0) / r.length,
                 h = (jt(), q(xe)).NORM_EPSILON;
@@ -4103,12 +4103,12 @@
           );
         }
         static layerNorm(t) {
-          let e = n.dense(t);
+          const e = n.dense(t);
           e.layerNorm = !0;
-          let o = e.activate.bind(e);
+          const o = e.activate.bind(e);
           return (
             (e.activate = function (s, i = !1) {
-              let r = o(s, i),
+              const r = o(s, i),
                 a = r.reduce((u, p) => u + p, 0) / r.length,
                 l = r.reduce((u, p) => u + (p - a) ** 2, 0) / r.length,
                 h = (jt(), q(xe)).NORM_EPSILON;
@@ -4118,7 +4118,7 @@
           );
         }
         static conv1d(t, e, o = 1, s = 0) {
-          let i = new n();
+          const i = new n();
           return (
             (i.nodes = Array.from({ length: t }, () => new K())),
             (i.output = new tt(t)),
@@ -4130,14 +4130,14 @@
           );
         }
         static attention(t, e = 1) {
-          let o = new n();
+          const o = new n();
           return (
             (o.nodes = Array.from({ length: t }, () => new K())),
             (o.output = new tt(t)),
             (o.attention = { heads: e }),
             (o.activate = function (s) {
               if (!s) return this.nodes.map((r) => r.activate());
-              let i = s.reduce((r, a) => r + a, 0) / s.length;
+              const i = s.reduce((r, a) => r + a, 0) / s.length;
               return Array(t).fill(i);
             }),
             o
@@ -4148,7 +4148,7 @@
         }
       };
     });
-  var ao = {};
+  const ao = {};
   ct(ao, { mutateImpl: () => os });
   function os(n) {
     if (n == null) throw new Error('No (correct) mutate method given!');
@@ -4157,13 +4157,13 @@
       (typeof n == 'string' ? (t = n) : (t = n?.name ?? n?.type ?? n?.identity),
       !t)
     ) {
-      for (let o in Gt)
+      for (const o in Gt)
         if (n === Gt[o]) {
           t = o;
           break;
         }
     }
-    let e = t ? ns[t] : void 0;
+    const e = t ? ns[t] : void 0;
     if (!e) {
       G.warnings &&
         console.warn('[mutate] Unknown mutation method ignored:', t);
@@ -4172,9 +4172,9 @@
     e.call(this, n), (this._topoDirty = !0);
   }
   function is() {
-    let n = this;
+    const n = this;
     if ((n._enforceAcyclic && (n._topoDirty = !0), G.deterministicChainMode)) {
-      let l = this.nodes.find((w) => w.type === 'input'),
+      const l = this.nodes.find((w) => w.type === 'input'),
         h = this.nodes.find((w) => w.type === 'output');
       if (!l || !h) return;
       n._detChain ||
@@ -4185,24 +4185,24 @@
         p = u[u.length - 1],
         c = this.connections.find((w) => w.from === p && w.to === h);
       c || (c = this.connect(p, h)[0]);
-      let d = c.gater;
+      const d = c.gater;
       this.disconnect(c.from, c.to);
-      let f = new K('hidden', void 0, n._rand);
+      const f = new K('hidden', void 0, n._rand);
       f.mutate(Gt.MOD_ACTIVATION);
-      let m = this.nodes.indexOf(h),
+      const m = this.nodes.indexOf(h),
         _ = Math.min(m, this.nodes.length - this.output);
       this.nodes.splice(_, 0, f), (n._nodeIndexDirty = !0);
-      let y = this.connect(p, f)[0],
+      const y = this.connect(p, f)[0],
         g = this.connect(f, h)[0];
       u.push(f),
         (n._preferredChainEdge = g),
         d && this.gate(d, n._rand() >= 0.5 ? y : g);
       for (let w = 0; w < u.length; w++) {
-        let v = u[w],
+        const v = u[w],
           b = w + 1 < u.length ? u[w + 1] : h,
           M = v.connections.out.find((x) => x.to === b);
         if (M) {
-          for (let x of v.connections.out.slice())
+          for (const x of v.connections.out.slice())
             if (x !== M)
               try {
                 this.disconnect(x.from, x.to);
@@ -4212,52 +4212,52 @@
       return;
     }
     if (this.connections.length === 0) {
-      let l = this.nodes.find((u) => u.type === 'input'),
+      const l = this.nodes.find((u) => u.type === 'input'),
         h = this.nodes.find((u) => u.type === 'output');
       if (l && h) this.connect(l, h);
       else return;
     }
-    let t = this.connections[Math.floor(n._rand() * this.connections.length)];
+    const t = this.connections[Math.floor(n._rand() * this.connections.length)];
     if (!t) return;
-    let e = t.gater;
+    const e = t.gater;
     this.disconnect(t.from, t.to);
-    let o = new K('hidden', void 0, n._rand);
+    const o = new K('hidden', void 0, n._rand);
     o.mutate(Gt.MOD_ACTIVATION);
-    let s = this.nodes.indexOf(t.to),
+    const s = this.nodes.indexOf(t.to),
       i = Math.min(s, this.nodes.length - this.output);
     this.nodes.splice(i, 0, o), (n._nodeIndexDirty = !0);
-    let r = this.connect(t.from, o)[0],
+    const r = this.connect(t.from, o)[0],
       a = this.connect(o, t.to)[0];
     (n._preferredChainEdge = a), e && this.gate(e, n._rand() >= 0.5 ? r : a);
   }
   function ss() {
-    let n = this.nodes.filter((s) => s.type === 'hidden');
+    const n = this.nodes.filter((s) => s.type === 'hidden');
     if (n.length === 0) {
       G.warnings && console.warn('No hidden nodes left to remove!');
       return;
     }
-    let e = n[Math.floor(this._rand() * n.length)];
+    const e = n[Math.floor(this._rand() * n.length)];
     this.remove(e);
-    let o = this.connections[0];
+    const o = this.connections[0];
     o && (o.weight += 1e-4);
   }
   function rs() {
-    let n = this;
+    const n = this;
     n._enforceAcyclic && (n._topoDirty = !0);
-    let t = [];
+    const t = [];
     for (let o = 0; o < this.nodes.length - this.output; o++) {
-      let s = this.nodes[o];
+      const s = this.nodes[o];
       for (let i = Math.max(o + 1, this.input); i < this.nodes.length; i++) {
-        let r = this.nodes[i];
+        const r = this.nodes[i];
         s.isProjectingTo(r) || t.push([s, r]);
       }
     }
     if (t.length === 0) return;
-    let e = t[Math.floor(n._rand() * t.length)];
+    const e = t[Math.floor(n._rand() * t.length)];
     this.connect(e[0], e[1]);
   }
   function as() {
-    let n = this,
+    const n = this,
       t = this.connections.filter((o) => {
         let s = o.from.connections.out.length > 1,
           i = o.to.connections.in.length > 1,
@@ -4278,25 +4278,25 @@
         );
       });
     if (t.length === 0) return;
-    let e = t[Math.floor(n._rand() * t.length)];
+    const e = t[Math.floor(n._rand() * t.length)];
     this.disconnect(e.from, e.to);
   }
   function cs(n) {
-    let t = this.connections.concat(this.selfconns);
+    const t = this.connections.concat(this.selfconns);
     if (t.length === 0) return;
-    let e = t[Math.floor(this._rand() * t.length)],
+    const e = t[Math.floor(this._rand() * t.length)],
       o = this._rand() * (n.max - n.min) + n.min;
     e.weight += o;
   }
   function ls(n) {
     if (this.nodes.length <= this.input) return;
-    let t = Math.floor(
+    const t = Math.floor(
       this._rand() * (this.nodes.length - this.input) + this.input
     );
     this.nodes[t].mutate(n);
   }
   function hs(n) {
-    let t = n.mutateOutput ?? !0,
+    const t = n.mutateOutput ?? !0,
       e = this.nodes.length - this.input - (t ? 0 : this.output);
     if (e <= 0) {
       G.warnings &&
@@ -4305,13 +4305,13 @@
         );
       return;
     }
-    let o = Math.floor(this._rand() * e + this.input);
+    const o = Math.floor(this._rand() * e + this.input);
     this.nodes[o].mutate(n);
   }
   function us() {
-    let n = this;
+    const n = this;
     if (n._enforceAcyclic) return;
-    let t = this.nodes.filter(
+    const t = this.nodes.filter(
       (o, s) => s >= this.input && o.connections.self.length === 0
     );
     if (t.length === 0) {
@@ -4319,7 +4319,7 @@
         console.warn('All eligible nodes already have self-connections.');
       return;
     }
-    let e = t[Math.floor(n._rand() * t.length)];
+    const e = t[Math.floor(n._rand() * t.length)];
     this.connect(e, e);
   }
   function ps() {
@@ -4327,11 +4327,11 @@
       G.warnings && console.warn('No self-connections exist to remove.');
       return;
     }
-    let n = this.selfconns[Math.floor(this._rand() * this.selfconns.length)];
+    const n = this.selfconns[Math.floor(this._rand() * this.selfconns.length)];
     this.disconnect(n.from, n.to);
   }
   function fs() {
-    let n = this,
+    const n = this,
       e = this.connections
         .concat(this.selfconns)
         .filter((r) => r.gater === null);
@@ -4339,7 +4339,7 @@
       G.warnings && console.warn('All connections are already gated.');
       return;
     }
-    let o = Math.floor(
+    const o = Math.floor(
         n._rand() * (this.nodes.length - this.input) + this.input
       ),
       s = this.nodes[o],
@@ -4351,45 +4351,45 @@
       G.warnings && console.warn('No gated connections to ungate.');
       return;
     }
-    let n = Math.floor(this._rand() * this.gates.length),
+    const n = Math.floor(this._rand() * this.gates.length),
       t = this.gates[n];
     this.ungate(t);
   }
   function ms() {
-    let n = this;
+    const n = this;
     if (n._enforceAcyclic) return;
-    let t = [];
+    const t = [];
     for (let o = this.input; o < this.nodes.length; o++) {
-      let s = this.nodes[o];
+      const s = this.nodes[o];
       for (let i = this.input; i < o; i++) {
-        let r = this.nodes[i];
+        const r = this.nodes[i];
         s.isProjectingTo(r) || t.push([s, r]);
       }
     }
     if (t.length === 0) return;
-    let e = t[Math.floor(n._rand() * t.length)];
+    const e = t[Math.floor(n._rand() * t.length)];
     this.connect(e[0], e[1]);
   }
   function gs() {
-    let n = this.connections.filter(
+    const n = this.connections.filter(
       (e) =>
         e.from.connections.out.length > 1 &&
         e.to.connections.in.length > 1 &&
         this.nodes.indexOf(e.from) > this.nodes.indexOf(e.to)
     );
     if (n.length === 0) return;
-    let t = n[Math.floor(this._rand() * n.length)];
+    const t = n[Math.floor(this._rand() * n.length)];
     this.disconnect(t.from, t.to);
   }
   function ys(n) {
-    let t = this,
+    const t = this,
       e = n.mutateOutput ?? !0,
       o = this.nodes.length - this.input - (e ? 0 : this.output);
     if (o < 2) return;
     let s = Math.floor(t._rand() * o + this.input),
       i = Math.floor(t._rand() * o + this.input);
     for (; s === i; ) i = Math.floor(t._rand() * o + this.input);
-    let r = this.nodes[s],
+    const r = this.nodes[s],
       a = this.nodes[i],
       l = r.bias,
       h = r.squash;
@@ -4397,12 +4397,12 @@
   }
   function _s() {
     if (this._enforceAcyclic || this.connections.length === 0) return;
-    let t = this.connections[
+    const t = this.connections[
         Math.floor(Math.random() * this.connections.length)
       ],
       e = t.gater;
     this.disconnect(t.from, t.to);
-    let s = (Ft(), q(Te)).default.lstm(1);
+    const s = (Ft(), q(Te)).default.lstm(1);
     s.nodes.forEach((i) => {
       (i.type = 'hidden'), this.nodes.push(i);
     }),
@@ -4412,12 +4412,12 @@
   }
   function bs() {
     if (this._enforceAcyclic || this.connections.length === 0) return;
-    let t = this.connections[
+    const t = this.connections[
         Math.floor(Math.random() * this.connections.length)
       ],
       e = t.gater;
     this.disconnect(t.from, t.to);
-    let s = (Ft(), q(Te)).default.gru(1);
+    const s = (Ft(), q(Te)).default.gru(1);
     s.nodes.forEach((i) => {
       (i.type = 'hidden'), this.nodes.push(i);
     }),
@@ -4427,23 +4427,23 @@
   }
   function vs(n) {
     if (this.nodes.length <= this.input) return;
-    let t = this,
+    const t = this,
       e = Math.floor(t._rand() * (this.nodes.length - this.input) + this.input),
       o = this.nodes[e],
       s = n?.min ?? -1,
       i = n?.max ?? 1,
       r = () => t._rand() * (i - s) + s;
-    for (let a of o.connections.in) a.weight = r();
-    for (let a of o.connections.out) a.weight = r();
-    for (let a of o.connections.self) a.weight = r();
+    for (const a of o.connections.in) a.weight = r();
+    for (const a of o.connections.out) a.weight = r();
+    for (const a of o.connections.self) a.weight = r();
   }
   function ws() {
-    let n = this.nodes.filter((o) => o.type === 'hidden');
+    const n = this.nodes.filter((o) => o.type === 'hidden');
     if (!n.length) return;
-    let e = n[Math.floor(this._rand() * n.length)];
+    const e = n[Math.floor(this._rand() * n.length)];
     e._batchNorm = !0;
   }
-  var ns,
+  let ns,
     co = C(() => {
       'use strict';
       mt();
@@ -4470,7 +4470,7 @@
         BATCH_NORM: ws,
       };
     });
-  var De = {};
+  const De = {};
   ct(De, {
     __trainingInternals: () => xs,
     applyGradientClippingImpl: () => lo,
@@ -4480,9 +4480,9 @@
   function Ms(n, t, e, o) {
     if (e.window <= 1 && e.type !== 'ema' && e.type !== 'adaptive-ema')
       return n;
-    let s = e.type;
+    const s = e.type;
     if (s === 'median') {
-      let i = [...t].sort((a, l) => a - l),
+      const i = [...t].sort((a, l) => a - l),
         r = Math.floor(i.length / 2);
       return i.length % 2 ? i[r] : (i[r - 1] + i[r]) / 2;
     }
@@ -4494,7 +4494,7 @@
         o.emaValue
       );
     if (s === 'adaptive-ema') {
-      let i = t.reduce((u, p) => u + p, 0) / t.length,
+      const i = t.reduce((u, p) => u + p, 0) / t.length,
         r = t.reduce((u, p) => u + (p - i) * (p - i), 0) / t.length,
         a = e.emaAlpha || 2 / (e.window + 1),
         l = r / Math.max(i * i, 1e-8),
@@ -4515,13 +4515,13 @@
         a = 0,
         l = t.length;
       for (let h = 0; h < l; h++) {
-        let u = Math.exp(-0.5 * Math.pow((h - (l - 1)) / i, 2));
+        const u = Math.exp(-0.5 * Math.pow((h - (l - 1)) / i, 2));
         (r += u), (a += u * t[h]);
       }
       return a / (r || 1);
     }
     if (s === 'trimmed') {
-      let i = Math.min(0.49, Math.max(0, e.trimmedRatio || 0.1)),
+      const i = Math.min(0.49, Math.max(0, e.trimmedRatio || 0.1)),
         r = [...t].sort((h, u) => h - u),
         a = Math.floor(r.length * i),
         l = r.slice(a, r.length - a);
@@ -4531,7 +4531,7 @@
       let i = 0,
         r = 0;
       for (let a = 0; a < t.length; a++) {
-        let l = a + 1;
+        const l = a + 1;
         (i += l), (r += l * t[a]);
       }
       return r / (i || 1);
@@ -4541,7 +4541,7 @@
   function Ss(n, t, e, o) {
     if (e.window <= 1 && e.type !== 'ema') return n;
     if (e.type === 'median') {
-      let s = [...t].sort((r, a) => r - a),
+      const s = [...t].sort((r, a) => r - a),
         i = Math.floor(s.length / 2);
       return s.length % 2 ? s[i] : (s[i - 1] + s[i]) / 2;
     }
@@ -4620,7 +4620,7 @@
   }
   function Cs(n) {
     n._mixedPrecisionState.goodSteps++;
-    let t = n._mpIncreaseEvery || 200;
+    const t = n._mpIncreaseEvery || 200;
     n._mixedPrecisionState.goodSteps >= t &&
       n._mixedPrecision.lossScale < n._mixedPrecisionState.maxLossScale &&
       ((n._mixedPrecision.lossScale *= 2),
@@ -4642,15 +4642,15 @@
       (n._lastOverflowStep = n._optimizerStep);
   }
   function lo(n, t) {
-    let e = n,
+    const e = n,
       s = (() => {
-        let a = [];
+        const a = [];
         if (t.mode.startsWith('layerwise'))
           if (n.layers && n.layers.length > 0)
             for (let l = 0; l < n.layers.length; l++) {
-              let h = n.layers[l];
+              const h = n.layers[l];
               if (!h || !h.nodes) continue;
-              let u = [];
+              const u = [];
               h.nodes.forEach((p) => {
                 !p ||
                   p.type === 'input' ||
@@ -4670,7 +4670,7 @@
           else
             n.nodes.forEach((l) => {
               if (l.type === 'input') return;
-              let h = [];
+              const h = [];
               l.connections.in.forEach((u) => {
                 typeof u.totalDeltaWeight == 'number' &&
                   h.push(u.totalDeltaWeight);
@@ -4683,7 +4683,7 @@
                 h.length && a.push(h);
             });
         else {
-          let l = [];
+          const l = [];
           n.nodes.forEach((h) => {
             h.connections.in.forEach((u) => {
               typeof u.totalDeltaWeight == 'number' &&
@@ -4700,9 +4700,9 @@
         return a;
       })();
     e._lastGradClipGroupCount = s.length;
-    let i = (a, l) => {
+    const i = (a, l) => {
         if (!a.length) return 0;
-        let h = [...a].sort((p, c) => Math.abs(p) - Math.abs(c)),
+        const h = [...a].sort((p, c) => Math.abs(p) - Math.abs(c)),
           u = Math.min(
             h.length - 1,
             Math.max(0, Math.floor((l / 100) * h.length - 1))
@@ -4713,7 +4713,7 @@
         let l = 0;
         n.nodes.forEach((h) => {
           if (t.mode.startsWith('layerwise') && h.type === 'input') return;
-          let u = t.mode.startsWith('layerwise') ? s[l++] : s[0];
+          const u = t.mode.startsWith('layerwise') ? s[l++] : s[0];
           h.connections.in.forEach((p) => {
             typeof p.totalDeltaWeight == 'number' &&
               (p.totalDeltaWeight = a(p.totalDeltaWeight, u));
@@ -4727,18 +4727,18 @@
         });
       };
     if (t.mode === 'norm' || t.mode === 'layerwiseNorm') {
-      let a = t.maxNorm || 1;
+      const a = t.maxNorm || 1;
       s.forEach((l) => {
-        let h = Math.sqrt(l.reduce((u, p) => u + p * p, 0));
+        const h = Math.sqrt(l.reduce((u, p) => u + p * p, 0));
         if (h > a && h > 0) {
-          let u = a / h;
+          const u = a / h;
           r((p, c) => (c === l ? p * u : p));
         }
       });
     } else if (t.mode === 'percentile' || t.mode === 'layerwisePercentile') {
-      let a = t.percentile || 99;
+      const a = t.percentile || 99;
       s.forEach((l) => {
-        let h = i(l, a);
+        const h = i(l, a);
         h <= 0 ||
           r((u, p) => (p === l && Math.abs(u) > h ? h * Math.sign(u) : u));
       });
@@ -4760,7 +4760,7 @@
       ? (f = a.calculate)
       : (f = () => 0);
     for (let m = 0; m < t.length; m++) {
-      let _ = t[m],
+      const _ = t[m],
         y = _.input,
         g = _.output;
       if (y.length !== n.input || g.length !== n.output) {
@@ -4771,11 +4771,11 @@
         continue;
       }
       try {
-        let w = n.activate(y, !0);
+        const w = n.activate(y, !0);
         if (l && l.type && l.type !== 'sgd') {
           for (let v = 0; v < d.length; v++) d[v].propagate(s, i, !1, r, g[v]);
           for (let v = n.nodes.length - 1; v >= 0; v--) {
-            let b = n.nodes[v];
+            const b = n.nodes[v];
             b.type === 'output' ||
               b.type === 'input' ||
               b.propagate(s, i, !1, r);
@@ -4783,7 +4783,7 @@
         } else {
           for (let v = 0; v < d.length; v++) d[v].propagate(s, i, !0, r, g[v]);
           for (let v = n.nodes.length - 1; v >= 0; v--) {
-            let b = n.nodes[v];
+            const b = n.nodes[v];
             b.type === 'output' ||
               b.type === 'input' ||
               b.propagate(s, i, !0, r);
@@ -4817,7 +4817,7 @@
     return h._lastGradNorm == null && (h._lastGradNorm = 0), c > 0 ? u / c : 0;
   }
   function Ts(n, t, e) {
-    let o = n;
+    const o = n;
     if (
       !t ||
       t.length === 0 ||
@@ -4844,7 +4844,7 @@
         console.warn(
           'Missing `iterations` option. Training will run potentially indefinitely until `error` threshold is met.'
         ));
-    let s = e.error ?? -1 / 0,
+    const s = e.error ?? -1 / 0,
       i = e.cost || wt.mse;
     if (
       typeof i != 'function' &&
@@ -4854,14 +4854,14 @@
       )
     )
       throw new Error('Invalid cost function provided to Network.train.');
-    let r = e.rate ?? 0.3,
+    const r = e.rate ?? 0.3,
       a = e.dropout || 0;
     if (a < 0 || a >= 1) throw new Error('dropout must be in [0,1)');
-    let l = e.momentum || 0,
+    const l = e.momentum || 0,
       h = e.batchSize || 1;
     if (h > t.length)
       throw new Error('Batch size cannot be larger than the dataset length.');
-    let u = e.accumulationSteps || 1;
+    const u = e.accumulationSteps || 1;
     if (
       ((o._accumulationReduction =
         e.accumulationReduction === 'sum' ? 'sum' : 'average'),
@@ -4869,7 +4869,7 @@
     )
       throw new Error('accumulationSteps must be >=1');
     if (e.gradientClip) {
-      let L = e.gradientClip;
+      const L = e.gradientClip;
       L.mode
         ? (o._currentGradClip = {
             mode: L.mode,
@@ -4886,10 +4886,10 @@
         (o._gradClipSeparateBias = !!L.separateBias);
     } else (o._currentGradClip = void 0), (o._gradClipSeparateBias = !1);
     if (e.mixedPrecision) {
-      let L = e.mixedPrecision === !0 ? { lossScale: 1024 } : e.mixedPrecision;
+      const L = e.mixedPrecision === !0 ? { lossScale: 1024 } : e.mixedPrecision;
       (o._mixedPrecision.enabled = !0),
         (o._mixedPrecision.lossScale = L.lossScale || 1024);
-      let V = L.dynamic || {};
+      const V = L.dynamic || {};
       (o._mixedPrecisionState.minLossScale = V.minScale || 1),
         (o._mixedPrecisionState.maxLossScale = V.maxScale || 65536),
         (o._mpIncreaseEvery =
@@ -4977,7 +4977,7 @@
       A = () => {
         if (j === 0) return [];
         if (j < k) return R.slice(0, j);
-        let L = new Array(j),
+        const L = new Array(j),
           V = W;
         for (let U = 0; U < j; U++) L[U] = R[(V + U) % k];
         return L;
@@ -4999,7 +4999,7 @@
       H = () => {
         if (I === 0) return [];
         if (I < D) return J.slice(0, I);
-        let L = new Array(I),
+        const L = new Array(I),
           V = Z;
         for (let U = 0; U < I; U++) L[U] = J[(V + U) % D];
         return L;
@@ -5009,19 +5009,19 @@
     let lt = 0;
     for (let L = 1; L <= d; L++) {
       n._maybePrune && n._maybePrune((o._globalEpoch || 0) + L);
-      let V = ho(n, t, h, u, r, l, {}, i, c);
+      const V = ho(n, t, h, u, r, l, {}, i, c);
       (lt = L), S(V);
       let U = V;
       if (_ > 1 || y === 'ema' || y === 'adaptive-ema') {
-        let Q = A();
+        const Q = A();
         if (y === 'median') {
-          let $ = [...Q].sort((at, gt) => at - gt),
+          const $ = [...Q].sort((at, gt) => at - gt),
             et = Math.floor($.length / 2);
           U = $.length % 2 ? $[et] : ($[et - 1] + $[et]) / 2;
         } else if (y === 'ema')
           O == null ? (O = V) : (O = O + g * (V - O)), (U = O);
         else if (y === 'adaptive-ema') {
-          let $ = Q.reduce((yt, Ct) => yt + Ct, 0) / Q.length,
+          const $ = Q.reduce((yt, Ct) => yt + Ct, 0) / Q.length,
             et = Q.reduce((yt, Ct) => yt + (Ct - $) * (Ct - $), 0) / Q.length,
             at = g || 2 / (_ + 1),
             gt = et / Math.max($ * $, 1e-8),
@@ -5037,12 +5037,12 @@
             gt = 0,
             xt = 0;
           for (let yt = 0; yt < et; yt++) {
-            let Ct = Math.exp(-0.5 * Math.pow((yt - (et - 1)) / at, 2));
+            const Ct = Math.exp(-0.5 * Math.pow((yt - (et - 1)) / at, 2));
             (gt += Ct), (xt += Ct * $[yt]);
           }
           U = xt / (gt || 1);
         } else if (y === 'trimmed') {
-          let $ = Math.min(0.49, Math.max(0, e.trimmedRatio || 0.1)),
+          const $ = Math.min(0.49, Math.max(0, e.trimmedRatio || 0.1)),
             et = [...Q].sort((xt, yt) => xt - yt),
             at = Math.floor(et.length * $),
             gt = et.slice(at, et.length - at);
@@ -5051,7 +5051,7 @@
           let $ = 0,
             et = 0;
           for (let at = 0; at < Q.length; at++) {
-            let gt = at + 1;
+            const gt = at + 1;
             ($ += gt), (et += gt * Q[at]);
           }
           U = et / ($ || 1);
@@ -5061,13 +5061,13 @@
       let nt = V;
       if (w > 1 || v === 'ema')
         if (v === 'median') {
-          let Q = [...H()].sort((et, at) => et - at),
+          const Q = [...H()].sort((et, at) => et - at),
             $ = Math.floor(Q.length / 2);
           nt = Q.length % 2 ? Q[$] : (Q[$ - 1] + Q[$]) / 2;
         } else if (v === 'ema')
           rt == null ? (rt = V) : (rt = rt + b * (V - rt)), (nt = rt);
         else {
-          let Q = H();
+          const Q = H();
           nt = Q.reduce(($, et) => $ + et, 0) / Q.length;
         }
       if (typeof e.metricsHook == 'function')
@@ -5124,14 +5124,14 @@
       { error: m, iterations: lt, time: Date.now() - f }
     );
   }
-  var xs,
+  let xs,
     ke = C(() => {
       'use strict';
       pt();
       vt();
       xs = { computeMonitoredError: Ms, computePlateauMetric: Ss };
     });
-  var po = qt((Ia, uo) => {
+  const po = qt((Ia, uo) => {
     uo.exports = function (t) {
       return (
         t &&
@@ -5142,7 +5142,7 @@
       );
     };
   });
-  var fo = qt((Ta, je) => {
+  const fo = qt((Ta, je) => {
     typeof Object.create == 'function'
       ? (je.exports = function (t, e) {
           (t.super_ = e),
@@ -5157,14 +5157,14 @@
         })
       : (je.exports = function (t, e) {
           t.super_ = e;
-          var o = function () {};
+          const o = function () {};
           (o.prototype = e.prototype),
             (t.prototype = new o()),
             (t.prototype.constructor = t);
         });
   });
-  var _o = qt((Y) => {
-    var Ds = /%[sdj%]/g;
+  const _o = qt((Y) => {
+    const Ds = /%[sdj%]/g;
     Y.format = function (n) {
       if (!me(n)) {
         for (var t = [], e = 0; e < arguments.length; e++)
@@ -5206,7 +5206,7 @@
           return Y.deprecate(n, t).apply(this, arguments);
         };
       if (process.noDeprecation === !0) return n;
-      var e = !1;
+      let e = !1;
       function o() {
         if (!e) {
           if (process.throwDeprecation) throw new Error(t);
@@ -5217,7 +5217,7 @@
       }
       return o;
     };
-    var le = {},
+    let le = {},
       Le;
     Y.debuglog = function (n) {
       if (
@@ -5226,16 +5226,16 @@
         !le[n])
       )
         if (new RegExp('\\b' + n + '\\b', 'i').test(Le)) {
-          var t = process.pid;
+          const t = process.pid;
           le[n] = function () {
-            var e = Y.format.apply(Y, arguments);
+            const e = Y.format.apply(Y, arguments);
             console.error('%s %d: %s', n, t, e);
           };
         } else le[n] = function () {};
       return le[n];
     };
     function Et(n, t) {
-      var e = { seen: [], stylize: js };
+      const e = { seen: [], stylize: js };
       return (
         arguments.length >= 3 && (e.depth = arguments[2]),
         arguments.length >= 4 && (e.colors = arguments[3]),
@@ -5275,7 +5275,7 @@
       regexp: 'red',
     };
     function ks(n, t) {
-      var e = Et.styles[t];
+      const e = Et.styles[t];
       return e
         ? '\x1B[' + Et.colors[e][0] + 'm' + n + '\x1B[' + Et.colors[e][1] + 'm'
         : n;
@@ -5284,7 +5284,7 @@
       return n;
     }
     function Ls(n) {
-      var t = {};
+      const t = {};
       return (
         n.forEach(function (e, o) {
           t[e] = !0;
@@ -5300,12 +5300,12 @@
         t.inspect !== Y.inspect &&
         !(t.constructor && t.constructor.prototype === t)
       ) {
-        var o = t.inspect(e, n);
+        let o = t.inspect(e, n);
         return me(o) || (o = fe(n, o, e)), o;
       }
-      var s = Ps(n, t);
+      const s = Ps(n, t);
       if (s) return s;
-      var i = Object.keys(t),
+      let i = Object.keys(t),
         r = Ls(i);
       if (
         (n.showHidden && (i = Object.getOwnPropertyNames(t)),
@@ -5314,7 +5314,7 @@
         return Pe(t);
       if (i.length === 0) {
         if (pe(t)) {
-          var a = t.name ? ': ' + t.name : '';
+          const a = t.name ? ': ' + t.name : '';
           return n.stylize('[Function' + a + ']', 'special');
         }
         if (he(t))
@@ -5322,11 +5322,11 @@
         if (Be(t)) return n.stylize(Date.prototype.toString.call(t), 'date');
         if (ue(t)) return Pe(t);
       }
-      var l = '',
+      let l = '',
         h = !1,
         u = ['{', '}'];
       if ((mo(t) && ((h = !0), (u = ['[', ']'])), pe(t))) {
-        var p = t.name ? ': ' + t.name : '';
+        const p = t.name ? ': ' + t.name : '';
         l = ' [Function' + p + ']';
       }
       if (
@@ -5341,7 +5341,7 @@
           ? n.stylize(RegExp.prototype.toString.call(t), 'regexp')
           : n.stylize('[Object]', 'special');
       n.seen.push(t);
-      var c;
+      let c;
       return (
         h
           ? (c = Rs(n, t, e, r, i))
@@ -5355,7 +5355,7 @@
     function Ps(n, t) {
       if (St(t)) return n.stylize('undefined', 'undefined');
       if (me(t)) {
-        var e =
+        const e =
           "'" +
           JSON.stringify(t)
             .replace(/^"|"$/g, '')
@@ -5382,7 +5382,7 @@
       );
     }
     function We(n, t, e, o, s, i) {
-      var r, a, l;
+      let r, a, l;
       if (
         ((l = Object.getOwnPropertyDescriptor(t, s) || { value: t[s] }),
         l.get
@@ -5438,7 +5438,7 @@
       return r + ': ' + a;
     }
     function Ws(n, t, e) {
-      var o = 0,
+      let o = 0,
         s = n.reduce(function (i, r) {
           return (
             o++,
@@ -5531,7 +5531,7 @@
     function Re(n) {
       return n < 10 ? '0' + n.toString(10) : n.toString(10);
     }
-    var $s = [
+    const $s = [
       'Jan',
       'Feb',
       'Mar',
@@ -5546,7 +5546,7 @@
       'Dec',
     ];
     function Hs() {
-      var n = new Date(),
+      const n = new Date(),
         t = [Re(n.getHours()), Re(n.getMinutes()), Re(n.getSeconds())].join(
           ':'
         );
@@ -5558,20 +5558,20 @@
     Y.inherits = fo();
     Y._extend = function (n, t) {
       if (!t || !$t(t)) return n;
-      for (var e = Object.keys(t), o = e.length; o--; ) n[e[o]] = t[e[o]];
+      for (let e = Object.keys(t), o = e.length; o--; ) n[e[o]] = t[e[o]];
       return n;
     };
     function yo(n, t) {
       return Object.prototype.hasOwnProperty.call(n, t);
     }
   });
-  var wo = qt((ka, Xt) => {
+  const wo = qt((ka, Xt) => {
     'use strict';
-    var qs = process.platform === 'win32',
+    const qs = process.platform === 'win32',
       Mt = _o();
     function ge(n, t) {
       for (var e = [], o = 0; o < n.length; o++) {
-        var s = n[o];
+        const s = n[o];
         !s ||
           s === '.' ||
           (s === '..'
@@ -5587,11 +5587,11 @@
       for (var o = t; o >= 0 && !n[o]; o--);
       return e === 0 && o === t ? n : e > o ? [] : n.slice(e, o + 1);
     }
-    var bo = /^([a-zA-Z]:|[\\\/]{2}[^\\\/]+[\\\/]+[^\\\/]+)?([\\\/])?([\s\S]*?)$/,
+    const bo = /^([a-zA-Z]:|[\\\/]{2}[^\\\/]+[\\\/]+[^\\\/]+)?([\\\/])?([\s\S]*?)$/,
       Us = /^([\s\S]*?)((?:\.{1,2}|[^\\\/]+?|)(\.[^.\/\\]*|))(?:[\\\/]*)$/,
       ot = {};
     function ye(n) {
-      var t = bo.exec(n),
+      const t = bo.exec(n),
         e = (t[1] || '') + (t[2] || ''),
         o = t[3] || '',
         s = Us.exec(o),
@@ -5601,7 +5601,7 @@
       return [e, i, r, a];
     }
     function $e(n) {
-      var t = bo.exec(n),
+      const t = bo.exec(n),
         e = t[1] || '',
         o = !!e && e[1] !== ':';
       return { device: e, isUnc: o, isAbsolute: o || !!t[2], tail: t[3] };
@@ -5642,7 +5642,7 @@
       );
     };
     ot.normalize = function (n) {
-      var t = $e(n),
+      let t = $e(n),
         e = t.device,
         o = t.isUnc,
         s = t.isAbsolute,
@@ -5661,12 +5661,12 @@
     };
     ot.join = function () {
       for (var n = [], t = 0; t < arguments.length; t++) {
-        var e = arguments[t];
+        const e = arguments[t];
         if (!Mt.isString(e))
           throw new TypeError('Arguments to path.join must be strings');
         e && n.push(e);
       }
-      var o = n.join('\\');
+      let o = n.join('\\');
       return (
         /^[\\\/]{2}[^\\\/]/.test(n[0]) || (o = o.replace(/^[\\\/]{2,}/, '\\')),
         ot.normalize(o)
@@ -5697,7 +5697,7 @@
     ot._makeLong = function (n) {
       if (!Mt.isString(n)) return n;
       if (!n) return '';
-      var t = ot.resolve(n);
+      const t = ot.resolve(n);
       return /^[a-zA-Z]\:\\/.test(t)
         ? '\\\\?\\' + t
         : /^\\\\[^?.]/.test(t)
@@ -5705,13 +5705,13 @@
         : n;
     };
     ot.dirname = function (n) {
-      var t = ye(n),
+      let t = ye(n),
         e = t[0],
         o = t[1];
       return !e && !o ? '.' : (o && (o = o.substr(0, o.length - 1)), e + o);
     };
     ot.basename = function (n, t) {
-      var e = ye(n)[2];
+      let e = ye(n)[2];
       return (
         t &&
           e.substr(-1 * t.length) === t &&
@@ -5727,13 +5727,13 @@
         throw new TypeError(
           "Parameter 'pathObject' must be an object, not " + typeof n
         );
-      var t = n.root || '';
+      const t = n.root || '';
       if (!Mt.isString(t))
         throw new TypeError(
           "'pathObject.root' must be a string or undefined, not " +
             typeof n.root
         );
-      var e = n.dir,
+      const e = n.dir,
         o = n.base || '';
       return e ? (e[e.length - 1] === ot.sep ? e + o : e + ot.sep + o) : o;
     };
@@ -5742,7 +5742,7 @@
         throw new TypeError(
           "Parameter 'pathString' must be a string, not " + typeof n
         );
-      var t = ye(n);
+      const t = ye(n);
       if (!t || t.length !== 4) throw new TypeError("Invalid path '" + n + "'");
       return {
         root: t[0],
@@ -5754,14 +5754,14 @@
     };
     ot.sep = '\\';
     ot.delimiter = ';';
-    var zs = /^(\/?|)([\s\S]*?)((?:\.{1,2}|[^\/]+?|)(\.[^.\/]*|))(?:[\/]*)$/,
+    const zs = /^(\/?|)([\s\S]*?)((?:\.{1,2}|[^\/]+?|)(\.[^.\/]*|))(?:[\/]*)$/,
       st = {};
     function _e(n) {
       return zs.exec(n).slice(1);
     }
     st.resolve = function () {
       for (var n = '', t = !1, e = arguments.length - 1; e >= -1 && !t; e--) {
-        var o = e >= 0 ? arguments[e] : process.cwd();
+        const o = e >= 0 ? arguments[e] : process.cwd();
         if (Mt.isString(o)) {
           if (!o) continue;
         } else throw new TypeError('Arguments to path.resolve must be strings');
@@ -5770,7 +5770,7 @@
       return (n = ge(n.split('/'), !t).join('/')), (t ? '/' : '') + n || '.';
     };
     st.normalize = function (n) {
-      var t = st.isAbsolute(n),
+      const t = st.isAbsolute(n),
         e = n && n[n.length - 1] === '/';
       return (
         (n = ge(n.split('/'), !t).join('/')),
@@ -5784,7 +5784,7 @@
     };
     st.join = function () {
       for (var n = '', t = 0; t < arguments.length; t++) {
-        var e = arguments[t];
+        const e = arguments[t];
         if (!Mt.isString(e))
           throw new TypeError('Arguments to path.join must be strings');
         e && (n ? (n += '/' + e) : (n += e));
@@ -5813,13 +5813,13 @@
       return n;
     };
     st.dirname = function (n) {
-      var t = _e(n),
+      let t = _e(n),
         e = t[0],
         o = t[1];
       return !e && !o ? '.' : (o && (o = o.substr(0, o.length - 1)), e + o);
     };
     st.basename = function (n, t) {
-      var e = _e(n)[2];
+      let e = _e(n)[2];
       return (
         t &&
           e.substr(-1 * t.length) === t &&
@@ -5835,13 +5835,13 @@
         throw new TypeError(
           "Parameter 'pathObject' must be an object, not " + typeof n
         );
-      var t = n.root || '';
+      const t = n.root || '';
       if (!Mt.isString(t))
         throw new TypeError(
           "'pathObject.root' must be a string or undefined, not " +
             typeof n.root
         );
-      var e = n.dir ? n.dir + st.sep : '',
+      const e = n.dir ? n.dir + st.sep : '',
         o = n.base || '';
       return e + o;
     };
@@ -5850,7 +5850,7 @@
         throw new TypeError(
           "Parameter 'pathString' must be a string, not " + typeof n
         );
-      var t = _e(n);
+      const t = _e(n);
       if (!t || t.length !== 4) throw new TypeError("Invalid path '" + n + "'");
       return (
         (t[1] = t[1] || ''),
@@ -5871,9 +5871,9 @@
     Xt.exports.posix = st;
     Xt.exports.win32 = ot;
   });
-  var He = {};
+  const He = {};
   ct(He, { TestWorker: () => be, default: () => Js });
-  var Mo,
+  let Mo,
     So,
     be,
     Js,
@@ -5889,7 +5889,7 @@
           }
           evaluate(t) {
             return new Promise((e) => {
-              let o = t.serialize(),
+              const o = t.serialize(),
                 s = { activations: o[0], states: o[1], conns: o[2] },
                 i = this.worker;
               this.worker.on('message', function r(a) {
@@ -5904,9 +5904,9 @@
         }),
         (Js = be);
     });
-  var ze = {};
+  const ze = {};
   ct(ze, { TestWorker: () => Ue });
-  var Ue,
+  let Ue,
     Je = C(() => {
       'use strict';
       ve();
@@ -5914,22 +5914,22 @@
         worker;
         url;
         constructor(t, e) {
-          let o = new Blob([n._createBlobString(e)]);
+          const o = new Blob([n._createBlobString(e)]);
           (this.url = window.URL.createObjectURL(o)),
             (this.worker = new Worker(this.url));
-          let s = { set: new Float64Array(t).buffer };
+          const s = { set: new Float64Array(t).buffer };
           this.worker.postMessage(s, [s.set]);
         }
         evaluate(t) {
           return new Promise((e, o) => {
-            let s = t.serialize(),
+            const s = t.serialize(),
               i = {
                 activations: new Float64Array(s[0]).buffer,
                 states: new Float64Array(s[1]).buffer,
                 conns: new Float64Array(s[2]).buffer,
               };
             (this.worker.onmessage = function (r) {
-              let a = new Float64Array(r.data.buffer)[0];
+              const a = new Float64Array(r.data.buffer)[0];
               e(a);
             }),
               this.worker.postMessage(i, [i.activations, i.states, i.conns]);
@@ -5967,7 +5967,7 @@
         }
       };
     });
-  var we,
+  let we,
     xo = C(() => {
       'use strict';
       we = class {
@@ -6001,13 +6001,13 @@
           (t) => Math.abs(t),
           (t) => 1 - t,
           (t) => {
-            let e = 1.6732632423543772;
+            const e = 1.6732632423543772;
             return (t > 0 ? t : e * Math.exp(t) - e) * 1.0507009873554805;
           },
           (t) => Math.log(1 + Math.exp(t)),
         ];
         static serializeDataSet(t) {
-          let e = [t[0].input.length, t[0].output.length];
+          const e = [t[0].input.length, t[0].output.length];
           for (let o = 0; o < t.length; o++) {
             for (let s = 0; s < e[0]; s++) e.push(t[o].input[s]);
             for (let s = 0; s < e[1]; s++) e.push(t[o].output[s]);
@@ -6017,7 +6017,7 @@
         static activateSerializedNetwork(t, e, o, s, i) {
           for (let a = 0; a < s[0]; a++) e[a] = t[a];
           for (let a = 2; a < s.length; a++) {
-            let l = s[a++],
+            const l = s[a++],
               h = s[a++],
               u = s[a++],
               p = s[a++],
@@ -6026,17 +6026,17 @@
               o[l] += e[s[a++]] * s[a++] * (s[a++] === -1 ? 1 : e[s[a - 1]]);
             e[l] = i[u](o[l]);
           }
-          let r = [];
+          const r = [];
           for (let a = e.length - s[1]; a < e.length; a++) r.push(e[a]);
           return r;
         }
         static deserializeDataSet(t) {
-          let e = [],
+          const e = [],
             o = t[0] + t[1];
           for (let s = 0; s < (t.length - 2) / o; s++) {
-            let i = [];
+            const i = [];
             for (let a = 2 + s * o; a < 2 + s * o + t[0]; a++) i.push(t[a]);
-            let r = [];
+            const r = [];
             for (let a = 2 + s * o + t[0]; a < 2 + s * o + o; a++) r.push(t[a]);
             e.push({ input: i, output: r });
           }
@@ -6085,7 +6085,7 @@
           return 1 - t;
         }
         static selu(t) {
-          let e = 1.6732632423543772;
+          const e = 1.6732632423543772;
           return (t > 0 ? t : e * Math.exp(t) - e) * 1.0507009873554805;
         }
         static softplus(t) {
@@ -6094,35 +6094,35 @@
         static testSerializedSet(t, e, o, s, i, r) {
           let a = 0;
           for (let l = 0; l < t.length; l++) {
-            let h = n.activateSerializedNetwork(t[l].input, o, s, i, r);
+            const h = n.activateSerializedNetwork(t[l].input, o, s, i, r);
             a += e(t[l].output, h);
           }
           return a / t.length;
         }
         static async getBrowserTestWorker() {
-          let { TestWorker: t } = await Promise.resolve().then(
+          const { TestWorker: t } = await Promise.resolve().then(
             () => (Je(), ze)
           );
           return t;
         }
         static async getNodeTestWorker() {
-          let { TestWorker: t } = await Promise.resolve().then(
+          const { TestWorker: t } = await Promise.resolve().then(
             () => (qe(), He)
           );
           return t;
         }
       };
     });
-  var Oo = {};
+  const Oo = {};
   ct(Oo, { evolveNetwork: () => Xs });
   function Ve(n, t) {
-    let e = n.nodes.length,
+    const e = n.nodes.length,
       o = n.connections.length,
       s = n.gates.length,
       i = No.get(n);
     if (i && i.nodes === e && i.conns === o && i.gates === s)
       return i.value * t;
-    let r = e - n.input - n.output + o + s;
+    const r = e - n.input - n.output + o + s;
     return No.set(n, { nodes: e, conns: o, gates: s, value: r }), r * t;
   }
   function Ao(n, t, e, o) {
@@ -6150,7 +6150,7 @@
       a = [],
       l = null;
     try {
-      let u = typeof process < 'u' && !!process.versions?.node;
+      const u = typeof process < 'u' && !!process.versions?.node;
       u && dt.workers?.getNodeTestWorker
         ? (l = await dt.workers.getNodeTestWorker())
         : !u &&
@@ -6170,7 +6170,7 @@
       } catch (p) {
         G.warnings && console.warn('Worker spawn failed', p);
       }
-    let h = (u) =>
+    const h = (u) =>
       new Promise((p) => {
         if (!a.length) {
           p();
@@ -6183,7 +6183,7 @@
               --d === 0 && p();
               return;
             }
-            let _ = c.shift();
+            const _ = c.shift();
             m.evaluate(_)
               .then((y) => {
                 typeof _ < 'u' &&
@@ -6248,7 +6248,7 @@
     let c;
     if (h === 1) c = Ao(n, s, i, o);
     else {
-      let b = await Ks(n, s, i, o, h, t);
+      const b = await Ks(n, s, i, o, h, t);
       (c = b.fitnessFunction), (h = b.threads);
     }
     (t.network = this),
@@ -6256,7 +6256,7 @@
         t.popsize == null &&
         (t.popsize = t.populationSize),
       typeof t.speciation > 'u' && (t.speciation = !1);
-    let { default: d } = await Promise.resolve().then(() => (Ke(), Co)),
+    const { default: d } = await Promise.resolve().then(() => (Ke(), Co)),
       f = new d(this.input, this.output, c, t);
     if (
       typeof t.iterations == 'number' &&
@@ -6277,7 +6277,7 @@
       w = 5,
       v = typeof t.iterations == 'number';
     for (; (e === -1 || m > e) && (!v || f.generation < t.iterations); ) {
-      let b = await f.evolve(),
+      const b = await f.evolve(),
         M = b.score ?? -1 / 0;
       if (
         ((m = -(M - Ve(b, o)) || 1 / 0),
@@ -6306,7 +6306,7 @@
     } catch {}
     return { error: m, iterations: f.generation, time: Date.now() - u };
   }
-  var No,
+  let No,
     Eo = C(() => {
       'use strict';
       pt();
@@ -6431,34 +6431,34 @@
           try {
             typeof G.poolMaxPerBucket == 'number' &&
               ft.setMaxPerBucket(G.poolMaxPerBucket);
-            let i =
+            const i =
               typeof G.poolPrewarmCount == 'number' ? G.poolPrewarmCount : 2;
             ft.prewarm(this.output, i);
           } catch {}
           o?.seed !== void 0 && this.setSeed(o.seed);
           for (let i = 0; i < this.input + this.output; i++) {
-            let r = i < this.input ? 'input' : 'output';
+            const r = i < this.input ? 'input' : 'output';
             G.enableNodePooling
               ? this.nodes.push(Oe({ type: r, rng: this._rand }))
               : this.nodes.push(new K(r, void 0, this._rand));
           }
           for (let i = 0; i < this.input; i++)
             for (let r = this.input; r < this.input + this.output; r++) {
-              let a = this._rand() * this.input * Math.sqrt(2 / this.input);
+              const a = this._rand() * this.input * Math.sqrt(2 / this.input);
               this.connect(this.nodes[i], this.nodes[r], a);
             }
-          let s = o?.minHidden || 0;
+          const s = o?.minHidden || 0;
           if (s > 0)
             for (; this.nodes.length < this.input + this.output + s; )
               this.addNodeBetween();
         }
         addNodeBetween() {
           if (this.connections.length === 0) return;
-          let t = Math.floor(this._rand() * this.connections.length),
+          const t = Math.floor(this._rand() * this.connections.length),
             e = this.connections[t];
           if (!e) return;
           this.disconnect(e.from, e.to);
-          let o = G.enableNodePooling
+          const o = G.enableNodePooling
             ? Oe({ type: 'hidden', rng: this._rand })
             : new K('hidden', void 0, this._rand);
           this.nodes.push(o),
@@ -6485,7 +6485,7 @@
           return An.call(this, t, e);
         }
         configurePruning(t) {
-          let { start: e, end: o, targetSparsity: s } = t;
+          const { start: e, end: o, targetSparsity: s } = t;
           if (e < 0 || o < e)
             throw new Error('Invalid pruning schedule window');
           if (s <= 0 || s >= 1)
@@ -6519,7 +6519,7 @@
               throw new Error(
                 'Per-hidden-layer weight noise requires a layered network with at least one hidden layer'
               );
-            let e = this.layers.length - 2;
+            const e = this.layers.length - 2;
             if (t.perHiddenLayer.length !== e)
               throw new Error(
                 `Expected ${e} std dev entries (one per hidden layer), got ${t.perHiddenLayer.length}`
@@ -6581,7 +6581,7 @@
             throw new Error('Stochastic depth survival probs must be in (0,1]');
           if (!this.layers || this.layers.length === 0)
             throw new Error('Stochastic depth requires layer-based network');
-          let e = Math.max(0, this.layers.length - 2);
+          const e = Math.max(0, this.layers.length - 2);
           if (t.length !== e)
             throw new Error(
               `Expected ${e} survival probabilities for hidden layers, got ${t.length}`
@@ -6596,10 +6596,10 @@
         }
         resetDropoutMasks() {
           if (this.layers && this.layers.length > 0) {
-            for (let t of this.layers)
+            for (const t of this.layers)
               if (typeof t.nodes < 'u')
-                for (let e of t.nodes) typeof e.mask < 'u' && (e.mask = 1);
-          } else for (let t of this.nodes) typeof t.mask < 'u' && (t.mask = 1);
+                for (const e of t.nodes) typeof e.mask < 'u' && (e.mask = 1);
+          } else for (const t of this.nodes) typeof t.mask < 'u' && (t.mask = 1);
         }
         standalone() {
           return Sn(this);
@@ -6620,12 +6620,12 @@
             try {
               return this._fastSlabActivate(t);
             } catch {}
-          let s = ft.acquire(this.output);
+          const s = ft.acquire(this.output);
           if (!this.nodes || this.nodes.length === 0)
             throw new Error(
               'Network structure is corrupted or empty. No nodes found.'
             );
-          let i = s;
+          const i = s;
           this._lastSkippedLayers = [];
           let r = {
               droppedHiddenNodes: 0,
@@ -6643,7 +6643,7 @@
               (l = this._weightNoiseSchedule(this._trainingStep)),
             l > 0 || this._weightNoisePerHidden.length > 0)
           )
-            for (let u of this.connections) {
+            for (const u of this.connections) {
               if (u._origWeightNoise != null) continue;
               u._origWeightNoise = u.weight;
               let p = l;
@@ -6655,14 +6655,14 @@
                     break;
                   }
                 if (c > 0 && c < this.layers.length) {
-                  let d = c - 1;
+                  const d = c - 1;
                   d >= 0 &&
                     d < this._weightNoisePerHidden.length &&
                     (p = this._weightNoisePerHidden[d]);
                 }
               }
               if (p > 0) {
-                let c = p * n._gaussianRand(this._rand);
+                const c = p * n._gaussianRand(this._rand);
                 (u.weight += c), (u._wnLast = c), (a = !0);
               } else u._wnLast = 0;
             }
@@ -6671,7 +6671,7 @@
             this._stochasticDepthSchedule &&
             this._stochasticDepth.length > 0
           ) {
-            let u = this._stochasticDepthSchedule(
+            const u = this._stochasticDepthSchedule(
               this._trainingStep,
               this._stochasticDepth.slice()
             );
@@ -6691,15 +6691,15 @@
                 d = p > 0 && p < this.layers.length - 1,
                 f = !1;
               if (e && d) {
-                let _ = p - 1;
+                const _ = p - 1;
                 if (_ < this._stochasticDepth.length) {
-                  let y = this._stochasticDepth[_];
+                  const y = this._stochasticDepth[_];
                   if (
                     ((f = this._rand() >= y),
                     f && (!u || u.length !== c.nodes.length) && (f = !1),
                     !f)
                   ) {
-                    let g = p === 0 ? c.activate(t, e) : c.activate(void 0, e);
+                    const g = p === 0 ? c.activate(t, e) : c.activate(void 0, e);
                     u = y < 1 ? g.map((w) => w * (1 / y)) : g;
                     continue;
                   }
@@ -6716,21 +6716,21 @@
           } else if (this.layers && this.layers.length > 0) {
             let u;
             for (let p = 0; p < this.layers.length; p++) {
-              let c = this.layers[p],
+              const c = this.layers[p],
                 d = p > 0 && p < this.layers.length - 1,
                 f = p === 0 ? c.activate(t, !1) : c.activate(void 0, !1);
               if (d && e && this.dropout > 0) {
                 let m = 0;
-                for (let _ of c.nodes)
+                for (const _ of c.nodes)
                   (_.mask = this._rand() < this.dropout ? 0 : 1),
                     r.totalHiddenNodes++,
                     _.mask === 0 && r.droppedHiddenNodes++,
                     _.mask === 0 && ((_.activation = 0), m++);
                 if (m === c.nodes.length && c.nodes.length > 0) {
-                  let _ = Math.floor(this._rand() * c.nodes.length);
+                  const _ = Math.floor(this._rand() * c.nodes.length);
                   (c.nodes[_].mask = 1), (c.nodes[_].activation = f[_]);
                 }
-              } else if (d) for (let m of c.nodes) m.mask = 1;
+              } else if (d) for (const m of c.nodes) m.mask = 1;
               u = f;
             }
             if (u)
@@ -6744,23 +6744,23 @@
             let u = this.nodes.filter((d) => d.type === 'hidden'),
               p = 0;
             if (e && this.dropout > 0) {
-              for (let d of u)
+              for (const d of u)
                 (d.mask = this._rand() < this.dropout ? 0 : 1),
                   r.totalHiddenNodes++,
                   d.mask === 0 && (p++, r.droppedHiddenNodes++);
               if (p === u.length && u.length > 0) {
-                let d = Math.floor(this._rand() * u.length);
+                const d = Math.floor(this._rand() * u.length);
                 u[d].mask = 1;
               }
-            } else for (let d of u) d.mask = 1;
+            } else for (const d of u) d.mask = 1;
             if (e && this._weightNoiseStd > 0) {
               this._wnOrig ||
                 (this._wnOrig = new Array(this.connections.length));
               for (let d = 0; d < this.connections.length; d++) {
-                let f = this.connections[d];
+                const f = this.connections[d];
                 if (f._origWeightNoise != null) continue;
                 f._origWeightNoise = f.weight;
-                let m = this._weightNoiseStd * n._gaussianRand(this._rand);
+                const m = this._weightNoiseStd * n._gaussianRand(this._rand);
                 f.weight += m;
               }
             }
@@ -6769,14 +6769,14 @@
               (this.nodes.forEach((d, f) => {
                 if (d.type === 'input') d.activate(t[f]);
                 else if (d.type === 'output') {
-                  let m = d.activate();
+                  const m = d.activate();
                   i[c++] = m;
                 } else d.activate();
               }),
               e && this._dropConnectProb > 0)
             )
-              for (let d of this.connections) {
-                let f = this._rand() < this._dropConnectProb ? 0 : 1;
+              for (const d of this.connections) {
+                const f = this._rand() < this._dropConnectProb ? 0 : 1;
                 f === 0 && r.droppedConnections++,
                   (d.dcMask = f),
                   f === 0
@@ -6786,12 +6786,12 @@
                       ((d.weight = d._origWeight), delete d._origWeight);
               }
             else
-              for (let d of this.connections)
+              for (const d of this.connections)
                 d._origWeight != null &&
                   ((d.weight = d._origWeight), delete d._origWeight),
                   (d.dcMask = 1);
             if (e && a)
-              for (let d of this.connections)
+              for (const d of this.connections)
                 d._origWeightNoise != null &&
                   ((d.weight = d._origWeightNoise), delete d._origWeightNoise);
           }
@@ -6800,7 +6800,7 @@
               (r.weightNoise.meanAbs =
                 r.weightNoise.sumAbs / r.weightNoise.count),
             (this._lastStats = r);
-          let h = Array.from(i);
+          const h = Array.from(i);
           return ft.release(i), h;
         }
         static _gaussianRand(t = Math.random) {
@@ -6811,15 +6811,15 @@
           return Math.sqrt(-2 * Math.log(e)) * Math.cos(2 * Math.PI * o);
         }
         noTraceActivate(t) {
-          let { noTraceActivate: e } = (ae(), q(re));
+          const { noTraceActivate: e } = (ae(), q(re));
           return e.call(this, t);
         }
         activateRaw(t, e = !1, o = 1e3) {
-          let { activateRaw: s } = (ae(), q(re));
+          const { activateRaw: s } = (ae(), q(re));
           return s.call(this, t, e, o);
         }
         activateBatch(t, e = !1) {
-          let { activateBatch: o } = (ae(), q(re));
+          const { activateBatch: o } = (ae(), q(re));
           return o.call(this, t, e);
         }
         propagate(t, e, o, s, i = 0, r) {
@@ -6847,7 +6847,7 @@
           this.nodes.forEach((t) => t.clear());
         }
         mutate(t) {
-          let { mutateImpl: e } = (co(), q(ao));
+          const { mutateImpl: e } = (co(), q(ao));
           return e.call(this, t);
         }
         connect(t, e, o) {
@@ -6857,7 +6857,7 @@
           return Wn.call(this, t, e);
         }
         remove(t) {
-          let e = Kn.call(this, t);
+          const e = Kn.call(this, t);
           if (G.enableNodePooling)
             try {
               ie(t);
@@ -6871,11 +6871,11 @@
           return Bn.call(this, t);
         }
         _applyGradientClipping(t) {
-          let { applyGradientClippingImpl: e } = (ke(), q(De));
+          const { applyGradientClippingImpl: e } = (ke(), q(De));
           e(this, t);
         }
         train(t, e) {
-          let { trainImpl: o } = (ke(), q(De));
+          const { trainImpl: o } = (ke(), q(De));
           return o(this, t, e);
         }
         getRawGradientNorm() {
@@ -6907,7 +6907,7 @@
           return o === 'sum' && e > 1 ? t / e : t;
         }
         async evolve(t, e) {
-          let { evolveNetwork: o } = await Promise.resolve().then(
+          const { evolveNetwork: o } = await Promise.resolve().then(
             () => (Eo(), Oo)
           );
           return o.call(this, t, e);
@@ -6915,7 +6915,7 @@
         test(t, e) {
           if (!Array.isArray(t) || t.length === 0)
             throw new Error('Test set is empty or not an array.');
-          for (let a of t) {
+          for (const a of t) {
             if (!Array.isArray(a.input) || a.input.length !== this.input)
               throw new Error(
                 `Test sample input size mismatch: expected ${this.input}, got ${
@@ -6935,11 +6935,11 @@
           this.nodes.forEach((a) => {
             a.type === 'hidden' && (a.mask = 1);
           });
-          let r = this.dropout;
+          const r = this.dropout;
           return (
             this.dropout > 0 && (this.dropout = 0),
             t.forEach((a) => {
-              let l = this.noTraceActivate(a.input);
+              const l = this.noTraceActivate(a.input);
               o += s(a.output, l);
             }),
             (this.dropout = r),
@@ -6971,18 +6971,18 @@
           return vn(this);
         }
         static createMLP(t, e, o) {
-          let s = Array.from({ length: t }, () => new K('input')),
+          const s = Array.from({ length: t }, () => new K('input')),
             i = e.map((u) => Array.from({ length: u }, () => new K('hidden'))),
             r = Array.from({ length: o }, () => new K('output')),
             a = [...s, ...i.flat(), ...r],
             l = new n(t, o);
           l.nodes = a;
           let h = s;
-          for (let u of i) {
-            for (let p of u) for (let c of h) c.connect(p);
+          for (const u of i) {
+            for (const p of u) for (const c of h) c.connect(p);
             h = u;
           }
-          for (let u of r) for (let p of h) p.connect(u);
+          for (const u of r) for (const p of h) p.connect(u);
           return (
             (l.connections = l.nodes.flatMap((u) => u.connections.out)),
             (l._topoDirty = !0),
@@ -6990,7 +6990,7 @@
           );
         }
         static rebuildConnections(t) {
-          let e = new Set();
+          const e = new Set();
           t.nodes.forEach((o) => {
             o.connections.out.forEach((s) => {
               e.add(s);
@@ -7001,8 +7001,8 @@
       };
     });
   function Io() {
-    let n = (pt(), q(ut));
-    for (let t of this.population) {
+    const n = (pt(), q(ut));
+    for (const t of this.population) {
       this.options.adaptiveMutation?.enabled &&
         t._mutRate === void 0 &&
         ((t._mutRate =
@@ -7012,7 +7012,7 @@
               (this.options.mutationRate || 0.7)),
         this.options.adaptiveMutation.adaptAmount &&
           (t._mutAmount = this.options.mutationAmount || 1));
-      let e =
+      const e =
           this.options.mutationRate !== void 0
             ? this.options.mutationRate
             : this.options.adaptiveMutation?.enabled
@@ -7027,11 +7027,11 @@
         for (let s = 0; s < o; s++) {
           let i = this.selectMutationMethod(t, !1);
           if (Array.isArray(i)) {
-            let r = i;
+            const r = i;
             i = r[Math.floor(this._getRNG()() * r.length)];
           }
           if (i && i.name) {
-            let r = t.nodes.length,
+            const r = t.nodes.length,
               a = t.connections.length;
             if (i === n.mutation.ADD_NODE) {
               this._mutateAddNodeReuse(t);
@@ -7057,12 +7057,12 @@
               (this._getRNG()() < 0.5 && this._mutateAddConnReuse(t),
               this.options.operatorAdaptation?.enabled)
             ) {
-              let l = this._operatorStats.get(i.name) || {
+              const l = this._operatorStats.get(i.name) || {
                 success: 0,
                 attempts: 0,
               };
               l.attempts++;
-              let h = t.nodes.length,
+              const h = t.nodes.length,
                 u = t.connections.length;
               (h > r || u > a) && l.success++,
                 this._operatorStats.set(i.name, l);
@@ -7073,16 +7073,16 @@
   }
   function To(n) {
     if (n.connections.length === 0) {
-      let h = n.nodes.find((p) => p.type === 'input'),
+      const h = n.nodes.find((p) => p.type === 'input'),
         u = n.nodes.find((p) => p.type === 'output');
       if (h && u)
         try {
           n.connect(h, u, 1);
         } catch {}
     }
-    let t = n.connections.filter((h) => h.enabled !== !1);
+    const t = n.connections.filter((h) => h.enabled !== !1);
     if (!t.length) return;
-    let e = t[Math.floor(this._getRNG()() * t.length)],
+    const e = t[Math.floor(this._getRNG()() * t.length)],
       o = e.from.geneId,
       s = e.to.geneId,
       i = o + '->' + s,
@@ -7091,16 +7091,16 @@
     let a = this._nodeSplitInnovations.get(i),
       l = (mt(), q(ne)).default;
     if (a) {
-      let h = new l('hidden');
+      const h = new l('hidden');
       h.geneId = a.newNodeGeneId;
-      let u = n.nodes.indexOf(e.to),
+      const u = n.nodes.indexOf(e.to),
         p = Math.min(u, n.nodes.length - n.output);
       n.nodes.splice(p, 0, h);
-      let c = n.connect(e.from, h, 1)[0],
+      const c = n.connect(e.from, h, 1)[0],
         d = n.connect(h, e.to, r)[0];
       c && (c.innovation = a.inInnov), d && (d.innovation = a.outInnov);
     } else {
-      let h = new l('hidden'),
+      const h = new l('hidden'),
         u = n.connect(e.from, h, 1)[0],
         p = n.connect(h, e.to, r)[0];
       u && (u.innovation = this._nextGlobalInnovation++),
@@ -7111,23 +7111,23 @@
           outInnov: p?.innovation,
         }),
         this._nodeSplitInnovations.set(i, a);
-      let c = n.nodes.indexOf(e.to),
+      const c = n.nodes.indexOf(e.to),
         d = Math.min(c, n.nodes.length - n.output);
       n.nodes.splice(d, 0, h);
     }
   }
   function Do(n) {
-    let t = [];
+    const t = [];
     for (let c = 0; c < n.nodes.length - n.output; c++) {
-      let d = n.nodes[c];
+      const d = n.nodes[c];
       for (let f = Math.max(c + 1, n.input); f < n.nodes.length; f++) {
-        let m = n.nodes[f];
+        const m = n.nodes[f];
         d.isProjectingTo(m) || t.push([d, m]);
       }
     }
     if (!t.length) return;
-    let e = t.filter((c) => {
-        let d = c[0].geneId,
+    const e = t.filter((c) => {
+        const d = c[0].geneId,
           f = c[1].geneId,
           m = d < f ? d + '::' + f : f + '::' + d;
         return this._connInnovations.has(m);
@@ -7145,34 +7145,34 @@
     if (
       n._enforceAcyclic &&
       (() => {
-        let d = [a],
+        const d = [a],
           f = new Set();
         for (; d.length; ) {
-          let m = d.pop();
+          const m = d.pop();
           if (m === r) return !0;
           if (!f.has(m)) {
             f.add(m);
-            for (let _ of m.connections.out) d.push(_.to);
+            for (const _ of m.connections.out) d.push(_.to);
           }
         }
         return !1;
       })()
     )
       return;
-    let p = n.connect(r, a)[0];
+    const p = n.connect(r, a)[0];
     if (p)
       if (this._connInnovations.has(u))
         p.innovation = this._connInnovations.get(u);
       else {
-        let c = this._nextGlobalInnovation++;
+        const c = this._nextGlobalInnovation++;
         (p.innovation = c), this._connInnovations.set(u, c);
-        let d = l + '::' + h,
+        const d = l + '::' + h,
           f = h + '::' + l;
         this._connInnovations.set(d, c), this._connInnovations.set(f, c);
       }
   }
   function ko(n, t) {
-    let e = this.options.maxNodes || 1 / 0,
+    const e = this.options.maxNodes || 1 / 0,
       o = Math.min(
         this.getMinimumHiddenSize(t),
         e - n.nodes.filter((h) => h.type !== 'hidden').length
@@ -7188,17 +7188,17 @@
       } catch {}
       return;
     }
-    let a = r.length;
+    const a = r.length;
     for (let h = a; h < o && n.nodes.length < e; h++) {
-      let u = (mt(), q(ne)).default,
+      const u = (mt(), q(ne)).default,
         p = new u('hidden');
       n.nodes.push(p), r.push(p);
     }
-    for (let h of r) {
+    for (const h of r) {
       if (h.connections.in.length === 0) {
-        let u = s.concat(r.filter((p) => p !== h));
+        const u = s.concat(r.filter((p) => p !== h));
         if (u.length > 0) {
-          let p = this._getRNG(),
+          const p = this._getRNG(),
             c = u[Math.floor(p() * u.length)];
           try {
             n.connect(c, h);
@@ -7206,9 +7206,9 @@
         }
       }
       if (h.connections.out.length === 0) {
-        let u = i.concat(r.filter((p) => p !== h));
+        const u = i.concat(r.filter((p) => p !== h));
         if (u.length > 0) {
-          let p = this._getRNG(),
+          const p = this._getRNG(),
             c = u[Math.floor(p() * u.length)];
           try {
             n.connect(h, c);
@@ -7219,40 +7219,40 @@
     (bt(), q(Pt)).default.rebuildConnections(n);
   }
   function jo(n) {
-    let t = n.nodes.filter((r) => r.type === 'input'),
+    const t = n.nodes.filter((r) => r.type === 'input'),
       e = n.nodes.filter((r) => r.type === 'output'),
       o = n.nodes.filter((r) => r.type === 'hidden'),
       s = (r) =>
         r.connections && r.connections.out && r.connections.out.length > 0,
       i = (r) =>
         r.connections && r.connections.in && r.connections.in.length > 0;
-    for (let r of t)
+    for (const r of t)
       if (!s(r)) {
-        let a = o.length > 0 ? o : e;
+        const a = o.length > 0 ? o : e;
         if (a.length > 0) {
-          let l = this._getRNG(),
+          const l = this._getRNG(),
             h = a[Math.floor(l() * a.length)];
           try {
             n.connect(r, h);
           } catch {}
         }
       }
-    for (let r of e)
+    for (const r of e)
       if (!i(r)) {
-        let a = o.length > 0 ? o : t;
+        const a = o.length > 0 ? o : t;
         if (a.length > 0) {
-          let l = this._getRNG(),
+          const l = this._getRNG(),
             h = a[Math.floor(l() * a.length)];
           try {
             n.connect(h, r);
           } catch {}
         }
       }
-    for (let r of o) {
+    for (const r of o) {
       if (!i(r)) {
-        let a = t.concat(o.filter((l) => l !== r));
+        const a = t.concat(o.filter((l) => l !== r));
         if (a.length > 0) {
-          let l = this._getRNG(),
+          const l = this._getRNG(),
             h = a[Math.floor(l() * a.length)];
           try {
             n.connect(h, r);
@@ -7260,9 +7260,9 @@
         }
       }
       if (!s(r)) {
-        let a = e.concat(o.filter((l) => l !== r));
+        const a = e.concat(o.filter((l) => l !== r));
         if (a.length > 0) {
-          let l = this._getRNG(),
+          const l = this._getRNG(),
             h = a[Math.floor(l() * a.length)];
           try {
             n.connect(r, h);
@@ -7272,7 +7272,7 @@
     }
   }
   function Lo(n, t = !0) {
-    let e = (pt(), q(ut)),
+    const e = (pt(), q(ut)),
       o = this.options.mutation === e.mutation.FFW,
       s =
         Array.isArray(this.options.mutation) &&
@@ -7300,26 +7300,26 @@
       this.options.phasedComplexity?.enabled && this._phase)
     ) {
       if (((i = i.filter((a) => !!a)), this._phase === 'simplify')) {
-        let a = i.filter(
+        const a = i.filter(
           (l) => l && l.name && l.name.startsWith && l.name.startsWith('SUB_')
         );
         a.length && (i = [...i, ...a]);
       } else if (this._phase === 'complexify') {
-        let a = i.filter(
+        const a = i.filter(
           (l) => l && l.name && l.name.startsWith && l.name.startsWith('ADD_')
         );
         a.length && (i = [...i, ...a]);
       }
     }
     if (this.options.operatorAdaptation?.enabled) {
-      let a = this.options.operatorAdaptation.boost ?? 2,
+      const a = this.options.operatorAdaptation.boost ?? 2,
         l = this._operatorStats,
         h = [];
-      for (let u of i) {
+      for (const u of i) {
         h.push(u);
-        let p = l.get(u.name);
+        const p = l.get(u.name);
         if (p && p.attempts > 5) {
-          let c = p.success / p.attempts;
+          const c = p.success / p.attempts;
           if (c > 0.55)
             for (let d = 0; d < Math.min(a, Math.floor(c * a)); d++) h.push(u);
         }
@@ -7337,16 +7337,16 @@
     )
       return null;
     if (this.options.operatorBandit?.enabled) {
-      let a = this.options.operatorBandit.c ?? 1.4,
+      const a = this.options.operatorBandit.c ?? 1.4,
         l = this.options.operatorBandit.minAttempts ?? 5,
         h = this._operatorStats;
-      for (let d of i)
+      for (const d of i)
         h.has(d.name) || h.set(d.name, { success: 0, attempts: 0 });
       let u = Array.from(h.values()).reduce((d, f) => d + f.attempts, 0) + 1e-9,
         p = r,
         c = -1 / 0;
-      for (let d of i) {
-        let f = h.get(d.name),
+      for (const d of i) {
+        const f = h.get(d.name),
           m = f.attempts > 0 ? f.success / f.attempts : 0,
           _ =
             f.attempts < l
@@ -7364,12 +7364,12 @@
       ? null
       : r;
   }
-  var Po = C(() => {
+  const Po = C(() => {
     'use strict';
     jt();
   });
   function Ro(n) {
-    let t = this._getObjectives(),
+    const t = this._getObjectives(),
       e = n.map((u) =>
         t.map((p) => {
           try {
@@ -7403,27 +7403,27 @@
     let l = a,
       h = 0;
     for (; l.length; ) {
-      let u = [];
-      for (let p of l) {
+      const u = [];
+      for (const p of l) {
         n[p]._moRank = h;
-        for (let c of r[p]) i[c]--, i[c] === 0 && u.push(c);
+        for (const c of r[p]) i[c]--, i[c] === 0 && u.push(c);
       }
       if ((s.push(l.map((p) => n[p])), (l = u), h++, h > 50)) break;
     }
-    for (let u of s)
+    for (const u of s)
       if (u.length !== 0) {
-        for (let p of u) p._moCrowd = 0;
+        for (const p of u) p._moCrowd = 0;
         for (let p = 0; p < t.length; p++) {
-          let c = u.slice().sort((_, y) => {
-            let g = t[p].accessor(_),
+          const c = u.slice().sort((_, y) => {
+            const g = t[p].accessor(_),
               w = t[p].accessor(y);
             return g - w;
           });
           (c[0]._moCrowd = 1 / 0), (c[c.length - 1]._moCrowd = 1 / 0);
-          let d = t[p].accessor(c[0]),
+          const d = t[p].accessor(c[0]),
             m = t[p].accessor(c[c.length - 1]) - d || 1;
           for (let _ = 1; _ < c.length - 1; _++) {
-            let y = t[p].accessor(c[_ - 1]),
+            const y = t[p].accessor(c[_ - 1]),
               g = t[p].accessor(c[_ + 1]);
             c[_]._moCrowd += (g - y) / m;
           }
@@ -7439,10 +7439,10 @@
       s
     );
   }
-  var Wo = C(() => {
+  const Wo = C(() => {
     'use strict';
   });
-  var Rt = {};
+  const Rt = {};
   ct(Rt, {
     applyAdaptiveMutation: () => er,
     applyAncestorUniqAdaptive: () => tr,
@@ -7453,11 +7453,11 @@
   });
   function Ys() {
     if (!this.options.complexityBudget?.enabled) return;
-    let n = this.options.complexityBudget;
+    const n = this.options.complexityBudget;
     if (n.mode === 'adaptive') {
       this._cbHistory || (this._cbHistory = []),
         this._cbHistory.push(this.population[0]?.score || 0);
-      let t = n.improvementWindow ?? 10;
+      const t = n.improvementWindow ?? 10;
       this._cbHistory.length > t && this._cbHistory.shift();
       let e = this._cbHistory,
         o = e.length > 1 ? e[e.length - 1] - e[0] : 0,
@@ -7470,12 +7470,12 @@
           m = 0;
         for (let y = 0; y < p; y++)
           (c += y), (d += e[y]), (f += y * e[y]), (m += y * y);
-        let _ = p * m - c * c || 1;
+        const _ = p * m - c * c || 1;
         s = (p * f - c * d) / _;
       }
       this._cbMaxNodes === void 0 &&
         (this._cbMaxNodes = n.maxNodesStart ?? this.input + this.output + 2);
-      let i = n.increaseFactor ?? 1.1,
+      const i = n.increaseFactor ?? 1.1,
         r = n.stagnationFactor ?? 0.95,
         a = Math.min(2, Math.max(-2, s / (Math.abs(e[0]) + 1e-9))),
         l = i + 0.05 * Math.max(0, a),
@@ -7496,7 +7496,7 @@
       )
         this._cbMaxNodes = Math.max(n.minNodes, this._cbMaxNodes);
       else {
-        let p = this.input + this.output + 2;
+        const p = this.input + this.output + 2;
         this._cbMaxNodes < p && (this._cbMaxNodes = p);
       }
       (this.options.maxNodes = this._cbMaxNodes),
@@ -7514,7 +7514,7 @@
               )),
           (this.options.maxConns = this._cbMaxConns));
     } else {
-      let t = n.maxNodesStart ?? this.input + this.output + 2,
+      const t = n.maxNodesStart ?? this.input + this.output + 2,
         e = n.maxNodesEnd ?? t * 4,
         o = n.horizon ?? 100,
         s = Math.min(1, this.generation / o);
@@ -7523,7 +7523,7 @@
   }
   function Zs() {
     if (!this.options.phasedComplexity?.enabled) return;
-    let n = this.options.phasedComplexity.phaseLength ?? 10;
+    const n = this.options.phasedComplexity.phaseLength ?? 10;
     this._phase ||
       ((this._phase =
         this.options.phasedComplexity.initialPhase ?? 'complexify'),
@@ -7535,10 +7535,10 @@
   }
   function Qs() {
     if (!this.options.minimalCriterionAdaptive?.enabled) return;
-    let n = this.options.minimalCriterionAdaptive;
+    const n = this.options.minimalCriterionAdaptive;
     this._mcThreshold === void 0 &&
       (this._mcThreshold = n.initialThreshold ?? 0);
-    let t = this.population.map((r) => r.score || 0),
+    const t = this.population.map((r) => r.score || 0),
       e = t.filter((r) => r >= this._mcThreshold).length,
       o = t.length ? e / t.length : 0,
       s = n.targetAcceptance ?? 0.5,
@@ -7546,18 +7546,18 @@
     o > s * 1.05
       ? (this._mcThreshold *= 1 + i)
       : o < s * 0.95 && (this._mcThreshold *= 1 - i);
-    for (let r of this.population)
+    for (const r of this.population)
       (r.score || 0) < this._mcThreshold && (r.score = 0);
   }
   function tr() {
     if (!this.options.ancestorUniqAdaptive?.enabled) return;
-    let n = this.options.ancestorUniqAdaptive,
+    const n = this.options.ancestorUniqAdaptive,
       t = n.cooldown ?? 5;
     if (this.generation - this._lastAncestorUniqAdjustGen < t) return;
-    let e = this._telemetry[this._telemetry.length - 1]?.lineage,
+    const e = this._telemetry[this._telemetry.length - 1]?.lineage,
       o = e ? e.ancestorUniq : void 0;
     if (typeof o != 'number') return;
-    let s = n.lowThreshold ?? 0.25,
+    const s = n.lowThreshold ?? 0.25,
       i = n.highThreshold ?? 0.55,
       r = n.adjust ?? 0.01;
     if (
@@ -7581,7 +7581,7 @@
           mode: 'spread',
           strength: 0.01,
         });
-      let a = this.options.lineagePressure;
+      const a = this.options.lineagePressure;
       o < s
         ? ((a.strength = (a.strength || 0.01) * 1.15),
           (a.mode = 'spread'),
@@ -7593,10 +7593,10 @@
   }
   function er() {
     if (!this.options.adaptiveMutation?.enabled) return;
-    let n = this.options.adaptiveMutation,
+    const n = this.options.adaptiveMutation,
       t = n.adaptEvery ?? 1;
     if (!(t <= 1 || this.generation % t === 0)) return;
-    let e = this.population.filter((c) => typeof c.score == 'number');
+    const e = this.population.filter((c) => typeof c.score == 'number');
     e.sort((c, d) => (c.score || 0) - (d.score || 0));
     let o = Math.floor(e.length / 2),
       s = e.slice(o),
@@ -7608,7 +7608,7 @@
       u = !1,
       p = !1;
     for (let c = 0; c < this.population.length; c++) {
-      let d = this.population[c];
+      const d = this.population[c];
       if (d._mutRate === void 0) continue;
       let f = d._mutRate,
         m = this._getRNG()() * 2 - 1;
@@ -7621,7 +7621,7 @@
       else if (h === 'exploreLow')
         m = i.includes(d) ? Math.abs(m * 1.5) : -Math.abs(m * 0.5);
       else if (h === 'anneal') {
-        let _ = Math.min(1, this.generation / (50 + this.population.length));
+        const _ = Math.min(1, this.generation / (50 + this.population.length));
         m *= 1 - _;
       }
       if (
@@ -7641,16 +7641,16 @@
             : (y = i.includes(d) ? Math.abs(y) : -Math.abs(y)));
         let g = d._mutAmount ?? (this.options.mutationAmount || 1);
         (g += y), (g = Math.round(g));
-        let w = n.minAmount ?? 1,
+        const w = n.minAmount ?? 1,
           v = n.maxAmount ?? 10;
         g < w && (g = w), g > v && (g = v), (d._mutAmount = g);
       }
     }
     if (h === 'twoTier' && !(u && p)) {
-      let c = this.options.adaptiveMutation.initialRate ?? 0.5,
+      const c = this.options.adaptiveMutation.initialRate ?? 0.5,
         d = Math.floor(this.population.length / 2);
       for (let f = 0; f < this.population.length; f++) {
-        let m = this.population[f];
+        const m = this.population[f];
         m._mutRate !== void 0 &&
           (f < d
             ? (m._mutRate = Math.min(m._mutRate + r, 1))
@@ -7660,34 +7660,34 @@
   }
   function nr() {
     if (!this.options.operatorAdaptation?.enabled) return;
-    let n = this.options.operatorAdaptation.decay ?? 0.9;
-    for (let [t, e] of this._operatorStats.entries())
+    const n = this.options.operatorAdaptation.decay ?? 0.9;
+    for (const [t, e] of this._operatorStats.entries())
       (e.success *= n), (e.attempts *= n), this._operatorStats.set(t, e);
   }
-  var Wt = C(() => {
+  const Wt = C(() => {
     'use strict';
     jt();
   });
-  var Xe = {};
+  const Xe = {};
   ct(Xe, { buildAnc: () => Bo, computeAncestorUniqueness: () => ir });
   function Bo(n) {
-    let t = new Set();
+    const t = new Set();
     if (!Array.isArray(n._parents)) return t;
-    let e = [];
-    for (let o of n._parents)
+    const e = [];
+    for (const o of n._parents)
       e.push({
         id: o,
         depth: 1,
         genomeRef: this.population.find((s) => s._id === o),
       });
     for (; e.length; ) {
-      let o = e.shift();
+      const o = e.shift();
       if (
         !(o.depth > 4) &&
         (o.id != null && t.add(o.id),
         o.genomeRef && Array.isArray(o.genomeRef._parents))
       )
-        for (let s of o.genomeRef._parents)
+        for (const s of o.genomeRef._parents)
           e.push({
             id: s,
             depth: o.depth + 1,
@@ -7708,23 +7708,23 @@
       let r = Math.floor(this._getRNG()() * this.population.length),
         a = Math.floor(this._getRNG()() * this.population.length);
       a === r && (a = (a + 1) % this.population.length);
-      let l = n(this.population[r]),
+      const l = n(this.population[r]),
         h = n(this.population[a]);
       if (l.size === 0 && h.size === 0) continue;
       let u = 0;
-      for (let d of l) h.has(d) && u++;
-      let p = l.size + h.size - u || 1,
+      for (const d of l) h.has(d) && u++;
+      const p = l.size + h.size - u || 1,
         c = 1 - u / p;
       (e += c), t++;
     }
     return t ? +(e / t).toFixed(3) : 0;
   }
-  var or,
+  let or,
     Ye = C(() => {
       'use strict';
       or = 30;
     });
-  var Fo = {};
+  const Fo = {};
   ct(Fo, {
     applyTelemetrySelect: () => Go,
     buildTelemetryEntry: () => cr,
@@ -7734,32 +7734,32 @@
   });
   function Go(n) {
     if (!this._telemetrySelect || !this._telemetrySelect.size) return n;
-    let t = this._telemetrySelect,
+    const t = this._telemetrySelect,
       e = { gen: n.gen, best: n.best, species: n.species };
-    for (let o of Object.keys(n)) o in e || t.has(o) || delete n[o];
+    for (const o of Object.keys(n)) o in e || t.has(o) || delete n[o];
     return Object.assign(n, e);
   }
   function sr(n) {
-    let t = n;
+    const t = n;
     if (t._entropyGen === this.generation && typeof t._entropyVal == 'number')
       return t._entropyVal;
-    let e = {};
-    for (let r of n.nodes) e[r.geneId] = 0;
-    for (let r of n.connections)
+    const e = {};
+    for (const r of n.nodes) e[r.geneId] = 0;
+    for (const r of n.connections)
       if (r.enabled) {
-        let a = r.from.geneId,
+        const a = r.from.geneId,
           l = r.to.geneId;
         e[a] !== void 0 && e[a]++, e[l] !== void 0 && e[l]++;
       }
-    let o = {},
+    const o = {},
       s = n.nodes.length || 1;
-    for (let r in e) {
-      let a = e[r];
+    for (const r in e) {
+      const a = e[r];
       o[a] = (o[a] || 0) + 1;
     }
     let i = 0;
-    for (let r in o) {
-      let a = o[r] / s;
+    for (const r in o) {
+      const a = o[r] / s;
       a > 0 && (i -= a * Math.log(a + 1e-9));
     }
     return (t._entropyGen = this.generation), (t._entropyVal = i), i;
@@ -7767,7 +7767,7 @@
   function rr() {
     if (!this.options.diversityMetrics?.enabled) return;
     if (this.options.fastMode && !this._fastModeTuned) {
-      let y = this.options.diversityMetrics;
+      const y = this.options.diversityMetrics;
       y &&
         (y.pairSample == null && (y.pairSample = 20),
         y.graphletSample == null && (y.graphletSample = 30)),
@@ -7787,10 +7787,10 @@
       let g = Math.floor(this._getRNG()() * o),
         w = Math.floor(this._getRNG()() * o);
       w === g && (w = (w + 1) % o);
-      let v = this._compatibilityDistance(e[g], e[w]);
+      const v = this._compatibilityDistance(e[g], e[w]);
       (s += v), (i += v * v), r++;
     }
-    let a = r ? s / r : 0,
+    const a = r ? s / r : 0,
       l = r ? Math.max(0, i / r - a * a) : 0,
       h = e.map((y) => this._structuralEntropy(y)),
       u = h.reduce((y, g) => y + g, 0) / (h.length || 1),
@@ -7799,27 +7799,27 @@
         : 0,
       c = [0, 0, 0, 0];
     for (let y = 0; y < t; y++) {
-      let g = e[Math.floor(this._getRNG()() * o)];
+      const g = e[Math.floor(this._getRNG()() * o)];
       if (!g) break;
       if (g.nodes.length < 3) continue;
-      let w = new Set();
+      const w = new Set();
       for (; w.size < 3; ) w.add(Math.floor(this._getRNG()() * g.nodes.length));
       let v = Array.from(w).map((M) => g.nodes[M]),
         b = 0;
-      for (let M of g.connections)
+      for (const M of g.connections)
         M.enabled && v.includes(M.from) && v.includes(M.to) && b++;
       b > 3 && (b = 3), c[b]++;
     }
     let d = c.reduce((y, g) => y + g, 0) || 1,
       f = 0;
     for (let y = 0; y < c.length; y++) {
-      let g = c[y] / d;
+      const g = c[y] / d;
       g > 0 && (f -= g * Math.log(g));
     }
     let m = 0,
       _ = 0;
     if (this._lineageEnabled && o > 0) {
-      let y = e.map((v) => v._depth ?? 0);
+      const y = e.map((v) => v._depth ?? 0);
       m = y.reduce((v, b) => v + b, 0) / o;
       let g = 0,
         w = 0;
@@ -7856,23 +7856,23 @@
     let t = this.generation,
       e = 0;
     if (this.options.multiObjective?.enabled) {
-      let i = this.options.multiObjective.complexityMetric || 'connections',
+      const i = this.options.multiObjective.complexityMetric || 'connections',
         r = this.population.map((c) => c.score || 0),
         a = Math.min(...r),
         l = Math.max(...r),
         h = [];
       for (let c = 0; c < 5; c++) {
-        let d = this.population.filter((f) => (f._moRank ?? 0) === c).length;
+        const d = this.population.filter((f) => (f._moRank ?? 0) === c).length;
         if (!d) break;
         h.push(d);
       }
-      for (let c of this.population) {
+      for (const c of this.population) {
         if ((c._moRank ?? 0) !== 0) continue;
-        let f = l > a ? ((c.score || 0) - a) / (l - a) : 0,
+        const f = l > a ? ((c.score || 0) - a) / (l - a) : 0,
           m = i === 'nodes' ? c.nodes.length : c.connections.length;
         e += f * (1 / (m + 1));
       }
-      let u = Array.from(this._operatorStats.entries()).map(([c, d]) => ({
+      const u = Array.from(this._operatorStats.entries()).map(([c, d]) => ({
           op: c,
           succ: d.success,
           att: d.attempts,
@@ -7898,9 +7898,9 @@
           this._pendingObjectiveRemoves?.length)
       ) {
         p.objEvents = [];
-        for (let c of this._pendingObjectiveAdds)
+        for (const c of this._pendingObjectiveAdds)
           p.objEvents.push({ type: 'add', key: c });
-        for (let c of this._pendingObjectiveRemoves)
+        for (const c of this._pendingObjectiveRemoves)
           p.objEvents.push({ type: 'remove', key: c });
         this._objectiveEvents.push(
           ...p.objEvents.map((c) => ({ gen: t, type: c.type, key: c.key }))
@@ -7919,10 +7919,10 @@
           (p.rng = this._rngState),
         this._lineageEnabled)
       ) {
-        let c = this.population[0],
+        const c = this.population[0],
           d = this.population.map((_) => _._depth ?? 0);
         this._lastMeanDepth = d.reduce((_, y) => _ + y, 0) / (d.length || 1);
-        let { computeAncestorUniqueness: f } = (Ye(), q(Xe)),
+        const { computeAncestorUniqueness: f } = (Ye(), q(Xe)),
           m = f.call(this);
         p.lineage = {
           parents: Array.isArray(c._parents) ? c._parents.slice() : [],
@@ -7938,7 +7938,7 @@
           (p.hv = +e.toFixed(4)),
         this.options.telemetry?.complexity)
       ) {
-        let c = this.population.map((M) => M.nodes.length),
+        const c = this.population.map((M) => M.nodes.length),
           d = this.population.map((M) => M.connections.length),
           f = c.reduce((M, x) => M + x, 0) / (c.length || 1),
           m = d.reduce((M, x) => M + x, 0) / (d.length || 1),
@@ -7947,7 +7947,7 @@
           g = this.population.map((M) => {
             let x = 0,
               N = 0;
-            for (let T of M.connections) T.enabled === !1 ? N++ : x++;
+            for (const T of M.connections) T.enabled === !1 ? N++ : x++;
             return x + N ? x / (x + N) : 0;
           }),
           w = g.reduce((M, x) => M + x, 0) / (g.length || 1),
@@ -7976,7 +7976,7 @@
         p
       );
     }
-    let o = Array.from(this._operatorStats.entries()).map(([i, r]) => ({
+    const o = Array.from(this._operatorStats.entries()).map(([i, r]) => ({
         op: i,
         succ: r.success,
         att: r.attempts,
@@ -8001,9 +8001,9 @@
         this._pendingObjectiveRemoves?.length)
     ) {
       s.objEvents = [];
-      for (let i of this._pendingObjectiveAdds)
+      for (const i of this._pendingObjectiveAdds)
         s.objEvents.push({ type: 'add', key: i });
-      for (let i of this._pendingObjectiveRemoves)
+      for (const i of this._pendingObjectiveRemoves)
         s.objEvents.push({ type: 'remove', key: i });
       this._objectiveEvents.push(
         ...s.objEvents.map((i) => ({ gen: t, type: i.type, key: i.key }))
@@ -8022,7 +8022,7 @@
         (s.rng = this._rngState),
       this._lineageEnabled)
     ) {
-      let i = this.population[0],
+      const i = this.population[0],
         r = this.population.map((c) => c._depth ?? 0);
       this._lastMeanDepth = r.reduce((c, d) => c + d, 0) / (r.length || 1);
       let { buildAnc: a } = (Ye(), q(Xe)),
@@ -8036,16 +8036,16 @@
         let d = Math.floor(this._getRNG()() * this.population.length),
           f = Math.floor(this._getRNG()() * this.population.length);
         f === d && (f = (f + 1) % this.population.length);
-        let m = a.call(this, this.population[d]),
+        const m = a.call(this, this.population[d]),
           _ = a.call(this, this.population[f]);
         if (m.size === 0 && _.size === 0) continue;
         let y = 0;
-        for (let v of m) _.has(v) && y++;
-        let g = m.size + _.size - y || 1,
+        for (const v of m) _.has(v) && y++;
+        const g = m.size + _.size - y || 1,
           w = 1 - y / g;
         (h += w), l++;
       }
-      let p = l ? +(h / l).toFixed(3) : 0;
+      const p = l ? +(h / l).toFixed(3) : 0;
       s.lineage = {
         parents: Array.isArray(i._parents) ? i._parents.slice() : [],
         depthBest: i._depth ?? 0,
@@ -8060,7 +8060,7 @@
         (s.hv = +e.toFixed(4)),
       this.options.telemetry?.complexity)
     ) {
-      let i = this.population.map((m) => m.nodes.length),
+      const i = this.population.map((m) => m.nodes.length),
         r = this.population.map((m) => m.connections.length),
         a = i.reduce((m, _) => m + _, 0) / (i.length || 1),
         l = r.reduce((m, _) => m + _, 0) / (r.length || 1),
@@ -8069,7 +8069,7 @@
         p = this.population.map((m) => {
           let _ = 0,
             y = 0;
-          for (let g of m.connections) g.enabled === !1 ? y++ : _++;
+          for (const g of m.connections) g.enabled === !1 ? y++ : _++;
           return _ + y ? _ / (_ + y) : 0;
         }),
         c = p.reduce((m, _) => m + _, 0) / (p.length || 1),
@@ -8098,32 +8098,32 @@
       s
     );
   }
-  var $o = C(() => {
+  const $o = C(() => {
     'use strict';
     jt();
   });
-  var Yt = {};
+  const Yt = {};
   ct(Yt, { applyAdaptivePruning: () => hr, applyEvolutionPruning: () => lr });
   function lr() {
-    let n = this.options.evolutionPruning;
+    const n = this.options.evolutionPruning;
     if (!n || this.generation < (n.startGeneration || 0)) return;
-    let t = n.interval || 1;
+    const t = n.interval || 1;
     if ((this.generation - n.startGeneration) % t !== 0) return;
     let e = n.rampGenerations || 0,
       o = 1;
     e > 0 &&
       (o = Math.min(1, Math.max(0, (this.generation - n.startGeneration) / e)));
-    let s = (n.targetSparsity || 0) * o;
-    for (let i of this.population)
+    const s = (n.targetSparsity || 0) * o;
+    for (const i of this.population)
       i &&
         typeof i.pruneToSparsity == 'function' &&
         i.pruneToSparsity(s, n.method || 'magnitude');
   }
   function hr() {
     if (!this.options.adaptivePruning?.enabled) return;
-    let n = this.options.adaptivePruning;
+    const n = this.options.adaptivePruning;
     this._adaptivePruneLevel === void 0 && (this._adaptivePruneLevel = 0);
-    let t = n.metric || 'connections',
+    const t = n.metric || 'connections',
       e =
         this.population.reduce((p, c) => p + c.nodes.length, 0) /
         (this.population.length || 1),
@@ -8132,7 +8132,7 @@
         (this.population.length || 1),
       s = t === 'nodes' ? e : o;
     this._adaptivePruneBaseline === void 0 && (this._adaptivePruneBaseline = s);
-    let i = this._adaptivePruneBaseline,
+    const i = this._adaptivePruneBaseline,
       r = n.targetSparsity ?? 0.5,
       a = i * (1 - r),
       l = n.tolerance ?? 0.05,
@@ -8143,16 +8143,16 @@
         0,
         Math.min(r, this._adaptivePruneLevel + h * (u > 0 ? 1 : -1))
       );
-      for (let p of this.population)
+      for (const p of this.population)
         typeof p.pruneToSparsity == 'function' &&
           p.pruneToSparsity(this._adaptivePruneLevel, 'magnitude');
     }
   }
-  var Zt = C(() => {
+  const Zt = C(() => {
     'use strict';
   });
   async function Ho() {
-    let n =
+    const n =
       typeof performance < 'u' && performance.now
         ? performance.now()
         : Date.now();
@@ -8167,7 +8167,7 @@
     } catch {}
     this.sort();
     try {
-      let h = this.population[0]?.score;
+      const h = this.population[0]?.score;
       typeof h == 'number' &&
         (this._bestScoreLastGen === void 0 || h > this._bestScoreLastGen) &&
         ((this._bestScoreLastGen = h),
@@ -8180,43 +8180,43 @@
       this._computeDiversityStats && this._computeDiversityStats();
     } catch {}
     if (this.options.multiObjective?.enabled) {
-      let h = this.population,
+      const h = this.population,
         u = Ro.call(this, h),
         p = this._getObjectives(),
         c = new Array(h.length).fill(0),
         d = p.map((m) => h.map((_) => m.accessor(_)));
-      for (let m of u) {
-        let _ = m.map((y) => this.population.indexOf(y));
+      for (const m of u) {
+        const _ = m.map((y) => this.population.indexOf(y));
         if (_.length < 3) {
           _.forEach((y) => (c[y] = 1 / 0));
           continue;
         }
         for (let y = 0; y < p.length; y++) {
-          let g = [..._].sort((b, M) => d[y][b] - d[y][M]);
+          const g = [..._].sort((b, M) => d[y][b] - d[y][M]);
           (c[g[0]] = 1 / 0), (c[g[g.length - 1]] = 1 / 0);
-          let w = d[y][g[0]],
+          const w = d[y][g[0]],
             v = d[y][g[g.length - 1]];
           for (let b = 1; b < g.length - 1; b++) {
-            let M = d[y][g[b - 1]],
+            const M = d[y][g[b - 1]],
               x = d[y][g[b + 1]],
               N = v - w || 1;
             c[g[b]] += (x - M) / N;
           }
         }
       }
-      let f = new Map();
+      const f = new Map();
       for (let m = 0; m < h.length; m++) f.set(h[m], m);
       this.population.sort((m, _) => {
-        let y = m._moRank ?? 0,
+        const y = m._moRank ?? 0,
           g = _._moRank ?? 0;
         if (y !== g) return y - g;
-        let w = f.get(m),
+        const w = f.get(m),
           v = f.get(_);
         return c[v] - c[w];
       });
       for (let m = 0; m < h.length; m++) h[m]._moCrowd = c[m];
       if (u.length) {
-        let m = u[0],
+        const m = u[0],
           _ = m.map((y) => ({
             id: y._id ?? -1,
             score: y.score || 0,
@@ -8232,7 +8232,7 @@
           this._paretoArchive.length > 200 && this._paretoArchive.shift(),
           p.length)
         ) {
-          let y = m.map((g) => ({
+          const y = m.map((g) => ({
             id: g._id ?? -1,
             values: p.map((w) => w.accessor(g)),
           }));
@@ -8245,7 +8245,7 @@
         }
       }
       if (this.options.multiObjective?.adaptiveEpsilon?.enabled && u.length) {
-        let m = this.options.multiObjective.adaptiveEpsilon,
+        const m = this.options.multiObjective.adaptiveEpsilon,
           _ =
             m.targetFront ??
             Math.max(3, Math.floor(Math.sqrt(this.population.length))),
@@ -8264,27 +8264,27 @@
         }
       }
       if (this.options.multiObjective?.pruneInactive?.enabled) {
-        let m = this.options.multiObjective.pruneInactive,
+        const m = this.options.multiObjective.pruneInactive,
           _ = m.window ?? 5,
           y = m.rangeEps ?? 1e-6,
           g = new Set(['fitness', 'complexity', ...(m.protect || [])]),
           w = this._getObjectives(),
           v = {};
-        for (let M of w) {
+        for (const M of w) {
           let x = 1 / 0,
             N = -1 / 0;
-          for (let T of this.population) {
-            let k = M.accessor(T);
+          for (const T of this.population) {
+            const k = M.accessor(T);
             k < x && (x = k), k > N && (N = k);
           }
           v[M.key] = { min: x, max: N };
         }
-        let b = [];
-        for (let M of w) {
+        const b = [];
+        for (const M of w) {
           if (g.has(M.key)) continue;
-          let x = v[M.key];
+          const x = v[M.key];
           if (x.max - x.min < y) {
-            let T = (this._objectiveStale.get(M.key) || 0) + 1;
+            const T = (this._objectiveStale.get(M.key) || 0) + 1;
             this._objectiveStale.set(M.key, T), T >= _ && b.push(M.key);
           } else this._objectiveStale.set(M.key, 0);
         }
@@ -8307,7 +8307,7 @@
         this._applyFitnessSharing();
       } catch {}
       try {
-        let h = this.options;
+        const h = this.options;
         if (h.autoCompatTuning?.enabled) {
           let u =
               h.autoCompatTuning.target ??
@@ -8343,14 +8343,14 @@
             this._speciesHistory.length > 200 && this._speciesHistory.shift()));
       } catch {}
     }
-    let t = it.fromJSON(this.population[0].toJSON());
+    const t = it.fromJSON(this.population[0].toJSON());
     (t.score = this.population[0].score), this._computeDiversityStats();
     try {
-      let h = this._getObjectives().map((p) => p.key),
+      const h = this._getObjectives().map((p) => p.key),
         u = this.options.multiObjective?.dynamic;
       if (this.options.multiObjective?.enabled)
         if (u?.enabled) {
-          let p = u.addComplexityAt ?? 1 / 0,
+          const p = u.addComplexityAt ?? 1 / 0,
             c = u.addEntropyAt ?? 1 / 0;
           if (
             (this.generation + 1 >= p &&
@@ -8369,7 +8369,7 @@
               this._pendingObjectiveAdds.push('entropy')),
             h.includes('entropy') && u.dropEntropyOnStagnation != null)
           ) {
-            let d = u.dropEntropyOnStagnation;
+            const d = u.dropEntropyOnStagnation;
             this.generation >= d &&
               !this._entropyDropped &&
               this.options.multiObjective?.objectives &&
@@ -8397,14 +8397,14 @@
               this._structuralEntropy(c)
             ),
             this._pendingObjectiveAdds.push('entropy'));
-      for (let p of h)
+      for (const p of h)
         this._objectiveAges.set(p, (this._objectiveAges.get(p) || 0) + 1);
-      for (let p of this._pendingObjectiveAdds) this._objectiveAges.set(p, 0);
+      for (const p of this._pendingObjectiveAdds) this._objectiveAges.set(p, 0);
     } catch {}
     try {
-      let h = this.options.multiObjective;
+      const h = this.options.multiObjective;
       if (h?.enabled && h.pruneInactive && h.pruneInactive.enabled === !1) {
-        let u = this._getObjectives().map((p) => p.key);
+        const u = this._getObjectives().map((p) => p.key);
         u.includes('fitness') &&
           u.length > 1 &&
           !this._fitnessSuppressedOnce &&
@@ -8415,12 +8415,12 @@
     } catch {}
     let e = null;
     try {
-      let h = this._getObjectives();
+      const h = this._getObjectives();
       if (h.length) {
         e = {};
-        let u = this.population;
-        for (let p of h) {
-          let c = u.map((y) => p.accessor(y)),
+        const u = this.population;
+        for (const p of h) {
+          const c = u.map((y) => p.accessor(y)),
             d = Math.min(...c),
             f = Math.max(...c),
             m = c.reduce((y, g) => y + g, 0) / c.length,
@@ -8432,23 +8432,23 @@
     } catch {}
     this.options.telemetry?.enabled;
     {
-      let h = ($o(), q(Fo)),
+      const h = ($o(), q(Fo)),
         u = h.buildTelemetryEntry.call(this, t);
       h.recordTelemetryEntry.call(this, u);
     }
     (t.score ?? -1 / 0) > this._bestGlobalScore &&
       ((this._bestGlobalScore = t.score ?? -1 / 0),
       (this._lastGlobalImproveGeneration = this.generation));
-    let o = [],
+    const o = [],
       s = Math.max(
         0,
         Math.min(this.options.elitism || 0, this.population.length)
       );
     for (let h = 0; h < s; h++) {
-      let u = this.population[h];
+      const u = this.population[h];
       u && o.push(u);
     }
-    let i = Math.max(0, this.options.popsize || 0),
+    const i = Math.max(0, this.options.popsize || 0),
       r = Math.max(0, i - o.length),
       a = Math.max(0, Math.min(this.options.provenance || 0, r));
     for (let h = 0; h < a; h++)
@@ -8461,15 +8461,15 @@
           );
     if (this.options.speciation && this._species.length > 0) {
       this._suppressTournamentError = !0;
-      let h = i - o.length;
+      const h = i - o.length;
       if (h > 0) {
-        let u = this.options.speciesAgeBonus || {},
+        const u = this.options.speciesAgeBonus || {},
           p = u.youngThreshold ?? 5,
           c = u.youngMultiplier ?? 1.3,
           d = u.oldThreshold ?? 30,
           f = u.oldMultiplier ?? 0.7,
           m = this._species.map((x) => {
-            let N = x.members.reduce((k, R) => k + (R.score || 0), 0),
+            const N = x.members.reduce((k, R) => k + (R.score || 0), 0),
               T = this.generation - x.lastImproved;
             return T <= p ? N * c : T >= d ? N * f : N;
           }),
@@ -8483,13 +8483,13 @@
           b = h - v,
           M = g.map((x, N) => ({ i: N, frac: x - Math.floor(x) }));
         M.sort((x, N) => N.frac - x.frac);
-        for (let x of M) {
+        for (const x of M) {
           if (b <= 0) break;
           w[x.i]++, b--;
         }
         if (b < 0) {
-          let x = w.map((N, T) => ({ i: T, v: N })).sort((N, T) => T.v - N.v);
-          for (let N of x) {
+          const x = w.map((N, T) => ({ i: T, v: N })).sort((N, T) => T.v - N.v);
+          for (const N of x) {
             if (b === 0) break;
             w[N.i] > y && (w[N.i]--, b++);
           }
@@ -8502,9 +8502,9 @@
           (this._lastInbreedingCount = 0),
           w.forEach((x, N) => {
             if (x <= 0) return;
-            let T = this._species[N];
+            const T = this._species[N];
             this._sortSpeciesMembers(T);
-            let k = T.members.slice(
+            const k = T.members.slice(
               0,
               Math.max(
                 1,
@@ -8525,9 +8525,9 @@
                   O = 0;
                 for (; A === N && O++ < 5; )
                   A = Math.floor(this._getRNG()() * this._species.length);
-                let E = this._species[A];
+                const E = this._species[A];
                 this._sortSpeciesMembers(E);
-                let B = E.members.slice(
+                const B = E.members.slice(
                   0,
                   Math.max(
                     1,
@@ -8538,14 +8538,14 @@
                 );
                 W = B[Math.floor(this._getRNG()() * B.length)];
               } else W = k[Math.floor(this._getRNG()() * k.length)];
-              let S = it.crossOver(j, W, this.options.equal || !1);
+              const S = it.crossOver(j, W, this.options.equal || !1);
               if (
                 ((S._reenableProb = this.options.reenableProb),
                 (S._id = this._nextGenomeId++),
                 this._lineageEnabled)
               ) {
                 S._parents = [j._id, W._id];
-                let A = j._depth ?? 0,
+                const A = j._depth ?? 0,
                   O = W._depth ?? 0;
                 (S._depth = 1 + Math.max(A, O)),
                   j._id === W._id && this._lastInbreedingCount++;
@@ -8557,11 +8557,11 @@
       }
     } else {
       this._suppressTournamentError = !0;
-      let h = Math.max(0, i - o.length);
+      const h = Math.max(0, i - o.length);
       for (let u = 0; u < h; u++) o.push(this.getOffspring());
       this._suppressTournamentError = !1;
     }
-    for (let h of o)
+    for (const h of o)
       h && (this.ensureMinHiddenNodes(h), this.ensureNoDeadEnds(h));
     this.population = o;
     try {
@@ -8585,12 +8585,12 @@
         this.generation - this._lastGlobalImproveGeneration >
           (this.options.globalStagnationGenerations || 0))
     ) {
-      let u = Math.max(
+      const u = Math.max(
         this.options.elitism || 0,
         Math.floor(this.population.length * 0.8)
       );
       for (let p = u; p < this.population.length; p++) {
-        let c = new it(this.input, this.output, {
+        const c = new it(this.input, this.output, {
           minHidden: this.options.minHidden,
         });
         (c.score = void 0),
@@ -8603,10 +8603,10 @@
             this.ensureNoDeadEnds(c),
             c.nodes.filter((f) => f.type === 'hidden').length === 0)
           ) {
-            let f = (mt(), q(ne)).default,
+            const f = (mt(), q(ne)).default,
               m = new f('hidden');
             c.nodes.splice(c.nodes.length - c.output, 0, m);
-            let _ = c.nodes.filter((g) => g.type === 'input'),
+            const _ = c.nodes.filter((g) => g.type === 'input'),
               y = c.nodes.filter((g) => g.type === 'output');
             if (_.length && y.length) {
               try {
@@ -8625,13 +8625,13 @@
     if (this.options.reenableProb !== void 0) {
       let h = 0,
         u = 0;
-      for (let p of this.population)
+      for (const p of this.population)
         (h += p._reenableSuccess || 0),
           (u += p._reenableAttempts || 0),
           (p._reenableSuccess = 0),
           (p._reenableAttempts = 0);
       if (u > 20) {
-        let d = h / u - 0.3;
+        const d = h / u - 0.3;
         this.options.reenableProb = Math.min(
           0.9,
           Math.max(0.05, this.options.reenableProb - d * 0.1)
@@ -8641,7 +8641,7 @@
     try {
       (Wt(), q(Rt)).applyOperatorAdaptation.call(this);
     } catch {}
-    let l =
+    const l =
       typeof performance < 'u' && performance.now
         ? performance.now()
         : Date.now();
@@ -8665,26 +8665,26 @@
     } catch {}
     return t;
   }
-  var qo = C(() => {
+  const qo = C(() => {
     'use strict';
     bt();
     Wo();
   });
   async function Uo() {
-    let n = this.options || {};
+    const n = this.options || {};
     if (n.fitnessPopulation)
       n.clear && this.population.forEach((t) => t.clear && t.clear()),
         await this.fitness(this.population);
     else
-      for (let t of this.population) {
+      for (const t of this.population) {
         n.clear && t.clear && t.clear();
-        let e = await this.fitness(t);
+        const e = await this.fitness(t);
         t.score = e;
       }
     try {
-      let t = n.novelty;
+      const t = n.novelty;
       if (t?.enabled && typeof t.descriptor == 'function') {
-        let e = Math.max(1, t.k || 3),
+        const e = Math.max(1, t.k || 3),
           o = t.blendFactor ?? 0.3,
           s = this.population.map((r) => {
             try {
@@ -8706,14 +8706,14 @@
               u = 0,
               p = Math.min(l.length, h.length);
             for (let c = 0; c < p; c++) {
-              let d = (l[c] || 0) - (h[c] || 0);
+              const d = (l[c] || 0) - (h[c] || 0);
               u += d * d;
             }
             i[r][a] = Math.sqrt(u);
           }
         }
         for (let r = 0; r < this.population.length; r++) {
-          let l = i[r]
+          const l = i[r]
               .slice()
               .sort((p, c) => p - c)
               .slice(1, e + 1),
@@ -8723,7 +8723,7 @@
               (this.population[r].score =
                 (1 - o) * this.population[r].score + o * h),
             this._noveltyArchive || (this._noveltyArchive = []);
-          let u = t.archiveAddThreshold ?? 1 / 0;
+          const u = t.archiveAddThreshold ?? 1 / 0;
           (t.archiveAddThreshold === 0 || h > u) &&
             this._noveltyArchive.length < 200 &&
             this._noveltyArchive.push({ desc: s[r], novelty: h });
@@ -8732,9 +8732,9 @@
     } catch {}
     this._diversityStats || (this._diversityStats = {});
     try {
-      let t = n.entropySharingTuning;
+      const t = n.entropySharingTuning;
       if (t?.enabled) {
-        let e = t.targetEntropyVar ?? 0.2,
+        const e = t.targetEntropyVar ?? 0.2,
           o = t.adjustRate ?? 0.1,
           s = t.minSigma ?? 0.1,
           i = t.maxSigma ?? 10,
@@ -8749,7 +8749,7 @@
       }
     } catch {}
     try {
-      let t = n.entropyCompatTuning;
+      const t = n.entropyCompatTuning;
       if (t?.enabled) {
         let e = this._diversityStats.meanEntropy,
           o = t.targetEntropy ?? 0.5,
@@ -8771,9 +8771,9 @@
         this._speciate();
     } catch {}
     try {
-      let t = this.options.autoDistanceCoeffTuning;
+      const t = this.options.autoDistanceCoeffTuning;
       if (t?.enabled && this.options.speciation) {
-        let e = this.population.map((l) => l.connections.length),
+        const e = this.population.map((l) => l.connections.length),
           o = e.reduce((l, h) => l + h, 0) / (e.length || 1),
           s = e.reduce((l, h) => l + (h - o) * (h - o), 0) / (e.length || 1),
           i = t.adjustRate ?? 0.05,
@@ -8815,11 +8815,11 @@
           (this._objectivesList = void 0)));
     } catch {}
   }
-  var zo = C(() => {
+  const zo = C(() => {
     'use strict';
   });
   function Jo(n, t = 1) {
-    let e = n.clone ? n.clone() : (bt(), q(Pt)).default.fromJSON(n.toJSON());
+    const e = n.clone ? n.clone() : (bt(), q(Pt)).default.fromJSON(n.toJSON());
     (e.score = void 0),
       (e._reenableProb = this.options.reenableProb),
       (e._id = this._nextGenomeId++),
@@ -8831,7 +8831,7 @@
       try {
         let s = this.selectMutationMethod(e, !1);
         if (Array.isArray(s)) {
-          let i = s;
+          const i = s;
           s = i[Math.floor(this._getRNG()() * i.length)];
         }
         s && s.name && e.mutate(s);
@@ -8848,7 +8848,7 @@
         (n._depth = 0),
         n._parents.length)
       ) {
-        let e = n._parents
+        const e = n._parents
           .map((o) => this.population.find((s) => s._id === o))
           .filter(Boolean)
           .map((o) => o._depth ?? 0);
@@ -8865,9 +8865,9 @@
   function Me(n) {
     try {
       this.population = [];
-      let t = this.options?.popsize || 50;
+      const t = this.options?.popsize || 50;
       for (let e = 0; e < t; e++) {
-        let o = n
+        const o = n
           ? it.fromJSON(n.toJSON())
           : new it(this.input, this.output, {
               minHidden: this.options?.minHidden,
@@ -8883,13 +8883,13 @@
       }
     } catch {}
   }
-  var Ko = C(() => {
+  const Ko = C(() => {
     'use strict';
     bt();
   });
   function Xo() {
     if (this._objectivesList) return this._objectivesList;
-    let n = [];
+    const n = [];
     if (
       (this._suppressFitnessObjective ||
         n.push({
@@ -8900,14 +8900,14 @@
       this.options.multiObjective?.enabled &&
         Array.isArray(this.options.multiObjective.objectives))
     )
-      for (let t of this.options.multiObjective.objectives)
+      for (const t of this.options.multiObjective.objectives)
         !t || !t.key || typeof t.accessor != 'function' || n.push(t);
     return (this._objectivesList = n), n;
   }
   function Yo(n, t, e) {
     this.options.multiObjective ||
       (this.options.multiObjective = { enabled: !0 });
-    let o = this.options.multiObjective;
+    const o = this.options.multiObjective;
     o.objectives || (o.objectives = []),
       (o.objectives = o.objectives.filter((s) => s.key !== n)),
       o.objectives.push({ key: n, direction: t, accessor: e }),
@@ -8918,7 +8918,7 @@
       (this.options.multiObjective.objectives = []),
       (this._objectivesList = void 0);
   }
-  var Qo = C(() => {
+  const Qo = C(() => {
     'use strict';
   });
   function Ze(n) {
@@ -8926,7 +8926,7 @@
       e = t.reduce((i, r) => i + r, 0) || 1,
       o = t.map((i) => i / e).filter((i) => i > 0),
       s = 0;
-    for (let i of o) s -= i * Math.log(i);
+    for (const i of o) s -= i * Math.log(i);
     return s;
   }
   function Ht(n) {
@@ -8934,13 +8934,13 @@
   }
   function ti(n) {
     if (!n.length) return 0;
-    let t = Ht(n);
+    const t = Ht(n);
     return Ht(n.map((e) => (e - t) * (e - t)));
   }
   function ei(n, t) {
     if (!n.length) return;
-    let e = [];
-    for (let y of n) typeof y._depth == 'number' && e.push(y._depth);
+    const e = [];
+    for (const y of n) typeof y._depth == 'number' && e.push(y._depth);
     let o = Ht(e),
       s = 0,
       i = 0;
@@ -8959,7 +8959,7 @@
     for (let y = 0; y < n.length && y < 25; y++)
       for (let g = y + 1; g < n.length && g < 25; g++)
         (d += t._compatibilityDistance(n[y], n[g])), f++;
-    let m = f ? d / f : 0,
+    const m = f ? d / f : 0,
       _ = Ht(n.map((y) => Ze(y)));
     return {
       lineageMeanDepth: o,
@@ -8973,11 +8973,11 @@
       population: n.length,
     };
   }
-  var ni = C(() => {
+  const ni = C(() => {
     'use strict';
   });
   function oi(n) {
-    let t = n.from?.index ?? 0,
+    const t = n.from?.index ?? 0,
       e = n.to?.index ?? 0;
     return t * 1e5 + e;
   }
@@ -8985,12 +8985,12 @@
     (!this._compatCacheGen || this._compatCacheGen !== this.generation) &&
       ((this._compatCacheGen = this.generation),
       (this._compatDistCache = new Map()));
-    let e = n._id < t._id ? `${n._id}|${t._id}` : `${t._id}|${n._id}`,
+    const e = n._id < t._id ? `${n._id}|${t._id}` : `${t._id}|${n._id}`,
       o = this._compatDistCache;
     if (o.has(e)) return o.get(e);
     let s = (w) => {
         if (!w._compatCache) {
-          let v = w.connections.map((b) => [
+          const v = w.connections.map((b) => [
             b.innovation ?? this._fallbackInnov(b),
             b.weight,
           ]);
@@ -9009,7 +9009,7 @@
       d = i.length ? i[i.length - 1][0] : 0,
       f = r.length ? r[r.length - 1][0] : 0;
     for (; a < i.length && l < r.length; ) {
-      let [w, v] = i[a],
+      const [w, v] = i[a],
         [b, M] = r[l];
       w === b
         ? (h++, (c += Math.abs(v - M)), a++, l++)
@@ -9018,7 +9018,7 @@
         : (b > d ? p++ : u++, l++);
     }
     a < i.length && (p += i.length - a), l < r.length && (p += r.length - l);
-    let m = Math.max(1, Math.max(i.length, r.length)),
+    const m = Math.max(1, Math.max(i.length, r.length)),
       _ = h ? c / h : 0,
       y = this.options,
       g =
@@ -9027,20 +9027,20 @@
         y.weightDiffCoeff * _;
     return o.set(e, g), g;
   }
-  var si = C(() => {
+  const si = C(() => {
     'use strict';
   });
   function ri() {
     this._prevSpeciesMembers.clear();
-    for (let t of this._species) {
-      let e = new Set();
-      for (let o of t.members) e.add(o._id);
+    for (const t of this._species) {
+      const e = new Set();
+      for (const o of t.members) e.add(o._id);
       this._prevSpeciesMembers.set(t.id, e);
     }
     this._species.forEach((t) => (t.members = []));
-    for (let t of this.population) {
+    for (const t of this.population) {
       let e = !1;
-      for (let o of this._species)
+      for (const o of this._species)
         if (
           this._compatibilityDistance(t, o.representative) <
           (this.options.compatibilityThreshold || 3)
@@ -9049,7 +9049,7 @@
           break;
         }
       if (!e) {
-        let o = this._nextSpeciesId++;
+        const o = this._nextSpeciesId++;
         this._species.push({
           id: o,
           members: [t],
@@ -9064,11 +9064,11 @@
       this._species.forEach((t) => {
         t.representative = t.members[0];
       });
-    let n = this.options.speciesAgeProtection || { grace: 3, oldPenalty: 0.5 };
-    for (let t of this._species) {
-      let e = this._speciesCreated.get(t.id) ?? this.generation;
+    const n = this.options.speciesAgeProtection || { grace: 3, oldPenalty: 0.5 };
+    for (const t of this._species) {
+      const e = this._speciesCreated.get(t.id) ?? this.generation;
       if (this.generation - e >= (n.grace ?? 3) * 10) {
-        let s = n.oldPenalty ?? 0.5;
+        const s = n.oldPenalty ?? 0.5;
         s < 1 &&
           t.members.forEach((i) => {
             typeof i.score == 'number' && (i.score *= s);
@@ -9076,7 +9076,7 @@
       }
     }
     if (this.options.speciation && (this.options.targetSpecies || 0) > 0) {
-      let t = this.options.targetSpecies,
+      const t = this.options.targetSpecies,
         e = this._species.length,
         o = this.options.compatAdjust,
         i = 2 / (Math.max(1, o.smoothingWindow || 1) + 1);
@@ -9084,7 +9084,7 @@
         this._compatSpeciesEMA === void 0
           ? e
           : this._compatSpeciesEMA + i * (e - this._compatSpeciesEMA);
-      let r = this._compatSpeciesEMA,
+      const r = this._compatSpeciesEMA,
         a = t - r;
       this._compatIntegral = this._compatIntegral * (o.decay || 0.95) + a;
       let l = (o.kp || 0) * a + (o.ki || 0) * this._compatIntegral,
@@ -9117,7 +9117,7 @@
         ));
     }
     if (this.options.speciesAllocation?.extendedHistory) {
-      let t = this._species.map((e) => {
+      const t = this._species.map((e) => {
         let o = e.members.map((S) => ({
             nodes: S.nodes.length,
             conns: S.connections.length,
@@ -9144,12 +9144,12 @@
           y = this._prevSpeciesMembers.get(e.id);
         if (y && e.members.length) {
           let S = 0;
-          for (let A of e.members) y.has(A._id) || S++;
+          for (const A of e.members) y.has(A._id) || S++;
           _ = S / e.members.length;
         }
         let g = (S) => {
             if (!S.length) return 0;
-            let A = s(S);
+            const A = s(S);
             return s(S.map((O) => (O - A) * (O - A)));
           },
           w = g(o.map((S) => S.nodes)),
@@ -9160,16 +9160,16 @@
           N = 1 / 0,
           T = 0,
           k = 0;
-        for (let S of e.members)
-          for (let A of S.connections) {
-            let O = A.innovation ?? this._fallbackInnov(A);
+        for (const S of e.members)
+          for (const A of S.connections) {
+            const O = A.innovation ?? this._fallbackInnov(A);
             (b += O),
               M++,
               O > x && (x = O),
               O < N && (N = O),
               A.enabled === !1 ? k++ : T++;
           }
-        let R = M ? b / M : 0,
+        const R = M ? b / M : 0,
           j = isFinite(x) && isFinite(N) && x > N ? x - N : 0,
           W = T + k > 0 ? T / (T + k) : 0;
         return {
@@ -9195,7 +9195,7 @@
           enabledRatio: W,
         };
       });
-      for (let e of t)
+      for (const e of t)
         this._speciesLastStats.set(e.id, {
           meanNodes: e.meanNodes,
           meanConns: e.meanConns,
@@ -9215,19 +9215,19 @@
     this._speciesHistory.length > 200 && this._speciesHistory.shift();
   }
   function ai() {
-    let n = this.options.sharingSigma || 0;
+    const n = this.options.sharingSigma || 0;
     n > 0
       ? this._species.forEach((t) => {
-          let e = t.members;
+          const e = t.members;
           for (let o = 0; o < e.length; o++) {
-            let s = e[o];
+            const s = e[o];
             if (typeof s.score != 'number') continue;
             let i = 0;
             for (let r = 0; r < e.length; r++) {
-              let a = e[r],
+              const a = e[r],
                 l = o === r ? 0 : this._compatibilityDistance(s, a);
               if (l < n) {
-                let h = l / n;
+                const h = l / n;
                 i += 1 - h * h;
               }
             }
@@ -9235,7 +9235,7 @@
           }
         })
       : this._species.forEach((t) => {
-          let e = t.members.length;
+          const e = t.members.length;
           t.members.forEach((o) => {
             typeof o.score == 'number' && (o.score = o.score / e);
           });
@@ -9245,17 +9245,17 @@
     n.members.sort((t, e) => (e.score || 0) - (t.score || 0));
   }
   function li() {
-    let n = this.options.stagnationGenerations || 15;
+    const n = this.options.stagnationGenerations || 15;
     this._species.forEach((e) => {
       this._sortSpeciesMembers(e);
-      let o = e.members[0];
+      const o = e.members[0];
       (o.score || -1 / 0) > e.bestScore &&
         ((e.bestScore = o.score || -1 / 0), (e.lastImproved = this.generation));
     });
-    let t = this._species.filter((e) => this.generation - e.lastImproved <= n);
+    const t = this._species.filter((e) => this.generation - e.lastImproved <= n);
     t.length && (this._species = t);
   }
-  var hi = C(() => {
+  const hi = C(() => {
     'use strict';
   });
   function ui() {
@@ -9267,20 +9267,20 @@
     }));
   }
   function pi() {
-    let n = this._speciesHistory;
+    const n = this._speciesHistory;
     if (this.options?.speciesAllocation?.extendedHistory)
-      for (let t of n)
-        for (let e of t.stats) {
+      for (const t of n)
+        for (const e of t.stats) {
           if ('innovationRange' in e && 'enabledRatio' in e) continue;
-          let o = this._species.find((s) => s.id === e.id);
+          const o = this._species.find((s) => s.id === e.id);
           if (o && o.members && o.members.length) {
             let s = -1 / 0,
               i = 1 / 0,
               r = 0,
               a = 0;
-            for (let l of o.members)
-              for (let h of l.connections) {
-                let u = h.innovation ?? this._fallbackInnov?.(h) ?? 0;
+            for (const l of o.members)
+              for (const h of l.connections) {
+                const u = h.innovation ?? this._fallbackInnov?.(h) ?? 0;
                 u > s && (s = u),
                   u < i && (i = u),
                   h.enabled === !1 ? a++ : r++;
@@ -9292,7 +9292,7 @@
         }
     return n;
   }
-  var fi = C(() => {
+  const fi = C(() => {
     'use strict';
   });
   function di() {
@@ -9300,12 +9300,12 @@
 `);
   }
   function mi(n = 500) {
-    let t = Array.isArray(this._telemetry) ? this._telemetry.slice(-n) : [];
+    const t = Array.isArray(this._telemetry) ? this._telemetry.slice(-n) : [];
     if (!t.length) return '';
-    let e = ur(t),
+    const e = ur(t),
       o = pr(e),
       s = [o.join(',')];
-    for (let i of t) s.push(fr(i, o));
+    for (const i of t) s.push(fr(i, o));
     return s.join(`
 `);
   }
@@ -9321,7 +9321,7 @@
       h = !1,
       u = !1,
       p = !1;
-    for (let c of n)
+    for (const c of n)
       Object.keys(c).forEach((d) => {
         d !== 'complexity' &&
           d !== 'perf' &&
@@ -9358,7 +9358,7 @@
     };
   }
   function pr(n) {
-    let t = [
+    const t = [
       ...n.baseKeys,
       ...[...n.complexityKeys].map((e) => `${Qe}${e}`),
       ...[...n.perfKeys].map((e) => `${tn}${e}`),
@@ -9376,11 +9376,11 @@
     );
   }
   function fr(n, t) {
-    let e = [];
-    for (let o of t)
+    const e = [];
+    for (const o of t)
       switch (!0) {
         case o.startsWith(Qe): {
-          let s = o.slice(Qe.length);
+          const s = o.slice(Qe.length);
           e.push(
             n.complexity && s in n.complexity
               ? JSON.stringify(n.complexity[s])
@@ -9389,19 +9389,19 @@
           break;
         }
         case o.startsWith(tn): {
-          let s = o.slice(tn.length);
+          const s = o.slice(tn.length);
           e.push(n.perf && s in n.perf ? JSON.stringify(n.perf[s]) : '');
           break;
         }
         case o.startsWith(en): {
-          let s = o.slice(en.length);
+          const s = o.slice(en.length);
           e.push(
             n.lineage && s in n.lineage ? JSON.stringify(n.lineage[s]) : ''
           );
           break;
         }
         case o.startsWith(nn): {
-          let s = o.slice(nn.length);
+          const s = o.slice(nn.length);
           e.push(
             n.diversity && s in n.diversity
               ? JSON.stringify(n.diversity[s])
@@ -9455,7 +9455,7 @@
         Array.isArray(this._species) &&
         this._species.length)
     ) {
-      let s = this._species.map((i) => ({
+      const s = this._species.map((i) => ({
         id: i.id ?? -1,
         size: Array.isArray(i.members) ? i.members.length : 0,
         best: i.bestScore ?? 0,
@@ -9463,20 +9463,20 @@
       }));
       this._speciesHistory.push({ generation: this.generation || 0, stats: s });
     }
-    let t = this._speciesHistory.slice(-n);
+    const t = this._speciesHistory.slice(-n);
     if (!t.length) return 'generation,id,size,best,lastImproved';
-    let e = new Set(['generation']);
-    for (let s of t)
-      for (let i of s.stats) Object.keys(i).forEach((r) => e.add(r));
-    let o = Array.from(e);
+    const e = new Set(['generation']);
+    for (const s of t)
+      for (const i of s.stats) Object.keys(i).forEach((r) => e.add(r));
+    const o = Array.from(e);
     return mr(t, o);
   }
   function mr(n, t) {
-    let e = [t.join(',')];
-    for (let o of n)
-      for (let s of o.stats) {
-        let i = [];
-        for (let r of t) {
+    const e = [t.join(',')];
+    for (const o of n)
+      for (const s of o.stats) {
+        const i = [];
+        for (const r of t) {
           if (r === dr) {
             i.push(JSON.stringify(o.generation));
             continue;
@@ -9488,7 +9488,7 @@
     return e.join(`
 `);
   }
-  var Qe,
+  let Qe,
     tn,
     en,
     nn,
@@ -9519,7 +9519,7 @@
     this.population.sort((n, t) => (t.score ?? 0) - (n.score ?? 0));
   }
   function Ni() {
-    let n = this.options.selection,
+    const n = this.options.selection,
       t = n?.name,
       e = this._getRNG.bind(this),
       o = this.population;
@@ -9529,7 +9529,7 @@
           o[1]?.score !== void 0 &&
           o[0].score < o[1].score &&
           this.sort();
-        let s = Math.floor(Math.pow(e()(), n.power || 1) * o.length);
+        const s = Math.floor(Math.pow(e()(), n.power || 1) * o.length);
         return o[s];
       case 'FITNESS_PROPORTIONATE':
         let i = 0,
@@ -9537,11 +9537,11 @@
         o.forEach((c) => {
           (r = Math.min(r, c.score ?? 0)), (i += c.score ?? 0);
         });
-        let a = Math.abs(r);
+        const a = Math.abs(r);
         i += a * o.length;
         let l = e()() * i,
           h = 0;
-        for (let c of o) if (((h += (c.score ?? 0) + a), l < h)) return c;
+        for (const c of o) if (((h += (c.score ?? 0) + a), l < h)) return c;
         return o[Math.floor(e()() * o.length)];
       case 'TOURNAMENT':
         if ((n.size || 2) > o.length) {
@@ -9551,7 +9551,7 @@
             );
           return o[Math.floor(e()() * o.length)];
         }
-        let u = n.size || 2,
+        const u = n.size || 2,
           p = [];
         for (let c = 0; c < u; c++) p.push(o[Math.floor(e()() * o.length)]);
         p.sort((c, d) => (d.score ?? 0) - (c.score ?? 0));
@@ -9564,7 +9564,7 @@
     return o[0];
   }
   function Ai() {
-    let n = this.population;
+    const n = this.population;
     return (
       n[n.length - 1].score === void 0 && this.evaluate(),
       n[1] && (n[0].score ?? 0) < (n[1].score ?? 0) && this.sort(),
@@ -9572,16 +9572,16 @@
     );
   }
   function Oi() {
-    let n = this.population;
+    const n = this.population;
     return (
       n[n.length - 1].score === void 0 && this.evaluate(),
       n.reduce((e, o) => e + (o.score ?? 0), 0) / n.length
     );
   }
-  var Ei = C(() => {
+  const Ei = C(() => {
     'use strict';
   });
-  var Ci = {};
+  const Ci = {};
   ct(Ci, {
     exportPopulation: () => sn,
     exportState: () => an,
@@ -9594,17 +9594,17 @@
     return this.population.map((n) => n.toJSON());
   }
   function rn(n) {
-    let t = (bt(), q(Pt)).default;
+    const t = (bt(), q(Pt)).default;
     (this.population = n.map((e) => t.fromJSON(e))),
       (this.options.popsize = this.population.length);
   }
   function an() {
-    let { toJSONImpl: n, exportPopulation: t } = (un(), q(Ci));
+    const { toJSONImpl: n, exportPopulation: t } = (un(), q(Ci));
     return { neat: n.call(this), population: t.call(this) };
   }
   function cn(n, t) {
     if (!n || typeof n != 'object') throw new Error('Invalid state bundle');
-    let e = this.fromJSON(n.neat, t);
+    const e = this.fromJSON(n.neat, t);
     return Array.isArray(n.population) && e.import(n.population), e;
   }
   function ln() {
@@ -9619,7 +9619,7 @@
     };
   }
   function hn(n, t) {
-    let e = this,
+    const e = this,
       o = new e(n.input, n.output, t, n.options || {});
     return (
       (o.generation = n.generation || 0),
@@ -9702,7 +9702,7 @@
         _mcThreshold;
         _getRNG() {
           if (!this._rng) {
-            let t = this.options?.rng;
+            const t = this.options?.rng;
             if (typeof t == 'function') this._rng = t;
             else {
               if (this._rngState === void 0) {
@@ -9736,7 +9736,7 @@
             (this.output = e ?? 0),
             (this.fitness = o ?? ((r) => 0)),
             (this.options = s || {});
-          let i = this.options;
+          const i = this.options;
           i.popsize === void 0 && (i.popsize = 50),
             i.elitism === void 0 && (i.elitism = 0),
             i.provenance === void 0 && (i.provenance = 0),
@@ -9802,9 +9802,9 @@
             if (Me && typeof Me == 'function') return Me.call(this, t);
           } catch {}
           this.population = [];
-          let e = this.options.popsize || 50;
+          const e = this.options.popsize || 50;
           for (let o = 0; o < e; o++) {
-            let s = t
+            const s = t
               ? it.fromJSON(t.toJSON())
               : new it(this.input, this.output, {
                   minHidden: this.options.minHidden,
@@ -9846,14 +9846,14 @@
                 Math.floor(this._getRNG()() * this.population.length)
               ] || this.population[0];
           }
-          let o = it.crossOver(t, e, this.options.equal || !1);
+          const o = it.crossOver(t, e, this.options.equal || !1);
           if (
             ((o._reenableProb = this.options.reenableProb),
             (o._id = this._nextGenomeId++),
             this._lineageEnabled)
           ) {
             o._parents = [t._id, e._id];
-            let s = t._depth ?? 0,
+            const s = t._depth ?? 0,
               i = e._depth ?? 0;
             (o._depth = 1 + Math.max(s, i)),
               t._id === e._id && this._lastInbreedingCount++;
@@ -9888,15 +9888,15 @@
           }
         }
         getMinimumHiddenSize(t) {
-          let e = this.options;
+          const e = this.options;
           if (typeof e.minHidden == 'number') return e.minHidden;
-          let o = t ?? e.minHiddenMultiplier;
+          const o = t ?? e.minHiddenMultiplier;
           return typeof o == 'number' && isFinite(o)
             ? Math.max(0, Math.round(o * (this.input + this.output)))
             : 0;
         }
         sampleRandom(t) {
-          let e = this._getRNG(),
+          const e = this._getRNG(),
             o = [];
           for (let s = 0; s < t; s++) o.push(e());
           return o;
@@ -10017,9 +10017,9 @@
         getParetoFronts(t = 3) {
           if (!this.options.multiObjective?.enabled)
             return [[...this.population]];
-          let e = [];
+          const e = [];
           for (let o = 0; o < t; o++) {
-            let s = this.population.filter((i) => (i._moRank ?? 0) === o);
+            const s = this.population.filter((i) => (i._moRank ?? 0) === o);
             if (!s.length) break;
             e.push(s);
           }
@@ -10108,30 +10108,30 @@
   vt();
   ve();
   function gr(n) {
-    let t = performance.now(),
+    const t = performance.now(),
       e = Math.max(1, Math.floor(Math.sqrt(n))),
       o = Math.max(1, Math.ceil(n / e)),
       s = new it(e, o);
     for (; s.connections.length > n; ) {
-      let r = Math.floor(Math.random() * s.connections.length),
+      const r = Math.floor(Math.random() * s.connections.length),
         a = s.connections[r];
       s.disconnect(a.from, a.to);
     }
-    let i = performance.now();
+    const i = performance.now();
     return { net: s, buildMs: i - t };
   }
   function yr(n, t) {
-    let e = new Array(n.input).fill(0).map(() => Math.random()),
+    const e = new Array(n.input).fill(0).map(() => Math.random()),
       o = performance.now();
     for (let r = 0; r < t; r++) n.activate(e);
-    let i = performance.now() - o;
+    const i = performance.now() - o;
     return { totalMs: i, avgMs: i / t };
   }
   function _r() {
-    let n = [1e3, 1e4, 5e4, 1e5],
+    const n = [1e3, 1e4, 5e4, 1e5],
       t = [];
-    for (let e of n) {
-      let { net: o, buildMs: s } = gr(e),
+    for (const e of n) {
+      const { net: o, buildMs: s } = gr(e),
         i = e >= 1e5 ? 2 : e >= 5e4 ? 3 : 5,
         { totalMs: r, avgMs: a } = yr(o, i);
       t.push({

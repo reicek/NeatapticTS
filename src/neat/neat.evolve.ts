@@ -708,7 +708,7 @@ export async function evolve(this: any): Promise<Network> {
        * compute `slotsLeft` (remaining slots to distribute).
        * @type {number}
        */
-      let allocated = offspringAlloc.reduce((a, b) => a + b, 0);
+      const allocated = offspringAlloc.reduce((a, b) => a + b, 0);
 
       /**
        * Number of unfilled offspring slots remaining after the initial

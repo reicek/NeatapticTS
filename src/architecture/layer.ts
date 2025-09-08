@@ -201,7 +201,7 @@ export default class Layer {
    */
   set(values: { bias?: number; squash?: any; type?: string }) {
     for (let i = 0; i < this.nodes.length; i++) {
-      let node = this.nodes[i];
+      const node = this.nodes[i];
 
       if (node instanceof Node) {
         // Apply settings directly to Node instances
@@ -239,7 +239,7 @@ export default class Layer {
 
           // Clean up connection tracking within the layer object (outgoing)
           for (k = this.connections.out.length - 1; k >= 0; k--) {
-            let conn = this.connections.out[k];
+            const conn = this.connections.out[k];
             if (conn.from === this.nodes[i] && conn.to === target.nodes[j]) {
               this.connections.out.splice(k, 1);
               break; // Assume only one connection between two nodes here
@@ -249,7 +249,7 @@ export default class Layer {
           // Clean up connection tracking (incoming) if twosided
           if (twosided) {
             for (k = this.connections.in.length - 1; k >= 0; k--) {
-              let conn = this.connections.in[k];
+              const conn = this.connections.in[k];
               if (conn.from === target.nodes[j] && conn.to === this.nodes[i]) {
                 this.connections.in.splice(k, 1);
                 break; // Assume only one connection
@@ -266,7 +266,7 @@ export default class Layer {
 
         // Clean up connection tracking (outgoing)
         for (j = this.connections.out.length - 1; j >= 0; j--) {
-          let conn = this.connections.out[j];
+          const conn = this.connections.out[j];
           if (conn.from === this.nodes[i] && conn.to === target) {
             this.connections.out.splice(j, 1);
             break; // Assume only one connection
@@ -276,7 +276,7 @@ export default class Layer {
         // Clean up connection tracking (incoming) if twosided
         if (twosided) {
           for (k = this.connections.in.length - 1; k >= 0; k--) {
-            let conn = this.connections.in[k];
+            const conn = this.connections.in[k];
             if (conn.from === target && conn.to === this.nodes[i]) {
               this.connections.in.splice(k, 1);
               break; // Assume only one connection

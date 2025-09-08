@@ -87,7 +87,6 @@ export function mutateImpl(this: Network, method: any): void {
   const fn = key ? MUTATION_DISPATCH[key] : undefined;
   if (!fn) {
     if (config.warnings) {
-      // eslint-disable-next-line no-console
       console.warn('[mutate] Unknown mutation method ignored:', key);
     }
     return; // graceful no-op for invalid method objects
@@ -509,7 +508,7 @@ function _swapNodes(this: Network, method: any): void {
     this.nodes.length - this.input - (canSwapOutput ? 0 : this.output);
   if (numSwappableNodes < 2) return;
   /** First random index. */
-  let firstNodeIndex = Math.floor(
+  const firstNodeIndex = Math.floor(
     netInternal._rand() * numSwappableNodes + this.input
   );
   /** Second random index (distinct). */

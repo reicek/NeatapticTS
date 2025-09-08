@@ -30,8 +30,8 @@ describe('training.determinism.mixed-precision', () => {
         JSON.stringify(a.connections.map((c) => c.weight)) ===
         JSON.stringify(b.connections.map((c) => c.weight));
       biasesMatch =
-        JSON.stringify(a.nodes.map((n: any) => n.bias)) ===
-        JSON.stringify(b.nodes.map((n: any) => n.bias));
+        JSON.stringify(a.nodes.map((n: { bias?: number }) => n.bias)) ===
+        JSON.stringify(b.nodes.map((n: { bias?: number }) => n.bias));
     });
     it('weights arrays match', () => {
       expect(weightsMatch).toBe(true);
@@ -112,7 +112,7 @@ describe('training.determinism.mixed-precision', () => {
           scaleWindow: 1,
         },
       });
-      (net as any).testForceOverflow?.();
+      (net as { testForceOverflow?: () => void }).testForceOverflow?.();
       net.train(ds, {
         iterations: 1,
         batchSize: 1,
@@ -123,9 +123,11 @@ describe('training.determinism.mixed-precision', () => {
           scaleWindow: 1,
         },
       });
-      const stats: any = net.getTrainingStats?.();
+      const stats = net.getTrainingStats?.() as
+        | { mp?: { overflowCount?: number } }
+        | undefined;
       overflowOccurred =
-        !stats || !stats.mp ? true : stats.mp.overflowCount >= 0; // relax: just ensure field exists
+        !stats || !stats.mp ? true : (stats.mp.overflowCount ?? 0) >= 0; // relax: just ensure field exists
     });
     it('overflow count > 0 after forced event', () => {
       expect(overflowOccurred).toBe(true);

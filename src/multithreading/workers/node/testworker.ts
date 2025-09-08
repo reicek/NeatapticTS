@@ -43,7 +43,6 @@ export class TestWorker {
     // Lazily require 'path' at runtime to avoid bundlers resolving Node builtins
     let pathModule: any = null;
     try {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
       pathModule = require('path');
     } catch {}
     const workerPath = pathModule

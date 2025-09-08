@@ -815,7 +815,7 @@ export function trainImpl(
       );
   }
   /** Target monitored (smoothed) error threshold for early termination. */
-  let targetError = options.error ?? -Infinity;
+  const targetError = options.error ?? -Infinity;
   /** Cost function (defaults to MSE) resolved from provided variant. */
   const cost = options.cost || methods.Cost.mse;
   if (

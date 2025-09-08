@@ -61,7 +61,7 @@ describe('phase1.variance artifact assertions', () => {
         expect(typeof v.fwdAvgMsCvPct).toBe('number');
         if (v.fwdAvgMsCvPct > softWarn) {
           // Emit a structured warning annotation (does not fail test) – kept minimal.
-          // eslint-disable-next-line no-console
+
           console.log(
             `[variance-soft] size=${v.size} mode=${
               v.mode

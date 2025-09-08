@@ -1,20 +1,24 @@
 import Network from '../../src/architecture/network';
-import Node from '../../src/architecture/node';
 import * as methods from '../../src/methods/methods';
 import { importFromONNX } from '../../src/architecture/onnx';
+import type { OnnxModel } from '../../src/architecture/network/network.onnx';
 
+/**
+ * Tests for importing ONNX-serialized networks.
+ * Uses lightweight structural typing for ONNX objects to avoid broad `any`.
+ */
 jest.retryTimes(2, { logErrorsBeforeRetry: true });
 
 describe('ONNX Import', () => {
   describe('1-1 input-output network', () => {
     let net: Network; // source network
-    let onnx: any; // exported ONNX representation
+    let onnx: OnnxModel | null = null; // exported ONNX representation
     let imported: Network; // imported network
     beforeEach(() => {
       // Arrange
       net = new Network(1, 1);
       net.nodes[1].squash = methods.Activation.tanh;
-      onnx = net.toONNX();
+      onnx = net.toONNX() as OnnxModel;
       // Act
       imported = importFromONNX(onnx);
     });
@@ -112,11 +116,11 @@ describe('ONNX Import', () => {
   // Negative/error scenarios
   describe('Error and edge scenarios', () => {
     it('throws if ONNX input is null', () => {
-      const throws = () => importFromONNX(null as any);
+      const throws = () => importFromONNX((null as unknown) as OnnxModel);
       expect(throws).toThrow();
     });
     it('throws if ONNX input is undefined', () => {
-      const throws = () => importFromONNX(undefined as any);
+      const throws = () => importFromONNX((undefined as unknown) as OnnxModel);
       expect(throws).toThrow();
     });
   });

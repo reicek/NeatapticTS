@@ -9,9 +9,16 @@ describe('training.edge-cases', () => {
     beforeAll(() => {
       const net = new Network(2, 1);
       try {
-        net.train(set as any, { iterations: 1, rate: 0.1 });
-      } catch (e: any) {
-        threw = e.message.includes('Dataset is invalid');
+        net.train((set as unknown) as { input: number[]; output: number[] }[], {
+          iterations: 1,
+          rate: 0.1,
+        });
+      } catch (e: unknown) {
+        const errMsg =
+          typeof e === 'object' && e !== null
+            ? String((e as { message?: unknown }).message ?? '')
+            : '';
+        threw = errMsg.includes('Dataset is invalid');
       }
     });
     it('throws dimension mismatch error', () => {
@@ -44,10 +51,15 @@ describe('training.edge-cases', () => {
         net.train(goodSet, {
           iterations: 1,
           rate: 0.1,
-          cost: { nope: true } as any,
+          // Provide an obviously invalid cost object to exercise validation path
+          cost: ({ nope: true } as unknown) as () => number,
         });
-      } catch (e: any) {
-        threw = e.message.includes('Invalid cost function');
+      } catch (e: unknown) {
+        const errMsg =
+          typeof e === 'object' && e !== null
+            ? String((e as { message?: unknown }).message ?? '')
+            : '';
+        threw = errMsg.includes('Invalid cost function');
       }
     });
     it('throws invalid cost function error', () => {
@@ -62,8 +74,12 @@ describe('training.edge-cases', () => {
       const goodSet = [{ input: [0], output: [0] }];
       try {
         net.train(goodSet, { iterations: 1, rate: 0.1, batchSize: 5 });
-      } catch (e: any) {
-        threw = e.message.includes('larger than the dataset length');
+      } catch (e: unknown) {
+        const errMsg =
+          typeof e === 'object' && e !== null
+            ? String((e as { message?: unknown }).message ?? '')
+            : '';
+        threw = errMsg.includes('larger than the dataset length');
       }
     });
     it('throws batch size error', () => {

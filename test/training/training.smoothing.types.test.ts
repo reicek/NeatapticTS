@@ -14,8 +14,8 @@ describe('Smoothing Types', () => {
     let iB = 0;
     const costA = () => seq[Math.min(iA++, seq.length - 1)];
     const costB = () => seq[Math.min(iB++, seq.length - 1)];
-    let sma: any;
-    let wma: any;
+    let sma: { error: number; iterations: number };
+    let wma: { error: number; iterations: number };
     beforeAll(() => {
       sma = netA.train(ds, {
         iterations: 4,
@@ -47,8 +47,8 @@ describe('Smoothing Types', () => {
     let is = 0;
     const costMed = () => seq[Math.min(im++, seq.length - 1)];
     const costSma = () => seq[Math.min(is++, seq.length - 1)];
-    let med: any;
-    let sma: any;
+    let med: { error: number; iterations: number };
+    let sma: { error: number; iterations: number };
     beforeAll(() => {
       med = netMed.train(ds, {
         iterations: 4,
@@ -80,8 +80,8 @@ describe('Smoothing Types', () => {
       is = 0;
     const costT = () => seq[Math.min(itIdx++, seq.length - 1)];
     const costS = () => seq[Math.min(is++, seq.length - 1)];
-    let trimmedRes: any;
-    let sma: any;
+    let trimmedRes: { error: number; iterations: number };
+    let sma: { error: number; iterations: number };
     beforeAll(() => {
       trimmedRes = netT.train(ds, {
         iterations: 4,
@@ -114,8 +114,8 @@ describe('Smoothing Types', () => {
       is = 0;
     const costG = () => seq[Math.min(ig++, seq.length - 1)];
     const costS = () => seq[Math.min(is++, seq.length - 1)];
-    let g: any;
-    let s: any;
+    let g: { error: number; iterations: number };
+    let sRes: { error: number; iterations: number };
     beforeAll(() => {
       g = netG.train(ds, {
         iterations: 4,
@@ -125,7 +125,7 @@ describe('Smoothing Types', () => {
         movingAverageWindow: 4,
         error: 0,
       });
-      s = netS.train(ds, {
+      sRes = netS.train(ds, {
         iterations: 4,
         rate: 0.1,
         cost: costS,
@@ -135,7 +135,11 @@ describe('Smoothing Types', () => {
       });
     });
     test('gaussian error between min and max raw values', () => {
-      expect(g.error).toBeGreaterThanOrEqual(0.6);
+      // Ensure both results computed and gaussian remains within expected bounds (between min and max of seq)
+      expect(g.error).toBeGreaterThanOrEqual(Math.min(...seq));
+      expect(g.error).toBeLessThanOrEqual(Math.max(...seq));
+      // Use sma result to ensure variable is referenced
+      expect(sRes.error).toBeGreaterThanOrEqual(0);
     });
   });
 
@@ -147,8 +151,8 @@ describe('Smoothing Types', () => {
       ie = 0;
     const costA = () => seqVar[Math.min(ia++, seqVar.length - 1)];
     const costE = () => seqVar[Math.min(ie++, seqVar.length - 1)];
-    let adapt: any;
-    let ema: any;
+    let adapt: { error: number; iterations: number };
+    let ema: { error: number; iterations: number };
     beforeAll(() => {
       adapt = netA.train(ds, {
         iterations: 5,

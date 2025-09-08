@@ -439,7 +439,7 @@ export function ensureMinHiddenNodes(
   /** Output nodes present in the network. */
   const outputNodes = network.nodes.filter((n: any) => n.type === 'output');
   /** Current hidden nodes present in the network. */
-  let hiddenNodes = network.nodes.filter((n: any) => n.type === 'hidden');
+  const hiddenNodes = network.nodes.filter((n: any) => n.type === 'hidden');
 
   if (inputNodes.length === 0 || outputNodes.length === 0) {
     try {

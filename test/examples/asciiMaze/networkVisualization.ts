@@ -186,7 +186,7 @@ export class NetworkVisualization {
   ): any[][] {
     if (hiddenNodes.length === 0) return [];
 
-    let layers: any[][] = [];
+    const layers: any[][] = [];
     let prevLayer = inputNodes;
     let remaining = [...hiddenNodes];
 

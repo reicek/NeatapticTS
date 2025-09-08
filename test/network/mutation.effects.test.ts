@@ -476,7 +476,6 @@ function arraysClose(
   }
   const result = compare(a, b);
   if (!result && logDelta) {
-    // eslint-disable-next-line no-console
     console.log('Max delta:', maxDelta);
   }
   return result;

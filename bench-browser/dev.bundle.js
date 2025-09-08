@@ -1,12 +1,12 @@
 'use strict';
 (() => {
-  var __create = Object.create;
-  var __defProp = Object.defineProperty;
-  var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
-  var __getOwnPropNames = Object.getOwnPropertyNames;
-  var __getProtoOf = Object.getPrototypeOf;
-  var __hasOwnProp = Object.prototype.hasOwnProperty;
-  var __require = /* @__PURE__ */ ((x) =>
+  const __create = Object.create;
+  const __defProp = Object.defineProperty;
+  const __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+  const __getOwnPropNames = Object.getOwnPropertyNames;
+  const __getProtoOf = Object.getPrototypeOf;
+  const __hasOwnProp = Object.prototype.hasOwnProperty;
+  const __require = /* @__PURE__ */ ((x) =>
     typeof require !== 'undefined'
       ? require
       : typeof Proxy !== 'undefined'
@@ -17,11 +17,11 @@
     if (typeof require !== 'undefined') return require.apply(this, arguments);
     throw Error('Dynamic require of "' + x + '" is not supported');
   });
-  var __esm = (fn, res) =>
+  const __esm = (fn, res) =>
     function __init() {
       return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])((fn = 0))), res;
     };
-  var __commonJS = (cb, mod) =>
+  const __commonJS = (cb, mod) =>
     function __require2() {
       return (
         mod ||
@@ -32,13 +32,13 @@
         mod.exports
       );
     };
-  var __export = (target, all) => {
-    for (var name in all)
+  const __export = (target, all) => {
+    for (const name in all)
       __defProp(target, name, { get: all[name], enumerable: true });
   };
-  var __copyProps = (to, from, except, desc) => {
+  const __copyProps = (to, from, except, desc) => {
     if ((from && typeof from === 'object') || typeof from === 'function') {
-      for (let key of __getOwnPropNames(from))
+      for (const key of __getOwnPropNames(from))
         if (!__hasOwnProp.call(to, key) && key !== except)
           __defProp(to, key, {
             get: () => from[key],
@@ -48,7 +48,7 @@
     }
     return to;
   };
-  var __toESM = (mod, isNodeMode, target) => (
+  const __toESM = (mod, isNodeMode, target) => (
     (target = mod != null ? __create(__getProtoOf(mod)) : {}),
     __copyProps(
       // If the importer is in node compatibility mode or this is not an ESM
@@ -61,12 +61,12 @@
       mod
     )
   );
-  var __toCommonJS = (mod) =>
+  const __toCommonJS = (mod) =>
     __copyProps(__defProp({}, '__esModule', { value: true }), mod);
 
   // dist/architecture/connection.js
-  var kGain, kGater, kOpt, Connection;
-  var init_connection = __esm({
+  let kGain, kGater, kOpt, Connection;
+  const init_connection = __esm({
     'dist/architecture/connection.js'() {
       'use strict';
       kGain = Symbol('connGain');
@@ -420,8 +420,8 @@
   });
 
   // dist/config.js
-  var config;
-  var init_config = __esm({
+  let config;
+  const init_config = __esm({
     'dist/config.js'() {
       'use strict';
       config = {
@@ -442,15 +442,15 @@
   });
 
   // dist/neat/neat.constants.js
-  var neat_constants_exports = {};
+  const neat_constants_exports = {};
   __export(neat_constants_exports, {
     EPSILON: () => EPSILON,
     EXTRA_CONNECTION_PROBABILITY: () => EXTRA_CONNECTION_PROBABILITY,
     NORM_EPSILON: () => NORM_EPSILON,
     PROB_EPSILON: () => PROB_EPSILON,
   });
-  var EPSILON, PROB_EPSILON, NORM_EPSILON, EXTRA_CONNECTION_PROBABILITY;
-  var init_neat_constants = __esm({
+  let EPSILON, PROB_EPSILON, NORM_EPSILON, EXTRA_CONNECTION_PROBABILITY;
+  const init_neat_constants = __esm({
     'dist/neat/neat.constants.js'() {
       'use strict';
       EPSILON = 1e-9;
@@ -461,8 +461,8 @@
   });
 
   // dist/methods/cost.js
-  var Cost;
-  var init_cost = __esm({
+  let Cost;
+  const init_cost = __esm({
     'dist/methods/cost.js'() {
       'use strict';
       init_neat_constants();
@@ -759,8 +759,8 @@
   });
 
   // dist/methods/rate.js
-  var Rate;
-  var init_rate = __esm({
+  let Rate;
+  const init_rate = __esm({
     'dist/methods/rate.js'() {
       'use strict';
       Rate = class {
@@ -970,8 +970,8 @@
   });
 
   // dist/methods/activation.js
-  var Activation, activation_default;
-  var init_activation = __esm({
+  let Activation, activation_default;
+  const init_activation = __esm({
     'dist/methods/activation.js'() {
       'use strict';
       Activation = {
@@ -1284,8 +1284,8 @@
   });
 
   // dist/methods/gating.js
-  var gating;
-  var init_gating = __esm({
+  let gating;
+  const init_gating = __esm({
     'dist/methods/gating.js'() {
       'use strict';
       gating = {
@@ -1321,8 +1321,8 @@
   });
 
   // dist/methods/mutation.js
-  var mutation, mutation_default;
-  var init_mutation = __esm({
+  let mutation, mutation_default;
+  const init_mutation = __esm({
     'dist/methods/mutation.js'() {
       'use strict';
       init_activation();
@@ -1572,8 +1572,8 @@
   });
 
   // dist/methods/selection.js
-  var selection;
-  var init_selection = __esm({
+  let selection;
+  const init_selection = __esm({
     'dist/methods/selection.js'() {
       'use strict';
       selection = {
@@ -1627,8 +1627,8 @@
   });
 
   // dist/methods/crossover.js
-  var crossover;
-  var init_crossover = __esm({
+  let crossover;
+  const init_crossover = __esm({
     'dist/methods/crossover.js'() {
       'use strict';
       crossover = {
@@ -1685,8 +1685,8 @@
   });
 
   // dist/methods/connection.js
-  var groupConnection, connection_default;
-  var init_connection2 = __esm({
+  let groupConnection, connection_default;
+  const init_connection2 = __esm({
     'dist/methods/connection.js'() {
       'use strict';
       groupConnection = Object.freeze({
@@ -1718,7 +1718,7 @@
   });
 
   // dist/methods/methods.js
-  var methods_exports = {};
+  const methods_exports = {};
   __export(methods_exports, {
     Activation: () => activation_default,
     Cost: () => Cost,
@@ -1729,7 +1729,7 @@
     mutation: () => mutation,
     selection: () => selection,
   });
-  var init_methods = __esm({
+  const init_methods = __esm({
     'dist/methods/methods.js'() {
       'use strict';
       init_cost();
@@ -1744,12 +1744,12 @@
   });
 
   // dist/architecture/node.js
-  var node_exports = {};
+  const node_exports = {};
   __export(node_exports, {
     default: () => Node,
   });
-  var Node;
-  var init_node = __esm({
+  let Node;
+  const init_node = __esm({
     'dist/architecture/node.js'() {
       'use strict';
       init_connection();
@@ -2898,8 +2898,8 @@
     pool.push(node);
     if (pool.length > highWaterMark) highWaterMark = pool.length;
   }
-  var pool, highWaterMark, nextGeneId, reusedCount, freshCount;
-  var init_nodePool = __esm({
+  let pool, highWaterMark, nextGeneId, reusedCount, freshCount;
+  const init_nodePool = __esm({
     'dist/architecture/nodePool.js'() {
       'use strict';
       init_node();
@@ -2912,8 +2912,8 @@
   });
 
   // dist/architecture/activationArrayPool.js
-  var ActivationArrayPool, activationArrayPool;
-  var init_activationArrayPool = __esm({
+  let ActivationArrayPool, activationArrayPool;
+  const init_activationArrayPool = __esm({
     'dist/architecture/activationArrayPool.js'() {
       'use strict';
       init_config();
@@ -3017,7 +3017,7 @@
   });
 
   // package.json
-  var require_package = __commonJS({
+  const require_package = __commonJS({
     'package.json'(exports, module) {
       module.exports = {
         name: '@reicek/neataptic-ts',
@@ -4371,7 +4371,7 @@
     }
     return model;
   }
-  var init_network_onnx = __esm({
+  const init_network_onnx = __esm({
     'dist/architecture/network/network.onnx.js'() {
       'use strict';
       init_methods();
@@ -4380,7 +4380,7 @@
   });
 
   // dist/architecture/onnx.js
-  var init_onnx = __esm({
+  const init_onnx = __esm({
     'dist/architecture/onnx.js'() {
       'use strict';
       init_network_onnx();
@@ -4542,8 +4542,8 @@
 })();`;
     return generatedSource;
   }
-  var stripCoverage;
-  var init_network_standalone = __esm({
+  let stripCoverage;
+  const init_network_standalone = __esm({
     'dist/architecture/network/network.standalone.js'() {
       'use strict';
       stripCoverage = (code) => {
@@ -4616,7 +4616,7 @@
     }
     return false;
   }
-  var init_network_topology = __esm({
+  const init_network_topology = __esm({
     'dist/architecture/network/network.topology.js'() {
       'use strict';
     },
@@ -4794,7 +4794,7 @@
   function canUseFastSlab(training) {
     return _canUseFastSlab.call(this, training);
   }
-  var init_network_slab = __esm({
+  const init_network_slab = __esm({
     'dist/architecture/network/network.slab.js'() {
       'use strict';
       init_activationArrayPool();
@@ -4919,7 +4919,7 @@
     if (!initialBaseline) return 0;
     return 1 - this.connections.length / initialBaseline;
   }
-  var init_network_prune = __esm({
+  const init_network_prune = __esm({
     'dist/architecture/network/network.prune.js'() {
       'use strict';
     },
@@ -4949,7 +4949,7 @@
     this.gates.splice(index, 1);
     connection.gater?.ungate(connection);
   }
-  var init_network_gating = __esm({
+  const init_network_gating = __esm({
     'dist/architecture/network/network.gating.js'() {
       'use strict';
       init_mutation();
@@ -4983,7 +4983,7 @@
   function setRNGState(state) {
     if (typeof state === 'number') this._rngState = state >>> 0;
   }
-  var init_network_deterministic = __esm({
+  const init_network_deterministic = __esm({
     'dist/architecture/network/network.deterministic.js'() {
       'use strict';
     },
@@ -5003,7 +5003,7 @@
     const lastStatsSnapshot = this._lastStats;
     return lastStatsSnapshot ? deepCloneValue(lastStatsSnapshot) : null;
   }
-  var init_network_stats = __esm({
+  const init_network_stats = __esm({
     'dist/architecture/network/network.stats.js'() {
       'use strict';
     },
@@ -5047,7 +5047,7 @@
     internalNet._slabDirty = true;
     internalNet._adjDirty = true;
   }
-  var init_network_remove = __esm({
+  const init_network_remove = __esm({
     'dist/architecture/network/network.remove.js'() {
       'use strict';
       init_nodePool();
@@ -5091,7 +5091,7 @@
     this._topoDirty = true;
     this._slabDirty = true;
   }
-  var init_network_connect = __esm({
+  const init_network_connect = __esm({
     'dist/architecture/network/network.connect.js'() {
       'use strict';
     },
@@ -5284,7 +5284,7 @@
     });
     return net;
   }
-  var init_network_serialize = __esm({
+  const init_network_serialize = __esm({
     'dist/architecture/network/network.serialize.js'() {
       'use strict';
       init_node();
@@ -5421,7 +5421,7 @@
     });
     return offspring;
   }
-  var init_network_genetic = __esm({
+  const init_network_genetic = __esm({
     'dist/architecture/network/network.genetic.js'() {
       'use strict';
       init_node();
@@ -5430,7 +5430,7 @@
   });
 
   // dist/architecture/network/network.activate.js
-  var network_activate_exports = {};
+  const network_activate_exports = {};
   __export(network_activate_exports, {
     activateBatch: () => activateBatch,
     activateRaw: () => activateRaw,
@@ -5486,7 +5486,7 @@
     }
     return out;
   }
-  var init_network_activate = __esm({
+  const init_network_activate = __esm({
     'dist/architecture/network/network.activate.js'() {
       'use strict';
       init_activationArrayPool();
@@ -5494,8 +5494,8 @@
   });
 
   // dist/architecture/group.js
-  var Group;
-  var init_group = __esm({
+  let Group;
+  const init_group = __esm({
     'dist/architecture/group.js'() {
       'use strict';
       init_node();
@@ -5618,7 +5618,7 @@
                     this.nodes[i] === target.nodes[j]
                   )
                     continue;
-                  let connection = this.nodes[i].connect(
+                  const connection = this.nodes[i].connect(
                     target.nodes[j],
                     weight
                   );
@@ -5634,7 +5634,7 @@
                 );
               }
               for (i = 0; i < this.nodes.length; i++) {
-                let connection = this.nodes[i].connect(target.nodes[i], weight);
+                const connection = this.nodes[i].connect(target.nodes[i], weight);
                 if (this === target) {
                   this.connections.self.push(connection[0]);
                 } else {
@@ -5648,7 +5648,7 @@
             connections = target.input(this, method, weight);
           } else if (target instanceof Node) {
             for (i = 0; i < this.nodes.length; i++) {
-              let connection = this.nodes[i].connect(target, weight);
+              const connection = this.nodes[i].connect(target, weight);
               this.connections.out.push(connection[0]);
               connections.push(connection[0]);
             }
@@ -5692,10 +5692,10 @@
             // Gate the output from the source node(s) of the connection(s)
             case gating.OUTPUT:
               for (i = 0; i < nodes1.length; i++) {
-                let node = nodes1[i];
-                let gater = this.nodes[i % this.nodes.length];
+                const node = nodes1[i];
+                const gater = this.nodes[i % this.nodes.length];
                 for (j = 0; j < node.connections.out.length; j++) {
-                  let conn = node.connections.out[j];
+                  const conn = node.connections.out[j];
                   if (connections.includes(conn)) {
                     gater.gate(conn);
                   }
@@ -5705,8 +5705,8 @@
             // Gate the self-connection of the node(s) involved
             case gating.SELF:
               for (i = 0; i < nodes1.length; i++) {
-                let node = nodes1[i];
-                let gater = this.nodes[i % this.nodes.length];
+                const node = nodes1[i];
+                const gater = this.nodes[i % this.nodes.length];
                 const selfConn = Array.isArray(node.connections.self)
                   ? node.connections.self[0]
                   : node.connections.self;
@@ -5747,7 +5747,7 @@
               for (j = 0; j < target.nodes.length; j++) {
                 this.nodes[i].disconnect(target.nodes[j], twosided);
                 for (k = this.connections.out.length - 1; k >= 0; k--) {
-                  let conn = this.connections.out[k];
+                  const conn = this.connections.out[k];
                   if (
                     conn.from === this.nodes[i] &&
                     conn.to === target.nodes[j]
@@ -5758,7 +5758,7 @@
                 }
                 if (twosided) {
                   for (k = this.connections.in.length - 1; k >= 0; k--) {
-                    let conn = this.connections.in[k];
+                    const conn = this.connections.in[k];
                     if (
                       conn.from === target.nodes[j] &&
                       conn.to === this.nodes[i]
@@ -5768,7 +5768,7 @@
                     }
                   }
                   for (k = target.connections.out.length - 1; k >= 0; k--) {
-                    let conn = target.connections.out[k];
+                    const conn = target.connections.out[k];
                     if (
                       conn.from === target.nodes[j] &&
                       conn.to === this.nodes[i]
@@ -5778,7 +5778,7 @@
                     }
                   }
                   for (k = target.connections.in.length - 1; k >= 0; k--) {
-                    let conn = target.connections.in[k];
+                    const conn = target.connections.in[k];
                     if (
                       conn.from === this.nodes[i] &&
                       conn.to === target.nodes[j]
@@ -5794,7 +5794,7 @@
             for (i = 0; i < this.nodes.length; i++) {
               this.nodes[i].disconnect(target, twosided);
               for (j = this.connections.out.length - 1; j >= 0; j--) {
-                let conn = this.connections.out[j];
+                const conn = this.connections.out[j];
                 if (conn.from === this.nodes[i] && conn.to === target) {
                   this.connections.out.splice(j, 1);
                   break;
@@ -5844,11 +5844,11 @@
   });
 
   // dist/architecture/layer.js
-  var layer_exports = {};
+  const layer_exports = {};
   __export(layer_exports, {
     default: () => Layer,
   });
-  var Layer;
+  let Layer;
   var init_layer = __esm({
     'dist/architecture/layer.js'() {
       'use strict';
@@ -6020,7 +6020,7 @@
          */
         set(values) {
           for (let i = 0; i < this.nodes.length; i++) {
-            let node = this.nodes[i];
+            const node = this.nodes[i];
             if (node instanceof Node) {
               if (values.bias !== void 0) {
                 node.bias = values.bias;
@@ -6046,7 +6046,7 @@
               for (j = 0; j < target.nodes.length; j++) {
                 this.nodes[i].disconnect(target.nodes[j], twosided);
                 for (k = this.connections.out.length - 1; k >= 0; k--) {
-                  let conn = this.connections.out[k];
+                  const conn = this.connections.out[k];
                   if (
                     conn.from === this.nodes[i] &&
                     conn.to === target.nodes[j]
@@ -6057,7 +6057,7 @@
                 }
                 if (twosided) {
                   for (k = this.connections.in.length - 1; k >= 0; k--) {
-                    let conn = this.connections.in[k];
+                    const conn = this.connections.in[k];
                     if (
                       conn.from === target.nodes[j] &&
                       conn.to === this.nodes[i]
@@ -6073,7 +6073,7 @@
             for (i = 0; i < this.nodes.length; i++) {
               this.nodes[i].disconnect(target, twosided);
               for (j = this.connections.out.length - 1; j >= 0; j--) {
-                let conn = this.connections.out[j];
+                const conn = this.connections.out[j];
                 if (conn.from === this.nodes[i] && conn.to === target) {
                   this.connections.out.splice(j, 1);
                   break;
@@ -6081,7 +6081,7 @@
               }
               if (twosided) {
                 for (k = this.connections.in.length - 1; k >= 0; k--) {
-                  let conn = this.connections.in[k];
+                  const conn = this.connections.in[k];
                   if (conn.from === target && conn.to === this.nodes[i]) {
                     this.connections.in.splice(k, 1);
                     break;
@@ -6473,7 +6473,7 @@
   });
 
   // dist/architecture/network/network.mutate.js
-  var network_mutate_exports = {};
+  const network_mutate_exports = {};
   __export(network_mutate_exports, {
     mutateImpl: () => mutateImpl,
   });
@@ -6798,7 +6798,7 @@
     const numSwappableNodes =
       this.nodes.length - this.input - (canSwapOutput ? 0 : this.output);
     if (numSwappableNodes < 2) return;
-    let firstNodeIndex = Math.floor(
+    const firstNodeIndex = Math.floor(
       netInternal._rand() * numSwappableNodes + this.input
     );
     let secondNodeIndex = Math.floor(
@@ -6878,8 +6878,8 @@
     const node = hidden[Math.floor(internal._rand() * hidden.length)];
     node._batchNorm = true;
   }
-  var MUTATION_DISPATCH;
-  var init_network_mutate = __esm({
+  let MUTATION_DISPATCH;
+  const init_network_mutate = __esm({
     'dist/architecture/network/network.mutate.js'() {
       'use strict';
       init_node();
@@ -6909,7 +6909,7 @@
   });
 
   // dist/architecture/network/network.training.js
-  var network_training_exports = {};
+  const network_training_exports = {};
   __export(network_training_exports, {
     __trainingInternals: () => __trainingInternals,
     applyGradientClippingImpl: () => applyGradientClippingImpl,
@@ -7404,7 +7404,7 @@
           'Missing `iterations` option. Training will run potentially indefinitely until `error` threshold is met.'
         );
     }
-    let targetError = options.error ?? -Infinity;
+    const targetError = options.error ?? -Infinity;
     const cost = options.cost || Cost.mse;
     if (
       typeof cost !== 'function' &&
@@ -7794,8 +7794,8 @@
       time: Date.now() - start,
     };
   }
-  var __trainingInternals;
-  var init_network_training = __esm({
+  let __trainingInternals;
+  const init_network_training = __esm({
     'dist/architecture/network/network.training.js'() {
       'use strict';
       init_methods();
@@ -7808,7 +7808,7 @@
   });
 
   // node_modules/util/support/isBufferBrowser.js
-  var require_isBufferBrowser = __commonJS({
+  const require_isBufferBrowser = __commonJS({
     'node_modules/util/support/isBufferBrowser.js'(exports, module) {
       module.exports = function isBuffer(arg) {
         return (
@@ -7823,7 +7823,7 @@
   });
 
   // node_modules/util/node_modules/inherits/inherits_browser.js
-  var require_inherits_browser = __commonJS({
+  const require_inherits_browser = __commonJS({
     'node_modules/util/node_modules/inherits/inherits_browser.js'(
       exports,
       module
@@ -7843,7 +7843,7 @@
       } else {
         module.exports = function inherits(ctor, superCtor) {
           ctor.super_ = superCtor;
-          var TempCtor = function () {};
+          const TempCtor = function () {};
           TempCtor.prototype = superCtor.prototype;
           ctor.prototype = new TempCtor();
           ctor.prototype.constructor = ctor;
@@ -7853,21 +7853,21 @@
   });
 
   // node_modules/util/util.js
-  var require_util = __commonJS({
+  const require_util = __commonJS({
     'node_modules/util/util.js'(exports) {
-      var formatRegExp = /%[sdj%]/g;
+      const formatRegExp = /%[sdj%]/g;
       exports.format = function (f) {
         if (!isString(f)) {
-          var objects = [];
+          const objects = [];
           for (var i = 0; i < arguments.length; i++) {
             objects.push(inspect(arguments[i]));
           }
           return objects.join(' ');
         }
         var i = 1;
-        var args = arguments;
-        var len = args.length;
-        var str = String(f).replace(formatRegExp, function (x2) {
+        const args = arguments;
+        const len = args.length;
+        let str = String(f).replace(formatRegExp, function (x2) {
           if (x2 === '%%') return '%';
           if (i >= len) return x2;
           switch (x2) {
@@ -7885,7 +7885,7 @@
               return x2;
           }
         });
-        for (var x = args[i]; i < len; x = args[++i]) {
+        for (let x = args[i]; i < len; x = args[++i]) {
           if (isNull(x) || !isObject(x)) {
             str += ' ' + x;
           } else {
@@ -7903,7 +7903,7 @@
         if (process.noDeprecation === true) {
           return fn;
         }
-        var warned = false;
+        let warned = false;
         function deprecated() {
           if (!warned) {
             if (process.throwDeprecation) {
@@ -7919,17 +7919,17 @@
         }
         return deprecated;
       };
-      var debugs = {};
-      var debugEnviron;
+      const debugs = {};
+      let debugEnviron;
       exports.debuglog = function (set) {
         if (isUndefined(debugEnviron))
           debugEnviron = process.env.NODE_DEBUG || '';
         set = set.toUpperCase();
         if (!debugs[set]) {
           if (new RegExp('\\b' + set + '\\b', 'i').test(debugEnviron)) {
-            var pid = process.pid;
+            const pid = process.pid;
             debugs[set] = function () {
-              var msg = exports.format.apply(exports, arguments);
+              const msg = exports.format.apply(exports, arguments);
               console.error('%s %d: %s', set, pid, msg);
             };
           } else {
@@ -7939,7 +7939,7 @@
         return debugs[set];
       };
       function inspect(obj, opts) {
-        var ctx = {
+        const ctx = {
           seen: [],
           stylize: stylizeNoColor,
         };
@@ -7985,7 +7985,7 @@
         regexp: 'red',
       };
       function stylizeWithColor(str, styleType) {
-        var style = inspect.styles[styleType];
+        const style = inspect.styles[styleType];
         if (style) {
           return (
             '\x1B[' +
@@ -8004,7 +8004,7 @@
         return str;
       }
       function arrayToHash(array) {
-        var hash = {};
+        const hash = {};
         array.forEach(function (val, idx) {
           hash[val] = true;
         });
@@ -8018,18 +8018,18 @@
           value.inspect !== exports.inspect && // Also filter out any prototype objects using the circular check.
           !(value.constructor && value.constructor.prototype === value)
         ) {
-          var ret = value.inspect(recurseTimes, ctx);
+          let ret = value.inspect(recurseTimes, ctx);
           if (!isString(ret)) {
             ret = formatValue(ctx, ret, recurseTimes);
           }
           return ret;
         }
-        var primitive = formatPrimitive(ctx, value);
+        const primitive = formatPrimitive(ctx, value);
         if (primitive) {
           return primitive;
         }
-        var keys = Object.keys(value);
-        var visibleKeys = arrayToHash(keys);
+        let keys = Object.keys(value);
+        const visibleKeys = arrayToHash(keys);
         if (ctx.showHidden) {
           keys = Object.getOwnPropertyNames(value);
         }
@@ -8041,7 +8041,7 @@
         }
         if (keys.length === 0) {
           if (isFunction(value)) {
-            var name = value.name ? ': ' + value.name : '';
+            const name = value.name ? ': ' + value.name : '';
             return ctx.stylize('[Function' + name + ']', 'special');
           }
           if (isRegExp(value)) {
@@ -8054,7 +8054,7 @@
             return formatError(value);
           }
         }
-        var base = '',
+        let base = '',
           array = false,
           braces = ['{', '}'];
         if (isArray(value)) {
@@ -8062,7 +8062,7 @@
           braces = ['[', ']'];
         }
         if (isFunction(value)) {
-          var n = value.name ? ': ' + value.name : '';
+          const n = value.name ? ': ' + value.name : '';
           base = ' [Function' + n + ']';
         }
         if (isRegExp(value)) {
@@ -8085,7 +8085,7 @@
           }
         }
         ctx.seen.push(value);
-        var output;
+        let output;
         if (array) {
           output = formatArray(ctx, value, recurseTimes, visibleKeys, keys);
         } else {
@@ -8106,7 +8106,7 @@
       function formatPrimitive(ctx, value) {
         if (isUndefined(value)) return ctx.stylize('undefined', 'undefined');
         if (isString(value)) {
-          var simple =
+          const simple =
             "'" +
             JSON.stringify(value)
               .replace(/^"|"$/g, '')
@@ -8123,8 +8123,8 @@
         return '[' + Error.prototype.toString.call(value) + ']';
       }
       function formatArray(ctx, value, recurseTimes, visibleKeys, keys) {
-        var output = [];
-        for (var i = 0, l = value.length; i < l; ++i) {
+        const output = [];
+        for (let i = 0, l = value.length; i < l; ++i) {
           if (hasOwnProperty(value, String(i))) {
             output.push(
               formatProperty(
@@ -8157,7 +8157,7 @@
         key,
         array
       ) {
-        var name, str, desc;
+        let name, str, desc;
         desc = Object.getOwnPropertyDescriptor(value, key) || {
           value: value[key],
         };
@@ -8225,8 +8225,8 @@
         return name + ': ' + str;
       }
       function reduceToSingleString(output, base, braces) {
-        var numLinesEst = 0;
-        var length = output.reduce(function (prev, cur) {
+        let numLinesEst = 0;
+        const length = output.reduce(function (prev, cur) {
           numLinesEst++;
           if (cur.indexOf('\n') >= 0) numLinesEst++;
           return prev + cur.replace(/\u001b\[\d\d?m/g, '').length + 1;
@@ -8316,7 +8316,7 @@
       function pad(n) {
         return n < 10 ? '0' + n.toString(10) : n.toString(10);
       }
-      var months = [
+      const months = [
         'Jan',
         'Feb',
         'Mar',
@@ -8331,8 +8331,8 @@
         'Dec',
       ];
       function timestamp() {
-        var d = /* @__PURE__ */ new Date();
-        var time = [
+        const d = /* @__PURE__ */ new Date();
+        const time = [
           pad(d.getHours()),
           pad(d.getMinutes()),
           pad(d.getSeconds()),
@@ -8349,8 +8349,8 @@
       exports.inherits = require_inherits_browser();
       exports._extend = function (origin, add) {
         if (!add || !isObject(add)) return origin;
-        var keys = Object.keys(add);
-        var i = keys.length;
+        const keys = Object.keys(add);
+        let i = keys.length;
         while (i--) {
           origin[keys[i]] = add[keys[i]];
         }
@@ -8363,15 +8363,15 @@
   });
 
   // node_modules/path/path.js
-  var require_path = __commonJS({
+  const require_path = __commonJS({
     'node_modules/path/path.js'(exports, module) {
       'use strict';
-      var isWindows = process.platform === 'win32';
-      var util = require_util();
+      const isWindows = process.platform === 'win32';
+      const util = require_util();
       function normalizeArray(parts, allowAboveRoot) {
-        var res = [];
-        for (var i = 0; i < parts.length; i++) {
-          var p = parts[i];
+        const res = [];
+        for (let i = 0; i < parts.length; i++) {
+          const p = parts[i];
           if (!p || p === '.') continue;
           if (p === '..') {
             if (res.length && res[res.length - 1] !== '..') {
@@ -8386,12 +8386,12 @@
         return res;
       }
       function trimArray(arr) {
-        var lastIndex = arr.length - 1;
-        var start = 0;
+        const lastIndex = arr.length - 1;
+        let start = 0;
         for (; start <= lastIndex; start++) {
           if (arr[start]) break;
         }
-        var end = lastIndex;
+        let end = lastIndex;
         for (; end >= 0; end--) {
           if (arr[end]) break;
         }
@@ -8399,21 +8399,21 @@
         if (start > end) return [];
         return arr.slice(start, end + 1);
       }
-      var splitDeviceRe = /^([a-zA-Z]:|[\\\/]{2}[^\\\/]+[\\\/]+[^\\\/]+)?([\\\/])?([\s\S]*?)$/;
-      var splitTailRe = /^([\s\S]*?)((?:\.{1,2}|[^\\\/]+?|)(\.[^.\/\\]*|))(?:[\\\/]*)$/;
-      var win32 = {};
+      const splitDeviceRe = /^([a-zA-Z]:|[\\\/]{2}[^\\\/]+[\\\/]+[^\\\/]+)?([\\\/])?([\s\S]*?)$/;
+      const splitTailRe = /^([\s\S]*?)((?:\.{1,2}|[^\\\/]+?|)(\.[^.\/\\]*|))(?:[\\\/]*)$/;
+      const win32 = {};
       function win32SplitPath(filename) {
-        var result = splitDeviceRe.exec(filename),
+        const result = splitDeviceRe.exec(filename),
           device = (result[1] || '') + (result[2] || ''),
           tail = result[3] || '';
-        var result2 = splitTailRe.exec(tail),
+        const result2 = splitTailRe.exec(tail),
           dir = result2[1],
           basename = result2[2],
           ext = result2[3];
         return [device, dir, basename, ext];
       }
       function win32StatPath(path2) {
-        var result = splitDeviceRe.exec(path2),
+        const result = splitDeviceRe.exec(path2),
           device = result[1] || '',
           isUnc = !!device && device[1] !== ':';
         return {
@@ -8430,10 +8430,10 @@
         );
       }
       win32.resolve = function () {
-        var resolvedDevice = '',
+        let resolvedDevice = '',
           resolvedTail = '',
           resolvedAbsolute = false;
-        for (var i = arguments.length - 1; i >= -1; i--) {
+        for (let i = arguments.length - 1; i >= -1; i--) {
           var path2;
           if (i >= 0) {
             path2 = arguments[i];
@@ -8489,7 +8489,7 @@
         );
       };
       win32.normalize = function (path2) {
-        var result = win32StatPath(path2),
+        let result = win32StatPath(path2),
           device = result.device,
           isUnc = result.isUnc,
           isAbsolute = result.isAbsolute,
@@ -8511,9 +8511,9 @@
         return win32StatPath(path2).isAbsolute;
       };
       win32.join = function () {
-        var paths = [];
-        for (var i = 0; i < arguments.length; i++) {
-          var arg = arguments[i];
+        const paths = [];
+        for (let i = 0; i < arguments.length; i++) {
+          const arg = arguments[i];
           if (!util.isString(arg)) {
             throw new TypeError('Arguments to path.join must be strings');
           }
@@ -8521,7 +8521,7 @@
             paths.push(arg);
           }
         }
-        var joined = paths.join('\\');
+        let joined = paths.join('\\');
         if (!/^[\\\/]{2}[^\\\/]/.test(paths[0])) {
           joined = joined.replace(/^[\\\/]{2,}/, '\\');
         }
@@ -8530,13 +8530,13 @@
       win32.relative = function (from, to) {
         from = win32.resolve(from);
         to = win32.resolve(to);
-        var lowerFrom = from.toLowerCase();
-        var lowerTo = to.toLowerCase();
-        var toParts = trimArray(to.split('\\'));
-        var lowerFromParts = trimArray(lowerFrom.split('\\'));
-        var lowerToParts = trimArray(lowerTo.split('\\'));
-        var length = Math.min(lowerFromParts.length, lowerToParts.length);
-        var samePartsLength = length;
+        const lowerFrom = from.toLowerCase();
+        const lowerTo = to.toLowerCase();
+        const toParts = trimArray(to.split('\\'));
+        const lowerFromParts = trimArray(lowerFrom.split('\\'));
+        const lowerToParts = trimArray(lowerTo.split('\\'));
+        const length = Math.min(lowerFromParts.length, lowerToParts.length);
+        let samePartsLength = length;
         for (var i = 0; i < length; i++) {
           if (lowerFromParts[i] !== lowerToParts[i]) {
             samePartsLength = i;
@@ -8546,7 +8546,7 @@
         if (samePartsLength == 0) {
           return to;
         }
-        var outputParts = [];
+        let outputParts = [];
         for (var i = samePartsLength; i < lowerFromParts.length; i++) {
           outputParts.push('..');
         }
@@ -8558,7 +8558,7 @@
         if (!path2) {
           return '';
         }
-        var resolvedPath = win32.resolve(path2);
+        const resolvedPath = win32.resolve(path2);
         if (/^[a-zA-Z]\:\\/.test(resolvedPath)) {
           return '\\\\?\\' + resolvedPath;
         } else if (/^\\\\[^?.]/.test(resolvedPath)) {
@@ -8567,7 +8567,7 @@
         return path2;
       };
       win32.dirname = function (path2) {
-        var result = win32SplitPath(path2),
+        let result = win32SplitPath(path2),
           root = result[0],
           dir = result[1];
         if (!root && !dir) {
@@ -8579,7 +8579,7 @@
         return root + dir;
       };
       win32.basename = function (path2, ext) {
-        var f = win32SplitPath(path2)[2];
+        let f = win32SplitPath(path2)[2];
         if (ext && f.substr(-1 * ext.length) === ext) {
           f = f.substr(0, f.length - ext.length);
         }
@@ -8594,15 +8594,15 @@
             "Parameter 'pathObject' must be an object, not " + typeof pathObject
           );
         }
-        var root = pathObject.root || '';
+        const root = pathObject.root || '';
         if (!util.isString(root)) {
           throw new TypeError(
             "'pathObject.root' must be a string or undefined, not " +
               typeof pathObject.root
           );
         }
-        var dir = pathObject.dir;
-        var base = pathObject.base || '';
+        const dir = pathObject.dir;
+        const base = pathObject.base || '';
         if (!dir) {
           return base;
         }
@@ -8617,7 +8617,7 @@
             "Parameter 'pathString' must be a string, not " + typeof pathString
           );
         }
-        var allParts = win32SplitPath(pathString);
+        const allParts = win32SplitPath(pathString);
         if (!allParts || allParts.length !== 4) {
           throw new TypeError("Invalid path '" + pathString + "'");
         }
@@ -8631,16 +8631,16 @@
       };
       win32.sep = '\\';
       win32.delimiter = ';';
-      var splitPathRe = /^(\/?|)([\s\S]*?)((?:\.{1,2}|[^\/]+?|)(\.[^.\/]*|))(?:[\/]*)$/;
-      var posix = {};
+      const splitPathRe = /^(\/?|)([\s\S]*?)((?:\.{1,2}|[^\/]+?|)(\.[^.\/]*|))(?:[\/]*)$/;
+      const posix = {};
       function posixSplitPath(filename) {
         return splitPathRe.exec(filename).slice(1);
       }
       posix.resolve = function () {
-        var resolvedPath = '',
+        let resolvedPath = '',
           resolvedAbsolute = false;
-        for (var i = arguments.length - 1; i >= -1 && !resolvedAbsolute; i--) {
-          var path2 = i >= 0 ? arguments[i] : process.cwd();
+        for (let i = arguments.length - 1; i >= -1 && !resolvedAbsolute; i--) {
+          const path2 = i >= 0 ? arguments[i] : process.cwd();
           if (!util.isString(path2)) {
             throw new TypeError('Arguments to path.resolve must be strings');
           } else if (!path2) {
@@ -8656,7 +8656,7 @@
         return (resolvedAbsolute ? '/' : '') + resolvedPath || '.';
       };
       posix.normalize = function (path2) {
-        var isAbsolute = posix.isAbsolute(path2),
+        const isAbsolute = posix.isAbsolute(path2),
           trailingSlash = path2 && path2[path2.length - 1] === '/';
         path2 = normalizeArray(path2.split('/'), !isAbsolute).join('/');
         if (!path2 && !isAbsolute) {
@@ -8671,9 +8671,9 @@
         return path2.charAt(0) === '/';
       };
       posix.join = function () {
-        var path2 = '';
-        for (var i = 0; i < arguments.length; i++) {
-          var segment = arguments[i];
+        let path2 = '';
+        for (let i = 0; i < arguments.length; i++) {
+          const segment = arguments[i];
           if (!util.isString(segment)) {
             throw new TypeError('Arguments to path.join must be strings');
           }
@@ -8690,17 +8690,17 @@
       posix.relative = function (from, to) {
         from = posix.resolve(from).substr(1);
         to = posix.resolve(to).substr(1);
-        var fromParts = trimArray(from.split('/'));
-        var toParts = trimArray(to.split('/'));
-        var length = Math.min(fromParts.length, toParts.length);
-        var samePartsLength = length;
+        const fromParts = trimArray(from.split('/'));
+        const toParts = trimArray(to.split('/'));
+        const length = Math.min(fromParts.length, toParts.length);
+        let samePartsLength = length;
         for (var i = 0; i < length; i++) {
           if (fromParts[i] !== toParts[i]) {
             samePartsLength = i;
             break;
           }
         }
-        var outputParts = [];
+        let outputParts = [];
         for (var i = samePartsLength; i < fromParts.length; i++) {
           outputParts.push('..');
         }
@@ -8711,7 +8711,7 @@
         return path2;
       };
       posix.dirname = function (path2) {
-        var result = posixSplitPath(path2),
+        let result = posixSplitPath(path2),
           root = result[0],
           dir = result[1];
         if (!root && !dir) {
@@ -8723,7 +8723,7 @@
         return root + dir;
       };
       posix.basename = function (path2, ext) {
-        var f = posixSplitPath(path2)[2];
+        let f = posixSplitPath(path2)[2];
         if (ext && f.substr(-1 * ext.length) === ext) {
           f = f.substr(0, f.length - ext.length);
         }
@@ -8738,15 +8738,15 @@
             "Parameter 'pathObject' must be an object, not " + typeof pathObject
           );
         }
-        var root = pathObject.root || '';
+        const root = pathObject.root || '';
         if (!util.isString(root)) {
           throw new TypeError(
             "'pathObject.root' must be a string or undefined, not " +
               typeof pathObject.root
           );
         }
-        var dir = pathObject.dir ? pathObject.dir + posix.sep : '';
-        var base = pathObject.base || '';
+        const dir = pathObject.dir ? pathObject.dir + posix.sep : '';
+        const base = pathObject.base || '';
         return dir + base;
       };
       posix.parse = function (pathString) {
@@ -8755,7 +8755,7 @@
             "Parameter 'pathString' must be a string, not " + typeof pathString
           );
         }
-        var allParts = posixSplitPath(pathString);
+        const allParts = posixSplitPath(pathString);
         if (!allParts || allParts.length !== 4) {
           throw new TypeError("Invalid path '" + pathString + "'");
         }
@@ -8780,13 +8780,13 @@
   });
 
   // dist/multithreading/workers/node/testworker.js
-  var testworker_exports = {};
+  const testworker_exports = {};
   __export(testworker_exports, {
     TestWorker: () => TestWorker,
     default: () => testworker_default,
   });
-  var import_child_process, import_path, TestWorker, testworker_default;
-  var init_testworker = __esm({
+  let import_child_process, import_path, TestWorker, testworker_default;
+  const init_testworker = __esm({
     'dist/multithreading/workers/node/testworker.js'() {
       'use strict';
       import_child_process = __require('child_process');
@@ -8847,12 +8847,12 @@
   });
 
   // dist/multithreading/workers/browser/testworker.js
-  var testworker_exports2 = {};
+  const testworker_exports2 = {};
   __export(testworker_exports2, {
     TestWorker: () => TestWorker2,
   });
-  var TestWorker2;
-  var init_testworker2 = __esm({
+  let TestWorker2;
+  const init_testworker2 = __esm({
     'dist/multithreading/workers/browser/testworker.js'() {
       'use strict';
       init_multi();
@@ -8939,8 +8939,8 @@
   });
 
   // dist/multithreading/workers/workers.js
-  var Workers;
-  var init_workers = __esm({
+  let Workers;
+  const init_workers = __esm({
     'dist/multithreading/workers/workers.js'() {
       'use strict';
       Workers = class {
@@ -8969,7 +8969,7 @@
   });
 
   // dist/multithreading/multi.js
-  var Multi;
+  let Multi;
   var init_multi = __esm({
     'dist/multithreading/multi.js'() {
       'use strict';
@@ -9279,7 +9279,7 @@
   });
 
   // dist/architecture/network/network.evolve.js
-  var network_evolve_exports = {};
+  const network_evolve_exports = {};
   __export(network_evolve_exports, {
     evolveNetwork: () => evolveNetwork,
   });
@@ -9519,8 +9519,8 @@
     } catch {}
     return { error, iterations: neat.generation, time: Date.now() - start };
   }
-  var _complexityCache;
-  var init_network_evolve = __esm({
+  let _complexityCache;
+  const init_network_evolve = __esm({
     'dist/architecture/network/network.evolve.js'() {
       'use strict';
       init_methods();
@@ -9535,7 +9535,7 @@
   __export(network_exports, {
     default: () => Network,
   });
-  var Network;
+  let Network;
   var init_network = __esm({
     'dist/architecture/network.js'() {
       'use strict';
@@ -9920,7 +9920,7 @@
               'Network structure is corrupted or empty. No nodes found.'
             );
           }
-          let output = outputArr;
+          const output = outputArr;
           this._lastSkippedLayers = [];
           const stats = {
             droppedHiddenNodes: 0,
@@ -10075,7 +10075,7 @@
               }
             }
           } else {
-            let hiddenNodes = this.nodes.filter(
+            const hiddenNodes = this.nodes.filter(
               (node) => node.type === 'hidden'
             );
             let droppedCount = 0;
@@ -10882,7 +10882,7 @@
     );
     const inputNodes = network.nodes.filter((n) => n.type === 'input');
     const outputNodes = network.nodes.filter((n) => n.type === 'output');
-    let hiddenNodes = network.nodes.filter((n) => n.type === 'hidden');
+    const hiddenNodes = network.nodes.filter((n) => n.type === 'hidden');
     if (inputNodes.length === 0 || outputNodes.length === 0) {
       try {
         console.warn(
@@ -11107,7 +11107,7 @@
       return null;
     return mutationMethod;
   }
-  var init_neat_mutation = __esm({
+  const init_neat_mutation = __esm({
     'dist/neat/neat.mutation.js'() {
       'use strict';
       init_neat_constants();
@@ -11231,14 +11231,14 @@
     }
     return paretoFronts;
   }
-  var init_neat_multiobjective = __esm({
+  const init_neat_multiobjective = __esm({
     'dist/neat/neat.multiobjective.js'() {
       'use strict';
     },
   });
 
   // dist/neat/neat.adaptive.js
-  var neat_adaptive_exports = {};
+  const neat_adaptive_exports = {};
   __export(neat_adaptive_exports, {
     applyAdaptiveMutation: () => applyAdaptiveMutation,
     applyAncestorUniqAdaptive: () => applyAncestorUniqAdaptive,
@@ -11490,7 +11490,7 @@
       this._operatorStats.set(k, stat);
     }
   }
-  var init_neat_adaptive = __esm({
+  const init_neat_adaptive = __esm({
     'dist/neat/neat.adaptive.js'() {
       'use strict';
       init_neat_constants();
@@ -11498,7 +11498,7 @@
   });
 
   // dist/neat/neat.lineage.js
-  var neat_lineage_exports = {};
+  const neat_lineage_exports = {};
   __export(neat_lineage_exports, {
     buildAnc: () => buildAnc,
     computeAncestorUniqueness: () => computeAncestorUniqueness,
@@ -11561,8 +11561,8 @@
       : 0;
     return ancestorUniqueness;
   }
-  var ANCESTOR_DEPTH_WINDOW, MAX_UNIQUENESS_SAMPLE_PAIRS;
-  var init_neat_lineage = __esm({
+  let ANCESTOR_DEPTH_WINDOW, MAX_UNIQUENESS_SAMPLE_PAIRS;
+  const init_neat_lineage = __esm({
     'dist/neat/neat.lineage.js'() {
       'use strict';
       ANCESTOR_DEPTH_WINDOW = 4;
@@ -11571,7 +11571,7 @@
   });
 
   // dist/neat/neat.telemetry.js
-  var neat_telemetry_exports = {};
+  const neat_telemetry_exports = {};
   __export(neat_telemetry_exports, {
     applyTelemetrySelect: () => applyTelemetrySelect,
     buildTelemetryEntry: () => buildTelemetryEntry,
@@ -12023,7 +12023,7 @@
       };
     return entry;
   }
-  var init_neat_telemetry = __esm({
+  const init_neat_telemetry = __esm({
     'dist/neat/neat.telemetry.js'() {
       'use strict';
       init_neat_constants();
@@ -12031,7 +12031,7 @@
   });
 
   // dist/neat/neat.pruning.js
-  var neat_pruning_exports = {};
+  const neat_pruning_exports = {};
   __export(neat_pruning_exports, {
     applyAdaptivePruning: () => applyAdaptivePruning,
     applyEvolutionPruning: () => applyEvolutionPruning,
@@ -12110,7 +12110,7 @@
           g.pruneToSparsity(this._adaptivePruneLevel, 'magnitude');
     }
   }
-  var init_neat_pruning = __esm({
+  const init_neat_pruning = __esm({
     'dist/neat/neat.pruning.js'() {
       'use strict';
     },
@@ -12531,7 +12531,7 @@
             remaining >= this._species.length * minOff
           )
             offspringAlloc[i] = minOff;
-        let allocated = offspringAlloc.reduce((a, b) => a + b, 0);
+        const allocated = offspringAlloc.reduce((a, b) => a + b, 0);
         let slotsLeft = remaining - allocated;
         const remainders = rawShares.map((s, i) => ({
           i,
@@ -12754,7 +12754,7 @@
     } catch {}
     return fittest;
   }
-  var init_neat_evolve = __esm({
+  const init_neat_evolve = __esm({
     'dist/neat/neat.evolve.js'() {
       'use strict';
       init_network();
@@ -12944,7 +12944,7 @@
       }
     } catch {}
   }
-  var init_neat_evaluate = __esm({
+  const init_neat_evaluate = __esm({
     'dist/neat/neat.evaluate.js'() {
       'use strict';
     },
@@ -13028,7 +13028,7 @@
       }
     } catch {}
   }
-  var init_neat_helpers = __esm({
+  const init_neat_helpers = __esm({
     'dist/neat/neat.helpers.js'() {
       'use strict';
       init_network();
@@ -13089,7 +13089,7 @@
       this.options.multiObjective.objectives = [];
     this._objectivesList = void 0;
   }
-  var init_neat_objectives = __esm({
+  const init_neat_objectives = __esm({
     'dist/neat/neat.objectives.js'() {
       'use strict';
     },
@@ -13174,7 +13174,7 @@
       population: population.length,
     };
   }
-  var init_neat_diversity = __esm({
+  const init_neat_diversity = __esm({
     'dist/neat/neat.diversity.js'() {
       'use strict';
     },
@@ -13250,7 +13250,7 @@
     cacheMap.set(key, dist);
     return dist;
   }
-  var init_neat_compat = __esm({
+  const init_neat_compat = __esm({
     'dist/neat/neat.compat.js'() {
       'use strict';
     },
@@ -13529,7 +13529,7 @@
     );
     if (survivors.length) this._species = survivors;
   }
-  var init_neat_speciation = __esm({
+  const init_neat_speciation = __esm({
     'dist/neat/neat.speciation.js'() {
       'use strict';
     },
@@ -13586,7 +13586,7 @@
     }
     return speciesHistory;
   }
-  var init_neat_species = __esm({
+  const init_neat_species = __esm({
     'dist/neat/neat.species.js'() {
       'use strict';
     },
@@ -13828,7 +13828,7 @@
     }
     return lines.join('\n');
   }
-  var COMPLEXITY_PREFIX,
+  let COMPLEXITY_PREFIX,
     PERF_PREFIX,
     LINEAGE_PREFIX,
     DIVERSITY_PREFIX,
@@ -13840,7 +13840,7 @@
     HEADER_OBJ_EVENTS,
     HEADER_OBJ_IMPORTANCE,
     HEADER_GENERATION;
-  var init_neat_telemetry_exports = __esm({
+  const init_neat_telemetry_exports = __esm({
     'dist/neat/neat.telemetry.exports.js'() {
       'use strict';
       COMPLEXITY_PREFIX = 'complexity.';
@@ -13954,14 +13954,14 @@
     );
     return totalScore / population.length;
   }
-  var init_neat_selection = __esm({
+  const init_neat_selection = __esm({
     'dist/neat/neat.selection.js'() {
       'use strict';
     },
   });
 
   // dist/neat/neat.export.js
-  var neat_export_exports = {};
+  const neat_export_exports = {};
   __export(neat_export_exports, {
     exportPopulation: () => exportPopulation,
     exportState: () => exportState,
@@ -14037,7 +14037,7 @@
   __export(neat_exports, {
     default: () => Neat,
   });
-  var Neat;
+  let Neat;
   var init_neat = __esm({
     'dist/neat.js'() {
       'use strict';

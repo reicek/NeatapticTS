@@ -20,7 +20,7 @@ describe('adaptive minimal criterion & adaptive complexity budget', () => {
     });
     await neat.evaluate();
     const initialThreshold = (neat as any)._mcThreshold;
-    let zeroedEarly = neat.population.filter((g) => (g.score || 0) === 0)
+    const zeroedEarly = neat.population.filter((g) => (g.score || 0) === 0)
       .length;
     for (let i = 0; i < 4; i++) await neat.evolve();
     await neat.evaluate();

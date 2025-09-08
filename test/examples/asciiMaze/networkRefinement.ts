@@ -135,7 +135,7 @@ export class NetworkRefinement {
       return true;
     } catch (e) {
       // Best-effort: swallow errors but keep optional debugging available via console when needed.
-      // eslint-disable-next-line no-console
+
       if ((globalThis as any).DEBUG)
         console.warn('Refinement propagate failed:', e);
       return false;

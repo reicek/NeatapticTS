@@ -48,7 +48,11 @@ class ActivationArrayPool {
       this.reused++;
       const arr = bucket.pop()!;
       // zero on reuse to avoid stale values
-      (arr as any).fill(0);
+      if (Array.isArray(arr)) {
+        arr.fill(0);
+      } else if (arr instanceof Float32Array) {
+        arr.fill(0);
+      }
       return arr;
     }
     this.created++;

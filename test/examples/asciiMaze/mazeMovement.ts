@@ -1407,7 +1407,7 @@ export class MazeMovement {
     const ring = state.moveHistoryRing;
     const capacity = ring.length;
     if (capacity === 0) return undefined; // defensive: empty ring
-    let head = state.moveHistoryHead | 0;
+    const head = state.moveHistoryHead | 0;
 
     // Compute wrapped index: head - requested (1-based) then normalize
     let rawIndex = head - requested;

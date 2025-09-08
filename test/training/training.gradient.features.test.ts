@@ -5,9 +5,7 @@ const data = Array.from({ length: 8 }, (_, i) => ({
   input: [i],
   output: [2 * i],
 }));
-function buildNet() {
-  return new Network(1, 1);
-}
+const buildNet = (): Network => new Network(1, 1);
 
 describe('training.gradient.features', () => {
   describe('accumulationSteps approximate equivalence', () => {
@@ -19,7 +17,9 @@ describe('training.gradient.features', () => {
       for (let i = 0; i < netA.connections.length; i++)
         netB.connections[i].weight = netA.connections[i].weight;
       for (let n = 0; n < netA.nodes.length; n++)
-        (netB.nodes[n] as any).bias = (netA.nodes[n] as any).bias;
+        (netB.nodes[n] as { bias?: number }).bias = (netA.nodes[n] as {
+          bias?: number;
+        }).bias;
       const origWeight = netA.connections[0].weight;
       const subset = data.slice(0, 4);
       netA.train(subset, {
@@ -100,7 +100,7 @@ describe('training.gradient.features', () => {
         optimizer: 'adam',
         mixedPrecision: { lossScale: 512 },
       });
-      const conn: any = net.connections[0];
+      const conn = net.connections[0] as { _fp32Weight?: number };
       hasMasterCopy = typeof conn._fp32Weight !== 'undefined';
     });
     it('stores master fp32 weight copy', () => {
