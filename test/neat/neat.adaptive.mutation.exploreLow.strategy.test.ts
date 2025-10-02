@@ -24,7 +24,7 @@ describe('Adaptive Mutation exploreLow strategy', () => {
       // Seed per-genome rates
       neat.mutate();
       require('../../src/neat/neat.adaptive').applyAdaptiveMutation.call(
-        neat as any
+        neat as any,
       );
       const rates = neat.population
         .map((g: any) => g._mutRate)

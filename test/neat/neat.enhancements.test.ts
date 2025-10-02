@@ -28,7 +28,7 @@ describe('Adaptive mutation rates', () => {
       (v, i) =>
         v !== undefined &&
         rates1[i] !== undefined &&
-        Math.abs(v - rates1[i]) > 1e-6
+        Math.abs(v - rates1[i]) > 1e-6,
     );
     expect(changed).toBe(true);
   });
@@ -51,7 +51,7 @@ describe('Novelty search blending', () => {
     });
     await neat.evaluate();
     const annotated = neat.population.filter(
-      (g) => (g as any)._novelty !== undefined
+      (g) => (g as any)._novelty !== undefined,
     );
     expect(annotated.length).toBeGreaterThan(0);
   });

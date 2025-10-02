@@ -7,13 +7,13 @@ describe('utility exports & resets', () => {
       3,
       1,
       (n: Network) =>
-        ((n as unknown) as { connections: unknown[] }).connections.length,
+        (n as unknown as { connections: unknown[] }).connections.length,
       {
         popsize: 12,
         seed: 600,
         speciation: true,
         speciesAllocation: { extendedHistory: true },
-      }
+      },
     );
     await neat.evaluate();
     await neat.evolve();
@@ -25,7 +25,7 @@ describe('utility exports & resets', () => {
       3,
       1,
       (n: Network) =>
-        ((n as unknown) as { connections: unknown[] }).connections.length,
+        (n as unknown as { connections: unknown[] }).connections.length,
       {
         popsize: 14,
         seed: 601,
@@ -34,7 +34,7 @@ describe('utility exports & resets', () => {
           descriptor: (g: Network) => [g.nodes.length],
           archiveAddThreshold: 0.0,
         },
-      }
+      },
     );
     await neat.evaluate();
     const before = neat.getNoveltyArchiveSize();
@@ -47,12 +47,12 @@ describe('utility exports & resets', () => {
       3,
       2,
       (n: Network) =>
-        ((n as unknown) as { connections: unknown[] }).connections.length,
+        (n as unknown as { connections: unknown[] }).connections.length,
       {
         popsize: 16,
         seed: 602,
         multiObjective: { enabled: true },
-      }
+      },
     );
     await neat.evolve();
     expect(neat.getParetoArchive().length).toBeGreaterThan(0);

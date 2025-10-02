@@ -19,7 +19,7 @@ describe('Operator Adaptation & Bandit', () => {
       neat.mutate();
       neat.mutate();
       require('../../src/neat/neat.adaptive').applyOperatorAdaptation.call(
-        neat as any
+        neat as any,
       );
       // Act: extract stats entries count
       const count = neat.getOperatorStats().length;

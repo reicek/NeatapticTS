@@ -18,7 +18,7 @@ describe('Phased Complexity Toggle Boundary', () => {
       for (let g = 0; g < 5; g++) {
         (neat as any).generation = g;
         require('../../src/neat/neat.adaptive').applyPhasedComplexity.call(
-          neat as any
+          neat as any,
         );
       }
       // Act: final phase after simulation

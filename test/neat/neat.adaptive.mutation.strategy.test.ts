@@ -5,7 +5,7 @@ describe('enhanced adaptive mutation strategies', () => {
   const fitness = (net: Network) => {
     // Simple score: number of enabled connections
     const conns = (net as any).connections.filter(
-      (c: any) => c.enabled !== false
+      (c: any) => c.enabled !== false,
     ).length;
     return conns;
   };

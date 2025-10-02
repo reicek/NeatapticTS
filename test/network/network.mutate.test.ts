@@ -24,12 +24,14 @@ describe('Network.mutateImpl & operators', () => {
   describe('Scenario: ADD_NODE deterministic chain mode', () => {
     it('extends linear chain depth by exactly one hidden node', () => {
       // Arrange
-      (config as any).deterministicChainMode = true;
+      const originalDeterministicChainMode =
+        config.deterministicChainMode ?? false;
+      config.deterministicChainMode = true;
       const net = new Network(1, 1, { seed: 2 });
       const beforeHidden = net.nodes.filter((n) => n.type === 'hidden').length;
       // Act
       mutateImpl.call(net, mutation.ADD_NODE);
-      (config as any).deterministicChainMode = false; // reset
+      config.deterministicChainMode = originalDeterministicChainMode; // reset
       const afterHidden = net.nodes.filter((n) => n.type === 'hidden').length;
       // Assert
       expect(afterHidden - beforeHidden).toBe(1);

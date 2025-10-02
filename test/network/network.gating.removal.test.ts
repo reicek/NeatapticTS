@@ -1,6 +1,10 @@
 import Network from '../../src/architecture/network';
+import Node from '../../src/architecture/node';
 import mutation from '../../src/methods/mutation';
 import { removeNode as gatingRemoveNode } from '../../src/architecture/network/network.gating';
+
+const getNetworkRng = (network: Network): (() => number) =>
+  Reflect.get(network, '_rand') as () => number;
 
 /**
  * Tests for gating & node removal utilities (`network.gating.ts`).
@@ -55,14 +59,13 @@ describe('Network.gating & removal', () => {
       // Arrange
       const net = new Network(1, 1, { seed: 21, enforceAcyclic: true });
       net.disconnect(net.nodes[0], net.nodes[1]);
-      const NodeCtor = require('../../src/architecture/node').default as any;
-      const hidden = new NodeCtor('hidden', undefined, (net as any)._rand);
-      (net as any).nodes.splice(1, 0, hidden);
+      const hidden = new Node('hidden', undefined, getNetworkRng(net));
+      net.nodes.splice(1, 0, hidden);
       net.connect(net.nodes[0], hidden);
       net.connect(hidden, net.nodes[net.nodes.length - 1]);
       // Act
       net.remove(hidden);
-      const stillHasHidden = (net as any).nodes.includes(hidden);
+      const stillHasHidden = net.nodes.includes(hidden);
       // Assert
       expect(stillHasHidden).toBe(false);
     });
@@ -75,16 +78,18 @@ describe('Network.gating & removal', () => {
       mutation.SUB_NODE.keep_gates = true;
       const net = new Network(1, 1, { seed: 31, enforceAcyclic: true });
       net.disconnect(net.nodes[0], net.nodes[1]);
-      const NodeCtor = require('../../src/architecture/node').default as any;
-      const hidden = new NodeCtor('hidden', undefined, (net as any)._rand);
-      (net as any).nodes.splice(1, 0, hidden);
-      const cIn = net.connect(net.nodes[0], hidden)[0];
-      const cOut = net.connect(hidden, net.nodes[net.nodes.length - 1])[0];
-      net.gate(net.nodes[0], cIn);
-      net.gate(net.nodes[net.nodes.length - 1], cOut);
+      const hidden = new Node('hidden', undefined, getNetworkRng(net));
+      net.nodes.splice(1, 0, hidden);
+      const inboundConnection = net.connect(net.nodes[0], hidden)[0];
+      const outboundConnection = net.connect(
+        hidden,
+        net.nodes[net.nodes.length - 1],
+      )[0];
+      net.gate(net.nodes[0], inboundConnection);
+      net.gate(net.nodes[net.nodes.length - 1], outboundConnection);
       // Act
       gatingRemoveNode.call(net, hidden);
-      const postRemovalGates = (net as any).gates.length;
+      const postRemovalGates = net.gates.length;
       // Assert
       expect(postRemovalGates > 0).toBe(true);
       mutation.SUB_NODE.keep_gates = originalKeep;

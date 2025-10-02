@@ -20,13 +20,13 @@ describe('Operator Adaptation Decay & Bandit Exploration', () => {
       neat.mutate();
       neat.mutate();
       require('../../src/neat/neat.adaptive').applyOperatorAdaptation.call(
-        neat as any
+        neat as any,
       );
       const before = neat
         .getOperatorStats()
         .reduce((s, r) => s + r.attempts, 0);
       require('../../src/neat/neat.adaptive').applyOperatorAdaptation.call(
-        neat as any
+        neat as any,
       );
       const after = neat.getOperatorStats().reduce((s, r) => s + r.attempts, 0);
       expect(after).toBeLessThan(before);

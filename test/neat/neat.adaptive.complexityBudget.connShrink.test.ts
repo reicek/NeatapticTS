@@ -22,7 +22,7 @@ describe('Adaptive Complexity Budget connection shrink', () => {
       const start = neat.options.maxConns || 18;
       for (let i = 0; i < 4; i++)
         require('../../src/neat/neat.adaptive').applyComplexityBudget.call(
-          neat as any
+          neat as any,
         );
       const after = neat.options.maxConns;
       expect(after).toBeLessThan(start);

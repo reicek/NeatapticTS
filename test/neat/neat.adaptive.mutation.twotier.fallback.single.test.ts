@@ -23,7 +23,7 @@ describe('Adaptive Mutation twoTier fallback (single genome)', () => {
       await neat.evaluate();
       neat.mutate();
       require('../../src/neat/neat.adaptive').applyAdaptiveMutation.call(
-        neat as any
+        neat as any,
       );
       const rate = (neat.population[0] as any)._mutRate;
       // Expect rate not equal baseline => changed via fallback balancing

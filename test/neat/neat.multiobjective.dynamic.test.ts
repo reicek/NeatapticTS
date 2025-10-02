@@ -15,7 +15,7 @@ describe('Dynamic objective registration', () => {
     });
     // Register a custom objective using structural entropy proxy (private method via cast)
     neat.registerObjective('entropy', 'max', (g: Network) =>
-      (neat as any)._structuralEntropy(g)
+      (neat as any)._structuralEntropy(g),
     );
     await neat.evaluate();
     await neat.evolve();

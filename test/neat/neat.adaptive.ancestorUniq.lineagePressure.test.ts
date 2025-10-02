@@ -20,7 +20,7 @@ describe('Ancestor Uniqueness Adaptive (lineagePressure mode)', () => {
       // Arrange: low ancestor uniqueness telemetry
       (neat as any)._telemetry.push({ lineage: { ancestorUniq: 0.2 } });
       require('../../src/neat/neat.adaptive').applyAncestorUniqAdaptive.call(
-        neat as any
+        neat as any,
       );
       const strength = neat.options.lineagePressure.strength;
       // Assert: strength above default baseline 0.01
@@ -45,7 +45,7 @@ describe('Ancestor Uniqueness Adaptive (lineagePressure mode)', () => {
       // Arrange: set initial strength then push high uniqueness
       (neat as any)._telemetry.push({ lineage: { ancestorUniq: 0.95 } });
       require('../../src/neat/neat.adaptive').applyAncestorUniqAdaptive.call(
-        neat as any
+        neat as any,
       );
       const strength = neat.options.lineagePressure.strength;
       // Assert: strength not increased above starting 0.01 (may reduce or stay ~0.01)

@@ -19,7 +19,7 @@ describe('Adaptive Complexity Budget minNodes clamp', () => {
     test('maxNodes stays >= minNodes after shrink cycles', () => {
       for (let i = 0; i < 5; i++)
         require('../../src/neat/neat.adaptive').applyComplexityBudget.call(
-          neat as any
+          neat as any,
         );
       expect(neat.options.maxNodes).toBeGreaterThanOrEqual(8);
     });

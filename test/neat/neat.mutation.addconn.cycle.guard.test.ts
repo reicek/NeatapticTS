@@ -25,12 +25,12 @@ describe('Mutation add connection reuse (acyclic guard)', () => {
       genome.connect(
         genome.nodes.find((n: any) => n.type === 'input'),
         hidden,
-        1
+        1,
       );
       genome.connect(
         hidden,
         genome.nodes.find((n: any) => n.type === 'output'),
-        1
+        1,
       );
       // Attempt to create a back edge hidden->input via direct call (should be prevented in selection logic)
     });
@@ -40,7 +40,7 @@ describe('Mutation add connection reuse (acyclic guard)', () => {
       // Act: search for illegal back edge to input
       const input = genome.nodes.find((n: any) => n.type === 'input');
       const illegal = genome.connections.some(
-        (c: any) => c.from.type === 'hidden' && c.to === input
+        (c: any) => c.from.type === 'hidden' && c.to === input,
       );
       // Assert: no illegal back edge created
       expect(illegal).toBe(false);

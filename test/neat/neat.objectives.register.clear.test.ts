@@ -29,7 +29,7 @@ describe('NEAT Objectives Management', () => {
       (neat as any).registerObjective(
         'sparsity',
         'min',
-        (g: any) => g.connections.length
+        (g: any) => g.connections.length,
       );
       // Act: retrieve keys including new objective
       const keys = neat.getObjectiveKeys();
@@ -41,7 +41,7 @@ describe('NEAT Objectives Management', () => {
       (neat as any).registerObjective(
         'temp',
         'max',
-        (g: any) => g.nodes.length
+        (g: any) => g.nodes.length,
       );
       (neat as any).clearObjectives();
       // Act: get resulting keys

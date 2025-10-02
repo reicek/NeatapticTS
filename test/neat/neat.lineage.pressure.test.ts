@@ -22,7 +22,7 @@ describe('Lineage pressure feature', () => {
     const scores = (neat as any).population.map((g: any) => g.score || 0);
     // Check if any genome with depth > target has score < 1 (penalized)
     const penalized = depths.some(
-      (d: number, i: number) => d > 1 && scores[i] < 0.99
+      (d: number, i: number) => d > 1 && scores[i] < 0.99,
     );
     expect(penalized).toBe(true);
   });

@@ -104,7 +104,7 @@ describe('State export/import', () => {
     const bundle = neat.exportState();
     const restored = (Neat as any).importState(
       bundle,
-      (n: Network) => n.connections.length
+      (n: Network) => n.connections.length,
     ) as Neat;
     expect(restored.generation).toBe(neat.generation);
   });
@@ -119,7 +119,7 @@ describe('State export/import', () => {
     const meta = neat.toJSON();
     const neat2 = (Neat as any).fromJSON(
       meta,
-      (n: Network) => n.connections.length
+      (n: Network) => n.connections.length,
     ) as Neat;
     expect(neat2.toJSON().nextGlobalInnovation).toBe(meta.nextGlobalInnovation);
   });

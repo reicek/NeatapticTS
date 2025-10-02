@@ -1,5 +1,13 @@
 import Network from '../../src/architecture/network';
 
+type NetworkSnapshot = ReturnType<Network['snapshotRNG']>;
+type InternalRand = () => number;
+
+const invokeInternalRand = (network: Network): number => {
+  const rand = Reflect.get(network, '_rand') as InternalRand;
+  return rand.call(network);
+};
+
 /** Deterministic RNG utilities tests (AAA pattern & single expectations). */
 describe('Network.deterministic RNG utilities', () => {
   describe('Scenario: reproducible seeding', () => {
@@ -8,8 +16,8 @@ describe('Network.deterministic RNG utilities', () => {
       const netA = new Network(1, 1, { seed: 123, enforceAcyclic: true });
       const netB = new Network(1, 1, { seed: 123, enforceAcyclic: true });
       // Act
-      const a1 = (netA as any)._rand();
-      const b1 = (netB as any)._rand();
+      const a1 = invokeInternalRand(netA);
+      const b1 = invokeInternalRand(netB);
       // Assert
       expect(a1).toBe(b1);
     });
@@ -29,9 +37,15 @@ describe('Network.deterministic RNG utilities', () => {
         // Arrange
         const net = new Network(1, 1, { seed: 9, enforceAcyclic: true });
         const snap = net.snapshotRNG();
-        (net as any)._rand();
+        invokeInternalRand(net);
         // Act
-        net.setRNGState(snap.state as number);
+        const { state } = snap;
+        if (typeof state !== 'number') {
+          throw new Error(
+            'Snapshot state should be numeric before restoration',
+          );
+        }
+        net.setRNGState(state as NetworkSnapshot['state']);
         const roundTripped = net.getRNGState();
         // Assert
         expect(roundTripped).toBe(snap.state);
@@ -45,7 +59,7 @@ describe('Network.deterministic RNG utilities', () => {
       const net = new Network(1, 1, { seed: 42, enforceAcyclic: true });
       // Act
       net.restoreRNG(() => 0.5);
-      const val = (net as any)._rand();
+      const val = invokeInternalRand(net);
       // Assert
       expect(val).toBe(0.5);
     });

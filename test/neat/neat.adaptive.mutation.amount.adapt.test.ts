@@ -25,10 +25,10 @@ describe('Adaptive Mutation amount adaptation', () => {
       await neat.evaluate();
       neat.mutate();
       require('../../src/neat/neat.adaptive').applyAdaptiveMutation.call(
-        neat as any
+        neat as any,
       );
       const ok = neat.population.every(
-        (g: any) => g._mutAmount >= 1 && g._mutAmount <= 6
+        (g: any) => g._mutAmount >= 1 && g._mutAmount <= 6,
       );
       expect(ok).toBe(true);
     });

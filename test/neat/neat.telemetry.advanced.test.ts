@@ -1,7 +1,48 @@
 import Neat from '../../src/neat';
 import Network from '../../src/architecture/network';
+import type {
+  SpeciesHistoryEntry,
+  SpeciesHistoryStat,
+  SpeciesHistoryStatExtended,
+  TelemetryEntry,
+} from '../../src/neat/neat.types';
 
 // Each test single expectation.
+
+const getLatestTelemetryEntry = (
+  neatInstance: Neat,
+): TelemetryEntry | undefined => {
+  const telemetryEntries = neatInstance.getTelemetry() as TelemetryEntry[];
+  return telemetryEntries.at(-1);
+};
+
+const requireLatestTelemetryEntry = (neatInstance: Neat): TelemetryEntry => {
+  const latestTelemetryEntry = getLatestTelemetryEntry(neatInstance);
+  if (!latestTelemetryEntry) {
+    throw new Error('Expected telemetry to contain at least one entry.');
+  }
+  return latestTelemetryEntry;
+};
+
+const requireLatestSpeciesHistoryEntry = (
+  entries: SpeciesHistoryEntry[],
+): SpeciesHistoryEntry => {
+  const latestEntry = entries.at(-1);
+  if (!latestEntry) {
+    throw new Error('Species history should contain at least one entry.');
+  }
+  return latestEntry;
+};
+
+const speciesStatHasInnovationRange = (
+  stat: SpeciesHistoryStat,
+): stat is SpeciesHistoryStatExtended =>
+  (stat as SpeciesHistoryStatExtended).innovationRange !== undefined;
+
+const speciesStatHasEnabledRatio = (
+  stat: SpeciesHistoryStat,
+): stat is SpeciesHistoryStatExtended =>
+  (stat as SpeciesHistoryStatExtended).enabledRatio !== undefined;
 
 describe('advanced telemetry & archives', () => {
   describe('operator stats presence', () => {
@@ -9,17 +50,19 @@ describe('advanced telemetry & archives', () => {
       const neat = new Neat(
         3,
         2,
-        (n: Network) => (n as any).connections.length,
+        (network: Network) => network.connections.length,
         {
           popsize: 18,
           seed: 501,
           multiObjective: { enabled: true },
           telemetry: { enabled: true },
-        }
+        },
       );
-      for (let i = 0; i < 2; i++) await neat.evolve();
-      const tel = neat.getTelemetry().slice(-1)[0];
-      expect(Array.isArray(tel.ops)).toBe(true);
+      for (let generationIndex = 0; generationIndex < 2; generationIndex += 1) {
+        await neat.evolve();
+      }
+      const telemetryEntry = requireLatestTelemetryEntry(neat);
+      expect(Array.isArray(telemetryEntry.ops)).toBe(true);
     });
   });
   describe('species extended history metrics', () => {
@@ -27,38 +70,44 @@ describe('advanced telemetry & archives', () => {
       const neat = new Neat(
         3,
         1,
-        (n: Network) => (n as any).connections.length,
+        (network: Network) => network.connections.length,
         {
           popsize: 14,
           seed: 502,
           speciation: true,
           speciesAllocation: { extendedHistory: true },
-        }
+        },
       );
       await neat.evaluate();
       await neat.evolve();
-      const hist = neat.getSpeciesHistory();
-      const last = hist[hist.length - 1];
-      const anyWithRange = last.stats.some((s: any) => 'innovationRange' in s);
-      expect(anyWithRange).toBe(true);
+      const historyEntries = neat.getSpeciesHistory();
+      const latestEntry = requireLatestSpeciesHistoryEntry(historyEntries);
+      const hasInnovationRange = latestEntry.stats.some(
+        speciesStatHasInnovationRange,
+      );
+      expect(hasInnovationRange).toBe(true);
     });
     test('history entry includes enabledRatio', async () => {
       const neat = new Neat(
         3,
         1,
-        (n: Network) => (n as any).connections.length,
+        (network: Network) => network.connections.length,
         {
           popsize: 12,
           seed: 506,
           speciation: true,
           speciesAllocation: { extendedHistory: true },
-        }
+        },
       );
       await neat.evaluate();
       await neat.evolve();
-      const last = neat.getSpeciesHistory().slice(-1)[0];
-      const has = last.stats.some((s: any) => 'enabledRatio' in s);
-      expect(has).toBe(true);
+      const latestEntry = requireLatestSpeciesHistoryEntry(
+        neat.getSpeciesHistory(),
+      );
+      const hasEnabledRatio = latestEntry.stats.some(
+        speciesStatHasEnabledRatio,
+      );
+      expect(hasEnabledRatio).toBe(true);
     });
   });
   describe('pareto archive snapshot', () => {
@@ -66,16 +115,18 @@ describe('advanced telemetry & archives', () => {
       const neat = new Neat(
         4,
         2,
-        (n: Network) => (n as any).connections.length,
+        (network: Network) => network.connections.length,
         {
           popsize: 20,
           seed: 503,
           multiObjective: { enabled: true },
-        }
+        },
       );
-      for (let i = 0; i < 3; i++) await neat.evolve();
-      const arc = neat.getParetoArchive();
-      expect(arc.length).toBeGreaterThan(0);
+      for (let generationIndex = 0; generationIndex < 3; generationIndex += 1) {
+        await neat.evolve();
+      }
+      const paretoArchive = neat.getParetoArchive() as unknown[];
+      expect(paretoArchive.length).toBeGreaterThan(0);
     });
   });
   describe('performance timing stats', () => {
@@ -83,35 +134,37 @@ describe('advanced telemetry & archives', () => {
       const neat = new Neat(
         3,
         1,
-        (n: Network) => (n as any).connections.length,
+        (network: Network) => network.connections.length,
         {
           popsize: 10,
           seed: 504,
-          telemetry: { enabled: true, performance: true } as any,
-        }
+          telemetry: { enabled: true, performance: true },
+        },
       );
       await neat.evaluate();
-      const perf = neat.getPerformanceStats();
+      const performanceStats = neat.getPerformanceStats();
       expect(
-        typeof perf.lastEvalMs === 'number' || perf.lastEvalMs === undefined
+        typeof performanceStats.lastEvalMs === 'number' ||
+          performanceStats.lastEvalMs === undefined,
       ).toBe(true);
     });
     test('telemetry entry contains perf block when enabled', async () => {
       const neat = new Neat(
         3,
         1,
-        (n: Network) => (n as any).connections.length,
+        (network: Network) => network.connections.length,
         {
           popsize: 10,
           seed: 507,
-          telemetry: { enabled: true, performance: true } as any,
-        }
+          telemetry: { enabled: true, performance: true },
+        },
       );
       await neat.evaluate();
       await neat.evolve();
-      const tel = neat.getTelemetry().slice(-1)[0];
-      const hasPerf = !!(tel && tel.perf && 'evalMs' in tel.perf);
-      expect(hasPerf).toBe(true);
+      const telemetryEntry = requireLatestTelemetryEntry(neat);
+      const hasPerfBlock =
+        telemetryEntry.perf !== undefined && 'evalMs' in telemetryEntry.perf;
+      expect(hasPerfBlock).toBe(true);
     });
   });
   describe('complexity telemetry', () => {
@@ -119,34 +172,38 @@ describe('advanced telemetry & archives', () => {
       const neat = new Neat(
         3,
         2,
-        (n: Network) => (n as any).connections.length,
+        (network: Network) => network.connections.length,
         {
           popsize: 14,
           seed: 508,
-          telemetry: { enabled: true, complexity: true } as any,
-        }
+          telemetry: { enabled: true, complexity: true },
+        },
       );
-      for (let i = 0; i < 2; i++) await neat.evolve();
-      const tel = neat.getTelemetry().slice(-1)[0];
-      expect(
-        tel && tel.complexity && typeof tel.complexity.meanNodes === 'number'
-      ).toBe(true);
+      for (let generationIndex = 0; generationIndex < 2; generationIndex += 1) {
+        await neat.evolve();
+      }
+      const telemetryEntry = requireLatestTelemetryEntry(neat);
+      const hasComplexityMetrics =
+        typeof telemetryEntry.complexity?.meanNodes === 'number';
+      expect(hasComplexityMetrics).toBe(true);
     });
     test('complexity telemetry tracks growth deltas', async () => {
       const neat = new Neat(
         3,
         2,
-        (n: Network) => (n as any).connections.length,
+        (network: Network) => network.connections.length,
         {
           popsize: 14,
           seed: 509,
-          telemetry: { enabled: true, complexity: true } as any,
-        }
+          telemetry: { enabled: true, complexity: true },
+        },
       );
       await neat.evolve();
       await neat.evolve();
-      const tel = neat.getTelemetry().slice(-1)[0];
-      expect('growthNodes' in (tel.complexity || {})).toBe(true);
+      const telemetryEntry = requireLatestTelemetryEntry(neat);
+      const tracksGrowthDeltas =
+        telemetryEntry.complexity?.growthNodes !== undefined;
+      expect(tracksGrowthDeltas).toBe(true);
     });
   });
   describe('hypervolume telemetry', () => {
@@ -154,17 +211,20 @@ describe('advanced telemetry & archives', () => {
       const neat = new Neat(
         3,
         2,
-        (n: Network) => (n as any).connections.length,
+        (network: Network) => network.connections.length,
         {
           popsize: 16,
           seed: 510,
           multiObjective: { enabled: true },
-          telemetry: { enabled: true, hypervolume: true } as any,
-        }
+          telemetry: { enabled: true, hypervolume: true },
+        },
       );
       await neat.evolve();
-      const tel = neat.getTelemetry().slice(-1)[0];
-      expect(typeof tel.hv === 'number' || tel.hv === undefined).toBe(true);
+      const telemetryEntry = requireLatestTelemetryEntry(neat);
+      const hypervolumeValue = telemetryEntry.hv;
+      const hvPresent =
+        typeof hypervolumeValue === 'number' || hypervolumeValue === undefined;
+      expect(hvPresent).toBe(true);
     });
   });
   describe('telemetry export utilities', () => {
@@ -172,7 +232,7 @@ describe('advanced telemetry & archives', () => {
       const neat = new Neat(
         3,
         2,
-        (n: Network) => (n as any).connections.length,
+        (network: Network) => network.connections.length,
         {
           popsize: 12,
           seed: 511,
@@ -180,12 +240,12 @@ describe('advanced telemetry & archives', () => {
             enabled: true,
             performance: true,
             complexity: true,
-          } as any,
-        }
+          },
+        },
       );
       await neat.evolve();
-      const csv = (neat as any).exportTelemetryCSV();
-      expect(csv.split('\n')[0].includes('gen')).toBe(true);
+      const csvOutput = neat.exportTelemetryCSV();
+      expect(csvOutput.split('\n')[0].includes('gen')).toBe(true);
     });
   });
   describe('novelty dynamic threshold', () => {
@@ -193,16 +253,16 @@ describe('advanced telemetry & archives', () => {
       const neat = new Neat(
         3,
         1,
-        (n: Network) => (n as any).connections.length,
+        (network: Network) => network.connections.length,
         {
           popsize: 16,
           seed: 505,
           speciation: false,
           novelty: {
             enabled: true,
-            descriptor: (g: Network) => [
-              (g as any).connections.length,
-              g.nodes.length,
+            descriptor: (genome: Network) => [
+              genome.connections.length,
+              genome.nodes.length,
             ],
             archiveAddThreshold: 0.01,
             dynamicThreshold: {
@@ -213,14 +273,14 @@ describe('advanced telemetry & archives', () => {
               max: 5,
             },
           },
-        }
+        },
       );
       await neat.evaluate();
-      const thr1 = neat.options.novelty!.archiveAddThreshold!;
+      const firstThreshold = neat.options.novelty!.archiveAddThreshold!;
       await neat.evaluate();
-      const thr2 = neat.options.novelty!.archiveAddThreshold!;
-      const changed = Math.abs(thr2 - thr1) > 1e-12;
-      expect(changed || thr1 === thr2).toBe(true);
+      const secondThreshold = neat.options.novelty!.archiveAddThreshold!;
+      const changed = Math.abs(secondThreshold - firstThreshold) > 1e-12;
+      expect(changed || firstThreshold === secondThreshold).toBe(true);
     });
   });
 });

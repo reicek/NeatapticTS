@@ -26,7 +26,7 @@ describe('lineage anti-inbreeding pressure', () => {
     // Collect scores and parent metadata
     const pop = neat.population as any[];
     const withParents = pop.filter(
-      (g) => Array.isArray(g._parents) && g._parents.length === 2
+      (g) => Array.isArray(g._parents) && g._parents.length === 2,
     );
     expect(withParents.length).toBeGreaterThan(0);
     // Ensure scores are numbers

@@ -9,9 +9,9 @@ describe('Topological reorder cache', () => {
     net.mutate(methods.mutation.ADD_NODE);
     net.mutate(methods.mutation.ADD_CONN);
     net.activate([0, 0, 0]);
-    const order = (net as any)._topoOrder as any[] | null;
-    expect(Array.isArray(order) && order.length === net.nodes.length).toBe(
-      true
-    );
+    const topoOrder = Reflect.get(net, '_topoOrder') as unknown;
+    const hasValidOrder =
+      Array.isArray(topoOrder) && topoOrder.length === net.nodes.length;
+    expect(hasValidOrder).toBe(true);
   });
 });

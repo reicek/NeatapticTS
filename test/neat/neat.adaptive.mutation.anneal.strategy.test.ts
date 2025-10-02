@@ -25,10 +25,10 @@ describe('Adaptive Mutation anneal strategy', () => {
       (neat as any).generation = 40;
       neat.mutate();
       require('../../src/neat/neat.adaptive').applyAdaptiveMutation.call(
-        neat as any
+        neat as any,
       );
       const within = neat.population.every(
-        (g: any) => g._mutRate >= 0.01 && g._mutRate <= 1
+        (g: any) => g._mutRate >= 0.01 && g._mutRate <= 1,
       );
       expect(within).toBe(true);
     });

@@ -1,5 +1,29 @@
 import Network from '../../src/architecture/network';
 
+type FastSlabActivate = (input: number[]) => number[];
+type CanUseFastSlab = () => boolean;
+type ActivateBatch = (inputs: unknown) => unknown;
+
+const setFastSlabHooks = (
+  network: Network,
+  hooks: {
+    canUseFastSlab?: CanUseFastSlab;
+    fastSlabActivate?: FastSlabActivate;
+  },
+): void => {
+  if (hooks.canUseFastSlab) {
+    Reflect.set(network, '_canUseFastSlab', hooks.canUseFastSlab);
+  }
+  if (hooks.fastSlabActivate) {
+    Reflect.set(network, '_fastSlabActivate', hooks.fastSlabActivate);
+  }
+};
+
+const invokeActivateBatch = (network: Network, inputs: unknown): unknown => {
+  const activateBatch = Reflect.get(network, 'activateBatch') as ActivateBatch;
+  return activateBatch.call(network, inputs);
+};
+
 /**
  * Activation path tests covering fast slab usage, fallback behavior, batch utilities,
  * raw / no-trace wrappers and validation error branches. Each test follows AAA and
@@ -11,10 +35,10 @@ describe('Network.activation helpers', () => {
       // Arrange
       const net = new Network(2, 1, { seed: 11, enforceAcyclic: true });
       // Monkey patch internal fast path eligibility + implementation to force that branch deterministically.
-      (net as any)._canUseFastSlab = () => true;
-      (net as any)._fastSlabActivate = (input: number[]) => [
-        input[0] + input[1],
-      ]; // simple deterministic stub
+      setFastSlabHooks(net, {
+        canUseFastSlab: () => true,
+        fastSlabActivate: (input) => [input[0] + input[1]],
+      });
       // Act
       const out = net.noTraceActivate([0.25, 0.75]);
       // Assert
@@ -26,10 +50,12 @@ describe('Network.activation helpers', () => {
     it('produces output vector of correct length via standard loop when fast slab fails', () => {
       // Arrange
       const net = new Network(3, 2, { seed: 12, enforceAcyclic: true });
-      (net as any)._canUseFastSlab = () => true;
-      (net as any)._fastSlabActivate = () => {
-        throw new Error('forced');
-      };
+      setFastSlabHooks(net, {
+        canUseFastSlab: () => true,
+        fastSlabActivate: () => {
+          throw new Error('forced');
+        },
+      });
       const input = [0.1, 0.2, 0.3];
       // Act
       const out = net.noTraceActivate(input);
@@ -44,7 +70,7 @@ describe('Network.activation helpers', () => {
       const net = new Network(2, 1, { seed: 13 });
       // Act / Assert
       expect(() => net.noTraceActivate([1, 2, 3])).toThrow(
-        /Input size mismatch/
+        /Input size mismatch/,
       );
     });
   });
@@ -97,7 +123,7 @@ describe('Network.activation helpers', () => {
       const net = new Network(2, 1, { seed: 17 });
       // Act / Assert
       expect(() => net.activateBatch([[1, 2], [3]])).toThrow(
-        /Input\[1] size mismatch/
+        /Input\[1] size mismatch/,
       );
     });
   });
@@ -107,8 +133,8 @@ describe('Network.activation helpers', () => {
       // Arrange
       const net = new Network(2, 1, { seed: 18 });
       // Act / Assert
-      expect(() => (net as any).activateBatch('nope')).toThrow(
-        /inputs must be an array/
+      expect(() => invokeActivateBatch(net, 'nope')).toThrow(
+        /inputs must be an array/,
       );
     });
   });

@@ -32,7 +32,7 @@ describe('Adaptive Complexity Budget Growth', () => {
         // Emulate evaluation step: assign an increasing score to best genome
         (neat.population[0] as any).score = i + 1;
         require('../../src/neat/neat.adaptive').applyComplexityBudget.call(
-          neat as any
+          neat as any,
         );
       }
       const after = neat.options.maxNodes;

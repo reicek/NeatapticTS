@@ -9,7 +9,8 @@ describe('Training Extensions', () => {
       { input: [0, 0], output: [0] },
       { input: [1, 1], output: [1] },
     ];
-    const saves: any[] = [];
+    type CheckpointSnapshot = { type?: string; [key: string]: unknown };
+    const saves: CheckpointSnapshot[] = [];
     const net = new Network(2, 1);
     it('invokes metricsHook with gradNorm', () => {
       let called = false;
@@ -27,7 +28,10 @@ describe('Training Extensions', () => {
       net.train(dataset, {
         iterations: 1,
         rate: 0.1,
-        checkpoint: { best: true, save: (d: any) => saves.push(d) },
+        checkpoint: {
+          best: true,
+          save: (snapshot: CheckpointSnapshot) => saves.push(snapshot),
+        },
       });
       const hasBest = saves.some((s) => s && s.type === 'best');
       expect(hasBest).toBe(true);

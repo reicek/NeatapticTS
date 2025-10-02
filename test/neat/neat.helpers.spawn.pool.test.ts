@@ -38,7 +38,7 @@ describe('NEAT Helper Utilities', () => {
     test('all genomes cloned from seed have identical IO counts', () => {
       // Act: collect distinct (input,output) signatures
       const sigs = new Set(
-        neat.population.map((g) => `${g.input}-${g.output}`)
+        neat.population.map((g) => `${g.input}-${g.output}`),
       );
       // Assert: only one signature means consistent cloning
       expect(sigs.size).toBe(1);

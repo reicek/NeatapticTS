@@ -4,6 +4,26 @@ Purpose
 -------
 When generating, modifying, or suggesting code that touches files under `src/` or `test/`, follow the project `STYLEGUIDE.md` rules and perform the quick validations listed below before returning suggestions.
 
+ES2023-first policy (strict)
+----------------------------
+For educational clarity and a modern look, always prefer idiomatic ES2023 syntax when it improves readability or safety without changing behavior. This repo is intentionally opinionated: use the immutable array methods and modern language constructs by default.
+
+Prefer (non-exhaustive):
+- Arrays: `toSorted`, `toReversed`, `toSpliced`, `with`, `.at(-1)`, `findLast`, `findLastIndex`.
+- Objects: spread/rest over `Object.assign` for shallow copies and merges.
+- Optional chaining `?.` and nullish coalescing `??` (avoid `||` for defaulting unless you mean falsy semantics).
+- Deep clone: `structuredClone` (or the project helper `safeStructuredClone` when cross-env safety is needed).
+- Errors: `Error` with `{ cause }` (e.g., `new Error(msg, { cause })`).
+- Numerics: numeric separators for long literals (for readability only, not to change values).
+- Modules: ES modules `import`/`export` over CommonJS `require`/`module.exports` (follow the repo’s phase plan; new code should be ESM). 
+
+Avoid (legacy/less clear):
+- In-place `sort`, `reverse`, `splice` in code paths that expect immutability; use the ES2023 immutable variants above.
+- `Object.assign({}, obj)` or `Object.assign([], arr)` for cloning; use object/array spread.
+- `JSON.parse(JSON.stringify(x))` for deep clone; use `structuredClone`/`safeStructuredClone`.
+- Index math like `arr[arr.length - 1]`; prefer `arr.at(-1)` when readability benefits.
+- CommonJS `require()` in new or refactored modules; prefer ESM.
+
 How to use these instructions
 -----------------------------
 - Always prefer to produce code that already satisfies the style guide.
@@ -46,6 +66,7 @@ When you modify or create files under `src/` or `test/`, run (or advise running)
    - Short-id scan: flag uses of the short identifiers regex `\b(dx|dy|d|i|a|b|c|p|o|idx|cand|tries)\b` in changed files.
    - Tests heuristic: flag test files that contain more than one `expect(` occurrence (these should be split into multiple `it()` blocks).
    - JSDoc: for new exported symbols, ensure a JSDoc block with `@param`/`@returns` exists (or flag if missing).
+   - ES2023 modernization: flag legacy patterns and suggest modern equivalents (see below one-liners).
 
    PowerShell examples (local validation)
    -------------------------------------
@@ -70,7 +91,35 @@ When you modify or create files under `src/` or `test/`, run (or advise running)
    What to include with a suggestion
    --------------------------------
    - A short validation summary (TypeScript: pass/fail, short-id matches: list or 0, test-expect heuristic: list or 0, JSDoc missing: list or 0).
+   - ES2023: list any flagged legacy patterns and the intended replacements (e.g., `Object.assign` -> spread, `arr[arr.length-1]` -> `arr.at(-1)`, `JSON.parse(JSON.stringify())` -> `structuredClone`).
    - If any issue can't be safely fixed automatically, include a TODO comment at the top of the changed file and a one-line explanation in the patch.
+
+   ES2023 modernization scans (optional helpers)
+   -------------------------------------------
+   Object.assign to spread:
+   ```powershell
+   Get-ChildItem -Path src,test -Recurse -Include *.ts,*.tsx | Select-String -Pattern '\bObject\.assign\s*\(' -List
+   ```
+
+   Deep clone via JSON (replace with structuredClone/safeStructuredClone):
+   ```powershell
+   Get-ChildItem -Path src,test -Recurse -Include *.ts,*.tsx | Select-String -Pattern 'JSON\.parse\s*\(\s*JSON\.stringify\s*\(' -List
+   ```
+
+   CommonJS require (prefer ESM):
+   ```powershell
+   Get-ChildItem -Path src,test -Recurse -Include *.ts,*.tsx | Select-String -Pattern '\brequire\s*\(' -List
+   ```
+
+   Mutable array methods in likely-immutable flows (prefer toSorted/toReversed/toSpliced):
+   ```powershell
+   Get-ChildItem -Path src,test -Recurse -Include *.ts,*.tsx | Select-String -Pattern '\b(sort|reverse|splice)\s*\(' -List
+   ```
+
+   Last element index math (consider .at(-1)):
+   ```powershell
+   Get-ChildItem -Path src,test -Recurse -Include *.ts,*.tsx | Select-String -Pattern '\b\.length\s*-\s*1\]' -List
+   ```
 
 - A runnable patch or new file content that follows the rules above.
 

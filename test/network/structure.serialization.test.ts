@@ -52,12 +52,12 @@ describe('Structure & Serialization', () => {
                 .spyOn(console, 'error')
                 .mockImplementation(() => {});
               console.error(
-                `Connection node not found in network nodes array: from=${fromNode?.index}, to=${toNode?.index}`
+                `Connection node not found in network nodes array: from=${fromNode?.index}, to=${toNode?.index}`,
               );
               errorSpy.mockRestore();
               return false;
             }
-          }
+          },
         );
         expect(allFeedForward).toBe(true);
       });
@@ -68,7 +68,7 @@ describe('Structure & Serialization', () => {
     jest.setTimeout(15000);
     const runEquivalencyTests = (
       architectureName: string,
-      createNetwork: () => Network
+      createNetwork: () => Network,
     ) => {
       describe(`${architectureName}`, () => {
         let original: Network;
@@ -80,7 +80,7 @@ describe('Structure & Serialization', () => {
           // Arrange
           original = createNetwork();
           const json = original.toJSON() as Record<string, unknown>;
-          copy = Network.fromJSON((json as unknown) as Record<string, unknown>);
+          copy = Network.fromJSON(json as unknown as Record<string, unknown>);
           input = Array.from({ length: original.input }, () => Math.random());
           originalOutput = original.activate(input);
           copyOutput = copy.activate(input);
@@ -95,7 +95,7 @@ describe('Structure & Serialization', () => {
             const outputsAreEqual = copyOutput.every(
               (val, i) =>
                 typeof originalOutput[i] === 'number' &&
-                Math.abs(val - originalOutput[i]) < 1e-9
+                Math.abs(val - originalOutput[i]) < 1e-9,
             );
             expect(outputsAreEqual).toBe(true);
           });
@@ -104,20 +104,20 @@ describe('Structure & Serialization', () => {
           it('throws error if nodes field is missing', () => {
             // Arrange
             const json = original.toJSON() as Record<string, unknown>;
-            delete ((json as unknown) as { nodes?: unknown }).nodes;
+            delete (json as unknown as { nodes?: unknown }).nodes;
             // Act
             const act = () =>
-              Network.fromJSON((json as unknown) as Record<string, unknown>);
+              Network.fromJSON(json as unknown as Record<string, unknown>);
             // Assert
             expect(act).toThrow();
           });
           it('throws error if connections field is missing', () => {
             // Arrange
             const json = original.toJSON() as Record<string, unknown>;
-            delete ((json as unknown) as { connections?: unknown }).connections;
+            delete (json as unknown as { connections?: unknown }).connections;
             // Act
             const act = () =>
-              Network.fromJSON((json as unknown) as Record<string, unknown>);
+              Network.fromJSON(json as unknown as Record<string, unknown>);
             // Assert
             expect(act).toThrow();
           });
@@ -128,38 +128,38 @@ describe('Structure & Serialization', () => {
       Architect.perceptron(
         Math.floor(Math.random() * 5 + 1),
         Math.floor(Math.random() * 5 + 1),
-        Math.floor(Math.random() * 5 + 1)
-      )
+        Math.floor(Math.random() * 5 + 1),
+      ),
     );
     runEquivalencyTests(
       'Basic Network',
       () =>
         new Network(
           Math.floor(Math.random() * 5 + 1),
-          Math.floor(Math.random() * 5 + 1)
-        )
+          Math.floor(Math.random() * 5 + 1),
+        ),
     );
     runEquivalencyTests('LSTM', () =>
       Architect.lstm(
         Math.floor(Math.random() * 5 + 1),
         Math.floor(Math.random() * 5 + 1),
-        Math.floor(Math.random() * 5 + 1)
-      )
+        Math.floor(Math.random() * 5 + 1),
+      ),
     );
     runEquivalencyTests('GRU', () =>
       Architect.gru(
         Math.floor(Math.random() * 5 + 1),
         Math.floor(Math.random() * 5 + 1),
         Math.floor(Math.random() * 5 + 1),
-        Math.floor(Math.random() * 5 + 1)
-      )
+        Math.floor(Math.random() * 5 + 1),
+      ),
     );
     runEquivalencyTests('Random', () =>
       Architect.random(
         Math.floor(Math.random() * 5 + 1),
         Math.floor(Math.random() * 10 + 1),
-        Math.floor(Math.random() * 5 + 1)
-      )
+        Math.floor(Math.random() * 5 + 1),
+      ),
     );
     runEquivalencyTests('NARX', () =>
       Architect.narx(
@@ -167,11 +167,11 @@ describe('Structure & Serialization', () => {
         Math.floor(Math.random() * 5 + 1),
         Math.floor(Math.random() * 5 + 1),
         Math.floor(Math.random() * 5 + 1),
-        Math.floor(Math.random() * 5 + 1)
-      )
+        Math.floor(Math.random() * 5 + 1),
+      ),
     );
     runEquivalencyTests('Hopfield', () =>
-      Architect.hopfield(Math.floor(Math.random() * 5 + 1))
+      Architect.hopfield(Math.floor(Math.random() * 5 + 1)),
     );
   });
 
@@ -201,7 +201,7 @@ describe('Structure & Serialization', () => {
         // Assert
         const epsilon = 0.05;
         const diffs = deserializedOutput.map((val, i) =>
-          Math.abs(val - originalOutput[i])
+          Math.abs(val - originalOutput[i]),
         );
         const allClose =
           deserializedOutput.length === originalOutput.length &&
@@ -241,7 +241,7 @@ describe('Structure & Serialization', () => {
         const deserialized = Network.deserialize(arr, net.input, net.output);
         // Assert
         expect(deserialized.connections.length).toBeLessThanOrEqual(
-          net.connections.length
+          net.connections.length,
         );
       });
       it('should warn for invalid connection indices', () => {
@@ -258,8 +258,8 @@ describe('Structure & Serialization', () => {
             (call) =>
               call[0] &&
               typeof call[0] === 'string' &&
-              call[0].includes('Invalid connection indices')
-          )
+              call[0].includes('Invalid connection indices'),
+          ),
         ).toBe(true);
       });
     });
@@ -287,8 +287,8 @@ describe('Structure & Serialization', () => {
             (call) =>
               call[0] &&
               typeof call[0] === 'string' &&
-              call[0].includes('Invalid gater index')
-          )
+              call[0].includes('Invalid gater index'),
+          ),
         ).toBe(true);
       });
     });
@@ -316,8 +316,8 @@ describe('Structure & Serialization', () => {
             (call) =>
               call[0] &&
               typeof call[0] === 'string' &&
-              call[0].includes('Unknown squash function')
-          )
+              call[0].includes('Unknown squash function'),
+          ),
         ).toBe(true);
       });
     });
@@ -328,13 +328,15 @@ describe('Structure & Serialization', () => {
         const validJson = validNetwork.toJSON() as Record<string, unknown>;
 
         // Modify the squash function to an unknown value
-        ((validJson as unknown) as {
-          nodes?: Array<Record<string, unknown>>;
-        }).nodes![0].squash = 'UNKNOWN_FUNCTION';
+        (
+          validJson as unknown as {
+            nodes?: Array<Record<string, unknown>>;
+          }
+        ).nodes![0].squash = 'UNKNOWN_FUNCTION';
 
         // Act
         const network = Network.fromJSON(
-          (validJson as unknown) as Record<string, unknown>
+          validJson as unknown as Record<string, unknown>,
         );
 
         // Assert - Only verify the core functionality (fallback to identity)
@@ -360,10 +362,10 @@ describe('Structure & Serialization', () => {
 
           // Get valid indices to work with
           const inputNodeIndex = network.nodes.findIndex(
-            (n) => n.type === 'input'
+            (n) => n.type === 'input',
           );
           const outputNodeIndex = network.nodes.findIndex(
-            (n) => n.type === 'output'
+            (n) => n.type === 'output',
           );
 
           if (inputNodeIndex >= 0 && outputNodeIndex >= 0) {
@@ -388,7 +390,7 @@ describe('Structure & Serialization', () => {
 
             // This should not throw, but may log warnings
             const result = Network.fromJSON(
-              (minimalJson as unknown) as Record<string, unknown>
+              minimalJson as unknown as Record<string, unknown>,
             );
 
             // If we get here, we succeeded
@@ -414,10 +416,10 @@ describe('Structure & Serialization', () => {
 
           // Get valid indices
           const inputNodeIndex = network.nodes.findIndex(
-            (n) => n.type === 'input'
+            (n) => n.type === 'input',
           );
           const outputNodeIndex = network.nodes.findIndex(
-            (n) => n.type === 'output'
+            (n) => n.type === 'output',
           );
 
           if (inputNodeIndex >= 0 && outputNodeIndex >= 0) {
@@ -441,7 +443,7 @@ describe('Structure & Serialization', () => {
 
             // This should handle the invalid gater gracefully
             const result = Network.fromJSON(
-              (minimalJson as unknown) as Record<string, unknown>
+              minimalJson as unknown as Record<string, unknown>,
             );
 
             // Verify it worked
@@ -475,14 +477,16 @@ describe('Structure & Serialization', () => {
       // Arrange
       const net = new Network(2, 1);
       const json = net.toJSON() as Record<string, unknown>;
-      delete ((json as unknown) as { nodes?: Array<Record<string, unknown>> })
+      delete (json as unknown as { nodes?: Array<Record<string, unknown>> })
         .nodes![0].squash;
-      delete ((json as unknown) as {
-        connections?: Array<Record<string, unknown>>;
-      }).connections![0].gater;
+      delete (
+        json as unknown as {
+          connections?: Array<Record<string, unknown>>;
+        }
+      ).connections![0].gater;
       // Act
       const deserialized = Network.fromJSON(
-        (json as unknown) as Record<string, unknown>
+        json as unknown as Record<string, unknown>,
       );
       // Assert
       expect(deserialized.nodes[0].squash).toBeDefined();
@@ -499,7 +503,7 @@ describe('Structure & Serialization', () => {
       } as Record<string, unknown>;
       // Act
       const deserialized = Network.fromJSON(
-        (json as unknown) as Record<string, unknown>
+        json as unknown as Record<string, unknown>,
       );
       // Assert
       expect(deserialized.nodes.length).toBe(0);
@@ -521,7 +525,7 @@ describe('Structure & Serialization', () => {
         });
         json = network.toJSON() as Record<string, unknown>;
         deserialized = Network.fromJSON(
-          (json as unknown) as Record<string, unknown>
+          json as unknown as Record<string, unknown>,
         );
       });
       it('should not preserve the custom function', () => {
@@ -546,7 +550,7 @@ describe('Structure & Serialization', () => {
       const json = net.toJSON() as Record<string, unknown>;
       // Act
       const deserialized = Network.fromJSON(
-        (json as unknown) as Record<string, unknown>
+        json as unknown as Record<string, unknown>,
       );
       // Assert
       expect(deserialized.nodes.length).toBeGreaterThan(2);
@@ -569,7 +573,7 @@ describe('Structure & Serialization', () => {
         });
         json = network.toJSON() as Record<string, unknown>;
         deserialized = Network.fromJSON(
-          (json as unknown) as Record<string, unknown>
+          json as unknown as Record<string, unknown>,
         );
         testValue = 0.5;
       });
@@ -611,7 +615,7 @@ describe('Structure & Serialization', () => {
         });
         const json = network.toJSON() as Record<string, unknown>;
         const deserialized = Network.fromJSON(
-          (json as unknown) as Record<string, unknown>
+          json as unknown as Record<string, unknown>,
         );
         originalResult = network.nodes[0].squash(testInput);
         deserializedResult = deserialized.nodes[0].squash(testInput);

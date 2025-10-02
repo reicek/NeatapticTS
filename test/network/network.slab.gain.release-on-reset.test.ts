@@ -4,27 +4,45 @@
  */
 import Network from '../../src/architecture/network';
 
-function anyGainArray(net: any) {
-  return !!net._connGain;
+type ConnectionSlab = ReturnType<Network['getConnectionSlab']>;
+interface NetworkInternals {
+  _slabDirty: boolean;
+  _connGain?: Float32Array | Float64Array | null;
 }
+
+const hasGainArray = (net: Network): boolean =>
+  Boolean(Reflect.get(net, '_connGain'));
+
+const getConnectionSlab = (net: Network): ConnectionSlab =>
+  (
+    net as unknown as { getConnectionSlab: () => ConnectionSlab }
+  ).getConnectionSlab();
+
+const setNetworkInternal = <Key extends keyof NetworkInternals>(
+  net: Network,
+  key: Key,
+  value: NetworkInternals[Key],
+) => {
+  Reflect.set(net, key, value);
+};
 
 describe('network.slab.gain.release-on-reset', () => {
   it('releases optional gain slab after all gains reset to neutral', () => {
-    const net: any = new Network(4, 2, { enforceAcyclic: true });
+    const net = new Network(4, 2, { enforceAcyclic: true });
     // Introduce a gating gain effect by setting gains manually
-    net.connections.forEach((c: any, idx: number) => {
-      if (idx === 0) c.gain = 0.5;
+    net.connections.forEach((connection, index) => {
+      if (index === 0) connection.gain = 0.5;
     });
-    net._slabDirty = true;
-    net.getConnectionSlab();
-    expect(anyGainArray(net)).toBe(true); // optional gain slab allocated
+    setNetworkInternal(net, '_slabDirty', true);
+    getConnectionSlab(net);
+    expect(hasGainArray(net)).toBe(true); // optional gain slab allocated
 
     // Reset all gains to neutral
-    net.connections.forEach((c: any) => {
-      c.gain = 1;
+    net.connections.forEach((connection) => {
+      connection.gain = 1;
     });
-    net._slabDirty = true;
-    net.getConnectionSlab();
-    expect(anyGainArray(net)).toBe(false); // optional gain slab should be released
+    setNetworkInternal(net, '_slabDirty', true);
+    getConnectionSlab(net);
+    expect(hasGainArray(net)).toBe(false); // optional gain slab should be released
   });
 });

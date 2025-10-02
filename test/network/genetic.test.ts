@@ -1,4 +1,21 @@
-import { Architect, Network, methods } from '../../src/neataptic';
+import { Network, methods } from '../../src/neataptic';
+
+const createCrossOverInvoker = (
+  firstParent: unknown,
+  secondParent: unknown,
+  equalFlag?: boolean,
+) => {
+  if (typeof equalFlag === 'boolean') {
+    return () =>
+      Network.crossOver(
+        firstParent as Network,
+        secondParent as Network,
+        equalFlag,
+      );
+  }
+  return () =>
+    Network.crossOver(firstParent as Network, secondParent as Network);
+};
 
 describe('Genetic Operations', () => {
   describe('Crossover', () => {
@@ -88,25 +105,27 @@ describe('Genetic Operations', () => {
     describe('Scenario: both parents are undefined', () => {
       it('throws', () => {
         // Arrange
-        const originalWarn = console.warn;
-        console.warn = jest.fn(); // Suppress warning
+        const warnSpy = jest
+          .spyOn(console, 'warn')
+          .mockImplementation(() => {});
         // Act
-        const act = () => Network.crossOver(undefined as any, undefined as any);
+        const act = createCrossOverInvoker(undefined, undefined);
         // Assert
         expect(act).toThrow();
-        console.warn = originalWarn;
+        warnSpy.mockRestore();
       });
     });
     describe('Scenario: both parents are null', () => {
       it('throws', () => {
         // Arrange
-        const originalWarn = console.warn;
-        console.warn = jest.fn(); // Suppress warning
+        const warnSpy = jest
+          .spyOn(console, 'warn')
+          .mockImplementation(() => {});
         // Act
-        const act = () => Network.crossOver(null as any, null as any);
+        const act = createCrossOverInvoker(null, null);
         // Assert
         expect(act).toThrow();
-        console.warn = originalWarn;
+        warnSpy.mockRestore();
       });
     });
     describe('Scenario: both parents have no connections', () => {
@@ -183,25 +202,25 @@ describe('Genetic Operations', () => {
     describe('Scenario: first parent is missing', () => {
       it('throws', () => {
         // Arrange
-        const originalWarn = console.warn;
-        console.warn = jest.fn(); // Suppress warning
+        const warnSpy = jest
+          .spyOn(console, 'warn')
+          .mockImplementation(() => {});
         // Act & Assert
-        expect(() =>
-          Network.crossOver(undefined as any, new Network(2, 1))
-        ).toThrow();
-        console.warn = originalWarn;
+        const act = createCrossOverInvoker(undefined, new Network(2, 1));
+        expect(act).toThrow();
+        warnSpy.mockRestore();
       });
     });
     describe('Scenario: second parent is missing', () => {
       it('throws', () => {
         // Arrange
-        const originalWarn = console.warn;
-        console.warn = jest.fn(); // Suppress warning
+        const warnSpy = jest
+          .spyOn(console, 'warn')
+          .mockImplementation(() => {});
         // Act & Assert
-        expect(() =>
-          Network.crossOver(new Network(2, 1), undefined as any)
-        ).toThrow();
-        console.warn = originalWarn;
+        const act = createCrossOverInvoker(new Network(2, 1), undefined);
+        expect(act).toThrow();
+        warnSpy.mockRestore();
       });
     });
   });

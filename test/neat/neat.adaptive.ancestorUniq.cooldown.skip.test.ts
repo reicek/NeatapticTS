@@ -26,7 +26,7 @@ describe('Ancestor Uniqueness Adaptive cooldown skip', () => {
       (neat as any).generation = 12; // difference 3 < cooldown 5
       (neat as any)._telemetry.push({ lineage: { ancestorUniq: 0.0 } });
       require('../../src/neat/neat.adaptive').applyAncestorUniqAdaptive.call(
-        neat as any
+        neat as any,
       );
       const eps = neat.options.multiObjective.dominanceEpsilon;
       // Assert: unchanged at baseline 0.1

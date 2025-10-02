@@ -21,7 +21,7 @@ describe('Adaptive Minimal Criterion', () => {
       await neat.evaluate();
       before = (neat as any)._mcThreshold ?? 0.1;
       require('../../src/neat/neat.adaptive').applyMinimalCriterionAdaptive.call(
-        neat as any
+        neat as any,
       );
       // Act: obtain adapted threshold
       const after = (neat as any)._mcThreshold;

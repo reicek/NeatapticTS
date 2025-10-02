@@ -20,7 +20,7 @@ describe('multi-objective adaptive epsilon & exports', () => {
           complexityMetric: 'nodes',
         },
         telemetry: { enabled: true, hypervolume: true },
-      }
+      },
     );
     const initial = neat.options.multiObjective!.dominanceEpsilon || 0;
     for (let i = 0; i < 5; i++) await neat.evolve();
@@ -41,7 +41,7 @@ describe('multi-objective adaptive epsilon & exports', () => {
         popsize: 18,
         multiObjective: { enabled: true, autoEntropy: true },
         telemetry: { enabled: true },
-      }
+      },
     );
     for (let i = 0; i < 3; i++) await neat.evolve();
     const jsonl = (neat as any).exportParetoFrontJSONL();

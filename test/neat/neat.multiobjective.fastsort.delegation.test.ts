@@ -37,7 +37,7 @@ describe('fast non-dominated sorting delegation invariants', () => {
     expect(ranks.every((r: any) => typeof r === 'number' && r >= 0)).toBe(true);
     // For first Pareto front collect crowding distances
     const firstFront = neat.population.filter(
-      (g: any) => (g as any)._moRank === 0
+      (g: any) => (g as any)._moRank === 0,
     );
     const crowd = firstFront.map((g: any) => (g as any)._moCrowd);
     // Boundary genomes (at least one, typically two) should have Infinity crowding

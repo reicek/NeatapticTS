@@ -24,7 +24,7 @@ describe('Adaptive Complexity Budget (trend & connection budget)', () => {
       // Arrange: run enough calls to fill window with constant best scores
       for (let i = 0; i < 4; i++)
         require('../../src/neat/neat.adaptive').applyComplexityBudget.call(
-          neat as any
+          neat as any,
         );
       const after = neat.options.maxNodes;
       // Assert: maxNodes decreased but not below minNodes
@@ -49,7 +49,7 @@ describe('Adaptive Complexity Budget (trend & connection budget)', () => {
       for (let g = 0; g < 5; g++) {
         (neat as any).generation = g;
         require('../../src/neat/neat.adaptive').applyComplexityBudget.call(
-          neat as any
+          neat as any,
         );
       }
       // Act: capture final value

@@ -24,7 +24,7 @@ describe('Adaptive Mutation twoTier balancing', () => {
       await neat.evaluate();
       neat.mutate();
       require('../../src/neat/neat.adaptive').applyAdaptiveMutation.call(
-        neat as any
+        neat as any,
       );
       // Act: collect distinct rates
       const distinct = new Set(neat.population.map((g: any) => g._mutRate));

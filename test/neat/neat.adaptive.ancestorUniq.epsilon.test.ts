@@ -24,7 +24,7 @@ describe('Ancestor Uniqueness Adaptive (epsilon mode)', () => {
       // Arrange: fake telemetry with low ancestor uniqueness
       (neat as any)._telemetry.push({ lineage: { ancestorUniq: 0.1 } });
       require('../../src/neat/neat.adaptive').applyAncestorUniqAdaptive.call(
-        neat as any
+        neat as any,
       );
       // Act: capture epsilon
       const eps = neat.options.multiObjective.dominanceEpsilon;
@@ -54,7 +54,7 @@ describe('Ancestor Uniqueness Adaptive (epsilon mode)', () => {
       // Arrange: telemetry with high ancestor uniqueness
       (neat as any)._telemetry.push({ lineage: { ancestorUniq: 0.9 } });
       require('../../src/neat/neat.adaptive').applyAncestorUniqAdaptive.call(
-        neat as any
+        neat as any,
       );
       // Act: capture epsilon
       const eps = neat.options.multiObjective.dominanceEpsilon;

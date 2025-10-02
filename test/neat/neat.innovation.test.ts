@@ -72,7 +72,7 @@ describe('Innovation Reuse', () => {
       net.nodes.splice(net.nodes.length - net.output, 0, h1, h2); // insert before outputs to preserve feedforward order
       // Remove any accidental connections between them if present (should not be)
       net.connections = net.connections.filter(
-        (c) => !(c.from === h1 && c.to === h2)
+        (c) => !(c.from === h1 && c.to === h2),
       );
       (neat as any)._mutateAddConnReuse(net);
       const keyCount = (neat as any)._connInnovations.size;
@@ -89,13 +89,13 @@ describe('Innovation Reuse', () => {
       net.nodes.splice(net.nodes.length - net.output, 0, h1, h2);
       (neat as any)._mutateAddConnReuse(net);
       const conn = net.connections.find(
-        (c) => (c.from === h1 && c.to === h2) || (c.from === h2 && c.to === h1)
+        (c) => (c.from === h1 && c.to === h2) || (c.from === h2 && c.to === h1),
       );
       const innovBefore = (conn as any)?.innovation;
       if (conn) net.disconnect(conn.from, conn.to);
       (neat as any)._mutateAddConnReuse(net); // should recreate same pair (only viable)
       const conn2 = net.connections.find(
-        (c) => (c.from === h1 && c.to === h2) || (c.from === h2 && c.to === h1)
+        (c) => (c.from === h1 && c.to === h2) || (c.from === h2 && c.to === h1),
       );
       const innovAfter = (conn2 as any)?.innovation;
       const reused = innovBefore === innovAfter;

@@ -1,22 +1,21 @@
-import { Architect, Network, methods } from '../../src/neataptic';
-import Node from '../../src/architecture/node';
+import { Network, methods } from '../../src/neataptic';
 import { config } from '../../src/config';
-// Define our own fail function instead of importing from Jest
-const fail = (message: string): void => {
-  throw new Error(message);
+
+type DoneCallbackWithFail = jest.DoneCallback & {
+  fail: (error?: string | Error) => void;
 };
 
 // Helper to wrap a test with a timeout and retry logic
-function testWithTimeoutAndRetry(
+const testWithTimeoutAndRetry = (
   name: string,
-  fn: (done: jest.DoneCallback) => void,
+  fn: (done: DoneCallbackWithFail) => void,
   timeoutMs: number = 5000,
-  retries: number = 3
-) {
+  retries: number = 3,
+): void => {
   test(name, (done: jest.DoneCallback) => {
     let attempts = 0;
-    let lastError: any;
-    function runAttempt() {
+    let lastError: unknown;
+    const runAttempt = (): void => {
       let finished = false;
       const timer = setTimeout(() => {
         if (!finished) {
@@ -28,27 +27,33 @@ function testWithTimeoutAndRetry(
             clearTimeout(timer);
             done(
               new Error(
-                `Test timed out after ${retries} attempts (${timeoutMs}ms each)`
-              )
+                `Test timed out after ${retries} attempts (${timeoutMs}ms each)`,
+              ),
             );
           }
         }
       }, timeoutMs);
+
+      const doneProxy = ((...callbackArgs: Parameters<jest.DoneCallback>) => {
+        if (!finished) {
+          finished = true;
+          clearTimeout(timer);
+          done(...callbackArgs);
+        }
+      }) as DoneCallbackWithFail;
+
+      doneProxy.fail = (error?: string | Error) => {
+        if (!finished) {
+          finished = true;
+          clearTimeout(timer);
+          done.fail(error);
+        }
+      };
+
       try {
-        fn(
-          Object.assign(
-            function (...args: any[]) {
-              if (!finished) {
-                finished = true;
-                clearTimeout(timer);
-                done(...args);
-              }
-            },
-            { fail: done.fail }
-          )
-        );
-      } catch (err: any) {
-        lastError = err;
+        fn(doneProxy);
+      } catch (error: unknown) {
+        lastError = error;
         if (!finished) {
           finished = true;
           clearTimeout(timer);
@@ -58,15 +63,15 @@ function testWithTimeoutAndRetry(
             done(
               lastError instanceof Error
                 ? lastError
-                : new Error(String(lastError))
+                : new Error(String(lastError)),
             );
           }
         }
       }
-    }
+    };
     runAttempt();
   });
-}
+};
 
 describe('Network Error Handling & Scenarios', () => {
   describe('activate()', () => {
@@ -195,8 +200,9 @@ describe('Network Error Handling & Scenarios', () => {
         let threw = false;
         try {
           net.train([{ input: [1], output: [1] }], { iterations: 1 });
-        } catch {
+        } catch (error) {
           threw = true;
+          void error;
         }
         expect(threw).toBe(true);
         warnSpy.mockRestore();
@@ -214,8 +220,9 @@ describe('Network Error Handling & Scenarios', () => {
         let threw = false;
         try {
           net.train([{ input: [1, 2], output: [1, 2] }], { iterations: 1 });
-        } catch {
+        } catch (error) {
           threw = true;
+          void error;
         }
         expect(threw).toBe(true);
         warnSpy.mockRestore();
@@ -236,8 +243,9 @@ describe('Network Error Handling & Scenarios', () => {
             batchSize: 2,
             iterations: 1,
           });
-        } catch {
+        } catch (error) {
           threw = true;
+          void error;
         }
         expect(threw).toBe(true);
         warnSpy.mockRestore();
@@ -255,8 +263,9 @@ describe('Network Error Handling & Scenarios', () => {
         let threw = false;
         try {
           net.train([{ input: [1, 2], output: [1] }], {});
-        } catch {
+        } catch (error) {
           threw = true;
+          void error;
         }
         expect(threw).toBe(true);
         warnSpy.mockRestore();
@@ -284,15 +293,16 @@ describe('Network Error Handling & Scenarios', () => {
         let threw = false;
         try {
           net.train([{ input: [1, 2], output: [1] }], { iterations: 1 }); // No rate provided
-        } catch {
+        } catch (error) {
           threw = true;
+          void error;
         }
         if (threw) {
           expect(threw).toBe(true);
         } else {
           const calls = warnSpy.mock.calls;
           const found = calls.some(
-            (call) => call[0] && call[0].includes('Missing `rate` option')
+            (call) => call[0] && call[0].includes('Missing `rate` option'),
           );
           expect(found).toBe(true);
         }
@@ -313,14 +323,16 @@ describe('Network Error Handling & Scenarios', () => {
           // Act
           try {
             net.train([{ input: [1, 2], output: [1] }], {});
-          } catch {}
+          } catch (error) {
+            void error;
+          }
           // Assert (synchronously)
           expect(warnSpy).toHaveBeenCalledWith(
-            expect.stringContaining('Missing `iterations` or `error` option')
+            expect.stringContaining('Missing `iterations` or `error` option'),
           );
           warnSpy.mockRestore();
           done();
-        }
+        },
       );
     });
     describe('Scenario: missing iterations option', () => {
@@ -334,10 +346,12 @@ describe('Network Error Handling & Scenarios', () => {
         // Act
         try {
           net.train([{ input: [1, 2], output: [1] }], { error: 0.1 });
-        } catch {}
+        } catch (error) {
+          void error;
+        }
         // Assert (synchronously)
         expect(warnSpy).toHaveBeenCalledWith(
-          expect.stringContaining('Missing `iterations` option')
+          expect.stringContaining('Missing `iterations` option'),
         );
         warnSpy.mockRestore();
         done();
@@ -409,8 +423,8 @@ describe('Network Error Handling & Scenarios', () => {
           expect(act).not.toThrow();
           expect(warnSpy).toHaveBeenCalledWith(
             expect.stringContaining(
-              'Attempted to ungate a connection not in the gates list.'
-            )
+              'Attempted to ungate a connection not in the gates list.',
+            ),
           );
           warnSpy.mockRestore();
           done();
@@ -425,7 +439,8 @@ describe('Network Error Handling & Scenarios', () => {
             .spyOn(console, 'warn')
             .mockImplementation(() => {});
           // Act
-          const act = () => net.ungate(undefined as any);
+          const act = () =>
+            (net.ungate as (connection: unknown) => void)(undefined);
           // Assert
           expect(act).not.toThrow();
           expect(warnSpy).toHaveBeenCalled();
@@ -488,7 +503,7 @@ describe('Network Error Handling & Scenarios', () => {
           net.train([{ input: [1, 2], output: [1] }], {
             iterations: 1,
             cost: 'notARealCostFn',
-          })
+          }),
         ).toThrow();
       });
     });
@@ -505,12 +520,19 @@ describe('Network Error Handling & Scenarios', () => {
         // Arrange
         const net = new Network(2, 1);
         net.mutate(methods.mutation.ADD_NODE);
-        const hidden = net.nodes.find((n) => n.type === 'hidden');
-        hidden!.squash = null as any;
+        const hidden = net.nodes.find(
+          (candidateNode) => candidateNode.type === 'hidden',
+        );
+        if (!hidden) {
+          throw new Error('Expected hidden node for activation mutation test');
+        }
+        Reflect.set(hidden as object, 'squash', null);
         // Act
         try {
           net.activate([1, 2]);
-        } catch {}
+        } catch (error) {
+          void error;
+        }
         // Assert
         expect(warnSpy).toHaveBeenCalled();
       });
@@ -520,15 +542,13 @@ describe('Network Error Handling & Scenarios', () => {
   describe('Training robustness', () => {
     describe('Scenario: error in a single iteration', () => {
       let net: Network;
-      let originalActivate: any;
       beforeEach(() => {
         // Arrange
         net = new Network(2, 1);
-        originalActivate = net.activate;
       });
       afterEach(() => {
-        // Restore original method
-        net.activate = originalActivate;
+        // Restore any spies
+        jest.restoreAllMocks();
       });
       it('should set errorThrown to true if error occurs', () => {
         // Arrange
@@ -539,18 +559,25 @@ describe('Network Error Handling & Scenarios', () => {
           { input: [1, 1], output: [0] },
         ];
         let errorThrown = false;
+        const originalActivate = net.activate.bind(net);
         // Spy
-        net.activate = jest.fn(function (input, training) {
-          if (!errorThrown && input[0] === 0 && input[1] === 1) {
-            errorThrown = true;
-            throw new Error('Test error');
-          }
-          return originalActivate.apply(net, [input, training]);
-        });
+        jest
+          .spyOn(net, 'activate')
+          .mockImplementation(
+            (input, training = false, maxActivationDepth = 1000) => {
+              if (!errorThrown && input[0] === 0 && input[1] === 1) {
+                errorThrown = true;
+                throw new Error('Test error');
+              }
+              return originalActivate(input, training, maxActivationDepth);
+            },
+          );
         // Act
         try {
           net.train(goodData, { iterations: 10, error: 0.01, rate: 0.3 });
-        } catch {}
+        } catch (error) {
+          void error;
+        }
         // Assert
         expect(errorThrown).toBe(true);
       });
@@ -563,14 +590,19 @@ describe('Network Error Handling & Scenarios', () => {
           { input: [1, 1], output: [0] },
         ];
         let errorThrown = false;
+        const originalActivate = net.activate.bind(net);
         // Spy
-        net.activate = jest.fn(function (input, training) {
-          if (!errorThrown && input[0] === 0 && input[1] === 1) {
-            errorThrown = true;
-            throw new Error('Test error');
-          }
-          return originalActivate.apply(net, [input, training]);
-        });
+        jest
+          .spyOn(net, 'activate')
+          .mockImplementation(
+            (input, training = false, maxActivationDepth = 1000) => {
+              if (!errorThrown && input[0] === 0 && input[1] === 1) {
+                errorThrown = true;
+                throw new Error('Test error');
+              }
+              return originalActivate(input, training, maxActivationDepth);
+            },
+          );
         // Act & Assert
         expect(() => {
           net.train(goodData, { iterations: 10, error: 0.01, rate: 0.3 });

@@ -75,16 +75,14 @@ describe('Adaptive entropy sharing & ancestor uniqueness objective adjustments',
       await neat.evaluate();
       await neat.evolve();
       // Force low uniqueness then evolve to trigger increase
-      neat.getTelemetry()[
-        neat.getTelemetry().length - 1
-      ].lineage.ancestorUniq = 0.1;
+      neat.getTelemetry()[neat.getTelemetry().length - 1].lineage.ancestorUniq =
+        0.1;
       await neat.evaluate();
       await neat.evolve();
       increased = neat.options.multiObjective!.dominanceEpsilon!;
       // Force high uniqueness then evolve to trigger decrease
-      neat.getTelemetry()[
-        neat.getTelemetry().length - 1
-      ].lineage.ancestorUniq = 0.95;
+      neat.getTelemetry()[neat.getTelemetry().length - 1].lineage.ancestorUniq =
+        0.95;
       await neat.evaluate();
       await neat.evolve();
       decreased = neat.options.multiObjective!.dominanceEpsilon!;
