@@ -1,4 +1,5 @@
 import Neat from '../../src/neat';
+import Network from '../../src/architecture/network';
 
 /**
  * Phased complexity should alternate _phase between 'complexify' and 'simplify'
@@ -7,7 +8,8 @@ import Neat from '../../src/neat';
 
 describe('Phased Complexity Controller', () => {
   it('toggles phase after configured phaseLength generations', async () => {
-    const neat = new Neat(2, 1, (n: any) => (n as any).connections.length, {
+  const fitness = (network: Network) => network.connections.length;
+  const neat = new Neat(2, 1, fitness, {
       popsize: 8,
       phasedComplexity: { enabled: true, phaseLength: 1 },
       mutationRate: 1,
@@ -15,11 +17,11 @@ describe('Phased Complexity Controller', () => {
     });
     // First evolve initializes phase to 'complexify'
     await neat.evolve();
-    const firstPhase = (neat as any)._phase;
+  const firstPhase = Reflect.get(neat, '_phase') as string | undefined;
     expect(firstPhase).toBe('complexify');
     // Second evolve should toggle to 'simplify'
     await neat.evolve();
-    const secondPhase = (neat as any)._phase;
+  const secondPhase = Reflect.get(neat, '_phase') as string | undefined;
     expect(secondPhase).toBe('simplify');
   });
 });

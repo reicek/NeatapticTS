@@ -59,7 +59,9 @@ describe('Gating Methods', () => {
         // Arrange
         // Act
         // Assert
-        expect((gating.OUTPUT as any)['nonexistent']).toBeUndefined();
+        expect(
+          (gating.OUTPUT as Record<string, unknown>).nonexistent,
+        ).toBeUndefined();
       });
     });
   });
@@ -98,7 +100,9 @@ describe('Gating Methods', () => {
         // Arrange
         // Act
         // Assert
-        expect((gating.INPUT as any)['nonexistent']).toBeUndefined();
+        expect(
+          (gating.INPUT as Record<string, unknown>).nonexistent,
+        ).toBeUndefined();
       });
     });
   });
@@ -137,7 +141,9 @@ describe('Gating Methods', () => {
         // Arrange
         // Act
         // Assert
-        expect((gating.SELF as any)['nonexistent']).toBeUndefined();
+        expect(
+          (gating.SELF as Record<string, unknown>).nonexistent,
+        ).toBeUndefined();
       });
     });
   });

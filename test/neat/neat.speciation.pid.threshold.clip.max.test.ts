@@ -3,34 +3,16 @@ import type {
   ConnectionLike,
   GenomeDetailed,
   SpeciationOptions,
-  SpeciesLike,
+  SpeciationHarnessContext,
+  SpeciesLastStats,
 } from '../../src/neat/neat.types';
 
-type SpeciationPidContext = {
-  population: GenomeDetailed[];
-  _species: SpeciesLike[];
-  _nextSpeciesId: number;
-  generation: number;
-  options: SpeciationOptions & {
-    compatibilityThreshold: number;
-    compatAdjust: Required<NonNullable<SpeciationOptions['compatAdjust']>>;
-  };
-  _speciesCreated: Map<number, number>;
-  _prevSpeciesMembers: Map<number, Set<number>>;
-  _speciesLastStats: Map<
-    number,
-    { meanNodes: number; meanConns: number; best: number }
-  >;
-  _speciesHistory: Array<Record<string, unknown>>;
-  _compatIntegral: number;
-  _getRNG: () => () => number;
-  _compatibilityDistance: (
-    genomeA: GenomeDetailed,
-    genomeB: GenomeDetailed,
-  ) => number;
-  _fallbackInnov: (connection: ConnectionLike) => number;
-  _structuralEntropy: (genome: GenomeDetailed) => number;
+type SpeciationPidOptions = SpeciationOptions & {
+  compatibilityThreshold: number;
+  compatAdjust: Required<NonNullable<SpeciationOptions['compatAdjust']>>;
 };
+
+type SpeciationPidContext = SpeciationHarnessContext<SpeciationPidOptions>;
 
 const buildPidContext = (
   population: GenomeDetailed[],
@@ -58,10 +40,7 @@ const buildPidContext = (
     options: { ...defaultOptions, ...overrides },
     _speciesCreated: new Map<number, number>(),
     _prevSpeciesMembers: new Map<number, Set<number>>(),
-    _speciesLastStats: new Map<
-      number,
-      { meanNodes: number; meanConns: number; best: number }
-    >(),
+    _speciesLastStats: new Map<number, SpeciesLastStats>(),
     _speciesHistory: [],
     _compatIntegral: compatIntegral,
     _getRNG: () => () => 0.5,
@@ -73,7 +52,10 @@ const buildPidContext = (
       void genomeB;
       return 0;
     },
-    _fallbackInnov: (_connection: ConnectionLike) => 1,
+    _fallbackInnov: (connection: ConnectionLike) => {
+      void connection;
+      return 1;
+    },
     _structuralEntropy: (genome: GenomeDetailed) => {
       void genome;
       return 0;

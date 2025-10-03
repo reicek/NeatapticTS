@@ -1,35 +1,75 @@
 import { _speciate } from '../../src/neat/neat.speciation';
+import type {
+  ConnectionLike,
+  GenomeDetailed,
+  SpeciationOptions,
+  SpeciationHarnessContext,
+  SpeciesLastStats,
+} from '../../src/neat/neat.types';
+
+type AssignmentOptions = SpeciationOptions & {
+  compatibilityThreshold: number;
+};
+
+type AssignmentContext = SpeciationHarnessContext<AssignmentOptions>;
+
+const buildAssignmentContext = (): AssignmentContext => {
+  const genomeOne: GenomeDetailed = {
+    nodes: [],
+    connections: [],
+    _id: 1,
+    score: 1,
+  };
+  const genomeTwo: GenomeDetailed = {
+    nodes: [],
+    connections: [],
+    _id: 2,
+    score: 2,
+  };
+  return {
+    population: [genomeOne, genomeTwo],
+    _species: [],
+    _nextSpeciesId: 1,
+    generation: 0,
+    options: {
+      speciation: true,
+      targetSpecies: 0,
+      compatibilityThreshold: 10,
+    },
+    _speciesCreated: new Map<number, number>(),
+    _prevSpeciesMembers: new Map<number, Set<number>>(),
+    _speciesLastStats: new Map<number, SpeciesLastStats>(),
+    _speciesHistory: [],
+    _compatIntegral: 0,
+    _getRNG: () => () => 0.5,
+    _compatibilityDistance: (
+      genomeA: GenomeDetailed,
+      genomeB: GenomeDetailed
+    ) => {
+      void genomeA;
+      void genomeB;
+      return 0;
+    },
+    _fallbackInnov: (connection: ConnectionLike) => {
+      void connection;
+      return 1;
+    },
+    _structuralEntropy: (genomeDetailed: GenomeDetailed) => {
+      void genomeDetailed;
+      return 0;
+    },
+  };
+};
 
 describe('speciation - assignment', () => {
   test('assigns second genome to first species when distance below threshold', () => {
     // Arrange
-    const g1: any = { nodes: [], connections: [], _id: 1, score: 1 };
-    const g2: any = { nodes: [], connections: [], _id: 2, score: 2 };
-    const ctx: any = {
-      population: [g1, g2],
-      _species: [],
-      _nextSpeciesId: 1,
-      generation: 0,
-      options: {
-        speciation: true,
-        targetSpecies: 0,
-        compatibilityThreshold: 10,
-      },
-      _speciesCreated: new Map(),
-      _prevSpeciesMembers: new Map(),
-      _speciesLastStats: new Map(),
-      _speciesHistory: [],
-      _compatIntegral: 0,
-      _getRNG: () => () => 0.5,
-      _compatibilityDistance: (a: any, b: any) => 0, // always same -> below threshold
-      _fallbackInnov: () => 1,
-      _structuralEntropy: () => 0,
-    };
+    const context = buildAssignmentContext();
 
     // Act
-    _speciate.call(ctx);
+    _speciate.call(context);
 
     // Assert
-    expect(ctx._species.length).toBe(1);
+    expect(context._species.length).toBe(1);
   });
 });

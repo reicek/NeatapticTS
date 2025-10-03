@@ -2,7 +2,7 @@ import Neat from '../../src/neat';
 import Network from '../../src/architecture/network';
 
 describe('operator bandit selection', () => {
-  const fitness = (net: Network) => (net as any).connections.length;
+  const fitness = (network: Network) => network.connections.length;
   test('bandit populates operator stats', async () => {
     const neat = new Neat(4, 2, fitness, {
       popsize: 25,

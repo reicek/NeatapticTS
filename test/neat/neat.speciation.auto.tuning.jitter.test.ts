@@ -3,38 +3,20 @@ import type {
   ConnectionLike,
   GenomeDetailed,
   SpeciationOptions,
-  SpeciesLike,
+  SpeciationHarnessContext,
+  SpeciesLastStats,
 } from '../../src/neat/neat.types';
 
-type AutoCompatContext = {
-  population: GenomeDetailed[];
-  _species: SpeciesLike[];
-  _nextSpeciesId: number;
-  generation: number;
-  options: SpeciationOptions & {
-    compatAdjust: Required<NonNullable<SpeciationOptions['compatAdjust']>>;
-    autoCompatTuning: Required<
-      NonNullable<SpeciationOptions['autoCompatTuning']>
-    >;
-    excessCoeff: number;
-    disjointCoeff: number;
-  };
-  _speciesCreated: Map<number, number>;
-  _prevSpeciesMembers: Map<number, Set<number>>;
-  _speciesLastStats: Map<
-    number,
-    { meanNodes: number; meanConns: number; best: number }
+type AutoCompatOptions = SpeciationOptions & {
+  compatAdjust: Required<NonNullable<SpeciationOptions['compatAdjust']>>;
+  autoCompatTuning: Required<
+    NonNullable<SpeciationOptions['autoCompatTuning']>
   >;
-  _speciesHistory: Array<Record<string, unknown>>;
-  _compatIntegral: number;
-  _getRNG: () => () => number;
-  _compatibilityDistance: (
-    genomeA: GenomeDetailed,
-    genomeB: GenomeDetailed,
-  ) => number;
-  _fallbackInnov: (connection: ConnectionLike) => number;
-  _structuralEntropy: (genome: GenomeDetailed) => number;
+  excessCoeff: number;
+  disjointCoeff: number;
 };
+
+type AutoCompatContext = SpeciationHarnessContext<AutoCompatOptions>;
 
 const createAutoCompatContext = (): AutoCompatContext => {
   const genome: GenomeDetailed = {
@@ -72,10 +54,7 @@ const createAutoCompatContext = (): AutoCompatContext => {
     },
     _speciesCreated: new Map<number, number>(),
     _prevSpeciesMembers: new Map<number, Set<number>>(),
-    _speciesLastStats: new Map<
-      number,
-      { meanNodes: number; meanConns: number; best: number }
-    >(),
+    _speciesLastStats: new Map<number, SpeciesLastStats>(),
     _speciesHistory: [],
     _compatIntegral: 0,
     _getRNG: () => () => 0.5,
@@ -87,7 +66,10 @@ const createAutoCompatContext = (): AutoCompatContext => {
       void genomeB;
       return 0;
     },
-    _fallbackInnov: (_connection: ConnectionLike) => 1,
+    _fallbackInnov: (connection: ConnectionLike) => {
+      void connection;
+      return 1;
+    },
     _structuralEntropy: (genome: GenomeDetailed) => {
       void genome;
       return 0;

@@ -12,9 +12,9 @@ import Network from '../../../src/architecture/network';
  * @param winner Evolved network to refine (not mutated; a clone is returned).
  * @returns Refined cloned network; if refinement fails, returns original clone.
  */
-export function refineWinnerWithBackprop(
+export const refineWinnerWithBackprop = (
   winner?: Network
-): Network | undefined {
+): Network | undefined => {
   if (!winner) return undefined;
   // Ensure differentiable activations for hidden/output nodes.
   try {
@@ -62,4 +62,4 @@ export function refineWinnerWithBackprop(
   } catch {
     return winner; // if clone fails, return original reference
   }
-}
+};

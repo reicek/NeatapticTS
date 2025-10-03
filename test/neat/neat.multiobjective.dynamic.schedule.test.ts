@@ -2,11 +2,9 @@ import Neat from '../../src/neat';
 import Network from '../../src/architecture/network';
 
 describe('Dynamic multi-objective scheduling', () => {
-  const fitness = (net: Network) => {
-    let s = 0;
-    for (const c of net.connections) if ((c as any).enabled !== false) s++;
-    return s;
-  };
+  const fitness = (network: Network) =>
+    network.connections.filter((connection) => connection.enabled !== false)
+      .length;
 
   test('delayed complexity objective and entropy drop/readd', async () => {
     const neat = new Neat(2, 1, fitness, {
@@ -28,19 +26,20 @@ describe('Dynamic multi-objective scheduling', () => {
       lineageTracking: false,
     });
     const keysByGen: string[][] = [];
-    for (let g = 0; g < 10; g++) {
+    for (let generationIndex = 0; generationIndex < 10; generationIndex += 1) {
       await neat.evaluate();
       await neat.evolve();
       keysByGen.push(neat.getObjectiveKeys());
     }
     // keysByGen[i] corresponds to generation i+1 (since generation increments after evolve)
     // Complexity absent for generations <4 => indices 0..2, present at generation 4 => index 3
-    for (let i = 0; i < 3; i++)
-      expect(keysByGen[i]).not.toContain('complexity');
+    for (let index = 0; index < 3; index += 1)
+      expect(keysByGen[index]).not.toContain('complexity');
     expect(keysByGen[3]).toContain('complexity');
     // Entropy absent for generations <3 => indices 0..1, present at generation 3 => index 2
-    for (let i = 0; i < 2; i++) expect(keysByGen[i]).not.toContain('entropy');
+    for (let index = 0; index < 2; index += 1)
+      expect(keysByGen[index]).not.toContain('entropy');
     expect(keysByGen[2]).toContain('entropy');
-    for (const ks of keysByGen) expect(ks).toContain('fitness');
+    for (const keys of keysByGen) expect(keys).toContain('fitness');
   }, 45000);
 });

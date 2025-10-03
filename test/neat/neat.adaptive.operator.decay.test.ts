@@ -1,4 +1,5 @@
 import Neat from '../../src/neat';
+import Network from '../../src/architecture/network';
 import * as methods from '../../src/methods/methods';
 
 /**
@@ -7,7 +8,8 @@ import * as methods from '../../src/methods/methods';
 
 describe('Operator Adaptation Decay', () => {
   it('decays operator stats', async () => {
-    const neat = new Neat(3, 1, (n: any) => (n as any).connections.length, {
+  const fitness = (network: Network) => network.connections.length;
+  const neat = new Neat(3, 1, fitness, {
       popsize: 12,
       mutation: [methods.mutation.ADD_CONN, methods.mutation.ADD_NODE],
       mutationRate: 1,
@@ -19,7 +21,7 @@ describe('Operator Adaptation Decay', () => {
     await neat.evolve();
     const before = neat.getOperatorStats().map((s) => ({ ...s }));
     // Disable new mutations so subsequent evolve only applies decay
-    (neat.options as any).mutationRate = 0;
+  neat.options.mutationRate = 0;
     await neat.evolve();
     const after = neat.getOperatorStats();
     for (const b of before) {

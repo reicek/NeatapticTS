@@ -23,6 +23,13 @@ export class NetworkRefinement {
     }
     return scratch;
   }
+
+  static #logDebug(message: string, detail: unknown): void {
+    const debugFlag = Reflect.get(globalThis, 'DEBUG');
+    const isEnabled =
+      typeof debugFlag === 'boolean' ? debugFlag : Boolean(debugFlag);
+    if (isEnabled) console.warn(message, detail);
+  }
   /**
    * Refines a winning neural network using backpropagation.
    *
@@ -89,17 +96,20 @@ export class NetworkRefinement {
           output.length
         );
 
-        for (let i = 0; i < input.length; i++)
-          NetworkRefinement.#INPUT_SCRATCH[i] = input[i];
-        for (let i = 0; i < output.length; i++)
-          NetworkRefinement.#OUTPUT_SCRATCH[i] = output[i];
+        NetworkRefinement.#INPUT_SCRATCH.set(input);
+        NetworkRefinement.#OUTPUT_SCRATCH.set(output);
 
         // Activate the network with the input sample (best-effort).
+        const activationInput = Array.from(
+          NetworkRefinement.#INPUT_SCRATCH.subarray(0, input.length)
+        );
         try {
-          (networkToRefine as any).activate(NetworkRefinement.#INPUT_SCRATCH);
-        } catch (e) {
-          if ((globalThis as any).DEBUG)
-            console.warn('Activation failed during refinement:', e);
+          networkToRefine.activate(activationInput);
+        } catch (error) {
+          NetworkRefinement.#logDebug(
+            'Activation failed during refinement:',
+            error
+          );
         }
 
         // Use a small defensive wrapper so refinement remains best-effort and
@@ -108,7 +118,7 @@ export class NetworkRefinement {
           networkToRefine,
           learningRate,
           momentum,
-          NetworkRefinement.#OUTPUT_SCRATCH
+          NetworkRefinement.#OUTPUT_SCRATCH.subarray(0, output.length)
         );
       }
     }
@@ -131,13 +141,12 @@ export class NetworkRefinement {
       // `propagate` is a concrete implementation detail on `Network` instances.
       // Keep the original call signature (learningRate, momentum, clear, target).
       // Convert array-like to a plain array once here (centralized allocation).
-      (net as any).propagate(learningRate, momentum, true, Array.from(target));
+      const targetArray = Array.from(target);
+      net.propagate(learningRate, momentum, true, targetArray);
       return true;
-    } catch (e) {
+    } catch (error) {
       // Best-effort: swallow errors but keep optional debugging available via console when needed.
-
-      if ((globalThis as any).DEBUG)
-        console.warn('Refinement propagate failed:', e);
+      NetworkRefinement.#logDebug('Refinement propagate failed:', error);
       return false;
     }
   }

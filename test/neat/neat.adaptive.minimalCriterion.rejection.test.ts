@@ -1,5 +1,6 @@
 import Neat from '../../src/neat';
 import Network from '../../src/architecture/network';
+import { applyMinimalCriterionAdaptive } from '../../src/neat/neat.adaptive';
 
 /** Tests for adaptive minimal criterion threshold adjustment & rejection. */
 describe('Adaptive Minimal Criterion', () => {
@@ -19,12 +20,10 @@ describe('Adaptive Minimal Criterion', () => {
     test('threshold increases after evaluation', async () => {
       // Arrange: evaluate to set scores > threshold
       await neat.evaluate();
-      before = (neat as any)._mcThreshold ?? 0.1;
-      require('../../src/neat/neat.adaptive').applyMinimalCriterionAdaptive.call(
-        neat as any,
-      );
+      before = (Reflect.get(neat as object, '_mcThreshold') as number | undefined) ?? 0.1;
+      applyMinimalCriterionAdaptive.call(neat);
       // Act: obtain adapted threshold
-      const after = (neat as any)._mcThreshold;
+      const after = Reflect.get(neat as object, '_mcThreshold') as number;
       // Assert: threshold increased (acceptance above target triggers growth)
       expect(after).toBeGreaterThan(before);
     });

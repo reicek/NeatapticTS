@@ -1,17 +1,21 @@
 import Neat from '../../src/neat';
+import Network from '../../src/architecture/network';
 
 describe('fastMode auto-tuning', () => {
   test('auto lowers sampling defaults when unspecified', async () => {
-    const neat = new Neat(4, 2, (g: any) => Math.random(), {
+  const neat = new Neat(4, 2, () => Math.random(), {
       popsize: 20,
       seed: 123,
       fastMode: true,
       diversityMetrics: { enabled: true }, // pairSample / graphletSample undefined => should be tuned
       novelty: {
         enabled: true,
-        descriptor: (n: any) => [n.nodes.length, n.connections.length],
+        descriptor: (network: Network) => [
+          network.nodes.length,
+          network.connections.length,
+        ],
       },
-    } as any);
+    });
 
     await neat.evolve(); // triggers diversity stats computation and fastMode tuning once
 
@@ -21,7 +25,7 @@ describe('fastMode auto-tuning', () => {
   });
 
   test('does not override user supplied sampling values', async () => {
-    const neat = new Neat(4, 2, (g: any) => Math.random(), {
+  const neat = new Neat(4, 2, () => Math.random(), {
       popsize: 20,
       seed: 321,
       fastMode: true,
@@ -29,9 +33,9 @@ describe('fastMode auto-tuning', () => {
       novelty: {
         enabled: true,
         k: 11,
-        descriptor: (n: any) => [n.nodes.length],
+        descriptor: (network: Network) => [network.nodes.length],
       },
-    } as any);
+    });
 
     await neat.evolve();
 

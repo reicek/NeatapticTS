@@ -1,9 +1,13 @@
 import Neat from '../../src/neat';
 import Network from '../../src/architecture/network';
 
+type StructuralEntropyAccessor = {
+  _structuralEntropy(network: Network): number;
+};
+
 // Simple helper to coerce evaluation quickly
-const fitness = (n: Network) =>
-  (n as any).nodes.length - (n as any).connections.length * 0.01;
+const fitness = (network: Network) =>
+  network.nodes.length - network.connections.length * 0.01;
 
 describe('Dynamic objective registration', () => {
   test('can register custom entropy objective and see it reflected in fronts', async () => {
@@ -14,8 +18,10 @@ describe('Dynamic objective registration', () => {
       multiObjective: { enabled: true, complexityMetric: 'nodes' },
     });
     // Register a custom objective using structural entropy proxy (private method via cast)
-    neat.registerObjective('entropy', 'max', (g: Network) =>
-      (neat as any)._structuralEntropy(g),
+    const structuralEntropy = (neat as unknown as StructuralEntropyAccessor)
+      ._structuralEntropy.bind(neat);
+    neat.registerObjective('entropy', 'max', (genome: Network) =>
+      structuralEntropy(genome),
     );
     await neat.evaluate();
     await neat.evolve();

@@ -1,6 +1,8 @@
 // Interfaces for ASCII Maze Neuroevolution System
 // This file centralizes shared interfaces and types for consistency and maintainability.
 
+import type Network from '../../../src/architecture/network';
+
 /**
  * Interface for dashboard manager abstraction.
  * Used for dependency inversion and testability.
@@ -44,7 +46,7 @@ export interface IDashboardManager {
    */
   update(
     maze: string[],
-    result: any,
+  result: IMazeRunResult,
     network: INetwork,
     generation: number,
     neatInstance?: any // optional Neat instance for advanced telemetry display
@@ -145,6 +147,34 @@ export interface IAgentSimulationConfig {
 }
 
 /**
+ * Result structure returned by the maze simulation/evolution helpers.
+ *
+ * Contains the key telemetry fields consumed by dashboards, visualisers and
+ * fitness evaluators while remaining permissive via an index signature for
+ * additional diagnostics.
+ */
+export interface IMazeRunResult {
+  /** Whether the agent solved the maze during this run. */
+  success: boolean;
+  /** Number of steps executed before termination. */
+  steps: number;
+  /** Materialised path as [x, y] coordinates visited sequentially. */
+  path: Array<[number, number]>;
+  /** Scalar fitness assigned to the run (after shaping). */
+  fitness: number;
+  /** Progress metric (usually 0-100) representing completion percentage. */
+  progress: number;
+  /** Optional saturation fraction of outputs during the run. */
+  saturationFraction?: number;
+  /** Optional action-entropy metric derived from movement distribution. */
+  actionEntropy?: number;
+  /** Optional exit reason string used by the evolution loop. */
+  exitReason?: string;
+  /** Additional diagnostics or telemetry fields supplied by callers. */
+  [key: string]: unknown;
+}
+
+/**
  * Configuration options for the evolutionary algorithm used in the ASCII Maze demos.
  *
  * Purpose
@@ -204,7 +234,7 @@ export interface IEvolutionAlgorithmConfig {
   /** Optionally provide an initial population of networks instead of random seeding. */
   initialPopulation?: INetwork[];
   /** Optionally supply a known-good starting network (copied/cloned by the engine). */
-  initialBestNetwork?: INetwork;
+  initialBestNetwork?: INetwork | Network;
   /** Per-individual local refinement iterations (Baldwinian/Lamarckian style). */
   lamarckianIterations?: number;
   /** Subsample size used for refinement training patterns to speed up Lamarckian steps. */
@@ -723,6 +753,55 @@ export interface IVisualizationConnection {
 }
 
 /**
+ * Structural connection descriptor referencing resolved node structures.
+ *
+ * Purpose:
+ * - Provide a lightweight, serialisable view over a connection while preserving
+ *   the node references expected by visualisation helpers.
+ * - Allow callers to attach additional metadata (innovation ids, traces) via
+ *   the index signature without breaking type safety for known properties.
+ *
+ * Typical contents:
+ * - `from` and `to` node references (may be null for partially constructed graphs).
+ * - Optional `gater` node when using gated connections.
+ * - Optional `weight` and `enabled` flags mirroring the runtime connection.
+ */
+export interface IConnectionWithStructRefs {
+  /** Source node reference for the connection (null when unresolved). */
+  from?: INodeStruct | null;
+  /** Destination node reference for the connection (null when unresolved). */
+  to?: INodeStruct | null;
+  /** Optional gater node reference (null or undefined when ungated). */
+  gater?: INodeStruct | null;
+  /** Optional numeric weight associated with the connection. */
+  weight?: number;
+  /** Whether the connection is currently enabled. */
+  enabled?: boolean;
+  /** Additional metadata supplied by concrete implementations. */
+  [key: string]: unknown;
+}
+
+/**
+ * Aggregates incoming/outgoing link arrays for a node snapshot.
+ *
+ * Callers may omit arrays that are not relevant for a given snapshot to keep
+ * serialised structures compact. Visualisation helpers should treat missing
+ * arrays as empty collections.
+ */
+export interface INodeConnectionRegistry {
+  /** Incoming connections terminating at the node. */
+  in?: IConnectionWithStructRefs[];
+  /** Outgoing connections sourced from the node. */
+  out?: IConnectionWithStructRefs[];
+  /** Connections gated by the node. */
+  gated?: IConnectionWithStructRefs[];
+  /** Self/recurrent connection descriptors. */
+  self?: IConnectionWithStructRefs[];
+  /** Extension point for engine-specific registries. */
+  [key: string]: unknown;
+}
+
+/**
  * Type representing a node activation (squash) function with optional metadata.
  *
  * Purpose:
@@ -834,6 +913,20 @@ export interface INodeStruct {
    *   breaking the generic interface. Prefer explicit properties where feasible.
    */
   [key: string]: any;
+}
+
+/**
+ * Extended node snapshot including connection registries for visualisation utilities.
+ *
+ * Purpose:
+ * - Preserve the lightweight structural fields from {@link INodeStruct} while adding
+ *   optional connection arrays used by network visualisation helpers.
+ * - Allow demos/tests to pass concrete `Network` nodes directly without cloning
+ *   as long as they satisfy the shape of this interface.
+ */
+export interface INodeWithConnectionInfo extends INodeStruct {
+  /** Optional connection registry describing incoming/outgoing/gated links. */
+  connections?: INodeConnectionRegistry;
 }
 
 /**

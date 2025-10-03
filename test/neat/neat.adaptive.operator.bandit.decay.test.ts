@@ -1,5 +1,6 @@
 import Neat from '../../src/neat';
 import Network from '../../src/architecture/network';
+import { applyOperatorAdaptation } from '../../src/neat/neat.adaptive';
 import { mutation } from '../../src/methods/mutation';
 
 /** Tests operator adaptation decay & bandit exploration bonus path. */
@@ -18,9 +19,7 @@ describe('Operator Adaptation & Bandit', () => {
       await neat.evaluate();
       neat.mutate();
       neat.mutate();
-      require('../../src/neat/neat.adaptive').applyOperatorAdaptation.call(
-        neat as any,
-      );
+      applyOperatorAdaptation.call(neat);
       // Act: extract stats entries count
       const count = neat.getOperatorStats().length;
       // Assert: at least one operator stat tracked

@@ -2,7 +2,7 @@ import Neat from '../../src/neat';
 
 describe('inactive objective pruning behavior', () => {
   test('does not prune when disabled', async () => {
-    const neat = new Neat(6, 2, (g: any) => Math.random(), {
+    const neat = new Neat(6, 2, () => Math.random(), {
       popsize: 15,
       seed: 77,
       multiObjective: {
@@ -13,8 +13,10 @@ describe('inactive objective pruning behavior', () => {
         ],
         pruneInactive: { enabled: false, window: 2, rangeEps: 1e-9 },
       },
-    } as any);
-    for (let i = 0; i < 4; i++) await neat.evolve();
+    });
+    for (let generationIndex = 0; generationIndex < 4; generationIndex += 1) {
+      await neat.evolve();
+    }
     const keys = neat
       .getObjectives()
       .map((o) => o.key)
@@ -23,7 +25,7 @@ describe('inactive objective pruning behavior', () => {
   });
 
   test('prunes only after required consecutive stagnant window', async () => {
-    const neat = new Neat(6, 2, (g: any) => Math.random(), {
+    const neat = new Neat(6, 2, () => Math.random(), {
       popsize: 18,
       seed: 88,
       multiObjective: {
@@ -40,15 +42,24 @@ describe('inactive objective pruning behavior', () => {
           protect: ['varB'],
         },
       },
-    } as any);
-    for (let i = 0; i < 2; i++) await neat.evolve();
-    let keys = neat.getObjectives().map((o) => o.key);
+    });
+    for (let generationIndex = 0; generationIndex < 2; generationIndex += 1) {
+      await neat.evolve();
+    }
+    let keys = neat.getObjectives().map((objective) => objective.key);
     expect(keys).toEqual(expect.arrayContaining(['constA', 'constB', 'varB']));
     await neat.evolve();
     await neat.evolve();
-    keys = neat.getObjectives().map((o) => o.key);
-    expect(keys).not.toContain('constA');
-    expect(keys).not.toContain('constB');
-    expect(keys).toContain('varB');
+    keys = neat.getObjectives().map((objective) => objective.key);
+    const objectivePresence = keys.reduce(
+      (accumulator, key) => {
+        if (key === 'constA') accumulator.constA = true;
+        if (key === 'constB') accumulator.constB = true;
+        if (key === 'varB') accumulator.varB = true;
+        return accumulator;
+      },
+      { constA: false, constB: false, varB: false },
+    );
+    expect(objectivePresence).toEqual({ constA: false, constB: false, varB: true });
   });
 });

@@ -10,9 +10,29 @@
  * - Simple goal-seeking behavior
  * - Simulation of movement with collision detection
  */
-import { INetwork } from './interfaces';
+import { INetwork, INodeStruct } from './interfaces';
 import { MazeUtils } from './mazeUtils';
 import { MazeVision } from './mazeVision';
+
+/**
+ * Diagnostic telemetry produced when selecting a direction from network logits.
+ *
+ * Encapsulates the chosen direction along with entropy and probability data so
+ * downstream helpers can apply shaping rewards and penalties without
+ * rederiving softmax statistics on hot paths.
+ */
+interface DirectionSelectionStats {
+  /** Chosen action index (0..#ACTION_DIM-1) or -1 when no move is selected. */
+  direction: number;
+  /** Defensive copy of per-action softmax probabilities. */
+  softmax: number[];
+  /** Normalised entropy of the action distribution in [0,1]. */
+  entropy: number;
+  /** Probability assigned to the chosen action. */
+  maxProb: number;
+  /** Probability assigned to the runner-up action. */
+  secondProb: number;
+}
 
 /**
  * Internal aggregate state used during a single agent simulation run.
@@ -100,7 +120,7 @@ interface SimulationState {
   /** Per-step perception/vision vector built for the network. */
   vision: number[];
   /** Network action statistics (softmax, entropy, etc.) populated each step. */
-  actionStats: any;
+  actionStats: DirectionSelectionStats | null;
   /** Currently selected direction index (0..3) or #-NO_MOVE. */
   direction: number;
   /** Whether the agent moved on the last executed action. */
@@ -425,14 +445,22 @@ export class MazeMovement {
    */
   static isValidMove(
     encodedMaze: ReadonlyArray<ReadonlyArray<number>>,
-    positionOrX: any,
-    yMaybe?: any
+    position: readonly [number, number]
+  ): boolean;
+  static isValidMove(
+    encodedMaze: ReadonlyArray<ReadonlyArray<number>>,
+    x: number,
+    y: number
+  ): boolean;
+  static isValidMove(
+    encodedMaze: ReadonlyArray<ReadonlyArray<number>>,
+    positionOrX: readonly [number, number] | number,
+    yMaybe?: number
   ): boolean {
-    // Step 1: Normalize inputs to integer coordinates using the pooled scratch
-    if (Array.isArray(positionOrX)) {
-      // Destructure the tuple and coerce to 32-bit ints
-      const [rawX, rawY] = positionOrX as [number, number];
-      // Store into pooled scratch to avoid creating new temporaries
+    // Step 1: handle numeric overload (x, y)
+    if (typeof positionOrX === 'number') {
+      const rawX = positionOrX;
+      const rawY = yMaybe ?? 0;
       MazeMovement.#COORD_SCRATCH[0] = rawX | 0;
       MazeMovement.#COORD_SCRATCH[1] = rawY | 0;
       return MazeMovement.#isCellOpen(
@@ -442,9 +470,9 @@ export class MazeMovement {
       );
     }
 
-    // Numeric-form: coerce both args into pooled scratch and delegate
-    const rawX = positionOrX as number;
-    const rawY = yMaybe as number;
+    // Step 2: tuple overload — validate shape before delegating
+    if (!Array.isArray(positionOrX) || positionOrX.length !== 2) return false;
+    const [rawX, rawY] = positionOrX;
     MazeMovement.#COORD_SCRATCH[0] = rawX | 0;
     MazeMovement.#COORD_SCRATCH[1] = rawY | 0;
     return MazeMovement.#isCellOpen(
@@ -639,6 +667,45 @@ export class MazeMovement {
   }
 
   /**
+   * Determine whether the provided value is a finite-number array.
+   *
+  * @param candidate - Value to test for numeric array semantics.
+  * @returns True when candidate is an array of finite numbers.
+   */
+  static #isNumberArray(candidate: unknown): candidate is number[] {
+    return (
+      Array.isArray(candidate) &&
+      candidate.every(
+        (value: unknown) => typeof value === 'number' && Number.isFinite(value)
+      )
+    );
+  }
+
+  /**
+   * Read the optional `_lastStepOutputs` history stored on the network.
+   *
+   * @param network - Network instance that may provide an outputs history.
+   * @returns Sanitised history buffer or `undefined` when absent/invalid.
+   */
+  static #readOutputHistory(network: INetwork): number[][] | undefined {
+    const historyCandidate = Reflect.get(network as object, '_lastStepOutputs');
+    if (!Array.isArray(historyCandidate)) return undefined;
+    return historyCandidate.every(MazeMovement.#isNumberArray)
+      ? (historyCandidate as number[][])
+      : undefined;
+  }
+
+  /**
+   * Persist the bounded outputs history on the network via reflection.
+   *
+   * @param network - Target network to mutate.
+   * @param history - Updated history buffer.
+   */
+  static #writeOutputHistory(network: INetwork, history: number[][]): void {
+    Reflect.set(network as object, '_lastStepOutputs', history);
+  }
+
+  /**
    * Materialize the current path stored in the pooled `#PathX` / `#PathY`
    * buffers into a fresh, mutable array of [x,y] tuples.
    *
@@ -679,42 +746,6 @@ export class MazeMovement {
       out[index] = [x, y];
     }
     return out;
-  }
-
-  /**
-   * Return the opposite cardinal direction for a given action index.
-   *
-   * Rationale:
-   * - Using a centered lookup (add half the action-space and wrap) keeps the
-   *   implementation independent of the exact `#ACTION_DIM` value and avoids
-   *   branchy conditionals when the action space changes.
-   * - Special-case the `#NO_MOVE` sentinel so callers that pass `-1` preserve
-   *   the 'no move' semantics instead of producing a wrapped numeric result.
-   *
-   * Steps:
-   * 1) If `direction` equals `#NO_MOVE` return `#NO_MOVE` immediately.
-   * 2) Coerce the input to a 32-bit integer and normalize into [0, ACTION_DIM).
-   * 3) Add the half-span (ACTION_DIM >> 1) and wrap with modulo to compute
-   *    the opposite index.
-   *
-   * @param direction - action index (0=N,1=E,2=S,3=W) or `#NO_MOVE` (-1)
-   * @returns Opposite action index, or `#NO_MOVE` when input was `#NO_MOVE`.
-   * @example
-   * MazeMovement.#opposite(0) === 2; // North -> South
-   */
-  static #opposite(direction: number): number {
-    // Step 1: preserve the no-move sentinel
-    if (direction === MazeMovement.#NO_MOVE) return MazeMovement.#NO_MOVE;
-
-    // Step 2: coerce to 32-bit integer and normalize into [0, ACTION_DIM)
-    const coerced = direction | 0; // fast int coercion
-    const dim = MazeMovement.#ACTION_DIM;
-    let normalized = coerced % dim;
-    if (normalized < 0) normalized += dim; // handle negative remainders
-
-    // Step 3: compute opposite by adding half the action-space and wrapping
-    const halfSpan = dim >> 1; // integer division by 2
-    return (normalized + halfSpan) % dim;
   }
 
   /**
@@ -1059,15 +1090,7 @@ export class MazeMovement {
    * const result = MazeMovement.selectDirection([0.2, 1.4, -0.1, 0]);
    * // result.direction -> 1 (for example)
    */
-  static selectDirection(
-    outputs: number[]
-  ): {
-    direction: number;
-    softmax: number[];
-    entropy: number;
-    maxProb: number;
-    secondProb: number;
-  } {
+  static selectDirection(outputs: number[]): DirectionSelectionStats {
     // Step 1: validate inputs and provide safe default
     const actionCount = MazeMovement.#ACTION_DIM;
     if (!Array.isArray(outputs) || outputs.length !== actionCount) {
@@ -1214,7 +1237,7 @@ export class MazeMovement {
     while (state.steps < maxSteps) {
       state.steps++;
       // Record cell visit & derive penalties for loops / memory / revisits
-      MazeMovement.#recordVisitAndUpdatePenalties(state, encodedMaze);
+  MazeMovement.#recordVisitAndUpdatePenalties(state);
 
       // Build perception & compute current distance for exploration logic
       MazeMovement.#buildVisionAndDistance(
@@ -1225,7 +1248,7 @@ export class MazeMovement {
       );
 
       // Neural net activation & saturation handling
-      MazeMovement.#decideDirection(state, network, encodedMaze, distanceMap);
+  MazeMovement.#decideDirection(state, network);
 
       // Proximity greedy override
       MazeMovement.#maybeApplyProximityGreedy(state, encodedMaze, distanceMap);
@@ -1321,8 +1344,8 @@ export class MazeMovement {
       revisitPenalty: 0,
       visitsAtCurrent: 0,
       distHere: Infinity,
-      vision: [] as number[],
-      actionStats: null as any,
+  vision: [] as number[],
+  actionStats: null,
       direction: MazeMovement.#NO_MOVE,
       moved: false,
       prevDistance: Infinity,
@@ -1438,15 +1461,11 @@ export class MazeMovement {
    *    when visits exceed `#VISIT_TERMINATION_THRESHOLD`.
    *
    * @param state - current simulation state (modified in-place)
-   * @param encodedMaze - read-only maze (unused directly here but kept for symmetry)
    * @returns void
    * @example
-   * MazeMovement.#recordVisitAndUpdatePenalties(state, encodedMaze);
+   * MazeMovement.#recordVisitAndUpdatePenalties(state);
    */
-  static #recordVisitAndUpdatePenalties(
-    state: SimulationState,
-    encodedMaze: number[][]
-  ) {
+  static #recordVisitAndUpdatePenalties(state: SimulationState) {
     // Step 0: local references and descriptive names for hot-path perf
     const visitedFlags = MazeMovement.#VisitedFlags!;
     const visitCounts = MazeMovement.#VisitCounts!;
@@ -1623,19 +1642,15 @@ export class MazeMovement {
    *
    * @param state - simulation state (mutated in-place)
    * @param network - neural network implementing `activate(vision): number[]`
-   * @param encodedMaze - read-only maze grid (kept for symmetry with callers)
-   * @param distanceMap - optional precomputed distance map aligned to the maze
    * @returns void
    *
    * @example
    * // inside the simulation loop
-   * MazeMovement.#decideDirection(state, network, encodedMaze, distanceMap);
+   * MazeMovement.#decideDirection(state, network);
    */
   static #decideDirection(
     state: SimulationState,
-    network: INetwork,
-    encodedMaze: number[][],
-    distanceMap?: number[][]
+    network: INetwork
   ) {
     // Step 1: fast-path bail when run flagged for early termination
     if (state.earlyTerminate) return;
@@ -1644,22 +1659,24 @@ export class MazeMovement {
       // Step 2: activate the network to obtain raw outputs (logits). We keep
       // the reference as-is because `selectDirection` can operate on typed
       // arrays and internally uses pooled scratch buffers for softmax.
-      const networkOutputs = network.activate(state.vision) as number[];
+      const networkOutputs = network.activate(state.vision);
 
       // Step 3: record a shallow, fixed-length plain-Array copy into the
       // network's history. `MazeUtils.pushHistory` expects Array semantics so
       // we must supply a real Array; create it deterministically sized to the
       // action count to avoid intermediate temporaries like spread operators.
-      const outputsLength = (networkOutputs && networkOutputs.length) | 0;
+      const outputsLength = networkOutputs.length | 0;
       const outputsHistoryCopy: number[] = new Array(outputsLength);
       for (let copyIndex = 0; copyIndex < outputsLength; copyIndex++) {
         outputsHistoryCopy[copyIndex] = networkOutputs[copyIndex];
       }
-      (network as any)._lastStepOutputs = MazeUtils.pushHistory(
-        (network as any)._lastStepOutputs,
+      const previousHistory = MazeMovement.#readOutputHistory(network);
+      const updatedHistory = MazeUtils.pushHistory(
+        previousHistory,
         outputsHistoryCopy,
         MazeMovement.#OUTPUT_HISTORY_LENGTH
       );
+      MazeMovement.#writeOutputHistory(network, updatedHistory);
 
       // Step 4: select action using pooled softmax / scratch buffers.
       const selectedActionStats = MazeMovement.selectDirection(networkOutputs);
@@ -2660,8 +2677,10 @@ export class MazeMovement {
 
     if (shouldAdjustBiases) {
       try {
-        const outputNodes = (network as any).nodes?.filter(
-          (node: any) => node.type === MazeMovement.#NODE_TYPE_OUTPUT
+        const outputNodes = network.nodes?.filter(
+          (node: INodeStruct): node is INodeStruct & { bias: number } =>
+            node.type === MazeMovement.#NODE_TYPE_OUTPUT &&
+            typeof node.bias === 'number'
         );
         if (outputNodes && outputNodes.length > 0) {
           // compute mean bias (simple loop to avoid higher-order helpers)

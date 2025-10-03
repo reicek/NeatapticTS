@@ -10,6 +10,45 @@ export type SpeciationOptions = NeatOptions & {
   speciesAllocation?: { extendedHistory?: boolean };
   speciesAgeProtection?: { grace?: number; oldPenalty?: number };
 };
+
+/**
+ * Rolling statistics tracked for each species between generations.
+ * These values inform stagnation heuristics and adaptive controllers.
+ */
+export interface SpeciesLastStats {
+  meanNodes: number;
+  meanConns: number;
+  best: number;
+}
+
+/**
+ * Minimal runtime surface required by speciation helpers.
+ * Tests and harnesses can narrow the options type via the generic parameter.
+ *
+ * @template TOptions - Specialised speciation options passed to the helper.
+ */
+export interface SpeciationHarnessContext<
+  TOptions extends SpeciationOptions = SpeciationOptions,
+> extends NeatLike {
+  population: GenomeDetailed[];
+  _species: SpeciesLike[];
+  _nextSpeciesId: number;
+  generation: number;
+  options: TOptions;
+  _speciesCreated: Map<number, number>;
+  _prevSpeciesMembers: Map<number, Set<number>>;
+  _speciesLastStats: Map<number, SpeciesLastStats>;
+  _speciesHistory: Array<Record<string, unknown>>;
+  _compatIntegral?: number;
+  _compatSpeciesEMA?: number;
+  _getRNG?: () => () => number;
+  _compatibilityDistance: (
+    genomeA: GenomeDetailed,
+    genomeB: GenomeDetailed,
+  ) => number;
+  _fallbackInnov: (connection: ConnectionLike) => number;
+  _structuralEntropy: (genome: GenomeDetailed) => number;
+}
 /**
  * Shared lightweight structural types for modular NEAT components.
  *

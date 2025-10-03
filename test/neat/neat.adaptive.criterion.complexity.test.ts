@@ -4,8 +4,9 @@ import Network from '../../src/architecture/network';
 describe('adaptive minimal criterion & adaptive complexity budget', () => {
   const fitness = (net: Network) => {
     // Give slightly noisy score proportional to connection count to create variance
-    const conns = (net as any).connections.length;
-    return conns + Math.random() * 0.1;
+    const connections = (net as { connections: unknown[] }).connections as unknown[];
+    const connectionCount = connections.length;
+    return connectionCount + Math.random() * 0.1;
   };
   test('adaptive minimal criterion prunes some genomes over generations', async () => {
     const neat = new Neat(3, 2, fitness, {
@@ -19,16 +20,11 @@ describe('adaptive minimal criterion & adaptive complexity budget', () => {
       speciation: true,
     });
     await neat.evaluate();
-    const initialThreshold = (neat as any)._mcThreshold;
-    const zeroedEarly = neat.population.filter(
-      (g) => (g.score || 0) === 0,
-    ).length;
+    const initialThreshold = Reflect.get(neat as object, '_mcThreshold') as number | undefined;
     for (let i = 0; i < 4; i++) await neat.evolve();
     await neat.evaluate();
-    const zeroedLater = neat.population.filter(
-      (g) => (g.score || 0) === 0,
-    ).length;
-    const finalThreshold = (neat as any)._mcThreshold;
+    const zeroedLater = neat.population.filter((g) => (g.score || 0) === 0).length;
+    const finalThreshold = Reflect.get(neat as object, '_mcThreshold') as number | undefined;
     // Expect threshold to shift OR pruning non-zero
     expect(finalThreshold).not.toBe(initialThreshold);
     expect(zeroedLater).toBeGreaterThanOrEqual(0); // always true but keep single expectation pattern minimal

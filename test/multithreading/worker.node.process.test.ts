@@ -2,8 +2,8 @@ import * as workerModule from '../../src/multithreading/workers/node/worker';
 import Multi from '../../src/multithreading/multi';
 
 // Helper to patch process.send for tests
-const setProcessSend = (fn: any) => {
-  (process as any).send = fn;
+const setProcessSend = (fn: (...args: unknown[]) => void) => {
+  (process as { send?: (...args: unknown[]) => void })!.send = fn;
 };
 
 describe('node worker process handler', () => {
@@ -14,9 +14,9 @@ describe('node worker process handler', () => {
     const set = Multi.serializeDataSet([{ input: [2], output: [1] }]);
 
     // Grab the current 'message' listeners
-    const listeners = process.listeners('message');
-    expect(listeners.length).toBeGreaterThan(0);
-    const handler = listeners[listeners.length - 1] as Function;
+  const listeners = process.listeners('message');
+  expect(listeners.length).toBeGreaterThan(0);
+  const handler = listeners[listeners.length - 1] as (msg: unknown) => void;
 
     // Initialize cost and dataset
     handler({ set, cost: 'mse' });

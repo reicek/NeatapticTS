@@ -23,12 +23,12 @@ describe('Adaptive Mutation exploreLow strategy', () => {
       await neat.evaluate();
       // Seed per-genome rates
       neat.mutate();
-      require('../../src/neat/neat.adaptive').applyAdaptiveMutation.call(
-        neat as any,
-      );
-      const rates = neat.population
-        .map((g: any) => g._mutRate)
-        .sort((a: number, b: number) => a - b);
+      const { applyAdaptiveMutation } = await import('../../src/neat/neat.adaptive');
+      applyAdaptiveMutation.call(neat as unknown as Record<string, unknown>);
+      type GenomeLike = { _mutRate: number };
+      const rates = (neat.population as unknown as GenomeLike[])
+        .map((g) => g._mutRate)
+        .sort((a, b) => a - b);
       // Assert: spread across rates (top - bottom > 0)
       expect(rates[rates.length - 1] - rates[0]).toBeGreaterThan(0);
     });

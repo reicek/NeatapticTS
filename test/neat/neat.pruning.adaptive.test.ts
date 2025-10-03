@@ -17,12 +17,17 @@ describe('NEAT Pruning Controllers', () => {
         interval: 1,
       },
     });
+    const neatWithEvolutionPruning = neat as unknown as {
+      applyEvolutionPruning: () => void;
+    };
     beforeAll(async () => {
       await neat.evaluate();
       // Advance several generations to enter ramp window
-      for (let i = 0; i < 2; i++) await neat.evolve();
+      for (let generationIndex = 0; generationIndex < 2; generationIndex += 1) {
+        await neat.evolve();
+      }
       // Act: invoke pruning (line coverage for ramp computation)
-      (neat as any).applyEvolutionPruning();
+      neatWithEvolutionPruning.applyEvolutionPruning();
     });
     test('population still defined after pruning invocation', () => {
       // Assert: pruning did not remove population structure
@@ -44,15 +49,20 @@ describe('NEAT Pruning Controllers', () => {
         tolerance: 0,
       },
     });
+    const neatWithAdaptivePruning = neat as unknown as {
+      applyAdaptivePruning: () => void;
+      _adaptivePruneLevel?: number;
+    };
     beforeAll(async () => {
       await neat.evaluate();
       // Act: call adaptive pruning twice to trigger adjustment branch
-      (neat as any).applyAdaptivePruning();
-      (neat as any).applyAdaptivePruning();
+      neatWithAdaptivePruning.applyAdaptivePruning();
+      neatWithAdaptivePruning.applyAdaptivePruning();
     });
     test('adaptive prune level field initialized on instance', () => {
       // Assert: internal field exists (indicates adjustment logic executed)
-      expect((neat as any)._adaptivePruneLevel !== undefined).toBe(true);
+      const levelInitialized = neatWithAdaptivePruning._adaptivePruneLevel !== undefined;
+      expect(levelInitialized).toBe(true);
     });
   });
 });

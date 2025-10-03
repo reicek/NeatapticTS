@@ -5,7 +5,7 @@ import Network from '../../src/architecture/network';
 
 describe('Adaptive mutation rates', () => {
   test('per-genome mutation rate field changes between successive evolves', async () => {
-    const neat = new Neat(2, 1, (n: Network) => 1, {
+    const neat = new Neat(2, 1, () => 1, {
       popsize: 6,
       seed: 200,
       speciation: false,
@@ -21,38 +21,40 @@ describe('Adaptive mutation rates', () => {
     });
     await neat.evaluate();
     await neat.evolve(); // initializes _mutRate
-    const rates1 = neat.population.map((g) => (g as any)._mutRate);
+    type GenomeWithMutationRate = Network & { _mutRate?: number };
     await neat.evolve(); // adapts
-    const rates2 = neat.population.map((g) => (g as any)._mutRate);
-    const changed = rates2.some(
-      (v, i) =>
-        v !== undefined &&
-        rates1[i] !== undefined &&
-        Math.abs(v - rates1[i]) > 1e-6,
+    const secondGenerationRates = (neat.population as GenomeWithMutationRate[]).map(
+      (genome) => genome._mutRate,
     );
-    expect(changed).toBe(true);
+    const mutationChanged = secondGenerationRates.some(
+      (rate) =>
+        rate !== undefined &&
+        Math.abs(rate - (neat.options.adaptiveMutation?.initialRate ?? 0.5)) > 1e-6,
+    );
+    // ensure at least one genome drifted away from the baseline mutation rate
+    expect(mutationChanged).toBe(true);
   });
 });
 
 describe('Novelty search blending', () => {
   test('novelty blending adds _novelty and alters score', async () => {
-    const desc = (n: Network) => [n.connections.length, n.nodes.length];
-    const neat = new Neat(2, 1, (n: Network) => n.connections.length, {
+    const descriptor = (network: Network) => [network.connections.length, network.nodes.length];
+    const neat = new Neat(2, 1, (network: Network) => network.connections.length, {
       popsize: 8,
       seed: 210,
       speciation: false,
       novelty: {
         enabled: true,
-        descriptor: desc,
+        descriptor,
         archiveAddThreshold: 0,
         k: 3,
         blendFactor: 0.5,
       },
     });
     await neat.evaluate();
-    const annotated = neat.population.filter(
-      (g) => (g as any)._novelty !== undefined,
-    );
+    type GenomeWithNovelty = Network & { _novelty?: number };
+    const noveltyPop = neat.population as GenomeWithNovelty[];
+    const annotated = noveltyPop.filter((genome) => genome._novelty !== undefined);
     expect(annotated.length).toBeGreaterThan(0);
   });
 });

@@ -1,4 +1,5 @@
 import Neat from '../../src/neat';
+import { applyComplexityBudget } from '../../src/neat/neat.adaptive';
 
 /** Covers explicit minNodes clamp path in adaptive complexity budget when shrink exceeds min. */
 describe('Adaptive Complexity Budget minNodes clamp', () => {
@@ -17,10 +18,7 @@ describe('Adaptive Complexity Budget minNodes clamp', () => {
       },
     });
     test('maxNodes stays >= minNodes after shrink cycles', () => {
-      for (let i = 0; i < 5; i++)
-        require('../../src/neat/neat.adaptive').applyComplexityBudget.call(
-          neat as any,
-        );
+      for (let i = 0; i < 5; i++) applyComplexityBudget.call(neat);
       expect(neat.options.maxNodes).toBeGreaterThanOrEqual(8);
     });
   });

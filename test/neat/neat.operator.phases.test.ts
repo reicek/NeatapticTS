@@ -13,11 +13,12 @@ describe('Phased complexity switching', () => {
     });
     await neat.evaluate();
     await neat.evolve(); // gen1
-    const phase1 = (neat as any)._phase;
+    const neatWithPhase = neat as unknown as { _phase?: number };
+    const initialPhase = neatWithPhase._phase;
     await neat.evolve(); // gen2 toggles
     await neat.evolve(); // gen3 (second phase)
-    const phase2 = (neat as any)._phase;
-    expect(phase1).not.toBeUndefined();
+  const toggledPhase = neatWithPhase._phase;
+  expect(initialPhase).not.toBe(toggledPhase);
   });
 });
 
@@ -31,8 +32,8 @@ describe('Operator adaptation tracking', () => {
     });
     await neat.evaluate();
     await neat.evolve();
-    const stats = (neat as any)._operatorStats;
-    const has = Array.from(stats.keys()).length > 0;
-    expect(has).toBe(true);
+    const neatWithStats = neat as unknown as { _operatorStats: Map<string, unknown> };
+    const hasAnyOperatorStat = neatWithStats._operatorStats.size > 0;
+    expect(hasAnyOperatorStat).toBe(true);
   });
 });

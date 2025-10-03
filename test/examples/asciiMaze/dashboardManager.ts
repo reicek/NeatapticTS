@@ -3,9 +3,67 @@ import { MazeUtils } from './mazeUtils';
 import { MazeVisualization } from './mazeVisualization';
 import { NetworkVisualization } from './networkVisualization';
 import { colors } from './colors';
-import { INetwork, IDashboardManager } from './interfaces';
+import {
+  INetwork,
+  IDashboardManager,
+  IMazeRunResult,
+} from './interfaces';
+import type Neat from '../../../src/neat';
 
 // Region: Type Interfaces ----------------------------------------------------
+type NumericTelemetryMap = Record<string, number | null | undefined>;
+
+interface AsciiMazeComplexityStats extends NumericTelemetryMap {
+  meanNodes?: number | null;
+  meanConns?: number | null;
+  growthNodes?: number | null;
+  growthConns?: number | null;
+}
+
+type MutationStatsMap = Record<string, unknown>;
+
+interface DashboardTelemetry {
+  complexity?: AsciiMazeComplexityStats | null;
+  perf?: NumericTelemetryMap | null;
+  lineage?: NumericTelemetryMap | null;
+  diversity?: NumericTelemetryMap | null;
+  fronts?: ReadonlyArray<ReadonlyArray<unknown>> | null;
+  objectives?: NumericTelemetryMap | null;
+  hyper?: number | null;
+  mutationStats?: MutationStatsMap | null;
+  mutation?: { stats?: MutationStatsMap | null } | null;
+  species?: number | null;
+  saturationFraction?: number | null;
+  actionEntropy?: number | null;
+  populationMean?: number | null;
+  populationMedian?: number | null;
+  enabledConnRatio?: number | null;
+  bestFitness?: number | null;
+  bestFitnessDelta?: number | null;
+  topSpeciesSizes?: number[] | null;
+  noveltyArchiveSize?: number | null;
+  operatorAcceptance?: Array<{ name: string; acceptancePct: number }> | null;
+  topMutations?: Array<{ name: string; count: number }> | null;
+  trends?: {
+    fitness?: string | null;
+    nodes?: string | null;
+    conns?: string | null;
+    hyper?: string | null;
+    progress?: string | null;
+    species?: string | null;
+  } | null;
+  histories?: {
+    bestFitness?: number[];
+    nodes?: number[];
+    conns?: number[];
+    hyper?: number[];
+    progress?: number[];
+    species?: number[];
+  } | null;
+  timestamp?: number;
+  generation?: number;
+}
+
 /** Detailed stats structure produced inside the dashboard. */
 interface AsciiMazeDetailedStats {
   generation: number;
@@ -16,21 +74,21 @@ interface AsciiMazeDetailedStats {
   populationMean: number | null;
   populationMedian: number | null;
   enabledConnRatio: number | null;
-  complexity: any;
+  complexity: AsciiMazeComplexityStats | null;
   simplifyPhaseActive: boolean;
-  perf: any;
-  lineage: any;
-  diversity: any;
+  perf: NumericTelemetryMap | null;
+  lineage: NumericTelemetryMap | null;
+  diversity: NumericTelemetryMap | null;
   speciesCount: number | null;
   topSpeciesSizes: number[] | null;
-  objectives: any;
+  objectives: NumericTelemetryMap | null;
   paretoFrontSizes: number[] | null;
   firstFrontSize: number;
   hypervolume: number | null;
   noveltyArchiveSize: number | null;
   operatorAcceptance: Array<{ name: string; acceptancePct: number }> | null;
   topMutations: Array<{ name: string; count: number }> | null;
-  mutationStats: any;
+  mutationStats: MutationStatsMap | null;
   trends: {
     fitness: string | null;
     nodes: string | null;
@@ -75,17 +133,17 @@ interface AsciiMazeTelemetrySnapshot {
 export class DashboardManager implements IDashboardManager {
   #solvedMazes: Array<{
     maze: string[];
-    result: any;
+    result: IMazeRunResult;
     network: INetwork;
     generation: number;
   }> = [];
   #solvedMazeKeys: Set<string> = new Set();
   #currentBest: {
-    result: any;
+    result: IMazeRunResult;
     network: INetwork;
     generation: number;
   } | null = null;
-  #lastTelemetry: any = null;
+  #lastTelemetry: DashboardTelemetry | null = null;
   #lastBestFitness: number | null = null;
   #bestFitnessHistory: number[] = [];
   #complexityNodesHistory: number[] = [];
@@ -99,9 +157,9 @@ export class DashboardManager implements IDashboardManager {
   #lastGeneration: number | null = null;
   #lastUpdateTs: number | null = null;
 
-  #logFn: (...args: any[]) => void;
+  #logFn: (...args: unknown[]) => void;
   #clearFn: () => void;
-  #archiveFn?: (...args: any[]) => void;
+  #archiveFn?: (...args: unknown[]) => void;
 
   static #HISTORY_MAX = 500;
   static #FRAME_INNER_WIDTH = 148;
@@ -459,15 +517,13 @@ export class DashboardManager implements IDashboardManager {
         : null;
       const objectivesSnapshot = telemetry?.objectives;
       const hypervolumeValue = telemetry?.hyper;
-      const mutationStatsObj =
-        telemetry?.mutationStats || telemetry?.mutation?.stats;
+      const mutationStatsObj: MutationStatsMap | null =
+        telemetry?.mutationStats ?? telemetry?.mutation?.stats ?? null;
 
       // Current best scalar metrics (fitness + auxiliary run stats)
       const bestFitnessValue = this.#currentBest?.result?.fitness;
-      const saturationFractionValue = (this.#currentBest as any)?.result
-        ?.saturationFraction;
-      const actionEntropyValue = (this.#currentBest as any)?.result
-        ?.actionEntropy;
+      const saturationFractionValue = this.#currentBest?.result?.saturationFraction;
+      const actionEntropyValue = this.#currentBest?.result?.actionEntropy;
 
       // Step 3: Population-level summary (fills in early-run blanks with best fitness/species when needed)
       const populationStats = this.#computePopulationStats(neat);
@@ -512,7 +568,7 @@ export class DashboardManager implements IDashboardManager {
       // Step 5: Pareto + novelty archive metrics
       const firstFrontSize = rawFrontsArray?.[0]?.length || 0;
       const paretoFrontSizes = rawFrontsArray
-        ? rawFrontsArray.map((front: any) => front?.length || 0)
+        ? rawFrontsArray.map((front) => (front?.length ?? 0))
         : null;
       const noveltyArchiveSize = this.#safeInvoke<number | null>(
         () =>
@@ -549,11 +605,16 @@ export class DashboardManager implements IDashboardManager {
         populationMedian: populationStats.median,
         enabledConnRatio: populationStats.enabledRatio,
         complexity: complexitySnapshot || null,
-        simplifyPhaseActive: !!(
-          complexitySnapshot &&
-          (complexitySnapshot.growthNodes < 0 ||
-            complexitySnapshot.growthConns < 0)
-        ),
+        simplifyPhaseActive: (() => {
+          if (!complexitySnapshot) return false;
+          const nodesDecrease =
+            typeof complexitySnapshot.growthNodes === 'number' &&
+            complexitySnapshot.growthNodes < 0;
+          const connsDecrease =
+            typeof complexitySnapshot.growthConns === 'number' &&
+            complexitySnapshot.growthConns < 0;
+          return nodesDecrease || connsDecrease;
+        })(),
         perf: perfSnapshot || null,
         lineage: lineageSnapshot || null,
         diversity: diversitySnapshot || null,
@@ -834,20 +895,18 @@ export class DashboardManager implements IDashboardManager {
    * // => [ { name: 'addNode', count: 42 }, { name: 'addConn', count: 17 } ]
    */
   #computeTopMutations(
-    mutationStats: any
+    mutationStats: MutationStatsMap | null
   ): Array<{ name: string; count: number }> | null {
     // Step 1: Guard for invalid container
-    if (!mutationStats || typeof mutationStats !== 'object') return null;
+    if (!mutationStats) return null;
 
     // Step 2: Populate scratch with numeric entries only
     const mutationEntriesScratch = this.#scratch.mutationEntries;
     mutationEntriesScratch.length = 0;
-    for (const mutationName of Object.keys(mutationStats)) {
-      const occurrenceCount = mutationStats[mutationName];
-      if (
-        typeof occurrenceCount === 'number' &&
-        Number.isFinite(occurrenceCount)
-      ) {
+    for (const [mutationName, occurrenceCount] of Object.entries(
+      mutationStats
+    )) {
+      if (typeof occurrenceCount === 'number' && Number.isFinite(occurrenceCount)) {
         mutationEntriesScratch.push([mutationName, occurrenceCount]);
       }
     }
@@ -1609,10 +1668,10 @@ export class DashboardManager implements IDashboardManager {
    */
   update(
     maze: string[],
-    result: any,
+    result: IMazeRunResult,
     network: INetwork,
     generation: number,
-    neatInstance?: any
+    neatInstance?: Neat
   ): void {
     // Step 1: Lazy initialization of timing anchors
     if (this.#runStartTs == null) {
@@ -1642,9 +1701,11 @@ export class DashboardManager implements IDashboardManager {
     }
 
     // Step 5: Pull latest telemetry snapshot & update bounded histories
-    const telemetrySeries = neatInstance?.getTelemetry?.();
-    if (Array.isArray(telemetrySeries) && telemetrySeries.length) {
-      this.#lastTelemetry = MazeUtils.safeLast(telemetrySeries as any[]);
+    const telemetrySeriesCandidate = neatInstance?.getTelemetry?.();
+    if (Array.isArray(telemetrySeriesCandidate) && telemetrySeriesCandidate.length) {
+      const telemetrySeries = telemetrySeriesCandidate as DashboardTelemetry[];
+      this.#lastTelemetry =
+        MazeUtils.safeLast<DashboardTelemetry>(telemetrySeries) ?? null;
       // Best fitness history (trend sparkline source)
       const latestFitness = this.#currentBest?.result?.fitness;
       if (typeof latestFitness === 'number') {

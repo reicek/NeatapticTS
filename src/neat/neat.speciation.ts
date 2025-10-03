@@ -6,29 +6,22 @@
  *
  * Implementation notes:
  */
-import type { NeatLike, GenomeDetailed, SpeciesLike, ConnectionLike, SpeciationOptions } from './neat.types';
+import type {
+  NeatLike,
+  GenomeDetailed,
+  SpeciesLike,
+  ConnectionLike,
+  SpeciationOptions,
+  SpeciationHarnessContext,
+} from './neat.types';
 
 
 
 // Compact, typed implementations for species maintenance helpers.
 
-export function _speciate(this: NeatLike & {
-  population: GenomeDetailed[];
-  _species: SpeciesLike[];
-  _prevSpeciesMembers: Map<number, Set<number>>;
-  _nextSpeciesId: number;
-  _speciesCreated: Map<number, number>;
-  _speciesHistory: Array<Record<string, unknown>>;
-  _speciesLastStats: Map<number, { meanNodes: number; meanConns: number; best: number }>;
-  _compatibilityDistance: (genomeA: GenomeDetailed, genomeB: GenomeDetailed) => number;
-  _structuralEntropy: (genome: GenomeDetailed) => number;
-  _fallbackInnov: (connection: ConnectionLike) => number;
-  generation: number;
-  options: SpeciationOptions;
-  _compatSpeciesEMA?: number;
-  _compatIntegral?: number;
-  _getRNG?: () => () => number;
-}) {
+export function _speciate<
+  TOptions extends SpeciationOptions = SpeciationOptions,
+>(this: SpeciationHarnessContext<TOptions>) {
   this._prevSpeciesMembers = this._prevSpeciesMembers ?? new Map();
   this._prevSpeciesMembers.clear();
   for (const species of this._species) {

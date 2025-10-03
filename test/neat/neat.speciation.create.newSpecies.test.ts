@@ -3,31 +3,15 @@ import type {
   ConnectionLike,
   GenomeDetailed,
   SpeciationOptions,
-  SpeciesLike,
+  SpeciationHarnessContext,
+  SpeciesLastStats,
 } from '../../src/neat/neat.types';
 
-type SpeciationTestContext = {
-  population: GenomeDetailed[];
-  _species: SpeciesLike[];
-  _nextSpeciesId: number;
-  generation: number;
-  options: SpeciationOptions & { compatibilityThreshold: number };
-  _speciesCreated: Map<number, number>;
-  _prevSpeciesMembers: Map<number, Set<number>>;
-  _speciesLastStats: Map<
-    number,
-    { meanNodes: number; meanConns: number; best: number }
-  >;
-  _speciesHistory: Array<Record<string, unknown>>;
-  _compatIntegral: number;
-  _getRNG: () => () => number;
-  _compatibilityDistance: (
-    genomeA: GenomeDetailed,
-    genomeB: GenomeDetailed,
-  ) => number;
-  _fallbackInnov: (connection: ConnectionLike) => number;
-  _structuralEntropy: (genome: GenomeDetailed) => number;
+type SpeciationCreationOptions = SpeciationOptions & {
+  compatibilityThreshold: number;
 };
+
+type SpeciationTestContext = SpeciationHarnessContext<SpeciationCreationOptions>;
 
 // Single expectation test: creates new species for each genome when all distances exceed threshold
 
@@ -52,10 +36,7 @@ const buildContext = (populationSize: number): SpeciationTestContext => {
     },
     _speciesCreated: new Map<number, number>(),
     _prevSpeciesMembers: new Map<number, Set<number>>(),
-    _speciesLastStats: new Map<
-      number,
-      { meanNodes: number; meanConns: number; best: number }
-    >(),
+    _speciesLastStats: new Map<number, SpeciesLastStats>(),
     _speciesHistory: [],
     _compatIntegral: 0,
     _getRNG: () => () => 0.5,
@@ -67,7 +48,10 @@ const buildContext = (populationSize: number): SpeciationTestContext => {
       void genomeB;
       return 5;
     },
-    _fallbackInnov: (_connection: ConnectionLike) => 1,
+    _fallbackInnov: (connection: ConnectionLike) => {
+      void connection;
+      return 1;
+    },
     _structuralEntropy: (genome: GenomeDetailed) => {
       void genome;
       return 0;

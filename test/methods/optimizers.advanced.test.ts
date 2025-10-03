@@ -1,13 +1,19 @@
 import Network from '../../src/architecture/network';
 
 // Helper to build tiny network (1 input -> 1 output) for deterministic gradient on identity activation
-function buildNet() {
+const buildNet = (): Network => {
   const net = new Network(1, 1);
   // Force deterministic weights/bias
-  net.connections.forEach((c) => (c.weight = 0.5));
-  net.nodes.filter((n) => n.type !== 'input').forEach((n) => (n.bias = 0));
+  net.connections.forEach((connection) => {
+    connection.weight = 0.5;
+  });
+  net.nodes
+    .filter((node) => node.type !== 'input')
+    .forEach((node) => {
+      node.bias = 0;
+    });
   return net;
-}
+};
 
 // Simple dataset: y = 2x so gradient direction is clear
 const data = Array.from({ length: 5 }, (_, i) => ({
@@ -15,8 +21,10 @@ const data = Array.from({ length: 5 }, (_, i) => ({
   output: [2 * i],
 }));
 
+type OptimizerConfig = { type: string } & Record<string, unknown>;
+
 // Run few iterations and collect first weight change sign/magnitude
-function trainWith(net: Network, opt: any) {
+const trainWith = (net: Network, optimizerConfig: OptimizerConfig) => {
   const before = net.connections[0].weight;
   net.train(data, {
     iterations: 3,
@@ -26,12 +34,12 @@ function trainWith(net: Network, opt: any) {
       fn: (t: number[], o: number[]) => (o[0] - t[0]) ** 2,
       calculate: (t: number[], o: number[]) => (o[0] - t[0]) ** 2,
     },
-    optimizer: opt,
+    optimizer: optimizerConfig,
     batchSize: 1,
   });
   const after = net.connections[0].weight;
   return { before, after, delta: after - before };
-}
+};
 
 describe('Advanced optimizers', () => {
   describe('adamax', () => {

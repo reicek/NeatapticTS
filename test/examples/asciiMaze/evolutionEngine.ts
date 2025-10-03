@@ -6285,12 +6285,16 @@ export class EvolutionEngine {
         (fittest as any)._lastStepOutputs =
           EvolutionEngine.#SCRATCH_LOGITS_RING;
       }
-    } catch {}
+    } catch (legacyBufferAttachmentError) {
+      EvolutionEngine.#swallowError(legacyBufferAttachmentError);
+    }
 
     try {
       (fittest as any)._saturationFraction = simResult?.saturationFraction ?? 0;
       (fittest as any)._actionEntropy = simResult?.actionEntropy ?? 0;
-    } catch {}
+    } catch (telemetryAssignError) {
+      EvolutionEngine.#swallowError(telemetryAssignError);
+    }
 
     // Step 3: If the simulator returned per-step logits, copy them into the pooled ring buffers.
     try {
@@ -6367,7 +6371,9 @@ export class EvolutionEngine {
           }
         }
       }
-    } catch {}
+    } catch (logitsPostprocessError) {
+      EvolutionEngine.#swallowError(logitsPostprocessError);
+    }
 
     // Step 4: Optionally prune saturated outputs and emit telemetry (best-effort).
     try {
@@ -6378,7 +6384,9 @@ export class EvolutionEngine {
       ) {
         EvolutionEngine.#pruneSaturatedHiddenOutputs(fittest);
       }
-    } catch {}
+    } catch (saturationPruneError) {
+      EvolutionEngine.#swallowError(saturationPruneError);
+    }
 
     try {
       if (
@@ -6394,7 +6402,9 @@ export class EvolutionEngine {
           safeWrite
         );
       }
-    } catch {}
+    } catch (telemetryDispatchError) {
+      EvolutionEngine.#swallowError(telemetryDispatchError);
+    }
 
     const elapsed = doProfile ? EvolutionEngine.#now() - startTime : 0;
     return { generationResult: simResult, simTime: elapsed } as any;
@@ -6776,7 +6786,8 @@ export class EvolutionEngine {
           };
           totalConnectionResets += Number(connReset) || 0;
           totalBiasResets += Number(biasReset) || 0;
-        } catch (genomeErr) {
+        } catch (genomeResetError) {
+          EvolutionEngine.#swallowError(genomeResetError);
           // Swallow per-genome errors to preserve overall loop robustness.
         }
       }
@@ -6786,10 +6797,12 @@ export class EvolutionEngine {
         safeWrite(
           `[ANTICOLLAPSE] gen=${completedGenerations} reinitGenomes=${sampledCount} connReset=${totalConnectionResets} biasReset=${totalBiasResets}\n`
         );
-      } catch {
+      } catch (antiCollapseLogError) {
+        EvolutionEngine.#swallowError(antiCollapseLogError);
         // best-effort logging only
       }
-    } catch {
+    } catch (antiCollapseRecoveryError) {
+      EvolutionEngine.#swallowError(antiCollapseRecoveryError);
       // Global swallow: never throw from the recovery helper.
     }
   }
@@ -6886,14 +6899,16 @@ export class EvolutionEngine {
                 weightHalfRange;
               connReset++;
             }
-          } catch {
+          } catch (connectionResetError) {
+            EvolutionEngine.#swallowError(connectionResetError);
             // Swallow per-connection errors; continue with best-effort semantics.
           }
         }
       }
 
       return { connReset, biasReset };
-    } catch {
+    } catch (reinitializeError) {
+      EvolutionEngine.#swallowError(reinitializeError);
       // Global swallow — return zeros if anything unexpected happens.
       return { connReset: 0, biasReset: 0 };
     }
@@ -8227,7 +8242,8 @@ export class EvolutionEngine {
         connectionsList
       );
       console.log('Has recurrent/gated connections:', hasRecurrentOrGated);
-    } catch (e) {
+    } catch (inspectError) {
+      EvolutionEngine.#swallowError(inspectError);
       // Best-effort logging: swallow and surface a minimal message.
       // Avoid throwing from a debug helper.
 
@@ -8562,9 +8578,15 @@ export class EvolutionEngine {
       // Step 4: Store the new buffer on the class for future reuse and return it.
       clsAny._SCRATCH_CONN_FLAGS = newBuffer;
       return newBuffer;
-    } catch {
+    } catch (connFlagsError) {
+      EvolutionEngine.#swallowError(connFlagsError);
       // Allocation failure or other fatal error: signal caller by returning null.
       return null;
     }
+  }
+
+  /** Utility to explicitly mark swallowed errors for lint compliance. */
+  static #swallowError(error: unknown): void {
+    void error;
   }
 }
