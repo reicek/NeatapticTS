@@ -34,7 +34,7 @@ export interface BenchAggregateGroup {
  * input rows to keep this function generic and forward‑compatible.
  */
 export function aggregateBenchMeasurements(
-  records: RawBenchMeasurement[]
+  records: RawBenchMeasurement[],
 ): BenchAggregateGroup[] {
   if (!records.length) return [];
   const groupMap = new Map<

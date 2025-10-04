@@ -17,7 +17,7 @@ export const createIdenticalNetworks = (
   count: number,
   inputs: number,
   hiddens: number,
-  outputs: number
+  outputs: number,
 ): Network[] => {
   const networks: Network[] = [];
 
@@ -49,7 +49,7 @@ export const createIdenticalNetworks = (
  */
 export const createDataset = (
   type: 'XOR' | 'AND' | 'OR' | 'SIN',
-  size: number = 4
+  size: number = 4,
 ): { input: number[]; output: number[] }[] => {
   switch (type) {
     case 'XOR':
@@ -92,7 +92,7 @@ export const createDataset = (
  */
 export const expectWarning = (
   fn: () => void,
-  expectedWarning: string
+  expectedWarning: string,
 ): void => {
   const originalWarn = console.warn;
   const mockWarn = jest.fn();
@@ -105,7 +105,7 @@ export const expectWarning = (
   }
 
   expect(mockWarn).toHaveBeenCalledWith(
-    expect.stringContaining(expectedWarning)
+    expect.stringContaining(expectedWarning),
   );
 };
 
@@ -121,8 +121,8 @@ export const createDeepNetworks = (): { original: Network; clone: Network } => {
   clone.mutate(mutationMethods.ADD_NODE);
 
   // Add test properties - this should work due to global interface declaration
-  ((original as unknown) as { testProp?: string }).testProp = 'original';
-  ((clone as unknown) as { testProp?: string }).testProp = 'clone';
+  (original as unknown as { testProp?: string }).testProp = 'original';
+  (clone as unknown as { testProp?: string }).testProp = 'clone';
 
   return { original, clone };
 };
@@ -131,7 +131,7 @@ export const createDeepNetworks = (): { original: Network; clone: Network } => {
  * Creates testing samples
  */
 export const createTestingSamples = (
-  count: number = 10
+  count: number = 10,
 ): { input: number[]; output: number[] }[] => {
   const samples: { input: number[]; output: number[] }[] = [];
   for (let i = 0; i < count; i++) {
@@ -150,13 +150,13 @@ export const compareNetworks = (
   net1: Network,
   net2: Network,
   matchingOutput?: boolean,
-  expectIdentical: boolean = true
+  expectIdentical: boolean = true,
 ): void => {
   // Validate basic properties
   expect(net1.input).toEqual(net2.input);
   expect(net1.output).toEqual(net2.output);
   expect(net1.nodes.length).toEqual(
-    expectIdentical ? net2.nodes.length : expect.any(Number)
+    expectIdentical ? net2.nodes.length : expect.any(Number),
   );
 
   // Compare structure if expected to be identical

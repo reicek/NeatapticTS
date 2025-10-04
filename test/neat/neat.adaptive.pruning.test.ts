@@ -19,7 +19,9 @@ describe('Adaptive pruning', () => {
       await neat.evolve();
     }
     // Internal level should move above zero
-    const neatWithAdaptive = neat as unknown as { _adaptivePruneLevel?: number };
+    const neatWithAdaptive = neat as unknown as {
+      _adaptivePruneLevel?: number;
+    };
     const level = neatWithAdaptive._adaptivePruneLevel ?? 0;
     expect(level).toBeGreaterThan(0);
   });

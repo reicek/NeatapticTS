@@ -61,7 +61,8 @@ describe('NEAT Pruning Controllers', () => {
     });
     test('adaptive prune level field initialized on instance', () => {
       // Assert: internal field exists (indicates adjustment logic executed)
-      const levelInitialized = neatWithAdaptivePruning._adaptivePruneLevel !== undefined;
+      const levelInitialized =
+        neatWithAdaptivePruning._adaptivePruneLevel !== undefined;
       expect(levelInitialized).toBe(true);
     });
   });

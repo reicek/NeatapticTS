@@ -65,7 +65,7 @@ describe('phase1.variance artifact assertions', () => {
           console.log(
             `[variance-soft] size=${v.size} mode=${
               v.mode
-            } fwdCvPct=${v.fwdAvgMsCvPct.toFixed(2)}> ${softWarn}%`
+            } fwdCvPct=${v.fwdAvgMsCvPct.toFixed(2)}> ${softWarn}%`,
           );
         }
       }

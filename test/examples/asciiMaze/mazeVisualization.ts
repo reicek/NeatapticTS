@@ -88,7 +88,7 @@ export class MazeVisualization {
     y: number,
     agentX: number,
     agentY: number,
-    path: ReadonlySet<string> | undefined
+    path: ReadonlySet<string> | undefined,
   ): string {
     /**
      * renderCell: Render a single maze character with ANSI styling.
@@ -145,7 +145,7 @@ export class MazeVisualization {
   static visualizeMaze(
     asciiMaze: string[],
     [agentX, agentY]: readonly [number, number],
-    path?: readonly [number, number][]
+    path?: readonly [number, number][],
   ): string {
     /**
      * visualizeMaze: Convert a maze to a colored ASCII representation.
@@ -166,9 +166,9 @@ export class MazeVisualization {
       .map((row, y) =>
         [...row]
           .map((cell, x) =>
-            this.renderCell(cell, x, y, agentX, agentY, visitedPositions)
+            this.renderCell(cell, x, y, agentX, agentY, visitedPositions),
           )
-          .join('')
+          .join(''),
       )
       .join('\n');
   }
@@ -194,7 +194,7 @@ export class MazeVisualization {
       generation: number;
     },
     maze: string[],
-    forceLog: (...args: unknown[]) => void
+    forceLog: (...args: unknown[]) => void,
   ): void {
     // --- Step 0: unpack inputs and derive colors ---
     const { result, generation } = currentBest;
@@ -206,7 +206,7 @@ export class MazeVisualization {
     const optimalLength = MazeUtils.bfsDistance(
       MazeUtils.encodeMaze(maze),
       startPos,
-      exitPos
+      exitPos,
     );
 
     // Layout constants (keep in sync with DashboardManager framing)
@@ -218,12 +218,12 @@ export class MazeVisualization {
     forceLog(
       `${colors.blueCore}║${NetworkVisualization.pad(' ', FRAME_WIDTH, ' ')}${
         colors.blueCore
-      }║${colors.reset}`
+      }║${colors.reset}`,
     );
     forceLog(
       `${colors.blueCore}║${NetworkVisualization.pad(' ', FRAME_WIDTH, ' ')}${
         colors.blueCore
-      }║${colors.reset}`
+      }║${colors.reset}`,
     );
     forceLog(
       `${colors.blueCore}║${' '.repeat(LEFT_PAD)}${NetworkVisualization.pad(
@@ -232,8 +232,8 @@ export class MazeVisualization {
         }`,
         CONTENT_WIDTH,
         ' ',
-        'left'
-      )}${' '.repeat(RIGHT_PAD)}${colors.blueCore}║${colors.reset}`
+        'left',
+      )}${' '.repeat(RIGHT_PAD)}${colors.blueCore}║${colors.reset}`,
     );
     // Print generation number with color and padding
     forceLog(
@@ -241,8 +241,8 @@ export class MazeVisualization {
         `${colors.neonSilver}Generation:${colors.neonIndigo} ${successColor}${generation}`,
         CONTENT_WIDTH,
         ' ',
-        'left'
-      )}${' '.repeat(RIGHT_PAD)}║${colors.reset}`
+        'left',
+      )}${' '.repeat(RIGHT_PAD)}║${colors.reset}`,
     );
     // Print fitness score
     forceLog(
@@ -252,8 +252,8 @@ export class MazeVisualization {
         } ${result.fitness.toFixed(2)}`,
         CONTENT_WIDTH,
         ' ',
-        'left'
-      )}${' '.repeat(RIGHT_PAD)}║${colors.reset}`
+        'left',
+      )}${' '.repeat(RIGHT_PAD)}║${colors.reset}`,
     );
     // Print steps taken
     forceLog(
@@ -261,8 +261,8 @@ export class MazeVisualization {
         `${colors.neonSilver}Steps taken:${colors.neonIndigo} ${result.steps}`,
         CONTENT_WIDTH,
         ' ',
-        'left'
-      )}${' '.repeat(RIGHT_PAD)}║${colors.reset}`
+        'left',
+      )}${' '.repeat(RIGHT_PAD)}║${colors.reset}`,
     );
     // Print path length
     forceLog(
@@ -270,8 +270,8 @@ export class MazeVisualization {
         `${colors.neonSilver}Path length:${colors.neonIndigo} ${result.path.length}${colors.blueCore}`,
         CONTENT_WIDTH,
         ' ',
-        'left'
-      )}${' '.repeat(RIGHT_PAD)}║${colors.reset}`
+        'left',
+      )}${' '.repeat(RIGHT_PAD)}║${colors.reset}`,
     );
     // Print optimal distance to exit
     forceLog(
@@ -279,14 +279,14 @@ export class MazeVisualization {
         `${colors.neonSilver}Optimal distance to exit:${colors.neonYellow} ${optimalLength}`,
         CONTENT_WIDTH,
         ' ',
-        'left'
-      )}${' '.repeat(RIGHT_PAD)}║${colors.reset}`
+        'left',
+      )}${' '.repeat(RIGHT_PAD)}║${colors.reset}`,
     );
     // Print a blank padded line for spacing
     forceLog(
       `${colors.blueCore}║${NetworkVisualization.pad(' ', FRAME_WIDTH, ' ')}${
         colors.blueCore
-      }║${colors.reset}`
+      }║${colors.reset}`,
     );
 
     if (result.success) {
@@ -296,7 +296,7 @@ export class MazeVisualization {
       // Efficiency: ratio of optimal path to actual path, capped at 100%.
       const efficiency = Math.min(
         100,
-        Math.round((optimalLength / pathLength) * 100)
+        Math.round((optimalLength / pathLength) * 100),
       ).toFixed(1);
 
       // Overhead: percent longer than optimal (positive = worse).
@@ -378,48 +378,48 @@ export class MazeVisualization {
           `${colors.neonSilver}Path efficiency:      ${colors.neonIndigo} ${optimalLength}/${pathLength} (${efficiency}%)`,
           CONTENT_WIDTH,
           ' ',
-          'left'
-        )}${' '.repeat(RIGHT_PAD)}║${colors.reset}`
+          'left',
+        )}${' '.repeat(RIGHT_PAD)}║${colors.reset}`,
       );
       forceLog(
         `${colors.blueCore}║${' '.repeat(LEFT_PAD)}${NetworkVisualization.pad(
           `${colors.neonSilver}Optimal steps:        ${colors.neonIndigo} ${optimalLength}`,
           CONTENT_WIDTH,
           ' ',
-          'left'
-        )}${' '.repeat(RIGHT_PAD)}║${colors.reset}`
+          'left',
+        )}${' '.repeat(RIGHT_PAD)}║${colors.reset}`,
       );
       forceLog(
         `${colors.blueCore}║${' '.repeat(LEFT_PAD)}${NetworkVisualization.pad(
           `${colors.neonSilver}Path overhead:        ${colors.neonIndigo} ${overhead}% longer than optimal`,
           CONTENT_WIDTH,
           ' ',
-          'left'
-        )}${' '.repeat(RIGHT_PAD)}║${colors.reset}`
+          'left',
+        )}${' '.repeat(RIGHT_PAD)}║${colors.reset}`,
       );
       forceLog(
         `${colors.blueCore}║${' '.repeat(LEFT_PAD)}${NetworkVisualization.pad(
           `${colors.neonSilver}Direction changes:    ${colors.neonIndigo} ${directionChanges}`,
           CONTENT_WIDTH,
           ' ',
-          'left'
-        )}${' '.repeat(RIGHT_PAD)}║${colors.reset}`
+          'left',
+        )}${' '.repeat(RIGHT_PAD)}║${colors.reset}`,
       );
       forceLog(
         `${colors.blueCore}║${' '.repeat(LEFT_PAD)}${NetworkVisualization.pad(
           `${colors.neonSilver}Unique cells visited: ${colors.neonIndigo} ${uniqueCells.size} (${coveragePercent}% of maze)`,
           CONTENT_WIDTH,
           ' ',
-          'left'
-        )}${' '.repeat(RIGHT_PAD)}║${colors.reset}`
+          'left',
+        )}${' '.repeat(RIGHT_PAD)}║${colors.reset}`,
       );
       forceLog(
         `${colors.blueCore}║${' '.repeat(LEFT_PAD)}${NetworkVisualization.pad(
           `${colors.neonSilver}Cells revisited:      ${colors.neonIndigo} ${revisitedCells} times`,
           CONTENT_WIDTH,
           ' ',
-          'left'
-        )}${' '.repeat(RIGHT_PAD)}║${colors.reset}`
+          'left',
+        )}${' '.repeat(RIGHT_PAD)}║${colors.reset}`,
       );
       forceLog(
         `${colors.blueCore}║${' '.repeat(LEFT_PAD)}${NetworkVisualization.pad(
@@ -428,16 +428,16 @@ export class MazeVisualization {
           ).toFixed(2)}`,
           CONTENT_WIDTH,
           ' ',
-          'left'
-        )}${' '.repeat(RIGHT_PAD)}║${colors.reset}`
+          'left',
+        )}${' '.repeat(RIGHT_PAD)}║${colors.reset}`,
       );
       forceLog(
         `${colors.blueCore}║${' '.repeat(LEFT_PAD)}${NetworkVisualization.pad(
           `${colors.neonOrange}Agent successfully navigated the maze!`,
           CONTENT_WIDTH,
           ' ',
-          'left'
-        )}${' '.repeat(RIGHT_PAD)}║${colors.reset}`
+          'left',
+        )}${' '.repeat(RIGHT_PAD)}║${colors.reset}`,
       );
     } else {
       // If the agent did not succeed, display progress toward the exit and unique cells visited.
@@ -448,7 +448,7 @@ export class MazeVisualization {
         MazeUtils.encodeMaze(maze),
         lastPos,
         startPos,
-        exitPos
+        exitPos,
       );
 
       const uniqueCells = new Set<string>();
@@ -460,32 +460,32 @@ export class MazeVisualization {
           `${colors.neonSilver}Best progress toward exit:      ${colors.neonIndigo} ${bestProgress}%`,
           CONTENT_WIDTH,
           ' ',
-          'left'
-        )}${' '.repeat(RIGHT_PAD)}║${colors.reset}`
+          'left',
+        )}${' '.repeat(RIGHT_PAD)}║${colors.reset}`,
       );
       forceLog(
         `${colors.blueCore}║${' '.repeat(LEFT_PAD)}${NetworkVisualization.pad(
           `${colors.neonSilver}Shortest possible steps:        ${colors.neonIndigo} ${optimalLength}`,
           CONTENT_WIDTH,
           ' ',
-          'left'
-        )}${' '.repeat(RIGHT_PAD)}║${colors.reset}`
+          'left',
+        )}${' '.repeat(RIGHT_PAD)}║${colors.reset}`,
       );
       forceLog(
         `${colors.blueCore}║${' '.repeat(LEFT_PAD)}${NetworkVisualization.pad(
           `${colors.neonSilver}Unique cells visited:           ${colors.neonIndigo} ${uniqueCells.size}`,
           CONTENT_WIDTH,
           ' ',
-          'left'
-        )}${' '.repeat(RIGHT_PAD)}║${colors.reset}`
+          'left',
+        )}${' '.repeat(RIGHT_PAD)}║${colors.reset}`,
       );
       forceLog(
         `${colors.blueCore}║${' '.repeat(LEFT_PAD)}${NetworkVisualization.pad(
           `${colors.neonSilver}Agent trying to reach the exit. ${colors.neonIndigo}`,
           CONTENT_WIDTH,
           ' ',
-          'left'
-        )}${' '.repeat(RIGHT_PAD)}║${colors.reset}`
+          'left',
+        )}${' '.repeat(RIGHT_PAD)}║${colors.reset}`,
       );
     }
   }
@@ -510,7 +510,7 @@ export class MazeVisualization {
     const clampedProgress = Math.max(0, Math.min(100, Math.round(progress)));
     const filledCount = Math.max(
       0,
-      Math.min(length, Math.floor((length * clampedProgress) / 100))
+      Math.min(length, Math.floor((length * clampedProgress) / 100)),
     );
 
     // Characters for the progress bar visuals

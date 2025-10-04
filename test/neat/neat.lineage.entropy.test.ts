@@ -38,7 +38,7 @@ describe('Lineage & Auto-Entropy Objective', () => {
     // objectives include entropy
     const objKeys = neat.getObjectives().map((o) => o.key);
     expect(objKeys).toContain('entropy');
-  const lineageSnapshot = neat.getLineageSnapshot();
+    const lineageSnapshot = neat.getLineageSnapshot();
     // offspring after first generation should have parents array
     const withParents = lineageSnapshot.filter(
       (snapshot) => snapshot.parents && snapshot.parents.length > 0,
@@ -47,14 +47,19 @@ describe('Lineage & Auto-Entropy Objective', () => {
   });
 
   test('can disable lineage tracking', async () => {
-    const neat = new Neat(2, 1, (network: Network) => {
-      void network;
-      return Math.random();
-    }, {
-      popsize: 10,
-      lineageTracking: false,
-      telemetry: { enabled: true },
-    });
+    const neat = new Neat(
+      2,
+      1,
+      (network: Network) => {
+        void network;
+        return Math.random();
+      },
+      {
+        popsize: 10,
+        lineageTracking: false,
+        telemetry: { enabled: true },
+      },
+    );
     await neat.evolve();
     const telemetryEntries = neat.getTelemetry() as TelemetryEntry[];
     const lastEntry = telemetryEntries.at(-1);

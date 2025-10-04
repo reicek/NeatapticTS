@@ -85,7 +85,7 @@ export function removeNode(this: Network, node: Node) {
       if (!ic.from || !oc.to || ic.from === oc.to) return; // skip invalid or trivial (self) cases
       /** True when a direct connection between source and target already exists. */
       const exists = this.connections.some(
-        (c) => c.from === ic.from && c.to === oc.to
+        (c) => c.from === ic.from && c.to === oc.to,
       );
       if (!exists) this.connect(ic.from, oc.to);
     });

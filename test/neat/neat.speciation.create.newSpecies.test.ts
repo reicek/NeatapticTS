@@ -11,7 +11,8 @@ type SpeciationCreationOptions = SpeciationOptions & {
   compatibilityThreshold: number;
 };
 
-type SpeciationTestContext = SpeciationHarnessContext<SpeciationCreationOptions>;
+type SpeciationTestContext =
+  SpeciationHarnessContext<SpeciationCreationOptions>;
 
 // Single expectation test: creates new species for each genome when all distances exceed threshold
 

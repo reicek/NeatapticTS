@@ -26,10 +26,10 @@ describe('Innovation Reuse', () => {
         mutationAmount: 1,
       });
       neat.mutate(); // perform one ADD_NODE on the single genome
-      const nodeSplitMap = Reflect.get(
-        neat,
-        '_nodeSplitInnovations',
-      ) as Map<string, NodeSplitRecord>;
+      const nodeSplitMap = Reflect.get(neat, '_nodeSplitInnovations') as Map<
+        string,
+        NodeSplitRecord
+      >;
       const registrySize = nodeSplitMap.size;
       test('registry has at least one entry', () => {
         expect(registrySize).toBeGreaterThan(0);
@@ -56,25 +56,26 @@ describe('Innovation Reuse', () => {
       const base = new Network(2, 1, { minHidden: 0 });
       neat.population[0] = base;
       // Invoke internal reuse mutation directly to guarantee using same chosen connection (first enabled)
-      const mutateAddNodeReuse = Reflect.get(
-        neat,
-        '_mutateAddNodeReuse',
-      ) as (genome: Network) => void;
+      const mutateAddNodeReuse = Reflect.get(neat, '_mutateAddNodeReuse') as (
+        genome: Network,
+      ) => void;
       mutateAddNodeReuse.call(neat, base);
-      const secondRegistry = Reflect.get(
-        neat,
-        '_nodeSplitInnovations',
-      ) as Map<string, NodeSplitRecord>;
+      const secondRegistry = Reflect.get(neat, '_nodeSplitInnovations') as Map<
+        string,
+        NodeSplitRecord
+      >;
       // Compare one entry innovations equality
-      const reused = Array.from(firstRegistry.entries()).every(([key, record]) => {
-        const reusedRecord = secondRegistry.get(key);
-        return (
-          !!reusedRecord &&
-          record.inInnov === reusedRecord.inInnov &&
-          record.outInnov === reusedRecord.outInnov &&
-          record.newNodeGeneId === reusedRecord.newNodeGeneId
-        );
-      });
+      const reused = Array.from(firstRegistry.entries()).every(
+        ([key, record]) => {
+          const reusedRecord = secondRegistry.get(key);
+          return (
+            !!reusedRecord &&
+            record.inInnov === reusedRecord.inInnov &&
+            record.outInnov === reusedRecord.outInnov &&
+            record.newNodeGeneId === reusedRecord.newNodeGeneId
+          );
+        },
+      );
       test('innovations reused for identical split', () => {
         expect(reused).toBe(true);
       });
@@ -95,15 +96,14 @@ describe('Innovation Reuse', () => {
       net.connections = net.connections.filter(
         (c) => !(c.from === h1 && c.to === h2),
       );
-      const mutateAddConnReuse = Reflect.get(
-        neat,
-        '_mutateAddConnReuse',
-      ) as (genome: Network) => void;
+      const mutateAddConnReuse = Reflect.get(neat, '_mutateAddConnReuse') as (
+        genome: Network,
+      ) => void;
       mutateAddConnReuse.call(neat, net);
-      const connInnovations = Reflect.get(
-        neat,
-        '_connInnovations',
-      ) as Map<string, number>;
+      const connInnovations = Reflect.get(neat, '_connInnovations') as Map<
+        string,
+        number
+      >;
       const keyCount = connInnovations.size;
       test('connection innovation registry updated', () => {
         expect(keyCount).toBeGreaterThan(0);
@@ -116,10 +116,9 @@ describe('Innovation Reuse', () => {
       const h1 = new Node('hidden');
       const h2 = new Node('hidden');
       net.nodes.splice(net.nodes.length - net.output, 0, h1, h2);
-      const mutateAddConnReuse = Reflect.get(
-        neat,
-        '_mutateAddConnReuse',
-      ) as (genome: Network) => void;
+      const mutateAddConnReuse = Reflect.get(neat, '_mutateAddConnReuse') as (
+        genome: Network,
+      ) => void;
       mutateAddConnReuse.call(neat, net);
       const conn = net.connections.find(
         (c) => (c.from === h1 && c.to === h2) || (c.from === h2 && c.to === h1),
@@ -155,10 +154,9 @@ describe('Cycle Safety', () => {
     // Now enforce acyclicity for subsequent mutation attempts
     net.setEnforceAcyclic(true);
     const before = net.connections.length;
-    const mutateAddConnReuse = Reflect.get(
-      neat,
-      '_mutateAddConnReuse',
-    ) as (genome: Network) => void;
+    const mutateAddConnReuse = Reflect.get(neat, '_mutateAddConnReuse') as (
+      genome: Network,
+    ) => void;
     for (let i = 0; i < 10; i++) mutateAddConnReuse.call(neat, net);
     const after = net.connections.length;
     const prevented =

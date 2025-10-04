@@ -9,7 +9,7 @@ describe('training.edge-cases', () => {
     beforeAll(() => {
       const net = new Network(2, 1);
       try {
-        net.train((set as unknown) as { input: number[]; output: number[] }[], {
+        net.train(set as unknown as { input: number[]; output: number[] }[], {
           iterations: 1,
           rate: 0.1,
         });
@@ -52,7 +52,7 @@ describe('training.edge-cases', () => {
           iterations: 1,
           rate: 0.1,
           // Provide an obviously invalid cost object to exercise validation path
-          cost: ({ nope: true } as unknown) as () => number,
+          cost: { nope: true } as unknown as () => number,
         });
       } catch (e: unknown) {
         const errMsg =

@@ -12,7 +12,9 @@ interface NetworkInternals {
 
 const getConnectionSlab = (net: Network): ConnectionSlab =>
   (
-    net as unknown as { getConnectionSlab: () => ConnectionSlab }
+    net as unknown as {
+      getConnectionSlab: () => ConnectionSlab;
+    }
   ).getConnectionSlab();
 
 const setNetworkInternal = <Key extends keyof NetworkInternals>(

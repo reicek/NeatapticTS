@@ -749,8 +749,8 @@ describe('Activation', () => {
   });
 
   describe('selu()', () => {
-  const alpha = 1.6732632423543772;
-  const scale = 1.0507009873554805;
+    const alpha = 1.6732632423543772;
+    const scale = 1.0507009873554805;
     const lowerBound = -alpha * scale;
 
     testValues.forEach((x) => {
@@ -897,7 +897,7 @@ describe('Activation', () => {
     testValues.forEach((x) => {
       describe(`Scenario: x=${x}`, () => {
         it(`gelu approximation is within [${lowerBound.toFixed(
-          2
+          2,
         )}, inf)`, () => {
           // Arrange
           // Act
@@ -911,7 +911,7 @@ describe('Activation', () => {
             0.5 *
             (1.0 +
               Math.tanh(
-                Math.sqrt(2.0 / Math.PI) * (x + 0.044715 * Math.pow(x, 3))
+                Math.sqrt(2.0 / Math.PI) * (x + 0.044715 * Math.pow(x, 3)),
               ));
           const expected = x * cdf;
           // Act
@@ -932,7 +932,7 @@ describe('Activation', () => {
             0.5 *
             (1.0 +
               Math.tanh(
-                Math.sqrt(2.0 / Math.PI) * (x + 0.044715 * Math.pow(x, 3))
+                Math.sqrt(2.0 / Math.PI) * (x + 0.044715 * Math.pow(x, 3)),
               ));
           const intermediate =
             Math.sqrt(2.0 / Math.PI) * (1.0 + 0.134145 * x * x);
@@ -1046,7 +1046,7 @@ describe('Activation', () => {
         // Arrange
         registerCustomActivation(
           'customFn',
-          (x: number, derivate: boolean = false) => (derivate ? 42 : x * 2)
+          (x: number, derivate: boolean = false) => (derivate ? 42 : x * 2),
         );
         // Act
         const result = Activation['customFn'](3);
@@ -1057,7 +1057,7 @@ describe('Activation', () => {
         // Arrange
         registerCustomActivation(
           'customFn',
-          (x: number, derivate: boolean = false) => (derivate ? 42 : x * 2)
+          (x: number, derivate: boolean = false) => (derivate ? 42 : x * 2),
         );
         // Act
         const result = Activation['customFn'](3, true);

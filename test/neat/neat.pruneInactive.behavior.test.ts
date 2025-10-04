@@ -60,6 +60,10 @@ describe('inactive objective pruning behavior', () => {
       },
       { constA: false, constB: false, varB: false },
     );
-    expect(objectivePresence).toEqual({ constA: false, constB: false, varB: true });
+    expect(objectivePresence).toEqual({
+      constA: false,
+      constB: false,
+      varB: true,
+    });
   });
 });

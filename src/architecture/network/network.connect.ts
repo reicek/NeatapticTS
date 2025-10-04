@@ -64,7 +64,7 @@ export function connect(
   this: Network,
   from: Node,
   to: Node,
-  weight?: number
+  weight?: number,
 ): Connection[] {
   // Step 1: Acyclic pre‑check – prevents cycles by disallowing edges that point "backwards" in order.
   if (

@@ -127,7 +127,7 @@ export function applyComplexityBudget(this: any) {
     /** Normalized slope magnitude used to scale growth/shrink nudges. */
     const slopeMag = Math.min(
       2,
-      Math.max(-2, slope / (Math.abs(history[0]) + EPSILON))
+      Math.max(-2, slope / (Math.abs(history[0]) + EPSILON)),
     );
     // method step: compute final increase and stagnation multipliers
     /**
@@ -153,12 +153,12 @@ export function applyComplexityBudget(this: any) {
     if (improvement > 0 || slope > 0)
       this._cbMaxNodes = Math.min(
         complexityBudget.maxNodesEnd ?? this._cbMaxNodes * 4,
-        Math.floor(this._cbMaxNodes * incF * noveltyFactor)
+        Math.floor(this._cbMaxNodes * incF * noveltyFactor),
       );
     else if (history.length === windowSize)
       this._cbMaxNodes = Math.max(
         complexityBudget.minNodes ?? this.input + this.output + 2,
-        Math.floor(this._cbMaxNodes * stagF)
+        Math.floor(this._cbMaxNodes * stagF),
       );
     // Final clamp to explicit minNodes if provided (safety to avoid too-small nets)
     if (complexityBudget.minNodes !== undefined) {
@@ -177,12 +177,12 @@ export function applyComplexityBudget(this: any) {
       if (improvement > 0 || slope > 0)
         this._cbMaxConns = Math.min(
           complexityBudget.maxConnsEnd ?? this._cbMaxConns * 4,
-          Math.floor(this._cbMaxConns * incF * noveltyFactor)
+          Math.floor(this._cbMaxConns * incF * noveltyFactor),
         );
       else if (history.length === windowSize)
         this._cbMaxConns = Math.max(
           complexityBudget.maxConnsStart,
-          Math.floor(this._cbMaxConns * stagF)
+          Math.floor(this._cbMaxConns * stagF),
         );
       this.options.maxConns = this._cbMaxConns;
     }
@@ -369,7 +369,7 @@ export function applyAncestorUniqAdaptive(this: any) {
     } else if (ancUniq > highT) {
       this.options.multiObjective.dominanceEpsilon = Math.max(
         0,
-        (this.options.multiObjective.dominanceEpsilon || 0) - adj
+        (this.options.multiObjective.dominanceEpsilon || 0) - adj,
       );
       this._lastAncestorUniqAdjustGen = this.generation;
     }
@@ -432,7 +432,7 @@ export function applyAdaptiveMutation(this: any) {
   const every = adaptCfg.adaptEvery ?? 1;
   if (!(every <= 1 || this.generation % every === 0)) return;
   const scored = this.population.filter(
-    (g: any) => typeof g.score === 'number'
+    (g: any) => typeof g.score === 'number',
   );
   scored.sort((a: any, b: any) => (a.score || 0) - (b.score || 0));
   // method step: partition scored genomes into top/bottom halves used by strategies
@@ -469,7 +469,7 @@ export function applyAdaptiveMutation(this: any) {
     } else if (strategy === 'anneal') {
       const progress = Math.min(
         1,
-        this.generation / (50 + this.population.length)
+        this.generation / (50 + this.population.length),
       );
       delta *= 1 - progress;
     }

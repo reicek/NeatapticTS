@@ -27,7 +27,7 @@ const forceLog = (...args: any[]): void => {
  */
 const dashboardManagerInstance: IDashboardManager = new DashboardManager(
   TerminalUtility.createTerminalClearer(),
-  forceLog
+  forceLog,
 );
 
 jest.setTimeout(3600000); //
@@ -85,12 +85,12 @@ jest.setTimeout(3600000); //
  */
 function analizeWinner(
   winner: Network,
-  trainingSet: { input: number[]; output: number[] }[]
+  trainingSet: { input: number[]; output: number[] }[],
 ) {
   // Step 1: Log the network's connection weights before training to establish a baseline.
   console.log(
     'Winner weights before training:',
-    winner.connections.map((c) => c.weight)
+    winner.connections.map((c) => c.weight),
   );
 
   // Step 2: Train the network with a highly detailed logging schedule.
@@ -111,12 +111,12 @@ function analizeWinner(
         winner.nodes.forEach((n, idx) => {
           n.connections.in.forEach((c, cidx) => {
             console.log(
-              `Iter ${iteration}: Node[${idx}] InConn[${cidx}] from Node ${c.from.index} weight=${c.weight} elig=${c.eligibility} tDeltaW=${c.totalDeltaWeight}`
+              `Iter ${iteration}: Node[${idx}] InConn[${cidx}] from Node ${c.from.index} weight=${c.weight} elig=${c.eligibility} tDeltaW=${c.totalDeltaWeight}`,
             );
           });
           n.connections.out.forEach((c, cidx) => {
             console.log(
-              `Iter ${iteration}: Node[${idx}] OutConn[${cidx}] to Node ${c.to.index} weight=${c.weight} elig=${c.eligibility} tDeltaW=${c.totalDeltaWeight}`
+              `Iter ${iteration}: Node[${idx}] OutConn[${cidx}] to Node ${c.to.index} weight=${c.weight} elig=${c.eligibility} tDeltaW=${c.totalDeltaWeight}`,
             );
           });
         });
@@ -127,26 +127,26 @@ function analizeWinner(
   // Step 3: Log the network's connection weights after training to see the changes.
   console.log(
     'Winner weights after training:',
-    winner.connections.map((c) => c.weight)
+    winner.connections.map((c) => c.weight),
   );
 
   // Step 4: Test the network's response to the primary input patterns after training.
   // This helps to verify that the network has learned the correct associations.
   console.log(
     'Test output for North-only scenario [0,1,0,0,0,0.7]:',
-    winner.activate([0, 1, 0, 0, 0, 0.7])
+    winner.activate([0, 1, 0, 0, 0, 0.7]),
   );
   console.log(
     'Test output for East-only scenario [0.25,0,1,0,0,0.7]:',
-    winner.activate([0.25, 0, 1, 0, 0, 0.7])
+    winner.activate([0.25, 0, 1, 0, 0, 0.7]),
   );
   console.log(
     'Test output for South-only scenario [0.5,0,0,1,0,0.7]:',
-    winner.activate([0.5, 0, 0, 1, 0, 0.7])
+    winner.activate([0.5, 0, 0, 1, 0, 0.7]),
   );
   console.log(
     'Test output for West-only scenario [0.75,0,0,0,1,0.7]:',
-    winner.activate([0.75, 0, 0, 0, 1, 0.7])
+    winner.activate([0.75, 0, 0, 0, 1, 0.7]),
   );
 
   // Step 5: Pause execution for manual inspection in a debugging environment.
@@ -231,7 +231,7 @@ describe('ASCII Maze Solver using Neuro-Evolution', () => {
       });
       proceduralPrevBest = result
         ? NetworkRefinement.refineWinnerWithBackprop(
-            result.bestNetwork as Network
+            result.bestNetwork as Network,
           )
         : undefined;
 

@@ -25,7 +25,7 @@ describe('benchmark.nodePool.memory', () => {
       expect(
         !!nodePool &&
           typeof nodePool.size === 'number' &&
-          typeof nodePool.highWaterMark === 'number'
+          typeof nodePool.highWaterMark === 'number',
       ).toBe(true);
     });
   });

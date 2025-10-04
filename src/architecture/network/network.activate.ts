@@ -81,7 +81,7 @@ export function noTraceActivate(this: Network, input: number[]): number[] {
     throw new Error(
       `Input size mismatch: expected ${this.input}, got ${
         input ? (input as any).length : 'undefined'
-      }`
+      }`,
     );
   }
 
@@ -156,7 +156,7 @@ export function activateRaw(
   this: Network,
   input: number[],
   training = false,
-  maxActivationDepth = 1000
+  maxActivationDepth = 1000,
 ): any {
   /** Access internal flags / helpers (private-ish) via a loose cast. */
   const self = this as any;
@@ -192,7 +192,7 @@ export function activateRaw(
 export function activateBatch(
   this: Network,
   inputs: number[][],
-  training = false
+  training = false,
 ): number[][] {
   // Global validation – ensure we can iterate as expected.
   if (!Array.isArray(inputs))
@@ -212,7 +212,7 @@ export function activateBatch(
       throw new Error(
         `Input[${i}] size mismatch: expected ${this.input}, got ${
           x ? x.length : 'undefined'
-        }`
+        }`,
       );
     }
     // Delegate to the network's activation (may perform tracing if training=true).

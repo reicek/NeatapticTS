@@ -166,7 +166,9 @@ describe('Crossover Methods', () => {
     describe('Scenario: Config property', () => {
       it('should not have config property', () => {
         // Assert
-        expect((crossover.UNIFORM as Record<string, unknown>).config).toBeUndefined();
+        expect(
+          (crossover.UNIFORM as Record<string, unknown>).config,
+        ).toBeUndefined();
       });
       it('should not have config property defined', () => {
         // Assert
@@ -191,7 +193,9 @@ describe('Crossover Methods', () => {
     describe('Scenario: Config property', () => {
       it('should not have config property', () => {
         // Assert
-        expect((crossover.AVERAGE as Record<string, unknown>).config).toBeUndefined();
+        expect(
+          (crossover.AVERAGE as Record<string, unknown>).config,
+        ).toBeUndefined();
       });
       it('should not have config property defined', () => {
         // Assert

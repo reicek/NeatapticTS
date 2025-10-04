@@ -112,10 +112,10 @@ export class TestWorker {
               code != null
                 ? ` with code ${code}`
                 : signal
-                ? ` with signal ${signal}`
-                : ''
-            }`
-          )
+                  ? ` with signal ${signal}`
+                  : ''
+            }`,
+          ),
         );
       };
 

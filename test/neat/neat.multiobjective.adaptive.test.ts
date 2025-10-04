@@ -38,8 +38,7 @@ describe('multi-objective adaptive epsilon & exports', () => {
     const neat = new Neat(
       4,
       2,
-      (network: Network) =>
-        network.connections.length + Math.random() * 0.01,
+      (network: Network) => network.connections.length + Math.random() * 0.01,
       {
         popsize: 18,
         multiObjective: { enabled: true, autoEntropy: true },

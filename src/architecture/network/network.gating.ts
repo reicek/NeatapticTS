@@ -52,7 +52,7 @@ import { config } from '../../config';
 export function gate(this: Network, node: Node, connection: Connection) {
   if (!this.nodes.includes(node))
     throw new Error(
-      'Gating node must be part of the network to gate a connection!'
+      'Gating node must be part of the network to gate a connection!',
     );
   if (connection.gater) {
     if (config.warnings) console.warn('Connection is already gated. Skipping.');

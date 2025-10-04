@@ -22,7 +22,7 @@ describe('ONNX Flatten after Pooling (Phase 4 extension)', () => {
       });
       // Act
       const hasFlatten = (onnx.metadata_props || []).some(
-        (m) => m.key === 'flatten_layers'
+        (m) => m.key === 'flatten_layers',
       );
       // Assert
       expect(hasFlatten).toBe(true);

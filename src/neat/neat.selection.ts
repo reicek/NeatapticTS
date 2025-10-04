@@ -22,7 +22,7 @@ export function sort(this: NeatLike): void {
   // Sort population descending by score (highest score first). Missing
   // scores (undefined/null) are treated as 0 using the nullish coalescing operator.
   (this as any).population.sort(
-    (a: any, b: any) => (b.score ?? 0) - (a.score ?? 0)
+    (a: any, b: any) => (b.score ?? 0) - (a.score ?? 0),
   );
 }
 
@@ -97,7 +97,7 @@ export function getParent(this: NeatLike) {
        */
       const selectedIndex = Math.floor(
         Math.pow(getRngFactory()(), selectionOptions.power || 1) *
-          population.length
+          population.length,
       );
 
       // Return the genome at the chosen index.
@@ -177,7 +177,7 @@ export function getParent(this: NeatLike) {
       // Sample `tournamentSize` random individuals (with possible repeats).
       for (let i = 0; i < tournamentSize; i++) {
         tournamentParticipants.push(
-          population[Math.floor(getRngFactory()() * population.length)]
+          population[Math.floor(getRngFactory()() * population.length)],
         );
       }
 
@@ -263,7 +263,7 @@ export function getAverage(this: NeatLike) {
   // Sum all scores treating undefined as 0 and divide by population size.
   const totalScore = population.reduce(
     (sum: number, genome: any) => sum + (genome.score ?? 0),
-    0
+    0,
   );
   return totalScore / population.length;
 }

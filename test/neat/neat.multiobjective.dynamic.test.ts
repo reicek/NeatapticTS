@@ -18,8 +18,9 @@ describe('Dynamic objective registration', () => {
       multiObjective: { enabled: true, complexityMetric: 'nodes' },
     });
     // Register a custom objective using structural entropy proxy (private method via cast)
-    const structuralEntropy = (neat as unknown as StructuralEntropyAccessor)
-      ._structuralEntropy.bind(neat);
+    const structuralEntropy = (
+      neat as unknown as StructuralEntropyAccessor
+    )._structuralEntropy.bind(neat);
     neat.registerObjective('entropy', 'max', (genome: Network) =>
       structuralEntropy(genome),
     );

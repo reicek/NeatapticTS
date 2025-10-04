@@ -92,7 +92,7 @@ function buildSingleThreadFitness(
   set: TrainingSample[],
   cost: any,
   amount: number,
-  growth: number
+  growth: number,
 ) {
   return (genome: Network) => {
     let score = 0; // Accumulate negative errors.
@@ -104,7 +104,7 @@ function buildSingleThreadFitness(
           console.warn(
             `Genome evaluation failed: ${
               (e && e.message) || e
-            }. Penalizing with -Infinity fitness.`
+            }. Penalizing with -Infinity fitness.`,
           );
         return -Infinity;
       }
@@ -151,7 +151,7 @@ async function buildMultiThreadFitness(
   amount: number,
   growth: number,
   threads: number,
-  options: any
+  options: any,
 ) {
   // Serialize dataset once for worker initialization (avoids deep cloning per evaluation call).
   const serializedSet = Multi.serializeDataSet(set);
@@ -169,7 +169,7 @@ async function buildMultiThreadFitness(
     if (config.warnings)
       console.warn(
         'Failed to load worker class; falling back to single-thread path:',
-        (e as any)?.message || e
+        (e as any)?.message || e,
       );
   }
   // Fallback path if no worker support.
@@ -184,7 +184,7 @@ async function buildMultiThreadFitness(
       workers.push(
         new WorkerCtor(serializedSet, {
           name: cost.name || cost.toString?.() || 'cost',
-        })
+        }),
       );
     } catch (e) {
       if (config.warnings) console.warn('Worker spawn failed', e);
@@ -273,7 +273,7 @@ async function buildMultiThreadFitness(
 export async function evolveNetwork(
   this: Network,
   set: TrainingSample[],
-  options: any
+  options: any,
 ): Promise<{ error: number; iterations: number; time: number }> {
   // 1. Dataset validation (shape + existence).
   if (
@@ -283,7 +283,7 @@ export async function evolveNetwork(
     set[0].output.length !== this.output
   ) {
     throw new Error(
-      'Dataset is invalid or dimensions do not match network input/output size!'
+      'Dataset is invalid or dimensions do not match network input/output size!',
     );
   }
   // Defensive defaulting.
@@ -315,7 +315,7 @@ export async function evolveNetwork(
     typeof options.error === 'undefined'
   ) {
     throw new Error(
-      'At least one stopping condition (`iterations` or `error`) must be specified for evolution.'
+      'At least one stopping condition (`iterations` or `error`) must be specified for evolution.',
     );
   } else if (typeof options.error === 'undefined') targetError = -1;
   // Only iterations constrain.
@@ -332,7 +332,7 @@ export async function evolveNetwork(
       amount,
       growth,
       threads,
-      options
+      options,
     );
     fitnessFunction = multi.fitnessFunction;
     threads = multi.threads;

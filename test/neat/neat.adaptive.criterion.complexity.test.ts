@@ -4,7 +4,8 @@ import Network from '../../src/architecture/network';
 describe('adaptive minimal criterion & adaptive complexity budget', () => {
   const fitness = (net: Network) => {
     // Give slightly noisy score proportional to connection count to create variance
-    const connections = (net as { connections: unknown[] }).connections as unknown[];
+    const connections = (net as { connections: unknown[] })
+      .connections as unknown[];
     const connectionCount = connections.length;
     return connectionCount + Math.random() * 0.1;
   };
@@ -20,11 +21,17 @@ describe('adaptive minimal criterion & adaptive complexity budget', () => {
       speciation: true,
     });
     await neat.evaluate();
-    const initialThreshold = Reflect.get(neat as object, '_mcThreshold') as number | undefined;
+    const initialThreshold = Reflect.get(neat as object, '_mcThreshold') as
+      | number
+      | undefined;
     for (let i = 0; i < 4; i++) await neat.evolve();
     await neat.evaluate();
-    const zeroedLater = neat.population.filter((g) => (g.score || 0) === 0).length;
-    const finalThreshold = Reflect.get(neat as object, '_mcThreshold') as number | undefined;
+    const zeroedLater = neat.population.filter(
+      (g) => (g.score || 0) === 0,
+    ).length;
+    const finalThreshold = Reflect.get(neat as object, '_mcThreshold') as
+      | number
+      | undefined;
     // Expect threshold to shift OR pruning non-zero
     expect(finalThreshold).not.toBe(initialThreshold);
     expect(zeroedLater).toBeGreaterThanOrEqual(0); // always true but keep single expectation pattern minimal

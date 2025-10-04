@@ -14,9 +14,9 @@ describe('node worker process handler', () => {
     const set = Multi.serializeDataSet([{ input: [2], output: [1] }]);
 
     // Grab the current 'message' listeners
-  const listeners = process.listeners('message');
-  expect(listeners.length).toBeGreaterThan(0);
-  const handler = listeners[listeners.length - 1] as (msg: unknown) => void;
+    const listeners = process.listeners('message');
+    expect(listeners.length).toBeGreaterThan(0);
+    const handler = listeners[listeners.length - 1] as (msg: unknown) => void;
 
     // Initialize cost and dataset
     handler({ set, cost: 'mse' });

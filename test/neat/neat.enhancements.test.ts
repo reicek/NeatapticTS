@@ -23,13 +23,14 @@ describe('Adaptive mutation rates', () => {
     await neat.evolve(); // initializes _mutRate
     type GenomeWithMutationRate = Network & { _mutRate?: number };
     await neat.evolve(); // adapts
-    const secondGenerationRates = (neat.population as GenomeWithMutationRate[]).map(
-      (genome) => genome._mutRate,
-    );
+    const secondGenerationRates = (
+      neat.population as GenomeWithMutationRate[]
+    ).map((genome) => genome._mutRate);
     const mutationChanged = secondGenerationRates.some(
       (rate) =>
         rate !== undefined &&
-        Math.abs(rate - (neat.options.adaptiveMutation?.initialRate ?? 0.5)) > 1e-6,
+        Math.abs(rate - (neat.options.adaptiveMutation?.initialRate ?? 0.5)) >
+          1e-6,
     );
     // ensure at least one genome drifted away from the baseline mutation rate
     expect(mutationChanged).toBe(true);
@@ -38,23 +39,33 @@ describe('Adaptive mutation rates', () => {
 
 describe('Novelty search blending', () => {
   test('novelty blending adds _novelty and alters score', async () => {
-    const descriptor = (network: Network) => [network.connections.length, network.nodes.length];
-    const neat = new Neat(2, 1, (network: Network) => network.connections.length, {
-      popsize: 8,
-      seed: 210,
-      speciation: false,
-      novelty: {
-        enabled: true,
-        descriptor,
-        archiveAddThreshold: 0,
-        k: 3,
-        blendFactor: 0.5,
+    const descriptor = (network: Network) => [
+      network.connections.length,
+      network.nodes.length,
+    ];
+    const neat = new Neat(
+      2,
+      1,
+      (network: Network) => network.connections.length,
+      {
+        popsize: 8,
+        seed: 210,
+        speciation: false,
+        novelty: {
+          enabled: true,
+          descriptor,
+          archiveAddThreshold: 0,
+          k: 3,
+          blendFactor: 0.5,
+        },
       },
-    });
+    );
     await neat.evaluate();
     type GenomeWithNovelty = Network & { _novelty?: number };
     const noveltyPop = neat.population as GenomeWithNovelty[];
-    const annotated = noveltyPop.filter((genome) => genome._novelty !== undefined);
+    const annotated = noveltyPop.filter(
+      (genome) => genome._novelty !== undefined,
+    );
     expect(annotated.length).toBeGreaterThan(0);
   });
 });

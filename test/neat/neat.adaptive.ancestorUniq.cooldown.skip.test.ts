@@ -22,11 +22,23 @@ describe('Ancestor Uniqueness Adaptive cooldown skip', () => {
     });
     test('epsilon unchanged due to cooldown', async () => {
       // Arrange: set last adjust generation to near current
-      (neat as unknown as { _lastAncestorUniqAdjustGen?: number })._lastAncestorUniqAdjustGen = 9;
+      (
+        neat as unknown as {
+          _lastAncestorUniqAdjustGen?: number;
+        }
+      )._lastAncestorUniqAdjustGen = 9;
       (neat as unknown as { generation?: number }).generation = 12; // difference 3 < cooldown 5
-      (neat as unknown as { _telemetry?: Array<Record<string, unknown>> })._telemetry?.push({ lineage: { ancestorUniq: 0.0 } });
-      const { applyAncestorUniqAdaptive } = await import('../../src/neat/neat.adaptive');
-      applyAncestorUniqAdaptive.call(neat as unknown as Record<string, unknown>);
+      (
+        neat as unknown as {
+          _telemetry?: Array<Record<string, unknown>>;
+        }
+      )._telemetry?.push({ lineage: { ancestorUniq: 0.0 } });
+      const { applyAncestorUniqAdaptive } = await import(
+        '../../src/neat/neat.adaptive'
+      );
+      applyAncestorUniqAdaptive.call(
+        neat as unknown as Record<string, unknown>,
+      );
       const eps = neat.options.multiObjective.dominanceEpsilon;
       // Assert: unchanged at baseline 0.1
       expect(eps).toBe(0.1);

@@ -34,7 +34,8 @@ describe('lineage anti-inbreeding pressure', () => {
       // Step 3: collect genomes that tracked both parents
       const population = neat.population as LineageNetwork[];
       genomesWithParents = population.filter(
-        (network) => Array.isArray(network._parents) && network._parents.length === 2,
+        (network) =>
+          Array.isArray(network._parents) && network._parents.length === 2,
       );
     });
 

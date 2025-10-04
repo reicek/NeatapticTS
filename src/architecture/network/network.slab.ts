@@ -126,7 +126,7 @@ function _acquireTA(
   kind: string,
   ctor: any,
   length: number,
-  bytesPerElement: number
+  bytesPerElement: number,
 ): TypedArray {
   if (!config.enableSlabArrayPooling) {
     _slabAllocStats.fresh++;
@@ -221,7 +221,7 @@ export function rebuildConnectionSlab(this: Network, force = false): void {
       _releaseTA(
         'w',
         internalNet._useFloat32Weights ? 4 : 8,
-        internalNet._connWeights
+        internalNet._connWeights,
       );
     if (internalNet._connFrom)
       _releaseTA('f', 4, internalNet._connFrom as Uint32Array);
@@ -233,20 +233,20 @@ export function rebuildConnectionSlab(this: Network, force = false): void {
       _releaseTA(
         'g',
         internalNet._useFloat32Weights ? 4 : 8,
-        internalNet._connGain as Float32Array | Float64Array
+        internalNet._connGain as Float32Array | Float64Array,
       );
     if (internalNet._connPlastic)
       _releaseTA(
         'p',
         internalNet._useFloat32Weights ? 4 : 8,
-        internalNet._connPlastic as Float32Array | Float64Array
+        internalNet._connPlastic as Float32Array | Float64Array,
       );
     // Acquire (possibly pooled) slabs with new capacity
     internalNet._connWeights = _acquireTA(
       'w',
       internalNet._useFloat32Weights ? Float32Array : Float64Array,
       capacity,
-      internalNet._useFloat32Weights ? 4 : 8
+      internalNet._useFloat32Weights ? 4 : 8,
     );
     internalNet._connFrom = _acquireTA('f', Uint32Array, capacity, 4);
     internalNet._connTo = _acquireTA('t', Uint32Array, capacity, 4);
@@ -291,7 +291,7 @@ export function rebuildConnectionSlab(this: Network, force = false): void {
           'g',
           internalNet._useFloat32Weights ? Float32Array : Float64Array,
           capacity,
-          internalNet._useFloat32Weights ? 4 : 8
+          internalNet._useFloat32Weights ? 4 : 8,
         ) as any;
         internalNet._connGain = gainArray;
         for (let j = 0; j < connectionIndex; j++) (gainArray as any)[j] = 1;
@@ -308,7 +308,7 @@ export function rebuildConnectionSlab(this: Network, force = false): void {
     _releaseTA(
       'g',
       internalNet._useFloat32Weights ? 4 : 8,
-      gainArray as Float32Array | Float64Array
+      gainArray as Float32Array | Float64Array,
     );
     internalNet._connGain = null;
   }
@@ -318,7 +318,7 @@ export function rebuildConnectionSlab(this: Network, force = false): void {
       'p',
       internalNet._useFloat32Weights ? Float32Array : Float64Array,
       capacity,
-      internalNet._useFloat32Weights ? 4 : 8
+      internalNet._useFloat32Weights ? 4 : 8,
     ) as any;
     internalNet._connPlastic = plasticArray;
     for (let i = 0; i < connectionCount; i++) {
@@ -330,7 +330,7 @@ export function rebuildConnectionSlab(this: Network, force = false): void {
     _releaseTA(
       'p',
       internalNet._useFloat32Weights ? 4 : 8,
-      plasticArray as Float32Array | Float64Array
+      plasticArray as Float32Array | Float64Array,
     );
     internalNet._connPlastic = null;
   }
@@ -357,7 +357,7 @@ export function rebuildConnectionSlab(this: Network, force = false): void {
  */
 export async function rebuildConnectionSlabAsync(
   this: Network,
-  chunkSize = 50_000
+  chunkSize = 50_000,
 ): Promise<void> {
   const internalNet = this as any;
   if (typeof window === 'undefined')
@@ -376,7 +376,7 @@ export async function rebuildConnectionSlabAsync(
       _releaseTA(
         'w',
         internalNet._useFloat32Weights ? 4 : 8,
-        internalNet._connWeights
+        internalNet._connWeights,
       );
     if (internalNet._connFrom)
       _releaseTA('f', 4, internalNet._connFrom as Uint32Array);
@@ -388,20 +388,20 @@ export async function rebuildConnectionSlabAsync(
       _releaseTA(
         'g',
         internalNet._useFloat32Weights ? 4 : 8,
-        internalNet._connGain as Float32Array | Float64Array
+        internalNet._connGain as Float32Array | Float64Array,
       );
     if (internalNet._connPlastic)
       _releaseTA(
         'p',
         internalNet._useFloat32Weights ? 4 : 8,
-        internalNet._connPlastic as Float32Array | Float64Array
+        internalNet._connPlastic as Float32Array | Float64Array,
       );
     // Acquire slabs (pooled or fresh) so allocation stats reflect this async path too
     internalNet._connWeights = _acquireTA(
       'w',
       internalNet._useFloat32Weights ? Float32Array : Float64Array,
       capacity,
-      internalNet._useFloat32Weights ? 4 : 8
+      internalNet._useFloat32Weights ? 4 : 8,
     );
     internalNet._connFrom = _acquireTA('f', Uint32Array, capacity, 4);
     internalNet._connTo = _acquireTA('t', Uint32Array, capacity, 4);
@@ -410,7 +410,7 @@ export async function rebuildConnectionSlabAsync(
       'g',
       internalNet._useFloat32Weights ? Float32Array : Float64Array,
       capacity,
-      internalNet._useFloat32Weights ? 4 : 8
+      internalNet._useFloat32Weights ? 4 : 8,
     );
     internalNet._connPlastic = null;
     internalNet._connCapacity = capacity;
@@ -434,7 +434,7 @@ export async function rebuildConnectionSlabAsync(
       const baseOpsPerMs = 15000; // coarse empirical constant; refine later.
       const estOps = Math.max(
         5_000,
-        Math.min(50_000, Math.floor(baseOpsPerMs * target))
+        Math.min(50_000, Math.floor(baseOpsPerMs * target)),
       );
       chunkSize = Math.min(chunkSize, estOps);
     } else {
@@ -464,7 +464,7 @@ export async function rebuildConnectionSlabAsync(
     _releaseTA(
       'g',
       internalNet._useFloat32Weights ? 4 : 8,
-      gainArray as Float32Array | Float64Array
+      gainArray as Float32Array | Float64Array,
     );
     internalNet._connGain = null;
   }
@@ -473,7 +473,7 @@ export async function rebuildConnectionSlabAsync(
       'p',
       internalNet._useFloat32Weights ? Float32Array : Float64Array,
       internalNet._connCapacity,
-      internalNet._useFloat32Weights ? 4 : 8
+      internalNet._useFloat32Weights ? 4 : 8,
     ) as any;
     internalNet._connPlastic = plasticArray;
     for (let i = 0; i < total; i++)
@@ -483,7 +483,7 @@ export async function rebuildConnectionSlabAsync(
     _releaseTA(
       'p',
       internalNet._useFloat32Weights ? 4 : 8,
-      plasticArray as Float32Array | Float64Array
+      plasticArray as Float32Array | Float64Array,
     );
     internalNet._connPlastic = null;
   }

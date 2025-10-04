@@ -68,7 +68,7 @@ describe('phase1.fieldAudit baseline', () => {
     });
     test('Connection keys array is sorted', () => {
       expect(connectionKeys.join(',')).toBe(
-        [...connectionKeys].sort().join(',')
+        [...connectionKeys].sort().join(','),
       );
     });
   });

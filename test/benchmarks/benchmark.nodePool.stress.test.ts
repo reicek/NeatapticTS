@@ -46,7 +46,7 @@ describe('benchmark.nodePool.stress', () => {
       recycledRatio >= 0.5 &&
         highWaterTailDelta <= 2 &&
         finalStats.reused > 0 &&
-        finalStats.fresh > 0
+        finalStats.fresh > 0,
     ).toBe(true);
   });
 });

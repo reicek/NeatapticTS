@@ -12,7 +12,8 @@ import type { GenomeDetailed } from './neat.types';
  * const lineageAware = child as LineageTrackedNetwork;
  * console.log(lineageAware._parents);
  */
-export type LineageTrackedNetwork = Network & Pick<GenomeDetailed, '_id' | '_parents' | '_depth'>;
+export type LineageTrackedNetwork = Network &
+  Pick<GenomeDetailed, '_id' | '_parents' | '_depth'>;
 
 /**
  * Narrow Neat surface exposing lineage helper methods used in tests.

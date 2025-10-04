@@ -13,7 +13,7 @@ import Network from '../../../src/architecture/network';
  * @returns Refined cloned network; if refinement fails, returns original clone.
  */
 export const refineWinnerWithBackprop = (
-  winner?: Network
+  winner?: Network,
 ): Network | undefined => {
   if (!winner) return undefined;
   // Ensure differentiable activations for hidden/output nodes.

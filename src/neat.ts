@@ -218,7 +218,7 @@ export default class Neat {
     input?: number,
     output?: number,
     fitness?: any,
-    options: any = {}
+    options: any = {},
   ) {
     // Assign basic fields; other internals are initialized above as class fields
     this.input = input ?? 0;
@@ -251,8 +251,8 @@ export default class Neat {
       opts.mutation = methods.mutation.ALL
         ? methods.mutation.ALL.slice()
         : methods.mutation.FFW
-        ? [methods.mutation.FFW]
-        : [];
+          ? [methods.mutation.FFW]
+          : [];
     // Selection method defaults
     if (opts.selection === undefined) {
       // prefer dedicated selection module; fallback to methods.selection if legacy export
@@ -423,7 +423,7 @@ export default class Neat {
     const offspring = Network.crossOver(
       parent1,
       parent2,
-      this.options.equal || false
+      this.options.equal || false,
     );
     (offspring as any)._reenableProb = this.options.reenableProb;
     (offspring as any)._id = this._nextGenomeId++;
@@ -448,7 +448,7 @@ export default class Neat {
   _warnIfNoBestGenome() {
     try {
       console.warn(
-        'Evolution completed without finding a valid best genome (no fitness improvements recorded).'
+        'Evolution completed without finding a valid best genome (no fitness improvements recorded).',
       );
     } catch {}
   }
@@ -570,7 +570,7 @@ export default class Neat {
   getObjectiveKeys(): string[] {
     // Map objective descriptors to their key strings
     return (this._getObjectives() as ObjectiveDescriptor[]).map(
-      (obj) => obj.key
+      (obj) => obj.key,
     );
   }
 
@@ -748,7 +748,7 @@ export default class Neat {
         name: operatorName,
         success: stats.success,
         attempts: stats.attempts,
-      })
+      }),
     );
   }
   /**
@@ -862,7 +862,7 @@ export default class Neat {
     const fronts: Network[][] = [];
     for (let frontIdx = 0; frontIdx < maxFronts; frontIdx++) {
       const front = this.population.filter(
-        (genome) => ((genome as any)._moRank ?? 0) === frontIdx
+        (genome) => ((genome as any)._moRank ?? 0) === frontIdx,
       );
       if (!front.length) break;
       fronts.push(front);
@@ -888,7 +888,7 @@ export default class Neat {
     key: string,
     direction: 'min' | 'max',
     // Widen accessor parameter type to match underlying registerObjective expectation (GenomeLike)
-    accessor: (g: any) => number
+    accessor: (g: any) => number,
   ) {
     return registerObjective.call(this as any, key, direction, accessor);
   }

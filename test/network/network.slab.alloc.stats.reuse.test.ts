@@ -4,7 +4,8 @@
  */
 import Network from '../../src/architecture/network';
 import { config } from '../../src/config';
-import { memoryStats, type SlabAllocStats } from '../../src/utils/memory';
+import { memoryStats } from '../../src/utils/memory';
+import type { SlabAllocStats } from '../../src/utils/memory';
 
 const markSlabDirty = (network: Network): void => {
   Reflect.set(network, '_slabDirty', true);

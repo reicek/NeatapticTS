@@ -12,7 +12,9 @@ import type {
  * data-export formats (JSONL and CSV). The functions intentionally
  * operate against `this` so they can be attached to instances.
  */
-export const exportTelemetryJSONL = function (this: NeatLike & { _telemetry: TelemetryEntry[] }): string {
+export const exportTelemetryJSONL = function (
+  this: NeatLike & { _telemetry: TelemetryEntry[] },
+): string {
   /**
    * Serialize the internal telemetry array to JSON Lines (JSONL).
    * Each telemetry entry is stringified and separated by a newline.
@@ -28,8 +30,10 @@ export const exportTelemetryJSONL = function (this: NeatLike & { _telemetry: Tel
    * log processors and line-based parsers. Each line is independent
    * and can be parsed with JSON.parse.
    */
-  return this._telemetry.map((entry: TelemetryEntry) => JSON.stringify(entry)).join('\n');
-}
+  return this._telemetry
+    .map((entry: TelemetryEntry) => JSON.stringify(entry))
+    .join('\n');
+};
 /**
  * Export recent telemetry entries to a CSV string.
  *
@@ -46,7 +50,10 @@ export const exportTelemetryJSONL = function (this: NeatLike & { _telemetry: Tel
  * @param maxEntries Maximum number of most recent telemetry entries to include (default 500).
  * @returns CSV string (headers + rows) or empty string when no telemetry.
  */
-export const exportTelemetryCSV = function (this: NeatLike & { _telemetry: TelemetryEntry[] }, maxEntries = 500): string {
+export const exportTelemetryCSV = function (
+  this: NeatLike & { _telemetry: TelemetryEntry[] },
+  maxEntries = 500,
+): string {
   /**
    * Recent telemetry entries to export. Contains at most `maxEntries` items.
    */
@@ -70,7 +77,7 @@ export const exportTelemetryCSV = function (this: NeatLike & { _telemetry: Telem
     csvLines.push(serializeTelemetryEntry(telemetryEntry, headers));
   }
   return csvLines.join('\n');
-}
+};
 
 /** Group prefix for complexity nested metrics when flattened. */
 const COMPLEXITY_PREFIX = 'complexity.'; // complexity.* flattened headers
@@ -130,7 +137,9 @@ interface TelemetryHeaderInfo {
  * - Discovers nested keys inside complexity, perf, lineage, diversity groups.
  * - Tracks presence of optional multi-value structures (ops, objectives, etc.).
  */
-const collectTelemetryHeaderInfo = (entries: TelemetryEntry[]): TelemetryHeaderInfo => {
+const collectTelemetryHeaderInfo = (
+  entries: TelemetryEntry[],
+): TelemetryHeaderInfo => {
   /** Discovered base keys (excluding grouped containers). */
   const baseKeys = new Set<string>();
   /** Discovered complexity metric keys. */
@@ -212,7 +221,7 @@ const collectTelemetryHeaderInfo = (entries: TelemetryEntry[]): TelemetryHeaderI
     includeObjEvents,
     includeObjImportance,
   };
-}
+};
 
 /**
  * Build the ordered list of CSV headers from collected metadata.
@@ -234,14 +243,17 @@ const buildTelemetryHeaders = (info: TelemetryHeaderInfo): string[] => {
   if (info.includeObjEvents) headers.push(HEADER_OBJ_EVENTS);
   if (info.includeObjImportance) headers.push(HEADER_OBJ_IMPORTANCE);
   return headers;
-}
+};
 
 /**
  * Serialize one telemetry entry into a CSV row using previously computed headers.
  * Uses a `switch(true)` pattern instead of a long if/else chain to reduce
  * cognitive complexity while preserving readability of each scenario.
  */
-const serializeTelemetryEntry = (entry: TelemetryEntry, headers: string[]): string => {
+const serializeTelemetryEntry = (
+  entry: TelemetryEntry,
+  headers: string[],
+): string => {
   /** Accumulator for serialized cell values for one telemetry row. */
   const row: string[] = [];
   for (const header of headers) {
@@ -253,11 +265,13 @@ const serializeTelemetryEntry = (entry: TelemetryEntry, headers: string[]): stri
         // complexity.<metric>. Missing metrics serialize as an empty cell.
         const key = header.slice(COMPLEXITY_PREFIX.length);
         // TypeScript: safe dynamic access
-        const complexity = entry.complexity as Record<string, unknown> | undefined;
+        const complexity = entry.complexity as
+          | Record<string, unknown>
+          | undefined;
         row.push(
           complexity && key in complexity
             ? JSON.stringify(complexity[key])
-            : ''
+            : '',
         );
         break;
       }
@@ -265,26 +279,24 @@ const serializeTelemetryEntry = (entry: TelemetryEntry, headers: string[]): stri
       case header.startsWith(PERF_PREFIX): {
         const key = header.slice(PERF_PREFIX.length);
         const perf = entry.perf as Record<string, unknown> | undefined;
-        row.push(
-          perf && key in perf ? JSON.stringify(perf[key]) : ''
-        );
+        row.push(perf && key in perf ? JSON.stringify(perf[key]) : '');
         break;
       }
       // Grouped lineage metrics
       case header.startsWith(LINEAGE_PREFIX): {
         const key = header.slice(LINEAGE_PREFIX.length);
         const lineage = entry.lineage as Record<string, unknown> | undefined;
-        row.push(
-          lineage && key in lineage ? JSON.stringify(lineage[key]) : ''
-        );
+        row.push(lineage && key in lineage ? JSON.stringify(lineage[key]) : '');
         break;
       }
       // Grouped diversity metrics
       case header.startsWith(DIVERSITY_PREFIX): {
         const key = header.slice(DIVERSITY_PREFIX.length);
-        const diversity = entry.diversity as Record<string, unknown> | undefined;
+        const diversity = entry.diversity as
+          | Record<string, unknown>
+          | undefined;
         row.push(
-          diversity && key in diversity ? JSON.stringify(diversity[key]) : ''
+          diversity && key in diversity ? JSON.stringify(diversity[key]) : '',
         );
         break;
       }
@@ -294,7 +306,7 @@ const serializeTelemetryEntry = (entry: TelemetryEntry, headers: string[]): stri
         // is typically an index set or representation of a front. Serialized
         // as JSON array for downstream MOEA visualization.
         row.push(
-          Array.isArray(entry.fronts) ? JSON.stringify(entry.fronts) : ''
+          Array.isArray(entry.fronts) ? JSON.stringify(entry.fronts) : '',
         );
         break;
       }
@@ -312,7 +324,7 @@ const serializeTelemetryEntry = (entry: TelemetryEntry, headers: string[]): stri
         row.push(
           Array.isArray(entry.objectives)
             ? JSON.stringify(entry.objectives)
-            : ''
+            : '',
         );
         break;
       }
@@ -328,7 +340,7 @@ const serializeTelemetryEntry = (entry: TelemetryEntry, headers: string[]): stri
         row.push(
           Array.isArray(entry.speciesAlloc)
             ? JSON.stringify(entry.speciesAlloc)
-            : ''
+            : '',
         );
         break;
       }
@@ -336,7 +348,7 @@ const serializeTelemetryEntry = (entry: TelemetryEntry, headers: string[]): stri
         // objEvents: timeline of objective-related events (e.g., dominance
         // shifts, re-weighting). Provides temporal context to objective trends.
         row.push(
-          Array.isArray(entry.objEvents) ? JSON.stringify(entry.objEvents) : ''
+          Array.isArray(entry.objEvents) ? JSON.stringify(entry.objEvents) : '',
         );
         break;
       }
@@ -345,7 +357,7 @@ const serializeTelemetryEntry = (entry: TelemetryEntry, headers: string[]): stri
         // adaptive multi-objective strategies; used for post-hoc analysis of
         // weight schedules.
         row.push(
-          entry.objImportance ? JSON.stringify(entry.objImportance) : ''
+          entry.objImportance ? JSON.stringify(entry.objImportance) : '',
         );
         break;
       }
@@ -354,13 +366,15 @@ const serializeTelemetryEntry = (entry: TelemetryEntry, headers: string[]): stri
         // All remaining headers correspond to primitive / object top‑level
         // properties (e.g., generation, population size, best score). Use
         // JSON.stringify so objects/arrays stay parseable and commas safe.
-  row.push(JSON.stringify((entry as unknown as Record<string, unknown>)[header]));
+        row.push(
+          JSON.stringify((entry as unknown as Record<string, unknown>)[header]),
+        );
         break;
       }
     }
   }
   return row.join(',');
-}
+};
 /**
  * Export species history snapshots to CSV.
  *
@@ -377,7 +391,14 @@ const serializeTelemetryEntry = (entry: TelemetryEntry, headers: string[]): stri
  * @param maxEntries Maximum number of most recent history snapshots (generations) to include (default 200).
  * @returns CSV string (headers + rows) describing species evolution timeline.
  */
-export const exportSpeciesHistoryCSV = function (this: NeatLike & { _speciesHistory?: SpeciesHistoryEntry[]; _species?: SpeciesHistoryStat[]; generation?: number }, maxEntries = 200): string {
+export const exportSpeciesHistoryCSV = function (
+  this: NeatLike & {
+    _speciesHistory?: SpeciesHistoryEntry[];
+    _species?: SpeciesHistoryStat[];
+    generation?: number;
+  },
+  maxEntries = 200,
+): string {
   /** Ensure the species history structure exists on the instance. */
   if (!Array.isArray(this._speciesHistory)) this._speciesHistory = [];
 
@@ -394,17 +415,29 @@ export const exportSpeciesHistoryCSV = function (this: NeatLike & { _speciesHist
   ) {
     // Create a minimal snapshot on demand so early exports (before evolve/speciate) still yield a header row
     // Defensive: allow for legacy or incomplete species objects
-    const stats: SpeciesHistoryStat[] = (this._species as unknown as Record<string, unknown>[]).map((sp) => ({
+    const stats: SpeciesHistoryStat[] = (
+      this._species as unknown as Record<string, unknown>[]
+    ).map((sp) => ({
       id: typeof sp.id === 'number' ? sp.id : -1,
-      size: Array.isArray(sp.members) ? sp.members.length : (typeof sp.size === 'number' ? sp.size : 0),
-      bestScore: typeof sp.bestScore === 'number' ? sp.bestScore : (typeof sp.best === 'number' ? sp.best : 0),
+      size: Array.isArray(sp.members)
+        ? sp.members.length
+        : typeof sp.size === 'number'
+          ? sp.size
+          : 0,
+      bestScore:
+        typeof sp.bestScore === 'number'
+          ? sp.bestScore
+          : typeof sp.best === 'number'
+            ? sp.best
+            : 0,
       lastImproved: typeof sp.lastImproved === 'number' ? sp.lastImproved : 0,
     }));
     this._speciesHistory.push({ generation: this.generation || 0, stats });
   }
 
   /** Recent slice of the species history we will export. */
-  const recentHistory: SpeciesHistoryEntry[] = this._speciesHistory.slice(-maxEntries);
+  const recentHistory: SpeciesHistoryEntry[] =
+    this._speciesHistory.slice(-maxEntries);
   if (!recentHistory.length) {
     // Emit header-only CSV for deterministic empty export
     return 'generation,id,size,best,lastImproved';
@@ -421,7 +454,7 @@ export const exportSpeciesHistoryCSV = function (this: NeatLike & { _speciesHist
 
   // Delegate CSV line materialization to helper for readability & testability
   return buildSpeciesHistoryCsv(recentHistory, headers);
-}
+};
 
 /** Header label for generation column in species history CSV. */
 const HEADER_GENERATION = 'generation';
@@ -437,7 +470,7 @@ const HEADER_GENERATION = 'generation';
  */
 const buildSpeciesHistoryCsv = (
   recentHistory: SpeciesHistoryEntry[],
-  headers: string[]
+  headers: string[],
 ): string => {
   /** Accumulates lines; seeded with header row. */
   const lines: string[] = [headers.join(',')];
@@ -454,10 +487,14 @@ const buildSpeciesHistoryCsv = (
           continue;
         }
         // Use index signature for dynamic keys
-  rowCells.push(JSON.stringify((speciesStat as unknown as Record<string, unknown>)[header]));
+        rowCells.push(
+          JSON.stringify(
+            (speciesStat as unknown as Record<string, unknown>)[header],
+          ),
+        );
       }
       lines.push(rowCells.join(','));
     }
   }
   return lines.join('\n');
-}
+};

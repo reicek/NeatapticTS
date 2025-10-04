@@ -195,7 +195,7 @@ function computeMonitoredError(
   trainError: number,
   recentErrors: number[],
   cfg: MonitoredSmoothingConfig,
-  state: PrimarySmoothingState
+  state: PrimarySmoothingState,
 ): number {
   // Fast path: no smoothing window / algorithm requiring history.
   if (cfg.window <= 1 && cfg.type !== 'ema' && cfg.type !== 'adaptive-ema') {
@@ -227,7 +227,7 @@ function computeMonitoredError(
     const varianceScaled = variance / Math.max(mean * mean, 1e-8);
     const adaptiveAlpha = Math.min(
       0.95,
-      Math.max(baseAlpha, baseAlpha * (1 + 2 * varianceScaled))
+      Math.max(baseAlpha, baseAlpha * (1 + 2 * varianceScaled)),
     );
     if (state.adaptiveBaseEmaValue == null) {
       state.adaptiveBaseEmaValue = trainError;
@@ -287,7 +287,7 @@ function computePlateauMetric(
   trainError: number,
   plateauErrors: number[],
   cfg: PlateauSmoothingConfig,
-  state: PlateauSmoothingState
+  state: PlateauSmoothingState,
 ): number {
   if (cfg.window <= 1 && cfg.type !== 'ema') return trainError;
   if (cfg.type === 'median') {
@@ -373,7 +373,7 @@ function applyOptimizerStep(
   optimizer: any,
   currentRate: number,
   momentum: number,
-  internalNet: any
+  internalNet: any,
 ): number {
   let sumSq = 0;
   net.nodes.forEach((node) => {
@@ -425,7 +425,7 @@ function handleOverflow(internalNet: any) {
   internalNet._mixedPrecisionState.goodSteps = 0;
   internalNet._mixedPrecision.lossScale = Math.max(
     internalNet._mixedPrecisionState.minLossScale,
-    Math.floor(internalNet._mixedPrecision.lossScale / 2) || 1
+    Math.floor(internalNet._mixedPrecision.lossScale / 2) || 1,
   );
   internalNet._mixedPrecisionState.overflowCount =
     (internalNet._mixedPrecisionState.overflowCount || 0) + 1;
@@ -452,7 +452,7 @@ export function applyGradientClippingImpl(
     mode: 'norm' | 'percentile' | 'layerwiseNorm' | 'layerwisePercentile';
     maxNorm?: number;
     percentile?: number;
-  }
+  },
 ) {
   const internalNet = net as any;
   /**
@@ -530,13 +530,13 @@ export function applyGradientClippingImpl(
    */
   const computeAbsolutePercentileThreshold = (
     values: number[],
-    percentile: number
+    percentile: number,
   ) => {
     if (!values.length) return 0;
     const sortedByAbs = [...values].sort((a, b) => Math.abs(a) - Math.abs(b));
     const rank = Math.min(
       sortedByAbs.length - 1,
-      Math.max(0, Math.floor((percentile / 100) * sortedByAbs.length - 1))
+      Math.max(0, Math.floor((percentile / 100) * sortedByAbs.length - 1)),
     );
     return Math.abs(sortedByAbs[rank]);
   };
@@ -546,7 +546,7 @@ export function applyGradientClippingImpl(
    * the active group (when computing per-group scaling factor yet iterating entire model).
    */
   const applyScale = (
-    scaleFn: (currentValue: number, owningGroup: number[]) => number
+    scaleFn: (currentValue: number, owningGroup: number[]) => number,
   ) => {
     let groupIndex = 0; // advances only for layerwise modes
     net.nodes.forEach((node) => {
@@ -565,7 +565,7 @@ export function applyGradientClippingImpl(
       if (typeof (node as any).totalDeltaBias === 'number')
         (node as any).totalDeltaBias = scaleFn(
           (node as any).totalDeltaBias,
-          activeGroup
+          activeGroup,
         );
     });
   };
@@ -575,7 +575,7 @@ export function applyGradientClippingImpl(
     groups.forEach((groupValues) => {
       /** Current group L2 norm. */
       const groupL2Norm = Math.sqrt(
-        groupValues.reduce((sum, v) => sum + v * v, 0)
+        groupValues.reduce((sum, v) => sum + v * v, 0),
       );
       if (groupL2Norm > maxAllowedNorm && groupL2Norm > 0) {
         /** Scaling factor applied uniformly to bring norm to boundary. */
@@ -583,7 +583,7 @@ export function applyGradientClippingImpl(
         applyScale((currentValue, owningGroup) =>
           owningGroup === groupValues
             ? currentValue * normScaleFactor
-            : currentValue
+            : currentValue,
         );
       }
     });
@@ -593,14 +593,14 @@ export function applyGradientClippingImpl(
     groups.forEach((groupValues) => {
       const percentileThreshold = computeAbsolutePercentileThreshold(
         groupValues,
-        percentileSetting
+        percentileSetting,
       );
       if (percentileThreshold <= 0) return;
       applyScale((currentValue, owningGroup) =>
         owningGroup === groupValues &&
         Math.abs(currentValue) > percentileThreshold
           ? percentileThreshold * Math.sign(currentValue)
-          : currentValue
+          : currentValue,
       );
     });
   }
@@ -619,7 +619,7 @@ export function trainSetImpl(
   momentum: number,
   regularization: any,
   costFunction: (target: number[], output: number[]) => number,
-  optimizer?: any
+  optimizer?: any,
 ): number {
   const internalNet = net as any;
   /** Sum of raw (unsmoothed) cost values across valid samples. */
@@ -657,7 +657,7 @@ export function trainSetImpl(
     if (input.length !== net.input || target.length !== net.output) {
       if (config.warnings)
         console.warn(
-          `Data point ${sampleIndex} has incorrect dimensions (input: ${input.length}/${net.input}, output: ${target.length}/${net.output}), skipping.`
+          `Data point ${sampleIndex} has incorrect dimensions (input: ${input.length}/${net.input}, output: ${target.length}/${net.output}), skipping.`,
         );
       continue;
     }
@@ -672,7 +672,7 @@ export function trainSetImpl(
             momentum,
             false,
             regularization,
-            target[outIndex]
+            target[outIndex],
           );
         for (
           let reverseIndex = net.nodes.length - 1;
@@ -691,7 +691,7 @@ export function trainSetImpl(
             momentum,
             true,
             regularization,
-            target[outIndex]
+            target[outIndex],
           );
         for (
           let reverseIndex = net.nodes.length - 1;
@@ -710,8 +710,8 @@ export function trainSetImpl(
       if (config.warnings)
         console.warn(
           `Error processing data point ${sampleIndex} (input: ${JSON.stringify(
-            input
-          )}): ${e.message}. Skipping.`
+            input,
+          )}): ${e.message}. Skipping.`,
         );
     }
     // Mini-batch / end-of-dataset flush condition.
@@ -732,7 +732,7 @@ export function trainSetImpl(
           /** Detect overflow under mixed precision (NaN/Inf). */
           const overflowDetected = detectMixedPrecisionOverflow(
             net,
-            internalNet
+            internalNet,
           );
           if (overflowDetected) {
             // Discard invalid gradients & shrink loss scale.
@@ -757,7 +757,7 @@ export function trainSetImpl(
               optimizer,
               currentRate,
               momentum,
-              internalNet
+              internalNet,
             );
             // Dynamic loss scaling increase if conditions satisfied.
             if (internalNet._mixedPrecision.enabled)
@@ -780,7 +780,7 @@ export function trainSetImpl(
 export function trainImpl(
   net: Network,
   set: { input: number[]; output: number[] }[],
-  options: TrainingOptions
+  options: TrainingOptions,
 ): { error: number; iterations: number; time: number } {
   const internalNet = net as any;
   if (
@@ -790,7 +790,7 @@ export function trainImpl(
     set[0].output.length !== net.output
   ) {
     throw new Error(
-      'Dataset is invalid or dimensions do not match network input/output size!'
+      'Dataset is invalid or dimensions do not match network input/output size!',
     );
   }
   options = options || {};
@@ -801,7 +801,7 @@ export function trainImpl(
     if (config.warnings)
       console.warn('Missing `iterations` or `error` option.');
     throw new Error(
-      'Missing `iterations` or `error` option. Training requires a stopping condition.'
+      'Missing `iterations` or `error` option. Training requires a stopping condition.',
     );
   }
   if (config.warnings) {
@@ -811,7 +811,7 @@ export function trainImpl(
     }
     if (typeof options.iterations === 'undefined')
       console.warn(
-        'Missing `iterations` option. Training will run potentially indefinitely until `error` threshold is met.'
+        'Missing `iterations` option. Training will run potentially indefinitely until `error` threshold is met.',
       );
   }
   /** Target monitored (smoothed) error threshold for early termination. */
@@ -923,11 +923,11 @@ export function trainImpl(
       if (!optimizerConfig.baseType) optimizerConfig.baseType = 'adam';
       if (optimizerConfig.baseType === 'lookahead')
         throw new Error(
-          'Nested lookahead (baseType lookahead) is not supported'
+          'Nested lookahead (baseType lookahead) is not supported',
         );
       if (!allowedOptimizers.has(optimizerConfig.baseType))
         throw new Error(
-          `Unknown baseType for lookahead: ${optimizerConfig.baseType}`
+          `Unknown baseType for lookahead: ${optimizerConfig.baseType}`,
         );
       optimizerConfig.la_k = optimizerConfig.la_k || 5;
       optimizerConfig.la_alpha = optimizerConfig.la_alpha ?? 0.5;
@@ -953,7 +953,7 @@ export function trainImpl(
   /** Separate window for plateau detection (defaults to primary window). */
   const plateauWindow = Math.max(
     1,
-    options.plateauMovingAverageWindow || movingAverageWindow
+    options.plateauMovingAverageWindow || movingAverageWindow,
   );
   /** Smoothing algorithm used specifically for plateau (scheduler / early-stop) metrics. */
   const plateauType = options.plateauMovingAverageType || movingAverageType;
@@ -1068,7 +1068,7 @@ export function trainImpl(
       momentum,
       {},
       cost as any,
-      optimizerConfig
+      optimizerConfig,
     );
     // Record that this iteration was fully executed (used if we early break afterwards).
     performedIterations = iter;
@@ -1107,7 +1107,7 @@ export function trainImpl(
         const varScaled = variance / Math.max(mean * mean, 1e-8);
         const adaptAlpha = Math.min(
           0.95,
-          Math.max(baseAlpha, baseAlpha * (1 + 2 * varScaled))
+          Math.max(baseAlpha, baseAlpha * (1 + 2 * varScaled)),
         );
         if (adaptiveBaseEmaValue == null) {
           adaptiveBaseEmaValue = trainError;
@@ -1129,7 +1129,7 @@ export function trainImpl(
         let gaussianWeightedAccumulator = 0;
         for (let gi = 0; gi < windowLength; gi++) {
           const weight = Math.exp(
-            -0.5 * Math.pow((gi - (windowLength - 1)) / sigma, 2)
+            -0.5 * Math.pow((gi - (windowLength - 1)) / sigma, 2),
           );
           gaussianWeightSum += weight;
           gaussianWeightedAccumulator += weight * gaussianWindow[gi];
@@ -1139,15 +1139,15 @@ export function trainImpl(
         // Trim symmetrical tails to damp outliers before averaging.
         const tailTrimRatio = Math.min(
           0.49,
-          Math.max(0, options.trimmedRatio || 0.1)
+          Math.max(0, options.trimmedRatio || 0.1),
         );
         const sorted = [...recentArr].sort((a, b) => a - b);
         const elementsToDropEachSide = Math.floor(
-          sorted.length * tailTrimRatio
+          sorted.length * tailTrimRatio,
         );
         const trimmedSegment = sorted.slice(
           elementsToDropEachSide,
-          sorted.length - elementsToDropEachSide
+          sorted.length - elementsToDropEachSide,
         );
         monitored =
           trimmedSegment.reduce((a, b) => a + b, 0) /

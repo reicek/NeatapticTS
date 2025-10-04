@@ -4,18 +4,23 @@ import type { TelemetryEntry } from '../../src/neat/neat.types';
 
 describe('Lineage inbreeding & depth metrics', () => {
   test('inbreeding count accumulates with single-survivor self-mating', async () => {
-    const neat = new Neat(2, 1, (network: Network) => {
-      void network;
-      return Math.random();
-    }, {
-      popsize: 10,
-      speciation: true,
-      compatibilityThreshold: 1e9, // force single species
-      survivalThreshold: 0, // only 1 survivor -> all offspring self-mate
-      lineageTracking: true,
-      telemetry: { enabled: true, logEvery: 1 },
-      mutation: [], // keep structures stable
-    });
+    const neat = new Neat(
+      2,
+      1,
+      (network: Network) => {
+        void network;
+        return Math.random();
+      },
+      {
+        popsize: 10,
+        speciation: true,
+        compatibilityThreshold: 1e9, // force single species
+        survivalThreshold: 0, // only 1 survivor -> all offspring self-mate
+        lineageTracking: true,
+        telemetry: { enabled: true, logEvery: 1 },
+        mutation: [], // keep structures stable
+      },
+    );
     // Need two generations: second telemetry reflects first reproduction's inbreeding
     await neat.evolve();
     await neat.evolve();
@@ -28,19 +33,24 @@ describe('Lineage inbreeding & depth metrics', () => {
   });
 
   test('lineage mean depth grows over generations', async () => {
-    const neat = new Neat(2, 1, (network: Network) => {
-      void network;
-      return Math.random();
-    }, {
-      popsize: 12,
-      speciation: true,
-      compatibilityThreshold: 1e9,
-      survivalThreshold: 0,
-      lineageTracking: true,
-      diversityMetrics: { enabled: true },
-      telemetry: { enabled: true, logEvery: 1 },
-      mutation: [],
-    });
+    const neat = new Neat(
+      2,
+      1,
+      (network: Network) => {
+        void network;
+        return Math.random();
+      },
+      {
+        popsize: 12,
+        speciation: true,
+        compatibilityThreshold: 1e9,
+        survivalThreshold: 0,
+        lineageTracking: true,
+        diversityMetrics: { enabled: true },
+        telemetry: { enabled: true, logEvery: 1 },
+        mutation: [],
+      },
+    );
     for (let generationIndex = 0; generationIndex < 4; generationIndex += 1) {
       await neat.evolve();
     }

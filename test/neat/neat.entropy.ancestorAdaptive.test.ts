@@ -8,7 +8,11 @@ type DiversityStats = {
 
 type TelemetryEntry = ReturnType<Neat['getTelemetry']>[number];
 
-const entropyResults: { initial?: number; shrunk?: number; grown?: number } = {};
+const entropyResults: {
+  initial?: number;
+  shrunk?: number;
+  grown?: number;
+} = {};
 const ancestorEpsilonResults: { increased?: number; decreased?: number } = {};
 const rngExportInfo: { headerCols?: string[]; rngVal?: string } = {};
 
@@ -39,14 +43,14 @@ describe('Adaptive entropy sharing & ancestor uniqueness objective adjustments',
       await neat.evolve();
       initial = neat.options.sharingSigma!;
       // Low variance -> shrink
-  const lowVarianceStats: DiversityStats = { varEntropy: 0.01 };
-  Reflect.set(neat, '_diversityStats', lowVarianceStats);
+      const lowVarianceStats: DiversityStats = { varEntropy: 0.01 };
+      Reflect.set(neat, '_diversityStats', lowVarianceStats);
       await neat.evaluate();
       await neat.evolve();
       shrunk = neat.options.sharingSigma!;
       // High variance -> grow
-  const highVarianceStats: DiversityStats = { varEntropy: 1.0 };
-  Reflect.set(neat, '_diversityStats', highVarianceStats);
+      const highVarianceStats: DiversityStats = { varEntropy: 1.0 };
+      Reflect.set(neat, '_diversityStats', highVarianceStats);
       await neat.evaluate();
       await neat.evolve();
       grown = neat.options.sharingSigma!;
@@ -90,7 +94,9 @@ describe('Adaptive entropy sharing & ancestor uniqueness objective adjustments',
       await neat.evolve();
       // Force low uniqueness then evolve to trigger increase
       const telemetryEntriesLow = neat.getTelemetry();
-      const lastEntryLow = telemetryEntriesLow.at(-1) as TelemetryEntry | undefined;
+      const lastEntryLow = telemetryEntriesLow.at(-1) as
+        | TelemetryEntry
+        | undefined;
       if (lastEntryLow?.lineage) {
         lastEntryLow.lineage.ancestorUniq = 0.1;
       }
@@ -99,7 +105,9 @@ describe('Adaptive entropy sharing & ancestor uniqueness objective adjustments',
       increased = neat.options.multiObjective!.dominanceEpsilon!;
       // Force high uniqueness then evolve to trigger decrease
       const telemetryEntriesHigh = neat.getTelemetry();
-      const lastEntryHigh = telemetryEntriesHigh.at(-1) as TelemetryEntry | undefined;
+      const lastEntryHigh = telemetryEntriesHigh.at(-1) as
+        | TelemetryEntry
+        | undefined;
       if (lastEntryHigh?.lineage) {
         lastEntryHigh.lineage.ancestorUniq = 0.95;
       }

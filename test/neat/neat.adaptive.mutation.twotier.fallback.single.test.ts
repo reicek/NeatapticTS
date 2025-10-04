@@ -22,7 +22,9 @@ describe('Adaptive Mutation twoTier fallback (single genome)', () => {
     test('mutRate differs from baseline after fallback', async () => {
       await neat.evaluate();
       neat.mutate();
-      const { applyAdaptiveMutation } = await import('../../src/neat/neat.adaptive');
+      const { applyAdaptiveMutation } = await import(
+        '../../src/neat/neat.adaptive'
+      );
       applyAdaptiveMutation.call(neat as unknown as Record<string, unknown>);
       type GenomeLike = { _mutRate: number };
       const rate = (neat.population as unknown as GenomeLike[])[0]._mutRate;

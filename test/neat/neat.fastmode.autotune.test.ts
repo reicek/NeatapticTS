@@ -3,7 +3,7 @@ import Network from '../../src/architecture/network';
 
 describe('fastMode auto-tuning', () => {
   test('auto lowers sampling defaults when unspecified', async () => {
-  const neat = new Neat(4, 2, () => Math.random(), {
+    const neat = new Neat(4, 2, () => Math.random(), {
       popsize: 20,
       seed: 123,
       fastMode: true,
@@ -25,7 +25,7 @@ describe('fastMode auto-tuning', () => {
   });
 
   test('does not override user supplied sampling values', async () => {
-  const neat = new Neat(4, 2, () => Math.random(), {
+    const neat = new Neat(4, 2, () => Math.random(), {
       popsize: 20,
       seed: 321,
       fastMode: true,

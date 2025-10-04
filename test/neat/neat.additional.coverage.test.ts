@@ -43,7 +43,7 @@ describe('ensureNoDeadEnds', () => {
 
 describe('Dynamic compatibility threshold controller', () => {
   test('clamps to minThreshold when target species far exceeds observed', async () => {
-  const neat = new Neat(3, 1, () => 1, {
+    const neat = new Neat(3, 1, () => 1, {
       popsize: 10,
       seed: 11,
       speciation: true,
@@ -125,7 +125,10 @@ describe('State export/import', () => {
     await neat.evaluate();
     await neat.evolve(); // advance generation
     const bundle = neat.exportState();
-    const restored = Neat.importState(bundle, (n: Network) => n.connections.length);
+    const restored = Neat.importState(
+      bundle,
+      (n: Network) => n.connections.length,
+    );
     expect(restored.generation).toBe(neat.generation);
   });
   test('toJSON/fromJSON preserves nextGlobalInnovation', async () => {

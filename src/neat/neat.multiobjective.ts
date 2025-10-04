@@ -73,7 +73,7 @@ export function fastNonDominated(this: any, pop: Network[]): Network[][] {
         // If an objective accessor fails, treat the value as neutral (0).
         return 0;
       }
-    })
+    }),
   );
 
   /**
@@ -210,15 +210,15 @@ export function fastNonDominated(this: any, pop: Network[]): Network[][] {
 
       // Boundary solutions get infinite crowding so they are always preferred.
       (sortedByCurrentObjective[0] as any)._moCrowd = Infinity;
-      (sortedByCurrentObjective[
-        sortedByCurrentObjective.length - 1
-      ] as any)._moCrowd = Infinity;
+      (
+        sortedByCurrentObjective[sortedByCurrentObjective.length - 1] as any
+      )._moCrowd = Infinity;
 
       const minVal = objectiveDescriptors[objectiveIndex].accessor(
-        sortedByCurrentObjective[0]
+        sortedByCurrentObjective[0],
       );
       const maxVal = objectiveDescriptors[objectiveIndex].accessor(
-        sortedByCurrentObjective[sortedByCurrentObjective.length - 1]
+        sortedByCurrentObjective[sortedByCurrentObjective.length - 1],
       );
       // Avoid division by zero when all values are equal.
       const valueRange = maxVal - minVal || 1;
@@ -230,10 +230,10 @@ export function fastNonDominated(this: any, pop: Network[]): Network[][] {
         sortedIndex++
       ) {
         const prevVal = objectiveDescriptors[objectiveIndex].accessor(
-          sortedByCurrentObjective[sortedIndex - 1]
+          sortedByCurrentObjective[sortedIndex - 1],
         );
         const nextVal = objectiveDescriptors[objectiveIndex].accessor(
-          sortedByCurrentObjective[sortedIndex + 1]
+          sortedByCurrentObjective[sortedIndex + 1],
         );
         (sortedByCurrentObjective[sortedIndex] as any)._moCrowd +=
           (nextVal - prevVal) / valueRange;
@@ -250,7 +250,7 @@ export function fastNonDominated(this: any, pop: Network[]): Network[][] {
       generation: this.generation,
       fronts: paretoFronts.slice(0, 3).map((front) =>
         // map each front (array of Network) to an array of genome IDs
-        front.map((genome) => (genome as any)._id)
+        front.map((genome) => (genome as any)._id),
       ),
     });
     if (this._paretoArchive.length > 100) this._paretoArchive.shift();

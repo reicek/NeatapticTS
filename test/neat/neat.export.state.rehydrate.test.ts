@@ -12,7 +12,7 @@ describe('NEAT Export / Import State', () => {
     const fitness = (n: Network) => n.nodes.length;
     test('throws on invalid state bundle', () => {
       // Arrange: capture callable that will invoke static import with bad input
-  const act = () => Neat.importState(undefined, fitness);
+      const act = () => Neat.importState(undefined, fitness);
       // Act & Assert: expect error thrown (single expectation)
       expect(act).toThrow();
     });
@@ -29,9 +29,9 @@ describe('NEAT Export / Import State', () => {
     });
     test('rehydrates identical population size', () => {
       // Arrange: export full state bundle
-  const bundle: NeatStateJSON = neat.exportState();
+      const bundle: NeatStateJSON = neat.exportState();
       // Act: rehydrate via static helper
-  const restored = Neat.importState(bundle, fitness);
+      const restored = Neat.importState(bundle, fitness);
       // Assert: population length preserved across round-trip
       expect(restored.population.length).toBe(neat.population.length);
     });

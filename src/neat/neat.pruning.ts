@@ -63,8 +63,8 @@ export function applyEvolutionPruning(this: any) {
       Math.max(
         0,
         (this.generation - evolutionPruningOpts.startGeneration) /
-          rampGenerations
-      )
+          rampGenerations,
+      ),
     );
     rampFraction = progressThroughRamp;
   }
@@ -82,7 +82,7 @@ export function applyEvolutionPruning(this: any) {
       // Step: call the genome's pruning routine. Method defaults to 'magnitude'.
       genome.pruneToSparsity(
         targetSparsityNow,
-        evolutionPruningOpts.method || 'magnitude'
+        evolutionPruningOpts.method || 'magnitude',
       );
     }
   }
@@ -134,7 +134,7 @@ export function applyAdaptivePruning(this: any) {
   const meanConnectionCount =
     this.population.reduce(
       (acc: number, g: any) => acc + g.connections.length,
-      0
+      0,
     ) / (this.population.length || 1);
 
   // Select the current observed metric value.
@@ -178,8 +178,8 @@ export function applyAdaptivePruning(this: any) {
       Math.min(
         desiredSparsity,
         this._adaptivePruneLevel +
-          adjustRate * (normalizedDifference > 0 ? 1 : -1)
-      )
+          adjustRate * (normalizedDifference > 0 ? 1 : -1),
+      ),
     );
 
     // Propagate new prune level to each genome using magnitude pruning.

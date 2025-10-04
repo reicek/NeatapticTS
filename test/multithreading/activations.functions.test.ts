@@ -45,9 +45,9 @@ describe('Multi activations coverage', () => {
     const input = [2];
     const A = [0];
     const S = [0];
-  const F: ActivationFn[] = Multi.activations; // includes identity at index 2
+    const F: ActivationFn[] = Multi.activations; // includes identity at index 2
 
-  const out = Multi.activateSerializedNetwork(input, A, S, data, F);
+    const out = Multi.activateSerializedNetwork(input, A, S, data, F);
     expect(out.length).toBe(1);
     // identity( bias + 0.5*input ) = 1.0
     expect(out[0]).toBeCloseTo(1.0, 10);

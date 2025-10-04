@@ -49,7 +49,7 @@ export class BrowserTerminalUtility {
     evolveFn: () => Promise<IEvolutionFunctionResult>,
     minProgressToPass: number = BrowserTerminalUtility
       .#DefaultMinProgressToPass,
-    maxAttemptCount: number = BrowserTerminalUtility.#DefaultMaxAttemptCount
+    maxAttemptCount: number = BrowserTerminalUtility.#DefaultMaxAttemptCount,
   ): Promise<{
     finalResult: IEvolutionStepResult;
     attemptCount: number;

@@ -31,7 +31,7 @@ import { MazeUtils } from '../mazeUtils';
 export const sampleArray = <T>(
   state: EngineState,
   source: T[],
-  sampleCount: number
+  sampleCount: number,
 ): T[] => {
   // Step 1: Fast validation and normalisation.
   if (!Array.isArray(source) || sampleCount <= 0) return [];
@@ -81,7 +81,7 @@ export const sampleArray = <T>(
 export const sampleIntoScratch = <T>(
   state: EngineState,
   source: T[],
-  sampleCount: number
+  sampleCount: number,
 ): number => {
   // Step 1: Validate inputs early.
   if (!Array.isArray(source) || sampleCount <= 0) return 0;
@@ -119,23 +119,18 @@ export const sampleIntoScratch = <T>(
   const blockLimit = writeCount & ~3;
   let writeIndex = 0;
   while (writeIndex < blockLimit) {
-    pooledBuffer[writeIndex++] = source[
-      (drawFastRandom(state, rngParameters) * sourceLength) | 0
-    ];
-    pooledBuffer[writeIndex++] = source[
-      (drawFastRandom(state, rngParameters) * sourceLength) | 0
-    ];
-    pooledBuffer[writeIndex++] = source[
-      (drawFastRandom(state, rngParameters) * sourceLength) | 0
-    ];
-    pooledBuffer[writeIndex++] = source[
-      (drawFastRandom(state, rngParameters) * sourceLength) | 0
-    ];
+    pooledBuffer[writeIndex++] =
+      source[(drawFastRandom(state, rngParameters) * sourceLength) | 0];
+    pooledBuffer[writeIndex++] =
+      source[(drawFastRandom(state, rngParameters) * sourceLength) | 0];
+    pooledBuffer[writeIndex++] =
+      source[(drawFastRandom(state, rngParameters) * sourceLength) | 0];
+    pooledBuffer[writeIndex++] =
+      source[(drawFastRandom(state, rngParameters) * sourceLength) | 0];
   }
   while (writeIndex < writeCount) {
-    pooledBuffer[writeIndex++] = source[
-      (drawFastRandom(state, rngParameters) * sourceLength) | 0
-    ];
+    pooledBuffer[writeIndex++] =
+      source[(drawFastRandom(state, rngParameters) * sourceLength) | 0];
   }
 
   return writeCount;
@@ -163,7 +158,7 @@ export const sampleSegmentIntoScratch = <T>(
   state: EngineState,
   source: T[],
   segmentStart: number,
-  sampleCount: number
+  sampleCount: number,
 ): number => {
   if (!Array.isArray(source) || sampleCount <= 0) return 0;
 
@@ -202,28 +197,33 @@ export const sampleSegmentIntoScratch = <T>(
   const blockLimit = writeCount & ~3;
   let writeIndex = 0;
   while (writeIndex < blockLimit) {
-    pooledBuffer[writeIndex++] = source[
-      clampedStart +
-        ((drawFastRandom(state, rngParameters) * segmentSize) | 0)
-    ];
-    pooledBuffer[writeIndex++] = source[
-      clampedStart +
-        ((drawFastRandom(state, rngParameters) * segmentSize) | 0)
-    ];
-    pooledBuffer[writeIndex++] = source[
-      clampedStart +
-        ((drawFastRandom(state, rngParameters) * segmentSize) | 0)
-    ];
-    pooledBuffer[writeIndex++] = source[
-      clampedStart +
-        ((drawFastRandom(state, rngParameters) * segmentSize) | 0)
-    ];
+    pooledBuffer[writeIndex++] =
+      source[
+        clampedStart +
+          ((drawFastRandom(state, rngParameters) * segmentSize) | 0)
+      ];
+    pooledBuffer[writeIndex++] =
+      source[
+        clampedStart +
+          ((drawFastRandom(state, rngParameters) * segmentSize) | 0)
+      ];
+    pooledBuffer[writeIndex++] =
+      source[
+        clampedStart +
+          ((drawFastRandom(state, rngParameters) * segmentSize) | 0)
+      ];
+    pooledBuffer[writeIndex++] =
+      source[
+        clampedStart +
+          ((drawFastRandom(state, rngParameters) * segmentSize) | 0)
+      ];
   }
   while (writeIndex < writeCount) {
-    pooledBuffer[writeIndex++] = source[
-      clampedStart +
-        ((drawFastRandom(state, rngParameters) * segmentSize) | 0)
-    ];
+    pooledBuffer[writeIndex++] =
+      source[
+        clampedStart +
+          ((drawFastRandom(state, rngParameters) * segmentSize) | 0)
+      ];
   }
 
   return writeCount;
@@ -248,7 +248,7 @@ export const sampleSegmentIntoScratch = <T>(
 export const getTail = <T>(
   state: EngineState,
   source: T[] | undefined,
-  count: number
+  count: number,
 ): T[] => {
   if (
     !Array.isArray(source) ||
@@ -259,7 +259,8 @@ export const getTail = <T>(
     return [];
 
   const normalisedCount = Math.floor(count);
-  const takeCount = normalisedCount >= source.length ? source.length : normalisedCount;
+  const takeCount =
+    normalisedCount >= source.length ? source.length : normalisedCount;
   if (takeCount === 0) return [];
 
   const scratch = state.scratch;
@@ -292,5 +293,5 @@ export const getTail = <T>(
 export const pushHistory = <T>(
   buffer: T[] | undefined,
   value: T,
-  maxLength: number
+  maxLength: number,
 ): T[] => MazeUtils.pushHistory(buffer, value, maxLength);

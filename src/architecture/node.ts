@@ -114,7 +114,7 @@ export default class Node {
   constructor(
     type: string = 'hidden',
     customActivation?: (x: number, derivate?: boolean) => number,
-    rng: () => number = Math.random
+    rng: () => number = Math.random,
   ) {
     // Initialize bias: 0 for input nodes, small random value for others (deterministic if rng seeded)
     this.bias = type === 'input' ? 0 : rng() * 0.2 - 0.1;
@@ -300,7 +300,7 @@ export default class Node {
       | number
       | { type: 'L1' | 'L2'; lambda: number }
       | ((weight: number) => number) = 0,
-    target?: number
+    target?: number,
   ): void {
     // Nesterov Accelerated Gradient (NAG): Apply momentum update *before* calculating the gradient.
     // This "lookahead" step estimates the future position and calculates the gradient there.
@@ -343,7 +343,7 @@ export default class Node {
         // Calculate the influence this node's activation had on the gated connection's state.
         let influence = node.connections.self.reduce(
           (sum, selfConn) => sum + (selfConn.gater === this ? node.old : 0),
-          0
+          0,
         ); // Influence via self-connection gating.
         influence += connection.weight * connection.from.activation; // Influence via regular connection gating.
 
@@ -437,7 +437,7 @@ export default class Node {
         if (!Number.isFinite(connection.weight)) {
           console.warn(
             `Weight update produced invalid value: ${connection.weight}. Resetting to 0.`,
-            { node: this.index, connection }
+            { node: this.index, connection },
           );
           connection.weight = 0;
         } else if (Math.abs(connection.weight) > 1e6) {
@@ -490,7 +490,7 @@ export default class Node {
       if (!Number.isFinite(connection.totalDeltaWeight)) {
         console.warn(
           'self totalDeltaWeight became NaN/Infinity, resetting to 0',
-          { node: this.index, connection }
+          { node: this.index, connection },
         );
         connection.totalDeltaWeight = 0;
       }
@@ -515,7 +515,7 @@ export default class Node {
         if (!Number.isFinite(connection.weight)) {
           console.warn(
             'self weight update produced invalid value, resetting to 0',
-            { node: this.index, connection }
+            { node: this.index, connection },
           );
           connection.weight = 0;
         } else if (Math.abs(connection.weight) > 1e6) {
@@ -612,7 +612,7 @@ export default class Node {
       } else {
         // Fallback to identity and log a warning
         console.warn(
-          `fromJSON: Unknown or invalid squash function '${json.squash}' for node. Using identity.`
+          `fromJSON: Unknown or invalid squash function '${json.squash}' for node. Using identity.`,
         );
         node.squash = methods.Activation.identity;
       }
@@ -657,7 +657,7 @@ export default class Node {
         // Mutate the activation function.
         if (!method.allowed || method.allowed.length === 0) {
           console.warn(
-            'MOD_ACTIVATION mutation called without allowed functions specified.'
+            'MOD_ACTIVATION mutation called without allowed functions specified.',
           );
           return;
         }
@@ -755,7 +755,7 @@ export default class Node {
     } else {
       // Handle invalid target type.
       throw new Error(
-        'Invalid target type for connection. Must be a Node or a group { nodes: Node[] }.'
+        'Invalid target type for connection. Must be a Node or a group { nodes: Node[] }.',
       );
     }
     return connections;
@@ -780,7 +780,7 @@ export default class Node {
       if (conn.to === target) {
         // Remove the connection from the target's incoming list.
         target.connections.in = target.connections.in.filter(
-          (inConn) => inConn !== conn // Filter by reference.
+          (inConn) => inConn !== conn, // Filter by reference.
         );
         // If the connection was gated, ungate it properly.
         if (conn.gater) {
@@ -823,7 +823,7 @@ export default class Node {
       // Check if the connection is already gated by another node.
       if (connection.gater !== null) {
         console.warn(
-          'Connection is already gated by another node. Ungate first.'
+          'Connection is already gated by another node. Ungate first.',
         );
         // Optionally, automatically ungate from the previous gater:
         // connection.gater.ungate(connection);
@@ -1051,7 +1051,7 @@ export default class Node {
           if (effectiveType === 'amsgrad') {
             conn.maxSecondMoment = Math.max(
               conn.maxSecondMoment ?? 0,
-              conn.secondMoment ?? 0
+              conn.secondMoment ?? 0,
             );
           }
           const vEff =
@@ -1071,7 +1071,7 @@ export default class Node {
           conn.firstMoment = (conn.firstMoment ?? 0) * beta1 + (1 - beta1) * g;
           conn.infinityNorm = Math.max(
             (conn.infinityNorm ?? 0) * beta2,
-            Math.abs(g)
+            Math.abs(g),
           );
           const mHat = conn.firstMoment! / (1 - Math.pow(beta1, t));
           const stepVal = (mHat / (conn.infinityNorm || 1e-12)) * lrScale;
@@ -1089,7 +1089,7 @@ export default class Node {
             mHat * beta1 + ((1 - beta1) * g) / (1 - Math.pow(beta1, t));
           this._safeUpdateWeight(
             conn,
-            (mNesterov / (Math.sqrt(vHat) + eps)) * lrScale
+            (mNesterov / (Math.sqrt(vHat) + eps)) * lrScale,
           );
           break;
         }
@@ -1106,11 +1106,11 @@ export default class Node {
           if (rhoT > 4) {
             const rt = Math.sqrt(
               ((rhoT - 4) * (rhoT - 2) * rhoInf) /
-                ((rhoInf - 4) * (rhoInf - 2) * rhoT)
+                ((rhoInf - 4) * (rhoInf - 2) * rhoT),
             );
             this._safeUpdateWeight(
               conn,
-              ((rt * mHat) / (Math.sqrt(vHat) + eps)) * lrScale
+              ((rt * mHat) / (Math.sqrt(vHat) + eps)) * lrScale,
             );
           } else {
             this._safeUpdateWeight(conn, mHat * lrScale);
@@ -1123,7 +1123,7 @@ export default class Node {
           conn.secondMomentum =
             (conn.secondMomentum ?? 0) * beta2 + (1 - beta2) * g;
           const update = Math.sign(
-            (conn.firstMoment || 0) + (conn.secondMomentum || 0)
+            (conn.firstMoment || 0) + (conn.secondMomentum || 0),
           );
           this._safeUpdateWeight(conn, -update * lrScale);
           break;
@@ -1138,7 +1138,7 @@ export default class Node {
           const vHat = conn.secondMoment! / (1 - Math.pow(beta2, t));
           this._safeUpdateWeight(
             conn,
-            (mHat / (Math.sqrt(vHat) + eps + 1e-12)) * lrScale
+            (mHat / (Math.sqrt(vHat) + eps + 1e-12)) * lrScale,
           );
           break;
         }
@@ -1190,7 +1190,7 @@ export default class Node {
         if (effectiveType === 'amsgrad') {
           (this as any).opt_vhatB = Math.max(
             (this as any).opt_vhatB ?? 0,
-            (this as any).opt_vB ?? 0
+            (this as any).opt_vB ?? 0,
           );
         }
         const vEffB =
@@ -1203,7 +1203,7 @@ export default class Node {
         if (effectiveType === 'adamax') {
           (this as any).opt_uB = Math.max(
             ((this as any).opt_uB ?? 0) * beta2,
-            Math.abs(gB)
+            Math.abs(gB),
           );
           stepB = (mHatB / ((this as any).opt_uB || 1e-12)) * lrScale;
         } else if (effectiveType === 'nadam') {
@@ -1217,7 +1217,7 @@ export default class Node {
           if (rhoT > 4) {
             const rt = Math.sqrt(
               ((rhoT - 4) * (rhoT - 2) * rhoInf) /
-                ((rhoInf - 4) * (rhoInf - 2) * rhoT)
+                ((rhoInf - 4) * (rhoInf - 2) * rhoT),
             );
             stepB = ((rt * mHatB) / (Math.sqrt(vHatB) + eps)) * lrScale;
           } else {
@@ -1225,7 +1225,7 @@ export default class Node {
           }
         } else if (effectiveType === 'lion') {
           const updateB = Math.sign(
-            (this as any).opt_mB + (this as any).opt_mB2
+            (this as any).opt_mB + (this as any).opt_mB2,
           );
           stepB = -updateB * lrScale;
         } else if (effectiveType === 'adabelief') {

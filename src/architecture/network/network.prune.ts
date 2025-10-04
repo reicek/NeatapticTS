@@ -29,7 +29,7 @@ import Connection from '../connection';
 /** Rank connections ascending by removal priority according to a method. */
 function rankConnections(
   conns: Connection[],
-  method: 'magnitude' | 'snip'
+  method: 'magnitude' | 'snip',
 ): Connection[] {
   /** Shallow copy of connections to be sorted by removal priority (ascending). */
   const ranked = [...conns];
@@ -61,7 +61,7 @@ function rankConnections(
 function regrowConnections(
   network: Network,
   desiredRemaining: number,
-  maxAttempts: number
+  maxAttempts: number,
 ) {
   /** Internal network reference for private fields (_rand, _enforceAcyclic). */
   const netAny = network as any;
@@ -133,7 +133,7 @@ export function maybePrune(this: Network, iteration: number): void {
   /** Desired remaining connection count based on baseline & current sparsity. */
   const desiredRemainingConnections = Math.max(
     1,
-    Math.floor(initialConnectionBaseline * (1 - targetSparsityNow))
+    Math.floor(initialConnectionBaseline * (1 - targetSparsityNow)),
   );
   /** Excess connections present right now that should be removed to hit schedule target. */
   const excessConnectionCount =
@@ -146,7 +146,7 @@ export function maybePrune(this: Network, iteration: number): void {
   /** Ranked connections ascending by removal priority. */
   const rankedConnections = rankConnections(
     this.connections,
-    cfg.method || 'magnitude'
+    cfg.method || 'magnitude',
   );
   /** Subset of connections to prune this iteration. */
   const connectionsToPrune = rankedConnections.slice(0, excessConnectionCount);
@@ -156,12 +156,12 @@ export function maybePrune(this: Network, iteration: number): void {
   if (cfg.regrowFraction && cfg.regrowFraction > 0) {
     /** Intended number of new connections to attempt to regrow (before attempt limit multiplier). */
     const intendedRegrowCount = Math.floor(
-      connectionsToPrune.length * cfg.regrowFraction
+      connectionsToPrune.length * cfg.regrowFraction,
     );
     regrowConnections(
       this,
       desiredRemainingConnections,
-      intendedRegrowCount * 10
+      intendedRegrowCount * 10,
     );
   }
 
@@ -177,7 +177,7 @@ export function maybePrune(this: Network, iteration: number): void {
 export function pruneToSparsity(
   this: Network,
   targetSparsity: number,
-  method: 'magnitude' | 'snip' = 'magnitude'
+  method: 'magnitude' | 'snip' = 'magnitude',
 ): void {
   if (targetSparsity <= 0) return; // trivial
   if (targetSparsity >= 1) targetSparsity = 0.999; // safety clamp
@@ -190,7 +190,7 @@ export function pruneToSparsity(
   /** Desired number of connections to retain. */
   const desiredRemainingConnections = Math.max(
     1,
-    Math.floor(evolutionaryBaseline * (1 - targetSparsity))
+    Math.floor(evolutionaryBaseline * (1 - targetSparsity)),
   );
   /** Excess relative to desired number. */
   const excessConnectionCount =

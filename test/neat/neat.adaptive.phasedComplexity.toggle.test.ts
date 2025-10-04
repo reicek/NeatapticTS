@@ -21,7 +21,7 @@ describe('Phased Complexity Toggle Boundary', () => {
         applyPhasedComplexity.call(neat);
       }
       // Act: final phase after simulation
-  const phase = Reflect.get(neat, '_phase') as string | undefined;
+      const phase = Reflect.get(neat, '_phase') as string | undefined;
       // Assert: phase string exists (flipped at least once)
       expect(typeof phase).toBe('string');
     });

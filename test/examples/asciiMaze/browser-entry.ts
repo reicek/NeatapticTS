@@ -98,7 +98,7 @@ export interface AsciiMazeRunHandle {
   done: Promise<void>;
   /** Subscribe to per-generation telemetry events. Returns an unsubscribe function. */
   onTelemetry: (
-    listener: (telemetry: Record<string, unknown>) => void
+    listener: (telemetry: Record<string, unknown>) => void,
   ) => () => void;
   /** Return the last telemetry snapshot produced by the dashboard, if any. */
   getTelemetry: () => unknown;
@@ -122,7 +122,7 @@ export interface AsciiMazeRunHandle {
  */
 export async function start(
   container: string | HTMLElement = DEFAULT_CONTAINER_ID,
-  opts: { signal?: AbortSignal } = {}
+  opts: { signal?: AbortSignal } = {},
 ): Promise<AsciiMazeRunHandle> {
   // Step 0: Resolve host elements & loggers
   const hostElement =
@@ -139,7 +139,7 @@ export async function start(
 
   // clearer will clear only the live area; archive remains
   const clearer = BrowserTerminalUtility.createTerminalClearer(
-    liveElement ?? undefined
+    liveElement ?? undefined,
   );
   const liveLogger = createBrowserLogger(liveElement ?? undefined);
   const archiveLogger = createBrowserLogger(archiveElement ?? undefined);
@@ -148,7 +148,7 @@ export async function start(
   const dashboard = new DashboardManager(
     clearer,
     liveLogger as any,
-    archiveLogger as any
+    archiveLogger as any,
   );
 
   // Telemetry hub mediating dashboard -> external listeners
@@ -217,7 +217,7 @@ export async function start(
    * @returns A signal that will abort when either the internal controller or the external signal aborts.
    */
   const composeAbortSignal = (
-    externalSignalParam?: AbortSignal
+    externalSignalParam?: AbortSignal,
   ): AbortSignal => {
     // Step 0: fast-path when no external signal supplied
     if (!externalSignalParam) return internalController.signal;
@@ -263,7 +263,7 @@ export async function start(
                 /* ignore */
               }
             },
-            { once: true }
+            { once: true },
           );
         } catch {
           // ignore event wiring errors (some polyfills / minimal DOMs may throw)
@@ -344,7 +344,7 @@ export async function start(
           /* ignore */
         }
       },
-      { once: true }
+      { once: true },
     );
   } catch {
     /* ignore listener wiring errors */
@@ -413,7 +413,7 @@ export async function start(
         const bestNet = (result as any)?.bestNetwork as INetwork | undefined;
         if (bestNet) {
           const refined = NetworkRefinement.refineWinnerWithBackprop(
-            bestNet as any
+            bestNet as any,
           );
           previousBestNetwork = (refined as any) || bestNet;
         }
@@ -428,7 +428,7 @@ export async function start(
           'solved?',
           solved,
           'progress',
-          progress
+          progress,
         );
       } catch {
         /* ignore */
@@ -437,14 +437,14 @@ export async function start(
       console.error(
         'Error while running procedural maze',
         currentDimension,
-        error
+        error,
       );
     }
 
     if (!cancelled && solved && currentDimension < MAX_MAZE_DIMENSION) {
       currentDimension = Math.min(
         currentDimension + MAZE_DIMENSION_INCREMENT,
-        MAX_MAZE_DIMENSION
+        MAX_MAZE_DIMENSION,
       );
       scheduleNextMaze(() => runEvolution());
     } else {
@@ -489,7 +489,7 @@ if (typeof window !== 'undefined' && (window as any).document) {
   if (!globalWindow.asciiMazeStart) {
     globalWindow.asciiMazeStart = (containerElement?: any) => {
       console.warn(
-        '[asciiMaze] window.asciiMazeStart is deprecated; use import { start } ... or window.asciiMaze.start'
+        '[asciiMaze] window.asciiMazeStart is deprecated; use import { start } ... or window.asciiMaze.start',
       );
       return start(containerElement);
     };

@@ -60,11 +60,11 @@ process.on(
       // The cost function is retrieved from the `methods.Cost` object
       cost = methods.Cost[e.cost as keyof typeof methods.Cost] as (
         expected: number[],
-        actual: number[]
+        actual: number[],
       ) => number;
 
       // Deserialize the dataset from the message and store it in the `set` variable
       set = Multi.deserializeDataSet(e.set);
     }
-  }
+  },
 );

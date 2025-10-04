@@ -70,7 +70,7 @@ export function setSeed(this: Network, seed: number): void {
     // First mix: xor with shifted self and multiply (Math.imul preserves 32-bit overflow semantics).
     let r = Math.imul(
       (this as any)._rngState ^ ((this as any)._rngState >>> 15),
-      1 | (this as any)._rngState
+      1 | (this as any)._rngState,
     );
     // Second mix: avalanche style bit diffusion.
     r ^= r + Math.imul(r ^ (r >>> 7), 61 | r);

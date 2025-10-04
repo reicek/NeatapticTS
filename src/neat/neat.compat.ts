@@ -53,7 +53,7 @@ export function _fallbackInnov(this: any, connection: any): number {
 export function _compatibilityDistance(
   this: any,
   genomeA: any,
-  genomeB: any
+  genomeB: any,
 ): number {
   // Ensure a generation-scoped cache exists and reset it at generation boundaries.
   if (!this._compatCacheGen || this._compatCacheGen !== this.generation) {

@@ -133,7 +133,7 @@ export async function evolve(this: any): Promise<Network> {
      * @type {number[]}
      */
     const crowdingDistances: number[] = new Array(
-      populationSnapshot.length
+      populationSnapshot.length,
     ).fill(0);
 
     /**
@@ -146,7 +146,7 @@ export async function evolve(this: any): Promise<Network> {
      * @type {number[][]}
      */
     const objectiveValues = (objectives as any[]).map((obj: any) =>
-      populationSnapshot.map((genome: any) => obj.accessor(genome))
+      populationSnapshot.map((genome: any) => obj.accessor(genome)),
     );
     for (const front of paretoFronts) {
       // Compute crowding distances for this front:
@@ -159,7 +159,7 @@ export async function evolve(this: any): Promise<Network> {
        * @type {number[]}
        */
       const frontIndices = front.map((genome: any) =>
-        this.population.indexOf(genome)
+        this.population.indexOf(genome),
       );
       if (frontIndices.length < 3) {
         frontIndices.forEach((i: number) => (crowdingDistances[i] = Infinity));
@@ -168,7 +168,7 @@ export async function evolve(this: any): Promise<Network> {
       for (let oi = 0; oi < objectives.length; oi++) {
         const sortedIdx = [...frontIndices].sort(
           (a: number, b: number) =>
-            objectiveValues[oi][a] - objectiveValues[oi][b]
+            objectiveValues[oi][a] - objectiveValues[oi][b],
         );
         crowdingDistances[sortedIdx[0]] = Infinity;
         crowdingDistances[sortedIdx[sortedIdx.length - 1]] = Infinity;
@@ -307,9 +307,10 @@ export async function evolve(this: any): Promise<Network> {
         }
       }
       if (toRemove.length && this.options.multiObjective?.objectives) {
-        this.options.multiObjective.objectives = this.options.multiObjective.objectives.filter(
-          (obj: any) => !toRemove.includes(obj.key)
-        );
+        this.options.multiObjective.objectives =
+          this.options.multiObjective.objectives.filter(
+            (obj: any) => !toRemove.includes(obj.key),
+          );
         // Clear cached list so _getObjectives rebuilds without removed objectives
         this._objectivesList = undefined as any;
       }
@@ -347,11 +348,11 @@ export async function evolve(this: any): Promise<Network> {
           factor = 1 + ((this as any)._getRNG()() - 0.5) * rate * 0.5;
         opts.excessCoeff = Math.min(
           maxC,
-          Math.max(minC, opts.excessCoeff * factor)
+          Math.max(minC, opts.excessCoeff * factor),
         );
         opts.disjointCoeff = Math.min(
           maxC,
-          Math.max(minC, opts.disjointCoeff * factor)
+          Math.max(minC, opts.disjointCoeff * factor),
         );
       }
     } catch {}
@@ -394,7 +395,7 @@ export async function evolve(this: any): Promise<Network> {
   try {
     // Rebuild objectives to ensure fitness exists
     const currentObjKeys = (this._getObjectives() as any[]).map(
-      (obj: any) => obj.key
+      (obj: any) => obj.key,
     );
     const dyn = this.options.multiObjective?.dynamic;
     if (this.options.multiObjective?.enabled) {
@@ -409,7 +410,7 @@ export async function evolve(this: any): Promise<Network> {
           this.registerObjective(
             'complexity',
             'min',
-            (genome: any) => genome.connections.length
+            (genome: any) => genome.connections.length,
           );
           this._pendingObjectiveAdds.push('complexity');
         }
@@ -418,7 +419,7 @@ export async function evolve(this: any): Promise<Network> {
           !currentObjKeys.includes('entropy')
         ) {
           this.registerObjective('entropy', 'max', (genome: any) =>
-            (this as any)._structuralEntropy(genome)
+            (this as any)._structuralEntropy(genome),
           );
           this._pendingObjectiveAdds.push('entropy');
         }
@@ -431,9 +432,10 @@ export async function evolve(this: any): Promise<Network> {
           if (this.generation >= stagnGen && !this._entropyDropped) {
             // remove entropy
             if (this.options.multiObjective?.objectives) {
-              this.options.multiObjective.objectives = this.options.multiObjective.objectives.filter(
-                (obj: any) => obj.key !== 'entropy'
-              );
+              this.options.multiObjective.objectives =
+                this.options.multiObjective.objectives.filter(
+                  (obj: any) => obj.key !== 'entropy',
+                );
               this._objectivesList = undefined as any;
               this._pendingObjectiveRemoves.push('entropy');
               this._entropyDropped = this.generation;
@@ -446,7 +448,7 @@ export async function evolve(this: any): Promise<Network> {
         ) {
           if (this.generation - this._entropyDropped >= dyn.readdEntropyAfter) {
             this.registerObjective('entropy', 'max', (genome: any) =>
-              (this as any)._structuralEntropy(genome)
+              (this as any)._structuralEntropy(genome),
             );
             this._pendingObjectiveAdds.push('entropy');
             this._entropyDropped = undefined;
@@ -457,7 +459,7 @@ export async function evolve(this: any): Promise<Network> {
         const addAt = 3;
         if (this.generation >= addAt && !currentObjKeys.includes('entropy')) {
           this.registerObjective('entropy', 'max', (genome: any) =>
-            (this as any)._structuralEntropy(genome)
+            (this as any)._structuralEntropy(genome),
           );
           this._pendingObjectiveAdds.push('entropy');
         }
@@ -503,7 +505,7 @@ export async function evolve(this: any): Promise<Network> {
         const varV =
           vals.reduce(
             (a: number, b: number) => a + (b - mean) * (b - mean),
-            0
+            0,
           ) / (vals.length || 1);
         objImportance[obj.key] = { range: max - min, var: varV };
       }
@@ -549,7 +551,7 @@ export async function evolve(this: any): Promise<Network> {
    */
   const elitismCount = Math.max(
     0,
-    Math.min(this.options.elitism || 0, this.population.length)
+    Math.min(this.options.elitism || 0, this.population.length),
   );
   for (let i = 0; i < elitismCount; i++) {
     const elite = this.population[i];
@@ -574,7 +576,7 @@ export async function evolve(this: any): Promise<Network> {
    */
   const remainingSlotsAfterElites = Math.max(
     0,
-    desiredPop - newPopulation.length
+    desiredPop - newPopulation.length,
   );
 
   /**
@@ -586,7 +588,7 @@ export async function evolve(this: any): Promise<Network> {
    */
   const provenanceCount = Math.max(
     0,
-    Math.min(this.options.provenance || 0, remainingSlotsAfterElites)
+    Math.min(this.options.provenance || 0, remainingSlotsAfterElites),
   );
   for (let i = 0; i < provenanceCount; i++) {
     if (this.options.network) {
@@ -595,7 +597,7 @@ export async function evolve(this: any): Promise<Network> {
       newPopulation.push(
         new Network(this.input, this.output, {
           minHidden: this.options.minHidden,
-        })
+        }),
       );
     }
   }
@@ -652,7 +654,7 @@ export async function evolve(this: any): Promise<Network> {
       const speciesAdjusted = this._species.map((species: any) => {
         const base = species.members.reduce(
           (a: number, member: any) => a + (member.score || 0),
-          0
+          0,
         );
         const age = this.generation - species.lastImproved;
         if (age <= youngT) return base * youngM;
@@ -684,7 +686,7 @@ export async function evolve(this: any): Promise<Network> {
        * @type {number[]}
        */
       const rawShares = this._species.map(
-        (_: any, idx: number) => (speciesAdjusted[idx] / totalAdj) * remaining
+        (_: any, idx: number) => (speciesAdjusted[idx] / totalAdj) * remaining,
       );
 
       /**
@@ -694,7 +696,7 @@ export async function evolve(this: any): Promise<Network> {
        * @type {number[]}
        */
       const offspringAlloc: number[] = rawShares.map((s: number) =>
-        Math.floor(s)
+        Math.floor(s),
       );
       // Enforce minimum for species that have any members surviving
       for (let i = 0; i < offspringAlloc.length; i++)
@@ -764,7 +766,7 @@ export async function evolve(this: any): Promise<Network> {
         (species: any, i: number) => ({
           id: species.id,
           alloc: offspringAlloc[i] || 0,
-        })
+        }),
       );
       // Breed within species
       this._prevInbreedingCount = this._lastInbreedingCount; // snapshot for telemetry next generation
@@ -782,9 +784,9 @@ export async function evolve(this: any): Promise<Network> {
           Math.max(
             1,
             Math.floor(
-              species.members.length * (this.options!.survivalThreshold || 0.5)
-            )
-          )
+              species.members.length * (this.options!.survivalThreshold || 0.5),
+            ),
+          ),
         );
         for (let k = 0; k < count; k++) {
           const parentA =
@@ -808,9 +810,9 @@ export async function evolve(this: any): Promise<Network> {
                 1,
                 Math.floor(
                   otherSpecies.members.length *
-                    (this.options!.survivalThreshold || 0.5)
-                )
-              )
+                    (this.options!.survivalThreshold || 0.5),
+                ),
+              ),
             );
             parentB =
               otherParents[Math.floor(this._getRNG()() * otherParents.length)];
@@ -821,7 +823,7 @@ export async function evolve(this: any): Promise<Network> {
           const child = Network.crossOver(
             parentA,
             parentB,
-            this.options.equal || false
+            this.options.equal || false,
           );
           (child as any)._reenableProb = this.options.reenableProb;
           (child as any)._id = this._nextGenomeId++;
@@ -905,7 +907,7 @@ export async function evolve(this: any): Promise<Network> {
      */
     const startIdx = Math.max(
       this.options.elitism || 0,
-      Math.floor(this.population.length * (1 - replaceFraction))
+      Math.floor(this.population.length * (1 - replaceFraction)),
     );
     for (let i = startIdx; i < this.population.length; i++) {
       const fresh = new Network(this.input, this.output, {
@@ -928,8 +930,9 @@ export async function evolve(this: any): Promise<Network> {
          * non-trivial topology for injected genomes.
          * @type {number}
          */
-        const hiddenCount = fresh.nodes.filter((n: any) => n.type === 'hidden')
-          .length;
+        const hiddenCount = fresh.nodes.filter(
+          (n: any) => n.type === 'hidden',
+        ).length;
         if (hiddenCount === 0) {
           const NodeCls = require('../architecture/node').default;
           const newNode = new NodeCls('hidden');
@@ -938,7 +941,7 @@ export async function evolve(this: any): Promise<Network> {
           // connect a random input to hidden and hidden to a random output
           const inputNodes = fresh.nodes.filter((n: any) => n.type === 'input');
           const outputNodes = fresh.nodes.filter(
-            (n: any) => n.type === 'output'
+            (n: any) => n.type === 'output',
           );
           if (inputNodes.length && outputNodes.length) {
             try {
@@ -980,7 +983,7 @@ export async function evolve(this: any): Promise<Network> {
       const delta = ratio - target;
       this.options.reenableProb = Math.min(
         0.9,
-        Math.max(0.05, this.options.reenableProb - delta * 0.1)
+        Math.max(0.05, this.options.reenableProb - delta * 0.1),
       );
     }
   }

@@ -3,12 +3,17 @@ import Network from '../../src/architecture/network';
 
 describe('Adaptive re-enable probability', () => {
   test('adjusts reenableProb after many crossovers', async () => {
-    const neat = new Neat(3, 1, (network: Network) => network.connections.length, {
-      popsize: 30,
-      seed: 500,
-      speciation: false,
-      reenableProb: 0.3,
-    });
+    const neat = new Neat(
+      3,
+      1,
+      (network: Network) => network.connections.length,
+      {
+        popsize: 30,
+        seed: 500,
+        speciation: false,
+        reenableProb: 0.3,
+      },
+    );
     await neat.evaluate();
     for (let iterationIndex = 0; iterationIndex < 5; iterationIndex += 1) {
       await neat.evolve();

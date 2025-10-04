@@ -22,13 +22,21 @@ describe('Mutation add connection reuse (acyclic guard)', () => {
       await neat.evaluate();
       genome = neat.population[0];
       // Step 1: enforce acyclicity and create simple chain input->hidden->output
-      (genome as unknown as { _enforceAcyclic?: boolean })._enforceAcyclic = true;
+      (
+        genome as unknown as {
+          _enforceAcyclic?: boolean;
+        }
+      )._enforceAcyclic = true;
       // Step 2: insert hidden node prior to output nodes
       const hiddenNode = new Node('hidden');
       genome.nodes.splice(genome.nodes.length - genome.output, 0, hiddenNode);
       // Step 3: connect input -> hidden and hidden -> output
-  const inputNode = genome.nodes.find((node: Node) => node.type === 'input');
-  const outputNode = genome.nodes.find((node: Node) => node.type === 'output');
+      const inputNode = genome.nodes.find(
+        (node: Node) => node.type === 'input',
+      );
+      const outputNode = genome.nodes.find(
+        (node: Node) => node.type === 'output',
+      );
       if (inputNode !== undefined && outputNode !== undefined) {
         genome.connect(inputNode, hiddenNode, 1);
         genome.connect(hiddenNode, outputNode, 1);
@@ -42,7 +50,9 @@ describe('Mutation add connection reuse (acyclic guard)', () => {
         neatWithInternals._mutateAddConnReuse(genome);
       }
       // Act: search for illegal back edge to input
-      const inputNode = genome.nodes.find((node: Node) => node.type === 'input');
+      const inputNode = genome.nodes.find(
+        (node: Node) => node.type === 'input',
+      );
       const illegalBackEdgeExists =
         inputNode !== undefined &&
         genome.connections.some(

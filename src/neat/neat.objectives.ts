@@ -103,7 +103,7 @@ export function registerObjective(
   this: any,
   key: string,
   direction: 'min' | 'max',
-  accessor: (genome: GenomeLike) => number
+  accessor: (genome: GenomeLike) => number,
 ) {
   // Ensure multi-objective container exists and is enabled
   if (!this.options.multiObjective)
@@ -123,9 +123,9 @@ export function registerObjective(
   if (!multiObjectiveOptions.objectives) multiObjectiveOptions.objectives = [];
 
   // Step: remove any existing objective with the same key (replace semantics)
-  multiObjectiveOptions.objectives = (multiObjectiveOptions.objectives as ObjectiveDescriptor[]).filter(
-    (existingObjective) => existingObjective.key !== key
-  );
+  multiObjectiveOptions.objectives = (
+    multiObjectiveOptions.objectives as ObjectiveDescriptor[]
+  ).filter((existingObjective) => existingObjective.key !== key);
 
   // Step: push new objective descriptor
   multiObjectiveOptions.objectives.push({ key, direction, accessor });

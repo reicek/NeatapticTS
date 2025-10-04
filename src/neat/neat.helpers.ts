@@ -56,13 +56,13 @@ import Network from '../architecture/network';
 export function spawnFromParent(
   this: NeatLike,
   parentGenome: any,
-  mutateCount: number = 1
+  mutateCount: number = 1,
 ) {
   // Step 1: Deep clone the parent (prefer direct clone() for performance).
   const clone = parentGenome.clone
     ? parentGenome.clone()
     : require('../architecture/network').default.fromJSON(
-        parentGenome.toJSON()
+        parentGenome.toJSON(),
       );
 
   // Step 2: Reset evaluation state for the fresh offspring.
@@ -84,7 +84,7 @@ export function spawnFromParent(
       // Select a mutation operator; may return a single method or an array of candidates.
       let selectedMutationMethod = (this as any).selectMutationMethod(
         clone,
-        false
+        false,
       );
       if (Array.isArray(selectedMutationMethod)) {
         const candidateMutations = selectedMutationMethod as any[];
@@ -142,7 +142,7 @@ export function addGenome(this: NeatLike, genome: any, parents?: number[]) {
       // Compute depth = (max parent depth) + 1 for genealogical layering.
       const parentDepths = (genome as any)._parents
         .map((pid: number) =>
-          (this as any).population.find((g: any) => g._id === pid)
+          (this as any).population.find((g: any) => g._id === pid),
         )
         .filter(Boolean)
         .map((g: any) => g._depth ?? 0);

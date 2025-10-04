@@ -3,11 +3,7 @@ import { MazeUtils } from './mazeUtils';
 import { MazeVisualization } from './mazeVisualization';
 import { NetworkVisualization } from './networkVisualization';
 import { colors } from './colors';
-import {
-  INetwork,
-  IDashboardManager,
-  IMazeRunResult,
-} from './interfaces';
+import { INetwork, IDashboardManager, IMazeRunResult } from './interfaces';
 import type Neat from '../../../src/neat';
 
 // Region: Type Interfaces ----------------------------------------------------
@@ -233,7 +229,7 @@ export class DashboardManager implements IDashboardManager {
   constructor(
     clearFn: () => void,
     logFn: (...args: any[]) => void,
-    archiveFn?: (...args: any[]) => void
+    archiveFn?: (...args: any[]) => void,
   ) {
     const noop = () => {};
     this.#clearFn = typeof clearFn === 'function' ? clearFn : noop;
@@ -246,8 +242,8 @@ export class DashboardManager implements IDashboardManager {
       `${colors.blueCore}║${NetworkVisualization.pad(
         ' ',
         DashboardManager.FRAME_INNER_WIDTH,
-        ' '
-      )}${colors.blueCore}║${colors.reset}`
+        ' ',
+      )}${colors.blueCore}║${colors.reset}`,
     );
   }
 
@@ -290,7 +286,7 @@ export class DashboardManager implements IDashboardManager {
     value: string | number,
     colorLabel = colors.neonSilver,
     colorValue = colors.cyanNeon,
-    labelWidth = DashboardManager.#STAT_LABEL_WIDTH
+    labelWidth = DashboardManager.#STAT_LABEL_WIDTH,
   ): string {
     // Step 1: Canonicalize label (ensure colon exactly once at end)
     const canonicalLabel = label.endsWith(':') ? label : `${label}:`;
@@ -312,7 +308,7 @@ export class DashboardManager implements IDashboardManager {
       coloredContent,
       DashboardManager.CONTENT_WIDTH,
       ' ',
-      'left'
+      'left',
     )}${' '.repeat(DashboardManager.RIGHT_PADDING)}${colors.blueCore}║${
       colors.reset
     }`;
@@ -394,7 +390,7 @@ export class DashboardManager implements IDashboardManager {
       const normalized = (tailSlice[encodeIndex] - minValue) / valueRange; // [0,1]
       const blockIndex = Math.min(
         blocksCount,
-        Math.max(0, Math.floor(normalized * blocksCount))
+        Math.max(0, Math.floor(normalized * blocksCount)),
       );
       sparkline += blocks[blockIndex];
     }
@@ -414,7 +410,7 @@ export class DashboardManager implements IDashboardManager {
       network: INetwork;
       generation: number;
     },
-    displayNumber: number
+    displayNumber: number,
   ): void {
     if (!this.#archiveFn) return;
     const blockLines: string[] = [];
@@ -522,7 +518,8 @@ export class DashboardManager implements IDashboardManager {
 
       // Current best scalar metrics (fitness + auxiliary run stats)
       const bestFitnessValue = this.#currentBest?.result?.fitness;
-      const saturationFractionValue = this.#currentBest?.result?.saturationFraction;
+      const saturationFractionValue =
+        this.#currentBest?.result?.saturationFraction;
       const actionEntropyValue = this.#currentBest?.result?.actionEntropy;
 
       // Step 3: Population-level summary (fills in early-run blanks with best fitness/species when needed)
@@ -568,12 +565,12 @@ export class DashboardManager implements IDashboardManager {
       // Step 5: Pareto + novelty archive metrics
       const firstFrontSize = rawFrontsArray?.[0]?.length || 0;
       const paretoFrontSizes = rawFrontsArray
-        ? rawFrontsArray.map((front) => (front?.length ?? 0))
+        ? rawFrontsArray.map((front) => front?.length ?? 0)
         : null;
       const noveltyArchiveSize = this.#safeInvoke<number | null>(
         () =>
           neat?.getNoveltyArchiveSize ? neat.getNoveltyArchiveSize() : null,
-        null
+        null,
       );
 
       // Step 6: Operator acceptance, mutation frequencies, species distribution
@@ -680,9 +677,7 @@ export class DashboardManager implements IDashboardManager {
    * @param neat NEAT-like engine instance exposing `population`, optional `species` collection.
    * @returns Object with `mean`, `median`, `speciesCount`, `enabledRatio` (each nullable when not derivable).
    */
-  #computePopulationStats(
-    neat?: any
-  ): {
+  #computePopulationStats(neat?: any): {
     mean: number | null;
     median: number | null;
     speciesCount: number | null;
@@ -799,7 +794,7 @@ export class DashboardManager implements IDashboardManager {
    * // => [ { name: 'mutateAddNode', acceptancePct: 62.5 }, ... ] or null
    */
   #computeOperatorAcceptance(
-    neat?: any
+    neat?: any,
   ): Array<{ name: string; acceptancePct: number }> | null {
     if (typeof neat?.getOperatorStats !== 'function') return null;
 
@@ -841,7 +836,7 @@ export class DashboardManager implements IDashboardManager {
     // Step 5: Map top-N into exported simplified objects.
     const limit = Math.min(
       DashboardManager.#TOP_OPERATOR_LIMIT,
-      rankedCopy.length
+      rankedCopy.length,
     );
     const acceptanceList: Array<{ name: string; acceptancePct: number }> = [];
     for (let rankIndex = 0; rankIndex < limit; rankIndex++) {
@@ -895,7 +890,7 @@ export class DashboardManager implements IDashboardManager {
    * // => [ { name: 'addNode', count: 42 }, { name: 'addConn', count: 17 } ]
    */
   #computeTopMutations(
-    mutationStats: MutationStatsMap | null
+    mutationStats: MutationStatsMap | null,
   ): Array<{ name: string; count: number }> | null {
     // Step 1: Guard for invalid container
     if (!mutationStats) return null;
@@ -904,9 +899,12 @@ export class DashboardManager implements IDashboardManager {
     const mutationEntriesScratch = this.#scratch.mutationEntries;
     mutationEntriesScratch.length = 0;
     for (const [mutationName, occurrenceCount] of Object.entries(
-      mutationStats
+      mutationStats,
     )) {
-      if (typeof occurrenceCount === 'number' && Number.isFinite(occurrenceCount)) {
+      if (
+        typeof occurrenceCount === 'number' &&
+        Number.isFinite(occurrenceCount)
+      ) {
         mutationEntriesScratch.push([mutationName, occurrenceCount]);
       }
     }
@@ -916,13 +914,13 @@ export class DashboardManager implements IDashboardManager {
 
     // Step 4: In-place sort descending by count
     mutationEntriesScratch.sort(
-      (leftEntry, rightEntry) => rightEntry[1] - leftEntry[1]
+      (leftEntry, rightEntry) => rightEntry[1] - leftEntry[1],
     );
 
     // Step 5: Map top-N to output objects
     const limit = Math.min(
       DashboardManager.#TOP_MUTATION_LIMIT,
-      mutationEntriesScratch.length
+      mutationEntriesScratch.length,
     );
     const topMutations: Array<{ name: string; count: number }> = [];
     for (let rankIndex = 0; rankIndex < limit; rankIndex++) {
@@ -990,7 +988,7 @@ export class DashboardManager implements IDashboardManager {
     // Step 4: Bounded copy to output (immutability for consumers)
     const limit = Math.min(
       DashboardManager.#TOP_SPECIES_LIMIT,
-      speciesSizesScratch.length
+      speciesSizesScratch.length,
     );
     const topSpeciesSizes: number[] = [];
     for (let rankIndex = 0; rankIndex < limit; rankIndex++) {
@@ -1030,7 +1028,7 @@ export class DashboardManager implements IDashboardManager {
       network: INetwork;
       generation: number;
     },
-    displayNumber: number
+    displayNumber: number,
   ): void {
     /**
      * Educational / formatting notes:
@@ -1060,8 +1058,8 @@ export class DashboardManager implements IDashboardManager {
       `${colors.blueCore}╔${NetworkVisualization.pad(
         '═'.repeat(innerWidth),
         innerWidth,
-        '═'
-      )}╗${colors.reset}`
+        '═',
+      )}╗${colors.reset}`,
     );
 
     // Step 3: Title components (defensive numeric handling)
@@ -1073,17 +1071,17 @@ export class DashboardManager implements IDashboardManager {
         : 'n/a';
     const title = ` SOLVED #${Math.max(
       1,
-      displayNumber
+      displayNumber,
     )} (GEN ${generation})  FITNESS ${formattedFitness} `;
 
     // Step 4: Centering math
     const leftPaddingSize = Math.max(
       0,
-      Math.floor((innerWidth - title.length) / 2)
+      Math.floor((innerWidth - title.length) / 2),
     );
     const rightPaddingSize = Math.max(
       0,
-      innerWidth - title.length - leftPaddingSize
+      innerWidth - title.length - leftPaddingSize,
     );
 
     // Step 5: Centered title line
@@ -1092,14 +1090,14 @@ export class DashboardManager implements IDashboardManager {
         colors.orangeNeon
       }${title}${colors.blueCore}${' '.repeat(rightPaddingSize)}║${
         colors.reset
-      }`
+      }`,
     );
 
     // Step 6: Spacer line
     blockLines.push(
       `${colors.blueCore}║${NetworkVisualization.pad(' ', innerWidth, ' ')}║${
         colors.reset
-      }`
+      }`,
     );
   }
 
@@ -1136,7 +1134,7 @@ export class DashboardManager implements IDashboardManager {
         value,
         colors.neonSilver,
         colors.cyanNeon,
-        solvedLabelWidth
+        solvedLabelWidth,
       );
     const pushIf = (label: string, value: string | null | undefined) => {
       if (value) blockLines.push(solvedStat(label, value));
@@ -1162,27 +1160,27 @@ export class DashboardManager implements IDashboardManager {
     const archiveWidth = DashboardManager.#ARCHIVE_SPARK_WIDTH;
     pushIf(
       'Fitness trend',
-      this.#buildSparkline(this.#bestFitnessHistory, archiveWidth)
+      this.#buildSparkline(this.#bestFitnessHistory, archiveWidth),
     );
     pushIf(
       'Nodes trend',
-      this.#buildSparkline(this.#complexityNodesHistory, archiveWidth)
+      this.#buildSparkline(this.#complexityNodesHistory, archiveWidth),
     );
     pushIf(
       'Conns trend',
-      this.#buildSparkline(this.#complexityConnsHistory, archiveWidth)
+      this.#buildSparkline(this.#complexityConnsHistory, archiveWidth),
     );
     pushIf(
       'Hypervol trend',
-      this.#buildSparkline(this.#hypervolumeHistory, archiveWidth)
+      this.#buildSparkline(this.#hypervolumeHistory, archiveWidth),
     );
     pushIf(
       'Progress trend',
-      this.#buildSparkline(this.#progressHistory, archiveWidth)
+      this.#buildSparkline(this.#progressHistory, archiveWidth),
     );
     pushIf(
       'Species trend',
-      this.#buildSparkline(this.#speciesCountHistory, archiveWidth)
+      this.#buildSparkline(this.#speciesCountHistory, archiveWidth),
     );
 
     // Step 3: Spacer line
@@ -1190,8 +1188,8 @@ export class DashboardManager implements IDashboardManager {
       `${colors.blueCore}║${NetworkVisualization.pad(
         ' ',
         DashboardManager.FRAME_INNER_WIDTH,
-        ' '
-      )}${colors.blueCore}║${colors.reset}`
+        ' ',
+      )}${colors.blueCore}║${colors.reset}`,
     );
   }
 
@@ -1231,7 +1229,7 @@ export class DashboardManager implements IDashboardManager {
         string,
         any
       >;
-    }
+    },
   ): void {
     // Step 1: Determine final position on the solved path (fallback to [0,0] if path missing)
     const pathCoordinates = solved.result.path as
@@ -1243,7 +1241,7 @@ export class DashboardManager implements IDashboardManager {
     const visualization = MazeVisualization.visualizeMaze(
       solved.maze,
       endPosition as [number, number],
-      (pathCoordinates ?? []) as [number, number][]
+      (pathCoordinates ?? []) as [number, number][],
     );
 
     // Step 3: Normalize to array of lines.
@@ -1259,8 +1257,8 @@ export class DashboardManager implements IDashboardManager {
         `${colors.blueCore}║${NetworkVisualization.pad(
           paddedRow,
           innerWidth,
-          ' '
-        )}${colors.blueCore}║${colors.reset}`
+          ' ',
+        )}${colors.blueCore}║${colors.reset}`,
       );
     }
   }
@@ -1293,7 +1291,7 @@ export class DashboardManager implements IDashboardManager {
    */
   #appendSolvedPathStats(
     blockLines: string[],
-    solved: { maze: string[]; result: any }
+    solved: { maze: string[]; result: any },
   ): void {
     // Step 1: Derive metrics (single call encapsulates BFS + visitation stats)
     const metrics = this.#computePathMetrics(solved.maze, solved.result);
@@ -1306,42 +1304,42 @@ export class DashboardManager implements IDashboardManager {
         value,
         colors.neonSilver,
         colors.cyanNeon,
-        labelWidth
+        labelWidth,
       );
 
     // Step 2 & 3: Format and append in stable order
     blockLines.push(
       solvedStat(
         DashboardManager.#LABEL_PATH_EFF,
-        `${metrics.optimalLength}/${metrics.pathLength} (${metrics.efficiencyPct}%)`
-      )
+        `${metrics.optimalLength}/${metrics.pathLength} (${metrics.efficiencyPct}%)`,
+      ),
     );
     blockLines.push(
       solvedStat(
         DashboardManager.#LABEL_PATH_OVER,
-        `${metrics.overheadPct}% longer than optimal`
-      )
+        `${metrics.overheadPct}% longer than optimal`,
+      ),
     );
     blockLines.push(
       solvedStat(
         DashboardManager.#LABEL_UNIQUE,
-        `${metrics.uniqueCellsVisited}`
-      )
+        `${metrics.uniqueCellsVisited}`,
+      ),
     );
     blockLines.push(
       solvedStat(
         DashboardManager.#LABEL_REVISITS,
-        `${metrics.revisitedCells} times`
-      )
+        `${metrics.revisitedCells} times`,
+      ),
     );
     blockLines.push(
-      solvedStat(DashboardManager.#LABEL_STEPS, `${metrics.totalSteps}`)
+      solvedStat(DashboardManager.#LABEL_STEPS, `${metrics.totalSteps}`),
     );
     blockLines.push(
       solvedStat(
         DashboardManager.#LABEL_FITNESS,
-        `${metrics.fitnessValue.toFixed(2)}`
-      )
+        `${metrics.fitnessValue.toFixed(2)}`,
+      ),
     );
   }
 
@@ -1382,7 +1380,7 @@ export class DashboardManager implements IDashboardManager {
       }╚${NetworkVisualization.pad(
         '═'.repeat(innerFrameWidth),
         innerFrameWidth,
-        '═'
+        '═',
       )}╝${colors.reset}`;
     }
 
@@ -1456,7 +1454,7 @@ export class DashboardManager implements IDashboardManager {
    */
   #computePathMetrics(
     maze: string[],
-    result: { path: [number, number][]; steps: number; fitness: number }
+    result: { path: [number, number][]; steps: number; fitness: number },
   ): {
     optimalLength: number;
     pathLength: number;
@@ -1475,7 +1473,7 @@ export class DashboardManager implements IDashboardManager {
     const bfsLength = MazeUtils.bfsDistance(
       MazeUtils.encodeMaze(maze),
       startPosition,
-      exitPosition
+      exitPosition,
     );
     const optimalLength = typeof bfsLength === 'number' ? bfsLength : 0;
 
@@ -1563,8 +1561,8 @@ export class DashboardManager implements IDashboardManager {
         const size = Array.isArray(layerRef?.nodes)
           ? layerRef.nodes.length
           : Array.isArray(layerRef)
-          ? layerRef.length
-          : 0;
+            ? layerRef.length
+            : 0;
         layerSizes.push(size);
       }
       return layerSizes.join(' - ');
@@ -1574,13 +1572,13 @@ export class DashboardManager implements IDashboardManager {
     const flatNodes = networkInstance.nodes;
     if (Array.isArray(flatNodes)) {
       const inputNodes = flatNodes.filter(
-        (nodeItem: any) => nodeItem.type === 'input'
+        (nodeItem: any) => nodeItem.type === 'input',
       );
       const outputNodes = flatNodes.filter(
-        (nodeItem: any) => nodeItem.type === 'output'
+        (nodeItem: any) => nodeItem.type === 'output',
       );
       const hiddenNodesAll = flatNodes.filter(
-        (nodeItem: any) => nodeItem.type === 'hidden'
+        (nodeItem: any) => nodeItem.type === 'hidden',
       );
 
       // Step 4: No hidden nodes -> simple case
@@ -1605,8 +1603,8 @@ export class DashboardManager implements IDashboardManager {
         iterationCounter++;
         const currentLayer = remainingHidden.filter((hiddenNode: any) =>
           hiddenNode.connections?.in?.every((conn: any) =>
-            assignedNodes.has(conn.from)
-          )
+            assignedNodes.has(conn.from),
+          ),
         );
         if (!currentLayer.length) {
           // Group unresolved remainder into one bucket (cycles / malformed graph)
@@ -1616,7 +1614,7 @@ export class DashboardManager implements IDashboardManager {
         inferredHiddenSizes.push(currentLayer.length);
         for (const nodeRef of currentLayer) assignedNodes.add(nodeRef);
         remainingHidden = remainingHidden.filter(
-          (nodeCandidate: any) => !assignedNodes.has(nodeCandidate)
+          (nodeCandidate: any) => !assignedNodes.has(nodeCandidate),
         );
       }
       return [
@@ -1671,7 +1669,7 @@ export class DashboardManager implements IDashboardManager {
     result: IMazeRunResult,
     network: INetwork,
     generation: number,
-    neatInstance?: Neat
+    neatInstance?: Neat,
   ): void {
     // Step 1: Lazy initialization of timing anchors
     if (this.#runStartTs == null) {
@@ -1695,14 +1693,17 @@ export class DashboardManager implements IDashboardManager {
         const displayOrdinal = this.#solvedMazes.length; // 1-based position
         this.#appendSolvedToArchive(
           { maze, result, network, generation },
-          displayOrdinal
+          displayOrdinal,
         );
       }
     }
 
     // Step 5: Pull latest telemetry snapshot & update bounded histories
     const telemetrySeriesCandidate = neatInstance?.getTelemetry?.();
-    if (Array.isArray(telemetrySeriesCandidate) && telemetrySeriesCandidate.length) {
+    if (
+      Array.isArray(telemetrySeriesCandidate) &&
+      telemetrySeriesCandidate.length
+    ) {
       const telemetrySeries = telemetrySeriesCandidate as DashboardTelemetry[];
       this.#lastTelemetry =
         MazeUtils.safeLast<DashboardTelemetry>(telemetrySeries) ?? null;
@@ -1713,7 +1714,7 @@ export class DashboardManager implements IDashboardManager {
         this.#bestFitnessHistory = MazeUtils.pushHistory(
           this.#bestFitnessHistory,
           latestFitness,
-          DashboardManager.HISTORY_MAX
+          DashboardManager.HISTORY_MAX,
         );
       }
       // Complexity histories (mean nodes / connections)
@@ -1723,14 +1724,14 @@ export class DashboardManager implements IDashboardManager {
           this.#complexityNodesHistory = MazeUtils.pushHistory(
             this.#complexityNodesHistory,
             complexitySnapshot.meanNodes,
-            DashboardManager.HISTORY_MAX
+            DashboardManager.HISTORY_MAX,
           );
         }
         if (typeof complexitySnapshot.meanConns === 'number') {
           this.#complexityConnsHistory = MazeUtils.pushHistory(
             this.#complexityConnsHistory,
             complexitySnapshot.meanConns,
-            DashboardManager.HISTORY_MAX
+            DashboardManager.HISTORY_MAX,
           );
         }
       }
@@ -1740,7 +1741,7 @@ export class DashboardManager implements IDashboardManager {
         this.#hypervolumeHistory = MazeUtils.pushHistory(
           this.#hypervolumeHistory,
           hyperVolumeLatest,
-          DashboardManager.HISTORY_MAX
+          DashboardManager.HISTORY_MAX,
         );
       }
       // Progress toward exit for current best
@@ -1749,7 +1750,7 @@ export class DashboardManager implements IDashboardManager {
         this.#progressHistory = MazeUtils.pushHistory(
           this.#progressHistory,
           progressFraction,
-          DashboardManager.HISTORY_MAX
+          DashboardManager.HISTORY_MAX,
         );
       }
       // Species count history
@@ -1758,7 +1759,7 @@ export class DashboardManager implements IDashboardManager {
         this.#speciesCountHistory = MazeUtils.pushHistory(
           this.#speciesCountHistory,
           speciesCountSnapshot,
-          DashboardManager.HISTORY_MAX
+          DashboardManager.HISTORY_MAX,
         );
       }
     }
@@ -1772,8 +1773,8 @@ export class DashboardManager implements IDashboardManager {
         this.#perfStart != null && globalThis.performance?.now
           ? globalThis.performance.now() - this.#perfStart
           : this.#runStartTs
-          ? Date.now() - this.#runStartTs
-          : 0;
+            ? Date.now() - this.#runStartTs
+            : 0;
       const generationsPerSecond =
         elapsedMs > 0 ? generation / (elapsedMs / 1000) : 0;
       const payload = {
@@ -1789,7 +1790,7 @@ export class DashboardManager implements IDashboardManager {
       if (typeof window !== 'undefined') {
         try {
           window.dispatchEvent(
-            new CustomEvent('asciiMazeTelemetry', { detail: payload })
+            new CustomEvent('asciiMazeTelemetry', { detail: payload }),
           );
         } catch {}
         try {
@@ -1816,8 +1817,8 @@ export class DashboardManager implements IDashboardManager {
       this.#perfStart != null && typeof performance !== 'undefined'
         ? performance.now() - this.#perfStart
         : this.#runStartTs
-        ? Date.now() - this.#runStartTs
-        : 0;
+          ? Date.now() - this.#runStartTs
+          : 0;
     const generation = this.#lastGeneration ?? 0;
     const gensPerSec = elapsedMs > 0 ? generation / (elapsedMs / 1000) : 0;
     return {
@@ -1891,8 +1892,8 @@ export class DashboardManager implements IDashboardManager {
       `${colors.blueCore}╔${NetworkVisualization.pad(
         DashboardManager.#FRAME_SINGLE_LINE_CHAR,
         innerWidth,
-        DashboardManager.#FRAME_SINGLE_LINE_CHAR
-      )}╗${colors.reset}`
+        DashboardManager.#FRAME_SINGLE_LINE_CHAR,
+      )}╗${colors.reset}`,
     );
 
     // Step 2: Upper bridge line (visual accent)
@@ -1900,8 +1901,8 @@ export class DashboardManager implements IDashboardManager {
       `${colors.blueCore}╚${NetworkVisualization.pad(
         DashboardManager.#FRAME_BRIDGE_TOP,
         innerWidth,
-        DashboardManager.#FRAME_SINGLE_LINE_CHAR
-      )}╝${colors.reset}`
+        DashboardManager.#FRAME_SINGLE_LINE_CHAR,
+      )}╝${colors.reset}`,
     );
 
     // Step 3: Centered colored title line
@@ -1912,7 +1913,7 @@ export class DashboardManager implements IDashboardManager {
     const rightPaddingCount = Math.max(0, remainingSpace - leftPaddingCount);
     const coloredTitleSegment = `║ ${colors.neonYellow}ASCII maze${colors.blueCore} ║`;
     const centeredTitleLine = `${colors.blueCore}${' '.repeat(
-      leftPaddingCount
+      leftPaddingCount,
     )}${coloredTitleSegment}${' '.repeat(rightPaddingCount)}${colors.reset}`;
     this.#logFn(centeredTitleLine);
 
@@ -1921,8 +1922,8 @@ export class DashboardManager implements IDashboardManager {
       `${colors.blueCore}╔${NetworkVisualization.pad(
         DashboardManager.#FRAME_BRIDGE_BOTTOM,
         innerWidth,
-        DashboardManager.#FRAME_SINGLE_LINE_CHAR
-      )}╗${colors.reset}`
+        DashboardManager.#FRAME_SINGLE_LINE_CHAR,
+      )}╗${colors.reset}`,
     );
   }
 
@@ -1935,22 +1936,22 @@ export class DashboardManager implements IDashboardManager {
       `${colors.blueCore}╠${NetworkVisualization.pad(
         sectionLine,
         DashboardManager.FRAME_INNER_WIDTH,
-        '═'
-      )}${colors.blueCore}╣${colors.reset}`
+        '═',
+      )}${colors.blueCore}╣${colors.reset}`,
     );
     this.#logFn(
       `${colors.blueCore}║${NetworkVisualization.pad(
         `${colors.orangeNeon}EVOLVING (GEN ${generation})`,
         DashboardManager.FRAME_INNER_WIDTH,
-        ' '
-      )}${colors.blueCore}║${colors.reset}`
+        ' ',
+      )}${colors.blueCore}║${colors.reset}`,
     );
     this.#logFn(
       `${colors.blueCore}╠${NetworkVisualization.pad(
         sectionLine,
         DashboardManager.FRAME_INNER_WIDTH,
-        '═'
-      )}${colors.blueCore}╣${colors.reset}`
+        '═',
+      )}${colors.blueCore}╣${colors.reset}`,
     );
     this.#logBlank();
     this.#printNetworkSummary();
@@ -1963,7 +1964,7 @@ export class DashboardManager implements IDashboardManager {
   #printNetworkSummary(): void {
     this.#logBlank();
     this.#logFn(
-      NetworkVisualization.visualizeNetworkSummary(this.#currentBest!.network)
+      NetworkVisualization.visualizeNetworkSummary(this.#currentBest!.network),
     );
     this.#logBlank();
   }
@@ -2000,7 +2001,7 @@ export class DashboardManager implements IDashboardManager {
     // Step 1: Determine last path coordinate (agent end position)
     const pathCoordinates = this.#currentBest!.result.path as readonly [
       number,
-      number
+      number,
     ][];
     const endOfPathPosition = pathCoordinates?.at(-1) ?? [0, 0];
 
@@ -2008,12 +2009,12 @@ export class DashboardManager implements IDashboardManager {
     const rawVisualization = MazeVisualization.visualizeMaze(
       currentMaze,
       endOfPathPosition as readonly [number, number],
-      pathCoordinates
+      pathCoordinates,
     );
 
     // Step 3: Normalize to array of lines
     const visualizationLines: readonly string[] = Array.isArray(
-      rawVisualization
+      rawVisualization,
     )
       ? rawVisualization
       : rawVisualization.split('\n');
@@ -2024,7 +2025,7 @@ export class DashboardManager implements IDashboardManager {
     for (const unpaddedRow of visualizationLines) {
       const paddedRow = NetworkVisualization.pad(unpaddedRow, innerWidth, ' ');
       this.#logFn(
-        `${colors.blueCore}║${paddedRow}${colors.blueCore}║${colors.reset}`
+        `${colors.blueCore}║${paddedRow}${colors.blueCore}║${colors.reset}`,
       );
     }
     this.#logBlank(); // trailing spacer (Step 5b)
@@ -2111,7 +2112,7 @@ export class DashboardManager implements IDashboardManager {
         value,
         colors.neonSilver,
         colors.cyanNeon,
-        liveLabelWidth
+        liveLabelWidth,
       );
 
     this.#logFn(liveStat('Fitness', formattedFitness));
@@ -2122,7 +2123,7 @@ export class DashboardManager implements IDashboardManager {
     MazeVisualization.printMazeStats(
       currentBestCandidate,
       currentMaze,
-      this.#logFn
+      this.#logFn,
     );
 
     // Step 6: Release typed-array scratch buffer back to pool and trailing spacer for readability.
@@ -2154,8 +2155,8 @@ export class DashboardManager implements IDashboardManager {
         `${colors.blueCore}║${NetworkVisualization.pad(
           ' ',
           DashboardManager.FRAME_INNER_WIDTH,
-          ' '
-        )}${colors.blueCore}║${colors.reset}`
+          ' ',
+        )}${colors.blueCore}║${colors.reset}`,
       );
 
     // Step 1: Top spacer
@@ -2169,9 +2170,8 @@ export class DashboardManager implements IDashboardManager {
       : 0;
 
     // Step 3: Build readable progress bar text
-    const humanReadableBar = MazeVisualization.displayProgressBar(
-      safeProgressFraction
-    );
+    const humanReadableBar =
+      MazeVisualization.displayProgressBar(safeProgressFraction);
     const progressLabel = `Progress to exit: ${humanReadableBar}`;
 
     // Step 4: Frame and emit the progress label with consistent padding and color accents
@@ -2179,8 +2179,8 @@ export class DashboardManager implements IDashboardManager {
       `${colors.blueCore}║${NetworkVisualization.pad(
         ' ' + colors.neonSilver + progressLabel + colors.reset,
         DashboardManager.FRAME_INNER_WIDTH,
-        ' '
-      )}${colors.blueCore}║${colors.reset}`
+        ' ',
+      )}${colors.blueCore}║${colors.reset}`,
     );
 
     // Step 5: Trailing spacer
@@ -2237,7 +2237,7 @@ export class DashboardManager implements IDashboardManager {
     // Step 2: Compute window start index
     const startIndex = Math.max(
       0,
-      history.length - DashboardManager.#HISTORY_EXPORT_WINDOW
+      history.length - DashboardManager.#HISTORY_EXPORT_WINDOW,
     );
 
     // Step 3: Full-buffer fast path (return shallow clone)

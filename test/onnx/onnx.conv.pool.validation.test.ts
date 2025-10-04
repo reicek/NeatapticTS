@@ -26,7 +26,7 @@ describe('ONNX Conv2D + Pooling Validation (Phase 4)', () => {
     const kernelPattern = [0.11, -0.07, 0.05, 0.02]; // order: (0,0),(0,1),(1,0),(1,1)
     // Helper to set weights of a neuron corresponding to spatial position (oh,ow).
     const hiddenNeurons = net.nodes.filter(
-      (n) => n.type === 'hidden'
+      (n) => n.type === 'hidden',
     ) as Array<{
       connections: { in: Array<{ from?: unknown; weight: number }> };
       bias?: number;
@@ -79,7 +79,7 @@ describe('ONNX Conv2D + Pooling Validation (Phase 4)', () => {
       });
       const onnxModel = onnx as OnnxModel;
       const verified = (onnxModel.metadata_props || []).find(
-        (m) => m.key === 'conv2d_sharing_verified'
+        (m) => m.key === 'conv2d_sharing_verified',
       );
       // Assert
       expect(!!verified).toBe(true);
@@ -133,7 +133,7 @@ describe('ONNX Conv2D + Pooling Validation (Phase 4)', () => {
       });
       const onnxModel = onnx as OnnxModel;
       const mismatch = (onnxModel.metadata_props || []).find(
-        (m) => m.key === 'conv2d_sharing_mismatch'
+        (m) => m.key === 'conv2d_sharing_mismatch',
       );
       expect(!!mismatch).toBe(true);
     });
@@ -164,7 +164,7 @@ describe('ONNX Conv2D + Pooling Validation (Phase 4)', () => {
       });
       const onnxModel = onnx as OnnxModel;
       const meta = (onnxModel.metadata_props || []).find(
-        (m) => m.key === 'pool2d_layers'
+        (m) => m.key === 'pool2d_layers',
       );
       expect(!!meta).toBe(true);
     });

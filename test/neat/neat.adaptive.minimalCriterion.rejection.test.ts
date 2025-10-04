@@ -20,7 +20,9 @@ describe('Adaptive Minimal Criterion', () => {
     test('threshold increases after evaluation', async () => {
       // Arrange: evaluate to set scores > threshold
       await neat.evaluate();
-      before = (Reflect.get(neat as object, '_mcThreshold') as number | undefined) ?? 0.1;
+      before =
+        (Reflect.get(neat as object, '_mcThreshold') as number | undefined) ??
+        0.1;
       applyMinimalCriterionAdaptive.call(neat);
       // Act: obtain adapted threshold
       const after = Reflect.get(neat as object, '_mcThreshold') as number;

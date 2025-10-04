@@ -39,9 +39,13 @@ export type TelemetryDiversityOptions = {
  * fields with descriptive names rather than repeated inline casts. */
 interface TelemetryContext extends NeatLike {
   generation?: number;
-  options?: NeatOptions & TelemetryDiversityOptions & {
-    telemetryStream?: { enabled?: boolean; onEntry?: (entry: TelemetryEntry) => void };
-  };
+  options?: NeatOptions &
+    TelemetryDiversityOptions & {
+      telemetryStream?: {
+        enabled?: boolean;
+        onEntry?: (entry: TelemetryEntry) => void;
+      };
+    };
   population?: TelemetryGenome[] | GenomeDetailed[];
   _getRNG?: () => () => number;
   _compatibilityDistance?: (a: TelemetryGenome, b: TelemetryGenome) => number;
@@ -88,7 +92,7 @@ interface TelemetryContext extends NeatLike {
 
 export function applyTelemetrySelect(
   this: TelemetryContext,
-  entry: Record<string, unknown>
+  entry: Record<string, unknown>,
 ): Record<string, unknown> {
   // Step 1: Fast-path, nothing to do when no selection set is configured
   const ctx = this as TelemetryContext;
@@ -106,7 +110,7 @@ export function applyTelemetrySelect(
 
   // Step 3: Remove non-core keys not in the selection set
   for (const key of Object.keys(entry)) {
-    if (coreFields.includes(key as typeof coreFields[number])) continue;
+    if (coreFields.includes(key as (typeof coreFields)[number])) continue;
     if (!selectionSet.has(key)) {
       delete entry[key];
     }
@@ -142,7 +146,7 @@ export function structuralEntropy(
       enabled: boolean;
     }>;
     [key: string]: unknown;
-  }
+  },
 ): number {
   // Step 1: Return cached value when available and valid for current generation
   const ctx = this as TelemetryContext;
@@ -208,13 +212,18 @@ export function computeDiversityStats(this: NeatLike) {
   if (!options.diversityMetrics?.enabled) return;
 
   // Fast-mode nudges
-  if (options.fastMode && !(ctx as { _fastModeTuned?: boolean })._fastModeTuned) {
+  if (
+    options.fastMode &&
+    !(ctx as { _fastModeTuned?: boolean })._fastModeTuned
+  ) {
     const diversityMetrics = options.diversityMetrics;
     if (diversityMetrics) {
       if (diversityMetrics.pairSample == null) diversityMetrics.pairSample = 20;
-      if (diversityMetrics.graphletSample == null) diversityMetrics.graphletSample = 30;
+      if (diversityMetrics.graphletSample == null)
+        diversityMetrics.graphletSample = 30;
     }
-    if (options.novelty?.enabled && options.novelty.k == null) options.novelty.k = 5;
+    if (options.novelty?.enabled && options.novelty.k == null)
+      options.novelty.k = 5;
     (ctx as { _fastModeTuned?: boolean })._fastModeTuned = true;
   }
 
@@ -228,35 +237,57 @@ export function computeDiversityStats(this: NeatLike) {
   let compatibilitySum = 0;
   let compatibilitySumSq = 0;
   let compatibilityCount = 0;
-  const rngFactory: () => () => number = typeof ctx._getRNG === 'function' ? ctx._getRNG : () => Math.random;
+  const rngFactory: () => () => number =
+    typeof ctx._getRNG === 'function' ? ctx._getRNG : () => Math.random;
   for (let iter = 0; iter < pairSample; iter++) {
     if (popSize < 2) break;
     const rng = rngFactory();
     const firstIndex = Math.floor(rng() * popSize);
     let secondIndex = Math.floor(rng() * popSize);
     if (secondIndex === firstIndex) secondIndex = (secondIndex + 1) % popSize;
-    const distance = ctx._compatibilityDistance?.(
-      population[firstIndex],
-      population[secondIndex]
-    ) ?? 0;
+    const distance =
+      ctx._compatibilityDistance?.(
+        population[firstIndex],
+        population[secondIndex],
+      ) ?? 0;
     compatibilitySum += distance;
     compatibilitySumSq += distance * distance;
     compatibilityCount++;
   }
-  const meanCompat = compatibilityCount ? compatibilitySum / compatibilityCount : 0;
+  const meanCompat = compatibilityCount
+    ? compatibilitySum / compatibilityCount
+    : 0;
   const varCompat = compatibilityCount
-    ? Math.max(0, compatibilitySumSq / compatibilityCount - meanCompat * meanCompat)
+    ? Math.max(
+        0,
+        compatibilitySumSq / compatibilityCount - meanCompat * meanCompat,
+      )
     : 0;
 
   // Structural entropy across population
   const entropies = population.map((genome) =>
     (ctx as TelemetryContext)._structuralEntropy
       ? (ctx as TelemetryContext)._structuralEntropy!(genome as TelemetryGenome)
-      : structuralEntropy.call(ctx, genome as { nodes: Array<{ geneId: number }>; connections: Array<{ from: { geneId: number }; to: { geneId: number }; enabled: boolean }> })
+      : structuralEntropy.call(
+          ctx,
+          genome as {
+            nodes: Array<{ geneId: number }>;
+            connections: Array<{
+              from: { geneId: number };
+              to: { geneId: number };
+              enabled: boolean;
+            }>;
+          },
+        ),
   );
-  const meanEntropy = entropies.reduce((a: number, b: number) => a + b, 0) / (entropies.length || 1);
+  const meanEntropy =
+    entropies.reduce((a: number, b: number) => a + b, 0) /
+    (entropies.length || 1);
   const varEntropy = entropies.length
-    ? entropies.reduce((a: number, b: number) => a + (b - meanEntropy) * (b - meanEntropy), 0) / entropies.length
+    ? entropies.reduce(
+        (a: number, b: number) => a + (b - meanEntropy) * (b - meanEntropy),
+        0,
+      ) / entropies.length
     : 0;
 
   // Graphlet (3-node motif) sampling
@@ -268,11 +299,19 @@ export function computeDiversityStats(this: NeatLike) {
     if (!genome) break;
     if (genome.nodes.length < 3) continue;
     const selectedIndices = new Set<number>();
-    while (selectedIndices.size < 3) selectedIndices.add(Math.floor(rng() * genome.nodes.length));
-    const selectedNodes = Array.from(selectedIndices).map((i) => genome.nodes[i]);
+    while (selectedIndices.size < 3)
+      selectedIndices.add(Math.floor(rng() * genome.nodes.length));
+    const selectedNodes = Array.from(selectedIndices).map(
+      (i) => genome.nodes[i],
+    );
     let edgeCount = 0;
     for (const connection of genome.connections) {
-      if (connection.enabled && selectedNodes.includes(connection.from) && selectedNodes.includes(connection.to)) edgeCount++;
+      if (
+        connection.enabled &&
+        selectedNodes.includes(connection.from) &&
+        selectedNodes.includes(connection.to)
+      )
+        edgeCount++;
     }
     if (edgeCount > 3) edgeCount = 3;
     motifCounts[edgeCount]++;
@@ -289,7 +328,8 @@ export function computeDiversityStats(this: NeatLike) {
   let lineageMeanPairDist = 0;
   if (ctx._lineageEnabled && popSize > 0) {
     const depths = population.map((genome) => genome._depth ?? 0);
-    lineageMeanDepth = depths.reduce((a: number, b: number) => a + b, 0) / popSize;
+    lineageMeanDepth =
+      depths.reduce((a: number, b: number) => a + b, 0) / popSize;
     let lineagePairSum = 0;
     let lineagePairN = 0;
     const pairsToSample = Math.min(pairSample, (popSize * (popSize - 1)) / 2);
@@ -346,7 +386,10 @@ export function recordTelemetryEntry(this: NeatLike, entry: TelemetryEntry) {
 
   try {
     const telemetryStream = ctx.options?.telemetryStream;
-    if (telemetryStream?.enabled && typeof telemetryStream.onEntry === 'function') {
+    if (
+      telemetryStream?.enabled &&
+      typeof telemetryStream.onEntry === 'function'
+    ) {
       telemetryStream.onEntry(entry);
     }
   } catch {
@@ -378,7 +421,7 @@ export function recordTelemetryEntry(this: NeatLike, entry: TelemetryEntry) {
  */
 export function buildTelemetryEntry(
   this: NeatLike,
-  fittest: Record<string, unknown>
+  fittest: Record<string, unknown>,
 ): TelemetryEntry {
   const ctx = this as TelemetryContext;
   /**
@@ -427,7 +470,7 @@ export function buildTelemetryEntry(
      */
     const population = (ctx.population as GenomeDetailed[]) || [];
     const primaryObjectiveScores: number[] = population.map(
-      (genome: GenomeDetailed) => (genome.score as number) || 0
+      (genome: GenomeDetailed) => (genome.score as number) || 0,
     );
 
     /** Minimum observed primary objective score in the population. */
@@ -445,7 +488,9 @@ export function buildTelemetryEntry(
 
     // Collect sizes of the first few Pareto fronts
     for (let r = 0; r < 5; r++) {
-      const size = population.filter((g) => ((g as GenomeDetailed)._moRank ?? 0) === r).length;
+      const size = population.filter(
+        (g) => ((g as GenomeDetailed)._moRank ?? 0) === r,
+      ).length;
       if (!size) break;
       paretoFrontSizes.push(size);
     }
@@ -474,13 +519,13 @@ export function buildTelemetryEntry(
      * @example
      * // [{ op: 'mutate.addNode', succ: 12, att: 50 }, ...]
      */
-    const operatorStatsSnapshot = Array.from((ctx._operatorStats ?? new Map()).entries()).map(
-      ([opName, stats]) => ({
-        op: opName,
-        succ: stats.success,
-        att: stats.attempts,
-      })
-    );
+    const operatorStatsSnapshot = Array.from(
+      (ctx._operatorStats ?? new Map()).entries(),
+    ).map(([opName, stats]) => ({
+      op: opName,
+      succ: stats.success,
+      att: stats.attempts,
+    }));
 
     /**
      * Telemetry entry assembled in multi-objective mode. Contains core
@@ -494,12 +539,12 @@ export function buildTelemetryEntry(
     const entry: TelemetryEntry & Record<string, unknown> = {
       gen,
       best: (fittest.score as number) ?? 0,
-  species: ctx._species?.length ?? 0,
-  hyper: hyperVolumeProxy,
-  fronts: paretoFrontSizes,
-  diversity: ctx._diversityStats,
-  ops: operatorStatsSnapshot,
-  objImportance: {},
+      species: ctx._species?.length ?? 0,
+      hyper: hyperVolumeProxy,
+      fronts: paretoFrontSizes,
+      diversity: ctx._diversityStats,
+      ops: operatorStatsSnapshot,
+      objImportance: {},
     };
 
     if (!entry.objImportance) entry.objImportance = {};
@@ -517,17 +562,22 @@ export function buildTelemetryEntry(
     }
 
     // Record pending objective lifecycle events (adds/removes) for telemetry
-    if (ctx._pendingObjectiveAdds?.length || ctx._pendingObjectiveRemoves?.length) {
+    if (
+      ctx._pendingObjectiveAdds?.length ||
+      ctx._pendingObjectiveRemoves?.length
+    ) {
       entry.objEvents = [];
-      for (const k of ctx._pendingObjectiveAdds || []) entry.objEvents.push({ type: 'add', key: k });
-      for (const k of ctx._pendingObjectiveRemoves || []) entry.objEvents.push({ type: 'remove', key: k });
+      for (const k of ctx._pendingObjectiveAdds || [])
+        entry.objEvents.push({ type: 'add', key: k });
+      for (const k of ctx._pendingObjectiveRemoves || [])
+        entry.objEvents.push({ type: 'remove', key: k });
       ctx._objectiveEvents = ctx._objectiveEvents || [];
       ctx._objectiveEvents.push(
         ...entry.objEvents.map((e: ObjEvent) => ({
           gen,
           type: e.type,
           key: e.key,
-        }))
+        })),
       );
       ctx._pendingObjectiveAdds = [];
       ctx._pendingObjectiveRemoves = [];
@@ -546,19 +596,27 @@ export function buildTelemetryEntry(
     } catch {
       // ignored: objective provider not present — skip objectives snapshot
     }
-  if (options.rngState && ctx._rngState !== undefined) entry.rng = ctx._rngState as number | undefined;
+    if (options.rngState && ctx._rngState !== undefined)
+      entry.rng = ctx._rngState as number | undefined;
 
     if (ctx._lineageEnabled) {
-      const bestGenome = (ctx.population as GenomeDetailed[])[0] as GenomeDetailed;
-      const depths = (ctx.population as GenomeDetailed[]).map((g: GenomeDetailed) => g._depth ?? 0);
-      ctx._lastMeanDepth = depths.reduce((a: number, b: number) => a + b, 0) / (depths.length || 1);
+      const bestGenome = (
+        ctx.population as GenomeDetailed[]
+      )[0] as GenomeDetailed;
+      const depths = (ctx.population as GenomeDetailed[]).map(
+        (g: GenomeDetailed) => g._depth ?? 0,
+      );
+      ctx._lastMeanDepth =
+        depths.reduce((a: number, b: number) => a + b, 0) /
+        (depths.length || 1);
       // Use dynamic import for ES2023, avoid require
       // NOTE: This assumes the import is available synchronously, otherwise refactor to async
 
       // Build a lightweight lineage context from the telemetry context when available
       const lineageCtx = {
         population: (ctx.population as GenomeDetailed[]) || [],
-        _getRNG: typeof ctx._getRNG === 'function' ? ctx._getRNG : () => Math.random,
+        _getRNG:
+          typeof ctx._getRNG === 'function' ? ctx._getRNG : () => Math.random,
       } as LineageContext;
       const ancestorUniqueness = computeAncestorUniqueness.call(lineageCtx);
       entry.lineage = {
@@ -566,8 +624,8 @@ export function buildTelemetryEntry(
           ? bestGenome._parents.slice()
           : [],
         depthBest: bestGenome._depth ?? 0,
-  meanDepth: +((ctx._lastMeanDepth ?? 0).toFixed(2)),
-  inbreeding: ctx._prevInbreedingCount ?? 0,
+        meanDepth: +(ctx._lastMeanDepth ?? 0).toFixed(2),
+        inbreeding: ctx._prevInbreedingCount ?? 0,
         ancestorUniq: ancestorUniqueness,
       };
     }
@@ -610,12 +668,16 @@ export function buildTelemetryEntry(
           ? meanConns -
             (this as NeatLike & { _lastMeanConns: number })._lastMeanConns
           : 0;
-      (this as NeatLike & {
-        _lastMeanNodes?: number;
-      })._lastMeanNodes = meanNodes;
-      (this as NeatLike & {
-        _lastMeanConns?: number;
-      })._lastMeanConns = meanConns;
+      (
+        this as NeatLike & {
+          _lastMeanNodes?: number;
+        }
+      )._lastMeanNodes = meanNodes;
+      (
+        this as NeatLike & {
+          _lastMeanConns?: number;
+        }
+      )._lastMeanConns = meanConns;
       entry.complexity = {
         meanNodes: +meanNodes.toFixed(2),
         meanConns: +meanConns.toFixed(2),
@@ -645,7 +707,9 @@ export function buildTelemetryEntry(
    * from the MO snapshot to document the intent and avoid accidental
    * coupling.
    */
-  const operatorStatsSnapshotMono = Array.from((ctx._operatorStats ?? new Map()).entries()).map(([opName, stats]) => ({
+  const operatorStatsSnapshotMono = Array.from(
+    (ctx._operatorStats ?? new Map()).entries(),
+  ).map(([opName, stats]) => ({
     op: opName,
     succ: stats.success,
     att: stats.attempts,
@@ -658,55 +722,86 @@ export function buildTelemetryEntry(
   const entry: TelemetryEntry & Record<string, unknown> = {
     gen,
     best: (fittest.score as number) ?? 0,
-  species: ctx._species?.length ?? 0,
+    species: ctx._species?.length ?? 0,
     hyper: hyperVolumeProxy,
-  diversity: ctx._diversityStats,
+    diversity: ctx._diversityStats,
     ops: operatorStatsSnapshotMono,
     objImportance: {},
   };
 
-  if (ctx._lastObjImportance) entry.objImportance = ctx._lastObjImportance as ObjImportance;
-  if (ctx._objectiveAges?.size) entry.objAges = Object.fromEntries(ctx._objectiveAges.entries());
+  if (ctx._lastObjImportance)
+    entry.objImportance = ctx._lastObjImportance as ObjImportance;
+  if (ctx._objectiveAges?.size)
+    entry.objAges = Object.fromEntries(ctx._objectiveAges.entries());
 
-  if (ctx._pendingObjectiveAdds?.length || ctx._pendingObjectiveRemoves?.length) {
+  if (
+    ctx._pendingObjectiveAdds?.length ||
+    ctx._pendingObjectiveRemoves?.length
+  ) {
     entry.objEvents = [];
-    for (const k of ctx._pendingObjectiveAdds || []) entry.objEvents.push({ type: 'add', key: k });
-    for (const k of ctx._pendingObjectiveRemoves || []) entry.objEvents.push({ type: 'remove', key: k });
+    for (const k of ctx._pendingObjectiveAdds || [])
+      entry.objEvents.push({ type: 'add', key: k });
+    for (const k of ctx._pendingObjectiveRemoves || [])
+      entry.objEvents.push({ type: 'remove', key: k });
     ctx._objectiveEvents = ctx._objectiveEvents || [];
-    ctx._objectiveEvents.push(...entry.objEvents.map((e: ObjEvent) => ({ gen, type: e.type, key: e.key })));
+    ctx._objectiveEvents.push(
+      ...entry.objEvents.map((e: ObjEvent) => ({
+        gen,
+        type: e.type,
+        key: e.key,
+      })),
+    );
     ctx._pendingObjectiveAdds = [];
     ctx._pendingObjectiveRemoves = [];
   }
 
-  if (ctx._lastOffspringAlloc) entry.speciesAlloc = ctx._lastOffspringAlloc?.slice();
+  if (ctx._lastOffspringAlloc)
+    entry.speciesAlloc = ctx._lastOffspringAlloc?.slice();
   try {
     entry.objectives = ctx._getObjectives?.().map((o) => o.key) || [];
   } catch {
     // ignored: optional objective provider absent
   }
-  if (ctx.options?.rngState && ctx._rngState !== undefined) entry.rng = ctx._rngState as number | undefined;
+  if (ctx.options?.rngState && ctx._rngState !== undefined)
+    entry.rng = ctx._rngState as number | undefined;
 
   if (ctx._lineageEnabled) {
-    const bestGenome = (ctx.population as GenomeDetailed[])[0] as GenomeDetailed;
-    const depths = (ctx.population as GenomeDetailed[]).map((g: GenomeDetailed) => g._depth ?? 0);
-    ctx._lastMeanDepth = depths.reduce((a: number, b: number) => a + b, 0) / (depths.length || 1);
+    const bestGenome = (
+      ctx.population as GenomeDetailed[]
+    )[0] as GenomeDetailed;
+    const depths = (ctx.population as GenomeDetailed[]).map(
+      (g: GenomeDetailed) => g._depth ?? 0,
+    );
+    ctx._lastMeanDepth =
+      depths.reduce((a: number, b: number) => a + b, 0) / (depths.length || 1);
     // Use dynamic import for ES2023, avoid require
     // NOTE: This assumes the import is available synchronously, otherwise refactor to async
 
     // use imported buildAnc helper
-  let sampledPairs = 0;
-  let jaccardSum = 0;
-  const popLength = (ctx.population as GenomeDetailed[]).length;
+    let sampledPairs = 0;
+    let jaccardSum = 0;
+    const popLength = (ctx.population as GenomeDetailed[]).length;
     const samplePairs = Math.min(30, (popLength * (popLength - 1)) / 2);
     for (let t = 0; t < samplePairs; t++) {
       if (popLength < 2) break;
-  const rngFn = typeof ctx._getRNG === 'function' ? ctx._getRNG() : Math.random;
-  const i = Math.floor(rngFn() * popLength);
-  let j = Math.floor(rngFn() * popLength);
+      const rngFn =
+        typeof ctx._getRNG === 'function' ? ctx._getRNG() : Math.random;
+      const i = Math.floor(rngFn() * popLength);
+      let j = Math.floor(rngFn() * popLength);
       if (j === i) j = (j + 1) % popLength;
-  const lineageCtx2 = { population: (ctx.population as GenomeDetailed[]) || [], _getRNG: typeof ctx._getRNG === 'function' ? ctx._getRNG : () => Math.random } as LineageContext;
-  const ancestorsA = buildAnc.call(lineageCtx2, (ctx.population as GenomeDetailed[])[i]);
-  const ancestorsB = buildAnc.call(lineageCtx2, (ctx.population as GenomeDetailed[])[j]);
+      const lineageCtx2 = {
+        population: (ctx.population as GenomeDetailed[]) || [],
+        _getRNG:
+          typeof ctx._getRNG === 'function' ? ctx._getRNG : () => Math.random,
+      } as LineageContext;
+      const ancestorsA = buildAnc.call(
+        lineageCtx2,
+        (ctx.population as GenomeDetailed[])[i],
+      );
+      const ancestorsB = buildAnc.call(
+        lineageCtx2,
+        (ctx.population as GenomeDetailed[])[j],
+      );
       if (ancestorsA.size === 0 && ancestorsB.size === 0) continue;
       let intersectionCount = 0;
       for (const id of ancestorsA) if (ancestorsB.has(id)) intersectionCount++;
@@ -723,8 +818,8 @@ export function buildTelemetryEntry(
         ? bestGenome._parents.slice()
         : [],
       depthBest: bestGenome._depth ?? 0,
-  meanDepth: +((ctx._lastMeanDepth ?? 0).toFixed(2)),
-  inbreeding: ctx._prevInbreedingCount ?? 0,
+      meanDepth: +(ctx._lastMeanDepth ?? 0).toFixed(2),
+      inbreeding: ctx._prevInbreedingCount ?? 0,
       ancestorUniq: ancestorUniqueness,
     };
   }
@@ -739,12 +834,16 @@ export function buildTelemetryEntry(
   if (
     (this as NeatLike & { options: NeatOptions }).options.telemetry?.complexity
   ) {
-    const nodesArr = (this as NeatLike & {
-      population: GenomeDetailed[];
-    }).population.map((g: GenomeDetailed) => g.nodes.length);
-    const connsArr = (this as NeatLike & {
-      population: GenomeDetailed[];
-    }).population.map((g: GenomeDetailed) => g.connections.length);
+    const nodesArr = (
+      this as NeatLike & {
+        population: GenomeDetailed[];
+      }
+    ).population.map((g: GenomeDetailed) => g.nodes.length);
+    const connsArr = (
+      this as NeatLike & {
+        population: GenomeDetailed[];
+      }
+    ).population.map((g: GenomeDetailed) => g.connections.length);
     const meanNodes =
       nodesArr.reduce((a: number, b: number) => a + b, 0) /
       (nodesArr.length || 1);
@@ -753,9 +852,11 @@ export function buildTelemetryEntry(
       (connsArr.length || 1);
     const maxNodes = nodesArr.length ? Math.max(...nodesArr) : 0;
     const maxConns = connsArr.length ? Math.max(...connsArr) : 0;
-    const enabledRatios = (this as NeatLike & {
-      population: GenomeDetailed[];
-    }).population.map((g: GenomeDetailed) => {
+    const enabledRatios = (
+      this as NeatLike & {
+        population: GenomeDetailed[];
+      }
+    ).population.map((g: GenomeDetailed) => {
       let en = 0,
         dis = 0;
       for (const c of g.connections) {

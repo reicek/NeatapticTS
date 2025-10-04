@@ -33,8 +33,8 @@ describe('Multi-threading Utilities (Multi)', () => {
     });
     describe('when dataset is empty', () => {
       it('throws an error', () => {
-  // Arrange
-  const set: SerializedSample[] = [];
+        // Arrange
+        const set: SerializedSample[] = [];
         // Act & Assert
         expect(() => Multi.serializeDataSet(set)).toThrow();
       });
@@ -131,12 +131,9 @@ describe('Multi-threading Utilities (Multi)', () => {
     });
     describe('when set is empty', () => {
       it('returns NaN', () => {
-  // Arrange
-  const set: SerializedSample[] = [];
-        const cost = (
-          expectedOutputs: number[],
-          actualOutputs: number[],
-        ) => {
+        // Arrange
+        const set: SerializedSample[] = [];
+        const cost = (expectedOutputs: number[], actualOutputs: number[]) => {
           return expectedOutputs.length === actualOutputs.length ? 0 : 0;
         };
         const A = [0];
@@ -151,8 +148,8 @@ describe('Multi-threading Utilities (Multi)', () => {
     });
     describe('when cost function throws', () => {
       it('returns NaN', () => {
-  // Arrange
-  const set: SerializedSample[] = [{ input: [1], output: [2] }];
+        // Arrange
+        const set: SerializedSample[] = [{ input: [1], output: [2] }];
         const cost = () => {
           throw new Error('cost error');
         };
@@ -174,8 +171,8 @@ describe('Multi-threading Utilities (Multi)', () => {
     });
     describe('when cost function returns NaN', () => {
       it('returns NaN as error', () => {
-  // Arrange
-  const set: SerializedSample[] = [{ input: [1], output: [2] }];
+        // Arrange
+        const set: SerializedSample[] = [{ input: [1], output: [2] }];
         const cost = () => NaN;
         const A = [0];
         const S = [0];
@@ -214,7 +211,9 @@ describe('Multi-threading Utilities (Multi)', () => {
             return '';
           }
         }
-        jest.spyOn(Multi, 'getBrowserTestWorker').mockResolvedValue(DummyWorker);
+        jest
+          .spyOn(Multi, 'getBrowserTestWorker')
+          .mockResolvedValue(DummyWorker);
       });
       afterAll(() => {
         jest.restoreAllMocks();
@@ -235,7 +234,7 @@ describe('Multi-threading Utilities (Multi)', () => {
           '../../src/multithreading/workers/browser/testworker',
           () => {
             throw new Error('fail');
-          }
+          },
         );
       });
       afterEach(() => {

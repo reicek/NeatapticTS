@@ -58,10 +58,10 @@ describe('Telemetry & adaptive entropy/speciation extensions', () => {
         multiObjective: { enabled: true, autoEntropy: true },
       });
       // Seed operator stats to guarantee ops column emission
-      const operatorStats = Reflect.get(
-        neat,
-        '_operatorStats',
-      ) as Map<string, { success: number; attempts: number }>;
+      const operatorStats = Reflect.get(neat, '_operatorStats') as Map<
+        string,
+        { success: number; attempts: number }
+      >;
       operatorStats.set('ADD_NODE', { success: 3, attempts: 5 });
       for (let g = 0; g < 4; g++) {
         await neat.evaluate();

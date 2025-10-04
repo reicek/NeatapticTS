@@ -29,29 +29,27 @@ import { config } from '../../config';
  *  - O(1) lookup keeps code flatter and makes tree‑shaking friendlier.
  *  - Enables meta‑programming (e.g. listing supported mutations) in tooling/docs.
  */
-const MUTATION_DISPATCH: Record<
-  string,
-  (this: Network, method?: any) => void
-> = {
-  ADD_NODE: _addNode,
-  SUB_NODE: _subNode,
-  ADD_CONN: _addConn,
-  SUB_CONN: _subConn,
-  MOD_WEIGHT: _modWeight,
-  MOD_BIAS: _modBias,
-  MOD_ACTIVATION: _modActivation,
-  ADD_SELF_CONN: _addSelfConn,
-  SUB_SELF_CONN: _subSelfConn,
-  ADD_GATE: _addGate,
-  SUB_GATE: _subGate,
-  ADD_BACK_CONN: _addBackConn,
-  SUB_BACK_CONN: _subBackConn,
-  SWAP_NODES: _swapNodes,
-  ADD_LSTM_NODE: _addLSTMNode,
-  ADD_GRU_NODE: _addGRUNode,
-  REINIT_WEIGHT: _reinitWeight,
-  BATCH_NORM: _batchNorm,
-};
+const MUTATION_DISPATCH: Record<string, (this: Network, method?: any) => void> =
+  {
+    ADD_NODE: _addNode,
+    SUB_NODE: _subNode,
+    ADD_CONN: _addConn,
+    SUB_CONN: _subConn,
+    MOD_WEIGHT: _modWeight,
+    MOD_BIAS: _modBias,
+    MOD_ACTIVATION: _modActivation,
+    ADD_SELF_CONN: _addSelfConn,
+    SUB_SELF_CONN: _subSelfConn,
+    ADD_GATE: _addGate,
+    SUB_GATE: _subGate,
+    ADD_BACK_CONN: _addBackConn,
+    SUB_BACK_CONN: _subBackConn,
+    SWAP_NODES: _swapNodes,
+    ADD_LSTM_NODE: _addLSTMNode,
+    ADD_GRU_NODE: _addGRUNode,
+    REINIT_WEIGHT: _reinitWeight,
+    BATCH_NORM: _batchNorm,
+  };
 
 /**
  * Public entry point: apply a single mutation operator to the network.
@@ -129,7 +127,7 @@ function _addNode(this: Network): void {
     if (!internal._detChain) {
       if (
         !this.connections.some(
-          (c) => c.from === inputNode && c.to === outputNode
+          (c) => c.from === inputNode && c.to === outputNode,
         )
       ) {
         this.connect(inputNode, outputNode);
@@ -140,7 +138,7 @@ function _addNode(this: Network): void {
     const tail = chain[chain.length - 1];
     // Ensure tail -> output edge exists (recreate if pruned earlier)
     let terminal = this.connections.find(
-      (c) => c.from === tail && c.to === outputNode
+      (c) => c.from === tail && c.to === outputNode,
     );
     if (!terminal) terminal = this.connect(tail, outputNode)[0];
     const prevGater = terminal.gater;
@@ -182,9 +180,8 @@ function _addNode(this: Network): void {
     if (input && output) this.connect(input, output);
     else return;
   }
-  const connection = this.connections[
-    Math.floor(internal._rand() * this.connections.length)
-  ];
+  const connection =
+    this.connections[Math.floor(internal._rand() * this.connections.length)];
   if (!connection) return;
   const prevGater = connection.gater;
   this.disconnect(connection.from, connection.to);
@@ -268,14 +265,14 @@ function _subConn(this: Network): void {
         (n) =>
           n.type === candidateConn.to.type &&
           Math.abs(
-            this.nodes.indexOf(n) - this.nodes.indexOf(candidateConn.to)
-          ) < Math.max(this.input, this.output)
+            this.nodes.indexOf(n) - this.nodes.indexOf(candidateConn.to),
+          ) < Math.max(this.input, this.output),
       );
       let wouldDisconnectLayerPeerGroup = false;
       if (targetLayerPeers.length > 0) {
         const peerConnectionsFromSource = this.connections.filter(
           (c) =>
-            c.from === candidateConn.from && targetLayerPeers.includes(c.to)
+            c.from === candidateConn.from && targetLayerPeers.includes(c.to),
         );
         if (peerConnectionsFromSource.length <= 1)
           wouldDisconnectLayerPeerGroup = true;
@@ -287,7 +284,7 @@ function _subConn(this: Network): void {
           this.nodes.indexOf(candidateConn.from) &&
         !wouldDisconnectLayerPeerGroup
       );
-    }
+    },
   );
   if (removableForwardConnections.length === 0) return;
   /** Connection chosen for removal. */
@@ -321,7 +318,7 @@ function _modBias(this: Network, method: any): void {
   if (this.nodes.length <= this.input) return;
   /** Index of target node (excluding inputs). */
   const targetNodeIndex = Math.floor(
-    (this as any)._rand() * (this.nodes.length - this.input) + this.input
+    (this as any)._rand() * (this.nodes.length - this.input) + this.input,
   );
   /** Selected node for bias mutation. */
   const nodeForBiasMutation = this.nodes[targetNodeIndex];
@@ -340,13 +337,13 @@ function _modActivation(this: Network, method: any): void {
   if (numMutableNodes <= 0) {
     if (config.warnings)
       console.warn(
-        'No nodes available for activation function mutation based on config.'
+        'No nodes available for activation function mutation based on config.',
       );
     return;
   }
   /** Index of chosen node. */
   const targetNodeIndex = Math.floor(
-    (this as any)._rand() * numMutableNodes + this.input
+    (this as any)._rand() * numMutableNodes + this.input,
   );
   /** Target node. */
   const targetNode = this.nodes[targetNodeIndex];
@@ -361,7 +358,7 @@ function _addSelfConn(this: Network): void {
   if (netInternal._enforceAcyclic) return;
   /** Nodes without an existing self connection (excluding inputs). */
   const nodesWithoutSelfLoop = this.nodes.filter(
-    (n, idx) => idx >= this.input && n.connections.self.length === 0
+    (n, idx) => idx >= this.input && n.connections.self.length === 0,
   );
   if (nodesWithoutSelfLoop.length === 0) {
     if (config.warnings)
@@ -385,9 +382,8 @@ function _subSelfConn(this: Network): void {
     return;
   }
   /** Chosen self connection for removal. */
-  const selfConnectionToRemove = this.selfconns[
-    Math.floor((this as any)._rand() * this.selfconns.length)
-  ];
+  const selfConnectionToRemove =
+    this.selfconns[Math.floor((this as any)._rand() * this.selfconns.length)];
   this.disconnect(selfConnectionToRemove.from, selfConnectionToRemove.to);
 }
 
@@ -400,7 +396,7 @@ function _addGate(this: Network): void {
   const allConnectionsIncludingSelf = this.connections.concat(this.selfconns);
   /** Ungated connection candidates. */
   const ungatedConnectionCandidates = allConnectionsIncludingSelf.filter(
-    (c: any) => c.gater === null
+    (c: any) => c.gater === null,
   );
   if (
     ungatedConnectionCandidates.length === 0 ||
@@ -411,7 +407,7 @@ function _addGate(this: Network): void {
   }
   /** Index for gating node (hidden or output). */
   const gatingNodeIndex = Math.floor(
-    netInternal._rand() * (this.nodes.length - this.input) + this.input
+    netInternal._rand() * (this.nodes.length - this.input) + this.input,
   );
   /** Gating node. */
   const gatingNode = this.nodes[gatingNodeIndex];
@@ -433,7 +429,7 @@ function _subGate(this: Network): void {
   }
   /** Random gated connection reference. */
   const gatedConnectionIndex = Math.floor(
-    (this as any)._rand() * this.gates.length
+    (this as any)._rand() * this.gates.length,
   );
   const gatedConnection = this.gates[gatedConnectionIndex];
   this.ungate(gatedConnection);
@@ -482,7 +478,7 @@ function _subBackConn(this: Network): void {
       candidateConn.from.connections.out.length > 1 &&
       candidateConn.to.connections.in.length > 1 &&
       this.nodes.indexOf(candidateConn.from) >
-        this.nodes.indexOf(candidateConn.to)
+        this.nodes.indexOf(candidateConn.to),
   );
   if (removableBackwardConnections.length === 0) return;
   /** Selected backward connection. */
@@ -492,7 +488,7 @@ function _subBackConn(this: Network): void {
     ];
   this.disconnect(
     backwardConnectionToRemove.from,
-    backwardConnectionToRemove.to
+    backwardConnectionToRemove.to,
   );
 }
 
@@ -509,15 +505,15 @@ function _swapNodes(this: Network, method: any): void {
   if (numSwappableNodes < 2) return;
   /** First random index. */
   const firstNodeIndex = Math.floor(
-    netInternal._rand() * numSwappableNodes + this.input
+    netInternal._rand() * numSwappableNodes + this.input,
   );
   /** Second random index (distinct). */
   let secondNodeIndex = Math.floor(
-    netInternal._rand() * numSwappableNodes + this.input
+    netInternal._rand() * numSwappableNodes + this.input,
   );
   while (firstNodeIndex === secondNodeIndex)
     secondNodeIndex = Math.floor(
-      netInternal._rand() * numSwappableNodes + this.input
+      netInternal._rand() * numSwappableNodes + this.input,
     );
   /** First node. */
   const firstNode = this.nodes[firstNodeIndex];
@@ -541,9 +537,8 @@ function _addLSTMNode(this: Network): void {
   if (netInternal._enforceAcyclic) return;
   if (this.connections.length === 0) return;
   /** Connection selected to expand into an LSTM block. */
-  const connectionToExpand = this.connections[
-    Math.floor(Math.random() * this.connections.length)
-  ];
+  const connectionToExpand =
+    this.connections[Math.floor(Math.random() * this.connections.length)];
   /** Original gater to reapply to new outgoing edge. */
   const gaterLSTM = connectionToExpand.gater;
   this.disconnect(connectionToExpand.from, connectionToExpand.to);
@@ -570,9 +565,8 @@ function _addGRUNode(this: Network): void {
   if (netInternal._enforceAcyclic) return;
   if (this.connections.length === 0) return;
   /** Connection selected to expand into a GRU block. */
-  const connectionToExpand = this.connections[
-    Math.floor(Math.random() * this.connections.length)
-  ];
+  const connectionToExpand =
+    this.connections[Math.floor(Math.random() * this.connections.length)];
   /** Original gater (if any). */
   const gaterGRU = connectionToExpand.gater;
   this.disconnect(connectionToExpand.from, connectionToExpand.to);
@@ -596,7 +590,7 @@ function _reinitWeight(this: Network, method: any): void {
   if (this.nodes.length <= this.input) return;
   const internal = this as any;
   const idx = Math.floor(
-    internal._rand() * (this.nodes.length - this.input) + this.input
+    internal._rand() * (this.nodes.length - this.input) + this.input,
   );
   const node = this.nodes[idx];
   const min = method?.min ?? -1;

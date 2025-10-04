@@ -52,16 +52,16 @@ import Connection from '../connection';
 export function crossOver(
   network1: Network,
   network2: Network,
-  equal = false
+  equal = false,
 ): Network {
   if (network1.input !== network2.input || network1.output !== network2.output)
     throw new Error(
-      'Parent networks must have the same input and output sizes for crossover.'
+      'Parent networks must have the same input and output sizes for crossover.',
     );
   /** Offspring scaffold produced by recombination of parent networks. */
   const offspring = new (require('../network').default)(
     network1.input,
-    network1.output
+    network1.output,
   ) as Network;
   /** Mutable list of standard (non self) connections assigned during reconstruction. */
   (offspring as any).connections = [];
@@ -228,10 +228,8 @@ export function crossOver(
       // edges (self loops handled elsewhere) to satisfy structural invariants expected by tests.
       if (cd.from >= cd.to) return; // skip backward / non feed-forward edge
       if (!from.isProjectingTo(to)) {
-        /** Newly constructed connection edge within offspring (first element of connect array). */ const conn = (offspring as any).connect(
-          from,
-          to
-        )[0];
+        /** Newly constructed connection edge within offspring (first element of connect array). */ const conn =
+          (offspring as any).connect(from, to)[0];
         if (conn) {
           conn.weight = cd.weight;
           (conn as any).enabled = cd.enabled !== false;

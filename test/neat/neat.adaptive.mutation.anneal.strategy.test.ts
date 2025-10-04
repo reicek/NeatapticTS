@@ -24,7 +24,9 @@ describe('Adaptive Mutation anneal strategy', () => {
       // increase generation to trigger progress scaling
       (neat as unknown as { generation: number }).generation = 40;
       neat.mutate();
-      const { applyAdaptiveMutation } = await import('../../src/neat/neat.adaptive');
+      const { applyAdaptiveMutation } = await import(
+        '../../src/neat/neat.adaptive'
+      );
       applyAdaptiveMutation.call(neat as unknown as Record<string, unknown>);
       type GenomeLike = { _mutRate: number };
       const within = (neat.population as unknown as GenomeLike[]).every(

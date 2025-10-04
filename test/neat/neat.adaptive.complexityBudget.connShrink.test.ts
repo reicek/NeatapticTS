@@ -20,7 +20,9 @@ describe('Adaptive Complexity Budget connection shrink', () => {
     test('maxConns decreases after stagnation window', async () => {
       // Need at least one improvement cycle: record initial
       const start = neat.options.maxConns || 18;
-      const { applyComplexityBudget } = await import('../../src/neat/neat.adaptive');
+      const { applyComplexityBudget } = await import(
+        '../../src/neat/neat.adaptive'
+      );
       for (let i = 0; i < 4; i++) {
         applyComplexityBudget.call(neat as unknown as Record<string, unknown>);
       }

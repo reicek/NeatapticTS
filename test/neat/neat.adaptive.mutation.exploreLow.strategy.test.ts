@@ -23,7 +23,9 @@ describe('Adaptive Mutation exploreLow strategy', () => {
       await neat.evaluate();
       // Seed per-genome rates
       neat.mutate();
-      const { applyAdaptiveMutation } = await import('../../src/neat/neat.adaptive');
+      const { applyAdaptiveMutation } = await import(
+        '../../src/neat/neat.adaptive'
+      );
       applyAdaptiveMutation.call(neat as unknown as Record<string, unknown>);
       type GenomeLike = { _mutRate: number };
       const rates = (neat.population as unknown as GenomeLike[])

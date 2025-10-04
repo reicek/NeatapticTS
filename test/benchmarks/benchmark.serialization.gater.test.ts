@@ -40,7 +40,7 @@ describe('serialization', () => {
       const netTuple = deserializeTuple(
         tuple,
         (net as any).input,
-        (net as any).output
+        (net as any).output,
       );
       const tupleGated =
         (netTuple as any).connections.filter((c: any) => !!c.gater).length +

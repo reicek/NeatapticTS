@@ -102,7 +102,7 @@ export default class Network implements NetworkView {
   gates: Connection[];
   selfconns: Connection[];
   dropout: number = 0;
-    protected _dropConnectProb: number = 0;
+  protected _dropConnectProb: number = 0;
   private _lastGradNorm?: number;
   private _optimizerStep: number = 0;
   private _weightNoiseStd: number = 0;
@@ -116,7 +116,7 @@ export default class Network implements NetworkView {
   private _lastStats: any = null;
   private _stochasticDepthSchedule?: (
     step: number,
-    current: number[]
+    current: number[],
   ) => number[];
   private _mixedPrecision: { enabled: boolean; lossScale: number } = {
     enabled: false,
@@ -172,11 +172,11 @@ export default class Network implements NetworkView {
   private _returnTypedActivations: boolean = false; // if true and reuse enabled, return typed array directly
   private _activationPool?: Float32Array | Float64Array; // pooled output array
   // Packed connection slab fields (for memory + cache efficiency when iterating connections)
-    public _connWeights?: Float32Array | Float64Array;
-    public _connFrom?: Uint32Array;
-    public _connTo?: Uint32Array;
-    public _slabDirty: boolean = true;
-    public _useFloat32Weights: boolean = true;
+  public _connWeights?: Float32Array | Float64Array;
+  public _connFrom?: Uint32Array;
+  public _connTo?: Uint32Array;
+  public _slabDirty: boolean = true;
+  public _useFloat32Weights: boolean = true;
   // Cached node.index maintenance (avoids repeated this.nodes.indexOf in hot paths like slab rebuild)
   public _nodeIndexDirty: boolean = true; // when true, node.index values must be reassigned sequentially
   // Fast slab forward path structures
@@ -221,7 +221,7 @@ export default class Network implements NetworkView {
       activationPrecision?: 'f32' | 'f64';
       reuseActivationArrays?: boolean;
       returnTypedActivations?: boolean;
-    }
+    },
   ) {
     // Validate that input and output sizes are provided.
     if (typeof input === 'undefined' || typeof output === 'undefined') {
@@ -360,7 +360,7 @@ export default class Network implements NetworkView {
    */
   pruneToSparsity(
     targetSparsity: number,
-    method: 'magnitude' | 'snip' = 'magnitude'
+    method: 'magnitude' | 'snip' = 'magnitude',
   ) {
     return _pruneToSparsity.call(this, targetSparsity, method);
   }
@@ -374,12 +374,12 @@ export default class Network implements NetworkView {
     } else if (stdDev && Array.isArray(stdDev.perHiddenLayer)) {
       if (!this.layers || this.layers.length < 3)
         throw new Error(
-          'Per-hidden-layer weight noise requires a layered network with at least one hidden layer'
+          'Per-hidden-layer weight noise requires a layered network with at least one hidden layer',
         );
       const hiddenLayerCount = this.layers.length - 2;
       if (stdDev.perHiddenLayer.length !== hiddenLayerCount)
         throw new Error(
-          `Expected ${hiddenLayerCount} std dev entries (one per hidden layer), got ${stdDev.perHiddenLayer.length}`
+          `Expected ${hiddenLayerCount} std dev entries (one per hidden layer), got ${stdDev.perHiddenLayer.length}`,
         );
       if (stdDev.perHiddenLayer.some((s) => s < 0))
         throw new Error('Weight noise std devs must be >= 0');
@@ -427,7 +427,7 @@ export default class Network implements NetworkView {
     _setRNGState.call(this, state);
   }
   setStochasticDepthSchedule(
-    fn: (step: number, current: number[]) => number[]
+    fn: (step: number, current: number[]) => number[],
   ) {
     this._stochasticDepthSchedule = fn;
   }
@@ -449,7 +449,7 @@ export default class Network implements NetworkView {
     const hiddenLayerCount = Math.max(0, this.layers.length - 2);
     if (survival.length !== hiddenLayerCount)
       throw new Error(
-        `Expected ${hiddenLayerCount} survival probabilities for hidden layers, got ${survival.length}`
+        `Expected ${hiddenLayerCount} survival probabilities for hidden layers, got ${survival.length}`,
       );
     this._stochasticDepth = survival.slice();
   }
@@ -506,14 +506,14 @@ export default class Network implements NetworkView {
   activate(
     input: number[],
     training = false,
-    maxActivationDepth = 1000
+    maxActivationDepth = 1000,
   ): number[] {
     if (this._enforceAcyclic && this._topoDirty) this._computeTopoOrder();
     if (!Array.isArray(input) || input.length !== this.input) {
       throw new Error(
         `Input size mismatch: expected ${this.input}, got ${
           input ? input.length : 'undefined'
-        }`
+        }`,
       );
     }
     // Fast slab path (inference-only, ungated, acyclic, no stochastic features)
@@ -530,7 +530,7 @@ export default class Network implements NetworkView {
     // Check for empty or corrupted network structure
     if (!this.nodes || this.nodes.length === 0) {
       throw new Error(
-        'Network structure is corrupted or empty. No nodes found.'
+        'Network structure is corrupted or empty. No nodes found.',
       );
     }
 
@@ -591,7 +591,7 @@ export default class Network implements NetworkView {
     ) {
       const updated = this._stochasticDepthSchedule(
         this._trainingStep,
-        this._stochasticDepth.slice()
+        this._stochasticDepth.slice(),
       );
       if (
         Array.isArray(updated) &&
@@ -821,7 +821,7 @@ export default class Network implements NetworkView {
   activateRaw(
     input: number[],
     training = false,
-    maxActivationDepth = 1000
+    maxActivationDepth = 1000,
   ): any {
     const { activateRaw } = require('./network/network.activate');
     return activateRaw.call(this, input, training, maxActivationDepth);
@@ -868,12 +868,12 @@ export default class Network implements NetworkView {
     update: boolean,
     target: number[],
     regularization: number = 0, // L2 regularization factor (lambda)
-    costDerivative?: (target: number, output: number) => number
+    costDerivative?: (target: number, output: number) => number,
   ): void {
     // Validate that the target array matches the network's output size.
     if (!target || target.length !== this.output) {
       throw new Error(
-        'Output target length should match network output length'
+        'Output target length should match network output length',
       );
     }
 
@@ -893,7 +893,7 @@ export default class Network implements NetworkView {
           update,
           regularization,
           target[--targetIndex],
-          costDerivative
+          costDerivative,
         );
       } else {
         this.nodes[i].propagate(
@@ -901,7 +901,7 @@ export default class Network implements NetworkView {
           momentum,
           update,
           regularization,
-          target[--targetIndex]
+          target[--targetIndex],
         );
       }
     }
@@ -1058,7 +1058,7 @@ export default class Network implements NetworkView {
   // Training is implemented in network.training.ts; this wrapper keeps public API stable.
   train(
     set: { input: number[]; output: number[] }[],
-    options: any
+    options: any,
   ): { error: number; iterations: number; time: number } {
     const { trainImpl } = require('./network/network.training');
     return trainImpl(this as any, set, options);
@@ -1097,7 +1097,7 @@ export default class Network implements NetworkView {
   static adjustRateForAccumulation(
     rate: number,
     accumulationSteps: number,
-    reduction: 'average' | 'sum'
+    reduction: 'average' | 'sum',
   ) {
     if (reduction === 'sum' && accumulationSteps > 1)
       return rate / accumulationSteps;
@@ -1107,7 +1107,7 @@ export default class Network implements NetworkView {
   // Evolution wrapper delegates to network/network.evolve.ts implementation.
   async evolve(
     set: { input: number[]; output: number[] }[],
-    options: any
+    options: any,
   ): Promise<{ error: number; iterations: number; time: number }> {
     const { evolveNetwork } = await import('./network/network.evolve');
     return evolveNetwork.call(this, set, options);
@@ -1125,7 +1125,7 @@ export default class Network implements NetworkView {
    */
   test(
     set: { input: number[]; output: number[] }[],
-    cost?: any
+    cost?: any,
   ): { error: number; time: number } {
     // Dataset dimension validation
     if (!Array.isArray(set) || set.length === 0) {
@@ -1136,7 +1136,7 @@ export default class Network implements NetworkView {
         throw new Error(
           `Test sample input size mismatch: expected ${this.input}, got ${
             sample.input ? sample.input.length : 'undefined'
-          }`
+          }`,
         );
       }
       if (
@@ -1146,7 +1146,7 @@ export default class Network implements NetworkView {
         throw new Error(
           `Test sample output size mismatch: expected ${this.output}, got ${
             sample.output ? sample.output.length : 'undefined'
-          }`
+          }`,
         );
       }
     }
@@ -1201,7 +1201,7 @@ export default class Network implements NetworkView {
   static deserialize(
     data: any[],
     inputSize?: number,
-    outputSize?: number
+    outputSize?: number,
   ): Network {
     return _deserialize(data, inputSize, outputSize);
   }
@@ -1251,7 +1251,7 @@ export default class Network implements NetworkView {
   static crossOver(
     network1: Network,
     network2: Network,
-    equal: boolean = false
+    equal: boolean = false,
   ): Network {
     return _crossOver(network1, network2, equal);
   }
@@ -1300,19 +1300,19 @@ export default class Network implements NetworkView {
   static createMLP(
     inputCount: number,
     hiddenCounts: number[],
-    outputCount: number
+    outputCount: number,
   ): Network {
     // Create all nodes
     const inputNodes = Array.from(
       { length: inputCount },
-      () => new Node('input')
+      () => new Node('input'),
     );
     const hiddenLayers: Node[][] = hiddenCounts.map((count) =>
-      Array.from({ length: count }, () => new Node('hidden'))
+      Array.from({ length: count }, () => new Node('hidden')),
     );
     const outputNodes = Array.from(
       { length: outputCount },
-      () => new Node('output')
+      () => new Node('output'),
     );
     // Flatten all nodes in topological order
     const allNodes = [...inputNodes, ...hiddenLayers.flat(), ...outputNodes];

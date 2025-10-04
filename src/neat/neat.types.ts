@@ -97,8 +97,8 @@ export type NeatLike = Record<string, unknown>;
  *   direction: 'min',
  *   accessor: g => (g.nodes.length + g.connections.length)
  * };
-* ```
-*/
+ * ```
+ */
 export interface ObjectiveDescriptor {
   key: string;
   direction: 'max' | 'min';

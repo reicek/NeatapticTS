@@ -48,13 +48,13 @@ import * as methods from '../../methods/methods';
 export function serialize(this: Network): any[] {
   // Ensure indices are refreshed (fast paths may leave stale indices for performance; we enforce consistency here).
   (this as any).nodes.forEach(
-    (nodeRef: any, nodeIndex: number) => (nodeRef.index = nodeIndex)
+    (nodeRef: any, nodeIndex: number) => (nodeRef.index = nodeIndex),
   );
   // At this point each node.index becomes our canonical ID used throughout the serialization.
   // Indices are intentionally positional so the resulting arrays remain tightly packed and cache‑friendly.
   /** Current activation values per node (index-aligned). */
   const activations = (this as any).nodes.map(
-    (nodeRef: any) => nodeRef.activation
+    (nodeRef: any) => nodeRef.activation,
   );
   // activations[] captures the post-squash output of each neuron; when deserialized we can resume
   // a simulation mid-stream (e.g. during evolutionary evaluation) if desired.
@@ -63,7 +63,7 @@ export function serialize(this: Network): any[] {
   // states[] represent the pre-activation internal sum (or evolving state for recurrent / gated constructs).
   /** Squash (activation function) names per node for later rehydration. */
   const squashes = (this as any).nodes.map(
-    (nodeRef: any) => nodeRef.squash.name
+    (nodeRef: any) => nodeRef.squash.name,
   );
   // Instead of serializing function references we store the human-readable name; on import we map name->fn.
   /** Combined forward + self connections flattened to plain indices + weights. */
@@ -100,7 +100,7 @@ export function serialize(this: Network): any[] {
 export function deserialize(
   data: any[],
   inputSize?: number,
-  outputSize?: number
+  outputSize?: number,
 ): Network {
   /** Destructured compact tuple payload produced by serialize(). */
   const [
@@ -140,8 +140,8 @@ export function deserialize(
     if (!(methods.Activation as any)[squashName]) {
       console.warn(
         `Unknown squash function '${String(
-          squashName
-        )}' encountered during deserialize. Falling back to identity.`
+          squashName,
+        )}' encountered during deserialize. Falling back to identity.`,
       );
     }
     node.squash =
@@ -164,24 +164,24 @@ export function deserialize(
       const createdConnection = (net as any).connect(
         sourceNode,
         targetNode,
-        serializedConn.weight
+        serializedConn.weight,
       )[0];
       if (createdConnection && serializedConn.gater != null) {
         if (serializedConn.gater < (net as any).nodes.length) {
           // Only gate if the gater index is valid—defensive against older or pruned models.
           (net as any).gate(
             (net as any).nodes[serializedConn.gater],
-            createdConnection
+            createdConnection,
           );
         } else {
           console.warn(
-            'Invalid gater index encountered during deserialize; skipping gater assignment.'
+            'Invalid gater index encountered during deserialize; skipping gater assignment.',
           );
         }
       }
     } else {
       console.warn(
-        'Invalid connection indices encountered during deserialize; skipping connection.'
+        'Invalid connection indices encountered during deserialize; skipping connection.',
       );
     }
   });
@@ -257,7 +257,7 @@ export function fromJSONImpl(json: any): Network {
   /** New network shell with recorded IO sizes. */
   const net = new (require('../network').default)(
     json.input,
-    json.output
+    json.output,
   ) as Network;
   (net as any).dropout = json.dropout || 0;
   (net as any).nodes = [];
@@ -291,7 +291,7 @@ export function fromJSONImpl(json: any): Network {
       connJson.to >= nodesLength
     ) {
       console.warn(
-        'Invalid connection indices encountered during fromJSONImpl; skipping connection.'
+        'Invalid connection indices encountered during fromJSONImpl; skipping connection.',
       );
       return;
     }
@@ -304,7 +304,7 @@ export function fromJSONImpl(json: any): Network {
     const createdConnection = (net as any).connect(
       sourceNode,
       targetNode,
-      connJson.weight
+      connJson.weight,
     )[0];
     if (
       createdConnection &&
@@ -314,11 +314,11 @@ export function fromJSONImpl(json: any): Network {
       if (connJson.gater >= 0 && connJson.gater < nodesLength) {
         (net as any).gate(
           (net as any).nodes[connJson.gater],
-          createdConnection
+          createdConnection,
         );
       } else {
         console.warn(
-          'Invalid gater index encountered during fromJSONImpl; skipping gater assignment.'
+          'Invalid gater index encountered during fromJSONImpl; skipping gater assignment.',
         );
       }
     }

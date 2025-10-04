@@ -227,12 +227,12 @@ export async function evaluate(this: any): Promise<void> {
         if (meanEntropy < targetEntropy - deadband)
           threshold = Math.max(
             entropyCompatOptions.minThreshold ?? 0.5,
-            threshold * (1 - adjustRate)
+            threshold * (1 - adjustRate),
           );
         else if (meanEntropy > targetEntropy + deadband)
           threshold = Math.min(
             entropyCompatOptions.maxThreshold ?? 10,
-            threshold * (1 + adjustRate)
+            threshold * (1 + adjustRate),
           );
         this.options.compatibilityThreshold = threshold;
       }
@@ -263,7 +263,7 @@ export async function evaluate(this: any): Promise<void> {
     if (autoDistanceCoeffOptions?.enabled && this.options.speciation) {
       /** Array of connection counts for each genome in the population. */
       const connectionSizes = this.population.map(
-        (g: any) => g.connections.length
+        (g: any) => g.connections.length,
       );
       /** Mean number of connections across the population. */
       const meanSize =
@@ -273,7 +273,7 @@ export async function evaluate(this: any): Promise<void> {
       const connVar =
         connectionSizes.reduce(
           (a: number, b: number) => a + (b - meanSize) * (b - meanSize),
-          0
+          0,
         ) / (connectionSizes.length || 1);
       /** Rate used to adjust distance coefficients when variance changes. */
       const adjustRate = autoDistanceCoeffOptions.adjustRate ?? 0.05;
@@ -290,31 +290,31 @@ export async function evaluate(this: any): Promise<void> {
         try {
           this.options.excessCoeff = Math.min(
             maxCoeff,
-            (this.options.excessCoeff! ?? 1) * (1 + adjustRate)
+            (this.options.excessCoeff! ?? 1) * (1 + adjustRate),
           );
           this.options.disjointCoeff = Math.min(
             maxCoeff,
-            (this.options.disjointCoeff! ?? 1) * (1 + adjustRate)
+            (this.options.disjointCoeff! ?? 1) * (1 + adjustRate),
           );
         } catch {}
       }
       if (connVar < this._lastConnVar * 0.95) {
         this.options.excessCoeff = Math.min(
           maxCoeff,
-          this.options.excessCoeff! * (1 + adjustRate)
+          this.options.excessCoeff! * (1 + adjustRate),
         );
         this.options.disjointCoeff = Math.min(
           maxCoeff,
-          this.options.disjointCoeff! * (1 + adjustRate)
+          this.options.disjointCoeff! * (1 + adjustRate),
         );
       } else if (connVar > this._lastConnVar * 1.05) {
         this.options.excessCoeff = Math.max(
           minCoeff,
-          this.options.excessCoeff! * (1 - adjustRate)
+          this.options.excessCoeff! * (1 - adjustRate),
         );
         this.options.disjointCoeff = Math.max(
           minCoeff,
-          this.options.disjointCoeff! * (1 - adjustRate)
+          this.options.disjointCoeff! * (1 - adjustRate),
         );
       }
       this._lastConnVar = connVar;
@@ -331,7 +331,7 @@ export async function evaluate(this: any): Promise<void> {
         const keys = (this._getObjectives() as any[]).map((o: any) => o.key);
         if (!keys.includes('entropy')) {
           this.registerObjective('entropy', 'max', (g: any) =>
-            (this as any)._structuralEntropy(g)
+            (this as any)._structuralEntropy(g),
           );
           this._pendingObjectiveAdds.push('entropy');
           this._objectivesList = undefined as any;

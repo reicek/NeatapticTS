@@ -30,7 +30,7 @@ import type {
  * @returns Array of per-species summaries suitable for reporting.
  */
 export function getSpeciesStats(
-  this: NeatLike
+  this: NeatLike,
 ): { id: number; size: number; bestScore: number; lastImproved: number }[] {
   // `speciesArray` is a reference to the internal species registry. We map
   // to a minimal representation to avoid exposing the full objects.
@@ -99,19 +99,23 @@ export function getSpeciesHistory(this: NeatLike): SpeciesHistoryEntry[] {
 
   // If the user enabled extended history, ensure extended fields exist by
   // backfilling inexpensive fallbacks where possible.
-  const options = (this.options as import('./neat.types').NeatOptions | undefined);
+  const options = this.options as
+    | import('./neat.types').NeatOptions
+    | undefined;
   if (options?.speciesAllocation?.extendedHistory) {
     // Iterate over each generation snapshot
     for (const generationEntry of speciesHistory) {
       // Iterate over each per-species stat in the snapshot
-  for (const speciesStat of generationEntry.stats as SpeciesHistoryStatExtended[]) {
+      for (const speciesStat of generationEntry.stats as SpeciesHistoryStatExtended[]) {
         // If extended fields already present, skip computation
         if ('innovationRange' in speciesStat && 'enabledRatio' in speciesStat)
           continue;
 
         // Find a representative species object in the current population by id
         // `speciesObj` is used to compute fallbacks when needed.
-  const speciesObj = (ctx._species || []).find((s) => s.id === speciesStat.id) as SpeciesLike | undefined;
+        const speciesObj = (ctx._species || []).find(
+          (s) => s.id === speciesStat.id,
+        ) as SpeciesLike | undefined;
 
         // If we have members, compute cheap fallbacks for innovationRange and enabledRatio
         if (speciesObj && speciesObj.members && speciesObj.members.length) {
@@ -127,7 +131,8 @@ export function getSpeciesHistory(this: NeatLike): SpeciesHistoryEntry[] {
             for (const connection of member.connections as ConnectionLike[]) {
               // Prefer an explicit `innovation` property; otherwise call internal
               // fallback innov extractor (if available) and finally default to 0.
-              const innovationId = connection.innovation ?? ctx._fallbackInnov?.(connection) ?? 0;
+              const innovationId =
+                connection.innovation ?? ctx._fallbackInnov?.(connection) ?? 0;
 
               // Update min/max innovation trackers
               if (innovationId > maxInnovation) maxInnovation = innovationId;
@@ -141,13 +146,17 @@ export function getSpeciesHistory(this: NeatLike): SpeciesHistoryEntry[] {
 
           // Compute innovationRange: positive difference when valid, otherwise 0
           (speciesStat as SpeciesHistoryStatExtended).innovationRange =
-            isFinite(maxInnovation) && isFinite(minInnovation) && maxInnovation > minInnovation
+            isFinite(maxInnovation) &&
+            isFinite(minInnovation) &&
+            maxInnovation > minInnovation
               ? maxInnovation - minInnovation
               : 0;
 
           // Compute enabledRatio: fraction of enabled connections when any exist
           (speciesStat as SpeciesHistoryStatExtended).enabledRatio =
-            enabledCount + disabledCount ? enabledCount / (enabledCount + disabledCount) : 0;
+            enabledCount + disabledCount
+              ? enabledCount / (enabledCount + disabledCount)
+              : 0;
         }
       }
     }

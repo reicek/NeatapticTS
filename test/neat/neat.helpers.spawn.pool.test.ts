@@ -22,21 +22,21 @@ describe('NEAT Helper Utilities', () => {
     test('child references single parent id', () => {
       // Arrange: spawn child from parent
       const helper = neat as NeatLineageHarness;
-  const child = helper.spawnFromParent(parent, 1) as LineageTrackedNetwork;
-  // Act & Assert: lineage metadata captures single parent id
-  expect(child._parents).toEqual([parent._id]);
+      const child = helper.spawnFromParent(parent, 1) as LineageTrackedNetwork;
+      // Act & Assert: lineage metadata captures single parent id
+      expect(child._parents).toEqual([parent._id]);
     });
   });
   describe('createPool seeded cloning', () => {
     /** Fitness returns connection length to avoid score ties influencing logic. */
-  const fitness = (network: Network) => network.connections.length;
+    const fitness = (network: Network) => network.connections.length;
     /** Seed network used for cloning across pool. */
     const seedNet = new Network(2, 1);
     /** Neat instance built with popsize 5 for pool creation. */
     const neat = new Neat(2, 1, fitness, { popsize: 5, seed: 333 });
     beforeAll(() => {
       // Arrange: create new pool from seed network
-  neat.createPool(seedNet);
+      neat.createPool(seedNet);
     });
     test('all genomes cloned from seed have identical IO counts', () => {
       // Act: collect distinct (input,output) signatures

@@ -44,9 +44,7 @@ interface BaselineRecord {
  * @param targetConnections Desired number of connections (approximate upper bound).
  * @returns Object containing created Network instance and elapsed build time in ms.
  */
-function buildSyntheticNetwork(
-  targetConnections: number
-): {
+function buildSyntheticNetwork(targetConnections: number): {
   net: Network;
   buildMs: number;
 } {
@@ -103,7 +101,7 @@ describe('benchmark.memory dist-only', () => {
         size >= 200000 ? 1 : size >= 100000 ? 2 : size >= 50000 ? 3 : 5;
       const { totalMs: fwdTotalMs, avgMs: fwdAvgMs } = measureForwardPass(
         net,
-        iters
+        iters,
       );
       const mem = memoryStats(net);
       baselineRecords.push({
@@ -124,7 +122,7 @@ describe('benchmark.memory dist-only', () => {
     for (const size of sizes)
       it(`records connections size=${size}`, () => {
         expect(
-          baselineRecords.find((r) => r.size === size)!.conn
+          baselineRecords.find((r) => r.size === size)!.conn,
         ).toBeGreaterThan(0);
       });
   });
@@ -158,7 +156,7 @@ describe('benchmark.memory dist-only', () => {
           size >= 200000 ? 3 : size >= 100000 ? 5 : size >= 50000 ? 4 : 5;
         const { totalMs: fwdTotalMs, avgMs: fwdAvgMs } = measureForwardPass(
           net,
-          iterations
+          iterations,
         );
         const mem = memoryStats(net);
         let heapUsed: number | undefined;
@@ -184,16 +182,15 @@ describe('benchmark.memory dist-only', () => {
         });
       }
     }
-    const {
-      aggregateBenchMeasurements,
-    } = require('./benchmark.report.test') as typeof import('./benchmark.report.test');
+    const { aggregateBenchMeasurements } =
+      require('./benchmark.report.test') as typeof import('./benchmark.report.test');
     distAggregated = aggregateBenchMeasurements(
       rawMeasurements.map((r) => ({
         mode: 'dist',
         scenario: 'buildForward',
         size: r.size,
         metrics: r.metrics,
-      })) as any
+      })) as any,
     );
     it('aggregated has entries', () => {
       expect(distAggregated.length).toBeGreaterThan(0);
@@ -217,7 +214,7 @@ describe('benchmark.memory dist-only', () => {
       if (a.length < 2) return 0;
       const m = mean(a);
       return Math.sqrt(
-        a.reduce((s, x) => s + (x - m) * (x - m), 0) / (a.length - 1)
+        a.reduce((s, x) => s + (x - m) * (x - m), 0) / (a.length - 1),
       );
     }
     /**
@@ -304,7 +301,7 @@ describe('benchmark.memory dist-only', () => {
       const iterations = size >= 200000 ? 3 : 5; // mirrors original logic for large sizes
       const { totalMs: fwdTotalMs, avgMs: fwdAvgMs } = measureForwardPass(
         net,
-        iterations
+        iterations,
       );
       const mem = memoryStats(net);
       let heapUsed: number | undefined;
@@ -345,7 +342,7 @@ describe('benchmark.memory dist-only', () => {
         if (a.length < 2) return 0;
         const mm = m(a);
         return Math.sqrt(
-          a.reduce((s, x) => s + (x - mm) * (x - mm), 0) / (a.length - 1)
+          a.reduce((s, x) => s + (x - mm) * (x - mm), 0) / (a.length - 1),
         );
       };
       const bm = m(build),
@@ -408,7 +405,7 @@ describe('benchmark.memory dist-only', () => {
         scenario: 'buildForward',
         size: r.size,
         metrics: r.metrics,
-      })) as any
+      })) as any,
     );
     const varianceSummary = distAggregated
       .filter((g) => g.size >= 100000 && g.count > 1)
@@ -535,8 +532,7 @@ describe('benchmark.memory dist-only', () => {
                 thresholdPct: DELTA_THRESHOLD,
                 cvPct: cv,
                 cvThresholdPct: CV_THRESHOLD,
-                note:
-                  'Informational only: not failing. Rolling median baseline.',
+                note: 'Informational only: not failing. Rolling median baseline.',
               });
             }
           }
@@ -556,9 +552,8 @@ describe('benchmark.memory dist-only', () => {
       // Attach variance escalation records & cap metadata
       (payload.meta as any).maxVarianceRepeats = maxVarianceRepeats;
       const priorEsc = (existing?.meta?.varianceAutoEscalations || []) as any[];
-      (payload.meta as any).varianceAutoEscalations = priorEsc.concat(
-        escalateRecords
-      );
+      (payload.meta as any).varianceAutoEscalations =
+        priorEsc.concat(escalateRecords);
       if (varianceSummary.length) payload.variance = varianceSummary;
       const hist = Array.isArray(payload.history) ? payload.history : [];
       hist.push(snapshot);

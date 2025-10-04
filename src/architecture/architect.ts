@@ -117,7 +117,7 @@ export default class Architect {
       // the network structure is ambiguous or incomplete.
       if (!foundTypes || inputSize === 0 || outputSize === 0) {
         throw new Error(
-          'Could not determine input/output nodes. Ensure nodes have their `type` property set to "input" or "output".'
+          'Could not determine input/output nodes. Ensure nodes have their `type` property set to "input" or "output".',
         );
       }
       // Note: A previous fallback mechanism existed here but was removed for stricter type enforcement.
@@ -151,7 +151,7 @@ export default class Architect {
   static perceptron(...layers: number[]): Network {
     if (layers.length < 3) {
       throw new Error(
-        'Invalid MLP configuration: You must specify at least 3 layer sizes (input, hidden, output).'
+        'Invalid MLP configuration: You must specify at least 3 layer sizes (input, hidden, output).',
       );
     }
 
@@ -184,7 +184,7 @@ export default class Architect {
       // Connect the previous layer to the current layer using a full mesh connection.
       (previousLayer as Layer).connect(
         currentLayer,
-        methods.groupConnection.ALL_TO_ALL // Every node in previousLayer connects to every node in currentLayer.
+        methods.groupConnection.ALL_TO_ALL, // Every node in previousLayer connects to every node in currentLayer.
       );
       nodes.push(currentLayer); // Add the new layer to the list of network components.
       previousLayer = currentLayer; // Update the reference to the previous layer.
@@ -194,8 +194,8 @@ export default class Architect {
     const net = Architect.construct(nodes);
     // Attach ordered Layer instances (excluding any Group) to enable layer-based features (e.g. stochastic depth)
 
-    ((net as unknown) as { layers: Layer[] }).layers = nodes.filter(
-      (n) => n instanceof Layer
+    (net as unknown as { layers: Layer[] }).layers = nodes.filter(
+      (n) => n instanceof Layer,
     );
     return net;
   }
@@ -229,7 +229,7 @@ export default class Architect {
       backconnections?: number;
       selfconnections?: number;
       gates?: number;
-    } = {}
+    } = {},
   ): Network {
     // Set default values for optional parameters if not provided.
     const {
@@ -309,11 +309,11 @@ export default class Architect {
     if (
       !layerArgs.every(
         (arg): arg is number =>
-          typeof arg === 'number' && Number.isFinite(arg) && arg > 0
+          typeof arg === 'number' && Number.isFinite(arg) && arg > 0,
       )
     ) {
       throw new Error(
-        'Invalid LSTM layer arguments: All layer sizes must be positive finite numbers.'
+        'Invalid LSTM layer arguments: All layer sizes must be positive finite numbers.',
       );
     }
     layers = layerArgs as number[]; // Type assertion is safe after validation.
@@ -321,7 +321,7 @@ export default class Architect {
     // Ensure at least input, one hidden (LSTM), and output layers are specified.
     if (layers.length < 3) {
       throw new Error(
-        'Invalid LSTM configuration: You must specify at least 3 layer sizes (input, hidden..., output).'
+        'Invalid LSTM configuration: You must specify at least 3 layer sizes (input, hidden..., output).',
       );
     }
 
@@ -389,7 +389,7 @@ export default class Architect {
     // Ensure at least input, one hidden (GRU), and output layers are specified.
     if (layers.length < 3) {
       throw new Error(
-        'Invalid GRU configuration: You must specify at least 3 layer sizes (input, hidden..., output).'
+        'Invalid GRU configuration: You must specify at least 3 layer sizes (input, hidden..., output).',
       );
     }
 
@@ -481,7 +481,7 @@ export default class Architect {
     hiddenLayers: number | number[],
     outputSize: number,
     previousInput: number, // Input delay taps
-    previousOutput: number // Output delay taps
+    previousOutput: number, // Output delay taps
   ): Network {
     // Ensure hiddenLayers is an array, even if a single number or zero is provided.
     if (!Array.isArray(hiddenLayers)) {
@@ -528,7 +528,7 @@ export default class Architect {
         // Connect the previous layer (input or preceding hidden layer) to the current hidden layer.
         (previousLayer as Layer).connect(
           hiddenLayer,
-          methods.groupConnection.ALL_TO_ALL
+          methods.groupConnection.ALL_TO_ALL,
         );
         previousLayer = hiddenLayer; // Update previous layer for the next connection.
 
@@ -540,7 +540,7 @@ export default class Architect {
       // Connect the last hidden layer to the output layer.
       (previousLayer as Layer).connect(
         output,
-        methods.groupConnection.ALL_TO_ALL
+        methods.groupConnection.ALL_TO_ALL,
       );
     } else {
       // No hidden layers: connect the main input layer directly to the output layer.
@@ -556,11 +556,11 @@ export default class Architect {
     // Use ALL_TO_ALL connection: every memory node connects to every node in the target layer.
     inputMemory.connect(
       firstProcessingLayer!,
-      methods.groupConnection.ALL_TO_ALL
+      methods.groupConnection.ALL_TO_ALL,
     ); // Non-null assertion safe due to logic above.
     outputMemory.connect(
       firstProcessingLayer!,
-      methods.groupConnection.ALL_TO_ALL
+      methods.groupConnection.ALL_TO_ALL,
     ); // Non-null assertion safe due to logic above.
 
     // Construct the final Network object.

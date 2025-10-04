@@ -8,8 +8,8 @@ import type Network from '../../src/architecture/network';
 
 describe('Adaptive Complexity Budget', () => {
   it('adjusts maxNodes in adaptive mode', async () => {
-  const fitness = (network: Network) => network.connections.length;
-  const neat = new Neat(2, 1, fitness, {
+    const fitness = (network: Network) => network.connections.length;
+    const neat = new Neat(2, 1, fitness, {
       popsize: 10,
       complexityBudget: {
         enabled: true,
@@ -27,7 +27,7 @@ describe('Adaptive Complexity Budget', () => {
     expect(baseline).not.toBe(Infinity);
     for (let i = 0; i < 7; i++) await neat.evolve();
     const after = neat.options.maxNodes;
-  const cfg = neat.options.complexityBudget ?? {};
+    const cfg = neat.options.complexityBudget ?? {};
     const minNodes = cfg.minNodes ?? neat.input + neat.output + 2; // mirrors implementation default
     // Budget should remain within configured min/max bounds
     expect(after).toBeGreaterThanOrEqual(minNodes);

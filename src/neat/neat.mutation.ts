@@ -37,8 +37,8 @@ export function mutate(this: NeatLike): void {
         (genome as any)._mutRate =
           (this as any).options.mutationRate !== undefined
             ? (this as any).options.mutationRate
-            : (this as any).options.adaptiveMutation.initialRate ??
-              ((this as any).options.mutationRate || 0.7);
+            : ((this as any).options.adaptiveMutation.initialRate ??
+              ((this as any).options.mutationRate || 0.7));
         if ((this as any).options.adaptiveMutation.adaptAmount)
           (genome as any)._mutAmount =
             (this as any).options.mutationAmount || 1;
@@ -50,13 +50,13 @@ export function mutate(this: NeatLike): void {
       (this as any).options.mutationRate !== undefined
         ? (this as any).options.mutationRate
         : (this as any).options.adaptiveMutation?.enabled
-        ? (genome as any)._mutRate
-        : (this as any).options.mutationRate || 0.7;
+          ? (genome as any)._mutRate
+          : (this as any).options.mutationRate || 0.7;
     const effectiveAmount =
       (this as any).options.adaptiveMutation?.enabled &&
       (this as any).options.adaptiveMutation.adaptAmount
-        ? (genome as any)._mutAmount ??
-          ((this as any).options.mutationAmount || 1)
+        ? ((genome as any)._mutAmount ??
+          ((this as any).options.mutationAmount || 1))
         : (this as any).options.mutationAmount || 1;
 
     // Decide whether to mutate this genome at all.
@@ -153,7 +153,7 @@ export function mutate(this: NeatLike): void {
              * selected mutation operator (used to adapt operator frequencies).
              */
             const statsRecord = (this as any)._operatorStats.get(
-              mutationMethod.name
+              mutationMethod.name,
             ) || {
               success: 0,
               attempts: 0,
@@ -220,7 +220,7 @@ export function mutateAddNodeReuse(this: any, genome: any) {
   // Choose an enabled (not disabled) connection at random
   /** All connections that are currently enabled on the genome. */
   const enabledConnections = genome.connections.filter(
-    (c: any) => c.enabled !== false
+    (c: any) => c.enabled !== false,
   );
   if (!enabledConnections.length) return;
   /** Randomly selected connection to split. */
@@ -359,13 +359,13 @@ export function mutateAddConnReuse(this: any, genome: any) {
   const hiddenPairs = reuseCandidates.length
     ? []
     : candidatePairs.filter(
-        (pair) => pair[0].type === 'hidden' && pair[1].type === 'hidden'
+        (pair) => pair[0].type === 'hidden' && pair[1].type === 'hidden',
       );
   const pool = reuseCandidates.length
     ? reuseCandidates
     : hiddenPairs.length
-    ? hiddenPairs
-    : candidatePairs;
+      ? hiddenPairs
+      : candidatePairs;
 
   // Deterministic selection when only one pair exists (important for tests)
   /** The pair chosen to be connected (deterministic if only one candidate). */
@@ -424,14 +424,14 @@ export function mutateAddConnReuse(this: any, genome: any) {
 export function ensureMinHiddenNodes(
   this: NeatLike,
   network: any,
-  multiplierOverride?: number
+  multiplierOverride?: number,
 ) {
   /** Maximum allowed nodes from configuration (or Infinity). */
   const maxNodes = (this as any).options.maxNodes || Infinity;
   /** Minimum number of hidden nodes required for this network (bounded by maxNodes). */
   const minHidden = Math.min(
     (this as any).getMinimumHiddenSize(multiplierOverride),
-    maxNodes - network.nodes.filter((n: any) => n.type !== 'hidden').length
+    maxNodes - network.nodes.filter((n: any) => n.type !== 'hidden').length,
   );
 
   /** Input nodes present in the network. */
@@ -444,7 +444,7 @@ export function ensureMinHiddenNodes(
   if (inputNodes.length === 0 || outputNodes.length === 0) {
     try {
       console.warn(
-        'Network is missing input or output nodes — skipping minHidden enforcement'
+        'Network is missing input or output nodes — skipping minHidden enforcement',
       );
     } catch {}
     return;
@@ -468,7 +468,7 @@ export function ensureMinHiddenNodes(
   for (const hiddenNode of hiddenNodes) {
     if (hiddenNode.connections.in.length === 0) {
       const candidates = inputNodes.concat(
-        hiddenNodes.filter((n: any) => n !== hiddenNode)
+        hiddenNodes.filter((n: any) => n !== hiddenNode),
       );
       if (candidates.length > 0) {
         const rng = (this as any)._getRNG();
@@ -480,7 +480,7 @@ export function ensureMinHiddenNodes(
     }
     if (hiddenNode.connections.out.length === 0) {
       const candidates = outputNodes.concat(
-        hiddenNodes.filter((n: any) => n !== hiddenNode)
+        hiddenNodes.filter((n: any) => n !== hiddenNode),
       );
       if (candidates.length > 0) {
         const rng = (this as any)._getRNG();
@@ -540,7 +540,7 @@ export function ensureNoDeadEnds(this: NeatLike, network: any) {
   for (const hiddenNode of hiddenNodes) {
     if (!hasIncoming(hiddenNode)) {
       const candidates = inputNodes.concat(
-        hiddenNodes.filter((n: any) => n !== hiddenNode)
+        hiddenNodes.filter((n: any) => n !== hiddenNode),
       );
       if (candidates.length > 0) {
         const rng = (this as any)._getRNG();
@@ -552,7 +552,7 @@ export function ensureNoDeadEnds(this: NeatLike, network: any) {
     }
     if (!hasOutgoing(hiddenNode)) {
       const candidates = outputNodes.concat(
-        hiddenNodes.filter((n: any) => n !== hiddenNode)
+        hiddenNodes.filter((n: any) => n !== hiddenNode),
       );
       if (candidates.length > 0) {
         const rng = (this as any)._getRNG();
@@ -574,7 +574,7 @@ export function ensureNoDeadEnds(this: NeatLike, network: any) {
 export function selectMutationMethod(
   this: NeatLike,
   genome: any,
-  rawReturnForTest: boolean = true
+  rawReturnForTest: boolean = true,
 ): any {
   /** Methods module used to access named mutation operator descriptors. */
   const methods = require('../methods/methods');
@@ -602,7 +602,7 @@ export function selectMutationMethod(
     Array.isArray(pool) &&
     pool.length === methods.mutation.FFW.length &&
     pool.every(
-      (m: any, i: number) => m && m.name === methods.mutation.FFW[i].name
+      (m: any, i: number) => m && m.name === methods.mutation.FFW[i].name,
     )
   ) {
     return methods.mutation.FFW;
@@ -615,14 +615,14 @@ export function selectMutationMethod(
       /** Operators that simplify structures (name starts with SUB_). */
       const simplifyPool = pool.filter(
         (m: any) =>
-          m && m.name && m.name.startsWith && m.name.startsWith('SUB_')
+          m && m.name && m.name.startsWith && m.name.startsWith('SUB_'),
       );
       if (simplifyPool.length) pool = [...pool, ...simplifyPool];
     } else if ((this as any)._phase === 'complexify') {
       /** Operators that add complexity (name starts with ADD_). */
       const addPool = pool.filter(
         (m: any) =>
-          m && m.name && m.name.startsWith && m.name.startsWith('ADD_')
+          m && m.name && m.name.startsWith && m.name.startsWith('ADD_'),
       );
       if (addPool.length) pool = [...pool, ...addPool];
     }
@@ -679,7 +679,7 @@ export function selectMutationMethod(
     const totalAttempts =
       (Array.from(stats.values()) as any[]).reduce(
         (a: number, s: any) => a + s.attempts,
-        0
+        0,
       ) + EPSILON; // stability epsilon
     /** Candidate best operator (initialized to current random pick). */
     let best = mutationMethod;

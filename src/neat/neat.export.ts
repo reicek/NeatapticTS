@@ -95,13 +95,13 @@ export function exportPopulation(this: NeatLike): GenomeJSON[] {
  */
 export function importPopulation(
   this: NeatLike,
-  populationJSON: GenomeJSON[]
+  populationJSON: GenomeJSON[],
 ): void {
   /** const Network class used for genome (network) rehydration */
   const Network = require('../architecture/network').default;
   // 1. Recreate each genome via Network.fromJSON
   (this as any).population = populationJSON.map((serializedGenome: any) =>
-    Network.fromJSON(serializedGenome)
+    Network.fromJSON(serializedGenome),
   );
   // 2. Keep popsize option in sync with actual population length
   (this as any).options.popsize = (this as any).population.length;
@@ -158,7 +158,7 @@ export function exportState(this: NeatLike): NeatStateJSON {
 export function importStateImpl(
   this: any,
   stateBundle: NeatStateJSON,
-  fitnessFunction: (network: any) => number
+  fitnessFunction: (network: any) => number,
 ): any {
   // 1. Basic validation of bundle shape
   if (!stateBundle || typeof stateBundle !== 'object')
@@ -197,7 +197,7 @@ export function toJSONImpl(this: NeatLike): NeatMetaJSON {
     generation: (this as any).generation,
     options: (this as any).options,
     nodeSplitInnovations: Array.from(
-      (this as any)._nodeSplitInnovations.entries()
+      (this as any)._nodeSplitInnovations.entries(),
     ),
     connInnovations: Array.from((this as any)._connInnovations.entries()),
     nextGlobalInnovation: (this as any)._nextGlobalInnovation,
@@ -223,7 +223,7 @@ export function toJSONImpl(this: NeatLike): NeatMetaJSON {
 export function fromJSONImpl(
   this: any,
   neatJSON: NeatMetaJSON,
-  fitnessFunction: (network: any) => number
+  fitnessFunction: (network: any) => number,
 ): any {
   /** const alias for the constructor (class) this function is bound to */
   const NeatClass = this as any;
@@ -232,7 +232,7 @@ export function fromJSONImpl(
     neatJSON.input,
     neatJSON.output,
     fitnessFunction,
-    neatJSON.options || {}
+    neatJSON.options || {},
   );
   // 2. Restore generation index
   neatInstance.generation = neatJSON.generation || 0;

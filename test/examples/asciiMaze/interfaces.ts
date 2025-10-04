@@ -46,10 +46,10 @@ export interface IDashboardManager {
    */
   update(
     maze: string[],
-  result: IMazeRunResult,
+    result: IMazeRunResult,
     network: INetwork,
     generation: number,
-    neatInstance?: any // optional Neat instance for advanced telemetry display
+    neatInstance?: any, // optional Neat instance for advanced telemetry display
   ): void;
 }
 
@@ -440,7 +440,7 @@ export type FitnessEvaluatorFn = (
    *      - Optional helpers: network.clear(), network.clone(), network.propagate() may exist --
    *        if used, operate on a clone or restore state to avoid mutating the original.
    */
-  context: IFitnessEvaluationContext
+  context: IFitnessEvaluationContext,
 ) => number;
 
 /**
@@ -832,7 +832,7 @@ export interface INodeConnectionRegistry {
  */
 export type ActivationFunctionWithName = ((
   input: number,
-  derivate?: boolean
+  derivate?: boolean,
 ) => number) & {
   name?: string;
   originalName?: string;
@@ -985,7 +985,7 @@ export interface INetwork {
     rate: number,
     momentum: number,
     update: boolean,
-    target: number[]
+    target: number[],
   ) => void;
 
   /**

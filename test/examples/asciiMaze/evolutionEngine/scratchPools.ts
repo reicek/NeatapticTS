@@ -48,7 +48,7 @@ export interface LogitsRingCapacityResult {
  * @returns The resulting capacity and whether shared-array mode stayed enabled.
  */
 export const ensureLogitsRingCapacity = (
-  capacityRequest: LogitsRingCapacityOptions
+  capacityRequest: LogitsRingCapacityOptions,
 ): LogitsRingCapacityResult => {
   const {
     state,
@@ -79,12 +79,19 @@ export const ensureLogitsRingCapacity = (
   const boundedMaximum = Math.max(boundedMinimum, Math.trunc(maximumCapacity));
 
   // Step 3: Grow the ring aggressively when utilisation approaches the upper bound.
-  if (desiredRecentSteps > (currentCapacity * 3) / 4 && currentCapacity < boundedMaximum) {
+  if (
+    desiredRecentSteps > (currentCapacity * 3) / 4 &&
+    currentCapacity < boundedMaximum
+  ) {
     const desired = Math.min(desiredRecentSteps * 2, boundedMaximum);
-    targetCapacity = Math.min(nextPowerOfTwo(Math.ceil(desired)), boundedMaximum);
-  }
-
-  else if (desiredRecentSteps < currentCapacity / 4 && currentCapacity > boundedMinimum) {
+    targetCapacity = Math.min(
+      nextPowerOfTwo(Math.ceil(desired)),
+      boundedMaximum,
+    );
+  } else if (
+    desiredRecentSteps < currentCapacity / 4 &&
+    currentCapacity > boundedMinimum
+  ) {
     // Step 4: Shrink the ring gradually when the requested history collapses.
     let shrinkCandidate = currentCapacity;
     while (
@@ -104,7 +111,10 @@ export const ensureLogitsRingCapacity = (
   }
 
   // Step 6: Reallocate process-local logits rows and restart the write cursor.
-  state.scratch.logitsRing = allocateLogitsRing(targetCapacity, actionDimension);
+  state.scratch.logitsRing = allocateLogitsRing(
+    targetCapacity,
+    actionDimension,
+  );
   state.scratch.logitsRingWriteCursor = 0;
 
   let sharedEnabledResult = sharedModeEnabled;
@@ -147,7 +157,7 @@ export interface SharedLogitsConfig {
  */
 export const initialiseSharedLogitsRing = (
   state: EngineState,
-  config: SharedLogitsConfig
+  config: SharedLogitsConfig,
 ): boolean => {
   const { capacity, actionDimension } = config;
 
@@ -162,7 +172,7 @@ export const initialiseSharedLogitsRing = (
     const indexBytes = Int32Array.BYTES_PER_ELEMENT;
     const floatBytes = Float32Array.BYTES_PER_ELEMENT;
     const sharedBuffer = new SharedArrayBuffer(
-      indexBytes + totalFloatCount * floatBytes
+      indexBytes + totalFloatCount * floatBytes,
     );
 
     // Step 3: Project typed views over the shared buffer for atomics and the logits payload.
@@ -170,7 +180,7 @@ export const initialiseSharedLogitsRing = (
     const logitsView = new Float32Array(
       sharedBuffer,
       indexBytes,
-      totalFloatCount
+      totalFloatCount,
     );
 
     // Step 4: Reset the write cursor and zero the logits to avoid stale data leaks.
@@ -199,7 +209,7 @@ export const initialiseSharedLogitsRing = (
  */
 export const allocateLogitsRing = (
   capacity: number,
-  actionDimension: number
+  actionDimension: number,
 ): Float32Array[] => {
   const safeCapacity = Math.max(0, Math.trunc(capacity));
   if (safeCapacity === 0) return [];
@@ -231,7 +241,7 @@ export interface ScratchCapacityRequest {
  */
 export const ensureScratchCapacity = (
   state: EngineState,
-  request: ScratchCapacityRequest
+  request: ScratchCapacityRequest,
 ): void => {
   const { populationSize, inputSize, outputSize } = request;
 
@@ -245,13 +255,10 @@ export const ensureScratchCapacity = (
     // Step 1: Compute conservative pool sizes derived from the upcoming workload.
     const desiredSampleCapacity = Math.max(
       32,
-      nextPowerOfTwo(Math.max(1, populationSize))
+      nextPowerOfTwo(Math.max(1, populationSize)),
     );
     const numericBase = Math.max(1, inputSize + outputSize);
-    const desiredNumericCapacity = Math.max(
-      64,
-      nextPowerOfTwo(numericBase)
-    );
+    const desiredNumericCapacity = Math.max(64, nextPowerOfTwo(numericBase));
 
     // Step 2: Ensure the sample pool can hold the expanded population.
     const samplePool = state.scratch.samplePool;
@@ -295,7 +302,7 @@ export const ensureScratchCapacity = (
  */
 export const maybeShrinkScratch = (
   state: EngineState,
-  populationSize: number
+  populationSize: number,
 ): void => {
   try {
     // Step 1: Ignore shrink attempts when the population is empty or undefined.
@@ -309,7 +316,7 @@ export const maybeShrinkScratch = (
 
     // Step 2: Establish the scaled-down capacity target we want the pools to match.
     const desiredCapacity = nextPowerOfTwo(
-      Math.max(minimumPoolSize, populationSize)
+      Math.max(minimumPoolSize, populationSize),
     );
 
     const { scratch } = state;
@@ -325,7 +332,10 @@ export const maybeShrinkScratch = (
 
     // Step 4: Trim the sample pool while preserving existing array instances.
     const samplePool = scratch.samplePool;
-    if (Array.isArray(samplePool) && samplePool.length > populationSize * shrinkFactor) {
+    if (
+      Array.isArray(samplePool) &&
+      samplePool.length > populationSize * shrinkFactor
+    ) {
       samplePool.length = desiredCapacity;
       scratch.samplePool = samplePool;
     }
@@ -337,7 +347,12 @@ export const maybeShrinkScratch = (
       exponentScratch.length > populationSize * shrinkFactor
     ) {
       const smaller = new Float64Array(desiredCapacity);
-      smaller.set(exponentScratch.subarray(0, Math.min(exponentScratch.length, desiredCapacity)));
+      smaller.set(
+        exponentScratch.subarray(
+          0,
+          Math.min(exponentScratch.length, desiredCapacity),
+        ),
+      );
       scratch.exps = smaller;
     }
 
@@ -347,7 +362,9 @@ export const maybeShrinkScratch = (
       biasScratch.length > populationSize * shrinkFactor
     ) {
       const smaller = new Float64Array(desiredCapacity);
-      smaller.set(biasScratch.subarray(0, Math.min(biasScratch.length, desiredCapacity)));
+      smaller.set(
+        biasScratch.subarray(0, Math.min(biasScratch.length, desiredCapacity)),
+      );
       scratch.biasTelemetryScratch = smaller;
     }
 
@@ -358,7 +375,12 @@ export const maybeShrinkScratch = (
       nodeIndexBuffer.length > populationSize * shrinkFactor
     ) {
       const smaller = new Int32Array(desiredCapacity);
-      smaller.set(nodeIndexBuffer.subarray(0, Math.min(nodeIndexBuffer.length, desiredCapacity)));
+      smaller.set(
+        nodeIndexBuffer.subarray(
+          0,
+          Math.min(nodeIndexBuffer.length, desiredCapacity),
+        ),
+      );
       scratch.nodeIndexBuffer = smaller;
     }
   } catch {
@@ -375,13 +397,13 @@ export const maybeShrinkScratch = (
  */
 export const ensureConnFlagsCapacity = (
   state: EngineState,
-  minimumCapacity: number
+  minimumCapacity: number,
 ): Int8Array | null => {
   try {
     // Step 1: Normalise the caller-provided capacity to a safe, non-negative integer.
     const requiredCapacity = Math.max(
       0,
-      Math.trunc(Number(minimumCapacity) || 0)
+      Math.trunc(Number(minimumCapacity) || 0),
     );
 
     // Step 2: Return a cached empty bitmap when the caller only needs zero entries.

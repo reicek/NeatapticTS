@@ -29,7 +29,9 @@ const setNetworkInternal = <Key extends keyof NetworkInternals>(
 
 const getConnectionSlab = (net: Network): ConnectionSlab =>
   (
-    net as unknown as { getConnectionSlab: () => ConnectionSlab }
+    net as unknown as {
+      getConnectionSlab: () => ConnectionSlab;
+    }
   ).getConnectionSlab();
 
 describe('network.slab.plasticity', () => {
