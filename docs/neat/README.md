@@ -444,6 +444,20 @@ const metaLoaded = JSON.parse(fs.readFileSync('neat-meta.json','utf8')) as NeatM
 const neat2 = Neat.fromJSONImpl(metaLoaded, fitnessFn); // empty population
 ```
 
+## neat/neat.harness.types.ts
+
+### LineageTrackedNetwork
+
+Network subtype that surfaces lineage metadata fields for assertions.
+
+### NeatLineageHarness
+
+Narrow Neat surface exposing lineage helper methods used in tests.
+
+### PhasedComplexityHarness
+
+Minimal surface exposing phased complexity internals for testing.
+
 ## neat/neat.helpers.ts
 
 ### addGenome
@@ -1172,6 +1186,11 @@ Aggregated success / attempt counters over a window or entire run.
 
 Timing metrics for coarse evolutionary phases (milliseconds).
 
+### SpeciationHarnessContext
+
+Minimal runtime surface required by speciation helpers.
+Tests and harnesses can narrow the options type via the generic parameter.
+
 ### SpeciationOptions
 
 Speciation options for NEAT speciation controller.
@@ -1193,6 +1212,11 @@ Species statistics at a single historical snapshot (generation boundary).
 
 Extended per-species historical snapshot with optional backfilled metrics
 that may be computed lazily (innovationRange, enabledRatio).
+
+### SpeciesLastStats
+
+Rolling statistics tracked for each species between generations.
+These values inform stagnation heuristics and adaptive controllers.
 
 ### SpeciesLike
 

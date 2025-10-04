@@ -6,6 +6,39 @@ import { MazeUtils } from './mazeUtils';
 import { MazeMovement } from './mazeMovement';
 import { FitnessEvaluator } from './fitness';
 import {
+  createEngineState,
+  EngineScratchState,
+  EngineState,
+  EngineToggleState,
+  ensureVisitedHashCapacity,
+  initialiseTelemetryScratch,
+  RngCacheParameters,
+} from './evolutionEngine/engineState';
+import {
+  accumulateProfilingDuration,
+  clearDeterministicMode,
+  drawFastRandom,
+  getProfilingAccumulators,
+  isProfilingDetailsEnabled,
+  profilingStartTimestamp,
+  readHighResolutionTime,
+  resolveRngParameters,
+  setDeterministicMode,
+} from './evolutionEngine/rngAndTiming';
+import {
+  ensureConnFlagsCapacity,
+  ensureLogitsRingCapacity,
+  ensureScratchCapacity,
+  maybeShrinkScratch,
+} from './evolutionEngine/scratchPools';
+import {
+  getTail,
+  pushHistory,
+  sampleArray,
+  sampleIntoScratch,
+  sampleSegmentIntoScratch,
+} from './evolutionEngine/sampling';
+import {
   INetwork,
   IFitnessEvaluationContext,
   IRunMazeEvolutionOptions,
@@ -24,88 +57,206 @@ import {
  * - Providing utilities for logging, visualization, and debugging the evolutionary process.
  */
 export class EvolutionEngine {
+  /** Shared engine state instance backing all façade helpers. */
+  static #STATE: EngineState = createEngineState();
+
+  /** Retrieve the shared scratch buffer bundle. */
+  static get #scratch(): EngineScratchState {
+    return EvolutionEngine.#STATE.scratch;
+  }
+
+  /** Retrieve the shared toggle configuration bundle. */
+  static get #toggles(): EngineToggleState {
+    return EvolutionEngine.#STATE.toggles;
+  }
+
+  /** Expose the shared engine state for extracted module consumers. */
+  static get sharedState(): EngineState {
+    return EvolutionEngine.#STATE;
+  }
+
   /**
    * Pooled scratch buffer used by telemetry softmax/entropy calculations.
    * @remarks Non-reentrant: telemetry functions that use this buffer must not be
    * called concurrently (single-threaded runtime assumption holds for Node/browser).
    */
-  static #SCRATCH_EXPS = new Float64Array(4);
+  static get #SCRATCH_EXPS(): Float64Array {
+    return EvolutionEngine.#scratch.exps;
+  }
+  static set #SCRATCH_EXPS(buffer: Float64Array) {
+    EvolutionEngine.#scratch.exps = buffer;
+  }
   /** Reusable empty vector constant to avoid ephemeral allocations from `|| []` fallbacks. */
   static #EMPTY_VEC: any[] = [];
   /** Pooled stats buffers (always resident) for means & stds. */
-  static #SCRATCH_MEANS = new Float64Array(4);
-  static #SCRATCH_STDS = new Float64Array(4);
+  static get #SCRATCH_MEANS(): Float64Array {
+    return EvolutionEngine.#scratch.means;
+  }
+  static set #SCRATCH_MEANS(buffer: Float64Array) {
+    EvolutionEngine.#scratch.means = buffer;
+  }
+  static get #SCRATCH_STDS(): Float64Array {
+    return EvolutionEngine.#scratch.standardDeviations;
+  }
+  static set #SCRATCH_STDS(buffer: Float64Array) {
+    EvolutionEngine.#scratch.standardDeviations = buffer;
+  }
+  /** Bias telemetry buffer reused for output bias statistics. */
+  static get #SCRATCH_BIAS_TA(): Float64Array {
+    return EvolutionEngine.#scratch.biasTelemetryScratch;
+  }
+  static set #SCRATCH_BIAS_TA(buffer: Float64Array) {
+    EvolutionEngine.#scratch.biasTelemetryScratch = buffer;
+  }
   /** Kurtosis related buffers allocated lazily when first needed (non-reduced telemetry). */
-  static #SCRATCH_KURT: Float64Array | undefined;
-  static #SCRATCH_M2_RAW = new Float64Array(4);
-  static #SCRATCH_M3_RAW: Float64Array | undefined;
-  static #SCRATCH_M4_RAW: Float64Array | undefined;
+  static get #SCRATCH_KURT(): Float64Array | undefined {
+    return EvolutionEngine.#scratch.kurtosis;
+  }
+  static set #SCRATCH_KURT(buffer: Float64Array | undefined) {
+    EvolutionEngine.#scratch.kurtosis = buffer;
+  }
+  static get #SCRATCH_M2_RAW(): Float64Array {
+    return EvolutionEngine.#scratch.secondMomentRaw;
+  }
+  static set #SCRATCH_M2_RAW(buffer: Float64Array) {
+    EvolutionEngine.#scratch.secondMomentRaw = buffer;
+  }
+  static get #SCRATCH_M3_RAW(): Float64Array | undefined {
+    return EvolutionEngine.#scratch.thirdMomentRaw;
+  }
+  static set #SCRATCH_M3_RAW(buffer: Float64Array | undefined) {
+    EvolutionEngine.#scratch.thirdMomentRaw = buffer;
+  }
+  static get #SCRATCH_M4_RAW(): Float64Array | undefined {
+    return EvolutionEngine.#scratch.fourthMomentRaw;
+  }
+  static set #SCRATCH_M4_RAW(buffer: Float64Array | undefined) {
+    EvolutionEngine.#scratch.fourthMomentRaw = buffer;
+  }
   /**
    * Small integer scratch buffer used for directional move counts (N,E,S,W).
    * @remarks Non-reentrant: reused across telemetry calls.
    */
-  static #SCRATCH_COUNTS = new Int32Array(4);
+  static get #SCRATCH_COUNTS(): Int32Array {
+    return EvolutionEngine.#scratch.moveCounts;
+  }
+  static set #SCRATCH_COUNTS(buffer: Int32Array) {
+    EvolutionEngine.#scratch.moveCounts = buffer;
+  }
   /**
    * Open-address hash table for visited coordinate detection (pairs packed into 32-bit int).
    * Length is always a power of two; uses linear probing. A value of 0 represents EMPTY so we offset packed values by +1.
    */
-  static #SCRATCH_VISITED_HASH = new Int32Array(0);
+  static get #SCRATCH_VISITED_HASH(): Int32Array {
+    return EvolutionEngine.#scratch.visitedHashTable;
+  }
+  static set #SCRATCH_VISITED_HASH(buffer: Int32Array) {
+    EvolutionEngine.#scratch.visitedHashTable = buffer;
+  }
   /** Load factor threshold (~0.7) for resizing visited hash. */
-  static #VISITED_HASH_LOAD = 0.7;
+  static get #VISITED_HASH_LOAD(): number {
+    return EvolutionEngine.#scratch.visitedHashLoadFactor;
+  }
+  static set #VISITED_HASH_LOAD(loadFactor: number) {
+    EvolutionEngine.#scratch.visitedHashLoadFactor = loadFactor;
+  }
   /** Knuth multiplicative hashing constant (32-bit golden ratio). */
   static #HASH_KNUTH_32 = 2654435761 >>> 0;
   /** Scratch species id buffer (dynamic growth). */
-  static #SCRATCH_SPECIES_IDS = new Int32Array(64);
+  static get #SCRATCH_SPECIES_IDS(): Int32Array {
+    return EvolutionEngine.#scratch.speciesIds;
+  }
+  static set #SCRATCH_SPECIES_IDS(buffer: Int32Array) {
+    EvolutionEngine.#scratch.speciesIds = buffer;
+  }
   /** Scratch species count buffer parallel to ids. */
-  static #SCRATCH_SPECIES_COUNTS = new Int32Array(64);
+  static get #SCRATCH_SPECIES_COUNTS(): Int32Array {
+    return EvolutionEngine.#scratch.speciesCounts;
+  }
+  static set #SCRATCH_SPECIES_COUNTS(buffer: Int32Array) {
+    EvolutionEngine.#scratch.speciesCounts = buffer;
+  }
   /** Reusable candidate connection object buffer. */
-  static #SCRATCH_CONN_CAND: any[] = [];
+  static get #SCRATCH_CONN_CAND(): any[] {
+    return EvolutionEngine.#scratch.connectionCandidates;
+  }
+  static set #SCRATCH_CONN_CAND(buffer: any[]) {
+    EvolutionEngine.#scratch.connectionCandidates = buffer;
+  }
   /** Reusable hidden->output connection buffer. */
-  static #SCRATCH_HIDDEN_OUT: any[] = [];
+  static get #SCRATCH_HIDDEN_OUT(): any[] {
+    return EvolutionEngine.#scratch.hiddenToOutputConnections;
+  }
+  static set #SCRATCH_HIDDEN_OUT(buffer: any[]) {
+    EvolutionEngine.#scratch.hiddenToOutputConnections = buffer;
+  }
   /** Flags buffer for connection disabling (grown on demand). */
-  static #SCRATCH_CONN_FLAGS = new Uint8Array(128);
-  /** Scratch tail buffer reused by #getTail (grows geometrically). */
-  static #SCRATCH_TAIL: any[] = new Array(64);
-  /** Scratch sample result buffer reused by #sampleArray (ephemeral return). */
-  static #SCRATCH_SAMPLE_RESULT: any[] = new Array(64);
+  static get #SCRATCH_CONN_FLAGS(): Uint8Array {
+    return EvolutionEngine.#scratch.connectionFlags;
+  }
+  static set #SCRATCH_CONN_FLAGS(buffer: Uint8Array) {
+    EvolutionEngine.#scratch.connectionFlags = buffer;
+  }
   /** Scratch index buffer holding sorted indices by score (reused per generation). */
-  static #SCRATCH_SORT_IDX: number[] = new Array(512);
+  static get #SCRATCH_SORT_IDX(): number[] {
+    return EvolutionEngine.#scratch.sortedIndexBuffer;
+  }
+  static set #SCRATCH_SORT_IDX(buffer: number[]) {
+    EvolutionEngine.#scratch.sortedIndexBuffer = buffer;
+  }
   /** Optional typed-array scratch used internally to accelerate sorting without allocating each call. */
-  static #SCRATCH_SORT_IDX_TA: Int32Array | undefined;
+  static get #SCRATCH_SORT_IDX_TA(): Int32Array | undefined {
+    return EvolutionEngine.#scratch.sortedIndexTypedArray;
+  }
+  static set #SCRATCH_SORT_IDX_TA(buffer: Int32Array | undefined) {
+    EvolutionEngine.#scratch.sortedIndexTypedArray = buffer;
+  }
   /** Scratch stack (lo,hi pairs) for quicksort on indices. */
-  static #SCRATCH_QS_STACK = new Int32Array(128);
+  static get #SCRATCH_QS_STACK(): Int32Array {
+    return EvolutionEngine.#scratch.quicksortStack;
+  }
+  static set #SCRATCH_QS_STACK(buffer: Int32Array) {
+    EvolutionEngine.#scratch.quicksortStack = buffer;
+  }
   /** Scratch array reused when cloning an initial population. */
-  static #SCRATCH_POP_CLONE: any[] = new Array(0);
+  static get #SCRATCH_POP_CLONE(): any[] {
+    return EvolutionEngine.#scratch.populationCloneBuffer;
+  }
+  static set #SCRATCH_POP_CLONE(buffer: any[]) {
+    EvolutionEngine.#scratch.populationCloneBuffer = buffer;
+  }
   /** Scratch string array for activation function names (printNetworkStructure). */
-  static #SCRATCH_ACT_NAMES: string[] = new Array(0);
+  static get #SCRATCH_ACT_NAMES(): string[] {
+    return EvolutionEngine.#scratch.activationNameBuffer;
+  }
+  static set #SCRATCH_ACT_NAMES(buffer: string[]) {
+    EvolutionEngine.#scratch.activationNameBuffer = buffer;
+  }
   /** Reusable object buffer for snapshot top entries. */
-  static #SCRATCH_SNAPSHOT_TOP: any[] = new Array(0);
+  static get #SCRATCH_SNAPSHOT_TOP(): any[] {
+    return EvolutionEngine.#scratch.snapshotTopEntries;
+  }
+  static set #SCRATCH_SNAPSHOT_TOP(buffer: any[]) {
+    EvolutionEngine.#scratch.snapshotTopEntries = buffer;
+  }
   /** Reusable snapshot object (fields overwritten each persistence). */
-  static #SCRATCH_SNAPSHOT_OBJ: any = {
-    generation: 0,
-    bestFitness: 0,
-    simplifyMode: false,
-    plateauCounter: 0,
-    timestamp: 0,
-    telemetryTail: undefined,
-    top: undefined,
-  };
+  static get #SCRATCH_SNAPSHOT_OBJ(): any {
+    return EvolutionEngine.#scratch.snapshotReusableObject;
+  }
+  static set #SCRATCH_SNAPSHOT_OBJ(buffer: any) {
+    EvolutionEngine.#scratch.snapshotReusableObject = buffer;
+  }
   /** Pooled buffer for mutation operator indices (shuffled prefix each use). */
-  static #SCRATCH_MUTOP_IDX = new Uint16Array(0);
+  static get #SCRATCH_MUTOP_IDX(): Uint16Array {
+    return EvolutionEngine.#scratch.mutationOperatorIndices;
+  }
+  static set #SCRATCH_MUTOP_IDX(buffer: Uint16Array) {
+    EvolutionEngine.#scratch.mutationOperatorIndices = buffer;
+  }
   /** Number of action outputs (N,E,S,W) */
   static #ACTION_DIM = 4;
   /** Precomputed 1/ln(4) for entropy normalization (micro-optimization). */
   static #INV_LOG4 = 1 / Math.log(4);
-  /** LCG multiplier (1664525) used by the fast RNG (32-bit LCG). */
-  static #LCG_MULT = 1664525;
-  /** LCG additive constant (1013904223) used by the fast RNG. */
-  static #LCG_ADD = 1013904223;
-  /** Number of cached RNG outputs per refill (batched to amortize state writes). */
-  static #RNG_CACHE_SIZE = 4;
-  /** Bit shift applied when converting 32-bit state to fractional mantissa (>> 9). */
-  static #RNG_SHIFT = 9;
-  /** Scale factor to map shifted integer to [0,1): 1 / 0x800000. */
-  static #RNG_SCALE = 1 / 0x800000;
   /** Adaptive logits ring capacity (power-of-two). */
   static #LOGITS_RING_CAP = 512;
   /** Max allowed ring capacity (safety bound). */
@@ -113,298 +264,106 @@ export class EvolutionEngine {
   /** Indicates SharedArrayBuffer-backed ring is active. */
   static #LOGITS_RING_SHARED = false;
   /** Logits ring (fallback non-shared row-of-vectors). */
-  static #SCRATCH_LOGITS_RING: Float32Array[] = (() => {
-    const cap = EvolutionEngine.#LOGITS_RING_CAP;
-    const rows: Float32Array[] = new Array(cap);
-    for (let i = 0; i < cap; i++)
-      rows[i] = new Float32Array(EvolutionEngine.#ACTION_DIM);
-    return rows;
-  })();
+  static get #SCRATCH_LOGITS_RING(): Float32Array[] {
+    return EvolutionEngine.#scratch.logitsRing;
+  }
+  static set #SCRATCH_LOGITS_RING(buffer: Float32Array[]) {
+    EvolutionEngine.#scratch.logitsRing = buffer;
+  }
   /** Shared flat logits storage when shared mode enabled (length = cap * ACTION_DIM). */
-  static #SCRATCH_LOGITS_SHARED: Float32Array | undefined;
+  static get #SCRATCH_LOGITS_SHARED(): Float32Array | undefined {
+    return EvolutionEngine.#scratch.sharedLogits;
+  }
+  static set #SCRATCH_LOGITS_SHARED(buffer: Float32Array | undefined) {
+    EvolutionEngine.#scratch.sharedLogits = buffer;
+  }
   /** Shared atomic write index (length=1 Int32). */
-  static #SCRATCH_LOGITS_SHARED_W: Int32Array | undefined;
+  static get #SCRATCH_LOGITS_SHARED_W(): Int32Array | undefined {
+    return EvolutionEngine.#scratch.sharedLogitsWriteIndex;
+  }
+  static set #SCRATCH_LOGITS_SHARED_W(buffer: Int32Array | undefined) {
+    EvolutionEngine.#scratch.sharedLogitsWriteIndex = buffer;
+  }
   /** Write cursor for non-shared ring. */
-  static #SCRATCH_LOGITS_RING_W = 0;
-  /** Internal helper: allocate a non-shared ring with specified capacity. */
-  static #allocateLogitsRing(cap: number): Float32Array[] {
-    const rows: Float32Array[] = new Array(cap);
-    for (let i = 0; i < cap; i++)
-      rows[i] = new Float32Array(EvolutionEngine.#ACTION_DIM);
-    return rows;
+  static get #SCRATCH_LOGITS_RING_W(): number {
+    return EvolutionEngine.#scratch.logitsRingWriteCursor;
   }
-
-  /**
-   * Behavior & environment constraints:
-   * - No-op when `SharedArrayBuffer` is unavailable or when the global context is not
-   *   `crossOriginIsolated` (the browser COOP+COEP requirement). In those cases the engine will
-   *   continue using the fallback non-shared `#SCRATCH_LOGITS_RING`.
-   * - Any exception during allocation or view creation is caught; on failure the method clears
-   *   any partially-initialized shared references and leaves `#LOGITS_RING_SHARED` as false.
-   *
-   * Memory layout details:
-   * - The SAB size is 4 + (cap * ACTION_DIM * 4) bytes.
-   *   - Byte offset 0: Int32Array view of length 1 used as the atomic write index (4 bytes).
-   *   - Byte offset 4: Float32Array view of length (cap * ACTION_DIM) storing the flattened logits.
-   * - Consumers should treat the Float32Array as rows of length `ACTION_DIM` and use the
-   *   atomic write index to coordinate producer/consumer access.
-   *
-   * Safety / assumptions:
-   * - `cap` should be a sensible ring capacity (the rest of the ring logic prefers power-of-two
-   *   capacities, though this method does not enforce it).
-   * - Atomics.store is used to initialize the write index to 0.
-   *
-   * @param cap Number of rows (ring capacity). The Float32 storage length will be `cap * ACTION_DIM`.
-   * @internal
-   * @remarks This is a best-effort performance optimization for worker/agent setups; when the
-   *          environment doesn't permit SAB usage the engine gracefully falls back to the
-   *          per-row `#SCRATCH_LOGITS_RING` representation.
-   * @example
-   * // internal usage (may succeed only in cross-origin-isolated browsers or compatible worker hosts)
-   * EvolutionEngine['#initSharedLogitsRing'](512);
-   */
-  static #initSharedLogitsRing(cap: number) {
-    try {
-      if (typeof SharedArrayBuffer === 'undefined') return;
-      if (globalThis?.crossOriginIsolated !== true) return; // must be true in browsers
-      if (!Number.isInteger(cap) || cap <= 0) return; // defensive
-
-      const actionDim = EvolutionEngine.#ACTION_DIM;
-      const totalFloats = cap * actionDim;
-      const indexBytes = Int32Array.BYTES_PER_ELEMENT; // 4
-      const floatBytes = Float32Array.BYTES_PER_ELEMENT; // 4
-      const sab = new SharedArrayBuffer(indexBytes + totalFloats * floatBytes);
-      EvolutionEngine.#SCRATCH_LOGITS_SHARED_W = new Int32Array(sab, 0, 1);
-      EvolutionEngine.#SCRATCH_LOGITS_SHARED = new Float32Array(
-        sab,
-        indexBytes,
-        totalFloats
-      );
-
-      // Initialize write cursor and zero the logits storage for deterministic startup.
-      Atomics.store(EvolutionEngine.#SCRATCH_LOGITS_SHARED_W, 0, 0);
-      EvolutionEngine.#SCRATCH_LOGITS_SHARED.fill(0);
-      EvolutionEngine.#LOGITS_RING_SHARED = true;
-    } catch {
-      EvolutionEngine.#LOGITS_RING_SHARED = false;
-      EvolutionEngine.#SCRATCH_LOGITS_SHARED = undefined;
-      EvolutionEngine.#SCRATCH_LOGITS_SHARED_W = undefined;
-    }
-  }
-
-  /**
-   * Ensure the logits ring has sufficient capacity for `desiredRecentSteps`.
-   *
-   * Heuristics:
-   * - Grow when usage exceeds ~75% of capacity (and cap < max); growth chooses the next
-   *   power-of-two >= desiredRecentSteps * 2 to leave headroom.
-   * - Shrink when usage drops below 25% of capacity while maintaining a lower bound (128).
-   * - All sizes are clamped to [128, #LOGITS_RING_CAP_MAX] and kept as powers of two.
-   *
-   * Behavior:
-   * - On resize we reset the non-shared write cursor, reallocate the non-shared per-row ring,
-   *   and attempt to reinitialize the SharedArrayBuffer-backed ring if shared mode is active.
-   * - The method is best-effort and non-blocking; callers should avoid concurrent calls from
-   *   multiple threads/workers because internal scratch state (non-shared ring) is replaced.
-   *
-   * @param desiredRecentSteps Estimated number of recent rows that need to be stored.
-   * @internal
-   */
-  static #ensureLogitsRingCapacity(desiredRecentSteps: number) {
-    // Defensive input validation
-    if (!Number.isFinite(desiredRecentSteps) || desiredRecentSteps < 0) return;
-
-    const MIN_CAP = 128;
-    const maxCap = EvolutionEngine.#LOGITS_RING_CAP_MAX;
-    const cap = EvolutionEngine.#LOGITS_RING_CAP;
-    let target = cap;
-
-    // Helper to compute next power-of-two >= n (for n > 0).
-    const nextPow2 = (n: number) => {
-      if (n <= 1) return 1;
-      return 1 << Math.ceil(Math.log2(n));
-    };
-
-    // Grow when usage approaches 75% of capacity (leave headroom by sizing >= desired*2).
-    if (desiredRecentSteps > (cap * 3) / 4 && cap < maxCap) {
-      const desired = Math.min(desiredRecentSteps * 2, maxCap);
-      target = Math.min(nextPow2(Math.ceil(desired)), maxCap);
-    } else if (desiredRecentSteps < cap / 4 && cap > MIN_CAP) {
-      // Shrink while leaving 2x headroom, but never below MIN_CAP.
-      let shrink = cap;
-      while (shrink > MIN_CAP && desiredRecentSteps * 2 <= shrink / 2)
-        shrink >>= 1;
-      target = Math.max(shrink, MIN_CAP);
-    }
-
-    if (target !== cap) {
-      EvolutionEngine.#LOGITS_RING_CAP = target;
-      EvolutionEngine.#SCRATCH_LOGITS_RING_W = 0;
-      EvolutionEngine.#SCRATCH_LOGITS_RING = EvolutionEngine.#allocateLogitsRing(
-        target
-      );
-      if (EvolutionEngine.#LOGITS_RING_SHARED)
-        EvolutionEngine.#initSharedLogitsRing(target);
-    }
+  static set #SCRATCH_LOGITS_RING_W(value: number) {
+    EvolutionEngine.#scratch.logitsRingWriteCursor = value;
   }
   /**
    * Small node index scratch arrays reused when extracting nodes by type.
    * @remarks Non-reentrant: do not call concurrently.
    */
-  static #SCRATCH_NODE_IDX = new Int32Array(64);
+  static get #SCRATCH_NODE_IDX(): Int32Array {
+    return EvolutionEngine.#scratch.nodeIndexBuffer;
+  }
+  static set #SCRATCH_NODE_IDX(buffer: Int32Array) {
+    EvolutionEngine.#scratch.nodeIndexBuffer = buffer;
+  }
   /**
    * Object reference scratch array used as a short sample buffer (max 40 entries).
    * Avoids allocating small arrays inside hot telemetry paths.
    */
-  static #SCRATCH_SAMPLE: any[] = new Array(40);
+  static get #SCRATCH_SAMPLE(): any[] {
+    return EvolutionEngine.#scratch.samplePool;
+  }
+  static set #SCRATCH_SAMPLE(buffer: any[]) {
+    EvolutionEngine.#scratch.samplePool = buffer;
+  }
   /** Reusable string assembly character buffer for small joins (grown geometrically). */
-  static #SCRATCH_STR: string[] = new Array(64);
+  static get #SCRATCH_STR(): string[] {
+    return EvolutionEngine.#scratch.stringAssemblyBuffer;
+  }
+  static set #SCRATCH_STR(buffer: string[]) {
+    EvolutionEngine.#scratch.stringAssemblyBuffer = buffer;
+  }
   /** Internal 32-bit state for fast LCG RNG (mul 1664525 + 1013904223). */
-  static #RNG_STATE = (Date.now() ^ 0x9e3779b9) >>> 0;
-  /** Detailed profiling enable flag (set ASCII_MAZE_PROFILE_DETAILS=1). */
-  static #PROFILE_ENABLED = (() => {
-    try {
-      return (
-        typeof process !== 'undefined' &&
-        process?.env?.ASCII_MAZE_PROFILE_DETAILS === '1'
-      );
-    } catch {
-      return false;
-    }
-  })();
-  /** Accumulators for detailed profiling (ms). */
-  static #PROFILE_ACCUM: Record<string, number> = {
-    telemetry: 0,
-    simplify: 0,
-    snapshot: 0,
-    prune: 0,
-  };
   /** Small fixed-size visited table for tiny path exploration (<32) to avoid O(n^2) duplicate scan. */
-  static #SMALL_EXPLORE_TABLE = new Int32Array(64);
+  static get #SMALL_EXPLORE_TABLE(): Int32Array {
+    return EvolutionEngine.#scratch.smallExploreTable;
+  }
+  static set #SMALL_EXPLORE_TABLE(buffer: Int32Array) {
+    EvolutionEngine.#scratch.smallExploreTable = buffer;
+  }
   /** Bit mask for SMALL_EXPLORE_TABLE indices (table length - 1). */
-  static #SMALL_EXPLORE_TABLE_MASK = 64 - 1;
-  static #PROFILE_T0(): number {
-    return EvolutionEngine.#now();
-  }
-  static #PROFILE_ADD(key: string, delta: number) {
-    if (!EvolutionEngine.#PROFILE_ENABLED) return;
-    EvolutionEngine.#PROFILE_ACCUM[key] =
-      (EvolutionEngine.#PROFILE_ACCUM[key] || 0) + delta;
+  static get #SMALL_EXPLORE_TABLE_MASK(): number {
+    return EvolutionEngine.#scratch.smallExploreTable.length - 1;
   }
   /**
-   * RNG cache (batched draws) to amortize LCG state updates in tight loops.
-   * Size is taken from `#RNG_CACHE_SIZE` so the batch parameter is centralized.
-   */
-  static #RNG_CACHE = new Float64Array(EvolutionEngine.#RNG_CACHE_SIZE);
-  // Force initial refill by setting index to cache size.
-  static #RNG_CACHE_INDEX: number = EvolutionEngine.#RNG_CACHE_SIZE;
-
-  /**
-   * Fast LCG producing a float in [0,1).
+   * Enable deterministic mode and optionally reseed the internal RNG via the shared state helpers.
    *
-   * Notes:
-   * - Non-cryptographic: simple 32-bit LCG (mul/add) used for high-performance sampling.
-   * - Batches `#RNG_CACHE_SIZE` outputs to reduce the number of state writes.
-   * - Deterministic when `#DETERMINISTIC` is set and seeded via `setDeterministic`.
-   * - Returns a double in [0,1). Consumers relying on high-quality randomness should
-   *   replace this with a cryptographic RNG.
-   *
-   * @returns float in [0,1)
-   * @internal
-   */
-  static #fastRandom(): number {
-    /**
-     * @internal Local alias for engine-wide numeric constants used by the RNG loop.
-     * Keeping a local const in the hot path improves readability while allowing
-     * the optimiser to keep accesses monomorphic.
-     */
-    // Step 1: Refill the cached batch when we've consumed the existing entries.
-    if (EvolutionEngine.#RNG_CACHE_INDEX >= EvolutionEngine.#RNG_CACHE_SIZE) {
-      // Copy static RNG state into a local variable for faster loop updates.
-      let localRngState = EvolutionEngine.#RNG_STATE >>> 0;
-
-      // Produce a small batch of cached uniform floats using the 32-bit LCG.
-      for (
-        let cacheFillIndex = 0;
-        cacheFillIndex < EvolutionEngine.#RNG_CACHE_SIZE;
-        cacheFillIndex++
-      ) {
-        // LCG update: newState = oldState * multiplier + increment (mod 2^32)
-        localRngState =
-          (localRngState * EvolutionEngine.#LCG_MULT +
-            EvolutionEngine.#LCG_ADD) >>>
-          0;
-        // Convert the high bits of the state to a floating fraction in [0,1).
-        EvolutionEngine.#RNG_CACHE[cacheFillIndex] =
-          (localRngState >>> EvolutionEngine.#RNG_SHIFT) *
-          EvolutionEngine.#RNG_SCALE;
-      }
-
-      // Persist updated state back to the shared static field.
-      EvolutionEngine.#RNG_STATE = localRngState >>> 0;
-
-      // Reset read index so subsequent calls consume from the freshly-filled cache.
-      EvolutionEngine.#RNG_CACHE_INDEX = 0;
-    }
-
-    // Step 2: Return the next cached uniform value (post-increment index).
-    const nextValue =
-      EvolutionEngine.#RNG_CACHE[EvolutionEngine.#RNG_CACHE_INDEX++];
-    return nextValue;
-  }
-  /** Deterministic mode flag (enables reproducible seeded RNG). */
-  static #DETERMINISTIC = false;
-  /** High-resolution time helper. */
-  static #now(): number {
-    return globalThis.performance?.now?.() ?? Date.now();
-  }
-  /**
-   * Enable deterministic mode and optionally reseed the internal RNG.
-   *
-   * Behaviour (stepwise):
-   * 1. Set the internal deterministic flag so other helpers can opt-in to deterministic behaviour.
-   * 2. If `seed` is provided and finite, normalise it to an unsigned 32-bit integer. A seed value of
-   *    `0` is remapped to the golden-ratio-derived constant `0x9e3779b9` to avoid the degenerate LCG state.
-   * 3. Persist the chosen u32 seed into `#RNG_STATE` and force the RNG cache to refill so the next
-   *    `#fastRandom()` call yields the deterministic sequence starting from the new seed.
-   *
-   * Notes:
-   * - If `seed` is omitted the method only enables deterministic mode without reseeding the RNG state.
-   * - The method is intentionally conservative about input coercion: only finite numeric seeds are accepted.
-   *
-   * @param seed Optional numeric seed. Fractional values are coerced via `>>> 0`. Passing `0` results in
-   *             a non-zero canonical seed to avoid trivial cycles.
-   * @example
-   * // Enable deterministic mode with an explicit seed:
-   * EvolutionEngine.setDeterministic(12345);
-   *
-   * @internal
+   * @param seed Optional numeric seed used to reseed the deterministic RNG sequence.
+   * @returns void.
    */
   static setDeterministic(seed?: number): void {
-    // Step 1: enable deterministic mode flag.
-    EvolutionEngine.#DETERMINISTIC = true;
-
-    // Step 2: if a finite numeric seed was supplied, normalise to u32 and persist.
-    if (typeof seed === 'number' && Number.isFinite(seed)) {
-      /** Coerce to unsigned 32-bit. If result is 0, remap to a safe non-zero constant. */
-      const normalised = seed >>> 0 || 0x9e3779b9;
-
-      EvolutionEngine.#RNG_STATE = normalised >>> 0;
-
-      // Step 3: force the RNG cache to refill on next use so the sequence starts from the new seed.
-      EvolutionEngine.#RNG_CACHE_INDEX = EvolutionEngine.#RNG_CACHE_SIZE;
-    }
+    setDeterministicMode(EvolutionEngine.#STATE, seed);
   }
   /** Disable deterministic mode. */
   static clearDeterministic(): void {
-    EvolutionEngine.#DETERMINISTIC = false;
+    clearDeterministicMode(EvolutionEngine.#STATE);
   }
   /** When true, telemetry skips higher-moment stats (kurtosis) for speed. */
-  static #REDUCED_TELEMETRY = false;
+  static get #REDUCED_TELEMETRY(): boolean {
+    return EvolutionEngine.#toggles.reducedTelemetry;
+  }
+  static set #REDUCED_TELEMETRY(isReduced: boolean) {
+    EvolutionEngine.#toggles.reducedTelemetry = isReduced;
+  }
   /** Skip most telemetry logging & higher moment stats when true (minimal mode). */
-  static #TELEMETRY_MINIMAL = false;
+  static get #TELEMETRY_MINIMAL(): boolean {
+    return EvolutionEngine.#toggles.telemetryMinimal;
+  }
+  static set #TELEMETRY_MINIMAL(isMinimal: boolean) {
+    EvolutionEngine.#toggles.telemetryMinimal = isMinimal;
+  }
   /** Disable Baldwinian refinement phase when true. */
-  static #DISABLE_BALDWIN = false;
+  static get #DISABLE_BALDWIN(): boolean {
+    return EvolutionEngine.#toggles.disableBaldwinPhase;
+  }
+  static set #DISABLE_BALDWIN(isDisabled: boolean) {
+    EvolutionEngine.#toggles.disableBaldwinPhase = isDisabled;
+  }
   /** Default tail history size used by telemetry */
   static #RECENT_WINDOW = 40;
   /** Default population size used when no popSize provided in cfg */
@@ -627,8 +586,8 @@ export class EvolutionEngine {
    * 1. Coordinates are packed into a single 32-bit integer: (x & 0xffff) << 16 | (y & 0xffff)
    * 2. Two code paths:
    *    a. Tiny path (< 32): use a fixed 64-slot Int32Array (#SMALL_EXPLORE_TABLE) cleared per call.
-   *    b. Larger path: use a growable power-of-two scratch Int32Array (#SCRATCH_VISITED_HASH) sized
-   *       for target load factor (#VISITED_HASH_LOAD). Table is zero-filled when reused.
+  *    b. Larger path: use a growable power-of-two scratch Int32Array (#SCRATCH_VISITED_HASH) sized
+  *       via {@link ensureVisitedHashCapacity} to honour the configured load factor. Table is zero-filled when reused.
    * 3. Open-addressing with linear probing; 0 denotes empty. We store packed+1 to disambiguate zero.
    * 4. Knuth multiplicative hashing constant extracted as a private static (#HASH_KNUTH_32) for clarity.
    * 5. All operations avoid heap allocation after initial buffer growth.
@@ -729,8 +688,8 @@ export class EvolutionEngine {
    * Ensures the table grows geometrically to keep probe chains short.
    *
    * Design rationale:
-   * - Uses a single shared Int32Array (#SCRATCH_VISITED_HASH) grown geometrically (power-of-two) so
-   *   subsequent calls amortize allocation costs. We target a load factor below `#VISITED_HASH_LOAD` (≈0.7).
+  * - Uses a single shared Int32Array (#SCRATCH_VISITED_HASH) grown geometrically (power-of-two) so
+  *   subsequent calls amortize allocation costs. Capacity planning is delegated to {@link ensureVisitedHashCapacity}.
    * - Multiplicative hashing (Knuth constant) provides a cheap, decent dispersion for packed 32-bit coordinates.
    * - Linear probing keeps memory contiguous (cache friendly) and avoids per-slot pointer overhead.
    * - We pack (x,y) into 32 bits allowing negative coordinates via masking (& 0xffff) with natural wrap —
@@ -755,20 +714,11 @@ export class EvolutionEngine {
     // Step 1: Compute target raw capacity (2x pathLength) to keep effective load factor low after inserts.
     const targetCapacity = pathLength << 1; // aim ~0.5 raw load pre-threshold
     // Step 2: Acquire / resize shared table if needed under load factor heuristic.
-    let table = EvolutionEngine.#SCRATCH_VISITED_HASH;
-    if (
-      table.length === 0 ||
-      targetCapacity > table.length * EvolutionEngine.#VISITED_HASH_LOAD
-    ) {
-      const needed = Math.ceil(
-        targetCapacity / EvolutionEngine.#VISITED_HASH_LOAD
-      );
-      const pow2 = 1 << Math.ceil(Math.log2(needed));
-      table = EvolutionEngine.#SCRATCH_VISITED_HASH = new Int32Array(pow2);
-    } else {
-      table.fill(0);
-    }
-    const mask = table.length - 1;
+    const { table, slotMask } = ensureVisitedHashCapacity(
+      targetCapacity,
+      EvolutionEngine.#STATE
+    );
+    const mask = slotMask;
     let distinct = 0;
     // Step 3: Iterate coordinates, pack & insert into open-address table.
     for (let index = 0; index < pathLength; index++) {
@@ -890,7 +840,11 @@ export class EvolutionEngine {
     const boundedSampleSize =
       sampleSize > 0 ? Math.min(populationLength, sampleSize | 0) : 0;
     const sampledLength = boundedSampleSize
-      ? EvolutionEngine.#sampleIntoScratch(populationRef, boundedSampleSize)
+      ? sampleIntoScratch(
+          EvolutionEngine.#STATE,
+          populationRef,
+          boundedSampleSize
+        )
       : 0;
 
     // Step 5: Welford single-pass variance for enabled connection weights across sampled genomes.
@@ -918,56 +872,6 @@ export class EvolutionEngine {
 
     // Step 6: Return concise metrics snapshot.
     return { speciesUniqueCount, simpson, wStd: weightStdDev };
-  }
-
-  /**
-   * Sample `k` items (with replacement) from a source array using the engine RNG.
-   *
-   * Characteristics:
-   * - With replacement: the same element can appear multiple times.
-   * - Uses a reusable pooled array (#SCRATCH_SAMPLE_RESULT) that grows geometrically (power-of-two) and is reused
-   *   across calls to avoid allocations. Callers MUST copy (`slice()` / spread) if they need to retain the result
-   *   beyond the next invocation.
-   * - Deterministic under deterministic engine mode (shared RNG state); otherwise non-deterministic.
-   * - Returns an empty array (length 0) for invalid inputs (`k <= 0`, non-array, or empty source). The returned
-   *   empty array is a fresh literal to avoid accidental aliasing with the scratch buffer.
-   *
-   * Complexity: O(k). Memory: O(k) only during first growth; subsequent calls reuse storage.
-   * Reentrancy: Non-reentrant (shared scratch buffer reused) — do not call concurrently.
-   *
-   * @param src - Source array to sample from.
-   * @param k - Number of samples requested (fractional values truncated via floor). Negative treated as 0.
-   * @returns Pooled ephemeral array of length `k` (or 0) containing sampled elements (with replacement).
-   * @example
-   * // Internal usage (pseudo):
-   * const batch = EvolutionEngine['#sampleArray'](population, 16); // do not store long-term
-   * const stableCopy = [...batch]; // copy if needed later
-   * @internal
-   * @remarks Non-reentrant; result must be treated as ephemeral.
-   */
-  static #sampleArray<T>(src: T[], k: number): T[] {
-    // Step 1: Validate inputs & normalize sample size.
-    if (!Array.isArray(src) || k <= 0) return [];
-    const sampleCount = Math.floor(k);
-    const sourceLength = src.length | 0;
-    if (sourceLength === 0 || sampleCount === 0) return [];
-
-    // Step 2: Ensure pooled output buffer capacity (power-of-two growth for amortized O(1) reallocation).
-    if (sampleCount > EvolutionEngine.#SCRATCH_SAMPLE_RESULT.length) {
-      const nextSize = 1 << Math.ceil(Math.log2(sampleCount));
-      EvolutionEngine.#SCRATCH_SAMPLE_RESULT = new Array(nextSize);
-    }
-    const out = EvolutionEngine.#SCRATCH_SAMPLE_RESULT as T[];
-
-    // Step 3: Fill buffer with sampled elements (with replacement) using fast RNG.
-    for (let sampleIndex = 0; sampleIndex < sampleCount; sampleIndex++) {
-      out[sampleIndex] =
-        src[(EvolutionEngine.#fastRandom() * sourceLength) | 0];
-    }
-
-    // Step 4: Truncate logical length to exactly sampleCount (allows buffer reuse if previously larger).
-    out.length = sampleCount;
-    return out; // pooled ephemeral array — copy if persistence required
   }
 
   /**
@@ -1086,6 +990,7 @@ export class EvolutionEngine {
       // Local aliases for constants used below
       const wInitRange = EvolutionEngine.#W_INIT_RANGE;
       const wInitMin = EvolutionEngine.#W_INIT_MIN;
+  const randomParameters = resolveRngParameters();
 
       // Step 2: connect directional input -> corresponding output for 4 compass directions
       for (let direction = 0; direction < 4; direction++) {
@@ -1117,7 +1022,12 @@ export class EvolutionEngine {
 
         // Small random initialization in [wInitMin, wInitMin + wInitRange)
         const initWeight =
-          EvolutionEngine.#fastRandom() * wInitRange + wInitMin;
+          drawFastRandom(
+            EvolutionEngine.#STATE,
+            randomParameters
+          ) *
+            wInitRange +
+          wInitMin;
         if (!existingConn) net.connect(inputNode, outputNode, initWeight);
         else existingConn.weight = initWeight;
       }
@@ -1261,8 +1171,10 @@ export class EvolutionEngine {
     }
 
     // Step 3: Optionally record profiling start (high precision micro-timer when enabled).
-    const profilingEnabled = EvolutionEngine.#PROFILE_ENABLED;
-    const profileStartMs = profilingEnabled ? EvolutionEngine.#PROFILE_T0() : 0;
+    const profilingEnabled = isProfilingDetailsEnabled(EvolutionEngine.#STATE);
+    const profileStartMs = profilingEnabled
+      ? profilingStartTimestamp(EvolutionEngine.#STATE)
+      : 0;
 
     // Step 4: Apply pruning across the population (best-effort; errors are isolated per genome).
     EvolutionEngine.#applySimplifyPruningToPopulation(
@@ -1273,8 +1185,13 @@ export class EvolutionEngine {
 
     // Step 5: Record profiling delta if enabled and return remaining generations decremented.
     if (profilingEnabled) {
-      const elapsedMs = EvolutionEngine.#PROFILE_T0() - profileStartMs || 0;
-      EvolutionEngine.#PROFILE_ADD('simplify', elapsedMs);
+      const elapsedMs =
+        profilingStartTimestamp(EvolutionEngine.#STATE) - profileStartMs || 0;
+      accumulateProfilingDuration(
+        EvolutionEngine.#STATE,
+        'simplify',
+        elapsedMs
+      );
     }
 
     return Math.max(0, remainingGens - 1);
@@ -1328,12 +1245,14 @@ export class EvolutionEngine {
     if (!Number.isFinite(iterations) || iterations <= 0) return 0;
 
     // Step 2: Start profiling timer if requested.
-    const profileStart = profileEnabled ? EvolutionEngine.#now() : 0;
+    const profileStart = profileEnabled
+      ? readHighResolutionTime(EvolutionEngine.#STATE)
+      : 0;
 
     // Step 3: Optionally down-sample the training set (with replacement) to reduce cost for large sets.
     const trainingSetRef =
       sampleSize && sampleSize > 0 && sampleSize < trainingSet.length
-        ? EvolutionEngine.#sampleArray(trainingSet, sampleSize)
+        ? sampleArray(EvolutionEngine.#STATE, trainingSet, sampleSize)
         : trainingSet;
 
     // Step 4: Iterate networks performing a bounded training pass.
@@ -1385,7 +1304,9 @@ export class EvolutionEngine {
     }
 
     // Step 6: Return elapsed time when profiling; otherwise return 0.
-    return profileEnabled ? EvolutionEngine.#now() - profileStart : 0;
+    return profileEnabled
+      ? readHighResolutionTime(EvolutionEngine.#STATE) - profileStart
+      : 0;
   }
 
   /**
@@ -1402,7 +1323,7 @@ export class EvolutionEngine {
    * 3. Compute logits-level statistics and run collapse detection / recovery heuristics.
    * 4. Emit exploration telemetry (unique coverage / progress).
    * 5. Emit diversity metrics (species richness, Simpson index, weight std).
-   * 6. Optionally record profiling timings into `#PROFILE_ACCUM`.
+  * 6. Optionally record profiling timings into the shared profiling accumulators.
    *
    * @param neat - NEAT instance exposing `population` and related internals used by some telemetry probes.
    * @param fittest - The current fittest genome/network (may be undefined during initialization).
@@ -1425,8 +1346,10 @@ export class EvolutionEngine {
     if (EvolutionEngine.#TELEMETRY_MINIMAL) return;
 
     // Start profiling window if enabled.
-    const profilingEnabled = EvolutionEngine.#PROFILE_ENABLED;
-    const profilingStart = profilingEnabled ? EvolutionEngine.#PROFILE_T0() : 0;
+    const profilingEnabled = isProfilingDetailsEnabled(EvolutionEngine.#STATE);
+    const profilingStart = profilingEnabled
+      ? profilingStartTimestamp(EvolutionEngine.#STATE)
+      : 0;
 
     try {
       // Step 1: Action entropy telemetry
@@ -1454,9 +1377,10 @@ export class EvolutionEngine {
 
     // Step 6: Record profiling delta if profiling was enabled at entry.
     if (profilingEnabled) {
-      EvolutionEngine.#PROFILE_ADD(
+      accumulateProfilingDuration(
+        EvolutionEngine.#STATE,
         'telemetry',
-        EvolutionEngine.#PROFILE_T0() - profilingStart || 0
+        profilingStartTimestamp(EvolutionEngine.#STATE) - profilingStart || 0
       );
     }
   }
@@ -1608,7 +1532,8 @@ export class EvolutionEngine {
       if (!fullHistory.length) return;
 
       // Acquire a bounded tail for statistics (recent window size).
-      const recentTail = EvolutionEngine.#getTail<number[]>(
+      const recentTail = getTail<number[]>(
+        EvolutionEngine.#STATE,
         fullHistory,
         EvolutionEngine.#RECENT_WINDOW
       );
@@ -1840,8 +1765,11 @@ export class EvolutionEngine {
 
     try {
       // Step 2: Optional profiling start (high-precision timer when enabled).
-      const profileStart = EvolutionEngine.#PROFILE_ENABLED
-        ? EvolutionEngine.#PROFILE_T0()
+      const snapshotProfilingEnabled = isProfilingDetailsEnabled(
+        EvolutionEngine.#STATE
+      );
+      const profileStart = snapshotProfilingEnabled
+        ? profilingStartTimestamp(EvolutionEngine.#STATE)
         : 0;
 
       // Step 3: Populate pooled snapshot metadata (mutate shared scratch snapshot object).
@@ -1895,10 +1823,11 @@ export class EvolutionEngine {
       fs.writeFileSync(snapshotFilePath, JSON.stringify(snapshot));
 
       // Step 6: Profile delta accumulation (best-effort).
-      if (EvolutionEngine.#PROFILE_ENABLED) {
-        EvolutionEngine.#PROFILE_ADD(
+      if (snapshotProfilingEnabled) {
+        accumulateProfilingDuration(
+          EvolutionEngine.#STATE,
           'snapshot',
-          EvolutionEngine.#PROFILE_T0() - profileStart || 0
+          profilingStartTimestamp(EvolutionEngine.#STATE) - profileStart || 0
         );
       }
     } catch {
@@ -1943,7 +1872,8 @@ export class EvolutionEngine {
 
       // Step 4a: If telemetry is an array, reuse pooled tail helper to avoid allocation.
       if (Array.isArray(telemetryRaw)) {
-        return EvolutionEngine.#getTail<any>(
+        return getTail<any>(
+          EvolutionEngine.#STATE,
           telemetryRaw,
           normalizedTailLength
         );
@@ -2185,64 +2115,6 @@ export class EvolutionEngine {
     // Step 5: Restore logical length (capacity retained for reuse) and return.
     stringScratch.length = priorLength;
     return joined;
-  }
-
-  /**
-   * Extract the last `count` items from an input array into a pooled scratch buffer (no new allocation).
-   *
-   * Educational steps:
-   * 1. Validate & normalize parameters: non-array, empty, non-positive, or non-finite counts -> empty result. Clamp
-   *    `count` to the source length and floor fractional values.
-   * 2. Ensure pooled scratch buffer (#SCRATCH_TAIL) has sufficient capacity; grow geometrically (next power-of-two)
-   *    so resizes are amortized and rare.
-   * 3. Copy the tail slice elements into the scratch buffer with a tight loop (avoids `slice()` allocation).
-   * 4. Set the logical length of the scratch buffer to the number of copied elements and return it.
-   *
-   * Complexity: O(k) where k = min(count, source length). Amortized O(1) extra space beyond the shared buffer.
-   * Determinism: Deterministic given identical input array contents and `count`.
-   * Reentrancy: Non-reentrant (returns a shared pooled buffer). Callers MUST copy (`slice()` / spread) if they need
-   *             to retain contents across another engine call that may reuse the scratch.
-   * Mutability: Returned array is mutable; mutations will affect the scratch buffer for subsequent calls.
-   *
-   * @param arr Source array reference.
-   * @param n Desired tail length (floored; negative / non-finite treated as 0).
-   * @returns Pooled ephemeral array containing the last `min(n, arr.length)` elements (or empty array literal when 0).
-   * @internal
-   */
-  static #getTail<T>(arr: T[] | undefined, n: number): T[] {
-    // Step 1: Validate & normalize parameters.
-    if (
-      !Array.isArray(arr) ||
-      arr.length === 0 ||
-      !Number.isFinite(n) ||
-      n <= 0
-    )
-      return [];
-    const desired = Math.floor(n);
-    const takeCount = desired >= arr.length ? arr.length : desired;
-    if (takeCount === 0) return [];
-
-    // Step 2: Ensure scratch capacity via geometric growth (next power of two >= takeCount).
-    if (takeCount > EvolutionEngine.#SCRATCH_TAIL.length) {
-      const nextSize = 1 << Math.ceil(Math.log2(takeCount));
-      EvolutionEngine.#SCRATCH_TAIL = new Array(nextSize);
-    }
-
-    // Step 3: Copy tail slice into scratch buffer.
-    const tailBuffer = EvolutionEngine.#SCRATCH_TAIL as T[];
-    const startIndex = arr.length - takeCount;
-    for (let elementIndex = 0; elementIndex < takeCount; elementIndex++) {
-      tailBuffer[elementIndex] = arr[startIndex + elementIndex]!;
-    }
-
-    // Step 4: Set logical length & return pooled (ephemeral) tail view.
-    tailBuffer.length = takeCount;
-    return tailBuffer;
-  }
-
-  /** Delegate to MazeUtils.pushHistory to keep bounded history semantics. @internal */
-  static #pushHistory<T>(buf: T[] | undefined, v: T, maxLen: number): T[] {
-    return MazeUtils.pushHistory(buf as any, v as any, maxLen) as T[];
   }
 
   /**
@@ -3043,30 +2915,18 @@ export class EvolutionEngine {
       : 0;
     if (dim === 0) return; // nothing to prepare for zero-dimension
 
-    // Step 2: Ensure base scratch buffers exist and have sufficient capacity.
-    // Grow only when capacity is insufficient to avoid noisy allocations on hot paths.
-    if (
-      !EvolutionEngine.#SCRATCH_MEANS ||
-      EvolutionEngine.#SCRATCH_MEANS.length < dim
-    ) {
-      EvolutionEngine.#SCRATCH_MEANS = new Float64Array(dim);
-    }
-    if (
-      !EvolutionEngine.#SCRATCH_M2_RAW ||
-      EvolutionEngine.#SCRATCH_M2_RAW.length < dim
-    ) {
-      EvolutionEngine.#SCRATCH_M2_RAW = new Float64Array(dim);
-    }
-    if (
-      !EvolutionEngine.#SCRATCH_STDS ||
-      EvolutionEngine.#SCRATCH_STDS.length < dim
-    ) {
-      EvolutionEngine.#SCRATCH_STDS = new Float64Array(dim);
-    }
+    // Step 2: Ensure base scratch buffers exist and have sufficient capacity using shared helper.
+    const telemetryScratch = initialiseTelemetryScratch(
+      {
+        actionDimension: dim,
+        includeHigherMoments: !reducedTelemetry,
+      },
+      EvolutionEngine.#STATE
+    );
 
-    const meansBuffer = EvolutionEngine.#SCRATCH_MEANS;
-    const secondMomentBuffer = EvolutionEngine.#SCRATCH_M2_RAW;
-    const stdBuffer = EvolutionEngine.#SCRATCH_STDS;
+    const meansBuffer = telemetryScratch.meanScratch;
+    const secondMomentBuffer = telemetryScratch.secondMomentScratch;
+    const stdBuffer = telemetryScratch.standardDeviationScratch;
 
     // Step 3: Zero only the active prefix to retain any extra capacity beyond `dim`.
     meansBuffer.fill(0, 0, dim);
@@ -3075,28 +2935,13 @@ export class EvolutionEngine {
 
     // Step 4: Full telemetry path: ensure and zero higher-moment buffers.
     if (!reducedTelemetry) {
-      if (
-        !EvolutionEngine.#SCRATCH_M3_RAW ||
-        EvolutionEngine.#SCRATCH_M3_RAW!.length < dim
-      ) {
-        EvolutionEngine.#SCRATCH_M3_RAW = new Float64Array(dim);
-      }
-      if (
-        !EvolutionEngine.#SCRATCH_M4_RAW ||
-        EvolutionEngine.#SCRATCH_M4_RAW!.length < dim
-      ) {
-        EvolutionEngine.#SCRATCH_M4_RAW = new Float64Array(dim);
-      }
-      if (
-        !EvolutionEngine.#SCRATCH_KURT ||
-        EvolutionEngine.#SCRATCH_KURT!.length < dim
-      ) {
-        EvolutionEngine.#SCRATCH_KURT = new Float64Array(dim);
-      }
+      const thirdMomentBuffer = telemetryScratch.thirdMomentScratch!;
+      const fourthMomentBuffer = telemetryScratch.fourthMomentScratch!;
+      const kurtosisBuffer = telemetryScratch.kurtosisScratch!;
 
-      EvolutionEngine.#SCRATCH_M3_RAW!.fill(0, 0, dim);
-      EvolutionEngine.#SCRATCH_M4_RAW!.fill(0, 0, dim);
-      EvolutionEngine.#SCRATCH_KURT!.fill(0, 0, dim);
+      thirdMomentBuffer.fill(0, 0, dim);
+      fourthMomentBuffer.fill(0, 0, dim);
+      kurtosisBuffer.fill(0, 0, dim);
     }
   }
 
@@ -3592,16 +3437,15 @@ export class EvolutionEngine {
     )
       return { mean: 0, std: 0, biasesStr: '' };
 
-    // Step 2: Ensure a pooled Float64Array exists and has capacity for outputCount values.
-    // Use a geometric (power-of-two) growth policy to amortize future resizes.
-    if (
-      !EvolutionEngine.#SCRATCH_BIAS_TA ||
-      EvolutionEngine.#SCRATCH_BIAS_TA.length < outputCount
-    ) {
-      const newSize = 1 << Math.ceil(Math.log2(Math.max(1, outputCount)));
-      EvolutionEngine.#SCRATCH_BIAS_TA = new Float64Array(newSize);
-    }
-    const biasTa = EvolutionEngine.#SCRATCH_BIAS_TA;
+    // Step 2: Ensure pooled telemetry buffers have sufficient capacity for the requested bias count.
+    const telemetryScratch = initialiseTelemetryScratch(
+      {
+        biasCount: outputCount,
+        stringBufferLength: outputCount,
+      },
+      EvolutionEngine.#STATE
+    );
+    const biasTa = telemetryScratch.biasScratch;
 
     // Step 2.1: Fill the numeric scratch from nodes using the precomputed node-index mapping.
     for (let i = 0; i < outputCount; i++) {
@@ -3623,11 +3467,7 @@ export class EvolutionEngine {
 
     // Step 4: Format CSV using pooled string buffer (#SCRATCH_STR) with toFixed(2).
     // Grow the pooled string buffer geometrically when capacity insufficient.
-    if (outputCount > EvolutionEngine.#SCRATCH_STR.length) {
-      const nextSize = 1 << Math.ceil(Math.log2(Math.max(1, outputCount)));
-      EvolutionEngine.#SCRATCH_STR = new Array(nextSize);
-    }
-    const sBuf = EvolutionEngine.#SCRATCH_STR;
+    const sBuf = telemetryScratch.stringBuffer;
     for (let bi = 0; bi < outputCount; bi++) {
       sBuf[bi] = biasTa[bi].toFixed(2);
     }
@@ -3689,10 +3529,13 @@ export class EvolutionEngine {
 
     // Step 2: Create the requested number of children by repeatedly sampling parents.
     // Note: uniform sampling over the top `parentPoolSize` indices.
+    const rngParameters = resolveRngParameters();
+    const sampleUniformParent = () =>
+      drawFastRandom(EvolutionEngine.#STATE, rngParameters);
     for (let childIndex = 0; childIndex < additionsWanted; childIndex++) {
       // 2.1 Sample a parent index in [0, parentPoolSize)
       const sampledParentIndex = Math.floor(
-        EvolutionEngine.#fastRandom() * parentPoolSize
+        sampleUniformParent() * parentPoolSize
       );
       // 2.2 Resolve parent genome from the sorted index map.
       const parentGenome = populationRef[sortedIdx[sampledParentIndex]];
@@ -3769,12 +3612,11 @@ export class EvolutionEngine {
    * @internal
    */
   static #determineMutateCount(): number {
-    return (
-      1 +
-      (EvolutionEngine.#fastRandom() < EvolutionEngine.#DEFAULT_HALF_PROB
-        ? 1
-        : 0)
+    const uniformSample = drawFastRandom(
+      EvolutionEngine.#STATE,
+      resolveRngParameters()
     );
+    return 1 + (uniformSample < EvolutionEngine.#DEFAULT_HALF_PROB ? 1 : 0);
   }
 
   /**
@@ -3856,6 +3698,7 @@ export class EvolutionEngine {
     // Step 6: Partial Fisher–Yates selection for k distinct picks.
     // For selectionCursor in [0,k) pick a random element from the remaining tail
     // and swap it into the prefix position, then apply it immediately.
+    const mutationRngParameters = resolveRngParameters();
     for (
       let selectionCursor = 0;
       selectionCursor < toApply;
@@ -3863,7 +3706,13 @@ export class EvolutionEngine {
     ) {
       const remaining = operationCount - selectionCursor;
       // Random offset in [0, remaining)
-      const offset = (EvolutionEngine.#fastRandom() * remaining) | 0;
+      const offset =
+        (drawFastRandom(
+          EvolutionEngine.#STATE,
+          mutationRngParameters
+        ) *
+          remaining) |
+        0;
       const swapPosition = selectionCursor + offset;
 
       // Swap chosen element into current prefix slot.
@@ -4377,13 +4226,6 @@ export class EvolutionEngine {
   static #CACHED_MUTATION_OPS: any[] | null = null;
 
   /**
-   * Pooled scratch buffer for temporary bias storage when computing output-bias statistics.
-   * - Lazily grown with power-of-two sizing to avoid per-call allocations.
-   * - Shared across engine helpers; non-reentrant (callers must not use concurrently).
-   */
-  static #SCRATCH_BIAS_TA: Float64Array = new Float64Array(0);
-
-  /**
    * Resolve and cache the configured mutation operations from the NEAT driver options.
    *
    * Behaviour / contract:
@@ -4593,7 +4435,7 @@ export class EvolutionEngine {
 
       // Step 4: push the species count into the global history and inspect recent window
       const speciesCount = uniqueCount || 1;
-      (EvolutionEngine as any)._speciesHistory = EvolutionEngine.#pushHistory<number>(
+      (EvolutionEngine as any)._speciesHistory = pushHistory<number>(
         (EvolutionEngine as any)._speciesHistory,
         speciesCount,
         EvolutionEngine.#SPECIES_HISTORY_MAX
@@ -4601,7 +4443,8 @@ export class EvolutionEngine {
 
       const _speciesHistory: number[] =
         (EvolutionEngine as any)._speciesHistory ?? EvolutionEngine.#EMPTY_VEC;
-      const recentWindow: number[] = EvolutionEngine.#getTail<number>(
+      const recentWindow: number[] = getTail<number>(
+        EvolutionEngine.#STATE,
         _speciesHistory,
         EvolutionEngine.#SPECIES_COLLAPSE_WINDOW
       );
@@ -4946,15 +4789,13 @@ export class EvolutionEngine {
       );
       if (outputNodeCount <= 0) return;
 
-      // Step 2: ensure pooled scratch buffer capacity (grow with power-of-two to bound allocations)
-      let biasScratch = EvolutionEngine.#SCRATCH_BIAS_TA;
-      if (biasScratch.length < outputNodeCount) {
-        let newCap = biasScratch.length || 1;
-        while (newCap < outputNodeCount) newCap <<= 1;
-        biasScratch = EvolutionEngine.#SCRATCH_BIAS_TA = new Float64Array(
-          newCap
-        );
-      }
+      // Step 2: ensure pooled scratch buffer capacity via shared helper (geometric growth).
+      const biasScratch = initialiseTelemetryScratch(
+        {
+          biasCount: outputNodeCount,
+        },
+        EvolutionEngine.#STATE
+      ).biasScratch;
 
       // Step 3: Welford one-pass accumulate into local variables while writing raw biases into scratch
       let mean = 0;
@@ -5116,20 +4957,23 @@ export class EvolutionEngine {
     );
 
     // Mild augmentation (jitter openness & progress)
+  const randomParameters = resolveRngParameters();
+    const sharedState = EvolutionEngine.#STATE;
     for (let dsi = 0; dsi < trainingSet.length; dsi++) {
       const caseEntry = trainingSet[dsi];
       for (let dirIndex = 1; dirIndex <= 4; dirIndex++) {
         if (
           caseEntry.input[dirIndex] === 1 &&
-          EvolutionEngine.#fastRandom() < EvolutionEngine.#DEFAULT_JITTER_PROB
+          drawFastRandom(sharedState, randomParameters) <
+            EvolutionEngine.#DEFAULT_JITTER_PROB
         )
           caseEntry.input[dirIndex] =
             EvolutionEngine.#AUGMENT_JITTER_BASE +
-            EvolutionEngine.#fastRandom() *
+            drawFastRandom(sharedState, randomParameters) *
               EvolutionEngine.#AUGMENT_JITTER_RANGE;
       }
       if (
-        EvolutionEngine.#fastRandom() <
+        drawFastRandom(sharedState, randomParameters) <
         EvolutionEngine.#AUGMENT_PROGRESS_JITTER_PROB
       )
         caseEntry.input[5] = Math.min(
@@ -5137,7 +4981,7 @@ export class EvolutionEngine {
           Math.max(
             0,
             caseEntry.input[5] +
-              (EvolutionEngine.#fastRandom() *
+              (drawFastRandom(sharedState, randomParameters) *
                 EvolutionEngine.#AUGMENT_PROGRESS_DELTA_RANGE -
                 EvolutionEngine.#AUGMENT_PROGRESS_DELTA_HALF)
           )
@@ -5685,160 +5529,6 @@ export class EvolutionEngine {
   }
 
   /**
-   * Sample `k` items from `src` into the pooled SCRATCH_SAMPLE buffer (with replacement).
-   * Returns the number of items written into the scratch buffer.
-   * @internal
-   * @remarks Non-reentrant: uses shared `#SCRATCH_SAMPLE` buffer.
-   */
-  static #sampleIntoScratch<T>(src: T[], k: number): number {
-    // Step 0: Validate inputs (fast-fail for bad src or non-positive sample size)
-    if (!Array.isArray(src) || k <= 0) return 0;
-
-    // Normalize requested sample count to an integer
-    const requestedSampleCount = Math.floor(k);
-
-    // Step 1: Ensure source contains items to sample from
-    const sourceLength = src.length | 0;
-    if (sourceLength === 0) return 0;
-
-    // Step 2: Ensure pooled scratch buffer has capacity. Grow pool using power-of-two
-    // sizing when necessary to avoid frequent allocations.
-    let pooledBuffer = EvolutionEngine.#SCRATCH_SAMPLE;
-    if (!Array.isArray(pooledBuffer))
-      pooledBuffer = EvolutionEngine.#SCRATCH_SAMPLE = [];
-
-    if (pooledBuffer.length < requestedSampleCount) {
-      // Grow to next power-of-two >= requestedSampleCount
-      let newCapacity = pooledBuffer.length > 0 ? pooledBuffer.length : 1;
-      while (newCapacity < requestedSampleCount) newCapacity <<= 1;
-      const newBuf: any[] = new Array(newCapacity);
-      // Copy existing contents (cheap, amortized) into new buffer
-      for (let i = 0; i < pooledBuffer.length; i++) newBuf[i] = pooledBuffer[i];
-      EvolutionEngine.#SCRATCH_SAMPLE = newBuf;
-      pooledBuffer = newBuf;
-    }
-
-    // Step 3: Determine how many items we'll actually write (bounded by pool capacity)
-    const writeCount = Math.min(requestedSampleCount, pooledBuffer.length);
-
-    // Step 4: Fill the pooled buffer with randomly selected items (with replacement).
-    // Keep the loop tight and unroll in blocks of 4 for throughput (same strategy as before).
-    let writeIndex = 0;
-    const fastRand = EvolutionEngine.#fastRandom;
-    const blockBound = writeCount & ~3; // largest multiple of 4
-    while (writeIndex < blockBound) {
-      pooledBuffer[writeIndex++] = src[(fastRand() * sourceLength) | 0];
-      pooledBuffer[writeIndex++] = src[(fastRand() * sourceLength) | 0];
-      pooledBuffer[writeIndex++] = src[(fastRand() * sourceLength) | 0];
-      pooledBuffer[writeIndex++] = src[(fastRand() * sourceLength) | 0];
-    }
-    while (writeIndex < writeCount) {
-      pooledBuffer[writeIndex++] = src[(fastRand() * sourceLength) | 0];
-    }
-
-    // Return how many items were written into the pooled scratch buffer.
-    return writeCount;
-  }
-
-  /**
-   * Sample up to `k` items (with replacement) from a contiguous segment of `src` into
-   * the engine's pooled scratch buffer (`#SCRATCH_SAMPLE`). This avoids creating a
-   * temporary slice for the segment and reduces per-call allocations.
-   *
-   * Behaviour & contract:
-   *  - The method samples uniformly at random with replacement from the source segment
-   *    `[segmentStart, src.length)` and writes references into the pooled buffer.
-   *  - It grows the pooled buffer conservatively using power-of-two resizing. Growth is
-   *    done by allocating a new array and copying the preserved prefix.
-   *  - The function is intentionally allocation-light for hot paths but is not
-   *    re-entrant: callers must not use the pooled `#SCRATCH_SAMPLE` concurrently.
-   *  - Sampling is best-effort and will silently return 0 when inputs are invalid.
-   *
-   * Steps (high-level):
-   *  1) Fast-validate inputs and normalise numeric arguments.
-   *  2) Compute the available segment length and the requested sample count.
-   *  3) Ensure the pooled `#SCRATCH_SAMPLE` exists and grow it by power-of-two when needed.
-   *  4) Sample uniformly (with replacement) from the segment into the pooled buffer using a
-   *     tight loop (4x unrolled) for throughput.
-   *  5) Return the number of items written into the pooled buffer (may be less than `k`
-   *     when the pool capacity bounds the write).
-   *
-   * Props / Parameters:
-   * @param src - Source array to sample from (must be an array-like object).
-   * @param segmentStart - Inclusive start index within `src` where sampling begins (integer >= 0).
-   * @param sampleCount - Number of items to sample (samples with replacement); will be floored to an integer.
-   * @returns Number of items written into the engine pooled scratch buffer (integer >= 0).
-   *
-   * Notes on pooling / reentrancy:
-   *  - The pooled buffer is shared across the engine and is not thread-safe or re-entrant.
-   *  - This helper is intended for internal use; consumers should copy the pooled items
-   *    out if they need to retain them across subsequent engine operations.
-   *
-   * Example:
-   * // Sample 10 items from src starting at index 20 into the engine scratch buffer
-   * const written = EvolutionEngine['#sampleSegmentIntoScratch'](srcArray, 20, 10);
-   * // Then read items via EvolutionEngine.#SCRATCH_SAMPLE[0..written-1]
-   *
-   * @internal
-   */
-  static #sampleSegmentIntoScratch<T>(
-    src: T[],
-    segmentStart: number,
-    sampleCount: number
-  ): number {
-    // Step 0: Validate inputs quickly and normalise numeric arguments.
-    if (!Array.isArray(src) || sampleCount <= 0) return 0;
-    const totalLength = src.length | 0;
-    const startIndex = Math.max(0, segmentStart | 0);
-    if (startIndex >= totalLength) return 0;
-
-    // Step 1: Determine segment size and requested sample count.
-    const segmentSize = totalLength - startIndex;
-    if (segmentSize <= 0) return 0;
-    const requestedCount = Math.max(0, Math.floor(sampleCount));
-    if (requestedCount === 0) return 0;
-
-    // Step 2: Ensure the pooled sample buffer exists and has sufficient capacity.
-    // Grow the pool conservatively by powers-of-two to reduce future resizes.
-    let pooledBuffer: any[] = Array.isArray(EvolutionEngine.#SCRATCH_SAMPLE)
-      ? EvolutionEngine.#SCRATCH_SAMPLE
-      : (EvolutionEngine.#SCRATCH_SAMPLE = []);
-
-    if (pooledBuffer.length < requestedCount) {
-      let newCapacity = pooledBuffer.length > 0 ? pooledBuffer.length : 1;
-      while (newCapacity < requestedCount) newCapacity <<= 1;
-      const extended: any[] = new Array(newCapacity);
-      for (let copyIndex = 0; copyIndex < pooledBuffer.length; copyIndex++) {
-        extended[copyIndex] = pooledBuffer[copyIndex];
-      }
-      EvolutionEngine.#SCRATCH_SAMPLE = extended;
-      pooledBuffer = extended;
-    }
-
-    // Step 3: Determine how many items we will actually write (bounded by pool capacity).
-    const writeCount = Math.min(requestedCount, pooledBuffer.length);
-
-    // Step 4: Fill the pooled buffer by sampling uniformly (with replacement) from the segment.
-    // Keep the loop tight; unroll in blocks of 4 for throughput on typical engines.
-    const rand = EvolutionEngine.#fastRandom;
-    const base = startIndex;
-    const blockLimit = writeCount & ~3; // largest multiple of 4
-    let writeIndex = 0;
-    while (writeIndex < blockLimit) {
-      pooledBuffer[writeIndex++] = src[base + ((rand() * segmentSize) | 0)];
-      pooledBuffer[writeIndex++] = src[base + ((rand() * segmentSize) | 0)];
-      pooledBuffer[writeIndex++] = src[base + ((rand() * segmentSize) | 0)];
-      pooledBuffer[writeIndex++] = src[base + ((rand() * segmentSize) | 0)];
-    }
-    while (writeIndex < writeCount) {
-      pooledBuffer[writeIndex++] = src[base + ((rand() * segmentSize) | 0)];
-    }
-
-    // Step 5: Return number of items written into the shared pooled buffer.
-    return writeCount;
-  }
-
-  /**
    * Run one generation: evolve, ensure output identity, update species history, maybe expand population,
    * and run Lamarckian training if configured.
    *
@@ -5917,7 +5607,7 @@ export class EvolutionEngine {
   ) {
     // Step 0: Local descriptive aliases and profiling setup.
     const profileEnabled = Boolean(doProfile);
-    const clockNow = () => EvolutionEngine.#now();
+  const clockNow = () => readHighResolutionTime(EvolutionEngine.#STATE);
     const startTime = profileEnabled ? clockNow() : 0;
 
     // Results we will populate. Keep names descriptive for readability in hot paths.
@@ -6269,7 +5959,9 @@ export class EvolutionEngine {
     neat: any
   ): { generationResult: any; simTime: number } {
     // Step 1: Run simulator and optionally capture elapsed time.
-    const startTime = doProfile ? EvolutionEngine.#now() : 0;
+    const startTime = doProfile
+      ? readHighResolutionTime(EvolutionEngine.#STATE)
+      : 0;
     const simResult = MazeMovement.simulateAgent(
       fittest,
       encodedMaze,
@@ -6302,7 +5994,18 @@ export class EvolutionEngine {
         ?.stepOutputs;
       if (Array.isArray(perStepLogits) && perStepLogits.length > 0) {
         // Ensure the ring can hold the incoming sequence to avoid overflow resize churn.
-        EvolutionEngine.#ensureLogitsRingCapacity(perStepLogits.length);
+        const logitsRingResult = ensureLogitsRingCapacity({
+          state: EvolutionEngine.#STATE,
+          desiredRecentSteps: perStepLogits.length,
+          currentCapacity: EvolutionEngine.#LOGITS_RING_CAP,
+          minimumCapacity: 128,
+          maximumCapacity: EvolutionEngine.#LOGITS_RING_CAP_MAX,
+          actionDimension: EvolutionEngine.#ACTION_DIM,
+          sharedModeEnabled: EvolutionEngine.#LOGITS_RING_SHARED,
+        });
+        EvolutionEngine.#LOGITS_RING_CAP = logitsRingResult.capacity;
+        EvolutionEngine.#LOGITS_RING_SHARED =
+          logitsRingResult.sharedModeEnabled;
 
         const useSharedSAB =
           EvolutionEngine.#LOGITS_RING_SHARED &&
@@ -6406,7 +6109,9 @@ export class EvolutionEngine {
       EvolutionEngine.#swallowError(telemetryDispatchError);
     }
 
-    const elapsed = doProfile ? EvolutionEngine.#now() - startTime : 0;
+    const elapsed = doProfile
+      ? readHighResolutionTime(EvolutionEngine.#STATE) - startTime
+      : 0;
     return { generationResult: simResult, simTime: elapsed } as any;
   }
 
@@ -6578,8 +6283,11 @@ export class EvolutionEngine {
   static #pruneSaturatedHiddenOutputs(genome: any) {
     try {
       // 1) Profiling and defensive references
-      const startProfile = EvolutionEngine.#PROFILE_ENABLED
-        ? EvolutionEngine.#PROFILE_T0()
+      const pruneProfilingEnabled = isProfilingDetailsEnabled(
+        EvolutionEngine.#STATE
+      );
+      const startProfile = pruneProfilingEnabled
+        ? profilingStartTimestamp(EvolutionEngine.#STATE)
         : 0;
       const nodesRef = genome?.nodes ?? EvolutionEngine.#EMPTY_VEC;
 
@@ -6686,10 +6394,11 @@ export class EvolutionEngine {
       }
 
       // 5) Profiling record (best-effort)
-      if (EvolutionEngine.#PROFILE_ENABLED) {
-        EvolutionEngine.#PROFILE_ADD(
+      if (pruneProfilingEnabled) {
+        accumulateProfilingDuration(
+          EvolutionEngine.#STATE,
           'prune',
-          EvolutionEngine.#PROFILE_T0() - startProfile || 0
+          profilingStartTimestamp(EvolutionEngine.#STATE) - startProfile || 0
         );
       }
     } catch {
@@ -6758,7 +6467,8 @@ export class EvolutionEngine {
 
       // Step 3: Sample up to `maxCandidates` genomes from the non-elite segment into the pool.
       // `sampledCount` is the number of items written into the pooled buffer.
-      const sampledCount = EvolutionEngine.#sampleSegmentIntoScratch(
+      const sampledCount = sampleSegmentIntoScratch(
+        EvolutionEngine.#STATE,
         population,
         nonEliteStartIndex,
         maxCandidates
@@ -6867,11 +6577,14 @@ export class EvolutionEngine {
       // Step 4: Reinitialise biases for collected outputs.
       let biasReset = 0;
       const biasHalfRange = Number(EvolutionEngine.#BIAS_RESET_HALF_RANGE) || 0;
+  const randomParameters = resolveRngParameters();
+      const sharedState = EvolutionEngine.#STATE;
       for (let idx = 0; idx < outputCount; idx++) {
         const outNode = sampleBuf[idx];
         if (!outNode) continue;
         outNode.bias =
-          EvolutionEngine.#fastRandom() * (2 * biasHalfRange) - biasHalfRange;
+          drawFastRandom(sharedState, randomParameters) * (2 * biasHalfRange) -
+          biasHalfRange;
         biasReset++;
       }
 
@@ -6895,7 +6608,8 @@ export class EvolutionEngine {
           try {
             if (outputsSet.has(conn?.to)) {
               conn.weight =
-                EvolutionEngine.#fastRandom() * (2 * weightHalfRange) -
+                drawFastRandom(sharedState, randomParameters) *
+                  (2 * weightHalfRange) -
                 weightHalfRange;
               connReset++;
             }
@@ -7063,108 +6777,6 @@ export class EvolutionEngine {
    * @param neat - NEAT instance used to derive population size for heuristics.
    * @internal
    */
-  static #maybeShrinkScratch(neat: any) {
-    try {
-      // Step 1: Defensive guards
-      const populationSize = Array.isArray(neat?.population)
-        ? neat.population.length
-        : 0;
-      if (!populationSize) return;
-
-      // Heuristic thresholds
-      const SHRINK_THRESHOLD_FACTOR = 8; // shrink when pool length > populationSize * factor
-      const MIN_POOL_SIZE = 8; // never shrink below this size
-
-      // Helper: next power-of-two >= n
-      const nextPowerOfTwo = (n: number) =>
-        1 << Math.ceil(Math.log2(Math.max(1, n)));
-
-      // Desired capacity computed from population size (clamped to MIN_POOL_SIZE)
-      const desiredCapacity = nextPowerOfTwo(
-        Math.max(MIN_POOL_SIZE, populationSize)
-      );
-
-      // --- SCRATCH_SORT_IDX (plain Array used for sorting indices) ---
-      try {
-        const sortIdx = EvolutionEngine.#SCRATCH_SORT_IDX;
-        if (
-          Array.isArray(sortIdx) &&
-          sortIdx.length > populationSize * SHRINK_THRESHOLD_FACTOR
-        ) {
-          EvolutionEngine.#SCRATCH_SORT_IDX = new Array(desiredCapacity);
-        }
-      } catch {
-        /* ignore per-pool failures */
-      }
-
-      // --- SCRATCH_SAMPLE (pooled sample buffer, plain Array) ---
-      try {
-        let samplePool = EvolutionEngine.#SCRATCH_SAMPLE;
-        if (!Array.isArray(samplePool))
-          samplePool = EvolutionEngine.#SCRATCH_SAMPLE = [];
-        if (samplePool.length > populationSize * SHRINK_THRESHOLD_FACTOR) {
-          samplePool.length = desiredCapacity;
-          EvolutionEngine.#SCRATCH_SAMPLE = samplePool;
-        }
-      } catch {
-        /* ignore per-pool failures */
-      }
-
-      // --- SCRATCH_EXPS (Float64Array used for temporary numeric work) ---
-      try {
-        const exps = EvolutionEngine.#SCRATCH_EXPS as Float64Array | undefined;
-        if (
-          exps instanceof Float64Array &&
-          exps.length > populationSize * SHRINK_THRESHOLD_FACTOR
-        ) {
-          const newLen = desiredCapacity;
-          const smaller = new Float64Array(newLen);
-          smaller.set(exps.subarray(0, Math.min(exps.length, newLen)));
-          EvolutionEngine.#SCRATCH_EXPS = smaller;
-        }
-      } catch {
-        /* ignore per-pool failures */
-      }
-
-      // --- SCRATCH_BIAS_TA (Float64Array for biases) ---
-      try {
-        const biasTa = EvolutionEngine.#SCRATCH_BIAS_TA as
-          | Float64Array
-          | undefined;
-        if (
-          biasTa instanceof Float64Array &&
-          biasTa.length > populationSize * SHRINK_THRESHOLD_FACTOR
-        ) {
-          const newLen = desiredCapacity;
-          const smaller = new Float64Array(newLen);
-          smaller.set(biasTa.subarray(0, Math.min(biasTa.length, newLen)));
-          EvolutionEngine.#SCRATCH_BIAS_TA = smaller;
-        }
-      } catch {
-        /* ignore per-pool failures */
-      }
-
-      // --- SCRATCH_NODE_IDX (Int32Array) ---
-      try {
-        const nodeIdx = EvolutionEngine.#SCRATCH_NODE_IDX as
-          | Int32Array
-          | undefined;
-        if (
-          nodeIdx instanceof Int32Array &&
-          nodeIdx.length > populationSize * SHRINK_THRESHOLD_FACTOR
-        ) {
-          const newLen = desiredCapacity;
-          const smaller = new Int32Array(newLen);
-          smaller.set(nodeIdx.subarray(0, Math.min(nodeIdx.length, newLen)));
-          EvolutionEngine.#SCRATCH_NODE_IDX = smaller;
-        }
-      } catch {
-        /* ignore per-pool failures */
-      }
-    } catch {
-      // Best-effort: do not propagate errors from maintenance helper.
-    }
-  }
 
   /**
    * Runs the NEAT neuro-evolution process for an agent to solve a given ASCII maze.
@@ -7203,7 +6815,11 @@ export class EvolutionEngine {
     );
 
     // 4) Ensure internal scratch/pooling capacity is sufficient for the configured population & network sizes.
-    EvolutionEngine.#ensureScratchCapacity(opts.popSize, inputSize, outputSize);
+    ensureScratchCapacity(EvolutionEngine.#STATE, {
+      populationSize: opts.popSize,
+      inputSize,
+      outputSize,
+    });
 
     // 5) Lamarckian warm-start (pretrain generation 0) when training cases exist.
     const lamarckianTrainingSet = EvolutionEngine.#buildLamarckianTrainingSet();
@@ -7297,32 +6913,36 @@ export class EvolutionEngine {
 
       // Step 2: Obtain a small pooled Float64Array (4 slots) to avoid per-call allocations.
       // Layout: [0]=totalEvolveMs, [1]=totalLamarckMs, [2]=totalSimMs, [3]=totalPerGen
-      const scratch: Float64Array =
-        (EvolutionEngine as any)._PROFILE_SCRATCH_TA ??
-        ((EvolutionEngine as any)._PROFILE_SCRATCH_TA = new Float64Array(4));
-      scratch[0] = Number.isFinite(totalEvolveMs) ? totalEvolveMs : 0;
-      scratch[1] = Number.isFinite(totalLamarckMs) ? totalLamarckMs : 0;
-      scratch[2] = Number.isFinite(totalSimMs) ? totalSimMs : 0;
+      const scratchBundle = EvolutionEngine.#STATE.scratch;
+      const profilingBuffer =
+        scratchBundle.profilingScratch ??
+        (scratchBundle.profilingScratch = new Float64Array(4));
+      profilingBuffer[0] = Number.isFinite(totalEvolveMs) ? totalEvolveMs : 0;
+      profilingBuffer[1] = Number.isFinite(totalLamarckMs)
+        ? totalLamarckMs
+        : 0;
+      profilingBuffer[2] = Number.isFinite(totalSimMs) ? totalSimMs : 0;
 
       // Step 3: Compute per-generation averages using the pooled buffer.
-      scratch[0] = scratch[0] / generations; // avg evolve
-      scratch[1] = scratch[1] / generations; // avg lamarck
-      scratch[2] = scratch[2] / generations; // avg sim
-      scratch[3] = scratch[0] + scratch[1] + scratch[2]; // avg total per gen
+      profilingBuffer[0] = profilingBuffer[0] / generations; // avg evolve
+      profilingBuffer[1] = profilingBuffer[1] / generations; // avg lamarck
+      profilingBuffer[2] = profilingBuffer[2] / generations; // avg sim
+      profilingBuffer[3] =
+        profilingBuffer[0] + profilingBuffer[1] + profilingBuffer[2]; // avg total per gen
 
       // Step 4: Format numbers with two decimals and print the compact summary.
-      const avgEvolveStr = scratch[0].toFixed(2);
-      const avgLamarckStr = scratch[1].toFixed(2);
-      const avgSimStr = scratch[2].toFixed(2);
-      const avgTotalPerGenStr = scratch[3].toFixed(2);
+      const avgEvolveStr = profilingBuffer[0].toFixed(2);
+      const avgLamarckStr = profilingBuffer[1].toFixed(2);
+      const avgSimStr = profilingBuffer[2].toFixed(2);
+      const avgTotalPerGenStr = profilingBuffer[3].toFixed(2);
 
       safeWrite(
         `\n[PROFILE] Generations=${generations} avg(ms): evolve=${avgEvolveStr} lamarck=${avgLamarckStr} sim=${avgSimStr} totalPerGen=${avgTotalPerGenStr}\n`
       );
 
       // Step 5: If the engine accumulates detailed profiling, print averaged detail line.
-      if ((EvolutionEngine as any).#PROFILE_ENABLED) {
-        const detailAccum = (EvolutionEngine as any).#PROFILE_ACCUM;
+      if (isProfilingDetailsEnabled(EvolutionEngine.#STATE)) {
+        const detailAccum = getProfilingAccumulators(EvolutionEngine.#STATE);
         const denom = generations || 1;
         // Defensive numeric extraction and formatting (do not allocate intermediate arrays)
         const avgTelemetry = Number.isFinite(detailAccum?.telemetry)
@@ -7412,7 +7032,7 @@ export class EvolutionEngine {
           ? Math.max(0, Math.floor(opts.popSize))
           : 0;
         if (targetPopulation > 0) {
-          const pooledSample = (EvolutionEngine as any).#SCRATCH_SAMPLE;
+          const pooledSample = EvolutionEngine.#SCRATCH_SAMPLE;
           if (
             Array.isArray(pooledSample) &&
             pooledSample.length < targetPopulation
@@ -7421,6 +7041,7 @@ export class EvolutionEngine {
             let newCapacity = pooledSample.length || 1;
             while (newCapacity < targetPopulation) newCapacity <<= 1;
             pooledSample.length = newCapacity;
+            EvolutionEngine.#SCRATCH_SAMPLE = pooledSample;
           }
         }
       } catch {
@@ -7477,32 +7098,32 @@ export class EvolutionEngine {
 
       // Ensure a plain-array pooled sample buffer exists and has the target capacity.
       try {
-        let pooledSampleBuffer: any[] = (EvolutionEngine as any)
-          ._SCRATCH_SAMPLE;
-        if (!Array.isArray(pooledSampleBuffer))
-          pooledSampleBuffer = (EvolutionEngine as any)._SCRATCH_SAMPLE = [];
-        if (pooledSampleBuffer.length < targetCapacity)
+        const scratchBundle = EvolutionEngine.#STATE.scratch;
+        let pooledSampleBuffer = scratchBundle.samplePool;
+        if (!Array.isArray(pooledSampleBuffer)) {
+          pooledSampleBuffer = scratchBundle.samplePool = [];
+        }
+        if (pooledSampleBuffer.length < targetCapacity) {
           pooledSampleBuffer.length = targetCapacity;
+        }
       } catch {
         // ignore pooling failures – non-critical
       }
 
       // Ensure a numeric scratch Float64Array for temporary numeric reductions exists.
       try {
-        let pooledNumericScratch: Float64Array = (EvolutionEngine as any)
-          ._SCRATCH_EXPS;
+        const scratchBundle = EvolutionEngine.#STATE.scratch;
+        let pooledNumericScratch = scratchBundle.exps;
         if (
           !(pooledNumericScratch instanceof Float64Array) ||
           pooledNumericScratch.length < 16
         ) {
-          // allocate with a small power-of-two size (preserve previous capacity when possible)
           const numericSize = Math.max(
             16,
             nextPowerOfTwo(Math.min(256, configuredPopulationSize))
           );
-          pooledNumericScratch = (EvolutionEngine as any)._SCRATCH_EXPS = new Float64Array(
-            numericSize
-          );
+          pooledNumericScratch = new Float64Array(numericSize);
+          scratchBundle.exps = pooledNumericScratch;
         }
       } catch {
         // ignore allocation failures – continue without pooled numeric scratch
@@ -7556,22 +7177,18 @@ export class EvolutionEngine {
     // surprising allocations during the first few generations. All failures are
     // swallowed so the engine remains robust.
     try {
-      // Ensure a plain-array sample pool exists.
-      if (!Array.isArray((EvolutionEngine as any)._SCRATCH_SAMPLE)) {
-        (EvolutionEngine as any)._SCRATCH_SAMPLE = [];
+      const scratchBundle = EvolutionEngine.#STATE.scratch;
+
+      if (!Array.isArray(scratchBundle.samplePool)) {
+        scratchBundle.samplePool = [];
       }
 
-      // Ensure a small profile scratch Float64Array is present.
-      if (
-        !((EvolutionEngine as any)._PROFILE_SCRATCH_TA instanceof Float64Array)
-      ) {
-        (EvolutionEngine as any)._PROFILE_SCRATCH_TA = new Float64Array(4);
+      if (!(scratchBundle.profilingScratch instanceof Float64Array)) {
+        scratchBundle.profilingScratch = new Float64Array(4);
       }
 
-      // Ensure a numeric scratch Float64Array for intermediate reductions exists.
-      if (!((EvolutionEngine as any)._SCRATCH_EXPS instanceof Float64Array)) {
-        // Reserve a modest default capacity that scales well for typical runs.
-        (EvolutionEngine as any)._SCRATCH_EXPS = new Float64Array(64);
+      if (!(scratchBundle.exps instanceof Float64Array)) {
+        scratchBundle.exps = new Float64Array(64);
       }
     } catch {
       // Intentionally ignore pool initialisation failures; not essential.
@@ -7661,9 +7278,10 @@ export class EvolutionEngine {
 
     // Profiling accumulators are stored in a pooled Float64Array to avoid
     // per-run object creation. Layout: [0]=evolveMs, [1]=lamarckMs, [2]=simMs, [3]=reserved
+    const scratchBundle = EvolutionEngine.#STATE.scratch;
     const profileScratch: Float64Array =
-      (EvolutionEngine as any)._PROFILE_SCRATCH_TA ??
-      ((EvolutionEngine as any)._PROFILE_SCRATCH_TA = new Float64Array(4));
+      scratchBundle.profilingScratch ??
+      (scratchBundle.profilingScratch = new Float64Array(4));
     profileScratch[0] = 0; // total evolve ms
     profileScratch[1] = 0; // total lamarck ms
     profileScratch[2] = 0; // total sim ms
@@ -7846,7 +7464,10 @@ export class EvolutionEngine {
       ) {
         const removedDisabled = EvolutionEngine.#compactPopulation(neat);
         if (removedDisabled > 0) {
-          EvolutionEngine.#maybeShrinkScratch(neat);
+          const currentPopulationSize = Array.isArray(neat?.population)
+            ? neat.population.length
+            : 0;
+          maybeShrinkScratch(EvolutionEngine.#STATE, currentPopulationSize);
           safeWrite(
             `[COMPACT] gen=${completedGenerations} removedDisabledConns=${removedDisabled}\n`
           );
@@ -8082,11 +7703,13 @@ export class EvolutionEngine {
 
     // Best-effort: warm a couple of small engine-level pools to reduce first-use allocations.
     try {
-      const clsAny = EvolutionEngine as any;
-      if (!Array.isArray(clsAny._SCRATCH_SAMPLE))
-        clsAny._SCRATCH_SAMPLE = new Array(32);
-      if (!clsAny._PROFILE_SCRATCH_TA)
-        clsAny._PROFILE_SCRATCH_TA = new Float64Array(4);
+      const scratchBundle = EvolutionEngine.#STATE.scratch;
+      if (!Array.isArray(scratchBundle.samplePool)) {
+        scratchBundle.samplePool = new Array(32);
+      }
+      if (!(scratchBundle.profilingScratch instanceof Float64Array)) {
+        scratchBundle.profilingScratch = new Float64Array(4);
+      }
     } catch {
       // Swallow pool allocation errors - they are non-fatal and only an optimisation.
     }
@@ -8102,98 +7725,6 @@ export class EvolutionEngine {
     };
   }
 
-  /**
-   * Ensure pooled scratch buffers / typed arrays exist and have capacity for the run.
-   *
-   * Behaviour & contract:
-   *  - Lazily creates or grows engine-level scratch pools to conservative, power-of-two
-   *    capacities. This reduces allocation churn during the evolution loop and keeps
-   *    growth cache-friendly.
-   *  - Typed arrays are resized by allocating a new buffer and copying the preserved
-   *    prefix to avoid losing useful scratch state.
-   *  - All operations are best-effort: allocation failures are swallowed so the
-   *    evolution engine remains resilient (it will fallback to on-demand allocations).
-   *
-   * Steps (high-level):
-   *  1) Compute power-of-two target capacities for sample and numeric scratch pools.
-   *  2) Ensure an Array-based sample pool (`#SCRATCH_SAMPLE`) exists and has capacity.
-   *  3) Ensure numeric typed-array pools (`#SCRATCH_EXPS`, `#SCRATCH_BIAS_TA`) exist and grow them
-   *     conservatively using power-of-two sizes; copy preserved prefix when growing.
-   *  4) Optionally ensure other small pools (conn flags, logits ring, profile scratch) exist.
-   *
-   * Props:
-   * @param popSize - Planned population size for the run (used to size sample scratch).
-   * @param inputSize - Network input dimensionality (used to size numeric scratch).
-   * @param outputSize - Network output dimensionality (used to size numeric scratch).
-   * @returns void (best-effort side-effect on engine pools).
-   *
-   * @example
-   * EvolutionEngine['#ensureScratchCapacity'](500, 6, 4);
-   */
-  static #ensureScratchCapacity(
-    popSize: number,
-    inputSize: number,
-    outputSize: number
-  ) {
-    // Local helper: next power-of-two at or above `v`.
-    const nextPowerOfTwo = (v: number): number => {
-      if (v <= 1) return 1;
-      return 2 ** Math.ceil(Math.log2(v));
-    };
-
-    try {
-      // Step 1: desired capacities (use reasonable minima to avoid tiny buffers)
-      const desiredSampleCap = Math.max(
-        32,
-        nextPowerOfTwo(Math.max(1, popSize))
-      );
-      const numericBase = Math.max(1, inputSize + outputSize);
-      const desiredNumericCap = Math.max(64, nextPowerOfTwo(numericBase));
-
-      // Step 2: Ensure the pooled sample array exists and has at least desired capacity.
-      if (!EvolutionEngine.#SCRATCH_SAMPLE) {
-        EvolutionEngine.#SCRATCH_SAMPLE = new Array(desiredSampleCap);
-      } else if (EvolutionEngine.#SCRATCH_SAMPLE.length < desiredSampleCap) {
-        EvolutionEngine.#SCRATCH_SAMPLE.length = desiredSampleCap;
-      }
-
-      // Helper to grow a Float64Array pool preserving the prefix contents.
-      const growFloat64Pool = (
-        old: Float64Array | undefined,
-        minCap: number
-      ) => {
-        if (old && old.length >= minCap) return old;
-        const newCap = Math.max(minCap, nextPowerOfTwo(minCap));
-        const next = new Float64Array(newCap);
-        if (old && old.length > 0)
-          next.set(old.subarray(0, Math.min(old.length, newCap)));
-        return next;
-      };
-
-      // Step 3: Ensure numeric typed-array scratch used by other helpers exists and is grown safely.
-      EvolutionEngine.#SCRATCH_EXPS = growFloat64Pool(
-        EvolutionEngine.#SCRATCH_EXPS,
-        desiredNumericCap
-      ) as any;
-      EvolutionEngine.#SCRATCH_BIAS_TA = growFloat64Pool(
-        EvolutionEngine.#SCRATCH_BIAS_TA,
-        desiredNumericCap
-      ) as any;
-
-      // Step 4 (optional): ensure other small pools exist to avoid first-use allocations.
-      // These are non-essential and created conservatively.
-      if (!(EvolutionEngine as any).#SCRATCH_CONN_FLAGS)
-        (EvolutionEngine as any).#SCRATCH_CONN_FLAGS = new Uint8Array(32);
-      if (!(EvolutionEngine as any)._PROFILE_SCRATCH_TA)
-        (EvolutionEngine as any)._PROFILE_SCRATCH_TA = new Float64Array(4);
-      if (!Array.isArray((EvolutionEngine as any)._SCRATCH_NODE_BUCKETS))
-        (EvolutionEngine as any)._SCRATCH_NODE_BUCKETS = [[], [], []];
-      if (!Array.isArray((EvolutionEngine as any)._SCRATCH_ACT_NAMES))
-        (EvolutionEngine as any)._SCRATCH_ACT_NAMES = [];
-    } catch {
-      // Best-effort: silently ignore pool setup failures.
-    }
-  }
 
   /**
    * Print a concise, human-readable summary of a network's topology and runtime metadata.
@@ -8294,10 +7825,10 @@ export class EvolutionEngine {
    * The returned buckets are backed by pooled arrays and are reused by subsequent
    * callers; do not mutate them if you intend to reuse the engine pools.
    *
-   * Implementation details:
-   * - The pool is stored on `EvolutionEngine._SCRATCH_NODE_BUCKETS` and lazily created.
-   * - Buckets are cleared by setting `.length = 0` which preserves allocated capacity.
-   * - The method is allocation-light and suitable for hot paths.
+  * Implementation details:
+  * - The pooled buckets live on the shared engine state and are lazily initialised.
+  * - Buckets are cleared by setting `.length = 0` which preserves allocated capacity.
+  * - The method is allocation-light and suitable for hot paths.
    *
    * @internal
    * @param nodesArray - Array-like collection of node objects (each node may have a `type` property).
@@ -8324,10 +7855,11 @@ export class EvolutionEngine {
     const nodeList: any[] = Array.isArray(nodesArray) ? nodesArray : [];
 
     // Step 2: Lazily create / reuse the pooled buckets structure on the class.
-    const clsAny = EvolutionEngine as any;
-    if (!clsAny._SCRATCH_NODE_BUCKETS)
-      clsAny._SCRATCH_NODE_BUCKETS = [[], [], []];
-    const pooledBuckets: any[][] = clsAny._SCRATCH_NODE_BUCKETS;
+    const scratchBundle = EvolutionEngine.#STATE.scratch;
+    let pooledBuckets = scratchBundle.nodeBuckets;
+    if (!Array.isArray(pooledBuckets?.[0])) {
+      pooledBuckets = scratchBundle.nodeBuckets = [[], [], []];
+    }
 
     // Descriptive bucket aliases for readability.
     const inputBucket = pooledBuckets[0];
@@ -8397,12 +7929,12 @@ export class EvolutionEngine {
     const nodesCount = nodesArray.length;
 
     // Step 2: Lazily ensure the shared pool exists. Use a cast to bypass private-field creation quirks.
-    if (!Array.isArray((EvolutionEngine as any).#SCRATCH_ACT_NAMES)) {
-      // @ts-ignore - create the private static pool slot on first use
-      (EvolutionEngine as any).#SCRATCH_ACT_NAMES = [];
+    const scratchBundle = EvolutionEngine.#STATE.scratch;
+    if (!Array.isArray(scratchBundle.activationNameBuffer)) {
+      scratchBundle.activationNameBuffer = [];
     }
 
-    const pooledNames: string[] = EvolutionEngine.#SCRATCH_ACT_NAMES;
+    const pooledNames: string[] = scratchBundle.activationNameBuffer;
 
     // Helper: compute next power-of-two for growth (keeps growth jumps friendly to the allocator).
     const nextPowerOfTwo = (value: number): number => {
@@ -8445,7 +7977,7 @@ export class EvolutionEngine {
    * Steps:
    * 1) Fast-guard invalid inputs (non-array / empty -> false).
    * 2) For small connection lists use a plain loop (lowest overhead).
-   * 3) For large lists rent a pooled Int8Array via `#ensureConnFlagsCapacity` and
+  * 3) For large lists rent a pooled Int8Array via `ensureConnFlagsCapacity` and
    *    reuse it as a tiny scratch bitmap to reduce allocations and improve cache locality.
    * 4) Early-return on first detection (gated or recurrent), otherwise mark seen indices
    *    in the scratch buffer and return false when complete.
@@ -8477,7 +8009,8 @@ export class EvolutionEngine {
 
     // Step 3: Large-list path: attempt to rent a pooled Int8Array for scratch flags
     try {
-      const scratchFlags = EvolutionEngine.#ensureConnFlagsCapacity(
+      const scratchFlags = ensureConnFlagsCapacity(
+        EvolutionEngine.#STATE,
         connectionCount
       );
 
@@ -8521,7 +8054,7 @@ export class EvolutionEngine {
    * Returns the pooled buffer or `null` when allocation fails.
    *
    * Implementation details / contract:
-   * - Reuses an engine-level pooled Int8Array stored at `_SCRATCH_CONN_FLAGS` to avoid
+  * - Reuses an engine-level pooled Int8Array stored in the shared scratch state to avoid
    *   repeated allocations when analyzing large connection lists.
    * - Grows the pooled buffer lazily using a power-of-two strategy (nextPow2) to
    *   keep resize frequency low and preserve cache-friendliness.
@@ -8533,57 +8066,11 @@ export class EvolutionEngine {
    * @param minCapacity Minimum required capacity (integer >= 0).
    * @returns The pooled Int8Array with capacity >= `minCapacity`, or `null` if allocation failed.
    * @example
-   * const flags = EvolutionEngine['#ensureConnFlagsCapacity'](1024);
+  * const flags = ensureConnFlagsCapacity(EvolutionEngine.sharedState, 1024);
    * if (flags) { // use flags as temporary Int8Array
    *   // use flags as temporary Int8Array
    * }
    */
-  static #ensureConnFlagsCapacity(minCapacity: number): Int8Array | null {
-    try {
-      // Step 0: Validate input
-      const requiredCapacity = Math.max(
-        0,
-        Math.trunc(Number(minCapacity) || 0)
-      );
-
-      // Fast-path: if no capacity requested return an empty small buffer (avoid null callers)
-      if (requiredCapacity === 0) {
-        const tiny = new Int8Array(0);
-        return tiny;
-      }
-
-      // Acquire class-owned pool slot (we operate via a plain property to avoid TS private access quirks)
-      const clsAny = EvolutionEngine as any;
-      const pooled: Int8Array | undefined = clsAny._SCRATCH_CONN_FLAGS;
-
-      // If an existing pooled buffer is already large enough, reuse it directly.
-      if (pooled instanceof Int8Array && pooled.length >= requiredCapacity) {
-        return pooled;
-      }
-
-      // Step 1: Compute new capacity as next power-of-two >= requiredCapacity to reduce future resizes.
-      let newCapacity = 1;
-      while (newCapacity < requiredCapacity) newCapacity <<= 1;
-
-      // Step 2: Allocate the new typed array.
-      const newBuffer = new Int8Array(newCapacity);
-
-      // Step 3: If a previous pooled buffer existed, copy preserved prefix into the new buffer.
-      if (pooled instanceof Int8Array && pooled.length > 0) {
-        // Copy only the preserved portion (min of old length and new capacity)
-        const preserved = Math.min(pooled.length, newBuffer.length);
-        newBuffer.set(pooled.subarray(0, preserved), 0);
-      }
-
-      // Step 4: Store the new buffer on the class for future reuse and return it.
-      clsAny._SCRATCH_CONN_FLAGS = newBuffer;
-      return newBuffer;
-    } catch (connFlagsError) {
-      EvolutionEngine.#swallowError(connFlagsError);
-      // Allocation failure or other fatal error: signal caller by returning null.
-      return null;
-    }
-  }
 
   /** Utility to explicitly mark swallowed errors for lint compliance. */
   static #swallowError(error: unknown): void {
