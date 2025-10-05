@@ -1426,3 +1426,137 @@ const joinNumberArray = (
 
 /** Knuth-derived 32-bit hash constant reused by exploration helpers. */
 const HASH_KNUTH_32 = 2654435761 >>> 0;
+
+/**
+ * Log comprehensive telemetry for a completed generation.
+ *
+ * This orchestrator function coordinates all telemetry logging for a generation,
+ * including action entropy, output biases, logits statistics, exploration metrics,
+ * and diversity metrics. It respects the minimal telemetry mode and performs
+ * optional profiling when enabled.
+ *
+ * Design Rationale:
+ *  - Orchestrates calls to individual telemetry functions (logActionEntropy, etc.)
+ *  - Respects minimal telemetry toggle (early exit when disabled)
+ *  - Best-effort error handling (swallow all exceptions)
+ *  - Optional profiling accumulation when details are enabled
+ *  - Accepts callback for anti-collapse recovery to avoid tight coupling
+ *
+ * Telemetry Steps (in order):
+ *  1. Action entropy - normalized entropy and unique move statistics
+ *  2. Output bias statistics - mean, std, and individual biases
+ *  3. Logits statistics - means, stds, kurtosis, entropy, stability, collapse detection
+ *  4. Exploration metrics - distinct coordinates visited and progress
+ *  5. Diversity metrics - species richness, Simpson index, weight variance
+ *
+ * Parameters:
+ * @param engineState - Shared engine state with scratch buffers and profiling
+ * @param neat - NEAT instance with population
+ * @param fittest - Best network/genome from this generation
+ * @param genResult - Generation result with simulation data
+ * @param generationIndex - Current generation index
+ * @param writeLog - Safe logging function
+ * @param actionDimension - Number of possible actions (for entropy normalization)
+ * @param recentWindow - Window size for logits tail sampling
+ * @param reducedTelemetry - Whether reduced telemetry mode is active
+ * @param telemetryMinimal - Whether minimal telemetry mode is active (skip all if true)
+ * @param onCollapseRecovery - Callback invoked when collapse is detected (for recovery)
+ * @param isProfilingDetailsEnabledFn - Function to check profiling state
+ * @param profilingStartTimestampFn - Function to get profiling start time
+ * @param accumulateProfilingDurationFn - Function to accumulate profiling duration
+ *
+ * @example
+ * // Log telemetry for generation 42
+ * logGenerationTelemetry(
+ *   state, neat, fittestNetwork, result, 42, console.log, 4, 40, false, false,
+ *   () => antiCollapseRecovery(...),
+ *   isProfilingDetailsEnabled, profilingStartTimestamp, accumulateProfilingDuration
+ * );
+ */
+export function logGenerationTelemetry(
+  engineState: any,
+  neat: any,
+  fittest: any,
+  genResult: any,
+  generationIndex: number,
+  writeLog: (msg: string) => void,
+  actionDimension: number,
+  recentWindow: number,
+  reducedTelemetry: boolean,
+  telemetryMinimal: boolean,
+  onCollapseRecovery: () => void,
+  isProfilingDetailsEnabledFn: (state: any) => boolean,
+  profilingStartTimestampFn: (state: any) => number,
+  accumulateProfilingDurationFn: (
+    state: any,
+    label: string,
+    duration: number,
+  ) => void,
+): void {
+  // Step 0: Global guard for minimal telemetry mode.
+  if (telemetryMinimal) return;
+
+  // Start profiling window if enabled.
+  const profilingEnabled = isProfilingDetailsEnabledFn(engineState);
+  const profilingStart = profilingEnabled
+    ? profilingStartTimestampFn(engineState)
+    : 0;
+
+  try {
+    // Step 1: Action entropy telemetry
+    logActionEntropy({
+      state: engineState,
+      generationResult: genResult,
+      generationIndex,
+      safeWrite: writeLog,
+    });
+
+    // Step 2: Output bias statistics (fittest may be undefined early on)
+    logOutputBiasStats({
+      state: engineState,
+      fittest,
+      generationIndex,
+      safeWrite: writeLog,
+    });
+
+    // Step 3: Logits statistics and collapse detection/recovery
+    logLogitsAndCollapse({
+      state: engineState,
+      neat,
+      fittest,
+      generationIndex,
+      safeWrite: writeLog,
+      actionDimension,
+      recentWindow,
+      reducedTelemetry,
+      onCollapseRecovery,
+    });
+
+    // Step 4: Exploration telemetry (path uniqueness, progress)
+    logExploration({
+      state: engineState,
+      generationResult: genResult,
+      generationIndex,
+      safeWrite: writeLog,
+    });
+
+    // Step 5: Diversity metrics (species richness, Simpson, weight std)
+    logDiversity({
+      state: engineState,
+      neat,
+      generationIndex,
+      safeWrite: writeLog,
+    });
+  } catch {
+    // Swallow any unexpected telemetry exception to avoid disrupting the evolution core loop.
+  }
+
+  // Step 6: Record profiling delta if profiling was enabled at entry.
+  if (profilingEnabled) {
+    accumulateProfilingDurationFn(
+      engineState,
+      'telemetry',
+      profilingStartTimestampFn(engineState) - profilingStart || 0,
+    );
+  }
+}

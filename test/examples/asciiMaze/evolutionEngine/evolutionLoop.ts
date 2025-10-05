@@ -22,11 +22,40 @@
  * @module evolutionEngine/evolutionLoop
  */
 
+import { MazeMovement } from '../mazeMovement';
 import {
   makeFlushToFrame,
   initPersistence,
   makeSafeWriter,
 } from './setupHelpers';
+import { readHighResolutionTime } from './rngAndTiming';
+import {
+  ensureOutputIdentity,
+  handleSpeciesHistory,
+  maybeExpandPopulation,
+  pruneSaturatedHiddenOutputs,
+  antiCollapseRecovery,
+  updatePlateauState,
+  handleSimplifyState,
+  compactPopulation,
+  getSortedIndicesByScore,
+} from './populationDynamics';
+import {
+  applyLamarckianTraining,
+  adjustOutputBiasesAfterTraining,
+} from './trainingWarmStart';
+import { ensureLogitsRingCapacity, maybeShrinkScratch } from './scratchPools';
+import { sampleSegmentIntoScratch } from './sampling';
+import {
+  logGenerationTelemetry,
+  collectTelemetryTail,
+} from './telemetryMetrics';
+import {
+  isProfilingDetailsEnabled,
+  profilingStartTimestamp,
+  accumulateProfilingDuration,
+} from './rngAndTiming';
+import { swallowError } from './networkInspection';
 
 /**
  * Inspect cooperative cancellation sources and annotate the provided result when cancelled.
@@ -232,10 +261,7 @@ export async function checkStopConditions(
   const shouldConsiderStops = !stopOnlyOnSolve;
 
   // --- 1) Solved check ---
-  if (
-    bestResult?.success &&
-    bestResult.progress >= (minProgressToPass ?? 0)
-  ) {
+  if (bestResult?.success && bestResult.progress >= (minProgressToPass ?? 0)) {
     // Attempt dashboard update and yield; swallow any errors.
     try {
       dashboardManager?.update?.(
@@ -407,11 +433,7 @@ export function persistSnapshotIfNeeded(
   )
     return;
 
-  if (
-    !neat ||
-    !Array.isArray(neat.population) ||
-    neat.population.length === 0
-  )
+  if (!neat || !Array.isArray(neat.population) || neat.population.length === 0)
     return;
 
   try {
@@ -748,3 +770,873 @@ export function emitProfileSummary(
   }
 }
 
+/**
+ * Run one generation: evolve, ensure output identity, update species history, maybe expand population,
+ * and run Lamarckian training if configured.
+ *
+ * Behaviour & contract:
+ *  - Performs a single NEAT generation step in a best-effort, non-throwing manner.
+ *  - Measures profiling durations when `doProfile` is truthy. Profiling is optional and
+ *    kept allocation-free (uses local numeric temporaries only).
+ *  - Invokes the following steps in order (each step is wrapped in a try/catch so
+ *    the evolution loop remains resilient to per-stage failures):
+ *      1) `neat.evolve()` to produce the fittest network for this generation.
+ *      2) `ensureOutputIdentity` to normalise output activations for consumers.
+ *      3) `handleSpeciesHistory` to update species statistics and history.
+ *      4) `maybeExpandPopulation` to grow the population when configured and warranted.
+ *      5) Optional Lamarckian warm-start training via `applyLamarckianTraining`.
+ *  - The method is allocation-light and reuses engine helpers / pooled buffers where
+ *    appropriate. It never throws; internal errors are swallowed and optionally logged
+ *    via the provided `safeWrite` function.
+ *
+ * @param engineState - Shared engine state with scratch buffers and RNG
+ * @param neat - NEAT driver instance used for evolving the generation
+ * @param doProfile - When truthy measure timing for the evolve step (ms) using engine clock
+ * @param lamarckianIterations - Number of supervised training iterations to run per genome (0 to skip)
+ * @param lamarckianTrainingSet - Array of supervised training cases used for warm-start (may be empty)
+ * @param lamarckianSampleSize - Optional per-network sample size used by the warm-start routine
+ * @param safeWrite - Safe logging function; used only for best-effort diagnostic messages
+ * @param completedGenerations - Current generation index (used by expansion heuristics)
+ * @param dynamicPopEnabled - Whether dynamic population expansion is enabled
+ * @param dynamicPopMax - Upper bound on population size for expansion
+ * @param plateauGenerations - Window size used by plateau detection
+ * @param plateauCounter - Current plateau counter used by expansion heuristics
+ * @param dynamicPopExpandInterval - Generation interval to attempt expansion
+ * @param dynamicPopExpandFactor - Fractional growth factor used to compute new members
+ * @param dynamicPopPlateauSlack - Minimum plateau ratio required to trigger expansion
+ * @param speciesHistoryRef - Mutable array holding species history (maintained externally)
+ * @param emptyVec - Empty array fallback to avoid ephemeral allocations
+ * @param scratchNodeIdx - Pooled node index buffer (passed through to helpers)
+ * @param getNodeIndicesByType - Helper function to collect node indices by type
+ * @param constants - Object containing DEFAULT_TRAIN_ERROR, DEFAULT_TRAIN_RATE, DEFAULT_TRAIN_MOMENTUM, DEFAULT_TRAIN_BATCH_SMALL, DEFAULT_STD_SMALL, DEFAULT_STD_ADJUST_MULT
+ *
+ * @returns An object shaped { fittest, tEvolve, tLamarck } where:
+ *  - `fittest` is the network returned by `neat.evolve()` (may be null on error),
+ *  - `tEvolve` is the measured evolve duration in milliseconds when `doProfile` is true (0 otherwise),
+ *  - `tLamarck` is the total time spent in Lamarckian training (0 when skipped)
+ *
+ * @example
+ * // Run a single generation with profiling and optional Lamarckian warm-start
+ * const { fittest, tEvolve, tLamarck } = await runGeneration(
+ *   engineState,
+ *   neatInstance,
+ *   true,   // doProfile
+ *   5,      // lamarckianIterations
+ *   trainingSet,
+ *   16,     // lamarckianSampleSize
+ *   console.log,
+ *   genIndex,
+ *   true,
+ *   500,
+ *   10,
+ *   plateauCounter,
+ *   5,
+ *   0.1,
+ *   0.75,
+ *   speciesHistory,
+ *   [],
+ *   nodeIndexBuffer,
+ *   getNodeIndicesByTypeFn,
+ *   { DEFAULT_TRAIN_ERROR: 0.01, ... }
+ * );
+ */
+export async function runGeneration(
+  engineState: any,
+  neat: any,
+  doProfile: boolean,
+  lamarckianIterations: number,
+  lamarckianTrainingSet: any[],
+  lamarckianSampleSize: number | undefined,
+  safeWrite: (msg: string) => void,
+  completedGenerations: number,
+  dynamicPopEnabled: boolean,
+  dynamicPopMax: number,
+  plateauGenerations: number,
+  plateauCounter: number,
+  dynamicPopExpandInterval: number,
+  dynamicPopExpandFactor: number,
+  dynamicPopPlateauSlack: number,
+  speciesHistoryRef: number[],
+  emptyVec: any[],
+  scratchNodeIdx: Int32Array,
+  getNodeIndicesByType: (nodes: any[], type: string) => number,
+  constants: {
+    DEFAULT_TRAIN_ERROR: number;
+    DEFAULT_TRAIN_RATE: number;
+    DEFAULT_TRAIN_MOMENTUM: number;
+    DEFAULT_TRAIN_BATCH_SMALL: number;
+    DEFAULT_STD_SMALL: number;
+    DEFAULT_STD_ADJUST_MULT: number;
+  },
+) {
+  // Step 0: Local descriptive aliases and profiling setup.
+  const profileEnabled = Boolean(doProfile);
+  const clockNow = () => readHighResolutionTime(engineState);
+  const startTime = profileEnabled ? clockNow() : 0;
+
+  // Results we will populate. Keep names descriptive for readability in hot paths.
+  let fittestNetwork: any = null;
+  let evolveDuration = 0;
+  let lamarckDuration = 0;
+
+  // Step 1: Run the evolutionary step and measure time when profiling is enabled.
+  try {
+    // `neat` is expected to provide an async `evolve()` method that returns the fittest genome.
+    fittestNetwork = await neat?.evolve();
+    if (profileEnabled) evolveDuration = clockNow() - startTime;
+  } catch (evolveError) {
+    // Best-effort: log a short diagnostic and continue. Do not rethrow.
+    try {
+      safeWrite?.(`runGeneration: evolve() threw: ${String(evolveError)}`);
+    } catch {}
+    // leave fittestNetwork null and continue with remaining housekeeping.
+  }
+
+  // Step 2: Ensure outputs are using identity activation where required (non-throwing).
+  try {
+    ensureOutputIdentity(neat);
+  } catch (identityError) {
+    try {
+      safeWrite?.(
+        `runGeneration: ensureOutputIdentity failed: ${String(identityError)}`,
+      );
+    } catch {}
+  }
+
+  // Step 3: Update species history (best-effort; internal errors are swallowed).
+  try {
+    const effectiveHistoryRef = speciesHistoryRef ?? emptyVec;
+    handleSpeciesHistory(engineState, neat, effectiveHistoryRef);
+  } catch (speciesError) {
+    try {
+      safeWrite?.(
+        `runGeneration: handleSpeciesHistory failed: ${String(speciesError)}`,
+      );
+    } catch {}
+  }
+
+  // Step 4: Possibly expand the population when configured and plateau conditions are met.
+  try {
+    maybeExpandPopulation(
+      engineState,
+      neat,
+      Boolean(dynamicPopEnabled),
+      completedGenerations,
+      dynamicPopMax,
+      plateauGenerations,
+      plateauCounter,
+      dynamicPopExpandInterval,
+      dynamicPopExpandFactor,
+      dynamicPopPlateauSlack,
+      safeWrite,
+    );
+  } catch (expandError) {
+    try {
+      safeWrite?.(
+        `runGeneration: maybeExpandPopulation failed: ${String(expandError)}`,
+      );
+    } catch {}
+  }
+
+  // Step 5: Optional Lamarckian warm-start training. This step may be expensive;
+  // we keep it synchronous as the called helper currently returns a numeric time.
+  try {
+    const shouldRunLamarckian =
+      Number.isFinite(lamarckianIterations) &&
+      lamarckianIterations > 0 &&
+      Array.isArray(lamarckianTrainingSet) &&
+      lamarckianTrainingSet.length > 0;
+
+    if (shouldRunLamarckian) {
+      // The helper returns the measured time (ms) spent in training when profiling is enabled.
+      lamarckDuration = applyLamarckianTraining(
+        neat,
+        lamarckianTrainingSet,
+        lamarckianIterations,
+        lamarckianSampleSize,
+        safeWrite,
+        doProfile,
+        completedGenerations,
+        engineState,
+        {
+          DEFAULT_TRAIN_ERROR: constants.DEFAULT_TRAIN_ERROR,
+          DEFAULT_TRAIN_RATE: constants.DEFAULT_TRAIN_RATE,
+          DEFAULT_TRAIN_MOMENTUM: constants.DEFAULT_TRAIN_MOMENTUM,
+          DEFAULT_TRAIN_BATCH_SMALL: constants.DEFAULT_TRAIN_BATCH_SMALL,
+        },
+        (network) => {
+          adjustOutputBiasesAfterTraining(
+            network,
+            engineState,
+            {
+              DEFAULT_STD_SMALL: constants.DEFAULT_STD_SMALL,
+              DEFAULT_STD_ADJUST_MULT: constants.DEFAULT_STD_ADJUST_MULT,
+            },
+            scratchNodeIdx,
+            getNodeIndicesByType,
+          );
+        },
+      );
+    }
+  } catch (lamarckError) {
+    try {
+      safeWrite?.(
+        `runGeneration: applyLamarckianTraining failed: ${String(lamarckError)}`,
+      );
+    } catch {}
+  }
+
+  // Final: return the canonical result shape. Keep original property names for callers.
+  return {
+    fittest: fittestNetwork,
+    tEvolve: evolveDuration,
+    tLamarck: lamarckDuration,
+  } as any;
+}
+
+/**
+ * Simulate the supplied `fittest` genome/network and perform allocation-light postprocessing.
+ *
+ * Behaviour & contract:
+ *  - Runs the simulation via `MazeMovement.simulateAgent` and attaches compact telemetry
+ *    (saturation fraction, action entropy) directly onto the `fittest` object (in-place).
+ *  - When per-step logits are returned the helper attempts to copy them into the engine's pooled
+ *    ring buffers to avoid per-run allocations. Two copy modes are supported:
+ *      1) Shared SAB-backed flat Float32Array with an atomic Int32 write index (cross-worker safe).
+ *      2) Local in-process per-row Float32Array ring (`scratchLogitsRing`).
+ *  - Best-effort: all mutation and buffer-copy steps are guarded; failures are swallowed so the
+ *    evolution loop is not interrupted. Use `safeWrite` for optional diagnostic messages.
+ *
+ * Steps (high level):
+ *  1) Run the simulator and capture wall-time when `doProfile` is truthy.
+ *  2) Attach compact telemetry fields to `fittest` and ensure legacy `_lastStepOutputs` exists.
+ *  3) If per-step logits are available, ensure ring capacity and copy them into the selected ring.
+ *  4) Optionally prune saturated hidden->output connections and emit telemetry via logGenerationTelemetry.
+ *  5) Return the raw simulation result and elapsed simulation time (ms when profiling enabled).
+ *
+ * Notes on pooling / reentrancy:
+ *  - The local ring is not re-entrant; callers must avoid concurrent writes.
+ *  - When shared mode is true we prefer the SAB-backed path which uses Atomics and is safe
+ *    for cross-thread producers.
+ *
+ * @param engineState - Shared engine state with scratch buffers and ring configuration
+ * @param fittest - Genome/network considered the generation's best; may be mutated with metadata
+ * @param encodedMaze - Maze descriptor used by the simulator
+ * @param startPosition - Start co-ordinates passed as-is to the simulator
+ * @param exitPosition - Exit co-ordinates passed as-is to the simulator
+ * @param distanceMap - Optional precomputed distance map consumed by the simulator
+ * @param maxSteps - Optional maximum simulation steps; may be undefined to allow default
+ * @param doProfile - When truthy measure and return the simulation time in milliseconds
+ * @param safeWrite - Optional logger used for non-fatal diagnostic messages
+ * @param logEvery - Emit telemetry every `logEvery` generations (0 disables periodic telemetry)
+ * @param completedGenerations - Current generation index used for conditional telemetry
+ * @param neat - NEAT driver instance passed to telemetry hooks
+ * @param scratchLogitsRing - Pooled logits ring buffer reference
+ * @param logitsRingCap - Current ring capacity (power of two)
+ * @param logitsRingCapMax - Maximum allowed ring capacity
+ * @param actionDim - Number of action dimensions (typically 4 for NESW)
+ * @param logitsRingShared - Whether shared SAB mode is enabled
+ * @param scratchLogitsShared - Shared flat Float32Array (when shared mode enabled)
+ * @param scratchLogitsSharedW - Shared atomic write index (when shared mode enabled)
+ * @param scratchLogitsRingW - Local ring write cursor (when not shared)
+ * @param telemetryMinimal - Whether minimal telemetry mode is active
+ * @param saturationPruneThreshold - Threshold above which to prune saturated outputs
+ * @param recentWindow - Size of telemetry tail window
+ * @param reducedTelemetry - Whether reduced telemetry mode is active
+ * @param getNodeIndicesByType - Helper to collect node indices by type
+ * @param collectHiddenToOutputConns - Helper to collect hidden-to-output connections
+ *
+ * @returns An object { generationResult, simTime, updatedRingState } where simTime is ms when profiling is enabled
+ *
+ * @example
+ * const { generationResult, simTime, updatedRingState } = simulateAndPostprocess(
+ *   state, bestGenome, maze, start, exit, distMap, 1000, true, console.log, 10, genIdx, neat, ...
+ * );
+ */
+export function simulateAndPostprocess(
+  engineState: any,
+  fittest: any,
+  encodedMaze: any,
+  startPosition: any,
+  exitPosition: any,
+  distanceMap: any,
+  maxSteps: number | undefined,
+  doProfile: boolean,
+  safeWrite: (msg: string) => void,
+  logEvery: number,
+  completedGenerations: number,
+  neat: any,
+  scratchLogitsRing: Float32Array[],
+  logitsRingCap: number,
+  logitsRingCapMax: number,
+  actionDim: number,
+  logitsRingShared: boolean,
+  scratchLogitsShared: Float32Array | undefined,
+  scratchLogitsSharedW: Int32Array | undefined,
+  scratchLogitsRingW: number,
+  telemetryMinimal: boolean,
+  saturationPruneThreshold: number,
+  recentWindow: number,
+  reducedTelemetry: boolean,
+  getNodeIndicesByType: (nodes: any[], type: string) => number,
+  collectHiddenToOutputConns: (
+    hiddenNode: any,
+    nodesRef: any[],
+    outputCount: number,
+  ) => any[],
+): {
+  generationResult: any;
+  simTime: number;
+  updatedRingState: {
+    logitsRingCap: number;
+    logitsRingShared: boolean;
+    scratchLogitsRingW: number;
+  };
+} {
+  // Step 1: Run simulator and optionally capture elapsed time.
+  const startTime = doProfile ? readHighResolutionTime(engineState) : 0;
+  const simResult = MazeMovement.simulateAgent(
+    fittest,
+    encodedMaze,
+    startPosition,
+    exitPosition,
+    distanceMap,
+    maxSteps,
+  );
+
+  // Best-effort: attach legacy buffer refs and compact telemetry onto the genome.
+  try {
+    if (!(fittest as any)._lastStepOutputs) {
+      (fittest as any)._lastStepOutputs = scratchLogitsRing;
+    }
+  } catch (legacyBufferAttachmentError) {
+    swallowError(legacyBufferAttachmentError);
+  }
+
+  try {
+    (fittest as any)._saturationFraction = simResult?.saturationFraction ?? 0;
+    (fittest as any)._actionEntropy = simResult?.actionEntropy ?? 0;
+  } catch (telemetryAssignError) {
+    swallowError(telemetryAssignError);
+  }
+
+  // Mutable ring state (will be updated and returned)
+  let updatedLogitsRingCap = logitsRingCap;
+  let updatedLogitsRingShared = logitsRingShared;
+  let updatedScratchLogitsRingW = scratchLogitsRingW;
+
+  // Step 3: If the simulator returned per-step logits, copy them into the pooled ring buffers.
+  try {
+    const perStepLogits: number[][] | undefined = (simResult as any)
+      ?.stepOutputs;
+    if (Array.isArray(perStepLogits) && perStepLogits.length > 0) {
+      // Ensure the ring can hold the incoming sequence to avoid overflow resize churn.
+      const logitsRingResult = ensureLogitsRingCapacity({
+        state: engineState,
+        desiredRecentSteps: perStepLogits.length,
+        currentCapacity: updatedLogitsRingCap,
+        minimumCapacity: 128,
+        maximumCapacity: logitsRingCapMax,
+        actionDimension: actionDim,
+        sharedModeEnabled: updatedLogitsRingShared,
+      });
+      updatedLogitsRingCap = logitsRingResult.capacity;
+      updatedLogitsRingShared = logitsRingResult.sharedModeEnabled;
+
+      const useSharedSAB =
+        updatedLogitsRingShared && scratchLogitsShared && scratchLogitsSharedW;
+
+      if (useSharedSAB) {
+        // Shared flat Float32Array layout: [ idx(Int32), floats... ] with atomic index at view[0].
+        const sharedBuffer = scratchLogitsShared as Float32Array;
+        const atomicIndexView = scratchLogitsSharedW as Int32Array;
+        const capacityMask = updatedLogitsRingCap - 1;
+
+        for (let stepIndex = 0; stepIndex < perStepLogits.length; stepIndex++) {
+          const logitsVector = perStepLogits[stepIndex];
+          if (!Array.isArray(logitsVector)) continue;
+
+          // Reserve a slot atomically and compute its base offset in the flat buffer.
+          const currentWriteIndex =
+            Atomics.load(atomicIndexView, 0) & capacityMask;
+          const baseOffset = currentWriteIndex * actionDim;
+          const copyLength = Math.min(actionDim, logitsVector.length);
+          for (let dimIndex = 0; dimIndex < copyLength; dimIndex++) {
+            sharedBuffer[baseOffset + dimIndex] = logitsVector[dimIndex] ?? 0;
+          }
+
+          // Advance the atomic write pointer (wrap safely using 31-bit mask to avoid negative values).
+          Atomics.store(
+            atomicIndexView,
+            0,
+            (Atomics.load(atomicIndexView, 0) + 1) & 0x7fffffff,
+          );
+        }
+      } else {
+        // Fallback: local per-row ring of Float32Array rows stored in scratchLogitsRing.
+        const ringCapacityMask = updatedLogitsRingCap - 1;
+
+        for (let stepIndex = 0; stepIndex < perStepLogits.length; stepIndex++) {
+          const logitsVector = perStepLogits[stepIndex];
+          if (!Array.isArray(logitsVector)) continue;
+
+          const writePos = updatedScratchLogitsRingW & ringCapacityMask;
+          const targetRow = scratchLogitsRing[writePos];
+          const copyLength = Math.min(actionDim, logitsVector.length);
+
+          // Copy into the pooled Float32Array row (no allocation).
+          for (let dimIndex = 0; dimIndex < copyLength; dimIndex++) {
+            targetRow[dimIndex] = logitsVector[dimIndex] ?? 0;
+          }
+
+          // Advance the non-shared ring write cursor.
+          updatedScratchLogitsRingW =
+            (updatedScratchLogitsRingW + 1) & 0x7fffffff;
+        }
+      }
+    }
+  } catch (logitsPostprocessError) {
+    swallowError(logitsPostprocessError);
+  }
+
+  // Step 4: Optionally prune saturated outputs and emit telemetry (best-effort).
+  try {
+    if (
+      simResult?.saturationFraction &&
+      simResult.saturationFraction > saturationPruneThreshold
+    ) {
+      pruneSaturatedHiddenOutputs(
+        engineState,
+        fittest,
+        getNodeIndicesByType,
+        collectHiddenToOutputConns,
+      );
+    }
+  } catch (saturationPruneError) {
+    swallowError(saturationPruneError);
+  }
+
+  try {
+    if (
+      !telemetryMinimal &&
+      logEvery > 0 &&
+      completedGenerations % logEvery === 0
+    ) {
+      logGenerationTelemetry(
+        engineState,
+        neat,
+        fittest,
+        simResult,
+        completedGenerations,
+        safeWrite,
+        actionDim,
+        recentWindow,
+        reducedTelemetry,
+        telemetryMinimal,
+        () => {
+          antiCollapseRecovery(
+            engineState,
+            neat,
+            completedGenerations,
+            safeWrite,
+            sampleSegmentIntoScratch,
+          );
+        },
+        isProfilingDetailsEnabled,
+        profilingStartTimestamp,
+        accumulateProfilingDuration,
+      );
+    }
+  } catch (telemetryDispatchError) {
+    swallowError(telemetryDispatchError);
+  }
+
+  const elapsed = doProfile
+    ? readHighResolutionTime(engineState) - startTime
+    : 0;
+  return {
+    generationResult: simResult,
+    simTime: elapsed,
+    updatedRingState: {
+      logitsRingCap: updatedLogitsRingCap,
+      logitsRingShared: updatedLogitsRingShared,
+      scratchLogitsRingW: updatedScratchLogitsRingW,
+    },
+  } as any;
+}
+
+/**
+ * Internal evolution loop that executes generations until a stop condition or cancellation.
+ *
+ * Behaviour & contract:
+ *  - Runs generations in a resilient, best-effort manner; internal errors are swallowed
+ *    so a single failure cannot abort the whole run.
+ *  - When `doProfile` is truthy the loop accumulates timing into a pooled Float64Array
+ *    to avoid per-iteration allocations. The pooled buffer is reused across calls.
+ *  - The helper performs side-effects (dashboard updates, persistence) in a non-fatal
+ *    fashion and yields to the host when requested via `helpers.flushToFrame`.
+ *
+ * @param engineState - Shared engine state with scratch buffers and configuration
+ * @param neat - NEAT driver instance used to perform evolution and mutation operations
+ * @param opts - Normalised run options (produced by normalizeRunOptions)
+ * @param lamarckianTrainingSet - Optional supervised training cases used for Lamarckian warm-start
+ * @param encodedMaze - Encoded maze representation consumed by simulators
+ * @param startPosition - Start coordinates for the simulated agent
+ * @param exitPosition - Exit coordinates for the simulated agent
+ * @param distanceMap - Optional precomputed distance map to speed simulation
+ * @param helpers - Helper utilities: { flushToFrame, fs, path, safeWrite }
+ * @param doProfile - When truthy collect and return millisecond timings in the result
+ * @param scratchLogitsRing - Pooled logits ring buffer
+ * @param logitsRingCap - Current ring capacity
+ * @param logitsRingCapMax - Maximum ring capacity
+ * @param actionDim - Number of action dimensions
+ * @param logitsRingShared - Whether shared mode is enabled
+ * @param scratchLogitsShared - Shared flat buffer (when shared mode)
+ * @param scratchLogitsSharedW - Shared atomic write index
+ * @param scratchLogitsRingW - Local ring write cursor
+ * @param emptyVec - Empty array fallback
+ * @param scratchNodeIdx - Pooled node index buffer
+ * @param scratchSnapshotObj - Reusable snapshot object
+ * @param scratchSnapshotTop - Reusable top-K snapshot buffer
+ * @param getNodeIndicesByType - Helper to collect node indices by type
+ * @param collectHiddenToOutputConns - Helper to collect connections
+ * @param constants - Object containing all engine constants (DEFAULT_TRAIN_ERROR, etc.)
+ *
+ * @returns Promise resolving to an object:
+ *  { bestNetwork, bestResult, neat, completedGenerations, totalEvolveMs, totalLamarckMs, totalSimMs, updatedRingState }
+ *
+ * @example
+ * const runSummary = await runEvolutionLoop(
+ *   state, neat, opts, trainingSet, maze, start, exit, distMap, helpers, true, ...
+ * );
+ */
+export async function runEvolutionLoop(
+  engineState: any,
+  neat: any,
+  opts: any,
+  lamarckianTrainingSet: any[],
+  encodedMaze: any,
+  startPosition: any,
+  exitPosition: any,
+  distanceMap: any,
+  helpers: {
+    flushToFrame: () => Promise<void>;
+    fs: any;
+    path: any;
+    safeWrite: (msg: string) => void;
+  },
+  doProfile: boolean,
+  scratchLogitsRing: Float32Array[],
+  logitsRingCap: number,
+  logitsRingCapMax: number,
+  actionDim: number,
+  logitsRingShared: boolean,
+  scratchLogitsShared: Float32Array | undefined,
+  scratchLogitsSharedW: Int32Array | undefined,
+  scratchLogitsRingW: number,
+  emptyVec: any[],
+  scratchNodeIdx: Int32Array,
+  scratchSnapshotObj: any,
+  scratchSnapshotTop: any[],
+  getNodeIndicesByType: (nodes: any[], type: string) => number,
+  collectHiddenToOutputConns: (
+    hiddenNode: any,
+    nodesRef: any[],
+    outputCount: number,
+  ) => any[],
+  constants: {
+    DEFAULT_TRAIN_ERROR: number;
+    DEFAULT_TRAIN_RATE: number;
+    DEFAULT_TRAIN_MOMENTUM: number;
+    DEFAULT_TRAIN_BATCH_SMALL: number;
+    DEFAULT_TRAIN_BATCH_LARGE: number;
+    DEFAULT_STD_SMALL: number;
+    DEFAULT_STD_ADJUST_MULT: number;
+    FITTEST_TRAIN_ITERATIONS: number;
+    TELEMETRY_MINIMAL: boolean;
+    SATURATION_PRUNE_THRESHOLD: number;
+    RECENT_WINDOW: number;
+    REDUCED_TELEMETRY: boolean;
+    DISABLE_BALDWIN: boolean;
+  },
+  speciesHistoryRef: number[],
+) {
+  const { flushToFrame, fs, path, safeWrite } = helpers;
+
+  // State: descriptive local names improve readability for future maintainers.
+  let bestNetworkSoFar: any = opts.initialBestNetwork;
+  let bestFitnessSoFar = -Infinity;
+  let bestRunResult: any = undefined;
+  let stagnantGenerationsCount = 0;
+  let completedGenerations = 0;
+  let plateauCounter = 0;
+  let simplifyMode = false;
+  let simplifyRemaining = 0;
+  let lastBestFitnessForPlateau = -Infinity;
+  let lastCompactionGeneration = 0;
+
+  // Mutable ring state
+  let updatedLogitsRingCap = logitsRingCap;
+  let updatedLogitsRingShared = logitsRingShared;
+  let updatedScratchLogitsRingW = scratchLogitsRingW;
+
+  // Profiling accumulators are stored in a pooled Float64Array to avoid
+  // per-run object creation. Layout: [0]=evolveMs, [1]=lamarckMs, [2]=simMs, [3]=reserved
+  const scratchBundle = engineState.scratch;
+  const profileScratch: Float64Array =
+    scratchBundle.profilingScratch ??
+    (scratchBundle.profilingScratch = new Float64Array(4));
+  profileScratch[0] = 0; // total evolve ms
+  profileScratch[1] = 0; // total lamarck ms
+  profileScratch[2] = 0; // total sim ms
+
+  // Main evolution loop: resilient and best-effort. Uses descriptive names
+  // and keeps allocations to a minimum.
+  while (true) {
+    // Step 1: cooperative cancellation check (non-allocating, safe)
+    const cancelReason = checkCancellation(opts, bestRunResult);
+    if (cancelReason) break;
+
+    // Step 2: perform one generation and collect per-stage timings when enabled
+    const generationOutcome = await runGeneration(
+      engineState,
+      neat,
+      doProfile,
+      opts.lamarckianIterations,
+      lamarckianTrainingSet,
+      opts.lamarckianSampleSize,
+      safeWrite,
+      completedGenerations,
+      opts.dynamicPopEnabled,
+      opts.dynamicPopMax,
+      opts.plateauGenerations,
+      plateauCounter,
+      opts.dynamicPopExpandInterval,
+      opts.dynamicPopExpandFactor,
+      opts.dynamicPopPlateauSlack,
+      speciesHistoryRef,
+      emptyVec,
+      scratchNodeIdx,
+      getNodeIndicesByType,
+      {
+        DEFAULT_TRAIN_ERROR: constants.DEFAULT_TRAIN_ERROR,
+        DEFAULT_TRAIN_RATE: constants.DEFAULT_TRAIN_RATE,
+        DEFAULT_TRAIN_MOMENTUM: constants.DEFAULT_TRAIN_MOMENTUM,
+        DEFAULT_TRAIN_BATCH_SMALL: constants.DEFAULT_TRAIN_BATCH_SMALL,
+        DEFAULT_STD_SMALL: constants.DEFAULT_STD_SMALL,
+        DEFAULT_STD_ADJUST_MULT: constants.DEFAULT_STD_ADJUST_MULT,
+      },
+    );
+
+    const fittest = generationOutcome.fittest;
+    if (doProfile) {
+      // Use pooled scratch to accumulate totals (avoid creating new numbers/objects)
+      profileScratch[0] += Number(generationOutcome.tEvolve ?? 0);
+      profileScratch[1] += Number(generationOutcome.tLamarck ?? 0);
+    }
+
+    // Step 3: optional Lamarckian refinement (best-effort)
+    if (!constants.DISABLE_BALDWIN) {
+      try {
+        fittest.train(lamarckianTrainingSet, {
+          iterations: constants.FITTEST_TRAIN_ITERATIONS,
+          error: constants.DEFAULT_TRAIN_ERROR,
+          rate: constants.DEFAULT_TRAIN_RATE,
+          momentum: constants.DEFAULT_TRAIN_MOMENTUM,
+          batchSize: constants.DEFAULT_TRAIN_BATCH_LARGE,
+          allowRecurrent: true,
+        });
+      } catch {
+        // ignore training errors - non-fatal
+      }
+    }
+
+    // Step 4: update per-generation counters and plateau/simplify state
+    const fitnessScore = fittest.score ?? 0;
+    completedGenerations += 1;
+
+    ({ plateauCounter, lastBestFitnessForPlateau } = updatePlateauState(
+      fitnessScore,
+      lastBestFitnessForPlateau,
+      plateauCounter,
+      opts.plateauImprovementThreshold,
+    ));
+
+    ({ simplifyMode, simplifyRemaining, plateauCounter } = handleSimplifyState(
+      engineState,
+      neat,
+      plateauCounter,
+      opts.plateauGenerations,
+      opts.simplifyDuration,
+      simplifyMode,
+      simplifyRemaining,
+      opts.simplifyStrategy,
+      opts.simplifyPruneFraction,
+    ));
+
+    // Step 5: simulate the fittest genome and optionally capture sim time
+    const simulationResult = simulateAndPostprocess(
+      engineState,
+      fittest,
+      encodedMaze,
+      startPosition,
+      exitPosition,
+      distanceMap,
+      opts.agentSimConfig?.maxSteps,
+      doProfile,
+      safeWrite,
+      opts.reportingConfig?.logEvery ?? 10,
+      completedGenerations,
+      neat,
+      scratchLogitsRing,
+      updatedLogitsRingCap,
+      logitsRingCapMax,
+      actionDim,
+      updatedLogitsRingShared,
+      scratchLogitsShared,
+      scratchLogitsSharedW,
+      updatedScratchLogitsRingW,
+      constants.TELEMETRY_MINIMAL,
+      constants.SATURATION_PRUNE_THRESHOLD,
+      constants.RECENT_WINDOW,
+      constants.REDUCED_TELEMETRY,
+      getNodeIndicesByType,
+      collectHiddenToOutputConns,
+    );
+    const generationResult = simulationResult.generationResult;
+    if (doProfile) profileScratch[2] += Number(simulationResult.simTime ?? 0);
+
+    // Update ring state from simulation result
+    updatedLogitsRingCap = simulationResult.updatedRingState.logitsRingCap;
+    updatedLogitsRingShared =
+      simulationResult.updatedRingState.logitsRingShared;
+    updatedScratchLogitsRingW =
+      simulationResult.updatedRingState.scratchLogitsRingW;
+
+    // Step 6: update best-so-far and dashboard periodically
+    if (fitnessScore > bestFitnessSoFar) {
+      bestFitnessSoFar = fitnessScore;
+      bestNetworkSoFar = fittest;
+      bestRunResult = generationResult;
+      stagnantGenerationsCount = 0;
+      try {
+        await updateDashboardAndMaybeFlush(
+          opts.mazeConfig.maze,
+          generationResult,
+          fittest,
+          completedGenerations,
+          neat,
+          opts.reportingConfig?.dashboardManager,
+          flushToFrame,
+        );
+      } catch {
+        // best-effort: ignore dashboard errors
+      }
+    } else {
+      stagnantGenerationsCount += 1;
+      if (completedGenerations % (opts.reportingConfig?.logEvery ?? 10) === 0) {
+        try {
+          await updateDashboardPeriodic(
+            opts.mazeConfig.maze,
+            bestRunResult,
+            bestNetworkSoFar,
+            completedGenerations,
+            neat,
+            opts.reportingConfig?.dashboardManager,
+            flushToFrame,
+          );
+        } catch {
+          // best-effort
+        }
+      }
+    }
+
+    // Step 7: persist snapshot if configured (best-effort)
+    persistSnapshotIfNeeded(
+      engineState,
+      fs,
+      path,
+      opts.persistDir,
+      opts.persistTopK,
+      completedGenerations,
+      opts.persistEvery,
+      neat,
+      bestFitnessSoFar,
+      simplifyMode,
+      plateauCounter,
+      scratchSnapshotObj,
+      scratchSnapshotTop,
+      collectTelemetryTail,
+      getSortedIndicesByScore,
+      isProfilingDetailsEnabled,
+      profilingStartTimestamp,
+      accumulateProfilingDuration,
+    );
+
+    // Step 8: check stop conditions
+    const stopReason = await checkStopConditions(
+      bestRunResult,
+      bestNetworkSoFar,
+      opts.mazeConfig.maze,
+      completedGenerations,
+      neat,
+      opts.reportingConfig?.dashboardManager,
+      flushToFrame,
+      opts.minProgressToPass,
+      opts.autoPauseOnSolve,
+      opts.stopOnlyOnSolve,
+      stagnantGenerationsCount,
+      opts.maxStagnantGenerations,
+      opts.maxGenerations,
+    );
+    if (stopReason) break;
+
+    // Step 9: periodic memory compaction and scratch shrinking
+    if (
+      opts.memoryCompactionInterval > 0 &&
+      completedGenerations - lastCompactionGeneration >=
+        opts.memoryCompactionInterval
+    ) {
+      const removedDisabled = compactPopulation(engineState, neat);
+      if (removedDisabled > 0) {
+        const currentPopulationSize = Array.isArray(neat?.population)
+          ? neat.population.length
+          : 0;
+        maybeShrinkScratch(engineState, currentPopulationSize);
+        safeWrite(
+          `[COMPACT] gen=${completedGenerations} removedDisabledConns=${removedDisabled}\n`,
+        );
+      }
+      lastCompactionGeneration = completedGenerations;
+    }
+
+    // Step 10: optionally yield to host between generations
+    if (opts.reportingConfig?.paceEveryGeneration) {
+      try {
+        await flushToFrame();
+      } catch {
+        // ignore host-yield failures
+      }
+    }
+  }
+
+  // Prepare totals to return (read from pooled scratch to avoid ephemeral numbers earlier)
+  const totalEvolveMs = Number(profileScratch[0] || 0);
+  const totalLamarckMs = Number(profileScratch[1] || 0);
+  const totalSimMs = Number(profileScratch[2] || 0);
+
+  return {
+    bestNetwork: bestNetworkSoFar,
+    bestResult: bestRunResult,
+    neat,
+    completedGenerations,
+    totalEvolveMs,
+    totalLamarckMs,
+    totalSimMs,
+    updatedRingState: {
+      logitsRingCap: updatedLogitsRingCap,
+      logitsRingShared: updatedLogitsRingShared,
+      scratchLogitsRingW: updatedScratchLogitsRingW,
+    },
+  } as any;
+}

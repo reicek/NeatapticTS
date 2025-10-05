@@ -186,7 +186,7 @@ export function makeSafeWriter(dashboardManager: any): (msg: string) => void {
 
   return (msg: string) => {
     if (!msg && msg !== '') return; // ignore undefined/null
-    
+
     // Fast path: Node stdout writer
     if (hasProcessStdout) {
       try {

@@ -199,9 +199,7 @@ export function runSimplifyCycle(
 
   // Step 3: Profiling start.
   const profilingEnabled = isProfilingDetailsEnabled(state);
-  const profileStartMs = profilingEnabled
-    ? profilingStartTimestamp(state)
-    : 0;
+  const profileStartMs = profilingEnabled ? profilingStartTimestamp(state) : 0;
 
   // Step 4: Apply pruning.
   applySimplifyPruningToPopulation({
@@ -313,7 +311,11 @@ export function handleSimplifyState(
     }
   }
 
-  return { simplifyMode: active, simplifyRemaining: remaining, plateauCounter: counter };
+  return {
+    simplifyMode: active,
+    simplifyRemaining: remaining,
+    plateauCounter: counter,
+  };
 }
 
 /**
@@ -470,7 +472,9 @@ export function applyMutationsToClone(
   let indexBuffer = state.scratch.mutationOperatorIndices;
   if (indexBuffer.length < operationCount) {
     const nextSize = 1 << Math.ceil(Math.log2(operationCount));
-    state.scratch.mutationOperatorIndices = indexBuffer = new Uint16Array(nextSize);
+    state.scratch.mutationOperatorIndices = indexBuffer = new Uint16Array(
+      nextSize,
+    );
   }
 
   // Step 3: Initialize identity permutation.
@@ -642,7 +646,9 @@ export function getSortedIndicesByScore(
     useTypedScratch = true;
   } else if (!typedScratchBuf && populationLength > 512) {
     const allocSize = 1 << Math.ceil(Math.log2(populationLength));
-    state.scratch.sortedIndexTypedArray = typedScratchBuf = new Int32Array(allocSize);
+    state.scratch.sortedIndexTypedArray = typedScratchBuf = new Int32Array(
+      allocSize,
+    );
     useTypedScratch = true;
   }
 
@@ -660,7 +666,8 @@ export function getSortedIndicesByScore(
   // Step 3: Initialize identity permutation.
   for (let initIdx = 0; initIdx < populationLength; initIdx++)
     indexScratch[initIdx] = initIdx;
-  if (!useTypedScratch) state.scratch.sortedIndexBuffer.length = populationLength;
+  if (!useTypedScratch)
+    state.scratch.sortedIndexBuffer.length = populationLength;
 
   // Step 4: Iterative quicksort.
   let qsStack = state.scratch.quicksortStack;
@@ -935,7 +942,11 @@ export function ensureOutputIdentity(neat: any) {
       ? neat.population
       : EMPTY_VEC;
 
-    for (let genomeIndex = 0; genomeIndex < populationRef.length; genomeIndex++) {
+    for (
+      let genomeIndex = 0;
+      genomeIndex < populationRef.length;
+      genomeIndex++
+    ) {
       const genome: any = populationRef[genomeIndex];
       if (!genome) continue;
 
@@ -993,7 +1004,11 @@ export function handleSpeciesHistory(
 
     // Count unique species.
     let uniqueCount = 0;
-    for (let genomeIndex = 0; genomeIndex < populationRef.length; genomeIndex++) {
+    for (
+      let genomeIndex = 0;
+      genomeIndex < populationRef.length;
+      genomeIndex++
+    ) {
       const genome = populationRef[genomeIndex];
       if (!genome || genome.species == null) continue;
 
@@ -1023,7 +1038,7 @@ export function handleSpeciesHistory(
       speciesCount,
       25,
     );
-    
+
     // Update the caller's history reference.
     speciesHistory.length = 0;
     speciesHistory.push(...updatedHistory);
@@ -1117,13 +1132,10 @@ export function maybeExpandPopulation(
         ? plateauGenerations | 0
         : 0;
     const plateauRatio =
-      plateauWindow > 0
-        ? Math.min(1, (plateauCounter | 0) / plateauWindow)
-        : 0;
+      plateauWindow > 0 ? Math.min(1, (plateauCounter | 0) / plateauWindow) : 0;
 
     const expandInterval =
-      Number.isFinite(dynamicPopExpandInterval) &&
-      dynamicPopExpandInterval > 0
+      Number.isFinite(dynamicPopExpandInterval) && dynamicPopExpandInterval > 0
         ? Math.max(1, dynamicPopExpandInterval | 0)
         : 0;
 
@@ -1147,7 +1159,13 @@ export function maybeExpandPopulation(
     const targetAdd = Math.min(computedAdd, allowed);
 
     if (targetAdd > 0) {
-      expandPopulation(state, neat, targetAdd, safeWrite, completedGenerations | 0);
+      expandPopulation(
+        state,
+        neat,
+        targetAdd,
+        safeWrite,
+        completedGenerations | 0,
+      );
     }
   } catch {
     // Best-effort: do not throw.
@@ -1195,7 +1213,9 @@ export function pruneSaturatedHiddenOutputs(
 
     for (let hiddenIndex = 0; hiddenIndex < hiddenCount; hiddenIndex++) {
       const hiddenNode =
-        nodesRef[Number(state.scratch.nodeIndexBuffer[outputCount + hiddenIndex])];
+        nodesRef[
+          Number(state.scratch.nodeIndexBuffer[outputCount + hiddenIndex])
+        ];
       if (!hiddenNode) continue;
 
       const outConns =
@@ -1347,11 +1367,13 @@ export function antiCollapseRecovery(
       if (!genome) continue;
 
       try {
-        const { connReset, biasReset } =
-          reinitializeGenomeOutputsAndWeights(state, genome) || {
-            connReset: 0,
-            biasReset: 0,
-          };
+        const { connReset, biasReset } = reinitializeGenomeOutputsAndWeights(
+          state,
+          genome,
+        ) || {
+          connReset: 0,
+          biasReset: 0,
+        };
         totalConnectionResets += Number(connReset) || 0;
         totalBiasResets += Number(biasReset) || 0;
       } catch {
@@ -1485,8 +1507,7 @@ export function compactGenomeConnections(genome: any): number {
     for (let readIndex = 0; readIndex < totalConnections; readIndex++) {
       const connection = connectionsList[readIndex];
       if (connection && connection.enabled !== false) {
-        if (readIndex !== writeIndex)
-          connectionsList[writeIndex] = connection;
+        if (readIndex !== writeIndex) connectionsList[writeIndex] = connection;
         writeIndex++;
       }
     }

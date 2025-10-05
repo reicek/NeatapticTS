@@ -98,7 +98,7 @@ export function buildLamarckianTrainingSet(
     trainingSet.push({ input: inputVector, output: OUTPUTS[directionIndex] });
 
   // Step 3: Populate the dataset with canonical scenarios.
-  
+
   // Single open path with steady progress
   pushCase(makeInput(0, 1, 0, 0, 0, constants.PROGRESS_MEDIUM), 0);
   pushCase(makeInput(0.25, 0, 1, 0, 0, constants.PROGRESS_MEDIUM), 1);
@@ -144,9 +144,13 @@ export function buildLamarckianTrainingSet(
 
   // Step 4: Mild augmentation (jitter openness & progress).
   const randomParameters = constants.RNG_PARAMETERS;
-  for (let datasetIndex = 0; datasetIndex < trainingSet.length; datasetIndex++) {
+  for (
+    let datasetIndex = 0;
+    datasetIndex < trainingSet.length;
+    datasetIndex++
+  ) {
     const caseEntry = trainingSet[datasetIndex];
-    
+
     // Jitter openness values (directional inputs 1-4)
     for (let directionIndex = 1; directionIndex <= 4; directionIndex++) {
       if (
@@ -155,10 +159,11 @@ export function buildLamarckianTrainingSet(
       ) {
         caseEntry.input[directionIndex] =
           constants.AUGMENT_JITTER_BASE +
-          drawFastRandom(state, randomParameters) * constants.AUGMENT_JITTER_RANGE;
+          drawFastRandom(state, randomParameters) *
+            constants.AUGMENT_JITTER_RANGE;
       }
     }
-    
+
     // Jitter progress delta (input[5])
     if (
       drawFastRandom(state, randomParameters) <
