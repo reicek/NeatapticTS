@@ -1792,16 +1792,24 @@ export class DashboardManager implements IDashboardManager {
           window.dispatchEvent(
             new CustomEvent('asciiMazeTelemetry', { detail: payload }),
           );
-        } catch {}
+        } catch {
+          // Swallow event dispatch errors
+        }
         try {
           if (window.parent && window.parent !== window)
             window.parent.postMessage(payload, '*');
-        } catch {}
+        } catch {
+          // Swallow postMessage errors
+        }
         (window as any).asciiMazeLastTelemetry = payload; // polling surface
       }
       try {
-        (this as any)._telemetryHook && (this as any)._telemetryHook(payload);
-      } catch {}
+        if ((this as any)._telemetryHook) {
+          (this as any)._telemetryHook(payload);
+        }
+      } catch {
+        // Swallow telemetry hook errors
+      }
     } catch {
       /* swallow telemetry emission errors */
     }

@@ -15,8 +15,13 @@
  * @module trainingWarmStart
  */
 
+import type { Neat, Network } from '../../../../src/neataptic';
 import { methods } from '../../../../src/neataptic';
-import { EngineState, initialiseTelemetryScratch } from './engineState';
+import {
+  EngineState,
+  initialiseTelemetryScratch,
+  type RngCacheParameters,
+} from './engineState';
 import { drawFastRandom, readHighResolutionTime } from './rngAndTiming';
 import { sampleArray } from './sampling';
 
@@ -49,7 +54,7 @@ const EMPTY_VEC: readonly never[] = [];
  *   // ... other constants
  * });
  */
-export function buildLamarckianTrainingSet(
+export const buildLamarckianTrainingSet = (
   state: EngineState,
   constants: {
     TRAIN_OUT_PROB_HIGH: number;
@@ -67,9 +72,9 @@ export function buildLamarckianTrainingSet(
     AUGMENT_PROGRESS_JITTER_PROB: number;
     AUGMENT_PROGRESS_DELTA_RANGE: number;
     AUGMENT_PROGRESS_DELTA_HALF: number;
-    RNG_PARAMETERS: any;
+    RNG_PARAMETERS: RngCacheParameters;
   },
-): { input: number[]; output: number[] }[] {
+): { input: number[]; output: number[] }[] => {
   // Step 1: Prepare the result container (small, bounded dataset).
   const trainingSet: { input: number[]; output: number[] }[] = [];
 
@@ -213,16 +218,18 @@ export function buildLamarckianTrainingSet(
  *   getNodeIndicesByType
  * );
  */
-export function adjustOutputBiasesAfterTraining(
-  network: any,
+export const adjustOutputBiasesAfterTraining = (
+  network: Network,
   state: EngineState,
   constants: {
     DEFAULT_STD_SMALL: number;
     DEFAULT_STD_ADJUST_MULT: number;
   },
   scratchNodeIdx: Int32Array,
+  // Type assertion: helper function working with dynamic node arrays
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   getNodeIndicesByType: (nodes: any[], nodeType: string) => number,
-): void {
+): void => {
   try {
     // Step 1: Early exit when no network or no nodes exist.
     if (!network) return;
@@ -301,8 +308,10 @@ export function adjustOutputBiasesAfterTraining(
  *   centerOutputBiases
  * );
  */
-export function pretrainPopulationWarmStart(
-  neat: any,
+export const pretrainPopulationWarmStart = (
+  neat: Neat,
+  // Type assertion: training dataset structure
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   lamarckianTrainingSet: any[],
   constants: {
     PRETRAIN_MAX_ITER: number;
@@ -312,9 +321,12 @@ export function pretrainPopulationWarmStart(
     DEFAULT_PRETRAIN_MOMENTUM: number;
     DEFAULT_TRAIN_BATCH_SMALL: number;
   },
+  // Type assertion: helper functions working with networks
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   applyCompassWarmStart: (network: any) => void,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   centerOutputBiases: (network: any) => void,
-): void {
+): void => {
   // Step 1: Defensive validation & fast exit.
   if (!neat) return;
   const population = neat.population ?? EMPTY_VEC;
@@ -322,6 +334,8 @@ export function pretrainPopulationWarmStart(
 
   // Step 2: Iterate population and apply supervised training per network (best-effort).
   for (let networkIndex = 0; networkIndex < population.length; networkIndex++) {
+    // Type assertion: network from population array
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const network: any = population[networkIndex];
     try {
       if (!network || typeof network.train !== 'function') continue; // skip non-trainable entries
@@ -405,8 +419,10 @@ export function pretrainPopulationWarmStart(
  *   adjustOutputBiasesAfterTraining
  * );
  */
-export function applyLamarckianTraining(
-  neat: any,
+export const applyLamarckianTraining = (
+  neat: Neat,
+  // Type assertion: training dataset structure
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   trainingSet: any[],
   iterations: number,
   sampleSize: number | undefined,
@@ -420,8 +436,10 @@ export function applyLamarckianTraining(
     DEFAULT_TRAIN_MOMENTUM: number;
     DEFAULT_TRAIN_BATCH_SMALL: number;
   },
+  // Type assertion: helper function working with networks
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   adjustOutputBiases: (network: any) => void,
-): number {
+): number => {
   // Step 1: Validate inputs & early exits.
   if (
     !neat ||
@@ -434,7 +452,7 @@ export function applyLamarckianTraining(
   if (!Number.isFinite(iterations) || iterations <= 0) return 0;
 
   // Step 2: Start profiling timer if requested.
-  const profileStart = profileEnabled ? readHighResolutionTime(state) : 0;
+  const profileStart = profileEnabled ? readHighResolutionTime() : 0;
 
   // Step 3: Optionally down-sample the training set (with replacement).
   const trainingSetRef =
@@ -445,6 +463,8 @@ export function applyLamarckianTraining(
   // Step 4: Iterate networks performing a bounded training pass.
   let gradientNormSum = 0;
   let gradientNormSamples = 0;
+  // Type assertion: population is Network array from Neat
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const populationRef = neat.population as any[];
 
   for (const network of populationRef) {
@@ -466,6 +486,8 @@ export function applyLamarckianTraining(
 
       // 4.3: Collect optional training stats (use optional chaining to avoid errors).
       try {
+        // Type assertion: accessing optional training stats method
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const stats = (network as any).getTrainingStats?.();
         const gradNorm = stats?.gradNorm;
         if (Number.isFinite(gradNorm)) {
@@ -491,7 +513,7 @@ export function applyLamarckianTraining(
   }
 
   // Step 6: Return elapsed time when profiling; otherwise return 0.
-  return profileEnabled ? readHighResolutionTime(state) - profileStart : 0;
+  return profileEnabled ? readHighResolutionTime() - profileStart : 0;
 }
 
 /**
@@ -524,12 +546,16 @@ export function applyLamarckianTraining(
  *   pretrainPopulationWarmStart
  * );
  */
-export function warmStartPopulationIfNeeded(
-  neat: any,
+export const warmStartPopulationIfNeeded = (
+  neat: Neat,
+  // Type assertion: training dataset structure
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   trainingSet: any[],
   state: EngineState,
+  // Type assertion: helper function for population pretraining
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   pretrainPopulation: (neat: any, trainingSet: any[]) => void,
-): void {
+): void => {
   try {
     // Step 1: Fast-guard invalid inputs – nothing to do when no data or driver.
     const hasTrainingCases =

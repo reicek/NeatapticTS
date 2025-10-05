@@ -39,7 +39,7 @@ const POPULATION_SIZE = 20;
  * @param dimension - Maze side length in cells (square maze).
  * @returns Readonly configuration object consumed by a single evolution run.
  */
-function createEvolutionSettings(dimension: number) {
+const createEvolutionSettings = (dimension: number) => {
   return {
     agentMaxSteps: AGENT_MAX_STEPS,
     popSize: POPULATION_SIZE,
@@ -49,7 +49,7 @@ function createEvolutionSettings(dimension: number) {
     lamarckianSampleSize: 12,
     mazeFactory: () => new MazeGenerator(dimension, dimension).generate(),
   } as const;
-}
+};
 
 /**
  * Lightweight telemetry hub using a Set + snapshot iteration (micro-optimized for small listener counts).
@@ -120,10 +120,10 @@ export interface AsciiMazeRunHandle {
  *               cooperatively cancel the curriculum. Calling `stop()` will also trigger an abort.
  * @returns A {@link AsciiMazeRunHandle} exposing lifecycle controls and telemetry hooks.
  */
-export async function start(
+export const start = async (
   container: string | HTMLElement = DEFAULT_CONTAINER_ID,
-  opts: { signal?: AbortSignal } = {},
-): Promise<AsciiMazeRunHandle> {
+  opts: { signal?: AbortSignal} = {},
+): Promise<AsciiMazeRunHandle> => {
   // Step 0: Resolve host elements & loggers
   const hostElement =
     typeof container === 'string'
@@ -477,11 +477,10 @@ export async function start(
 
   // (Pause UI removed; external host can manage pause via a future API if needed.)
   return handle;
-}
+};
 
 // UMD-style compatibility + deprecated global.
 // If loaded directly (no module loader), expose window.asciiMaze.start() and legacy asciiMazeStart().
-declare const __webpack_require__: any; // silence TS if bundler injects
 if (typeof window !== 'undefined' && (window as any).document) {
   const globalWindow: any = window as any;
   globalWindow.asciiMaze = globalWindow.asciiMaze || {};

@@ -74,85 +74,6 @@ jest.setTimeout(3600000); //
  * @throws Error if no `winner` network is provided.
  */
 
-/**
- * Analyzes the weights and outputs of a network before and after training.
- * This function is a powerful debugging tool to understand how a network's internal state
- * changes during the supervised training process. It logs connection weights and eligibility
- * traces at each iteration, providing a detailed view of the learning dynamics.
- *
- * @param winner - The network to analyze.
- * @param trainingSet - The training data to use for supervised learning.
- */
-function analizeWinner(
-  winner: Network,
-  trainingSet: { input: number[]; output: number[] }[],
-) {
-  // Step 1: Log the network's connection weights before training to establish a baseline.
-  console.log(
-    'Winner weights before training:',
-    winner.connections.map((c) => c.weight),
-  );
-
-  // Step 2: Train the network with a highly detailed logging schedule.
-  // The `schedule` option allows executing a function at specified iterations.
-  winner.train(trainingSet, {
-    iterations: 2000,
-    recurrent: true,
-    error: 0.001,
-    log: 100, // Log training progress every 100 iterations.
-    rate: 0.0001,
-    batchSize: 10,
-    schedule: {
-      iterations: 2000, // The schedule will run for all iterations.
-      function: ({ iteration }: { iteration: number }) => {
-        // For each node in the network, log the details of its incoming and outgoing connections.
-        // This includes the weight, eligibility trace, and total delta weight, which are key
-        // metrics in understanding how the network is learning.
-        winner.nodes.forEach((n, idx) => {
-          n.connections.in.forEach((c, cidx) => {
-            console.log(
-              `Iter ${iteration}: Node[${idx}] InConn[${cidx}] from Node ${c.from.index} weight=${c.weight} elig=${c.eligibility} tDeltaW=${c.totalDeltaWeight}`,
-            );
-          });
-          n.connections.out.forEach((c, cidx) => {
-            console.log(
-              `Iter ${iteration}: Node[${idx}] OutConn[${cidx}] to Node ${c.to.index} weight=${c.weight} elig=${c.eligibility} tDeltaW=${c.totalDeltaWeight}`,
-            );
-          });
-        });
-      },
-    },
-  });
-
-  // Step 3: Log the network's connection weights after training to see the changes.
-  console.log(
-    'Winner weights after training:',
-    winner.connections.map((c) => c.weight),
-  );
-
-  // Step 4: Test the network's response to the primary input patterns after training.
-  // This helps to verify that the network has learned the correct associations.
-  console.log(
-    'Test output for North-only scenario [0,1,0,0,0,0.7]:',
-    winner.activate([0, 1, 0, 0, 0, 0.7]),
-  );
-  console.log(
-    'Test output for East-only scenario [0.25,0,1,0,0,0.7]:',
-    winner.activate([0.25, 0, 1, 0, 0, 0.7]),
-  );
-  console.log(
-    'Test output for South-only scenario [0.5,0,0,1,0,0.7]:',
-    winner.activate([0.5, 0, 0, 1, 0, 0.7]),
-  );
-  console.log(
-    'Test output for West-only scenario [0.75,0,0,0,1,0.7]:',
-    winner.activate([0.75, 0, 0, 0, 1, 0.7]),
-  );
-
-  // Step 5: Pause execution for manual inspection in a debugging environment.
-  debugger;
-}
-
 describe('ASCII Maze Solver using Neuro-Evolution', () => {
   /**
    * This `beforeAll` block runs once before any of the tests in this suite.
@@ -196,13 +117,13 @@ describe('ASCII Maze Solver using Neuro-Evolution', () => {
    * @param increment step between consecutive dimensions
    * @param max maximum dimension (inclusive)
    */
-  function curriculumDimensions(increment: number, max: number): number[] {
+  const curriculumDimensions = (increment: number, max: number): number[] => {
     const seq: number[] = [];
     for (let size = 8; size <= max; size += increment) {
       seq.push(size);
     }
     return seq;
-  }
+  };
 
   let proceduralPrevBest: Network | undefined;
 

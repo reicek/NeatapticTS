@@ -26,21 +26,19 @@ let cachedRngParameters: RngCacheParameters | undefined;
 
 /**
  * Obtain a monotonic-ish timestamp suitable for profiling.
- * @param _state Shared engine state (reserved for future cross-environment hooks).
  * @returns Timestamp in milliseconds, preferring `performance.now` when available.
  * @example
- * const timestamp = readHighResolutionTime(sharedState);
+ * const timestamp = readHighResolutionTime();
  */
-export const readHighResolutionTime = (_state: EngineState): number =>
+export const readHighResolutionTime = (): number =>
   globalThis.performance?.now?.() ?? Date.now();
 
 /**
  * Return a profiling start timestamp that mirrors the historic `#PROFILE_T0` helper.
- * @param state Shared engine state used for potential future hooks.
  * @returns Millisecond timestamp representing the profiling start time.
  */
-export const profilingStartTimestamp = (state: EngineState): number =>
-  readHighResolutionTime(state);
+export const profilingStartTimestamp = (): number =>
+  readHighResolutionTime();
 
 /**
  * Provide cached congruential parameters used by the shared fast RNG helper.

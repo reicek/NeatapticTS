@@ -37,17 +37,17 @@ export interface EngineScratchState {
   /** Species count scratch array kept parallel to {@link speciesIds}. */
   speciesCounts: Int32Array;
   /** Candidate connection objects pooled for pruning heuristics. */
-  connectionCandidates: any[];
+  connectionCandidates: Record<string, unknown>[];
   /** Hidden-to-output connection list reused during inspection. */
-  hiddenToOutputConnections: any[];
+  hiddenToOutputConnections: Record<string, unknown>[];
   /** Bit flags for connection enable/disable states. */
   connectionFlags: Uint8Array;
   /** Bitmap reused when detecting recurrent or gated connections. */
   connectionFlagBitmap?: Int8Array;
   /** Maze tail history reused to avoid reallocating per telemetry call. */
-  tailHistoryBuffer: any[];
+  tailHistoryBuffer: Array<unknown>;
   /** Sampled result buffer reused by array sampling helpers. */
-  sampleResultBuffer: any[];
+  sampleResultBuffer: Array<unknown>;
   /** Sorted index scratch reused when ranking genomes. */
   sortedIndexBuffer: number[];
   /** Optional typed view of {@link sortedIndexBuffer} for faster sorts. */
@@ -55,19 +55,19 @@ export interface EngineScratchState {
   /** Quicksort stack storing pending index ranges. */
   quicksortStack: Int32Array;
   /** Temporary population clone array used during expansion. */
-  populationCloneBuffer: any[];
+  populationCloneBuffer: Record<string, unknown>[];
   /** Activation name buffer reused by inspection routines. */
   activationNameBuffer: string[];
   /** Node classification buckets reused by inspection routines. */
-  nodeBuckets: [any[], any[], any[]];
+  nodeBuckets: [Record<string, unknown>[], Record<string, unknown>[], Record<string, unknown>[]];
   /** Top entry objects reused when generating snapshots. */
-  snapshotTopEntries: any[];
+  snapshotTopEntries: Record<string, unknown>[];
   /** Snapshot metadata object reused per persistence write. */
-  snapshotReusableObject: any;
+  snapshotReusableObject: Record<string, unknown>;
   /** Mutation operator index buffer shuffled each generation. */
   mutationOperatorIndices: Uint16Array;
   /** Object pool used when sampling individuals for telemetry. */
-  samplePool: any[];
+  samplePool: Array<unknown>;
   /** Character array reused when assembling debug strings. */
   stringAssemblyBuffer: string[];
   /** Small exploration table for low-cost duplicate detection. */
@@ -661,11 +661,11 @@ const buildTelemetryHandles = (
  * @param minimum Optional lower bound applied before comparison.
  * @returns Buffer with sufficient capacity (original or grown).
  */
-function ensureFloat64Pool(
+const ensureFloat64Pool = (
   buffer: Float64Array,
   required: number,
   minimum = 0,
-): Float64Array {
+): Float64Array => {
   const target = Math.max(required, minimum);
   if (target <= 0 || buffer.length >= target) return buffer;
   const nextSize = nextPowerOfTwo(target);
@@ -674,7 +674,7 @@ function ensureFloat64Pool(
     next.set(buffer.subarray(0, Math.min(buffer.length, nextSize)));
   }
   return next;
-}
+};
 
 /**
  * Ensure an optional Float64Array is present and sized appropriately.
@@ -682,10 +682,10 @@ function ensureFloat64Pool(
  * @param required Minimum required capacity; zero preserves the existing buffer.
  * @returns Buffer with sufficient capacity or undefined when no allocation is required.
  */
-function ensureOptionalFloat64Pool(
+const ensureOptionalFloat64Pool = (
   buffer: Float64Array | undefined,
   required: number,
-): Float64Array | undefined {
+): Float64Array | undefined => {
   if (required <= 0) return buffer;
   if (!buffer) return new Float64Array(nextPowerOfTwo(required));
   if (buffer.length >= required) return buffer;
@@ -693,7 +693,7 @@ function ensureOptionalFloat64Pool(
   const next = new Float64Array(nextSize);
   next.set(buffer.subarray(0, Math.min(buffer.length, nextSize)));
   return next;
-}
+};
 
 /**
  * Ensure a generic Array buffer has enough slots, reusing existing entries when grown.
@@ -701,7 +701,7 @@ function ensureOptionalFloat64Pool(
  * @param required Minimum number of elements required.
  * @returns Buffer with sufficient capacity (original or grown).
  */
-function ensureArrayCapacity<T>(buffer: T[], required: number): T[] {
+const ensureArrayCapacity = <T>(buffer: T[], required: number): T[] => {
   if (required <= 0 || buffer.length >= required) return buffer;
   const nextSize = nextPowerOfTwo(required);
   const grown = new Array<T>(nextSize);
@@ -709,17 +709,17 @@ function ensureArrayCapacity<T>(buffer: T[], required: number): T[] {
     grown[index] = buffer[index];
   }
   return grown;
-}
+};
 
 /**
  * Compute the next power-of-two for geometric growth.
  * @param candidate Raw size candidate.
  * @returns Smallest power-of-two >= candidate.
  */
-function nextPowerOfTwo(candidate: number): number {
+const nextPowerOfTwo = (candidate: number): number => {
   if (candidate <= 1) return 1;
   return 1 << Math.ceil(Math.log2(candidate));
-}
+};
 
 /**
  * Clamp the requested target entry count to a non-negative integer.

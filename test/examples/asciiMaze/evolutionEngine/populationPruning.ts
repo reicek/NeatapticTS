@@ -15,6 +15,7 @@
  * All functions are best-effort: internal errors are swallowed to avoid destabilizing the evolution loop.
  */
 
+import type { Neat, Network } from '../../../../src/neataptic';
 import { EngineState } from './engineState';
 import { drawFastRandom, resolveRngParameters } from './rngAndTiming';
 
@@ -35,14 +36,14 @@ const OUTPUT_BIAS_CLAMP = 5;
 const PRUNE_BULK_INSERTION_MAX = 64;
 
 /** Empty shared vector reused when a fallback empty array is required. */
-const EMPTY_VECTOR: any[] = [];
+const EMPTY_VECTOR: Array<Record<string, unknown>> = [];
 
 /**
  * Parameters for applying simplify pruning to a population.
  */
 export interface ApplySimplifyPruningParams {
   /** NEAT instance exposing a `population` array. */
-  neat: any;
+  neat: Neat;
   /** Pruning strategy key (for example `weakRecurrentPreferred`). */
   simplifyStrategy: string;
   /** Fraction of enabled connections to prune (0..1). */
@@ -74,7 +75,7 @@ export const applySimplifyPruningToPopulation = ({
   // Step 0: Defensive normalization & fast exits.
   if (!neat || !Array.isArray(neat.population) || neat.population.length === 0)
     return;
-  const populationRef: any[] = neat.population;
+  const populationRef: Network[] = neat.population;
   const pruneFraction = Number.isFinite(simplifyPruneFraction)
     ? Math.max(0, Math.min(1, simplifyPruneFraction))
     : 0;
@@ -106,7 +107,7 @@ export interface ApplyCompassWarmStartParams {
   /** Shared engine state providing pooled scratch buffers and RNG state. */
   state: EngineState;
   /** Network-like object with `nodes` and `connections` arrays and `connect(from, to, weight)` method. */
-  network: any;
+  network: Network;
 }
 
 /**
@@ -159,6 +160,8 @@ export const applyCompassWarmStart = ({
       if (!inputNode || !outputNode) continue; // nothing to wire for this direction
 
       // Find existing connection input→output (linear scan; avoids allocations)
+      // Type assertion: conn is a connection object with from/to properties
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let existingConn: any = undefined;
       for (let ci = 0, cLen = connectionsRef.length; ci < cLen; ci++) {
         const conn = connectionsRef[ci];
@@ -187,6 +190,8 @@ export const applyCompassWarmStart = ({
       if (!outNode) continue;
 
       // Find existing connection compass→outNode
+      // Type assertion: conn is a connection object with from/to properties
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let existingConn: any = undefined;
       for (let ci = 0, cLen = connectionsRef.length; ci < cLen; ci++) {
         const conn = connectionsRef[ci];
@@ -212,7 +217,7 @@ export interface CenterOutputBiasesParams {
   /** Shared engine state providing pooled scratch buffers. */
   state: EngineState;
   /** Network-like object exposing a `nodes` array. */
-  network: any;
+  network: Network;
 }
 
 /**
@@ -269,6 +274,8 @@ export const centerOutputBiases = ({
     }
 
     // Step 4: Persist stats for optional telemetry.
+    // Type assertion: dynamic property assignment for telemetry data
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (network as any)._outputBiasStats = { mean: meanBias, std: stdBias };
   } catch {
     // swallow errors (best-effort maintenance routine)
@@ -293,7 +300,7 @@ export const centerOutputBiases = ({
  * pruneWeakConnectionsForGenome(genome, 'weakRecurrentPreferred', 0.15);
  */
 const pruneWeakConnectionsForGenome = (
-  genome: any,
+  genome: Network,
   simplifyStrategy: string,
   simplifyPruneFraction: number,
 ): void => {
@@ -305,6 +312,8 @@ const pruneWeakConnectionsForGenome = (
     if (rawFraction <= 0) return; // nothing requested
 
     // Step 2: Collect enabled connections.
+    // Type assertion: connections array elements have connection properties
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const allConnections = genome.connections as any[];
     let candidateConnections = collectEnabledConnections(allConnections);
     const enabledConnectionCount = candidateConnections.length;
@@ -348,6 +357,8 @@ const pruneWeakConnectionsForGenome = (
  * const enabled = collectEnabledConnections(genome.connections);
  * const stableCopy = enabled.slice(); // only if retention needed
  */
+// Type assertion: connections are dynamic objects checked at runtime
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const collectEnabledConnections = (connectionsSource: any[]): any[] => {
   // Step 1: Validate input & fast exit.
   if (!Array.isArray(connectionsSource) || connectionsSource.length === 0)
@@ -355,6 +366,8 @@ const collectEnabledConnections = (connectionsSource: any[]): any[] => {
 
   // Step 2: Reset pooled buffer (reusing the scratch array from state; needs access via closure or parameter).
   // Note: This is a simplified version; in practice this would access state.scratch.connectionCandidates
+  // Type assertion: buffer holds connection objects
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const candidateBuffer: any[] = [];
 
   // Step 3: Linear scan & collect enabled connections.
@@ -373,80 +386,6 @@ const collectEnabledConnections = (connectionsSource: any[]): any[] => {
 };
 
 /**
- * Collect enabled outgoing connections from a hidden node that terminate at any output node.
- *
- * Steps:
- * 1. Validate inputs & early-exit: invalid node / connections / zero outputs => fresh empty array literal.
- * 2. Clamp effective output count to available scratch index capacity and `nodesRef` length (defensive bounds).
- * 3. Reset pooled result buffer (hiddenToOutputConnections) by setting length=0 (capacity retained for reuse).
- * 4. Iterate enabled outgoing connections; for each, linearly scan output indices to detect whether its `to`
- *    endpoint references one of the output nodes; push on first match and break.
- * 5. Return pooled buffer (EPHEMERAL). Callers MUST copy if they need persistence beyond next engine helper.
- *
- * @param state Shared engine state providing pooled scratch buffers.
- * @param hiddenNode Hidden node object with structure `{ connections: { out: Connection[] } }`.
- * @param nodesRef Full node array; indices stored in nodeIndexBuffer resolve into this array.
- * @param outputCount Declared number of output nodes (will be clamped to safe range).
- * @returns Pooled ephemeral array of connections from `hiddenNode` to any output node.
- * @example
- * const outs = collectHiddenToOutputConns(state, hNode, nodes, outputCount);
- * const stable = outs.slice(); // copy if retention required
- */
-const collectHiddenToOutputConns = (
-  state: EngineState,
-  hiddenNode: any,
-  nodesRef: any[],
-  outputCount: number,
-): any[] => {
-  // Step 1: Input validation & quick exits.
-  if (
-    !hiddenNode ||
-    !hiddenNode.connections ||
-    !Array.isArray(nodesRef) ||
-    nodesRef.length === 0 ||
-    !Number.isFinite(outputCount) ||
-    outputCount <= 0
-  ) {
-    return [];
-  }
-
-  // Step 2: Clamp effective output count.
-  const maxScratch = state.scratch.nodeIndexBuffer.length;
-  const effectiveOutputCount = Math.min(
-    outputCount | 0,
-    maxScratch,
-    nodesRef.length,
-  );
-  if (effectiveOutputCount <= 0) return [];
-
-  // Step 3: Reset pooled result buffer.
-  const resultBuffer = state.scratch.hiddenToOutputConnections;
-  resultBuffer.length = 0;
-
-  // Step 4: Iterate outgoing connections from hidden node.
-  const outgoingConnections = hiddenNode.connections.out ?? EMPTY_VECTOR;
-  for (let connIndex = 0; connIndex < outgoingConnections.length; connIndex++) {
-    const candidateConnection = outgoingConnections[connIndex];
-    if (!candidateConnection || candidateConnection.enabled === false) continue;
-
-    const targetNode = candidateConnection.to;
-    if (!targetNode) continue;
-
-    // Step 5: Linear scan output indices (tiny constant factor).
-    for (let outIndex = 0; outIndex < effectiveOutputCount; outIndex++) {
-      const outputNodeIndex = state.scratch.nodeIndexBuffer[outIndex];
-      if (nodesRef[outputNodeIndex] === targetNode) {
-        resultBuffer.push(candidateConnection);
-        break; // found match; no need to check other outputs
-      }
-    }
-  }
-
-  // Step 6: Return pooled ephemeral result.
-  return resultBuffer;
-};
-
-/**
  * Order connection candidates by strategy-specific priority.
  *
  * Steps:
@@ -462,8 +401,11 @@ const collectHiddenToOutputConns = (
  * sortCandidatesByStrategy(candidates, 'weakRecurrentPreferred');
  */
 const sortCandidatesByStrategy = (
+  // Type assertion: connections are dynamic objects with weight/gater properties
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   candidateConnections: any[],
   strategyKey: string,
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): any[] => {
   // Step 1: Validate input.
   if (!Array.isArray(candidateConnections) || candidateConnections.length === 0)
@@ -529,6 +471,8 @@ const sortCandidatesByStrategy = (
  * insertionSortByAbsWeight(buf, 0, 10);
  */
 const insertionSortByAbsWeight = (
+  // Type assertion: buffer holds connection objects with weight property
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   connectionsBuffer: any[],
   startIndex: number,
   endExclusive: number,
@@ -585,6 +529,8 @@ const insertionSortByAbsWeight = (
  * disableSmallestEnabledConnections(candidates, 5);
  */
 const disableSmallestEnabledConnections = (
+  // Type assertion: buffer holds connection objects with enabled property
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   candidateConnections: any[],
   pruneCount: number,
 ): void => {
@@ -617,6 +563,8 @@ const disableSmallestEnabledConnections = (
       candidateConnections
         .slice(0, activeEnabledCount) // sort only active slice; slice() to avoid comparing undefined tail beyond active
         .sort(
+          // Type assertion: comparing connection objects with weight property
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           (firstConnection: any, secondConnection: any) =>
             Math.abs(firstConnection?.weight || 0) -
             Math.abs(secondConnection?.weight || 0),
@@ -685,6 +633,8 @@ const disableSmallestEnabledConnections = (
  */
 const collectNodeIndicesByType = (
   state: EngineState,
+  // Type assertion: nodes are dynamic objects with type property
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   nodes: any[] | undefined,
   nodeType: string,
 ): number => {

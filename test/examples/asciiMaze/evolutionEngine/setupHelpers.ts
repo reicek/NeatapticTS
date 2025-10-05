@@ -2,8 +2,28 @@
  * setupHelpers.ts
  *
  * Environment and setup utilities for the evolution engine.
- *
- * Responsibilities:
+   // Return  return async (): Promise<void> => {
+    // Polling loop: after each tick, if the cooperative pause flag is set, wait another tick.
+    // This keeps CPU usage minimal while allowing the host to pause/resume the evolution loop.
+    while (true) {
+      await preferredTick();
+      // Note: using a permissive read of the global pause flag; undefined => not paused.
+      if (!(globalThis as Record<string, unknown>).asciiMazePaused) return;
+      // otherwise continue and await another tick before re-checking
+    }
+  };
+};flush function used by the evolution loop.
+  return async (): Promise<void> => {
+    // Polling loop: after each tick, if the cooperative pause flag is set, wait another tick.
+    // This keeps CPU usage minimal while allowing the host to pause/resume the evolution loop.
+    while (true) {
+      await preferredTick();
+      // Note: using a permissive read of the global pause flag; undefined => not paused.
+      if (!(globalThis as Record<string, unknown>).asciiMazePaused) return;
+      // otherwise continue and await another tick before re-checking
+    }
+  };
+};ibilities:
  * - Create cooperative frame-yielding functions for async evolution loops
  * - Initialize Node.js filesystem persistence helpers (fs, path)
  * - Build resilient logging writers with fallback chains
@@ -12,6 +32,33 @@
  *
  * @module setupHelpers
  */
+
+/**
+ * Minimal filesystem module shape for type safety (Node.js fs module subset).
+ */
+export interface FilesystemModule {
+  existsSync?: (path: string) => boolean;
+  mkdirSync?: (path: string, options?: {recursive?: boolean}) => void;
+  writeFileSync?: (path: string, data: string | Buffer) => void;
+  [key: string]: unknown;
+}
+
+/**
+ * Minimal path module shape for type safety (Node.js path module subset).
+ */
+export interface PathModule {
+  join?: (...paths: string[]) => string;
+  resolve?: (...paths: string[]) => string;
+  [key: string]: unknown;
+}
+
+/**
+ * Dashboard manager shape for logging (optional log function).
+ */
+export interface DashboardManagerLike {
+  logFunction?: (msg: string) => void;
+  [key: string]: unknown;
+}
 
 /**
  * Create a cooperative frame-yielding function used by the evolution loop.
@@ -34,12 +81,12 @@
  * const flushToFrame = makeFlushToFrame();
  * await flushToFrame(); // yields to next frame/tick
  */
-export function makeFlushToFrame(): () => Promise<void> {
+export const makeFlushToFrame = (): (() => Promise<void>) => {
   // Helper factories for the three tick primitives; each returns a Promise that resolves on the next tick.
   const rafTick = () =>
     new Promise<void>((resolve) =>
-      (globalThis as any).requestAnimationFrame
-        ? (globalThis as any).requestAnimationFrame(() => resolve())
+      (globalThis as Record<string, unknown>).requestAnimationFrame
+        ? ((globalThis as Record<string, unknown>).requestAnimationFrame as (callback: () => void) => number)(() => resolve())
         : setTimeout(() => resolve(), 0),
     );
   const immediateTick = () =>
@@ -53,7 +100,7 @@ export function makeFlushToFrame(): () => Promise<void> {
 
   // Pick the most appropriate tick primitive for this host.
   const preferredTick =
-    typeof (globalThis as any).requestAnimationFrame === 'function'
+    typeof (globalThis as Record<string, unknown>).requestAnimationFrame === 'function'
       ? rafTick
       : typeof setImmediate === 'function'
         ? immediateTick
@@ -66,7 +113,7 @@ export function makeFlushToFrame(): () => Promise<void> {
     while (true) {
       await preferredTick();
       // Note: using a permissive read of the global pause flag; undefined => not paused.
-      if (!(globalThis as any).asciiMazePaused) return;
+      if (!(globalThis as Record<string, unknown>).asciiMazePaused) return;
       // otherwise continue and await another tick before re-checking
     }
   };
@@ -96,22 +143,22 @@ export function makeFlushToFrame(): () => Promise<void> {
  *   fs.writeFileSync(path.join(dir, 'snapshot.json'), data);
  * }
  */
-export function initPersistence(persistDir: string | undefined): {
-  fs: any;
-  path: any;
-} {
-  let fs: any = null;
-  let path: any = null;
+export const initPersistence = (persistDir: string | undefined): {
+  fs: FilesystemModule | null;
+  path: PathModule | null;
+} => {
+  let fs: FilesystemModule | null = null;
+  let path: PathModule | null = null;
 
   // Step 1: Safe detection of Node-style `require` without crashing bundlers that rewrite `require`.
   try {
     const maybeRequire =
-      (globalThis as any).require ??
+      (globalThis as Record<string, unknown>).require ??
       (typeof require === 'function' ? require : null);
     if (maybeRequire) {
       try {
-        fs = maybeRequire('fs');
-        path = maybeRequire('path');
+        fs = (maybeRequire as (moduleName: string) => unknown)('fs') as FilesystemModule;
+        path = (maybeRequire as (moduleName: string) => unknown)('path') as PathModule;
       } catch {
         // module not available or require denied; leave as null
       }
@@ -136,7 +183,7 @@ export function initPersistence(persistDir: string | undefined): {
 
   // Step 3: Return module references (may be null in browser-like hosts).
   return { fs, path };
-}
+};
 
 /**
  * Build a resilient writer that attempts to write to Node stdout, then a provided
@@ -159,7 +206,7 @@ export function initPersistence(persistDir: string | undefined): {
  * const safeWrite = makeSafeWriter(dashboardManager);
  * safeWrite('[INFO] Generation 42 complete\n');
  */
-export function makeSafeWriter(dashboardManager: any): (msg: string) => void {
+export const makeSafeWriter = (dashboardManager: DashboardManagerLike | undefined): ((msg: string) => void) => {
   // Capture local references to avoid repeated property lookups at call time.
   const hasProcessStdout = (() => {
     try {
@@ -176,8 +223,8 @@ export function makeSafeWriter(dashboardManager: any): (msg: string) => void {
 
   const dashboardLogFn = (() => {
     try {
-      return dashboardManager && (dashboardManager as any).logFunction
-        ? (dashboardManager as any).logFunction.bind(dashboardManager)
+      return dashboardManager && dashboardManager.logFunction
+        ? dashboardManager.logFunction.bind(dashboardManager)
         : null;
     } catch {
       return null;
@@ -190,7 +237,7 @@ export function makeSafeWriter(dashboardManager: any): (msg: string) => void {
     // Fast path: Node stdout writer
     if (hasProcessStdout) {
       try {
-        (process as any).stdout.write(msg);
+        (process as unknown as {stdout: {write: (msg: string) => void}}).stdout.write(msg);
         return;
       } catch {
         /* swallow and fall through */
@@ -216,4 +263,4 @@ export function makeSafeWriter(dashboardManager: any): (msg: string) => void {
       /* swallow all logging errors */
     }
   };
-}
+};

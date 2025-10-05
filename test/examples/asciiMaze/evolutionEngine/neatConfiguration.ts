@@ -21,7 +21,26 @@
  * @module evolutionEngine/neatConfiguration
  */
 
-import { Neat, methods } from '../../../../src/neataptic';
+import { Neat, Network, methods } from '../../../../src/neataptic';
+
+/**
+ * NEAT configuration object shape for type safety.
+ */
+export interface NeatConfig {
+  popSize?: number;
+  mutation?: unknown[];
+  elitism?: number;
+  provenance?: number;
+  mutationRate?: number;
+  mutationAmount?: number;
+  selection?: unknown;
+  equal?: boolean;
+  clear?: boolean;
+  popsize?: number;
+  network?: Network;
+  fitnessFunction?: (network: Network) => number;
+  [key: string]: unknown;
+}
 
 /**
  * Create a NEAT instance with normalized configuration and opinionated defaults.
@@ -73,12 +92,12 @@ import { Neat, methods } from '../../../../src/neataptic';
  * // Create with default configuration
  * const neat = createNeat(10, 4, fitnessFn);
  */
-export function createNeat(
+export const createNeat = (
   inputCount: number,
   outputCount: number,
-  fitnessCallback: (net: any) => number,
-  cfg?: any,
-): any {
+  fitnessCallback: (net: Network) => number,
+  cfg?: NeatConfig,
+): Neat => {
   // Default constants (extracted from EvolutionEngine static fields)
   const DEFAULT_POPSIZE = 150;
   const DEFAULT_ELITISM_FRACTION = 0.05;
@@ -92,8 +111,8 @@ export function createNeat(
 
   // Step 1: Normalize configuration bag and derive primary numeric settings.
   const conf = cfg ?? {};
-  const popSize = Number.isFinite(conf.popSize)
-    ? conf.popSize
+  const popSize: number = Number.isFinite(conf.popSize)
+    ? (conf.popSize as number)
     : DEFAULT_POPSIZE;
   const mutationOps = Array.isArray(conf.mutation)
     ? conf.mutation
@@ -205,13 +224,13 @@ export function createNeat(
  * // Seed with only a best network (population will be empty except index 0)
  * const pool = seedInitialPopulation(neat, undefined, bestNetwork, 150, pool);
  */
-export function seedInitialPopulation(
-  neat: any,
-  initialPopulation: any[] | undefined,
-  initialBestNetwork: any | undefined,
+export const seedInitialPopulation = (
+  neat: Neat,
+  initialPopulation: Network[] | undefined,
+  initialBestNetwork: Network | undefined,
   targetPopSize: number,
-  scratchPopClone: any[],
-): any[] {
+  scratchPopClone: Network[],
+): Network[] => {
   // Step 1: Defensive guard - nothing to do without a neat manager
   if (!neat) return scratchPopClone;
 
@@ -239,7 +258,7 @@ export function seedInitialPopulation(
             candidateNetwork && typeof candidateNetwork.clone === 'function'
               ? candidateNetwork.clone()
               : candidateNetwork;
-        } catch (cloneError) {
+        } catch {
           // Best-effort: if cloning fails, fall back to the original reference.
           pooledCloneBuffer[sourceIndex] = candidateNetwork;
         }
@@ -274,7 +293,7 @@ export function seedInitialPopulation(
     } catch {
       /* best-effort; swallow */
     }
-  } catch (outerError) {
+  } catch {
     // Top-level safety net: swallow all errors to avoid breaking the evolution loop.
     try {
       neat.options = neat.options || {};

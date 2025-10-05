@@ -55,7 +55,6 @@ import {
   profilingStartTimestamp,
   accumulateProfilingDuration,
 } from './rngAndTiming';
-import { swallowError } from './networkInspection';
 
 /**
  * Inspect cooperative cancellation sources and annotate the provided result when cancelled.
@@ -93,10 +92,11 @@ import { swallowError } from './networkInspection';
  *   break;
  * }
  */
-export function checkCancellation(
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- options shape varies by host environment; bestResult is dynamic run summary
+export const checkCancellation = (
   options: any,
   bestResult?: any,
-): string | undefined {
+): string | undefined => {
   try {
     // Step 1: Check legacy cancellation object first (if present).
     const legacyCancellation = options?.cancellation;
@@ -115,12 +115,12 @@ export function checkCancellation(
       if (bestResult) bestResult.exitReason = 'aborted';
       return 'aborted';
     }
-  } catch (err) {
+  } catch {
     // Best-effort: swallow any unexpected errors to avoid breaking the caller.
   }
   // No cancellation detected.
   return undefined;
-}
+};
 
 /**
  * Build lightweight helpers used inside the evolution loop.
@@ -158,7 +158,8 @@ export function checkCancellation(
  * safeWrite('Starting evolution...\n');
  * await flushToFrame(); // Yield to host
  */
-export function prepareLoopHelpers(opts: any, scratchBundle: any): any {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- opts shape varies by environment; scratchBundle is dynamic engine state; return type is helper object with mixed types
+export const prepareLoopHelpers = (opts: any, scratchBundle: any): any => {
   // Step 1: Create the lightweight host-yield helper first.
   const flushToFrame = makeFlushToFrame();
 
@@ -189,7 +190,7 @@ export function prepareLoopHelpers(opts: any, scratchBundle: any): any {
 
   // Return the same simple shape the rest of the engine expects.
   return { flushToFrame, fs, path, safeWrite };
-}
+};
 
 /**
  * Inspect common termination conditions and perform minimal, best-effort side-effects.
@@ -241,7 +242,8 @@ export function prepareLoopHelpers(opts: any, scratchBundle: any): any {
  *   break;
  * }
  */
-export async function checkStopConditions(
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- bestResult/bestNetwork/maze/neat/dashboardManager are dynamic runtime objects
+export const checkStopConditions = async (
   bestResult: any,
   bestNetwork: any,
   maze: any,
@@ -255,7 +257,7 @@ export async function checkStopConditions(
   stagnantGenerations: number,
   maxStagnantGenerations: number,
   maxGenerations: number,
-): Promise<string | undefined> {
+): Promise<string | undefined> => {
   // Local convenience aliases for small, hot checks.
   const hasBest = Boolean(bestResult);
   const shouldConsiderStops = !stopOnlyOnSolve;
@@ -271,11 +273,15 @@ export async function checkStopConditions(
         completedGenerations,
         neat,
       );
-    } catch {}
+    } catch {
+      // Swallow dashboard update errors
+    }
 
     try {
       await flushToFrame?.();
-    } catch {}
+    } catch {
+      // Swallow frame flush errors
+    }
 
     // Optionally set a cooperative pause and emit a small event for UIs to react to.
     if (autoPauseOnSolve) {
@@ -292,9 +298,13 @@ export async function checkStopConditions(
                 },
               }),
             );
-          } catch {}
+          } catch {
+            // Swallow event dispatch errors
+          }
         }
-      } catch {}
+      } catch {
+        // Swallow window access errors
+      }
     }
 
     if (hasBest) (bestResult as any).exitReason = 'solved';
@@ -315,10 +325,14 @@ export async function checkStopConditions(
         completedGenerations,
         neat,
       );
-    } catch {}
+    } catch {
+      // Swallow dashboard update errors
+    }
     try {
       await flushToFrame?.();
-    } catch {}
+    } catch {
+      // Swallow frame flush errors
+    }
     if (hasBest) (bestResult as any).exitReason = 'stagnation';
     return 'stagnation';
   }
@@ -335,7 +349,7 @@ export async function checkStopConditions(
 
   // No stop condition matched.
   return undefined;
-}
+};
 
 /**
  * Persist a population snapshot to disk at the configured interval.
@@ -391,7 +405,8 @@ export async function checkStopConditions(
  *   scratchObj, scratchTop, collectTail, getSorted, isProfilingEnabled, profileStart, profileAccum
  * );
  */
-export function persistSnapshotIfNeeded(
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- engineState, fs, pathModule, neat, snapshot data are all dynamic runtime structures
+export const persistSnapshotIfNeeded = (
   engineState: any,
   fs: any,
   pathModule: any,
@@ -414,7 +429,7 @@ export function persistSnapshotIfNeeded(
     label: string,
     duration: number,
   ) => void,
-) {
+) => {
   // Step 1: Defensive validation & scheduling cadence.
   if (
     !fs ||
@@ -502,7 +517,7 @@ export function persistSnapshotIfNeeded(
   } catch {
     // Best-effort: swallow persistence errors silently to avoid disrupting the evolution loop.
   }
-}
+};
 
 /**
  * Safely update a UI dashboard with the latest run state and optionally yield to the
@@ -539,7 +554,8 @@ export function persistSnapshotIfNeeded(
  *   maze, genResult, fittestNetwork, gen, neatInstance, dashboard, () => new Promise(r => requestAnimationFrame(r))
  * );
  */
-export async function updateDashboardAndMaybeFlush(
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- maze, result, network, neat, dashboardManager are dynamic runtime objects
+export const updateDashboardAndMaybeFlush = async (
   maze: any,
   result: any,
   network: any,
@@ -547,7 +563,7 @@ export async function updateDashboardAndMaybeFlush(
   neat: any,
   dashboardManager: any,
   flushToFrame?: () => Promise<void>,
-) {
+) => {
   // Step 0: Defensive local aliases with descriptive names to improve readability in hot paths.
   const manager = dashboardManager;
   const yieldFrame = flushToFrame;
@@ -558,7 +574,7 @@ export async function updateDashboardAndMaybeFlush(
     try {
       // Use the stable argument order so dashboard implementations are consistent.
       manager.update(maze, result, network, completedGenerations, neat);
-    } catch (_updateError) {
+    } catch {
       // Swallow dashboard errors — telemetry/UI must not break evolution.
     }
   }
@@ -568,11 +584,11 @@ export async function updateDashboardAndMaybeFlush(
   if (typeof yieldFrame === 'function') {
     try {
       await yieldFrame();
-    } catch (_flushError) {
+    } catch {
       // Swallow flush errors; a failed frame yield is non-fatal for the evolution loop.
     }
   }
-}
+};
 
 /**
  * Periodic dashboard update used when the engine wants to refresh a non-primary
@@ -617,7 +633,8 @@ export async function updateDashboardAndMaybeFlush(
  *   maze, result, network, gen, neatInstance, dashboard, () => new Promise(r => requestAnimationFrame(r))
  * );
  */
-export async function updateDashboardPeriodic(
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- maze, bestResult, bestNetwork, neat, dashboardManager are dynamic runtime objects
+export const updateDashboardPeriodic = async (
   maze: any,
   bestResult: any,
   bestNetwork: any,
@@ -625,7 +642,7 @@ export async function updateDashboardPeriodic(
   neat: any,
   dashboardManager: any,
   flushToFrame?: () => Promise<void>,
-) {
+) => {
   // Step 0: create descriptive local aliases to clarify intent and keep hot-path refs short.
   const dashboard = dashboardManager;
   const updateFunction = dashboard?.update;
@@ -647,7 +664,7 @@ export async function updateDashboardPeriodic(
       completedGenerations,
       neat,
     );
-  } catch (updateError) {
+  } catch {
     // Intentionally ignore update errors — dashboard should not crash the engine.
   }
 
@@ -655,11 +672,11 @@ export async function updateDashboardPeriodic(
   if (typeof frameFlush === 'function') {
     try {
       await frameFlush();
-    } catch (flushError) {
+    } catch {
       // Ignore flush errors — non-critical for engine progress.
     }
   }
-}
+};
 
 /**
  * Emit a formatted profiling summary showing average per-generation timings.
@@ -699,7 +716,8 @@ export async function updateDashboardPeriodic(
  *   isProfilingDetailsEnabled, getProfilingAccumulators
  * );
  */
-export function emitProfileSummary(
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- engineState and getProfilingAccumulatorsFn return dynamic profiling structures
+export const emitProfileSummary = (
   engineState: any,
   safeWrite: (msg: string) => void,
   completedGenerations: number,
@@ -708,7 +726,7 @@ export function emitProfileSummary(
   totalSimMs: number,
   isProfilingDetailsEnabledFn: (state: any) => boolean,
   getProfilingAccumulatorsFn: (state: any) => any,
-) {
+) => {
   try {
     // Step 1: Normalise inputs and guard against divide-by-zero.
     const generations =
@@ -768,7 +786,7 @@ export function emitProfileSummary(
   } catch {
     // Best-effort: never let profiling output disrupt the run.
   }
-}
+};
 
 /**
  * Run one generation: evolve, ensure output identity, update species history, maybe expand population,
@@ -840,7 +858,8 @@ export function emitProfileSummary(
  *   { DEFAULT_TRAIN_ERROR: 0.01, ... }
  * );
  */
-export async function runGeneration(
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- engineState, neat, lamarckianTrainingSet, speciesHistoryRef, emptyVec, scratchNodeIdx, getNodeIndicesByType, constants are all dynamic runtime types
+export const runGeneration = async (
   engineState: any,
   neat: any,
   doProfile: boolean,
@@ -868,10 +887,10 @@ export async function runGeneration(
     DEFAULT_STD_SMALL: number;
     DEFAULT_STD_ADJUST_MULT: number;
   },
-) {
+) => {
   // Step 0: Local descriptive aliases and profiling setup.
   const profileEnabled = Boolean(doProfile);
-  const clockNow = () => readHighResolutionTime(engineState);
+  const clockNow = () => readHighResolutionTime();
   const startTime = profileEnabled ? clockNow() : 0;
 
   // Results we will populate. Keep names descriptive for readability in hot paths.
@@ -884,35 +903,37 @@ export async function runGeneration(
     // `neat` is expected to provide an async `evolve()` method that returns the fittest genome.
     fittestNetwork = await neat?.evolve();
     if (profileEnabled) evolveDuration = clockNow() - startTime;
-  } catch (evolveError) {
+  } catch {
     // Best-effort: log a short diagnostic and continue. Do not rethrow.
     try {
-      safeWrite?.(`runGeneration: evolve() threw: ${String(evolveError)}`);
-    } catch {}
+      safeWrite?.(`runGeneration: evolve() threw error`);
+    } catch {
+      // Swallow write errors
+    }
     // leave fittestNetwork null and continue with remaining housekeeping.
   }
 
   // Step 2: Ensure outputs are using identity activation where required (non-throwing).
   try {
     ensureOutputIdentity(neat);
-  } catch (identityError) {
+  } catch {
     try {
-      safeWrite?.(
-        `runGeneration: ensureOutputIdentity failed: ${String(identityError)}`,
-      );
-    } catch {}
+      safeWrite?.(`runGeneration: ensureOutputIdentity failed`);
+    } catch {
+      // Swallow write errors
+    }
   }
 
   // Step 3: Update species history (best-effort; internal errors are swallowed).
   try {
     const effectiveHistoryRef = speciesHistoryRef ?? emptyVec;
     handleSpeciesHistory(engineState, neat, effectiveHistoryRef);
-  } catch (speciesError) {
+  } catch {
     try {
-      safeWrite?.(
-        `runGeneration: handleSpeciesHistory failed: ${String(speciesError)}`,
-      );
-    } catch {}
+      safeWrite?.(`runGeneration: handleSpeciesHistory failed`);
+    } catch {
+      // Swallow write errors
+    }
   }
 
   // Step 4: Possibly expand the population when configured and plateau conditions are met.
@@ -930,12 +951,12 @@ export async function runGeneration(
       dynamicPopPlateauSlack,
       safeWrite,
     );
-  } catch (expandError) {
+  } catch {
     try {
-      safeWrite?.(
-        `runGeneration: maybeExpandPopulation failed: ${String(expandError)}`,
-      );
-    } catch {}
+      safeWrite?.(`runGeneration: maybeExpandPopulation failed`);
+    } catch {
+      // Swallow write errors
+    }
   }
 
   // Step 5: Optional Lamarckian warm-start training. This step may be expensive;
@@ -978,12 +999,12 @@ export async function runGeneration(
         },
       );
     }
-  } catch (lamarckError) {
+  } catch {
     try {
-      safeWrite?.(
-        `runGeneration: applyLamarckianTraining failed: ${String(lamarckError)}`,
-      );
-    } catch {}
+      safeWrite?.(`runGeneration: applyLamarckianTraining failed`);
+    } catch {
+      // Swallow write errors
+    }
   }
 
   // Final: return the canonical result shape. Keep original property names for callers.
@@ -992,7 +1013,7 @@ export async function runGeneration(
     tEvolve: evolveDuration,
     tLamarck: lamarckDuration,
   } as any;
-}
+};
 
 /**
  * Simulate the supplied `fittest` genome/network and perform allocation-light postprocessing.
@@ -1053,7 +1074,8 @@ export async function runGeneration(
  *   state, bestGenome, maze, start, exit, distMap, 1000, true, console.log, 10, genIdx, neat, ...
  * );
  */
-export function simulateAndPostprocess(
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- engineState, fittest, encodedMaze, startPosition, exitPosition, distanceMap, neat, scratchLogitsRing, scratchLogitsShared, scratchLogitsSharedW, getNodeIndicesByType, collectHiddenToOutputConns all dynamic runtime types
+export const simulateAndPostprocess = (
   engineState: any,
   fittest: any,
   encodedMaze: any,
@@ -1092,9 +1114,9 @@ export function simulateAndPostprocess(
     logitsRingShared: boolean;
     scratchLogitsRingW: number;
   };
-} {
+} => {
   // Step 1: Run simulator and optionally capture elapsed time.
-  const startTime = doProfile ? readHighResolutionTime(engineState) : 0;
+  const startTime = doProfile ? readHighResolutionTime() : 0;
   const simResult = MazeMovement.simulateAgent(
     fittest,
     encodedMaze,
@@ -1109,15 +1131,15 @@ export function simulateAndPostprocess(
     if (!(fittest as any)._lastStepOutputs) {
       (fittest as any)._lastStepOutputs = scratchLogitsRing;
     }
-  } catch (legacyBufferAttachmentError) {
-    swallowError(legacyBufferAttachmentError);
+  } catch {
+    // Swallow legacy buffer attachment errors
   }
 
   try {
     (fittest as any)._saturationFraction = simResult?.saturationFraction ?? 0;
     (fittest as any)._actionEntropy = simResult?.actionEntropy ?? 0;
-  } catch (telemetryAssignError) {
-    swallowError(telemetryAssignError);
+  } catch {
+    // Swallow telemetry assignment errors
   }
 
   // Mutable ring state (will be updated and returned)
@@ -1195,8 +1217,8 @@ export function simulateAndPostprocess(
         }
       }
     }
-  } catch (logitsPostprocessError) {
-    swallowError(logitsPostprocessError);
+  } catch {
+    // Swallow logits postprocessing errors
   }
 
   // Step 4: Optionally prune saturated outputs and emit telemetry (best-effort).
@@ -1212,8 +1234,8 @@ export function simulateAndPostprocess(
         collectHiddenToOutputConns,
       );
     }
-  } catch (saturationPruneError) {
-    swallowError(saturationPruneError);
+  } catch {
+    // Swallow saturation pruning errors
   }
 
   try {
@@ -1247,13 +1269,11 @@ export function simulateAndPostprocess(
         accumulateProfilingDuration,
       );
     }
-  } catch (telemetryDispatchError) {
-    swallowError(telemetryDispatchError);
+  } catch {
+    // Swallow telemetry dispatch errors
   }
 
-  const elapsed = doProfile
-    ? readHighResolutionTime(engineState) - startTime
-    : 0;
+  const elapsed = doProfile ? readHighResolutionTime() - startTime : 0;
   return {
     generationResult: simResult,
     simTime: elapsed,
@@ -1263,7 +1283,7 @@ export function simulateAndPostprocess(
       scratchLogitsRingW: updatedScratchLogitsRingW,
     },
   } as any;
-}
+};
 
 /**
  * Internal evolution loop that executes generations until a stop condition or cancellation.
@@ -1310,7 +1330,8 @@ export function simulateAndPostprocess(
  *   state, neat, opts, trainingSet, maze, start, exit, distMap, helpers, true, ...
  * );
  */
-export async function runEvolutionLoop(
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- engineState, neat, opts, lamarckianTrainingSet, encodedMaze, startPosition, exitPosition, distanceMap, helpers, scratchLogitsRing, scratchLogitsShared, scratchLogitsSharedW, emptyVec, scratchNodeIdx, scratchSnapshotObj, scratchSnapshotTop, getNodeIndicesByType, collectHiddenToOutputConns, constants, speciesHistoryRef all dynamic runtime types
+export const runEvolutionLoop = async (
   engineState: any,
   neat: any,
   opts: any,
@@ -1360,7 +1381,7 @@ export async function runEvolutionLoop(
     DISABLE_BALDWIN: boolean;
   },
   speciesHistoryRef: number[],
-) {
+) => {
   const { flushToFrame, fs, path, safeWrite } = helpers;
 
   // State: descriptive local names improve readability for future maintainers.
@@ -1639,4 +1660,4 @@ export async function runEvolutionLoop(
       scratchLogitsRingW: updatedScratchLogitsRingW,
     },
   } as any;
-}
+};

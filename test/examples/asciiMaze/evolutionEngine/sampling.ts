@@ -91,7 +91,9 @@ export const sampleIntoScratch = <T>(
   if (sourceLength === 0 || normalisedCount <= 0) return 0;
 
   const scratch = state.scratch;
-  let pooledBuffer = scratch.samplePool;
+  // Type assertion: pool holds T[] at runtime but declared as Array<unknown> for reuse flexibility
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let pooledBuffer = scratch.samplePool as any as T[];
   if (!Array.isArray(pooledBuffer)) {
     pooledBuffer = [];
     scratch.samplePool = pooledBuffer;
@@ -107,7 +109,7 @@ export const sampleIntoScratch = <T>(
       existingIndex < pooledBuffer.length;
       existingIndex++
     ) {
-      expandedBuffer[existingIndex] = pooledBuffer[existingIndex]!;
+      expandedBuffer[existingIndex] = pooledBuffer[existingIndex];
     }
     scratch.samplePool = expandedBuffer;
     pooledBuffer = expandedBuffer;
@@ -173,9 +175,11 @@ export const sampleSegmentIntoScratch = <T>(
   if (normalisedCount === 0) return 0;
 
   const scratch = state.scratch;
+  // Type assertion: pool holds T[] at runtime but declared as Array<unknown> for reuse flexibility
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let pooledBuffer = Array.isArray(scratch.samplePool)
-    ? (scratch.samplePool as T[])
-    : (scratch.samplePool = [] as T[]);
+    ? (scratch.samplePool as any as T[])
+    : (scratch.samplePool = [] as any as T[]);
 
   if (pooledBuffer.length < normalisedCount) {
     let newCapacity = pooledBuffer.length > 0 ? pooledBuffer.length : 1;
@@ -186,7 +190,7 @@ export const sampleSegmentIntoScratch = <T>(
       existingIndex < pooledBuffer.length;
       existingIndex++
     ) {
-      expandedBuffer[existingIndex] = pooledBuffer[existingIndex]!;
+      expandedBuffer[existingIndex] = pooledBuffer[existingIndex];
     }
     scratch.samplePool = expandedBuffer;
     pooledBuffer = expandedBuffer;

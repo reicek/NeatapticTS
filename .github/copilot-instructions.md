@@ -46,6 +46,8 @@ Strict rules to enforce (apply to any suggestion touching `src/` or `test/`)
 
 6. Lookup tables and enums: prefer a single table/enum for small fixed mappings (for example direction deltas) and helper methods like `#opposite(direction)` rather than scattered arithmetic.
 
+7. Types: avoid `any` and `unknown` in `src/` and `test/`. Use precise types or `// eslint-disable-next-line @typescript-eslint/no-explicit-any` with a short justification comment.
+
 Automated validations to run before finalizing a suggestion
 -------------------------------------------------------
 When you modify or create files under `src/` or `test/`, run (or advise running) these quick validations. If you cannot run them, still make sure your suggestion would pass them.
@@ -63,7 +65,6 @@ When you modify or create files under `src/` or `test/`, run (or advise running)
    Quick checks to run (recommended)
    --------------------------------
    - TypeScript: run `npm run build` and report pass/fail.
-   - Short-id scan: flag uses of the short identifiers regex `\b(dx|dy|d|i|a|b|c|p|o|idx|cand|tries)\b` in changed files.
    - Tests heuristic: flag test files that contain more than one `expect(` occurrence (these should be split into multiple `it()` blocks).
    - JSDoc: for new exported symbols, ensure a JSDoc block with `@param`/`@returns` exists (or flag if missing).
    - ES2023 modernization: flag legacy patterns and suggest modern equivalents (see below one-liners).
@@ -75,51 +76,9 @@ When you modify or create files under `src/` or `test/`, run (or advise running)
    npx tsc --noEmit -p tsconfig.json
    ```
 
-   Short-id scan:
-   ```powershell
-   Get-ChildItem -Path src,test -Recurse -Include *.ts,*.tsx | Select-String -Pattern '\b(dx|dy|d|i|a|b|c|p|o|idx|cand|tries)\b' -NotMatch '\b(i|j)\b' -List
-   ```
-
-   Test heuristic:
-   ```powershell
-   Get-ChildItem -Path test -Recurse -Include *.ts,*.tsx | ForEach-Object {
-      $count = (Get-Content $_.FullName | Select-String 'expect\(' -AllMatches).Matches.Count
-      if ($count -gt 1) { Write-Output "$($_.FullName): $count expects" }
-   }
-   ```
-
    What to include with a suggestion
    --------------------------------
    - A short validation summary (TypeScript: pass/fail, short-id matches: list or 0, test-expect heuristic: list or 0, JSDoc missing: list or 0).
    - ES2023: list any flagged legacy patterns and the intended replacements (e.g., `Object.assign` -> spread, `arr[arr.length-1]` -> `arr.at(-1)`, `JSON.parse(JSON.stringify())` -> `structuredClone`).
    - If any issue can't be safely fixed automatically, include a TODO comment at the top of the changed file and a one-line explanation in the patch.
-
-   ES2023 modernization scans (optional helpers)
-   -------------------------------------------
-   Object.assign to spread:
-   ```powershell
-   Get-ChildItem -Path src,test -Recurse -Include *.ts,*.tsx | Select-String -Pattern '\bObject\.assign\s*\(' -List
-   ```
-
-   Deep clone via JSON (replace with structuredClone/safeStructuredClone):
-   ```powershell
-   Get-ChildItem -Path src,test -Recurse -Include *.ts,*.tsx | Select-String -Pattern 'JSON\.parse\s*\(\s*JSON\.stringify\s*\(' -List
-   ```
-
-   CommonJS require (prefer ESM):
-   ```powershell
-   Get-ChildItem -Path src,test -Recurse -Include *.ts,*.tsx | Select-String -Pattern '\brequire\s*\(' -List
-   ```
-
-   Mutable array methods in likely-immutable flows (prefer toSorted/toReversed/toSpliced):
-   ```powershell
-   Get-ChildItem -Path src,test -Recurse -Include *.ts,*.tsx | Select-String -Pattern '\b(sort|reverse|splice)\s*\(' -List
-   ```
-
-   Last element index math (consider .at(-1)):
-   ```powershell
-   Get-ChildItem -Path src,test -Recurse -Include *.ts,*.tsx | Select-String -Pattern '\b\.length\s*-\s*1\]' -List
-   ```
-
-- A runnable patch or new file content that follows the rules above.
 

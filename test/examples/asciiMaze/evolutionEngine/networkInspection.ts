@@ -48,9 +48,9 @@ import { ensureConnFlagsCapacity } from './scratchPools';
  *   swallowError(error); // Explicit void for lint compliance
  * }
  */
-export function swallowError(error: unknown): void {
+export const swallowError = (error: unknown): void => {
   void error;
-}
+};
 
 /**
  * Normalize the incoming network into a safe node list reference.
@@ -61,9 +61,11 @@ export function swallowError(error: unknown): void {
  * @param network - Network-like object with an optional `nodes` array.
  * @returns Safe array reference (network.nodes or empty array).
  */
-function normalizeNodesArray(network: INetwork): any[] {
+// Type assertion: Network nodes are dynamically typed structures with variable properties
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const normalizeNodesArray = (network: INetwork): any[] => {
   return Array.isArray(network?.nodes) ? network.nodes : [];
-}
+};
 
 /**
  * Classify a node array into input / hidden / output buckets using pooled arrays.
@@ -91,16 +93,24 @@ function normalizeNodesArray(network: INetwork): any[] {
  * const { nodeList, inputNodes, hiddenNodes, outputNodes } = classifyNodesFromArray(state, net.nodes || []);
  * console.log(`inputs=${inputNodes.length} hidden=${hiddenNodes.length} outputs=${outputNodes.length}`);
  */
-function classifyNodesFromArray(
+const classifyNodesFromArray = (
   engineState: EngineState,
+  // Type assertion: Network nodes are dynamically typed structures with variable properties
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   nodesArray: any[],
 ): {
+  // Type assertion: Network nodes are dynamically typed structures with variable properties
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   nodeList: any[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   inputNodes: any[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   hiddenNodes: any[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   outputNodes: any[];
-} {
+} => {
   // Step 1: Normalise the incoming node list to a safe, non-null array reference.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const nodeList: any[] = Array.isArray(nodesArray) ? nodesArray : [];
 
   // Step 2: Lazily create / reuse the pooled buckets structure on the state.
@@ -145,7 +155,7 @@ function classifyNodesFromArray(
     hiddenNodes: hiddenBucket,
     outputNodes: outputBucket,
   };
-}
+};
 
 /**
  * Classify nodes into input / hidden / output buckets.
@@ -164,19 +174,24 @@ function classifyNodesFromArray(
  * const { nodeList, inputNodes, hiddenNodes, outputNodes } = classifyNodes(state, someNet);
  * console.log(`inputs=${inputNodes.length} hidden=${hiddenNodes.length} outputs=${outputNodes.length}`);
  */
-function classifyNodes(
+const classifyNodes = (
   engineState: EngineState,
   network: INetwork,
 ): {
+  // Type assertion: Network nodes are dynamically typed structures with variable properties
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   nodeList: any[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   inputNodes: any[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   hiddenNodes: any[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   outputNodes: any[];
-} {
+} => {
   // Orchestrator: normalize inputs then delegate to the fast, allocation-light classifier.
   const normalizedNodeList = normalizeNodesArray(network);
   return classifyNodesFromArray(engineState, normalizedNodeList);
-}
+};
 
 /**
  * Populate and return a pooled array of activation (squash) function names for `network.nodes`.
@@ -201,11 +216,13 @@ function classifyNodes(
  * const names = gatherActivationNames(state, someNet);
  * console.log(names.join(','));
  */
-function gatherActivationNames(
+const gatherActivationNames = (
   engineState: EngineState,
   network: INetwork,
-): string[] {
+): string[] => {
   // Step 1: Safe normalisation of the node list reference.
+  // Type assertion: Network nodes are dynamically typed structures with variable properties
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const nodesArray: any[] = Array.isArray(network?.nodes) ? network.nodes : [];
   const nodesCount = nodesArray.length;
 
@@ -254,7 +271,7 @@ function gatherActivationNames(
   // Step 5: Trim to exact length for consumer readability (non-allocating when shrinking a pre-sized array).
   pooledNames.length = nodesCount;
   return pooledNames;
-}
+};
 
 /**
  * Fast, allocation-aware detector for recurrent or gated connections.
@@ -275,10 +292,12 @@ function gatherActivationNames(
  * @example
  * const hasSpecial = detectRecurrentOrGated(state, network.connections);
  */
-function detectRecurrentOrGated(
+const detectRecurrentOrGated = (
   engineState: EngineState,
+  // Type assertion: Network connections are dynamically typed structures with variable properties
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   connectionsList: any[],
-): boolean {
+): boolean => {
   // Step 1: Validate input quickly
   if (!Array.isArray(connectionsList) || connectionsList.length === 0)
     return false;
@@ -349,7 +368,7 @@ function detectRecurrentOrGated(
     }
     return false;
   }
-}
+};
 
 /**
  * Print a structured summary of network topology to the console.
@@ -371,10 +390,10 @@ function detectRecurrentOrGated(
  * @example
  * printNetworkStructure(state, bestNetwork);
  */
-export function printNetworkStructure(
+export const printNetworkStructure = (
   engineState: EngineState,
   network: INetwork,
-): void {
+): void => {
   // Orchestrator: gather lightweight facts and delegate formatting to helpers.
   try {
     console.log('Network Structure:');
@@ -412,4 +431,4 @@ export function printNetworkStructure(
       'printNetworkStructure: failed to inspect network (partial data)',
     );
   }
-}
+};

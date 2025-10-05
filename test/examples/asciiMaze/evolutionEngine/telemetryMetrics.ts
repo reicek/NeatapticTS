@@ -5,6 +5,8 @@
  * per-call allocations while keeping the main façade lighter. All telemetry is best-effort: any
  * internal error is swallowed so that logging never impacts the evolution loop.
  */
+import type { Neat, Network } from '../../../../src/neataptic';
+import type { GenomeDetailed } from '../../../../src/neat/neat.types';
 import {
   EngineState,
   ensureVisitedHashCapacity,
@@ -71,6 +73,17 @@ let collapseStreak = 0;
 type TelemetryWriter = (message: string) => void;
 
 /**
+ * Minimal structure representing a generation evolution result.
+ * Expected to have a path property containing the movement history.
+ */
+interface GenerationResult {
+  /** Path taken by the agent (array of [x, y] coordinate pairs). */
+  path?: ReadonlyArray<[number, number]>;
+  /** Additional properties may exist but are not strongly typed. */
+  [key: string]: unknown;
+}
+
+/**
  * Parameters shared by telemetry helpers that require access to the shared state and writer.
  */
 interface TelemetryBaseParams {
@@ -87,7 +100,7 @@ interface TelemetryBaseParams {
  */
 export interface LogActionEntropyParams extends TelemetryBaseParams {
   /** Per-generation result expected to expose a `path` array (may be undefined early on). */
-  generationResult: any;
+  generationResult: GenerationResult | undefined;
 }
 
 /**
@@ -282,7 +295,7 @@ export const logLogitsAndCollapse = ({
  */
 export interface LogExplorationParams extends TelemetryBaseParams {
   /** Per-generation result exposing `path`, `progress` and optional `saturationFraction`. */
-  generationResult: any;
+  generationResult: GenerationResult | undefined;
 }
 
 /**
@@ -318,10 +331,10 @@ export const logExploration = ({
       ? exploration.ratio.toFixed(3)
       : '0.000';
     const progressStr = Number.isFinite(rawProgress)
-      ? rawProgress.toFixed(1)
+      ? (rawProgress as number).toFixed(1)
       : '0.0';
     const saturationStr = Number.isFinite(rawSaturationFraction)
-      ? rawSaturationFraction.toFixed(3)
+      ? (rawSaturationFraction as number).toFixed(3)
       : '0.000';
 
     safeWrite(
@@ -688,7 +701,7 @@ const computeDiversityMetrics = (
   let enabledWeights = 0;
   const sampleBuffer = state.scratch.samplePool ?? EMPTY_VECTOR;
   for (let sampleIndex = 0; sampleIndex < sampledLength; sampleIndex++) {
-    const genome = sampleBuffer[sampleIndex];
+    const genome = sampleBuffer[sampleIndex] as GenomeDetailed | undefined;
     const connections = Array.isArray(genome?.connections)
       ? genome.connections
       : EMPTY_VECTOR;
@@ -1473,11 +1486,11 @@ const HASH_KNUTH_32 = 2654435761 >>> 0;
  *   isProfilingDetailsEnabled, profilingStartTimestamp, accumulateProfilingDuration
  * );
  */
-export function logGenerationTelemetry(
-  engineState: any,
-  neat: any,
-  fittest: any,
-  genResult: any,
+export const logGenerationTelemetry = (
+  engineState: EngineState,
+  neat: Neat,
+  fittest: Network | undefined,
+  genResult: GenerationResult | undefined,
   generationIndex: number,
   writeLog: (msg: string) => void,
   actionDimension: number,
@@ -1485,14 +1498,14 @@ export function logGenerationTelemetry(
   reducedTelemetry: boolean,
   telemetryMinimal: boolean,
   onCollapseRecovery: () => void,
-  isProfilingDetailsEnabledFn: (state: any) => boolean,
-  profilingStartTimestampFn: (state: any) => number,
+  isProfilingDetailsEnabledFn: (state: EngineState) => boolean,
+  profilingStartTimestampFn: (state: EngineState) => number,
   accumulateProfilingDurationFn: (
-    state: any,
+    state: EngineState,
     label: string,
     duration: number,
   ) => void,
-): void {
+): void => {
   // Step 0: Global guard for minimal telemetry mode.
   if (telemetryMinimal) return;
 
@@ -1559,4 +1572,4 @@ export function logGenerationTelemetry(
       profilingStartTimestampFn(engineState) - profilingStart || 0,
     );
   }
-}
+};

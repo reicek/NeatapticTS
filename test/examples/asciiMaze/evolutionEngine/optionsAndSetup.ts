@@ -25,7 +25,6 @@ import { Network } from '../../../../src/neataptic';
 import { MazeUtils } from '../mazeUtils';
 import { FitnessEvaluator } from '../fitness';
 import {
-  INetwork,
   IFitnessEvaluationContext,
   IRunMazeEvolutionOptions,
 } from '../interfaces';
@@ -86,13 +85,15 @@ import { createNeat, seedInitialPopulation } from './neatConfiguration';
  *   (disabled) => EvolutionEngine.setDisableBaldwin(disabled)
  * );
  */
-export function normalizeRunOptions(
+export const normalizeRunOptions = (
   options: IRunMazeEvolutionOptions,
   setDeterministic: (seed: number) => void,
   setReducedTelemetry: (enabled: boolean) => void,
   setMinimalTelemetry: (enabled: boolean) => void,
   setDisableBaldwin: (disabled: boolean) => void,
-): any {
+  // Type assertion: Return type contains mixed configuration from user options
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+): any => {
   // Step 1: normalise option groups using nullish coalescing for robustness.
   const mazeConfig = options?.mazeConfig;
   const agentSimConfig = options?.agentSimConfig ?? {};
@@ -210,8 +211,10 @@ export function normalizeRunOptions(
       },
     },
     maze: mazeConfig?.maze,
+    // Type assertion: Mixed configuration object with diverse property types
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } as any;
-}
+};
 
 /**
  * Prepare maze encoding, start/exit positions, distance map, and fitness context for the run.
@@ -255,7 +258,16 @@ export function normalizeRunOptions(
  * const env = prepareEnvironmentForRun(normalizedOpts, engineState.scratch);
  * const neat = createAndSeedNeat(normalizedOpts, env.inputSize, env.outputSize, env.fitnessContext);
  */
-export function prepareEnvironmentForRun(opts: any, scratchBundle: any): any {
+export const prepareEnvironmentForRun = (
+  // Type assertion: Accepts normalized options with mixed types from normalizeRunOptions
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  opts: any,
+  // Type assertion: Scratch bundle contains dynamic pooled structures
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  scratchBundle: any,
+  // Type assertion: Returns diverse environment properties for evolution setup
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+): any => {
   // Step 1: Resolve the maze input in a null-safe way.
   const mazeSource = opts?.maze ?? opts?.mazeConfig?.maze;
 
@@ -303,7 +315,7 @@ export function prepareEnvironmentForRun(opts: any, scratchBundle: any): any {
     outputSize,
     fitnessContext,
   };
-}
+};
 
 /**
  * Create and seed a NEAT driver with normalized configuration and optional initial population.
@@ -349,14 +361,22 @@ export function prepareEnvironmentForRun(opts: any, scratchBundle: any): any {
  *   scratchSampleBuffer
  * );
  */
-export function createAndSeedNeat(
+export const createAndSeedNeat = (
+  // Type assertion: Accepts normalized options with mixed types from normalizeRunOptions
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   opts: any,
   inputSize: number,
   outputSize: number,
   fitnessContext: IFitnessEvaluationContext,
+  // Type assertion: Pooled clone buffer for network population
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   scratchPopClone: any[],
+  // Type assertion: Pooled sample buffer for selection operations
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   scratchSample: any[],
-): any {
+  // Type assertion: Returns NEAT driver and updated scratch buffers
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+): any => {
   try {
     // Step 1: Build a descriptive, bound fitness callback.
     const fitnessCallback = (network: Network) =>
@@ -405,9 +425,9 @@ export function createAndSeedNeat(
     }
 
     return { neat: neatDriver, scratchPopClone, scratchSample };
-  } catch (creationError) {
+  } catch {
     // Top-level safety net: return null driver on catastrophic failure.
     // Caller should check for null and handle gracefully.
     return { neat: null, scratchPopClone, scratchSample };
   }
-}
+};
