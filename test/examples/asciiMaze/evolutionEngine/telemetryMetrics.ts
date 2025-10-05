@@ -15,6 +15,50 @@ import {
 import { getTail, sampleIntoScratch } from './sampling';
 
 /**
+ * Runtime type for NEAT instance with dynamic properties.
+ * NEAT instances may have population, getTelemetry and other runtime methods.
+ */
+interface RuntimeNeat {
+  population?: unknown[];
+  getTelemetry?: () => unknown;
+  [key: string]: unknown;
+}
+
+/**
+ * Runtime type for network connection with dynamic properties.
+ * Connections may have enabled, weight, and other runtime-added fields.
+ */
+interface RuntimeConnection {
+  enabled?: boolean;
+  weight?: number;
+  [key: string]: unknown;
+}
+
+/**
+ * Runtime type for NEAT genome/network with dynamic properties.
+ * Genomes may have nodes, connections, score, species and runtime tracking fields.
+ */
+interface RuntimeGenome {
+  nodes?: RuntimeNode[];
+  connections?: RuntimeConnection[];
+  score?: number;
+  species?: number | null;
+  _lastStepOutputs?: unknown[];
+  [key: string]: unknown;
+}
+
+/**
+ * Runtime type for network node with dynamic properties.
+ * Nodes may have type, bias, and other runtime-added fields.
+ */
+interface RuntimeNode {
+  type?: string;
+  bias?: number;
+  [key: string]: unknown;
+}
+
+
+/**
  * Telemetry tag emitted when logging action-entropy statistics.
  * @example
  * safeWrite(`${LOG_TAG_ACTION_ENTROPY} gen=1 entropyNorm=0.500 uniqueMoves=4 pathLen=32\n`);
@@ -148,7 +192,7 @@ export const logActionEntropy = ({
  */
 export interface LogOutputBiasParams extends TelemetryBaseParams {
   /** Fittest genome/network for the generation (may be undefined early on). */
-  fittest: any;
+  fittest: unknown;
 }
 
 /**
@@ -165,7 +209,8 @@ export const logOutputBiasStats = ({
 }: LogOutputBiasParams): void => {
   if (typeof safeWrite !== 'function') return;
 
-  const nodeList = fittest?.nodes ?? [];
+  const runtimeFittest = fittest as RuntimeGenome | undefined;
+  const nodeList = runtimeFittest?.nodes ?? [];
 
   try {
     // Step 1: Populate pooled node-index scratch with output-node indices.
@@ -197,9 +242,9 @@ export const logOutputBiasStats = ({
  */
 export interface LogLogitsParams extends TelemetryBaseParams {
   /** NEAT instance passed to the anti-collapse recovery helper when triggered. */
-  neat: any;
+  neat: unknown;
   /** Fittest genome/network which may expose a `_lastStepOutputs` logits history. */
-  fittest: any;
+  fittest: unknown;
   /** Optional override for action output dimensionality (defaults to 4). */
   actionDimension?: number;
   /** Optional override for the recent history window length (defaults to {@link DEFAULT_RECENT_WINDOW}). */
@@ -208,7 +253,7 @@ export interface LogLogitsParams extends TelemetryBaseParams {
   reducedTelemetry?: boolean;
   /** Callback invoked when the collapse streak reaches the trigger threshold. */
   onCollapseRecovery: (
-    neat: any,
+    neat: unknown,
     generationIndex: number,
     safeWrite: TelemetryWriter,
   ) => void;
@@ -235,8 +280,9 @@ export const logLogitsAndCollapse = ({
 
   try {
     // Step 1: Obtain the recent logits history from the fittest candidate.
+    const runtimeFittest = fittest as RuntimeGenome | undefined;
     const logitsHistory: number[][] =
-      (fittest?._lastStepOutputs as number[][]) ?? EMPTY_VECTOR;
+      (runtimeFittest?._lastStepOutputs as number[][]) ?? EMPTY_VECTOR;
     if (logitsHistory.length === 0) return;
 
     const recentTail = getTail<number[]>(state, logitsHistory, recentWindow);
@@ -350,7 +396,7 @@ export const logExploration = ({
  */
 export interface LogDiversityParams extends TelemetryBaseParams {
   /** NEAT instance exposing a `population` array. */
-  neat: any;
+  neat: unknown;
   /** Optional override for the diversity sampling size (defaults to {@link DEFAULT_SAMPLE_SIZE}). */
   sampleSize?: number;
 }
@@ -369,10 +415,11 @@ export const logDiversity = ({
   sampleSize = DEFAULT_SAMPLE_SIZE,
 }: LogDiversityParams): void => {
   if (typeof safeWrite !== 'function') return;
-  if (!neat || !Array.isArray(neat.population)) return;
+  const runtimeNeat = neat as RuntimeNeat | undefined;
+  if (!runtimeNeat || !Array.isArray(runtimeNeat.population)) return;
 
   try {
-    const diversity = computeDiversityMetrics(state, neat, sampleSize);
+    const diversity = computeDiversityMetrics(state, runtimeNeat, sampleSize);
 
     const speciesCountStr = Number.isFinite(diversity.speciesUniqueCount)
       ? String(diversity.speciesUniqueCount)
@@ -402,11 +449,12 @@ export const logDiversity = ({
  */
 export const collectTelemetryTail = (
   state: EngineState,
-  neat: any,
+  neat: unknown,
   tailLength = 10,
 ): unknown => {
   // Step 1: Guard against missing telemetry providers so callers can skip optional handling.
-  if (!neat || typeof neat.getTelemetry !== 'function') return undefined;
+  const runtimeNeat = neat as RuntimeNeat | undefined;
+  if (!runtimeNeat || typeof runtimeNeat.getTelemetry !== 'function') return undefined;
 
   // Step 2: Normalise the desired tail length to a bounded non-negative integer.
   const normalizedTailLength = Number.isFinite(tailLength)
@@ -415,7 +463,7 @@ export const collectTelemetryTail = (
 
   try {
     // Step 3: Probe the telemetry API and re-use pooled storage for array tails when possible.
-    const telemetryRaw = neat.getTelemetry?.();
+    const telemetryRaw = runtimeNeat.getTelemetry?.();
     if (Array.isArray(telemetryRaw)) {
       return getTail(state, telemetryRaw, normalizedTailLength);
     }
@@ -427,7 +475,7 @@ export const collectTelemetryTail = (
 };
 
 /** Empty shared vector reused when a fallback empty array is required. */
-const EMPTY_VECTOR: any[] = [];
+const EMPTY_VECTOR: unknown[] = [];
 
 /** Structure describing the result of action-entropy computation. */
 interface ActionEntropyStats {
@@ -623,11 +671,11 @@ const countDistinctCoordinatesHashed = (
  */
 const computeDiversityMetrics = (
   state: EngineState,
-  neat: any,
+  neat: RuntimeNeat,
   sampleSize: number,
 ): { speciesUniqueCount: number; simpson: number; weightStd: number } => {
   // Step 1: Normalise the population reference to a safe array view.
-  const population: any[] = Array.isArray(neat?.population)
+  const population: unknown[] = Array.isArray(neat?.population)
     ? neat.population
     : EMPTY_VECTOR;
   const populationLength = population.length | 0;
@@ -652,7 +700,7 @@ const computeDiversityMetrics = (
   let speciesUniqueCount = 0;
   let individualCount = 0;
   for (let genomeIndex = 0; genomeIndex < populationLength; genomeIndex++) {
-    const genome = population[genomeIndex];
+    const genome = population[genomeIndex] as RuntimeGenome | undefined;
     const speciesId =
       (genome && genome.species != null ? genome.species : -1) | 0;
 
@@ -703,17 +751,17 @@ const computeDiversityMetrics = (
   for (let sampleIndex = 0; sampleIndex < sampledLength; sampleIndex++) {
     const genome = sampleBuffer[sampleIndex] as GenomeDetailed | undefined;
     const connections = Array.isArray(genome?.connections)
-      ? genome.connections
+      ? (genome.connections as RuntimeConnection[])
       : EMPTY_VECTOR;
     for (
       let connectionIndex = 0;
       connectionIndex < connections.length;
       connectionIndex++
     ) {
-      const connection = connections[connectionIndex];
+      const connection = connections[connectionIndex] as RuntimeConnection | undefined;
       if (connection && connection.enabled !== false) {
         const weight = Number.isFinite(connection.weight)
-          ? connection.weight
+          ? connection.weight!
           : 0;
         enabledWeights += 1;
         const delta = weight - weightMean;
@@ -736,7 +784,7 @@ const computeDiversityMetrics = (
 /** Gather indices of nodes matching `nodeType` into the pooled scratch buffer. */
 const collectNodeIndicesByType = (
   state: EngineState,
-  nodes: any[] | undefined,
+  nodes: RuntimeNode[] | undefined,
   nodeType: string,
 ): number => {
   // Step 1: Exit early when the node list is absent or already empty.
@@ -768,7 +816,7 @@ const collectNodeIndicesByType = (
 /** Compute mean, standard deviation and CSV string for output-node biases. */
 const computeOutputBiasStats = (
   state: EngineState,
-  nodes: any[],
+  nodes: RuntimeNode[],
   outputCount: number,
 ): { mean: number; std: number; biasesStr: string } => {
   // Step 1: Initialise telemetry scratch sized to the output-node count.

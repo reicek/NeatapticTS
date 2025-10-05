@@ -26,6 +26,7 @@ import {
   isProfilingDetailsEnabled,
   profilingStartTimestamp,
 } from './rngAndTiming';
+import type { NetworkNode, NetworkConnection } from '../interfaces';
 
 /** Shared empty array to avoid repeated allocations for missing/invalid arrays. */
 // Type assertion: Empty array for generic fallback when arrays are invalid
@@ -50,10 +51,32 @@ const BIAS_RESET_HALF_RANGE = 0.1;
 /** Half-range for connection weight reset in anti-collapse recovery (±0.2). */
 const CONN_WEIGHT_RESET_HALF_RANGE = 0.2;
 
+// ========== Type Definitions for Runtime Network Structures ==========
+
+/** Network genome with dynamic runtime properties */
+interface RuntimeGenome {
+  nodes?: NetworkNode[];
+  connections?: NetworkConnection[];
+  clone?: () => RuntimeGenome;
+  mutate?: (method: unknown) => void;
+  _id?: number;
+  _parentId?: number;
+  [key: string]: unknown;
+}
+
+/** Mutation operation from NEAT driver */
+interface MutationOperation {
+  length?: number;
+  [key: string]: unknown;
+}
+
+/** Typed or array-based index buffer for sorting */
+type IndexBuffer = Uint32Array | Int32Array | number[];
+
+// ========== End Type Definitions ==========
+
 /** Cached reference to mutation ops array (invalidated if driver replaces the reference). */
-// Type assertion: Mutation operations are dynamically typed from NEAT driver
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let cachedMutationOps: any[] | null = null;
+let cachedMutationOps: MutationOperation[] | null = null;
 
 /**
  * Update plateau state based on current fitness vs baseline.
@@ -578,7 +601,8 @@ export const registerClone = (
 
     // Optionally track parent ID.
     if (parentId != null) {
-      (clone as any)._parentId = parentId;
+      const runtimeClone = clone as RuntimeGenome;
+      runtimeClone._parentId = parentId;
     }
   } catch {
     // Best-effort: swallow errors.
@@ -640,7 +664,8 @@ export const createChildFromParent = (
     if (!clone && typeof parent.clone === 'function') {
       clone = parent.clone();
       if (clone) {
-        registerClone(neat, clone, (parent as any)?._id);
+        const runtimeParent = parent as RuntimeGenome;
+        registerClone(neat, clone, runtimeParent?._id);
       }
     }
 
@@ -702,7 +727,7 @@ export const getSortedIndicesByScore = (
   }
 
   // Local alias.
-  const indexScratch: any = useTypedScratch
+  const indexScratch: IndexBuffer = useTypedScratch
     ? typedScratchBuf!
     : state.scratch.sortedIndexBuffer;
 
@@ -959,13 +984,14 @@ const getMutationOps = (
 
     if (candidate && cachedMutationOps !== candidate) {
       if (Array.isArray(candidate)) {
-        cachedMutationOps = candidate as any[];
+        cachedMutationOps = candidate as MutationOperation[];
       } else if (candidate && typeof candidate === 'object') {
-        const maybeLen = (candidate as any).length;
-        if (Number.isFinite(maybeLen) && maybeLen >= 0) {
-          cachedMutationOps = candidate as any[];
+        const maybeMutation = candidate as MutationOperation;
+        const maybeLen = maybeMutation.length;
+        if (maybeLen != null && Number.isFinite(maybeLen) && maybeLen >= 0) {
+          cachedMutationOps = candidate as MutationOperation[];
         } else {
-          cachedMutationOps = Object.values(candidate as any);
+          cachedMutationOps = Object.values(candidate as Record<string, MutationOperation>);
         }
       } else {
         cachedMutationOps = EMPTY_VEC;
@@ -1010,15 +1036,15 @@ export const ensureOutputIdentity = (
       genomeIndex < populationRef.length;
       genomeIndex++
     ) {
-      const genome: any = populationRef[genomeIndex];
+      const genome = populationRef[genomeIndex] as RuntimeGenome;
       if (!genome) continue;
 
-      const nodesRef: any[] = Array.isArray(genome.nodes)
+      const nodesRef: NetworkNode[] = Array.isArray(genome.nodes)
         ? genome.nodes
         : EMPTY_VEC;
 
       for (let nodeIndex = 0; nodeIndex < nodesRef.length; nodeIndex++) {
-        const node: any = nodesRef[nodeIndex];
+        const node = nodesRef[nodeIndex];
         if (node && node.type === 'output') {
           node.squash = methods.Activation.identity;
         }
@@ -1261,29 +1287,21 @@ export const maybeExpandPopulation = (
  */
 export const pruneSaturatedHiddenOutputs = (
   state: EngineState,
-  // Type assertion: Genome with dynamic structure
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  genome: any,
-  // Type assertion: Helper function processes dynamic node structures
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  getNodeIndicesByType: (nodes: any[], nodeType: string) => number,
-  // Type assertion: Helper function processes dynamic connection structures
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  genome: unknown,
+  getNodeIndicesByType: (nodes: NetworkNode[], nodeType: string) => number,
   collectHiddenToOutputConns: (
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    hiddenNode: any,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    nodes: any[],
+    hiddenNode: NetworkNode,
+    nodes: NetworkNode[],
     outputCount: number,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ) => any[],
+  ) => NetworkConnection[],
 ) => {
   try {
     const pruneProfilingEnabled = isProfilingDetailsEnabled(state);
     const startProfile = pruneProfilingEnabled
       ? profilingStartTimestamp()
       : 0;
-    const nodesRef = genome?.nodes ?? EMPTY_VEC;
+    const runtimeGenome = genome as RuntimeGenome;
+    const nodesRef = runtimeGenome?.nodes ?? EMPTY_VEC;
 
     const outputCount = getNodeIndicesByType(nodesRef, 'output');
     const hiddenCount = getNodeIndicesByType(nodesRef, 'hidden');
@@ -1309,14 +1327,14 @@ export const pruneSaturatedHiddenOutputs = (
         let newCap = 1;
         while (newCap < needed) newCap <<= 1;
         absWeightsTA = new Float64Array(newCap);
-        state.scratch.exps = absWeightsTA as any;
+        state.scratch.exps = absWeightsTA as Float64Array;
       }
 
       // Fill absolute weights.
       const fillLimit = Math.min(outConnsLen, absWeightsTA.length);
       for (let wi = 0; wi < fillLimit; wi++) {
-        const conn = outConns[wi] as any;
-        absWeightsTA[wi] = Math.abs(conn?.weight) || 0;
+        const conn = outConns[wi] as NetworkConnection;
+        absWeightsTA[wi] = Math.abs(conn?.weight ?? 0) || 0;
       }
 
       // Welford variance.
@@ -1342,19 +1360,20 @@ export const pruneSaturatedHiddenOutputs = (
           let minAbs = Infinity;
           for (let j = 0; j < outConnsLen; j++) {
             if (indexFlags[j]) continue;
-            const candidate = outConns[j] as any;
+            const candidate = outConns[j] as NetworkConnection;
             if (!candidate || candidate.enabled === false) {
               indexFlags[j] = 1;
               continue;
             }
-            const weightAbs = Math.abs(candidate.weight) || 0;
+            const weightAbs = Math.abs(candidate.weight ?? 0) || 0;
             if (weightAbs < minAbs) {
               minAbs = weightAbs;
               minPos = j;
             }
           }
           if (minPos >= 0) {
-            (outConns[minPos] as any).enabled = false;
+            const connToDisable = outConns[minPos] as NetworkConnection;
+            connToDisable.enabled = false;
             indexFlags[minPos] = 1;
           } else {
             break;
@@ -1446,7 +1465,7 @@ export const antiCollapseRecovery = (
     let totalBiasResets = 0;
 
     for (let sampleIndex = 0; sampleIndex < sampledCount; sampleIndex++) {
-      const genome = pooledSampleBuffer[sampleIndex] as any;
+      const genome = pooledSampleBuffer[sampleIndex] as RuntimeGenome;
       if (!genome) continue;
 
       try {
@@ -1493,12 +1512,11 @@ export const antiCollapseRecovery = (
  */
 export const reinitializeGenomeOutputsAndWeights = (
   state: EngineState,
-  // Type assertion: Genome with dynamic structure
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  genome: any,
+  genome: unknown,
 ): { connReset: number; biasReset: number } => {
   try {
-    const nodesList: any[] = Array.isArray(genome?.nodes) ? genome.nodes : [];
+    const runtimeGenome = genome as RuntimeGenome;
+    const nodesList: NetworkNode[] = Array.isArray(runtimeGenome?.nodes) ? runtimeGenome.nodes : [];
 
     let sampleBuf = state.scratch.samplePool;
     if (!Array.isArray(sampleBuf)) sampleBuf = state.scratch.samplePool = [];
@@ -1535,13 +1553,13 @@ export const reinitializeGenomeOutputsAndWeights = (
 
     // Reset weights targeting outputs.
     let connReset = 0;
-    const connections: any[] = Array.isArray(genome?.connections)
-      ? genome.connections
+    const connections: NetworkConnection[] = Array.isArray(runtimeGenome?.connections)
+      ? runtimeGenome.connections
       : [];
     if (connections.length > 0 && outputCount > 0) {
-      const outputsSet = new Set<any>();
+      const outputsSet = new Set<NetworkNode>();
       for (let idx = 0; idx < outputCount; idx++) {
-        const outNode = sampleBuf[idx];
+        const outNode = sampleBuf[idx] as NetworkNode;
         if (outNode) outputsSet.add(outNode);
       }
 
@@ -1549,7 +1567,8 @@ export const reinitializeGenomeOutputsAndWeights = (
 
       for (const conn of connections) {
         try {
-          if (outputsSet.has(conn?.to)) {
+          const connTarget = conn?.to;
+          if (connTarget && outputsSet.has(connTarget)) {
             conn.weight =
               drawFastRandom(state, randomParameters) * (2 * weightHalfRange) -
               weightHalfRange;

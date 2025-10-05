@@ -175,11 +175,9 @@ export const sampleSegmentIntoScratch = <T>(
   if (normalisedCount === 0) return 0;
 
   const scratch = state.scratch;
-  // Type assertion: pool holds T[] at runtime but declared as Array<unknown> for reuse flexibility
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let pooledBuffer = Array.isArray(scratch.samplePool)
-    ? (scratch.samplePool as any as T[])
-    : (scratch.samplePool = [] as any as T[]);
+    ? (scratch.samplePool as unknown as T[])
+    : (scratch.samplePool = [] as unknown as T[]);
 
   if (pooledBuffer.length < normalisedCount) {
     let newCapacity = pooledBuffer.length > 0 ? pooledBuffer.length : 1;

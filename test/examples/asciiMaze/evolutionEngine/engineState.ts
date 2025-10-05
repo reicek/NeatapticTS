@@ -90,6 +90,8 @@ export interface EngineScratchState {
   rngCache: Float64Array;
   /** Next unread index within {@link rngCache}. */
   rngCacheIndex: number;
+  /** Allow additional properties for extensibility */
+  [key: string]: unknown;
 }
 
 /** Default logits ring length used when allocating pooled softmax buffers. */

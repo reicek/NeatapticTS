@@ -31,6 +31,49 @@ import {
 } from './evolutionEngine/evolutionLoop';
 import { printNetworkStructure } from './evolutionEngine/networkInspection';
 import { INetwork, IRunMazeEvolutionOptions } from './interfaces';
+import type Network from '../../../src/architecture/network';
+
+/**
+ * Runtime type for network node with dynamic properties.
+ * Nodes may have type, connections, and other runtime-added fields.
+ */
+interface RuntimeNetworkNode {
+  type?: string;
+  connections?: {
+    out?: RuntimeNetworkConnection[];
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+}
+
+/**
+ * Runtime type for network connection with dynamic properties.
+ * Connections track from/to nodes and enabled state.
+ */
+interface RuntimeNetworkConnection {
+  from?: RuntimeNetworkNode;
+  to?: RuntimeNetworkNode;
+  enabled?: boolean;
+  [key: string]: unknown;
+}
+
+/**
+ * Runtime type for evolution result with dynamic exit reason.
+ * Results may include exitReason from simulation outcomes.
+ */
+interface RuntimeEvolutionResult {
+  exitReason?: string;
+  [key: string]: unknown;
+}
+
+/**
+ * Runtime type for EvolutionEngine class with dynamic properties.
+ * Engine may have _speciesHistory for telemetry tracking.
+ */
+interface RuntimeEvolutionEngine {
+  _speciesHistory?: unknown[];
+  [key: string]: unknown;
+}
 
 /**
  * EvolutionEngine: Thin façade for NEAT-based maze solving.
@@ -60,7 +103,7 @@ export class EvolutionEngine {
   static #STATE: EngineState = createEngineState();
 
   /** Reusable empty vector constant to avoid ephemeral allocations from `|| []` fallbacks. */
-  static #EMPTY_VEC: any[] = [];
+  static #EMPTY_VEC: unknown[] = [];
 
   /** Number of action outputs (N,E,S,W) */
   static #ACTION_DIM = 4;
@@ -151,7 +194,7 @@ export class EvolutionEngine {
    * Populate the engine's pooled node-index scratch buffer with indices of nodes matching `type`.
    * @internal - Small helper used by various engine methods; retained for internal use.
    */
-  static #getNodeIndicesByType(nodes: any[] | undefined, type: string): number {
+  static #getNodeIndicesByType(nodes: RuntimeNetworkNode[] | undefined, type: string): number {
     if (!Array.isArray(nodes) || nodes.length === 0) return 0;
     let writeCount = 0;
     let scratch = EvolutionEngine.#STATE.scratch.nodeIndexBuffer;
@@ -175,10 +218,10 @@ export class EvolutionEngine {
    * @internal - Small helper used by network analysis methods; retained for internal use.
    */
   static #collectHiddenToOutputConns(
-    hiddenNode: any,
-    nodesRef: any[],
+    hiddenNode: RuntimeNetworkNode,
+    nodesRef: RuntimeNetworkNode[],
     outputCount: number,
-  ): any[] {
+  ): RuntimeNetworkConnection[] {
     if (
       !hiddenNode?.connections ||
       !Array.isArray(nodesRef) ||
@@ -197,7 +240,7 @@ export class EvolutionEngine {
     hiddenOutBuffer.length = 0;
     const outgoing = hiddenNode.connections.out ?? EvolutionEngine.#EMPTY_VEC;
     for (let outIndex = 0; outIndex < outgoing.length; outIndex++) {
-      const candidate = outgoing[outIndex];
+      const candidate = outgoing[outIndex] as unknown as RuntimeNetworkConnection;
       if (!candidate || candidate.enabled === false) continue;
       for (
         let outputIndex = 0;
@@ -374,7 +417,7 @@ export class EvolutionEngine {
       EvolutionEngine.#STATE.scratch.sharedLogits,
       EvolutionEngine.#STATE.scratch.sharedLogitsWriteIndex,
       EvolutionEngine.#SCRATCH_LOGITS_RING_W,
-      EvolutionEngine.#EMPTY_VEC,
+      EvolutionEngine.#EMPTY_VEC as unknown as Network[],
       EvolutionEngine.#STATE.scratch.nodeIndexBuffer,
       EvolutionEngine.#STATE.scratch.snapshotReusableObject,
       EvolutionEngine.#STATE.scratch.snapshotTopEntries,
@@ -395,7 +438,7 @@ export class EvolutionEngine {
         REDUCED_TELEMETRY: EvolutionEngine.#STATE.toggles.reducedTelemetry,
         DISABLE_BALDWIN: EvolutionEngine.#STATE.toggles.disableBaldwinPhase,
       },
-      (EvolutionEngine as any)._speciesHistory ?? EvolutionEngine.#EMPTY_VEC,
+      (EvolutionEngine as unknown as RuntimeEvolutionEngine)._speciesHistory as unknown as number[] ?? EvolutionEngine.#EMPTY_VEC as unknown as number[],
     );
 
     // Update ring state from loop result
@@ -434,7 +477,7 @@ export class EvolutionEngine {
       bestNetwork,
       bestResult,
       neat,
-      exitReason: (bestResult as any)?.exitReason ?? 'incomplete',
+      exitReason: (bestResult as unknown as RuntimeEvolutionResult).exitReason ?? 'incomplete',
     };
   }
 

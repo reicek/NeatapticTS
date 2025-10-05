@@ -22,6 +22,62 @@
  * @module evolutionEngine/evolutionLoop
  */
 
+/** Extended Window interface for maze-specific global state */
+interface MazeWindow extends Window {
+  asciiMazePaused?: boolean;
+}
+
+/** Mutable result object with exitReason field */
+interface MutableMazeResult extends IMazeRunResult {
+  exitReason?: string;
+}
+
+/** Generation outcome with profiling timings */
+interface GenerationOutcome {
+  fittest: NetworkInstance;
+  tEvolve?: number;
+  tLamarck?: number;
+}
+
+/** Simulation result with profiling and ring state */
+interface SimulationOutcome {
+  generationResult: IMazeRunResult;
+  simTime: number;
+  updatedRingState: {
+    logitsRingCap: number;
+    logitsRingShared: boolean;
+    scratchLogitsRingW: number;
+  };
+}
+
+/** Evolution loop result */
+interface EvolutionLoopResult {
+  bestNetwork: NetworkInstance | null;
+  bestResult: IMazeRunResult | undefined;
+  neat: NeatInstance;
+  completedGenerations: number;
+  totalEvolveMs: number;
+  totalLamarckMs: number;
+  totalSimMs: number;
+  updatedRingState: {
+    logitsRingCap: number;
+    logitsRingShared: boolean;
+    scratchLogitsRingW: number;
+  };
+}
+
+/** Network with dynamic runtime properties */
+interface RuntimeNetworkInstance extends NetworkInstance {
+  _lastStepOutputs?: Float32Array[];
+  _saturationFraction?: number;
+  _actionEntropy?: number;
+}
+
+/** Simulation result with step outputs */
+interface SimResultWithOutputs extends IMazeRunResult {
+  stepOutputs?: number[][];
+}
+
 import { MazeMovement } from '../mazeMovement';
 import {
   makeFlushToFrame,
@@ -55,6 +111,23 @@ import {
   profilingStartTimestamp,
   accumulateProfilingDuration,
 } from './rngAndTiming';
+import type { EngineState } from './engineState';
+import type {
+  EvolutionOptions,
+  IMazeRunResult,
+  INetwork,
+  NetworkInstance,
+  NeatInstance,
+  IDashboardManager,
+  LoopHelpers,
+  ScratchBundle,
+  SnapshotEntry,
+  ProfilingAccumulators,
+  TrainingConstants,
+  NetworkNode,
+  NetworkConnection,
+  SimulationResult,
+} from '../interfaces';
 
 /**
  * Inspect cooperative cancellation sources and annotate the provided result when cancelled.
@@ -92,10 +165,9 @@ import {
  *   break;
  * }
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- options shape varies by host environment; bestResult is dynamic run summary
 export const checkCancellation = (
-  options: any,
-  bestResult?: any,
+  options: EvolutionOptions,
+  bestResult?: IMazeRunResult,
 ): string | undefined => {
   try {
     // Step 1: Check legacy cancellation object first (if present).
@@ -158,8 +230,10 @@ export const checkCancellation = (
  * safeWrite('Starting evolution...\n');
  * await flushToFrame(); // Yield to host
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- opts shape varies by environment; scratchBundle is dynamic engine state; return type is helper object with mixed types
-export const prepareLoopHelpers = (opts: any, scratchBundle: any): any => {
+export const prepareLoopHelpers = (
+  opts: EvolutionOptions,
+  scratchBundle: ScratchBundle,
+): LoopHelpers => {
   // Step 1: Create the lightweight host-yield helper first.
   const flushToFrame = makeFlushToFrame();
 
@@ -242,14 +316,13 @@ export const prepareLoopHelpers = (opts: any, scratchBundle: any): any => {
  *   break;
  * }
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- bestResult/bestNetwork/maze/neat/dashboardManager are dynamic runtime objects
 export const checkStopConditions = async (
-  bestResult: any,
-  bestNetwork: any,
-  maze: any,
+  bestResult: IMazeRunResult | undefined,
+  bestNetwork: NetworkInstance | null,
+  maze: string[],
   completedGenerations: number,
-  neat: any,
-  dashboardManager: any,
+  neat: NeatInstance,
+  dashboardManager: IDashboardManager | undefined,
   flushToFrame: () => Promise<void>,
   minProgressToPass: number,
   autoPauseOnSolve: boolean,
@@ -269,7 +342,7 @@ export const checkStopConditions = async (
       dashboardManager?.update?.(
         maze,
         bestResult,
-        bestNetwork,
+        bestNetwork as INetwork | null,
         completedGenerations,
         neat,
       );
@@ -287,7 +360,7 @@ export const checkStopConditions = async (
     if (autoPauseOnSolve) {
       try {
         if (typeof window !== 'undefined') {
-          (window as any).asciiMazePaused = true;
+          (window as MazeWindow).asciiMazePaused = true;
           try {
             window.dispatchEvent(
               new CustomEvent('asciiMazeSolved', {
@@ -307,7 +380,7 @@ export const checkStopConditions = async (
       }
     }
 
-    if (hasBest) (bestResult as any).exitReason = 'solved';
+    if (hasBest) (bestResult as MutableMazeResult).exitReason = 'solved';
     return 'solved';
   }
 
@@ -321,7 +394,7 @@ export const checkStopConditions = async (
       dashboardManager?.update?.(
         maze,
         bestResult,
-        bestNetwork,
+        bestNetwork as INetwork | null,
         completedGenerations,
         neat,
       );
@@ -333,7 +406,7 @@ export const checkStopConditions = async (
     } catch {
       // Swallow frame flush errors
     }
-    if (hasBest) (bestResult as any).exitReason = 'stagnation';
+    if (hasBest) (bestResult as MutableMazeResult).exitReason = 'stagnation';
     return 'stagnation';
   }
 
@@ -343,7 +416,7 @@ export const checkStopConditions = async (
     isFinite(maxGenerations) &&
     completedGenerations >= maxGenerations
   ) {
-    if (hasBest) (bestResult as any).exitReason = 'maxGenerations';
+    if (hasBest) (bestResult as MutableMazeResult).exitReason = 'maxGenerations';
     return 'maxGenerations';
   }
 
@@ -405,27 +478,26 @@ export const checkStopConditions = async (
  *   scratchObj, scratchTop, collectTail, getSorted, isProfilingEnabled, profileStart, profileAccum
  * );
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- engineState, fs, pathModule, neat, snapshot data are all dynamic runtime structures
 export const persistSnapshotIfNeeded = (
-  engineState: any,
-  fs: any,
-  pathModule: any,
+  engineState: EngineState,
+  fs: { writeFileSync?: (path: string, data: string) => void } | null,
+  pathModule: { join?: (...paths: string[]) => string } | null,
   persistDir: string | undefined,
   persistTopK: number,
   completedGenerations: number,
   persistEvery: number,
-  neat: any,
+  neat: NeatInstance,
   bestFitness: number,
   simplifyMode: boolean,
   plateauCounter: number,
-  scratchSnapshotObj: any,
-  scratchSnapshotTop: any[],
-  collectTelemetryTailFn: (state: any, neat: any, count: number) => any,
-  getSortedIndicesByScoreFn: (state: any, population: any[]) => number[],
-  isProfilingDetailsEnabledFn: (state: any) => boolean,
-  profilingStartTimestampFn: (state: any) => number,
+  scratchSnapshotObj: Record<string, unknown>,
+  scratchSnapshotTop: SnapshotEntry[],
+  collectTelemetryTailFn: (state: EngineState, neat: NeatInstance, count: number) => unknown,
+  getSortedIndicesByScoreFn: (state: EngineState, population: NetworkInstance[]) => number[],
+  isProfilingDetailsEnabledFn: (state: EngineState) => boolean,
+  profilingStartTimestampFn: (state: EngineState) => number,
   accumulateProfilingDurationFn: (
-    state: any,
+    state: EngineState,
     label: string,
     duration: number,
   ) => void,
@@ -470,7 +542,7 @@ export const persistSnapshotIfNeeded = (
     snapshot.telemetryTail = collectTelemetryTailFn(engineState, neat, 5);
 
     // Step 4: Prepare the top-K minimal metadata list by reusing pooled buffer.
-    const populationRef: any[] = neat.population ?? [];
+    const populationRef: NetworkInstance[] = (neat.population as NetworkInstance[]) ?? [];
     const sortedIndices =
       getSortedIndicesByScoreFn(engineState, populationRef) ?? [];
     const normalizedTopK = Math.max(
@@ -493,7 +565,9 @@ export const persistSnapshotIfNeeded = (
       entry.nodes = genome?.nodes?.length ?? 0;
       entry.connections = genome?.connections?.length ?? 0;
       entry.json =
-        typeof genome?.toJSON === 'function' ? genome.toJSON() : undefined;
+        typeof genome?.toJSON === 'function' 
+          ? JSON.stringify(genome.toJSON()) 
+          : undefined;
     }
 
     topBuffer.length = topLimit;
@@ -554,14 +628,13 @@ export const persistSnapshotIfNeeded = (
  *   maze, genResult, fittestNetwork, gen, neatInstance, dashboard, () => new Promise(r => requestAnimationFrame(r))
  * );
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- maze, result, network, neat, dashboardManager are dynamic runtime objects
 export const updateDashboardAndMaybeFlush = async (
-  maze: any,
-  result: any,
-  network: any,
+  maze: string[],
+  result: IMazeRunResult | undefined,
+  network: NetworkInstance | null,
   completedGenerations: number,
-  neat: any,
-  dashboardManager: any,
+  neat: NeatInstance,
+  dashboardManager: IDashboardManager | undefined,
   flushToFrame?: () => Promise<void>,
 ) => {
   // Step 0: Defensive local aliases with descriptive names to improve readability in hot paths.
@@ -573,7 +646,7 @@ export const updateDashboardAndMaybeFlush = async (
   if (manager?.update && typeof manager.update === 'function') {
     try {
       // Use the stable argument order so dashboard implementations are consistent.
-      manager.update(maze, result, network, completedGenerations, neat);
+      manager.update(maze, result, network as INetwork | null, completedGenerations, neat);
     } catch {
       // Swallow dashboard errors — telemetry/UI must not break evolution.
     }
@@ -633,14 +706,13 @@ export const updateDashboardAndMaybeFlush = async (
  *   maze, result, network, gen, neatInstance, dashboard, () => new Promise(r => requestAnimationFrame(r))
  * );
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- maze, bestResult, bestNetwork, neat, dashboardManager are dynamic runtime objects
 export const updateDashboardPeriodic = async (
-  maze: any,
-  bestResult: any,
-  bestNetwork: any,
+  maze: string[],
+  bestResult: IMazeRunResult | undefined,
+  bestNetwork: NetworkInstance | null,
   completedGenerations: number,
-  neat: any,
-  dashboardManager: any,
+  neat: NeatInstance,
+  dashboardManager: IDashboardManager | undefined,
   flushToFrame?: () => Promise<void>,
 ) => {
   // Step 0: create descriptive local aliases to clarify intent and keep hot-path refs short.
@@ -660,7 +732,7 @@ export const updateDashboardPeriodic = async (
       dashboard,
       maze,
       bestResult,
-      bestNetwork,
+      bestNetwork as unknown as INetwork,
       completedGenerations,
       neat,
     );
@@ -716,16 +788,15 @@ export const updateDashboardPeriodic = async (
  *   isProfilingDetailsEnabled, getProfilingAccumulators
  * );
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- engineState and getProfilingAccumulatorsFn return dynamic profiling structures
 export const emitProfileSummary = (
-  engineState: any,
+  engineState: EngineState,
   safeWrite: (msg: string) => void,
   completedGenerations: number,
   totalEvolveMs: number,
   totalLamarckMs: number,
   totalSimMs: number,
-  isProfilingDetailsEnabledFn: (state: any) => boolean,
-  getProfilingAccumulatorsFn: (state: any) => any,
+  isProfilingDetailsEnabledFn: (state: EngineState) => boolean,
+  getProfilingAccumulatorsFn: (state: EngineState) => ProfilingAccumulators,
 ) => {
   try {
     // Step 1: Normalise inputs and guard against divide-by-zero.
@@ -768,16 +839,16 @@ export const emitProfileSummary = (
       const denom = generations || 1;
       // Defensive numeric extraction and formatting (do not allocate intermediate arrays)
       const avgTelemetry = Number.isFinite(detailAccum?.telemetry)
-        ? (detailAccum.telemetry / denom).toFixed(2)
+        ? ((detailAccum.telemetry ?? 0) / denom).toFixed(2)
         : '0.00';
       const avgSimplify = Number.isFinite(detailAccum?.simplify)
-        ? (detailAccum.simplify / denom).toFixed(2)
+        ? ((detailAccum.simplify ?? 0) / denom).toFixed(2)
         : '0.00';
       const avgSnapshot = Number.isFinite(detailAccum?.snapshot)
-        ? (detailAccum.snapshot / denom).toFixed(2)
+        ? ((detailAccum.snapshot ?? 0) / denom).toFixed(2)
         : '0.00';
       const avgPrune = Number.isFinite(detailAccum?.prune)
-        ? (detailAccum.prune / denom).toFixed(2)
+        ? ((detailAccum.prune ?? 0) / denom).toFixed(2)
         : '0.00';
       safeWrite(
         `[PROFILE_DETAIL] avgTelemetry=${avgTelemetry} avgSimplify=${avgSimplify} avgSnapshot=${avgSnapshot} avgPrune=${avgPrune}\n`,
@@ -858,13 +929,12 @@ export const emitProfileSummary = (
  *   { DEFAULT_TRAIN_ERROR: 0.01, ... }
  * );
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- engineState, neat, lamarckianTrainingSet, speciesHistoryRef, emptyVec, scratchNodeIdx, getNodeIndicesByType, constants are all dynamic runtime types
 export const runGeneration = async (
-  engineState: any,
-  neat: any,
+  engineState: EngineState,
+  neat: NeatInstance,
   doProfile: boolean,
   lamarckianIterations: number,
-  lamarckianTrainingSet: any[],
+  lamarckianTrainingSet: { input: number[]; output: number[] }[],
   lamarckianSampleSize: number | undefined,
   safeWrite: (msg: string) => void,
   completedGenerations: number,
@@ -876,17 +946,10 @@ export const runGeneration = async (
   dynamicPopExpandFactor: number,
   dynamicPopPlateauSlack: number,
   speciesHistoryRef: number[],
-  emptyVec: any[],
+  emptyVec: NetworkInstance[],
   scratchNodeIdx: Int32Array,
-  getNodeIndicesByType: (nodes: any[], type: string) => number,
-  constants: {
-    DEFAULT_TRAIN_ERROR: number;
-    DEFAULT_TRAIN_RATE: number;
-    DEFAULT_TRAIN_MOMENTUM: number;
-    DEFAULT_TRAIN_BATCH_SMALL: number;
-    DEFAULT_STD_SMALL: number;
-    DEFAULT_STD_ADJUST_MULT: number;
-  },
+  getNodeIndicesByType: (nodes: NetworkNode[], type: string) => number,
+  constants: TrainingConstants,
 ) => {
   // Step 0: Local descriptive aliases and profiling setup.
   const profileEnabled = Boolean(doProfile);
@@ -894,7 +957,7 @@ export const runGeneration = async (
   const startTime = profileEnabled ? clockNow() : 0;
 
   // Results we will populate. Keep names descriptive for readability in hot paths.
-  let fittestNetwork: any = null;
+  let fittestNetwork: NetworkInstance | null = null;
   let evolveDuration = 0;
   let lamarckDuration = 0;
 
@@ -1012,7 +1075,7 @@ export const runGeneration = async (
     fittest: fittestNetwork,
     tEvolve: evolveDuration,
     tLamarck: lamarckDuration,
-  } as any;
+  } as GenerationOutcome;
 };
 
 /**
@@ -1074,20 +1137,19 @@ export const runGeneration = async (
  *   state, bestGenome, maze, start, exit, distMap, 1000, true, console.log, 10, genIdx, neat, ...
  * );
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- engineState, fittest, encodedMaze, startPosition, exitPosition, distanceMap, neat, scratchLogitsRing, scratchLogitsShared, scratchLogitsSharedW, getNodeIndicesByType, collectHiddenToOutputConns all dynamic runtime types
 export const simulateAndPostprocess = (
-  engineState: any,
-  fittest: any,
-  encodedMaze: any,
-  startPosition: any,
-  exitPosition: any,
-  distanceMap: any,
+  engineState: EngineState,
+  fittest: NetworkInstance,
+  encodedMaze: number[][],
+  startPosition: readonly [number, number],
+  exitPosition: readonly [number, number],
+  distanceMap: number[][],
   maxSteps: number | undefined,
   doProfile: boolean,
   safeWrite: (msg: string) => void,
   logEvery: number,
   completedGenerations: number,
-  neat: any,
+  neat: NeatInstance,
   scratchLogitsRing: Float32Array[],
   logitsRingCap: number,
   logitsRingCapMax: number,
@@ -1100,25 +1162,17 @@ export const simulateAndPostprocess = (
   saturationPruneThreshold: number,
   recentWindow: number,
   reducedTelemetry: boolean,
-  getNodeIndicesByType: (nodes: any[], type: string) => number,
+  getNodeIndicesByType: (nodes: NetworkNode[], type: string) => number,
   collectHiddenToOutputConns: (
-    hiddenNode: any,
-    nodesRef: any[],
+    hiddenNode: NetworkNode,
+    nodesRef: NetworkNode[],
     outputCount: number,
-  ) => any[],
-): {
-  generationResult: any;
-  simTime: number;
-  updatedRingState: {
-    logitsRingCap: number;
-    logitsRingShared: boolean;
-    scratchLogitsRingW: number;
-  };
-} => {
+  ) => NetworkConnection[],
+): SimulationResult => {
   // Step 1: Run simulator and optionally capture elapsed time.
   const startTime = doProfile ? readHighResolutionTime() : 0;
   const simResult = MazeMovement.simulateAgent(
-    fittest,
+    fittest as unknown as INetwork,
     encodedMaze,
     startPosition,
     exitPosition,
@@ -1127,17 +1181,18 @@ export const simulateAndPostprocess = (
   );
 
   // Best-effort: attach legacy buffer refs and compact telemetry onto the genome.
+  const runtimeFittest = fittest as RuntimeNetworkInstance;
   try {
-    if (!(fittest as any)._lastStepOutputs) {
-      (fittest as any)._lastStepOutputs = scratchLogitsRing;
+    if (!runtimeFittest._lastStepOutputs) {
+      runtimeFittest._lastStepOutputs = scratchLogitsRing;
     }
   } catch {
     // Swallow legacy buffer attachment errors
   }
 
   try {
-    (fittest as any)._saturationFraction = simResult?.saturationFraction ?? 0;
-    (fittest as any)._actionEntropy = simResult?.actionEntropy ?? 0;
+    runtimeFittest._saturationFraction = simResult?.saturationFraction ?? 0;
+    runtimeFittest._actionEntropy = simResult?.actionEntropy ?? 0;
   } catch {
     // Swallow telemetry assignment errors
   }
@@ -1149,8 +1204,8 @@ export const simulateAndPostprocess = (
 
   // Step 3: If the simulator returned per-step logits, copy them into the pooled ring buffers.
   try {
-    const perStepLogits: number[][] | undefined = (simResult as any)
-      ?.stepOutputs;
+    const simResultWithOutputs = simResult as SimResultWithOutputs;
+    const perStepLogits = simResultWithOutputs?.stepOutputs;
     if (Array.isArray(perStepLogits) && perStepLogits.length > 0) {
       // Ensure the ring can hold the incoming sequence to avoid overflow resize churn.
       const logitsRingResult = ensureLogitsRingCapacity({
@@ -1282,7 +1337,7 @@ export const simulateAndPostprocess = (
       logitsRingShared: updatedLogitsRingShared,
       scratchLogitsRingW: updatedScratchLogitsRingW,
     },
-  } as any;
+  } as SimulationOutcome;
 };
 
 /**
@@ -1330,22 +1385,16 @@ export const simulateAndPostprocess = (
  *   state, neat, opts, trainingSet, maze, start, exit, distMap, helpers, true, ...
  * );
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- engineState, neat, opts, lamarckianTrainingSet, encodedMaze, startPosition, exitPosition, distanceMap, helpers, scratchLogitsRing, scratchLogitsShared, scratchLogitsSharedW, emptyVec, scratchNodeIdx, scratchSnapshotObj, scratchSnapshotTop, getNodeIndicesByType, collectHiddenToOutputConns, constants, speciesHistoryRef all dynamic runtime types
 export const runEvolutionLoop = async (
-  engineState: any,
-  neat: any,
-  opts: any,
-  lamarckianTrainingSet: any[],
-  encodedMaze: any,
-  startPosition: any,
-  exitPosition: any,
-  distanceMap: any,
-  helpers: {
-    flushToFrame: () => Promise<void>;
-    fs: any;
-    path: any;
-    safeWrite: (msg: string) => void;
-  },
+  engineState: EngineState,
+  neat: NeatInstance,
+  opts: EvolutionOptions,
+  lamarckianTrainingSet: { input: number[]; output: number[] }[],
+  encodedMaze: number[][],
+  startPosition: readonly [number, number],
+  exitPosition: readonly [number, number],
+  distanceMap: number[][],
+  helpers: LoopHelpers,
   doProfile: boolean,
   scratchLogitsRing: Float32Array[],
   logitsRingCap: number,
@@ -1355,24 +1404,18 @@ export const runEvolutionLoop = async (
   scratchLogitsShared: Float32Array | undefined,
   scratchLogitsSharedW: Int32Array | undefined,
   scratchLogitsRingW: number,
-  emptyVec: any[],
+  emptyVec: NetworkInstance[],
   scratchNodeIdx: Int32Array,
-  scratchSnapshotObj: any,
-  scratchSnapshotTop: any[],
-  getNodeIndicesByType: (nodes: any[], type: string) => number,
+  scratchSnapshotObj: Record<string, unknown>,
+  scratchSnapshotTop: SnapshotEntry[],
+  getNodeIndicesByType: (nodes: NetworkNode[], type: string) => number,
   collectHiddenToOutputConns: (
-    hiddenNode: any,
-    nodesRef: any[],
+    hiddenNode: NetworkNode,
+    nodesRef: NetworkNode[],
     outputCount: number,
-  ) => any[],
-  constants: {
-    DEFAULT_TRAIN_ERROR: number;
-    DEFAULT_TRAIN_RATE: number;
-    DEFAULT_TRAIN_MOMENTUM: number;
-    DEFAULT_TRAIN_BATCH_SMALL: number;
+  ) => NetworkConnection[],
+  constants: TrainingConstants & {
     DEFAULT_TRAIN_BATCH_LARGE: number;
-    DEFAULT_STD_SMALL: number;
-    DEFAULT_STD_ADJUST_MULT: number;
     FITTEST_TRAIN_ITERATIONS: number;
     TELEMETRY_MINIMAL: boolean;
     SATURATION_PRUNE_THRESHOLD: number;
@@ -1385,9 +1428,9 @@ export const runEvolutionLoop = async (
   const { flushToFrame, fs, path, safeWrite } = helpers;
 
   // State: descriptive local names improve readability for future maintainers.
-  let bestNetworkSoFar: any = opts.initialBestNetwork;
+  let bestNetworkSoFar: NetworkInstance | null = (opts.initialBestNetwork as NetworkInstance | null) ?? null;
   let bestFitnessSoFar = -Infinity;
-  let bestRunResult: any = undefined;
+  let bestRunResult: IMazeRunResult | undefined = undefined;
   let stagnantGenerationsCount = 0;
   let completedGenerations = 0;
   let plateauCounter = 0;
@@ -1423,18 +1466,18 @@ export const runEvolutionLoop = async (
       engineState,
       neat,
       doProfile,
-      opts.lamarckianIterations,
+      opts.lamarckianIterations ?? 0,
       lamarckianTrainingSet,
       opts.lamarckianSampleSize,
       safeWrite,
       completedGenerations,
-      opts.dynamicPopEnabled,
-      opts.dynamicPopMax,
-      opts.plateauGenerations,
+      opts.dynamicPopEnabled ?? false,
+      opts.dynamicPopMax ?? 0,
+      opts.plateauGenerations ?? 0,
       plateauCounter,
-      opts.dynamicPopExpandInterval,
-      opts.dynamicPopExpandFactor,
-      opts.dynamicPopPlateauSlack,
+      opts.dynamicPopExpandInterval ?? 0,
+      opts.dynamicPopExpandFactor ?? 0,
+      opts.dynamicPopPlateauSlack ?? 0,
       speciesHistoryRef,
       emptyVec,
       scratchNodeIdx,
@@ -1480,19 +1523,19 @@ export const runEvolutionLoop = async (
       fitnessScore,
       lastBestFitnessForPlateau,
       plateauCounter,
-      opts.plateauImprovementThreshold,
+      opts.plateauImprovementThreshold ?? 1e-6,
     ));
 
     ({ simplifyMode, simplifyRemaining, plateauCounter } = handleSimplifyState(
       engineState,
       neat,
       plateauCounter,
-      opts.plateauGenerations,
-      opts.simplifyDuration,
+      opts.plateauGenerations ?? 0,
+      opts.simplifyDuration ?? 0,
       simplifyMode,
       simplifyRemaining,
-      opts.simplifyStrategy,
-      opts.simplifyPruneFraction,
+      opts.simplifyStrategy ?? 'weakWeight',
+      opts.simplifyPruneFraction ?? 0,
     ));
 
     // Step 5: simulate the fittest genome and optionally capture sim time
@@ -1575,12 +1618,12 @@ export const runEvolutionLoop = async (
     // Step 7: persist snapshot if configured (best-effort)
     persistSnapshotIfNeeded(
       engineState,
-      fs,
-      path,
+      fs as { writeFileSync?: (path: string, data: string) => void } | null,
+      path as { join?: (...paths: string[]) => string } | null,
       opts.persistDir,
-      opts.persistTopK,
+      opts.persistTopK ?? 0,
       completedGenerations,
-      opts.persistEvery,
+      opts.persistEvery ?? 0,
       neat,
       bestFitnessSoFar,
       simplifyMode,
@@ -1603,20 +1646,20 @@ export const runEvolutionLoop = async (
       neat,
       opts.reportingConfig?.dashboardManager,
       flushToFrame,
-      opts.minProgressToPass,
-      opts.autoPauseOnSolve,
-      opts.stopOnlyOnSolve,
+      opts.minProgressToPass ?? 0,
+      opts.autoPauseOnSolve ?? false,
+      opts.stopOnlyOnSolve ?? false,
       stagnantGenerationsCount,
-      opts.maxStagnantGenerations,
-      opts.maxGenerations,
+      opts.maxStagnantGenerations ?? 0,
+      opts.maxGenerations ?? 0,
     );
     if (stopReason) break;
 
     // Step 9: periodic memory compaction and scratch shrinking
     if (
-      opts.memoryCompactionInterval > 0 &&
+      (opts.memoryCompactionInterval ?? 0) > 0 &&
       completedGenerations - lastCompactionGeneration >=
-        opts.memoryCompactionInterval
+        (opts.memoryCompactionInterval ?? 0)
     ) {
       const removedDisabled = compactPopulation(engineState, neat);
       if (removedDisabled > 0) {
@@ -1659,5 +1702,5 @@ export const runEvolutionLoop = async (
       logitsRingShared: updatedLogitsRingShared,
       scratchLogitsRingW: updatedScratchLogitsRingW,
     },
-  } as any;
+  } as EvolutionLoopResult;
 };

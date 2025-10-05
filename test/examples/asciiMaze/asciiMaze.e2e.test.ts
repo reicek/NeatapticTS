@@ -13,7 +13,7 @@ import { NetworkRefinement } from './networkRefinement';
  * especially in environments where `console.log` might be mocked or redirected.
  * @param args - The arguments to log, which will be joined into a single string.
  */
-const forceLog = (...args: any[]): void => {
+const forceLog = (...args: unknown[]): void => {
   // Step 1: Join all arguments into a single string, separated by spaces, and add a newline character.
   const message = args.join(' ') + '\n';
   // Step 2: Write the formatted message directly to the standard output stream.
@@ -93,7 +93,7 @@ describe('ASCII Maze Solver using Neuro-Evolution', () => {
     // Store the original console.debug implementation.
     const origDebug = console.debug;
     // Override console.debug to filter out specific dashboard messages.
-    console.debug = (...args: any[]) => {
+    console.debug = (...args: unknown[]) => {
       if (args.some((a) => typeof a === 'string' && a.includes('[DPDBG-')))
         return;
       // Call the original debug function if it exists.
