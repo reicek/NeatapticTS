@@ -405,7 +405,7 @@ const sortCandidatesByStrategy = (
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   candidateConnections: any[],
   strategyKey: string,
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): any[] => {
   // Step 1: Validate input.
   if (!Array.isArray(candidateConnections) || candidateConnections.length === 0)

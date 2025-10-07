@@ -416,7 +416,8 @@ export const checkStopConditions = async (
     isFinite(maxGenerations) &&
     completedGenerations >= maxGenerations
   ) {
-    if (hasBest) (bestResult as MutableMazeResult).exitReason = 'maxGenerations';
+    if (hasBest)
+      (bestResult as MutableMazeResult).exitReason = 'maxGenerations';
     return 'maxGenerations';
   }
 
@@ -492,8 +493,15 @@ export const persistSnapshotIfNeeded = (
   plateauCounter: number,
   scratchSnapshotObj: Record<string, unknown>,
   scratchSnapshotTop: SnapshotEntry[],
-  collectTelemetryTailFn: (state: EngineState, neat: NeatInstance, count: number) => unknown,
-  getSortedIndicesByScoreFn: (state: EngineState, population: NetworkInstance[]) => number[],
+  collectTelemetryTailFn: (
+    state: EngineState,
+    neat: NeatInstance,
+    count: number,
+  ) => unknown,
+  getSortedIndicesByScoreFn: (
+    state: EngineState,
+    population: NetworkInstance[],
+  ) => number[],
   isProfilingDetailsEnabledFn: (state: EngineState) => boolean,
   profilingStartTimestampFn: (state: EngineState) => number,
   accumulateProfilingDurationFn: (
@@ -542,7 +550,8 @@ export const persistSnapshotIfNeeded = (
     snapshot.telemetryTail = collectTelemetryTailFn(engineState, neat, 5);
 
     // Step 4: Prepare the top-K minimal metadata list by reusing pooled buffer.
-    const populationRef: NetworkInstance[] = (neat.population as NetworkInstance[]) ?? [];
+    const populationRef: NetworkInstance[] =
+      (neat.population as NetworkInstance[]) ?? [];
     const sortedIndices =
       getSortedIndicesByScoreFn(engineState, populationRef) ?? [];
     const normalizedTopK = Math.max(
@@ -565,8 +574,8 @@ export const persistSnapshotIfNeeded = (
       entry.nodes = genome?.nodes?.length ?? 0;
       entry.connections = genome?.connections?.length ?? 0;
       entry.json =
-        typeof genome?.toJSON === 'function' 
-          ? JSON.stringify(genome.toJSON()) 
+        typeof genome?.toJSON === 'function'
+          ? JSON.stringify(genome.toJSON())
           : undefined;
     }
 
@@ -646,7 +655,13 @@ export const updateDashboardAndMaybeFlush = async (
   if (manager?.update && typeof manager.update === 'function') {
     try {
       // Use the stable argument order so dashboard implementations are consistent.
-      manager.update(maze, result, network as INetwork | null, completedGenerations, neat);
+      manager.update(
+        maze,
+        result,
+        network as INetwork | null,
+        completedGenerations,
+        neat,
+      );
     } catch {
       // Swallow dashboard errors — telemetry/UI must not break evolution.
     }
@@ -1428,7 +1443,8 @@ export const runEvolutionLoop = async (
   const { flushToFrame, fs, path, safeWrite } = helpers;
 
   // State: descriptive local names improve readability for future maintainers.
-  let bestNetworkSoFar: NetworkInstance | null = (opts.initialBestNetwork as NetworkInstance | null) ?? null;
+  let bestNetworkSoFar: NetworkInstance | null =
+    (opts.initialBestNetwork as NetworkInstance | null) ?? null;
   let bestFitnessSoFar = -Infinity;
   let bestRunResult: IMazeRunResult | undefined = undefined;
   let stagnantGenerationsCount = 0;

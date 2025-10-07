@@ -185,7 +185,7 @@ export interface AsciiMazeRunHandle {
  */
 export const start = async (
   container: string | HTMLElement = DEFAULT_CONTAINER_ID,
-  opts: { signal?: AbortSignal} = {},
+  opts: { signal?: AbortSignal } = {},
 ): Promise<AsciiMazeRunHandle> => {
   // Step 0: Resolve host elements & loggers
   const hostElement =
@@ -300,13 +300,13 @@ export const start = async (
       }
 
       // Case: environment supports AbortSignal.any (modern browsers / Node 20+)
-      case typeof (AbortSignal as unknown as RuntimeAbortSignalConstructor).any === 'function': {
+      case typeof (AbortSignal as unknown as RuntimeAbortSignalConstructor)
+        .any === 'function': {
         try {
           // Prefer native composition when available for clarity & performance.
-          const composedSignal = (AbortSignal as unknown as RuntimeAbortSignalConstructor).any!([
-            externalSignal as unknown as AbortSignal,
-            internalSignal
-          ]);
+          const composedSignal = (
+            AbortSignal as unknown as RuntimeAbortSignalConstructor
+          ).any!([externalSignal as unknown as AbortSignal, internalSignal]);
           return composedSignal;
         } catch {
           // If native composition throws, intentionally fall through to manual
@@ -537,7 +537,11 @@ export const start = async (
     isRunning: () => running && !cancelled && !combinedSignal.aborted,
     done: Promise.resolve(donePromise).catch(() => {}) as Promise<void>,
     onTelemetry: (telemetryCallback) =>
-      telemetryHub.add(telemetryCallback as unknown as (payload: Record<string, unknown>) => void),
+      telemetryHub.add(
+        telemetryCallback as unknown as (
+          payload: Record<string, unknown>,
+        ) => void,
+      ),
     getTelemetry: () => runtimeDashboard.getLastTelemetry?.(),
   };
 
@@ -547,7 +551,10 @@ export const start = async (
 
 // UMD-style compatibility + deprecated global.
 // If loaded directly (no module loader), expose window.asciiMaze.start() and legacy asciiMazeStart().
-if (typeof window !== 'undefined' && (window as unknown as RuntimeWindow).document) {
+if (
+  typeof window !== 'undefined' &&
+  (window as unknown as RuntimeWindow).document
+) {
   const globalWindow = window as unknown as RuntimeWindow;
   globalWindow.asciiMaze = globalWindow.asciiMaze || {};
   globalWindow.asciiMaze.start = start;

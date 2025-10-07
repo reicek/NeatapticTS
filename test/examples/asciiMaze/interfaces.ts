@@ -1154,7 +1154,8 @@ export interface IEvolutionFunctionResult {
 export type NeatInstance = import('../../../src/neat').default;
 
 /** Type for Network class instance from neataptic library */
-export type NetworkInstance = import('../../../src/architecture/network').default;
+export type NetworkInstance =
+  import('../../../src/architecture/network').default;
 
 /** Encoded maze representation with cell values */
 export interface EncodedMaze {
@@ -1411,7 +1412,10 @@ export interface NetworkNode {
   /** Node bias */
   bias?: number;
   /** Node activation function */
-  squash?: string | { name?: string } | ((x: number, derivate?: boolean) => number);
+  squash?:
+    | string
+    | { name?: string }
+    | ((x: number, derivate?: boolean) => number);
   /** Incoming connections */
   connections?: {
     in?: NetworkConnection[];
@@ -1486,4 +1490,3 @@ export interface SimulationResult {
   /** Updated ring state */
   updatedRingState: LogitsRingState;
 }
-

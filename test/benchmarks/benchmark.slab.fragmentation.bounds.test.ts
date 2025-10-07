@@ -5,15 +5,24 @@
 import Network from '../../src/architecture/network';
 import { memoryStats } from '../../src/utils/memory';
 import { config } from '../../src/config';
+import type Node from '../../src/architecture/node';
+
+/**
+ * Runtime interface for Network with slab management methods.
+ */
+interface RuntimeNetwork {
+  _slabDirty: boolean;
+  getConnectionSlab: () => void;
+}
 
 describe('benchmark.slab.fragmentation.bounds', () => {
   it('fragmentationPct remains within bounds after growth/prune/regrow cycles', () => {
     config.enableNodePooling = false;
     const net = new Network(5, 2, { enforceAcyclic: true });
     const fragments: number[] = [];
-    const record = () => {
-      (net as any)._slabDirty = true;
-      (net as any).getConnectionSlab();
+    const record = (): void => {
+      (net as unknown as RuntimeNetwork)._slabDirty = true;
+      (net as unknown as RuntimeNetwork).getConnectionSlab();
       const frag = memoryStats(net).slabs.fragmentationPct;
       if (frag !== null) fragments.push(frag);
     };
@@ -24,7 +33,7 @@ describe('benchmark.slab.fragmentation.bounds', () => {
       record();
     }
     // Prune some hidden nodes
-    const hidden = net.nodes.filter((n: any) => n.type === 'hidden');
+    const hidden = net.nodes.filter((n: Node) => n.type === 'hidden');
     for (let i = 0; i < hidden.length; i += 3) net.remove(hidden[i]);
     record();
     // Regrow a bit

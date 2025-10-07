@@ -3,16 +3,52 @@ import Node from '../../src/architecture/node';
 import Group from '../../src/architecture/group';
 import Connection from '../../src/architecture/connection';
 import * as methods from '../../src/methods/methods';
-import { config } from '../../src/config';
 
 // Retry failed tests
 jest.retryTimes(2, { logErrorsBeforeRetry: true });
+
+/**
+ * Runtime interface for Layer with private methods accessible in tests.
+ */
+interface RuntimeLayer {
+  isGroup: (nodeOrGroup: Node | Group) => boolean;
+  [key: string]: unknown;
+}
+
+/**
+ * Runtime interface for Layer with conv1d configuration.
+ */
+interface LayerWithConv1d {
+  conv1d: {
+    kernelSize: number;
+    stride: number;
+    padding: number;
+  };
+}
+
+/**
+ * Runtime interface for Layer with attention configuration.
+ */
+interface LayerWithAttention {
+  attention: {
+    heads: number;
+  };
+}
+
+/**
+ * Runtime interface for Node with dynamic properties used in LSTM tests.
+ */
+interface RuntimeNode {
+  mask: number;
+  activation: number;
+  [key: string]: unknown;
+}
 
 // Helper function to check group connectivity
 const isGroupConnectedTo = (
   groupA: Group,
   groupB: Group,
-  method?: any,
+  method?: unknown,
 ): boolean => {
   if (!groupA || !groupB || !groupA.nodes || !groupB.nodes) return false; // Basic validation
 
@@ -49,8 +85,6 @@ const isGroupConnectedTo = (
 };
 
 describe('Layer', () => {
-  const epsilon = 1e-9; // Tolerance for float comparisons
-
   describe('Constructor', () => {
     let layer: Layer;
 
@@ -408,7 +442,6 @@ describe('Layer', () => {
 
       it('should not change properties if not provided in values object', () => {
         // Arrange
-        const initialBiases = layer.nodes.map((node) => node.bias);
         const initialSquashes = layer.nodes.map((node) => node.squash);
         const initialTypes = layer.nodes.map((node) => node.type);
         // Act
@@ -1142,7 +1175,9 @@ describe('Layer', () => {
       it('should create a layer with memoryDepth groups in nodes array', () => {
         expect(layer.nodes).toHaveLength(memoryDepth);
         layer.nodes.forEach((nodeOrGroup) => {
-          expect((layer as any).isGroup(nodeOrGroup)).toBe(true);
+          expect((layer as unknown as RuntimeLayer).isGroup(nodeOrGroup)).toBe(
+            true,
+          );
           expect((nodeOrGroup as unknown as Group).nodes).toHaveLength(size);
         });
       });
@@ -1333,7 +1368,7 @@ describe('Layer', () => {
         expect(layer.nodes).toHaveLength(size);
         expect(layer.output?.nodes).toHaveLength(size);
         // Should store conv params
-        expect((layer as any).conv1d).toEqual({
+        expect((layer as unknown as LayerWithConv1d).conv1d).toEqual({
           kernelSize: kernel,
           stride: 1,
           padding: 0,
@@ -1348,7 +1383,9 @@ describe('Layer', () => {
         const layer = Layer.attention(size, heads);
         expect(layer.nodes).toHaveLength(size);
         expect(layer.output?.nodes).toHaveLength(size);
-        expect((layer as any).attention).toEqual({ heads });
+        expect((layer as unknown as LayerWithAttention).attention).toEqual({
+          heads,
+        });
         // Activation averages input
         const input = [2, 4, 6];
         expect(layer.activate(input)).toEqual([4, 4, 4]);
@@ -1365,37 +1402,66 @@ describe('Layer', () => {
 
     it('should return true for a Group instance', () => {
       const group = new Group(1);
-      expect((layer as any).isGroup(group)).toBe(true);
+      expect((layer as unknown as RuntimeLayer).isGroup(group)).toBe(true);
     });
 
     it('should return false for a Node instance', () => {
       const node = new Node();
-      expect((layer as any).isGroup(node)).toBe(false);
+      expect((layer as unknown as RuntimeLayer).isGroup(node)).toBe(false);
     });
 
     it('should return false for a plain object', () => {
       const obj = { nodes: [], set: () => {} };
-      expect((layer as any).isGroup(obj)).toBe(true);
+      expect(
+        (layer as unknown as RuntimeLayer).isGroup(obj as unknown as Group),
+      ).toBe(true);
 
       const objMissingNodes = { set: () => {} };
-      expect((layer as any).isGroup(objMissingNodes)).toBe(false);
+      expect(
+        (layer as unknown as RuntimeLayer).isGroup(
+          objMissingNodes as unknown as Group,
+        ),
+      ).toBe(false);
 
       const objMissingSet = { nodes: [] };
-      expect((layer as any).isGroup(objMissingSet)).toBe(false);
+      expect(
+        (layer as unknown as RuntimeLayer).isGroup(
+          objMissingSet as unknown as Group,
+        ),
+      ).toBe(false);
+      expect(
+        (layer as unknown as RuntimeLayer).isGroup(
+          objMissingSet as unknown as Group,
+        ),
+      ).toBe(false);
     });
 
     it('should return false for null', () => {
-      expect((layer as any).isGroup(null)).toBe(false);
+      expect(
+        (layer as unknown as RuntimeLayer).isGroup(null as unknown as Group),
+      ).toBe(false);
     });
 
     it('should return false for undefined', () => {
-      expect((layer as any).isGroup(undefined)).toBe(false);
+      expect(
+        (layer as unknown as RuntimeLayer).isGroup(
+          undefined as unknown as Group,
+        ),
+      ).toBe(false);
     });
 
     it('should return false for primitive types', () => {
-      expect((layer as any).isGroup(123)).toBe(false);
-      expect((layer as any).isGroup('string')).toBe(false);
-      expect((layer as any).isGroup(true)).toBe(false);
+      expect(
+        (layer as unknown as RuntimeLayer).isGroup(123 as unknown as Group),
+      ).toBe(false);
+      expect(
+        (layer as unknown as RuntimeLayer).isGroup(
+          'string' as unknown as Group,
+        ),
+      ).toBe(false);
+      expect(
+        (layer as unknown as RuntimeLayer).isGroup(true as unknown as Group),
+      ).toBe(false);
     });
   });
 
@@ -1404,15 +1470,15 @@ describe('Layer', () => {
       it('all masks are the same (either all 0 or all 1)', () => {
         // Arrange
         const size = 8;
-        const layer = new (require('../../src/architecture/layer').default)();
+        const layer = new Layer();
         for (let i = 0; i < size; i++) {
-          layer.nodes.push(
-            new (require('../../src/architecture/node').default)('hidden'),
-          );
+          layer.nodes.push(new Node('hidden'));
         }
         layer.dropout = 0.7;
         // Act
-        const masks = layer.nodes.map((n: any) => n.mask);
+        const masks = layer.nodes.map(
+          (n: Node) => (n as unknown as RuntimeNode).mask,
+        );
         // Assert
         expect(new Set(masks).size).toBe(1);
       });
@@ -1422,18 +1488,18 @@ describe('Layer', () => {
       it('all masks are 1 after inference', () => {
         // Arrange
         const size = 8;
-        const layer = new (require('../../src/architecture/layer').default)();
+        const layer = new Layer();
         for (let i = 0; i < size; i++) {
-          layer.nodes.push(
-            new (require('../../src/architecture/node').default)('hidden'),
-          );
+          layer.nodes.push(new Node('hidden'));
         }
         layer.dropout = 0.7;
         // Simulate training
         layer.activate(undefined, true);
         // Act
         layer.activate(undefined, false);
-        const masks = layer.nodes.map((n: any) => n.mask);
+        const masks = layer.nodes.map(
+          (n: Node) => (n as unknown as RuntimeNode).mask,
+        );
         // Assert
         masks.forEach((m: number) => expect(m).toBe(1));
       });
@@ -1443,18 +1509,18 @@ describe('Layer', () => {
       it('all activations are valid numbers after inference', () => {
         // Arrange
         const size = 8;
-        const layer = new (require('../../src/architecture/layer').default)();
+        const layer = new Layer();
         for (let i = 0; i < size; i++) {
-          layer.nodes.push(
-            new (require('../../src/architecture/node').default)('hidden'),
-          );
+          layer.nodes.push(new Node('hidden'));
         }
         layer.dropout = 0.7;
         // Simulate training
         layer.activate(undefined, true);
         // Act
         layer.activate(undefined, false);
-        const activations = layer.nodes.map((n: any) => n.activation);
+        const activations = layer.nodes.map(
+          (n: Node) => (n as unknown as RuntimeNode).activation,
+        );
         // Assert
         activations.forEach((a: number) => expect(typeof a).toBe('number'));
       });

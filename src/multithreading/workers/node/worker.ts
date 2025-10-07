@@ -35,36 +35,44 @@ const F = Multi.activations;
  *   - `states`: Serialized state values for the network.
  *   - `conns`: Serialized connection data for the network.
  */
-process.on(
-  'message',
-  (e: {
-    set?: any;
-    cost?: string;
-    activations?: any;
-    states?: any;
-    conns?: any;
-  }) => {
-    if (typeof e.set === 'undefined') {
-      // Deserialize the activations, states, and connections from the message
-      const { activations: A, states: S, conns: data } = e;
+/**
+ * Interface for messages sent to the worker process.
+ */
+interface WorkerMessage {
+  set?: number[];
+  cost?: string;
+  activations?: number[];
+  states?: number[];
+  conns?: number[];
+}
 
-      // Evaluate the network using the serialized dataset and send the result back
-      const result = Multi.testSerializedSet(set, cost, A, S, data, F);
+process.on('message', (e: WorkerMessage) => {
+  if (typeof e.set === 'undefined') {
+    // Deserialize the activations, states, and connections from the message
+    const { activations: A, states: S, conns: data } = e;
 
-      // Send the evaluation result back to the parent process
-      if (process.send) {
-        process.send(result);
-      }
-    } else {
-      // Initialize the cost function using the provided name
-      // The cost function is retrieved from the `methods.Cost` object
-      cost = methods.Cost[e.cost as keyof typeof methods.Cost] as (
-        expected: number[],
-        actual: number[],
-      ) => number;
-
-      // Deserialize the dataset from the message and store it in the `set` variable
-      set = Multi.deserializeDataSet(e.set);
+    // Guard: Ensure all required data is present
+    if (!A || !S || !data) {
+      console.error('Missing required data for network evaluation');
+      return;
     }
-  },
-);
+
+    // Evaluate the network using the serialized dataset and send the result back
+    const result = Multi.testSerializedSet(set, cost, A, S, data, F);
+
+    // Send the evaluation result back to the parent process
+    if (process.send) {
+      process.send(result);
+    }
+  } else {
+    // Initialize the cost function using the provided name
+    // The cost function is retrieved from the `methods.Cost` object
+    cost = methods.Cost[e.cost as keyof typeof methods.Cost] as (
+      expected: number[],
+      actual: number[],
+    ) => number;
+
+    // Deserialize the dataset from the message and store it in the `set` variable
+    set = Multi.deserializeDataSet(e.set);
+  }
+});

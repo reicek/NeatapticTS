@@ -615,7 +615,9 @@ export class DashboardManager implements IDashboardManager {
       const neatInstance = neat as NeatInstance;
       const noveltyArchiveSize = this.#safeInvoke<number | null>(
         () =>
-          neatInstance?.getNoveltyArchive ? neatInstance.getNoveltyArchive()?.length ?? null : null,
+          neatInstance?.getNoveltyArchive
+            ? (neatInstance.getNoveltyArchive()?.length ?? null)
+            : null,
         null,
       );
 
@@ -1017,7 +1019,11 @@ export class DashboardManager implements IDashboardManager {
   #computeTopSpeciesSizes(neat?: unknown): number[] | null {
     const neatInstance = neat as NeatInstance;
     // Step 1: Guard for absence / emptiness
-    if (!Array.isArray(neatInstance?.species) || neatInstance.species.length === 0) return null;
+    if (
+      !Array.isArray(neatInstance?.species) ||
+      neatInstance.species.length === 0
+    )
+      return null;
 
     // Step 2: Populate scratch with member counts
     const speciesSizesScratch = this.#scratch.speciesSizes;
@@ -1440,7 +1446,10 @@ export class DashboardManager implements IDashboardManager {
     try {
       // Favor the original API shape: archiveFn(payload, { prepend: true }). Use a permissive type cast
       // because test harnesses may provide different shapes.
-      const archiveFnCast = this.#archiveFn as (payload: string, options?: { prepend?: boolean }) => void;
+      const archiveFnCast = this.#archiveFn as (
+        payload: string,
+        options?: { prepend?: boolean },
+      ) => void;
       archiveFnCast(blockLines.join('\n'), { prepend: true });
 
       // Step 5: Clear the accumulator in-place to allow caller reuse (reduces GC pressure in tests).
@@ -1622,7 +1631,11 @@ export class DashboardManager implements IDashboardManager {
     // Step 3: Flat node list representation
     const flatNodes = networkAny.nodes;
     if (Array.isArray(flatNodes)) {
-      type NodeWithType = { type?: string; connections?: { in?: Array<{ from?: unknown }> }; [key: string]: unknown };
+      type NodeWithType = {
+        type?: string;
+        connections?: { in?: Array<{ from?: unknown }> };
+        [key: string]: unknown;
+      };
       const inputNodes = flatNodes.filter(
         (nodeItem: unknown) => (nodeItem as NodeWithType).type === 'input',
       );
@@ -1854,11 +1867,15 @@ export class DashboardManager implements IDashboardManager {
         } catch {
           // Swallow postMessage errors
         }
-        interface AsciiMazeWindow extends Window { asciiMazeLastTelemetry?: unknown }
+        interface AsciiMazeWindow extends Window {
+          asciiMazeLastTelemetry?: unknown;
+        }
         (window as AsciiMazeWindow).asciiMazeLastTelemetry = payload; // polling surface
       }
       try {
-        interface DashboardWithHook { _telemetryHook?: (payload: unknown) => void }
+        interface DashboardWithHook {
+          _telemetryHook?: (payload: unknown) => void;
+        }
         const dashboardWithHook = this as unknown as DashboardWithHook;
         if (dashboardWithHook._telemetryHook) {
           dashboardWithHook._telemetryHook(payload);

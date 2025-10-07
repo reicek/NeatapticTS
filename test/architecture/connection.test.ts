@@ -2,6 +2,17 @@ import { suppressConsoleOutput } from '../utils/console-helper';
 import Connection from '../../src/architecture/connection';
 import Node from '../../src/architecture/node';
 
+/**
+ * Runtime interface for Connection JSON serialization result.
+ */
+interface ConnectionJSON {
+  weight: number;
+  from: number;
+  to: number;
+  gain: number;
+  gater?: number;
+}
+
 describe('Connection', () => {
   let fromNode: Node;
   let toNode: Node;
@@ -144,7 +155,7 @@ describe('Connection', () => {
       it('does not throw when setting gater to an invalid value', () => {
         // Arrange & Act & Assert
         expect(() => {
-          // @ts-expect-error
+          // @ts-expect-error -- Testing runtime error handling for invalid gater assignment
           connection.gater = 12345;
         }).not.toThrow();
       });
@@ -154,7 +165,7 @@ describe('Connection', () => {
   describe('toJSON()', () => {
     describe('Scenario: simple connection', () => {
       let connection: Connection;
-      let json: any;
+      let json: ConnectionJSON;
       const weight = -0.3;
 
       beforeEach(() => {
@@ -192,7 +203,7 @@ describe('Connection', () => {
 
     describe('Scenario: connection with gater', () => {
       let connection: Connection;
-      let json: any;
+      let json: ConnectionJSON;
       const weight = 0.6;
 
       beforeEach(() => {

@@ -59,7 +59,11 @@ export interface EngineScratchState {
   /** Activation name buffer reused by inspection routines. */
   activationNameBuffer: string[];
   /** Node classification buckets reused by inspection routines. */
-  nodeBuckets: [Record<string, unknown>[], Record<string, unknown>[], Record<string, unknown>[]];
+  nodeBuckets: [
+    Record<string, unknown>[],
+    Record<string, unknown>[],
+    Record<string, unknown>[],
+  ];
   /** Top entry objects reused when generating snapshots. */
   snapshotTopEntries: Record<string, unknown>[];
   /** Snapshot metadata object reused per persistence write. */

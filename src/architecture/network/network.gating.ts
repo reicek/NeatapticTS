@@ -5,6 +5,13 @@ import mutation from '../../methods/mutation';
 import { config } from '../../config';
 
 /**
+ * Internal Network properties accessed during gating operations.
+ */
+interface NetworkGatingProps {
+  _nodeIndexDirty?: boolean;
+}
+
+/**
  * Gating & node removal utilities for {@link Network}.
  *
  * Gating concept:
@@ -179,7 +186,7 @@ export function removeNode(this: Network, node: Node) {
 
   // Final removal & cache invalidation (indices may be used by fast lookup structures elsewhere).
   this.nodes.splice(idx, 1);
-  (this as any)._nodeIndexDirty = true;
+  (this as unknown as NetworkGatingProps)._nodeIndexDirty = true;
 }
 
 // Only functions exported; keep module shape predictable for tree-shaking / documentation tooling.

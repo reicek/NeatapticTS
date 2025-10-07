@@ -8,13 +8,31 @@ import Connection from '../../src/architecture/connection';
 import * as methods from '../../src/methods/methods';
 import { config } from '../../src/config';
 
+/**
+ * Type for activation/squash functions
+ */
+type SquashFunction = (x: number, derivate?: boolean) => number;
+
+/**
+ * Runtime interface for Group JSON serialization result.
+ */
+interface GroupJSON {
+  size: number;
+  nodeIndices: (number | undefined)[];
+  connections: {
+    in: number;
+    out: number;
+    self: number;
+  };
+}
+
 // Retry failed tests
 jest.retryTimes(2, { logErrorsBeforeRetry: true });
 
 beforeEach(() => {
   const origLog = console.log;
   const origDir = console.dir;
-  console.log = function (...args) {
+  console.log = (...args): void => {
     origLog.apply(
       console,
       args.map((arg) =>
@@ -22,7 +40,7 @@ beforeEach(() => {
       ),
     );
   };
-  console.dir = function (obj, options) {
+  console.dir = (obj, options): void => {
     if (obj && typeof obj.toJSON === 'function') {
       obj = obj.toJSON();
     }
@@ -31,8 +49,6 @@ beforeEach(() => {
 });
 
 describe('Group', () => {
-  const epsilon = 1e-9; // Tolerance for float comparisons
-
   describe('Constructor', () => {
     const size = 5;
     let group: Group;
@@ -407,7 +423,7 @@ describe('Group', () => {
 
     describe('when not changing properties if not provided', () => {
       let initialBiases: number[];
-      let initialSquashes: any[];
+      let initialSquashes: SquashFunction[];
       let initialTypes: string[];
       beforeEach(() => {
         // Arrange
@@ -435,7 +451,7 @@ describe('Group', () => {
     });
 
     describe('when setting only bias', () => {
-      let initialSquashes: any[];
+      let initialSquashes: SquashFunction[];
       let initialTypes: string[];
       beforeEach(() => {
         // Arrange
@@ -603,7 +619,7 @@ describe('Group', () => {
   describe('toJSON()', () => {
     describe('when serializing an empty group', () => {
       let group: Group;
-      let json: any;
+      let json: GroupJSON;
       beforeEach(() => {
         // Arrange
         group = new Group(2);
@@ -632,8 +648,8 @@ describe('Group', () => {
     describe('when serializing group after connections', () => {
       let group1: Group;
       let group2: Group;
-      let json1: any;
-      let json2: any;
+      let json1: GroupJSON;
+      let json2: GroupJSON;
       beforeEach(() => {
         // Arrange
         group1 = new Group(2);
@@ -667,7 +683,7 @@ describe('Group', () => {
       let node1: Node;
       let node2: Node;
       let conn1: Connection;
-      let json: any;
+      let json: GroupJSON;
       beforeEach(() => {
         // Arrange
         group = new Group(2);
@@ -704,7 +720,6 @@ describe('Group', () => {
     let group1: Group;
     let group2: Group;
     let node: Node;
-    let layer: Layer;
     const size1 = 3;
     const size2 = 2;
     let originalWarnings: boolean;
@@ -714,7 +729,6 @@ describe('Group', () => {
       group1 = new Group(size1);
       group2 = new Group(size2);
       node = new Node();
-      layer = new Layer();
       originalWarnings = config.warnings;
       config.warnings = true;
       jest.spyOn(console, 'warn').mockImplementation(() => {});
@@ -728,7 +742,7 @@ describe('Group', () => {
 
     describe('Scenario: To Group', () => {
       describe('when connecting ALL_TO_ALL by default to a different group', () => {
-        let connections: any[];
+        let connections: Connection[];
         beforeEach(() => {
           // Act
           connections = group1.connect(group2);
@@ -760,7 +774,7 @@ describe('Group', () => {
 
       describe('when connecting ONE_TO_ONE by default to the same group', () => {
         let sameSizeGroup: Group;
-        let connections: any[];
+        let connections: Connection[];
         beforeEach(() => {
           // Act
           sameSizeGroup = new Group(size1);
@@ -789,7 +803,7 @@ describe('Group', () => {
       });
 
       describe('when connecting using specified ALL_TO_ALL method', () => {
-        let connections: any[];
+        let connections: Connection[];
         beforeEach(() => {
           // Act
           connections = group1.connect(
@@ -810,7 +824,7 @@ describe('Group', () => {
 
       describe('when connecting using specified ALL_TO_ELSE method', () => {
         let sameSizeGroup: Group;
-        let connections: any[];
+        let connections: Connection[];
         const expectedConns = size1 * size1 - size1;
         beforeEach(() => {
           // Act
@@ -836,7 +850,7 @@ describe('Group', () => {
 
       describe('when connecting using specified ONE_TO_ONE method', () => {
         let sameSizeGroup: Group;
-        let connections: any[];
+        let connections: Connection[];
         beforeEach(() => {
           // Act
           sameSizeGroup = new Group(size1);
@@ -875,7 +889,7 @@ describe('Group', () => {
 
       describe('when connecting with specified weight', () => {
         const weight = 0.75;
-        let connections: any[];
+        let connections: Connection[];
         beforeEach(() => {
           // Act
           connections = group1.connect(
@@ -912,7 +926,7 @@ describe('Group', () => {
     });
 
     describe('Scenario: To Node', () => {
-      let connections: any[];
+      let connections: Connection[];
       beforeEach(() => {
         // Act
         connections = group1.connect(node);
@@ -935,7 +949,7 @@ describe('Group', () => {
 
     describe('when connecting to node with specified weight', () => {
       const weight = -0.3;
-      let connections: any[];
+      let connections: Connection[];
       beforeEach(() => {
         // Act
         connections = group1.connect(node, undefined, weight);

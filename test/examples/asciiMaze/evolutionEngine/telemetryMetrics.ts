@@ -57,7 +57,6 @@ interface RuntimeNode {
   [key: string]: unknown;
 }
 
-
 /**
  * Telemetry tag emitted when logging action-entropy statistics.
  * @example
@@ -454,7 +453,8 @@ export const collectTelemetryTail = (
 ): unknown => {
   // Step 1: Guard against missing telemetry providers so callers can skip optional handling.
   const runtimeNeat = neat as RuntimeNeat | undefined;
-  if (!runtimeNeat || typeof runtimeNeat.getTelemetry !== 'function') return undefined;
+  if (!runtimeNeat || typeof runtimeNeat.getTelemetry !== 'function')
+    return undefined;
 
   // Step 2: Normalise the desired tail length to a bounded non-negative integer.
   const normalizedTailLength = Number.isFinite(tailLength)
@@ -758,7 +758,9 @@ const computeDiversityMetrics = (
       connectionIndex < connections.length;
       connectionIndex++
     ) {
-      const connection = connections[connectionIndex] as RuntimeConnection | undefined;
+      const connection = connections[connectionIndex] as
+        | RuntimeConnection
+        | undefined;
       if (connection && connection.enabled !== false) {
         const weight = Number.isFinite(connection.weight)
           ? connection.weight!

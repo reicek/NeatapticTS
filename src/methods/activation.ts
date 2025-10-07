@@ -235,7 +235,11 @@ export const Activation: {
    * @see {@link https://github.com/wagenaartje/neataptic/wiki/Activation#selu} - Neataptic context
    */
   selu: (x: number, derivate: boolean = false): number => {
+    // SELU constants from the original paper (Klambauer et al., 2017)
+    // These precise values ensure self-normalizing properties
+    // eslint-disable-next-line no-loss-of-precision
     const alpha = 1.6732632423543772848170429916717;
+    // eslint-disable-next-line no-loss-of-precision
     const scale = 1.0507009873554804934193349852946;
     const fx = x > 0 ? x : alpha * Math.exp(x) - alpha;
     // Derivative: scale * (x > 0 ? 1 : alpha * exp(x))
@@ -362,11 +366,11 @@ export const Activation: {
  * @param {string} name - Name for the custom activation.
  * @param {(x: number, derivate?: boolean) => number} fn - The activation function (should handle derivative if needed).
  */
-export function registerCustomActivation(
+export const registerCustomActivation = (
   name: string,
   fn: (x: number, derivate?: boolean) => number,
-): void {
+): void => {
   Activation[name] = fn;
-}
+};
 
 export default Activation;

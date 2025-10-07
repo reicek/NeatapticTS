@@ -2,6 +2,15 @@ import type Network from '../network';
 import type Node from '../node';
 
 /**
+ * Internal Network properties accessed during topology operations.
+ */
+interface NetworkTopologyProps {
+  _enforceAcyclic?: boolean;
+  _topoOrder: Node[] | null;
+  _topoDirty?: boolean;
+}
+
+/**
  * Topology utilities.
  *
  * Provides:
@@ -24,7 +33,7 @@ import type Node from '../node';
  * In non-acyclic mode we simply clear cached order to signal use of sequential node array.
  */
 export function computeTopoOrder(this: Network): void {
-  const internalNet = this as any;
+  const internalNet = this as unknown as NetworkTopologyProps;
   // Fast exit: if acyclicity not enforced we discard any cached order (signals using raw nodes list).
   if (!internalNet._enforceAcyclic) {
     internalNet._topoOrder = null;
@@ -42,7 +51,7 @@ export function computeTopoOrder(this: Network): void {
   /** Processing queue for Kahn's algorithm. */
   const processingQueue: Node[] = [];
   this.nodes.forEach((node) => {
-    if ((node as any).type === 'input' || (inDegree.get(node) || 0) === 0) {
+    if (node.type === 'input' || (inDegree.get(node) || 0) === 0) {
       processingQueue.push(node);
     }
   });
@@ -53,7 +62,7 @@ export function computeTopoOrder(this: Network): void {
     const node = processingQueue.shift()!;
     topoOrder.push(node);
     // Decrement in-degree of outgoing targets (ignoring self loops which were excluded earlier).
-    for (const outgoing of (node as any).connections.out) {
+    for (const outgoing of node.connections.out) {
       if (outgoing.to === node) continue; // Skip self loop.
       const remaining = (inDegree.get(outgoing.to) || 0) - 1;
       inDegree.set(outgoing.to, remaining);
@@ -67,6 +76,7 @@ export function computeTopoOrder(this: Network): void {
 }
 
 /** Depth-first reachability test (avoids infinite loops via visited set). */
+// eslint-disable-next-line prefer-arrow/prefer-arrow-functions
 export function hasPath(this: Network, from: Node, to: Node): boolean {
   if (from === to) return true; // Trivial reachability.
   /** Visited node set to prevent infinite traversal on cycles. */
@@ -78,9 +88,11 @@ export function hasPath(this: Network, from: Node, to: Node): boolean {
     if (current === to) return true;
     if (visited.has(current)) continue; // Already expanded.
     visited.add(current);
-    for (const edge of (current as any).connections.out) {
+    for (const edge of current.connections.out) {
       if (edge.to !== current) dfsStack.push(edge.to); // Skip self loops.
     }
   }
   return false;
 }
+
+export default { computeTopoOrder, hasPath };

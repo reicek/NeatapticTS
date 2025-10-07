@@ -2,6 +2,10 @@ import Network from '../network';
 import * as methods from '../../methods/methods';
 import { config } from '../../config';
 import Multi from '../../multithreading/multi';
+import type {
+  TestWorkerInstance,
+  TestWorkerConstructor,
+} from '../../multithreading/types';
 
 /**
  * A single supervised training example used to evaluate fitness.
@@ -12,18 +16,64 @@ interface TrainingSample {
 }
 
 /**
+ * Cost function type: takes target and output arrays, returns error scalar.
+ */
+type CostFunction = (target: number[], output: number[]) => number;
+
+/**
+ * Cost function OR a serializable reference with just the name (for worker threads).
+ */
+type CostFunctionOrRef = CostFunction | { name: string };
+
+/**
  * Internal evolution configuration summary (for potential logging / debugging)
  * capturing normalized option values used by the local evolutionary loop.
  */
 interface EvolutionConfig {
   targetError: number;
   growth: number;
-  cost: any;
+  cost: CostFunctionOrRef;
   amount: number;
   log: number;
-  schedule: any;
+  schedule: {
+    iterations: number;
+    function: (stats: {
+      fitness: number;
+      error: number;
+      iteration: number;
+    }) => void;
+  };
   clear: boolean;
   threads: number;
+}
+
+/**
+ * Evolution options for the evolveNetwork method.
+ * Includes core evolution parameters plus NEAT-specific options passed through.
+ */
+interface EvolveOptions extends Record<string, unknown> {
+  error?: number;
+  iterations?: number;
+  growth?: number;
+  cost?: CostFunctionOrRef;
+  amount?: number;
+  log?: number;
+  schedule?: {
+    iterations: number;
+    function: (stats: {
+      fitness: number;
+      error: number;
+      iteration: number;
+    }) => void;
+  };
+  clear?: boolean;
+  threads?: number;
+  fitnessPopulation?: boolean;
+  network?: Network;
+  populationSize?: number;
+  popsize?: number;
+  speciation?: boolean;
+  _workerTerminators?: () => void;
 }
 
 /**
@@ -55,7 +105,7 @@ const _complexityCache: WeakMap<
  * @param growth - Positive scalar controlling strength of parsimony pressure.
  * @returns Complexity * growth (used directly to subtract from fitness score).
  */
-function computeComplexityPenalty(genome: Network, growth: number): number {
+const computeComplexityPenalty = (genome: Network, growth: number): number => {
   // Extract structural counts once.
   const n = genome.nodes.length;
   const c = genome.connections.length;
@@ -68,7 +118,7 @@ function computeComplexityPenalty(genome: Network, growth: number): number {
   const base = n - genome.input - genome.output + c + g;
   _complexityCache.set(genome, { nodes: n, conns: c, gates: g, value: base });
   return base * growth;
-}
+};
 
 /**
  * Build a single-threaded fitness evaluation function (classic NEAT style) evaluating a genome
@@ -88,22 +138,22 @@ function computeComplexityPenalty(genome: Network, growth: number): number {
  * @param growth - Complexity penalty scalar.
  * @returns Function mapping a Network genome to a numeric fitness.
  */
-function buildSingleThreadFitness(
+const buildSingleThreadFitness = (
   set: TrainingSample[],
-  cost: any,
+  cost: CostFunction,
   amount: number,
   growth: number,
-) {
+) => {
   return (genome: Network) => {
     let score = 0; // Accumulate negative errors.
     for (let i = 0; i < amount; i++) {
       try {
         score -= genome.test(set, cost).error; // negative adds fitness.
-      } catch (e: any) {
+      } catch (e: unknown) {
         if (config.warnings)
           console.warn(
             `Genome evaluation failed: ${
-              (e && e.message) || e
+              (e && (e as Error).message) || e
             }. Penalizing with -Infinity fitness.`,
           );
         return -Infinity;
@@ -116,7 +166,7 @@ function buildSingleThreadFitness(
     // Average over repeats.
     return score / amount;
   };
-}
+};
 
 /**
  * Build a multi-threaded (worker-based) population fitness evaluator if worker infrastructure is available.
@@ -145,37 +195,43 @@ function buildSingleThreadFitness(
  * @param options - Evolution options object (mutated to add cleanup hooks & flags).
  * @returns Object with fitnessFunction (population evaluator) and resolved thread count.
  */
-async function buildMultiThreadFitness(
+const buildMultiThreadFitness = async (
   set: TrainingSample[],
-  cost: any,
+  cost: CostFunctionOrRef,
   amount: number,
   growth: number,
   threads: number,
-  options: any,
-) {
+  options: Record<string, unknown>,
+) => {
   // Serialize dataset once for worker initialization (avoids deep cloning per evaluation call).
   const serializedSet = Multi.serializeDataSet(set);
   /** Collection of worker instances. */
-  const workers: any[] = [];
-  let WorkerCtor: any = null; // Will hold dynamic Worker class.
+  const workers: TestWorkerInstance[] = [];
+  let WorkerCtor: TestWorkerConstructor | null = null; // Will hold dynamic Worker class.
   try {
     const isNode =
-      typeof process !== 'undefined' && !!(process.versions as any)?.node;
+      typeof process !== 'undefined' &&
+      !!(process.versions as Record<string, unknown> | undefined)?.node;
     if (isNode && Multi.workers?.getNodeTestWorker)
       WorkerCtor = await Multi.workers.getNodeTestWorker();
     else if (!isNode && Multi.workers?.getBrowserTestWorker)
       WorkerCtor = await Multi.workers.getBrowserTestWorker();
-  } catch (e) {
+  } catch (e: unknown) {
     if (config.warnings)
       console.warn(
         'Failed to load worker class; falling back to single-thread path:',
-        (e as any)?.message || e,
+        (e as Error)?.message || e,
       );
   }
   // Fallback path if no worker support.
   if (!WorkerCtor)
     return {
-      fitnessFunction: buildSingleThreadFitness(set, cost, amount, growth),
+      fitnessFunction: buildSingleThreadFitness(
+        set,
+        cost as CostFunction,
+        amount,
+        growth,
+      ),
       threads: 1,
     };
   // Spin up requested workers (best-effort; partial successes still useful).
@@ -183,10 +239,13 @@ async function buildMultiThreadFitness(
     try {
       workers.push(
         new WorkerCtor(serializedSet, {
-          name: cost.name || cost.toString?.() || 'cost',
+          name:
+            (typeof cost === 'function' ? cost.name : cost.name) ||
+            cost.toString?.() ||
+            'cost',
         }),
       );
-    } catch (e) {
+    } catch (e: unknown) {
       if (config.warnings) console.warn('Worker spawn failed', e);
     }
   }
@@ -199,16 +258,24 @@ async function buildMultiThreadFitness(
       }
       const queue = population.slice(); // Shallow copy so we can mutate.
       let active = workers.length; // Number of workers still draining tasks.
-      const startNext = (worker: any) => {
+      const startNext = (worker: TestWorkerInstance) => {
         if (!queue.length) {
           if (--active === 0) resolve();
           return;
         }
         const genome = queue.shift();
-        worker
-          .evaluate(genome)
+        if (!genome) {
+          // Queue empty due to race (shouldn't happen but defensive check)
+          if (--active === 0) resolve();
+          return;
+        }
+        Promise.resolve(
+          worker.evaluate(
+            genome as unknown as import('../../multithreading/types').SerializableNetwork,
+          ),
+        )
           .then((result: number) => {
-            if (typeof genome !== 'undefined' && typeof result === 'number') {
+            if (typeof result === 'number') {
               genome.score = -result - computeComplexityPenalty(genome, growth);
               genome.score = isNaN(result) ? -Infinity : genome.score;
             }
@@ -220,15 +287,17 @@ async function buildMultiThreadFitness(
     });
   options.fitnessPopulation = true; // Signal population-level semantics.
   // Provide cleanup hook (used after evolution loop) to terminate workers.
-  (options as any)._workerTerminators = () => {
+  (options as Record<string, unknown>)._workerTerminators = () => {
     workers.forEach((w) => {
       try {
-        w.terminate && w.terminate();
-      } catch {}
+        w.terminate?.();
+      } catch {
+        // Ignore termination errors
+      }
     });
   };
   return { fitnessFunction, threads };
-}
+};
 
 /**
  * Evolve (optimize) the current network's topology and weights using a NEAT-like evolutionary loop
@@ -273,7 +342,7 @@ async function buildMultiThreadFitness(
 export async function evolveNetwork(
   this: Network,
   set: TrainingSample[],
-  options: any,
+  options: EvolveOptions = {},
 ): Promise<{ error: number; iterations: number; time: number }> {
   // 1. Dataset validation (shape + existence).
   if (
@@ -298,16 +367,20 @@ export async function evolveNetwork(
   let threads: number =
     typeof options.threads === 'undefined' ? 1 : options.threads; // Worker count.
   const start = Date.now(); // Benchmark start time.
-  const evoConfig: EvolutionConfig = {
-    targetError,
-    growth,
-    cost,
-    amount,
-    log,
-    schedule,
-    clear,
-    threads,
-  }; // (Currently unused externally; placeholder for future structured logging.)
+  // Structured config for potential future logging / inspection.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const evoConfig: EvolutionConfig | undefined = schedule
+    ? {
+        targetError,
+        growth,
+        cost,
+        amount,
+        log,
+        schedule,
+        clear,
+        threads,
+      }
+    : undefined;
 
   // 2. Stopping condition checks / normalization.
   if (
@@ -322,9 +395,16 @@ export async function evolveNetwork(
   else if (typeof options.iterations === 'undefined') options.iterations = 0; // Only error constrains (0 sentinel lets loop run until satisfied).
 
   // 3. Build fitness function (single or multi-thread variant).
-  let fitnessFunction: any;
+  let fitnessFunction:
+    | ((genome: Network) => number)
+    | ((population: Network[]) => Promise<void>);
   if (threads === 1)
-    fitnessFunction = buildSingleThreadFitness(set, cost, amount, growth);
+    fitnessFunction = buildSingleThreadFitness(
+      set,
+      cost as CostFunction,
+      amount,
+      growth,
+    );
   else {
     const multi = await buildMultiThreadFitness(
       set,
@@ -352,10 +432,15 @@ export async function evolveNetwork(
 
   // Warn if immediate termination conditions could yield empty best genome tracking.
   if (typeof options.iterations === 'number' && options.iterations === 0) {
-    if ((neat as any)._warnIfNoBestGenome) {
+    const neatWithWarn = neat as unknown as {
+      _warnIfNoBestGenome?: () => void;
+    };
+    if (neatWithWarn._warnIfNoBestGenome) {
       try {
-        (neat as any)._warnIfNoBestGenome();
-      } catch {}
+        neatWithWarn._warnIfNoBestGenome();
+      } catch {
+        // Ignore warning errors
+      }
     }
   }
   // Micro-population heuristics: increase mutation intensity to promote exploration.
@@ -375,7 +460,7 @@ export async function evolveNetwork(
   // 5a. Main generation loop (terminates on error target or iteration cap).
   while (
     (targetError === -1 || error > targetError) &&
-    (!iterationsSpecified || neat.generation < options.iterations)
+    (!iterationsSpecified || neat.generation < (options.iterations ?? 0))
   ) {
     // Perform one generation: breed + evaluate population, returning fittest genome.
     const fittest = await neat.evolve();
@@ -399,7 +484,9 @@ export async function evolveNetwork(
           error,
           iteration: neat.generation,
         });
-      } catch {}
+      } catch {
+        // Ignore schedule callback errors
+      }
     }
   }
 
@@ -410,17 +497,25 @@ export async function evolveNetwork(
     this.selfconns = bestGenome.selfconns;
     this.gates = bestGenome.gates;
     if (clear) this.clear();
-  } else if ((neat as any)._warnIfNoBestGenome) {
-    try {
-      (neat as any)._warnIfNoBestGenome();
-    } catch {}
+  } else {
+    const neatWithWarn = neat as unknown as {
+      _warnIfNoBestGenome?: () => void;
+    };
+    if (neatWithWarn._warnIfNoBestGenome) {
+      try {
+        neatWithWarn._warnIfNoBestGenome();
+      } catch {
+        // Ignore warning errors
+      }
+    }
   }
 
   // 7. Cleanup worker resources if any.
   try {
-    (options as any)._workerTerminators &&
-      (options as any)._workerTerminators();
-  } catch {}
+    options._workerTerminators?.();
+  } catch {
+    // Ignore termination errors
+  }
 
   return { error, iterations: neat.generation, time: Date.now() - start };
 }

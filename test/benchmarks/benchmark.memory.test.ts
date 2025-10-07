@@ -15,7 +15,13 @@
  */
 import { memoryStats } from '../../src/utils/memory';
 import Network from '../../src/architecture/network';
+import NeatapticNode from '../../src/architecture/node';
+import type { BenchAggregateGroup } from './benchmark.report.test';
+import { aggregateBenchMeasurements } from './benchmark.report.test';
 import * as fs from 'fs';
+import * as path from 'path';
+import * as childProcess from 'child_process';
+import * as crypto from 'crypto';
 import seedrandom from 'seedrandom';
 
 /**
@@ -44,22 +50,29 @@ interface BaselineRecord {
  * @param targetConnections Desired number of connections (approximate upper bound).
  * @returns Object containing created Network instance and elapsed build time in ms.
  */
-function buildSyntheticNetwork(targetConnections: number): {
+const buildSyntheticNetwork = (
+  targetConnections: number,
+): {
   net: Network;
   buildMs: number;
-} {
+} => {
   const start = performance.now?.() ?? Date.now();
   const inputs = Math.max(1, Math.floor(Math.sqrt(targetConnections)));
   const outputs = Math.max(1, Math.ceil(targetConnections / inputs));
   const net = new Network(inputs, outputs);
+
+  interface RuntimeNetwork {
+    disconnect: (from: NeatapticNode, to: NeatapticNode) => void;
+  }
+
   while (net.connections.length > targetConnections) {
     const idx = Math.floor(Math.random() * net.connections.length);
     const c = net.connections[idx];
-    (net as any).disconnect(c.from, c.to);
+    (net as unknown as RuntimeNetwork).disconnect(c.from, c.to);
   }
   const end = performance.now?.() ?? Date.now();
   return { net, buildMs: end - start };
-}
+};
 
 /**
  * Measure total & average forward pass runtime for a network over N iterations.
@@ -68,7 +81,10 @@ function buildSyntheticNetwork(targetConnections: number): {
  * @param iterations Number of forward passes to execute (default 5).
  * @returns Object with totalMs and avgMs fields.
  */
-function measureForwardPass(net: Network, iterations = 5) {
+const measureForwardPass = (
+  net: Network,
+  iterations = 5,
+): { totalMs: number; avgMs: number } => {
   const inputLen = net.input;
   const vec = new Array(inputLen).fill(0).map(() => Math.random());
   const t0 = performance.now?.() ?? Date.now();
@@ -76,11 +92,11 @@ function measureForwardPass(net: Network, iterations = 5) {
   const t1 = performance.now?.() ?? Date.now();
   const totalMs = t1 - t0;
   return { totalMs, avgMs: totalMs / iterations };
-}
+};
 
 const baselineRecords: BaselineRecord[] = [];
-const warnings: any[] = [];
-let distAggregated: any[] = [];
+const warnings: Array<Record<string, unknown>> = [];
+let distAggregated: BenchAggregateGroup[] = [];
 // Collected per‑run measurements (build + forward + memory) prior to aggregation.
 // Declared here (before tests) so inner describe blocks can push safely.
 const rawMeasurements: { size: number; metrics: Record<string, number> }[] = [];
@@ -140,7 +156,15 @@ describe('benchmark.memory dist-only', () => {
     for (const size of sizes) {
       const repeats = repeatLarge && size >= 100000 ? BENCH_REPEAT_LARGE : 1;
       for (let rep = 0; rep < repeats; rep++) {
-        (seedrandom as any)(`size:${size}|rep:${rep}`, { global: true });
+        interface RuntimeSeedrandom {
+          (seed: string, options: { global: boolean }): void;
+        }
+        (seedrandom as unknown as RuntimeSeedrandom)(
+          `size:${size}|rep:${rep}`,
+          {
+            global: true,
+          },
+        );
         const inp = Math.max(1, Math.floor(Math.sqrt(size)));
         const out = Math.max(1, Math.ceil(size / inp));
         if (size >= 100000) {
@@ -162,12 +186,21 @@ describe('benchmark.memory dist-only', () => {
         let heapUsed: number | undefined;
         let rss: number | undefined;
         try {
-          const mu = (process as any).memoryUsage?.();
+          interface ProcessMemoryUsage {
+            heapUsed: number;
+            rss: number;
+          }
+          interface RuntimeProcess {
+            memoryUsage?: () => ProcessMemoryUsage;
+          }
+          const mu = (process as unknown as RuntimeProcess).memoryUsage?.();
           if (mu) {
             heapUsed = mu.heapUsed;
             rss = mu.rss;
           }
-        } catch {}
+        } catch {
+          // Ignore memory usage errors
+        }
         rawMeasurements.push({
           size,
           metrics: {
@@ -182,15 +215,13 @@ describe('benchmark.memory dist-only', () => {
         });
       }
     }
-    const { aggregateBenchMeasurements } =
-      require('./benchmark.report.test') as typeof import('./benchmark.report.test');
     distAggregated = aggregateBenchMeasurements(
       rawMeasurements.map((r) => ({
-        mode: 'dist',
+        mode: 'dist' as const,
         scenario: 'buildForward',
         size: r.size,
         metrics: r.metrics,
-      })) as any,
+      })),
     );
     it('aggregated has entries', () => {
       expect(distAggregated.length).toBeGreaterThan(0);
@@ -202,28 +233,30 @@ describe('benchmark.memory dist-only', () => {
      * @param a Array of numbers.
      * @returns Mean (0 if array empty).
      */
-    function mean(a: number[]) {
+    const mean = (a: number[]): number => {
       return a.reduce((s, x) => s + x, 0) / (a.length || 1);
-    }
+    };
     /**
      * Unbiased sample standard deviation (n-1 denominator) with guard for n<2.
      * @param a Array of numbers.
      * @returns Standard deviation (0 if insufficient samples).
      */
-    function std(a: number[]) {
+    const std = (a: number[]): number => {
       if (a.length < 2) return 0;
       const m = mean(a);
       return Math.sqrt(
         a.reduce((s, x) => s + (x - m) * (x - m), 0) / (a.length - 1),
       );
-    }
+    };
     /**
      * IQR (Interquartile Range) based mild outlier filter (1.5*I rule).
      * Returns original array if filtering would leave <3 points or no outliers found.
      * @param vals Raw numeric samples.
      * @returns Object with filtered (possibly original) and outliers arrays.
      */
-    function iqrFilter(vals: number[]) {
+    const iqrFilter = (
+      vals: number[],
+    ): { filtered: number[]; outliers: number[] } => {
       if (vals.length < 4) return { filtered: vals.slice(), outliers: [] };
       const s = vals.toSorted((a, b) => a - b);
       const q = (p: number) => {
@@ -243,13 +276,25 @@ describe('benchmark.memory dist-only', () => {
       if (!o.length || f.length < 3)
         return { filtered: vals.slice(), outliers: [] };
       return { filtered: f, outliers: o };
-    }
+    };
     /**
      * Recompute per-size variance statistics (mean, std, CV%) after outlier filtering.
      * @param g Aggregated group entry containing size & count.
      * @returns Variance summary object.
      */
-    function recomputeVariance(g: any) {
+    const recomputeVariance = (
+      g: BenchAggregateGroup,
+    ): {
+      mode: string;
+      size: number;
+      samples: number;
+      buildMsMean: number;
+      buildMsStd: number;
+      buildMsCvPct: number;
+      fwdAvgMsMean: number;
+      fwdAvgMsStd: number;
+      fwdAvgMsCvPct: number;
+    } => {
       const raw = rawMeasurements.filter((r) => r.size === g.size);
       const build = raw.map((r) => r.metrics.buildMs);
       const fwd = raw.map((r) => r.metrics.fwdAvgMs);
@@ -270,13 +315,13 @@ describe('benchmark.memory dist-only', () => {
         fwdAvgMsStd: +fs.toFixed(4),
         fwdAvgMsCvPct: fm ? +((fs / fm) * 100).toFixed(2) : 0,
       };
-    }
+    };
     // --- Variance auto escalation (Phase 2 -> active implementation) ---
     // If CV% for large sizes (>=100k) exceeds target, incrementally add repeats (up to cap)
     // to stabilize variance before persisting final artifact. Each escalation recorded.
     const targetCvPct = 7; // phase target (can tighten in future phases)
     const maxVarianceRepeats = 9; // hard cap to control runtime explosion
-    const escalateRecords: any[] = [];
+    const escalateRecords: Array<Record<string, unknown>> = [];
 
     /**
      * Execute an additional measurement repeat for a given large size to attempt variance reduction.
@@ -284,9 +329,14 @@ describe('benchmark.memory dist-only', () => {
      * @param size Connection size bucket.
      * @param rep Repeat index (used for deterministic seeding).
      */
-    function runAdditionalRepeat(size: number, rep: number) {
+    const runAdditionalRepeat = (size: number, rep: number): void => {
       // Mirrors logic in initial measurement loop for large sizes
-      (seedrandom as any)(`size:${size}|rep:${rep}`, { global: true });
+      interface RuntimeSeedrandom {
+        (seed: string, options: { global: boolean }): void;
+      }
+      (seedrandom as unknown as RuntimeSeedrandom)(`size:${size}|rep:${rep}`, {
+        global: true,
+      });
       const inp = Math.max(1, Math.floor(Math.sqrt(size)));
       const out = Math.max(1, Math.ceil(size / inp));
       if (size >= 100000) {
@@ -307,12 +357,21 @@ describe('benchmark.memory dist-only', () => {
       let heapUsed: number | undefined;
       let rss: number | undefined;
       try {
-        const mu = (process as any).memoryUsage?.();
+        interface ProcessMemoryUsage {
+          heapUsed: number;
+          rss: number;
+        }
+        interface RuntimeProcess {
+          memoryUsage?: () => ProcessMemoryUsage;
+        }
+        const mu = (process as unknown as RuntimeProcess).memoryUsage?.();
         if (mu) {
           heapUsed = mu.heapUsed;
           rss = mu.rss;
         }
-      } catch {}
+      } catch {
+        // Ignore memory usage errors; keep undefined values
+      }
       rawMeasurements.push({
         size,
         metrics: {
@@ -325,14 +384,21 @@ describe('benchmark.memory dist-only', () => {
           fwdIterations: iterations,
         },
       });
-    }
+    };
 
     /**
      * Compute simple variance (CV%) metrics for a size without IQR filtering (used to drive escalation loop).
      * @param size Connection size bucket.
      * @returns Variance entry or null if insufficient samples.
      */
-    function computeVarianceForSize(size: number) {
+    const computeVarianceForSize = (
+      size: number,
+    ): {
+      size: number;
+      samples: number;
+      buildMsCvPct: number;
+      fwdAvgMsCvPct: number;
+    } | null => {
       const raw = rawMeasurements.filter((r) => r.size === size);
       if (raw.length < 2) return null;
       const build = raw.map((r) => r.metrics.buildMs);
@@ -355,7 +421,7 @@ describe('benchmark.memory dist-only', () => {
         buildMsCvPct: bm ? +((bs / bm) * 100).toFixed(2) : 0,
         fwdAvgMsCvPct: fm ? +((fs / fm) * 100).toFixed(2) : 0,
       };
-    }
+    };
 
     // Escalate per monitored large size
     for (const size of [100000, 200000]) {
@@ -401,11 +467,11 @@ describe('benchmark.memory dist-only', () => {
     // Recompute aggregation & final variance summary after escalations
     distAggregated = aggregateBenchMeasurements(
       rawMeasurements.map((r) => ({
-        mode: 'dist',
+        mode: 'dist' as const,
         scenario: 'buildForward',
         size: r.size,
         metrics: r.metrics,
-      })) as any,
+      })),
     );
     const varianceSummary = distAggregated
       .filter((g) => g.size >= 100000 && g.count > 1)
@@ -413,37 +479,51 @@ describe('benchmark.memory dist-only', () => {
 
     // Persist results
     try {
-      const path = require('path');
       const resultsFile = path.resolve(__dirname, 'benchmark.results.json');
-      let existing: any;
+      let existing: Record<string, unknown> | undefined;
       if (fs.existsSync(resultsFile)) {
         try {
-          existing = JSON.parse(fs.readFileSync(resultsFile, 'utf-8'));
-        } catch {}
+          existing = JSON.parse(
+            fs.readFileSync(resultsFile, 'utf-8'),
+          ) as Record<string, unknown>;
+        } catch {
+          // Ignore JSON parse errors
+        }
       }
       let commit: string | undefined;
       try {
-        const cp = require('child_process');
-        commit = cp
+        commit = childProcess
           .execSync('git rev-parse --short HEAD', {
             stdio: ['ignore', 'pipe', 'ignore'],
           })
           .toString()
           .trim();
-      } catch {}
+      } catch {
+        // Ignore git command errors
+      }
       /**
        * Strip aggregation objects down to the compact summary persisted in history snapshots.
        * @param ag Aggregated measurement groups.
        * @returns Array of simplified objects (size + key means).
        */
-      function summarize(ag: any[]) {
-        return ag.map((g) => ({
-          size: g.size,
-          buildMsMean: g.buildMsMean,
-          fwdAvgMsMean: g.fwdAvgMsMean,
-          bytesPerConnMean: g.bytesPerConnMean,
-        }));
-      }
+      const summarize = (
+        ag: BenchAggregateGroup[],
+      ): Array<Record<string, unknown>> => {
+        return ag.map((g) => {
+          interface GroupWithStats extends BenchAggregateGroup {
+            buildMsMean?: number;
+            fwdAvgMsMean?: number;
+            bytesPerConnMean?: number;
+          }
+          const gWithStats = g as GroupWithStats;
+          return {
+            size: gWithStats.size,
+            buildMsMean: gWithStats.buildMsMean,
+            fwdAvgMsMean: gWithStats.fwdAvgMsMean,
+            bytesPerConnMean: gWithStats.bytesPerConnMean,
+          };
+        });
+      };
       const snapshot = {
         generatedAt: new Date().toISOString(),
         commit,
@@ -453,14 +533,20 @@ describe('benchmark.memory dist-only', () => {
         summary: summarize(distAggregated),
         fwdDeltaPct: [],
         fieldAuditCounts:
-          existing && existing.fieldAudit
+          existing &&
+          typeof existing.fieldAudit === 'object' &&
+          existing.fieldAudit !== null
             ? {
-                Node: existing.fieldAudit.Node?.count,
-                Connection: existing.fieldAudit.Connection?.count,
+                Node: (
+                  existing.fieldAudit as Record<string, { count?: number }>
+                ).Node?.count,
+                Connection: (
+                  existing.fieldAudit as Record<string, { count?: number }>
+                ).Connection?.count,
               }
             : undefined,
       };
-      const payload: any = existing || {};
+      const payload: Record<string, unknown> = existing || {};
       payload.generatedAt = snapshot.generatedAt;
       payload.baseline = baselineRecords;
       payload.variantRaw = rawMeasurements;
@@ -479,7 +565,6 @@ describe('benchmark.memory dist-only', () => {
           const stat = fs.statSync(distPath);
           // Hash only when file reasonably small (<25MB) to avoid CI slowdown (practical upper bound here is tiny)
           const data = fs.readFileSync(distPath);
-          const crypto = require('crypto');
           const hash = crypto
             .createHash('sha256')
             .update(data)
@@ -487,17 +572,28 @@ describe('benchmark.memory dist-only', () => {
             .slice(0, 12);
           distBundleMeta = { exists: true, bytes: stat.size, hash };
         }
-      } catch {}
+      } catch {
+        // Ignore dist bundle hash errors
+      }
       // --- optional forward regression annotation (informational, non-failing) ---
       // Criteria: we need at least 2 historical snapshots to compute a rolling median, and variance CV below threshold.
-      const regressionAnnotations: any[] = [];
+      const regressionAnnotations: Array<Record<string, unknown>> = [];
       try {
-        if (Array.isArray(existing?.history) && existing.history.length) {
+        if (
+          existing &&
+          Array.isArray(existing.history) &&
+          existing.history.length
+        ) {
           // Build map size -> rolling median fwdAvgMsMean from history summary entries
-          const history = existing.history.slice(-10);
+          const history = (
+            existing.history as Array<Record<string, unknown>>
+          ).slice(-10);
           const sizeToSamples: Record<string, number[]> = {};
           for (const snap of history) {
-            for (const s of snap.summary || []) {
+            for (const s of (snap.summary as Array<{
+              size: number;
+              fwdAvgMsMean: number;
+            }>) || []) {
               (sizeToSamples[s.size] ||= []).push(s.fwdAvgMsMean);
             }
           }
@@ -520,7 +616,10 @@ describe('benchmark.memory dist-only', () => {
             const sz = g.size;
             const m = sizeMedian[sz];
             if (!m || !Number.isFinite(m)) continue;
-            const current = (g as any).fwdAvgMsMean;
+            interface GroupWithMetrics extends BenchAggregateGroup {
+              fwdAvgMsMean?: number;
+            }
+            const current = (g as GroupWithMetrics).fwdAvgMsMean;
             if (!Number.isFinite(current) || !current) continue;
             const deltaPct = ((current - m) / m) * 100;
             const cv = cvMap[sz];
@@ -539,7 +638,9 @@ describe('benchmark.memory dist-only', () => {
           if (regressionAnnotations.length)
             payload.regressionAnnotations = regressionAnnotations;
         }
-      } catch {}
+      } catch {
+        // Ignore regression computation errors
+      }
       payload.meta = {
         note: 'Dist-only benchmark results file.',
         varianceRepeatsLarge: BENCH_REPEAT_LARGE,
@@ -550,20 +651,37 @@ describe('benchmark.memory dist-only', () => {
         distBundle: distBundleMeta,
       };
       // Attach variance escalation records & cap metadata
-      (payload.meta as any).maxVarianceRepeats = maxVarianceRepeats;
-      const priorEsc = (existing?.meta?.varianceAutoEscalations || []) as any[];
-      (payload.meta as any).varianceAutoEscalations =
+      interface PayloadMeta {
+        maxVarianceRepeats?: number;
+        varianceAutoEscalations?: Array<Record<string, unknown>>;
+      }
+      (payload.meta as PayloadMeta).maxVarianceRepeats = maxVarianceRepeats;
+      const priorEsc: Array<Record<string, unknown>> =
+        existing &&
+        typeof existing.meta === 'object' &&
+        existing.meta !== null &&
+        Array.isArray((existing.meta as PayloadMeta).varianceAutoEscalations)
+          ? ((existing.meta as PayloadMeta).varianceAutoEscalations ?? [])
+          : [];
+      (payload.meta as PayloadMeta).varianceAutoEscalations =
         priorEsc.concat(escalateRecords);
       if (varianceSummary.length) payload.variance = varianceSummary;
       const hist = Array.isArray(payload.history) ? payload.history : [];
       hist.push(snapshot);
       payload.history = hist.slice(-10);
       fs.writeFileSync(resultsFile, JSON.stringify(payload, null, 2), 'utf-8');
-    } catch {}
+    } catch {
+      // Ignore file write errors
+      // Ignore JSON parse errors
+    }
 
     it('bytesPerConnMean positive (size 1000)', () => {
-      const g = distAggregated.find((g) => g.size === 1000);
-      expect(g.bytesPerConnMean > 0).toBe(true);
+      const g = distAggregated.find((group) => group.size === 1000);
+      interface GroupWithMetrics extends BenchAggregateGroup {
+        bytesPerConnMean?: number;
+      }
+      expect(g).toBeDefined();
+      expect((g as GroupWithMetrics).bytesPerConnMean).toBeGreaterThan(0);
     });
   });
 });

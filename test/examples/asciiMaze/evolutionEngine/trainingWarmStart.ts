@@ -188,7 +188,7 @@ export const buildLamarckianTrainingSet = (
   }
 
   return trainingSet;
-}
+};
 
 /**
  * Adjust output node biases after training to maintain exploration diversity.
@@ -277,7 +277,7 @@ export const adjustOutputBiasesAfterTraining = (
   } catch {
     // Best-effort: swallow errors to avoid breaking the engine loop.
   }
-}
+};
 
 /**
  * Pretrain the population using a small supervised dataset and apply warm-start heuristics.
@@ -374,7 +374,7 @@ export const pretrainPopulationWarmStart = (
       // Per-network training failure is non-fatal; continue with others.
     }
   }
-}
+};
 
 /**
  * Apply Lamarckian backpropagation training to the entire population with optional profiling.
@@ -514,7 +514,7 @@ export const applyLamarckianTraining = (
 
   // Step 6: Return elapsed time when profiling; otherwise return 0.
   return profileEnabled ? readHighResolutionTime() - profileStart : 0;
-}
+};
 
 /**
  * Conditionally warm-start / pretrain the population using a provided training set.
@@ -617,4 +617,4 @@ export const warmStartPopulationIfNeeded = (
   } catch {
     // global swallow: keep best-effort semantics
   }
-}
+};

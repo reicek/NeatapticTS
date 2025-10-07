@@ -1,5 +1,4 @@
 import { Workers } from './workers/workers';
-import Network from '../architecture/network';
 import type {
   ActivationFn,
   SerializedSample,
@@ -39,8 +38,10 @@ export default class Multi {
     (x) => Math.abs(x), // Absolute (12)
     (x) => 1 - x, // Inverse (13)
     (x) => {
-      // SELU (14)
+      // SELU (14) - Constants from Klambauer et al., 2017
+      // eslint-disable-next-line no-loss-of-precision
       const alpha = 1.6732632423543772848170429916717;
+      // eslint-disable-next-line no-loss-of-precision
       const scale = 1.0507009873554804934193349852946;
       const fx = x > 0 ? x : alpha * Math.exp(x) - alpha;
       return fx * scale;
@@ -273,7 +274,10 @@ export default class Multi {
    * @returns {number} The activated value.
    */
   static selu(x: number): number {
+    // SELU constants from Klambauer et al., 2017
+    // eslint-disable-next-line no-loss-of-precision
     const alpha = 1.6732632423543772848170429916717;
+    // eslint-disable-next-line no-loss-of-precision
     const scale = 1.0507009873554804934193349852946;
     const fx = x > 0 ? x : alpha * Math.exp(x) - alpha; // Corrected definition
     return fx * scale;

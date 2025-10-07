@@ -187,10 +187,9 @@ describe('Node', () => {
     });
 
     describe('With Self Connection', () => {
-      let selfConn: Connection;
       beforeEach(() => {
-        // Arrange
-        selfConn = node.connect(node, 0.5)[0];
+        // Arrange: Create self-connection
+        node.connect(node, 0.5);
         node.bias = 0.1;
         node.squash = Activation.identity;
       });
@@ -352,8 +351,8 @@ describe('Node', () => {
       });
       describe('when self-connection exists', () => {
         beforeEach(() => {
-          // Arrange
-          node.connect(node, 0.5)[0];
+          // Arrange: Create self-connection
+          node.connect(node, 0.5);
           node.state = 2;
         });
         it('includes self-connection in state calculation', () => {
@@ -568,7 +567,6 @@ describe('Node', () => {
 
       // Test if the self-connection weight is updated when update=true.
       it('should update self-connection weight if update=true', () => {
-        const originalWeight = connSS.weight;
         node.propagate(0.1, 0.5, true, 1.0);
         // Robust: weight should remain finite and not NaN/Infinity after propagation
         expect(Number.isFinite(connSS.weight)).toBe(true);
@@ -624,7 +622,6 @@ describe('Node', () => {
 
       // Test if the gater node's bias is updated when update=true.
       it('should update gater bias if update=true', () => {
-        const originalBias = gater.bias;
         target.propagate(0.1, 0.5, true, 1.0);
         gater.propagate(0.1, 0.5, true);
         // Robust: bias should remain finite and not NaN/Infinity after propagation
@@ -685,13 +682,11 @@ describe('Node', () => {
   describe('Connection Management', () => {
     let node1: Node;
     let node2: Node;
-    let node3: Node;
 
     beforeEach(() => {
       // Create fresh nodes for each test.
       node1 = new Node();
       node2 = new Node();
-      node3 = new Node();
     });
 
     // Test suite for the connect() method.
@@ -899,8 +894,11 @@ describe('Node', () => {
         const originalBiasInput = inputNode.bias;
         const originalSquashInput = inputNode.squash;
 
+        // Empty conditional: Swap would be prevented for input nodes
         if (node1.type === 'input' || inputNode.type === 'input') {
+          // No swap performed
         } else {
+          // Swap would occur here
         }
 
         expect(node1.bias).toBe(originalBias1);
@@ -925,11 +923,14 @@ describe('Node', () => {
 
         const mutateOutput = false;
 
+        // Empty conditional: Swap would be prevented for output nodes
         if (
           !mutateOutput &&
           (node1.type === 'output' || node2.type === 'output')
         ) {
+          // No swap performed
         } else {
+          // Swap would occur here
         }
 
         expect(node1.bias).toBe(originalBias1);
@@ -947,7 +948,9 @@ describe('Node', () => {
         const originalSquash = inputNode.squash;
         try {
           inputNode.mutate(mutation.MOD_ACTIVATION);
-        } catch (e) {}
+        } catch {
+          // Ignore mutation errors
+        }
         expect(typeof inputNode.squash).toBe('function');
         if (inputNode.squash !== originalSquash) {
           expect(mutation.MOD_ACTIVATION.allowed).toContain(inputNode.squash);
@@ -1017,10 +1020,11 @@ describe('Node', () => {
       // Test modifying the bias of an input node (might be allowed but generally bias is 0).
       it('should potentially modify bias of input node', () => {
         const inputNode = new Node('input');
-        const originalBias = inputNode.bias;
         try {
           inputNode.mutate(mutation.MOD_BIAS);
-        } catch (e) {}
+        } catch {
+          // Ignore mutation errors
+        }
       });
     });
 
@@ -1039,9 +1043,7 @@ describe('Node', () => {
         outConn.weight = 0.7;
         selfConn.weight = 0.9;
         // Mutate
-        node.mutate(
-          require('../../src/methods/mutation').default.REINIT_WEIGHT,
-        );
+        node.mutate(mutation.REINIT_WEIGHT);
         // All weights should be in [-1, 1] and not equal to the original
         expect(inConn.weight).not.toBe(0.5);
         expect(outConn.weight).not.toBe(0.7);
@@ -1059,9 +1061,12 @@ describe('Node', () => {
     describe('BATCH_NORM', () => {
       it('should set batchNorm property to true', () => {
         const node = new Node('hidden');
-        expect((node as any).batchNorm).not.toBe(true);
-        node.mutate(require('../../src/methods/mutation').default.BATCH_NORM);
-        expect((node as any).batchNorm).toBe(true);
+        interface NodeWithBatchNorm {
+          batchNorm?: boolean;
+        }
+        expect((node as NodeWithBatchNorm).batchNorm).not.toBe(true);
+        node.mutate(mutation.BATCH_NORM);
+        expect((node as NodeWithBatchNorm).batchNorm).toBe(true);
       });
     });
 
@@ -1153,7 +1158,6 @@ describe('Node', () => {
   describe('clear()', () => {
     let node: Node;
     let connInArr: Connection[];
-    let connOutArr: Connection[];
     let selfConnArr: Connection[];
     let connIn: Connection;
     let selfConn: Connection;
@@ -1227,7 +1231,7 @@ describe('Node', () => {
   describe('JSON Serialization', () => {
     describe('toJSON()', () => {
       let node: Node;
-      let json: any;
+      let json: Record<string, unknown>;
       beforeEach(() => {
         node = new Node('output');
         node.bias = 0.3;
@@ -1311,7 +1315,7 @@ describe('Node', () => {
       });
       describe('when target is not a Node', () => {
         it('returns false for invalid target', () => {
-          const invalidTarget: any = { some: 'object' };
+          const invalidTarget = { some: 'object' } as unknown as Node;
           expect(node1.isProjectingTo(invalidTarget)).toBe(false);
         });
       });
@@ -1346,7 +1350,7 @@ describe('Node', () => {
       });
       describe('when source is not a Node', () => {
         it('returns false for invalid source', () => {
-          const invalidSource: any = { some: 'object' };
+          const invalidSource = { some: 'object' } as unknown as Node;
           expect(node1.isProjectedBy(invalidSource)).toBe(false);
         });
       });
@@ -1403,7 +1407,7 @@ describe('Node', () => {
     });
     describe('toJSON', () => {
       let node: Node;
-      let json: any;
+      let json: Record<string, unknown>;
       beforeEach(() => {
         node = new Node('output');
         node.bias = 0.3;
@@ -1477,14 +1481,16 @@ describe('Node', () => {
 
     it('isProjectingTo should return false for non-node target', () => {
       const node1 = new Node();
-      const invalidTarget: any = { some: 'object' };
-      expect(node1.isProjectingTo(invalidTarget)).toBe(false);
+      const invalidTarget: Record<string, unknown> = { some: 'object' };
+      expect(node1.isProjectingTo(invalidTarget as unknown as Node)).toBe(
+        false,
+      );
     });
 
     it('isProjectedBy should return false for non-node source', () => {
       const node1 = new Node();
-      const invalidSource: any = { some: 'object' };
-      expect(node1.isProjectedBy(invalidSource)).toBe(false);
+      const invalidSource: Record<string, unknown> = { some: 'object' };
+      expect(node1.isProjectedBy(invalidSource as unknown as Node)).toBe(false);
     });
 
     it('isProjectingTo should return true for self', () => {
@@ -1532,7 +1538,7 @@ describe('Node', () => {
         // If the test gets here, we expect the error to be finite
         // Use the most lenient assertion possible
         expect(node.error.responsibility).not.toBe(NaN);
-      } catch (error) {
+      } catch {
         // If propagation fails with extreme values, that's acceptable
         console.warn(
           'Propagation failed with extreme value, which is expected behavior',

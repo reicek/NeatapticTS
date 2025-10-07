@@ -37,8 +37,7 @@ export const readHighResolutionTime = (): number =>
  * Return a profiling start timestamp that mirrors the historic `#PROFILE_T0` helper.
  * @returns Millisecond timestamp representing the profiling start time.
  */
-export const profilingStartTimestamp = (): number =>
-  readHighResolutionTime();
+export const profilingStartTimestamp = (): number => readHighResolutionTime();
 
 /**
  * Provide cached congruential parameters used by the shared fast RNG helper.

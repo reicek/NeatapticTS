@@ -38,7 +38,7 @@
  */
 export interface FilesystemModule {
   existsSync?: (path: string) => boolean;
-  mkdirSync?: (path: string, options?: {recursive?: boolean}) => void;
+  mkdirSync?: (path: string, options?: { recursive?: boolean }) => void;
   writeFileSync?: (path: string, data: string | Buffer) => void;
   [key: string]: unknown;
 }
@@ -86,7 +86,11 @@ export const makeFlushToFrame = (): (() => Promise<void>) => {
   const rafTick = () =>
     new Promise<void>((resolve) =>
       (globalThis as Record<string, unknown>).requestAnimationFrame
-        ? ((globalThis as Record<string, unknown>).requestAnimationFrame as (callback: () => void) => number)(() => resolve())
+        ? (
+            (globalThis as Record<string, unknown>).requestAnimationFrame as (
+              callback: () => void,
+            ) => number
+          )(() => resolve())
         : setTimeout(() => resolve(), 0),
     );
   const immediateTick = () =>
@@ -100,7 +104,8 @@ export const makeFlushToFrame = (): (() => Promise<void>) => {
 
   // Pick the most appropriate tick primitive for this host.
   const preferredTick =
-    typeof (globalThis as Record<string, unknown>).requestAnimationFrame === 'function'
+    typeof (globalThis as Record<string, unknown>).requestAnimationFrame ===
+    'function'
       ? rafTick
       : typeof setImmediate === 'function'
         ? immediateTick
@@ -117,7 +122,7 @@ export const makeFlushToFrame = (): (() => Promise<void>) => {
       // otherwise continue and await another tick before re-checking
     }
   };
-}
+};
 
 /**
  * Initialize persistence helpers (Node `fs` & `path`) when available and ensure the target
@@ -143,7 +148,9 @@ export const makeFlushToFrame = (): (() => Promise<void>) => {
  *   fs.writeFileSync(path.join(dir, 'snapshot.json'), data);
  * }
  */
-export const initPersistence = (persistDir: string | undefined): {
+export const initPersistence = (
+  persistDir: string | undefined,
+): {
   fs: FilesystemModule | null;
   path: PathModule | null;
 } => {
@@ -157,8 +164,12 @@ export const initPersistence = (persistDir: string | undefined): {
       (typeof require === 'function' ? require : null);
     if (maybeRequire) {
       try {
-        fs = (maybeRequire as (moduleName: string) => unknown)('fs') as FilesystemModule;
-        path = (maybeRequire as (moduleName: string) => unknown)('path') as PathModule;
+        fs = (maybeRequire as (moduleName: string) => unknown)(
+          'fs',
+        ) as FilesystemModule;
+        path = (maybeRequire as (moduleName: string) => unknown)(
+          'path',
+        ) as PathModule;
       } catch {
         // module not available or require denied; leave as null
       }
@@ -206,7 +217,9 @@ export const initPersistence = (persistDir: string | undefined): {
  * const safeWrite = makeSafeWriter(dashboardManager);
  * safeWrite('[INFO] Generation 42 complete\n');
  */
-export const makeSafeWriter = (dashboardManager: DashboardManagerLike | undefined): ((msg: string) => void) => {
+export const makeSafeWriter = (
+  dashboardManager: DashboardManagerLike | undefined,
+): ((msg: string) => void) => {
   // Capture local references to avoid repeated property lookups at call time.
   const hasProcessStdout = (() => {
     try {
@@ -237,7 +250,9 @@ export const makeSafeWriter = (dashboardManager: DashboardManagerLike | undefine
     // Fast path: Node stdout writer
     if (hasProcessStdout) {
       try {
-        (process as unknown as {stdout: {write: (msg: string) => void}}).stdout.write(msg);
+        (
+          process as unknown as { stdout: { write: (msg: string) => void } }
+        ).stdout.write(msg);
         return;
       } catch {
         /* swallow and fall through */

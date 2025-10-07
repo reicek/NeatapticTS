@@ -244,7 +244,7 @@ export const runSimplifyCycle = (
   }
 
   return Math.max(0, remainingGens - 1);
-}
+};
 
 /**
  * Handle simplify entry and per-generation advance.
@@ -347,7 +347,7 @@ export const handleSimplifyState = (
     simplifyRemaining: remaining,
     plateauCounter: counter,
   };
-}
+};
 
 /**
  * Expand the population by creating children from top-performing parents.
@@ -421,7 +421,7 @@ export const expandPopulation = (
   } catch {
     // Swallow logging errors.
   }
-}
+};
 
 /**
  * Prepare working sets for population expansion.
@@ -823,7 +823,7 @@ export const getSortedIndicesByScore = (
 
   state.scratch.sortedIndexBuffer.length = populationLength;
   return state.scratch.sortedIndexBuffer;
-}
+};
 
 /**
  * In-place insertion sort by descending score.
@@ -864,7 +864,7 @@ const insertionSortIndices = (
 
     indexBuf[scanPos + 1] = keyIndex;
   }
-}
+};
 
 /**
  * Compute median-of-three pivot score for quicksort.
@@ -919,7 +919,7 @@ const medianOfThreePivot = (
   }
 
   return middleScore as number;
-}
+};
 
 /**
  * Push a [lo, hi] range onto the pooled quicksort stack.
@@ -954,7 +954,7 @@ const qsPushRange = (
   stackBuf[stackPtr++] = rangeLo | 0;
   stackBuf[stackPtr++] = rangeHi | 0;
   return stackPtr;
-}
+};
 
 /**
  * Resolve and cache configured mutation operations from NEAT driver.
@@ -991,7 +991,9 @@ const getMutationOps = (
         if (maybeLen != null && Number.isFinite(maybeLen) && maybeLen >= 0) {
           cachedMutationOps = candidate as MutationOperation[];
         } else {
-          cachedMutationOps = Object.values(candidate as Record<string, MutationOperation>);
+          cachedMutationOps = Object.values(
+            candidate as Record<string, MutationOperation>,
+          );
         }
       } else {
         cachedMutationOps = EMPTY_VEC;
@@ -1002,7 +1004,7 @@ const getMutationOps = (
   } catch {
     return EMPTY_VEC;
   }
-}
+};
 
 /**
  * Ensure all output nodes use identity activation.
@@ -1053,7 +1055,7 @@ export const ensureOutputIdentity = (
   } catch {
     // Best-effort: swallow errors.
   }
-}
+};
 
 /**
  * Update species history and detect species collapse.
@@ -1170,7 +1172,7 @@ export const handleSpeciesHistory = (
   } catch {
     return false;
   }
-}
+};
 
 /**
  * Attempt population expansion when conditions permit.
@@ -1267,7 +1269,7 @@ export const maybeExpandPopulation = (
   } catch {
     // Best-effort: do not throw.
   }
-}
+};
 
 /**
  * Prune saturated hidden-to-output connections for a single genome.
@@ -1297,9 +1299,7 @@ export const pruneSaturatedHiddenOutputs = (
 ) => {
   try {
     const pruneProfilingEnabled = isProfilingDetailsEnabled(state);
-    const startProfile = pruneProfilingEnabled
-      ? profilingStartTimestamp()
-      : 0;
+    const startProfile = pruneProfilingEnabled ? profilingStartTimestamp() : 0;
     const runtimeGenome = genome as RuntimeGenome;
     const nodesRef = runtimeGenome?.nodes ?? EMPTY_VEC;
 
@@ -1516,7 +1516,9 @@ export const reinitializeGenomeOutputsAndWeights = (
 ): { connReset: number; biasReset: number } => {
   try {
     const runtimeGenome = genome as RuntimeGenome;
-    const nodesList: NetworkNode[] = Array.isArray(runtimeGenome?.nodes) ? runtimeGenome.nodes : [];
+    const nodesList: NetworkNode[] = Array.isArray(runtimeGenome?.nodes)
+      ? runtimeGenome.nodes
+      : [];
 
     let sampleBuf = state.scratch.samplePool;
     if (!Array.isArray(sampleBuf)) sampleBuf = state.scratch.samplePool = [];
@@ -1553,7 +1555,9 @@ export const reinitializeGenomeOutputsAndWeights = (
 
     // Reset weights targeting outputs.
     let connReset = 0;
-    const connections: NetworkConnection[] = Array.isArray(runtimeGenome?.connections)
+    const connections: NetworkConnection[] = Array.isArray(
+      runtimeGenome?.connections,
+    )
       ? runtimeGenome.connections
       : [];
     if (connections.length > 0 && outputCount > 0) {
@@ -1689,4 +1693,4 @@ export const compactPopulation = (
   } catch {
     return 0;
   }
-}
+};

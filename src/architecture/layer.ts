@@ -1,7 +1,9 @@
 import Node from './node';
+import Connection from './connection';
 import Group from './group';
 import * as methods from '../methods/methods';
 import { activationArrayPool } from './activationArrayPool';
+import { NORM_EPSILON } from '../neat/neat.constants';
 
 /**
  * Represents a functional layer within a neural network architecture.
@@ -25,7 +27,7 @@ export default class Layer {
    * `out`: Outgoing connections from the layer's nodes.
    * `self`: Self-connections within the layer's nodes.
    */
-  connections: { in: any[]; out: any[]; self: any[] };
+  connections: { in: Connection[]; out: Connection[]; self: Connection[] };
 
   /**
    * Represents the primary output group of nodes for this layer.
@@ -97,9 +99,9 @@ export default class Layer {
       } else {
         activation = this.nodes[i].activate(value[i]);
       }
-      (out as any)[i] = activation;
+      (out as unknown as number[])[i] = activation;
     }
-    const cloned = Array.from(out as any) as number[];
+    const cloned = Array.from(out as unknown as number[]) as number[];
     activationArrayPool.release(out);
     return cloned; // Return the activation values of all nodes
   }
@@ -148,7 +150,11 @@ export default class Layer {
    * @returns An array containing the newly created connection objects.
    * @throws {Error} If the layer's `output` group is not defined.
    */
-  connect(target: Group | Node | Layer, method?: any, weight?: number): any[] {
+  connect(
+    target: Group | Node | Layer,
+    method?: unknown,
+    weight?: number,
+  ): Connection[] {
     // Ensure the output group is defined before connecting
     if (!this.output) {
       throw new Error(
@@ -156,7 +162,7 @@ export default class Layer {
       );
     }
 
-    let connections: any[] = [];
+    let connections: Connection[] = [];
     if (target instanceof Layer) {
       // Delegate connection ONLY to the target layer's input method
       connections = target.input(this, method, weight);
@@ -178,7 +184,7 @@ export default class Layer {
    * @param method - The gating method (e.g., `INPUT`, `OUTPUT`, `SELF`) specifying how the gate influences the connection. See `methods.gating`.
    * @throws {Error} If the layer's `output` group is not defined.
    */
-  gate(connections: any[], method: any) {
+  gate(connections: Connection[], method: unknown): void {
     // Ensure the output group is defined before gating
     if (!this.output) {
       throw new Error(
@@ -199,7 +205,11 @@ export default class Layer {
    * @param values - An object containing the properties and their values to set.
    *                 Example: `{ bias: 0.5, squash: methods.Activation.ReLU }`
    */
-  set(values: { bias?: number; squash?: any; type?: string }) {
+  set(values: {
+    bias?: number;
+    squash?: (x: number, derivate?: boolean) => number;
+    type?: string;
+  }): void {
     for (let i = 0; i < this.nodes.length; i++) {
       const node = this.nodes[i];
 
@@ -208,10 +218,12 @@ export default class Layer {
         if (values.bias !== undefined) {
           node.bias = values.bias;
         }
-        // Use provided squash function or keep the existing one
-        node.squash = values.squash || node.squash;
-        // Use provided type or keep the existing one
-        node.type = values.type || node.type;
+        if (values.squash !== undefined) {
+          node.squash = values.squash;
+        }
+        if (values.type !== undefined) {
+          node.type = values.type;
+        }
       } else if (this.isGroup(node)) {
         // If it's a Group (possible in memory layers), apply settings recursively
         (node as Group).set(values);
@@ -310,7 +322,7 @@ export default class Layer {
    * @returns An array containing the newly created connection objects.
    * @throws {Error} If the layer's `output` group (acting as input target here) is not defined.
    */
-  input(from: Layer | Group, method?: any, weight?: number): any[] {
+  input(from: Layer | Group, method?: unknown, weight?: number): Connection[] {
     // If connecting from another Layer, use its output group as the source
     if (from instanceof Layer) from = from.output!;
     // Default connection method if not specified
@@ -349,9 +361,9 @@ export default class Layer {
     // Override the default input method to connect directly to the 'block' group
     layer.input = (
       from: Layer | Group,
-      method?: any,
+      method?: unknown,
       weight?: number,
-    ): any[] => {
+    ): Connection[] => {
       if (from instanceof Layer) from = from.output!; // Use output group of source layer
       method = method || methods.groupConnection.ALL_TO_ALL; // Default connection
       // Connect the source 'from' to this layer's 'block'
@@ -443,12 +455,12 @@ export default class Layer {
     // Define how external inputs connect to this LSTM layer
     layer.input = (
       from: Layer | Group,
-      method?: any,
+      method?: unknown,
       weight?: number,
-    ): any[] => {
+    ): Connection[] => {
       if (from instanceof Layer) from = from.output!; // Use output group of source layer
       method = method || methods.groupConnection.ALL_TO_ALL; // Default connection
-      let connections: any[] = [];
+      let connections: Connection[] = [];
 
       // Connect external input to the memory cell (candidate values) and all three gates
       const input = from.connect(memoryCell, method, weight); // Input to cell calculation
@@ -561,12 +573,12 @@ export default class Layer {
     // Define how external inputs connect to this GRU layer
     layer.input = (
       from: Layer | Group,
-      method?: any,
+      method?: unknown,
       weight?: number,
-    ): any[] => {
+    ): Connection[] => {
       if (from instanceof Layer) from = from.output!; // Use output group of source layer
       method = method || methods.groupConnection.ALL_TO_ALL; // Default connection
-      let connections: any[] = [];
+      let connections: Connection[] = [];
 
       // Connect external input to update gate, reset gate, and memory cell candidate calculation
       connections = connections.concat(
@@ -652,12 +664,10 @@ export default class Layer {
     // Define how external inputs connect to this Memory layer
     layer.input = (
       from: Layer | Group,
-      method?: any,
-      weight?: number,
-    ): any[] => {
+      _method?: unknown, // eslint-disable-line @typescript-eslint/no-unused-vars
+      _weight?: number, // eslint-disable-line @typescript-eslint/no-unused-vars
+    ): Connection[] => {
       if (from instanceof Layer) from = from.output!; // Use output group of source layer
-      // Method is typically ignored here as we force ONE_TO_ONE to the last block
-      method = method || methods.groupConnection.ALL_TO_ALL; // Keep for signature consistency
 
       // Get the most recent memory block (last element after reversal)
       const inputBlock = layer.nodes[layer.nodes.length - 1];
@@ -689,22 +699,23 @@ export default class Layer {
    */
   static batchNorm(size: number): Layer {
     const layer = Layer.dense(size);
-    (layer as any).batchNorm = true;
+    (layer as unknown as { batchNorm: boolean }).batchNorm = true;
     // Override activate to apply batch normalization
     const baseActivate = layer.activate.bind(layer);
-    layer.activate = function (
+    layer.activate = (
       value?: number[],
       training: boolean = false,
-    ): number[] {
+    ): number[] => {
       const activations = baseActivate(value, training);
       // Compute mean and variance
       const mean = activations.reduce((a, b) => a + b, 0) / activations.length;
       const variance =
         activations.reduce((a, b) => a + (b - mean) ** 2, 0) /
         activations.length;
-      const epsilon = require('../neat/neat.constants').NORM_EPSILON;
       // Normalize
-      return activations.map((a) => (a - mean) / Math.sqrt(variance + epsilon));
+      return activations.map(
+        (a) => (a - mean) / Math.sqrt(variance + NORM_EPSILON),
+      );
     };
     return layer;
   }
@@ -717,22 +728,23 @@ export default class Layer {
    */
   static layerNorm(size: number): Layer {
     const layer = Layer.dense(size);
-    (layer as any).layerNorm = true;
+    (layer as unknown as { layerNorm: boolean }).layerNorm = true;
     // Override activate to apply layer normalization
     const baseActivate = layer.activate.bind(layer);
-    layer.activate = function (
+    layer.activate = (
       value?: number[],
       training: boolean = false,
-    ): number[] {
+    ): number[] => {
       const activations = baseActivate(value, training);
       // Compute mean and variance (per sample, but here per layer)
       const mean = activations.reduce((a, b) => a + b, 0) / activations.length;
       const variance =
         activations.reduce((a, b) => a + (b - mean) ** 2, 0) /
         activations.length;
-      const epsilon = require('../neat/neat.constants').NORM_EPSILON;
       // Normalize
-      return activations.map((a) => (a - mean) / Math.sqrt(variance + epsilon));
+      return activations.map(
+        (a) => (a - mean) / Math.sqrt(variance + NORM_EPSILON),
+      );
     };
     return layer;
   }
@@ -755,11 +767,15 @@ export default class Layer {
     layer.nodes = Array.from({ length: size }, () => new Node());
     layer.output = new Group(size);
     // Store conv params for future use
-    (layer as any).conv1d = { kernelSize, stride, padding };
+    (
+      layer as unknown as {
+        conv1d: { kernelSize: number; stride: number; padding: number };
+      }
+    ).conv1d = { kernelSize, stride, padding };
     // Placeholder: actual convolution logic would be in a custom activate method
-    layer.activate = function (value?: number[]): number[] {
+    layer.activate = (value?: number[]): number[] => {
       // For now, just pass through or slice input as a stub
-      if (!value) return this.nodes.map((n) => n.activate());
+      if (!value) return layer.nodes.map((n) => n.activate());
       // Simple stub: take the first 'size' values
       return value.slice(0, size);
     };
@@ -776,11 +792,13 @@ export default class Layer {
     const layer = new Layer();
     layer.nodes = Array.from({ length: size }, () => new Node());
     layer.output = new Group(size);
-    (layer as any).attention = { heads };
+    (layer as unknown as { attention: { heads: number } }).attention = {
+      heads,
+    };
     // Placeholder: actual attention logic would be in a custom activate method
-    layer.activate = function (value?: number[]): number[] {
+    layer.activate = (value?: number[]): number[] => {
       // For now, just average the input as a stub
-      if (!value) return this.nodes.map((n) => n.activate());
+      if (!value) return layer.nodes.map((n) => n.activate());
       const avg = value.reduce((a, b) => a + b, 0) / value.length;
       return Array(size).fill(avg);
     };
@@ -797,8 +815,13 @@ export default class Layer {
    * @param obj - The object to inspect.
    * @returns `true` if the object has `set` and `nodes` properties matching a Group, `false` otherwise.
    */
-  private isGroup(obj: any): obj is Group {
+  private isGroup(obj: unknown): obj is Group {
     // Check for existence and type of key properties
-    return !!obj && typeof obj.set === 'function' && Array.isArray(obj.nodes);
+    const candidate = obj as { set?: unknown; nodes?: unknown };
+    return (
+      !!obj &&
+      typeof candidate.set === 'function' &&
+      Array.isArray(candidate.nodes)
+    );
   }
 }

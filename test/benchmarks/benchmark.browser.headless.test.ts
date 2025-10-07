@@ -40,8 +40,14 @@ jest.setTimeout(60000);
 interface BrowserRunRecord {
   mode: string;
   bundleBytes: number;
-  performanceMemory: any;
-  bench: any;
+  performanceMemory: {
+    usedJSHeapSize?: number;
+    totalJSHeapSize?: number;
+    jsHeapSizeLimit?: number;
+  } | null;
+  bench: {
+    [key: string]: unknown;
+  } | null;
 }
 
 /**
@@ -57,7 +63,11 @@ interface BrowserRunRecord {
  *  - Marks Node‑only core modules as externals so esbuild does not attempt to
  *    polyfill or resolve them for the browser (avoids CI resolution failures).
  */
-async function buildBundles(): Promise<{ devPath: string; prodPath: string }> {
+const buildBundles = async (): Promise<{
+  devPath: string;
+  prodPath: string;
+}> => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const esbuild = require('esbuild');
   const benchDir = path.resolve(__dirname, '../..', 'bench-browser');
   const entry = path.join(benchDir, 'bench-entry.ts');
@@ -93,7 +103,7 @@ async function buildBundles(): Promise<{ devPath: string; prodPath: string }> {
     write: true,
   });
   return { devPath: devOut, prodPath: prodOut };
-}
+};
 
 /**
  * Launches a headless Chromium instance (if available) and executes each built
@@ -106,12 +116,13 @@ async function buildBundles(): Promise<{ devPath: string; prodPath: string }> {
  *    short‑circuit with an empty result set.
  *  - A bounded polling loop (15s cap) waits for the bundle to mark readiness.
  */
-async function runHeadless(paths: {
+const runHeadless = async (paths: {
   devPath: string;
   prodPath: string;
-}): Promise<BrowserRunRecord[]> {
+}): Promise<BrowserRunRecord[]> => {
   let puppeteer;
   try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     puppeteer = require('puppeteer');
   } catch {
     return [];
@@ -141,7 +152,9 @@ async function runHeadless(paths: {
         if (!fs.existsSync(localCopy)) {
           fs.copyFileSync(b.path, localCopy);
         }
-      } catch {}
+      } catch {
+        // Ignore file copy errors; bundle may already exist
+      }
     }
     // Inject mode + bundle placeholder tokens into HTML template.
     const html = template
@@ -153,18 +166,30 @@ async function runHeadless(paths: {
     await page.goto(`file://${tmpPath}`);
     // Poll the page for the benchmark payload with a hard timeout.
     const start = Date.now();
-    let payload: any;
+    let payload: Record<string, unknown> | null = null;
     while (Date.now() - start < 15000) {
-      payload = await page
-        .evaluate(() => (window as any).__NEATAPTIC_BENCH__)
-        .catch(() => null);
+      payload = (await page
+        .evaluate(() => {
+          interface WindowWithBench extends Window {
+            __NEATAPTIC_BENCH__?: Record<string, unknown>;
+          }
+          return (window as WindowWithBench).__NEATAPTIC_BENCH__ || null;
+        })
+        .catch(() => null)) as Record<string, unknown> | null;
       if (payload) break;
       await new Promise((r) => setTimeout(r, 50));
     }
     // Attempt to read memory stats (Chromium only; may be absent in CI).
     const perfMem = await page
       .evaluate(() => {
-        const pm: any = (performance as any).memory || null;
+        interface PerformanceWithMemory extends Performance {
+          memory?: {
+            usedJSHeapSize?: number;
+            totalJSHeapSize?: number;
+            jsHeapSizeLimit?: number;
+          };
+        }
+        const pm = (performance as PerformanceWithMemory).memory || null;
         return pm
           ? {
               usedJSHeapSize: pm.usedJSHeapSize,
@@ -184,25 +209,32 @@ async function runHeadless(paths: {
   }
   await browser.close();
   return runs;
-}
+};
 
 /**
  * Merges (overwrites) the provided run records into benchmark.results.json.
  * File is created if missing. Existing structure is preserved except for the
  * browserRuns & meta.browserHarness keys which we control.
  */
-function mergeResults(browserRuns: BrowserRunRecord[]) {
+const mergeResults = (browserRuns: BrowserRunRecord[]): void => {
   const resultsPath = path.resolve(__dirname, 'benchmark.results.json');
-  let data: any = {};
+  let data: Record<string, unknown> = {};
   if (fs.existsSync(resultsPath)) {
     try {
-      data = JSON.parse(fs.readFileSync(resultsPath, 'utf-8'));
-    } catch {}
+      data = JSON.parse(fs.readFileSync(resultsPath, 'utf-8')) as Record<
+        string,
+        unknown
+      >;
+    } catch {
+      // Ignore parse errors, keep empty object
+    }
   }
   data.browserRuns = browserRuns;
-  data.meta = Object.assign({}, data.meta || {}, { browserHarness: true });
+  data.meta = Object.assign({}, (data.meta as object) || {}, {
+    browserHarness: true,
+  });
   fs.writeFileSync(resultsPath, JSON.stringify(data, null, 2), 'utf-8');
-}
+};
 
 describe('browser headless benchmark integration', () => {
   if (SKIP) {
@@ -228,7 +260,9 @@ describe('browser headless benchmark integration', () => {
     [devPath, prodPath].forEach((f) => {
       try {
         fs.unlinkSync(f);
-      } catch {}
+      } catch {
+        // Ignore cleanup errors; files may already be deleted
+      }
     });
   });
 
@@ -242,11 +276,16 @@ describe('browser headless benchmark integration', () => {
 
   it('persists browserRuns in results file', () => {
     const resultsPath = path.resolve(__dirname, 'benchmark.results.json');
-    let parsed: any = {};
+    let parsed: Record<string, unknown> = {};
     if (fs.existsSync(resultsPath)) {
       try {
-        parsed = JSON.parse(fs.readFileSync(resultsPath, 'utf-8'));
-      } catch {}
+        parsed = JSON.parse(fs.readFileSync(resultsPath, 'utf-8')) as Record<
+          string,
+          unknown
+        >;
+      } catch {
+        // Ignore parse errors; keep empty object
+      }
     }
     expect(Array.isArray(parsed.browserRuns)).toBe(true);
   });

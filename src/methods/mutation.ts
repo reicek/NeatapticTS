@@ -1,6 +1,18 @@
 import Activation from './activation';
 
 /**
+ * Configuration object for a single mutation operation.
+ */
+interface MutationConfig {
+  name: string;
+  min?: number;
+  max?: number;
+  keep_gates?: boolean;
+  mutateOutput?: boolean;
+  allowed?: Array<(x: number) => number>;
+}
+
+/**
  * Defines various mutation methods used in neuroevolution algorithms.
  *
  * Mutation introduces genetic diversity into the population by randomly
@@ -45,7 +57,9 @@ import Activation from './activation';
  * @see {@link https://en.wikipedia.org/wiki/Neuroevolution Neuroevolution - Wikipedia}
  * @see {@link http://nn.cs.utexas.edu/downloads/papers/stanley.ec02.pdf NEAT Paper (Relevant concepts)}
  */
-export const mutation: { [key: string]: any } = {
+export const mutation: {
+  [key: string]: MutationConfig | MutationConfig[];
+} = {
   /**
    * Adds a new node to the network by splitting an existing connection.
    * The original connection is disabled, and two new connections are created:
@@ -258,24 +272,24 @@ export const mutation: { [key: string]: any } = {
  * Useful for scenarios where any type of structural or parameter mutation is allowed.
  */
 mutation.ALL = [
-  mutation.ADD_NODE,
-  mutation.SUB_NODE,
-  mutation.ADD_CONN,
-  mutation.SUB_CONN,
-  mutation.MOD_WEIGHT,
-  mutation.MOD_BIAS,
-  mutation.MOD_ACTIVATION,
-  mutation.ADD_GATE,
-  mutation.SUB_GATE,
-  mutation.ADD_SELF_CONN,
-  mutation.SUB_SELF_CONN,
-  mutation.ADD_BACK_CONN,
-  mutation.SUB_BACK_CONN,
-  mutation.SWAP_NODES,
-  mutation.REINIT_WEIGHT,
-  mutation.BATCH_NORM,
-  mutation.ADD_LSTM_NODE, // Added
-  mutation.ADD_GRU_NODE, // Added
+  mutation.ADD_NODE as MutationConfig,
+  mutation.SUB_NODE as MutationConfig,
+  mutation.ADD_CONN as MutationConfig,
+  mutation.SUB_CONN as MutationConfig,
+  mutation.MOD_WEIGHT as MutationConfig,
+  mutation.MOD_BIAS as MutationConfig,
+  mutation.MOD_ACTIVATION as MutationConfig,
+  mutation.ADD_GATE as MutationConfig,
+  mutation.SUB_GATE as MutationConfig,
+  mutation.ADD_SELF_CONN as MutationConfig,
+  mutation.SUB_SELF_CONN as MutationConfig,
+  mutation.ADD_BACK_CONN as MutationConfig,
+  mutation.SUB_BACK_CONN as MutationConfig,
+  mutation.SWAP_NODES as MutationConfig,
+  mutation.REINIT_WEIGHT as MutationConfig,
+  mutation.BATCH_NORM as MutationConfig,
+  mutation.ADD_LSTM_NODE as MutationConfig, // Added
+  mutation.ADD_GRU_NODE as MutationConfig, // Added
 ];
 
 /**
@@ -285,16 +299,16 @@ mutation.ALL = [
  * as these would violate the feedforward structure.
  */
 mutation.FFW = [
-  mutation.ADD_NODE,
-  mutation.SUB_NODE,
-  mutation.ADD_CONN,
-  mutation.SUB_CONN,
-  mutation.MOD_WEIGHT,
-  mutation.MOD_BIAS,
-  mutation.MOD_ACTIVATION,
-  mutation.SWAP_NODES,
-  mutation.REINIT_WEIGHT,
-  mutation.BATCH_NORM,
+  mutation.ADD_NODE as MutationConfig,
+  mutation.SUB_NODE as MutationConfig,
+  mutation.ADD_CONN as MutationConfig,
+  mutation.SUB_CONN as MutationConfig,
+  mutation.MOD_WEIGHT as MutationConfig,
+  mutation.MOD_BIAS as MutationConfig,
+  mutation.MOD_ACTIVATION as MutationConfig,
+  mutation.SWAP_NODES as MutationConfig,
+  mutation.REINIT_WEIGHT as MutationConfig,
+  mutation.BATCH_NORM as MutationConfig,
 ];
 
 export default mutation;

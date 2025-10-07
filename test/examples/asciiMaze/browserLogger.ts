@@ -511,4 +511,4 @@ export const createBrowserLogger = (
       logPreElement.scrollTop = logPreElement.scrollHeight;
     }
   };
-}
+};

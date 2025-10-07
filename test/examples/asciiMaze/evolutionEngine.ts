@@ -194,7 +194,10 @@ export class EvolutionEngine {
    * Populate the engine's pooled node-index scratch buffer with indices of nodes matching `type`.
    * @internal - Small helper used by various engine methods; retained for internal use.
    */
-  static #getNodeIndicesByType(nodes: RuntimeNetworkNode[] | undefined, type: string): number {
+  static #getNodeIndicesByType(
+    nodes: RuntimeNetworkNode[] | undefined,
+    type: string,
+  ): number {
     if (!Array.isArray(nodes) || nodes.length === 0) return 0;
     let writeCount = 0;
     let scratch = EvolutionEngine.#STATE.scratch.nodeIndexBuffer;
@@ -240,7 +243,9 @@ export class EvolutionEngine {
     hiddenOutBuffer.length = 0;
     const outgoing = hiddenNode.connections.out ?? EvolutionEngine.#EMPTY_VEC;
     for (let outIndex = 0; outIndex < outgoing.length; outIndex++) {
-      const candidate = outgoing[outIndex] as unknown as RuntimeNetworkConnection;
+      const candidate = outgoing[
+        outIndex
+      ] as unknown as RuntimeNetworkConnection;
       if (!candidate || candidate.enabled === false) continue;
       for (
         let outputIndex = 0;
@@ -438,7 +443,9 @@ export class EvolutionEngine {
         REDUCED_TELEMETRY: EvolutionEngine.#STATE.toggles.reducedTelemetry,
         DISABLE_BALDWIN: EvolutionEngine.#STATE.toggles.disableBaldwinPhase,
       },
-      (EvolutionEngine as unknown as RuntimeEvolutionEngine)._speciesHistory as unknown as number[] ?? EvolutionEngine.#EMPTY_VEC as unknown as number[],
+      ((EvolutionEngine as unknown as RuntimeEvolutionEngine)
+        ._speciesHistory as unknown as number[]) ??
+        (EvolutionEngine.#EMPTY_VEC as unknown as number[]),
     );
 
     // Update ring state from loop result
@@ -477,7 +484,9 @@ export class EvolutionEngine {
       bestNetwork,
       bestResult,
       neat,
-      exitReason: (bestResult as unknown as RuntimeEvolutionResult).exitReason ?? 'incomplete',
+      exitReason:
+        (bestResult as unknown as RuntimeEvolutionResult).exitReason ??
+        'incomplete',
     };
   }
 

@@ -5,16 +5,33 @@
  */
 import fs from 'fs';
 import path from 'path';
-import Connection from '../../src/architecture/connection';
 import Node from '../../src/architecture/node';
+
+/**
+ * Runtime interface for benchmark results with field audit data.
+ */
+interface BenchmarkResults {
+  fieldAudit?: {
+    generatedAt?: string;
+    Node?: {
+      count: number;
+      keys: string[];
+    };
+    Connection?: {
+      count: number;
+      keys: string[];
+    };
+  };
+  [key: string]: unknown;
+}
 
 /**
  * Persist field audit data into the shared benchmark results artifact so later
  * slimming refactors can diff property counts & names. Idempotent per test run.
  */
-function writeAudit(data: any) {
+const writeAudit = (data: BenchmarkResults['fieldAudit']): void => {
   const resultsPath = path.resolve(__dirname, 'benchmark.results.json');
-  let current: any = {};
+  let current: BenchmarkResults = {};
   if (fs.existsSync(resultsPath)) {
     try {
       current = JSON.parse(fs.readFileSync(resultsPath, 'utf8'));
@@ -24,7 +41,7 @@ function writeAudit(data: any) {
   }
   current.fieldAudit = data;
   fs.writeFileSync(resultsPath, JSON.stringify(current, null, 2));
-}
+};
 
 describe('phase1.fieldAudit baseline', () => {
   /**
@@ -76,11 +93,13 @@ describe('phase1.fieldAudit baseline', () => {
   describe('persistence', () => {
     test('writes fieldAudit with matching Node count', () => {
       const resultsPath = path.resolve(__dirname, 'benchmark.results.json');
-      let parsed: any = {};
+      let parsed: BenchmarkResults = {};
       if (fs.existsSync(resultsPath)) {
         try {
           parsed = JSON.parse(fs.readFileSync(resultsPath, 'utf-8'));
-        } catch {}
+        } catch {
+          // Ignore parse errors
+        }
       }
       const ok =
         parsed.fieldAudit &&

@@ -1,4 +1,5 @@
 import Node from './node';
+import Connection from './connection';
 import Layer from './layer';
 import { config } from '../config';
 import * as methods from '../methods/methods';
@@ -19,9 +20,9 @@ export default class Group {
    * `self`: Connections between nodes within this same group (e.g., in ONE_TO_ONE connections).
    */
   connections: {
-    in: any[]; // Consider using a more specific type like `Connection[]` if available
-    out: any[]; // Consider using a more specific type like `Connection[]` if available
-    self: any[]; // Consider using a more specific type like `Connection[]` if available
+    in: Connection[];
+    out: Connection[];
+    self: Connection[];
   };
 
   /**
@@ -103,11 +104,15 @@ export default class Group {
    * @param {Group | Layer | Node} target - The destination entity (Group, Layer, or Node) to connect to.
    * @param {methods.groupConnection | methods.connection} [method] - The connection method/type (e.g., `methods.groupConnection.ALL_TO_ALL`, `methods.groupConnection.ONE_TO_ONE`). Defaults depend on the target type and whether it's the same group.
    * @param {number} [weight] - An optional fixed weight to assign to all created connections. If not provided, weights might be initialized randomly or based on node defaults.
-   * @returns {any[]} An array containing all the connection objects created. Consider using a more specific type like `Connection[]`.
+   * @returns {Connection[]} An array containing all the connection objects created.
    * @throws {Error} If `methods.groupConnection.ONE_TO_ONE` is used and the source and target groups have different sizes.
    */
-  connect(target: Group | Layer | Node, method?: any, weight?: number): any[] {
-    let connections: any[] = [];
+  connect(
+    target: Group | Layer | Node,
+    method?: unknown,
+    weight?: number,
+  ): Connection[] {
+    let connections: Connection[] = [];
     let i, j;
 
     // Connection to another Group
@@ -199,11 +204,11 @@ export default class Group {
    * Configures nodes within this group to act as gates for the specified connection(s).
    * Gating allows the output of a node in this group to modulate the flow of signal through the gated connection.
    *
-   * @param {any | any[]} connections - A single connection object or an array of connection objects to be gated. Consider using a more specific type like `Connection | Connection[]`.
+   * @param {Connection | Connection[]} connections - A single connection object or an array of connection objects to be gated.
    * @param {methods.gating} method - The gating mechanism to use (e.g., `methods.gating.INPUT`, `methods.gating.OUTPUT`, `methods.gating.SELF`). Specifies which part of the connection is influenced by the gater node.
    * @throws {Error} If no gating `method` is specified.
    */
-  gate(connections: any | any[], method: any): void {
+  gate(connections: Connection | Connection[], method: unknown): void {
     if (method === undefined) {
       throw new Error(
         'Please specify a gating method: Gating.INPUT, Gating.OUTPUT, or Gating.SELF',
@@ -274,18 +279,26 @@ export default class Group {
   /**
    * Sets specific properties (like bias, squash function, or type) for all nodes within the group.
    *
-   * @param {{ bias?: number; squash?: any; type?: string }} values - An object containing the properties and their new values. Only provided properties are updated.
+   * @param {{ bias?: number; squash?: (x: number, derivate?: boolean) => number; type?: string }} values - An object containing the properties and their new values. Only provided properties are updated.
    *        `bias`: Sets the bias term for all nodes.
    *        `squash`: Sets the activation function (squashing function) for all nodes.
    *        `type`: Sets the node type (e.g., 'input', 'hidden', 'output') for all nodes.
    */
-  set(values: { bias?: number; squash?: any; type?: string }): void {
+  set(values: {
+    bias?: number;
+    squash?: (x: number, derivate?: boolean) => number;
+    type?: string;
+  }): void {
     for (let i = 0; i < this.nodes.length; i++) {
       if (values.bias !== undefined) {
         this.nodes[i].bias = values.bias;
       }
-      this.nodes[i].squash = values.squash || this.nodes[i].squash;
-      this.nodes[i].type = values.type || this.nodes[i].type;
+      if (values.squash !== undefined) {
+        this.nodes[i].squash = values.squash;
+      }
+      if (values.type !== undefined) {
+        this.nodes[i].type = values.type;
+      }
     }
   }
 

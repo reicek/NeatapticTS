@@ -181,7 +181,7 @@ export const createNeat = (
   });
 
   return neatInstance;
-}
+};
 
 /**
  * Seed the NEAT population from an optional initial population and/or an optional
@@ -306,4 +306,4 @@ export const seedInitialPopulation = (
   }
 
   return scratchPopClone;
-}
+};

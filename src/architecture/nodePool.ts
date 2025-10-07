@@ -19,24 +19,6 @@
  */
 import Node from './node';
 
-/** Shape describing minimal mutable fields we explicitly reset (used internally). */
-interface ResettableNodeFields {
-  activation: number;
-  state: number;
-  old: number;
-  mask: number;
-  previousDeltaBias: number;
-  totalDeltaBias: number;
-  derivative?: number;
-  connections: Node['connections'];
-  error: Node['error'];
-  bias: number;
-  index?: number;
-  geneId: number;
-  type: string;
-  squash: Node['squash'];
-}
-
 /** Internal free list (stack) storing recycled Node instances. */
 const pool: Node[] = [];
 /** High-water mark statistic (observability aid; may feed future leak detection tooling). */
@@ -56,7 +38,11 @@ let freshCount = 0;
  * We intentionally do NOT reset the `type` or `squash` function unless explicitly provided so callers
  * can optionally request a different type on acquire. Bias is reinitialized consistent with constructor semantics.
  */
-function resetNode(node: Node, type?: string, rng: () => number = Math.random) {
+const resetNode = (
+  node: Node,
+  type?: string,
+  rng: () => number = Math.random,
+): void => {
   // Preserve or update type
   if (type) node.type = type;
   const t = node.type;
@@ -80,7 +66,7 @@ function resetNode(node: Node, type?: string, rng: () => number = Math.random) {
   // Assign new stable gene id (distinct from original run usage)
   node.geneId = nextGeneId++;
   // Index is preserved; we do NOT recycle indices here (network rebuild logic may reassign in future phase)
-}
+};
 
 /** Options bag for acquiring a node. */
 export interface AcquireNodeOptions {
@@ -96,7 +82,7 @@ export interface AcquireNodeOptions {
  * Acquire (obtain) a node instance from the pool (or construct a new one if empty).
  * The node is guaranteed to have fully reset dynamic state (activation, gradients, error, connections).
  */
-export function acquireNode(opts: AcquireNodeOptions = {}): Node {
+export const acquireNode = (opts: AcquireNodeOptions = {}): Node => {
   const { type = 'hidden', activationFn, rng } = opts;
   let node: Node;
   if (pool.length) {
@@ -111,7 +97,7 @@ export function acquireNode(opts: AcquireNodeOptions = {}): Node {
   }
   // NOTE: highWaterMark reflects MAX retained pool size; updated only on release().
   return node;
-}
+};
 
 /**
  * Release (recycle) a node back into the pool. The caller MUST ensure the node is fully detached
@@ -120,7 +106,7 @@ export function acquireNode(opts: AcquireNodeOptions = {}): Node {
  *
  * Phase 2: Automatically invoked by Network.remove() when pooling is enabled to recycle pruned nodes.
  */
-export function releaseNode(node: Node) {
+export const releaseNode = (node: Node): void => {
   // Proactively scrub large arrays / references to help GC of graphs containing this node.
   node.connections.in.length = 0;
   node.connections.out.length = 0;
@@ -129,12 +115,18 @@ export function releaseNode(node: Node) {
   node.error = { responsibility: 0, projected: 0, gated: 0 };
   pool.push(node);
   if (pool.length > highWaterMark) highWaterMark = pool.length;
-}
+};
 
 /**
  * Get current pool statistics (for debugging / future leak detection).
  */
-export function nodePoolStats() {
+export const nodePoolStats = (): {
+  size: number;
+  highWaterMark: number;
+  reused: number;
+  fresh: number;
+  recycledRatio: number;
+} => {
   // recycledRatio expresses long-run reuse efficiency; 0 => all fresh, 1 => full reuse.
   return {
     size: pool.length,
@@ -146,17 +138,17 @@ export function nodePoolStats() {
         ? reusedCount / (reusedCount + freshCount)
         : 0,
   };
-}
+};
 
 /**
  * Reset the pool (drops all retained nodes). Intended for test harness cleanup.
  */
-export function resetNodePool() {
+export const resetNodePool = (): void => {
   pool.length = 0; // drop all retained instances
   highWaterMark = 0; // reset leak tracking baseline
   reusedCount = 0; // reset instrumentation counters
   freshCount = 0;
-}
+};
 
 // Future (Phase 2+): preWarm(count), trim(predicate), integrate with network pruning events.
 
