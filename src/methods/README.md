@@ -8,12 +8,6 @@
 
 `(name: string, fn: (x: number, derivate?: boolean | undefined) => number) => void`
 
-Register a custom activation function at runtime.
-
-Parameters:
-- `` - - Name for the custom activation.
-- `` - - The activation function (should handle derivative if needed).
-
 ## methods/connection.ts
 
 ### connection
@@ -508,6 +502,10 @@ Returns: A function that calculates the decayed learning rate for a given iterat
 ## methods/mutation.ts
 
 ### mutation
+
+### MutationConfig
+
+Configuration object for a single mutation operation.
 
 ## methods/rate.ts
 

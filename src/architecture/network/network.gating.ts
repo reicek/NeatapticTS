@@ -140,7 +140,9 @@ export function removeNode(this: Network, node: Node) {
   const inputs: Node[] = [];
   for (let i = node.connections.in.length - 1; i >= 0; i--) {
     const c = node.connections.in[i];
-    const subNodeConfig = Array.isArray(mutation.SUB_NODE) ? mutation.SUB_NODE[0] : mutation.SUB_NODE;
+    const subNodeConfig = Array.isArray(mutation.SUB_NODE)
+      ? mutation.SUB_NODE[0]
+      : mutation.SUB_NODE;
     if (subNodeConfig?.keep_gates && c.gater && c.gater !== node)
       gaters.push(c.gater);
     inputs.push(c.from);
@@ -152,7 +154,9 @@ export function removeNode(this: Network, node: Node) {
   const outputs: Node[] = [];
   for (let i = node.connections.out.length - 1; i >= 0; i--) {
     const c = node.connections.out[i];
-    const subNodeConfig = Array.isArray(mutation.SUB_NODE) ? mutation.SUB_NODE[0] : mutation.SUB_NODE;
+    const subNodeConfig = Array.isArray(mutation.SUB_NODE)
+      ? mutation.SUB_NODE[0]
+      : mutation.SUB_NODE;
     if (subNodeConfig?.keep_gates && c.gater && c.gater !== node)
       gaters.push(c.gater);
     outputs.push(c.to);

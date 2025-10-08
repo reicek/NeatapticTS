@@ -251,7 +251,9 @@ export const makeSafeWriter = (
     if (hasProcessStdout) {
       try {
         (
-          process as unknown as { stdout: { write: (msg: string) => void } }
+          process as unknown as {
+            stdout: { write: (msg: string) => void };
+          }
         ).stdout.write(msg);
         return;
       } catch {

@@ -1003,7 +1003,23 @@ export default class Network implements NetworkView {
    *
    * @see {@link methods.mutation} for available mutation types.
    */
-  mutate(method: string | { name?: string; type?: string; identity?: string; [key: string]: unknown } | { name?: string; type?: string; identity?: string; [key: string]: unknown }[] | undefined): void {
+  mutate(
+    method:
+      | string
+      | {
+          name?: string;
+          type?: string;
+          identity?: string;
+          [key: string]: unknown;
+        }
+      | {
+          name?: string;
+          type?: string;
+          identity?: string;
+          [key: string]: unknown;
+        }[]
+      | undefined,
+  ): void {
     return _mutateImpl.call(this, method as never);
   }
 
@@ -1263,7 +1279,16 @@ export default class Network implements NetworkView {
    */
   /** Static lightweight tuple deserializer delegate */
   static deserialize(
-    data: [number[], number[], string[], { from: number; to: number; weight: number; gater: number | null }[], number, number] | unknown[],
+    data:
+      | [
+          number[],
+          number[],
+          string[],
+          { from: number; to: number; weight: number; gater: number | null }[],
+          number,
+          number,
+        ]
+      | unknown[],
     inputSize?: number,
     outputSize?: number,
   ): Network {

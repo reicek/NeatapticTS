@@ -25,7 +25,7 @@ Returns: 2‑D array: outputs[i] is the activation result for inputs[i].
 
 ### activateRaw
 
-`(input: number[], training: boolean, maxActivationDepth: number) => any`
+`(input: number[], training: boolean, maxActivationDepth: number) => number[]`
 
 Thin semantic alias to the network's main activation path.
 
@@ -42,6 +42,10 @@ Parameters:
 - `maxActivationDepth` - - Guard against runaway recursion / cyclic activation attempts.
 
 Returns: Implementation-defined result of Network.activate (typically an output vector).
+
+### NetworkInternals
+
+Runtime interface for accessing Network internal properties during activation.
 
 ### noTraceActivate
 
@@ -126,6 +130,10 @@ Parameters:
 - `from` - - Source node.
 - `to` - - Target node.
 
+### NetworkInternals
+
+Runtime interface for accessing Network internal properties during connection operations.
+
 ## architecture/network/network.deterministic.ts
 
 ### getRandomFn
@@ -158,6 +166,11 @@ Returns: Unsigned 32‑bit state integer or undefined if generator not yet seede
 ### network.deterministic
 
 Default export bundle for convenient named imports.
+
+### NetworkInternals
+
+Runtime properties accessed for deterministic PRNG operations.
+Local interface to avoid circular dependencies.
 
 ### restoreRNG
 
@@ -259,84 +272,15 @@ Returns: Object containing current training step & 32‑bit RNG state (both poss
 
 ## architecture/network/network.evolve.ts
 
-### buildMultiThreadFitness
+### CostFunction
 
-`(set: TrainingSample[], cost: any, amount: number, growth: number, threads: number, options: any) => Promise<{ fitnessFunction: (genome: import("D:/code-practice/NeatapticTS/src/architecture/network").default) => number; threads: number; } | { fitnessFunction: (population: import("D:/code-practice/NeatapticTS/src/architecture/network").default[]) => Promise<void>; threads: number; }>`
+`(target: number[], output: number[]) => number`
 
-Build a multi-threaded (worker-based) population fitness evaluator if worker infrastructure is available.
+Cost function type: takes target and output arrays, returns error scalar.
 
-Strategy:
- - Attempt to dynamically obtain a Worker constructor (node or browser variant).
- - If not possible, gracefully fall back to single-thread evaluation.
- - Spawn N workers (threads) each capable of evaluating genomes by calling worker.evaluate(genome).
- - Provide a fitness function that takes the whole population and returns a Promise that resolves
-   when all queued genomes have been processed. Each genome's score is written in-place.
+### CostFunctionOrRef
 
-Implementation details:
- - Queue: simple FIFO (array shift) suffices because ordering is not critical.
- - Robustness: Each worker evaluation is wrapped with error handling to prevent a single failure
-   from stalling the batch; failed evaluations simply proceed to next genome.
- - Complexity penalty applied after raw result retrieval: genome.score = -result - penalty.
-
-Returned metadata sets options.fitnessPopulation=true so downstream NEAT logic treats the fitness
-function as operating over the entire population at once (rather than per-genome).
-
-Parameters:
-- `set` - - Dataset.
-- `cost` - - Cost function.
-- `amount` - - Repetition count (unused directly here; assumed handled inside worker.evaluate result metric if needed).
-- `growth` - - Complexity penalty scalar.
-- `threads` - - Desired worker count.
-- `options` - - Evolution options object (mutated to add cleanup hooks & flags).
-
-Returns: Object with fitnessFunction (population evaluator) and resolved thread count.
-
-### buildSingleThreadFitness
-
-`(set: TrainingSample[], cost: any, amount: number, growth: number) => (genome: import("D:/code-practice/NeatapticTS/src/architecture/network").default) => number`
-
-Build a single-threaded fitness evaluation function (classic NEAT style) evaluating a genome
-over the provided dataset and returning a scalar score where higher is better.
-
-Fitness Definition:
-  fitness = -averageError - complexityPenalty
-We accumulate negative error (so lower error => higher fitness) over `amount` independent
-evaluations (amount>1 can smooth stochastic evaluation noise) then subtract complexity penalty.
-
-Error handling: If evaluation throws (numerical instability, internal error) we return -Infinity
-so such genomes are strongly disfavored.
-
-Parameters:
-- `set` - - Dataset of training samples.
-- `cost` - - Cost function reference (should expose error computation in genome.test).
-- `amount` - - Number of repeated evaluations to average.
-- `growth` - - Complexity penalty scalar.
-
-Returns: Function mapping a Network genome to a numeric fitness.
-
-### computeComplexityPenalty
-
-`(genome: import("D:/code-practice/NeatapticTS/src/architecture/network").default, growth: number) => number`
-
-Compute a structural complexity penalty scaled by a growth factor.
-
-Complexity heuristic:
-  (hidden nodes) + (connections) + (gates)
-hidden nodes = total nodes - input - output (to avoid penalizing fixed I/O interface size).
-
-Rationale: Encourages minimal / parsimonious networks by subtracting a term from fitness
-proportional to network size, counteracting bloat. Growth hyper‑parameter tunes pressure.
-
-Caching strategy: We memoize the base complexity (pre‑growth scaling) per genome when its
-structural counts (nodes / connections / gates) are unchanged. This is safe because only
-structural mutations alter these counts, and those invalidate earlier entries naturally
-(since mutated genomes are distinct object references in typical NEAT flows).
-
-Parameters:
-- `genome` - - Candidate network whose complexity to measure.
-- `growth` - - Positive scalar controlling strength of parsimony pressure.
-
-Returns: Complexity * growth (used directly to subtract from fitness score).
+Cost function OR a serializable reference with just the name (for worker threads).
 
 ### EvolutionConfig
 
@@ -345,7 +289,7 @@ capturing normalized option values used by the local evolutionary loop.
 
 ### evolveNetwork
 
-`(set: TrainingSample[], options: any) => Promise<{ error: number; iterations: number; time: number; }>`
+`(set: TrainingSample[], options: EvolveOptions) => Promise<{ error: number; iterations: number; time: number; }>`
 
 Evolve (optimize) the current network's topology and weights using a NEAT-like evolutionary loop
 until a stopping criterion (target error or max iterations) is met.
@@ -388,6 +332,11 @@ Parameters:
 
 Returns: Summary object { error, iterations, time(ms) }.
 
+### EvolveOptions
+
+Evolution options for the evolveNetwork method.
+Includes core evolution parameters plus NEAT-specific options passed through.
+
 ### TrainingSample
 
 A single supervised training example used to evaluate fitness.
@@ -424,6 +373,10 @@ Exported functions:
  - {@link gate}: Attach a gater to a connection.
  - {@link ungate}: Remove gating from a connection.
  - {@link removeNode}: Remove a hidden node while attempting to preserve connectivity & gating.
+
+### NetworkGatingProps
+
+Internal Network properties accessed during gating operations.
 
 ### removeNode
 
@@ -477,15 +430,22 @@ Parameters:
 
 ## architecture/network/network.genetic.ts
 
+### ConnectionGene
+
+Connection gene descriptor used during crossover.
+
+### ConnectionGeneticProps
+
+Extended Connection properties for genetic operations.
+
 ### crossOver
 
 `(network1: import("D:/code-practice/NeatapticTS/src/architecture/network").default, network2: import("D:/code-practice/NeatapticTS/src/architecture/network").default, equal: boolean) => import("D:/code-practice/NeatapticTS/src/architecture/network").default`
 
-Genetic operator: NEAT‑style crossover (legacy merge operator removed).
+### NetworkGeneticProps
 
-This module now focuses solely on producing recombinant offspring via {@link crossOver}.
-The previous experimental Network.merge has been removed to reduce maintenance surface area
-and avoid implying a misleading “sequential composition” guarantee.
+Internal runtime properties used during genetic operations.
+These properties are accessed dynamically and not part of the formal Network interface.
 
 ## architecture/network/network.mutate.ts
 
@@ -557,25 +517,25 @@ future batch normalization integration. Currently a no-op beyond tagging.
 
 ### _modActivation
 
-`(method: any) => void`
+`(method: MutationMethod | undefined) => void`
 
 MOD_ACTIVATION: Swap activation (squash) of a random eligible node; may exclude outputs.
 
 ### _modBias
 
-`(method: any) => void`
+`(method: MutationMethod | undefined) => void`
 
 MOD_BIAS: Delegate to node.mutate to adjust bias of a random non‑input node.
 
 ### _modWeight
 
-`(method: any) => void`
+`(method: MutationMethod | undefined) => void`
 
 MOD_WEIGHT: Perturb a single (possibly self) connection weight by uniform delta in [min,max].
 
 ### _reinitWeight
 
-`(method: any) => void`
+`(method: MutationMethod | undefined) => void`
 
 REINIT_WEIGHT: Reinitialize all incoming/outgoing/self connection weights for a random node.
 Useful as a heavy mutation to escape local minima. Falls back silently if no eligible node.
@@ -613,13 +573,13 @@ SUB_SELF_CONN: Remove a random existing self loop.
 
 ### _swapNodes
 
-`(method: any) => void`
+`(method: MutationMethod | undefined) => void`
 
 SWAP_NODES: Exchange bias & activation function between two random eligible nodes.
 
 ### mutateImpl
 
-`(method: any) => void`
+`(method: MutationMethod | undefined) => void`
 
 Public entry point: apply a single mutation operator to the network.
 
@@ -636,25 +596,15 @@ Parameters:
 - `this` - Network instance (bound).
 - `method` - Mutation enum value or descriptor object.
 
+### MutationMethod
+
+Mutation method descriptor (can be string enum value or object with identity).
+
+### NetworkMutationProps
+
+Internal Network properties accessed during mutations.
+
 ## architecture/network/network.onnx.ts
-
-### assignActivationFunctions
-
-`(network: import("D:/code-practice/NeatapticTS/src/architecture/network").default, onnx: import("D:/code-practice/NeatapticTS/src/architecture/network/network.onnx").OnnxModel, hiddenLayerSizes: number[]) => void`
-
-Map activation op_types from ONNX nodes back to internal activation functions.
-
-### assignWeightsAndBiases
-
-`(network: import("D:/code-practice/NeatapticTS/src/architecture/network").default, onnx: import("D:/code-practice/NeatapticTS/src/architecture/network/network.onnx").OnnxModel, hiddenLayerSizes: number[], metadataProps: { key: string; value: string; }[] | undefined) => void`
-
-Apply weights & biases from ONNX initializers onto the newly created network.
-
-### buildOnnxModel
-
-`(network: import("D:/code-practice/NeatapticTS/src/architecture/network").default, layers: any[][], options: import("D:/code-practice/NeatapticTS/src/architecture/network/network.onnx").OnnxExportOptions) => import("D:/code-practice/NeatapticTS/src/architecture/network/network.onnx").OnnxModel`
-
-Construct the ONNX model graph (initializers + nodes) given validated layers.
 
 ### Conv2DMapping
 
@@ -662,12 +612,6 @@ Mapping declaration for treating a fully-connected layer as a 2D convolution dur
 This assumes the dense layer was originally synthesized from a convolution with weight sharing; we reconstitute spatial metadata.
 Each mapping references an export-layer index (1-based across hidden layers, output layer would be hiddenCount+1) and supplies spatial/kernel hyperparameters.
 Validation ensures that input spatial * channels product equals the previous layer width and that output channels * output spatial equals the current layer width.
-
-### deriveHiddenLayerSizes
-
-`(initializers: OnnxTensor[], metadataProps: { key: string; value: string; }[] | undefined) => number[]`
-
-Extract hidden layer sizes from ONNX initializers (weight tensors).
 
 ### exportToONNX
 
@@ -709,17 +653,18 @@ Limitations:
  - Only guaranteed for self-produced models; arbitrary ONNX graphs or differing op orderings are unsupported.
  - Fused recurrent node emission currently leaves original unfused Gemm/Activation path in exported model (import ignores duplicates).
 
-### inferLayerOrdering
+### NodeInternals
 
-`(network: import("D:/code-practice/NeatapticTS/src/architecture/network").default) => any[][]`
+Runtime interface for accessing node internal properties.
+Nodes have runtime properties for connections, bias, and squash that aren't in the public interface.
 
-Infer strictly layered ordering from a network, ensuring feed-forward fully-connected structure.
+### OnnxAttribute
 
-### mapActivationToOnnx
+ONNX node attribute.
 
-`(squash: any) => string`
+### OnnxDimension
 
-Map an internal activation function (squash) to an ONNX op_type, defaulting to Identity.
+ONNX tensor type shape dimension.
 
 ### OnnxExportOptions
 
@@ -727,21 +672,21 @@ Options controlling ONNX export behavior (Phase 1).
 
 ### OnnxModel
 
+### OnnxShape
+
+ONNX tensor type shape.
+
+### OnnxTensorType
+
+ONNX tensor type.
+
+### OnnxValueInfo
+
+ONNX value info (input/output description).
+
 ### Pool2DMapping
 
 Mapping describing a pooling operation inserted after a given export-layer index.
-
-### rebuildConnectionsLocal
-
-`(networkLike: any) => void`
-
-Rebuild the network's flat connections array from each node's outgoing list (avoids circular import).
-
-### validateLayerHomogeneityAndConnectivity
-
-`(layers: any[][], network: import("D:/code-practice/NeatapticTS/src/architecture/network").default, options: import("D:/code-practice/NeatapticTS/src/architecture/network/network.onnx").OnnxExportOptions) => void`
-
-Validate layer connectivity and (optionally) homogeneity; mixed activations allowed with per-neuron decomposition.
 
 ## architecture/network/network.prune.ts
 
@@ -769,6 +714,10 @@ SNIP heuristic:
  - Uses |w * grad| style saliency approximation (here reusing stored delta stats as gradient proxy)
  - Falls back to pure magnitude if gradient stats absent.
 
+### NetworkPruningProps
+
+Internal Network properties accessed during pruning operations.
+
 ### pruneToSparsity
 
 `(targetSparsity: number, method: "magnitude" | "snip") => void`
@@ -777,35 +726,11 @@ Evolutionary (generation-based) pruning toward a target sparsity baseline.
 Unlike maybePrune this operates immediately relative to the first invocation's connection count
 (stored separately as _evoInitialConnCount) and does not implement scheduling or regrowth.
 
-### rankConnections
-
-`(conns: import("D:/code-practice/NeatapticTS/src/architecture/connection").default[], method: "magnitude" | "snip") => import("D:/code-practice/NeatapticTS/src/architecture/connection").default[]`
-
-Structured and dynamic pruning utilities for networks.
-
-Features:
- - Scheduled pruning during gradient-based training ({@link maybePrune}) with linear sparsity ramp.
- - Evolutionary generation pruning toward a target sparsity ({@link pruneToSparsity}).
- - Two ranking heuristics:
-     magnitude: |w|
-     snip: |w * g| approximation (g approximated via accumulated delta stats; falls back to |w|)
- - Optional stochastic regrowth during scheduled pruning (dynamic sparse training), preserving acyclic constraints.
-
-Internal State Fields (attached to Network via `any` casting):
- - _pruningConfig: user-specified schedule & options (start, end, frequency, targetSparsity, method, regrowFraction, lastPruneIter)
- - _initialConnectionCount: baseline connection count captured outside (first training iteration)
- - _evoInitialConnCount: baseline for evolutionary pruning (first invocation of pruneToSparsity)
- - _rand: deterministic RNG function
- - _enforceAcyclic: boolean flag enforcing forward-only connectivity ordering
- - _topoDirty: topology order invalidation flag consumed by activation fast path / topological sorting
-
-### regrowConnections
-
-`(network: import("D:/code-practice/NeatapticTS/src/architecture/network").default, desiredRemaining: number, maxAttempts: number) => void`
-
-Attempt stochastic regrowth of pruned connections up to a desired remaining count.
-
 ## architecture/network/network.remove.ts
+
+### NetworkRemoveProps
+
+Internal Network properties accessed during node removal operations.
 
 ### removeNode
 
@@ -840,23 +765,29 @@ Notes / Limitations:
 
 ### deserialize
 
-`(data: any[], inputSize: number | undefined, outputSize: number | undefined) => import("D:/code-practice/NeatapticTS/src/architecture/network").default`
-
-Static counterpart to {@link serialize}. Rebuilds a Network from the compact tuple form.
-Accepts optional explicit input/output size overrides (useful when piping through evolvers that trim IO).
+`(data: [number[], number[], string[], SerializedConnection[], number, number], inputSize: number | undefined, outputSize: number | undefined) => import("D:/code-practice/NeatapticTS/src/architecture/network").default`
 
 ### fromJSONImpl
 
-`(json: any) => import("D:/code-practice/NeatapticTS/src/architecture/network").default`
-
-Reconstruct a Network from the verbose JSON produced by {@link toJSONImpl} (formatVersion 2).
-Defensive parsing retains forward compatibility (warns on unknown versions rather than aborting).
+`(json: NetworkJSON) => import("D:/code-practice/NeatapticTS/src/architecture/network").default`
 
 ### network.serialize
 
+### NetworkInternals
+
+Runtime interface for accessing Network internal properties.
+
+### NetworkJSON
+
+Verbose JSON format for network serialization.
+
+### NodeInternals
+
+Runtime interface for accessing Node internal properties.
+
 ### serialize
 
-`() => any[]`
+`() => [number[], number[], string[], SerializedConnection[], number, number]`
 
 Serialization & deserialization helpers for Network instances.
 
@@ -884,9 +815,13 @@ Future Ideas:
  - Delta / patch serialization for large evolving populations.
  - Compressed binary packing (e.g., Float32Array segments) for WASM pipelines.
 
+### SerializedConnection
+
+Serialized connection representation.
+
 ### toJSONImpl
 
-`() => object`
+`() => NetworkJSON`
 
 Verbose JSON export (stable formatVersion). Omits transient runtime fields but keeps structural genetics.
 formatVersion=2 adds: enabled flags, stable geneId (if present), dropout value.
@@ -1038,7 +973,7 @@ The target (post-synaptic) node receiving activation.
 
 #### toJSON
 
-`() => any`
+`() => { from: number | undefined; to: number | undefined; weight: number; gain: number; innovation: number; enabled: boolean; gater?: number | undefined; }`
 
 Serialize to a minimal JSON-friendly shape (used for saving genomes / networks).
 Undefined indices are preserved as `undefined` to allow later resolution / remapping.
@@ -1059,25 +994,6 @@ Extended trace structure for modulatory / eligibility propagation algorithms. Pa
 
 ## architecture/network/network.slab.ts
 
-### _acquireTA
-
-`(kind: string, ctor: any, length: number, bytesPerElement: number) => TypedArray`
-
-Acquire (or reuse) a typed array slab, updating allocation statistics.
-
-Behaviour:
- - Pooling disabled: always allocate fresh.
- - Pooling enabled: reuse last retained array for identical key if present.
- - Metrics updated (fresh/pooled + per-key created/reused counters).
-
-Parameters:
-- `kind` - Pool discriminator (see `_poolKey`).
-- `ctor` - Typed array constructor.
-- `length` - Desired element count.
-- `bytesPerElement` - Byte width used to form key (guards reuse correctness).
-
-Returns: The acquired typed array (possibly recycled).
-
 ### _buildAdjacency
 
 `() => void`
@@ -1097,59 +1013,12 @@ Parameters:
 
 Returns: True if fast path can be safely used for deterministic forward activation.
 
-### _poolKey
-
-`(kind: string, bytes: number, length: number) => string`
-
-Construct a unique pool key encoding kind + element byte size + logical length.
-This granularity prevents mismatched reuse (different lengths / element sizes).
-
-Parameters:
-- `kind` - Short discriminator (e.g. 'w','f','t','fl','g','p').
-- `bytes` - Bytes per element (1,4,8).
-- `length` - Typed array length.
-
-Returns: Stable string key used in pool maps.
-
 ### _reindexNodes
 
 `() => void`
 
 Assign sequential indices to each node (stable ordering prerequisite for slab packing).
 Clears `_nodeIndexDirty` flag.
-
-### _releaseTA
-
-`(kind: string, bytesPerElement: number, arr: TypedArray) => void`
-
-Return a typed array slab to the per‑key bounded pool.
-No-op if pooling disabled. Pool functions as small LRU (push/pop).
-
-Parameters:
-- `kind` - Pool discriminator.
-- `bytesPerElement` - Byte width for key regeneration.
-- `arr` - The typed array instance to consider retaining.
-
-### _slabPoolCap
-
-`() => number`
-
-Compute the effective per‑key retention cap for slab pooling.
-
-RATIONALE
----------
-The default (4) was selected after observing diminishing reuse gains beyond the
-3rd–4th cached buffer in mutation / prune churn micro‑benchmarks; larger caps
-produced a higher long‑tail of retained bytes with negligible hit‑rate benefit.
-
-CONFIG
-------
-Users can override via `config.slabPoolMaxPerKey`:
-  undefined → default 4
-  0         → keep metrics but do not retain slabs (max reuse pressure scenario)
-  <0        → coerced to 0 (safety)
-
-Returns: Integer retention cap (≥0).
 
 ### canUseFastSlab
 
@@ -1162,6 +1031,10 @@ Parameters:
 - `training` - Whether caller is performing training (disables fast path if true).
 
 Returns: True when slab fast path predicates hold.
+
+### ConnectionInternals
+
+Internal Connection properties accessed during slab operations.
 
 ### ConnectionSlabView
 
@@ -1205,17 +1078,6 @@ Returns: Read‑only style view (do not mutate) containing typed arrays + metada
 
 `() => { pool: Record<string, PoolKeyMetrics>; fresh: number; pooled: number; }`
 
-Allocation statistics snapshot for slab typed arrays.
-
-Includes:
- - fresh: number of newly constructed typed arrays since process start / metrics reset.
- - pooled: number of arrays served from the pool.
- - pool: per‑key metrics (created, reused, maxRetained) for educational inspection.
-
-NOTE: Stats are cumulative (not auto‑reset); callers may diff successive snapshots.
-
-Returns: Plain object copy (safe to serialize) of current allocator counters.
-
 ### getSlabVersion
 
 `() => number`
@@ -1223,6 +1085,10 @@ Returns: Plain object copy (safe to serialize) of current allocator counters.
 Retrieve current monotonic slab version (increments on each successful rebuild).
 
 Returns: Non‑negative integer (0 if slab never built yet).
+
+### NetworkSlabProps
+
+Internal Network properties for slab operations.
 
 ### PoolKeyMetrics
 
@@ -1279,55 +1145,29 @@ Union of slab typed array element container types. We purposefully restrict
 to the specific constructors actually used by this module so TypeScript can
 narrow accurately and editors display concise hover info.
 
+### TypedArrayConstructor
+
+Constructor type for typed arrays used in slabs.
+
 ## architecture/network/network.standalone.ts
 
 ### generateStandalone
 
 `(net: import("D:/code-practice/NeatapticTS/src/architecture/network").default) => string`
 
-Generate a standalone JavaScript source string that returns an `activate(input:number[])` function.
+### NetworkStandaloneProps
 
-Implementation Steps:
- 1. Validate presence of output nodes (must produce something observable).
- 2. Assign stable sequential indices to nodes (used as array offsets in generated code).
- 3. Collect initial activation/state values into typed array initializers for warm starting.
- 4. For each non-input node, build a line computing S[i] (pre-activation sum with bias) and A[i]
-    (post-activation output). Gating multiplies activation by gate activations; self-connection adds
-    recurrent term S[i] * weight before activation.
- 5. De-duplicate activation functions: each unique squash name is emitted once; references become
-    indices into array F of function references for compactness.
- 6. Emit an IIFE producing the activate function with internal arrays A (activations) and S (states).
+Internal Network properties accessed during standalone code generation.
 
-Parameters:
-- `net` - Network instance to snapshot.
+### NodeWithIndex
 
-Returns: Source string (ES5-compatible) – safe to eval in sandbox to obtain activate function.
+Internal Node properties with assigned indices for code generation.
 
 ## architecture/network/network.stats.ts
 
-### deepCloneValue
-
-`(value: T) => T`
-
-Network statistics accessors.
-
-Currently exposes a single helper for retrieving the most recent regularization / stochasticity
-metrics snapshot recorded during training or evaluation. The internal `_lastStats` field (on the
-Network instance, typed as any) is expected to be populated elsewhere in the training loop with
-values such as:
- - l1Penalty, l2Penalty
- - dropoutApplied (fraction of units dropped last pass)
- - weightNoiseStd (effective std dev used if noise injected)
- - sparsityRatio, prunedConnections
- - any custom user extensions (object is not strictly typed to allow experimentation)
-
-Design decision: We return a deep copy to prevent external mutation of internal accounting state.
-If the object is large and copying becomes a bottleneck, future versions could offer a freeze
-option or incremental diff interface.
-
 ### getRegularizationStats
 
-`() => any`
+`() => Record<string, unknown> | null`
 
 Obtain the last recorded regularization / stochastic statistics snapshot.
 
@@ -1336,6 +1176,14 @@ internal `_lastStats` object maintained by the training loop (e.g., during pruni
 noise scheduling updates).
 
 Returns: A deep-cloned stats object or null if no stats have been recorded yet.
+
+### GlobalThisWithStructuredClone
+
+GlobalThis interface with optional structuredClone.
+
+### NetworkStatsProps
+
+Internal Network properties accessed during stats operations.
 
 ## architecture/network/network.topology.ts
 
@@ -1364,6 +1212,10 @@ Design Notes:
 
 Depth-first reachability test (avoids infinite loops via visited set).
 
+### NetworkTopologyProps
+
+Internal Network properties accessed during topology operations.
+
 ## architecture/network/network.training.ts
 
 ### __trainingInternals
@@ -1372,60 +1224,13 @@ Depth-first reachability test (avoids infinite loops via visited set).
 
 `(net: import("D:/code-practice/NeatapticTS/src/architecture/network").default, cfg: { mode: "norm" | "percentile" | "layerwiseNorm" | "layerwisePercentile"; maxNorm?: number | undefined; percentile?: number | undefined; }) => void`
 
-Apply gradient clipping to accumulated connection deltas / bias deltas.
-
-Modes:
- - norm / layerwiseNorm: L2 norm scaling (global vs per group).
- - percentile / layerwisePercentile: element-wise clamp at absolute percentile threshold.
-
-Grouping:
- - If layerwise* and net.layers exists -> each defined layer is a group.
- - Else if layerwise* -> each non-input node becomes its own group.
- - Otherwise a single global group containing all learnable params.
-
-### applyOptimizerStep
-
-`(net: import("D:/code-practice/NeatapticTS/src/architecture/network").default, optimizer: any, currentRate: number, momentum: number, internalNet: any) => number`
-
-Apply optimizer update step across all nodes; returns gradient L2 norm (approx).
-
-### averageAccumulatedGradients
-
-`(net: import("D:/code-practice/NeatapticTS/src/architecture/network").default, accumulationSteps: number) => void`
-
-Divide accumulated gradients by accumulationSteps (average reduction mode).
-
 ### CheckpointConfig
 
 Checkpoint callback spec.
 
-### computeMonitoredError
+### ConnectionInternals
 
-`(trainError: number, recentErrors: number[], cfg: MonitoredSmoothingConfig, state: PrimarySmoothingState) => number`
-
-Compute the monitored (primary) smoothed error given recent raw errors.
-
-Behavior:
- - For SMA-like strategies uses the supplied window slice directly.
- - For EMA it mutates state.emaValue.
- - For adaptive-ema maintains dual EMA tracks inside state and returns the min for stability.
- - For median / gaussian / trimmed / wma applies algorithmic weighting as documented inline.
-
-Inputs:
- - trainError: Current raw mean error for this iteration.
- - recentErrors: Chronological array (oldest->newest) of last N raw errors.
- - cfg: Algorithm selection + parameters.
- - state: Mutable smoothing state (ema / adaptive fields updated in-place).
-
-Returns: Smoothed/monitored error metric (may equal trainError if no smoothing active).
-
-### computePlateauMetric
-
-`(trainError: number, plateauErrors: number[], cfg: PlateauSmoothingConfig, state: PlateauSmoothingState) => number`
-
-Compute plateau metric (may differ in strategy from primary monitored error).
-Only algorithms actually supported for plateau in current pipeline are SMA, median and EMA.
-Provided flexibility keeps room for extension; unsupported types silently fallback to mean.
+Runtime interface for accessing Connection internal properties during training.
 
 ### CostFunction
 
@@ -1435,28 +1240,13 @@ Provided flexibility keeps room for extension; unsupported types silently fallba
 Internal Type Definitions (documentation only; optional for callers)
 -----------------------------------------------------------------------------
 
-### detectMixedPrecisionOverflow
+### CostFunctionOrObject
 
-`(net: import("D:/code-practice/NeatapticTS/src/architecture/network").default, internalNet: any) => boolean`
-
-Detect mixed precision overflow (NaN / Inf) in bias values if mixed precision enabled.
-Side-effect: may clear internal trigger _forceNextOverflow.
+Cost function or cost object interface.
 
 ### GradientClipConfig
 
 Gradient clipping configuration accepted by options.gradientClip.
-
-### handleOverflow
-
-`(internalNet: any) => void`
-
-Respond to a mixed precision overflow by shrinking loss scale & bookkeeping.
-
-### maybeIncreaseLossScale
-
-`(internalNet: any) => void`
-
-Update dynamic loss scaling after a successful (non-overflow) optimizer step.
 
 ### MetricsHook
 
@@ -1477,6 +1267,14 @@ Configuration passed to monitored (primary) smoothing computation.
 ### MovingAverageType
 
 Moving average strategy identifiers.
+
+### NetworkInternals
+
+Runtime interface for accessing Network internal properties during training.
+
+### NodeInternals
+
+Runtime interface for accessing Node internal properties during training.
 
 ### OptimizerConfigBase
 
@@ -1499,15 +1297,21 @@ These functions encapsulate cohesive sub-steps of the training pipeline so the
 main exported functions remain readable while preserving original behavior.
 Each helper is intentionally pure where reasonable or documents its side-effects.
 
+### RegularizationConfig
+
+Regularization configuration (used internally during training).
+
 ### ScheduleConfig
 
 Schedule hook executed every N iterations.
 
+### SerializedNetwork
+
+Serialized network structure (used in checkpoint callbacks).
+
 ### trainImpl
 
 `(net: import("D:/code-practice/NeatapticTS/src/architecture/network").default, set: { input: number[]; output: number[]; }[], options: import("D:/code-practice/NeatapticTS/src/architecture/network/network.training").TrainingOptions) => { error: number; iterations: number; time: number; }`
-
-High-level training orchestration with early stopping, smoothing & callbacks.
 
 ### TrainingOptions
 
@@ -1515,13 +1319,4 @@ Primary training options object (public shape).
 
 ### trainSetImpl
 
-`(net: import("D:/code-practice/NeatapticTS/src/architecture/network").default, set: { input: number[]; output: number[]; }[], batchSize: number, accumulationSteps: number, currentRate: number, momentum: number, regularization: any, costFunction: (target: number[], output: number[]) => number, optimizer: any) => number`
-
-Execute one full pass over dataset (epoch) with optional accumulation & adaptive optimizer.
-Returns mean cost across processed samples.
-
-### zeroAccumulatedGradients
-
-`(net: import("D:/code-practice/NeatapticTS/src/architecture/network").default) => void`
-
-Zero-out accumulated gradient buffers after an overflow to discard invalid updates.
+`(net: import("D:/code-practice/NeatapticTS/src/architecture/network").default, set: { input: number[]; output: number[]; }[], batchSize: number, accumulationSteps: number, currentRate: number, momentum: number, regularization: RegularizationConfig, costFunction: import("D:/code-practice/NeatapticTS/src/architecture/network/network.training").CostFunction | CostFunctionOrObject, optimizer: import("D:/code-practice/NeatapticTS/src/architecture/network/network.training").OptimizerConfigBase | undefined) => number`

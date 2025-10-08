@@ -257,7 +257,11 @@ export default class Neat {
    * @param multiplierOverride Optional multiplier to override configured policy.
    */
   ensureMinHiddenNodes(network: Network, multiplierOverride?: number) {
-    return ensureMinHiddenNodes.call(this as any, network as never, multiplierOverride);
+    return ensureMinHiddenNodes.call(
+      this as any,
+      network as never,
+      multiplierOverride,
+    );
   }
   /**
    * Construct a new Neat instance.
@@ -552,7 +556,11 @@ export default class Neat {
    * @returns A new `Network` instance derived from `parent`. The child is unregistered.
    */
   spawnFromParent(parent: Network, mutateCount: number = 1): Network {
-    return spawnFromParent.call(this as any, parent as never, mutateCount) as unknown as Network;
+    return spawnFromParent.call(
+      this as any,
+      parent as never,
+      mutateCount,
+    ) as unknown as Network;
   }
 
   /**
@@ -595,7 +603,11 @@ export default class Neat {
    */
   selectMutationMethod(genome: Network, rawReturnForTest: boolean = true): any {
     try {
-      return selectMutationMethod.call(this as any, genome as never, rawReturnForTest);
+      return selectMutationMethod.call(
+        this as any,
+        genome as never,
+        rawReturnForTest,
+      );
     } catch {
       return null;
     }
@@ -1133,7 +1145,11 @@ export default class Neat {
    * @param fitness Fitness function to attach
    */
   static importState(bundle: any, fitness: (n: Network) => number): Neat {
-    return importStateImpl.call(Neat as any, bundle, fitness as never) as unknown as Neat;
+    return importStateImpl.call(
+      Neat as any,
+      bundle,
+      fitness as never,
+    ) as unknown as Neat;
   }
   /**
    * Import a previously exported state bundle and rehydrate a Neat instance.
@@ -1144,6 +1160,10 @@ export default class Neat {
   }
 
   static fromJSON(json: any, fitness: (n: Network) => number): Neat {
-    return fromJSONImpl.call(Neat as any, json, fitness as never) as unknown as Neat;
+    return fromJSONImpl.call(
+      Neat as any,
+      json,
+      fitness as never,
+    ) as unknown as Neat;
   }
 }

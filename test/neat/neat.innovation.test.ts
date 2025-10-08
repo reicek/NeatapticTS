@@ -21,7 +21,7 @@ describe('Innovation Reuse', () => {
       let neat: Neat;
       let nodeSplitMap: Map<string, NodeSplitRecord>;
       let registrySize: number;
-      
+
       beforeAll(async () => {
         neat = new Neat(2, 1, fitness, {
           popsize: 1,
@@ -37,7 +37,7 @@ describe('Innovation Reuse', () => {
         >;
         registrySize = nodeSplitMap.size;
       });
-      
+
       test('registry has at least one entry', () => {
         expect(registrySize).toBeGreaterThan(0);
       });
@@ -49,7 +49,7 @@ describe('Innovation Reuse', () => {
       let secondRegistry: Map<string, NodeSplitRecord>;
       let base: Network;
       let reused: boolean;
-      
+
       beforeAll(async () => {
         neat = new Neat(2, 1, fitness, {
           popsize: 1,
@@ -79,19 +79,17 @@ describe('Innovation Reuse', () => {
           NodeSplitRecord
         >;
         // Compare one entry innovations equality
-        reused = Array.from(firstRegistry.entries()).every(
-          ([key, record]) => {
-            const reusedRecord = secondRegistry.get(key);
-            return (
-              !!reusedRecord &&
-              record.inInnov === reusedRecord.inInnov &&
-              record.outInnov === reusedRecord.outInnov &&
-              record.newNodeGeneId === reusedRecord.newNodeGeneId
-            );
-          },
-        );
+        reused = Array.from(firstRegistry.entries()).every(([key, record]) => {
+          const reusedRecord = secondRegistry.get(key);
+          return (
+            !!reusedRecord &&
+            record.inInnov === reusedRecord.inInnov &&
+            record.outInnov === reusedRecord.outInnov &&
+            record.newNodeGeneId === reusedRecord.newNodeGeneId
+          );
+        });
       });
-      
+
       test('innovations reused for identical split', () => {
         expect(reused).toBe(true);
       });

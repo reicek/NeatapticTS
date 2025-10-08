@@ -21,7 +21,7 @@ vectorized backend that exploits SIMD, GPU kernels, or parallel workers.</p>
 <li><code>training</code> - - Whether each activation should keep training traces.</li>
 </ul>
 <p>Returns: 2‑D array: outputs[i] is the activation result for inputs[i].</p>
-<h3 id="activateraw">activateRaw</h3><p><code>(input: number[], training: boolean, maxActivationDepth: number) =&gt; any</code></p>
+<h3 id="activateraw">activateRaw</h3><p><code>(input: number[], training: boolean, maxActivationDepth: number) =&gt; number[]</code></p>
 <p>Thin semantic alias to the network&#39;s main activation path.</p>
 <p>At present this simply forwards to {@link Network.activate}. The indirection is useful for:</p>
 <ul>
@@ -42,6 +42,7 @@ staged batching logic.</li>
 <li><code>maxActivationDepth</code> - - Guard against runaway recursion / cyclic activation attempts.</li>
 </ul>
 <p>Returns: Implementation-defined result of Network.activate (typically an output vector).</p>
+<h3 id="networkinternals">NetworkInternals</h3><p>Runtime interface for accessing Network internal properties during activation.</p>
 <h3 id="notraceactivate">noTraceActivate</h3><p><code>(input: number[]) =&gt; number[]</code></p>
 <p>Network activation helpers (forward pass utilities).</p>
 <p>This module provides progressively lower–overhead entry points for performing
@@ -122,6 +123,7 @@ this conservative approach simplifies callers (they need not pre‑check existen
 <li><code>from</code> - - Source node.</li>
 <li><code>to</code> - - Target node.</li>
 </ul>
+<h3 id="networkinternals">NetworkInternals</h3><p>Runtime interface for accessing Network internal properties during connection operations.</p>
 <h2 id="architecture-network-network-deterministic-ts">architecture/network/network.deterministic.ts</h2><h3 id="getrandomfn">getRandomFn</h3><p><code>() =&gt; (() =&gt; number) | undefined</code></p>
 <p>Retrieve the active random function reference (for testing, instrumentation, or swapping).</p>
 <p>Mutating the returned function&#39;s closure variables (if any) is not recommended; prefer using
@@ -145,6 +147,8 @@ higher-level APIs (setSeed / restoreRNG) to manage state.</p>
 </ul>
 <p>Returns: Unsigned 32‑bit state integer or undefined if generator not yet seeded or was reset.</p>
 <h3 id="network-deterministic">network.deterministic</h3><p>Default export bundle for convenient named imports.</p>
+<h3 id="networkinternals">NetworkInternals</h3><p>Runtime properties accessed for deterministic PRNG operations.
+Local interface to avoid circular dependencies.</p>
 <h3 id="restorerng">restoreRNG</h3><p><code>(fn: () =&gt; number) =&gt; void</code></p>
 <p>Restore a previously captured RNG function implementation (advanced usage).</p>
 <p>This does NOT rehydrate _rngState (it explicitly sets it to undefined). Intended for scenarios
@@ -244,72 +248,12 @@ structural change and the randomness timeline if accepting/rejecting a candidate
 <li></li>
 </ul>
 <p>Returns: Object containing current training step &amp; 32‑bit RNG state (both possibly undefined if unseeded).</p>
-<h2 id="architecture-network-network-evolve-ts">architecture/network/network.evolve.ts</h2><h3 id="buildmultithreadfitness">buildMultiThreadFitness</h3><p><code>(set: TrainingSample[], cost: any, amount: number, growth: number, threads: number, options: any) =&gt; Promise&lt;{ fitnessFunction: (genome: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default) =&gt; number; threads: number; } | { fitnessFunction: (population: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default[]) =&gt; Promise&lt;void&gt;; threads: number; }&gt;</code></p>
-<p>Build a multi-threaded (worker-based) population fitness evaluator if worker infrastructure is available.</p>
-<p>Strategy:</p>
-<ul>
-<li>Attempt to dynamically obtain a Worker constructor (node or browser variant).</li>
-<li>If not possible, gracefully fall back to single-thread evaluation.</li>
-<li>Spawn N workers (threads) each capable of evaluating genomes by calling worker.evaluate(genome).</li>
-<li>Provide a fitness function that takes the whole population and returns a Promise that resolves
-when all queued genomes have been processed. Each genome&#39;s score is written in-place.</li>
-</ul>
-<p>Implementation details:</p>
-<ul>
-<li>Queue: simple FIFO (array shift) suffices because ordering is not critical.</li>
-<li>Robustness: Each worker evaluation is wrapped with error handling to prevent a single failure
-from stalling the batch; failed evaluations simply proceed to next genome.</li>
-<li>Complexity penalty applied after raw result retrieval: genome.score = -result - penalty.</li>
-</ul>
-<p>Returned metadata sets options.fitnessPopulation=true so downstream NEAT logic treats the fitness
-function as operating over the entire population at once (rather than per-genome).</p>
-<p>Parameters:</p>
-<ul>
-<li><code>set</code> - - Dataset.</li>
-<li><code>cost</code> - - Cost function.</li>
-<li><code>amount</code> - - Repetition count (unused directly here; assumed handled inside worker.evaluate result metric if needed).</li>
-<li><code>growth</code> - - Complexity penalty scalar.</li>
-<li><code>threads</code> - - Desired worker count.</li>
-<li><code>options</code> - - Evolution options object (mutated to add cleanup hooks &amp; flags).</li>
-</ul>
-<p>Returns: Object with fitnessFunction (population evaluator) and resolved thread count.</p>
-<h3 id="buildsinglethreadfitness">buildSingleThreadFitness</h3><p><code>(set: TrainingSample[], cost: any, amount: number, growth: number) =&gt; (genome: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default) =&gt; number</code></p>
-<p>Build a single-threaded fitness evaluation function (classic NEAT style) evaluating a genome
-over the provided dataset and returning a scalar score where higher is better.</p>
-<p>Fitness Definition:
-  fitness = -averageError - complexityPenalty
-We accumulate negative error (so lower error =&gt; higher fitness) over <code>amount</code> independent
-evaluations (amount&gt;1 can smooth stochastic evaluation noise) then subtract complexity penalty.</p>
-<p>Error handling: If evaluation throws (numerical instability, internal error) we return -Infinity
-so such genomes are strongly disfavored.</p>
-<p>Parameters:</p>
-<ul>
-<li><code>set</code> - - Dataset of training samples.</li>
-<li><code>cost</code> - - Cost function reference (should expose error computation in genome.test).</li>
-<li><code>amount</code> - - Number of repeated evaluations to average.</li>
-<li><code>growth</code> - - Complexity penalty scalar.</li>
-</ul>
-<p>Returns: Function mapping a Network genome to a numeric fitness.</p>
-<h3 id="computecomplexitypenalty">computeComplexityPenalty</h3><p><code>(genome: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default, growth: number) =&gt; number</code></p>
-<p>Compute a structural complexity penalty scaled by a growth factor.</p>
-<p>Complexity heuristic:
-  (hidden nodes) + (connections) + (gates)
-hidden nodes = total nodes - input - output (to avoid penalizing fixed I/O interface size).</p>
-<p>Rationale: Encourages minimal / parsimonious networks by subtracting a term from fitness
-proportional to network size, counteracting bloat. Growth hyper‑parameter tunes pressure.</p>
-<p>Caching strategy: We memoize the base complexity (pre‑growth scaling) per genome when its
-structural counts (nodes / connections / gates) are unchanged. This is safe because only
-structural mutations alter these counts, and those invalidate earlier entries naturally
-(since mutated genomes are distinct object references in typical NEAT flows).</p>
-<p>Parameters:</p>
-<ul>
-<li><code>genome</code> - - Candidate network whose complexity to measure.</li>
-<li><code>growth</code> - - Positive scalar controlling strength of parsimony pressure.</li>
-</ul>
-<p>Returns: Complexity * growth (used directly to subtract from fitness score).</p>
+<h2 id="architecture-network-network-evolve-ts">architecture/network/network.evolve.ts</h2><h3 id="costfunction">CostFunction</h3><p><code>(target: number[], output: number[]) =&gt; number</code></p>
+<p>Cost function type: takes target and output arrays, returns error scalar.</p>
+<h3 id="costfunctionorref">CostFunctionOrRef</h3><p>Cost function OR a serializable reference with just the name (for worker threads).</p>
 <h3 id="evolutionconfig">EvolutionConfig</h3><p>Internal evolution configuration summary (for potential logging / debugging)
 capturing normalized option values used by the local evolutionary loop.</p>
-<h3 id="evolvenetwork">evolveNetwork</h3><p><code>(set: TrainingSample[], options: any) =&gt; Promise&lt;{ error: number; iterations: number; time: number; }&gt;</code></p>
+<h3 id="evolvenetwork">evolveNetwork</h3><p><code>(set: TrainingSample[], options: EvolveOptions) =&gt; Promise&lt;{ error: number; iterations: number; time: number; }&gt;</code></p>
 <p>Evolve (optimize) the current network&#39;s topology and weights using a NEAT-like evolutionary loop
 until a stopping criterion (target error or max iterations) is met.</p>
 <p>High-level process:</p>
@@ -357,6 +301,8 @@ We recompute error from the stored fitness plus penalty to ensure consistent rep
 <li>clear: whether to call network.clear() after adopting best genome</li>
 </ul>
 <p>Returns: Summary object { error, iterations, time(ms) }.</p>
+<h3 id="evolveoptions">EvolveOptions</h3><p>Evolution options for the evolveNetwork method.
+Includes core evolution parameters plus NEAT-specific options passed through.</p>
 <h3 id="trainingsample">TrainingSample</h3><p>A single supervised training example used to evaluate fitness.</p>
 <h2 id="architecture-network-network-gating-ts">architecture/network/network.gating.ts</h2><h3 id="gate">gate</h3><p><code>(node: import(&quot;D:/code-practice/NeatapticTS/src/architecture/node&quot;).default, connection: import(&quot;D:/code-practice/NeatapticTS/src/architecture/connection&quot;).default) =&gt; void</code></p>
 <p>Gating &amp; node removal utilities for {@link Network}.</p>
@@ -390,6 +336,7 @@ you may consider replacing with the network&#39;s seeded RNG (if provided) in fu
 <li>{@link ungate}: Remove gating from a connection.</li>
 <li>{@link removeNode}: Remove a hidden node while attempting to preserve connectivity &amp; gating.</li>
 </ul>
+<h3 id="networkgatingprops">NetworkGatingProps</h3><p>Internal Network properties accessed during gating operations.</p>
 <h3 id="removenode">removeNode</h3><p><code>(node: import(&quot;D:/code-practice/NeatapticTS/src/architecture/node&quot;).default) =&gt; void</code></p>
 <p>Remove a hidden node from the network while attempting to preserve functional connectivity.</p>
 <p>Algorithm outline:</p>
@@ -443,11 +390,11 @@ without modulation by a gater activation.</p>
 <ul>
 <li><code>connection</code> - - Connection to ungate.</li>
 </ul>
-<h2 id="architecture-network-network-genetic-ts">architecture/network/network.genetic.ts</h2><h3 id="crossover">crossOver</h3><p><code>(network1: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default, network2: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default, equal: boolean) =&gt; import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default</code></p>
-<p>Genetic operator: NEAT‑style crossover (legacy merge operator removed).</p>
-<p>This module now focuses solely on producing recombinant offspring via {@link crossOver}.
-The previous experimental Network.merge has been removed to reduce maintenance surface area
-and avoid implying a misleading “sequential composition” guarantee.</p>
+<h2 id="architecture-network-network-genetic-ts">architecture/network/network.genetic.ts</h2><h3 id="connectiongene">ConnectionGene</h3><p>Connection gene descriptor used during crossover.</p>
+<h3 id="connectiongeneticprops">ConnectionGeneticProps</h3><p>Extended Connection properties for genetic operations.</p>
+<h3 id="crossover">crossOver</h3><p><code>(network1: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default, network2: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default, equal: boolean) =&gt; import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default</code></p>
+<h3 id="networkgeneticprops">NetworkGeneticProps</h3><p>Internal runtime properties used during genetic operations.
+These properties are accessed dynamically and not part of the formal Network interface.</p>
 <h2 id="architecture-network-network-mutate-ts">architecture/network/network.mutate.ts</h2><h3 id="addbackconn">_addBackConn</h3><p><code>() =&gt; void</code></p>
 <p>ADD_BACK_CONN: Add a backward (recurrent) connection (acyclic mode must be off).</p>
 <h3 id="addconn">_addConn</h3><p><code>() =&gt; void</code></p>
@@ -485,13 +432,13 @@ Recurrent edges are handled separately by ADD_BACK_CONN.</p>
 <h3 id="batchnorm">_batchNorm</h3><p><code>() =&gt; void</code></p>
 <p>BATCH_NORM: Placeholder mutation – marks a random hidden node with a flag for potential
 future batch normalization integration. Currently a no-op beyond tagging.</p>
-<h3 id="modactivation">_modActivation</h3><p><code>(method: any) =&gt; void</code></p>
+<h3 id="modactivation">_modActivation</h3><p><code>(method: MutationMethod | undefined) =&gt; void</code></p>
 <p>MOD_ACTIVATION: Swap activation (squash) of a random eligible node; may exclude outputs.</p>
-<h3 id="modbias">_modBias</h3><p><code>(method: any) =&gt; void</code></p>
+<h3 id="modbias">_modBias</h3><p><code>(method: MutationMethod | undefined) =&gt; void</code></p>
 <p>MOD_BIAS: Delegate to node.mutate to adjust bias of a random non‑input node.</p>
-<h3 id="modweight">_modWeight</h3><p><code>(method: any) =&gt; void</code></p>
+<h3 id="modweight">_modWeight</h3><p><code>(method: MutationMethod | undefined) =&gt; void</code></p>
 <p>MOD_WEIGHT: Perturb a single (possibly self) connection weight by uniform delta in [min,max].</p>
-<h3 id="reinitweight">_reinitWeight</h3><p><code>(method: any) =&gt; void</code></p>
+<h3 id="reinitweight">_reinitWeight</h3><p><code>(method: MutationMethod | undefined) =&gt; void</code></p>
 <p>REINIT_WEIGHT: Reinitialize all incoming/outgoing/self connection weights for a random node.
 Useful as a heavy mutation to escape local minima. Falls back silently if no eligible node.</p>
 <h3 id="subbackconn">_subBackConn</h3><p><code>() =&gt; void</code></p>
@@ -505,9 +452,9 @@ Useful as a heavy mutation to escape local minima. Falls back silently if no eli
 After removal a tiny deterministic weight nudge encourages observable phenotype change in tests.</p>
 <h3 id="subselfconn">_subSelfConn</h3><p><code>() =&gt; void</code></p>
 <p>SUB_SELF_CONN: Remove a random existing self loop.</p>
-<h3 id="swapnodes">_swapNodes</h3><p><code>(method: any) =&gt; void</code></p>
+<h3 id="swapnodes">_swapNodes</h3><p><code>(method: MutationMethod | undefined) =&gt; void</code></p>
 <p>SWAP_NODES: Exchange bias &amp; activation function between two random eligible nodes.</p>
-<h3 id="mutateimpl">mutateImpl</h3><p><code>(method: any) =&gt; void</code></p>
+<h3 id="mutateimpl">mutateImpl</h3><p><code>(method: MutationMethod | undefined) =&gt; void</code></p>
 <p>Public entry point: apply a single mutation operator to the network.</p>
 <p>Steps:</p>
 <ol>
@@ -523,18 +470,12 @@ identifying <code>name | type | identity</code> field allowing future parameteri
 <li><code>this</code> - Network instance (bound).</li>
 <li><code>method</code> - Mutation enum value or descriptor object.</li>
 </ul>
-<h2 id="architecture-network-network-onnx-ts">architecture/network/network.onnx.ts</h2><h3 id="assignactivationfunctions">assignActivationFunctions</h3><p><code>(network: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default, onnx: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network/network.onnx&quot;).OnnxModel, hiddenLayerSizes: number[]) =&gt; void</code></p>
-<p>Map activation op_types from ONNX nodes back to internal activation functions.</p>
-<h3 id="assignweightsandbiases">assignWeightsAndBiases</h3><p><code>(network: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default, onnx: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network/network.onnx&quot;).OnnxModel, hiddenLayerSizes: number[], metadataProps: { key: string; value: string; }[] | undefined) =&gt; void</code></p>
-<p>Apply weights &amp; biases from ONNX initializers onto the newly created network.</p>
-<h3 id="buildonnxmodel">buildOnnxModel</h3><p><code>(network: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default, layers: any[][], options: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network/network.onnx&quot;).OnnxExportOptions) =&gt; import(&quot;D:/code-practice/NeatapticTS/src/architecture/network/network.onnx&quot;).OnnxModel</code></p>
-<p>Construct the ONNX model graph (initializers + nodes) given validated layers.</p>
-<h3 id="conv2dmapping">Conv2DMapping</h3><p>Mapping declaration for treating a fully-connected layer as a 2D convolution during export.
+<h3 id="mutationmethod">MutationMethod</h3><p>Mutation method descriptor (can be string enum value or object with identity).</p>
+<h3 id="networkmutationprops">NetworkMutationProps</h3><p>Internal Network properties accessed during mutations.</p>
+<h2 id="architecture-network-network-onnx-ts">architecture/network/network.onnx.ts</h2><h3 id="conv2dmapping">Conv2DMapping</h3><p>Mapping declaration for treating a fully-connected layer as a 2D convolution during export.
 This assumes the dense layer was originally synthesized from a convolution with weight sharing; we reconstitute spatial metadata.
 Each mapping references an export-layer index (1-based across hidden layers, output layer would be hiddenCount+1) and supplies spatial/kernel hyperparameters.
 Validation ensures that input spatial * channels product equals the previous layer width and that output channels * output spatial equals the current layer width.</p>
-<h3 id="derivehiddenlayersizes">deriveHiddenLayerSizes</h3><p><code>(initializers: OnnxTensor[], metadataProps: { key: string; value: string; }[] | undefined) =&gt; number[]</code></p>
-<p>Extract hidden layer sizes from ONNX initializers (weight tensors).</p>
 <h3 id="exporttoonnx">exportToONNX</h3><p><code>(network: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default, options: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network/network.onnx&quot;).OnnxExportOptions) =&gt; import(&quot;D:/code-practice/NeatapticTS/src/architecture/network/network.onnx&quot;).OnnxModel</code></p>
 <p>Export a minimal multilayer perceptron Network to a lightweight ONNX JSON object.</p>
 <p>Steps:</p>
@@ -570,16 +511,15 @@ by replacing the corresponding hidden node block with a freshly constructed Laye
 <li>Only guaranteed for self-produced models; arbitrary ONNX graphs or differing op orderings are unsupported.</li>
 <li>Fused recurrent node emission currently leaves original unfused Gemm/Activation path in exported model (import ignores duplicates).</li>
 </ul>
-<h3 id="inferlayerordering">inferLayerOrdering</h3><p><code>(network: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default) =&gt; any[][]</code></p>
-<p>Infer strictly layered ordering from a network, ensuring feed-forward fully-connected structure.</p>
-<h3 id="mapactivationtoonnx">mapActivationToOnnx</h3><p><code>(squash: any) =&gt; string</code></p>
-<p>Map an internal activation function (squash) to an ONNX op_type, defaulting to Identity.</p>
+<h3 id="nodeinternals">NodeInternals</h3><p>Runtime interface for accessing node internal properties.
+Nodes have runtime properties for connections, bias, and squash that aren&#39;t in the public interface.</p>
+<h3 id="onnxattribute">OnnxAttribute</h3><p>ONNX node attribute.</p>
+<h3 id="onnxdimension">OnnxDimension</h3><p>ONNX tensor type shape dimension.</p>
 <h3 id="onnxexportoptions">OnnxExportOptions</h3><p>Options controlling ONNX export behavior (Phase 1).</p>
-<h3 id="onnxmodel">OnnxModel</h3><h3 id="pool2dmapping">Pool2DMapping</h3><p>Mapping describing a pooling operation inserted after a given export-layer index.</p>
-<h3 id="rebuildconnectionslocal">rebuildConnectionsLocal</h3><p><code>(networkLike: any) =&gt; void</code></p>
-<p>Rebuild the network&#39;s flat connections array from each node&#39;s outgoing list (avoids circular import).</p>
-<h3 id="validatelayerhomogeneityandconnectivity">validateLayerHomogeneityAndConnectivity</h3><p><code>(layers: any[][], network: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default, options: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network/network.onnx&quot;).OnnxExportOptions) =&gt; void</code></p>
-<p>Validate layer connectivity and (optionally) homogeneity; mixed activations allowed with per-neuron decomposition.</p>
+<h3 id="onnxmodel">OnnxModel</h3><h3 id="onnxshape">OnnxShape</h3><p>ONNX tensor type shape.</p>
+<h3 id="onnxtensortype">OnnxTensorType</h3><p>ONNX tensor type.</p>
+<h3 id="onnxvalueinfo">OnnxValueInfo</h3><p>ONNX value info (input/output description).</p>
+<h3 id="pool2dmapping">Pool2DMapping</h3><p>Mapping describing a pooling operation inserted after a given export-layer index.</p>
 <h2 id="architecture-network-network-prune-ts">architecture/network/network.prune.ts</h2><h3 id="getcurrentsparsity">getCurrentSparsity</h3><p><code>() =&gt; number</code></p>
 <p>Current sparsity fraction relative to the training-time pruning baseline.</p>
 <h3 id="maybeprune">maybePrune</h3><p><code>(iteration: number) =&gt; void</code></p>
@@ -598,33 +538,13 @@ a fraction of them at random unused positions (respecting acyclic constraint if 
 <li>Uses |w * grad| style saliency approximation (here reusing stored delta stats as gradient proxy)</li>
 <li>Falls back to pure magnitude if gradient stats absent.</li>
 </ul>
+<h3 id="networkpruningprops">NetworkPruningProps</h3><p>Internal Network properties accessed during pruning operations.</p>
 <h3 id="prunetosparsity">pruneToSparsity</h3><p><code>(targetSparsity: number, method: &quot;magnitude&quot; | &quot;snip&quot;) =&gt; void</code></p>
 <p>Evolutionary (generation-based) pruning toward a target sparsity baseline.
 Unlike maybePrune this operates immediately relative to the first invocation&#39;s connection count
 (stored separately as _evoInitialConnCount) and does not implement scheduling or regrowth.</p>
-<h3 id="rankconnections">rankConnections</h3><p><code>(conns: import(&quot;D:/code-practice/NeatapticTS/src/architecture/connection&quot;).default[], method: &quot;magnitude&quot; | &quot;snip&quot;) =&gt; import(&quot;D:/code-practice/NeatapticTS/src/architecture/connection&quot;).default[]</code></p>
-<p>Structured and dynamic pruning utilities for networks.</p>
-<p>Features:</p>
-<ul>
-<li>Scheduled pruning during gradient-based training ({@link maybePrune}) with linear sparsity ramp.</li>
-<li>Evolutionary generation pruning toward a target sparsity ({@link pruneToSparsity}).</li>
-<li>Two ranking heuristics:
-  magnitude: |w|
-  snip: |w * g| approximation (g approximated via accumulated delta stats; falls back to |w|)</li>
-<li>Optional stochastic regrowth during scheduled pruning (dynamic sparse training), preserving acyclic constraints.</li>
-</ul>
-<p>Internal State Fields (attached to Network via <code>any</code> casting):</p>
-<ul>
-<li>_pruningConfig: user-specified schedule &amp; options (start, end, frequency, targetSparsity, method, regrowFraction, lastPruneIter)</li>
-<li>_initialConnectionCount: baseline connection count captured outside (first training iteration)</li>
-<li>_evoInitialConnCount: baseline for evolutionary pruning (first invocation of pruneToSparsity)</li>
-<li>_rand: deterministic RNG function</li>
-<li>_enforceAcyclic: boolean flag enforcing forward-only connectivity ordering</li>
-<li>_topoDirty: topology order invalidation flag consumed by activation fast path / topological sorting</li>
-</ul>
-<h3 id="regrowconnections">regrowConnections</h3><p><code>(network: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default, desiredRemaining: number, maxAttempts: number) =&gt; void</code></p>
-<p>Attempt stochastic regrowth of pruned connections up to a desired remaining count.</p>
-<h2 id="architecture-network-network-remove-ts">architecture/network/network.remove.ts</h2><h3 id="removenode">removeNode</h3><p><code>(node: import(&quot;D:/code-practice/NeatapticTS/src/architecture/node&quot;).default) =&gt; void</code></p>
+<h2 id="architecture-network-network-remove-ts">architecture/network/network.remove.ts</h2><h3 id="networkremoveprops">NetworkRemoveProps</h3><p>Internal Network properties accessed during node removal operations.</p>
+<h3 id="removenode">removeNode</h3><p><code>(node: import(&quot;D:/code-practice/NeatapticTS/src/architecture/node&quot;).default) =&gt; void</code></p>
 <p>Node removal utilities.</p>
 <p>This module provides a focused implementation for removing a single hidden node from a network
 while attempting to preserve overall functional connectivity. The removal procedure mirrors the
@@ -650,13 +570,12 @@ change—callers relying heavily on gating may want a custom remap strategy.</li
 <li>Self connections are simply removed; no attempt is made to emulate recursion via alternative
 structures.</li>
 </ul>
-<h2 id="architecture-network-network-serialize-ts">architecture/network/network.serialize.ts</h2><h3 id="deserialize">deserialize</h3><p><code>(data: any[], inputSize: number | undefined, outputSize: number | undefined) =&gt; import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default</code></p>
-<p>Static counterpart to {@link serialize}. Rebuilds a Network from the compact tuple form.
-Accepts optional explicit input/output size overrides (useful when piping through evolvers that trim IO).</p>
-<h3 id="fromjsonimpl">fromJSONImpl</h3><p><code>(json: any) =&gt; import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default</code></p>
-<p>Reconstruct a Network from the verbose JSON produced by {@link toJSONImpl} (formatVersion 2).
-Defensive parsing retains forward compatibility (warns on unknown versions rather than aborting).</p>
-<h3 id="network-serialize">network.serialize</h3><h3 id="serialize">serialize</h3><p><code>() =&gt; any[]</code></p>
+<h2 id="architecture-network-network-serialize-ts">architecture/network/network.serialize.ts</h2><h3 id="deserialize">deserialize</h3><p><code>(data: [number[], number[], string[], SerializedConnection[], number, number], inputSize: number | undefined, outputSize: number | undefined) =&gt; import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default</code></p>
+<h3 id="fromjsonimpl">fromJSONImpl</h3><p><code>(json: NetworkJSON) =&gt; import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default</code></p>
+<h3 id="network-serialize">network.serialize</h3><h3 id="networkinternals">NetworkInternals</h3><p>Runtime interface for accessing Network internal properties.</p>
+<h3 id="networkjson">NetworkJSON</h3><p>Verbose JSON format for network serialization.</p>
+<h3 id="nodeinternals">NodeInternals</h3><p>Runtime interface for accessing Node internal properties.</p>
+<h3 id="serialize">serialize</h3><p><code>() =&gt; [number[], number[], string[], SerializedConnection[], number, number]</code></p>
 <p>Serialization &amp; deserialization helpers for Network instances.</p>
 <p>Provides two independent formats:</p>
 <ol>
@@ -685,7 +604,8 @@ Defensive parsing retains forward compatibility (warns on unknown versions rathe
 <li>Delta / patch serialization for large evolving populations.</li>
 <li>Compressed binary packing (e.g., Float32Array segments) for WASM pipelines.</li>
 </ul>
-<h3 id="tojsonimpl">toJSONImpl</h3><p><code>() =&gt; object</code></p>
+<h3 id="serializedconnection">SerializedConnection</h3><p>Serialized connection representation.</p>
+<h3 id="tojsonimpl">toJSONImpl</h3><p><code>() =&gt; NetworkJSON</code></p>
 <p>Verbose JSON export (stable formatVersion). Omits transient runtime fields but keeps structural genetics.
 formatVersion=2 adds: enabled flags, stable geneId (if present), dropout value.</p>
 <h3 id="default">default</h3><h4 id="flags">_flags</h4><p>Packed state flags (private for future-proofing hidden class):
@@ -753,30 +673,14 @@ You normally only call this at the start of an experiment or when deserializing 
 <h4 id="secondmoment">secondMoment</h4><p>Second raw moment estimate (Adam family) (was opt_v).</p>
 <h4 id="secondmomentum">secondMomentum</h4><p>Secondary momentum (Lion variant) (was opt_m2).</p>
 <h4 id="to">to</h4><p>The target (post-synaptic) node receiving activation.</p>
-<h4 id="tojson">toJSON</h4><p><code>() =&gt; any</code></p>
+<h4 id="tojson">toJSON</h4><p><code>() =&gt; { from: number | undefined; to: number | undefined; weight: number; gain: number; innovation: number; enabled: boolean; gater?: number | undefined; }</code></p>
 <p>Serialize to a minimal JSON-friendly shape (used for saving genomes / networks).
 Undefined indices are preserved as <code>undefined</code> to allow later resolution / remapping.</p>
 <p>Returns: Object with node indices, weight, gain, gater index (if any), innovation id &amp; enabled flag.</p>
 <h4 id="totaldeltaweight">totalDeltaWeight</h4><p>Accumulated (batched) delta weight awaiting an apply step.</p>
 <h4 id="weight">weight</h4><p>Scalar multiplier applied to the source activation (prior to gain modulation).</p>
 <h4 id="xtrace">xtrace</h4><p>Extended trace structure for modulatory / eligibility propagation algorithms. Parallel arrays for cache-friendly iteration.</p>
-<h2 id="architecture-network-network-slab-ts">architecture/network/network.slab.ts</h2><h3 id="acquireta">_acquireTA</h3><p><code>(kind: string, ctor: any, length: number, bytesPerElement: number) =&gt; TypedArray</code></p>
-<p>Acquire (or reuse) a typed array slab, updating allocation statistics.</p>
-<p>Behaviour:</p>
-<ul>
-<li>Pooling disabled: always allocate fresh.</li>
-<li>Pooling enabled: reuse last retained array for identical key if present.</li>
-<li>Metrics updated (fresh/pooled + per-key created/reused counters).</li>
-</ul>
-<p>Parameters:</p>
-<ul>
-<li><code>kind</code> - Pool discriminator (see <code>_poolKey</code>).</li>
-<li><code>ctor</code> - Typed array constructor.</li>
-<li><code>length</code> - Desired element count.</li>
-<li><code>bytesPerElement</code> - Byte width used to form key (guards reuse correctness).</li>
-</ul>
-<p>Returns: The acquired typed array (possibly recycled).</p>
-<h3 id="buildadjacency">_buildAdjacency</h3><p><code>() =&gt; void</code></p>
+<h2 id="architecture-network-network-slab-ts">architecture/network/network.slab.ts</h2><h3 id="buildadjacency">_buildAdjacency</h3><p><code>() =&gt; void</code></p>
 <p>Build / refresh CSR‑style adjacency (outStart + outOrder) enabling fast fan‑out traversal.
 Only rebuilds when marked dirty. Stores arrays on internal network instance.</p>
 <h3 id="canusefastslab">_canUseFastSlab</h3><p><code>(training: boolean) =&gt; boolean</code></p>
@@ -787,38 +691,9 @@ Disallows training / stochastic / dynamic edge behaviours (gating, dropout, nois
 <li><code>training</code> - Whether caller is in training mode (disables fast path for gradient/time reasons).</li>
 </ul>
 <p>Returns: True if fast path can be safely used for deterministic forward activation.</p>
-<h3 id="poolkey">_poolKey</h3><p><code>(kind: string, bytes: number, length: number) =&gt; string</code></p>
-<p>Construct a unique pool key encoding kind + element byte size + logical length.
-This granularity prevents mismatched reuse (different lengths / element sizes).</p>
-<p>Parameters:</p>
-<ul>
-<li><code>kind</code> - Short discriminator (e.g. &#39;w&#39;,&#39;f&#39;,&#39;t&#39;,&#39;fl&#39;,&#39;g&#39;,&#39;p&#39;).</li>
-<li><code>bytes</code> - Bytes per element (1,4,8).</li>
-<li><code>length</code> - Typed array length.</li>
-</ul>
-<p>Returns: Stable string key used in pool maps.</p>
 <h3 id="reindexnodes">_reindexNodes</h3><p><code>() =&gt; void</code></p>
 <p>Assign sequential indices to each node (stable ordering prerequisite for slab packing).
 Clears <code>_nodeIndexDirty</code> flag.</p>
-<h3 id="releaseta">_releaseTA</h3><p><code>(kind: string, bytesPerElement: number, arr: TypedArray) =&gt; void</code></p>
-<p>Return a typed array slab to the per‑key bounded pool.
-No-op if pooling disabled. Pool functions as small LRU (push/pop).</p>
-<p>Parameters:</p>
-<ul>
-<li><code>kind</code> - Pool discriminator.</li>
-<li><code>bytesPerElement</code> - Byte width for key regeneration.</li>
-<li><code>arr</code> - The typed array instance to consider retaining.</li>
-</ul>
-<h3 id="slabpoolcap">_slabPoolCap</h3><p><code>() =&gt; number</code></p>
-<p>Compute the effective per‑key retention cap for slab pooling.</p>
-<h2 id="rationale">RATIONALE</h2><p>The default (4) was selected after observing diminishing reuse gains beyond the
-3rd–4th cached buffer in mutation / prune churn micro‑benchmarks; larger caps
-produced a higher long‑tail of retained bytes with negligible hit‑rate benefit.</p>
-<h2 id="config">CONFIG</h2><p>Users can override via <code>config.slabPoolMaxPerKey</code>:
-  undefined → default 4
-  0         → keep metrics but do not retain slabs (max reuse pressure scenario)
-  &lt;0        → coerced to 0 (safety)</p>
-<p>Returns: Integer retention cap (≥0).</p>
 <h3 id="canusefastslab">canUseFastSlab</h3><p><code>(training: boolean) =&gt; boolean</code></p>
 <p>Public convenience wrapper exposing fast path eligibility.
 Mirrors <code>_canUseFastSlab</code> internal predicate.</p>
@@ -827,6 +702,7 @@ Mirrors <code>_canUseFastSlab</code> internal predicate.</p>
 <li><code>training</code> - Whether caller is performing training (disables fast path if true).</li>
 </ul>
 <p>Returns: True when slab fast path predicates hold.</p>
+<h3 id="connectioninternals">ConnectionInternals</h3><p>Internal Connection properties accessed during slab operations.</p>
 <h3 id="connectionslabview">ConnectionSlabView</h3><p>Shape returned by <code>getConnectionSlab()</code> describing the packed SoA view.
 Note: The arrays SHOULD NOT be mutated by callers; treat as read‑only.</p>
 <h3 id="fastslabactivate">fastSlabActivate</h3><p><code>(input: number[]) =&gt; number[]</code></p>
@@ -855,18 +731,10 @@ neutral array is created and returned (NOT retained) to keep external educationa
 tooling branch‑free while preserving omission memory savings internally.</p>
 <p>Returns: Read‑only style view (do not mutate) containing typed arrays + metadata.</p>
 <h3 id="getslaballocationstats">getSlabAllocationStats</h3><p><code>() =&gt; { pool: Record&lt;string, PoolKeyMetrics&gt;; fresh: number; pooled: number; }</code></p>
-<p>Allocation statistics snapshot for slab typed arrays.</p>
-<p>Includes:</p>
-<ul>
-<li>fresh: number of newly constructed typed arrays since process start / metrics reset.</li>
-<li>pooled: number of arrays served from the pool.</li>
-<li>pool: per‑key metrics (created, reused, maxRetained) for educational inspection.</li>
-</ul>
-<p>NOTE: Stats are cumulative (not auto‑reset); callers may diff successive snapshots.</p>
-<p>Returns: Plain object copy (safe to serialize) of current allocator counters.</p>
 <h3 id="getslabversion">getSlabVersion</h3><p><code>() =&gt; number</code></p>
 <p>Retrieve current monotonic slab version (increments on each successful rebuild).</p>
 <p>Returns: Non‑negative integer (0 if slab never built yet).</p>
+<h3 id="networkslabprops">NetworkSlabProps</h3><p>Internal Network properties for slab operations.</p>
 <h3 id="poolkeymetrics">PoolKeyMetrics</h3><p>Per-pool-key allocation &amp; reuse counters (educational / diagnostics).
 Tracks how many slabs were freshly created vs reused plus the high‑water
 mark (maxRetained) of simultaneously retained arrays for the key. Exposed
@@ -905,47 +773,18 @@ Fallback: On Node (no <code>window</code>) defers to synchronous rebuild for sim
 <h3 id="typedarray">TypedArray</h3><p>Union of slab typed array element container types. We purposefully restrict
 to the specific constructors actually used by this module so TypeScript can
 narrow accurately and editors display concise hover info.</p>
+<h3 id="typedarrayconstructor">TypedArrayConstructor</h3><p>Constructor type for typed arrays used in slabs.</p>
 <h2 id="architecture-network-network-standalone-ts">architecture/network/network.standalone.ts</h2><h3 id="generatestandalone">generateStandalone</h3><p><code>(net: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default) =&gt; string</code></p>
-<p>Generate a standalone JavaScript source string that returns an <code>activate(input:number[])</code> function.</p>
-<p>Implementation Steps:</p>
-<ol>
-<li>Validate presence of output nodes (must produce something observable).</li>
-<li>Assign stable sequential indices to nodes (used as array offsets in generated code).</li>
-<li>Collect initial activation/state values into typed array initializers for warm starting.</li>
-<li>For each non-input node, build a line computing S[i] (pre-activation sum with bias) and A[i]
-(post-activation output). Gating multiplies activation by gate activations; self-connection adds
-recurrent term S[i] * weight before activation.</li>
-<li>De-duplicate activation functions: each unique squash name is emitted once; references become
-indices into array F of function references for compactness.</li>
-<li>Emit an IIFE producing the activate function with internal arrays A (activations) and S (states).</li>
-</ol>
-<p>Parameters:</p>
-<ul>
-<li><code>net</code> - Network instance to snapshot.</li>
-</ul>
-<p>Returns: Source string (ES5-compatible) – safe to eval in sandbox to obtain activate function.</p>
-<h2 id="architecture-network-network-stats-ts">architecture/network/network.stats.ts</h2><h3 id="deepclonevalue">deepCloneValue</h3><p><code>(value: T) =&gt; T</code></p>
-<p>Network statistics accessors.</p>
-<p>Currently exposes a single helper for retrieving the most recent regularization / stochasticity
-metrics snapshot recorded during training or evaluation. The internal <code>_lastStats</code> field (on the
-Network instance, typed as any) is expected to be populated elsewhere in the training loop with
-values such as:</p>
-<ul>
-<li>l1Penalty, l2Penalty</li>
-<li>dropoutApplied (fraction of units dropped last pass)</li>
-<li>weightNoiseStd (effective std dev used if noise injected)</li>
-<li>sparsityRatio, prunedConnections</li>
-<li>any custom user extensions (object is not strictly typed to allow experimentation)</li>
-</ul>
-<p>Design decision: We return a deep copy to prevent external mutation of internal accounting state.
-If the object is large and copying becomes a bottleneck, future versions could offer a freeze
-option or incremental diff interface.</p>
-<h3 id="getregularizationstats">getRegularizationStats</h3><p><code>() =&gt; any</code></p>
+<h3 id="networkstandaloneprops">NetworkStandaloneProps</h3><p>Internal Network properties accessed during standalone code generation.</p>
+<h3 id="nodewithindex">NodeWithIndex</h3><p>Internal Node properties with assigned indices for code generation.</p>
+<h2 id="architecture-network-network-stats-ts">architecture/network/network.stats.ts</h2><h3 id="getregularizationstats">getRegularizationStats</h3><p><code>() =&gt; Record&lt;string, unknown&gt; | null</code></p>
 <p>Obtain the last recorded regularization / stochastic statistics snapshot.</p>
 <p>Returns a defensive deep copy so callers can inspect metrics without risking mutation of the
 internal <code>_lastStats</code> object maintained by the training loop (e.g., during pruning, dropout, or
 noise scheduling updates).</p>
 <p>Returns: A deep-cloned stats object or null if no stats have been recorded yet.</p>
+<h3 id="globalthiswithstructuredclone">GlobalThisWithStructuredClone</h3><p>GlobalThis interface with optional structuredClone.</p>
+<h3 id="networkstatsprops">NetworkStatsProps</h3><p>Internal Network properties accessed during stats operations.</p>
 <h2 id="architecture-network-network-topology-ts">architecture/network/network.topology.ts</h2><h3 id="computetopoorder">computeTopoOrder</h3><p><code>() =&gt; void</code></p>
 <p>Topology utilities.</p>
 <p>Provides:</p>
@@ -965,60 +804,21 @@ nodes nor should they block ordering completion).</li>
 </ul>
 <h3 id="haspath">hasPath</h3><p><code>(from: import(&quot;D:/code-practice/NeatapticTS/src/architecture/node&quot;).default, to: import(&quot;D:/code-practice/NeatapticTS/src/architecture/node&quot;).default) =&gt; boolean</code></p>
 <p>Depth-first reachability test (avoids infinite loops via visited set).</p>
+<h3 id="networktopologyprops">NetworkTopologyProps</h3><p>Internal Network properties accessed during topology operations.</p>
 <h2 id="architecture-network-network-training-ts">architecture/network/network.training.ts</h2><h3 id="traininginternals">__trainingInternals</h3><h3 id="applygradientclippingimpl">applyGradientClippingImpl</h3><p><code>(net: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default, cfg: { mode: &quot;norm&quot; | &quot;percentile&quot; | &quot;layerwiseNorm&quot; | &quot;layerwisePercentile&quot;; maxNorm?: number | undefined; percentile?: number | undefined; }) =&gt; void</code></p>
-<p>Apply gradient clipping to accumulated connection deltas / bias deltas.</p>
-<p>Modes:</p>
-<ul>
-<li>norm / layerwiseNorm: L2 norm scaling (global vs per group).</li>
-<li>percentile / layerwisePercentile: element-wise clamp at absolute percentile threshold.</li>
-</ul>
-<p>Grouping:</p>
-<ul>
-<li>If layerwise* and net.layers exists -&gt; each defined layer is a group.</li>
-<li>Else if layerwise* -&gt; each non-input node becomes its own group.</li>
-<li>Otherwise a single global group containing all learnable params.</li>
-</ul>
-<h3 id="applyoptimizerstep">applyOptimizerStep</h3><p><code>(net: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default, optimizer: any, currentRate: number, momentum: number, internalNet: any) =&gt; number</code></p>
-<p>Apply optimizer update step across all nodes; returns gradient L2 norm (approx).</p>
-<h3 id="averageaccumulatedgradients">averageAccumulatedGradients</h3><p><code>(net: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default, accumulationSteps: number) =&gt; void</code></p>
-<p>Divide accumulated gradients by accumulationSteps (average reduction mode).</p>
 <h3 id="checkpointconfig">CheckpointConfig</h3><p>Checkpoint callback spec.</p>
-<h3 id="computemonitorederror">computeMonitoredError</h3><p><code>(trainError: number, recentErrors: number[], cfg: MonitoredSmoothingConfig, state: PrimarySmoothingState) =&gt; number</code></p>
-<p>Compute the monitored (primary) smoothed error given recent raw errors.</p>
-<p>Behavior:</p>
-<ul>
-<li>For SMA-like strategies uses the supplied window slice directly.</li>
-<li>For EMA it mutates state.emaValue.</li>
-<li>For adaptive-ema maintains dual EMA tracks inside state and returns the min for stability.</li>
-<li>For median / gaussian / trimmed / wma applies algorithmic weighting as documented inline.</li>
-</ul>
-<p>Inputs:</p>
-<ul>
-<li>trainError: Current raw mean error for this iteration.</li>
-<li>recentErrors: Chronological array (oldest-&gt;newest) of last N raw errors.</li>
-<li>cfg: Algorithm selection + parameters.</li>
-<li>state: Mutable smoothing state (ema / adaptive fields updated in-place).</li>
-</ul>
-<p>Returns: Smoothed/monitored error metric (may equal trainError if no smoothing active).</p>
-<h3 id="computeplateaumetric">computePlateauMetric</h3><p><code>(trainError: number, plateauErrors: number[], cfg: PlateauSmoothingConfig, state: PlateauSmoothingState) =&gt; number</code></p>
-<p>Compute plateau metric (may differ in strategy from primary monitored error).
-Only algorithms actually supported for plateau in current pipeline are SMA, median and EMA.
-Provided flexibility keeps room for extension; unsupported types silently fallback to mean.</p>
+<h3 id="connectioninternals">ConnectionInternals</h3><p>Runtime interface for accessing Connection internal properties during training.</p>
 <h3 id="costfunction">CostFunction</h3><p><code>(target: number[], output: number[]) =&gt; number</code></p>
 <hr>
-<h2 id="internal-type-definitions-documentation-only-optional-for-callers">Internal Type Definitions (documentation only; optional for callers)</h2><h3 id="detectmixedprecisionoverflow">detectMixedPrecisionOverflow</h3><p><code>(net: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default, internalNet: any) =&gt; boolean</code></p>
-<p>Detect mixed precision overflow (NaN / Inf) in bias values if mixed precision enabled.
-Side-effect: may clear internal trigger _forceNextOverflow.</p>
+<h2 id="internal-type-definitions-documentation-only-optional-for-callers">Internal Type Definitions (documentation only; optional for callers)</h2><h3 id="costfunctionorobject">CostFunctionOrObject</h3><p>Cost function or cost object interface.</p>
 <h3 id="gradientclipconfig">GradientClipConfig</h3><p>Gradient clipping configuration accepted by options.gradientClip.</p>
-<h3 id="handleoverflow">handleOverflow</h3><p><code>(internalNet: any) =&gt; void</code></p>
-<p>Respond to a mixed precision overflow by shrinking loss scale &amp; bookkeeping.</p>
-<h3 id="maybeincreaselossscale">maybeIncreaseLossScale</h3><p><code>(internalNet: any) =&gt; void</code></p>
-<p>Update dynamic loss scaling after a successful (non-overflow) optimizer step.</p>
 <h3 id="metricshook">MetricsHook</h3><p><code>(m: { iteration: number; error: number; plateauError?: number | undefined; gradNorm: number; }) =&gt; void</code></p>
 <p>Metrics hook signature.</p>
 <h3 id="mixedprecisionconfig">MixedPrecisionConfig</h3><h3 id="mixedprecisiondynamicconfig">MixedPrecisionDynamicConfig</h3><p>Mixed precision configuration.</p>
 <h3 id="monitoredsmoothingconfig">MonitoredSmoothingConfig</h3><p>Configuration passed to monitored (primary) smoothing computation.</p>
 <h3 id="movingaveragetype">MovingAverageType</h3><p>Moving average strategy identifiers.</p>
+<h3 id="networkinternals">NetworkInternals</h3><p>Runtime interface for accessing Network internal properties during training.</p>
+<h3 id="nodeinternals">NodeInternals</h3><p>Runtime interface for accessing Node internal properties during training.</p>
 <h3 id="optimizerconfigbase">OptimizerConfigBase</h3><p>Optimizer configuration (subset – delegated to node.applyBatchUpdatesWithOptimizer).</p>
 <h3 id="plateausmoothingconfig">PlateauSmoothingConfig</h3><p>Configuration for plateau smoothing computation.</p>
 <h3 id="plateausmoothingstate">PlateauSmoothingState</h3><p>State container for plateau EMA smoothing.</p>
@@ -1026,13 +826,10 @@ Side-effect: may clear internal trigger _forceNextOverflow.</p>
 <h2 id="internal-helper-utilities-non-exported">Internal Helper Utilities (non-exported)</h2><p>These functions encapsulate cohesive sub-steps of the training pipeline so the
 main exported functions remain readable while preserving original behavior.
 Each helper is intentionally pure where reasonable or documents its side-effects.</p>
+<h3 id="regularizationconfig">RegularizationConfig</h3><p>Regularization configuration (used internally during training).</p>
 <h3 id="scheduleconfig">ScheduleConfig</h3><p>Schedule hook executed every N iterations.</p>
+<h3 id="serializednetwork">SerializedNetwork</h3><p>Serialized network structure (used in checkpoint callbacks).</p>
 <h3 id="trainimpl">trainImpl</h3><p><code>(net: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default, set: { input: number[]; output: number[]; }[], options: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network/network.training&quot;).TrainingOptions) =&gt; { error: number; iterations: number; time: number; }</code></p>
-<p>High-level training orchestration with early stopping, smoothing &amp; callbacks.</p>
 <h3 id="trainingoptions">TrainingOptions</h3><p>Primary training options object (public shape).</p>
-<h3 id="trainsetimpl">trainSetImpl</h3><p><code>(net: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default, set: { input: number[]; output: number[]; }[], batchSize: number, accumulationSteps: number, currentRate: number, momentum: number, regularization: any, costFunction: (target: number[], output: number[]) =&gt; number, optimizer: any) =&gt; number</code></p>
-<p>Execute one full pass over dataset (epoch) with optional accumulation &amp; adaptive optimizer.
-Returns mean cost across processed samples.</p>
-<h3 id="zeroaccumulatedgradients">zeroAccumulatedGradients</h3><p><code>(net: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default) =&gt; void</code></p>
-<p>Zero-out accumulated gradient buffers after an overflow to discard invalid updates.</p>
-<footer class="site-footer">Generated from source JSDoc • <a href="https://github.com/reicek/NeatapticTS">GitHub</a></footer></main><aside class="toc"><div class="page-toc"><h2>Files</h2><div class="toc-file"><a href="#architecture-network-network-activate-ts">architecture/network/network.activate.ts</a><ul><li><a href=#activatebatch>activateBatch</a></li><li><a href=#activateraw>activateRaw</a></li><li><a href=#notraceactivate>noTraceActivate</a></li></ul></div><div class="toc-file"><a href="#architecture-network-network-connect-ts">architecture/network/network.connect.ts</a><ul><li><a href=#connect>connect</a></li><li><a href=#disconnect>disconnect</a></li></ul></div><div class="toc-file"><a href="#architecture-network-network-deterministic-ts">architecture/network/network.deterministic.ts</a><ul><li><a href=#getrandomfn>getRandomFn</a></li><li><a href=#getrngstate>getRNGState</a></li><li><a href=#restorerng>restoreRNG</a></li><li><a href=#rngsnapshot>RNGSnapshot</a></li><li><a href=#setrngstate>setRNGState</a></li><li><a href=#setseed>setSeed</a></li><li><a href=#snapshotrng>snapshotRNG</a></li></ul></div><div class="toc-file"><a href="#architecture-network-network-evolve-ts">architecture/network/network.evolve.ts</a><ul><li><a href=#buildmultithreadfitness>buildMultiThreadFitness</a></li><li><a href=#buildsinglethreadfitness>buildSingleThreadFitness</a></li><li><a href=#computecomplexitypenalty>computeComplexityPenalty</a></li><li><a href=#evolutionconfig>EvolutionConfig</a></li><li><a href=#evolvenetwork>evolveNetwork</a></li><li><a href=#trainingsample>TrainingSample</a></li></ul></div><div class="toc-file"><a href="#architecture-network-network-gating-ts">architecture/network/network.gating.ts</a><ul><li><a href=#gate>gate</a></li><li><a href=#removenode>removeNode</a></li><li><a href=#ungate>ungate</a></li></ul></div><div class="toc-file"><a href="#architecture-network-network-genetic-ts">architecture/network/network.genetic.ts</a><ul><li><a href=#crossover>crossOver</a></li></ul></div><div class="toc-file"><a href="#architecture-network-network-mutate-ts">architecture/network/network.mutate.ts</a><ul><li><a href=#addbackconn>_addBackConn</a></li><li><a href=#addconn>_addConn</a></li><li><a href=#addgate>_addGate</a></li><li><a href=#addgrunode>_addGRUNode</a></li><li><a href=#addlstmnode>_addLSTMNode</a></li><li><a href=#addnode>_addNode</a></li><li><a href=#addselfconn>_addSelfConn</a></li><li><a href=#batchnorm>_batchNorm</a></li><li><a href=#modactivation>_modActivation</a></li><li><a href=#modbias>_modBias</a></li><li><a href=#modweight>_modWeight</a></li><li><a href=#reinitweight>_reinitWeight</a></li><li><a href=#subbackconn>_subBackConn</a></li><li><a href=#subconn>_subConn</a></li><li><a href=#subgate>_subGate</a></li><li><a href=#subnode>_subNode</a></li><li><a href=#subselfconn>_subSelfConn</a></li><li><a href=#swapnodes>_swapNodes</a></li><li><a href=#mutateimpl>mutateImpl</a></li></ul></div><div class="toc-file"><a href="#architecture-network-network-onnx-ts">architecture/network/network.onnx.ts</a><ul><li><a href=#assignactivationfunctions>assignActivationFunctions</a></li><li><a href=#assignweightsandbiases>assignWeightsAndBiases</a></li><li><a href=#buildonnxmodel>buildOnnxModel</a></li><li><a href=#conv2dmapping>Conv2DMapping</a></li><li><a href=#derivehiddenlayersizes>deriveHiddenLayerSizes</a></li><li><a href=#exporttoonnx>exportToONNX</a></li><li><a href=#importfromonnx>importFromONNX</a></li><li><a href=#inferlayerordering>inferLayerOrdering</a></li><li><a href=#mapactivationtoonnx>mapActivationToOnnx</a></li><li><a href=#onnxexportoptions>OnnxExportOptions</a></li><li><a href=#onnxmodel>OnnxModel</a></li><li><a href=#pool2dmapping>Pool2DMapping</a></li><li><a href=#rebuildconnectionslocal>rebuildConnectionsLocal</a></li><li><a href=#validatelayerhomogeneityandconnectivity>validateLayerHomogeneityAndConnectivity</a></li></ul></div><div class="toc-file"><a href="#architecture-network-network-prune-ts">architecture/network/network.prune.ts</a><ul><li><a href=#getcurrentsparsity>getCurrentSparsity</a></li><li><a href=#maybeprune>maybePrune</a></li><li><a href=#prunetosparsity>pruneToSparsity</a></li><li><a href=#rankconnections>rankConnections</a></li><li><a href=#regrowconnections>regrowConnections</a></li></ul></div><div class="toc-file"><a href="#architecture-network-network-remove-ts">architecture/network/network.remove.ts</a><ul><li><a href=#removenode>removeNode</a></li></ul></div><div class="toc-file"><a href="#architecture-network-network-serialize-ts">architecture/network/network.serialize.ts</a><ul><li><a href=#deserialize>deserialize</a></li><li><a href=#fromjsonimpl>fromJSONImpl</a></li><li><a href=#serialize>serialize</a></li><li><a href=#tojsonimpl>toJSONImpl</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#architecture-network-network-slab-ts">architecture/network/network.slab.ts</a><ul><li><a href=#acquireta>_acquireTA</a></li><li><a href=#buildadjacency>_buildAdjacency</a></li><li><a href=#canusefastslab>_canUseFastSlab</a></li><li><a href=#poolkey>_poolKey</a></li><li><a href=#reindexnodes>_reindexNodes</a></li><li><a href=#releaseta>_releaseTA</a></li><li><a href=#slabpoolcap>_slabPoolCap</a></li><li><a href=#canusefastslab>canUseFastSlab</a></li><li><a href=#connectionslabview>ConnectionSlabView</a></li><li><a href=#fastslabactivate>fastSlabActivate</a></li><li><a href=#getconnectionslab>getConnectionSlab</a></li><li><a href=#getslaballocationstats>getSlabAllocationStats</a></li><li><a href=#getslabversion>getSlabVersion</a></li><li><a href=#poolkeymetrics>PoolKeyMetrics</a></li><li><a href=#rebuildconnectionslab>rebuildConnectionSlab</a></li><li><a href=#rebuildconnectionslabasync>rebuildConnectionSlabAsync</a></li><li><a href=#typedarray>TypedArray</a></li></ul></div><div class="toc-file"><a href="#architecture-network-network-standalone-ts">architecture/network/network.standalone.ts</a><ul><li><a href=#generatestandalone>generateStandalone</a></li></ul></div><div class="toc-file"><a href="#architecture-network-network-stats-ts">architecture/network/network.stats.ts</a><ul><li><a href=#deepclonevalue>deepCloneValue</a></li><li><a href=#getregularizationstats>getRegularizationStats</a></li></ul></div><div class="toc-file"><a href="#architecture-network-network-topology-ts">architecture/network/network.topology.ts</a><ul><li><a href=#computetopoorder>computeTopoOrder</a></li><li><a href=#haspath>hasPath</a></li></ul></div><div class="toc-file"><a href="#architecture-network-network-training-ts">architecture/network/network.training.ts</a><ul><li><a href=#traininginternals>__trainingInternals</a></li><li><a href=#applygradientclippingimpl>applyGradientClippingImpl</a></li><li><a href=#applyoptimizerstep>applyOptimizerStep</a></li><li><a href=#averageaccumulatedgradients>averageAccumulatedGradients</a></li><li><a href=#checkpointconfig>CheckpointConfig</a></li><li><a href=#computemonitorederror>computeMonitoredError</a></li><li><a href=#computeplateaumetric>computePlateauMetric</a></li><li><a href=#costfunction>CostFunction</a></li><li><a href=#detectmixedprecisionoverflow>detectMixedPrecisionOverflow</a></li><li><a href=#gradientclipconfig>GradientClipConfig</a></li><li><a href=#handleoverflow>handleOverflow</a></li><li><a href=#maybeincreaselossscale>maybeIncreaseLossScale</a></li><li><a href=#metricshook>MetricsHook</a></li><li><a href=#mixedprecisionconfig>MixedPrecisionConfig</a></li><li><a href=#mixedprecisiondynamicconfig>MixedPrecisionDynamicConfig</a></li><li><a href=#monitoredsmoothingconfig>MonitoredSmoothingConfig</a></li><li><a href=#movingaveragetype>MovingAverageType</a></li><li><a href=#optimizerconfigbase>OptimizerConfigBase</a></li><li><a href=#plateausmoothingconfig>PlateauSmoothingConfig</a></li><li><a href=#plateausmoothingstate>PlateauSmoothingState</a></li><li><a href=#primarysmoothingstate>PrimarySmoothingState</a></li><li><a href=#scheduleconfig>ScheduleConfig</a></li><li><a href=#trainimpl>trainImpl</a></li><li><a href=#trainingoptions>TrainingOptions</a></li><li><a href=#trainsetimpl>trainSetImpl</a></li><li><a href=#zeroaccumulatedgradients>zeroAccumulatedGradients</a></li></ul></div></div></aside></div></body></html>
+<h3 id="trainsetimpl">trainSetImpl</h3><p><code>(net: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default, set: { input: number[]; output: number[]; }[], batchSize: number, accumulationSteps: number, currentRate: number, momentum: number, regularization: RegularizationConfig, costFunction: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network/network.training&quot;).CostFunction | CostFunctionOrObject, optimizer: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network/network.training&quot;).OptimizerConfigBase | undefined) =&gt; number</code></p>
+<footer class="site-footer">Generated from source JSDoc • <a href="https://github.com/reicek/NeatapticTS">GitHub</a></footer></main><aside class="toc"><div class="page-toc"><h2>Files</h2><div class="toc-file"><a href="#architecture-network-network-activate-ts">architecture/network/network.activate.ts</a><ul><li><a href=#activatebatch>activateBatch</a></li><li><a href=#activateraw>activateRaw</a></li><li><a href=#networkinternals>NetworkInternals</a></li><li><a href=#notraceactivate>noTraceActivate</a></li></ul></div><div class="toc-file"><a href="#architecture-network-network-connect-ts">architecture/network/network.connect.ts</a><ul><li><a href=#connect>connect</a></li><li><a href=#disconnect>disconnect</a></li><li><a href=#networkinternals>NetworkInternals</a></li></ul></div><div class="toc-file"><a href="#architecture-network-network-deterministic-ts">architecture/network/network.deterministic.ts</a><ul><li><a href=#getrandomfn>getRandomFn</a></li><li><a href=#getrngstate>getRNGState</a></li><li><a href=#networkinternals>NetworkInternals</a></li><li><a href=#restorerng>restoreRNG</a></li><li><a href=#rngsnapshot>RNGSnapshot</a></li><li><a href=#setrngstate>setRNGState</a></li><li><a href=#setseed>setSeed</a></li><li><a href=#snapshotrng>snapshotRNG</a></li></ul></div><div class="toc-file"><a href="#architecture-network-network-evolve-ts">architecture/network/network.evolve.ts</a><ul><li><a href=#costfunction>CostFunction</a></li><li><a href=#costfunctionorref>CostFunctionOrRef</a></li><li><a href=#evolutionconfig>EvolutionConfig</a></li><li><a href=#evolvenetwork>evolveNetwork</a></li><li><a href=#evolveoptions>EvolveOptions</a></li><li><a href=#trainingsample>TrainingSample</a></li></ul></div><div class="toc-file"><a href="#architecture-network-network-gating-ts">architecture/network/network.gating.ts</a><ul><li><a href=#gate>gate</a></li><li><a href=#networkgatingprops>NetworkGatingProps</a></li><li><a href=#removenode>removeNode</a></li><li><a href=#ungate>ungate</a></li></ul></div><div class="toc-file"><a href="#architecture-network-network-genetic-ts">architecture/network/network.genetic.ts</a><ul><li><a href=#connectiongene>ConnectionGene</a></li><li><a href=#connectiongeneticprops>ConnectionGeneticProps</a></li><li><a href=#crossover>crossOver</a></li><li><a href=#networkgeneticprops>NetworkGeneticProps</a></li></ul></div><div class="toc-file"><a href="#architecture-network-network-mutate-ts">architecture/network/network.mutate.ts</a><ul><li><a href=#addbackconn>_addBackConn</a></li><li><a href=#addconn>_addConn</a></li><li><a href=#addgate>_addGate</a></li><li><a href=#addgrunode>_addGRUNode</a></li><li><a href=#addlstmnode>_addLSTMNode</a></li><li><a href=#addnode>_addNode</a></li><li><a href=#addselfconn>_addSelfConn</a></li><li><a href=#batchnorm>_batchNorm</a></li><li><a href=#modactivation>_modActivation</a></li><li><a href=#modbias>_modBias</a></li><li><a href=#modweight>_modWeight</a></li><li><a href=#reinitweight>_reinitWeight</a></li><li><a href=#subbackconn>_subBackConn</a></li><li><a href=#subconn>_subConn</a></li><li><a href=#subgate>_subGate</a></li><li><a href=#subnode>_subNode</a></li><li><a href=#subselfconn>_subSelfConn</a></li><li><a href=#swapnodes>_swapNodes</a></li><li><a href=#mutateimpl>mutateImpl</a></li><li><a href=#mutationmethod>MutationMethod</a></li><li><a href=#networkmutationprops>NetworkMutationProps</a></li></ul></div><div class="toc-file"><a href="#architecture-network-network-onnx-ts">architecture/network/network.onnx.ts</a><ul><li><a href=#conv2dmapping>Conv2DMapping</a></li><li><a href=#exporttoonnx>exportToONNX</a></li><li><a href=#importfromonnx>importFromONNX</a></li><li><a href=#nodeinternals>NodeInternals</a></li><li><a href=#onnxattribute>OnnxAttribute</a></li><li><a href=#onnxdimension>OnnxDimension</a></li><li><a href=#onnxexportoptions>OnnxExportOptions</a></li><li><a href=#onnxmodel>OnnxModel</a></li><li><a href=#onnxshape>OnnxShape</a></li><li><a href=#onnxtensortype>OnnxTensorType</a></li><li><a href=#onnxvalueinfo>OnnxValueInfo</a></li><li><a href=#pool2dmapping>Pool2DMapping</a></li></ul></div><div class="toc-file"><a href="#architecture-network-network-prune-ts">architecture/network/network.prune.ts</a><ul><li><a href=#getcurrentsparsity>getCurrentSparsity</a></li><li><a href=#maybeprune>maybePrune</a></li><li><a href=#networkpruningprops>NetworkPruningProps</a></li><li><a href=#prunetosparsity>pruneToSparsity</a></li></ul></div><div class="toc-file"><a href="#architecture-network-network-remove-ts">architecture/network/network.remove.ts</a><ul><li><a href=#networkremoveprops>NetworkRemoveProps</a></li><li><a href=#removenode>removeNode</a></li></ul></div><div class="toc-file"><a href="#architecture-network-network-serialize-ts">architecture/network/network.serialize.ts</a><ul><li><a href=#deserialize>deserialize</a></li><li><a href=#fromjsonimpl>fromJSONImpl</a></li><li><a href=#networkinternals>NetworkInternals</a></li><li><a href=#networkjson>NetworkJSON</a></li><li><a href=#nodeinternals>NodeInternals</a></li><li><a href=#serialize>serialize</a></li><li><a href=#serializedconnection>SerializedConnection</a></li><li><a href=#tojsonimpl>toJSONImpl</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#architecture-network-network-slab-ts">architecture/network/network.slab.ts</a><ul><li><a href=#buildadjacency>_buildAdjacency</a></li><li><a href=#canusefastslab>_canUseFastSlab</a></li><li><a href=#reindexnodes>_reindexNodes</a></li><li><a href=#canusefastslab>canUseFastSlab</a></li><li><a href=#connectioninternals>ConnectionInternals</a></li><li><a href=#connectionslabview>ConnectionSlabView</a></li><li><a href=#fastslabactivate>fastSlabActivate</a></li><li><a href=#getconnectionslab>getConnectionSlab</a></li><li><a href=#getslaballocationstats>getSlabAllocationStats</a></li><li><a href=#getslabversion>getSlabVersion</a></li><li><a href=#networkslabprops>NetworkSlabProps</a></li><li><a href=#poolkeymetrics>PoolKeyMetrics</a></li><li><a href=#rebuildconnectionslab>rebuildConnectionSlab</a></li><li><a href=#rebuildconnectionslabasync>rebuildConnectionSlabAsync</a></li><li><a href=#typedarray>TypedArray</a></li><li><a href=#typedarrayconstructor>TypedArrayConstructor</a></li></ul></div><div class="toc-file"><a href="#architecture-network-network-standalone-ts">architecture/network/network.standalone.ts</a><ul><li><a href=#generatestandalone>generateStandalone</a></li><li><a href=#networkstandaloneprops>NetworkStandaloneProps</a></li><li><a href=#nodewithindex>NodeWithIndex</a></li></ul></div><div class="toc-file"><a href="#architecture-network-network-stats-ts">architecture/network/network.stats.ts</a><ul><li><a href=#getregularizationstats>getRegularizationStats</a></li><li><a href=#globalthiswithstructuredclone>GlobalThisWithStructuredClone</a></li><li><a href=#networkstatsprops>NetworkStatsProps</a></li></ul></div><div class="toc-file"><a href="#architecture-network-network-topology-ts">architecture/network/network.topology.ts</a><ul><li><a href=#computetopoorder>computeTopoOrder</a></li><li><a href=#haspath>hasPath</a></li><li><a href=#networktopologyprops>NetworkTopologyProps</a></li></ul></div><div class="toc-file"><a href="#architecture-network-network-training-ts">architecture/network/network.training.ts</a><ul><li><a href=#traininginternals>__trainingInternals</a></li><li><a href=#applygradientclippingimpl>applyGradientClippingImpl</a></li><li><a href=#checkpointconfig>CheckpointConfig</a></li><li><a href=#connectioninternals>ConnectionInternals</a></li><li><a href=#costfunction>CostFunction</a></li><li><a href=#costfunctionorobject>CostFunctionOrObject</a></li><li><a href=#gradientclipconfig>GradientClipConfig</a></li><li><a href=#metricshook>MetricsHook</a></li><li><a href=#mixedprecisionconfig>MixedPrecisionConfig</a></li><li><a href=#mixedprecisiondynamicconfig>MixedPrecisionDynamicConfig</a></li><li><a href=#monitoredsmoothingconfig>MonitoredSmoothingConfig</a></li><li><a href=#movingaveragetype>MovingAverageType</a></li><li><a href=#networkinternals>NetworkInternals</a></li><li><a href=#nodeinternals>NodeInternals</a></li><li><a href=#optimizerconfigbase>OptimizerConfigBase</a></li><li><a href=#plateausmoothingconfig>PlateauSmoothingConfig</a></li><li><a href=#plateausmoothingstate>PlateauSmoothingState</a></li><li><a href=#primarysmoothingstate>PrimarySmoothingState</a></li><li><a href=#regularizationconfig>RegularizationConfig</a></li><li><a href=#scheduleconfig>ScheduleConfig</a></li><li><a href=#serializednetwork>SerializedNetwork</a></li><li><a href=#trainimpl>trainImpl</a></li><li><a href=#trainingoptions>TrainingOptions</a></li><li><a href=#trainsetimpl>trainSetImpl</a></li></ul></div></div></aside></div></body></html>
