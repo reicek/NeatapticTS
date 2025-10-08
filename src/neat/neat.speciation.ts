@@ -192,13 +192,21 @@ export function _speciate<
   if (this._speciesHistory.length > 200) this._speciesHistory.shift();
 }
 
-export function _applyFitnessSharing(
+/**
+ * Apply fitness sharing to penalize similarity within species.
+ *
+ * @param this - Neat instance context with species array and compatibility distance function.
+ */
+export const _applyFitnessSharing = function (
   this: NeatLike & {
     _species: SpeciesLike[];
     _compatibilityDistance: (a: GenomeDetailed, b: GenomeDetailed) => number;
   },
 ) {
-  const sigma = (this.options as any).sharingSigma ?? 0;
+  interface OptionsWithSharing {
+    sharingSigma?: number;
+  }
+  const sigma = (this.options as OptionsWithSharing).sharingSigma ?? 0;
   if (sigma > 0) {
     for (const s of this._species) {
       const members = s.members as GenomeDetailed[];
@@ -226,20 +234,35 @@ export function _applyFitnessSharing(
         if (typeof m.score === 'number') m.score = m.score / size;
     }
   }
-}
+};
 
-export function _sortSpeciesMembers(this: NeatLike, sp: SpeciesLike) {
+/**
+ * Sort species members by descending score.
+ *
+ * @param this - Neat instance context.
+ * @param sp - Species to sort.
+ */
+export const _sortSpeciesMembers = (sp: SpeciesLike) => {
   (sp.members as GenomeDetailed[]).sort(
     (a, b) => (b.score || 0) - (a.score || 0),
   );
-}
+};
 
-export function _updateSpeciesStagnation(
+/**
+ * Update stagnation counters for all species.
+ *
+ * @param this - Neat instance context with species array and generation counter.
+ */
+export const _updateSpeciesStagnation = function (
   this: NeatLike & { _species: SpeciesLike[]; generation: number },
 ) {
-  const win = (this.options as any).stagnationGenerations ?? 15;
+  interface OptionsWithStagnation {
+    stagnationGenerations?: number;
+  }
+  const win =
+    (this.options as OptionsWithStagnation).stagnationGenerations ?? 15;
   for (const s of this._species) {
-    _sortSpeciesMembers.call(this, s);
+    _sortSpeciesMembers(s);
     const top = (s.members as GenomeDetailed[])[0];
     if ((top?.score ?? -Infinity) > (s.bestScore ?? -Infinity)) {
       s.bestScore = top.score ?? -Infinity;
@@ -250,4 +273,4 @@ export function _updateSpeciesStagnation(
     (s) => this.generation - (s.lastImproved ?? 0) <= win,
   );
   if (survivors.length) this._species = survivors;
-}
+};

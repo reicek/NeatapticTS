@@ -1,4 +1,115 @@
 /**
+ * Genome with score, novelty, and clearing capabilities.
+ */
+interface GenomeForEvaluation {
+  score?: number;
+  clear?: () => void;
+  connections: unknown[];
+  nodes?: unknown[];
+  _novelty?: number;
+  [key: string]: unknown;
+}
+
+/**
+ * Novelty archive entry with descriptor and novelty score.
+ */
+interface NoveltyArchiveEntry {
+  desc: number[];
+  novelty: number;
+}
+
+/**
+ * Diversity statistics tracked during evaluation.
+ */
+interface DiversityStats {
+  varEntropy?: number;
+  meanEntropy?: number;
+  [key: string]: unknown;
+}
+
+/**
+ * Objective definition for multi-objective optimization.
+ */
+interface ObjectiveDef {
+  key: string;
+  direction?: string;
+  fn?: (genome: GenomeForEvaluation) => number;
+}
+
+/**
+ * NEAT controller interface for evaluation.
+ */
+interface NeatControllerForEval {
+  options: {
+    fitnessPopulation?: boolean;
+    clear?: boolean;
+    novelty?: {
+      enabled?: boolean;
+      descriptor?: (genome: GenomeForEvaluation) => number[];
+      k?: number;
+      blendFactor?: number;
+      archiveAddThreshold?: number;
+    };
+    entropySharingTuning?: {
+      enabled?: boolean;
+      targetEntropyVar?: number;
+      adjustRate?: number;
+      minSigma?: number;
+      maxSigma?: number;
+    };
+    entropyCompatTuning?: {
+      enabled?: boolean;
+      targetEntropy?: number;
+      deadband?: number;
+      adjustRate?: number;
+      minThreshold?: number;
+      maxThreshold?: number;
+    };
+    autoDistanceCoeffTuning?: {
+      enabled?: boolean;
+      adjustRate?: number;
+      minCoeff?: number;
+      maxCoeff?: number;
+    };
+    multiObjective?: {
+      enabled?: boolean;
+      autoEntropy?: boolean;
+      dynamic?: {
+        enabled?: boolean;
+      };
+    };
+    speciation?: boolean;
+    targetSpecies?: number;
+    compatAdjust?: boolean;
+    speciesAllocation?: {
+      extendedHistory?: boolean;
+    };
+    sharingSigma?: number;
+    compatibilityThreshold?: number;
+    excessCoeff?: number;
+    disjointCoeff?: number;
+    [key: string]: unknown;
+  };
+  population: GenomeForEvaluation[];
+  fitness: (
+    genomeOrPop: GenomeForEvaluation | GenomeForEvaluation[],
+  ) => Promise<number | void>;
+  _noveltyArchive?: NoveltyArchiveEntry[];
+  _diversityStats?: DiversityStats;
+  _lastConnVar?: number | null;
+  _speciate?: () => void;
+  _getObjectives?: () => ObjectiveDef[];
+  _structuralEntropy?: (genome: GenomeForEvaluation) => number;
+  registerObjective?: (
+    key: string,
+    direction: string,
+    fn: (g: GenomeForEvaluation) => number,
+  ) => void;
+  _pendingObjectiveAdds?: string[];
+  _objectivesList?: unknown;
+}
+
+/**
  * Evaluate the population or population-wide fitness delegate.
  *
  * This function mirrors the legacy `evaluate` behaviour used by NeatapticTS
@@ -23,7 +134,7 @@
  *
  * @returns Promise<void> resolves after evaluation and adaptive updates complete.
  */
-export async function evaluate(this: any): Promise<void> {
+export async function evaluate(this: NeatControllerForEval): Promise<void> {
   // Delegate-evaluated version of the fallback in src/neat.ts
   /**
    * The options object for the running NEAT controller.
@@ -44,18 +155,17 @@ export async function evaluate(this: any): Promise<void> {
   if (options.fitnessPopulation) {
     // method steps descriptions
     // 1) Optionally clear internal genome state (when using population-level fitness)
-    if (options.clear)
-      this.population.forEach((g: any) => g.clear && g.clear());
+    if (options.clear) this.population.forEach((g) => g.clear && g.clear());
     // 2) Run the population-level fitness delegate
-    await this.fitness(this.population as any);
+    await this.fitness(this.population);
   } else {
     // method steps descriptions
     // 1) Evaluate each genome individually. We clear genome internal state
     //    when `options.clear` is provided to ensure deterministic runs.
     for (const genome of this.population) {
       if (options.clear && genome.clear) genome.clear();
-      const fitnessValue = await this.fitness(genome as any);
-      (genome as any).score = fitnessValue;
+      const fitnessValue = await this.fitness(genome);
+      genome.score = fitnessValue as number;
     }
   }
 
@@ -97,9 +207,9 @@ export async function evaluate(this: any): Promise<void> {
        * Example descriptor (redacted educational):
        * function descriptor(genome) { return [genome.connections.length, genome.nodes.length]; }
        */
-      const descriptors = this.population.map((g: any) => {
+      const descriptors = this.population.map((g) => {
         try {
-          return noveltyOptions.descriptor(g) || [];
+          return noveltyOptions.descriptor?.(g) ?? [];
         } catch {
           // Graceful degradation: a failing descriptor becomes an empty vector
           return [];
@@ -141,11 +251,11 @@ export async function evaluate(this: any): Promise<void> {
         const novelty = neighbours.length
           ? neighbours.reduce((a, b) => a + b, 0) / neighbours.length
           : 0;
-        (this.population[i] as any)._novelty = novelty;
+        this.population[i]._novelty = novelty;
         // Blend novelty into score when a numeric score is present
-        if (typeof (this.population[i] as any).score === 'number') {
-          (this.population[i] as any).score =
-            (1 - blendFactor) * (this.population[i] as any).score +
+        if (typeof this.population[i].score === 'number') {
+          this.population[i].score =
+            (1 - blendFactor) * (this.population[i].score ?? 0) +
             blendFactor * novelty;
         }
         // Maintain a novelty archive with simple thresholds and a cap
@@ -167,10 +277,12 @@ export async function evaluate(this: any): Promise<void> {
         }
       }
     }
-  } catch {}
+  } catch {
+    // Intentionally ignore novelty computation errors to allow evaluation to continue
+  }
 
   // Ensure diversity stats container exists so tuning logic can read/write
-  if (!this._diversityStats) this._diversityStats = {} as any;
+  if (!this._diversityStats) this._diversityStats = {};
 
   // === Entropy sharing tuning ===
   try {
@@ -191,7 +303,7 @@ export async function evaluate(this: any): Promise<void> {
       /** Maximum allowed sharing sigma to prevent runaway values. */
       const maxSigma = entropySharingOptions.maxSigma ?? 10;
       /** Current observed variance of entropy across the population. */
-      const currentVarEntropy = this._diversityStats.varEntropy;
+      const currentVarEntropy = this._diversityStats?.varEntropy;
       if (typeof currentVarEntropy === 'number') {
         let sigma = this.options.sharingSigma ?? 0;
         if (currentVarEntropy < targetVar * 0.9)
@@ -201,7 +313,9 @@ export async function evaluate(this: any): Promise<void> {
         this.options.sharingSigma = sigma;
       }
     }
-  } catch {}
+  } catch {
+    // Intentionally ignore entropy sharing tuning errors
+  }
 
   // === Entropy-compatibility threshold tuning ===
   try {
@@ -214,7 +328,7 @@ export async function evaluate(this: any): Promise<void> {
     const entropyCompatOptions = options.entropyCompatTuning;
     if (entropyCompatOptions?.enabled) {
       /** Current mean entropy across the population. */
-      const meanEntropy = this._diversityStats.meanEntropy;
+      const meanEntropy = this._diversityStats?.meanEntropy;
       /** Target mean entropy the tuner tries to achieve. */
       const targetEntropy = entropyCompatOptions.targetEntropy ?? 0.5;
       /** Deadband around targetEntropy where no tuning is applied. */
@@ -237,7 +351,9 @@ export async function evaluate(this: any): Promise<void> {
         this.options.compatibilityThreshold = threshold;
       }
     }
-  } catch {}
+  } catch {
+    // Intentionally ignore entropy-compatibility tuning errors
+  }
 
   // Run speciation (lightweight) during evaluate when controller features enabled
   // so threshold tuning tests that only call evaluate pass.
@@ -248,9 +364,11 @@ export async function evaluate(this: any): Promise<void> {
         this.options.compatAdjust ||
         this.options.speciesAllocation?.extendedHistory)
     ) {
-      (this as any)._speciate();
+      this._speciate?.();
     }
-  } catch {}
+  } catch {
+    // Intentionally ignore speciation errors during evaluation
+  }
 
   // === Auto-distance coefficient tuning (variance-based) ===
   try {
@@ -262,17 +380,15 @@ export async function evaluate(this: any): Promise<void> {
     const autoDistanceCoeffOptions = this.options.autoDistanceCoeffTuning;
     if (autoDistanceCoeffOptions?.enabled && this.options.speciation) {
       /** Array of connection counts for each genome in the population. */
-      const connectionSizes = this.population.map(
-        (g: any) => g.connections.length,
-      );
+      const connectionSizes = this.population.map((g) => g.connections.length);
       /** Mean number of connections across the population. */
       const meanSize =
-        connectionSizes.reduce((a: number, b: number) => a + b, 0) /
+        connectionSizes.reduce((a, b) => a + b, 0) /
         (connectionSizes.length || 1);
       /** Variance of connection counts across the population. */
       const connVar =
         connectionSizes.reduce(
-          (a: number, b: number) => a + (b - meanSize) * (b - meanSize),
+          (a, b) => a + (b - meanSize) * (b - meanSize),
           0,
         ) / (connectionSizes.length || 1);
       /** Rate used to adjust distance coefficients when variance changes. */
@@ -296,7 +412,9 @@ export async function evaluate(this: any): Promise<void> {
             maxCoeff,
             (this.options.disjointCoeff! ?? 1) * (1 + adjustRate),
           );
-        } catch {}
+        } catch {
+          // Intentionally ignore coefficient adjustment errors during bootstrap
+        }
       }
       if (connVar < this._lastConnVar * 0.95) {
         this.options.excessCoeff = Math.min(
@@ -319,7 +437,9 @@ export async function evaluate(this: any): Promise<void> {
       }
       this._lastConnVar = connVar;
     }
-  } catch {}
+  } catch {
+    // Intentionally ignore auto-distance coefficient tuning errors
+  }
 
   // === Auto-entropy objective injection during evaluation ===
   try {
@@ -328,17 +448,21 @@ export async function evaluate(this: any): Promise<void> {
       this.options.multiObjective.autoEntropy
     ) {
       if (!this.options.multiObjective.dynamic?.enabled) {
-        const keys = (this._getObjectives() as any[]).map((o: any) => o.key);
+        const keys = this._getObjectives?.()?.map((o) => o.key) ?? [];
         if (!keys.includes('entropy')) {
-          this.registerObjective('entropy', 'max', (g: any) =>
-            (this as any)._structuralEntropy(g),
+          this.registerObjective?.(
+            'entropy',
+            'max',
+            (g) => this._structuralEntropy?.(g) ?? 0,
           );
-          this._pendingObjectiveAdds.push('entropy');
-          this._objectivesList = undefined as any;
+          this._pendingObjectiveAdds?.push('entropy');
+          this._objectivesList = undefined;
         }
       }
     }
-  } catch {}
+  } catch {
+    // Intentionally ignore auto-entropy objective injection errors
+  }
 }
 
 export default { evaluate };

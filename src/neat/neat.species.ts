@@ -3,7 +3,6 @@ import type {
   SpeciesHistoryEntry,
   SpeciesLike,
   GenomeDetailed,
-  SpeciesHistoryStat,
   ConnectionLike,
   SpeciesHistoryStatExtended,
 } from './neat.types';

@@ -1,6 +1,24 @@
 import Network from '../architecture/network';
 
 /**
+ * Minimal node interface with connections.
+ */
+interface NodeWithConnections {
+  connections: {
+    out: unknown[];
+  };
+}
+
+/**
+ * Minimal genome interface for diversity computations.
+ */
+interface GenomeWithMetrics {
+  nodes: NodeWithConnections[];
+  connections: unknown[];
+  _depth?: number;
+}
+
+/**
  * Diversity statistics returned by computeDiversityStats.
  * Each field represents an aggregate metric for a NEAT population.
  */
@@ -38,14 +56,14 @@ export interface DiversityStats {
  * @example
  * // network-like object shape expected by this helper:
  * // const net = { nodes: [ { connections: { out: [] } }, ... ] };
- * // const h = structuralEntropy(net as any);
+ * // const h = structuralEntropy(net);
  */
-export function structuralEntropy(graph: Network): number {
+export const structuralEntropy = (graph: Network): number => {
   // method steps descriptions
   // 1) Collect out-degree for each node
   /** Array of out-degrees for each node in the network. */
   const outDegrees: number[] = graph.nodes.map(
-    (node: any) =>
+    (node) =>
       // each node exposes connections.out array in current architecture
       node.connections.out.length,
   );
@@ -65,7 +83,7 @@ export function structuralEntropy(graph: Network): number {
     entropy -= p * Math.log(p);
   }
   return entropy;
-}
+};
 
 /**
  * Minimal interface that provides a compatibility distance function.
@@ -78,28 +96,28 @@ interface CompatComputer {
    * @param b - second genome-like object
    * @returns non-negative numeric distance (higher = more different)
    */
-  _compatibilityDistance(a: any, b: any): number;
+  _compatibilityDistance(a: GenomeWithMetrics, b: GenomeWithMetrics): number;
 }
 
 /**
  * Compute the arithmetic mean of a numeric array. Returns 0 for empty arrays.
  * Extracted as a helper so it can be documented/tested independently.
  */
-function arrayMean(values: number[]): number {
+const arrayMean = (values: number[]): number => {
   /** Guard: return 0 when there are no values */
   if (!values.length) return 0;
   return values.reduce((sum, v) => sum + v, 0) / values.length;
-}
+};
 
 /**
  * Compute the variance (population variance) of a numeric array.
  * Returns 0 for empty arrays. Uses arrayMean internally.
  */
-function arrayVariance(values: number[]): number {
+const arrayVariance = (values: number[]): number => {
   if (!values.length) return 0;
   const m = arrayMean(values);
   return arrayMean(values.map((v) => (v - m) * (v - m)));
-}
+};
 
 /**
  * Compute diversity statistics for a NEAT population.
@@ -119,10 +137,10 @@ function arrayVariance(values: number[]): number {
  * const stats = computeDiversityStats(population, compatImpl);
  * console.log(`Mean nodes: ${stats?.meanNodes}`);
  */
-export function computeDiversityStats(
-  population: any[],
+export const computeDiversityStats = (
+  population: GenomeWithMetrics[],
   compatibilityComputer: CompatComputer,
-): DiversityStats | undefined {
+): DiversityStats | undefined => {
   // Early exit: empty population
   if (!population.length) return undefined;
 
@@ -132,8 +150,8 @@ export function computeDiversityStats(
   /** Collected lineage depths from genomes that expose a numeric `_depth`. */
   const lineageDepths: number[] = [];
   for (const genome of population) {
-    if (typeof (genome as any)._depth === 'number') {
-      lineageDepths.push((genome as any)._depth);
+    if (typeof genome._depth === 'number') {
+      lineageDepths.push(genome._depth);
     }
   }
 
@@ -214,4 +232,4 @@ export function computeDiversityStats(
     graphletEntropy,
     population: population.length,
   };
-}
+};

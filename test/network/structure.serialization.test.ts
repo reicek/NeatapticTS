@@ -21,12 +21,12 @@ describe('Structure & Serialization', () => {
         const network1 = new Network(2, 2);
         const network2 = new Network(2, 2);
         for (let iterIndex = 0; iterIndex < 100; iterIndex++) {
-          network1.mutate(methods.mutation.ADD_NODE);
-          network2.mutate(methods.mutation.ADD_NODE);
+          network1.mutate(methods.mutation.ADD_NODE as never);
+          network2.mutate(methods.mutation.ADD_NODE as never);
         }
         for (let iterIndex = 0; iterIndex < 400; iterIndex++) {
-          network1.mutate(methods.mutation.ADD_CONN);
-          network2.mutate(methods.mutation.ADD_NODE);
+          network1.mutate(methods.mutation.ADD_CONN as never);
+          network2.mutate(methods.mutation.ADD_NODE as never);
         }
         // Act
         network = Network.crossOver(network1, network2);

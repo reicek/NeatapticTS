@@ -997,14 +997,14 @@ export default class Network implements NetworkView {
    * This is a core operation for neuro-evolutionary algorithms (like NEAT).
    * The method argument should be one of the mutation types defined in `methods.mutation`.
    *
-   * @param {unknown} method - The mutation method to apply (e.g., `mutation.ADD_NODE`, `mutation.MOD_WEIGHT`).
+   * @param {string | object | undefined} method - The mutation method to apply (e.g., `mutation.ADD_NODE`, `mutation.MOD_WEIGHT`).
    *                       Some methods might have associated parameters (e.g., `MOD_WEIGHT` uses `min`, `max`).
    * @throws {Error} If no valid mutation `method` is provided.
    *
    * @see {@link methods.mutation} for available mutation types.
    */
-  mutate(method: unknown): void {
-    return _mutateImpl.call(this, method);
+  mutate(method: string | { name?: string; type?: string; identity?: string; [key: string]: unknown } | { name?: string; type?: string; identity?: string; [key: string]: unknown }[] | undefined): void {
+    return _mutateImpl.call(this, method as never);
   }
 
   /**
@@ -1171,10 +1171,10 @@ export default class Network implements NetworkView {
   // Evolution wrapper delegates to network/network.evolve.ts implementation.
   async evolve(
     set: { input: number[]; output: number[] }[],
-    options: unknown,
+    options: Record<string, unknown> | undefined,
   ): Promise<{ error: number; iterations: number; time: number }> {
     const { evolveNetwork } = await import('./network/network.evolve');
-    return evolveNetwork.call(this, set, options);
+    return evolveNetwork.call(this, set, options as never);
   }
 
   /**
@@ -1263,11 +1263,11 @@ export default class Network implements NetworkView {
    */
   /** Static lightweight tuple deserializer delegate */
   static deserialize(
-    data: unknown[],
+    data: [number[], number[], string[], { from: number; to: number; weight: number; gater: number | null }[], number, number] | unknown[],
     inputSize?: number,
     outputSize?: number,
   ): Network {
-    return _deserialize(data, inputSize, outputSize);
+    return _deserialize(data as never, inputSize, outputSize);
   }
 
   /**
@@ -1278,8 +1278,8 @@ export default class Network implements NetworkView {
    * @returns {object} A JSON-compatible object representing the network.
    */
   /** Verbose JSON serializer delegate */
-  toJSON(): object {
-    return _toJSONImpl.call(this);
+  toJSON(): Record<string, unknown> {
+    return _toJSONImpl.call(this) as unknown as Record<string, unknown>;
   }
 
   /**
@@ -1289,8 +1289,8 @@ export default class Network implements NetworkView {
    * @returns {Network} The reconstructed network.
    */
   /** Verbose JSON static deserializer */
-  static fromJSON(json: unknown): Network {
-    return _fromJSONImpl(json);
+  static fromJSON(json: Record<string, unknown>): Network {
+    return _fromJSONImpl(json as never);
   }
 
   /**

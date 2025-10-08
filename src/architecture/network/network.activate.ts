@@ -2,6 +2,23 @@ import type Network from '../network';
 import { activationArrayPool } from '../activationArrayPool';
 
 /**
+ * Runtime interface for accessing Network internal properties during activation.
+ */
+interface NetworkInternals {
+  _enforceAcyclic?: boolean;
+  _topoDirty: boolean;
+  _computeTopoOrder: () => void;
+  _canUseFastSlab: (training: boolean) => boolean;
+  _fastSlabActivate: (input: number[]) => number[];
+  _reuseActivationArrays?: boolean;
+  activate: (
+    input: number[],
+    training?: boolean,
+    maxActivationDepth?: number,
+  ) => number[];
+}
+
+/**
  * Network activation helpers (forward pass utilities).
  *
  * This module provides progressively lower–overhead entry points for performing
@@ -65,31 +82,27 @@ import { activationArrayPool } from '../activationArrayPool';
  * @remarks Safe for inference hot paths; not suitable when gradients / training traces are required.
  */
 export function noTraceActivate(this: Network, input: number[]): number[] {
-  /**
-   * Reference to the network instance cast to any so internal/private helper properties
-   * (underscored fields & fast path flags) can be accessed without TypeScript complaints.
-   */
-  const self = this as any;
+  const networkInternal = this as unknown as NetworkInternals;
 
   // Step 1: Ensure that if we require an acyclic graph, our cached topological
   // ordering of nodes is current. A fresh order guarantees deterministic forward propagation.
-  if (self._enforceAcyclic && self._topoDirty)
-    (this as any)._computeTopoOrder();
+  if (networkInternal._enforceAcyclic && networkInternal._topoDirty)
+    networkInternal._computeTopoOrder();
 
   // Step 2: Basic validation – mismatched length typically indicates a user error.
   if (!Array.isArray(input) || input.length !== this.input) {
     throw new Error(
       `Input size mismatch: expected ${this.input}, got ${
-        input ? (input as any).length : 'undefined'
+        input ? input.length : 'undefined'
       }`,
     );
   }
 
   // Step 3: Attempt a zero‑allocation vectorized activation over a packed slab. We wrap
   // the call in a try/catch to avoid penalizing typical paths with conditional prechecks.
-  if ((this as any)._canUseFastSlab(false)) {
+  if (networkInternal._canUseFastSlab(false)) {
     try {
-      return (this as any)._fastSlabActivate(input);
+      return networkInternal._fastSlabActivate(input);
     } catch {
       // Silent fallback – correctness first; performance is opportunistic here.
     }
@@ -118,7 +131,7 @@ export function noTraceActivate(this: Network, input: number[]): number[] {
     if (node.type === 'input') node.noTraceActivate(input[index]);
     // Output nodes: compute their activation (which implicitly uses upstream hidden/input nodes) and store.
     else if (node.type === 'output')
-      (output as any)[outIndex++] = node.noTraceActivate();
+      output[outIndex++] = node.noTraceActivate();
     // Hidden nodes: just activate (value stored internally on the node itself).
     else node.noTraceActivate();
   });
@@ -127,7 +140,7 @@ export function noTraceActivate(this: Network, input: number[]): number[] {
   // the pooled object after it's released (which would create hard‑to‑trace bugs).
   /** Detached plain array containing final output activations. */
   /** Final detached output activation vector. */
-  const result = Array.from(output as any) as number[];
+  const result = Array.from(output) as number[];
 
   // Always release pooled resources promptly to keep memory pressure low for future calls.
   activationArrayPool.release(output);
@@ -157,16 +170,15 @@ export function activateRaw(
   input: number[],
   training = false,
   maxActivationDepth = 1000,
-): any {
-  /** Access internal flags / helpers (private-ish) via a loose cast. */
-  const self = this as any;
+): number[] {
+  const networkInternal = this as unknown as NetworkInternals;
 
   // If the network is not reusing activation arrays there's nothing special to do – delegate.
-  if (!self._reuseActivationArrays)
-    return (this as any).activate(input, training, maxActivationDepth);
+  if (!networkInternal._reuseActivationArrays)
+    return networkInternal.activate(input, training, maxActivationDepth);
 
   // Even when reuse is enabled we currently still just delegate; hook point for future optimization.
-  return (this as any).activate(input, training, maxActivationDepth);
+  return networkInternal.activate(input, training, maxActivationDepth);
 }
 
 /**
@@ -194,6 +206,8 @@ export function activateBatch(
   inputs: number[][],
   training = false,
 ): number[][] {
+  const networkInternal = this as unknown as NetworkInternals;
+
   // Global validation – ensure we can iterate as expected.
   if (!Array.isArray(inputs))
     throw new Error('inputs must be an array of input arrays');
@@ -216,7 +230,7 @@ export function activateBatch(
       );
     }
     // Delegate to the network's activation (may perform tracing if training=true).
-    out[i] = (this as any).activate(x, training);
+    out[i] = networkInternal.activate(x, training);
   }
 
   return out;

@@ -18,64 +18,80 @@ describe('Innovation Reuse', () => {
     const fitness = () => 0;
 
     describe('initial split records innovations', () => {
-      const neat = new Neat(2, 1, fitness, {
-        popsize: 1,
-        seed,
-        mutation: [methods.mutation.ADD_NODE],
-        mutationRate: 1,
-        mutationAmount: 1,
+      let neat: Neat;
+      let nodeSplitMap: Map<string, NodeSplitRecord>;
+      let registrySize: number;
+      
+      beforeAll(async () => {
+        neat = new Neat(2, 1, fitness, {
+          popsize: 1,
+          seed,
+          mutation: [methods.mutation.ADD_NODE],
+          mutationRate: 1,
+          mutationAmount: 1,
+        });
+        await neat.mutate(); // perform one ADD_NODE on the single genome
+        nodeSplitMap = Reflect.get(neat, '_nodeSplitInnovations') as Map<
+          string,
+          NodeSplitRecord
+        >;
+        registrySize = nodeSplitMap.size;
       });
-      neat.mutate(); // perform one ADD_NODE on the single genome
-      const nodeSplitMap = Reflect.get(neat, '_nodeSplitInnovations') as Map<
-        string,
-        NodeSplitRecord
-      >;
-      const registrySize = nodeSplitMap.size;
+      
       test('registry has at least one entry', () => {
         expect(registrySize).toBeGreaterThan(0);
       });
     });
 
     describe('second split of same connection reuses innovation ids', () => {
-      const neat = new Neat(2, 1, fitness, {
-        popsize: 1,
-        seed: seed + 1, // different seed to avoid sharing RNG sequence with previous block
-        mutation: [methods.mutation.ADD_NODE],
-        mutationRate: 1,
-        mutationAmount: 1,
-      });
-      // First mutation creates mapping
-      neat.mutate();
-      const firstRegistry = new Map(
-        Reflect.get(neat, '_nodeSplitInnovations') as Map<
+      let neat: Neat;
+      let firstRegistry: Map<string, NodeSplitRecord>;
+      let secondRegistry: Map<string, NodeSplitRecord>;
+      let base: Network;
+      let reused: boolean;
+      
+      beforeAll(async () => {
+        neat = new Neat(2, 1, fitness, {
+          popsize: 1,
+          seed: seed + 1, // different seed to avoid sharing RNG sequence with previous block
+          mutation: [methods.mutation.ADD_NODE],
+          mutationRate: 1,
+          mutationAmount: 1,
+        });
+        // First mutation creates mapping
+        await neat.mutate();
+        firstRegistry = new Map(
+          Reflect.get(neat, '_nodeSplitInnovations') as Map<
+            string,
+            NodeSplitRecord
+          >,
+        );
+        // Reset genome to base network (same from->to gene ids stay constant across runs because geneId is global)
+        base = new Network(2, 1, { minHidden: 0 });
+        neat.population[0] = base;
+        // Invoke internal reuse mutation directly to guarantee using same chosen connection (first enabled)
+        const mutateAddNodeReuse = Reflect.get(neat, '_mutateAddNodeReuse') as (
+          genome: Network,
+        ) => void;
+        mutateAddNodeReuse.call(neat, base);
+        secondRegistry = Reflect.get(neat, '_nodeSplitInnovations') as Map<
           string,
           NodeSplitRecord
-        >,
-      );
-      // Reset genome to base network (same from->to gene ids stay constant across runs because geneId is global)
-      const base = new Network(2, 1, { minHidden: 0 });
-      neat.population[0] = base;
-      // Invoke internal reuse mutation directly to guarantee using same chosen connection (first enabled)
-      const mutateAddNodeReuse = Reflect.get(neat, '_mutateAddNodeReuse') as (
-        genome: Network,
-      ) => void;
-      mutateAddNodeReuse.call(neat, base);
-      const secondRegistry = Reflect.get(neat, '_nodeSplitInnovations') as Map<
-        string,
-        NodeSplitRecord
-      >;
-      // Compare one entry innovations equality
-      const reused = Array.from(firstRegistry.entries()).every(
-        ([key, record]) => {
-          const reusedRecord = secondRegistry.get(key);
-          return (
-            !!reusedRecord &&
-            record.inInnov === reusedRecord.inInnov &&
-            record.outInnov === reusedRecord.outInnov &&
-            record.newNodeGeneId === reusedRecord.newNodeGeneId
-          );
-        },
-      );
+        >;
+        // Compare one entry innovations equality
+        reused = Array.from(firstRegistry.entries()).every(
+          ([key, record]) => {
+            const reusedRecord = secondRegistry.get(key);
+            return (
+              !!reusedRecord &&
+              record.inInnov === reusedRecord.inInnov &&
+              record.outInnov === reusedRecord.outInnov &&
+              record.newNodeGeneId === reusedRecord.newNodeGeneId
+            );
+          },
+        );
+      });
+      
       test('innovations reused for identical split', () => {
         expect(reused).toBe(true);
       });

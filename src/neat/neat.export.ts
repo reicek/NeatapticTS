@@ -13,8 +13,13 @@ import type { NeatLike } from './neat.types';
  * plugins / future features (e.g. CPPNs, substrate metadata, ONNX export tags).
  */
 export interface GenomeJSON {
-  [key: string]: any; // eslint-disable-line @typescript-eslint/no-explicit-any
+  [key: string]: unknown;
 }
+
+/**
+ * Connection innovation map entry.
+ */
+type InnovationMapEntry = [string, number];
 
 /**
  * Serialized meta information describing a NEAT run, excluding the concrete
@@ -30,13 +35,57 @@ export interface NeatMetaJSON {
   /** Current evolutionary generation index (0-based). */
   generation: number;
   /** Full options object (hyper‑parameters) used to configure NEAT. */
-  options: any; // retained as any until options interface is extracted
+  options: Record<string, unknown>;
   /** Innovation records for node split mutations: [compositeKey, innovationId]. */
-  nodeSplitInnovations: [any, any][]; // key/value pairs serialised from Map
+  nodeSplitInnovations: InnovationMapEntry[];
   /** Innovation records for connection mutations: [compositeKey, innovationId]. */
-  connInnovations: [any, any][];
+  connInnovations: InnovationMapEntry[];
   /** Next global innovation number that will be assigned. */
   nextGlobalInnovation: number;
+}
+
+/**
+ * Genome with toJSON serialization method.
+ */
+interface GenomeWithSerialization {
+  toJSON: () => GenomeJSON;
+}
+
+/**
+ * NEAT controller interface for export operations.
+ */
+interface NeatControllerForExport {
+  input: number;
+  output: number;
+  generation: number;
+  options: Record<string, unknown> & { popsize?: number };
+  population: GenomeWithSerialization[];
+  _nodeSplitInnovations: Map<string, number>;
+  _connInnovations: Map<string, number>;
+  _nextGlobalInnovation: number;
+}
+
+/**
+ * Network class with static fromJSON method.
+ */
+interface NetworkClass {
+  fromJSON: (json: GenomeJSON) => GenomeWithSerialization;
+}
+
+/**
+ * NEAT class constructor interface.
+ */
+interface NeatConstructor {
+  new (
+    input: number,
+    output: number,
+    fitness: (network: GenomeWithSerialization) => number | Promise<number>,
+    options?: Record<string, unknown>,
+  ): NeatControllerForExport;
+  fromJSON?: (
+    meta: NeatMetaJSON,
+    fitness: (network: GenomeWithSerialization) => number | Promise<number>,
+  ) => NeatControllerForExport;
 }
 
 /**
@@ -72,7 +121,8 @@ export interface NeatStateJSON {
  */
 export function exportPopulation(this: NeatLike): GenomeJSON[] {
   // 1. Map each genome in the current population to its serializable form
-  return (this as any).population.map((genome: any) => genome.toJSON());
+  const internal = this as unknown as NeatControllerForExport;
+  return internal.population.map((genome) => genome.toJSON());
 }
 
 /**
@@ -93,18 +143,19 @@ export function exportPopulation(this: NeatLike): GenomeJSON[] {
  *
  * @param populationJSON Array of serialized genome objects.
  */
-export function importPopulation(
+export async function importPopulation(
   this: NeatLike,
   populationJSON: GenomeJSON[],
-): void {
-  /** const Network class used for genome (network) rehydration */
-  const Network = require('../architecture/network').default;
+): Promise<void> {
+  /** Network class used for genome (network) rehydration */
+  const { default: Network } = await import('../architecture/network');
   // 1. Recreate each genome via Network.fromJSON
-  (this as any).population = populationJSON.map((serializedGenome: any) =>
-    Network.fromJSON(serializedGenome),
+  const internal = this as unknown as NeatControllerForExport;
+  internal.population = populationJSON.map((serializedGenome) =>
+    (Network as unknown as NetworkClass).fromJSON(serializedGenome),
   );
   // 2. Keep popsize option in sync with actual population length
-  (this as any).options.popsize = (this as any).population.length;
+  internal.options.popsize = internal.population.length;
 }
 
 /**
@@ -123,14 +174,12 @@ export function importPopulation(
  * @returns A {@link NeatStateJSON} bundle containing meta + population.
  */
 export function exportState(this: NeatLike): NeatStateJSON {
-  /** const lazily loaded export helpers (avoids circular deps) */
-  const { toJSONImpl, exportPopulation } = require('./neat.export');
   // 1. Serialize meta
   // 2. Serialize population
   // 3. Package into a bundle for persistence
   return {
-    neat: toJSONImpl.call(this as any),
-    population: exportPopulation.call(this as any),
+    neat: toJSONImpl.call(this),
+    population: exportPopulation.call(this),
   };
 }
 
@@ -155,19 +204,28 @@ export function exportState(this: NeatLike): NeatStateJSON {
  * @param fitnessFunction Fitness evaluation callback used for new instance.
  * @returns Rehydrated NEAT instance ready to continue evolving.
  */
-export function importStateImpl(
-  this: any,
+export async function importStateImpl(
+  this: NeatConstructor,
   stateBundle: NeatStateJSON,
-  fitnessFunction: (network: any) => number,
-): any {
+  fitnessFunction: (
+    network: GenomeWithSerialization,
+  ) => number | Promise<number>,
+): Promise<NeatControllerForExport> {
   // 1. Basic validation of bundle shape
   if (!stateBundle || typeof stateBundle !== 'object')
     throw new Error('Invalid state bundle');
   // 2. Reconstruct Neat meta & instance
-  const neatInstance = this.fromJSON(stateBundle.neat, fitnessFunction);
+  const neatInstance = (
+    this as NeatConstructor & { fromJSON?: typeof fromJSONImpl }
+  ).fromJSON?.(stateBundle.neat, fitnessFunction);
+  if (!neatInstance)
+    throw new Error('Failed to create NEAT instance from JSON');
   // 3. Import population if provided
   if (Array.isArray(stateBundle.population))
-    neatInstance.import(stateBundle.population);
+    await importPopulation.call(
+      neatInstance as unknown as NeatLike,
+      stateBundle.population,
+    );
   // 4. Return fully restored instance
   return neatInstance;
 }
@@ -191,16 +249,15 @@ export function importStateImpl(
  */
 export function toJSONImpl(this: NeatLike): NeatMetaJSON {
   // 1. Return a plain object with primitive / array serializable fields only
+  const internal = this as unknown as NeatControllerForExport;
   return {
-    input: (this as any).input,
-    output: (this as any).output,
-    generation: (this as any).generation,
-    options: (this as any).options,
-    nodeSplitInnovations: Array.from(
-      (this as any)._nodeSplitInnovations.entries(),
-    ),
-    connInnovations: Array.from((this as any)._connInnovations.entries()),
-    nextGlobalInnovation: (this as any)._nextGlobalInnovation,
+    input: internal.input,
+    output: internal.output,
+    generation: internal.generation,
+    options: internal.options,
+    nodeSplitInnovations: Array.from(internal._nodeSplitInnovations.entries()),
+    connInnovations: Array.from(internal._connInnovations.entries()),
+    nextGlobalInnovation: internal._nextGlobalInnovation,
   };
 }
 
@@ -221,14 +278,14 @@ export function toJSONImpl(this: NeatLike): NeatMetaJSON {
  * @returns Fresh NEAT instance with restored innovation history.
  */
 export function fromJSONImpl(
-  this: any,
+  this: NeatConstructor,
   neatJSON: NeatMetaJSON,
-  fitnessFunction: (network: any) => number,
-): any {
-  /** const alias for the constructor (class) this function is bound to */
-  const NeatClass = this as any;
+  fitnessFunction: (
+    network: GenomeWithSerialization,
+  ) => number | Promise<number>,
+): NeatControllerForExport {
   // 1. Instantiate with stored IO sizes & options
-  const neatInstance = new NeatClass(
+  const neatInstance = new this(
     neatJSON.input,
     neatJSON.output,
     fitnessFunction,

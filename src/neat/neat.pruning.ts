@@ -1,4 +1,35 @@
 /**
+ * Minimal Neat instance interface for pruning functions.
+ */
+interface NeatLikeForPruning {
+  options: {
+    evolutionPruning?: {
+      startGeneration?: number;
+      interval?: number;
+      rampGenerations?: number;
+      targetSparsity?: number;
+      method?: string;
+    };
+    adaptivePruning?: {
+      enabled?: boolean;
+      metric?: string;
+      targetSparsity?: number;
+      learningRate?: number;
+      tolerance?: number;
+      adjustRate?: number;
+    };
+  };
+  generation: number;
+  population: Array<{
+    nodes: unknown[];
+    connections: unknown[];
+    pruneToSparsity?: (sparsity: number, method?: string) => void;
+  }>;
+  _adaptivePruneLevel?: number;
+  _adaptivePruneBaseline?: number;
+}
+
+/**
  * Apply evolution-time pruning to the current population.
  *
  * This method is intended to be called from the evolve loop. It reads
@@ -21,9 +52,9 @@
  * - This function performs no changes if pruning options are not set or
  *   the generation is before `startGeneration`.
  *
- * @this any A Neat instance (expects `options`, `generation` and `population`).
+ * @this NeatLikeForPruning A Neat instance (expects `options`, `generation` and `population`).
  */
-export function applyEvolutionPruning(this: any) {
+export function applyEvolutionPruning(this: NeatLikeForPruning) {
   // Read configured evolution pruning options from the Neat instance.
   /** Evolution pruning options configured on the Neat instance. */
   const evolutionPruningOpts = this.options.evolutionPruning;
@@ -40,10 +71,10 @@ export function applyEvolutionPruning(this: any) {
    * @default 1
    */
   const interval = evolutionPruningOpts.interval || 1;
+  const startGen = evolutionPruningOpts.startGeneration || 0;
 
   // Only run at configured interval.
-  if ((this.generation - evolutionPruningOpts.startGeneration) % interval !== 0)
-    return;
+  if ((this.generation - startGen) % interval !== 0) return;
 
   /**
    * How many generations to ramp the pruning in over. If 0, pruning is immediate.
@@ -60,11 +91,7 @@ export function applyEvolutionPruning(this: any) {
     // Step: compute normalized progress through the ramp window.
     const progressThroughRamp = Math.min(
       1,
-      Math.max(
-        0,
-        (this.generation - evolutionPruningOpts.startGeneration) /
-          rampGenerations,
-      ),
+      Math.max(0, (this.generation - startGen) / rampGenerations),
     );
     rampFraction = progressThroughRamp;
   }
@@ -104,9 +131,9 @@ export function applyEvolutionPruning(this: any) {
  * neat.applyAdaptivePruning();
  * ```
  *
- * @this any A Neat instance (expects `options` and `population`).
+ * @this NeatLikeForPruning A Neat instance (expects `options` and `population`).
  */
-export function applyAdaptivePruning(this: any) {
+export function applyAdaptivePruning(this: NeatLikeForPruning) {
   // Skip when adaptive pruning is disabled.
   if (!this.options.adaptivePruning?.enabled) return;
 
@@ -126,14 +153,16 @@ export function applyAdaptivePruning(this: any) {
   // Compute average node count across the population.
   /** Average number of nodes per genome in the population (float). */
   const meanNodeCount =
-    this.population.reduce((acc: number, g: any) => acc + g.nodes.length, 0) /
-    (this.population.length || 1);
+    this.population.reduce(
+      (acc: number, genome) => acc + genome.nodes.length,
+      0,
+    ) / (this.population.length || 1);
 
   // Compute average connection count across the population.
   /** Average number of connections per genome in the population (float). */
   const meanConnectionCount =
     this.population.reduce(
-      (acc: number, g: any) => acc + g.connections.length,
+      (acc: number, genome) => acc + genome.connections.length,
       0,
     ) / (this.population.length || 1);
 
