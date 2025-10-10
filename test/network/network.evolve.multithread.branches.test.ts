@@ -1,12 +1,8 @@
-/**
- * Multi-thread fitness builder branch tests:
- *  - Worker spawn failure (one worker succeeds, another fails)
- *  - Worker evaluate rejection path (caught and continues)
- */
 import Network from '../../src/architecture/network';
 import { evolveNetwork } from '../../src/architecture/network/network.evolve';
 import Multi from '../../src/multithreading/multi';
 import { Workers } from '../../src/multithreading/workers/workers';
+import type { TestWorker } from '../../src/multithreading/workers/node/testworker';
 
 type TrainingSet = Parameters<typeof evolveNetwork>[0];
 
@@ -17,15 +13,18 @@ describe('Network.evolveNetwork multi-thread branches', () => {
       const originalWorkers = Multi.workers;
       let spawnCount = 0;
       class SpawnFailureWorkers extends Workers {
-        static override async getNodeTestWorker() {
-          return class TestWorker {
+        static override async getNodeTestWorker(): Promise<typeof TestWorker> {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Mock class for testing
+          return class MockTestWorker {
+            ['worker']: unknown; // Required property to match TestWorker interface
             private readonly description: string;
 
             constructor(
-              serializedSet: number[],
-              workerMetadata: { name: string },
+              dataSet: number[],
+              cost: { name: string },
             ) {
-              this.description = `${workerMetadata.name}:${serializedSet.length}`;
+              this['worker'] = null; // Mock worker property
+              this.description = `${cost.name}:${dataSet.length}`;
               spawnCount += 1;
               if (spawnCount === 2) throw new Error('fail second');
             }
@@ -37,7 +36,7 @@ describe('Network.evolveNetwork multi-thread branches', () => {
             terminate() {
               void this.description;
             }
-          };
+          } as unknown as typeof TestWorker;
         }
       }
       Multi.workers = SpawnFailureWorkers;
@@ -62,16 +61,19 @@ describe('Network.evolveNetwork multi-thread branches', () => {
       // Arrange
       const originalWorkers = Multi.workers;
       class RejectionWorkers extends Workers {
-        static override async getNodeTestWorker() {
-          return class TestWorker {
+        static override async getNodeTestWorker(): Promise<typeof TestWorker> {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Mock class for testing
+          return class MockTestWorker {
+            ['worker']: unknown; // Required property to match TestWorker interface
             #failOnce = true;
             private readonly description: string;
 
             constructor(
-              serializedSet: number[],
-              workerMetadata: { name: string },
+              dataSet: number[],
+              cost: { name: string },
             ) {
-              this.description = `${workerMetadata.name}:${serializedSet.length}`;
+              this['worker'] = null; // Mock worker property
+              this.description = `${cost.name}:${dataSet.length}`;
             }
 
             async evaluate(candidate: Network) {
@@ -85,7 +87,7 @@ describe('Network.evolveNetwork multi-thread branches', () => {
             terminate() {
               void this.description;
             }
-          };
+          } as unknown as typeof TestWorker;
         }
       }
       Multi.workers = RejectionWorkers;

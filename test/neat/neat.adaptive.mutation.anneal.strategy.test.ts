@@ -1,4 +1,5 @@
 import Neat from '../../src/neat';
+import type { NeatLikeWithAdaptive } from '../../src/neat/neat.adaptive';
 import Network from '../../src/architecture/network';
 import { mutation } from '../../src/methods/mutation';
 
@@ -23,11 +24,11 @@ describe('Adaptive Mutation anneal strategy', () => {
       await neat.evaluate();
       // increase generation to trigger progress scaling
       (neat as unknown as { generation: number }).generation = 40;
-      neat.mutate();
+      await neat.mutate();
       const { applyAdaptiveMutation } = await import(
         '../../src/neat/neat.adaptive'
       );
-      applyAdaptiveMutation.call(neat as unknown as Record<string, unknown>);
+      applyAdaptiveMutation.call(neat as unknown as NeatLikeWithAdaptive);
       type GenomeLike = { _mutRate: number };
       const within = (neat.population as unknown as GenomeLike[]).every(
         (g) => g._mutRate >= 0.01 && g._mutRate <= 1,
@@ -36,3 +37,4 @@ describe('Adaptive Mutation anneal strategy', () => {
     });
   });
 });
+

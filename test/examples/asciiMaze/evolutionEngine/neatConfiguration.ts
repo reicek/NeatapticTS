@@ -123,7 +123,7 @@ export const createNeat = (
         methods.mutation.SUB_CONN,
         methods.mutation.MOD_BIAS,
         methods.mutation.MOD_ACTIVATION,
-        methods.mutation.MOD_CONNECTION,
+        methods.mutation.MOD_WEIGHT,
         methods.mutation.ADD_LSTM_NODE,
       ];
 

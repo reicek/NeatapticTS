@@ -1,4 +1,5 @@
 import Neat from '../../src/neat';
+import type { NeatLikeWithAdaptive } from '../../src/neat/neat.adaptive';
 import { applyComplexityBudget } from '../../src/neat/neat.adaptive';
 
 /** Additional complexity budget tests covering adaptive shrink & connection budget. */
@@ -23,7 +24,7 @@ describe('Adaptive Complexity Budget (trend & connection budget)', () => {
     });
     test('node budget decreases after full stagnation window', () => {
       // Arrange: run enough calls to fill window with constant best scores
-      for (let i = 0; i < 4; i++) applyComplexityBudget.call(neat);
+      for (let i = 0; i < 4; i++) applyComplexityBudget.call((neat as unknown as NeatLikeWithAdaptive));
       const after = neat.options.maxNodes;
       // Assert: maxNodes decreased but not below minNodes
       expect(after).toBeLessThan(10);
@@ -46,7 +47,7 @@ describe('Adaptive Complexity Budget (trend & connection budget)', () => {
       // Arrange: simulate generations and invoke scheduler
       for (let g = 0; g < 5; g++) {
         neat.generation = g;
-        applyComplexityBudget.call(neat);
+        applyComplexityBudget.call((neat as unknown as NeatLikeWithAdaptive));
       }
       // Act: capture final value
       const finalVal = neat.options.maxNodes;
@@ -55,3 +56,4 @@ describe('Adaptive Complexity Budget (trend & connection budget)', () => {
     });
   });
 });
+

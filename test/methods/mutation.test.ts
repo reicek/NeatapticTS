@@ -176,7 +176,7 @@ describe('Mutation Methods', () => {
         });
         it('should have allowed property with correct length', () => {
           // Assert
-          expect(mutation.MOD_ACTIVATION.allowed.length).toBe(
+          expect(mutation.MOD_ACTIVATION.allowed!.length).toBe(
             expectedActivations.length,
           );
         });

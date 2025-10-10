@@ -30,12 +30,35 @@ describe('Innovation Reuse', () => {
           mutationRate: 1,
           mutationAmount: 1,
         });
+        const genome = neat.population[0];
+        // Ensure genome has enabled connections before attempting to split
+        const enabledConns = genome.connections.filter((c) => c.enabled !== false);
+        if (enabledConns.length === 0) {
+          // Network constructor should have created connections, but ensure they exist
+          const inputNode = genome.nodes.find((n) => n.type === 'input');
+          const outputNode = genome.nodes.find((n) => n.type === 'output');
+          if (inputNode && outputNode) {
+            genome.connect(inputNode, outputNode, 1.0);
+          }
+        }
+        // Record initial state
+        const initialNodeCount = genome.nodes.length;
+        
         await neat.mutate(); // perform one ADD_NODE on the single genome
+        
+        // Verify mutation actually happened
+        const didAddNode = genome.nodes.length > initialNodeCount;
+        
         nodeSplitMap = Reflect.get(neat, '_nodeSplitInnovations') as Map<
           string,
           NodeSplitRecord
         >;
         registrySize = nodeSplitMap.size;
+        
+        // For debugging: if no nodes were added, registry won't be populated
+        if (!didAddNode) {
+          console.warn('ADD_NODE mutation did not add a node - connections:', genome.connections.length, 'enabled:', enabledConns.length);
+        }
       });
 
       test('registry has at least one entry', () => {

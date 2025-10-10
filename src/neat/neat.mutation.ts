@@ -189,7 +189,7 @@ export async function mutate(this: NeatLike): Promise<void> {
       for (let iteration = 0; iteration < effectiveAmount; iteration++) {
         // Pick an operator using selection logic that respects phased and
         // adaptive operator policies.
-        let mutationMethod = internal.selectMutationMethod(genome, false);
+        let mutationMethod = await internal.selectMutationMethod(genome, false);
 
         // If selection returned the full FFW array (legacy/testing path),
         // sample a concrete operator from it deterministically using RNG.

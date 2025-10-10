@@ -1,4 +1,5 @@
 import Neat from '../../src/neat';
+import type { NeatLikeWithAdaptive } from '../../src/neat/neat.adaptive';
 
 /** Covers connection budget shrink path in adaptive complexity budget. */
 describe('Adaptive Complexity Budget connection shrink', () => {
@@ -24,10 +25,11 @@ describe('Adaptive Complexity Budget connection shrink', () => {
         '../../src/neat/neat.adaptive'
       );
       for (let i = 0; i < 4; i++) {
-        applyComplexityBudget.call(neat as unknown as Record<string, unknown>);
+        applyComplexityBudget.call(neat as unknown as NeatLikeWithAdaptive);
       }
       const after = neat.options.maxConns;
       expect(after).toBeLessThan(start);
     });
   });
 });
+

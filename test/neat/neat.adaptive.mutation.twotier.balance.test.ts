@@ -1,4 +1,5 @@
 import Neat from '../../src/neat';
+import type { NeatLikeWithAdaptive } from '../../src/neat/neat.adaptive';
 import Network from '../../src/architecture/network';
 import { mutation } from '../../src/methods/mutation';
 
@@ -26,7 +27,7 @@ describe('Adaptive Mutation twoTier balancing', () => {
       const { applyAdaptiveMutation } = await import(
         '../../src/neat/neat.adaptive'
       );
-      applyAdaptiveMutation.call(neat as unknown as Record<string, unknown>);
+      applyAdaptiveMutation.call(neat as unknown as NeatLikeWithAdaptive);
       // Act: collect distinct rates
       type GenomeLike = { _mutRate: number };
       const distinct = new Set(
@@ -37,3 +38,4 @@ describe('Adaptive Mutation twoTier balancing', () => {
     });
   });
 });
+

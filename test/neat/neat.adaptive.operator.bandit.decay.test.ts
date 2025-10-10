@@ -1,4 +1,5 @@
 import Neat from '../../src/neat';
+import type { NeatLikeWithAdaptive } from '../../src/neat/neat.adaptive';
 import Network from '../../src/architecture/network';
 import { applyOperatorAdaptation } from '../../src/neat/neat.adaptive';
 import { mutation } from '../../src/methods/mutation';
@@ -17,9 +18,9 @@ describe('Operator Adaptation & Bandit', () => {
     test('operator stats map populated after mutation & decay', async () => {
       // Arrange: evaluate, mutate twice to populate stats
       await neat.evaluate();
-      neat.mutate();
-      neat.mutate();
-      applyOperatorAdaptation.call(neat);
+      await neat.mutate();
+      await neat.mutate();
+      applyOperatorAdaptation.call(neat as unknown as NeatLikeWithAdaptive);
       // Act: extract stats entries count
       const count = neat.getOperatorStats().length;
       // Assert: at least one operator stat tracked
@@ -27,3 +28,4 @@ describe('Operator Adaptation & Bandit', () => {
     });
   });
 });
+

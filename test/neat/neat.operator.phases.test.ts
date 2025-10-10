@@ -1,5 +1,6 @@
 import Neat from '../../src/neat';
 import Network from '../../src/architecture/network';
+import { mutation } from '../../src/methods/mutation';
 
 // Single expectation per test.
 
@@ -28,6 +29,14 @@ describe('Operator adaptation tracking', () => {
       popsize: 6,
       seed: 410,
       speciation: false,
+      mutation: [
+        mutation.MOD_WEIGHT,
+        mutation.MOD_BIAS,
+        mutation.ADD_NODE,
+        mutation.SUB_NODE,
+      ],
+      mutationRate: 1, // Ensure mutations always happen
+      mutationAmount: 1,
       operatorAdaptation: { enabled: true, boost: 2 },
     });
     await neat.evaluate();

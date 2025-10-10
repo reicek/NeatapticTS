@@ -10,6 +10,7 @@ interface MutationConfig {
   keep_gates?: boolean;
   mutateOutput?: boolean;
   allowed?: Array<(x: number) => number>;
+  [key: string]: unknown;
 }
 
 /**
@@ -58,7 +59,26 @@ interface MutationConfig {
  * @see {@link http://nn.cs.utexas.edu/downloads/papers/stanley.ec02.pdf NEAT Paper (Relevant concepts)}
  */
 export const mutation: {
-  [key: string]: MutationConfig | MutationConfig[];
+  ADD_NODE: MutationConfig;
+  SUB_NODE: MutationConfig;
+  ADD_CONN: MutationConfig;
+  SUB_CONN: MutationConfig;
+  MOD_WEIGHT: MutationConfig;
+  MOD_BIAS: MutationConfig;
+  MOD_ACTIVATION: MutationConfig;
+  ADD_GATE: MutationConfig;
+  SUB_GATE: MutationConfig;
+  ADD_SELF_CONN: MutationConfig;
+  SUB_SELF_CONN: MutationConfig;
+  ADD_BACK_CONN: MutationConfig;
+  SUB_BACK_CONN: MutationConfig;
+  SWAP_NODES: MutationConfig;
+  REINIT_WEIGHT: MutationConfig;
+  BATCH_NORM: MutationConfig;
+  ADD_LSTM_NODE: MutationConfig;
+  ADD_GRU_NODE: MutationConfig;
+  ALL: MutationConfig[];
+  FFW: MutationConfig[];
 } = {
   /**
    * Adds a new node to the network by splitting an existing connection.

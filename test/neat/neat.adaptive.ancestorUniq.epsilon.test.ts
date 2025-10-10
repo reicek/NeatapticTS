@@ -1,4 +1,5 @@
 import Neat from '../../src/neat';
+import type { NeatLikeWithAdaptive } from '../../src/neat/neat.adaptive';
 
 /** Tests ancestor uniqueness adaptive epsilon adjustments (both directions). */
 describe('Ancestor Uniqueness Adaptive (epsilon mode)', () => {
@@ -31,7 +32,7 @@ describe('Ancestor Uniqueness Adaptive (epsilon mode)', () => {
         '../../src/neat/neat.adaptive'
       );
       applyAncestorUniqAdaptive.call(
-        neat as unknown as Record<string, unknown>,
+        neat as unknown as NeatLikeWithAdaptive,
       );
       // Act: capture epsilon
       const eps = neat.options.multiObjective.dominanceEpsilon;
@@ -68,7 +69,7 @@ describe('Ancestor Uniqueness Adaptive (epsilon mode)', () => {
         '../../src/neat/neat.adaptive'
       );
       applyAncestorUniqAdaptive.call(
-        neat as unknown as Record<string, unknown>,
+        neat as unknown as NeatLikeWithAdaptive,
       );
       // Act: capture epsilon
       const eps = neat.options.multiObjective.dominanceEpsilon;

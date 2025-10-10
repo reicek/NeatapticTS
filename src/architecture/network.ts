@@ -51,7 +51,10 @@ import {
   activateRaw as _activateRaw,
   activateBatch as _activateBatch,
 } from './network/network.activate';
-import { mutateImpl as _mutateImpl } from './network/network.mutate';
+import {
+  mutateImpl as _mutateImpl,
+  type MutationMethod,
+} from './network/network.mutate';
 import {
   applyGradientClippingImpl as _applyGradientClippingImpl,
   trainImpl as _trainImpl,
@@ -121,6 +124,7 @@ interface ConnectionWeightNoiseProps {
 import type { NetworkView } from '../utils/memory';
 
 export default class Network implements NetworkView {
+  [key: string]: unknown; // Index signature for adaptive features compatibility
   input: number;
   output: number;
   score?: number;
@@ -443,7 +447,7 @@ export default class Network implements NetworkView {
   get lastSkippedLayers(): number[] {
     return (this as unknown as NetworkRuntimeProps)._lastSkippedLayers || [];
   }
-  snapshotRNG(): unknown {
+  snapshotRNG(): import('./network/network.deterministic').RNGSnapshot {
     return _snapshotRNG.call(this);
   }
   restoreRNG(fn: () => number) {
@@ -997,30 +1001,14 @@ export default class Network implements NetworkView {
    * This is a core operation for neuro-evolutionary algorithms (like NEAT).
    * The method argument should be one of the mutation types defined in `methods.mutation`.
    *
-   * @param {string | object | undefined} method - The mutation method to apply (e.g., `mutation.ADD_NODE`, `mutation.MOD_WEIGHT`).
-   *                       Some methods might have associated parameters (e.g., `MOD_WEIGHT` uses `min`, `max`).
+   * @param method - The mutation method to apply (e.g., `mutation.ADD_NODE`, `mutation.MOD_WEIGHT`).
+   *                 Some methods might have associated parameters (e.g., `MOD_WEIGHT` uses `min`, `max`).
    * @throws {Error} If no valid mutation `method` is provided.
    *
    * @see {@link methods.mutation} for available mutation types.
    */
-  mutate(
-    method:
-      | string
-      | {
-          name?: string;
-          type?: string;
-          identity?: string;
-          [key: string]: unknown;
-        }
-      | {
-          name?: string;
-          type?: string;
-          identity?: string;
-          [key: string]: unknown;
-        }[]
-      | undefined,
-  ): void {
-    return _mutateImpl.call(this, method as never);
+  mutate(method: MutationMethod): void {
+    return _mutateImpl.call(this, method);
   }
 
   /**
@@ -1262,7 +1250,14 @@ export default class Network implements NetworkView {
   }
 
   /** Lightweight tuple serializer delegating to network.serialize.ts */
-  serialize(): unknown[] {
+  serialize(): [
+    number[],
+    number[],
+    string[],
+    import('./network/network.serialize').SerializedConnection[],
+    number,
+    number,
+  ] {
     return _serialize.call(this);
   }
 

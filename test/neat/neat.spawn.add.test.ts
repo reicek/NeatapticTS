@@ -42,11 +42,11 @@ describe('Neat spawnFromParent and addGenome helpers', () => {
     /**
      * Ensure spawnFromParent assigns a new unique genome id (distinct from parent).
      */
-    it('should assign a new id distinct from parent', () => {
+    it('should assign a new id distinct from parent', async () => {
       // Arrange: have neat and parent defined above
-      // Act: spawn a child
+      // Act: spawn a child (await the async operation)
       const child = withInternalGenome(
-        neatWithHelpers.spawnFromParent(parent, 1),
+        await neatWithHelpers.spawnFromParent(parent, 1),
       );
       // Assert: child id must not equal parent id
       expect(child._id).not.toBe(parent._id);
@@ -55,12 +55,11 @@ describe('Neat spawnFromParent and addGenome helpers', () => {
     /**
      * Ensure spawnFromParent records the parent id in _parents array.
      */
-    it('should set parent id in _parents', () => {
-      // Arrange
+    it('should set parent id in _parents', async () => {
+      // Arrange & Act: spawn child (await the async operation)
       const child = withInternalGenome(
-        neatWithHelpers.spawnFromParent(parent, 1),
+        await neatWithHelpers.spawnFromParent(parent, 1),
       );
-      // Act is same as spawn
       // Assert: the first parent id equals parent's id
       expect(child._parents).toEqual([parent._id]);
     });
@@ -68,12 +67,12 @@ describe('Neat spawnFromParent and addGenome helpers', () => {
     /**
      * Ensure the child's depth is parent's depth + 1 when lineage is enabled.
      */
-    it('should set depth equal to parent.depth + 1', () => {
+    it('should set depth equal to parent.depth + 1', async () => {
       // Arrange
       const baseDepth = parent._depth ?? 0;
-      // Act
+      // Act: spawn child (await the async operation)
       const child = withInternalGenome(
-        neatWithHelpers.spawnFromParent(parent, 1),
+        await neatWithHelpers.spawnFromParent(parent, 1),
       );
       // Assert: child's depth increments parent's depth
       expect(child._depth).toBe(baseDepth + 1);
@@ -82,9 +81,9 @@ describe('Neat spawnFromParent and addGenome helpers', () => {
     /**
      * Ensure structural invariants are preserved (child has at least one connection).
      */
-    it('should ensure the spawned child has at least one connection', () => {
-      // Arrange/Act
-      const child = neatWithHelpers.spawnFromParent(parent, 1);
+    it('should ensure the spawned child has at least one connection', async () => {
+      // Arrange/Act: spawn child (await the async operation)
+      const child = await neatWithHelpers.spawnFromParent(parent, 1);
       // Assert: connections array length is greater than zero
       expect(child.connections.length).toBeGreaterThan(0);
     });
@@ -131,12 +130,12 @@ describe('Neat spawnFromParent and addGenome helpers', () => {
     /**
      * When provided parents, addGenome should estimate depth as max(parent depths)+1.
      */
-    it('should estimate depth based on parent depths', () => {
+    it('should estimate depth based on parent depths', async () => {
       // Arrange: create chain parents to increase depth
       const firstParent = withInternalGenome(neat.population[0]);
       // artificially create a deeper parent via spawnFromParent to produce different depths
       const secondParent = withInternalGenome(
-        neatWithHelpers.spawnFromParent(firstParent, 1),
+        await neatWithHelpers.spawnFromParent(firstParent, 1),
       );
       // Register the spawned parent into neat so addGenome can resolve parent depths
       neatWithHelpers.addGenome(secondParent, [firstParent._id]);

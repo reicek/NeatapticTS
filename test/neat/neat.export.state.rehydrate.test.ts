@@ -10,11 +10,11 @@ describe('NEAT Export / Import State', () => {
   describe('invalid bundle handling', () => {
     /** Fitness function returning constant for deterministic behavior. */
     const fitness = (n: Network) => n.nodes.length;
-    test('throws on invalid state bundle', () => {
+    test('throws on invalid state bundle', async () => {
       // Arrange: capture callable that will invoke static import with bad input
-      const act = () => Neat.importState(undefined, fitness);
+      const act = async () => await Neat.importState(undefined as any, fitness);
       // Act & Assert: expect error thrown (single expectation)
-      expect(act).toThrow();
+      await expect(act()).rejects.toThrow();
     });
   });
   describe('round-trip exportState / importState', () => {
@@ -27,11 +27,11 @@ describe('NEAT Export / Import State', () => {
       await neat.evolve();
       await neat.evolve();
     });
-    test('rehydrates identical population size', () => {
+    test('rehydrates identical population size', async () => {
       // Arrange: export full state bundle
       const bundle: NeatStateJSON = neat.exportState();
-      // Act: rehydrate via static helper
-      const restored = Neat.importState(bundle, fitness);
+      // Act: rehydrate via static helper (await the async operation)
+      const restored = await Neat.importState(bundle, fitness);
       // Assert: population length preserved across round-trip
       expect(restored.population.length).toBe(neat.population.length);
     });

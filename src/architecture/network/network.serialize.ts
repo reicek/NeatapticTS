@@ -30,7 +30,7 @@ interface NodeInternals {
 /**
  * Serialized connection representation.
  */
-interface SerializedConnection {
+export interface SerializedConnection {
   from: number;
   to: number;
   weight: number;

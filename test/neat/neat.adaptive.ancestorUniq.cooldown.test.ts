@@ -1,4 +1,5 @@
 import Neat from '../../src/neat';
+import type { NeatLikeWithAdaptive } from '../../src/neat/neat.adaptive';
 
 /** Covers cooldown early-return branch in applyAncestorUniqAdaptive. */
 describe('Ancestor Uniqueness Adaptive cooldown skip', () => {
@@ -37,7 +38,7 @@ describe('Ancestor Uniqueness Adaptive cooldown skip', () => {
         '../../src/neat/neat.adaptive'
       );
       applyAncestorUniqAdaptive.call(
-        neat as unknown as Record<string, unknown>,
+        neat as unknown as NeatLikeWithAdaptive,
       );
       const eps = neat.options.multiObjective.dominanceEpsilon;
       // Assert: unchanged at baseline 0.1

@@ -372,6 +372,11 @@ export default class Neat {
       // lineagePressure requires lineage metadata
       this._lineageEnabled = true;
     }
+    // Bind _getRNG as a property for adaptive functions that expect it as a callable property
+    // The interface NeatLikeWithAdaptive expects _getRNG?: () => () => number
+    // but the class method is private _getRNG(): () => number
+    // This binding makes it accessible as a property that returns the RNG function
+    (this as any)._getRNG = this._getRNG.bind(this);
   }
   /**
    * Evolves the population by selecting, mutating, and breeding genomes.
@@ -1144,12 +1149,15 @@ export default class Neat {
    * @param bundle Object with shape { neat, population }
    * @param fitness Fitness function to attach
    */
-  static importState(bundle: any, fitness: (n: Network) => number): Neat {
-    return importStateImpl.call(
+  static async importState(
+    bundle: any,
+    fitness: (n: Network) => number,
+  ): Promise<Neat> {
+    return (await importStateImpl.call(
       Neat as any,
       bundle,
       fitness as never,
-    ) as unknown as Neat;
+    )) as unknown as Neat;
   }
   /**
    * Import a previously exported state bundle and rehydrate a Neat instance.

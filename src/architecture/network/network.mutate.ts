@@ -6,7 +6,7 @@ import { config } from '../../config';
 /**
  * Mutation method descriptor (can be string enum value or object with identity).
  */
-type MutationMethod =
+export type MutationMethod =
   | string
   | {
       name?: string;

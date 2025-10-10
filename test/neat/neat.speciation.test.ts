@@ -53,6 +53,7 @@ describe('Kernel Fitness Sharing', () => {
       sharingSigma: 0,
     });
     await neatA.evaluate();
+    await neatA.evolve(); // Need to evolve to trigger fitness sharing
     // Clone population JSON to reuse identical raw scores in second instance
     const exported = neatA.export();
     const neatB = new Neat(2, 1, baseFitness, {
@@ -63,6 +64,7 @@ describe('Kernel Fitness Sharing', () => {
     });
     neatB.import(exported); // identical genomes before evaluation
     await neatB.evaluate();
+    await neatB.evolve(); // Need to evolve to trigger fitness sharing
     const meanA =
       neatA.population.reduce((s, g) => s + (g.score || 0), 0) /
       neatA.population.length;

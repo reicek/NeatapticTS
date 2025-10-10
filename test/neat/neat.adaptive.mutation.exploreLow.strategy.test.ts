@@ -1,4 +1,5 @@
 import Neat from '../../src/neat';
+import type { NeatLikeWithAdaptive } from '../../src/neat/neat.adaptive';
 import Network from '../../src/architecture/network';
 import { mutation } from '../../src/methods/mutation';
 
@@ -22,11 +23,11 @@ describe('Adaptive Mutation exploreLow strategy', () => {
     test('max rate difference positive after adaptation', async () => {
       await neat.evaluate();
       // Seed per-genome rates
-      neat.mutate();
+      await neat.mutate();
       const { applyAdaptiveMutation } = await import(
         '../../src/neat/neat.adaptive'
       );
-      applyAdaptiveMutation.call(neat as unknown as Record<string, unknown>);
+      applyAdaptiveMutation.call(neat as unknown as NeatLikeWithAdaptive);
       type GenomeLike = { _mutRate: number };
       const rates = (neat.population as unknown as GenomeLike[])
         .map((g) => g._mutRate)
@@ -36,3 +37,4 @@ describe('Adaptive Mutation exploreLow strategy', () => {
     });
   });
 });
+

@@ -19,10 +19,13 @@ describe('NEAT Helper Utilities', () => {
       await neat.evaluate();
       parent = neat.population[0] as LineageTrackedNetwork;
     });
-    test('child references single parent id', () => {
+    test('child references single parent id', async () => {
       // Arrange: spawn child from parent
       const helper = neat as NeatLineageHarness;
-      const child = helper.spawnFromParent(parent, 1) as LineageTrackedNetwork;
+      const child = (await helper.spawnFromParent(
+        parent,
+        1,
+      )) as LineageTrackedNetwork;
       // Act & Assert: lineage metadata captures single parent id
       expect(child._parents).toEqual([parent._id]);
     });

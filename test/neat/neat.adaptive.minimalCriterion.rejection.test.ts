@@ -1,4 +1,5 @@
 import Neat from '../../src/neat';
+import type { NeatLikeWithAdaptive } from '../../src/neat/neat.adaptive';
 import Network from '../../src/architecture/network';
 import { applyMinimalCriterionAdaptive } from '../../src/neat/neat.adaptive';
 
@@ -23,7 +24,7 @@ describe('Adaptive Minimal Criterion', () => {
       before =
         (Reflect.get(neat as object, '_mcThreshold') as number | undefined) ??
         0.1;
-      applyMinimalCriterionAdaptive.call(neat);
+      applyMinimalCriterionAdaptive.call((neat as unknown as NeatLikeWithAdaptive));
       // Act: obtain adapted threshold
       const after = Reflect.get(neat as object, '_mcThreshold') as number;
       // Assert: threshold increased (acceptance above target triggers growth)
@@ -31,3 +32,4 @@ describe('Adaptive Minimal Criterion', () => {
     });
   });
 });
+

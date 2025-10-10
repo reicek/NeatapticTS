@@ -1,6 +1,7 @@
 import Network from '../../src/architecture/network';
+import type { RNGSnapshot } from '../../src/architecture/network/network.deterministic';
 
-type NetworkSnapshot = ReturnType<Network['snapshotRNG']>;
+type NetworkSnapshot = RNGSnapshot;
 type InternalRand = () => number;
 
 const invokeInternalRand = (network: Network): number => {
@@ -45,7 +46,7 @@ describe('Network.deterministic RNG utilities', () => {
             'Snapshot state should be numeric before restoration',
           );
         }
-        net.setRNGState(state as NetworkSnapshot['state']);
+        net.setRNGState(state);
         const roundTripped = net.getRNGState();
         // Assert
         expect(roundTripped).toBe(snap.state);

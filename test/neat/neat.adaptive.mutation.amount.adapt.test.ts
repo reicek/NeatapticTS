@@ -1,6 +1,7 @@
 import Neat from '../../src/neat';
 import Network from '../../src/architecture/network';
 import { mutation } from '../../src/methods/mutation';
+import type { NeatLikeWithAdaptive } from '../../src/neat/neat.adaptive';
 
 /** Covers adaptAmount branch in adaptive mutation (twoTier provides opposite deltas). */
 describe('Adaptive Mutation amount adaptation', () => {
@@ -23,12 +24,12 @@ describe('Adaptive Mutation amount adaptation', () => {
     });
     test('mutAmount values within configured bounds', async () => {
       await neat.evaluate();
-      neat.mutate();
+      await neat.mutate();
       // use ES import to access adaptive helpers
       const { applyAdaptiveMutation } = await import(
         '../../src/neat/neat.adaptive'
       );
-      applyAdaptiveMutation.call(neat as unknown as Record<string, unknown>);
+      applyAdaptiveMutation.call(neat as unknown as NeatLikeWithAdaptive);
       type GenomeWithAdaptiveAmount = Network & { _mutAmount: number };
       const populationWithAdaptiveAmount =
         neat.population as Array<GenomeWithAdaptiveAmount>;

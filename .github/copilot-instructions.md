@@ -4,6 +4,45 @@ Purpose
 -------
 When generating, modifying, or suggesting code that touches files under `src/` or `test/`, follow the project `STYLEGUIDE.md` rules and perform the quick validations listed below before returning suggestions.
 
+**CRITICAL: Fix-first strategy for test failures**
+---------------------------------------------------
+When asked to fix multiple test failures:
+
+1. **FOCUS on fixing ALL issues systematically BEFORE running tests**
+   - Create or update a comprehensive fix plan (e.g., `plans/TestsFix.md`)
+   - Categorize errors by type (TypeScript compilation, async/await, runtime logic)
+   - Prioritize: HIGH (compilation blockers) → MEDIUM (easy fixes) → LOW (investigation needed)
+   - Mark completed items with ✅ as you progress
+
+2. **DO NOT run tests or check test output during the fix phase**
+   - Avoid running `npm test`, `npm run test:silent`, or any test execution commands
+   - Do NOT run partial test checks like `Select-String -Pattern "●"` to see failures
+   - Do NOT attempt to run individual tests to "verify" fixes
+   - TypeScript compilation checks (`npx tsc --noEmit`) are acceptable to validate type fixes
+   - **REMEMBER**: You already have the test failure output - use it to guide your fixes
+
+3. **ONLY run full test suite AFTER all fixes are applied**
+   - Apply ALL planned fixes first (optimistically)
+   - Use `npm test` or `npm run test:silent` for final validation ONLY
+   - Analyze remaining failures and update the plan accordingly
+   - If you feel tempted to run a test, STOP and apply more fixes instead
+
+4. **Follow the plan strictly**
+   - Do not improvise or skip ahead
+   - Execute fixes in the documented priority order
+   - Update the plan with ✅ checkmarks and status notes as you complete each item
+   - Mark ALL items completed before running tests
+
+**Why this matters:**
+- Running tests interrupts the systematic fix workflow
+- Test output during fixes causes distraction and context switching
+- You already have all the error information needed to fix issues
+- Optimistic fixing is faster than iterative test-fix-test cycles
+- This strategy ensures thorough, complete fixes before validation
+
+This strategy prevents distraction, maintains focus, and ensures systematic completion of all fixes before validation.
+
+
 ES2023-first policy (strict)
 ----------------------------
 For educational clarity and a modern look, always prefer idiomatic ES2023 syntax when it improves readability or safety without changing behavior. This repo is intentionally opinionated: use the immutable array methods and modern language constructs by default.
@@ -81,4 +120,13 @@ When you modify or create files under `src/` or `test/`, run (or advise running)
    - A short validation summary (TypeScript: pass/fail, short-id matches: list or 0, test-expect heuristic: list or 0, JSDoc missing: list or 0).
    - ES2023: list any flagged legacy patterns and the intended replacements (e.g., `Object.assign` -> spread, `arr[arr.length-1]` -> `arr.at(-1)`, `JSON.parse(JSON.stringify())` -> `structuredClone`).
    - If any issue can't be safely fixed automatically, include a TODO comment at the top of the changed file and a one-line explanation in the patch.
+
+   Test failure workflow
+   ---------------------
+   When fixing multiple test failures:
+   1. Create/update a comprehensive plan document (e.g., `plans/TestsFix.md`)
+   2. Apply ALL fixes systematically without running tests
+   3. Validate TypeScript compilation with `npx tsc --noEmit -p tsconfig.test.json`
+   4. ONLY run `npm test` after all planned fixes are complete
+   5. Analyze results and iterate on remaining issues
 

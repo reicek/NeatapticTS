@@ -1,4 +1,5 @@
 import Neat from '../../src/neat';
+import type { NeatLikeWithAdaptive } from '../../src/neat/neat.adaptive';
 import Network from '../../src/architecture/network';
 import { mutation } from '../../src/methods/mutation';
 
@@ -25,7 +26,7 @@ describe('Adaptive Mutation twoTier fallback (single genome)', () => {
       const { applyAdaptiveMutation } = await import(
         '../../src/neat/neat.adaptive'
       );
-      applyAdaptiveMutation.call(neat as unknown as Record<string, unknown>);
+      applyAdaptiveMutation.call(neat as unknown as NeatLikeWithAdaptive);
       type GenomeLike = { _mutRate: number };
       const rate = (neat.population as unknown as GenomeLike[])[0]._mutRate;
       // Expect rate not equal baseline => changed via fallback balancing
@@ -33,3 +34,4 @@ describe('Adaptive Mutation twoTier fallback (single genome)', () => {
     });
   });
 });
+

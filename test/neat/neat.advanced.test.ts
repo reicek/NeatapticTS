@@ -182,7 +182,7 @@ describe('Neat advanced coverage', () => {
 
   describe('selectMutationMethod', () => {
     describe('when ADD_NODE and maxNodes reached', () => {
-      it('should return null', () => {
+      it('should return null', async () => {
         // Arrange
         const fitness = jest.fn();
         const neat = new Neat(2, 1, fitness, {
@@ -192,13 +192,13 @@ describe('Neat advanced coverage', () => {
         const genome = new Network(2, 1);
         genome.nodes.push(new Node());
         // Act
-        const result = neat.selectMutationMethod(genome);
+        const result = await neat.selectMutationMethod(genome);
         // Assert
         expect(result).toBeNull();
       });
     });
     describe('when ADD_CONN and maxConns reached', () => {
-      it('should return null', () => {
+      it('should return null', async () => {
         // Arrange
         const fitness = jest.fn();
         const neat = new Neat(2, 1, fitness, {
@@ -208,13 +208,13 @@ describe('Neat advanced coverage', () => {
         const genome = new Network(2, 1);
         genome.connections.push(new Connection(new Node(), new Node()));
         // Act
-        const result = neat.selectMutationMethod(genome);
+        const result = await neat.selectMutationMethod(genome);
         // Assert
         expect(result).toBeNull();
       });
     });
     describe('when ADD_GATE and maxGates reached', () => {
-      it('should return null', () => {
+      it('should return null', async () => {
         // Arrange
         const fitness = jest.fn();
         const neat = new Neat(2, 1, fitness, {
@@ -224,13 +224,13 @@ describe('Neat advanced coverage', () => {
         const genome = new Network(2, 1);
         genome.gates.push(new Connection(new Node(), new Node()));
         // Act
-        const result = neat.selectMutationMethod(genome);
+        const result = await neat.selectMutationMethod(genome);
         // Assert
         expect(result).toBeNull();
       });
     });
     describe('when constraints not reached', () => {
-      it('should return mutation method', () => {
+      it('should return mutation method', async () => {
         // Arrange
         const fitness = jest.fn();
         const neat = new Neat(2, 1, fitness, {
@@ -238,7 +238,7 @@ describe('Neat advanced coverage', () => {
         });
         const genome = new Network(2, 1);
         // Act
-        const result = neat.selectMutationMethod(genome);
+        const result = await neat.selectMutationMethod(genome);
         // Assert
         expect(result).toBe(methods.mutation.FFW);
       });
@@ -411,23 +411,33 @@ describe('Neat advanced coverage', () => {
 
   describe('mutate', () => {
     describe('when mutationMethod is valid', () => {
-      it('should call mutate on genome', () => {
+      it('should call mutate on genome', async () => {
         // Arrange
         const fitness = jest.fn();
         const neat = new Neat(2, 1, fitness, {
           popsize: 1,
-          mutation: [methods.mutation.FFW],
+          mutation: [methods.mutation.MOD_WEIGHT],
           mutationRate: 1,
         });
-        const mutateSpy = jest.spyOn(neat.population[0], 'mutate');
+        // Get reference to the actual genome in the population
+        const genome = neat.population[0];
+        
+        // Verify genome has connections that can be mutated
+        expect(genome.connections.length).toBeGreaterThan(0);
+        
+        // Record initial weight to verify mutation
+        const initialWeight = genome.connections[0].weight;
+        
         // Act
-        neat.mutate();
-        // Assert
-        expect(mutateSpy).toHaveBeenCalled();
+        await neat.mutate();
+        
+        // Assert: verify mutation actually occurred by checking weight changed
+        const finalWeight = genome.connections[0].weight;
+        expect(finalWeight).not.toBe(initialWeight);
       });
     });
     describe('when mutationMethod is null', () => {
-      it('should not call mutate', () => {
+      it('should not call mutate', async () => {
         // Arrange
         const fitness = jest.fn();
         const neat = new Neat(2, 1, fitness, {
@@ -438,9 +448,11 @@ describe('Neat advanced coverage', () => {
         });
         const mutateSpy = jest.spyOn(neat.population[0], 'mutate');
         // Force selectMutationMethod to always return null
-        jest.spyOn(neat, 'selectMutationMethod').mockReturnValue(null);
+        jest
+          .spyOn(neat, 'selectMutationMethod')
+          .mockResolvedValue(null);
         // Act
-        neat.mutate();
+        await neat.mutate();
         // Assert
         expect(mutateSpy).not.toHaveBeenCalled();
       });
@@ -475,12 +487,12 @@ describe('Neat advanced coverage', () => {
       });
     });
     describe('when importing empty array', () => {
-      it('should import empty array as empty population', () => {
+      it('should import empty array as empty population', async () => {
         // Arrange
         const fitness = jest.fn();
         const neat = new Neat(2, 1, fitness, { popsize: 2 });
         // Act
-        neat.import([]);
+        await neat.import([]);
         // Assert
         expect(neat.population.length).toBe(0);
       });

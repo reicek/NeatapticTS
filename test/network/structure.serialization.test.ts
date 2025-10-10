@@ -297,7 +297,7 @@ describe('Structure & Serialization', () => {
         // Arrange
         const net = new Network(2, 1);
         const arr = net.serialize();
-        arr[2][0] = 'notARealSquashFn';
+        arr[2][0] = 'notARealSquashFn' as never;
         // Act
         const deserialized = Network.deserialize(arr, net.input, net.output);
         // Assert
@@ -307,7 +307,7 @@ describe('Structure & Serialization', () => {
         // Arrange
         const net = new Network(2, 1);
         const arr = net.serialize();
-        arr[2][0] = 'notARealSquashFn';
+        arr[2][0] = 'notARealSquashFn' as never;
         // Act
         Network.deserialize(arr, net.input, net.output);
         // Assert

@@ -2,8 +2,9 @@ import { EPSILON } from './neat.constants';
 
 /**
  * Minimal interface for NEAT instances with adaptive features.
+ * Exported for use in tests and type-safe function calls.
  */
-interface NeatLikeWithAdaptive {
+export interface NeatLikeWithAdaptive {
   options: {
     complexityBudget?: {
       enabled?: boolean;

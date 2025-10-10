@@ -7,8 +7,8 @@ import Node from '../../src/architecture/node';
  */
 interface ConnectionJSON {
   weight: number;
-  from: number;
-  to: number;
+  from: number | undefined;
+  to: number | undefined;
   gain: number;
   gater?: number;
 }
@@ -182,12 +182,12 @@ describe('Connection', () => {
 
       it('serializes the from index', () => {
         // Assert
-        expect(json.from).toBe(fromNode.index);
+        expect(json.from).toBe(fromNode.index!);
       });
 
       it('serializes the to index', () => {
         // Assert
-        expect(json.to).toBe(toNode.index);
+        expect(json.to).toBe(toNode.index!);
       });
 
       it('serializes the gain', () => {

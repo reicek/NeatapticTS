@@ -125,7 +125,7 @@ describe('State export/import', () => {
     await neat.evaluate();
     await neat.evolve(); // advance generation
     const bundle = neat.exportState();
-    const restored = Neat.importState(
+    const restored = await Neat.importState(
       bundle,
       (n: Network) => n.connections.length,
     );

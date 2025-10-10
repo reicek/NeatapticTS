@@ -78,14 +78,14 @@ describe('Network.evolveNetwork', () => {
       // Arrange
       const net = new Network(1, 1, { seed: 5 });
       const trainingSet: TrainingSet = [{ input: [0.3], output: [0.7] }];
-      // Step 1: Override worker discovery hooks with a subclass that throws to force fallback.
+      // Step 1: Override worker discovery hooks with a subclass that rejects to force fallback.
       const originalWorkers = Multi.workers;
       class DisabledWorkers extends Workers {
-        static override async getNodeTestWorker() {
+        static override async getNodeTestWorker(): Promise<never> {
           throw new Error('worker disabled for test');
         }
 
-        static override async getBrowserTestWorker() {
+        static override async getBrowserTestWorker(): Promise<never> {
           throw new Error('worker disabled for test');
         }
       }

@@ -136,7 +136,7 @@ export async function spawnFromParent(
   for (let mutationIndex = 0; mutationIndex < mutateCount; mutationIndex++) {
     try {
       // Select a mutation operator; may return a single method or an array of candidates.
-      let selectedMutationMethod = internal.selectMutationMethod?.(
+      let selectedMutationMethod = await internal.selectMutationMethod?.(
         clone,
         false,
       );

@@ -974,9 +974,9 @@ describe('Layer', () => {
           );
           expect(inputToMemoryConnection).toBeDefined();
           const targetNodeIndex = memoryCell.nodes.indexOf(
-            inputToMemoryConnection.to,
+            inputToMemoryConnection!.to,
           );
-          expect(inputToMemoryConnection.gater).toBe(
+          expect(inputToMemoryConnection!.gater).toBe(
             inputGate.nodes[targetNodeIndex],
           );
         });
