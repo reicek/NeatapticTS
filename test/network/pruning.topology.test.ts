@@ -1,4 +1,5 @@
 import Network from '../../src/architecture/network';
+import Node from '../../src/architecture/node';
 import {
   maybePrune,
   pruneToSparsity,
@@ -8,6 +9,50 @@ import {
   computeTopoOrder,
   hasPath,
 } from '../../src/architecture/network/network.topology';
+
+type PruningMethod = 'magnitude' | 'snip';
+
+type PruningConfig = {
+  start: number;
+  end: number;
+  frequency: number;
+  targetSparsity: number;
+  method: PruningMethod;
+  regrowFraction?: number;
+  lastPruneIter?: number;
+};
+
+const setPruningConfig = (network: Network, config: PruningConfig) => {
+  Reflect.set(network, '_pruningConfig', config);
+};
+
+const getPruningConfig = (network: Network): PruningConfig | undefined => {
+  return Reflect.get(network, '_pruningConfig') as PruningConfig | undefined;
+};
+
+const captureInitialConnectionBaseline = (network: Network) => {
+  Reflect.set(network, '_initialConnectionCount', network.connections.length);
+};
+
+const setTopoOrder = (network: Network, order: Node[] | null) => {
+  Reflect.set(network, '_topoOrder', order);
+};
+
+const getTopoOrder = (network: Network): Node[] | null => {
+  return Reflect.get(network, '_topoOrder') as Node[] | null;
+};
+
+const setTopoDirty = (network: Network, isDirty: boolean) => {
+  Reflect.set(network, '_topoDirty', isDirty);
+};
+
+const getTopoDirty = (network: Network): boolean => {
+  return Boolean(Reflect.get(network, '_topoDirty'));
+};
+
+const getNetworkRng = (network: Network): (() => number) => {
+  return (Reflect.get(network, '_rand') as () => number) ?? Math.random;
+};
 
 /**
  * Pruning & topology scenario tests.
@@ -19,14 +64,14 @@ describe('Network.pruning & topology utilities', () => {
     it('keeps connection count unchanged when iteration before start', () => {
       // Arrange
       const net = new Network(2, 1, { seed: 1, enforceAcyclic: true });
-      (net as any)._pruningConfig = {
+      setPruningConfig(net, {
         start: 5,
         end: 10,
         frequency: 1,
         targetSparsity: 0.5,
         method: 'magnitude',
-      };
-      (net as any)._initialConnectionCount = net.connections.length;
+      });
+      captureInitialConnectionBaseline(net);
       const before = net.connections.length;
       // Act
       maybePrune.call(net, 0);
@@ -39,20 +84,20 @@ describe('Network.pruning & topology utilities', () => {
     it('sets lastPruneIter without changing connection count when sparsity target yields no excess', () => {
       // Arrange
       const net = new Network(3, 2, { seed: 101, enforceAcyclic: true });
-      (net as any)._pruningConfig = {
+      setPruningConfig(net, {
         start: 0,
         end: 5,
         frequency: 1,
         targetSparsity: 0.8,
         method: 'magnitude',
-      }; // iteration 0 progressFraction=0 => target NOW =0
-      (net as any)._initialConnectionCount = net.connections.length;
+      }); // iteration 0 progressFraction=0 => target NOW =0
+      captureInitialConnectionBaseline(net);
       const before = net.connections.length;
       // Act
       maybePrune.call(net, 0); // inside window, but targetSparsityNow=0
+      const configAfter = getPruningConfig(net);
       const unchanged =
-        net.connections.length === before &&
-        (net as any)._pruningConfig.lastPruneIter === 0;
+        net.connections.length === before && configAfter?.lastPruneIter === 0;
       // Assert
       expect(unchanged).toBe(true);
     });
@@ -62,14 +107,14 @@ describe('Network.pruning & topology utilities', () => {
     it('reduces connection count inside active window', () => {
       // Arrange
       const net = new Network(3, 2, { seed: 2, enforceAcyclic: true });
-      (net as any)._pruningConfig = {
+      setPruningConfig(net, {
         start: 0,
         end: 2,
         frequency: 1,
         targetSparsity: 0.5,
         method: 'magnitude',
-      };
-      (net as any)._initialConnectionCount = net.connections.length;
+      });
+      captureInitialConnectionBaseline(net);
       const before = net.connections.length;
       // Act
       maybePrune.call(net, 2); // end of window -> full target sparsity applied
@@ -83,14 +128,14 @@ describe('Network.pruning & topology utilities', () => {
     it('invokes pruning using snip ranking (connection count decreases)', () => {
       // Arrange
       const net = new Network(3, 2, { seed: 12, enforceAcyclic: true });
-      (net as any)._pruningConfig = {
+      setPruningConfig(net, {
         start: 0,
         end: 3,
         frequency: 1,
         targetSparsity: 0.4,
         method: 'snip',
-      };
-      (net as any)._initialConnectionCount = net.connections.length;
+      });
+      captureInitialConnectionBaseline(net);
       const before = net.connections.length;
       // Act
       maybePrune.call(net, 3); // full progress for target sparsity
@@ -105,23 +150,23 @@ describe('Network.pruning & topology utilities', () => {
       // Arrange
       const baseA = new Network(3, 2, { seed: 21, enforceAcyclic: true });
       const baseB = new Network(3, 2, { seed: 21, enforceAcyclic: true }); // identical topology & seed
-      (baseA as any)._pruningConfig = {
+      setPruningConfig(baseA, {
         start: 0,
         end: 0,
         frequency: 1,
         targetSparsity: 0.5,
         method: 'magnitude',
-      };
-      (baseB as any)._pruningConfig = {
+      });
+      setPruningConfig(baseB, {
         start: 0,
         end: 0,
         frequency: 1,
         targetSparsity: 0.5,
         method: 'magnitude',
         regrowFraction: 1,
-      };
-      (baseA as any)._initialConnectionCount = baseA.connections.length;
-      (baseB as any)._initialConnectionCount = baseB.connections.length;
+      });
+      captureInitialConnectionBaseline(baseA);
+      captureInitialConnectionBaseline(baseB);
       // Act
       maybePrune.call(baseA, 0); // prune only
       maybePrune.call(baseB, 0); // prune + regrow
@@ -145,7 +190,7 @@ describe('Network.pruning & topology utilities', () => {
     it('reports positive sparsity after manual disconnection', () => {
       // Arrange
       const net = new Network(2, 2, { seed: 31, enforceAcyclic: true });
-      (net as any)._initialConnectionCount = net.connections.length;
+      captureInitialConnectionBaseline(net);
       const toRemove = net.connections[0];
       net.disconnect(toRemove.from, toRemove.to);
       // Act
@@ -209,9 +254,9 @@ describe('Network.pruning & topology utilities', () => {
       const net = new Network(2, 2, { seed: 6, enforceAcyclic: true });
       // Act
       computeTopoOrder.call(net);
-      const order = (net as any)._topoOrder;
+      const order = getTopoOrder(net);
       // Assert
-      expect(order.length).toBe(net.nodes.length);
+      expect(order?.length).toBe(net.nodes.length);
     });
   });
 
@@ -220,17 +265,16 @@ describe('Network.pruning & topology utilities', () => {
       // Arrange
       const net = new Network(1, 1, { seed: 7, enforceAcyclic: true });
       // Add hidden node & create cycle hidden->output->hidden.
-      const NodeCtor = require('../../src/architecture/node').default as any;
-      const hidden = new NodeCtor('hidden', undefined, (net as any)._rand);
-      (net as any).nodes.push(hidden);
+      const hidden = new Node('hidden', undefined, getNetworkRng(net));
+      net.nodes.push(hidden);
       net.connect(net.nodes[0], hidden);
       net.connect(hidden, net.nodes[1]);
       net.connect(net.nodes[1], hidden); // back edge introduces cycle
       // Act
       computeTopoOrder.call(net);
-      const order = (net as any)._topoOrder;
+      const order = getTopoOrder(net);
       // Assert
-      expect(order.length).toBe(net.nodes.length);
+      expect(order?.length).toBe(net.nodes.length);
     });
   });
 
@@ -238,14 +282,11 @@ describe('Network.pruning & topology utilities', () => {
     it('clears cached topo order (sets to null) when acyclicity not enforced', () => {
       // Arrange
       const net = new Network(2, 1, { seed: 71, enforceAcyclic: false });
-      (net as any)._topoOrder = [
-        /* dummy */
-      ];
-      (net as any)._topoDirty = true;
+      setTopoOrder(net, [net.nodes[0]]);
+      setTopoDirty(net, true);
       // Act
       computeTopoOrder.call(net);
-      const cleared =
-        (net as any)._topoOrder === null && (net as any)._topoDirty === false;
+      const cleared = getTopoOrder(net) === null && getTopoDirty(net) === false;
       // Assert
       expect(cleared).toBe(true);
     });

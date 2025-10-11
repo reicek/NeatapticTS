@@ -25,6 +25,17 @@ const kOpt = Symbol('connOptMoments');
 // Symbol used for optional plasticity learning rate (non-enumerable) (bit3 flag presence)
 const kPlasticRate = Symbol('connPlasticRate');
 
+/**
+ * Internal interface for accessing symbol-keyed properties on Connection instances.
+ * Used for type-safe access to dynamic symbol properties.
+ */
+interface ConnectionSymbolProps {
+  [kGain]?: number;
+  [kGater]?: Node;
+  [kOpt]?: Record<string, number | undefined>;
+  [kPlasticRate]?: number;
+}
+
 export default class Connection {
   /** The source (pre-synaptic) node supplying activation. */
   from: Node;
@@ -102,8 +113,24 @@ export default class Connection {
    * const json = connection.toJSON();
    * // => { from: 0, to: 3, weight: 0.12, gain: 1, innovation: 57, enabled: true }
    */
-  toJSON() {
-    const json: any = {
+  toJSON(): {
+    from: number | undefined;
+    to: number | undefined;
+    weight: number;
+    gain: number;
+    innovation: number;
+    enabled: boolean;
+    gater?: number;
+  } {
+    const json: {
+      from: number | undefined;
+      to: number | undefined;
+      weight: number;
+      gain: number;
+      innovation: number;
+      enabled: boolean;
+      gater?: number;
+    } = {
       from: this.from.index ?? undefined,
       to: this.to.index ?? undefined,
       weight: this.weight,
@@ -111,8 +138,8 @@ export default class Connection {
       innovation: this.innovation,
       enabled: this.enabled,
     };
-    if ((this as any)._flags & 0b100) {
-      const g = (this as any)[kGater];
+    if (this._flags & 0b100) {
+      const g = ((this as unknown) as ConnectionSymbolProps)[kGater];
       if (g && typeof g.index !== 'undefined') json.gater = g.index;
     }
     return json;
@@ -172,11 +199,17 @@ export default class Connection {
     let c: Connection;
     if (Connection._pool.length) {
       c = Connection._pool.pop()!;
-      (c as any).from = from;
-      (c as any).to = to;
+      const symProps = (c as unknown) as ConnectionSymbolProps;
+      const mutableConn = (c as unknown) as {
+        from: Node;
+        to: Node;
+        innovation: number;
+      };
+      mutableConn.from = from;
+      mutableConn.to = to;
       c.weight = weight ?? Math.random() * 0.2 - 0.1;
-      if ((c as any)[kGain] !== undefined) delete (c as any)[kGain];
-      if ((c as any)[kGater] !== undefined) delete (c as any)[kGater];
+      if (symProps[kGain] !== undefined) delete symProps[kGain];
+      if (symProps[kGater] !== undefined) delete symProps[kGater];
       c._flags = 0b11; // enabled + dcActive
       c.eligibility = 0;
       c.previousDeltaWeight = 0;
@@ -184,8 +217,8 @@ export default class Connection {
       c.xtrace.nodes.length = 0;
       c.xtrace.values.length = 0;
       // Clear optimizer bag if present
-      if ((c as any)[kOpt]) delete (c as any)[kOpt];
-      (c as any).innovation = Connection._nextInnovation++;
+      if (symProps[kOpt]) delete symProps[kOpt];
+      mutableConn.innovation = Connection._nextInnovation++;
     } else c = new Connection(from, to, weight);
     return c;
   }
@@ -224,8 +257,9 @@ export default class Connection {
   set plastic(v: boolean) {
     if (v) this._flags |= 0b1000;
     else this._flags &= ~0b1000;
-    if (!v && (this as any)[kPlasticRate] !== undefined)
-      delete (this as any)[kPlasticRate];
+    const symProps = (this as unknown) as ConnectionSymbolProps;
+    if (!v && symProps[kPlasticRate] !== undefined)
+      delete symProps[kPlasticRate];
   }
 
   // --- Virtualized gain property ---
@@ -235,32 +269,37 @@ export default class Connection {
    * large populations where most connections are ungated.
    */
   get gain(): number {
-    return (this as any)[kGain] === undefined ? 1 : (this as any)[kGain];
+    const symProps = (this as unknown) as ConnectionSymbolProps;
+    return symProps[kGain] === undefined ? 1 : symProps[kGain];
   }
   set gain(v: number) {
+    const symProps = (this as unknown) as ConnectionSymbolProps;
     if (v === 1) {
-      if ((this as any)[kGain] !== undefined) delete (this as any)[kGain];
+      if (symProps[kGain] !== undefined) delete symProps[kGain];
     } else {
-      (this as any)[kGain] = v;
+      symProps[kGain] = v;
     }
   }
 
   // --- Optimizer field accessors (prototype-level to avoid per-instance enumerable keys) ---
-  private _ensureOptBag(): any {
-    let bag = (this as any)[kOpt];
+  private _ensureOptBag(): Record<string, number | undefined> {
+    const symProps = (this as unknown) as ConnectionSymbolProps;
+    let bag = symProps[kOpt];
     if (!bag) {
       bag = {};
-      (this as any)[kOpt] = bag; // symbol-keyed; non-enumerable
+      symProps[kOpt] = bag; // symbol-keyed; non-enumerable
     }
     return bag;
   }
-  private _getOpt<K extends keyof any>(k: string): number | undefined {
-    const bag = (this as any)[kOpt];
-    return bag ? bag[k] : undefined;
+  private _getOpt(_k: string): number | undefined {
+    const symProps = (this as unknown) as ConnectionSymbolProps;
+    const bag = symProps[kOpt];
+    return bag ? bag[_k] : undefined;
   }
   private _setOpt(k: string, v: number | undefined): void {
+    const symProps = (this as unknown) as ConnectionSymbolProps;
     if (v === undefined) {
-      const bag = (this as any)[kOpt];
+      const bag = symProps[kOpt];
       if (bag) delete bag[k];
     } else {
       this._ensureOptBag()[k] = v;
@@ -319,33 +358,34 @@ export default class Connection {
   // --- Virtualized gater property (non-enumerable) ---
   /** Optional gating node whose activation can modulate effective weight (symbol-backed). */
   get gater(): Node | null {
-    return (this._flags & 0b100) !== 0 ? (this as any)[kGater] : null;
+    const symProps = (this as unknown) as ConnectionSymbolProps;
+    return (this._flags & 0b100) !== 0 ? symProps[kGater] ?? null : null;
   }
   set gater(node: Node | null) {
+    const symProps = (this as unknown) as ConnectionSymbolProps;
     if (node === null) {
       if ((this._flags & 0b100) !== 0) {
         this._flags &= ~0b100;
-        if ((this as any)[kGater] !== undefined) delete (this as any)[kGater];
+        if (symProps[kGater] !== undefined) delete symProps[kGater];
       }
     } else {
-      (this as any)[kGater] = node;
+      symProps[kGater] = node;
       this._flags |= 0b100;
     }
   }
   // --- Plasticity rate (virtualized) ---
   /** Per-connection plasticity / learning rate (0 means non-plastic). Setting >0 marks plastic flag. */
   get plasticityRate(): number {
-    return (this as any)[kPlasticRate] === undefined
-      ? 0
-      : (this as any)[kPlasticRate];
+    const symProps = (this as unknown) as ConnectionSymbolProps;
+    return symProps[kPlasticRate] === undefined ? 0 : symProps[kPlasticRate];
   }
   set plasticityRate(v: number) {
+    const symProps = (this as unknown) as ConnectionSymbolProps;
     if (v === undefined || v === 0) {
-      if ((this as any)[kPlasticRate] !== undefined)
-        delete (this as any)[kPlasticRate];
+      if (symProps[kPlasticRate] !== undefined) delete symProps[kPlasticRate];
       this._flags &= ~0b1000;
     } else {
-      (this as any)[kPlasticRate] = v;
+      symProps[kPlasticRate] = v;
       this._flags |= 0b1000;
     }
   }

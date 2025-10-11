@@ -29,6 +29,8 @@
     "prettier:tests": "npx prettier --write test/**/*.ts",
     "prettier:src": "npx prettier --write src/**/*.ts",
     "docs": "npm run build:ascii-maze && npm run docs:examples && npm run docs:build-scripts && node ./dist-docs/scripts/generate-docs.js && node ./dist-docs/scripts/render-docs-html.js",
+    "lint": "eslint src/ test/",
+    "lint:fix": "eslint src/ --fix",
     "onnx:export": "node scripts/export-onnx.mjs"
   },
   "exports": {
@@ -38,6 +40,8 @@
     }
   },
   "devDependencies": {
+    "@eslint/eslintrc": "^3.3.1",
+    "@eslint/js": "^9.35.0",
     "@types/chai": "^5.2.2",
     "@types/fs-extra": "^11.0.4",
     "@types/jest": "^30.0.0",
@@ -45,10 +49,14 @@
     "@types/seedrandom": "^3.0.8",
     "@types/webpack": "^5.28.5",
     "@types/webpack-dev-server": "^4.7.2",
+    "@typescript-eslint/eslint-plugin": "^8.42.0",
+    "@typescript-eslint/parser": "^8.42.0",
     "chai": "^6.0.1",
     "copy-webpack-plugin": "^13.0.1",
     "cross-env": "^10.0.0",
     "esbuild": "^0.25.9",
+    "eslint": "^9.35.0",
+    "eslint-plugin-prefer-arrow": "^1.2.3",
     "fast-glob": "^3.3.3",
     "fs-extra": "^11.3.1",
     "husky": "^9.1.7",

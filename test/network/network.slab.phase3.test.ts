@@ -5,21 +5,37 @@
 import Network from '../../src/architecture/network';
 import { config } from '../../src/config';
 
+type ConnectionSlab = ReturnType<Network['getConnectionSlab']>;
+interface NetworkInternals {
+  _slabDirty: boolean;
+}
+
+const getConnectionSlab = (net: Network): ConnectionSlab =>
+  ((net as unknown) as {
+    getConnectionSlab: () => ConnectionSlab;
+  }).getConnectionSlab();
+
+const setNetworkInternal = <Key extends keyof NetworkInternals>(
+  net: Network,
+  key: Key,
+  value: NetworkInternals[Key]
+) => {
+  Reflect.set(net, key, value);
+};
+
 describe('phase3.slab.initial', () => {
   describe('slab rebuild version & arrays', () => {
     it('slab version increments and exposes flags/gain arrays', () => {
       // Arrange
       config.enableNodePooling = false; // pooling not required here
       const net = new Network(3, 2, { enforceAcyclic: true });
-      // Force a connection add/remove mutation to dirty slabs (simulate structural change)
-      const initialVersion = (net as any)._slabVersion || 0;
       // Act
-      const slab1 = (net as any).getConnectionSlab();
+      const slab1 = getConnectionSlab(net);
       const v1 = slab1.version;
       // Add a node between to change connections and mark slab dirty
       if (net.connections.length) net.addNodeBetween();
-      (net as any)._slabDirty = true;
-      const slab2 = (net as any).getConnectionSlab();
+      setNetworkInternal(net, '_slabDirty', true);
+      const slab2 = getConnectionSlab(net);
       const v2 = slab2.version;
       // Assert (single expectation bundling core invariants)
       expect(

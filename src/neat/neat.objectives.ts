@@ -1,6 +1,20 @@
 import type { ObjectiveDescriptor, GenomeLike } from './neat.types';
 
 /**
+ * Minimal interface for NEAT instances using objective management.
+ */
+interface NeatLikeWithObjectives {
+  options: {
+    multiObjective?: {
+      enabled?: boolean;
+      objectives?: ObjectiveDescriptor[];
+    };
+  };
+  _objectivesList?: ObjectiveDescriptor[];
+  _suppressFitnessObjective?: boolean;
+}
+
+/**
  * Build and return the list of registered objectives for this NEAT instance.
  *
  * This function lazily builds `this._objectivesList` from the built-in
@@ -21,7 +35,9 @@ import type { ObjectiveDescriptor, GenomeLike } from './neat.types';
  *   no objectives are registered, this will contain only the built-in
  *   fitness objective (unless suppressed).
  */
-export function _getObjectives(this: any): ObjectiveDescriptor[] {
+export function _getObjectives(
+  this: NeatLikeWithObjectives
+): ObjectiveDescriptor[] {
   // Return cached objectives list if already computed
   if (this._objectivesList) return this._objectivesList;
 
@@ -49,7 +65,12 @@ export function _getObjectives(this: any): ObjectiveDescriptor[] {
        * const value = defaultAccessor(genome);
        * ```
        */
-      accessor: (genome: GenomeLike) => (genome as any).score || 0,
+      accessor: (genome: GenomeLike) => {
+        interface GenomeWithScore {
+          score?: number;
+        }
+        return (genome as GenomeWithScore).score || 0;
+      },
     });
   }
 
@@ -58,8 +79,7 @@ export function _getObjectives(this: any): ObjectiveDescriptor[] {
     this.options.multiObjective?.enabled &&
     Array.isArray(this.options.multiObjective.objectives)
   ) {
-    for (const candidateObjective of this.options.multiObjective
-      .objectives as ObjectiveDescriptor[]) {
+    for (const candidateObjective of this.options.multiObjective.objectives) {
       // Validate shape before accepting
       if (
         !candidateObjective ||
@@ -67,7 +87,7 @@ export function _getObjectives(this: any): ObjectiveDescriptor[] {
         typeof candidateObjective.accessor !== 'function'
       )
         continue;
-      objectivesList.push(candidateObjective as ObjectiveDescriptor);
+      objectivesList.push(candidateObjective);
     }
   }
 
@@ -100,30 +120,25 @@ export function _getObjectives(this: any): ObjectiveDescriptor[] {
  * @param {(g: GenomeLike) => number} accessor Function to extract a numeric value from a genome
  */
 export function registerObjective(
-  this: any,
+  this: NeatLikeWithObjectives,
   key: string,
   direction: 'min' | 'max',
   accessor: (genome: GenomeLike) => number
 ) {
   // Ensure multi-objective container exists and is enabled
   if (!this.options.multiObjective)
-    this.options.multiObjective = { enabled: true } as any;
+    this.options.multiObjective = { enabled: true };
 
   /**
    * Convenience reference to multi-objective related options on `this`.
-   *
-   * @example
-   * ```ts
-   * const multiObjectiveOptions = this.options.multiObjective as any;
-   * ```
    */
-  const multiObjectiveOptions: any = this.options.multiObjective;
+  const multiObjectiveOptions = this.options.multiObjective;
 
   // Ensure the objectives array exists
   if (!multiObjectiveOptions.objectives) multiObjectiveOptions.objectives = [];
 
   // Step: remove any existing objective with the same key (replace semantics)
-  multiObjectiveOptions.objectives = (multiObjectiveOptions.objectives as ObjectiveDescriptor[]).filter(
+  multiObjectiveOptions.objectives = multiObjectiveOptions.objectives.filter(
     (existingObjective) => existingObjective.key !== key
   );
 
@@ -131,7 +146,7 @@ export function registerObjective(
   multiObjectiveOptions.objectives.push({ key, direction, accessor });
 
   // Invalidate cached list so callers will pick up the change
-  this._objectivesList = undefined as any;
+  this._objectivesList = undefined;
 }
 
 /**
@@ -147,11 +162,11 @@ export function registerObjective(
  * // now only the default fitness objective (unless suppressed) will remain
  * ```
  */
-export function clearObjectives(this: any) {
+export function clearObjectives(this: NeatLikeWithObjectives) {
   // Reset the registered objectives array when present
   if (this.options.multiObjective?.objectives)
     this.options.multiObjective.objectives = [];
 
   // Invalidate the cached objectives list
-  this._objectivesList = undefined as any;
+  this._objectivesList = undefined;
 }

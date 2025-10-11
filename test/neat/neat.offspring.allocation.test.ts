@@ -1,8 +1,7 @@
 import Neat from '../../src/neat';
-import Network from '../../src/architecture/network';
 
 describe('refined offspring allocation', () => {
-  const fitness = (net: Network) => 1; // uniform fitness encourages proportional distribution
+  const fitness = () => 1; // uniform fitness encourages proportional distribution
   test('each species gets at least minOffspring', async () => {
     const neat = new Neat(3, 2, fitness, {
       popsize: 50,

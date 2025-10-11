@@ -16,6 +16,30 @@ type ObjectiveDescriptor = {
 };
 
 /**
+ * Minimal Neat instance interface for multi-objective operations.
+ */
+interface NeatLikeWithMultiObjective {
+  _getObjectives: () => ObjectiveDescriptor[];
+  options: {
+    multiObjective?: {
+      enabled?: boolean;
+      archiveParetoFronts?: boolean;
+    };
+  };
+  _paretoArchive: Array<{ generation?: number; fronts: number[][] }>;
+  generation?: number;
+}
+
+/**
+ * Extended Network interface with multi-objective annotations.
+ */
+interface NetworkWithMOAnnotations extends Network {
+  _moRank?: number;
+  _moCrowd?: number;
+  _id?: number;
+}
+
+/**
  * Perform fast non-dominated sorting and compute crowding distances for a
  * population of networks (genomes). This implements a standard NSGA-II style
  * non-dominated sorting followed by crowding distance assignment.
@@ -43,7 +67,10 @@ type ObjectiveDescriptor = {
  * @param pop - population array of `Network` genomes to be ranked
  * @returns Array of Pareto fronts; each front is an array of `Network` genomes.
  */
-export function fastNonDominated(this: any, pop: Network[]): Network[][] {
+export function fastNonDominated(
+  this: NeatLikeWithMultiObjective,
+  pop: Network[]
+): Network[][] {
   /**
    * const: objective descriptors array
    * Short description: descriptors returned by the Neat instance that define
@@ -66,7 +93,7 @@ export function fastNonDominated(this: any, pop: Network[]): Network[][] {
    * objective vector for `pop[i]`.
    */
   const valuesMatrix: number[][] = pop.map((genomeItem: Network) =>
-    objectiveDescriptors.map((descriptor: any) => {
+    objectiveDescriptors.map((descriptor) => {
       try {
         return descriptor.accessor(genomeItem);
       } catch {
@@ -170,7 +197,7 @@ export function fastNonDominated(this: any, pop: Network[]): Network[][] {
     const nextFrontIndices: number[] = [];
     for (const pIndex of currentFrontIndices) {
       // Annotate genome with its multi-objective rank for downstream use.
-      (pop[pIndex] as any)._moRank = currentFrontRank;
+      (pop[pIndex] as NetworkWithMOAnnotations)._moRank = currentFrontRank;
       // For every genome q dominated by p, reduce its domination count.
       for (const qIndex of dominatedIndicesByIndex[pIndex]) {
         dominationCounts[qIndex]--;
@@ -189,7 +216,8 @@ export function fastNonDominated(this: any, pop: Network[]): Network[][] {
   for (const front of paretoFronts) {
     if (front.length === 0) continue;
     // Initialize crowding distance for each genome in the front.
-    for (const genomeItem of front) (genomeItem as any)._moCrowd = 0;
+    for (const genomeItem of front)
+      (genomeItem as NetworkWithMOAnnotations)._moCrowd = 0;
 
     // For each objective, sort the front and accumulate normalized distances.
     for (
@@ -209,10 +237,10 @@ export function fastNonDominated(this: any, pop: Network[]): Network[][] {
         });
 
       // Boundary solutions get infinite crowding so they are always preferred.
-      (sortedByCurrentObjective[0] as any)._moCrowd = Infinity;
+      (sortedByCurrentObjective[0] as NetworkWithMOAnnotations)._moCrowd = Infinity;
       (sortedByCurrentObjective[
         sortedByCurrentObjective.length - 1
-      ] as any)._moCrowd = Infinity;
+      ] as NetworkWithMOAnnotations)._moCrowd = Infinity;
 
       const minVal = objectiveDescriptors[objectiveIndex].accessor(
         sortedByCurrentObjective[0]
@@ -235,8 +263,12 @@ export function fastNonDominated(this: any, pop: Network[]): Network[][] {
         const nextVal = objectiveDescriptors[objectiveIndex].accessor(
           sortedByCurrentObjective[sortedIndex + 1]
         );
-        (sortedByCurrentObjective[sortedIndex] as any)._moCrowd +=
-          (nextVal - prevVal) / valueRange;
+        const currentGenome = sortedByCurrentObjective[
+          sortedIndex
+        ] as NetworkWithMOAnnotations;
+        if (currentGenome._moCrowd !== undefined) {
+          currentGenome._moCrowd += (nextVal - prevVal) / valueRange;
+        }
       }
     }
   }
@@ -250,7 +282,7 @@ export function fastNonDominated(this: any, pop: Network[]): Network[][] {
       generation: this.generation,
       fronts: paretoFronts.slice(0, 3).map((front) =>
         // map each front (array of Network) to an array of genome IDs
-        front.map((genome) => (genome as any)._id)
+        front.map((genome) => (genome as NetworkWithMOAnnotations)._id || 0)
       ),
     });
     if (this._paretoArchive.length > 100) this._paretoArchive.shift();

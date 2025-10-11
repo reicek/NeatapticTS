@@ -1,5 +1,6 @@
 import Network from '../../src/architecture/network';
-import { exportToONNX, importFromONNX } from '../../src/architecture/onnx';
+import { exportToONNX } from '../../src/architecture/onnx';
+import type { OnnxModel } from '../../src/architecture/network/network.onnx';
 
 /**
  * Phase 4 groundwork tests: explicit Conv2D mapping export scaffolding.
@@ -29,10 +30,10 @@ describe('ONNX Conv2D Groundwork Export', () => {
       // Arrange
       const net = Network.createMLP(inputSize, [hiddenSize], outputSize);
       // Deterministic weight fill: weight = (idx * 0.01)
-      net.connections.forEach((c: any, idx: number) => {
+      net.connections.forEach((c: { weight: number }, idx: number) => {
         c.weight = idx * 0.01;
       });
-      net.nodes.forEach((n: any, idx: number) => {
+      net.nodes.forEach((n: { type?: string; bias?: number }, idx: number) => {
         if (n.type !== 'input') n.bias = idx * 0.001;
       });
       const mapping = [
@@ -60,9 +61,10 @@ describe('ONNX Conv2D Groundwork Export', () => {
         conv2dMappings: mapping,
       });
       // Assert (single expectation): ensure Conv node present & metadata recorded
-      const hasConv = onnx.graph.node.some((n: any) => n.op_type === 'Conv');
+      const onnxModel = onnx as OnnxModel;
+      const hasConv = onnxModel.graph.node.some((n) => n.op_type === 'Conv');
       const metaConvLayers = (onnx.metadata_props || []).find(
-        (m: any) => m.key === 'conv2d_layers'
+        (m: { key?: string }) => m.key === 'conv2d_layers'
       );
       expect(hasConv && !!metaConvLayers).toBe(true);
     });
@@ -88,9 +90,11 @@ describe('ONNX Conv2D Groundwork Export', () => {
         },
       ];
       // Act
-      const onnx = exportToONNX(net, { conv2dMappings: badMapping });
+      const onnx = exportToONNX(net, {
+        conv2dMappings: badMapping,
+      }) as OnnxModel;
       // Assert
-      const hasConv = onnx.graph.node.some((n: any) => n.op_type === 'Conv');
+      const hasConv = onnx.graph.node.some((n) => n.op_type === 'Conv');
       expect(hasConv).toBe(false);
     });
   });

@@ -1,4 +1,5 @@
 import Neat from '../../src/neat';
+import Network from '../../src/architecture/network';
 
 /**
  * Parity test: ensure telemetry export (CSV vs JSONL) includes core fields and
@@ -7,12 +8,17 @@ import Neat from '../../src/neat';
 
 describe('telemetry export parity', () => {
   it('includes core fields and consistent nested flattening', async () => {
-    const neat = new Neat(3, 2, (n: any) => n.connections.length, {
-      popsize: 20,
-      telemetry: { enabled: true, complexity: true, performance: true },
-      multiObjective: { enabled: true, objectives: [] },
-      speciation: false,
-    });
+    const neat = new Neat(
+      3,
+      2,
+      (network: Network) => network.connections.length,
+      {
+        popsize: 20,
+        telemetry: { enabled: true, complexity: true, performance: true },
+        multiObjective: { enabled: true, objectives: [] },
+        speciation: false,
+      }
+    );
     // Run a few generations to accumulate telemetry snapshots
     for (let i = 0; i < 3; i++) await neat.evolve();
     const jsonl = neat.exportTelemetryJSONL();

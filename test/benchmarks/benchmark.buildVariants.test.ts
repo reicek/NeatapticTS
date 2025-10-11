@@ -22,11 +22,11 @@ export interface PlannedVariantRun {
  * No deduplication is performed: duplicate values in any axis produce duplicate rows (by design),
  * which allows upstream callers to intentionally weight certain modes/scenarios.
  */
-export function planVariantRuns(
+export const planVariantRuns = (
   modes: Array<'src' | 'dist'> = ['src', 'dist'],
   scenarios: string[] = ['build'],
   sizes: number[] = [1000]
-): PlannedVariantRun[] {
+): PlannedVariantRun[] => {
   const plannedRuns: PlannedVariantRun[] = [];
   // Iterate axes in fixed order to guarantee stable output ordering for reproducibility.
   for (const variantMode of modes) {
@@ -45,7 +45,7 @@ export function planVariantRuns(
     }
   }
   return plannedRuns;
-}
+};
 
 // Tests ------------------------------------------------------------------------------------------
 

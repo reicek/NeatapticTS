@@ -5,6 +5,69 @@ import { EvolutionEngine } from './evolutionEngine';
 import { INetwork } from './interfaces';
 import { MazeGenerator } from './mazes';
 import { NetworkRefinement } from './networkRefinement';
+import type Network from '../../../src/architecture/network';
+
+/**
+ * Runtime type for DashboardManager with dynamic methods and hooks.
+ * Dashboard gains runtime methods like redraw and telemetry hooks.
+ */
+interface RuntimeDashboard {
+  _telemetryHook?: (telemetry: Record<string, unknown>) => void;
+  redraw?: (data: unknown[], state: unknown) => void;
+  getLastTelemetry?: () => Record<string, unknown>;
+  [key: string]: unknown;
+}
+
+/**
+ * Runtime type for AbortSignal with dynamic properties.
+ * Some environments extend AbortSignal with additional runtime flags.
+ */
+interface RuntimeAbortSignal {
+  aborted?: boolean;
+  onabort?: (() => void) | null;
+  addEventListener: AbortSignal['addEventListener'];
+  removeEventListener: AbortSignal['removeEventListener'];
+  dispatchEvent: AbortSignal['dispatchEvent'];
+  reason?: unknown;
+  throwIfAborted?: () => void;
+}
+
+/**
+ * Runtime type for AbortSignal constructor with dynamic any method.
+ * Modern environments support AbortSignal.any for signal composition.
+ */
+interface RuntimeAbortSignalConstructor {
+  prototype: AbortSignal;
+  new (): AbortSignal;
+  any?: (signals: AbortSignal[]) => AbortSignal;
+}
+
+/**
+ * Runtime type for evolution result with dynamic properties.
+ * Evolution loop returns results with bestResult, bestNetwork, etc.
+ */
+interface RuntimeEvolutionResult {
+  bestResult?: {
+    progress?: number;
+    [key: string]: unknown;
+  };
+  bestNetwork?: INetwork;
+  [key: string]: unknown;
+}
+
+/**
+ * Runtime type for global window with dynamic asciiMaze namespace.
+ * Browser environments extend window with custom global namespaces.
+ */
+interface RuntimeWindow extends Window {
+  asciiMaze?: {
+    start?: typeof start;
+    _autoStarted?: boolean;
+    [key: string]: unknown;
+  };
+  asciiMazeStart?: (containerElement?: unknown) => unknown;
+  [key: string]: unknown;
+}
 
 /** Default host container id used when a string is supplied to `start`. */
 const DEFAULT_CONTAINER_ID = 'ascii-maze-output';
@@ -39,7 +102,7 @@ const POPULATION_SIZE = 20;
  * @param dimension - Maze side length in cells (square maze).
  * @returns Readonly configuration object consumed by a single evolution run.
  */
-function createEvolutionSettings(dimension: number) {
+const createEvolutionSettings = (dimension: number) => {
   return {
     agentMaxSteps: AGENT_MAX_STEPS,
     popSize: POPULATION_SIZE,
@@ -49,7 +112,7 @@ function createEvolutionSettings(dimension: number) {
     lamarckianSampleSize: 12,
     mazeFactory: () => new MazeGenerator(dimension, dimension).generate(),
   } as const;
-}
+};
 
 /**
  * Lightweight telemetry hub using a Set + snapshot iteration (micro-optimized for small listener counts).
@@ -120,10 +183,10 @@ export interface AsciiMazeRunHandle {
  *               cooperatively cancel the curriculum. Calling `stop()` will also trigger an abort.
  * @returns A {@link AsciiMazeRunHandle} exposing lifecycle controls and telemetry hooks.
  */
-export async function start(
+export const start = async (
   container: string | HTMLElement = DEFAULT_CONTAINER_ID,
   opts: { signal?: AbortSignal } = {}
-): Promise<AsciiMazeRunHandle> {
+): Promise<AsciiMazeRunHandle> => {
   // Step 0: Resolve host elements & loggers
   const hostElement =
     typeof container === 'string'
@@ -147,13 +210,14 @@ export async function start(
   // DashboardManager will use live logger for ongoing redraws and archive logger to append solved blocks
   const dashboard = new DashboardManager(
     clearer,
-    liveLogger as any,
-    archiveLogger as any
+    (liveLogger as unknown) as (...args: unknown[]) => void,
+    (archiveLogger as unknown) as (...args: unknown[]) => void
   );
 
   // Telemetry hub mediating dashboard -> external listeners
   const telemetryHub = new TelemetryHub<Record<string, unknown>>();
-  (dashboard as any)._telemetryHook = (telemetry: Record<string, unknown>) =>
+  const runtimeDashboard = (dashboard as unknown) as RuntimeDashboard;
+  runtimeDashboard._telemetryHook = (telemetry: Record<string, unknown>) =>
     telemetryHub.dispatch(telemetry);
 
   // Responsive resize: re-render dashboard when host width changes significantly.
@@ -169,7 +233,7 @@ export async function start(
             // threshold to avoid noisy redraws
             lastObservedWidth = width;
             try {
-              (dashboard as any).redraw?.([], undefined);
+              runtimeDashboard.redraw?.([], undefined);
             } catch {
               // ignore redraw errors
             }
@@ -184,7 +248,7 @@ export async function start(
         if (typeof debounceTimer === 'number') clearTimeout(debounceTimer);
         debounceTimer = window.setTimeout(() => {
           try {
-            (dashboard as any).redraw?.([], undefined);
+            runtimeDashboard.redraw?.([], undefined);
           } catch {
             // ignore
           }
@@ -223,9 +287,7 @@ export async function start(
     if (!externalSignalParam) return internalController.signal;
 
     // Convert to descriptive locals for clarity
-    const externalSignal = externalSignalParam as AbortSignal & {
-      aborted?: boolean;
-    };
+    const externalSignal = externalSignalParam as RuntimeAbortSignal;
     const internalSignal = internalController.signal;
 
     // Use a switch-style flow to replace chained else-if logic and keep branches explicit.
@@ -233,15 +295,18 @@ export async function start(
     // satisfies the requirement to use switch/case rather than else-if chains.
     switch (true) {
       // Case: external already aborted -> return it immediately (race fast-path)
-      case !!(externalSignal as any).aborted: {
-        return externalSignal;
+      case !!externalSignal.aborted: {
+        return (externalSignal as unknown) as AbortSignal;
       }
 
       // Case: environment supports AbortSignal.any (modern browsers / Node 20+)
-      case typeof (AbortSignal as any).any === 'function': {
+      case typeof ((AbortSignal as unknown) as RuntimeAbortSignalConstructor)
+        .any === 'function': {
         try {
           // Prefer native composition when available for clarity & performance.
-          return (AbortSignal as any).any([externalSignal, internalSignal]);
+          const composedSignal = ((AbortSignal as unknown) as RuntimeAbortSignalConstructor)
+            .any!([(externalSignal as unknown) as AbortSignal, internalSignal]);
+          return composedSignal;
         } catch {
           // If native composition throws, intentionally fall through to manual
           // wiring below so listeners are still attached.
@@ -271,9 +336,8 @@ export async function start(
 
         // Step: defensive fallback - attempt to set `onabort` if supported.
         try {
-          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-          // @ts-ignore - defensive set for environments lacking addEventListener
-          (externalSignal as any).onabort = () => {
+          // Runtime assignment for environments lacking addEventListener
+          externalSignal.onabort = () => {
             try {
               internalController.abort();
             } catch {
@@ -289,7 +353,7 @@ export async function start(
         // in some minimal runtimes, so guard defensively.
         try {
           queueMicrotask(() => {
-            if ((externalSignal as any).aborted) {
+            if (externalSignal.aborted) {
               try {
                 internalController.abort();
               } catch {
@@ -407,15 +471,16 @@ export async function start(
         cancellation: { isCancelled: () => cancelled },
         signal: combinedSignal,
       });
-      const progress = (result as any)?.bestResult?.progress;
+      const runtimeResult = (result as unknown) as RuntimeEvolutionResult;
+      const progress = runtimeResult.bestResult?.progress;
       // Capture & refine best network for seeding next curriculum phase (if any).
       try {
-        const bestNet = (result as any)?.bestNetwork as INetwork | undefined;
+        const bestNet = runtimeResult.bestNetwork;
         if (bestNet) {
           const refined = NetworkRefinement.refineWinnerWithBackprop(
-            bestNet as any
+            (bestNet as unknown) as Network
           );
-          previousBestNetwork = (refined as any) || bestNet;
+          previousBestNetwork = ((refined as unknown) as INetwork) || bestNet;
         }
       } catch {
         /* ignore refinement */
@@ -433,7 +498,7 @@ export async function start(
       } catch {
         /* ignore */
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error(
         'Error while running procedural maze',
         currentDimension,
@@ -471,27 +536,33 @@ export async function start(
     isRunning: () => running && !cancelled && !combinedSignal.aborted,
     done: Promise.resolve(donePromise).catch(() => {}) as Promise<void>,
     onTelemetry: (telemetryCallback) =>
-      telemetryHub.add(telemetryCallback as any),
-    getTelemetry: () => (dashboard as any).getLastTelemetry?.(),
+      telemetryHub.add(
+        (telemetryCallback as unknown) as (
+          payload: Record<string, unknown>
+        ) => void
+      ),
+    getTelemetry: () => runtimeDashboard.getLastTelemetry?.(),
   };
 
   // (Pause UI removed; external host can manage pause via a future API if needed.)
   return handle;
-}
+};
 
 // UMD-style compatibility + deprecated global.
 // If loaded directly (no module loader), expose window.asciiMaze.start() and legacy asciiMazeStart().
-declare const __webpack_require__: any; // silence TS if bundler injects
-if (typeof window !== 'undefined' && (window as any).document) {
-  const globalWindow: any = window as any;
+if (
+  typeof window !== 'undefined' &&
+  ((window as unknown) as RuntimeWindow).document
+) {
+  const globalWindow = (window as unknown) as RuntimeWindow;
   globalWindow.asciiMaze = globalWindow.asciiMaze || {};
   globalWindow.asciiMaze.start = start;
   if (!globalWindow.asciiMazeStart) {
-    globalWindow.asciiMazeStart = (containerElement?: any) => {
+    globalWindow.asciiMazeStart = (containerElement?: unknown) => {
       console.warn(
         '[asciiMaze] window.asciiMazeStart is deprecated; use import { start } ... or window.asciiMaze.start'
       );
-      return start(containerElement);
+      return start(containerElement as string | HTMLElement | undefined);
     };
   }
   // Guard against duplicate auto-start

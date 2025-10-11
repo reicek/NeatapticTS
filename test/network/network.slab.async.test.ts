@@ -8,22 +8,66 @@ import Node from '../../src/architecture/node';
 import { config } from '../../src/config';
 import { rebuildConnectionSlabAsync } from '../../src/architecture/network/network.slab';
 import { memoryStats } from '../../src/utils/memory';
+import type { SlabAllocStats } from '../../src/utils/memory';
 
-// Helper to fabricate large network with many connections (>100k) deterministically.
-function buildDenseNetwork(input: number, hidden: number, output: number) {
-  const net = new Network(input, output, { enforceAcyclic: true });
-  for (let h = 0; h < hidden; h++) {
-    const node = new Node('hidden');
-    (net as any).nodes.push(node);
-    for (let i = 0; i < input; i++)
-      (net as any).connect(net.nodes[i], node, Math.random() * 0.2 - 0.1);
-    for (let o = net.nodes.length - output; o < net.nodes.length; o++)
-      (net as any).connect(node, net.nodes[o], Math.random() * 0.2 - 0.1);
+type ConnectionSlabSnapshot = ReturnType<Network['getConnectionSlab']>;
+type PromiseThen = typeof Promise.prototype.then;
+
+const setTopologyDirty = (network: Network): void => {
+  Reflect.set(network, '_topoDirty', true);
+  Reflect.set(network, '_nodeIndexDirty', true);
+};
+
+const markSlabDirty = (network: Network): void => {
+  Reflect.set(network, '_slabDirty', true);
+};
+
+const getSlabVersion = (network: Network): number =>
+  (Reflect.get(network, '_slabVersion') as number | undefined) ?? 0;
+
+const rebuildConnectionSlabIfPresent = (network: Network): void => {
+  const rebound = Reflect.get(network, 'rebuildConnectionSlab') as
+    | ((force?: boolean) => void)
+    | undefined;
+  rebound?.call(network);
+};
+
+const getConnectionSlabSnapshot = (network: Network): ConnectionSlabSnapshot =>
+  network.getConnectionSlab() as ConnectionSlabSnapshot;
+
+const buildDenseNetwork = (
+  inputCount: number,
+  hiddenCount: number,
+  outputCount: number
+): Network => {
+  const network = new Network(inputCount, outputCount, {
+    enforceAcyclic: true,
+  });
+  for (let hiddenIndex = 0; hiddenIndex < hiddenCount; hiddenIndex += 1) {
+    const hiddenNode = new Node('hidden');
+    network.nodes.push(hiddenNode);
+    for (let inputIndex = 0; inputIndex < inputCount; inputIndex += 1) {
+      network.connect(
+        network.nodes[inputIndex],
+        hiddenNode,
+        Math.random() * 0.2 - 0.1
+      );
+    }
+    for (
+      let outputIndex = network.nodes.length - outputCount;
+      outputIndex < network.nodes.length;
+      outputIndex += 1
+    ) {
+      network.connect(
+        hiddenNode,
+        network.nodes[outputIndex],
+        Math.random() * 0.2 - 0.1
+      );
+    }
   }
-  (net as any)._topoDirty = true;
-  (net as any)._nodeIndexDirty = true;
-  return net;
-}
+  setTopologyDirty(network);
+  return network;
+};
 
 describe('network.slab.async', () => {
   it('async rebuild yields and matches sync slab (version, capacity, flags, gain) with minimal alloc stat bump', async () => {
@@ -37,43 +81,71 @@ describe('network.slab.async', () => {
     config.enableSlabArrayPooling = true; // exercise pooling accounting
     const targetConnections = 110_000; // force multiple chunks with default 50k
     // Heuristic hidden count to exceed target connections: each hidden adds input + output edges
-    const net = buildDenseNetwork(20, 1500, 5); // ~ (20+5)*1500 = 37,500 + baseline input-output; may adjust
+    const net = buildDenseNetwork(20, 1_500, 5); // ~ (20+5)*1500 = 37,500 + baseline input-output; may adjust
     // If still under threshold, add more hidden nodes
-    let guard = 0;
-    while (net.connections.length < targetConnections && guard < 2000) {
+    let hiddenExpansionGuard = 0;
+    while (
+      net.connections.length < targetConnections &&
+      hiddenExpansionGuard < 2_000
+    ) {
       const node = new Node('hidden');
-      (net as any).nodes.push(node);
-      for (let i = 0; i < 20; i++)
-        (net as any).connect(net.nodes[i], node, 0.05);
-      for (let o = net.nodes.length - 5; o < net.nodes.length; o++)
-        (net as any).connect(node, net.nodes[o], 0.05);
-      guard++;
+      net.nodes.push(node);
+      for (let inputIndex = 0; inputIndex < 20; inputIndex += 1) {
+        net.connect(net.nodes[inputIndex], node, 0.05);
+      }
+      for (
+        let outputIndex = net.nodes.length - 5;
+        outputIndex < net.nodes.length;
+        outputIndex += 1
+      ) {
+        net.connect(node, net.nodes[outputIndex], 0.05);
+      }
+      hiddenExpansionGuard += 1;
     }
-    (net as any)._topoDirty = true;
-    (net as any)._nodeIndexDirty = true;
-    (net as any)._slabDirty = true;
-    const statsBefore = memoryStats(net).flags.snapshot.allocStats;
-    const versionBefore = (net as any)._slabVersion || 0;
+    setTopologyDirty(net);
+    markSlabDirty(net);
+    const statsBefore = memoryStats(net).flags.snapshot
+      .allocStats as SlabAllocStats;
+    if (!statsBefore) throw new Error('statsBefore is null');
+    const versionBefore = getSlabVersion(net);
 
     // Act: perform async rebuild with small chunkSize to force >1 yield
-    const cs = 10_000; // ensure multiple slices
+    const chunkSize = 10_000; // ensure multiple slices
     let microtaskYields = 0;
-    const origThen = Promise.prototype.then;
-    // Monkey patch then to count yields (lightweight)
-    (Promise.prototype as any).then = function (...args: any[]) {
-      microtaskYields++;
-      return origThen.apply(this, args as any);
+    const originalThen: PromiseThen = Promise.prototype.then;
+    const patchedThen: PromiseThen = function patchedThen<TResult1, TResult2>(
+      this: Promise<unknown>,
+      onfulfilled?:
+        | ((value: unknown) => TResult1 | PromiseLike<TResult1>)
+        | null,
+      onrejected?:
+        | ((reason: unknown) => TResult2 | PromiseLike<TResult2>)
+        | null
+    ): Promise<TResult1 | TResult2> {
+      microtaskYields += 1;
+      return originalThen.call(this, onfulfilled, onrejected) as Promise<
+        TResult1 | TResult2
+      >;
     };
-    await rebuildConnectionSlabAsync.call(net, cs);
-    (Promise.prototype as any).then = origThen; // restore
+    Promise.prototype.then = patchedThen;
+    await rebuildConnectionSlabAsync.call(net, chunkSize);
+    Promise.prototype.then = originalThen;
 
-    const slabAsync = (net as any).getConnectionSlab();
-    const statsAfter = memoryStats(net).flags.snapshot.allocStats;
+    const slabAsync = getConnectionSlabSnapshot(net);
+    if (!slabAsync.gain || !slabAsync.flags) {
+      throw new Error('Connection slab should expose gain and flag arrays');
+    }
+    const statsAfter = memoryStats(net).flags.snapshot
+      .allocStats as SlabAllocStats;
+    if (!statsAfter) throw new Error('statsAfter is null');
 
     // Force a sync rebuild after a dummy structural no-op to compare parity
-    (net as any)._slabDirty = true;
-    (net as any).rebuildConnectionSlab?.(); // if exposed
-    const slabSync = (net as any).getConnectionSlab();
+    markSlabDirty(net);
+    rebuildConnectionSlabIfPresent(net);
+    const slabSync = getConnectionSlabSnapshot(net);
+    if (!slabSync.gain || !slabSync.flags) {
+      throw new Error('Reference slab should expose gain and flag arrays');
+    }
 
     // Assert: single expectation bundling invariants
     expect(

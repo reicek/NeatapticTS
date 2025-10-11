@@ -68,6 +68,10 @@ export interface OptimizerConfigBase {
   la_alpha?: number; // lookahead interpolation factor
 }
 
+/** Serialized network structure (used in checkpoint callbacks). */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Serialized network type defined in network.serialize.ts; using flexible type to avoid circular dependency
+export type SerializedNetwork = Record<string, any>;
+
 /** Checkpoint callback spec. */
 export interface CheckpointConfig {
   /** Save final state each iteration. */
@@ -79,7 +83,7 @@ export interface CheckpointConfig {
     type: 'last' | 'best';
     iteration: number;
     error: number;
-    network: any;
+    network: SerializedNetwork;
   }) => void;
 }
 
@@ -175,6 +179,111 @@ interface PlateauSmoothingConfig {
 }
 
 /**
+ * Runtime interface for accessing Connection internal properties during training.
+ */
+interface ConnectionInternals {
+  totalDeltaWeight: number;
+  previousDeltaWeight: number;
+  weight: number;
+  from: unknown;
+  to: unknown;
+  gater: unknown | null;
+  _fp32Weight?: number;
+}
+
+/**
+ * Runtime interface for accessing Node internal properties during training.
+ */
+interface NodeInternals {
+  connections: {
+    in: ConnectionInternals[];
+    out: ConnectionInternals[];
+    self: ConnectionInternals[];
+    gated: ConnectionInternals[];
+  };
+  _fp32Bias?: number;
+  bias: number;
+  totalDeltaBias: number;
+  previousDeltaBias: number;
+  type: string;
+  applyBatchUpdatesWithOptimizer: (config: {
+    type: string;
+    baseType?: string;
+    beta1?: number;
+    beta2?: number;
+    eps?: number;
+    weightDecay?: number;
+    momentum?: number;
+    lrScale: number;
+    t: number;
+    la_k?: number;
+    la_alpha?: number;
+  }) => void;
+  propagate: (
+    rate: number,
+    momentum: number,
+    update: boolean,
+    regularization: RegularizationConfig,
+    target?: number
+  ) => void;
+}
+
+/**
+ * Runtime interface for accessing Network internal properties during training.
+ */
+interface NetworkInternals {
+  nodes: NodeInternals[];
+  layers?: { nodes: NodeInternals[] }[];
+  _mixedPrecision: {
+    enabled: boolean;
+    lossScale: number;
+  };
+  _forceNextOverflow?: boolean;
+  _mixedPrecisionState: {
+    goodSteps: number;
+    badSteps: number;
+    minLossScale: number;
+    maxLossScale: number;
+    overflowCount?: number;
+    scaleUpEvents?: number;
+    scaleDownEvents?: number;
+  };
+  _mpIncreaseEvery?: number;
+  _optimizerStep: number;
+  _lastOverflowStep?: number;
+  _gradAccumMicroBatches: number;
+  _lastGradNorm: number | null;
+  _lastGradClipGroupCount?: number;
+  _globalEpoch?: number;
+  _checkpointBestError?: number;
+  _currentGradClip?: {
+    mode: 'norm' | 'percentile' | 'layerwiseNorm' | 'layerwisePercentile';
+    maxNorm?: number;
+    percentile?: number;
+  };
+  _accumulationReduction?: 'average' | 'sum';
+  _gradClipSeparateBias?: boolean;
+  activate: (input: number[], training?: boolean) => number[];
+  _maybePrune?: (epoch: number) => void;
+}
+
+/**
+ * Regularization configuration (used internally during training).
+ */
+interface RegularizationConfig {
+  l1?: number;
+  l2?: number;
+}
+
+/**
+ * Cost function or cost object interface.
+ */
+interface CostFunctionOrObject {
+  fn?: (target: number[], output: number[]) => number;
+  calculate?: (target: number[], output: number[]) => number;
+}
+
+/**
  * Compute the monitored (primary) smoothed error given recent raw errors.
  *
  * Behavior:
@@ -191,12 +300,12 @@ interface PlateauSmoothingConfig {
  *
  * Returns: Smoothed/monitored error metric (may equal trainError if no smoothing active).
  */
-function computeMonitoredError(
+const computeMonitoredError = (
   trainError: number,
   recentErrors: number[],
   cfg: MonitoredSmoothingConfig,
   state: PrimarySmoothingState
-): number {
+): number => {
   // Fast path: no smoothing window / algorithm requiring history.
   if (cfg.window <= 1 && cfg.type !== 'ema' && cfg.type !== 'adaptive-ema') {
     return trainError;
@@ -276,19 +385,19 @@ function computeMonitoredError(
   }
   // Default: arithmetic mean (SMA).
   return recentErrors.reduce((a, b) => a + b, 0) / recentErrors.length;
-}
+};
 
 /**
  * Compute plateau metric (may differ in strategy from primary monitored error).
  * Only algorithms actually supported for plateau in current pipeline are SMA, median and EMA.
  * Provided flexibility keeps room for extension; unsupported types silently fallback to mean.
  */
-function computePlateauMetric(
+const computePlateauMetric = (
   trainError: number,
   plateauErrors: number[],
   cfg: PlateauSmoothingConfig,
   state: PlateauSmoothingState
-): number {
+): number => {
   if (cfg.window <= 1 && cfg.type !== 'ema') return trainError;
   if (cfg.type === 'median') {
     const sorted = [...plateauErrors].sort((a, b) => a - b);
@@ -307,7 +416,7 @@ function computePlateauMetric(
   }
   // Fallback default mean.
   return plateauErrors.reduce((a, b) => a + b, 0) / plateauErrors.length;
-}
+};
 
 // Internal export bundle (test-only usage) to enable direct branch coverage of smoothing helpers.
 // Marked with double underscore to discourage production use.
@@ -320,7 +429,10 @@ export const __trainingInternals = {
  * Detect mixed precision overflow (NaN / Inf) in bias values if mixed precision enabled.
  * Side-effect: may clear internal trigger _forceNextOverflow.
  */
-function detectMixedPrecisionOverflow(net: Network, internalNet: any): boolean {
+const detectMixedPrecisionOverflow = (
+  net: Network,
+  internalNet: NetworkInternals
+): boolean => {
   if (!internalNet._mixedPrecision.enabled) return false;
   if (internalNet._forceNextOverflow) {
     internalNet._forceNextOverflow = false;
@@ -328,57 +440,64 @@ function detectMixedPrecisionOverflow(net: Network, internalNet: any): boolean {
   }
   let overflow = false;
   net.nodes.forEach((node) => {
-    if ((node as any)._fp32Bias !== undefined) {
-      if (!Number.isFinite((node as any).bias)) overflow = true;
+    const nodeInternal = (node as unknown) as NodeInternals;
+    if (nodeInternal._fp32Bias !== undefined) {
+      if (!Number.isFinite(nodeInternal.bias)) overflow = true;
     }
   });
   return overflow;
-}
+};
 
 /** Zero-out accumulated gradient buffers after an overflow to discard invalid updates. */
-function zeroAccumulatedGradients(net: Network) {
+const zeroAccumulatedGradients = (net: Network): void => {
   net.nodes.forEach((node) => {
-    (node as any).connections.in.forEach((c: any) => {
+    const nodeInternal = (node as unknown) as NodeInternals;
+    nodeInternal.connections.in.forEach((c) => {
       c.totalDeltaWeight = 0;
     });
-    (node as any).connections.self.forEach((c: any) => {
+    nodeInternal.connections.self.forEach((c) => {
       c.totalDeltaWeight = 0;
     });
-    if (typeof (node as any).totalDeltaBias === 'number')
-      (node as any).totalDeltaBias = 0;
-    (node as any).previousDeltaBias = 0;
+    if (typeof nodeInternal.totalDeltaBias === 'number')
+      nodeInternal.totalDeltaBias = 0;
+    nodeInternal.previousDeltaBias = 0;
   });
-}
+};
 
 /** Divide accumulated gradients by accumulationSteps (average reduction mode). */
-function averageAccumulatedGradients(net: Network, accumulationSteps: number) {
+const averageAccumulatedGradients = (
+  net: Network,
+  accumulationSteps: number
+): void => {
   if (accumulationSteps <= 1) return;
   net.nodes.forEach((node) => {
-    (node as any).connections.in.forEach((c: any) => {
+    const nodeInternal = (node as unknown) as NodeInternals;
+    nodeInternal.connections.in.forEach((c) => {
       if (typeof c.totalDeltaWeight === 'number')
         c.totalDeltaWeight /= accumulationSteps;
     });
-    (node as any).connections.self.forEach((c: any) => {
+    nodeInternal.connections.self.forEach((c) => {
       if (typeof c.totalDeltaWeight === 'number')
         c.totalDeltaWeight /= accumulationSteps;
     });
-    if (typeof (node as any).totalDeltaBias === 'number')
-      (node as any).totalDeltaBias /= accumulationSteps;
+    if (typeof nodeInternal.totalDeltaBias === 'number')
+      nodeInternal.totalDeltaBias /= accumulationSteps;
   });
-}
+};
 
 /** Apply optimizer update step across all nodes; returns gradient L2 norm (approx). */
-function applyOptimizerStep(
+const applyOptimizerStep = (
   net: Network,
-  optimizer: any,
+  optimizer: OptimizerConfigBase,
   currentRate: number,
   momentum: number,
-  internalNet: any
-): number {
+  internalNet: NetworkInternals
+): number => {
   let sumSq = 0;
   net.nodes.forEach((node) => {
     if (node.type === 'input') return;
-    (node as any).applyBatchUpdatesWithOptimizer({
+    const nodeInternal = (node as unknown) as NodeInternals;
+    nodeInternal.applyBatchUpdatesWithOptimizer({
       type: optimizer.type,
       baseType: optimizer.baseType,
       beta1: optimizer.beta1,
@@ -391,20 +510,20 @@ function applyOptimizerStep(
       la_k: optimizer.la_k,
       la_alpha: optimizer.la_alpha,
     });
-    (node as any).connections.in.forEach((c: any) => {
+    nodeInternal.connections.in.forEach((c) => {
       if (typeof c.previousDeltaWeight === 'number')
         sumSq += c.previousDeltaWeight * c.previousDeltaWeight;
     });
-    (node as any).connections.self.forEach((c: any) => {
+    nodeInternal.connections.self.forEach((c) => {
       if (typeof c.previousDeltaWeight === 'number')
         sumSq += c.previousDeltaWeight * c.previousDeltaWeight;
     });
   });
   return Math.sqrt(sumSq);
-}
+};
 
 /** Update dynamic loss scaling after a successful (non-overflow) optimizer step. */
-function maybeIncreaseLossScale(internalNet: any) {
+const maybeIncreaseLossScale = (internalNet: NetworkInternals): void => {
   internalNet._mixedPrecisionState.goodSteps++;
   const incEvery = internalNet._mpIncreaseEvery || 200;
   if (
@@ -417,10 +536,10 @@ function maybeIncreaseLossScale(internalNet: any) {
     internalNet._mixedPrecisionState.scaleUpEvents =
       (internalNet._mixedPrecisionState.scaleUpEvents || 0) + 1;
   }
-}
+};
 
 /** Respond to a mixed precision overflow by shrinking loss scale & bookkeeping. */
-function handleOverflow(internalNet: any) {
+const handleOverflow = (internalNet: NetworkInternals): void => {
   internalNet._mixedPrecisionState.badSteps++;
   internalNet._mixedPrecisionState.goodSteps = 0;
   internalNet._mixedPrecision.lossScale = Math.max(
@@ -432,7 +551,7 @@ function handleOverflow(internalNet: any) {
   internalNet._mixedPrecisionState.scaleDownEvents =
     (internalNet._mixedPrecisionState.scaleDownEvents || 0) + 1;
   internalNet._lastOverflowStep = internalNet._optimizerStep;
-}
+};
 
 /**
  * Apply gradient clipping to accumulated connection deltas / bias deltas.
@@ -446,34 +565,38 @@ function handleOverflow(internalNet: any) {
  *  - Else if layerwise* -> each non-input node becomes its own group.
  *  - Otherwise a single global group containing all learnable params.
  */
-export function applyGradientClippingImpl(
+export const applyGradientClippingImpl = (
   net: Network,
   cfg: {
     mode: 'norm' | 'percentile' | 'layerwiseNorm' | 'layerwisePercentile';
     maxNorm?: number;
     percentile?: number;
   }
-) {
-  const internalNet = net as any;
+): void => {
+  const internalNet = (net as unknown) as NetworkInternals;
   /**
    * Build arrays of gradient values grouped according to chosen clipping mode.
    * Each group is later processed independently (layerwise modes) or as a single global set.
    */
-  const collectGroups = () => {
+  const collectGroups = (): number[][] => {
     const collected: number[][] = [];
     if (cfg.mode.startsWith('layerwise')) {
-      if ((net as any).layers && (net as any).layers.length > 0) {
-        for (let li = 0; li < (net as any).layers.length; li++) {
-          const layer = (net as any).layers[li];
+      if (internalNet.layers && internalNet.layers.length > 0) {
+        for (
+          let layerIndex = 0;
+          layerIndex < internalNet.layers.length;
+          layerIndex++
+        ) {
+          const layer = internalNet.layers[layerIndex];
           if (!layer || !layer.nodes) continue;
           const groupVals: number[] = [];
-          layer.nodes.forEach((node: any) => {
+          layer.nodes.forEach((node) => {
             if (!node || node.type === 'input') return;
-            node.connections.in.forEach((c: any) => {
+            node.connections.in.forEach((c) => {
               if (typeof c.totalDeltaWeight === 'number')
                 groupVals.push(c.totalDeltaWeight);
             });
-            node.connections.self.forEach((c: any) => {
+            node.connections.self.forEach((c) => {
               if (typeof c.totalDeltaWeight === 'number')
                 groupVals.push(c.totalDeltaWeight);
             });
@@ -486,32 +609,34 @@ export function applyGradientClippingImpl(
         net.nodes.forEach((node) => {
           if (node.type === 'input') return;
           const groupVals: number[] = [];
-          (node as any).connections.in.forEach((c: any) => {
+          const nodeInternal = (node as unknown) as NodeInternals;
+          nodeInternal.connections.in.forEach((c) => {
             if (typeof c.totalDeltaWeight === 'number')
               groupVals.push(c.totalDeltaWeight);
           });
-          (node as any).connections.self.forEach((c: any) => {
+          nodeInternal.connections.self.forEach((c) => {
             if (typeof c.totalDeltaWeight === 'number')
               groupVals.push(c.totalDeltaWeight);
           });
-          if (typeof (node as any).totalDeltaBias === 'number')
-            groupVals.push((node as any).totalDeltaBias);
+          if (typeof nodeInternal.totalDeltaBias === 'number')
+            groupVals.push(nodeInternal.totalDeltaBias);
           if (groupVals.length) collected.push(groupVals);
         });
       }
     } else {
       const globalVals: number[] = [];
       net.nodes.forEach((node) => {
-        (node as any).connections.in.forEach((c: any) => {
+        const nodeInternal = (node as unknown) as NodeInternals;
+        nodeInternal.connections.in.forEach((c) => {
           if (typeof c.totalDeltaWeight === 'number')
             globalVals.push(c.totalDeltaWeight);
         });
-        (node as any).connections.self.forEach((c: any) => {
+        nodeInternal.connections.self.forEach((c) => {
           if (typeof c.totalDeltaWeight === 'number')
             globalVals.push(c.totalDeltaWeight);
         });
-        if (typeof (node as any).totalDeltaBias === 'number')
-          globalVals.push((node as any).totalDeltaBias);
+        if (typeof nodeInternal.totalDeltaBias === 'number')
+          globalVals.push(nodeInternal.totalDeltaBias);
       });
       if (globalVals.length) collected.push(globalVals);
     }
@@ -547,24 +672,25 @@ export function applyGradientClippingImpl(
    */
   const applyScale = (
     scaleFn: (currentValue: number, owningGroup: number[]) => number
-  ) => {
+  ): void => {
     let groupIndex = 0; // advances only for layerwise modes
     net.nodes.forEach((node) => {
       if (cfg.mode.startsWith('layerwise') && node.type === 'input') return; // skip input nodes in layerwise grouping
       const activeGroup = cfg.mode.startsWith('layerwise')
         ? groups[groupIndex++]
         : groups[0];
-      (node as any).connections.in.forEach((c: any) => {
+      const nodeInternal = (node as unknown) as NodeInternals;
+      nodeInternal.connections.in.forEach((c) => {
         if (typeof c.totalDeltaWeight === 'number')
           c.totalDeltaWeight = scaleFn(c.totalDeltaWeight, activeGroup);
       });
-      (node as any).connections.self.forEach((c: any) => {
+      nodeInternal.connections.self.forEach((c) => {
         if (typeof c.totalDeltaWeight === 'number')
           c.totalDeltaWeight = scaleFn(c.totalDeltaWeight, activeGroup);
       });
-      if (typeof (node as any).totalDeltaBias === 'number')
-        (node as any).totalDeltaBias = scaleFn(
-          (node as any).totalDeltaBias,
+      if (typeof nodeInternal.totalDeltaBias === 'number')
+        nodeInternal.totalDeltaBias = scaleFn(
+          nodeInternal.totalDeltaBias,
           activeGroup
         );
     });
@@ -604,24 +730,24 @@ export function applyGradientClippingImpl(
       );
     });
   }
-}
+};
 
 /**
  * Execute one full pass over dataset (epoch) with optional accumulation & adaptive optimizer.
  * Returns mean cost across processed samples.
  */
-export function trainSetImpl(
+export const trainSetImpl = (
   net: Network,
   set: { input: number[]; output: number[] }[],
   batchSize: number,
   accumulationSteps: number,
   currentRate: number,
   momentum: number,
-  regularization: any,
-  costFunction: (target: number[], output: number[]) => number,
-  optimizer?: any
-): number {
-  const internalNet = net as any;
+  regularization: RegularizationConfig,
+  costFunction: CostFunction | CostFunctionOrObject,
+  optimizer?: OptimizerConfigBase
+): number => {
+  const internalNet = (net as unknown) as NetworkInternals;
   /** Sum of raw (unsmoothed) cost values across valid samples. */
   let cumulativeError = 0;
   /** Number of samples processed in current mini-batch (resets after potential optimizer step). */
@@ -634,18 +760,23 @@ export function trainSetImpl(
   const outputNodes = net.nodes.filter((n) => n.type === 'output');
   /** Unified cost evaluation function resolved from provided cost variant. */
   let computeError: (t: number[], o: number[]) => number;
-  if (typeof costFunction === 'function') computeError = costFunction as any;
-  else if (
-    (costFunction as any) &&
-    typeof (costFunction as any).fn === 'function'
-  )
-    computeError = (costFunction as any).fn;
-  else if (
-    (costFunction as any) &&
-    typeof (costFunction as any).calculate === 'function'
-  )
-    computeError = (costFunction as any).calculate;
-  else computeError = () => 0;
+  if (typeof costFunction === 'function') {
+    computeError = costFunction;
+  } else if (
+    typeof costFunction === 'object' &&
+    costFunction !== null &&
+    typeof (costFunction as CostFunctionOrObject).fn === 'function'
+  ) {
+    computeError = (costFunction as CostFunctionOrObject).fn!;
+  } else if (
+    typeof costFunction === 'object' &&
+    costFunction !== null &&
+    typeof (costFunction as CostFunctionOrObject).calculate === 'function'
+  ) {
+    computeError = (costFunction as CostFunctionOrObject).calculate!;
+  } else {
+    computeError = (): number => 0;
+  }
 
   for (let sampleIndex = 0; sampleIndex < set.length; sampleIndex++) {
     /** Current training sample record (input + target). */
@@ -663,17 +794,22 @@ export function trainSetImpl(
     }
     try {
       // Forward pass with training flag (enables dropout / any stochastic layers).
-      const output = (net as any).activate(input, true);
+      const networkInternal = (net as unknown) as NetworkInternals;
+      const output = networkInternal.activate(input, true);
       if (optimizer && optimizer.type && optimizer.type !== 'sgd') {
         // Accumulate gradients for adaptive optimizers (no immediate weight update inside propagate).
-        for (let outIndex = 0; outIndex < outputNodes.length; outIndex++)
-          (outputNodes[outIndex] as any).propagate(
+        for (let outIndex = 0; outIndex < outputNodes.length; outIndex++) {
+          const outputNodeInternal = (outputNodes[
+            outIndex
+          ] as unknown) as NodeInternals;
+          outputNodeInternal.propagate(
             currentRate,
             momentum,
             false,
             regularization,
             target[outIndex]
           );
+        }
         for (
           let reverseIndex = net.nodes.length - 1;
           reverseIndex >= 0;
@@ -681,18 +817,23 @@ export function trainSetImpl(
         ) {
           const node = net.nodes[reverseIndex];
           if (node.type === 'output' || node.type === 'input') continue;
-          (node as any).propagate(currentRate, momentum, false, regularization);
+          const nodeInternal = (node as unknown) as NodeInternals;
+          nodeInternal.propagate(currentRate, momentum, false, regularization);
         }
       } else {
         // SGD mode: propagate performs immediate parameter updates using deltas.
-        for (let outIndex = 0; outIndex < outputNodes.length; outIndex++)
-          (outputNodes[outIndex] as any).propagate(
+        for (let outIndex = 0; outIndex < outputNodes.length; outIndex++) {
+          const outputNodeInternal = (outputNodes[
+            outIndex
+          ] as unknown) as NodeInternals;
+          outputNodeInternal.propagate(
             currentRate,
             momentum,
             true,
             regularization,
             target[outIndex]
           );
+        }
         for (
           let reverseIndex = net.nodes.length - 1;
           reverseIndex >= 0;
@@ -700,19 +841,23 @@ export function trainSetImpl(
         ) {
           const node = net.nodes[reverseIndex];
           if (node.type === 'output' || node.type === 'input') continue;
-          (node as any).propagate(currentRate, momentum, true, regularization);
+          const nodeInternal = (node as unknown) as NodeInternals;
+          nodeInternal.propagate(currentRate, momentum, true, regularization);
         }
       }
       cumulativeError += computeError(target, output);
       batchSampleCount++;
       totalProcessedSamples++;
-    } catch (e: any) {
-      if (config.warnings)
+    } catch (error: unknown) {
+      if (config.warnings) {
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
         console.warn(
           `Error processing data point ${sampleIndex} (input: ${JSON.stringify(
             input
-          )}): ${e.message}. Skipping.`
+          )}): ${errorMessage}. Skipping.`
         );
+      }
     }
     // Mini-batch / end-of-dataset flush condition.
     if (
@@ -772,17 +917,17 @@ export function trainSetImpl(
   return totalProcessedSamples > 0
     ? cumulativeError / totalProcessedSamples
     : 0;
-}
+};
 
 /**
  * High-level training orchestration with early stopping, smoothing & callbacks.
  */
-export function trainImpl(
+export const trainImpl = (
   net: Network,
   set: { input: number[]; output: number[] }[],
   options: TrainingOptions
-): { error: number; iterations: number; time: number } {
-  const internalNet = net as any;
+): { error: number; iterations: number; time: number } => {
+  const internalNet = (net as unknown) as NetworkInternals;
   if (
     !set ||
     set.length === 0 ||
@@ -815,15 +960,16 @@ export function trainImpl(
       );
   }
   /** Target monitored (smoothed) error threshold for early termination. */
-  let targetError = options.error ?? -Infinity;
+  const targetError = options.error ?? -Infinity;
   /** Cost function (defaults to MSE) resolved from provided variant. */
   const cost = options.cost || methods.Cost.mse;
   if (
     typeof cost !== 'function' &&
     !(
       typeof cost === 'object' &&
-      (typeof (cost as any).fn === 'function' ||
-        typeof (cost as any).calculate === 'function')
+      cost !== null &&
+      (typeof (cost as CostFunctionOrObject).fn === 'function' ||
+        typeof (cost as CostFunctionOrObject).calculate === 'function')
     )
   ) {
     throw new Error('Invalid cost function provided to Network.train.');
@@ -852,14 +998,14 @@ export function trainImpl(
         mode: gc.mode,
         maxNorm: gc.maxNorm,
         percentile: gc.percentile,
-      } as any;
+      };
     else if (typeof gc.maxNorm === 'number')
       internalNet._currentGradClip = { mode: 'norm', maxNorm: gc.maxNorm };
     else if (typeof gc.percentile === 'number')
       internalNet._currentGradClip = {
         mode: 'percentile',
         percentile: gc.percentile,
-      } as any;
+      };
     internalNet._gradClipSeparateBias = !!gc.separateBias;
   } else {
     internalNet._currentGradClip = undefined;
@@ -878,10 +1024,14 @@ export function trainImpl(
     internalNet._mpIncreaseEvery =
       dyn.increaseEvery || dyn.stableStepsForIncrease || 200;
     net.connections.forEach((c) => {
-      (c as any)._fp32Weight = c.weight;
+      const connInternal = (c as unknown) as ConnectionInternals;
+      connInternal._fp32Weight = c.weight;
     });
     net.nodes.forEach((n) => {
-      if (n.type !== 'input') (n as any)._fp32Bias = n.bias;
+      if (n.type !== 'input') {
+        const nodeInternal = (n as unknown) as NodeInternals;
+        nodeInternal._fp32Bias = n.bias;
+      }
     });
   } else {
     internalNet._mixedPrecision.enabled = false;
@@ -904,7 +1054,7 @@ export function trainImpl(
     'lookahead',
   ]);
   /** Normalized optimizer configuration or undefined for pure SGD mode. */
-  let optimizerConfig: any = undefined;
+  let optimizerConfig: OptimizerConfigBase | undefined = undefined;
   if (typeof options.optimizer !== 'undefined') {
     if (typeof options.optimizer === 'string')
       optimizerConfig = { type: options.optimizer.toLowerCase() };
@@ -1055,8 +1205,8 @@ export function trainImpl(
     // Iteration prologue
     // -----------------------------
     // 'iter' is 1-based to align with common optimizer bias-correction formulae (Adam etc.).
-    if ((net as any)._maybePrune) {
-      (net as any)._maybePrune((internalNet._globalEpoch || 0) + iter);
+    if (internalNet._maybePrune) {
+      internalNet._maybePrune((internalNet._globalEpoch || 0) + iter);
     }
     // Run one epoch pass over dataset (mini-batching handled internally) and obtain raw mean error.
     const trainError = trainSetImpl(
@@ -1067,7 +1217,7 @@ export function trainImpl(
       baseRate,
       momentum,
       {},
-      cost as any,
+      cost as CostFunction | CostFunctionOrObject,
       optimizerConfig
     );
     // Record that this iteration was fully executed (used if we early break afterwards).
@@ -1202,7 +1352,9 @@ export function trainImpl(
           plateauError,
           gradNorm: internalNet._lastGradNorm ?? 0,
         });
-      } catch {}
+      } catch {
+        // Intentionally ignore errors from user-provided metrics hook
+      }
     }
     if (options.checkpoint && typeof options.checkpoint.save === 'function') {
       if (options.checkpoint.last) {
@@ -1214,15 +1366,17 @@ export function trainImpl(
             error: finalError,
             network: net.toJSON(),
           });
-        } catch {}
+        } catch {
+          // Intentionally ignore errors from user-provided checkpoint save callback
+        }
       }
       if (options.checkpoint.best) {
         if (
-          finalError < (net as any)._checkpointBestError ||
-          (net as any)._checkpointBestError == null
+          finalError < internalNet._checkpointBestError! ||
+          internalNet._checkpointBestError == null
         ) {
           // New best model discovered under monitored error metric.
-          (net as any)._checkpointBestError = finalError;
+          internalNet._checkpointBestError = finalError;
           try {
             options.checkpoint.save({
               type: 'best',
@@ -1230,7 +1384,9 @@ export function trainImpl(
               error: finalError,
               network: net.toJSON(),
             });
-          } catch {}
+          } catch {
+            // Intentionally ignore errors from user-provided checkpoint save callback
+          }
         }
       }
     }
@@ -1242,7 +1398,9 @@ export function trainImpl(
       try {
         // Periodic user-defined callback (e.g., adjust LR, print status, inject curriculum changes).
         options.schedule.function({ error: finalError, iteration: iter });
-      } catch {}
+      } catch {
+        // Intentionally ignore errors from user-provided schedule callback
+      }
     }
     // -----------------------------
     // Early stopping logic
@@ -1275,4 +1433,4 @@ export function trainImpl(
     /** Wall-clock training duration in milliseconds. */
     time: Date.now() - start,
   };
-}
+};

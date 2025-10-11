@@ -17,7 +17,7 @@ emphasis on efficient evaluation and mutation of neural networks in parallel env
 <li>`` - - The input value.</li>
 </ul>
 <p>Returns: The activated value.</p>
-<h4 id="activateserializednetwork">activateSerializedNetwork</h4><p><code>(input: number[], A: number[], S: number[], data: number[], F: Function[]) =&gt; number[]</code></p>
+<h4 id="activateserializednetwork">activateSerializedNetwork</h4><p><code>(input: number[], A: number[], S: number[], data: number[], F: import(&quot;D:/code-practice/NeatapticTS/src/multithreading/types&quot;).ActivationFn[]) =&gt; number[]</code></p>
 <p>Activates a serialized network.</p>
 <p>Parameters:</p>
 <ul>
@@ -50,7 +50,7 @@ emphasis on efficient evaluation and mutation of neural networks in parallel env
 <li>`` - - The input value.</li>
 </ul>
 <p>Returns: The activated value.</p>
-<h4 id="deserializedataset">deserializeDataSet</h4><p><code>(serializedSet: number[]) =&gt; { input: number[]; output: number[]; }[]</code></p>
+<h4 id="deserializedataset">deserializeDataSet</h4><p><code>(serializedSet: number[]) =&gt; import(&quot;D:/code-practice/NeatapticTS/src/multithreading/types&quot;).SerializedSample[]</code></p>
 <p>Deserializes a dataset from a flat array.</p>
 <p>Parameters:</p>
 <ul>
@@ -64,10 +64,10 @@ emphasis on efficient evaluation and mutation of neural networks in parallel env
 <li>`` - - The input value.</li>
 </ul>
 <p>Returns: The activated value.</p>
-<h4 id="getbrowsertestworker">getBrowserTestWorker</h4><p><code>() =&gt; Promise&lt;typeof import(&quot;D:/code-practice/NeatapticTS/src/multithreading/workers/browser/testworker&quot;).TestWorker&gt;</code></p>
+<h4 id="getbrowsertestworker">getBrowserTestWorker</h4><p><code>() =&gt; Promise&lt;import(&quot;D:/code-practice/NeatapticTS/src/multithreading/types&quot;).TestWorkerConstructor&gt;</code></p>
 <p>Gets the browser test worker.</p>
 <p>Returns: The browser test worker.</p>
-<h4 id="getnodetestworker">getNodeTestWorker</h4><p><code>() =&gt; Promise&lt;typeof import(&quot;D:/code-practice/NeatapticTS/src/multithreading/workers/node/testworker&quot;).TestWorker&gt;</code></p>
+<h4 id="getnodetestworker">getNodeTestWorker</h4><p><code>() =&gt; Promise&lt;import(&quot;D:/code-practice/NeatapticTS/src/multithreading/types&quot;).TestWorkerConstructor&gt;</code></p>
 <p>Gets the node test worker.</p>
 <p>Returns: The node test worker.</p>
 <h4 id="hardtanh">hardTanh</h4><p><code>(x: number) =&gt; number</code></p>
@@ -154,7 +154,7 @@ emphasis on efficient evaluation and mutation of neural networks in parallel env
 <li>`` - - The input value.</li>
 </ul>
 <p>Returns: The activated value.</p>
-<h4 id="testserializedset">testSerializedSet</h4><p><code>(set: { input: number[]; output: number[]; }[], cost: (expected: number[], actual: number[]) =&gt; number, A: number[], S: number[], data: number[], F: Function[]) =&gt; number</code></p>
+<h4 id="testserializedset">testSerializedSet</h4><p><code>(set: import(&quot;D:/code-practice/NeatapticTS/src/multithreading/types&quot;).SerializedSample[], cost: (expected: number[], actual: number[]) =&gt; number, A: number[], S: number[], data: number[], F: import(&quot;D:/code-practice/NeatapticTS/src/multithreading/types&quot;).ActivationFn[]) =&gt; number</code></p>
 <p>Tests a serialized dataset using a cost function.</p>
 <p>Parameters:</p>
 <ul>
@@ -167,4 +167,6 @@ emphasis on efficient evaluation and mutation of neural networks in parallel env
 </ul>
 <p>Returns: The average error.</p>
 <h4 id="workers">workers</h4><p>Workers for multi-threading</p>
-<footer class="site-footer">Generated from source JSDoc • <a href="https://github.com/reicek/NeatapticTS">GitHub</a></footer></main><aside class="toc"><div class="page-toc"><h2>Files</h2><div class="toc-file"><a href="#multithreading-multi-ts">multithreading/multi.ts</a><ul><li><a href=#multi>multi</a></li><li><a href=#multi>Multi</a></li><li><a href=#default>default</a></li></ul></div></div></aside></div></body></html>
+<h2 id="multithreading-types-ts">multithreading/types.ts</h2><h3 id="activationfn">ActivationFn</h3><p><code>(x: number) =&gt; number</code></p>
+<p>Shared types for multithreading helpers and test workers.</p>
+<h3 id="serializablenetwork">SerializableNetwork</h3><h3 id="serializedsample">SerializedSample</h3><h3 id="testworkerconstructor">TestWorkerConstructor</h3><h3 id="testworkerinstance">TestWorkerInstance</h3><footer class="site-footer">Generated from source JSDoc • <a href="https://github.com/reicek/NeatapticTS">GitHub</a></footer></main><aside class="toc"><div class="page-toc"><h2>Files</h2><div class="toc-file"><a href="#multithreading-multi-ts">multithreading/multi.ts</a><ul><li><a href=#multi>multi</a></li><li><a href=#multi>Multi</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#multithreading-types-ts">multithreading/types.ts</a><ul><li><a href=#activationfn>ActivationFn</a></li><li><a href=#serializablenetwork>SerializableNetwork</a></li><li><a href=#serializedsample>SerializedSample</a></li><li><a href=#testworkerconstructor>TestWorkerConstructor</a></li><li><a href=#testworkerinstance>TestWorkerInstance</a></li></ul></div></div></aside></div></body></html>

@@ -7,6 +7,7 @@ describe('Diversity metrics', () => {
       popsize: 25,
       seed: 77,
       speciation: true,
+      telemetry: { enabled: true },
       diversityMetrics: { enabled: true, pairSample: 30, graphletSample: 40 },
     });
     await neat.evaluate();

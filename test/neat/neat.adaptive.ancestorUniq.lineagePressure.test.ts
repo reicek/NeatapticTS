@@ -1,4 +1,5 @@
 import Neat from '../../src/neat';
+import type { NeatLikeWithAdaptive } from '../../src/neat/neat.adaptive';
 
 /** Tests ancestor uniqueness adaptive in lineagePressure mode (strength adjustments). */
 describe('Ancestor Uniqueness Adaptive (lineagePressure mode)', () => {
@@ -16,12 +17,15 @@ describe('Ancestor Uniqueness Adaptive (lineagePressure mode)', () => {
         cooldown: 0,
       },
     });
-    test('lineagePressure.strength increases', () => {
+    test('lineagePressure.strength increases', async () => {
       // Arrange: low ancestor uniqueness telemetry
-      (neat as any)._telemetry.push({ lineage: { ancestorUniq: 0.2 } });
-      require('../../src/neat/neat.adaptive').applyAncestorUniqAdaptive.call(
-        neat as any
+      ((neat as unknown) as {
+        _telemetry: Array<Record<string, unknown>>;
+      })._telemetry.push({ lineage: { ancestorUniq: 0.2 } });
+      const { applyAncestorUniqAdaptive } = await import(
+        '../../src/neat/neat.adaptive'
       );
+      applyAncestorUniqAdaptive.call((neat as unknown) as NeatLikeWithAdaptive);
       const strength = neat.options.lineagePressure.strength;
       // Assert: strength above default baseline 0.01
       expect(strength).toBeGreaterThan(0.01);
@@ -41,12 +45,15 @@ describe('Ancestor Uniqueness Adaptive (lineagePressure mode)', () => {
         cooldown: 0,
       },
     });
-    test('lineagePressure.strength decreases from initial', () => {
+    test('lineagePressure.strength decreases from initial', async () => {
       // Arrange: set initial strength then push high uniqueness
-      (neat as any)._telemetry.push({ lineage: { ancestorUniq: 0.95 } });
-      require('../../src/neat/neat.adaptive').applyAncestorUniqAdaptive.call(
-        neat as any
+      ((neat as unknown) as {
+        _telemetry: Array<Record<string, unknown>>;
+      })._telemetry.push({ lineage: { ancestorUniq: 0.95 } });
+      const { applyAncestorUniqAdaptive } = await import(
+        '../../src/neat/neat.adaptive'
       );
+      applyAncestorUniqAdaptive.call((neat as unknown) as NeatLikeWithAdaptive);
       const strength = neat.options.lineagePressure.strength;
       // Assert: strength not increased above starting 0.01 (may reduce or stay ~0.01)
       expect(strength).toBeLessThanOrEqual(0.01);

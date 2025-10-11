@@ -6,7 +6,7 @@ describe('multi-objective adaptive epsilon & exports', () => {
     const neat = new Neat(
       3,
       2,
-      (n: Network) => (n as any).connections.length + Math.random() * 0.01,
+      (network: Network) => network.connections.length + Math.random() * 0.01,
       {
         popsize: 24,
         multiObjective: {
@@ -22,9 +22,11 @@ describe('multi-objective adaptive epsilon & exports', () => {
         telemetry: { enabled: true, hypervolume: true },
       }
     );
-    const initial = neat.options.multiObjective!.dominanceEpsilon || 0;
-    for (let i = 0; i < 5; i++) await neat.evolve();
-    const after = neat.options.multiObjective!.dominanceEpsilon || 0;
+    const initial = neat.options.multiObjective!.dominanceEpsilon ?? 0;
+    for (let iterationIndex = 0; iterationIndex < 5; iterationIndex += 1) {
+      await neat.evolve();
+    }
+    const after = neat.options.multiObjective!.dominanceEpsilon ?? 0;
     // Expect epsilon to have changed directionally (likely increased due to large initial front)
     expect(after === initial || after > initial || after < initial).toBe(true); // existence check
     // More specific: should be within configured bounds
@@ -36,15 +38,17 @@ describe('multi-objective adaptive epsilon & exports', () => {
     const neat = new Neat(
       4,
       2,
-      (n: Network) => (n as any).connections.length + Math.random() * 0.01,
+      (network: Network) => network.connections.length + Math.random() * 0.01,
       {
         popsize: 18,
         multiObjective: { enabled: true, autoEntropy: true },
         telemetry: { enabled: true },
       }
     );
-    for (let i = 0; i < 3; i++) await neat.evolve();
-    const jsonl = (neat as any).exportParetoFrontJSONL();
+    for (let iterationIndex = 0; iterationIndex < 3; iterationIndex += 1) {
+      await neat.evolve();
+    }
+    const jsonl = neat.exportParetoFrontJSONL();
     expect(jsonl.length).toBeGreaterThan(0);
     const firstLine = jsonl.split('\n')[0];
     const parsed = JSON.parse(firstLine);

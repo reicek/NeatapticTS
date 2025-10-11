@@ -5,7 +5,7 @@ import Network from '../../src/architecture/network';
 describe('NEAT Objectives Management', () => {
   describe('default fitness objective presence', () => {
     /** Constant fitness for deterministic baseline. */
-    const fitness = (_: Network) => 1;
+    const fitness = () => 1;
     /** Instance without multi-objective overrides. */
     const neat = new Neat(2, 1, fitness, { popsize: 3, seed: 444 });
     test('includes built-in fitness objective key', () => {
@@ -24,12 +24,20 @@ describe('NEAT Objectives Management', () => {
       seed: 445,
       multiObjective: { enabled: true },
     });
+    const neatWithObjectives = (neat as unknown) as {
+      registerObjective: (
+        key: string,
+        direction: 'min' | 'max',
+        accessor: (network: Network) => number
+      ) => void;
+      clearObjectives: () => void;
+    };
     test('registerObjective adds new key', () => {
       // Arrange: register custom objective
-      (neat as any).registerObjective(
+      neatWithObjectives.registerObjective(
         'sparsity',
         'min',
-        (g: any) => g.connections.length
+        (network) => network.connections.length
       );
       // Act: retrieve keys including new objective
       const keys = neat.getObjectiveKeys();
@@ -38,12 +46,12 @@ describe('NEAT Objectives Management', () => {
     });
     test('clearObjectives removes custom objectives (keeps fitness)', () => {
       // Arrange: ensure a custom objective exists then clear
-      (neat as any).registerObjective(
+      neatWithObjectives.registerObjective(
         'temp',
         'max',
-        (g: any) => g.nodes.length
+        (network) => network.nodes.length
       );
-      (neat as any).clearObjectives();
+      neatWithObjectives.clearObjectives();
       // Act: get resulting keys
       const keys = neat.getObjectiveKeys();
       // Assert: only fitness remains

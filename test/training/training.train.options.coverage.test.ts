@@ -4,7 +4,7 @@ import Network from '../../src/architecture/network';
 // keeping one expectation per "it" as required.
 describe('Network.train with { crossValidate, shuffle, dropout, schedule, log, clear } options', () => {
   let net: Network;
-  let result: any;
+  let result: { error: number; iterations: number };
   let scheduleFn: jest.Mock;
   let hiddenMasksReset: boolean;
 

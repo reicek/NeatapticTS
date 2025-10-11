@@ -1,83 +1,105 @@
-/**
- * Multi-thread fitness builder branch tests:
- *  - Worker spawn failure (one worker succeeds, another fails)
- *  - Worker evaluate rejection path (caught and continues)
- */
 import Network from '../../src/architecture/network';
 import { evolveNetwork } from '../../src/architecture/network/network.evolve';
+import Multi from '../../src/multithreading/multi';
+import { Workers } from '../../src/multithreading/workers/workers';
+import type { TestWorker } from '../../src/multithreading/workers/node/testworker';
 
-// Craft a mock Multi.workers with custom Worker constructor exercising branches.
-const MultiMod = require('../../src/multithreading/multi').default;
+type TrainingSet = Parameters<typeof evolveNetwork>[0];
 
 describe('Network.evolveNetwork multi-thread branches', () => {
   describe('Scenario: partial worker spawn failures', () => {
     it('still evolves with reduced worker pool', async () => {
       // Arrange
-      const originalWorkers = MultiMod.workers;
+      const originalWorkers = Multi.workers;
       let spawnCount = 0;
-      MultiMod.workers = {
-        async getNodeTestWorker() {
-          return class TestWorker {
-            private set: any;
-            private meta: any;
-            constructor(setSerialized: any, meta: any) {
-              this.set = setSerialized;
-              this.meta = meta;
-              spawnCount++;
+      class SpawnFailureWorkers extends Workers {
+        static getNodeTestWorker(): Promise<typeof TestWorker> {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Mock class for testing
+          const MockTestWorker = (class MockTestWorker {
+            ['worker']: unknown; // Required property to match TestWorker interface
+            private readonly description: string;
+
+            constructor(dataSet: number[], cost: { name: string }) {
+              this['worker'] = null; // Mock worker property
+              this.description = `${cost.name}:${dataSet.length}`;
+              spawnCount += 1;
               if (spawnCount === 2) throw new Error('fail second');
             }
-            evaluate(genome: any) {
-              return Promise.resolve(0.123);
+
+            async evaluate(candidate: Network) {
+              return candidate.nodes.length >= 0 ? 0.123 : 0.123;
             }
+
             terminate() {
-              /* no-op */
+              void this.description;
             }
-          };
-        },
-      };
+          } as unknown) as typeof TestWorker;
+          return Promise.resolve(MockTestWorker);
+        }
+      }
+      Multi.workers = SpawnFailureWorkers;
       const net = new Network(1, 1, { seed: 70 });
-      const set = [{ input: [0.5], output: [0.6] }];
-      // Act
-      const res = await evolveNetwork.call(net, set as any, {
-        iterations: 1,
-        threads: 3,
-      });
-      MultiMod.workers = originalWorkers;
-      // Assert
-      expect(res.iterations).toBe(1);
+      const trainingSet: TrainingSet = [{ input: [0.5], output: [0.6] }];
+      try {
+        // Act
+        const result = await evolveNetwork.call(net, trainingSet, {
+          iterations: 1,
+          threads: 3,
+        });
+        // Assert
+        expect(result.iterations).toBe(1);
+      } finally {
+        Multi.workers = originalWorkers;
+      }
     });
   });
 
   describe('Scenario: worker evaluate rejection is caught and skipped', () => {
     it('continues draining queue after rejection', async () => {
       // Arrange
-      const originalWorkers = MultiMod.workers;
-      MultiMod.workers = {
-        async getNodeTestWorker() {
-          return class TestWorker {
-            private failOnce = true;
-            constructor(_: any, __: any) {}
-            evaluate(genome: any) {
-              if (this.failOnce) {
-                this.failOnce = false;
-                return Promise.reject(new Error('boom'));
-              }
-              return Promise.resolve(0.321);
+      const originalWorkers = Multi.workers;
+      class RejectionWorkers extends Workers {
+        static getNodeTestWorker(): Promise<typeof TestWorker> {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Mock class for testing
+          const MockTestWorker = (class MockTestWorker {
+            ['worker']: unknown; // Required property to match TestWorker interface
+            #failOnce = true;
+            private readonly description: string;
+
+            constructor(dataSet: number[], cost: { name: string }) {
+              this['worker'] = null; // Mock worker property
+              this.description = `${cost.name}:${dataSet.length}`;
             }
-            terminate() {}
-          };
-        },
-      };
+
+            async evaluate(candidate: Network) {
+              if (this.#failOnce) {
+                this.#failOnce = false;
+                throw new Error('boom');
+              }
+              return candidate.nodes.length >= 0 ? 0.321 : 0.321;
+            }
+
+            terminate() {
+              void this.description;
+            }
+          } as unknown) as typeof TestWorker;
+          return Promise.resolve(MockTestWorker);
+        }
+      }
+      Multi.workers = RejectionWorkers;
       const net = new Network(1, 1, { seed: 71 });
-      const set = [{ input: [0.2], output: [0.8] }];
-      // Act
-      const res = await evolveNetwork.call(net, set as any, {
-        iterations: 1,
-        threads: 2,
-      });
-      MultiMod.workers = originalWorkers;
-      // Assert
-      expect(res.iterations).toBe(1);
+      const trainingSet: TrainingSet = [{ input: [0.2], output: [0.8] }];
+      try {
+        // Act
+        const result = await evolveNetwork.call(net, trainingSet, {
+          iterations: 1,
+          threads: 2,
+        });
+        // Assert
+        expect(result.iterations).toBe(1);
+      } finally {
+        Multi.workers = originalWorkers;
+      }
     });
   });
 });

@@ -7,16 +7,30 @@ import {
   structuralEntropy as teleEntropy,
 } from '../../src/neat/neat.telemetry';
 
+type TelemetrySelectStub = Record<string, unknown> & {
+  generation: number;
+  _getRNG: () => () => number;
+  options: Record<string, unknown>;
+  _telemetrySelect?: Set<string>;
+};
+
+type GraphStub = {
+  nodes: Array<{ geneId: number }>;
+  connections: Array<{
+    from: { geneId: number };
+    to: { geneId: number };
+    enabled: boolean;
+  }>;
+  _entropyGen?: number;
+  _entropyVal?: number;
+};
+
 /** Minimal NeatLike stub implementing generation + RNG */
-function makeStub() {
-  /** internal state object acting as this */
-  const stub: any = {
-    generation: 0,
-    _getRNG: () => () => Math.random(),
-    options: {},
-  };
-  return stub;
-}
+const makeStub = (): TelemetrySelectStub => ({
+  generation: 0,
+  _getRNG: () => () => Math.random(),
+  options: {},
+});
 
 describe('Telemetry selection & entropy cache', () => {
   describe('applyTelemetrySelect filtering', () => {
@@ -26,7 +40,13 @@ describe('Telemetry selection & entropy cache', () => {
       /** keys to retain besides core */
       ctx._telemetrySelect = new Set(['keep']);
       /** raw telemetry entry containing extra keys */
-      const entry: any = { gen: 1, best: 0.5, species: 3, keep: 1, drop: 2 };
+      const entry: Record<string, unknown> = {
+        gen: 1,
+        best: 0.5,
+        species: 3,
+        keep: 1,
+        drop: 2,
+      };
       // Act
       applyTelemetrySelect.call(ctx, entry);
       // Assert
@@ -36,7 +56,12 @@ describe('Telemetry selection & entropy cache', () => {
       // Arrange
       const ctx = makeStub();
       /** entry with several keys */
-      const entry: any = { gen: 2, best: 1, species: 1, a: 1 };
+      const entry: Record<string, unknown> = {
+        gen: 2,
+        best: 1,
+        species: 1,
+        a: 1,
+      };
       // Act
       const out = applyTelemetrySelect.call(ctx, entry);
       // Assert
@@ -48,7 +73,7 @@ describe('Telemetry selection & entropy cache', () => {
       // Arrange
       const ctx = makeStub();
       /** simple graph with two nodes and one enabled connection */
-      const graph: any = {
+      const graph: GraphStub = {
         nodes: [{ geneId: 1 }, { geneId: 2 }],
         connections: [
           { from: { geneId: 1 }, to: { geneId: 2 }, enabled: true },

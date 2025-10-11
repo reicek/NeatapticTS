@@ -5,10 +5,13 @@ import { __trainingInternals } from '../../src/architecture/network/network.trai
  */
 
 describe('Network.training helper smoothing functions', () => {
-  const {
-    computeMonitoredError,
-    computePlateauMetric,
-  } = __trainingInternals as any;
+  const { computeMonitoredError, computePlateauMetric } = __trainingInternals;
+  const createPrimarySmoothingState = (): Parameters<
+    typeof computeMonitoredError
+  >[3] => ({});
+  const createPlateauSmoothingState = (): Parameters<
+    typeof computePlateauMetric
+  >[3] => ({});
 
   describe('Scenario: fast path returns trainError when window<=1 and non-EMA types', () => {
     it('returns raw error', () => {
@@ -46,7 +49,7 @@ describe('Network.training helper smoothing functions', () => {
   describe('Scenario: ema smoothing initializes state', () => {
     it('stores emaValue on first pass', () => {
       // Arrange
-      const state: any = {};
+      const state = createPrimarySmoothingState();
       // Act
       const out = computeMonitoredError(
         5,
@@ -62,7 +65,7 @@ describe('Network.training helper smoothing functions', () => {
   describe('Scenario: adaptive-ema dual path', () => {
     it('returns min of base and adaptive', () => {
       // Arrange
-      const state: any = {};
+      const state = createPrimarySmoothingState();
       const recent = [1, 2, 3, 4];
       // Act
       const out = computeMonitoredError(
@@ -159,7 +162,7 @@ describe('Network.training helper smoothing functions', () => {
   describe('Scenario: plateau ema path', () => {
     it('updates plateauEmaValue', () => {
       // Arrange
-      const state: any = {};
+      const state = createPlateauSmoothingState();
       // Act
       const out = computePlateauMetric(
         2,

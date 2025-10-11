@@ -33,7 +33,7 @@ Returns: The activated value.
 
 #### activateSerializedNetwork
 
-`(input: number[], A: number[], S: number[], data: number[], F: Function[]) => number[]`
+`(input: number[], A: number[], S: number[], data: number[], F: import("D:/code-practice/NeatapticTS/src/multithreading/types").ActivationFn[]) => number[]`
 
 Activates a serialized network.
 
@@ -85,7 +85,7 @@ Returns: The activated value.
 
 #### deserializeDataSet
 
-`(serializedSet: number[]) => { input: number[]; output: number[]; }[]`
+`(serializedSet: number[]) => import("D:/code-practice/NeatapticTS/src/multithreading/types").SerializedSample[]`
 
 Deserializes a dataset from a flat array.
 
@@ -107,7 +107,7 @@ Returns: The activated value.
 
 #### getBrowserTestWorker
 
-`() => Promise<typeof import("D:/code-practice/NeatapticTS/src/multithreading/workers/browser/testworker").TestWorker>`
+`() => Promise<import("D:/code-practice/NeatapticTS/src/multithreading/types").TestWorkerConstructor>`
 
 Gets the browser test worker.
 
@@ -115,7 +115,7 @@ Returns: The browser test worker.
 
 #### getNodeTestWorker
 
-`() => Promise<typeof import("D:/code-practice/NeatapticTS/src/multithreading/workers/node/testworker").TestWorker>`
+`() => Promise<import("D:/code-practice/NeatapticTS/src/multithreading/types").TestWorkerConstructor>`
 
 Gets the node test worker.
 
@@ -255,7 +255,7 @@ Returns: The activated value.
 
 #### testSerializedSet
 
-`(set: { input: number[]; output: number[]; }[], cost: (expected: number[], actual: number[]) => number, A: number[], S: number[], data: number[], F: Function[]) => number`
+`(set: import("D:/code-practice/NeatapticTS/src/multithreading/types").SerializedSample[], cost: (expected: number[], actual: number[]) => number, A: number[], S: number[], data: number[], F: import("D:/code-practice/NeatapticTS/src/multithreading/types").ActivationFn[]) => number`
 
 Tests a serialized dataset using a cost function.
 
@@ -272,3 +272,19 @@ Returns: The average error.
 #### workers
 
 Workers for multi-threading
+
+## multithreading/types.ts
+
+### ActivationFn
+
+`(x: number) => number`
+
+Shared types for multithreading helpers and test workers.
+
+### SerializableNetwork
+
+### SerializedSample
+
+### TestWorkerConstructor
+
+### TestWorkerInstance

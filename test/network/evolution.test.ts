@@ -1,22 +1,25 @@
 jest.setTimeout(10000);
 
-import { Architect } from '../../src/neataptic';
+import { Architect, Network } from '../../src/neataptic';
+
+type TrainingSet = Parameters<Network['evolve']>[0];
+type EvolutionSummary = Awaited<ReturnType<Network['evolve']>>;
 
 describe('Async Evolution', () => {
   describe('Scenario: valid dataset and reachable error', () => {
-    const dataset = [
+    const dataset: TrainingSet = [
       { input: [0, 0], output: [0] },
       { input: [0, 1], output: [1] },
       { input: [1, 0], output: [1] },
       { input: [1, 1], output: [0] },
     ];
-    let net: any;
+    let net: Network;
     beforeEach(() => {
       // Arrange
       net = Architect.perceptron(2, 4, 1);
     });
     describe('when evolving', () => {
-      let result: any;
+      let result: EvolutionSummary;
       beforeEach(async () => {
         // Act
         result = await net.evolve(dataset, {
@@ -120,19 +123,19 @@ describe('Async Evolution', () => {
   });
 
   describe('Scenario: only error stopping condition', () => {
-    const dataset = [
+    const dataset: TrainingSet = [
       { input: [0, 0], output: [0] },
       { input: [0, 1], output: [1] },
       { input: [1, 0], output: [1] },
       { input: [1, 1], output: [0] },
     ];
-    let net: any;
+    let net: Network;
     beforeEach(() => {
       // Arrange
       net = Architect.perceptron(2, 4, 1);
     });
     describe('when evolving with only error specified', () => {
-      let result: any;
+      let result: EvolutionSummary;
       beforeEach(async () => {
         // Act
         result = await net.evolve(dataset, {
@@ -189,7 +192,7 @@ describe('Async Evolution', () => {
   });
 
   describe('Advanced Evolution Scenarios', () => {
-    const dataset = [
+    const dataset: TrainingSet = [
       { input: [0, 0], output: [0] },
       { input: [0, 1], output: [1] },
       { input: [1, 0], output: [1] },
@@ -200,7 +203,7 @@ describe('Async Evolution', () => {
         // Arrange
         const net = Architect.perceptron(2, 4, 1);
         // Act
-        const result = await net.evolve(dataset, {
+        const result: EvolutionSummary = await net.evolve(dataset, {
           iterations: 2,
           error: 0.5,
           amount: 1,
@@ -217,7 +220,7 @@ describe('Async Evolution', () => {
         // Arrange
         const net = Architect.perceptron(2, 4, 1);
         // Act
-        const result = await net.evolve(dataset, {
+        const result: EvolutionSummary = await net.evolve(dataset, {
           iterations: 2,
           error: 0.5,
           amount: 1,
@@ -234,7 +237,7 @@ describe('Async Evolution', () => {
         // Arrange
         const net = Architect.perceptron(2, 4, 1);
         // Act
-        const result = await net.evolve(dataset, {
+        const result: EvolutionSummary = await net.evolve(dataset, {
           iterations: 2,
           error: 0.5,
           amount: 1,
@@ -251,7 +254,7 @@ describe('Async Evolution', () => {
         // Arrange
         const net = Architect.perceptron(2, 4, 1);
         // Act
-        const result = await net.evolve(dataset, {
+        const result: EvolutionSummary = await net.evolve(dataset, {
           iterations: 2,
           error: 0.5,
           amount: 1,
@@ -268,9 +271,9 @@ describe('Async Evolution', () => {
         // Arrange
         const net = Architect.perceptron(2, 4, 1);
         // Force empty population
-        (net as any).population = [];
+        Reflect.set(net, 'population', []);
         // Act
-        const result = await net.evolve(dataset, {
+        const result: EvolutionSummary = await net.evolve(dataset, {
           iterations: 2,
           error: 0.5,
           amount: 1,

@@ -34,10 +34,12 @@ const mockConsole = {
 /**
  * Check if console output should be allowed for the current file
  */
-export function shouldShowConsole(): boolean {
+export const shouldShowConsole = (): boolean => {
   if (process.env.JEST_VERBOSE === '1') return true;
 
-  const filesToShow = (global as any).__SHOW_CONSOLE_FOR__;
+  const filesToShow = ((globalThis as unknown) as {
+    __SHOW_CONSOLE_FOR__?: string;
+  }).__SHOW_CONSOLE_FOR__;
   if (!filesToShow) return false;
 
   const currentFile = expect.getState().testPath || '';
@@ -46,12 +48,12 @@ export function shouldShowConsole(): boolean {
     .some((filePattern: string) =>
       currentFile.toLowerCase().includes(filePattern.toLowerCase())
     );
-}
+};
 
 /**
  * Allow console output for the current test file
  */
-export function allowConsoleOutput(): boolean {
+export const allowConsoleOutput = (): boolean => {
   if (shouldShowConsole()) {
     // Restore original console methods
     console.log = originalConsole.log;
@@ -62,15 +64,15 @@ export function allowConsoleOutput(): boolean {
     return true;
   }
   return false;
-}
+};
 
 /**
  * Suppress console output
  */
-export function suppressConsoleOutput() {
+export const suppressConsoleOutput = (): void => {
   console.log = mockConsole.log;
   console.info = mockConsole.info;
   console.warn = mockConsole.warn;
   console.error = mockConsole.error;
   console.debug = mockConsole.debug;
-}
+};

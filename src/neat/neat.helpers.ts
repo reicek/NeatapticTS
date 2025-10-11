@@ -2,6 +2,54 @@ import type { NeatLike } from './neat.types';
 import Network from '../architecture/network';
 
 /**
+ * Genome with NEAT-specific metadata and methods.
+ */
+interface GenomeWithMetadata {
+  score?: number;
+  _reenableProb?: number;
+  _id?: number;
+  _parents?: number[];
+  _depth?: number;
+  clone?: () => GenomeWithMetadata;
+  toJSON?: () => Record<string, unknown>;
+  mutate?: (method: MutationMethod) => void;
+  [key: string]: unknown;
+}
+
+/**
+ * Mutation method with optional name.
+ */
+interface MutationMethod {
+  name?: string;
+  [key: string]: unknown;
+}
+
+/**
+ * NEAT controller interface for helper functions.
+ */
+interface NeatControllerForHelpers {
+  input: number;
+  output: number;
+  population: GenomeWithMetadata[];
+  options: {
+    reenableProb?: number;
+    popsize?: number;
+    minHidden?: number;
+    [key: string]: unknown;
+  };
+  _nextGenomeId: number;
+  _lineageEnabled?: boolean;
+  _getRNG: () => () => number;
+  ensureMinHiddenNodes?: (genome: GenomeWithMetadata) => void;
+  ensureNoDeadEnds?: (genome: GenomeWithMetadata) => void;
+  selectMutationMethod?: (
+    genome: GenomeWithMetadata,
+    sexual: boolean
+  ) => MutationMethod | MutationMethod[];
+  _invalidateGenomeCaches?: (genome: GenomeWithMetadata) => void;
+}
+
+/**
  * Helper utilities that augment the core NEAT (NeuroEvolution of Augmenting Topologies)
  * implementation. These functions are kept separate from the main class so they can
  * be tree‑shaken when unused and independently documented for educational purposes.
@@ -53,49 +101,55 @@ import Network from '../architecture/network';
  * neat.addGenome(child, [parent._id]);
  * ```
  */
-export function spawnFromParent(
+export async function spawnFromParent(
   this: NeatLike,
-  parentGenome: any,
+  parentGenome: GenomeWithMetadata,
   mutateCount: number = 1
-) {
+): Promise<GenomeWithMetadata> {
+  const internal = (this as unknown) as NeatControllerForHelpers;
+
   // Step 1: Deep clone the parent (prefer direct clone() for performance).
-  const clone = parentGenome.clone
-    ? parentGenome.clone()
-    : require('../architecture/network').default.fromJSON(
-        parentGenome.toJSON()
-      );
+  let clone: GenomeWithMetadata;
+  if (parentGenome.clone) {
+    clone = parentGenome.clone();
+  } else {
+    const { default: NetworkClass } = await import('../architecture/network');
+    clone = (NetworkClass.fromJSON(
+      parentGenome.toJSON?.() ?? {}
+    ) as unknown) as GenomeWithMetadata;
+  }
 
   // Step 2: Reset evaluation state for the fresh offspring.
   clone.score = undefined;
-  (clone as any)._reenableProb = (this as any).options.reenableProb;
-  (clone as any)._id = (this as any)._nextGenomeId++;
+  clone._reenableProb = internal.options.reenableProb;
+  clone._id = internal._nextGenomeId++;
 
   // Step 3: Record minimal lineage (single direct parent) and generation depth.
-  (clone as any)._parents = [(parentGenome as any)._id];
-  (clone as any)._depth = ((parentGenome as any)._depth ?? 0) + 1;
+  clone._parents = [parentGenome._id ?? 0];
+  clone._depth = (parentGenome._depth ?? 0) + 1;
 
   // Step 4: Enforce structural invariants (minimum hidden nodes, no dead ends).
-  (this as any).ensureMinHiddenNodes(clone);
-  (this as any).ensureNoDeadEnds(clone);
+  internal.ensureMinHiddenNodes?.(clone);
+  internal.ensureNoDeadEnds?.(clone);
 
   // Step 5: Apply the requested number of mutation passes.
   for (let mutationIndex = 0; mutationIndex < mutateCount; mutationIndex++) {
     try {
       // Select a mutation operator; may return a single method or an array of candidates.
-      let selectedMutationMethod = (this as any).selectMutationMethod(
+      let selectedMutationMethod = await internal.selectMutationMethod?.(
         clone,
         false
       );
       if (Array.isArray(selectedMutationMethod)) {
-        const candidateMutations = selectedMutationMethod as any[];
+        const candidateMutations = selectedMutationMethod;
         selectedMutationMethod =
           candidateMutations[
-            Math.floor((this as any)._getRNG()() * candidateMutations.length)
+            Math.floor(internal._getRNG()() * candidateMutations.length)
           ];
       }
       // Execute mutation if a valid operator with a name (convention) is present.
       if (selectedMutationMethod && selectedMutationMethod.name) {
-        clone.mutate(selectedMutationMethod);
+        clone.mutate?.(selectedMutationMethod);
       }
     } catch {
       // Intentionally ignore individual mutation failures to keep evolution moving.
@@ -103,7 +157,7 @@ export function spawnFromParent(
   }
 
   // Step 6: Invalidate any cached compatibility / distance metrics tied to the genome.
-  (this as any)._invalidateGenomeCaches(clone);
+  internal._invalidateGenomeCaches?.(clone);
   return clone;
 }
 
@@ -128,39 +182,43 @@ export function spawnFromParent(
  * neat.addGenome(imported, [parentA._id, parentB._id]);
  * ```
  */
-export function addGenome(this: NeatLike, genome: any, parents?: number[]) {
+export function addGenome(
+  this: NeatLike,
+  genome: GenomeWithMetadata,
+  parents?: number[]
+): void {
+  const internal = (this as unknown) as NeatControllerForHelpers;
+
   try {
     // Step 1: Reset score so future evaluations are not biased by stale values.
     genome.score = undefined;
-    (genome as any)._reenableProb = (this as any).options.reenableProb;
-    (genome as any)._id = (this as any)._nextGenomeId++;
+    genome._reenableProb = internal.options.reenableProb;
+    genome._id = internal._nextGenomeId++;
 
     // Step 2: Copy lineage from provided parent IDs (if any).
-    (genome as any)._parents = Array.isArray(parents) ? parents.slice() : [];
-    (genome as any)._depth = 0;
-    if ((genome as any)._parents.length) {
+    genome._parents = Array.isArray(parents) ? parents.slice() : [];
+    genome._depth = 0;
+    if (genome._parents.length) {
       // Compute depth = (max parent depth) + 1 for genealogical layering.
-      const parentDepths = (genome as any)._parents
+      const parentDepths = genome._parents
         .map((pid: number) =>
-          (this as any).population.find((g: any) => g._id === pid)
+          internal.population.find((g: GenomeWithMetadata) => g._id === pid)
         )
-        .filter(Boolean)
-        .map((g: any) => g._depth ?? 0);
-      (genome as any)._depth = parentDepths.length
-        ? Math.max(...parentDepths) + 1
-        : 1;
+        .filter((g): g is GenomeWithMetadata => g !== undefined)
+        .map((g) => g._depth ?? 0);
+      genome._depth = parentDepths.length ? Math.max(...parentDepths) + 1 : 1;
     }
 
     // Step 3: Ensure structural invariants.
-    (this as any).ensureMinHiddenNodes(genome);
-    (this as any).ensureNoDeadEnds(genome);
+    internal.ensureMinHiddenNodes?.(genome);
+    internal.ensureNoDeadEnds?.(genome);
 
     // Step 4: Invalidate caches & persist.
-    (this as any)._invalidateGenomeCaches(genome);
-    (this as any).population.push(genome);
-  } catch (error) {
+    internal._invalidateGenomeCaches?.(genome);
+    internal.population.push(genome);
+  } catch {
     // Fallback: still add genome so the evolutionary run can continue.
-    (this as any).population.push(genome);
+    internal.population.push(genome);
   }
 }
 
@@ -193,41 +251,48 @@ export function addGenome(this: NeatLike, genome: any, parents?: number[]) {
  * neat.createPool(seed);
  * ```
  */
-export function createPool(this: NeatLike, seedNetwork: any | null) {
+export function createPool(
+  this: NeatLike,
+  seedNetwork: GenomeWithMetadata | null
+): void {
+  const internal = (this as unknown) as NeatControllerForHelpers;
+
   try {
     // Step 1: Reset population container.
-    (this as any).population = [];
-    const poolSize = ((this as any).options?.popsize as number) || 50;
+    internal.population = [];
+    const poolSize = internal.options?.popsize ?? 50;
 
     // Step 2: Generate each initial genome.
     for (let genomeIndex = 0; genomeIndex < poolSize; genomeIndex++) {
       // Clone from seed OR build a fresh network.
       const genomeCopy = seedNetwork
-        ? Network.fromJSON(seedNetwork.toJSON())
-        : new Network((this as any).input, (this as any).output, {
-            minHidden: (this as any).options?.minHidden,
-          });
+        ? ((Network.fromJSON(
+            seedNetwork.toJSON?.() ?? {}
+          ) as unknown) as GenomeWithMetadata)
+        : ((new Network(internal.input, internal.output, {
+            minHidden: internal.options?.minHidden,
+          }) as unknown) as GenomeWithMetadata);
 
       // Step 2a: Ensure no stale scoring information.
       genomeCopy.score = undefined;
 
       // Step 2b: Attempt structural invariant enforcement (best effort).
       try {
-        (this as any).ensureNoDeadEnds(genomeCopy);
+        internal.ensureNoDeadEnds?.(genomeCopy);
       } catch {
         // Ignored; genome may still be viable or corrected by later mutations.
       }
 
       // Step 2c: Annotate runtime metadata.
-      (genomeCopy as any)._reenableProb = (this as any).options.reenableProb;
-      (genomeCopy as any)._id = (this as any)._nextGenomeId++;
-      if ((this as any)._lineageEnabled) {
-        (genomeCopy as any)._parents = [];
-        (genomeCopy as any)._depth = 0;
+      genomeCopy._reenableProb = internal.options.reenableProb;
+      genomeCopy._id = internal._nextGenomeId++;
+      if (internal._lineageEnabled) {
+        genomeCopy._parents = [];
+        genomeCopy._depth = 0;
       }
 
       // Step 2d: Insert into population.
-      (this as any).population.push(genomeCopy);
+      internal.population.push(genomeCopy);
     }
   } catch {
     // Swallow: partial population is acceptable; caller may decide to refill or continue.

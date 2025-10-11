@@ -24,6 +24,7 @@ export default class Rate {
    * @param iteration The current training iteration (unused in this method, but included for consistency).
    */
   static fixed(): (baseRate: number, iteration: number) => number {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const func = (baseRate: number, iteration: number): number => {
       return baseRate;
     };
@@ -223,6 +224,7 @@ export default class Rate {
       minDelta = 1e-4,
       cooldown = 0,
       minRate = 0,
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       verbose = false,
     } = options || {};
     let currentRate: number | undefined; // lazily initialize to baseRate first call

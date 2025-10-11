@@ -1,4 +1,124 @@
 import { EPSILON } from './neat.constants';
+
+/**
+ * Minimal interface for NEAT instances with adaptive features.
+ * Exported for use in tests and type-safe function calls.
+ */
+export interface NeatLikeWithAdaptive {
+  options: {
+    complexityBudget?: {
+      enabled?: boolean;
+      mode?: string;
+      improvementWindow?: number;
+      increaseFactor?: number;
+      stagnationFactor?: number;
+      maxNodesStart?: number;
+      maxNodesEnd?: number;
+      minNodes?: number;
+      maxConnsStart?: number;
+      maxConnsEnd?: number;
+      horizon?: number;
+    };
+    phasedComplexity?: {
+      enabled?: boolean;
+      phases?: Array<{
+        generation: number;
+        maxNodes?: number;
+        maxConns?: number;
+      }>;
+      phaseLength?: number;
+      initialPhase?: string;
+    };
+    minimalCriterion?: {
+      enabled?: boolean;
+      mode?: string;
+      targetComplexity?: number;
+      learningRate?: number;
+    };
+    minimalCriterionAdaptive?: {
+      enabled?: boolean;
+      initialThreshold?: number;
+      targetAcceptance?: number;
+      adjustRate?: number;
+    };
+    ancestorUniqueness?: {
+      enabled?: boolean;
+      targetRate?: number;
+      learningRate?: number;
+    };
+    ancestorUniqAdaptive?: {
+      enabled?: boolean;
+      cooldown?: number;
+      lowThreshold?: number;
+      highThreshold?: number;
+      adjust?: number;
+      mode?: string;
+    };
+    adaptiveMutation?: {
+      enabled?: boolean;
+      learningRate?: number;
+      min?: number;
+      max?: number;
+      adaptEvery?: number;
+      sigma?: number;
+      minRate?: number;
+      maxRate?: number;
+      strategy?: string;
+      adaptAmount?: boolean;
+      minAmount?: number;
+      maxAmount?: number;
+      initialRate?: number;
+      amountSigma?: number;
+    };
+    operatorAdaptation?: {
+      enabled?: boolean;
+      learningRate?: number;
+      alpha?: number;
+      decay?: number;
+    };
+    multiObjective?: {
+      adaptiveEpsilon?: {
+        enabled?: boolean;
+      };
+      dominanceEpsilon?: number;
+    };
+    lineagePressure?: {
+      enabled?: boolean;
+      mode?: string;
+      strength?: number;
+    };
+    maxNodes?: number;
+    maxConns?: number;
+    mutationRate?: number;
+    mutationAmount?: number;
+  };
+  population: Array<{
+    score?: number;
+    _mutRate?: number | null;
+    _mutAmount?: number | null;
+    [key: string]: unknown;
+  }>;
+  input: number;
+  output: number;
+  generation: number;
+  _cbHistory?: number[];
+  _cbMaxNodes?: number;
+  _cbMaxConns?: number;
+  _noveltyArchive?: unknown[];
+  _mcBaseline?: number;
+  _mcLevel?: number;
+  _lastInbreedingCount?: number;
+  _inbreedingPenalty?: number;
+  _mutationRateAdaptive?: number;
+  _operatorStats?: Map<string, { success: number; attempts: number }>;
+  _phase?: string;
+  _phaseStartGeneration?: number;
+  _mcThreshold?: number;
+  _lastAncestorUniqAdjustGen?: number;
+  _telemetry?: Array<{ lineage?: { ancestorUniq?: number } }>;
+  _getRNG?: () => () => number;
+}
+
 /**
  * Apply complexity budget scheduling to the evolving population.
  *
@@ -45,7 +165,7 @@ import { EPSILON } from './neat.constants';
  * an educational setting, this helps learners observe how stronger
  * selection pressure or novelty can influence allowed network size.
  */
-export function applyComplexityBudget(this: any) {
+export function applyComplexityBudget(this: NeatLikeWithAdaptive) {
   if (!this.options.complexityBudget?.enabled) return;
   /**
    * Complexity budget configuration object taken from `this.options`.
@@ -148,7 +268,7 @@ export function applyComplexityBudget(this: any) {
      * limited.
      */
     /** Soft multiplier reducing growth if the novelty archive is small. */
-    const noveltyFactor = this._noveltyArchive.length > 5 ? 1 : 0.9;
+    const noveltyFactor = (this._noveltyArchive?.length ?? 0) > 5 ? 1 : 0.9;
     // method step: expand or contract the node budget depending on trend
     if (improvement > 0 || slope > 0)
       this._cbMaxNodes = Math.min(
@@ -219,7 +339,7 @@ export function applyComplexityBudget(this: any) {
  * // Called once per generation to update the phase state
  * engine.applyPhasedComplexity();
  */
-export function applyPhasedComplexity(this: any) {
+export function applyPhasedComplexity(this: NeatLikeWithAdaptive) {
   if (!this.options.phasedComplexity?.enabled) return;
   /**
    * phaseLength: number — how many generations each phase ('complexify' or
@@ -234,7 +354,7 @@ export function applyPhasedComplexity(this: any) {
     this._phase = this.options.phasedComplexity.initialPhase ?? 'complexify';
     this._phaseStartGeneration = this.generation;
   }
-  if (this.generation - this._phaseStartGeneration >= len) {
+  if (this.generation - (this._phaseStartGeneration ?? 0) >= len) {
     // method step: toggle phase and reset start generation
     this._phase = this._phase === 'complexify' ? 'simplify' : 'complexify';
     this._phaseStartGeneration = this.generation;
@@ -269,7 +389,7 @@ export function applyPhasedComplexity(this: any) {
  * mass-rejection early in evolution. The multiplicative update keeps
  * changes smooth and conservative.
  */
-export function applyMinimalCriterionAdaptive(this: any) {
+export function applyMinimalCriterionAdaptive(this: NeatLikeWithAdaptive) {
   if (!this.options.minimalCriterionAdaptive?.enabled) return;
   /** Minimal criterion adaptive configuration attached to options. */
   const mcCfg = this.options.minimalCriterionAdaptive;
@@ -281,9 +401,10 @@ export function applyMinimalCriterionAdaptive(this: any) {
     this._mcThreshold = mcCfg.initialThreshold ?? 0;
   // method step: compute current acceptance proportion
   /** Population fitness scores snapshot used to compute acceptance proportion. */
-  const scores = this.population.map((g: any) => g.score || 0);
+  const scores = this.population.map((g) => g.score || 0);
   /** Count of genomes meeting or exceeding the current MC threshold. */
-  const accepted = scores.filter((s: number) => s >= this._mcThreshold).length;
+  const accepted = scores.filter((s: number) => s >= (this._mcThreshold ?? 0))
+    .length;
   /** Observed acceptance proportion in the current population. */
   const prop = scores.length ? accepted / scores.length : 0;
   /**
@@ -328,7 +449,7 @@ export function applyMinimalCriterionAdaptive(this: any) {
  * This method respects a `cooldown` so adjustments are not made every
  * generation. Values are adjusted multiplicatively for gentle change.
  */
-export function applyAncestorUniqAdaptive(this: any) {
+export const applyAncestorUniqAdaptive = function (this: NeatLikeWithAdaptive) {
   if (!this.options.ancestorUniqAdaptive?.enabled) return;
   /** Ancestor uniqueness adaptive configuration object from options. */
   const ancestorCfg = this.options.ancestorUniqAdaptive;
@@ -338,9 +459,10 @@ export function applyAncestorUniqAdaptive(this: any) {
    */
   /** Cooldown (in generations) between successive ancestor-uniqueness adjustments. */
   const cooldown = ancestorCfg.cooldown ?? 5;
-  if (this.generation - this._lastAncestorUniqAdjustGen < cooldown) return;
+  if (this.generation - (this._lastAncestorUniqAdjustGen ?? 0) < cooldown)
+    return;
   // method step: fetch latest lineage telemetry block and extract ancestor uniqueness
-  const lineageBlock = this._telemetry[this._telemetry.length - 1]?.lineage;
+  const lineageBlock = this._telemetry?.at(-1)?.lineage;
   const ancUniq = lineageBlock ? lineageBlock.ancestorUniq : undefined;
   if (typeof ancUniq !== 'number') return;
   /**
@@ -379,8 +501,8 @@ export function applyAncestorUniqAdaptive(this: any) {
         enabled: true,
         mode: 'spread',
         strength: 0.01,
-      } as any;
-    const lpRef = this.options.lineagePressure!;
+      };
+    const lpRef = this.options.lineagePressure;
     // method step: adjust lineage pressure strength to push populations
     // toward more spread (if ancUniq low) or less (if ancUniq high)
     if (ancUniq < lowT) {
@@ -392,7 +514,7 @@ export function applyAncestorUniqAdaptive(this: any) {
       this._lastAncestorUniqAdjustGen = this.generation;
     }
   }
-}
+};
 /**
  * Self-adaptive per-genome mutation tuning.
  *
@@ -422,7 +544,7 @@ export function applyAncestorUniqAdaptive(this: any) {
  * - Randomness is used to propose changes; seeding the RNG allows for
  *   reproducible experiments.
  */
-export function applyAdaptiveMutation(this: any) {
+export const applyAdaptiveMutation = function (this: NeatLikeWithAdaptive) {
   if (!this.options.adaptiveMutation?.enabled) return;
   const adaptCfg = this.options.adaptiveMutation;
   /**
@@ -431,10 +553,8 @@ export function applyAdaptiveMutation(this: any) {
    */
   const every = adaptCfg.adaptEvery ?? 1;
   if (!(every <= 1 || this.generation % every === 0)) return;
-  const scored = this.population.filter(
-    (g: any) => typeof g.score === 'number'
-  );
-  scored.sort((a: any, b: any) => (a.score || 0) - (b.score || 0));
+  const scored = this.population.filter((g) => typeof g.score === 'number');
+  scored.sort((a, b) => (a.score || 0) - (b.score || 0));
   // method step: partition scored genomes into top/bottom halves used by strategies
   const mid = Math.floor(scored.length / 2);
   const topHalf = scored.slice(mid);
@@ -449,13 +569,14 @@ export function applyAdaptiveMutation(this: any) {
   const strategy = adaptCfg.strategy || 'twoTier';
   let anyUp = false,
     anyDown = false;
+  const getRNG = this._getRNG ?? (() => Math.random);
   for (let index = 0; index < this.population.length; index++) {
     const genome = this.population[index];
-    if (genome._mutRate === undefined) continue;
+    if (genome._mutRate === undefined || genome._mutRate === null) continue;
     let rate = genome._mutRate;
     // method step: propose a signed delta from RNG and scale it. Values
     // are in [-1,1] then multiplied by sigmaBase to control magnitude.
-    let delta = this._getRNG()() * 2 - 1; // base unit in [-1,1]
+    let delta = getRNG()() * 2 - 1; // base unit in [-1,1]
     delta *= sigmaBase;
     if (strategy === 'twoTier') {
       if (topHalf.length === 0 || bottomHalf.length === 0)
@@ -486,7 +607,7 @@ export function applyAdaptiveMutation(this: any) {
       /** Scale used when perturbing per-genome discrete mutation amount. */
       const aSigma = adaptCfg.amountSigma ?? 0.25;
       // method step: propose and apply an amount delta if requested
-      let aDelta = (this._getRNG()() * 2 - 1) * aSigma;
+      let aDelta = (getRNG()() * 2 - 1) * aSigma;
       if (strategy === 'twoTier') {
         if (topHalf.length === 0 || bottomHalf.length === 0)
           aDelta = index % 2 === 0 ? Math.abs(aDelta) : -Math.abs(aDelta);
@@ -509,17 +630,16 @@ export function applyAdaptiveMutation(this: any) {
     }
   }
   if (strategy === 'twoTier' && !(anyUp && anyDown)) {
-    const baseline = this.options.adaptiveMutation!.initialRate ?? 0.5;
     const half = Math.floor(this.population.length / 2);
     for (let i = 0; i < this.population.length; i++) {
       const genome = this.population[i];
-      if (genome._mutRate === undefined) continue;
+      if (genome._mutRate === undefined || genome._mutRate === null) continue;
       // method step: fallback balancing to ensure some genomes go up and some down
       if (i < half) genome._mutRate = Math.min(genome._mutRate + sigmaBase, 1);
       else genome._mutRate = Math.max(genome._mutRate - sigmaBase, 0.01);
     }
   }
-}
+};
 /**
  * Decay operator adaptation statistics (success/attempt counters).
  *
@@ -538,13 +658,14 @@ export function applyAdaptiveMutation(this: any) {
  * @example
  * engine.applyOperatorAdaptation();
  */
-export function applyOperatorAdaptation(this: any) {
+export const applyOperatorAdaptation = function (this: NeatLikeWithAdaptive) {
   if (!this.options.operatorAdaptation?.enabled) return;
   const decay = this.options.operatorAdaptation.decay ?? 0.9;
   // method step: apply exponential decay to operator success/attempt tallies
+  if (!this._operatorStats) return;
   for (const [k, stat] of this._operatorStats.entries()) {
     stat.success *= decay;
     stat.attempts *= decay;
     this._operatorStats.set(k, stat);
   }
-}
+};

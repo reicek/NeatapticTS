@@ -13,6 +13,7 @@
 import { MazeUtils } from './mazeUtils';
 import { colors } from './colors';
 import { NetworkVisualization } from './networkVisualization';
+import type { IMazeRunResult, INetwork } from './interfaces';
 
 /**
  * MazeVisualization provides static methods for rendering mazes and agent progress.
@@ -41,7 +42,9 @@ export class MazeVisualization {
 
   /** Return the last element of an array or undefined when empty. */
   static #last<T>(arr?: readonly T[] | null): T | undefined {
-    return MazeUtils.safeLast(arr as any) as T | undefined;
+    if (!arr || arr.length === 0) return undefined;
+    if (typeof arr.at === 'function') return arr.at(-1);
+    return arr[arr.length - 1];
   }
 
   /** Convert a [x,y] pair to the canonical 'x,y' key. */
@@ -186,12 +189,12 @@ export class MazeVisualization {
    */
   static printMazeStats(
     currentBest: {
-      result: any;
-      network: any;
+      result: IMazeRunResult;
+      network: INetwork;
       generation: number;
     },
     maze: string[],
-    forceLog: (...args: any[]) => void
+    forceLog: (...args: unknown[]) => void
   ): void {
     // --- Step 0: unpack inputs and derive colors ---
     const { result, generation } = currentBest;

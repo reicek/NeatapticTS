@@ -1,4 +1,22 @@
 import type Network from '../network';
+import type Node from '../node';
+
+/**
+ * Internal Network properties accessed during standalone code generation.
+ */
+interface NetworkStandaloneProps {
+  nodes: Node[];
+  input: number;
+  output: number;
+  _activationPrecision?: 'f32' | 'f64';
+}
+
+/**
+ * Internal Node properties with assigned indices for code generation.
+ */
+interface NodeWithIndex extends Node {
+  index: number;
+}
 
 /**
  * Standalone forward pass code generator.
@@ -64,9 +82,13 @@ const stripCoverage = (code: string): string => {
  * @returns Source string (ES5-compatible) – safe to eval in sandbox to obtain activate function.
  * @throws If network lacks output nodes.
  */
-export function generateStandalone(net: Network): string {
+export const generateStandalone = (net: Network): string => {
   // 1. Structural validation: ensure at least one output node exists.
-  if (!(net as any).nodes.some((nodeRef: any) => nodeRef.type === 'output')) {
+  if (
+    !((net as unknown) as NetworkStandaloneProps).nodes.some(
+      (nodeRef) => nodeRef.type === 'output'
+    )
+  ) {
     throw new Error(
       'Cannot create standalone function: network has no output nodes.'
     );
@@ -115,23 +137,26 @@ export function generateStandalone(net: Network): string {
   };
 
   // 2. Assign stable indices & collect runtime state seeds.
-  (net as any).nodes.forEach((node: any, nodeIndex: number) => {
-    node.index = nodeIndex;
-    initialActivations.push(node.activation);
-    initialStates.push(node.state);
-  });
+  ((net as unknown) as NetworkStandaloneProps).nodes.forEach(
+    (node, nodeIndex: number) => {
+      (node as NodeWithIndex).index = nodeIndex;
+      initialActivations.push(node.activation);
+      initialStates.push(node.state);
+    }
+  );
 
   // 3. Emit input seeding loop (direct copy of provided input into A[0..inputSize-1]).
   bodyLines.push('for(var i = 0; i < input.length; i++) A[i] = input[i];');
   // 4. Build computational body for each non-input node.
   for (
-    let nodeIndex = (net as any).input;
-    nodeIndex < (net as any).nodes.length;
+    let nodeIndex = ((net as unknown) as NetworkStandaloneProps).input;
+    nodeIndex < ((net as unknown) as NetworkStandaloneProps).nodes.length;
     nodeIndex++
   ) {
-    const node: any = (net as any).nodes[nodeIndex];
-    const squashFn: any = node.squash;
-    const squashName = squashFn.name || `anonymous_squash_${nodeIndex}`;
+    const node = ((net as unknown) as NetworkStandaloneProps).nodes[nodeIndex];
+    const squashFn = node.squash;
+    const squashName =
+      (squashFn as { name?: string }).name || `anonymous_squash_${nodeIndex}`;
     // Activation function emission (deduplicate by name).
     if (!(squashName in emittedActivationSource)) {
       let functionSource: string;
@@ -203,12 +228,17 @@ export function generateStandalone(net: Network): string {
   // 5. Gather output indices (tail section of node array).
   const outputIndices: number[] = [];
   for (
-    let nodeIndex = (net as any).nodes.length - (net as any).output;
-    nodeIndex < (net as any).nodes.length;
+    let nodeIndex =
+      ((net as unknown) as NetworkStandaloneProps).nodes.length -
+      ((net as unknown) as NetworkStandaloneProps).output;
+    nodeIndex < ((net as unknown) as NetworkStandaloneProps).nodes.length;
     nodeIndex++
   ) {
-    if (typeof ((net as any).nodes[nodeIndex] as any)?.index !== 'undefined') {
-      outputIndices.push(((net as any).nodes[nodeIndex] as any).index);
+    const nodeWithIndex = ((net as unknown) as NetworkStandaloneProps).nodes[
+      nodeIndex
+    ] as NodeWithIndex;
+    if (typeof nodeWithIndex?.index !== 'undefined') {
+      outputIndices.push(nodeWithIndex.index);
     }
   }
   bodyLines.push(
@@ -220,7 +250,7 @@ export function generateStandalone(net: Network): string {
     .map(([name]) => name)
     .join(',');
   const activationArrayType =
-    (net as any)._activationPrecision === 'f32'
+    ((net as unknown) as NetworkStandaloneProps)._activationPrecision === 'f32'
       ? 'Float32Array'
       : 'Float64Array';
   let generatedSource = '';
@@ -235,12 +265,12 @@ export function generateStandalone(net: Network): string {
   )}]);\n`;
   generatedSource += `function activate(input){\n`;
   generatedSource += `if (!input || input.length !== ${
-    (net as any).input
+    ((net as unknown) as NetworkStandaloneProps).input
   }) { throw new Error('Invalid input size. Expected ${
-    (net as any).input
+    ((net as unknown) as NetworkStandaloneProps).input
   }, got ' + (input ? input.length : 'undefined')); }\n`;
   generatedSource += bodyLines.join('\n');
   generatedSource += `}\n`;
   generatedSource += `return activate;\n})();`;
   return generatedSource;
-}
+};

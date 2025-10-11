@@ -15,20 +15,51 @@ const CORE_MUTATIONS = [
   methods.mutation.ADD_GRU_NODE,
 ];
 
+type NeatapticNode = InstanceType<typeof Network>['nodes'][number];
+
+const computeLongestPathDepth = (
+  startNode: NeatapticNode | undefined,
+  targetNode: NeatapticNode | undefined,
+  visitedNodes: Set<NeatapticNode> = new Set()
+): number => {
+  if (!startNode || !targetNode) {
+    return 0;
+  }
+  if (startNode === targetNode) {
+    return 0;
+  }
+  visitedNodes.add(startNode);
+  let maxDepth = 0;
+  for (const connection of startNode.connections.out) {
+    const destination = connection.to as NeatapticNode;
+    if (visitedNodes.has(destination)) {
+      continue;
+    }
+    const candidateDepth =
+      1 + computeLongestPathDepth(destination, targetNode, visitedNodes);
+    if (candidateDepth > maxDepth) {
+      maxDepth = candidateDepth;
+    }
+  }
+  visitedNodes.delete(startNode);
+  return maxDepth;
+};
+
 describe('Mutation Effects', () => {
-  let originalWarn: any;
-  let originalLog: any;
+  let originalWarn: typeof console.warn;
+  let originalLog: typeof console.log;
 
   beforeEach(() => {
     // Arrange: Patch console.warn and console.log to suppress expected output
     originalWarn = console.warn;
     originalLog = console.log;
-    console.warn = jest.fn(); // Spy
-    console.log = jest.fn(); // Spy
+    console.warn = jest.fn(() => undefined);
+    console.log = jest.fn(() => undefined);
   });
 
   afterEach(() => {
     // Restore console methods
+    console.warn = originalWarn;
     console.log = originalLog;
   });
 
@@ -199,7 +230,7 @@ describe('Mutation Effects', () => {
       const net = new Network(2, 1);
       // Act & Assert
       expect(() => {
-        net.mutate({ name: 'NOT_A_REAL_MUTATION' } as any);
+        net.mutate(({ name: 'NOT_A_REAL_MUTATION' } as unknown) as never);
       }).not.toThrow();
     });
     it('warns but does not throw for empty mutation object', () => {
@@ -207,7 +238,7 @@ describe('Mutation Effects', () => {
       const net = new Network(2, 1);
       // Act & Assert
       expect(() => {
-        net.mutate({} as any);
+        net.mutate(({} as unknown) as never);
       }).not.toThrow();
     });
     it('throws error on null mutation method', () => {
@@ -215,7 +246,7 @@ describe('Mutation Effects', () => {
       const net = new Network(2, 1);
       // Act & Assert
       expect(() => {
-        net.mutate(null as any);
+        net.mutate((null as unknown) as never);
       }).toThrow('No (correct) mutate method given!');
     });
     describe('Scenario: mutation after serialization', () => {
@@ -278,19 +309,7 @@ describe('Mutation Effects', () => {
         // Find the longest path from input to output
         const input = net.nodes.find((n) => n.type === 'input');
         const output = net.nodes.find((n) => n.type === 'output');
-        function dfs(node: any, visited = new Set()): number {
-          if (node === output) return 0;
-          visited.add(node);
-          let maxDepth = 0;
-          for (const conn of node.connections.out) {
-            if (!visited.has(conn.to)) {
-              maxDepth = Math.max(maxDepth, 1 + dfs(conn.to, visited));
-            }
-          }
-          visited.delete(node);
-          return maxDepth;
-        }
-        const depth = dfs(input!);
+        const depth = computeLongestPathDepth(input, output);
         // Assert
         expect(depth).toBeGreaterThan(2);
       });
@@ -301,19 +320,7 @@ describe('Mutation Effects', () => {
         // No mutation
         const input = net.nodes.find((n) => n.type === 'input');
         const output = net.nodes.find((n) => n.type === 'output');
-        function dfs(node: any, visited = new Set()): number {
-          if (node === output) return 0;
-          visited.add(node);
-          let maxDepth = 0;
-          for (const conn of node.connections.out) {
-            if (!visited.has(conn.to)) {
-              maxDepth = Math.max(maxDepth, 1 + dfs(conn.to, visited));
-            }
-          }
-          visited.delete(node);
-          return maxDepth;
-        }
-        const depth = dfs(input!);
+        const depth = computeLongestPathDepth(input, output);
         // Assert
         expect(depth).toBe(1);
       });
@@ -442,51 +449,64 @@ describe('Helper: arraysClose', () => {
   });
 });
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
+
 // Helper for deep approximate equality with max delta logging
-function arraysClose(
-  a: any,
-  b: any,
+const arraysClose = (
+  a: unknown,
+  b: unknown,
   epsilon = 1e-5,
   logDelta = false
-): boolean {
+): boolean => {
   let maxDelta = 0;
-  function compare(x: any, y: any): boolean {
-    if (Array.isArray(x) && Array.isArray(y) && x.length === y.length) {
-      return x.every((v, i) => compare(v, y[i]));
+  const compare = (x: unknown, y: unknown): boolean => {
+    if (Array.isArray(x) && Array.isArray(y)) {
+      if (x.length !== y.length) {
+        return false;
+      }
+      return x.every((value, index) => compare(value, y[index]));
     }
     if (typeof x === 'number' && typeof y === 'number') {
       const delta = Math.abs(x - y);
-      if (delta > maxDelta) maxDelta = delta;
+      if (delta > maxDelta) {
+        maxDelta = delta;
+      }
       return delta < epsilon;
     }
-    if (x && y && typeof x === 'object' && typeof y === 'object') {
-      const xKeys = Object.keys(x);
-      const yKeys = Object.keys(y);
-      if (xKeys.length !== yKeys.length) return false;
-      // Sort keys to ensure order doesn't matter
-      xKeys.sort();
-      yKeys.sort();
-      for (let i = 0; i < xKeys.length; i++) {
-        if (xKeys[i] !== yKeys[i]) return false;
-        if (!compare(x[xKeys[i]], y[yKeys[i]])) return false;
+    if (isRecord(x) && isRecord(y)) {
+      const xKeys = Object.keys(x).toSorted();
+      const yKeys = Object.keys(y).toSorted();
+      if (xKeys.length !== yKeys.length) {
+        return false;
+      }
+      for (let index = 0; index < xKeys.length; index += 1) {
+        if (xKeys[index] !== yKeys[index]) {
+          return false;
+        }
+        if (!compare(x[xKeys[index]], y[yKeys[index]])) {
+          return false;
+        }
       }
       return true;
     }
     return x === y;
-  }
+  };
   const result = compare(a, b);
   if (!result && logDelta) {
-    // eslint-disable-next-line no-console
     console.log('Max delta:', maxDelta);
   }
   return result;
-}
+};
 
 // Local deterministic PRNG (do not patch Math.random)
-function seededRandom(seed: number) {
-  let s = seed;
-  return function () {
-    s = Math.imul(48271, s) | 0 % 2147483647;
-    return (s & 2147483647) / 2147483647;
+const seededRandom = (seed: number): (() => number) => {
+  let state = seed % 2_147_483_647;
+  if (state <= 0) {
+    state += 2_147_483_646;
+  }
+  return () => {
+    state = (Math.imul(48_271, state) + 0) % 2_147_483_647;
+    return state / 2_147_483_647;
   };
-}
+};

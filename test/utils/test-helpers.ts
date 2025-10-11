@@ -1,23 +1,24 @@
 import { Network, Architect } from '../../src/neataptic';
+import mutationMethods from '../../src/methods/mutation';
 
 /**
  * Creates a network with identical structure but different weight initialization
  */
-export function cloneNetworkStructure(network: Network): Network {
+export const cloneNetworkStructure = (network: Network): Network => {
   const inputs = network.nodes.filter((n) => n.type === 'input').length;
   const outputs = network.nodes.filter((n) => n.type === 'output').length;
   return new Network(inputs, outputs);
-}
+};
 
 /**
  * Creates networks with identical weights for comparing training methods
  */
-export function createIdenticalNetworks(
+export const createIdenticalNetworks = (
   count: number,
   inputs: number,
   hiddens: number,
   outputs: number
-): Network[] {
+): Network[] => {
   const networks: Network[] = [];
 
   // Create first network
@@ -41,15 +42,15 @@ export function createIdenticalNetworks(
   }
 
   return networks;
-}
+};
 
 /**
  * Creates a dataset for a specific problem
  */
-export function createDataset(
+export const createDataset = (
   type: 'XOR' | 'AND' | 'OR' | 'SIN',
   size: number = 4
-): { input: number[]; output: number[] }[] {
+): { input: number[]; output: number[] }[] => {
   switch (type) {
     case 'XOR':
       return [
@@ -72,7 +73,7 @@ export function createDataset(
         { input: [1, 0], output: [1] },
         { input: [1, 1], output: [1] },
       ];
-    case 'SIN':
+    case 'SIN': {
       const dataset: { input: number[]; output: number[] }[] = [];
       for (let i = 0; i < size; i++) {
         const x = Math.random() * Math.PI * 2;
@@ -82,13 +83,17 @@ export function createDataset(
         });
       }
       return dataset;
+    }
   }
-}
+};
 
 /**
  * Mock console.warn during a test and assert warning was called
  */
-export function expectWarning(fn: () => void, expectedWarning: string): void {
+export const expectWarning = (
+  fn: () => void,
+  expectedWarning: string
+): void => {
   const originalWarn = console.warn;
   const mockWarn = jest.fn();
   console.warn = mockWarn;
@@ -102,7 +107,7 @@ export function expectWarning(fn: () => void, expectedWarning: string): void {
   expect(mockWarn).toHaveBeenCalledWith(
     expect.stringContaining(expectedWarning)
   );
-}
+};
 
 /**
  * Creates deep networks for testing
@@ -113,11 +118,11 @@ export const createDeepNetworks = (): { original: Network; clone: Network } => {
   // Create a clone with additional structure
   const clone = new Network(original.input, original.output);
   // Use mutate to add a node instead of nonexistent addNode method
-  clone.mutate(require('../../src/methods/mutation').default.ADD_NODE);
+  clone.mutate(mutationMethods.ADD_NODE);
 
   // Add test properties - this should work due to global interface declaration
-  (original as any).testProp = 'original';
-  (clone as any).testProp = 'clone';
+  ((original as unknown) as { testProp?: string }).testProp = 'original';
+  ((clone as unknown) as { testProp?: string }).testProp = 'clone';
 
   return { original, clone };
 };

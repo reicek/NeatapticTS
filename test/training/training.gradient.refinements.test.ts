@@ -13,7 +13,9 @@ describe('training.gradient.refinements', () => {
       for (let i = 0; i < netAvg.connections.length; i++)
         netSum.connections[i].weight = netAvg.connections[i].weight;
       for (let n = 0; n < netAvg.nodes.length; n++)
-        (netSum.nodes[n] as any).bias = (netAvg.nodes[n] as any).bias;
+        (netSum.nodes[n] as { bias?: number }).bias = (netAvg.nodes[n] as {
+          bias?: number;
+        }).bias;
       netAvg.train(data, {
         iterations: 1,
         rate: 0.01,
@@ -54,7 +56,9 @@ describe('training.gradient.refinements', () => {
         batchSize: 3,
         gradientClip: { mode: 'norm', maxNorm: 0.05 },
       });
-      const stats: any = net.getTrainingStats?.();
+      const stats = net.getTrainingStats?.() as
+        | { lastGradNormRaw?: number; lastGradNorm?: number }
+        | undefined;
       statsDefined = !!stats;
       if (
         stats &&
@@ -84,7 +88,9 @@ describe('training.gradient.refinements', () => {
         batchSize: 1,
         gradientClip: { mode: 'norm', maxNorm: 0.1, layerwise: true },
       });
-      const stats: any = net.getTrainingStats?.();
+      const stats = net.getTrainingStats?.() as
+        | { layerwiseGroupCount?: number }
+        | undefined;
       groupCountValid =
         !!stats && typeof stats.layerwiseGroupCount === 'number'
           ? stats.layerwiseGroupCount > 0
@@ -110,7 +116,7 @@ describe('training.gradient.refinements', () => {
           scaleWindow: 1,
         },
       });
-      (net as any).testForceOverflow?.();
+      (net as { testForceOverflow?: () => void }).testForceOverflow?.();
       net.train(ds, {
         iterations: 1,
         batchSize: 1,
@@ -121,7 +127,7 @@ describe('training.gradient.refinements', () => {
           scaleWindow: 1,
         },
       });
-      const stats: any = net.getTrainingStats?.();
+      const stats = net.getTrainingStats?.() as { mp?: unknown } | undefined;
       mpTelemetryPresent = !!(stats && stats.mp);
     });
     it('mixed precision telemetry object present', () => {

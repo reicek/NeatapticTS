@@ -5,63 +5,73 @@
 import Network from '../../src/architecture/network';
 import { config } from '../../src/config';
 
+type ConnectionSlabSnapshot = ReturnType<Network['getConnectionSlab']>;
+
+const getConnectionSlabSnapshot = (network: Network): ConnectionSlabSnapshot =>
+  network.getConnectionSlab() as ConnectionSlabSnapshot;
+
+const markSlabDirty = (network: Network): void => {
+  Reflect.set(network, '_slabDirty', true);
+};
+
+const ensureDirectConnection = (network: Network): void => {
+  const inputNode = network.nodes[0];
+  const outputNode = network.nodes.at(-1);
+  if (!inputNode || !outputNode) {
+    throw new Error('Network must contain at least two nodes to connect.');
+  }
+  network.connect(inputNode, outputNode, 0.5);
+};
+
 describe('network.slab.capacity', () => {
   it('grows geometrically and reuses existing arrays when within capacity', () => {
     // Arrange
     config.enableNodePooling = false;
-    const net = new Network(2, 1, { enforceAcyclic: true });
-    const slab1 = (net as any).getConnectionSlab();
+    const networkUnderTest = new Network(2, 1, { enforceAcyclic: true });
+    const slab1 = getConnectionSlabSnapshot(networkUnderTest);
     const initialCapacity = slab1.capacity;
     const initialVersion = slab1.version;
     // Act: add nodes between repeatedly to increase connection count but stay under geometric capacity threshold
-    let iterations = 0;
+    let reuseIterations = 0;
     while (
-      (net as any).connections.length + 2 < initialCapacity &&
-      iterations < 8 &&
-      (net as any).connections.length < 200 // absolute guard
+      networkUnderTest.connections.length + 2 < initialCapacity &&
+      reuseIterations < 8 &&
+      networkUnderTest.connections.length < 200 // absolute guard
     ) {
-      const before = (net as any).connections.length;
-      net.addNodeBetween();
+      const previousConnectionCount = networkUnderTest.connections.length;
+      networkUnderTest.addNodeBetween();
       // Fallback: if no structural change occurred (e.g., no connections to split), force connect first input->output
-      if ((net as any).connections.length === before) {
-        (net as any).connect(
-          net.nodes[0],
-          net.nodes[net.nodes.length - 1],
-          0.5
-        );
+      if (networkUnderTest.connections.length === previousConnectionCount) {
+        ensureDirectConnection(networkUnderTest);
       }
-      (net as any)._slabDirty = true;
-      (net as any).getConnectionSlab(); // rebuild updates used count
-      iterations++;
+      markSlabDirty(networkUnderTest);
+      getConnectionSlabSnapshot(networkUnderTest); // rebuild updates used count
+      reuseIterations++;
     }
-    const slab2 = (net as any).getConnectionSlab();
+    const slab2 = getConnectionSlabSnapshot(networkUnderTest);
     // Force surpass capacity to trigger growth
-    let growIters = 0;
+    let growthIterations = 0;
     while (
-      (net as any).connections.length <= slab2.capacity &&
-      growIters < 50 &&
-      (net as any).connections.length < slab2.capacity + 64
+      networkUnderTest.connections.length <= slab2.capacity &&
+      growthIterations < 50 &&
+      networkUnderTest.connections.length < slab2.capacity + 64
     ) {
-      const before = (net as any).connections.length;
-      net.addNodeBetween();
-      if ((net as any).connections.length === before) {
-        (net as any).connect(
-          net.nodes[0],
-          net.nodes[net.nodes.length - 1],
-          0.5
-        );
+      const previousConnectionCount = networkUnderTest.connections.length;
+      networkUnderTest.addNodeBetween();
+      if (networkUnderTest.connections.length === previousConnectionCount) {
+        ensureDirectConnection(networkUnderTest);
       }
-      growIters++;
+      growthIterations++;
     }
     // If we failed to exceed capacity (e.g., mutation no-op), skip test early to avoid hang
-    if ((net as any).connections.length <= slab2.capacity) {
-      (net as any)._slabDirty = true;
-      (net as any).getConnectionSlab();
+    if (networkUnderTest.connections.length <= slab2.capacity) {
+      markSlabDirty(networkUnderTest);
+      getConnectionSlabSnapshot(networkUnderTest);
       expect(true).toBe(true);
       return;
     }
-    (net as any)._slabDirty = true;
-    const slab3 = (net as any).getConnectionSlab();
+    markSlabDirty(networkUnderTest);
+    const slab3 = getConnectionSlabSnapshot(networkUnderTest);
     // Assert: single expectation bundling invariants
     expect(
       initialCapacity >= slab1.used &&

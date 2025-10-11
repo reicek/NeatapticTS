@@ -6,12 +6,19 @@ import {
 } from '../../src/architecture/nodePool';
 import { config } from '../../src/config';
 
+/**
+ * Runtime interface for mutable config properties in tests.
+ */
+interface MutableConfig {
+  enableNodePooling: boolean;
+}
+
 describe('benchmark.nodePool.memory', () => {
   describe('pool stats & reset cleanliness', () => {
     it('should expose nodePool stats and return clean reset state after release', () => {
       // Arrange
       resetNodePool();
-      (config as any).enableNodePooling = true;
+      ((config as unknown) as MutableConfig).enableNodePooling = true;
       const n1 = acquireNode({ type: 'hidden', rng: () => 0.42 });
       n1.activation = 123;
       n1.state = 456;

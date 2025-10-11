@@ -1,4 +1,5 @@
 import Neat from '../../src/neat';
+import type { NeatLikeWithAdaptive } from '../../src/neat/neat.adaptive';
 
 /** Tests ancestor uniqueness adaptive epsilon adjustments (both directions). */
 describe('Ancestor Uniqueness Adaptive (epsilon mode)', () => {
@@ -20,12 +21,15 @@ describe('Ancestor Uniqueness Adaptive (epsilon mode)', () => {
         dominanceEpsilon: 0.1,
       },
     });
-    test('epsilon increases when below low threshold', () => {
+    test('epsilon increases when below low threshold', async () => {
       // Arrange: fake telemetry with low ancestor uniqueness
-      (neat as any)._telemetry.push({ lineage: { ancestorUniq: 0.1 } });
-      require('../../src/neat/neat.adaptive').applyAncestorUniqAdaptive.call(
-        neat as any
+      ((neat as unknown) as {
+        _telemetry: Array<Record<string, unknown>>;
+      })._telemetry.push({ lineage: { ancestorUniq: 0.1 } });
+      const { applyAncestorUniqAdaptive } = await import(
+        '../../src/neat/neat.adaptive'
       );
+      applyAncestorUniqAdaptive.call((neat as unknown) as NeatLikeWithAdaptive);
       // Act: capture epsilon
       const eps = neat.options.multiObjective.dominanceEpsilon;
       // Assert: epsilon moved upwards
@@ -50,12 +54,15 @@ describe('Ancestor Uniqueness Adaptive (epsilon mode)', () => {
         dominanceEpsilon: 0.2,
       },
     });
-    test('epsilon decreases when above high threshold', () => {
+    test('epsilon decreases when above high threshold', async () => {
       // Arrange: telemetry with high ancestor uniqueness
-      (neat as any)._telemetry.push({ lineage: { ancestorUniq: 0.9 } });
-      require('../../src/neat/neat.adaptive').applyAncestorUniqAdaptive.call(
-        neat as any
+      ((neat as unknown) as {
+        _telemetry: Array<Record<string, unknown>>;
+      })._telemetry.push({ lineage: { ancestorUniq: 0.9 } });
+      const { applyAncestorUniqAdaptive } = await import(
+        '../../src/neat/neat.adaptive'
       );
+      applyAncestorUniqAdaptive.call((neat as unknown) as NeatLikeWithAdaptive);
       // Act: capture epsilon
       const eps = neat.options.multiObjective.dominanceEpsilon;
       // Assert: epsilon decreased (clamped to non-negative)

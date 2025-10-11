@@ -17,9 +17,28 @@ interface VarianceEntry {
   fwdAvgMsCvPct: number;
 }
 
+/**
+ * Runtime interface for the benchmark results artifact.
+ */
+interface BenchmarkResultsArtifact {
+  meta?: {
+    varianceRepeatsLarge?: number;
+    [key: string]: unknown;
+  };
+  variance?: VarianceEntry[];
+  fieldAudit?: {
+    Connection?: {
+      count: number;
+      [key: string]: unknown;
+    };
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+}
+
 describe('phase1.variance artifact assertions', () => {
   const resultsPath = path.resolve(__dirname, 'benchmark.results.json');
-  let artifact: any;
+  let artifact: BenchmarkResultsArtifact;
   test('artifact present', () => {
     expect(fs.existsSync(resultsPath)).toBe(true);
     artifact = JSON.parse(fs.readFileSync(resultsPath, 'utf8'));
@@ -32,7 +51,9 @@ describe('phase1.variance artifact assertions', () => {
       return;
     }
     expect(Array.isArray(artifact.variance)).toBe(true);
-    const sizes = new Set(artifact.variance.map((v: VarianceEntry) => v.size));
+    const sizes = new Set(
+      artifact.variance?.map((v: VarianceEntry) => v.size) ?? []
+    );
     expect(sizes.has(100000)).toBe(true);
     expect(sizes.has(200000)).toBe(true);
   });
@@ -61,7 +82,7 @@ describe('phase1.variance artifact assertions', () => {
         expect(typeof v.fwdAvgMsCvPct).toBe('number');
         if (v.fwdAvgMsCvPct > softWarn) {
           // Emit a structured warning annotation (does not fail test) – kept minimal.
-          // eslint-disable-next-line no-console
+
           console.log(
             `[variance-soft] size=${v.size} mode=${
               v.mode

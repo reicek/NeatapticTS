@@ -1,6 +1,8 @@
 // Interfaces for ASCII Maze Neuroevolution System
 // This file centralizes shared interfaces and types for consistency and maintainability.
 
+import type Network from '../../../src/architecture/network';
+
 /**
  * Interface for dashboard manager abstraction.
  * Used for dependency inversion and testability.
@@ -44,11 +46,17 @@ export interface IDashboardManager {
    */
   update(
     maze: string[],
-    result: any,
-    network: INetwork,
+    result: IMazeRunResult | undefined,
+    network: INetwork | null,
     generation: number,
-    neatInstance?: any // optional Neat instance for advanced telemetry display
+    neatInstance?: NeatInstance // optional Neat instance for advanced telemetry display
   ): void;
+
+  /** Optional log function for dashboard messages */
+  logFunction?: (msg: string) => void;
+
+  /** Allow additional properties for extensibility */
+  [key: string]: unknown;
 }
 
 /**
@@ -145,6 +153,34 @@ export interface IAgentSimulationConfig {
 }
 
 /**
+ * Result structure returned by the maze simulation/evolution helpers.
+ *
+ * Contains the key telemetry fields consumed by dashboards, visualisers and
+ * fitness evaluators while remaining permissive via an index signature for
+ * additional diagnostics.
+ */
+export interface IMazeRunResult {
+  /** Whether the agent solved the maze during this run. */
+  success: boolean;
+  /** Number of steps executed before termination. */
+  steps: number;
+  /** Materialised path as [x, y] coordinates visited sequentially. */
+  path: Array<[number, number]>;
+  /** Scalar fitness assigned to the run (after shaping). */
+  fitness: number;
+  /** Progress metric (usually 0-100) representing completion percentage. */
+  progress: number;
+  /** Optional saturation fraction of outputs during the run. */
+  saturationFraction?: number;
+  /** Optional action-entropy metric derived from movement distribution. */
+  actionEntropy?: number;
+  /** Optional exit reason string used by the evolution loop. */
+  exitReason?: string;
+  /** Additional diagnostics or telemetry fields supplied by callers. */
+  [key: string]: unknown;
+}
+
+/**
  * Configuration options for the evolutionary algorithm used in the ASCII Maze demos.
  *
  * Purpose
@@ -204,7 +240,7 @@ export interface IEvolutionAlgorithmConfig {
   /** Optionally provide an initial population of networks instead of random seeding. */
   initialPopulation?: INetwork[];
   /** Optionally supply a known-good starting network (copied/cloned by the engine). */
-  initialBestNetwork?: INetwork;
+  initialBestNetwork?: INetwork | Network;
   /** Per-individual local refinement iterations (Baldwinian/Lamarckian style). */
   lamarckianIterations?: number;
   /** Subsample size used for refinement training patterns to speed up Lamarckian steps. */
@@ -723,6 +759,55 @@ export interface IVisualizationConnection {
 }
 
 /**
+ * Structural connection descriptor referencing resolved node structures.
+ *
+ * Purpose:
+ * - Provide a lightweight, serialisable view over a connection while preserving
+ *   the node references expected by visualisation helpers.
+ * - Allow callers to attach additional metadata (innovation ids, traces) via
+ *   the index signature without breaking type safety for known properties.
+ *
+ * Typical contents:
+ * - `from` and `to` node references (may be null for partially constructed graphs).
+ * - Optional `gater` node when using gated connections.
+ * - Optional `weight` and `enabled` flags mirroring the runtime connection.
+ */
+export interface IConnectionWithStructRefs {
+  /** Source node reference for the connection (null when unresolved). */
+  from?: INodeStruct | null;
+  /** Destination node reference for the connection (null when unresolved). */
+  to?: INodeStruct | null;
+  /** Optional gater node reference (null or undefined when ungated). */
+  gater?: INodeStruct | null;
+  /** Optional numeric weight associated with the connection. */
+  weight?: number;
+  /** Whether the connection is currently enabled. */
+  enabled?: boolean;
+  /** Additional metadata supplied by concrete implementations. */
+  [key: string]: unknown;
+}
+
+/**
+ * Aggregates incoming/outgoing link arrays for a node snapshot.
+ *
+ * Callers may omit arrays that are not relevant for a given snapshot to keep
+ * serialised structures compact. Visualisation helpers should treat missing
+ * arrays as empty collections.
+ */
+export interface INodeConnectionRegistry {
+  /** Incoming connections terminating at the node. */
+  in?: IConnectionWithStructRefs[];
+  /** Outgoing connections sourced from the node. */
+  out?: IConnectionWithStructRefs[];
+  /** Connections gated by the node. */
+  gated?: IConnectionWithStructRefs[];
+  /** Self/recurrent connection descriptors. */
+  self?: IConnectionWithStructRefs[];
+  /** Extension point for engine-specific registries. */
+  [key: string]: unknown;
+}
+
+/**
  * Type representing a node activation (squash) function with optional metadata.
  *
  * Purpose:
@@ -833,7 +918,21 @@ export interface INodeStruct {
    * - Allows concrete Network implementations to expose additional fields without
    *   breaking the generic interface. Prefer explicit properties where feasible.
    */
-  [key: string]: any;
+  [key: string]: unknown;
+}
+
+/**
+ * Extended node snapshot including connection registries for visualisation utilities.
+ *
+ * Purpose:
+ * - Preserve the lightweight structural fields from {@link INodeStruct} while adding
+ *   optional connection arrays used by network visualisation helpers.
+ * - Allow demos/tests to pass concrete `Network` nodes directly without cloning
+ *   as long as they satisfy the shape of this interface.
+ */
+export interface INodeWithConnectionInfo extends INodeStruct {
+  /** Optional connection registry describing incoming/outgoing/gated links. */
+  connections?: INodeConnectionRegistry;
 }
 
 /**
@@ -947,7 +1046,7 @@ export interface INetwork {
     weight: number;
     gater?: INodeStruct | null;
     enabled?: boolean;
-    [key: string]: any;
+    [key: string]: unknown;
   }[];
 
   /**
@@ -1044,4 +1143,349 @@ export interface IEvolutionFunctionResult {
    * - Useful for UI, logging, persistence and programmatic checks after the run returns.
    */
   finalResult: IEvolutionStepResult;
+}
+
+/**
+ * Runtime types for evolution engine internals
+ * These types represent dynamic structures used throughout the evolution system
+ */
+
+/** Type for Neat class instance from neataptic library */
+export type NeatInstance = import('../../../src/neat').default;
+
+/** Type for Network class instance from neataptic library */
+export type NetworkInstance = import('../../../src/architecture/network').default;
+
+/** Encoded maze representation with cell values */
+export interface EncodedMaze {
+  /** Width of the maze */
+  width: number;
+  /** Height of the maze */
+  height: number;
+  /** Flattened array of cell values */
+  cells: number[];
+  /** Original maze strings */
+  maze: string[];
+}
+
+/** 2D position in maze coordinates */
+export interface Position {
+  /** X coordinate (column) */
+  x: number;
+  /** Y coordinate (row) */
+  y: number;
+}
+
+/** Distance map for maze navigation */
+export interface DistanceMap {
+  /** Width of the map */
+  width: number;
+  /** Height of the map */
+  height: number;
+  /** Flattened array of distances from exit */
+  distances: number[];
+}
+
+/** Options object passed to evolution functions */
+export interface EvolutionOptions {
+  /** Optional cancellation controller */
+  cancellation?: {
+    /** Check if cancellation is requested (legacy API) */
+    isCancelled?: () => boolean;
+    /** Check if cancellation is requested */
+    isCancellationRequested?: () => boolean;
+    /** Reason for cancellation */
+    reason?: string;
+  };
+  /** Optional AbortSignal for cooperative cancellation */
+  signal?: AbortSignal;
+  /** Maximum number of generations to run */
+  maxGenerations?: number;
+  /** Maximum number of stagnant generations before stopping */
+  maxStagnantGenerations?: number;
+  /** Minimum progress value to consider maze solved */
+  minProgressToPass?: number;
+  /** Log telemetry every N generations */
+  logEvery?: number;
+  /** Enable profiling */
+  enableProfiling?: boolean;
+  /** Directory for persistence */
+  persistDir?: string;
+  /** Number of top networks to persist */
+  persistTopK?: number;
+  /** Persist every N generations */
+  persistEvery?: number;
+  /** Optional flush function for UI updates */
+  flushToFrame?: () => Promise<void>;
+  /** Reporting configuration */
+  reportingConfig?: {
+    /** Dashboard manager instance */
+    dashboardManager?: IDashboardManager;
+    /** Log every N generations */
+    logEvery?: number;
+    /** Pace every generation (yield to UI) */
+    paceEveryGeneration?: boolean;
+    /** Additional reporting options */
+    [key: string]: unknown;
+  };
+  /** Maze configuration */
+  mazeConfig: {
+    /** Maze strings array */
+    maze: string[];
+    /** Additional maze config */
+    [key: string]: unknown;
+  };
+  /** Agent simulation configuration */
+  agentSimConfig?: {
+    /** Maximum steps for agent simulation */
+    maxSteps: number;
+    /** Additional simulation options */
+    [key: string]: unknown;
+  };
+  /** Lamarckian training iterations */
+  lamarckianIterations?: number;
+  /** Lamarckian sample size */
+  lamarckianSampleSize?: number;
+  /** Enable dynamic population growth */
+  dynamicPopEnabled?: boolean;
+  /** Maximum dynamic population size */
+  dynamicPopMax?: number;
+  /** Plateau generations threshold */
+  plateauGenerations?: number;
+  /** Dynamic population expand interval */
+  dynamicPopExpandInterval?: number;
+  /** Dynamic population expand factor */
+  dynamicPopExpandFactor?: number;
+  /** Dynamic population plateau slack */
+  dynamicPopPlateauSlack?: number;
+  /** Plateau improvement threshold */
+  plateauImprovementThreshold?: number;
+  /** Simplify duration in generations */
+  simplifyDuration?: number;
+  /** Simplify strategy */
+  simplifyStrategy?: 'weakWeight' | 'weakRecurrentPreferred';
+  /** Simplify prune fraction */
+  simplifyPruneFraction?: number;
+  /** Memory compaction interval */
+  memoryCompactionInterval?: number;
+  /** Auto-pause on solve flag */
+  autoPauseOnSolve?: boolean;
+  /** Stop only on solve (ignore stagnation) */
+  stopOnlyOnSolve?: boolean;
+  /** Initial best network */
+  initialBestNetwork?: unknown;
+  /** Additional dynamic options */
+  [key: string]: unknown;
+}
+
+/** Helper functions object passed to evolution loop */
+export interface EvolutionHelpers {
+  /** Write function for logging */
+  write: (msg: string) => void;
+  /** Check if profiling details are enabled */
+  isProfilingDetailsEnabled: (state: unknown) => boolean;
+  /** Get profiling accumulators */
+  getProfilingAccumulators: (state: unknown) => ProfilingAccumulators;
+}
+
+/** Profiling accumulator structure */
+export interface ProfilingAccumulators {
+  /** Total evolution time in milliseconds */
+  totalEvolveMs?: number;
+  /** Total Lamarckian training time in milliseconds */
+  totalLamarckMs?: number;
+  /** Total simulation time in milliseconds */
+  totalSimMs?: number;
+  /** Mutation time */
+  mutate?: number;
+  /** Crossover time */
+  crossover?: number;
+  /** Selection time */
+  select?: number;
+  /** Snapshot time */
+  snapshot?: number;
+  /** Telemetry time */
+  telemetry?: number;
+  /** Simplify time */
+  simplify?: number;
+  /** Prune time */
+  prune?: number;
+  /** Additional profiling metrics */
+  [key: string]: number | undefined;
+}
+
+/** Node.js fs module type for file operations */
+export interface FileSystem {
+  /** Write file synchronously */
+  writeFileSync: (path: string, data: string) => void;
+  /** Read file synchronously */
+  readFileSync: (path: string, encoding: string) => string;
+  /** Check if file exists */
+  existsSync: (path: string) => boolean;
+  /** Make directory */
+  mkdirSync: (path: string, options?: { recursive?: boolean }) => void;
+}
+
+/** Node.js path module type */
+export interface PathModule {
+  /** Join path segments */
+  join: (...paths: string[]) => string;
+  /** Resolve absolute path */
+  resolve: (...paths: string[]) => string;
+  /** Get directory name */
+  dirname: (path: string) => string;
+}
+
+/** Loop helpers returned by prepareLoopHelpers */
+export interface LoopHelpers {
+  /** Async function to yield to browser frame */
+  flushToFrame: () => Promise<void>;
+  /** Node.js fs module (may be null in browser) - uses setupHelpers.FilesystemModule */
+  fs: unknown;
+  /** Node.js path module (may be null in browser) - uses setupHelpers.PathModule */
+  path: unknown;
+  /** Safe write function for logging */
+  safeWrite: (msg: string) => void;
+}
+
+/** Scratch bundle containing reusable buffers */
+export interface ScratchBundle {
+  /** Pooled sample array */
+  samplePool?: unknown[];
+  /** Profiling scratch buffer */
+  profilingScratch?: Float64Array;
+  /** Exponential scratch buffer */
+  exps?: Float64Array;
+  /** Additional scratch buffers */
+  [key: string]: unknown;
+}
+
+/** Snapshot entry for persistence */
+export interface SnapshotEntry {
+  /** Index in population */
+  idx?: number;
+  /** JSON serialization of network */
+  json?: string;
+  /** Score */
+  score?: number;
+  /** Number of nodes */
+  nodes?: number;
+  /** Number of connections */
+  connections?: number;
+  /** Additional snapshot data */
+  [key: string]: unknown;
+}
+
+/** Training constants */
+export interface TrainingConstants {
+  /** Default training error threshold */
+  DEFAULT_TRAIN_ERROR: number;
+  /** Default training learning rate */
+  DEFAULT_TRAIN_RATE: number;
+  /** Default training momentum */
+  DEFAULT_TRAIN_MOMENTUM: number;
+  /** Default small batch size */
+  DEFAULT_TRAIN_BATCH_SMALL: number;
+  /** Default small standard deviation */
+  DEFAULT_STD_SMALL: number;
+  /** Default standard deviation adjustment multiplier */
+  DEFAULT_STD_ADJUST_MULT: number;
+}
+
+/** Helper functions for evolution */
+export interface EvolutionLoopHelpers {
+  /** Get node indices by type */
+  getNodeIndicesByType: (nodes: NetworkNode[], type: string) => number;
+  /** Collect hidden-to-output connections */
+  collectHiddenToOutputConns: (
+    hiddenNode: NetworkNode,
+    nodes: NetworkNode[],
+    outputCount: number
+  ) => NetworkConnection[];
+}
+
+/** Network node representation */
+export interface NetworkNode {
+  /** Node type (input/output/hidden) */
+  type?: string;
+  /** Node bias */
+  bias?: number;
+  /** Node activation function */
+  squash?:
+    | string
+    | { name?: string }
+    | ((x: number, derivate?: boolean) => number);
+  /** Incoming connections */
+  connections?: {
+    in?: NetworkConnection[];
+    out?: NetworkConnection[];
+  };
+  /** Additional node properties */
+  [key: string]: unknown;
+}
+
+/** Network connection representation */
+export interface NetworkConnection {
+  /** Source node */
+  from?: NetworkNode;
+  /** Target node */
+  to?: NetworkNode;
+  /** Connection weight */
+  weight?: number;
+  /** Connection gain */
+  gain?: number;
+  /** Additional connection properties */
+  [key: string]: unknown;
+}
+
+/** Encoded maze for simulation */
+export interface EncodedMazeData {
+  /** Maze width */
+  width: number;
+  /** Maze height */
+  height: number;
+  /** Flattened cell data */
+  cells: number[];
+  /** Original maze strings */
+  maze?: string[];
+  /** Additional maze metadata */
+  [key: string]: unknown;
+}
+
+/** Position in maze */
+export interface MazePosition {
+  /** X coordinate */
+  x: number;
+  /** Y coordinate */
+  y: number;
+}
+
+/** Distance map for pathfinding */
+export interface MazeDistanceMap {
+  /** Map width */
+  width: number;
+  /** Map height */
+  height: number;
+  /** Flattened distance values */
+  distances: number[];
+}
+
+/** Ring state for logits tracking */
+export interface LogitsRingState {
+  /** Current ring capacity */
+  logitsRingCap: number;
+  /** Whether ring is shared */
+  logitsRingShared: boolean;
+  /** Ring write pointer */
+  scratchLogitsRingW: number;
+}
+
+/** Simulation result */
+export interface SimulationResult {
+  /** Generation result data */
+  generationResult: IMazeRunResult;
+  /** Simulation time in milliseconds */
+  simTime: number;
+  /** Updated ring state */
+  updatedRingState: LogitsRingState;
 }

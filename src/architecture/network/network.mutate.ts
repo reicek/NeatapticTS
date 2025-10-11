@@ -4,6 +4,33 @@ import mutation from '../../methods/mutation';
 import { config } from '../../config';
 
 /**
+ * Mutation method descriptor (can be string enum value or object with identity).
+ */
+export type MutationMethod =
+  | string
+  | {
+      name?: string;
+      type?: string;
+      identity?: string;
+      max?: number;
+      min?: number;
+      mutateOutput?: boolean;
+      [key: string]: unknown;
+    };
+
+/**
+ * Internal Network properties accessed during mutations.
+ */
+interface NetworkMutationProps {
+  _enforceAcyclic?: boolean;
+  _topoDirty?: boolean;
+  _detChain?: Node[];
+  _rand: () => number;
+  _nodeIndexDirty?: boolean;
+  _preferredChainEdge?: unknown;
+}
+
+/**
  * Network structural & parametric mutation utilities.
  *
  * This module exposes {@link mutateImpl} which delegates to small, focused internal helper
@@ -31,7 +58,7 @@ import { config } from '../../config';
  */
 const MUTATION_DISPATCH: Record<
   string,
-  (this: Network, method?: any) => void
+  (this: Network, method?: MutationMethod) => void
 > = {
   ADD_NODE: _addNode,
   SUB_NODE: _subNode,
@@ -68,7 +95,7 @@ const MUTATION_DISPATCH: Record<
  * @param this Network instance (bound).
  * @param method Mutation enum value or descriptor object.
  */
-export function mutateImpl(this: Network, method: any): void {
+export function mutateImpl(this: Network, method?: MutationMethod): void {
   if (method == null) throw new Error('No (correct) mutate method given!');
 
   // Some mutation method objects may contain additional config but carry an identity equal to enum value.
@@ -78,7 +105,7 @@ export function mutateImpl(this: Network, method: any): void {
   if (!key) {
     // Fallback: identity match against exported mutation objects
     for (const k in mutation) {
-      if (method === (mutation as any)[k]) {
+      if (method === (mutation as Record<string, unknown>)[k]) {
         key = k;
         break;
       }
@@ -87,13 +114,12 @@ export function mutateImpl(this: Network, method: any): void {
   const fn = key ? MUTATION_DISPATCH[key] : undefined;
   if (!fn) {
     if (config.warnings) {
-      // eslint-disable-next-line no-console
       console.warn('[mutate] Unknown mutation method ignored:', key);
     }
     return; // graceful no-op for invalid method objects
   }
   fn.call(this, method);
-  (this as any)._topoDirty = true; // Mark topology/order caches invalid.
+  ((this as unknown) as NetworkMutationProps)._topoDirty = true; // Mark topology/order caches invalid.
 }
 
 // ======================= Individual mutation helpers ======================= //
@@ -118,7 +144,7 @@ export function mutateImpl(this: Network, method: any): void {
  *  6. Reassign gater uniformly to one of the new edges.
  */
 function _addNode(this: Network): void {
-  const internal = this as any;
+  const internal = (this as unknown) as NetworkMutationProps;
   if (internal._enforceAcyclic) internal._topoDirty = true;
 
   // Deterministic linear chain growth: always split the terminal edge of a persisted chain.
@@ -137,7 +163,7 @@ function _addNode(this: Network): void {
       }
       internal._detChain = [inputNode]; // store chain nodes (excluding output)
     }
-    const chain: any[] = internal._detChain;
+    const chain: Node[] = internal._detChain;
     const tail = chain[chain.length - 1];
     // Ensure tail -> output edge exists (recreate if pruned earlier)
     let terminal = this.connections.find(
@@ -161,13 +187,17 @@ function _addNode(this: Network): void {
     for (let i = 0; i < chain.length; i++) {
       const node = chain[i];
       const target = i + 1 < chain.length ? chain[i + 1] : outputNode;
-      const keep = node.connections.out.find((e: any) => e.to === target);
+      const keep = node.connections.out.find(
+        (e: { to: Node }) => e.to === target
+      );
       if (keep) {
         for (const extra of node.connections.out.slice()) {
           if (extra !== keep) {
             try {
               this.disconnect(extra.from, extra.to);
-            } catch {}
+            } catch {
+              // Ignore disconnection errors for extra connections
+            }
           }
         }
       }
@@ -211,7 +241,7 @@ function _subNode(this: Network): void {
     if (config.warnings) console.warn('No hidden nodes left to remove!');
     return;
   }
-  const internal = this as any;
+  const internal = (this as unknown) as NetworkMutationProps;
   const victim = hidden[Math.floor(internal._rand() * hidden.length)];
   this.remove(victim);
   // Nudge a weight slightly so tests expecting output change are robust.
@@ -224,10 +254,10 @@ function _subNode(this: Network): void {
  * Recurrent edges are handled separately by ADD_BACK_CONN.
  */
 function _addConn(this: Network): void {
-  const netInternal = this as any;
+  const netInternal = (this as unknown) as NetworkMutationProps;
   if (netInternal._enforceAcyclic) netInternal._topoDirty = true;
   /** Candidate pairs [source,target]. */
-  const forwardConnectionCandidates: Array<[any, any]> = [];
+  const forwardConnectionCandidates: Array<[Node, Node]> = [];
   for (
     let sourceIndex = 0;
     sourceIndex < this.nodes.length - this.output;
@@ -257,7 +287,7 @@ function _addConn(this: Network): void {
  * SUB_CONN: Remove a forward connection chosen under redundancy heuristics to avoid disconnects.
  */
 function _subConn(this: Network): void {
-  const netInternal = this as any;
+  const netInternal = (this as unknown) as NetworkMutationProps;
   /** Candidate removable forward connections. */
   const removableForwardConnections = this.connections.filter(
     (candidateConn) => {
@@ -302,27 +332,37 @@ function _subConn(this: Network): void {
 /**
  * MOD_WEIGHT: Perturb a single (possibly self) connection weight by uniform delta in [min,max].
  */
-function _modWeight(this: Network, method: any): void {
+function _modWeight(this: Network, method?: MutationMethod): void {
   /** Combined list of normal and self connections. */
   const allConnections = this.connections.concat(this.selfconns);
   if (allConnections.length === 0) return;
   /** Random connection to perturb. */
   const connectionToPerturb =
-    allConnections[Math.floor((this as any)._rand() * allConnections.length)];
+    allConnections[
+      Math.floor(
+        ((this as unknown) as NetworkMutationProps)._rand() *
+          allConnections.length
+      )
+    ];
   /** Delta sampled uniformly from [min,max]. */
+  const methodObj = typeof method === 'object' ? method : {};
+  const min = methodObj.min ?? -1;
+  const max = methodObj.max ?? 1;
   const modification =
-    (this as any)._rand() * (method.max - method.min) + method.min;
+    ((this as unknown) as NetworkMutationProps)._rand() * (max - min) + min;
   connectionToPerturb.weight += modification;
 }
 
 /**
  * MOD_BIAS: Delegate to node.mutate to adjust bias of a random non‑input node.
  */
-function _modBias(this: Network, method: any): void {
+function _modBias(this: Network, method?: MutationMethod): void {
   if (this.nodes.length <= this.input) return;
   /** Index of target node (excluding inputs). */
   const targetNodeIndex = Math.floor(
-    (this as any)._rand() * (this.nodes.length - this.input) + this.input
+    ((this as unknown) as NetworkMutationProps)._rand() *
+      (this.nodes.length - this.input) +
+      this.input
   );
   /** Selected node for bias mutation. */
   const nodeForBiasMutation = this.nodes[targetNodeIndex];
@@ -332,9 +372,10 @@ function _modBias(this: Network, method: any): void {
 /**
  * MOD_ACTIVATION: Swap activation (squash) of a random eligible node; may exclude outputs.
  */
-function _modActivation(this: Network, method: any): void {
+function _modActivation(this: Network, method?: MutationMethod): void {
+  const methodObj = typeof method === 'object' ? method : {};
   /** Whether output nodes may be mutated. */
-  const canMutateOutput = method.mutateOutput ?? true;
+  const canMutateOutput = methodObj.mutateOutput ?? true;
   /** Count of nodes available for mutation. */
   const numMutableNodes =
     this.nodes.length - this.input - (canMutateOutput ? 0 : this.output);
@@ -347,7 +388,8 @@ function _modActivation(this: Network, method: any): void {
   }
   /** Index of chosen node. */
   const targetNodeIndex = Math.floor(
-    (this as any)._rand() * numMutableNodes + this.input
+    ((this as unknown) as NetworkMutationProps)._rand() * numMutableNodes +
+      this.input
   );
   /** Target node. */
   const targetNode = this.nodes[targetNodeIndex];
@@ -358,7 +400,7 @@ function _modActivation(this: Network, method: any): void {
  * ADD_SELF_CONN: Add a self loop to a random eligible node (only when cycles allowed).
  */
 function _addSelfConn(this: Network): void {
-  const netInternal = this as any;
+  const netInternal = (this as unknown) as NetworkMutationProps;
   if (netInternal._enforceAcyclic) return;
   /** Nodes without an existing self connection (excluding inputs). */
   const nodesWithoutSelfLoop = this.nodes.filter(
@@ -387,7 +429,10 @@ function _subSelfConn(this: Network): void {
   }
   /** Chosen self connection for removal. */
   const selfConnectionToRemove = this.selfconns[
-    Math.floor((this as any)._rand() * this.selfconns.length)
+    Math.floor(
+      ((this as unknown) as NetworkMutationProps)._rand() *
+        this.selfconns.length
+    )
   ];
   this.disconnect(selfConnectionToRemove.from, selfConnectionToRemove.to);
 }
@@ -396,12 +441,12 @@ function _subSelfConn(this: Network): void {
  * ADD_GATE: Assign a random (hidden/output) node to gate a random ungated connection.
  */
 function _addGate(this: Network): void {
-  const netInternal = this as any;
+  const netInternal = (this as unknown) as NetworkMutationProps;
   /** All connections (including self connections). */
   const allConnectionsIncludingSelf = this.connections.concat(this.selfconns);
   /** Ungated connection candidates. */
   const ungatedConnectionCandidates = allConnectionsIncludingSelf.filter(
-    (c: any) => c.gater === null
+    (c) => c.gater === null
   );
   if (
     ungatedConnectionCandidates.length === 0 ||
@@ -434,7 +479,7 @@ function _subGate(this: Network): void {
   }
   /** Random gated connection reference. */
   const gatedConnectionIndex = Math.floor(
-    (this as any)._rand() * this.gates.length
+    ((this as unknown) as NetworkMutationProps)._rand() * this.gates.length
   );
   const gatedConnection = this.gates[gatedConnectionIndex];
   this.ungate(gatedConnection);
@@ -444,10 +489,10 @@ function _subGate(this: Network): void {
  * ADD_BACK_CONN: Add a backward (recurrent) connection (acyclic mode must be off).
  */
 function _addBackConn(this: Network): void {
-  const netInternal = this as any;
+  const netInternal = (this as unknown) as NetworkMutationProps;
   if (netInternal._enforceAcyclic) return;
   /** Candidate backward pairs [laterNode, earlierNode]. */
-  const backwardConnectionCandidates: Array<[any, any]> = [];
+  const backwardConnectionCandidates: Array<[Node, Node]> = [];
   for (
     let laterIndex = this.input;
     laterIndex < this.nodes.length;
@@ -489,7 +534,10 @@ function _subBackConn(this: Network): void {
   /** Selected backward connection. */
   const backwardConnectionToRemove =
     removableBackwardConnections[
-      Math.floor((this as any)._rand() * removableBackwardConnections.length)
+      Math.floor(
+        ((this as unknown) as NetworkMutationProps)._rand() *
+          removableBackwardConnections.length
+      )
     ];
   this.disconnect(
     backwardConnectionToRemove.from,
@@ -500,16 +548,17 @@ function _subBackConn(this: Network): void {
 /**
  * SWAP_NODES: Exchange bias & activation function between two random eligible nodes.
  */
-function _swapNodes(this: Network, method: any): void {
-  const netInternal = this as any;
+function _swapNodes(this: Network, method?: MutationMethod): void {
+  const netInternal = (this as unknown) as NetworkMutationProps;
+  const methodObj = typeof method === 'object' ? method : {};
   /** Whether output nodes may be included. */
-  const canSwapOutput = method.mutateOutput ?? true;
+  const canSwapOutput = methodObj.mutateOutput ?? true;
   /** Number of nodes eligible for swapping. */
   const numSwappableNodes =
     this.nodes.length - this.input - (canSwapOutput ? 0 : this.output);
   if (numSwappableNodes < 2) return;
   /** First random index. */
-  let firstNodeIndex = Math.floor(
+  const firstNodeIndex = Math.floor(
     netInternal._rand() * numSwappableNodes + this.input
   );
   /** Second random index (distinct). */
@@ -538,7 +587,7 @@ function _swapNodes(this: Network, method: any): void {
  * ADD_LSTM_NODE: Replace a random connection with a minimal 1‑unit LSTM block (macro mutation).
  */
 function _addLSTMNode(this: Network): void {
-  const netInternal = this as any;
+  const netInternal = (this as unknown) as NetworkMutationProps;
   if (netInternal._enforceAcyclic) return;
   if (this.connections.length === 0) return;
   /** Connection selected to expand into an LSTM block. */
@@ -549,10 +598,11 @@ function _addLSTMNode(this: Network): void {
   const gaterLSTM = connectionToExpand.gater;
   this.disconnect(connectionToExpand.from, connectionToExpand.to);
   // Dynamic import of layer factory (kept lazy to avoid circular refs if any).
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const Layer = require('../layer').default;
   const lstmLayer = Layer.lstm(1);
   // Convert produced layer's nodes to hidden and append to network node list.
-  lstmLayer.nodes.forEach((n: any) => {
+  lstmLayer.nodes.forEach((n: Node) => {
     n.type = 'hidden';
     this.nodes.push(n);
   });
@@ -567,7 +617,7 @@ function _addLSTMNode(this: Network): void {
  * ADD_GRU_NODE: Replace a random connection with a minimal 1‑unit GRU block.
  */
 function _addGRUNode(this: Network): void {
-  const netInternal = this as any;
+  const netInternal = (this as unknown) as NetworkMutationProps;
   if (netInternal._enforceAcyclic) return;
   if (this.connections.length === 0) return;
   /** Connection selected to expand into a GRU block. */
@@ -577,9 +627,10 @@ function _addGRUNode(this: Network): void {
   /** Original gater (if any). */
   const gaterGRU = connectionToExpand.gater;
   this.disconnect(connectionToExpand.from, connectionToExpand.to);
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const Layer = require('../layer').default;
   const gruLayer = Layer.gru(1);
-  gruLayer.nodes.forEach((n: any) => {
+  gruLayer.nodes.forEach((n: Node) => {
     n.type = 'hidden';
     this.nodes.push(n);
   });
@@ -593,15 +644,16 @@ function _addGRUNode(this: Network): void {
  * REINIT_WEIGHT: Reinitialize all incoming/outgoing/self connection weights for a random node.
  * Useful as a heavy mutation to escape local minima. Falls back silently if no eligible node.
  */
-function _reinitWeight(this: Network, method: any): void {
+function _reinitWeight(this: Network, method?: MutationMethod): void {
   if (this.nodes.length <= this.input) return;
-  const internal = this as any;
+  const internal = (this as unknown) as NetworkMutationProps;
   const idx = Math.floor(
     internal._rand() * (this.nodes.length - this.input) + this.input
   );
   const node = this.nodes[idx];
-  const min = method?.min ?? -1;
-  const max = method?.max ?? 1;
+  const methodObj = typeof method === 'object' ? method : {};
+  const min = methodObj.min ?? -1;
+  const max = methodObj.max ?? 1;
   const sample = () => internal._rand() * (max - min) + min;
   // Incoming
   for (const c of node.connections.in) c.weight = sample();
@@ -618,7 +670,7 @@ function _reinitWeight(this: Network, method: any): void {
 function _batchNorm(this: Network): void {
   const hidden = this.nodes.filter((n) => n.type === 'hidden');
   if (!hidden.length) return;
-  const internal = this as any;
-  const node = hidden[Math.floor(internal._rand() * hidden.length)] as any;
-  node._batchNorm = true; // simple tag; downstream training code could act on this.
+  const internal = (this as unknown) as NetworkMutationProps;
+  const node = hidden[Math.floor(internal._rand() * hidden.length)];
+  ((node as unknown) as { _batchNorm: boolean })._batchNorm = true; // simple tag; downstream training code could act on this.
 }

@@ -1,12 +1,11 @@
 import Node from './node';
+import Layer from './layer';
 import {
   acquireNode as _acquireNode,
   releaseNode as _releaseNode,
 } from './nodePool';
 import Connection from './connection';
-import Multi from '../multithreading/multi';
 import * as methods from '../methods/methods';
-import mutation from '../methods/mutation'; // Import mutation methods
 import { config } from '../config'; // Import configuration settings
 import { activationArrayPool } from './activationArrayPool';
 import type { ActivationArray } from './activationArrayPool';
@@ -27,11 +26,7 @@ import {
   pruneToSparsity as _pruneToSparsity,
   getCurrentSparsity as _getCurrentSparsity,
 } from './network/network.prune';
-import {
-  gate as _gate,
-  ungate as _ungate,
-  removeNode as _removeNode,
-} from './network/network.gating';
+import { gate as _gate, ungate as _ungate } from './network/network.gating';
 import {
   setSeed as _setSeed,
   snapshotRNG as _snapshotRNG,
@@ -51,7 +46,40 @@ import {
   toJSONImpl as _toJSONImpl,
   fromJSONImpl as _fromJSONImpl,
 } from './network/network.serialize';
+import {
+  noTraceActivate as _noTraceActivate,
+  activateRaw as _activateRaw,
+  activateBatch as _activateBatch,
+} from './network/network.activate';
+import type { MutationMethod } from './network/network.mutate';
+import { mutateImpl as _mutateImpl } from './network/network.mutate';
+import type { TrainingOptions } from './network/network.training';
+import {
+  applyGradientClippingImpl as _applyGradientClippingImpl,
+  trainImpl as _trainImpl,
+} from './network/network.training';
 import { crossOver as _crossOver } from './network/network.genetic';
+
+/**
+ * Internal runtime properties attached to Network instances.
+ * These properties are dynamically managed and not part of the formal class interface.
+ */
+interface NetworkRuntimeProps {
+  _lastSkippedLayers?: number[];
+  _lastStats?: unknown;
+  layers?: unknown[];
+}
+
+/**
+ * Internal runtime properties attached to Connection instances.
+ * These properties are dynamically managed for weight noise and DropConnect.
+ */
+interface ConnectionWeightNoiseProps {
+  _origWeightNoise?: number;
+  _wnLast?: number;
+  _origWeight?: number;
+  dcMask?: number;
+}
 
 /**
  * Network (Evolvable / Trainable Graph)
@@ -91,7 +119,10 @@ import { crossOver as _crossOver } from './network/network.genetic';
  *  - `toJSON()` / `fromJSON()` support experiment checkpointing.
  *  - ONNX export (`exportToONNX`) enables interoperability with other tools.
  */
-export default class Network {
+import type { NetworkView } from '../utils/memory';
+
+export default class Network implements NetworkView {
+  [key: string]: unknown; // Index signature for adaptive features compatibility
   input: number;
   output: number;
   score?: number;
@@ -100,7 +131,7 @@ export default class Network {
   gates: Connection[];
   selfconns: Connection[];
   dropout: number = 0;
-  private _dropConnectProb: number = 0;
+  protected _dropConnectProb: number = 0;
   private _lastGradNorm?: number;
   private _optimizerStep: number = 0;
   private _weightNoiseStd: number = 0;
@@ -111,7 +142,7 @@ export default class Network {
   private _trainingStep: number = 0;
   private _rand: () => number = Math.random;
   private _rngState?: number;
-  private _lastStats: any = null;
+  private _lastStats: unknown = null;
   private _stochasticDepthSchedule?: (
     step: number,
     current: number[]
@@ -163,27 +194,27 @@ export default class Network {
   private _topoOrder: Node[] | null = null;
   private _topoDirty: boolean = true;
   private _globalEpoch: number = 0;
-  layers?: any[];
+  layers?: Layer[];
   private _evoInitialConnCount?: number; // baseline for evolution-time pruning
   private _activationPrecision: 'f64' | 'f32' = 'f64'; // typed array precision for compiled path
   private _reuseActivationArrays: boolean = false; // reuse pooled output arrays
   private _returnTypedActivations: boolean = false; // if true and reuse enabled, return typed array directly
   private _activationPool?: Float32Array | Float64Array; // pooled output array
   // Packed connection slab fields (for memory + cache efficiency when iterating connections)
-  private _connWeights?: Float32Array | Float64Array;
-  private _connFrom?: Uint32Array;
-  private _connTo?: Uint32Array;
-  private _slabDirty: boolean = true;
-  private _useFloat32Weights: boolean = true;
+  public _connWeights?: Float32Array | Float64Array;
+  public _connFrom?: Uint32Array;
+  public _connTo?: Uint32Array;
+  public _slabDirty: boolean = true;
+  public _useFloat32Weights: boolean = true;
   // Cached node.index maintenance (avoids repeated this.nodes.indexOf in hot paths like slab rebuild)
-  private _nodeIndexDirty: boolean = true; // when true, node.index values must be reassigned sequentially
+  public _nodeIndexDirty: boolean = true; // when true, node.index values must be reassigned sequentially
   // Fast slab forward path structures
   private _outStart?: Uint32Array;
   private _outOrder?: Uint32Array;
   private _adjDirty: boolean = true;
   // Cached typed arrays for fast slab forward pass
-  private _fastA?: Float32Array | Float64Array;
-  private _fastS?: Float32Array | Float64Array;
+  public _fastA?: Float32Array | Float64Array;
+  public _fastS?: Float32Array | Float64Array;
   // Internal hint: track a preferred linear chain edge to split on subsequent ADD_NODE mutations
   // to encourage deep path formation even in stochastic modes. Updated each time we split it.
   private _preferredChainEdge?: Connection;
@@ -234,7 +265,7 @@ export default class Network {
     this.gates = [];
     this.selfconns = [];
     this.dropout = 0;
-    this._enforceAcyclic = (options as any)?.enforceAcyclic || false;
+    this._enforceAcyclic = options?.enforceAcyclic || false;
     if (options?.activationPrecision) {
       this._activationPrecision = options.activationPrecision;
     } else if (config.float32Mode) {
@@ -251,7 +282,9 @@ export default class Network {
           ? config.poolPrewarmCount
           : 2;
       activationArrayPool.prewarm(this.output, prewarm);
-    } catch {}
+    } catch {
+      // Silently ignore pool initialization errors
+    }
 
     if (options?.seed !== undefined) {
       this.setSeed(options.seed);
@@ -410,9 +443,9 @@ export default class Network {
     return this._trainingStep;
   }
   get lastSkippedLayers(): number[] {
-    return (this as any)._lastSkippedLayers || [];
+    return ((this as unknown) as NetworkRuntimeProps)._lastSkippedLayers || [];
   }
-  snapshotRNG(): any {
+  snapshotRNG(): import('./network/network.deterministic').RNGSnapshot {
     return _snapshotRNG.call(this);
   }
   restoreRNG(fn: () => number) {
@@ -485,7 +518,7 @@ export default class Network {
 
   // Delegated standalone generator
   standalone(): string {
-    return generateStandalone(this as any);
+    return generateStandalone(this);
   }
 
   /**
@@ -504,7 +537,7 @@ export default class Network {
   activate(
     input: number[],
     training = false,
-    maxActivationDepth = 1000
+    _maxActivationDepth = 1000 // eslint-disable-line @typescript-eslint/no-unused-vars
   ): number[] {
     if (this._enforceAcyclic && this._topoDirty) this._computeTopoOrder();
     if (!Array.isArray(input) || input.length !== this.input) {
@@ -532,8 +565,8 @@ export default class Network {
       );
     }
 
-    let output: ActivationArray = outputArr;
-    (this as any)._lastSkippedLayers = [];
+    const output: ActivationArray = outputArr;
+    ((this as unknown) as NetworkRuntimeProps)._lastSkippedLayers = [];
     const stats = {
       droppedHiddenNodes: 0,
       totalHiddenNodes: 0,
@@ -550,8 +583,13 @@ export default class Network {
         dynamicStd = this._weightNoiseSchedule(this._trainingStep);
       if (dynamicStd > 0 || this._weightNoisePerHidden.length > 0) {
         for (const c of this.connections) {
-          if ((c as any)._origWeightNoise != null) continue;
-          (c as any)._origWeightNoise = c.weight;
+          if (
+            ((c as unknown) as ConnectionWeightNoiseProps)._origWeightNoise !=
+            null
+          )
+            continue;
+          ((c as unknown) as ConnectionWeightNoiseProps)._origWeightNoise =
+            c.weight;
           let std = dynamicStd;
           if (this._weightNoisePerHidden.length > 0 && this.layers) {
             let fromLayerIndex = -1;
@@ -573,10 +611,10 @@ export default class Network {
           if (std > 0) {
             const noise = std * Network._gaussianRand(this._rand);
             c.weight += noise;
-            (c as any)._wnLast = noise;
+            ((c as unknown) as ConnectionWeightNoiseProps)._wnLast = noise;
             appliedWeightNoise = true;
           } else {
-            (c as any)._wnLast = 0;
+            ((c as unknown) as ConnectionWeightNoiseProps)._wnLast = 0;
           }
         }
       }
@@ -634,7 +672,9 @@ export default class Network {
           }
         }
         if (skip) {
-          (this as any)._lastSkippedLayers.push(li);
+          ((this as unknown) as NetworkRuntimeProps)._lastSkippedLayers!.push(
+            li
+          );
           stats.skippedLayers.push(li);
           // identity: acts unchanged
           continue;
@@ -689,15 +729,15 @@ export default class Network {
       if (lastActs) {
         if (this._reuseActivationArrays) {
           for (let i = 0; i < lastActs.length && i < this.output; i++)
-            (output as any)[i] = lastActs[i];
+            output[i] = lastActs[i];
         } else {
           for (let i = 0; i < lastActs.length && i < this.output; i++)
-            (output as any)[i] = lastActs[i];
+            output[i] = lastActs[i];
         }
       }
     } else {
       // Node-based activation (legacy, node-level dropout)
-      let hiddenNodes = this.nodes.filter((node) => node.type === 'hidden');
+      const hiddenNodes = this.nodes.filter((node) => node.type === 'hidden');
       let droppedCount = 0;
       if (training && this.dropout > 0) {
         // Randomly drop hidden nodes
@@ -723,8 +763,13 @@ export default class Network {
         if (!this._wnOrig) this._wnOrig = new Array(this.connections.length);
         for (let ci = 0; ci < this.connections.length; ci++) {
           const c = this.connections[ci];
-          if ((c as any)._origWeightNoise != null) continue; // already perturbed in recursive call
-          (c as any)._origWeightNoise = c.weight;
+          if (
+            ((c as unknown) as ConnectionWeightNoiseProps)._origWeightNoise !=
+            null
+          )
+            continue; // already perturbed in recursive call
+          ((c as unknown) as ConnectionWeightNoiseProps)._origWeightNoise =
+            c.weight;
           const noise =
             this._weightNoiseStd * Network._gaussianRand(this._rand);
           c.weight += noise;
@@ -736,7 +781,7 @@ export default class Network {
           node.activate(input[index]);
         } else if (node.type === 'output') {
           const activation = node.activate();
-          (output as any)[outIndex++] = activation;
+          output[outIndex++] = activation;
         } else {
           node.activate();
         }
@@ -746,32 +791,48 @@ export default class Network {
         for (const conn of this.connections) {
           const mask = this._rand() < this._dropConnectProb ? 0 : 1;
           if (mask === 0) stats.droppedConnections++;
-          (conn as any).dcMask = mask;
+          ((conn as unknown) as ConnectionWeightNoiseProps).dcMask = mask;
           if (mask === 0) {
-            if ((conn as any)._origWeight == null)
-              (conn as any)._origWeight = conn.weight;
+            if (
+              ((conn as unknown) as ConnectionWeightNoiseProps)._origWeight ==
+              null
+            )
+              ((conn as unknown) as ConnectionWeightNoiseProps)._origWeight =
+                conn.weight;
             conn.weight = 0;
-          } else if ((conn as any)._origWeight != null) {
-            conn.weight = (conn as any)._origWeight;
-            delete (conn as any)._origWeight;
+          } else if (
+            ((conn as unknown) as ConnectionWeightNoiseProps)._origWeight !=
+            null
+          ) {
+            conn.weight = ((conn as unknown) as ConnectionWeightNoiseProps)._origWeight!;
+            delete ((conn as unknown) as ConnectionWeightNoiseProps)
+              ._origWeight;
           }
         }
       } else {
         // restore any temporarily zeroed weights
         for (const conn of this.connections) {
-          if ((conn as any)._origWeight != null) {
-            conn.weight = (conn as any)._origWeight;
-            delete (conn as any)._origWeight;
+          if (
+            ((conn as unknown) as ConnectionWeightNoiseProps)._origWeight !=
+            null
+          ) {
+            conn.weight = ((conn as unknown) as ConnectionWeightNoiseProps)._origWeight!;
+            delete ((conn as unknown) as ConnectionWeightNoiseProps)
+              ._origWeight;
           }
-          (conn as any).dcMask = 1;
+          ((conn as unknown) as ConnectionWeightNoiseProps).dcMask = 1;
         }
       }
       // Restore weight noise
       if (training && appliedWeightNoise) {
         for (const c of this.connections) {
-          if ((c as any)._origWeightNoise != null) {
-            c.weight = (c as any)._origWeightNoise;
-            delete (c as any)._origWeightNoise;
+          if (
+            ((c as unknown) as ConnectionWeightNoiseProps)._origWeightNoise !=
+            null
+          ) {
+            c.weight = ((c as unknown) as ConnectionWeightNoiseProps)._origWeightNoise!;
+            delete ((c as unknown) as ConnectionWeightNoiseProps)
+              ._origWeightNoise;
           }
         }
       }
@@ -782,7 +843,7 @@ export default class Network {
         stats.weightNoise.sumAbs / stats.weightNoise.count;
     this._lastStats = stats;
     // Clone and release pooled array for backward compatibility
-    const result = Array.from(output as any) as number[];
+    const result = Array.from(output) as number[];
     activationArrayPool.release(output);
     return result;
   }
@@ -808,8 +869,7 @@ export default class Network {
    */
   // Delegated activation helpers
   noTraceActivate(input: number[]): number[] {
-    const { noTraceActivate } = require('./network/network.activate');
-    return noTraceActivate.call(this, input);
+    return _noTraceActivate.call(this, input);
   }
 
   /**
@@ -820,9 +880,8 @@ export default class Network {
     input: number[],
     training = false,
     maxActivationDepth = 1000
-  ): any {
-    const { activateRaw } = require('./network/network.activate');
-    return activateRaw.call(this, input, training, maxActivationDepth);
+  ): number[] | ActivationArray {
+    return _activateRaw.call(this, input, training, maxActivationDepth);
   }
 
   /**
@@ -837,8 +896,7 @@ export default class Network {
    * @returns Array of output vectors, each length equals this.output
    */
   activateBatch(inputs: number[][], training = false): number[][] {
-    const { activateBatch } = require('./network/network.activate');
-    return activateBatch.call(this, inputs, training);
+    return _activateBatch.call(this, inputs, training);
   }
 
   /**
@@ -885,7 +943,18 @@ export default class Network {
       i--
     ) {
       if (costDerivative) {
-        (this.nodes[i] as any).propagate(
+        // Note: costDerivative parameter not currently supported by Node.propagate
+        // This code path may be deprecated or requires Node.propagate signature update
+        ((this.nodes[i] as unknown) as {
+          propagate: (
+            rate: number,
+            momentum: number,
+            update: boolean,
+            regularization: number,
+            target: number,
+            costDerivative: (target: number, output: number) => number
+          ) => void;
+        }).propagate(
           rate,
           momentum,
           update,
@@ -928,15 +997,14 @@ export default class Network {
    * This is a core operation for neuro-evolutionary algorithms (like NEAT).
    * The method argument should be one of the mutation types defined in `methods.mutation`.
    *
-   * @param {any} method - The mutation method to apply (e.g., `mutation.ADD_NODE`, `mutation.MOD_WEIGHT`).
-   *                       Some methods might have associated parameters (e.g., `MOD_WEIGHT` uses `min`, `max`).
+   * @param method - The mutation method to apply (e.g., `mutation.ADD_NODE`, `mutation.MOD_WEIGHT`).
+   *                 Some methods might have associated parameters (e.g., `MOD_WEIGHT` uses `min`, `max`).
    * @throws {Error} If no valid mutation `method` is provided.
    *
    * @see {@link methods.mutation} for available mutation types.
    */
-  mutate(method: any): void {
-    const { mutateImpl } = require('./network/network.mutate');
-    return mutateImpl.call(this, method);
+  mutate(method: MutationMethod): void {
+    return _mutateImpl.call(this, method);
   }
 
   /**
@@ -1048,18 +1116,16 @@ export default class Network {
     mode: 'norm' | 'percentile' | 'layerwiseNorm' | 'layerwisePercentile';
     maxNorm?: number;
     percentile?: number;
-  }) {
-    const { applyGradientClippingImpl } = require('./network/network.training');
-    applyGradientClippingImpl(this as any, cfg);
+  }): void {
+    _applyGradientClippingImpl(this, cfg);
   }
 
   // Training is implemented in network.training.ts; this wrapper keeps public API stable.
   train(
     set: { input: number[]; output: number[] }[],
-    options: any
+    options: unknown
   ): { error: number; iterations: number; time: number } {
-    const { trainImpl } = require('./network/network.training');
-    return trainImpl(this as any, set, options);
+    return _trainImpl(this, set, options as TrainingOptions);
   }
 
   /** Returns last recorded raw (pre-update) gradient L2 norm. */
@@ -1105,10 +1171,10 @@ export default class Network {
   // Evolution wrapper delegates to network/network.evolve.ts implementation.
   async evolve(
     set: { input: number[]; output: number[] }[],
-    options: any
+    options: Record<string, unknown> | undefined
   ): Promise<{ error: number; iterations: number; time: number }> {
     const { evolveNetwork } = await import('./network/network.evolve');
-    return evolveNetwork.call(this, set, options);
+    return evolveNetwork.call(this, set, options as never);
   }
 
   /**
@@ -1123,7 +1189,7 @@ export default class Network {
    */
   test(
     set: { input: number[]; output: number[] }[],
-    cost?: any
+    cost?: (target: number[], output: number[]) => number
   ): { error: number; time: number } {
     // Dataset dimension validation
     if (!Array.isArray(set) || set.length === 0) {
@@ -1180,7 +1246,14 @@ export default class Network {
   }
 
   /** Lightweight tuple serializer delegating to network.serialize.ts */
-  serialize(): any[] {
+  serialize(): [
+    number[],
+    number[],
+    string[],
+    import('./network/network.serialize').SerializedConnection[],
+    number,
+    number
+  ] {
     return _serialize.call(this);
   }
 
@@ -1197,11 +1270,20 @@ export default class Network {
    */
   /** Static lightweight tuple deserializer delegate */
   static deserialize(
-    data: any[],
+    data:
+      | [
+          number[],
+          number[],
+          string[],
+          { from: number; to: number; weight: number; gater: number | null }[],
+          number,
+          number
+        ]
+      | unknown[],
     inputSize?: number,
     outputSize?: number
   ): Network {
-    return _deserialize(data, inputSize, outputSize);
+    return _deserialize(data as never, inputSize, outputSize);
   }
 
   /**
@@ -1212,8 +1294,8 @@ export default class Network {
    * @returns {object} A JSON-compatible object representing the network.
    */
   /** Verbose JSON serializer delegate */
-  toJSON(): object {
-    return _toJSONImpl.call(this);
+  toJSON(): Record<string, unknown> {
+    return (_toJSONImpl.call(this) as unknown) as Record<string, unknown>;
   }
 
   /**
@@ -1223,8 +1305,8 @@ export default class Network {
    * @returns {Network} The reconstructed network.
    */
   /** Verbose JSON static deserializer */
-  static fromJSON(json: any): Network {
-    return _fromJSONImpl(json);
+  static fromJSON(json: Record<string, unknown>): Network {
+    return _fromJSONImpl(json as never);
   }
 
   /**
@@ -1263,7 +1345,10 @@ export default class Network {
    * @param {function} [values.squash] - If provided, sets the squash (activation) function for all nodes.
    *                                     Should be a valid activation function (e.g., from `methods.Activation`).
    */
-  set(values: { bias?: number; squash?: any }): void {
+  set(values: {
+    bias?: number;
+    squash?: (x: number, derivate?: boolean) => number;
+  }): void {
     // Iterate through all nodes in the network.
     this.nodes.forEach((node) => {
       // Update bias if provided in the values object.

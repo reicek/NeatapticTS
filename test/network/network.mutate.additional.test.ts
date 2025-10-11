@@ -110,7 +110,8 @@ describe('Network.mutateImpl additional operators', () => {
       // Act
       mutateImpl.call(net, mutation.BATCH_NORM);
       const tagged = net.nodes.some(
-        (n: any) => n.type === 'hidden' && n._batchNorm === true
+        (node) =>
+          node.type === 'hidden' && Reflect.get(node, '_batchNorm') === true
       );
       // Assert
       expect(tagged).toBe(true);

@@ -16,6 +16,17 @@ interface EscalationRecord {
   timestamp: string;
 }
 
+/**
+ * Runtime interface for variance record from benchmark results.
+ */
+interface VarianceRecord {
+  size: number;
+  fwdAvgMsCvPct: number;
+  buildMsCvPct: number;
+  repeatsRun: number;
+  [key: string]: unknown;
+}
+
 describe('benchmark.variance.escalation (metadata stub)', () => {
   it('records advisory escalation entries when CV exceeds target', () => {
     const file = path.resolve(__dirname, 'benchmark.results.json');
@@ -32,7 +43,7 @@ describe('benchmark.variance.escalation (metadata stub)', () => {
       data.meta.varianceAutoEscalations = [];
     }
     const existing: EscalationRecord[] = data.meta.varianceAutoEscalations;
-    (data.variance || []).forEach((v: any) => {
+    (data.variance || []).forEach((v: VarianceRecord) => {
       const exceeds = v.fwdAvgMsCvPct > targetCv;
       const already = existing.find((e) => e.size === v.size);
       if (exceeds && !already) {

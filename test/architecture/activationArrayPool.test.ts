@@ -14,14 +14,14 @@ describe('ActivationArrayPool', () => {
     });
     describe('reuse', () => {
       const acquired = activationArrayPool.acquire(size);
-      acquired[0] = 123 as any;
+      acquired[0] = 123;
       activationArrayPool.release(acquired);
       const again = activationArrayPool.acquire(size);
       it('returns the same array reference after release', () => {
         expect(again).toBe(acquired);
       });
       it('zero-fills on reuse', () => {
-        expect(again[0]).toBe(0 as any);
+        expect(again[0]).toBe(0);
       });
     });
     it('clear empties all buckets', () => {

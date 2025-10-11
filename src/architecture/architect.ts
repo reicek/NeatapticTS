@@ -193,7 +193,10 @@ export default class Architect {
     // Construct the final Network object from the assembled layers.
     const net = Architect.construct(nodes);
     // Attach ordered Layer instances (excluding any Group) to enable layer-based features (e.g. stochastic depth)
-    (net as any).layers = nodes.filter((n) => n instanceof Layer);
+
+    ((net as unknown) as { layers: Layer[] }).layers = nodes.filter(
+      (n) => n instanceof Layer
+    );
     return net;
   }
 
@@ -243,30 +246,30 @@ export default class Architect {
     // Add the specified number of hidden nodes using the ADD_NODE mutation.
     // This mutation typically adds a node by splitting an existing connection.
     for (let i = 0; i < hidden; i++) {
-      network.mutate(methods.mutation.ADD_NODE);
+      network.mutate(methods.mutation.ADD_NODE as never);
     }
 
     // Add forward connections using the ADD_CONN mutation.
     // This mutation adds a connection between two previously unconnected nodes.
     // Note: The initial hidden node additions also create connections, so we add `connections - hidden` more.
     for (let i = 0; i < connections - hidden; i++) {
-      network.mutate(methods.mutation.ADD_CONN);
+      network.mutate(methods.mutation.ADD_CONN as never);
     }
 
     // Add recurrent (backward) connections using the ADD_BACK_CONN mutation.
     for (let i = 0; i < backconnections; i++) {
-      network.mutate(methods.mutation.ADD_BACK_CONN);
+      network.mutate(methods.mutation.ADD_BACK_CONN as never);
     }
 
     // Add self-connections using the ADD_SELF_CONN mutation.
     for (let i = 0; i < selfconnections; i++) {
-      network.mutate(methods.mutation.ADD_SELF_CONN);
+      network.mutate(methods.mutation.ADD_SELF_CONN as never);
     }
 
     // Add gating connections using the ADD_GATE mutation.
     // This adds a connection where one node controls the flow through another connection.
     for (let i = 0; i < gates; i++) {
-      network.mutate(methods.mutation.ADD_GATE);
+      network.mutate(methods.mutation.ADD_GATE as never);
     }
 
     // Return the network with the generated topology.
@@ -606,7 +609,7 @@ export default class Architect {
 
           // Connect to previous layer
           if (i > 0 && network.layers[i - 1].output) {
-            for (const prevNode of network.layers[i - 1].output.nodes) {
+            for (const prevNode of network.layers[i - 1].output!.nodes) {
               const connections = prevNode.connect(newNode);
               // Fix: Spread the connections array into individual connections
               network.connections.push(...connections);
@@ -615,7 +618,7 @@ export default class Architect {
 
           // Connect to next layer
           if (i < network.layers.length - 1 && network.layers[i + 1].output) {
-            for (const nextNode of network.layers[i + 1].output.nodes) {
+            for (const nextNode of network.layers[i + 1].output!.nodes) {
               const connections = newNode.connect(nextNode);
               // Fix: Spread the connections array into individual connections
               network.connections.push(...connections);

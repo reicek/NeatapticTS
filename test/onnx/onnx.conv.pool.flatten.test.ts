@@ -1,5 +1,5 @@
 import Network from '../../src/architecture/network';
-import { exportToONNX, importFromONNX } from '../../src/architecture/onnx';
+import { exportToONNX } from '../../src/architecture/onnx';
 
 describe('ONNX Flatten after Pooling (Phase 4 extension)', () => {
   describe('when flattenAfterPooling enabled', () => {

@@ -68,5 +68,5 @@ function run(): BrowserBenchRecord[] {
   results: run(),
 };
 
-// eslint-disable-next-line no-console
+ 
 console.log('[NEATAPTIC_BROWSER_BENCH] ready');

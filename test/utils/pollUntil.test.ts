@@ -1,4 +1,4 @@
-import { pollUntil, PollUntilAbortError } from './pollUntil';
+import { pollUntil } from './pollUntil';
 
 describe('pollUntil', () => {
   it('resolves when predicate becomes truthy', async () => {

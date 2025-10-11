@@ -114,7 +114,9 @@ This approach is inspired by neuro-evolution techniques where network topology e
 <li>`` - - Optional configuration for the network structure.</li>
 </ul>
 <p>Returns: The constructed network with a randomized topology.</p>
-<h2 id="architecture-connection-ts">architecture/connection.ts</h2><h3 id="connection">connection</h3><h3 id="default">default</h3><h4 id="flags">_flags</h4><p>Packed state flags (private for future-proofing hidden class):
+<h2 id="architecture-connection-ts">architecture/connection.ts</h2><h3 id="connection">connection</h3><h3 id="connectionsymbolprops">ConnectionSymbolProps</h3><p>Internal interface for accessing symbol-keyed properties on Connection instances.
+Used for type-safe access to dynamic symbol properties.</p>
+<h3 id="default">default</h3><h4 id="flags">_flags</h4><p>Packed state flags (private for future-proofing hidden class):
 bit0 =&gt; enabled gene expression (1 = active)
 bit1 =&gt; DropConnect active mask (1 = not dropped this forward pass)
 bit2 =&gt; hasGater (1 = symbol field present)
@@ -179,7 +181,7 @@ You normally only call this at the start of an experiment or when deserializing 
 <h4 id="secondmoment">secondMoment</h4><p>Second raw moment estimate (Adam family) (was opt_v).</p>
 <h4 id="secondmomentum">secondMomentum</h4><p>Secondary momentum (Lion variant) (was opt_m2).</p>
 <h4 id="to">to</h4><p>The target (post-synaptic) node receiving activation.</p>
-<h4 id="tojson">toJSON</h4><p><code>() =&gt; any</code></p>
+<h4 id="tojson">toJSON</h4><p><code>() =&gt; { from: number | undefined; to: number | undefined; weight: number; gain: number; innovation: number; enabled: boolean; gater?: number | undefined; }</code></p>
 <p>Serialize to a minimal JSON-friendly shape (used for saving genomes / networks).
 Undefined indices are preserved as <code>undefined</code> to allow later resolution / remapping.</p>
 <p>Returns: Object with node indices, weight, gain, gater index (if any), innovation id &amp; enabled flag.</p>
@@ -203,7 +205,7 @@ existing states and incoming connections.</p>
 <p>Resets the state of all nodes in the group. This typically involves clearing
 activation values, state, and propagated errors, preparing the group for a new input pattern,
 especially relevant in recurrent networks or sequence processing.</p>
-<h4 id="connect">connect</h4><p><code>(target: import(&quot;D:/code-practice/NeatapticTS/src/architecture/node&quot;).default | import(&quot;D:/code-practice/NeatapticTS/src/architecture/layer&quot;).default | import(&quot;D:/code-practice/NeatapticTS/src/architecture/group&quot;).default, method: any, weight: number | undefined) =&gt; any[]</code></p>
+<h4 id="connect">connect</h4><p><code>(target: import(&quot;D:/code-practice/NeatapticTS/src/architecture/node&quot;).default | import(&quot;D:/code-practice/NeatapticTS/src/architecture/layer&quot;).default | import(&quot;D:/code-practice/NeatapticTS/src/architecture/group&quot;).default, method: unknown, weight: number | undefined) =&gt; import(&quot;D:/code-practice/NeatapticTS/src/architecture/connection&quot;).default[]</code></p>
 <p>Establishes connections from all nodes in this group to a target Group, Layer, or Node.
 The connection pattern (e.g., all-to-all, one-to-one) can be specified.</p>
 <p>Parameters:</p>
@@ -212,7 +214,7 @@ The connection pattern (e.g., all-to-all, one-to-one) can be specified.</p>
 <li>`` - - The connection method/type (e.g., <code>methods.groupConnection.ALL_TO_ALL</code>, <code>methods.groupConnection.ONE_TO_ONE</code>). Defaults depend on the target type and whether it&#39;s the same group.</li>
 <li>`` - - An optional fixed weight to assign to all created connections. If not provided, weights might be initialized randomly or based on node defaults.</li>
 </ul>
-<p>Returns: An array containing all the connection objects created. Consider using a more specific type like <code>Connection[]</code>.</p>
+<p>Returns: An array containing all the connection objects created.</p>
 <h4 id="connections">connections</h4><p>Stores connection information related to this group.
 <code>in</code>: Connections coming into any node in this group from outside.
 <code>out</code>: Connections going out from any node in this group to outside.
@@ -224,12 +226,12 @@ The connection pattern (e.g., all-to-all, one-to-one) can be specified.</p>
 <li>`` - - The Group or Node to disconnect from.</li>
 <li>`` - - If true, also removes connections originating from the <code>target</code> and ending in this group. Defaults to false (only removes connections from this group to the target).</li>
 </ul>
-<h4 id="gate">gate</h4><p><code>(connections: any, method: any) =&gt; void</code></p>
+<h4 id="gate">gate</h4><p><code>(connections: import(&quot;D:/code-practice/NeatapticTS/src/architecture/connection&quot;).default | import(&quot;D:/code-practice/NeatapticTS/src/architecture/connection&quot;).default[], method: unknown) =&gt; void</code></p>
 <p>Configures nodes within this group to act as gates for the specified connection(s).
 Gating allows the output of a node in this group to modulate the flow of signal through the gated connection.</p>
 <p>Parameters:</p>
 <ul>
-<li>`` - - A single connection object or an array of connection objects to be gated. Consider using a more specific type like <code>Connection | Connection[]</code>.</li>
+<li>`` - - A single connection object or an array of connection objects to be gated.</li>
 <li>`` - - The gating mechanism to use (e.g., <code>methods.gating.INPUT</code>, <code>methods.gating.OUTPUT</code>, <code>methods.gating.SELF</code>). Specifies which part of the connection is influenced by the gater node.</li>
 </ul>
 <h4 id="nodes">nodes</h4><p>An array holding all the nodes within this group.</p>
@@ -243,7 +245,7 @@ the error is calculated based on the error propagated from subsequent layers/nod
 <li>`` - - The momentum factor to apply during weight updates.</li>
 <li>`` - - Optional target values for error calculation. If provided, its length must match the number of nodes.</li>
 </ul>
-<h4 id="set">set</h4><p><code>(values: { bias?: number | undefined; squash?: any; type?: string | undefined; }) =&gt; void</code></p>
+<h4 id="set">set</h4><p><code>(values: { bias?: number | undefined; squash?: ((x: number, derivate?: boolean | undefined) =&gt; number) | undefined; type?: string | undefined; }) =&gt; void</code></p>
 <p>Sets specific properties (like bias, squash function, or type) for all nodes within the group.</p>
 <p>Parameters:</p>
 <ul>
@@ -298,7 +300,7 @@ Applies batch normalization to the activations of the nodes in this layer during
 <h4 id="clear">clear</h4><p><code>() =&gt; void</code></p>
 <p>Resets the activation state of all nodes within the layer.
 This is typically done before processing a new input sequence or sample.</p>
-<h4 id="connect">connect</h4><p><code>(target: import(&quot;D:/code-practice/NeatapticTS/src/architecture/node&quot;).default | import(&quot;D:/code-practice/NeatapticTS/src/architecture/layer&quot;).default | import(&quot;D:/code-practice/NeatapticTS/src/architecture/group&quot;).default, method: any, weight: number | undefined) =&gt; any[]</code></p>
+<h4 id="connect">connect</h4><p><code>(target: import(&quot;D:/code-practice/NeatapticTS/src/architecture/node&quot;).default | import(&quot;D:/code-practice/NeatapticTS/src/architecture/layer&quot;).default | import(&quot;D:/code-practice/NeatapticTS/src/architecture/group&quot;).default, method: unknown, weight: number | undefined) =&gt; import(&quot;D:/code-practice/NeatapticTS/src/architecture/connection&quot;).default[]</code></p>
 <p>Connects this layer&#39;s output to a target component (Layer, Group, or Node).</p>
 <p>This method delegates the connection logic primarily to the layer&#39;s <code>output</code> group
 or the target layer&#39;s <code>input</code> method. It establishes the forward connections
@@ -343,7 +345,7 @@ when using the default <code>ALL_TO_ALL</code> connection method via <code>layer
 </ul>
 <h4 id="dropout">dropout</h4><p>Dropout rate for this layer (0 to 1). If &gt; 0, all nodes in the layer are masked together during training.
 Layer-level dropout takes precedence over node-level dropout for nodes in this layer.</p>
-<h4 id="gate">gate</h4><p><code>(connections: any[], method: any) =&gt; void</code></p>
+<h4 id="gate">gate</h4><p><code>(connections: import(&quot;D:/code-practice/NeatapticTS/src/architecture/connection&quot;).default[], method: unknown) =&gt; void</code></p>
 <p>Applies gating to a set of connections originating from this layer&#39;s output group.</p>
 <p>Gating allows the activity of nodes in this layer (specifically, the output group)
 to modulate the flow of information through the specified <code>connections</code>.</p>
@@ -362,7 +364,7 @@ They use an update gate and a reset gate to manage information flow.</p>
 <li><code>size</code> - - The number of GRU units (and nodes in each gate/cell group).</li>
 </ul>
 <p>Returns: A new Layer instance configured as a GRU layer.</p>
-<h4 id="input">input</h4><p><code>(from: import(&quot;D:/code-practice/NeatapticTS/src/architecture/layer&quot;).default | import(&quot;D:/code-practice/NeatapticTS/src/architecture/group&quot;).default, method: any, weight: number | undefined) =&gt; any[]</code></p>
+<h4 id="input">input</h4><p><code>(from: import(&quot;D:/code-practice/NeatapticTS/src/architecture/layer&quot;).default | import(&quot;D:/code-practice/NeatapticTS/src/architecture/group&quot;).default, method: unknown, weight: number | undefined) =&gt; import(&quot;D:/code-practice/NeatapticTS/src/architecture/connection&quot;).default[]</code></p>
 <p>Handles the connection logic when this layer is the <em>target</em> of a connection.</p>
 <p>It connects the output of the <code>from</code> layer or group to this layer&#39;s primary
 input mechanism (which is often the <code>output</code> group itself, but depends on the layer type).
@@ -374,7 +376,7 @@ This method is usually called by the <code>connect</code> method of the source l
 <li><code>weight</code> - - An optional fixed weight for the connections.</li>
 </ul>
 <p>Returns: An array containing the newly created connection objects.</p>
-<h4 id="isgroup">isGroup</h4><p><code>(obj: any) =&gt; boolean</code></p>
+<h4 id="isgroup">isGroup</h4><p><code>(obj: unknown) =&gt; boolean</code></p>
 <p>Type guard to check if an object is likely a <code>Group</code>.</p>
 <p>This is a duck-typing check based on the presence of expected properties
 (<code>set</code> method and <code>nodes</code> array). Used internally where <code>layer.nodes</code>
@@ -431,7 +433,7 @@ their error based on the error propagated from subsequent layers.</p>
 <li><code>momentum</code> - - The momentum factor, used to smooth weight updates and escape local minima.</li>
 <li><code>target</code> - - An optional array of target values (expected outputs) for the layer&#39;s nodes. The length must match the number of nodes.</li>
 </ul>
-<h4 id="set">set</h4><p><code>(values: { bias?: number | undefined; squash?: any; type?: string | undefined; }) =&gt; void</code></p>
+<h4 id="set">set</h4><p><code>(values: { bias?: number | undefined; squash?: ((x: number, derivate?: boolean | undefined) =&gt; number) | undefined; type?: string | undefined; }) =&gt; void</code></p>
 <p>Configures properties for all nodes within the layer.</p>
 <p>Allows batch setting of common node properties like bias, activation function (<code>squash</code>),
 or node type. If a node within the <code>nodes</code> array is actually a <code>Group</code> (e.g., in memory layers),
@@ -441,76 +443,10 @@ the configuration is applied recursively to the nodes within that group.</p>
 <li><code>values</code> - - An object containing the properties and their values to set.
 Example: <code>{ bias: 0.5, squash: methods.Activation.ReLU }</code></li>
 </ul>
-<h2 id="architecture-network-ts">architecture/network.ts</h2><h3 id="network">network</h3><h1 id="network-evolvable-trainable-graph">Network (Evolvable / Trainable Graph)</h1><p>Represents a directed neural computation graph used both as a NEAT genome
-phenotype and (optionally) as a gradient‑trainable model. The class binds
-together specialized modules (topology, pruning, serialization, slab packing)
-to keep the core surface approachable for learners.</p>
-<p>Educational Highlights:</p>
-<ul>
-<li>Structural Mutation: functions like <code>addNodeBetween()</code> and evolutionary
-helpers (in higher-level <code>Neat</code>) mutate topology to explore architectures.</li>
-<li>Fast Execution Paths: a Structure‑of‑Arrays (SoA) slab (<code>rebuildConnectionSlab</code>)
-packs connection data into typed arrays to improve cache locality.</li>
-<li>Memory Optimization: node pooling &amp; typed array pooling demonstrate how
-allocation patterns affect performance and GC pressure.</li>
-<li>Determinism: RNG snapshot/restore methods allow reproducible experiments.</li>
-<li>Hybrid Workflows: dropout, stochastic depth, weight noise and mixed precision
-illustrate gradient‑era regularization applied to evolved topologies.</li>
-</ul>
-<p>Typical Usage:</p>
-<pre><code class="language-ts">const net = new Network(4, 2);           // create network
-const out = net.activate([0.1,0.3,0.2,0.9]);
-net.addNodeBetween();                    // structural mutation
-const slab = (net as any).getConnectionSlab(); // inspect packed arrays
-const clone = net.clone();               // deep copy
-</code></pre>
-<p>Performance Guidance:</p>
-<ul>
-<li>Invoke <code>activate()</code> normally; the class auto‑selects slab vs object path.</li>
-<li>Batch structural mutations then call <code>rebuildConnectionSlab(true)</code> if you
-need an immediate fast‑path (it is invoked lazily otherwise).</li>
-<li>Keep input array length exactly equal to <code>input</code>; mismatches throw early.</li>
-</ul>
-<p>Serialization:</p>
-<ul>
-<li><code>toJSON()</code> / <code>fromJSON()</code> support experiment checkpointing.</li>
-<li>ONNX export (<code>exportToONNX</code>) enables interoperability with other tools.</li>
-</ul>
-<h3 id="network">Network</h3><h1 id="network-evolvable-trainable-graph">Network (Evolvable / Trainable Graph)</h1><p>Represents a directed neural computation graph used both as a NEAT genome
-phenotype and (optionally) as a gradient‑trainable model. The class binds
-together specialized modules (topology, pruning, serialization, slab packing)
-to keep the core surface approachable for learners.</p>
-<p>Educational Highlights:</p>
-<ul>
-<li>Structural Mutation: functions like <code>addNodeBetween()</code> and evolutionary
-helpers (in higher-level <code>Neat</code>) mutate topology to explore architectures.</li>
-<li>Fast Execution Paths: a Structure‑of‑Arrays (SoA) slab (<code>rebuildConnectionSlab</code>)
-packs connection data into typed arrays to improve cache locality.</li>
-<li>Memory Optimization: node pooling &amp; typed array pooling demonstrate how
-allocation patterns affect performance and GC pressure.</li>
-<li>Determinism: RNG snapshot/restore methods allow reproducible experiments.</li>
-<li>Hybrid Workflows: dropout, stochastic depth, weight noise and mixed precision
-illustrate gradient‑era regularization applied to evolved topologies.</li>
-</ul>
-<p>Typical Usage:</p>
-<pre><code class="language-ts">const net = new Network(4, 2);           // create network
-const out = net.activate([0.1,0.3,0.2,0.9]);
-net.addNodeBetween();                    // structural mutation
-const slab = (net as any).getConnectionSlab(); // inspect packed arrays
-const clone = net.clone();               // deep copy
-</code></pre>
-<p>Performance Guidance:</p>
-<ul>
-<li>Invoke <code>activate()</code> normally; the class auto‑selects slab vs object path.</li>
-<li>Batch structural mutations then call <code>rebuildConnectionSlab(true)</code> if you
-need an immediate fast‑path (it is invoked lazily otherwise).</li>
-<li>Keep input array length exactly equal to <code>input</code>; mismatches throw early.</li>
-</ul>
-<p>Serialization:</p>
-<ul>
-<li><code>toJSON()</code> / <code>fromJSON()</code> support experiment checkpointing.</li>
-<li>ONNX export (<code>exportToONNX</code>) enables interoperability with other tools.</li>
-</ul>
+<h2 id="architecture-network-ts">architecture/network.ts</h2><h3 id="connectionweightnoiseprops">ConnectionWeightNoiseProps</h3><p>Internal runtime properties attached to Connection instances.
+These properties are dynamically managed for weight noise and DropConnect.</p>
+<h3 id="network">network</h3><h3 id="networkruntimeprops">NetworkRuntimeProps</h3><p>Internal runtime properties attached to Network instances.
+These properties are dynamically managed and not part of the formal class interface.</p>
 <h3 id="default">default</h3><h4 id="applygradientclipping">_applyGradientClipping</h4><p><code>(cfg: { mode: &quot;norm&quot; | &quot;percentile&quot; | &quot;layerwiseNorm&quot; | &quot;layerwisePercentile&quot;; maxNorm?: number | undefined; percentile?: number | undefined; }) =&gt; void</code></p>
 <p>Trains the network on a given dataset subset for one pass (epoch or batch).
 Performs activation and backpropagation for each item in the set.
@@ -525,7 +461,7 @@ Updates weights based on batch size configuration.</p>
 <li>`` - - The function used to calculate the error between target and output.</li>
 </ul>
 <p>Returns: The average error calculated over the provided dataset subset.</p>
-<h4 id="activate">activate</h4><p><code>(input: number[], training: boolean, maxActivationDepth: number) =&gt; number[]</code></p>
+<h4 id="activate">activate</h4><p><code>(input: number[], training: boolean, _maxActivationDepth: number) =&gt; number[]</code></p>
 <p>Activates the network using the given input array.
 Performs a forward pass through the network, calculating the activation of each node.</p>
 <p>Parameters:</p>
@@ -546,7 +482,7 @@ compatibility. Future optimizations can vectorize this path.</p>
 <li><code>training</code> - Whether to run with training-time stochastic features</li>
 </ul>
 <p>Returns: Array of output vectors, each length equals this.output</p>
-<h4 id="activateraw">activateRaw</h4><p><code>(input: number[], training: boolean, maxActivationDepth: number) =&gt; any</code></p>
+<h4 id="activateraw">activateRaw</h4><p><code>(input: number[], training: boolean, maxActivationDepth: number) =&gt; import(&quot;D:/code-practice/NeatapticTS/src/architecture/activationArrayPool&quot;).ActivationArray</code></p>
 <p>Raw activation that can return a typed array when pooling is enabled (zero-copy).
 If reuseActivationArrays=false falls back to standard activate().</p>
 <h4 id="adjustrateforaccumulation">adjustRateForAccumulation</h4><p><code>(rate: number, accumulationSteps: number, reduction: &quot;average&quot; | &quot;sum&quot;) =&gt; number</code></p>
@@ -592,7 +528,7 @@ while disjoint/excess genes are typically inherited from the fitter parent (or r
  If false (default), they are inherited from the fitter parent.</li>
 </ul>
 <p>Returns: A new Network instance representing the offspring.</p>
-<h4 id="deserialize">deserialize</h4><p><code>(data: any[], inputSize: number | undefined, outputSize: number | undefined) =&gt; import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default</code></p>
+<h4 id="deserialize">deserialize</h4><p><code>(data: [number[], number[], string[], { from: number; to: number; weight: number; gater: number | null; }[], number, number] | unknown[], inputSize: number | undefined, outputSize: number | undefined) =&gt; import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default</code></p>
 <p>Creates a Network instance from serialized data produced by <code>serialize()</code>.
 Reconstructs the network structure and state based on the provided arrays.</p>
 <p>Parameters:</p>
@@ -618,7 +554,7 @@ If the connection being removed was gated, it is also ungated.</p>
 <p>Public wrapper for fast slab forward pass (primarily for tests / benchmarking).
 Prefer using standard activate(); it will auto dispatch when eligible.
 Falls back internally if prerequisites not met.</p>
-<h4 id="fromjson">fromJSON</h4><p><code>(json: any) =&gt; import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default</code></p>
+<h4 id="fromjson">fromJSON</h4><p><code>(json: Record&lt;string, unknown&gt;) =&gt; import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default</code></p>
 <p>Reconstructs a network from a JSON object (latest standard).
 Handles formatVersion, robust error handling, and index-based references.</p>
 <p>Parameters:</p>
@@ -643,13 +579,13 @@ Adds the connection to the network&#39;s <code>gates</code> list.</p>
 <p>Returns last recorded raw (pre-update) gradient L2 norm.</p>
 <h4 id="gettrainingstats">getTrainingStats</h4><p><code>() =&gt; { gradNorm: number; gradNormRaw: number; lossScale: number; optimizerStep: number; mp: { good: number; bad: number; overflowCount: number; scaleUps: number; scaleDowns: number; lastOverflowStep: number; }; }</code></p>
 <p>Consolidated training stats snapshot.</p>
-<h4 id="mutate">mutate</h4><p><code>(method: any) =&gt; void</code></p>
+<h4 id="mutate">mutate</h4><p><code>(method: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network/network.mutate&quot;).MutationMethod) =&gt; void</code></p>
 <p>Mutates the network&#39;s structure or parameters according to the specified method.
 This is a core operation for neuro-evolutionary algorithms (like NEAT).
 The method argument should be one of the mutation types defined in <code>methods.mutation</code>.</p>
 <p>Parameters:</p>
 <ul>
-<li>`` - - The mutation method to apply (e.g., <code>mutation.ADD_NODE</code>, <code>mutation.MOD_WEIGHT</code>).
+<li><code>method</code> - - The mutation method to apply (e.g., <code>mutation.ADD_NODE</code>, <code>mutation.MOD_WEIGHT</code>).
 Some methods might have associated parameters (e.g., <code>MOD_WEIGHT</code> uses <code>min</code>, <code>max</code>).</li>
 </ul>
 <h4 id="notraceactivate">noTraceActivate</h4><p><code>(input: number[]) =&gt; number[]</code></p>
@@ -715,9 +651,9 @@ and potentially re-gating connections that were gated <em>by other nodes</em> on
 <h4 id="resetdropoutmasks">resetDropoutMasks</h4><p><code>() =&gt; void</code></p>
 <p>Resets all masks in the network to 1 (no dropout). Applies to both node-level and layer-level dropout.
 Should be called after training to ensure inference is unaffected by previous dropout.</p>
-<h4 id="serialize">serialize</h4><p><code>() =&gt; any[]</code></p>
+<h4 id="serialize">serialize</h4><p><code>() =&gt; [number[], number[], string[], import(&quot;D:/code-practice/NeatapticTS/src/architecture/network/network.serialize&quot;).SerializedConnection[], number, number]</code></p>
 <p>Lightweight tuple serializer delegating to network.serialize.ts</p>
-<h4 id="set">set</h4><p><code>(values: { bias?: number | undefined; squash?: any; }) =&gt; void</code></p>
+<h4 id="set">set</h4><p><code>(values: { bias?: number | undefined; squash?: ((x: number, derivate?: boolean | undefined) =&gt; number) | undefined; }) =&gt; void</code></p>
 <p>Sets specified properties (e.g., bias, squash function) for all nodes in the network.
 Useful for initializing or resetting node properties uniformly.</p>
 <p>Parameters:</p>
@@ -726,7 +662,7 @@ Useful for initializing or resetting node properties uniformly.</p>
 </ul>
 <h4 id="setstochasticdepth">setStochasticDepth</h4><p><code>(survival: number[]) =&gt; void</code></p>
 <p>Configure stochastic depth with survival probabilities per hidden layer (length must match hidden layer count when using layered network).</p>
-<h4 id="test">test</h4><p><code>(set: { input: number[]; output: number[]; }[], cost: any) =&gt; { error: number; time: number; }</code></p>
+<h4 id="test">test</h4><p><code>(set: { input: number[]; output: number[]; }[], cost: ((target: number[], output: number[]) =&gt; number) | undefined) =&gt; { error: number; time: number; }</code></p>
 <p>Tests the network&#39;s performance on a given dataset.
 Calculates the average error over the dataset using a specified cost function.
 Uses <code>noTraceActivate</code> for efficiency as gradients are not needed.
@@ -737,7 +673,7 @@ Handles dropout scaling if dropout was used during training.</p>
 <li>`` - - The cost function to evaluate the error. Defaults to Mean Squared Error.</li>
 </ul>
 <p>Returns: An object containing the calculated average error over the dataset and the time taken for the test in milliseconds.</p>
-<h4 id="tojson">toJSON</h4><p><code>() =&gt; object</code></p>
+<h4 id="tojson">toJSON</h4><p><code>() =&gt; Record&lt;string, unknown&gt;</code></p>
 <p>Converts the network into a JSON object representation (latest standard).
 Includes formatVersion, and only serializes properties needed for full reconstruction.
 All references are by index. Excludes runtime-only properties (activation, state, traces).</p>
@@ -777,6 +713,8 @@ a variety of learning rules beyond simple backprop).</li>
 <p>Educational note: Traces (<code>eligibility</code> and <code>xtrace</code>) illustrate how recurrent credit
 assignment works in algorithms like RTRL / policy gradients. They are updated only when
 using the traced activation path (<code>activate</code>) vs <code>noTraceActivate</code> (inference fast path).</p>
+<h3 id="nodeoptimizerprops">NodeOptimizerProps</h3><p>Internal interface for accessing dynamic optimizer properties on Node instances.
+These properties are lazily allocated and not part of the main class definition.</p>
 <h3 id="default">default</h3><h4 id="activatecore">_activateCore</h4><p><code>(withTrace: boolean, input: number | undefined) =&gt; number</code></p>
 <p>Internal shared implementation for activate/noTraceActivate.</p>
 <p>Parameters:</p>
@@ -818,7 +756,7 @@ Resets accumulators after applying. Safe to call on any node type.</p>
 <ul>
 <li><code>momentum</code> - Momentum factor (0 to disable)</li>
 </ul>
-<h4 id="applybatchupdateswithoptimizer">applyBatchUpdatesWithOptimizer</h4><p><code>(opts: { type: &quot;sgd&quot; | &quot;rmsprop&quot; | &quot;adagrad&quot; | &quot;adam&quot; | &quot;adamw&quot; | &quot;amsgrad&quot; | &quot;adamax&quot; | &quot;nadam&quot; | &quot;radam&quot; | &quot;lion&quot; | &quot;adabelief&quot; | &quot;lookahead&quot;; momentum?: number | undefined; beta1?: number | undefined; beta2?: number | undefined; eps?: number | undefined; weightDecay?: number | undefined; lrScale?: number | undefined; t?: number | undefined; baseType?: any; la_k?: number | undefined; la_alpha?: number | undefined; }) =&gt; void</code></p>
+<h4 id="applybatchupdateswithoptimizer">applyBatchUpdatesWithOptimizer</h4><p><code>(opts: { type: &quot;sgd&quot; | &quot;rmsprop&quot; | &quot;adagrad&quot; | &quot;adam&quot; | &quot;adamw&quot; | &quot;amsgrad&quot; | &quot;adamax&quot; | &quot;nadam&quot; | &quot;radam&quot; | &quot;lion&quot; | &quot;adabelief&quot; | &quot;lookahead&quot;; momentum?: number | undefined; beta1?: number | undefined; beta2?: number | undefined; eps?: number | undefined; weightDecay?: number | undefined; lrScale?: number | undefined; t?: number | undefined; baseType?: string | undefined; la_k?: number | undefined; la_alpha?: number | undefined; }) =&gt; void</code></p>
 <p>Extended batch update supporting multiple optimizers.</p>
 <p>Applies accumulated (batch) gradients stored in <code>totalDeltaWeight</code> / <code>totalDeltaBias</code> to the
 underlying weights and bias using the selected optimization algorithm. Supports both classic
@@ -928,7 +866,7 @@ Considers both regular outgoing connections and the self-connection.</p>
 </ul>
 <p>Returns: True if this node projects to the target node, false otherwise.</p>
 <h4 id="mask">mask</h4><p>A mask factor (typically 0 or 1) used for implementing dropout. If 0, the node&#39;s output is effectively silenced.</p>
-<h4 id="mutate">mutate</h4><p><code>(method: any) =&gt; void</code></p>
+<h4 id="mutate">mutate</h4><p><code>(method: unknown) =&gt; void</code></p>
 <p>Applies a mutation method to the node. Used in neuro-evolution.</p>
 <p>This allows modifying the node&#39;s properties, such as its activation function or bias,
 based on predefined mutation methods.</p>
@@ -1005,24 +943,10 @@ Resets the connection&#39;s gain to 1 and removes it from the <code>connections.
 <li><code>connections</code> - A single Connection object or an array of Connection objects to ungate.</li>
 </ul>
 <h2 id="architecture-nodepool-ts">architecture/nodePool.ts</h2><h3 id="acquirenode">acquireNode</h3><p><code>(opts: import(&quot;D:/code-practice/NeatapticTS/src/architecture/nodePool&quot;).AcquireNodeOptions) =&gt; import(&quot;D:/code-practice/NeatapticTS/src/architecture/node&quot;).default</code></p>
-<p>Acquire (obtain) a node instance from the pool (or construct a new one if empty).
-The node is guaranteed to have fully reset dynamic state (activation, gradients, error, connections).</p>
 <h3 id="acquirenodeoptions">AcquireNodeOptions</h3><p>Options bag for acquiring a node.</p>
 <h3 id="nodepoolstats">nodePoolStats</h3><p><code>() =&gt; { size: number; highWaterMark: number; reused: number; fresh: number; recycledRatio: number; }</code></p>
-<p>Get current pool statistics (for debugging / future leak detection).</p>
 <h3 id="releasenode">releaseNode</h3><p><code>(node: import(&quot;D:/code-practice/NeatapticTS/src/architecture/node&quot;).default) =&gt; void</code></p>
-<p>Release (recycle) a node back into the pool. The caller MUST ensure the node is fully detached
-from any network (connections arrays pruned, no external references maintained) to prevent leaks.
-After release, the node must be considered invalid until re-acquired.</p>
-<p>Phase 2: Automatically invoked by Network.remove() when pooling is enabled to recycle pruned nodes.</p>
-<h3 id="resetnode">resetNode</h3><p><code>(node: import(&quot;D:/code-practice/NeatapticTS/src/architecture/node&quot;).default, type: string | undefined, rng: () =&gt; number) =&gt; void</code></p>
-<p>Reset all mutable / dynamic fields of a node to a pristine post-construction state.
-This mirrors logic in the constructor &amp; <code>clear()</code> while also clearing arrays &amp; error objects.</p>
-<p>We intentionally do NOT reset the <code>type</code> or <code>squash</code> function unless explicitly provided so callers
-can optionally request a different type on acquire. Bias is reinitialized consistent with constructor semantics.</p>
 <h3 id="resetnodepool">resetNodePool</h3><p><code>() =&gt; void</code></p>
-<p>Reset the pool (drops all retained nodes). Intended for test harness cleanup.</p>
-<h3 id="resettablenodefields">ResettableNodeFields</h3><p>Shape describing minimal mutable fields we explicitly reset (used internally).</p>
 <h2 id="architecture-onnx-ts">architecture/onnx.ts</h2><h3 id="conv2dmapping">Conv2DMapping</h3><p>Mapping declaration for treating a fully-connected layer as a 2D convolution during export.
 This assumes the dense layer was originally synthesized from a convolution with weight sharing; we reconstitute spatial metadata.
 Each mapping references an export-layer index (1-based across hidden layers, output layer would be hiddenCount+1) and supplies spatial/kernel hyperparameters.
@@ -1064,4 +988,4 @@ by replacing the corresponding hidden node block with a freshly constructed Laye
 </ul>
 <h3 id="onnxexportoptions">OnnxExportOptions</h3><p>Options controlling ONNX export behavior (Phase 1).</p>
 <h3 id="onnxmodel">OnnxModel</h3><h3 id="pool2dmapping">Pool2DMapping</h3><p>Mapping describing a pooling operation inserted after a given export-layer index.</p>
-<footer class="site-footer">Generated from source JSDoc • <a href="https://github.com/reicek/NeatapticTS">GitHub</a></footer></main><aside class="toc"><div class="page-toc"><h2>Files</h2><div class="toc-file"><a href="#architecture-activationarraypool-ts">architecture/activationArrayPool.ts</a><ul><li><a href=#activationarray>ActivationArray</a></li><li><a href=#activationarraypool>activationArrayPool</a></li><li><a href=#activationarraypool>ActivationArrayPool</a></li></ul></div><div class="toc-file"><a href="#architecture-architect-ts">architecture/architect.ts</a><ul><li><a href=#architect>architect</a></li><li><a href=#architect>Architect</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#architecture-connection-ts">architecture/connection.ts</a><ul><li><a href=#connection>connection</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#architecture-group-ts">architecture/group.ts</a><ul><li><a href=#group>group</a></li><li><a href=#group>Group</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#architecture-layer-ts">architecture/layer.ts</a><ul><li><a href=#layer>layer</a></li><li><a href=#layer>Layer</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#architecture-network-ts">architecture/network.ts</a><ul><li><a href=#network>network</a></li><li><a href=#network>Network</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#architecture-node-ts">architecture/node.ts</a><ul><li><a href=#node>node</a></li><li><a href=#node>Node</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#architecture-nodepool-ts">architecture/nodePool.ts</a><ul><li><a href=#acquirenode>acquireNode</a></li><li><a href=#acquirenodeoptions>AcquireNodeOptions</a></li><li><a href=#nodepoolstats>nodePoolStats</a></li><li><a href=#releasenode>releaseNode</a></li><li><a href=#resetnode>resetNode</a></li><li><a href=#resetnodepool>resetNodePool</a></li><li><a href=#resettablenodefields>ResettableNodeFields</a></li></ul></div><div class="toc-file"><a href="#architecture-onnx-ts">architecture/onnx.ts</a><ul><li><a href=#conv2dmapping>Conv2DMapping</a></li><li><a href=#exporttoonnx>exportToONNX</a></li><li><a href=#importfromonnx>importFromONNX</a></li><li><a href=#onnxexportoptions>OnnxExportOptions</a></li><li><a href=#onnxmodel>OnnxModel</a></li><li><a href=#pool2dmapping>Pool2DMapping</a></li></ul></div></div></aside></div></body></html>
+<footer class="site-footer">Generated from source JSDoc • <a href="https://github.com/reicek/NeatapticTS">GitHub</a></footer></main><aside class="toc"><div class="page-toc"><h2>Files</h2><div class="toc-file"><a href="#architecture-activationarraypool-ts">architecture/activationArrayPool.ts</a><ul><li><a href=#activationarray>ActivationArray</a></li><li><a href=#activationarraypool>activationArrayPool</a></li><li><a href=#activationarraypool>ActivationArrayPool</a></li></ul></div><div class="toc-file"><a href="#architecture-architect-ts">architecture/architect.ts</a><ul><li><a href=#architect>architect</a></li><li><a href=#architect>Architect</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#architecture-connection-ts">architecture/connection.ts</a><ul><li><a href=#connection>connection</a></li><li><a href=#connectionsymbolprops>ConnectionSymbolProps</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#architecture-group-ts">architecture/group.ts</a><ul><li><a href=#group>group</a></li><li><a href=#group>Group</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#architecture-layer-ts">architecture/layer.ts</a><ul><li><a href=#layer>layer</a></li><li><a href=#layer>Layer</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#architecture-network-ts">architecture/network.ts</a><ul><li><a href=#connectionweightnoiseprops>ConnectionWeightNoiseProps</a></li><li><a href=#network>network</a></li><li><a href=#networkruntimeprops>NetworkRuntimeProps</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#architecture-node-ts">architecture/node.ts</a><ul><li><a href=#node>node</a></li><li><a href=#node>Node</a></li><li><a href=#nodeoptimizerprops>NodeOptimizerProps</a></li><li><a href=#default>default</a></li></ul></div><div class="toc-file"><a href="#architecture-nodepool-ts">architecture/nodePool.ts</a><ul><li><a href=#acquirenode>acquireNode</a></li><li><a href=#acquirenodeoptions>AcquireNodeOptions</a></li><li><a href=#nodepoolstats>nodePoolStats</a></li><li><a href=#releasenode>releaseNode</a></li><li><a href=#resetnodepool>resetNodePool</a></li></ul></div><div class="toc-file"><a href="#architecture-onnx-ts">architecture/onnx.ts</a><ul><li><a href=#conv2dmapping>Conv2DMapping</a></li><li><a href=#exporttoonnx>exportToONNX</a></li><li><a href=#importfromonnx>importFromONNX</a></li><li><a href=#onnxexportoptions>OnnxExportOptions</a></li><li><a href=#onnxmodel>OnnxModel</a></li><li><a href=#pool2dmapping>Pool2DMapping</a></li></ul></div></div></aside></div></body></html>

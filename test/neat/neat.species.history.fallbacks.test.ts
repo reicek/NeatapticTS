@@ -3,36 +3,80 @@
  * Single expectation per test.
  */
 import { getSpeciesHistory } from '../../src/neat/neat.species';
+import type {
+  ConnectionLike,
+  GenomeDetailed,
+  SpeciesHistoryEntry,
+  SpeciesHistoryStatExtended,
+  SpeciesLike,
+} from '../../src/neat/neat.types';
+
+type SpeciesHistoryContext = {
+  options: { speciesAllocation: { extendedHistory: boolean } } & Record<
+    string,
+    unknown
+  >;
+  _speciesHistory: SpeciesHistoryEntry[];
+  _species: SpeciesLike[];
+  _fallbackInnov?: (connection: ConnectionLike) => number;
+};
 
 /** Build a minimal context for species history fallback */
-function ctxWithHistory() {
+const ctxWithHistory = (): SpeciesHistoryContext => {
   /** two member genomes with connections containing innovations */
-  const memberA = {
+  const memberA: GenomeDetailed = {
+    _id: 1,
+    nodes: [],
     connections: [
-      { innovation: 2, enabled: true },
-      { innovation: 5, enabled: false },
+      {
+        innovation: 2,
+        enabled: true,
+        from: { geneId: 1 },
+        to: { geneId: 2 },
+      },
+      {
+        innovation: 5,
+        enabled: false,
+        from: { geneId: 2 },
+        to: { geneId: 3 },
+      },
     ],
-  } as any;
-  const memberB = { connections: [{ innovation: 7, enabled: true }] } as any;
+  };
+  const memberB: GenomeDetailed = {
+    _id: 2,
+    nodes: [],
+    connections: [
+      {
+        innovation: 7,
+        enabled: true,
+        from: { geneId: 1 },
+        to: { geneId: 3 },
+      },
+    ],
+  };
   /** species present in current population */
-  const species = [
-    { id: 1, members: [memberA, memberB], bestScore: 1, lastImproved: 0 },
+  const species: SpeciesLike[] = [
+    {
+      id: 1,
+      members: [memberA, memberB],
+      bestScore: 1,
+      lastImproved: 0,
+    },
   ];
   /** species history snapshot lacking extended fields */
-  const _speciesHistory = [
+  const _speciesHistory: SpeciesHistoryEntry[] = [
     {
       generation: 0,
       stats: [{ id: 1, size: 2, bestScore: 1, lastImproved: 0 }],
     },
   ];
   /** context object implementing required members */
-  const ctx: any = {
+  return {
     options: { speciesAllocation: { extendedHistory: true } },
     _speciesHistory,
     _species: species,
   };
-  return ctx;
-}
+};
 
 describe('Species history fallbacks', () => {
   test('augments stats with innovationRange when missing', () => {
@@ -46,12 +90,13 @@ describe('Species history fallbacks', () => {
   test('skips recomputation when fields present', () => {
     // Arrange
     const ctx = ctxWithHistory();
-    const stat = ctx._speciesHistory[0].stats[0];
+    const stat = ctx._speciesHistory[0].stats[0] as SpeciesHistoryStatExtended;
     stat.innovationRange = 123; // sentinel
     stat.enabledRatio = 0.5;
     // Act
     const hist = getSpeciesHistory.call(ctx);
     // Assert
-    expect((hist[0].stats[0] as any).innovationRange).toBe(123);
+    const entry = hist[0].stats[0] as SpeciesHistoryStatExtended;
+    expect(entry.innovationRange).toBe(123);
   });
 });

@@ -1,7 +1,18 @@
 import type Network from '../network';
 import type Node from '../node';
+import type Connection from '../connection';
 import { releaseNode as _releaseNode } from '../nodePool';
 import { config } from '../../config';
+
+/**
+ * Internal Network properties accessed during node removal operations.
+ */
+interface NetworkRemoveProps {
+  _topoDirty?: boolean;
+  _nodeIndexDirty?: boolean;
+  _slabDirty?: boolean;
+  _adjDirty?: boolean;
+}
 
 /**
  * Node removal utilities.
@@ -42,8 +53,8 @@ import { config } from '../../config';
  *  - Marks internal dirty flags so that future activation / ordering passes recompute derived state.
  */
 export function removeNode(this: Network, node: Node) {
-  /** Cast to any to access internal dirty flags without changing public typing. */
-  const internalNet = this as any;
+  /** Cast to access internal dirty flags without changing public typing. */
+  const internalNet = (this as unknown) as NetworkRemoveProps;
   /** Index of the node in the network's node array (or -1 if not found). */
   const idx = this.nodes.indexOf(node);
   if (idx === -1) throw new Error('Node not in network');
@@ -53,9 +64,9 @@ export function removeNode(this: Network, node: Node) {
   }
 
   // 1. Ungate any connections gated BY this node (drop gating influence).
-  this.gates = this.gates.filter((c: any) => {
+  this.gates = this.gates.filter((c) => {
     if (c.gater === node) {
-      (c as any).gater = null; // explicit null so legacy checks see it as ungated
+      ((c as unknown) as Connection).gater = null; // explicit null so legacy checks see it as ungated
       return false; // remove from gates list
     }
     return true;
@@ -67,21 +78,21 @@ export function removeNode(this: Network, node: Node) {
   const outbound = node.connections.out.slice();
 
   // 2. Disconnect all inbound connections.
-  inbound.forEach((c: any) => this.disconnect(c.from, c.to));
+  inbound.forEach((c) => this.disconnect(c.from, c.to));
   // 3. Disconnect all outbound connections.
-  outbound.forEach((c: any) => this.disconnect(c.from, c.to));
+  outbound.forEach((c) => this.disconnect(c.from, c.to));
   // 4. Disconnect self connections (if any recurrent self-loop).
   node.connections.self.slice().forEach(() => this.disconnect(node, node));
 
   // 5. Physically remove the node from the node list (and release to pool if enabled).
   const removed = this.nodes.splice(idx, 1)[0];
   if (config.enableNodePooling && removed) {
-    _releaseNode(removed as any);
+    _releaseNode((removed as unknown) as Node);
   }
 
   // 6. Reconnect every former inbound source to every former outbound target if a direct edge is missing.
-  inbound.forEach((ic: any) => {
-    outbound.forEach((oc: any) => {
+  inbound.forEach((ic) => {
+    outbound.forEach((oc) => {
       if (!ic.from || !oc.to || ic.from === oc.to) return; // skip invalid or trivial (self) cases
       /** True when a direct connection between source and target already exists. */
       const exists = this.connections.some(

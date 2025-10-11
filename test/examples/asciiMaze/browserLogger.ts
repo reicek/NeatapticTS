@@ -104,12 +104,12 @@ const BRIGHT_FG_COLORS = Object.freeze([
  * @param s - input string possibly containing HTML-sensitive chars
  * @returns escaped string safe for insertion into innerHTML
  */
-function escapeHtml(raw: string): string {
+const escapeHtml = (raw: string): string => {
   // Fast path: no escaping needed.
   if (!HTML_ESCAPE_PRESENCE.test(raw)) return raw;
   // Order: & first to avoid double-escaping.
   return raw.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
+};
 
 /**
  * Ensure there is a <pre> element in the provided container (or default host)
@@ -119,7 +119,7 @@ function escapeHtml(raw: string): string {
  * @param container - Optional host element to place the <pre> into.
  * @returns the <pre> element or null when unavailable
  */
-function ensurePre(container?: HTMLElement): HTMLPreElement | null {
+const ensurePre = (container?: HTMLElement): HTMLPreElement | null => {
   const hostElement =
     container ??
     (typeof document !== 'undefined'
@@ -137,7 +137,7 @@ function ensurePre(container?: HTMLElement): HTMLPreElement | null {
     hostElement.appendChild(preElement);
   }
   return preElement as HTMLPreElement;
-}
+};
 
 /**
  * Internal ANSI -> HTML converter with private helpers for a declarative main flow.
@@ -151,6 +151,7 @@ class AnsiHtmlConverter {
    * Global regex used to locate SGR parameter sequences. Reset before each parse.
    * `([0-9;]*)` captures the parameter list which may be empty (equivalent to reset).
    */
+  // eslint-disable-next-line no-control-regex -- ANSI escape sequence \x1b is intentional for terminal color codes
   static #SgrSequencePattern = /\x1b\[([0-9;]*)m/g;
 
   /** Marker inserted for newline during streaming conversion (literal `<br/>`). */
@@ -417,6 +418,15 @@ class AnsiHtmlConverter {
 }
 
 /**
+ * Optional configuration for browser logger output.
+ * Controls how logged text is inserted into the DOM.
+ */
+interface BrowserLogOptions {
+  prepend?: boolean;
+  [key: string]: unknown;
+}
+
+/**
  * Create a browser logger function that appends formatted, ANSI->HTML
  * converted text to a <pre> element in `container` (or the default host).
  *
@@ -428,9 +438,9 @@ class AnsiHtmlConverter {
  * @param container - Optional host element for log output
  * @returns logger function compatible with the demo's forceLog API
  */
-export function createBrowserLogger(
+export const createBrowserLogger = (
   container?: HTMLElement
-): (...args: any[]) => void {
+): ((...args: unknown[]) => void) => {
   /**
    * Create a browser logger function that appends formatted, ANSI->HTML
    * converted text to a <pre> element in `container` (or the default host).
@@ -448,7 +458,7 @@ export function createBrowserLogger(
    * operation is in progress (single-threaded assumption). Designed for high
    * throughput incremental logging with minimal allocations.
    */
-  return (...args: any[]) => {
+  return (...args: unknown[]) => {
     // Resolve (or recreate) the <pre> element each time because the clearer
     // may remove it (clearFunction sets container.innerHTML = ''), leaving
     // a stale reference otherwise.
@@ -458,15 +468,15 @@ export function createBrowserLogger(
     // pass `{ prepend: true }` to indicate the text should be added at the
     // top of the log (useful for archive views where newest entries appear
     // above older ones).
-    let logOptions: any = undefined;
+    let logOptions: BrowserLogOptions | undefined = undefined;
     if (args.length) {
-      const lastArgument = MazeUtils.safeLast(args as any);
+      const lastArgument = MazeUtils.safeLast(args);
       if (
         lastArgument &&
         typeof lastArgument === 'object' &&
-        'prepend' in (lastArgument as any)
+        'prepend' in lastArgument
       ) {
-        logOptions = lastArgument as any;
+        logOptions = lastArgument as BrowserLogOptions;
         // Remove the last arg in-place to avoid allocating a new args array.
         // This is a deliberate micro-optimization for hot logging paths.
         args.pop();
@@ -498,4 +508,4 @@ export function createBrowserLogger(
       logPreElement.scrollTop = logPreElement.scrollHeight;
     }
   };
-}
+};

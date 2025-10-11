@@ -33,9 +33,9 @@ export interface BenchAggregateGroup {
  * for each numeric metric encountered. All metric keys are imported from the union of
  * input rows to keep this function generic and forward‑compatible.
  */
-export function aggregateBenchMeasurements(
+export const aggregateBenchMeasurements = (
   records: RawBenchMeasurement[]
-): BenchAggregateGroup[] {
+): BenchAggregateGroup[] => {
   if (!records.length) return [];
   const groupMap = new Map<
     string,
@@ -88,11 +88,11 @@ export function aggregateBenchMeasurements(
       size: group.size,
       count: group.count,
       // Cast: we intentionally restrict exported interface; extended stats could be exposed later.
-      ...(stats as any),
+      ...(stats as Record<string, unknown>),
     });
   }
   return finalized;
-}
+};
 
 // Tests ------------------------------------------------------------------------------------------
 
@@ -123,11 +123,11 @@ describe('benchmark.report placeholder', () => {
       expect(aggregated.length).toBe(1);
     });
     it('exposes constructMsMean statistic', () => {
-      const g: any = aggregated[0];
+      const g = (aggregated[0] as unknown) as Record<string, unknown>;
       expect(typeof g.constructMsMean).toBe('number');
     });
     it('exposes constructMsP50 statistic', () => {
-      const g: any = aggregated[0];
+      const g = (aggregated[0] as unknown) as Record<string, unknown>;
       expect(typeof g.constructMsP50).toBe('number');
     });
   });

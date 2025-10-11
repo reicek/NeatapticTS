@@ -5,7 +5,7 @@ import Neat from '../../src/neat';
 
 describe('multi-objective inactive pruning', () => {
   test('removes stagnant objective after window', async () => {
-    const neat = new Neat(10, 2, (g: any) => Math.random(), {
+    const neat = new Neat(10, 2, () => Math.random(), {
       mutationRate: 0.3,
       popsize: 30,
       elitism: 2,
@@ -13,11 +13,11 @@ describe('multi-objective inactive pruning', () => {
       multiObjective: {
         enabled: true,
         objectives: [
-          { key: 'objConst', direction: 'max', accessor: (g: any) => 1 }, // constant -> zero range
+          { key: 'objConst', direction: 'max', accessor: () => 1 }, // constant -> zero range
           {
             key: 'objVar',
             direction: 'max',
-            accessor: (g: any) => Math.random(),
+            accessor: () => Math.random(),
           },
         ],
         pruneInactive: {
@@ -27,13 +27,19 @@ describe('multi-objective inactive pruning', () => {
           protect: ['objVar'],
         },
       },
-    } as any);
+    });
 
-    for (let i = 0; i < 5; i++) {
+    for (let generationIndex = 0; generationIndex < 5; generationIndex += 1) {
       await neat.evolve();
     }
-    const keys = neat.getObjectives().map((o) => o.key);
-    expect(keys).not.toContain('objConst');
-    expect(keys).toContain('objVar');
+    const objectivePresence = neat.getObjectives().reduce(
+      (accumulator, objective) => {
+        if (objective.key === 'objConst') accumulator.hasConst = true;
+        if (objective.key === 'objVar') accumulator.hasVar = true;
+        return accumulator;
+      },
+      { hasConst: false, hasVar: false }
+    );
+    expect(objectivePresence).toEqual({ hasConst: false, hasVar: true });
   });
 });

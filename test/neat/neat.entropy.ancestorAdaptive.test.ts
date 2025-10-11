@@ -1,11 +1,28 @@
 import Neat from '../../src/neat';
 import Network from '../../src/architecture/network';
 
+type DiversityStats = {
+  meanEntropy?: number;
+  varEntropy?: number;
+};
+
+type TelemetryEntry = ReturnType<Neat['getTelemetry']>[number];
+
+const entropyResults: {
+  initial?: number;
+  shrunk?: number;
+  grown?: number;
+} = {};
+const ancestorEpsilonResults: { increased?: number; decreased?: number } = {};
+const rngExportInfo: { headerCols?: string[]; rngVal?: string } = {};
+
 describe('Adaptive entropy sharing & ancestor uniqueness objective adjustments', () => {
   const fitness = (net: Network) => net.nodes.length;
 
   describe('entropySharingTuning', () => {
-    let initial: number, shrunk: number, grown: number;
+    let initial: number;
+    let shrunk: number;
+    let grown: number;
     beforeAll(async () => {
       const neat = new Neat(3, 2, fitness, {
         popsize: 20,
@@ -26,30 +43,31 @@ describe('Adaptive entropy sharing & ancestor uniqueness objective adjustments',
       await neat.evolve();
       initial = neat.options.sharingSigma!;
       // Low variance -> shrink
-      (neat as any)._diversityStats = { varEntropy: 0.01 };
+      const lowVarianceStats: DiversityStats = { varEntropy: 0.01 };
+      Reflect.set(neat, '_diversityStats', lowVarianceStats);
       await neat.evaluate();
       await neat.evolve();
       shrunk = neat.options.sharingSigma!;
       // High variance -> grow
-      (neat as any)._diversityStats = { varEntropy: 1.0 };
+      const highVarianceStats: DiversityStats = { varEntropy: 1.0 };
+      Reflect.set(neat, '_diversityStats', highVarianceStats);
       await neat.evaluate();
       await neat.evolve();
       grown = neat.options.sharingSigma!;
       // Store on describe scope
-      (global as any).__entropyResults = { initial, shrunk, grown };
+      Object.assign(entropyResults, { initial, shrunk, grown });
     });
     it('shrinks sigma under low entropy variance', () => {
-      const { initial, shrunk } = (global as any).__entropyResults;
-      expect(shrunk).toBeLessThan(initial);
+      expect(entropyResults.shrunk!).toBeLessThan(entropyResults.initial!);
     });
     it('expands sigma under high entropy variance', () => {
-      const { shrunk, grown } = (global as any).__entropyResults;
-      expect(grown).toBeGreaterThan(shrunk);
+      expect(entropyResults.grown!).toBeGreaterThan(entropyResults.shrunk!);
     });
   });
 
   describe('ancestorUniqAdaptive epsilon mode', () => {
-    let increased: number, decreased: number;
+    let increased: number;
+    let decreased: number;
     beforeAll(async () => {
       const neat = new Neat(2, 1, fitness, {
         popsize: 15,
@@ -75,33 +93,42 @@ describe('Adaptive entropy sharing & ancestor uniqueness objective adjustments',
       await neat.evaluate();
       await neat.evolve();
       // Force low uniqueness then evolve to trigger increase
-      neat.getTelemetry()[
-        neat.getTelemetry().length - 1
-      ].lineage.ancestorUniq = 0.1;
+      const telemetryEntriesLow = neat.getTelemetry();
+      const lastEntryLow = telemetryEntriesLow.at(-1) as
+        | TelemetryEntry
+        | undefined;
+      if (lastEntryLow?.lineage) {
+        lastEntryLow.lineage.ancestorUniq = 0.1;
+      }
       await neat.evaluate();
       await neat.evolve();
       increased = neat.options.multiObjective!.dominanceEpsilon!;
       // Force high uniqueness then evolve to trigger decrease
-      neat.getTelemetry()[
-        neat.getTelemetry().length - 1
-      ].lineage.ancestorUniq = 0.95;
+      const telemetryEntriesHigh = neat.getTelemetry();
+      const lastEntryHigh = telemetryEntriesHigh.at(-1) as
+        | TelemetryEntry
+        | undefined;
+      if (lastEntryHigh?.lineage) {
+        lastEntryHigh.lineage.ancestorUniq = 0.95;
+      }
       await neat.evaluate();
       await neat.evolve();
       decreased = neat.options.multiObjective!.dominanceEpsilon!;
-      (global as any).__ancestorEps = { increased, decreased };
+      Object.assign(ancestorEpsilonResults, { increased, decreased });
     });
     it('increases dominanceEpsilon when ancestorUniq low', () => {
-      const { increased } = (global as any).__ancestorEps;
-      expect(increased).toBeGreaterThan(0.01);
+      expect(ancestorEpsilonResults.increased).toBeGreaterThan(0.01);
     });
     it('decreases dominanceEpsilon when ancestorUniq high', () => {
-      const { increased, decreased } = (global as any).__ancestorEps;
-      expect(decreased).toBeLessThan(increased);
+      expect(ancestorEpsilonResults.decreased!).toBeLessThan(
+        ancestorEpsilonResults.increased!
+      );
     });
   });
 
   describe('telemetry RNG export', () => {
-    let headerCols: string[], rngVal: string;
+    let headerCols: string[];
+    let rngVal: string;
     beforeAll(async () => {
       const neat = new Neat(2, 1, fitness, {
         popsize: 10,
@@ -110,24 +137,22 @@ describe('Adaptive entropy sharing & ancestor uniqueness objective adjustments',
         rngState: true,
         multiObjective: { enabled: true },
       });
-      for (let g = 0; g < 3; g++) {
+      for (let generationIndex = 0; generationIndex < 3; generationIndex += 1) {
         await neat.evaluate();
         await neat.evolve();
       }
       const csv = neat.exportTelemetryCSV();
       const lines = csv.split(/\r?\n/);
       headerCols = lines[0].split(',');
-      const idx = headerCols.indexOf('rng');
-      rngVal = lines[1].split(',')[idx];
-      (global as any).__rngInfo = { headerCols, rngVal };
+      const rngColumnIndex = headerCols.indexOf('rng');
+      rngVal = lines[1].split(',')[rngColumnIndex];
+      Object.assign(rngExportInfo, { headerCols, rngVal });
     });
     it('includes rng column', () => {
-      const { headerCols } = (global as any).__rngInfo;
-      expect(headerCols).toContain('rng');
+      expect(rngExportInfo.headerCols!).toContain('rng');
     });
     it('provides numeric rng value', () => {
-      const { rngVal } = (global as any).__rngInfo;
-      expect(rngVal).toMatch(/\d+/);
+      expect(rngExportInfo.rngVal!).toMatch(/\d+/);
     });
   });
 });

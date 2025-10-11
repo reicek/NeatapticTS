@@ -2,12 +2,60 @@ import Network from '../../src/architecture/network';
 import Node from '../../src/architecture/node';
 import * as methods from '../../src/methods/methods';
 import { exportToONNX } from '../../src/architecture/onnx';
+import type { OnnxModel } from '../../src/architecture/onnx';
 
 /**
  * Suppresses console.warn output during execution of a function that is
  * expected to trigger warnings (e.g., unknown activation mapping). This keeps
  * test output clean while still exercising the warning path.
  */
+type OnnxValueDim = { dim_value?: number; dim_param?: string };
+
+type OnnxValueInfo = {
+  name: string;
+  type: {
+    tensor_type: {
+      shape: {
+        dim: OnnxValueDim[];
+      };
+    };
+  };
+};
+
+type OnnxAttributeView = {
+  name: string;
+  f?: number;
+  i?: number;
+};
+
+type OnnxNodeView = {
+  op_type: string;
+  input: string[];
+  output: string[];
+  attributes?: OnnxAttributeView[];
+};
+
+type OnnxInitializerView = { name: string };
+
+type OnnxGraphView = {
+  inputs: OnnxValueInfo[];
+  outputs: OnnxValueInfo[];
+  initializer: OnnxInitializerView[];
+  node: OnnxNodeView[];
+};
+
+const toGraphView = (model: OnnxModel): OnnxGraphView => ({
+  inputs: model.graph.inputs as OnnxValueInfo[],
+  outputs: model.graph.outputs as OnnxValueInfo[],
+  initializer: model.graph.initializer as OnnxInitializerView[],
+  node: model.graph.node as OnnxNodeView[],
+});
+
+const activationOps = new Set(['Tanh', 'Sigmoid', 'Relu', 'Identity']);
+
+const getHiddenNodes = (network: Network) =>
+  network.nodes.filter((node) => node.type === 'hidden');
+
 const suppressConsoleWarn = (fn: () => void) => {
   const originalWarn = console.warn;
   console.warn = jest.fn();
@@ -24,7 +72,7 @@ describe('ONNX Export', () => {
   describe('Minimal valid MLP', () => {
     describe('1-1 input-output network', () => {
       let net: Network; // network under test
-      let onnx: ReturnType<typeof exportToONNX>; // exported model
+      let onnx: OnnxModel; // exported model
       beforeEach(() => {
         // Arrange
         net = new Network(1, 1, {});
@@ -33,16 +81,16 @@ describe('ONNX Export', () => {
       });
       it('has correct single input dimension', () => {
         // Assert
-        const dimVal =
-          onnx.graph.inputs[0].type.tensor_type.shape.dim[0].dim_value;
-        expect(dimVal).toBe(1);
+        const graph = toGraphView(onnx);
+        const firstDim = graph.inputs[0].type.tensor_type.shape.dim[0];
+        expect(firstDim?.dim_value).toBe(1);
       });
     });
   });
 
   describe('Networks with hidden layers', () => {
     describe('2-2-1 network', () => {
-      let onnx: ReturnType<typeof exportToONNX>;
+      let onnx: OnnxModel;
       beforeEach(() => {
         // Arrange
         const net = Network.createMLP(2, [2], 1);
@@ -51,12 +99,13 @@ describe('ONNX Export', () => {
       });
       it('has at least one initializer', () => {
         // Assert
-        const hasInitializer = onnx.graph.initializer.length > 0;
+        const graph = toGraphView(onnx);
+        const hasInitializer = graph.initializer.length > 0;
         expect(hasInitializer).toBe(true);
       });
     });
     describe('3-3-2-1 network (two hidden layers)', () => {
-      let onnx: ReturnType<typeof exportToONNX>;
+      let onnx: OnnxModel;
       beforeEach(() => {
         // Arrange
         const net = Network.createMLP(3, [3, 2], 1);
@@ -65,12 +114,13 @@ describe('ONNX Export', () => {
       });
       it('emits initializers for weights and biases', () => {
         // Assert
-        const hasInitializers = onnx.graph.initializer.length > 0;
+        const graph = toGraphView(onnx);
+        const hasInitializers = graph.initializer.length > 0;
         expect(hasInitializers).toBe(true);
       });
     });
     describe('2-2-2 network (multiple outputs)', () => {
-      let onnx: ReturnType<typeof exportToONNX>;
+      let onnx: OnnxModel;
       beforeEach(() => {
         // Arrange
         const net = Network.createMLP(2, [2], 2);
@@ -79,14 +129,15 @@ describe('ONNX Export', () => {
       });
       it('has single output tensor', () => {
         // Assert
-        const singleOutput = onnx.graph.outputs.length === 1;
+        const graph = toGraphView(onnx);
+        const singleOutput = graph.outputs.length === 1;
         expect(singleOutput).toBe(true);
       });
       it('has output dimension 2', () => {
         // Assert
-        const outDim =
-          onnx.graph.outputs[0].type.tensor_type.shape.dim[0].dim_value;
-        expect(outDim).toBe(2);
+        const graph = toGraphView(onnx);
+        const firstDim = graph.outputs[0].type.tensor_type.shape.dim[0];
+        expect(firstDim?.dim_value).toBe(2);
       });
     });
   });
@@ -100,8 +151,9 @@ describe('ONNX Export', () => {
         // Act
         const onnx = exportToONNX(net);
         // Assert
-        const actNode = onnx.graph.node.find((n: any) =>
-          ['Tanh', 'Sigmoid', 'Relu', 'Identity'].includes(n.op_type)
+        const graph = toGraphView(onnx);
+        const actNode = graph.node.find((node) =>
+          activationOps.has(node.op_type)
         );
         expect(actNode?.op_type).toBe('Tanh');
       });
@@ -114,8 +166,9 @@ describe('ONNX Export', () => {
         // Act
         const onnx = exportToONNX(net);
         // Assert
-        const actNode = onnx.graph.node.find((n: any) =>
-          ['Tanh', 'Sigmoid', 'Relu', 'Identity'].includes(n.op_type)
+        const graph = toGraphView(onnx);
+        const actNode = graph.node.find((node) =>
+          activationOps.has(node.op_type)
         );
         expect(actNode?.op_type).toBe('Sigmoid');
       });
@@ -128,8 +181,9 @@ describe('ONNX Export', () => {
         // Act
         const onnx = exportToONNX(net);
         // Assert
-        const actNode = onnx.graph.node.find((n: any) =>
-          ['Tanh', 'Sigmoid', 'Relu', 'Identity'].includes(n.op_type)
+        const graph = toGraphView(onnx);
+        const actNode = graph.node.find((node) =>
+          activationOps.has(node.op_type)
         );
         expect(actNode?.op_type).toBe('Relu');
       });
@@ -138,14 +192,13 @@ describe('ONNX Export', () => {
       it('falls back to Identity op', () => {
         // Arrange
         const net = new Network(1, 1, {});
-        net.nodes[1].squash = function customSquash(x: number) {
-          return x;
-        };
+        net.nodes[1].squash = (value: number) => value;
         // Act / Assert
         suppressConsoleWarn(() => {
           const onnx = exportToONNX(net);
-          const actNode = onnx.graph.node.find((n: any) =>
-            ['Tanh', 'Sigmoid', 'Relu', 'Identity'].includes(n.op_type)
+          const graph = toGraphView(onnx);
+          const actNode = graph.node.find((node) =>
+            activationOps.has(node.op_type)
           );
           expect(actNode?.op_type).toBe('Identity');
         });
@@ -153,9 +206,7 @@ describe('ONNX Export', () => {
       it('emits a console warning for unknown activation', () => {
         // Arrange
         const net = new Network(1, 1, {});
-        net.nodes[1].squash = function customSquash(x: number) {
-          return x;
-        };
+        net.nodes[1].squash = (value: number) => value;
         const originalWarn = console.warn;
         const warnSpy = jest.fn();
         console.warn = warnSpy;
@@ -265,15 +316,16 @@ describe('ONNX Export', () => {
 
   describe('Gemm attributes and ordering', () => {
     describe('Default ordering (Gemm -> Activation)', () => {
-      let gemmNodes: any[];
-      let nodes: any[];
+      let gemmNodes: OnnxNodeView[];
+      let nodes: OnnxNodeView[];
       beforeEach(() => {
         // Arrange
         const net = Network.createMLP(3, [3, 2], 1);
         // Act
-        const onnx: any = exportToONNX(net);
-        gemmNodes = onnx.graph.node.filter((n: any) => n.op_type === 'Gemm');
-        nodes = onnx.graph.node as any[];
+        const onnx = exportToONNX(net);
+        const graph = toGraphView(onnx);
+        gemmNodes = graph.node.filter((node) => node.op_type === 'Gemm');
+        nodes = graph.node;
       });
       it('emits at least one Gemm node', () => {
         // Assert
@@ -281,33 +333,42 @@ describe('ONNX Export', () => {
         expect(hasGemm).toBe(true);
       });
       it('all Gemm nodes have alpha=1', () => {
-        const allAlphaOne = gemmNodes.every(
-          (g) =>
-            (g.attributes || []).find((a: any) => a.name === 'alpha')?.f === 1
-        );
+        const allAlphaOne = gemmNodes.every((node) => {
+          const attributes = node.attributes ?? [];
+          return (
+            attributes.find((attribute) => attribute.name === 'alpha')?.f === 1
+          );
+        });
         expect(allAlphaOne).toBe(true);
       });
       it('all Gemm nodes have beta=1', () => {
-        const allBetaOne = gemmNodes.every(
-          (g) =>
-            (g.attributes || []).find((a: any) => a.name === 'beta')?.f === 1
-        );
+        const allBetaOne = gemmNodes.every((node) => {
+          const attributes = node.attributes ?? [];
+          return (
+            attributes.find((attribute) => attribute.name === 'beta')?.f === 1
+          );
+        });
         expect(allBetaOne).toBe(true);
       });
       it('all Gemm nodes have transB=1', () => {
-        const allTransBOne = gemmNodes.every(
-          (g) =>
-            (g.attributes || []).find((a: any) => a.name === 'transB')?.i === 1
-        );
+        const allTransBOne = gemmNodes.every((node) => {
+          const attributes = node.attributes ?? [];
+          return (
+            attributes.find((attribute) => attribute.name === 'transB')?.i === 1
+          );
+        });
         expect(allTransBOne).toBe(true);
       });
       it('each Gemm node is followed by activation referencing its output', () => {
-        const orderingValid = gemmNodes.every((g) => {
-          const idxG = nodes.indexOf(g);
-          const act = nodes.find(
-            (n) => n.input && n.input[0] === g.output[0] && n.op_type !== 'Gemm'
+        const orderingValid = gemmNodes.every((node) => {
+          const gemmIndex = nodes.indexOf(node);
+          const activation = nodes.find(
+            (candidate) =>
+              candidate !== node &&
+              candidate.input[0] === node.output[0] &&
+              candidate.op_type !== 'Gemm'
           );
-          return act && nodes.indexOf(act) > idxG;
+          return !!activation && nodes.indexOf(activation) > gemmIndex;
         });
         expect(orderingValid).toBe(true);
       });
@@ -318,15 +379,18 @@ describe('ONNX Export', () => {
         // Arrange
         const net = Network.createMLP(2, [2], 1);
         // Act
-        const onnx: any = exportToONNX(net, { legacyNodeOrdering: true });
-        const nodes = onnx.graph.node as any[];
-        const gemmNodes = nodes.filter((n) => n.op_type === 'Gemm');
-        orderingValid = gemmNodes.every((g) => {
-          const idxG = nodes.indexOf(g);
-          const act = nodes.find(
-            (n) => n.input && n.input[0] === g.output[0] && n.op_type !== 'Gemm'
+        const onnx = exportToONNX(net, { legacyNodeOrdering: true });
+        const nodes = toGraphView(onnx).node;
+        const gemmNodes = nodes.filter((node) => node.op_type === 'Gemm');
+        orderingValid = gemmNodes.every((node) => {
+          const gemmIndex = nodes.indexOf(node);
+          const activation = nodes.find(
+            (candidate) =>
+              candidate !== node &&
+              candidate.input[0] === node.output[0] &&
+              candidate.op_type !== 'Gemm'
           );
-          return act && nodes.indexOf(act) < idxG;
+          return !!activation && nodes.indexOf(activation) < gemmIndex;
         });
       });
       it('places activation before gemm in legacy mode', () => {
@@ -335,7 +399,7 @@ describe('ONNX Export', () => {
       });
     });
     describe('Metadata inclusion', () => {
-      let onnx: any;
+      let onnx: OnnxModel;
       beforeEach(() => {
         // Arrange
         const net = Network.createMLP(1, [1], 1);
@@ -356,15 +420,16 @@ describe('ONNX Export', () => {
       });
     });
     describe('Batch dimension option', () => {
-      let inDims: any[];
-      let outDims: any[];
+      let inDims: OnnxValueDim[];
+      let outDims: OnnxValueDim[];
       beforeEach(() => {
         // Arrange
         const net = Network.createMLP(4, [3], 2);
         // Act
-        const onnx: any = exportToONNX(net, { batchDimension: true });
-        inDims = onnx.graph.inputs[0].type.tensor_type.shape.dim;
-        outDims = onnx.graph.outputs[0].type.tensor_type.shape.dim;
+        const onnx = exportToONNX(net, { batchDimension: true });
+        const graph = toGraphView(onnx);
+        inDims = graph.inputs[0].type.tensor_type.shape.dim;
+        outDims = graph.outputs[0].type.tensor_type.shape.dim;
       });
       it('adds two input dims (batch + feature)', () => {
         const twoDims = inDims.length === 2;
@@ -443,8 +508,9 @@ describe('ONNX Export', () => {
         const warnSpy = jest.fn();
         console.warn = warnSpy;
         try {
-          const model: any = exportToONNX(net, { allowMixedActivations: true });
-          const didExport = !!model.graph;
+          const model = exportToONNX(net, { allowMixedActivations: true });
+          const graph = toGraphView(model);
+          const didExport = graph.node.length >= 0;
           expect(didExport).toBe(true);
         } finally {
           console.warn = originalWarn;
@@ -458,16 +524,16 @@ describe('ONNX Export', () => {
   // ---------------------------------------------------------------------------
   describe('Recurrent single-step export', () => {
     describe('Single hidden layer self-recurrence', () => {
-      let onnx: any;
+      let onnx: OnnxModel;
       beforeEach(() => {
         // Arrange: create 2-3-1 network and add self connections to each hidden node
         const net = Network.createMLP(2, [3], 1);
-        const hidden = net.nodes.filter((n: any) => n.type === 'hidden');
-        hidden.forEach((h: any) => {
-          if (!h.connections.self.length) {
-            h.connect(h, 0.42); // arbitrary recurrent weight
+        const hiddenNodes = getHiddenNodes(net);
+        hiddenNodes.forEach((node) => {
+          if (!node.connections.self.length) {
+            node.connect(node, 0.42); // arbitrary recurrent weight
           } else {
-            h.connections.self[0].weight = 0.42;
+            node.connections.self[0].weight = 0.42;
           }
         });
         // Act
@@ -477,29 +543,34 @@ describe('ONNX Export', () => {
         });
       });
       it('adds previous hidden state input', () => {
-        const hasPrev = onnx.graph.inputs.some(
-          (i: any) => i.name === 'hidden_prev'
+        const hasPrev = toGraphView(onnx).inputs.some(
+          (input) => input.name === 'hidden_prev'
         );
         expect(hasPrev).toBe(true);
       });
       it('emits recurrent weight matrix R0', () => {
-        const hasR0 = onnx.graph.initializer.some((t: any) => t.name === 'R0');
+        const hasR0 = toGraphView(onnx).initializer.some(
+          (initializer) => initializer.name === 'R0'
+        );
         expect(hasR0).toBe(true);
       });
     });
     describe('Two hidden layers with recurrence only in second', () => {
-      let onnx: any;
+      let onnx: OnnxModel;
       beforeEach(() => {
         // Arrange: 2-2-2-1 network (two hidden layers of size 2)
         const net = Network.createMLP(2, [2, 2], 1);
-        const hiddenLayers = net.nodes.filter((n: any) => n.type === 'hidden');
+        const hiddenLayers = getHiddenNodes(net);
         // Hidden layer segmentation: first hidden layer indices 2..3, second 4..5 (after inputs 0..1)
-        const firstHidden = hiddenLayers.slice(0, 2);
         const secondHidden = hiddenLayers.slice(2, 4);
         // Add self connections only to second hidden layer
-        secondHidden.forEach((h: any, idx: number) => {
-          if (!h.connections.self.length) h.connect(h, 0.1 + idx);
-          else h.connections.self[0].weight = 0.1 + idx;
+        secondHidden.forEach((node, index) => {
+          const recurrentWeight = 0.1 + index;
+          if (!node.connections.self.length) {
+            node.connect(node, recurrentWeight);
+          } else {
+            node.connections.self[0].weight = recurrentWeight;
+          }
         });
         // Act
         onnx = exportToONNX(net, {
@@ -508,18 +579,22 @@ describe('ONNX Export', () => {
         });
       });
       it('adds previous state input for second hidden layer only', () => {
-        const hasFirst = onnx.graph.inputs.some(
-          (i: any) => i.name === 'hidden_prev'
-        );
-        const hasSecond = onnx.graph.inputs.some(
-          (i: any) => i.name === 'hidden_prev_l2'
+        const inputs = toGraphView(onnx).inputs;
+        const hasFirst = inputs.some((input) => input.name === 'hidden_prev');
+        const hasSecond = inputs.some(
+          (input) => input.name === 'hidden_prev_l2'
         );
         expect(hasFirst).toBe(false); // no recurrence in first hidden layer
         expect(hasSecond).toBe(true);
       });
       it('emits recurrent matrix R1 only', () => {
-        const hasR0 = onnx.graph.initializer.some((t: any) => t.name === 'R0');
-        const hasR1 = onnx.graph.initializer.some((t: any) => t.name === 'R1');
+        const initializers = toGraphView(onnx).initializer;
+        const hasR0 = initializers.some(
+          (initializer) => initializer.name === 'R0'
+        );
+        const hasR1 = initializers.some(
+          (initializer) => initializer.name === 'R1'
+        );
         expect(hasR0).toBe(false);
         expect(hasR1).toBe(true);
       });
@@ -527,9 +602,9 @@ describe('ONNX Export', () => {
     describe('Mixed activations in recurrent layer not allowed', () => {
       it('throws when recurrent layer has mixed activations without allowMixedActivations (not yet supported together)', () => {
         const net = Network.createMLP(1, [2], 1);
-        const hidden = net.nodes.filter((n: any) => n.type === 'hidden');
+        const hidden = getHiddenNodes(net);
         // Add self connections
-        hidden.forEach((h: any) => h.connect(h, 0.2));
+        hidden.forEach((node) => node.connect(node, 0.2));
         // Make mixed activations
         hidden[0].squash = methods.Activation.relu;
         hidden[1].squash = methods.Activation.tanh;

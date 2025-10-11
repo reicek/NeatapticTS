@@ -12,11 +12,19 @@ describe('Deterministic stochastic regularization', () => {
     const inp = [0.1, 0.2, 0.3, 0.4];
     const patterns1: number[][] = [];
     const patterns2: number[][] = [];
-    for (let i = 0; i < 20; i++) {
+    for (let iter = 0; iter < 20; iter++) {
       net1.activate(inp, true);
       net2.activate(inp, true);
-      patterns1.push((net1 as any)._lastSkippedLayers.slice());
-      patterns2.push((net2 as any)._lastSkippedLayers.slice());
+      patterns1.push(
+        ((net1 as unknown) as {
+          _lastSkippedLayers?: number[];
+        })._lastSkippedLayers?.slice() || []
+      );
+      patterns2.push(
+        ((net2 as unknown) as {
+          _lastSkippedLayers?: number[];
+        })._lastSkippedLayers?.slice() || []
+      );
     }
     expect(patterns1).toEqual(patterns2);
   });
@@ -69,7 +77,9 @@ describe('Deterministic stochastic regularization', () => {
         if (fromLayer > 0 && fromLayer < net.layers!.length - 1) {
           // hidden
           const hiddenIdx = fromLayer - 1;
-          noiseByLayer[hiddenIdx].push((c as any)._wnLast || 0);
+          noiseByLayer[hiddenIdx].push(
+            ((c as unknown) as { _wnLast?: number })._wnLast || 0
+          );
         }
       }
     }

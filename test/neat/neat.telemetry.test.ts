@@ -2,7 +2,7 @@ import Neat from '../../src/neat';
 import Network from '../../src/architecture/network';
 
 describe('telemetry snapshot', () => {
-  const fitness = (net: Network) => (net as any).connections.length;
+  const fitness = (net: Network) => net.connections.length;
   test('telemetry records hyper proxy', async () => {
     const neat = new Neat(3, 2, fitness, {
       popsize: 30,

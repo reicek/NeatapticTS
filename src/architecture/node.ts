@@ -3,6 +3,23 @@ import { config } from '../config';
 import * as methods from '../methods/methods';
 
 /**
+ * Internal interface for accessing dynamic optimizer properties on Node instances.
+ * These properties are lazily allocated and not part of the main class definition.
+ */
+interface NodeOptimizerProps {
+  opt_mB?: number;
+  opt_mB2?: number;
+  opt_vB?: number;
+  opt_vhatB?: number;
+  opt_uB?: number;
+  _la_k?: number;
+  _la_alpha?: number;
+  _la_step?: number;
+  _la_shadowBias?: number;
+  batchNorm?: boolean;
+}
+
+/**
  * Node (Neuron)
  * =============
  * Fundamental computational unit: aggregates weighted inputs, applies an activation
@@ -244,7 +261,7 @@ export default class Node {
     // Accumulate incoming weighted activations
     if (this.connections.in.length) {
       for (const conn of this.connections.in) {
-        if (conn.dcMask === 0 || (conn as any).enabled === false) continue;
+        if (conn.dcMask === 0 || conn.enabled === false) continue;
         newState += conn.from.activation * conn.weight * conn.gain;
       }
     }
@@ -639,29 +656,40 @@ export default class Node {
    * @throws {Error} If the mutation method is invalid, not provided, or not found in `methods.mutation`.
    * @see {@link https://medium.com/data-science/neuro-evolution-on-steroids-82bd14ddc2f6#3-mutation Instinct Algorithm - Section 3 Mutation}
    */
-  mutate(method: any): void {
+  mutate(method: unknown): void {
     // Validate the provided mutation method.
     if (!method) {
       throw new Error('Mutation method cannot be null or undefined.');
     }
+
+    // Cast to a mutation method shape for internal usage
+    const mutationMethod = method as {
+      name?: string;
+      allowed?: ((x: number, derivate?: boolean) => number)[];
+      min?: number;
+      max?: number;
+    };
+
     // Ensure the method exists in the defined mutation methods.
     // Note: This check assumes `method` itself is the function, comparing its name.
     // If `method` is an object describing the mutation, the check might need adjustment.
-    if (!(method.name in methods.mutation)) {
-      throw new Error(`Unknown mutation method: ${method.name}`);
+    if (!(mutationMethod.name && mutationMethod.name in methods.mutation)) {
+      throw new Error(
+        `Unknown mutation method: ${mutationMethod.name ?? 'undefined'}`
+      );
     }
 
     // Apply the specified mutation.
     switch (method) {
-      case methods.mutation.MOD_ACTIVATION:
+      case methods.mutation.MOD_ACTIVATION: {
         // Mutate the activation function.
-        if (!method.allowed || method.allowed.length === 0) {
+        if (!mutationMethod.allowed || mutationMethod.allowed.length === 0) {
           console.warn(
             'MOD_ACTIVATION mutation called without allowed functions specified.'
           );
           return;
         }
-        const allowed = method.allowed;
+        const allowed = mutationMethod.allowed;
         // Find the index of the current squash function.
         const currentIndex = allowed.indexOf(this.squash);
         // Select a new function randomly from the allowed list, ensuring it's different.
@@ -675,18 +703,20 @@ export default class Node {
         }
         this.squash = allowed[newIndex];
         break;
-      case methods.mutation.MOD_BIAS:
+      }
+      case methods.mutation.MOD_BIAS: {
         // Mutate the bias value.
-        const min = method.min ?? -1; // Default min modification
-        const max = method.max ?? 1; // Default max modification
+        const min = mutationMethod.min ?? -1; // Default min modification
+        const max = mutationMethod.max ?? 1; // Default max modification
         // Add a random modification within the specified range [min, max).
         const modification = Math.random() * (max - min) + min;
         this.bias += modification;
         break;
-      case methods.mutation.REINIT_WEIGHT:
+      }
+      case methods.mutation.REINIT_WEIGHT: {
         // Reinitialize all connection weights (in, out, self)
-        const reinitMin = method.min ?? -1;
-        const reinitMax = method.max ?? 1;
+        const reinitMin = mutationMethod.min ?? -1;
+        const reinitMax = mutationMethod.max ?? 1;
         for (const conn of this.connections.in) {
           conn.weight = Math.random() * (reinitMax - reinitMin) + reinitMin;
         }
@@ -697,14 +727,17 @@ export default class Node {
           conn.weight = Math.random() * (reinitMax - reinitMin) + reinitMin;
         }
         break;
+      }
       case methods.mutation.BATCH_NORM:
         // Enable batch normalization (stub, for mutation tracking)
-        (this as any).batchNorm = true;
+        ((this as unknown) as { batchNorm: boolean }).batchNorm = true;
         break;
       // Add cases for other mutation types if needed.
       default:
         // This case might be redundant if the initial check catches unknown methods.
-        throw new Error(`Unsupported mutation method: ${method.name}`);
+        throw new Error(
+          `Unsupported mutation method: ${mutationMethod.name ?? 'undefined'}`
+        );
     }
   }
 
@@ -1001,7 +1034,7 @@ export default class Node {
     weightDecay?: number;
     lrScale?: number;
     t?: number;
-    baseType?: any;
+    baseType?: string;
     la_k?: number;
     la_alpha?: number;
   }): void {
@@ -1015,12 +1048,12 @@ export default class Node {
     const wd = opts.weightDecay ?? 0;
     const lrScale = opts.lrScale ?? 1;
     const t = Math.max(1, Math.floor(opts.t ?? 1));
+    const optProps = (this as unknown) as NodeOptimizerProps;
     if (type === 'lookahead') {
-      (this as any)._la_k = (this as any)._la_k || opts.la_k || 5;
-      (this as any)._la_alpha = (this as any)._la_alpha || opts.la_alpha || 0.5;
-      (this as any)._la_step = ((this as any)._la_step || 0) + 1;
-      if (!(this as any)._la_shadowBias)
-        (this as any)._la_shadowBias = this.bias;
+      optProps._la_k = optProps._la_k || opts.la_k || 5;
+      optProps._la_alpha = optProps._la_alpha || opts.la_alpha || 0.5;
+      optProps._la_step = (optProps._la_step || 0) + 1;
+      if (!optProps._la_shadowBias) optProps._la_shadowBias = this.bias;
     }
     const applyConn = (conn: Connection) => {
       let g = conn.totalDeltaWeight || 0;
@@ -1175,37 +1208,35 @@ export default class Node {
           'adabelief',
         ].includes(effectiveType)
       ) {
-        (this as any).opt_mB =
-          ((this as any).opt_mB ?? 0) * beta1 + (1 - beta1) * gB;
+        optProps.opt_mB = (optProps.opt_mB ?? 0) * beta1 + (1 - beta1) * gB;
         if (effectiveType === 'lion') {
-          (this as any).opt_mB2 =
-            ((this as any).opt_mB2 ?? 0) * beta2 + (1 - beta2) * gB;
+          optProps.opt_mB2 = (optProps.opt_mB2 ?? 0) * beta2 + (1 - beta2) * gB;
         }
-        (this as any).opt_vB =
-          ((this as any).opt_vB ?? 0) * beta2 +
+        optProps.opt_vB =
+          (optProps.opt_vB ?? 0) * beta2 +
           (1 - beta2) *
             (effectiveType === 'adabelief'
-              ? Math.pow(gB - (this as any).opt_mB, 2)
+              ? Math.pow(gB - (optProps.opt_mB ?? 0), 2)
               : gB * gB);
         if (effectiveType === 'amsgrad') {
-          (this as any).opt_vhatB = Math.max(
-            (this as any).opt_vhatB ?? 0,
-            (this as any).opt_vB ?? 0
+          optProps.opt_vhatB = Math.max(
+            optProps.opt_vhatB ?? 0,
+            optProps.opt_vB ?? 0
           );
         }
         const vEffB =
           effectiveType === 'amsgrad'
-            ? (this as any).opt_vhatB
-            : (this as any).opt_vB;
-        const mHatB = (this as any).opt_mB / (1 - Math.pow(beta1, t));
+            ? optProps.opt_vhatB ?? 0
+            : optProps.opt_vB ?? 0;
+        const mHatB = (optProps.opt_mB ?? 0) / (1 - Math.pow(beta1, t));
         const vHatB = vEffB / (1 - Math.pow(beta2, t));
         let stepB: number;
         if (effectiveType === 'adamax') {
-          (this as any).opt_uB = Math.max(
-            ((this as any).opt_uB ?? 0) * beta2,
+          optProps.opt_uB = Math.max(
+            (optProps.opt_uB ?? 0) * beta2,
             Math.abs(gB)
           );
-          stepB = (mHatB / ((this as any).opt_uB || 1e-12)) * lrScale;
+          stepB = (mHatB / ((optProps.opt_uB ?? 0) || 1e-12)) * lrScale;
         } else if (effectiveType === 'nadam') {
           const mNesterovB =
             mHatB * beta1 + ((1 - beta1) * gB) / (1 - Math.pow(beta1, t));
@@ -1225,7 +1256,7 @@ export default class Node {
           }
         } else if (effectiveType === 'lion') {
           const updateB = Math.sign(
-            (this as any).opt_mB + (this as any).opt_mB2
+            (optProps.opt_mB ?? 0) + (optProps.opt_mB2 ?? 0)
           );
           stepB = -updateB * lrScale;
         } else if (effectiveType === 'adabelief') {
@@ -1256,13 +1287,14 @@ export default class Node {
       this.totalDeltaBias = 0;
     }
     if (type === 'lookahead') {
-      const k = (this as any)._la_k || 5;
-      const alpha = (this as any)._la_alpha || 0.5;
-      if ((this as any)._la_step % k === 0) {
+      const k = optProps._la_k || 5;
+      const alpha = optProps._la_alpha || 0.5;
+      if ((optProps._la_step ?? 0) % k === 0) {
         // Blend towards slow weights every k steps: shadow = (1-alpha)*shadow + alpha*fast ; fast = shadow
-        (this as any)._la_shadowBias =
-          (1 - alpha) * (this as any)._la_shadowBias + alpha * this.bias;
-        this.bias = (this as any)._la_shadowBias;
+        optProps._la_shadowBias =
+          (1 - alpha) * (optProps._la_shadowBias ?? this.bias) +
+          alpha * this.bias;
+        this.bias = optProps._la_shadowBias;
         const blendConn = (conn: Connection) => {
           if (!conn.lookaheadShadowWeight)
             conn.lookaheadShadowWeight = conn.weight;

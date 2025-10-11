@@ -1,4 +1,6 @@
-import Activation from '../../src/methods/activation';
+import Activation, {
+  registerCustomActivation,
+} from '../../src/methods/activation';
 
 describe('Activation', () => {
   const epsilon = 1e-9; // Tolerance for floating point comparisons
@@ -83,7 +85,6 @@ describe('Activation', () => {
       describe(`Scenario: x=${x}`, () => {
         it('tanh is within [-1, 1]', () => {
           // Arrange
-          const expected = Math.tanh(x);
           // Act
           const result = Activation.tanh(x);
           // Assert
@@ -91,7 +92,6 @@ describe('Activation', () => {
         });
         it('tanh is less than or equal to 1', () => {
           // Arrange
-          const expected = Math.tanh(x);
           // Act
           const result = Activation.tanh(x);
           // Assert
@@ -107,7 +107,6 @@ describe('Activation', () => {
         });
         it('tanh derivative is within [0, 1]', () => {
           // Arrange
-          const expected = 1 - Math.pow(Math.tanh(x), 2);
           // Act
           const result = Activation.tanh(x, true);
           // Assert
@@ -115,7 +114,6 @@ describe('Activation', () => {
         });
         it('tanh derivative is less than or equal to 1', () => {
           // Arrange
-          const expected = 1 - Math.pow(Math.tanh(x), 2);
           // Act
           const result = Activation.tanh(x, true);
           // Assert
@@ -751,16 +749,14 @@ describe('Activation', () => {
   });
 
   describe('selu()', () => {
-    const alpha = 1.6732632423543772848170429916717;
-    const scale = 1.0507009873554804934193349852946;
+    const alpha = 1.6732632423543772;
+    const scale = 1.0507009873554805;
     const lowerBound = -alpha * scale;
 
     testValues.forEach((x) => {
       describe(`Scenario: x=${x}`, () => {
         it(`selu is within [${lowerBound.toFixed(2)}, inf)`, () => {
           // Arrange
-          const fx = x > 0 ? x : alpha * Math.exp(x) - alpha;
-          const expected = fx * scale;
           // Act
           const result = Activation.selu(x);
           // Assert
@@ -777,8 +773,6 @@ describe('Activation', () => {
         });
         it(`selu derivative is within (0, ${scale * alpha}]`, () => {
           // Arrange
-          const fx = x > 0 ? x : alpha * Math.exp(x) - alpha;
-          const expected = x > 0 ? scale : (fx + alpha) * scale;
           // Act
           const result = Activation.selu(x, true);
           // Assert
@@ -786,8 +780,6 @@ describe('Activation', () => {
         });
         it(`selu derivative is less than or equal to ${scale * alpha}`, () => {
           // Arrange
-          const fx = x > 0 ? x : alpha * Math.exp(x) - alpha;
-          const expected = x > 0 ? scale : (fx + alpha) * scale;
           // Act
           const result = Activation.selu(x, true);
           // Assert
@@ -835,7 +827,6 @@ describe('Activation', () => {
         });
         it('softplus derivative (logistic) is within (0, 1]', () => {
           // Arrange
-          const expected = 1 / (1 + Math.exp(-x)); // Logistic
           // Act
           const result = Activation.softplus(x, true);
           // Assert
@@ -843,7 +834,6 @@ describe('Activation', () => {
         });
         it('softplus derivative (logistic) is less than or equal to 1', () => {
           // Arrange
-          const expected = 1 / (1 + Math.exp(-x)); // Logistic
           // Act
           const result = Activation.softplus(x, true);
           // Assert
@@ -867,8 +857,6 @@ describe('Activation', () => {
       describe(`Scenario: x=${x}`, () => {
         it(`swish is within [${lowerBound.toFixed(3)}, inf)`, () => {
           // Arrange
-          const sigmoid_x = 1 / (1 + Math.exp(-x));
-          const expected = x * sigmoid_x;
           // Act
           const result = Activation.swish(x);
           // Assert
@@ -885,9 +873,6 @@ describe('Activation', () => {
         });
         it('swish derivative is within approx [-0.09, inf)', () => {
           // Arrange
-          const sigmoid_x = 1 / (1 + Math.exp(-x));
-          const swish_x = x * sigmoid_x;
-          const expected = swish_x + sigmoid_x * (1 - swish_x);
           // Act
           const result = Activation.swish(x, true);
           // Assert
@@ -915,13 +900,6 @@ describe('Activation', () => {
           2
         )}, inf)`, () => {
           // Arrange
-          const cdf =
-            0.5 *
-            (1.0 +
-              Math.tanh(
-                Math.sqrt(2.0 / Math.PI) * (x + 0.044715 * Math.pow(x, 3))
-              ));
-          const expected = x * cdf;
           // Act
           const result = Activation.gelu(x);
           // Assert
@@ -943,19 +921,6 @@ describe('Activation', () => {
         });
         it('gelu approximation derivative is within approx [-0.16, inf)', () => {
           // Arrange
-          const cdf =
-            0.5 *
-            (1.0 +
-              Math.tanh(
-                Math.sqrt(2.0 / Math.PI) * (x + 0.044715 * Math.pow(x, 3))
-              ));
-          const intermediate =
-            Math.sqrt(2.0 / Math.PI) * (1.0 + 0.134145 * x * x);
-          const sech_arg =
-            Math.sqrt(2.0 / Math.PI) * (x + 0.044715 * Math.pow(x, 3));
-          const sech_val = 1.0 / Math.cosh(sech_arg);
-          const sech_sq = sech_val * sech_val;
-          const expected = cdf + x * 0.5 * intermediate * sech_sq;
           // Act
           const result = Activation.gelu(x, true);
           // Assert
@@ -991,15 +956,6 @@ describe('Activation', () => {
       describe(`Scenario: x=${x}`, () => {
         it(`mish is within [${lowerBound.toFixed(3)}, inf)`, () => {
           // Arrange
-          let sp_x: number;
-          if (x > 30) {
-            sp_x = x;
-          } else if (x < -30) {
-            sp_x = Math.exp(x);
-          } else {
-            sp_x = Math.max(0, x) + Math.log(1 + Math.exp(-Math.abs(x)));
-          }
-          const expected = x * Math.tanh(sp_x);
           // Act
           const result = Activation.mish(x);
           // Assert
@@ -1043,19 +999,6 @@ describe('Activation', () => {
         });
         it('mish derivative result is finite', () => {
           // Arrange
-          let sp_x: number;
-          if (x > 30) {
-            sp_x = x;
-          } else if (x < -30) {
-            sp_x = Math.exp(x);
-          } else {
-            sp_x = Math.max(0, x) + Math.log(1 + Math.exp(-Math.abs(x)));
-          }
-          const tanh_sp_x = Math.tanh(sp_x);
-          const sigmoid_x = 1 / (1 + Math.exp(-x));
-          const sech_sp_x = 1.0 / Math.cosh(sp_x);
-          const sech_sq_sp_x = sech_sp_x * sech_sp_x;
-          const expected = tanh_sp_x + x * sech_sq_sp_x * sigmoid_x;
           // Act
           const result = Activation.mish(x, true);
           // Assert
@@ -1087,20 +1030,16 @@ describe('Activation', () => {
   });
 
   describe('Custom Activation Registration', () => {
-    let Activation: typeof import('../../src/methods/activation').default;
-    let registerCustomActivation: (
-      name: string,
-      fn: (x: number, derivate?: boolean) => number
-    ) => void;
+    const cleanupCustomFn = () => {
+      if (Reflect.has(Activation, 'customFn')) {
+        Reflect.deleteProperty(Activation, 'customFn');
+      }
+    };
     beforeEach(() => {
-      Activation = require('../../src/methods/activation').default;
-      registerCustomActivation = require('../../src/methods/activation')
-        .registerCustomActivation;
-      // Clean up any previous customFn
-      if (Activation['customFn']) delete Activation['customFn'];
+      cleanupCustomFn();
     });
     afterEach(() => {
-      if (Activation['customFn']) delete Activation['customFn'];
+      cleanupCustomFn();
     });
     describe('when registering a custom activation', () => {
       it('can register and use a custom activation function', () => {

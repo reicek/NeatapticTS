@@ -5,6 +5,13 @@ import mutation from '../../methods/mutation';
 import { config } from '../../config';
 
 /**
+ * Internal Network properties accessed during gating operations.
+ */
+interface NetworkGatingProps {
+  _nodeIndexDirty?: boolean;
+}
+
+/**
  * Gating & node removal utilities for {@link Network}.
  *
  * Gating concept:
@@ -133,7 +140,10 @@ export function removeNode(this: Network, node: Node) {
   const inputs: Node[] = [];
   for (let i = node.connections.in.length - 1; i >= 0; i--) {
     const c = node.connections.in[i];
-    if (mutation.SUB_NODE.keep_gates && c.gater && c.gater !== node)
+    const subNodeConfig = Array.isArray(mutation.SUB_NODE)
+      ? mutation.SUB_NODE[0]
+      : mutation.SUB_NODE;
+    if (subNodeConfig?.keep_gates && c.gater && c.gater !== node)
       gaters.push(c.gater);
     inputs.push(c.from);
     this.disconnect(c.from, node);
@@ -144,7 +154,10 @@ export function removeNode(this: Network, node: Node) {
   const outputs: Node[] = [];
   for (let i = node.connections.out.length - 1; i >= 0; i--) {
     const c = node.connections.out[i];
-    if (mutation.SUB_NODE.keep_gates && c.gater && c.gater !== node)
+    const subNodeConfig = Array.isArray(mutation.SUB_NODE)
+      ? mutation.SUB_NODE[0]
+      : mutation.SUB_NODE;
+    if (subNodeConfig?.keep_gates && c.gater && c.gater !== node)
       gaters.push(c.gater);
     outputs.push(c.to);
     this.disconnect(node, c.to);
@@ -179,7 +192,7 @@ export function removeNode(this: Network, node: Node) {
 
   // Final removal & cache invalidation (indices may be used by fast lookup structures elsewhere).
   this.nodes.splice(idx, 1);
-  (this as any)._nodeIndexDirty = true;
+  ((this as unknown) as NetworkGatingProps)._nodeIndexDirty = true;
 }
 
 // Only functions exported; keep module shape predictable for tree-shaking / documentation tooling.

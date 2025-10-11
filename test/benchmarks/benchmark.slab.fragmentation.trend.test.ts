@@ -7,24 +7,34 @@
 import Network from '../../src/architecture/network';
 import { memoryStats } from '../../src/utils/memory';
 import { config } from '../../src/config';
+import type Node from '../../src/architecture/node';
+
+/**
+ * Runtime interface for Network with slab management methods.
+ */
+interface RuntimeNetwork {
+  _slabDirty: boolean;
+  getConnectionSlab: () => void;
+}
 
 describe('benchmark.slab.fragmentation.trend', () => {
   it('fragmentation percentage increases after prune-induced slack (growth -> prune)', () => {
     // Arrange
     config.enableNodePooling = false;
     const net = new Network(6, 3, { enforceAcyclic: true });
+    const runtimeNet = (net as unknown) as RuntimeNetwork;
     // Initial slab build
-    (net as any)._slabDirty = true;
-    (net as any).getConnectionSlab();
-    const addedNodes: any[] = [];
+    runtimeNet._slabDirty = true;
+    runtimeNet.getConnectionSlab();
+    const addedNodes: Node[] = [];
     // Growth phase: repeatedly split random connections to enlarge connection count & capacity
     let growthIters = 0;
     while (growthIters < 40) {
       if (net.connections.length) net.addNodeBetween();
       const newlyAdded = net.nodes[net.nodes.length - 1];
       if (!addedNodes.includes(newlyAdded)) addedNodes.push(newlyAdded);
-      (net as any)._slabDirty = true;
-      (net as any).getConnectionSlab();
+      runtimeNet._slabDirty = true;
+      runtimeNet.getConnectionSlab();
       growthIters++;
     }
     const statsAfterGrowth = memoryStats(net).slabs;
@@ -38,8 +48,8 @@ describe('benchmark.slab.fragmentation.trend', () => {
       removed++;
       if (removed > addedNodes.length / 2) break;
     }
-    (net as any)._slabDirty = true;
-    (net as any).getConnectionSlab();
+    runtimeNet._slabDirty = true;
+    runtimeNet.getConnectionSlab();
     const statsAfterPrune = memoryStats(net).slabs;
     const fragAfterPrune = statsAfterPrune.fragmentationPct;
     // Assert: fragmentation after prune should be >= growth fragmentation (strictly greater ideally)

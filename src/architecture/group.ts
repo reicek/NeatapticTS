@@ -1,4 +1,5 @@
 import Node from './node';
+import Connection from './connection';
 import Layer from './layer';
 import { config } from '../config';
 import * as methods from '../methods/methods';
@@ -19,9 +20,9 @@ export default class Group {
    * `self`: Connections between nodes within this same group (e.g., in ONE_TO_ONE connections).
    */
   connections: {
-    in: any[]; // Consider using a more specific type like `Connection[]` if available
-    out: any[]; // Consider using a more specific type like `Connection[]` if available
-    self: any[]; // Consider using a more specific type like `Connection[]` if available
+    in: Connection[];
+    out: Connection[];
+    self: Connection[];
   };
 
   /**
@@ -103,11 +104,15 @@ export default class Group {
    * @param {Group | Layer | Node} target - The destination entity (Group, Layer, or Node) to connect to.
    * @param {methods.groupConnection | methods.connection} [method] - The connection method/type (e.g., `methods.groupConnection.ALL_TO_ALL`, `methods.groupConnection.ONE_TO_ONE`). Defaults depend on the target type and whether it's the same group.
    * @param {number} [weight] - An optional fixed weight to assign to all created connections. If not provided, weights might be initialized randomly or based on node defaults.
-   * @returns {any[]} An array containing all the connection objects created. Consider using a more specific type like `Connection[]`.
+   * @returns {Connection[]} An array containing all the connection objects created.
    * @throws {Error} If `methods.groupConnection.ONE_TO_ONE` is used and the source and target groups have different sizes.
    */
-  connect(target: Group | Layer | Node, method?: any, weight?: number): any[] {
-    let connections: any[] = [];
+  connect(
+    target: Group | Layer | Node,
+    method?: unknown,
+    weight?: number
+  ): Connection[] {
+    let connections: Connection[] = [];
     let i, j;
 
     // Connection to another Group
@@ -146,7 +151,7 @@ export default class Group {
             )
               continue;
             // Create connection from source node to target node
-            let connection = this.nodes[i].connect(target.nodes[j], weight);
+            const connection = this.nodes[i].connect(target.nodes[j], weight);
             // Store the outgoing connection reference in the source group
             this.connections.out.push(connection[0]);
             // Store the incoming connection reference in the target group
@@ -166,7 +171,7 @@ export default class Group {
 
         // Iterate and connect corresponding nodes
         for (i = 0; i < this.nodes.length; i++) {
-          let connection = this.nodes[i].connect(target.nodes[i], weight);
+          const connection = this.nodes[i].connect(target.nodes[i], weight);
           if (this === target) {
             // Store self-connections (within the group)
             this.connections.self.push(connection[0]);
@@ -185,7 +190,7 @@ export default class Group {
     } else if (target instanceof Node) {
       // Connect every node in this group to the target node
       for (i = 0; i < this.nodes.length; i++) {
-        let connection = this.nodes[i].connect(target, weight);
+        const connection = this.nodes[i].connect(target, weight);
         // Store outgoing connections
         this.connections.out.push(connection[0]);
         connections.push(connection[0]);
@@ -199,11 +204,11 @@ export default class Group {
    * Configures nodes within this group to act as gates for the specified connection(s).
    * Gating allows the output of a node in this group to modulate the flow of signal through the gated connection.
    *
-   * @param {any | any[]} connections - A single connection object or an array of connection objects to be gated. Consider using a more specific type like `Connection | Connection[]`.
+   * @param {Connection | Connection[]} connections - A single connection object or an array of connection objects to be gated.
    * @param {methods.gating} method - The gating mechanism to use (e.g., `methods.gating.INPUT`, `methods.gating.OUTPUT`, `methods.gating.SELF`). Specifies which part of the connection is influenced by the gater node.
    * @throws {Error} If no gating `method` is specified.
    */
-  gate(connections: any | any[], method: any): void {
+  gate(connections: Connection | Connection[], method: unknown): void {
     if (method === undefined) {
       throw new Error(
         'Please specify a gating method: Gating.INPUT, Gating.OUTPUT, or Gating.SELF'
@@ -239,13 +244,13 @@ export default class Group {
       // Gate the output from the source node(s) of the connection(s)
       case methods.gating.OUTPUT:
         for (i = 0; i < nodes1.length; i++) {
-          let node = nodes1[i]; // Source node of a connection
+          const node = nodes1[i]; // Source node of a connection
           // Select a gater node from this group
-          let gater = this.nodes[i % this.nodes.length];
+          const gater = this.nodes[i % this.nodes.length];
 
           // Find outgoing connections from the source node that are in the provided list
           for (j = 0; j < node.connections.out.length; j++) {
-            let conn = node.connections.out[j];
+            const conn = node.connections.out[j];
             if (connections.includes(conn)) {
               // Apply gating from the selected gater node to this connection
               gater.gate(conn);
@@ -257,8 +262,8 @@ export default class Group {
       // Gate the self-connection of the node(s) involved
       case methods.gating.SELF:
         for (i = 0; i < nodes1.length; i++) {
-          let node = nodes1[i]; // Node with the self-connection
-          let gater = this.nodes[i % this.nodes.length];
+          const node = nodes1[i]; // Node with the self-connection
+          const gater = this.nodes[i % this.nodes.length];
           // Get the actual self-connection object (first element)
           const selfConn = Array.isArray(node.connections.self)
             ? node.connections.self[0]
@@ -274,18 +279,26 @@ export default class Group {
   /**
    * Sets specific properties (like bias, squash function, or type) for all nodes within the group.
    *
-   * @param {{ bias?: number; squash?: any; type?: string }} values - An object containing the properties and their new values. Only provided properties are updated.
+   * @param {{ bias?: number; squash?: (x: number, derivate?: boolean) => number; type?: string }} values - An object containing the properties and their new values. Only provided properties are updated.
    *        `bias`: Sets the bias term for all nodes.
    *        `squash`: Sets the activation function (squashing function) for all nodes.
    *        `type`: Sets the node type (e.g., 'input', 'hidden', 'output') for all nodes.
    */
-  set(values: { bias?: number; squash?: any; type?: string }): void {
+  set(values: {
+    bias?: number;
+    squash?: (x: number, derivate?: boolean) => number;
+    type?: string;
+  }): void {
     for (let i = 0; i < this.nodes.length; i++) {
       if (values.bias !== undefined) {
         this.nodes[i].bias = values.bias;
       }
-      this.nodes[i].squash = values.squash || this.nodes[i].squash;
-      this.nodes[i].type = values.type || this.nodes[i].type;
+      if (values.squash !== undefined) {
+        this.nodes[i].squash = values.squash;
+      }
+      if (values.type !== undefined) {
+        this.nodes[i].type = values.type;
+      }
     }
   }
 
@@ -309,7 +322,7 @@ export default class Group {
 
           // Remove the connection reference from this group's outgoing connections list
           for (k = this.connections.out.length - 1; k >= 0; k--) {
-            let conn = this.connections.out[k];
+            const conn = this.connections.out[k];
             if (conn.from === this.nodes[i] && conn.to === target.nodes[j]) {
               this.connections.out.splice(k, 1);
               break; // Assume only one connection between two specific nodes
@@ -320,7 +333,7 @@ export default class Group {
           if (twosided) {
             // Remove from this group's incoming list
             for (k = this.connections.in.length - 1; k >= 0; k--) {
-              let conn = this.connections.in[k];
+              const conn = this.connections.in[k];
               if (conn.from === target.nodes[j] && conn.to === this.nodes[i]) {
                 this.connections.in.splice(k, 1);
                 break; // Assume only one connection
@@ -328,7 +341,7 @@ export default class Group {
             }
             // Remove from target group's outgoing list
             for (k = target.connections.out.length - 1; k >= 0; k--) {
-              let conn = target.connections.out[k];
+              const conn = target.connections.out[k];
               if (conn.from === target.nodes[j] && conn.to === this.nodes[i]) {
                 target.connections.out.splice(k, 1);
                 break; // Assume only one connection
@@ -336,7 +349,7 @@ export default class Group {
             }
             // Remove from target group's incoming list (forward connection)
             for (k = target.connections.in.length - 1; k >= 0; k--) {
-              let conn = target.connections.in[k];
+              const conn = target.connections.in[k];
               if (conn.from === this.nodes[i] && conn.to === target.nodes[j]) {
                 target.connections.in.splice(k, 1);
                 break; // Assume only one connection
@@ -354,7 +367,7 @@ export default class Group {
 
         // Remove the connection reference from this group's outgoing connections list
         for (j = this.connections.out.length - 1; j >= 0; j--) {
-          let conn = this.connections.out[j];
+          const conn = this.connections.out[j];
           if (conn.from === this.nodes[i] && conn.to === target) {
             this.connections.out.splice(j, 1);
             break; // Assume only one connection

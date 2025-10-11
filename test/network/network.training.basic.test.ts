@@ -2,9 +2,32 @@ import Network from '../../src/architecture/network';
 import {
   trainImpl,
   applyGradientClippingImpl,
-  trainSetImpl,
 } from '../../src/architecture/network/network.training';
-import * as methods from '../../src/methods/methods';
+import type {
+  CheckpointConfig,
+  MetricsHook,
+  ScheduleConfig,
+} from '../../src/architecture/network/network.training';
+
+type TrainingDataset = Parameters<typeof trainImpl>[1];
+
+interface NetworkInternals {
+  _forceNextOverflow: boolean;
+  _mixedPrecision: { enabled: boolean; lossScale: number };
+}
+
+const setNetworkInternal = <Key extends keyof NetworkInternals>(
+  net: Network,
+  key: Key,
+  value: NetworkInternals[Key]
+) => {
+  Reflect.set(net, key, value);
+};
+
+const getNetworkInternal = <Key extends keyof NetworkInternals>(
+  net: Network,
+  key: Key
+): NetworkInternals[Key] => Reflect.get(net, key) as NetworkInternals[Key];
 
 /**
  * Training tests focus on uncovered branches: validation errors, gradient clipping modes, mixed precision overflow,
@@ -17,10 +40,13 @@ describe('Network.training core', () => {
     it('throws descriptive error on mismatch', () => {
       // Arrange
       const net = new Network(2, 1, { seed: 101 });
-      const badSet = [{ input: [0.1], output: [0.5] } as any];
+      const mismatchedDataset: TrainingDataset = [
+        { input: [0.1], output: [0.5] },
+      ];
+
       // Act / Assert
       expect(() =>
-        trainImpl(net, badSet, { iterations: 1, rate: 0.1 })
+        trainImpl(net, mismatchedDataset, { iterations: 1, rate: 0.1 })
       ).toThrow(/Dataset is invalid/);
     });
   });
@@ -29,9 +55,12 @@ describe('Network.training core', () => {
     it('warns then throws', () => {
       // Arrange
       const net = new Network(1, 1, { seed: 102 });
-      const set = [{ input: [0.1], output: [0.2] }];
+      const trainingSamples: TrainingDataset = [
+        { input: [0.1], output: [0.2] },
+      ];
+
       // Act / Assert
-      expect(() => trainImpl(net, set as any, { rate: 0.1 })).toThrow(
+      expect(() => trainImpl(net, trainingSamples, { rate: 0.1 })).toThrow(
         /stopping condition/
       );
     });
@@ -41,10 +70,17 @@ describe('Network.training core', () => {
     it('throws explicit batch size error', () => {
       // Arrange
       const net = new Network(1, 1, { seed: 103 });
-      const set = [{ input: [0.3], output: [0.4] }];
+      const trainingSamples: TrainingDataset = [
+        { input: [0.3], output: [0.4] },
+      ];
+
       // Act / Assert
       expect(() =>
-        trainImpl(net, set as any, { iterations: 1, rate: 0.1, batchSize: 5 })
+        trainImpl(net, trainingSamples, {
+          iterations: 1,
+          rate: 0.1,
+          batchSize: 5,
+        })
       ).toThrow(/Batch size/);
     });
   });
@@ -53,10 +89,17 @@ describe('Network.training core', () => {
     it('throws when dropout >= 1', () => {
       // Arrange
       const net = new Network(1, 1, { seed: 104 });
-      const set = [{ input: [0.3], output: [0.4] }];
+      const trainingSamples: TrainingDataset = [
+        { input: [0.3], output: [0.4] },
+      ];
+
       // Act / Assert
       expect(() =>
-        trainImpl(net, set as any, { iterations: 1, rate: 0.1, dropout: 1 })
+        trainImpl(net, trainingSamples, {
+          iterations: 1,
+          rate: 0.1,
+          dropout: 1,
+        })
       ).toThrow(/dropout/);
     });
   });
@@ -65,10 +108,13 @@ describe('Network.training core', () => {
     it('throws when accumulationSteps < 1', () => {
       // Arrange
       const net = new Network(1, 1, { seed: 105 });
-      const set = [{ input: [0.3], output: [0.4] }];
+      const trainingSamples: TrainingDataset = [
+        { input: [0.3], output: [0.4] },
+      ];
+
       // Act / Assert
       expect(() =>
-        trainImpl(net, set as any, {
+        trainImpl(net, trainingSamples, {
           iterations: 1,
           rate: 0.1,
           accumulationSteps: -1,
@@ -81,10 +127,13 @@ describe('Network.training core', () => {
     it('throws on invalid optimizer string', () => {
       // Arrange
       const net = new Network(1, 1, { seed: 106 });
-      const set = [{ input: [0.3], output: [0.4] }];
+      const trainingSamples: TrainingDataset = [
+        { input: [0.3], output: [0.4] },
+      ];
+
       // Act / Assert
       expect(() =>
-        trainImpl(net, set as any, {
+        trainImpl(net, trainingSamples, {
           iterations: 1,
           rate: 0.1,
           optimizer: 'notreal',
@@ -97,10 +146,13 @@ describe('Network.training core', () => {
     it('throws when baseType is lookahead', () => {
       // Arrange
       const net = new Network(1, 1, { seed: 107 });
-      const set = [{ input: [0.3], output: [0.4] }];
+      const trainingSamples: TrainingDataset = [
+        { input: [0.3], output: [0.4] },
+      ];
+
       // Act / Assert
       expect(() =>
-        trainImpl(net, set as any, {
+        trainImpl(net, trainingSamples, {
           iterations: 1,
           rate: 0.1,
           optimizer: { type: 'lookahead', baseType: 'lookahead' },
@@ -114,14 +166,15 @@ describe('Network.training core', () => {
       // Arrange
       const net = new Network(1, 1, { seed: 108 });
       const inputNode = net.nodes[0];
-      const outNode = net.nodes.find((n) => n.type === 'output')!;
-      // artificially create a connection with large delta
-      const conn = net.connect(inputNode, outNode)[0];
-      (conn as any).totalDeltaWeight = 10;
+      const outputNode = net.nodes.find((node) => node.type === 'output')!;
+      const connection = net.connect(inputNode, outputNode)[0];
+      connection.totalDeltaWeight = 10;
+
       // Act
       applyGradientClippingImpl(net, { mode: 'norm', maxNorm: 1 });
+
       // Assert
-      expect(Math.abs((conn as any).totalDeltaWeight) <= 1).toBe(true);
+      expect(Math.abs(connection.totalDeltaWeight) <= 1).toBe(true);
     });
   });
 
@@ -130,15 +183,17 @@ describe('Network.training core', () => {
       // Arrange
       const net = new Network(1, 1, { seed: 109 });
       const inputNode = net.nodes[0];
-      const outNode = net.nodes.find((n) => n.type === 'output')!;
-      const c1 = net.connect(inputNode, outNode)[0];
-      const c2 = net.connect(inputNode, outNode)[0];
-      (c1 as any).totalDeltaWeight = 0.1;
-      (c2 as any).totalDeltaWeight = 100;
+      const outputNode = net.nodes.find((node) => node.type === 'output')!;
+      const lowMagnitudeConnection = net.connect(inputNode, outputNode)[0];
+      const highMagnitudeConnection = net.connect(inputNode, outputNode)[0];
+      lowMagnitudeConnection.totalDeltaWeight = 0.1;
+      highMagnitudeConnection.totalDeltaWeight = 100;
+
       // Act
       applyGradientClippingImpl(net, { mode: 'percentile', percentile: 50 });
+
       // Assert
-      expect((c2 as any).totalDeltaWeight <= 100).toBe(true);
+      expect(highMagnitudeConnection.totalDeltaWeight <= 100).toBe(true);
     });
   });
 
@@ -146,18 +201,21 @@ describe('Network.training core', () => {
     it('reduces loss scale after forced overflow', () => {
       // Arrange
       const net = new Network(1, 1, { seed: 110 });
-      const set = [{ input: [0.2], output: [0.3] }];
-      (net as any)._forceNextOverflow = true; // cause overflow detection path
+      const trainingSamples: TrainingDataset = [
+        { input: [0.2], output: [0.3] },
+      ];
+      setNetworkInternal(net, '_forceNextOverflow', true);
+
       // Act
-      const res = trainImpl(net, set as any, {
+      trainImpl(net, trainingSamples, {
         iterations: 1,
         rate: 0.1,
         mixedPrecision: true,
       });
+
       // Assert
-      expect(((net as any)._mixedPrecision.lossScale as number) <= 1024).toBe(
-        true
-      );
+      const mixedPrecisionState = getNetworkInternal(net, '_mixedPrecision');
+      expect(mixedPrecisionState.lossScale <= 1024).toBe(true);
     });
   });
 
@@ -165,16 +223,20 @@ describe('Network.training core', () => {
     it('halts before reaching max iterations when no improvement', () => {
       // Arrange
       const net = new Network(1, 1, { seed: 111 });
-      const set = [{ input: [0.2], output: [0.3] }];
+      const trainingSamples: TrainingDataset = [
+        { input: [0.2], output: [0.3] },
+      ];
+
       // Act
-      const res = trainImpl(net, set as any, {
+      const result = trainImpl(net, trainingSamples, {
         iterations: 5,
         rate: 0.1,
         earlyStopPatience: 1,
         earlyStopMinDelta: 1,
       });
+
       // Assert
-      expect(res.iterations < 5).toBe(true);
+      expect(result.iterations < 5).toBe(true);
     });
   });
 
@@ -182,19 +244,26 @@ describe('Network.training core', () => {
     it('invokes save for both last and best types', () => {
       // Arrange
       const net = new Network(1, 1, { seed: 112 });
-      const set = [{ input: [0.2], output: [0.25] }];
-      const saved: string[] = [];
-      const save = (p: any) => {
-        saved.push(p.type);
+      const trainingSamples: TrainingDataset = [
+        { input: [0.2], output: [0.25] },
+      ];
+      const savedTypes: string[] = [];
+      type CheckpointPayload = Parameters<CheckpointConfig['save']>[0];
+      const save: CheckpointConfig['save'] = (payload: CheckpointPayload) => {
+        savedTypes.push(payload.type);
       };
+
       // Act
-      trainImpl(net, set as any, {
+      trainImpl(net, trainingSamples, {
         iterations: 2,
         rate: 0.1,
         checkpoint: { last: true, best: true, save },
       });
+
       // Assert
-      expect(saved.includes('last') && saved.includes('best')).toBe(true);
+      expect(savedTypes.includes('last') && savedTypes.includes('best')).toBe(
+        true
+      );
     });
   });
 
@@ -202,27 +271,31 @@ describe('Network.training core', () => {
     it('invokes both schedule.function and metricsHook', () => {
       // Arrange
       const net = new Network(1, 1, { seed: 113 });
-      const set = [{ input: [0.2], output: [0.3] }];
-      let scheduleCalled = 0;
-      let metricsCalled = 0;
-      const schedule = {
+      const trainingSamples: TrainingDataset = [
+        { input: [0.2], output: [0.3] },
+      ];
+      let scheduleInvocations = 0;
+      let metricsInvocations = 0;
+      const schedule: ScheduleConfig = {
         iterations: 1,
         function: () => {
-          scheduleCalled++;
+          scheduleInvocations++;
         },
       };
-      const metricsHook = () => {
-        metricsCalled++;
+      const metricsHook: MetricsHook = () => {
+        metricsInvocations++;
       };
+
       // Act
-      trainImpl(net, set as any, {
+      trainImpl(net, trainingSamples, {
         iterations: 1,
         rate: 0.1,
         schedule,
         metricsHook,
       });
+
       // Assert
-      expect(scheduleCalled === 1 && metricsCalled === 1).toBe(true);
+      expect(scheduleInvocations === 1 && metricsInvocations === 1).toBe(true);
     });
   });
 });

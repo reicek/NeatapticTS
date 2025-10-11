@@ -27,23 +27,20 @@ describe('Telemetry & adaptive entropy/speciation extensions', () => {
       await neat.evolve();
       thrBaseline = neat.options.compatibilityThreshold!;
       // Low entropy -> decrease threshold
-      (neat as any)._diversityStats = { meanEntropy: 0.1 };
+      Reflect.set(neat, '_diversityStats', { meanEntropy: 0.1 });
       neat.population.forEach((g) => (g.score = undefined));
       await neat.evaluate(); // triggers tuning
       thrLow = neat.options.compatibilityThreshold!;
       // High entropy -> increase threshold
-      (neat as any)._diversityStats = { meanEntropy: 1.0 };
+      Reflect.set(neat, '_diversityStats', { meanEntropy: 1.0 });
       neat.population.forEach((g) => (g.score = undefined));
       await neat.evaluate();
       thrHigh = neat.options.compatibilityThreshold!;
-      (global as any).__compat = { thrBaseline, thrLow, thrHigh };
     });
     it('decreases threshold under low entropy', () => {
-      const { thrBaseline, thrLow } = (global as any).__compat;
       expect(thrLow).toBeLessThan(thrBaseline);
     });
     it('increases threshold under high entropy', () => {
-      const { thrLow, thrHigh } = (global as any).__compat;
       expect(thrHigh).toBeGreaterThan(thrLow);
     });
   });
@@ -61,7 +58,11 @@ describe('Telemetry & adaptive entropy/speciation extensions', () => {
         multiObjective: { enabled: true, autoEntropy: true },
       });
       // Seed operator stats to guarantee ops column emission
-      (neat as any)._operatorStats.set('ADD_NODE', { success: 3, attempts: 5 });
+      const operatorStats = Reflect.get(neat, '_operatorStats') as Map<
+        string,
+        { success: number; attempts: number }
+      >;
+      operatorStats.set('ADD_NODE', { success: 3, attempts: 5 });
       for (let g = 0; g < 4; g++) {
         await neat.evaluate();
         await neat.evolve();
@@ -72,14 +73,11 @@ describe('Telemetry & adaptive entropy/speciation extensions', () => {
       const idxObj = headers.indexOf('objectives');
       objectivesCell = idxObj >= 0 ? lines[1].split(',')[idxObj] : '';
       opsPresent = headers.includes('ops');
-      (global as any).__csvInfo = { headers, objectivesCell, opsPresent };
     });
     it('includes ops column when operator stats present', () => {
-      const { opsPresent } = (global as any).__csvInfo;
       expect(opsPresent).toBe(true);
     });
     it('includes objectives column with active objective keys', () => {
-      const { objectivesCell } = (global as any).__csvInfo;
       expect(objectivesCell.length).toBeGreaterThan(2);
     });
   });
@@ -98,10 +96,8 @@ describe('Telemetry & adaptive entropy/speciation extensions', () => {
       const last = neat.getTelemetry().slice(-1)[0];
       hasFitness =
         Array.isArray(last.objectives) && last.objectives.includes('fitness');
-      (global as any).__telObj = { hasFitness };
     });
     it('records objectives array in telemetry', () => {
-      const { hasFitness } = (global as any).__telObj;
       expect(hasFitness).toBe(true);
     });
   });

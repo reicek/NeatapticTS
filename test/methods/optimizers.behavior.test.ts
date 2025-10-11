@@ -1,18 +1,24 @@
 import Network from '../../src/architecture/network';
 
 // Deterministic small dataset y = 2x
-const data = Array.from({ length: 4 }, (_, i) => ({
-  input: [i + 1],
-  output: [2 * (i + 1)],
+const data = Array.from({ length: 4 }, (_, index) => ({
+  input: [index + 1],
+  output: [2 * (index + 1)],
 }));
 
-function buildNet() {
+const buildNet = (): Network => {
   const net = new Network(1, 1);
   // set fixed weights
-  net.connections.forEach((c) => (c.weight = 0.5));
-  net.nodes.filter((n) => n.type !== 'input').forEach((n) => (n.bias = 0));
+  net.connections.forEach((connection) => {
+    connection.weight = 0.5;
+  });
+  net.nodes
+    .filter((node) => node.type !== 'input')
+    .forEach((node) => {
+      node.bias = 0;
+    });
   return net;
-}
+};
 
 describe('Optimizer specific behaviors', () => {
   describe('adamw', () => {
@@ -59,25 +65,28 @@ describe('Optimizer specific behaviors', () => {
         la_alpha: 0.5,
       },
     });
-    const conn: any = net.connections[0];
+    const connection = net.connections[0];
     it('creates shadow weight', () => {
-      expect(conn.lookaheadShadowWeight).toBeDefined();
+      expect(connection.lookaheadShadowWeight).toBeDefined();
     });
     it('synchronizes weight to shadow on k-multiple', () => {
-      const conn: any = net.connections[0];
-      expect(conn.weight).toBeCloseTo(conn.lookaheadShadowWeight, 10);
+      const latestConnection = net.connections[0];
+      expect(latestConnection.weight).toBeCloseTo(
+        latestConnection.lookaheadShadowWeight!,
+        10
+      );
     });
   });
 
   describe('string optimizer normalization', () => {
     const net = buildNet();
     net.train(data, { iterations: 1, rate: 0.01, optimizer: 'adam' });
-    const conn: any = net.connections[0];
+    const connection = net.connections[0];
     it('creates first moment', () => {
-      expect(conn.firstMoment).toBeDefined();
+      expect(connection.firstMoment).toBeDefined();
     });
     it('creates second moment', () => {
-      expect(conn.secondMoment).toBeDefined();
+      expect(connection.secondMoment).toBeDefined();
     });
   });
 
@@ -85,7 +94,7 @@ describe('Optimizer specific behaviors', () => {
     it('throws error', () => {
       const net = buildNet();
       expect(() =>
-        net.train(data, { iterations: 1, rate: 0.01, optimizer: 'nope' as any })
+        net.train(data, { iterations: 1, rate: 0.01, optimizer: 'nope' })
       ).toThrow('Unknown optimizer type');
     });
   });

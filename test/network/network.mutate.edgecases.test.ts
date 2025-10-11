@@ -93,7 +93,9 @@ describe('Network.mutateImpl edge cases', () => {
       const net = new Network(1, 1, { seed: 46 });
       // Act
       mutateImpl.call(net, mutation.BATCH_NORM);
-      const tagged = net.nodes.some((n: any) => n._batchNorm);
+      const tagged = net.nodes.some(
+        (node) => Reflect.get(node, '_batchNorm') === true
+      );
       // Assert
       expect(tagged).toBe(false);
     });

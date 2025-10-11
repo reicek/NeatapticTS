@@ -15,16 +15,16 @@ export class PollUntilAbortError extends Error {
   }
 }
 
-export async function pollUntil<T>(
+export const pollUntil = async <T>(
   predicate: () => T | Promise<T>,
   { intervalMs = 25, timeoutMs = 2000, signal }: PollUntilOptions = {}
-): Promise<T> {
+): Promise<T> => {
   if (signal?.aborted) {
     throw new PollUntilAbortError('Operation aborted before start');
   }
 
   const start = performance.now();
-  let timer: any;
+  let timer: ReturnType<typeof setTimeout> | undefined;
   let abortListener: (() => void) | undefined;
 
   return new Promise<T>((resolve, reject) => {
@@ -34,16 +34,16 @@ export async function pollUntil<T>(
         signal.removeEventListener('abort', abortListener);
     };
 
-    const tick = async () => {
+    const tick = async (): Promise<void> => {
       try {
         const result = await predicate();
         if (result) {
           cleanup();
           return resolve(result);
         }
-      } catch (err) {
+      } catch (error: unknown) {
         cleanup();
-        return reject(err);
+        return reject(error);
       }
 
       if (performance.now() - start >= timeoutMs) {
@@ -64,4 +64,4 @@ export async function pollUntil<T>(
 
     timer = setTimeout(tick, 0);
   });
-}
+};

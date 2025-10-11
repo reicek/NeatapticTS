@@ -12,7 +12,7 @@ describe('Plateau vs Early-Stop Smoothing Separation', () => {
       { input: [1, 1], output: [0] },
     ];
 
-    const plateauDecisions: number[] = []; // capture rates when reduced
+    // plateau decisions capture removed; not used in assertions
     const rop = methods.Rate.reduceOnPlateau({
       patience: 3,
       factor: 0.5,

@@ -7,32 +7,38 @@
 import Network from '../../src/architecture/network';
 import { evolveNetwork } from '../../src/architecture/network/network.evolve';
 
+type TrainingSet = Parameters<typeof evolveNetwork>[0];
+
 // Mock the dynamically imported Neat module used inside evolveNetwork.
 jest.mock('../../src/neat', () => {
+  type FitnessFunction = (network: Network) => number;
+  type OptionsRecord = Record<string, unknown>;
   return {
     __esModule: true,
     default: class MockNeat {
       input: number;
       output: number;
-      fitnessFn: any;
-      options: any;
+      fitnessFn: FitnessFunction;
+      options: OptionsRecord;
       generation = 0;
-      constructor(input: number, output: number, fitnessFn: any, options: any) {
+      constructor(
+        input: number,
+        output: number,
+        fitnessFn: FitnessFunction,
+        options: OptionsRecord
+      ) {
         this.input = input;
         this.output = output;
         this.fitnessFn = fitnessFn;
         this.options = options;
       }
-      async evolve() {
-        // Return genome with NaN score so error remains Infinity (via fallback) triggering infiniteErrorCount.
+      async evolve(): Promise<Network> {
+        // Step 1: Increment generation counter to emulate progress.
         this.generation += 1;
-        return {
-          score: NaN,
-          nodes: [],
-          connections: [],
-          selfconns: [],
-          gates: [],
-        } as any;
+        // Step 2: Return a network whose score remains NaN to trigger infiniteErrorCount path.
+        const genome = new Network(this.input, this.output);
+        genome.score = NaN;
+        return genome;
       }
       _warnIfNoBestGenome() {
         console.warn(
@@ -49,11 +55,11 @@ describe('Network.evolveNetwork branch coverage', () => {
       // Arrange
       const spy = jest.spyOn(console, 'warn').mockImplementation(() => {});
       const net = new Network(1, 1, { seed: 60 });
-      const set = [{ input: [0.1], output: [0.2] }];
+      const trainingSet: TrainingSet = [{ input: [0.1], output: [0.2] }];
       // Act
-      await evolveNetwork.call(net, set as any, { iterations: 0 });
-      const warned = spy.mock.calls.some((c) =>
-        /valid best genome/.test(String(c[0]))
+      await evolveNetwork.call(net, trainingSet, { iterations: 0 });
+      const warned = spy.mock.calls.some(([message]) =>
+        /valid best genome/.test(String(message))
       );
       spy.mockRestore();
       // Assert
@@ -65,11 +71,13 @@ describe('Network.evolveNetwork branch coverage', () => {
     it('terminates early (iterations less than configured upper bound)', async () => {
       // Arrange
       const net = new Network(1, 1, { seed: 61 });
-      const set = [{ input: [0.9], output: [0.1] }];
+      const trainingSet: TrainingSet = [{ input: [0.9], output: [0.1] }];
       // Act
-      const res = await evolveNetwork.call(net, set as any, { iterations: 50 });
+      const result = await evolveNetwork.call(net, trainingSet, {
+        iterations: 50,
+      });
       // Assert (loop should break after reaching infinite error threshold << 50)
-      expect(res.iterations < 50).toBe(true);
+      expect(result.iterations < 50).toBe(true);
     });
   });
 });

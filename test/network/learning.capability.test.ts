@@ -216,26 +216,34 @@ describe('Learning Capability', () => {
     });
 
     describe('resetDropoutMasks utility', () => {
-      let net: any;
+      let net: Network | null;
       let hiddenNodeIndexes: number[];
       beforeEach(() => {
         // Arrange
-        const NetworkClass = require('../../src/architecture/network').default;
-        net = new NetworkClass(3, 2);
+        net = new Network(3, 2);
         hiddenNodeIndexes = [];
-        net.nodes.forEach((node: any, idx: number) => {
-          if (node.type === 'hidden') {
-            node.mask = 0;
-            hiddenNodeIndexes.push(idx);
+        net.nodes.forEach((node, nodeIndex) => {
+          if (node.type !== 'hidden') {
+            return;
           }
+          node.mask = 0;
+          hiddenNodeIndexes.push(nodeIndex);
         });
       });
 
       it('resets all hidden node masks to 1 (node-level dropout)', () => {
         // Act
+        if (!net) {
+          throw new Error('Network instance must be defined before test.');
+        }
         net.resetDropoutMasks();
         // Assert
         hiddenNodeIndexes.forEach((idx) => {
+          if (!net) {
+            throw new Error(
+              'Network instance must be defined during assertions.'
+            );
+          }
           expect(net.nodes[idx].mask).toBe(1);
         });
       });

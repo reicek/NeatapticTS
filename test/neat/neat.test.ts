@@ -2,6 +2,8 @@ import Network from '../../src/architecture/network';
 import Neat from '../../src/neat';
 import * as methods from '../../src/methods/methods';
 import { config } from '../../src/config';
+import type Node from '../../src/architecture/node';
+import type Connection from '../../src/architecture/connection';
 
 // Retry failed tests
 jest.retryTimes(3, { logErrorsBeforeRetry: true });
@@ -252,21 +254,27 @@ describe('Deep Network Evolution', () => {
         net.mutate(methods.mutation.ADD_NODE);
       }
       // Find the longest path from input to output
-      const input = net.nodes.find((n) => n.type === 'input');
-      const output = net.nodes.find((n) => n.type === 'output');
-      function dfs(node: any, visited = new Set()): number {
-        if (node === output) return 0;
-        visited.add(node);
-        let maxDepth = 0;
-        for (const conn of node.connections.out) {
-          if (!visited.has(conn.to)) {
-            maxDepth = Math.max(maxDepth, 1 + dfs(conn.to, visited));
-          }
-        }
-        visited.delete(node);
-        return maxDepth;
+      const inputNode = net.nodes.find((node) => node.type === 'input');
+      const outputNode = net.nodes.find((node) => node.type === 'output');
+      if (!inputNode || !outputNode) {
+        throw new Error('Network must expose both input and output nodes');
       }
-      const depth = dfs(input!);
+      const computeDepth = (
+        current: Node,
+        visitedNodes: Set<Node> = new Set()
+      ): number => {
+        if (current === outputNode) return 0;
+        visitedNodes.add(current);
+        let maxDepth = 0;
+        for (const connection of current.connections.out as Connection[]) {
+          if (visitedNodes.has(connection.to)) continue;
+          const depthCandidate = 1 + computeDepth(connection.to, visitedNodes);
+          if (depthCandidate > maxDepth) maxDepth = depthCandidate;
+        }
+        visitedNodes.delete(current);
+        return maxDepth;
+      };
+      const depth = computeDepth(inputNode);
       // Assert
       // Note: Random mutation does not guarantee a deep chain, only that deep paths are possible
       // This test passes if a path of length > 1 exists (i.e., at least one hidden node in a chain)
@@ -288,16 +296,24 @@ describe('Deep Path Construction (guaranteed)', () => {
     // deterministically grow chain: each ADD_NODE splits terminal edge
     for (let i = 0; i < 5; i++) net.mutate(methods.mutation.ADD_NODE);
     // measure depth via following out[0]
-    const input = net.nodes.find((n) => n.type === 'input')!;
-    const output = net.nodes.find((n) => n.type === 'output')!;
-    let cur: any = input;
+    const inputNode = net.nodes.find((node) => node.type === 'input');
+    const outputNode = net.nodes.find((node) => node.type === 'output');
+    if (!inputNode || !outputNode) {
+      throw new Error('Network must expose both input and output nodes');
+    }
+    let currentNode: Node | undefined = inputNode;
     let depth = 0;
-    const seen = new Set();
-    while (cur !== output && cur && !seen.has(cur)) {
-      seen.add(cur);
-      const edge = cur.connections.out[0];
+    const visitedNodes = new Set<Node>();
+    while (
+      currentNode &&
+      currentNode !== outputNode &&
+      !visitedNodes.has(currentNode)
+    ) {
+      visitedNodes.add(currentNode);
+      const edge: Connection | undefined = (currentNode.connections
+        .out as Connection[])[0];
       if (!edge) break;
-      cur = edge.to;
+      currentNode = edge.to;
       depth++;
     }
     // depth should be hidden count + 1 output; we added 5 hidden nodes
@@ -315,15 +331,20 @@ describe('Connection Preservation', () => {
     const inputNodes = net.nodes.filter((n) => n.type === 'input');
     const outputNode = net.nodes.find((n) => n.type === 'output')!;
     const neat = new Neat(2, 1, () => 1, { hiddenLayerMultiplier: 1 });
-    (neat as any).ensureMinHiddenNodes(net, 1);
-    function hasPath(from: any, to: any, visited = new Set()): boolean {
-      if (from === to) return true;
-      visited.add(from);
-      for (const conn of from.connections.out) {
-        if (!visited.has(conn.to) && hasPath(conn.to, to, visited)) return true;
+    neat.ensureMinHiddenNodes(net, 1);
+    const hasPath = (
+      fromNode: Node,
+      toNode: Node,
+      visitedNodes: Set<Node> = new Set()
+    ): boolean => {
+      if (fromNode === toNode) return true;
+      visitedNodes.add(fromNode);
+      for (const connection of fromNode.connections.out as Connection[]) {
+        if (visitedNodes.has(connection.to)) continue;
+        if (hasPath(connection.to, toNode, visitedNodes)) return true;
       }
       return false;
-    }
+    };
     it('input node 1 has a path to output', () => {
       // Act
       const pathExists = hasPath(inputNodes[0], outputNode);
@@ -349,7 +370,7 @@ describe('Hidden Node Minimum Enforcement', () => {
         hiddenLayerMultiplier: multiplier,
       });
       // Act
-      (neat as any).ensureMinHiddenNodes(net, multiplier);
+      neat.ensureMinHiddenNodes(net, multiplier);
       const hiddenCount = net.nodes.filter((n) => n.type === 'hidden').length;
       // Assert
       expect(hiddenCount).toBeGreaterThanOrEqual(
@@ -364,7 +385,7 @@ describe('Hidden Node Minimum Enforcement', () => {
       const neat = new Neat(4, 3, () => 1, {
         hiddenLayerMultiplier: multiplier,
       });
-      (neat as any).ensureMinHiddenNodes(net, multiplier);
+      neat.ensureMinHiddenNodes(net, multiplier);
       const hiddenCount = net.nodes.filter((n) => n.type === 'hidden').length;
       // Assert
       expect(hiddenCount).toBeGreaterThanOrEqual(
@@ -381,7 +402,7 @@ describe('Hidden Node Minimum Enforcement', () => {
       const neat = new Neat(2, 1, () => 1, {
         hiddenLayerMultiplier: multiplier,
       });
-      (neat as any).ensureMinHiddenNodes(net, multiplier);
+      neat.ensureMinHiddenNodes(net, multiplier);
       it('ensures minimum hidden nodes', () => {
         // Act
         const hiddenCount = net.nodes.filter((n) => n.type === 'hidden').length;
@@ -411,7 +432,7 @@ describe('Hidden Node Minimum Enforcement', () => {
       });
       const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {}); // Spy
       // Act
-      (neat as any).ensureMinHiddenNodes(net, multiplier);
+      neat.ensureMinHiddenNodes(net, multiplier);
       // Assert
       expect(warnSpy).toHaveBeenCalledWith(
         expect.stringContaining('Network is missing input or output nodes')

@@ -1,4 +1,19 @@
 import { fork, ChildProcess } from 'child_process';
+import * as path from 'path';
+
+/**
+ * Interface for serializable network used in worker evaluation.
+ */
+interface SerializableNetwork {
+  serialize(): [number[], number[], number[]];
+}
+
+/**
+ * Interface for cost function used in worker evaluation.
+ */
+interface CostFunction {
+  name: string;
+}
 
 /**
  * TestWorker class for handling network evaluations in a Node.js environment using Worker Threads.
@@ -37,18 +52,11 @@ export class TestWorker {
    * to the worker for further processing.
    *
    * @param {number[]} dataSet - The serialized dataset to be used by the worker.
-   * @param {{ name: string }} cost - The cost function to evaluate the network.
+   * @param {CostFunction} cost - The cost function to evaluate the network.
    */
-  constructor(dataSet: number[], cost: { name: string }) {
-    // Lazily require 'path' at runtime to avoid bundlers resolving Node builtins
-    let pathModule: any = null;
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      pathModule = require('path');
-    } catch {}
-    const workerPath = pathModule
-      ? pathModule.join(__dirname, '/worker')
-      : './worker';
+  constructor(dataSet: number[], cost: CostFunction) {
+    // Use path module to join paths correctly for worker
+    const workerPath = path.join(__dirname, '/worker');
     this.worker = fork(workerPath);
     this.worker.send({ set: dataSet, cost: cost.name });
   }
@@ -59,7 +67,7 @@ export class TestWorker {
    * The network is serialized and sent to the worker for evaluation. The worker
    * sends back the evaluation result, which is returned as a promise.
    *
-   * @param {any} network - The neural network to evaluate. It must implement a `serialize` method.
+   * @param {SerializableNetwork} network - The neural network to evaluate. It must implement a `serialize` method.
    * @returns {Promise<number>} A promise that resolves to the evaluation result.
    *
    * @example
@@ -69,7 +77,7 @@ export class TestWorker {
    * const score = await worker.evaluate(mockNetwork);
    * console.log('score', score);
    */
-  async evaluate(network: any): Promise<number> {
+  async evaluate(network: SerializableNetwork): Promise<number> {
     const serialized = network.serialize();
 
     const data = {
@@ -129,12 +137,18 @@ export class TestWorker {
         // use off which is available on EventEmitter in modern Node.js
         this.worker.off('message', onMessage);
         this.worker.off('error', onError);
-        this.worker.off('exit', onExit as any);
+        this.worker.off(
+          'exit',
+          onExit as (code: number | null, signal: NodeJS.Signals | null) => void
+        );
       };
 
       this.worker.once('message', onMessage);
       this.worker.once('error', onError);
-      this.worker.once('exit', onExit as any);
+      this.worker.once(
+        'exit',
+        onExit as (code: number | null, signal: NodeJS.Signals | null) => void
+      );
 
       this.worker.send(data);
     });

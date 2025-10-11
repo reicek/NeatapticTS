@@ -1,4 +1,7 @@
 import Neat from '../../src/neat';
+import type { NeatLikeWithAdaptive } from '../../src/neat/neat.adaptive';
+import type Network from '../../src/architecture/network';
+import { applyComplexityBudget } from '../../src/neat/neat.adaptive';
 
 /**
  * Tests adaptive complexity budget growth path with positive improvement & noveltyFactor=1.
@@ -26,14 +29,13 @@ describe('Adaptive Complexity Budget Growth', () => {
     });
     test('node budget increases after improvements', () => {
       // Arrange: fill novelty archive to disable novelty dampening
-      (neat as any)._noveltyArchive = [1, 2, 3, 4, 5, 6];
+      Reflect.set(neat, '_noveltyArchive', [1, 2, 3, 4, 5, 6]);
       // Simulate improving best score each generation (history drives growth)
       for (let i = 0; i < 4; i++) {
         // Emulate evaluation step: assign an increasing score to best genome
-        (neat.population[0] as any).score = i + 1;
-        require('../../src/neat/neat.adaptive').applyComplexityBudget.call(
-          neat as any
-        );
+        const bestGenome = neat.population[0] as Network & { score?: number };
+        bestGenome.score = i + 1;
+        applyComplexityBudget.call((neat as unknown) as NeatLikeWithAdaptive);
       }
       const after = neat.options.maxNodes;
       // Assert: increased relative to start

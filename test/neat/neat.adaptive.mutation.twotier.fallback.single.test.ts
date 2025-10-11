@@ -1,4 +1,5 @@
 import Neat from '../../src/neat';
+import type { NeatLikeWithAdaptive } from '../../src/neat/neat.adaptive';
 import Network from '../../src/architecture/network';
 import { mutation } from '../../src/methods/mutation';
 
@@ -22,10 +23,12 @@ describe('Adaptive Mutation twoTier fallback (single genome)', () => {
     test('mutRate differs from baseline after fallback', async () => {
       await neat.evaluate();
       neat.mutate();
-      require('../../src/neat/neat.adaptive').applyAdaptiveMutation.call(
-        neat as any
+      const { applyAdaptiveMutation } = await import(
+        '../../src/neat/neat.adaptive'
       );
-      const rate = (neat.population[0] as any)._mutRate;
+      applyAdaptiveMutation.call((neat as unknown) as NeatLikeWithAdaptive);
+      type GenomeLike = { _mutRate: number };
+      const rate = ((neat.population as unknown) as GenomeLike[])[0]._mutRate;
       // Expect rate not equal baseline => changed via fallback balancing
       expect(rate).not.toBe(0.4);
     });

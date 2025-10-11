@@ -1,5 +1,9 @@
 import { Workers } from './workers/workers';
-import Network from '../architecture/network';
+import type {
+  ActivationFn,
+  SerializedSample,
+  TestWorkerConstructor,
+} from './types';
 
 /**
  * Multi-threading utilities for neural network operations.
@@ -18,7 +22,7 @@ export default class Multi {
   /**
    * A list of compiled activation functions in a specific order.
    */
-  static activations: Array<(x: number) => number> = [
+  static activations: ActivationFn[] = [
     (x) => 1 / (1 + Math.exp(-x)), // Logistic (0)
     (x) => Math.tanh(x), // Tanh (1)
     (x) => x, // Identity (2)
@@ -34,8 +38,10 @@ export default class Multi {
     (x) => Math.abs(x), // Absolute (12)
     (x) => 1 - x, // Inverse (13)
     (x) => {
-      // SELU (14)
+      // SELU (14) - Constants from Klambauer et al., 2017
+      // eslint-disable-next-line no-loss-of-precision
       const alpha = 1.6732632423543772848170429916717;
+      // eslint-disable-next-line no-loss-of-precision
       const scale = 1.0507009873554804934193349852946;
       const fx = x > 0 ? x : alpha * Math.exp(x) - alpha;
       return fx * scale;
@@ -79,7 +85,7 @@ export default class Multi {
     A: number[],
     S: number[],
     data: number[],
-    F: Function[]
+    F: ActivationFn[]
   ): number[] {
     for (let i = 0; i < data[0]; i++) A[i] = input[i];
     for (let i = 2; i < data.length; i++) {
@@ -99,7 +105,7 @@ export default class Multi {
       A[index] = F[squash](S[index]);
     }
 
-    const output = [];
+    const output: number[] = [];
     for (let i = A.length - data[1]; i < A.length; i++) output.push(A[i]);
     return output;
   }
@@ -109,10 +115,8 @@ export default class Multi {
    * @param {number[]} serializedSet - The serialized dataset.
    * @returns {Array<{ input: number[]; output: number[] }>} The deserialized dataset as an array of input-output pairs.
    */
-  static deserializeDataSet(
-    serializedSet: number[]
-  ): Array<{ input: number[]; output: number[] }> {
-    const set: Array<{ input: number[]; output: number[] }> = [];
+  static deserializeDataSet(serializedSet: number[]): SerializedSample[] {
+    const set: SerializedSample[] = [];
     const sampleSize = serializedSet[0] + serializedSet[1];
 
     for (let i = 0; i < (serializedSet.length - 2) / sampleSize; i++) {
@@ -270,7 +274,10 @@ export default class Multi {
    * @returns {number} The activated value.
    */
   static selu(x: number): number {
+    // SELU constants from Klambauer et al., 2017
+    // eslint-disable-next-line no-loss-of-precision
     const alpha = 1.6732632423543772848170429916717;
+    // eslint-disable-next-line no-loss-of-precision
     const scale = 1.0507009873554804934193349852946;
     const fx = x > 0 ? x : alpha * Math.exp(x) - alpha; // Corrected definition
     return fx * scale;
@@ -296,34 +303,35 @@ export default class Multi {
    * @returns {number} The average error.
    */
   static testSerializedSet(
-    set: Array<{ input: number[]; output: number[] }>,
+    set: SerializedSample[],
     cost: (expected: number[], actual: number[]) => number,
     A: number[],
     S: number[],
     data: number[],
-    F: Function[]
+    F: ActivationFn[]
   ): number {
-    let error = 0;
-
-    for (let i = 0; i < set.length; i++) {
+    if (set.length === 0) return NaN;
+    let errorSum = 0;
+    for (const sample of set) {
       const output = Multi.activateSerializedNetwork(
-        set[i].input,
+        sample.input,
         A,
         S,
         data,
         F
       );
-      error += cost(set[i].output, output);
+      const costVal = cost(sample.output, output);
+      if (!Number.isFinite(costVal)) return NaN;
+      errorSum += costVal;
     }
-
-    return error / set.length;
+    return errorSum / set.length;
   }
 
   /**
    * Gets the browser test worker.
    * @returns {Promise<any>} The browser test worker.
    */
-  static async getBrowserTestWorker() {
+  static async getBrowserTestWorker(): Promise<TestWorkerConstructor> {
     const { TestWorker } = await import('./workers/browser/testworker');
     return TestWorker;
   }
@@ -332,8 +340,8 @@ export default class Multi {
    * Gets the node test worker.
    * @returns {Promise<any>} The node test worker.
    */
-  static async getNodeTestWorker() {
-    const { TestWorker } = await import('./workers/node/testworker'); // Corrected path
+  static async getNodeTestWorker(): Promise<TestWorkerConstructor> {
+    const { TestWorker } = await import('./workers/node/testworker');
     return TestWorker;
   }
 }

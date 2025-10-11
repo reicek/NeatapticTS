@@ -1,5 +1,24 @@
 import Network from '../../src/architecture/network';
 
+interface RegularizationStatsSnapshot {
+  l1Penalty?: number;
+  dropped?: number;
+  custom?: { depth: number };
+  [key: string]: unknown;
+}
+
+const setRegularizationStats = (
+  net: Network,
+  stats: RegularizationStatsSnapshot | null
+) => {
+  Reflect.set(net, '_lastStats', stats);
+};
+
+const getRegularizationStatsSnapshot = (
+  net: Network
+): RegularizationStatsSnapshot | null =>
+  net.getRegularizationStats() as RegularizationStatsSnapshot | null;
+
 /** Regularization stats accessor tests (AAA pattern). */
 describe('Network.stats.getRegularizationStats', () => {
   describe('Scenario: stats never recorded', () => {
@@ -17,12 +36,12 @@ describe('Network.stats.getRegularizationStats', () => {
     it('returns a cloned object (not the same reference)', () => {
       // Arrange
       const net = new Network(1, 1, { seed: 2, enforceAcyclic: true });
-      const internalStats = {
+      const internalStats: RegularizationStatsSnapshot = {
         l1Penalty: 0.1,
         dropped: 0.25,
         custom: { depth: 3 },
       };
-      (net as any)._lastStats = internalStats;
+      setRegularizationStats(net, internalStats);
       // Act
       const snap = net.getRegularizationStats();
       // Assert
@@ -32,13 +51,19 @@ describe('Network.stats.getRegularizationStats', () => {
       it('does not reflect external deep mutation (defensive copy)', () => {
         // Arrange
         const net = new Network(1, 1, { seed: 3, enforceAcyclic: true });
-        (net as any)._lastStats = { custom: { depth: 3 } };
-        const snap = net.getRegularizationStats();
+        setRegularizationStats(net, { custom: { depth: 3 } });
+        const snap = getRegularizationStatsSnapshot(net);
         // Act
-        (snap as any).custom.depth = 99;
-        const reread = net.getRegularizationStats();
+        if (!snap || !snap.custom) {
+          throw new Error('Regularization stats should include custom depth');
+        }
+        snap.custom.depth = 99;
+        const reread = getRegularizationStatsSnapshot(net);
         // Assert
-        expect((reread as any).custom.depth).toBe(3);
+        if (!reread || !reread.custom) {
+          throw new Error('Regularization stats should include custom depth');
+        }
+        expect(reread.custom.depth).toBe(3);
       });
     });
   });

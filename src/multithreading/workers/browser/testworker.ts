@@ -1,6 +1,20 @@
 import Multi from '../../multi';
 
 /**
+ * Interface for serializable network used in worker evaluation.
+ */
+interface SerializableNetwork {
+  serialize(): [number[], number[], number[]];
+}
+
+/**
+ * Interface for cost function used in worker evaluation.
+ */
+interface CostFunction {
+  name: string;
+}
+
+/**
  * TestWorker class for handling network evaluations in a browser environment using Web Workers.
  *
  * This implementation aligns with the Instinct algorithm's emphasis on efficient evaluation of
@@ -17,9 +31,9 @@ export class TestWorker {
   /**
    * Creates a new TestWorker instance.
    * @param {number[]} dataSet - The serialized dataset to be used by the worker.
-   * @param {any} cost - The cost function to evaluate the network.
+   * @param {CostFunction} cost - The cost function to evaluate the network.
    */
-  constructor(dataSet: number[], cost: { name: string }) {
+  constructor(dataSet: number[], cost: CostFunction) {
     const blob = new Blob([TestWorker._createBlobString(cost)]);
     this.url = window.URL.createObjectURL(blob);
     this.worker = new Worker(this.url);
@@ -30,11 +44,11 @@ export class TestWorker {
 
   /**
    * Evaluates a network using the worker process.
-   * @param {any} network - The network to evaluate.
+   * @param {SerializableNetwork} network - The network to evaluate.
    * @returns {Promise<number>} A promise that resolves to the evaluation result.
    */
-  evaluate(network: any): Promise<number> {
-    return new Promise((resolve, reject) => {
+  evaluate(network: SerializableNetwork): Promise<number> {
+    return new Promise((resolve) => {
       const serialized = network.serialize();
 
       const data = {
@@ -43,7 +57,7 @@ export class TestWorker {
         conns: new Float64Array(serialized[2]).buffer,
       };
 
-      this.worker.onmessage = function (e: MessageEvent) {
+      this.worker.onmessage = (e: MessageEvent) => {
         const error = new Float64Array(e.data.buffer)[0];
         resolve(error);
       };
@@ -66,10 +80,10 @@ export class TestWorker {
 
   /**
    * Creates a string representation of the worker's blob.
-   * @param {any} cost - The cost function to be used by the worker.
+   * @param {CostFunction} cost - The cost function to be used by the worker.
    * @returns {string} The blob string.
    */
-  private static _createBlobString(cost: any): string {
+  private static _createBlobString(cost: CostFunction): string {
     return `
       const F = [${Multi.activations.toString()}];
       const cost = ${cost.toString()};

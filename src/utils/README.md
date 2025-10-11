@@ -4,12 +4,7 @@
 
 ### memoryStats
 
-`(targetNetworks: any) => import("D:/code-practice/NeatapticTS/src/utils/memory").MemoryStats`
-
-Capture heuristic memory statistics for one or more networks with snapshot of active config flags.
-
-Parameters:
-- `targetNetworks` - Optional single network or array. If omitted, uses registered networks.
+`(targetNetworks: import("D:/code-practice/NeatapticTS/src/utils/memory").NetworkView | import("D:/code-practice/NeatapticTS/src/utils/memory").NetworkView[] | undefined) => import("D:/code-practice/NeatapticTS/src/utils/memory").MemoryStats`
 
 ### MemoryStats
 
@@ -27,35 +22,25 @@ Design principles:
 - Cross‑environment: Works in both Browser and Node via feature detection.
 - Extensible: Shape deliberately includes draft sections for later precise accounting phases.
 
+### NetworkView
+
+Minimal view of a network used for memory heuristics. Only properties
+accessed by this module are declared. This keeps coupling light while
+enabling typed local variables instead of `any` everywhere.
+
 ### registerTrackedNetwork
 
-`(network: any) => void`
-
-Register a network for inclusion in future `memoryStats()` calls made
-without explicit parameters.
-
-Duplicate registrations are ignored; insertion order is preserved which is
-useful for deterministic test snapshots.
-
-Parameters:
-- `network` - Network instance (loosely typed to defer strict coupling).
+`(network: import("D:/code-practice/NeatapticTS/src/utils/memory").NetworkView | null | undefined) => void`
 
 ### resetMemoryTracking
 
 `() => void`
 
-Reset internal tracking registry (and, in later phases, ancillary counters).
+### SlabAllocStats
 
-Educational: Calling this does NOT free memory — it simply clears the list
-of networks that will be included when `memoryStats()` is invoked without
-arguments. Use it between benchmark runs to isolate scenarios.
+Minimal slab allocator stats shape used here. The real shape may
+include additional fields; we only rely on fresh/pooled counts.
 
 ### unregisterTrackedNetwork
 
-`(network: any) => void`
-
-Remove a previously registered network from the tracking registry.
-No-op if the network is not currently registered.
-
-Parameters:
-- `network` - Network instance.
+`(network: import("D:/code-practice/NeatapticTS/src/utils/memory").NetworkView) => void`

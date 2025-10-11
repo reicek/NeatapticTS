@@ -1,13 +1,9 @@
 import Multi from '../../src/multithreading/multi';
-
-// Helper: simple cost function for tests
-const mse = (expected: number[], actual: number[]) => {
-  let sum = 0;
-  for (let i = 0; i < expected.length; i++) {
-    sum += Math.pow(expected[i] - actual[i], 2);
-  }
-  return sum / expected.length;
-};
+import type {
+  SerializedSample,
+  TestWorkerConstructor,
+  SerializableNetwork,
+} from '../../src/multithreading/types';
 
 describe('Multi-threading Utilities (Multi)', () => {
   // Set longer timeout for multithreading tests
@@ -25,7 +21,7 @@ describe('Multi-threading Utilities (Multi)', () => {
     describe('when dataset is valid', () => {
       it('serializes a simple dataset', () => {
         // Arrange
-        const set = [
+        const set: SerializedSample[] = [
           { input: [1, 2], output: [3] },
           { input: [4, 5], output: [9] },
         ];
@@ -38,7 +34,7 @@ describe('Multi-threading Utilities (Multi)', () => {
     describe('when dataset is empty', () => {
       it('throws an error', () => {
         // Arrange
-        const set: any[] = [];
+        const set: SerializedSample[] = [];
         // Act & Assert
         expect(() => Multi.serializeDataSet(set)).toThrow();
       });
@@ -49,7 +45,7 @@ describe('Multi-threading Utilities (Multi)', () => {
     describe('when input is valid', () => {
       it('deserializes a simple serialized dataset', () => {
         // Arrange
-        const set = [
+        const set: SerializedSample[] = [
           { input: [1, 2], output: [3] },
           { input: [4, 5], output: [9] },
         ];
@@ -136,8 +132,10 @@ describe('Multi-threading Utilities (Multi)', () => {
     describe('when set is empty', () => {
       it('returns NaN', () => {
         // Arrange
-        const set: any[] = [];
-        const cost = (expected: number[], actual: number[]) => 0;
+        const set: SerializedSample[] = [];
+        const cost = (expectedOutputs: number[], actualOutputs: number[]) => {
+          return expectedOutputs.length === actualOutputs.length ? 0 : 0;
+        };
         const A = [0];
         const S = [0];
         const data = [1, 1, 0, 0, 0, 0, -1, -2]; // squash index is 0
@@ -151,7 +149,7 @@ describe('Multi-threading Utilities (Multi)', () => {
     describe('when cost function throws', () => {
       it('returns NaN', () => {
         // Arrange
-        const set = [{ input: [1], output: [2] }];
+        const set: SerializedSample[] = [{ input: [1], output: [2] }];
         const cost = () => {
           throw new Error('cost error');
         };
@@ -160,10 +158,11 @@ describe('Multi-threading Utilities (Multi)', () => {
         const data = [1, 1, 0, 0, 0, 0, -1, -2]; // squash index is 0
         const F = [(x: number) => x];
         // Act
-        let error;
+        let error: number;
         try {
           error = Multi.testSerializedSet(set, cost, A, S, data, F);
-        } catch (e) {
+        } catch (caughtError: unknown) {
+          void caughtError;
           error = NaN;
         }
         // Assert
@@ -173,7 +172,7 @@ describe('Multi-threading Utilities (Multi)', () => {
     describe('when cost function returns NaN', () => {
       it('returns NaN as error', () => {
         // Arrange
-        const set = [{ input: [1], output: [2] }];
+        const set: SerializedSample[] = [{ input: [1], output: [2] }];
         const cost = () => NaN;
         const A = [0];
         const S = [0];
@@ -191,19 +190,30 @@ describe('Multi-threading Utilities (Multi)', () => {
     describe('when import succeeds', () => {
       beforeAll(() => {
         // Provide a dummy class as the resolved value, matching the expected type
-        class DummyWorker {
-          private worker: any;
+        class DummyWorker implements InstanceType<TestWorkerConstructor> {
+          private readonly serializedData: number[];
+          private readonly costDescriptor: { name: string };
           constructor(dataSet: number[], cost: { name: string }) {
-            this.worker = null;
+            this.serializedData = dataSet;
+            this.costDescriptor = cost;
           }
-          evaluate = () => {};
-          terminate = () => {};
-          test = () => {};
-          private static _createBlobString = () => '';
+          evaluate(network: SerializableNetwork): Promise<number> | number {
+            void network;
+            return this.serializedData.length + this.costDescriptor.name.length;
+          }
+          terminate(): void {
+            /* no-op */
+          }
+          test?(): unknown {
+            return undefined;
+          }
+          private static _createBlobString(): string {
+            return '';
+          }
         }
         jest
           .spyOn(Multi, 'getBrowserTestWorker')
-          .mockResolvedValue(DummyWorker as any);
+          .mockResolvedValue(DummyWorker);
       });
       afterAll(() => {
         jest.restoreAllMocks();
@@ -243,19 +253,28 @@ describe('Multi-threading Utilities (Multi)', () => {
     describe('when import succeeds', () => {
       beforeAll(() => {
         // Provide a dummy class as the resolved value, matching the expected type
-        class DummyWorker {
-          private worker: any;
+        class DummyWorker implements InstanceType<TestWorkerConstructor> {
+          private readonly serializedData: number[];
+          private readonly costDescriptor: { name: string };
           constructor(dataSet: number[], cost: { name: string }) {
-            this.worker = null;
+            this.serializedData = dataSet;
+            this.costDescriptor = cost;
           }
-          evaluate = () => {};
-          terminate = () => {};
-          test = () => {};
-          private static _createBlobString = () => '';
+          evaluate(network: SerializableNetwork): Promise<number> | number {
+            void network;
+            return this.serializedData.length + this.costDescriptor.name.length;
+          }
+          terminate(): void {
+            /* no-op */
+          }
+          test?(): unknown {
+            return undefined;
+          }
+          private static _createBlobString(): string {
+            return '';
+          }
         }
-        jest
-          .spyOn(Multi, 'getNodeTestWorker')
-          .mockResolvedValue(DummyWorker as any);
+        jest.spyOn(Multi, 'getNodeTestWorker').mockResolvedValue(DummyWorker);
       });
       afterAll(() => {
         jest.restoreAllMocks();

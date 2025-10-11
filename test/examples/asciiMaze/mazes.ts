@@ -267,6 +267,18 @@ export const minotaur = [
  * const m = procedural(41, 21);
  * console.log(m.join("\n"));
  */
+
+interface MazeScratchBuffers {
+  capacity: number;
+  stackX: Int32Array;
+  stackY: Int32Array;
+  stackDepth: Int32Array;
+  distancesFlat: Int32Array;
+  queueX: Int32Array;
+  queueY: Int32Array;
+  maskFlags: Int8Array;
+}
+
 export class MazeGenerator {
   #width: number;
   #height: number;
@@ -280,6 +292,24 @@ export class MazeGenerator {
   static readonly PATH = 0;
   static readonly START = 2;
   static readonly EXIT = 3;
+
+  static #scratchBuffers: MazeScratchBuffers | null = null;
+
+  static #acquireScratchBuffers(): MazeScratchBuffers {
+    if (!MazeGenerator.#scratchBuffers) {
+      MazeGenerator.#scratchBuffers = {
+        capacity: 0,
+        stackX: new Int32Array(0),
+        stackY: new Int32Array(0),
+        stackDepth: new Int32Array(0),
+        distancesFlat: new Int32Array(0),
+        queueX: new Int32Array(0),
+        queueY: new Int32Array(0),
+        maskFlags: new Int8Array(4),
+      };
+    }
+    return MazeGenerator.#scratchBuffers;
+  }
 
   constructor(rawWidth: number, rawHeight: number) {
     this.#width = rawWidth;
@@ -348,21 +378,8 @@ export class MazeGenerator {
    */
   #carvePerfectMaze(): void {
     // --- Tiny typed-array scratch-pool (grow-only) used across instances ---
-    // Stored as a regular private static member to keep TS happy with older emit targets.
-    if (!(MazeGenerator as any)._scratchBuffers) {
-      (MazeGenerator as any)._scratchBuffers = {
-        capacity: 0,
-        stackX: new Int32Array(0),
-        stackY: new Int32Array(0),
-        stackDepth: new Int32Array(0),
-      };
-    }
-    const scratch = (MazeGenerator as any)._scratchBuffers as {
-      capacity: number;
-      stackX: Int32Array;
-      stackY: Int32Array;
-      stackDepth: Int32Array;
-    };
+    // Stored on a private static field so every generator shares the buffers.
+    const scratch = MazeGenerator.#acquireScratchBuffers();
 
     // Estimate a safe stack capacity: quarter of cells (every second cell both axes), minimum 1024
     const estimatedCapacity = Math.max(
@@ -509,40 +526,7 @@ export class MazeGenerator {
    */
   #computeDistances(): number[][] {
     // --- Setup / scratch buffers reuse ---
-    if (!(MazeGenerator as any)._scratchBuffers) {
-      (MazeGenerator as any)._scratchBuffers = {
-        capacity: 0,
-        stackX: new Int32Array(0),
-        stackY: new Int32Array(0),
-        stackDepth: new Int32Array(0),
-        // BFS-specific buffers
-        distancesFlat: new Int32Array(0),
-        queueX: new Int32Array(0),
-        queueY: new Int32Array(0),
-      };
-    }
-    const scratch = (MazeGenerator as any)._scratchBuffers as {
-      capacity: number;
-      stackX: Int32Array;
-      stackY: Int32Array;
-      stackDepth: Int32Array;
-      distancesFlat: Int32Array;
-      queueX: Int32Array;
-      queueY: Int32Array;
-    };
-
-    // Defensive: previous code paths may have initialized a partial
-    // `_scratchBuffers` object (e.g., carving stage). Ensure BFS-specific
-    // typed arrays exist so `.length` checks below are safe.
-    if (!('distancesFlat' in scratch) || !scratch.distancesFlat) {
-      (scratch as any).distancesFlat = new Int32Array(0);
-    }
-    if (!('queueX' in scratch) || !scratch.queueX) {
-      (scratch as any).queueX = new Int32Array(0);
-    }
-    if (!('queueY' in scratch) || !scratch.queueY) {
-      (scratch as any).queueY = new Int32Array(0);
-    }
+    const scratch = MazeGenerator.#acquireScratchBuffers();
 
     const totalCells = this.#width * this.#height;
     // Grow flat buffers if needed (grow-only to keep reuse simple)
@@ -682,11 +666,9 @@ export class MazeGenerator {
     // Ensure distances are computed and available on the shared scratch buffer.
     const distances2D = this.#computeDistances();
     // Access the flat distances buffer directly for scanning (avoid extra allocations).
-    const scratch = (MazeGenerator as any)._scratchBuffers as
-      | { distancesFlat: Int32Array }
-      | undefined;
+    const scratch = MazeGenerator.#acquireScratchBuffers();
     const distancesFlat =
-      scratch && scratch.distancesFlat ? scratch.distancesFlat : null;
+      scratch.distancesFlat.length > 0 ? scratch.distancesFlat : null;
 
     // Track the best candidate found during a single pass.
     let bestDistance = -1;
@@ -821,13 +803,10 @@ export class MazeGenerator {
    */
   #wallGlyph(column: number, row: number): string {
     // --- STEP 1: Prepare a tiny pooled buffer for neighbor flags ---
-    if (!(MazeGenerator as any)._scratchBuffers) {
-      (MazeGenerator as any)._scratchBuffers = {} as any;
+    const scratch = MazeGenerator.#acquireScratchBuffers();
+    if (scratch.maskFlags.length < 4) {
+      scratch.maskFlags = new Int8Array(4);
     }
-    const scratch = (MazeGenerator as any)._scratchBuffers as {
-      maskFlags?: Int8Array;
-    };
-    if (!scratch.maskFlags) scratch.maskFlags = new Int8Array(4);
 
     // Helper: treat any non-PATH/START/EXIT as a wall for rendering.
     const isNeighborWall = (col: number, rw: number): boolean =>

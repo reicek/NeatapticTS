@@ -60,15 +60,15 @@ export interface MemoryStats {
   flags: {
     /** Snapshot of selected global / experimental feature flags at sampling time. */
     snapshot: {
-      warnings: any;
-      float32Mode: any;
-      deterministicChainMode: any;
-      enableGatingTraces: any;
+      warnings: unknown;
+      float32Mode: unknown;
+      deterministicChainMode: unknown;
+      enableGatingTraces: unknown;
       poolMaxPerBucket: number | null;
       poolPrewarmCount: number | null;
       enableNodePooling: boolean;
       /** Raw allocator stats (shape may evolve). */
-      allocStats: any;
+      allocStats: SlabAllocStats | unknown;
     };
   };
   env: {
@@ -118,12 +118,47 @@ import { config } from '../config';
 import { nodePoolStats } from '../architecture/nodePool';
 import { getSlabAllocationStats as _getSlabAllocationStats } from '../architecture/network/network.slab';
 
+/** Minimal view of a network used for memory heuristics. Only properties
+ * accessed by this module are declared. This keeps coupling light while
+ * enabling typed local variables instead of `any` everywhere. */
+export interface NetworkView {
+  connections?: unknown[];
+  nodes?: unknown[];
+  // Slab / pool internals (optional and feature-gated)
+  _connWeights?: Float32Array | Float64Array;
+  _connFrom?: Uint32Array;
+  _connTo?: Uint32Array;
+  _connFlags?: Uint8Array;
+  _connGain?: Float32Array | Float64Array | null;
+  _connPlastic?: Float32Array | Float64Array | null;
+  _fastA?: Float32Array | Float64Array;
+  _fastS?: Float32Array | Float64Array;
+  _connCapacity?: number;
+  _connCount?: number;
+  _useFloat32Weights?: boolean;
+  _slabVersion?: number;
+  _slabAsyncBuilds?: number;
+}
+
+/** Minimal slab allocator stats shape used here. The real shape may
+ * include additional fields; we only rely on fresh/pooled counts. */
+export type SlabAllocStats = { fresh: number; pooled: number } | null;
+
 /**
  * Capture heuristic memory statistics for one or more networks with snapshot of active config flags.
  * @param targetNetworks Optional single network or array. If omitted, uses registered networks.
  */
-export function memoryStats(targetNetworks?: any | any[]): MemoryStats {
-  const networks: any[] = Array.isArray(targetNetworks)
+/**
+ * Capture heuristic memory statistics for one or more networks with a
+ * snapshot of active config flags.
+ *
+ * @param targetNetworks Optional single network or array. If omitted, uses registered networks.
+ * @returns MemoryStats heuristic snapshot.
+ */
+export const memoryStats = (
+  targetNetworks?: NetworkView | NetworkView[]
+): MemoryStats => {
+  const networks: NetworkView[] = Array.isArray(targetNetworks)
     ? targetNetworks
     : targetNetworks
     ? [targetNetworks]
@@ -142,12 +177,12 @@ export function memoryStats(targetNetworks?: any | any[]): MemoryStats {
   /** Heuristic per-node JS object overhead. */
   const JS_OBJECT_NODE_BYTES = 72; // includes bias, activation caches, refs
 
-  for (const net of networks) {
-    if (!net) continue;
-    const connCount = Array.isArray(net.connections)
-      ? net.connections.length
+  for (const network of networks) {
+    if (!network) continue;
+    const connCount = Array.isArray(network.connections)
+      ? network.connections.length
       : 0;
-    const nodeCount = Array.isArray(net.nodes) ? net.nodes.length : 0;
+    const nodeCount = Array.isArray(network.nodes) ? network.nodes.length : 0;
     totalConnections += connCount;
     totalNodes += nodeCount;
 
@@ -155,31 +190,14 @@ export function memoryStats(targetNetworks?: any | any[]): MemoryStats {
     objectConnOverheadBytes += connCount * JS_OBJECT_CONN_BYTES;
 
     // Examine slab typed arrays (private fields guarded by feature detection)
-    const weightSlab = (net as any)._connWeights as
-      | Float32Array
-      | Float64Array
-      | undefined;
-    const fromSlab = (net as any)._connFrom as Uint32Array | undefined;
-    const toSlab = (net as any)._connTo as Uint32Array | undefined;
-    const flagsSlab = (net as any)._connFlags as Uint8Array | undefined; // Phase 3 flags
-    const gainSlab = (net as any)._connGain as
-      | Float32Array
-      | Float64Array
-      | null
-      | undefined; // Phase 3 gain (optional with omission optimization)
-    const plasticSlab = (net as any)._connPlastic as
-      | Float32Array
-      | Float64Array
-      | null
-      | undefined;
-    const fastA = (net as any)._fastA as
-      | Float32Array
-      | Float64Array
-      | undefined;
-    const fastS = (net as any)._fastS as
-      | Float32Array
-      | Float64Array
-      | undefined;
+    const weightSlab = network._connWeights;
+    const fromSlab = network._connFrom;
+    const toSlab = network._connTo;
+    const flagsSlab = network._connFlags; // Phase 3 flags
+    const gainSlab = network._connGain; // optional with omission optimization
+    const plasticSlab = network._connPlastic;
+    const fastA = network._fastA;
+    const fastS = network._fastS;
 
     const typedArrays: Array<
       Float32Array | Float64Array | Uint32Array | Uint8Array | Int32Array
@@ -189,7 +207,8 @@ export function memoryStats(targetNetworks?: any | any[]): MemoryStats {
     if (toSlab) typedArrays.push(toSlab);
     if (flagsSlab) typedArrays.push(flagsSlab);
     if (gainSlab) typedArrays.push(gainSlab);
-    if (plasticSlab) typedArrays.push(plasticSlab as any);
+    if (plasticSlab)
+      typedArrays.push(plasticSlab as Float32Array | Float64Array);
     if (fastA) typedArrays.push(fastA);
     if (fastS) typedArrays.push(fastS);
     for (const ta of typedArrays) {
@@ -197,12 +216,12 @@ export function memoryStats(targetNetworks?: any | any[]): MemoryStats {
       slabBytes += ta.byteLength;
     }
     // Capacity vs used (only for connection slabs when capacity tracked)
-    const capacity = (net as any)._connCapacity as number | undefined;
-    const used = (net as any)._connCount as number | undefined;
+    const capacity = network._connCapacity;
+    const used = network._connCount;
     if (capacity && used !== undefined && used <= capacity) {
       // Approximate per-connection bytes across parallel arrays we manage (weights/from/to/flags/gain)
       // Determine element sizes
-      const weightBytes = (net as any)._useFloat32Weights ? 4 : 8;
+      const weightBytes = network._useFloat32Weights ? 4 : 8;
       const gainBytes = gainSlab ? weightBytes : 0;
       const fromBytes = 4;
       const toBytes = 4;
@@ -228,24 +247,45 @@ export function memoryStats(targetNetworks?: any | any[]): MemoryStats {
     : 0;
 
   // Environment metrics (feature-detected)
-  const env: any = { isBrowser: typeof window !== 'undefined' };
+  const env: MemoryStats['env'] = {
+    isBrowser: typeof window !== 'undefined',
+  } as MemoryStats['env'];
   try {
-    if (typeof performance !== 'undefined' && (performance as any).memory) {
-      const mem = (performance as any).memory;
-      env.usedJSHeapSize = mem.usedJSHeapSize;
-      env.totalJSHeapSize = mem.totalJSHeapSize;
-      env.jsHeapSizeLimit = mem.jsHeapSizeLimit;
+    // Guarded access to browser performance.memory (non-standard in some envs)
+    if (typeof performance !== 'undefined' && 'memory' in performance) {
+      const mem = (performance as Performance & {
+        memory?: {
+          usedJSHeapSize: number;
+          totalJSHeapSize: number;
+          jsHeapSizeLimit: number;
+        };
+      }).memory;
+      if (mem) {
+        env.usedJSHeapSize = mem.usedJSHeapSize;
+        env.totalJSHeapSize = mem.totalJSHeapSize;
+        env.jsHeapSizeLimit = mem.jsHeapSizeLimit;
+      }
     }
-  } catch {}
+  } catch (error: unknown) {
+    // Ignore instrumentation errors; this should not crash consumer code.
+    void error;
+  }
   try {
-    if (typeof process !== 'undefined' && (process as any).memoryUsage) {
-      const mu = (process as any).memoryUsage();
+    // Node.js environment: use globalThis.process to avoid bundler shims
+    const maybeProcess = ((globalThis as unknown) as {
+      process?: { memoryUsage?: () => NodeJS.MemoryUsage };
+    }).process;
+    if (maybeProcess && typeof maybeProcess.memoryUsage === 'function') {
+      const mu = maybeProcess.memoryUsage();
       env.rss = mu.rss;
       env.heapUsed = mu.heapUsed;
       env.heapTotal = mu.heapTotal;
       env.external = mu.external;
     }
-  } catch {}
+  } catch (error: unknown) {
+    // Ignore instrumentation errors; this should not crash consumer code.
+    void error;
+  }
 
   const stats: MemoryStats = {
     timestamp: Date.now(),
@@ -264,20 +304,24 @@ export function memoryStats(targetNetworks?: any | any[]): MemoryStats {
           : null,
       reservedBytes: totalReservedBytes || null,
       usedBytes: totalUsedBytes || null,
-      slabVersion: (networks[0] as any)?._slabVersion ?? null, // example version (Phase 3 edu)
-      asyncBuilds: (networks[0] as any)?._slabAsyncBuilds ?? 0,
+      slabVersion:
+        (networks[0] as NetworkView | undefined)?._slabVersion ?? null, // example version (Phase 3 edu)
+      asyncBuilds:
+        (networks[0] as NetworkView | undefined)?._slabAsyncBuilds ?? 0,
       pooledFraction: (() => {
         try {
-          const stats = _getSlabAllocationStats();
+          const stats = _getSlabAllocationStats() as SlabAllocStats;
+          if (!stats) return null;
           const denom = stats.fresh + stats.pooled;
           return denom > 0 ? Number((stats.pooled / denom).toFixed(4)) : null;
-        } catch {
+        } catch (error: unknown) {
+          void error;
           return null;
         }
       })(),
     },
     pools: {
-      nodePool: nodePoolStats?.() ?? null,
+      nodePool: typeof nodePoolStats === 'function' ? nodePoolStats() : null,
       // future: connectionPool, slabAllocators, activation array pool etc.
     },
     flags: {
@@ -288,11 +332,14 @@ export function memoryStats(targetNetworks?: any | any[]): MemoryStats {
         enableGatingTraces: config.enableGatingTraces,
         poolMaxPerBucket: config.poolMaxPerBucket ?? null,
         poolPrewarmCount: config.poolPrewarmCount ?? null,
-        enableNodePooling: (config as any).enableNodePooling ?? false, // Phase 2 addition
+        enableNodePooling:
+          ((config as unknown) as { enableNodePooling?: boolean })
+            .enableNodePooling ?? false, // Phase 2 addition
         allocStats: (() => {
           try {
             return _getSlabAllocationStats();
-          } catch {
+          } catch (error: unknown) {
+            void error;
             return null;
           }
         })(),
@@ -301,7 +348,7 @@ export function memoryStats(targetNetworks?: any | any[]): MemoryStats {
     env,
   };
   return stats;
-}
+};
 
 /**
  * Reset internal tracking registry (and, in later phases, ancillary counters).
@@ -310,9 +357,14 @@ export function memoryStats(targetNetworks?: any | any[]): MemoryStats {
  * of networks that will be included when `memoryStats()` is invoked without
  * arguments. Use it between benchmark runs to isolate scenarios.
  */
-export function resetMemoryTracking(): void {
+/**
+ * Clear the internal list of networks tracked by `memoryStats()` when no
+ * explicit networks are provided. This does NOT free memory; it only
+ * removes references held by the registry.
+ */
+export const resetMemoryTracking = (): void => {
   _trackedNetworks.length = 0; // clear registered networks
-}
+};
 
 /**
  * Register a network for inclusion in future `memoryStats()` calls made
@@ -323,11 +375,19 @@ export function resetMemoryTracking(): void {
  *
  * @param network Network instance (loosely typed to defer strict coupling).
  */
-export function registerTrackedNetwork(network: any): void {
-  if (network && !_trackedNetworks.includes(network)) {
-    _trackedNetworks.push(network);
+/**
+ * Register a network instance for future anonymous `memoryStats()` calls.
+ * Duplicate registrations are ignored.
+ *
+ * @param network Network instance (loose shape, validated at runtime).
+ */
+export const registerTrackedNetwork = (
+  network: NetworkView | null | undefined
+): void => {
+  if (network && !_trackedNetworks.includes(network as NetworkView)) {
+    _trackedNetworks.push(network as NetworkView);
   }
-}
+};
 
 /**
  * Remove a previously registered network from the tracking registry.
@@ -335,10 +395,15 @@ export function registerTrackedNetwork(network: any): void {
  *
  * @param network Network instance.
  */
-export function unregisterTrackedNetwork(network: any): void {
-  const idx = _trackedNetworks.indexOf(network);
-  if (idx >= 0) _trackedNetworks.splice(idx, 1);
-}
+/**
+ * Unregister a previously registered network. No-op when not found.
+ * @param network Network instance to remove.
+ */
+export const unregisterTrackedNetwork = (network: NetworkView): void => {
+  const index = _trackedNetworks.indexOf(network);
+  if (index >= 0) _trackedNetworks.splice(index, 1);
+};
 
 // Internal registry (simple array to preserve insertion order for deterministic summaries)
-const _trackedNetworks: any[] = [];
+// Internal registry (simple array to preserve insertion order for deterministic summaries)
+const _trackedNetworks: NetworkView[] = [];

@@ -1,4 +1,38 @@
 /**
+ * Connection with optional innovation and node indices.
+ */
+interface ConnectionLike {
+  from?: { index?: number };
+  to?: { index?: number };
+  innovation?: number;
+  weight: number;
+}
+
+/**
+ * Genome/network with connections and compatibility cache.
+ */
+interface GenomeLike {
+  _id?: number;
+  connections: ConnectionLike[];
+  _compatCache?: Array<[number, number]>;
+}
+
+/**
+ * Minimal NEAT interface for compatibility checks.
+ */
+interface NeatLikeForCompat {
+  generation: number;
+  options: {
+    excessCoeff?: number;
+    disjointCoeff?: number;
+    weightDiffCoeff?: number;
+  };
+  _compatCacheGen?: number;
+  _compatDistCache?: Map<string, number>;
+  _fallbackInnov: (connection: ConnectionLike) => number;
+}
+
+/**
  * Generate a deterministic fallback innovation id for a connection when the
  * connection does not provide an explicit innovation number.
  *
@@ -20,14 +54,18 @@
  * @param connection - Connection object expected to contain `from.index` and `to.index`.
  * @returns A numeric innovation id derived from the (from, to) index pair.
  */
-export function _fallbackInnov(this: any, connection: any): number {
+// eslint-disable-next-line prefer-arrow/prefer-arrow-functions
+export const _fallbackInnov = function (
+  this: NeatLikeForCompat,
+  connection: ConnectionLike
+): number {
   // Read the source and target node indices, defaulting to 0 if missing.
   const fromIndex = connection.from?.index ?? 0;
   const toIndex = connection.to?.index ?? 0;
 
   // Encode the pair deterministically using a large multiplier to reduce collisions.
   return fromIndex * 100000 + toIndex;
-}
+};
 /**
  * Compute the NEAT compatibility distance between two genomes (networks).
  *
@@ -50,10 +88,10 @@ export function _fallbackInnov(this: any, connection: any): number {
  * @param genomeB - Second genome (network) to compare. Expected to expose `_id` and `connections`.
  * @returns A numeric compatibility distance; lower means more similar.
  */
-export function _compatibilityDistance(
-  this: any,
-  genomeA: any,
-  genomeB: any
+export const _compatibilityDistance = function (
+  this: NeatLikeForCompat,
+  genomeA: GenomeLike,
+  genomeB: GenomeLike
 ): number {
   // Ensure a generation-scoped cache exists and reset it at generation boundaries.
   if (!this._compatCacheGen || this._compatCacheGen !== this.generation) {
@@ -65,12 +103,12 @@ export function _compatibilityDistance(
    * Short description: Stable cache key for the genome pair in the form "minId|maxId".
    */
   const key =
-    (genomeA as any)._id < (genomeB as any)._id
-      ? `${(genomeA as any)._id}|${(genomeB as any)._id}`
-      : `${(genomeB as any)._id}|${(genomeA as any)._id}`;
+    (genomeA._id ?? 0) < (genomeB._id ?? 0)
+      ? `${genomeA._id ?? 0}|${genomeB._id ?? 0}`
+      : `${genomeB._id ?? 0}|${genomeA._id ?? 0}`;
 
   /** Short description: Map storing cached distances for genome pairs this generation. */
-  const cacheMap: Map<string, number> = this._compatDistCache;
+  const cacheMap: Map<string, number> = this._compatDistCache!;
 
   // If we've already computed this pair this generation, return it immediately.
   if (cacheMap.has(key)) return cacheMap.get(key)!;
@@ -79,11 +117,11 @@ export function _compatibilityDistance(
    * Short description: Retrieve or build a sorted innovation list for a genome.
    * Returns an array of [innovationNumber, weight] sorted by innovationNumber.
    */
-  const getCache = (network: any) => {
+  const getCache = (network: GenomeLike) => {
     if (!network._compatCache) {
       // Build a list of pairs [innovation, weight] using connection.innovation
       // if present, otherwise falling back to a deterministic id.
-      const list: [number, number][] = network.connections.map((conn: any) => [
+      const list: [number, number][] = network.connections.map((conn) => [
         conn.innovation ?? this._fallbackInnov(conn),
         conn.weight,
       ]);
@@ -161,4 +199,4 @@ export function _compatibilityDistance(
   // Cache the result for this generation and return.
   cacheMap.set(key, dist);
   return dist;
-}
+};

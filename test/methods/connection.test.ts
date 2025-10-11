@@ -121,7 +121,7 @@ describe('Group Connection Methods', () => {
         // Act
         // Assert
         expect(() => {
-          (groupConnection as any)['NEW_PROP'] = 123;
+          (groupConnection as Record<string, unknown>).NEW_PROP = 123;
         }).toThrow(TypeError);
       });
       it('should not allow mutation of ALL_TO_ALL property', () => {
@@ -129,7 +129,8 @@ describe('Group Connection Methods', () => {
         // Act
         // Assert
         expect(() => {
-          (groupConnection.ALL_TO_ALL as any)['name'] = 'MUTATED';
+          (groupConnection.ALL_TO_ALL as Record<string, unknown>).name =
+            'MUTATED';
         }).toThrow(TypeError);
       });
       it('should be deeply frozen', () => {

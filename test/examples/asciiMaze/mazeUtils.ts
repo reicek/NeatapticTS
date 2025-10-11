@@ -111,7 +111,14 @@ export class MazeUtils {
    */
   static safeLast<T>(arr?: T[] | null): T | undefined {
     if (!Array.isArray(arr) || arr.length === 0) return undefined;
-    return (arr as any).at ? (arr as any).at(-1) : arr[arr.length - 1];
+
+    // Preferred ES2023 path: Array.prototype.at is now widely available.
+    if (typeof arr.at === 'function') {
+      return arr.at(-1) as T | undefined;
+    }
+
+    // Fallback for legacy environments that lack Array.prototype.at.
+    return arr[arr.length - 1];
   }
 
   /**
@@ -184,7 +191,7 @@ export class MazeUtils {
 
     // Step: convert each ASCII row into a numeric row. Preallocate the numeric
     // row to avoid intermediate arrays and reduce allocations in hot code paths.
-    return asciiMaze.map((rowString, rowIndex) => {
+    return asciiMaze.map((rowString) => {
       const rowLength = rowString.length;
       const encodedRow: number[] = new Array(rowLength);
       for (let colIndex = 0; colIndex < rowLength; colIndex++) {
@@ -317,10 +324,6 @@ export class MazeUtils {
     let queueTail = 0;
     queue[queueTail++] = startFlatIndex;
 
-    // Precompute vertical offsets for neighbors on the flattened grid.
-    const northOffset = -colCount;
-    const southOffset = colCount;
-
     // BFS: each cell is visited at most once, so this loop is O(cellCount).
     while (queueHead < queueTail) {
       const currentFlatIndex = queue[queueHead++];
@@ -332,29 +335,15 @@ export class MazeUtils {
       // Compute 2D coordinates from the flattened index.
       const currentRow = (currentFlatIndex / colCount) | 0; // fast floor
       const currentCol = currentFlatIndex - currentRow * colCount;
+      // Examine cardinal neighbors using the shared direction table.
+      for (const [deltaX, deltaY] of MazeUtils.#DIRECTIONS) {
+        const neighborRow = currentRow + deltaY;
+        if (neighborRow < 0 || neighborRow >= rowCount) continue;
 
-      // Examine cardinal neighbors using a small switch to centralize bounds
-      // checks and enqueue logic (keeps code generation compact and JIT-friendly).
-      for (let direction = 0; direction < 4; direction++) {
-        let neighborFlatIndex: number;
-        switch (direction) {
-          case 0: // North
-            if (currentRow === 0) continue;
-            neighborFlatIndex = currentFlatIndex + northOffset;
-            break;
-          case 1: // East
-            if (currentCol + 1 >= colCount) continue;
-            neighborFlatIndex = currentFlatIndex + 1;
-            break;
-          case 2: // South
-            if (currentRow + 1 >= rowCount) continue;
-            neighborFlatIndex = currentFlatIndex + southOffset;
-            break;
-          default:
-            // West
-            if (currentCol === 0) continue;
-            neighborFlatIndex = currentFlatIndex - 1;
-        }
+        const neighborColumn = currentCol + deltaX;
+        if (neighborColumn < 0 || neighborColumn >= colCount) continue;
+
+        const neighborFlatIndex = neighborRow * colCount + neighborColumn;
 
         // If the neighbor is walkable and unvisited, mark distance and enqueue.
         if (

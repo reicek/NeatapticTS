@@ -1,22 +1,21 @@
 import { computeDiversityStats } from '../../src/neat/neat.diversity';
 
 describe('computeDiversityStats', () => {
-  function mockGenome(nodes: number, conns: number, depth?: number) {
-    return {
-      nodes: new Array(nodes)
-        .fill(0)
-        .map((_, i) => ({ id: i, connections: { out: [] as any[] } })),
-      connections: new Array(conns).fill(0).map((_, i) => ({ id: i })),
-      _depth: depth,
-    } as any;
-  }
+  const mockGenome = (nodes: number, conns: number, depth?: number) => ({
+    nodes: Array.from({ length: nodes }, (_, i) => ({
+      id: i,
+      connections: { out: [] as unknown[] },
+    })),
+    connections: Array.from({ length: conns }, (_, i) => ({ id: i })),
+    _depth: depth,
+  });
   const compat = {
-    _compatibilityDistance(a: any, b: any) {
-      return (
-        Math.abs(a.nodes.length - b.nodes.length) +
-        Math.abs(a.connections.length - b.connections.length)
-      );
-    },
+    _compatibilityDistance: (
+      a: { nodes: unknown[]; connections: unknown[] },
+      b: { nodes: unknown[]; connections: unknown[] }
+    ) =>
+      Math.abs(a.nodes.length - b.nodes.length) +
+      Math.abs(a.connections.length - b.connections.length),
   };
 
   it('returns undefined for empty population', () => {

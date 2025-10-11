@@ -1,5 +1,9 @@
 import Neat from '../../src/neat';
 import Network from '../../src/architecture/network';
+import type {
+  LineageTrackedNetwork,
+  NeatLineageHarness,
+} from '../../src/neat/neat.harness.types';
 
 /**
  * Tests for helper utilities in `neat.helpers.ts` (spawnFromParent, createPool, addGenome).
@@ -7,33 +11,35 @@ import Network from '../../src/architecture/network';
 describe('NEAT Helper Utilities', () => {
   describe('spawnFromParent lineage metadata', () => {
     /** Deterministic fitness returning node count. */
-    const fitness = (n: Network) => n.nodes.length;
+    const fitness = (network: Network) => network.nodes.length;
     /** Neat instance with minimal configuration. */
     const neat = new Neat(2, 1, fitness, { popsize: 4, seed: 222 });
-    let parent: any;
+    let parent: LineageTrackedNetwork;
     beforeAll(async () => {
       await neat.evaluate();
-      parent = neat.population[0];
+      parent = neat.population[0] as LineageTrackedNetwork;
     });
-    test('child references single parent id', () => {
+    test('child references single parent id', async () => {
       // Arrange: spawn child from parent
-      const child = (neat as any).spawnFromParent(parent, 1);
-      // Act: inspect lineage metadata
-      const parentIds = child._parents;
-      // Assert: exactly one parent id recorded
-      expect(parentIds.length).toBe(1);
+      const helper = neat as NeatLineageHarness;
+      const child = (await helper.spawnFromParent(
+        parent,
+        1
+      )) as LineageTrackedNetwork;
+      // Act & Assert: lineage metadata captures single parent id
+      expect(child._parents).toEqual([parent._id]);
     });
   });
   describe('createPool seeded cloning', () => {
     /** Fitness returns connection length to avoid score ties influencing logic. */
-    const fitness = (n: Network) => n.connections.length;
+    const fitness = (network: Network) => network.connections.length;
     /** Seed network used for cloning across pool. */
     const seedNet = new Network(2, 1);
     /** Neat instance built with popsize 5 for pool creation. */
     const neat = new Neat(2, 1, fitness, { popsize: 5, seed: 333 });
     beforeAll(() => {
       // Arrange: create new pool from seed network
-      (neat as any).createPool(seedNet);
+      neat.createPool(seedNet);
     });
     test('all genomes cloned from seed have identical IO counts', () => {
       // Act: collect distinct (input,output) signatures

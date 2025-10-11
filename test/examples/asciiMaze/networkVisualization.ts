@@ -10,15 +10,51 @@
  * - Connection structure between layers
  */
 
-import { INetwork } from './interfaces'; // Added INetwork import
-import { MazeUtils } from './mazeUtils';
 import { colors } from './colors';
-import { IVisualizationNode, IVisualizationConnection } from './interfaces';
+import type {
+  INetwork,
+  IVisualizationNode,
+  INodeWithConnectionInfo,
+  INodeStruct,
+  IConnectionWithStructRefs,
+} from './interfaces';
 
-// Ambient declaration fallback: some TS lib bundlings in test build may not surface ES2023 array methods.
-// This doesn't polyfill at runtime (Node 20+ already supports them); it merely satisfies the type checker.
-interface Array<T> {
-  toSorted?(compareFn?: (a: T, b: T) => number): T[];
+type ActivationRangeBucket = { min: number; max: number; label: string };
+type AverageNodeStats = { avgValue: number; count: number };
+type LayerAveragesRegistry = Record<string, AverageNodeStats>;
+type VisualizationLayer = IVisualizationNode[];
+type HiddenLayerCollection = VisualizationLayer[];
+type NetworkConnection = NonNullable<INetwork['connections']>[number];
+
+const ESCAPE_CONTROL_CHARACTER = String.fromCharCode(27);
+const ANSI_ESCAPE_REGEX = new RegExp(
+  `${ESCAPE_CONTROL_CHARACTER}\\[[0-9;]*m`,
+  'g'
+);
+
+interface CategorizedNodesResult {
+  inputNodes: IVisualizationNode[];
+  hiddenNodes: IVisualizationNode[];
+  outputNodes: IVisualizationNode[];
+  rawInputNodes: INodeWithConnectionInfo[];
+  rawHiddenNodes: INodeWithConnectionInfo[];
+  rawOutputNodes: INodeWithConnectionInfo[];
+  visualizationByNode: Map<INodeWithConnectionInfo, IVisualizationNode>;
+  inputCountDetected: number;
+}
+
+interface RowsInitContext {
+  maxRows: number;
+  rows: string[];
+  inputDisplayNodes: VisualizationLayer;
+  outputDisplayNodes: VisualizationLayer;
+  numHiddenLayers: number;
+  inputCount: number;
+  outputCount: number;
+  inputNodes: IVisualizationNode[];
+  outputNodes: IVisualizationNode[];
+  displayLayers: HiddenLayerCollection;
+  connectionCounts: Int32Array;
 }
 
 /**
@@ -49,7 +85,7 @@ export class NetworkVisualization {
   static readonly #ARROW_WIDTH = NetworkVisualization.#ARROW.length;
   static readonly #TOTAL_WIDTH = 150; // Overall visualization width
   /** Activation range buckets (ordered, positive to negative). */
-  static readonly #ACTIVATION_RANGES = [
+  static readonly #ACTIVATION_RANGES: readonly ActivationRangeBucket[] = [
     { min: 2.0, max: Infinity, label: 'v-high+' },
     { min: 1.0, max: 2.0, label: 'high+' },
     { min: 0.5, max: 1.0, label: 'mid+' },
@@ -59,10 +95,9 @@ export class NetworkVisualization {
     { min: -1.0, max: -0.5, label: 'mid-' },
     { min: -2.0, max: -1.0, label: 'high-' },
     { min: -Infinity, max: -2.0, label: 'v-high-' },
-  ] as const;
+  ];
   /** Scratch array for connection counts (reused / grown). @remarks Non-reentrant. */
   static #ConnectionCountsScratch: Int32Array = new Int32Array(16);
-  static #ConnectionCountsLen = 0;
   /** Scratch list for building output rows before join. @remarks Non-reentrant. */
   static #ScratchRows: string[] = [];
   /** Scratch list for header construction. */
@@ -82,17 +117,17 @@ export class NetworkVisualization {
     padChar: string = ' ',
     align: 'left' | 'center' | 'right' = 'center'
   ): string {
-    str = str ?? '';
-    const len = str.replace(/\x1b\[[0-9;]*m/g, '').length; // Account for ANSI color codes
+    const sanitizedInput = str ?? '';
+    const len = sanitizedInput.replace(ANSI_ESCAPE_REGEX, '').length; // Account for ANSI color codes
     if (len >= width) return str;
 
     const padLen = width - len;
-    if (align === 'left') return str + padChar.repeat(padLen);
-    if (align === 'right') return padChar.repeat(padLen) + str;
+    if (align === 'left') return sanitizedInput + padChar.repeat(padLen);
+    if (align === 'right') return padChar.repeat(padLen) + sanitizedInput;
 
     const left = Math.floor(padLen / 2);
     const right = padLen - left;
-    return padChar.repeat(left) + str + padChar.repeat(right);
+    return padChar.repeat(left) + sanitizedInput + padChar.repeat(right);
   }
 
   /**
@@ -102,7 +137,7 @@ export class NetworkVisualization {
    * @param node - Neural network node object.
    * @returns Cleaned and normalized activation value.
    */
-  static #getNodeValue(node: any): number {
+  static #getNodeValue(node: IVisualizationNode): number {
     if (
       typeof node.activation === 'number' &&
       isFinite(node.activation) &&
@@ -148,9 +183,7 @@ export class NetworkVisualization {
     if (typeof v !== 'number' || isNaN(v) || !isFinite(v)) return ' 0.000';
 
     const color = this.#getActivationColor(v);
-    let formattedValue;
-
-    formattedValue = (v >= 0 ? ' ' : '') + v.toFixed(6);
+    const formattedValue = (v >= 0 ? ' ' : '') + v.toFixed(6);
 
     return color + formattedValue + colors.reset;
   }
@@ -162,13 +195,42 @@ export class NetworkVisualization {
   static #formatNode(
     symbolColor: string,
     symbol: string,
-    node: any,
+    node: IVisualizationNode,
     extra?: string
   ): string {
     const value = NetworkVisualization.#getNodeValue(node);
     const fmt = NetworkVisualization.#fmtColoredValue(value);
     const sym = `${symbolColor}${symbol}${colors.reset}`;
     return `${sym}${fmt}${extra ?? ''}`;
+  }
+
+  static #isNodeCandidate(node: unknown): node is INodeWithConnectionInfo {
+    if (node === null || typeof node !== 'object') return false;
+    const candidate = node as Partial<INodeWithConnectionInfo>;
+    return typeof candidate.type === 'string';
+  }
+
+  static #resolveVisualizationId(
+    node: INodeWithConnectionInfo,
+    visualizationByNode: Map<INodeWithConnectionInfo, IVisualizationNode>,
+    fallbackIndex: number
+  ): number {
+    const visualization = visualizationByNode.get(node);
+    if (visualization) return visualization.id;
+    if (typeof node.index === 'number') return node.index;
+    return fallbackIndex;
+  }
+
+  static #resolveStructVisualizationId(
+    node: INodeStruct | null | undefined,
+    visualizationByNode: Map<INodeWithConnectionInfo, IVisualizationNode>
+  ): number | null {
+    if (!node || typeof node !== 'object') return null;
+    const candidate = node as INodeWithConnectionInfo;
+    const visualization = visualizationByNode.get(candidate);
+    if (visualization) return visualization.id;
+    if (typeof candidate.index === 'number') return candidate.index;
+    return null;
   }
 
   /**
@@ -180,33 +242,81 @@ export class NetworkVisualization {
    * @returns Array of hidden node arrays, each representing a layer.
    */
   static #groupHiddenByLayer(
-    inputNodes: any[],
-    hiddenNodes: any[],
-    outputNodes: any[]
-  ): any[][] {
+    inputNodes: INodeWithConnectionInfo[],
+    hiddenNodes: INodeWithConnectionInfo[],
+    visualizationByNode: Map<INodeWithConnectionInfo, IVisualizationNode>
+  ): INodeWithConnectionInfo[][] {
     if (hiddenNodes.length === 0) return [];
 
-    let layers: any[][] = [];
-    let prevLayer = inputNodes;
-    let remaining = [...hiddenNodes];
+    const layers: INodeWithConnectionInfo[][] = [];
+    let remaining = hiddenNodes.slice();
+    let fallbackIdentifier = Number.MIN_SAFE_INTEGER;
+
+    const inputIdentifiers = new Set<number>(
+      inputNodes.map((node, index) =>
+        NetworkVisualization.#resolveVisualizationId(
+          node,
+          visualizationByNode,
+          index
+        )
+      )
+    );
+
+    const satisfiedIdentifiers = new Set(inputIdentifiers);
 
     while (remaining.length > 0) {
-      const currentLayer = remaining.filter(
-        (h) =>
-          h.connections &&
-          h.connections.in &&
-          h.connections.in.length > 0 &&
-          h.connections.in.every((conn: any) => prevLayer.includes(conn.from))
-      );
+      const currentLayer: INodeWithConnectionInfo[] = [];
+      const unresolvedNodes: INodeWithConnectionInfo[] = [];
+
+      for (const node of remaining) {
+        const incomingSource = node.connections?.in;
+        const incomingConnections: readonly IConnectionWithStructRefs[] = Array.isArray(
+          incomingSource
+        )
+          ? incomingSource
+          : [];
+
+        if (incomingConnections.length === 0) {
+          currentLayer.push(node);
+          continue;
+        }
+
+        const dependenciesSatisfied = incomingConnections.every(
+          (connection) => {
+            const dependencyId = NetworkVisualization.#resolveStructVisualizationId(
+              connection.from,
+              visualizationByNode
+            );
+            return (
+              dependencyId === null || satisfiedIdentifiers.has(dependencyId)
+            );
+          }
+        );
+
+        if (dependenciesSatisfied) {
+          currentLayer.push(node);
+        } else {
+          unresolvedNodes.push(node);
+        }
+      }
 
       if (currentLayer.length === 0) {
-        layers.push(remaining);
+        layers.push(remaining.slice());
         break;
       }
 
       layers.push(currentLayer);
-      prevLayer = currentLayer;
-      remaining = remaining.filter((h) => !currentLayer.includes(h));
+
+      for (const node of currentLayer) {
+        const identifier = NetworkVisualization.#resolveVisualizationId(
+          node,
+          visualizationByNode,
+          fallbackIdentifier++
+        );
+        satisfiedIdentifiers.add(identifier);
+      }
+
+      remaining = unresolvedNodes;
     }
 
     return layers;
@@ -220,9 +330,9 @@ export class NetworkVisualization {
    * @returns Object containing groups of nodes and corresponding labels.
    */
   static #groupNodesByActivation(
-    nodes: any[]
+    nodes: VisualizationLayer
   ): {
-    groups: any[][];
+    groups: HiddenLayerCollection;
     labels: string[];
   } {
     // Calculate activation values once (reuse for range checks)
@@ -232,7 +342,7 @@ export class NetworkVisualization {
     /**
      * Arrays to hold groups of nodes and their labels.
      */
-    const groups: any[][] = [];
+    const groups: HiddenLayerCollection = [];
     const labels: string[] = [];
 
     // Group nodes by predefined activation ranges
@@ -259,12 +369,12 @@ export class NetworkVisualization {
    * @returns Object containing display-ready layers and metrics.
    */
   static #prepareHiddenLayersForDisplay(
-    hiddenLayers: any[][],
+    hiddenLayers: HiddenLayerCollection,
     maxVisiblePerLayer: number = 10
   ): {
-    displayLayers: any[][];
+    displayLayers: HiddenLayerCollection;
     layerDisplayCounts: number[];
-    averageNodes: { [key: string]: { avgValue: number; count: number } };
+    averageNodes: LayerAveragesRegistry;
   } {
     // Step 0: Fast return if no hidden layers
     /**
@@ -275,14 +385,12 @@ export class NetworkVisualization {
     /**
      * Stores average node info for each group.
      */
-    const averageNodes: {
-      [key: string]: { avgValue: number; count: number };
-    } = {};
+    const averageNodes: LayerAveragesRegistry = {};
 
     /**
      * Arrays for display-ready layers and their display counts.
      */
-    const displayLayers: any[][] = [];
+    const displayLayers: HiddenLayerCollection = [];
     const layerDisplayCounts: number[] = [];
 
     hiddenLayers.forEach((layer, layerIdx) => {
@@ -314,11 +422,11 @@ export class NetworkVisualization {
    * Decomposed from #prepareHiddenLayersForDisplay for clarity.
    */
   static #createAverageNodesForLargeLayer(params: {
-    layer: any[];
+    layer: VisualizationLayer;
     layerIndex: number;
     maxVisible: number;
-    averageNodesStore: { [key: string]: { avgValue: number; count: number } };
-  }): { avgNodes: any[]; count: number } {
+    averageNodesStore: LayerAveragesRegistry;
+  }): { avgNodes: VisualizationLayer; count: number } {
     const { layer, layerIndex, maxVisible, averageNodesStore } = params;
     const { groups, labels } = NetworkVisualization.#groupNodesByActivation(
       layer
@@ -347,16 +455,16 @@ export class NetworkVisualization {
 
   /** Build a single average node descriptor from a group. */
   static #buildAverageNode(params: {
-    group: any[];
+    group: VisualizationLayer;
     groupIndex: number;
     layerIndex: number;
     label: string;
-    averageNodesStore: { [key: string]: { avgValue: number; count: number } };
-  }): any {
+    averageNodesStore: LayerAveragesRegistry;
+  }): IVisualizationNode {
     const { group, groupIndex, layerIndex, label, averageNodesStore } = params;
     const avgKey = `layer${layerIndex}-avg-${groupIndex}`;
     const sum = group.reduce(
-      (runningTotal: number, node: any) =>
+      (runningTotal: number, node: IVisualizationNode) =>
         runningTotal + NetworkVisualization.#getNodeValue(node),
       0
     );
@@ -375,10 +483,10 @@ export class NetworkVisualization {
 
   /** Rank groups by size, merge overflow into one group, then order by activation semantics. */
   static #rankMergeAndOrderGroups(params: {
-    groups: any[][];
+    groups: HiddenLayerCollection;
     labels: string[];
     maxVisible: number;
-  }): { finalGroups: any[][]; finalLabels: string[] } {
+  }): { finalGroups: HiddenLayerCollection; finalLabels: string[] } {
     const { groups, labels, maxVisible } = params;
     // Pair groups with metadata
     const groupMeta = groups.map((group, index) => ({
@@ -409,7 +517,7 @@ export class NetworkVisualization {
 
   /** Merge overflow group metadata into a single synthetic bucket. */
   static #mergeOverflowGroups(
-    metadataList: { group: any[]; label: string; size: number }[]
+    metadataList: { group: VisualizationLayer; label: string; size: number }[]
   ) {
     // Use reduce with spread push; could also use flatMap but this is explicit.
     return metadataList.reduce(
@@ -418,20 +526,28 @@ export class NetworkVisualization {
         acc.size += current.size;
         return acc;
       },
-      { group: [] as any[], label: 'other±', size: 0 }
+      { group: [] as VisualizationLayer, label: 'other±', size: 0 }
     );
   }
 
   /** Safe wrapper around ES2023 Array.prototype.toSorted with graceful fallback. */
-  static #safeToSorted<T>(array: T[], compare: (a: T, b: T) => number): T[] {
-    const anyArray: any = array as any;
-    if (typeof anyArray.toSorted === 'function')
-      return anyArray.toSorted(compare);
+  static #safeToSorted<T>(
+    array: readonly T[],
+    compare: (a: T, b: T) => number
+  ): T[] {
+    const maybeSorted = (array as unknown) as {
+      toSorted?: (compareFn: (a: T, b: T) => number) => T[];
+    };
+    if (typeof maybeSorted.toSorted === 'function')
+      return maybeSorted.toSorted(compare);
     return [...array].sort(compare);
   }
 
   /** Comparator for activation range label ordering (heuristic). */
-  static #activationLabelComparator(a: any, b: any): number {
+  static #activationLabelComparator(
+    a: { label: string },
+    b: { label: string }
+  ): number {
     const aNeg = a.label.includes('-');
     const bNeg = b.label.includes('-');
     if (aNeg !== bNeg) return aNeg ? 1 : -1; // positives first
@@ -452,54 +568,76 @@ export class NetworkVisualization {
    * @param index - Index of the node in the network.
    * @returns Visualization node object.
    */
-  static #toVisualizationNode(node: any, index: number): IVisualizationNode {
+  static #toVisualizationNode(
+    node: INodeWithConnectionInfo,
+    index: number
+  ): IVisualizationNode {
     // Use node.index if available, else fallback to array index
     const id = typeof node.index === 'number' ? node.index : index;
     return {
       id,
       uuid: String(id),
       type: node.type,
-      activation: node.activation,
-      bias: node.bias,
+      activation: typeof node.activation === 'number' ? node.activation : 0,
+      bias: typeof node.bias === 'number' ? node.bias : undefined,
     };
   }
 
   /** Categorize nodes in a single pass (avoids 3 separate filter passes). */
-  static #categorizeNodes(
-    network: INetwork
-  ): {
-    inputNodes: IVisualizationNode[];
-    hiddenNodes: IVisualizationNode[];
-    outputNodes: IVisualizationNode[];
-    inputCountDetected: number;
-  } {
+  static #categorizeNodes(network: INetwork): CategorizedNodesResult {
     const inputNodes: IVisualizationNode[] = [];
     const hiddenNodes: IVisualizationNode[] = [];
     const outputNodes: IVisualizationNode[] = [];
-    const nodes = network.nodes || [];
-    for (let index = 0; index < nodes.length; index++) {
-      const node = nodes[index];
-      const viz = NetworkVisualization.#toVisualizationNode(node, index);
+    const rawInputNodes: INodeWithConnectionInfo[] = [];
+    const rawHiddenNodes: INodeWithConnectionInfo[] = [];
+    const rawOutputNodes: INodeWithConnectionInfo[] = [];
+    const visualizationByNode = new Map<
+      INodeWithConnectionInfo,
+      IVisualizationNode
+    >();
+
+    const nodesCandidate = Array.isArray(network.nodes)
+      ? (network.nodes as unknown[])
+      : [];
+
+    nodesCandidate.forEach((candidateNode, index) => {
+      if (!NetworkVisualization.#isNodeCandidate(candidateNode)) {
+        return;
+      }
+      const node = candidateNode as INodeWithConnectionInfo;
+      const visualization = NetworkVisualization.#toVisualizationNode(
+        node,
+        index
+      );
+      visualizationByNode.set(node, visualization);
+
       switch (node.type) {
         case 'input':
         case 'constant':
-          inputNodes.push(viz);
+          inputNodes.push(visualization);
+          rawInputNodes.push(node);
           break;
         case 'hidden':
-          hiddenNodes.push(viz);
+          hiddenNodes.push(visualization);
+          rawHiddenNodes.push(node);
           break;
         case 'output':
-          outputNodes.push(viz);
+          outputNodes.push(visualization);
+          rawOutputNodes.push(node);
           break;
         default:
-          // ignore other experimental types
           break;
       }
-    }
+    });
+
     return {
       inputNodes,
       hiddenNodes,
       outputNodes,
+      rawInputNodes,
+      rawHiddenNodes,
+      rawOutputNodes,
+      visualizationByNode,
       inputCountDetected: inputNodes.length,
     };
   }
@@ -543,8 +681,9 @@ export class NetworkVisualization {
   static #computeConnectionCounts(
     network: INetwork,
     inputNodes: IVisualizationNode[],
-    hiddenLayers: any[][],
-    outputNodes: IVisualizationNode[]
+    hiddenLayers: INodeWithConnectionInfo[][],
+    outputNodes: IVisualizationNode[],
+    visualizationByNode: Map<INodeWithConnectionInfo, IVisualizationNode>
   ): Int32Array {
     // Step 1: determine number of connection segments and get pooled buffer
     const hiddenLayerCount = hiddenLayers.length;
@@ -554,7 +693,6 @@ export class NetworkVisualization {
     );
     // Zero only the used portion of the pooled buffer for minimal overhead
     countsBuffer.fill(0, 0, connectionSegments);
-    NetworkVisualization.#ConnectionCountsLen = connectionSegments;
 
     // Step 2: build fast membership sets (one-pass mappings)
     const inputIdSet = new Set<number>(
@@ -564,17 +702,28 @@ export class NetworkVisualization {
       outputNodes.map((node) => Number(node.id))
     );
     const hiddenIdSets: Set<number>[] = hiddenLayers.map(
-      (layer) => new Set(layer.map((node: any) => Number(node.id)))
+      (layer, layerIndex) =>
+        new Set(
+          layer.map((node) =>
+            NetworkVisualization.#resolveVisualizationId(
+              node,
+              visualizationByNode,
+              layerIndex * 10_000 + (node.index ?? 0)
+            )
+          )
+        )
     );
 
     // Step 3: single-pass connection scan; use descriptive names for clarity
-    const connections = network.connections ?? [];
+    const connections: NetworkConnection[] = Array.isArray(network.connections)
+      ? (network.connections as NetworkConnection[])
+      : [];
     for (
       let connectionIndex = 0;
       connectionIndex < connections.length;
       connectionIndex++
     ) {
-      const connection: any = connections[connectionIndex];
+      const connection = connections[connectionIndex];
       const fromNodeIndex = Number(connection.from?.index ?? -1);
       const toNodeIndex = Number(connection.to?.index ?? -1);
 
@@ -668,7 +817,7 @@ export class NetworkVisualization {
    */
   static #buildHeader(
     inputCount: number,
-    hiddenLayers: any[][],
+    hiddenLayers: HiddenLayerCollection,
     outputCount: number,
     connectionCounts: Int32Array
   ): string {
@@ -809,7 +958,7 @@ export class NetworkVisualization {
       inputCount: number;
       outputCount: number;
       inputNodes: IVisualizationNode[];
-      displayLayers: any[][];
+      displayLayers: HiddenLayerCollection;
       layerDisplayCounts: number[];
       outputNodes: IVisualizationNode[];
       connectionCounts: Int32Array;
@@ -876,11 +1025,11 @@ export class NetworkVisualization {
     inputCount: number;
     outputCount: number;
     inputNodes: IVisualizationNode[];
-    displayLayers: any[][];
+    displayLayers: HiddenLayerCollection;
     layerDisplayCounts: number[];
     outputNodes: IVisualizationNode[];
     connectionCounts: Int32Array;
-  }) {
+  }): RowsInitContext {
     const {
       inputCount,
       outputCount,
@@ -893,13 +1042,23 @@ export class NetworkVisualization {
     const maxRows = Math.max(inputCount, ...layerDisplayCounts, outputCount);
     const rows = NetworkVisualization.#ScratchRows;
     rows.length = 0;
-    const inputDisplayNodes = Array.from(
+    const makePlaceholder = (
+      kind: 'input' | 'output',
+      index: number
+    ): IVisualizationNode => ({
+      uuid: `placeholder-${kind}-${index}`,
+      id: -1 * (index + 1),
+      type: kind,
+      activation: 0,
+    });
+
+    const inputDisplayNodes: VisualizationLayer = Array.from(
       { length: inputCount },
-      (_, idx) => inputNodes[idx] || { activation: 0 }
+      (_, idx) => inputNodes[idx] ?? makePlaceholder('input', idx)
     );
-    const outputDisplayNodes = Array.from(
+    const outputDisplayNodes: VisualizationLayer = Array.from(
       { length: outputCount },
-      (_, idx) => outputNodes[idx] || { activation: 0 }
+      (_, idx) => outputNodes[idx] ?? makePlaceholder('output', idx)
     );
     return {
       maxRows,
@@ -910,6 +1069,7 @@ export class NetworkVisualization {
       inputCount,
       outputCount,
       inputNodes,
+      outputNodes,
       displayLayers,
       connectionCounts,
     };
@@ -920,7 +1080,7 @@ export class NetworkVisualization {
     rowIndex: number;
     inputCount: number;
     columnWidth: number;
-    inputDisplayNodes: any[];
+    inputDisplayNodes: VisualizationLayer;
   }): string {
     const { rowIndex, inputCount, columnWidth, inputDisplayNodes } = params;
     if (rowIndex >= inputCount)
@@ -954,7 +1114,7 @@ export class NetworkVisualization {
     rowIndex: number;
     inputCount: number;
     inputNodes: IVisualizationNode[];
-    displayLayers: any[][];
+    displayLayers: HiddenLayerCollection;
     connectionCounts: Int32Array;
   }): string {
     const {
@@ -1000,7 +1160,7 @@ export class NetworkVisualization {
     rowIndex: number;
     layerIndex: number;
     columnWidth: number;
-    displayLayers: any[][];
+    displayLayers: HiddenLayerCollection;
   }): string {
     const { rowIndex, layerIndex, columnWidth, displayLayers } = params;
     const layer = displayLayers[layerIndex];
@@ -1030,7 +1190,7 @@ export class NetworkVisualization {
     rowIndex: number;
     layerIndex: number;
     numHiddenLayers: number;
-    displayLayers: any[][];
+    displayLayers: HiddenLayerCollection;
     connectionCounts: Int32Array;
     outputCount: number;
   }): string {
@@ -1142,7 +1302,7 @@ export class NetworkVisualization {
   static #buildOutputCell(params: {
     rowIndex: number;
     outputCount: number;
-    outputDisplayNodes: any[];
+    outputDisplayNodes: VisualizationLayer;
     columnWidth: number;
   }): string {
     const { rowIndex, outputCount, outputDisplayNodes, columnWidth } = params;
@@ -1186,26 +1346,49 @@ export class NetworkVisualization {
     const categorized = NetworkVisualization.#categorizeNodes(network);
     const INPUT_COUNT = categorized.inputCountDetected || 18; // legacy fallback retained
     const OUTPUT_COUNT = 4; // maze solver fixed
-    const hiddenLayers = NetworkVisualization.#groupHiddenByLayer(
-      categorized.inputNodes,
-      categorized.hiddenNodes,
-      categorized.outputNodes
+    const hiddenLayersRaw = NetworkVisualization.#groupHiddenByLayer(
+      categorized.rawInputNodes,
+      categorized.rawHiddenNodes,
+      categorized.visualizationByNode
     );
+
+    const ensureVisualizationForNode = (
+      node: INodeWithConnectionInfo,
+      fallbackIndex: number
+    ): IVisualizationNode => {
+      const existing = categorized.visualizationByNode.get(node);
+      if (existing) return existing;
+      const generated = NetworkVisualization.#toVisualizationNode(
+        node,
+        fallbackIndex
+      );
+      categorized.visualizationByNode.set(node, generated);
+      return generated;
+    };
+
+    const hiddenLayersCanonical: HiddenLayerCollection = hiddenLayersRaw.map(
+      (layer, layerIndex) =>
+        layer.map((node, nodeIndex) =>
+          ensureVisualizationForNode(node, layerIndex * 10_000 + nodeIndex)
+        )
+    );
+
     const prepared = NetworkVisualization.#prepareHiddenLayersForDisplay(
-      hiddenLayers
+      hiddenLayersCanonical
     );
     const connectionCounts = NetworkVisualization.#computeConnectionCounts(
       network,
       categorized.inputNodes,
-      hiddenLayers,
-      categorized.outputNodes
+      hiddenLayersRaw,
+      categorized.outputNodes,
+      categorized.visualizationByNode
     );
     const { columnWidth } = NetworkVisualization.#computeLayout(
-      hiddenLayers.length
+      hiddenLayersCanonical.length
     );
     const header = NetworkVisualization.#buildHeader(
       INPUT_COUNT,
-      hiddenLayers,
+      hiddenLayersCanonical,
       OUTPUT_COUNT,
       connectionCounts
     );

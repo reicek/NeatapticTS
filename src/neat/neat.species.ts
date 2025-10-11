@@ -1,4 +1,11 @@
-import type { NeatLike, SpeciesHistoryEntry } from './neat.types';
+import type {
+  NeatLike,
+  SpeciesHistoryEntry,
+  SpeciesLike,
+  GenomeDetailed,
+  ConnectionLike,
+  SpeciesHistoryStatExtended,
+} from './neat.types';
 
 /**
  * Get lightweight per-species statistics for the current population.
@@ -32,14 +39,15 @@ export function getSpeciesStats(
    * This value is intentionally not documented in the public API; we only
    * expose the derived summary below.
    */
-  const speciesArray = (this as any)._species as any[];
+  const ctx = (this as unknown) as { _species?: unknown[] };
+  const speciesArray = (ctx._species as SpeciesLike[]) || [];
 
   // Map internal species to compact summaries.
-  return speciesArray.map((species: any) => ({
+  return speciesArray.map((species: SpeciesLike) => ({
     id: species.id,
-    size: species.members.length,
-    bestScore: species.bestScore,
-    lastImproved: species.lastImproved,
+    size: (species.members && species.members.length) || 0,
+    bestScore: (species.bestScore as number) || 0,
+    lastImproved: (species.lastImproved as number) || 0,
   }));
 }
 
@@ -80,24 +88,33 @@ export function getSpeciesHistory(this: NeatLike): SpeciesHistoryEntry[] {
    * is a snapshot for a generation and includes a `stats` array of per-species
    * summaries.
    */
-  const speciesHistory = (this as any)._speciesHistory as SpeciesHistoryEntry[];
+  const ctx = this as NeatLike & {
+    _speciesHistory?: SpeciesHistoryEntry[];
+    _species?: SpeciesLike[];
+    _fallbackInnov?: (c: ConnectionLike) => number;
+  };
+
+  const speciesHistory = (ctx._speciesHistory as SpeciesHistoryEntry[]) || [];
 
   // If the user enabled extended history, ensure extended fields exist by
   // backfilling inexpensive fallbacks where possible.
-  if (this.options?.speciesAllocation?.extendedHistory) {
+  const options = this.options as
+    | import('./neat.types').NeatOptions
+    | undefined;
+  if (options?.speciesAllocation?.extendedHistory) {
     // Iterate over each generation snapshot
     for (const generationEntry of speciesHistory) {
       // Iterate over each per-species stat in the snapshot
-      for (const speciesStat of generationEntry.stats as any[]) {
+      for (const speciesStat of generationEntry.stats as SpeciesHistoryStatExtended[]) {
         // If extended fields already present, skip computation
         if ('innovationRange' in speciesStat && 'enabledRatio' in speciesStat)
           continue;
 
         // Find a representative species object in the current population by id
         // `speciesObj` is used to compute fallbacks when needed.
-        const speciesObj = (this as any)._species.find(
-          (s: any) => s.id === speciesStat.id
-        );
+        const speciesObj = (ctx._species || []).find(
+          (s) => s.id === speciesStat.id
+        ) as SpeciesLike | undefined;
 
         // If we have members, compute cheap fallbacks for innovationRange and enabledRatio
         if (speciesObj && speciesObj.members && speciesObj.members.length) {
@@ -108,28 +125,26 @@ export function getSpeciesHistory(this: NeatLike): SpeciesHistoryEntry[] {
           let disabledCount = 0;
 
           // For each member genome in the species
-          for (const member of speciesObj.members) {
+          for (const member of speciesObj.members as GenomeDetailed[]) {
             // For each connection in the genome, attempt to read an innovation id
-            for (const connection of member.connections) {
+            for (const connection of member.connections as ConnectionLike[]) {
               // Prefer an explicit `innovation` property; otherwise call internal
               // fallback innov extractor (if available) and finally default to 0.
               const innovationId =
-                (connection as any).innovation ??
-                (this as any)._fallbackInnov?.(connection) ??
-                0;
+                connection.innovation ?? ctx._fallbackInnov?.(connection) ?? 0;
 
               // Update min/max innovation trackers
               if (innovationId > maxInnovation) maxInnovation = innovationId;
               if (innovationId < minInnovation) minInnovation = innovationId;
 
               // Count enabled vs disabled connections (treat undefined as enabled)
-              if ((connection as any).enabled === false) disabledCount++;
+              if (connection.enabled === false) disabledCount++;
               else enabledCount++;
             }
           }
 
           // Compute innovationRange: positive difference when valid, otherwise 0
-          (speciesStat as any).innovationRange =
+          (speciesStat as SpeciesHistoryStatExtended).innovationRange =
             isFinite(maxInnovation) &&
             isFinite(minInnovation) &&
             maxInnovation > minInnovation
@@ -137,7 +152,7 @@ export function getSpeciesHistory(this: NeatLike): SpeciesHistoryEntry[] {
               : 0;
 
           // Compute enabledRatio: fraction of enabled connections when any exist
-          (speciesStat as any).enabledRatio =
+          (speciesStat as SpeciesHistoryStatExtended).enabledRatio =
             enabledCount + disabledCount
               ? enabledCount / (enabledCount + disabledCount)
               : 0;

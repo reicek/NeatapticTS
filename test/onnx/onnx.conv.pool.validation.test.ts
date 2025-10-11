@@ -1,5 +1,6 @@
 import Network from '../../src/architecture/network';
 import { exportToONNX } from '../../src/architecture/onnx';
+import type { OnnxModel } from '../../src/architecture/network/network.onnx';
 
 /**
  * Phase 4 tests: pooling emission + conv weight sharing validation metadata.
@@ -24,14 +25,19 @@ describe('ONNX Conv2D + Pooling Validation (Phase 4)', () => {
     // Define a canonical kernel pattern (relative weights) size kH*kW.
     const kernelPattern = [0.11, -0.07, 0.05, 0.02]; // order: (0,0),(0,1),(1,0),(1,1)
     // Helper to set weights of a neuron corresponding to spatial position (oh,ow).
-    const hiddenNeurons = net.nodes.filter((n: any) => n.type === 'hidden');
-    hiddenNeurons.forEach((neuron: any, idx: number) => {
+    const hiddenNeurons = net.nodes.filter(
+      (n) => n.type === 'hidden'
+    ) as Array<{
+      connections: { in: Array<{ from?: unknown; weight: number }> };
+      bias?: number;
+    }>;
+    hiddenNeurons.forEach((neuron, idx: number) => {
       const oh = Math.floor(idx / outW); // since outC=1
       const ow = idx % outW;
       const ihBase = oh * stride;
       const iwBase = ow * stride; // no padding
       // Build map from input node to desired kernel weight by relative coordinate
-      neuron.connections.in.forEach((conn: any) => {
+      neuron.connections.in.forEach((conn) => {
         conn.weight = 0;
       });
       for (let kh = 0; kh < kH; kh++) {
@@ -40,12 +46,10 @@ describe('ONNX Conv2D + Pooling Validation (Phase 4)', () => {
           const iw = iwBase + kw;
           const inputIndex = ih * inW + iw; // single channel
           const relativeIdx = kh * kW + kw;
-          const sourceNode = net.nodes.filter((n: any) => n.type === 'input')[
+          const sourceNode = net.nodes.filter((n) => n.type === 'input')[
             inputIndex
           ];
-          const c = neuron.connections.in.find(
-            (cc: any) => cc.from === sourceNode
-          );
+          const c = neuron.connections.in.find((cc) => cc.from === sourceNode);
           if (c) c.weight = kernelPattern[relativeIdx];
         }
       }
@@ -73,8 +77,9 @@ describe('ONNX Conv2D + Pooling Validation (Phase 4)', () => {
         conv2dMappings: mapping,
         validateConvSharing: true,
       });
-      const verified = (onnx.metadata_props || []).find(
-        (m: any) => m.key === 'conv2d_sharing_verified'
+      const onnxModel = onnx as OnnxModel;
+      const verified = (onnxModel.metadata_props || []).find(
+        (m) => m.key === 'conv2d_sharing_verified'
       );
       // Assert
       expect(!!verified).toBe(true);
@@ -95,12 +100,15 @@ describe('ONNX Conv2D + Pooling Validation (Phase 4)', () => {
     const hiddenSize = outC * outH * outW;
     const net = Network.createMLP(inputSize, [hiddenSize], 1);
     // Deliberately vary one spatial neuron's weight to break sharing
-    const hidden = net.nodes.filter((n: any) => n.type === 'hidden');
-    hidden.forEach((n: any, neuronIdx: number) => {
-      n.connections.in.forEach((c: any, idx: number) => {
-        c.weight = (idx + 1) * 0.02 + neuronIdx * 0.001;
+    const hidden = net.nodes.filter((n) => n.type === 'hidden') as Array<{
+      connections: { in: Array<{ weight: number }> };
+      bias?: number;
+    }>;
+    hidden.forEach((neuron, neuronIdx: number) => {
+      neuron.connections.in.forEach((conn, idx: number) => {
+        conn.weight = (idx + 1) * 0.02 + neuronIdx * 0.001;
       });
-      n.bias = neuronIdx * 0.01;
+      neuron.bias = neuronIdx * 0.01;
     });
     const mapping = [
       {
@@ -123,8 +131,9 @@ describe('ONNX Conv2D + Pooling Validation (Phase 4)', () => {
         conv2dMappings: mapping,
         validateConvSharing: true,
       });
-      const mismatch = (onnx.metadata_props || []).find(
-        (m: any) => m.key === 'conv2d_sharing_mismatch'
+      const onnxModel = onnx as OnnxModel;
+      const mismatch = (onnxModel.metadata_props || []).find(
+        (m) => m.key === 'conv2d_sharing_mismatch'
       );
       expect(!!mismatch).toBe(true);
     });
@@ -133,10 +142,10 @@ describe('ONNX Conv2D + Pooling Validation (Phase 4)', () => {
   describe('Pooling emission metadata', () => {
     const net = Network.createMLP(6, [4], 2); // simple layer
     // Uniform weights
-    net.connections.forEach((c: any, idx: number) => {
+    net.connections.forEach((c: { weight: number }, idx: number) => {
       c.weight = (idx + 1) * 0.01;
     });
-    net.nodes.forEach((n: any, idx: number) => {
+    net.nodes.forEach((n: { type?: string; bias?: number }, idx: number) => {
       if (n.type !== 'input') n.bias = idx * 0.001;
     });
     it('emits pool2d_layers metadata when pool mapping provided', () => {
@@ -153,8 +162,9 @@ describe('ONNX Conv2D + Pooling Validation (Phase 4)', () => {
           },
         ],
       });
-      const meta = (onnx.metadata_props || []).find(
-        (m: any) => m.key === 'pool2d_layers'
+      const onnxModel = onnx as OnnxModel;
+      const meta = (onnxModel.metadata_props || []).find(
+        (m) => m.key === 'pool2d_layers'
       );
       expect(!!meta).toBe(true);
     });

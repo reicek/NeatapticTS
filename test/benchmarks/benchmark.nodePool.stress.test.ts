@@ -12,6 +12,7 @@ import {
   nodePoolStats,
   resetNodePool,
 } from '../../src/architecture/nodePool';
+import type Node from '../../src/architecture/node';
 
 describe('benchmark.nodePool.stress', () => {
   it('achieves recycledRatio >=0.5 with stable highWaterMark tail', () => {
@@ -19,7 +20,7 @@ describe('benchmark.nodePool.stress', () => {
     const BATCH = 32; // number of logical node creations per phase
 
     // Phase A: fresh allocations
-    const phaseAFresh: any[] = [];
+    const phaseAFresh: Node[] = [];
     for (let i = 0; i < BATCH; i++)
       phaseAFresh.push(acquireNode({ type: 'hidden' }));
     // Release all (populate pool)
@@ -27,13 +28,13 @@ describe('benchmark.nodePool.stress', () => {
     const highWaterBeforeReuseTail = nodePoolStats().highWaterMark;
 
     // Phase B: first reuse wave
-    const phaseBReuse: any[] = [];
+    const phaseBReuse: Node[] = [];
     for (let i = 0; i < BATCH; i++)
       phaseBReuse.push(acquireNode({ type: 'hidden' }));
     for (const n of phaseBReuse) releaseNode(n);
 
     // Phase C: second reuse wave (boost recycled ratio)
-    const phaseCReuse: any[] = [];
+    const phaseCReuse: Node[] = [];
     for (let i = 0; i < BATCH; i++)
       phaseCReuse.push(acquireNode({ type: 'hidden' }));
 

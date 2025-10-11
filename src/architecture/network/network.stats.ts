@@ -1,6 +1,20 @@
 import type Network from '../network';
 
 /**
+ * Internal Network properties accessed during stats operations.
+ */
+interface NetworkStatsProps {
+  _lastStats?: Record<string, unknown>;
+}
+
+/**
+ * GlobalThis interface with optional structuredClone.
+ */
+interface GlobalThisWithStructuredClone {
+  structuredClone?: <T>(value: T) => T;
+}
+
+/**
  * Network statistics accessors.
  *
  * Currently exposes a single helper for retrieving the most recent regularization / stochasticity
@@ -30,16 +44,17 @@ import type Network from '../network';
  *
  * NOTE: This is intentionally minimal; for richer cloning semantics consider a dedicated utility.
  */
-function deepCloneValue<T>(value: T): T {
+const deepCloneValue = <T>(value: T): T => {
   try {
-    return (globalThis as any).structuredClone
-      ? (globalThis as any).structuredClone(value)
+    const global = globalThis as GlobalThisWithStructuredClone;
+    return global.structuredClone
+      ? global.structuredClone(value)
       : JSON.parse(JSON.stringify(value));
   } catch {
     // Fallback: attempt JSON path again; if it fails this will throw—acceptable for edge cases.
     return JSON.parse(JSON.stringify(value));
   }
-}
+};
 
 /**
  * Obtain the last recorded regularization / stochastic statistics snapshot.
@@ -52,7 +67,7 @@ function deepCloneValue<T>(value: T): T {
  */
 export function getRegularizationStats(this: Network) {
   /** Raw internal stats reference (may be undefined if never set). */
-  const lastStatsSnapshot = (this as any)._lastStats;
+  const lastStatsSnapshot = ((this as unknown) as NetworkStatsProps)._lastStats;
   return lastStatsSnapshot ? deepCloneValue(lastStatsSnapshot) : null;
 }
 

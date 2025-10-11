@@ -3,9 +3,99 @@ import { MazeUtils } from './mazeUtils';
 import { MazeVisualization } from './mazeVisualization';
 import { NetworkVisualization } from './networkVisualization';
 import { colors } from './colors';
-import { INetwork, IDashboardManager } from './interfaces';
+import { INetwork, IDashboardManager, IMazeRunResult } from './interfaces';
+import type Neat from '../../../src/neat';
+
+// Region: NEAT Runtime Type Interfaces ---------------------------------------
+
+/** NEAT genome/network with runtime properties */
+interface NeatGenome {
+  score?: number;
+  nodes?: Array<{ type?: string; [key: string]: unknown }>;
+  connections?: Array<{ enabled?: boolean; [key: string]: unknown }>;
+  [key: string]: unknown;
+}
+
+/** NEAT species collection */
+interface NeatSpecies {
+  length?: number;
+  [key: string]: unknown;
+}
+
+/** NEAT instance with population and optional methods */
+interface NeatInstance {
+  population?: NeatGenome[];
+  species?: NeatSpecies;
+  getOperatorStats?: () => unknown[];
+  getMutationStats?: () => Record<string, number>;
+  getNoveltyArchive?: () => unknown[];
+  [key: string]: unknown;
+}
+
+/** Operator stats entry from NEAT */
+interface OperatorStatsEntry {
+  name: string;
+  success: number;
+  attempts: number;
+  accepted?: number;
+  total?: number;
+  [key: string]: unknown;
+}
 
 // Region: Type Interfaces ----------------------------------------------------
+type NumericTelemetryMap = Record<string, number | null | undefined>;
+
+interface AsciiMazeComplexityStats extends NumericTelemetryMap {
+  meanNodes?: number | null;
+  meanConns?: number | null;
+  growthNodes?: number | null;
+  growthConns?: number | null;
+}
+
+type MutationStatsMap = Record<string, unknown>;
+
+interface DashboardTelemetry {
+  complexity?: AsciiMazeComplexityStats | null;
+  perf?: NumericTelemetryMap | null;
+  lineage?: NumericTelemetryMap | null;
+  diversity?: NumericTelemetryMap | null;
+  fronts?: ReadonlyArray<ReadonlyArray<unknown>> | null;
+  objectives?: NumericTelemetryMap | null;
+  hyper?: number | null;
+  mutationStats?: MutationStatsMap | null;
+  mutation?: { stats?: MutationStatsMap | null } | null;
+  species?: number | null;
+  saturationFraction?: number | null;
+  actionEntropy?: number | null;
+  populationMean?: number | null;
+  populationMedian?: number | null;
+  enabledConnRatio?: number | null;
+  bestFitness?: number | null;
+  bestFitnessDelta?: number | null;
+  topSpeciesSizes?: number[] | null;
+  noveltyArchiveSize?: number | null;
+  operatorAcceptance?: Array<{ name: string; acceptancePct: number }> | null;
+  topMutations?: Array<{ name: string; count: number }> | null;
+  trends?: {
+    fitness?: string | null;
+    nodes?: string | null;
+    conns?: string | null;
+    hyper?: string | null;
+    progress?: string | null;
+    species?: string | null;
+  } | null;
+  histories?: {
+    bestFitness?: number[];
+    nodes?: number[];
+    conns?: number[];
+    hyper?: number[];
+    progress?: number[];
+    species?: number[];
+  } | null;
+  timestamp?: number;
+  generation?: number;
+}
+
 /** Detailed stats structure produced inside the dashboard. */
 interface AsciiMazeDetailedStats {
   generation: number;
@@ -16,21 +106,21 @@ interface AsciiMazeDetailedStats {
   populationMean: number | null;
   populationMedian: number | null;
   enabledConnRatio: number | null;
-  complexity: any;
+  complexity: AsciiMazeComplexityStats | null;
   simplifyPhaseActive: boolean;
-  perf: any;
-  lineage: any;
-  diversity: any;
+  perf: NumericTelemetryMap | null;
+  lineage: NumericTelemetryMap | null;
+  diversity: NumericTelemetryMap | null;
   speciesCount: number | null;
   topSpeciesSizes: number[] | null;
-  objectives: any;
+  objectives: NumericTelemetryMap | null;
   paretoFrontSizes: number[] | null;
   firstFrontSize: number;
   hypervolume: number | null;
   noveltyArchiveSize: number | null;
   operatorAcceptance: Array<{ name: string; acceptancePct: number }> | null;
   topMutations: Array<{ name: string; count: number }> | null;
-  mutationStats: any;
+  mutationStats: MutationStatsMap | null;
   trends: {
     fitness: string | null;
     nodes: string | null;
@@ -73,19 +163,22 @@ interface AsciiMazeTelemetrySnapshot {
  * are capped at `HISTORY_MAX` samples for predictable memory usage.
  */
 export class DashboardManager implements IDashboardManager {
+  /** Allow additional properties for extensibility */
+  [key: string]: unknown;
+
   #solvedMazes: Array<{
     maze: string[];
-    result: any;
+    result: IMazeRunResult;
     network: INetwork;
     generation: number;
   }> = [];
   #solvedMazeKeys: Set<string> = new Set();
   #currentBest: {
-    result: any;
+    result: IMazeRunResult;
     network: INetwork;
     generation: number;
   } | null = null;
-  #lastTelemetry: any = null;
+  #lastTelemetry: DashboardTelemetry | null = null;
   #lastBestFitness: number | null = null;
   #bestFitnessHistory: number[] = [];
   #complexityNodesHistory: number[] = [];
@@ -99,9 +192,9 @@ export class DashboardManager implements IDashboardManager {
   #lastGeneration: number | null = null;
   #lastUpdateTs: number | null = null;
 
-  #logFn: (...args: any[]) => void;
+  #logFn: (...args: unknown[]) => void;
   #clearFn: () => void;
-  #archiveFn?: (...args: any[]) => void;
+  #archiveFn?: (...args: unknown[]) => void;
 
   static #HISTORY_MAX = 500;
   static #FRAME_INNER_WIDTH = 148;
@@ -174,14 +267,20 @@ export class DashboardManager implements IDashboardManager {
    */
   constructor(
     clearFn: () => void,
-    logFn: (...args: any[]) => void,
-    archiveFn?: (...args: any[]) => void
+    logFn: (...args: unknown[]) => void,
+    archiveFn?: (...args: unknown[]) => void
   ) {
     const noop = () => {};
     this.#clearFn = typeof clearFn === 'function' ? clearFn : noop;
     this.#logFn = typeof logFn === 'function' ? logFn : noop;
     this.#archiveFn = typeof archiveFn === 'function' ? archiveFn : undefined;
   }
+
+  /** Optional log function for dashboard messages (implements IDashboardManager) */
+  get logFunction(): ((msg: string) => void) | undefined {
+    return this.#logFn;
+  }
+
   /** Emit a blank padded line inside the frame to avoid duplication. */
   #logBlank(): void {
     this.#logFn(
@@ -352,7 +451,7 @@ export class DashboardManager implements IDashboardManager {
   #appendSolvedToArchive(
     solved: {
       maze: string[];
-      result: any;
+      result: IMazeRunResult;
       network: INetwork;
       generation: number;
     },
@@ -389,7 +488,7 @@ export class DashboardManager implements IDashboardManager {
    * @param currentMaze Maze currently being evolved.
    * @param neat Optional NEAT implementation instance for population-level stats.
    */
-  redraw(currentMaze: string[], neat?: any): void {
+  redraw(currentMaze: string[], neat?: unknown): void {
     // Update the high-resolution last-update timestamp when a redraw happens.
     this.#lastUpdateTs = globalThis.performance?.now?.() ?? Date.now();
     this.#beginFrameRefresh();
@@ -402,7 +501,7 @@ export class DashboardManager implements IDashboardManager {
   #scratch: {
     scores: number[];
     speciesSizes: number[];
-    operatorStats: any[];
+    operatorStats: OperatorStatsEntry[];
     mutationEntries: [string, number][];
   } = { scores: [], speciesSizes: [], operatorStats: [], mutationEntries: [] };
 
@@ -444,7 +543,7 @@ export class DashboardManager implements IDashboardManager {
    *
    * @param neat Optional NEAT engine instance (used for population stats, operator stats, novelty archive size, species sizes).
    */
-  #updateDetailedStatsSnapshot(neat?: any): void {
+  #updateDetailedStatsSnapshot(neat?: unknown): void {
     const telemetry = this.#lastTelemetry;
     // Step 1: Early guard when no data yet (avoids unnecessary object churn)
     if (!telemetry && !this.#currentBest) return;
@@ -459,15 +558,14 @@ export class DashboardManager implements IDashboardManager {
         : null;
       const objectivesSnapshot = telemetry?.objectives;
       const hypervolumeValue = telemetry?.hyper;
-      const mutationStatsObj =
-        telemetry?.mutationStats || telemetry?.mutation?.stats;
+      const mutationStatsObj: MutationStatsMap | null =
+        telemetry?.mutationStats ?? telemetry?.mutation?.stats ?? null;
 
       // Current best scalar metrics (fitness + auxiliary run stats)
       const bestFitnessValue = this.#currentBest?.result?.fitness;
-      const saturationFractionValue = (this.#currentBest as any)?.result
+      const saturationFractionValue = this.#currentBest?.result
         ?.saturationFraction;
-      const actionEntropyValue = (this.#currentBest as any)?.result
-        ?.actionEntropy;
+      const actionEntropyValue = this.#currentBest?.result?.actionEntropy;
 
       // Step 3: Population-level summary (fills in early-run blanks with best fitness/species when needed)
       const populationStats = this.#computePopulationStats(neat);
@@ -512,11 +610,14 @@ export class DashboardManager implements IDashboardManager {
       // Step 5: Pareto + novelty archive metrics
       const firstFrontSize = rawFrontsArray?.[0]?.length || 0;
       const paretoFrontSizes = rawFrontsArray
-        ? rawFrontsArray.map((front: any) => front?.length || 0)
+        ? rawFrontsArray.map((front) => front?.length ?? 0)
         : null;
+      const neatInstance = neat as NeatInstance;
       const noveltyArchiveSize = this.#safeInvoke<number | null>(
         () =>
-          neat?.getNoveltyArchiveSize ? neat.getNoveltyArchiveSize() : null,
+          neatInstance?.getNoveltyArchive
+            ? neatInstance.getNoveltyArchive()?.length ?? null
+            : null,
         null
       );
 
@@ -549,11 +650,16 @@ export class DashboardManager implements IDashboardManager {
         populationMedian: populationStats.median,
         enabledConnRatio: populationStats.enabledRatio,
         complexity: complexitySnapshot || null,
-        simplifyPhaseActive: !!(
-          complexitySnapshot &&
-          (complexitySnapshot.growthNodes < 0 ||
-            complexitySnapshot.growthConns < 0)
-        ),
+        simplifyPhaseActive: (() => {
+          if (!complexitySnapshot) return false;
+          const nodesDecrease =
+            typeof complexitySnapshot.growthNodes === 'number' &&
+            complexitySnapshot.growthNodes < 0;
+          const connsDecrease =
+            typeof complexitySnapshot.growthConns === 'number' &&
+            complexitySnapshot.growthConns < 0;
+          return nodesDecrease || connsDecrease;
+        })(),
         perf: perfSnapshot || null,
         lineage: lineageSnapshot || null,
         diversity: diversitySnapshot || null,
@@ -620,18 +726,19 @@ export class DashboardManager implements IDashboardManager {
    * @returns Object with `mean`, `median`, `speciesCount`, `enabledRatio` (each nullable when not derivable).
    */
   #computePopulationStats(
-    neat?: any
+    neat?: unknown
   ): {
     mean: number | null;
     median: number | null;
     speciesCount: number | null;
     enabledRatio: number | null;
   } {
+    const neatInstance = neat as NeatInstance;
     // Step 1: Guard for absent / malformed population
     if (
-      !neat ||
-      !Array.isArray(neat.population) ||
-      neat.population.length === 0
+      !neatInstance ||
+      !Array.isArray(neatInstance.population) ||
+      neatInstance.population.length === 0
     ) {
       return {
         mean: null,
@@ -648,7 +755,7 @@ export class DashboardManager implements IDashboardManager {
     // Step 3: Scan genomes collecting scores & connection enablement stats
     let enabledConnectionsCount = 0;
     let totalConnectionsCount = 0;
-    for (const genome of neat.population) {
+    for (const genome of neatInstance.population) {
       if (typeof genome?.score === 'number') scores.push(genome.score);
       const genomeConns = genome?.connections;
       if (Array.isArray(genomeConns)) {
@@ -685,8 +792,8 @@ export class DashboardManager implements IDashboardManager {
       : null;
 
     // Step 7: Species count (nullable)
-    const speciesCount = Array.isArray(neat.species)
-      ? neat.species.length
+    const speciesCount = Array.isArray(neatInstance.species)
+      ? neatInstance.species.length ?? null
       : null;
 
     // Step 8: Return aggregate
@@ -738,13 +845,14 @@ export class DashboardManager implements IDashboardManager {
    * // => [ { name: 'mutateAddNode', acceptancePct: 62.5 }, ... ] or null
    */
   #computeOperatorAcceptance(
-    neat?: any
+    neat?: unknown
   ): Array<{ name: string; acceptancePct: number }> | null {
-    if (typeof neat?.getOperatorStats !== 'function') return null;
+    const neatInstance = neat as NeatInstance;
+    if (typeof neatInstance?.getOperatorStats !== 'function') return null;
 
-    let rawOperatorStats: any;
+    let rawOperatorStats: unknown;
     try {
-      rawOperatorStats = neat.getOperatorStats();
+      rawOperatorStats = neatInstance.getOperatorStats();
     } catch {
       return null; // Defensive: treat transient failures as absence of data.
     }
@@ -834,16 +942,17 @@ export class DashboardManager implements IDashboardManager {
    * // => [ { name: 'addNode', count: 42 }, { name: 'addConn', count: 17 } ]
    */
   #computeTopMutations(
-    mutationStats: any
+    mutationStats: MutationStatsMap | null
   ): Array<{ name: string; count: number }> | null {
     // Step 1: Guard for invalid container
-    if (!mutationStats || typeof mutationStats !== 'object') return null;
+    if (!mutationStats) return null;
 
     // Step 2: Populate scratch with numeric entries only
     const mutationEntriesScratch = this.#scratch.mutationEntries;
     mutationEntriesScratch.length = 0;
-    for (const mutationName of Object.keys(mutationStats)) {
-      const occurrenceCount = mutationStats[mutationName];
+    for (const [mutationName, occurrenceCount] of Object.entries(
+      mutationStats
+    )) {
       if (
         typeof occurrenceCount === 'number' &&
         Number.isFinite(occurrenceCount)
@@ -909,14 +1018,19 @@ export class DashboardManager implements IDashboardManager {
    * const sizes = (dashboard as any)["#computeTopSpeciesSizes"](neat);
    * // => [34, 21, 10] (up to 5 elements) or null
    */
-  #computeTopSpeciesSizes(neat?: any): number[] | null {
+  #computeTopSpeciesSizes(neat?: unknown): number[] | null {
+    const neatInstance = neat as NeatInstance;
     // Step 1: Guard for absence / emptiness
-    if (!Array.isArray(neat?.species) || neat.species.length === 0) return null;
+    if (
+      !Array.isArray(neatInstance?.species) ||
+      neatInstance.species.length === 0
+    )
+      return null;
 
     // Step 2: Populate scratch with member counts
     const speciesSizesScratch = this.#scratch.speciesSizes;
     speciesSizesScratch.length = 0; // clear
-    for (const speciesEntry of neat.species) {
+    for (const speciesEntry of neatInstance.species) {
       // Fallback to 0 when members array missing / non-array
       const sizeValue = Array.isArray(speciesEntry?.members)
         ? speciesEntry.members.length
@@ -967,7 +1081,7 @@ export class DashboardManager implements IDashboardManager {
     blockLines: string[],
     solved: {
       maze: string[];
-      result: any;
+      result: IMazeRunResult;
       network: INetwork;
       generation: number;
     },
@@ -1087,7 +1201,7 @@ export class DashboardManager implements IDashboardManager {
     if (network) {
       let architectureRaw = 'n/a';
       try {
-        architectureRaw = this.#deriveArchitecture(network as any);
+        architectureRaw = this.#deriveArchitecture(network);
       } catch {
         architectureRaw = 'n/a';
       }
@@ -1170,7 +1284,7 @@ export class DashboardManager implements IDashboardManager {
       maze: string[];
       result: { path?: ReadonlyArray<readonly [number, number]> } & Record<
         string,
-        any
+        unknown
       >;
     }
   ): void {
@@ -1234,7 +1348,7 @@ export class DashboardManager implements IDashboardManager {
    */
   #appendSolvedPathStats(
     blockLines: string[],
-    solved: { maze: string[]; result: any }
+    solved: { maze: string[]; result: IMazeRunResult }
   ): void {
     // Step 1: Derive metrics (single call encapsulates BFS + visitation stats)
     const metrics = this.#computePathMetrics(solved.maze, solved.result);
@@ -1332,9 +1446,13 @@ export class DashboardManager implements IDashboardManager {
 
     // Step 3: Prefer a single-string emission for efficiency (smaller call overhead and fewer allocations).
     try {
-      // Favor the original API shape: archiveFn(payload, { prepend: true }). Use a permissive any-cast
+      // Favor the original API shape: archiveFn(payload, { prepend: true }). Use a permissive type cast
       // because test harnesses may provide different shapes.
-      (this.#archiveFn as any)(blockLines.join('\n'), { prepend: true });
+      const archiveFnCast = this.#archiveFn as (
+        payload: string,
+        options?: { prepend?: boolean }
+      ) => void;
+      archiveFnCast(blockLines.join('\n'), { prepend: true });
 
       // Step 5: Clear the accumulator in-place to allow caller reuse (reduces GC pressure in tests).
       blockLines.length = 0;
@@ -1492,12 +1610,13 @@ export class DashboardManager implements IDashboardManager {
    * // Flat node list with inferred hidden tiers
    * deriveArchitecture({ nodes:[{type:'input'}, {type:'hidden'}, {type:'output'}] }) => "1 - 1 - 1"
    */
-  #deriveArchitecture(networkInstance: any): string {
+  #deriveArchitecture(networkInstance: INetwork): string {
+    const networkAny = (networkInstance as unknown) as Record<string, unknown>;
     // Step 1: Null/undefined quick exit
     if (!networkInstance) return 'n/a';
 
     // Step 2: Layered representation (fast path)
-    const layerArray = networkInstance.layers;
+    const layerArray = networkAny.layers;
     if (Array.isArray(layerArray) && layerArray.length >= 2) {
       const layerSizes: number[] = [];
       for (const layerRef of layerArray) {
@@ -1512,16 +1631,21 @@ export class DashboardManager implements IDashboardManager {
     }
 
     // Step 3: Flat node list representation
-    const flatNodes = networkInstance.nodes;
+    const flatNodes = networkAny.nodes;
     if (Array.isArray(flatNodes)) {
+      type NodeWithType = {
+        type?: string;
+        connections?: { in?: Array<{ from?: unknown }> };
+        [key: string]: unknown;
+      };
       const inputNodes = flatNodes.filter(
-        (nodeItem: any) => nodeItem.type === 'input'
+        (nodeItem: unknown) => (nodeItem as NodeWithType).type === 'input'
       );
       const outputNodes = flatNodes.filter(
-        (nodeItem: any) => nodeItem.type === 'output'
+        (nodeItem: unknown) => (nodeItem as NodeWithType).type === 'output'
       );
       const hiddenNodesAll = flatNodes.filter(
-        (nodeItem: any) => nodeItem.type === 'hidden'
+        (nodeItem: unknown) => (nodeItem as NodeWithType).type === 'hidden'
       );
 
       // Step 4: No hidden nodes -> simple case
@@ -1536,7 +1660,7 @@ export class DashboardManager implements IDashboardManager {
       }
 
       // Step 5: Iterative hidden layer inference
-      const assignedNodes = new Set<any>(inputNodes);
+      const assignedNodes = new Set<unknown>(inputNodes);
       let remainingHidden = hiddenNodesAll.slice();
       const inferredHiddenSizes: number[] = [];
       const safetyLimit =
@@ -1544,11 +1668,12 @@ export class DashboardManager implements IDashboardManager {
       let iterationCounter = 0;
       while (remainingHidden.length && iterationCounter < safetyLimit) {
         iterationCounter++;
-        const currentLayer = remainingHidden.filter((hiddenNode: any) =>
-          hiddenNode.connections?.in?.every((conn: any) =>
-            assignedNodes.has(conn.from)
-          )
-        );
+        const currentLayer = remainingHidden.filter((hiddenNode: unknown) => {
+          const nodeWithConn = hiddenNode as NodeWithType;
+          return nodeWithConn.connections?.in?.every((conn: unknown) =>
+            assignedNodes.has((conn as { from?: unknown }).from)
+          );
+        });
         if (!currentLayer.length) {
           // Group unresolved remainder into one bucket (cycles / malformed graph)
           inferredHiddenSizes.push(remainingHidden.length);
@@ -1557,7 +1682,7 @@ export class DashboardManager implements IDashboardManager {
         inferredHiddenSizes.push(currentLayer.length);
         for (const nodeRef of currentLayer) assignedNodes.add(nodeRef);
         remainingHidden = remainingHidden.filter(
-          (nodeCandidate: any) => !assignedNodes.has(nodeCandidate)
+          (nodeCandidate: unknown) => !assignedNodes.has(nodeCandidate)
         );
       }
       return [
@@ -1609,10 +1734,10 @@ export class DashboardManager implements IDashboardManager {
    */
   update(
     maze: string[],
-    result: any,
+    result: IMazeRunResult,
     network: INetwork,
     generation: number,
-    neatInstance?: any
+    neatInstance?: Neat
   ): void {
     // Step 1: Lazy initialization of timing anchors
     if (this.#runStartTs == null) {
@@ -1642,9 +1767,14 @@ export class DashboardManager implements IDashboardManager {
     }
 
     // Step 5: Pull latest telemetry snapshot & update bounded histories
-    const telemetrySeries = neatInstance?.getTelemetry?.();
-    if (Array.isArray(telemetrySeries) && telemetrySeries.length) {
-      this.#lastTelemetry = MazeUtils.safeLast(telemetrySeries as any[]);
+    const telemetrySeriesCandidate = neatInstance?.getTelemetry?.();
+    if (
+      Array.isArray(telemetrySeriesCandidate) &&
+      telemetrySeriesCandidate.length
+    ) {
+      const telemetrySeries = telemetrySeriesCandidate as DashboardTelemetry[];
+      this.#lastTelemetry =
+        MazeUtils.safeLast<DashboardTelemetry>(telemetrySeries) ?? null;
       // Best fitness history (trend sparkline source)
       const latestFitness = this.#currentBest?.result?.fitness;
       if (typeof latestFitness === 'number') {
@@ -1730,16 +1860,31 @@ export class DashboardManager implements IDashboardManager {
           window.dispatchEvent(
             new CustomEvent('asciiMazeTelemetry', { detail: payload })
           );
-        } catch {}
+        } catch {
+          // Swallow event dispatch errors
+        }
         try {
           if (window.parent && window.parent !== window)
             window.parent.postMessage(payload, '*');
-        } catch {}
-        (window as any).asciiMazeLastTelemetry = payload; // polling surface
+        } catch {
+          // Swallow postMessage errors
+        }
+        interface AsciiMazeWindow extends Window {
+          asciiMazeLastTelemetry?: unknown;
+        }
+        (window as AsciiMazeWindow).asciiMazeLastTelemetry = payload; // polling surface
       }
       try {
-        (this as any)._telemetryHook && (this as any)._telemetryHook(payload);
-      } catch {}
+        interface DashboardWithHook {
+          _telemetryHook?: (payload: unknown) => void;
+        }
+        const dashboardWithHook = (this as unknown) as DashboardWithHook;
+        if (dashboardWithHook._telemetryHook) {
+          dashboardWithHook._telemetryHook(payload);
+        }
+      } catch {
+        // Swallow telemetry hook errors
+      }
     } catch {
       /* swallow telemetry emission errors */
     }

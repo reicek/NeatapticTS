@@ -29,13 +29,3 @@ export * from './interfaces';
 export { colors } from './colors';
 /** Collection of available maze definitions. */
 export * as mazes from './mazes';
-
-/**
- * Main entry point for the ASCII Maze example.
- * If this file is executed directly, it runs the enhanced demonstration environment.
- */
-if (require.main === module) {
-  // If this file is being run directly (not imported), run the enhanced demo.
-  // This sets up the demonstration environment for the ASCII Maze solver.
-  require('./enhancedMazeDemo');
-}

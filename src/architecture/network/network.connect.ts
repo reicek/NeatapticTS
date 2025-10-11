@@ -3,6 +3,15 @@ import Node from '../node';
 import Connection from '../connection';
 
 /**
+ * Runtime interface for accessing Network internal properties during connection operations.
+ */
+interface NetworkInternals {
+  _enforceAcyclic?: boolean;
+  _topoDirty: boolean;
+  _slabDirty: boolean;
+}
+
+/**
  * Network structural mutation helpers (connect / disconnect).
  *
  * This module centralizes the logic for adding and removing edges (connections) between
@@ -66,9 +75,10 @@ export function connect(
   to: Node,
   weight?: number
 ): Connection[] {
+  const networkInternal = (this as unknown) as NetworkInternals;
   // Step 1: Acyclic pre‑check – prevents cycles by disallowing edges that point "backwards" in order.
   if (
-    (this as any)._enforceAcyclic &&
+    networkInternal._enforceAcyclic &&
     this.nodes.indexOf(from) > this.nodes.indexOf(to)
   )
     return [];
@@ -85,15 +95,15 @@ export function connect(
       this.connections.push(c);
     } else {
       // Self‑connection: only valid when acyclicity is not enforced.
-      if ((this as any)._enforceAcyclic) continue; // Skip silently to preserve invariant.
+      if (networkInternal._enforceAcyclic) continue; // Skip silently to preserve invariant.
       this.selfconns.push(c);
     }
   }
 
   // Step 4: Invalidate caches if we materially changed structure (at least one edge added).
   if (connections.length) {
-    (this as any)._topoDirty = true; // Topological ordering must be recomputed lazily.
-    (this as any)._slabDirty = true; // Packed connection slab requires rebuild for fast activation path.
+    networkInternal._topoDirty = true; // Topological ordering must be recomputed lazily.
+    networkInternal._slabDirty = true; // Packed connection slab requires rebuild for fast activation path.
   }
 
   return connections; // Return created edges so caller can inspect / further manipulate (e.g., gating).
@@ -130,6 +140,7 @@ export function connect(
  * @remarks For removing many edges consider higher‑level bulk utilities to avoid repeated scans.
  */
 export function disconnect(this: Network, from: Node, to: Node): void {
+  const networkInternal = (this as unknown) as NetworkInternals;
   // Step 1: Select list to search: selfconns for loops, otherwise normal connections.
   /** Candidate list of connections to inspect for removal. */
   const list = from === to ? this.selfconns : this.connections;
@@ -152,6 +163,6 @@ export function disconnect(this: Network, from: Node, to: Node): void {
   from.disconnect(to);
 
   // Step 6: Structural mutation => mark caches dirty so next activation can rebuild fast-path artifacts.
-  (this as any)._topoDirty = true;
-  (this as any)._slabDirty = true;
+  networkInternal._topoDirty = true;
+  networkInternal._slabDirty = true;
 }
