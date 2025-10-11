@@ -26,12 +26,11 @@ describe('Adaptive Mutation twoTier fallback (single genome)', () => {
       const { applyAdaptiveMutation } = await import(
         '../../src/neat/neat.adaptive'
       );
-      applyAdaptiveMutation.call(neat as unknown as NeatLikeWithAdaptive);
+      applyAdaptiveMutation.call((neat as unknown) as NeatLikeWithAdaptive);
       type GenomeLike = { _mutRate: number };
-      const rate = (neat.population as unknown as GenomeLike[])[0]._mutRate;
+      const rate = ((neat.population as unknown) as GenomeLike[])[0]._mutRate;
       // Expect rate not equal baseline => changed via fallback balancing
       expect(rate).not.toBe(0.4);
     });
   });
 });
-

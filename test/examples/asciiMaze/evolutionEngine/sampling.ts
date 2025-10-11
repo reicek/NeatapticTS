@@ -31,7 +31,7 @@ import { MazeUtils } from '../mazeUtils';
 export const sampleArray = <T>(
   state: EngineState,
   source: T[],
-  sampleCount: number,
+  sampleCount: number
 ): T[] => {
   // Step 1: Fast validation and normalisation.
   if (!Array.isArray(source) || sampleCount <= 0) return [];
@@ -81,7 +81,7 @@ export const sampleArray = <T>(
 export const sampleIntoScratch = <T>(
   state: EngineState,
   source: T[],
-  sampleCount: number,
+  sampleCount: number
 ): number => {
   // Step 1: Validate inputs early.
   if (!Array.isArray(source) || sampleCount <= 0) return 0;
@@ -93,7 +93,7 @@ export const sampleIntoScratch = <T>(
   const scratch = state.scratch;
   // Type assertion: pool holds T[] at runtime but declared as Array<unknown> for reuse flexibility
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let pooledBuffer = scratch.samplePool as any as T[];
+  let pooledBuffer = (scratch.samplePool as any) as T[];
   if (!Array.isArray(pooledBuffer)) {
     pooledBuffer = [];
     scratch.samplePool = pooledBuffer;
@@ -160,7 +160,7 @@ export const sampleSegmentIntoScratch = <T>(
   state: EngineState,
   source: T[],
   segmentStart: number,
-  sampleCount: number,
+  sampleCount: number
 ): number => {
   if (!Array.isArray(source) || sampleCount <= 0) return 0;
 
@@ -176,8 +176,8 @@ export const sampleSegmentIntoScratch = <T>(
 
   const scratch = state.scratch;
   let pooledBuffer = Array.isArray(scratch.samplePool)
-    ? (scratch.samplePool as unknown as T[])
-    : (scratch.samplePool = [] as unknown as T[]);
+    ? ((scratch.samplePool as unknown) as T[])
+    : (scratch.samplePool = ([] as unknown) as T[]);
 
   if (pooledBuffer.length < normalisedCount) {
     let newCapacity = pooledBuffer.length > 0 ? pooledBuffer.length : 1;
@@ -250,7 +250,7 @@ export const sampleSegmentIntoScratch = <T>(
 export const getTail = <T>(
   state: EngineState,
   source: T[] | undefined,
-  count: number,
+  count: number
 ): T[] => {
   if (
     !Array.isArray(source) ||
@@ -295,5 +295,5 @@ export const getTail = <T>(
 export const pushHistory = <T>(
   buffer: T[] | undefined,
   value: T,
-  maxLength: number,
+  maxLength: number
 ): T[] => MazeUtils.pushHistory(buffer, value, maxLength);

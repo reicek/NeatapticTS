@@ -257,7 +257,7 @@ const rebuildConnectionsLocal = (networkLike: Network): void => {
   /** Set used to deduplicate connection objects. */
   const uniqueConnections = new Set<Connection>();
   networkLike.nodes.forEach((node) =>
-    node.connections?.out.forEach((conn) => uniqueConnections.add(conn)),
+    node.connections?.out.forEach((conn) => uniqueConnections.add(conn))
   );
   networkLike.connections = Array.from(uniqueConnections);
 };
@@ -266,7 +266,7 @@ const rebuildConnectionsLocal = (networkLike: Network): void => {
  * Map an internal activation function (squash) to an ONNX op_type, defaulting to Identity.
  */
 const mapActivationToOnnx = (
-  squash: ((x: number, derivate?: boolean) => number) & { name?: string },
+  squash: ((x: number, derivate?: boolean) => number) & { name?: string }
 ): string => {
   const upperName = (squash?.name || '').toUpperCase();
   if (upperName.includes('TANH')) return 'Tanh';
@@ -275,7 +275,7 @@ const mapActivationToOnnx = (
   if (upperName.includes('RELU')) return 'Relu';
   if (squash)
     console.warn(
-      `Unsupported activation function ${squash.name} for ONNX export, defaulting to Identity.`,
+      `Unsupported activation function ${squash.name} for ONNX export, defaulting to Identity.`
     );
   return 'Identity';
 };
@@ -300,13 +300,13 @@ const inferLayerOrdering = (network: Network): NeatapticNode[][] => {
   while (remainingHidden.length) {
     /** Hidden nodes whose inbound connections originate only from previousLayer. */
     const currentLayer = remainingHidden.filter((hidden) =>
-      (hidden as unknown as NodeInternals).connections.in.every((conn) =>
-        previousLayer.includes(conn.from),
-      ),
+      ((hidden as unknown) as NodeInternals).connections.in.every((conn) =>
+        previousLayer.includes(conn.from)
+      )
     );
     if (!currentLayer.length)
       throw new Error(
-        'Invalid network structure for ONNX export: cannot resolve layered ordering.',
+        'Invalid network structure for ONNX export: cannot resolve layered ordering.'
       );
     layerAccumulator.push(previousLayer);
     previousLayer = currentLayer;
@@ -324,7 +324,7 @@ const inferLayerOrdering = (network: Network): NeatapticNode[][] => {
 const validateLayerHomogeneityAndConnectivity = (
   layers: NeatapticNode[][],
   network: Network,
-  options: OnnxExportOptions,
+  options: OnnxExportOptions
 ): void => {
   for (let layerIndex = 1; layerIndex < layers.length; layerIndex++) {
     /** Nodes in the source (previous) layer feeding current layer. */
@@ -334,27 +334,27 @@ const validateLayerHomogeneityAndConnectivity = (
     /** Set of activation names encountered. */
     const activationNameSet = new Set(
       currentLayerNodes.map((n) => {
-        const nodeInternal = n as unknown as NodeInternals;
+        const nodeInternal = (n as unknown) as NodeInternals;
         return nodeInternal.squash && nodeInternal.squash.name;
-      }),
+      })
     );
     if (activationNameSet.size > 1 && !options.allowMixedActivations)
       throw new Error(
-        `ONNX export error: Mixed activation functions detected in layer ${layerIndex}. (enable allowMixedActivations to decompose layer)`,
+        `ONNX export error: Mixed activation functions detected in layer ${layerIndex}. (enable allowMixedActivations to decompose layer)`
       );
     if (activationNameSet.size > 1 && options.allowMixedActivations)
       console.warn(
-        `Warning: Mixed activations in layer ${layerIndex}; exporting per-neuron Gemm + Activation (+Concat) baseline.`,
+        `Warning: Mixed activations in layer ${layerIndex}; exporting per-neuron Gemm + Activation (+Concat) baseline.`
       );
     for (const targetNode of currentLayerNodes) {
-      const targetInternal = targetNode as unknown as NodeInternals;
+      const targetInternal = (targetNode as unknown) as NodeInternals;
       for (const sourceNode of previousLayerNodes) {
         const isConnected = targetInternal.connections.in.some(
-          (conn) => conn.from === sourceNode,
+          (conn) => conn.from === sourceNode
         );
         if (!isConnected && !options.allowPartialConnectivity)
           throw new Error(
-            `ONNX export error: Missing connection from node ${sourceNode.index} to node ${targetNode.index} in layer ${layerIndex}. (enable allowPartialConnectivity)`,
+            `ONNX export error: Missing connection from node ${sourceNode.index} to node ${targetNode.index} in layer ${layerIndex}. (enable allowPartialConnectivity)`
           );
       }
     }
@@ -383,7 +383,7 @@ const validateLayerHomogeneityAndConnectivity = (
 const buildOnnxModel = (
   network: Network,
   layers: NeatapticNode[][],
-  options: OnnxExportOptions = {},
+  options: OnnxExportOptions = {}
 ): OnnxModel => {
   const {
     includeMetadata = false,
@@ -453,7 +453,7 @@ const buildOnnxModel = (
       const hiddenLayerNodes = layers[layerIndex];
       if (
         hiddenLayerNodes.some(
-          (n) => (n as unknown as NodeInternals).connections.self.length > 0,
+          (n) => ((n as unknown) as NodeInternals).connections.self.length > 0
         )
       ) {
         recurrentLayerIndices.push(layerIndex);
@@ -485,7 +485,7 @@ const buildOnnxModel = (
 
     // Phase 4 groundwork: check if this layer is declared as a Conv2D mapping.
     const convSpec = options.conv2dMappings?.find(
-      (m) => m.layerIndex === layerIndex,
+      (m) => m.layerIndex === layerIndex
     );
     if (convSpec) {
       // Validate dimensional consistency.
@@ -506,7 +506,7 @@ const buildOnnxModel = (
         thisWidthExpected === thisWidthActual;
       if (!shapeValid) {
         console.warn(
-          `Conv2D mapping for layer ${layerIndex} skipped: dimension mismatch (expected prev=${prevWidthExpected} got ${prevWidthActual}; expected this=${thisWidthExpected} got ${thisWidthActual}).`,
+          `Conv2D mapping for layer ${layerIndex} skipped: dimension mismatch (expected prev=${prevWidthExpected} got ${prevWidthActual}; expected this=${thisWidthExpected} got ${thisWidthActual}).`
         );
       } else {
         // Build kernel weights: For each output channel, for each input channel, for each kernel element (kH,kW), derive weight by sampling representative spatial position
@@ -516,7 +516,7 @@ const buildOnnxModel = (
         for (let oc = 0; oc < convSpec.outChannels; oc++) {
           const repIndex = oc * convSpec.outHeight * convSpec.outWidth; // first spatial location
           const repNeuron = currentLayerNodes[repIndex];
-          const repNeuronInternal = repNeuron as unknown as NodeInternals;
+          const repNeuronInternal = (repNeuron as unknown) as NodeInternals;
           B.push(repNeuronInternal.bias);
           for (let ic = 0; ic < convSpec.inChannels; ic++) {
             for (let kh = 0; kh < convSpec.kernelHeight; kh++) {
@@ -528,7 +528,7 @@ const buildOnnxModel = (
                   kw;
                 const sourceNode = previousLayerNodes[inputFeatureIndex];
                 const conn = repNeuronInternal.connections.in.find(
-                  (cc) => cc.from === sourceNode,
+                  (cc) => cc.from === sourceNode
                 );
                 W.push(conn ? conn.weight : 0);
               }
@@ -587,7 +587,7 @@ const buildOnnxModel = (
         previousOutputName = activationOutputName;
         // Optional pooling insertion after conv or recurrent layer
         const poolSpecPostConv = options.pool2dMappings?.find(
-          (p) => p.afterLayerIndex === layerIndex,
+          (p) => p.afterLayerIndex === layerIndex
         );
         if (poolSpecPostConv) {
           const kernel = [
@@ -630,7 +630,7 @@ const buildOnnxModel = (
             previousOutputName = flatOut;
             model.metadata_props = model.metadata_props || [];
             const flMeta = model.metadata_props.find(
-              (m) => m.key === 'flatten_layers',
+              (m) => m.key === 'flatten_layers'
             );
             if (flMeta) {
               try {
@@ -651,7 +651,7 @@ const buildOnnxModel = (
           }
           model.metadata_props = model.metadata_props || [];
           const poolLayersMeta = model.metadata_props.find(
-            (m) => m.key === 'pool2d_layers',
+            (m) => m.key === 'pool2d_layers'
           );
           if (poolLayersMeta) {
             try {
@@ -670,7 +670,7 @@ const buildOnnxModel = (
             });
           }
           const poolSpecsMeta = model.metadata_props.find(
-            (m) => m.key === 'pool2d_specs',
+            (m) => m.key === 'pool2d_specs'
           );
           if (poolSpecsMeta) {
             try {
@@ -692,7 +692,7 @@ const buildOnnxModel = (
         // Record metadata
         model.metadata_props = model.metadata_props || [];
         const convLayersMeta = model.metadata_props.find(
-          (m) => m.key === 'conv2d_layers',
+          (m) => m.key === 'conv2d_layers'
         );
         if (convLayersMeta) {
           try {
@@ -711,7 +711,7 @@ const buildOnnxModel = (
           });
         }
         const convSpecsMeta = model.metadata_props.find(
-          (m) => m.key === 'conv2d_specs',
+          (m) => m.key === 'conv2d_specs'
         );
         if (convSpecsMeta) {
           try {
@@ -736,27 +736,27 @@ const buildOnnxModel = (
       options.allowMixedActivations &&
       new Set(
         currentLayerNodes.map((n) => {
-          const nInternal = n as unknown as NodeInternals;
+          const nInternal = (n as unknown) as NodeInternals;
           return nInternal.squash && nInternal.squash.name;
-        }),
+        })
       ).size > 1;
     if (recurrentLayerIndices.includes(layerIndex) && !isOutputLayer) {
       // Recurrent single-step path for this layer (only supports homogeneous activations)
       if (mixed)
         throw new Error(
-          `Recurrent export does not yet support mixed activations in hidden layer ${layerIndex}.`,
+          `Recurrent export does not yet support mixed activations in hidden layer ${layerIndex}.`
         );
       // Build feedforward weights W{layerIndex-1} / B{layerIndex-1}
       const weightMatrixValues: number[] = [];
       const biasVector: number[] = new Array(currentLayerNodes.length).fill(0);
       for (let r = 0; r < currentLayerNodes.length; r++) {
         const targetNode = currentLayerNodes[r];
-        const targetNodeInternal = targetNode as unknown as NodeInternals;
+        const targetNodeInternal = (targetNode as unknown) as NodeInternals;
         biasVector[r] = targetNodeInternal.bias;
         for (let c = 0; c < previousLayerNodes.length; c++) {
           const sourceNode = previousLayerNodes[c];
           const inboundConn = targetNodeInternal.connections.in.find(
-            (conn) => conn.from === sourceNode,
+            (conn) => conn.from === sourceNode
           );
           weightMatrixValues.push(inboundConn ? inboundConn.weight : 0);
         }
@@ -830,7 +830,7 @@ const buildOnnxModel = (
       // Activation
       model.graph.node.push({
         op_type: mapActivationToOnnx(
-          (currentLayerNodes[0] as unknown as NodeInternals).squash,
+          ((currentLayerNodes[0] as unknown) as NodeInternals).squash
         ),
         input: [`RecurrentSum_${layerIndex}`],
         output: [`Layer_${layerIndex}`],
@@ -843,12 +843,12 @@ const buildOnnxModel = (
       const biasVector: number[] = new Array(currentLayerNodes.length).fill(0);
       for (let r = 0; r < currentLayerNodes.length; r++) {
         const targetNode = currentLayerNodes[r];
-        const targetNodeInternal = targetNode as unknown as NodeInternals;
+        const targetNodeInternal = (targetNode as unknown) as NodeInternals;
         biasVector[r] = targetNodeInternal.bias;
         for (let c = 0; c < previousLayerNodes.length; c++) {
           const sourceNode = previousLayerNodes[c];
           const inboundConn = targetNodeInternal.connections.in.find(
-            (conn) => conn.from === sourceNode,
+            (conn) => conn.from === sourceNode
           );
           weightMatrixValues.push(inboundConn ? inboundConn.weight : 0);
         }
@@ -883,7 +883,7 @@ const buildOnnxModel = (
         });
         model.graph.node.push({
           op_type: mapActivationToOnnx(
-            (currentLayerNodes[0] as unknown as NodeInternals).squash,
+            ((currentLayerNodes[0] as unknown) as NodeInternals).squash
           ),
           input: [gemmOutputName],
           output: [activationOutputName],
@@ -892,7 +892,7 @@ const buildOnnxModel = (
       } else {
         model.graph.node.push({
           op_type: mapActivationToOnnx(
-            (currentLayerNodes[0] as unknown as NodeInternals).squash,
+            ((currentLayerNodes[0] as unknown) as NodeInternals).squash
           ),
           input: [gemmOutputName],
           output: [activationOutputName],
@@ -913,7 +913,7 @@ const buildOnnxModel = (
       previousOutputName = activationOutputName;
       // Optional pooling insertion after standard dense layer
       const poolSpecDense = options.pool2dMappings?.find(
-        (p) => p.afterLayerIndex === layerIndex,
+        (p) => p.afterLayerIndex === layerIndex
       );
       if (poolSpecDense) {
         const kernel = [poolSpecDense.kernelHeight, poolSpecDense.kernelWidth];
@@ -949,7 +949,7 @@ const buildOnnxModel = (
           previousOutputName = flatOut;
           model.metadata_props = model.metadata_props || [];
           const flMeta = model.metadata_props.find(
-            (m) => m.key === 'flatten_layers',
+            (m) => m.key === 'flatten_layers'
           );
           if (flMeta) {
             try {
@@ -970,7 +970,7 @@ const buildOnnxModel = (
         }
         model.metadata_props = model.metadata_props || [];
         const poolLayersMeta = model.metadata_props.find(
-          (m) => m.key === 'pool2d_layers',
+          (m) => m.key === 'pool2d_layers'
         );
         if (poolLayersMeta) {
           try {
@@ -989,7 +989,7 @@ const buildOnnxModel = (
           });
         }
         const poolSpecsMeta = model.metadata_props.find(
-          (m) => m.key === 'pool2d_specs',
+          (m) => m.key === 'pool2d_specs'
         );
         if (poolSpecsMeta) {
           try {
@@ -1012,13 +1012,13 @@ const buildOnnxModel = (
       // Per-neuron decomposition: Gemm + Activation per neuron, then Concat.
       const perNeuronActivationOutputs: string[] = [];
       currentLayerNodes.forEach((targetNode, idx: number) => {
-        const targetNodeInternal = targetNode as unknown as NodeInternals;
+        const targetNodeInternal = (targetNode as unknown) as NodeInternals;
         // Build single-row weight matrix for neuron idx.
         const weightRow: number[] = [];
         for (let c = 0; c < previousLayerNodes.length; c++) {
           const sourceNode = previousLayerNodes[c];
           const inboundConn = targetNodeInternal.connections.in.find(
-            (conn) => conn.from === sourceNode,
+            (conn) => conn.from === sourceNode
           );
           weightRow.push(inboundConn ? inboundConn.weight : 0);
         }
@@ -1067,7 +1067,7 @@ const buildOnnxModel = (
       });
       previousOutputName = activationOutputName;
       const poolSpecPerNeuron = options.pool2dMappings?.find(
-        (p) => p.afterLayerIndex === layerIndex,
+        (p) => p.afterLayerIndex === layerIndex
       );
       if (poolSpecPerNeuron) {
         const kernel = [
@@ -1109,7 +1109,7 @@ const buildOnnxModel = (
           previousOutputName = flatOut;
           model.metadata_props = model.metadata_props || [];
           const flMeta = model.metadata_props.find(
-            (m) => m.key === 'flatten_layers',
+            (m) => m.key === 'flatten_layers'
           );
           if (flMeta) {
             try {
@@ -1130,7 +1130,7 @@ const buildOnnxModel = (
         }
         model.metadata_props = model.metadata_props || [];
         const poolLayersMeta = model.metadata_props.find(
-          (m) => m.key === 'pool2d_layers',
+          (m) => m.key === 'pool2d_layers'
         );
         if (poolLayersMeta) {
           try {
@@ -1149,7 +1149,7 @@ const buildOnnxModel = (
           });
         }
         const poolSpecsMeta = model.metadata_props.find(
-          (m) => m.key === 'pool2d_specs',
+          (m) => m.key === 'pool2d_specs'
         );
         if (poolSpecsMeta) {
           try {
@@ -1208,12 +1208,12 @@ const buildOnnxModel = (
           const gate = gateOrder[g];
           for (let r = 0; r < unit; r++) {
             const neuron = gate[r];
-            const neuronInternal = neuron as unknown as NodeInternals;
+            const neuronInternal = (neuron as unknown) as NodeInternals;
             // Input weights
             for (let c = 0; c < prevSize; c++) {
               const source = prevLayerNodes[c];
               const conn = neuronInternal.connections.in.find(
-                (cc) => cc.from === source,
+                (cc) => cc.from === source
               );
               W.push(conn ? conn.weight : 0);
             }
@@ -1268,7 +1268,7 @@ const buildOnnxModel = (
         model.metadata_props = model.metadata_props || [];
         // Aggregate LSTM emitted layer indices (avoid multiple single-element entries)
         const lstmMetaIdx = model.metadata_props.findIndex(
-          (m) => m.key === 'lstm_emitted_layers',
+          (m) => m.key === 'lstm_emitted_layers'
         );
         if (lstmMetaIdx >= 0) {
           try {
@@ -1308,11 +1308,11 @@ const buildOnnxModel = (
           const gate = gateOrderGRU[g];
           for (let r = 0; r < unitG; r++) {
             const neuron = gate[r];
-            const neuronInternal = neuron as unknown as NodeInternals;
+            const neuronInternal = (neuron as unknown) as NodeInternals;
             for (let c = 0; c < prevSizeGRU; c++) {
               const src = prevLayerNodes[c];
               const conn = neuronInternal.connections.in.find(
-                (cc) => cc.from === src,
+                (cc) => cc.from === src
               );
               Wg.push(conn ? conn.weight : 0);
             }
@@ -1363,7 +1363,7 @@ const buildOnnxModel = (
         });
         model.metadata_props = model.metadata_props || [];
         const gruMetaIdx = model.metadata_props.findIndex(
-          (m) => m.key === 'gru_emitted_layers',
+          (m) => m.key === 'gru_emitted_layers'
         );
         if (gruMetaIdx >= 0) {
           try {
@@ -1418,7 +1418,7 @@ const buildOnnxModel = (
           // Representative neuron (0,0)
           const repIndex = oc * (spec.outHeight * spec.outWidth);
           const repNeuron = layerNodes[repIndex];
-          const repNeuronInternal = repNeuron as unknown as NodeInternals;
+          const repNeuronInternal = (repNeuron as unknown) as NodeInternals;
           const kernel: number[] = [];
           for (let ic = 0; ic < spec.inChannels; ic++) {
             for (let kh = 0; kh < spec.kernelHeight; kh++) {
@@ -1427,7 +1427,7 @@ const buildOnnxModel = (
                   ic * (spec.inHeight * spec.inWidth) + kh * spec.inWidth + kw;
                 const sourceNode = prevLayerNodes[inputFeatureIndex];
                 const conn = repNeuronInternal.connections.in.find(
-                  (cc) => cc.from === sourceNode,
+                  (cc) => cc.from === sourceNode
                 );
                 kernel.push(conn ? conn.weight : 0);
               }
@@ -1444,7 +1444,7 @@ const buildOnnxModel = (
                 oc * (spec.outHeight * spec.outWidth) + oh * spec.outWidth + ow;
               const neuron = layerNodes[idx];
               if (!neuron) continue;
-              const neuronInternal = neuron as unknown as NodeInternals;
+              const neuronInternal = (neuron as unknown) as NodeInternals;
               let kPtr = 0;
               for (let ic = 0; ic < spec.inChannels && allOk; ic++) {
                 const hBase = oh * spec.strideHeight - (spec.padTop || 0);
@@ -1468,7 +1468,7 @@ const buildOnnxModel = (
                       iw;
                     const srcNode = prevLayerNodes[inputFeatureIndex];
                     const conn = neuronInternal.connections.in.find(
-                      (cc) => cc.from === srcNode,
+                      (cc) => cc.from === srcNode
                     );
                     const wVal = conn ? conn.weight : 0;
                     if (Math.abs(wVal - repPerChannel[oc][kPtr]) > tol) {
@@ -1486,7 +1486,7 @@ const buildOnnxModel = (
         else {
           mismatched.push(layerIdx);
           console.warn(
-            `Conv2D weight sharing mismatch detected in layer ${layerIdx}`,
+            `Conv2D weight sharing mismatch detected in layer ${layerIdx}`
           );
         }
       }
@@ -1510,7 +1510,7 @@ const buildOnnxModel = (
  */
 const deriveHiddenLayerSizes = (
   initializers: OnnxTensor[],
-  metadataProps?: { key: string; value: string }[],
+  metadataProps?: { key: string; value: string }[]
 ): number[] => {
   // Prefer metadata-provided ordering if available.
   const meta = metadataProps?.find((p) => p.key === 'layer_sizes');
@@ -1575,7 +1575,7 @@ const assignWeightsAndBiases = (
   network: Network,
   onnx: OnnxModel,
   hiddenLayerSizes: number[],
-  metadataProps?: { key: string; value: string }[],
+  metadataProps?: { key: string; value: string }[]
 ): void => {
   // Build map for quick initializer lookup.
   const initMap: Record<string, OnnxTensor> = {};
@@ -1595,7 +1595,7 @@ const assignWeightsAndBiases = (
             hiddenLayerSizes.slice(0, sequentialIdx).reduce((a, b) => a + b, 0),
             hiddenLayerSizes
               .slice(0, sequentialIdx + 1)
-              .reduce((a, b) => a + b, 0),
+              .reduce((a, b) => a + b, 0)
           )
       : network.nodes.filter((n) => n.type === 'output');
     const previousLayerNodes =
@@ -1609,21 +1609,21 @@ const assignWeightsAndBiases = (
                 .reduce((a, b) => a + b, 0),
               hiddenLayerSizes
                 .slice(0, sequentialIdx)
-                .reduce((a, b) => a + b, 0),
+                .reduce((a, b) => a + b, 0)
             );
     const aggregated = initMap[`W${layerIdx}`];
     if (aggregated) {
       const bias = initMap[`B${layerIdx}`];
       for (let r = 0; r < currentLayerNodes.length; r++) {
-        const currentNodeInternal = currentLayerNodes[
+        const currentNodeInternal = (currentLayerNodes[
           r
-        ] as unknown as NodeInternals;
+        ] as unknown) as NodeInternals;
         for (let c = 0; c < previousLayerNodes.length; c++) {
-          const prevNodeInternal = previousLayerNodes[
+          const prevNodeInternal = (previousLayerNodes[
             c
-          ] as unknown as NodeInternals;
+          ] as unknown) as NodeInternals;
           const conn = prevNodeInternal.connections.out.find(
-            (cc) => cc.to === currentLayerNodes[r],
+            (cc) => cc.to === currentLayerNodes[r]
           );
           if (conn)
             conn.weight =
@@ -1633,16 +1633,16 @@ const assignWeightsAndBiases = (
       }
     } else {
       currentLayerNodes.forEach((node, neuronIdx: number) => {
-        const nodeInternal = node as unknown as NodeInternals;
+        const nodeInternal = (node as unknown) as NodeInternals;
         const w = initMap[`W${layerIdx}_n${neuronIdx}`];
         const b = initMap[`B${layerIdx}_n${neuronIdx}`];
         if (!w || !b) return;
         for (let c = 0; c < previousLayerNodes.length; c++) {
-          const prevNodeInternal = previousLayerNodes[
+          const prevNodeInternal = (previousLayerNodes[
             c
-          ] as unknown as NodeInternals;
+          ] as unknown) as NodeInternals;
           const conn = prevNodeInternal.connections.out.find(
-            (cc) => cc.to === node,
+            (cc) => cc.to === node
           );
           if (conn) conn.weight = w.float_data[c];
         }
@@ -1681,20 +1681,20 @@ const assignWeightsAndBiases = (
                   .reduce((a, b) => a + b, 0),
                 hiddenLayerSizes
                   .slice(0, hiddenIndex)
-                  .reduce((a, b) => a + b, 0),
+                  .reduce((a, b) => a + b, 0)
               );
         const Wt = onnx.graph.initializer.find(
-          (t) => t.name === `ConvW${layerExportIndex - 1}`,
+          (t) => t.name === `ConvW${layerExportIndex - 1}`
         );
         const Bt = onnx.graph.initializer.find(
-          (t) => t.name === `ConvB${layerExportIndex - 1}`,
+          (t) => t.name === `ConvB${layerExportIndex - 1}`
         );
         if (!Wt || !Bt) return; // type guard
         const [outChannels, inChannels, kH, kW] = Wt.dims as [
           number,
           number,
           number,
-          number,
+          number
         ];
         // Sanity check vs spec
         if (
@@ -1717,7 +1717,7 @@ const assignWeightsAndBiases = (
           oc: number,
           ic: number,
           kh: number,
-          kw: number,
+          kw: number
         ): number => {
           const idx = ((oc * inChannels + ic) * kH + kh) * kW + kw;
           return Wt!.float_data[idx];
@@ -1729,13 +1729,13 @@ const assignWeightsAndBiases = (
               const neuronLinearIndex = oc * (outH * outW) + oh * outW + ow;
               const neuron = layerNodes[neuronLinearIndex];
               if (!neuron) continue;
-              const neuronInternal = neuron as unknown as NodeInternals;
+              const neuronInternal = (neuron as unknown) as NodeInternals;
               neuronInternal.bias = Bt.float_data[oc];
               // Clear existing inbound weights first (retain connection objects)
               // Build map for quick lookup
               const inConnMap = new Map<NeatapticNode, Connection>();
               neuronInternal.connections.in.forEach((c) =>
-                inConnMap.set(c.from, c),
+                inConnMap.set(c.from, c)
               );
               for (let ic = 0; ic < inChannels; ic++) {
                 const ihBase = oh * strideH - padTop;
@@ -1769,7 +1769,7 @@ const assignWeightsAndBiases = (
 const assignActivationFunctions = (
   network: Network,
   onnx: OnnxModel,
-  hiddenLayerSizes: number[],
+  hiddenLayerSizes: number[]
 ): void => {
   const hiddenNodes = network.nodes.filter((n) => n.type === 'hidden');
   let hiddenOffset = 0;
@@ -1806,9 +1806,9 @@ const assignActivationFunctions = (
           break;
       }
       if (hiddenNodes[hiddenOffset + i]) {
-        const hiddenNodeInternal = hiddenNodes[
+        const hiddenNodeInternal = (hiddenNodes[
           hiddenOffset + i
-        ] as unknown as NodeInternals;
+        ] as unknown) as NodeInternals;
         hiddenNodeInternal.squash = fn;
       }
     }
@@ -1834,7 +1834,7 @@ const assignActivationFunctions = (
   network.nodes
     .filter((n) => n.type === 'output')
     .forEach((n) => {
-      const nInternal = n as unknown as NodeInternals;
+      const nInternal = (n as unknown) as NodeInternals;
       nInternal.squash = outputFn;
     });
 };
@@ -1858,11 +1858,13 @@ const assignActivationFunctions = (
 // eslint-disable-next-line prefer-arrow/prefer-arrow-functions -- Public export function
 export function exportToONNX(
   network: Network,
-  options: OnnxExportOptions = {},
+  options: OnnxExportOptions = {}
 ): OnnxModel {
   rebuildConnectionsLocal(network);
   network.nodes.forEach((node, idx: number) => {
-    const nodeInternal = node as unknown as NodeInternals & { index?: number };
+    const nodeInternal = (node as unknown) as NodeInternals & {
+      index?: number;
+    };
     nodeInternal.index = idx;
   });
   if (!network.connections || network.connections.length === 0)
@@ -1882,7 +1884,7 @@ export function exportToONNX(
           const memorySlice = hiddenLayer.slice(seg * 2, seg * 3);
           const allSelf = memorySlice.every(
             (n) =>
-              (n as unknown as NodeInternals).connections.self.length === 1,
+              ((n as unknown) as NodeInternals).connections.self.length === 1
           );
           if (allSelf) {
             lstmPatternStubs.push({ layerIndex: li, unitSize: seg });
@@ -1914,7 +1916,7 @@ export function exportToONNX(
         if (outSpatial * outSpatial === currWidth) {
           // Avoid duplicating explicit specs
           const alreadyDeclared = options.conv2dMappings?.some(
-            (m) => m.layerIndex === li,
+            (m) => m.layerIndex === li
           );
           if (alreadyDeclared) break;
           inferredLayers.push(li);
@@ -1988,23 +1990,27 @@ export function importFromONNX(onnx: OnnxModel): Network {
   const { default: Layer } = require('../layer');
   /** Number of input features (dimension of input tensor). */
   const inputShapeDims = onnx.graph.inputs[0].type.tensor_type.shape.dim;
-  const inputCount = (
-    inputShapeDims[inputShapeDims.length - 1] as Record<string, number>
-  ).dim_value;
+  const inputCount = (inputShapeDims[inputShapeDims.length - 1] as Record<
+    string,
+    number
+  >).dim_value;
   /** Number of output neurons (dimension of output tensor). */
   const outputShapeDims = onnx.graph.outputs[0].type.tensor_type.shape.dim;
-  const outputCount = (
-    outputShapeDims[outputShapeDims.length - 1] as Record<string, number>
-  ).dim_value;
+  const outputCount = (outputShapeDims[outputShapeDims.length - 1] as Record<
+    string,
+    number
+  >).dim_value;
   /** Hidden layer sizes derived from weight tensor shapes. */
   const hiddenLayerSizes = deriveHiddenLayerSizes(
     onnx.graph.initializer,
-    onnx.metadata_props,
+    onnx.metadata_props
   );
   /** Newly constructed network mirroring the ONNX architecture. */
-  const network: Network = (
-    NetworkVal as typeof import('../network').default
-  ).createMLP(inputCount, hiddenLayerSizes, outputCount);
+  const network: Network = (NetworkVal as typeof import('../network').default).createMLP(
+    inputCount,
+    hiddenLayerSizes,
+    outputCount
+  );
   if (hiddenLayerSizes.length === 0) {
     // Edge case: single-layer perceptron (inputs -> outputs); prune hidden placeholders if any.
     network.nodes = [
@@ -2041,7 +2047,7 @@ export function importFromONNX(onnx: OnnxModel): Network {
             const node = network.nodes.filter((n) => n.type === 'hidden')[
               hiddenStart + i
             ];
-            const nodeInternal = node as unknown as NodeInternals;
+            const nodeInternal = (node as unknown) as NodeInternals;
             const weight = rInit.float_data[i * size + i];
             let selfConn = nodeInternal.connections.self[0];
             if (!selfConn) {
@@ -2079,13 +2085,13 @@ export function importFromONNX(onnx: OnnxModel): Network {
         if (hiddenIndex < 0 || hiddenIndex >= hiddenLayerSizes.length) return;
         // Locate LSTM initializer tensors
         const W = onnx.graph.initializer.find(
-          (t) => t.name === `LSTM_W${hiddenIndex}`,
+          (t) => t.name === `LSTM_W${hiddenIndex}`
         );
         const R = onnx.graph.initializer.find(
-          (t) => t.name === `LSTM_R${hiddenIndex}`,
+          (t) => t.name === `LSTM_R${hiddenIndex}`
         );
         const B = onnx.graph.initializer.find(
-          (t) => t.name === `LSTM_B${hiddenIndex}`,
+          (t) => t.name === `LSTM_B${hiddenIndex}`
         );
         if (!W || !R || !B) return; // incomplete
         // Determine unit size (rows = gates*unit, gates assumed 4)
@@ -2111,7 +2117,7 @@ export function importFromONNX(onnx: OnnxModel): Network {
                   .reduce((a, b) => a + b, 0),
                 hiddenLayerSizes
                   .slice(0, hiddenIndex)
-                  .reduce((a, b) => a + b, 0),
+                  .reduce((a, b) => a + b, 0)
               );
         const nextLayerIsOutput = hiddenIndex === hiddenLayerSizes.length - 1;
         const nextLayerNodes = nextLayerIsOutput
@@ -2120,22 +2126,22 @@ export function importFromONNX(onnx: OnnxModel): Network {
         // Remove connections linked to old layer nodes
         network.connections = network.connections.filter(
           (c) =>
-            !oldLayerNodes.includes(c.from) && !oldLayerNodes.includes(c.to),
+            !oldLayerNodes.includes(c.from) && !oldLayerNodes.includes(c.to)
         );
         prevLayerNodes.forEach((p) => {
-          const pInternal = p as unknown as NodeInternals;
+          const pInternal = (p as unknown) as NodeInternals;
           pInternal.connections.out = pInternal.connections.out.filter(
-            (c) => !oldLayerNodes.includes(c.to),
+            (c) => !oldLayerNodes.includes(c.to)
           );
         });
         nextLayerNodes.forEach((nxt) => {
-          const nxtInternal = nxt as unknown as NodeInternals;
+          const nxtInternal = (nxt as unknown) as NodeInternals;
           nxtInternal.connections.in = nxtInternal.connections.in.filter(
-            (c) => !oldLayerNodes.includes(c.from),
+            (c) => !oldLayerNodes.includes(c.from)
           );
         });
         oldLayerNodes.forEach((n) => {
-          const nInternal = n as unknown as NodeInternals;
+          const nInternal = (n as unknown) as NodeInternals;
           nInternal.connections.in = [];
           nInternal.connections.out = [];
         });
@@ -2152,7 +2158,7 @@ export function importFromONNX(onnx: OnnxModel): Network {
         lstmLayer.input({ output: { nodes: prevLayerNodes } });
         // Connect LSTM output block to next layer nodes
         lstmLayer.output.nodes.forEach((outNode: NeatapticNode) => {
-          const outNodeInternal = outNode as unknown as NodeInternals & {
+          const outNodeInternal = (outNode as unknown) as NodeInternals & {
             connect: (to: NeatapticNode) => Connection;
           };
           nextLayerNodes.forEach((nxt) => outNodeInternal.connect(nxt));
@@ -2169,13 +2175,13 @@ export function importFromONNX(onnx: OnnxModel): Network {
           for (let r = 0; r < unit; r++) {
             const rowOffset = g * unit + r;
             const neuron = groupMap[gateOrder[g]][r];
-            const neuronInternal = neuron as unknown as NodeInternals;
+            const neuronInternal = (neuron as unknown) as NodeInternals;
             neuronInternal.bias = B.float_data[rowOffset];
             for (let c = 0; c < prevSize; c++) {
               const weight = W.float_data[rowOffset * prevSize + c];
               const src = prevLayerNodes[c];
               const conn = neuronInternal.connections.in.find(
-                (cc) => cc.from === src,
+                (cc) => cc.from === src
               );
               if (conn) conn.weight = weight;
             }
@@ -2196,13 +2202,13 @@ export function importFromONNX(onnx: OnnxModel): Network {
         const hiddenIndex = exportLayerIndex - 1;
         if (hiddenIndex < 0 || hiddenIndex >= hiddenLayerSizes.length) return;
         const W = onnx.graph.initializer.find(
-          (t) => t.name === `GRU_W${hiddenIndex}`,
+          (t) => t.name === `GRU_W${hiddenIndex}`
         );
         const R = onnx.graph.initializer.find(
-          (t) => t.name === `GRU_R${hiddenIndex}`,
+          (t) => t.name === `GRU_R${hiddenIndex}`
         );
         const B = onnx.graph.initializer.find(
-          (t) => t.name === `GRU_B${hiddenIndex}`,
+          (t) => t.name === `GRU_B${hiddenIndex}`
         );
         if (!W || !R || !B) return;
         const rows = W.dims[0];
@@ -2225,7 +2231,7 @@ export function importFromONNX(onnx: OnnxModel): Network {
                   .reduce((a, b) => a + b, 0),
                 hiddenLayerSizes
                   .slice(0, hiddenIndex)
-                  .reduce((a, b) => a + b, 0),
+                  .reduce((a, b) => a + b, 0)
               );
         const nextLayerIsOutput = hiddenIndex === hiddenLayerSizes.length - 1;
         const nextLayerNodes = nextLayerIsOutput
@@ -2233,22 +2239,22 @@ export function importFromONNX(onnx: OnnxModel): Network {
           : hiddenNodes.slice(end, end + hiddenLayerSizes[hiddenIndex + 1]);
         network.connections = network.connections.filter(
           (c) =>
-            !oldLayerNodes.includes(c.from) && !oldLayerNodes.includes(c.to),
+            !oldLayerNodes.includes(c.from) && !oldLayerNodes.includes(c.to)
         );
         prevLayerNodes.forEach((p) => {
-          const pInternal = p as unknown as NodeInternals;
+          const pInternal = (p as unknown) as NodeInternals;
           pInternal.connections.out = pInternal.connections.out.filter(
-            (c) => !oldLayerNodes.includes(c.to),
+            (c) => !oldLayerNodes.includes(c.to)
           );
         });
         nextLayerNodes.forEach((nxt) => {
-          const nxtInternal = nxt as unknown as NodeInternals;
+          const nxtInternal = (nxt as unknown) as NodeInternals;
           nxtInternal.connections.in = nxtInternal.connections.in.filter(
-            (c) => !oldLayerNodes.includes(c.from),
+            (c) => !oldLayerNodes.includes(c.from)
           );
         });
         oldLayerNodes.forEach((n) => {
-          const nInternal = n as unknown as NodeInternals;
+          const nInternal = (n as unknown) as NodeInternals;
           nInternal.connections.in = [];
           nInternal.connections.out = [];
         });
@@ -2260,7 +2266,7 @@ export function importFromONNX(onnx: OnnxModel): Network {
         network.nodes = [...inputNodes, ...newHiddenNodes, ...outputNodes];
         gruLayer.input({ output: { nodes: prevLayerNodes } });
         gruLayer.output.nodes.forEach((outNode: NeatapticNode) => {
-          const outNodeInternal = outNode as unknown as NodeInternals & {
+          const outNodeInternal = (outNode as unknown) as NodeInternals & {
             connect: (to: NeatapticNode) => Connection;
           };
           nextLayerNodes.forEach((nxt) => outNodeInternal.connect(nxt));
@@ -2275,13 +2281,13 @@ export function importFromONNX(onnx: OnnxModel): Network {
           for (let r = 0; r < unit; r++) {
             const rowOffset = g * unit + r;
             const neuron = groupMap[gateOrder[g]][r];
-            const neuronInternal = neuron as unknown as NodeInternals;
+            const neuronInternal = (neuron as unknown) as NodeInternals;
             neuronInternal.bias = B.float_data[rowOffset];
             for (let c = 0; c < prevSize; c++) {
               const weight = W.float_data[rowOffset * prevSize + c];
               const src = prevLayerNodes[c];
               const conn = neuronInternal.connections.in.find(
-                (cc) => cc.from === src,
+                (cc) => cc.from === src
               );
               if (conn) conn.weight = weight;
             }

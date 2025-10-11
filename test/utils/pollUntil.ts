@@ -17,7 +17,7 @@ export class PollUntilAbortError extends Error {
 
 export const pollUntil = async <T>(
   predicate: () => T | Promise<T>,
-  { intervalMs = 25, timeoutMs = 2000, signal }: PollUntilOptions = {},
+  { intervalMs = 25, timeoutMs = 2000, signal }: PollUntilOptions = {}
 ): Promise<T> => {
   if (signal?.aborted) {
     throw new PollUntilAbortError('Operation aborted before start');
@@ -41,9 +41,9 @@ export const pollUntil = async <T>(
           cleanup();
           return resolve(result);
         }
-      } catch (err) {
+      } catch (error: unknown) {
         cleanup();
-        return reject(err);
+        return reject(error);
       }
 
       if (performance.now() - start >= timeoutMs) {

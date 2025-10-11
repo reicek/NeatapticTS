@@ -28,7 +28,7 @@ export interface SpeciesLastStats {
  * @template TOptions - Specialised speciation options passed to the helper.
  */
 export interface SpeciationHarnessContext<
-  TOptions extends SpeciationOptions = SpeciationOptions,
+  TOptions extends SpeciationOptions = SpeciationOptions
 > extends NeatLike {
   population: GenomeDetailed[];
   _species: SpeciesLike[];
@@ -44,7 +44,7 @@ export interface SpeciationHarnessContext<
   _getRNG?: () => () => number;
   _compatibilityDistance: (
     genomeA: GenomeDetailed,
-    genomeB: GenomeDetailed,
+    genomeB: GenomeDetailed
   ) => number;
   _fallbackInnov: (connection: ConnectionLike) => number;
   _structuralEntropy: (genome: GenomeDetailed) => number;

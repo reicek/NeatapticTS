@@ -49,7 +49,7 @@ export interface IDashboardManager {
     result: IMazeRunResult | undefined,
     network: INetwork | null,
     generation: number,
-    neatInstance?: NeatInstance, // optional Neat instance for advanced telemetry display
+    neatInstance?: NeatInstance // optional Neat instance for advanced telemetry display
   ): void;
 
   /** Optional log function for dashboard messages */
@@ -446,7 +446,7 @@ export type FitnessEvaluatorFn = (
    *      - Optional helpers: network.clear(), network.clone(), network.propagate() may exist --
    *        if used, operate on a clone or restore state to avoid mutating the original.
    */
-  context: IFitnessEvaluationContext,
+  context: IFitnessEvaluationContext
 ) => number;
 
 /**
@@ -838,7 +838,7 @@ export interface INodeConnectionRegistry {
  */
 export type ActivationFunctionWithName = ((
   input: number,
-  derivate?: boolean,
+  derivate?: boolean
 ) => number) & {
   name?: string;
   originalName?: string;
@@ -991,7 +991,7 @@ export interface INetwork {
     rate: number,
     momentum: number,
     update: boolean,
-    target: number[],
+    target: number[]
   ) => void;
 
   /**
@@ -1154,8 +1154,7 @@ export interface IEvolutionFunctionResult {
 export type NeatInstance = import('../../../src/neat').default;
 
 /** Type for Network class instance from neataptic library */
-export type NetworkInstance =
-  import('../../../src/architecture/network').default;
+export type NetworkInstance = import('../../../src/architecture/network').default;
 
 /** Encoded maze representation with cell values */
 export interface EncodedMaze {
@@ -1401,7 +1400,7 @@ export interface EvolutionLoopHelpers {
   collectHiddenToOutputConns: (
     hiddenNode: NetworkNode,
     nodes: NetworkNode[],
-    outputCount: number,
+    outputCount: number
   ) => NetworkConnection[];
 }
 

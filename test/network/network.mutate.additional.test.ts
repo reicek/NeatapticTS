@@ -38,12 +38,12 @@ describe('Network.mutateImpl additional operators', () => {
       // Arrange
       const net = new Network(2, 2, { seed: 22, enforceAcyclic: false });
       const before = net.connections.filter(
-        (c) => net.nodes.indexOf(c.from) > net.nodes.indexOf(c.to),
+        (c) => net.nodes.indexOf(c.from) > net.nodes.indexOf(c.to)
       ).length;
       // Act
       mutateImpl.call(net, mutation.ADD_BACK_CONN);
       const after = net.connections.filter(
-        (c) => net.nodes.indexOf(c.from) > net.nodes.indexOf(c.to),
+        (c) => net.nodes.indexOf(c.from) > net.nodes.indexOf(c.to)
       ).length;
       // Assert
       expect(after > before).toBe(true);
@@ -72,12 +72,12 @@ describe('Network.mutateImpl additional operators', () => {
         if (!h.isProjectingTo(net.nodes[0])) net.connect(h, net.nodes[0]);
       }
       const before = net.connections.filter(
-        (c) => net.nodes.indexOf(c.from) > net.nodes.indexOf(c.to),
+        (c) => net.nodes.indexOf(c.from) > net.nodes.indexOf(c.to)
       ).length;
       // Act
       mutateImpl.call(net, mutation.SUB_BACK_CONN);
       const after = net.connections.filter(
-        (c) => net.nodes.indexOf(c.from) > net.nodes.indexOf(c.to),
+        (c) => net.nodes.indexOf(c.from) > net.nodes.indexOf(c.to)
       ).length;
       // Assert
       expect(after < before).toBe(true);
@@ -111,7 +111,7 @@ describe('Network.mutateImpl additional operators', () => {
       mutateImpl.call(net, mutation.BATCH_NORM);
       const tagged = net.nodes.some(
         (node) =>
-          node.type === 'hidden' && Reflect.get(node, '_batchNorm') === true,
+          node.type === 'hidden' && Reflect.get(node, '_batchNorm') === true
       );
       // Assert
       expect(tagged).toBe(true);

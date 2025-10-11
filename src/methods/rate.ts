@@ -49,12 +49,12 @@ export default class Rate {
    */
   static step(
     gamma: number = 0.9,
-    stepSize: number = 100,
+    stepSize: number = 100
   ): (baseRate: number, iteration: number) => number {
     const func = (baseRate: number, iteration: number): number => {
       return Math.max(
         0,
-        baseRate * Math.pow(gamma, Math.floor(iteration / stepSize)),
+        baseRate * Math.pow(gamma, Math.floor(iteration / stepSize))
       );
     };
 
@@ -76,7 +76,7 @@ export default class Rate {
    * @param iteration The current training iteration.
    */
   static exp(
-    gamma: number = 0.999,
+    gamma: number = 0.999
   ): (baseRate: number, iteration: number) => number {
     const func = (baseRate: number, iteration: number): number => {
       return baseRate * Math.pow(gamma, iteration);
@@ -102,7 +102,7 @@ export default class Rate {
    */
   static inv(
     gamma: number = 0.001,
-    power: number = 2,
+    power: number = 2
   ): (baseRate: number, iteration: number) => number {
     const func = (baseRate: number, iteration: number): number => {
       // Use formula expected by tests: baseRate / (1 + gamma * Math.pow(iteration, power))
@@ -132,7 +132,7 @@ export default class Rate {
    */
   static cosineAnnealing(
     period: number = 1000,
-    minRate: number = 0,
+    minRate: number = 0
   ): (baseRate: number, iteration: number) => number {
     const func = (baseRate: number, iteration: number): number => {
       // Calculate the current position within the cycle
@@ -156,7 +156,7 @@ export default class Rate {
   static cosineAnnealingWarmRestarts(
     initialPeriod: number = 1000,
     minRate: number = 0,
-    tMult: number = 1,
+    tMult: number = 1
   ): (baseRate: number, iteration: number) => number {
     let period = initialPeriod;
     let cycleStart = 0;
@@ -186,12 +186,12 @@ export default class Rate {
   static linearWarmupDecay(
     totalSteps: number,
     warmupSteps?: number,
-    endRate: number = 0,
+    endRate: number = 0
   ): (baseRate: number, iteration: number) => number {
     if (totalSteps <= 0) throw new Error('totalSteps must be > 0');
     const warm = Math.min(
       warmupSteps ?? Math.max(1, Math.floor(totalSteps * 0.1)),
-      totalSteps - 1,
+      totalSteps - 1
     );
     return (baseRate: number, iteration: number): number => {
       if (iteration <= warm) {
@@ -234,7 +234,7 @@ export default class Rate {
     return (
       baseRate: number,
       iteration: number,
-      lastError?: number,
+      lastError?: number
     ): number => {
       if (currentRate === undefined) currentRate = baseRate;
       if (lastError !== undefined) {

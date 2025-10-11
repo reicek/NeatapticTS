@@ -19,7 +19,7 @@ describe('Lineage inbreeding & depth metrics', () => {
         lineageTracking: true,
         telemetry: { enabled: true, logEvery: 1 },
         mutation: [], // keep structures stable
-      },
+      }
     );
     // Need two generations: second telemetry reflects first reproduction's inbreeding
     await neat.evolve();
@@ -49,7 +49,7 @@ describe('Lineage inbreeding & depth metrics', () => {
         diversityMetrics: { enabled: true },
         telemetry: { enabled: true, logEvery: 1 },
         mutation: [],
-      },
+      }
     );
     for (let generationIndex = 0; generationIndex < 4; generationIndex += 1) {
       await neat.evolve();

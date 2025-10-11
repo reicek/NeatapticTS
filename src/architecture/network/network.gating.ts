@@ -59,7 +59,7 @@ interface NetworkGatingProps {
 export function gate(this: Network, node: Node, connection: Connection) {
   if (!this.nodes.includes(node))
     throw new Error(
-      'Gating node must be part of the network to gate a connection!',
+      'Gating node must be part of the network to gate a connection!'
     );
   if (connection.gater) {
     if (config.warnings) console.warn('Connection is already gated. Skipping.');
@@ -192,7 +192,7 @@ export function removeNode(this: Network, node: Node) {
 
   // Final removal & cache invalidation (indices may be used by fast lookup structures elsewhere).
   this.nodes.splice(idx, 1);
-  (this as unknown as NetworkGatingProps)._nodeIndexDirty = true;
+  ((this as unknown) as NetworkGatingProps)._nodeIndexDirty = true;
 }
 
 // Only functions exported; keep module shape predictable for tree-shaking / documentation tooling.

@@ -12,7 +12,7 @@ describe('Adaptive re-enable probability', () => {
         seed: 500,
         speciation: false,
         reenableProb: 0.3,
-      },
+      }
     );
     await neat.evaluate();
     for (let iterationIndex = 0; iterationIndex < 5; iterationIndex += 1) {

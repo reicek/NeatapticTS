@@ -17,11 +17,8 @@
 
 import type { Neat, Network } from '../../../../src/neataptic';
 import { methods } from '../../../../src/neataptic';
-import {
-  EngineState,
-  initialiseTelemetryScratch,
-  type RngCacheParameters,
-} from './engineState';
+import type { RngCacheParameters } from './engineState';
+import { EngineState, initialiseTelemetryScratch } from './engineState';
 import { drawFastRandom, readHighResolutionTime } from './rngAndTiming';
 import { sampleArray } from './sampling';
 
@@ -73,7 +70,7 @@ export const buildLamarckianTrainingSet = (
     AUGMENT_PROGRESS_DELTA_RANGE: number;
     AUGMENT_PROGRESS_DELTA_HALF: number;
     RNG_PARAMETERS: RngCacheParameters;
-  },
+  }
 ): { input: number[]; output: number[] }[] => {
   // Step 1: Prepare the result container (small, bounded dataset).
   const trainingSet: { input: number[]; output: number[] }[] = [];
@@ -95,7 +92,7 @@ export const buildLamarckianTrainingSet = (
     openE: number,
     openS: number,
     openW: number,
-    progressDelta: number,
+    progressDelta: number
   ) => [compassScalar, openN, openE, openS, openW, progressDelta];
 
   // Local helper to append a case (keeps call sites terse).
@@ -142,9 +139,9 @@ export const buildLamarckianTrainingSet = (
       0,
       constants.PROGRESS_MIN_SIGNAL,
       0,
-      constants.PROGRESS_MILD_REGRESS,
+      constants.PROGRESS_MILD_REGRESS
     ),
-    2,
+    2
   );
 
   // Step 4: Mild augmentation (jitter openness & progress).
@@ -181,8 +178,8 @@ export const buildLamarckianTrainingSet = (
           caseEntry.input[5] +
             (drawFastRandom(state, randomParameters) *
               constants.AUGMENT_PROGRESS_DELTA_RANGE -
-              constants.AUGMENT_PROGRESS_DELTA_HALF),
-        ),
+              constants.AUGMENT_PROGRESS_DELTA_HALF)
+        )
       );
     }
   }
@@ -228,7 +225,7 @@ export const adjustOutputBiasesAfterTraining = (
   scratchNodeIdx: Int32Array,
   // Type assertion: helper function working with dynamic node arrays
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  getNodeIndicesByType: (nodes: any[], nodeType: string) => number,
+  getNodeIndicesByType: (nodes: any[], nodeType: string) => number
 ): void => {
   try {
     // Step 1: Early exit when no network or no nodes exist.
@@ -241,7 +238,7 @@ export const adjustOutputBiasesAfterTraining = (
     // Step 2: Ensure pooled scratch buffer capacity via shared helper (geometric growth).
     const biasScratch = initialiseTelemetryScratch(
       { biasCount: outputNodeCount },
-      state,
+      state
     ).biasScratch;
 
     // Step 3: Welford one-pass accumulate into local variables while writing raw biases into scratch.
@@ -325,7 +322,7 @@ export const pretrainPopulationWarmStart = (
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   applyCompassWarmStart: (network: any) => void,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  centerOutputBiases: (network: any) => void,
+  centerOutputBiases: (network: any) => void
 ): void => {
   // Step 1: Defensive validation & fast exit.
   if (!neat) return;
@@ -344,7 +341,7 @@ export const pretrainPopulationWarmStart = (
       const iterations = Math.min(
         constants.PRETRAIN_MAX_ITER,
         constants.PRETRAIN_BASE_ITER +
-          Math.floor((lamarckianTrainingSet?.length || 0) / 2),
+          Math.floor((lamarckianTrainingSet?.length || 0) / 2)
       );
 
       // Delegate to the network's own training routine; options are intentionally conservative.
@@ -438,7 +435,7 @@ export const applyLamarckianTraining = (
   },
   // Type assertion: helper function working with networks
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  adjustOutputBiases: (network: any) => void,
+  adjustOutputBiases: (network: any) => void
 ): number => {
   // Step 1: Validate inputs & early exits.
   if (
@@ -507,8 +504,8 @@ export const applyLamarckianTraining = (
     const meanGrad = gradientNormSum / gradientNormSamples;
     safeWrite(
       `[GRAD] gen=${completedGenerations} meanGradNorm=${meanGrad.toFixed(
-        4,
-      )} samples=${gradientNormSamples}\n`,
+        4
+      )} samples=${gradientNormSamples}\n`
     );
   }
 
@@ -554,7 +551,7 @@ export const warmStartPopulationIfNeeded = (
   state: EngineState,
   // Type assertion: helper function for population pretraining
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  pretrainPopulation: (neat: any, trainingSet: any[]) => void,
+  pretrainPopulation: (neat: any, trainingSet: any[]) => void
 ): void => {
   try {
     // Step 1: Fast-guard invalid inputs – nothing to do when no data or driver.
@@ -572,7 +569,7 @@ export const warmStartPopulationIfNeeded = (
     const nextPowerOfTwo = (n: number) =>
       1 << Math.ceil(Math.log2(Math.max(1, n)));
     const targetCapacity = nextPowerOfTwo(
-      Math.max(8, configuredPopulationSize),
+      Math.max(8, configuredPopulationSize)
     );
 
     // Ensure a plain-array pooled sample buffer exists and has the target capacity.
@@ -599,7 +596,7 @@ export const warmStartPopulationIfNeeded = (
       ) {
         const numericSize = Math.max(
           16,
-          nextPowerOfTwo(Math.min(256, configuredPopulationSize)),
+          nextPowerOfTwo(Math.min(256, configuredPopulationSize))
         );
         pooledNumericScratch = new Float64Array(numericSize);
         scratchBundle.exps = pooledNumericScratch;

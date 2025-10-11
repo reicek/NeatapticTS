@@ -17,7 +17,7 @@ type SpeciationPidContext = SpeciationHarnessContext<SpeciationPidOptions>;
 const buildPidContext = (
   population: GenomeDetailed[],
   overrides: Partial<SpeciationPidContext['options']>,
-  compatIntegral: number,
+  compatIntegral: number
 ): SpeciationPidContext => {
   const defaultOptions: SpeciationPidContext['options'] = {
     speciation: true,
@@ -46,7 +46,7 @@ const buildPidContext = (
     _getRNG: () => () => 0.5,
     _compatibilityDistance: (
       genomeA: GenomeDetailed,
-      genomeB: GenomeDetailed,
+      genomeB: GenomeDetailed
     ) => {
       void genomeA;
       void genomeB;

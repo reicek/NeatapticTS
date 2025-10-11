@@ -27,7 +27,7 @@ describe('Network.evolveNetwork', () => {
       ]; // wrong input length
       // Act / Assert
       await expect(
-        evolveNetwork.call(net, invalidTrainingSet, { iterations: 1 }),
+        evolveNetwork.call(net, invalidTrainingSet, { iterations: 1 })
       ).rejects.toThrow(/Dataset is invalid/);
     });
   });
@@ -39,7 +39,7 @@ describe('Network.evolveNetwork', () => {
       const trainingSet: TrainingSet = [{ input: [0.1], output: [0.2] }];
       // Act / Assert
       await expect(evolveNetwork.call(net, trainingSet, {})).rejects.toThrow(
-        /At least one stopping condition/,
+        /At least one stopping condition/
       );
     });
   });
@@ -81,12 +81,12 @@ describe('Network.evolveNetwork', () => {
       // Step 1: Override worker discovery hooks with a subclass that rejects to force fallback.
       const originalWorkers = Multi.workers;
       class DisabledWorkers extends Workers {
-        static override async getNodeTestWorker(): Promise<never> {
-          throw new Error('worker disabled for test');
+        static getNodeTestWorker(): Promise<never> {
+          return Promise.reject(new Error('worker disabled for test'));
         }
 
-        static override async getBrowserTestWorker(): Promise<never> {
-          throw new Error('worker disabled for test');
+        static getBrowserTestWorker(): Promise<never> {
+          return Promise.reject(new Error('worker disabled for test'));
         }
       }
       Multi.workers = DisabledWorkers;

@@ -6,7 +6,7 @@ type FitnessSharingContext = {
   options: { sharingSigma?: number } & Record<string, unknown>;
   _compatibilityDistance: (
     genomeA: GenomeDetailed,
-    genomeB: GenomeDetailed,
+    genomeB: GenomeDetailed
   ) => number;
 };
 
@@ -31,7 +31,7 @@ describe('speciation - fitness sharing', () => {
       options: { sharingSigma: 0 },
       _compatibilityDistance: (
         genomeA: GenomeDetailed,
-        genomeB: GenomeDetailed,
+        genomeB: GenomeDetailed
       ) => {
         void genomeA;
         void genomeB;

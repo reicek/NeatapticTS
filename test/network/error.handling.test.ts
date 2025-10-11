@@ -10,7 +10,7 @@ const testWithTimeoutAndRetry = (
   name: string,
   fn: (done: DoneCallbackWithFail) => void,
   timeoutMs: number = 5000,
-  retries: number = 3,
+  retries: number = 3
 ): void => {
   test(name, (done: jest.DoneCallback) => {
     let attempts = 0;
@@ -27,8 +27,8 @@ const testWithTimeoutAndRetry = (
             clearTimeout(timer);
             done(
               new Error(
-                `Test timed out after ${retries} attempts (${timeoutMs}ms each)`,
-              ),
+                `Test timed out after ${retries} attempts (${timeoutMs}ms each)`
+              )
             );
           }
         }
@@ -63,7 +63,7 @@ const testWithTimeoutAndRetry = (
             done(
               lastError instanceof Error
                 ? lastError
-                : new Error(String(lastError)),
+                : new Error(String(lastError))
             );
           }
         }
@@ -200,7 +200,7 @@ describe('Network Error Handling & Scenarios', () => {
         let threw = false;
         try {
           net.train([{ input: [1], output: [1] }], { iterations: 1 });
-        } catch (error) {
+        } catch (error: unknown) {
           threw = true;
           void error;
         }
@@ -220,7 +220,7 @@ describe('Network Error Handling & Scenarios', () => {
         let threw = false;
         try {
           net.train([{ input: [1, 2], output: [1, 2] }], { iterations: 1 });
-        } catch (error) {
+        } catch (error: unknown) {
           threw = true;
           void error;
         }
@@ -243,7 +243,7 @@ describe('Network Error Handling & Scenarios', () => {
             batchSize: 2,
             iterations: 1,
           });
-        } catch (error) {
+        } catch (error: unknown) {
           threw = true;
           void error;
         }
@@ -263,7 +263,7 @@ describe('Network Error Handling & Scenarios', () => {
         let threw = false;
         try {
           net.train([{ input: [1, 2], output: [1] }], {});
-        } catch (error) {
+        } catch (error: unknown) {
           threw = true;
           void error;
         }
@@ -293,7 +293,7 @@ describe('Network Error Handling & Scenarios', () => {
         let threw = false;
         try {
           net.train([{ input: [1, 2], output: [1] }], { iterations: 1 }); // No rate provided
-        } catch (error) {
+        } catch (error: unknown) {
           threw = true;
           void error;
         }
@@ -302,7 +302,7 @@ describe('Network Error Handling & Scenarios', () => {
         } else {
           const calls = warnSpy.mock.calls;
           const found = calls.some(
-            (call) => call[0] && call[0].includes('Missing `rate` option'),
+            (call) => call[0] && call[0].includes('Missing `rate` option')
           );
           expect(found).toBe(true);
         }
@@ -323,16 +323,16 @@ describe('Network Error Handling & Scenarios', () => {
           // Act
           try {
             net.train([{ input: [1, 2], output: [1] }], {});
-          } catch (error) {
+          } catch (error: unknown) {
             void error;
           }
           // Assert (synchronously)
           expect(warnSpy).toHaveBeenCalledWith(
-            expect.stringContaining('Missing `iterations` or `error` option'),
+            expect.stringContaining('Missing `iterations` or `error` option')
           );
           warnSpy.mockRestore();
           done();
-        },
+        }
       );
     });
     describe('Scenario: missing iterations option', () => {
@@ -346,12 +346,12 @@ describe('Network Error Handling & Scenarios', () => {
         // Act
         try {
           net.train([{ input: [1, 2], output: [1] }], { error: 0.1 });
-        } catch (error) {
+        } catch (error: unknown) {
           void error;
         }
         // Assert (synchronously)
         expect(warnSpy).toHaveBeenCalledWith(
-          expect.stringContaining('Missing `iterations` option'),
+          expect.stringContaining('Missing `iterations` option')
         );
         warnSpy.mockRestore();
         done();
@@ -423,8 +423,8 @@ describe('Network Error Handling & Scenarios', () => {
           expect(act).not.toThrow();
           expect(warnSpy).toHaveBeenCalledWith(
             expect.stringContaining(
-              'Attempted to ungate a connection not in the gates list.',
-            ),
+              'Attempted to ungate a connection not in the gates list.'
+            )
           );
           warnSpy.mockRestore();
           done();
@@ -503,7 +503,7 @@ describe('Network Error Handling & Scenarios', () => {
           net.train([{ input: [1, 2], output: [1] }], {
             iterations: 1,
             cost: 'notARealCostFn',
-          }),
+          })
         ).toThrow();
       });
     });
@@ -521,7 +521,7 @@ describe('Network Error Handling & Scenarios', () => {
         const net = new Network(2, 1);
         net.mutate(methods.mutation.ADD_NODE);
         const hidden = net.nodes.find(
-          (candidateNode) => candidateNode.type === 'hidden',
+          (candidateNode) => candidateNode.type === 'hidden'
         );
         if (!hidden) {
           throw new Error('Expected hidden node for activation mutation test');
@@ -530,7 +530,7 @@ describe('Network Error Handling & Scenarios', () => {
         // Act
         try {
           net.activate([1, 2]);
-        } catch (error) {
+        } catch (error: unknown) {
           void error;
         }
         // Assert
@@ -570,12 +570,12 @@ describe('Network Error Handling & Scenarios', () => {
                 throw new Error('Test error');
               }
               return originalActivate(input, training, maxActivationDepth);
-            },
+            }
           );
         // Act
         try {
           net.train(goodData, { iterations: 10, error: 0.01, rate: 0.3 });
-        } catch (error) {
+        } catch (error: unknown) {
           void error;
         }
         // Assert
@@ -601,7 +601,7 @@ describe('Network Error Handling & Scenarios', () => {
                 throw new Error('Test error');
               }
               return originalActivate(input, training, maxActivationDepth);
-            },
+            }
           );
         // Act & Assert
         expect(() => {

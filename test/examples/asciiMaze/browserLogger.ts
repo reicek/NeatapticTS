@@ -237,7 +237,7 @@ class AnsiHtmlConverter {
     if (this.#lastProcessedIndex >= stopExclusive) return;
     const rawChunk = this.#input.substring(
       this.#lastProcessedIndex,
-      stopExclusive,
+      stopExclusive
     );
     if (!rawChunk) return;
     // Fast path: no newline present.
@@ -309,7 +309,7 @@ class AnsiHtmlConverter {
           this.#hasActiveStyle = Boolean(
             this.#currentColor ||
               this.#currentBackground ||
-              this.#currentFontWeight,
+              this.#currentFontWeight
           );
           break;
         }
@@ -352,14 +352,14 @@ class AnsiHtmlConverter {
         case ansiCode === SGR_FG_DEFAULT: {
           this.#currentColor = undefined;
           this.#hasActiveStyle = Boolean(
-            this.#currentBackground || this.#currentFontWeight,
+            this.#currentBackground || this.#currentFontWeight
           );
           break;
         }
         case ansiCode === SGR_BG_DEFAULT: {
           this.#currentBackground = undefined;
           this.#hasActiveStyle = Boolean(
-            this.#currentColor || this.#currentFontWeight,
+            this.#currentColor || this.#currentFontWeight
           );
           break;
         }
@@ -372,10 +372,7 @@ class AnsiHtmlConverter {
 
   /** Reset style-related state to defaults (SGR 0 or empty parameter list). */
   #resetStyles(): void {
-    this.#currentColor =
-      this.#currentBackground =
-      this.#currentFontWeight =
-        undefined;
+    this.#currentColor = this.#currentBackground = this.#currentFontWeight = undefined;
     this.#hasActiveStyle = false;
     this.#currentStyleSpanStart = '';
   }
@@ -442,7 +439,7 @@ interface BrowserLogOptions {
  * @returns logger function compatible with the demo's forceLog API
  */
 export const createBrowserLogger = (
-  container?: HTMLElement,
+  container?: HTMLElement
 ): ((...args: unknown[]) => void) => {
   /**
    * Create a browser logger function that appends formatted, ANSI->HTML

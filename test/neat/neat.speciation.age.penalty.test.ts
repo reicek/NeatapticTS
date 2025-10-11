@@ -43,7 +43,7 @@ const buildAgePenaltyContext = (): AgePenaltyContext => {
     _getRNG: () => () => 0.5,
     _compatibilityDistance: (
       genomeA: GenomeDetailed,
-      genomeB: GenomeDetailed,
+      genomeB: GenomeDetailed
     ) => {
       void genomeA;
       void genomeB;

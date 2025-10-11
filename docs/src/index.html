@@ -342,7 +342,7 @@ Replaces the current population with the imported one.</p>
 <ul>
 <li><code>state</code> - Numeric RNG state.</li>
 </ul>
-<h4 id="importstate">importState</h4><p><code>(bundle: any, fitness: (n: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default) =&gt; number) =&gt; import(&quot;D:/code-practice/NeatapticTS/src/neat&quot;).default</code></p>
+<h4 id="importstate">importState</h4><p><code>(bundle: any, fitness: (n: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default) =&gt; number) =&gt; Promise&lt;import(&quot;D:/code-practice/NeatapticTS/src/neat&quot;).default&gt;</code></p>
 <p>Convenience: restore full evolutionary state previously produced by exportState().</p>
 <p>Parameters:</p>
 <ul>
@@ -830,7 +830,7 @@ when using the default <code>ALL_TO_ALL</code> connection method via <code>layer
 </ul>
 <p>Returns: A new Layer instance configured as a dense layer.</p>
 <h4 id="derivative">derivative</h4><p>The derivative of the activation function evaluated at the node&#39;s current state. Used in backpropagation.</p>
-<h4 id="deserialize">deserialize</h4><p><code>(data: unknown[] | [number[], number[], string[], { from: number; to: number; weight: number; gater: number | null; }[], number, number], inputSize: number | undefined, outputSize: number | undefined) =&gt; import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default</code></p>
+<h4 id="deserialize">deserialize</h4><p><code>(data: [number[], number[], string[], { from: number; to: number; weight: number; gater: number | null; }[], number, number] | unknown[], inputSize: number | undefined, outputSize: number | undefined) =&gt; import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default</code></p>
 <p>Creates a Network instance from serialized data produced by <code>serialize()</code>.
 Reconstructs the network structure and state based on the provided arrays.</p>
 <p>Parameters:</p>
@@ -1171,7 +1171,7 @@ Replaces the current population with the imported one.</p>
 <ul>
 <li><code>state</code> - Numeric RNG state.</li>
 </ul>
-<h4 id="importstate">importState</h4><p><code>(bundle: any, fitness: (n: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default) =&gt; number) =&gt; import(&quot;D:/code-practice/NeatapticTS/src/neat&quot;).default</code></p>
+<h4 id="importstate">importState</h4><p><code>(bundle: any, fitness: (n: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default) =&gt; number) =&gt; Promise&lt;import(&quot;D:/code-practice/NeatapticTS/src/neat&quot;).default&gt;</code></p>
 <p>Convenience: restore full evolutionary state previously produced by exportState().</p>
 <p>Parameters:</p>
 <ul>
@@ -1287,13 +1287,13 @@ concatenates the states of all memory blocks.</p>
 <p>Applies mutations to the population based on the mutation rate and amount.
 Each genome is mutated using the selected mutation methods.
 Slightly increases the chance of ADD_CONN mutation for more connectivity.</p>
-<h4 id="mutate">mutate</h4><p><code>(method: string | { [key: string]: unknown; name?: string | undefined; type?: string | undefined; identity?: string | undefined; } | { [key: string]: unknown; name?: string | undefined; type?: string | undefined; identity?: string | undefined; }[] | undefined) =&gt; void</code></p>
+<h4 id="mutate">mutate</h4><p><code>(method: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network/network.mutate&quot;).MutationMethod) =&gt; void</code></p>
 <p>Mutates the network&#39;s structure or parameters according to the specified method.
 This is a core operation for neuro-evolutionary algorithms (like NEAT).
 The method argument should be one of the mutation types defined in <code>methods.mutation</code>.</p>
 <p>Parameters:</p>
 <ul>
-<li>`` - - The mutation method to apply (e.g., <code>mutation.ADD_NODE</code>, <code>mutation.MOD_WEIGHT</code>).
+<li><code>method</code> - - The mutation method to apply (e.g., <code>mutation.ADD_NODE</code>, <code>mutation.MOD_WEIGHT</code>).
 Some methods might have associated parameters (e.g., <code>MOD_WEIGHT</code> uses <code>min</code>, <code>max</code>).</li>
 </ul>
 <h4 id="mutate">mutate</h4><p><code>(method: unknown) =&gt; void</code></p>
@@ -1500,7 +1500,7 @@ Ensures that the mutation respects the maximum nodes, connections, and gates.</p
 <li><code>genome</code> - - The genome to mutate.</li>
 </ul>
 <p>Returns: The selected mutation method or null if no valid method is available.</p>
-<h4 id="serialize">serialize</h4><p><code>() =&gt; unknown[]</code></p>
+<h4 id="serialize">serialize</h4><p><code>() =&gt; [number[], number[], string[], import(&quot;D:/code-practice/NeatapticTS/src/architecture/network/network.serialize&quot;).SerializedConnection[], number, number]</code></p>
 <p>Lightweight tuple serializer delegating to network.serialize.ts</p>
 <h4 id="set">set</h4><p><code>(values: { bias?: number | undefined; squash?: ((x: number, derivate?: boolean | undefined) =&gt; number) | undefined; }) =&gt; void</code></p>
 <p>Sets specified properties (e.g., bias, squash function) for all nodes in the network.

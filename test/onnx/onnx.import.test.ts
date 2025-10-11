@@ -116,11 +116,11 @@ describe('ONNX Import', () => {
   // Negative/error scenarios
   describe('Error and edge scenarios', () => {
     it('throws if ONNX input is null', () => {
-      const throws = () => importFromONNX(null as unknown as OnnxModel);
+      const throws = () => importFromONNX((null as unknown) as OnnxModel);
       expect(throws).toThrow();
     });
     it('throws if ONNX input is undefined', () => {
-      const throws = () => importFromONNX(undefined as unknown as OnnxModel);
+      const throws = () => importFromONNX((undefined as unknown) as OnnxModel);
       expect(throws).toThrow();
     });
   });

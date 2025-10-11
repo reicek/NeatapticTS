@@ -887,7 +887,7 @@ Returns: A new Network instance representing the offspring.
 
 #### deserialize
 
-`(data: unknown[] | [number[], number[], string[], { from: number; to: number; weight: number; gater: number | null; }[], number, number], inputSize: number | undefined, outputSize: number | undefined) => import("D:/code-practice/NeatapticTS/src/architecture/network").default`
+`(data: [number[], number[], string[], { from: number; to: number; weight: number; gater: number | null; }[], number, number] | unknown[], inputSize: number | undefined, outputSize: number | undefined) => import("D:/code-practice/NeatapticTS/src/architecture/network").default`
 
 Creates a Network instance from serialized data produced by `serialize()`.
 Reconstructs the network structure and state based on the provided arrays.
@@ -976,15 +976,15 @@ Consolidated training stats snapshot.
 
 #### mutate
 
-`(method: string | { [key: string]: unknown; name?: string | undefined; type?: string | undefined; identity?: string | undefined; } | { [key: string]: unknown; name?: string | undefined; type?: string | undefined; identity?: string | undefined; }[] | undefined) => void`
+`(method: import("D:/code-practice/NeatapticTS/src/architecture/network/network.mutate").MutationMethod) => void`
 
 Mutates the network's structure or parameters according to the specified method.
 This is a core operation for neuro-evolutionary algorithms (like NEAT).
 The method argument should be one of the mutation types defined in `methods.mutation`.
 
 Parameters:
-- `` - - The mutation method to apply (e.g., `mutation.ADD_NODE`, `mutation.MOD_WEIGHT`).
-Some methods might have associated parameters (e.g., `MOD_WEIGHT` uses `min`, `max`).
+- `method` - - The mutation method to apply (e.g., `mutation.ADD_NODE`, `mutation.MOD_WEIGHT`).
+  Some methods might have associated parameters (e.g., `MOD_WEIGHT` uses `min`, `max`).
 
 #### noTraceActivate
 
@@ -1071,7 +1071,7 @@ Should be called after training to ensure inference is unaffected by previous dr
 
 #### serialize
 
-`() => unknown[]`
+`() => [number[], number[], string[], import("D:/code-practice/NeatapticTS/src/architecture/network/network.serialize").SerializedConnection[], number, number]`
 
 Lightweight tuple serializer delegating to network.serialize.ts
 

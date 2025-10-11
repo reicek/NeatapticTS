@@ -20,7 +20,7 @@ describe('training.optimizer', () => {
       let hasAccumulator = false;
       beforeAll(() => {
         const net = new Network(1, 1);
-        const conn = net.connections[0] as unknown as {
+        const conn = (net.connections[0] as unknown) as {
           weight: number;
           firstMoment?: number;
           secondMoment?: number;

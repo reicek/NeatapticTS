@@ -10,7 +10,7 @@ import type {
 // Each test single expectation.
 
 const getLatestTelemetryEntry = (
-  neatInstance: Neat,
+  neatInstance: Neat
 ): TelemetryEntry | undefined => {
   const telemetryEntries = neatInstance.getTelemetry() as TelemetryEntry[];
   return telemetryEntries.at(-1);
@@ -25,7 +25,7 @@ const requireLatestTelemetryEntry = (neatInstance: Neat): TelemetryEntry => {
 };
 
 const requireLatestSpeciesHistoryEntry = (
-  entries: SpeciesHistoryEntry[],
+  entries: SpeciesHistoryEntry[]
 ): SpeciesHistoryEntry => {
   const latestEntry = entries.at(-1);
   if (!latestEntry) {
@@ -35,12 +35,12 @@ const requireLatestSpeciesHistoryEntry = (
 };
 
 const speciesStatHasInnovationRange = (
-  stat: SpeciesHistoryStat,
+  stat: SpeciesHistoryStat
 ): stat is SpeciesHistoryStatExtended =>
   (stat as SpeciesHistoryStatExtended).innovationRange !== undefined;
 
 const speciesStatHasEnabledRatio = (
-  stat: SpeciesHistoryStat,
+  stat: SpeciesHistoryStat
 ): stat is SpeciesHistoryStatExtended =>
   (stat as SpeciesHistoryStatExtended).enabledRatio !== undefined;
 
@@ -56,7 +56,7 @@ describe('advanced telemetry & archives', () => {
           seed: 501,
           multiObjective: { enabled: true },
           telemetry: { enabled: true },
-        },
+        }
       );
       for (let generationIndex = 0; generationIndex < 2; generationIndex += 1) {
         await neat.evolve();
@@ -76,14 +76,14 @@ describe('advanced telemetry & archives', () => {
           seed: 502,
           speciation: true,
           speciesAllocation: { extendedHistory: true },
-        },
+        }
       );
       await neat.evaluate();
       await neat.evolve();
       const historyEntries = neat.getSpeciesHistory();
       const latestEntry = requireLatestSpeciesHistoryEntry(historyEntries);
       const hasInnovationRange = latestEntry.stats.some(
-        speciesStatHasInnovationRange,
+        speciesStatHasInnovationRange
       );
       expect(hasInnovationRange).toBe(true);
     });
@@ -97,15 +97,15 @@ describe('advanced telemetry & archives', () => {
           seed: 506,
           speciation: true,
           speciesAllocation: { extendedHistory: true },
-        },
+        }
       );
       await neat.evaluate();
       await neat.evolve();
       const latestEntry = requireLatestSpeciesHistoryEntry(
-        neat.getSpeciesHistory(),
+        neat.getSpeciesHistory()
       );
       const hasEnabledRatio = latestEntry.stats.some(
-        speciesStatHasEnabledRatio,
+        speciesStatHasEnabledRatio
       );
       expect(hasEnabledRatio).toBe(true);
     });
@@ -120,7 +120,7 @@ describe('advanced telemetry & archives', () => {
           popsize: 20,
           seed: 503,
           multiObjective: { enabled: true },
-        },
+        }
       );
       for (let generationIndex = 0; generationIndex < 3; generationIndex += 1) {
         await neat.evolve();
@@ -139,13 +139,13 @@ describe('advanced telemetry & archives', () => {
           popsize: 10,
           seed: 504,
           telemetry: { enabled: true, performance: true },
-        },
+        }
       );
       await neat.evaluate();
       const performanceStats = neat.getPerformanceStats();
       expect(
         typeof performanceStats.lastEvalMs === 'number' ||
-          performanceStats.lastEvalMs === undefined,
+          performanceStats.lastEvalMs === undefined
       ).toBe(true);
     });
     test('telemetry entry contains perf block when enabled', async () => {
@@ -157,7 +157,7 @@ describe('advanced telemetry & archives', () => {
           popsize: 10,
           seed: 507,
           telemetry: { enabled: true, performance: true },
-        },
+        }
       );
       await neat.evaluate();
       await neat.evolve();
@@ -177,7 +177,7 @@ describe('advanced telemetry & archives', () => {
           popsize: 14,
           seed: 508,
           telemetry: { enabled: true, complexity: true },
-        },
+        }
       );
       for (let generationIndex = 0; generationIndex < 2; generationIndex += 1) {
         await neat.evolve();
@@ -196,7 +196,7 @@ describe('advanced telemetry & archives', () => {
           popsize: 14,
           seed: 509,
           telemetry: { enabled: true, complexity: true },
-        },
+        }
       );
       await neat.evolve();
       await neat.evolve();
@@ -217,7 +217,7 @@ describe('advanced telemetry & archives', () => {
           seed: 510,
           multiObjective: { enabled: true },
           telemetry: { enabled: true, hypervolume: true },
-        },
+        }
       );
       await neat.evolve();
       const telemetryEntry = requireLatestTelemetryEntry(neat);
@@ -241,7 +241,7 @@ describe('advanced telemetry & archives', () => {
             performance: true,
             complexity: true,
           },
-        },
+        }
       );
       await neat.evolve();
       const csvOutput = neat.exportTelemetryCSV();
@@ -273,7 +273,7 @@ describe('advanced telemetry & archives', () => {
               max: 5,
             },
           },
-        },
+        }
       );
       await neat.evaluate();
       const firstThreshold = neat.options.novelty!.archiveAddThreshold!;

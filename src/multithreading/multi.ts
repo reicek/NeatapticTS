@@ -55,7 +55,7 @@ export default class Multi {
    * @returns {number[]} The serialized dataset.
    */
   static serializeDataSet(
-    dataSet: Array<{ input: number[]; output: number[] }>,
+    dataSet: Array<{ input: number[]; output: number[] }>
   ): number[] {
     const serialized = [dataSet[0].input.length, dataSet[0].output.length];
 
@@ -85,7 +85,7 @@ export default class Multi {
     A: number[],
     S: number[],
     data: number[],
-    F: ActivationFn[],
+    F: ActivationFn[]
   ): number[] {
     for (let i = 0; i < data[0]; i++) A[i] = input[i];
     for (let i = 2; i < data.length; i++) {
@@ -308,7 +308,7 @@ export default class Multi {
     A: number[],
     S: number[],
     data: number[],
-    F: ActivationFn[],
+    F: ActivationFn[]
   ): number {
     if (set.length === 0) return NaN;
     let errorSum = 0;
@@ -318,7 +318,7 @@ export default class Multi {
         A,
         S,
         data,
-        F,
+        F
       );
       const costVal = cost(sample.output, output);
       if (!Number.isFinite(costVal)) return NaN;

@@ -38,7 +38,7 @@ describe('multi-objective inactive pruning', () => {
         if (objective.key === 'objVar') accumulator.hasVar = true;
         return accumulator;
       },
-      { hasConst: false, hasVar: false },
+      { hasConst: false, hasVar: false }
     );
     expect(objectivePresence).toEqual({ hasConst: false, hasVar: true });
   });

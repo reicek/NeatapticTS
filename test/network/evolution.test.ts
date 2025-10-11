@@ -61,7 +61,7 @@ describe('Async Evolution', () => {
           amount: 1,
           threads: 1,
           popsize: 2,
-        }),
+        })
       ).rejects.toThrow();
     });
   });
@@ -83,7 +83,7 @@ describe('Async Evolution', () => {
             amount: 1,
             threads: 1,
             popsize: 2,
-          }),
+          })
         ).rejects.toThrow();
       });
     });
@@ -103,7 +103,7 @@ describe('Async Evolution', () => {
             amount: 1,
             threads: 1,
             popsize: 2,
-          }),
+          })
         ).rejects.toThrow();
       });
     });
@@ -184,8 +184,8 @@ describe('Async Evolution', () => {
         // Assert
         expect(warnSpy).toHaveBeenCalledWith(
           expect.stringContaining(
-            'Evolution completed without finding a valid best genome',
-          ),
+            'Evolution completed without finding a valid best genome'
+          )
         );
       });
     });

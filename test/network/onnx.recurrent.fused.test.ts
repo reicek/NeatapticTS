@@ -13,7 +13,7 @@ const hasMetadataKey = (model: OnnxModel, key: string) =>
 const buildPartitionedLSTM = (
   input: number,
   unit: number,
-  output: number,
+  output: number
 ): Network => {
   // Total hidden = 5 * unit (input, forget, cell, output gate, output block)
   const hiddenSize = unit * 5;
@@ -39,7 +39,7 @@ const buildPartitionedLSTM = (
 const buildPartitionedGRU = (
   input: number,
   unit: number,
-  output: number,
+  output: number
 ): Network => {
   // Total hidden = 4 * unit (update, reset, candidate, output block)
   const hiddenSize = unit * 4;
@@ -73,7 +73,7 @@ describe('ONNX Export (Experimental Fused Recurrent)', () => {
     });
     it('emits LSTM initializers', () => {
       const hasW = onnx.graph.initializer.some(
-        (tensor) => tensor.name === 'LSTM_W0',
+        (tensor) => tensor.name === 'LSTM_W0'
       );
       expect(hasW).toBe(true);
     });
@@ -96,7 +96,7 @@ describe('ONNX Export (Experimental Fused Recurrent)', () => {
     });
     it('emits GRU initializers', () => {
       const hasW = onnx.graph.initializer.some(
-        (tensor) => tensor.name === 'GRU_W0',
+        (tensor) => tensor.name === 'GRU_W0'
       );
       expect(hasW).toBe(true);
     });
@@ -137,9 +137,8 @@ describe('ONNX Export (Experimental Fused Recurrent)', () => {
       roundTrip = importFromONNX(exported);
     });
     it('rebuilds a network with same input/output sizes', () => {
-      const inputs = roundTrip.nodes.filter(
-        (node) => node.type === 'input',
-      ).length;
+      const inputs = roundTrip.nodes.filter((node) => node.type === 'input')
+        .length;
       expect(inputs).toBe(2);
     });
   });
@@ -153,9 +152,8 @@ describe('ONNX Export (Experimental Fused Recurrent)', () => {
       roundTrip = importFromONNX(exported);
     });
     it('rebuilds a network with same output size', () => {
-      const outputs = roundTrip.nodes.filter(
-        (node) => node.type === 'output',
-      ).length;
+      const outputs = roundTrip.nodes.filter((node) => node.type === 'output')
+        .length;
       expect(outputs).toBe(1);
     });
   });
@@ -167,7 +165,7 @@ describe('ONNX Export (Experimental Fused Recurrent)', () => {
       onnx = exportToONNX(net, { allowRecurrent: true });
       // Remove one initializer to simulate corruption
       onnx.graph.initializer = onnx.graph.initializer.filter(
-        (tensor) => !tensor.name.startsWith('LSTM_R'),
+        (tensor) => !tensor.name.startsWith('LSTM_R')
       );
     });
     it('imports without throwing when recurrent tensors missing', () => {

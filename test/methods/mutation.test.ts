@@ -177,17 +177,18 @@ describe('Mutation Methods', () => {
         it('should have allowed property with correct length', () => {
           // Assert
           expect(mutation.MOD_ACTIVATION.allowed!.length).toBe(
-            expectedActivations.length,
+            expectedActivations.length
           );
         });
         it('should not contain unexpected activation functions', () => {
           // Arrange
-          const unexpectedActivations: Array<(typeof Activation)['logistic']> =
-            [];
+          const unexpectedActivations: Array<
+            typeof Activation['logistic']
+          > = [];
           // Assert
           unexpectedActivations.forEach((candidateActivation) => {
             expect(mutation.MOD_ACTIVATION.allowed).not.toContain(
-              candidateActivation,
+              candidateActivation
             );
           });
         });
@@ -382,7 +383,7 @@ describe('Mutation Methods', () => {
       });
       it('should not contain unexpected mutation methods', () => {
         // Arrange
-        const unexpectedMethods: Array<(typeof mutation)['ALL'][number]> = [];
+        const unexpectedMethods: Array<typeof mutation['ALL'][number]> = [];
         // Assert
         unexpectedMethods.forEach((candidateMethod) => {
           expect(mutation.ALL).not.toContain(candidateMethod);

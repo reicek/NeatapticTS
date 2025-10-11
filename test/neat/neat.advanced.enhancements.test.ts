@@ -18,7 +18,7 @@ describe('Minimal criterion filtering', () => {
       .forEach((c) => neat.population[0].disconnect(c.from, c.to));
     await neat.evaluate();
     const zeroed = neat.population.some(
-      (g) => g.connections.length === 0 && (g.score || 0) === 0,
+      (g) => g.connections.length === 0 && (g.score || 0) === 0
     );
     expect(zeroed).toBe(true);
   });
@@ -54,7 +54,7 @@ describe('Cross-species mating', () => {
     await neat.evolve();
     // ensure evolution completed with at least same or more species (mating across species should not reduce species count sharply)
     expect(neat.getSpeciesStats().length).toBeGreaterThanOrEqual(
-      Math.min(1, beforeSpecies),
+      Math.min(1, beforeSpecies)
     );
   });
 });

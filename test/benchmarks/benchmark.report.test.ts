@@ -34,7 +34,7 @@ export interface BenchAggregateGroup {
  * input rows to keep this function generic and forward‑compatible.
  */
 export const aggregateBenchMeasurements = (
-  records: RawBenchMeasurement[],
+  records: RawBenchMeasurement[]
 ): BenchAggregateGroup[] => {
   if (!records.length) return [];
   const groupMap = new Map<
@@ -123,11 +123,11 @@ describe('benchmark.report placeholder', () => {
       expect(aggregated.length).toBe(1);
     });
     it('exposes constructMsMean statistic', () => {
-      const g = aggregated[0] as unknown as Record<string, unknown>;
+      const g = (aggregated[0] as unknown) as Record<string, unknown>;
       expect(typeof g.constructMsMean).toBe('number');
     });
     it('exposes constructMsP50 statistic', () => {
-      const g = aggregated[0] as unknown as Record<string, unknown>;
+      const g = (aggregated[0] as unknown) as Record<string, unknown>;
       expect(typeof g.constructMsP50).toBe('number');
     });
   });

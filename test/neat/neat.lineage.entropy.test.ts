@@ -17,7 +17,7 @@ describe('Lineage & Auto-Entropy Objective', () => {
         telemetry: { enabled: true, logEvery: 1 },
         lineageTracking: true,
         mutation: [], // disable mutation for speed
-      },
+      }
     );
     // run a couple generations
     for (let generationIndex = 0; generationIndex < 3; generationIndex += 1) {
@@ -41,7 +41,7 @@ describe('Lineage & Auto-Entropy Objective', () => {
     const lineageSnapshot = neat.getLineageSnapshot();
     // offspring after first generation should have parents array
     const withParents = lineageSnapshot.filter(
-      (snapshot) => snapshot.parents && snapshot.parents.length > 0,
+      (snapshot) => snapshot.parents && snapshot.parents.length > 0
     );
     expect(withParents.length).toBeGreaterThan(0);
   });
@@ -58,7 +58,7 @@ describe('Lineage & Auto-Entropy Objective', () => {
         popsize: 10,
         lineageTracking: false,
         telemetry: { enabled: true },
-      },
+      }
     );
     await neat.evolve();
     const telemetryEntries = neat.getTelemetry() as TelemetryEntry[];

@@ -131,7 +131,7 @@ export default class Node {
   constructor(
     type: string = 'hidden',
     customActivation?: (x: number, derivate?: boolean) => number,
-    rng: () => number = Math.random,
+    rng: () => number = Math.random
   ) {
     // Initialize bias: 0 for input nodes, small random value for others (deterministic if rng seeded)
     this.bias = type === 'input' ? 0 : rng() * 0.2 - 0.1;
@@ -317,7 +317,7 @@ export default class Node {
       | number
       | { type: 'L1' | 'L2'; lambda: number }
       | ((weight: number) => number) = 0,
-    target?: number,
+    target?: number
   ): void {
     // Nesterov Accelerated Gradient (NAG): Apply momentum update *before* calculating the gradient.
     // This "lookahead" step estimates the future position and calculates the gradient there.
@@ -360,7 +360,7 @@ export default class Node {
         // Calculate the influence this node's activation had on the gated connection's state.
         let influence = node.connections.self.reduce(
           (sum, selfConn) => sum + (selfConn.gater === this ? node.old : 0),
-          0,
+          0
         ); // Influence via self-connection gating.
         influence += connection.weight * connection.from.activation; // Influence via regular connection gating.
 
@@ -454,7 +454,7 @@ export default class Node {
         if (!Number.isFinite(connection.weight)) {
           console.warn(
             `Weight update produced invalid value: ${connection.weight}. Resetting to 0.`,
-            { node: this.index, connection },
+            { node: this.index, connection }
           );
           connection.weight = 0;
         } else if (Math.abs(connection.weight) > 1e6) {
@@ -507,7 +507,7 @@ export default class Node {
       if (!Number.isFinite(connection.totalDeltaWeight)) {
         console.warn(
           'self totalDeltaWeight became NaN/Infinity, resetting to 0',
-          { node: this.index, connection },
+          { node: this.index, connection }
         );
         connection.totalDeltaWeight = 0;
       }
@@ -532,7 +532,7 @@ export default class Node {
         if (!Number.isFinite(connection.weight)) {
           console.warn(
             'self weight update produced invalid value, resetting to 0',
-            { node: this.index, connection },
+            { node: this.index, connection }
           );
           connection.weight = 0;
         } else if (Math.abs(connection.weight) > 1e6) {
@@ -629,7 +629,7 @@ export default class Node {
       } else {
         // Fallback to identity and log a warning
         console.warn(
-          `fromJSON: Unknown or invalid squash function '${json.squash}' for node. Using identity.`,
+          `fromJSON: Unknown or invalid squash function '${json.squash}' for node. Using identity.`
         );
         node.squash = methods.Activation.identity;
       }
@@ -675,7 +675,7 @@ export default class Node {
     // If `method` is an object describing the mutation, the check might need adjustment.
     if (!(mutationMethod.name && mutationMethod.name in methods.mutation)) {
       throw new Error(
-        `Unknown mutation method: ${mutationMethod.name ?? 'undefined'}`,
+        `Unknown mutation method: ${mutationMethod.name ?? 'undefined'}`
       );
     }
 
@@ -685,7 +685,7 @@ export default class Node {
         // Mutate the activation function.
         if (!mutationMethod.allowed || mutationMethod.allowed.length === 0) {
           console.warn(
-            'MOD_ACTIVATION mutation called without allowed functions specified.',
+            'MOD_ACTIVATION mutation called without allowed functions specified.'
           );
           return;
         }
@@ -730,13 +730,13 @@ export default class Node {
       }
       case methods.mutation.BATCH_NORM:
         // Enable batch normalization (stub, for mutation tracking)
-        (this as unknown as { batchNorm: boolean }).batchNorm = true;
+        ((this as unknown) as { batchNorm: boolean }).batchNorm = true;
         break;
       // Add cases for other mutation types if needed.
       default:
         // This case might be redundant if the initial check catches unknown methods.
         throw new Error(
-          `Unsupported mutation method: ${mutationMethod.name ?? 'undefined'}`,
+          `Unsupported mutation method: ${mutationMethod.name ?? 'undefined'}`
         );
     }
   }
@@ -788,7 +788,7 @@ export default class Node {
     } else {
       // Handle invalid target type.
       throw new Error(
-        'Invalid target type for connection. Must be a Node or a group { nodes: Node[] }.',
+        'Invalid target type for connection. Must be a Node or a group { nodes: Node[] }.'
       );
     }
     return connections;
@@ -813,7 +813,7 @@ export default class Node {
       if (conn.to === target) {
         // Remove the connection from the target's incoming list.
         target.connections.in = target.connections.in.filter(
-          (inConn) => inConn !== conn, // Filter by reference.
+          (inConn) => inConn !== conn // Filter by reference.
         );
         // If the connection was gated, ungate it properly.
         if (conn.gater) {
@@ -856,7 +856,7 @@ export default class Node {
       // Check if the connection is already gated by another node.
       if (connection.gater !== null) {
         console.warn(
-          'Connection is already gated by another node. Ungate first.',
+          'Connection is already gated by another node. Ungate first.'
         );
         // Optionally, automatically ungate from the previous gater:
         // connection.gater.ungate(connection);
@@ -1048,7 +1048,7 @@ export default class Node {
     const wd = opts.weightDecay ?? 0;
     const lrScale = opts.lrScale ?? 1;
     const t = Math.max(1, Math.floor(opts.t ?? 1));
-    const optProps = this as unknown as NodeOptimizerProps;
+    const optProps = (this as unknown) as NodeOptimizerProps;
     if (type === 'lookahead') {
       optProps._la_k = optProps._la_k || opts.la_k || 5;
       optProps._la_alpha = optProps._la_alpha || opts.la_alpha || 0.5;
@@ -1084,7 +1084,7 @@ export default class Node {
           if (effectiveType === 'amsgrad') {
             conn.maxSecondMoment = Math.max(
               conn.maxSecondMoment ?? 0,
-              conn.secondMoment ?? 0,
+              conn.secondMoment ?? 0
             );
           }
           const vEff =
@@ -1104,7 +1104,7 @@ export default class Node {
           conn.firstMoment = (conn.firstMoment ?? 0) * beta1 + (1 - beta1) * g;
           conn.infinityNorm = Math.max(
             (conn.infinityNorm ?? 0) * beta2,
-            Math.abs(g),
+            Math.abs(g)
           );
           const mHat = conn.firstMoment! / (1 - Math.pow(beta1, t));
           const stepVal = (mHat / (conn.infinityNorm || 1e-12)) * lrScale;
@@ -1122,7 +1122,7 @@ export default class Node {
             mHat * beta1 + ((1 - beta1) * g) / (1 - Math.pow(beta1, t));
           this._safeUpdateWeight(
             conn,
-            (mNesterov / (Math.sqrt(vHat) + eps)) * lrScale,
+            (mNesterov / (Math.sqrt(vHat) + eps)) * lrScale
           );
           break;
         }
@@ -1139,11 +1139,11 @@ export default class Node {
           if (rhoT > 4) {
             const rt = Math.sqrt(
               ((rhoT - 4) * (rhoT - 2) * rhoInf) /
-                ((rhoInf - 4) * (rhoInf - 2) * rhoT),
+                ((rhoInf - 4) * (rhoInf - 2) * rhoT)
             );
             this._safeUpdateWeight(
               conn,
-              ((rt * mHat) / (Math.sqrt(vHat) + eps)) * lrScale,
+              ((rt * mHat) / (Math.sqrt(vHat) + eps)) * lrScale
             );
           } else {
             this._safeUpdateWeight(conn, mHat * lrScale);
@@ -1156,7 +1156,7 @@ export default class Node {
           conn.secondMomentum =
             (conn.secondMomentum ?? 0) * beta2 + (1 - beta2) * g;
           const update = Math.sign(
-            (conn.firstMoment || 0) + (conn.secondMomentum || 0),
+            (conn.firstMoment || 0) + (conn.secondMomentum || 0)
           );
           this._safeUpdateWeight(conn, -update * lrScale);
           break;
@@ -1171,7 +1171,7 @@ export default class Node {
           const vHat = conn.secondMoment! / (1 - Math.pow(beta2, t));
           this._safeUpdateWeight(
             conn,
-            (mHat / (Math.sqrt(vHat) + eps + 1e-12)) * lrScale,
+            (mHat / (Math.sqrt(vHat) + eps + 1e-12)) * lrScale
           );
           break;
         }
@@ -1221,20 +1221,20 @@ export default class Node {
         if (effectiveType === 'amsgrad') {
           optProps.opt_vhatB = Math.max(
             optProps.opt_vhatB ?? 0,
-            optProps.opt_vB ?? 0,
+            optProps.opt_vB ?? 0
           );
         }
         const vEffB =
           effectiveType === 'amsgrad'
-            ? (optProps.opt_vhatB ?? 0)
-            : (optProps.opt_vB ?? 0);
+            ? optProps.opt_vhatB ?? 0
+            : optProps.opt_vB ?? 0;
         const mHatB = (optProps.opt_mB ?? 0) / (1 - Math.pow(beta1, t));
         const vHatB = vEffB / (1 - Math.pow(beta2, t));
         let stepB: number;
         if (effectiveType === 'adamax') {
           optProps.opt_uB = Math.max(
             (optProps.opt_uB ?? 0) * beta2,
-            Math.abs(gB),
+            Math.abs(gB)
           );
           stepB = (mHatB / ((optProps.opt_uB ?? 0) || 1e-12)) * lrScale;
         } else if (effectiveType === 'nadam') {
@@ -1248,7 +1248,7 @@ export default class Node {
           if (rhoT > 4) {
             const rt = Math.sqrt(
               ((rhoT - 4) * (rhoT - 2) * rhoInf) /
-                ((rhoInf - 4) * (rhoInf - 2) * rhoT),
+                ((rhoInf - 4) * (rhoInf - 2) * rhoT)
             );
             stepB = ((rt * mHatB) / (Math.sqrt(vHatB) + eps)) * lrScale;
           } else {
@@ -1256,7 +1256,7 @@ export default class Node {
           }
         } else if (effectiveType === 'lion') {
           const updateB = Math.sign(
-            (optProps.opt_mB ?? 0) + (optProps.opt_mB2 ?? 0),
+            (optProps.opt_mB ?? 0) + (optProps.opt_mB2 ?? 0)
           );
           stepB = -updateB * lrScale;
         } else if (effectiveType === 'adabelief') {

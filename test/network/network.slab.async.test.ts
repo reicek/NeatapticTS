@@ -38,7 +38,7 @@ const getConnectionSlabSnapshot = (network: Network): ConnectionSlabSnapshot =>
 const buildDenseNetwork = (
   inputCount: number,
   hiddenCount: number,
-  outputCount: number,
+  outputCount: number
 ): Network => {
   const network = new Network(inputCount, outputCount, {
     enforceAcyclic: true,
@@ -50,7 +50,7 @@ const buildDenseNetwork = (
       network.connect(
         network.nodes[inputIndex],
         hiddenNode,
-        Math.random() * 0.2 - 0.1,
+        Math.random() * 0.2 - 0.1
       );
     }
     for (
@@ -61,7 +61,7 @@ const buildDenseNetwork = (
       network.connect(
         hiddenNode,
         network.nodes[outputIndex],
-        Math.random() * 0.2 - 0.1,
+        Math.random() * 0.2 - 0.1
       );
     }
   }
@@ -120,7 +120,7 @@ describe('network.slab.async', () => {
         | null,
       onrejected?:
         | ((reason: unknown) => TResult2 | PromiseLike<TResult2>)
-        | null,
+        | null
     ): Promise<TResult1 | TResult2> {
       microtaskYields += 1;
       return originalThen.call(this, onfulfilled, onrejected) as Promise<
@@ -158,7 +158,7 @@ describe('network.slab.async', () => {
         slabAsync.used === slabSync.used &&
         statsAfter.fresh >= statsBefore.fresh &&
         // pooled may increase or stay; ensure fresh did not jump multiple times (<= fresh + 10 heuristic guard)
-        statsAfter.fresh - statsBefore.fresh <= 10,
+        statsAfter.fresh - statsBefore.fresh <= 10
     ).toBe(true);
   }, 30000);
 });

@@ -24,7 +24,9 @@ describe('Adaptive Minimal Criterion', () => {
       before =
         (Reflect.get(neat as object, '_mcThreshold') as number | undefined) ??
         0.1;
-      applyMinimalCriterionAdaptive.call((neat as unknown as NeatLikeWithAdaptive));
+      applyMinimalCriterionAdaptive.call(
+        (neat as unknown) as NeatLikeWithAdaptive
+      );
       // Act: obtain adapted threshold
       const after = Reflect.get(neat as object, '_mcThreshold') as number;
       // Assert: threshold increased (acceptance above target triggers growth)
@@ -32,4 +34,3 @@ describe('Adaptive Minimal Criterion', () => {
     });
   });
 });
-

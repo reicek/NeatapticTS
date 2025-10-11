@@ -142,19 +142,19 @@ const buildSingleThreadFitness = (
   set: TrainingSample[],
   cost: CostFunction,
   amount: number,
-  growth: number,
+  growth: number
 ) => {
   return (genome: Network) => {
     let score = 0; // Accumulate negative errors.
     for (let i = 0; i < amount; i++) {
       try {
         score -= genome.test(set, cost).error; // negative adds fitness.
-      } catch (e: unknown) {
+      } catch (error: unknown) {
         if (config.warnings)
           console.warn(
             `Genome evaluation failed: ${
-              (e && (e as Error).message) || e
-            }. Penalizing with -Infinity fitness.`,
+              (error && (error as Error).message) || error
+            }. Penalizing with -Infinity fitness.`
           );
         return -Infinity;
       }
@@ -201,7 +201,7 @@ const buildMultiThreadFitness = async (
   amount: number,
   growth: number,
   threads: number,
-  options: Record<string, unknown>,
+  options: Record<string, unknown>
 ) => {
   // Serialize dataset once for worker initialization (avoids deep cloning per evaluation call).
   const serializedSet = Multi.serializeDataSet(set);
@@ -216,11 +216,11 @@ const buildMultiThreadFitness = async (
       WorkerCtor = await Multi.workers.getNodeTestWorker();
     else if (!isNode && Multi.workers?.getBrowserTestWorker)
       WorkerCtor = await Multi.workers.getBrowserTestWorker();
-  } catch (e: unknown) {
+  } catch (error: unknown) {
     if (config.warnings)
       console.warn(
         'Failed to load worker class; falling back to single-thread path:',
-        (e as Error)?.message || e,
+        (error as Error)?.message || error
       );
   }
   // Fallback path if no worker support.
@@ -230,7 +230,7 @@ const buildMultiThreadFitness = async (
         set,
         cost as CostFunction,
         amount,
-        growth,
+        growth
       ),
       threads: 1,
     };
@@ -243,10 +243,10 @@ const buildMultiThreadFitness = async (
             (typeof cost === 'function' ? cost.name : cost.name) ||
             cost.toString?.() ||
             'cost',
-        }),
+        })
       );
-    } catch (e: unknown) {
-      if (config.warnings) console.warn('Worker spawn failed', e);
+    } catch (error: unknown) {
+      if (config.warnings) console.warn('Worker spawn failed', error);
     }
   }
   // Population-level fitness function: resolves when all genomes processed.
@@ -271,8 +271,8 @@ const buildMultiThreadFitness = async (
         }
         Promise.resolve(
           worker.evaluate(
-            genome as unknown as import('../../multithreading/types').SerializableNetwork,
-          ),
+            (genome as unknown) as import('../../multithreading/types').SerializableNetwork
+          )
         )
           .then((result: number) => {
             if (typeof result === 'number') {
@@ -342,7 +342,7 @@ const buildMultiThreadFitness = async (
 export async function evolveNetwork(
   this: Network,
   set: TrainingSample[],
-  options: EvolveOptions = {},
+  options: EvolveOptions = {}
 ): Promise<{ error: number; iterations: number; time: number }> {
   // 1. Dataset validation (shape + existence).
   if (
@@ -352,7 +352,7 @@ export async function evolveNetwork(
     set[0].output.length !== this.output
   ) {
     throw new Error(
-      'Dataset is invalid or dimensions do not match network input/output size!',
+      'Dataset is invalid or dimensions do not match network input/output size!'
     );
   }
   // Defensive defaulting.
@@ -388,7 +388,7 @@ export async function evolveNetwork(
     typeof options.error === 'undefined'
   ) {
     throw new Error(
-      'At least one stopping condition (`iterations` or `error`) must be specified for evolution.',
+      'At least one stopping condition (`iterations` or `error`) must be specified for evolution.'
     );
   } else if (typeof options.error === 'undefined') targetError = -1;
   // Only iterations constrain.
@@ -403,7 +403,7 @@ export async function evolveNetwork(
       set,
       cost as CostFunction,
       amount,
-      growth,
+      growth
     );
   else {
     const multi = await buildMultiThreadFitness(
@@ -412,7 +412,7 @@ export async function evolveNetwork(
       amount,
       growth,
       threads,
-      options,
+      options
     );
     fitnessFunction = multi.fitnessFunction;
     threads = multi.threads;
@@ -432,7 +432,7 @@ export async function evolveNetwork(
 
   // Warn if immediate termination conditions could yield empty best genome tracking.
   if (typeof options.iterations === 'number' && options.iterations === 0) {
-    const neatWithWarn = neat as unknown as {
+    const neatWithWarn = (neat as unknown) as {
       _warnIfNoBestGenome?: () => void;
     };
     if (neatWithWarn._warnIfNoBestGenome) {
@@ -498,7 +498,7 @@ export async function evolveNetwork(
     this.gates = bestGenome.gates;
     if (clear) this.clear();
   } else {
-    const neatWithWarn = neat as unknown as {
+    const neatWithWarn = (neat as unknown) as {
       _warnIfNoBestGenome?: () => void;
     };
     if (neatWithWarn._warnIfNoBestGenome) {

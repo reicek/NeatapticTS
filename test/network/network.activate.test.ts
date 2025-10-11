@@ -9,7 +9,7 @@ const setFastSlabHooks = (
   hooks: {
     canUseFastSlab?: CanUseFastSlab;
     fastSlabActivate?: FastSlabActivate;
-  },
+  }
 ): void => {
   if (hooks.canUseFastSlab) {
     Reflect.set(network, '_canUseFastSlab', hooks.canUseFastSlab);
@@ -70,7 +70,7 @@ describe('Network.activation helpers', () => {
       const net = new Network(2, 1, { seed: 13 });
       // Act / Assert
       expect(() => net.noTraceActivate([1, 2, 3])).toThrow(
-        /Input size mismatch/,
+        /Input size mismatch/
       );
     });
   });
@@ -123,7 +123,7 @@ describe('Network.activation helpers', () => {
       const net = new Network(2, 1, { seed: 17 });
       // Act / Assert
       expect(() => net.activateBatch([[1, 2], [3]])).toThrow(
-        /Input\[1] size mismatch/,
+        /Input\[1] size mismatch/
       );
     });
   });
@@ -134,7 +134,7 @@ describe('Network.activation helpers', () => {
       const net = new Network(2, 1, { seed: 18 });
       // Act / Assert
       expect(() => invokeActivateBatch(net, 'nope')).toThrow(
-        /inputs must be an array/,
+        /inputs must be an array/
       );
     });
   });

@@ -18,7 +18,7 @@ describe('benchmark.nodePool.memory', () => {
     it('should expose nodePool stats and return clean reset state after release', () => {
       // Arrange
       resetNodePool();
-      (config as unknown as MutableConfig).enableNodePooling = true;
+      ((config as unknown) as MutableConfig).enableNodePooling = true;
       const n1 = acquireNode({ type: 'hidden', rng: () => 0.42 });
       n1.activation = 123;
       n1.state = 456;
@@ -32,7 +32,7 @@ describe('benchmark.nodePool.memory', () => {
       expect(
         !!nodePool &&
           typeof nodePool.size === 'number' &&
-          typeof nodePool.highWaterMark === 'number',
+          typeof nodePool.highWaterMark === 'number'
       ).toBe(true);
     });
   });

@@ -10,7 +10,7 @@ describe('RNG state snapshot/restore', () => {
         void network; // Fitness stub keeps interface satisfied without side effects
         return 0;
       },
-      { popsize: 4, seed: 42 },
+      { popsize: 4, seed: 42 }
     );
     // Step 1: consume a handful of samples to move RNG forward.
     neat.sampleRandom(10);
@@ -29,7 +29,7 @@ describe('RNG state snapshot/restore', () => {
         void network;
         return 0;
       },
-      { popsize: 4 },
+      { popsize: 4 }
     );
     neatReplica.importRNGState(exported);
     const replicaSequence = neatReplica.sampleRandom(5);

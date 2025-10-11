@@ -90,7 +90,7 @@ export const normalizeRunOptions = (
   setDeterministic: (seed: number) => void,
   setReducedTelemetry: (enabled: boolean) => void,
   setMinimalTelemetry: (enabled: boolean) => void,
-  setDisableBaldwin: (disabled: boolean) => void,
+  setDisableBaldwin: (disabled: boolean) => void
   // Type assertion: Return type contains mixed configuration from user options
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): any => {
@@ -264,7 +264,7 @@ export const prepareEnvironmentForRun = (
   opts: any,
   // Type assertion: Scratch bundle contains dynamic pooled structures
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  scratchBundle: any,
+  scratchBundle: any
   // Type assertion: Returns diverse environment properties for evolution setup
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): any => {
@@ -373,7 +373,7 @@ export const createAndSeedNeat = (
   scratchPopClone: any[],
   // Type assertion: Pooled sample buffer for selection operations
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  scratchSample: any[],
+  scratchSample: any[]
   // Type assertion: Returns NEAT driver and updated scratch buffers
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): any => {
@@ -382,7 +382,7 @@ export const createAndSeedNeat = (
     const fitnessCallback = (network: Network) =>
       (opts.fitnessEvaluator ?? FitnessEvaluator.defaultFitnessEvaluator)(
         network,
-        fitnessContext,
+        fitnessContext
       );
 
     // Step 2: Instantiate the NEAT driver with the derived options.
@@ -390,7 +390,7 @@ export const createAndSeedNeat = (
       inputSize,
       outputSize,
       fitnessCallback,
-      opts.neatOptions,
+      opts.neatOptions
     );
 
     // Step 3: Seed the newly created driver using provided initial population / best network.
@@ -399,7 +399,7 @@ export const createAndSeedNeat = (
       opts.initialPopulation ?? undefined,
       opts.initialBestNetwork ?? undefined,
       Number.isFinite(opts.popSize) ? Math.max(0, Math.floor(opts.popSize)) : 0,
-      scratchPopClone,
+      scratchPopClone
     );
 
     // Step 4 (optional best-effort): warm-up a pooled sample buffer to avoid

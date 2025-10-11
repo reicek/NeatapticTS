@@ -14,16 +14,14 @@ const hasGainArray = (net: Network): boolean =>
   Boolean(Reflect.get(net, '_connGain'));
 
 const getConnectionSlab = (net: Network): ConnectionSlab =>
-  (
-    net as unknown as {
-      getConnectionSlab: () => ConnectionSlab;
-    }
-  ).getConnectionSlab();
+  ((net as unknown) as {
+    getConnectionSlab: () => ConnectionSlab;
+  }).getConnectionSlab();
 
 const setNetworkInternal = <Key extends keyof NetworkInternals>(
   net: Network,
   key: Key,
-  value: NetworkInternals[Key],
+  value: NetworkInternals[Key]
 ) => {
   Reflect.set(net, key, value);
 };

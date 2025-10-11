@@ -241,7 +241,7 @@ describe('Learning Capability', () => {
         hiddenNodeIndexes.forEach((idx) => {
           if (!net) {
             throw new Error(
-              'Network instance must be defined during assertions.',
+              'Network instance must be defined during assertions.'
             );
           }
           expect(net.nodes[idx].mask).toBe(1);

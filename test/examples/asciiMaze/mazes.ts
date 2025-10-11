@@ -338,7 +338,7 @@ export class MazeGenerator {
    */
   #initializeGrid(): void {
     this.#grid = Array.from({ length: this.#height }, () =>
-      Array.from({ length: this.#width }, () => MazeGenerator.WALL),
+      Array.from({ length: this.#width }, () => MazeGenerator.WALL)
     );
     const toOdd = (value: number) => (value % 2 === 0 ? value - 1 : value);
     this.#startX = toOdd(Math.floor(this.#width / 2));
@@ -384,7 +384,7 @@ export class MazeGenerator {
     // Estimate a safe stack capacity: quarter of cells (every second cell both axes), minimum 1024
     const estimatedCapacity = Math.max(
       1024,
-      ((this.#width * this.#height) >> 2) + 1,
+      ((this.#width * this.#height) >> 2) + 1
     );
     if (scratch.capacity < estimatedCapacity) {
       scratch.capacity = estimatedCapacity;
@@ -410,7 +410,7 @@ export class MazeGenerator {
 
     // Local helpers for clarity
     const shuffleInPlace = (
-      array: Array<{ deltaX: number; deltaY: number }>,
+      array: Array<{ deltaX: number; deltaY: number }>
     ) => {
       for (let i = array.length - 1; i > 0; i--) {
         const j = (Math.random() * (i + 1)) | 0;
@@ -812,7 +812,7 @@ export class MazeGenerator {
     const isNeighborWall = (col: number, rw: number): boolean =>
       this.#inBounds(col, rw) &&
       ![MazeGenerator.PATH, MazeGenerator.START, MazeGenerator.EXIT].includes(
-        this.#grid[rw][col],
+        this.#grid[rw][col]
       );
 
     // --- STEP 2: Compute neighbor wall presence (explicit descriptive names) ---

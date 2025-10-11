@@ -86,18 +86,16 @@ export const makeFlushToFrame = (): (() => Promise<void>) => {
   const rafTick = () =>
     new Promise<void>((resolve) =>
       (globalThis as Record<string, unknown>).requestAnimationFrame
-        ? (
-            (globalThis as Record<string, unknown>).requestAnimationFrame as (
-              callback: () => void,
-            ) => number
-          )(() => resolve())
-        : setTimeout(() => resolve(), 0),
+        ? ((globalThis as Record<string, unknown>).requestAnimationFrame as (
+            callback: () => void
+          ) => number)(() => resolve())
+        : setTimeout(() => resolve(), 0)
     );
   const immediateTick = () =>
     new Promise<void>((resolve) =>
       typeof setImmediate === 'function'
         ? setImmediate(resolve)
-        : setTimeout(resolve, 0),
+        : setTimeout(resolve, 0)
     );
   const timeoutTick = () =>
     new Promise<void>((resolve) => setTimeout(resolve, 0));
@@ -108,8 +106,8 @@ export const makeFlushToFrame = (): (() => Promise<void>) => {
     'function'
       ? rafTick
       : typeof setImmediate === 'function'
-        ? immediateTick
-        : timeoutTick;
+      ? immediateTick
+      : timeoutTick;
 
   // Return the async flush function used by the evolution loop.
   return async (): Promise<void> => {
@@ -149,7 +147,7 @@ export const makeFlushToFrame = (): (() => Promise<void>) => {
  * }
  */
 export const initPersistence = (
-  persistDir: string | undefined,
+  persistDir: string | undefined
 ): {
   fs: FilesystemModule | null;
   path: PathModule | null;
@@ -165,10 +163,10 @@ export const initPersistence = (
     if (maybeRequire) {
       try {
         fs = (maybeRequire as (moduleName: string) => unknown)(
-          'fs',
+          'fs'
         ) as FilesystemModule;
         path = (maybeRequire as (moduleName: string) => unknown)(
-          'path',
+          'path'
         ) as PathModule;
       } catch {
         // module not available or require denied; leave as null
@@ -218,7 +216,7 @@ export const initPersistence = (
  * safeWrite('[INFO] Generation 42 complete\n');
  */
 export const makeSafeWriter = (
-  dashboardManager: DashboardManagerLike | undefined,
+  dashboardManager: DashboardManagerLike | undefined
 ): ((msg: string) => void) => {
   // Capture local references to avoid repeated property lookups at call time.
   const hasProcessStdout = (() => {
@@ -250,11 +248,9 @@ export const makeSafeWriter = (
     // Fast path: Node stdout writer
     if (hasProcessStdout) {
       try {
-        (
-          process as unknown as {
-            stdout: { write: (msg: string) => void };
-          }
-        ).stdout.write(msg);
+        ((process as unknown) as {
+          stdout: { write: (msg: string) => void };
+        }).stdout.write(msg);
         return;
       } catch {
         /* swallow and fall through */

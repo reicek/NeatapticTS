@@ -52,7 +52,7 @@ describe('phase1.variance artifact assertions', () => {
     }
     expect(Array.isArray(artifact.variance)).toBe(true);
     const sizes = new Set(
-      artifact.variance?.map((v: VarianceEntry) => v.size) ?? [],
+      artifact.variance?.map((v: VarianceEntry) => v.size) ?? []
     );
     expect(sizes.has(100000)).toBe(true);
     expect(sizes.has(200000)).toBe(true);
@@ -86,7 +86,7 @@ describe('phase1.variance artifact assertions', () => {
           console.log(
             `[variance-soft] size=${v.size} mode=${
               v.mode
-            } fwdCvPct=${v.fwdAvgMsCvPct.toFixed(2)}> ${softWarn}%`,
+            } fwdCvPct=${v.fwdAvgMsCvPct.toFixed(2)}> ${softWarn}%`
           );
         }
       }

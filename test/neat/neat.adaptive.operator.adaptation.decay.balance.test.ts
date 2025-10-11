@@ -25,11 +25,11 @@ describe('Operator Adaptation Decay & Bandit Exploration', () => {
       const { applyOperatorAdaptation } = await import(
         '../../src/neat/neat.adaptive'
       );
-      applyOperatorAdaptation.call(neat as unknown as NeatLikeWithAdaptive);
+      applyOperatorAdaptation.call((neat as unknown) as NeatLikeWithAdaptive);
       const before = neat
         .getOperatorStats()
         .reduce((sum, record) => sum + record.attempts, 0);
-      applyOperatorAdaptation.call(neat as unknown as NeatLikeWithAdaptive);
+      applyOperatorAdaptation.call((neat as unknown) as NeatLikeWithAdaptive);
       const after = neat
         .getOperatorStats()
         .reduce((sum, record) => sum + record.attempts, 0);
@@ -37,4 +37,3 @@ describe('Operator Adaptation Decay & Bandit Exploration', () => {
     });
   });
 });
-

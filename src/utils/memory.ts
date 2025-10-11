@@ -156,13 +156,13 @@ export type SlabAllocStats = { fresh: number; pooled: number } | null;
  * @returns MemoryStats heuristic snapshot.
  */
 export const memoryStats = (
-  targetNetworks?: NetworkView | NetworkView[],
+  targetNetworks?: NetworkView | NetworkView[]
 ): MemoryStats => {
   const networks: NetworkView[] = Array.isArray(targetNetworks)
     ? targetNetworks
     : targetNetworks
-      ? [targetNetworks]
-      : _trackedNetworks;
+    ? [targetNetworks]
+    : _trackedNetworks;
 
   let totalConnections = 0;
   let totalNodes = 0;
@@ -253,32 +253,28 @@ export const memoryStats = (
   try {
     // Guarded access to browser performance.memory (non-standard in some envs)
     if (typeof performance !== 'undefined' && 'memory' in performance) {
-      const mem = (
-        performance as Performance & {
-          memory?: {
-            usedJSHeapSize: number;
-            totalJSHeapSize: number;
-            jsHeapSizeLimit: number;
-          };
-        }
-      ).memory;
+      const mem = (performance as Performance & {
+        memory?: {
+          usedJSHeapSize: number;
+          totalJSHeapSize: number;
+          jsHeapSizeLimit: number;
+        };
+      }).memory;
       if (mem) {
         env.usedJSHeapSize = mem.usedJSHeapSize;
         env.totalJSHeapSize = mem.totalJSHeapSize;
         env.jsHeapSizeLimit = mem.jsHeapSizeLimit;
       }
     }
-  } catch (err) {
+  } catch (error: unknown) {
     // Ignore instrumentation errors; this should not crash consumer code.
-    void err;
+    void error;
   }
   try {
     // Node.js environment: use globalThis.process to avoid bundler shims
-    const maybeProcess = (
-      globalThis as unknown as {
-        process?: { memoryUsage?: () => NodeJS.MemoryUsage };
-      }
-    ).process;
+    const maybeProcess = ((globalThis as unknown) as {
+      process?: { memoryUsage?: () => NodeJS.MemoryUsage };
+    }).process;
     if (maybeProcess && typeof maybeProcess.memoryUsage === 'function') {
       const mu = maybeProcess.memoryUsage();
       env.rss = mu.rss;
@@ -286,9 +282,9 @@ export const memoryStats = (
       env.heapTotal = mu.heapTotal;
       env.external = mu.external;
     }
-  } catch (err) {
+  } catch (error: unknown) {
     // Ignore instrumentation errors; this should not crash consumer code.
-    void err;
+    void error;
   }
 
   const stats: MemoryStats = {
@@ -303,8 +299,7 @@ export const memoryStats = (
       fragmentationPct:
         totalReservedBytes > 0
           ? Math.round(
-              (100 * (totalReservedBytes - totalUsedBytes)) /
-                totalReservedBytes,
+              (100 * (totalReservedBytes - totalUsedBytes)) / totalReservedBytes
             )
           : null,
       reservedBytes: totalReservedBytes || null,
@@ -319,8 +314,8 @@ export const memoryStats = (
           if (!stats) return null;
           const denom = stats.fresh + stats.pooled;
           return denom > 0 ? Number((stats.pooled / denom).toFixed(4)) : null;
-        } catch (err) {
-          void err;
+        } catch (error: unknown) {
+          void error;
           return null;
         }
       })(),
@@ -338,13 +333,13 @@ export const memoryStats = (
         poolMaxPerBucket: config.poolMaxPerBucket ?? null,
         poolPrewarmCount: config.poolPrewarmCount ?? null,
         enableNodePooling:
-          (config as unknown as { enableNodePooling?: boolean })
+          ((config as unknown) as { enableNodePooling?: boolean })
             .enableNodePooling ?? false, // Phase 2 addition
         allocStats: (() => {
           try {
             return _getSlabAllocationStats();
-          } catch (err) {
-            void err;
+          } catch (error: unknown) {
+            void error;
             return null;
           }
         })(),
@@ -387,7 +382,7 @@ export const resetMemoryTracking = (): void => {
  * @param network Network instance (loose shape, validated at runtime).
  */
 export const registerTrackedNetwork = (
-  network: NetworkView | null | undefined,
+  network: NetworkView | null | undefined
 ): void => {
   if (network && !_trackedNetworks.includes(network as NetworkView)) {
     _trackedNetworks.push(network as NetworkView);

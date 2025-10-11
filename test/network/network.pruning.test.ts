@@ -26,7 +26,7 @@ describe('phase3.pruning.magnitude (structural sparsification)', () => {
     test('sparsity >0 and connections ≥ 40% baseline', () => {
       expect(
         net.getCurrentSparsity() > 0 &&
-          net.connections.length >= Math.floor(initialConns * 0.4),
+          net.connections.length >= Math.floor(initialConns * 0.4)
       ).toBe(true);
     });
   });

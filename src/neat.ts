@@ -260,7 +260,7 @@ export default class Neat {
     return ensureMinHiddenNodes.call(
       this as any,
       network as never,
-      multiplierOverride,
+      multiplierOverride
     );
   }
   /**
@@ -275,7 +275,7 @@ export default class Neat {
     input?: number,
     output?: number,
     fitness?: any,
-    options: any = {},
+    options: any = {}
   ) {
     // Assign basic fields; other internals are initialized above as class fields
     this.input = input ?? 0;
@@ -308,8 +308,8 @@ export default class Neat {
       opts.mutation = Array.isArray(methods.mutation.ALL)
         ? methods.mutation.ALL.slice()
         : methods.mutation.FFW
-          ? [methods.mutation.FFW]
-          : [];
+        ? [methods.mutation.FFW]
+        : [];
     }
     // Selection method defaults
     if (opts.selection === undefined) {
@@ -497,7 +497,7 @@ export default class Neat {
     const offspring = Network.crossOver(
       parent1,
       parent2,
-      this.options.equal || false,
+      this.options.equal || false
     );
     (offspring as any)._reenableProb = this.options.reenableProb;
     (offspring as any)._id = this._nextGenomeId++;
@@ -522,7 +522,7 @@ export default class Neat {
   _warnIfNoBestGenome() {
     try {
       console.warn(
-        'Evolution completed without finding a valid best genome (no fitness improvements recorded).',
+        'Evolution completed without finding a valid best genome (no fitness improvements recorded).'
       );
     } catch {
       // Empty catch: Console output may fail in restricted environments (e.g., headless
@@ -561,11 +561,11 @@ export default class Neat {
    * @returns A new `Network` instance derived from `parent`. The child is unregistered.
    */
   spawnFromParent(parent: Network, mutateCount: number = 1): Network {
-    return spawnFromParent.call(
+    return (spawnFromParent.call(
       this as any,
       parent as never,
-      mutateCount,
-    ) as unknown as Network;
+      mutateCount
+    ) as unknown) as Network;
   }
 
   /**
@@ -611,7 +611,7 @@ export default class Neat {
       return selectMutationMethod.call(
         this as any,
         genome as never,
-        rawReturnForTest,
+        rawReturnForTest
       );
     } catch {
       return null;
@@ -655,7 +655,7 @@ export default class Neat {
   getObjectiveKeys(): string[] {
     // Map objective descriptors to their key strings
     return (this._getObjectives() as ObjectiveDescriptor[]).map(
-      (obj) => obj.key,
+      (obj) => obj.key
     );
   }
 
@@ -833,7 +833,7 @@ export default class Neat {
         name: operatorName,
         success: stats.success,
         attempts: stats.attempts,
-      }),
+      })
     );
   }
   /**
@@ -955,7 +955,7 @@ export default class Neat {
     const fronts: Network[][] = [];
     for (let frontIdx = 0; frontIdx < maxFronts; frontIdx++) {
       const front = this.population.filter(
-        (genome) => ((genome as any)._moRank ?? 0) === frontIdx,
+        (genome) => ((genome as any)._moRank ?? 0) === frontIdx
       );
       if (!front.length) break;
       fronts.push(front);
@@ -981,7 +981,7 @@ export default class Neat {
     key: string,
     direction: 'min' | 'max',
     // Widen accessor parameter type to match underlying registerObjective expectation (GenomeLike)
-    accessor: (g: any) => number,
+    accessor: (g: any) => number
   ) {
     return registerObjective.call(this as any, key, direction, accessor);
   }
@@ -1097,7 +1097,7 @@ export default class Neat {
    * @throws Error if tournament size exceeds population size.
    */
   getParent(): Network {
-    return getParent.call(this as any) as unknown as Network;
+    return (getParent.call(this as any) as unknown) as Network;
   }
 
   /**
@@ -1106,7 +1106,7 @@ export default class Neat {
    * @returns The fittest genome in the population.
    */
   getFittest(): Network {
-    return getFittest.call(this as any) as unknown as Network;
+    return (getFittest.call(this as any) as unknown) as Network;
   }
 
   /**
@@ -1151,13 +1151,13 @@ export default class Neat {
    */
   static async importState(
     bundle: any,
-    fitness: (n: Network) => number,
+    fitness: (n: Network) => number
   ): Promise<Neat> {
-    return (await importStateImpl.call(
+    return ((await importStateImpl.call(
       Neat as any,
       bundle,
-      fitness as never,
-    )) as unknown as Neat;
+      fitness as never
+    )) as unknown) as Neat;
   }
   /**
    * Import a previously exported state bundle and rehydrate a Neat instance.
@@ -1168,10 +1168,10 @@ export default class Neat {
   }
 
   static fromJSON(json: any, fitness: (n: Network) => number): Neat {
-    return fromJSONImpl.call(
+    return (fromJSONImpl.call(
       Neat as any,
       json,
-      fitness as never,
-    ) as unknown as Neat;
+      fitness as never
+    ) as unknown) as Neat;
   }
 }

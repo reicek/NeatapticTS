@@ -40,7 +40,7 @@ describe('serialization', () => {
     it('should preserve gated connection count across serialization formats', () => {
       // Arrange: small network baseline.
       const net = new Network(2, 1);
-      const runtimeNet = net as unknown as RuntimeNetwork;
+      const runtimeNet = (net as unknown) as RuntimeNetwork;
       // Attempt to add a hidden node if API exists; otherwise reuse existing structure.
       const hidden = runtimeNet.addNode?.() || null;
       const nodes = runtimeNet.nodes;
@@ -59,10 +59,10 @@ describe('serialization', () => {
 
       const originalGated =
         runtimeNet.connections.filter(
-          (c) => !!(c as unknown as RuntimeConnection).gater,
+          (c) => !!((c as unknown) as RuntimeConnection).gater
         ).length +
         runtimeNet.selfconns.filter(
-          (c) => !!(c as unknown as RuntimeConnection).gater,
+          (c) => !!((c as unknown) as RuntimeConnection).gater
         ).length;
 
       // Act: tuple round-trip
@@ -70,27 +70,27 @@ describe('serialization', () => {
       const netTuple = deserializeTuple(
         tuple,
         runtimeNet.input,
-        runtimeNet.output,
+        runtimeNet.output
       );
-      const runtimeTuple = netTuple as unknown as RuntimeNetwork;
+      const runtimeTuple = (netTuple as unknown) as RuntimeNetwork;
       const tupleGated =
         runtimeTuple.connections.filter(
-          (c) => !!(c as unknown as RuntimeConnection).gater,
+          (c) => !!((c as unknown) as RuntimeConnection).gater
         ).length +
         runtimeTuple.selfconns.filter(
-          (c) => !!(c as unknown as RuntimeConnection).gater,
+          (c) => !!((c as unknown) as RuntimeConnection).gater
         ).length;
 
       // Act: verbose JSON round-trip
       const json = toJSONImpl.call(net);
       const netJson = fromJSONImpl(json);
-      const runtimeJson = netJson as unknown as RuntimeNetwork;
+      const runtimeJson = (netJson as unknown) as RuntimeNetwork;
       const jsonGated =
         runtimeJson.connections.filter(
-          (c) => !!(c as unknown as RuntimeConnection).gater,
+          (c) => !!((c as unknown) as RuntimeConnection).gater
         ).length +
         runtimeJson.selfconns.filter(
-          (c) => !!(c as unknown as RuntimeConnection).gater,
+          (c) => !!((c as unknown) as RuntimeConnection).gater
         ).length;
 
       const pass =

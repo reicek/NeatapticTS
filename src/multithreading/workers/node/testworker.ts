@@ -121,10 +121,10 @@ export class TestWorker {
               code != null
                 ? ` with code ${code}`
                 : signal
-                  ? ` with signal ${signal}`
-                  : ''
-            }`,
-          ),
+                ? ` with signal ${signal}`
+                : ''
+            }`
+          )
         );
       };
 
@@ -139,10 +139,7 @@ export class TestWorker {
         this.worker.off('error', onError);
         this.worker.off(
           'exit',
-          onExit as (
-            code: number | null,
-            signal: NodeJS.Signals | null,
-          ) => void,
+          onExit as (code: number | null, signal: NodeJS.Signals | null) => void
         );
       };
 
@@ -150,7 +147,7 @@ export class TestWorker {
       this.worker.once('error', onError);
       this.worker.once(
         'exit',
-        onExit as (code: number | null, signal: NodeJS.Signals | null) => void,
+        onExit as (code: number | null, signal: NodeJS.Signals | null) => void
       );
 
       this.worker.send(data);

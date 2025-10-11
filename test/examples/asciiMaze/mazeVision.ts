@@ -68,7 +68,7 @@ export class MazeVision {
    * `distanceToExitMap` is provided. Values are `NaN` when missing.
    */
   static #SCRATCH_NEIGHBOR_RAWDIST = new Float32Array(
-    MazeVision.#DIRECTION_COUNT,
+    MazeVision.#DIRECTION_COUNT
   );
 
   // Small helpers
@@ -151,7 +151,7 @@ export class MazeVision {
     distanceToExitMap: number[][] | undefined,
     previousStepDistance: number | undefined,
     currentStepDistance: number,
-    previousAction: number | undefined,
+    previousAction: number | undefined
   ): number[] {
     // Step 0: Basic validation of inputs. Return a neutral vector when inputs
     // cannot be interpreted reliably (this keeps callers simple and avoids
@@ -368,8 +368,8 @@ export class MazeVision {
               ? 1
               : 3
             : deltaToExitY > 0
-              ? 2
-              : 0;
+            ? 2
+            : 0;
       }
     } else {
       const deltaToExitX = exitPosition[0] - agentX;
@@ -380,8 +380,8 @@ export class MazeVision {
             ? 1
             : 3
           : deltaToExitY > 0
-            ? 2
-            : 0;
+          ? 2
+          : 0;
     }
     const compassScalar = bestDirection * MazeVision.#COMPASS_STEP;
 
@@ -396,7 +396,7 @@ export class MazeVision {
       const delta = previousStepDistance - currentStepDistance;
       const clipped = Math.max(
         -MazeVision.#PROGRESS_CLIP,
-        Math.min(MazeVision.#PROGRESS_CLIP, delta),
+        Math.min(MazeVision.#PROGRESS_CLIP, delta)
       );
       progress =
         MazeVision.#PROGRESS_NEUTRAL + clipped / MazeVision.#PROGRESS_SCALE;

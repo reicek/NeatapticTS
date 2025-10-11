@@ -16,18 +16,14 @@ describe('Deterministic stochastic regularization', () => {
       net1.activate(inp, true);
       net2.activate(inp, true);
       patterns1.push(
-        (
-          net1 as unknown as {
-            _lastSkippedLayers?: number[];
-          }
-        )._lastSkippedLayers?.slice() || [],
+        ((net1 as unknown) as {
+          _lastSkippedLayers?: number[];
+        })._lastSkippedLayers?.slice() || []
       );
       patterns2.push(
-        (
-          net2 as unknown as {
-            _lastSkippedLayers?: number[];
-          }
-        )._lastSkippedLayers?.slice() || [],
+        ((net2 as unknown) as {
+          _lastSkippedLayers?: number[];
+        })._lastSkippedLayers?.slice() || []
       );
     }
     expect(patterns1).toEqual(patterns2);
@@ -82,13 +78,13 @@ describe('Deterministic stochastic regularization', () => {
           // hidden
           const hiddenIdx = fromLayer - 1;
           noiseByLayer[hiddenIdx].push(
-            (c as unknown as { _wnLast?: number })._wnLast || 0,
+            ((c as unknown) as { _wnLast?: number })._wnLast || 0
           );
         }
       }
     }
     const avgAbs = noiseByLayer.map(
-      (arr) => arr.reduce((a, b) => a + Math.abs(b), 0) / (arr.length || 1),
+      (arr) => arr.reduce((a, b) => a + Math.abs(b), 0) / (arr.length || 1)
     );
     expect(avgAbs[0]).toBeLessThan(1e-6); // ~0
     expect(avgAbs[1]).toBeGreaterThan(0.0001);

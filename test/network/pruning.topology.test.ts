@@ -300,7 +300,7 @@ describe('Network.pruning & topology utilities', () => {
       const reachable = hasPath.call(
         net,
         net.nodes[0],
-        net.nodes[net.nodes.length - 1],
+        net.nodes[net.nodes.length - 1]
       );
       // Assert
       expect(reachable).toBe(true);
@@ -314,7 +314,7 @@ describe('Network.pruning & topology utilities', () => {
       const reachable = hasPath.call(
         net,
         net.nodes[0],
-        net.nodes[net.nodes.length - 1],
+        net.nodes[net.nodes.length - 1]
       );
       // Assert
       expect(reachable).toBe(false);

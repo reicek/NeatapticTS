@@ -58,7 +58,7 @@ describe('inactive objective pruning behavior', () => {
         if (key === 'varB') accumulator.varB = true;
         return accumulator;
       },
-      { constA: false, constB: false, varB: false },
+      { constA: false, constB: false, varB: false }
     );
     expect(objectivePresence).toEqual({
       constA: false,

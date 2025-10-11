@@ -27,7 +27,7 @@ describe('ensureNoDeadEnds', () => {
     const net = neat.population[0];
     // Remove all connections
     [...net.connections].forEach((connection: Connection) =>
-      net.disconnect(connection.from, connection.to),
+      net.disconnect(connection.from, connection.to)
     );
     const hiddenNode = net.nodes.find((node) => node.type === 'hidden');
     // Call private method to repair
@@ -127,7 +127,7 @@ describe('State export/import', () => {
     const bundle = neat.exportState();
     const restored = await Neat.importState(
       bundle,
-      (n: Network) => n.connections.length,
+      (n: Network) => n.connections.length
     );
     expect(restored.generation).toBe(neat.generation);
   });

@@ -13,7 +13,7 @@ describe('Mutation add connection reuse (acyclic guard)', () => {
       seed: 880,
       mutation: [mutation.ADD_CONN],
     });
-    const neatWithInternals = neat as unknown as {
+    const neatWithInternals = (neat as unknown) as {
       _mutateAddConnReuse: (network: Network) => void;
     };
     let genome: Network;
@@ -22,20 +22,18 @@ describe('Mutation add connection reuse (acyclic guard)', () => {
       await neat.evaluate();
       genome = neat.population[0];
       // Step 1: enforce acyclicity and create simple chain input->hidden->output
-      (
-        genome as unknown as {
-          _enforceAcyclic?: boolean;
-        }
-      )._enforceAcyclic = true;
+      ((genome as unknown) as {
+        _enforceAcyclic?: boolean;
+      })._enforceAcyclic = true;
       // Step 2: insert hidden node prior to output nodes
       const hiddenNode = new Node('hidden');
       genome.nodes.splice(genome.nodes.length - genome.output, 0, hiddenNode);
       // Step 3: connect input -> hidden and hidden -> output
       const inputNode = genome.nodes.find(
-        (node: Node) => node.type === 'input',
+        (node: Node) => node.type === 'input'
       );
       const outputNode = genome.nodes.find(
-        (node: Node) => node.type === 'output',
+        (node: Node) => node.type === 'output'
       );
       if (inputNode !== undefined && outputNode !== undefined) {
         genome.connect(inputNode, hiddenNode, 1);
@@ -51,13 +49,13 @@ describe('Mutation add connection reuse (acyclic guard)', () => {
       }
       // Act: search for illegal back edge to input
       const inputNode = genome.nodes.find(
-        (node: Node) => node.type === 'input',
+        (node: Node) => node.type === 'input'
       );
       const illegalBackEdgeExists =
         inputNode !== undefined &&
         genome.connections.some(
-          (connection: (typeof genome.connections)[number]) =>
-            connection.from.type === 'hidden' && connection.to === inputNode,
+          (connection: typeof genome.connections[number]) =>
+            connection.from.type === 'hidden' && connection.to === inputNode
         );
       // Assert: no illegal back edge created
       expect(illegalBackEdgeExists).toBe(false);

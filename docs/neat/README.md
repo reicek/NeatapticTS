@@ -80,6 +80,7 @@ Returns: Mutates `this._phase` and `this._phaseStartGeneration`.
 ### NeatLikeWithAdaptive
 
 Minimal interface for NEAT instances with adaptive features.
+Exported for use in tests and type-safe function calls.
 
 ## neat/neat.compat.ts
 

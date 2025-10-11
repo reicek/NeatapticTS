@@ -13,16 +13,13 @@ describe('Network.evolveNetwork multi-thread branches', () => {
       const originalWorkers = Multi.workers;
       let spawnCount = 0;
       class SpawnFailureWorkers extends Workers {
-        static override async getNodeTestWorker(): Promise<typeof TestWorker> {
+        static getNodeTestWorker(): Promise<typeof TestWorker> {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Mock class for testing
-          return class MockTestWorker {
+          const MockTestWorker = (class MockTestWorker {
             ['worker']: unknown; // Required property to match TestWorker interface
             private readonly description: string;
 
-            constructor(
-              dataSet: number[],
-              cost: { name: string },
-            ) {
+            constructor(dataSet: number[], cost: { name: string }) {
               this['worker'] = null; // Mock worker property
               this.description = `${cost.name}:${dataSet.length}`;
               spawnCount += 1;
@@ -36,7 +33,8 @@ describe('Network.evolveNetwork multi-thread branches', () => {
             terminate() {
               void this.description;
             }
-          } as unknown as typeof TestWorker;
+          } as unknown) as typeof TestWorker;
+          return Promise.resolve(MockTestWorker);
         }
       }
       Multi.workers = SpawnFailureWorkers;
@@ -61,17 +59,14 @@ describe('Network.evolveNetwork multi-thread branches', () => {
       // Arrange
       const originalWorkers = Multi.workers;
       class RejectionWorkers extends Workers {
-        static override async getNodeTestWorker(): Promise<typeof TestWorker> {
+        static getNodeTestWorker(): Promise<typeof TestWorker> {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Mock class for testing
-          return class MockTestWorker {
+          const MockTestWorker = (class MockTestWorker {
             ['worker']: unknown; // Required property to match TestWorker interface
             #failOnce = true;
             private readonly description: string;
 
-            constructor(
-              dataSet: number[],
-              cost: { name: string },
-            ) {
+            constructor(dataSet: number[], cost: { name: string }) {
               this['worker'] = null; // Mock worker property
               this.description = `${cost.name}:${dataSet.length}`;
             }
@@ -87,7 +82,8 @@ describe('Network.evolveNetwork multi-thread branches', () => {
             terminate() {
               void this.description;
             }
-          } as unknown as typeof TestWorker;
+          } as unknown) as typeof TestWorker;
+          return Promise.resolve(MockTestWorker);
         }
       }
       Multi.workers = RejectionWorkers;

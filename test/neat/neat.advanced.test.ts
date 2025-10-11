@@ -421,16 +421,16 @@ describe('Neat advanced coverage', () => {
         });
         // Get reference to the actual genome in the population
         const genome = neat.population[0];
-        
+
         // Verify genome has connections that can be mutated
         expect(genome.connections.length).toBeGreaterThan(0);
-        
+
         // Record initial weight to verify mutation
         const initialWeight = genome.connections[0].weight;
-        
+
         // Act
         await neat.mutate();
-        
+
         // Assert: verify mutation actually occurred by checking weight changed
         const finalWeight = genome.connections[0].weight;
         expect(finalWeight).not.toBe(initialWeight);
@@ -448,9 +448,7 @@ describe('Neat advanced coverage', () => {
         });
         const mutateSpy = jest.spyOn(neat.population[0], 'mutate');
         // Force selectMutationMethod to always return null
-        jest
-          .spyOn(neat, 'selectMutationMethod')
-          .mockResolvedValue(null);
+        jest.spyOn(neat, 'selectMutationMethod').mockResolvedValue(null);
         // Act
         await neat.mutate();
         // Assert

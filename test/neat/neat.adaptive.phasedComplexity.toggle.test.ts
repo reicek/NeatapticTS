@@ -19,7 +19,7 @@ describe('Phased Complexity Toggle Boundary', () => {
       // Arrange: simulate generations and apply each time
       for (let g = 0; g < 5; g++) {
         neat.generation = g;
-        applyPhasedComplexity.call((neat as unknown as NeatLikeWithAdaptive));
+        applyPhasedComplexity.call((neat as unknown) as NeatLikeWithAdaptive);
       }
       // Act: final phase after simulation
       const phase = Reflect.get(neat, '_phase') as string | undefined;
@@ -28,4 +28,3 @@ describe('Phased Complexity Toggle Boundary', () => {
     });
   });
 });
-

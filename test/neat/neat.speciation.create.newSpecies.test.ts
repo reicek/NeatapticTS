@@ -11,8 +11,7 @@ type SpeciationCreationOptions = SpeciationOptions & {
   compatibilityThreshold: number;
 };
 
-type SpeciationTestContext =
-  SpeciationHarnessContext<SpeciationCreationOptions>;
+type SpeciationTestContext = SpeciationHarnessContext<SpeciationCreationOptions>;
 
 // Single expectation test: creates new species for each genome when all distances exceed threshold
 
@@ -23,7 +22,7 @@ const buildContext = (populationSize: number): SpeciationTestContext => {
       nodes: [],
       connections: [],
       _id: index + 1,
-    }),
+    })
   );
   return {
     population: genomes,
@@ -43,7 +42,7 @@ const buildContext = (populationSize: number): SpeciationTestContext => {
     _getRNG: () => () => 0.5,
     _compatibilityDistance: (
       genomeA: GenomeDetailed,
-      genomeB: GenomeDetailed,
+      genomeB: GenomeDetailed
     ) => {
       void genomeA;
       void genomeB;

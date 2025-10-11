@@ -702,7 +702,7 @@ Parameters:
 
 #### importState
 
-`(bundle: any, fitness: (n: import("D:/code-practice/NeatapticTS/src/architecture/network").default) => number) => import("D:/code-practice/NeatapticTS/src/neat").default`
+`(bundle: any, fitness: (n: import("D:/code-practice/NeatapticTS/src/architecture/network").default) => number) => Promise<import("D:/code-practice/NeatapticTS/src/neat").default>`
 
 Convenience: restore full evolutionary state previously produced by exportState().
 
@@ -1540,7 +1540,7 @@ The derivative of the activation function evaluated at the node's current state.
 
 #### deserialize
 
-`(data: unknown[] | [number[], number[], string[], { from: number; to: number; weight: number; gater: number | null; }[], number, number], inputSize: number | undefined, outputSize: number | undefined) => import("D:/code-practice/NeatapticTS/src/architecture/network").default`
+`(data: [number[], number[], string[], { from: number; to: number; weight: number; gater: number | null; }[], number, number] | unknown[], inputSize: number | undefined, outputSize: number | undefined) => import("D:/code-practice/NeatapticTS/src/architecture/network").default`
 
 Creates a Network instance from serialized data produced by `serialize()`.
 Reconstructs the network structure and state based on the provided arrays.
@@ -2143,7 +2143,7 @@ Parameters:
 
 #### importState
 
-`(bundle: any, fitness: (n: import("D:/code-practice/NeatapticTS/src/architecture/network").default) => number) => import("D:/code-practice/NeatapticTS/src/neat").default`
+`(bundle: any, fitness: (n: import("D:/code-practice/NeatapticTS/src/architecture/network").default) => number) => Promise<import("D:/code-practice/NeatapticTS/src/neat").default>`
 
 Convenience: restore full evolutionary state previously produced by exportState().
 
@@ -2332,15 +2332,15 @@ Slightly increases the chance of ADD_CONN mutation for more connectivity.
 
 #### mutate
 
-`(method: string | { [key: string]: unknown; name?: string | undefined; type?: string | undefined; identity?: string | undefined; } | { [key: string]: unknown; name?: string | undefined; type?: string | undefined; identity?: string | undefined; }[] | undefined) => void`
+`(method: import("D:/code-practice/NeatapticTS/src/architecture/network/network.mutate").MutationMethod) => void`
 
 Mutates the network's structure or parameters according to the specified method.
 This is a core operation for neuro-evolutionary algorithms (like NEAT).
 The method argument should be one of the mutation types defined in `methods.mutation`.
 
 Parameters:
-- `` - - The mutation method to apply (e.g., `mutation.ADD_NODE`, `mutation.MOD_WEIGHT`).
-Some methods might have associated parameters (e.g., `MOD_WEIGHT` uses `min`, `max`).
+- `method` - - The mutation method to apply (e.g., `mutation.ADD_NODE`, `mutation.MOD_WEIGHT`).
+  Some methods might have associated parameters (e.g., `MOD_WEIGHT` uses `min`, `max`).
 
 #### mutate
 
@@ -2642,7 +2642,7 @@ Returns: The selected mutation method or null if no valid method is available.
 
 #### serialize
 
-`() => unknown[]`
+`() => [number[], number[], string[], import("D:/code-practice/NeatapticTS/src/architecture/network/network.serialize").SerializedConnection[], number, number]`
 
 Lightweight tuple serializer delegating to network.serialize.ts
 

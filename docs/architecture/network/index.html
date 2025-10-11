@@ -432,13 +432,13 @@ Recurrent edges are handled separately by ADD_BACK_CONN.</p>
 <h3 id="batchnorm">_batchNorm</h3><p><code>() =&gt; void</code></p>
 <p>BATCH_NORM: Placeholder mutation – marks a random hidden node with a flag for potential
 future batch normalization integration. Currently a no-op beyond tagging.</p>
-<h3 id="modactivation">_modActivation</h3><p><code>(method: MutationMethod | undefined) =&gt; void</code></p>
+<h3 id="modactivation">_modActivation</h3><p><code>(method: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network/network.mutate&quot;).MutationMethod | undefined) =&gt; void</code></p>
 <p>MOD_ACTIVATION: Swap activation (squash) of a random eligible node; may exclude outputs.</p>
-<h3 id="modbias">_modBias</h3><p><code>(method: MutationMethod | undefined) =&gt; void</code></p>
+<h3 id="modbias">_modBias</h3><p><code>(method: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network/network.mutate&quot;).MutationMethod | undefined) =&gt; void</code></p>
 <p>MOD_BIAS: Delegate to node.mutate to adjust bias of a random non‑input node.</p>
-<h3 id="modweight">_modWeight</h3><p><code>(method: MutationMethod | undefined) =&gt; void</code></p>
+<h3 id="modweight">_modWeight</h3><p><code>(method: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network/network.mutate&quot;).MutationMethod | undefined) =&gt; void</code></p>
 <p>MOD_WEIGHT: Perturb a single (possibly self) connection weight by uniform delta in [min,max].</p>
-<h3 id="reinitweight">_reinitWeight</h3><p><code>(method: MutationMethod | undefined) =&gt; void</code></p>
+<h3 id="reinitweight">_reinitWeight</h3><p><code>(method: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network/network.mutate&quot;).MutationMethod | undefined) =&gt; void</code></p>
 <p>REINIT_WEIGHT: Reinitialize all incoming/outgoing/self connection weights for a random node.
 Useful as a heavy mutation to escape local minima. Falls back silently if no eligible node.</p>
 <h3 id="subbackconn">_subBackConn</h3><p><code>() =&gt; void</code></p>
@@ -452,9 +452,9 @@ Useful as a heavy mutation to escape local minima. Falls back silently if no eli
 After removal a tiny deterministic weight nudge encourages observable phenotype change in tests.</p>
 <h3 id="subselfconn">_subSelfConn</h3><p><code>() =&gt; void</code></p>
 <p>SUB_SELF_CONN: Remove a random existing self loop.</p>
-<h3 id="swapnodes">_swapNodes</h3><p><code>(method: MutationMethod | undefined) =&gt; void</code></p>
+<h3 id="swapnodes">_swapNodes</h3><p><code>(method: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network/network.mutate&quot;).MutationMethod | undefined) =&gt; void</code></p>
 <p>SWAP_NODES: Exchange bias &amp; activation function between two random eligible nodes.</p>
-<h3 id="mutateimpl">mutateImpl</h3><p><code>(method: MutationMethod | undefined) =&gt; void</code></p>
+<h3 id="mutateimpl">mutateImpl</h3><p><code>(method: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network/network.mutate&quot;).MutationMethod | undefined) =&gt; void</code></p>
 <p>Public entry point: apply a single mutation operator to the network.</p>
 <p>Steps:</p>
 <ol>
@@ -570,12 +570,12 @@ change—callers relying heavily on gating may want a custom remap strategy.</li
 <li>Self connections are simply removed; no attempt is made to emulate recursion via alternative
 structures.</li>
 </ul>
-<h2 id="architecture-network-network-serialize-ts">architecture/network/network.serialize.ts</h2><h3 id="deserialize">deserialize</h3><p><code>(data: [number[], number[], string[], SerializedConnection[], number, number], inputSize: number | undefined, outputSize: number | undefined) =&gt; import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default</code></p>
+<h2 id="architecture-network-network-serialize-ts">architecture/network/network.serialize.ts</h2><h3 id="deserialize">deserialize</h3><p><code>(data: [number[], number[], string[], import(&quot;D:/code-practice/NeatapticTS/src/architecture/network/network.serialize&quot;).SerializedConnection[], number, number], inputSize: number | undefined, outputSize: number | undefined) =&gt; import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default</code></p>
 <h3 id="fromjsonimpl">fromJSONImpl</h3><p><code>(json: NetworkJSON) =&gt; import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default</code></p>
 <h3 id="network-serialize">network.serialize</h3><h3 id="networkinternals">NetworkInternals</h3><p>Runtime interface for accessing Network internal properties.</p>
 <h3 id="networkjson">NetworkJSON</h3><p>Verbose JSON format for network serialization.</p>
 <h3 id="nodeinternals">NodeInternals</h3><p>Runtime interface for accessing Node internal properties.</p>
-<h3 id="serialize">serialize</h3><p><code>() =&gt; [number[], number[], string[], SerializedConnection[], number, number]</code></p>
+<h3 id="serialize">serialize</h3><p><code>() =&gt; [number[], number[], string[], import(&quot;D:/code-practice/NeatapticTS/src/architecture/network/network.serialize&quot;).SerializedConnection[], number, number]</code></p>
 <p>Serialization &amp; deserialization helpers for Network instances.</p>
 <p>Provides two independent formats:</p>
 <ol>

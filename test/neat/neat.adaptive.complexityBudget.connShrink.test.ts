@@ -25,11 +25,10 @@ describe('Adaptive Complexity Budget connection shrink', () => {
         '../../src/neat/neat.adaptive'
       );
       for (let i = 0; i < 4; i++) {
-        applyComplexityBudget.call(neat as unknown as NeatLikeWithAdaptive);
+        applyComplexityBudget.call((neat as unknown) as NeatLikeWithAdaptive);
       }
       const after = neat.options.maxConns;
       expect(after).toBeLessThan(start);
     });
   });
 });
-

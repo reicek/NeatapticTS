@@ -91,7 +91,7 @@ export function applyEvolutionPruning(this: NeatLikeForPruning) {
     // Step: compute normalized progress through the ramp window.
     const progressThroughRamp = Math.min(
       1,
-      Math.max(0, (this.generation - startGen) / rampGenerations),
+      Math.max(0, (this.generation - startGen) / rampGenerations)
     );
     rampFraction = progressThroughRamp;
   }
@@ -109,7 +109,7 @@ export function applyEvolutionPruning(this: NeatLikeForPruning) {
       // Step: call the genome's pruning routine. Method defaults to 'magnitude'.
       genome.pruneToSparsity(
         targetSparsityNow,
-        evolutionPruningOpts.method || 'magnitude',
+        evolutionPruningOpts.method || 'magnitude'
       );
     }
   }
@@ -155,7 +155,7 @@ export function applyAdaptivePruning(this: NeatLikeForPruning) {
   const meanNodeCount =
     this.population.reduce(
       (acc: number, genome) => acc + genome.nodes.length,
-      0,
+      0
     ) / (this.population.length || 1);
 
   // Compute average connection count across the population.
@@ -163,7 +163,7 @@ export function applyAdaptivePruning(this: NeatLikeForPruning) {
   const meanConnectionCount =
     this.population.reduce(
       (acc: number, genome) => acc + genome.connections.length,
-      0,
+      0
     ) / (this.population.length || 1);
 
   // Select the current observed metric value.
@@ -207,8 +207,8 @@ export function applyAdaptivePruning(this: NeatLikeForPruning) {
       Math.min(
         desiredSparsity,
         this._adaptivePruneLevel +
-          adjustRate * (normalizedDifference > 0 ? 1 : -1),
-      ),
+          adjustRate * (normalizedDifference > 0 ? 1 : -1)
+      )
     );
 
     // Propagate new prune level to each genome using magnitude pruning.

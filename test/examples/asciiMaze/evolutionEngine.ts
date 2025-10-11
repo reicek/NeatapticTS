@@ -196,7 +196,7 @@ export class EvolutionEngine {
    */
   static #getNodeIndicesByType(
     nodes: RuntimeNetworkNode[] | undefined,
-    type: string,
+    type: string
   ): number {
     if (!Array.isArray(nodes) || nodes.length === 0) return 0;
     let writeCount = 0;
@@ -223,7 +223,7 @@ export class EvolutionEngine {
   static #collectHiddenToOutputConns(
     hiddenNode: RuntimeNetworkNode,
     nodesRef: RuntimeNetworkNode[],
-    outputCount: number,
+    outputCount: number
   ): RuntimeNetworkConnection[] {
     if (
       !hiddenNode?.connections ||
@@ -235,7 +235,7 @@ export class EvolutionEngine {
     const effectiveOutputCount = Math.min(
       outputCount | 0,
       maxScratch,
-      nodesRef.length,
+      nodesRef.length
     );
     if (effectiveOutputCount <= 0) return [];
     const hiddenOutBuffer =
@@ -243,9 +243,9 @@ export class EvolutionEngine {
     hiddenOutBuffer.length = 0;
     const outgoing = hiddenNode.connections.out ?? EvolutionEngine.#EMPTY_VEC;
     for (let outIndex = 0; outIndex < outgoing.length; outIndex++) {
-      const candidate = outgoing[
+      const candidate = (outgoing[
         outIndex
-      ] as unknown as RuntimeNetworkConnection;
+      ] as unknown) as RuntimeNetworkConnection;
       if (!candidate || candidate.enabled === false) continue;
       for (
         let outputIndex = 0;
@@ -308,7 +308,7 @@ export class EvolutionEngine {
       },
       (disabled: boolean) => {
         EvolutionEngine.#STATE.toggles.disableBaldwinPhase = disabled;
-      },
+      }
     );
 
     // 2) Prepare maze, encoded maps and fitness context. This reuses pooled buffers where possible.
@@ -329,7 +329,7 @@ export class EvolutionEngine {
       outputSize,
       fitnessContext,
       EvolutionEngine.#STATE.scratch.populationCloneBuffer,
-      EvolutionEngine.#STATE.scratch.samplePool,
+      EvolutionEngine.#STATE.scratch.samplePool
     );
     EvolutionEngine.#STATE.scratch.populationCloneBuffer = scratchPopClone;
     EvolutionEngine.#STATE.scratch.samplePool = scratchSample;
@@ -364,7 +364,7 @@ export class EvolutionEngine {
         AUGMENT_PROGRESS_DELTA_HALF:
           EvolutionEngine.#AUGMENT_PROGRESS_DELTA_HALF,
         RNG_PARAMETERS: resolveRngParameters(),
-      },
+      }
     );
     warmStartPopulationIfNeeded(
       neat,
@@ -385,15 +385,15 @@ export class EvolutionEngine {
               EvolutionEngine.#DEFAULT_TRAIN_BATCH_SMALL,
           },
           applyCompassWarmStart,
-          centerOutputBiases,
+          centerOutputBiases
         );
-      },
+      }
     );
 
     // 6) Prepare loop helpers and run the full evolution loop inside a private helper.
     const loopHelpers = prepareLoopHelpers(
       opts,
-      EvolutionEngine.#STATE.scratch,
+      EvolutionEngine.#STATE.scratch
     );
 
     // Lightweight profiling (opt-in): set env ASCII_MAZE_PROFILE=1 to enable
@@ -422,7 +422,7 @@ export class EvolutionEngine {
       EvolutionEngine.#STATE.scratch.sharedLogits,
       EvolutionEngine.#STATE.scratch.sharedLogitsWriteIndex,
       EvolutionEngine.#SCRATCH_LOGITS_RING_W,
-      EvolutionEngine.#EMPTY_VEC as unknown as Network[],
+      (EvolutionEngine.#EMPTY_VEC as unknown) as Network[],
       EvolutionEngine.#STATE.scratch.nodeIndexBuffer,
       EvolutionEngine.#STATE.scratch.snapshotReusableObject,
       EvolutionEngine.#STATE.scratch.snapshotTopEntries,
@@ -443,9 +443,9 @@ export class EvolutionEngine {
         REDUCED_TELEMETRY: EvolutionEngine.#STATE.toggles.reducedTelemetry,
         DISABLE_BALDWIN: EvolutionEngine.#STATE.toggles.disableBaldwinPhase,
       },
-      ((EvolutionEngine as unknown as RuntimeEvolutionEngine)
-        ._speciesHistory as unknown as number[]) ??
-        (EvolutionEngine.#EMPTY_VEC as unknown as number[]),
+      ((((EvolutionEngine as unknown) as RuntimeEvolutionEngine)
+        ._speciesHistory as unknown) as number[]) ??
+        ((EvolutionEngine.#EMPTY_VEC as unknown) as number[])
     );
 
     // Update ring state from loop result
@@ -475,7 +475,7 @@ export class EvolutionEngine {
         totalLamarckMs,
         totalSimMs,
         isProfilingDetailsEnabled,
-        getProfilingAccumulators,
+        getProfilingAccumulators
       );
     }
 
@@ -485,7 +485,7 @@ export class EvolutionEngine {
       bestResult,
       neat,
       exitReason:
-        (bestResult as unknown as RuntimeEvolutionResult).exitReason ??
+        ((bestResult as unknown) as RuntimeEvolutionResult).exitReason ??
         'incomplete',
     };
   }

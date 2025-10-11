@@ -24,11 +24,11 @@ describe('NEAT Objectives Management', () => {
       seed: 445,
       multiObjective: { enabled: true },
     });
-    const neatWithObjectives = neat as unknown as {
+    const neatWithObjectives = (neat as unknown) as {
       registerObjective: (
         key: string,
         direction: 'min' | 'max',
-        accessor: (network: Network) => number,
+        accessor: (network: Network) => number
       ) => void;
       clearObjectives: () => void;
     };
@@ -37,7 +37,7 @@ describe('NEAT Objectives Management', () => {
       neatWithObjectives.registerObjective(
         'sparsity',
         'min',
-        (network) => network.connections.length,
+        (network) => network.connections.length
       );
       // Act: retrieve keys including new objective
       const keys = neat.getObjectiveKeys();
@@ -49,7 +49,7 @@ describe('NEAT Objectives Management', () => {
       neatWithObjectives.registerObjective(
         'temp',
         'max',
-        (network) => network.nodes.length,
+        (network) => network.nodes.length
       );
       neatWithObjectives.clearObjectives();
       // Act: get resulting keys

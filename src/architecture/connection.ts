@@ -139,7 +139,7 @@ export default class Connection {
       enabled: this.enabled,
     };
     if (this._flags & 0b100) {
-      const g = (this as unknown as ConnectionSymbolProps)[kGater];
+      const g = ((this as unknown) as ConnectionSymbolProps)[kGater];
       if (g && typeof g.index !== 'undefined') json.gater = g.index;
     }
     return json;
@@ -199,8 +199,8 @@ export default class Connection {
     let c: Connection;
     if (Connection._pool.length) {
       c = Connection._pool.pop()!;
-      const symProps = c as unknown as ConnectionSymbolProps;
-      const mutableConn = c as unknown as {
+      const symProps = (c as unknown) as ConnectionSymbolProps;
+      const mutableConn = (c as unknown) as {
         from: Node;
         to: Node;
         innovation: number;
@@ -257,7 +257,7 @@ export default class Connection {
   set plastic(v: boolean) {
     if (v) this._flags |= 0b1000;
     else this._flags &= ~0b1000;
-    const symProps = this as unknown as ConnectionSymbolProps;
+    const symProps = (this as unknown) as ConnectionSymbolProps;
     if (!v && symProps[kPlasticRate] !== undefined)
       delete symProps[kPlasticRate];
   }
@@ -269,11 +269,11 @@ export default class Connection {
    * large populations where most connections are ungated.
    */
   get gain(): number {
-    const symProps = this as unknown as ConnectionSymbolProps;
+    const symProps = (this as unknown) as ConnectionSymbolProps;
     return symProps[kGain] === undefined ? 1 : symProps[kGain];
   }
   set gain(v: number) {
-    const symProps = this as unknown as ConnectionSymbolProps;
+    const symProps = (this as unknown) as ConnectionSymbolProps;
     if (v === 1) {
       if (symProps[kGain] !== undefined) delete symProps[kGain];
     } else {
@@ -283,7 +283,7 @@ export default class Connection {
 
   // --- Optimizer field accessors (prototype-level to avoid per-instance enumerable keys) ---
   private _ensureOptBag(): Record<string, number | undefined> {
-    const symProps = this as unknown as ConnectionSymbolProps;
+    const symProps = (this as unknown) as ConnectionSymbolProps;
     let bag = symProps[kOpt];
     if (!bag) {
       bag = {};
@@ -292,12 +292,12 @@ export default class Connection {
     return bag;
   }
   private _getOpt(_k: string): number | undefined {
-    const symProps = this as unknown as ConnectionSymbolProps;
+    const symProps = (this as unknown) as ConnectionSymbolProps;
     const bag = symProps[kOpt];
     return bag ? bag[_k] : undefined;
   }
   private _setOpt(k: string, v: number | undefined): void {
-    const symProps = this as unknown as ConnectionSymbolProps;
+    const symProps = (this as unknown) as ConnectionSymbolProps;
     if (v === undefined) {
       const bag = symProps[kOpt];
       if (bag) delete bag[k];
@@ -358,11 +358,11 @@ export default class Connection {
   // --- Virtualized gater property (non-enumerable) ---
   /** Optional gating node whose activation can modulate effective weight (symbol-backed). */
   get gater(): Node | null {
-    const symProps = this as unknown as ConnectionSymbolProps;
-    return (this._flags & 0b100) !== 0 ? (symProps[kGater] ?? null) : null;
+    const symProps = (this as unknown) as ConnectionSymbolProps;
+    return (this._flags & 0b100) !== 0 ? symProps[kGater] ?? null : null;
   }
   set gater(node: Node | null) {
-    const symProps = this as unknown as ConnectionSymbolProps;
+    const symProps = (this as unknown) as ConnectionSymbolProps;
     if (node === null) {
       if ((this._flags & 0b100) !== 0) {
         this._flags &= ~0b100;
@@ -376,11 +376,11 @@ export default class Connection {
   // --- Plasticity rate (virtualized) ---
   /** Per-connection plasticity / learning rate (0 means non-plastic). Setting >0 marks plastic flag. */
   get plasticityRate(): number {
-    const symProps = this as unknown as ConnectionSymbolProps;
+    const symProps = (this as unknown) as ConnectionSymbolProps;
     return symProps[kPlasticRate] === undefined ? 0 : symProps[kPlasticRate];
   }
   set plasticityRate(v: number) {
-    const symProps = this as unknown as ConnectionSymbolProps;
+    const symProps = (this as unknown) as ConnectionSymbolProps;
     if (v === undefined || v === 0) {
       if (symProps[kPlasticRate] !== undefined) delete symProps[kPlasticRate];
       this._flags &= ~0b1000;

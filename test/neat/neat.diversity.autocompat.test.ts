@@ -5,9 +5,8 @@ import Node from '../../src/architecture/node';
 describe('diversityPressure & autoCompatTuning', () => {
   const fitness = (net: Network) => {
     // Simple fitness proportional to hidden node count to create motif similarity pressure
-    const hiddenCount = net.nodes.filter(
-      (node: Node) => node.type === 'hidden',
-    ).length;
+    const hiddenCount = net.nodes.filter((node: Node) => node.type === 'hidden')
+      .length;
     return hiddenCount;
   };
   test('diversity pressure adjusts scores (no crash)', async () => {
@@ -27,7 +26,7 @@ describe('diversityPressure & autoCompatTuning', () => {
     await neat.evaluate();
     const population = neat.population;
     const allScored = population.every(
-      (genome) => typeof genome.score === 'number',
+      (genome) => typeof genome.score === 'number'
     );
     expect(allScored).toBe(true);
   });

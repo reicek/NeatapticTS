@@ -528,7 +528,7 @@ while disjoint/excess genes are typically inherited from the fitter parent (or r
  If false (default), they are inherited from the fitter parent.</li>
 </ul>
 <p>Returns: A new Network instance representing the offspring.</p>
-<h4 id="deserialize">deserialize</h4><p><code>(data: unknown[] | [number[], number[], string[], { from: number; to: number; weight: number; gater: number | null; }[], number, number], inputSize: number | undefined, outputSize: number | undefined) =&gt; import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default</code></p>
+<h4 id="deserialize">deserialize</h4><p><code>(data: [number[], number[], string[], { from: number; to: number; weight: number; gater: number | null; }[], number, number] | unknown[], inputSize: number | undefined, outputSize: number | undefined) =&gt; import(&quot;D:/code-practice/NeatapticTS/src/architecture/network&quot;).default</code></p>
 <p>Creates a Network instance from serialized data produced by <code>serialize()</code>.
 Reconstructs the network structure and state based on the provided arrays.</p>
 <p>Parameters:</p>
@@ -579,13 +579,13 @@ Adds the connection to the network&#39;s <code>gates</code> list.</p>
 <p>Returns last recorded raw (pre-update) gradient L2 norm.</p>
 <h4 id="gettrainingstats">getTrainingStats</h4><p><code>() =&gt; { gradNorm: number; gradNormRaw: number; lossScale: number; optimizerStep: number; mp: { good: number; bad: number; overflowCount: number; scaleUps: number; scaleDowns: number; lastOverflowStep: number; }; }</code></p>
 <p>Consolidated training stats snapshot.</p>
-<h4 id="mutate">mutate</h4><p><code>(method: string | { [key: string]: unknown; name?: string | undefined; type?: string | undefined; identity?: string | undefined; } | { [key: string]: unknown; name?: string | undefined; type?: string | undefined; identity?: string | undefined; }[] | undefined) =&gt; void</code></p>
+<h4 id="mutate">mutate</h4><p><code>(method: import(&quot;D:/code-practice/NeatapticTS/src/architecture/network/network.mutate&quot;).MutationMethod) =&gt; void</code></p>
 <p>Mutates the network&#39;s structure or parameters according to the specified method.
 This is a core operation for neuro-evolutionary algorithms (like NEAT).
 The method argument should be one of the mutation types defined in <code>methods.mutation</code>.</p>
 <p>Parameters:</p>
 <ul>
-<li>`` - - The mutation method to apply (e.g., <code>mutation.ADD_NODE</code>, <code>mutation.MOD_WEIGHT</code>).
+<li><code>method</code> - - The mutation method to apply (e.g., <code>mutation.ADD_NODE</code>, <code>mutation.MOD_WEIGHT</code>).
 Some methods might have associated parameters (e.g., <code>MOD_WEIGHT</code> uses <code>min</code>, <code>max</code>).</li>
 </ul>
 <h4 id="notraceactivate">noTraceActivate</h4><p><code>(input: number[]) =&gt; number[]</code></p>
@@ -651,7 +651,7 @@ and potentially re-gating connections that were gated <em>by other nodes</em> on
 <h4 id="resetdropoutmasks">resetDropoutMasks</h4><p><code>() =&gt; void</code></p>
 <p>Resets all masks in the network to 1 (no dropout). Applies to both node-level and layer-level dropout.
 Should be called after training to ensure inference is unaffected by previous dropout.</p>
-<h4 id="serialize">serialize</h4><p><code>() =&gt; unknown[]</code></p>
+<h4 id="serialize">serialize</h4><p><code>() =&gt; [number[], number[], string[], import(&quot;D:/code-practice/NeatapticTS/src/architecture/network/network.serialize&quot;).SerializedConnection[], number, number]</code></p>
 <p>Lightweight tuple serializer delegating to network.serialize.ts</p>
 <h4 id="set">set</h4><p><code>(values: { bias?: number | undefined; squash?: ((x: number, derivate?: boolean | undefined) =&gt; number) | undefined; }) =&gt; void</code></p>
 <p>Sets specified properties (e.g., bias, squash function) for all nodes in the network.

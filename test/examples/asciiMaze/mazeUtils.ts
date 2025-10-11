@@ -138,7 +138,7 @@ export class MazeUtils {
   static pushHistory<T>(
     buffer: T[] | undefined,
     value: T,
-    maxLen: number,
+    maxLen: number
   ): T[] {
     // Fast-path: if no existing buffer, return a new one containing the value.
     if (!Array.isArray(buffer)) return [value];
@@ -217,7 +217,7 @@ export class MazeUtils {
    */
   static findPosition(
     asciiMaze: ReadonlyArray<string>,
-    char: string,
+    char: string
   ): readonly [number, number] {
     // Fast, low-allocation search:
     // - Use an index-based loop to avoid iterator allocations.
@@ -264,7 +264,7 @@ export class MazeUtils {
   static bfsDistance(
     encodedMaze: ReadonlyArray<ReadonlyArray<number>>,
     start: readonly [number, number],
-    goal: readonly [number, number],
+    goal: readonly [number, number]
   ): number {
     // --- Step 1: validate inputs and derive grid metadata ---
     const [startX, startY] = start;
@@ -375,7 +375,7 @@ export class MazeUtils {
     encodedMaze: ReadonlyArray<ReadonlyArray<number>>,
     currentPos: readonly [number, number],
     startPos: readonly [number, number],
-    exitPos: readonly [number, number],
+    exitPos: readonly [number, number]
   ): number {
     /**
      * Total shortest path distance from start to exit
@@ -388,15 +388,15 @@ export class MazeUtils {
     const remainingDistance = MazeUtils.bfsDistance(
       encodedMaze,
       currentPos,
-      exitPos,
+      exitPos
     );
     // Calculate progress as a percentage
     return Math.min(
       100,
       Math.max(
         0,
-        Math.round(((totalDistance - remainingDistance) / totalDistance) * 100),
-      ),
+        Math.round(((totalDistance - remainingDistance) / totalDistance) * 100)
+      )
     );
   }
 
@@ -411,7 +411,7 @@ export class MazeUtils {
   static calculateProgressFromDistanceMap(
     distanceMap: ReadonlyArray<ReadonlyArray<number>>,
     currentPos: readonly [number, number],
-    startPos: readonly [number, number],
+    startPos: readonly [number, number]
   ): number {
     /**
      * Start and current coordinates
@@ -446,15 +446,20 @@ export class MazeUtils {
    */
   static buildDistanceMap(
     encodedMaze: ReadonlyArray<ReadonlyArray<number>>,
-    goal: readonly [number, number],
+    goal: readonly [number, number]
   ): number[][] {
     // Use the fast flat variant internally, then convert to the legacy number[][] shape.
-    const { width, height, distances, WALL_VALUE, UNREACHABLE_VALUE } =
-      MazeUtils.buildDistanceMapFlat(encodedMaze, goal);
+    const {
+      width,
+      height,
+      distances,
+      WALL_VALUE,
+      UNREACHABLE_VALUE,
+    } = MazeUtils.buildDistanceMapFlat(encodedMaze, goal);
 
     const result: number[][] = Array.from(
       { length: height },
-      () => new Array<number>(width),
+      () => new Array<number>(width)
     );
 
     // Convert flat typed-array distances back into legacy 2D shape.
@@ -500,7 +505,7 @@ export class MazeUtils {
    */
   static buildDistanceMapFlat(
     encodedMaze: ReadonlyArray<ReadonlyArray<number>>,
-    goal: readonly [number, number],
+    goal: readonly [number, number]
   ): {
     width: number;
     height: number;

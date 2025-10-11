@@ -6,7 +6,7 @@ describe('Training Early Stopping Extensions', () => {
   describe('Scenario: movingAverageWindow > 1 smooths oscillating error', () => {
     const net = new Network(1, 1);
     const rawErrors: number[] = Array.from({ length: 20 }, (_, i) =>
-      i % 2 === 0 ? 0.5 : 0.7,
+      i % 2 === 0 ? 0.5 : 0.7
     );
     let idx = 0;
     const cost = () => rawErrors[Math.min(idx++, rawErrors.length - 1)];

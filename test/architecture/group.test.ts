@@ -36,8 +36,8 @@ beforeEach(() => {
     origLog.apply(
       console,
       args.map((arg) =>
-        arg && typeof arg.toJSON === 'function' ? arg.toJSON() : arg,
-      ),
+        arg && typeof arg.toJSON === 'function' ? arg.toJSON() : arg
+      )
     );
   };
   console.dir = (obj, options): void => {
@@ -138,7 +138,7 @@ describe('Group', () => {
         it('throws an error', () => {
           // Act & Assert
           expect(() => group.activate([1, 2])).toThrow(
-            'Array with values should be same as the amount of nodes!',
+            'Array with values should be same as the amount of nodes!'
           );
         });
       });
@@ -168,21 +168,21 @@ describe('Group', () => {
           // Assert
           expect(activations[0]).toBeCloseTo(
             1 / (1 + Math.exp(-inputValues[0])),
-            10,
+            10
           );
         });
         it('assigns correct activation value to node 1', () => {
           // Assert
           expect(activations[1]).toBeCloseTo(
             1 / (1 + Math.exp(-inputValues[1])),
-            10,
+            10
           );
         });
         it('assigns correct activation value to node 2', () => {
           // Assert
           expect(activations[2]).toBeCloseTo(
             1 / (1 + Math.exp(-inputValues[2])),
-            10,
+            10
           );
         });
       });
@@ -191,7 +191,7 @@ describe('Group', () => {
         it('throws an error', () => {
           // Act & Assert
           expect(() => group.activate([1, 2])).toThrow(
-            'Array with values should be same as the amount of nodes!',
+            'Array with values should be same as the amount of nodes!'
           );
         });
       });
@@ -228,7 +228,7 @@ describe('Group', () => {
         const targets = [0.1, 0.2];
         // Act & Assert
         expect(() => group.propagate(rate, momentum, targets)).toThrow(
-          'Array with values should be same as the amount of nodes!',
+          'Array with values should be same as the amount of nodes!'
         );
       });
     });
@@ -257,7 +257,7 @@ describe('Group', () => {
     describe('when no gating method is specified', () => {
       it('throws an error', () => {
         expect(() => gatingGroup.gate(connections, undefined)).toThrow(
-          'Please specify a gating method: Gating.INPUT, Gating.OUTPUT, or Gating.SELF',
+          'Please specify a gating method: Gating.INPUT, Gating.OUTPUT, or Gating.SELF'
         );
       });
     });
@@ -756,7 +756,7 @@ describe('Group', () => {
         });
         it('warns about default ALL_TO_ALL', () => {
           expect(console.warn).toHaveBeenCalledWith(
-            'No group connection specified, using ALL_TO_ALL by default.',
+            'No group connection specified, using ALL_TO_ALL by default.'
           );
         });
         it('forms connections between all node pairs', () => {
@@ -788,7 +788,7 @@ describe('Group', () => {
         });
         it('warns about default ONE_TO_ONE', () => {
           expect(console.warn).toHaveBeenCalledWith(
-            'Connecting group to itself, using ONE_TO_ONE by default.',
+            'Connecting group to itself, using ONE_TO_ONE by default.'
           );
         });
         it('stores self-connection in group', () => {
@@ -808,7 +808,7 @@ describe('Group', () => {
           // Act
           connections = group1.connect(
             group2,
-            methods.groupConnection.ALL_TO_ALL,
+            methods.groupConnection.ALL_TO_ALL
           );
         });
         it('creates the correct number of connections', () => {
@@ -831,7 +831,7 @@ describe('Group', () => {
           sameSizeGroup = new Group(size1);
           connections = sameSizeGroup.connect(
             sameSizeGroup,
-            methods.groupConnection.ALL_TO_ELSE,
+            methods.groupConnection.ALL_TO_ELSE
           );
         });
         it('creates the correct number of connections', () => {
@@ -856,7 +856,7 @@ describe('Group', () => {
           sameSizeGroup = new Group(size1);
           connections = group1.connect(
             sameSizeGroup,
-            methods.groupConnection.ONE_TO_ONE,
+            methods.groupConnection.ONE_TO_ONE
           );
         });
         it('creates the correct number of connections', () => {
@@ -880,9 +880,9 @@ describe('Group', () => {
       describe('when connecting ONE_TO_ONE with different group sizes', () => {
         it('throws an error', () => {
           expect(() =>
-            group1.connect(group2, methods.groupConnection.ONE_TO_ONE),
+            group1.connect(group2, methods.groupConnection.ONE_TO_ONE)
           ).toThrow(
-            'Cannot create ONE_TO_ONE connection: source and target groups must have the same size.',
+            'Cannot create ONE_TO_ONE connection: source and target groups must have the same size.'
           );
         });
       });
@@ -895,7 +895,7 @@ describe('Group', () => {
           connections = group1.connect(
             group2,
             methods.groupConnection.ALL_TO_ALL,
-            weight,
+            weight
           );
         });
         it('sets the weight for all connections', () => {

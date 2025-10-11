@@ -73,7 +73,7 @@ describe('Optimizer specific behaviors', () => {
       const latestConnection = net.connections[0];
       expect(latestConnection.weight).toBeCloseTo(
         latestConnection.lookaheadShadowWeight!,
-        10,
+        10
       );
     });
   });
@@ -94,7 +94,7 @@ describe('Optimizer specific behaviors', () => {
     it('throws error', () => {
       const net = buildNet();
       expect(() =>
-        net.train(data, { iterations: 1, rate: 0.01, optimizer: 'nope' }),
+        net.train(data, { iterations: 1, rate: 0.01, optimizer: 'nope' })
       ).toThrow('Unknown optimizer type');
     });
   });
@@ -107,7 +107,7 @@ describe('Optimizer specific behaviors', () => {
           iterations: 1,
           rate: 0.01,
           optimizer: { type: 'lookahead', baseType: 'lookahead' },
-        }),
+        })
       ).toThrow('Nested lookahead');
     });
   });

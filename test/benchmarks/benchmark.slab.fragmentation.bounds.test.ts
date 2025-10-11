@@ -21,8 +21,8 @@ describe('benchmark.slab.fragmentation.bounds', () => {
     const net = new Network(5, 2, { enforceAcyclic: true });
     const fragments: number[] = [];
     const record = (): void => {
-      (net as unknown as RuntimeNetwork)._slabDirty = true;
-      (net as unknown as RuntimeNetwork).getConnectionSlab();
+      ((net as unknown) as RuntimeNetwork)._slabDirty = true;
+      ((net as unknown) as RuntimeNetwork).getConnectionSlab();
       const frag = memoryStats(net).slabs.fragmentationPct;
       if (frag !== null) fragments.push(frag);
     };

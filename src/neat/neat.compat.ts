@@ -57,7 +57,7 @@ interface NeatLikeForCompat {
 // eslint-disable-next-line prefer-arrow/prefer-arrow-functions
 export const _fallbackInnov = function (
   this: NeatLikeForCompat,
-  connection: ConnectionLike,
+  connection: ConnectionLike
 ): number {
   // Read the source and target node indices, defaulting to 0 if missing.
   const fromIndex = connection.from?.index ?? 0;
@@ -91,7 +91,7 @@ export const _fallbackInnov = function (
 export const _compatibilityDistance = function (
   this: NeatLikeForCompat,
   genomeA: GenomeLike,
-  genomeB: GenomeLike,
+  genomeB: GenomeLike
 ): number {
   // Ensure a generation-scoped cache exists and reset it at generation boundaries.
   if (!this._compatCacheGen || this._compatCacheGen !== this.generation) {

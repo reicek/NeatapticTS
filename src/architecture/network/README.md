@@ -517,25 +517,25 @@ future batch normalization integration. Currently a no-op beyond tagging.
 
 ### _modActivation
 
-`(method: MutationMethod | undefined) => void`
+`(method: import("D:/code-practice/NeatapticTS/src/architecture/network/network.mutate").MutationMethod | undefined) => void`
 
 MOD_ACTIVATION: Swap activation (squash) of a random eligible node; may exclude outputs.
 
 ### _modBias
 
-`(method: MutationMethod | undefined) => void`
+`(method: import("D:/code-practice/NeatapticTS/src/architecture/network/network.mutate").MutationMethod | undefined) => void`
 
 MOD_BIAS: Delegate to node.mutate to adjust bias of a random non‑input node.
 
 ### _modWeight
 
-`(method: MutationMethod | undefined) => void`
+`(method: import("D:/code-practice/NeatapticTS/src/architecture/network/network.mutate").MutationMethod | undefined) => void`
 
 MOD_WEIGHT: Perturb a single (possibly self) connection weight by uniform delta in [min,max].
 
 ### _reinitWeight
 
-`(method: MutationMethod | undefined) => void`
+`(method: import("D:/code-practice/NeatapticTS/src/architecture/network/network.mutate").MutationMethod | undefined) => void`
 
 REINIT_WEIGHT: Reinitialize all incoming/outgoing/self connection weights for a random node.
 Useful as a heavy mutation to escape local minima. Falls back silently if no eligible node.
@@ -573,13 +573,13 @@ SUB_SELF_CONN: Remove a random existing self loop.
 
 ### _swapNodes
 
-`(method: MutationMethod | undefined) => void`
+`(method: import("D:/code-practice/NeatapticTS/src/architecture/network/network.mutate").MutationMethod | undefined) => void`
 
 SWAP_NODES: Exchange bias & activation function between two random eligible nodes.
 
 ### mutateImpl
 
-`(method: MutationMethod | undefined) => void`
+`(method: import("D:/code-practice/NeatapticTS/src/architecture/network/network.mutate").MutationMethod | undefined) => void`
 
 Public entry point: apply a single mutation operator to the network.
 
@@ -765,7 +765,7 @@ Notes / Limitations:
 
 ### deserialize
 
-`(data: [number[], number[], string[], SerializedConnection[], number, number], inputSize: number | undefined, outputSize: number | undefined) => import("D:/code-practice/NeatapticTS/src/architecture/network").default`
+`(data: [number[], number[], string[], import("D:/code-practice/NeatapticTS/src/architecture/network/network.serialize").SerializedConnection[], number, number], inputSize: number | undefined, outputSize: number | undefined) => import("D:/code-practice/NeatapticTS/src/architecture/network").default`
 
 ### fromJSONImpl
 
@@ -787,7 +787,7 @@ Runtime interface for accessing Node internal properties.
 
 ### serialize
 
-`() => [number[], number[], string[], SerializedConnection[], number, number]`
+`() => [number[], number[], string[], import("D:/code-practice/NeatapticTS/src/architecture/network/network.serialize").SerializedConnection[], number, number]`
 
 Serialization & deserialization helpers for Network instances.
 

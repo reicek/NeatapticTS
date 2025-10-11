@@ -262,7 +262,7 @@ describe('Dropout & Regularization', () => {
               const result = originalActivate(...args);
               if (isTraining) {
                 const hiddenNodes = net.nodes.filter(
-                  (node: Node) => node.type === 'hidden',
+                  (node: Node) => node.type === 'hidden'
                 );
                 if (hiddenNodes.some((node: Node) => node.mask === 0)) {
                   maskedNodeSeen = true;
@@ -328,7 +328,7 @@ describe('Dropout & Regularization', () => {
         it('resultNoReg.error is a number', () => {
           // Assert
           expect(typeof trainingSummaryWithoutRegularization.error).toBe(
-            'number',
+            'number'
           );
         });
       });
@@ -360,7 +360,7 @@ describe('Dropout & Regularization', () => {
           avgWeightNoReg =
             netNoReg.connections.reduce(
               (sum, c) => sum + Math.abs(c.weight),
-              0,
+              0
             ) / netNoReg.connections.length;
           avgWeightReg =
             netReg.connections.reduce((sum, c) => sum + Math.abs(c.weight), 0) /
@@ -426,21 +426,21 @@ describe('Dropout & Regularization', () => {
               iterations: 10,
               error: 0.01,
               regularization: 0,
-            },
+            }
           );
           trainingSummaryWithoutExplicitRegularization = netWithoutReg.train(
             dataset,
             {
               iterations: 10,
               error: 0.01,
-            },
+            }
           );
         });
 
         it('errors are close', () => {
           // Assert
           expect(
-            trainingSummaryWithExplicitZeroRegularization.error,
+            trainingSummaryWithExplicitZeroRegularization.error
           ).toBeCloseTo(trainingSummaryWithoutExplicitRegularization.error, 2);
         });
 
@@ -449,7 +449,7 @@ describe('Dropout & Regularization', () => {
           for (let i = 0; i < netWithZero.connections.length; i++) {
             expect(netWithZero.connections[i].weight).toBeCloseTo(
               netWithoutReg.connections[i].weight,
-              1,
+              1
             );
           }
         });
@@ -484,10 +484,10 @@ describe('Dropout & Regularization', () => {
           });
           const zeroThreshold = 1e-4;
           zeroWeightsL1 = netL1.connections.filter(
-            (c) => Math.abs(c.weight) < zeroThreshold,
+            (c) => Math.abs(c.weight) < zeroThreshold
           ).length;
           zeroWeightsL2 = netL2.connections.filter(
-            (c) => Math.abs(c.weight) < zeroThreshold,
+            (c) => Math.abs(c.weight) < zeroThreshold
           ).length;
         });
 
@@ -587,7 +587,7 @@ describe('Dropout & Regularization', () => {
               iterations: 100,
               error: 0.1,
               cost: 'notARealCostFn',
-            }),
+            })
           ).toThrow();
         });
       });
@@ -608,7 +608,7 @@ describe('Dropout & Regularization', () => {
           };
           // Act & Assert
           expect(() =>
-            net.train(dataset, { iterations: 5, cost: customCost }),
+            net.train(dataset, { iterations: 5, cost: customCost })
           ).not.toThrow();
         });
       });
@@ -710,7 +710,7 @@ describe('Dropout & Regularization', () => {
       const generateNoisyXORData = (
         numSamples: number,
         noiseLevel: number,
-        rng: () => number,
+        rng: () => number
       ): DataSample[] => {
         const data: DataSample[] = [];
         for (let i = 0; i < numSamples; i++) {
@@ -759,12 +759,12 @@ describe('Dropout & Regularization', () => {
         });
         // Defensive: check for NaN weights after training
         const nanWeights = withReg.connections.filter(
-          (c) => !Number.isFinite(c.weight),
+          (c) => !Number.isFinite(c.weight)
         );
         if (nanWeights.length > 0) {
           throw new Error(
             `NaN/Infinity detected in weights after training with regularization: ` +
-              nanWeights.map((c, i) => `conn#${i}=${c.weight}`).join(', '),
+              nanWeights.map((c, i) => `conn#${i}=${c.weight}`).join(', ')
           );
         }
         // Test both networks on clean data
@@ -780,7 +780,7 @@ describe('Dropout & Regularization', () => {
         ) {
           throw new Error(
             `Test failed: errorWithReg=${errorWithReg}, errorWithoutReg=${errorWithoutReg}. ` +
-              'One or both errors are not finite. This may indicate instability in the network or regularization logic.',
+              'One or both errors are not finite. This may indicate instability in the network or regularization logic.'
           );
         }
         // Allow a small epsilon tolerance due to inherent stochasticity and potential slight bias from L2 on tiny noisy sets
@@ -808,7 +808,7 @@ describe('Dropout & Regularization', () => {
               const isTraining = args[1] === true;
               if (isTraining && net.dropout > 0) {
                 const hiddenNodes = net.nodes.filter(
-                  (node: Node) => node.type === 'hidden',
+                  (node: Node) => node.type === 'hidden'
                 );
                 if (hiddenNodes.some((node: Node) => node.mask === 0)) {
                   dropoutApplied = true;
@@ -832,7 +832,7 @@ describe('Dropout & Regularization', () => {
             {
               iterations: 20,
               dropout: 0.5,
-            },
+            }
           );
           // Assert
           expect(dropoutApplied).toBe(true);
@@ -848,7 +848,7 @@ describe('Dropout & Regularization', () => {
             {
               iterations: 20,
               dropout: 0.5,
-            },
+            }
           );
           // Reset detection
           dropoutApplied = false;

@@ -27,9 +27,9 @@ describe('Adaptive Mutation exploreLow strategy', () => {
       const { applyAdaptiveMutation } = await import(
         '../../src/neat/neat.adaptive'
       );
-      applyAdaptiveMutation.call(neat as unknown as NeatLikeWithAdaptive);
+      applyAdaptiveMutation.call((neat as unknown) as NeatLikeWithAdaptive);
       type GenomeLike = { _mutRate: number };
-      const rates = (neat.population as unknown as GenomeLike[])
+      const rates = ((neat.population as unknown) as GenomeLike[])
         .map((g) => g._mutRate)
         .sort((a, b) => a - b);
       // Assert: spread across rates (top - bottom > 0)
@@ -37,4 +37,3 @@ describe('Adaptive Mutation exploreLow strategy', () => {
     });
   });
 });
-

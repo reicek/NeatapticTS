@@ -24,7 +24,7 @@ describe('NEAT Helper Utilities', () => {
       const helper = neat as NeatLineageHarness;
       const child = (await helper.spawnFromParent(
         parent,
-        1,
+        1
       )) as LineageTrackedNetwork;
       // Act & Assert: lineage metadata captures single parent id
       expect(child._parents).toEqual([parent._id]);
@@ -44,7 +44,7 @@ describe('NEAT Helper Utilities', () => {
     test('all genomes cloned from seed have identical IO counts', () => {
       // Act: collect distinct (input,output) signatures
       const sigs = new Set(
-        neat.population.map((g) => `${g.input}-${g.output}`),
+        neat.population.map((g) => `${g.input}-${g.output}`)
       );
       // Assert: only one signature means consistent cloning
       expect(sigs.size).toBe(1);

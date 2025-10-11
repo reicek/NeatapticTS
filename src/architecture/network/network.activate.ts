@@ -14,7 +14,7 @@ interface NetworkInternals {
   activate: (
     input: number[],
     training?: boolean,
-    maxActivationDepth?: number,
+    maxActivationDepth?: number
   ) => number[];
 }
 
@@ -82,7 +82,7 @@ interface NetworkInternals {
  * @remarks Safe for inference hot paths; not suitable when gradients / training traces are required.
  */
 export function noTraceActivate(this: Network, input: number[]): number[] {
-  const networkInternal = this as unknown as NetworkInternals;
+  const networkInternal = (this as unknown) as NetworkInternals;
 
   // Step 1: Ensure that if we require an acyclic graph, our cached topological
   // ordering of nodes is current. A fresh order guarantees deterministic forward propagation.
@@ -94,7 +94,7 @@ export function noTraceActivate(this: Network, input: number[]): number[] {
     throw new Error(
       `Input size mismatch: expected ${this.input}, got ${
         input ? input.length : 'undefined'
-      }`,
+      }`
     );
   }
 
@@ -169,9 +169,9 @@ export function activateRaw(
   this: Network,
   input: number[],
   training = false,
-  maxActivationDepth = 1000,
+  maxActivationDepth = 1000
 ): number[] {
-  const networkInternal = this as unknown as NetworkInternals;
+  const networkInternal = (this as unknown) as NetworkInternals;
 
   // If the network is not reusing activation arrays there's nothing special to do – delegate.
   if (!networkInternal._reuseActivationArrays)
@@ -204,9 +204,9 @@ export function activateRaw(
 export function activateBatch(
   this: Network,
   inputs: number[][],
-  training = false,
+  training = false
 ): number[][] {
-  const networkInternal = this as unknown as NetworkInternals;
+  const networkInternal = (this as unknown) as NetworkInternals;
 
   // Global validation – ensure we can iterate as expected.
   if (!Array.isArray(inputs))
@@ -226,7 +226,7 @@ export function activateBatch(
       throw new Error(
         `Input[${i}] size mismatch: expected ${this.input}, got ${
           x ? x.length : 'undefined'
-        }`,
+        }`
       );
     }
     // Delegate to the network's activation (may perform tracing if training=true).

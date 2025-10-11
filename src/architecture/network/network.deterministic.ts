@@ -71,7 +71,7 @@ export interface RNGSnapshot {
  * const b = net.getRandomFn()(); // a === b
  */
 export function setSeed(this: Network, seed: number): void {
-  const networkInternal = this as unknown as NetworkInternals;
+  const networkInternal = (this as unknown) as NetworkInternals;
 
   // Store 32-bit unsigned state (bitwise ops in JS operate on signed 32-bit but we keep consistency via >>> 0).
   networkInternal._rngState = seed >>> 0;
@@ -83,7 +83,7 @@ export function setSeed(this: Network, seed: number): void {
     // First mix: xor with shifted self and multiply (Math.imul preserves 32-bit overflow semantics).
     let r = Math.imul(
       networkInternal._rngState ^ (networkInternal._rngState >>> 15),
-      1 | networkInternal._rngState,
+      1 | networkInternal._rngState
     );
     // Second mix: avalanche style bit diffusion.
     r ^= r + Math.imul(r ^ (r >>> 7), 61 | r);
@@ -106,7 +106,7 @@ export function setSeed(this: Network, seed: number): void {
  * net.setRNGState(snap.state!);
  */
 export function snapshotRNG(this: Network): RNGSnapshot {
-  const networkInternal = this as unknown as NetworkInternals;
+  const networkInternal = (this as unknown) as NetworkInternals;
   return {
     step: networkInternal._trainingStep,
     state: networkInternal._rngState,
@@ -130,7 +130,7 @@ export function snapshotRNG(this: Network): RNGSnapshot {
  * net.restoreRNG(original); // restore
  */
 export function restoreRNG(this: Network, fn: () => number): void {
-  const networkInternal = this as unknown as NetworkInternals;
+  const networkInternal = (this as unknown) as NetworkInternals;
   networkInternal._rand = fn;
   networkInternal._rngState = undefined;
 }
@@ -142,7 +142,7 @@ export function restoreRNG(this: Network, fn: () => number): void {
  * @returns Unsigned 32‑bit state integer or undefined if generator not yet seeded or was reset.
  */
 export function getRNGState(this: Network): number | undefined {
-  const networkInternal = this as unknown as NetworkInternals;
+  const networkInternal = (this as unknown) as NetworkInternals;
   return networkInternal._rngState;
 }
 
@@ -157,7 +157,7 @@ export function getRNGState(this: Network): number | undefined {
  * @param state - Any finite number (only low 32 bits used). Ignored if not numeric.
  */
 export function setRNGState(this: Network, state: number): void {
-  const networkInternal = this as unknown as NetworkInternals;
+  const networkInternal = (this as unknown) as NetworkInternals;
   if (typeof state === 'number') networkInternal._rngState = state >>> 0;
 }
 
@@ -171,7 +171,7 @@ export function setRNGState(this: Network, state: number): void {
  * @returns Function producing numbers in [0,1). May be undefined if never seeded (call setSeed first).
  */
 export function getRandomFn(this: Network): (() => number) | undefined {
-  const networkInternal = this as unknown as NetworkInternals;
+  const networkInternal = (this as unknown) as NetworkInternals;
   return networkInternal._rand;
 }
 

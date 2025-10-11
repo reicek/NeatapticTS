@@ -27,7 +27,7 @@ const forceLog = (...args: unknown[]): void => {
  */
 const dashboardManagerInstance: IDashboardManager = new DashboardManager(
   TerminalUtility.createTerminalClearer(),
-  forceLog,
+  forceLog
 );
 
 jest.setTimeout(3600000); //
@@ -152,7 +152,7 @@ describe('ASCII Maze Solver using Neuro-Evolution', () => {
       });
       proceduralPrevBest = result
         ? NetworkRefinement.refineWinnerWithBackprop(
-            result.bestNetwork as Network,
+            result.bestNetwork as Network
           )
         : undefined;
 

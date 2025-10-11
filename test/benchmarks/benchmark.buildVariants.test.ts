@@ -25,7 +25,7 @@ export interface PlannedVariantRun {
 export const planVariantRuns = (
   modes: Array<'src' | 'dist'> = ['src', 'dist'],
   scenarios: string[] = ['build'],
-  sizes: number[] = [1000],
+  sizes: number[] = [1000]
 ): PlannedVariantRun[] => {
   const plannedRuns: PlannedVariantRun[] = [];
   // Iterate axes in fixed order to guarantee stable output ordering for reproducibility.

@@ -51,7 +51,7 @@ interface BaselineRecord {
  * @returns Object containing created Network instance and elapsed build time in ms.
  */
 const buildSyntheticNetwork = (
-  targetConnections: number,
+  targetConnections: number
 ): {
   net: Network;
   buildMs: number;
@@ -68,7 +68,7 @@ const buildSyntheticNetwork = (
   while (net.connections.length > targetConnections) {
     const idx = Math.floor(Math.random() * net.connections.length);
     const c = net.connections[idx];
-    (net as unknown as RuntimeNetwork).disconnect(c.from, c.to);
+    ((net as unknown) as RuntimeNetwork).disconnect(c.from, c.to);
   }
   const end = performance.now?.() ?? Date.now();
   return { net, buildMs: end - start };
@@ -83,7 +83,7 @@ const buildSyntheticNetwork = (
  */
 const measureForwardPass = (
   net: Network,
-  iterations = 5,
+  iterations = 5
 ): { totalMs: number; avgMs: number } => {
   const inputLen = net.input;
   const vec = new Array(inputLen).fill(0).map(() => Math.random());
@@ -117,7 +117,7 @@ describe('benchmark.memory dist-only', () => {
         size >= 200000 ? 1 : size >= 100000 ? 2 : size >= 50000 ? 3 : 5;
       const { totalMs: fwdTotalMs, avgMs: fwdAvgMs } = measureForwardPass(
         net,
-        iters,
+        iters
       );
       const mem = memoryStats(net);
       baselineRecords.push({
@@ -138,7 +138,7 @@ describe('benchmark.memory dist-only', () => {
     for (const size of sizes)
       it(`records connections size=${size}`, () => {
         expect(
-          baselineRecords.find((r) => r.size === size)!.conn,
+          baselineRecords.find((r) => r.size === size)!.conn
         ).toBeGreaterThan(0);
       });
   });
@@ -159,11 +159,11 @@ describe('benchmark.memory dist-only', () => {
         interface RuntimeSeedrandom {
           (seed: string, options: { global: boolean }): void;
         }
-        (seedrandom as unknown as RuntimeSeedrandom)(
+        ((seedrandom as unknown) as RuntimeSeedrandom)(
           `size:${size}|rep:${rep}`,
           {
             global: true,
-          },
+          }
         );
         const inp = Math.max(1, Math.floor(Math.sqrt(size)));
         const out = Math.max(1, Math.ceil(size / inp));
@@ -180,7 +180,7 @@ describe('benchmark.memory dist-only', () => {
           size >= 200000 ? 3 : size >= 100000 ? 5 : size >= 50000 ? 4 : 5;
         const { totalMs: fwdTotalMs, avgMs: fwdAvgMs } = measureForwardPass(
           net,
-          iterations,
+          iterations
         );
         const mem = memoryStats(net);
         let heapUsed: number | undefined;
@@ -193,7 +193,7 @@ describe('benchmark.memory dist-only', () => {
           interface RuntimeProcess {
             memoryUsage?: () => ProcessMemoryUsage;
           }
-          const mu = (process as unknown as RuntimeProcess).memoryUsage?.();
+          const mu = ((process as unknown) as RuntimeProcess).memoryUsage?.();
           if (mu) {
             heapUsed = mu.heapUsed;
             rss = mu.rss;
@@ -221,7 +221,7 @@ describe('benchmark.memory dist-only', () => {
         scenario: 'buildForward',
         size: r.size,
         metrics: r.metrics,
-      })),
+      }))
     );
     it('aggregated has entries', () => {
       expect(distAggregated.length).toBeGreaterThan(0);
@@ -245,7 +245,7 @@ describe('benchmark.memory dist-only', () => {
       if (a.length < 2) return 0;
       const m = mean(a);
       return Math.sqrt(
-        a.reduce((s, x) => s + (x - m) * (x - m), 0) / (a.length - 1),
+        a.reduce((s, x) => s + (x - m) * (x - m), 0) / (a.length - 1)
       );
     };
     /**
@@ -255,7 +255,7 @@ describe('benchmark.memory dist-only', () => {
      * @returns Object with filtered (possibly original) and outliers arrays.
      */
     const iqrFilter = (
-      vals: number[],
+      vals: number[]
     ): { filtered: number[]; outliers: number[] } => {
       if (vals.length < 4) return { filtered: vals.slice(), outliers: [] };
       const s = vals.toSorted((a, b) => a - b);
@@ -283,7 +283,7 @@ describe('benchmark.memory dist-only', () => {
      * @returns Variance summary object.
      */
     const recomputeVariance = (
-      g: BenchAggregateGroup,
+      g: BenchAggregateGroup
     ): {
       mode: string;
       size: number;
@@ -334,9 +334,12 @@ describe('benchmark.memory dist-only', () => {
       interface RuntimeSeedrandom {
         (seed: string, options: { global: boolean }): void;
       }
-      (seedrandom as unknown as RuntimeSeedrandom)(`size:${size}|rep:${rep}`, {
-        global: true,
-      });
+      ((seedrandom as unknown) as RuntimeSeedrandom)(
+        `size:${size}|rep:${rep}`,
+        {
+          global: true,
+        }
+      );
       const inp = Math.max(1, Math.floor(Math.sqrt(size)));
       const out = Math.max(1, Math.ceil(size / inp));
       if (size >= 100000) {
@@ -351,7 +354,7 @@ describe('benchmark.memory dist-only', () => {
       const iterations = size >= 200000 ? 3 : 5; // mirrors original logic for large sizes
       const { totalMs: fwdTotalMs, avgMs: fwdAvgMs } = measureForwardPass(
         net,
-        iterations,
+        iterations
       );
       const mem = memoryStats(net);
       let heapUsed: number | undefined;
@@ -364,7 +367,7 @@ describe('benchmark.memory dist-only', () => {
         interface RuntimeProcess {
           memoryUsage?: () => ProcessMemoryUsage;
         }
-        const mu = (process as unknown as RuntimeProcess).memoryUsage?.();
+        const mu = ((process as unknown) as RuntimeProcess).memoryUsage?.();
         if (mu) {
           heapUsed = mu.heapUsed;
           rss = mu.rss;
@@ -392,7 +395,7 @@ describe('benchmark.memory dist-only', () => {
      * @returns Variance entry or null if insufficient samples.
      */
     const computeVarianceForSize = (
-      size: number,
+      size: number
     ): {
       size: number;
       samples: number;
@@ -408,7 +411,7 @@ describe('benchmark.memory dist-only', () => {
         if (a.length < 2) return 0;
         const mm = m(a);
         return Math.sqrt(
-          a.reduce((s, x) => s + (x - mm) * (x - mm), 0) / (a.length - 1),
+          a.reduce((s, x) => s + (x - mm) * (x - mm), 0) / (a.length - 1)
         );
       };
       const bm = m(build),
@@ -471,7 +474,7 @@ describe('benchmark.memory dist-only', () => {
         scenario: 'buildForward',
         size: r.size,
         metrics: r.metrics,
-      })),
+      }))
     );
     const varianceSummary = distAggregated
       .filter((g) => g.size >= 100000 && g.count > 1)
@@ -484,7 +487,7 @@ describe('benchmark.memory dist-only', () => {
       if (fs.existsSync(resultsFile)) {
         try {
           existing = JSON.parse(
-            fs.readFileSync(resultsFile, 'utf-8'),
+            fs.readFileSync(resultsFile, 'utf-8')
           ) as Record<string, unknown>;
         } catch {
           // Ignore JSON parse errors
@@ -507,7 +510,7 @@ describe('benchmark.memory dist-only', () => {
        * @returns Array of simplified objects (size + key means).
        */
       const summarize = (
-        ag: BenchAggregateGroup[],
+        ag: BenchAggregateGroup[]
       ): Array<Record<string, unknown>> => {
         return ag.map((g) => {
           interface GroupWithStats extends BenchAggregateGroup {
@@ -537,12 +540,14 @@ describe('benchmark.memory dist-only', () => {
           typeof existing.fieldAudit === 'object' &&
           existing.fieldAudit !== null
             ? {
-                Node: (
-                  existing.fieldAudit as Record<string, { count?: number }>
-                ).Node?.count,
-                Connection: (
-                  existing.fieldAudit as Record<string, { count?: number }>
-                ).Connection?.count,
+                Node: (existing.fieldAudit as Record<
+                  string,
+                  { count?: number }
+                >).Node?.count,
+                Connection: (existing.fieldAudit as Record<
+                  string,
+                  { count?: number }
+                >).Connection?.count,
               }
             : undefined,
       };
@@ -585,9 +590,9 @@ describe('benchmark.memory dist-only', () => {
           existing.history.length
         ) {
           // Build map size -> rolling median fwdAvgMsMean from history summary entries
-          const history = (
-            existing.history as Array<Record<string, unknown>>
-          ).slice(-10);
+          const history = (existing.history as Array<
+            Record<string, unknown>
+          >).slice(-10);
           const sizeToSamples: Record<string, number[]> = {};
           for (const snap of history) {
             for (const s of (snap.summary as Array<{
@@ -631,7 +636,8 @@ describe('benchmark.memory dist-only', () => {
                 thresholdPct: DELTA_THRESHOLD,
                 cvPct: cv,
                 cvThresholdPct: CV_THRESHOLD,
-                note: 'Informational only: not failing. Rolling median baseline.',
+                note:
+                  'Informational only: not failing. Rolling median baseline.',
               });
             }
           }
@@ -661,10 +667,11 @@ describe('benchmark.memory dist-only', () => {
         typeof existing.meta === 'object' &&
         existing.meta !== null &&
         Array.isArray((existing.meta as PayloadMeta).varianceAutoEscalations)
-          ? ((existing.meta as PayloadMeta).varianceAutoEscalations ?? [])
+          ? (existing.meta as PayloadMeta).varianceAutoEscalations ?? []
           : [];
-      (payload.meta as PayloadMeta).varianceAutoEscalations =
-        priorEsc.concat(escalateRecords);
+      (payload.meta as PayloadMeta).varianceAutoEscalations = priorEsc.concat(
+        escalateRecords
+      );
       if (varianceSummary.length) payload.variance = varianceSummary;
       const hist = Array.isArray(payload.history) ? payload.history : [];
       hist.push(snapshot);

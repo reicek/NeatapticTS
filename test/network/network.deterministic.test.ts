@@ -43,7 +43,7 @@ describe('Network.deterministic RNG utilities', () => {
         const { state } = snap;
         if (typeof state !== 'number') {
           throw new Error(
-            'Snapshot state should be numeric before restoration',
+            'Snapshot state should be numeric before restoration'
           );
         }
         net.setRNGState(state);

@@ -9,14 +9,14 @@ describe('training.edge-cases', () => {
     beforeAll(() => {
       const net = new Network(2, 1);
       try {
-        net.train(set as unknown as { input: number[]; output: number[] }[], {
+        net.train((set as unknown) as { input: number[]; output: number[] }[], {
           iterations: 1,
           rate: 0.1,
         });
-      } catch (e: unknown) {
+      } catch (error: unknown) {
         const errMsg =
-          typeof e === 'object' && e !== null
-            ? String((e as { message?: unknown }).message ?? '')
+          typeof error === 'object' && error !== null
+            ? String((error as { message?: unknown }).message ?? '')
             : '';
         threw = errMsg.includes('Dataset is invalid');
       }
@@ -52,12 +52,12 @@ describe('training.edge-cases', () => {
           iterations: 1,
           rate: 0.1,
           // Provide an obviously invalid cost object to exercise validation path
-          cost: { nope: true } as unknown as () => number,
+          cost: ({ nope: true } as unknown) as () => number,
         });
-      } catch (e: unknown) {
+      } catch (error: unknown) {
         const errMsg =
-          typeof e === 'object' && e !== null
-            ? String((e as { message?: unknown }).message ?? '')
+          typeof error === 'object' && error !== null
+            ? String((error as { message?: unknown }).message ?? '')
             : '';
         threw = errMsg.includes('Invalid cost function');
       }
@@ -74,10 +74,10 @@ describe('training.edge-cases', () => {
       const goodSet = [{ input: [0], output: [0] }];
       try {
         net.train(goodSet, { iterations: 1, rate: 0.1, batchSize: 5 });
-      } catch (e: unknown) {
+      } catch (error: unknown) {
         const errMsg =
-          typeof e === 'object' && e !== null
-            ? String((e as { message?: unknown }).message ?? '')
+          typeof error === 'object' && error !== null
+            ? String((error as { message?: unknown }).message ?? '')
             : '';
         threw = errMsg.includes('larger than the dataset length');
       }

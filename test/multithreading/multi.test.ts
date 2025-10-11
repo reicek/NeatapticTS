@@ -161,7 +161,7 @@ describe('Multi-threading Utilities (Multi)', () => {
         let error: number;
         try {
           error = Multi.testSerializedSet(set, cost, A, S, data, F);
-        } catch (caughtError) {
+        } catch (caughtError: unknown) {
           void caughtError;
           error = NaN;
         }
@@ -234,7 +234,7 @@ describe('Multi-threading Utilities (Multi)', () => {
           '../../src/multithreading/workers/browser/testworker',
           () => {
             throw new Error('fail');
-          },
+          }
         );
       });
       afterEach(() => {

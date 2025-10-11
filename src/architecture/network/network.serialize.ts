@@ -104,30 +104,30 @@ interface NetworkJSON {
  *  - Indices are derived from current node ordering; caller must ensure consistent ordering across workers.
  */
 export function serialize(
-  this: Network,
+  this: Network
 ): [number[], number[], string[], SerializedConnection[], number, number] {
-  const networkInternal = this as unknown as NetworkInternals;
+  const networkInternal = (this as unknown) as NetworkInternals;
   // Ensure indices are refreshed (fast paths may leave stale indices for performance; we enforce consistency here).
   networkInternal.nodes.forEach((nodeRef, nodeIndex: number) => {
-    const nodeInternal = nodeRef as unknown as NodeInternals;
+    const nodeInternal = (nodeRef as unknown) as NodeInternals;
     nodeInternal.index = nodeIndex;
   });
   // At this point each node.index becomes our canonical ID used throughout the serialization.
   // Indices are intentionally positional so the resulting arrays remain tightly packed and cache‑friendly.
   /** Current activation values per node (index-aligned). */
   const activations = networkInternal.nodes.map(
-    (nodeRef) => (nodeRef as unknown as NodeInternals).activation,
+    (nodeRef) => ((nodeRef as unknown) as NodeInternals).activation
   );
   // activations[] captures the post-squash output of each neuron; when deserialized we can resume
   // a simulation mid-stream (e.g. during evolutionary evaluation) if desired.
   /** Current membrane/accumulator state per node. */
   const states = networkInternal.nodes.map(
-    (nodeRef) => (nodeRef as unknown as NodeInternals).state,
+    (nodeRef) => ((nodeRef as unknown) as NodeInternals).state
   );
   // states[] represent the pre-activation internal sum (or evolving state for recurrent / gated constructs).
   /** Squash (activation function) names per node for later rehydration. */
   const squashes = networkInternal.nodes.map(
-    (nodeRef) => (nodeRef as unknown as NodeInternals).squash.name,
+    (nodeRef) => ((nodeRef as unknown) as NodeInternals).squash.name
   );
   // Instead of serializing function references we store the human-readable name; on import we map name->fn.
   /** Combined forward + self connections flattened to plain indices + weights. */
@@ -135,13 +135,13 @@ export function serialize(
     .concat(networkInternal.selfconns)
     .map(
       (connInstance): SerializedConnection => ({
-        from: (connInstance.from as unknown as NodeInternals).index,
-        to: (connInstance.to as unknown as NodeInternals).index,
+        from: ((connInstance.from as unknown) as NodeInternals).index,
+        to: ((connInstance.to as unknown) as NodeInternals).index,
         weight: connInstance.weight,
         gater: connInstance.gater
-          ? (connInstance.gater as unknown as NodeInternals).index
+          ? ((connInstance.gater as unknown) as NodeInternals).index
           : null,
-      }),
+      })
     );
   // A single linear pass is used; order of connections is not semantically important because reconstruction
   // will look up by (from,to) pairs. Self connections are treated uniformly (from === to) for simplicity.
@@ -168,7 +168,7 @@ export function serialize(
 export const deserialize = (
   data: [number[], number[], string[], SerializedConnection[], number, number],
   inputSize?: number,
-  outputSize?: number,
+  outputSize?: number
 ): Network => {
   /** Destructured compact tuple payload produced by serialize(). */
   const [
@@ -189,7 +189,7 @@ export const deserialize = (
   const { default: NetworkConstructor } = require('../network');
   /** Newly constructed network shell with IO sizes. */
   const net = new NetworkConstructor(input, output) as Network;
-  const netInternal = net as unknown as NetworkInternals;
+  const netInternal = (net as unknown) as NetworkInternals;
   netInternal.nodes = [];
   netInternal.connections = [];
   netInternal.selfconns = [];
@@ -204,7 +204,7 @@ export const deserialize = (
     else type = 'hidden';
     /** Rehydrated node instance. */
     const node = new Node(type);
-    const nodeInternal = node as unknown as NodeInternals;
+    const nodeInternal = (node as unknown) as NodeInternals;
     nodeInternal.activation = activation;
     nodeInternal.state = states[nodeIndex];
     /** Activation function name captured during serialization. */
@@ -212,8 +212,8 @@ export const deserialize = (
     if (!methods.Activation[squashName]) {
       console.warn(
         `Unknown squash function '${String(
-          squashName,
-        )}' encountered during deserialize. Falling back to identity.`,
+          squashName
+        )}' encountered during deserialize. Falling back to identity.`
       );
     }
     nodeInternal.squash =
@@ -236,24 +236,24 @@ export const deserialize = (
       const createdConnection = netInternal.connect(
         sourceNode,
         targetNode,
-        serializedConn.weight,
+        serializedConn.weight
       )[0];
       if (createdConnection && serializedConn.gater != null) {
         if (serializedConn.gater < netInternal.nodes.length) {
           // Only gate if the gater index is valid—defensive against older or pruned models.
           netInternal.gate(
             netInternal.nodes[serializedConn.gater],
-            createdConnection,
+            createdConnection
           );
         } else {
           console.warn(
-            'Invalid gater index encountered during deserialize; skipping gater assignment.',
+            'Invalid gater index encountered during deserialize; skipping gater assignment.'
           );
         }
       }
     } else {
       console.warn(
-        'Invalid connection indices encountered during deserialize; skipping connection.',
+        'Invalid connection indices encountered during deserialize; skipping connection.'
       );
     }
   });
@@ -267,7 +267,7 @@ export const deserialize = (
  * formatVersion=2 adds: enabled flags, stable geneId (if present), dropout value.
  */
 export function toJSONImpl(this: Network): NetworkJSON {
-  const networkInternal = this as unknown as NetworkInternals & {
+  const networkInternal = (this as unknown) as NetworkInternals & {
     dropout?: number;
   };
   /** Accumulated verbose JSON representation (formatVersion = 2). */
@@ -281,7 +281,7 @@ export function toJSONImpl(this: Network): NetworkJSON {
   };
   // Node pass: capture minimal structural genetics (bias, activation, geneId) but exclude transient runtime state.
   networkInternal.nodes.forEach((node, nodeIndex: number) => {
-    const nodeInternal = node as unknown as NodeInternals & {
+    const nodeInternal = (node as unknown) as NodeInternals & {
       bias: number;
       geneId?: number;
       connections: { self: Connection[] };
@@ -303,7 +303,7 @@ export function toJSONImpl(this: Network): NetworkJSON {
         to: nodeIndex,
         weight: selfConn.weight,
         gater: selfConn.gater
-          ? (selfConn.gater as unknown as NodeInternals).index
+          ? ((selfConn.gater as unknown) as NodeInternals).index
           : null,
         enabled: selfConnInternal.enabled !== false,
       });
@@ -311,8 +311,8 @@ export function toJSONImpl(this: Network): NetworkJSON {
   });
   // Connection pass: append forward connections preserving enabled state & gating relationships.
   networkInternal.connections.forEach((connInstance) => {
-    const fromInternal = connInstance.from as unknown as NodeInternals;
-    const toInternal = connInstance.to as unknown as NodeInternals;
+    const fromInternal = (connInstance.from as unknown) as NodeInternals;
+    const toInternal = (connInstance.to as unknown) as NodeInternals;
     if (
       typeof fromInternal.index !== 'number' ||
       typeof toInternal.index !== 'number'
@@ -324,7 +324,7 @@ export function toJSONImpl(this: Network): NetworkJSON {
       to: toInternal.index,
       weight: connInstance.weight,
       gater: connInstance.gater
-        ? (connInstance.gater as unknown as NodeInternals).index
+        ? ((connInstance.gater as unknown) as NodeInternals).index
         : null,
       enabled: connInternal.enabled !== false,
     });
@@ -346,7 +346,9 @@ export const fromJSONImpl = (json: NetworkJSON): Network => {
   const { default: NetworkConstructor } = require('../network');
   /** New network shell with recorded IO sizes. */
   const net = new NetworkConstructor(json.input, json.output) as Network;
-  const netInternal = net as unknown as NetworkInternals & { dropout?: number };
+  const netInternal = (net as unknown) as NetworkInternals & {
+    dropout?: number;
+  };
   netInternal.dropout = json.dropout || 0;
   netInternal.nodes = [];
   netInternal.connections = [];
@@ -356,7 +358,7 @@ export const fromJSONImpl = (json: NetworkJSON): Network => {
   json.nodes.forEach((nodeJson, nodeIndex: number) => {
     /** Rehydrated node from JSON. */
     const node = new Node(nodeJson.type);
-    const nodeInternal = node as unknown as NodeInternals & {
+    const nodeInternal = (node as unknown) as NodeInternals & {
       bias: number;
       geneId?: number;
     };
@@ -383,7 +385,7 @@ export const fromJSONImpl = (json: NetworkJSON): Network => {
       connJson.to >= nodesLength
     ) {
       console.warn(
-        'Invalid connection indices encountered during fromJSONImpl; skipping connection.',
+        'Invalid connection indices encountered during fromJSONImpl; skipping connection.'
       );
       return;
     }
@@ -396,7 +398,7 @@ export const fromJSONImpl = (json: NetworkJSON): Network => {
     const createdConnection = netInternal.connect(
       sourceNode,
       targetNode,
-      connJson.weight,
+      connJson.weight
     )[0];
     if (
       createdConnection &&
@@ -407,7 +409,7 @@ export const fromJSONImpl = (json: NetworkJSON): Network => {
         netInternal.gate(netInternal.nodes[connJson.gater], createdConnection);
       } else {
         console.warn(
-          'Invalid gater index encountered during fromJSONImpl; skipping gater assignment.',
+          'Invalid gater index encountered during fromJSONImpl; skipping gater assignment.'
         );
       }
     }

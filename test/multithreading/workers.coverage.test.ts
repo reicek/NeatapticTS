@@ -30,7 +30,7 @@ describe('Workers coverage', () => {
       evaluate(candidateNetwork: SerializableNetwork) {
         void candidateNetwork;
         return Promise.resolve(
-          this.payload.length + this.descriptor.name.length,
+          this.payload.length + this.descriptor.name.length
         );
       }
       terminate() {}

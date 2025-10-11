@@ -33,8 +33,8 @@ const detectCaller = (): string => {
         return `${file}:${m[2]}`;
       }
     }
-  } catch (e) {
-    void e;
+  } catch (error: unknown) {
+    void error;
   }
   return 'unknown';
 };
@@ -43,7 +43,7 @@ const detectCaller = (): string => {
 const _benchLog = (
   tag: string,
   section: string,
-  kv: Record<string, unknown>,
+  kv: Record<string, unknown>
 ) => {
   const caller = detectCaller();
   const seq = ++__benchRunSeq;
@@ -75,7 +75,7 @@ const _benchLog = (
   if (typeof bytesPerConn === 'number')
     extras.bytesPerConnHuman = String(humanBytes(bytesPerConn)).replace(
       /B$/,
-      'B/conn',
+      'B/conn'
     );
 
   if (!BENCH_PRETTY) {
@@ -84,7 +84,7 @@ const _benchLog = (
       .concat(Object.entries(extras).map(([k, v]) => `${k}=${v}`))
       .join(' ');
     originalLog(
-      `${BENCH_PREFIX}[${tag}][${section}] seq=${seq} ts=${timestamp} at=${caller} ${parts}`,
+      `${BENCH_PREFIX}[${tag}][${section}] seq=${seq} ts=${timestamp} at=${caller} ${parts}`
     );
     return;
   }
@@ -163,11 +163,9 @@ expect.extend({
 });
 
 // Expose bench logger on globalThis with a precise type
-(
-  globalThis as unknown as {
-    benchLog?: typeof _benchLog;
-  }
-).benchLog = _benchLog;
+((globalThis as unknown) as {
+  benchLog?: typeof _benchLog;
+}).benchLog = _benchLog;
 
 // Add this line to prevent "Your test suite must contain at least one test." error
 describe('Setup', () => {

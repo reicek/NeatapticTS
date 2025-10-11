@@ -73,9 +73,9 @@ export function connect(
   this: Network,
   from: Node,
   to: Node,
-  weight?: number,
+  weight?: number
 ): Connection[] {
-  const networkInternal = this as unknown as NetworkInternals;
+  const networkInternal = (this as unknown) as NetworkInternals;
   // Step 1: Acyclic pre‑check – prevents cycles by disallowing edges that point "backwards" in order.
   if (
     networkInternal._enforceAcyclic &&
@@ -140,7 +140,7 @@ export function connect(
  * @remarks For removing many edges consider higher‑level bulk utilities to avoid repeated scans.
  */
 export function disconnect(this: Network, from: Node, to: Node): void {
-  const networkInternal = this as unknown as NetworkInternals;
+  const networkInternal = (this as unknown) as NetworkInternals;
   // Step 1: Select list to search: selfconns for loops, otherwise normal connections.
   /** Candidate list of connections to inspect for removal. */
   const list = from === to ? this.selfconns : this.connections;

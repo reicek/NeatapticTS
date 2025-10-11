@@ -83,11 +83,11 @@ interface ConnectionGeneticProps {
 export const crossOver = (
   network1: Network,
   network2: Network,
-  equal = false,
+  equal = false
 ): Network => {
   if (network1.input !== network2.input || network1.output !== network2.output)
     throw new Error(
-      'Parent networks must have the same input and output sizes for crossover.',
+      'Parent networks must have the same input and output sizes for crossover.'
     );
   // Import Network dynamically to avoid circular dependency
   // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -95,9 +95,9 @@ export const crossOver = (
   /** Offspring scaffold produced by recombination of parent networks. */
   const offspring = new NetworkConstructor(
     network1.input,
-    network1.output,
+    network1.output
   ) as Network;
-  const offspringProps = offspring as unknown as NetworkGeneticProps;
+  const offspringProps = (offspring as unknown) as NetworkGeneticProps;
   /** Mutable list of standard (non self) connections assigned during reconstruction. */
   offspringProps.connections = [];
   /** Ordered list of cloned node genes composing the offspring topology. */
@@ -106,8 +106,8 @@ export const crossOver = (
   offspringProps.selfconns = [];
   /** Collection of gated connections after inheritance. */
   offspringProps.gates = [];
-  const network1Props = network1 as unknown as NetworkGeneticProps;
-  const network2Props = network2 as unknown as NetworkGeneticProps;
+  const network1Props = (network1 as unknown) as NetworkGeneticProps;
+  const network2Props = (network2 as unknown) as NetworkGeneticProps;
   /** Fitness (score) of parent 1 used for dominance decisions. */
   const score1 = network1Props.score || 0;
   /** Fitness (score) of parent 2 used for dominance decisions. */
@@ -159,13 +159,15 @@ export const crossOver = (
           ? network2Props.nodes[o2]
           : undefined;
       const rand1 =
-        (network1 as unknown as { _rand?: () => number })._rand || Math.random;
+        ((network1 as unknown) as { _rand?: () => number })._rand ||
+        Math.random;
       if (n1o && n2o) chosen = rand1() >= 0.5 ? n1o : n2o;
       else chosen = n1o || n2o;
     } else {
       // Hidden region.
       const rand2 =
-        (network1 as unknown as { _rand?: () => number })._rand || Math.random;
+        ((network1 as unknown) as { _rand?: () => number })._rand ||
+        Math.random;
       if (node1 && node2) chosen = rand2() >= 0.5 ? node1 : node2;
       else if (node1 && (score1 >= score2 || equal)) chosen = node1;
       else if (node2 && (score2 >= score1 || equal)) chosen = node2;
@@ -193,7 +195,7 @@ export const crossOver = (
         to: c.to.index,
         gater:
           c.gater && typeof c.gater.index === 'number' ? c.gater.index : -1,
-        enabled: (c as unknown as ConnectionGeneticProps).enabled !== false,
+        enabled: ((c as unknown) as ConnectionGeneticProps).enabled !== false,
       };
   });
   network2Props.connections.concat(network2Props.selfconns).forEach((c) => {
@@ -204,7 +206,7 @@ export const crossOver = (
         to: c.to.index,
         gater:
           c.gater && typeof c.gater.index === 'number' ? c.gater.index : -1,
-        enabled: (c as unknown as ConnectionGeneticProps).enabled !== false,
+        enabled: ((c as unknown) as ConnectionGeneticProps).enabled !== false,
       };
   });
   // Select connection genes: iterate parent1's map, handle overlaps, then optionally add remaining parent2 genes.
@@ -220,7 +222,8 @@ export const crossOver = (
       /** Corresponding connection gene from parent 2 for matching innovation ID. */
       const c2 = n2conns[k];
       const rand3 =
-        (network1 as unknown as { _rand?: () => number })._rand || Math.random;
+        ((network1 as unknown) as { _rand?: () => number })._rand ||
+        Math.random;
       /** Selected gene (either c1 or c2) retained in offspring. */
       const pick = rand3() >= 0.5 ? c1 : c2; // Randomly select weight / flags from one parent.
       if (c1.enabled === false || c2.enabled === false) {
@@ -264,11 +267,13 @@ export const crossOver = (
       // edges (self loops handled elsewhere) to satisfy structural invariants expected by tests.
       if (cd.from >= cd.to) return; // skip backward / non feed-forward edge
       if (!from.isProjectingTo(to)) {
-        /** Newly constructed connection edge within offspring (first element of connect array). */ const conn =
-          offspring.connect(from, to)[0];
+        /** Newly constructed connection edge within offspring (first element of connect array). */ const conn = offspring.connect(
+          from,
+          to
+        )[0];
         if (conn) {
           conn.weight = cd.weight;
-          (conn as unknown as ConnectionGeneticProps).enabled =
+          ((conn as unknown) as ConnectionGeneticProps).enabled =
             cd.enabled !== false;
           if (cd.gater !== -1 && cd.gater < nodeCount)
             offspring.gate(offspringProps.nodes[cd.gater], conn);

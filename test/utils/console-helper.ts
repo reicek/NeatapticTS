@@ -37,18 +37,16 @@ const mockConsole = {
 export const shouldShowConsole = (): boolean => {
   if (process.env.JEST_VERBOSE === '1') return true;
 
-  const filesToShow = (
-    globalThis as unknown as {
-      __SHOW_CONSOLE_FOR__?: string;
-    }
-  ).__SHOW_CONSOLE_FOR__;
+  const filesToShow = ((globalThis as unknown) as {
+    __SHOW_CONSOLE_FOR__?: string;
+  }).__SHOW_CONSOLE_FOR__;
   if (!filesToShow) return false;
 
   const currentFile = expect.getState().testPath || '';
   return filesToShow
     .split(',')
     .some((filePattern: string) =>
-      currentFile.toLowerCase().includes(filePattern.toLowerCase()),
+      currentFile.toLowerCase().includes(filePattern.toLowerCase())
     );
 };
 

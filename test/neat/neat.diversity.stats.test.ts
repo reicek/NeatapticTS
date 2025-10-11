@@ -12,7 +12,7 @@ describe('computeDiversityStats', () => {
   const compat = {
     _compatibilityDistance: (
       a: { nodes: unknown[]; connections: unknown[] },
-      b: { nodes: unknown[]; connections: unknown[] },
+      b: { nodes: unknown[]; connections: unknown[] }
     ) =>
       Math.abs(a.nodes.length - b.nodes.length) +
       Math.abs(a.connections.length - b.connections.length),

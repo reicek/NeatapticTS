@@ -17,7 +17,7 @@ describe('ONNX Export/Import Round-Trip Numerical Equivalence', () => {
     input: number,
     hidden: number[],
     output: number,
-    seed = 42,
+    seed = 42
   ) => {
     const net = Network.createMLP(input, hidden, output);
     // Simple linear congruential generator for reproducible pseudo-random numbers

@@ -3,14 +3,14 @@ import { Network, methods } from '../../src/neataptic';
 const createCrossOverInvoker = (
   firstParent: unknown,
   secondParent: unknown,
-  equalFlag?: boolean,
+  equalFlag?: boolean
 ) => {
   if (typeof equalFlag === 'boolean') {
     return () =>
       Network.crossOver(
         firstParent as Network,
         secondParent as Network,
-        equalFlag,
+        equalFlag
       );
   }
   return () =>

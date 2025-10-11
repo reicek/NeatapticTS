@@ -224,7 +224,7 @@ interface NodeInternals {
     momentum: number,
     update: boolean,
     regularization: RegularizationConfig,
-    target?: number,
+    target?: number
   ) => void;
 }
 
@@ -304,7 +304,7 @@ const computeMonitoredError = (
   trainError: number,
   recentErrors: number[],
   cfg: MonitoredSmoothingConfig,
-  state: PrimarySmoothingState,
+  state: PrimarySmoothingState
 ): number => {
   // Fast path: no smoothing window / algorithm requiring history.
   if (cfg.window <= 1 && cfg.type !== 'ema' && cfg.type !== 'adaptive-ema') {
@@ -336,7 +336,7 @@ const computeMonitoredError = (
     const varianceScaled = variance / Math.max(mean * mean, 1e-8);
     const adaptiveAlpha = Math.min(
       0.95,
-      Math.max(baseAlpha, baseAlpha * (1 + 2 * varianceScaled)),
+      Math.max(baseAlpha, baseAlpha * (1 + 2 * varianceScaled))
     );
     if (state.adaptiveBaseEmaValue == null) {
       state.adaptiveBaseEmaValue = trainError;
@@ -396,7 +396,7 @@ const computePlateauMetric = (
   trainError: number,
   plateauErrors: number[],
   cfg: PlateauSmoothingConfig,
-  state: PlateauSmoothingState,
+  state: PlateauSmoothingState
 ): number => {
   if (cfg.window <= 1 && cfg.type !== 'ema') return trainError;
   if (cfg.type === 'median') {
@@ -431,7 +431,7 @@ export const __trainingInternals = {
  */
 const detectMixedPrecisionOverflow = (
   net: Network,
-  internalNet: NetworkInternals,
+  internalNet: NetworkInternals
 ): boolean => {
   if (!internalNet._mixedPrecision.enabled) return false;
   if (internalNet._forceNextOverflow) {
@@ -440,7 +440,7 @@ const detectMixedPrecisionOverflow = (
   }
   let overflow = false;
   net.nodes.forEach((node) => {
-    const nodeInternal = node as unknown as NodeInternals;
+    const nodeInternal = (node as unknown) as NodeInternals;
     if (nodeInternal._fp32Bias !== undefined) {
       if (!Number.isFinite(nodeInternal.bias)) overflow = true;
     }
@@ -451,7 +451,7 @@ const detectMixedPrecisionOverflow = (
 /** Zero-out accumulated gradient buffers after an overflow to discard invalid updates. */
 const zeroAccumulatedGradients = (net: Network): void => {
   net.nodes.forEach((node) => {
-    const nodeInternal = node as unknown as NodeInternals;
+    const nodeInternal = (node as unknown) as NodeInternals;
     nodeInternal.connections.in.forEach((c) => {
       c.totalDeltaWeight = 0;
     });
@@ -467,11 +467,11 @@ const zeroAccumulatedGradients = (net: Network): void => {
 /** Divide accumulated gradients by accumulationSteps (average reduction mode). */
 const averageAccumulatedGradients = (
   net: Network,
-  accumulationSteps: number,
+  accumulationSteps: number
 ): void => {
   if (accumulationSteps <= 1) return;
   net.nodes.forEach((node) => {
-    const nodeInternal = node as unknown as NodeInternals;
+    const nodeInternal = (node as unknown) as NodeInternals;
     nodeInternal.connections.in.forEach((c) => {
       if (typeof c.totalDeltaWeight === 'number')
         c.totalDeltaWeight /= accumulationSteps;
@@ -491,12 +491,12 @@ const applyOptimizerStep = (
   optimizer: OptimizerConfigBase,
   currentRate: number,
   momentum: number,
-  internalNet: NetworkInternals,
+  internalNet: NetworkInternals
 ): number => {
   let sumSq = 0;
   net.nodes.forEach((node) => {
     if (node.type === 'input') return;
-    const nodeInternal = node as unknown as NodeInternals;
+    const nodeInternal = (node as unknown) as NodeInternals;
     nodeInternal.applyBatchUpdatesWithOptimizer({
       type: optimizer.type,
       baseType: optimizer.baseType,
@@ -544,7 +544,7 @@ const handleOverflow = (internalNet: NetworkInternals): void => {
   internalNet._mixedPrecisionState.goodSteps = 0;
   internalNet._mixedPrecision.lossScale = Math.max(
     internalNet._mixedPrecisionState.minLossScale,
-    Math.floor(internalNet._mixedPrecision.lossScale / 2) || 1,
+    Math.floor(internalNet._mixedPrecision.lossScale / 2) || 1
   );
   internalNet._mixedPrecisionState.overflowCount =
     (internalNet._mixedPrecisionState.overflowCount || 0) + 1;
@@ -571,9 +571,9 @@ export const applyGradientClippingImpl = (
     mode: 'norm' | 'percentile' | 'layerwiseNorm' | 'layerwisePercentile';
     maxNorm?: number;
     percentile?: number;
-  },
+  }
 ): void => {
-  const internalNet = net as unknown as NetworkInternals;
+  const internalNet = (net as unknown) as NetworkInternals;
   /**
    * Build arrays of gradient values grouped according to chosen clipping mode.
    * Each group is later processed independently (layerwise modes) or as a single global set.
@@ -609,7 +609,7 @@ export const applyGradientClippingImpl = (
         net.nodes.forEach((node) => {
           if (node.type === 'input') return;
           const groupVals: number[] = [];
-          const nodeInternal = node as unknown as NodeInternals;
+          const nodeInternal = (node as unknown) as NodeInternals;
           nodeInternal.connections.in.forEach((c) => {
             if (typeof c.totalDeltaWeight === 'number')
               groupVals.push(c.totalDeltaWeight);
@@ -626,7 +626,7 @@ export const applyGradientClippingImpl = (
     } else {
       const globalVals: number[] = [];
       net.nodes.forEach((node) => {
-        const nodeInternal = node as unknown as NodeInternals;
+        const nodeInternal = (node as unknown) as NodeInternals;
         nodeInternal.connections.in.forEach((c) => {
           if (typeof c.totalDeltaWeight === 'number')
             globalVals.push(c.totalDeltaWeight);
@@ -655,13 +655,13 @@ export const applyGradientClippingImpl = (
    */
   const computeAbsolutePercentileThreshold = (
     values: number[],
-    percentile: number,
+    percentile: number
   ) => {
     if (!values.length) return 0;
     const sortedByAbs = [...values].sort((a, b) => Math.abs(a) - Math.abs(b));
     const rank = Math.min(
       sortedByAbs.length - 1,
-      Math.max(0, Math.floor((percentile / 100) * sortedByAbs.length - 1)),
+      Math.max(0, Math.floor((percentile / 100) * sortedByAbs.length - 1))
     );
     return Math.abs(sortedByAbs[rank]);
   };
@@ -671,7 +671,7 @@ export const applyGradientClippingImpl = (
    * the active group (when computing per-group scaling factor yet iterating entire model).
    */
   const applyScale = (
-    scaleFn: (currentValue: number, owningGroup: number[]) => number,
+    scaleFn: (currentValue: number, owningGroup: number[]) => number
   ): void => {
     let groupIndex = 0; // advances only for layerwise modes
     net.nodes.forEach((node) => {
@@ -679,7 +679,7 @@ export const applyGradientClippingImpl = (
       const activeGroup = cfg.mode.startsWith('layerwise')
         ? groups[groupIndex++]
         : groups[0];
-      const nodeInternal = node as unknown as NodeInternals;
+      const nodeInternal = (node as unknown) as NodeInternals;
       nodeInternal.connections.in.forEach((c) => {
         if (typeof c.totalDeltaWeight === 'number')
           c.totalDeltaWeight = scaleFn(c.totalDeltaWeight, activeGroup);
@@ -691,7 +691,7 @@ export const applyGradientClippingImpl = (
       if (typeof nodeInternal.totalDeltaBias === 'number')
         nodeInternal.totalDeltaBias = scaleFn(
           nodeInternal.totalDeltaBias,
-          activeGroup,
+          activeGroup
         );
     });
   };
@@ -701,7 +701,7 @@ export const applyGradientClippingImpl = (
     groups.forEach((groupValues) => {
       /** Current group L2 norm. */
       const groupL2Norm = Math.sqrt(
-        groupValues.reduce((sum, v) => sum + v * v, 0),
+        groupValues.reduce((sum, v) => sum + v * v, 0)
       );
       if (groupL2Norm > maxAllowedNorm && groupL2Norm > 0) {
         /** Scaling factor applied uniformly to bring norm to boundary. */
@@ -709,7 +709,7 @@ export const applyGradientClippingImpl = (
         applyScale((currentValue, owningGroup) =>
           owningGroup === groupValues
             ? currentValue * normScaleFactor
-            : currentValue,
+            : currentValue
         );
       }
     });
@@ -719,14 +719,14 @@ export const applyGradientClippingImpl = (
     groups.forEach((groupValues) => {
       const percentileThreshold = computeAbsolutePercentileThreshold(
         groupValues,
-        percentileSetting,
+        percentileSetting
       );
       if (percentileThreshold <= 0) return;
       applyScale((currentValue, owningGroup) =>
         owningGroup === groupValues &&
         Math.abs(currentValue) > percentileThreshold
           ? percentileThreshold * Math.sign(currentValue)
-          : currentValue,
+          : currentValue
       );
     });
   }
@@ -745,9 +745,9 @@ export const trainSetImpl = (
   momentum: number,
   regularization: RegularizationConfig,
   costFunction: CostFunction | CostFunctionOrObject,
-  optimizer?: OptimizerConfigBase,
+  optimizer?: OptimizerConfigBase
 ): number => {
-  const internalNet = net as unknown as NetworkInternals;
+  const internalNet = (net as unknown) as NetworkInternals;
   /** Sum of raw (unsmoothed) cost values across valid samples. */
   let cumulativeError = 0;
   /** Number of samples processed in current mini-batch (resets after potential optimizer step). */
@@ -788,26 +788,26 @@ export const trainSetImpl = (
     if (input.length !== net.input || target.length !== net.output) {
       if (config.warnings)
         console.warn(
-          `Data point ${sampleIndex} has incorrect dimensions (input: ${input.length}/${net.input}, output: ${target.length}/${net.output}), skipping.`,
+          `Data point ${sampleIndex} has incorrect dimensions (input: ${input.length}/${net.input}, output: ${target.length}/${net.output}), skipping.`
         );
       continue;
     }
     try {
       // Forward pass with training flag (enables dropout / any stochastic layers).
-      const networkInternal = net as unknown as NetworkInternals;
+      const networkInternal = (net as unknown) as NetworkInternals;
       const output = networkInternal.activate(input, true);
       if (optimizer && optimizer.type && optimizer.type !== 'sgd') {
         // Accumulate gradients for adaptive optimizers (no immediate weight update inside propagate).
         for (let outIndex = 0; outIndex < outputNodes.length; outIndex++) {
-          const outputNodeInternal = outputNodes[
+          const outputNodeInternal = (outputNodes[
             outIndex
-          ] as unknown as NodeInternals;
+          ] as unknown) as NodeInternals;
           outputNodeInternal.propagate(
             currentRate,
             momentum,
             false,
             regularization,
-            target[outIndex],
+            target[outIndex]
           );
         }
         for (
@@ -817,21 +817,21 @@ export const trainSetImpl = (
         ) {
           const node = net.nodes[reverseIndex];
           if (node.type === 'output' || node.type === 'input') continue;
-          const nodeInternal = node as unknown as NodeInternals;
+          const nodeInternal = (node as unknown) as NodeInternals;
           nodeInternal.propagate(currentRate, momentum, false, regularization);
         }
       } else {
         // SGD mode: propagate performs immediate parameter updates using deltas.
         for (let outIndex = 0; outIndex < outputNodes.length; outIndex++) {
-          const outputNodeInternal = outputNodes[
+          const outputNodeInternal = (outputNodes[
             outIndex
-          ] as unknown as NodeInternals;
+          ] as unknown) as NodeInternals;
           outputNodeInternal.propagate(
             currentRate,
             momentum,
             true,
             regularization,
-            target[outIndex],
+            target[outIndex]
           );
         }
         for (
@@ -841,20 +841,21 @@ export const trainSetImpl = (
         ) {
           const node = net.nodes[reverseIndex];
           if (node.type === 'output' || node.type === 'input') continue;
-          const nodeInternal = node as unknown as NodeInternals;
+          const nodeInternal = (node as unknown) as NodeInternals;
           nodeInternal.propagate(currentRate, momentum, true, regularization);
         }
       }
       cumulativeError += computeError(target, output);
       batchSampleCount++;
       totalProcessedSamples++;
-    } catch (e: unknown) {
+    } catch (error: unknown) {
       if (config.warnings) {
-        const errorMessage = e instanceof Error ? e.message : String(e);
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
         console.warn(
           `Error processing data point ${sampleIndex} (input: ${JSON.stringify(
-            input,
-          )}): ${errorMessage}. Skipping.`,
+            input
+          )}): ${errorMessage}. Skipping.`
         );
       }
     }
@@ -876,7 +877,7 @@ export const trainSetImpl = (
           /** Detect overflow under mixed precision (NaN/Inf). */
           const overflowDetected = detectMixedPrecisionOverflow(
             net,
-            internalNet,
+            internalNet
           );
           if (overflowDetected) {
             // Discard invalid gradients & shrink loss scale.
@@ -901,7 +902,7 @@ export const trainSetImpl = (
               optimizer,
               currentRate,
               momentum,
-              internalNet,
+              internalNet
             );
             // Dynamic loss scaling increase if conditions satisfied.
             if (internalNet._mixedPrecision.enabled)
@@ -924,9 +925,9 @@ export const trainSetImpl = (
 export const trainImpl = (
   net: Network,
   set: { input: number[]; output: number[] }[],
-  options: TrainingOptions,
+  options: TrainingOptions
 ): { error: number; iterations: number; time: number } => {
-  const internalNet = net as unknown as NetworkInternals;
+  const internalNet = (net as unknown) as NetworkInternals;
   if (
     !set ||
     set.length === 0 ||
@@ -934,7 +935,7 @@ export const trainImpl = (
     set[0].output.length !== net.output
   ) {
     throw new Error(
-      'Dataset is invalid or dimensions do not match network input/output size!',
+      'Dataset is invalid or dimensions do not match network input/output size!'
     );
   }
   options = options || {};
@@ -945,7 +946,7 @@ export const trainImpl = (
     if (config.warnings)
       console.warn('Missing `iterations` or `error` option.');
     throw new Error(
-      'Missing `iterations` or `error` option. Training requires a stopping condition.',
+      'Missing `iterations` or `error` option. Training requires a stopping condition.'
     );
   }
   if (config.warnings) {
@@ -955,7 +956,7 @@ export const trainImpl = (
     }
     if (typeof options.iterations === 'undefined')
       console.warn(
-        'Missing `iterations` option. Training will run potentially indefinitely until `error` threshold is met.',
+        'Missing `iterations` option. Training will run potentially indefinitely until `error` threshold is met.'
       );
   }
   /** Target monitored (smoothed) error threshold for early termination. */
@@ -1023,12 +1024,12 @@ export const trainImpl = (
     internalNet._mpIncreaseEvery =
       dyn.increaseEvery || dyn.stableStepsForIncrease || 200;
     net.connections.forEach((c) => {
-      const connInternal = c as unknown as ConnectionInternals;
+      const connInternal = (c as unknown) as ConnectionInternals;
       connInternal._fp32Weight = c.weight;
     });
     net.nodes.forEach((n) => {
       if (n.type !== 'input') {
-        const nodeInternal = n as unknown as NodeInternals;
+        const nodeInternal = (n as unknown) as NodeInternals;
         nodeInternal._fp32Bias = n.bias;
       }
     });
@@ -1072,11 +1073,11 @@ export const trainImpl = (
       if (!optimizerConfig.baseType) optimizerConfig.baseType = 'adam';
       if (optimizerConfig.baseType === 'lookahead')
         throw new Error(
-          'Nested lookahead (baseType lookahead) is not supported',
+          'Nested lookahead (baseType lookahead) is not supported'
         );
       if (!allowedOptimizers.has(optimizerConfig.baseType))
         throw new Error(
-          `Unknown baseType for lookahead: ${optimizerConfig.baseType}`,
+          `Unknown baseType for lookahead: ${optimizerConfig.baseType}`
         );
       optimizerConfig.la_k = optimizerConfig.la_k || 5;
       optimizerConfig.la_alpha = optimizerConfig.la_alpha ?? 0.5;
@@ -1102,7 +1103,7 @@ export const trainImpl = (
   /** Separate window for plateau detection (defaults to primary window). */
   const plateauWindow = Math.max(
     1,
-    options.plateauMovingAverageWindow || movingAverageWindow,
+    options.plateauMovingAverageWindow || movingAverageWindow
   );
   /** Smoothing algorithm used specifically for plateau (scheduler / early-stop) metrics. */
   const plateauType = options.plateauMovingAverageType || movingAverageType;
@@ -1217,7 +1218,7 @@ export const trainImpl = (
       momentum,
       {},
       cost as CostFunction | CostFunctionOrObject,
-      optimizerConfig,
+      optimizerConfig
     );
     // Record that this iteration was fully executed (used if we early break afterwards).
     performedIterations = iter;
@@ -1256,7 +1257,7 @@ export const trainImpl = (
         const varScaled = variance / Math.max(mean * mean, 1e-8);
         const adaptAlpha = Math.min(
           0.95,
-          Math.max(baseAlpha, baseAlpha * (1 + 2 * varScaled)),
+          Math.max(baseAlpha, baseAlpha * (1 + 2 * varScaled))
         );
         if (adaptiveBaseEmaValue == null) {
           adaptiveBaseEmaValue = trainError;
@@ -1278,7 +1279,7 @@ export const trainImpl = (
         let gaussianWeightedAccumulator = 0;
         for (let gi = 0; gi < windowLength; gi++) {
           const weight = Math.exp(
-            -0.5 * Math.pow((gi - (windowLength - 1)) / sigma, 2),
+            -0.5 * Math.pow((gi - (windowLength - 1)) / sigma, 2)
           );
           gaussianWeightSum += weight;
           gaussianWeightedAccumulator += weight * gaussianWindow[gi];
@@ -1288,15 +1289,15 @@ export const trainImpl = (
         // Trim symmetrical tails to damp outliers before averaging.
         const tailTrimRatio = Math.min(
           0.49,
-          Math.max(0, options.trimmedRatio || 0.1),
+          Math.max(0, options.trimmedRatio || 0.1)
         );
         const sorted = [...recentArr].sort((a, b) => a - b);
         const elementsToDropEachSide = Math.floor(
-          sorted.length * tailTrimRatio,
+          sorted.length * tailTrimRatio
         );
         const trimmedSegment = sorted.slice(
           elementsToDropEachSide,
-          sorted.length - elementsToDropEachSide,
+          sorted.length - elementsToDropEachSide
         );
         monitored =
           trimmedSegment.reduce((a, b) => a + b, 0) /

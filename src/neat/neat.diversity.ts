@@ -65,7 +65,7 @@ export const structuralEntropy = (graph: Network): number => {
   const outDegrees: number[] = graph.nodes.map(
     (node) =>
       // each node exposes connections.out array in current architecture
-      node.connections.out.length,
+      node.connections.out.length
   );
 
   // 2) Normalize degrees to a probability distribution
@@ -139,7 +139,7 @@ const arrayVariance = (values: number[]): number => {
  */
 export const computeDiversityStats = (
   population: GenomeWithMetrics[],
-  compatibilityComputer: CompatComputer,
+  compatibilityComputer: CompatComputer
 ): DiversityStats | undefined => {
   // Early exit: empty population
   if (!population.length) return undefined;
@@ -204,7 +204,7 @@ export const computeDiversityStats = (
     for (let j = i + 1; j < population.length && j < 25; j++) {
       compatSum += compatibilityComputer._compatibilityDistance(
         population[i],
-        population[j],
+        population[j]
       );
       compatPairCount++;
     }
@@ -217,7 +217,7 @@ export const computeDiversityStats = (
   // Compute structuralEntropy per genome and average the results.
   /** Mean structural entropy across the population. */
   const graphletEntropy = arrayMean(
-    population.map((g) => structuralEntropy(g as Network)),
+    population.map((g) => structuralEntropy(g as Network))
   );
 
   // Final aggregated result

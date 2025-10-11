@@ -202,7 +202,7 @@ const _acquireTA = (
   kind: string,
   ctor: TypedArrayConstructor,
   length: number,
-  bytesPerElement: number,
+  bytesPerElement: number
 ): TypedArray => {
   if (!config.enableSlabArrayPooling) {
     _slabAllocStats.fresh++;
@@ -231,7 +231,7 @@ const _acquireTA = (
 const _releaseTA = (
   kind: string,
   bytesPerElement: number,
-  arr: TypedArray,
+  arr: TypedArray
 ): void => {
   if (!config.enableSlabArrayPooling) return;
   const key = _poolKey(kind, bytesPerElement, arr.length);
@@ -279,7 +279,7 @@ export const getSlabAllocationStats = () => {
  * @param force When true forces rebuild even if network not marked dirty (useful for timing tests).
  */
 export function rebuildConnectionSlab(this: Network, force = false): void {
-  const internalNet = this as unknown as NetworkSlabProps;
+  const internalNet = (this as unknown) as NetworkSlabProps;
   if (!force && !internalNet._slabDirty) return; // Already current; avoid reallocation churn.
   if (internalNet._nodeIndexDirty) _reindexNodes.call(this); // Ensure node.index stable before packing.
   /** Active connection count requiring packing (logical size). */
@@ -301,7 +301,7 @@ export function rebuildConnectionSlab(this: Network, force = false): void {
       _releaseTA(
         'w',
         internalNet._useFloat32Weights ? 4 : 8,
-        internalNet._connWeights,
+        internalNet._connWeights
       );
     if (internalNet._connFrom)
       _releaseTA('f', 4, internalNet._connFrom as Uint32Array);
@@ -313,38 +313,38 @@ export function rebuildConnectionSlab(this: Network, force = false): void {
       _releaseTA(
         'g',
         internalNet._useFloat32Weights ? 4 : 8,
-        internalNet._connGain as Float32Array | Float64Array,
+        internalNet._connGain as Float32Array | Float64Array
       );
     if (internalNet._connPlastic)
       _releaseTA(
         'p',
         internalNet._useFloat32Weights ? 4 : 8,
-        internalNet._connPlastic as Float32Array | Float64Array,
+        internalNet._connPlastic as Float32Array | Float64Array
       );
     // Acquire (possibly pooled) slabs with new capacity
     internalNet._connWeights = _acquireTA(
       'w',
       internalNet._useFloat32Weights ? Float32Array : Float64Array,
       capacity,
-      internalNet._useFloat32Weights ? 4 : 8,
+      internalNet._useFloat32Weights ? 4 : 8
     ) as Float32Array | Float64Array;
     internalNet._connFrom = _acquireTA(
       'f',
       Uint32Array,
       capacity,
-      4,
+      4
     ) as Uint32Array;
     internalNet._connTo = _acquireTA(
       't',
       Uint32Array,
       capacity,
-      4,
+      4
     ) as Uint32Array;
     internalNet._connFlags = _acquireTA(
       'fl',
       Uint8Array,
       capacity,
-      1,
+      1
     ) as Uint8Array;
     // Gain slab now allocated lazily (gain omission optimization); set null placeholder
     internalNet._connGain = null;
@@ -371,9 +371,9 @@ export function rebuildConnectionSlab(this: Network, force = false): void {
     connectionIndex < connectionCount;
     connectionIndex++
   ) {
-    const connection = this.connections[
+    const connection = (this.connections[
       connectionIndex
-    ] as unknown as ConnectionInternals;
+    ] as unknown) as ConnectionInternals;
     weightArray[connectionIndex] = connection.weight;
     fromIndexArray[connectionIndex] = connection.from.index >>> 0;
     toIndexArray[connectionIndex] = connection.to.index >>> 0;
@@ -381,14 +381,14 @@ export function rebuildConnectionSlab(this: Network, force = false): void {
     // Future bits (plasticity, freeze, mutation lineage) can be OR'ed here with documented positions.
     flagArray[connectionIndex] = connection._flags & 0xff; // mask to one byte
     // Gain: if virtualized gain !== 1 we snapshot it, else store 1 (keeps forward math branch-free)
-    const gainValue = (connection as unknown as Connection).gain;
+    const gainValue = ((connection as unknown) as Connection).gain;
     if (gainValue !== 1) {
       if (!gainArray) {
         gainArray = _acquireTA(
           'g',
           internalNet._useFloat32Weights ? Float32Array : Float64Array,
           capacity,
-          internalNet._useFloat32Weights ? 4 : 8,
+          internalNet._useFloat32Weights ? 4 : 8
         ) as Float32Array | Float64Array;
         internalNet._connGain = gainArray;
         for (let j = 0; j < connectionIndex; j++) gainArray[j] = 1;
@@ -405,7 +405,7 @@ export function rebuildConnectionSlab(this: Network, force = false): void {
     _releaseTA(
       'g',
       internalNet._useFloat32Weights ? 4 : 8,
-      gainArray as Float32Array | Float64Array,
+      gainArray as Float32Array | Float64Array
     );
     internalNet._connGain = null;
   }
@@ -415,11 +415,11 @@ export function rebuildConnectionSlab(this: Network, force = false): void {
       'p',
       internalNet._useFloat32Weights ? Float32Array : Float64Array,
       capacity,
-      internalNet._useFloat32Weights ? 4 : 8,
+      internalNet._useFloat32Weights ? 4 : 8
     ) as Float32Array | Float64Array;
     internalNet._connPlastic = plasticArray;
     for (let i = 0; i < connectionCount; i++) {
-      const c = this.connections[i] as unknown as Connection & {
+      const c = (this.connections[i] as unknown) as Connection & {
         plasticityRate?: number;
       };
       plasticArray[i] = c.plasticityRate || 0;
@@ -429,7 +429,7 @@ export function rebuildConnectionSlab(this: Network, force = false): void {
     _releaseTA(
       'p',
       internalNet._useFloat32Weights ? 4 : 8,
-      plasticArray as Float32Array | Float64Array,
+      plasticArray as Float32Array | Float64Array
     );
     internalNet._connPlastic = null;
   }
@@ -456,9 +456,9 @@ export function rebuildConnectionSlab(this: Network, force = false): void {
  */
 export async function rebuildConnectionSlabAsync(
   this: Network,
-  chunkSize = 50_000,
+  chunkSize = 50_000
 ): Promise<void> {
-  const internalNet = this as unknown as NetworkSlabProps;
+  const internalNet = (this as unknown) as NetworkSlabProps;
   if (typeof window === 'undefined')
     return rebuildConnectionSlab.call(this, true);
   if (!internalNet._slabDirty) return; // already clean
@@ -475,7 +475,7 @@ export async function rebuildConnectionSlabAsync(
       _releaseTA(
         'w',
         internalNet._useFloat32Weights ? 4 : 8,
-        internalNet._connWeights,
+        internalNet._connWeights
       );
     if (internalNet._connFrom)
       _releaseTA('f', 4, internalNet._connFrom as Uint32Array);
@@ -487,44 +487,44 @@ export async function rebuildConnectionSlabAsync(
       _releaseTA(
         'g',
         internalNet._useFloat32Weights ? 4 : 8,
-        internalNet._connGain as Float32Array | Float64Array,
+        internalNet._connGain as Float32Array | Float64Array
       );
     if (internalNet._connPlastic)
       _releaseTA(
         'p',
         internalNet._useFloat32Weights ? 4 : 8,
-        internalNet._connPlastic as Float32Array | Float64Array,
+        internalNet._connPlastic as Float32Array | Float64Array
       );
     // Acquire slabs (pooled or fresh) so allocation stats reflect this async path too
     internalNet._connWeights = _acquireTA(
       'w',
       internalNet._useFloat32Weights ? Float32Array : Float64Array,
       capacity,
-      internalNet._useFloat32Weights ? 4 : 8,
+      internalNet._useFloat32Weights ? 4 : 8
     ) as Float32Array | Float64Array;
     internalNet._connFrom = _acquireTA(
       'f',
       Uint32Array,
       capacity,
-      4,
+      4
     ) as Uint32Array;
     internalNet._connTo = _acquireTA(
       't',
       Uint32Array,
       capacity,
-      4,
+      4
     ) as Uint32Array;
     internalNet._connFlags = _acquireTA(
       'fl',
       Uint8Array,
       capacity,
-      1,
+      1
     ) as Uint8Array;
     internalNet._connGain = _acquireTA(
       'g',
       internalNet._useFloat32Weights ? Float32Array : Float64Array,
       capacity,
-      internalNet._useFloat32Weights ? 4 : 8,
+      internalNet._useFloat32Weights ? 4 : 8
     ) as Float32Array | Float64Array;
     internalNet._connPlastic = null;
     internalNet._connCapacity = capacity;
@@ -548,7 +548,7 @@ export async function rebuildConnectionSlabAsync(
       const baseOpsPerMs = 15000; // coarse empirical constant; refine later.
       const estOps = Math.max(
         5_000,
-        Math.min(50_000, Math.floor(baseOpsPerMs * target)),
+        Math.min(50_000, Math.floor(baseOpsPerMs * target))
       );
       chunkSize = Math.min(chunkSize, estOps);
     } else {
@@ -560,12 +560,14 @@ export async function rebuildConnectionSlabAsync(
   while (idx < total) {
     const end = Math.min(total, idx + chunkSize);
     for (let i = idx; i < end; i++) {
-      const connection = this.connections[i] as unknown as ConnectionInternals;
+      const connection = (this.connections[
+        i
+      ] as unknown) as ConnectionInternals;
       weights[i] = connection.weight;
       fromIndices[i] = connection.from.index >>> 0;
       toIndices[i] = connection.to.index >>> 0;
       flagBytes[i] = connection._flags & 0xff;
-      const gainValue = (connection as unknown as Connection).gain;
+      const gainValue = ((connection as unknown) as Connection).gain;
       if (gainArray) gainArray[i] = gainValue === 1 ? 1 : gainValue;
       if (gainValue !== 1) anyNonNeutralGain = true;
       if (connection._flags & 0b1000) anyPlastic = true;
@@ -578,7 +580,7 @@ export async function rebuildConnectionSlabAsync(
     _releaseTA(
       'g',
       internalNet._useFloat32Weights ? 4 : 8,
-      gainArray as Float32Array | Float64Array,
+      gainArray as Float32Array | Float64Array
     );
     internalNet._connGain = null;
   }
@@ -587,7 +589,7 @@ export async function rebuildConnectionSlabAsync(
       'p',
       internalNet._useFloat32Weights ? Float32Array : Float64Array,
       internalNet._connCapacity!,
-      internalNet._useFloat32Weights ? 4 : 8,
+      internalNet._useFloat32Weights ? 4 : 8
     ) as Float32Array | Float64Array;
     internalNet._connPlastic = plasticArray;
     for (let i = 0; i < total; i++)
@@ -598,7 +600,7 @@ export async function rebuildConnectionSlabAsync(
     _releaseTA(
       'p',
       internalNet._useFloat32Weights ? 4 : 8,
-      plasticArray as Float32Array | Float64Array,
+      plasticArray as Float32Array | Float64Array
     );
     internalNet._connPlastic = null;
   }
@@ -620,7 +622,7 @@ export async function rebuildConnectionSlabAsync(
  */
 export function getConnectionSlab(this: Network): ConnectionSlabView {
   rebuildConnectionSlab.call(this); // Lazy rebuild if needed.
-  const internalNet = this as unknown as NetworkSlabProps;
+  const internalNet = (this as unknown) as NetworkSlabProps;
   let gain: Float32Array | Float64Array | null = internalNet._connGain || null;
   if (!gain) {
     // Provide a synthetic neutral gain view for educational/tests expecting parity while preserving omission semantics.
@@ -654,10 +656,11 @@ export function getConnectionSlab(this: Network): ConnectionSlabView {
  * Clears `_nodeIndexDirty` flag.
  */
 function _reindexNodes(this: Network) {
-  const internalNet = this as unknown as NetworkSlabProps;
+  const internalNet = (this as unknown) as NetworkSlabProps;
   for (let nodeIndex = 0; nodeIndex < this.nodes.length; nodeIndex++)
-    (this.nodes[nodeIndex] as unknown as Node & { index: number }).index =
-      nodeIndex;
+    ((this.nodes[nodeIndex] as unknown) as Node & {
+      index: number;
+    }).index = nodeIndex;
   internalNet._nodeIndexDirty = false;
 }
 
@@ -666,7 +669,7 @@ function _reindexNodes(this: Network) {
  * Only rebuilds when marked dirty. Stores arrays on internal network instance.
  */
 function _buildAdjacency(this: Network) {
-  const internalNet = this as unknown as NetworkSlabProps;
+  const internalNet = (this as unknown) as NetworkSlabProps;
   if (!internalNet._connFrom || !internalNet._connTo) return; // Nothing to build yet.
   /** Number of nodes in current network. */
   const nodeCount = this.nodes.length;
@@ -715,17 +718,19 @@ function _buildAdjacency(this: Network) {
  * @returns True if fast path can be safely used for deterministic forward activation.
  */
 function _canUseFastSlab(this: Network, training: boolean): boolean {
-  const internalNet = this as unknown as NetworkSlabProps;
+  const internalNet = (this as unknown) as NetworkSlabProps;
   return !!(
-    !training && // Training may require gradients / noise injection.
-    internalNet._enforceAcyclic && // Must have acyclic guarantee for single forward sweep.
-    !internalNet._topoDirty && // Topological order must be current.
-    this.gates.length === 0 && // Gating implies dynamic per-edge behavior.
-    this.selfconns.length === 0 && // Self connections require recurrent handling.
-    this.dropout === 0 && // Dropout introduces stochastic masking.
-    internalNet._weightNoiseStd === 0 && // Global weight noise disables deterministic slab pass.
-    (internalNet._weightNoisePerHidden?.length || 0) === 0 && // Per hidden noise variants.
-    (internalNet._stochasticDepth?.length || 0) === 0 // Layer drop also stochastic.
+    (
+      !training && // Training may require gradients / noise injection.
+      internalNet._enforceAcyclic && // Must have acyclic guarantee for single forward sweep.
+      !internalNet._topoDirty && // Topological order must be current.
+      this.gates.length === 0 && // Gating implies dynamic per-edge behavior.
+      this.selfconns.length === 0 && // Self connections require recurrent handling.
+      this.dropout === 0 && // Dropout introduces stochastic masking.
+      internalNet._weightNoiseStd === 0 && // Global weight noise disables deterministic slab pass.
+      (internalNet._weightNoisePerHidden?.length || 0) === 0 && // Per hidden noise variants.
+      (internalNet._stochasticDepth?.length || 0) === 0
+    ) // Layer drop also stochastic.
   );
 }
 
@@ -746,16 +751,14 @@ function _canUseFastSlab(this: Network, training: boolean): boolean {
  * @returns Output activations (detached plain array) of length `network.output`.
  */
 export function fastSlabActivate(this: Network, input: number[]): number[] {
-  const internalNet = this as unknown as NetworkSlabProps;
+  const internalNet = (this as unknown) as NetworkSlabProps;
   rebuildConnectionSlab.call(this); // Ensure slabs up-to-date (no-op if clean).
   if (internalNet._adjDirty) _buildAdjacency.call(this); // Build CSR adjacency if needed.
   // Gating incompatibility guard: if gating is present, always fallback to legacy path (dynamic per-edge behavior)
   if (this.gates && this.gates.length > 0)
-    return (
-      this as unknown as Network & {
-        activate: (input: number[], training: boolean) => number[];
-      }
-    ).activate(input, false);
+    return ((this as unknown) as Network & {
+      activate: (input: number[], training: boolean) => number[];
+    }).activate(input, false);
   if (
     !internalNet._connWeights ||
     !internalNet._connFrom ||
@@ -763,14 +766,12 @@ export function fastSlabActivate(this: Network, input: number[]): number[] {
     !internalNet._outStart ||
     !internalNet._outOrder
   ) {
-    return (
-      this as unknown as Network & {
-        activate: (input: number[], training: boolean) => number[];
-      }
-    ).activate(input, false); // Fallback: prerequisites missing.
+    return ((this as unknown) as Network & {
+      activate: (input: number[], training: boolean) => number[];
+    }).activate(input, false); // Fallback: prerequisites missing.
   }
   if (internalNet._topoDirty) {
-    const computeTopoOrder = (this as unknown as Record<string, unknown>)
+    const computeTopoOrder = ((this as unknown) as Record<string, unknown>)
       ._computeTopoOrder as () => void;
     computeTopoOrder.call(this);
   }
@@ -812,18 +813,14 @@ export function fastSlabActivate(this: Network, input: number[]): number[] {
   // Seed input activations directly (no accumulation for inputs).
   for (let inputIndex = 0; inputIndex < this.input; inputIndex++) {
     activationBuffer[inputIndex] = input[inputIndex];
-    (
-      this.nodes[inputIndex] as unknown as Node & {
-        activation: number;
-        state: number;
-      }
-    ).activation = input[inputIndex];
-    (
-      this.nodes[inputIndex] as unknown as Node & {
-        activation: number;
-        state: number;
-      }
-    ).state = 0;
+    ((this.nodes[inputIndex] as unknown) as Node & {
+      activation: number;
+      state: number;
+    }).activation = input[inputIndex];
+    ((this.nodes[inputIndex] as unknown) as Node & {
+      activation: number;
+      state: number;
+    }).state = 0;
   }
   /** Packed connection weights. */
   const weightArray = internalNet._connWeights;
@@ -867,7 +864,7 @@ export function fastSlabActivate(this: Network, input: number[]): number[] {
   // Collect outputs: final output nodes occupy the tail of the node list.
   const outputBaseIndex = nodeCount - this.output;
   const pooledOutputArray = activationArrayPool.acquire(
-    this.output,
+    this.output
   ) as Float64Array;
   for (let outputOffset = 0; outputOffset < this.output; outputOffset++) {
     pooledOutputArray[outputOffset] =
@@ -893,7 +890,7 @@ export function canUseFastSlab(this: Network, training: boolean) {
  * @returns Non‑negative integer (0 if slab never built yet).
  */
 export function getSlabVersion(this: Network): number {
-  const internalNet = this as unknown as NetworkSlabProps;
+  const internalNet = (this as unknown) as NetworkSlabProps;
   return internalNet._slabVersion || 0;
 }
 

@@ -121,7 +121,7 @@ describe('Adaptive entropy sharing & ancestor uniqueness objective adjustments',
     });
     it('decreases dominanceEpsilon when ancestorUniq high', () => {
       expect(ancestorEpsilonResults.decreased!).toBeLessThan(
-        ancestorEpsilonResults.increased!,
+        ancestorEpsilonResults.increased!
       );
     });
   });

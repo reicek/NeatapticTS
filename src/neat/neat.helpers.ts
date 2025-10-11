@@ -44,7 +44,7 @@ interface NeatControllerForHelpers {
   ensureNoDeadEnds?: (genome: GenomeWithMetadata) => void;
   selectMutationMethod?: (
     genome: GenomeWithMetadata,
-    sexual: boolean,
+    sexual: boolean
   ) => MutationMethod | MutationMethod[];
   _invalidateGenomeCaches?: (genome: GenomeWithMetadata) => void;
 }
@@ -104,9 +104,9 @@ interface NeatControllerForHelpers {
 export async function spawnFromParent(
   this: NeatLike,
   parentGenome: GenomeWithMetadata,
-  mutateCount: number = 1,
+  mutateCount: number = 1
 ): Promise<GenomeWithMetadata> {
-  const internal = this as unknown as NeatControllerForHelpers;
+  const internal = (this as unknown) as NeatControllerForHelpers;
 
   // Step 1: Deep clone the parent (prefer direct clone() for performance).
   let clone: GenomeWithMetadata;
@@ -114,9 +114,9 @@ export async function spawnFromParent(
     clone = parentGenome.clone();
   } else {
     const { default: NetworkClass } = await import('../architecture/network');
-    clone = NetworkClass.fromJSON(
-      parentGenome.toJSON?.() ?? {},
-    ) as unknown as GenomeWithMetadata;
+    clone = (NetworkClass.fromJSON(
+      parentGenome.toJSON?.() ?? {}
+    ) as unknown) as GenomeWithMetadata;
   }
 
   // Step 2: Reset evaluation state for the fresh offspring.
@@ -138,7 +138,7 @@ export async function spawnFromParent(
       // Select a mutation operator; may return a single method or an array of candidates.
       let selectedMutationMethod = await internal.selectMutationMethod?.(
         clone,
-        false,
+        false
       );
       if (Array.isArray(selectedMutationMethod)) {
         const candidateMutations = selectedMutationMethod;
@@ -185,9 +185,9 @@ export async function spawnFromParent(
 export function addGenome(
   this: NeatLike,
   genome: GenomeWithMetadata,
-  parents?: number[],
+  parents?: number[]
 ): void {
-  const internal = this as unknown as NeatControllerForHelpers;
+  const internal = (this as unknown) as NeatControllerForHelpers;
 
   try {
     // Step 1: Reset score so future evaluations are not biased by stale values.
@@ -202,7 +202,7 @@ export function addGenome(
       // Compute depth = (max parent depth) + 1 for genealogical layering.
       const parentDepths = genome._parents
         .map((pid: number) =>
-          internal.population.find((g: GenomeWithMetadata) => g._id === pid),
+          internal.population.find((g: GenomeWithMetadata) => g._id === pid)
         )
         .filter((g): g is GenomeWithMetadata => g !== undefined)
         .map((g) => g._depth ?? 0);
@@ -253,9 +253,9 @@ export function addGenome(
  */
 export function createPool(
   this: NeatLike,
-  seedNetwork: GenomeWithMetadata | null,
+  seedNetwork: GenomeWithMetadata | null
 ): void {
-  const internal = this as unknown as NeatControllerForHelpers;
+  const internal = (this as unknown) as NeatControllerForHelpers;
 
   try {
     // Step 1: Reset population container.
@@ -266,12 +266,12 @@ export function createPool(
     for (let genomeIndex = 0; genomeIndex < poolSize; genomeIndex++) {
       // Clone from seed OR build a fresh network.
       const genomeCopy = seedNetwork
-        ? (Network.fromJSON(
-            seedNetwork.toJSON?.() ?? {},
-          ) as unknown as GenomeWithMetadata)
-        : (new Network(internal.input, internal.output, {
+        ? ((Network.fromJSON(
+            seedNetwork.toJSON?.() ?? {}
+          ) as unknown) as GenomeWithMetadata)
+        : ((new Network(internal.input, internal.output, {
             minHidden: internal.options?.minHidden,
-          }) as unknown as GenomeWithMetadata);
+          }) as unknown) as GenomeWithMetadata);
 
       // Step 2a: Ensure no stale scoring information.
       genomeCopy.score = undefined;

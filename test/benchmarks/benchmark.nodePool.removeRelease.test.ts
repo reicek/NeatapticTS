@@ -15,7 +15,7 @@ describe('benchmark.nodePool.removeRelease', () => {
     it('should recycle node into pool after removal when pooling enabled', () => {
       // Arrange
       resetNodePool();
-      (config as unknown as MutableConfig).enableNodePooling = true;
+      ((config as unknown) as MutableConfig).enableNodePooling = true;
       const net = new Network(2, 1, { seed: 7, minHidden: 1 });
       const before = nodePoolStats().size;
       // Remove last hidden node if present (skip input/output)
