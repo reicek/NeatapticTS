@@ -1,33 +1,18 @@
-/**
- * Minimal Neat instance interface for pruning functions.
- */
-interface NeatLikeForPruning {
-  options: {
-    evolutionPruning?: {
-      startGeneration?: number;
-      interval?: number;
-      rampGenerations?: number;
-      targetSparsity?: number;
-      method?: string;
-    };
-    adaptivePruning?: {
-      enabled?: boolean;
-      metric?: string;
-      targetSparsity?: number;
-      learningRate?: number;
-      tolerance?: number;
-      adjustRate?: number;
-    };
-  };
-  generation: number;
-  population: Array<{
-    nodes: unknown[];
-    connections: unknown[];
-    pruneToSparsity?: (sparsity: number, method?: string) => void;
-  }>;
-  _adaptivePruneLevel?: number;
-  _adaptivePruneBaseline?: number;
-}
+import type { NeatLikeForPruning } from './neat.pruning.utils';
+import {
+  applyAdaptivePruneLevelToPopulation,
+  applyPruningToPopulation,
+  computeNextAdaptivePruneLevel,
+  computePopulationMetrics,
+  computeTargetRemainingMetric,
+  computeTargetSparsityNow,
+  initializeAdaptivePruningState,
+  resolveActiveAdaptivePruningOptions,
+  resolveActiveEvolutionPruningOptions,
+  resolveAdaptivePruneBaseline,
+  resolveObservedMetricValue,
+  shouldAdjustAdaptivePruning,
+} from './neat.pruning.utils';
 
 /**
  * Apply evolution-time pruning to the current population.
@@ -55,65 +40,22 @@ interface NeatLikeForPruning {
  * @this NeatLikeForPruning A Neat instance (expects `options`, `generation` and `population`).
  */
 export function applyEvolutionPruning(this: NeatLikeForPruning) {
-  // Read configured evolution pruning options from the Neat instance.
-  /** Evolution pruning options configured on the Neat instance. */
-  const evolutionPruningOpts = this.options.evolutionPruning;
+  // Step 1: Resolve the active evolution pruning options for this generation.
+  const evolutionPruningOpts = resolveActiveEvolutionPruningOptions(this);
 
-  // Abort early when pruning is not configured or not yet started.
-  if (
-    !evolutionPruningOpts ||
-    this.generation < (evolutionPruningOpts.startGeneration || 0)
-  )
-    return;
+  // Step 2: Exit early when pruning should not run for this generation.
+  if (!evolutionPruningOpts) return;
 
-  /**
-   * Interval (in generations) between pruning operations.
-   * @default 1
-   */
-  const interval = evolutionPruningOpts.interval || 1;
-  const startGen = evolutionPruningOpts.startGeneration || 0;
+  // Step 3: Calculate the target sparsity for this generation.
+  const targetSparsityNow = computeTargetSparsityNow(
+    this,
+    evolutionPruningOpts,
+  );
 
-  // Only run at configured interval.
-  if ((this.generation - startGen) % interval !== 0) return;
-
-  /**
-   * How many generations to ramp the pruning in over. If 0, pruning is immediate.
-   * @default 0
-   */
-  const rampGenerations = evolutionPruningOpts.rampGenerations || 0;
-
-  // Fraction in [0,1] indicating how far through the ramp we currently are.
-  /** Fraction of ramp completed (0 -> 1). */
-  let rampFraction = 1;
-
-  // Compute ramp fraction when ramping is enabled.
-  if (rampGenerations > 0) {
-    // Step: compute normalized progress through the ramp window.
-    const progressThroughRamp = Math.min(
-      1,
-      Math.max(0, (this.generation - startGen) / rampGenerations),
-    );
-    rampFraction = progressThroughRamp;
-  }
-
-  /**
-   * The target sparsity to apply at this generation (0..1), scaled by rampFraction.
-   * Example: a configured targetSparsity of 0.5 and rampFraction 0.5 => target 0.25.
-   */
-  const targetSparsityNow =
-    (evolutionPruningOpts.targetSparsity || 0) * rampFraction;
-
-  // Instruct each genome to prune itself to the calculated sparsity.
-  for (const genome of this.population) {
-    if (genome && typeof genome.pruneToSparsity === 'function') {
-      // Step: call the genome's pruning routine. Method defaults to 'magnitude'.
-      genome.pruneToSparsity(
-        targetSparsityNow,
-        evolutionPruningOpts.method || 'magnitude',
-      );
-    }
-  }
+  // Step 4: Apply pruning to each genome using the selected method.
+  applyPruningToPopulation(this, evolutionPruningOpts, targetSparsityNow);
 }
+
 /**
  * Adaptive pruning controller.
  *
@@ -134,86 +76,53 @@ export function applyEvolutionPruning(this: NeatLikeForPruning) {
  * @this NeatLikeForPruning A Neat instance (expects `options` and `population`).
  */
 export function applyAdaptivePruning(this: NeatLikeForPruning) {
-  // Skip when adaptive pruning is disabled.
-  if (!this.options.adaptivePruning?.enabled) return;
+  // Step 1: Resolve adaptive pruning options when enabled.
+  const adaptivePruningOpts = resolveActiveAdaptivePruningOptions(this);
 
-  /** Adaptive pruning options from the Neat instance. */
-  const adaptivePruningOpts = this.options.adaptivePruning;
+  // Step 2: Exit early when adaptive pruning is disabled.
+  if (!adaptivePruningOpts) return;
 
-  // Initialize the shared prune level if needed.
-  if (this._adaptivePruneLevel === undefined) this._adaptivePruneLevel = 0;
+  // Step 3: Ensure adaptive pruning state is initialized.
+  initializeAdaptivePruningState(this);
 
-  /**
-   * Which population-level metric to observe when deciding pruning adjustments.
-   * Supported values: 'nodes' | 'connections'
-   * @default 'connections'
-   */
-  const metricName = adaptivePruningOpts.metric || 'connections';
+  // Step 4: Compute population metrics needed for adaptation.
+  const populationMetrics = computePopulationMetrics(this);
 
-  // Compute average node count across the population.
-  /** Average number of nodes per genome in the population (float). */
-  const meanNodeCount =
-    this.population.reduce(
-      (acc: number, genome) => acc + genome.nodes.length,
-      0,
-    ) / (this.population.length || 1);
+  // Step 5: Resolve the current observed metric value.
+  const currentMetricValue = resolveObservedMetricValue(
+    adaptivePruningOpts,
+    populationMetrics,
+  );
 
-  // Compute average connection count across the population.
-  /** Average number of connections per genome in the population (float). */
-  const meanConnectionCount =
-    this.population.reduce(
-      (acc: number, genome) => acc + genome.connections.length,
-      0,
-    ) / (this.population.length || 1);
+  // Step 6: Resolve and persist the baseline metric.
+  const adaptivePruneBaseline = resolveAdaptivePruneBaseline(
+    this,
+    currentMetricValue,
+  );
 
-  // Select the current observed metric value.
-  /** Current observed metric value used for adaptation. */
-  const currentMetricValue =
-    metricName === 'nodes' ? meanNodeCount : meanConnectionCount;
+  // Step 7: Compute the target remaining metric value.
+  const targetRemainingMetric = computeTargetRemainingMetric(
+    adaptivePruningOpts,
+    adaptivePruneBaseline,
+  );
 
-  // Initialize baseline if it's the first run.
-  if (this._adaptivePruneBaseline === undefined)
-    this._adaptivePruneBaseline = currentMetricValue;
+  // Step 8: Evaluate whether adjustment is required.
+  const shouldAdjust = shouldAdjustAdaptivePruning(
+    adaptivePruningOpts,
+    currentMetricValue,
+    targetRemainingMetric,
+    adaptivePruneBaseline,
+  );
 
-  /** Baseline metric value captured when adaptive pruning started. */
-  const adaptivePruneBaseline = this._adaptivePruneBaseline;
-
-  /** Target sparsity fraction to aim for (0..1). */
-  const desiredSparsity = adaptivePruningOpts.targetSparsity ?? 0.5;
-
-  /**
-   * Target remaining metric value (nodes or connections) computed from baseline
-   * and desiredSparsity. For example, baseline=100, desiredSparsity=0.5 => targetRemaining=50
-   */
-  const targetRemainingMetric = adaptivePruneBaseline * (1 - desiredSparsity);
-
-  /** Tolerance to ignore small fluctuations in the observed metric. */
-  const tolerance = adaptivePruningOpts.tolerance ?? 0.05;
-
-  /** Rate at which to adjust the global prune level each step (0..1). */
-  const adjustRate = adaptivePruningOpts.adjustRate ?? 0.02;
-
-  // Normalized difference between current metric and where we want to be.
-  /** Normalized difference: (current - targetRemaining) / baseline. */
-  const normalizedDifference =
-    (currentMetricValue - targetRemainingMetric) / (adaptivePruneBaseline || 1);
-
-  // Only adjust prune level if deviation exceeds tolerance.
-  if (Math.abs(normalizedDifference) > tolerance) {
-    // Step: move the prune level up or down by adjustRate in the right direction
-    // and clamp it between 0 and desiredSparsity.
-    this._adaptivePruneLevel = Math.max(
-      0,
-      Math.min(
-        desiredSparsity,
-        this._adaptivePruneLevel +
-          adjustRate * (normalizedDifference > 0 ? 1 : -1),
-      ),
+  // Step 9: Update the prune level and propagate when adjustment is needed.
+  if (shouldAdjust) {
+    const updatedPruneLevel = computeNextAdaptivePruneLevel(
+      adaptivePruningOpts,
+      this._adaptivePruneLevel ?? 0,
+      currentMetricValue,
+      targetRemainingMetric,
     );
-
-    // Propagate new prune level to each genome using magnitude pruning.
-    for (const g of this.population)
-      if (typeof g.pruneToSparsity === 'function')
-        g.pruneToSparsity(this._adaptivePruneLevel, 'magnitude');
+    this._adaptivePruneLevel = updatedPruneLevel;
+    applyAdaptivePruneLevelToPopulation(this, updatedPruneLevel);
   }
 }
