@@ -95,6 +95,13 @@ Strict rules to enforce (apply to any suggestion touching `src/` or `test/`)
        4) Internal helper function declarations at the end of the parent function
     - Helpers should be small and pure where practical, with step-level inline comments and JSDoc.
 
+9. Mandatory implementation pattern (always; keep cognitive complexity low):
+   - Applies to all new code and any modified/refactored code in `src/` and `test/`.
+   - Prefer a *declarative top-level flow* ("collect → transform → fold/return") over deeply nested control flow.
+   - Avoid ternary chains (especially nested) for multi-branch fallback logic; use named resolver helpers with early returns instead.
+   - When normalizing legacy/loose data, isolate type assertions/casting into a single helper and keep the rest strongly typed.
+   - Keep helpers after the fold, and give each helper a single responsibility (SOLID: SRP). If the logic reads like a decision tree, it likely wants 2–4 small helpers.
+
 Example (ideal structure)
 -------------------------
 ```ts

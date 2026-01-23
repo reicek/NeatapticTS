@@ -1,107 +1,20 @@
 import type {
   NeatLike,
   TelemetryEntry,
-  SpeciesHistoryEntry,
   SpeciesHistoryStat,
+  SpeciesHistoryEntry,
 } from './neat.types';
-/**
- * Telemetry export helpers extracted from `neat.ts`.
- *
- * This module exposes small helpers intended to serialize the internal
- * telemetry gathered by the NeatapticTS `Neat` runtime into common
- * data-export formats (JSONL and CSV). The functions intentionally
- * operate against `this` so they can be attached to instances.
- */
-export const exportTelemetryJSONL = function (
-  this: NeatLike & { _telemetry: TelemetryEntry[] },
-): string {
-  /**
-   * Serialize the internal telemetry array to JSON Lines (JSONL).
-   * Each telemetry entry is stringified and separated by a newline.
-   *
-   * Example:
-   * ```ts
-   * // Attach to a neat instance and call:
-   * const jsonl = neatInstance.exportTelemetryJSONL();
-   * // jsonl now contains one JSON object per line
-   * ```
-   *
-   * Notes for docs: JSONL is useful for streaming telemetry into
-   * log processors and line-based parsers. Each line is independent
-   * and can be parsed with JSON.parse.
-   */
-  return this._telemetry
-    .map((entry: TelemetryEntry) => JSON.stringify(entry))
-    .join('\n');
-};
-/**
- * Export recent telemetry entries to a CSV string.
- *
- * Responsibilities:
- * - Collect a bounded slice (`maxEntries`) of recent telemetry records.
- * - Discover and flatten dynamic header keys (top-level + grouped metrics).
- * - Serialize each entry into a CSV row with stable, parseable values.
- *
- * Flattening Rules:
- * - Nested groups (complexity, perf, lineage, diversity) become group.key columns.
- * - Optional arrays/maps (ops, objectives, objAges, speciesAlloc, objEvents, objImportance, fronts) included only if present.
- *
- * @param this Neat instance (expects `_telemetry` array field).
- * @param maxEntries Maximum number of most recent telemetry entries to include (default 500).
- * @returns CSV string (headers + rows) or empty string when no telemetry.
- */
-export const exportTelemetryCSV = function (
-  this: NeatLike & { _telemetry: TelemetryEntry[] },
-  maxEntries = 500,
-): string {
-  /**
-   * Recent telemetry entries to export. Contains at most `maxEntries` items.
-   */
-  const recentTelemetry: TelemetryEntry[] = Array.isArray(this._telemetry)
-    ? this._telemetry.slice(-maxEntries)
-    : [];
-  if (!recentTelemetry.length) return '';
-
-  // 1. Collect structural + header metadata across entries
-  /** Metadata describing all discovered headers across sampled entries. */
-  const headerInfo = collectTelemetryHeaderInfo(recentTelemetry);
-
-  // 2. Materialize header list (ordered) from collected metadata
-  /** Ordered list of CSV header names (flattened). */
-  const headers = buildTelemetryHeaders(headerInfo);
-
-  // 3. Serialize: header row + data rows
-  /** Accumulator of CSV lines starting with the header row. */
-  const csvLines: string[] = [headers.join(',')];
-  for (const telemetryEntry of recentTelemetry) {
-    csvLines.push(serializeTelemetryEntry(telemetryEntry, headers));
-  }
-  return csvLines.join('\n');
-};
-
-/** Group prefix for complexity nested metrics when flattened. */
-const COMPLEXITY_PREFIX = 'complexity.'; // complexity.* flattened headers
-/** Group prefix for performance nested metrics when flattened. */
-const PERF_PREFIX = 'perf.'; // perf.* flattened headers
-/** Group prefix for lineage nested metrics when flattened. */
-const LINEAGE_PREFIX = 'lineage.'; // lineage.* flattened headers
-/** Group prefix for diversity nested metrics when flattened. */
-const DIVERSITY_PREFIX = 'diversity.'; // diversity.* flattened headers
-
-/** Header label for Pareto front arrays column. */
-const HEADER_FRONTS = 'fronts';
-/** Header label for operations array column. */
-const HEADER_OPS = 'ops';
-/** Header label for objectives vector column. */
-const HEADER_OBJECTIVES = 'objectives';
-/** Header label for objective ages map column. */
-const HEADER_OBJ_AGES = 'objAges';
-/** Header label for species allocation array column. */
-const HEADER_SPECIES_ALLOC = 'speciesAlloc';
-/** Header label for objective events list column. */
-const HEADER_OBJ_EVENTS = 'objEvents';
-/** Header label for objective importance map column. */
-const HEADER_OBJ_IMPORTANCE = 'objImportance';
+import {
+  collectBaseKeys,
+  collectGroupedMetricKeys,
+  collectDiversityLineageMetrics,
+  collectOptionalColumnPresence,
+  ensureSpeciesHistoryArray,
+  ensureMinimalSpeciesSnapshot,
+  collectSpeciesHistoryHeaders,
+  serializeSpeciesHistoryRow,
+  type TelemetryHeaderCollectionState,
+} from './neat.telemetry.exports.utils';
 
 /**
  * Shape describing collected telemetry header discovery info.
@@ -131,103 +44,165 @@ interface TelemetryHeaderInfo {
   includeObjImportance: boolean;
 }
 
+/** Group prefix for complexity nested metrics when flattened. */
+const COMPLEXITY_PREFIX = 'complexity.'; // complexity.* flattened headers
+/** Group prefix for performance nested metrics when flattened. */
+const PERF_PREFIX = 'perf.'; // perf.* flattened headers
+/** Group prefix for lineage nested metrics when flattened. */
+const LINEAGE_PREFIX = 'lineage.'; // lineage.* flattened headers
+/** Group prefix for diversity nested metrics when flattened. */
+const DIVERSITY_PREFIX = 'diversity.'; // diversity.* flattened headers
+
+/** Header label for Pareto front arrays column. */
+const HEADER_FRONTS = 'fronts';
+/** Header label for operations array column. */
+const HEADER_OPS = 'ops';
+/** Header label for objectives vector column. */
+const HEADER_OBJECTIVES = 'objectives';
+/** Header label for objective ages map column. */
+const HEADER_OBJ_AGES = 'objAges';
+/** Header label for species allocation array column. */
+const HEADER_SPECIES_ALLOC = 'speciesAlloc';
+/** Header label for objective events list column. */
+const HEADER_OBJ_EVENTS = 'objEvents';
+/** Header label for objective importance map column. */
+const HEADER_OBJ_IMPORTANCE = 'objImportance';
+
+/** Header label for generation column in species history CSV. */
+const HEADER_GENERATION = 'generation';
+
+/** Default max entries for species history CSV exports. */
+export const DEFAULT_SPECIES_HISTORY_MAX_ENTRIES = 200;
+/** Default fallback species id when missing. */
+export const DEFAULT_SPECIES_ID = -1;
+/** Default fallback species size when missing. */
+export const DEFAULT_SPECIES_SIZE = 0;
+/** Default fallback best score when missing. */
+export const DEFAULT_SPECIES_BEST_SCORE = 0;
+/** Default fallback last improved when missing. */
+export const DEFAULT_SPECIES_LAST_IMPROVED = 0;
+/** Default fallback generation when missing. */
+export const DEFAULT_SPECIES_HISTORY_GENERATION = 0;
+
+/**
+ * Telemetry export helpers extracted from `neat.ts`.
+ *
+ * This module exposes small helpers intended to serialize the internal
+ * telemetry gathered by the NeatapticTS `Neat` runtime into common
+ * data-export formats (JSONL and CSV). The functions intentionally
+ * operate against `this` so they can be attached to instances.
+ */
+export function exportTelemetryJSONL(
+  this: NeatLike & { _telemetry: TelemetryEntry[] },
+): string {
+  /**
+   * Serialize the internal telemetry array to JSON Lines (JSONL).
+   * Each telemetry entry is stringified and separated by a newline.
+   *
+   * Example:
+   * ```ts
+   * // Attach to a neat instance and call:
+   * const jsonl = neatInstance.exportTelemetryJSONL();
+   * // jsonl now contains one JSON object per line
+   * ```
+   *
+   * Notes for docs: JSONL is useful for streaming telemetry into
+   * log processors and line-based parsers. Each line is independent
+   * and can be parsed with JSON.parse.
+   */
+  return this._telemetry
+    .map((entry: TelemetryEntry) => JSON.stringify(entry))
+    .join('\n');
+}
+
+/**
+ * Export recent telemetry entries to a CSV string.
+ *
+ * Responsibilities:
+ * - Collect a bounded slice (`maxEntries`) of recent telemetry records.
+ * - Discover and flatten dynamic header keys (top-level + grouped metrics).
+ * - Serialize each entry into a CSV row with stable, parseable values.
+ *
+ * Flattening Rules:
+ * - Nested groups (complexity, perf, lineage, diversity) become group.key columns.
+ * - Optional arrays/maps (ops, objectives, objAges, speciesAlloc, objEvents, objImportance, fronts) included only if present.
+ *
+ * @param this Neat instance (expects `_telemetry` array field).
+ * @param maxEntries Maximum number of most recent telemetry entries to include (default 500).
+ * @returns CSV string (headers + rows) or empty string when no telemetry.
+ */
+export function exportTelemetryCSV(
+  this: NeatLike & { _telemetry: TelemetryEntry[] },
+  maxEntries = 500,
+): string {
+  /**
+   * Recent telemetry entries to export. Contains at most `maxEntries` items.
+   */
+  const recentTelemetry: TelemetryEntry[] = Array.isArray(this._telemetry)
+    ? this._telemetry.slice(-maxEntries)
+    : [];
+  if (!recentTelemetry.length) return '';
+
+  // 1. Collect structural + header metadata across entries
+  /** Metadata describing all discovered headers across sampled entries. */
+  const headerInfo = collectTelemetryHeaderInfo(recentTelemetry);
+
+  // 2. Materialize header list (ordered) from collected metadata
+  /** Ordered list of CSV header names (flattened). */
+  const headers = buildTelemetryHeaders(headerInfo);
+
+  // 3. Serialize: header row + data rows
+  /** Accumulator of CSV lines starting with the header row. */
+  const csvLines: string[] = [headers.join(',')];
+
+  for (const telemetryEntry of recentTelemetry) {
+    csvLines.push(serializeTelemetryEntry(telemetryEntry, headers));
+  }
+
+  return csvLines.join('\n');
+}
+
 /**
  * Collect header metadata from the raw telemetry entries.
  * - Discovers base (top‑level) keys excluding grouped objects.
  * - Discovers nested keys inside complexity, perf, lineage, diversity groups.
  * - Tracks presence of optional multi-value structures (ops, objectives, etc.).
  */
-const collectTelemetryHeaderInfo = (
+function collectTelemetryHeaderInfo(
   entries: TelemetryEntry[],
-): TelemetryHeaderInfo => {
-  /** Discovered base keys (excluding grouped containers). */
-  const baseKeys = new Set<string>();
-  /** Discovered complexity metric keys. */
-  const complexityKeys = new Set<string>();
-  /** Discovered performance metric keys. */
-  const perfKeys = new Set<string>();
-  /** Discovered lineage metric keys. */
-  const lineageKeys = new Set<string>();
-  /** Selected diversity lineage metric keys. */
-  const diversityLineageKeys = new Set<string>();
-
-  /** Presence: operations array. */
-  let includeOps = false;
-  /** Presence: objectives array. */
-  let includeObjectives = false;
-  /** Presence: objective ages map. */
-  let includeObjAges = false;
-  /** Presence: species allocation array. */
-  let includeSpeciesAlloc = false;
-  /** Presence: objective events array. */
-  let includeObjEvents = false;
-  /** Presence: objective importance map. */
-  let includeObjImportance = false;
-
-  for (const entry of entries) {
-    // (A) Discover base keys (excluding grouped containers we flatten separately)
-    Object.keys(entry).forEach((k) => {
-      if (
-        k !== 'complexity' &&
-        k !== 'perf' &&
-        k !== 'ops' &&
-        k !== HEADER_FRONTS
-      ) {
-        baseKeys.add(k);
-      }
-    });
-
-    // (B) Add fronts as a base key only when it's an array
-    if (Array.isArray(entry.fronts)) baseKeys.add(HEADER_FRONTS);
-
-    // (C) Discover nested group keys
-    if (entry.complexity)
-      Object.keys(entry.complexity).forEach((k) => complexityKeys.add(k));
-    if (entry.perf) Object.keys(entry.perf).forEach((k) => perfKeys.add(k));
-    if (entry.lineage)
-      Object.keys(entry.lineage).forEach((k) => lineageKeys.add(k));
-
-    // (D) Diversity: export only curated lineage metrics for stability
-    if (entry.diversity) {
-      if ('lineageMeanDepth' in entry.diversity)
-        diversityLineageKeys.add('lineageMeanDepth');
-      if ('lineageMeanPairDist' in entry.diversity)
-        diversityLineageKeys.add('lineageMeanPairDist');
-    }
-
-    // (E) Guarantee rng is surfaced (primitive or object)
-    if ('rng' in entry) baseKeys.add('rng');
-
-    // (F) Presence tracking for optional array/map columns
-    if (Array.isArray(entry.ops) && entry.ops.length) includeOps = true;
-    if (Array.isArray(entry.objectives)) includeObjectives = true;
-    if (entry.objAges) includeObjAges = true;
-    if (Array.isArray(entry.speciesAlloc)) includeSpeciesAlloc = true;
-    if (Array.isArray(entry.objEvents) && entry.objEvents.length)
-      includeObjEvents = true;
-    if (entry.objImportance) includeObjImportance = true;
-  }
-
-  return {
-    baseKeys,
-    complexityKeys,
-    perfKeys,
-    lineageKeys,
-    diversityLineageKeys,
-    includeOps,
-    includeObjectives,
-    includeObjAges,
-    includeSpeciesAlloc,
-    includeObjEvents,
-    includeObjImportance,
+): TelemetryHeaderInfo {
+  /** Accumulator for header metadata and optional column flags. */
+  const headerState: TelemetryHeaderCollectionState = {
+    baseKeys: new Set<string>(),
+    complexityKeys: new Set<string>(),
+    perfKeys: new Set<string>(),
+    lineageKeys: new Set<string>(),
+    diversityLineageKeys: new Set<string>(),
+    includeOps: false,
+    includeObjectives: false,
+    includeObjAges: false,
+    includeSpeciesAlloc: false,
+    includeObjEvents: false,
+    includeObjImportance: false,
   };
-};
+
+  // Step 1: Declaratively collect structural metadata per entry.
+  entries.forEach((entry) => {
+    collectBaseKeys(entry, headerState, HEADER_FRONTS);
+    collectGroupedMetricKeys(entry, headerState);
+    collectDiversityLineageMetrics(entry, headerState);
+    collectOptionalColumnPresence(entry, headerState);
+  });
+
+  // Step 2: Fold all collected metadata into a single info object.
+  return headerState;
+}
 
 /**
  * Build the ordered list of CSV headers from collected metadata.
  * Flattened nested metrics are emitted using group prefixes (group.key).
  */
-const buildTelemetryHeaders = (info: TelemetryHeaderInfo): string[] => {
+function buildTelemetryHeaders(info: TelemetryHeaderInfo): string[] {
   /** Aggregated headers list (ordered). */
   const headers: string[] = [
     ...info.baseKeys,
@@ -236,24 +211,26 @@ const buildTelemetryHeaders = (info: TelemetryHeaderInfo): string[] => {
     ...[...info.lineageKeys].map((k) => `${LINEAGE_PREFIX}${k}`),
     ...[...info.diversityLineageKeys].map((k) => `${DIVERSITY_PREFIX}${k}`),
   ];
+
   if (info.includeOps) headers.push(HEADER_OPS);
   if (info.includeObjectives) headers.push(HEADER_OBJECTIVES);
   if (info.includeObjAges) headers.push(HEADER_OBJ_AGES);
   if (info.includeSpeciesAlloc) headers.push(HEADER_SPECIES_ALLOC);
   if (info.includeObjEvents) headers.push(HEADER_OBJ_EVENTS);
   if (info.includeObjImportance) headers.push(HEADER_OBJ_IMPORTANCE);
+
   return headers;
-};
+}
 
 /**
  * Serialize one telemetry entry into a CSV row using previously computed headers.
  * Uses a `switch(true)` pattern instead of a long if/else chain to reduce
  * cognitive complexity while preserving readability of each scenario.
  */
-const serializeTelemetryEntry = (
+function serializeTelemetryEntry(
   entry: TelemetryEntry,
   headers: string[],
-): string => {
+): string {
   /** Accumulator for serialized cell values for one telemetry row. */
   const row: string[] = [];
   for (const header of headers) {
@@ -374,7 +351,8 @@ const serializeTelemetryEntry = (
     }
   }
   return row.join(',');
-};
+}
+
 /**
  * Export species history snapshots to CSV.
  *
@@ -391,16 +369,21 @@ const serializeTelemetryEntry = (
  * @param maxEntries Maximum number of most recent history snapshots (generations) to include (default 200).
  * @returns CSV string (headers + rows) describing species evolution timeline.
  */
-export const exportSpeciesHistoryCSV = function (
+export function exportSpeciesHistoryCSV(
   this: NeatLike & {
     _speciesHistory?: SpeciesHistoryEntry[];
     _species?: SpeciesHistoryStat[];
     generation?: number;
   },
-  maxEntries = 200,
+  maxEntries = DEFAULT_SPECIES_HISTORY_MAX_ENTRIES,
 ): string {
-  /** Ensure the species history structure exists on the instance. */
-  if (!Array.isArray(this._speciesHistory)) this._speciesHistory = [];
+  /** Bound Neat instance for helper access without implicit `this` typing. */
+  const neatInstance = this;
+  /**
+   * Ensure the species history structure exists on the instance.
+   * Returned array is the canonical backing store used throughout export.
+   */
+  const speciesHistory = ensureSpeciesHistoryArray(neatInstance);
 
   /**
    * If species history is empty but species are present, create a minimal
@@ -408,56 +391,33 @@ export const exportSpeciesHistoryCSV = function (
    * early debugging and deterministic exports before speciation/evolution
    * has run.
    */
-  if (
-    !this._speciesHistory.length &&
-    Array.isArray(this._species) &&
-    this._species.length
-  ) {
-    // Create a minimal snapshot on demand so early exports (before evolve/speciate) still yield a header row
-    // Defensive: allow for legacy or incomplete species objects
-    const stats: SpeciesHistoryStat[] = (
-      this._species as unknown as Record<string, unknown>[]
-    ).map((sp) => ({
-      id: typeof sp.id === 'number' ? sp.id : -1,
-      size: Array.isArray(sp.members)
-        ? sp.members.length
-        : typeof sp.size === 'number'
-          ? sp.size
-          : 0,
-      bestScore:
-        typeof sp.bestScore === 'number'
-          ? sp.bestScore
-          : typeof sp.best === 'number'
-            ? sp.best
-            : 0,
-      lastImproved: typeof sp.lastImproved === 'number' ? sp.lastImproved : 0,
-    }));
-    this._speciesHistory.push({ generation: this.generation || 0, stats });
-  }
+  ensureMinimalSpeciesSnapshot(
+    neatInstance,
+    speciesHistory,
+    DEFAULT_SPECIES_HISTORY_GENERATION,
+    DEFAULT_SPECIES_ID,
+    DEFAULT_SPECIES_SIZE,
+    DEFAULT_SPECIES_BEST_SCORE,
+    DEFAULT_SPECIES_LAST_IMPROVED,
+  );
 
   /** Recent slice of the species history we will export. */
   const recentHistory: SpeciesHistoryEntry[] =
-    this._speciesHistory.slice(-maxEntries);
+    speciesHistory.slice(-maxEntries);
   if (!recentHistory.length) {
     // Emit header-only CSV for deterministic empty export
     return 'generation,id,size,best,lastImproved';
   }
 
-  /** Set of discovered keys to use as headers; starts with `generation`. */
-  const headerKeySet = new Set<string>(['generation']);
-  for (const entry of recentHistory)
-    for (const speciesStat of entry.stats)
-      Object.keys(speciesStat).forEach((k) => headerKeySet.add(k));
-
   /** Final ordered header list for CSV output. */
-  const headers = Array.from(headerKeySet);
+  const headers = collectSpeciesHistoryHeaders(
+    recentHistory,
+    HEADER_GENERATION,
+  );
 
   // Delegate CSV line materialization to helper for readability & testability
   return buildSpeciesHistoryCsv(recentHistory, headers);
-};
-
-/** Header label for generation column in species history CSV. */
-const HEADER_GENERATION = 'generation';
+}
 
 /**
  * Build the full CSV string for species history given ordered headers and
@@ -468,33 +428,25 @@ const HEADER_GENERATION = 'generation';
  * - We emit one CSV row per species stat, repeating the generation value.
  * - Values are JSON.stringify'd to remain safe for commas/quotes.
  */
-const buildSpeciesHistoryCsv = (
+function buildSpeciesHistoryCsv(
   recentHistory: SpeciesHistoryEntry[],
   headers: string[],
-): string => {
-  /** Accumulates lines; seeded with header row. */
-  const lines: string[] = [headers.join(',')];
-  // Iterate each generation snapshot
-  for (const historyEntry of recentHistory) {
-    // Each species stat becomes its own CSV data row
-    for (const speciesStat of historyEntry.stats) {
-      /** Cell accumulator for a single row. */
-      const rowCells: string[] = [];
-      // Maintain header order while extracting values
-      for (const header of headers) {
-        if (header === HEADER_GENERATION) {
-          rowCells.push(JSON.stringify(historyEntry.generation));
-          continue;
-        }
-        // Use index signature for dynamic keys
-        rowCells.push(
-          JSON.stringify(
-            (speciesStat as unknown as Record<string, unknown>)[header],
-          ),
-        );
-      }
-      lines.push(rowCells.join(','));
-    }
-  }
-  return lines.join('\n');
-};
+): string {
+  // Step 1: Materialize the header row.
+  const headerLine = headers.join(',');
+
+  // Step 2: Collect all data rows as strings.
+  const dataLines = recentHistory.flatMap((historyEntry) =>
+    historyEntry.stats.map((speciesStat) =>
+      serializeSpeciesHistoryRow(
+        historyEntry,
+        speciesStat,
+        headers,
+        HEADER_GENERATION,
+      ),
+    ),
+  );
+
+  // Step 3: Fold into a final CSV string.
+  return [headerLine, ...dataLines].join('\n');
+}

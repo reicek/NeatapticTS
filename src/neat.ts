@@ -318,6 +318,7 @@ export default class Neat {
     // This binding makes it accessible as a property that returns the RNG function
     (this as any)._getRNG = this._getRNG.bind(this);
   }
+
   /**
    * Evolves the population by selecting, mutating, and breeding genomes.
    * This method is delegated to `src/neat/neat.evolve.ts` during the migration.
