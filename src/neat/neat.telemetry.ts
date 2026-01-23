@@ -8,7 +8,7 @@ import type {
   DiversityStats,
   GenomeDetailed,
   NeatOptions,
-  ObjEvent,
+  ObjectiveEvent,
   NodeLike,
   ConnectionLike,
 } from './neat.types';
@@ -69,7 +69,33 @@ interface TelemetryContext extends NeatLike {
   _lastEvolveDuration?: number;
   _telemetrySelect?: Set<string>;
   _telemetry?: TelemetryEntry[];
-  _objectiveEvents?: Array<Record<string, unknown>>;
+  _objectiveEvents?: ObjectiveEvent[];
+}
+
+/**
+ * Create a strict baseline telemetry entry with required fields populated.
+ *
+ * This helper centralizes defaults so downstream telemetry producers can
+ * extend the entry while keeping the strict `TelemetryEntry` contract.
+ *
+ * @param generationIndex Generation index for the telemetry snapshot.
+ * @param bestScore Best fitness value observed in the generation.
+ * @param speciesCount Number of extant species.
+ * @returns A strict telemetry entry with required fields populated.
+ */
+export function createTelemetryEntryBase(
+  generationIndex: number,
+  bestScore: number,
+  speciesCount: number
+): TelemetryEntry {
+  return {
+    gen: generationIndex,
+    best: bestScore,
+    species: speciesCount,
+    hyper: 0,
+    ops: [],
+    objImportance: {},
+  };
 }
 
 /**
@@ -568,17 +594,11 @@ export function buildTelemetryEntry(
     ) {
       entry.objEvents = [];
       for (const k of ctx._pendingObjectiveAdds || [])
-        entry.objEvents.push({ type: 'add', key: k });
+        entry.objEvents.push({ gen, type: 'add', key: k });
       for (const k of ctx._pendingObjectiveRemoves || [])
-        entry.objEvents.push({ type: 'remove', key: k });
+        entry.objEvents.push({ gen, type: 'remove', key: k });
       ctx._objectiveEvents = ctx._objectiveEvents || [];
-      ctx._objectiveEvents.push(
-        ...entry.objEvents.map((e: ObjEvent) => ({
-          gen,
-          type: e.type,
-          key: e.key,
-        }))
-      );
+      ctx._objectiveEvents.push(...entry.objEvents);
       ctx._pendingObjectiveAdds = [];
       ctx._pendingObjectiveRemoves = [];
     }
@@ -734,17 +754,11 @@ export function buildTelemetryEntry(
   ) {
     entry.objEvents = [];
     for (const k of ctx._pendingObjectiveAdds || [])
-      entry.objEvents.push({ type: 'add', key: k });
+      entry.objEvents.push({ gen, type: 'add', key: k });
     for (const k of ctx._pendingObjectiveRemoves || [])
-      entry.objEvents.push({ type: 'remove', key: k });
+      entry.objEvents.push({ gen, type: 'remove', key: k });
     ctx._objectiveEvents = ctx._objectiveEvents || [];
-    ctx._objectiveEvents.push(
-      ...entry.objEvents.map((e: ObjEvent) => ({
-        gen,
-        type: e.type,
-        key: e.key,
-      }))
-    );
+    ctx._objectiveEvents.push(...entry.objEvents);
     ctx._pendingObjectiveAdds = [];
     ctx._pendingObjectiveRemoves = [];
   }

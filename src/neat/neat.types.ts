@@ -293,11 +293,12 @@ export interface ObjImportance {
 export interface ObjAges {
   [key: string]: number;
 }
-/** Dynamic objective lifecycle event (addition or removal). */
-export interface ObjEvent {
-  type: 'add' | 'remove';
-  key: string;
-}
+/**
+ * Dynamic objective lifecycle event (addition or removal).
+ *
+ * @deprecated Use `ObjectiveEvent` instead.
+ */
+export type ObjEvent = ObjectiveEvent;
 /** Offspring allocation for a species during reproduction. */
 export interface SpeciesAlloc {
   id: number;
@@ -400,7 +401,7 @@ export interface TelemetryEntry {
   ops: OperatorStat[];
   objImportance: ObjImportance; // always present (may be empty object)
   objAges?: ObjAges;
-  objEvents?: ObjEvent[];
+  objEvents?: ObjectiveEvent[];
   speciesAlloc?: SpeciesAlloc[];
   objectives?: string[];
   rng?: number; // rng state when exported
@@ -437,4 +438,22 @@ export interface SpeciesHistoryEntry {
 export interface SpeciesHistoryStatExtended extends SpeciesHistoryStat {
   innovationRange?: number;
   enabledRatio?: number;
+}
+
+/**
+ * Pareto archive entry capturing a genome plus its objective values.
+ */
+export interface ParetoArchiveEntry {
+  genome: GenomeLike;
+  objectives: number[];
+  [key: string]: unknown;
+}
+
+/**
+ * Objective add/remove lifecycle event for telemetry and auditing.
+ */
+export interface ObjectiveEvent {
+  gen: number;
+  type: 'add' | 'remove';
+  key: string;
 }

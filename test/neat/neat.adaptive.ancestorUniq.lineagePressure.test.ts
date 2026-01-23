@@ -1,5 +1,7 @@
 import Neat from '../../src/neat';
 import type { NeatLikeWithAdaptive } from '../../src/neat/neat.adaptive';
+import { createTelemetryEntryBase } from '../../src/neat/neat.telemetry';
+import type { TelemetryEntry } from '../../src/neat/neat.types';
 
 /** Tests ancestor uniqueness adaptive in lineagePressure mode (strength adjustments). */
 describe('Ancestor Uniqueness Adaptive (lineagePressure mode)', () => {
@@ -20,8 +22,17 @@ describe('Ancestor Uniqueness Adaptive (lineagePressure mode)', () => {
     test('lineagePressure.strength increases', async () => {
       // Arrange: low ancestor uniqueness telemetry
       ((neat as unknown) as {
-        _telemetry: Array<Record<string, unknown>>;
-      })._telemetry.push({ lineage: { ancestorUniq: 0.2 } });
+        _telemetry: TelemetryEntry[];
+      })._telemetry.push({
+        ...createTelemetryEntryBase(0, 0, 1),
+        lineage: {
+          parents: [],
+          depthBest: 0,
+          meanDepth: 0,
+          inbreeding: 0,
+          ancestorUniq: 0.2,
+        },
+      });
       const { applyAncestorUniqAdaptive } = await import(
         '../../src/neat/neat.adaptive'
       );
@@ -48,8 +59,17 @@ describe('Ancestor Uniqueness Adaptive (lineagePressure mode)', () => {
     test('lineagePressure.strength decreases from initial', async () => {
       // Arrange: set initial strength then push high uniqueness
       ((neat as unknown) as {
-        _telemetry: Array<Record<string, unknown>>;
-      })._telemetry.push({ lineage: { ancestorUniq: 0.95 } });
+        _telemetry: TelemetryEntry[];
+      })._telemetry.push({
+        ...createTelemetryEntryBase(0, 0, 1),
+        lineage: {
+          parents: [],
+          depthBest: 0,
+          meanDepth: 0,
+          inbreeding: 0,
+          ancestorUniq: 0.95,
+        },
+      });
       const { applyAncestorUniqAdaptive } = await import(
         '../../src/neat/neat.adaptive'
       );

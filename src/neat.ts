@@ -21,6 +21,9 @@ import type {
   SpeciesHistoryEntry,
   OperatorStatsRecord,
   SpeciesLike,
+  TelemetryEntry,
+  ParetoArchiveEntry,
+  ObjectiveEvent,
 } from './neat/neat.types';
 import * as methods from './methods/methods';
 import { selection as selectionMethods } from './methods/selection';
@@ -69,45 +72,6 @@ import {
 } from './neat/neat.export';
 
 /**
- * Runtime types for internal Neat bookkeeping.
- * These interfaces define the shape of internal state without requiring full type safety.
- */
-interface SpeciesInternals {
-  id: number;
-  representative: Network;
-  members: Network[];
-  age: number;
-  stagnation: number;
-  bestFitness: number;
-  avgFitness?: number;
-  [key: string]: unknown;
-}
-
-interface NodeSplitInnovation {
-  innovationId: number;
-  newNodeId: number;
-  inConnection: number;
-  outConnection: number;
-}
-
-interface TelemetryRecord {
-  generation: number;
-  [key: string]: unknown;
-}
-
-interface ParetoArchiveEntry {
-  genome: Network;
-  objectives: number[];
-  [key: string]: unknown;
-}
-
-interface ObjectiveEvent {
-  gen: number;
-  type: 'add' | 'remove';
-  key: string;
-}
-
-/**
  * Configuration options for Neat evolutionary runs.
  *
  * Each property is optional and the class applies sensible defaults when a
@@ -141,33 +105,16 @@ export default class Neat {
    * Cached RNG function; created lazily and seeded from `_rngState` when used.
    */
   private _rng?: () => number;
-  // Internal bookkeeping and caches (kept permissive during staggered migration)
-  /** Array of current species (internal representation). */
-  private _species: SpeciesInternals[] = [];
   /** Operator statistics used by adaptive operator selection. */
   private _operatorStats: Map<string, OperatorStatsRecord> = new Map();
-  /** Map of node-split innovations used to reuse innovation ids for node splits. */
-  private _nodeSplitInnovations: Map<string, NodeSplitInnovation> = new Map();
-  /** Map of connection innovations keyed by a string identifier. */
-  private _connInnovations: Map<string, number> = new Map();
-  /** Counter for issuing global innovation numbers when explicit numbers are used. */
-  private _nextGlobalInnovation: number = 1;
   /** Counter for assigning unique genome ids. */
   private _nextGenomeId: number = 1;
   /** Whether lineage metadata should be recorded on genomes. */
   private _lineageEnabled: boolean = false;
   /** Last observed count of inbreeding (used for detecting excessive cloning). */
   private _lastInbreedingCount: number = 0;
-  /** Previous inbreeding count snapshot. */
-  private _prevInbreedingCount: number = 0;
-  /** Optional phase marker for multi-stage experiments. */
-  private _phase?: string;
   /** Telemetry buffer storing diagnostic snapshots per generation. */
-  private _telemetry: TelemetryRecord[] = [];
-  /** Map of species id -> set of member genome ids from previous generation. */
-  private _prevSpeciesMembers: Map<number, Set<number>> = new Map();
-  /** Last recorded stats per species id. */
-  private _speciesLastStats: Map<number, SpeciesHistoryEntry> = new Map();
+  private _telemetry: TelemetryEntry[] = [];
   /** Time-series history of species stats (for exports/telemetry). */
   private _speciesHistory: SpeciesHistoryEntry[] = [];
   /** Archive of Pareto front metadata for multi-objective tracking. */
@@ -176,46 +123,14 @@ export default class Neat {
   private _paretoObjectivesArchive: number[][] = [];
   /** Novelty archive used by novelty search (behavior representatives). */
   private _noveltyArchive: number[][] = [];
-  /** Map tracking stale counts for objectives by key. */
-  private _objectiveStale: Map<string, number> = new Map();
-  /** Map tracking ages for objectives by key. */
-  private _objectiveAges: Map<string, number> = new Map();
   /** Queue of recent objective activation/deactivation events for telemetry. */
   private _objectiveEvents: ObjectiveEvent[] = [];
-  /** Pending objective keys to add during safe phases. */
-  private _pendingObjectiveAdds: string[] = [];
-  /** Pending objective keys to remove during safe phases. */
-  private _pendingObjectiveRemoves: string[] = [];
-  /** Last allocated offspring set (used by adaptive allocators). */
-  private _lastOffspringAlloc?: number[];
-  /** Adaptive prune level for complexity control (optional). */
-  private _adaptivePruneLevel?: number;
   /** Duration of the last evaluation run (ms). */
   private _lastEvalDuration?: number;
   /** Duration of the last evolve run (ms). */
   private _lastEvolveDuration?: number;
   /** Cached diversity metrics (computed lazily). */
   private _diversityStats?: any;
-  /** Cached list of registered objectives. */
-  private _objectivesList?: any[];
-  /** Generation index where the last global improvement occurred. */
-  private _lastGlobalImproveGeneration: number = 0;
-  /** Best score observed in the last generation (used for improvement detection). */
-  private _bestScoreLastGen?: number;
-  // Speciation controller state
-  /** Map of speciesId -> creation generation for bookkeeping. */
-  private _speciesCreated: Map<number, number> = new Map();
-  /** Exponential moving average for compatibility threshold (adaptive speciation). */
-  private _compatSpeciesEMA?: number;
-  /** Integral accumulator used by adaptive compatibility controllers. */
-  private _compatIntegral: number = 0;
-  /** Generation when epsilon compatibility was last adjusted. */
-  private _lastEpsilonAdjustGen: number = -Infinity;
-  /** Generation when ancestor uniqueness adjustment was last applied. */
-  private _lastAncestorUniqAdjustGen: number = -Infinity;
-  // Adaptive minimal criterion & complexity
-  /** Adaptive minimal criterion threshold (optional). */
-  private _mcThreshold?: number;
 
   // Lightweight RNG accessor used throughout migrated modules
   private _getRNG(): () => number {
@@ -349,6 +264,32 @@ export default class Neat {
       opts.multiObjective.objectives = [];
     // Ensure population initialization consistent with original behavior
     this.population = this.population || [];
+    // Initialize innovation registries used by mutation helpers
+    const internalState = this as any;
+    if (!internalState._nodeSplitInnovations)
+      internalState._nodeSplitInnovations = new Map();
+    if (!internalState._connInnovations)
+      internalState._connInnovations = new Map();
+    if (internalState._nextGlobalInnovation === undefined)
+      internalState._nextGlobalInnovation = 0;
+    // Initialize speciation and objective tracking structures
+    if (!Array.isArray(internalState._species)) internalState._species = [];
+    if (internalState._nextSpeciesId === undefined)
+      internalState._nextSpeciesId = 1;
+    if (!internalState._speciesCreated)
+      internalState._speciesCreated = new Map();
+    if (!internalState._prevSpeciesMembers)
+      internalState._prevSpeciesMembers = new Map();
+    if (!internalState._speciesLastStats)
+      internalState._speciesLastStats = new Map();
+    if (!internalState._objectiveAges)
+      internalState._objectiveAges = new Map();
+    if (!Array.isArray(internalState._pendingObjectiveAdds))
+      internalState._pendingObjectiveAdds = [];
+    if (!Array.isArray(internalState._pendingObjectiveRemoves))
+      internalState._pendingObjectiveRemoves = [];
+    if (!internalState._objectiveStale)
+      internalState._objectiveStale = new Map();
     // If a network or population seed provided, create initial pool
     try {
       if ((this.options as any).network !== undefined)
@@ -883,7 +824,7 @@ export default class Neat {
    *
    * @returns Array of telemetry snapshot objects.
    */
-  getTelemetry(): any[] {
+  getTelemetry(): TelemetryEntry[] {
     return this._telemetry;
   }
   /**

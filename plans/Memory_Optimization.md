@@ -122,7 +122,7 @@ Carry-Over to Phase 2:
 - Browser parity memory test (defer until CV stabilized).
 - Optional production optimized build (only if a materially different bundle path is introduced).
 
-### Phase 1 – Field Audit & Slimming (Condensed Summary)
+### Phase 1 – Field Audit & Slimming (Finalized)
 
 Purpose: Reduce per-object overhead & lock in structural introspection before deeper memory model changes.
 
@@ -160,7 +160,7 @@ Deferred / Hand-off to Phase 2:
 - Further slimming (node error SoA) scheduled for Phase 3 (slab introduction).
 - Enforcement gate (fail on Connection key regression) postponed until post-pooling variance stabilization.
 
-### Phase 2 – Node Pooling & Governance (Finalized – COMPLETE)
+### Phase 2 – Node Pooling & Governance (Finalized)
 
 Completion Summary:
 
