@@ -11,14 +11,16 @@ interface NetworkInternals {
 }
 
 const getConnectionSlab = (net: Network): ConnectionSlab =>
-  ((net as unknown) as {
-    getConnectionSlab: () => ConnectionSlab;
-  }).getConnectionSlab();
+  (
+    net as unknown as {
+      getConnectionSlab: () => ConnectionSlab;
+    }
+  ).getConnectionSlab();
 
 const setNetworkInternal = <Key extends keyof NetworkInternals>(
   net: Network,
   key: Key,
-  value: NetworkInternals[Key]
+  value: NetworkInternals[Key],
 ) => {
   Reflect.set(net, key, value);
 };
@@ -43,7 +45,7 @@ describe('phase3.slab.initial', () => {
           ArrayBuffer.isView(slab2.flags) &&
           ArrayBuffer.isView(slab2.gain) &&
           slab2.flags.length === slab2.weights.length &&
-          slab2.gain.length === slab2.weights.length
+          slab2.gain.length === slab2.weights.length,
       ).toBe(true);
     });
   });

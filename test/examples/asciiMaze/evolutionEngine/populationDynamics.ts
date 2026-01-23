@@ -100,7 +100,7 @@ export const updatePlateauState = (
   fitness: number,
   lastBestFitnessForPlateau: number,
   plateauCounter: number,
-  plateauImprovementThreshold: number
+  plateauImprovementThreshold: number,
 ): { plateauCounter: number; lastBestFitnessForPlateau: number } => {
   // Step 1: Validate & normalise numeric inputs.
   if (!Number.isFinite(fitness)) {
@@ -155,7 +155,7 @@ export const updatePlateauState = (
 export const maybeStartSimplify = (
   plateauCounter: number,
   plateauGenerations: number,
-  simplifyDuration: number
+  simplifyDuration: number,
 ): number => {
   // Step 1: Defensive normalization.
   const observedPlateau = Number.isFinite(plateauCounter)
@@ -209,7 +209,7 @@ export const runSimplifyCycle = (
   neat: any,
   simplifyRemaining: number,
   simplifyStrategy: string,
-  simplifyPruneFraction: number
+  simplifyPruneFraction: number,
 ): number => {
   // Step 1: Defensive normalization & quick exits.
   const remainingGens = Number.isFinite(simplifyRemaining)
@@ -278,7 +278,7 @@ export const handleSimplifyState = (
   simplifyMode: boolean,
   simplifyRemaining: number,
   simplifyStrategy: string,
-  simplifyPruneFraction: number
+  simplifyPruneFraction: number,
 ): {
   simplifyMode: boolean;
   simplifyRemaining: number;
@@ -309,7 +309,7 @@ export const handleSimplifyState = (
       const startBudget = maybeStartSimplify(
         counter,
         windowSize,
-        requestedDuration
+        requestedDuration,
       );
       if (Number.isFinite(startBudget) && startBudget > 0) {
         active = true;
@@ -329,7 +329,7 @@ export const handleSimplifyState = (
         neat,
         remaining,
         simplifyStrategy,
-        simplifyPruneFraction
+        simplifyPruneFraction,
       );
       if (!Number.isFinite(remaining) || remaining <= 0) {
         active = false;
@@ -374,7 +374,7 @@ export const expandPopulation = (
   neat: any,
   targetAdd: number,
   safeWrite: (msg: string) => void,
-  completedGenerations: number
+  completedGenerations: number,
 ) => {
   // Step 0: Defensive normalization.
   const additionsWanted = Number.isFinite(targetAdd)
@@ -385,7 +385,7 @@ export const expandPopulation = (
   // Step 1: Prepare working sets.
   const { populationRef, sortedIdx, parentPoolSize } = prepareExpansion(
     state,
-    neat
+    neat,
   );
 
   // Fast exit when no parents.
@@ -397,7 +397,7 @@ export const expandPopulation = (
   const sampleUniformParent = () => drawFastRandom(state, rngParameters);
   for (let childIndex = 0; childIndex < additionsWanted; childIndex++) {
     const sampledParentIndex = Math.floor(
-      sampleUniformParent() * parentPoolSize
+      sampleUniformParent() * parentPoolSize,
     );
     const parentGenome = populationRef[sortedIdx[sampledParentIndex]];
 
@@ -416,7 +416,7 @@ export const expandPopulation = (
   neat.options.popsize = currentPopSize;
   try {
     safeWrite?.(
-      `[DYNAMIC_POP] Expanded population to ${currentPopSize} at gen ${completedGenerations}\n`
+      `[DYNAMIC_POP] Expanded population to ${currentPopSize} at gen ${completedGenerations}\n`,
     );
   } catch {
     // Swallow logging errors.
@@ -437,7 +437,7 @@ export const prepareExpansion = (
   state: EngineState,
   // Type assertion: NEAT driver with dynamically typed population
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  neat: any
+  neat: any,
 ): {
   // Type assertion: Population array contains network genomes
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -461,7 +461,7 @@ export const prepareExpansion = (
 
   // Compute parent pool size.
   const desiredParentCount = Math.ceil(
-    sortedIdx.length * DEFAULT_PARENT_FRACTION
+    sortedIdx.length * DEFAULT_PARENT_FRACTION,
   );
   const parentCount = Math.max(2, desiredParentCount);
   const parentPoolSize = Math.min(parentCount, sortedIdx.length);
@@ -505,7 +505,7 @@ export const applyMutationsToClone = (
   // Type assertion: NEAT driver with dynamic mutation methods
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   neat: any,
-  mutateCount: number
+  mutateCount: number,
 ) => {
   // Step 1: Resolve mutation operations.
   const mutationOps = getMutationOps(neat);
@@ -517,7 +517,7 @@ export const applyMutationsToClone = (
   if (indexBuffer.length < operationCount) {
     const nextSize = 1 << Math.ceil(Math.log2(operationCount));
     state.scratch.mutationOperatorIndices = indexBuffer = new Uint16Array(
-      nextSize
+      nextSize,
     );
   }
 
@@ -554,7 +554,7 @@ export const applyMutationsToClone = (
   for (let selectionCursor = 0; selectionCursor < toApply; selectionCursor++) {
     const remaining = operationCount - selectionCursor;
     const pickOffset = Math.floor(
-      drawFastRandom(state, mutationRngParameters) * remaining
+      drawFastRandom(state, mutationRngParameters) * remaining,
     );
     const pickIndex = selectionCursor + pickOffset;
 
@@ -588,7 +588,7 @@ export const registerClone = (
   clone: any,
   // Type assertion: Parent ID can be number, string, or undefined
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  parentId?: any
+  parentId?: any,
 ) => {
   try {
     if (!neat || !clone) return;
@@ -632,7 +632,7 @@ export const createChildFromParent = (
   neat: any,
   // Type assertion: Parent genome with dynamic structure
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  parent: any
+  parent: any,
   // Type assertion: Returns child genome with dynamic structure
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): any => {
@@ -701,7 +701,7 @@ export const getSortedIndicesByScore = (
   state: EngineState,
   // Type assertion: Population array contains network genomes with dynamic structure
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  population: any[]
+  population: any[],
 ): number[] => {
   // Step 1: Validate inputs.
   const populationLength = population.length | 0;
@@ -715,7 +715,7 @@ export const getSortedIndicesByScore = (
   } else if (!typedScratchBuf && populationLength > 512) {
     const allocSize = 1 << Math.ceil(Math.log2(populationLength));
     state.scratch.sortedIndexTypedArray = typedScratchBuf = new Int32Array(
-      allocSize
+      allocSize,
     );
     useTypedScratch = true;
   }
@@ -812,7 +812,7 @@ export const getSortedIndicesByScore = (
   if (useTypedScratch) {
     if (state.scratch.sortedIndexBuffer.length < populationLength)
       state.scratch.sortedIndexBuffer = new Array(
-        1 << Math.ceil(Math.log2(populationLength))
+        1 << Math.ceil(Math.log2(populationLength)),
       );
     const out = state.scratch.sortedIndexBuffer;
     const ta = typedScratchBuf!;
@@ -844,7 +844,7 @@ const insertionSortIndices = (
   hi: number,
   // Type assertion: Population array contains dynamic network genomes
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  population: any
+  population: any,
 ) => {
   if (!indexBuf || lo >= hi) return;
 
@@ -886,7 +886,7 @@ const medianOfThreePivot = (
   hi: number,
   // Type assertion: Population array contains dynamic network genomes
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  population: any
+  population: any,
 ): number => {
   const mid = (lo + hi) >> 1;
   const leftIndex = indexBuf[lo];
@@ -937,7 +937,7 @@ const qsPushRange = (
   state: EngineState,
   stackPtr: number,
   rangeLo: number,
-  rangeHi: number
+  rangeHi: number,
 ): number => {
   let stackBuf = state.scratch.quicksortStack;
 
@@ -973,7 +973,7 @@ const qsPushRange = (
 const getMutationOps = (
   // Type assertion: NEAT driver with dynamic mutation options
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  neat: any
+  neat: any,
   // Type assertion: Returns array of dynamic mutation operation objects
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): any[] => {
@@ -992,7 +992,7 @@ const getMutationOps = (
           cachedMutationOps = candidate as MutationOperation[];
         } else {
           cachedMutationOps = Object.values(
-            candidate as Record<string, MutationOperation>
+            candidate as Record<string, MutationOperation>,
           );
         }
       } else {
@@ -1022,7 +1022,7 @@ const getMutationOps = (
 export const ensureOutputIdentity = (
   // Type assertion: NEAT driver with dynamically typed population
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  neat: any
+  neat: any,
 ) => {
   try {
     if (!neat) return;
@@ -1079,7 +1079,7 @@ export const handleSpeciesHistory = (
   // Type assertion: NEAT driver with dynamically typed population
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   neat: any,
-  speciesHistory: number[]
+  speciesHistory: number[],
 ): boolean => {
   try {
     // Type assertion: Population array contains network genomes
@@ -1131,7 +1131,7 @@ export const handleSpeciesHistory = (
     const updatedHistory = pushHistory<number>(
       speciesHistory,
       speciesCount,
-      25
+      25,
     );
 
     // Update the caller's history reference.
@@ -1152,14 +1152,14 @@ export const handleSpeciesHistory = (
           neat.options.mutationRate = Math.min(1, currentMutationRate * 1.2);
           neat.options.mutationAmount = Math.min(
             1,
-            currentMutationAmount * 1.1
+            currentMutationAmount * 1.1,
           );
 
           if (neat.options.config?.novelty) {
             const currentBlend = neat.options.config.novelty.blendFactor ?? 0;
             neat.options.config.novelty.blendFactor = Math.min(
               1,
-              currentBlend * 1.15
+              currentBlend * 1.15,
             );
           }
         }
@@ -1210,7 +1210,7 @@ export const maybeExpandPopulation = (
   dynamicPopExpandInterval: number,
   dynamicPopExpandFactor: number,
   dynamicPopPlateauSlack: number,
-  safeWrite: (msg: string) => void
+  safeWrite: (msg: string) => void,
 ) => {
   try {
     if (!dynamicPopEnabled || completedGenerations <= 0) return;
@@ -1263,7 +1263,7 @@ export const maybeExpandPopulation = (
         neat,
         targetAdd,
         safeWrite,
-        completedGenerations | 0
+        completedGenerations | 0,
       );
     }
   } catch {
@@ -1294,8 +1294,8 @@ export const pruneSaturatedHiddenOutputs = (
   collectHiddenToOutputConns: (
     hiddenNode: NetworkNode,
     nodes: NetworkNode[],
-    outputCount: number
-  ) => NetworkConnection[]
+    outputCount: number,
+  ) => NetworkConnection[],
 ) => {
   try {
     const pruneProfilingEnabled = isProfilingDetailsEnabled(state);
@@ -1388,7 +1388,7 @@ export const pruneSaturatedHiddenOutputs = (
       accumulateProfilingDuration(
         state,
         'prune',
-        profilingStartTimestamp() - startProfile || 0
+        profilingStartTimestamp() - startProfile || 0,
       );
     }
   } catch {
@@ -1426,8 +1426,8 @@ export const antiCollapseRecovery = (
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     array: any[],
     startIdx: number,
-    count: number
-  ) => number
+    count: number,
+  ) => number,
 ) => {
   try {
     if (!neat) return;
@@ -1456,7 +1456,7 @@ export const antiCollapseRecovery = (
       state,
       population,
       nonEliteStartIndex,
-      maxCandidates
+      maxCandidates,
     );
 
     if (sampledCount <= 0) return;
@@ -1471,7 +1471,7 @@ export const antiCollapseRecovery = (
       try {
         const { connReset, biasReset } = reinitializeGenomeOutputsAndWeights(
           state,
-          genome
+          genome,
         ) || {
           connReset: 0,
           biasReset: 0,
@@ -1485,7 +1485,7 @@ export const antiCollapseRecovery = (
 
     try {
       safeWrite(
-        `[ANTICOLLAPSE] gen=${completedGenerations} reinitGenomes=${sampledCount} connReset=${totalConnectionResets} biasReset=${totalBiasResets}\n`
+        `[ANTICOLLAPSE] gen=${completedGenerations} reinitGenomes=${sampledCount} connReset=${totalConnectionResets} biasReset=${totalBiasResets}\n`,
       );
     } catch {
       // Best-effort logging.
@@ -1512,7 +1512,7 @@ export const antiCollapseRecovery = (
  */
 export const reinitializeGenomeOutputsAndWeights = (
   state: EngineState,
-  genome: unknown
+  genome: unknown,
 ): { connReset: number; biasReset: number } => {
   try {
     const runtimeGenome = genome as RuntimeGenome;
@@ -1556,7 +1556,7 @@ export const reinitializeGenomeOutputsAndWeights = (
     // Reset weights targeting outputs.
     let connReset = 0;
     const connections: NetworkConnection[] = Array.isArray(
-      runtimeGenome?.connections
+      runtimeGenome?.connections,
     )
       ? runtimeGenome.connections
       : [];
@@ -1607,7 +1607,7 @@ export const reinitializeGenomeOutputsAndWeights = (
 export const compactGenomeConnections = (
   // Type assertion: Genome with dynamic structure
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  genome: any
+  genome: any,
 ): number => {
   try {
     // Type assertion: Connections array with dynamic structure
@@ -1655,7 +1655,7 @@ export const compactPopulation = (
   state: EngineState,
   // Type assertion: NEAT driver with dynamically typed population
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  neat: any
+  neat: any,
 ): number => {
   try {
     // Type assertion: Population array contains network genomes

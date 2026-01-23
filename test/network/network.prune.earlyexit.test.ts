@@ -13,20 +13,20 @@ interface PruningConfigSnapshot {
 
 const setInitialConnectionCount = (
   network: Network,
-  connectionCount: number
+  connectionCount: number,
 ): void => {
   Reflect.set(network, '_initialConnectionCount', connectionCount);
 };
 
 const setPruningConfig = (
   network: Network,
-  config: PruningConfigSnapshot
+  config: PruningConfigSnapshot,
 ): void => {
   Reflect.set(network, '_pruningConfig', config);
 };
 
 const getPruningConfigSnapshot = (
-  network: Network
+  network: Network,
 ): PruningConfigSnapshot | null =>
   (Reflect.get(network, '_pruningConfig') as PruningConfigSnapshot | null) ??
   null;
@@ -65,7 +65,7 @@ describe('Network.prune scheduled pruning', () => {
       }
       expect(
         pruningConfig.lastPruneIter === 0 &&
-          net.connections.length === initialConnCount
+          net.connections.length === initialConnCount,
       ).toBe(true);
     });
   });

@@ -36,7 +36,7 @@ interface NeatLikeWithObjectives {
  *   fitness objective (unless suppressed).
  */
 export function _getObjectives(
-  this: NeatLikeWithObjectives
+  this: NeatLikeWithObjectives,
 ): ObjectiveDescriptor[] {
   // Return cached objectives list if already computed
   if (this._objectivesList) return this._objectivesList;
@@ -123,7 +123,7 @@ export function registerObjective(
   this: NeatLikeWithObjectives,
   key: string,
   direction: 'min' | 'max',
-  accessor: (genome: GenomeLike) => number
+  accessor: (genome: GenomeLike) => number,
 ) {
   // Ensure multi-objective container exists and is enabled
   if (!this.options.multiObjective)
@@ -139,7 +139,7 @@ export function registerObjective(
 
   // Step: remove any existing objective with the same key (replace semantics)
   multiObjectiveOptions.objectives = multiObjectiveOptions.objectives.filter(
-    (existingObjective) => existingObjective.key !== key
+    (existingObjective) => existingObjective.key !== key,
   );
 
   // Step: push new objective descriptor

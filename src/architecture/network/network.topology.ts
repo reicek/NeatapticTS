@@ -33,7 +33,7 @@ interface NetworkTopologyProps {
  * In non-acyclic mode we simply clear cached order to signal use of sequential node array.
  */
 export function computeTopoOrder(this: Network): void {
-  const internalNet = (this as unknown) as NetworkTopologyProps;
+  const internalNet = this as unknown as NetworkTopologyProps;
   // Fast exit: if acyclicity not enforced we discard any cached order (signals using raw nodes list).
   if (!internalNet._enforceAcyclic) {
     internalNet._topoOrder = null;

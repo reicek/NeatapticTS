@@ -24,14 +24,13 @@ describe('Adaptive Mutation twoTier balancing', () => {
       // Arrange: evaluate to assign scores then seed per-genome _mutRate via mutate
       await neat.evaluate();
       neat.mutate();
-      const { applyAdaptiveMutation } = await import(
-        '../../src/neat/neat.adaptive'
-      );
-      applyAdaptiveMutation.call((neat as unknown) as NeatLikeWithAdaptive);
+      const { applyAdaptiveMutation } =
+        await import('../../src/neat/neat.adaptive');
+      applyAdaptiveMutation.call(neat as unknown as NeatLikeWithAdaptive);
       // Act: collect distinct rates
       type GenomeLike = { _mutRate: number };
       const distinct = new Set(
-        ((neat.population as unknown) as GenomeLike[]).map((g) => g._mutRate)
+        (neat.population as unknown as GenomeLike[]).map((g) => g._mutRate),
       );
       // Assert: at least two different rates (divergence achieved)
       expect(distinct.size).toBeGreaterThan(1);

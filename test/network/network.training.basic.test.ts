@@ -19,14 +19,14 @@ interface NetworkInternals {
 const setNetworkInternal = <Key extends keyof NetworkInternals>(
   net: Network,
   key: Key,
-  value: NetworkInternals[Key]
+  value: NetworkInternals[Key],
 ) => {
   Reflect.set(net, key, value);
 };
 
 const getNetworkInternal = <Key extends keyof NetworkInternals>(
   net: Network,
-  key: Key
+  key: Key,
 ): NetworkInternals[Key] => Reflect.get(net, key) as NetworkInternals[Key];
 
 /**
@@ -46,7 +46,7 @@ describe('Network.training core', () => {
 
       // Act / Assert
       expect(() =>
-        trainImpl(net, mismatchedDataset, { iterations: 1, rate: 0.1 })
+        trainImpl(net, mismatchedDataset, { iterations: 1, rate: 0.1 }),
       ).toThrow(/Dataset is invalid/);
     });
   });
@@ -61,7 +61,7 @@ describe('Network.training core', () => {
 
       // Act / Assert
       expect(() => trainImpl(net, trainingSamples, { rate: 0.1 })).toThrow(
-        /stopping condition/
+        /stopping condition/,
       );
     });
   });
@@ -80,7 +80,7 @@ describe('Network.training core', () => {
           iterations: 1,
           rate: 0.1,
           batchSize: 5,
-        })
+        }),
       ).toThrow(/Batch size/);
     });
   });
@@ -99,7 +99,7 @@ describe('Network.training core', () => {
           iterations: 1,
           rate: 0.1,
           dropout: 1,
-        })
+        }),
       ).toThrow(/dropout/);
     });
   });
@@ -118,7 +118,7 @@ describe('Network.training core', () => {
           iterations: 1,
           rate: 0.1,
           accumulationSteps: -1,
-        })
+        }),
       ).toThrow(/accumulationSteps/);
     });
   });
@@ -137,7 +137,7 @@ describe('Network.training core', () => {
           iterations: 1,
           rate: 0.1,
           optimizer: 'notreal',
-        })
+        }),
       ).toThrow(/Unknown optimizer/);
     });
   });
@@ -156,7 +156,7 @@ describe('Network.training core', () => {
           iterations: 1,
           rate: 0.1,
           optimizer: { type: 'lookahead', baseType: 'lookahead' },
-        })
+        }),
       ).toThrow(/Nested lookahead/);
     });
   });
@@ -262,7 +262,7 @@ describe('Network.training core', () => {
 
       // Assert
       expect(savedTypes.includes('last') && savedTypes.includes('best')).toBe(
-        true
+        true,
       );
     });
   });

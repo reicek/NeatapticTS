@@ -179,7 +179,7 @@ export const logActionEntropy = ({
 
     // Step 3: Emit the single-line telemetry record.
     safeWrite(
-      `${LOG_TAG_ACTION_ENTROPY} gen=${generationIndex} entropyNorm=${entropyNormStr} uniqueMoves=${uniqueMovesStr} pathLen=${pathLengthStr}\n`
+      `${LOG_TAG_ACTION_ENTROPY} gen=${generationIndex} entropyNorm=${entropyNormStr} uniqueMoves=${uniqueMovesStr} pathLen=${pathLengthStr}\n`,
     );
   } catch {
     // Telemetry remains best-effort: swallow any unexpected failure.
@@ -229,7 +229,7 @@ export const logOutputBiasStats = ({
     const biasesStr = String(biasStats.biasesStr ?? '');
 
     safeWrite(
-      `${LOG_TAG_OUTPUT_BIAS} gen=${generationIndex} mean=${meanStr} std=${stdStr} biases=${biasesStr}\n`
+      `${LOG_TAG_OUTPUT_BIAS} gen=${generationIndex} mean=${meanStr} std=${stdStr} biases=${biasesStr}\n`,
     );
   } catch {
     // Bias telemetry is best-effort; swallow unexpected failures.
@@ -254,7 +254,7 @@ export interface LogLogitsParams extends TelemetryBaseParams {
   onCollapseRecovery: (
     neat: unknown,
     generationIndex: number,
-    safeWrite: TelemetryWriter
+    safeWrite: TelemetryWriter,
   ) => void;
 }
 
@@ -303,7 +303,7 @@ export const logLogitsAndCollapse = ({
       : '0.000';
 
     safeWrite(
-      `${LOG_TAG_LOGITS} gen=${generationIndex} means=${stats.meansStr} stds=${stats.stdsStr} kurt=${stats.kurtStr} entMean=${entropyMeanStr} stability=${stabilityStr} steps=${recentTail.length}\n`
+      `${LOG_TAG_LOGITS} gen=${generationIndex} means=${stats.meansStr} stds=${stats.stdsStr} kurt=${stats.kurtStr} entMean=${entropyMeanStr} stability=${stabilityStr} steps=${recentTail.length}\n`,
     );
 
     // Step 4: Collapse detection using std, entropy and stability thresholds.
@@ -383,7 +383,7 @@ export const logExploration = ({
       : '0.000';
 
     safeWrite(
-      `${LOG_TAG_EXPLORATION} gen=${generationIndex} unique=${uniqueStr} pathLen=${pathLengthStr} ratio=${ratioStr} progress=${progressStr} satFrac=${saturationStr}\n`
+      `${LOG_TAG_EXPLORATION} gen=${generationIndex} unique=${uniqueStr} pathLen=${pathLengthStr} ratio=${ratioStr} progress=${progressStr} satFrac=${saturationStr}\n`,
     );
   } catch {
     // Exploration telemetry is best-effort; swallow unexpected failures.
@@ -431,7 +431,7 @@ export const logDiversity = ({
       : '0.000';
 
     safeWrite(
-      `${LOG_TAG_DIVERSITY} gen=${generationIndex} species=${speciesCountStr} simpson=${simpsonStr} weightStd=${weightStdStr}\n`
+      `${LOG_TAG_DIVERSITY} gen=${generationIndex} species=${speciesCountStr} simpson=${simpsonStr} weightStd=${weightStdStr}\n`,
     );
   } catch {
     // Diversity telemetry is best-effort; swallow unexpected failures.
@@ -449,7 +449,7 @@ export const logDiversity = ({
 export const collectTelemetryTail = (
   state: EngineState,
   neat: unknown,
-  tailLength = 10
+  tailLength = 10,
 ): unknown => {
   // Step 1: Guard against missing telemetry providers so callers can skip optional handling.
   const runtimeNeat = neat as RuntimeNeat | undefined;
@@ -487,7 +487,7 @@ interface ActionEntropyStats {
 /** Compute action-entropy metrics using pooled scratch buffers. */
 const computeActionEntropy = (
   state: EngineState,
-  path: ReadonlyArray<[number, number]> | undefined
+  path: ReadonlyArray<[number, number]> | undefined,
 ): ActionEntropyStats => {
   if (!Array.isArray(path) || path.length < 2) {
     return { entropyNorm: 0, uniqueMoves: 0, pathLen: path?.length ?? 0 };
@@ -555,7 +555,7 @@ const computeActionEntropy = (
 /** Compute exploration statistics using either the tiny table or dynamic visited hash. */
 const computeExplorationStats = (
   state: EngineState,
-  path: ReadonlyArray<[number, number]> | undefined
+  path: ReadonlyArray<[number, number]> | undefined,
 ): { unique: number; pathLen: number; ratio: number } => {
   // Step 1: Handle empty paths up-front to avoid scratch allocations or divisions by zero.
   const pathLength = path?.length ?? 0;
@@ -583,7 +583,7 @@ const computeExplorationStats = (
 const countDistinctCoordinatesTiny = (
   state: EngineState,
   path: ReadonlyArray<[number, number]>,
-  pathLength: number
+  pathLength: number,
 ): number => {
   // Step 1: Fast-path zero-length paths to avoid scratch-table churn.
   if (pathLength === 0) return 0;
@@ -630,7 +630,7 @@ const countDistinctCoordinatesTiny = (
 const countDistinctCoordinatesHashed = (
   state: EngineState,
   path: ReadonlyArray<[number, number]>,
-  pathLength: number
+  pathLength: number,
 ): number => {
   // Step 1: Make sure the visited-hash scratch table is large enough for open addressing.
   const targetCapacity = pathLength << 1;
@@ -672,7 +672,7 @@ const countDistinctCoordinatesHashed = (
 const computeDiversityMetrics = (
   state: EngineState,
   neat: RuntimeNeat,
-  sampleSize: number
+  sampleSize: number,
 ): { speciesUniqueCount: number; simpson: number; weightStd: number } => {
   // Step 1: Normalise the population reference to a safe array view.
   const population: unknown[] = Array.isArray(neat?.population)
@@ -787,7 +787,7 @@ const computeDiversityMetrics = (
 const collectNodeIndicesByType = (
   state: EngineState,
   nodes: RuntimeNode[] | undefined,
-  nodeType: string
+  nodeType: string,
 ): number => {
   // Step 1: Exit early when the node list is absent or already empty.
   if (!Array.isArray(nodes) || nodes.length === 0) return 0;
@@ -819,7 +819,7 @@ const collectNodeIndicesByType = (
 const computeOutputBiasStats = (
   state: EngineState,
   nodes: RuntimeNode[],
-  outputCount: number
+  outputCount: number,
 ): { mean: number; std: number; biasesStr: string } => {
   // Step 1: Initialise telemetry scratch sized to the output-node count.
   const telemetryScratch = initialiseTelemetryScratch(
@@ -827,7 +827,7 @@ const computeOutputBiasStats = (
       biasCount: outputCount,
       stringBufferLength: outputCount,
     },
-    state
+    state,
   );
 
   // Step 2: Copy the output-node biases into the reusable scratch buffer.
@@ -920,13 +920,13 @@ const computeLogitStats = ({
     state,
     state.scratch.means,
     actionDimension,
-    3
+    3,
   );
   const stdsStr = joinNumberArray(
     state,
     state.scratch.standardDeviations,
     actionDimension,
-    3
+    3,
   );
   const kurtStr = reducedTelemetry
     ? ''
@@ -934,7 +934,7 @@ const computeLogitStats = ({
         state,
         state.scratch.kurtosis ?? new Float64Array(actionDimension),
         actionDimension,
-        2
+        2,
       );
 
   return {
@@ -951,7 +951,7 @@ const computeLogitStats = ({
 const resetLogitScratch = (
   state: EngineState,
   actionDimension: number,
-  reducedTelemetry: boolean
+  reducedTelemetry: boolean,
 ): void => {
   // Step 1: Validate the requested action dimension before touching scratch buffers.
   const dim = Number.isFinite(actionDimension)
@@ -965,7 +965,7 @@ const resetLogitScratch = (
       actionDimension: dim,
       includeHigherMoments: !reducedTelemetry,
     },
-    state
+    state,
   );
 
   // Step 3: Zero all relevant buffers so accumulators start from a predictable baseline.
@@ -984,7 +984,7 @@ const resetLogitScratch = (
 const accumulateLogitStatsReduced = (
   state: EngineState,
   recent: number[][],
-  actionDimension: number
+  actionDimension: number,
 ): number => {
   // Step 1: Abort when no samples or dimensions are present to avoid wasted work.
   const sampleCount = Array.isArray(recent) ? recent.length : 0;
@@ -1030,7 +1030,7 @@ const accumulateLogitStatsReduced = (
 const accumulateLogitStatsUnrolled4 = (
   state: EngineState,
   recent: number[][],
-  sampleCount: number
+  sampleCount: number,
 ): number => {
   // Step 1: Guard against empty histories to keep pooled scratch stable.
   if (!Array.isArray(recent) || sampleCount === 0) return 0; // Ensure recent is an array and sampleCount is valid
@@ -1064,38 +1064,44 @@ const accumulateLogitStatsUnrolled4 = (
     const west = vector[3] ?? 0;
     const sampleNumber = sampleIndex + 1;
 
-    ({ mean: meanNorth, m2: m2North, m3: m3North, m4: m4North } = updateMoments(
+    ({
+      mean: meanNorth,
+      m2: m2North,
+      m3: m3North,
+      m4: m4North,
+    } = updateMoments(
       meanNorth,
       m2North,
       m3North,
       m4North,
       north,
-      sampleNumber
+      sampleNumber,
     ));
-    ({ mean: meanEast, m2: m2East, m3: m3East, m4: m4East } = updateMoments(
-      meanEast,
-      m2East,
-      m3East,
-      m4East,
-      east,
-      sampleNumber
-    ));
-    ({ mean: meanSouth, m2: m2South, m3: m3South, m4: m4South } = updateMoments(
+    ({
+      mean: meanEast,
+      m2: m2East,
+      m3: m3East,
+      m4: m4East,
+    } = updateMoments(meanEast, m2East, m3East, m4East, east, sampleNumber));
+    ({
+      mean: meanSouth,
+      m2: m2South,
+      m3: m3South,
+      m4: m4South,
+    } = updateMoments(
       meanSouth,
       m2South,
       m3South,
       m4South,
       south,
-      sampleNumber
+      sampleNumber,
     ));
-    ({ mean: meanWest, m2: m2West, m3: m3West, m4: m4West } = updateMoments(
-      meanWest,
-      m2West,
-      m3West,
-      m4West,
-      west,
-      sampleNumber
-    ));
+    ({
+      mean: meanWest,
+      m2: m2West,
+      m3: m3West,
+      m4: m4West,
+    } = updateMoments(meanWest, m2West, m3West, m4West, west, sampleNumber));
 
     entropyAccumulator += softmaxEntropyFromVector(vector, exponentScratch);
   }
@@ -1134,7 +1140,7 @@ const accumulateLogitStatsUnrolled4 = (
 const accumulateLogitStatsGeneric = (
   state: EngineState,
   recent: number[][],
-  actionDimension: number
+  actionDimension: number,
 ): number => {
   // Step 1: Quickly exit for empty histories or invalid dimensions.
   const sampleCount = Array.isArray(recent) ? recent.length : 0;
@@ -1210,7 +1216,7 @@ const accumulateLogitStatsGeneric = (
 const finalizeLogitStatsFull = (
   state: EngineState,
   actionDimension: number,
-  sampleCount: number
+  sampleCount: number,
 ): void => {
   // Step 1: Validate dimension and sample counts before touching scratch buffers.
   const dim = Number.isFinite(actionDimension)
@@ -1236,7 +1242,7 @@ const finalizeLogitStatsFull = (
       kurtosis[dimensionIndex] = computeExcessKurtosis(
         m2[dimensionIndex],
         m4[dimensionIndex],
-        samples
+        samples,
       );
     }
   }
@@ -1246,7 +1252,7 @@ const finalizeLogitStatsFull = (
 const finalizeLogitStatsReduced = (
   state: EngineState,
   actionDimension: number,
-  sampleCount: number
+  sampleCount: number,
 ): void => {
   // Step 1: Ensure the inputs describe a meaningful accumulation before proceeding.
   const dim = Number.isFinite(actionDimension)
@@ -1272,7 +1278,7 @@ const updateMoments = (
   previousM3: number,
   previousM4: number,
   value: number,
-  sampleNumber: number
+  sampleNumber: number,
 ): { mean: number; m2: number; m3: number; m4: number } => {
   // Step 1: Compute the deltas between the new value and the running statistics.
   const delta = value - previousMean;
@@ -1303,7 +1309,7 @@ const updateMoments = (
 const computeExcessKurtosis = (
   m2: number,
   m4: number,
-  sampleCount: number
+  sampleCount: number,
 ): number => {
   // Step 1: Guard against degenerate inputs that would cause division by zero or noise.
   const denominator = m2 * m2;
@@ -1315,7 +1321,7 @@ const computeExcessKurtosis = (
 /** Compute softmax entropy for a vector using pooled exponent scratch. */
 const softmaxEntropyFromVector = (
   vector: number[] | undefined,
-  exponentScratch: Float64Array
+  exponentScratch: Float64Array,
 ): number => {
   // Step 1: Bail out for empty or scalar vectors where entropy is uninformative.
   if (!vector || vector.length === 0) return 0;
@@ -1376,7 +1382,7 @@ const softmaxEntropyFromVector = (
 /** Compute decision stability over a sequence of logits vectors. */
 const computeDecisionStability = (
   recent: number[][],
-  actionDimension: number
+  actionDimension: number,
 ): number => {
   // Step 1: Skip stability analysis when fewer than two steps are available.
   const sequenceLength = recent?.length ?? 0;
@@ -1439,7 +1445,7 @@ const joinNumberArray = (
   state: EngineState,
   arrayLike: ArrayLike<number>,
   length: number,
-  digits = 3
+  digits = 3,
 ): string => {
   // Step 1: Validate inputs and clamp requested precision to a safe range.
   if (!arrayLike) return '';
@@ -1547,8 +1553,8 @@ export const logGenerationTelemetry = (
   accumulateProfilingDurationFn: (
     state: EngineState,
     label: string,
-    duration: number
-  ) => void
+    duration: number,
+  ) => void,
 ): void => {
   // Step 0: Global guard for minimal telemetry mode.
   if (telemetryMinimal) return;
@@ -1613,7 +1619,7 @@ export const logGenerationTelemetry = (
     accumulateProfilingDurationFn(
       engineState,
       'telemetry',
-      profilingStartTimestampFn(engineState) - profilingStart || 0
+      profilingStartTimestampFn(engineState) - profilingStart || 0,
     );
   }
 };

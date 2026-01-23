@@ -153,7 +153,7 @@ describe('ONNX Export', () => {
         // Assert
         const graph = toGraphView(onnx);
         const actNode = graph.node.find((node) =>
-          activationOps.has(node.op_type)
+          activationOps.has(node.op_type),
         );
         expect(actNode?.op_type).toBe('Tanh');
       });
@@ -168,7 +168,7 @@ describe('ONNX Export', () => {
         // Assert
         const graph = toGraphView(onnx);
         const actNode = graph.node.find((node) =>
-          activationOps.has(node.op_type)
+          activationOps.has(node.op_type),
         );
         expect(actNode?.op_type).toBe('Sigmoid');
       });
@@ -183,7 +183,7 @@ describe('ONNX Export', () => {
         // Assert
         const graph = toGraphView(onnx);
         const actNode = graph.node.find((node) =>
-          activationOps.has(node.op_type)
+          activationOps.has(node.op_type),
         );
         expect(actNode?.op_type).toBe('Relu');
       });
@@ -198,7 +198,7 @@ describe('ONNX Export', () => {
           const onnx = exportToONNX(net);
           const graph = toGraphView(onnx);
           const actNode = graph.node.find((node) =>
-            activationOps.has(node.op_type)
+            activationOps.has(node.op_type),
           );
           expect(actNode?.op_type).toBe('Identity');
         });
@@ -240,7 +240,7 @@ describe('ONNX Export', () => {
         // Act / Assert
         const throws = () => exportToONNX(net);
         expect(throws).toThrow(
-          'ONNX export currently only supports simple MLPs'
+          'ONNX export currently only supports simple MLPs',
         );
       });
     });
@@ -263,10 +263,10 @@ describe('ONNX Export', () => {
         hidden2.connect(net.nodes[4], 1.0);
         // Remove one connection to violate full connectivity
         hidden1.connections.in = hidden1.connections.in.filter(
-          (c) => c.from !== input0
+          (c) => c.from !== input0,
         );
         input0.connections.out = input0.connections.out.filter(
-          (c) => c.to !== hidden1
+          (c) => c.to !== hidden1,
         );
         Network.rebuildConnections(net);
       });
@@ -293,7 +293,7 @@ describe('ONNX Export', () => {
         exportToONNX(net);
         // Assert
         const allIndexed = net.nodes.every(
-          (n: Node) => typeof n.index === 'number'
+          (n: Node) => typeof n.index === 'number',
         );
         expect(allIndexed).toBe(true);
       });
@@ -366,7 +366,7 @@ describe('ONNX Export', () => {
             (candidate) =>
               candidate !== node &&
               candidate.input[0] === node.output[0] &&
-              candidate.op_type !== 'Gemm'
+              candidate.op_type !== 'Gemm',
           );
           return !!activation && nodes.indexOf(activation) > gemmIndex;
         });
@@ -388,7 +388,7 @@ describe('ONNX Export', () => {
             (candidate) =>
               candidate !== node &&
               candidate.input[0] === node.output[0] &&
-              candidate.op_type !== 'Gemm'
+              candidate.op_type !== 'Gemm',
           );
           return !!activation && nodes.indexOf(activation) < gemmIndex;
         });
@@ -471,10 +471,10 @@ describe('ONNX Export', () => {
         const hidden0 = net.nodes[2];
         // Remove a single connection to create a partial layer
         hidden0.connections.in = hidden0.connections.in.filter(
-          (c) => c.from !== input0
+          (c) => c.from !== input0,
         );
         input0.connections.out = input0.connections.out.filter(
-          (c) => c.to !== hidden0
+          (c) => c.to !== hidden0,
         );
         Network.rebuildConnections(net);
       });
@@ -544,13 +544,13 @@ describe('ONNX Export', () => {
       });
       it('adds previous hidden state input', () => {
         const hasPrev = toGraphView(onnx).inputs.some(
-          (input) => input.name === 'hidden_prev'
+          (input) => input.name === 'hidden_prev',
         );
         expect(hasPrev).toBe(true);
       });
       it('emits recurrent weight matrix R0', () => {
         const hasR0 = toGraphView(onnx).initializer.some(
-          (initializer) => initializer.name === 'R0'
+          (initializer) => initializer.name === 'R0',
         );
         expect(hasR0).toBe(true);
       });
@@ -582,7 +582,7 @@ describe('ONNX Export', () => {
         const inputs = toGraphView(onnx).inputs;
         const hasFirst = inputs.some((input) => input.name === 'hidden_prev');
         const hasSecond = inputs.some(
-          (input) => input.name === 'hidden_prev_l2'
+          (input) => input.name === 'hidden_prev_l2',
         );
         expect(hasFirst).toBe(false); // no recurrence in first hidden layer
         expect(hasSecond).toBe(true);
@@ -590,10 +590,10 @@ describe('ONNX Export', () => {
       it('emits recurrent matrix R1 only', () => {
         const initializers = toGraphView(onnx).initializer;
         const hasR0 = initializers.some(
-          (initializer) => initializer.name === 'R0'
+          (initializer) => initializer.name === 'R0',
         );
         const hasR1 = initializers.some(
-          (initializer) => initializer.name === 'R1'
+          (initializer) => initializer.name === 'R1',
         );
         expect(hasR0).toBe(false);
         expect(hasR1).toBe(true);

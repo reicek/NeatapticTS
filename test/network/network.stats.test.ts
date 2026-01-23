@@ -9,13 +9,13 @@ interface RegularizationStatsSnapshot {
 
 const setRegularizationStats = (
   net: Network,
-  stats: RegularizationStatsSnapshot | null
+  stats: RegularizationStatsSnapshot | null,
 ) => {
   Reflect.set(net, '_lastStats', stats);
 };
 
 const getRegularizationStatsSnapshot = (
-  net: Network
+  net: Network,
 ): RegularizationStatsSnapshot | null =>
   net.getRegularizationStats() as RegularizationStatsSnapshot | null;
 

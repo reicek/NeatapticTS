@@ -22,15 +22,17 @@ interface NetworkInternals {
 const setNetworkInternal = <Key extends keyof NetworkInternals>(
   net: Network,
   key: Key,
-  value: NetworkInternals[Key]
+  value: NetworkInternals[Key],
 ) => {
   Reflect.set(net, key, value);
 };
 
 const getConnectionSlab = (net: Network): ConnectionSlab =>
-  ((net as unknown) as {
-    getConnectionSlab: () => ConnectionSlab;
-  }).getConnectionSlab();
+  (
+    net as unknown as {
+      getConnectionSlab: () => ConnectionSlab;
+    }
+  ).getConnectionSlab();
 
 describe('network.slab.plasticity', () => {
   it('allocates plastic slab only when at least one connection has plasticityRate > 0 and releases when cleared', () => {
@@ -64,7 +66,7 @@ describe('network.slab.plasticity', () => {
         plasticAfterSet !== null &&
         plasticCount >= 1 &&
         slab.version > baseVersion &&
-        plasticCleared
+        plasticCleared,
     ).toBe(true);
   });
 });

@@ -72,7 +72,7 @@ export default class Layer {
     // Input validation
     if (value !== undefined && value.length !== this.nodes.length) {
       throw new Error(
-        'Array with values should be same as the amount of nodes!'
+        'Array with values should be same as the amount of nodes!',
       );
     }
 
@@ -99,9 +99,9 @@ export default class Layer {
       } else {
         activation = this.nodes[i].activate(value[i]);
       }
-      ((out as unknown) as number[])[i] = activation;
+      (out as unknown as number[])[i] = activation;
     }
-    const cloned = Array.from((out as unknown) as number[]) as number[];
+    const cloned = Array.from(out as unknown as number[]) as number[];
     activationArrayPool.release(out);
     return cloned; // Return the activation values of all nodes
   }
@@ -123,7 +123,7 @@ export default class Layer {
     // Input validation
     if (target !== undefined && target.length !== this.nodes.length) {
       throw new Error(
-        'Array with values should be same as the amount of nodes!'
+        'Array with values should be same as the amount of nodes!',
       );
     }
 
@@ -153,12 +153,12 @@ export default class Layer {
   connect(
     target: Group | Node | Layer,
     method?: unknown,
-    weight?: number
+    weight?: number,
   ): Connection[] {
     // Ensure the output group is defined before connecting
     if (!this.output) {
       throw new Error(
-        'Layer output is not defined. Cannot connect from this layer.'
+        'Layer output is not defined. Cannot connect from this layer.',
       );
     }
 
@@ -188,7 +188,7 @@ export default class Layer {
     // Ensure the output group is defined before gating
     if (!this.output) {
       throw new Error(
-        'Layer output is not defined. Cannot gate from this layer.'
+        'Layer output is not defined. Cannot gate from this layer.',
       );
     }
     // Delegate gating to the output group
@@ -362,7 +362,7 @@ export default class Layer {
     layer.input = (
       from: Layer | Group,
       method?: unknown,
-      weight?: number
+      weight?: number,
     ): Connection[] => {
       if (from instanceof Layer) from = from.output!; // Use output group of source layer
       method = method || methods.groupConnection.ALL_TO_ALL; // Default connection
@@ -412,7 +412,7 @@ export default class Layer {
     // Connection from memory cell to the final output block (gated by output gate)
     const output = memoryCell.connect(
       outputBlock,
-      methods.groupConnection.ALL_TO_ALL
+      methods.groupConnection.ALL_TO_ALL,
     );
 
     // Apply gating mechanisms
@@ -423,7 +423,7 @@ export default class Layer {
     memoryCell.nodes.forEach((node, i) => {
       // Find the self-connection on the node
       const selfConnection = node.connections.self.find(
-        (conn) => conn.to === node && conn.from === node
+        (conn) => conn.to === node && conn.from === node,
       );
       if (selfConnection) {
         // Assign the corresponding forget gate node as the gater
@@ -435,7 +435,7 @@ export default class Layer {
       } else {
         // This case should ideally not happen if connect worked correctly
         console.warn(
-          `LSTM Warning: No self-connection found for memory cell node ${i}`
+          `LSTM Warning: No self-connection found for memory cell node ${i}`,
         );
       }
     });
@@ -456,7 +456,7 @@ export default class Layer {
     layer.input = (
       from: Layer | Group,
       method?: unknown,
-      weight?: number
+      weight?: number,
     ): Connection[] => {
       if (from instanceof Layer) from = from.output!; // Use output group of source layer
       method = method || methods.groupConnection.ALL_TO_ALL; // Default connection
@@ -467,10 +467,10 @@ export default class Layer {
       connections = connections.concat(input);
       connections = connections.concat(from.connect(inputGate, method, weight)); // Input to Input Gate
       connections = connections.concat(
-        from.connect(outputGate, method, weight)
+        from.connect(outputGate, method, weight),
       ); // Input to Output Gate
       connections = connections.concat(
-        from.connect(forgetGate, method, weight)
+        from.connect(forgetGate, method, weight),
       ); // Input to Forget Gate
 
       // Input gate controls the influence of the external input on the memory cell state update
@@ -530,24 +530,24 @@ export default class Layer {
     updateGate.connect(
       inverseUpdateGate,
       methods.groupConnection.ONE_TO_ONE,
-      1
+      1,
     ); // Weight of 1 for direct inversion
 
     // Previous output, gated by reset gate, influences memory cell candidate calculation
     const reset = previousOutput.connect(
       memoryCell,
-      methods.groupConnection.ALL_TO_ALL
+      methods.groupConnection.ALL_TO_ALL,
     );
     resetGate.gate(reset, methods.gating.OUTPUT); // Reset gate controls this connection
 
     // Calculate final output: combination of previous output and candidate activation, controlled by update gate
     const update1 = previousOutput.connect(
       output,
-      methods.groupConnection.ALL_TO_ALL
+      methods.groupConnection.ALL_TO_ALL,
     ); // Connection from previous output
     const update2 = memoryCell.connect(
       output,
-      methods.groupConnection.ALL_TO_ALL
+      methods.groupConnection.ALL_TO_ALL,
     ); // Connection from candidate activation
 
     // Apply gating by update gate and its inverse
@@ -574,7 +574,7 @@ export default class Layer {
     layer.input = (
       from: Layer | Group,
       method?: unknown,
-      weight?: number
+      weight?: number,
     ): Connection[] => {
       if (from instanceof Layer) from = from.output!; // Use output group of source layer
       method = method || methods.groupConnection.ALL_TO_ALL; // Default connection
@@ -582,11 +582,11 @@ export default class Layer {
 
       // Connect external input to update gate, reset gate, and memory cell candidate calculation
       connections = connections.concat(
-        from.connect(updateGate, method, weight)
+        from.connect(updateGate, method, weight),
       );
       connections = connections.concat(from.connect(resetGate, method, weight));
       connections = connections.concat(
-        from.connect(memoryCell, method, weight)
+        from.connect(memoryCell, method, weight),
       );
 
       return connections; // Return all created connections
@@ -632,7 +632,7 @@ export default class Layer {
 
       // Add the *Group* itself to the layer's nodes list (unlike other layer types)
       // This requires the `set` method to handle Groups internally.
-      layer.nodes.push((block as unknown) as Node); // Cast needed due to `nodes: Node[]` type hint
+      layer.nodes.push(block as unknown as Node); // Cast needed due to `nodes: Node[]` type hint
       previous = block; // Update previous block reference
     }
 
@@ -654,7 +654,7 @@ export default class Layer {
       } else {
         // Handle cases where a Node might be directly in layer.nodes, though unlikely for memory layer
         console.warn(
-          'Unexpected Node type found directly in Memory layer nodes list during output group creation.'
+          'Unexpected Node type found directly in Memory layer nodes list during output group creation.',
         );
       }
     }
@@ -665,7 +665,7 @@ export default class Layer {
     layer.input = (
       from: Layer | Group,
       _method?: unknown, // eslint-disable-line @typescript-eslint/no-unused-vars
-      _weight?: number // eslint-disable-line @typescript-eslint/no-unused-vars
+      _weight?: number, // eslint-disable-line @typescript-eslint/no-unused-vars
     ): Connection[] => {
       if (from instanceof Layer) from = from.output!; // Use output group of source layer
 
@@ -679,7 +679,7 @@ export default class Layer {
       // Validate that the input size matches the memory block size
       if (from.nodes.length !== inputBlock.nodes.length) {
         throw new Error(
-          `Previous layer size (${from.nodes.length}) must be same as memory size (${inputBlock.nodes.length})`
+          `Previous layer size (${from.nodes.length}) must be same as memory size (${inputBlock.nodes.length})`,
         );
       }
 
@@ -699,12 +699,12 @@ export default class Layer {
    */
   static batchNorm(size: number): Layer {
     const layer = Layer.dense(size);
-    ((layer as unknown) as { batchNorm: boolean }).batchNorm = true;
+    (layer as unknown as { batchNorm: boolean }).batchNorm = true;
     // Override activate to apply batch normalization
     const baseActivate = layer.activate.bind(layer);
     layer.activate = (
       value?: number[],
-      training: boolean = false
+      training: boolean = false,
     ): number[] => {
       const activations = baseActivate(value, training);
       // Compute mean and variance
@@ -714,7 +714,7 @@ export default class Layer {
         activations.length;
       // Normalize
       return activations.map(
-        (a) => (a - mean) / Math.sqrt(variance + NORM_EPSILON)
+        (a) => (a - mean) / Math.sqrt(variance + NORM_EPSILON),
       );
     };
     return layer;
@@ -728,12 +728,12 @@ export default class Layer {
    */
   static layerNorm(size: number): Layer {
     const layer = Layer.dense(size);
-    ((layer as unknown) as { layerNorm: boolean }).layerNorm = true;
+    (layer as unknown as { layerNorm: boolean }).layerNorm = true;
     // Override activate to apply layer normalization
     const baseActivate = layer.activate.bind(layer);
     layer.activate = (
       value?: number[],
-      training: boolean = false
+      training: boolean = false,
     ): number[] => {
       const activations = baseActivate(value, training);
       // Compute mean and variance (per sample, but here per layer)
@@ -743,7 +743,7 @@ export default class Layer {
         activations.length;
       // Normalize
       return activations.map(
-        (a) => (a - mean) / Math.sqrt(variance + NORM_EPSILON)
+        (a) => (a - mean) / Math.sqrt(variance + NORM_EPSILON),
       );
     };
     return layer;
@@ -761,15 +761,17 @@ export default class Layer {
     size: number,
     kernelSize: number,
     stride: number = 1,
-    padding: number = 0
+    padding: number = 0,
   ): Layer {
     const layer = new Layer();
     layer.nodes = Array.from({ length: size }, () => new Node());
     layer.output = new Group(size);
     // Store conv params for future use
-    ((layer as unknown) as {
-      conv1d: { kernelSize: number; stride: number; padding: number };
-    }).conv1d = { kernelSize, stride, padding };
+    (
+      layer as unknown as {
+        conv1d: { kernelSize: number; stride: number; padding: number };
+      }
+    ).conv1d = { kernelSize, stride, padding };
     // Placeholder: actual convolution logic would be in a custom activate method
     layer.activate = (value?: number[]): number[] => {
       // For now, just pass through or slice input as a stub
@@ -790,7 +792,7 @@ export default class Layer {
     const layer = new Layer();
     layer.nodes = Array.from({ length: size }, () => new Node());
     layer.output = new Group(size);
-    ((layer as unknown) as { attention: { heads: number } }).attention = {
+    (layer as unknown as { attention: { heads: number } }).attention = {
       heads,
     };
     // Placeholder: actual attention logic would be in a custom activate method

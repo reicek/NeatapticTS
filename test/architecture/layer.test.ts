@@ -48,7 +48,7 @@ interface RuntimeNode {
 const isGroupConnectedTo = (
   groupA: Group,
   groupB: Group,
-  method?: unknown
+  method?: unknown,
 ): boolean => {
   if (!groupA || !groupB || !groupA.nodes || !groupB.nodes) return false; // Basic validation
 
@@ -79,7 +79,7 @@ const isGroupConnectedTo = (
           )
             return true;
           return false;
-        })
+        }),
     );
   }
 };
@@ -204,7 +204,7 @@ describe('Layer', () => {
         // Arrange
         const callOrder: number[] = [];
         nodeSpies.forEach((spy, i) =>
-          spy.mockImplementation(() => callOrder.push(i))
+          spy.mockImplementation(() => callOrder.push(i)),
         );
         // Act
         layer.propagate(rate, momentum);
@@ -227,7 +227,7 @@ describe('Layer', () => {
             momentum,
             true,
             0,
-            targetValues[originalIndex]
+            targetValues[originalIndex],
           );
         });
       });
@@ -237,7 +237,7 @@ describe('Layer', () => {
         const invalidTarget = [0.1, 0.2];
         // Act & Assert
         expect(() => layer.propagate(rate, momentum, invalidTarget)).toThrow(
-          'Array with values should be same as the amount of nodes!'
+          'Array with values should be same as the amount of nodes!',
         );
       });
     });
@@ -272,7 +272,7 @@ describe('Layer', () => {
         const layerWithoutOutput = new Layer();
         // Act & Assert
         expect(() => layerWithoutOutput.connect(targetGroup)).toThrow(
-          'Layer output is not defined. Cannot connect from this layer.'
+          'Layer output is not defined. Cannot connect from this layer.',
         );
       });
 
@@ -286,7 +286,7 @@ describe('Layer', () => {
         expect(sourceOutputSpy).toHaveBeenCalledWith(
           targetGroup,
           method,
-          weight
+          weight,
         );
       });
 
@@ -299,7 +299,7 @@ describe('Layer', () => {
         expect(sourceOutputSpy).toHaveBeenCalledWith(
           targetNode,
           undefined,
-          weight
+          weight,
         );
       });
 
@@ -313,13 +313,13 @@ describe('Layer', () => {
         expect(targetInputSpy).toHaveBeenCalledWith(
           sourceLayer,
           method,
-          weight
+          weight,
         );
         expect(sourceOutputSpy).toHaveBeenCalledTimes(1);
         expect(sourceOutputSpy).toHaveBeenCalledWith(
           targetLayer.output,
           method,
-          weight
+          weight,
         );
       });
 
@@ -369,7 +369,7 @@ describe('Layer', () => {
         const layerWithoutOutput = new Layer();
         // Act & Assert
         expect(() =>
-          layerWithoutOutput.gate(connectionsToGate, methods.gating.INPUT)
+          layerWithoutOutput.gate(connectionsToGate, methods.gating.INPUT),
         ).toThrow('Layer output is not defined. Cannot gate from this layer.');
       });
 
@@ -457,7 +457,7 @@ describe('Layer', () => {
       it('should call set on Group instances within the layer nodes', () => {
         const memoryLayer = Layer.memory(2, 2);
         const groupSetSpies = memoryLayer.nodes.map((groupNode) =>
-          jest.spyOn((groupNode as unknown) as Group, 'set')
+          jest.spyOn(groupNode as unknown as Group, 'set'),
         );
 
         const settings = { bias: 0.1, squash: methods.Activation.relu };
@@ -488,14 +488,14 @@ describe('Layer', () => {
           node.connect(targetNode);
         });
         layer.nodes[0].connections.out.forEach((conn) =>
-          layer.connections.out.push(conn)
+          layer.connections.out.push(conn),
         );
         layer.nodes[1].connections.out.forEach((conn) =>
-          layer.connections.out.push(conn)
+          layer.connections.out.push(conn),
         );
 
         nodeDisconnectSpies = layer.nodes.map((node) =>
-          jest.spyOn(node, 'disconnect')
+          jest.spyOn(node, 'disconnect'),
         );
       });
 
@@ -507,10 +507,10 @@ describe('Layer', () => {
         it('should call disconnect on each layer node for each target group node (one-sided)', () => {
           layer.disconnect(targetGroup, false);
           expect(nodeDisconnectSpies[0]).toHaveBeenCalledTimes(
-            targetGroup.nodes.length
+            targetGroup.nodes.length,
           );
           expect(nodeDisconnectSpies[1]).toHaveBeenCalledTimes(
-            targetGroup.nodes.length
+            targetGroup.nodes.length,
           );
           targetGroup.nodes.forEach((target) => {
             expect(nodeDisconnectSpies[0]).toHaveBeenCalledWith(target, false);
@@ -521,10 +521,10 @@ describe('Layer', () => {
         it('should call disconnect on each layer node for each target group node (two-sided)', () => {
           layer.disconnect(targetGroup, true);
           expect(nodeDisconnectSpies[0]).toHaveBeenCalledTimes(
-            targetGroup.nodes.length
+            targetGroup.nodes.length,
           );
           expect(nodeDisconnectSpies[1]).toHaveBeenCalledTimes(
-            targetGroup.nodes.length
+            targetGroup.nodes.length,
           );
           targetGroup.nodes.forEach((target) => {
             expect(nodeDisconnectSpies[0]).toHaveBeenCalledWith(target, true);
@@ -563,11 +563,11 @@ describe('Layer', () => {
           expect(nodeDisconnectSpies[1]).toHaveBeenCalledTimes(1);
           expect(nodeDisconnectSpies[0]).toHaveBeenCalledWith(
             targetNode,
-            false
+            false,
           );
           expect(nodeDisconnectSpies[1]).toHaveBeenCalledWith(
             targetNode,
-            false
+            false,
           );
         });
 
@@ -626,7 +626,7 @@ describe('Layer', () => {
       it('should call clear on Group instances within the layer nodes (e.g., Memory layer)', () => {
         const memoryLayer = Layer.memory(2, 2);
         const groupClearSpies = memoryLayer.nodes.map((groupNode) =>
-          jest.spyOn((groupNode as unknown) as Group, 'clear')
+          jest.spyOn(groupNode as unknown as Group, 'clear'),
         );
 
         memoryLayer.clear();
@@ -671,7 +671,7 @@ describe('Layer', () => {
       it('should throw error if target layer output (acting as input) is not defined', () => {
         const layerWithoutOutput = new Layer();
         expect(() => layerWithoutOutput.input(sourceGroup)).toThrow(
-          'Layer output (acting as input target) is not defined.'
+          'Layer output (acting as input target) is not defined.',
         );
       });
 
@@ -681,7 +681,7 @@ describe('Layer', () => {
         expect(sourceOutputConnectSpy).toHaveBeenCalledWith(
           targetLayer.output,
           methods.groupConnection.ALL_TO_ALL,
-          undefined
+          undefined,
         );
         expect(sourceGroupConnectSpy).not.toHaveBeenCalled();
       });
@@ -692,7 +692,7 @@ describe('Layer', () => {
         expect(sourceGroupConnectSpy).toHaveBeenCalledWith(
           targetLayer.output,
           methods.groupConnection.ALL_TO_ALL,
-          undefined
+          undefined,
         );
         expect(sourceOutputConnectSpy).not.toHaveBeenCalled();
       });
@@ -702,7 +702,7 @@ describe('Layer', () => {
         expect(sourceGroupConnectSpy).toHaveBeenCalledWith(
           expect.anything(),
           methods.groupConnection.ALL_TO_ALL,
-          undefined
+          undefined,
         );
       });
 
@@ -715,7 +715,7 @@ describe('Layer', () => {
         expect(sourceGroupConnectSpy).toHaveBeenCalledWith(
           targetLayer.output,
           method,
-          undefined
+          undefined,
         );
       });
 
@@ -725,7 +725,7 @@ describe('Layer', () => {
         expect(sourceGroupConnectSpy).toHaveBeenCalledWith(
           targetLayer.output,
           methods.groupConnection.ALL_TO_ALL,
-          weight
+          weight,
         );
       });
 
@@ -793,7 +793,7 @@ describe('Layer', () => {
           expect(sourceOutputConnectSpy).toHaveBeenCalledWith(
             layer.output,
             method,
-            weight
+            weight,
           );
           expect(sourceGroupConnectSpy).not.toHaveBeenCalled();
         });
@@ -810,7 +810,7 @@ describe('Layer', () => {
           expect(sourceGroupConnectSpy).toHaveBeenCalledWith(
             layer.output,
             method,
-            weight
+            weight,
           );
           expect(sourceOutputConnectSpy).not.toHaveBeenCalled();
         });
@@ -820,7 +820,7 @@ describe('Layer', () => {
           expect(sourceGroupConnectSpy).toHaveBeenCalledWith(
             expect.anything(),
             methods.groupConnection.ALL_TO_ALL,
-            undefined
+            undefined,
           );
         });
       });
@@ -882,8 +882,8 @@ describe('Layer', () => {
           isGroupConnectedTo(
             memoryCell,
             memoryCell,
-            methods.groupConnection.ONE_TO_ONE
-          )
+            methods.groupConnection.ONE_TO_ONE,
+          ),
         ).toBe(true);
       });
 
@@ -894,7 +894,7 @@ describe('Layer', () => {
       it('should gate the memoryCell self-connection with the forgetGate', () => {
         memoryCell.nodes.forEach((node, i) => {
           const selfConnection = node.connections.self.find(
-            (conn: Connection) => conn.to === node
+            (conn: Connection) => conn.to === node,
           );
           expect(selfConnection).toBeDefined();
           expect(selfConnection?.gater).toBe(forgetGate.nodes[i]);
@@ -904,14 +904,14 @@ describe('Layer', () => {
       it('should gate the memoryCell to outputBlock connection with the outputGate', () => {
         memoryCell.nodes.forEach((node, i) => {
           const outputConnection = node.connections.out.find(
-            (conn) => conn.to === outputBlock.nodes[0]
+            (conn) => conn.to === outputBlock.nodes[0],
           );
           expect(outputConnection).toBeDefined();
           expect(outputConnection?.gater).toBe(outputGate.nodes[i]);
 
           if (size > 1) {
             const outputConnection1 = node.connections.out.find(
-              (conn) => conn.to === outputBlock.nodes[1]
+              (conn) => conn.to === outputBlock.nodes[1],
             );
             expect(outputConnection1).toBeDefined();
             expect(outputConnection1?.gater).toBe(outputGate.nodes[i]);
@@ -946,22 +946,22 @@ describe('Layer', () => {
           expect(sourceOutputConnectSpy).toHaveBeenCalledWith(
             expect.objectContaining({ nodes: inputGate.nodes }),
             methods.groupConnection.ALL_TO_ALL,
-            undefined
+            undefined,
           );
           expect(sourceOutputConnectSpy).toHaveBeenCalledWith(
             expect.objectContaining({ nodes: forgetGate.nodes }),
             methods.groupConnection.ALL_TO_ALL,
-            undefined
+            undefined,
           );
           expect(sourceOutputConnectSpy).toHaveBeenCalledWith(
             expect.objectContaining({ nodes: memoryCell.nodes }),
             methods.groupConnection.ALL_TO_ALL,
-            undefined
+            undefined,
           );
           expect(sourceOutputConnectSpy).toHaveBeenCalledWith(
             expect.objectContaining({ nodes: outputGate.nodes }),
             methods.groupConnection.ALL_TO_ALL,
-            undefined
+            undefined,
           );
         });
 
@@ -970,14 +970,14 @@ describe('Layer', () => {
           const inputToMemoryConnection = connections.find(
             (conn) =>
               sourceLayer.output!.nodes.includes(conn.from) &&
-              memoryCell.nodes.includes(conn.to)
+              memoryCell.nodes.includes(conn.to),
           );
           expect(inputToMemoryConnection).toBeDefined();
           const targetNodeIndex = memoryCell.nodes.indexOf(
-            inputToMemoryConnection!.to
+            inputToMemoryConnection!.to,
           );
           expect(inputToMemoryConnection!.gater).toBe(
-            inputGate.nodes[targetNodeIndex]
+            inputGate.nodes[targetNodeIndex],
           );
         });
       });
@@ -1031,7 +1031,7 @@ describe('Layer', () => {
           expect(node.type).toBe('variant');
         });
         memoryCell.nodes.forEach((node) =>
-          expect(node.squash).toBe(methods.Activation.tanh)
+          expect(node.squash).toBe(methods.Activation.tanh),
         );
         inverseUpdateGate.nodes.forEach((node) => {
           expect(node.bias).toBe(0);
@@ -1052,12 +1052,12 @@ describe('Layer', () => {
           isGroupConnectedTo(
             updateGate,
             inverseUpdateGate,
-            methods.groupConnection.ONE_TO_ONE
-          )
+            methods.groupConnection.ONE_TO_ONE,
+          ),
         ).toBe(true);
         updateGate.nodes.forEach((node, i) => {
           const conn = node.connections.out.find(
-            (c) => c.to === inverseUpdateGate.nodes[i]
+            (c) => c.to === inverseUpdateGate.nodes[i],
           );
           expect(conn).toBeDefined();
           expect(conn?.weight).toBe(1);
@@ -1078,12 +1078,12 @@ describe('Layer', () => {
           isGroupConnectedTo(
             output,
             previousOutput,
-            methods.groupConnection.ONE_TO_ONE
-          )
+            methods.groupConnection.ONE_TO_ONE,
+          ),
         ).toBe(true);
         output.nodes.forEach((node, i) => {
           const conn = node.connections.out.find(
-            (c) => c.to === previousOutput.nodes[i]
+            (c) => c.to === previousOutput.nodes[i],
           );
           expect(conn).toBeDefined();
           expect(conn?.weight).toBe(1);
@@ -1093,7 +1093,7 @@ describe('Layer', () => {
       it('should gate previousOutput->memoryCell connection with resetGate', () => {
         previousOutput.nodes.forEach((node, i) => {
           const conn = node.connections.out.find(
-            (c) => c.to === memoryCell.nodes[0]
+            (c) => c.to === memoryCell.nodes[0],
           );
           expect(conn).toBeDefined();
           expect(conn?.gater).toBe(resetGate.nodes[i]);
@@ -1103,7 +1103,7 @@ describe('Layer', () => {
       it('should gate previousOutput->output connection with updateGate', () => {
         previousOutput.nodes.forEach((node, i) => {
           const conn = node.connections.out.find(
-            (c) => c.to === output.nodes[0]
+            (c) => c.to === output.nodes[0],
           );
           expect(conn).toBeDefined();
           expect(conn?.gater).toBe(updateGate.nodes[i]);
@@ -1113,7 +1113,7 @@ describe('Layer', () => {
       it('should gate memoryCell->output connection with inverseUpdateGate', () => {
         memoryCell.nodes.forEach((node, i) => {
           const conn = node.connections.out.find(
-            (c) => c.to === output.nodes[0]
+            (c) => c.to === output.nodes[0],
           );
           expect(conn).toBeDefined();
           expect(conn?.gater).toBe(inverseUpdateGate.nodes[i]);
@@ -1147,17 +1147,17 @@ describe('Layer', () => {
           expect(sourceOutputConnectSpy).toHaveBeenCalledWith(
             expect.objectContaining({ nodes: updateGate.nodes }),
             methods.groupConnection.ALL_TO_ALL,
-            undefined
+            undefined,
           );
           expect(sourceOutputConnectSpy).toHaveBeenCalledWith(
             expect.objectContaining({ nodes: resetGate.nodes }),
             methods.groupConnection.ALL_TO_ALL,
-            undefined
+            undefined,
           );
           expect(sourceOutputConnectSpy).toHaveBeenCalledWith(
             expect.objectContaining({ nodes: memoryCell.nodes }),
             methods.groupConnection.ALL_TO_ALL,
-            undefined
+            undefined,
           );
         });
       });
@@ -1175,16 +1175,16 @@ describe('Layer', () => {
       it('should create a layer with memoryDepth groups in nodes array', () => {
         expect(layer.nodes).toHaveLength(memoryDepth);
         layer.nodes.forEach((nodeOrGroup) => {
-          expect(
-            ((layer as unknown) as RuntimeLayer).isGroup(nodeOrGroup)
-          ).toBe(true);
-          expect(((nodeOrGroup as unknown) as Group).nodes).toHaveLength(size);
+          expect((layer as unknown as RuntimeLayer).isGroup(nodeOrGroup)).toBe(
+            true,
+          );
+          expect((nodeOrGroup as unknown as Group).nodes).toHaveLength(size);
         });
       });
 
       it('should set specific properties for nodes within memory blocks', () => {
         layer.nodes.forEach((group) => {
-          ((group as unknown) as Group).nodes.forEach((node) => {
+          (group as unknown as Group).nodes.forEach((node) => {
             expect(node.squash).toBe(methods.Activation.identity);
             expect(node.bias).toBe(0);
             expect(node.type).toBe('variant');
@@ -1196,18 +1196,22 @@ describe('Layer', () => {
         // After reversal in factory: nodes[0] is newest, nodes[1] is second newest, etc.
         // Connection is made from older (previous) to newer (block).
         // So, connection should exist from nodes[1] (older) to nodes[0] (newer).
-        const block1 = (layer.nodes[0] as unknown) as Group; // Newest block
-        const block2 = (layer.nodes[1] as unknown) as Group; // Second newest (older) block
+        const block1 = layer.nodes[0] as unknown as Group; // Newest block
+        const block2 = layer.nodes[1] as unknown as Group; // Second newest (older) block
 
         // Check connection from the older block (block2) to the newer block (block1)
         expect(
-          isGroupConnectedTo(block2, block1, methods.groupConnection.ONE_TO_ONE)
+          isGroupConnectedTo(
+            block2,
+            block1,
+            methods.groupConnection.ONE_TO_ONE,
+          ),
         ).toBe(true);
 
         // Check weight on the node level (connection from block2 node to block1 node)
         block2.nodes.forEach((node, i) => {
           const conn = node.connections.out.find(
-            (c) => c.to === block1.nodes[i]
+            (c) => c.to === block1.nodes[i],
           );
           expect(conn).toBeDefined();
           expect(conn?.weight).toBe(1);
@@ -1217,8 +1221,8 @@ describe('Layer', () => {
       it('should create a concatenated output group', () => {
         expect(layer.output).toBeInstanceOf(Group);
         expect(layer.output?.nodes).toHaveLength(size * memoryDepth);
-        const block1Nodes = ((layer.nodes[0] as unknown) as Group).nodes;
-        const block2Nodes = ((layer.nodes[1] as unknown) as Group).nodes;
+        const block1Nodes = (layer.nodes[0] as unknown as Group).nodes;
+        const block2Nodes = (layer.nodes[1] as unknown as Group).nodes;
         expect(layer.output?.nodes).toEqual([...block1Nodes, ...block2Nodes]);
       });
 
@@ -1237,7 +1241,7 @@ describe('Layer', () => {
         beforeEach(() => {
           sourceLayer = Layer.dense(size);
           sourceGroup = new Group(size);
-          lastBlock = (layer.nodes[memoryDepth - 1] as unknown) as Group;
+          lastBlock = layer.nodes[memoryDepth - 1] as unknown as Group;
 
           if (sourceLayer.output) {
             sourceOutputConnectSpy = jest.spyOn(sourceLayer.output, 'connect');
@@ -1257,7 +1261,7 @@ describe('Layer', () => {
           expect(sourceOutputConnectSpy).toHaveBeenCalledWith(
             expect.objectContaining({ nodes: lastBlock.nodes }),
             methods.groupConnection.ONE_TO_ONE,
-            1
+            1,
           );
           expect(sourceGroupConnectSpy).not.toHaveBeenCalled();
         });
@@ -1269,7 +1273,7 @@ describe('Layer', () => {
           expect(sourceGroupConnectSpy).toHaveBeenCalledWith(
             expect.objectContaining({ nodes: lastBlock.nodes }),
             methods.groupConnection.ONE_TO_ONE,
-            1
+            1,
           );
           expect(sourceOutputConnectSpy).not.toHaveBeenCalled();
         });
@@ -1281,21 +1285,21 @@ describe('Layer', () => {
           expect(sourceGroupConnectSpy).toHaveBeenCalledWith(
             expect.objectContaining({ nodes: lastBlock.nodes }),
             methods.groupConnection.ONE_TO_ONE,
-            1
+            1,
           );
         });
 
         it('should throw error if source size does not match memory block size', () => {
           const wrongSizeSource = new Group(size + 1);
           expect(() => layer.input(wrongSizeSource)).toThrow(
-            `Previous layer size (${wrongSizeSource.nodes.length}) must be same as memory size (${size})`
+            `Previous layer size (${wrongSizeSource.nodes.length}) must be same as memory size (${size})`,
           );
         });
 
         it('should throw error if the target input block is not a Group (edge case)', () => {
           layer.nodes[memoryDepth - 1] = new Node();
           expect(() => layer.input(sourceGroup)).toThrow(
-            'Memory layer input block is not a Group.'
+            'Memory layer input block is not a Group.',
           );
         });
       });
@@ -1364,7 +1368,7 @@ describe('Layer', () => {
         expect(layer.nodes).toHaveLength(size);
         expect(layer.output?.nodes).toHaveLength(size);
         // Should store conv params
-        expect(((layer as unknown) as LayerWithConv1d).conv1d).toEqual({
+        expect((layer as unknown as LayerWithConv1d).conv1d).toEqual({
           kernelSize: kernel,
           stride: 1,
           padding: 0,
@@ -1379,7 +1383,7 @@ describe('Layer', () => {
         const layer = Layer.attention(size, heads);
         expect(layer.nodes).toHaveLength(size);
         expect(layer.output?.nodes).toHaveLength(size);
-        expect(((layer as unknown) as LayerWithAttention).attention).toEqual({
+        expect((layer as unknown as LayerWithAttention).attention).toEqual({
           heads,
         });
         // Activation averages input
@@ -1398,65 +1402,65 @@ describe('Layer', () => {
 
     it('should return true for a Group instance', () => {
       const group = new Group(1);
-      expect(((layer as unknown) as RuntimeLayer).isGroup(group)).toBe(true);
+      expect((layer as unknown as RuntimeLayer).isGroup(group)).toBe(true);
     });
 
     it('should return false for a Node instance', () => {
       const node = new Node();
-      expect(((layer as unknown) as RuntimeLayer).isGroup(node)).toBe(false);
+      expect((layer as unknown as RuntimeLayer).isGroup(node)).toBe(false);
     });
 
     it('should return false for a plain object', () => {
       const obj = { nodes: [], set: () => {} };
       expect(
-        ((layer as unknown) as RuntimeLayer).isGroup((obj as unknown) as Group)
+        (layer as unknown as RuntimeLayer).isGroup(obj as unknown as Group),
       ).toBe(true);
 
       const objMissingNodes = { set: () => {} };
       expect(
-        ((layer as unknown) as RuntimeLayer).isGroup(
-          (objMissingNodes as unknown) as Group
-        )
+        (layer as unknown as RuntimeLayer).isGroup(
+          objMissingNodes as unknown as Group,
+        ),
       ).toBe(false);
 
       const objMissingSet = { nodes: [] };
       expect(
-        ((layer as unknown) as RuntimeLayer).isGroup(
-          (objMissingSet as unknown) as Group
-        )
+        (layer as unknown as RuntimeLayer).isGroup(
+          objMissingSet as unknown as Group,
+        ),
       ).toBe(false);
       expect(
-        ((layer as unknown) as RuntimeLayer).isGroup(
-          (objMissingSet as unknown) as Group
-        )
+        (layer as unknown as RuntimeLayer).isGroup(
+          objMissingSet as unknown as Group,
+        ),
       ).toBe(false);
     });
 
     it('should return false for null', () => {
       expect(
-        ((layer as unknown) as RuntimeLayer).isGroup((null as unknown) as Group)
+        (layer as unknown as RuntimeLayer).isGroup(null as unknown as Group),
       ).toBe(false);
     });
 
     it('should return false for undefined', () => {
       expect(
-        ((layer as unknown) as RuntimeLayer).isGroup(
-          (undefined as unknown) as Group
-        )
+        (layer as unknown as RuntimeLayer).isGroup(
+          undefined as unknown as Group,
+        ),
       ).toBe(false);
     });
 
     it('should return false for primitive types', () => {
       expect(
-        ((layer as unknown) as RuntimeLayer).isGroup((123 as unknown) as Group)
+        (layer as unknown as RuntimeLayer).isGroup(123 as unknown as Group),
       ).toBe(false);
       expect(
-        ((layer as unknown) as RuntimeLayer).isGroup(
-          ('string' as unknown) as Group
-        )
+        (layer as unknown as RuntimeLayer).isGroup(
+          'string' as unknown as Group,
+        ),
       ).toBe(false);
       expect(
-        ((layer as unknown) as RuntimeLayer).isGroup((true as unknown) as Group)
+        (layer as unknown as RuntimeLayer).isGroup(true as unknown as Group),
       ).toBe(false);
     });
   });
@@ -1473,7 +1477,7 @@ describe('Layer', () => {
         layer.dropout = 0.7;
         // Act
         const masks = layer.nodes.map(
-          (n: Node) => ((n as unknown) as RuntimeNode).mask
+          (n: Node) => (n as unknown as RuntimeNode).mask,
         );
         // Assert
         expect(new Set(masks).size).toBe(1);
@@ -1494,7 +1498,7 @@ describe('Layer', () => {
         // Act
         layer.activate(undefined, false);
         const masks = layer.nodes.map(
-          (n: Node) => ((n as unknown) as RuntimeNode).mask
+          (n: Node) => (n as unknown as RuntimeNode).mask,
         );
         // Assert
         masks.forEach((m: number) => expect(m).toBe(1));
@@ -1515,7 +1519,7 @@ describe('Layer', () => {
         // Act
         layer.activate(undefined, false);
         const activations = layer.nodes.map(
-          (n: Node) => ((n as unknown) as RuntimeNode).activation
+          (n: Node) => (n as unknown as RuntimeNode).activation,
         );
         // Assert
         activations.forEach((a: number) => expect(typeof a).toBe('number'));

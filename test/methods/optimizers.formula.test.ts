@@ -23,7 +23,7 @@ const trainSteps = (
   network: Network,
   optimizerConfig: OptimizerConfigBase,
   iterations: number,
-  rate = 0.01
+  rate = 0.01,
 ): void => {
   network.train(trainingData, {
     iterations,
@@ -73,12 +73,12 @@ describe('Optimizer formula characteristics', () => {
     trainSteps(earlyNetwork, { type: 'radam' }, 1);
     trainSteps(lateNetwork, { type: 'radam' }, 10);
     const earlyStepMagnitude = Math.abs(
-      earlyNetwork.connections[0].weight - 0.5
+      earlyNetwork.connections[0].weight - 0.5,
     );
     const lateStepMagnitude = Math.abs(lateNetwork.connections[0].weight - 0.5);
     it('late step magnitude differs from very early step', () => {
       expect(Math.abs(lateStepMagnitude - earlyStepMagnitude)).toBeGreaterThan(
-        0
+        0,
       );
     });
   });
@@ -92,7 +92,7 @@ describe('Optimizer formula characteristics', () => {
     const adamConnection = adamNetwork.connections[0];
     it('maintains distinct second moment estimate', () => {
       expect(adabeliefConnection.secondMoment).not.toBe(
-        adamConnection.secondMoment
+        adamConnection.secondMoment,
       );
     });
   });

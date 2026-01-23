@@ -15,7 +15,7 @@ describe('Network.evolveNetwork multi-thread branches', () => {
       class SpawnFailureWorkers extends Workers {
         static getNodeTestWorker(): Promise<typeof TestWorker> {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Mock class for testing
-          const MockTestWorker = (class MockTestWorker {
+          const MockTestWorker = class MockTestWorker {
             ['worker']: unknown; // Required property to match TestWorker interface
             private readonly description: string;
 
@@ -33,7 +33,7 @@ describe('Network.evolveNetwork multi-thread branches', () => {
             terminate() {
               void this.description;
             }
-          } as unknown) as typeof TestWorker;
+          } as unknown as typeof TestWorker;
           return Promise.resolve(MockTestWorker);
         }
       }
@@ -61,7 +61,7 @@ describe('Network.evolveNetwork multi-thread branches', () => {
       class RejectionWorkers extends Workers {
         static getNodeTestWorker(): Promise<typeof TestWorker> {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Mock class for testing
-          const MockTestWorker = (class MockTestWorker {
+          const MockTestWorker = class MockTestWorker {
             ['worker']: unknown; // Required property to match TestWorker interface
             #failOnce = true;
             private readonly description: string;
@@ -82,7 +82,7 @@ describe('Network.evolveNetwork multi-thread branches', () => {
             terminate() {
               void this.description;
             }
-          } as unknown) as typeof TestWorker;
+          } as unknown as typeof TestWorker;
           return Promise.resolve(MockTestWorker);
         }
       }

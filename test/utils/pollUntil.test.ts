@@ -8,14 +8,14 @@ describe('pollUntil', () => {
         count++;
         return count > 2 ? 'done' : '';
       },
-      { intervalMs: 5, timeoutMs: 200 }
+      { intervalMs: 5, timeoutMs: 200 },
     );
     expect(result).toBe('done');
   });
 
   it('rejects on timeout', async () => {
     await expect(
-      pollUntil(() => false, { intervalMs: 5, timeoutMs: 40 })
+      pollUntil(() => false, { intervalMs: 5, timeoutMs: 40 }),
     ).rejects.toThrow(/timeout/i);
   });
 
@@ -27,7 +27,7 @@ describe('pollUntil', () => {
         intervalMs: 5,
         timeoutMs: 200,
         signal: controller.signal,
-      })
+      }),
     ).rejects.toThrow(/aborted/i);
   });
 
@@ -37,8 +37,8 @@ describe('pollUntil', () => {
         () => {
           throw new Error('boom');
         },
-        { intervalMs: 5, timeoutMs: 50 }
-      )
+        { intervalMs: 5, timeoutMs: 50 },
+      ),
     ).rejects.toThrow('boom');
   });
 });

@@ -37,7 +37,7 @@ describe('fast non-dominated sorting delegation invariants', () => {
             },
           ],
         },
-      }
+      },
     );
     // Assign synthetic fitness scores to encourage spread
     const population = neat.population as NetworkWithMultiObjective[];
@@ -48,14 +48,15 @@ describe('fast non-dominated sorting delegation invariants', () => {
     await neat.evolve();
     const ranks = population.map((genome) => genome._moRank ?? 0);
     expect(ranks.every((rank) => typeof rank === 'number' && rank >= 0)).toBe(
-      true
+      true,
     );
     // For first Pareto front collect crowding distances
     const firstFront = population.filter((genome) => genome._moRank === 0);
     const crowdingDistances = firstFront.map((genome) => genome._moCrowd);
     // Boundary genomes (at least one, typically two) should have Infinity crowding
-    const infCount = crowdingDistances.filter((value) => value === Infinity)
-      .length;
+    const infCount = crowdingDistances.filter(
+      (value) => value === Infinity,
+    ).length;
     if (firstFront.length >= 2) {
       expect(infCount).toBeGreaterThanOrEqual(1);
     } else {

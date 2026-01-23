@@ -427,7 +427,7 @@ describe('Neat advanced coverage', () => {
 
         // Record initial weights to verify mutation
         const initialWeights = genome.connections.map(
-          (connection) => connection.weight
+          (connection) => connection.weight,
         );
 
         // Act
@@ -435,10 +435,10 @@ describe('Neat advanced coverage', () => {
 
         // Assert: verify mutation actually occurred by checking weight changed
         const finalWeights = genome.connections.map(
-          (connection) => connection.weight
+          (connection) => connection.weight,
         );
         const weightChanged = finalWeights.some(
-          (weight, index) => weight !== initialWeights[index]
+          (weight, index) => weight !== initialWeights[index],
         );
         expect(weightChanged).toBe(true);
       });

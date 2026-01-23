@@ -25,7 +25,7 @@ jest.mock('../../src/neat', () => {
         input: number,
         output: number,
         fitnessFn: FitnessFunction,
-        options: OptionsRecord
+        options: OptionsRecord,
       ) {
         this.input = input;
         this.output = output;
@@ -42,7 +42,7 @@ jest.mock('../../src/neat', () => {
       }
       _warnIfNoBestGenome() {
         console.warn(
-          'Evolution completed without finding a valid best genome (mock)'
+          'Evolution completed without finding a valid best genome (mock)',
         );
       }
     },
@@ -59,7 +59,7 @@ describe('Network.evolveNetwork branch coverage', () => {
       // Act
       await evolveNetwork.call(net, trainingSet, { iterations: 0 });
       const warned = spy.mock.calls.some(([message]) =>
-        /valid best genome/.test(String(message))
+        /valid best genome/.test(String(message)),
       );
       spy.mockRestore();
       // Assert

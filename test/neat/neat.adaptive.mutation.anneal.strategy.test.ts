@@ -23,15 +23,14 @@ describe('Adaptive Mutation anneal strategy', () => {
     test('all rates bounded within [min,max] after adaptation', async () => {
       await neat.evaluate();
       // increase generation to trigger progress scaling
-      ((neat as unknown) as { generation: number }).generation = 40;
+      (neat as unknown as { generation: number }).generation = 40;
       await neat.mutate();
-      const { applyAdaptiveMutation } = await import(
-        '../../src/neat/neat.adaptive'
-      );
-      applyAdaptiveMutation.call((neat as unknown) as NeatLikeWithAdaptive);
+      const { applyAdaptiveMutation } =
+        await import('../../src/neat/neat.adaptive');
+      applyAdaptiveMutation.call(neat as unknown as NeatLikeWithAdaptive);
       type GenomeLike = { _mutRate: number };
-      const within = ((neat.population as unknown) as GenomeLike[]).every(
-        (g) => g._mutRate >= 0.01 && g._mutRate <= 1
+      const within = (neat.population as unknown as GenomeLike[]).every(
+        (g) => g._mutRate >= 0.01 && g._mutRate <= 1,
       );
       expect(within).toBe(true);
     });

@@ -54,7 +54,7 @@ const makeNeat = (popSize: number): DiversityContext => {
         _id: index + 1,
         score: 0,
       };
-    }
+    },
   );
   /** stub instance providing options and helpers */
   let rngCounter = 0;

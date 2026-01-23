@@ -62,7 +62,7 @@ export interface EngineScratchState {
   nodeBuckets: [
     Record<string, unknown>[],
     Record<string, unknown>[],
-    Record<string, unknown>[]
+    Record<string, unknown>[],
   ];
   /** Top entry objects reused when generating snapshots. */
   snapshotTopEntries: Record<string, unknown>[];
@@ -438,7 +438,7 @@ export interface VisitedHashScratchHandles {
  */
 export const ensureVisitedHashCapacity = (
   targetEntryCount: number,
-  state: EngineState = engineState
+  state: EngineState = engineState,
 ): VisitedHashScratchHandles => {
   const scratch = state.scratch;
 
@@ -481,14 +481,14 @@ export const ensureVisitedHashCapacity = (
  */
 export const initialiseTelemetryScratch = (
   request: TelemetryScratchRequest = {},
-  state: EngineState = engineState
+  state: EngineState = engineState,
 ): TelemetryScratchHandles => {
   const scratch = state.scratch;
   const capacityHints = normaliseTelemetryCapacityHints(request);
   ensureTelemetryFloatPools(scratch, capacityHints);
   scratch.stringAssemblyBuffer = ensureTelemetryStringBuffer(
     scratch.stringAssemblyBuffer,
-    capacityHints.stringLength
+    capacityHints.stringLength,
   );
 
   return buildTelemetryHandles(scratch);
@@ -502,7 +502,7 @@ export const initialiseTelemetryScratch = (
  */
 export const ensureRngCacheBatch = (
   parameters: RngCacheParameters,
-  state: EngineState = engineState
+  state: EngineState = engineState,
 ): RngCacheHandles => {
   const scratch = state.scratch;
   const batchSize = normaliseRngBatchSize(parameters.batchSize);
@@ -539,7 +539,7 @@ export const ensureRngCacheBatch = (
  */
 export const reseedRngState = (
   seed: number,
-  state: EngineState = engineState
+  state: EngineState = engineState,
 ): number => {
   const scratch = state.scratch;
   const normalisedSeed = normaliseRngSeed(seed);
@@ -561,7 +561,7 @@ interface TelemetryCapacityHints {
  * @returns Sanitised capacity values used during buffer initialisation.
  */
 const normaliseTelemetryCapacityHints = (
-  request: TelemetryScratchRequest
+  request: TelemetryScratchRequest,
 ): TelemetryCapacityHints => {
   const normaliseSize = (value: number | undefined, fallback = 0): number => {
     if (!Number.isFinite(value as number))
@@ -585,48 +585,48 @@ const normaliseTelemetryCapacityHints = (
  */
 const ensureTelemetryFloatPools = (
   scratch: EngineScratchState,
-  hints: TelemetryCapacityHints
+  hints: TelemetryCapacityHints,
 ): void => {
   const minActionDim = Math.max(4, hints.actionDimension);
   scratch.exps = ensureFloat64Pool(
     scratch.exps,
     minActionDim,
-    4
+    4,
   ); /* exponent scratch for entropy */
   scratch.means = ensureFloat64Pool(
     scratch.means,
     hints.actionDimension,
-    1
+    1,
   ); /* running mean per action */
   scratch.standardDeviations = ensureFloat64Pool(
     scratch.standardDeviations,
     hints.actionDimension,
-    1
+    1,
   ); /* std aggregation buffer */
   scratch.secondMomentRaw = ensureFloat64Pool(
     scratch.secondMomentRaw,
     hints.actionDimension,
-    1
+    1,
   ); /* Welford M2 accumulator */
   scratch.biasTelemetryScratch = ensureFloat64Pool(
     scratch.biasTelemetryScratch,
     hints.biasCount,
-    1
+    1,
   ); /* bias stats workspace */
 
   if (!hints.requiresHigherMoments) return;
 
   scratch.thirdMomentRaw = ensureOptionalFloat64Pool(
     scratch.thirdMomentRaw,
-    hints.actionDimension
+    hints.actionDimension,
   ); /* optional skewness (M3) */
   scratch.fourthMomentRaw = ensureOptionalFloat64Pool(
     scratch.fourthMomentRaw,
-    hints.actionDimension
+    hints.actionDimension,
   ); /* optional kurtosis (M4) */
   scratch.kurtosis = ensureOptionalFloat64Pool(
     scratch.kurtosis,
-    hints.actionDimension
+    hints.actionDimension,
   ); /* derived excess kurtosis */
 };
 
@@ -638,7 +638,7 @@ const ensureTelemetryFloatPools = (
  */
 const ensureTelemetryStringBuffer = (
   buffer: string[],
-  required: number
+  required: number,
 ): string[] => ensureArrayCapacity(buffer, required);
 
 /**
@@ -647,7 +647,7 @@ const ensureTelemetryStringBuffer = (
  * @returns Structured handles consumed by telemetry helpers.
  */
 const buildTelemetryHandles = (
-  scratch: EngineScratchState
+  scratch: EngineScratchState,
 ): TelemetryScratchHandles => ({
   exponentScratch: scratch.exps,
   meanScratch: scratch.means,
@@ -670,7 +670,7 @@ const buildTelemetryHandles = (
 const ensureFloat64Pool = (
   buffer: Float64Array,
   required: number,
-  minimum = 0
+  minimum = 0,
 ): Float64Array => {
   const target = Math.max(required, minimum);
   if (target <= 0 || buffer.length >= target) return buffer;
@@ -690,7 +690,7 @@ const ensureFloat64Pool = (
  */
 const ensureOptionalFloat64Pool = (
   buffer: Float64Array | undefined,
-  required: number
+  required: number,
 ): Float64Array | undefined => {
   if (required <= 0) return buffer;
   if (!buffer) return new Float64Array(nextPowerOfTwo(required));

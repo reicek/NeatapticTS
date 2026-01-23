@@ -67,7 +67,7 @@ const deepCloneValue = <T>(value: T): T => {
  */
 export function getRegularizationStats(this: Network) {
   /** Raw internal stats reference (may be undefined if never set). */
-  const lastStatsSnapshot = ((this as unknown) as NetworkStatsProps)._lastStats;
+  const lastStatsSnapshot = (this as unknown as NetworkStatsProps)._lastStats;
   return lastStatsSnapshot ? deepCloneValue(lastStatsSnapshot) : null;
 }
 

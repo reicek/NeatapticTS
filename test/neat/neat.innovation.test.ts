@@ -33,7 +33,7 @@ describe('Innovation Reuse', () => {
         const genome = neat.population[0];
         // Ensure genome has enabled connections before attempting to split
         const enabledConns = genome.connections.filter(
-          (c) => c.enabled !== false
+          (c) => c.enabled !== false,
         );
         if (enabledConns.length === 0) {
           // Network constructor should have created connections, but ensure they exist
@@ -63,7 +63,7 @@ describe('Innovation Reuse', () => {
             'ADD_NODE mutation did not add a node - connections:',
             genome.connections.length,
             'enabled:',
-            enabledConns.length
+            enabledConns.length,
           );
         }
       });
@@ -94,14 +94,14 @@ describe('Innovation Reuse', () => {
           Reflect.get(neat, '_nodeSplitInnovations') as Map<
             string,
             NodeSplitRecord
-          >
+          >,
         );
         // Reset genome to base network (same from->to gene ids stay constant across runs because geneId is global)
         base = new Network(2, 1, { minHidden: 0 });
         neat.population[0] = base;
         // Invoke internal reuse mutation directly to guarantee using same chosen connection (first enabled)
         const mutateAddNodeReuse = Reflect.get(neat, '_mutateAddNodeReuse') as (
-          genome: Network
+          genome: Network,
         ) => void;
         mutateAddNodeReuse.call(neat, base);
         secondRegistry = Reflect.get(neat, '_nodeSplitInnovations') as Map<
@@ -138,10 +138,10 @@ describe('Innovation Reuse', () => {
       net.nodes.splice(net.nodes.length - net.output, 0, h1, h2); // insert before outputs to preserve feedforward order
       // Remove any accidental connections between them if present (should not be)
       net.connections = net.connections.filter(
-        (c) => !(c.from === h1 && c.to === h2)
+        (c) => !(c.from === h1 && c.to === h2),
       );
       const mutateAddConnReuse = Reflect.get(neat, '_mutateAddConnReuse') as (
-        genome: Network
+        genome: Network,
       ) => void;
       mutateAddConnReuse.call(neat, net);
       const connInnovations = Reflect.get(neat, '_connInnovations') as Map<
@@ -161,17 +161,17 @@ describe('Innovation Reuse', () => {
       const h2 = new Node('hidden');
       net.nodes.splice(net.nodes.length - net.output, 0, h1, h2);
       const mutateAddConnReuse = Reflect.get(neat, '_mutateAddConnReuse') as (
-        genome: Network
+        genome: Network,
       ) => void;
       mutateAddConnReuse.call(neat, net);
       const conn = net.connections.find(
-        (c) => (c.from === h1 && c.to === h2) || (c.from === h2 && c.to === h1)
+        (c) => (c.from === h1 && c.to === h2) || (c.from === h2 && c.to === h1),
       );
       const innovBefore = conn?.innovation;
       if (conn) net.disconnect(conn.from, conn.to);
       mutateAddConnReuse.call(neat, net); // should recreate same pair (only viable)
       const conn2 = net.connections.find(
-        (c) => (c.from === h1 && c.to === h2) || (c.from === h2 && c.to === h1)
+        (c) => (c.from === h1 && c.to === h2) || (c.from === h2 && c.to === h1),
       );
       const innovAfter = conn2?.innovation;
       const reused = innovBefore === innovAfter;
@@ -199,7 +199,7 @@ describe('Cycle Safety', () => {
     net.setEnforceAcyclic(true);
     const before = net.connections.length;
     const mutateAddConnReuse = Reflect.get(neat, '_mutateAddConnReuse') as (
-      genome: Network
+      genome: Network,
     ) => void;
     for (let i = 0; i < 10; i++) mutateAddConnReuse.call(neat, net);
     const after = net.connections.length;

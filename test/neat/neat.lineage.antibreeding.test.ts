@@ -35,7 +35,7 @@ describe('lineage anti-inbreeding pressure', () => {
       const population = neat.population as LineageNetwork[];
       genomesWithParents = population.filter(
         (network) =>
-          Array.isArray(network._parents) && network._parents.length === 2
+          Array.isArray(network._parents) && network._parents.length === 2,
       );
     });
 
@@ -45,7 +45,7 @@ describe('lineage anti-inbreeding pressure', () => {
 
     test('assigns numeric scores to genomes with parent metadata', () => {
       const allScoresNumeric = genomesWithParents.every(
-        (network) => typeof network.score === 'number'
+        (network) => typeof network.score === 'number',
       );
       expect(allScoresNumeric).toBe(true);
     });

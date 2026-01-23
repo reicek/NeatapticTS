@@ -13,7 +13,7 @@ describe('Network.removeNode (standalone) error guards', () => {
       const inputNode = net.nodes[0];
       // Act / Assert
       expect(() => removeNode.call(net, inputNode)).toThrow(
-        /Cannot remove input or output node/
+        /Cannot remove input or output node/,
       );
     });
   });
@@ -25,7 +25,7 @@ describe('Network.removeNode (standalone) error guards', () => {
       const outputNode = net.nodes[net.nodes.length - 1];
       // Act / Assert
       expect(() => removeNode.call(net, outputNode)).toThrow(
-        /Cannot remove input or output node/
+        /Cannot remove input or output node/,
       );
     });
   });
@@ -38,7 +38,7 @@ describe('Network.removeNode (standalone) error guards', () => {
       const foreignNode = otherNet.nodes[0];
       // Act / Assert
       expect(() => removeNode.call(net, foreignNode)).toThrow(
-        /Node not in network/
+        /Node not in network/,
       );
     });
   });

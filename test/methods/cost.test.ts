@@ -151,7 +151,7 @@ describe('Cost', () => {
         console.error = () => {};
         // Act & Assert
         expect(() => Cost.crossEntropy(targets, outputs)).toThrow(
-          'Target and output arrays must have the same length.'
+          'Target and output arrays must have the same length.',
         );
         console.error = originalError;
       });
@@ -1044,7 +1044,7 @@ describe('Cost', () => {
         console.error = () => {};
         // Act & Assert
         expect(() => Cost.focalLoss(targets, outputs)).toThrow(
-          'Target and output arrays must have the same length.'
+          'Target and output arrays must have the same length.',
         );
         console.error = originalError;
       });
@@ -1114,7 +1114,7 @@ describe('Cost', () => {
         console.error = () => {};
         // Act & Assert
         expect(() => Cost.labelSmoothing(targets, outputs)).toThrow(
-          'Target and output arrays must have the same length.'
+          'Target and output arrays must have the same length.',
         );
         console.error = originalError;
       });

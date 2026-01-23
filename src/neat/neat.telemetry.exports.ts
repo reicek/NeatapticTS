@@ -13,7 +13,7 @@ import type {
  * operate against `this` so they can be attached to instances.
  */
 export const exportTelemetryJSONL = function (
-  this: NeatLike & { _telemetry: TelemetryEntry[] }
+  this: NeatLike & { _telemetry: TelemetryEntry[] },
 ): string {
   /**
    * Serialize the internal telemetry array to JSON Lines (JSONL).
@@ -52,7 +52,7 @@ export const exportTelemetryJSONL = function (
  */
 export const exportTelemetryCSV = function (
   this: NeatLike & { _telemetry: TelemetryEntry[] },
-  maxEntries = 500
+  maxEntries = 500,
 ): string {
   /**
    * Recent telemetry entries to export. Contains at most `maxEntries` items.
@@ -138,7 +138,7 @@ interface TelemetryHeaderInfo {
  * - Tracks presence of optional multi-value structures (ops, objectives, etc.).
  */
 const collectTelemetryHeaderInfo = (
-  entries: TelemetryEntry[]
+  entries: TelemetryEntry[],
 ): TelemetryHeaderInfo => {
   /** Discovered base keys (excluding grouped containers). */
   const baseKeys = new Set<string>();
@@ -252,7 +252,7 @@ const buildTelemetryHeaders = (info: TelemetryHeaderInfo): string[] => {
  */
 const serializeTelemetryEntry = (
   entry: TelemetryEntry,
-  headers: string[]
+  headers: string[],
 ): string => {
   /** Accumulator for serialized cell values for one telemetry row. */
   const row: string[] = [];
@@ -269,7 +269,9 @@ const serializeTelemetryEntry = (
           | Record<string, unknown>
           | undefined;
         row.push(
-          complexity && key in complexity ? JSON.stringify(complexity[key]) : ''
+          complexity && key in complexity
+            ? JSON.stringify(complexity[key])
+            : '',
         );
         break;
       }
@@ -294,7 +296,7 @@ const serializeTelemetryEntry = (
           | Record<string, unknown>
           | undefined;
         row.push(
-          diversity && key in diversity ? JSON.stringify(diversity[key]) : ''
+          diversity && key in diversity ? JSON.stringify(diversity[key]) : '',
         );
         break;
       }
@@ -304,7 +306,7 @@ const serializeTelemetryEntry = (
         // is typically an index set or representation of a front. Serialized
         // as JSON array for downstream MOEA visualization.
         row.push(
-          Array.isArray(entry.fronts) ? JSON.stringify(entry.fronts) : ''
+          Array.isArray(entry.fronts) ? JSON.stringify(entry.fronts) : '',
         );
         break;
       }
@@ -322,7 +324,7 @@ const serializeTelemetryEntry = (
         row.push(
           Array.isArray(entry.objectives)
             ? JSON.stringify(entry.objectives)
-            : ''
+            : '',
         );
         break;
       }
@@ -338,7 +340,7 @@ const serializeTelemetryEntry = (
         row.push(
           Array.isArray(entry.speciesAlloc)
             ? JSON.stringify(entry.speciesAlloc)
-            : ''
+            : '',
         );
         break;
       }
@@ -346,7 +348,7 @@ const serializeTelemetryEntry = (
         // objEvents: timeline of objective-related events (e.g., dominance
         // shifts, re-weighting). Provides temporal context to objective trends.
         row.push(
-          Array.isArray(entry.objEvents) ? JSON.stringify(entry.objEvents) : ''
+          Array.isArray(entry.objEvents) ? JSON.stringify(entry.objEvents) : '',
         );
         break;
       }
@@ -355,7 +357,7 @@ const serializeTelemetryEntry = (
         // adaptive multi-objective strategies; used for post-hoc analysis of
         // weight schedules.
         row.push(
-          entry.objImportance ? JSON.stringify(entry.objImportance) : ''
+          entry.objImportance ? JSON.stringify(entry.objImportance) : '',
         );
         break;
       }
@@ -365,9 +367,7 @@ const serializeTelemetryEntry = (
         // properties (e.g., generation, population size, best score). Use
         // JSON.stringify so objects/arrays stay parseable and commas safe.
         row.push(
-          JSON.stringify(
-            ((entry as unknown) as Record<string, unknown>)[header]
-          )
+          JSON.stringify((entry as unknown as Record<string, unknown>)[header]),
         );
         break;
       }
@@ -397,7 +397,7 @@ export const exportSpeciesHistoryCSV = function (
     _species?: SpeciesHistoryStat[];
     generation?: number;
   },
-  maxEntries = 200
+  maxEntries = 200,
 ): string {
   /** Ensure the species history structure exists on the instance. */
   if (!Array.isArray(this._speciesHistory)) this._speciesHistory = [];
@@ -415,31 +415,29 @@ export const exportSpeciesHistoryCSV = function (
   ) {
     // Create a minimal snapshot on demand so early exports (before evolve/speciate) still yield a header row
     // Defensive: allow for legacy or incomplete species objects
-    const stats: SpeciesHistoryStat[] = ((this._species as unknown) as Record<
-      string,
-      unknown
-    >[]).map((sp) => ({
+    const stats: SpeciesHistoryStat[] = (
+      this._species as unknown as Record<string, unknown>[]
+    ).map((sp) => ({
       id: typeof sp.id === 'number' ? sp.id : -1,
       size: Array.isArray(sp.members)
         ? sp.members.length
         : typeof sp.size === 'number'
-        ? sp.size
-        : 0,
+          ? sp.size
+          : 0,
       bestScore:
         typeof sp.bestScore === 'number'
           ? sp.bestScore
           : typeof sp.best === 'number'
-          ? sp.best
-          : 0,
+            ? sp.best
+            : 0,
       lastImproved: typeof sp.lastImproved === 'number' ? sp.lastImproved : 0,
     }));
     this._speciesHistory.push({ generation: this.generation || 0, stats });
   }
 
   /** Recent slice of the species history we will export. */
-  const recentHistory: SpeciesHistoryEntry[] = this._speciesHistory.slice(
-    -maxEntries
-  );
+  const recentHistory: SpeciesHistoryEntry[] =
+    this._speciesHistory.slice(-maxEntries);
   if (!recentHistory.length) {
     // Emit header-only CSV for deterministic empty export
     return 'generation,id,size,best,lastImproved';
@@ -472,7 +470,7 @@ const HEADER_GENERATION = 'generation';
  */
 const buildSpeciesHistoryCsv = (
   recentHistory: SpeciesHistoryEntry[],
-  headers: string[]
+  headers: string[],
 ): string => {
   /** Accumulates lines; seeded with header row. */
   const lines: string[] = [headers.join(',')];
@@ -491,8 +489,8 @@ const buildSpeciesHistoryCsv = (
         // Use index signature for dynamic keys
         rowCells.push(
           JSON.stringify(
-            ((speciesStat as unknown) as Record<string, unknown>)[header]
-          )
+            (speciesStat as unknown as Record<string, unknown>)[header],
+          ),
         );
       }
       lines.push(rowCells.join(','));

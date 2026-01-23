@@ -6,10 +6,10 @@ const clearConnectionWeights = (network: Network): void => {
 
 const runInternalFastSlabActivate = (
   network: Network,
-  values: number[]
+  values: number[],
 ): number[] => {
   const fastSlab = Reflect.get(network, '_fastSlabActivate') as (
-    input: number[]
+    input: number[],
   ) => number[];
   return fastSlab.call(network, values);
 };
@@ -33,7 +33,7 @@ describe('Network.fastSlabActivate prerequisites', () => {
       // Act
       const outputVector = runInternalFastSlabActivate(
         networkUnderTest,
-        inputVector
+        inputVector,
       );
       // Assert
       expect(outputVector.length).toBe(2);

@@ -68,7 +68,7 @@ export const resolveRngParameters = (): RngCacheParameters => {
 export const accumulateProfilingDuration = (
   state: EngineState,
   category: string,
-  deltaMs: number
+  deltaMs: number,
 ): void => {
   if (!state.profiling.detailsEnabled) return;
   if (!Number.isFinite(deltaMs)) return;
@@ -86,7 +86,7 @@ export const accumulateProfilingDuration = (
  */
 export const drawFastRandom = (
   state: EngineState,
-  parameters: RngCacheParameters
+  parameters: RngCacheParameters,
 ): number => {
   const rngHandles = ensureRngCacheBatch(parameters, state);
   const scratch = state.scratch;
@@ -102,7 +102,7 @@ export const drawFastRandom = (
  */
 export const setDeterministicMode = (
   state: EngineState,
-  seed?: number
+  seed?: number,
 ): void => {
   state.deterministicMode = true;
   if (typeof seed === 'number' && Number.isFinite(seed)) {
@@ -141,5 +141,5 @@ export const isProfilingDetailsEnabled = (state: EngineState): boolean =>
  * @returns Mutable record of profiling accumulators keyed by category name.
  */
 export const getProfilingAccumulators = (
-  state: EngineState
+  state: EngineState,
 ): Record<string, number> => state.profiling.accumulators;

@@ -111,7 +111,7 @@ describe('Group Connection Methods', () => {
         // Act
         // Assert
         expect(Object.keys(groupConnection).sort()).toEqual(
-          ['ALL_TO_ALL', 'ALL_TO_ELSE', 'ONE_TO_ONE'].sort()
+          ['ALL_TO_ALL', 'ALL_TO_ELSE', 'ONE_TO_ONE'].sort(),
         );
       });
     });

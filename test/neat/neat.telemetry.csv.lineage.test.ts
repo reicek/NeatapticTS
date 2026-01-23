@@ -12,7 +12,7 @@ describe('Telemetry CSV lineage flattening', () => {
         lineageTracking: true,
         telemetry: { enabled: true, logEvery: 1 },
         diversityMetrics: { enabled: true },
-      }
+      },
     );
     await neat.evolve();
     await neat.evolve();

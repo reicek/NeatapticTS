@@ -27,7 +27,7 @@ describe('Network.evolveNetwork', () => {
       ]; // wrong input length
       // Act / Assert
       await expect(
-        evolveNetwork.call(net, invalidTrainingSet, { iterations: 1 })
+        evolveNetwork.call(net, invalidTrainingSet, { iterations: 1 }),
       ).rejects.toThrow(/Dataset is invalid/);
     });
   });
@@ -39,7 +39,7 @@ describe('Network.evolveNetwork', () => {
       const trainingSet: TrainingSet = [{ input: [0.1], output: [0.2] }];
       // Act / Assert
       await expect(evolveNetwork.call(net, trainingSet, {})).rejects.toThrow(
-        /At least one stopping condition/
+        /At least one stopping condition/,
       );
     });
   });

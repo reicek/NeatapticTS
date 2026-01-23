@@ -58,7 +58,7 @@ export class TerminalUtility {
   static async evolveUntilSolved(
     evolveFn: () => Promise<IEvolutionFunctionResult>,
     minProgressToPass: number = 60,
-    maxTries: number = 10
+    maxTries: number = 10,
   ): Promise<{ finalResult: IEvolutionStepResult; tries: number }> {
     /**
      * Tracks the number of tries performed.

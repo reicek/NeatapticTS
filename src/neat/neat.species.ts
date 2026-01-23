@@ -29,7 +29,7 @@ import type {
  * @returns Array of per-species summaries suitable for reporting.
  */
 export function getSpeciesStats(
-  this: NeatLike
+  this: NeatLike,
 ): { id: number; size: number; bestScore: number; lastImproved: number }[] {
   // `speciesArray` is a reference to the internal species registry. We map
   // to a minimal representation to avoid exposing the full objects.
@@ -39,7 +39,7 @@ export function getSpeciesStats(
    * This value is intentionally not documented in the public API; we only
    * expose the derived summary below.
    */
-  const ctx = (this as unknown) as { _species?: unknown[] };
+  const ctx = this as unknown as { _species?: unknown[] };
   const speciesArray = (ctx._species as SpeciesLike[]) || [];
 
   // Map internal species to compact summaries.
@@ -113,7 +113,7 @@ export function getSpeciesHistory(this: NeatLike): SpeciesHistoryEntry[] {
         // Find a representative species object in the current population by id
         // `speciesObj` is used to compute fallbacks when needed.
         const speciesObj = (ctx._species || []).find(
-          (s) => s.id === speciesStat.id
+          (s) => s.id === speciesStat.id,
         ) as SpeciesLike | undefined;
 
         // If we have members, compute cheap fallbacks for innovationRange and enabledRatio

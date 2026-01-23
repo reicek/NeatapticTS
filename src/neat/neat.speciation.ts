@@ -18,7 +18,7 @@ import type {
 // Compact, typed implementations for species maintenance helpers.
 
 export function _speciate<
-  TOptions extends SpeciationOptions = SpeciationOptions
+  TOptions extends SpeciationOptions = SpeciationOptions,
 >(this: SpeciationHarnessContext<TOptions>) {
   this._prevSpeciesMembers = this._prevSpeciesMembers ?? new Map();
   this._prevSpeciesMembers.clear();
@@ -36,7 +36,7 @@ export function _speciate<
     for (const species of this._species) {
       const compatibilityDistance = this._compatibilityDistance(
         genome,
-        species.representative as GenomeDetailed
+        species.representative as GenomeDetailed,
       );
       if (compatibilityDistance < (this.options.compatibilityThreshold ?? 3)) {
         species.members.push(genome);
@@ -103,7 +103,8 @@ export function _speciate<
 
   this._species = this._species.filter((species) => species.members.length > 0);
   this._species.forEach(
-    (species) => (species.representative = species.members[0] as GenomeDetailed)
+    (species) =>
+      (species.representative = species.members[0] as GenomeDetailed),
   );
 
   const ageProtection = options.speciesAgeProtection ?? {
@@ -200,7 +201,7 @@ export const _applyFitnessSharing = function (
   this: NeatLike & {
     _species: SpeciesLike[];
     _compatibilityDistance: (a: GenomeDetailed, b: GenomeDetailed) => number;
-  }
+  },
 ) {
   interface OptionsWithSharing {
     sharingSigma?: number;
@@ -243,7 +244,7 @@ export const _applyFitnessSharing = function (
  */
 export const _sortSpeciesMembers = (sp: SpeciesLike) => {
   (sp.members as GenomeDetailed[]).sort(
-    (a, b) => (b.score || 0) - (a.score || 0)
+    (a, b) => (b.score || 0) - (a.score || 0),
   );
 };
 
@@ -253,7 +254,7 @@ export const _sortSpeciesMembers = (sp: SpeciesLike) => {
  * @param this - Neat instance context with species array and generation counter.
  */
 export const _updateSpeciesStagnation = function (
-  this: NeatLike & { _species: SpeciesLike[]; generation: number }
+  this: NeatLike & { _species: SpeciesLike[]; generation: number },
 ) {
   interface OptionsWithStagnation {
     stagnationGenerations?: number;
@@ -269,7 +270,7 @@ export const _updateSpeciesStagnation = function (
     }
   }
   const survivors = this._species.filter(
-    (s) => this.generation - (s.lastImproved ?? 0) <= win
+    (s) => this.generation - (s.lastImproved ?? 0) <= win,
   );
   if (survivors.length) this._species = survivors;
 };

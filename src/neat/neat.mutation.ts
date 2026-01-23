@@ -18,7 +18,7 @@ interface GenomeWithMetadata {
   connect?: (
     from: NodeWithMetadata,
     to: NodeWithMetadata,
-    weight?: number
+    weight?: number,
   ) => ConnectionWithMetadata[];
   disconnect?: (from: NodeWithMetadata, to: NodeWithMetadata) => void;
 }
@@ -111,7 +111,7 @@ interface NeatControllerForMutation {
   _getRNG: () => () => number;
   selectMutationMethod: (
     genome: GenomeWithMetadata,
-    crossover: boolean
+    crossover: boolean,
   ) => MutationMethod | MutationMethod[];
   _mutateAddNodeReuse: (genome: GenomeWithMetadata) => void;
   _mutateAddConnReuse: (genome: GenomeWithMetadata) => void;
@@ -148,7 +148,7 @@ interface NeatControllerForMutation {
  * @this NeatLike - instance of a Neat controller with population and options
  */
 export async function mutate(this: NeatLike): Promise<void> {
-  const internal = (this as unknown) as NeatControllerForMutation;
+  const internal = this as unknown as NeatControllerForMutation;
 
   /**
    * Methods module — collection of mutation operator descriptors used to map
@@ -163,8 +163,8 @@ export async function mutate(this: NeatLike): Promise<void> {
         genome._mutRate =
           internal.options.mutationRate !== undefined
             ? internal.options.mutationRate
-            : internal.options.adaptiveMutation.initialRate ??
-              (internal.options.mutationRate || 0.7);
+            : (internal.options.adaptiveMutation.initialRate ??
+              (internal.options.mutationRate || 0.7));
         if (internal.options.adaptiveMutation.adaptAmount) {
           genome._mutAmount = internal.options.mutationAmount || 1;
         }
@@ -176,12 +176,12 @@ export async function mutate(this: NeatLike): Promise<void> {
       internal.options.mutationRate !== undefined
         ? internal.options.mutationRate
         : internal.options.adaptiveMutation?.enabled
-        ? genome._mutRate ?? 0.7
-        : internal.options.mutationRate || 0.7;
+          ? (genome._mutRate ?? 0.7)
+          : internal.options.mutationRate || 0.7;
     const effectiveAmount =
       internal.options.adaptiveMutation?.enabled &&
       internal.options.adaptiveMutation.adaptAmount
-        ? genome._mutAmount ?? (internal.options.mutationAmount || 1)
+        ? (genome._mutAmount ?? (internal.options.mutationAmount || 1))
         : internal.options.mutationAmount || 1;
 
     // Decide whether to mutate this genome at all.
@@ -283,7 +283,7 @@ export async function mutate(this: NeatLike): Promise<void> {
              * selected mutation operator (used to adapt operator frequencies).
              */
             const statsRecord = internal._operatorStats.get(
-              mutationMethod.name
+              mutationMethod.name,
             ) || {
               success: 0,
               attempts: 0,
@@ -332,9 +332,9 @@ export async function mutate(this: NeatLike): Promise<void> {
  */
 export async function mutateAddNodeReuse(
   this: NeatLike,
-  genome: GenomeWithMetadata
+  genome: GenomeWithMetadata,
 ): Promise<void> {
-  const internal = (this as unknown) as NeatControllerForMutation;
+  const internal = this as unknown as NeatControllerForMutation;
 
   // If genome lacks any connections, try to create a simple input->output link
   if (genome.connections.length === 0) {
@@ -354,7 +354,7 @@ export async function mutateAddNodeReuse(
   // Choose an enabled (not disabled) connection at random
   /** All connections that are currently enabled on the genome. */
   const enabledConnections = genome.connections.filter(
-    (connection) => connection.enabled !== false
+    (connection) => connection.enabled !== false,
   );
   if (!enabledConnections.length) return;
   /** Randomly selected connection to split. */
@@ -383,14 +383,14 @@ export async function mutateAddNodeReuse(
   if (!splitRecord) {
     // No historical split; create a new hidden node and two connecting edges
     /** Newly created hidden node instance for the split. */
-    const newNode = (new NodeClass('hidden') as unknown) as NodeWithMetadata;
+    const newNode = new NodeClass('hidden') as unknown as NodeWithMetadata;
     /** Connection object from original source to new node. */
     const inConn = genome.connect?.(chosenConn.from, newNode, 1)?.[0];
     /** Connection object from new node to original target. */
     const outConn = genome.connect?.(
       newNode,
       chosenConn.to,
-      originalWeight
+      originalWeight,
     )?.[0];
     if (inConn) inConn.innovation = internal._nextGlobalInnovation++;
     if (outConn) outConn.innovation = internal._nextGlobalInnovation++;
@@ -412,7 +412,7 @@ export async function mutateAddNodeReuse(
     // Reuse a historical split: create a new node instance but assign the
     // historical geneId and innovation numbers so the split is aligned
     /** New node instance (reusing historical gene id for alignment). */
-    const newNode = (new NodeClass('hidden') as unknown) as NodeWithMetadata;
+    const newNode = new NodeClass('hidden') as unknown as NodeWithMetadata;
     newNode.geneId = splitRecord.newNodeGeneId;
     const toIndex = genome.nodes.indexOf(chosenConn.to);
     const insertIndex = Math.min(toIndex, genome.nodes.length - genome.output);
@@ -423,7 +423,7 @@ export async function mutateAddNodeReuse(
     const outConn = genome.connect?.(
       newNode,
       chosenConn.to,
-      originalWeight
+      originalWeight,
     )?.[0];
     if (inConn) inConn.innovation = splitRecord.inInnov;
     if (outConn) outConn.innovation = splitRecord.outInnov;
@@ -457,9 +457,9 @@ export async function mutateAddNodeReuse(
  */
 export function mutateAddConnReuse(
   this: NeatLike,
-  genome: GenomeWithMetadata
+  genome: GenomeWithMetadata,
 ): void {
-  const internal = (this as unknown) as NeatControllerForMutation;
+  const internal = this as unknown as NeatControllerForMutation;
 
   /** Candidate (from,to) node pairs that are not currently connected. */
   const candidatePairs: Array<[NodeWithMetadata, NodeWithMetadata]> = [];
@@ -513,13 +513,13 @@ export function mutateAddConnReuse(
   const hiddenPairs = reuseCandidates.length
     ? []
     : candidatePairs.filter(
-        (pair) => pair[0].type === 'hidden' && pair[1].type === 'hidden'
+        (pair) => pair[0].type === 'hidden' && pair[1].type === 'hidden',
       );
   const pool = reuseCandidates.length
     ? reuseCandidates
     : hiddenPairs.length
-    ? hiddenPairs
-    : candidatePairs;
+      ? hiddenPairs
+      : candidatePairs;
 
   // Deterministic selection when only one pair exists (important for tests)
   /** The pair chosen to be connected (deterministic if only one candidate). */
@@ -580,16 +580,16 @@ export function mutateAddConnReuse(
 export async function ensureMinHiddenNodes(
   this: NeatLike,
   network: GenomeWithMetadata,
-  multiplierOverride?: number
+  multiplierOverride?: number,
 ): Promise<void> {
-  const internal = (this as unknown) as NeatControllerForMutation;
+  const internal = this as unknown as NeatControllerForMutation;
 
   /** Maximum allowed nodes from configuration (or Infinity). */
   const maxNodes = internal.options.maxNodes || Infinity;
   /** Minimum number of hidden nodes required for this network (bounded by maxNodes). */
   const minHidden = Math.min(
     internal.getMinimumHiddenSize?.(multiplierOverride) ?? 0,
-    maxNodes - network.nodes.filter((node) => node.type !== 'hidden').length
+    maxNodes - network.nodes.filter((node) => node.type !== 'hidden').length,
   );
 
   /** Input nodes present in the network. */
@@ -602,7 +602,7 @@ export async function ensureMinHiddenNodes(
   if (inputNodes.length === 0 || outputNodes.length === 0) {
     try {
       console.warn(
-        'Network is missing input or output nodes — skipping minHidden enforcement'
+        'Network is missing input or output nodes — skipping minHidden enforcement',
       );
     } catch {
       // Intentionally ignore: console may not be available in all environments.
@@ -621,7 +621,7 @@ export async function ensureMinHiddenNodes(
     hiddenIndex++
   ) {
     /** Newly created hidden node to satisfy minimum hidden requirement. */
-    const newNode = (new NodeClass('hidden') as unknown) as NodeWithMetadata;
+    const newNode = new NodeClass('hidden') as unknown as NodeWithMetadata;
     network.nodes.push(newNode);
     hiddenNodes.push(newNode);
   }
@@ -629,7 +629,7 @@ export async function ensureMinHiddenNodes(
   for (const hiddenNode of hiddenNodes) {
     if (hiddenNode.connections.in.length === 0) {
       const candidates = inputNodes.concat(
-        hiddenNodes.filter((node) => node !== hiddenNode)
+        hiddenNodes.filter((node) => node !== hiddenNode),
       );
       if (candidates.length > 0) {
         const rng = internal._getRNG();
@@ -643,7 +643,7 @@ export async function ensureMinHiddenNodes(
     }
     if (hiddenNode.connections.out.length === 0) {
       const candidates = outputNodes.concat(
-        hiddenNodes.filter((node) => node !== hiddenNode)
+        hiddenNodes.filter((node) => node !== hiddenNode),
       );
       if (candidates.length > 0) {
         const rng = internal._getRNG();
@@ -666,9 +666,9 @@ export async function ensureMinHiddenNodes(
  */
 export function ensureNoDeadEnds(
   this: NeatLike,
-  network: GenomeWithMetadata
+  network: GenomeWithMetadata,
 ): void {
-  const internal = (this as unknown) as NeatControllerForMutation;
+  const internal = this as unknown as NeatControllerForMutation;
 
   const inputNodes = network.nodes.filter((node) => node.type === 'input');
   const outputNodes = network.nodes.filter((node) => node.type === 'output');
@@ -714,7 +714,7 @@ export function ensureNoDeadEnds(
   for (const hiddenNode of hiddenNodes) {
     if (!hasIncoming(hiddenNode)) {
       const candidates = inputNodes.concat(
-        hiddenNodes.filter((node) => node !== hiddenNode)
+        hiddenNodes.filter((node) => node !== hiddenNode),
       );
       if (candidates.length > 0) {
         const rng = internal._getRNG();
@@ -728,7 +728,7 @@ export function ensureNoDeadEnds(
     }
     if (!hasOutgoing(hiddenNode)) {
       const candidates = outputNodes.concat(
-        hiddenNodes.filter((node) => node !== hiddenNode)
+        hiddenNodes.filter((node) => node !== hiddenNode),
       );
       if (candidates.length > 0) {
         const rng = internal._getRNG();
@@ -752,9 +752,9 @@ export function ensureNoDeadEnds(
 export async function selectMutationMethod(
   this: NeatLike,
   genome: GenomeWithMetadata,
-  rawReturnForTest: boolean = true
+  rawReturnForTest: boolean = true,
 ): Promise<MutationMethod | MutationMethod[] | null> {
-  const internal = (this as unknown) as NeatControllerForMutation;
+  const internal = this as unknown as NeatControllerForMutation;
 
   /** Methods module used to access named mutation operator descriptors. */
   const methods = await import('../methods/methods');
@@ -768,14 +768,14 @@ export async function selectMutationMethod(
     (internal.options.mutation as unknown[])[0] === methods.mutation.FFW;
 
   if ((isFFWDirect || isFFWNested) && rawReturnForTest) {
-    return (methods.mutation.FFW as unknown) as MutationMethod[];
+    return methods.mutation.FFW as unknown as MutationMethod[];
   }
   if (isFFWDirect) {
-    const ffwArray = (methods.mutation.FFW as unknown) as MutationMethod[];
+    const ffwArray = methods.mutation.FFW as unknown as MutationMethod[];
     return ffwArray[Math.floor(internal._getRNG()() * ffwArray.length)];
   }
   if (isFFWNested) {
-    const ffwArray = (methods.mutation.FFW as unknown) as MutationMethod[];
+    const ffwArray = methods.mutation.FFW as unknown as MutationMethod[];
     return ffwArray[Math.floor(internal._getRNG()() * ffwArray.length)];
   }
 
@@ -785,19 +785,19 @@ export async function selectMutationMethod(
     rawReturnForTest &&
     Array.isArray(pool) &&
     pool.length ===
-      ((methods.mutation.FFW as unknown) as MutationMethod[]).length &&
+      (methods.mutation.FFW as unknown as MutationMethod[]).length &&
     pool.every(
       (method, methodIndex) =>
         method &&
         method.name ===
-          ((methods.mutation.FFW as unknown) as MutationMethod[])[methodIndex]
-            .name
+          (methods.mutation.FFW as unknown as MutationMethod[])[methodIndex]
+            .name,
     )
   ) {
-    return (methods.mutation.FFW as unknown) as MutationMethod[];
+    return methods.mutation.FFW as unknown as MutationMethod[];
   }
   if (pool.length === 1 && Array.isArray(pool[0]) && pool[0].length) {
-    pool = (pool[0] as unknown) as MutationMethod[];
+    pool = pool[0] as unknown as MutationMethod[];
   }
 
   if (internal.options.phasedComplexity?.enabled && internal._phase) {
@@ -809,7 +809,7 @@ export async function selectMutationMethod(
           method &&
           method.name &&
           method.name.startsWith &&
-          method.name.startsWith('SUB_')
+          method.name.startsWith('SUB_'),
       );
       if (simplifyPool.length) pool = [...pool, ...simplifyPool];
     } else if (internal._phase === 'complexify') {
@@ -819,7 +819,7 @@ export async function selectMutationMethod(
           method &&
           method.name &&
           method.name.startsWith &&
-          method.name.startsWith('ADD_')
+          method.name.startsWith('ADD_'),
       );
       if (addPool.length) pool = [...pool, ...addPool];
     }
@@ -889,7 +889,7 @@ export async function selectMutationMethod(
     const totalAttempts =
       (Array.from(stats.values()) as OperatorStats[]).reduce(
         (accumulator, operatorStat) => accumulator + operatorStat.attempts,
-        0
+        0,
       ) + EPSILON; // stability epsilon
     /** Candidate best operator (initialized to current random pick). */
     let best = mutationMethod;
@@ -908,7 +908,7 @@ export async function selectMutationMethod(
           ? Infinity
           : explorationCoefficient *
             Math.sqrt(
-              Math.log(totalAttempts) / (operatorStats.attempts + EPSILON)
+              Math.log(totalAttempts) / (operatorStats.attempts + EPSILON),
             );
       /** Combined score used to rank operators. */
       const val = mean + bonus;

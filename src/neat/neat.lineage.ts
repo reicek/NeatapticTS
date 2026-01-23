@@ -78,7 +78,7 @@ const ANCESTOR_DEPTH_WINDOW = 4;
  */
 export function buildAnc(
   this: NeatLineageContext,
-  genome: GenomeLike
+  genome: GenomeLike,
 ): Set<number> {
   // Initialize ancestor ID accumulator.
   const ancestorSet = new Set<number>();
@@ -175,7 +175,7 @@ export function computeAncestorUniqueness(this: NeatLineageContext): number {
    */
   const maxSamplePairs = Math.min(
     MAX_UNIQUENESS_SAMPLE_PAIRS,
-    (this.population.length * (this.population.length - 1)) / 2
+    (this.population.length * (this.population.length - 1)) / 2,
   );
 
   // Main sampling loop.

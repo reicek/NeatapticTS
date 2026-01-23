@@ -54,7 +54,7 @@ interface NetworkRemoveProps {
  */
 export function removeNode(this: Network, node: Node) {
   /** Cast to access internal dirty flags without changing public typing. */
-  const internalNet = (this as unknown) as NetworkRemoveProps;
+  const internalNet = this as unknown as NetworkRemoveProps;
   /** Index of the node in the network's node array (or -1 if not found). */
   const idx = this.nodes.indexOf(node);
   if (idx === -1) throw new Error('Node not in network');
@@ -66,7 +66,7 @@ export function removeNode(this: Network, node: Node) {
   // 1. Ungate any connections gated BY this node (drop gating influence).
   this.gates = this.gates.filter((c) => {
     if (c.gater === node) {
-      ((c as unknown) as Connection).gater = null; // explicit null so legacy checks see it as ungated
+      (c as unknown as Connection).gater = null; // explicit null so legacy checks see it as ungated
       return false; // remove from gates list
     }
     return true;
@@ -87,7 +87,7 @@ export function removeNode(this: Network, node: Node) {
   // 5. Physically remove the node from the node list (and release to pool if enabled).
   const removed = this.nodes.splice(idx, 1)[0];
   if (config.enableNodePooling && removed) {
-    _releaseNode((removed as unknown) as Node);
+    _releaseNode(removed as unknown as Node);
   }
 
   // 6. Reconnect every former inbound source to every former outbound target if a direct edge is missing.
@@ -96,7 +96,7 @@ export function removeNode(this: Network, node: Node) {
       if (!ic.from || !oc.to || ic.from === oc.to) return; // skip invalid or trivial (self) cases
       /** True when a direct connection between source and target already exists. */
       const exists = this.connections.some(
-        (c) => c.from === ic.from && c.to === oc.to
+        (c) => c.from === ic.from && c.to === oc.to,
       );
       if (!exists) this.connect(ic.from, oc.to);
     });

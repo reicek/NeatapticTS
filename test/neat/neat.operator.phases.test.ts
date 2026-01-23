@@ -14,7 +14,7 @@ describe('Phased complexity switching', () => {
     });
     await neat.evaluate();
     await neat.evolve(); // gen1
-    const neatWithPhase = (neat as unknown) as { _phase?: number };
+    const neatWithPhase = neat as unknown as { _phase?: number };
     const initialPhase = neatWithPhase._phase;
     await neat.evolve(); // gen2 toggles
     await neat.evolve(); // gen3 (second phase)
@@ -41,7 +41,7 @@ describe('Operator adaptation tracking', () => {
     });
     await neat.evaluate();
     await neat.evolve();
-    const neatWithStats = (neat as unknown) as {
+    const neatWithStats = neat as unknown as {
       _operatorStats: Map<string, unknown>;
     };
     const hasAnyOperatorStat = neatWithStats._operatorStats.size > 0;

@@ -25,7 +25,7 @@ describe('Adaptive Minimal Criterion', () => {
         (Reflect.get(neat as object, '_mcThreshold') as number | undefined) ??
         0.1;
       applyMinimalCriterionAdaptive.call(
-        (neat as unknown) as NeatLikeWithAdaptive
+        neat as unknown as NeatLikeWithAdaptive,
       );
       // Act: obtain adapted threshold
       const after = Reflect.get(neat as object, '_mcThreshold') as number;

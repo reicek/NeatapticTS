@@ -34,10 +34,10 @@ describe('NEAT Compatibility Distance', () => {
       genomeA = neat.population[0] as NetworkWithMutableConnections;
       genomeB = neat.population[1] as NetworkWithMutableConnections;
       genomeA.connections.forEach((connection) =>
-        Reflect.deleteProperty(connection, 'innovation')
+        Reflect.deleteProperty(connection, 'innovation'),
       );
       genomeB.connections.forEach((connection) =>
-        Reflect.deleteProperty(connection, 'innovation')
+        Reflect.deleteProperty(connection, 'innovation'),
       );
     });
     test('second distance call reuses cached value', () => {

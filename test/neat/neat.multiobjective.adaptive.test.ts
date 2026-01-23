@@ -20,7 +20,7 @@ describe('multi-objective adaptive epsilon & exports', () => {
           complexityMetric: 'nodes',
         },
         telemetry: { enabled: true, hypervolume: true },
-      }
+      },
     );
     const initial = neat.options.multiObjective!.dominanceEpsilon ?? 0;
     for (let iterationIndex = 0; iterationIndex < 5; iterationIndex += 1) {
@@ -43,7 +43,7 @@ describe('multi-objective adaptive epsilon & exports', () => {
         popsize: 18,
         multiObjective: { enabled: true, autoEntropy: true },
         telemetry: { enabled: true },
-      }
+      },
     );
     for (let iterationIndex = 0; iterationIndex < 3; iterationIndex += 1) {
       await neat.evolve();

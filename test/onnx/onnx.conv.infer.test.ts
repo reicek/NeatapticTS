@@ -14,7 +14,7 @@ describe('ONNX Conv Inference & Pool Import Attachment', () => {
       const onnx = exportToONNX(net, { includeMetadata: true });
       const onnxModel = onnx as OnnxModel;
       const inferred = (onnxModel.metadata_props || []).find(
-        (m) => m.key === 'conv2d_inferred_layers'
+        (m) => m.key === 'conv2d_inferred_layers',
       );
       expect(!!inferred).toBe(true);
     });

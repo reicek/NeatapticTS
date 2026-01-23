@@ -26,14 +26,14 @@ describe('Adaptive Mutation amount adaptation', () => {
       await neat.evaluate();
       await neat.mutate();
       // use ES import to access adaptive helpers
-      const { applyAdaptiveMutation } = await import(
-        '../../src/neat/neat.adaptive'
-      );
-      applyAdaptiveMutation.call((neat as unknown) as NeatLikeWithAdaptive);
+      const { applyAdaptiveMutation } =
+        await import('../../src/neat/neat.adaptive');
+      applyAdaptiveMutation.call(neat as unknown as NeatLikeWithAdaptive);
       type GenomeWithAdaptiveAmount = Network & { _mutAmount: number };
-      const populationWithAdaptiveAmount = neat.population as Array<GenomeWithAdaptiveAmount>;
+      const populationWithAdaptiveAmount =
+        neat.population as Array<GenomeWithAdaptiveAmount>;
       const mutationAmountWithinBounds = populationWithAdaptiveAmount.every(
-        (genome) => genome._mutAmount >= 1 && genome._mutAmount <= 6
+        (genome) => genome._mutAmount >= 1 && genome._mutAmount <= 6,
       );
       expect(mutationAmountWithinBounds).toBe(true);
     });

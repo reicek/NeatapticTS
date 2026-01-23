@@ -368,7 +368,7 @@ export const Activation: {
  */
 export const registerCustomActivation = (
   name: string,
-  fn: (x: number, derivate?: boolean) => number
+  fn: (x: number, derivate?: boolean) => number,
 ): void => {
   Activation[name] = fn;
 };

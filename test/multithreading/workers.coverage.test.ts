@@ -6,9 +6,8 @@ import type {
 
 describe('Workers coverage', () => {
   it('Workers.getNodeTestWorker loads a class with evaluate/terminate', async () => {
-    const mod = await import(
-      '../../src/multithreading/workers/node/testworker'
-    );
+    const mod =
+      await import('../../src/multithreading/workers/node/testworker');
     const WorkerCtor = mod.TestWorker as TestWorkerConstructor;
     jest.spyOn(Multi, 'getNodeTestWorker').mockResolvedValue(WorkerCtor);
     const WorkerClass = await Multi.getNodeTestWorker();
@@ -30,7 +29,7 @@ describe('Workers coverage', () => {
       evaluate(candidateNetwork: SerializableNetwork) {
         void candidateNetwork;
         return Promise.resolve(
-          this.payload.length + this.descriptor.name.length
+          this.payload.length + this.descriptor.name.length,
         );
       }
       terminate() {}

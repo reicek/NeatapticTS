@@ -30,7 +30,7 @@ describe('Neat spawnFromParent and addGenome helpers', () => {
         void network;
         return 0;
       },
-      { popsize: 6 }
+      { popsize: 6 },
     );
 
   describe('spawnFromParent(parent, mutateCount)', () => {
@@ -46,7 +46,7 @@ describe('Neat spawnFromParent and addGenome helpers', () => {
       // Arrange: have neat and parent defined above
       // Act: spawn a child (await the async operation)
       const child = withInternalGenome(
-        await neatWithHelpers.spawnFromParent(parent, 1)
+        await neatWithHelpers.spawnFromParent(parent, 1),
       );
       // Assert: child id must not equal parent id
       expect(child._id).not.toBe(parent._id);
@@ -58,7 +58,7 @@ describe('Neat spawnFromParent and addGenome helpers', () => {
     it('should set parent id in _parents', async () => {
       // Arrange & Act: spawn child (await the async operation)
       const child = withInternalGenome(
-        await neatWithHelpers.spawnFromParent(parent, 1)
+        await neatWithHelpers.spawnFromParent(parent, 1),
       );
       // Assert: the first parent id equals parent's id
       expect(child._parents).toEqual([parent._id]);
@@ -72,7 +72,7 @@ describe('Neat spawnFromParent and addGenome helpers', () => {
       const baseDepth = parent._depth ?? 0;
       // Act: spawn child (await the async operation)
       const child = withInternalGenome(
-        await neatWithHelpers.spawnFromParent(parent, 1)
+        await neatWithHelpers.spawnFromParent(parent, 1),
       );
       // Assert: child's depth increments parent's depth
       expect(child._depth).toBe(baseDepth + 1);
@@ -122,7 +122,7 @@ describe('Neat spawnFromParent and addGenome helpers', () => {
       neatWithHelpers.addGenome(external, [parent._id]);
       // Assert: the most recently added genome has the expected parents
       const added = withInternalGenome(
-        neat.population[neat.population.length - 1]
+        neat.population[neat.population.length - 1],
       );
       expect(added._parents).toEqual([parent._id]);
     });
@@ -135,7 +135,7 @@ describe('Neat spawnFromParent and addGenome helpers', () => {
       const firstParent = withInternalGenome(neat.population[0]);
       // artificially create a deeper parent via spawnFromParent to produce different depths
       const secondParent = withInternalGenome(
-        await neatWithHelpers.spawnFromParent(firstParent, 1)
+        await neatWithHelpers.spawnFromParent(firstParent, 1),
       );
       // Register the spawned parent into neat so addGenome can resolve parent depths
       neatWithHelpers.addGenome(secondParent, [firstParent._id]);
@@ -146,7 +146,7 @@ describe('Neat spawnFromParent and addGenome helpers', () => {
       neatWithHelpers.addGenome(external, [firstParent._id, secondParent._id]);
       // Assert: added genome depth is max(parent depths)+1
       const added = withInternalGenome(
-        neat.population[neat.population.length - 1]
+        neat.population[neat.population.length - 1],
       );
       const expectedDepth =
         Math.max(firstParent._depth ?? 0, secondParent._depth ?? 0) + 1;

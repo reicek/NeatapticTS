@@ -56,7 +56,7 @@ export default class Group {
 
     if (value !== undefined && value.length !== this.nodes.length) {
       throw new Error(
-        'Array with values should be same as the amount of nodes!'
+        'Array with values should be same as the amount of nodes!',
       );
     }
 
@@ -84,7 +84,7 @@ export default class Group {
   propagate(rate: number, momentum: number, target?: number[]): void {
     if (target !== undefined && target.length !== this.nodes.length) {
       throw new Error(
-        'Array with values should be same as the amount of nodes!'
+        'Array with values should be same as the amount of nodes!',
       );
     }
 
@@ -110,7 +110,7 @@ export default class Group {
   connect(
     target: Group | Layer | Node,
     method?: unknown,
-    weight?: number
+    weight?: number,
   ): Connection[] {
     let connections: Connection[] = [];
     let i, j;
@@ -123,14 +123,14 @@ export default class Group {
           // Default to ALL_TO_ALL if connecting to a different group
           if (config.warnings)
             console.warn(
-              'No group connection specified, using ALL_TO_ALL by default.'
+              'No group connection specified, using ALL_TO_ALL by default.',
             );
           method = methods.groupConnection.ALL_TO_ALL;
         } else {
           // Default to ONE_TO_ONE if connecting to the same group (self-connection)
           if (config.warnings)
             console.warn(
-              'Connecting group to itself, using ONE_TO_ONE by default.'
+              'Connecting group to itself, using ONE_TO_ONE by default.',
             );
           method = methods.groupConnection.ONE_TO_ONE;
         }
@@ -165,7 +165,7 @@ export default class Group {
         // Ensure groups are the same size for ONE_TO_ONE connection
         if (this.nodes.length !== target.nodes.length) {
           throw new Error(
-            'Cannot create ONE_TO_ONE connection: source and target groups must have the same size.'
+            'Cannot create ONE_TO_ONE connection: source and target groups must have the same size.',
           );
         }
 
@@ -211,7 +211,7 @@ export default class Group {
   gate(connections: Connection | Connection[], method: unknown): void {
     if (method === undefined) {
       throw new Error(
-        'Please specify a gating method: Gating.INPUT, Gating.OUTPUT, or Gating.SELF'
+        'Please specify a gating method: Gating.INPUT, Gating.OUTPUT, or Gating.SELF',
       );
     }
 

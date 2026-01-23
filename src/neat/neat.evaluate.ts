@@ -92,7 +92,7 @@ interface NeatControllerForEval {
   };
   population: GenomeForEvaluation[];
   fitness: (
-    genomeOrPop: GenomeForEvaluation | GenomeForEvaluation[]
+    genomeOrPop: GenomeForEvaluation | GenomeForEvaluation[],
   ) => Promise<number | void>;
   _noveltyArchive?: NoveltyArchiveEntry[];
   _diversityStats?: DiversityStats;
@@ -103,7 +103,7 @@ interface NeatControllerForEval {
   registerObjective?: (
     key: string,
     direction: string,
-    fn: (g: GenomeForEvaluation) => number
+    fn: (g: GenomeForEvaluation) => number,
   ) => void;
   _pendingObjectiveAdds?: string[];
   _objectivesList?: unknown;
@@ -341,12 +341,12 @@ export async function evaluate(this: NeatControllerForEval): Promise<void> {
         if (meanEntropy < targetEntropy - deadband)
           threshold = Math.max(
             entropyCompatOptions.minThreshold ?? 0.5,
-            threshold * (1 - adjustRate)
+            threshold * (1 - adjustRate),
           );
         else if (meanEntropy > targetEntropy + deadband)
           threshold = Math.min(
             entropyCompatOptions.maxThreshold ?? 10,
-            threshold * (1 + adjustRate)
+            threshold * (1 + adjustRate),
           );
         this.options.compatibilityThreshold = threshold;
       }
@@ -389,7 +389,7 @@ export async function evaluate(this: NeatControllerForEval): Promise<void> {
       const connVar =
         connectionSizes.reduce(
           (a, b) => a + (b - meanSize) * (b - meanSize),
-          0
+          0,
         ) / (connectionSizes.length || 1);
       /** Rate used to adjust distance coefficients when variance changes. */
       const adjustRate = autoDistanceCoeffOptions.adjustRate ?? 0.05;
@@ -406,11 +406,11 @@ export async function evaluate(this: NeatControllerForEval): Promise<void> {
         try {
           this.options.excessCoeff = Math.min(
             maxCoeff,
-            (this.options.excessCoeff! ?? 1) * (1 + adjustRate)
+            (this.options.excessCoeff! ?? 1) * (1 + adjustRate),
           );
           this.options.disjointCoeff = Math.min(
             maxCoeff,
-            (this.options.disjointCoeff! ?? 1) * (1 + adjustRate)
+            (this.options.disjointCoeff! ?? 1) * (1 + adjustRate),
           );
         } catch {
           // Intentionally ignore coefficient adjustment errors during bootstrap
@@ -419,20 +419,20 @@ export async function evaluate(this: NeatControllerForEval): Promise<void> {
       if (connVar < this._lastConnVar * 0.95) {
         this.options.excessCoeff = Math.min(
           maxCoeff,
-          this.options.excessCoeff! * (1 + adjustRate)
+          this.options.excessCoeff! * (1 + adjustRate),
         );
         this.options.disjointCoeff = Math.min(
           maxCoeff,
-          this.options.disjointCoeff! * (1 + adjustRate)
+          this.options.disjointCoeff! * (1 + adjustRate),
         );
       } else if (connVar > this._lastConnVar * 1.05) {
         this.options.excessCoeff = Math.max(
           minCoeff,
-          this.options.excessCoeff! * (1 - adjustRate)
+          this.options.excessCoeff! * (1 - adjustRate),
         );
         this.options.disjointCoeff = Math.max(
           minCoeff,
-          this.options.disjointCoeff! * (1 - adjustRate)
+          this.options.disjointCoeff! * (1 - adjustRate),
         );
       }
       this._lastConnVar = connVar;
@@ -453,7 +453,7 @@ export async function evaluate(this: NeatControllerForEval): Promise<void> {
           this.registerObjective?.(
             'entropy',
             'max',
-            (g) => this._structuralEntropy?.(g) ?? 0
+            (g) => this._structuralEntropy?.(g) ?? 0,
           );
           this._pendingObjectiveAdds?.push('entropy');
           this._objectivesList = undefined;

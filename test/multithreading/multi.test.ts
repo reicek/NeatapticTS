@@ -234,7 +234,7 @@ describe('Multi-threading Utilities (Multi)', () => {
           '../../src/multithreading/workers/browser/testworker',
           () => {
             throw new Error('fail');
-          }
+          },
         );
       });
       afterEach(() => {

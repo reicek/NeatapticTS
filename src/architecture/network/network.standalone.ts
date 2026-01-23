@@ -85,12 +85,12 @@ const stripCoverage = (code: string): string => {
 export const generateStandalone = (net: Network): string => {
   // 1. Structural validation: ensure at least one output node exists.
   if (
-    !((net as unknown) as NetworkStandaloneProps).nodes.some(
-      (nodeRef) => nodeRef.type === 'output'
+    !(net as unknown as NetworkStandaloneProps).nodes.some(
+      (nodeRef) => nodeRef.type === 'output',
     )
   ) {
     throw new Error(
-      'Cannot create standalone function: network has no output nodes.'
+      'Cannot create standalone function: network has no output nodes.',
     );
   }
   /** Map of activation function name -> emitted source string (deduplication). */
@@ -125,35 +125,32 @@ export const generateStandalone = (net: Network): string => {
     hardTanh: 'function hardTanh(x){ return Math.max(-1, Math.min(1, x)); }',
     absolute: 'function absolute(x){ return Math.abs(x); }',
     inverse: 'function inverse(x){ return 1 - x; }',
-    selu:
-      'function selu(x){ var a=1.6732632423543772,s=1.0507009873554805; var fx=x>0?x:a*Math.exp(x)-a; return fx*s; }',
+    selu: 'function selu(x){ var a=1.6732632423543772,s=1.0507009873554805; var fx=x>0?x:a*Math.exp(x)-a; return fx*s; }',
     softplus:
       'function softplus(x){ if(x>30)return x; if(x<-30)return Math.exp(x); return Math.max(0,x)+Math.log(1+Math.exp(-Math.abs(x))); }',
     swish: 'function swish(x){ var s=1/(1+Math.exp(-x)); return x*s; }',
-    gelu:
-      'function gelu(x){ var cdf=0.5*(1.0+Math.tanh(Math.sqrt(2.0/Math.PI)*(x+0.044715*Math.pow(x,3)))); return x*cdf; }',
-    mish:
-      'function mish(x){ var sp_x; if(x>30){sp_x=x;}else if(x<-30){sp_x=Math.exp(x);}else{sp_x=Math.log(1+Math.exp(x));} var tanh_sp_x=Math.tanh(sp_x); return x*tanh_sp_x; }',
+    gelu: 'function gelu(x){ var cdf=0.5*(1.0+Math.tanh(Math.sqrt(2.0/Math.PI)*(x+0.044715*Math.pow(x,3)))); return x*cdf; }',
+    mish: 'function mish(x){ var sp_x; if(x>30){sp_x=x;}else if(x<-30){sp_x=Math.exp(x);}else{sp_x=Math.log(1+Math.exp(x));} var tanh_sp_x=Math.tanh(sp_x); return x*tanh_sp_x; }',
   };
 
   // 2. Assign stable indices & collect runtime state seeds.
-  ((net as unknown) as NetworkStandaloneProps).nodes.forEach(
+  (net as unknown as NetworkStandaloneProps).nodes.forEach(
     (node, nodeIndex: number) => {
       (node as NodeWithIndex).index = nodeIndex;
       initialActivations.push(node.activation);
       initialStates.push(node.state);
-    }
+    },
   );
 
   // 3. Emit input seeding loop (direct copy of provided input into A[0..inputSize-1]).
   bodyLines.push('for(var i = 0; i < input.length; i++) A[i] = input[i];');
   // 4. Build computational body for each non-input node.
   for (
-    let nodeIndex = ((net as unknown) as NetworkStandaloneProps).input;
-    nodeIndex < ((net as unknown) as NetworkStandaloneProps).nodes.length;
+    let nodeIndex = (net as unknown as NetworkStandaloneProps).input;
+    nodeIndex < (net as unknown as NetworkStandaloneProps).nodes.length;
     nodeIndex++
   ) {
-    const node = ((net as unknown) as NetworkStandaloneProps).nodes[nodeIndex];
+    const node = (net as unknown as NetworkStandaloneProps).nodes[nodeIndex];
     const squashFn = node.squash;
     const squashName =
       (squashFn as { name?: string }).name || `anonymous_squash_${nodeIndex}`;
@@ -165,7 +162,7 @@ export const generateStandalone = (net: Network): string => {
         // Guarantee explicit named function signature (normalize just in case snippet differs).
         if (!functionSource.startsWith(`function ${squashName}`)) {
           functionSource = `function ${squashName}${functionSource.substring(
-            functionSource.indexOf('(')
+            functionSource.indexOf('('),
           )}`;
         }
         functionSource = stripCoverage(functionSource);
@@ -175,12 +172,12 @@ export const generateStandalone = (net: Network): string => {
         functionSource = stripCoverage(functionSource);
         if (functionSource.startsWith('function')) {
           functionSource = `function ${squashName}${functionSource.substring(
-            functionSource.indexOf('(')
+            functionSource.indexOf('('),
           )}`;
         } else if (functionSource.includes('=>')) {
           // Arrow function: treat substring from first '(' as params.
           functionSource = `function ${squashName}${functionSource.substring(
-            functionSource.indexOf('(')
+            functionSource.indexOf('('),
           )}`;
         } else {
           functionSource = `function ${squashName}(x){ return x; }`;
@@ -222,19 +219,19 @@ export const generateStandalone = (net: Network): string => {
     bodyLines.push(
       `A[${nodeIndex}] = F[${activationFunctionIndex}](S[${nodeIndex}])${
         maskValue !== 1 ? ` * ${maskValue}` : ''
-      };`
+      };`,
     );
   }
   // 5. Gather output indices (tail section of node array).
   const outputIndices: number[] = [];
   for (
     let nodeIndex =
-      ((net as unknown) as NetworkStandaloneProps).nodes.length -
-      ((net as unknown) as NetworkStandaloneProps).output;
-    nodeIndex < ((net as unknown) as NetworkStandaloneProps).nodes.length;
+      (net as unknown as NetworkStandaloneProps).nodes.length -
+      (net as unknown as NetworkStandaloneProps).output;
+    nodeIndex < (net as unknown as NetworkStandaloneProps).nodes.length;
     nodeIndex++
   ) {
-    const nodeWithIndex = ((net as unknown) as NetworkStandaloneProps).nodes[
+    const nodeWithIndex = (net as unknown as NetworkStandaloneProps).nodes[
       nodeIndex
     ] as NodeWithIndex;
     if (typeof nodeWithIndex?.index !== 'undefined') {
@@ -242,7 +239,7 @@ export const generateStandalone = (net: Network): string => {
     }
   }
   bodyLines.push(
-    `return [${outputIndices.map((idx) => `A[${idx}]`).join(',')}];`
+    `return [${outputIndices.map((idx) => `A[${idx}]`).join(',')}];`,
   );
   // 6. Assemble final source with deterministic activation function ordering by index.
   const activationArrayLiteral = Object.entries(activationFunctionIndexMap)
@@ -250,7 +247,7 @@ export const generateStandalone = (net: Network): string => {
     .map(([name]) => name)
     .join(',');
   const activationArrayType =
-    ((net as unknown) as NetworkStandaloneProps)._activationPrecision === 'f32'
+    (net as unknown as NetworkStandaloneProps)._activationPrecision === 'f32'
       ? 'Float32Array'
       : 'Float64Array';
   let generatedSource = '';
@@ -258,16 +255,16 @@ export const generateStandalone = (net: Network): string => {
   generatedSource += `${activationFunctionSources.join('\n')}\n`;
   generatedSource += `var F = [${activationArrayLiteral}];\n`;
   generatedSource += `var A = new ${activationArrayType}([${initialActivations.join(
-    ','
+    ',',
   )}]);\n`;
   generatedSource += `var S = new ${activationArrayType}([${initialStates.join(
-    ','
+    ',',
   )}]);\n`;
   generatedSource += `function activate(input){\n`;
   generatedSource += `if (!input || input.length !== ${
-    ((net as unknown) as NetworkStandaloneProps).input
+    (net as unknown as NetworkStandaloneProps).input
   }) { throw new Error('Invalid input size. Expected ${
-    ((net as unknown) as NetworkStandaloneProps).input
+    (net as unknown as NetworkStandaloneProps).input
   }, got ' + (input ? input.length : 'undefined')); }\n`;
   generatedSource += bodyLines.join('\n');
   generatedSource += `}\n`;

@@ -207,7 +207,7 @@ export default class Cost {
       // Calculate the absolute percentage error for each sample.
       // Use Math.max with epsilon to prevent division by zero.
       error += Math.abs(
-        (target - output) / Math.max(Math.abs(target), epsilon)
+        (target - output) / Math.max(Math.abs(target), epsilon),
       );
     });
 
@@ -299,7 +299,7 @@ export default class Cost {
     targets: number[],
     outputs: number[],
     gamma: number = 2,
-    alpha: number = 0.25
+    alpha: number = 0.25,
   ): number {
     let error = 0;
     const epsilon = PROB_EPSILON;
@@ -329,7 +329,7 @@ export default class Cost {
   static labelSmoothing(
     targets: number[],
     outputs: number[],
-    smoothing: number = 0.1
+    smoothing: number = 0.1,
   ): number {
     let error = 0;
     const epsilon = PROB_EPSILON;

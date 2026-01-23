@@ -69,7 +69,7 @@ interface NetworkWithMOAnnotations extends Network {
  */
 export function fastNonDominated(
   this: NeatLikeWithMultiObjective,
-  pop: Network[]
+  pop: Network[],
 ): Network[][] {
   /**
    * const: objective descriptors array
@@ -100,7 +100,7 @@ export function fastNonDominated(
         // If an objective accessor fails, treat the value as neutral (0).
         return 0;
       }
-    })
+    }),
   );
 
   /**
@@ -237,16 +237,19 @@ export function fastNonDominated(
         });
 
       // Boundary solutions get infinite crowding so they are always preferred.
-      (sortedByCurrentObjective[0] as NetworkWithMOAnnotations)._moCrowd = Infinity;
-      (sortedByCurrentObjective[
-        sortedByCurrentObjective.length - 1
-      ] as NetworkWithMOAnnotations)._moCrowd = Infinity;
+      (sortedByCurrentObjective[0] as NetworkWithMOAnnotations)._moCrowd =
+        Infinity;
+      (
+        sortedByCurrentObjective[
+          sortedByCurrentObjective.length - 1
+        ] as NetworkWithMOAnnotations
+      )._moCrowd = Infinity;
 
       const minVal = objectiveDescriptors[objectiveIndex].accessor(
-        sortedByCurrentObjective[0]
+        sortedByCurrentObjective[0],
       );
       const maxVal = objectiveDescriptors[objectiveIndex].accessor(
-        sortedByCurrentObjective[sortedByCurrentObjective.length - 1]
+        sortedByCurrentObjective[sortedByCurrentObjective.length - 1],
       );
       // Avoid division by zero when all values are equal.
       const valueRange = maxVal - minVal || 1;
@@ -258,10 +261,10 @@ export function fastNonDominated(
         sortedIndex++
       ) {
         const prevVal = objectiveDescriptors[objectiveIndex].accessor(
-          sortedByCurrentObjective[sortedIndex - 1]
+          sortedByCurrentObjective[sortedIndex - 1],
         );
         const nextVal = objectiveDescriptors[objectiveIndex].accessor(
-          sortedByCurrentObjective[sortedIndex + 1]
+          sortedByCurrentObjective[sortedIndex + 1],
         );
         const currentGenome = sortedByCurrentObjective[
           sortedIndex
@@ -282,7 +285,7 @@ export function fastNonDominated(
       generation: this.generation,
       fronts: paretoFronts.slice(0, 3).map((front) =>
         // map each front (array of Network) to an array of genome IDs
-        front.map((genome) => (genome as NetworkWithMOAnnotations)._id || 0)
+        front.map((genome) => (genome as NetworkWithMOAnnotations)._id || 0),
       ),
     });
     if (this._paretoArchive.length > 100) this._paretoArchive.shift();

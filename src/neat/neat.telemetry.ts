@@ -9,31 +9,43 @@ import type {
   GenomeDetailed,
   NeatOptions,
   ObjectiveEvent,
-  NodeLike,
-  ConnectionLike,
 } from './neat.types';
-import { EPSILON } from './neat.constants';
-import { computeAncestorUniqueness, buildAnc } from './neat.lineage';
-import type { NeatLineageContext as LineageContext } from './neat.lineage';
-
-// --- Local telemetry helper types ---
-/** Minimal genome shape used by telemetry helpers (kept local to avoid
- * scattering lightweight shapes across other type files). */
-export type TelemetryGenome = {
-  nodes: NodeLike[];
-  connections: ConnectionLike[];
-  _depth?: number;
-};
-
-export type TelemetryDiversityOptions = {
-  diversityMetrics?: {
-    enabled?: boolean;
-    pairSample?: number;
-    graphletSample?: number;
-  };
-  fastMode?: boolean;
-  novelty?: { enabled?: boolean; k?: number };
-};
+import {
+  getCachedEntropy,
+  computeDegreeCounts,
+  buildDegreeHistogram,
+  computeEntropyFromHistogram,
+  setCachedEntropy,
+  getTelemetryCoreSnapshot,
+  stripUnselectedTelemetryKeys,
+  mergeTelemetryCoreFields,
+  applyFastModeDefaults,
+  computeCompatibilityStats,
+  computeEntropyStats,
+  computeGraphletEntropy,
+  computeLineageStats,
+  safelyApplyTelemetrySelect,
+  ensureTelemetryBuffer,
+  safelyStreamTelemetryEntry,
+  trimTelemetryBuffer,
+  computeOperatorStatsSnapshot,
+  computeHyperVolumeProxy,
+  computeParetoFrontSizes,
+  applyObjectiveImportance,
+  applyObjectiveAges,
+  applyObjectiveEvents,
+  applySpeciesAllocation,
+  applyObjectivesSnapshot,
+  applyRngState,
+  applyLineageStatsMultiObjective,
+  applyLineageStatsMonoObjective,
+  applyHypervolumeTelemetry,
+  applyComplexityStatsMultiObjective,
+  applyComplexityStatsMonoObjective,
+  applyPerformanceStats,
+  type TelemetryGenome,
+  type TelemetryDiversityOptions,
+} from './neat.telemetry.utils';
 
 /** Context view used within telemetry helpers to access optional internal
  * fields with descriptive names rather than repeated inline casts. */
@@ -70,6 +82,7 @@ interface TelemetryContext extends NeatLike {
   _telemetrySelect?: Set<string>;
   _telemetry?: TelemetryEntry[];
   _objectiveEvents?: ObjectiveEvent[];
+  _fastModeTuned?: boolean;
 }
 
 /**
@@ -86,7 +99,7 @@ interface TelemetryContext extends NeatLike {
 export function createTelemetryEntryBase(
   generationIndex: number,
   bestScore: number,
-  speciesCount: number
+  speciesCount: number,
 ): TelemetryEntry {
   return {
     gen: generationIndex,
@@ -118,32 +131,24 @@ export function createTelemetryEntryBase(
 
 export function applyTelemetrySelect(
   this: TelemetryContext,
-  entry: Record<string, unknown>
+  entry: Record<string, unknown>,
 ): Record<string, unknown> {
-  // Step 1: Fast-path, nothing to do when no selection set is configured
   const ctx = this as TelemetryContext;
   const selectionSet = ctx._telemetrySelect;
+  const coreFields = ['gen', 'best', 'species'] as const;
+
+  // Step 1: Fast-path, nothing to do when no selection set is configured
   if (!selectionSet || selectionSet.size === 0) return entry;
 
-  // Step 2: Core telemetry fields always preserved
-  const coreFields = ['gen', 'best', 'species'] as const;
-  const core: Partial<Record<string, unknown>> = {};
-  for (const field of coreFields) {
-    if (Object.hasOwn(entry, field)) {
-      core[field] = entry[field];
-    }
-  }
+  // Step 2: Declarative fold over the entry with internal helpers
+  const coreSnapshot = getTelemetryCoreSnapshot(entry, coreFields);
+  const filteredEntry = stripUnselectedTelemetryKeys(
+    entry,
+    selectionSet,
+    coreFields,
+  );
 
-  // Step 3: Remove non-core keys not in the selection set
-  for (const key of Object.keys(entry)) {
-    if (coreFields.includes(key as typeof coreFields[number])) continue;
-    if (!selectionSet.has(key)) {
-      delete entry[key];
-    }
-  }
-
-  // Step 4: Re-attach the core fields (ensures ordering and presence)
-  return Object.assign(entry, core);
+  return mergeTelemetryCoreFields(filteredEntry, coreSnapshot);
 }
 
 /**
@@ -172,50 +177,27 @@ export function structuralEntropy(
       enabled: boolean;
     }>;
     [key: string]: unknown;
-  }
+  },
 ): number {
-  // Step 1: Return cached value when available and valid for current generation
   const ctx = this as TelemetryContext;
-  if (
-    (graph as Record<string, unknown>)._entropyGen === ctx.generation &&
-    typeof (graph as Record<string, unknown>)._entropyVal === 'number'
-  ) {
-    return (graph as Record<string, unknown>)._entropyVal as number;
-  }
 
-  // Step 2: Mapping from each node's unique gene identifier to the degree
-  const degreeCounts: Record<number, number> = {};
-  for (const node of graph.nodes) degreeCounts[node.geneId] = 0;
+  // Step 1: Fast-path cached entropy when available for current generation
+  const cachedEntropy = getCachedEntropy(ctx.generation, graph);
+  if (cachedEntropy !== undefined) return cachedEntropy;
 
-  // Step 3: Accumulate degrees from enabled connections
-  for (const connection of graph.connections) {
-    if (connection.enabled) {
-      const fromId = connection.from.geneId;
-      const toId = connection.to.geneId;
-      if (degreeCounts[fromId] !== undefined) degreeCounts[fromId]!++;
-      if (degreeCounts[toId] !== undefined) degreeCounts[toId]!++;
-    }
-  }
+  // Step 2: Compute degree counts for enabled edges
+  const degreeCounts = computeDegreeCounts(graph);
 
-  // Step 4: Build histogram of degree frequencies
-  const degreeHistogram: Record<number, number> = {};
+  // Step 3: Convert degree counts into a degree-frequency histogram
   const nodeCount = graph.nodes.length || 1;
-  for (const nodeId in degreeCounts) {
-    const degree = degreeCounts[Number(nodeId)];
-    degreeHistogram[degree] = (degreeHistogram[degree] || 0) + 1;
-  }
+  const degreeHistogram = buildDegreeHistogram(degreeCounts);
 
-  // Step 5: Compute entropy H = -sum p * log(p)
-  let entropy = 0;
-  for (const degree in degreeHistogram) {
-    const probability = degreeHistogram[degree] / nodeCount;
-    if (probability > 0)
-      entropy -= probability * Math.log(probability + EPSILON);
-  }
+  // Step 4: Compute entropy H = -sum p * log(p)
+  const entropy = computeEntropyFromHistogram(degreeHistogram, nodeCount);
 
-  // Step 6: Cache result on the graph object for the current generation
-  (graph as Record<string, unknown>)._entropyGen = ctx.generation;
-  (graph as Record<string, unknown>)._entropyVal = entropy;
+  // Step 5: Cache the result on the genome object
+  setCachedEntropy(ctx.generation, graph, entropy);
+
   return entropy;
 }
 
@@ -237,149 +219,70 @@ export function computeDiversityStats(this: NeatLike) {
   const options = ctx.options as NeatOptions & TelemetryDiversityOptions;
   if (!options.diversityMetrics?.enabled) return;
 
-  // Fast-mode nudges
-  if (
-    options.fastMode &&
-    !(ctx as { _fastModeTuned?: boolean })._fastModeTuned
-  ) {
-    const diversityMetrics = options.diversityMetrics;
-    if (diversityMetrics) {
-      if (diversityMetrics.pairSample == null) diversityMetrics.pairSample = 20;
-      if (diversityMetrics.graphletSample == null)
-        diversityMetrics.graphletSample = 30;
-    }
-    if (options.novelty?.enabled && options.novelty.k == null)
-      options.novelty.k = 5;
-    (ctx as { _fastModeTuned?: boolean })._fastModeTuned = true;
-  }
+  // Step 1: Apply fast-mode defaults once per instance
+  applyFastModeDefaults(ctx, options);
 
-  // Sampling parameters and population reference
+  // Step 2: Resolve sampling parameters and population snapshot
   const pairSample = options.diversityMetrics.pairSample ?? 40;
   const graphletSample = options.diversityMetrics.graphletSample ?? 60;
   const population = (ctx.population as TelemetryGenome[]) ?? [];
-  const popSize = population.length;
-
-  // Pairwise compatibility sampling
-  let compatibilitySum = 0;
-  let compatibilitySumSq = 0;
-  let compatibilityCount = 0;
+  const populationSize = population.length;
   const rngFactory: () => () => number =
     typeof ctx._getRNG === 'function' ? ctx._getRNG : () => Math.random;
-  for (let iter = 0; iter < pairSample; iter++) {
-    if (popSize < 2) break;
-    const rng = rngFactory();
-    const firstIndex = Math.floor(rng() * popSize);
-    let secondIndex = Math.floor(rng() * popSize);
-    if (secondIndex === firstIndex) secondIndex = (secondIndex + 1) % popSize;
-    const distance =
-      ctx._compatibilityDistance?.(
-        population[firstIndex],
-        population[secondIndex]
-      ) ?? 0;
-    compatibilitySum += distance;
-    compatibilitySumSq += distance * distance;
-    compatibilityCount++;
-  }
-  const meanCompat = compatibilityCount
-    ? compatibilitySum / compatibilityCount
-    : 0;
-  const varCompat = compatibilityCount
-    ? Math.max(
-        0,
-        compatibilitySumSq / compatibilityCount - meanCompat * meanCompat
-      )
-    : 0;
+  const structuralEntropyFn =
+    typeof ctx._structuralEntropy === 'function'
+      ? (genome: TelemetryGenome) => ctx._structuralEntropy?.(genome) ?? 0
+      : (genome: TelemetryGenome) =>
+          structuralEntropy.call(
+            ctx,
+            genome as {
+              nodes: Array<{ geneId: number }>;
+              connections: Array<{
+                from: { geneId: number };
+                to: { geneId: number };
+                enabled: boolean;
+              }>;
+            },
+          );
 
-  // Structural entropy across population
-  const entropies = population.map((genome) =>
-    (ctx as TelemetryContext)._structuralEntropy
-      ? (ctx as TelemetryContext)._structuralEntropy!(genome as TelemetryGenome)
-      : structuralEntropy.call(
-          ctx,
-          genome as {
-            nodes: Array<{ geneId: number }>;
-            connections: Array<{
-              from: { geneId: number };
-              to: { geneId: number };
-              enabled: boolean;
-            }>;
-          }
-        )
+  // Step 3: Compute pairwise compatibility statistics
+  const compatibilityStats = computeCompatibilityStats(
+    population,
+    populationSize,
+    pairSample,
+    rngFactory,
+    ctx._compatibilityDistance,
   );
-  const meanEntropy =
-    entropies.reduce((a: number, b: number) => a + b, 0) /
-    (entropies.length || 1);
-  const varEntropy = entropies.length
-    ? entropies.reduce(
-        (a: number, b: number) => a + (b - meanEntropy) * (b - meanEntropy),
-        0
-      ) / entropies.length
-    : 0;
 
-  // Graphlet (3-node motif) sampling
-  const motifCounts = [0, 0, 0, 0];
-  for (let iter = 0; iter < graphletSample; iter++) {
-    if (popSize === 0) break;
-    const rng = rngFactory();
-    const genome = population[Math.floor(rng() * popSize)];
-    if (!genome) break;
-    if (genome.nodes.length < 3) continue;
-    const selectedIndices = new Set<number>();
-    while (selectedIndices.size < 3)
-      selectedIndices.add(Math.floor(rng() * genome.nodes.length));
-    const selectedNodes = Array.from(selectedIndices).map(
-      (i) => genome.nodes[i]
-    );
-    let edgeCount = 0;
-    for (const connection of genome.connections) {
-      if (
-        connection.enabled &&
-        selectedNodes.includes(connection.from) &&
-        selectedNodes.includes(connection.to)
-      )
-        edgeCount++;
-    }
-    if (edgeCount > 3) edgeCount = 3;
-    motifCounts[edgeCount]++;
-  }
-  const totalMotifs = motifCounts.reduce((a, b) => a + b, 0) || 1;
-  let graphletEntropy = 0;
-  for (let k = 0; k < motifCounts.length; k++) {
-    const probability = motifCounts[k] / totalMotifs;
-    if (probability > 0) graphletEntropy -= probability * Math.log(probability);
-  }
+  // Step 4: Compute structural entropy statistics across population
+  const entropyStats = computeEntropyStats(population, structuralEntropyFn);
 
-  // Lineage-based statistics (if enabled)
-  let lineageMeanDepth = 0;
-  let lineageMeanPairDist = 0;
-  if (ctx._lineageEnabled && popSize > 0) {
-    const depths = population.map((genome) => genome._depth ?? 0);
-    lineageMeanDepth =
-      depths.reduce((a: number, b: number) => a + b, 0) / popSize;
-    let lineagePairSum = 0;
-    let lineagePairN = 0;
-    const pairsToSample = Math.min(pairSample, (popSize * (popSize - 1)) / 2);
-    for (let iter = 0; iter < pairsToSample; iter++) {
-      if (popSize < 2) break;
-      const rng = rngFactory();
-      const i = Math.floor(rng() * popSize);
-      let j = Math.floor(rng() * popSize);
-      if (j === i) j = (j + 1) % popSize;
-      lineagePairSum += Math.abs(depths[i] - depths[j]);
-      lineagePairN++;
-    }
-    lineageMeanPairDist = lineagePairN ? lineagePairSum / lineagePairN : 0;
-  }
+  // Step 5: Sample graphlet motifs and compute entropy
+  const graphletEntropy = computeGraphletEntropy(
+    population,
+    populationSize,
+    graphletSample,
+    rngFactory,
+  );
 
-  // Store computed stats on instance
+  // Step 6: Compute lineage-based statistics when enabled
+  const lineageStats = computeLineageStats(
+    Boolean(ctx._lineageEnabled),
+    population,
+    populationSize,
+    pairSample,
+    rngFactory,
+  );
+
+  // Step 7: Store computed stats on instance
   (ctx as { _diversityStats?: object })._diversityStats = {
-    meanCompat,
-    varCompat,
-    meanEntropy,
-    varEntropy,
+    meanCompat: compatibilityStats.meanCompat,
+    varCompat: compatibilityStats.varCompat,
+    meanEntropy: entropyStats.meanEntropy,
+    varEntropy: entropyStats.varEntropy,
     graphletEntropy,
-    lineageMeanDepth,
-    lineageMeanPairDist,
+    lineageMeanDepth: lineageStats.lineageMeanDepth,
+    lineageMeanPairDist: lineageStats.lineageMeanPairDist,
   };
 }
 
@@ -401,29 +304,19 @@ export function computeDiversityStats(this: NeatLike) {
  */
 export function recordTelemetryEntry(this: NeatLike, entry: TelemetryEntry) {
   const ctx = this as TelemetryContext;
-  try {
-    applyTelemetrySelect.call(ctx, entry as Record<string, unknown>);
-  } catch {
-    // ignored: telemetry selection errors are non-fatal and safe to drop
-  }
 
-  if (!ctx._telemetry) ctx._telemetry = [];
-  ctx._telemetry.push(entry);
+  // Step 1: Apply telemetry selection without failing the evolution loop
+  safelyApplyTelemetrySelect(ctx, entry, applyTelemetrySelect);
 
-  try {
-    const telemetryStream = ctx.options?.telemetryStream;
-    if (
-      telemetryStream?.enabled &&
-      typeof telemetryStream.onEntry === 'function'
-    ) {
-      telemetryStream.onEntry(entry);
-    }
-  } catch {
-    // ignored: telemetry stream callback errors should not disrupt evolution
-  }
+  // Step 2: Ensure the telemetry buffer exists and record the entry
+  const telemetryBuffer = ensureTelemetryBuffer(ctx);
+  telemetryBuffer.push(entry);
 
-  // Keep the in-memory telemetry buffer bounded to avoid runaway memory usage
-  if (ctx._telemetry.length > 500) ctx._telemetry.shift();
+  // Step 3: Stream the entry when a stream callback is configured
+  safelyStreamTelemetryEntry(ctx, entry);
+
+  // Step 4: Keep the in-memory telemetry buffer bounded
+  trimTelemetryBuffer(telemetryBuffer, 500);
 }
 
 /**
@@ -447,9 +340,10 @@ export function recordTelemetryEntry(this: NeatLike, entry: TelemetryEntry) {
  */
 export function buildTelemetryEntry(
   this: NeatLike,
-  fittest: Record<string, unknown>
+  fittest: Record<string, unknown>,
 ): TelemetryEntry {
   const ctx = this as TelemetryContext;
+  const options = ctx.options || {};
   /**
    * Current generation index for this telemetry snapshot.
    * Anchors all reported statistics to a single evolutionary timestep.
@@ -457,453 +351,140 @@ export function buildTelemetryEntry(
    * // use the generation number when inspecting recorded telemetry
    * const generation = neat.generation;
    */
-  const gen = ctx.generation ?? 0;
+  const generationIndex = ctx.generation ?? 0;
+  const isMultiObjectiveEnabled = options.multiObjective?.enabled ?? false;
 
-  // ---------------------------------------------------------------------------
-  // Multi-objective (MO) path: compute MO-specific telemetry when enabled.
-  // Method steps:
-  // 1) Compute a lightweight hypervolume-like proxy over the first Pareto
-  //    front to summarize quality + parsimony.
-  // 2) Collect sizes of the first few Pareto fronts to observe convergence.
-  // 3) Snapshot operator statistics (success/attempt counts).
-  // 4) Attach diversity, lineage and objective meta-data if available.
-  // 5) Optionally attach complexity & perf metrics based on options.
-  // 6) Return the assembled telemetry entry.
-  // ---------------------------------------------------------------------------
+  // Step 1: Select multi-objective or mono-objective telemetry path.
+  if (isMultiObjectiveEnabled)
+    return buildMultiObjectiveEntry(ctx, options, generationIndex, fittest);
+
+  // Step 2: Fallback path (mono-objective) retained for parity with legacy behavior.
+  return buildMonoObjectiveEntry(ctx, options, generationIndex, fittest);
 
   /**
-   * Running accumulator for a lightweight hypervolume-like proxy.
-   * This heuristic weights normalized objective score by inverse complexity
-   * so smaller Pareto-optimal solutions are favored. Not a formal HV.
+   * Build a telemetry entry for multi-objective mode.
+   *
+   * @param telemetryContext - Neat-like context with population state.
+   * @param telemetryOptions - Options controlling telemetry behavior.
+   * @param generation - Generation index for this snapshot.
+   * @param fittestGenome - Fittest genome record with score.
+   * @returns Telemetry entry object for MO mode.
    */
-  let hyperVolumeProxy = 0;
-  const options = ctx.options || {};
-  if (options.multiObjective?.enabled) {
-    /**
-     * Selected complexity metric used to penalize genomes in the hypervolume
-     * proxy. Allowed values: 'nodes' | 'connections'. Defaults to 'connections'.
-     * @example
-     * // penalize by number of connections
-     * neat.options.multiObjective.complexityMetric = 'connections';
-     */
-    const complexityMetric: 'nodes' | 'connections' =
-      options.multiObjective?.complexityMetric || 'connections';
+  function buildMultiObjectiveEntry(
+    telemetryContext: TelemetryContext,
+    telemetryOptions: NeatOptions & TelemetryDiversityOptions,
+    generation: number,
+    fittestGenome: Record<string, unknown>,
+  ): TelemetryEntry {
+    // Step 1: Resolve population snapshot.
+    const population = (telemetryContext.population as GenomeDetailed[]) || [];
 
-    /**
-     * Primary objective scalar values for the current population. These are
-     * used to compute normalization bounds when forming the hypervolume
-     * proxy so all scores lie in a comparable [0,1] range.
-     */
-    const population = (ctx.population as GenomeDetailed[]) || [];
-    const primaryObjectiveScores: number[] = population.map(
-      (genome: GenomeDetailed) => (genome.score as number) || 0
+    // Step 2: Compute MO proxy metrics (hypervolume proxy + pareto fronts).
+    const hyperVolumeProxy = computeHyperVolumeProxy(
+      telemetryOptions,
+      population,
+    );
+    const paretoFrontSizes = computeParetoFrontSizes(population);
+
+    // Step 3: Snapshot operator statistics.
+    const operatorStatsSnapshot = computeOperatorStatsSnapshot(
+      telemetryContext._operatorStats,
     );
 
-    /** Minimum observed primary objective score in the population. */
-    const minPrimaryScore = Math.min(...primaryObjectiveScores);
-
-    /** Maximum observed primary objective score in the population. */
-    const maxPrimaryScore = Math.max(...primaryObjectiveScores);
-
-    /**
-     * Collection of Pareto front sizes for the first few ranks (0..4).
-     * Recording only the early fronts keeps telemetry compact while showing
-     * population partitioning across non-dominated sets.
-     */
-    const paretoFrontSizes: number[] = [];
-
-    // Collect sizes of the first few Pareto fronts
-    for (let r = 0; r < 5; r++) {
-      const size = population.filter(
-        (g) => ((g as GenomeDetailed)._moRank ?? 0) === r
-      ).length;
-      if (!size) break;
-      paretoFrontSizes.push(size);
-    }
-
-    // Compute a simple hypervolume proxy: normalized score weighted by inverse complexity
-    // Accumulate hypervolume proxy contributions from Pareto-front genomes
-    for (const genome of population) {
-      const rank = genome._moRank ?? 0;
-      if (rank !== 0) continue; // only consider Pareto front 0
-      const normalizedScore =
-        maxPrimaryScore > minPrimaryScore
-          ? ((genome.score || 0) - minPrimaryScore) /
-            (maxPrimaryScore - minPrimaryScore)
-          : 0;
-      const genomeComplexity =
-        complexityMetric === 'nodes'
-          ? genome.nodes.length
-          : genome.connections.length;
-      hyperVolumeProxy += normalizedScore * (1 / (genomeComplexity + 1));
-    }
-
-    /**
-     * Snapshot of operator statistics. Each entry is an object describing a
-     * genetic operator with counts for successful applications and attempts.
-     * These are useful for visualizations showing operator effectiveness.
-     * @example
-     * // [{ op: 'mutate.addNode', succ: 12, att: 50 }, ...]
-     */
-    const operatorStatsSnapshot = Array.from(
-      (ctx._operatorStats ?? new Map()).entries()
-    ).map(([opName, stats]) => ({
-      op: opName,
-      succ: stats.success,
-      att: stats.attempts,
-    }));
-
-    /**
-     * Telemetry entry assembled in multi-objective mode. Contains core
-     * statistics plus MO-specific proxies and optional detailed snapshots.
-     * This object is suitable for recording or streaming as-is.
-     *
-     * @example
-     * // peek at current generation telemetry
-     * console.log(entry.gen, entry.best, entry.hyper);
-     */
+    // Step 4: Assemble base entry.
     const entry: TelemetryEntry & Record<string, unknown> = {
-      gen,
-      best: (fittest.score as number) ?? 0,
-      species: ctx._species?.length ?? 0,
+      gen: generation,
+      best: (fittestGenome.score as number) ?? 0,
+      species: telemetryContext._species?.length ?? 0,
       hyper: hyperVolumeProxy,
       fronts: paretoFrontSizes,
-      diversity: ctx._diversityStats,
+      diversity: telemetryContext._diversityStats,
       ops: operatorStatsSnapshot,
       objImportance: {},
     };
 
-    if (!entry.objImportance) entry.objImportance = {};
-    if (ctx._lastObjImportance) {
-      const lastImportance = ctx._lastObjImportance;
-      if (typeof lastImportance === 'object' && lastImportance !== null)
-        entry.objImportance = lastImportance;
-    }
+    // Step 5: Attach objective/meta snapshots.
+    applyObjectiveImportance(telemetryContext, entry);
+    applyObjectiveAges(telemetryContext, entry);
+    applyObjectiveEvents(telemetryContext, entry, generation);
+    applySpeciesAllocation(telemetryContext, entry);
+    applyObjectivesSnapshot(telemetryContext, entry);
+    applyRngState(telemetryContext, telemetryOptions, entry);
 
-    /**
-     * Optional snapshot of objective ages: a map objectiveKey -> age (generations).
-     */
-    if (ctx._objectiveAges?.size) {
-      entry.objAges = Object.fromEntries(ctx._objectiveAges.entries());
-    }
+    // Step 6: Attach lineage stats when enabled.
+    applyLineageStatsMultiObjective(telemetryContext, population, entry);
 
-    // Record pending objective lifecycle events (adds/removes) for telemetry
-    if (
-      ctx._pendingObjectiveAdds?.length ||
-      ctx._pendingObjectiveRemoves?.length
-    ) {
-      entry.objEvents = [];
-      for (const k of ctx._pendingObjectiveAdds || [])
-        entry.objEvents.push({ gen, type: 'add', key: k });
-      for (const k of ctx._pendingObjectiveRemoves || [])
-        entry.objEvents.push({ gen, type: 'remove', key: k });
-      ctx._objectiveEvents = ctx._objectiveEvents || [];
-      ctx._objectiveEvents.push(...entry.objEvents);
-      ctx._pendingObjectiveAdds = [];
-      ctx._pendingObjectiveRemoves = [];
-    }
+    // Step 7: Attach optional telemetry expansions.
+    applyHypervolumeTelemetry(telemetryOptions, hyperVolumeProxy, entry);
+    applyComplexityStatsMultiObjective(
+      telemetryContext,
+      telemetryOptions,
+      population,
+      entry,
+    );
+    applyPerformanceStats(telemetryContext, telemetryOptions, entry);
 
-    /**
-     * Optional per-species offspring allocation snapshot from the most recent
-     * allocation calculation. Used for tracking reproductive budgets.
-     */
-    if (ctx._lastOffspringAlloc) {
-      const lastAlloc = ctx._lastOffspringAlloc;
-      if (Array.isArray(lastAlloc)) entry.speciesAlloc = lastAlloc.slice();
-    }
-    try {
-      entry.objectives = ctx._getObjectives?.().map((o) => o.key) || [];
-    } catch {
-      // ignored: objective provider not present — skip objectives snapshot
-    }
-    if (options.rngState && ctx._rngState !== undefined)
-      entry.rng = ctx._rngState as number | undefined;
-
-    if (ctx._lineageEnabled) {
-      const bestGenome = (ctx.population as GenomeDetailed[])[0] as GenomeDetailed;
-      const depths = (ctx.population as GenomeDetailed[]).map(
-        (g: GenomeDetailed) => g._depth ?? 0
-      );
-      ctx._lastMeanDepth =
-        depths.reduce((a: number, b: number) => a + b, 0) /
-        (depths.length || 1);
-      // Use dynamic import for ES2023, avoid require
-      // NOTE: This assumes the import is available synchronously, otherwise refactor to async
-
-      // Build a lightweight lineage context from the telemetry context when available
-      const lineageCtx = {
-        population: (ctx.population as GenomeDetailed[]) || [],
-        _getRNG:
-          typeof ctx._getRNG === 'function' ? ctx._getRNG : () => Math.random,
-      } as LineageContext;
-      const ancestorUniqueness = computeAncestorUniqueness.call(lineageCtx);
-      entry.lineage = {
-        parents: Array.isArray(bestGenome._parents)
-          ? bestGenome._parents.slice()
-          : [],
-        depthBest: bestGenome._depth ?? 0,
-        meanDepth: +(ctx._lastMeanDepth ?? 0).toFixed(2),
-        inbreeding: ctx._prevInbreedingCount ?? 0,
-        ancestorUniq: ancestorUniqueness,
-      };
-    }
-
-    if (options.telemetry?.hypervolume && options.multiObjective?.enabled)
-      entry.hv = +hyperVolumeProxy.toFixed(4);
-
-    if (options.telemetry?.complexity) {
-      const nodesArr = population.map((g) => g.nodes.length);
-      const connsArr = population.map((g) => g.connections.length);
-      const meanNodes =
-        nodesArr.reduce((a: number, b: number) => a + b, 0) /
-        (nodesArr.length || 1);
-      const meanConns =
-        connsArr.reduce((a: number, b: number) => a + b, 0) /
-        (connsArr.length || 1);
-      const maxNodes = nodesArr.length ? Math.max(...nodesArr) : 0;
-      const maxConns = connsArr.length ? Math.max(...connsArr) : 0;
-      const enabledRatios = population.map((g) => {
-        let enabled = 0,
-          disabled = 0;
-        for (const c of g.connections) {
-          if (c.enabled === false) disabled++;
-          else enabled++;
-        }
-        return enabled + disabled ? enabled / (enabled + disabled) : 0;
-      });
-      const meanEnabledRatio =
-        enabledRatios.reduce((a: number, b: number) => a + b, 0) /
-        (enabledRatios.length || 1);
-      const growthNodes =
-        (this as NeatLike & { _lastMeanNodes?: number })._lastMeanNodes !==
-        undefined
-          ? meanNodes -
-            (this as NeatLike & { _lastMeanNodes: number })._lastMeanNodes
-          : 0;
-      const growthConns =
-        (this as NeatLike & { _lastMeanConns?: number })._lastMeanConns !==
-        undefined
-          ? meanConns -
-            (this as NeatLike & { _lastMeanConns: number })._lastMeanConns
-          : 0;
-      (this as NeatLike & {
-        _lastMeanNodes?: number;
-      })._lastMeanNodes = meanNodes;
-      (this as NeatLike & {
-        _lastMeanConns?: number;
-      })._lastMeanConns = meanConns;
-      entry.complexity = {
-        meanNodes: +meanNodes.toFixed(2),
-        meanConns: +meanConns.toFixed(2),
-        maxNodes,
-        maxConns,
-        meanEnabledRatio: +meanEnabledRatio.toFixed(3),
-        growthNodes: +growthNodes.toFixed(2),
-        growthConns: +growthConns.toFixed(2),
-        budgetMaxNodes: options.maxNodes ?? 0,
-        budgetMaxConns: options.maxConns ?? 0,
-      };
-    }
-
-    if (options.telemetry?.performance)
-      entry.perf = {
-        evalMs: (this as NeatLike & { _lastEvalDuration?: number })
-          ._lastEvalDuration,
-        evolveMs: (this as NeatLike & { _lastEvolveDuration?: number })
-          ._lastEvolveDuration,
-      };
+    // Step 8: Return the assembled entry.
     return entry;
   }
 
-  // Fallback path (mono-objective) retained for parity with legacy behavior.
   /**
-   * Snapshot of operator statistics for mono-objective mode. Kept separate
-   * from the MO snapshot to document the intent and avoid accidental
-   * coupling.
+   * Build a telemetry entry for mono-objective mode.
+   *
+   * @param telemetryContext - Neat-like context with population state.
+   * @param telemetryOptions - Options controlling telemetry behavior.
+   * @param generation - Generation index for this snapshot.
+   * @param fittestGenome - Fittest genome record with score.
+   * @returns Telemetry entry object for mono mode.
    */
-  const operatorStatsSnapshotMono = Array.from(
-    (ctx._operatorStats ?? new Map()).entries()
-  ).map(([opName, stats]) => ({
-    op: opName,
-    succ: stats.success,
-    att: stats.attempts,
-  }));
+  function buildMonoObjectiveEntry(
+    telemetryContext: TelemetryContext,
+    telemetryOptions: NeatOptions & TelemetryDiversityOptions,
+    generation: number,
+    fittestGenome: Record<string, unknown>,
+  ): TelemetryEntry {
+    // Step 1: Resolve population snapshot.
+    const populationSnapshot =
+      (telemetryContext.population as GenomeDetailed[]) || [];
 
-  /**
-   * Telemetry entry object for mono-objective mode. Aligns with the
-   * multi-objective structure but omits MO-only fields like `fronts`.
-   */
-  const entry: TelemetryEntry & Record<string, unknown> = {
-    gen,
-    best: (fittest.score as number) ?? 0,
-    species: ctx._species?.length ?? 0,
-    hyper: hyperVolumeProxy,
-    diversity: ctx._diversityStats,
-    ops: operatorStatsSnapshotMono,
-    objImportance: {},
-  };
-
-  if (ctx._lastObjImportance)
-    entry.objImportance = ctx._lastObjImportance as ObjImportance;
-  if (ctx._objectiveAges?.size)
-    entry.objAges = Object.fromEntries(ctx._objectiveAges.entries());
-
-  if (
-    ctx._pendingObjectiveAdds?.length ||
-    ctx._pendingObjectiveRemoves?.length
-  ) {
-    entry.objEvents = [];
-    for (const k of ctx._pendingObjectiveAdds || [])
-      entry.objEvents.push({ gen, type: 'add', key: k });
-    for (const k of ctx._pendingObjectiveRemoves || [])
-      entry.objEvents.push({ gen, type: 'remove', key: k });
-    ctx._objectiveEvents = ctx._objectiveEvents || [];
-    ctx._objectiveEvents.push(...entry.objEvents);
-    ctx._pendingObjectiveAdds = [];
-    ctx._pendingObjectiveRemoves = [];
-  }
-
-  if (ctx._lastOffspringAlloc)
-    entry.speciesAlloc = ctx._lastOffspringAlloc?.slice();
-  try {
-    entry.objectives = ctx._getObjectives?.().map((o) => o.key) || [];
-  } catch {
-    // ignored: optional objective provider absent
-  }
-  if (ctx.options?.rngState && ctx._rngState !== undefined)
-    entry.rng = ctx._rngState as number | undefined;
-
-  if (ctx._lineageEnabled) {
-    const bestGenome = (ctx.population as GenomeDetailed[])[0] as GenomeDetailed;
-    const depths = (ctx.population as GenomeDetailed[]).map(
-      (g: GenomeDetailed) => g._depth ?? 0
+    // Step 2: Snapshot operator statistics.
+    const operatorStatsSnapshot = computeOperatorStatsSnapshot(
+      telemetryContext._operatorStats,
     );
-    ctx._lastMeanDepth =
-      depths.reduce((a: number, b: number) => a + b, 0) / (depths.length || 1);
-    // Use dynamic import for ES2023, avoid require
-    // NOTE: This assumes the import is available synchronously, otherwise refactor to async
 
-    // use imported buildAnc helper
-    let sampledPairs = 0;
-    let jaccardSum = 0;
-    const popLength = (ctx.population as GenomeDetailed[]).length;
-    const samplePairs = Math.min(30, (popLength * (popLength - 1)) / 2);
-    for (let t = 0; t < samplePairs; t++) {
-      if (popLength < 2) break;
-      const rngFn =
-        typeof ctx._getRNG === 'function' ? ctx._getRNG() : Math.random;
-      const i = Math.floor(rngFn() * popLength);
-      let j = Math.floor(rngFn() * popLength);
-      if (j === i) j = (j + 1) % popLength;
-      const lineageCtx2 = {
-        population: (ctx.population as GenomeDetailed[]) || [],
-        _getRNG:
-          typeof ctx._getRNG === 'function' ? ctx._getRNG : () => Math.random,
-      } as LineageContext;
-      const ancestorsA = buildAnc.call(
-        lineageCtx2,
-        (ctx.population as GenomeDetailed[])[i]
-      );
-      const ancestorsB = buildAnc.call(
-        lineageCtx2,
-        (ctx.population as GenomeDetailed[])[j]
-      );
-      if (ancestorsA.size === 0 && ancestorsB.size === 0) continue;
-      let intersectionCount = 0;
-      for (const id of ancestorsA) if (ancestorsB.has(id)) intersectionCount++;
-      const union = ancestorsA.size + ancestorsB.size - intersectionCount || 1;
-      const jaccardDistance = 1 - intersectionCount / union;
-      jaccardSum += jaccardDistance;
-      sampledPairs++;
-    }
-    const ancestorUniqueness = sampledPairs
-      ? +(jaccardSum / sampledPairs).toFixed(3)
-      : 0;
-    entry.lineage = {
-      parents: Array.isArray(bestGenome._parents)
-        ? bestGenome._parents.slice()
-        : [],
-      depthBest: bestGenome._depth ?? 0,
-      meanDepth: +(ctx._lastMeanDepth ?? 0).toFixed(2),
-      inbreeding: ctx._prevInbreedingCount ?? 0,
-      ancestorUniq: ancestorUniqueness,
+    // Step 2: Assemble base entry.
+    const entry: TelemetryEntry & Record<string, unknown> = {
+      gen: generation,
+      best: (fittestGenome.score as number) ?? 0,
+      species: telemetryContext._species?.length ?? 0,
+      hyper: 0,
+      diversity: telemetryContext._diversityStats,
+      ops: operatorStatsSnapshot,
+      objImportance: {},
     };
-  }
 
-  if (
-    (this as NeatLike & { options: NeatOptions }).options.telemetry
-      ?.hypervolume &&
-    (this as NeatLike & { options: NeatOptions }).options.multiObjective
-      ?.enabled
-  )
-    entry.hv = +hyperVolumeProxy.toFixed(4);
-  if (
-    (this as NeatLike & { options: NeatOptions }).options.telemetry?.complexity
-  ) {
-    const nodesArr = (this as NeatLike & {
-      population: GenomeDetailed[];
-    }).population.map((g: GenomeDetailed) => g.nodes.length);
-    const connsArr = (this as NeatLike & {
-      population: GenomeDetailed[];
-    }).population.map((g: GenomeDetailed) => g.connections.length);
-    const meanNodes =
-      nodesArr.reduce((a: number, b: number) => a + b, 0) /
-      (nodesArr.length || 1);
-    const meanConns =
-      connsArr.reduce((a: number, b: number) => a + b, 0) /
-      (connsArr.length || 1);
-    const maxNodes = nodesArr.length ? Math.max(...nodesArr) : 0;
-    const maxConns = connsArr.length ? Math.max(...connsArr) : 0;
-    const enabledRatios = (this as NeatLike & {
-      population: GenomeDetailed[];
-    }).population.map((g: GenomeDetailed) => {
-      let en = 0,
-        dis = 0;
-      for (const c of g.connections) {
-        if (c.enabled === false) dis++;
-        else en++;
-      }
-      return en + dis ? en / (en + dis) : 0;
-    });
-    const meanEnabledRatio =
-      enabledRatios.reduce((a: number, b: number) => a + b, 0) /
-      (enabledRatios.length || 1);
-    const growthNodes =
-      (this as NeatLike & { _lastMeanNodes?: number })._lastMeanNodes !==
-      undefined
-        ? meanNodes -
-          (this as NeatLike & { _lastMeanNodes: number })._lastMeanNodes
-        : 0;
-    const growthConns =
-      (this as NeatLike & { _lastMeanConns?: number })._lastMeanConns !==
-      undefined
-        ? meanConns -
-          (this as NeatLike & { _lastMeanConns: number })._lastMeanConns
-        : 0;
-    (this as NeatLike & { _lastMeanNodes?: number })._lastMeanNodes = meanNodes;
-    (this as NeatLike & { _lastMeanConns?: number })._lastMeanConns = meanConns;
-    entry.complexity = {
-      meanNodes: +meanNodes.toFixed(2),
-      meanConns: +meanConns.toFixed(2),
-      maxNodes,
-      maxConns,
-      meanEnabledRatio: +meanEnabledRatio.toFixed(3),
-      growthNodes: +growthNodes.toFixed(2),
-      growthConns: +growthConns.toFixed(2),
-      budgetMaxNodes:
-        (this as NeatLike & { options: NeatOptions }).options.maxNodes ?? 0,
-      budgetMaxConns:
-        (this as NeatLike & { options: NeatOptions }).options.maxConns ?? 0,
-    };
+    // Step 3: Attach objective/meta snapshots.
+    applyObjectiveImportance(telemetryContext, entry);
+    applyObjectiveAges(telemetryContext, entry);
+    applyObjectiveEvents(telemetryContext, entry, generation);
+    applySpeciesAllocation(telemetryContext, entry);
+    applyObjectivesSnapshot(telemetryContext, entry);
+    applyRngState(telemetryContext, telemetryOptions, entry);
+
+    // Step 4: Attach lineage stats when enabled.
+    applyLineageStatsMonoObjective(telemetryContext, populationSnapshot, entry);
+
+    // Step 5: Attach optional telemetry expansions.
+    applyHypervolumeTelemetry(telemetryOptions, 0, entry);
+    applyComplexityStatsMonoObjective(
+      telemetryContext,
+      telemetryOptions,
+      populationSnapshot,
+      entry,
+    );
+    applyPerformanceStats(telemetryContext, telemetryOptions, entry);
+
+    // Step 6: Return the assembled entry.
+    return entry;
   }
-  if (
-    (this as NeatLike & { options: NeatOptions }).options.telemetry?.performance
-  )
-    entry.perf = {
-      evalMs: (this as NeatLike & { _lastEvalDuration?: number })
-        ._lastEvalDuration,
-      evolveMs: (this as NeatLike & { _lastEvolveDuration?: number })
-        ._lastEvolveDuration,
-    };
-  return entry;
 }

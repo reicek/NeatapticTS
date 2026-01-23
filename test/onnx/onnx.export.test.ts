@@ -102,7 +102,7 @@ describe('ONNX Export', () => {
         const onnx = exportToONNX(net);
         // Assert
         const actNode = (onnx as OnnxModel).graph.node.find((n) =>
-          ['Tanh', 'Sigmoid', 'Relu', 'Identity'].includes(n.op_type)
+          ['Tanh', 'Sigmoid', 'Relu', 'Identity'].includes(n.op_type),
         );
         expect(actNode?.op_type).toBe('Tanh');
       });
@@ -116,7 +116,7 @@ describe('ONNX Export', () => {
         const onnx = exportToONNX(net);
         // Assert
         const actNode = (onnx as OnnxModel).graph.node.find((n) =>
-          ['Tanh', 'Sigmoid', 'Relu', 'Identity'].includes(n.op_type)
+          ['Tanh', 'Sigmoid', 'Relu', 'Identity'].includes(n.op_type),
         );
         expect(actNode?.op_type).toBe('Sigmoid');
       });
@@ -130,7 +130,7 @@ describe('ONNX Export', () => {
         const onnx = exportToONNX(net);
         // Assert
         const actNode = (onnx as OnnxModel).graph.node.find((n) =>
-          ['Tanh', 'Sigmoid', 'Relu', 'Identity'].includes(n.op_type)
+          ['Tanh', 'Sigmoid', 'Relu', 'Identity'].includes(n.op_type),
         );
         expect(actNode?.op_type).toBe('Relu');
       });
@@ -144,7 +144,7 @@ describe('ONNX Export', () => {
         suppressConsoleWarn(() => {
           const onnx = exportToONNX(net) as OnnxModel;
           const actNode = onnx.graph.node.find((n) =>
-            ['Tanh', 'Sigmoid', 'Relu', 'Identity'].includes(n.op_type)
+            ['Tanh', 'Sigmoid', 'Relu', 'Identity'].includes(n.op_type),
           );
           expect(actNode?.op_type).toBe('Identity');
         });
@@ -186,7 +186,7 @@ describe('ONNX Export', () => {
         // Act / Assert
         const throws = () => exportToONNX(net);
         expect(throws).toThrow(
-          'ONNX export currently only supports simple MLPs'
+          'ONNX export currently only supports simple MLPs',
         );
       });
     });
@@ -209,10 +209,10 @@ describe('ONNX Export', () => {
         hidden2.connect(net.nodes[4], 1.0);
         // Remove one connection to violate full connectivity
         hidden1.connections.in = hidden1.connections.in.filter(
-          (c) => c.from !== input0
+          (c) => c.from !== input0,
         );
         input0.connections.out = input0.connections.out.filter(
-          (c) => c.to !== hidden1
+          (c) => c.to !== hidden1,
         );
         Network.rebuildConnections(net);
       });
@@ -239,7 +239,7 @@ describe('ONNX Export', () => {
         exportToONNX(net);
         // Assert
         const allIndexed = net.nodes.every(
-          (n: Node) => typeof n.index === 'number'
+          (n: Node) => typeof n.index === 'number',
         );
         expect(allIndexed).toBe(true);
       });
@@ -281,8 +281,8 @@ describe('ONNX Export', () => {
         const allAlphaOne = gemmNodes.every(
           (g) =>
             (g.attributes || []).find(
-              (a) => (a as { name?: string }).name === 'alpha'
-            )?.f === 1
+              (a) => (a as { name?: string }).name === 'alpha',
+            )?.f === 1,
         );
         expect(allAlphaOne).toBe(true);
       });
@@ -290,8 +290,8 @@ describe('ONNX Export', () => {
         const allBetaOne = gemmNodes.every(
           (g) =>
             (g.attributes || []).find(
-              (a) => (a as { name?: string }).name === 'beta'
-            )?.f === 1
+              (a) => (a as { name?: string }).name === 'beta',
+            )?.f === 1,
         );
         expect(allBetaOne).toBe(true);
       });
@@ -299,8 +299,8 @@ describe('ONNX Export', () => {
         const allTransBOne = gemmNodes.every(
           (g) =>
             (g.attributes || []).find(
-              (a) => (a as { name?: string }).name === 'transB'
-            )?.i === 1
+              (a) => (a as { name?: string }).name === 'transB',
+            )?.i === 1,
         );
         expect(allTransBOne).toBe(true);
       });
@@ -310,7 +310,7 @@ describe('ONNX Export', () => {
           const act = nodes.find(
             (n) =>
               (n.input && n.input[0] === g.output[0] && n.op_type !== 'Gemm') ??
-              false
+              false,
           );
           return act && nodes.indexOf(act) > idxG;
         });
@@ -331,7 +331,8 @@ describe('ONNX Export', () => {
         orderingValid = gemmNodes.every((g) => {
           const idxG = nodes.indexOf(g);
           const act = nodes.find(
-            (n) => n.input && n.input[0] === g.output[0] && n.op_type !== 'Gemm'
+            (n) =>
+              n.input && n.input[0] === g.output[0] && n.op_type !== 'Gemm',
           );
           return act && nodes.indexOf(act) < idxG;
         });
@@ -417,10 +418,10 @@ describe('ONNX Export', () => {
         const hidden0 = net.nodes[2];
         // Remove a single connection to create a partial layer
         hidden0.connections.in = hidden0.connections.in.filter(
-          (c) => c.from !== input0
+          (c) => c.from !== input0,
         );
         input0.connections.out = input0.connections.out.filter(
-          (c) => c.to !== hidden0
+          (c) => c.to !== hidden0,
         );
         Network.rebuildConnections(net);
       });
