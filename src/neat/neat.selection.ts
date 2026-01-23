@@ -1,31 +1,29 @@
 import type { NeatLike } from './neat.types';
+import {
+  calculateTotalScore,
+  DEFAULT_SCORE,
+  ensurePopulationEvaluated,
+  ensurePopulationSortedDescending,
+  FIRST_INDEX,
+  type GenomeWithScore,
+  type NeatLikeWithSelection,
+  selectParentByStrategy,
+} from './neat.selection.utils';
 
-/**
- * Genome with score and optional selection-related properties.
- */
-interface GenomeWithScore {
-  score?: number;
-  [key: string]: unknown;
-}
-
-/**
- * NEAT instance extended with selection-specific properties.
- */
-interface NeatLikeWithSelection extends NeatLike {
-  population: GenomeWithScore[];
-  options: {
-    selection?: {
-      name?: string;
-      power?: number;
-      size?: number;
-      probability?: number;
-    };
-    [key: string]: unknown;
-  };
-  _getRNG: () => () => number;
-  _suppressTournamentError?: boolean;
-  sort: () => void;
-}
+export {
+  DEFAULT_POWER,
+  DEFAULT_TOURNAMENT_SIZE,
+  DEFAULT_TOURNAMENT_PROBABILITY,
+  DEFAULT_SCORE,
+  FIRST_INDEX,
+  SECOND_INDEX,
+  LAST_INDEX_OFFSET,
+  LOOP_INDEX_INCREMENT,
+  LAST_ELEMENT_INDEX,
+  INITIAL_TOTAL_FITNESS,
+  INITIAL_MOST_NEGATIVE_SCORE,
+  INITIAL_CUMULATIVE_FITNESS,
+} from './neat.selection.utils';
 
 /**
  * Sorts the internal population in place by descending fitness.
@@ -49,7 +47,10 @@ export function sort(this: NeatLike): void {
   // Sort population descending by score (highest score first). Missing
   // scores (undefined/null) are treated as 0 using the nullish coalescing operator.
   const internal = this as unknown as NeatLikeWithSelection;
-  internal.population.sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+  internal.population.sort(
+    (left, right) =>
+      (right.score ?? DEFAULT_SCORE) - (left.score ?? DEFAULT_SCORE),
+  );
 }
 
 /**
@@ -77,149 +78,13 @@ export function sort(this: NeatLike): void {
  * @returns A genome object chosen as the parent according to the selection strategy
  */
 export function getParent(this: NeatLike): GenomeWithScore {
-  /**
-   * The configured selection options for this Neat instance. It controls the
-   * algorithm used to pick parents.
-   */
   const internal = this as unknown as NeatLikeWithSelection;
-  const selectionOptions = internal.options.selection;
 
-  /**
-   * The selection strategy identifier (e.g. 'POWER', 'FITNESS_PROPORTIONATE', 'TOURNAMENT').
-   */
-  const selectionName = selectionOptions?.name;
+  // Step 1: resolve parent selection via utility helpers.
+  const selectedParent = selectParentByStrategy(internal);
 
-  /**
-   * Bound factory that yields a random number generator function when called.
-   * Many parts of the codebase use the pattern `_getRNG()()` to obtain a
-   * uniform RNG in [0, 1). We preserve that behaviour via getRngFactory.
-   */
-  const getRngFactory = internal._getRNG.bind(this);
-
-  /**
-   * Local reference to the population array of genomes on this Neat instance.
-   */
-  const population = internal.population;
-
-  switch (selectionName) {
-    case 'POWER': {
-      // Ensure population sorted descending when necessary. The POWER strategy
-      // expects the best genomes to be at the front so we check and sort.
-      if (
-        population[0]?.score !== undefined &&
-        population[1]?.score !== undefined &&
-        population[0].score < population[1].score
-      ) {
-        internal.sort();
-      }
-
-      /**
-       * Compute the selected index using a power-law distribution. `power`
-       * > 1 biases selection toward the start of the sorted population.
-       */
-      const selectedIndex = Math.floor(
-        Math.pow(getRngFactory()(), selectionOptions?.power ?? 1) *
-          population.length,
-      );
-
-      // Return the genome at the chosen index.
-      return population[selectedIndex];
-    }
-
-    case 'FITNESS_PROPORTIONATE': {
-      // --- Compute total fitness and shift negative fitnesses ---
-      /**
-       * Accumulator for sum of fitness values (before shifting negatives).
-       */
-      let totalFitness = 0;
-
-      /**
-       * Track the most negative score to shift all scores into positive space.
-       * This avoids problems when fitness values are negative.
-       */
-      let mostNegativeScore = 0;
-
-      // Aggregate total fitness and discover minimal score in one loop.
-      population.forEach((individual) => {
-        mostNegativeScore = Math.min(mostNegativeScore, individual.score ?? 0);
-        totalFitness += individual.score ?? 0;
-      });
-
-      // Convert the most negative score into a non-negative shift value.
-      const minFitnessShift = Math.abs(mostNegativeScore);
-
-      // Add the shift for every member so the totalFitness accounts for shifting.
-      totalFitness += minFitnessShift * population.length;
-
-      /**
-       * Random threshold used to perform roulette-wheel selection over shifted fitness.
-       */
-      const threshold = getRngFactory()() * totalFitness;
-
-      /**
-       * Running cumulative total while iterating to find where `threshold` falls.
-       */
-      let cumulative = 0;
-
-      // Walk the population adding shifted scores until threshold is exceeded.
-      for (const individual of population) {
-        cumulative += (individual.score ?? 0) + minFitnessShift;
-        if (threshold < cumulative) return individual;
-      }
-
-      // Fallback in the unlikely event the loop did not return: choose random.
-      return population[Math.floor(getRngFactory()() * population.length)];
-    }
-
-    case 'TOURNAMENT': {
-      // Validate tournament size vs population and handle fallback/exception.
-      if ((selectionOptions?.size ?? 2) > population.length) {
-        // Only throw when not in internal reproduction path (flag set by evolve to suppress)
-        if (!internal._suppressTournamentError) {
-          throw new Error('Tournament size must be less than population size.');
-        }
-        // Fallback: degrade to random parent
-        return population[Math.floor(getRngFactory()() * population.length)];
-      }
-
-      /**
-       * Number of competitors to sample for the tournament.
-       */
-      const tournamentSize = selectionOptions?.size ?? 2;
-
-      /**
-       * Temporary list of randomly sampled tournament participants.
-       */
-      const tournamentParticipants: GenomeWithScore[] = [];
-
-      // Sample `tournamentSize` random individuals (with possible repeats).
-      for (let i = 0; i < tournamentSize; i++) {
-        tournamentParticipants.push(
-          population[Math.floor(getRngFactory()() * population.length)],
-        );
-      }
-
-      // Sort participants descending by fitness so index 0 is the best.
-      tournamentParticipants.sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
-
-      // Walk through the sorted tournament and pick a winner probabilistically.
-      for (let i = 0; i < tournamentParticipants.length; i++) {
-        if (
-          getRngFactory()() < (selectionOptions?.probability ?? 0.5) ||
-          i === tournamentParticipants.length - 1
-        )
-          return tournamentParticipants[i];
-      }
-      break;
-    }
-
-    default: {
-      // Legacy fallback: return the first population member as a safe default.
-      return population[0];
-    }
-  }
-  // Extra safety fallback.
-  return population[0];
+  // Step 2: return the selected parent.
+  return selectedParent;
 }
 
 /**
@@ -236,27 +101,17 @@ export function getParent(this: NeatLike): GenomeWithScore {
  * @returns The genome object judged to be the fittest (highest score).
  */
 export function getFittest(this: NeatLike): GenomeWithScore {
-  /**
-   * Local reference to the population array of genomes.
-   */
   const internal = this as unknown as NeatLikeWithSelection;
   const population = internal.population;
 
-  // If the last element doesn't have a score then evaluation hasn't run yet.
-  if (population[population.length - 1].score === undefined) {
-    (internal as unknown as { evaluate: () => void }).evaluate();
-  }
+  // Step 1: ensure the population has scores.
+  ensurePopulationEvaluated(internal);
 
-  // If the population isn't sorted descending by score, sort it.
-  if (
-    population[1] &&
-    (population[0].score ?? 0) < (population[1].score ?? 0)
-  ) {
-    internal.sort();
-  }
+  // Step 2: ensure the population is sorted descending by score.
+  ensurePopulationSortedDescending(internal);
 
-  // Return the genome at index 0 which should be the fittest.
-  return population[0];
+  // Step 3: return the fittest genome (index 0).
+  return population[FIRST_INDEX];
 }
 
 /**
@@ -276,15 +131,12 @@ export function getAverage(this: NeatLike): number {
   const internal = this as unknown as NeatLikeWithSelection;
   const population = internal.population;
 
-  // Ensure all genomes have been evaluated before computing the mean.
-  if (population[population.length - 1].score === undefined) {
-    (internal as unknown as { evaluate: () => void }).evaluate();
-  }
+  // Step 1: ensure scores exist.
+  ensurePopulationEvaluated(internal);
 
-  // Sum all scores treating undefined as 0 and divide by population size.
-  const totalScore = population.reduce(
-    (sum, genome) => sum + (genome.score ?? 0),
-    0,
-  );
+  // Step 2: compute total fitness.
+  const totalScore = calculateTotalScore(population);
+
+  // Step 3: fold into the mean.
   return totalScore / population.length;
 }
