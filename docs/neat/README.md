@@ -518,7 +518,7 @@ tolerant/robust nature of many historical NEAT library implementations.
 
 ### buildAnc
 
-`(genome: import("C:/NeatapticTS/src/neat/neat.lineage").GenomeLike) => Set<number>`
+`(genome: import("C:/NeatapticTS/src/neat/neat.lineage.utils").GenomeLike) => Set<number>`
 
 Build the (shallow) ancestor ID set for a single genome using breadth‑first traversal.
 
@@ -575,20 +575,934 @@ Returns: Mean Jaccard distance in [0,1]. Higher ⇒ more lineage uniqueness / di
 
 ### GenomeLike
 
-Lineage / ancestry analysis helpers for NEAT populations.
+Lineage / ancestry helper utilities for NEAT populations.
 
-These utilities were migrated from the historical implementation inside `src/neat.ts`
-to keep core NEAT logic lean while still exposing educational metrics for users who
-want to introspect evolutionary diversity.
-
-Glossary:
- - Genome: An individual network encoding (has a unique `_id` and optional `_parents`).
- - Ancestor Window: A shallow breadth‑first window (default depth = 4) over the lineage graph.
- - Jaccard Distance: 1 - |A ∩ B| / |A ∪ B|, measuring dissimilarity between two sets.
+This module centralizes helper logic used by the public lineage APIs to keep
+the main entry file small and orchestration-focused.
 
 ### NeatLineageContext
 
 Expected `this` context for lineage helpers (a subset of the NEAT instance).
+
+## neat/neat.lineage.utils.ts
+
+### AncestorQueueEntry
+
+Queue entry for ancestor traversal.
+
+### calculateMaxSamplePairs
+
+`(size: number) => number`
+
+Parameters:
+- `size` - Population size.
+
+Returns: Upper bound on the number of sampled pairs.
+
+### collectAncestorIds
+
+`(queueEntries: AncestorQueueEntry[], population: import("C:/NeatapticTS/src/neat/neat.lineage.utils").GenomeLike[]) => Set<number>`
+
+Parameters:
+- `queueEntries` - BFS queue seeded with direct parents.
+- `population` - Current population for lookups.
+
+Returns: Unique ancestor IDs encountered within the window.
+
+### computeAverageDistance
+
+`(distances: number[]) => number`
+
+Parameters:
+- `distances` - Jaccard distances to average.
+
+Returns: Mean distance rounded to the configured decimal places.
+
+### computeJaccardDistance
+
+`(ancestorSetA: Set<number>, ancestorSetB: Set<number>) => number`
+
+Parameters:
+- `ancestorSetA` - First ancestor set.
+- `ancestorSetB` - Second ancestor set.
+
+Returns: Jaccard distance for the two sets.
+
+### computePairDistance
+
+`(pair: GenomeIndexPair, population: import("C:/NeatapticTS/src/neat/neat.lineage.utils").GenomeLike[], buildAncestorSet: (genome: import("C:/NeatapticTS/src/neat/neat.lineage.utils").GenomeLike) => Set<number>) => number | undefined`
+
+Parameters:
+- `pair` - Index pair for comparison.
+- `population` - Current population.
+- `buildAncestorSet` - Helper to build ancestor sets.
+
+Returns: Jaccard distance or undefined when skipped.
+
+### computePairDistances
+
+`(pairs: GenomeIndexPair[], population: import("C:/NeatapticTS/src/neat/neat.lineage.utils").GenomeLike[], buildAncestorSet: (genome: import("C:/NeatapticTS/src/neat/neat.lineage.utils").GenomeLike) => Set<number>) => number[]`
+
+Parameters:
+- `pairs` - Sampled index pairs.
+- `population` - Current population.
+- `buildAncestorSet` - Helper to build ancestor sets.
+
+Returns: Jaccard distances for valid pairs.
+
+### countIntersection
+
+`(ancestorSetA: Set<number>, ancestorSetB: Set<number>) => number`
+
+Parameters:
+- `ancestorSetA` - First ancestor set.
+- `ancestorSetB` - Second ancestor set.
+
+Returns: Size of intersection between the sets.
+
+### createInitialQueue
+
+`(parentIds: number[], population: import("C:/NeatapticTS/src/neat/neat.lineage.utils").GenomeLike[]) => AncestorQueueEntry[]`
+
+Parameters:
+- `parentIds` - Direct parent IDs to seed the queue.
+- `population` - Current population for lookups.
+
+Returns: Queue entries at depth 1.
+
+### enqueueParentEntries
+
+`(queueEntries: AncestorQueueEntry[], currentEntry: AncestorQueueEntry, population: import("C:/NeatapticTS/src/neat/neat.lineage.utils").GenomeLike[]) => void`
+
+Parameters:
+- `queueEntries` - Mutable queue array to append to.
+- `currentEntry` - Current ancestor entry being expanded.
+- `population` - Current population for lookups.
+
+### findGenomeById
+
+`(population: import("C:/NeatapticTS/src/neat/neat.lineage.utils").GenomeLike[], genomeId: number) => import("C:/NeatapticTS/src/neat/neat.lineage.utils").GenomeLike | undefined`
+
+Parameters:
+- `population` - Current population for lookup.
+- `genomeId` - Genome identifier to match.
+
+Returns: Genome reference if found.
+
+### GenomeIndexPair
+
+Index pair representing a sampled genome pair.
+
+### GenomeLike
+
+Lineage / ancestry helper utilities for NEAT populations.
+
+This module centralizes helper logic used by the public lineage APIs to keep
+the main entry file small and orchestration-focused.
+
+### hasMinimumPopulation
+
+`(size: number) => boolean`
+
+Parameters:
+- `size` - Population size.
+
+Returns: True when at least two genomes exist.
+
+### isEmptyAncestorPair
+
+`(ancestorSetA: Set<number>, ancestorSetB: Set<number>) => boolean`
+
+Parameters:
+- `ancestorSetA` - First ancestor set.
+- `ancestorSetB` - Second ancestor set.
+
+Returns: True when both sets are empty.
+
+### isWithinDepthWindow
+
+`(depth: number) => boolean`
+
+Parameters:
+- `depth` - Current depth value.
+
+Returns: True when within the configured depth window.
+
+### NeatLineageContext
+
+Expected `this` context for lineage helpers (a subset of the NEAT instance).
+
+### normalizeParentIds
+
+`(value: import("C:/NeatapticTS/src/neat/neat.lineage.utils").GenomeLike) => number[]`
+
+Parameters:
+- `value` - Genome to read parents from.
+
+Returns: Parent ID list (empty when absent).
+
+### pickDistinctIndex
+
+`(randomNumber: () => number, size: number, firstIndex: number) => number`
+
+Parameters:
+- `randomNumber` - RNG function returning [0,1).
+- `size` - Population size for bounds.
+- `firstIndex` - Index to avoid.
+
+Returns: Random index not equal to the first index.
+
+### pickRandomIndex
+
+`(randomNumber: () => number, size: number) => number`
+
+Parameters:
+- `randomNumber` - RNG function returning [0,1).
+- `size` - Population size for bounds.
+
+Returns: Random index within bounds.
+
+### resolveParentIds
+
+`(value: import("C:/NeatapticTS/src/neat/neat.lineage.utils").GenomeLike | undefined) => number[]`
+
+Parameters:
+- `value` - Optional genome reference.
+
+Returns: Parent IDs when available.
+
+### sampleGenomePairs
+
+`(sampleCount: number, size: number, rngFactory: () => () => number) => GenomeIndexPair[]`
+
+Parameters:
+- `sampleCount` - Number of pairs to sample.
+- `size` - Population size for index bounds.
+- `rngFactory` - RNG provider to obtain a random function.
+
+Returns: Array of sampled index pairs.
+
+## neat/neat.multiobjective.archive.utils.ts
+
+### archiveParetoFrontsIfEnabled
+
+`(neatInstance: import("C:/NeatapticTS/src/neat/neat.multiobjective.types.utils").NeatLikeWithMultiObjective, fronts: import("C:/NeatapticTS/src/architecture/network").default[][]) => void`
+
+Archives a compact snapshot of the current Pareto fronts when
+multi-objective mode is enabled.
+
+This is intended for visualization/debugging:
+- Stores only genome `_id` values (not full genomes).
+- Keeps only the top {@link MAX_PARETO_ARCHIVE_FRONTS} fronts.
+- Maintains a ring-buffer-like cap of {@link MAX_PARETO_ARCHIVE_LENGTH}
+  snapshots by shifting the oldest entry.
+
+Behavior note:
+- This currently gates only on `neatInstance.options.multiObjective?.enabled`.
+  If you want a separate archive toggle, ensure the caller configures
+  `enabled` accordingly.
+
+Parameters:
+- `neatInstance` - - Neat instance.
+- `fronts` - - Pareto fronts to archive.
+
+### MAX_PARETO_ARCHIVE_FRONTS
+
+### MAX_PARETO_ARCHIVE_LENGTH
+
+## neat/neat.multiobjective.crowding.utils.ts
+
+### accumulateCrowdingForObjective
+
+`(sortedFront: import("C:/NeatapticTS/src/architecture/network").default[], valuesMatrixInput: number[][], genomeIndexByReference: Map<import("C:/NeatapticTS/src/architecture/network").default, number>, objectiveIndex: number) => void`
+
+Accumulates crowding distance contributions for a single objective.
+
+Pre-conditions / expectations:
+- `sortedFront` must be sorted ascending by the selected objective.
+- {@link initializeCrowding} has already set `_moCrowd = 0` for the front.
+- {@link markBoundaryCrowding} is typically called before this to set the
+  boundary genomes to `Infinity`.
+
+Edge cases:
+- If the front has fewer than 2 genomes, this is a no-op.
+- If the objective range is `0`, a range of `1` is used (see
+  {@link resolveObjectiveRange}).
+
+Parameters:
+- `sortedFront` - - Front sorted by objective.
+- `valuesMatrixInput` - - Values matrix.
+- `genomeIndexByReference` - - Lookup map.
+- `objectiveIndex` - - Objective column index.
+
+### accumulateInteriorCrowding
+
+`(sortedFront: import("C:/NeatapticTS/src/architecture/network").default[], valuesMatrixInput: number[][], genomeIndexByReference: Map<import("C:/NeatapticTS/src/architecture/network").default, number>, objectiveIndex: number, valueRange: number) => void`
+
+Accumulates crowding deltas for the interior genomes of a sorted front.
+
+Interior genomes receive a normalized spacing delta:
+`delta = (nextValue - previousValue) / valueRange`.
+
+Parameters:
+- `sortedFront` - - Front sorted by objective.
+- `valuesMatrixInput` - - Values matrix.
+- `genomeIndexByReference` - - Lookup map.
+- `objectiveIndex` - - Objective column index.
+- `valueRange` - - Normalized objective range.
+
+### applyCrowdingDelta
+
+`(currentGenome: import("C:/NeatapticTS/src/neat/neat.multiobjective.types.utils").NetworkWithMOAnnotations, previousValue: number, nextValue: number, valueRange: number) => void`
+
+Applies a normalized crowding-distance delta to a genome.
+
+If the genome’s crowding distance is `Infinity`, it will remain `Infinity`.
+This helper only updates when `_moCrowd` is initialized.
+
+Parameters:
+- `currentGenome` - - Genome to update.
+- `previousValue` - - Objective value of previous genome.
+- `nextValue` - - Objective value of next genome.
+- `valueRange` - - Normalized objective range.
+
+### applyCrowdingForObjective
+
+`(front: import("C:/NeatapticTS/src/architecture/network").default[], valuesMatrixInput: number[][], genomeIndexByReference: Map<import("C:/NeatapticTS/src/architecture/network").default, number>, objectiveIndex: number) => void`
+
+Applies crowding-distance accumulation for a single objective within a
+single front.
+
+Parameters:
+- `front` - - Pareto front.
+- `valuesMatrixInput` - - Values matrix.
+- `genomeIndexByReference` - - Lookup map.
+- `objectiveIndex` - - Objective column index.
+
+### assignCrowdingDistances
+
+`(fronts: import("C:/NeatapticTS/src/architecture/network").default[][], valuesMatrixInput: number[][], descriptors: import("C:/NeatapticTS/src/neat/neat.multiobjective.types.utils").ObjectiveDescriptor[], population: import("C:/NeatapticTS/src/architecture/network").default[]) => void`
+
+Assigns crowding-distance annotations for each Pareto front.
+
+This implements the crowding distance component of NSGA-II selection. Each
+genome in each front receives a `_moCrowd` value representing how isolated
+it is in objective space within its front.
+
+Notes:
+- This function sorts each front by each objective (ascending raw values).
+  Objective direction (min vs max) does not affect the computed spacing
+  magnitude; extrema are treated as boundaries either way.
+- Empty fronts are skipped.
+
+Side effects:
+- Writes `_moCrowd` on each genome in each front.
+
+Parameters:
+- `fronts` - - Pareto fronts.
+- `valuesMatrixInput` - - Values matrix.
+- `descriptors` - - Objective descriptors (provides objective count).
+- `population` - - Population to resolve indices.
+
+### assignCrowdingForFront
+
+`(front: import("C:/NeatapticTS/src/architecture/network").default[], valuesMatrixInput: number[][], genomeIndexByReference: Map<import("C:/NeatapticTS/src/architecture/network").default, number>, objectiveIndices: number[]) => void`
+
+Assigns crowding distances for a single front across all objectives.
+
+Parameters:
+- `front` - - Pareto front.
+- `valuesMatrixInput` - - Values matrix.
+- `genomeIndexByReference` - - Lookup map.
+- `objectiveIndices` - - Objective indices to process.
+
+### buildGenomeIndexByReference
+
+`(population: import("C:/NeatapticTS/src/architecture/network").default[]) => Map<import("C:/NeatapticTS/src/architecture/network").default, number>`
+
+Builds a stable mapping from genome object references to their population
+index.
+
+This relies on object identity (reference equality), not structural
+equality. It is used to resolve objective values from a values matrix when
+working with reordered views (e.g., sorted fronts).
+
+Parameters:
+- `population` - - Genomes in population order.
+
+Returns: Map from genome references to their index.
+
+### buildInteriorIndexRange
+
+`(frontLength: number) => number[]`
+
+Builds the index range for interior genomes of a front.
+
+Boundary genomes are excluded because their crowding distance is treated as
+infinite.
+
+Parameters:
+- `frontLength` - - Length of the sorted front.
+
+Returns: Interior indices excluding boundary genomes.
+
+### buildObjectiveIndexRange
+
+`(objectiveCount: number) => number[]`
+
+Builds a stable objective index range.
+
+Parameters:
+- `objectiveCount` - - Number of objectives.
+
+Returns: Objective indices `0..objectiveCount-1`.
+
+### buildSortedFrontByObjective
+
+`(front: import("C:/NeatapticTS/src/architecture/network").default[], valuesMatrixInput: number[][], genomeIndexByReference: Map<import("C:/NeatapticTS/src/architecture/network").default, number>, objectiveIndex: number) => import("C:/NeatapticTS/src/architecture/network").default[]`
+
+Builds a copy of the front sorted by the specified objective.
+
+Sorting is ascending by the raw objective value. This ordering is used for
+computing neighbor spacing in objective space.
+
+Parameters:
+- `front` - - Pareto front.
+- `valuesMatrixInput` - - Values matrix.
+- `genomeIndexByReference` - - Lookup map.
+- `objectiveIndex` - - Objective column index.
+
+Returns: Front sorted by objective value.
+
+### compareObjectiveValuesForCrowding
+
+`(valuesMatrixInput: number[][], genomeIndexByReference: Map<import("C:/NeatapticTS/src/architecture/network").default, number>, objectiveIndex: number, leftGenome: import("C:/NeatapticTS/src/architecture/network").default, rightGenome: import("C:/NeatapticTS/src/architecture/network").default) => number`
+
+Comparator used to sort genomes by a specific objective value.
+
+Parameters:
+- `valuesMatrixInput` - - Values matrix.
+- `genomeIndexByReference` - - Lookup map.
+- `objectiveIndex` - - Objective column index.
+- `leftGenome` - - Left genome.
+- `rightGenome` - - Right genome.
+
+Returns: Numeric sort comparison value (ascending).
+
+### initializeCrowding
+
+`(front: import("C:/NeatapticTS/src/architecture/network").default[]) => void`
+
+Initializes crowding-distance annotations for a front.
+
+This sets each genome’s `_moCrowd` to `0`. Later steps accumulate per-
+objective spacing deltas.
+
+Parameters:
+- `front` - - Pareto front.
+
+### markBoundaryCrowding
+
+`(sortedFront: import("C:/NeatapticTS/src/architecture/network").default[]) => void`
+
+Marks the boundary genomes of a sorted front as infinitely crowded.
+
+In NSGA-II style crowding distance, boundary solutions (extremes for the
+objective) are assigned an infinite crowding distance to ensure they are
+always preferred when ranks tie.
+
+Parameters:
+- `sortedFront` - - Front sorted by the current objective.
+
+### resolveBoundaryGenomes
+
+`(sortedFront: import("C:/NeatapticTS/src/architecture/network").default[]) => { firstGenome: import("C:/NeatapticTS/src/architecture/network").default; lastGenome: import("C:/NeatapticTS/src/architecture/network").default; } | null`
+
+Resolves the boundary (first/last) genomes for a sorted front.
+
+Parameters:
+- `sortedFront` - - Front sorted by objective.
+
+Returns: Boundary genomes, or `null` if the front is empty.
+
+### resolveGenomeIndex
+
+`(genomeIndexByReference: Map<import("C:/NeatapticTS/src/architecture/network").default, number>, genomeItem: import("C:/NeatapticTS/src/architecture/network").default) => number`
+
+Resolves a genome’s index using a reference-based map.
+
+Parameters:
+- `genomeIndexByReference` - - Lookup map created by
+ *  {@link buildGenomeIndexByReference} .
+ *
+- `genomeItem` - - Genome to resolve.
+
+Returns: The population index of the genome.
+
+### resolveNeighborPair
+
+`(sortedFront: import("C:/NeatapticTS/src/architecture/network").default[], sortedIndex: number) => { previousGenome: import("C:/NeatapticTS/src/architecture/network").default; nextGenome: import("C:/NeatapticTS/src/architecture/network").default; }`
+
+Resolves the neighbor genomes for an interior element of a sorted front.
+
+Parameters:
+- `sortedFront` - - Front sorted by objective.
+- `sortedIndex` - - Current index in sorted front.
+
+Returns: Previous and next neighbor genomes.
+
+### resolveObjectiveRange
+
+`(minValue: number, maxValue: number) => number`
+
+Resolves a non-zero objective range used to normalize crowding deltas.
+
+If all genomes have the same objective value, the raw range is `0`. This
+returns `1` in that case to avoid division by zero while still producing a
+well-defined crowding delta of `0`.
+
+Parameters:
+- `minValue` - - Minimum objective value.
+- `maxValue` - - Maximum objective value.
+
+Returns: Normalized range with a non-zero floor.
+
+### resolveObjectiveRangeFromBoundaries
+
+`(valuesMatrixInput: number[][], genomeIndexByReference: Map<import("C:/NeatapticTS/src/architecture/network").default, number>, boundaryGenomes: { firstGenome: import("C:/NeatapticTS/src/architecture/network").default; lastGenome: import("C:/NeatapticTS/src/architecture/network").default; }, objectiveIndex: number) => number`
+
+Resolves the normalized objective range for a front from its boundary
+genomes.
+
+Because `sortedFront` is sorted by objective, the first and last genomes are
+the extrema used for range normalization.
+
+Parameters:
+- `valuesMatrixInput` - - Values matrix.
+- `genomeIndexByReference` - - Lookup map.
+- `boundaryGenomes` - - Boundary genomes for the front.
+- `objectiveIndex` - - Objective column index.
+
+Returns: Normalized value range for the objective.
+
+### resolveObjectiveValue
+
+`(valuesMatrixInput: number[][], genomeIndexByReference: Map<import("C:/NeatapticTS/src/architecture/network").default, number>, genomeItem: import("C:/NeatapticTS/src/architecture/network").default, objectiveIndex: number) => number`
+
+Resolves an objective value for a genome from a values matrix.
+
+This is a convenience helper for working with sorted/reordered views of the
+population while keeping objective values in a dense matrix.
+
+Parameters:
+- `valuesMatrixInput` - - Values matrix indexed by population index.
+- `genomeIndexByReference` - - Lookup map from genome reference to index.
+- `genomeItem` - - Genome to resolve.
+- `objectiveIndex` - - Objective column index.
+
+Returns: The objective value for the genome.
+
+### shouldSkipCrowdingFront
+
+`(front: import("C:/NeatapticTS/src/architecture/network").default[]) => boolean`
+
+Determines whether crowding-distance processing should be skipped for a
+front.
+
+Parameters:
+- `front` - - Pareto front.
+
+Returns: `true` if the front should be skipped.
+
+## neat/neat.multiobjective.dominance.utils.ts
+
+### applyPairwiseDominance
+
+`(dominanceState: import("C:/NeatapticTS/src/neat/neat.multiobjective.dominance.utils").DominanceState, valuesMatrixInput: number[][], descriptors: import("C:/NeatapticTS/src/neat/neat.multiobjective.types.utils").ObjectiveDescriptor[], candidateIndex: number, opponentIndex: number) => void`
+
+Applies a single pairwise dominance update between candidate and opponent.
+
+If the candidate dominates the opponent, the opponent index is appended to
+`dominatedIndicesByIndex[candidateIndex]`. If the candidate is dominated by
+the opponent, `dominationCounts[candidateIndex]` is incremented.
+
+Parameters:
+- `dominanceState` - - Dominance bookkeeping.
+- `valuesMatrixInput` - - Matrix of objective values.
+- `descriptors` - - Objective descriptors.
+- `candidateIndex` - - Candidate genome index.
+- `opponentIndex` - - Opponent genome index.
+
+### buildDominanceState
+
+`(valuesMatrixInput: number[][], descriptors: import("C:/NeatapticTS/src/neat/neat.multiobjective.types.utils").ObjectiveDescriptor[]) => import("C:/NeatapticTS/src/neat/neat.multiobjective.dominance.utils").DominanceState`
+
+Builds dominance bookkeeping structures used by fast non-dominated sorting.
+
+This computes (pairwise):
+- `dominationCounts[i]`: how many genomes dominate genome `i`.
+- `dominatedIndicesByIndex[i]`: which genomes are dominated by genome `i`.
+- `firstFrontIndices`: genomes with `dominationCounts[i] === 0`.
+
+Complexity:
+- Time: $O(n^2 \cdot m)$ where $n$ is population size and $m$ is objective
+  count.
+- Space: $O(n^2)$ in the worst case for the dominated adjacency lists.
+
+Assumptions:
+- Each row in `valuesMatrixInput` is a vector aligned with `descriptors`.
+- Genome ordering in later steps is expected to match the matrix ordering.
+
+Parameters:
+- `valuesMatrixInput` - - Matrix of objective values (row = genome).
+- `descriptors` - - Objective descriptors (direction semantics).
+
+Returns: Dominance bookkeeping structures for ranking.
+
+### buildIndexRange
+
+`(populationSize: number) => number[]`
+
+Builds a stable index range for iterating the population.
+
+Parameters:
+- `populationSize` - - Number of genomes.
+
+Returns: Array of indices `0..populationSize-1`.
+
+### compareObjectiveValues
+
+`(direction: "max" | "min", candidateValue: number, opponentValue: number) => { isDominated: boolean; isStrictlyBetter: boolean; }`
+
+Compares a candidate and opponent value for a single objective.
+
+This does not compute full Pareto dominance; it returns per-objective flags
+used by the vector-level dominance check.
+
+Parameters:
+- `direction` - - Objective direction.
+- `candidateValue` - - Candidate objective value.
+- `opponentValue` - - Opponent objective value.
+
+Returns: Comparison flags for this objective.
+
+### createEmptyDominanceState
+
+`(populationSize: number) => import("C:/NeatapticTS/src/neat/neat.multiobjective.dominance.utils").DominanceState`
+
+Creates an empty dominance state container sized to the population.
+
+Parameters:
+- `populationSize` - - Number of genomes.
+
+Returns: An initialized dominance state with zeroed counts.
+
+### DominanceState
+
+Dominance bookkeeping structures for fast non-dominated sorting.
+
+These structures are typically produced once per generation (from the values
+matrix) and then consumed to build Pareto fronts.
+
+### isCandidateDominatedByObjective
+
+`(direction: "max" | "min", candidateValue: number, opponentValue: number) => boolean`
+
+Checks if the candidate is worse than the opponent for a single objective.
+
+For dominance, being worse on any objective makes the candidate unable to
+dominate the opponent.
+
+Parameters:
+- `direction` - - Objective direction.
+- `candidateValue` - - Candidate objective value.
+- `opponentValue` - - Opponent objective value.
+
+Returns: `true` if the candidate is dominated for this objective.
+
+### isCandidateStrictlyBetterForObjective
+
+`(direction: "max" | "min", candidateValue: number, opponentValue: number) => boolean`
+
+Checks if the candidate is strictly better than the opponent for a single
+objective.
+
+Strict improvement in at least one objective is required for Pareto
+dominance when the candidate is not worse in any objective.
+
+Parameters:
+- `direction` - - Objective direction.
+- `candidateValue` - - Candidate objective value.
+- `opponentValue` - - Opponent objective value.
+
+Returns: `true` if the candidate is strictly better for this objective.
+
+### isNonDominatedCandidate
+
+`(dominanceState: import("C:/NeatapticTS/src/neat/neat.multiobjective.dominance.utils").DominanceState, candidateIndex: number) => boolean`
+
+Determines whether a candidate has zero domination count.
+
+Parameters:
+- `dominanceState` - - Dominance bookkeeping.
+- `candidateIndex` - - Candidate genome index.
+
+Returns: `true` if the candidate is currently non-dominated.
+
+### resolveDominanceOutcome
+
+`(candidateVector: number[], opponentVector: number[], descriptors: import("C:/NeatapticTS/src/neat/neat.multiobjective.types.utils").ObjectiveDescriptor[]) => "dominates" | "dominated" | "indifferent"`
+
+Resolves dominance outcome between two objective vectors.
+
+Outcome meanings:
+- `'dominates'`: candidate dominates opponent.
+- `'dominated'`: candidate is dominated by opponent.
+- `'indifferent'`: neither dominates the other.
+
+Parameters:
+- `candidateVector` - - Candidate objective values.
+- `opponentVector` - - Opponent objective values.
+- `descriptors` - - Objective descriptors.
+
+Returns: Dominance outcome between candidate and opponent.
+
+### resolveObjectiveDirection
+
+`(descriptors: import("C:/NeatapticTS/src/neat/neat.multiobjective.types.utils").ObjectiveDescriptor[], objectiveIndex: number) => "max" | "min"`
+
+Resolves the objective direction for a given objective index.
+
+If a descriptor omits `direction`, it is treated as maximization.
+
+Parameters:
+- `descriptors` - - Objective descriptors.
+- `objectiveIndex` - - Objective index.
+
+Returns: Normalized objective direction.
+
+### shouldSkipSelfComparison
+
+`(candidateIndex: number, opponentIndex: number) => boolean`
+
+Determines whether a pairwise comparison should be skipped.
+
+Currently this skips only self-comparisons.
+
+Parameters:
+- `candidateIndex` - - Candidate genome index.
+- `opponentIndex` - - Opponent genome index.
+
+Returns: `true` if the pair should be skipped.
+
+### updateDominanceForCandidate
+
+`(dominanceState: import("C:/NeatapticTS/src/neat/neat.multiobjective.dominance.utils").DominanceState, valuesMatrixInput: number[][], descriptors: import("C:/NeatapticTS/src/neat/neat.multiobjective.types.utils").ObjectiveDescriptor[], candidateIndex: number, candidateIndices: number[]) => void`
+
+Updates dominance bookkeeping for a candidate against all opponents.
+
+This iterates every opponent index and applies a pairwise dominance update.
+Self-comparisons are ignored.
+
+Parameters:
+- `dominanceState` - - Dominance bookkeeping.
+- `valuesMatrixInput` - - Matrix of objective values.
+- `descriptors` - - Objective descriptors.
+- `candidateIndex` - - Candidate genome index.
+- `candidateIndices` - - Indices to compare against.
+
+### updateStrictImprovement
+
+`(hasStrictImprovement: boolean, isStrictlyBetter: boolean) => boolean`
+
+Accumulates whether the candidate has any strict improvement across
+objectives.
+
+Parameters:
+- `hasStrictImprovement` - - Current strict-improvement flag.
+- `isStrictlyBetter` - - Whether the candidate strictly improves on the
+current objective.
+
+Returns: Updated strict-improvement flag.
+
+### vectorDominates
+
+`(valuesA: number[], valuesB: number[], descriptors: import("C:/NeatapticTS/src/neat/neat.multiobjective.types.utils").ObjectiveDescriptor[]) => boolean`
+
+Determines whether vector A Pareto-dominates vector B.
+
+A dominates B iff:
+- A is **no worse** than B in every objective (respecting each objective’s
+  direction: maximize/minimize), and
+- A is **strictly better** in at least one objective.
+
+Assumptions:
+- `valuesA` and `valuesB` are aligned and have the same length.
+- `descriptors` provides a descriptor for each objective index.
+- If a descriptor has no `direction`, it defaults to `'max'`.
+
+Parameters:
+- `valuesA` - - Objective values for candidate A.
+- `valuesB` - - Objective values for candidate B.
+- `descriptors` - - Objective descriptors defining direction semantics.
+
+Returns: `true` if A dominates B; otherwise `false`.
+
+## neat/neat.multiobjective.fronts.utils.ts
+
+### annotateGenomeRank
+
+`(population: import("C:/NeatapticTS/src/architecture/network").default[], genomeIndex: number, frontRank: number) => void`
+
+Annotates a genome with its Pareto front rank.
+
+Parameters:
+- `population` - - Genome population.
+- `genomeIndex` - - Index of the genome to annotate.
+- `frontRank` - - Pareto front rank (0 = best front).
+
+### appendFront
+
+`(paretoFronts: import("C:/NeatapticTS/src/architecture/network").default[][], population: import("C:/NeatapticTS/src/architecture/network").default[], currentFrontIndices: number[]) => void`
+
+Appends the current front (index list) as genome references to the
+`paretoFronts` accumulator.
+
+Parameters:
+- `paretoFronts` - - Accumulator for Pareto fronts.
+- `population` - - Genome population.
+- `currentFrontIndices` - - Indices for the current front.
+
+### buildNextFrontIndices
+
+`(population: import("C:/NeatapticTS/src/architecture/network").default[], dominanceState: import("C:/NeatapticTS/src/neat/neat.multiobjective.dominance.utils").DominanceState, currentFrontIndices: number[], currentFrontRank: number) => number[]`
+
+Builds the next front by applying rank annotations and dominance updates.
+
+Parameters:
+- `population` - - Genome population.
+- `dominanceState` - - Dominance bookkeeping.
+- `currentFrontIndices` - - Indices for the current front.
+- `currentFrontRank` - - Rank to assign to the current front.
+
+Returns: Indices for the next front.
+
+### buildParetoFronts
+
+`(population: import("C:/NeatapticTS/src/architecture/network").default[], dominanceState: import("C:/NeatapticTS/src/neat/neat.multiobjective.dominance.utils").DominanceState, maxFrontRankGuard: number) => import("C:/NeatapticTS/src/architecture/network").default[][]`
+
+Builds Pareto fronts from a precomputed dominance state.
+
+This performs the “peeling” phase of fast non-dominated sorting:
+- Start with the first front (all non-dominated genomes).
+- For each front, reduce domination counts of the genomes it dominates.
+- Any genome whose domination count becomes zero moves to the next front.
+
+Side effects:
+- Annotates each genome in `population` with `_moRank` (0 = best front).
+
+Guard:
+- Stops when `currentFrontRank > maxFrontRankGuard` to avoid pathological
+  infinite/degenerate runs. If the guard triggers, the returned fronts may
+  be incomplete.
+
+Parameters:
+- `population` - - Genome population (same ordering used by dominance
+bookkeeping).
+- `dominanceState` - - Dominance bookkeeping.
+- `maxFrontRankGuard` - - Safety guard for ranking iterations.
+
+Returns: Ordered Pareto fronts (rank order).
+
+### collectNextFrontIndices
+
+`(dominanceState: import("C:/NeatapticTS/src/neat/neat.multiobjective.dominance.utils").DominanceState, genomeIndex: number, nextFrontIndices: number[]) => void`
+
+Collects indices that become non-dominated after removing the current
+genome’s dominance influence.
+
+Parameters:
+- `dominanceState` - - Dominance bookkeeping.
+- `genomeIndex` - - Index of the current genome.
+- `nextFrontIndices` - - Accumulator for the next front.
+
+### incrementFrontRank
+
+`(currentFrontRank: number) => number`
+
+Increments the front rank counter.
+
+Parameters:
+- `currentFrontRank` - - Current front rank.
+
+Returns: Incremented front rank.
+
+### MAX_PARETO_FRONT_RANK_GUARD
+
+### shouldStopFrontRanking
+
+`(currentFrontRank: number, maxFrontRankGuard: number) => boolean`
+
+Determines whether ranking should stop due to a safety guard.
+
+Parameters:
+- `currentFrontRank` - - Current front rank after increment.
+- `maxFrontRankGuard` - - Safety guard for ranking iterations.
+
+Returns: `true` if ranking should stop.
+
+## neat/neat.multiobjective.objectives.utils.ts
+
+### buildGenomeValues
+
+`(genomeItem: import("C:/NeatapticTS/src/architecture/network").default, descriptors: import("C:/NeatapticTS/src/neat/neat.multiobjective.types.utils").ObjectiveDescriptor[]) => number[]`
+
+Builds an objective vector for a single genome.
+
+The resulting array order matches the `descriptors` order exactly.
+Each component is read via {@link readObjectiveValue} so individual
+objective accessors are fault-tolerant.
+
+Parameters:
+- `genomeItem` - - Genome to evaluate.
+- `descriptors` - - Objective descriptors (vector schema).
+
+Returns: Objective value vector (length equals `descriptors.length`).
+
+### buildValuesMatrix
+
+`(population: import("C:/NeatapticTS/src/architecture/network").default[], descriptors: import("C:/NeatapticTS/src/neat/neat.multiobjective.types.utils").ObjectiveDescriptor[]) => number[][]`
+
+Builds a population-wide objective value matrix.
+
+The resulting matrix is indexed as `[genomeIndex][objectiveIndex]` where
+`genomeIndex` matches the input `population` order.
+
+Parameters:
+- `population` - - Genomes to evaluate (population order is preserved).
+- `descriptors` - - Objective descriptors (column schema).
+
+Returns: Objective values matrix.
+
+### readObjectiveValue
+
+`(genomeItem: import("C:/NeatapticTS/src/architecture/network").default, descriptor: import("C:/NeatapticTS/src/neat/neat.multiobjective.types.utils").ObjectiveDescriptor) => number`
+
+Safely reads a single objective value for a given genome.
+
+This wraps the descriptor `accessor` in a `try/catch` so that a buggy
+objective function cannot crash multi-objective ranking.
+
+Notes:
+- If the accessor throws, this returns `0` (a neutral-ish fallback).
+- Callers should prefer to surface accessor errors during development;
+  this helper is intentionally defensive for long-running training loops.
+
+Parameters:
+- `genomeItem` - - Genome to evaluate.
+- `descriptor` - - Objective descriptor providing an accessor.
+
+Returns: Numeric objective value; `0` if the accessor throws.
 
 ## neat/neat.multiobjective.ts
 
@@ -625,20 +1539,373 @@ Parameters:
 
 Returns: Array of Pareto fronts; each front is an array of `Network` genomes.
 
+## neat/neat.multiobjective.types.utils.ts
+
 ### NeatLikeWithMultiObjective
 
-Minimal Neat instance interface for multi-objective operations.
+Minimal Neat-like interface required by the multi-objective helpers.
+
+This intentionally models only the fields used for archiving Pareto fronts
+and retrieving objective descriptors. It allows these helpers to be used
+without depending on the full Neat class type.
 
 ### NetworkWithMOAnnotations
 
-Extended Network interface with multi-objective annotations.
+Extends a genome/network with multi-objective annotations.
+
+These properties are used as transient metadata during selection.
+
+- `_moRank`: Pareto front rank (0 = best front)
+- `_moCrowd`: crowding distance within the front (higher = more isolated;
+  boundary genomes are typically `Infinity`)
+- `_id`: optional stable identifier used for compact archiving
 
 ### ObjectiveDescriptor
 
-Shape of an objective descriptor used by the Neat instance.
-- `accessor` extracts a numeric objective from a genome
-- `direction` optionally indicates whether the objective is maximized or
-  minimized (defaults to 'max')
+Describes how to evaluate a single objective for a genome.
+
+The order of objective descriptors defines the order of each genome’s
+objective vector and therefore the columns of the values matrix.
+
+Notes:
+- `accessor` should be deterministic for a given genome state.
+- `direction` controls Pareto dominance comparisons:
+  - `'max'`: higher is better
+  - `'min'`: lower is better
+- If `direction` is omitted, it defaults to `'max'`.
+
+## neat/neat.multiobjective.utils.ts
+
+### accumulateCrowdingForObjective
+
+`(sortedFront: import("C:/NeatapticTS/src/architecture/network").default[], valuesMatrixInput: number[][], genomeIndexByReference: Map<import("C:/NeatapticTS/src/architecture/network").default, number>, objectiveIndex: number) => void`
+
+Accumulates crowding distance contributions for a single objective.
+
+Pre-conditions / expectations:
+- `sortedFront` must be sorted ascending by the selected objective.
+- {@link initializeCrowding} has already set `_moCrowd = 0` for the front.
+- {@link markBoundaryCrowding} is typically called before this to set the
+  boundary genomes to `Infinity`.
+
+Edge cases:
+- If the front has fewer than 2 genomes, this is a no-op.
+- If the objective range is `0`, a range of `1` is used (see
+  {@link resolveObjectiveRange}).
+
+Parameters:
+- `sortedFront` - - Front sorted by objective.
+- `valuesMatrixInput` - - Values matrix.
+- `genomeIndexByReference` - - Lookup map.
+- `objectiveIndex` - - Objective column index.
+
+### archiveParetoFrontsIfEnabled
+
+`(neatInstance: import("C:/NeatapticTS/src/neat/neat.multiobjective.types.utils").NeatLikeWithMultiObjective, fronts: import("C:/NeatapticTS/src/architecture/network").default[][]) => void`
+
+Archives a compact snapshot of the current Pareto fronts when
+multi-objective mode is enabled.
+
+This is intended for visualization/debugging:
+- Stores only genome `_id` values (not full genomes).
+- Keeps only the top {@link MAX_PARETO_ARCHIVE_FRONTS} fronts.
+- Maintains a ring-buffer-like cap of {@link MAX_PARETO_ARCHIVE_LENGTH}
+  snapshots by shifting the oldest entry.
+
+Behavior note:
+- This currently gates only on `neatInstance.options.multiObjective?.enabled`.
+  If you want a separate archive toggle, ensure the caller configures
+  `enabled` accordingly.
+
+Parameters:
+- `neatInstance` - - Neat instance.
+- `fronts` - - Pareto fronts to archive.
+
+### assignCrowdingDistances
+
+`(fronts: import("C:/NeatapticTS/src/architecture/network").default[][], valuesMatrixInput: number[][], descriptors: import("C:/NeatapticTS/src/neat/neat.multiobjective.types.utils").ObjectiveDescriptor[], population: import("C:/NeatapticTS/src/architecture/network").default[]) => void`
+
+Assigns crowding-distance annotations for each Pareto front.
+
+This implements the crowding distance component of NSGA-II selection. Each
+genome in each front receives a `_moCrowd` value representing how isolated
+it is in objective space within its front.
+
+Notes:
+- This function sorts each front by each objective (ascending raw values).
+  Objective direction (min vs max) does not affect the computed spacing
+  magnitude; extrema are treated as boundaries either way.
+- Empty fronts are skipped.
+
+Side effects:
+- Writes `_moCrowd` on each genome in each front.
+
+Parameters:
+- `fronts` - - Pareto fronts.
+- `valuesMatrixInput` - - Values matrix.
+- `descriptors` - - Objective descriptors (provides objective count).
+- `population` - - Population to resolve indices.
+
+### buildDominanceState
+
+`(valuesMatrixInput: number[][], descriptors: import("C:/NeatapticTS/src/neat/neat.multiobjective.types.utils").ObjectiveDescriptor[]) => import("C:/NeatapticTS/src/neat/neat.multiobjective.dominance.utils").DominanceState`
+
+Builds dominance bookkeeping structures used by fast non-dominated sorting.
+
+This computes (pairwise):
+- `dominationCounts[i]`: how many genomes dominate genome `i`.
+- `dominatedIndicesByIndex[i]`: which genomes are dominated by genome `i`.
+- `firstFrontIndices`: genomes with `dominationCounts[i] === 0`.
+
+Complexity:
+- Time: $O(n^2 \cdot m)$ where $n$ is population size and $m$ is objective
+  count.
+- Space: $O(n^2)$ in the worst case for the dominated adjacency lists.
+
+Assumptions:
+- Each row in `valuesMatrixInput` is a vector aligned with `descriptors`.
+- Genome ordering in later steps is expected to match the matrix ordering.
+
+Parameters:
+- `valuesMatrixInput` - - Matrix of objective values (row = genome).
+- `descriptors` - - Objective descriptors (direction semantics).
+
+Returns: Dominance bookkeeping structures for ranking.
+
+### buildGenomeIndexByReference
+
+`(population: import("C:/NeatapticTS/src/architecture/network").default[]) => Map<import("C:/NeatapticTS/src/architecture/network").default, number>`
+
+Builds a stable mapping from genome object references to their population
+index.
+
+This relies on object identity (reference equality), not structural
+equality. It is used to resolve objective values from a values matrix when
+working with reordered views (e.g., sorted fronts).
+
+Parameters:
+- `population` - - Genomes in population order.
+
+Returns: Map from genome references to their index.
+
+### buildGenomeValues
+
+`(genomeItem: import("C:/NeatapticTS/src/architecture/network").default, descriptors: import("C:/NeatapticTS/src/neat/neat.multiobjective.types.utils").ObjectiveDescriptor[]) => number[]`
+
+Builds an objective vector for a single genome.
+
+The resulting array order matches the `descriptors` order exactly.
+Each component is read via {@link readObjectiveValue} so individual
+objective accessors are fault-tolerant.
+
+Parameters:
+- `genomeItem` - - Genome to evaluate.
+- `descriptors` - - Objective descriptors (vector schema).
+
+Returns: Objective value vector (length equals `descriptors.length`).
+
+### buildParetoFronts
+
+`(population: import("C:/NeatapticTS/src/architecture/network").default[], dominanceState: import("C:/NeatapticTS/src/neat/neat.multiobjective.dominance.utils").DominanceState, maxFrontRankGuard: number) => import("C:/NeatapticTS/src/architecture/network").default[][]`
+
+Builds Pareto fronts from a precomputed dominance state.
+
+This performs the “peeling” phase of fast non-dominated sorting:
+- Start with the first front (all non-dominated genomes).
+- For each front, reduce domination counts of the genomes it dominates.
+- Any genome whose domination count becomes zero moves to the next front.
+
+Side effects:
+- Annotates each genome in `population` with `_moRank` (0 = best front).
+
+Guard:
+- Stops when `currentFrontRank > maxFrontRankGuard` to avoid pathological
+  infinite/degenerate runs. If the guard triggers, the returned fronts may
+  be incomplete.
+
+Parameters:
+- `population` - - Genome population (same ordering used by dominance
+bookkeeping).
+- `dominanceState` - - Dominance bookkeeping.
+- `maxFrontRankGuard` - - Safety guard for ranking iterations.
+
+Returns: Ordered Pareto fronts (rank order).
+
+### buildValuesMatrix
+
+`(population: import("C:/NeatapticTS/src/architecture/network").default[], descriptors: import("C:/NeatapticTS/src/neat/neat.multiobjective.types.utils").ObjectiveDescriptor[]) => number[][]`
+
+Builds a population-wide objective value matrix.
+
+The resulting matrix is indexed as `[genomeIndex][objectiveIndex]` where
+`genomeIndex` matches the input `population` order.
+
+Parameters:
+- `population` - - Genomes to evaluate (population order is preserved).
+- `descriptors` - - Objective descriptors (column schema).
+
+Returns: Objective values matrix.
+
+### DominanceState
+
+Dominance bookkeeping structures for fast non-dominated sorting.
+
+These structures are typically produced once per generation (from the values
+matrix) and then consumed to build Pareto fronts.
+
+### initializeCrowding
+
+`(front: import("C:/NeatapticTS/src/architecture/network").default[]) => void`
+
+Initializes crowding-distance annotations for a front.
+
+This sets each genome’s `_moCrowd` to `0`. Later steps accumulate per-
+objective spacing deltas.
+
+Parameters:
+- `front` - - Pareto front.
+
+### markBoundaryCrowding
+
+`(sortedFront: import("C:/NeatapticTS/src/architecture/network").default[]) => void`
+
+Marks the boundary genomes of a sorted front as infinitely crowded.
+
+In NSGA-II style crowding distance, boundary solutions (extremes for the
+objective) are assigned an infinite crowding distance to ensure they are
+always preferred when ranks tie.
+
+Parameters:
+- `sortedFront` - - Front sorted by the current objective.
+
+### MAX_PARETO_ARCHIVE_FRONTS
+
+### MAX_PARETO_ARCHIVE_LENGTH
+
+### MAX_PARETO_FRONT_RANK_GUARD
+
+### NeatLikeWithMultiObjective
+
+Minimal Neat-like interface required by the multi-objective helpers.
+
+This intentionally models only the fields used for archiving Pareto fronts
+and retrieving objective descriptors. It allows these helpers to be used
+without depending on the full Neat class type.
+
+### NetworkWithMOAnnotations
+
+Extends a genome/network with multi-objective annotations.
+
+These properties are used as transient metadata during selection.
+
+- `_moRank`: Pareto front rank (0 = best front)
+- `_moCrowd`: crowding distance within the front (higher = more isolated;
+  boundary genomes are typically `Infinity`)
+- `_id`: optional stable identifier used for compact archiving
+
+### ObjectiveDescriptor
+
+Describes how to evaluate a single objective for a genome.
+
+The order of objective descriptors defines the order of each genome’s
+objective vector and therefore the columns of the values matrix.
+
+Notes:
+- `accessor` should be deterministic for a given genome state.
+- `direction` controls Pareto dominance comparisons:
+  - `'max'`: higher is better
+  - `'min'`: lower is better
+- If `direction` is omitted, it defaults to `'max'`.
+
+### readObjectiveValue
+
+`(genomeItem: import("C:/NeatapticTS/src/architecture/network").default, descriptor: import("C:/NeatapticTS/src/neat/neat.multiobjective.types.utils").ObjectiveDescriptor) => number`
+
+Safely reads a single objective value for a given genome.
+
+This wraps the descriptor `accessor` in a `try/catch` so that a buggy
+objective function cannot crash multi-objective ranking.
+
+Notes:
+- If the accessor throws, this returns `0` (a neutral-ish fallback).
+- Callers should prefer to surface accessor errors during development;
+  this helper is intentionally defensive for long-running training loops.
+
+Parameters:
+- `genomeItem` - - Genome to evaluate.
+- `descriptor` - - Objective descriptor providing an accessor.
+
+Returns: Numeric objective value; `0` if the accessor throws.
+
+### resolveGenomeIndex
+
+`(genomeIndexByReference: Map<import("C:/NeatapticTS/src/architecture/network").default, number>, genomeItem: import("C:/NeatapticTS/src/architecture/network").default) => number`
+
+Resolves a genome’s index using a reference-based map.
+
+Parameters:
+- `genomeIndexByReference` - - Lookup map created by
+ *  {@link buildGenomeIndexByReference} .
+ *
+- `genomeItem` - - Genome to resolve.
+
+Returns: The population index of the genome.
+
+### resolveObjectiveRange
+
+`(minValue: number, maxValue: number) => number`
+
+Resolves a non-zero objective range used to normalize crowding deltas.
+
+If all genomes have the same objective value, the raw range is `0`. This
+returns `1` in that case to avoid division by zero while still producing a
+well-defined crowding delta of `0`.
+
+Parameters:
+- `minValue` - - Minimum objective value.
+- `maxValue` - - Maximum objective value.
+
+Returns: Normalized range with a non-zero floor.
+
+### resolveObjectiveValue
+
+`(valuesMatrixInput: number[][], genomeIndexByReference: Map<import("C:/NeatapticTS/src/architecture/network").default, number>, genomeItem: import("C:/NeatapticTS/src/architecture/network").default, objectiveIndex: number) => number`
+
+Resolves an objective value for a genome from a values matrix.
+
+This is a convenience helper for working with sorted/reordered views of the
+population while keeping objective values in a dense matrix.
+
+Parameters:
+- `valuesMatrixInput` - - Values matrix indexed by population index.
+- `genomeIndexByReference` - - Lookup map from genome reference to index.
+- `genomeItem` - - Genome to resolve.
+- `objectiveIndex` - - Objective column index.
+
+Returns: The objective value for the genome.
+
+### vectorDominates
+
+`(valuesA: number[], valuesB: number[], descriptors: import("C:/NeatapticTS/src/neat/neat.multiobjective.types.utils").ObjectiveDescriptor[]) => boolean`
+
+Determines whether vector A Pareto-dominates vector B.
+
+A dominates B iff:
+- A is **no worse** than B in every objective (respecting each objective’s
+  direction: maximize/minimize), and
+- A is **strictly better** in at least one objective.
+
+Assumptions:
+- `valuesA` and `valuesB` are aligned and have the same length.
+- `descriptors` provides a descriptor for each objective index.
+- If a descriptor has no `direction`, it defaults to `'max'`.
+
+Parameters:
+- `valuesA` - - Objective values for candidate A.
+- `valuesB` - - Objective values for candidate B.
+- `descriptors` - - Objective descriptors defining direction semantics.
+
+Returns: `true` if A dominates B; otherwise `false`.
 
 ## neat/neat.mutation.add-conn.utils.ts
 
@@ -4010,7 +5277,7 @@ Parameters:
 
 ### buildLineageContext
 
-`(context: { _getRNG?: (() => () => number) | undefined; }, populationSnapshot: import("C:/NeatapticTS/src/neat/neat.types").GenomeDetailed[]) => import("C:/NeatapticTS/src/neat/neat.lineage").NeatLineageContext`
+`(context: { _getRNG?: (() => () => number) | undefined; }, populationSnapshot: import("C:/NeatapticTS/src/neat/neat.types").GenomeDetailed[]) => import("C:/NeatapticTS/src/neat/neat.lineage.utils").NeatLineageContext`
 
 Build a lineage helper context for ancestor operations.
 
@@ -4620,7 +5887,7 @@ Returns: Map degree -> number of nodes with that degree.
 
 ### buildLineageContext
 
-`(context: { _getRNG?: (() => () => number) | undefined; }, populationSnapshot: import("C:/NeatapticTS/src/neat/neat.types").GenomeDetailed[]) => import("C:/NeatapticTS/src/neat/neat.lineage").NeatLineageContext`
+`(context: { _getRNG?: (() => () => number) | undefined; }, populationSnapshot: import("C:/NeatapticTS/src/neat/neat.types").GenomeDetailed[]) => import("C:/NeatapticTS/src/neat/neat.lineage.utils").NeatLineageContext`
 
 Build a lineage helper context for ancestor operations.
 

@@ -297,7 +297,7 @@ network or by synthesizing fresh minimal networks.</li>
 They intentionally use defensive try/catch blocks to avoid aborting broader
 evolutionary runs when an individual genome operation fails; this mirrors the
 tolerant/robust nature of many historical NEAT library implementations.</p>
-<h2 id="neat-neat-lineage-ts">neat/neat.lineage.ts</h2><h3 id="buildanc">buildAnc</h3><p><code>(genome: import(&quot;C:/NeatapticTS/src/neat/neat.lineage&quot;).GenomeLike) =&gt; Set&lt;number&gt;</code></p>
+<h2 id="neat-neat-lineage-ts">neat/neat.lineage.ts</h2><h3 id="buildanc">buildAnc</h3><p><code>(genome: import(&quot;C:/NeatapticTS/src/neat/neat.lineage.utils&quot;).GenomeLike) =&gt; Set&lt;number&gt;</code></p>
 <p>Build the (shallow) ancestor ID set for a single genome using breadth‑first traversal.</p>
 <p>Traversal Strategy:</p>
 <ol>
@@ -345,17 +345,675 @@ does not change the proportion of shared ancestry, and distance stays within [0,
 <li><code>this</code> - NEAT context (<code>population</code> and <code>_getRNG</code> must exist).</li>
 </ul>
 <p>Returns: Mean Jaccard distance in [0,1]. Higher ⇒ more lineage uniqueness / diversity.</p>
-<h3 id="genomelike">GenomeLike</h3><p>Lineage / ancestry analysis helpers for NEAT populations.</p>
-<p>These utilities were migrated from the historical implementation inside <code>src/neat.ts</code>
-to keep core NEAT logic lean while still exposing educational metrics for users who
-want to introspect evolutionary diversity.</p>
-<p>Glossary:</p>
-<ul>
-<li>Genome: An individual network encoding (has a unique <code>_id</code> and optional <code>_parents</code>).</li>
-<li>Ancestor Window: A shallow breadth‑first window (default depth = 4) over the lineage graph.</li>
-<li>Jaccard Distance: 1 - |A ∩ B| / |A ∪ B|, measuring dissimilarity between two sets.</li>
-</ul>
+<h3 id="genomelike">GenomeLike</h3><p>Lineage / ancestry helper utilities for NEAT populations.</p>
+<p>This module centralizes helper logic used by the public lineage APIs to keep
+the main entry file small and orchestration-focused.</p>
 <h3 id="neatlineagecontext">NeatLineageContext</h3><p>Expected <code>this</code> context for lineage helpers (a subset of the NEAT instance).</p>
+<h2 id="neat-neat-lineage-utils-ts">neat/neat.lineage.utils.ts</h2><h3 id="ancestorqueueentry">AncestorQueueEntry</h3><p>Queue entry for ancestor traversal.</p>
+<h3 id="calculatemaxsamplepairs">calculateMaxSamplePairs</h3><p><code>(size: number) =&gt; number</code></p>
+<p>Parameters:</p>
+<ul>
+<li><code>size</code> - Population size.</li>
+</ul>
+<p>Returns: Upper bound on the number of sampled pairs.</p>
+<h3 id="collectancestorids">collectAncestorIds</h3><p><code>(queueEntries: AncestorQueueEntry[], population: import(&quot;C:/NeatapticTS/src/neat/neat.lineage.utils&quot;).GenomeLike[]) =&gt; Set&lt;number&gt;</code></p>
+<p>Parameters:</p>
+<ul>
+<li><code>queueEntries</code> - BFS queue seeded with direct parents.</li>
+<li><code>population</code> - Current population for lookups.</li>
+</ul>
+<p>Returns: Unique ancestor IDs encountered within the window.</p>
+<h3 id="computeaveragedistance">computeAverageDistance</h3><p><code>(distances: number[]) =&gt; number</code></p>
+<p>Parameters:</p>
+<ul>
+<li><code>distances</code> - Jaccard distances to average.</li>
+</ul>
+<p>Returns: Mean distance rounded to the configured decimal places.</p>
+<h3 id="computejaccarddistance">computeJaccardDistance</h3><p><code>(ancestorSetA: Set&lt;number&gt;, ancestorSetB: Set&lt;number&gt;) =&gt; number</code></p>
+<p>Parameters:</p>
+<ul>
+<li><code>ancestorSetA</code> - First ancestor set.</li>
+<li><code>ancestorSetB</code> - Second ancestor set.</li>
+</ul>
+<p>Returns: Jaccard distance for the two sets.</p>
+<h3 id="computepairdistance">computePairDistance</h3><p><code>(pair: GenomeIndexPair, population: import(&quot;C:/NeatapticTS/src/neat/neat.lineage.utils&quot;).GenomeLike[], buildAncestorSet: (genome: import(&quot;C:/NeatapticTS/src/neat/neat.lineage.utils&quot;).GenomeLike) =&gt; Set&lt;number&gt;) =&gt; number | undefined</code></p>
+<p>Parameters:</p>
+<ul>
+<li><code>pair</code> - Index pair for comparison.</li>
+<li><code>population</code> - Current population.</li>
+<li><code>buildAncestorSet</code> - Helper to build ancestor sets.</li>
+</ul>
+<p>Returns: Jaccard distance or undefined when skipped.</p>
+<h3 id="computepairdistances">computePairDistances</h3><p><code>(pairs: GenomeIndexPair[], population: import(&quot;C:/NeatapticTS/src/neat/neat.lineage.utils&quot;).GenomeLike[], buildAncestorSet: (genome: import(&quot;C:/NeatapticTS/src/neat/neat.lineage.utils&quot;).GenomeLike) =&gt; Set&lt;number&gt;) =&gt; number[]</code></p>
+<p>Parameters:</p>
+<ul>
+<li><code>pairs</code> - Sampled index pairs.</li>
+<li><code>population</code> - Current population.</li>
+<li><code>buildAncestorSet</code> - Helper to build ancestor sets.</li>
+</ul>
+<p>Returns: Jaccard distances for valid pairs.</p>
+<h3 id="countintersection">countIntersection</h3><p><code>(ancestorSetA: Set&lt;number&gt;, ancestorSetB: Set&lt;number&gt;) =&gt; number</code></p>
+<p>Parameters:</p>
+<ul>
+<li><code>ancestorSetA</code> - First ancestor set.</li>
+<li><code>ancestorSetB</code> - Second ancestor set.</li>
+</ul>
+<p>Returns: Size of intersection between the sets.</p>
+<h3 id="createinitialqueue">createInitialQueue</h3><p><code>(parentIds: number[], population: import(&quot;C:/NeatapticTS/src/neat/neat.lineage.utils&quot;).GenomeLike[]) =&gt; AncestorQueueEntry[]</code></p>
+<p>Parameters:</p>
+<ul>
+<li><code>parentIds</code> - Direct parent IDs to seed the queue.</li>
+<li><code>population</code> - Current population for lookups.</li>
+</ul>
+<p>Returns: Queue entries at depth 1.</p>
+<h3 id="enqueueparententries">enqueueParentEntries</h3><p><code>(queueEntries: AncestorQueueEntry[], currentEntry: AncestorQueueEntry, population: import(&quot;C:/NeatapticTS/src/neat/neat.lineage.utils&quot;).GenomeLike[]) =&gt; void</code></p>
+<p>Parameters:</p>
+<ul>
+<li><code>queueEntries</code> - Mutable queue array to append to.</li>
+<li><code>currentEntry</code> - Current ancestor entry being expanded.</li>
+<li><code>population</code> - Current population for lookups.</li>
+</ul>
+<h3 id="findgenomebyid">findGenomeById</h3><p><code>(population: import(&quot;C:/NeatapticTS/src/neat/neat.lineage.utils&quot;).GenomeLike[], genomeId: number) =&gt; import(&quot;C:/NeatapticTS/src/neat/neat.lineage.utils&quot;).GenomeLike | undefined</code></p>
+<p>Parameters:</p>
+<ul>
+<li><code>population</code> - Current population for lookup.</li>
+<li><code>genomeId</code> - Genome identifier to match.</li>
+</ul>
+<p>Returns: Genome reference if found.</p>
+<h3 id="genomeindexpair">GenomeIndexPair</h3><p>Index pair representing a sampled genome pair.</p>
+<h3 id="genomelike">GenomeLike</h3><p>Lineage / ancestry helper utilities for NEAT populations.</p>
+<p>This module centralizes helper logic used by the public lineage APIs to keep
+the main entry file small and orchestration-focused.</p>
+<h3 id="hasminimumpopulation">hasMinimumPopulation</h3><p><code>(size: number) =&gt; boolean</code></p>
+<p>Parameters:</p>
+<ul>
+<li><code>size</code> - Population size.</li>
+</ul>
+<p>Returns: True when at least two genomes exist.</p>
+<h3 id="isemptyancestorpair">isEmptyAncestorPair</h3><p><code>(ancestorSetA: Set&lt;number&gt;, ancestorSetB: Set&lt;number&gt;) =&gt; boolean</code></p>
+<p>Parameters:</p>
+<ul>
+<li><code>ancestorSetA</code> - First ancestor set.</li>
+<li><code>ancestorSetB</code> - Second ancestor set.</li>
+</ul>
+<p>Returns: True when both sets are empty.</p>
+<h3 id="iswithindepthwindow">isWithinDepthWindow</h3><p><code>(depth: number) =&gt; boolean</code></p>
+<p>Parameters:</p>
+<ul>
+<li><code>depth</code> - Current depth value.</li>
+</ul>
+<p>Returns: True when within the configured depth window.</p>
+<h3 id="neatlineagecontext">NeatLineageContext</h3><p>Expected <code>this</code> context for lineage helpers (a subset of the NEAT instance).</p>
+<h3 id="normalizeparentids">normalizeParentIds</h3><p><code>(value: import(&quot;C:/NeatapticTS/src/neat/neat.lineage.utils&quot;).GenomeLike) =&gt; number[]</code></p>
+<p>Parameters:</p>
+<ul>
+<li><code>value</code> - Genome to read parents from.</li>
+</ul>
+<p>Returns: Parent ID list (empty when absent).</p>
+<h3 id="pickdistinctindex">pickDistinctIndex</h3><p><code>(randomNumber: () =&gt; number, size: number, firstIndex: number) =&gt; number</code></p>
+<p>Parameters:</p>
+<ul>
+<li><code>randomNumber</code> - RNG function returning [0,1).</li>
+<li><code>size</code> - Population size for bounds.</li>
+<li><code>firstIndex</code> - Index to avoid.</li>
+</ul>
+<p>Returns: Random index not equal to the first index.</p>
+<h3 id="pickrandomindex">pickRandomIndex</h3><p><code>(randomNumber: () =&gt; number, size: number) =&gt; number</code></p>
+<p>Parameters:</p>
+<ul>
+<li><code>randomNumber</code> - RNG function returning [0,1).</li>
+<li><code>size</code> - Population size for bounds.</li>
+</ul>
+<p>Returns: Random index within bounds.</p>
+<h3 id="resolveparentids">resolveParentIds</h3><p><code>(value: import(&quot;C:/NeatapticTS/src/neat/neat.lineage.utils&quot;).GenomeLike | undefined) =&gt; number[]</code></p>
+<p>Parameters:</p>
+<ul>
+<li><code>value</code> - Optional genome reference.</li>
+</ul>
+<p>Returns: Parent IDs when available.</p>
+<h3 id="samplegenomepairs">sampleGenomePairs</h3><p><code>(sampleCount: number, size: number, rngFactory: () =&gt; () =&gt; number) =&gt; GenomeIndexPair[]</code></p>
+<p>Parameters:</p>
+<ul>
+<li><code>sampleCount</code> - Number of pairs to sample.</li>
+<li><code>size</code> - Population size for index bounds.</li>
+<li><code>rngFactory</code> - RNG provider to obtain a random function.</li>
+</ul>
+<p>Returns: Array of sampled index pairs.</p>
+<h2 id="neat-neat-multiobjective-archive-utils-ts">neat/neat.multiobjective.archive.utils.ts</h2><h3 id="archiveparetofrontsifenabled">archiveParetoFrontsIfEnabled</h3><p><code>(neatInstance: import(&quot;C:/NeatapticTS/src/neat/neat.multiobjective.types.utils&quot;).NeatLikeWithMultiObjective, fronts: import(&quot;C:/NeatapticTS/src/architecture/network&quot;).default[][]) =&gt; void</code></p>
+<p>Archives a compact snapshot of the current Pareto fronts when
+multi-objective mode is enabled.</p>
+<p>This is intended for visualization/debugging:</p>
+<ul>
+<li>Stores only genome <code>_id</code> values (not full genomes).</li>
+<li>Keeps only the top {@link MAX_PARETO_ARCHIVE_FRONTS} fronts.</li>
+<li>Maintains a ring-buffer-like cap of {@link MAX_PARETO_ARCHIVE_LENGTH}
+snapshots by shifting the oldest entry.</li>
+</ul>
+<p>Behavior note:</p>
+<ul>
+<li>This currently gates only on <code>neatInstance.options.multiObjective?.enabled</code>.
+If you want a separate archive toggle, ensure the caller configures
+<code>enabled</code> accordingly.</li>
+</ul>
+<p>Parameters:</p>
+<ul>
+<li><code>neatInstance</code> - - Neat instance.</li>
+<li><code>fronts</code> - - Pareto fronts to archive.</li>
+</ul>
+<h3 id="max-pareto-archive-fronts">MAX_PARETO_ARCHIVE_FRONTS</h3><h3 id="max-pareto-archive-length">MAX_PARETO_ARCHIVE_LENGTH</h3><h2 id="neat-neat-multiobjective-crowding-utils-ts">neat/neat.multiobjective.crowding.utils.ts</h2><h3 id="accumulatecrowdingforobjective">accumulateCrowdingForObjective</h3><p><code>(sortedFront: import(&quot;C:/NeatapticTS/src/architecture/network&quot;).default[], valuesMatrixInput: number[][], genomeIndexByReference: Map&lt;import(&quot;C:/NeatapticTS/src/architecture/network&quot;).default, number&gt;, objectiveIndex: number) =&gt; void</code></p>
+<p>Accumulates crowding distance contributions for a single objective.</p>
+<p>Pre-conditions / expectations:</p>
+<ul>
+<li><code>sortedFront</code> must be sorted ascending by the selected objective.</li>
+<li>{@link initializeCrowding} has already set <code>_moCrowd = 0</code> for the front.</li>
+<li>{@link markBoundaryCrowding} is typically called before this to set the
+boundary genomes to <code>Infinity</code>.</li>
+</ul>
+<p>Edge cases:</p>
+<ul>
+<li>If the front has fewer than 2 genomes, this is a no-op.</li>
+<li>If the objective range is <code>0</code>, a range of <code>1</code> is used (see
+{@link resolveObjectiveRange}).</li>
+</ul>
+<p>Parameters:</p>
+<ul>
+<li><code>sortedFront</code> - - Front sorted by objective.</li>
+<li><code>valuesMatrixInput</code> - - Values matrix.</li>
+<li><code>genomeIndexByReference</code> - - Lookup map.</li>
+<li><code>objectiveIndex</code> - - Objective column index.</li>
+</ul>
+<h3 id="accumulateinteriorcrowding">accumulateInteriorCrowding</h3><p><code>(sortedFront: import(&quot;C:/NeatapticTS/src/architecture/network&quot;).default[], valuesMatrixInput: number[][], genomeIndexByReference: Map&lt;import(&quot;C:/NeatapticTS/src/architecture/network&quot;).default, number&gt;, objectiveIndex: number, valueRange: number) =&gt; void</code></p>
+<p>Accumulates crowding deltas for the interior genomes of a sorted front.</p>
+<p>Interior genomes receive a normalized spacing delta:
+<code>delta = (nextValue - previousValue) / valueRange</code>.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>sortedFront</code> - - Front sorted by objective.</li>
+<li><code>valuesMatrixInput</code> - - Values matrix.</li>
+<li><code>genomeIndexByReference</code> - - Lookup map.</li>
+<li><code>objectiveIndex</code> - - Objective column index.</li>
+<li><code>valueRange</code> - - Normalized objective range.</li>
+</ul>
+<h3 id="applycrowdingdelta">applyCrowdingDelta</h3><p><code>(currentGenome: import(&quot;C:/NeatapticTS/src/neat/neat.multiobjective.types.utils&quot;).NetworkWithMOAnnotations, previousValue: number, nextValue: number, valueRange: number) =&gt; void</code></p>
+<p>Applies a normalized crowding-distance delta to a genome.</p>
+<p>If the genome’s crowding distance is <code>Infinity</code>, it will remain <code>Infinity</code>.
+This helper only updates when <code>_moCrowd</code> is initialized.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>currentGenome</code> - - Genome to update.</li>
+<li><code>previousValue</code> - - Objective value of previous genome.</li>
+<li><code>nextValue</code> - - Objective value of next genome.</li>
+<li><code>valueRange</code> - - Normalized objective range.</li>
+</ul>
+<h3 id="applycrowdingforobjective">applyCrowdingForObjective</h3><p><code>(front: import(&quot;C:/NeatapticTS/src/architecture/network&quot;).default[], valuesMatrixInput: number[][], genomeIndexByReference: Map&lt;import(&quot;C:/NeatapticTS/src/architecture/network&quot;).default, number&gt;, objectiveIndex: number) =&gt; void</code></p>
+<p>Applies crowding-distance accumulation for a single objective within a
+single front.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>front</code> - - Pareto front.</li>
+<li><code>valuesMatrixInput</code> - - Values matrix.</li>
+<li><code>genomeIndexByReference</code> - - Lookup map.</li>
+<li><code>objectiveIndex</code> - - Objective column index.</li>
+</ul>
+<h3 id="assigncrowdingdistances">assignCrowdingDistances</h3><p><code>(fronts: import(&quot;C:/NeatapticTS/src/architecture/network&quot;).default[][], valuesMatrixInput: number[][], descriptors: import(&quot;C:/NeatapticTS/src/neat/neat.multiobjective.types.utils&quot;).ObjectiveDescriptor[], population: import(&quot;C:/NeatapticTS/src/architecture/network&quot;).default[]) =&gt; void</code></p>
+<p>Assigns crowding-distance annotations for each Pareto front.</p>
+<p>This implements the crowding distance component of NSGA-II selection. Each
+genome in each front receives a <code>_moCrowd</code> value representing how isolated
+it is in objective space within its front.</p>
+<p>Notes:</p>
+<ul>
+<li>This function sorts each front by each objective (ascending raw values).
+Objective direction (min vs max) does not affect the computed spacing
+magnitude; extrema are treated as boundaries either way.</li>
+<li>Empty fronts are skipped.</li>
+</ul>
+<p>Side effects:</p>
+<ul>
+<li>Writes <code>_moCrowd</code> on each genome in each front.</li>
+</ul>
+<p>Parameters:</p>
+<ul>
+<li><code>fronts</code> - - Pareto fronts.</li>
+<li><code>valuesMatrixInput</code> - - Values matrix.</li>
+<li><code>descriptors</code> - - Objective descriptors (provides objective count).</li>
+<li><code>population</code> - - Population to resolve indices.</li>
+</ul>
+<h3 id="assigncrowdingforfront">assignCrowdingForFront</h3><p><code>(front: import(&quot;C:/NeatapticTS/src/architecture/network&quot;).default[], valuesMatrixInput: number[][], genomeIndexByReference: Map&lt;import(&quot;C:/NeatapticTS/src/architecture/network&quot;).default, number&gt;, objectiveIndices: number[]) =&gt; void</code></p>
+<p>Assigns crowding distances for a single front across all objectives.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>front</code> - - Pareto front.</li>
+<li><code>valuesMatrixInput</code> - - Values matrix.</li>
+<li><code>genomeIndexByReference</code> - - Lookup map.</li>
+<li><code>objectiveIndices</code> - - Objective indices to process.</li>
+</ul>
+<h3 id="buildgenomeindexbyreference">buildGenomeIndexByReference</h3><p><code>(population: import(&quot;C:/NeatapticTS/src/architecture/network&quot;).default[]) =&gt; Map&lt;import(&quot;C:/NeatapticTS/src/architecture/network&quot;).default, number&gt;</code></p>
+<p>Builds a stable mapping from genome object references to their population
+index.</p>
+<p>This relies on object identity (reference equality), not structural
+equality. It is used to resolve objective values from a values matrix when
+working with reordered views (e.g., sorted fronts).</p>
+<p>Parameters:</p>
+<ul>
+<li><code>population</code> - - Genomes in population order.</li>
+</ul>
+<p>Returns: Map from genome references to their index.</p>
+<h3 id="buildinteriorindexrange">buildInteriorIndexRange</h3><p><code>(frontLength: number) =&gt; number[]</code></p>
+<p>Builds the index range for interior genomes of a front.</p>
+<p>Boundary genomes are excluded because their crowding distance is treated as
+infinite.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>frontLength</code> - - Length of the sorted front.</li>
+</ul>
+<p>Returns: Interior indices excluding boundary genomes.</p>
+<h3 id="buildobjectiveindexrange">buildObjectiveIndexRange</h3><p><code>(objectiveCount: number) =&gt; number[]</code></p>
+<p>Builds a stable objective index range.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>objectiveCount</code> - - Number of objectives.</li>
+</ul>
+<p>Returns: Objective indices <code>0..objectiveCount-1</code>.</p>
+<h3 id="buildsortedfrontbyobjective">buildSortedFrontByObjective</h3><p><code>(front: import(&quot;C:/NeatapticTS/src/architecture/network&quot;).default[], valuesMatrixInput: number[][], genomeIndexByReference: Map&lt;import(&quot;C:/NeatapticTS/src/architecture/network&quot;).default, number&gt;, objectiveIndex: number) =&gt; import(&quot;C:/NeatapticTS/src/architecture/network&quot;).default[]</code></p>
+<p>Builds a copy of the front sorted by the specified objective.</p>
+<p>Sorting is ascending by the raw objective value. This ordering is used for
+computing neighbor spacing in objective space.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>front</code> - - Pareto front.</li>
+<li><code>valuesMatrixInput</code> - - Values matrix.</li>
+<li><code>genomeIndexByReference</code> - - Lookup map.</li>
+<li><code>objectiveIndex</code> - - Objective column index.</li>
+</ul>
+<p>Returns: Front sorted by objective value.</p>
+<h3 id="compareobjectivevaluesforcrowding">compareObjectiveValuesForCrowding</h3><p><code>(valuesMatrixInput: number[][], genomeIndexByReference: Map&lt;import(&quot;C:/NeatapticTS/src/architecture/network&quot;).default, number&gt;, objectiveIndex: number, leftGenome: import(&quot;C:/NeatapticTS/src/architecture/network&quot;).default, rightGenome: import(&quot;C:/NeatapticTS/src/architecture/network&quot;).default) =&gt; number</code></p>
+<p>Comparator used to sort genomes by a specific objective value.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>valuesMatrixInput</code> - - Values matrix.</li>
+<li><code>genomeIndexByReference</code> - - Lookup map.</li>
+<li><code>objectiveIndex</code> - - Objective column index.</li>
+<li><code>leftGenome</code> - - Left genome.</li>
+<li><code>rightGenome</code> - - Right genome.</li>
+</ul>
+<p>Returns: Numeric sort comparison value (ascending).</p>
+<h3 id="initializecrowding">initializeCrowding</h3><p><code>(front: import(&quot;C:/NeatapticTS/src/architecture/network&quot;).default[]) =&gt; void</code></p>
+<p>Initializes crowding-distance annotations for a front.</p>
+<p>This sets each genome’s <code>_moCrowd</code> to <code>0</code>. Later steps accumulate per-
+objective spacing deltas.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>front</code> - - Pareto front.</li>
+</ul>
+<h3 id="markboundarycrowding">markBoundaryCrowding</h3><p><code>(sortedFront: import(&quot;C:/NeatapticTS/src/architecture/network&quot;).default[]) =&gt; void</code></p>
+<p>Marks the boundary genomes of a sorted front as infinitely crowded.</p>
+<p>In NSGA-II style crowding distance, boundary solutions (extremes for the
+objective) are assigned an infinite crowding distance to ensure they are
+always preferred when ranks tie.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>sortedFront</code> - - Front sorted by the current objective.</li>
+</ul>
+<h3 id="resolveboundarygenomes">resolveBoundaryGenomes</h3><p><code>(sortedFront: import(&quot;C:/NeatapticTS/src/architecture/network&quot;).default[]) =&gt; { firstGenome: import(&quot;C:/NeatapticTS/src/architecture/network&quot;).default; lastGenome: import(&quot;C:/NeatapticTS/src/architecture/network&quot;).default; } | null</code></p>
+<p>Resolves the boundary (first/last) genomes for a sorted front.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>sortedFront</code> - - Front sorted by objective.</li>
+</ul>
+<p>Returns: Boundary genomes, or <code>null</code> if the front is empty.</p>
+<h3 id="resolvegenomeindex">resolveGenomeIndex</h3><p><code>(genomeIndexByReference: Map&lt;import(&quot;C:/NeatapticTS/src/architecture/network&quot;).default, number&gt;, genomeItem: import(&quot;C:/NeatapticTS/src/architecture/network&quot;).default) =&gt; number</code></p>
+<p>Resolves a genome’s index using a reference-based map.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>genomeIndexByReference</code> - - Lookup map created by</li>
+</ul>
+<ul>
+<li>{@link buildGenomeIndexByReference} .</li>
+<li></li>
+</ul>
+<ul>
+<li><code>genomeItem</code> - - Genome to resolve.</li>
+</ul>
+<p>Returns: The population index of the genome.</p>
+<h3 id="resolveneighborpair">resolveNeighborPair</h3><p><code>(sortedFront: import(&quot;C:/NeatapticTS/src/architecture/network&quot;).default[], sortedIndex: number) =&gt; { previousGenome: import(&quot;C:/NeatapticTS/src/architecture/network&quot;).default; nextGenome: import(&quot;C:/NeatapticTS/src/architecture/network&quot;).default; }</code></p>
+<p>Resolves the neighbor genomes for an interior element of a sorted front.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>sortedFront</code> - - Front sorted by objective.</li>
+<li><code>sortedIndex</code> - - Current index in sorted front.</li>
+</ul>
+<p>Returns: Previous and next neighbor genomes.</p>
+<h3 id="resolveobjectiverange">resolveObjectiveRange</h3><p><code>(minValue: number, maxValue: number) =&gt; number</code></p>
+<p>Resolves a non-zero objective range used to normalize crowding deltas.</p>
+<p>If all genomes have the same objective value, the raw range is <code>0</code>. This
+returns <code>1</code> in that case to avoid division by zero while still producing a
+well-defined crowding delta of <code>0</code>.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>minValue</code> - - Minimum objective value.</li>
+<li><code>maxValue</code> - - Maximum objective value.</li>
+</ul>
+<p>Returns: Normalized range with a non-zero floor.</p>
+<h3 id="resolveobjectiverangefromboundaries">resolveObjectiveRangeFromBoundaries</h3><p><code>(valuesMatrixInput: number[][], genomeIndexByReference: Map&lt;import(&quot;C:/NeatapticTS/src/architecture/network&quot;).default, number&gt;, boundaryGenomes: { firstGenome: import(&quot;C:/NeatapticTS/src/architecture/network&quot;).default; lastGenome: import(&quot;C:/NeatapticTS/src/architecture/network&quot;).default; }, objectiveIndex: number) =&gt; number</code></p>
+<p>Resolves the normalized objective range for a front from its boundary
+genomes.</p>
+<p>Because <code>sortedFront</code> is sorted by objective, the first and last genomes are
+the extrema used for range normalization.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>valuesMatrixInput</code> - - Values matrix.</li>
+<li><code>genomeIndexByReference</code> - - Lookup map.</li>
+<li><code>boundaryGenomes</code> - - Boundary genomes for the front.</li>
+<li><code>objectiveIndex</code> - - Objective column index.</li>
+</ul>
+<p>Returns: Normalized value range for the objective.</p>
+<h3 id="resolveobjectivevalue">resolveObjectiveValue</h3><p><code>(valuesMatrixInput: number[][], genomeIndexByReference: Map&lt;import(&quot;C:/NeatapticTS/src/architecture/network&quot;).default, number&gt;, genomeItem: import(&quot;C:/NeatapticTS/src/architecture/network&quot;).default, objectiveIndex: number) =&gt; number</code></p>
+<p>Resolves an objective value for a genome from a values matrix.</p>
+<p>This is a convenience helper for working with sorted/reordered views of the
+population while keeping objective values in a dense matrix.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>valuesMatrixInput</code> - - Values matrix indexed by population index.</li>
+<li><code>genomeIndexByReference</code> - - Lookup map from genome reference to index.</li>
+<li><code>genomeItem</code> - - Genome to resolve.</li>
+<li><code>objectiveIndex</code> - - Objective column index.</li>
+</ul>
+<p>Returns: The objective value for the genome.</p>
+<h3 id="shouldskipcrowdingfront">shouldSkipCrowdingFront</h3><p><code>(front: import(&quot;C:/NeatapticTS/src/architecture/network&quot;).default[]) =&gt; boolean</code></p>
+<p>Determines whether crowding-distance processing should be skipped for a
+front.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>front</code> - - Pareto front.</li>
+</ul>
+<p>Returns: <code>true</code> if the front should be skipped.</p>
+<h2 id="neat-neat-multiobjective-dominance-utils-ts">neat/neat.multiobjective.dominance.utils.ts</h2><h3 id="applypairwisedominance">applyPairwiseDominance</h3><p><code>(dominanceState: import(&quot;C:/NeatapticTS/src/neat/neat.multiobjective.dominance.utils&quot;).DominanceState, valuesMatrixInput: number[][], descriptors: import(&quot;C:/NeatapticTS/src/neat/neat.multiobjective.types.utils&quot;).ObjectiveDescriptor[], candidateIndex: number, opponentIndex: number) =&gt; void</code></p>
+<p>Applies a single pairwise dominance update between candidate and opponent.</p>
+<p>If the candidate dominates the opponent, the opponent index is appended to
+<code>dominatedIndicesByIndex[candidateIndex]</code>. If the candidate is dominated by
+the opponent, <code>dominationCounts[candidateIndex]</code> is incremented.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>dominanceState</code> - - Dominance bookkeeping.</li>
+<li><code>valuesMatrixInput</code> - - Matrix of objective values.</li>
+<li><code>descriptors</code> - - Objective descriptors.</li>
+<li><code>candidateIndex</code> - - Candidate genome index.</li>
+<li><code>opponentIndex</code> - - Opponent genome index.</li>
+</ul>
+<h3 id="builddominancestate">buildDominanceState</h3><p><code>(valuesMatrixInput: number[][], descriptors: import(&quot;C:/NeatapticTS/src/neat/neat.multiobjective.types.utils&quot;).ObjectiveDescriptor[]) =&gt; import(&quot;C:/NeatapticTS/src/neat/neat.multiobjective.dominance.utils&quot;).DominanceState</code></p>
+<p>Builds dominance bookkeeping structures used by fast non-dominated sorting.</p>
+<p>This computes (pairwise):</p>
+<ul>
+<li><code>dominationCounts[i]</code>: how many genomes dominate genome <code>i</code>.</li>
+<li><code>dominatedIndicesByIndex[i]</code>: which genomes are dominated by genome <code>i</code>.</li>
+<li><code>firstFrontIndices</code>: genomes with <code>dominationCounts[i] === 0</code>.</li>
+</ul>
+<p>Complexity:</p>
+<ul>
+<li>Time: $O(n^2 \cdot m)$ where $n$ is population size and $m$ is objective
+count.</li>
+<li>Space: $O(n^2)$ in the worst case for the dominated adjacency lists.</li>
+</ul>
+<p>Assumptions:</p>
+<ul>
+<li>Each row in <code>valuesMatrixInput</code> is a vector aligned with <code>descriptors</code>.</li>
+<li>Genome ordering in later steps is expected to match the matrix ordering.</li>
+</ul>
+<p>Parameters:</p>
+<ul>
+<li><code>valuesMatrixInput</code> - - Matrix of objective values (row = genome).</li>
+<li><code>descriptors</code> - - Objective descriptors (direction semantics).</li>
+</ul>
+<p>Returns: Dominance bookkeeping structures for ranking.</p>
+<h3 id="buildindexrange">buildIndexRange</h3><p><code>(populationSize: number) =&gt; number[]</code></p>
+<p>Builds a stable index range for iterating the population.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>populationSize</code> - - Number of genomes.</li>
+</ul>
+<p>Returns: Array of indices <code>0..populationSize-1</code>.</p>
+<h3 id="compareobjectivevalues">compareObjectiveValues</h3><p><code>(direction: &quot;max&quot; | &quot;min&quot;, candidateValue: number, opponentValue: number) =&gt; { isDominated: boolean; isStrictlyBetter: boolean; }</code></p>
+<p>Compares a candidate and opponent value for a single objective.</p>
+<p>This does not compute full Pareto dominance; it returns per-objective flags
+used by the vector-level dominance check.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>direction</code> - - Objective direction.</li>
+<li><code>candidateValue</code> - - Candidate objective value.</li>
+<li><code>opponentValue</code> - - Opponent objective value.</li>
+</ul>
+<p>Returns: Comparison flags for this objective.</p>
+<h3 id="createemptydominancestate">createEmptyDominanceState</h3><p><code>(populationSize: number) =&gt; import(&quot;C:/NeatapticTS/src/neat/neat.multiobjective.dominance.utils&quot;).DominanceState</code></p>
+<p>Creates an empty dominance state container sized to the population.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>populationSize</code> - - Number of genomes.</li>
+</ul>
+<p>Returns: An initialized dominance state with zeroed counts.</p>
+<h3 id="dominancestate">DominanceState</h3><p>Dominance bookkeeping structures for fast non-dominated sorting.</p>
+<p>These structures are typically produced once per generation (from the values
+matrix) and then consumed to build Pareto fronts.</p>
+<h3 id="iscandidatedominatedbyobjective">isCandidateDominatedByObjective</h3><p><code>(direction: &quot;max&quot; | &quot;min&quot;, candidateValue: number, opponentValue: number) =&gt; boolean</code></p>
+<p>Checks if the candidate is worse than the opponent for a single objective.</p>
+<p>For dominance, being worse on any objective makes the candidate unable to
+dominate the opponent.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>direction</code> - - Objective direction.</li>
+<li><code>candidateValue</code> - - Candidate objective value.</li>
+<li><code>opponentValue</code> - - Opponent objective value.</li>
+</ul>
+<p>Returns: <code>true</code> if the candidate is dominated for this objective.</p>
+<h3 id="iscandidatestrictlybetterforobjective">isCandidateStrictlyBetterForObjective</h3><p><code>(direction: &quot;max&quot; | &quot;min&quot;, candidateValue: number, opponentValue: number) =&gt; boolean</code></p>
+<p>Checks if the candidate is strictly better than the opponent for a single
+objective.</p>
+<p>Strict improvement in at least one objective is required for Pareto
+dominance when the candidate is not worse in any objective.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>direction</code> - - Objective direction.</li>
+<li><code>candidateValue</code> - - Candidate objective value.</li>
+<li><code>opponentValue</code> - - Opponent objective value.</li>
+</ul>
+<p>Returns: <code>true</code> if the candidate is strictly better for this objective.</p>
+<h3 id="isnondominatedcandidate">isNonDominatedCandidate</h3><p><code>(dominanceState: import(&quot;C:/NeatapticTS/src/neat/neat.multiobjective.dominance.utils&quot;).DominanceState, candidateIndex: number) =&gt; boolean</code></p>
+<p>Determines whether a candidate has zero domination count.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>dominanceState</code> - - Dominance bookkeeping.</li>
+<li><code>candidateIndex</code> - - Candidate genome index.</li>
+</ul>
+<p>Returns: <code>true</code> if the candidate is currently non-dominated.</p>
+<h3 id="resolvedominanceoutcome">resolveDominanceOutcome</h3><p><code>(candidateVector: number[], opponentVector: number[], descriptors: import(&quot;C:/NeatapticTS/src/neat/neat.multiobjective.types.utils&quot;).ObjectiveDescriptor[]) =&gt; &quot;dominates&quot; | &quot;dominated&quot; | &quot;indifferent&quot;</code></p>
+<p>Resolves dominance outcome between two objective vectors.</p>
+<p>Outcome meanings:</p>
+<ul>
+<li><code>&#39;dominates&#39;</code>: candidate dominates opponent.</li>
+<li><code>&#39;dominated&#39;</code>: candidate is dominated by opponent.</li>
+<li><code>&#39;indifferent&#39;</code>: neither dominates the other.</li>
+</ul>
+<p>Parameters:</p>
+<ul>
+<li><code>candidateVector</code> - - Candidate objective values.</li>
+<li><code>opponentVector</code> - - Opponent objective values.</li>
+<li><code>descriptors</code> - - Objective descriptors.</li>
+</ul>
+<p>Returns: Dominance outcome between candidate and opponent.</p>
+<h3 id="resolveobjectivedirection">resolveObjectiveDirection</h3><p><code>(descriptors: import(&quot;C:/NeatapticTS/src/neat/neat.multiobjective.types.utils&quot;).ObjectiveDescriptor[], objectiveIndex: number) =&gt; &quot;max&quot; | &quot;min&quot;</code></p>
+<p>Resolves the objective direction for a given objective index.</p>
+<p>If a descriptor omits <code>direction</code>, it is treated as maximization.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>descriptors</code> - - Objective descriptors.</li>
+<li><code>objectiveIndex</code> - - Objective index.</li>
+</ul>
+<p>Returns: Normalized objective direction.</p>
+<h3 id="shouldskipselfcomparison">shouldSkipSelfComparison</h3><p><code>(candidateIndex: number, opponentIndex: number) =&gt; boolean</code></p>
+<p>Determines whether a pairwise comparison should be skipped.</p>
+<p>Currently this skips only self-comparisons.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>candidateIndex</code> - - Candidate genome index.</li>
+<li><code>opponentIndex</code> - - Opponent genome index.</li>
+</ul>
+<p>Returns: <code>true</code> if the pair should be skipped.</p>
+<h3 id="updatedominanceforcandidate">updateDominanceForCandidate</h3><p><code>(dominanceState: import(&quot;C:/NeatapticTS/src/neat/neat.multiobjective.dominance.utils&quot;).DominanceState, valuesMatrixInput: number[][], descriptors: import(&quot;C:/NeatapticTS/src/neat/neat.multiobjective.types.utils&quot;).ObjectiveDescriptor[], candidateIndex: number, candidateIndices: number[]) =&gt; void</code></p>
+<p>Updates dominance bookkeeping for a candidate against all opponents.</p>
+<p>This iterates every opponent index and applies a pairwise dominance update.
+Self-comparisons are ignored.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>dominanceState</code> - - Dominance bookkeeping.</li>
+<li><code>valuesMatrixInput</code> - - Matrix of objective values.</li>
+<li><code>descriptors</code> - - Objective descriptors.</li>
+<li><code>candidateIndex</code> - - Candidate genome index.</li>
+<li><code>candidateIndices</code> - - Indices to compare against.</li>
+</ul>
+<h3 id="updatestrictimprovement">updateStrictImprovement</h3><p><code>(hasStrictImprovement: boolean, isStrictlyBetter: boolean) =&gt; boolean</code></p>
+<p>Accumulates whether the candidate has any strict improvement across
+objectives.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>hasStrictImprovement</code> - - Current strict-improvement flag.</li>
+<li><code>isStrictlyBetter</code> - - Whether the candidate strictly improves on the
+current objective.</li>
+</ul>
+<p>Returns: Updated strict-improvement flag.</p>
+<h3 id="vectordominates">vectorDominates</h3><p><code>(valuesA: number[], valuesB: number[], descriptors: import(&quot;C:/NeatapticTS/src/neat/neat.multiobjective.types.utils&quot;).ObjectiveDescriptor[]) =&gt; boolean</code></p>
+<p>Determines whether vector A Pareto-dominates vector B.</p>
+<p>A dominates B iff:</p>
+<ul>
+<li>A is <strong>no worse</strong> than B in every objective (respecting each objective’s
+direction: maximize/minimize), and</li>
+<li>A is <strong>strictly better</strong> in at least one objective.</li>
+</ul>
+<p>Assumptions:</p>
+<ul>
+<li><code>valuesA</code> and <code>valuesB</code> are aligned and have the same length.</li>
+<li><code>descriptors</code> provides a descriptor for each objective index.</li>
+<li>If a descriptor has no <code>direction</code>, it defaults to <code>&#39;max&#39;</code>.</li>
+</ul>
+<p>Parameters:</p>
+<ul>
+<li><code>valuesA</code> - - Objective values for candidate A.</li>
+<li><code>valuesB</code> - - Objective values for candidate B.</li>
+<li><code>descriptors</code> - - Objective descriptors defining direction semantics.</li>
+</ul>
+<p>Returns: <code>true</code> if A dominates B; otherwise <code>false</code>.</p>
+<h2 id="neat-neat-multiobjective-fronts-utils-ts">neat/neat.multiobjective.fronts.utils.ts</h2><h3 id="annotategenomerank">annotateGenomeRank</h3><p><code>(population: import(&quot;C:/NeatapticTS/src/architecture/network&quot;).default[], genomeIndex: number, frontRank: number) =&gt; void</code></p>
+<p>Annotates a genome with its Pareto front rank.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>population</code> - - Genome population.</li>
+<li><code>genomeIndex</code> - - Index of the genome to annotate.</li>
+<li><code>frontRank</code> - - Pareto front rank (0 = best front).</li>
+</ul>
+<h3 id="appendfront">appendFront</h3><p><code>(paretoFronts: import(&quot;C:/NeatapticTS/src/architecture/network&quot;).default[][], population: import(&quot;C:/NeatapticTS/src/architecture/network&quot;).default[], currentFrontIndices: number[]) =&gt; void</code></p>
+<p>Appends the current front (index list) as genome references to the
+<code>paretoFronts</code> accumulator.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>paretoFronts</code> - - Accumulator for Pareto fronts.</li>
+<li><code>population</code> - - Genome population.</li>
+<li><code>currentFrontIndices</code> - - Indices for the current front.</li>
+</ul>
+<h3 id="buildnextfrontindices">buildNextFrontIndices</h3><p><code>(population: import(&quot;C:/NeatapticTS/src/architecture/network&quot;).default[], dominanceState: import(&quot;C:/NeatapticTS/src/neat/neat.multiobjective.dominance.utils&quot;).DominanceState, currentFrontIndices: number[], currentFrontRank: number) =&gt; number[]</code></p>
+<p>Builds the next front by applying rank annotations and dominance updates.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>population</code> - - Genome population.</li>
+<li><code>dominanceState</code> - - Dominance bookkeeping.</li>
+<li><code>currentFrontIndices</code> - - Indices for the current front.</li>
+<li><code>currentFrontRank</code> - - Rank to assign to the current front.</li>
+</ul>
+<p>Returns: Indices for the next front.</p>
+<h3 id="buildparetofronts">buildParetoFronts</h3><p><code>(population: import(&quot;C:/NeatapticTS/src/architecture/network&quot;).default[], dominanceState: import(&quot;C:/NeatapticTS/src/neat/neat.multiobjective.dominance.utils&quot;).DominanceState, maxFrontRankGuard: number) =&gt; import(&quot;C:/NeatapticTS/src/architecture/network&quot;).default[][]</code></p>
+<p>Builds Pareto fronts from a precomputed dominance state.</p>
+<p>This performs the “peeling” phase of fast non-dominated sorting:</p>
+<ul>
+<li>Start with the first front (all non-dominated genomes).</li>
+<li>For each front, reduce domination counts of the genomes it dominates.</li>
+<li>Any genome whose domination count becomes zero moves to the next front.</li>
+</ul>
+<p>Side effects:</p>
+<ul>
+<li>Annotates each genome in <code>population</code> with <code>_moRank</code> (0 = best front).</li>
+</ul>
+<p>Guard:</p>
+<ul>
+<li>Stops when <code>currentFrontRank &gt; maxFrontRankGuard</code> to avoid pathological
+infinite/degenerate runs. If the guard triggers, the returned fronts may
+be incomplete.</li>
+</ul>
+<p>Parameters:</p>
+<ul>
+<li><code>population</code> - - Genome population (same ordering used by dominance
+bookkeeping).</li>
+<li><code>dominanceState</code> - - Dominance bookkeeping.</li>
+<li><code>maxFrontRankGuard</code> - - Safety guard for ranking iterations.</li>
+</ul>
+<p>Returns: Ordered Pareto fronts (rank order).</p>
+<h3 id="collectnextfrontindices">collectNextFrontIndices</h3><p><code>(dominanceState: import(&quot;C:/NeatapticTS/src/neat/neat.multiobjective.dominance.utils&quot;).DominanceState, genomeIndex: number, nextFrontIndices: number[]) =&gt; void</code></p>
+<p>Collects indices that become non-dominated after removing the current
+genome’s dominance influence.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>dominanceState</code> - - Dominance bookkeeping.</li>
+<li><code>genomeIndex</code> - - Index of the current genome.</li>
+<li><code>nextFrontIndices</code> - - Accumulator for the next front.</li>
+</ul>
+<h3 id="incrementfrontrank">incrementFrontRank</h3><p><code>(currentFrontRank: number) =&gt; number</code></p>
+<p>Increments the front rank counter.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>currentFrontRank</code> - - Current front rank.</li>
+</ul>
+<p>Returns: Incremented front rank.</p>
+<h3 id="max-pareto-front-rank-guard">MAX_PARETO_FRONT_RANK_GUARD</h3><h3 id="shouldstopfrontranking">shouldStopFrontRanking</h3><p><code>(currentFrontRank: number, maxFrontRankGuard: number) =&gt; boolean</code></p>
+<p>Determines whether ranking should stop due to a safety guard.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>currentFrontRank</code> - - Current front rank after increment.</li>
+<li><code>maxFrontRankGuard</code> - - Safety guard for ranking iterations.</li>
+</ul>
+<p>Returns: <code>true</code> if ranking should stop.</p>
+<h2 id="neat-neat-multiobjective-objectives-utils-ts">neat/neat.multiobjective.objectives.utils.ts</h2><h3 id="buildgenomevalues">buildGenomeValues</h3><p><code>(genomeItem: import(&quot;C:/NeatapticTS/src/architecture/network&quot;).default, descriptors: import(&quot;C:/NeatapticTS/src/neat/neat.multiobjective.types.utils&quot;).ObjectiveDescriptor[]) =&gt; number[]</code></p>
+<p>Builds an objective vector for a single genome.</p>
+<p>The resulting array order matches the <code>descriptors</code> order exactly.
+Each component is read via {@link readObjectiveValue} so individual
+objective accessors are fault-tolerant.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>genomeItem</code> - - Genome to evaluate.</li>
+<li><code>descriptors</code> - - Objective descriptors (vector schema).</li>
+</ul>
+<p>Returns: Objective value vector (length equals <code>descriptors.length</code>).</p>
+<h3 id="buildvaluesmatrix">buildValuesMatrix</h3><p><code>(population: import(&quot;C:/NeatapticTS/src/architecture/network&quot;).default[], descriptors: import(&quot;C:/NeatapticTS/src/neat/neat.multiobjective.types.utils&quot;).ObjectiveDescriptor[]) =&gt; number[][]</code></p>
+<p>Builds a population-wide objective value matrix.</p>
+<p>The resulting matrix is indexed as <code>[genomeIndex][objectiveIndex]</code> where
+<code>genomeIndex</code> matches the input <code>population</code> order.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>population</code> - - Genomes to evaluate (population order is preserved).</li>
+<li><code>descriptors</code> - - Objective descriptors (column schema).</li>
+</ul>
+<p>Returns: Objective values matrix.</p>
+<h3 id="readobjectivevalue">readObjectiveValue</h3><p><code>(genomeItem: import(&quot;C:/NeatapticTS/src/architecture/network&quot;).default, descriptor: import(&quot;C:/NeatapticTS/src/neat/neat.multiobjective.types.utils&quot;).ObjectiveDescriptor) =&gt; number</code></p>
+<p>Safely reads a single objective value for a given genome.</p>
+<p>This wraps the descriptor <code>accessor</code> in a <code>try/catch</code> so that a buggy
+objective function cannot crash multi-objective ranking.</p>
+<p>Notes:</p>
+<ul>
+<li>If the accessor throws, this returns <code>0</code> (a neutral-ish fallback).</li>
+<li>Callers should prefer to surface accessor errors during development;
+this helper is intentionally defensive for long-running training loops.</li>
+</ul>
+<p>Parameters:</p>
+<ul>
+<li><code>genomeItem</code> - - Genome to evaluate.</li>
+<li><code>descriptor</code> - - Objective descriptor providing an accessor.</li>
+</ul>
+<p>Returns: Numeric objective value; <code>0</code> if the accessor throws.</p>
 <h2 id="neat-neat-multiobjective-ts">neat/neat.multiobjective.ts</h2><h3 id="fastnondominated">fastNonDominated</h3><p><code>(pop: import(&quot;C:/NeatapticTS/src/architecture/network&quot;).default[]) =&gt; import(&quot;C:/NeatapticTS/src/architecture/network&quot;).default[][]</code></p>
 <p>Perform fast non-dominated sorting and compute crowding distances for a
 population of networks (genomes). This implements a standard NSGA-II style
@@ -385,14 +1043,299 @@ const fronts = fastNonDominated.call(neatInstance, population);
 <li><code>pop</code> - - population array of <code>Network</code> genomes to be ranked</li>
 </ul>
 <p>Returns: Array of Pareto fronts; each front is an array of <code>Network</code> genomes.</p>
-<h3 id="neatlikewithmultiobjective">NeatLikeWithMultiObjective</h3><p>Minimal Neat instance interface for multi-objective operations.</p>
-<h3 id="networkwithmoannotations">NetworkWithMOAnnotations</h3><p>Extended Network interface with multi-objective annotations.</p>
-<h3 id="objectivedescriptor">ObjectiveDescriptor</h3><p>Shape of an objective descriptor used by the Neat instance.</p>
+<h2 id="neat-neat-multiobjective-types-utils-ts">neat/neat.multiobjective.types.utils.ts</h2><h3 id="neatlikewithmultiobjective">NeatLikeWithMultiObjective</h3><p>Minimal Neat-like interface required by the multi-objective helpers.</p>
+<p>This intentionally models only the fields used for archiving Pareto fronts
+and retrieving objective descriptors. It allows these helpers to be used
+without depending on the full Neat class type.</p>
+<h3 id="networkwithmoannotations">NetworkWithMOAnnotations</h3><p>Extends a genome/network with multi-objective annotations.</p>
+<p>These properties are used as transient metadata during selection.</p>
 <ul>
-<li><code>accessor</code> extracts a numeric objective from a genome</li>
-<li><code>direction</code> optionally indicates whether the objective is maximized or
-minimized (defaults to &#39;max&#39;)</li>
+<li><code>_moRank</code>: Pareto front rank (0 = best front)</li>
+<li><code>_moCrowd</code>: crowding distance within the front (higher = more isolated;
+boundary genomes are typically <code>Infinity</code>)</li>
+<li><code>_id</code>: optional stable identifier used for compact archiving</li>
 </ul>
+<h3 id="objectivedescriptor">ObjectiveDescriptor</h3><p>Describes how to evaluate a single objective for a genome.</p>
+<p>The order of objective descriptors defines the order of each genome’s
+objective vector and therefore the columns of the values matrix.</p>
+<p>Notes:</p>
+<ul>
+<li><code>accessor</code> should be deterministic for a given genome state.</li>
+<li><code>direction</code> controls Pareto dominance comparisons:<ul>
+<li><code>&#39;max&#39;</code>: higher is better</li>
+<li><code>&#39;min&#39;</code>: lower is better</li>
+</ul>
+</li>
+<li>If <code>direction</code> is omitted, it defaults to <code>&#39;max&#39;</code>.</li>
+</ul>
+<h2 id="neat-neat-multiobjective-utils-ts">neat/neat.multiobjective.utils.ts</h2><h3 id="accumulatecrowdingforobjective">accumulateCrowdingForObjective</h3><p><code>(sortedFront: import(&quot;C:/NeatapticTS/src/architecture/network&quot;).default[], valuesMatrixInput: number[][], genomeIndexByReference: Map&lt;import(&quot;C:/NeatapticTS/src/architecture/network&quot;).default, number&gt;, objectiveIndex: number) =&gt; void</code></p>
+<p>Accumulates crowding distance contributions for a single objective.</p>
+<p>Pre-conditions / expectations:</p>
+<ul>
+<li><code>sortedFront</code> must be sorted ascending by the selected objective.</li>
+<li>{@link initializeCrowding} has already set <code>_moCrowd = 0</code> for the front.</li>
+<li>{@link markBoundaryCrowding} is typically called before this to set the
+boundary genomes to <code>Infinity</code>.</li>
+</ul>
+<p>Edge cases:</p>
+<ul>
+<li>If the front has fewer than 2 genomes, this is a no-op.</li>
+<li>If the objective range is <code>0</code>, a range of <code>1</code> is used (see
+{@link resolveObjectiveRange}).</li>
+</ul>
+<p>Parameters:</p>
+<ul>
+<li><code>sortedFront</code> - - Front sorted by objective.</li>
+<li><code>valuesMatrixInput</code> - - Values matrix.</li>
+<li><code>genomeIndexByReference</code> - - Lookup map.</li>
+<li><code>objectiveIndex</code> - - Objective column index.</li>
+</ul>
+<h3 id="archiveparetofrontsifenabled">archiveParetoFrontsIfEnabled</h3><p><code>(neatInstance: import(&quot;C:/NeatapticTS/src/neat/neat.multiobjective.types.utils&quot;).NeatLikeWithMultiObjective, fronts: import(&quot;C:/NeatapticTS/src/architecture/network&quot;).default[][]) =&gt; void</code></p>
+<p>Archives a compact snapshot of the current Pareto fronts when
+multi-objective mode is enabled.</p>
+<p>This is intended for visualization/debugging:</p>
+<ul>
+<li>Stores only genome <code>_id</code> values (not full genomes).</li>
+<li>Keeps only the top {@link MAX_PARETO_ARCHIVE_FRONTS} fronts.</li>
+<li>Maintains a ring-buffer-like cap of {@link MAX_PARETO_ARCHIVE_LENGTH}
+snapshots by shifting the oldest entry.</li>
+</ul>
+<p>Behavior note:</p>
+<ul>
+<li>This currently gates only on <code>neatInstance.options.multiObjective?.enabled</code>.
+If you want a separate archive toggle, ensure the caller configures
+<code>enabled</code> accordingly.</li>
+</ul>
+<p>Parameters:</p>
+<ul>
+<li><code>neatInstance</code> - - Neat instance.</li>
+<li><code>fronts</code> - - Pareto fronts to archive.</li>
+</ul>
+<h3 id="assigncrowdingdistances">assignCrowdingDistances</h3><p><code>(fronts: import(&quot;C:/NeatapticTS/src/architecture/network&quot;).default[][], valuesMatrixInput: number[][], descriptors: import(&quot;C:/NeatapticTS/src/neat/neat.multiobjective.types.utils&quot;).ObjectiveDescriptor[], population: import(&quot;C:/NeatapticTS/src/architecture/network&quot;).default[]) =&gt; void</code></p>
+<p>Assigns crowding-distance annotations for each Pareto front.</p>
+<p>This implements the crowding distance component of NSGA-II selection. Each
+genome in each front receives a <code>_moCrowd</code> value representing how isolated
+it is in objective space within its front.</p>
+<p>Notes:</p>
+<ul>
+<li>This function sorts each front by each objective (ascending raw values).
+Objective direction (min vs max) does not affect the computed spacing
+magnitude; extrema are treated as boundaries either way.</li>
+<li>Empty fronts are skipped.</li>
+</ul>
+<p>Side effects:</p>
+<ul>
+<li>Writes <code>_moCrowd</code> on each genome in each front.</li>
+</ul>
+<p>Parameters:</p>
+<ul>
+<li><code>fronts</code> - - Pareto fronts.</li>
+<li><code>valuesMatrixInput</code> - - Values matrix.</li>
+<li><code>descriptors</code> - - Objective descriptors (provides objective count).</li>
+<li><code>population</code> - - Population to resolve indices.</li>
+</ul>
+<h3 id="builddominancestate">buildDominanceState</h3><p><code>(valuesMatrixInput: number[][], descriptors: import(&quot;C:/NeatapticTS/src/neat/neat.multiobjective.types.utils&quot;).ObjectiveDescriptor[]) =&gt; import(&quot;C:/NeatapticTS/src/neat/neat.multiobjective.dominance.utils&quot;).DominanceState</code></p>
+<p>Builds dominance bookkeeping structures used by fast non-dominated sorting.</p>
+<p>This computes (pairwise):</p>
+<ul>
+<li><code>dominationCounts[i]</code>: how many genomes dominate genome <code>i</code>.</li>
+<li><code>dominatedIndicesByIndex[i]</code>: which genomes are dominated by genome <code>i</code>.</li>
+<li><code>firstFrontIndices</code>: genomes with <code>dominationCounts[i] === 0</code>.</li>
+</ul>
+<p>Complexity:</p>
+<ul>
+<li>Time: $O(n^2 \cdot m)$ where $n$ is population size and $m$ is objective
+count.</li>
+<li>Space: $O(n^2)$ in the worst case for the dominated adjacency lists.</li>
+</ul>
+<p>Assumptions:</p>
+<ul>
+<li>Each row in <code>valuesMatrixInput</code> is a vector aligned with <code>descriptors</code>.</li>
+<li>Genome ordering in later steps is expected to match the matrix ordering.</li>
+</ul>
+<p>Parameters:</p>
+<ul>
+<li><code>valuesMatrixInput</code> - - Matrix of objective values (row = genome).</li>
+<li><code>descriptors</code> - - Objective descriptors (direction semantics).</li>
+</ul>
+<p>Returns: Dominance bookkeeping structures for ranking.</p>
+<h3 id="buildgenomeindexbyreference">buildGenomeIndexByReference</h3><p><code>(population: import(&quot;C:/NeatapticTS/src/architecture/network&quot;).default[]) =&gt; Map&lt;import(&quot;C:/NeatapticTS/src/architecture/network&quot;).default, number&gt;</code></p>
+<p>Builds a stable mapping from genome object references to their population
+index.</p>
+<p>This relies on object identity (reference equality), not structural
+equality. It is used to resolve objective values from a values matrix when
+working with reordered views (e.g., sorted fronts).</p>
+<p>Parameters:</p>
+<ul>
+<li><code>population</code> - - Genomes in population order.</li>
+</ul>
+<p>Returns: Map from genome references to their index.</p>
+<h3 id="buildgenomevalues">buildGenomeValues</h3><p><code>(genomeItem: import(&quot;C:/NeatapticTS/src/architecture/network&quot;).default, descriptors: import(&quot;C:/NeatapticTS/src/neat/neat.multiobjective.types.utils&quot;).ObjectiveDescriptor[]) =&gt; number[]</code></p>
+<p>Builds an objective vector for a single genome.</p>
+<p>The resulting array order matches the <code>descriptors</code> order exactly.
+Each component is read via {@link readObjectiveValue} so individual
+objective accessors are fault-tolerant.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>genomeItem</code> - - Genome to evaluate.</li>
+<li><code>descriptors</code> - - Objective descriptors (vector schema).</li>
+</ul>
+<p>Returns: Objective value vector (length equals <code>descriptors.length</code>).</p>
+<h3 id="buildparetofronts">buildParetoFronts</h3><p><code>(population: import(&quot;C:/NeatapticTS/src/architecture/network&quot;).default[], dominanceState: import(&quot;C:/NeatapticTS/src/neat/neat.multiobjective.dominance.utils&quot;).DominanceState, maxFrontRankGuard: number) =&gt; import(&quot;C:/NeatapticTS/src/architecture/network&quot;).default[][]</code></p>
+<p>Builds Pareto fronts from a precomputed dominance state.</p>
+<p>This performs the “peeling” phase of fast non-dominated sorting:</p>
+<ul>
+<li>Start with the first front (all non-dominated genomes).</li>
+<li>For each front, reduce domination counts of the genomes it dominates.</li>
+<li>Any genome whose domination count becomes zero moves to the next front.</li>
+</ul>
+<p>Side effects:</p>
+<ul>
+<li>Annotates each genome in <code>population</code> with <code>_moRank</code> (0 = best front).</li>
+</ul>
+<p>Guard:</p>
+<ul>
+<li>Stops when <code>currentFrontRank &gt; maxFrontRankGuard</code> to avoid pathological
+infinite/degenerate runs. If the guard triggers, the returned fronts may
+be incomplete.</li>
+</ul>
+<p>Parameters:</p>
+<ul>
+<li><code>population</code> - - Genome population (same ordering used by dominance
+bookkeeping).</li>
+<li><code>dominanceState</code> - - Dominance bookkeeping.</li>
+<li><code>maxFrontRankGuard</code> - - Safety guard for ranking iterations.</li>
+</ul>
+<p>Returns: Ordered Pareto fronts (rank order).</p>
+<h3 id="buildvaluesmatrix">buildValuesMatrix</h3><p><code>(population: import(&quot;C:/NeatapticTS/src/architecture/network&quot;).default[], descriptors: import(&quot;C:/NeatapticTS/src/neat/neat.multiobjective.types.utils&quot;).ObjectiveDescriptor[]) =&gt; number[][]</code></p>
+<p>Builds a population-wide objective value matrix.</p>
+<p>The resulting matrix is indexed as <code>[genomeIndex][objectiveIndex]</code> where
+<code>genomeIndex</code> matches the input <code>population</code> order.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>population</code> - - Genomes to evaluate (population order is preserved).</li>
+<li><code>descriptors</code> - - Objective descriptors (column schema).</li>
+</ul>
+<p>Returns: Objective values matrix.</p>
+<h3 id="dominancestate">DominanceState</h3><p>Dominance bookkeeping structures for fast non-dominated sorting.</p>
+<p>These structures are typically produced once per generation (from the values
+matrix) and then consumed to build Pareto fronts.</p>
+<h3 id="initializecrowding">initializeCrowding</h3><p><code>(front: import(&quot;C:/NeatapticTS/src/architecture/network&quot;).default[]) =&gt; void</code></p>
+<p>Initializes crowding-distance annotations for a front.</p>
+<p>This sets each genome’s <code>_moCrowd</code> to <code>0</code>. Later steps accumulate per-
+objective spacing deltas.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>front</code> - - Pareto front.</li>
+</ul>
+<h3 id="markboundarycrowding">markBoundaryCrowding</h3><p><code>(sortedFront: import(&quot;C:/NeatapticTS/src/architecture/network&quot;).default[]) =&gt; void</code></p>
+<p>Marks the boundary genomes of a sorted front as infinitely crowded.</p>
+<p>In NSGA-II style crowding distance, boundary solutions (extremes for the
+objective) are assigned an infinite crowding distance to ensure they are
+always preferred when ranks tie.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>sortedFront</code> - - Front sorted by the current objective.</li>
+</ul>
+<h3 id="max-pareto-archive-fronts">MAX_PARETO_ARCHIVE_FRONTS</h3><h3 id="max-pareto-archive-length">MAX_PARETO_ARCHIVE_LENGTH</h3><h3 id="max-pareto-front-rank-guard">MAX_PARETO_FRONT_RANK_GUARD</h3><h3 id="neatlikewithmultiobjective">NeatLikeWithMultiObjective</h3><p>Minimal Neat-like interface required by the multi-objective helpers.</p>
+<p>This intentionally models only the fields used for archiving Pareto fronts
+and retrieving objective descriptors. It allows these helpers to be used
+without depending on the full Neat class type.</p>
+<h3 id="networkwithmoannotations">NetworkWithMOAnnotations</h3><p>Extends a genome/network with multi-objective annotations.</p>
+<p>These properties are used as transient metadata during selection.</p>
+<ul>
+<li><code>_moRank</code>: Pareto front rank (0 = best front)</li>
+<li><code>_moCrowd</code>: crowding distance within the front (higher = more isolated;
+boundary genomes are typically <code>Infinity</code>)</li>
+<li><code>_id</code>: optional stable identifier used for compact archiving</li>
+</ul>
+<h3 id="objectivedescriptor">ObjectiveDescriptor</h3><p>Describes how to evaluate a single objective for a genome.</p>
+<p>The order of objective descriptors defines the order of each genome’s
+objective vector and therefore the columns of the values matrix.</p>
+<p>Notes:</p>
+<ul>
+<li><code>accessor</code> should be deterministic for a given genome state.</li>
+<li><code>direction</code> controls Pareto dominance comparisons:<ul>
+<li><code>&#39;max&#39;</code>: higher is better</li>
+<li><code>&#39;min&#39;</code>: lower is better</li>
+</ul>
+</li>
+<li>If <code>direction</code> is omitted, it defaults to <code>&#39;max&#39;</code>.</li>
+</ul>
+<h3 id="readobjectivevalue">readObjectiveValue</h3><p><code>(genomeItem: import(&quot;C:/NeatapticTS/src/architecture/network&quot;).default, descriptor: import(&quot;C:/NeatapticTS/src/neat/neat.multiobjective.types.utils&quot;).ObjectiveDescriptor) =&gt; number</code></p>
+<p>Safely reads a single objective value for a given genome.</p>
+<p>This wraps the descriptor <code>accessor</code> in a <code>try/catch</code> so that a buggy
+objective function cannot crash multi-objective ranking.</p>
+<p>Notes:</p>
+<ul>
+<li>If the accessor throws, this returns <code>0</code> (a neutral-ish fallback).</li>
+<li>Callers should prefer to surface accessor errors during development;
+this helper is intentionally defensive for long-running training loops.</li>
+</ul>
+<p>Parameters:</p>
+<ul>
+<li><code>genomeItem</code> - - Genome to evaluate.</li>
+<li><code>descriptor</code> - - Objective descriptor providing an accessor.</li>
+</ul>
+<p>Returns: Numeric objective value; <code>0</code> if the accessor throws.</p>
+<h3 id="resolvegenomeindex">resolveGenomeIndex</h3><p><code>(genomeIndexByReference: Map&lt;import(&quot;C:/NeatapticTS/src/architecture/network&quot;).default, number&gt;, genomeItem: import(&quot;C:/NeatapticTS/src/architecture/network&quot;).default) =&gt; number</code></p>
+<p>Resolves a genome’s index using a reference-based map.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>genomeIndexByReference</code> - - Lookup map created by</li>
+</ul>
+<ul>
+<li>{@link buildGenomeIndexByReference} .</li>
+<li></li>
+</ul>
+<ul>
+<li><code>genomeItem</code> - - Genome to resolve.</li>
+</ul>
+<p>Returns: The population index of the genome.</p>
+<h3 id="resolveobjectiverange">resolveObjectiveRange</h3><p><code>(minValue: number, maxValue: number) =&gt; number</code></p>
+<p>Resolves a non-zero objective range used to normalize crowding deltas.</p>
+<p>If all genomes have the same objective value, the raw range is <code>0</code>. This
+returns <code>1</code> in that case to avoid division by zero while still producing a
+well-defined crowding delta of <code>0</code>.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>minValue</code> - - Minimum objective value.</li>
+<li><code>maxValue</code> - - Maximum objective value.</li>
+</ul>
+<p>Returns: Normalized range with a non-zero floor.</p>
+<h3 id="resolveobjectivevalue">resolveObjectiveValue</h3><p><code>(valuesMatrixInput: number[][], genomeIndexByReference: Map&lt;import(&quot;C:/NeatapticTS/src/architecture/network&quot;).default, number&gt;, genomeItem: import(&quot;C:/NeatapticTS/src/architecture/network&quot;).default, objectiveIndex: number) =&gt; number</code></p>
+<p>Resolves an objective value for a genome from a values matrix.</p>
+<p>This is a convenience helper for working with sorted/reordered views of the
+population while keeping objective values in a dense matrix.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>valuesMatrixInput</code> - - Values matrix indexed by population index.</li>
+<li><code>genomeIndexByReference</code> - - Lookup map from genome reference to index.</li>
+<li><code>genomeItem</code> - - Genome to resolve.</li>
+<li><code>objectiveIndex</code> - - Objective column index.</li>
+</ul>
+<p>Returns: The objective value for the genome.</p>
+<h3 id="vectordominates">vectorDominates</h3><p><code>(valuesA: number[], valuesB: number[], descriptors: import(&quot;C:/NeatapticTS/src/neat/neat.multiobjective.types.utils&quot;).ObjectiveDescriptor[]) =&gt; boolean</code></p>
+<p>Determines whether vector A Pareto-dominates vector B.</p>
+<p>A dominates B iff:</p>
+<ul>
+<li>A is <strong>no worse</strong> than B in every objective (respecting each objective’s
+direction: maximize/minimize), and</li>
+<li>A is <strong>strictly better</strong> in at least one objective.</li>
+</ul>
+<p>Assumptions:</p>
+<ul>
+<li><code>valuesA</code> and <code>valuesB</code> are aligned and have the same length.</li>
+<li><code>descriptors</code> provides a descriptor for each objective index.</li>
+<li>If a descriptor has no <code>direction</code>, it defaults to <code>&#39;max&#39;</code>.</li>
+</ul>
+<p>Parameters:</p>
+<ul>
+<li><code>valuesA</code> - - Objective values for candidate A.</li>
+<li><code>valuesB</code> - - Objective values for candidate B.</li>
+<li><code>descriptors</code> - - Objective descriptors defining direction semantics.</li>
+</ul>
+<p>Returns: <code>true</code> if A dominates B; otherwise <code>false</code>.</p>
 <h2 id="neat-neat-mutation-add-conn-utils-ts">neat/neat.mutation.add-conn.utils.ts</h2><h3 id="assigninnovationforconnection">assignInnovationForConnection</h3><p><code>(connection: import(&quot;C:/NeatapticTS/src/neat/neat.mutation.types&quot;).ConnectionWithMetadata, pairNodes: { symmetricKey: string; legacyForwardKey: string; legacyReverseKey: string; }, internal: import(&quot;C:/NeatapticTS/src/neat/neat.mutation.types&quot;).NeatControllerForMutation) =&gt; void</code></p>
 <p>Assign an innovation id for a new connection, reusing when possible.</p>
 <p>Parameters:</p>
@@ -2535,7 +3478,7 @@ cognitive complexity while preserving readability of each scenario.</p>
 <li><code>population</code> - - Population snapshot.</li>
 <li><code>entry</code> - - Telemetry entry to update.</li>
 </ul>
-<h3 id="buildlineagecontext">buildLineageContext</h3><p><code>(context: { _getRNG?: (() =&gt; () =&gt; number) | undefined; }, populationSnapshot: import(&quot;C:/NeatapticTS/src/neat/neat.types&quot;).GenomeDetailed[]) =&gt; import(&quot;C:/NeatapticTS/src/neat/neat.lineage&quot;).NeatLineageContext</code></p>
+<h3 id="buildlineagecontext">buildLineageContext</h3><p><code>(context: { _getRNG?: (() =&gt; () =&gt; number) | undefined; }, populationSnapshot: import(&quot;C:/NeatapticTS/src/neat/neat.types&quot;).GenomeDetailed[]) =&gt; import(&quot;C:/NeatapticTS/src/neat/neat.lineage.utils&quot;).NeatLineageContext</code></p>
 <p>Build a lineage helper context for ancestor operations.</p>
 <p>Parameters:</p>
 <ul>
@@ -2932,7 +3875,7 @@ fields with descriptive names rather than repeated inline casts.</p>
 <li><code>counts</code> - - Map geneId -&gt; degree count.</li>
 </ul>
 <p>Returns: Map degree -&gt; number of nodes with that degree.</p>
-<h3 id="buildlineagecontext">buildLineageContext</h3><p><code>(context: { _getRNG?: (() =&gt; () =&gt; number) | undefined; }, populationSnapshot: import(&quot;C:/NeatapticTS/src/neat/neat.types&quot;).GenomeDetailed[]) =&gt; import(&quot;C:/NeatapticTS/src/neat/neat.lineage&quot;).NeatLineageContext</code></p>
+<h3 id="buildlineagecontext">buildLineageContext</h3><p><code>(context: { _getRNG?: (() =&gt; () =&gt; number) | undefined; }, populationSnapshot: import(&quot;C:/NeatapticTS/src/neat/neat.types&quot;).GenomeDetailed[]) =&gt; import(&quot;C:/NeatapticTS/src/neat/neat.lineage.utils&quot;).NeatLineageContext</code></p>
 <p>Build a lineage helper context for ancestor operations.</p>
 <p>Parameters:</p>
 <ul>
@@ -3289,4 +4232,4 @@ These values inform stagnation heuristics and adaptive controllers.</p>
 <h3 id="specieslike">SpeciesLike</h3><p>Internal species representation used by helpers. Kept minimal and structural.</p>
 <h3 id="telemetryentry">TelemetryEntry</h3><p>Telemetry summary for one generation.</p>
 <p>Optional properties are feature‑dependent; consumers MUST test for presence.</p>
-<footer class="site-footer">Generated from source JSDoc • <a href="https://github.com/reicek/NeatapticTS">GitHub</a></footer></main><aside class="toc"><div class="page-toc"><h2>Files</h2><div class="toc-file"><a href="#neat-neat-adaptive-ts">neat/neat.adaptive.ts</a><ul><li><a href=#applyadaptivemutation>applyAdaptiveMutation</a></li><li><a href=#applyancestoruniqadaptive>applyAncestorUniqAdaptive</a></li><li><a href=#applycomplexitybudget>applyComplexityBudget</a></li><li><a href=#applyminimalcriterionadaptive>applyMinimalCriterionAdaptive</a></li><li><a href=#applyoperatoradaptation>applyOperatorAdaptation</a></li><li><a href=#applyphasedcomplexity>applyPhasedComplexity</a></li><li><a href=#neatlikewithadaptive>NeatLikeWithAdaptive</a></li></ul></div><div class="toc-file"><a href="#neat-neat-compat-ts">neat/neat.compat.ts</a><ul><li><a href=#compatibilitydistance>_compatibilityDistance</a></li><li><a href=#fallbackinnov>_fallbackInnov</a></li><li><a href=#connectionlike>ConnectionLike</a></li><li><a href=#genomelike>GenomeLike</a></li><li><a href=#neatlikeforcompat>NeatLikeForCompat</a></li></ul></div><div class="toc-file"><a href="#neat-neat-constants-ts">neat/neat.constants.ts</a><ul><li><a href=#epsilon>EPSILON</a></li><li><a href=#extra-connection-probability>EXTRA_CONNECTION_PROBABILITY</a></li><li><a href=#norm-epsilon>NORM_EPSILON</a></li><li><a href=#prob-epsilon>PROB_EPSILON</a></li></ul></div><div class="toc-file"><a href="#neat-neat-diversity-ts">neat/neat.diversity.ts</a><ul><li><a href=#compatcomputer>CompatComputer</a></li><li><a href=#computediversitystats>computeDiversityStats</a></li><li><a href=#diversitystats>DiversityStats</a></li><li><a href=#genomewithmetrics>GenomeWithMetrics</a></li><li><a href=#nodewithconnections>NodeWithConnections</a></li><li><a href=#structuralentropy>structuralEntropy</a></li></ul></div><div class="toc-file"><a href="#neat-neat-evaluate-ts">neat/neat.evaluate.ts</a><ul><li><a href=#diversitystats>DiversityStats</a></li><li><a href=#evaluate>evaluate</a></li><li><a href=#genomeforevaluation>GenomeForEvaluation</a></li><li><a href=#neatcontrollerforeval>NeatControllerForEval</a></li><li><a href=#noveltyarchiveentry>NoveltyArchiveEntry</a></li><li><a href=#objectivedef>ObjectiveDef</a></li></ul></div><div class="toc-file"><a href="#neat-neat-evolve-ts">neat/neat.evolve.ts</a><ul><li><a href=#evolve>evolve</a></li><li><a href=#genomewithmetadata>GenomeWithMetadata</a></li><li><a href=#multiobjectiveoptions>MultiObjectiveOptions</a></li><li><a href=#mutationmethod>MutationMethod</a></li><li><a href=#neatcontrollerforevolution>NeatControllerForEvolution</a></li><li><a href=#objectivedescriptor>ObjectiveDescriptor</a></li><li><a href=#specieshistoryrecord>SpeciesHistoryRecord</a></li><li><a href=#specieswithmetadata>SpeciesWithMetadata</a></li></ul></div><div class="toc-file"><a href="#neat-neat-export-ts">neat/neat.export.ts</a><ul><li><a href=#exportpopulation>exportPopulation</a></li><li><a href=#exportstate>exportState</a></li><li><a href=#fromjsonimpl>fromJSONImpl</a></li><li><a href=#genomejson>GenomeJSON</a></li><li><a href=#genomewithserialization>GenomeWithSerialization</a></li><li><a href=#importpopulation>importPopulation</a></li><li><a href=#importstateimpl>importStateImpl</a></li><li><a href=#innovationmapentry>InnovationMapEntry</a></li><li><a href=#neatconstructor>NeatConstructor</a></li><li><a href=#neatcontrollerforexport>NeatControllerForExport</a></li><li><a href=#neatmetajson>NeatMetaJSON</a></li><li><a href=#neatstatejson>NeatStateJSON</a></li><li><a href=#networkclass>NetworkClass</a></li><li><a href=#tojsonimpl>toJSONImpl</a></li></ul></div><div class="toc-file"><a href="#neat-neat-harness-types-ts">neat/neat.harness.types.ts</a><ul><li><a href=#lineagetrackednetwork>LineageTrackedNetwork</a></li><li><a href=#neatlineageharness>NeatLineageHarness</a></li><li><a href=#phasedcomplexityharness>PhasedComplexityHarness</a></li></ul></div><div class="toc-file"><a href="#neat-neat-helpers-ts">neat/neat.helpers.ts</a><ul><li><a href=#addgenome>addGenome</a></li><li><a href=#createpool>createPool</a></li><li><a href=#genomewithmetadata>GenomeWithMetadata</a></li><li><a href=#mutationmethod>MutationMethod</a></li><li><a href=#neatcontrollerforhelpers>NeatControllerForHelpers</a></li><li><a href=#spawnfromparent>spawnFromParent</a></li></ul></div><div class="toc-file"><a href="#neat-neat-lineage-ts">neat/neat.lineage.ts</a><ul><li><a href=#buildanc>buildAnc</a></li><li><a href=#computeancestoruniqueness>computeAncestorUniqueness</a></li><li><a href=#genomelike>GenomeLike</a></li><li><a href=#neatlineagecontext>NeatLineageContext</a></li></ul></div><div class="toc-file"><a href="#neat-neat-multiobjective-ts">neat/neat.multiobjective.ts</a><ul><li><a href=#fastnondominated>fastNonDominated</a></li><li><a href=#neatlikewithmultiobjective>NeatLikeWithMultiObjective</a></li><li><a href=#networkwithmoannotations>NetworkWithMOAnnotations</a></li><li><a href=#objectivedescriptor>ObjectiveDescriptor</a></li></ul></div><div class="toc-file"><a href="#neat-neat-mutation-add-conn-utils-ts">neat/neat.mutation.add-conn.utils.ts</a><ul><li><a href=#assigninnovationforconnection>assignInnovationForConnection</a></li><li><a href=#buildlegacykeyforconn>buildLegacyKeyForConn</a></li><li><a href=#buildsymmetrickeyforconn>buildSymmetricKeyForConn</a></li><li><a href=#choosepairforconn>choosePairForConn</a></li><li><a href=#collectcandidatepairsforconn>collectCandidatePairsForConn</a></li><li><a href=#connectchosenpair>connectChosenPair</a></li><li><a href=#createscycle>createsCycle</a></li><li><a href=#filterpairswithinnovations>filterPairsWithInnovations</a></li><li><a href=#resolvepairnodes>resolvePairNodes</a></li><li><a href=#selectpairpool>selectPairPool</a></li><li><a href=#shouldabortforcycle>shouldAbortForCycle</a></li></ul></div><div class="toc-file"><a href="#neat-neat-mutation-add-node-utils-ts">neat/neat.mutation.add-node.utils.ts</a><ul><li><a href=#applysplitwithexistingrecord>applySplitWithExistingRecord</a></li><li><a href=#applysplitwithnewrecord>applySplitWithNewRecord</a></li><li><a href=#assigninnovationsfornewsplit>assignInnovationsForNewSplit</a></li><li><a href=#buildsplitdescriptor>buildSplitDescriptor</a></li><li><a href=#chooseconnectionforsplit>chooseConnectionForSplit</a></li><li><a href=#collectenabledconnections>collectEnabledConnections</a></li><li><a href=#connectsplitedges>connectSplitEdges</a></li><li><a href=#disconnectoriginalconnection>disconnectOriginalConnection</a></li><li><a href=#ensurebootstrapconnection>ensureBootstrapConnection</a></li><li><a href=#findfirstnodebytype>findFirstNodeByType</a></li><li><a href=#resolveinsertindex>resolveInsertIndex</a></li></ul></div><div class="toc-file"><a href="#neat-neat-mutation-dead-ends-utils-ts">neat/neat.mutation.dead-ends.utils.ts</a><ul><li><a href=#chooserandomnodefordeadends>chooseRandomNodeForDeadEnds</a></li><li><a href=#collectnodegroupsfordeadends>collectNodeGroupsForDeadEnds</a></li><li><a href=#connectifcandidatesexistfordeadends>connectIfCandidatesExistForDeadEnds</a></li><li><a href=#ensurehiddenconnectivityfordeadends>ensureHiddenConnectivityForDeadEnds</a></li><li><a href=#ensureinputconnectivityfordeadends>ensureInputConnectivityForDeadEnds</a></li><li><a href=#ensureoutputconnectivityfordeadends>ensureOutputConnectivityForDeadEnds</a></li><li><a href=#hasincomingfordeadends>hasIncomingForDeadEnds</a></li><li><a href=#hasoutgoingfordeadends>hasOutgoingForDeadEnds</a></li></ul></div><div class="toc-file"><a href="#neat-neat-mutation-flow-utils-ts">neat/neat.mutation.flow.utils.ts</a><ul><li><a href=#applyaddconnmutation>applyAddConnMutation</a></li><li><a href=#applyaddnodemutation>applyAddNodeMutation</a></li><li><a href=#applymutationoperator>applyMutationOperator</a></li><li><a href=#capturestructuralsizes>captureStructuralSizes</a></li><li><a href=#initializeadaptivemutation>initializeAdaptiveMutation</a></li><li><a href=#maybeaddextraconnection>maybeAddExtraConnection</a></li><li><a href=#mutategenome>mutateGenome</a></li><li><a href=#resolveeffectiveamount>resolveEffectiveAmount</a></li><li><a href=#resolveeffectiverate>resolveEffectiveRate</a></li><li><a href=#selectconcretemutationmethod>selectConcreteMutationMethod</a></li><li><a href=#shouldinvalidatecaches>shouldInvalidateCaches</a></li><li><a href=#shouldmutategenome>shouldMutateGenome</a></li><li><a href=#updateoperatorstatsifneeded>updateOperatorStatsIfNeeded</a></li></ul></div><div class="toc-file"><a href="#neat-neat-mutation-min-hidden-utils-ts">neat/neat.mutation.min-hidden.utils.ts</a><ul><li><a href=#chooserandomnodeforminhidden>chooseRandomNodeForMinHidden</a></li><li><a href=#collectnodegroupsforminhidden>collectNodeGroupsForMinHidden</a></li><li><a href=#ensurehiddenconnectivityforminhidden>ensureHiddenConnectivityForMinHidden</a></li><li><a href=#ensurehiddennodecountforminhidden>ensureHiddenNodeCountForMinHidden</a></li><li><a href=#ensureincomingconnectionforminhidden>ensureIncomingConnectionForMinHidden</a></li><li><a href=#ensureoutgoingconnectionforminhidden>ensureOutgoingConnectionForMinHidden</a></li><li><a href=#hasrequiredendpointsforminhidden>hasRequiredEndpointsForMinHidden</a></li><li><a href=#rebuildnetworkconnectionsforminhidden>rebuildNetworkConnectionsForMinHidden</a></li><li><a href=#resolvemaxnodesforminhidden>resolveMaxNodesForMinHidden</a></li><li><a href=#resolveminhiddenforminhidden>resolveMinHiddenForMinHidden</a></li><li><a href=#warnmissingendpointsforminhidden>warnMissingEndpointsForMinHidden</a></li></ul></div><div class="toc-file"><a href="#neat-neat-mutation-select-utils-ts">neat/neat.mutation.select.utils.ts</a><ul><li><a href=#applyoperatoradaptationforselect>applyOperatorAdaptationForSelect</a></li><li><a href=#applyoperatorbanditforselect>applyOperatorBanditForSelect</a></li><li><a href=#applyphasedcomplexityforselect>applyPhasedComplexityForSelect</a></li><li><a href=#isblockedbyrecurrentpolicyforselect>isBlockedByRecurrentPolicyForSelect</a></li><li><a href=#isblockedbystructurallimitsforselect>isBlockedByStructuralLimitsForSelect</a></li><li><a href=#islegacyffwpoolforselect>isLegacyFFWPoolForSelect</a></li><li><a href=#isoperatornameprefixedforselect>isOperatorNamePrefixedForSelect</a></li><li><a href=#normalizemutationpoolforselect>normalizeMutationPoolForSelect</a></li><li><a href=#resolveffwpolicyforselect>resolveFFWPolicyForSelect</a></li><li><a href=#samplefrompoolforselect>sampleFromPoolForSelect</a></li></ul></div><div class="toc-file"><a href="#neat-neat-mutation-ts">neat/neat.mutation.ts</a><ul><li><a href=#default-connection-weight>DEFAULT_CONNECTION_WEIGHT</a></li><li><a href=#default-gene-id>DEFAULT_GENE_ID</a></li><li><a href=#default-innovation-id>DEFAULT_INNOVATION_ID</a></li><li><a href=#ensureminhiddennodes>ensureMinHiddenNodes</a></li><li><a href=#ensurenodeadends>ensureNoDeadEnds</a></li><li><a href=#mutate>mutate</a></li><li><a href=#mutateaddconnreuse>mutateAddConnReuse</a></li><li><a href=#mutateaddnodereuse>mutateAddNodeReuse</a></li><li><a href=#selectmutationmethod>selectMutationMethod</a></li></ul></div><div class="toc-file"><a href="#neat-neat-mutation-types-ts">neat/neat.mutation.types.ts</a><ul><li><a href=#connectionwithmetadata>ConnectionWithMetadata</a></li><li><a href=#genomewithmetadata>GenomeWithMetadata</a></li><li><a href=#mutationmethod>MutationMethod</a></li><li><a href=#neatcontrollerformutation>NeatControllerForMutation</a></li><li><a href=#nodesplitrecord>NodeSplitRecord</a></li><li><a href=#nodewithmetadata>NodeWithMetadata</a></li><li><a href=#operatorstats>OperatorStats</a></li></ul></div><div class="toc-file"><a href="#neat-neat-mutation-utils-ts">neat/neat.mutation.utils.ts</a><ul><li><a href=#applyaddconnmutation>applyAddConnMutation</a></li><li><a href=#applyaddnodemutation>applyAddNodeMutation</a></li><li><a href=#applymutationoperator>applyMutationOperator</a></li><li><a href=#applyoperatoradaptationforselect>applyOperatorAdaptationForSelect</a></li><li><a href=#applyoperatorbanditforselect>applyOperatorBanditForSelect</a></li><li><a href=#applyphasedcomplexityforselect>applyPhasedComplexityForSelect</a></li><li><a href=#applysplitwithexistingrecord>applySplitWithExistingRecord</a></li><li><a href=#applysplitwithnewrecord>applySplitWithNewRecord</a></li><li><a href=#assigninnovationforconnection>assignInnovationForConnection</a></li><li><a href=#assigninnovationsfornewsplit>assignInnovationsForNewSplit</a></li><li><a href=#buildlegacykeyforconn>buildLegacyKeyForConn</a></li><li><a href=#buildsplitdescriptor>buildSplitDescriptor</a></li><li><a href=#buildsymmetrickeyforconn>buildSymmetricKeyForConn</a></li><li><a href=#capturestructuralsizes>captureStructuralSizes</a></li><li><a href=#chooseconnectionforsplit>chooseConnectionForSplit</a></li><li><a href=#choosepairforconn>choosePairForConn</a></li><li><a href=#chooserandomnodefordeadends>chooseRandomNodeForDeadEnds</a></li><li><a href=#chooserandomnodeforminhidden>chooseRandomNodeForMinHidden</a></li><li><a href=#collectcandidatepairsforconn>collectCandidatePairsForConn</a></li><li><a href=#collectenabledconnections>collectEnabledConnections</a></li><li><a href=#collectnodegroupsfordeadends>collectNodeGroupsForDeadEnds</a></li><li><a href=#collectnodegroupsforminhidden>collectNodeGroupsForMinHidden</a></li><li><a href=#connectchosenpair>connectChosenPair</a></li><li><a href=#connectifcandidatesexistfordeadends>connectIfCandidatesExistForDeadEnds</a></li><li><a href=#connectsplitedges>connectSplitEdges</a></li><li><a href=#createscycle>createsCycle</a></li><li><a href=#disconnectoriginalconnection>disconnectOriginalConnection</a></li><li><a href=#ensurebootstrapconnection>ensureBootstrapConnection</a></li><li><a href=#ensurehiddenconnectivityfordeadends>ensureHiddenConnectivityForDeadEnds</a></li><li><a href=#ensurehiddenconnectivityforminhidden>ensureHiddenConnectivityForMinHidden</a></li><li><a href=#ensurehiddennodecountforminhidden>ensureHiddenNodeCountForMinHidden</a></li><li><a href=#ensureincomingconnectionforminhidden>ensureIncomingConnectionForMinHidden</a></li><li><a href=#ensureinputconnectivityfordeadends>ensureInputConnectivityForDeadEnds</a></li><li><a href=#ensureoutgoingconnectionforminhidden>ensureOutgoingConnectionForMinHidden</a></li><li><a href=#ensureoutputconnectivityfordeadends>ensureOutputConnectivityForDeadEnds</a></li><li><a href=#filterpairswithinnovations>filterPairsWithInnovations</a></li><li><a href=#findfirstnodebytype>findFirstNodeByType</a></li><li><a href=#hasincomingfordeadends>hasIncomingForDeadEnds</a></li><li><a href=#hasoutgoingfordeadends>hasOutgoingForDeadEnds</a></li><li><a href=#hasrequiredendpointsforminhidden>hasRequiredEndpointsForMinHidden</a></li><li><a href=#initializeadaptivemutation>initializeAdaptiveMutation</a></li><li><a href=#isblockedbyrecurrentpolicyforselect>isBlockedByRecurrentPolicyForSelect</a></li><li><a href=#isblockedbystructurallimitsforselect>isBlockedByStructuralLimitsForSelect</a></li><li><a href=#islegacyffwpoolforselect>isLegacyFFWPoolForSelect</a></li><li><a href=#isoperatornameprefixedforselect>isOperatorNamePrefixedForSelect</a></li><li><a href=#maybeaddextraconnection>maybeAddExtraConnection</a></li><li><a href=#mutategenome>mutateGenome</a></li><li><a href=#normalizemutationpoolforselect>normalizeMutationPoolForSelect</a></li><li><a href=#rebuildnetworkconnectionsforminhidden>rebuildNetworkConnectionsForMinHidden</a></li><li><a href=#resolveeffectiveamount>resolveEffectiveAmount</a></li><li><a href=#resolveeffectiverate>resolveEffectiveRate</a></li><li><a href=#resolveffwpolicyforselect>resolveFFWPolicyForSelect</a></li><li><a href=#resolveinsertindex>resolveInsertIndex</a></li><li><a href=#resolvemaxnodesforminhidden>resolveMaxNodesForMinHidden</a></li><li><a href=#resolveminhiddenforminhidden>resolveMinHiddenForMinHidden</a></li><li><a href=#resolvepairnodes>resolvePairNodes</a></li><li><a href=#samplefrompoolforselect>sampleFromPoolForSelect</a></li><li><a href=#selectconcretemutationmethod>selectConcreteMutationMethod</a></li><li><a href=#selectpairpool>selectPairPool</a></li><li><a href=#shouldabortforcycle>shouldAbortForCycle</a></li><li><a href=#shouldinvalidatecaches>shouldInvalidateCaches</a></li><li><a href=#shouldmutategenome>shouldMutateGenome</a></li><li><a href=#updateoperatorstatsifneeded>updateOperatorStatsIfNeeded</a></li><li><a href=#warnmissingendpointsforminhidden>warnMissingEndpointsForMinHidden</a></li></ul></div><div class="toc-file"><a href="#neat-neat-objectives-ts">neat/neat.objectives.ts</a><ul><li><a href=#getobjectives>_getObjectives</a></li><li><a href=#clearobjectives>clearObjectives</a></li><li><a href=#registerobjective>registerObjective</a></li></ul></div><div class="toc-file"><a href="#neat-neat-objectives-utils-ts">neat/neat.objectives.utils.ts</a><ul><li><a href=#builddefaultfitnessobjective>buildDefaultFitnessObjective</a></li><li><a href=#collectdefaultobjectives>collectDefaultObjectives</a></li><li><a href=#collectuserobjectives>collectUserObjectives</a></li><li><a href=#ensuremultiobjectiveoptions>ensureMultiObjectiveOptions</a></li><li><a href=#ensureobjectiveslist>ensureObjectivesList</a></li><li><a href=#getobjectivecandidates>getObjectiveCandidates</a></li><li><a href=#ismultiobjectiveenabled>isMultiObjectiveEnabled</a></li><li><a href=#isvalidobjective>isValidObjective</a></li><li><a href=#neatlikewithobjectives>NeatLikeWithObjectives</a></li><li><a href=#replaceobjectivebykey>replaceObjectiveByKey</a></li></ul></div><div class="toc-file"><a href="#neat-neat-pruning-ts">neat/neat.pruning.ts</a><ul><li><a href=#applyadaptivepruning>applyAdaptivePruning</a></li><li><a href=#applyevolutionpruning>applyEvolutionPruning</a></li></ul></div><div class="toc-file"><a href="#neat-neat-pruning-utils-ts">neat/neat.pruning.utils.ts</a><ul><li><a href=#adaptivepruningoptions>AdaptivePruningOptions</a></li><li><a href=#applyadaptivepruneleveltopopulation>applyAdaptivePruneLevelToPopulation</a></li><li><a href=#applypruningtopopulation>applyPruningToPopulation</a></li><li><a href=#computemeanconnectioncount>computeMeanConnectionCount</a></li><li><a href=#computemeannodecount>computeMeanNodeCount</a></li><li><a href=#computenextadaptiveprunelevel>computeNextAdaptivePruneLevel</a></li><li><a href=#computepopulationmetrics>computePopulationMetrics</a></li><li><a href=#computerampfraction>computeRampFraction</a></li><li><a href=#computetargetremainingmetric>computeTargetRemainingMetric</a></li><li><a href=#computetargetsparsitynow>computeTargetSparsityNow</a></li><li><a href=#evolutionpruningoptions>EvolutionPruningOptions</a></li><li><a href=#initializeadaptivepruningstate>initializeAdaptivePruningState</a></li><li><a href=#neatlikeforpruning>NeatLikeForPruning</a></li><li><a href=#populationmetrics>PopulationMetrics</a></li><li><a href=#resolveactiveadaptivepruningoptions>resolveActiveAdaptivePruningOptions</a></li><li><a href=#resolveactiveevolutionpruningoptions>resolveActiveEvolutionPruningOptions</a></li><li><a href=#resolveadaptiveprunebaseline>resolveAdaptivePruneBaseline</a></li><li><a href=#resolveobservedmetricvalue>resolveObservedMetricValue</a></li><li><a href=#shouldadjustadaptivepruning>shouldAdjustAdaptivePruning</a></li></ul></div><div class="toc-file"><a href="#neat-neat-selection-ts">neat/neat.selection.ts</a><ul><li><a href=#default-power>DEFAULT_POWER</a></li><li><a href=#default-score>DEFAULT_SCORE</a></li><li><a href=#default-tournament-probability>DEFAULT_TOURNAMENT_PROBABILITY</a></li><li><a href=#default-tournament-size>DEFAULT_TOURNAMENT_SIZE</a></li><li><a href=#first-index>FIRST_INDEX</a></li><li><a href=#getaverage>getAverage</a></li><li><a href=#getfittest>getFittest</a></li><li><a href=#getparent>getParent</a></li><li><a href=#initial-cumulative-fitness>INITIAL_CUMULATIVE_FITNESS</a></li><li><a href=#initial-most-negative-score>INITIAL_MOST_NEGATIVE_SCORE</a></li><li><a href=#initial-total-fitness>INITIAL_TOTAL_FITNESS</a></li><li><a href=#last-element-index>LAST_ELEMENT_INDEX</a></li><li><a href=#last-index-offset>LAST_INDEX_OFFSET</a></li><li><a href=#loop-index-increment>LOOP_INDEX_INCREMENT</a></li><li><a href=#second-index>SECOND_INDEX</a></li><li><a href=#sort>sort</a></li></ul></div><div class="toc-file"><a href="#neat-neat-selection-utils-ts">neat/neat.selection.utils.ts</a><ul><li><a href=#calculatefitnesstotals>calculateFitnessTotals</a></li><li><a href=#calculatetotalscore>calculateTotalScore</a></li><li><a href=#default-power>DEFAULT_POWER</a></li><li><a href=#default-score>DEFAULT_SCORE</a></li><li><a href=#default-tournament-probability>DEFAULT_TOURNAMENT_PROBABILITY</a></li><li><a href=#default-tournament-size>DEFAULT_TOURNAMENT_SIZE</a></li><li><a href=#ensurepopulationevaluated>ensurePopulationEvaluated</a></li><li><a href=#ensurepopulationsorteddescending>ensurePopulationSortedDescending</a></li><li><a href=#ensurepopulationsorteddescendingforpower>ensurePopulationSortedDescendingForPower</a></li><li><a href=#first-index>FIRST_INDEX</a></li><li><a href=#genomewithscore>GenomeWithScore</a></li><li><a href=#getrandompopulationmember>getRandomPopulationMember</a></li><li><a href=#initial-cumulative-fitness>INITIAL_CUMULATIVE_FITNESS</a></li><li><a href=#initial-most-negative-score>INITIAL_MOST_NEGATIVE_SCORE</a></li><li><a href=#initial-total-fitness>INITIAL_TOTAL_FITNESS</a></li><li><a href=#last-element-index>LAST_ELEMENT_INDEX</a></li><li><a href=#last-index-offset>LAST_INDEX_OFFSET</a></li><li><a href=#loop-index-increment>LOOP_INDEX_INCREMENT</a></li><li><a href=#neatlikewithselection>NeatLikeWithSelection</a></li><li><a href=#pickbyshiftedthreshold>pickByShiftedThreshold</a></li><li><a href=#picktournamentwinner>pickTournamentWinner</a></li><li><a href=#resolvetournamentoverflow>resolveTournamentOverflow</a></li><li><a href=#sampletournamentparticipants>sampleTournamentParticipants</a></li><li><a href=#second-index>SECOND_INDEX</a></li><li><a href=#selectparentbyfitnessproportionate>selectParentByFitnessProportionate</a></li><li><a href=#selectparentbypower>selectParentByPower</a></li><li><a href=#selectparentbystrategy>selectParentByStrategy</a></li><li><a href=#selectparentbytournament>selectParentByTournament</a></li></ul></div><div class="toc-file"><a href="#neat-neat-speciation-ts">neat/neat.speciation.ts</a><ul><li><a href=#applyfitnesssharing>_applyFitnessSharing</a></li><li><a href=#sortspeciesmembers>_sortSpeciesMembers</a></li><li><a href=#speciate>_speciate</a></li><li><a href=#updatespeciesstagnation>_updateSpeciesStagnation</a></li></ul></div><div class="toc-file"><a href="#neat-neat-speciation-utils-ts">neat/neat.speciation.utils.ts</a><ul><li><a href=#adjustcompatibilitythreshold>adjustCompatibilityThreshold</a></li><li><a href=#applyageprotection>applyAgeProtection</a></li><li><a href=#applyfitnesssharing>applyFitnessSharing</a></li><li><a href=#assignpopulationtospecies>assignPopulationToSpecies</a></li><li><a href=#averagenumbers>averageNumbers</a></li><li><a href=#buildextendedhistorystats>buildExtendedHistoryStats</a></li><li><a href=#clampcompatibilitythreshold>clampCompatibilityThreshold</a></li><li><a href=#compatadjust>CompatAdjust</a></li><li><a href=#computepidthreshold>computePidThreshold</a></li><li><a href=#createspeciesforgenome>createSpeciesForGenome</a></li><li><a href=#default-compat-integral>DEFAULT_COMPAT_INTEGRAL</a></li><li><a href=#default-compatibility-integral-gain>DEFAULT_COMPATIBILITY_INTEGRAL_GAIN</a></li><li><a href=#default-compatibility-proportional-gain>DEFAULT_COMPATIBILITY_PROPORTIONAL_GAIN</a></li><li><a href=#default-compatibility-threshold>DEFAULT_COMPATIBILITY_THRESHOLD</a></li><li><a href=#default-last-improved-generation>DEFAULT_LAST_IMPROVED_GENERATION</a></li><li><a href=#default-max-compatibility-threshold>DEFAULT_MAX_COMPATIBILITY_THRESHOLD</a></li><li><a href=#default-member-count-fallback>DEFAULT_MEMBER_COUNT_FALLBACK</a></li><li><a href=#default-min-compatibility-threshold>DEFAULT_MIN_COMPATIBILITY_THRESHOLD</a></li><li><a href=#default-score-fallback>DEFAULT_SCORE_FALLBACK</a></li><li><a href=#default-sharing-sigma>DEFAULT_SHARING_SIGMA</a></li><li><a href=#default-species-age-grace>DEFAULT_SPECIES_AGE_GRACE</a></li><li><a href=#default-species-old-penalty>DEFAULT_SPECIES_OLD_PENALTY</a></li><li><a href=#default-stagnation-window>DEFAULT_STAGNATION_WINDOW</a></li><li><a href=#default-target-species>DEFAULT_TARGET_SPECIES</a></li><li><a href=#findcompatiblespecies>findCompatibleSpecies</a></li><li><a href=#fitnesssharingcontext>FitnessSharingContext</a></li><li><a href=#history-buffer-max-entries>HISTORY_BUFFER_MAX_ENTRIES</a></li><li><a href=#innovationaccumulator>InnovationAccumulator</a></li><li><a href=#negative-infinity>NEGATIVE_INFINITY</a></li><li><a href=#penalty-no-effect-threshold>PENALTY_NO_EFFECT_THRESHOLD</a></li><li><a href=#recordhistory>recordHistory</a></li><li><a href=#refreshspeciesrepresentatives>refreshSpeciesRepresentatives</a></li><li><a href=#resetspeciesmembers>resetSpeciesMembers</a></li><li><a href=#sharing-max-contribution>SHARING_MAX_CONTRIBUTION</a></li><li><a href=#sharing-self-distance>SHARING_SELF_DISTANCE</a></li><li><a href=#sharing-sum-floor>SHARING_SUM_FLOOR</a></li><li><a href=#snapshotpreviousmembers>snapshotPreviousMembers</a></li><li><a href=#species-age-grace-multiplier>SPECIES_AGE_GRACE_MULTIPLIER</a></li><li><a href=#stagnationcontext>StagnationContext</a></li><li><a href=#summarizeinnovations>summarizeInnovations</a></li><li><a href=#trimhistory>trimHistory</a></li><li><a href=#updatespeciesstagnation>updateSpeciesStagnation</a></li></ul></div><div class="toc-file"><a href="#neat-neat-species-ts">neat/neat.species.ts</a><ul><li><a href=#getspecieshistory>getSpeciesHistory</a></li><li><a href=#getspeciesstats>getSpeciesStats</a></li></ul></div><div class="toc-file"><a href="#neat-neat-species-utils-ts">neat/neat.species.utils.ts</a><ul><li><a href=#backfillextendedhistory>backfillExtendedHistory</a></li><li><a href=#shouldaugmentextendedhistory>shouldAugmentExtendedHistory</a></li><li><a href=#species-history-default-enabled-ratio>SPECIES_HISTORY_DEFAULT_ENABLED_RATIO</a></li><li><a href=#species-history-default-innovation-id>SPECIES_HISTORY_DEFAULT_INNOVATION_ID</a></li><li><a href=#species-history-default-innovation-range>SPECIES_HISTORY_DEFAULT_INNOVATION_RANGE</a></li><li><a href=#species-history-initial-max-innovation>SPECIES_HISTORY_INITIAL_MAX_INNOVATION</a></li><li><a href=#species-history-initial-min-innovation>SPECIES_HISTORY_INITIAL_MIN_INNOVATION</a></li><li><a href=#species-history-zero>SPECIES_HISTORY_ZERO</a></li></ul></div><div class="toc-file"><a href="#neat-neat-telemetry-buffer-utils-ts">neat/neat.telemetry.buffer.utils.ts</a><ul><li><a href=#ensuretelemetrybuffer>ensureTelemetryBuffer</a></li><li><a href=#safelystreamtelemetryentry>safelyStreamTelemetryEntry</a></li><li><a href=#trimtelemetrybuffer>trimTelemetryBuffer</a></li></ul></div><div class="toc-file"><a href="#neat-neat-telemetry-complexity-utils-ts">neat/neat.telemetry.complexity.utils.ts</a><ul><li><a href=#applycomplexitystatsmonoobjective>applyComplexityStatsMonoObjective</a></li><li><a href=#applycomplexitystatsmultiobjective>applyComplexityStatsMultiObjective</a></li><li><a href=#buildcomplexityentry>buildComplexityEntry</a></li><li><a href=#collectpopulationcounts>collectPopulationCounts</a></li><li><a href=#computeandstoregrowthvalues>computeAndStoreGrowthValues</a></li><li><a href=#computeenabledratios>computeEnabledRatios</a></li><li><a href=#computemaxcounts>computeMaxCounts</a></li><li><a href=#computemeancounts>computeMeanCounts</a></li><li><a href=#computemeanenabledratio>computeMeanEnabledRatio</a></li></ul></div><div class="toc-file"><a href="#neat-neat-telemetry-diversity-utils-ts">neat/neat.telemetry.diversity.utils.ts</a><ul><li><a href=#applyfastmodedefaults>applyFastModeDefaults</a></li><li><a href=#computecompatibilitystats>computeCompatibilityStats</a></li><li><a href=#computeentropystats>computeEntropyStats</a></li><li><a href=#computegraphletentropy>computeGraphletEntropy</a></li><li><a href=#countenablededges>countEnabledEdges</a></li><li><a href=#pickdistinctindices>pickDistinctIndices</a></li></ul></div><div class="toc-file"><a href="#neat-neat-telemetry-entropy-utils-ts">neat/neat.telemetry.entropy.utils.ts</a><ul><li><a href=#builddegreehistogram>buildDegreeHistogram</a></li><li><a href=#computedegreecounts>computeDegreeCounts</a></li><li><a href=#computeentropyfromhistogram>computeEntropyFromHistogram</a></li><li><a href=#getcachedentropy>getCachedEntropy</a></li><li><a href=#setcachedentropy>setCachedEntropy</a></li></ul></div><div class="toc-file"><a href="#neat-neat-telemetry-exports-ts">neat/neat.telemetry.exports.ts</a><ul><li><a href=#buildspecieshistorycsv>buildSpeciesHistoryCsv</a></li><li><a href=#buildtelemetryheaders>buildTelemetryHeaders</a></li><li><a href=#collecttelemetryheaderinfo>collectTelemetryHeaderInfo</a></li><li><a href=#default-species-best-score>DEFAULT_SPECIES_BEST_SCORE</a></li><li><a href=#default-species-history-generation>DEFAULT_SPECIES_HISTORY_GENERATION</a></li><li><a href=#default-species-history-max-entries>DEFAULT_SPECIES_HISTORY_MAX_ENTRIES</a></li><li><a href=#default-species-id>DEFAULT_SPECIES_ID</a></li><li><a href=#default-species-last-improved>DEFAULT_SPECIES_LAST_IMPROVED</a></li><li><a href=#default-species-size>DEFAULT_SPECIES_SIZE</a></li><li><a href=#exportspecieshistorycsv>exportSpeciesHistoryCSV</a></li><li><a href=#exporttelemetrycsv>exportTelemetryCSV</a></li><li><a href=#exporttelemetryjsonl>exportTelemetryJSONL</a></li><li><a href=#serializetelemetryentry>serializeTelemetryEntry</a></li><li><a href=#telemetryheaderinfo>TelemetryHeaderInfo</a></li></ul></div><div class="toc-file"><a href="#neat-neat-telemetry-exports-utils-ts">neat/neat.telemetry.exports.utils.ts</a><ul><li><a href=#buildspecieshistorystats>buildSpeciesHistoryStats</a></li><li><a href=#collectbasekeys>collectBaseKeys</a></li><li><a href=#collectdiversitylineagemetrics>collectDiversityLineageMetrics</a></li><li><a href=#collectgroupedmetrickeys>collectGroupedMetricKeys</a></li><li><a href=#collectoptionalcolumnpresence>collectOptionalColumnPresence</a></li><li><a href=#collectspecieshistoryheaders>collectSpeciesHistoryHeaders</a></li><li><a href=#ensureminimalspeciessnapshot>ensureMinimalSpeciesSnapshot</a></li><li><a href=#ensurespecieshistoryarray>ensureSpeciesHistoryArray</a></li><li><a href=#resolvespecieshistorycellvalue>resolveSpeciesHistoryCellValue</a></li><li><a href=#safestringifycell>safeStringifyCell</a></li><li><a href=#serializespecieshistoryrow>serializeSpeciesHistoryRow</a></li><li><a href=#telemetryheadercollectionstate>TelemetryHeaderCollectionState</a></li></ul></div><div class="toc-file"><a href="#neat-neat-telemetry-lineage-utils-ts">neat/neat.telemetry.lineage.utils.ts</a><ul><li><a href=#applylineagestatsmonoobjective>applyLineageStatsMonoObjective</a></li><li><a href=#applylineagestatsmultiobjective>applyLineageStatsMultiObjective</a></li><li><a href=#buildlineagecontext>buildLineageContext</a></li><li><a href=#buildlineageentry>buildLineageEntry</a></li><li><a href=#collectdepths>collectDepths</a></li><li><a href=#computeancestoruniquenesssampled>computeAncestorUniquenessSampled</a></li><li><a href=#computelineagestats>computeLineageStats</a></li><li><a href=#computemeandepth>computeMeanDepth</a></li><li><a href=#computepairjaccarddistance>computePairJaccardDistance</a></li><li><a href=#countancestorintersection>countAncestorIntersection</a></li><li><a href=#islineageeligible>isLineageEligible</a></li><li><a href=#pickdistinctpairindices>pickDistinctPairIndices</a></li></ul></div><div class="toc-file"><a href="#neat-neat-telemetry-objectives-utils-ts">neat/neat.telemetry.objectives.utils.ts</a><ul><li><a href=#applyhypervolumetelemetry>applyHypervolumeTelemetry</a></li><li><a href=#applyobjectiveages>applyObjectiveAges</a></li><li><a href=#applyobjectiveevents>applyObjectiveEvents</a></li><li><a href=#applyobjectiveimportance>applyObjectiveImportance</a></li><li><a href=#applyobjectivessnapshot>applyObjectivesSnapshot</a></li><li><a href=#applyspeciesallocation>applySpeciesAllocation</a></li><li><a href=#computehypervolumeproxy>computeHyperVolumeProxy</a></li><li><a href=#computeparetofrontsizes>computeParetoFrontSizes</a></li></ul></div><div class="toc-file"><a href="#neat-neat-telemetry-operator-utils-ts">neat/neat.telemetry.operator.utils.ts</a><ul><li><a href=#computeoperatorstatssnapshot>computeOperatorStatsSnapshot</a></li></ul></div><div class="toc-file"><a href="#neat-neat-telemetry-performance-utils-ts">neat/neat.telemetry.performance.utils.ts</a><ul><li><a href=#applyperformancestats>applyPerformanceStats</a></li></ul></div><div class="toc-file"><a href="#neat-neat-telemetry-rng-utils-ts">neat/neat.telemetry.rng.utils.ts</a><ul><li><a href=#applyrngstate>applyRngState</a></li></ul></div><div class="toc-file"><a href="#neat-neat-telemetry-selection-utils-ts">neat/neat.telemetry.selection.utils.ts</a><ul><li><a href=#gettelemetrycoresnapshot>getTelemetryCoreSnapshot</a></li><li><a href=#mergetelemetrycorefields>mergeTelemetryCoreFields</a></li><li><a href=#safelyapplytelemetryselect>safelyApplyTelemetrySelect</a></li><li><a href=#stripunselectedtelemetrykeys>stripUnselectedTelemetryKeys</a></li></ul></div><div class="toc-file"><a href="#neat-neat-telemetry-ts">neat/neat.telemetry.ts</a><ul><li><a href=#applytelemetryselect>applyTelemetrySelect</a></li><li><a href=#buildtelemetryentry>buildTelemetryEntry</a></li><li><a href=#computediversitystats>computeDiversityStats</a></li><li><a href=#createtelemetryentrybase>createTelemetryEntryBase</a></li><li><a href=#recordtelemetryentry>recordTelemetryEntry</a></li><li><a href=#structuralentropy>structuralEntropy</a></li><li><a href=#telemetrycontext>TelemetryContext</a></li></ul></div><div class="toc-file"><a href="#neat-neat-telemetry-types-ts">neat/neat.telemetry.types.ts</a><ul><li><a href=#operatorstatsmap>OperatorStatsMap</a></li><li><a href=#telemetrybuffercontext>TelemetryBufferContext</a></li><li><a href=#telemetrycorefields>TelemetryCoreFields</a></li><li><a href=#telemetrydiversityoptions>TelemetryDiversityOptions</a></li><li><a href=#telemetryentryrecord>TelemetryEntryRecord</a></li><li><a href=#telemetrygenome>TelemetryGenome</a></li><li><a href=#telemetryselectcontext>TelemetrySelectContext</a></li><li><a href=#telemetrystreamoptions>TelemetryStreamOptions</a></li></ul></div><div class="toc-file"><a href="#neat-neat-telemetry-utils-ts">neat/neat.telemetry.utils.ts</a><ul><li><a href=#applycomplexitystatsmonoobjective>applyComplexityStatsMonoObjective</a></li><li><a href=#applycomplexitystatsmultiobjective>applyComplexityStatsMultiObjective</a></li><li><a href=#applyfastmodedefaults>applyFastModeDefaults</a></li><li><a href=#applyhypervolumetelemetry>applyHypervolumeTelemetry</a></li><li><a href=#applylineagestatsmonoobjective>applyLineageStatsMonoObjective</a></li><li><a href=#applylineagestatsmultiobjective>applyLineageStatsMultiObjective</a></li><li><a href=#applyobjectiveages>applyObjectiveAges</a></li><li><a href=#applyobjectiveevents>applyObjectiveEvents</a></li><li><a href=#applyobjectiveimportance>applyObjectiveImportance</a></li><li><a href=#applyobjectivessnapshot>applyObjectivesSnapshot</a></li><li><a href=#applyperformancestats>applyPerformanceStats</a></li><li><a href=#applyrngstate>applyRngState</a></li><li><a href=#applyspeciesallocation>applySpeciesAllocation</a></li><li><a href=#buildcomplexityentry>buildComplexityEntry</a></li><li><a href=#builddegreehistogram>buildDegreeHistogram</a></li><li><a href=#buildlineagecontext>buildLineageContext</a></li><li><a href=#buildlineageentry>buildLineageEntry</a></li><li><a href=#collectdepths>collectDepths</a></li><li><a href=#collectpopulationcounts>collectPopulationCounts</a></li><li><a href=#computeancestoruniquenesssampled>computeAncestorUniquenessSampled</a></li><li><a href=#computeandstoregrowthvalues>computeAndStoreGrowthValues</a></li><li><a href=#computecompatibilitystats>computeCompatibilityStats</a></li><li><a href=#computedegreecounts>computeDegreeCounts</a></li><li><a href=#computeenabledratios>computeEnabledRatios</a></li><li><a href=#computeentropyfromhistogram>computeEntropyFromHistogram</a></li><li><a href=#computeentropystats>computeEntropyStats</a></li><li><a href=#computegraphletentropy>computeGraphletEntropy</a></li><li><a href=#computehypervolumeproxy>computeHyperVolumeProxy</a></li><li><a href=#computelineagestats>computeLineageStats</a></li><li><a href=#computemaxcounts>computeMaxCounts</a></li><li><a href=#computemeancounts>computeMeanCounts</a></li><li><a href=#computemeandepth>computeMeanDepth</a></li><li><a href=#computemeanenabledratio>computeMeanEnabledRatio</a></li><li><a href=#computeoperatorstatssnapshot>computeOperatorStatsSnapshot</a></li><li><a href=#computepairjaccarddistance>computePairJaccardDistance</a></li><li><a href=#computeparetofrontsizes>computeParetoFrontSizes</a></li><li><a href=#countancestorintersection>countAncestorIntersection</a></li><li><a href=#countenablededges>countEnabledEdges</a></li><li><a href=#ensuretelemetrybuffer>ensureTelemetryBuffer</a></li><li><a href=#getcachedentropy>getCachedEntropy</a></li><li><a href=#gettelemetrycoresnapshot>getTelemetryCoreSnapshot</a></li><li><a href=#islineageeligible>isLineageEligible</a></li><li><a href=#mergetelemetrycorefields>mergeTelemetryCoreFields</a></li><li><a href=#operatorstatsmap>OperatorStatsMap</a></li><li><a href=#pickdistinctindices>pickDistinctIndices</a></li><li><a href=#pickdistinctpairindices>pickDistinctPairIndices</a></li><li><a href=#safelyapplytelemetryselect>safelyApplyTelemetrySelect</a></li><li><a href=#safelystreamtelemetryentry>safelyStreamTelemetryEntry</a></li><li><a href=#setcachedentropy>setCachedEntropy</a></li><li><a href=#stripunselectedtelemetrykeys>stripUnselectedTelemetryKeys</a></li><li><a href=#telemetrybuffercontext>TelemetryBufferContext</a></li><li><a href=#telemetrycorefields>TelemetryCoreFields</a></li><li><a href=#telemetrydiversityoptions>TelemetryDiversityOptions</a></li><li><a href=#telemetryentryrecord>TelemetryEntryRecord</a></li><li><a href=#telemetrygenome>TelemetryGenome</a></li><li><a href=#telemetryselectcontext>TelemetrySelectContext</a></li><li><a href=#telemetrystreamoptions>TelemetryStreamOptions</a></li><li><a href=#trimtelemetrybuffer>trimTelemetryBuffer</a></li></ul></div><div class="toc-file"><a href="#neat-neat-types-ts">neat/neat.types.ts</a><ul><li><a href=#anyobj>AnyObj</a></li><li><a href=#complexitymetrics>ComplexityMetrics</a></li><li><a href=#connectionlike>ConnectionLike</a></li><li><a href=#diversitystats>DiversityStats</a></li><li><a href=#genomedetailed>GenomeDetailed</a></li><li><a href=#genomelike>GenomeLike</a></li><li><a href=#lineagesnapshot>LineageSnapshot</a></li><li><a href=#neatlike>NeatLike</a></li><li><a href=#neatoptions>NeatOptions</a></li><li><a href=#nodelike>NodeLike</a></li><li><a href=#objages>ObjAges</a></li><li><a href=#objectivedescriptor>ObjectiveDescriptor</a></li><li><a href=#objectiveevent>ObjectiveEvent</a></li><li><a href=#objevent>ObjEvent</a></li><li><a href=#objimportance>ObjImportance</a></li><li><a href=#objimportanceentry>ObjImportanceEntry</a></li><li><a href=#operatorstat>OperatorStat</a></li><li><a href=#operatorstatsrecord>OperatorStatsRecord</a></li><li><a href=#paretoarchiveentry>ParetoArchiveEntry</a></li><li><a href=#performancemetrics>PerformanceMetrics</a></li><li><a href=#speciationharnesscontext>SpeciationHarnessContext</a></li><li><a href=#speciationoptions>SpeciationOptions</a></li><li><a href=#speciesalloc>SpeciesAlloc</a></li><li><a href=#specieshistoryentry>SpeciesHistoryEntry</a></li><li><a href=#specieshistorystat>SpeciesHistoryStat</a></li><li><a href=#specieshistorystatextended>SpeciesHistoryStatExtended</a></li><li><a href=#specieslaststats>SpeciesLastStats</a></li><li><a href=#specieslike>SpeciesLike</a></li><li><a href=#telemetryentry>TelemetryEntry</a></li></ul></div></div></aside></div></body></html>
+<footer class="site-footer">Generated from source JSDoc • <a href="https://github.com/reicek/NeatapticTS">GitHub</a></footer></main><aside class="toc"><div class="page-toc"><h2>Files</h2><div class="toc-file"><a href="#neat-neat-adaptive-ts">neat/neat.adaptive.ts</a><ul><li><a href=#applyadaptivemutation>applyAdaptiveMutation</a></li><li><a href=#applyancestoruniqadaptive>applyAncestorUniqAdaptive</a></li><li><a href=#applycomplexitybudget>applyComplexityBudget</a></li><li><a href=#applyminimalcriterionadaptive>applyMinimalCriterionAdaptive</a></li><li><a href=#applyoperatoradaptation>applyOperatorAdaptation</a></li><li><a href=#applyphasedcomplexity>applyPhasedComplexity</a></li><li><a href=#neatlikewithadaptive>NeatLikeWithAdaptive</a></li></ul></div><div class="toc-file"><a href="#neat-neat-compat-ts">neat/neat.compat.ts</a><ul><li><a href=#compatibilitydistance>_compatibilityDistance</a></li><li><a href=#fallbackinnov>_fallbackInnov</a></li><li><a href=#connectionlike>ConnectionLike</a></li><li><a href=#genomelike>GenomeLike</a></li><li><a href=#neatlikeforcompat>NeatLikeForCompat</a></li></ul></div><div class="toc-file"><a href="#neat-neat-constants-ts">neat/neat.constants.ts</a><ul><li><a href=#epsilon>EPSILON</a></li><li><a href=#extra-connection-probability>EXTRA_CONNECTION_PROBABILITY</a></li><li><a href=#norm-epsilon>NORM_EPSILON</a></li><li><a href=#prob-epsilon>PROB_EPSILON</a></li></ul></div><div class="toc-file"><a href="#neat-neat-diversity-ts">neat/neat.diversity.ts</a><ul><li><a href=#compatcomputer>CompatComputer</a></li><li><a href=#computediversitystats>computeDiversityStats</a></li><li><a href=#diversitystats>DiversityStats</a></li><li><a href=#genomewithmetrics>GenomeWithMetrics</a></li><li><a href=#nodewithconnections>NodeWithConnections</a></li><li><a href=#structuralentropy>structuralEntropy</a></li></ul></div><div class="toc-file"><a href="#neat-neat-evaluate-ts">neat/neat.evaluate.ts</a><ul><li><a href=#diversitystats>DiversityStats</a></li><li><a href=#evaluate>evaluate</a></li><li><a href=#genomeforevaluation>GenomeForEvaluation</a></li><li><a href=#neatcontrollerforeval>NeatControllerForEval</a></li><li><a href=#noveltyarchiveentry>NoveltyArchiveEntry</a></li><li><a href=#objectivedef>ObjectiveDef</a></li></ul></div><div class="toc-file"><a href="#neat-neat-evolve-ts">neat/neat.evolve.ts</a><ul><li><a href=#evolve>evolve</a></li><li><a href=#genomewithmetadata>GenomeWithMetadata</a></li><li><a href=#multiobjectiveoptions>MultiObjectiveOptions</a></li><li><a href=#mutationmethod>MutationMethod</a></li><li><a href=#neatcontrollerforevolution>NeatControllerForEvolution</a></li><li><a href=#objectivedescriptor>ObjectiveDescriptor</a></li><li><a href=#specieshistoryrecord>SpeciesHistoryRecord</a></li><li><a href=#specieswithmetadata>SpeciesWithMetadata</a></li></ul></div><div class="toc-file"><a href="#neat-neat-export-ts">neat/neat.export.ts</a><ul><li><a href=#exportpopulation>exportPopulation</a></li><li><a href=#exportstate>exportState</a></li><li><a href=#fromjsonimpl>fromJSONImpl</a></li><li><a href=#genomejson>GenomeJSON</a></li><li><a href=#genomewithserialization>GenomeWithSerialization</a></li><li><a href=#importpopulation>importPopulation</a></li><li><a href=#importstateimpl>importStateImpl</a></li><li><a href=#innovationmapentry>InnovationMapEntry</a></li><li><a href=#neatconstructor>NeatConstructor</a></li><li><a href=#neatcontrollerforexport>NeatControllerForExport</a></li><li><a href=#neatmetajson>NeatMetaJSON</a></li><li><a href=#neatstatejson>NeatStateJSON</a></li><li><a href=#networkclass>NetworkClass</a></li><li><a href=#tojsonimpl>toJSONImpl</a></li></ul></div><div class="toc-file"><a href="#neat-neat-harness-types-ts">neat/neat.harness.types.ts</a><ul><li><a href=#lineagetrackednetwork>LineageTrackedNetwork</a></li><li><a href=#neatlineageharness>NeatLineageHarness</a></li><li><a href=#phasedcomplexityharness>PhasedComplexityHarness</a></li></ul></div><div class="toc-file"><a href="#neat-neat-helpers-ts">neat/neat.helpers.ts</a><ul><li><a href=#addgenome>addGenome</a></li><li><a href=#createpool>createPool</a></li><li><a href=#genomewithmetadata>GenomeWithMetadata</a></li><li><a href=#mutationmethod>MutationMethod</a></li><li><a href=#neatcontrollerforhelpers>NeatControllerForHelpers</a></li><li><a href=#spawnfromparent>spawnFromParent</a></li></ul></div><div class="toc-file"><a href="#neat-neat-lineage-ts">neat/neat.lineage.ts</a><ul><li><a href=#buildanc>buildAnc</a></li><li><a href=#computeancestoruniqueness>computeAncestorUniqueness</a></li><li><a href=#genomelike>GenomeLike</a></li><li><a href=#neatlineagecontext>NeatLineageContext</a></li></ul></div><div class="toc-file"><a href="#neat-neat-lineage-utils-ts">neat/neat.lineage.utils.ts</a><ul><li><a href=#ancestorqueueentry>AncestorQueueEntry</a></li><li><a href=#calculatemaxsamplepairs>calculateMaxSamplePairs</a></li><li><a href=#collectancestorids>collectAncestorIds</a></li><li><a href=#computeaveragedistance>computeAverageDistance</a></li><li><a href=#computejaccarddistance>computeJaccardDistance</a></li><li><a href=#computepairdistance>computePairDistance</a></li><li><a href=#computepairdistances>computePairDistances</a></li><li><a href=#countintersection>countIntersection</a></li><li><a href=#createinitialqueue>createInitialQueue</a></li><li><a href=#enqueueparententries>enqueueParentEntries</a></li><li><a href=#findgenomebyid>findGenomeById</a></li><li><a href=#genomeindexpair>GenomeIndexPair</a></li><li><a href=#genomelike>GenomeLike</a></li><li><a href=#hasminimumpopulation>hasMinimumPopulation</a></li><li><a href=#isemptyancestorpair>isEmptyAncestorPair</a></li><li><a href=#iswithindepthwindow>isWithinDepthWindow</a></li><li><a href=#neatlineagecontext>NeatLineageContext</a></li><li><a href=#normalizeparentids>normalizeParentIds</a></li><li><a href=#pickdistinctindex>pickDistinctIndex</a></li><li><a href=#pickrandomindex>pickRandomIndex</a></li><li><a href=#resolveparentids>resolveParentIds</a></li><li><a href=#samplegenomepairs>sampleGenomePairs</a></li></ul></div><div class="toc-file"><a href="#neat-neat-multiobjective-archive-utils-ts">neat/neat.multiobjective.archive.utils.ts</a><ul><li><a href=#archiveparetofrontsifenabled>archiveParetoFrontsIfEnabled</a></li><li><a href=#max-pareto-archive-fronts>MAX_PARETO_ARCHIVE_FRONTS</a></li><li><a href=#max-pareto-archive-length>MAX_PARETO_ARCHIVE_LENGTH</a></li></ul></div><div class="toc-file"><a href="#neat-neat-multiobjective-crowding-utils-ts">neat/neat.multiobjective.crowding.utils.ts</a><ul><li><a href=#accumulatecrowdingforobjective>accumulateCrowdingForObjective</a></li><li><a href=#accumulateinteriorcrowding>accumulateInteriorCrowding</a></li><li><a href=#applycrowdingdelta>applyCrowdingDelta</a></li><li><a href=#applycrowdingforobjective>applyCrowdingForObjective</a></li><li><a href=#assigncrowdingdistances>assignCrowdingDistances</a></li><li><a href=#assigncrowdingforfront>assignCrowdingForFront</a></li><li><a href=#buildgenomeindexbyreference>buildGenomeIndexByReference</a></li><li><a href=#buildinteriorindexrange>buildInteriorIndexRange</a></li><li><a href=#buildobjectiveindexrange>buildObjectiveIndexRange</a></li><li><a href=#buildsortedfrontbyobjective>buildSortedFrontByObjective</a></li><li><a href=#compareobjectivevaluesforcrowding>compareObjectiveValuesForCrowding</a></li><li><a href=#initializecrowding>initializeCrowding</a></li><li><a href=#markboundarycrowding>markBoundaryCrowding</a></li><li><a href=#resolveboundarygenomes>resolveBoundaryGenomes</a></li><li><a href=#resolvegenomeindex>resolveGenomeIndex</a></li><li><a href=#resolveneighborpair>resolveNeighborPair</a></li><li><a href=#resolveobjectiverange>resolveObjectiveRange</a></li><li><a href=#resolveobjectiverangefromboundaries>resolveObjectiveRangeFromBoundaries</a></li><li><a href=#resolveobjectivevalue>resolveObjectiveValue</a></li><li><a href=#shouldskipcrowdingfront>shouldSkipCrowdingFront</a></li></ul></div><div class="toc-file"><a href="#neat-neat-multiobjective-dominance-utils-ts">neat/neat.multiobjective.dominance.utils.ts</a><ul><li><a href=#applypairwisedominance>applyPairwiseDominance</a></li><li><a href=#builddominancestate>buildDominanceState</a></li><li><a href=#buildindexrange>buildIndexRange</a></li><li><a href=#compareobjectivevalues>compareObjectiveValues</a></li><li><a href=#createemptydominancestate>createEmptyDominanceState</a></li><li><a href=#dominancestate>DominanceState</a></li><li><a href=#iscandidatedominatedbyobjective>isCandidateDominatedByObjective</a></li><li><a href=#iscandidatestrictlybetterforobjective>isCandidateStrictlyBetterForObjective</a></li><li><a href=#isnondominatedcandidate>isNonDominatedCandidate</a></li><li><a href=#resolvedominanceoutcome>resolveDominanceOutcome</a></li><li><a href=#resolveobjectivedirection>resolveObjectiveDirection</a></li><li><a href=#shouldskipselfcomparison>shouldSkipSelfComparison</a></li><li><a href=#updatedominanceforcandidate>updateDominanceForCandidate</a></li><li><a href=#updatestrictimprovement>updateStrictImprovement</a></li><li><a href=#vectordominates>vectorDominates</a></li></ul></div><div class="toc-file"><a href="#neat-neat-multiobjective-fronts-utils-ts">neat/neat.multiobjective.fronts.utils.ts</a><ul><li><a href=#annotategenomerank>annotateGenomeRank</a></li><li><a href=#appendfront>appendFront</a></li><li><a href=#buildnextfrontindices>buildNextFrontIndices</a></li><li><a href=#buildparetofronts>buildParetoFronts</a></li><li><a href=#collectnextfrontindices>collectNextFrontIndices</a></li><li><a href=#incrementfrontrank>incrementFrontRank</a></li><li><a href=#max-pareto-front-rank-guard>MAX_PARETO_FRONT_RANK_GUARD</a></li><li><a href=#shouldstopfrontranking>shouldStopFrontRanking</a></li></ul></div><div class="toc-file"><a href="#neat-neat-multiobjective-objectives-utils-ts">neat/neat.multiobjective.objectives.utils.ts</a><ul><li><a href=#buildgenomevalues>buildGenomeValues</a></li><li><a href=#buildvaluesmatrix>buildValuesMatrix</a></li><li><a href=#readobjectivevalue>readObjectiveValue</a></li></ul></div><div class="toc-file"><a href="#neat-neat-multiobjective-ts">neat/neat.multiobjective.ts</a><ul><li><a href=#fastnondominated>fastNonDominated</a></li></ul></div><div class="toc-file"><a href="#neat-neat-multiobjective-types-utils-ts">neat/neat.multiobjective.types.utils.ts</a><ul><li><a href=#neatlikewithmultiobjective>NeatLikeWithMultiObjective</a></li><li><a href=#networkwithmoannotations>NetworkWithMOAnnotations</a></li><li><a href=#objectivedescriptor>ObjectiveDescriptor</a></li></ul></div><div class="toc-file"><a href="#neat-neat-multiobjective-utils-ts">neat/neat.multiobjective.utils.ts</a><ul><li><a href=#accumulatecrowdingforobjective>accumulateCrowdingForObjective</a></li><li><a href=#archiveparetofrontsifenabled>archiveParetoFrontsIfEnabled</a></li><li><a href=#assigncrowdingdistances>assignCrowdingDistances</a></li><li><a href=#builddominancestate>buildDominanceState</a></li><li><a href=#buildgenomeindexbyreference>buildGenomeIndexByReference</a></li><li><a href=#buildgenomevalues>buildGenomeValues</a></li><li><a href=#buildparetofronts>buildParetoFronts</a></li><li><a href=#buildvaluesmatrix>buildValuesMatrix</a></li><li><a href=#dominancestate>DominanceState</a></li><li><a href=#initializecrowding>initializeCrowding</a></li><li><a href=#markboundarycrowding>markBoundaryCrowding</a></li><li><a href=#max-pareto-archive-fronts>MAX_PARETO_ARCHIVE_FRONTS</a></li><li><a href=#max-pareto-archive-length>MAX_PARETO_ARCHIVE_LENGTH</a></li><li><a href=#max-pareto-front-rank-guard>MAX_PARETO_FRONT_RANK_GUARD</a></li><li><a href=#neatlikewithmultiobjective>NeatLikeWithMultiObjective</a></li><li><a href=#networkwithmoannotations>NetworkWithMOAnnotations</a></li><li><a href=#objectivedescriptor>ObjectiveDescriptor</a></li><li><a href=#readobjectivevalue>readObjectiveValue</a></li><li><a href=#resolvegenomeindex>resolveGenomeIndex</a></li><li><a href=#resolveobjectiverange>resolveObjectiveRange</a></li><li><a href=#resolveobjectivevalue>resolveObjectiveValue</a></li><li><a href=#vectordominates>vectorDominates</a></li></ul></div><div class="toc-file"><a href="#neat-neat-mutation-add-conn-utils-ts">neat/neat.mutation.add-conn.utils.ts</a><ul><li><a href=#assigninnovationforconnection>assignInnovationForConnection</a></li><li><a href=#buildlegacykeyforconn>buildLegacyKeyForConn</a></li><li><a href=#buildsymmetrickeyforconn>buildSymmetricKeyForConn</a></li><li><a href=#choosepairforconn>choosePairForConn</a></li><li><a href=#collectcandidatepairsforconn>collectCandidatePairsForConn</a></li><li><a href=#connectchosenpair>connectChosenPair</a></li><li><a href=#createscycle>createsCycle</a></li><li><a href=#filterpairswithinnovations>filterPairsWithInnovations</a></li><li><a href=#resolvepairnodes>resolvePairNodes</a></li><li><a href=#selectpairpool>selectPairPool</a></li><li><a href=#shouldabortforcycle>shouldAbortForCycle</a></li></ul></div><div class="toc-file"><a href="#neat-neat-mutation-add-node-utils-ts">neat/neat.mutation.add-node.utils.ts</a><ul><li><a href=#applysplitwithexistingrecord>applySplitWithExistingRecord</a></li><li><a href=#applysplitwithnewrecord>applySplitWithNewRecord</a></li><li><a href=#assigninnovationsfornewsplit>assignInnovationsForNewSplit</a></li><li><a href=#buildsplitdescriptor>buildSplitDescriptor</a></li><li><a href=#chooseconnectionforsplit>chooseConnectionForSplit</a></li><li><a href=#collectenabledconnections>collectEnabledConnections</a></li><li><a href=#connectsplitedges>connectSplitEdges</a></li><li><a href=#disconnectoriginalconnection>disconnectOriginalConnection</a></li><li><a href=#ensurebootstrapconnection>ensureBootstrapConnection</a></li><li><a href=#findfirstnodebytype>findFirstNodeByType</a></li><li><a href=#resolveinsertindex>resolveInsertIndex</a></li></ul></div><div class="toc-file"><a href="#neat-neat-mutation-dead-ends-utils-ts">neat/neat.mutation.dead-ends.utils.ts</a><ul><li><a href=#chooserandomnodefordeadends>chooseRandomNodeForDeadEnds</a></li><li><a href=#collectnodegroupsfordeadends>collectNodeGroupsForDeadEnds</a></li><li><a href=#connectifcandidatesexistfordeadends>connectIfCandidatesExistForDeadEnds</a></li><li><a href=#ensurehiddenconnectivityfordeadends>ensureHiddenConnectivityForDeadEnds</a></li><li><a href=#ensureinputconnectivityfordeadends>ensureInputConnectivityForDeadEnds</a></li><li><a href=#ensureoutputconnectivityfordeadends>ensureOutputConnectivityForDeadEnds</a></li><li><a href=#hasincomingfordeadends>hasIncomingForDeadEnds</a></li><li><a href=#hasoutgoingfordeadends>hasOutgoingForDeadEnds</a></li></ul></div><div class="toc-file"><a href="#neat-neat-mutation-flow-utils-ts">neat/neat.mutation.flow.utils.ts</a><ul><li><a href=#applyaddconnmutation>applyAddConnMutation</a></li><li><a href=#applyaddnodemutation>applyAddNodeMutation</a></li><li><a href=#applymutationoperator>applyMutationOperator</a></li><li><a href=#capturestructuralsizes>captureStructuralSizes</a></li><li><a href=#initializeadaptivemutation>initializeAdaptiveMutation</a></li><li><a href=#maybeaddextraconnection>maybeAddExtraConnection</a></li><li><a href=#mutategenome>mutateGenome</a></li><li><a href=#resolveeffectiveamount>resolveEffectiveAmount</a></li><li><a href=#resolveeffectiverate>resolveEffectiveRate</a></li><li><a href=#selectconcretemutationmethod>selectConcreteMutationMethod</a></li><li><a href=#shouldinvalidatecaches>shouldInvalidateCaches</a></li><li><a href=#shouldmutategenome>shouldMutateGenome</a></li><li><a href=#updateoperatorstatsifneeded>updateOperatorStatsIfNeeded</a></li></ul></div><div class="toc-file"><a href="#neat-neat-mutation-min-hidden-utils-ts">neat/neat.mutation.min-hidden.utils.ts</a><ul><li><a href=#chooserandomnodeforminhidden>chooseRandomNodeForMinHidden</a></li><li><a href=#collectnodegroupsforminhidden>collectNodeGroupsForMinHidden</a></li><li><a href=#ensurehiddenconnectivityforminhidden>ensureHiddenConnectivityForMinHidden</a></li><li><a href=#ensurehiddennodecountforminhidden>ensureHiddenNodeCountForMinHidden</a></li><li><a href=#ensureincomingconnectionforminhidden>ensureIncomingConnectionForMinHidden</a></li><li><a href=#ensureoutgoingconnectionforminhidden>ensureOutgoingConnectionForMinHidden</a></li><li><a href=#hasrequiredendpointsforminhidden>hasRequiredEndpointsForMinHidden</a></li><li><a href=#rebuildnetworkconnectionsforminhidden>rebuildNetworkConnectionsForMinHidden</a></li><li><a href=#resolvemaxnodesforminhidden>resolveMaxNodesForMinHidden</a></li><li><a href=#resolveminhiddenforminhidden>resolveMinHiddenForMinHidden</a></li><li><a href=#warnmissingendpointsforminhidden>warnMissingEndpointsForMinHidden</a></li></ul></div><div class="toc-file"><a href="#neat-neat-mutation-select-utils-ts">neat/neat.mutation.select.utils.ts</a><ul><li><a href=#applyoperatoradaptationforselect>applyOperatorAdaptationForSelect</a></li><li><a href=#applyoperatorbanditforselect>applyOperatorBanditForSelect</a></li><li><a href=#applyphasedcomplexityforselect>applyPhasedComplexityForSelect</a></li><li><a href=#isblockedbyrecurrentpolicyforselect>isBlockedByRecurrentPolicyForSelect</a></li><li><a href=#isblockedbystructurallimitsforselect>isBlockedByStructuralLimitsForSelect</a></li><li><a href=#islegacyffwpoolforselect>isLegacyFFWPoolForSelect</a></li><li><a href=#isoperatornameprefixedforselect>isOperatorNamePrefixedForSelect</a></li><li><a href=#normalizemutationpoolforselect>normalizeMutationPoolForSelect</a></li><li><a href=#resolveffwpolicyforselect>resolveFFWPolicyForSelect</a></li><li><a href=#samplefrompoolforselect>sampleFromPoolForSelect</a></li></ul></div><div class="toc-file"><a href="#neat-neat-mutation-ts">neat/neat.mutation.ts</a><ul><li><a href=#default-connection-weight>DEFAULT_CONNECTION_WEIGHT</a></li><li><a href=#default-gene-id>DEFAULT_GENE_ID</a></li><li><a href=#default-innovation-id>DEFAULT_INNOVATION_ID</a></li><li><a href=#ensureminhiddennodes>ensureMinHiddenNodes</a></li><li><a href=#ensurenodeadends>ensureNoDeadEnds</a></li><li><a href=#mutate>mutate</a></li><li><a href=#mutateaddconnreuse>mutateAddConnReuse</a></li><li><a href=#mutateaddnodereuse>mutateAddNodeReuse</a></li><li><a href=#selectmutationmethod>selectMutationMethod</a></li></ul></div><div class="toc-file"><a href="#neat-neat-mutation-types-ts">neat/neat.mutation.types.ts</a><ul><li><a href=#connectionwithmetadata>ConnectionWithMetadata</a></li><li><a href=#genomewithmetadata>GenomeWithMetadata</a></li><li><a href=#mutationmethod>MutationMethod</a></li><li><a href=#neatcontrollerformutation>NeatControllerForMutation</a></li><li><a href=#nodesplitrecord>NodeSplitRecord</a></li><li><a href=#nodewithmetadata>NodeWithMetadata</a></li><li><a href=#operatorstats>OperatorStats</a></li></ul></div><div class="toc-file"><a href="#neat-neat-mutation-utils-ts">neat/neat.mutation.utils.ts</a><ul><li><a href=#applyaddconnmutation>applyAddConnMutation</a></li><li><a href=#applyaddnodemutation>applyAddNodeMutation</a></li><li><a href=#applymutationoperator>applyMutationOperator</a></li><li><a href=#applyoperatoradaptationforselect>applyOperatorAdaptationForSelect</a></li><li><a href=#applyoperatorbanditforselect>applyOperatorBanditForSelect</a></li><li><a href=#applyphasedcomplexityforselect>applyPhasedComplexityForSelect</a></li><li><a href=#applysplitwithexistingrecord>applySplitWithExistingRecord</a></li><li><a href=#applysplitwithnewrecord>applySplitWithNewRecord</a></li><li><a href=#assigninnovationforconnection>assignInnovationForConnection</a></li><li><a href=#assigninnovationsfornewsplit>assignInnovationsForNewSplit</a></li><li><a href=#buildlegacykeyforconn>buildLegacyKeyForConn</a></li><li><a href=#buildsplitdescriptor>buildSplitDescriptor</a></li><li><a href=#buildsymmetrickeyforconn>buildSymmetricKeyForConn</a></li><li><a href=#capturestructuralsizes>captureStructuralSizes</a></li><li><a href=#chooseconnectionforsplit>chooseConnectionForSplit</a></li><li><a href=#choosepairforconn>choosePairForConn</a></li><li><a href=#chooserandomnodefordeadends>chooseRandomNodeForDeadEnds</a></li><li><a href=#chooserandomnodeforminhidden>chooseRandomNodeForMinHidden</a></li><li><a href=#collectcandidatepairsforconn>collectCandidatePairsForConn</a></li><li><a href=#collectenabledconnections>collectEnabledConnections</a></li><li><a href=#collectnodegroupsfordeadends>collectNodeGroupsForDeadEnds</a></li><li><a href=#collectnodegroupsforminhidden>collectNodeGroupsForMinHidden</a></li><li><a href=#connectchosenpair>connectChosenPair</a></li><li><a href=#connectifcandidatesexistfordeadends>connectIfCandidatesExistForDeadEnds</a></li><li><a href=#connectsplitedges>connectSplitEdges</a></li><li><a href=#createscycle>createsCycle</a></li><li><a href=#disconnectoriginalconnection>disconnectOriginalConnection</a></li><li><a href=#ensurebootstrapconnection>ensureBootstrapConnection</a></li><li><a href=#ensurehiddenconnectivityfordeadends>ensureHiddenConnectivityForDeadEnds</a></li><li><a href=#ensurehiddenconnectivityforminhidden>ensureHiddenConnectivityForMinHidden</a></li><li><a href=#ensurehiddennodecountforminhidden>ensureHiddenNodeCountForMinHidden</a></li><li><a href=#ensureincomingconnectionforminhidden>ensureIncomingConnectionForMinHidden</a></li><li><a href=#ensureinputconnectivityfordeadends>ensureInputConnectivityForDeadEnds</a></li><li><a href=#ensureoutgoingconnectionforminhidden>ensureOutgoingConnectionForMinHidden</a></li><li><a href=#ensureoutputconnectivityfordeadends>ensureOutputConnectivityForDeadEnds</a></li><li><a href=#filterpairswithinnovations>filterPairsWithInnovations</a></li><li><a href=#findfirstnodebytype>findFirstNodeByType</a></li><li><a href=#hasincomingfordeadends>hasIncomingForDeadEnds</a></li><li><a href=#hasoutgoingfordeadends>hasOutgoingForDeadEnds</a></li><li><a href=#hasrequiredendpointsforminhidden>hasRequiredEndpointsForMinHidden</a></li><li><a href=#initializeadaptivemutation>initializeAdaptiveMutation</a></li><li><a href=#isblockedbyrecurrentpolicyforselect>isBlockedByRecurrentPolicyForSelect</a></li><li><a href=#isblockedbystructurallimitsforselect>isBlockedByStructuralLimitsForSelect</a></li><li><a href=#islegacyffwpoolforselect>isLegacyFFWPoolForSelect</a></li><li><a href=#isoperatornameprefixedforselect>isOperatorNamePrefixedForSelect</a></li><li><a href=#maybeaddextraconnection>maybeAddExtraConnection</a></li><li><a href=#mutategenome>mutateGenome</a></li><li><a href=#normalizemutationpoolforselect>normalizeMutationPoolForSelect</a></li><li><a href=#rebuildnetworkconnectionsforminhidden>rebuildNetworkConnectionsForMinHidden</a></li><li><a href=#resolveeffectiveamount>resolveEffectiveAmount</a></li><li><a href=#resolveeffectiverate>resolveEffectiveRate</a></li><li><a href=#resolveffwpolicyforselect>resolveFFWPolicyForSelect</a></li><li><a href=#resolveinsertindex>resolveInsertIndex</a></li><li><a href=#resolvemaxnodesforminhidden>resolveMaxNodesForMinHidden</a></li><li><a href=#resolveminhiddenforminhidden>resolveMinHiddenForMinHidden</a></li><li><a href=#resolvepairnodes>resolvePairNodes</a></li><li><a href=#samplefrompoolforselect>sampleFromPoolForSelect</a></li><li><a href=#selectconcretemutationmethod>selectConcreteMutationMethod</a></li><li><a href=#selectpairpool>selectPairPool</a></li><li><a href=#shouldabortforcycle>shouldAbortForCycle</a></li><li><a href=#shouldinvalidatecaches>shouldInvalidateCaches</a></li><li><a href=#shouldmutategenome>shouldMutateGenome</a></li><li><a href=#updateoperatorstatsifneeded>updateOperatorStatsIfNeeded</a></li><li><a href=#warnmissingendpointsforminhidden>warnMissingEndpointsForMinHidden</a></li></ul></div><div class="toc-file"><a href="#neat-neat-objectives-ts">neat/neat.objectives.ts</a><ul><li><a href=#getobjectives>_getObjectives</a></li><li><a href=#clearobjectives>clearObjectives</a></li><li><a href=#registerobjective>registerObjective</a></li></ul></div><div class="toc-file"><a href="#neat-neat-objectives-utils-ts">neat/neat.objectives.utils.ts</a><ul><li><a href=#builddefaultfitnessobjective>buildDefaultFitnessObjective</a></li><li><a href=#collectdefaultobjectives>collectDefaultObjectives</a></li><li><a href=#collectuserobjectives>collectUserObjectives</a></li><li><a href=#ensuremultiobjectiveoptions>ensureMultiObjectiveOptions</a></li><li><a href=#ensureobjectiveslist>ensureObjectivesList</a></li><li><a href=#getobjectivecandidates>getObjectiveCandidates</a></li><li><a href=#ismultiobjectiveenabled>isMultiObjectiveEnabled</a></li><li><a href=#isvalidobjective>isValidObjective</a></li><li><a href=#neatlikewithobjectives>NeatLikeWithObjectives</a></li><li><a href=#replaceobjectivebykey>replaceObjectiveByKey</a></li></ul></div><div class="toc-file"><a href="#neat-neat-pruning-ts">neat/neat.pruning.ts</a><ul><li><a href=#applyadaptivepruning>applyAdaptivePruning</a></li><li><a href=#applyevolutionpruning>applyEvolutionPruning</a></li></ul></div><div class="toc-file"><a href="#neat-neat-pruning-utils-ts">neat/neat.pruning.utils.ts</a><ul><li><a href=#adaptivepruningoptions>AdaptivePruningOptions</a></li><li><a href=#applyadaptivepruneleveltopopulation>applyAdaptivePruneLevelToPopulation</a></li><li><a href=#applypruningtopopulation>applyPruningToPopulation</a></li><li><a href=#computemeanconnectioncount>computeMeanConnectionCount</a></li><li><a href=#computemeannodecount>computeMeanNodeCount</a></li><li><a href=#computenextadaptiveprunelevel>computeNextAdaptivePruneLevel</a></li><li><a href=#computepopulationmetrics>computePopulationMetrics</a></li><li><a href=#computerampfraction>computeRampFraction</a></li><li><a href=#computetargetremainingmetric>computeTargetRemainingMetric</a></li><li><a href=#computetargetsparsitynow>computeTargetSparsityNow</a></li><li><a href=#evolutionpruningoptions>EvolutionPruningOptions</a></li><li><a href=#initializeadaptivepruningstate>initializeAdaptivePruningState</a></li><li><a href=#neatlikeforpruning>NeatLikeForPruning</a></li><li><a href=#populationmetrics>PopulationMetrics</a></li><li><a href=#resolveactiveadaptivepruningoptions>resolveActiveAdaptivePruningOptions</a></li><li><a href=#resolveactiveevolutionpruningoptions>resolveActiveEvolutionPruningOptions</a></li><li><a href=#resolveadaptiveprunebaseline>resolveAdaptivePruneBaseline</a></li><li><a href=#resolveobservedmetricvalue>resolveObservedMetricValue</a></li><li><a href=#shouldadjustadaptivepruning>shouldAdjustAdaptivePruning</a></li></ul></div><div class="toc-file"><a href="#neat-neat-selection-ts">neat/neat.selection.ts</a><ul><li><a href=#default-power>DEFAULT_POWER</a></li><li><a href=#default-score>DEFAULT_SCORE</a></li><li><a href=#default-tournament-probability>DEFAULT_TOURNAMENT_PROBABILITY</a></li><li><a href=#default-tournament-size>DEFAULT_TOURNAMENT_SIZE</a></li><li><a href=#first-index>FIRST_INDEX</a></li><li><a href=#getaverage>getAverage</a></li><li><a href=#getfittest>getFittest</a></li><li><a href=#getparent>getParent</a></li><li><a href=#initial-cumulative-fitness>INITIAL_CUMULATIVE_FITNESS</a></li><li><a href=#initial-most-negative-score>INITIAL_MOST_NEGATIVE_SCORE</a></li><li><a href=#initial-total-fitness>INITIAL_TOTAL_FITNESS</a></li><li><a href=#last-element-index>LAST_ELEMENT_INDEX</a></li><li><a href=#last-index-offset>LAST_INDEX_OFFSET</a></li><li><a href=#loop-index-increment>LOOP_INDEX_INCREMENT</a></li><li><a href=#second-index>SECOND_INDEX</a></li><li><a href=#sort>sort</a></li></ul></div><div class="toc-file"><a href="#neat-neat-selection-utils-ts">neat/neat.selection.utils.ts</a><ul><li><a href=#calculatefitnesstotals>calculateFitnessTotals</a></li><li><a href=#calculatetotalscore>calculateTotalScore</a></li><li><a href=#default-power>DEFAULT_POWER</a></li><li><a href=#default-score>DEFAULT_SCORE</a></li><li><a href=#default-tournament-probability>DEFAULT_TOURNAMENT_PROBABILITY</a></li><li><a href=#default-tournament-size>DEFAULT_TOURNAMENT_SIZE</a></li><li><a href=#ensurepopulationevaluated>ensurePopulationEvaluated</a></li><li><a href=#ensurepopulationsorteddescending>ensurePopulationSortedDescending</a></li><li><a href=#ensurepopulationsorteddescendingforpower>ensurePopulationSortedDescendingForPower</a></li><li><a href=#first-index>FIRST_INDEX</a></li><li><a href=#genomewithscore>GenomeWithScore</a></li><li><a href=#getrandompopulationmember>getRandomPopulationMember</a></li><li><a href=#initial-cumulative-fitness>INITIAL_CUMULATIVE_FITNESS</a></li><li><a href=#initial-most-negative-score>INITIAL_MOST_NEGATIVE_SCORE</a></li><li><a href=#initial-total-fitness>INITIAL_TOTAL_FITNESS</a></li><li><a href=#last-element-index>LAST_ELEMENT_INDEX</a></li><li><a href=#last-index-offset>LAST_INDEX_OFFSET</a></li><li><a href=#loop-index-increment>LOOP_INDEX_INCREMENT</a></li><li><a href=#neatlikewithselection>NeatLikeWithSelection</a></li><li><a href=#pickbyshiftedthreshold>pickByShiftedThreshold</a></li><li><a href=#picktournamentwinner>pickTournamentWinner</a></li><li><a href=#resolvetournamentoverflow>resolveTournamentOverflow</a></li><li><a href=#sampletournamentparticipants>sampleTournamentParticipants</a></li><li><a href=#second-index>SECOND_INDEX</a></li><li><a href=#selectparentbyfitnessproportionate>selectParentByFitnessProportionate</a></li><li><a href=#selectparentbypower>selectParentByPower</a></li><li><a href=#selectparentbystrategy>selectParentByStrategy</a></li><li><a href=#selectparentbytournament>selectParentByTournament</a></li></ul></div><div class="toc-file"><a href="#neat-neat-speciation-ts">neat/neat.speciation.ts</a><ul><li><a href=#applyfitnesssharing>_applyFitnessSharing</a></li><li><a href=#sortspeciesmembers>_sortSpeciesMembers</a></li><li><a href=#speciate>_speciate</a></li><li><a href=#updatespeciesstagnation>_updateSpeciesStagnation</a></li></ul></div><div class="toc-file"><a href="#neat-neat-speciation-utils-ts">neat/neat.speciation.utils.ts</a><ul><li><a href=#adjustcompatibilitythreshold>adjustCompatibilityThreshold</a></li><li><a href=#applyageprotection>applyAgeProtection</a></li><li><a href=#applyfitnesssharing>applyFitnessSharing</a></li><li><a href=#assignpopulationtospecies>assignPopulationToSpecies</a></li><li><a href=#averagenumbers>averageNumbers</a></li><li><a href=#buildextendedhistorystats>buildExtendedHistoryStats</a></li><li><a href=#clampcompatibilitythreshold>clampCompatibilityThreshold</a></li><li><a href=#compatadjust>CompatAdjust</a></li><li><a href=#computepidthreshold>computePidThreshold</a></li><li><a href=#createspeciesforgenome>createSpeciesForGenome</a></li><li><a href=#default-compat-integral>DEFAULT_COMPAT_INTEGRAL</a></li><li><a href=#default-compatibility-integral-gain>DEFAULT_COMPATIBILITY_INTEGRAL_GAIN</a></li><li><a href=#default-compatibility-proportional-gain>DEFAULT_COMPATIBILITY_PROPORTIONAL_GAIN</a></li><li><a href=#default-compatibility-threshold>DEFAULT_COMPATIBILITY_THRESHOLD</a></li><li><a href=#default-last-improved-generation>DEFAULT_LAST_IMPROVED_GENERATION</a></li><li><a href=#default-max-compatibility-threshold>DEFAULT_MAX_COMPATIBILITY_THRESHOLD</a></li><li><a href=#default-member-count-fallback>DEFAULT_MEMBER_COUNT_FALLBACK</a></li><li><a href=#default-min-compatibility-threshold>DEFAULT_MIN_COMPATIBILITY_THRESHOLD</a></li><li><a href=#default-score-fallback>DEFAULT_SCORE_FALLBACK</a></li><li><a href=#default-sharing-sigma>DEFAULT_SHARING_SIGMA</a></li><li><a href=#default-species-age-grace>DEFAULT_SPECIES_AGE_GRACE</a></li><li><a href=#default-species-old-penalty>DEFAULT_SPECIES_OLD_PENALTY</a></li><li><a href=#default-stagnation-window>DEFAULT_STAGNATION_WINDOW</a></li><li><a href=#default-target-species>DEFAULT_TARGET_SPECIES</a></li><li><a href=#findcompatiblespecies>findCompatibleSpecies</a></li><li><a href=#fitnesssharingcontext>FitnessSharingContext</a></li><li><a href=#history-buffer-max-entries>HISTORY_BUFFER_MAX_ENTRIES</a></li><li><a href=#innovationaccumulator>InnovationAccumulator</a></li><li><a href=#negative-infinity>NEGATIVE_INFINITY</a></li><li><a href=#penalty-no-effect-threshold>PENALTY_NO_EFFECT_THRESHOLD</a></li><li><a href=#recordhistory>recordHistory</a></li><li><a href=#refreshspeciesrepresentatives>refreshSpeciesRepresentatives</a></li><li><a href=#resetspeciesmembers>resetSpeciesMembers</a></li><li><a href=#sharing-max-contribution>SHARING_MAX_CONTRIBUTION</a></li><li><a href=#sharing-self-distance>SHARING_SELF_DISTANCE</a></li><li><a href=#sharing-sum-floor>SHARING_SUM_FLOOR</a></li><li><a href=#snapshotpreviousmembers>snapshotPreviousMembers</a></li><li><a href=#species-age-grace-multiplier>SPECIES_AGE_GRACE_MULTIPLIER</a></li><li><a href=#stagnationcontext>StagnationContext</a></li><li><a href=#summarizeinnovations>summarizeInnovations</a></li><li><a href=#trimhistory>trimHistory</a></li><li><a href=#updatespeciesstagnation>updateSpeciesStagnation</a></li></ul></div><div class="toc-file"><a href="#neat-neat-species-ts">neat/neat.species.ts</a><ul><li><a href=#getspecieshistory>getSpeciesHistory</a></li><li><a href=#getspeciesstats>getSpeciesStats</a></li></ul></div><div class="toc-file"><a href="#neat-neat-species-utils-ts">neat/neat.species.utils.ts</a><ul><li><a href=#backfillextendedhistory>backfillExtendedHistory</a></li><li><a href=#shouldaugmentextendedhistory>shouldAugmentExtendedHistory</a></li><li><a href=#species-history-default-enabled-ratio>SPECIES_HISTORY_DEFAULT_ENABLED_RATIO</a></li><li><a href=#species-history-default-innovation-id>SPECIES_HISTORY_DEFAULT_INNOVATION_ID</a></li><li><a href=#species-history-default-innovation-range>SPECIES_HISTORY_DEFAULT_INNOVATION_RANGE</a></li><li><a href=#species-history-initial-max-innovation>SPECIES_HISTORY_INITIAL_MAX_INNOVATION</a></li><li><a href=#species-history-initial-min-innovation>SPECIES_HISTORY_INITIAL_MIN_INNOVATION</a></li><li><a href=#species-history-zero>SPECIES_HISTORY_ZERO</a></li></ul></div><div class="toc-file"><a href="#neat-neat-telemetry-buffer-utils-ts">neat/neat.telemetry.buffer.utils.ts</a><ul><li><a href=#ensuretelemetrybuffer>ensureTelemetryBuffer</a></li><li><a href=#safelystreamtelemetryentry>safelyStreamTelemetryEntry</a></li><li><a href=#trimtelemetrybuffer>trimTelemetryBuffer</a></li></ul></div><div class="toc-file"><a href="#neat-neat-telemetry-complexity-utils-ts">neat/neat.telemetry.complexity.utils.ts</a><ul><li><a href=#applycomplexitystatsmonoobjective>applyComplexityStatsMonoObjective</a></li><li><a href=#applycomplexitystatsmultiobjective>applyComplexityStatsMultiObjective</a></li><li><a href=#buildcomplexityentry>buildComplexityEntry</a></li><li><a href=#collectpopulationcounts>collectPopulationCounts</a></li><li><a href=#computeandstoregrowthvalues>computeAndStoreGrowthValues</a></li><li><a href=#computeenabledratios>computeEnabledRatios</a></li><li><a href=#computemaxcounts>computeMaxCounts</a></li><li><a href=#computemeancounts>computeMeanCounts</a></li><li><a href=#computemeanenabledratio>computeMeanEnabledRatio</a></li></ul></div><div class="toc-file"><a href="#neat-neat-telemetry-diversity-utils-ts">neat/neat.telemetry.diversity.utils.ts</a><ul><li><a href=#applyfastmodedefaults>applyFastModeDefaults</a></li><li><a href=#computecompatibilitystats>computeCompatibilityStats</a></li><li><a href=#computeentropystats>computeEntropyStats</a></li><li><a href=#computegraphletentropy>computeGraphletEntropy</a></li><li><a href=#countenablededges>countEnabledEdges</a></li><li><a href=#pickdistinctindices>pickDistinctIndices</a></li></ul></div><div class="toc-file"><a href="#neat-neat-telemetry-entropy-utils-ts">neat/neat.telemetry.entropy.utils.ts</a><ul><li><a href=#builddegreehistogram>buildDegreeHistogram</a></li><li><a href=#computedegreecounts>computeDegreeCounts</a></li><li><a href=#computeentropyfromhistogram>computeEntropyFromHistogram</a></li><li><a href=#getcachedentropy>getCachedEntropy</a></li><li><a href=#setcachedentropy>setCachedEntropy</a></li></ul></div><div class="toc-file"><a href="#neat-neat-telemetry-exports-ts">neat/neat.telemetry.exports.ts</a><ul><li><a href=#buildspecieshistorycsv>buildSpeciesHistoryCsv</a></li><li><a href=#buildtelemetryheaders>buildTelemetryHeaders</a></li><li><a href=#collecttelemetryheaderinfo>collectTelemetryHeaderInfo</a></li><li><a href=#default-species-best-score>DEFAULT_SPECIES_BEST_SCORE</a></li><li><a href=#default-species-history-generation>DEFAULT_SPECIES_HISTORY_GENERATION</a></li><li><a href=#default-species-history-max-entries>DEFAULT_SPECIES_HISTORY_MAX_ENTRIES</a></li><li><a href=#default-species-id>DEFAULT_SPECIES_ID</a></li><li><a href=#default-species-last-improved>DEFAULT_SPECIES_LAST_IMPROVED</a></li><li><a href=#default-species-size>DEFAULT_SPECIES_SIZE</a></li><li><a href=#exportspecieshistorycsv>exportSpeciesHistoryCSV</a></li><li><a href=#exporttelemetrycsv>exportTelemetryCSV</a></li><li><a href=#exporttelemetryjsonl>exportTelemetryJSONL</a></li><li><a href=#serializetelemetryentry>serializeTelemetryEntry</a></li><li><a href=#telemetryheaderinfo>TelemetryHeaderInfo</a></li></ul></div><div class="toc-file"><a href="#neat-neat-telemetry-exports-utils-ts">neat/neat.telemetry.exports.utils.ts</a><ul><li><a href=#buildspecieshistorystats>buildSpeciesHistoryStats</a></li><li><a href=#collectbasekeys>collectBaseKeys</a></li><li><a href=#collectdiversitylineagemetrics>collectDiversityLineageMetrics</a></li><li><a href=#collectgroupedmetrickeys>collectGroupedMetricKeys</a></li><li><a href=#collectoptionalcolumnpresence>collectOptionalColumnPresence</a></li><li><a href=#collectspecieshistoryheaders>collectSpeciesHistoryHeaders</a></li><li><a href=#ensureminimalspeciessnapshot>ensureMinimalSpeciesSnapshot</a></li><li><a href=#ensurespecieshistoryarray>ensureSpeciesHistoryArray</a></li><li><a href=#resolvespecieshistorycellvalue>resolveSpeciesHistoryCellValue</a></li><li><a href=#safestringifycell>safeStringifyCell</a></li><li><a href=#serializespecieshistoryrow>serializeSpeciesHistoryRow</a></li><li><a href=#telemetryheadercollectionstate>TelemetryHeaderCollectionState</a></li></ul></div><div class="toc-file"><a href="#neat-neat-telemetry-lineage-utils-ts">neat/neat.telemetry.lineage.utils.ts</a><ul><li><a href=#applylineagestatsmonoobjective>applyLineageStatsMonoObjective</a></li><li><a href=#applylineagestatsmultiobjective>applyLineageStatsMultiObjective</a></li><li><a href=#buildlineagecontext>buildLineageContext</a></li><li><a href=#buildlineageentry>buildLineageEntry</a></li><li><a href=#collectdepths>collectDepths</a></li><li><a href=#computeancestoruniquenesssampled>computeAncestorUniquenessSampled</a></li><li><a href=#computelineagestats>computeLineageStats</a></li><li><a href=#computemeandepth>computeMeanDepth</a></li><li><a href=#computepairjaccarddistance>computePairJaccardDistance</a></li><li><a href=#countancestorintersection>countAncestorIntersection</a></li><li><a href=#islineageeligible>isLineageEligible</a></li><li><a href=#pickdistinctpairindices>pickDistinctPairIndices</a></li></ul></div><div class="toc-file"><a href="#neat-neat-telemetry-objectives-utils-ts">neat/neat.telemetry.objectives.utils.ts</a><ul><li><a href=#applyhypervolumetelemetry>applyHypervolumeTelemetry</a></li><li><a href=#applyobjectiveages>applyObjectiveAges</a></li><li><a href=#applyobjectiveevents>applyObjectiveEvents</a></li><li><a href=#applyobjectiveimportance>applyObjectiveImportance</a></li><li><a href=#applyobjectivessnapshot>applyObjectivesSnapshot</a></li><li><a href=#applyspeciesallocation>applySpeciesAllocation</a></li><li><a href=#computehypervolumeproxy>computeHyperVolumeProxy</a></li><li><a href=#computeparetofrontsizes>computeParetoFrontSizes</a></li></ul></div><div class="toc-file"><a href="#neat-neat-telemetry-operator-utils-ts">neat/neat.telemetry.operator.utils.ts</a><ul><li><a href=#computeoperatorstatssnapshot>computeOperatorStatsSnapshot</a></li></ul></div><div class="toc-file"><a href="#neat-neat-telemetry-performance-utils-ts">neat/neat.telemetry.performance.utils.ts</a><ul><li><a href=#applyperformancestats>applyPerformanceStats</a></li></ul></div><div class="toc-file"><a href="#neat-neat-telemetry-rng-utils-ts">neat/neat.telemetry.rng.utils.ts</a><ul><li><a href=#applyrngstate>applyRngState</a></li></ul></div><div class="toc-file"><a href="#neat-neat-telemetry-selection-utils-ts">neat/neat.telemetry.selection.utils.ts</a><ul><li><a href=#gettelemetrycoresnapshot>getTelemetryCoreSnapshot</a></li><li><a href=#mergetelemetrycorefields>mergeTelemetryCoreFields</a></li><li><a href=#safelyapplytelemetryselect>safelyApplyTelemetrySelect</a></li><li><a href=#stripunselectedtelemetrykeys>stripUnselectedTelemetryKeys</a></li></ul></div><div class="toc-file"><a href="#neat-neat-telemetry-ts">neat/neat.telemetry.ts</a><ul><li><a href=#applytelemetryselect>applyTelemetrySelect</a></li><li><a href=#buildtelemetryentry>buildTelemetryEntry</a></li><li><a href=#computediversitystats>computeDiversityStats</a></li><li><a href=#createtelemetryentrybase>createTelemetryEntryBase</a></li><li><a href=#recordtelemetryentry>recordTelemetryEntry</a></li><li><a href=#structuralentropy>structuralEntropy</a></li><li><a href=#telemetrycontext>TelemetryContext</a></li></ul></div><div class="toc-file"><a href="#neat-neat-telemetry-types-ts">neat/neat.telemetry.types.ts</a><ul><li><a href=#operatorstatsmap>OperatorStatsMap</a></li><li><a href=#telemetrybuffercontext>TelemetryBufferContext</a></li><li><a href=#telemetrycorefields>TelemetryCoreFields</a></li><li><a href=#telemetrydiversityoptions>TelemetryDiversityOptions</a></li><li><a href=#telemetryentryrecord>TelemetryEntryRecord</a></li><li><a href=#telemetrygenome>TelemetryGenome</a></li><li><a href=#telemetryselectcontext>TelemetrySelectContext</a></li><li><a href=#telemetrystreamoptions>TelemetryStreamOptions</a></li></ul></div><div class="toc-file"><a href="#neat-neat-telemetry-utils-ts">neat/neat.telemetry.utils.ts</a><ul><li><a href=#applycomplexitystatsmonoobjective>applyComplexityStatsMonoObjective</a></li><li><a href=#applycomplexitystatsmultiobjective>applyComplexityStatsMultiObjective</a></li><li><a href=#applyfastmodedefaults>applyFastModeDefaults</a></li><li><a href=#applyhypervolumetelemetry>applyHypervolumeTelemetry</a></li><li><a href=#applylineagestatsmonoobjective>applyLineageStatsMonoObjective</a></li><li><a href=#applylineagestatsmultiobjective>applyLineageStatsMultiObjective</a></li><li><a href=#applyobjectiveages>applyObjectiveAges</a></li><li><a href=#applyobjectiveevents>applyObjectiveEvents</a></li><li><a href=#applyobjectiveimportance>applyObjectiveImportance</a></li><li><a href=#applyobjectivessnapshot>applyObjectivesSnapshot</a></li><li><a href=#applyperformancestats>applyPerformanceStats</a></li><li><a href=#applyrngstate>applyRngState</a></li><li><a href=#applyspeciesallocation>applySpeciesAllocation</a></li><li><a href=#buildcomplexityentry>buildComplexityEntry</a></li><li><a href=#builddegreehistogram>buildDegreeHistogram</a></li><li><a href=#buildlineagecontext>buildLineageContext</a></li><li><a href=#buildlineageentry>buildLineageEntry</a></li><li><a href=#collectdepths>collectDepths</a></li><li><a href=#collectpopulationcounts>collectPopulationCounts</a></li><li><a href=#computeancestoruniquenesssampled>computeAncestorUniquenessSampled</a></li><li><a href=#computeandstoregrowthvalues>computeAndStoreGrowthValues</a></li><li><a href=#computecompatibilitystats>computeCompatibilityStats</a></li><li><a href=#computedegreecounts>computeDegreeCounts</a></li><li><a href=#computeenabledratios>computeEnabledRatios</a></li><li><a href=#computeentropyfromhistogram>computeEntropyFromHistogram</a></li><li><a href=#computeentropystats>computeEntropyStats</a></li><li><a href=#computegraphletentropy>computeGraphletEntropy</a></li><li><a href=#computehypervolumeproxy>computeHyperVolumeProxy</a></li><li><a href=#computelineagestats>computeLineageStats</a></li><li><a href=#computemaxcounts>computeMaxCounts</a></li><li><a href=#computemeancounts>computeMeanCounts</a></li><li><a href=#computemeandepth>computeMeanDepth</a></li><li><a href=#computemeanenabledratio>computeMeanEnabledRatio</a></li><li><a href=#computeoperatorstatssnapshot>computeOperatorStatsSnapshot</a></li><li><a href=#computepairjaccarddistance>computePairJaccardDistance</a></li><li><a href=#computeparetofrontsizes>computeParetoFrontSizes</a></li><li><a href=#countancestorintersection>countAncestorIntersection</a></li><li><a href=#countenablededges>countEnabledEdges</a></li><li><a href=#ensuretelemetrybuffer>ensureTelemetryBuffer</a></li><li><a href=#getcachedentropy>getCachedEntropy</a></li><li><a href=#gettelemetrycoresnapshot>getTelemetryCoreSnapshot</a></li><li><a href=#islineageeligible>isLineageEligible</a></li><li><a href=#mergetelemetrycorefields>mergeTelemetryCoreFields</a></li><li><a href=#operatorstatsmap>OperatorStatsMap</a></li><li><a href=#pickdistinctindices>pickDistinctIndices</a></li><li><a href=#pickdistinctpairindices>pickDistinctPairIndices</a></li><li><a href=#safelyapplytelemetryselect>safelyApplyTelemetrySelect</a></li><li><a href=#safelystreamtelemetryentry>safelyStreamTelemetryEntry</a></li><li><a href=#setcachedentropy>setCachedEntropy</a></li><li><a href=#stripunselectedtelemetrykeys>stripUnselectedTelemetryKeys</a></li><li><a href=#telemetrybuffercontext>TelemetryBufferContext</a></li><li><a href=#telemetrycorefields>TelemetryCoreFields</a></li><li><a href=#telemetrydiversityoptions>TelemetryDiversityOptions</a></li><li><a href=#telemetryentryrecord>TelemetryEntryRecord</a></li><li><a href=#telemetrygenome>TelemetryGenome</a></li><li><a href=#telemetryselectcontext>TelemetrySelectContext</a></li><li><a href=#telemetrystreamoptions>TelemetryStreamOptions</a></li><li><a href=#trimtelemetrybuffer>trimTelemetryBuffer</a></li></ul></div><div class="toc-file"><a href="#neat-neat-types-ts">neat/neat.types.ts</a><ul><li><a href=#anyobj>AnyObj</a></li><li><a href=#complexitymetrics>ComplexityMetrics</a></li><li><a href=#connectionlike>ConnectionLike</a></li><li><a href=#diversitystats>DiversityStats</a></li><li><a href=#genomedetailed>GenomeDetailed</a></li><li><a href=#genomelike>GenomeLike</a></li><li><a href=#lineagesnapshot>LineageSnapshot</a></li><li><a href=#neatlike>NeatLike</a></li><li><a href=#neatoptions>NeatOptions</a></li><li><a href=#nodelike>NodeLike</a></li><li><a href=#objages>ObjAges</a></li><li><a href=#objectivedescriptor>ObjectiveDescriptor</a></li><li><a href=#objectiveevent>ObjectiveEvent</a></li><li><a href=#objevent>ObjEvent</a></li><li><a href=#objimportance>ObjImportance</a></li><li><a href=#objimportanceentry>ObjImportanceEntry</a></li><li><a href=#operatorstat>OperatorStat</a></li><li><a href=#operatorstatsrecord>OperatorStatsRecord</a></li><li><a href=#paretoarchiveentry>ParetoArchiveEntry</a></li><li><a href=#performancemetrics>PerformanceMetrics</a></li><li><a href=#speciationharnesscontext>SpeciationHarnessContext</a></li><li><a href=#speciationoptions>SpeciationOptions</a></li><li><a href=#speciesalloc>SpeciesAlloc</a></li><li><a href=#specieshistoryentry>SpeciesHistoryEntry</a></li><li><a href=#specieshistorystat>SpeciesHistoryStat</a></li><li><a href=#specieshistorystatextended>SpeciesHistoryStatExtended</a></li><li><a href=#specieslaststats>SpeciesLastStats</a></li><li><a href=#specieslike>SpeciesLike</a></li><li><a href=#telemetryentry>TelemetryEntry</a></li></ul></div></div></aside></div></body></html>

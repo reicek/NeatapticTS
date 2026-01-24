@@ -11,42 +11,23 @@
  *  - Jaccard Distance: 1 - |A ∩ B| / |A ∪ B|, measuring dissimilarity between two sets.
  */
 
-/**
- * Minimal shape assumed for a genome inside the NEAT population. Additional properties are
- * intentionally left open (index signature) because user implementations may extend genomes.
- */
-export interface GenomeLike {
-  /** Unique numeric identifier assigned when the genome is created. */
-  _id: number;
-  /** Optional list of parent genome IDs (could be 1 or 2 for sexual reproduction, or more in custom ops). */
-  _parents?: number[];
-  /** Allow arbitrary extra properties without forcing casts. */
-  [key: string]: any; // eslint-disable-line @typescript-eslint/no-explicit-any
-}
+import {
+  calculateMaxSamplePairs,
+  collectAncestorIds,
+  computeAverageDistance,
+  computePairDistances,
+  createInitialQueue,
+  hasMinimumPopulation,
+  normalizeParentIds,
+  sampleGenomePairs,
+  type GenomeLike,
+  type NeatLineageContext,
+} from './neat.lineage.utils';
 
-/** Expected `this` context for lineage helpers (a subset of the NEAT instance). */
-export interface NeatLineageContext {
-  /** Current evolutionary population (array of genomes). */
-  population: GenomeLike[];
-  /** RNG provider returning a PRNG function; shape taken from core NEAT implementation. */
-  _getRNG: () => () => number;
-}
+/** Common zero value for counters and defaults. */
+const ZERO_VALUE = 0;
 
-/**
- * Depth window (in breadth-first layers) used when gathering ancestor IDs.
- * A small window keeps the metric inexpensive while still capturing recent lineage diversity.
- *
- * Rationale: Deep full ancestry can grow quickly and become O(N * lineage depth). Empirically,
- * a window of 4 gives a stable signal about short‑term innovation mixing without large cost.
- *
- * You can fork and increase this constant if you need deeper lineage metrics, but note that
- * performance will degrade roughly proportionally to the number of enqueued ancestor nodes.
- *
- * Example (changing the window):
- *   // (NOT exported) – modify locally before building docs
- *   // const ANCESTOR_DEPTH_WINDOW = 6; // capture deeper history
- */
-const ANCESTOR_DEPTH_WINDOW = 4;
+export type { GenomeLike, NeatLineageContext } from './neat.lineage.utils';
 
 /**
  * Build the (shallow) ancestor ID set for a single genome using breadth‑first traversal.
@@ -80,55 +61,22 @@ export function buildAnc(
   this: NeatLineageContext,
   genome: GenomeLike,
 ): Set<number> {
-  // Initialize ancestor ID accumulator.
+  // Local accumulator and normalized inputs.
   const ancestorSet = new Set<number>();
+  const directParentIds = normalizeParentIds(genome);
 
-  // Fast exit if the genome has no recorded parents.
-  if (!Array.isArray(genome._parents)) return ancestorSet;
+  // Guard: no parents means no ancestors to collect.
+  if (directParentIds.length === ZERO_VALUE) return ancestorSet;
 
-  /**
-   * BFS queue entries carrying the ancestor ID, current depth within the window,
-   * and a direct reference to the ancestor genome (if located) so we can expand its parents.
-   */
-  const queue: { id: number; depth: number; genomeRef?: GenomeLike }[] = [];
+  // 1) Seed the breadth-first queue.
+  const queueEntries = createInitialQueue(directParentIds, this.population);
+  // 2) Collect ancestor IDs within the configured depth window.
+  const ancestorIds = collectAncestorIds(queueEntries, this.population);
+  // 3) Fold into the output set and return.
+  for (const ancestorId of ancestorIds) ancestorSet.add(ancestorId);
 
-  // Seed: enqueue each direct parent at depth = 1.
-  for (const parentId of genome._parents) {
-    queue.push({
-      id: parentId,
-      depth: 1,
-      genomeRef: this.population.find((gm) => gm._id === parentId),
-    });
-  }
-
-  // Breadth‑first expansion within the fixed depth window.
-  while (queue.length) {
-    // Dequeue (FIFO) to ensure breadth‑first order.
-    const current = queue.shift()!;
-
-    // Skip nodes that exceed the depth window limit.
-    if (current.depth > ANCESTOR_DEPTH_WINDOW) continue;
-
-    // Record ancestor ID (dedup automatically handled by Set semantics).
-    if (current.id != null) ancestorSet.add(current.id);
-
-    // If we have a concrete genome reference with parents, enqueue them for the next layer.
-    if (current.genomeRef && Array.isArray(current.genomeRef._parents)) {
-      for (const parentId of current.genomeRef._parents) {
-        queue.push({
-          id: parentId,
-          // Depth increases as we move one layer further away from the focal genome.
-          depth: current.depth + 1,
-          genomeRef: this.population.find((gm) => gm._id === parentId),
-        });
-      }
-    }
-  }
   return ancestorSet;
 }
-
-/** Maximum number of distinct genome pairs to sample when computing uniqueness. */
-const MAX_UNIQUENESS_SAMPLE_PAIRS = 30;
 
 /**
  * Compute an "ancestor uniqueness" diversity metric for the current population.
@@ -162,59 +110,26 @@ const MAX_UNIQUENESS_SAMPLE_PAIRS = 30;
  * console.log('Ancestor uniqueness:', uniqueness); // e.g. 0.742
  */
 export function computeAncestorUniqueness(this: NeatLineageContext): number {
-  // Bind builder once for clarity & micro‑efficiency.
+  // Local references and derived values.
   const buildAncestorSet = buildAnc.bind(this);
+  const populationSize = this.population.length;
+  const maxSamplePairs = calculateMaxSamplePairs(populationSize);
 
-  // Accumulators for (distance sum, sampled pair count).
-  let sampledPairCount = 0;
-  let jaccardDistanceSum = 0;
+  // Guard: cannot sample pairs when the population is too small.
+  if (!hasMinimumPopulation(populationSize)) return ZERO_VALUE;
 
-  /**
-   * Maximum number of pair samples respecting both the cap constant and the total
-   * possible distinct unordered pairs nC2 = n(n-1)/2.
-   */
-  const maxSamplePairs = Math.min(
-    MAX_UNIQUENESS_SAMPLE_PAIRS,
-    (this.population.length * (this.population.length - 1)) / 2,
+  // 1) Sample candidate pairs.
+  const sampledPairs = sampleGenomePairs(
+    maxSamplePairs,
+    populationSize,
+    this._getRNG,
   );
-
-  // Main sampling loop.
-  for (let t = 0; t < maxSamplePairs; t++) {
-    if (this.population.length < 2) break; // not enough genomes to form pairs
-
-    // Randomly pick first genome index.
-    const indexA = Math.floor(this._getRNG()() * this.population.length);
-    // Pick second index (avoid identical -> simple offset if collision).
-    let indexB = Math.floor(this._getRNG()() * this.population.length);
-    if (indexB === indexA) indexB = (indexB + 1) % this.population.length;
-
-    // Build ancestor sets for the pair.
-    const ancestorSetA = buildAncestorSet(this.population[indexA]);
-    const ancestorSetB = buildAncestorSet(this.population[indexB]);
-
-    // Skip if both sets are empty (no lineage info to compare yet).
-    if (ancestorSetA.size === 0 && ancestorSetB.size === 0) continue;
-
-    // Compute intersection size.
-    let intersectionCount = 0;
-    for (const id of ancestorSetA)
-      if (ancestorSetB.has(id)) intersectionCount++;
-
-    // Union size = |A| + |B| - |A ∩ B| (guard against divide-by-zero).
-    const unionSize =
-      ancestorSetA.size + ancestorSetB.size - intersectionCount || 1;
-
-    // Jaccard distance = 1 - similarity.
-    const jaccardDistance = 1 - intersectionCount / unionSize;
-
-    // Accumulate for averaging.
-    jaccardDistanceSum += jaccardDistance;
-    sampledPairCount++;
-  }
-
-  // Average (3 decimal places) or 0 if no valid samples.
-  const ancestorUniqueness = sampledPairCount
-    ? +(jaccardDistanceSum / sampledPairCount).toFixed(3)
-    : 0;
-  return ancestorUniqueness;
+  // 2) Compute distances for valid pairs.
+  const pairDistances = computePairDistances(
+    sampledPairs,
+    this.population,
+    buildAncestorSet,
+  );
+  // 3) Fold into the final average.
+  return computeAverageDistance(pairDistances);
 }
